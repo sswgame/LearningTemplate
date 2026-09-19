@@ -430,7 +430,7 @@ namespace sw
         return true;
     }
 
-    const string& LocalizationManager::getCurrentLanguage() const
+    string LocalizationManager::getCurrentLanguage() const
     {
         std::shared_lock<std::shared_mutex> lock( _mutex );
         return _currentLanguage;
@@ -442,7 +442,7 @@ namespace sw
         _fallbackLanguage = languageCode;
     }
 
-    const string& LocalizationManager::getFallbackLanguage() const
+    string LocalizationManager::getFallbackLanguage() const
     {
         std::shared_lock<std::shared_mutex> lock( _mutex );
         return _fallbackLanguage;

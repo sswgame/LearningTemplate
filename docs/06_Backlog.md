@@ -435,6 +435,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (같은 모양을 저장소 전체에서 찾았다 — 언어 코드도 그랬다)
+
+`ComponentDefaults::getPath()` 를 고치고 나서 **"락을 잡은 함수가 뷰나 참조를 돌려주는 자리"**
+를 저장소 전체에서 훑었다(27곳). 대부분은 문제가 아니다 — 오래 사는 객체의 **포인터**를 주는
+것이라(코덱 · TypeInfo · GameObject) 락은 컨테이너를 지키는 것이고 수명은 별개다. 이 저장소가
+의도한 설계다.
+
+문제는 **자기 멤버의 참조**를 주는 자리다. 둘 있었다:
+
+```cpp
+const string& LocalizationManager::getCurrentLanguage() const
+{
+    std::shared_lock<std::shared_mutex> lock{ _mutex };
+    return _currentLanguage;     // 락은 여기서 풀린다
+}
+```
+
+`getFallbackLanguage()` 도 같고, `GameStrings::getLanguage()` 가 그것을 **게임 코드까지 그대로
+흘려보내고** 있었다(자기도 `const string&` 로 받아 되돌려준다). 넷 다 값으로 바꿨다.
+
+**검증.** `LocalizationManagerTest.LanguageCodeIsReturnedByValue`. 되돌리면 들고 있던 참조가
+나중에 넣은 `aaaa...` 로 **보인다** — 스냅샷이 아니라 살아 있는 참조였다는 증거다.
+
+> **테스트를 한 번 잘못 썼다.** 처음에는 `const auto held = loc.getCurrentLanguage();` 로 받았는데
+> 변이를 넣어도 통과했다. `auto` 는 **참조를 벗긴다** — 반환형이 `const string&` 여도 `held` 는
+> 복사본이 되어 버린다. 수명을 재는 테스트는 실제 호출 코드와 같은 모양(`const auto&`)으로
+> 받아야 한다. 앞선 `ComponentDefaults` 테스트가 `const auto` 로도 물었던 것은 그쪽 반환형이
+> `string_view` 라 `auto` 가 **그 뷰를 통째로 복사**했기 때문이다(포인터가 따라온다).
+
+**살펴보고 문제 없던 것.** `ResourcePackReader::getPackPath()` · `getHeader()` 도 멤버 참조를
+주지만, 그 둘은 `open()` 에서 한 번 정해지고 그 뒤로 바뀌지 않는다(다시 열면 리더가 새로 만들어
+진다). `ShaderBindingLayoutCache::getOrBuild` 는 `unique_ptr` 항목 안을 가리키고 그 항목은 지워
+지지 않는다.
+
 ### 2026-09-20 (뮤텍스로 지킨 문자열을 뷰로 돌려주고 있었다)
 
 `ComponentDefaults::getPath()` 가 이렇게 생겼다:

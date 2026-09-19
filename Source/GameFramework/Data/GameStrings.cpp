@@ -93,7 +93,7 @@ namespace sw
         return pLoc->setCurrentLanguage( languageCode );
     }
 
-    const string& GameStrings::getLanguage()
+    string GameStrings::getLanguage()
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )
@@ -109,7 +109,7 @@ namespace sw
             pLoc->setFallbackLanguage( languageCode );
     }
 
-    const string& GameStrings::getFallbackLanguage()
+    string GameStrings::getFallbackLanguage()
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )

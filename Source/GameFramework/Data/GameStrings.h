@@ -47,13 +47,13 @@ namespace sw
         static bool setLanguage( string_view languageCode );
 
         /** @brief 현재 활성 언어 코드를 반환합니다. */
-        static const string& getLanguage();
+        static string getLanguage();
 
         /** @brief 대체(Fallback) 언어 코드를 설정합니다 (현재 언어에 키가 누락되었을 때 사용). */
         static void setFallbackLanguage( string_view languageCode );
 
         /** @brief 대체(Fallback) 언어 코드를 반환합니다. */
-        static const string& getFallbackLanguage();
+        static string getFallbackLanguage();
 
         /** @brief 특정 언어가 로드되어 있는지 확인합니다. */
         static bool hasLanguage( string_view languageCode );

@@ -91,14 +91,20 @@ namespace sw
         /** @brief 현재 활성 언어를 설정합니다. 언어가 변경되면 등록된 콜백이 호출됩니다. */
         bool setCurrentLanguage( string_view languageCode );
 
-        /** @brief 현재 활성 언어 코드를 반환합니다. */
-        const string& getCurrentLanguage() const;
+        /**
+         * @brief 현재 활성 언어 코드를 반환합니다.
+         * @details **값으로 돌려줍니다.** 참조를 주면 `_mutex` 를 놓은 뒤의 참조가 되고, 그 사이
+         *          `setCurrentLanguage` 가 길이가 다른 코드를 넣으면 `string` 이 버퍼를 새로 잡아
+         *          받아 든 쪽이 사라진 메모리를 읽는다. 지키는 것이 뜻을 가지려면 지키는 동안
+         *          복사해서 나가야 한다.
+         */
+        string getCurrentLanguage() const;
 
         /** @brief 대체(Fallback) 언어를 설정합니다 (현재 언어에 키가 누락되었을 때 사용). */
         void setFallbackLanguage( string_view languageCode );
 
-        /** @brief 대체(Fallback) 언어 코드를 반환합니다. */
-        const string& getFallbackLanguage() const;
+        /** @brief 대체(Fallback) 언어 코드를 반환합니다. 위와 같은 이유로 값입니다. */
+        string getFallbackLanguage() const;
 
         /** @brief 특정 언어가 로드되어 있는지 확인합니다. */
         bool hasLanguage( string_view languageCode ) const;

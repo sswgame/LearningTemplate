@@ -671,6 +671,33 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryHeaderEntryCountIsBoundedByTheBuffe
 }
 
 /**
+ * @brief [LocalizationManagerTest] 언어 코드가 **값으로** 돌아오는지 검증
+ * @details `getCurrentLanguage()` 가 `_mutex` 로 지키는 `_currentLanguage` 의 **참조**를
+ *          돌려주고 있었다. 락은 함수가 끝나며 풀리므로, 받아 든 쪽이 그것을 들고 있는 동안
+ *          `setCurrentLanguage` 가 길이가 다른 코드를 넣으면 `string` 이 버퍼를 새로 잡고
+ *          참조는 사라진 메모리를 가리킨다 — 지키는 것이 아무 뜻이 없었다.
+ *          `GameStrings::getLanguage()` 가 그것을 게임 코드까지 그대로 흘려보내고 있었다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
+{
+    sw::LocalizationManager loc;
+    loc.setString( "ko_KR", sw::hashed_string( "K" ), "값" );
+    loc.setCurrentLanguage( "ko_KR" );
+    loc.setFallbackLanguage( "en_US" );
+
+    const auto& heldCurrent  = loc.getCurrentLanguage();
+    const auto& heldFallback = loc.getFallbackLanguage();
+
+    // 길이를 크게 바꿔 내부 버퍼를 **다시 잡게** 만든다.
+    loc.setCurrentLanguage( sw::string( 4096, 'a' ) );
+    loc.setFallbackLanguage( sw::string( 4096, 'b' ) );
+
+    // 고치기 전이라면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
+    SW_EXPECT_STREQ( "ko_KR", sw::string( heldCurrent ).c_str() );
+    SW_EXPECT_STREQ( "en_US", sw::string( heldFallback ).c_str() );
+}
+
+/**
  * @brief [GameFramework] GameModeStateMachine 상태 전환, 핸들러 호출 및 델리게이트 알림 검증
  */
 SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
