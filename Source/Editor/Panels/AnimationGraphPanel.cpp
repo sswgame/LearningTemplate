@@ -22,15 +22,39 @@ namespace sw::editor
 {
     namespace
     {
+        /**
+         * @brief 핀 번호 계약 — **짓는 것과 푸는 것이 한 자리에 있다.**
+         * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 이다. 예전에는 짓는 쪽만 여기 있고
+         *          푸는 쪽은 링크를 만드는 코드에 `/ 10` · `% 10` 으로 적혀 있었다 — 자릿수 기준을
+         *          바꾸면 한쪽만 따라가서 **링크가 엉뚱한 노드에 붙는다.** `DialogueGraphAsset` 이
+         *          같은 이유로 이미 한 자리에 모았다(그 파일의 "핀 번호 계약" 절).
+         */
         struct AnimationGraphPanelInternal
         {
+            /** @brief 핀 번호의 자릿수 기준 — 한 노드가 가질 수 있는 핀 오프셋 개수이기도 하다. */
+            static constexpr int32 kPinScale = 10;
+            /** @brief 입력 핀의 오프셋. */
+            static constexpr int32 kPinOffsetIn = 1;
+            /** @brief 출력 핀의 오프셋. */
+            static constexpr int32 kPinOffsetOut = 2;
+
             static int32 pinIn( int32 nodeId )
             {
-                return nodeId * 10 + 1;
+                return nodeId * kPinScale + kPinOffsetIn;
             }
             static int32 pinOut( int32 nodeId )
             {
-                return nodeId * 10 + 2;
+                return nodeId * kPinScale + kPinOffsetOut;
+            }
+            /** @brief 핀 번호에서 노드 id 를 꺼냅니다. */
+            static int32 pinNodeId( int32 pin )
+            {
+                return pin / kPinScale;
+            }
+            /** @brief 그 핀이 출력 핀인지 여부입니다. */
+            static bool isOutputPin( int32 pin )
+            {
+                return ( pin % kPinScale ) == kPinOffsetOut;
             }
         };
     } // namespace
@@ -185,9 +209,9 @@ namespace sw::editor
                     link._id          = nextLinkId();
                     const int32 ap    = static_cast<int32>( a.Get() );
                     const int32 bp    = static_cast<int32>( b.Get() );
-                    const int32 aNode = ap / 10;
-                    const int32 bNode = bp / 10;
-                    if ( ( ap % 10 ) == 2 )
+                    const int32 aNode = AnimationGraphPanelInternal::pinNodeId( ap );
+                    const int32 bNode = AnimationGraphPanelInternal::pinNodeId( bp );
+                    if ( AnimationGraphPanelInternal::isOutputPin( ap ) )
                     {
                         link._fromNode = aNode;
                         link._toNode   = bNode;

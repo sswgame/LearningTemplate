@@ -391,7 +391,16 @@ namespace sw::editor
                                      _listNode.end() );
                     _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
                                                      [id]( const DialogueLink& l )
-                    { return ( l._fromPin / 100 ) == id || ( l._toPin / 100 ) == id; } ),
+                    {
+                        // **핀을 푸는 것도 `DialogueGraphAsset` 이 정본이다.** 여기만 `/ 100` 을
+                        // 손으로 적고 있었다 — 그 파일의 "핀 번호 계약" 절이 경고하는 바로 그
+                        // 모양이다(인코딩은 이미 한 곳으로 모았는데 디코딩 한 자리가 남았다).
+                        // `decodePinNodeId` 는 단순한 나눗셈이 아니라 자릿수 기준(`kPinScale`)이
+                        // 다른 옛 핀도 함께 푼다 — 손으로 적은 `/ 100` 은 그것을 모른다. 간격이
+                        // 바뀌면 이 줄만 조용히 틀려서, 노드를 지워도 그 링크가 남는다.
+                        return DialogueGraphAsset::decodePinNodeId( l._fromPin ) == id ||
+                               DialogueGraphAsset::decodePinNodeId( l._toPin ) == id;
+                    } ),
                                      _listLink.end() );
                     if ( _selectedNodeId == id )
                         _selectedNodeId = 0;

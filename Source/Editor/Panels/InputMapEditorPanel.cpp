@@ -955,7 +955,9 @@ namespace sw::editor
                     ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", previewGlyph.c_str() );
 
                 ImGui::TableNextColumn();
-                ImGui::TextDisabled( "%s", arrPlatforms[_selectedGlyphPlatform] );
+                // 위의 미리보기 장치 선택과 **같은 자르기**를 쓴다 — 한쪽만 자르면 그 차이가
+                // 언젠가 배열 밖 읽기가 된다.
+                ImGui::TextDisabled( "%s", arrPlatforms[MathUtil::clamp( _selectedGlyphPlatform, 0, 3 )] );
             }
             ImGui::EndTable();
         }

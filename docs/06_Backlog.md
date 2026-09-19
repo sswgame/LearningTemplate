@@ -526,6 +526,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (핀 번호를 짓는 곳과 푸는 곳이 또 갈라져 있었다 — 그래프 패널 둘)
+
+`DialogueGraphAsset.h` 의 "핀 번호 계약" 절은 **"에디터가 인코딩을, 애셋이 디코딩을 각자 적고
+있었다"** 를 고친 기록이다. 그런데 디코딩 한 자리가 남아 있었다 — `DialogueGraphPanel` 이 노드를
+지울 때 그 노드의 링크를 걸러 내면서 `l._fromPin / 100` 이라고 **손으로** 적는다. `decodePinNodeId`
+는 단순한 나눗셈이 아니라 자릿수 기준이 다른 옛 핀도 함께 푸는데, 손으로 적은 쪽은 그것을 모른다.
+
+`AnimationGraphPanel` 은 아예 같은 병을 안 고친 채였다: 짓는 쪽은 `nodeId * 10 + 1/2`,
+푸는 쪽은 링크 만드는 코드에 `/ 10` · `% 10` 리터럴. 한 구조체 안에 `kPinScale` ·
+`kPinOffsetIn/Out` 과 `pinNodeId()` · `isOutputPin()` 을 함께 두어 **짓는 것과 푸는 것이 같은
+자리에** 있게 했다. 이쪽 핀은 디스크에 안 남으므로(링크는 노드 id 로 저장된다) 어긋나도 데이터가
+썩지는 않지만, 링크가 엉뚱한 노드에 붙는 것은 같다.
+
+같은 훑기에서 하나 더: `InputMapEditorPanel` 이 같은 인덱스를 한 줄에서는 자르고
+(`clamp( _selectedGlyphPlatform, 0, 3 )`) 다른 줄에서는 그냥 배열 첨자로 썼다. 둘을 맞췄다.
+
 ### 2026-09-20 (액션 메뉴도 순회 중에 콜백을 불렀다 · 서비스 조회의 세 번째 문)
 
 **`EditorActionMenuManager::drawActionMenu` 가 범위 for 로 돌면서 액션과 술어를 불렀다.**
