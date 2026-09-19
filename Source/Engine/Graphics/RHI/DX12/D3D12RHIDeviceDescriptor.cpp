@@ -4,6 +4,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourceRecipe.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -230,18 +231,8 @@ namespace sw
                 { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             };
 
-            D3D12_HEAP_PROPERTIES heapProps{};
-            heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-            D3D12_RESOURCE_DESC resDesc{};
-            resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resDesc.Width            = sizeof( arrFullscreenVert );
-            resDesc.Height           = 1;
-            resDesc.DepthOrArraySize = 1;
-            resDesc.MipLevels        = 1;
-            resDesc.Format           = DXGI_FORMAT_UNKNOWN;
-            resDesc.SampleDesc.Count = 1;
-            resDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+            const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourceRecipe::bufferDesc( sizeof( arrFullscreenVert ) );
 
             if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
                                                            nullptr, IID_PPV_ARGS( _vertexBuffer.GetAddressOf() ) ) ) )

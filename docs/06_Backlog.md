@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `a9ff3ac7`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `723b78be`
 
 ---
 
@@ -434,6 +434,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (RHI 리소스 조리법 — 남은 중복 후보를 전부 판정했다)
+
+길이순 목록의 나머지를 끝까지 내려가 **전부 판정**했다. 합칠 것은 합치고, 합치지 않을 것은
+**왜인지를 탐지기 머리말에 적어** 다음 사람이 같은 판단을 다시 하지 않게 했다.
+
+**합쳤다 — `D3D12RHIResourceRecipe`.** D3D12 에서 버퍼를 만들려면 `D3D12_RESOURCE_DESC` 의 일곱
+필드를 버퍼용 고정값으로 채워야 하는데(`Dimension=BUFFER` · `Height=1` · `MipLevels=1` ·
+`Format=UNKNOWN` · `SampleDesc.Count=1` · `Layout=ROW_MAJOR` …), 실제로 다른 것은 **크기와 플래그뿐**
+이다. 그 일곱 줄이 **여섯 곳**에 있었다(상수버퍼 · 구조버퍼 · 업로드 스테이징 · 리드백 · 정점버퍼 ·
+전체화면 정점버퍼). [[VulkanRHISamplerRecipe]] 와 같은 생각이다 — 객체가 아니라 **값을 만드는 방법에
+이름을 붙인다.** 힙 종류와 초기 상태는 자리마다 정말 다른 결정이라 호출부가 정한다.
+
+그 과정에서 둘이 같이 닫혔다:
+- 구조버퍼 자리에 `heapProps.Type` 대입이 **두 번** 들어 있었다(죽은 줄, 복붙의 지문).
+- 같은 자리가 `elementSize * elementCount` 를 **32비트로 곱해** `Width`(UINT64)에 넣고 있었다.
+  넘치면 **조용히 작은 버퍼**가 된다. 64비트로 곱하게 했다.
+
+**합쳤다 — Vulkan 전체 밉 배리어 뼈대.** 업로드와 리드백이 "2D 색 이미지 전체 밉" 배리어의 고정
+필드 열 줄을 각자 적고 있었다. `makeWholeImageBarrier( image, mipLevels )` 하나로 모았다.
+`aspectMask`·`layerCount` 를 빠뜨린 배리어는 검증 계층이 잡아 주지만 **잡히는 자리가 배리어를 건
+곳이 아니라 그 뒤의 전이**라 읽기 나쁘다.
+
+**합치지 않았다 — 그리고 그 이유를 `RunDuplicateCode.py` 머리말에 적었다.** 매번 상위권에 올라오는
+것들이다:
+- **enum 레이블 나열**(`MaterialPacking` 의 두 switch): `case` 줄이 통째로 같고 `-Wswitch-default`
+  때문에 `default:` 도 양쪽에 있다. **본체가 다르면 중복이 아니다.**
+- **서비스 로케이터 둘**(`sw::editor` / `sw::game`): 서로 다른 DLL 의 서로 다른 레지스트리다
+  (`SW_GAMESERVICE_API` 가 그 경계). 미발견 처리도 **의도적으로** 다르다 — 에디터는 문서대로
+  `nullptr`(그래서 `CheckNullableServiceUse` 가 있다), 게임은 Debug 에서 `SW_ASSERT` 로 죽는다.
+- **컨테이너 래퍼의 미세한 차이**: `VectorWrapper`↔`DequeWrapper` 는 `reserve` 유무,
+  `unordered_map.h`↔`unordered_set.h` 는 레이스 래퍼 전달. 접으면 읽기만 나빠진다.
+
+> **하나는 열어 둔다 — `LinuxFileDialog` 의 zenity/yad.** 둘이 거의 같은 명령을 만드는데
+> **zenity 만 "All files" 필터를 붙인다.** yad 만 깔린 리눅스에서는 선언한 확장자 밖의 파일을 고를
+> 수 없다는 뜻이다. 고치지 않은 이유는 여기서 yad 를 돌려 `--file-filter` 반복 지정을 확인할 수
+> 없기 때문이다 — 잘못 넣으면 "제한됨" 이 아니라 **다이얼로그가 아예 안 뜨는** 쪽으로 틀린다.
+> 리눅스에서 yad 를 쓸 수 있는 사람이 확인하고 닫을 것.
+
+**검증.** Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 · 린트 17/17 ·
+정적 씬 스크린샷 **dx12·vulkan·dx11·gl 네 백엔드 모두 기준 sha(`d2c61c1f8e57cf2d`)와 동일**
+(D3D12 버퍼 생성과 Vulkan 배리어를 둘 다 건드렸으므로 픽셀까지 본다).
 
 ### 2026-09-19 (컴팩트 스트림의 경계 검사가 두 벌이었고, 어느 쪽도 테스트가 없었다)
 

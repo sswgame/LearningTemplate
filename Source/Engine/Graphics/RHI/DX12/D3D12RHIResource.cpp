@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourceRecipe.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -24,19 +25,10 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
     {
-        const UINT            alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
-        D3D12_HEAP_PROPERTIES heapProps{};
-        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-        D3D12_RESOURCE_DESC resDesc{};
-        resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resDesc.Width            = static_cast<UINT64>( alignedSize ) * constant::kMaxFrameCountInFlight;
-        resDesc.Height           = 1;
-        resDesc.DepthOrArraySize = 1;
-        resDesc.MipLevels        = 1;
-        resDesc.Format           = DXGI_FORMAT_UNKNOWN;
-        resDesc.SampleDesc.Count = 1;
-        resDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        const UINT                  alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
+        const D3D12_HEAP_PROPERTIES heapProps   = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resDesc     = D3D12RHIResourceRecipe::bufferDesc(
+            static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
@@ -79,22 +71,10 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
-        UINT                  alignedSize = elementSize * elementCount;
-        D3D12_HEAP_PROPERTIES heapProps{};
-        heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-        heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-        D3D12_RESOURCE_DESC resDesc{};
-        resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resDesc.Width            = alignedSize;
-        resDesc.Height           = 1;
-        resDesc.DepthOrArraySize = 1;
-        resDesc.MipLevels        = 1;
-        resDesc.Format           = DXGI_FORMAT_UNKNOWN;
-        resDesc.SampleDesc.Count = 1;
-        resDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        // 64비트로 곱한다 — 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
+        const uint64                totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+        const D3D12_HEAP_PROPERTIES heapProps  = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
+        const D3D12_RESOURCE_DESC   resDesc    = D3D12RHIResourceRecipe::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
@@ -223,18 +203,8 @@ namespace sw
                 stagingOffset      = 0;
             }
 
-            D3D12_HEAP_PROPERTIES uploadHeap{};
-            uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-            D3D12_RESOURCE_DESC uploadDesc{};
-            uploadDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-            uploadDesc.Width            = newCapacity;
-            uploadDesc.Height           = 1;
-            uploadDesc.DepthOrArraySize = 1;
-            uploadDesc.MipLevels        = 1;
-            uploadDesc.Format           = DXGI_FORMAT_UNKNOWN;
-            uploadDesc.SampleDesc.Count = 1;
-            uploadDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            const D3D12_HEAP_PROPERTIES uploadHeap = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+            const D3D12_RESOURCE_DESC   uploadDesc = D3D12RHIResourceRecipe::bufferDesc( newCapacity );
 
             Microsoft::WRL::ComPtr<ID3D12Resource> newHeap;
             if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
@@ -454,17 +424,8 @@ namespace sw
         UINT64                             totalBytes{ 0 };
         _pDevice->_device->GetCopyableFootprints( &resDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
 
-        D3D12_HEAP_PROPERTIES readbackHeap{};
-        readbackHeap.Type = D3D12_HEAP_TYPE_READBACK;
-        D3D12_RESOURCE_DESC bufferDesc{};
-        bufferDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width            = totalBytes;
-        bufferDesc.Height           = 1;
-        bufferDesc.DepthOrArraySize = 1;
-        bufferDesc.MipLevels        = 1;
-        bufferDesc.Format           = DXGI_FORMAT_UNKNOWN;
-        bufferDesc.SampleDesc.Count = 1;
-        bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourceRecipe::bufferDesc( totalBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
                                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
@@ -532,18 +493,8 @@ namespace sw
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        D3D12_HEAP_PROPERTIES heapProps{};
-        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-        D3D12_RESOURCE_DESC resDesc{};
-        resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resDesc.Width            = sizeBytes;
-        resDesc.Height           = 1;
-        resDesc.DepthOrArraySize = 1;
-        resDesc.MipLevels        = 1;
-        resDesc.Format           = DXGI_FORMAT_UNKNOWN;
-        resDesc.SampleDesc.Count = 1;
-        resDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourceRecipe::bufferDesc( sizeBytes );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )

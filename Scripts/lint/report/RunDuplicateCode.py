@@ -32,6 +32,16 @@
     `Base::` 를 부르는 기계적 전달. 매크로로 접으면 읽기만 나빠진다.
   - **플랫폼 구현**: 같은 함수의 Windows/POSIX 판은 이름과 뼈대가 닮지만 본체가 다르다. 다만 **가드나
     정책이 양쪽에 복사돼 있으면** 그것은 합칠 값이 있다(크래시 경로의 `try_lock` 이 그랬다).
+  - **enum 레이블 나열**: 같은 열거형을 `switch` 하는 두 함수는 `case` 줄이 통째로 같아 보인다.
+    `-Wswitch-default` 때문에 `default:` 도 양쪽에 있다. **본체가 다르면 중복이 아니다**
+    (`MaterialPacking` 의 두 switch 가 매번 올라온다).
+  - **서비스 로케이터 둘**: `sw::editor::getService` 와 `sw::game::getService` 는 열두 줄이 닮았지만
+    **서로 다른 DLL 의 서로 다른 레지스트리**다(`SW_GAMESERVICE_API` 가 그 경계다). 합치려면 내부
+    함수를 주입해야 하고 그러면 경계가 흐려진다. 미발견 처리도 의도적으로 다르다 — 에디터는
+    문서대로 `nullptr` 을 돌려주고(그래서 `CheckNullableServiceUse` 가 있다), 게임 쪽은 Debug 에서
+    `SW_ASSERT` 로 죽는다.
+  - **같은 컨테이너 래퍼의 미세한 차이**: `VectorWrapper`↔`DequeWrapper` 는 `reserve` 유무만 다르고
+    `unordered_map.h`↔`unordered_set.h` 는 레이스 래퍼 전달이다. 둘 다 접으면 읽기만 나빠진다.
 
 즉 **"백엔드마다 정말로 다른 일을 하는가" 를 먼저 묻고** 시작한다. 답이 "그렇다" 면 넘긴다.
 

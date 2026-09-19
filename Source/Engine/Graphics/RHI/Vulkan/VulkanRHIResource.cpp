@@ -101,6 +101,28 @@ namespace sw
             VkQueue         _queue;
             VkCommandBuffer _commandBuffer;
         };
+
+        /**
+         * @brief 2D 색 이미지의 **전체 밉 체인** 배리어 뼈대입니다. 레이아웃과 접근 마스크만 채우면 됩니다.
+         * @details `transitionImageLayout` 은 밉 하나만 다루므로 업로드·리드백은 전체 밉 배리어를
+         *          직접 쓴다. 그 뼈대 열 줄이 두 곳에 복사돼 있었다 — `aspectMask` 나 `layerCount` 를
+         *          빠뜨린 새 배리어는 검증 계층이 잡아 주지만, **잡히는 곳이 배리어를 건 자리가 아니라
+         *          그 뒤의 전이**라 읽기 나쁘다. 고정값은 한 곳에 둔다.
+         */
+        VkImageMemoryBarrier makeWholeImageBarrier( VkImage image, uint32 mipLevels )
+        {
+            VkImageMemoryBarrier barrier{};
+            barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image                           = image;
+            barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.baseMipLevel   = 0;
+            barrier.subresourceRange.levelCount     = mipLevels;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount     = 1;
+            return barrier;
+        }
     } // namespace
 
     RHIBufferHandle VulkanRHIResource::createConstantBuffer( uint32 size )
@@ -582,16 +604,7 @@ namespace sw
         const VkCommandBuffer cmd = oneShot.get();
 
         // transitionImageLayout 은 밉 하나만 다루므로 여기서는 전체 밉 체인 배리어를 직접 쓴다.
-        VkImageMemoryBarrier barrier{};
-        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image                           = pRecord->_image;
-        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = pRecord->_mipLevels;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount     = 1;
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels );
 
         barrier.oldLayout     = static_cast<VkImageLayout>( pRecord->_layout );
         barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -683,20 +696,11 @@ namespace sw
         }
         const VkCommandBuffer cmd = oneShot.get();
 
-        VkImageMemoryBarrier barrier{};
-        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image                           = pRecord->_image;
-        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = pRecord->_mipLevels;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount     = 1;
-        barrier.oldLayout                       = static_cast<VkImageLayout>( pRecord->_layout );
-        barrier.newLayout                       = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask                   = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
-        barrier.dstAccessMask                   = VK_ACCESS_TRANSFER_READ_BIT;
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels );
+        barrier.oldLayout            = static_cast<VkImageLayout>( pRecord->_layout );
+        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_READ_BIT;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
         VkBufferImageCopy region{};
