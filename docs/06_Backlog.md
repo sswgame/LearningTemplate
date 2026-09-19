@@ -435,6 +435,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (TaskManager 테스트 파일이 없었다 — 10 케이스로 채웠다)
+
+`Test/CoreTest` 에 **TaskManager 전용 케이스가 하나도 없었다.** 1,355 줄짜리 동시성 핵심인데
+`EngineTest` 의 다른 주제(AssetStreaming · Audio · GpuScene)를 통해 간접적으로만 돌고 있었다 —
+그 테스트들은 스케줄러가 아니라 **자기 주제**를 보므로, 스케줄러 자체의 결함은 지나간다.
+실제로 `scheduleReadyTask` 의 `notify_one` 결함이 그렇게 지나갔다.
+
+`TestTaskManager.cpp` 에 **스케줄러가 지켜야 하는 약속**만 10 개 담았다:
+
+| 케이스 | 무엇을 못박는가 |
+|--------|----------------|
+| `SubmittedTaskRunsBeforeWaitAllReturns` | 낸 일은 반드시 돌고 `waitAll` 이 그것을 보장한다 |
+| `PrecedeKeepsTheDependencyOrder` | 후속은 선행이 **끝난 뒤에만** 돈다 |
+| `ParallelCoversEveryIndexExactlyOnce` | 분할이 빠뜨리지도 겹치지도 않는다 |
+| `ParallelBlockCoversTheWholeRangeExactlyOnce` | `[start, end)` 경계를 하나 더/덜 세지 않는다 |
+| `WaitStageReturnsOnlyAfterEveryStageTaskIsDone` | 스테이지 대기가 끝을 보장한다 |
+| `MainThreadTaskRunsOnlyOnTheMainThread` | 워커가 집어가지 않고, dispatch 로만, 메인에서 돈다 |
+| `CancelledTaskDoesNotRunAndStillCompletes` | 취소한 일은 안 돌지만 카운터는 맞는다 |
+| `WhenAllRunsOnceAfterEveryDependency` | 합류가 **한 번만**, 전부 끝난 뒤에 |
+| `NestedWaitInsideATaskDoesNotStall` | 태스크 안의 대기가 work-helping 으로 풀린다 |
+| `ConcurrentSubmitLosesNothing` | 4 스레드 × 500 제출에서 하나도 잃지 않는다 |
+
+**무는지 확인했다.** 병렬 분할이 마지막 인덱스를 빠뜨리게 만들면 덮기 검사가
+`Expected [0], Actual [1]` 로 지고, 메인 스레드 친화도를 무시하게 만들면 "워커가 집어갔다" 와
+"메인이 아니다" 둘 다 진다.
+
+> **함정 하나를 밟았다.** 처음에는 덮기 표를 `sw::vector` 로 두고 워커 안에서 `listHit[index]`
+> 로 만졌는데 `exit 3` 으로 죽었다 — `vector::operator[]` 에 **레이스 탐지기**가 붙어 있어서
+> 여러 워커가 동시에 들어오면 그것이 먼저 운다(원소가 원자라 진짜 레이스는 없다).
+> `measure-in-release-not-debug` 메모에 *"워커에 sw::vector 인덱싱 금지"* 로 이미 적혀 있던
+> 것이다. 시작 전에 `data()` 로 주소만 받아 두는 것으로 풀었다.
+
+**모든 대기에 타임아웃을 건다.** 스케줄러가 멈추는 결함이 회귀하면 이 바이너리가 CTest
+타임아웃(30초)까지 붙잡히는 대신 그 자리에서 진다.
+
 ### 2026-09-20 (Core 전체를 네 가지 모양으로 훑어 vector 에서 둘을 더 찾았다)
 
 Core 를 함수 단위로 다 읽은 뒤, **이번 훑기가 되풀이해 만난 네 모양**을 Core 전체에 기계적으로
