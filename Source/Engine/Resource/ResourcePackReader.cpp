@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/array.h"
@@ -321,7 +322,8 @@ namespace sw
 
         auto* pFile = static_cast<FILE*>( _pFileHandle );
 
-        if ( validateHeaderGeometry() == false )
+        uint64 fileSize{ 0 };
+        if ( validateHeaderGeometry( fileSize ) == false )
             return false;
 
         // 스트링 풀 로드 (포함된 경우)
@@ -358,6 +360,13 @@ namespace sw
 
         for ( const auto& diskEntry : listDiskEntry )
         {
+            // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 가 헤더의 구역(인덱스 ·
+            // 스트링 풀)을 재면서 **항목은 재지 않고 있었다** — 그런데 `readFile` 은 항목이 적어 둔
+            // 크기를 그대로 `resize` 에 넣는다. 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
+            // 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
+            if ( validateFileEntry( diskEntry, fileSize ) == false )
+                return false;
+
             PackFileEntry memEntry{};
             memEntry._pathHash         = diskEntry._pathHash;
             memEntry._dataOffset       = diskEntry._dataOffset;
@@ -383,8 +392,9 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::validateHeaderGeometry() const
+    bool ResourcePackReader::validateHeaderGeometry( uint64& outFileSize ) const
     {
+        outFileSize          = 0;
         const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( static_cast<FILE*>( _pFileHandle ) );
         if ( fileSize <= 0 )
         {
@@ -392,6 +402,7 @@ namespace sw
             return false;
         }
         const uint64 sizeBytes = static_cast<uint64>( fileSize );
+        outFileSize            = sizeBytes;
 
         // 헤더가 인덱스 크기를 **두 번** 말한다 — `_indexSize` 로 한 번, `_fileCount` 로 한 번.
         // 리더는 예전에 뒤엣것만 쓰고 앞엣것은 읽지도 않았다. 둘이 어긋난 팩은 리더와 쿠커가
@@ -418,6 +429,38 @@ namespace sw
         {
             SW_LOG_ERROR( "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
                           _packFilePath, _header._stringPoolOffset, _header._stringPoolSize, sizeBytes );
+            return false;
+        }
+
+        return true;
+    }
+
+    bool ResourcePackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
+    {
+        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 잰다** — `offset + size` 는 넘칠 수 있다.
+        if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
+        {
+            SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
+                          _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, fileSize );
+            return false;
+        }
+
+        // 비압축 팩은 `_uncompressedSize` 만큼을 **파일에서 그대로 읽는다** — 그것도 안에 있어야 한다.
+        if ( static_cast<PackCompressionType>( _header._compressionType ) == PackCompressionType::None &&
+             diskEntry._uncompressedSize > fileSize - diskEntry._dataOffset )
+        {
+            SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
+                          _packFilePath, diskEntry._dataOffset, diskEntry._uncompressedSize, fileSize );
+            return false;
+        }
+
+        // 압축 항목의 원본 크기는 파일 크기로 묶이지 않는다(그것이 압축의 요점이다). 상한은
+        // `CompressionStream` 이 같은 이유로 이미 정해 둔 것을 쓴다 — "이 컨테이너가 다루는
+        // 가장 큰 조각" 의 답이 두 개일 이유가 없다.
+        if ( static_cast<uint64>( diskEntry._uncompressedSize ) > CompressionStream::kMaxUncompressedSize )
+        {
+            SW_LOG_ERROR( "Pack entry claims an uncompressed size of %# bytes in %# — beyond what this container carries.",
+                          diskEntry._uncompressedSize, _packFilePath );
             return false;
         }
 

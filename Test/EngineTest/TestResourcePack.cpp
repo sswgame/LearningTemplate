@@ -213,6 +213,42 @@ namespace sw
             return true;
         }
 
+        /** @brief 팩의 FAT 항목 하나를 읽습니다. 헤더가 적어 둔 인덱스 오프셋을 씁니다. */
+        bool readPackEntryFromDisk( const string& packPath, uint32 entryIndex, PackFileEntryOnDisk& outEntry )
+        {
+            PackHeader header{};
+            if ( readPackHeaderFromDisk( packPath, header ) == false || entryIndex >= header._fileCount )
+                return false;
+
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false )
+                return false;
+
+            const size_t at = static_cast<size_t>( header._indexOffset ) + entryIndex * sizeof( PackFileEntryOnDisk );
+            if ( at + sizeof( PackFileEntryOnDisk ) > bytes.size() )
+                return false;
+            Memory::copy( &outEntry, bytes.data() + at, sizeof( PackFileEntryOnDisk ) );
+            return true;
+        }
+
+        /** @brief 팩의 FAT 항목 하나를 덮어씁니다. */
+        bool writePackEntryToDisk( const string& packPath, uint32 entryIndex, const PackFileEntryOnDisk& entry )
+        {
+            PackHeader header{};
+            if ( readPackHeaderFromDisk( packPath, header ) == false || entryIndex >= header._fileCount )
+                return false;
+
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false )
+                return false;
+
+            const size_t at = static_cast<size_t>( header._indexOffset ) + entryIndex * sizeof( PackFileEntryOnDisk );
+            if ( at + sizeof( PackFileEntryOnDisk ) > bytes.size() )
+                return false;
+            Memory::copy( bytes.data() + at, &entry, sizeof( PackFileEntryOnDisk ) );
+            return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
+        }
+
         bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
         {
             vector<uint8> bytes;
@@ -831,4 +867,69 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
     SW_ASSERT_TRUE( reader.getFileEntry( "data/items.json", entry ) );
     // 풀 전체가 이 한 문자열이고 종결자가 없다 — 풀 길이만큼만 읽고 멈춰야 한다.
     SW_EXPECT_EQUAL( sw::string( "data/items.jsonX" ), entry._debugRelativePath );
+}
+
+/**
+ * @brief [ResourcePackTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
+ * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)이 파일 안에 있는지
+ *          재는데, **항목은 재지 않았다.** 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로
+ *          `resize` 에 넣는다 — `_uncompressedSize` 는 `uint32` 이므로 손상된 32바이트 항목
+ *          하나가 **4GB 할당 요청**이 된다. 같은 파일 안에서 형제가 갈려 있었던 셈이다.
+ *
+ *          항목을 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다 — 그래서 검사는 여는
+ *          시점에 있고, 이 케이스도 `open()` 이 거부하는지를 본다.
+ */
+SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_corrupt_entry.pack" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
+    {
+        sw::FileUtil::removeFile( packPath );
+    } ) );
+
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
+        {"data/items.json", "{\"sword\": 1}"},
+        { "maps/title.xml",       "<Scene/>"},
+    };
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+
+    // 멀쩡한 상태에서는 열리고 읽힌다 — 아래 거부가 손상 때문임을 못 박는다.
+    {
+        sw::ResourcePackReader reader;
+        SW_ASSERT_TRUE( reader.open( packPath ) );
+        sw::vector<uint8> bytes;
+        SW_EXPECT_TRUE( reader.readFile( sw::string_view{ "data/items.json" }, bytes ) );
+    }
+
+    sw::PackFileEntryOnDisk original{};
+    SW_ASSERT_TRUE( sw::readPackEntryFromDisk( packPath, 0, original ) );
+
+    // 1) 항목이 파일 끝을 한참 넘는 크기를 적어 두었다.
+    {
+        sw::PackFileEntryOnDisk corrupted = original;
+        corrupted._compressedSize         = 0xFFFFFFFFu;
+        corrupted._uncompressedSize       = 0xFFFFFFFFu;
+        SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, corrupted ) );
+
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePackReader    reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+        SW_EXPECT_FALSE( reader.isOpen() );
+    }
+
+    // 2) 오프셋이 파일 밖을 가리킨다.
+    {
+        sw::PackFileEntryOnDisk corrupted = original;
+        corrupted._dataOffset             = 1ull << 40;
+        SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, corrupted ) );
+
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePackReader    reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
+
+    // 원래대로 돌려 두면 다시 열린다.
+    SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, original ) );
+    sw::ResourcePackReader reader;
+    SW_EXPECT_TRUE( reader.open( packPath ) );
 }

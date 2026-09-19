@@ -82,8 +82,11 @@ namespace sw
          * @details 헤더의 수는 파일에서 온 값이다 — 그것을 그대로 믿고 `resize` 하면 손상된 팩
          *          하나가 거대한 할당 요청이 된다. `_indexSize` 와 `_fileCount` 가 같은 것을
          *          두 번 말하는 것도 여기서 맞춰 본다.
+         * @param outFileSize 실제 파일 크기입니다. 항목 검사(`validateFileEntry`)가 같은 값을 씁니다.
          */
-        bool validateHeaderGeometry() const;
+        bool validateHeaderGeometry( uint64& outFileSize ) const;
+        /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
+        bool validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
         bool loadIndexTable();
         bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;
 

@@ -435,6 +435,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (팩 헤더는 쟀는데 FAT 항목은 재지 않았다)
+
+`ResourcePackReader::validateHeaderGeometry` 는 헤더가 말하는 구역(인덱스 표 · 스트링 풀)이
+실제 파일 안에 있는지 재고, 그 주석은 이유까지 적어 두었다 — *"예전에는 헤더의 수를 그대로 믿고
+`resize` 했다 — 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있었다"*.
+
+**그 검사가 FAT 항목에는 적용되지 않았다.** 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로
+쓴다:
+
+```cpp
+outBytes.resize( entry._uncompressedSize );      // FAT 에서 온 값. 검사 없음
+compressedBytes.resize( entry._compressedSize ); // 마찬가지
+```
+
+`_compressedSize` · `_uncompressedSize` 는 `uint32` 라 최악이 4GB 다 — 손상된 **32바이트 항목
+하나**가 4GB 할당 요청이 된다. 같은 파일 안에서 형제가 갈려 있었던 셈이고, 고친 쪽이 이유를
+적어 두었는데도 옮겨지지 않았다(이번 훑기에서 되풀이된 모양이다).
+
+항목 검사는 **여는 시점**에 한 번 한다(`validateFileEntry`) — 그러면 `readFile` 은 그 값을
+믿어도 된다. 페이로드가 파일 안에 있는지는 **뺄셈으로** 재고(`offset + size` 는 넘칠 수 있다),
+압축 항목의 원본 크기는 파일로 묶이지 않으므로 `CompressionStream::kMaxUncompressedSize` 를
+쓴다 — "이 컨테이너가 다루는 가장 큰 조각" 의 답이 두 개일 이유가 없다.
+
+**검증.** `ResourcePackTest.CorruptEntrySizeIsRejected` — 멀쩡한 팩을 만들고 FAT 항목 하나의
+크기·오프셋만 망가뜨린 뒤 `open()` 이 거부하는지, 되돌리면 다시 열리는지 본다. 검사를 빼면
+`open()` 이 성공해 버려 진다.
+
 ### 2026-09-20 (부모 체인을 거는 세 곳이 전부 순환에서 멈추지 않았다)
 
 `TypeInfo` 의 부모 체인(`_parentFQN`)을 거는 곳이 셋 있는데 **셋 다** 순환을 대비하지 않았다:
