@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file TaskFuture.h
  * @brief C++17 호환 Fluent 비동기 TaskFuture<T> 및 TaskPromise<T> 파이프라인
  */
@@ -17,20 +17,109 @@ namespace sw
 
     namespace internal
     {
-        template <typename T>
-        struct SharedFutureState
+        /**
+         * @struct SharedFutureSignal
+         * @brief future 의 **완료 신호** — 값 타입과 무관한 부분 전부입니다.
+         *
+         * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 는 서로 다른 특수화라
+         *          **같은 코드를 두 벌 갖고 있었다** — 뮤텍스·조건 변수·`_bReady`·`wait`·`waitFor`,
+         *          그리고 "락 안에서 표시하고, 알림과 이어받기 호출은 락 밖에서" 라는 **순서 규약**까지.
+         *          그 규약은 틀리기 쉬운 쪽이다: 이어받기가 다시 이 future 를 건드릴 수 있어 락 밖에서
+         *          불러야 하고, 옮긴 델리게이트를 되살려 읽어서도 안 된다. 실제로 그 자리에서
+         *          use-after-move 를 한 번 고쳤고, 그때 **두 벌을 따로 고쳐야 했다.**
+         *
+         *          여기 한 벌만 둔다. 값을 어디에 어떻게 저장할지는 특수화가 람다로 준다.
+         */
+        struct SharedFutureSignal
         {
-            mutable mutex                                     _mutex;
-            mutable std::condition_variable_any               _cv;
-            atomic<bool>                                      _bReady{ false };
+            mutable mutex                       _mutex;
+            mutable std::condition_variable_any _cv;
+            atomic<bool>                        _bReady{ false };
+
+            SharedFutureSignal()
+                : _mutex{}
+                , _cv{}
+                , _bReady{ false }
+            {
+            }
+
+            /** @brief 완료될 때까지 기다립니다. */
+            void wait() const
+            {
+                if ( _bReady.load( std::memory_order_acquire ) )
+                    return;
+
+                std::unique_lock<mutex> lock{ _mutex };
+                _cv.wait( lock, [this]()
+                {
+                    return _bReady.load( std::memory_order_acquire );
+                } );
+            }
+
+            /** @brief 제한 시간까지 기다립니다. 완료됐으면 true 입니다. */
+            bool waitFor( uint32 timeoutMs ) const
+            {
+                if ( _bReady.load( std::memory_order_acquire ) )
+                    return true;
+
+                std::unique_lock<mutex> lock{ _mutex };
+                return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
+                {
+                    return _bReady.load( std::memory_order_acquire );
+                } );
+            }
+
+            /**
+             * @brief 완료로 표시하고 **보관된 이어받기를 돌려줍니다.** 이미 끝났으면 빈 것을 돌려줍니다.
+             * @param storage    보관 중인 이어받기 델리게이트.
+             * @param storeValue 값을 저장하는 일 — **락 안에서** 부릅니다(타입마다 하는 일이 다릅니다).
+             * @details 돌려받은 이어받기는 **호출부가 락 밖에서** 부른다. 락 안에서 부르면 그 콜백이
+             *          다시 이 future 를 건드릴 때 잠긴다. 알림은 값이 보이게 된 뒤에 한 번만 보낸다.
+             */
+            template <typename TDelegate, typename FStoreValue>
+            TDelegate markReadyAndTakeContinuation( TDelegate& storage, FStoreValue&& storeValue )
+            {
+                TDelegate continuation;
+                {
+                    std::scoped_lock<mutex> lock{ _mutex };
+                    if ( _bReady.load( std::memory_order_relaxed ) )
+                        return TDelegate{};
+
+                    storeValue();
+                    _bReady.store( true, std::memory_order_release );
+                    continuation = std::move( storage );
+                }
+                _cv.notify_all();
+                return continuation;
+            }
+
+            /**
+             * @brief 이어받기를 **보관하거나**, 이미 끝났으면 그대로 돌려줍니다.
+             * @details 돌려받았으면 호출부가 **락 밖에서** 부른다. 갈 곳을 하나씩만 정하므로 옮긴 값을
+             *          되살려 읽는 자리가 없다 — 예전에는 bool 플래그와 `std::move` 가 서로를 배제한다는
+             *          사실에 기대고 있어서, 읽는 사람도 분석기도 use-after-move 로 볼 수밖에 없었다.
+             */
+            template <typename TDelegate>
+            TDelegate takeImmediateOrStore( TDelegate continuation, TDelegate& outStorage )
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                if ( _bReady.load( std::memory_order_acquire ) )
+                    return continuation;
+
+                outStorage = std::move( continuation );
+                return TDelegate{};
+            }
+        };
+
+        template <typename T>
+        struct SharedFutureState : SharedFutureSignal
+        {
             atomic<bool>                                      _bHasValue{ false };
             std::aligned_storage_t<sizeof( T ), alignof( T )> _storage;
             Delegate<void( const T& )>                        _continuation;
 
             SharedFutureState()
-                : _mutex{}
-                , _cv{}
-                , _bReady{ false }
+                : SharedFutureSignal{}
                 , _bHasValue{ false }
                 , _storage{}
                 , _continuation{}
@@ -42,6 +131,7 @@ namespace sw
                 reset();
             }
 
+            /** @brief 보관한 값을 파괴하고 미완료 상태로 되돌립니다. */
             void reset()
             {
                 if ( _bHasValue.load( std::memory_order_acquire ) )
@@ -52,166 +142,75 @@ namespace sw
                 _bReady.store( false, std::memory_order_release );
             }
 
+            /** @brief 값을 복사해 넣고 완료로 표시합니다. */
             void setValue( const T& value )
             {
-                Delegate<void( const T& )> cont;
+                Delegate<void( const T& )> continuation = markReadyAndTakeContinuation( _continuation, [&]()
                 {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_relaxed ) )
-                        return;
-
                     new ( &_storage ) T( value );
                     _bHasValue.store( true, std::memory_order_release );
-                    _bReady.store( true, std::memory_order_release );
-                    cont = std::move( _continuation );
-                }
-                _cv.notify_all();
-                if ( cont.isBound() )
-                    cont( *reinterpret_cast<const T*>( &_storage ) );
+                } );
+                if ( continuation.isBound() )
+                    continuation( *reinterpret_cast<const T*>( &_storage ) );
             }
 
+            /** @brief 값을 옮겨 넣고 완료로 표시합니다. */
             void setValue( T&& value )
             {
-                Delegate<void( const T& )> cont;
+                Delegate<void( const T& )> continuation = markReadyAndTakeContinuation( _continuation, [&]()
                 {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_relaxed ) )
-                        return;
-
                     new ( &_storage ) T( std::move( value ) );
                     _bHasValue.store( true, std::memory_order_release );
-                    _bReady.store( true, std::memory_order_release );
-                    cont = std::move( _continuation );
-                }
-                _cv.notify_all();
-                if ( cont.isBound() )
-                    cont( *reinterpret_cast<const T*>( &_storage ) );
+                } );
+                if ( continuation.isBound() )
+                    continuation( *reinterpret_cast<const T*>( &_storage ) );
             }
 
+            /** @brief 완료를 기다린 뒤 값을 돌려줍니다. */
             const T& get() const
             {
                 wait();
                 return *reinterpret_cast<const T*>( &_storage );
             }
 
-            void wait() const
+            /** @brief 완료 뒤에 부를 이어받기를 겁니다. 이미 끝났으면 지금 부릅니다. */
+            void setContinuation( Delegate<void( const T& )> continuation )
             {
-                if ( _bReady.load( std::memory_order_acquire ) )
-                    return;
-
-                std::unique_lock<mutex> lock{ _mutex };
-                _cv.wait( lock, [this]()
-                {
-                    return _bReady.load( std::memory_order_acquire );
-                } );
-            }
-
-            bool waitFor( uint32 timeoutMs ) const
-            {
-                if ( _bReady.load( std::memory_order_acquire ) )
-                    return true;
-
-                std::unique_lock<mutex> lock{ _mutex };
-                return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
-                {
-                    return _bReady.load( std::memory_order_acquire );
-                } );
-            }
-
-            void setContinuation( Delegate<void( const T& )> cont )
-            {
-                // 이미 끝났으면 지금 부르고, 아니면 보관한다. **락 밖에서 부른다** — 콜백이 다시
-                // 이 future 를 건드릴 수 있다. 갈 곳을 하나씩만 정해 옮긴 값을 되살려 읽지 않는다
-                // (`void` 특수화는 이미 이 모양인데 여기만 bool 플래그와 `std::move` 가 서로를
-                // 배제한다는 사실에 기대고 있었다 — 그래서 use-after-move 억제 주석이 붙어 있었다).
-                Delegate<void( const T& )> immediate;
-                {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_acquire ) )
-                        immediate = std::move( cont );
-                    else
-                        _continuation = std::move( cont );
-                }
+                Delegate<void( const T& )> immediate = takeImmediateOrStore( std::move( continuation ), _continuation );
                 if ( immediate.isBound() )
                     immediate( *reinterpret_cast<const T*>( &_storage ) );
             }
         };
 
         template <>
-        struct SharedFutureState<void>
+        struct SharedFutureState<void> : SharedFutureSignal
         {
-            mutable mutex                       _mutex;
-            mutable std::condition_variable_any _cv;
-            atomic<bool>                        _bReady{ false };
-            Delegate<void()>                    _continuation;
+            Delegate<void()> _continuation;
 
             SharedFutureState()
-                : _mutex{}
-                , _cv{}
-                , _bReady{ false }
+                : SharedFutureSignal{}
                 , _continuation{}
             {
             }
 
+            /** @brief 완료로 표시합니다 (보관할 값이 없습니다). */
             void setValue()
             {
-                Delegate<void()> cont;
-                {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_relaxed ) )
-                        return;
-
-                    _bReady.store( true, std::memory_order_release );
-                    cont = std::move( _continuation );
-                }
-                _cv.notify_all();
-                if ( cont.isBound() )
-                    cont();
+                Delegate<void()> continuation = markReadyAndTakeContinuation( _continuation, []() {} );
+                if ( continuation.isBound() )
+                    continuation();
             }
 
+            /** @brief 완료를 기다립니다 (돌려줄 값이 없습니다). */
             void get() const
             {
                 wait();
             }
 
-            void wait() const
+            /** @brief 완료 뒤에 부를 이어받기를 겁니다. 이미 끝났으면 지금 부릅니다. */
+            void setContinuation( Delegate<void()> continuation )
             {
-                if ( _bReady.load( std::memory_order_acquire ) )
-                    return;
-
-                std::unique_lock<mutex> lock{ _mutex };
-                _cv.wait( lock, [this]()
-                {
-                    return _bReady.load( std::memory_order_acquire );
-                } );
-            }
-
-            bool waitFor( uint32 timeoutMs ) const
-            {
-                if ( _bReady.load( std::memory_order_acquire ) )
-                    return true;
-
-                std::unique_lock<mutex> lock{ _mutex };
-                return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
-                {
-                    return _bReady.load( std::memory_order_acquire );
-                } );
-            }
-
-            void setContinuation( Delegate<void()> cont )
-            {
-                // 이미 끝났으면 지금 부르고, 아니면 보관한다. **락 밖에서 부른다** — 콜백이 다시
-                // 이 future 를 건드릴 수 있다. 옮긴 값을 조건으로 되살려 쓰지 않도록 갈 곳을
-                // 하나씩만 정한다(예전에는 bool 플래그와 std::move 가 서로를 배제한다는 사실에
-                // 기대고 있어서, 읽는 사람도 분석기도 use-after-move 로 볼 수밖에 없었다).
-                Delegate<void()> immediate;
-                {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_acquire ) )
-                        immediate = std::move( cont );
-                    else
-                        _continuation = std::move( cont );
-                }
+                Delegate<void()> immediate = takeImmediateOrStore( std::move( continuation ), _continuation );
                 if ( immediate.isBound() )
                     immediate();
             }

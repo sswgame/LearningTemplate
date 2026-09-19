@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `e77d7340`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `ad462035`
 
 ---
 
@@ -434,6 +434,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (future 의 잠금 규약이 두 벌이었다 — `SharedFutureSignal` 하나로)
+
+앞 항목의 결함이 **두 특수화를 따로 고쳐야 했던** 것이 이유다. `SharedFutureState<T>` 와
+`SharedFutureState<void>` 는 뮤텍스·조건 변수·`_bReady`·`wait`·`waitFor` 를 각자 갖고 있었고,
+무엇보다 **순서 규약**을 각자 적고 있었다 — "락 안에서 완료로 표시하고, 알림과 이어받기 호출은
+락 밖에서".
+
+그 규약은 틀리기 쉬운 쪽이다. 이어받기가 **다시 이 future 를 건드릴 수 있어** 락 밖에서 불러야
+하고, 옮긴 델리게이트를 조건으로 되살려 읽어서도 안 된다. 실제로 그 자리에서 use-after-move 를
+한 번 고쳤는데, **그때도 두 벌을 따로 고쳤다.**
+
+`SharedFutureSignal` 하나에 모았다. 값 저장은 특수화가 람다로 준다:
+
+- `markReadyAndTakeContinuation( storage, storeValue )` — 락 안에서 표시하고 보관된 이어받기를
+  **돌려준다**(호출부가 락 밖에서 부른다). `setValue` 세 벌(const&, &&, void)이 이것 하나를 쓴다.
+- `takeImmediateOrStore( cont, outStorage )` — 이미 끝났으면 그대로 돌려주고 아니면 보관한다.
+  **갈 곳이 하나씩만 정해지므로** 옮긴 값을 되살려 읽는 자리가 없다.
+
+동작은 바뀌지 않는다 — 기존 테스트가 그것을 지킨다. **두 경로가 실제로 태워지는지도 변이로
+확인했다**: `takeImmediateOrStore` 의 "이미 끝났으면 즉시" 갈래를 없애면
+`CombinatorsDoNotHangOnInvalidOrEmptyInput` 이 2초 타임아웃과 함께 실패한다.
+`Core/Task` 의 12줄 이상 중복은 이제 **0건**이다.
+
+**검증.** Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 · 린트 17/17 ·
+`TaskTest` 19/19.
 
 ### 2026-09-19 (무효한 future 에 `then` 을 걸면 영원히 기다리는 future 가 나왔다)
 
