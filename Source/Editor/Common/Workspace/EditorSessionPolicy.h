@@ -57,6 +57,21 @@ namespace sw::editor
         /** @brief Isolation은 활성 씬을 유지하므로 dirty 씬에서도 들어갈 수 있습니다. */
         static bool requiresCleanSceneForPrefabIsolation() { return false; }
         /**
+         * @brief 컨테이너 **원소를 제자리에서 편집해도 되는가** — 둘 다 허락해야 합니다.
+         * @param bReadOnly                 프로퍼티가 `ReadOnly` 로 표시돼 있는가.
+         * @param bAllowsInPlaceElementWrite 컨테이너가 제자리 쓰기를 허용하는가
+         *                                  (`ISequenceContainerWrapper::allowsInPlaceElementWrite`).
+         * @details 인스펙터는 두 질문을 **따로** 물어 각각 다른 것을 막고 있었다 — `ReadOnly` 는
+         *          `+ Add`·`Clear` 버튼만 감췄고, **원소 위젯은 그대로 편집 가능**했다. 즉 컨테이너
+         *          프로퍼티에서는 `ReadOnly` 가 조용히 무시되고 있었다. 연관 컨테이너에서는 그것이
+         *          더 나쁘다 — 원소가 곧 정렬 키라 제자리 편집이 **트리를 깨뜨린다.**
+         *          두 조건을 여기 한 자리에 모아 테스트가 지키게 한다.
+         */
+        static bool areContainerElementEditsAllowed( bool bReadOnly, bool bAllowsInPlaceElementWrite )
+        {
+            return bReadOnly == false && bAllowsInPlaceElementWrite == true;
+        }
+        /**
          * @brief 노드가 움직였는가 — **어느 한 축이라도** 달라지면 움직인 것입니다.
          * @details 그래프 패널 둘이 이 판단을 각자 적고 있었고 **연산자가 서로 달랐다**:
          *          애니메이션은 `||`, 대화는 `&&` 였다. `&&` 쪽에서는 노드를 **정확히 수평으로만**

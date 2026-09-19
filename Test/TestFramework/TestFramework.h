@@ -260,6 +260,21 @@ namespace test
         }                                                                                       \
     } while ( 0 )
 
+/**
+ * @brief 조건이 거짓이어야 하며, 실패 시 메시지를 함께 기록합니다.
+ * @details 이것이 없어서 부정 단언에는 메시지를 붙일 수 없었다 — 저자는 메시지를 버리거나
+ *          `SW_EXPECT_TRUE_MSG( x == false, ... )` 로 뒤집어 썼다. **실패했을 때 가장 설명이
+ *          필요한 쪽이 부정 단언**이다(무엇이 열려 있으면 안 되는지). 그래서 짝을 맞춘다.
+ */
+#define SW_EXPECT_FALSE_MSG( cond, msg )                                                             \
+    do                                                                                               \
+    {                                                                                                \
+        if ( ( cond ) )                                                                              \
+        {                                                                                            \
+            test::TestRegistry::getInstance().addFailure( "!(" #cond ")", __FILE__, __LINE__, msg ); \
+        }                                                                                            \
+    } while ( 0 )
+
 /** @brief 두 값이 같아야 합니다. */
 #define SW_EXPECT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \

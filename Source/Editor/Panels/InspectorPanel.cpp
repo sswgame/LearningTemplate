@@ -12,6 +12,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -712,6 +713,7 @@ namespace sw::editor
                 // 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
                 // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
                 const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
+                const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, bInPlaceEditable );
                 if ( bInPlaceEditable == false )
                     bReadOnly = true;
 
@@ -729,6 +731,10 @@ namespace sw::editor
                             pSeq->clear( pContainer );
                         ImGui::Separator();
                     }
+
+                    // 원소 위젯도 같은 규칙을 받아야 한다. 예전에는 `bReadOnly` 가 위의 버튼만 가려서
+                    // **`ReadOnly` 컨테이너의 원소가 그대로 편집됐다.**
+                    ImGui::BeginDisabled( bElementEditable == false );
 
                     const size_t newCount = pSeq->getSize( pContainer );
                     for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
@@ -751,6 +757,8 @@ namespace sw::editor
                         drawPropertyWidget( pElem, elemProp );
                         ImGui::PopID();
                     }
+
+                    ImGui::EndDisabled();
                     ImGui::TreePop();
                 }
                 return;

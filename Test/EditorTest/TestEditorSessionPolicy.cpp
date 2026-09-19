@@ -93,3 +93,23 @@ SW_TEST_CASE( EditorSessionPolicyTest, NodeCountsAsMovedWhenEitherAxisChanges )
     SW_EXPECT_FALSE( Policy::shouldMarkDocumentDirtyOnNodeMove( false, true ) );
     SW_EXPECT_TRUE( Policy::shouldMarkDocumentDirtyOnNodeMove( true, true ) );
 }
+
+/**
+ * @brief 컨테이너 원소 편집은 **두 조건이 모두** 맞아야 열린다.
+ * @details 인스펙터는 이 둘을 따로 물었고, 그래서 `ReadOnly` 컨테이너의 원소가 그대로 편집됐다
+ *          (읽기 전용 표시는 `+ Add`·`Clear` 버튼만 가리고 있었다). 연관 컨테이너에서는 그 편집이
+ *          정렬 키를 제자리에서 바꾸는 일이라 트리를 깨뜨린다.
+ */
+SW_TEST_CASE( EditorSessionPolicyTest, ContainerElementEditsNeedBothConditions )
+{
+    using Policy = sw::editor::EditorSessionPolicy;
+
+    // 편집 가능한 유일한 조합 — 읽기 전용이 아니고, 컨테이너가 제자리 쓰기를 허용한다.
+    SW_EXPECT_TRUE( Policy::areContainerElementEditsAllowed( false, true ) );
+
+    SW_EXPECT_FALSE_MSG( Policy::areContainerElementEditsAllowed( true, true ),
+                         "ReadOnly 컨테이너의 원소가 편집 가능하면 안 됩니다" );
+    SW_EXPECT_FALSE_MSG( Policy::areContainerElementEditsAllowed( false, false ),
+                         "제자리 쓰기를 거부한 컨테이너(set 등)의 원소가 편집 가능하면 안 됩니다" );
+    SW_EXPECT_FALSE( Policy::areContainerElementEditsAllowed( true, false ) );
+}
