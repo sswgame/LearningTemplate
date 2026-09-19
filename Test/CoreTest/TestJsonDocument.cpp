@@ -141,3 +141,30 @@ SW_TEST_CASE( JsonDocumentTest, FloatToIntTypeSafetyAndCoercion )
     SW_EXPECT_EQUAL( -10, root.get( "negativeFloat" ).asInt() );
     SW_EXPECT_EQUAL( 0, root.get( "zeroVal" ).asInt() );
 }
+
+/**
+ * @brief [JsonDocumentTest] int64 를 넘는 부호 없는 수가 음수로 돌아오지 않는다
+ * @details nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 **부호 없는 정수 둘 다에 참**이다.
+ *          `asInt` 와 `asFloat` 은 그 검사를 부호 없는 검사보다 **먼저** 해서, 부호 없는 가지가
+ *          영영 돌지 않았다 — `asFloat` 에서는 그 탓에 `18446744073709551615` 가 `-1.0` 이 됐다.
+ *          `asUint` 만 순서가 맞아 있었고, 셋이 같은 파일 안에서 어긋나 있었다.
+ */
+SW_TEST_CASE( JsonDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
+{
+    sw::JsonDocument doc;
+    SW_ASSERT_TRUE( doc.parse( R"({"big":18446744073709551615,"color":4289362560})" ) );
+
+    const sw::JsonValue root = doc.root();
+    SW_ASSERT_TRUE( root.isObject() );
+
+    SW_EXPECT_EQUAL( uint64( 18446744073709551615ull ), root.get( "big" ).asUint( 0 ) );
+
+    // 크기를 잃지 않았는지만 본다 — int64 에 담을 수 없는 값이므로 정확한 정수 비교는 뜻이 없다.
+    const float64 big = root.get( "big" ).asFloat( 0.0 );
+    SW_EXPECT_TRUE( big > 1.0e19 );
+
+    // 흔한 크기(ARGB 색)는 세 접근자 모두에서 같은 값이어야 한다.
+    SW_EXPECT_EQUAL( uint64( 4289362560ull ), root.get( "color" ).asUint( 0 ) );
+    SW_EXPECT_EQUAL( int64( 4289362560ll ), root.get( "color" ).asInt( 0 ) );
+    SW_EXPECT_NEAR_EQUAL( 4289362560.0, root.get( "color" ).asFloat( 0.0 ), 1.0 );
+}

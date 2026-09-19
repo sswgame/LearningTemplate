@@ -30,7 +30,11 @@ namespace sw
             string_view val = StringUtil::trim( line.substr( equalPos + 1 ) );
             if ( key.empty() )
                 return;
-            outMap.emplace( string( key ), string( val ) );
+            // **뒤에 적힌 것이 이긴다.** `emplace` 는 이미 있는 키를 **덮지 않으므로**, 손으로
+            // 고친 설정 파일에서 같은 키를 아래에 다시 적으면 위의 옛 값이 그대로 읽혔다 —
+            // 고쳤는데 아무 일도 일어나지 않는, 원인을 짚기 어려운 모양이다. INI 계열의
+            // 통상 규약도, 이 파일의 `dump` 가 키마다 한 줄만 쓰는 것과도 이쪽이 맞는다.
+            outMap[string( key )] = string( val );
         },
             opt._commentChar );
 

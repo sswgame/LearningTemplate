@@ -503,6 +503,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (재진입 깃발을 네 곳에서 보고 한 곳에서 안 봤다 — 그 한 곳은 멈춘다)
+
+`Engine/Utility` 를 함수 단위로 읽어 셋을 고쳤다. 셋 다 "형제는 맞는데 하나만 다르다" 모양이다.
+
+**`CommandStack::jumpTo` 가 재진입 깃발을 안 봤다.** `_bIsExecuting` 은 undo/redo 콜백이 자기
+자신을 새 명령으로 기록하지 못하게 막는 깃발이고, `push` · `pushCoalesce` · `undo` · `redo` 가
+모두 본다. `jumpTo` 만 안 봤다 — 그런데 여기서는 값이 아니라 **진행**이 걸린다. 콜백 안에서
+`jumpTo` 를 부르면 그 안의 `undo()` 가 깃발 때문에 아무것도 하지 않고 돌아오고, `_index` 가 줄지
+않으므로 `while ( _index > targetIndex && canUndo() )` 가 영원히 참이다. 틀린 값이 아니라 **멈춘
+에디터**다. 무는지 확인할 때 실제로 테스트가 25초 타임아웃까지 붙잡혔다.
+
+같은 파일에서 하나 더: **명령이 하나로 끝난 트랜잭션만 트랜잭션 레이블을 버렸다.** 여러 개일
+때는 `_transactionLabel` 을 쓰는데 하나일 때만 안쪽 명령의 레이블을 그대로 썼다 — "Move 3 objects"
+로 묶었는데 실제 명령이 하나면 실행 취소 메뉴에 "Set position" 이 뜬다.
+
+**`JsonValue::asInt`·`asFloat` 이 부호 없는 가지에 영영 닿지 않았다.** nlohmann 의
+`is_number_integer()` 는 부호 있는 정수와 **부호 없는 정수 둘 다에 참**이다. 그래서 그 검사를
+`is_number_unsigned()` 보다 먼저 두면 뒤엣것은 죽은 코드가 된다. `asUint` 만 순서가 맞아 있었고,
+`asFloat` 에서는 그 탓에 `18446744073709551615` 가 **`-1.0`** 으로 돌아왔다.
+
+**`KeyValueFile::parse` 는 먼저 적힌 값이 이겼다.** `emplace` 는 이미 있는 키를 덮지 않는다.
+손으로 고친 설정 파일에서 같은 키를 아래에 다시 적으면 위의 옛 값이 그대로 읽힌다 — 고쳤는데
+아무 일도 일어나지 않는, 원인을 짚기 어려운 모양이다. INI 계열의 통상 규약도, 이 파일의 `dump`
+가 키마다 한 줄만 쓰는 것과도 "뒤가 이긴다" 쪽이 맞는다.
+
+**문서만 고친 것 하나:** `JsonValue` 는 문서 안 노드를 가리키는 **빌린 포인터**인데, 객체도 배열도
+연속 저장이라 같은 부모에 `set( 새 키 )` 나 `pushBack()` 을 하면 **앞서 꺼낸 형제 핸들이 해제된
+메모리를 가리킨다.** 헤더에는 "clear/destroy 이후 무효" 만 적혀 있었다. 지금 저장소의 쓰기
+코드는 전부 "하나 받아서 다 채우고 다음 것을 받는" 순서라 걸리지 않지만, 그 순서가 규약이라는
+것이 어디에도 없었다.
+
+**무는지 확인했다.** `jumpTo` 의 가드를 빼면 그 케이스가 타임아웃까지 돌아오지 않고, 나머지 셋은
+해당 케이스가 그 자리에서 진다.
+
 ### 2026-09-20 (TaskManager 테스트 파일이 없었다 — 10 케이스로 채웠다)
 
 `Test/CoreTest` 에 **TaskManager 전용 케이스가 하나도 없었다.** 1,355 줄짜리 동시성 핵심인데

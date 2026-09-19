@@ -325,3 +325,18 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
     // 이전 상태 복구
     sw::GameConfig::setActive( oldActive );
 }
+
+/**
+ * @brief [KeyValueFileTest] 같은 키가 두 번 나오면 뒤에 적힌 것이 이긴다
+ * @details `emplace` 는 이미 있는 키를 **덮지 않는다.** 손으로 고친 설정 파일에서 같은 키를 아래에
+ *          다시 적으면 위의 옛 값이 그대로 읽혔다 — 고쳤는데 아무 일도 일어나지 않는 모양이다.
+ */
+SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
+{
+    sw::KeyValueMap map;
+    SW_ASSERT_TRUE( sw::KeyValueFile::parse( "width=800\nheight=600\nwidth=1920\n", map ) );
+
+    SW_EXPECT_EQUAL( 1920, sw::KeyValueFile::getInt( map, "width", 0 ) );
+    SW_EXPECT_EQUAL( 600, sw::KeyValueFile::getInt( map, "height", 0 ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), map.size() );
+}

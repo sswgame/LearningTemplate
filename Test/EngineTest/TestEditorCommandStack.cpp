@@ -672,3 +672,69 @@ SW_TEST_CASE( EditorCommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
     stack.undo(); // SetFirst 취소
     SW_EXPECT_EQUAL( 0, firstValue );
 }
+
+/**
+ * @brief [EditorCommandStackTest] undo 콜백 안에서 jumpTo 를 불러도 멈추지 않는다
+ * @details `push` · `pushCoalesce` · `undo` · `redo` 는 모두 재진입 깃발(`_bIsExecuting`)을 보는데
+ *          `jumpTo` 만 보지 않았다. 콜백 안에서 부르면 안쪽 `undo()` 가 그 깃발 때문에 아무것도
+ *          하지 않고 돌아오고, `_index` 가 줄지 않으므로 `while` 이 영원히 돈다 — 틀린 값이 아니라
+ *          **멈춘 에디터**다. 이 케이스가 회귀하면 CTest 타임아웃까지 붙잡힌다.
+ */
+SW_TEST_CASE( EditorCommandStackTest, JumpToInsideUndoCallbackDoesNotSpin )
+{
+    sw::CommandStack stack;
+
+    int32 value = 0;
+    for ( int32 step = 1; step <= 3; ++step )
+    {
+        sw::CommandStack::Command cmd;
+        cmd._label = "Step";
+        cmd._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&value, step]()
+         {
+            value = step;
+        } );
+        cmd._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&value, step]()
+         {
+            value = step - 1;
+        } );
+        stack.push( std::move( cmd ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 3 ), stack.getCurrentIndex() );
+
+    // 마지막 명령의 undo 가 다시 jumpTo 를 부른다 — 재진입이다.
+    sw::CommandStack::Command reentrant;
+    reentrant._label = "Reentrant";
+    reentrant._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []() {} );
+    reentrant._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&stack]()
+     {
+        stack.jumpTo( 0 );
+    } );
+    stack.push( std::move( reentrant ) );
+    SW_ASSERT_EQUAL( size_t( 4 ), stack.getCurrentIndex() );
+
+    stack.undo(); // 안에서 jumpTo(0) 이 불린다 — 돌아와야 한다.
+    SW_EXPECT_EQUAL( size_t( 3 ), stack.getCurrentIndex() );
+}
+
+/**
+ * @brief [EditorCommandStackTest] 명령이 하나뿐인 트랜잭션도 트랜잭션 레이블을 쓴다
+ * @details 여러 개일 때는 트랜잭션 레이블을 쓰면서 하나일 때만 안쪽 명령의 레이블을 그대로 썼다 —
+ *          "Move 3 objects" 로 묶었는데 실제 명령이 하나면 실행 취소 메뉴에 "Set position" 이 떴다.
+ */
+SW_TEST_CASE( EditorCommandStackTest, SingleCommandTransactionKeepsTheTransactionLabel )
+{
+    sw::CommandStack stack;
+
+    stack.beginTransaction( "Move 3 objects" );
+    {
+        sw::CommandStack::Command cmd;
+        cmd._label = "Set position";
+        cmd._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []() {} );
+        cmd._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []() {} );
+        stack.push( std::move( cmd ) );
+    }
+    stack.endTransaction();
+
+    SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+    SW_EXPECT_STREQ( "Move 3 objects", stack.peekUndoLabel().c_str() );
+}

@@ -59,8 +59,14 @@ namespace sw
 
         if ( _listPendingTransactionCommand.size() == 1 )
         {
-            push( std::move( _listPendingTransactionCommand[0] ) );
+            // 트랜잭션 레이블은 **명령이 몇 개든** 그 트랜잭션의 이름이다. 예전에는 하나로 끝난
+            // 트랜잭션만 안쪽 명령의 레이블을 그대로 썼다 — "Move 3 objects" 로 묶었는데 실제로
+            // 명령이 하나 나오면 실행 취소 메뉴에 "Set position" 이 떴다.
+            Command singleCmd = std::move( _listPendingTransactionCommand[0] );
             _listPendingTransactionCommand.clear();
+            if ( _transactionLabel.empty() == false )
+                singleCmd._label = _transactionLabel;
+            push( std::move( singleCmd ) );
             return;
         }
 
@@ -201,6 +207,14 @@ namespace sw
 
     void CommandStack::jumpTo( size_t targetIndex )
     {
+        // **재진입 깃발을 여기서도 본다 — 여기서는 값이 아니라 진행이 걸린다.** `push` ·
+        // `pushCoalesce` · `undo` · `redo` 는 모두 `_bIsExecuting` 을 보는데 이 함수만 보지 않았다.
+        // undo/redo 콜백 안에서 `jumpTo` 를 부르면 아래의 `undo()` 가 그 깃발 때문에 **아무것도
+        // 하지 않고 돌아오고**, `_index` 가 줄지 않으므로 `while` 조건이 영원히 참이다 —
+        // 틀린 답이 아니라 **멈춘 에디터**가 된다.
+        if ( _bIsExecuting )
+            return;
+
         _lastCoalesceKey.clear();
         if ( targetIndex > _listCommand.size() )
             targetIndex = _listCommand.size();
