@@ -190,3 +190,44 @@ SW_TEST_CASE( HandleTableTest, StressGenerationRolloverAndRandomChurn )
         SW_EXPECT_EQUAL( static_cast<int32>( 10000 + index ), *pVal );
     }
 }
+
+/**
+ * @brief [HandleTableTest] 세대는 점유 비트와 절대 섞이지 않는다
+ * @details 슬롯의 "점유 중인가" 와 "몇 번째 세대인가" 는 **한 원자값**에 같이 산다 — 따로 두면 락
+ *          없이 읽는 `get()` 이 둘을 두 번에 나눠 읽게 되고, 그 사이에 `erase()` 가 끼면
+ *          "점유 중 + 옛 세대" 라는 있어서는 안 되는 조합이 보여 **비워지는 중인 값의 주소**가
+ *          돌아간다. 합치는 대가로 세대가 31비트가 되었으므로, 최상위 비트를 켠 세대를 들고 온
+ *          핸들이 **점유 비트를 세대로 오해받아 통과하지 않는지**를 여기서 못박는다.
+ */
+SW_TEST_CASE( HandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
+{
+    HandleTable<int32> table;
+    const ObjectHandle handle = table.insert( 77 );
+    SW_ASSERT_TRUE( handle.isValid() );
+    SW_ASSERT_NOT_NULL( table.get( handle ) );
+
+    // 슬롯의 상태 워드에서 점유 비트가 켜지는 자리(최상위)를 세대에 얹은 핸들.
+    const ObjectHandle forgedHigh = ObjectHandle::make( handle.index(), handle.generation() | 0x80000000u );
+    SW_EXPECT_TRUE_MSG( table.get( forgedHigh ) == nullptr,
+                        "최상위 비트를 켠 세대가 점유 비트와 겹쳐 통과했습니다" );
+
+    // 최상위 비트만 켠 것도 마찬가지다.
+    const ObjectHandle forgedOnlyBit = ObjectHandle::make( handle.index(), 0x80000000u );
+    SW_EXPECT_TRUE( table.get( forgedOnlyBit ) == nullptr );
+
+    // 진짜 핸들은 그대로 읽힌다.
+    int32* pValue = table.get( handle );
+    SW_ASSERT_NOT_NULL( pValue );
+    SW_EXPECT_EQUAL( 77, *pValue );
+
+    // 지운 뒤 재사용된 슬롯에도 같은 규칙이 선다.
+    table.erase( handle );
+    const ObjectHandle reused = table.insert( 88 );
+    SW_ASSERT_EQUAL( handle.index(), reused.index() );
+    SW_EXPECT_TRUE( reused.generation() != handle.generation() );
+    SW_EXPECT_TRUE( ( reused.generation() & 0x80000000u ) == 0 );
+    SW_EXPECT_TRUE( table.get( handle ) == nullptr );
+    SW_EXPECT_TRUE( table.get( ObjectHandle::make( reused.index(), reused.generation() | 0x80000000u ) ) == nullptr );
+    SW_ASSERT_NOT_NULL( table.get( reused ) );
+    SW_EXPECT_EQUAL( 88, *table.get( reused ) );
+}

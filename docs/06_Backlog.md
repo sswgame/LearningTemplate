@@ -435,6 +435,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Source 함수 단위 점검 — Core/Container 마저)
+
+**`HandleTable` 의 주석이 코드가 주지 않는 보장을 적고 있었다.** "세대를 먼저 올리고 점유 해제를
+release 로 발행해, 락 없이 읽는 쪽이 '점유 중' 으로 보는 동안에는 항상 옛 세대와 비교되어
+실패한다" — 그런데 점유 여부(`_bOccupied`)와 세대(`_generation`)가 **서로 다른 원자값**이라
+`get()` 이 둘을 두 번에 나눠 읽는다. 그 사이에 `erase()` 가 끼면 "점유 중 + 옛 세대" 라는
+있어서는 안 되는 조합이 보이고, **비워지는 중인 슬롯 값의 주소**가 그대로 돌아간다.
+x86 의 메모리 모델이 창을 거의 닫아 주지만 arm64(이번에 CI 에 넣은 맥 타깃)에서는 아니다.
+
+둘을 한 워드(`_state` = 최상위 점유 비트 | 31비트 세대)로 합쳐 **한 번의 load 가 둘 다 답하게**
+했다. 필드가 하나 줄고, 뜨거운 경로(드로우마다 불린다)의 원자 읽기도 둘에서 하나로 준다.
+대가는 세대가 31비트가 된 것뿐이다(2^31 번 재활용까지).
+
+**검증이 특히 중요한 변경이다** — 네 RHI 백엔드의 리소스가 전부 이 테이블 위에 있다.
+정적 씬 스크린샷이 dx12·vk·dx11·gl **네 백엔드 모두** 기존 해시 `d2c61c1f8e57cf2d` 와 일치했다.
+새 케이스 `ForgedGenerationDoesNotAliasTheOccupiedBit` 는 31비트가 된 세대가 점유 비트와
+겹치지 않는지를 못박는다(HandleTableTest 6/6, DataStructureTest 24/24).
+
+> Shipping 빌드에는 **DirectX12 만 들어 있다** — `-vk`/`-dx11`/`-gl` 은 "이 빌드에 없습니다" 로
+> 진다. 네 백엔드 스크린샷 대조는 Debug 빌드에서 해야 한다. (기존 동작이고 이번 변경과 무관.)
+
+**살펴보고 문제 없던 것:** `sparse_set`, `PagedArray`(발행 순서가 문서대로 맞다), `ObjectHandle`,
+`map`(정렬된 vector), `deque`·`list`(std 위임 + 레이스 스코프), `array`, `pair`.
+Core 전체를 부호 없는 뺄셈·역방향 루프·덧셈 경계 검사 세 패턴으로 훑었고, 남은 것은 없다
+(`vector::insert` 가 유일한 보유자였다).
+
 ### 2026-09-19 (Source 함수 단위 점검 — Core/Concurrency · Core/Container)
 
 **`sw::vector::insert( pos, count, value )` 가 두 가지로 범위 밖을 만졌다 (메모리 안전).**

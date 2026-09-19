@@ -43,9 +43,10 @@ namespace sw
                 if ( pSlot == nullptr )
                     return ObjectHandle{};
                 // 세대는 retireSlot 에서 이미 올려뒀으므로 그대로 쓴다 — 옛 핸들은 계속 무효.
-                pSlot->_value = std::move( value );
-                pSlot->_bOccupied.store( true, std::memory_order_release );
-                return ObjectHandle::make( index, pSlot->_generation.load( std::memory_order_relaxed ) );
+                const uint32 generation = pSlot->generation( std::memory_order_relaxed );
+                pSlot->_value           = std::move( value );
+                pSlot->_state.store( Slot::kOccupiedBit | generation, std::memory_order_release );
+                return ObjectHandle::make( index, generation );
             }
 
             const uint32 index = _listSlot.pushBack( Slot{} );
@@ -54,8 +55,7 @@ namespace sw
 
             Slot* pSlot   = _listSlot.at( index );
             pSlot->_value = std::move( value );
-            pSlot->_generation.store( 1u, std::memory_order_relaxed );
-            pSlot->_bOccupied.store( true, std::memory_order_release );
+            pSlot->_state.store( Slot::kOccupiedBit | 1u, std::memory_order_release );
             return ObjectHandle::make( index, 1u );
         }
 
@@ -70,8 +70,9 @@ namespace sw
             const Slot* pSlot = _listSlot.at( handle.index() );
             if ( pSlot == nullptr )
                 return nullptr;
-            if ( pSlot->_bOccupied.load( std::memory_order_acquire ) == false ||
-                 pSlot->_generation.load( std::memory_order_acquire ) != handle.generation() )
+            // 점유 여부와 세대를 **한 번에** 본다 — 둘로 나눠 읽으면 그 사이에 erase 가 끼어
+            // "점유 중 + 옛 세대" 라는 조합이 보이고, 비워지는 중인 값의 주소가 돌아간다.
+            if ( pSlot->matches( handle.generation(), std::memory_order_acquire ) == false )
                 return nullptr;
             return std::addressof( pSlot->_value );
         }
@@ -107,7 +108,7 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {
                 Slot* pSlot = _listSlot.at( slotIndex );
-                if ( pSlot != nullptr && pSlot->_bOccupied.load( std::memory_order_relaxed ) )
+                if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
                     fn( pSlot->_value );
             }
         }
@@ -121,8 +122,8 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {
                 Slot* pSlot = _listSlot.at( slotIndex );
-                if ( pSlot != nullptr && pSlot->_bOccupied.load( std::memory_order_relaxed ) )
-                    fn( ObjectHandle::make( slotIndex, pSlot->_generation.load( std::memory_order_relaxed ) ), pSlot->_value );
+                if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
+                    fn( ObjectHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
         }
 
@@ -135,8 +136,8 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {
                 const Slot* pSlot = _listSlot.at( slotIndex );
-                if ( pSlot != nullptr && pSlot->_bOccupied.load( std::memory_order_relaxed ) )
-                    fn( ObjectHandle::make( slotIndex, pSlot->_generation.load( std::memory_order_relaxed ) ), pSlot->_value );
+                if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
+                    fn( ObjectHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
         }
 
@@ -159,29 +160,52 @@ namespace sw
         }
 
     private:
+        /**
+         * @brief 한 슬롯의 값과 상태입니다.
+         * @details **점유 여부와 세대는 한 원자값에 같이 산다.** 따로 두면 락 없이 읽는 쪽이 둘을 두 번에
+         *          나눠 읽게 되고, 그 사이에 지우는 쪽이 끼면 "점유 중 + 옛 세대" 라는 **있어서는 안 되는
+         *          조합**을 보게 된다 — 이미 비워지는 중인 슬롯의 값을 가리키는 포인터가 그대로 돌아간다.
+         *          x86 의 메모리 모델이 그 창을 거의 닫아 주지만 arm64(맥 타깃)에서는 아니다.
+         *          하나로 합치면 한 번의 load 가 둘 다 답한다 — 더 빠르기도 하다.
+         */
         struct Slot
         {
+            /** @brief `_state` 최상위 비트 — 켜져 있으면 점유 중입니다. */
+            static constexpr uint32 kOccupiedBit = 0x8000'0000u;
+            /** @brief `_state` 의 나머지 31비트가 세대입니다. 0 은 무효 세대입니다. */
+            static constexpr uint32 kGenerationMask = 0x7FFF'FFFFu;
+
             T              _value{};
-            atomic<uint32> _generation{ 1 };
-            atomic<bool>   _bOccupied{ false };
+            atomic<uint32> _state{ 1 }; /**< kOccupiedBit | generation */
 
             /** @brief 빈 슬롯입니다. */
             Slot() = default;
-            /** @brief PagedArray 저장을 위해 값만 옮깁니다(카운터는 새로 시작). */
+            /** @brief PagedArray 저장을 위해 값과 상태를 옮깁니다. */
             Slot( Slot&& other ) noexcept
                 : _value{ std::move( other._value ) }
-                , _generation{ other._generation.load( std::memory_order_relaxed ) }
-                , _bOccupied{ other._bOccupied.load( std::memory_order_relaxed ) }
+                , _state{ other._state.load( std::memory_order_relaxed ) }
             {
             }
-            /** @brief PagedArray 저장을 위해 값만 옮깁니다(카운터는 새로 시작). */
+            /** @brief PagedArray 저장을 위해 값과 상태를 옮깁니다. */
             Slot& operator=( Slot&& other ) noexcept
             {
                 _value = std::move( other._value );
-                _generation.store( other._generation.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-                _bOccupied.store( other._bOccupied.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+                _state.store( other._state.load( std::memory_order_relaxed ), std::memory_order_relaxed );
                 return *this;
             }
+
+            /** @brief 점유 중이고 세대가 맞으면 true 입니다 (원자값을 **한 번**만 읽습니다). */
+            bool matches( uint32 generation, std::memory_order order ) const
+            {
+                const uint32 state = _state.load( order );
+                return ( state & kOccupiedBit ) != 0 && ( state & kGenerationMask ) == generation;
+            }
+
+            /** @brief 지금 세대입니다 (점유 여부와 무관). */
+            uint32 generation( std::memory_order order ) const { return _state.load( order ) & kGenerationMask; }
+
+            /** @brief 점유 중인지 돌려줍니다. */
+            bool isOccupied( std::memory_order order ) const { return ( _state.load( order ) & kOccupiedBit ) != 0; }
         };
 
         /** @brief 핸들이 가리키는 점유 중인 슬롯을 찾습니다(뮤텍스를 이미 잡은 상태에서 호출). */
@@ -190,8 +214,7 @@ namespace sw
             if ( handle.isValid() == false )
                 return nullptr;
             Slot* pSlot = _listSlot.at( handle.index() );
-            if ( pSlot == nullptr || pSlot->_bOccupied.load( std::memory_order_relaxed ) == false ||
-                 pSlot->_generation.load( std::memory_order_relaxed ) != handle.generation() )
+            if ( pSlot == nullptr || pSlot->matches( handle.generation(), std::memory_order_relaxed ) == false )
                 return nullptr;
             return pSlot;
         }
@@ -200,13 +223,12 @@ namespace sw
         void retireSlot( uint32 index, Slot& slot )
         {
             slot._value = T{};
-            // 세대를 먼저 올리고 점유 해제를 release 로 발행해, 락 없이 읽는 쪽이 "점유 중"으로 보는
-            // 동안에는 항상 옛 세대와 비교되어 실패하도록 한다.
-            uint32 nextGeneration = slot._generation.load( std::memory_order_relaxed ) + 1u;
+            // 점유 해제와 세대 올리기를 **한 번의 store** 로 발행한다. 둘로 나누면 그 사이에 락 없이
+            // 읽는 쪽이 "점유 중 + 옛 세대" 를 보고 비워지는 중인 값의 주소를 받아 간다.
+            uint32 nextGeneration = ( slot.generation( std::memory_order_relaxed ) + 1u ) & Slot::kGenerationMask;
             if ( nextGeneration == 0 )
-                nextGeneration = 1;
-            slot._generation.store( nextGeneration, std::memory_order_relaxed );
-            slot._bOccupied.store( false, std::memory_order_release );
+                nextGeneration = 1; // 세대 0 은 무효 핸들의 몫이다 — 한 바퀴 돌면 건너뛴다.
+            slot._state.store( nextGeneration, std::memory_order_release );
             _listFree.push_back( index );
         }
 
