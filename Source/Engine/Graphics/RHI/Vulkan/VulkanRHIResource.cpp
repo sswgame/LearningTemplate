@@ -17,6 +17,92 @@ namespace sw
 {
     SW_LOG_CALLER( "VulkanRHIResource" );
 
+    namespace
+    {
+        /**
+         * @class VulkanOneShotCommands
+         * @brief 일회용 커맨드 버퍼 하나 — 할당·시작은 생성자가, **해제는 소멸자가** 합니다.
+         *
+         * @details 텍스처 업로드와 리드백이 같은 열다섯 줄을 각자 적고 있었다(할당 → begin → … →
+         *          end → submit → waitIdle → free). 지금은 그 사이에 `return` 이 없어 새는 자리가
+         *          없지만, **누군가 중간에 검사를 하나 더하는 날 커맨드 버퍼가 샌다** — 풀에서 조용히
+         *          자라다가 나중에 할당이 실패한다. 해제를 소멸자에 두면 그 실수가 생길 수 없다.
+         *
+         * @note 장치 핸들 셋을 인자로 받는다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
+         *       `VulkanRHIResource` 만 friend 라, 이 클래스가 장치를 직접 알 수는 없다.
+         */
+        class VulkanOneShotCommands
+        {
+        public:
+            /** @brief 커맨드 버퍼를 하나 할당하고 기록을 시작합니다. 실패하면 `isValid()` 가 false 입니다. */
+            VulkanOneShotCommands( VkDevice device, VkCommandPool commandPool, VkQueue queue )
+                : _device{ device }
+                , _commandPool{ commandPool }
+                , _queue{ queue }
+                , _commandBuffer{ VK_NULL_HANDLE }
+            {
+                VkCommandBufferAllocateInfo allocInfo{};
+                allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                allocInfo.commandPool        = _commandPool;
+                allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                allocInfo.commandBufferCount = 1;
+                if ( vkAllocateCommandBuffers( _device, &allocInfo, &_commandBuffer ) != VK_SUCCESS )
+                {
+                    _commandBuffer = VK_NULL_HANDLE;
+                    return;
+                }
+
+                VkCommandBufferBeginInfo beginInfo{};
+                beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                vkBeginCommandBuffer( _commandBuffer, &beginInfo );
+            }
+
+            ~VulkanOneShotCommands()
+            {
+                if ( _commandBuffer != VK_NULL_HANDLE )
+                    vkFreeCommandBuffers( _device, _commandPool, 1, &_commandBuffer );
+            }
+
+            VulkanOneShotCommands( const VulkanOneShotCommands& )            = delete;
+            VulkanOneShotCommands& operator=( const VulkanOneShotCommands& ) = delete;
+
+            /** @brief 커맨드 버퍼를 얻었는지 여부입니다. */
+            bool isValid() const { return _commandBuffer != VK_NULL_HANDLE; }
+            /** @brief 기록 대상 커맨드 버퍼입니다. */
+            VkCommandBuffer get() const { return _commandBuffer; }
+
+            /**
+             * @brief 기록을 끝내고 제출한 뒤 큐가 빌 때까지 기다립니다.
+             * @details 로드·리드백 경로라 큐가 비기를 기다리는 값싼 동기 방식을 택했다
+             *          (`executeCommandListImmediate` 와 같은 이유).
+             */
+            bool endSubmitAndWait()
+            {
+                if ( isValid() == false )
+                    return false;
+
+                vkEndCommandBuffer( _commandBuffer );
+
+                VkSubmitInfo submitInfo{};
+                submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.commandBufferCount = 1;
+                submitInfo.pCommandBuffers    = &_commandBuffer;
+                if ( vkQueueSubmit( _queue, 1, &submitInfo, VK_NULL_HANDLE ) != VK_SUCCESS )
+                    return false;
+
+                vkQueueWaitIdle( _queue );
+                return true;
+            }
+
+        private:
+            VkDevice        _device;
+            VkCommandPool   _commandPool;
+            VkQueue         _queue;
+            VkCommandBuffer _commandBuffer;
+        };
+    } // namespace
+
     RHIBufferHandle VulkanRHIResource::createConstantBuffer( uint32 size )
     {
         const uint32          aligned = MathUtil::align( size, constant::kConstantBufferAlignment );
@@ -174,21 +260,22 @@ namespace sw
         // (초기 업로드·테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
         VkCommandBuffer cmd      = ( _pDevice->_bFrameStarted == SW_TRUE ) ? _pDevice->_activeFrameBuffer : VK_NULL_HANDLE;
         const bool      bOneShot = ( cmd == VK_NULL_HANDLE );
+
+        // 프레임 밖이면 일회성 커맨드버퍼를 쓴다. **해제는 소멸자가 하므로** 나중에 이 사이에 검사가
+        // 하나 더 생겨도 커맨드 버퍼가 새지 않는다 (같은 절차가 이 파일에 세 벌 있었다).
+        std::optional<VulkanOneShotCommands> oneShot;
         if ( bOneShot )
         {
             if ( _pDevice->_commandPool == VK_NULL_HANDLE )
                 return;
-            VkCommandBufferAllocateInfo allocInfo{};
-            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfo.commandPool        = _pDevice->_commandPool;
-            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocInfo.commandBufferCount = 1;
-            if ( vkAllocateCommandBuffers( _pDevice->_device, &allocInfo, &cmd ) != VK_SUCCESS )
+
+            oneShot.emplace( _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue );
+            if ( oneShot->isValid() == false )
+            {
+                SW_LOG_ERROR( "updateStructuredBuffer: failed to allocate the one-shot command buffer" );
                 return;
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            vkBeginCommandBuffer( cmd, &beginInfo );
+            }
+            cmd = oneShot->get();
         }
         else if ( _pDevice->_recordingState._bRenderPassActive == SW_TRUE )
         {
@@ -224,17 +311,8 @@ namespace sw
         barrier.dstAccessMask = kConsumerAccess;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, kConsumerStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
 
-        if ( bOneShot )
-        {
-            vkEndCommandBuffer( cmd );
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers    = &cmd;
-            if ( vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
-                vkQueueWaitIdle( _pDevice->_graphicsQueue );
-            vkFreeCommandBuffers( _pDevice->_device, _pDevice->_commandPool, 1, &cmd );
-        }
+        if ( oneShot.has_value() && oneShot->endSubmitAndWait() == false )
+            SW_LOG_ERROR( "updateStructuredBuffer: vkQueueSubmit failed" );
     }
 
     RHIBufferHandle VulkanRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -489,27 +567,19 @@ namespace sw
         VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
         if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
         {
+            destroyBuffer( staging );
             SW_LOG_ERROR( "uploadTexture2D: failed to create the staging buffer (%# bytes)", usedBytes );
             return false;
         }
 
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool        = _pDevice->_commandPool;
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
-        VkCommandBuffer cmd{ VK_NULL_HANDLE };
-        if ( vkAllocateCommandBuffers( _pDevice->_device, &allocInfo, &cmd ) != VK_SUCCESS )
+        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue };
+        if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );
             SW_LOG_ERROR( "uploadTexture2D: failed to allocate the one-shot command buffer" );
             return false;
         }
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer( cmd, &beginInfo );
+        const VkCommandBuffer cmd = oneShot.get();
 
         // transitionImageLayout 은 밉 하나만 다루므로 여기서는 전체 밉 체인 배리어를 직접 쓴다.
         VkImageMemoryBarrier barrier{};
@@ -551,16 +621,8 @@ namespace sw
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                               0, 0, nullptr, 0, nullptr, 1, &barrier );
-        vkEndCommandBuffer( cmd );
 
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers    = &cmd;
-        const bool bSubmitted         = ( vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS );
-        if ( bSubmitted )
-            vkQueueWaitIdle( _pDevice->_graphicsQueue );
-        vkFreeCommandBuffers( _pDevice->_device, _pDevice->_commandPool, 1, &cmd );
+        const bool bSubmitted = oneShot.endSubmitAndWait();
         destroyBuffer( staging );
 
         if ( bSubmitted == false )
@@ -580,35 +642,46 @@ namespace sw
 
     bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
+        // **여기의 실패는 전부 소리를 낸다.** 예전에는 네 자리가 말없이 false 를 돌려줬는데, 리드백은
+        // 오프스크린 렌더 문제가 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다
+        // (형제인 uploadTexture2D 는 같은 자리에서 전부 로그를 남기고 있었다).
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
             return false;
+        }
         if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
+        {
+            SW_LOG_ERROR( "readbackTexture2D: depth-stencil readback is unsupported, or mip %# is out of range (%# mips)",
+                          mip, pRecord->_mipLevels );
             return false;
+        }
         if ( computeRhiTextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        {
+            SW_LOG_ERROR( "readbackTexture2D: unsupported format %# for %#x%# mip %#",
+                          pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
             return false;
+        }
 
         const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( outLayout._sizeBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
         VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
         if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
-            return false;
-
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool        = _pDevice->_commandPool;
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
-        VkCommandBuffer cmd{ VK_NULL_HANDLE };
-        if ( vkAllocateCommandBuffers( _pDevice->_device, &allocInfo, &cmd ) != VK_SUCCESS )
         {
             destroyBuffer( staging );
+            SW_LOG_ERROR( "readbackTexture2D: failed to create the staging buffer (%# bytes)", outLayout._sizeBytes );
             return false;
         }
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer( cmd, &beginInfo );
+
+        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue };
+        if ( oneShot.isValid() == false )
+        {
+            destroyBuffer( staging );
+            SW_LOG_ERROR( "readbackTexture2D: failed to allocate the one-shot command buffer" );
+            return false;
+        }
+        const VkCommandBuffer cmd = oneShot.get();
 
         VkImageMemoryBarrier barrier{};
         barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -643,16 +716,8 @@ namespace sw
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-        vkEndCommandBuffer( cmd );
 
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers    = &cmd;
-        const bool bSubmitted         = ( vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS );
-        if ( bSubmitted )
-            vkQueueWaitIdle( _pDevice->_graphicsQueue );
-        vkFreeCommandBuffers( _pDevice->_device, _pDevice->_commandPool, 1, &cmd );
+        const bool bSubmitted = oneShot.endSubmitAndWait();
 
         bool bOk = false;
         if ( bSubmitted )
@@ -665,7 +730,15 @@ namespace sw
                 vkUnmapMemory( _pDevice->_device, pStaging->_memory );
                 bOk = true;
             }
+            else
+            {
+                SW_LOG_ERROR( "readbackTexture2D: failed to map the staging memory (%# bytes)", outLayout._sizeBytes );
+            }
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        }
+        else
+        {
+            SW_LOG_ERROR( "readbackTexture2D: vkQueueSubmit failed" );
         }
         destroyBuffer( staging );
         return bOk;
