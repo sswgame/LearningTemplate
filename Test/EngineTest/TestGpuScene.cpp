@@ -778,3 +778,80 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
     SW_EXPECT_TRUE_MSG( withNormalMap == 1,
                         "인스턴스가 켠 키워드를 든 배치가 정확히 하나여야 한다 — 0 이면 인스턴스 define 이 통째로 빠진 것이고, 2 면 남의 배치에까지 번진 것이다" );
 }
+
+/**
+ * @brief [GpuSceneTest] 걸러진 프리미티브 때문에 슬롯이 밀려도 **지난 프레임 값이 남지 않는다**
+ * @details 수집은 후보 배열을 비우지 않고 제자리에 덮어쓴다(참조 카운트를 매 프레임 내렸다 올리지
+ *          않으려고). 그래서 앞의 것이 걸러지면 **뒤의 것이 앞 슬롯으로 내려오고**, 그 슬롯에는
+ *          다른 프리미티브의 값이 들어 있다 — 한 필드라도 다시 쓰지 않으면 남의 메시·블렌드 모드로
+ *          그려진다. 이 케이스가 그 자리를 잡는다: 첫 번째를 숨기고 다시 지으면 0번 슬롯이
+ *          **두 번째 것으로 완전히** 바뀌어야 한다.
+ */
+SW_TEST_CASE( GpuSceneTest, ReusedCandidateSlotsCarryNoStaleData )
+{
+    sw::Scene scene( "GpuSceneSlotReuse" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    // 메시가 서로 달라야 "남의 메시가 남았다" 를 볼 수 있다.
+    sw::shared_ptr<sw::Mesh> cube   = sw::MeshUtil::createUnitCube();
+    sw::shared_ptr<sw::Mesh> sphere = sw::MeshUtil::createSphere();
+    SW_ASSERT_NOT_NULL( cube.get() );
+    SW_ASSERT_NOT_NULL( sphere.get() );
+    SW_ASSERT_TRUE( cube.get() != sphere.get() );
+
+    auto addMesh = [&]( const utf8* pName, const sw::shared_ptr<sw::Mesh>& mesh, float32 x, sw::RHIBlendMode blend ) -> sw::MeshComponent*
+    {
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
+        if ( go == nullptr )
+            return nullptr;
+        sw::MeshComponent* pMeshComp = go->addComponent<sw::MeshComponent>();
+        if ( pMeshComp == nullptr )
+            return nullptr;
+        pMeshComp->setMesh( mesh );
+        pMeshComp->setLocalPosition( sw::float3( x, 0.0f, -4.0f ) );
+        pMeshComp->setBlendMode( blend );
+        pMeshComp->setVisible( true );
+        return pMeshComp;
+    };
+
+    // 0번은 큐브·불투명, 1번은 구·반투명 — 숨기면 1번이 0번 슬롯으로 내려온다.
+    sw::MeshComponent* pFirst  = addMesh( "SlotFirstCube", cube, -3.0f, sw::RHIBlendMode::Opaque );
+    sw::MeshComponent* pSecond = addMesh( "SlotSecondSphere", sphere, 3.0f, sw::RHIBlendMode::Transparent );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_ASSERT_NOT_NULL( pSecond );
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // **여기서 한 번 더 짓는 것이 이 케이스의 핵심이다.** 수집이 쓰는 배열과 기준 배열은 끝에서
+    // 맞바뀌므로, 첫 빌드가 끝난 시점의 수집 배열은 아직 **비어 있다**(맞바꾸기 전 기준이 비었다).
+    // 두 번째 빌드를 지나야 지지난 프레임의 값이 수집 배열로 돌아온다 — 재사용이 처음 일어나는
+    // 자리가 거기다. 한 번만 짓고 검사하면 슬롯을 통째로 무시하는 구현도 통과한다(실제로 그랬다).
+    pSecond->setLocalPosition( sw::float3( 3.0f, 0.5f, -4.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 앞의 것을 숨긴다 — 남는 것은 구 하나뿐이어야 한다.
+    pFirst->setVisible( false );
+    gpuScene.buildFromScene( &scene, camPos );
+
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    SW_EXPECT_TRUE_MSG( gpuScene.getOpaqueBatches().empty(),
+                        "불투명 배치가 남았다 — 숨긴 큐브의 값이 재사용된 슬롯에 남아 있다" );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+
+    const sw::GpuMeshBatch& batch = gpuScene.getTransparentBatches()[0];
+    SW_EXPECT_TRUE_MSG( batch._mesh.get() == sphere.get(),
+                        "배치가 든 메시가 구가 아니다 — 앞 슬롯의 큐브가 그대로 남았다" );
+    SW_EXPECT_EQUAL( 1u, batch._instanceCount );
+
+    // 바운드 중심도 두 번째 것의 값이어야 한다(위치까지 갈아엎혔는가).
+    const sw::GpuInstance& instance = gpuScene.getInstances()[batch._instanceBase];
+    SW_EXPECT_TRUE_MSG( sw::MathUtil::nearEqual( instance._boundsCenter._x, 3.0f ),
+                        "바운드 중심이 숨긴 큐브의 자리다 — 슬롯이 덜 덮어써졌다" );
+}

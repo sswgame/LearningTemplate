@@ -520,3 +520,43 @@ SW_TEST_CASE( MathTest, SingularMatrixInvertsToIdentity )
     SW_EXPECT_TRUE( sw::MathUtil::abs( scaleInverse._11 - 0.5f ) < 1e-5f );
     SW_EXPECT_TRUE( sw::MathUtil::abs( scaleInverse._22 - 0.25f ) < 1e-5f );
 }
+
+/**
+ * @brief [MathTest] `createTrs` 는 행렬 셋을 곱한 것과 **같은 값**이다
+ * @details 곱을 생략하는 지름길이라 "빠른데 값이 다르다" 가 가장 무서운 실패다. 비교 대상을 손으로
+ *          적지 않고 **원래 식 그대로**(S * R * T) 두어, 규격(행-벡터 · 요/피치/롤 해석)이 바뀌면
+ *          둘이 함께 움직이게 한다. 비대칭 스케일·세 축 회전·0 이 아닌 이동을 섞어야 행이 뒤바뀐
+ *          구현이 통과하지 못한다.
+ */
+SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
+{
+    const sw::float3 position{ 3.0f, -7.5f, 2.25f };
+    const sw::float3 rotation{ 0.37f, -1.1f, 0.62f }; // 피치 · 요 · 롤 (라디안)
+    const sw::float3 scale{ 2.0f, 0.5f, 3.25f };      // 축마다 달라야 행을 바꿔치기한 구현이 걸린다
+
+    const sw::float4x4 expected = sw::float4x4::createScale( scale ) *
+                                  sw::float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
+                                  sw::float4x4::createTranslation( position );
+    const sw::float4x4 actual = sw::float4x4::createTrs( position, rotation, scale );
+
+    const float32* pExpected = &expected._11;
+    const float32* pActual   = &actual._11;
+    for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+        SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pActual[elementIndex], 1e-5f );
+
+    // 쿼터니언 오버로드도 같은 값이어야 한다 — 오일러 쪽이 그쪽으로 넘기므로 둘이 갈라지면
+    // 애니메이션(쿼터니언)과 컴포넌트(오일러)가 서로 다른 행렬을 쓰게 된다.
+    const sw::quaternion rotationQuat = sw::quaternion::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
+    const sw::float4x4   fromQuat     = sw::float4x4::createTrs( position, rotationQuat, scale );
+    const float32*       pFromQuat    = &fromQuat._11;
+    for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+        SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pFromQuat[elementIndex], 1e-5f );
+
+    // 점 하나를 실제로 변환해 본다 — 16개 성분이 맞아도 규격을 잘못 읽었으면 여기서 갈린다.
+    const sw::float4 point{ 1.0f, 2.0f, 3.0f, 1.0f };
+    const sw::float4 byExpected = sw::float4::transform( point, expected );
+    const sw::float4 byActual   = sw::float4::transform( point, actual );
+    SW_EXPECT_NEAR_EQUAL( byExpected._x, byActual._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( byExpected._y, byActual._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( byExpected._z, byActual._z, 1e-4f );
+}

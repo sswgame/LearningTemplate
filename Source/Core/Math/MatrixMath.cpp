@@ -518,6 +518,22 @@ namespace sw
         return createFromYawPitchRoll( angles._y, angles._x, angles._z );
     }
 
+    float4x4 float4x4::createTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept
+    {
+        // 회전만 행렬로 만든 뒤 각 행에 스케일을 곱하고 마지막 행에 위치를 놓는다.
+        // S * R * T 를 곱으로 구한 것과 **같은 값**이다 (헤더의 설명 참고).
+        const float4x4 rotationMatrix = createFromQuaternion( rotation );
+        return float4x4{ rotationMatrix._11 * scale._x, rotationMatrix._12 * scale._x, rotationMatrix._13 * scale._x, 0.f,
+                         rotationMatrix._21 * scale._y, rotationMatrix._22 * scale._y, rotationMatrix._23 * scale._y, 0.f,
+                         rotationMatrix._31 * scale._z, rotationMatrix._32 * scale._z, rotationMatrix._33 * scale._z, 0.f,
+                         position._x, position._y, position._z, 1.f };
+    }
+
+    float4x4 float4x4::createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept
+    {
+        return createTrs( position, quaternion::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ), scale );
+    }
+
     float4x4 float4x4::lerp( const float4x4& from, const float4x4& to, float32 t ) noexcept
     {
         return float4x4{ MathUtil::lerp( from._11, to._11, t ), MathUtil::lerp( from._12, to._12, t ), MathUtil::lerp( from._13, to._13, t ), MathUtil::lerp( from._14, to._14, t ), MathUtil::lerp( from._21, to._21, t ), MathUtil::lerp( from._22, to._22, t ), MathUtil::lerp( from._23, to._23, t ), MathUtil::lerp( from._24, to._24, t ), MathUtil::lerp( from._31, to._31, t ), MathUtil::lerp( from._32, to._32, t ), MathUtil::lerp( from._33, to._33, t ), MathUtil::lerp( from._34, to._34, t ), MathUtil::lerp( from._41, to._41, t ), MathUtil::lerp( from._42, to._42, t ), MathUtil::lerp( from._43, to._43, t ), MathUtil::lerp( from._44, to._44, t ) };

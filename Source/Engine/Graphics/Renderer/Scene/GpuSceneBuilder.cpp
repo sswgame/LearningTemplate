@@ -254,8 +254,18 @@ namespace sw
         pObjects->getPrimitiveRegistry().clearDirty();
 
         const vector<MeshComponent*>& listPrimitive = primitives.getAll();
-        _listScratchCandidate.clear();
-        _listScratchCandidate.reserve( listPrimitive.size() );
+
+        // 후보 배열을 **비우지 않고 제자리에 덮어쓴다.** `clear()` + `push_back` 은 원소마다
+        // shared_ptr 셋의 참조 카운트를 내렸다(clear) 올린다(push_back) — 프레임당 원자 연산이
+        // 6N 번이고, 그 중 대부분이 **지난 프레임과 같은 객체**를 가리킨다(메시·머티리얼·인스턴스는
+        // 물체가 움직인다고 바뀌지 않는다). 포인터가 그대로면 손대지 않는다.
+        //
+        // **필드는 전부 다시 채워야 한다.** 비우지 않으므로 채우지 않은 필드에는 지난 프레임 값이
+        // 남는다 — `DrawCandidate` 에 필드를 더하면 아래 루프에도 같이 적을 것.
+        if ( _listScratchCandidate.size() < listPrimitive.size() )
+            _listScratchCandidate.resize( listPrimitive.size() );
+
+        size_t candidateCount = 0;
 
         // 등록부에는 그릴 수 있는 것만 들어 있다 — 타입 검사가 없다.
         {
@@ -272,17 +282,24 @@ namespace sw
                     continue;
 
                 const float4x4 world = pMeshComp->getWorldMatrix();
-                DrawCandidate  cand{};
-                cand._world        = world;
-                cand._boundsCenter = world.getTranslation();
-                cand._boundsRadius = pMeshComp->getBoundsRadius();
-                cand._spinSeed     = pMeshComp->getGpuSpinSeed();
-                cand._mesh         = pMeshComp->getMesh(); // 소유를 싣는다 — RT 가 upload() 에서 역참조한다
-                // 스냅샷은 소유를 함께 싣는다 — 렌더 스레드가 패킷을 다 쓸 때까지 머티리얼·인스턴스가 살아야 한다.
-                cand._instance = pMeshComp->getMaterialInstance();
-                cand._material = GpuSceneBuilderInternal::shareMaterial( pMeshComp->getMaterial() );
-                if ( cand._material == nullptr )
-                    cand._material = GpuSceneBuilderInternal::shareMaterial( pScene->getMaterial() ); // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼)
+                DrawCandidate& cand  = _listScratchCandidate[candidateCount];
+                cand._world          = world;
+                cand._boundsCenter   = world.getTranslation();
+                cand._boundsRadius   = pMeshComp->getBoundsRadius();
+                cand._spinSeed       = pMeshComp->getGpuSpinSeed();
+                // 소유를 싣는다 — RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼·인스턴스의 소유도
+                // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
+                // 먼저 비교**한다 — 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
+                if ( cand._mesh.get() != pMesh )
+                    cand._mesh = pMeshComp->getMesh();
+                if ( cand._instance.get() != pMeshComp->getRawMaterialInstance() )
+                    cand._instance = pMeshComp->getMaterialInstance();
+                // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼).
+                Material* pMaterial = pMeshComp->getMaterial();
+                if ( pMaterial == nullptr )
+                    pMaterial = pScene->getMaterial();
+                if ( cand._material.get() != pMaterial )
+                    cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
 
                 // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
                 // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
@@ -300,10 +317,10 @@ namespace sw
                 // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
                 // 나누기·정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
                 cand._permutationHash = permutationHashFor( cand._material.get(), cand._instance.get() );
-                // 옮긴다 — `cand` 는 여기서 죽는다. 복사하면 shared_ptr 셋의 참조 카운트를 원소마다
-                // 올렸다 내리게 되고, 그게 프리미티브 수만큼 반복된다.
-                _listScratchCandidate.push_back( std::move( cand ) );
+                ++candidateCount;
             }
+            // 걸러진 만큼 줄인다 — 남은 원소는 여기서 소유를 놓는다.
+            _listScratchCandidate.resize( candidateCount );
         }
 
         if ( _listScratchCandidate.empty() )
@@ -332,7 +349,14 @@ namespace sw
 
         // 물체가 움직이기만 했으면 배치 구성은 그대로다 — 인스턴스 값만 새로 채우고, 나누기와
         // 정렬은 건너뛴다. 움직이는 씬에서 남아 있던 유일한 O(N log N) 이 이 정렬이었다.
-        const bool bBatchKeysSame = bHasCache && bContentSame == false && hasSameBatchKeysAsBuilt();
+        //
+        // 이 판단 자체가 후보 배열 **둘을 통째로 훑는다** — 스코프 없이 두면 표에서 `build` 와
+        // 하위 항목들의 차이로만 나타나 아무도 보지 않는다. 재는 자리를 만들어 둔다.
+        bool bBatchKeysSame = false;
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.batchKeys" );
+            bBatchKeysSame = bHasCache && bContentSame == false && hasSameBatchKeysAsBuilt();
+        }
 
         if ( bContentSame == false )
         {

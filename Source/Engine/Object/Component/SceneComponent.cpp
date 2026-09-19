@@ -17,10 +17,10 @@ namespace sw
              */
             static float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
             {
-                // DirectX 행-벡터 규격: Scale * Rotation * Translation
-                return float4x4::createScale( scale ) *
-                       float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
-                       float4x4::createTranslation( position );
+                // DirectX 행-벡터 규격: Scale * Rotation * Translation.
+                // 행렬 셋을 곱하지 않고 결과를 바로 적는다 — 값은 같고 곱 두 번이 사라진다
+                // (`float4x4::createTrs` 주석). 움직이는 컴포넌트마다 매 프레임 지나는 자리다.
+                return float4x4::createTrs( position, rotation, scale );
             }
 
             /**

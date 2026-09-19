@@ -392,6 +392,22 @@ namespace sw
         static float4x4 createFromYawPitchRoll( const float3& angles ) noexcept;
 
         /**
+         * @brief 스케일·회전·이동을 **한 번에** 합성합니다 (행-벡터 규격의 S * R * T).
+         * @details `createScale( s ) * createFromYawPitchRoll( … ) * createTranslation( p )` 와 **같은 값**이지만
+         *          행렬 곱을 하지 않습니다. 스케일은 대각이고 이동은 마지막 행뿐이라 결과가 미리 정해져 있습니다 —
+         *          위 3x3 은 회전 행렬의 각 행에 스케일을 곱한 것이고, 마지막 행이 곧 위치입니다. 곱 두 번
+         *          (128번의 실수 곱)이 곱 아홉 번으로 줄어듭니다. 매 프레임 움직이는 모든 컴포넌트가
+         *          지나가는 자리라 이 차이가 프레임에 보입니다.
+         */
+        static float4x4 createTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept;
+        /**
+         * @brief 스케일·오일러 회전(요/피치/롤)·이동을 한 번에 합성합니다.
+         * @param rotation 라디안 오일러 각. `_x` 가 피치, `_y` 가 요, `_z` 가 롤입니다
+         *                 (`createFromYawPitchRoll( angles )` 와 같은 해석입니다).
+         */
+        static float4x4 createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept;
+
+        /**
          * @brief 선형 보간합니다
          */
         static float4x4 lerp( const float4x4& from, const float4x4& to, float32 t ) noexcept;
