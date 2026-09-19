@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `7d7f10fb`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `78ecd6b7`
 
 ---
 
@@ -434,6 +434,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (리눅스 CI 가 **설정 단계**에서 멈춰 있었다 — 로컬에서는 볼 수 없는 종류)
+
+리눅스 잡 넷이 **한 줄도 컴파일하지 못하고** 끝나고 있었다. 빌드도 테스트도 아니고 CMake
+**configure** 에서였다:
+
+```
+File "Scripts/lint/gate/CheckIncludeOrder.py", line 156
+    includeFull = f"{includeType}{includeName}{'>' if includeType == '<' else '\"'}"
+SyntaxError: f-string expression part cannot include a backslash
+```
+
+f-string **식 안의 백슬래시**는 Python 3.12 의 PEP 701 부터 허용된다. 그 줄을 쓴 기계의 파이썬은
+**3.14** 라 아무 문제가 없었고 커밋 훅도 린트도 전부 초록이었다. CI 러너(ubuntu-22.04)의 `python3`
+만 **3.10** 이라 거기서만 죽었고, 그 자리가 `sw_executePythonScript` 라서 **설정 자체가 실패**했다.
+
+고치는 법은 한 줄이다 — **식을 변수로 먼저 뽑는다.** 그러면 백슬래시가 f-string 밖에 있게 된다.
+
+**하지만 그것만으로는 다시 난다.** 이것은 "실수했는데 못 봤다" 가 아니라 **"내 기계에서는 볼 방법이
+없다"** 는 종류다. 그래서 게이트를 하나 뒀다 — `CheckPythonMinimumVersion.py` 가 모든 스크립트의
+f-string 식을 **소스에서 잘라** 보고, `kMinimumVersion`(=CI 의 3.10)이 거절할 구문(식 안의
+백슬래시 · 여러 줄 식)을 잡는다. 린트 테스트가 17 → **18** 로 늘었다(게이트는 폴더에 떨어뜨리면
+CMake·커밋 훅이 알아서 집어 간다).
+
+> **`ast.parse(feature_version=(3, 10))` 은 이것을 못 잡는다 — 해 보고 확인했다.** PEP 701 은 문법이
+> 아니라 **토크나이저**를 바꾼 것이라, 새 토크나이저로 읽는 이상 옛 제약이 되살아나지 않는다
+> (3.10·3.11·3.12 셋 다 통과했다). 그래서 식의 소스 조각을 직접 본다.
+
+**재현하면서 알게 된 것 둘.**
+- CI 프리셋만 **유니티 빌드**(`SW_ENABLE_UNITY_BUILD=ON`)를 쓴다 — 로컬 `WSL-Debug` 와의 유일한
+  차이다. 그것까지 WSL 에서 재현해 봤고 **빌드는 깨끗했다**(문제는 오직 설정 단계였다).
+- 이 PC 의 WSL(우분투 26.04)에서는 `CI-*` 프리셋이 **링크에서 먼저 막힌다** — 번들
+  `Tools/LLVM/bin/ld.lld` 가 `libxml2.so.2` 를 못 찾는다. 재현하려면 시스템 링커를 줘야 한다:
+  `-DCMAKE_{EXE,SHARED,MODULE}_LINKER_FLAGS="--ld-path=$(command -v ld.lld)"`.
+  (`Scripts/setup/SetupLinuxDevEnvironment.py` 가 같은 안내를 한다.)
+
+**검증.** 윈도우 Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 ·
+린트 **18/18** · WSL 에서 `CI-Debug`(유니티) 설정·빌드 성공.
 
 ### 2026-09-19 (리눅스에서 창을 다시 만들면 사라졌다 — 화면 상태를 의도로 착각했다)
 

@@ -153,7 +153,11 @@ def processFile(filePath: Path, repositoryRoot: Path,
                 includeName = normalizedPath
 
         # 중복 제거
-        includeFull = f"{includeType}{includeName}{'>' if includeType == '<' else '\"'}"
+        # 닫는 괄호를 **먼저 변수로 뽑는다.** f-string 식 안의 백슬래시는 Python 3.12(PEP 701) 부터
+        # 허용된 것이고, CI 러너(ubuntu-22.04)의 `python3` 는 3.10 이라 SyntaxError 로 죽는다 —
+        # 그리고 그 죽는 자리가 **CMake configure** 라 리눅스 CI 가 통째로 멈췄다.
+        closingBracket = ">" if includeType == "<" else '"'
+        includeFull = f"{includeType}{includeName}{closingBracket}"
         if not includeName.endswith(".xxx"):
             if includeFull in seenIncludes:
                 continue
