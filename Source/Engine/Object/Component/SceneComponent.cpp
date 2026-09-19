@@ -187,15 +187,21 @@ namespace sw
     SceneComponent::~SceneComponent()
     {
         // 소멸 시 자식 컴포넌트들을 부모로부터 분리 (힙 복사 없이 역순 분리)
+        //
+        // **미루는 쪽(`detachFromComponent`)을 쓰면 안 된다.** 그쪽은 틱 중이면 일을 큐에 넣고
+        // 그냥 돌아오므로 `_listChild` 가 줄지 않는다 — 아래 루프가 끝나지 않고 미룬 일만 무한히
+        // 쌓인다. 게다가 그 일이 나중에 실행될 때 핸들로 되찾을 자기 자신은 이미 없다. 파괴는
+        // 지금 틱 창 밖에서만 일어나므로 실제로 닿지는 않지만, 닿았을 때의 모습이 "멈춘다" 인
+        // 것을 남겨 둘 이유가 없다.
         while ( _listChild.empty() == false )
         {
             SceneComponent* pChild = _listChild.back();
             if ( pChild != nullptr )
-                pChild->detachFromComponent();
+                pChild->detachFromParentImmediate();
             else
                 _listChild.pop_back();
         }
-        detachFromComponent();
+        detachFromParentImmediate();
     }
 
     void SceneComponent::onBeginPlay()
@@ -429,6 +435,11 @@ namespace sw
             return;
         }
 
+        detachFromParentImmediate();
+    }
+
+    void SceneComponent::detachFromParentImmediate()
+    {
         if ( _pParent == nullptr )
             return;
 

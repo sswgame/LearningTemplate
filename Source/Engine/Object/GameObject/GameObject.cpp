@@ -371,7 +371,7 @@ namespace sw
         return pTagComp->getTags();
     }
 
-    TagContainer& GameObject::getTags()
+    TagContainer& GameObject::getOrCreateTags()
     {
         TagComponent* pTagComp = getComponent<TagComponent>();
         if ( pTagComp == nullptr )
@@ -379,7 +379,15 @@ namespace sw
         if ( pTagComp != nullptr )
             return pTagComp->getTags();
 
-        return const_cast<TagContainer&>( s_emptyTags );
+        // 틱 중이라 `addComponent` 가 미뤄져 nullptr 을 준 경우다. 서명은 참조를 요구하는데
+        // 돌려줄 컨테이너가 없다 — 예전에는 **공용 상수** `s_emptyTags` 를 `const_cast` 해서
+        // 줬다. 그쪽에 한 번이라도 쓰면 태그가 없는 **모든** 오브젝트의 `getTags() const` ·
+        // `hasTag` · `matchesTagQuery` 가 그 값을 보게 된다. 버리는 통을 따로 둬서 쓰기가
+        // 아무에게도 새지 않게 한다.
+        SW_LOG_ERROR( "getOrCreateTags(): cannot attach a TagComponent while structural mutation is frozen — writes are discarded." );
+        thread_local TagContainer t_discardedTags;
+        t_discardedTags.clear();
+        return t_discardedTags;
     }
 
     size_t GameObject::getComponentCount() const

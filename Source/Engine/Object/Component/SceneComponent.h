@@ -133,6 +133,15 @@ namespace sw
         void applyAttachSerializeFields();
 
     private:
+        /**
+         * @brief 부모에서 **지금 당장** 뗍니다(미루지 않습니다).
+         * @details `detachFromComponent` 는 틱 중이면 일을 미루고 그냥 돌아온다. 소멸자가 그
+         *          경로를 타면 `_listChild` 가 줄지 않아 루프가 끝나지 않고, 미룬 일이 큐에
+         *          무한히 쌓인다. 소멸 중에는 미룰 대상(나중에 핸들로 되찾을 자기 자신)이
+         *          없으므로 소멸자는 반드시 이쪽을 씁니다.
+         */
+        void detachFromParentImmediate();
+
         PROPERTY( Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
         float3 _localPosition;
         PROPERTY( Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=deg" )

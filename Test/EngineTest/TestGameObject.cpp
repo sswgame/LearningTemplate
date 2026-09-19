@@ -1192,3 +1192,29 @@ SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
     SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
     SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
 }
+
+/**
+ * @brief [GameObjectTest] 태그를 **읽기만** 하는 것이 오브젝트의 구성을 바꾸지 않는지 검증
+ * @details `getTags()` 에 const/비-const 오버로드가 있었고, 비-const 쪽은 TagComponent 가 없으면
+ *          **만들어 붙였다.** `GameObject*` 로 부르면 읽을 생각이었어도 그쪽이 골라진다 —
+ *          인스펙터(`InspectorPanel`)가 태그 없는 오브젝트를 보여 주는 것만으로 그 오브젝트에
+ *          컴포넌트가 하나 생겼고, 저장하면 씬 파일에까지 들어갔다. 오브젝트의 구성이 바뀌는
+ *          일이 오버로드 해석으로 조용히 정해지고 있었던 것이다.
+ *
+ *          쓰는 쪽은 이제 `getOrCreateTags()` 라는 다른 이름이라 실수로 골라지지 않는다.
+ */
+SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "Plain" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    manager.mergePendingAdds();
+
+    const size_t beforeCount = pObj->getComponentCount();
+
+    // 인스펙터가 하던 것과 같은 모양 — **비-const 포인터**로 태그를 읽기만 한다.
+    const sw::vector<sw::TagID>& listTag = pObj->getTags().getTags();
+    SW_EXPECT_TRUE( listTag.empty() );
+
+    SW_EXPECT_EQUAL( beforeCount, pObj->getComponentCount() );
+}

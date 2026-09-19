@@ -142,8 +142,15 @@ namespace sw
         bool hasTag( TagID tag, bool bExactMatch = false ) const;
         /** @brief TagQuery 복합 불리언 질의 조건 검사 */
         bool matchesTagQuery( const TagQuery& query ) const;
-        /** @brief TagComponent의 태그 컨테이너. 없으면 추가한 뒤 반환합니다. */
-        TagContainer& getTags();
+        /**
+         * @brief TagComponent 의 태그 컨테이너를 **쓰기 위해** 얻습니다. 없으면 만들어 붙입니다.
+         * @details 이름에 `getOrCreate` 가 들어간 이유가 있다. 예전에는 이것이 `getTags()` 의
+         *          비-const 오버로드였고, `GameObject*` 로 부르면 **읽을 생각이었는데도** 이쪽이
+         *          골라졌다 — 인스펙터가 태그 없는 오브젝트를 보여 주는 것만으로 그 오브젝트에
+         *          `TagComponent` 가 붙었고, 저장하면 씬 파일에까지 들어갔다. 구성이 바뀌는 일이
+         *          오버로드 해석으로 조용히 정해지면 안 된다.
+         */
+        TagContainer& getOrCreateTags();
         /** @brief TagComponent의 태그 컨테이너. 없으면 빈 컨테이너. */
         const TagContainer& getTags() const;
 

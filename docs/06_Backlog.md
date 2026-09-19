@@ -435,6 +435,70 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (오브젝트를 인스펙터에서 보기만 해도 컴포넌트가 붙었다)
+
+`GameObject::getTags()` 에 오버로드가 둘 있었다:
+
+```cpp
+TagContainer&       getTags();        // 없으면 TagComponent 를 **만들어 붙인다**
+const TagContainer& getTags() const;  // 없으면 빈 컨테이너를 준다
+```
+
+`GameObject*` 로 부르면 **읽을 생각이었어도 비-const 쪽이 골라진다.** `InspectorPanel` 이
+정확히 그렇게 쓰고 있었다:
+
+```cpp
+const vector<TagID>& listTag = pObj->getTags().getTags();   // pObj 는 GameObject*
+```
+
+받는 쪽이 `const&` 라 읽기처럼 보이지만, 고른 것은 만드는 쪽이다. **인스펙터에서 태그 없는
+오브젝트를 선택하는 것만으로 그 오브젝트에 `TagComponent` 가 생겼다.** 컴포넌트 목록에 나타나고,
+저장하면 씬 파일에도 들어간다. 오브젝트의 구성이 바뀌는 일이 오버로드 해석으로 조용히 정해지고
+있었던 것이다.
+
+쓰는 쪽을 `getOrCreateTags()` 로 갈랐다 — 저장소에 이미 있는 이름 관례다
+(`getOrCreateLanguageTable` · `getOrCreateComponentPool`). **호출부는 한 줄도 고치지 않았는데
+빌드가 통과한다** — 인스펙터가 원하던 것이 애초에 const 판이었다는 증거다.
+
+**그 안에 하나 더 있었다.** 만드는 쪽이 실패했을 때(틱 중이라 `addComponent` 가 미뤄져 nullptr
+을 줄 때) 이렇게 돌려줬다:
+
+```cpp
+return const_cast<TagContainer&>( s_emptyTags );
+```
+
+`s_emptyTags` 는 **파일 전역 공용 상수**다. `getTags() const` · `hasTag` · `matchesTagQuery` 가
+태그 없는 모든 오브젝트에 대해 이것을 돌려준다. 여기에 한 번이라도 쓰면 **태그가 없는 모든
+오브젝트가 그 태그를 갖게 된다.** 버리는 통(`thread_local`)으로 바꾸고 로그를 남긴다.
+
+**검증.** `GameObjectTest.ReadingTagsDoesNotAttachATagComponent` — 비-const 포인터로 태그를 읽고
+컴포넌트 수가 그대로인지 본다. 이름을 되돌리면 `Expected [0], Actual [1]` 로 진다.
+
+### 2026-09-19 (~SceneComponent 가 미루는 경로를 타면 멈춘다)
+
+```cpp
+while ( _listChild.empty() == false )
+{
+    SceneComponent* pChild = _listChild.back();
+    if ( pChild != nullptr )
+        pChild->detachFromComponent();   // 틱 중이면 **미루고 그냥 돌아온다**
+    else
+        _listChild.pop_back();
+}
+```
+
+`detachFromComponent` 는 `isParallelTransformReadOnly()` 면 일을 큐에 넣고 돌아온다 —
+`_listChild` 가 줄지 않으므로 이 루프는 **끝나지 않고**, 미룬 일만 무한히 쌓인다. 게다가 그
+일이 나중에 실행될 때 핸들로 되찾을 자기 자신은 이미 없다.
+
+지금은 닿지 않는다. 파괴는 `processDeferredDestruction` 에서만 일어나고 그것은 틱 창 밖이며,
+`removeComponent` 도 얼어 있으면 미룬다. **재현 경로가 없어 무는 테스트를 쓰지 못했다** — 그
+점은 분명히 해 둔다. 그래도 닿았을 때의 모습이 "멈춘다" 인 것을 남겨 둘 이유가 없어서,
+미루지 않는 `detachFromParentImmediate()` 를 갈라 소멸자가 그쪽을 쓰게 했다.
+
+> `~GameObject` 도 `detachFromParent()` 로 같은 지연 경로에 들어가지만 그쪽은 루프가 아니라
+> 멈추지는 않고, 뒤이은 `clearComponents()` 가 `~SceneComponent` 를 태워 결국 끊긴다.
+
 ### 2026-09-19 (천천히 움직이는 물체는 영원히 제자리에 있었다)
 
 `SceneComponent` 의 세 setter 가 "정말 바뀌었나" 를 이렇게 물었다:
