@@ -626,6 +626,15 @@ namespace sw
         return _impl->_doc.saveToString();
     }
 
+    XmlNode XmlDocumentBackend::getDeserializationRoot() const
+    {
+        // 스택의 바닥이 `initializeXmlDeserialization` 이 찾은 루트다 — `pushChild` 로 내려가
+        // 있어도 루트는 그대로 바닥에 있다.
+        if ( _impl->_listNodeStack.empty() )
+            return XmlNode{};
+        return _impl->_listNodeStack.front();
+    }
+
     bool XmlDocumentBackend::initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName )
     {
         _impl->_doc.clear();
@@ -902,14 +911,17 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
 
-        XmlDocument doc;
-        if ( doc.parse( xmlStr ) == false )
+        // **문서 하나로 셋을 다 한다** — 버전 attribute · 값 읽기 · orphan 자식 훑기.
+        // 예전에는 여기서 자기 `XmlDocument` 를 따로 파싱하고, 아래 백엔드가 **같은 문자열을
+        // 한 번 더** 파싱했다. 씬·프리팹 로드가 엔티티마다 이 길로 간다. 형제인
+        // `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나만 쓴다.
+        const bool         bIgnore = ctx.ignoresCaseKeys();
+        XmlDocumentBackend backend;
+        backend.setIgnoreCaseKeys( bIgnore );
+        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        const bool bIgnore = ctx.ignoresCaseKeys();
-        XmlNode    root    = doc.root( typeInfo._name.c_str(), bIgnore );
-        if ( root.isValid() == false )
-            root = doc.root( nullptr, bIgnore );
+        const XmlNode root = backend.getDeserializationRoot();
         if ( root.isValid() == false )
             return false;
 
@@ -925,10 +937,6 @@ namespace sw
             }
         }
 
-        XmlDocumentBackend backend;
-        backend.setIgnoreCaseKeys( bIgnore );
-        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
-            return false;
         if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
             return false;
 

@@ -13,6 +13,8 @@ namespace sw
     struct TypeInfo;
 
     class Archive;
+    /** @brief `XmlDocumentBackend::getDeserializationRoot` 가 돌려주는 노드입니다. */
+    class XmlNode;
 
     using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
     using XmlMapItemDelegate   = Delegate<void( string_view keyStr, string_view valStr )>;
@@ -200,6 +202,16 @@ namespace sw
         bool readText( string& outText ) override;
         /** @brief 현재 노드의 자식 요소를 순서대로 방문합니다. */
         bool iterateChildren( const XmlChildVisitDelegate& callback ) override;
+
+        /**
+         * @brief 역직렬화 중인 문서의 **루트 노드**입니다. 초기화 전이면 무효 노드입니다.
+         * @details 이것이 없어서 `XmlSerializer::deserializeSoft` 가 **같은 문자열을 두 번
+         *          파싱했다** — 한 번은 자기 `XmlDocument` 로 버전 attribute 와 orphan 자식을
+         *          훑으려고, 또 한 번은 이 백엔드가 값을 읽으려고. 형제인
+         *          `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나로 셋을 다 한다.
+         * @warning 반환된 노드는 **이 백엔드가 살아 있는 동안만** 유효합니다(문서를 이쪽이 쥔다).
+         */
+        XmlNode getDeserializationRoot() const;
 
     private:
         struct Impl;

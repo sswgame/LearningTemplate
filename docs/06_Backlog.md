@@ -156,8 +156,6 @@ cd build/Ninja-Debug/Bin
 이번에는 **성능과 재사용성**으로 다시 훑는다. **구조가 크게 바뀌어도 된다.** (A) 는 "틀린 답을
 내는 곳" 만 보느라 성능·중복을 일부러 지나쳤다 — 지나친 것들의 예:
 
-- `XmlSerializer::deserializeSoft` 가 같은 XML 을 **두 번 파싱**한다(버전 읽기용 한 번,
-  백엔드용 한 번). 씬·프리팹 로드가 엔티티마다 이 길로 간다.
 - `AnnotationApply` 의 토큰 분해가 토큰마다 임시 `string` 을 만든다
   (`trim( string( view ).c_str() )`) — `trim( string_view )` 오버로드가 이미 있다.
 - `SpatialHashGrid2D::queryRay` 가 좁은 판정 없이 셀 안 전부를 돌려준다(형제 둘은 좁힌다).
@@ -466,6 +464,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 ((B) 패스 시작 — XML 역직렬화가 같은 문자열을 두 번 파싱했다)
+
+커밋 `TBD`. 성능·재사용성 패스 (B) 의 첫 항목.
+
+`XmlSerializer::deserializeSoft` 가 **같은 문자열을 두 번 파싱**했다 — 자기 `XmlDocument` 로
+한 번(버전 attribute + orphan 자식 훑기), 그 아래 `XmlDocumentBackend` 가 값을 읽으려고 또 한 번.
+형제인 `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나로 셋을 다 한다. 씬·프리팹 로드가
+엔티티마다 이 길로 간다.
+
+백엔드에 `getDeserializationRoot()` 를 내서 그쪽 파싱 결과를 그대로 쓴다. 파싱은 한 번이다.
+
+**측정 (Release, `NestedContainerActor` 20000회, best-of-5 를 3회 실행해 최솟값):**
+
+| | ns/call |
+|---|---|
+| 두 번 파싱 (전) | 6339 |
+| 한 번 파싱 (후) | **5825** |
+
+**약 8% 다.** 파싱이 이 경로의 전부가 아니라(리플렉션 프로퍼티 읽기가 더 크다) 배수로 줄지는
+않는다 — 숫자를 그대로 적어 둔다. 엔티티 1000개짜리 씬이면 로드당 0.5 ms 쯤이다.
+
+곁들여 하나 확인됨: 예전 코드의 `doc.root( typeInfo._name.c_str() )` 는 **한 번도 안 맞았다.**
+직렬화가 태그 이름의 `::` 를 `__` 로 바꿔 쓰는데(`sanitizeTag`) 조회는 원본 이름으로 했다 —
+늘 `doc.root( nullptr )` 폴백으로 떨어졌다. 백엔드 쪽은 처음부터 sanitize 한 이름으로 찾는다.
 
 ### 2026-09-20 (벤치가 리로드마다 라이트와 바닥을 한 벌씩 쌓았다 — (A) 패스 마감)
 
