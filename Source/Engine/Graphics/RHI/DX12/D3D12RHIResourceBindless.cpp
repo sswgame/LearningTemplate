@@ -134,8 +134,10 @@ namespace sw
             srvDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width ) / stride;
             srvDesc.Buffer.StructureByteStride = stride;
             srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
+            // 온라인 힙과 오프라인 힙에 각각 한 번씩 — 예전에는 오프라인 쪽을 **두 번** 불렀다
+            // (복사-붙여넣기). 같은 뷰를 덮어쓰는 것이라 결과는 같았지만, 읽는 사람에게는 "둘이
+            // 달라야 하는데 잘못 적은 것" 으로 보인다.
             _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
-            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
             _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
 
             if ( index >= _pDevice->_listRegisteredBindless.size() )

@@ -3122,3 +3122,64 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the instance constant buffer growth test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] 32비트에 담기지 않는 구조 버퍼는 **만들지 않는다**
+ * @details `createStructuredBuffer( elementSize, elementCount )` 는 네 백엔드가 각자 곱한다.
+ *          **DX12 만 64비트로 곱하고 나머지 셋은 uint32 로 곱했다** — 넘치면 조용히 작은 버퍼가
+ *          만들어지고, 셰이더는 원래 개수만큼 쓰므로 그 밖으로 나간다. DX12 쪽 주석에 그 함정이
+ *          이미 적혀 있었는데(그쪽은 `Width` 가 UINT64 라 넓히는 것으로 끝났다) 형제 백엔드로는
+ *          옮겨지지 않은 것이다 — 이 저장소가 여러 번 겪은 "한 백엔드만 고쳐진" 모양이다.
+ *
+ *          나머지 셋은 하위 API 가 전부 32비트 크기를 받아 넓힐 수 없으므로 **거절**이 맞다.
+ *          네 백엔드가 같은 답(0)을 내는지 여기서 못박는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
+{
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            sw::IRHIResource* pResource = device->getResource();
+            SW_ASSERT_TRUE( pResource != nullptr );
+
+            // 64 x 100'000'000 = 6.4e9 — uint32 로 곱하면 약 2.1e9 로 접혀 "성공" 한다.
+            const sw::RHIBufferHandle overflowed = pResource->createStructuredBuffer( 64u, 100000000u );
+
+            // **DX12 는 거절하지 않아도 된다.** 그쪽 `D3D12_RESOURCE_DESC::Width` 는 UINT64 라 이 크기를
+            // 실제로 표현할 수 있고, 만들지 말지는 드라이버가 정한다. 나머지 셋은 하위 API 가 전부
+            // 32비트 크기를 받으므로 **담기지 않으면 만들지 않는 것**이 유일하게 맞는 답이다 —
+            // 접힌 크기로 만들면 셰이더가 원래 개수만큼 쓰면서 버퍼 밖으로 나간다.
+            if ( backend != sw::RHIBackend::DirectX12 )
+            {
+                SW_EXPECT_TRUE_MSG( overflowed == 0,
+                                    "32비트에 담기지 않는 크기로 구조 버퍼를 만들었습니다 — 접힌 크기입니다" );
+            }
+            if ( overflowed != 0 )
+                pResource->destroyBuffer( overflowed );
+
+            // 평범한 크기는 그대로 만들어진다 — "다 막는다" 로 굳지 않는다.
+            const sw::RHIBufferHandle normal = pResource->createStructuredBuffer( 64u, 256u );
+            SW_EXPECT_TRUE_MSG( normal != 0, "평범한 구조 버퍼를 만들지 못했습니다" );
+            if ( normal != 0 )
+                pResource->destroyBuffer( normal );
+        }
+
+        device->shutdown();
+        device.reset();
+        if ( window != nullptr )
+        {
+            window->destroy();
+            window.reset();
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the structured buffer overflow test" );
+}

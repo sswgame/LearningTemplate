@@ -87,9 +87,25 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
+        if ( elementSize == 0 || elementCount == 0 )
+            return 0;
+
+        // **64비트로 곱하고 담기지 않으면 거절한다.** `elementSize * elementCount` 를 uint32 로 곱하면
+        // 넘쳐서 **조용히 작은 버퍼**가 만들어지고, 셰이더는 원래 개수만큼 쓰므로 그 밖으로 나간다.
+        // DX12 는 이 함정을 이미 고쳤는데(그쪽은 `Width` 가 UINT64 라 넓히는 것으로 끝났다)
+        // 나머지 백엔드로는 옮겨지지 않았다 — 여기서는 아래 API 가 전부 32비트 크기를 받으므로
+        // 넓힐 수가 없다. 담기지 않으면 만들지 않는 것이 맞다.
+        const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+        if ( totalBytes > static_cast<uint64>( ~uint32{ 0 } ) )
+        {
+            SW_LOG_ERROR( "구조 버퍼가 32비트 크기에 담기지 않습니다 (%# x %# = %# 바이트).",
+                          elementSize, elementCount, totalBytes );
+            return 0;
+        }
+
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage               = D3D11_USAGE_DEFAULT;
-        bufferDesc.ByteWidth           = elementSize * elementCount;
+        bufferDesc.ByteWidth           = static_cast<UINT>( totalBytes );
         bufferDesc.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
         bufferDesc.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
         bufferDesc.StructureByteStride = elementSize;

@@ -435,6 +435,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (구조 버퍼 크기 곱셈 — DX12 만 고쳐져 있었다)
+
+`createStructuredBuffer( elementSize, elementCount )` 는 네 백엔드가 각자 곱한다. **DX12 만 64비트로
+곱하고 나머지 셋은 uint32 로 곱했다.** 넘치면 조용히 **작은 버퍼**가 만들어지고, 셰이더는 원래
+개수만큼 쓰므로 그 밖으로 나간다.
+
+DX12 쪽에는 그 함정이 주석으로 이미 적혀 있었다 — *"64비트로 곱한다 — 예전에는 UINT 로 곱해
+Width(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다"*. **그 수정이 형제 백엔드로 옮겨지지
+않은 것이다.** 이 저장소가 여러 번 겪은 "한 백엔드만 고쳐진" 모양이고, 이번엔 고친 쪽이 이유까지
+적어 두었는데도 옮겨지지 않았다.
+
+셋은 하위 API 가 전부 32비트 크기를 받으므로 DX12 처럼 넓힐 수 없다 — **담기지 않으면 만들지
+않는다**(로그를 남기고 0). DX12 는 `Width` 가 UINT64 라 그 크기를 실제로 표현할 수 있으므로
+거절하지 않아도 된다. 새 케이스가 그 **백엔드별 계약을 그대로** 적는다.
+
+> 테스트를 한 번 잘못 썼다. 처음에는 네 백엔드 모두 0 을 돌려주길 기대했는데, Shipping 빌드에는
+> DX12 만 링크돼 있어서 그 하나가 6.4GB 버퍼를 **실제로 만들어** 냈다. DX12 가 틀린 것이 아니라
+> **내 기대가 틀린 것**이었다 — 능력이 다른 백엔드에 같은 답을 요구하고 있었다.
+
+**검증.** `RenderPassGpuTest.StructuredBufferRejectsSizeThatOverflows32Bit`(hostgpu). 가드를
+빼면 세 백엔드가 모두 진다(Debug 빌드에서 네 백엔드가 다 뜬다 — Shipping 은 DX12 뿐이다).
+정적 씬 스크린샷 네 백엔드 모두 `d2c61c1f8e57cf2d` 유지, nogpu 7/7 × 3 프리셋, hostgpu 2/2.
+
+**덤:** `D3D12RHIResourceBindless` 에서 `CreateShaderResourceView( ..., offlineHandle )` 가 연속으로
+**두 번** 불리고 있었다(복사-붙여넣기). 결과는 같지만 읽는 사람에게는 "둘이 달라야 하는데 잘못
+적은 것" 으로 보인다. 저장소 전체를 같은 패턴(연속된 동일 호출)으로 훑었고 이 한 곳뿐이었다.
+
+**살펴보고 문제 없던 것 (DX12):** bindless 인덱스 공간이 SRV·CBV·UAV·텍스처UAV 모두 하나로
+통일돼 있고(`acquireBindlessIndex`), 인덱스 반납은 GPU 펜스 뒤로 미루며, 슬롯 테이블은
+`static_assert( kOnlineBlockDescriptorCount >= kMaxSlotTableSize )` 로 관계를 컴파일 타임에
+못박아 두었다. 슬롯 쓰기는 전부 `slot >= kXxxSlotCount` 로 막는다.
+
 ### 2026-09-19 (Engine 훑기 — Graphics/Shader · Renderer · RHI 공유 계층: 발견 없음)
 
 고칠 것이 나오지 않은 구간도 **무엇을 확인했는지** 남긴다 — 다음에 같은 자리를 다시 파지 않도록.
