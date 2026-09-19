@@ -18,6 +18,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Container/array.h"
+#include "Core/Log/Logger.h"
 
 namespace sw
 {
@@ -96,7 +97,18 @@ namespace sw
                 return;
 
             pPtr->~T();
-            _freeQueue.enqueue( pPtr );
+
+            // **반납이 실패하면 세지 않는다.** 자유 큐의 자리 수는 정확히 `Capacity` 이고 풀의 블록
+            // 수도 그만큼이다 — 가득 찼다는 것은 이 포인터가 이 풀의 것이 아니거나 **이미 반납된
+            // 것**이라는 뜻이다. 그런데도 `_activeCount` 를 줄이면 0 에서 뒤집혀 40억이 되고,
+            // 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 하게 된다.
+            if ( _freeQueue.enqueue( pPtr ) == false )
+            {
+                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue is full — the pointer is not this pool's, or was already released." );
+                pPtr = nullptr;
+                return;
+            }
+
             _activeCount.fetch_sub( 1, std::memory_order_relaxed );
             pPtr = nullptr; // 호출자가 실수로 사용하지 못하도록 즉시 무효화
         }

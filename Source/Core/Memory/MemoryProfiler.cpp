@@ -39,6 +39,24 @@ namespace sw
     {
         struct MemoryProfilerInternal
         {
+            /**
+             * @brief 원자 카운터에서 빼되 **0 아래로 내려가지 않게** 합니다.
+             * @details 카운터가 `uint64` 라 그냥 `fetch_sub` 하면 0 아래가 1.8e19 로 접힌다.
+             *          할당은 세지 않았는데 해제만 세는 경우가 실제로 있다 — 에디터의 프로파일러
+             *          패널이 **추적을 런타임에 켤 수 있어서**, 켜기 전에 잡힌 블록들이 켠 뒤에
+             *          풀리면 그렇게 된다.
+             */
+            static void subtractSaturating( atomic<uint64>& counter, uint64 amount )
+            {
+                uint64 current = counter.load( std::memory_order_relaxed );
+                while ( true )
+                {
+                    const uint64 next = ( current >= amount ) ? ( current - amount ) : 0;
+                    if ( counter.compare_exchange_weak( current, next, std::memory_order_relaxed, std::memory_order_relaxed ) )
+                        return;
+                }
+            }
+
 #if defined( SW_HAS_CRT_LEAK_CHECK )
             static inline _CrtMemState s_leakBaseline{};
             static inline bool         s_bHasLeakBaseline{ false };
@@ -292,8 +310,14 @@ namespace sw
             tagIdx = 0;
 
         _arrStat[tagIdx]._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
-        _arrStat[tagIdx]._currentAllocatedBytes.fetch_sub( size, std::memory_order_relaxed );
-        _arrStat[tagIdx]._currentAllocationCount.fetch_sub( 1, std::memory_order_relaxed );
+
+        // **세지 않은 것을 빼면 안 된다.** 두 카운터는 `uint64` 라 0 아래로 내려가면 1.8e19 로
+        // 접힌다. 에디터의 프로파일러 패널에 **추적 켜기 체크박스**가 있어서, 켜기 전에 잡힌
+        // 블록들이 켠 뒤에 풀리면 정확히 그 일이 난다(할당은 세지 않았는데 해제만 센다).
+        // 바로 아래 콜스택 표는 처음부터 `>= size` 로 막고 있었다 — 같은 함수 안에서 위쪽만
+        // 빠져 있었다.
+        MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocatedBytes, size );
+        MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocationCount, 1 );
 
         if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
         {

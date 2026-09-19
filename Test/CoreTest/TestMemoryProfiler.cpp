@@ -42,3 +42,39 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
 
     profiler.shutdown();
 }
+
+/**
+ * @brief [MemoryProfilerTest] 세지 않은 해제가 카운터를 0 아래로 접지 않는지 검증
+ * @details 두 카운터(`_currentAllocatedBytes` · `_currentAllocationCount`)는 `uint64` 다.
+ *          그냥 `fetch_sub` 하면 0 아래가 **1.8e19** 로 접힌다. 할당은 세지 않았는데 해제만
+ *          세는 경우가 실제로 있다 — 에디터의 프로파일러 패널에 **추적 켜기 체크박스**가
+ *          있어서, 켜기 전에 잡힌 블록들이 켠 뒤에 풀리면 정확히 그 일이 난다.
+ *
+ *          같은 함수 안의 콜스택 표는 처음부터 `>= size` 로 막고 있었다 — 위쪽만 빠져 있었다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+
+    // 추적을 **끈 채** 할당한다 — 카운터는 올라가지 않는다.
+    profiler.setTrackingEnabled( false );
+    void* pDummy = reinterpret_cast<void*>( 0x1234'5678 );
+    profiler.recordAllocation( pDummy, 4096, MemoryTag::Game );
+
+    const uint64 beforeBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
+    const uint64 beforeCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
+
+    // 이제 켜고 해제한다 — 세지 않은 것을 빼게 된다.
+    profiler.setTrackingEnabled( true );
+    profiler.recordFree( pDummy, 4096, MemoryTag::Game, 0 );
+
+    const uint64 afterBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
+    const uint64 afterCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
+
+    // 고치기 전에는 여기가 1.8e19 였다.
+    SW_EXPECT_TRUE( afterBytes <= beforeBytes );
+    SW_EXPECT_TRUE( afterCount <= beforeCount );
+
+    profiler.shutdown();
+}

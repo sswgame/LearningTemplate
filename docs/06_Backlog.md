@@ -435,6 +435,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (세지 않은 해제가 프로파일러 카운터를 1.8e19 로 접었다)
+
+`MemoryProfiler::recordFree` 가 태그별 카운터를 그냥 뺐다:
+
+```cpp
+_arrStat[tagIdx]._currentAllocatedBytes.fetch_sub( size, relaxed );   // uint64
+_arrStat[tagIdx]._currentAllocationCount.fetch_sub( 1, relaxed );
+```
+
+둘 다 `uint64` 라 0 아래로 내려가면 **1.8e19** 로 접힌다. 그리고 세지 않은 것을 빼는 경우가
+실제로 있다 — **에디터의 프로파일러 패널에 추적 켜기 체크박스가 있어서**
+(`ProfilerPanel.cpp:212`), 켜기 전에 잡힌 블록들이 켠 뒤에 풀리면 정확히 그렇게 된다.
+
+**같은 함수 안에서** 콜스택 표는 처음부터 막고 있었다:
+
+```cpp
+if ( it->second._currentBytes >= size ) it->second._currentBytes -= size; else ... = 0;
+if ( it->second._currentCount > 0 )     it->second._currentCount--;
+```
+
+세 줄 아래에 답이 있는데 위쪽만 빠져 있었다. `subtractSaturating` 하나로 맞췄다.
+
+**검증.** `MemoryProfilerTest.FreeWithoutMatchingAllocationDoesNotWrap` — 추적을 끈 채 할당하고
+켠 뒤 해제한다. 되돌리면 두 단언이 모두 진다.
+
+**살펴보고 문제 없던 것 (Core/Memory · Core/Concurrency · Core/Process · Core/Log).**
+`Memory::freeAligned` 는 헤더 매직으로 이중 해제를 막고, 해제 시 태그를 **헤더에 적힌 것**으로
+넘기므로 스레드마다 다른 현재 태그로 어긋나지 않는다. `LinearAllocator` · `FrameArenaAllocator` 는
+뺄셈 비교와 `size + alignment` 오버플로 가드가 이미 들어가 있다. `ConcurrentQueue` 는 Vyukov
+MPMC 가 정확하고, `LockFreeQueue` 는 SPSC 메모리 순서가 정석이며, `mutex` 는
+`condition_variable_any` 와 짝이 맞는다. 크래시 핸들러는 Windows · POSIX 가 **같은 재진입 가드와
+같은 기록 순서**를 쓰고 POSIX 는 `sigaltstack` 까지 깐다. `Logger` 는 출력 장치를 **지우지 않으므로**
+락 밖에서 생포인터로 쓰는 것이 안전하고, 워커의 조건 대기는 5ms 타임아웃이 안전망이다.
+`MulticastDelegate` 는 방송 중 `add`/`remove` 를 인덱스 순회 + 원소 복사로 견딘다.
+
+> 함께 고친 작은 것: `LockFreeObjectPool::release` 가 `enqueue` 실패를 무시하고 `_activeCount` 를
+> 줄였다. 자유 큐의 자리 수는 정확히 `Capacity` 이므로 가득 찼다는 것은 **이미 반납된 포인터**
+> 라는 뜻인데, 그때도 세면 0 에서 뒤집혀 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 한다.
+
 ### 2026-09-20 (풀이 이중 반납을 조용히 받아들이고 있었다)
 
 `PoolAllocator::free` 는 Debug 에서 **"이 포인터가 내 청크 안인가"** 는 봤지만 **"이미 자유
