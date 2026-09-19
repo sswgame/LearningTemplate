@@ -97,8 +97,19 @@ namespace sw
          *          그래서 이 표를 읽는 쪽은 **값까지** 보아야 한다. 예전 이름은 `_mapLoadedAsset`
          *          이었고, 읽는 곳 셋 중 둘이 이름을 믿고 키만 보다가 틀렸다.
          */
-        unordered_map<string, bool>                                    _mapAssetResult;
-        unordered_set<string>                                          _uniqueActiveRequest;
+        unordered_map<string, bool> _mapAssetResult;
+        unordered_set<string>       _uniqueActiveRequest;
+        /**
+         * @brief 진행 중인 요청 가운데 **바이트까지 읽는** 것들.
+         * @details `requestAsset`(있는지만 본다)과 `requestAssetData`(바이트를 읽는다)가 같은
+         *          `_uniqueActiveRequest` 를 공유한다. 그래서 존재 확인이 진행 중일 때 데이터
+         *          요청이 들어오면 **그 태스크에 편승**했는데, 그 태스크는 파일을 읽지 않는다 —
+         *          데이터 콜백이 `bSuccess = true` 와 **빈 버퍼**를 받았다. 성공이라고 말하면서
+         *          아무것도 주지 않는, 가장 나쁜 모양의 틀린 답이다.
+         *
+         *          진행 중인 것이 어느 쪽인지 알아야 "편승해도 되는가" 를 가릴 수 있다.
+         */
+        unordered_set<string>                                          _uniqueActiveDataRequest;
         unordered_map<string, vector<OnStreamingCompleteDelegate>>     _mapInFlightCallback;
         unordered_map<string, vector<OnStreamingDataCompleteDelegate>> _mapInFlightDataCallback;
         /**

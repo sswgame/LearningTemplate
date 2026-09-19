@@ -435,6 +435,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (데이터 요청이 존재 확인에 편승해 "성공" 과 빈 버퍼를 돌려줬다)
+
+`AssetStreamingQueue` 에는 요청이 두 가지 있다 — `requestAsset` 은 **있는지만** 보고
+(`ResourceUtil::hasResource`), `requestAssetData` 는 **바이트를 읽는다**
+(`readBinaryResource`). 그런데 진행 중인 요청을 담는 목록이 **하나**였다:
+
+```cpp
+if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
+{
+    _mapInFlightDataCallback[pathStr].push_back( onComplete );   // 편승한다
+    return true;
+}
+```
+
+존재 확인이 아직 돌고 있을 때 데이터 요청이 들어오면 그 태스크에 붙는데, **그 태스크는 파일을
+읽지 않는다.** 완료가 오면 데이터 콜백이 `bSuccess = true` 와 **빈 버퍼**를 받는다. 성공이라고
+말하면서 아무것도 주지 않는, 가장 나쁜 모양의 틀린 답이다.
+
+진행 중인 것이 어느 쪽인지 알아야 "편승해도 되는가" 를 가릴 수 있으므로
+`_uniqueActiveDataRequest` 를 둔다. 존재 확인에만 붙게 되는 경우에는 **세대를 올려** 그 태스크의
+완료를 버리고 데이터 태스크를 새로 낸다 — `processAssetTask` 는 세대가 어긋나면 콜백 표에
+손대기 전에 돌아가므로, 먼저 등록된 존재 확인 콜백도 그대로 살아 새 태스크의 완료에 함께 실린다.
+
+**검증.** `AssetStreamingTest.DataRequestDoesNotPiggybackOnAnExistenceCheck` — 32 라운드,
+되돌리면 3/3 진다.
+
+> **테스트를 두 번 잘못 썼다.** (1) 처음에는 `if ( bDataSuccess )` 안에서만 바이트를 단언했는데,
+> 기존 케이스들이 쓰던 경로(`Resource/common/shaders/forward_lit.hlsl`)가 **일부러 없는 것**이라
+> `bSuccess` 가 false 로 와서 단언을 통째로 지나갔다 — 변이가 3/3 통과했다. 실제로 읽히는
+> 에셋을 쓰는 케이스가 이 저장소에 없었던 것이다. (2) 그래서 진짜 셰이더 경로로 바꿨더니
+> **Shipping 에서만** 졌다 — 거기서는 리소스가 팩에만 있고 `.hlsl` 원본은 들어가지 않는다.
+> 결국 테스트가 **자기 파일을 만들어 절대 경로로** 준다(`ResourceUtil` 은 절대 경로를 디스크에서
+> 그대로 읽으므로 프리셋이 달라도 답이 같다).
+
 ### 2026-09-20 (팩 헤더는 쟀는데 FAT 항목은 재지 않았다)
 
 `ResourcePackReader::validateHeaderGeometry` 는 헤더가 말하는 구역(인덱스 표 · 스트링 풀)이

@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -266,5 +268,88 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
     }
 
     SW_EXPECT_TRUE( countCallback.load() > 0 );
+    queue.shutdown();
+}
+
+/**
+ * @brief [AssetStreamingTest] 데이터 요청이 존재 확인 요청에 편승해 빈 버퍼를 받지 않는지 검증
+ * @details `requestAsset`(있는지만 본다)과 `requestAssetData`(바이트를 읽는다)가 진행 중 목록
+ *          하나를 공유했다. 그래서 존재 확인이 아직 돌고 있을 때 데이터 요청이 들어오면 그
+ *          태스크에 **편승**했는데, 그 태스크는 파일을 읽지 않는다 — 데이터 콜백이
+ *          `bSuccess = true` 와 **빈 버퍼**를 받았다. 성공이라고 말하면서 아무것도 주지 않는,
+ *          가장 나쁜 모양의 틀린 답이다.
+ *
+ *          창이 좁은 레이스라 라운드를 여러 번 돌린다. 편승이 일어나지 않은 라운드는 어차피
+ *          올바른 길을 타므로 통과한다 — 이 케이스는 **편승했을 때만** 진다.
+ */
+SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    // **진짜로 읽히는 경로여야 한다.** 없는 경로를 쓰면 데이터 콜백이 `bSuccess = false` 로
+    // 오고, "성공인데 바이트가 없다" 는 이 케이스의 단언을 지나가 버린다(처음에 그렇게 썼다가
+    // 변이가 통과했다). 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
+    // **직접 만든 파일을 절대 경로로** 준다. `ResourceUtil` 은 절대 경로를 디스크에서 그대로
+    // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
+    const sw::string assetPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_stream_piggyback.bin" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [assetPath]()
+    {
+        sw::FileUtil::removeFile( assetPath );
+    } ) );
+
+    const sw::vector<uint8> payload( 4096, uint8{ 0xAB } );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+
+    const utf8* pAssetPath = assetPath.c_str();
+
+    sw::vector<uint8> directBytes;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( pAssetPath, directBytes ) );
+    SW_ASSERT_TRUE( directBytes.empty() == false );
+
+    constexpr uint32 kRound = 32;
+
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        bool   bExistenceDone = false;
+        bool   bDataDone      = false;
+        bool   bDataSuccess   = false;
+        size_t dataByteCount  = 0;
+
+        // 존재 확인을 먼저 띄우고, 그것이 끝나기 전에 데이터를 요청한다.
+        queue.requestAsset( pAssetPath, sw::StreamingPriority::Normal,
+                            SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&bExistenceDone]( sw::string_view, bool )
+        {
+            bExistenceDone = true;
+        } ) );
+
+        queue.requestAssetData( pAssetPath, sw::StreamingPriority::Normal,
+                                SW_DELEGATE_LAMBDA( sw::OnStreamingDataCompleteDelegate,
+                                                    [&bDataDone, &bDataSuccess, &dataByteCount]( sw::string_view, bool bSuccess, const sw::vector<uint8>& bytes )
+        {
+            bDataDone     = true;
+            bDataSuccess  = bSuccess;
+            dataByteCount = bytes.size();
+        } ) );
+
+        for ( int32 attempt = 0; attempt < 200; ++attempt )
+        {
+            queue.update();
+            if ( bExistenceDone && bDataDone )
+                break;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 2 ) );
+        }
+
+        SW_ASSERT_TRUE( bDataDone );
+
+        // 위에서 직접 읽어 봤으므로 이 경로는 반드시 성공이고 바이트가 있어야 한다.
+        // 편승했으면 여기서 성공인데 0 바이트가 나온다.
+        SW_EXPECT_TRUE( bDataSuccess );
+        SW_EXPECT_EQUAL( directBytes.size(), dataByteCount );
+
+        // 다음 라운드가 `_mapAssetResult` 지름길로 빠지지 않도록 기록을 비운다.
+        queue.clearCompletionRecord();
+    }
+
     queue.shutdown();
 }

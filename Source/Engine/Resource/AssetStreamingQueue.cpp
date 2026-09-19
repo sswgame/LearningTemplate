@@ -15,6 +15,7 @@ namespace sw
         : _mutex{}
         , _mapAssetResult{}
         , _uniqueActiveRequest{}
+        , _uniqueActiveDataRequest{}
         , _mapInFlightCallback{}
         , _mapRequestGeneration{}
         , _queueCompleted{}
@@ -40,6 +41,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _mutex };
         _uniqueActiveRequest.clear();
+        _uniqueActiveDataRequest.clear();
         _mapInFlightCallback.clear();
         _mapInFlightDataCallback.clear();
         _mapRequestGeneration.clear();
@@ -130,7 +132,14 @@ namespace sw
         const string pathStr = string( assetPath );
 
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
+
+        // **바이트를 읽는 태스크에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
+        // 않으므로, 거기 붙으면 `bSuccess = true` 에 빈 버퍼를 받는다. 그때는 세대를 올려
+        // 그 태스크의 완료를 버리고 **데이터 태스크를 새로 낸다** — `processAssetTask` 는 세대가
+        // 어긋나면 콜백 표에 손대기 전에 돌아가므로, 먼저 등록된 존재 확인 콜백도 그대로 살아
+        // 새 태스크의 완료에 함께 실린다.
+        const bool bAlreadyFetchingData = _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end();
+        if ( bAlreadyFetchingData )
         {
             if ( onComplete.isBound() )
                 _mapInFlightDataCallback[pathStr].push_back( onComplete );
@@ -138,6 +147,7 @@ namespace sw
         }
 
         _uniqueActiveRequest.insert( pathStr );
+        _uniqueActiveDataRequest.insert( pathStr );
         const uint64 generation = ++_mapRequestGeneration[pathStr];
         if ( onComplete.isBound() )
             _mapInFlightDataCallback[pathStr].push_back( onComplete );
@@ -158,6 +168,7 @@ namespace sw
             const bool    bSuccess   = ResourceUtil::readBinaryResource( pathStr, bytes );
             _mapAssetResult[pathStr] = bSuccess;
             _uniqueActiveRequest.erase( pathStr );
+            _uniqueActiveDataRequest.erase( pathStr );
 
             auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
             if ( itDataCallbacks != _mapInFlightDataCallback.end() )
@@ -217,6 +228,7 @@ namespace sw
 
         _mapAssetResult[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
+        _uniqueActiveDataRequest.erase( pathStr );
 
         auto itCallbacks = _mapInFlightCallback.find( pathStr );
         if ( itCallbacks != _mapInFlightCallback.end() )
@@ -253,6 +265,7 @@ namespace sw
         const string            pathStr = string( assetPath );
         std::scoped_lock<mutex> lock{ _mutex };
         _uniqueActiveRequest.erase( pathStr );
+        _uniqueActiveDataRequest.erase( pathStr );
 
         const auto itCallbacks = _mapInFlightCallback.find( pathStr );
         if ( itCallbacks != _mapInFlightCallback.end() )
