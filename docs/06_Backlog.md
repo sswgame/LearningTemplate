@@ -435,6 +435,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (머티리얼 패킹이 옆 프로퍼티를 덮을 수 있었다)
+
+상수버퍼에서 **칸 크기는 셰이더 리플렉션**이 정하고(`ShaderVariableInfo::_size`) **쓰는 크기는
+머티리얼 XML** 의 `shaderType` 이 정한다 — 둘이 어긋날 수 있다.
+`Material::syncPropertiesFromReflection` 이 대부분 재매핑으로 맞춰 주지만, **고칠 수 없는
+조합**에서는 경고만 남기고(`bAllPacked = false`) `shaderType` 을 그대로 둔다.
+
+`MaterialUtil::packPropertyIntoBuffer` 의 `writeNumericValue` 는 처음부터 `packSize < need` 를
+보고 있었는데, **같은 switch 안에서 직접 `Memory::copy` 하던 형제 경로 여섯**
+(Bool · Enum · BitFlag · ChannelMask · Texture · Range)은 그 검사를 건너뛰었다. 그래서 예를 들어
+5바이트 칸에 `ChannelMask` + `shaderType="Float4"` 가 오면 **16바이트를 썼다.**
+
+**증상은 크래시가 아니라 "엉뚱한 색" 이다.** 넘친 바이트가 상수버퍼 **안**의 다음 프로퍼티
+자리로 들어가기 때문이다 — 메모리 오류로는 안 잡히고 화면에서만 보인다. 이 저장소가 머티리얼에서
+여러 번 겪은 모양이다.
+
+여섯 경로를 `writeBoundedValue` 하나로 모아 칸을 넘으면 쓰지 않고 false 를 돌려주게 했다.
+
+**테스트를 무는 것으로 만드는 데 두 번 실패했다 — 그 과정이 이 항목의 요점이다.**
+
+1. `MaterialUtil::packPropertyIntoBuffer` 를 직접 부르려 했다 → **링크 실패.**
+   `MaterialUtil.h` 는 머리말에 "Engine TU 전용" 이라고 적혀 있고 실제로 export 하지 않는다.
+   테스트를 위해 `SW_API` 를 붙이는 것은 그 의도를 뒤집는 일이라 공개 경로
+   (`loadFromXml` + `syncPropertiesFromReflection`)로 돌아갔다.
+2. "ASan 이 잡겠지" 로 썼다 → **수정을 빼고도 3/3 통과.**
+   `sw::vector` 의 capacity 가 이미 16이라(앞선 `rebuildPackedBuffer` 가 그렇게 잡았다) 16바이트
+   쓰기가 **할당 안**에 들어간다. 논리적으로는 `size()` 를 넘었지만 메모리 오류는 아니다.
+   즉 **이건 메모리 안전 문제가 아니라 데이터 오염 문제**이고, 검사도 거기에 맞춰야 했다.
+
+최종 케이스 `PackingDoesNotClobberTheNextPropertySlot` 은 `_tint` 를 **먼저** 적어 뒤의 `_mask` 가
+덮는지를 본다(패킹은 목록 순서대로 돈다). 수정 전에는 "옆 프로퍼티(_tint)의 값이 _mask 의
+16바이트 쓰기에 덮였습니다" 로 지고, 수정 후에는 통과한다 — **ASan 없이 결정적으로** 문다.
+
+**검증.** 정적 씬 스크린샷이 dx12·vk·dx11·gl 네 백엔드 모두 `d2c61c1f8e57cf2d` 유지,
+MaterialTest 16/16, nogpu 7/7 × 3 프리셋.
+
 ### 2026-09-19 (Engine 훑기 — Common · Compression · Config · Dialogue · Graphics 앞부분)
 
 고칠 것은 나오지 않았고, **말로 적혀 있지 않던 계약 두 개**를 적었다. 둘 다 "지금은 맞지만

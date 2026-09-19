@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -744,4 +745,73 @@ SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
     SW_EXPECT_EQUAL( 102u, pReadTex[1] );
     SW_EXPECT_EQUAL( 103u, pReadTex[2] );
     SW_EXPECT_EQUAL( 104u, pReadTex[3] );
+}
+
+/**
+ * @brief [MaterialTest] 어긋난 크기로 써서 **옆 프로퍼티를 덮지 않는다**
+ * @details 칸 크기는 **셰이더 리플렉션**이 정하고(`ShaderVariableInfo::_size`), 쓰는 크기는
+ *          **머티리얼 XML** 의 `shaderType` 이 정한다. `syncPropertiesFromReflection` 이 둘을
+ *          대부분 재매핑으로 맞춰 주지만 **고칠 수 없는 조합**에서는 경고만 남기고 `shaderType` 을
+ *          그대로 둔다. 여기서는 리플렉션이 **타입 이름 없이 5바이트**를 보고하는 경우를 만든다 —
+ *          낡거나 깨진 리플렉션 매니페스트에서 나올 수 있는 모양이다(백로그의 "셰이더 산출물
+ *          스테일 함정"). XML 은 `ChannelMask` + `shaderType="Float4"`, 즉 쓰는 쪽은 16바이트다.
+ *
+ *          `writeNumericValue` 는 처음부터 `packSize < need` 를 보고 있었는데, switch 안에서 직접
+ *          `Memory::copy` 하던 형제 경로들(Bool · Enum · BitFlag · ChannelMask · Texture · Range)은
+ *          그 검사를 건너뛰었다. 그래서 5바이트 칸에 16바이트를 쓰고 **그 뒤에 놓인 프로퍼티의
+ *          값을 덮었다** — 상수버퍼 안이라 메모리 오류로는 안 잡히고, 화면에서 "엉뚱한 색" 으로만
+ *          나타난다(이 저장소가 머티리얼에서 여러 번 겪은 모양이다).
+ *
+ *          그래서 검사는 "터지는가" 가 아니라 **옆 값이 살아 있는가** 로 한다.
+ */
+SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+
+    // `_tint` 를 **먼저** 적는다 — 패킹은 목록 순서대로 돌므로, 뒤에 오는 `_mask` 가 덮으면 진다.
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"MismatchProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"_tint\" type=\"Float\" shaderType=\"Float\" defaultValue=\"0.25\"/>"
+        "    <item name=\"_mask\" type=\"ChannelMask\" shaderType=\"Float4\" defaultValue=\"rgba\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+
+    // 리플렉션이 말하는 것: `_mask` 는 타입 이름 없이 5바이트(재매핑이 실패하는 조합),
+    // `_tint` 는 그 바로 뒤 8바이트 자리의 float 하나다.
+    sw::ShaderReflectionData reflection{};
+    sw::ShaderBufferInfo     cb{};
+    cb._name      = "MaterialCB";
+    cb._totalSize = 12;
+
+    sw::ShaderVariableInfo varMask{};
+    varMask._name   = "_mask";
+    varMask._type   = "";
+    varMask._offset = 0;
+    varMask._size   = 5;
+    cb._listVariable.push_back( varMask );
+
+    sw::ShaderVariableInfo varTint{};
+    varTint._name   = "_tint";
+    varTint._type   = "Float";
+    varTint._offset = 8;
+    varTint._size   = 4;
+    cb._listVariable.push_back( varTint );
+
+    reflection._listConstantBuffer.push_back( cb );
+
+    // 재매핑에 실패하므로 sync 는 false 를 돌려준다 — 그 자체는 기대한 결과다.
+    (void)material->syncPropertiesFromReflection( reflection );
+
+    const sw::vector<uint8> buffer = material->getBuffer();
+    SW_ASSERT_TRUE( buffer.size() >= 12 );
+
+    float32 tintValue{ 0.0f };
+    sw::Memory::copy( &tintValue, buffer.data() + 8, sizeof( tintValue ) );
+    SW_EXPECT_TRUE_MSG( tintValue > 0.24f && tintValue < 0.26f,
+                        "옆 프로퍼티(_tint)의 값이 _mask 의 16바이트 쓰기에 덮였습니다" );
 }

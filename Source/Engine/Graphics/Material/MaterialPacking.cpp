@@ -166,6 +166,25 @@ namespace sw
                 return mask != 0 ? mask : 0xFu;
             }
 
+            /**
+             * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
+             * @details 아래 `writeNumericValue` 는 처음부터 `packSize < need` 를 보고 있었는데,
+             *          switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**은 그 검사를 건너뛰었다.
+             *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
+             *          머티리얼 XML 의 `shaderType` 이 정하므로 **둘이 어긋날 수 있다** —
+             *          예를 들어 셰이더가 `uint` (4바이트)로 선언한 자리에 XML 이
+             *          `ChannelMask` + `shaderType="Float4"` 를 적으면 4바이트 칸에 16바이트를 쓴다.
+             *          손으로 지은 머티리얼 XML 이 이 저장소를 여러 번 물었으므로, 조용히 넘치는
+             *          대신 쓰지 않고 false 를 돌려준다(호출부가 경고한다).
+             */
+            static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
+            {
+                if ( pDst == nullptr || pSrc == nullptr || byteCount > packSize )
+                    return false;
+                Memory::copy( pDst, pSrc, byteCount );
+                return true;
+            }
+
             static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
             {
                 const uint32 need = MaterialUtil::packedSizeOf( shaderType );
@@ -384,11 +403,9 @@ namespace sw
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
                 {
                     const float32 floatVal = boolVal != 0 ? 1.0f : 0.0f;
-                    Memory::copy( pDst, &floatVal, sizeof( floatVal ) );
+                    return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
                 }
-                else
-                    Memory::copy( pDst, &boolVal, sizeof( boolVal ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &boolVal, sizeof( boolVal ) );
             }
             case MaterialPropertyType::Enum:
             {
@@ -397,22 +414,19 @@ namespace sw
                 if ( shaderType == MaterialPropertyType::Int )
                 {
                     const int32 intVal = static_cast<int32>( enumVal );
-                    Memory::copy( pDst, &intVal, sizeof( intVal ) );
+                    return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &intVal, sizeof( intVal ) );
                 }
-                else if ( shaderType == MaterialPropertyType::Float )
+                if ( shaderType == MaterialPropertyType::Float )
                 {
                     const float32 floatVal = static_cast<float32>( enumVal );
-                    Memory::copy( pDst, &floatVal, sizeof( floatVal ) );
+                    return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
                 }
-                else
-                    Memory::copy( pDst, &uEnumVal, sizeof( uEnumVal ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &uEnumVal, sizeof( uEnumVal ) );
             }
             case MaterialPropertyType::BitFlag:
             {
                 const uint32 uEnumVal = static_cast<uint32>( MaterialPackingInternal::parseEnumOrFlags( prop, prop._value, true ) );
-                Memory::copy( pDst, &uEnumVal, sizeof( uEnumVal ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &uEnumVal, sizeof( uEnumVal ) );
             }
             case MaterialPropertyType::ChannelMask:
             {
@@ -425,11 +439,9 @@ namespace sw
                         ( mask & 4 ) != 0 ? 1.0f : 0.0f,
                         ( mask & 8 ) != 0 ? 1.0f : 0.0f,
                     };
-                    Memory::copy( pDst, arrComp, sizeof( arrComp ) );
+                    return MaterialPackingInternal::writeBoundedValue( pDst, packSize, arrComp, sizeof( arrComp ) );
                 }
-                else
-                    Memory::copy( pDst, &mask, sizeof( mask ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &mask, sizeof( mask ) );
             }
             case MaterialPropertyType::Texture2D:
             case MaterialPropertyType::TextureCube:
@@ -448,8 +460,7 @@ namespace sw
                 // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있던 상수버퍼를
                 // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 났다. 셰이더의
                 // SW_SampleIndex 는 SW_INVALID_INDEX 를 "텍스처 없음" 으로 이미 처리한다.
-                Memory::copy( pDst, &textureIndex, sizeof( textureIndex ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }
             case MaterialPropertyType::Range:
             {
@@ -457,9 +468,7 @@ namespace sw
                 StringUtil::parseFloat( prop._value, floatVal );
                 if ( prop._min < prop._max )
                     floatVal = MathUtil::clamp( floatVal, prop._min, prop._max );
-                if ( shaderType == MaterialPropertyType::Float || packSize >= 4 )
-                    Memory::copy( pDst, &floatVal, sizeof( floatVal ) );
-                return true;
+                return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
             }
             case MaterialPropertyType::Color:
             case MaterialPropertyType::Float:
