@@ -22,9 +22,7 @@ namespace sw
     public:
         REFLECT_BODY();
         BoxCollider2DComponent();
-        virtual ~BoxCollider2DComponent() override                             = default;
-        BoxCollider2DComponent( BoxCollider2DComponent&& ) noexcept            = default;
-        BoxCollider2DComponent& operator=( BoxCollider2DComponent&& ) noexcept = default;
+        virtual ~BoxCollider2DComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

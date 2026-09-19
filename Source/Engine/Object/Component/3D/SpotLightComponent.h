@@ -33,9 +33,6 @@ namespace sw
         virtual ~SpotLightComponent() override = default;
 
         /** @brief 라이트를 이동합니다. */
-        SpotLightComponent( SpotLightComponent&& ) noexcept = default;
-        /** @brief 이동 대입입니다. */
-        SpotLightComponent& operator=( SpotLightComponent&& ) noexcept = default;
 
         /** @brief 빛 색입니다. */
         const float3& getColor() const { return _color; }

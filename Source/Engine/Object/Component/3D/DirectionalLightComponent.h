@@ -33,9 +33,6 @@ namespace sw
         virtual ~DirectionalLightComponent() override = default;
 
         /** @brief 라이트를 이동합니다. */
-        DirectionalLightComponent( DirectionalLightComponent&& ) noexcept = default;
-        /** @brief 이동 대입입니다. */
-        DirectionalLightComponent& operator=( DirectionalLightComponent&& ) noexcept = default;
 
         /** @brief 빛이 나아가는 방향(정규화). 컴포넌트 전방 벡터입니다. */
         float3 getLightDirection() const;

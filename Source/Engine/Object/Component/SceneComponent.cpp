@@ -176,58 +176,13 @@ namespace sw
         _bCanEverTick = SW_FALSE;
     }
 
-    // `Component{ std::move( other ) }` 는 **기반 부분객체만** 이동한다. 기반 이동 생성자는 파생
-    // 멤버(_localPosition 등)에 손댈 수 없으므로 그 뒤에 other 의 파생 멤버를 읽는 것은 정의된
-    // 동작이고, 파생 클래스 이동 생성자의 표준 관용구다. 검사기가 기반으로의 슬라이싱을 모델링하지
-    // 못해 "used after move" 로 본다.
-    // NOLINTBEGIN(bugprone-use-after-move)
-    SceneComponent::SceneComponent( SceneComponent&& other ) noexcept
-        : Component{ std::move( other ) }
-        , _localPosition{ other._localPosition }
-        , _localRotation{ other._localRotation }
-        , _localScale{ other._localScale }
-        , _attachOwner{ other._attachOwner }
-        , _attachComponent{ other._attachComponent }
-        , _cachedWorldPosition{ other._cachedWorldPosition }
-        , _cachedWorldMatrix{ other._cachedWorldMatrix }
-        , _cachedWorldPositionLWC{ other._cachedWorldPositionLWC }
-        , _pManager{ other._pManager }
-        , _pParent{ other._pParent }
-        , _listChild{ std::move( other._listChild ) }
-        , _bIsTransformDirty{ other._bIsTransformDirty }
-        , _bHasDirtyDescendant{ other._bHasDirtyDescendant }
-        , _reservedTransform{ other._reservedTransform }
-    {
-        other._pParent = nullptr;
-        other._listChild.clear();
-    }
-
-    SceneComponent& SceneComponent::operator=( SceneComponent&& other ) noexcept
-    {
-        if ( this != &other )
-        {
-            Component::operator=( std::move( other ) );
-            _localPosition          = other._localPosition;
-            _localRotation          = other._localRotation;
-            _localScale             = other._localScale;
-            _attachOwner            = other._attachOwner;
-            _attachComponent        = other._attachComponent;
-            _cachedWorldPosition    = other._cachedWorldPosition;
-            _cachedWorldMatrix      = other._cachedWorldMatrix;
-            _cachedWorldPositionLWC = other._cachedWorldPositionLWC;
-            _pManager               = other._pManager;
-            _pParent                = other._pParent;
-            _listChild              = std::move( other._listChild );
-            _bIsTransformDirty      = other._bIsTransformDirty;
-            _bHasDirtyDescendant    = other._bHasDirtyDescendant;
-            _reservedTransform      = other._reservedTransform;
-
-            other._pParent = nullptr;
-            _listChild.clear();
-            other._listChild.clear();
-        }
-        return *this;
-    }
+    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터·자식 목록·매니저의 루트
+    // 등록부에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
+    // `_listChild` 항목, `registerRootSceneComponent` 가 들고 있는 포인터를 전부 새 주소로
+    // 고쳐야 하는데, 예전 이동 연산은 그중 하나도 하지 않았다(이동 대입은 심지어 방금 옮겨
+    // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀에서 제자리 생성·소멸하므로 실제로
+    // 옮겨지는 일이 없었고 — 삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지
+    // 않았다 — 그래서 고치는 대신 **막는다.** 파생 7종의 `= default` 선언도 같이 걷었다.
 
     SceneComponent::~SceneComponent()
     {
@@ -278,8 +233,6 @@ namespace sw
             markTransformDirty();
     }
 
-    // NOLINTEND(bugprone-use-after-move)
-
     void SceneComponent::setLocalPosition( const float3& pos )
     {
         if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
@@ -294,7 +247,10 @@ namespace sw
             } );
             return;
         }
-        if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::Epsilon )
+        // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
+        // "안 움직였다" 가 되는데, 비교 기준이 매번 **현재 값**이라 그 아래 움직임은 쌓이지도
+        // 않는다 — 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에 있었다.
+        if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::EpsilonSquared )
             return;
         _localPosition = pos;
         markTransformDirty();
@@ -319,7 +275,7 @@ namespace sw
             } );
             return;
         }
-        if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::Epsilon )
+        if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::EpsilonSquared )
             return;
         _localRotation = rot;
         markTransformDirty();
@@ -344,7 +300,7 @@ namespace sw
             } );
             return;
         }
-        if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::Epsilon )
+        if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::EpsilonSquared )
             return;
         _localScale = scale;
         markTransformDirty();

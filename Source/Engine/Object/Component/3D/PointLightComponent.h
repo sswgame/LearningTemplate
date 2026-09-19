@@ -33,9 +33,6 @@ namespace sw
         virtual ~PointLightComponent() override = default;
 
         /** @brief 라이트를 이동합니다. */
-        PointLightComponent( PointLightComponent&& ) noexcept = default;
-        /** @brief 이동 대입입니다. */
-        PointLightComponent& operator=( PointLightComponent&& ) noexcept = default;
 
         /** @brief 빛 색입니다. */
         const float3& getColor() const { return _color; }

@@ -37,11 +37,6 @@ namespace sw
         /** @brief 카메라를 해제합니다. */
         virtual ~CameraComponent() override = default;
 
-        /** @brief 이동 생성자입니다. */
-        CameraComponent( CameraComponent&& ) noexcept = default;
-        /** @brief 이동 대입입니다. */
-        CameraComponent& operator=( CameraComponent&& ) noexcept = default;
-
         void onBeginPlay() override;
 
         /** @brief 카메라 역할을 설정합니다. */

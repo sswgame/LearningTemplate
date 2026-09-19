@@ -39,9 +39,6 @@ namespace sw
         virtual ~MeshComponent() override = default;
 
         /** @brief 메시 참조를 이동합니다. */
-        MeshComponent( MeshComponent&& ) noexcept = default;
-        /** @brief 이동 대입입니다. */
-        MeshComponent& operator=( MeshComponent&& ) noexcept = default;
 
         /** @brief 수명주기 초기화 */
         void onBeginPlay() override;

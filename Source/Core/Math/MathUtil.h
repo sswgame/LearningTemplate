@@ -27,6 +27,15 @@ namespace sw
         static constexpr float32 RadianToDegree = 180.f / Pi;
         /** @brief float32 비교용 머신 엡실론입니다. */
         static constexpr float32 Epsilon = 1e-6f;
+        /**
+         * @brief **제곱 거리·제곱 길이**를 `Epsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
+         * @details `getDistanceSquared(...) <= Epsilon` 은 실제 거리로는 `1e-3` 까지를 같다고 본다
+         *          — 제곱된 값을 제곱하지 않은 허용치와 재기 때문이다. 같은 허용치를 뜻하려면
+         *          `Epsilon` 도 제곱해야 한다. 이름을 따로 둔 것은 그 한 걸음을 잊기 쉬워서다.
+         * @note 정규화 직전의 **퇴화 벡터 검사**에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라
+         *       "0 으로 나눌 만큼 짧은가" 를 묻는 것이라 넉넉한 `Epsilon` 이 오히려 맞습니다.
+         */
+        static constexpr float32 EpsilonSquared = Epsilon * Epsilon;
         /** @brief float64 비교용 머신 엡실론입니다. */
         static constexpr float64 Epsilon64 = std::numeric_limits<float64>::epsilon();
 

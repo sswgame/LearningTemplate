@@ -435,6 +435,67 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (천천히 움직이는 물체는 영원히 제자리에 있었다)
+
+`SceneComponent` 의 세 setter 가 "정말 바뀌었나" 를 이렇게 물었다:
+
+```cpp
+if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::Epsilon )
+    return;
+```
+
+**제곱 거리를 제곱하지 않은 허용치와 재고 있다.** `Epsilon` 이 `1e-6` 이므로 실제 거리로는
+`1e-3` 까지가 "안 움직였다" 로 삼켜진다 — 의도한 부동소수 허용치보다 **1000배 크다.**
+
+그것만이면 1mm 짜리 오차로 끝났을 텐데, 비교 기준이 **매번 현재 값**이라 그 아래 움직임은
+**쌓이지도 않는다.** 한 프레임에 `1e-3` 보다 조금씩 가는 물체는 몇 초를 가도 한 번도 움직이지
+않는다. 165Hz 에서 그 경계는 **0.165 유닛/초** — 천천히 도는 포탑, 흘러가는 구름, 부드럽게
+따라붙는 카메라 암처럼 게임에 흔한 속도다.
+
+테스트로 재 보니 프레임당 `5e-4` 로 200프레임(약 1.2초) 움직인 물체의 최종 좌표가 **정확히
+0** 이었다. 0.1 만큼 가 있어야 했다.
+
+`MathUtil::EpsilonSquared` 를 두고 세 자리를 그것으로 바꿨다. 이름을 따로 둔 이유는 제곱을
+잊는 그 한 걸음이 눈에 안 보이기 때문이다.
+
+**바꾸지 않은 것 — 정규화 직전의 퇴화 벡터 검사.** `getLengthSquared() < Epsilon` 이 저장소에
+열몇 군데 있는데(`MatrixMath` · `MeshUtil` · 라이트 컴포넌트들), 그쪽은 "같은가" 가 아니라
+"0 으로 나눌 만큼 짧은가" 를 묻는 것이라 넉넉한 쪽이 오히려 맞다. `EpsilonSquared` 의
+`@note` 에 그렇게 적어 두었다.
+
+**`GpuSceneBuilder::bCamSame` 도 같은 모양이지만 성격이 다르다.** `_lastCameraPos` 는 리빌드가
+실제로 일어날 때만 갱신되므로(399행) 차이가 **쌓인다** — 카메라가 `1e-3` 만큼 움직이면 그때
+리빌드된다. 얼어붙는 것이 아니라 최대 `1e-3` 만큼 늦는 이력(hysteresis)이고, 그 자리는 정지한
+씬의 비용을 0 으로 만드는 최적화라 숫자 없이 건드리지 않았다.
+
+### 2026-09-19 (SceneComponent 의 이동 연산은 계층을 부순 채로 놓여 있었다)
+
+`SceneComponent` 는 **자기 주소로 얽혀 있는 계층의 노드**다 — 자식들의 `_pParent`, 부모의
+`_listChild` 항목, 매니저의 `_listRootSceneComponent` 가 전부 이 객체의 주소를 들고 있다.
+그런데 이동 연산은 그중 **하나도** 고치지 않았다. 옮기고 나면 자식들은 사라진 객체를 부모로
+가리키고, 매니저의 루트 등록부는 죽은 포인터를 훑게 된다.
+
+이동 대입은 한 걸음 더 나갔다:
+
+```cpp
+_listChild = std::move( other._listChild );   // 받아 오고
+...
+_listChild.clear();                            // 그 자리에서 비운다
+```
+
+이동 생성자에는 없는 줄이다. 둘 중 하나는 틀렸다는 뜻인데, 실제로는 둘 다 틀렸다.
+
+**고치는 대신 막았다.** 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다 —
+`= delete` 로 바꾸고 빌드해 보니 **저장소 전체에서 그 두 정의 말고는 아무것도 깨지지 않았다.**
+아무도 쓰지 않는 코드가 세 가지를 잘못하고 있었던 것이다. 파생 8종
+(`Mesh` · `Camera` · `Sprite` · `SpriteAnimator` · `BoxCollider2D` · `Directional/Point/SpotLight`)의
+`= default` 선언도 같이 걷었다.
+
+**덤:** `PrefabManager::spawn` 이 `pAsset` · `pGameObject` · `pTypeInfo` · `pInstanceName` 은 전부
+검사하면서 `pGameObjectManager` 만 그냥 역참조하고 있었다. 지금 호출부는 셋 다 널을 막아 주지만
+(`EditorUtil` 은 명시적으로, `Scene` 은 소유로) 활성 씬이 없을 때 `getObjectManager()` 는 널을
+준다 — 나머지와 같은 모양으로 맞췄다.
+
 ### 2026-09-19 (같은 오브젝트를 둘이 없애면 풀이 같은 블록을 두 번 받았다)
 
 `destroyObject` 가 이렇게 생겼다:

@@ -524,6 +524,14 @@ namespace sw
     GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName,
                                       const uint8* pInstanceDiff, size_t instanceDiffSize )
     {
+        // 이 함수는 나머지 포인터를 전부 검사한다(`pAsset`·`pGameObject`·`pTypeInfo`·`pInstanceName`).
+        // 매니저만 빠져 있었다 — 활성 씬이 없을 때 `getObjectManager()` 는 널을 준다.
+        if ( pGameObjectManager == nullptr )
+        {
+            SW_LOG_WARNING( "Cannot spawn prefab '%#' without a GameObjectManager.", assetRelativePath );
+            return nullptr;
+        }
+
         string resolvedPath{ assetRelativePath };
         if ( engine::areEngineServicesBound() )
         {

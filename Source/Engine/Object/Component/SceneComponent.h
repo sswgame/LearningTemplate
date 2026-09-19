@@ -31,10 +31,16 @@ namespace sw
         /** @brief 트랜스폼 계층에서 자신을 뗍니다. */
         virtual ~SceneComponent() override;
 
-        /** @brief 계층 포인터를 이동합니다. */
-        SceneComponent( SceneComponent&& ) noexcept;
-        /** @brief 이동 대입입니다. */
-        SceneComponent& operator=( SceneComponent&& ) noexcept;
+        /**
+         * @brief **옮기지 않습니다.** 이 클래스는 자기 주소로 얽혀 있는 계층의 노드입니다.
+         * @details 자식들의 `_pParent`, 부모의 `_listChild` 항목, 매니저의 루트 등록부가 모두
+         *          이 객체의 **주소**를 들고 있습니다. 옮기려면 그 셋을 전부 새 주소로 고쳐야
+         *          하는데, 예전 이동 연산은 하나도 하지 않았습니다(이동 대입은 방금 옮겨 온
+         *          `_listChild` 를 그 자리에서 비우기까지 했습니다). 컴포넌트는 풀에서 제자리
+         *          생성·소멸하므로 실제로 옮겨지는 일이 없습니다 — 고치는 대신 막습니다.
+         */
+        SceneComponent( SceneComponent&& )            = delete;
+        SceneComponent& operator=( SceneComponent&& ) = delete;
 
         /** @brief 플레이 시작 시 월드 행렬을 맞춥니다. */
         void onBeginPlay() override;

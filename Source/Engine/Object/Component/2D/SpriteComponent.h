@@ -18,9 +18,7 @@ namespace sw
     public:
         REFLECT_BODY();
         SpriteComponent();
-        virtual ~SpriteComponent() override                      = default;
-        SpriteComponent( SpriteComponent&& ) noexcept            = default;
-        SpriteComponent& operator=( SpriteComponent&& ) noexcept = default;
+        virtual ~SpriteComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

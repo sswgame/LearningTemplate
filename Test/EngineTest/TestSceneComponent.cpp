@@ -223,3 +223,39 @@ SW_TEST_CASE( SceneHierarchyTest, TransformDirtyPropagationAndEarlyOut )
     const sw::float3 childPos = pChildSc->getWorldPosition();
     SW_EXPECT_NEAR_EQUAL( 30.0f, childPos._x, 0.001f );
 }
+
+/**
+ * @brief [SceneComponentTest] 느리게 움직이는 물체가 제자리에 얼어붙지 않는지 검증
+ * @details 세 setter 가 `getDistanceSquared(...) <= MathUtil::Epsilon` 로 "안 바뀌었다" 를
+ *          판정했다. **제곱 거리를 제곱 안 한 허용치와 비교**한 것이라, 실제 거리로는 1e-3
+ *          까지가 변화 없음으로 삼켜진다 — 의도한 부동소수 허용치보다 1000배 크다.
+ *
+ *          그리고 비교 기준이 **매번 현재 값**이라 오차가 쌓이지 않는다. 한 프레임에 1e-3
+ *          보다 조금씩 움직이는 물체는 몇 초를 가도 **한 번도 움직이지 않는다.** 165Hz 에서
+ *          0.08 유닛/초면 그 구간이다 — 천천히 도는 포탑이나 흘러가는 구름처럼 흔한 속도다.
+ */
+SW_TEST_CASE( SceneComponentTest, SlowMotionIsNotSwallowedByTheChangeThreshold )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "SlowMover" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    manager.mergePendingAdds();
+
+    sw::SceneComponent* pSceneComp = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSceneComp );
+
+    // 165Hz 에서 0.08 유닛/초로 움직이는 물체가 한 프레임에 가는 거리.
+    constexpr float32 kStepPerFrame = 0.0005f;
+    constexpr uint32  kFrameCount   = 200;
+
+    pSceneComp->setLocalPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        sw::float3 next = pSceneComp->getLocalPosition();
+        next._x += kStepPerFrame;
+        pSceneComp->setLocalPosition( next );
+    }
+
+    // 200 프레임(약 1.2초) 이면 0.1 만큼 가 있어야 한다.
+    SW_EXPECT_NEAR_EQUAL( 0.1f, pSceneComp->getLocalPosition()._x, 0.005f );
+}
