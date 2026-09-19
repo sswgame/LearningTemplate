@@ -21,8 +21,6 @@ namespace sw
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         /** @brief X11 윈도우를 파괴합니다. */
         void destroy() override;
-        /** @brief 기존 창의 크기와 위치를 유지한 채 X11 윈도우를 재생성합니다 (컨텍스트 핫스왑용). */
-        bool recreate() override;
         /** @brief X11 이벤트를 처리합니다. 종료 요청 시 false를 반환합니다. */
         bool processMessages() override;
 
@@ -42,14 +40,17 @@ namespace sw
         void* getNativeHandle() const override { return nullptr; }
 #endif
 
+    protected:
+        /** @brief `XGetWindowAttributes` 로 지금 위치를 담습니다. */
+        void captureRestorePosition() override;
+        /** @brief 복원 위치를 창 관리자에게 맡기는 기본 좌표로 되돌립니다. */
+        void clearRestorePosition() override;
+
     private:
         [[maybe_unused]] void*  _pX11Display;
         [[maybe_unused]] uint64 _x11Window;
         [[maybe_unused]] uint64 _x11WmDelete;
-        [[maybe_unused]] int32  _restoreX;
-        [[maybe_unused]] int32  _restoreY;
-        [[maybe_unused]] uint8  _bRecreating : 1;
-        [[maybe_unused]] uint8  _reservedX11 : 7;
+        [[maybe_unused]] uint8  _reservedX11 : 8;
         [[maybe_unused]] uint16 _padding;
     };
 } // namespace sw

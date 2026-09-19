@@ -47,8 +47,16 @@ namespace sw
         virtual void destroy() = 0;
 
         /**
-         * @brief 동일 크기/제목으로 네이티브 창을 다시 만듭니다 (OpenGL↔DXGI 핫스왑용).
-         * @details WM_DESTROY로 앱 종료가 걸리지 않도록 구현해야 합니다.
+         * @brief 동일 크기/제목/위치/표시 상태로 네이티브 창을 다시 만듭니다 (OpenGL↔DXGI 핫스왑용).
+         *
+         * @details **절차는 여기 한 벌뿐이다.** 예전에는 이 순서가 Win32 · X11 · 그리고 이 기반 클래스에
+         *          **세 벌** 있었고, 기반의 것이 조용히 모자랐다 — `_bRecreating` 을 세우지 않아 다시
+         *          만드는 동안의 리사이즈·닫기 통보가 그대로 새어 나갔고, 무엇보다 **보이던 창을 다시
+         *          보이게 하지 않았다.** 백엔드 교체(`RHI::applyPendingChange`)가 부르는 자리라, 그 길로
+         *          들어온 창은 교체 뒤 사라진다. 플랫폼이 정말로 다른 두 가지는 아래 훅으로 뺐다.
+         *
+         * @note 플랫폼이 이 기능을 지원하지 않으면(macOS) 이 함수를 재정의해 `false` 를 돌려준다.
+         *       재정의해서 **절차를 다시 적지는 말 것** — 그것이 세 벌이 생긴 경위다.
          */
         virtual bool recreate();
 
@@ -93,6 +101,19 @@ namespace sw
         static IWindow* getActiveWindow();
 
     protected:
+        /**
+         * @brief 다시 만들기 직전의 창 위치를 `_restoreX`·`_restoreY` 에 담습니다.
+         * @details 플랫폼마다 묻는 API 가 다르다(`GetWindowRect` · `XGetWindowAttributes`).
+         *          지원하지 않으면 아무것도 하지 않으면 된다 — 그러면 새 창은 기본 위치에 뜬다.
+         */
+        virtual void captureRestorePosition() {}
+        /**
+         * @brief 복원 위치를 플랫폼의 "알아서 정해라" 값으로 되돌립니다.
+         * @details 그 값이 플랫폼마다 다르다 — Win32 는 `CW_USEDEFAULT`, X11 은 좌표 하나다.
+         */
+        virtual void clearRestorePosition() {}
+
+    protected:
         wstring                      _title;
         WindowMessageHandlerDelegate _customHandler;
         WindowResizeDelegate         _onResize;
@@ -100,7 +121,17 @@ namespace sw
         uint32                       _width;
         uint32                       _height;
         uint8                        _bShouldClose : 1;
-        [[maybe_unused]] uint8       _reserved     : 7;
-        uint8                        _arrReserved[7];
+        /**
+         * @brief 다시 만드는 중인가.
+         * @details 플랫폼 메시지 처리기가 이 깃발을 보고 그 사이의 리사이즈·닫기 통보를 삼킨다 —
+         *          다시 만드는 과정의 `destroy()` 가 앱 종료로 오해되면 안 되기 때문이다.
+         *          절차가 이 클래스로 올라왔으므로 깃발도 같이 올라왔다.
+         */
+        uint8                  _bRecreating : 1;
+        [[maybe_unused]] uint8 _reserved    : 6;
+        uint8                  _arrReserved[7];
+        /** @brief 다시 만들 때 놓을 위치. 플랫폼 생성자가 자기 "알아서" 값으로 채운다. */
+        int32 _restoreX;
+        int32 _restoreY;
     };
 } // namespace sw

@@ -11,13 +11,12 @@ namespace sw
 
     Win32Window::Win32Window()
         : _hWnd{ nullptr }
-        , _restoreX{ CW_USEDEFAULT }
-        , _restoreY{ CW_USEDEFAULT }
-        , _bRecreating{ SW_FALSE }
         , _bResizing{ SW_FALSE }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
+        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 돈다 — 플랫폼은 "알아서" 값만 정한다.
+        clearRestorePosition();
     }
 
     Win32Window::~Win32Window()
@@ -109,38 +108,23 @@ namespace sw
     /**
      * @brief RHI 백엔드 핫스왑 등을 위해 이전 윈도우 좌표를 유지한 채 윈도우를 다시 생성합니다.
      */
-    bool Win32Window::recreate()
+    void Win32Window::captureRestorePosition()
     {
-        if ( _title.empty() )
-            return false;
+        if ( _hWnd == nullptr )
+            return;
 
-        const bool bWasVisible = isVisible();
-
-        if ( _hWnd != nullptr )
+        RECT windowRect{};
+        if ( GetWindowRect( _hWnd, &windowRect ) )
         {
-            RECT windowRect{};
-            if ( GetWindowRect( _hWnd, &windowRect ) )
-            {
-                _restoreX = windowRect.left;
-                _restoreY = windowRect.top;
-            }
+            _restoreX = windowRect.left;
+            _restoreY = windowRect.top;
         }
+    }
 
-        const uint32 width  = _width;
-        const uint32 height = _height;
-        _bRecreating        = SW_TRUE;
-        destroy();
-        _bShouldClose      = SW_FALSE;
-        const string title = StringUtil::utf16ToUtf8( _title.c_str() );
-
-        const bool ok = initializeWindow( title.c_str(), width, height );
-        if ( ok && bWasVisible )
-            showWindow( true );
-
-        _bRecreating = SW_FALSE;
-        _restoreX    = CW_USEDEFAULT;
-        _restoreY    = CW_USEDEFAULT;
-        return ok;
+    void Win32Window::clearRestorePosition()
+    {
+        _restoreX = CW_USEDEFAULT;
+        _restoreY = CW_USEDEFAULT;
     }
 
     bool Win32Window::processMessages()
@@ -233,9 +217,6 @@ namespace sw
 {
     Win32Window::Win32Window()
         : _hWnd{ nullptr }
-        , _restoreX{ 0 }
-        , _restoreY{ 0 }
-        , _bRecreating{ SW_FALSE }
         , _bResizing{ SW_FALSE }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
@@ -257,9 +238,15 @@ namespace sw
         _hWnd = nullptr;
     }
 
-    bool Win32Window::recreate()
+    void Win32Window::captureRestorePosition()
     {
-        return false;
+    }
+
+    void Win32Window::clearRestorePosition()
+    {
+        // 이 플랫폼에서는 창을 만들지 않지만, 생성자가 부르므로 값은 채워 둔다.
+        _restoreX = 0;
+        _restoreY = 0;
     }
 
     bool Win32Window::processMessages()

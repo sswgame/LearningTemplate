@@ -105,3 +105,36 @@ SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
 
     SW_EXPECT_EQUAL( nullptr, sw::IWindow::getActiveWindow() );
 }
+
+/**
+ * @brief [WindowTest] 다시 만들어도 **보이던 창은 보인다** — 그리고 크기·제목을 지킨다
+ * @details 이 절차는 한때 **세 벌**이었다: `Win32Window` · `X11Window` · 그리고 기반 `IWindow`.
+ *          앞의 둘만 표시 상태를 되살렸고 기반의 것은 그러지 않았다 — 그 길로 들어온 창은 백엔드
+ *          교체(`RHI::applyPendingChange` 가 `recreate()` 를 부른다) 뒤 **화면에서 사라진다.**
+ *          셋을 한 벌로 합치면서 이 케이스를 그 자리에 둔다. 새 플랫폼이 훅만 구현하고 절차를
+ *          다시 적지 않는 한, 이 계약은 모든 플랫폼에서 같다.
+ */
+SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
+{
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+
+    constexpr uint32 kReqW = 480;
+    constexpr uint32 kReqH = 320;
+    SW_ASSERT_TRUE( window->initializeWindow( "RecreateTestWindow", kReqW, kReqH ) );
+    window->showWindow( true );
+
+    const uint32 widthBefore  = window->getWidth();
+    const uint32 heightBefore = window->getHeight();
+    SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
+
+    if ( window->recreate() == false )
+        SW_TEST_SKIP( "이 플랫폼은 창 재생성을 지원하지 않습니다 (macOS)" );
+
+    SW_EXPECT_TRUE_MSG( window->isVisible(),
+                        "다시 만든 창이 보이지 않습니다 — 백엔드를 바꾸면 화면이 사라집니다" );
+    SW_EXPECT_EQUAL( widthBefore, window->getWidth() );
+    SW_EXPECT_EQUAL( heightBefore, window->getHeight() );
+
+    window->destroy();
+}

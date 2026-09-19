@@ -23,8 +23,11 @@ namespace sw
         , _width{ 1280 }
         , _height{ 720 }
         , _bShouldClose{ SW_FALSE }
+        , _bRecreating{ SW_FALSE }
         , _reserved{ 0 }
         , _arrReserved{}
+        , _restoreX{ 0 }
+        , _restoreY{ 0 }
     {
     }
 
@@ -60,13 +63,27 @@ namespace sw
         if ( _title.empty() )
             return false;
 
+        // 다시 만들어도 **보이던 창은 보여야 한다.** 예전 기반 구현이 이 한 줄을 빠뜨려서, 이 길로
+        // 들어온 창은 백엔드 교체 뒤 사라졌다(플랫폼 재정의 둘만 제대로 하고 있었다).
+        const bool bWasVisible = isVisible();
+        captureRestorePosition();
+
         const uint32 width  = _width;
         const uint32 height = _height;
+
+        // 이 구간의 `destroy()` 는 앱 종료가 아니다 — 플랫폼 메시지 처리기가 이 깃발을 보고 삼킨다.
+        _bRecreating = SW_TRUE;
         destroy();
         _bShouldClose = SW_FALSE;
 
         const string title = StringUtil::utf16ToUtf8( _title.c_str() );
-        return initializeWindow( title.c_str(), width, height );
+        const bool   bOk   = initializeWindow( title.c_str(), width, height );
+        if ( bOk && bWasVisible )
+            showWindow( true );
+
+        _bRecreating = SW_FALSE;
+        clearRestorePosition();
+        return bOk;
     }
 
     unique_ptr<IWindow> IWindow::createPlatformWindow()

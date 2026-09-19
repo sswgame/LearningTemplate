@@ -8,16 +8,23 @@ namespace sw
 {
     SW_LOG_CALLER( "X11Window" );
 
+    namespace
+    {
+        /** @brief 복원 위치의 "알아서" 값. X11 에는 `CW_USEDEFAULT` 같은 약속이 없어 좌표를 하나 정해 둔다. */
+        constexpr int32 kDefaultRestoreX = 100;
+        /** @brief 위와 같다. */
+        constexpr int32 kDefaultRestoreY = 100;
+    } // namespace
+
     X11Window::X11Window()
         : _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
-        , _restoreX{ 100 }
-        , _restoreY{ 100 }
-        , _bRecreating{ SW_FALSE }
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
+        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 돈다 — 플랫폼은 "알아서" 값만 정한다.
+        clearRestorePosition();
     }
 
     X11Window::~X11Window()
@@ -113,38 +120,25 @@ namespace sw
         return false;
     }
 
-    bool X11Window::recreate()
+    void X11Window::captureRestorePosition()
     {
-        if ( _title.empty() )
-            return false;
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return;
 
-        const bool bWasVisible = isVisible();
-
-        if ( _pX11Display != nullptr && _x11Window != 0 )
+        Display*          pDisplay = static_cast<Display*>( _pX11Display );
+        XWindowAttributes wa{};
+        if ( XGetWindowAttributes( pDisplay, _x11Window, &wa ) != 0 )
         {
-            Display*          pDisplay = static_cast<Display*>( _pX11Display );
-            XWindowAttributes wa{};
-            if ( XGetWindowAttributes( pDisplay, _x11Window, &wa ) != 0 )
-            {
-                _restoreX = wa.x;
-                _restoreY = wa.y;
-            }
+            _restoreX = wa.x;
+            _restoreY = wa.y;
         }
+    }
 
-        const uint32 width  = _width;
-        const uint32 height = _height;
-        _bRecreating        = SW_TRUE;
-        destroy();
-        _bShouldClose      = SW_FALSE;
-        const string title = StringUtil::utf16ToUtf8( _title.c_str() );
-        const bool   ok    = initializeWindow( title.c_str(), width, height );
-        if ( ok && bWasVisible )
-            showWindow( true );
-        _bRecreating = SW_FALSE;
-
-        _restoreX = 100;
-        _restoreY = 100;
-        return ok;
+    void X11Window::clearRestorePosition()
+    {
+        // X11 에는 `CW_USEDEFAULT` 같은 값이 없다 — 창 관리자에게 맡기는 관례적 시작점을 쓴다.
+        _restoreX = kDefaultRestoreX;
+        _restoreY = kDefaultRestoreY;
     }
 
     bool X11Window::processMessages()
@@ -214,9 +208,15 @@ namespace sw
     {
     }
 
-    bool X11Window::recreate()
+    void X11Window::captureRestorePosition()
     {
-        return false;
+    }
+
+    void X11Window::clearRestorePosition()
+    {
+        // 이 플랫폼에서는 창을 만들지 않지만, 생성자가 부르므로 값은 채워 둔다.
+        _restoreX = kDefaultRestoreX;
+        _restoreY = kDefaultRestoreY;
     }
 
     bool X11Window::processMessages()

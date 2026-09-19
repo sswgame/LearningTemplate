@@ -38,9 +38,6 @@ namespace sw
         /** @brief 생성된 윈도우(HWND)를 파괴합니다. */
         void destroy() override;
 
-        /** @brief 기존 창의 크기와 위치를 유지한 채 핸들을 재생성합니다 (컨텍스트 핫스왑용). */
-        bool recreate() override;
-
         /** @brief Windows 메시지 큐(PeekMessage)를 처리합니다. */
         bool processMessages() override;
 
@@ -55,14 +52,17 @@ namespace sw
         /** @brief Win32 전용 HWND 핸들을 반환합니다. */
         HWND getHwnd() const { return _hWnd; }
 
+    protected:
+        /** @brief `GetWindowRect` 로 지금 위치를 담습니다. */
+        void captureRestorePosition() override;
+        /** @brief 복원 위치를 `CW_USEDEFAULT` 로 되돌립니다. */
+        void clearRestorePosition() override;
+
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
     private:
         HWND                    _hWnd;
-        [[maybe_unused]] int32  _restoreX;
-        [[maybe_unused]] int32  _restoreY;
-        [[maybe_unused]] uint8  _bRecreating   : 1;
         [[maybe_unused]] uint8  _bResizing     : 1;
         [[maybe_unused]] uint8  _reservedWin32 : 6;
         [[maybe_unused]] uint16 _padding;
