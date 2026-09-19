@@ -526,6 +526,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (에디터 워크스페이스 둘 — 순회 중 목록 변경 · GUID 두 표가 어긋났다)
+
+**`ReloadFileManager::dispatchEvents` 가 범위 for 로 돌면서 콜백을 불렀다.** 리로드 콜백이 자기
+감시를 다시 거는 것은 흔한 일인데(에셋을 다시 읽고 다시 arm 한다), 그러면 `_listWatch` 가 순회
+도중 재할당돼 **참조가 뜬 메모리를 가리킨다.** 인덱스로 돌고 델리게이트를 부르기 전에 복사하는
+것으로 고쳤다 — `MulticastDelegate::broadcast` 가 같은 이유로 같은 모양을 쓴다. 되돌려 놓으면
+ASAN 이 `heap-use-after-free` 로 그 자리에서 잡는다.
+
+검사를 위해 `dispatchEvents` 를 공개로 올렸다. **이것이 이 클래스의 절반이기 때문이다** —
+나머지 절반(폴링)은 OS 알림에 기대므로 검사가 타이밍에 흔들린다. 이벤트를 직접 넣을 수 있으면
+"누구에게 가고 누구에게 안 가는가" 와 "콜백이 목록을 바꿔도 견디는가" 를 파일 시스템 없이
+결정적으로 본다.
+
+**`EditorWorkspace::setGuid` 가 한쪽만 끊었다.** "이 오브젝트가 들고 있던 옛 GUID" 는 끊는데
+"이 GUID 를 들고 있던 옛 오브젝트" 는 그대로 뒀다. 그러면 옛 오브젝트가 계속 그 GUID 를 가졌다고
+답하는데(`getGuid`) 정작 GUID 로 찾으면 새 오브젝트가 나온다 — 두 표가 서로의 역이 아니게 된다.
+GUID 는 되돌리기가 오브젝트를 다시 찾는 열쇠이고(`EditorTransaction::findTargetGameObject`),
+되돌리기로 오브젝트를 되살릴 때 같은 GUID 를 새 오브젝트에 다시 붙이므로 실제로 지나간다.
+증상은 **되돌리기가 엉뚱한 오브젝트에 적용되는 것**이고 그 자리에서 터지지 않는다.
+
 ### 2026-09-20 (같은 함정에 문이 하나 더 있었다 — `EditorContext::get()`)
 
 `CheckNullableServiceUse` 는 2026-09-18 에 "nullptr 을 돌려줄 수 있는 조회를 확인 없이 `->` 로

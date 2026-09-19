@@ -191,14 +191,22 @@ namespace sw
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
             bool bAnyMatch{ false };
-            for ( const WatchEntry& entry : _listWatch )
+            // **콜백이 감시를 등록·해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
+            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 들고 있던 참조가 뜬 메모리를
+            // 가리킨다. 인덱스로 돌면서 델리게이트를 **부르기 전에 복사**한다 —
+            // `MulticastDelegate::broadcast` 가 같은 이유로 같은 모양을 쓴다.
+            //
+            // 순회 도중 앞쪽 감시가 빠지면 뒤의 하나가 밀려 건너뛰어질 수 있는데, 그것은
+            // 이 방식이 원래 받아들이는 값이다(부르는 도중 목록을 바꾼 쪽의 몫이다).
+            for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
             {
-                if ( matchesWatch( entry, changeEvent ) == false )
+                if ( matchesWatch( _listWatch[watchIndex], changeEvent ) == false )
                     continue;
 
-                bAnyMatch = true;
-                if ( entry._onMatch.isBound() )
-                    entry._onMatch( changeEvent );
+                bAnyMatch                            = true;
+                const FileWatchMatchDelegate onMatch = _listWatch[watchIndex]._onMatch;
+                if ( onMatch.isBound() )
+                    onMatch( changeEvent );
             }
 
             if ( bAnyMatch )

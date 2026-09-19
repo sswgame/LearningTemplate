@@ -57,6 +57,16 @@ namespace sw
         /** @brief 워치 등록을 해제합니다. */
         void unregisterWatch( FileWatchHandle handle );
 
+        /**
+         * @brief 파일 변경 이벤트를 등록된 워치 콜백으로 보냅니다.
+         * @details **공개인 이유는 이것이 이 클래스의 절반이기 때문이다** — 나머지 절반(폴링)은
+         *          OS 알림에 기대므로 검사가 타이밍에 흔들린다. 이벤트를 직접 넣을 수 있으면
+         *          "누구에게 가고 누구에게 안 가는가" 와 "콜백이 목록을 바꿔도 견디는가" 를
+         *          파일 시스템 없이 결정적으로 볼 수 있다. 도구가 합성 이벤트를 넣는 데도 쓴다.
+         * @note 콜백 안에서 `registerWatch`/`unregisterWatch` 를 불러도 된다.
+         */
+        void dispatchEvents( const vector<FileChangeEvent>& listEvent );
+
     private:
         /// @brief path prefix + 확장자 필터 + 콜백
         struct WatchEntry
@@ -69,8 +79,6 @@ namespace sw
 
         /** @brief 이벤트가 이 watch의 prefix/확장자와 맞으면 true. */
         bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const;
-        /** @brief 파일 변경 이벤트를 워치 콜백으로 보냅니다. */
-        void dispatchEvents( const vector<FileChangeEvent>& listEvent );
         /**
          * @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다.
          * @param sinceTimestamp 이 시각(파일 시계, 초) 이후 mtime 인 파일만 낸다 — 직전 드레인 시각.

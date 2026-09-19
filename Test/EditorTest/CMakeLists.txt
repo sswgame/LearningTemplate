@@ -23,6 +23,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorTransaction.cpp
 		TestEditorToolAssetCommands.cpp
 		TestEditorViewportMath.cpp
+		TestEditorWorkspaceGuid.cpp
 		TestEditorViewportPick.cpp
 		TestReloadFileManager.cpp
 		TestSelectionManager.cpp

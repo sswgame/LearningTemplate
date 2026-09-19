@@ -487,9 +487,18 @@ namespace sw::editor
         if ( objectId == 0 || guid.isNull() )
             return;
 
-        const auto itOld = _mapObjectIdToGuid.find( objectId );
-        if ( itOld != _mapObjectIdToGuid.end() )
-            _mapGuidToObjectId.erase( itOld->second );
+        // **양쪽을 다 끊어야 두 표가 서로의 역으로 남는다.** 예전에는 "이 오브젝트가 들고 있던
+        // 옛 guid" 만 끊고 "이 guid 를 들고 있던 옛 오브젝트" 는 그대로 뒀다. 그러면 옛 오브젝트가
+        // 계속 이 guid 를 가졌다고 답하는데(`getGuid`) 정작 guid 로 찾으면 새 오브젝트가 나온다 —
+        // 되돌리기가 **엉뚱한 오브젝트에** 적용되는 길이다. 되돌리기로 오브젝트를 되살릴 때
+        // (`EditorTransaction` 의 recreate) 같은 guid 를 새 오브젝트에 다시 붙이므로 실제로 지나간다.
+        const auto itOldGuid = _mapObjectIdToGuid.find( objectId );
+        if ( itOldGuid != _mapObjectIdToGuid.end() )
+            _mapGuidToObjectId.erase( itOldGuid->second );
+
+        const auto itOldOwner = _mapGuidToObjectId.find( guid );
+        if ( itOldOwner != _mapGuidToObjectId.end() )
+            _mapObjectIdToGuid.erase( itOldOwner->second );
 
         _mapObjectIdToGuid[objectId] = guid;
         _mapGuidToObjectId[guid]     = objectId;
