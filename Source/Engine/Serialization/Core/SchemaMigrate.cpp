@@ -77,29 +77,70 @@ namespace sw
                 return true;
             }
 
+            /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다 (`to_string` 오버로드가 넷뿐이다). */
+            template <typename ReadType, typename PrintType>
+            static bool formatPodAs( const uint8* pPayload, size_t payloadSize, string& out )
+            {
+                ReadType value{};
+                if ( readPod( pPayload, payloadSize, value ) == false )
+                    return false;
+                out = sw::to_string( static_cast<PrintType>( value ) );
+                return true;
+            }
+
+            /**
+             * @brief 전선(wire) 타입을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
+             * @details **크기만으로는 타입을 가를 수 없다.** `sizeof(float32) == sizeof(int32)` 이고
+             *          `sizeof(float64) == sizeof(int64)` 다. 그래서 크기로만 고르던 `formatPodToString`
+             *          에서는 `float32` 가지가 **영영 돌지 않았고**(앞의 int32 가지가 먼저 걸린다),
+             *          `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값
+             *          `"1069547520"` 으로 적었다. 전선 타입은 바이너리 태그(`wireTypeHash`)와
+             *          `SchemaOrphanValue._wireTypeHash` 가 **이미 들고 있었다** — 여기까지
+             *          넘겨 주지 않았을 뿐이다.
+             * @return 전선 타입을 모르거나 그 타입이 스칼라가 아니면 false (호출부가 크기 짐작으로 넘어간다).
+             */
+            static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
+            {
+                if ( wireTypeName.empty() )
+                    return false;
+
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_float32 ) )
+                    return formatPodAs<float32, float32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_float64 ) )
+                    return formatPodAs<float64, float64>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_bool ) )
+                    return formatPodAs<bool, int32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int8 ) )
+                    return formatPodAs<int8, int32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int16 ) )
+                    return formatPodAs<int16, int32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int32 ) )
+                    return formatPodAs<int32, int32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int64 ) )
+                    return formatPodAs<int64, int64>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint8 ) )
+                    return formatPodAs<uint8, uint32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint16 ) )
+                    return formatPodAs<uint16, uint32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint32 ) )
+                    return formatPodAs<uint32, uint32>( pPayload, payloadSize, out );
+                if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint64 ) )
+                    return formatPodAs<uint64, uint64>( pPayload, payloadSize, out );
+                return false;
+            }
+
+            /**
+             * @brief 전선 타입을 모를 때 크기로 짐작합니다.
+             * @warning 정수와 실수를 **가를 수 없다**(같은 크기다). 정수로 읽는다 — 전선 타입을 아는
+             *          경로는 `formatWirePodToString` 이 먼저 처리하므로, 여기까지 오는 것은
+             *          타입을 잃은 payload 뿐이다.
+             */
             static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
             {
                 if ( payloadSize == sizeof( int32 ) )
-                {
-                    int32 value{ 0 };
-                    readPod( pPayload, payloadSize, value );
-                    out = sw::to_string( value );
-                    return true;
-                }
+                    return formatPodAs<int32, int32>( pPayload, payloadSize, out );
                 if ( payloadSize == sizeof( int64 ) )
-                {
-                    int64 value{ 0 };
-                    readPod( pPayload, payloadSize, value );
-                    out = sw::to_string( value );
-                    return true;
-                }
-                if ( payloadSize == sizeof( float32 ) )
-                {
-                    float32 value{ 0 };
-                    readPod( pPayload, payloadSize, value );
-                    out = sw::to_string( value );
-                    return true;
-                }
+                    return formatPodAs<int64, int64>( pPayload, payloadSize, out );
                 return false;
             }
 
@@ -252,7 +293,7 @@ namespace sw
                     // wire 타입으로 임시 버퍼에 읽은 뒤 텍스트 coerce — 간단 경로: coerce payload
                 }
             }
-            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
+            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx, hint );
         }
         return false;
     }
@@ -288,7 +329,7 @@ namespace sw
             if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), off,
                                                          ctx ) )
                 return true;
-            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
+            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx, hint );
         }
         return false;
     }
@@ -335,7 +376,7 @@ namespace sw
     }
 
     bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                 const SerializeContext& ctx )
+                                 const SerializeContext& ctx, hashed_string wireTypeName )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
@@ -349,6 +390,9 @@ namespace sw
         if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
         {
             string asText;
+            // 전선 타입을 알면 그것으로 적는다 — 크기 짐작은 정수와 실수를 가르지 못한다.
+            if ( SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, asText ) )
+                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
                 return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
 

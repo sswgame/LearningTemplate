@@ -331,8 +331,7 @@ namespace sw
             static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
                                              vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                unordered_set<uint32> uniqueSeen;
-                bool                  bFieldError{ false };
+                bool bFieldError{ false };
 
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
@@ -360,7 +359,6 @@ namespace sw
                         }
                         if ( entered )
                         {
-                            uniqueSeen.insert( prop.getNameHash() );
                             if ( readContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
                                 bFieldError = true;
                             backend.popChild();
@@ -387,7 +385,6 @@ namespace sw
                             }
                             if ( entered )
                             {
-                                uniqueSeen.insert( prop.getNameHash() );
                                 if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
                                     bFieldError = true;
                                 backend.popChild();
@@ -413,7 +410,6 @@ namespace sw
 
                         if ( readOk )
                         {
-                            uniqueSeen.insert( prop.getNameHash() );
                             if ( prop._bIsBitField == SW_TRUE )
                             {
                                 const bool bVal = StringUtil::parseBool( strValue, false );
@@ -427,7 +423,6 @@ namespace sw
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 
-                (void)uniqueSeen;
                 if ( pOutListOrphan != nullptr )
                     return true;
                 return bFieldError == false;

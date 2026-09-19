@@ -503,6 +503,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (전선이 타입을 싣고 오는데 읽을 때 버리고 있었다 — 직렬화)
+
+`Engine/Serialization` 을 함수 단위로 읽어 셋을 고쳤다. 첫째가 실제로 값을 망가뜨린다.
+
+**스키마 이관이 payload 크기로 타입을 짐작했다.** `float32` 프로퍼티를 `string` 으로 바꾸는
+이관에서 `SchemaMigrateInternal::formatPodToString` 이 크기만 보고 갈래를 골랐는데,
+`sizeof(float32) == sizeof(int32)` 라 **float32 가지는 영영 돌지 않았다**(앞의 int32 가지가 먼저
+걸린다). `1.5f` 가 그 비트값인 `"1069547520"` 으로 적혔다. `uint32` 도 마찬가지로 int32 로 읽혀
+큰 값이 음수가 됐다. 전선 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash`
+가 **이미 들고 있었는데** `tryCoerceBinaryPayload` 까지 넘겨 주지 않았을 뿐이다. 넘겨 주고,
+아는 타입이면 그 타입으로 적는다. 형제 케이스(`int32 -> string`)는 크기 짐작이 우연히 맞아서
+줄곧 초록이었다.
+
+**`Archive::readBytesView` 만 덧셈으로 재고 있었다.** `uint64` 길이를 받는 읽기가 셋인데
+(`readBytes` · `readSubArchive` · `readBytesView`) 앞의 둘은 이미 `길이 > 남은 바이트` 로 빼서
+재고 이것만 `위치 + 길이 > 전체` 였다. 위치가 0 이 아닐 때 큰 길이를 주면 그 합이 넘쳐 작아지고
+검사를 통과한다 — 호출자가 받은 포인터에서 버퍼 밖을 그만큼 읽는다.
+
+**`XmlSerializer` 의 `uniqueSeen` 은 쓰기만 하고 읽지 않았다.** 세 자리에서 채우고 마지막에
+`(void)uniqueSeen;` 로 버렸다. JSON·Binary 는 같은 집합으로 "안 온 프로퍼티에 기본값" 을 채우는데,
+XML 은 그 일을 가지마다 그 자리에서 하므로 집합이 필요 없다. 프로퍼티마다 해시 삽입 한 번씩을
+씬·프리팹 로드 경로에서 덜어 냈다.
+
 ### 2026-09-20 (최소화한 창의 크기를 0 으로 기억하고 있었다)
 
 Win32 의 `WM_SIZE` 는 최소화를 **클라이언트 영역 0x0** 으로 알린다. `Win32Window::wndProc` 은

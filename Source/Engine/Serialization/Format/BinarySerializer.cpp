@@ -118,7 +118,10 @@ namespace sw
 
                     if ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() )
                     {
-                        if ( tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx ) == false )
+                        // **전선 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않아서,
+                        // POD -> string 이관이 크기로만 타입을 짐작했다(정수와 실수를 못 가른다).
+                        const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
+                        if ( tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName ) == false )
                             return false;
                         reader.skip( payloadSize );
                         continue;
@@ -370,7 +373,10 @@ namespace sw
             {
                 applied = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
                 if ( applied == false )
-                    applied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx );
+                {
+                    const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
+                    applied                          = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName );
+                }
             }
 
             if ( applied == false )

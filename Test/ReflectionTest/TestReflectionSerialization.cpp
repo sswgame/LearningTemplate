@@ -1191,6 +1191,87 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] float 프로퍼티를 string 으로 바꿔도 **숫자가** 살아남는다
+ * @details POD -> string 이관은 payload **크기**로 타입을 짐작했다. 그런데 `sizeof(float32)` 는
+ *          `sizeof(int32)` 와 같아서 int32 가지가 먼저 걸리고 float32 가지는 **영영 돌지 않았다** —
+ *          `1.5f` 가 그 비트값인 `"1069547520"` 으로 적혔다. 형제 케이스
+ *          `FieldTypeChangeAndTextVersioned`(int32 -> string)는 크기 짐작이 우연히 맞아서 초록이었다.
+ *          전선 타입은 바이너리 태그가 이미 들고 있었고, 여기까지 넘겨 주지 않았을 뿐이다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumber )
+{
+    struct FloatSpeed
+    {
+        float32 _speed{ 0.0f };
+    };
+    struct StrSpeed
+    {
+        sw::string _speed;
+    };
+
+    sw::TypeInfo floatInfo;
+    floatInfo._name               = sw::hashed_string( "FloatSpeed" );
+    floatInfo._fullyQualifiedName = sw::hashed_string( "sw::FloatSpeed" );
+    floatInfo._size               = sizeof( FloatSpeed );
+    floatInfo._listProperty       = {
+        { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( FloatSpeed, _speed ) }
+    };
+
+    sw::TypeInfo strInfo;
+    strInfo._name               = sw::hashed_string( "StrSpeed" );
+    strInfo._fullyQualifiedName = sw::hashed_string( "sw::StrSpeed" );
+    strInfo._size               = sizeof( StrSpeed );
+    strInfo._listProperty       = {
+        { sw::hashed_string( "_speed" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrSpeed, _speed ) }
+    };
+
+    FloatSpeed        src{ 1.5f };
+    sw::vector<uint8> bin;
+    sw::BinarySerializer::serializeVersioned( 1, &src, floatInfo, bin );
+
+    StrSpeed dst;
+    uint32   ver{ 0 };
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &dst, strInfo, bin.data(), bin.size(), 1u ) );
+    SW_EXPECT_EQUAL( 1u, ver );
+
+    // 적힌 글자 모양(`to_string` 의 자릿수)에 기대지 않고 **다시 읽어 숫자로** 본다.
+    float32 roundTripped{ 0.0f };
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::parseFloat( dst._speed, roundTripped ),
+                        "float 프로퍼티가 숫자가 아닌 글자로 이관됐습니다" );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, roundTripped, 0.0001f );
+
+    // 큰 부호 없는 값도 비트값으로 접히지 않아야 한다.
+    struct UintCount
+    {
+        uint32 _count{ 0 };
+    };
+    sw::TypeInfo uintInfo;
+    uintInfo._name               = sw::hashed_string( "UintCount" );
+    uintInfo._fullyQualifiedName = sw::hashed_string( "sw::UintCount" );
+    uintInfo._size               = sizeof( UintCount );
+    uintInfo._listProperty       = {
+        { sw::hashed_string( "_count" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( UintCount, _count ) }
+    };
+
+    sw::TypeInfo strCountInfo;
+    strCountInfo._name               = sw::hashed_string( "StrCount" );
+    strCountInfo._fullyQualifiedName = sw::hashed_string( "sw::StrCount" );
+    strCountInfo._size               = sizeof( StrSpeed );
+    strCountInfo._listProperty       = {
+        { sw::hashed_string( "_count" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrSpeed, _speed ) }
+    };
+
+    UintCount         uintSrc{ 4000000000u };
+    sw::vector<uint8> uintBin;
+    sw::BinarySerializer::serializeVersioned( 1, &uintSrc, uintInfo, uintBin );
+
+    StrSpeed uintDst;
+    ver = 0;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &uintDst, strCountInfo, uintBin.data(), uintBin.size(), 1u ) );
+    SW_EXPECT_TRUE_MSG( uintDst._speed == "4000000000", "부호 없는 값이 int32 로 읽혀 음수가 됐습니다" );
+}
+
+/**
  * @brief [ReflectionSerializationTest] migrate 없이 스키마 버전이 다르면 실패
  */
 SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigrate )

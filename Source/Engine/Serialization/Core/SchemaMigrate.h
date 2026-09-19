@@ -114,10 +114,15 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 바이너리 페이로드를 대상 타입으로 강제 변환 시도 (int32↔string 등).
+     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘긴다 — POD 를 문자열로 바꿀 때
+     *                     크기만으로는 정수와 실수를 가를 수 없어서(`sizeof(float32) == sizeof(int32)`)
+     *                     `1.5f` 가 비트값 `"1069547520"` 이 된다. 비워 두면 크기로 짐작한다.
      * @return 적용 성공 시 true.
      */
     SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
-                                        const uint8* pPayload, size_t payloadSize, const SerializeContext& ctx );
+                                        const uint8* pPayload, size_t payloadSize,
+                                        const SerializeContext& ctx,
+                                        hashed_string           wireTypeName = hashed_string{} );
 
     /**
      * @brief 텍스트 토큰을 대상 타입으로 파싱 (따옴표 제거·numeric↔string coerce).

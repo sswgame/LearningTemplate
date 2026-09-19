@@ -1906,3 +1906,36 @@ SW_TEST_CASE( ArchiveTest, VarIntRejectsNonCanonicalTenthByte )
     SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarUint64( maxBytes.data(), maxBytes.size(), offset, value ) );
     SW_EXPECT_EQUAL( 0xFFFF'FFFF'FFFF'FFFFULL, value );
 }
+
+/**
+ * @brief [ArchiveTest] 넘치는 길이를 준 readBytesView 가 버퍼 밖을 가리키지 않는다
+ * @details 세 읽기 함수가 `uint64` 길이를 받는다 — `readBytes` · `readSubArchive` · `readBytesView`.
+ *          앞의 둘은 `길이 > 남은 바이트` 로 **빼서** 재는데 이것만 `위치 + 길이 > 전체` 로 더해서
+ *          쟀다. 위치가 0 이 아닐 때 큰 길이를 주면 그 합이 **넘쳐서 작아지고** 검사를 그대로
+ *          통과한다 — 그러면 호출자가 받은 포인터에서 그 길이만큼 버퍼 밖을 읽는다.
+ */
+SW_TEST_CASE( ArchiveTest, ReadBytesViewRejectsALengthThatWrapsTheOffset )
+{
+    const uint8 arrData[8]{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    sw::Archive arch( arrData, sizeof( arrData ) );
+
+    SW_ASSERT_TRUE( arch.readBytesView( 4 ) != nullptr );
+    SW_ASSERT_TRUE( arch.isOk() );
+
+    // 지금 위치(4) 와 더하면 정확히 2^64 라 0 으로 접히는 길이다.
+    const uint64 wrappingSize = ~uint64{ 0 } - 3u;
+    SW_EXPECT_TRUE_MSG( arch.readBytesView( wrappingSize ) == nullptr,
+                        "넘치는 길이를 통과시켰습니다 — 호출자가 버퍼 밖을 읽습니다" );
+    SW_EXPECT_TRUE( arch.isError() );
+
+    // 형제 둘도 같은 답을 내야 한다.
+    sw::Archive byteArch( arrData, sizeof( arrData ) );
+    uint8       arrScratch[4]{};
+    SW_ASSERT_TRUE( byteArch.readBytes( arrScratch, 4 ) );
+    SW_EXPECT_FALSE( byteArch.readBytes( arrScratch, wrappingSize ) );
+
+    sw::Archive subArch( arrData, sizeof( arrData ) );
+    SW_ASSERT_TRUE( subArch.readBytesView( 4 ) != nullptr );
+    const sw::Archive sub = subArch.readSubArchive( wrappingSize );
+    SW_EXPECT_TRUE( sub.isError() );
+}

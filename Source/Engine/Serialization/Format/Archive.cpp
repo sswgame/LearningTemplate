@@ -140,7 +140,11 @@ namespace sw
 
     const uint8* Archive::readBytesView( uint64 byteSize )
     {
-        if ( _pData == nullptr || _offset + byteSize > _dataSize )
+        // 뺄셈으로 비교한다 — `readBytes` · `readSubArchive` 와 같은 이유다(그 둘은 이미 그렇게
+        // 하고 이 함수만 남아 있었다). `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서
+        // 작아지고** 그대로 검사를 통과하며, 그러면 호출자가 버퍼 밖을 `byteSize` 만큼 읽는다.
+        // 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
+        if ( _pData == nullptr || byteSize > _dataSize - _offset )
         {
             _bError = SW_TRUE;
             return nullptr;
