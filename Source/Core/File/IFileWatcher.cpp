@@ -29,7 +29,13 @@ namespace sw
         if ( _listEventQueue.empty() == false )
         {
             const FileChangeEvent& last = _listEventQueue.back();
-            if ( last._action == action && last._filename == filename )
+            // **디렉터리까지 같아야 같은 변경이다.** Windows · Linux 는 감시 루트 하나를
+            // `directory` 로 주고 하위 경로를 `filename` 에 담으므로 이름만 봐도 갈렸지만,
+            // macOS 는 이벤트마다 그 파일이 있는 디렉터리를 준다 — 서로 다른 폴더의 같은
+            // 이름(`config.json` 둘)이 잇달아 오면 뒤엣것이 조용히 사라진다. 여기서 한 번
+            // 더 보면 어느 플랫폼이 무엇을 넘기든 답이 맞는다(앞의 둘은 값이 늘 같으므로
+            // 동작이 달라지지 않는다).
+            if ( last._action == action && last._filename == filename && last._directory == directory )
                 return;
         }
 

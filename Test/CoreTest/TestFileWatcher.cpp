@@ -30,6 +30,12 @@ namespace
         {
             pushChange( action, _directoryPath, filename );
         }
+
+        /** @brief 디렉터리까지 직접 정해 넣습니다 — macOS 구현이 하는 모양입니다. */
+        void pushFrom( sw::FileWatcherAction action, sw::string_view directory, sw::string_view filename )
+        {
+            pushChange( action, directory, filename );
+        }
     };
 } // namespace
 
@@ -109,4 +115,34 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
     // 리스캔은 한 번만 알린다 — 다음 폴링에는 남아 있지 않다.
     listEvent.clear();
     SW_EXPECT_EQUAL( 0u, watcher.pollEvents( listEvent ) );
+}
+
+/**
+ * @brief [FileWatcherTest] 디렉터리가 다르면 이름이 같아도 접지 않는다
+ * @details 연속 중복 접기가 `_action` 과 `_filename` 만 봤다. Windows · Linux 는 감시 루트 하나를
+ *          `directory` 로 주고 하위 경로를 `filename` 에 담으므로 이름만으로 갈렸지만, macOS 는
+ *          이벤트마다 그 파일이 있는 디렉터리를 준다 — 서로 다른 폴더의 같은 이름이 잇달아 오면
+ *          뒤엣것이 **조용히 사라진다.** 이 저장소는 macOS 를 빌드하지 않아 드러날 길이 없었고,
+ *          그래서 공유 코드 쪽에서 한 번 더 보게 했다.
+ */
+SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
+{
+    StubFileWatcher watcher{ "assets" };
+
+    watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/ui", "config.json" );
+    watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/audio", "config.json" );
+
+    sw::vector<sw::FileChangeEvent> listEvent;
+    const uint32                    count = watcher.pollEvents( listEvent );
+
+    SW_ASSERT_EQUAL( 2u, count );
+    SW_ASSERT_EQUAL( size_t( 2 ), listEvent.size() );
+    SW_EXPECT_STREQ( "assets/ui", listEvent[0]._directory.c_str() );
+    SW_EXPECT_STREQ( "assets/audio", listEvent[1]._directory.c_str() );
+
+    // 같은 디렉터리의 같은 이름은 그대로 접힌다.
+    sw::vector<sw::FileChangeEvent> listSecond;
+    watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/ui", "config.json" );
+    watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/ui", "config.json" );
+    SW_EXPECT_EQUAL( 1u, watcher.pollEvents( listSecond ) );
 }

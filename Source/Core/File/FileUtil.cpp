@@ -43,6 +43,62 @@ namespace sw
 
         /** @brief 윈도우 경로의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
         constexpr size_t kMaxWindowsPathSize = 32768;
+
+        /**
+         * @brief 디렉터리를 훑으며 항목마다 실행합니다. **던지지 않습니다.**
+         * @details `std::filesystem` 의 순회자는 `error_code` 를 받지 않으면 **예외를 던진다** —
+         *          권한이 없는 폴더, 순회 도중 지워진 폴더, 윈도우의 보호된 정션이 그 경우다.
+         *          `collectFiles` · `collectFolders` 는 `bool` 로 실패를 알리는 약속인데 그 예외가
+         *          호출부를 뚫고 나갔다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
+         *          처음부터 `error_code` 를 받고 있었다 — 그 형태가 여기로 옮겨지지 않았다.
+         *
+         *          같은 네 벌(파일/폴더 × 재귀/비재귀)이 따로 적혀 있던 것도 여기서 하나로 모은다.
+         *          갈라질 자리를 줄이는 것이 이 저장소가 되풀이해 겪은 문제의 답이다.
+         */
+        template <typename Func>
+        void forEachDirectoryEntry( const std::filesystem::path& directoryPath, const bool bRecursive, Func&& func )
+        {
+            std::error_code ec;
+
+            if ( bRecursive )
+            {
+                // `skip_permission_denied` 는 하위 폴더에 못 들어갈 때 멈추지 않고 건너뛰게 한다.
+                std::filesystem::recursive_directory_iterator iter{ directoryPath, std::filesystem::directory_options::skip_permission_denied, ec };
+                if ( ec )
+                    return;
+
+                const std::filesystem::recursive_directory_iterator last{};
+                while ( iter != last )
+                {
+                    func( *iter );
+                    iter.increment( ec );
+                    if ( ec )
+                        return;
+                }
+                return;
+            }
+
+            std::filesystem::directory_iterator iter{ directoryPath, std::filesystem::directory_options::skip_permission_denied, ec };
+            if ( ec )
+                return;
+
+            const std::filesystem::directory_iterator last{};
+            while ( iter != last )
+            {
+                func( *iter );
+                iter.increment( ec );
+                if ( ec )
+                    return;
+            }
+        }
+
+        /** @brief 항목이 디렉터리인지 — 물어보다 던지지 않습니다. */
+        bool isDirectoryEntry( const std::filesystem::directory_entry& entry )
+        {
+            std::error_code ec;
+            const bool      bIsDirectory = entry.is_directory( ec );
+            return ec ? false : bIsDirectory;
+        }
     } // namespace
 
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
@@ -773,36 +829,18 @@ namespace sw
         const std::filesystem::path directoryPath{ directory };
         const bool                  bHasFilter = filterExtension.empty() == false;
 
-        if ( bRecursive )
+        forEachDirectoryEntry( directoryPath, bRecursive, [&]( const std::filesystem::directory_entry& entry )
         {
-            for ( const auto& entry : std::filesystem::recursive_directory_iterator{ directoryPath } )
-            {
-                if ( entry.is_directory() )
-                    continue;
+            if ( isDirectoryEntry( entry ) )
+                return;
 
-                const string genericStd = entry.path().generic_string().c_str();
-                string_view  genericView{ genericStd };
-                if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
-                    continue;
+            const string genericStd = entry.path().generic_string().c_str();
+            string_view  genericView{ genericStd };
+            if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
+                return;
 
-                outListFilePath.push_back( string( genericView ) );
-            }
-        }
-        else
-        {
-            for ( const auto& entry : std::filesystem::directory_iterator{ directoryPath } )
-            {
-                if ( entry.is_directory() )
-                    continue;
-
-                const string genericStd = entry.path().generic_string().c_str();
-                string_view  genericView{ genericStd };
-                if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
-                    continue;
-
-                outListFilePath.push_back( string( genericView ) );
-            }
-        }
+            outListFilePath.push_back( string( genericView ) );
+        } );
 
         return true;
     }
@@ -814,30 +852,15 @@ namespace sw
 
         const std::filesystem::path directoryPath{ directory };
 
-        if ( bRecursive )
+        forEachDirectoryEntry( directoryPath, bRecursive, [&]( const std::filesystem::directory_entry& entry )
         {
-            for ( const auto& entry : std::filesystem::recursive_directory_iterator{ directoryPath } )
-            {
-                if ( entry.is_directory() == false )
-                    continue;
+            if ( isDirectoryEntry( entry ) == false )
+                return;
 
-                const string genericStd = entry.path().generic_string().c_str();
-                string_view  genericView{ genericStd };
-                outListFolder.push_back( string( genericView ) );
-            }
-        }
-        else
-        {
-            for ( const auto& entry : std::filesystem::directory_iterator{ directoryPath } )
-            {
-                if ( entry.is_directory() == false )
-                    continue;
-
-                const string genericStd = entry.path().generic_string().c_str();
-                string_view  genericView{ genericStd };
-                outListFolder.push_back( string( genericView ) );
-            }
-        }
+            const string genericStd = entry.path().generic_string().c_str();
+            string_view  genericView{ genericStd };
+            outListFolder.push_back( string( genericView ) );
+        } );
 
         return true;
     }

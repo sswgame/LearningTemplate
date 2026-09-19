@@ -152,3 +152,75 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
     // 두 번 물어도 같은 답이어야 한다(버퍼를 키우는 루프가 상태를 남기지 않는다).
     SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath() == executablePath );
 }
+
+/**
+ * @brief [FileTest] 디렉터리 순회가 재귀·비재귀 모두 같은 규칙으로 걷는지 검증
+ * @details `collectFiles` · `collectFolders` 는 같은 순회를 **네 벌**(파일/폴더 × 재귀/비재귀)로
+ *          따로 적고 있었고, 넷 다 `std::error_code` 없이 순회자를 만들었다 — 권한이 없는 폴더나
+ *          순회 중 지워진 폴더에서 **예외를 던진다.** 두 함수는 `bool` 로 실패를 알리는 약속이라
+ *          그 예외가 호출부를 뚫고 나간다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
+ *          처음부터 `error_code` 를 받고 있었다.
+ *
+ *          넷을 헬퍼 하나로 모았으므로, 여기서는 그 헬퍼가 네 경우를 모두 예전과 같이 걷는지 본다.
+ */
+SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
+{
+    const sw::string rootDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_walk_root" );
+    const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "nested" );
+    sw::FileUtil::ensureDirectoryExists( subDir );
+
+    const sw::string topFile    = sw::FileUtil::joinPath( rootDir, "top.txt" );
+    const sw::string nestedFile = sw::FileUtil::joinPath( subDir, "deep.txt" );
+    const sw::string otherFile  = sw::FileUtil::joinPath( rootDir, "skip.bin" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( topFile, "a" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( nestedFile, "b" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( otherFile, "c" ) );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [topFile, nestedFile, otherFile, subDir, rootDir]()
+    {
+        sw::FileUtil::removeFile( topFile );
+        sw::FileUtil::removeFile( nestedFile );
+        sw::FileUtil::removeFile( otherFile );
+        sw::FileUtil::removeDirectory( subDir );
+        sw::FileUtil::removeDirectory( rootDir );
+    } ) );
+
+    BLOCK( "비재귀 파일 — 바로 아래만, 확장자 필터가 걸린다" )
+    {
+        sw::vector<sw::string> listFile;
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, false ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), listFile.size() );
+    }
+
+    BLOCK( "재귀 파일 — 하위까지 본다" )
+    {
+        sw::vector<sw::string> listFile;
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
+        SW_EXPECT_EQUAL( size_t( 2 ), listFile.size() );
+    }
+
+    BLOCK( "필터가 비면 전부" )
+    {
+        sw::vector<sw::string> listFile;
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, "", listFile, true ) );
+        SW_EXPECT_EQUAL( size_t( 3 ), listFile.size() );
+    }
+
+    BLOCK( "폴더 — 비재귀와 재귀" )
+    {
+        sw::vector<sw::string> listFolder;
+        SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, false ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), listFolder.size() );
+
+        listFolder.clear();
+        SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, true ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), listFolder.size() );
+    }
+
+    BLOCK( "없는 디렉터리는 false — 던지지 않는다" )
+    {
+        sw::vector<sw::string> listFile;
+        SW_EXPECT_FALSE( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( rootDir, "nope" ), "", listFile, true ) );
+        SW_EXPECT_TRUE( listFile.empty() );
+    }
+}

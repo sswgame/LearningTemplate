@@ -435,6 +435,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (파일 감시 중복 접기가 폴더를 안 봤다 · 디렉터리 순회가 예외를 던졌다)
+
+**1) `IFileWatcher::pushChange` 의 연속 중복 접기가 `_directory` 를 비교하지 않았다.**
+
+```cpp
+if ( last._action == action && last._filename == filename )   // 디렉터리는 안 본다
+    return;
+```
+
+Windows · Linux 는 감시 루트 하나를 `directory` 로 주고 하위 경로를 `filename` 에 담으므로 이름만
+봐도 갈렸다. **macOS 만 이벤트마다 그 파일이 있는 디렉터리를 준다** — 서로 다른 폴더의 같은
+이름(`config.json` 둘)이 잇달아 오면 뒤엣것이 조용히 사라진다. 이 저장소는 macOS 를 빌드하지
+않으므로 드러날 길이 없었다(이 파일의 헤더 주석이 *"실제로 macOS 쪽만 연속 중복 접기가 빠져
+있었다"* 고 적어 둔 것과 같은 자리다 — 한 번 더 같은 곳에서 갈라졌다).
+
+플랫폼 파일을 고치는 대신 **공유 코드 쪽에서 한 번 더 보게** 했다. 어느 플랫폼이 무엇을 넘기든
+답이 맞고, 앞의 둘은 값이 늘 같으므로 동작이 달라지지 않는다.
+`FileWatcherTest.SameNameInDifferentDirectoriesIsNotCollapsed` — 되돌리면 `Expected [2], Actual [1]`.
+
+**2) `collectFiles` · `collectFolders` 가 `std::error_code` 없이 순회자를 만들었다.**
+
+네 곳 모두(`파일/폴더 × 재귀/비재귀`) `std::filesystem::directory_iterator{ path }` 였다. 이
+형태는 권한이 없는 폴더, 순회 도중 지워진 폴더, 윈도우의 보호된 정션에서 **예외를 던진다.**
+두 함수는 `bool` 로 실패를 알리는 약속이라 그 예외가 호출부를 뚫고 나간다. 같은 파일에서
+`std::error_code` 를 11번 쓰고 있었는데(`makeRelativePath` · `makeAbsolutePath` 등) 그 형태가
+순회 쪽으로 옮겨지지 않았다.
+
+네 벌을 헬퍼 하나(`forEachDirectoryEntry`)로 모으고 `skip_permission_denied` 와 `increment( ec )`
+를 쓴다. `entry.is_directory()` 도 던지므로 `is_directory( ec )` 로 감쌌다.
+
+> **이 쪽은 무는 테스트가 아니다.** 권한이 없는 폴더나 순회 중 사라지는 폴더를 이식성 있게 만들
+> 방법이 없어서, `FileTest.DirectoryWalkCollectsFilesAndFolders` 는 **네 경우가 예전과 같이
+> 걷는지**(비재귀/재귀 × 파일/폴더 + 필터 + 없는 폴더)를 지키는 회귀 가드다. 네 벌을 하나로
+> 모으는 변경이라 그 가드가 필요했다.
+
+**살펴보고 문제 없던 것 (Core/File).** `FileUtil::readFile` 은 `offset > uFileSize` 를 먼저 보고
+뺄셈으로 길이를 낸다. `suffixAfterPathComponent` 는 앞을 확인하지 않지만 **호출부 넷이 모두**
+`startsWithPathComponent` 로 먼저 막는다. 파일 다이얼로그는 워커 스레드에서 델리게이트를 부르지
+않고 큐에 담으며, 세대 카운터로 취소를 가리고, 델리게이트 호출·파괴를 모두 락 밖에서 한다.
+세 플랫폼 워처의 `_bIsWatching` 은 전부 `atomic<bool>` 이다.
+
 ### 2026-09-20 (fixed_string::erase 가 큰 길이에서 첨자를 접었다 · formatstring 은 용량 0 에서 무제한으로 썼다)
 
 Core/String 을 함수 단위로 읽다가 둘 나왔다. 둘 다 **같은 파일 안에 올바른 형제가 있다.**
