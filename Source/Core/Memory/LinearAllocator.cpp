@@ -43,6 +43,11 @@ namespace sw
         if ( alignment == 0 || MathUtil::isPowerOfTwo( alignment ) == false )
             alignment = alignof( std::max_align_t );
 
+        // 아래에서 `size + alignment` 로 새 블록 크기를 정한다 — 뒤집히면 **더 작은** 블록을 잡고,
+        // 그 블록으로도 안 들어가니 블록을 끝없이 늘리게 된다. 담을 수 없는 크기는 여기서 끝낸다.
+        if ( size > SIZE_MAX - alignment )
+            return nullptr;
+
         while ( true )
         {
             const size_t blockIndex    = _currentBlockIndex.load( std::memory_order_acquire );
@@ -66,9 +71,13 @@ namespace sw
                 const uintptr_t basePtr       = reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) + oldOffset;
                 const uintptr_t alignedPtr    = MathUtil::align( basePtr, static_cast<uintptr_t>( alignment ) );
                 const size_t    alignedOffset = static_cast<size_t>( alignedPtr - reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) );
-                const size_t    newOffset     = alignedOffset + size;
-                if ( newOffset > pCurrentBlock->_capacity )
+                // **뺄셈으로 비교한다.** `alignedOffset + size` 로 쓰면 큰 size 에서 합이 뒤집혀
+                // 검사를 통과하고, 블록 밖을 가리키는 주소가 정상 할당인 척 돌아간다.
+                // 정렬 때문에 alignedOffset 이 capacity 를 넘어설 수 있으므로 그것도 함께 본다.
+                if ( alignedOffset > pCurrentBlock->_capacity || size > pCurrentBlock->_capacity - alignedOffset )
                     break;
+
+                const size_t newOffset = alignedOffset + size;
 
                 if ( pCurrentBlock->_offset.compare_exchange_weak( oldOffset, newOffset, std::memory_order_acq_rel, std::memory_order_acquire ) )
                     return reinterpret_cast<void*>( alignedPtr );

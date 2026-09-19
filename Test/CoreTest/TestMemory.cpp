@@ -2,6 +2,8 @@
 
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/Memory/LinearAllocator.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/PoolAllocator.h"
 
 #include "TestFramework/TestFramework.h"
@@ -395,4 +397,51 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
             ++duplicateCount;
     }
     SW_EXPECT_TRUE_MSG( duplicateCount == 0, "풀이 같은 블록을 두 번 내줬다" );
+}
+
+/**
+ * @brief [MemoryTest] 담을 수 없는 크기는 **주소를 만들어 주지 않는다**
+ * @details 할당기 셋이 모두 `size + 무언가` 로 크기를 정했다 — `size` 가 클수록 그 합이 **뒤집혀
+ *          작아진다.** 그러면 (1) 요청보다 작은 블록이 잡히고, (2) `오프셋 + size <= 용량` 검사가
+ *          통과해 **블록 밖을 가리키는 주소**가 정상 할당인 척 돌아간다. 쓰는 순간 남의 메모리다.
+ *          이런 크기는 어차피 할당될 수 없으므로 nullptr 로 끝내는 것이 맞다.
+ */
+SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
+{
+    constexpr size_t kNearMax = ~size_t( 0 ) - 8;
+
+    // 1) 아레나 — 예전에는 `size + alignment` 가 뒤집혀 작은 청크를 끝없이 늘렸다.
+    {
+        sw::FrameArenaAllocator arena{ 4096 };
+        SW_EXPECT_TRUE_MSG( arena.allocate( kNearMax, 64 ) == nullptr,
+                            "담을 수 없는 크기에 주소를 돌려줬습니다" );
+        SW_EXPECT_TRUE( arena.allocate( ~size_t( 0 ), 16 ) == nullptr );
+
+        // 평소 할당은 그대로 된다 — "다 막는다" 로 굳지 않는다.
+        void* pSmall = arena.allocate( 128, 16 );
+        SW_EXPECT_TRUE( pSmall != nullptr );
+        SW_EXPECT_TRUE( reinterpret_cast<uintptr_t>( pSmall ) % 16 == 0 );
+    }
+
+    // 2) 선형 할당기 — 같은 함정이 블록 쪽에 있었다.
+    {
+        sw::LinearAllocator linear{ 4096 };
+        SW_EXPECT_TRUE_MSG( linear.allocate( kNearMax, 64 ) == nullptr,
+                            "담을 수 없는 크기에 주소를 돌려줬습니다" );
+        SW_EXPECT_TRUE( linear.allocate( ~size_t( 0 ), 16 ) == nullptr );
+
+        void* pSmall = linear.allocate( 128, 16 );
+        SW_EXPECT_TRUE( pSmall != nullptr );
+        SW_EXPECT_TRUE( reinterpret_cast<uintptr_t>( pSmall ) % 16 == 0 );
+    }
+
+    // 3) 바닥의 Memory — 헤더 크기를 더하다 뒤집히면 헤더 쓰기가 곧바로 범위를 넘는다.
+    {
+        SW_EXPECT_TRUE( sw::Memory::allocate( ~size_t( 0 ) ) == nullptr );
+        SW_EXPECT_TRUE( sw::Memory::allocateAligned( ~size_t( 0 ), 64 ) == nullptr );
+
+        void* pSmall = sw::Memory::allocate( 64 );
+        SW_ASSERT_TRUE( pSmall != nullptr );
+        sw::Memory::free( pSmall );
+    }
 }

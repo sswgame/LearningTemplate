@@ -46,6 +46,11 @@ namespace sw
     #endif
 #else // SW_SHIPPING
 
+        // 헤더와 정렬 여유를 더하다 뒤집히면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가
+        // 곧바로 범위를 넘는다. 넘칠 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
+        if ( size > SIZE_MAX - sizeof( AllocHeader ) - align )
+            return nullptr;
+
         size_t totalSize = size + sizeof( AllocHeader ) + align;
 
     #if defined( SW_PLATFORM_WINDOWS )
@@ -121,6 +126,10 @@ namespace sw
 #if defined( SW_SHIPPING )
         return ::malloc( size );
 #else  // SW_SHIPPING
+       // allocateAligned 와 같은 이유로 넘치는 크기를 먼저 거절한다.
+        if ( size > SIZE_MAX - sizeof( AllocHeader ) )
+            return nullptr;
+
         size_t totalSize = size + sizeof( AllocHeader );
         void*  pRawPtr   = ::malloc( totalSize );
         if ( pRawPtr == nullptr )

@@ -59,7 +59,7 @@ namespace sw
                 const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
                 const size_t    padding = static_cast<size_t>( aligned - current );
 
-                if ( chunk._offset + padding + size <= chunk._capacity )
+                if ( fitsInChunk( chunk._capacity, chunk._offset, padding, size ) )
                 {
                     chunk._offset += padding + size;
                     _usedBytes += padding + size;
@@ -127,9 +127,26 @@ namespace sw
         };
 
         /**
-         * @brief minSize 이상을 담는 새 청크를 할당하고 현재 청크로 전환합니다.
+         * @brief `offset + padding + size` 가 capacity 안에 드는지 **뒤집히지 않게** 봅니다.
+         * @details 덧셈으로 쓰면 큰 `size` 에서 합이 뒤집혀 검사를 통과하고, **청크 밖을 가리키는
+         *          주소**가 정상 할당인 척 돌아간다. `offset <= capacity` 는 이 클래스의 불변이지만
+         *          여기서도 확인한다 — 비용이 없고, 틀렸을 때 뺄셈이 뒤집힌다.
          */
-        void allocateNewChunk( size_t minSize );
+        static bool fitsInChunk( size_t capacity, size_t offset, size_t padding, size_t size )
+        {
+            if ( offset > capacity )
+                return false;
+            const size_t remaining = capacity - offset;
+            if ( padding > remaining )
+                return false;
+            return size <= remaining - padding;
+        }
+
+        /**
+         * @brief minSize 이상을 담는 새 청크를 할당하고 현재 청크로 전환합니다.
+         * @return 할당에 실패하면 false — 그때 청크 표에는 **아무것도 넣지 않습니다.**
+         */
+        bool allocateNewChunk( size_t minSize );
 
         /**
          * @brief 청크 용량이 모자랄 때 다음 청크를 찾거나 새로 할당하는 슬로우 패스입니다.

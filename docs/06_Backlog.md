@@ -435,6 +435,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Source 함수 단위 점검 — Core/Delegate · Core/Event · Core/Memory)
+
+**할당기 셋이 모두 `size + 무언가` 로 크기를 정하고 있었다.** `size` 가 클수록 그 합이 **뒤집혀
+작아진다** — 그러면 (1) 요청보다 작은 블록이 잡히고, (2) `오프셋 + size <= 용량` 검사마저 통과해
+**블록 밖을 가리키는 주소**가 정상 할당인 척 돌아간다. 쓰는 순간 남의 메모리다. 넷을 고쳤다:
+
+- `Memory::allocate` / `allocateAligned` — 헤더(+정렬 여유) 크기를 더하다 뒤집히면 헤더 쓰기가
+  곧바로 범위를 넘는다. Shipping 이 아닌 빌드의 이야기이므로, 정작 개발·테스트 중에만 났다.
+- `LinearAllocator::allocate` — 용량 검사를 덧셈에서 **뺄셈**으로 바꿨다(정렬 때문에 alignedOffset
+  이 capacity 를 넘어설 수 있어 그것도 함께 본다).
+- `FrameArenaAllocator` — 같은 검사를 `fitsInChunk` 하나로 모으고 빠른 경로·느린 경로가 함께 쓴다.
+
+**그 과정에서 더 아픈 것이 나왔다 — `FrameArenaAllocator::allocateNewChunk` 가 할당 실패를 아예
+보지 않았다.** `Memory::allocate` 는 `malloc` 결과를 그대로 돌려주므로 실패하면 nullptr 인데,
+그것을 `Chunk{ nullptr, ... }` 로 표에 넣고 다음 줄에서 `allocate` 를 다시 불렀다. 그 안의
+`chunk._pBuffer + chunk._offset` 은 **널 포인터 산술(UB)** 이고, 결과로 널 근처 주소가 정상 할당인
+척 돌아간다. `LinearAllocator` 는 같은 자리를 이미 제대로 보고 있었다 — 한쪽만 빠져 있었다.
+
+**검증.** `MemoryTest.AbsurdSizesReturnNullInsteadOfAWrappedBlock` 하나로 셋을 모두 건드린다.
+넘침 가드 넷을 도로 빼면 이 케이스가 프로세스째 죽는다(정상 코드에서는 12/12 통과).
+
+**살펴보고 문제 없던 것:** `MulticastDelegate`(복사·이동과 `_broadcastDepth` 가 이미 꼼꼼히
+다뤄져 있다 — 다만 콜백이 예외를 던지면 깊이가 되돌아오지 않는다. 엔진 코드가 던지지 않으므로
+그대로 둔다), `Delegate`, `EventDispatcher`, `PoolAllocator`, `LinearAllocator` 의 lock-free CAS
+경로와 `advanceToHeldBlock`.
+
+> `FrameArenaAllocator` 는 **아직 테스트에서만 쓰인다**(프로덕션 사용처 없음). 그래도 Core 의
+> 공개 API 이므로 고쳤다.
+
 ### 2026-09-19 (해시맵 충돌 체인에 검사가 하나도 없었다)
 
 `sw::unordered_map` 은 밀집 배열 + 버킷 체인이고 `erase` 는 **마지막 원소를 지운 자리로 옮긴다**

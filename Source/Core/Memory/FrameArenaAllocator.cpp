@@ -39,7 +39,7 @@ namespace sw
             const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
             const size_t    padding = static_cast<size_t>( aligned - current );
 
-            if ( chunk._offset + padding + size <= chunk._capacity )
+            if ( fitsInChunk( chunk._capacity, chunk._offset, padding, size ) )
             {
                 chunk._offset += padding + size;
                 _usedBytes += padding + size;
@@ -49,7 +49,17 @@ namespace sw
             _currentChunkIndex++;
         }
 
-        allocateNewChunk( size + alignment );
+        // `size + alignment` 가 뒤집히면 **더 작은** 청크를 잡게 되고, 그 청크로도 안 들어가니
+        // 다시 여기로 와서 청크를 끝없이 늘린다. 담을 수 없는 크기는 여기서 끝낸다.
+        if ( size > SIZE_MAX - alignment )
+            return nullptr;
+
+        // 새 청크를 못 잡으면 **여기서 끝난다.** 예전에는 실패를 보지 않고 `_pBuffer` 가 nullptr 인
+        // 청크를 표에 넣었고, 그 다음 줄의 `allocate` 가 널에서 만든 주소를 정상 할당인 척 돌려줬다
+        // (`nullptr + offset` 자체가 UB 이기도 하다).
+        if ( allocateNewChunk( size + alignment ) == false )
+            return nullptr;
+
         _currentChunkIndex = _listChunk.size() - 1;
         return allocate( size, alignment );
     }
@@ -88,11 +98,18 @@ namespace sw
         }
     }
 
-    void FrameArenaAllocator::allocateNewChunk( size_t minSize )
+    bool FrameArenaAllocator::allocateNewChunk( size_t minSize )
     {
         size_t chunkSize = MathUtil::max( _defaultCapacity, minSize );
         uint8* pBuf      = static_cast<uint8*>( Memory::allocate( chunkSize ) );
+        if ( pBuf == nullptr )
+        {
+            SW_LOG_ERROR( "Failed to allocate a %# byte frame arena chunk.", static_cast<uint64>( chunkSize ) );
+            return false;
+        }
+
         _listChunk.push_back( Chunk{ pBuf, chunkSize, 0 } );
         _totalAllocatedBytes += chunkSize;
+        return true;
     }
 } // namespace sw
