@@ -21,6 +21,7 @@
 #include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
+#include "GameFramework/Kits/TurnBattle/BattleState.h"
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Transition/ScreenTransitionManager.h"
@@ -1868,6 +1869,139 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
     SW_EXPECT_EQUAL( "Beta", seenChoice[1] );
     SW_EXPECT_TRUE_MSG( seenChoice[2] == "Gamma", "고르는 사이에 선택지 목록이 바뀌었습니다" );
     SW_EXPECT_EQUAL( "Took Beta", runner.getCurrentText() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 기술이 하나뿐인 적도 몰리면 **때린다**
+ * @details 체력이 절반 아래면 무조건 1 번 슬롯을 골랐다. 슬롯 수는 데이터가 정하므로 기술이
+ *          하나뿐인 종족이 있을 수 있고, 그러면 `applyMove` 가 없는 슬롯으로 보고 "no PP" 만
+ *          찍는다 — 적은 절반 이하로 떨어지는 순간부터 **한 대도 못 때렸다.** 몰려야 할 때
+ *          오히려 무해해졌다.
+ */
+SW_TEST_CASE( GameFrameworkTest, BattleFoeWithOneMoveStillAttacksWhenLow )
+{
+    // 기술이 둘이면 몰렸을 때 두 번째를 쓴다 — 원래 의도다.
+    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 40, 40, 2 ) );
+    SW_EXPECT_EQUAL( 1, pickFoeMoveSlot( 10, 40, 2 ) );
+    SW_EXPECT_EQUAL( 1, pickFoeMoveSlot( 10, 40, 4 ) );
+
+    // 기술이 하나면 몰려도 0 번이다 — 없는 슬롯을 고르지 않는다.
+    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 40, 40, 1 ) );
+    SW_EXPECT_TRUE_MSG( pickFoeMoveSlot( 10, 40, 1 ) == 0, "기술이 하나인데 없는 슬롯을 골랐습니다" );
+    SW_EXPECT_TRUE_MSG( pickFoeMoveSlot( 1, 40, 1 ) == 0, "기술이 하나인데 없는 슬롯을 골랐습니다" );
+
+    // 기술이 없으면 0 이다(부르는 쪽이 "슬롯 없음" 으로 처리한다).
+    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 10, 40, 0 ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 끝난 전투는 **스스로** 비활성으로 돌아온다
+ * @details `update` 의 첫 줄이 `Ended` 도 같이 걸러 냈다. 그런데 아래 `Ended` 분기가
+ *          `Inactive` 로 돌리는 유일한 자리다 — 그 분기는 한 번도 돌지 않았고, `Ended` 에
+ *          들어가며 건 0.4 초 타이머도 영영 안 끝났다. 전투가 스스로 끝나기를 기다리는 쪽은
+ *          `endBattle()` 을 따로 부르지 않는 한 영원히 기다린다.
+ */
+SW_TEST_CASE( GameFrameworkTest, EndedBattleReturnsToInactiveByItself )
+{
+    SpeciesCatalog catalog;
+    {
+        // 리소스가 없으면 최소 폴백 표를 심는다 — 이 테스트에는 그것으로 충분하다.
+        test::ScopedLogSuppressor suppressor;
+        catalog.loadFromResource( "no_such_species_catalog.xml" );
+    }
+    game::bindLocalService<SpeciesCatalog>( &catalog );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+    {
+        game::unbindLocalService<SpeciesCatalog>();
+    } ) );
+
+    BattleState battle;
+    battle.startWildEncounter();
+    SW_ASSERT_TRUE( battle.isActive() );
+
+    // 인트로를 넘기고 도망친다 — 가장 짧은 종료 경로다.
+    battle.update( 1.0f );
+    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::PlayerChoice ), static_cast<uint8>( battle.getPhase() ) );
+    battle.selectRun();
+    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::Ended ), static_cast<uint8>( battle.getPhase() ) );
+
+    // 여기서부터가 본론 — 아무도 `endBattle()` 을 부르지 않는다.
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+        battle.update( 0.016f );
+
+    SW_EXPECT_TRUE_MSG( battle.getPhase() == BattlePhase::Inactive,
+                        "끝난 전투가 스스로 비활성으로 돌아오지 않습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 전환 액션이 **그 안에서 새 전환**을 걸어도 덮이지 않는다
+ * @details 액션을 부른 뒤 `_phase = FadeIn` 과 `beginFadeIn()` 을 **조건 없이** 실행했다.
+ *          액션이 "다음 맵을 읽고, 그 맵이 또 전환을 건다" 는 흔한 일을 하면 방금 걸린
+ *          페이드 아웃이 곧바로 페이드 인으로 덮이고 **그쪽 액션은 영영 안 불린다.**
+ *          게다가 액션은 `_pendingAction` 을 통해 불리고 있어서, 새 전환이 그 델리게이트를
+ *          **실행 중에** 갈아 끼웠다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
+{
+    ScreenTransitionManager manager;
+
+    int32 firstActionCount{ 0 };
+    int32 secondActionCount{ 0 };
+
+    manager.beginTransition( SW_DELEGATE_LAMBDA( Delegate<void()>, [&]()
+    {
+        ++firstActionCount;
+        // 첫 액션 안에서 두 번째 전환을 건다.
+        manager.beginTransition( SW_DELEGATE_LAMBDA( Delegate<void()>, [&]()
+        {
+            ++secondActionCount;
+        } ),
+                                 0.1f, 0.1f );
+    } ),
+                             0.1f, 0.1f );
+
+    // 넉넉히 돌린다 — 두 전환이 차례로 다 끝나야 한다.
+    for ( int32 frameIndex = 0; frameIndex < 200; ++frameIndex )
+        manager.update( 0.016f );
+
+    SW_EXPECT_EQUAL( 1, firstActionCount );
+    SW_EXPECT_TRUE_MSG( secondActionCount == 1, "액션 안에서 건 전환이 덮여서 그쪽 액션이 안 불렸습니다" );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::None );
+}
+
+/**
+ * @brief [GameFrameworkTest] 못 읽은 값은 **fallback 이 된다** — 조용히 0 이 되지 않는다
+ * @details 세 조회 헬퍼가 `StringUtil` 의 파서를 두고 손수 풀고 있었다. `strtol` · `strtof` 는
+ *          실패를 0 으로 돌려주므로 `maxPartySize=six` 같은 오타가 조용히 0 이 됐다 —
+ *          fallback 이 있는데도 쓰이지 않았다. bool 은 `true`/`True`/`1` 만 알아서
+ *          `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어졌다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecomingZero )
+{
+    GameData gameData;
+    gameData._mapCustomProperty["brokenInt"]   = "six";
+    gameData._mapCustomProperty["brokenFloat"] = "half";
+    gameData._mapCustomProperty["emptyInt"]    = "";
+    gameData._mapCustomProperty["upperBool"]   = "TRUE";
+    gameData._mapCustomProperty["yesBool"]     = "yes";
+    gameData._mapCustomProperty["offBool"]     = "OFF";
+    gameData._mapCustomProperty["paddedInt"]   = "  12  ";
+
+    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
+    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, gameData.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
+
+    // 대소문자와 흔한 철자를 모두 안다 — 반만 아는 사본이 아니다.
+    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "yesBool", false ), "yes 를 못 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "offBool", true ) == false, "OFF 를 못 읽었습니다" );
+
+    // 앞뒤 공백도 파서가 다룬다.
+    SW_EXPECT_EQUAL( 12, gameData.getCustomPropertyInt( "paddedInt", 6 ) );
+
+    // 멀쩡한 값은 그대로다.
+    gameData._mapCustomProperty["goodInt"] = "8";
+    SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "goodInt", 6 ) );
 }
 
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )

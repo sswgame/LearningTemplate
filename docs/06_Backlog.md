@@ -458,6 +458,34 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (도달할 수 없는 분기 둘 · 콜백 뒤에 상태를 덮어썼다 — 턴전투 · 전환 · GameData)
+
+커밋 `TBD`. GameFramework 마무리에서 나온 다섯.
+
+1. **`BattleState::update` 의 `Ended` 분기가 도달 불가였다.** 함수 첫 줄이 `Inactive` 와 `Ended`
+   를 같이 걸러 냈는데, 아래 `Ended` 분기가 `Inactive` 로 돌리는 **유일한 자리**다. 그 분기는
+   한 번도 돌지 않았고 `Ended` 에 들어가며 건 0.4 초 타이머도 영영 안 끝났다 — 전투가 스스로
+   끝나기를 기다리는 쪽은 `endBattle()` 을 따로 부르지 않는 한 영원히 기다린다. (같은 날 고친
+   `LocomotionState::Walk` 와 **정확히 같은 모양**이다: 상태 기계가 빠져나올 수 없는 칸.)
+2. **기술이 하나뿐인 적은 몰리면 무해해졌다.** 체력이 절반 아래면 무조건 1 번 슬롯을 골랐는데
+   슬롯 수는 데이터가 정한다. 없는 슬롯이면 `applyMove` 가 "no PP" 만 찍고 돌아간다 — 적이
+   절반 이하로 떨어지는 순간부터 한 대도 못 때렸다. 판정을 `pickFoeMoveSlot( hp, hpMax, n )`
+   자유 함수로 꺼냈다.
+3. **`ScreenTransitionManager` 가 액션을 부른 뒤 상태를 조건 없이 덮었다.** 액션이 그 안에서
+   `beginTransition()` 을 부르면(= "다음 맵을 읽고 그 맵이 또 전환을 건다") 방금 걸린 페이드
+   아웃이 곧바로 페이드 인으로 덮이고 **그쪽 액션은 영영 안 불린다.** 게다가 액션은
+   `_pendingAction` 을 통해 불리는데 새 전환이 그 델리게이트를 **실행 중에** 갈아 끼웠다.
+   사본으로 부르고, 내가 두고 간 상태 그대로일 때만 잇는다.
+4. **`GameData` 의 조회 헬퍼 셋이 `StringUtil` 파서를 두고 손수 풀고 있었다.** 그 사본들은
+   공통으로 둘을 잃었다 — (a) `strtol`/`strtof` 는 실패를 0 으로 돌려주므로 `maxPartySize=six`
+   같은 오타가 **fallback 을 두고도 조용히 0** 이 됐고, (b) bool 은 `true`/`True`/`1` 만 알아서
+   `TRUE` · `yes` · `on` 이 전부 fallback 으로 떨어졌다. 덤으로 호출마다 `string` 을 만들었다.
+5. **`GameData::loadFromResource` 만 먼저 비우지 않았다.** 형제인
+   `SpeciesCatalog::loadFromResource` 는 처음부터 `clear()` 로 시작한다. 팩을 바꿔 다시 읽으면
+   앞 팩의 커스텀 프로퍼티가 남아서, 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나왔다.
+
+테스트 다섯, 전부 변이로 문다.
+
 ### 2026-09-20 (테스트 임시 파일 이름이 전부 고정이었다)
 
 커밋 `TBD`. `Test/` 의 임시 파일 경로 102 자리를 `test::makeTempPath( "이름" )` 하나로 모았다.

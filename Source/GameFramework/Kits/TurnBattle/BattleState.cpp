@@ -61,7 +61,11 @@ namespace sw
 
     void BattleState::update( float32 deltaTime )
     {
-        if ( _phase == BattlePhase::Inactive || _phase == BattlePhase::Ended )
+        // **`Ended` 도 갱신한다.** 예전에는 여기서 같이 걸러 냈는데, 아래 `Ended` 분기가
+        // `Inactive` 로 돌리는 유일한 자리다. 즉 그 분기는 **한 번도 돌지 않았고**, `Ended` 에
+        // 들어가며 건 0.4 초 타이머도 영영 안 끝났다. 전투가 스스로 끝나기를 기다리는 쪽은
+        // `endBattle()` 을 따로 부르지 않는 한 영원히 기다린다.
+        if ( _phase == BattlePhase::Inactive )
             return;
 
         _phaseTimer -= deltaTime;
@@ -192,10 +196,23 @@ namespace sw
         SW_LOG_TRACE( "%#", _statusText.c_str() );
     }
 
+    int32 pickFoeMoveSlot( int32 hp, int32 hpMax, size_t moveSlotCount )
+    {
+        if ( moveSlotCount == 0 )
+            return 0;
+
+        // **가진 슬롯 안에서 고른다.** 예전에는 체력이 절반 아래면 무조건 1 번을 돌려줬는데,
+        // 슬롯 수는 데이터가 정하므로 기술이 하나뿐인 종족이 있을 수 있다. 그러면
+        // `applyMove` 가 "없는 슬롯" 으로 보고 "no PP" 만 찍고 돌아가서, **적은 절반 이하로
+        // 떨어지는 순간부터 한 대도 못 때린다** — 몰려야 할 때 오히려 무해해졌다.
+        const int32 lastSlot = static_cast<int32>( moveSlotCount - 1 );
+        if ( hp * 2 < hpMax )
+            return MathUtil::min( 1, lastSlot );
+        return 0;
+    }
+
     int32 BattleState::pickFoeMoveSlot() const
     {
-        if ( _foe._hp * 2 < _foe._hpMax )
-            return 1;
-        return 0;
+        return sw::pickFoeMoveSlot( _foe._hp, _foe._hpMax, _foe._listPp.size() );
     }
 } // namespace sw

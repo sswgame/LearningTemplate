@@ -119,7 +119,19 @@ namespace sw
                 SW_LOG_TRACE( "ScreenTransition: FadeOut complete, executing transition action." );
 
                 if ( _pendingAction.isBound() == true )
-                    _pendingAction();
+                {
+                    // **사본으로 부른다.** 액션이 그 안에서 `beginTransition()` 을 부르면
+                    // `_pendingAction` 이 **실행 중에 갈린다** — 지금 돌고 있는 델리게이트를
+                    // 밟는 것이다. "다음 맵을 읽고, 그 맵이 또 전환을 건다" 는 흔한 흐름이다.
+                    const Delegate<void()> action = _pendingAction;
+                    action();
+                }
+
+                // 액션이 그 안에서 **새 전환을 시작했을 수 있다.** 그러면 이 아래 두 줄이
+                // 그 전환을 통째로 덮어써서, 새로 건 페이드 아웃이 곧바로 페이드 인으로
+                // 바뀌고 그쪽 액션은 영영 안 불린다. 내가 두고 간 상태 그대로일 때만 잇는다.
+                if ( _phase != Phase::Loading )
+                    return;
 
                 _phase = Phase::FadeIn;
                 _fade.beginFadeIn( _pendingFadeInDuration );

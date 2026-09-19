@@ -20,32 +20,28 @@ namespace sw
         return fallback;
     }
 
+    // 셋 다 `StringUtil` 의 파서를 쓴다. 예전에는 여기서 손수 풀었는데 그 사본들이 공통으로
+    // 두 가지를 잃고 있었다.
+    //   (1) **못 읽은 것과 0 을 구별 못 했다.** `strtol`/`strtof` 는 실패를 0 으로 돌려주므로
+    //       `maxPartySize=six` 같은 오타가 조용히 0 이 됐다 — fallback 이 있는데도 안 쓰였다.
+    //   (2) **대소문자를 반만 봤다.** bool 은 `true`/`True`/`1` 만 알아서 `TRUE` · `yes` · `on`
+    //       은 전부 fallback 으로 떨어졌다. `StringUtil::parseBool` 은 처음부터 그것들을 안다.
+    // 덤으로 손수 푸는 쪽은 매번 `string` 을 하나씩 만들었다(파서는 `string_view` 로 받는다).
     int32 GameData::getCustomPropertyInt( string_view key, int32 fallback ) const
     {
-        const string_view val = getCustomProperty( key );
-        if ( val.empty() == true )
-            return fallback;
-        return static_cast<int32>( std::strtol( string( val ).c_str(), nullptr, 10 ) );
+        int32 value{ 0 };
+        return StringUtil::parseInt( getCustomProperty( key ), value ) ? value : fallback;
     }
 
     float32 GameData::getCustomPropertyFloat( string_view key, float32 fallback ) const
     {
-        const string_view val = getCustomProperty( key );
-        if ( val.empty() == true )
-            return fallback;
-        return std::strtof( string( val ).c_str(), nullptr );
+        float32 value{ 0.0f };
+        return StringUtil::parseFloat( getCustomProperty( key ), value ) ? value : fallback;
     }
 
     bool GameData::getCustomPropertyBool( string_view key, bool bFallback ) const
     {
-        const string_view val = getCustomProperty( key );
-        if ( val.empty() == true )
-            return bFallback;
-        if ( val == "true" || val == "True" || val == "1" )
-            return true;
-        if ( val == "false" || val == "False" || val == "0" )
-            return false;
-        return bFallback;
+        return StringUtil::parseBool( getCustomProperty( key ), bFallback );
     }
 
     bool GameData::loadFromResource( string_view assetRelativePath )
@@ -57,6 +53,11 @@ namespace sw
         const string path = string( assetRelativePath );
         if ( ResourceUtil::hasResource( path ) == false )
             return false;
+
+        // **먼저 비운다.** 형제인 `SpeciesCatalog::loadFromResource` 는 처음부터 그렇게 한다.
+        // 여기만 안 비워서, 팩을 바꿔 다시 읽으면 앞 팩의 커스텀 프로퍼티가 그대로 남았다 —
+        // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
+        *this = GameData{};
 
         XmlDocument doc;
         string      absPath;
