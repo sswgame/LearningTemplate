@@ -77,9 +77,29 @@ namespace sw
         /** @brief 레이스 메시지와 콜스택을 Fatal 로 남깁니다. */
         void triggerDataRace( const utf8* pMessage );
 
+        /** @brief 지금 들어와 있는 것이 **나 자신**인지 — 그렇다면 재진입이지 레이스가 아닙니다. */
+        bool isOwnedByCurrentThread() const;
+
         // 하위 16비트: Reader Count (최대 65535)
         // 상위 16비트: Writer Count (최대 65535)
         atomic<uint32> _state{ 0 };
+
+        /**
+         * @brief 지금 이 컨텍스트에 **처음 들어온 스레드**의 id 해시. 아무도 없으면 0.
+         *
+         * @details **데이터 레이스는 정의상 두 스레드가 필요하다.** 그런데 이 검출기에는 스레드 개념이
+         *          없어서, 한 스레드가 가드를 잡은 채 **같은 객체의 다른 가드 메서드를 부르기만 해도**
+         *          레이스로 보고했다 — 예: `sw::set::operator=(initializer_list)` 는 쓰기 가드를 잡고
+         *          `clear()`·`insert()` 를 부르는데 그 둘도 가드를 잡는다. 그래서 Debug 빌드에서
+         *          **`sw::set` 에 초기화 리스트를 대입하기만 해도 없는 레이스가 떴다.**
+         *
+         *          같은 자리가 `map` 에도 있고, 쓰기 가드 안에서 const 메서드를 부르는 모든 경우가
+         *          같은 모양이다 — 즉 "가드 메서드가 가드 메서드를 부르지 않게 조심한다" 로는 막히지
+         *          않는 **구조적** 오탐이었다. 주인 스레드를 기억해 재진입을 구분한다.
+         *
+         * @note 이것은 **오탐만 줄인다.** 다른 스레드가 들어오면 id 가 다르므로 그대로 보고된다.
+         */
+        atomic<uint64> _ownerThreadId{ 0 };
 #endif
     };
 

@@ -241,42 +241,15 @@ namespace sw
         }
     };
 
+    /**
+     * @brief unordered_set 래퍼 — `SetWrapper` 와 **하는 일이 같아 별칭이다.**
+     * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수·비우기·순회·삽입·키/값 크기)은
+     *          거기에 좌우되지 않는다. 예전에는 `SetWrapper` 를 통째로 복사해 이름만 바꾼 구현이
+     *          따로 있었다 — 그러면 한쪽에 메서드를 더할 때 다른 쪽이 조용히 뒤처진다.
+     *          별칭이면 **뒤처질 수가 없다.**
+     */
     template <typename TContainer>
-    /// @brief unordered_set 시퀀스 래퍼
-    struct UnorderedSetWrapper : ISequenceContainerWrapper
-    {
-        /** @brief 원소 개수. */
-        size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
-        /** @brief 인덱스 원소 포인터. */
-        void* getElement( void* pContainer, size_t index ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            auto        it              = pContainerTyped->begin();
-            std::advance( it, index );
-            return const_cast<void*>( static_cast<const void*>( &( *it ) ) );
-        }
-
-        /** @brief 인덱스 원소 const 포인터. */
-        const void* getElementConst( const void* pContainer, size_t index ) const override
-        {
-            const TContainer* pContainerTyped = static_cast<const TContainer*>( pContainer );
-            auto              it              = pContainerTyped->begin();
-            std::advance( it, index );
-            return &( *it );
-        }
-
-        /** @brief 비웁니다. */
-        void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->clear(); }
-        /** @brief 제로된 저장소에 빈 컨테이너를 placement-new 합니다. */
-        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
-        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
-        /** @brief 기본 원소를 뒤에 추가합니다. */
-        void addElementDefault( void* pContainer ) const override
-        {
-            using ElementType = typename TContainer::value_type;
-            static_cast<TContainer*>( pContainer )->insert( ElementType{} );
-        }
-    };
+    using UnorderedSetWrapper = SetWrapper<TContainer>;
 
     template <typename TContainer>
     /// @brief 고정 배열 시퀀스 래퍼 (add/clear 없음)
@@ -351,49 +324,15 @@ namespace sw
         void destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
     };
 
+    /**
+     * @brief unordered_map 래퍼 — `MapWrapper` 와 **하는 일이 같아 별칭이다.**
+     * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수·비우기·순회·삽입·키/값 크기)은
+     *          거기에 좌우되지 않는다. 예전에는 `MapWrapper` 를 통째로 복사해 이름만 바꾼 구현이
+     *          따로 있었다 — 그러면 한쪽에 메서드를 더할 때 다른 쪽이 조용히 뒤처진다.
+     *          별칭이면 **뒤처질 수가 없다.**
+     */
     template <typename TContainer>
-    /// @brief unordered_map 키-값 래퍼
-    struct UnorderedMapWrapper : IMapContainerWrapper
-    {
-        using KeyType   = typename TContainer::key_type;
-        using ValueType = typename TContainer::mapped_type;
-
-        /** @brief 원소 개수. */
-        size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
-        /** @brief 비웁니다. */
-        void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->clear(); }
-        /** @brief 제로된 저장소에 빈 컨테이너를 placement-new 합니다. */
-        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
-        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
-        /** @brief 각 키-값에 콜백을 호출합니다. */
-        void forEach( const void* pContainer, const MapForEachDelegate& callback ) const override
-        {
-            const TContainer* pContainerTyped = static_cast<const TContainer*>( pContainer );
-            for ( const auto& pair : *pContainerTyped )
-            {
-                callback( &pair.first, &pair.second );
-            }
-        }
-
-        /** @brief 키-값을 삽입하거나 덮어씁니다. */
-        void insertKeyValue( void* pContainer, const void* pKey, const void* pVal ) const override
-        {
-            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
-            ( *pContainerTyped )[*static_cast<const KeyType*>( pKey )] =
-                *static_cast<const ValueType*>( pVal );
-        }
-
-        /** @brief 키 바이트 크기. */
-        size_t getKeySize() const override { return sizeof( KeyType ); }
-        /** @brief 값 바이트 크기. */
-        size_t getValueSize() const override { return sizeof( ValueType ); }
-        /** @brief 키를 기본 생성합니다. */
-        void defaultConstructKey( void* pPtr ) const override { sw_placement_new( pPtr ) KeyType{}; }
-        void defaultConstructValue( void* pPtr ) const override { sw_placement_new( pPtr ) ValueType{}; }
-        void destroyKey( void* pPtr ) const override { static_cast<KeyType*>( pPtr )->~KeyType(); }
-        /** @brief 값을 파괴합니다. */
-        void destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
-    };
+    using UnorderedMapWrapper = MapWrapper<TContainer>;
 
     template <typename TContainer>
     /// @brief sparse_set 키-값 래퍼
