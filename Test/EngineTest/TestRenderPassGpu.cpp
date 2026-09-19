@@ -3044,3 +3044,81 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the material texture ordinal test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] 부모 레이아웃이 커지면 인스턴스 상수버퍼를 **다시 만든다**
+ * @details `updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 적혀 있지 않은 전제가 있었다 — 그
+ *          크기는 버퍼를 만들 때 준 크기를 넘으면 안 된다. 네 백엔드 중 셋(DX12 · Vulkan · DX11)은
+ *          받은 크기를 **그대로 복사**하므로 넘기면 프레임 슬롯 밖까지 쓴다. GL 만
+ *          `glBufferSubData` 가 막아 준다 — 한 백엔드에서만 조용히 안전했다는 뜻이다.
+ *
+ *          그런데 부모 머티리얼의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이
+ *          바뀐다). `MaterialInstance::updateRhi` 는 `_constant._buffer` 가 0 이 아니면 그대로
+ *          쓰고 새 크기로 갱신했다. 라이브 셰이더 편집 + 파라미터 변경이 겹치면 그 자리를 밟는다.
+ *
+ *          GPU 메모리로 넘치는 것이라 ASan 도 단언도 잡지 못한다. 대신 **버퍼를 다시 만들었는지**
+ *          를 본다 — 다시 만들면 bindless 디스크립터 인덱스가 새로 발급되므로 그것으로 가른다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrows )
+{
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            sw::shared_ptr<sw::Material> parent = sw::Material::create();
+            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
+
+            sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
+            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+
+            const sw::RHIDescriptorIndex firstIndex = instance->getDescriptorIndex();
+            const size_t                 firstSize  = instance->getBuffer().size();
+            SW_ASSERT_TRUE( firstSize > 0 );
+
+            // 셰이더를 다시 구워 레이아웃이 커진 상황을 만든다 — 부모 상수버퍼가 256 을 넘게 한다.
+            sw::ShaderReflectionData reflection{};
+            sw::ShaderBufferInfo     cb{};
+            cb._name      = "MaterialCB";
+            cb._totalSize = static_cast<uint32>( firstSize ) + 256;
+
+            sw::ShaderVariableInfo var{};
+            var._name   = "grownTail";
+            var._type   = "Float4";
+            var._offset = static_cast<uint32>( firstSize ) + 16;
+            var._size   = 16;
+            cb._listVariable.push_back( var );
+            reflection._listConstantBuffer.push_back( cb );
+            (void)parent->syncPropertiesFromReflection( reflection );
+            SW_ASSERT_TRUE( parent->getBuffer().size() > firstSize );
+
+            // 파라미터를 건드려 인스턴스를 더럽힌다 — 이것이 실제로 겹치는 조합이다.
+            instance->setScalarParameter( sw::hashed_string( "roughness" ), 0.75f );
+            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+
+            SW_EXPECT_TRUE_MSG( instance->getBuffer().size() > firstSize,
+                                "인스턴스가 커진 부모 레이아웃을 따라가지 않았습니다" );
+            SW_EXPECT_TRUE_MSG( instance->getDescriptorIndex() != firstIndex,
+                                "상수버퍼를 다시 만들지 않고 더 큰 크기로 갱신했습니다 — 슬롯 밖으로 씁니다" );
+
+            instance->releaseRhi( device.get() );
+            parent->releaseRhi( device.get() );
+        }
+
+        device->shutdown();
+        device.reset();
+        if ( window != nullptr )
+        {
+            window->destroy();
+            window.reset();
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the instance constant buffer growth test" );
+}

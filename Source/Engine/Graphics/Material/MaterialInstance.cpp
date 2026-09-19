@@ -71,6 +71,7 @@ namespace sw
         , _bytes{}
         , _constant{}
         , _descriptorIndex{ kInvalidDescriptorIndex }
+        , _constantByteSize{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
@@ -94,8 +95,9 @@ namespace sw
             return;
         // 디바이스가 이미 없다 — 상수버퍼는 그와 함께 갔다.
         _constant.forget();
-        _descriptorIndex = kInvalidDescriptorIndex;
-        _bGpuDirty       = SW_TRUE;
+        _descriptorIndex  = kInvalidDescriptorIndex;
+        _constantByteSize = 0;
+        _bGpuDirty        = SW_TRUE;
     }
 
     void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
@@ -112,7 +114,8 @@ namespace sw
                 pRhi->getResource()->destroyBuffer( _constant._buffer );
         }
         _constant.forget();
-        _descriptorIndex = kInvalidDescriptorIndex;
+        _descriptorIndex  = kInvalidDescriptorIndex;
+        _constantByteSize = 0;
         _bytes.clear();
         _bGpuDirty = SW_TRUE;
     }
@@ -186,8 +189,9 @@ namespace sw
         if ( _constant._buffer != 0 && _constant.isResident() == false )
         {
             _constant.forget();
-            _descriptorIndex = kInvalidDescriptorIndex;
-            _bGpuDirty       = SW_TRUE;
+            _descriptorIndex  = kInvalidDescriptorIndex;
+            _constantByteSize = 0;
+            _bGpuDirty        = SW_TRUE;
         }
 
         if ( _bGpuDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
@@ -208,13 +212,29 @@ namespace sw
         }
 
         const uint32 size = static_cast<uint32>( _bytes.size() );
+
+        // 부모의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이 바뀐다). 그때 예전
+        // 버퍼를 그대로 쓰면 `updateConstantBuffer` 가 만들 때보다 큰 크기로 복사한다 — 그 함수는
+        // 크기를 검사하지 않으므로(GL 만 API 가 막아 준다) 프레임 슬롯 밖까지 쓴다.
+        // 커졌으면 버리고 다시 만든다.
+        if ( _constant._buffer != 0 && size > _constantByteSize )
+        {
+            if ( _descriptorIndex != kInvalidDescriptorIndex )
+                pRhi->getResource()->unregisterBindlessResource( _descriptorIndex );
+            pRhi->getResource()->destroyBuffer( _constant._buffer );
+            _constant.forget();
+            _descriptorIndex  = kInvalidDescriptorIndex;
+            _constantByteSize = 0;
+        }
+
         if ( _constant._buffer == 0 )
         {
             const RHIBufferHandle constantBuffer = pRhi->getResource()->createConstantBuffer( size );
             if ( constantBuffer == 0 )
                 return false;
             _constant.adopt( pRhi, constantBuffer );
-            _descriptorIndex = pRhi->getResource()->registerBindlessResource( constantBuffer );
+            _descriptorIndex  = pRhi->getResource()->registerBindlessResource( constantBuffer );
+            _constantByteSize = size;
         }
         pRhi->getResource()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
         _bGpuDirty = SW_FALSE;

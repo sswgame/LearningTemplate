@@ -435,6 +435,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (상수버퍼를 만들 때보다 큰 크기로 갱신할 수 있었다)
+
+`IRHIResource::updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 **적혀 있지 않은 전제**가 있었다 —
+그 크기는 `createConstantBuffer` 에 준 크기를 넘으면 안 된다. 그런데 **네 백엔드 중 셋
+(DX12 · Vulkan · DX11)은 그것을 검사하지 않고 받은 크기를 그대로 복사한다.** 넘기면 프레임 슬롯
+밖(또는 버퍼 밖)까지 쓴다. GL 만 `glBufferSubData` 가 `GL_INVALID_VALUE` 로 막아 준다 —
+**한 백엔드에서만 조용히 안전했다.**
+
+`MaterialInstance::updateRhi` 가 그 전제를 어길 수 있었다. 부모 머티리얼의 상수버퍼는 **셰이더를
+다시 구우면 커진다**(레이아웃이 바뀐다). 그런데 `_constant._buffer` 가 0 이 아니면 그대로 쓰고
+새 크기로 갱신했다. 라이브 셰이더 편집 + 인스턴스 파라미터 변경이 겹치면 그 자리를 밟는다.
+
+만들 때의 크기(`_constantByteSize`)를 들고 있다가 **커졌으면 버리고 다시 만든다.**
+전제 자체도 `IRHIResource.h` 에 적었다 — 다음 호출자가 다시 밟지 않도록.
+
+**검증이 까다로운 종류다.** 넘치는 곳이 GPU 매핑 메모리라 ASan 도 단언도 잡지 못한다. 대신
+**버퍼를 다시 만들었는지**로 가른다 — 다시 만들면 bindless 디스크립터 인덱스가 새로 발급된다.
+`RenderPassGpuTest.InstanceConstantBufferIsRecreatedWhenLayoutGrows`(hostgpu, 네 백엔드)가
+실제 에셋으로 그 순서를 재현하고, 재생성을 빼면 "상수버퍼를 다시 만들지 않고 더 큰 크기로
+갱신했습니다" 로 진다.
+
+Debug·Release·Shipping·ASAN 경고 0, nogpu 7/7 × 3 프리셋, hostgpu 2/2.
+
 ### 2026-09-19 (forgetRhi 와 releaseRhi 가 서로 다른 상태를 남겼다)
 
 둘 다 **"디바이스가 사라졌다"** 는 통보인데 `Material` 에서 남기는 상태가 달랐다 —

@@ -41,7 +41,16 @@ namespace sw
         /** @brief 상수 버퍼를 만듭니다. */
         virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
 
-        /** @brief 상수 버퍼 데이터를 갱신합니다. */
+        /**
+         * @brief 상수 버퍼 데이터를 갱신합니다.
+         * @param size 보낼 바이트 수. **`createConstantBuffer` 에 준 크기를 넘으면 안 됩니다.**
+         * @warning 그 전제는 **백엔드가 검사해 주지 않는다.** DX12·Vulkan·DX11 은 받은 크기를 그대로
+         *          복사하므로, 넘기면 프레임 슬롯 밖(또는 버퍼 밖)까지 쓴다. GL 만 `glBufferSubData`
+         *          가 `GL_INVALID_VALUE` 로 막아 준다 — 즉 **한 백엔드에서만 조용히 안전하다.**
+         *          버퍼가 작아졌다면 갱신하지 말고 **다시 만들어야 한다**
+         *          (`MaterialInstance::updateRhi` 가 셰이더 재컴파일로 레이아웃이 커지는 경우를
+         *          그렇게 처리한다).
+         */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
         /** @brief Structured / Storage 버퍼를 만듭니다. */

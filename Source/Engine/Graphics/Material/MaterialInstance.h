@@ -135,6 +135,15 @@ namespace sw
         /** @brief 상수버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). 인덱스는 이 버퍼의 것이다. */
         RHIResidentBuffer  _constant;
         RHIDescriptorIndex _descriptorIndex;
+        /**
+         * @brief `_constant` 를 **만들 때 준 바이트 수**입니다.
+         * @details `updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 적혀 있지 않은 전제가 있다 —
+         *          그 크기는 버퍼를 만들 때 준 크기를 넘으면 안 된다. 네 백엔드 중 셋은 그것을
+         *          검사하지 않고 그대로 복사하므로(GL 만 API 가 막아 준다) 넘기면 프레임 슬롯 밖까지
+         *          쓴다. 부모 머티리얼의 상수버퍼는 **셰이더를 다시 굽는 동안 커질 수 있으므로**
+         *          (레이아웃이 바뀐다) 만들 때의 크기를 들고 있다가 커지면 다시 만든다.
+         */
+        uint32 _constantByteSize;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;
