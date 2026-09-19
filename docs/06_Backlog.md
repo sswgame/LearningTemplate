@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `dbb2055b`
+> 마지막 갱신: 2026-09-20 · 기준 커밋 `9ab3bfae`
 
 ---
 
@@ -434,6 +434,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 (시퀀스 플레이어가 자산을 바꾸기 전에 멈췄다)
+
+`SequencePlayer::loadFromFile` 과 `setAsset` 이 **자산을 바꾸기 전에** `stop()` 을 불렀다.
+`stop()` 안의 `_previousFrame = _asset._frameMin` 이 아직 **옛 자산**의 시작 프레임을 집는다.
+
+100 프레임에서 시작하는 시퀀스를 읽으면 이전 프레임만 0 에 남는다. 이벤트 판정은
+`previousFrame < start <= frame`(지나갔는가) 이므로 첫 적용이 `applyFrame(100, 0)` 이 되어
+**100 이하의 이벤트가 전부 한꺼번에 발화**한다. `getCurrentFrame()` 은 재생 시각에서 그때그때
+구하므로 새 자산을 따르는데 `getPreviousFrame()` 만 옛 자산을 따르는, 둘이 어긋난 상태이기도 했다.
+`SequencePlayerComponent` 가 그 둘을 짝으로 `applyFrame` 에 넘긴다.
+
+같은 파일에서 하나 더: 프레임 번호는 JSON 에서 오는데 그대로 믿었다. `frameMin` 이 int32
+최대값이면 바로 아래의 `_frameMax = _frameMin + 1` 이 **부호 있는 넘침**(UB)이라 끝이 시작보다
+앞이 되고, 트랙의 `_end - _start` 도 같은 식으로 접혔다. 파싱하는 자리에서 `kSequenceFrameLimit`
+(= int32 최대의 절반)로 자른다 — 그러면 **어떤 두 값의 차도** int32 안에 들어와서, 빼는 자리마다
+넓은 타입으로 올릴 필요가 없다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않는다.
+
+**무는지 확인했다.** `stop()` 순서를 되돌리면 `LoadedAssetResetsPlaybackToItsOwnStart` 가 세 단언
+모두(현재/이전 프레임 일치, 값 100, 그리고 "이벤트가 발화하지 않는다")에서 지고, 자르기를 빼면
+`OutOfRangeFrameNumbersCannotOverflowSpans` 가 진다.
 
 ### 2026-09-20 (TaskManager 테스트 파일이 없었다 — 10 케이스로 채웠다)
 

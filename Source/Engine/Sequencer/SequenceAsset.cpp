@@ -3,6 +3,7 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
@@ -13,6 +14,17 @@ namespace sw
     {
         struct SequenceAssetInternal
         {
+            /**
+             * @brief JSON 이 준 프레임 번호를 다룰 수 있는 범위로 자릅니다.
+             * @details `asInt` 는 int64 를 준다 — int32 로 그냥 캐스팅하면 큰 값이 **음수로 접힌다**.
+             *          자르는 이유는 `kSequenceFrameLimit` 에 적혀 있다.
+             */
+            static int32 clampFrame( int64 value )
+            {
+                const int64 limit = static_cast<int64>( kSequenceFrameLimit );
+                return static_cast<int32>( MathUtil::clamp( value, -limit, limit ) );
+            }
+
             static float3 readVec3( const JsonValue& parent, string_view key, const float3& fallback )
             {
                 const JsonValue val = parent.get( key );
@@ -79,8 +91,10 @@ namespace sw
     {
         _listItem.clear();
 
-        _frameMin = static_cast<int32>( root.get( "frameMin" ).asInt( 0 ) );
-        _frameMax = static_cast<int32>( root.get( "frameMax" ).asInt( 100 ) );
+        // 파일에서 온 프레임 번호는 여기서 한 번 잘라 둔다 — 아래의 `+ 1` 과 재생/타임라인 쪽의
+        // 뺄셈들이 넘치지 않는 것은 이 잘라 둠에 기댄다. 자세한 이유는 `kSequenceFrameLimit` 참고.
+        _frameMin = SequenceAssetInternal::clampFrame( root.get( "frameMin" ).asInt( 0 ) );
+        _frameMax = SequenceAssetInternal::clampFrame( root.get( "frameMax" ).asInt( 100 ) );
         _note     = root.get( "note" ).asString();
         if ( _frameMax <= _frameMin )
             _frameMax = _frameMin + 1;
@@ -90,8 +104,8 @@ namespace sw
             SequenceTrackItem item{};
             item._name         = itemJson.get( "name" ).asString();
             item._targetObject = itemJson.get( "target" ).asString();
-            item._start        = static_cast<int32>( itemJson.get( "start" ).asInt( 0 ) );
-            item._end          = static_cast<int32>( itemJson.get( "end" ).asInt( 10 ) );
+            item._start        = SequenceAssetInternal::clampFrame( itemJson.get( "start" ).asInt( 0 ) );
+            item._end          = SequenceAssetInternal::clampFrame( itemJson.get( "end" ).asInt( 10 ) );
             item._type         = static_cast<int32>( itemJson.get( "type" ).asInt( 0 ) );
             item._color        = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
             item._translation  = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );

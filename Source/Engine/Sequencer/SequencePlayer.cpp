@@ -20,14 +20,21 @@ namespace sw
 
     bool SequencePlayer::loadFromFile( string_view path )
     {
+        const bool bLoaded = _asset.loadFromFile( path );
+        // **자산을 바꾼 뒤에 멈춘다.** 예전에는 `stop()` 이 먼저였고, 그 안의
+        // `_previousFrame = _asset._frameMin` 이 **바뀌기 전 자산**의 시작 프레임을 집었다.
+        // 새 자산이 100 프레임에서 시작하고 직전 값이 0 이면, 첫 갱신이 `applyFrame(100, 0)` 이
+        // 되어 100 이하의 이벤트가 전부 한꺼번에 발화한다. `getCurrentFrame()` 은 재생 시각으로
+        // 그때그때 구하므로 새 자산을 따르는데 `getPreviousFrame()` 만 옛 자산을 따르는,
+        // 둘이 어긋나는 상태이기도 했다.
         stop();
-        return _asset.loadFromFile( path );
+        return bLoaded;
     }
 
     void SequencePlayer::setAsset( const SequenceAsset& asset )
     {
-        stop();
         _asset = asset;
+        stop();
     }
 
     void SequencePlayer::play()

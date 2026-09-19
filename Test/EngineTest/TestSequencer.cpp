@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -182,4 +184,64 @@ SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
     SW_EXPECT_TRUE( asset._note.empty() );
     SW_EXPECT_EQUAL( 0, asset._frameMin );
     SW_EXPECT_EQUAL( 100, asset._frameMax );
+}
+
+/**
+ * @brief [SequencerTest] 새 자산을 넣으면 재생 위치가 **그 자산의** 시작으로 돌아간다
+ * @details setAsset/loadFromFile 은 자산을 바꾸기 **전에** stop() 을 불렀다. stop() 안의
+ *          `_previousFrame = _asset._frameMin` 이 아직 옛 자산을 보고 있었으므로, 100 프레임에서
+ *          시작하는 자산을 넣으면 이전 프레임만 0 에 남고 현재 프레임은 100 이 된다 — 첫 적용이
+ *          `applyFrame(100, 0)` 이라 100 이하의 이벤트가 전부 한꺼번에 발화했다.
+ */
+SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
+{
+    sw::SequencePlayer player;
+    player.setAsset( sw::makeSequenceWithFirstFrameEvent() ); // _frameMin 은 0
+
+    sw::SequenceAsset later;
+    later._frameMin = 100;
+    later._frameMax = 200;
+
+    sw::SequenceTrackItem event{};
+    event._name         = "MidEvent";
+    event._targetObject = "SeqTarget";
+    event._start        = 50; // 새 자산의 시작보다 앞 — 지나간 적이 없어야 한다.
+    event._end          = 50;
+    event._type         = 1;
+    later._listItem.push_back( std::move( event ) );
+
+    player.setAsset( later );
+    SW_EXPECT_EQUAL( player.getCurrentFrame(), player.getPreviousFrame() );
+    SW_EXPECT_EQUAL( 100, player.getPreviousFrame() );
+
+    sw::GameObjectManager manager;
+    SW_ASSERT_NOT_NULL( manager.createGameObject( sw::hashed_string{ "SeqTarget" } ) );
+    manager.mergePendingAdds();
+
+    sw::vector<const sw::SequenceTrackItem*> listCrossed;
+    sw::SequenceTimelineUtil::applyFrame( &manager, player.getAsset(), player.getCurrentFrame(), player.getPreviousFrame(), &listCrossed );
+    SW_EXPECT_FALSE( sw::containsEvent( listCrossed, "MidEvent" ) );
+}
+
+/**
+ * @brief [SequencerTest] 파일이 준 프레임 번호가 int32 양 끝이어도 뺄셈이 넘치지 않는다
+ * @details 프레임 번호는 JSON 에서 온다. int32 최대값이 그대로 들어오면 `_frameMax = _frameMin + 1`
+ *          이 부호 있는 넘침이 되어 끝이 시작보다 **앞**이 되고, 트랙의 `_end - _start` 도 마찬가지로
+ *          접혔다. 파싱 자리에서 절반 범위로 잘라 어떤 두 값의 차도 int32 안에 들어오게 한다.
+ */
+SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
+{
+    sw::SequenceAsset asset;
+    SW_ASSERT_TRUE( asset.parseJson( R"({
+        "frameMin": 2147483647,
+        "frameMax": 0,
+        "items": [ { "name": "Wide", "target": "SeqTarget", "start": 2147483647, "end": -2147483648 } ]
+    })" ) );
+
+    SW_EXPECT_TRUE( asset._frameMax > asset._frameMin );
+    SW_ASSERT_EQUAL( size_t( 1 ), asset._listItem.size() );
+
+    const int64 itemSpan = static_cast<int64>( asset._listItem[0]._end ) - static_cast<int64>( asset._listItem[0]._start );
+    SW_EXPECT_TRUE( itemSpan >= static_cast<int64>( sw::MathUtil::MinInt32 ) );
+    SW_EXPECT_TRUE( itemSpan <= static_cast<int64>( sw::MathUtil::MaxInt32 ) );
 }

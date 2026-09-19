@@ -7,11 +7,22 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
 {
     class JsonValue;
+
+    /**
+     * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
+     * @details 프레임 번호는 JSON 에서 온다 — 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
+     *          **차**를 그냥 빼기로 구하고(`_frameMax - _frameMin`, `_end - _start`), int32 의
+     *          양 끝값이 짝으로 들어오면 그 빼기가 부호 있는 넘침(UB)이 된다. 범위를 절반으로
+     *          자르면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 자리마다 넓은 타입으로
+     *          올리지 않아도 된다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않는다.
+     */
+    constexpr int32 kSequenceFrameLimit = MathUtil::MaxInt32 / 2;
 
     /** @brief 시퀀서 트랙 항목 (클립 또는 이벤트) */
     struct SequenceTrackItem
