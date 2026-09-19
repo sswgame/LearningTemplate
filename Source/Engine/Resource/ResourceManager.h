@@ -97,8 +97,16 @@ namespace sw
          * @param pCache 매니저보다 오래 사는 캐시. nullptr 은 무시한다.
          */
         void registerAssetCache( IAssetCache* pCache );
+        /**
+         * @brief 등록부에서 캐시를 내립니다. **모듈은 내려가기 전에 반드시 이것을 부릅니다.**
+         * @details 등록부는 포인터만 든다 — 모듈 DLL 이 내려가면 그 포인터도, 가상 함수 표도 같이
+         *          사라진다(`docs` 의 "Statics die on hot reload" 와 같은 자리다). 남겨 두면 다음
+         *          종료·비우기가 죽은 코드로 뛰어든다.
+         * @param pCache 등록했던 그 포인터. 등록된 적이 없으면 아무 일도 하지 않습니다.
+         */
+        void unregisterAssetCache( const IAssetCache* pCache );
         /** @brief 등록된 캐시 목록입니다. 소유하지 않습니다. */
-        const vector<IAssetCache*>& getAllAssetCache() const { return _listAssetCache; }
+        vector<IAssetCache*> getAllAssetCache() const;
         /**
          * @brief 종류 이름으로 캐시를 찾습니다 ("Material" · "Texture" · "Prefab"). 없으면 nullptr.
          * @details 이름으로 도는 코드(진단 · 도구)가 캐시 셋을 다시 적지 않게 하는 손잡이다.
@@ -110,6 +118,12 @@ namespace sw
          *          그래서 **프리팹 캐시만 빠져 있었다** - 재초기화 뒤에도 옛 프리팹이 남았다.
          */
         void clearAssetCaches();
+        /**
+         * @brief 모듈이 올려 두고 내리지 않은 캐시를 이름으로 경고합니다. 종료가 부릅니다.
+         * @details 포인터는 이미 죽었을 수 있어 **역참조하지 않는다** — 등록 시점에 복사해 둔
+         *          이름만 쓴다. 조용히 지나가면 다음 실행에서 같은 일이 또 일어난다.
+         */
+        void warnAboutLeftoverModuleCaches() const;
 
         /** @brief VFS 마운트된 리소스 팩 매니저 반환. */
         ResourcePackManager&       getPackManager();
@@ -141,7 +155,20 @@ namespace sw
         unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabManager>       _prefabManager;
         unique_ptr<ResourcePackManager> _pPackManager;
+        /**
+         * @struct RegisteredAssetCache
+         * @brief 등록된 캐시 하나와 **그 이름의 사본**.
+         * @details 이름을 복사해 두는 이유가 있다 — 모듈이 자기 캐시를 내리지 않고 사라지면 그
+         *          포인터의 가상 함수 표도 같이 사라진다. 진단에서 `getAssetKindName()` 을 부르면
+         *          그 진단 자체가 죽는다. 사본이 있으면 **무엇을 두고 갔는지** 안전하게 말할 수 있다.
+         */
+        struct RegisteredAssetCache
+        {
+            IAssetCache* _pCache{ nullptr }; ///< 소유하지 않습니다.
+            string       _kindName{};        ///< 등록 시점의 이름 사본.
+        };
+
         /** @brief 소유하지 않습니다 - 내장 셋은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다. */
-        vector<IAssetCache*> _listAssetCache;
+        vector<RegisteredAssetCache> _listAssetCache;
     };
 } // namespace sw

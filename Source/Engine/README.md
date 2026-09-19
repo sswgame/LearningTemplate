@@ -64,6 +64,21 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     그 캐시까지 지나간다. 이름으로 캐시를 적던 시절 종료 경로가 프리팹 캐시만 빠뜨리고 있었다.
     핫리로드가 디바이스를 **인자로** 받는 것도 그 계약이다 — 캐시가 마지막으로 본 디바이스를 들고 있으면
     백엔드를 바꾼 뒤 죽은 포인터가 된다.
+  - **모듈(게임·에디터·키트)도 자기 에셋 종류를 올릴 수 있다.** 창구는 이미 열려 있다 —
+    `ResourceManager` 는 게임 모듈에도 노출되는 서비스이고(`EngineServiceList.xxx` 의 `gameAllowed=1`),
+    `IAssetCache.h` 는 모듈이 그냥 include 하면 된다. 규칙은 하나뿐이고 그것이 전부다:
+
+    ```cpp
+    // 모듈 초기화에서
+    getService<ResourceManager>()->registerAssetCache( &_myCache );
+    // 모듈 종료에서 — **반드시**
+    getService<ResourceManager>()->unregisterAssetCache( &_myCache );
+    ```
+
+    등록부는 **포인터만** 든다. 모듈 DLL 이 내려가면 그 포인터도 가상 함수 표도 같이 사라지므로,
+    내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
+    두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
+    포인터를 건드리지 않는다.
 - **Serialization/**: 직렬화 (BinarySerializer · JsonSerializer · XmlSerializer · Archive)
 - **Module/**: LiveReloadManager · ModuleTypeRegistry · ReloadFileManager. DLL 핫스왑과 그에 따른
   TypeInfo 재결합을 담당합니다. 예전에는 `Utility/Module` 에 있었지만, 모든 로드된 Scene 의

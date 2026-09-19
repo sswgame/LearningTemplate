@@ -119,6 +119,9 @@ namespace sw
             _pPackManager->unmountAll();
 
         clearAssetCaches();
+        // 비운 **뒤에** 말한다 — 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
+        // 다음 실행에서 같은 일이 반복되지 않게 이름을 남겨야 한다.
+        warnAboutLeftoverModuleCaches();
         _assetDatabase.clear();
     }
 
@@ -133,32 +136,80 @@ namespace sw
     {
         if ( pCache == nullptr )
             return;
-        for ( const IAssetCache* pExisting : _listAssetCache )
+        for ( const RegisteredAssetCache& existing : _listAssetCache )
         {
-            if ( pExisting == pCache )
+            if ( existing._pCache == pCache )
                 return;
         }
-        _listAssetCache.push_back( pCache );
+
+        RegisteredAssetCache entry{};
+        entry._pCache = pCache;
+        // 이름은 **지금** 복사해 둔다 — 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
+        const utf8* pKindName = pCache->getAssetKindName();
+        if ( pKindName != nullptr )
+            entry._kindName = pKindName;
+        _listAssetCache.push_back( std::move( entry ) );
+    }
+
+    void ResourceManager::unregisterAssetCache( const IAssetCache* pCache )
+    {
+        if ( pCache == nullptr )
+            return;
+        for ( size_t slot = 0; slot < _listAssetCache.size(); ++slot )
+        {
+            if ( _listAssetCache[slot]._pCache != pCache )
+                continue;
+
+            _listAssetCache.erase( _listAssetCache.begin() + static_cast<ptrdiff_t>( slot ) );
+            return;
+        }
+    }
+
+    vector<IAssetCache*> ResourceManager::getAllAssetCache() const
+    {
+        vector<IAssetCache*> listCache;
+        listCache.reserve( _listAssetCache.size() );
+        for ( const RegisteredAssetCache& entry : _listAssetCache )
+        {
+            listCache.push_back( entry._pCache );
+        }
+        return listCache;
     }
 
     IAssetCache* ResourceManager::findAssetCache( string_view assetKindName ) const
     {
         if ( assetKindName.empty() )
             return nullptr;
-        for ( IAssetCache* pCache : _listAssetCache )
+        for ( const RegisteredAssetCache& entry : _listAssetCache )
         {
-            if ( pCache != nullptr && assetKindName == pCache->getAssetKindName() )
-                return pCache;
+            // 이름은 등록 시점 사본으로 맞춘다 — 죽은 모듈의 가상 함수를 부르지 않는다.
+            if ( entry._pCache != nullptr && assetKindName == entry._kindName )
+                return entry._pCache;
         }
         return nullptr;
     }
 
     void ResourceManager::clearAssetCaches()
     {
-        for ( IAssetCache* pCache : _listAssetCache )
+        for ( const RegisteredAssetCache& entry : _listAssetCache )
         {
-            if ( pCache != nullptr )
-                pCache->clear();
+            if ( entry._pCache != nullptr )
+                entry._pCache->clear();
+        }
+    }
+
+    void ResourceManager::warnAboutLeftoverModuleCaches() const
+    {
+        for ( const RegisteredAssetCache& entry : _listAssetCache )
+        {
+            if ( entry._pCache == _materialCache.get() || entry._pCache == _textureCache.get() ||
+                 entry._pCache == _prefabManager.get() )
+                continue;
+
+            // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
+            SW_LOG_WARNING( "에셋 캐시 '%#' 가 등록된 채로 남아 있습니다 — 올린 쪽(모듈)이 내려가기 전에 "
+                            "unregisterAssetCache 를 불러야 합니다. 그대로 두면 다음 비우기가 죽은 코드로 뜁니다.",
+                            entry._kindName.c_str() );
         }
     }
 
