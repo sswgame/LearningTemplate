@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `181741bb`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `a9ff3ac7`
 
 ---
 
@@ -434,6 +434,37 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (컴팩트 스트림의 경계 검사가 두 벌이었고, 어느 쪽도 테스트가 없었다)
+
+`BinarySerializer::deserializeCompact` 의 두 모드(밀집 비트마스크 · 희소 인덱스)가 프로퍼티 하나를
+읽는 **열두 줄을 각자** 갖고 있었다. 다른 것은 `propIndex` 를 어디서 얻는가 뿐이다(비트 검사 vs
+varint 읽기). 그런데 그 안에 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있다:
+
+```cpp
+if ( payloadSize > dataSize - payloadStart )   // 파일에서 온 수다
+    return false;
+```
+
+한쪽이 이것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽는다 — `applyPropertyPayload` 가 그 크기를
+그대로 믿기 때문이다. 저장소에서 **가장 위험한 파싱 코드**를 두 벌로 둘 이유가 없다.
+`readAndApplyProperty` 하나로 모았다. (두 사본에 같은 오타까지 들어 있었다 — 주석의 단어가 하나
+빠진 채로 양쪽에 복사돼 있었다. 복붙의 지문이다.)
+
+**그리고 재 보니 그 검사에 테스트가 없었다.** 통째로 지워도 `ArchiveTest` 39개가 전부 초록이었다.
+이 스위트에는 이미 손상 스트림 케이스가 둘 있는데(`BoundsChecksSurviveSizeOverflow` ·
+`CompactDensePropertyCountIsBounded`) 둘 다 **다른 값**을 본다 — 앞엣것은 `Archive`·`reader` 의
+길이 인자, 뒤엣것은 `totalProps` 다. 프로퍼티마다의 `payloadSize` 는 아무도 안 봤다.
+`CompactPayloadSizeIsBounded` 가 두 모드를 각각 태운다. 변이 확인: 검사를 지우면 희소 모드 단언이
+바로 실패한다.
+
+> **처음에 변이를 엉뚱한 바이너리로 쟀다.** 컴팩트 테스트는 `ReflectionTest` 가 아니라
+> `EngineTest`(`ArchiveTest`)에 있다. `ReflectionTest` 만 돌리고 "107/107 초록" 을 보고 커버리지
+> 구멍이라고 판단했는데, 결론은 우연히 맞았지만 근거는 틀렸다 — **변이를 걸었으면 그 코드를 태우는
+> 스위트가 어느 실행 파일에 있는지부터 확인할 것.**
+
+**검증.** Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 · 린트 17/17 ·
+`ArchiveTest` 39/39 · `ReflectionTest` 107/107.
 
 ### 2026-09-19 (스무딩 마우스 델타는 기본 설정에서 **항상 0** 이었다)
 

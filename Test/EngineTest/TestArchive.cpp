@@ -1732,3 +1732,67 @@ SW_TEST_CASE( ArchiveTest, CompactRoundTripsContainerProperties )
     SW_EXPECT_EQUAL( sw::string( "alpha" ), restored._listTag[0] );
     SW_EXPECT_EQUAL( sw::string( "beta" ), restored._listTag[1] );
 }
+
+/**
+ * @brief [ArchiveTest] 컴팩트 페이로드 크기도 **남은 바이트를 넘을 수 없다**
+ * @details 두 모드(밀집 비트마스크 · 희소)가 프로퍼티마다 `payloadSize` 를 varint 로 읽어 그만큼을
+ *          인스턴스에 쓰고 건너뛴다. 그 수는 **파일에서 온 값**이다 — 검사가 없으면 손상된 파일
+ *          하나로 버퍼 밖을 읽는다(`applyPropertyPayload` 가 그 크기를 그대로 믿는다).
+ *
+ *          2026-09-19 에 그 검사가 두 모드에 **각자** 적혀 있던 것을 한 곳으로 모으면서 재 보니,
+ *          **어느 쪽도 테스트가 없었다** — 검사를 통째로 지워도 전 스위트가 초록이었다. 저장소에서
+ *          가장 위험한 파싱 코드가 그 상태였다는 뜻이다.
+ *
+ * @note ASan 구성에서 이 케이스가 특히 값을 한다 — 검사가 없으면 거기서는 조용한 오독이 아니라
+ *       **즉시 죽는다.**
+ */
+SW_TEST_CASE( ArchiveTest, CompactPayloadSizeIsBounded )
+{
+    constexpr uint64 kAbsurdPayloadSize = 0xFFFFFFFFull;
+
+    BLOCK( "밀집 비트마스크 모드" )
+    {
+        sw::vector<uint8> bytes;
+        bytes.push_back( sw::PresenceMaskUtil::kModeDense );
+        sw::VarIntUtil::encodeVarUint64( 3, bytes ); // TestReflectedPlayer 의 프로퍼티 수
+        bytes.push_back( 0x07 );                     // 비트마스크 1바이트 — 셋 다 있음
+        sw::VarIntUtil::encodeVarUint64( kAbsurdPayloadSize, bytes );
+
+        TestReflectedPlayer restored;
+        SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
+                                                                       bytes.data(), bytes.size() ),
+                             "남은 바이트보다 큰 페이로드 크기를 받아들이면 안 됩니다" );
+    }
+
+    BLOCK( "희소 인덱스 모드" )
+    {
+        sw::vector<uint8> bytes;
+        bytes.push_back( sw::PresenceMaskUtil::kModeSparse );
+        sw::VarIntUtil::encodeVarUint64( 1, bytes ); // 바뀐 프로퍼티 하나
+        sw::VarIntUtil::encodeVarUint64( 0, bytes ); // 그 인덱스
+        sw::VarIntUtil::encodeVarUint64( kAbsurdPayloadSize, bytes );
+
+        TestReflectedPlayer restored;
+        SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
+                                                                       bytes.data(), bytes.size() ),
+                             "희소 모드도 같은 검사를 지나야 합니다 — 모드마다 따로 적으면 한쪽이 잃는다" );
+    }
+
+    BLOCK( "멀쩡한 것은 그대로 읽힌다 — 위 거부가 과잉이 아님을 못 박는다" )
+    {
+        TestReflectedPlayer player;
+        player._level = 9;
+        player._name  = "PayloadBounded";
+        player._gold  = 1234;
+
+        sw::vector<uint8> goodBytes;
+        sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), goodBytes );
+
+        TestReflectedPlayer restored;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
+                                                                  goodBytes.data(), goodBytes.size() ) );
+        SW_EXPECT_EQUAL( 9, restored._level );
+        SW_EXPECT_EQUAL( sw::string( "PayloadBounded" ), restored._name );
+        SW_EXPECT_EQUAL( 1234, restored._gold );
+    }
+}

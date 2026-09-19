@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
@@ -178,6 +178,39 @@ namespace sw
                 orphan._wireTypeHash = wireTypeHash;
                 orphan._listBinary.assign( pPayload, pPayload + payloadSize );
                 pOutListOrphan->push_back( std::move( orphan ) );
+            }
+
+            /**
+             * @brief 프로퍼티 하나의 페이로드를 읽어 인스턴스에 쓰고, 스트림을 그 뒤로 넘깁니다.
+             * @details 컴팩트 스트림의 두 모드(비트마스크 · 희소)가 이 열두 줄을 **각자** 갖고 있었다.
+             *          다른 것은 `propIndex` 를 어디서 얻는가 뿐이다(비트 검사 vs varint 읽기).
+             *          그런데 이 안에는 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있다 —
+             *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽는다. 저장소에서 가장
+             *          위험한 파싱 코드를 두 벌로 두지 않는다.
+             */
+            static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
+                                              BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
+                                              const SerializeContext& ctx )
+            {
+                uint64 payloadSize = 0;
+                if ( reader.readVarUint( payloadSize ) == false )
+                    return false;
+
+                const size_t payloadStart = reader.getOffset();
+                // 뺄셈으로 비교한다 — 스트림에서 읽은 크기가 크면 덧셈이 넘친다.
+                if ( payloadSize > dataSize - payloadStart )
+                    return false;
+
+                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다 — 모르는 인덱스는 건너뛴다.
+                if ( propIndex < listProp.size() )
+                {
+                    if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
+                                               pData, payloadStart, payloadSize, ctx ) == false )
+                        return false;
+                }
+
+                reader.skip( payloadSize );
+                return true;
             }
         };
     } // namespace
@@ -657,7 +690,6 @@ namespace sw
 
         BinaryStreamReader          reader( pData, dataSize );
         const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
-        const size_t                numProps = listProp.size();
 
         uint8 modeByte = 0;
         if ( reader.read( modeByte ) == false )
@@ -694,22 +726,8 @@ namespace sw
                 if ( bPresent == false )
                     continue;
 
-                uint64 payloadSize = 0;
-                if ( reader.readVarUint( payloadSize ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx ) == false )
                     return false;
-
-                const size_t payloadStart = reader.getOffset();
-                // 뺄셈으로 비교한다 — 스트림에서 읽은  가 크면 덧셈이 넘친다.
-                if ( payloadSize > dataSize - payloadStart )
-                    return false;
-
-                if ( propIndex < numProps )
-                {
-                    if ( BinarySerializerInternal::applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
-                                                                         pData, payloadStart, payloadSize, ctx ) == false )
-                        return false;
-                }
-                reader.skip( payloadSize );
             }
             return true;
         }
@@ -725,22 +743,8 @@ namespace sw
                 if ( reader.readVarUint( propIndex ) == false )
                     return false;
 
-                uint64 payloadSize = 0;
-                if ( reader.readVarUint( payloadSize ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx ) == false )
                     return false;
-
-                const size_t payloadStart = reader.getOffset();
-                // 뺄셈으로 비교한다 — 스트림에서 읽은  가 크면 덧셈이 넘친다.
-                if ( payloadSize > dataSize - payloadStart )
-                    return false;
-
-                if ( propIndex < numProps )
-                {
-                    if ( BinarySerializerInternal::applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
-                                                                         pData, payloadStart, payloadSize, ctx ) == false )
-                        return false;
-                }
-                reader.skip( payloadSize );
             }
             return true;
         }
