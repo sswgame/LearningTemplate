@@ -14,6 +14,7 @@ namespace sw
         : ISplashWindow{}
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
+        , _x11Pixmap{ 0 }
         , _listScaledPixel{}
     {
     }
@@ -37,6 +38,15 @@ namespace sw
     }
 
 #if defined( SW_PLATFORM_LINUX )
+    namespace
+    {
+        // 스플래시 팔레트. 창 배경과 픽스맵 배경이 **같은 값이어야** 노출 순간에 색이 튀지 않는다.
+        constexpr uint64 kSplashBackgroundColor = 0x181C24;
+        constexpr uint64 kSplashTextColor       = 0xAEC3E6;
+        constexpr uint64 kSplashBarTrackColor   = 0x202632;
+        constexpr uint64 kSplashBarFillColor    = 0x4691FF;
+    } // namespace
+
     bool X11SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
@@ -61,7 +71,7 @@ namespace sw
 
         XSetWindowAttributes attrs{};
         attrs.override_redirect = 1;
-        attrs.background_pixel  = 0x181C24;
+        attrs.background_pixel  = kSplashBackgroundColor;
 
         Window win = XCreateWindow(
             pDisplay, root,
@@ -99,45 +109,70 @@ namespace sw
 
         Display* pDisplay = static_cast<Display*>( _pX11Display );
         Window   win      = static_cast<Window>( _x11Window );
-        if ( pDisplay != nullptr && win != 0 )
+        if ( pDisplay == nullptr || win == 0 )
+            return;
+
+        const int32 screen = DefaultScreen( pDisplay );
+        GC          gc     = DefaultGC( pDisplay, screen );
+
+        // **창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 건다.**
+        //
+        // 스플래시에는 이벤트 루프가 없다 — `updateStatus` 가 불릴 때만 그린다. 그런데 X11 은
+        // 창이 노출될 때마다(`Expose`) **배경색으로 지우고** 우리에게 다시 그리라고 알린다. 그 알림을
+        // 받아 줄 루프가 없으니 그리는 족족 지워졌고, 남는 것은 `background_pixel` 뿐이었다 —
+        // 리눅스에서 "뒷배경만 보인다" 던 것이 이것이다. (호출은 전부 정상이었다: 이미지도 읽히고
+        // `XPutImage` 도 불렸다. 그린 뒤에 지워진 것이라 로그로는 보이지 않았다.)
+        //
+        // 배경 픽스맵으로 걸어 두면 **다시 그리는 일을 서버가 한다.** 이벤트 루프 없이도 노출·가림·
+        // 이동을 견딘다. Win32 가 `WM_PAINT` 로 하는 일을 여기서는 서버에게 맡기는 셈이다.
+        Pixmap pixmap = static_cast<Pixmap>( _x11Pixmap );
+        if ( pixmap == 0 )
         {
-            const int32 screen = DefaultScreen( pDisplay );
-            GC          gc     = DefaultGC( pDisplay, screen );
-
-            // **창 크기로 줄여 둔 것**을 찍는다. `XPutImage` 는 늘리거나 줄이지 못하므로, 원본을
-            // 그대로 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본 · 480×280 창).
-            if ( _listScaledPixel.empty() == false )
-            {
-                XImage* pImage = XCreateImage(
-                    pDisplay, DefaultVisual( pDisplay, screen ),
-                    static_cast<uint32>( DefaultDepth( pDisplay, screen ) ), ZPixmap, 0,
-                    reinterpret_cast<utf8*>( _listScaledPixel.data() ),
-                    _width, _height, 32, 0 );
-                if ( pImage != nullptr )
-                {
-                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _width, _height );
-                    pImage->data = nullptr;
-                    XDestroyImage( pImage );
-                }
-            }
-
-            XSetForeground( pDisplay, gc, 0xAEC3E6 );
-            XDrawString( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 50, _status.c_str(), static_cast<int32>( _status.length() ) );
-
-            const int32   totalBarWidth   = static_cast<int32>( _width ) - 64;
-            const float32 clampedProgress = ( _progress < 0.0f ) ? 0.0f : ( ( _progress > 1.0f ) ? 1.0f : _progress );
-            const int32   fillWidth       = static_cast<int32>( static_cast<float32>( totalBarWidth ) * clampedProgress );
-
-            XSetForeground( pDisplay, gc, 0x202632 );
-            XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 30, totalBarWidth, 4 );
-            if ( fillWidth > 0 )
-            {
-                XSetForeground( pDisplay, gc, 0x4691FF );
-                XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 30, fillWidth, 4 );
-            }
-
-            XFlush( pDisplay );
+            pixmap     = XCreatePixmap( pDisplay, win, _width, _height, static_cast<uint32>( DefaultDepth( pDisplay, screen ) ) );
+            _x11Pixmap = static_cast<uint64>( pixmap );
         }
+        if ( pixmap == 0 )
+            return;
+
+        XSetForeground( pDisplay, gc, kSplashBackgroundColor );
+        XFillRectangle( pDisplay, pixmap, gc, 0, 0, _width, _height );
+
+        // 창 크기로 줄여 둔 것을 찍는다. `XPutImage` 는 늘리거나 줄이지 못하므로 원본을 그대로
+        // 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본 · 480×280 창).
+        if ( _listScaledPixel.empty() == false )
+        {
+            XImage* pImage = XCreateImage(
+                pDisplay, DefaultVisual( pDisplay, screen ),
+                static_cast<uint32>( DefaultDepth( pDisplay, screen ) ), ZPixmap, 0,
+                reinterpret_cast<utf8*>( _listScaledPixel.data() ),
+                _width, _height, 32, 0 );
+            if ( pImage != nullptr )
+            {
+                XPutImage( pDisplay, pixmap, gc, pImage, 0, 0, 0, 0, _width, _height );
+                pImage->data = nullptr;
+                XDestroyImage( pImage );
+            }
+        }
+
+        XSetForeground( pDisplay, gc, kSplashTextColor );
+        XDrawString( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 50, _status.c_str(), static_cast<int32>( _status.length() ) );
+
+        const int32   totalBarWidth   = static_cast<int32>( _width ) - 64;
+        const float32 clampedProgress = ( _progress < 0.0f ) ? 0.0f : ( ( _progress > 1.0f ) ? 1.0f : _progress );
+        const int32   fillWidth       = static_cast<int32>( static_cast<float32>( totalBarWidth ) * clampedProgress );
+
+        XSetForeground( pDisplay, gc, kSplashBarTrackColor );
+        XFillRectangle( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 30, static_cast<uint32>( totalBarWidth ), 4 );
+        if ( fillWidth > 0 )
+        {
+            XSetForeground( pDisplay, gc, kSplashBarFillColor );
+            XFillRectangle( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 30, static_cast<uint32>( fillWidth ), 4 );
+        }
+
+        // 배경으로 걸고 창을 지우면 서버가 그 픽스맵으로 칠한다. 이후의 노출도 서버가 알아서 한다.
+        XSetWindowBackgroundPixmap( pDisplay, win, pixmap );
+        XClearWindow( pDisplay, win );
+        XFlush( pDisplay );
     }
 
     void X11SplashWindow::setProgress( float32 progress )
@@ -154,6 +189,11 @@ namespace sw
         Window   win      = static_cast<Window>( _x11Window );
         if ( pDisplay != nullptr && win != 0 )
         {
+            if ( _x11Pixmap != 0 )
+            {
+                XFreePixmap( pDisplay, static_cast<Pixmap>( _x11Pixmap ) );
+                _x11Pixmap = 0;
+            }
             XUnmapWindow( pDisplay, win );
             XDestroyWindow( pDisplay, win );
             XCloseDisplay( pDisplay );
