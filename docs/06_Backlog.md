@@ -435,6 +435,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (sparse_set::emplace 가 칸을 먼저 지우고 그 지워진 것에서 지었다)
+
+같은 키로 다시 `emplace` 하면 그 칸을 **제자리에서 지우고 다시 지었다:**
+
+```cpp
+T* ptr = &_listDenseValue[_listSparse[key]];
+ptr->~T();
+new ( ptr ) T( std::forward<Args>( args )... );
+```
+
+두 가지가 깨진다:
+
+1. **인자가 그 칸 자신을 가리키면**(`set.emplace( k, set[k] )`) 이미 지워진 객체에서 만든다.
+   힙을 든 타입이면 해제된 메모리를 읽는다.
+2. **생성자가 던지면** 지워진 칸이 그대로 남아, 나중에 벡터가 소멸할 때 **두 번 지워진다.**
+
+임시를 먼저 짓고 옮겨 넣는 것으로 바꿨다(`_listDenseValue[...] = T( args... )`). 둘 다 없어진다.
+
+**검증.** `SparseSetTest.EmplaceFromItsOwnValueDoesNotReadDestroyedMemory`. 되돌리면
+`Expected [zzz…], Actual []` 로 진다 — ASAN 없이 결정적이다.
+
+**살펴보고 문제 없던 것 (Core/Container).** `unordered_map` 의 swap-and-pop erase 는 옮겨 온
+원소의 버킷 체인 재연결이 네 경우 모두 맞다(마지막 원소가 같은 버킷의 머리 · 앞 노드 · 뒤 노드 ·
+다른 버킷). `DynamicBitset` 은 꼬리 비트를 더럽힐 수 있는 다섯 곳(`resize` · `set()` · `flip()` ·
+두 시프트)이 전부 `sanitize()` 를 부르고, `&=` · `|=` · `^=` 는 크기가 다르면 **아무것도 하지
+않는다**(`SW_LOG_ASSERT` 는 Debug 밖에서 사라지므로 그 뒤에 진짜 가드가 있다 — 이 저장소가
+`vector::erase` 에서 한 것과 같은 모양이다). 시프트 연산도 `shift >= _bitCount` 를 먼저 걸러
+`kBitsPerBlock - bitShift` 가 폭만큼 시프트되는 일이 없다.
+
 ### 2026-09-20 (vector 의 이동 insert 만 자기 원소 가드가 없었다)
 
 Core 를 다시 훑다가 `vector` 의 삽입 계열에서 **한 판만** 빠져 있는 것을 찾았다:

@@ -172,9 +172,11 @@ namespace sw
 
         if ( contains( key ) )
         {
-            T* ptr = &_listDenseValue[_listSparse[key]];
-            ptr->~T();
-            new ( ptr ) T( std::forward<Args>( args )... );
+            // **먼저 만들고 대입한다.** 예전에는 제자리에서 지운 뒤 다시 지었는데, 그러면 두 가지가
+            // 깨진다: (1) 생성자가 던지면 이미 지워진 칸이 남아 나중에 **두 번 지워진다**,
+            // (2) 인자가 그 칸 자신을 가리키면(`set.emplace( k, set[k] )`) **지워진 것에서**
+            // 만들게 된다. 임시를 먼저 짓고 옮겨 넣으면 둘 다 없다.
+            _listDenseValue[_listSparse[key]] = T( std::forward<Args>( args )... );
             return;
         }
 
