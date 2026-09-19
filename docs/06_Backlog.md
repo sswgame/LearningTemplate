@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `bf5a012f`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `7d7f10fb`
 
 ---
 
@@ -434,6 +434,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (리눅스에서 창을 다시 만들면 사라졌다 — 화면 상태를 의도로 착각했다)
+
+WSL 클론을 현재 main 으로 맞추고 **진짜 리눅스 빌드**를 돌렸더니 `WindowTest.RecreateKeepsVisibilityAndSize`
+가 **3회 모두** 졌다. 레이스가 아니라 결정적이었고, 진 이유가 진짜 결함이었다.
+
+`IWindow::recreate()` 는 "보이던 창이었나" 를 **`isVisible()`** 로 물었다. 윈도우에서 그것은
+`IsWindowVisible` — `ShowWindow` 가 세운 WS_VISIBLE 스타일이라 **즉시 참**이다. X11 에서 그것은
+`XGetWindowAttributes` 의 `map_state == IsViewable` — **창 관리자가 실제로 매핑한 뒤**에야 참이다.
+그래서 리눅스에서는:
+
+- 방금 `showWindow(true)` 한 창도 아직 **거짓**이고,
+- **최소화된 창**, **다른 워크스페이스의 창**도 거짓이다.
+
+그 상태에서 백엔드를 바꾸면(`RHI::applyPendingChange` → `recreate()`) **창이 사라진다.** 윈도우에서만
+보면 두 질문이 우연히 같아서 끝까지 초록이었다.
+
+**두 질문을 분리했다.** `showWindow()` 가 이제 가상이 아니다 — 기반이 **의도를 기록하고**
+플랫폼 훅 `applyWindowVisibility()` 를 부른다(플랫폼이 기록을 빠뜨릴 수 없다). `recreate()` 는
+`isVisibleIntended()` 를 보고, `isVisible()` 은 "**지금 화면에 있는가**" 라는 다른 질문으로 남았다
+(헤더에 `@warning` 으로 적었다).
+
+테스트도 정직하게 고쳤다 — 엔진 계약인 **의도**를 단언하고, 화면 상태는 **그 플랫폼이 동기로
+답할 때만** 추가로 본다(그 여부를 `recreate` 전에 재 둔다). 안 그러면 엔진이 아니라 창 관리자를
+시험하게 된다.
+
+> **리눅스 빌드가 아니었으면 못 잡았다.** 그리고 그 과정에서 컴파일 오류도 하나 나왔다 —
+> `Win32Window.cpp` 는 **리눅스에서도 컴파일된다**(비-윈도우 스텁 구간이 있다). 이름을 바꾸면서
+> 인자 이름이 없는 스텁(`void Win32Window::showWindow( bool )`)을 놓쳤고, 윈도우 빌드는 그 구간을
+> 컴파일하지 않으므로 끝까지 초록이었다.
+
+**남은 리눅스 실패 셋은 환경 탓이고, 그대로 두면 위험하다.** WSL 에는 GPU 백엔드도 DXC 도 없다:
+`LiveShaderTest.EditedIncludeChangesRecompiledBytecode`(셰이더 컴파일 실패) ·
+`AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` ·
+`AppSmokeTest.EditorModeStartsAndExitsCleanly`(둘 다 "Requested RHI backend is unavailable").
+**넷이 늘 빨간 상태면 아무도 새 회귀를 못 본다** — 이 저장소가 `SW_TEST_SKIP` 을 두는 이유가 그것이다.
+백엔드·DXC 가 없을 때 건너뛰도록 바꾸는 것이 다음 할 일이다(그 전까지 리눅스 기준선은 **28개 중 24개**).
+
+**검증.** 윈도우 Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 ·
+린트 17/17 · **리눅스 빌드 경고 0** · 리눅스 `WindowTest` 3회 모두 통과(고치기 전 3회 모두 실패).
 
 ### 2026-09-19 (리눅스 파일 다이얼로그 — 도구에 따라 다르게 동작하던 자리를 인자 하나로 드러냈다)
 

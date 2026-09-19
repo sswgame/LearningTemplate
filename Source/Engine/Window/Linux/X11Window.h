@@ -25,7 +25,7 @@ namespace sw
         bool processMessages() override;
 
         /** @brief X11 윈도우를 화면에 표시하거나 숨깁니다. */
-        void showWindow( bool bShow ) override;
+        void applyWindowVisibility( bool bShow ) override;
         /** @brief X11 윈도우 표시 여부를 반환합니다. */
         bool isVisible() const override;
 

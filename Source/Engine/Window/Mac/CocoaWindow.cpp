@@ -207,7 +207,7 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
-    void CocoaWindow::showWindow( bool bShow )
+    void CocoaWindow::applyWindowVisibility( bool bShow )
     {
         if ( _pCocoaWindow != nullptr )
         {
@@ -262,7 +262,7 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
-    void CocoaWindow::showWindow( bool bShow )
+    void CocoaWindow::applyWindowVisibility( bool bShow )
     {
         (void)bShow;
     }

@@ -74,10 +74,32 @@ namespace sw
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
         virtual uint32 getHeight() const { return _height; }
-        /** @brief 윈도우를 화면에 표시하거나 숨깁니다. */
-        virtual void showWindow( bool bShow ) { (void)bShow; }
-        /** @brief 윈도우 표시 여부를 반환합니다. */
+        /**
+         * @brief 윈도우를 화면에 표시하거나 숨깁니다. **"보이기로 했다" 는 사실을 기억합니다.**
+         * @details 이것은 가상이 아니다 — 의도를 기록하는 일을 플랫폼이 빠뜨릴 수 없게 한다.
+         *          실제로 창을 띄우고 내리는 일만 `applyWindowVisibility` 로 내려간다.
+         */
+        void showWindow( bool bShow )
+        {
+            _bVisibleIntent = bShow ? SW_TRUE : SW_FALSE;
+            applyWindowVisibility( bShow );
+        }
+
+        /**
+         * @brief **지금 화면에 보이는가** — 플랫폼에 직접 묻습니다.
+         * @warning 이것은 `isVisibleIntended()` 와 **다른 질문**이다. X11 에서는 `XMapWindow` 가
+         *          요청일 뿐이고 창 관리자가 실제로 매핑하기 전까지 `IsViewable` 이 아니다 —
+         *          즉 방금 보이라고 한 창도 여기서는 **false** 다. 최소화·다른 워크스페이스도 같다.
+         *          "다시 만든 뒤 되살릴까" 같은 판단에는 쓰지 말 것(그래서 `recreate` 는 의도를 본다).
+         */
         virtual bool isVisible() const { return true; }
+
+        /**
+         * @brief **보이기로 정해져 있는가** — 마지막 `showWindow()` 의 인자입니다.
+         * @details 창 관리자의 사정과 무관하게 즉시 답한다. 창을 다시 만들 때 되살릴지를 정하는
+         *          것은 이 값이다 — 화면 상태가 아니라 **우리가 원한 상태**가 기준이어야 한다.
+         */
+        bool isVisibleIntended() const { return _bVisibleIntent == SW_TRUE; }
 
         /** @brief 외부 이벤트 핸들러(예: ImGui)를 연결합니다. */
         void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = handler; }
@@ -101,6 +123,9 @@ namespace sw
         static IWindow* getActiveWindow();
 
     protected:
+        /** @brief 실제로 창을 띄우거나 내립니다. 의도 기록은 기반이 이미 했습니다. */
+        virtual void applyWindowVisibility( bool bShow ) { (void)bShow; }
+
         /**
          * @brief 다시 만들기 직전의 창 위치를 `_restoreX`·`_restoreY` 에 담습니다.
          * @details 플랫폼마다 묻는 API 가 다르다(`GetWindowRect` · `XGetWindowAttributes`).
@@ -127,8 +152,9 @@ namespace sw
          *          다시 만드는 과정의 `destroy()` 가 앱 종료로 오해되면 안 되기 때문이다.
          *          절차가 이 클래스로 올라왔으므로 깃발도 같이 올라왔다.
          */
-        uint8                  _bRecreating : 1;
-        [[maybe_unused]] uint8 _reserved    : 6;
+        uint8                  _bRecreating    : 1;
+        uint8                  _bVisibleIntent : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**다. */
+        [[maybe_unused]] uint8 _reserved       : 5;
         uint8                  _arrReserved[7];
         /** @brief 다시 만들 때 놓을 위치. 플랫폼 생성자가 자기 "알아서" 값으로 채운다. */
         int32 _restoreX;

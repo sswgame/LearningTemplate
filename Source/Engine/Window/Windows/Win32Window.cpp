@@ -82,7 +82,7 @@ namespace sw
         }
     }
 
-    void Win32Window::showWindow( bool bShow )
+    void Win32Window::applyWindowVisibility( bool bShow )
     {
         if ( _hWnd == nullptr )
             return;
@@ -254,7 +254,7 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
-    void Win32Window::showWindow( bool )
+    void Win32Window::applyWindowVisibility( bool )
     {
     }
 

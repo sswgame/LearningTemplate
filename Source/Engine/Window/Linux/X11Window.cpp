@@ -90,7 +90,7 @@ namespace sw
         }
     }
 
-    void X11Window::showWindow( bool bShow )
+    void X11Window::applyWindowVisibility( bool bShow )
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )
             return;
@@ -224,7 +224,7 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
-    void X11Window::showWindow( bool bShow )
+    void X11Window::applyWindowVisibility( bool bShow )
     {
         (void)bShow;
     }

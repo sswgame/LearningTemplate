@@ -113,6 +113,13 @@ SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
  *          교체(`RHI::applyPendingChange` 가 `recreate()` 를 부른다) 뒤 **화면에서 사라진다.**
  *          셋을 한 벌로 합치면서 이 케이스를 그 자리에 둔다. 새 플랫폼이 훅만 구현하고 절차를
  *          다시 적지 않는 한, 이 계약은 모든 플랫폼에서 같다.
+ *
+ *          **2026-09-19, 리눅스에서 이 케이스가 졌다.** 그리고 진 이유가 진짜 결함이었다 —
+ *          `recreate()` 가 "보이던 창이었나" 를 `isVisible()` 로 물었는데, X11 에서 그것은
+ *          "창 관리자가 이미 매핑했는가" 다. 방금 보이라고 한 창도, 최소화된 창도, 다른 워크스페이스에
+ *          있는 창도 거짓이다. 그 상태로 다시 만들면 **창이 사라진다.** 윈도우에서는 `IsWindowVisible`
+ *          이 WS_VISIBLE 스타일이라 둘이 우연히 같았고, 그래서 윈도우만 보면 초록이었다.
+ *          이제 엔진은 **의도**(`isVisibleIntended()`)로 판단하고, 이 케이스도 그것을 단언한다.
  */
 SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
 {
@@ -124,6 +131,13 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
     SW_ASSERT_TRUE( window->initializeWindow( "RecreateTestWindow", kReqW, kReqH ) );
     window->showWindow( true );
 
+    // **화면 상태를 동기로 답하는 플랫폼인지 여기서 재 둔다.** 윈도우의 `IsWindowVisible` 은
+    // `ShowWindow` 가 세운 WS_VISIBLE 스타일이라 즉시 참이지만, X11 의 `IsViewable` 은 **창 관리자가
+    // 실제로 매핑한 뒤**에야 참이다 — 방금 보이라고 한 창도 아직 거짓이고, 이 테스트는 이벤트 루프를
+    // 돌리지 않는다(WSL 에서 3회 모두 그랬다). 그런 플랫폼에서 화면 상태를 단언하면 **엔진이 아니라
+    // 창 관리자를 시험하는 것**이 된다.
+    const bool bPlatformAnswersVisibilitySynchronously = window->isVisible();
+
     const uint32 widthBefore  = window->getWidth();
     const uint32 heightBefore = window->getHeight();
     SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
@@ -131,8 +145,17 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
     if ( window->recreate() == false )
         SW_TEST_SKIP( "이 플랫폼은 창 재생성을 지원하지 않습니다 (macOS)" );
 
-    SW_EXPECT_TRUE_MSG( window->isVisible(),
-                        "다시 만든 창이 보이지 않습니다 — 백엔드를 바꾸면 화면이 사라집니다" );
+    // 엔진의 계약은 **의도**다 — "보이기로 한 창은 다시 만든 뒤에도 보이기로 한 상태다".
+    // 이것은 모든 플랫폼에서 즉시 답할 수 있고, `recreate()` 가 판단에 쓰는 값도 이것이다.
+    SW_EXPECT_TRUE_MSG( window->isVisibleIntended(),
+                        "다시 만든 창이 숨김으로 남았습니다 — 백엔드를 바꾸면 화면이 사라집니다" );
+
+    if ( bPlatformAnswersVisibilitySynchronously )
+    {
+        SW_EXPECT_TRUE_MSG( window->isVisible(),
+                            "다시 만든 창이 화면에 없습니다 — 플랫폼 훅이 불리지 않았습니다" );
+    }
+
     SW_EXPECT_EQUAL( widthBefore, window->getWidth() );
     SW_EXPECT_EQUAL( heightBefore, window->getHeight() );
 
