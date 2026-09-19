@@ -2985,3 +2985,62 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] forgetRhi 뒤 다시 올려도 텍스처 서수가 **처음부터** 다시 센다
+ * @details `forgetRhi` 와 `releaseRhi` 는 둘 다 "디바이스가 사라졌다" 는 통보인데, 남기는 상태가
+ *          달랐다 — `releaseRhi` 만 빌린 텍스처 목록을 비웠다. 그래서 forget 뒤에 `initRhi` 가
+ *          오면 `resolveTextureAssets` 가 목록에 **덧붙였다.**
+ *
+ *          그러면 `ordinal`(= `_listMaterialTextureSrv.size()`)이 0 이 아닌 값에서 시작한다.
+ *          네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를 **t5..t8 고정 슬롯 번호**로
+ *          쓰므로 엉뚱한 텍스처를 읽거나, 한도(`kMaterialTextureCount`)를 넘어 흰색으로 남는다 —
+ *          "백엔드를 바꾸면 화면이 이상해진다" 로만 보이는 종류다.
+ *
+ *          `forgetRhi` 는 `~IRHIDevice()` 의 안전망 경로에서 온다(shutdown 을 거치지 않고 사라지는
+ *          디바이스). 정상 종료는 `releaseRhi` 라서 평소에는 드러나지 않는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdinals )
+{
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            // 텍스처가 붙은 실제 에셋이어야 한다 — 손으로 지은 XML 은 이 저장소를 여러 번 물었다.
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+
+            const size_t firstCount = material->getMaterialTextureSrvs().size();
+            SW_ASSERT_TRUE( firstCount > 0 );
+
+            // 디바이스가 정상 종료를 거치지 않고 사라진 경우의 통보.
+            material->forgetRhi( device.get() );
+            SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs().empty(),
+                                "forgetRhi 가 빌린 텍스처 목록을 남겼습니다" );
+
+            // 새 디바이스가 서서 다시 올린다.
+            SW_EXPECT_TRUE( material->initRhi( device.get() ) );
+            SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs().size() == firstCount,
+                                "다시 올린 뒤 텍스처 서수가 누적됐습니다 — DX11 · GL 이 엉뚱한 슬롯을 읽습니다" );
+
+            material->releaseRhi( device.get() );
+        }
+
+        device->shutdown();
+        device.reset();
+        if ( window != nullptr )
+        {
+            window->destroy();
+            window.reset();
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the material texture ordinal test" );
+}

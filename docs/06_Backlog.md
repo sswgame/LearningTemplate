@@ -435,6 +435,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (forgetRhi 와 releaseRhi 가 서로 다른 상태를 남겼다)
+
+둘 다 **"디바이스가 사라졌다"** 는 통보인데 `Material` 에서 남기는 상태가 달랐다 —
+`releaseRhi` 만 빌린 텍스처 목록(`_listAcquiredTexturePath` · `_listMaterialTextureSrv`)을
+비웠고 `forgetRhi` 는 핸들만 비웠다.
+
+그래서 forget 뒤에 `initRhi` 가 오면 `resolveTextureAssets` 가 목록에 **덧붙인다.** 그러면
+`ordinal`(= `_listMaterialTextureSrv.size()`)이 0 이 아닌 값에서 시작하는데, 네이티브 bindless 가
+없는 백엔드(**DX11 · GL**)는 그 서수를 **t5..t8 고정 슬롯 번호**로 쓴다 — 엉뚱한 텍스처를 읽거나
+한도(`kMaterialTextureCount`)를 넘어 흰색으로 남는다. "백엔드를 바꾸면 화면이 이상해진다" 로만
+보이는 종류다.
+
+`forgetRhi` 도 `releaseTextureAssets( nullptr )` 로 놓게 했다. 널 디바이스면 `TextureCache` 가
+참조만 돌려주고 GPU 호출은 하지 않는다 — 디바이스가 이미 없으므로 그것이 맞다.
+
+**왜 평소에 안 보였나.** `forgetRhi` 는 `~IRHIDevice()` 의 **안전망** 경로에서만 온다
+(shutdown 을 거치지 않고 사라지는 디바이스 — 초기화 실패 등). 정상 백엔드 교체는
+`shutdown()` → `releaseAllFor` 라서 이 자리를 지나지 않는다.
+
+**검증.** 디바이스가 필요하므로 `RenderPassGpuTest`(hostgpu)에 넣었다 — CLAUDE.md 의 규칙이다.
+`ForgetThenInitDoesNotDoubleMaterialTextureOrdinals` 는 실제 에셋(`benchtextured.material`,
+albedoMap 이 붙어 있다)으로 네 백엔드를 돌며 forget → init 뒤 서수가 누적되지 않는지 본다.
+수정을 빼면 "forgetRhi 가 빌린 텍스처 목록을 남겼습니다" 와 "다시 올린 뒤 텍스처 서수가
+누적됐습니다" 둘 다 진다. hostgpu 2/2, nogpu 7/7 × 3 프리셋, 정적 씬 스크린샷
+dx12·dx11·gl 모두 `d2c61c1f8e57cf2d` 유지.
+
 ### 2026-09-19 (머티리얼 패킹이 옆 프로퍼티를 덮을 수 있었다)
 
 상수버퍼에서 **칸 크기는 셰이더 리플렉션**이 정하고(`ShaderVariableInfo::_size`) **쓰는 크기는

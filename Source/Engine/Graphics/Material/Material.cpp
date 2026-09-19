@@ -195,6 +195,17 @@ namespace sw
     {
         if ( _pRHIDevice != pDevice )
             return;
+
+        // 빌린 텍스처도 **여기서 놓는다** — 널 디바이스로 부르면 `TextureCache` 가 참조만 돌려주고
+        // GPU 호출은 하지 않는다(디바이스가 이미 없으므로 그것이 맞다).
+        //
+        // 예전에는 `releaseRhi` 만 이 목록을 비웠다. 둘 다 "디바이스가 사라졌다" 는 통보인데 남기는
+        // 상태가 달라서, forget 뒤에 `initRhi` 가 오면 `resolveTextureAssets` 가 목록에 **덧붙였다.**
+        // 그러면 `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는
+        // 그 서수를 t5..t8 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로
+        // 남는다. 통보 둘이 같은 상태를 남기게 한다.
+        releaseTextureAssets( nullptr );
+
         // 디바이스가 이미 없다 — GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 는 해제 후 사용이다).
         _constantBuffer  = 0;
         _descriptorIndex = kInvalidDescriptorIndex;
