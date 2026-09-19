@@ -775,3 +775,79 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
     const int32 winnerIndex = anyFuture.get();
     SW_EXPECT_TRUE( 0 <= winnerIndex && winnerIndex < kRacers );
 }
+
+/**
+ * @brief [TaskTest] 무효한 future 의 `then` 은 **무효한 future** 를 돌려준다.
+ * @details 예전에는 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 돌려줬다. 그것을 `wait()`
+ *          하면 영원히 멈춘다 — 조건 변수는 절대 깨어나지 않는다. 증상은 "느리다" 가 아니라
+ *          **완전한 정지**이고, 스택만 보면 기다리는 것이 정상인지 아닌지 알 수 없다.
+ *
+ *          그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다(유효한 것만 세고,
+ *          후보가 없으면 무효를 돌려준다). 우회가 두 벌이면 세 번째 호출부가 같은 함정에 빠진다 —
+ *          그래서 뿌리인 `then` 을 고쳤다. 네 조합(T→T · T→void · void→T · void→void)을 모두 본다:
+ *          `TaskFuture<T>` 와 `TaskFuture<void>` 는 **서로 다른 특수화**라 한쪽만 고쳐질 수 있다.
+ *
+ * @note 여기서 `wait()` 를 부르지 않는 것은 일부러다 — 회귀가 나면 그 호출이 테스트를 **멈춰
+ *       세운다**(실패가 아니라 정지다). `isValid()` 와 `waitFor` 로만 묻는다.
+ */
+SW_TEST_CASE( TaskTest, InvalidFutureThenStaysInvalid )
+{
+    constexpr uint32 kShortTimeoutMs = 20;
+
+    BLOCK( "T -> T" )
+    {
+        sw::TaskFuture<int32> invalidFuture;
+        SW_ASSERT_FALSE( invalidFuture.isValid() );
+
+        sw::TaskFuture<int32> chained = invalidFuture.then( []( const int32& value )
+        {
+            return value + 1;
+        } );
+        SW_EXPECT_FALSE_MSG( chained.isValid(),
+                             "무효한 future 의 then 이 유효한 future 를 돌려주면 wait() 가 영원히 멈춥니다" );
+        SW_EXPECT_FALSE( chained.waitFor( kShortTimeoutMs ) );
+    }
+
+    BLOCK( "T -> void" )
+    {
+        sw::TaskFuture<int32> invalidFuture;
+        sw::TaskFuture<void>  chained = invalidFuture.then( []( const int32& ) {} );
+        SW_EXPECT_FALSE_MSG( chained.isValid(), "T -> void 사슬에서도 무효가 전해져야 합니다" );
+        SW_EXPECT_FALSE( chained.waitFor( kShortTimeoutMs ) );
+    }
+
+    BLOCK( "void -> T" )
+    {
+        sw::TaskFuture<void> invalidFuture;
+        SW_ASSERT_FALSE( invalidFuture.isValid() );
+
+        sw::TaskFuture<int32> chained = invalidFuture.then( []()
+        {
+            return 7;
+        } );
+        SW_EXPECT_FALSE_MSG( chained.isValid(), "TaskFuture<void> 특수화도 같은 규칙을 따라야 합니다" );
+        SW_EXPECT_FALSE( chained.waitFor( kShortTimeoutMs ) );
+    }
+
+    BLOCK( "void -> void" )
+    {
+        sw::TaskFuture<void> invalidFuture;
+        sw::TaskFuture<void> chained = invalidFuture.then( []() {} );
+        SW_EXPECT_FALSE_MSG( chained.isValid(), "void -> void 사슬에서도 무효가 전해져야 합니다" );
+        SW_EXPECT_FALSE( chained.waitFor( kShortTimeoutMs ) );
+    }
+
+    BLOCK( "유효한 future 는 그대로 이어진다" )
+    {
+        sw::TaskPromise<int32> promise;
+        sw::TaskFuture<int32>  chained = promise.getFuture().then( []( const int32& value )
+        {
+            return value * 2;
+        } );
+        SW_ASSERT_TRUE( chained.isValid() );
+
+        promise.setValue( 21 );
+        SW_EXPECT_TRUE( chained.waitFor( 1000 ) );
+        SW_EXPECT_EQUAL( 42, chained.get() );
+    }
+}

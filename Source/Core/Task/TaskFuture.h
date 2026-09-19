@@ -259,12 +259,20 @@ namespace sw
         template <typename F>
         auto then( F&& continuationFunc ) const -> TaskFuture<std::invoke_result_t<F, const T&>>
         {
-            using ReturnType                  = std::invoke_result_t<F, const T&>;
+            using ReturnType = std::invoke_result_t<F, const T&>;
+
+            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지
+            // 않는) future 를 돌려줬고, 그것을 `wait()` 하면 **영원히 멈췄다**. 그리고 그 함정을
+            // `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다 — 유효한 것만 세고, 후보가
+            // 하나도 없으면 무효한 future 를 돌려주도록. 우회가 두 벌이면 세 번째 호출부가 같은 함정에
+            // 빠진다. 뿌리를 여기서 막는다: 무효한 future 는 `wait()` 가 곧장 돌아오고 `waitFor` 가
+            // false 이며 `isValid()` 로 물어볼 수 있다 — "무효가 들어오면 무효가 나간다" 가 사슬 전체에
+            // 전해진다. (`fallback()` 은 처음부터 이 자리를 바르게 다뤘다 — 값을 채워 끝낸다.)
+            if ( _pState == nullptr )
+                return TaskFuture<ReturnType>{};
+
             auto                   pNextState = sw::make_shared<internal::SharedFutureState<ReturnType>>();
             TaskFuture<ReturnType> nextFuture( pNextState );
-
-            if ( _pState == nullptr )
-                return nextFuture;
 
             _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void( const T& )>, [pNextState, contFunc = std::forward<F>( continuationFunc )]( const T& val )
             {
@@ -342,12 +350,20 @@ namespace sw
         template <typename F>
         auto then( F&& continuationFunc ) const -> TaskFuture<std::invoke_result_t<F>>
         {
-            using ReturnType                  = std::invoke_result_t<F>;
+            using ReturnType = std::invoke_result_t<F>;
+
+            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지
+            // 않는) future 를 돌려줬고, 그것을 `wait()` 하면 **영원히 멈췄다**. 그리고 그 함정을
+            // `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다 — 유효한 것만 세고, 후보가
+            // 하나도 없으면 무효한 future 를 돌려주도록. 우회가 두 벌이면 세 번째 호출부가 같은 함정에
+            // 빠진다. 뿌리를 여기서 막는다: 무효한 future 는 `wait()` 가 곧장 돌아오고 `waitFor` 가
+            // false 이며 `isValid()` 로 물어볼 수 있다 — "무효가 들어오면 무효가 나간다" 가 사슬 전체에
+            // 전해진다. (`fallback()` 은 처음부터 이 자리를 바르게 다뤘다 — 값을 채워 끝낸다.)
+            if ( _pState == nullptr )
+                return TaskFuture<ReturnType>{};
+
             auto                   pNextState = sw::make_shared<internal::SharedFutureState<ReturnType>>();
             TaskFuture<ReturnType> nextFuture( pNextState );
-
-            if ( _pState == nullptr )
-                return nextFuture;
 
             _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void()>, [pNextState, contFunc = std::forward<F>( continuationFunc )]()
             {
