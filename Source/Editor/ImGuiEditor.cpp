@@ -193,7 +193,14 @@ namespace sw::editor
             const shared_ptr<RenderPipelineResource> forwardPipeline = sw::make_shared<RenderPipelineResource>();
 
             TaskManager* pTaskManager = editor::getService<TaskManager>();
-            TaskHandle   hDefault     = pTaskManager->emplaceTask(
+            if ( pTaskManager == nullptr )
+            {
+                SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
+                shutdownPartialInitialization();
+                return false;
+            }
+
+            TaskHandle hDefault = pTaskManager->emplaceTask(
                 "EditorSplash_DefaultRenderPass",
                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
                 MakeTaskArgs( defaultPass ) );

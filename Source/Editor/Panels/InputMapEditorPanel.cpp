@@ -503,6 +503,8 @@ namespace sw::editor
     void InputMapEditorPanel::drawKeyboardMonitor()
     {
         InputManager* pInput = getService<InputManager>();
+        if ( pInput == nullptr )
+            return;
 
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Keyboard Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -534,6 +536,8 @@ namespace sw::editor
     void InputMapEditorPanel::drawMouseMonitor()
     {
         InputManager* pInput = getService<InputManager>();
+        if ( pInput == nullptr )
+            return;
 
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -572,6 +576,8 @@ namespace sw::editor
     void InputMapEditorPanel::drawGamepadMonitor()
     {
         InputManager* pInput = getService<InputManager>();
+        if ( pInput == nullptr )
+            return;
 
         // 4) 게임패드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Gamepad 0 Status", ImGuiTreeNodeFlags_DefaultOpen ) )

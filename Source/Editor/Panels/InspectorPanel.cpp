@@ -589,7 +589,10 @@ namespace sw::editor
 
         const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
-        auto*           pRegistry = editor::getService<TypeRegistry>();
+        auto* pRegistry = editor::getService<TypeRegistry>();
+        if ( pRegistry == nullptr )
+            return;
+
         const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
         {
@@ -617,6 +620,8 @@ namespace sw::editor
     {
         const utf8* pLabel    = "##value";
         auto*       pRegistry = editor::getService<TypeRegistry>();
+        if ( pRegistry == nullptr )
+            return;
 
         int32* pEnumValue = prop.getValuePtr<int32>( pInstance );
         if ( pEnumValue == nullptr )

@@ -526,6 +526,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (액션 메뉴도 순회 중에 콜백을 불렀다 · 서비스 조회의 세 번째 문)
+
+**`EditorActionMenuManager::drawActionMenu` 가 범위 for 로 돌면서 액션과 술어를 불렀다.**
+확장 메뉴는 원래 항목을 더하라고 있는 자리이므로, 액션이 같은 위치에 항목을 더하면 벡터가
+재할당돼 반복자와 참조가 뜬다. `ReloadFileManager::dispatchEvents` 와 **같은 모양**이고 그쪽은
+ASAN 이 `heap-use-after-free` 로 잡았다. 인덱스로 돌고, 목록을 바꿀 수 있는 두 호출(술어·액션)의
+델리게이트를 부르기 전에 복사한다. 문자열은 복사하지 않는다 — ImGui 호출은 목록을 건드리지
+않으므로 참조로 충분하고, 그 두 호출 뒤에는 참조를 더 쓰지 않는다.
+
+같은 파일에서 하나 더: 위치 수 `4` 가 배열 크기와 경계 검사에 **리터럴로 두 번** 적혀 있었다.
+`ActionMenuLocation::Count` 가 정본이 되게 했다.
+
+**서비스 조회에 세 번째 문이 있었다.** 게이트는 `getService<T>()->` 와
+`EditorContext::get()->` 를 잡는데, `T* p = getService<T>();` 로 **받아 두고 확인은 안 하는**
+것은 한 줄짜리 정규식을 통과한다. 결과는 같다. 백세 자리 중 여섯이 그랬다(ImGuiEditor 1 ·
+InputMapEditorPanel 3 · InspectorPanel 2). 여섯을 고치고, 게이트가 선언 뒤를 함수 끝까지 훑어
+"확인이 먼저인가 역참조가 먼저인가" 를 보게 했다. `CheckLintsAreAlive` 28 케이스 / 17 게이트.
+
 ### 2026-09-20 (로그에 뷰를 `.data()` 로 풀어 넘겨 끝을 넘어 읽고 있었다)
 
 `formatstring` 은 인자가 `string_view` 면 **길이로** 쓰고(`write()` 가 `str.length()` 를 본다),

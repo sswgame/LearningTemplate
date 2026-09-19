@@ -17,6 +17,11 @@ nullptr 을 돌려줄 수 있는 조회 함수를 곧바로 `->` 로 따라가�
 있다. 2026-09-20 에 세어 보니 여든두 자리는 받아서 확인하는데 **쉰두 자리가 그대로 `->` 로
 따라가고 있었다** — 이 린트가 잡던 것과 정확히 같은 모양인데 이름만 달라서 지나갔다.
 
+**세 번째 문은 "받아 두고 확인은 안 하는" 것이다.** `T* p = getService<T>();` 라고 적어 두면
+이 린트의 한 줄짜리 정규식은 통과하지만, 그 뒤에 확인 없이 `p->` 를 쓰면 결과는 같다. 같은 날
+백세 자리 중 **여섯 자리**가 그랬다. 그래서 선언 뒤를 함수 끝까지 훑어 "확인이 먼저인가
+역참조가 먼저인가" 를 본다 — 확인으로 치는 모양은 아래 `_kCheckTemplate` 에 적혀 있다.
+
   python Scripts/lint/gate/CheckNullableServiceUse.py [--root <repo>] [--files a.cpp b.cpp]
 """
 
@@ -43,6 +48,45 @@ _kListNullableCallRe = (
     re.compile(r"\bEditorContext\s*::\s*get\s*\(\s*\)\s*->"),
 )
 
+# 세 번째 문: 받아 두기만 하고 확인하지 않는 것.
+#   T* pName = getService<T>();   ·   EditorContext* pName = EditorContext::get();
+_kNullableDeclRe = re.compile(
+    r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(p[A-Z]\w*)\s*=\s*"
+    r"(?:(?:editor|game)::)?(?:getService\s*<|EditorContext\s*::\s*get\s*\()"
+)
+
+# 확인으로 치는 모양. 이 중 하나가 역참조보다 먼저 나오면 통과다.
+_kCheckTemplate = (
+    r"({0}\s*==\s*nullptr|{0}\s*!=\s*nullptr|nullptr\s*==\s*{0}|nullptr\s*!=\s*{0}"
+    r"|if\s*\(\s*!?\s*{0}\s*\)|{0}\s*&&|&&\s*!?\s*{0}\b|{0}\s*\?"
+    r"|\|\|\s*!\s*{0}\b|!\s*{0}\s*\|\||SW_ASSERT[A-Z_]*\s*\([^)]*{0}\b)"
+)
+_kDerefTemplate = r"(\b{0}\s*->|\*\s*{0}\b)"
+
+
+def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
+    """받아 두고 확인 없이 역참조하는 곳을 모읍니다."""
+    violations: list[str] = []
+    for index, line in enumerate(lines):
+        match = _kNullableDeclRe.match(line)
+        if not match:
+            continue
+        indent, name = match.group(1), match.group(2)
+        checkRe = re.compile(_kCheckTemplate.format(re.escape(name)))
+        derefRe = re.compile(_kDerefTemplate.format(re.escape(name)))
+        for scanIndex in range(index + 1, len(lines)):
+            current = lines[scanIndex]
+            stripped = current.strip()
+            # 선언보다 얕은 들여쓰기의 `}` 면 그 블록(대개 함수)이 끝난 것이다.
+            if stripped.startswith("}") and (len(current) - len(current.lstrip())) < len(indent):
+                break
+            if checkRe.search(current):
+                break
+            if derefRe.search(current):
+                violations.append(f"[Nullable Service] {relative}:{index + 1}: {line.strip()}")
+                break
+    return violations
+
 # 같은 함정이 세 곳에 있다 — 에디터의 `editor::getService`, 게임의 `game::getService`.
 # 게임 쪽은 `SW_ASSERT( false )` 를 거치는데 **그 단정은 Shipping 에서 사라진다.**
 _kListScanRoot = ( "Source/Editor", "Source/GameFramework", "Source/Games" )
@@ -68,9 +112,11 @@ def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | Non
         except OSError:
             continue
 
-        for lineIndex, line in enumerate(text.splitlines(), start=1):
+        lines = text.splitlines()
+        for lineIndex, line in enumerate(lines, start=1):
             if any(regex.search(line) for regex in _kListNullableCallRe):
                 violations.append(f"[Nullable Service] {relative}:{lineIndex}: {line.strip()}")
+        violations.extend(findUncheckedStores(relative, lines))
     return violations
 
 
@@ -110,6 +156,18 @@ class CheckNullableServiceUseGate(LintGate):
                     "void probe()\n"
                     "{\n"
                     "    EditorContext::get()->getWorkspace().clearSelection();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "받아 두고 확인 없이 역참조",
+            "files": {
+                "Source/Editor/Probe/ProbeStored.cpp": (
+                    "void probe()\n"
+                    "{\n"
+                    "    InputManager* pInput = getService<InputManager>();\n"
+                    "    pInput->update();\n"
                     "}\n"
                 ),
             },

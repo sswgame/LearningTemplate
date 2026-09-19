@@ -16,7 +16,8 @@ namespace sw::editor
         Hierarchy = 0,
         ContentBrowser,
         Viewport,
-        Inspector
+        Inspector,
+        Count ///< 위치 수 — 배열 크기와 경계 검사가 이 값을 본다.
     };
 
     /** @brief 개별 액션 메뉴 항목 */
@@ -43,6 +44,6 @@ namespace sw::editor
         void drawActionMenu( ActionMenuLocation location );
 
     private:
-        vector<ActionMenuItem> _arrItem[4];
+        vector<ActionMenuItem> _arrItem[static_cast<size_t>( ActionMenuLocation::Count )];
     };
 } // namespace sw::editor
