@@ -122,7 +122,7 @@ namespace sw
         /** @brief 게임 컴포넌트 기본값 XML(gamedata.xml) 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
         static void setDefaultGamedataPath( string_view path );
         /** @brief 현재 게임 컴포넌트 기본값 XML 경로를 반환합니다. */
-        static string_view getDefaultGamedataPath();
+        static string getDefaultGamedataPath();
 
         /** @brief 게임플레이 시작 시 초기화 콜백 */
         virtual void onBeginPlay();

@@ -39,7 +39,7 @@ namespace sw
         ComponentDefaults::setDefaultsPath( path );
     }
 
-    string_view Component::getDefaultGamedataPath()
+    string Component::getDefaultGamedataPath()
     {
         return ComponentDefaults::getDefaultsPath();
     }

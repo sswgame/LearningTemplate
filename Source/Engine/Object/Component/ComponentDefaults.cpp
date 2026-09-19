@@ -126,17 +126,20 @@ namespace sw
 
     void ComponentDefaults::ensureDefaultsLoaded()
     {
-        if ( _bDefaultsLoaded )
+        // 이중 검사 잠금이다 — 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
+        // 스레드가 그 앞에서 지어진 `_defaultsDoc` 도 함께 본다.
+        if ( _bDefaultsLoaded.load( std::memory_order_acquire ) )
             return;
+
         std::scoped_lock<mutex> lock{ _defaultsMutex };
-        if ( _bDefaultsLoaded )
+        if ( _bDefaultsLoaded.load( std::memory_order_relaxed ) )
             return;
         if ( _customDefaultsPath.empty() )
             return;
 
         string absPath;
         if ( _defaultsDoc.loadResource( _customDefaultsPath.c_str(), &absPath ) )
-            _bDefaultsLoaded = true;
+            _bDefaultsLoaded.store( true, std::memory_order_release );
     }
 
     void ComponentDefaults::apply( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
@@ -145,8 +148,13 @@ namespace sw
             return;
 
         ensureDefaultsLoaded();
-        if ( _bDefaultsLoaded == false )
+        if ( _bDefaultsLoaded.load( std::memory_order_acquire ) == false )
             return;
+
+        // **`reloadDefaults()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서를
+        // 락 없이 읽는다(컴포넌트 생성마다 도는 자리라 잠그면 직렬화된다). 다시 읽는 일은
+        // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
+        // 쪽의 몫이다.
 
         XmlNode root = _defaultsDoc.root( "GameData" );
         if ( root.isValid() == false )
@@ -215,11 +223,13 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _defaultsMutex };
         _customDefaultsPath = path;
-        _bDefaultsLoaded    = false;
+        _bDefaultsLoaded.store( false, std::memory_order_release );
     }
 
-    string_view ComponentDefaults::getPath() const
+    string ComponentDefaults::getPath() const
     {
+        // **값으로 돌려준다.** `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
+        // `setPath` 가 문자열을 갈아 끼우면 사라진 버퍼를 가리킨다.
         std::scoped_lock<mutex> lock{ _defaultsMutex };
         return _customDefaultsPath;
     }
@@ -227,7 +237,7 @@ namespace sw
     void ComponentDefaults::reload()
     {
         std::scoped_lock<mutex> lock{ _defaultsMutex };
-        _bDefaultsLoaded = false;
+        _bDefaultsLoaded.store( false, std::memory_order_release );
     }
 
     void ComponentDefaults::applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
@@ -248,7 +258,7 @@ namespace sw
             engine::getComponentDefaults().setPath( path );
     }
 
-    string_view ComponentDefaults::getDefaultsPath()
+    string ComponentDefaults::getDefaultsPath()
     {
         if ( engine::areEngineServicesBound() )
             return engine::getComponentDefaults().getPath();

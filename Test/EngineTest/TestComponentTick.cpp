@@ -752,3 +752,28 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
     sw::ComponentDefaults::reloadDefaults();
     sw::FileUtil::removeFile( defaultsPath );
 }
+
+/**
+ * @brief [ComponentDefaultsTest] 기본값 경로가 **값으로** 돌아오는지 검증
+ * @details `getDefaultGamedataPath()` 가 `string_view` 를 돌려주고 있었다. 그 뷰는 뮤텍스로
+ *          지키는 `_customDefaultsPath` 의 내부 버퍼를 가리키는데, **뮤텍스는 함수가 끝나면서
+ *          풀린다.** 받아 든 쪽이 그것을 들고 있는 동안 다른 곳에서 `setDefaultGamedataPath` 를
+ *          부르면(길이가 달라지면 버퍼를 새로 잡는다) 뷰는 사라진 메모리를 가리킨다.
+ *          지키는 것이 아무 뜻이 없었던 셈이다.
+ */
+SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
+{
+    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+
+    sw::Component::setDefaultGamedataPath( "game/data/short.xml" );
+    const auto heldPath = sw::Component::getDefaultGamedataPath();
+
+    // 길이를 크게 바꿔 내부 버퍼를 **다시 잡게** 만든다.
+    sw::Component::setDefaultGamedataPath( sw::string( 4096, 'x' ) );
+
+    // 고치기 전이라면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
+    SW_EXPECT_STREQ( "game/data/short.xml", sw::string( heldPath ).c_str() );
+
+    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::ComponentDefaults::reloadDefaults();
+}

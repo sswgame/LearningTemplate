@@ -435,6 +435,53 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (뮤텍스로 지킨 문자열을 뷰로 돌려주고 있었다)
+
+`ComponentDefaults::getPath()` 가 이렇게 생겼다:
+
+```cpp
+string_view ComponentDefaults::getPath() const
+{
+    std::scoped_lock<mutex> lock{ _defaultsMutex };
+    return _customDefaultsPath;      // 락은 여기서 풀린다. 뷰는 남는다.
+}
+```
+
+**지키는 것이 아무 뜻이 없다.** 받아 든 쪽이 뷰를 들고 있는 동안 다른 곳에서 `setPath` 를
+부르면(길이가 달라지면 `string` 이 버퍼를 새로 잡는다) 그 뷰는 사라진 메모리를 가리킨다.
+`Component::getDefaultGamedataPath()` · `ComponentDefaults::getDefaultsPath()` 가 그대로
+그것을 흘려보내고 있었다. 셋 다 값으로 돌려주게 바꿨다.
+
+**검증.** `ComponentDefaultsTest.DefaultsPathIsReturnedByValue`. 되돌리면 ASAN 이
+`heap-use-after-free` 로 그 자리를 찍는다(`__msvc_string_view.hpp:206`).
+
+### 2026-09-20 (기본값 로딩의 이중 검사 잠금이 깨져 있었다)
+
+같은 파일에서:
+
+```cpp
+void ComponentDefaults::ensureDefaultsLoaded()
+{
+    if ( _bDefaultsLoaded )              // 락 밖에서 읽는다. 그냥 bool 이다.
+        return;
+    std::scoped_lock<mutex> lock{ _defaultsMutex };
+    ...
+    if ( _defaultsDoc.loadResource( ... ) )
+        _bDefaultsLoaded = true;         // 락 안이지만 순서를 묶지 않는다
+}
+```
+
+교과서적인 **깨진 이중 검사 잠금**이다. 문제는 경합 자체보다 **순서**다 — `true` 를 본 스레드가
+그 앞에서 지어진 `_defaultsDoc` 을 함께 본다는 보장이 없어서, 다 지어지지 않은 XML 문서를
+읽을 수 있다. `atomic<bool>` + release/acquire 로 묶었다.
+
+문서 자체를 읽는 `apply()` 는 여전히 락을 잡지 않는다 — 컴포넌트를 만들 때마다 도는 자리라
+잠그면 생성이 직렬화된다. 대신 **`reloadDefaults()` 를 컴포넌트 생성 중에 부르면 안 된다**는
+것을 그 자리에 적어 두었다(다시 읽는 일은 개발 중 한 번씩 일어나는 일이다).
+
+> 레이스 쪽은 무는 테스트를 쓰지 못했다. 재현하려면 한 스레드가 `reload` 하는 동안 다른
+> 스레드들이 컴포넌트를 만들어야 하는데, 그 조합은 지금 엔진 흐름에 없다.
+
 ### 2026-09-19 (컴포넌트의 이동 연산은 전부 죽어 있었고, 전부 틀려 있었다)
 
 `SceneComponent` 쪽을 막고 나서 기반인 `Component` 도 같은 방법으로 재 봤다 — `= delete` 로
