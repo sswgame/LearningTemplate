@@ -69,24 +69,53 @@ namespace sw
         const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
         const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
 
+        // **`override_redirect` 를 쓰지 않는다.** 그 깃발은 "창 관리자는 이 창에 손대지 말라" 는
+        // 뜻이고, 메뉴·툴팁처럼 **이미 떠 있는 창에 딸린 것**을 위한 것이다. 스플래시는 그 앱의
+        // 첫 창이라 딸릴 곳이 없다 — XWayland(WSLg)에서는 그런 창이 화면에 나타나지 않았다.
+        // (서버 안에는 멀쩡히 있었다. `XGetImage` 로 되읽으면 그림·글자·막대가 다 들어 있었는데,
+        //  사용자 화면에는 아무것도 뜨지 않았다.)
+        //
+        // 표준 방법은 **창 종류를 스플래시라고 말해 주는 것**이다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
+        // 그러면 창 관리자가 장식 없이, 가운데에, 위로 띄운다 — 우리가 하려던 바로 그 일을
+        // 창 관리자와 **싸우지 않고** 얻는다.
         XSetWindowAttributes attrs{};
-        attrs.override_redirect = 1;
-        attrs.background_pixel  = kSplashBackgroundColor;
+        attrs.background_pixel = kSplashBackgroundColor;
 
         Window win = XCreateWindow(
             pDisplay, root,
             posX, posY, _width, _height,
-            1, CopyFromParent, InputOutput, CopyFromParent,
-            CWOverrideRedirect | CWBackPixel, &attrs );
+            0, CopyFromParent, InputOutput, CopyFromParent,
+            CWBackPixel, &attrs );
 
         const utf8* pWinTitle = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
         XStoreName( pDisplay, win, pWinTitle );
+
+        const Atom windowTypeAtom = XInternAtom( pDisplay, "_NET_WM_WINDOW_TYPE", 0 );
+        const Atom splashTypeAtom = XInternAtom( pDisplay, "_NET_WM_WINDOW_TYPE_SPLASH", 0 );
+        if ( windowTypeAtom != 0 && splashTypeAtom != 0 ) // Xlib 의 `None` 매크로는 이 저장소가 해제한다.
+        {
+            XChangeProperty( pDisplay, win, windowTypeAtom, XA_ATOM, 32, PropModeReplace,
+                             reinterpret_cast<const uint8*>( &splashTypeAtom ), 1 );
+        }
+
+        // 위치를 우리가 정했다고 알린다 — 없으면 창 관리자가 자기 규칙대로 놓는다.
+        XSizeHints sizeHints{};
+        sizeHints.flags      = PPosition | PSize | PMinSize | PMaxSize;
+        sizeHints.x          = posX;
+        sizeHints.y          = posY;
+        sizeHints.width      = static_cast<int32>( _width );
+        sizeHints.height     = static_cast<int32>( _height );
+        sizeHints.min_width  = static_cast<int32>( _width );
+        sizeHints.min_height = static_cast<int32>( _height );
+        sizeHints.max_width  = static_cast<int32>( _width );
+        sizeHints.max_height = static_cast<int32>( _height );
+        XSetWMNormalHints( pDisplay, win, &sizeHints );
+
         XSelectInput( pDisplay, win, ExposureMask | StructureNotifyMask );
         XMapRaised( pDisplay, win );
 
-        // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이고, 서버가 그것을 처리하기 전에 그리면
-        // 그 그리기는 버려진다 — 첫 화면이 통째로 비는 길이다. 한 번 왕복해 매핑을 확정하고 그린다
-        // (`override_redirect` 창이라 창 관리자를 기다릴 일은 없다).
+        // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이라, 서버가 처리하기 전에 그리면 그
+        // 그리기는 버려진다. 한 번 왕복해 두면 이후의 그리기가 확실히 창에 닿는다.
         XSync( pDisplay, 0 ); // discard=0. Xlib 의 `False` 매크로는 이 저장소가 해제한다.
 
         _pX11Display = pDisplay;
