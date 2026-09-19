@@ -145,9 +145,13 @@ namespace sw::editor
 
     void InspectorPanel::drawSelectionSection()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         EditorWidgets::drawSectionHeader( "Selection" );
 
-        const size_t selCount = EditorContext::get()->getSelectionManager().getSelectedObjectCount();
+        const size_t selCount = pContext->getSelectionManager().getSelectedObjectCount();
         if ( selCount > 1 )
         {
             ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "Multi-Selection (%u objects)",
@@ -155,7 +159,7 @@ namespace sw::editor
             ImGui::Separator();
         }
 
-        EditorWorkspace& ws = EditorContext::get()->getWorkspace();
+        EditorWorkspace& ws = pContext->getWorkspace();
         if ( ws.getSelectedObjectId() == 0 )
         {
             EditorWidgets::drawEmptyHint( "Nothing selected. Pick in Game View or use Hierarchy." );
@@ -422,11 +426,15 @@ namespace sw::editor
 
     void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice )
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentId() ) );
 
         const TypeInfo*      pTypeInfo  = pComp->getTypeInfo();
         IInspectorComponent* pInspector = ( pTypeInfo != nullptr )
-                                            ? EditorContext::get()->getInspectorComponentManager().find( pTypeInfo->_name.c_str() )
+                                            ? pContext->getInspectorComponentManager().find( pTypeInfo->_name.c_str() )
                                             : nullptr;
 
         if ( pInspector != nullptr )
@@ -568,7 +576,11 @@ namespace sw::editor
 
     void InspectorPanel::drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop )
     {
-        IInspectorProperty* pProperty = EditorContext::get()->getInspectorPropertyManager().find( prop._typeName.c_str() );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        IInspectorProperty* pProperty = pContext->getInspectorPropertyManager().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
             if ( pProperty->draw( pInstance, prop ) )

@@ -12,6 +12,11 @@ nullptr 을 돌려줄 수 있는 조회 함수를 곧바로 `->` 로 따라가�
 (`EditorTransaction::push` 는 확인했고 그 위 일곱은 안 했다). 사람이 지킬 규칙이 아니라
 기계가 볼 규칙으로 옮긴다.
 
+**같은 함정에 문이 하나 더 있었다.** `EditorContext::get()` 은 속으로
+`getService<EditorContext>()` 를 부르고 없으면 정적 폴백을 돌려주므로 이것도 nullptr 이 될 수
+있다. 2026-09-20 에 세어 보니 여든두 자리는 받아서 확인하는데 **쉰두 자리가 그대로 `->` 로
+따라가고 있었다** — 이 린트가 잡던 것과 정확히 같은 모양인데 이름만 달라서 지나갔다.
+
   python Scripts/lint/gate/CheckNullableServiceUse.py [--root <repo>] [--files a.cpp b.cpp]
 """
 
@@ -28,9 +33,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import collectSourceFiles, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-# `getService<T>()->` · `getService< T >()->` 처럼 곧바로 화살표가 붙는 모양만 잡는다.
-# 포인터를 받아 두고 확인한 뒤 쓰는 형태(`T* p = getService<T>();`)는 걸리지 않는다.
-_kNullableCallRe = re.compile(r"\bgetService\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->")
+# 곧바로 화살표가 붙는 모양만 잡는다 — 포인터를 받아 두고 확인한 뒤 쓰는 형태
+# (`T* p = getService<T>();`)는 걸리지 않는다.
+#
+#   getService<T>()->        · getService< T >()->
+#   EditorContext::get()->   — 속으로 getService<EditorContext>() 를 부르는 같은 함정의 다른 문
+_kListNullableCallRe = (
+    re.compile(r"\bgetService\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
+    re.compile(r"\bEditorContext\s*::\s*get\s*\(\s*\)\s*->"),
+)
 
 # 같은 함정이 세 곳에 있다 — 에디터의 `editor::getService`, 게임의 `game::getService`.
 # 게임 쪽은 `SW_ASSERT( false )` 를 거치는데 **그 단정은 Shipping 에서 사라진다.**
@@ -58,7 +69,7 @@ def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | Non
             continue
 
         for lineIndex, line in enumerate(text.splitlines(), start=1):
-            if _kNullableCallRe.search(line):
+            if any(regex.search(line) for regex in _kListNullableCallRe):
                 violations.append(f"[Nullable Service] {relative}:{lineIndex}: {line.strip()}")
     return violations
 
@@ -73,11 +84,12 @@ class CheckNullableServiceUseGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
-        "  editor::getService<T>() 는 nullptr 을 돌려줄 수 있습니다.\n"
+        "  editor::getService<T>() 와 EditorContext::get() 은 nullptr 을 돌려줄 수 있습니다.\n"
         "  포인터를 받아 두고 확인한 뒤 쓰십시오:\n"
         "      CommandStack* pStack = editor::getService<CommandStack>();\n"
         "      if ( pStack == nullptr )\n"
-        "          return;"
+        "          return;\n"
+        "  나중에 불리는 람다·델리게이트 안에서는 바깥 포인터를 쓰지 말고 그 자리에서 다시 받으십시오."
     )
     selfTestCases = [
         {
@@ -87,6 +99,17 @@ class CheckNullableServiceUseGate(LintGate):
                     "void probe()\n"
                     "{\n"
                     "    editor::getService<CommandStack>()->undo();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "EditorContext::get() 을 바로 역참조",
+            "files": {
+                "Source/Editor/Probe/ProbeContext.cpp": (
+                    "void probe()\n"
+                    "{\n"
+                    "    EditorContext::get()->getWorkspace().clearSelection();\n"
                     "}\n"
                 ),
             },

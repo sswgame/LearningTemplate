@@ -127,9 +127,13 @@ namespace sw::editor
             public:
                 void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
                 {
+                    EditorContext* pContext = EditorContext::get();
+                    if ( pContext == nullptr )
+                        return;
+
                     if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
                     {
-                        EditorContext::get()->getWorkspace().requestOpenPanel(
+                        pContext->getWorkspace().requestOpenPanel(
                             EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind::SpriteClip ) );
                     }
                 }

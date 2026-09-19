@@ -163,8 +163,8 @@ namespace sw::editor
         {
             EditorPlaySession::stop();
             GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-            if ( pObjectManager != nullptr )
-                EditorContext::get()->getWorkspace().remapSelectionByObjectName( pObjectManager );
+            if ( pObjectManager != nullptr && pContext != nullptr )
+                pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
         }
         EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
     }

@@ -100,11 +100,15 @@ namespace sw::editor
 
     void EditorDockLayout::loadPanelVisibility()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         // 진단 스위치가 켜져 있으면 저장된 가시성을 **읽지 않는다**. 도구 패널은 기본이 닫힘이고
         // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
         if ( gv_editorOpenAllPanels != 0 )
         {
-            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
@@ -117,7 +121,7 @@ namespace sw::editor
         if ( gv_editorOpenPanel.empty() == false )
         {
             bool bFound = false;
-            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;
@@ -142,7 +146,7 @@ namespace sw::editor
             return;
         }
 
-        for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+        for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
         {
             if ( entry._pInstance == nullptr )
                 continue;
@@ -155,12 +159,16 @@ namespace sw::editor
 
     void EditorDockLayout::save()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         // 전부 열어 둔 상태를 사용자의 레이아웃으로 굳히지 않는다 — 진단용으로 한 번 켠 스위치가
         // 다음 실행부터 항상 모든 패널을 여는 일이 없어야 한다.
         if ( _windowsIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
         {
             KeyValueMap visibilityKv;
-            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;

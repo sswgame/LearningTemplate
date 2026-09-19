@@ -155,7 +155,11 @@ namespace sw::editor
 
     void TileMapPanel::drawTileMapFileControls()
     {
-        const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        const string& focused = pContext->getWorkspace().getFocusedAssetPath();
         if ( focused.empty() == false )
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 

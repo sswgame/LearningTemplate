@@ -69,22 +69,38 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void CommandPalettePopup::open()
     {
-        EditorContext::get()->getPopupManager().openPopup( "CommandPalette" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().openPopup( "CommandPalette" );
     }
 
     void CommandPalettePopup::close()
     {
-        EditorContext::get()->getPopupManager().closePopup( "CommandPalette" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().closePopup( "CommandPalette" );
     }
 
     void CommandPalettePopup::toggle()
     {
-        EditorContext::get()->getPopupManager().togglePopup( "CommandPalette" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().togglePopup( "CommandPalette" );
     }
 
     bool CommandPalettePopup::isOpen()
     {
-        return EditorContext::get()->getPopupManager().isPopupOpen( "CommandPalette" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return false;
+
+        return pContext->getPopupManager().isPopupOpen( "CommandPalette" );
     }
 
     // ------------------------------------------------------------------------------
@@ -100,10 +116,14 @@ namespace sw::editor
 
     void CommandPalettePopup::rebuildDynamicEntries()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         _listAllCommand.clear();
 
         // 1) 커맨드 레지스트리에 등록된 커맨드 — 메뉴·단축키와 같은 정의다
-        for ( const EditorCommandDesc& desc : EditorContext::get()->getCommandRegistry().getCommands() )
+        for ( const EditorCommandDesc& desc : pContext->getCommandRegistry().getCommands() )
         {
             if ( desc._bPaletteVisible == false )
                 continue;
@@ -113,13 +133,18 @@ namespace sw::editor
             entry._category = desc._category;
             entry._label    = desc._label;
             entry._detail   = desc._detail;
-            entry._action   = [commandId]()
-            { EditorContext::get()->getCommandRegistry().execute( commandId ); };
+            // 이 델리게이트는 나중에 불린다 — 그때 컨텍스트가 있는지 그 자리에서 본다.
+            entry._action = [commandId]()
+            {
+                EditorContext* pRunContext = EditorContext::get();
+                if ( pRunContext != nullptr )
+                    pRunContext->getCommandRegistry().execute( commandId );
+            };
             _listAllCommand.push_back( std::move( entry ) );
         }
 
         // 2) 등록된 모든 에디터 패널 토글 커맨드
-        for ( const EditorPanelEntry& win : EditorContext::get()->getPanelManager().getPanels() )
+        for ( const EditorPanelEntry& win : pContext->getPanelManager().getPanels() )
         {
             const string        panelId  = win._id;
             const string        winTitle = win._title;
@@ -128,7 +153,11 @@ namespace sw::editor
             entry._label    = "Open Panel: " + winTitle;
             entry._detail   = "Editor Panel";
             entry._action   = [panelId]()
-            { EditorContext::get()->getPanelManager().setPanelOpen( panelId.c_str(), true ); };
+            {
+                EditorContext* pRunContext = EditorContext::get();
+                if ( pRunContext != nullptr )
+                    pRunContext->getPanelManager().setPanelOpen( panelId.c_str(), true );
+            };
             _listAllCommand.push_back( std::move( entry ) );
         }
 
@@ -156,9 +185,10 @@ namespace sw::editor
                         SceneManager* pMgr = editor::getService<SceneManager>();
                         if ( pMgr && pMgr->getActiveScene() && pMgr->getActiveScene()->getObjectManager() )
                         {
-                            GameObject* pFound = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
-                            if ( pFound )
-                                EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
+                            GameObject*    pFound      = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
+                            EditorContext* pRunContext = EditorContext::get();
+                            if ( pFound != nullptr && pRunContext != nullptr )
+                                pRunContext->getSelectionManager().selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
                         }
                     };
                     _listAllCommand.push_back( std::move( entry ) );

@@ -109,12 +109,18 @@ namespace sw::editor
 
     void EditorMenuBar::drawAssetsMenu()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         if ( ImGui::BeginMenu( "Assets" ) )
         {
             EditorAssetTypeRegistry::forEachToolPanelTitle( []( const utf8* pTitle )
             {
-                if ( ImGui::MenuItem( pTitle ) )
-                    EditorContext::get()->getWorkspace().requestOpenPanel( pTitle );
+                // 람다는 바깥의 `pContext` 를 캡처하지 않는다 — 여기서 다시 받고 다시 확인한다.
+                EditorContext* pMenuContext = EditorContext::get();
+                if ( pMenuContext != nullptr && ImGui::MenuItem( pTitle ) )
+                    pMenuContext->getWorkspace().requestOpenPanel( pTitle );
             } );
             ImGui::EndMenu();
         }
@@ -122,10 +128,14 @@ namespace sw::editor
 
     void EditorMenuBar::drawPanelMenu( EditorDockLayout& dockLayout )
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         if ( ImGui::BeginMenu( "Panel" ) )
         {
             ImGui::SeparatorText( "Panels" );
-            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category != EditorPanelCategory::Core )
                     continue;
@@ -135,7 +145,7 @@ namespace sw::editor
             }
 
             ImGui::SeparatorText( "Tools" );
-            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category == EditorPanelCategory::Core )
                     continue;
@@ -170,21 +180,24 @@ namespace sw::editor
             // 컴파일 완료 상태 전이 감지 (Compiling -> Success / Failed)
             if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
             {
-                const string  targetName  = pCompiler->getTargetName();
-                const string  displayName = targetName.empty() ? "All Modules" : targetName;
-                const float32 duration    = pCompiler->getLastDurationSec();
+                const string   targetName  = pCompiler->getTargetName();
+                const string   displayName = targetName.empty() ? "All Modules" : targetName;
+                const float32  duration    = pCompiler->getLastDurationSec();
+                EditorContext* pContext    = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
 
                 if ( state == BuildState::Success )
                 {
                     fixed_string<constant::kMaxBuffer128> contentBuf;
                     formatstring( contentBuf.data(), contentBuf.capacity(), "%# compiled and reloaded in %#s", displayName.c_str(), Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
-                    EditorContext::get()->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
+                    pContext->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
                 }
                 else if ( state == BuildState::Failed )
                 {
                     fixed_string<constant::kMaxBuffer128> contentBuf;
                     formatstring( contentBuf.data(), contentBuf.capacity(), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), pCompiler->getLastExitCode() );
-                    EditorContext::get()->getNotificationManager().push( "Live Coding Failed", contentBuf.c_str(), NotificationType::Error, 6.0f );
+                    pContext->getNotificationManager().push( "Live Coding Failed", contentBuf.c_str(), NotificationType::Error, 6.0f );
                 }
             }
 
@@ -265,17 +278,25 @@ namespace sw::editor
 
     void EditorMenuBar::processOpenPanelRequests()
     {
-        string openTitle;
-        if ( EditorContext::get()->getWorkspace().consumeOpenPanel( openTitle ) == false )
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
             return;
-        if ( EditorContext::get()->getPanelManager().setPanelOpen( openTitle, true ) )
+
+        string openTitle;
+        if ( pContext->getWorkspace().consumeOpenPanel( openTitle ) == false )
+            return;
+        if ( pContext->getPanelManager().setPanelOpen( openTitle, true ) )
             ImGui::SetWindowFocus( openTitle.c_str() );
     }
 
     void EditorMenuBar::processPendingSceneLoad()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         string scenePath;
-        if ( EditorContext::get()->getWorkspace().consumeLoadScene( scenePath ) == false )
+        if ( pContext->getWorkspace().consumeLoadScene( scenePath ) == false )
             return;
 
         EditorAssetCommands::tryOpenScene( scenePath );

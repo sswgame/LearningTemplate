@@ -503,6 +503,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (같은 함정에 문이 하나 더 있었다 — `EditorContext::get()`)
+
+`CheckNullableServiceUse` 는 2026-09-18 에 "nullptr 을 돌려줄 수 있는 조회를 확인 없이 `->` 로
+따라가는 곳" 을 잡으려고 만든 게이트다. 그런데 **같은 함정의 다른 문**을 보지 않고 있었다 —
+`EditorContext::get()` 은 속으로 `getService<EditorContext>()` 를 부르고 없으면 정적 폴백을
+돌려주므로 이것도 nullptr 이 될 수 있다. 세어 보니 **여든두 자리는 받아서 확인하는데 쉰두 자리가
+그대로 역참조**하고 있었다. 이름만 달라서 게이트를 지나갔다.
+
+쉰두 자리를 전부 "받아서 확인하고 쓰는" 형태로 바꾸고, 게이트 정규식에 그 문을 더했다. 넷은
+**나중에 불리는 람다·델리게이트 안**이라 바깥 포인터를 쓸 수 없다 — 그 자리에서 다시 받고 다시
+확인한다(커맨드 팔레트의 액션 셋, 에셋 메뉴 하나). 게이트 힌트에도 그 경우를 적었다.
+
+**게이트가 스스로를 증명한다.** `selfTestCases` 에 `EditorContext::get()->` 조각을 더했고
+`CheckLintsAreAlive` 가 26 케이스 / 16 게이트로 늘었다.
+
 ### 2026-09-20 (임포트가 같은 이름의 자산을 아무 말 없이 덮었다)
 
 `EditorAssetCommands::importFiles` 는 `ResourceUtil::makeSavePath` 가 준 경로로 그냥 복사했다.

@@ -95,22 +95,38 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void BoneHierarchyPopup::open()
     {
-        EditorContext::get()->getPopupManager().openPopup( "BoneHierarchy" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().openPopup( "BoneHierarchy" );
     }
 
     void BoneHierarchyPopup::close()
     {
-        EditorContext::get()->getPopupManager().closePopup( "BoneHierarchy" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().closePopup( "BoneHierarchy" );
     }
 
     void BoneHierarchyPopup::toggle()
     {
-        EditorContext::get()->getPopupManager().togglePopup( "BoneHierarchy" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        pContext->getPopupManager().togglePopup( "BoneHierarchy" );
     }
 
     bool BoneHierarchyPopup::isOpen()
     {
-        return EditorContext::get()->getPopupManager().isPopupOpen( "BoneHierarchy" );
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return false;
+
+        return pContext->getPopupManager().isPopupOpen( "BoneHierarchy" );
     }
 
     // ------------------------------------------------------------------------------
@@ -118,13 +134,17 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void BoneHierarchyPopup::drawContent()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         if ( EditorChrome::beginPanel( getPopupTitle(), &_bOpen ) == false )
         {
             EditorChrome::endPanel();
             return;
         }
 
-        EditorWorkspace& ws   = EditorContext::get()->getWorkspace();
+        EditorWorkspace& ws   = pContext->getWorkspace();
         const string     name = ws.getSelectedObjectName();
         if ( name.empty() || ws.getSelectedObjectId() == 0 )
         {

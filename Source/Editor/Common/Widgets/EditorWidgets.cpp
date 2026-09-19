@@ -168,20 +168,24 @@ namespace sw::editor
 
     void EditorWidgets::drawGizmoOperationControls()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         // 라디오 값은 `EditorWorkspace` 의 기즈모 조작 번호다 — 여기 숫자는 그 표현일 뿐이고,
         // 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
-        int32 operation = EditorContext::get()->getWorkspace().getGizmoOperation();
+        int32 operation = pContext->getWorkspace().getGizmoOperation();
         ImGui::RadioButton( "Translate", &operation, 0 );
         ImGui::SameLine();
         ImGui::RadioButton( "Rotate", &operation, 1 );
         ImGui::SameLine();
         ImGui::RadioButton( "Scale", &operation, 2 );
         ImGui::SameLine();
-        EditorContext::get()->getWorkspace().setGizmoOperation( operation );
+        pContext->getWorkspace().setGizmoOperation( operation );
 
-        bool bLocalSpace = EditorContext::get()->getWorkspace().isGizmoLocalSpace();
+        bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();
         if ( ImGui::Checkbox( "Local", &bLocalSpace ) )
-            EditorContext::get()->getWorkspace().setGizmoLocalSpace( bLocalSpace );
+            pContext->getWorkspace().setGizmoLocalSpace( bLocalSpace );
     }
 
     void EditorWidgets::drawToolbarSeparator()

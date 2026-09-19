@@ -141,8 +141,15 @@ namespace sw::editor
                 if ( ImGui::BeginPopupContextItem( "CompCtx" ) == false )
                     return;
 
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                {
+                    ImGui::EndPopup();
+                    return;
+                }
+
                 if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-                    EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pObj } );
+                    pContext->getWorkspace().selectGameObject( GameObjectPtr{ pObj } );
 
                 const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
@@ -275,9 +282,12 @@ namespace sw::editor
                         EditorSceneCommands::unparent( pObj );
                 }
 
-                GameObject* pSelected = pManager->findGameObjectById( EditorContext::get()->getWorkspace().getSelectedObjectId() );
-                const bool  bCanParentToSelected =
-                    pSelected != nullptr && pSelected != pObj && EditorContext::get()->getWorkspace().getSelectedComponentId() == 0;
+                EditorContext* pContext             = EditorContext::get();
+                GameObject*    pSelected            = ( pContext != nullptr )
+                                                        ? pManager->findGameObjectById( pContext->getWorkspace().getSelectedObjectId() )
+                                                        : nullptr;
+                const bool     bCanParentToSelected = pContext != nullptr && pSelected != nullptr && pSelected != pObj &&
+                                                  pContext->getWorkspace().getSelectedComponentId() == 0;
                 if ( bCanParentToSelected )
                 {
                     if ( EditorSceneCommands::wouldCreateParentCycle( pObj, pSelected ) == false )
@@ -294,7 +304,8 @@ namespace sw::editor
                 }
 
                 // 동적 확장 메뉴
-                EditorContext::get()->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
+                if ( pContext != nullptr )
+                    pContext->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
 
                 ImGui::Separator();
                 if ( ImGui::MenuItem( "Destroy GameObject", "Delete" ) )
@@ -307,12 +318,16 @@ namespace sw::editor
 
             static void drawSceneComponentNode( GameObject* pObj, SceneComponent* pSceneComp, GameObjectManager* pManager )
             {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
+
                 if ( pObj == nullptr || pSceneComp == nullptr )
                     return;
 
                 ImGui::PushID( static_cast<int32>( pSceneComp->getComponentId() ) );
 
-                EditorWorkspace& ws        = EditorContext::get()->getWorkspace();
+                EditorWorkspace& ws        = pContext->getWorkspace();
                 const bool       bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
                                          ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
@@ -360,6 +375,10 @@ namespace sw::editor
                                             uint64& renamingObjectId, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                             bool& bFocusRenameInput )
             {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
+
                 if ( pObj == nullptr || pManager == nullptr )
                     return;
 
@@ -371,7 +390,7 @@ namespace sw::editor
 
                 const uint64  objectId = pObj->getObjectId();
                 GameObjectPtr ptrObj{ pObj };
-                const bool    bSelected = EditorContext::get()->getSelectionManager().hasObject( ptrObj );
+                const bool    bSelected = pContext->getSelectionManager().hasObject( ptrObj );
 
                 ImGui::PushID( static_cast<int32>( objectId ) );
 
@@ -418,7 +437,7 @@ namespace sw::editor
                     else if ( io.KeyShift )
                         mode = SelectionMode::Add;
 
-                    EditorContext::get()->getWorkspace().selectGameObject( ptrObj, mode );
+                    pContext->getWorkspace().selectGameObject( ptrObj, mode );
                 }
 
                 // Inline Rename Input
@@ -475,7 +494,7 @@ namespace sw::editor
 
                         ImGui::PushID( static_cast<int32>( pComp->getComponentId() ) );
 
-                        EditorWorkspace& ws            = EditorContext::get()->getWorkspace();
+                        EditorWorkspace& ws            = pContext->getWorkspace();
                         const bool       bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
                                                      ws.getSelectedComponentId() == pComp->getComponentId() );
 
@@ -600,7 +619,9 @@ namespace sw::editor
                 if ( ImGui::MenuItem( "Create Empty GameObject" ) )
                     EditorSceneCommands::create( pManager, nullptr );
 
-                EditorContext::get()->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
+                EditorContext* pMenuContext = EditorContext::get();
+                if ( pMenuContext != nullptr )
+                    pMenuContext->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
                 ImGui::EndPopup();
             }
         }
@@ -609,11 +630,15 @@ namespace sw::editor
 
     void HierarchyPanel::handleHierarchyShortcuts( GameObjectManager* pManager )
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         // Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
             const ImGuiIO&               io      = ImGui::GetIO();
-            SelectionManager&            selMgr  = EditorContext::get()->getSelectionManager();
+            SelectionManager&            selMgr  = pContext->getSelectionManager();
             const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
 
             if ( listSel.empty() == false )

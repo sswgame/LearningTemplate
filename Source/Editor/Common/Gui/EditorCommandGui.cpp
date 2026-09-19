@@ -61,8 +61,12 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static void onOpenSceneDialogResult( const vector<string>& listPath )
             {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
+
                 if ( listPath.empty() == false )
-                    EditorContext::get()->getWorkspace().requestLoadScene( listPath[0] );
+                    pContext->getWorkspace().requestLoadScene( listPath[0] );
             }
 
             /// @brief 표는 `void()` 를 요구하고 `tryCreateNewScene` 은 `bool` 을 돌려준다 — 그 차이를 메우려고 남긴다.

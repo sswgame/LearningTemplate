@@ -349,7 +349,11 @@ namespace sw::editor
 
     void EditorViewportClient::drawTransformBar( const float2& anchorPos )
     {
-        const bool bHasSelection = EditorContext::get()->getSelectionManager().getSelectedObjectCount() > 0;
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        const bool bHasSelection = pContext->getSelectionManager().getSelectedObjectCount() > 0;
         EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
     }
 
@@ -421,6 +425,10 @@ namespace sw::editor
 
     void EditorViewportClient::processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera )
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         if ( pCamera == nullptr )
             return;
         if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) == false )
@@ -472,12 +480,12 @@ namespace sw::editor
         EditorPickResult pickResult{};
         if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) )
         {
-            EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pickResult._pObject },
-                                                                  ComponentPtr{ pickResult._pComponent } );
+            pContext->getWorkspace().selectComponent( GameObjectPtr{ pickResult._pObject },
+                                                      ComponentPtr{ pickResult._pComponent } );
         }
         else
         {
-            EditorContext::get()->getWorkspace().clearSelection();
+            pContext->getWorkspace().clearSelection();
         }
     }
 

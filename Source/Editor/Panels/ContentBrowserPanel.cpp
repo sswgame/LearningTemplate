@@ -930,9 +930,13 @@ namespace sw::editor
 
     void ContentBrowserPanel::selectAsset( const AssetEntry& entry )
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
         _selectedAssetAbs = entry._absolutePath;
         if ( entry._bIsDirectory == false )
-            EditorContext::get()->getWorkspace().setFocusedAssetPath( entry._relativePath.c_str() );
+            pContext->getWorkspace().setFocusedAssetPath( entry._relativePath.c_str() );
     }
 
     void ContentBrowserPanel::openAsset( const AssetEntry& entry )
