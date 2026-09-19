@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `723b78be`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `bf5a012f`
 
 ---
 
@@ -434,6 +434,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (리눅스 파일 다이얼로그 — 도구에 따라 다르게 동작하던 자리를 인자 하나로 드러냈다)
+
+앞 항목에서 "열어 둔다" 고 적은 마지막 후보를 닫았다. `openWithZenity` 와 `openWithYad` 는 명령
+조립 스무 줄이 **글자까지 같았는데**, 사본이 이미 갈라져 있었다 — **zenity 만 "All files" 필터를
+붙인다.** yad 만 깔린 기계에서는 선언한 확장자 밖의 파일을 **고를 방법이 없다.** 같은 제품이 설치된
+도구에 따라 다르게 동작하고, 로그에는 아무것도 남지 않는다.
+
+`buildGtkStyleCommand( toolPath, pFileSelectionFlag, params, bMulti, bAppendAllFilesFilter )` 하나로
+모았다. **차이는 이제 인자 둘**이다 — 플래그 이름과 그 bool.
+
+**동작은 바꾸지 않았다.** yad 가 `--file-filter` 를 여러 번 받는지 이 기계에서 확인할 수 없기
+때문이다. 잘못 넣으면 "필터가 제한된다" 가 아니라 도구가 인자를 거부해 **다이얼로그가 아예 안 뜬다**
+— 지금보다 나쁘다. 대신 확인 방법을 그 자리에 적어 두었다(`yad --file --file-filter='A | *.txt'
+--file-filter='All files | *'` 가 뜨는지 본 뒤 호출을 `true` 로). **한 줄만 바꾸면 되는 상태**로
+남겨 두는 것이 여기서 할 수 있는 최선이다.
+
+> **리눅스 전용 파일은 WSL 로 문법 검사부터 한다 — 클론을 건드리지 않고.** `/home/ssw/LearningTemplate`
+> 클론에는 **남의 작업 변경이 남아 있어** 거기서 빌드하면 그것을 건드린다. 대신 윈도우 트리를
+> `/mnt/d/...` 로 읽어 파일 하나만 검사하면 된다:
+> ```bash
+> WIN=/mnt/d/Projects/Personal/LearningTemplate
+> clang++ -std=c++17 -fsyntax-only -DSW_PLATFORM_LINUX -DSW_DEBUG -DSW_COMPILER_CLANG -DSW_X64 >   -DSW_LOG_TAG='"Core"' -I"$WIN/Source/Core" -I"$WIN/Source" -include "$WIN/Source/Core/pch.h" >   "$WIN/Source/Core/File/Linux/LinuxFileDialog.cpp"
+> ```
+> **이것이 실제로 잡았다** — 옛 `openWithYad` 가 kdialog **뒤에** 정의돼 있어서 새 것을 앞에 넣은 뒤
+> 정의가 둘이 됐다. 윈도우 빌드는 이 파일을 아예 컴파일하지 않으므로 끝까지 초록이었을 것이다.
+
+**검증.** 윈도우 Debug·Shipping 빌드(경고 0) · `-L nogpu` 7/7 · 린트 17/17 ·
+**WSL clang `-fsyntax-only` 통과(경고 0)**.
 
 ### 2026-09-19 (RHI 리소스 조리법 — 남은 중복 후보를 전부 판정했다)
 

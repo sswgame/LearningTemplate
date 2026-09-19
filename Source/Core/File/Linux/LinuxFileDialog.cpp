@@ -195,11 +195,29 @@ namespace sw
                 }
             }
 
-            /** @brief Zenity (또는 호환) 도구를 사용하여 다이얼로그를 엽니다. */
-            static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            /**
+             * @brief zenity·yad 계열 도구의 명령줄을 만듭니다. **둘의 차이는 인자 둘뿐입니다.**
+             * @param pFileSelectionFlag 파일 선택 모드를 켜는 플래그 (zenity `--file-selection`, yad `--file`).
+             * @param bAppendAllFilesFilter "All files | *" 필터를 하나 더 붙일지 여부.
+             *
+             * @details 두 도구의 명령 조립이 **글자까지 같은 스무 줄로 복사**돼 있었다. 그런데 그
+             *          사본이 이미 갈라져 있다 — **zenity 만 "All files" 필터를 붙인다.** 즉 yad 만
+             *          깔린 기계에서는 선언한 확장자 밖의 파일을 **고를 방법이 없다.** 같은 제품이
+             *          설치된 도구에 따라 다르게 동작하는 것이고, 어느 쪽도 로그를 남기지 않는다.
+             *
+             * @note **그 차이를 여기서 고치지는 않았다.** yad 가 `--file-filter` 를 여러 번 받는지
+             *       이 기계에서 확인할 수 없기 때문이다. 잘못 넣으면 "필터가 제한된다" 가 아니라
+             *       도구가 인자를 거부해 **다이얼로그가 아예 안 뜬다** — 지금보다 나쁘다.
+             *       대신 차이를 **인자 하나로 드러내** 다음 사람이 한 줄만 바꾸면 되게 했다.
+             *       확인 방법: yad 가 깔린 리눅스에서 `yad --file --file-filter='A | *.txt'
+             *       --file-filter='All files | *'` 가 뜨는지 본다. 뜨면 아래 호출을 `true` 로 바꾼다.
+             */
+            static string buildGtkStyleCommand( string_view toolPath, const utf8* pFileSelectionFlag,
+                                                const FileDialogParams& params, bool bMulti, bool bAppendAllFilesFilter )
             {
                 string cmd = shellQuote( toolPath );
-                cmd += " --file-selection";
+                cmd += " ";
+                cmd += pFileSelectionFlag;
 
                 if ( params._type == FileDialogParams::Type::Save )
                     cmd += " --save --confirm-overwrite";
@@ -207,12 +225,12 @@ namespace sw
                 cmd += " --title=";
                 cmd += shellQuote( dialogTitle( params ) );
 
-                const bool bMulti = params._bEnableMultiselect && params._type == FileDialogParams::Type::Open;
                 if ( bMulti )
                     cmd += " --multiple --separator='|'";
 
                 if ( params._initialDirectory.empty() == false )
                 {
+                    // 디렉터리로 열리게 하려면 끝에 슬래시가 있어야 한다 — 없으면 그 이름의 파일을 고른 것으로 본다.
                     string initial = FileUtil::normalizeSeparators( params._initialDirectory );
                     if ( initial.empty() == false && initial.back() != '/' )
                         initial.push_back( '/' );
@@ -226,20 +244,62 @@ namespace sw
                     const string globs = makeCombinedGlobList( params._listFilterExtension );
                     cmd += " --file-filter=";
                     cmd += shellQuote( label + " | " + globs );
-                    cmd += " --file-filter=";
-                    cmd += shellQuote( string{ "All files | *" } );
+
+                    if ( bAppendAllFilesFilter )
+                    {
+                        cmd += " --file-filter=";
+                        cmd += shellQuote( string{ "All files | *" } );
+                    }
                 }
+                return cmd;
+            }
+
+            /** @brief zenity·yad 의 출력(구분자 `|`)을 경로 목록으로 만듭니다. */
+            static bool collectGtkStyleOutput( string_view output, bool bMulti, vector<string>& outListPath )
+            {
+                if ( bMulti )
+                    splitPaths( output, '|', outListPath );
+                else
+                    outListPath.push_back( FileUtil::normalizeSeparators( output ) );
+                return outListPath.empty() == false;
+            }
+
+            /** @brief 파일 선택 다중 선택이 가능한 상황인지 여부입니다 (저장 대화상자는 하나만 고른다). */
+            static bool isMultiselectEnabled( const FileDialogParams& params )
+            {
+                return params._bEnableMultiselect && params._type == FileDialogParams::Type::Open;
+            }
+
+            /** @brief Zenity (또는 호환) 도구를 사용하여 다이얼로그를 엽니다. */
+            static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            {
+                const bool   bMulti = isMultiselectEnabled( params );
+                const string cmd    = buildGtkStyleCommand( toolPath, "--file-selection", params, bMulti, true );
 
                 int32        exitCode = -1;
                 const string output   = runCommandCapture( cmd, exitCode );
                 if ( exitCode != 0 || output.empty() )
                     return false;
 
-                if ( bMulti )
-                    splitPaths( output, '|', outListPath );
-                else
-                    outListPath.push_back( FileUtil::normalizeSeparators( output ) );
-                return outListPath.empty() == false;
+                return collectGtkStyleOutput( output, bMulti, outListPath );
+            }
+
+            /**
+             * @brief Yad 도구를 사용하여 다이얼로그를 엽니다.
+             * @note "All files" 필터를 붙이지 않는 것이 zenity 와의 유일한 차이다 — 왜 그대로
+             *       두었는지는 `buildGtkStyleCommand` 의 설명을 볼 것.
+             */
+            static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            {
+                const bool   bMulti = isMultiselectEnabled( params );
+                const string cmd    = buildGtkStyleCommand( toolPath, "--file", params, bMulti, false );
+
+                int32        exitCode = -1;
+                const string output   = runCommandCapture( cmd, exitCode );
+                if ( exitCode != 0 || output.empty() )
+                    return false;
+
+                return collectGtkStyleOutput( output, bMulti, outListPath );
             }
 
             /** @brief KDialog 도구를 사용하여 다이얼로그를 엽니다. */
@@ -280,51 +340,6 @@ namespace sw
 
                 if ( bMulti )
                     splitPaths( output, '\n', outListPath );
-                else
-                    outListPath.push_back( FileUtil::normalizeSeparators( output ) );
-                return outListPath.empty() == false;
-            }
-
-            /** @brief Yad 도구를 사용하여 다이얼로그를 엽니다. */
-            static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
-            {
-                string cmd = shellQuote( toolPath );
-                cmd += " --file";
-
-                if ( params._type == FileDialogParams::Type::Save )
-                    cmd += " --save --confirm-overwrite";
-
-                cmd += " --title=";
-                cmd += shellQuote( dialogTitle( params ) );
-
-                const bool bMulti = params._bEnableMultiselect && params._type == FileDialogParams::Type::Open;
-                if ( bMulti )
-                    cmd += " --multiple --separator='|'";
-
-                if ( params._initialDirectory.empty() == false )
-                {
-                    string initial = FileUtil::normalizeSeparators( params._initialDirectory );
-                    if ( initial.empty() == false && initial.back() != '/' )
-                        initial.push_back( '/' );
-                    cmd += " --filename=";
-                    cmd += shellQuote( initial );
-                }
-
-                if ( params._listFilterExtension.empty() == false )
-                {
-                    const string label = params._description.empty() ? "Files" : params._description;
-                    const string globs = makeCombinedGlobList( params._listFilterExtension );
-                    cmd += " --file-filter=";
-                    cmd += shellQuote( label + " | " + globs );
-                }
-
-                int32        exitCode = -1;
-                const string output   = runCommandCapture( cmd, exitCode );
-                if ( exitCode != 0 || output.empty() )
-                    return false;
-
-                if ( bMulti )
-                    splitPaths( output, '|', outListPath );
                 else
                     outListPath.push_back( FileUtil::normalizeSeparators( output ) );
                 return outListPath.empty() == false;
