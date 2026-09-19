@@ -829,6 +829,11 @@ namespace sw
         // 그래서 손대기 전에 값으로 떠 둔다.
         const T valueCopy = value;
 
+        // `_size + count` 가 넘치면 **더 작은** 값이 되어 확보를 건너뛰고, 아래 밀기 루프가
+        // `fromIndex + count` 라는 범위 밖 주소에 쓴다. 담을 수 없는 개수는 여기서 끝낸다.
+        if ( count > ( ~size_t{ 0 } ) - _size )
+            return _pData + offset;
+
         if ( _size + count > _capacity )
             reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
@@ -914,7 +919,11 @@ namespace sw
         size_t offset = static_cast<size_t>( first - _pData );
         size_t count  = static_cast<size_t>( last - first );
         SW_ASSERT( offset + count <= _size );
-        if ( offset + count > _size )
+        // **뺄셈으로 잰다.** `offset + count` 는 `size_t` 안에서 넘칠 수 있다 — `last < first` 인
+        // 이터레이터 쌍이면 `last - first` 가 음수라 `count` 가 거대한 값이 되고, 그 합이 작은
+        // 수로 접혀 이 가드를 그냥 지나간다. 그러면 아래 `_size - count` 도 뒤집혀 루프가 범위
+        // 밖을 쓴다. 같은 모양을 `fixed_string::erase` 에서도 고쳤다.
+        if ( offset > _size || count > _size - offset )
             return _pData + _size;
         if ( count > 0 )
         {

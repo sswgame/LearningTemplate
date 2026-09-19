@@ -394,3 +394,56 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
     SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
 #endif
 }
+
+/**
+ * @brief [VectorTest] 뒤집힌 이터레이터 쌍과 거대한 개수가 첨자를 접지 않는지 검증
+ * @details 두 가드가 덧셈 형태였다 — `erase` 는 `offset + count > _size`, `insert` 는
+ *          `_size + count > _capacity`. `size_t` 안에서 그 합이 넘치면 **작은 수로 접혀**
+ *          가드를 그냥 지나간다. `last < first` 인 이터레이터 쌍이면 `last - first` 가 음수라
+ *          `count` 가 거대해지고(뒤집힌 뺄셈으로 만든 개수도 같다), 그 뒤 `_size - count` 와
+ *          `fromIndex + count` 가 전부 범위 밖을 가리킨다.
+ *
+ *          같은 모양을 `fixed_string::erase` 에서도 고쳤다 — 이 저장소가 되풀이해 만난 형태다.
+ */
+SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
+{
+    BLOCK( "erase — last 가 first 보다 앞이면 아무것도 하지 않는다" )
+    {
+        sw::vector<sw::string> list;
+        for ( int32 index = 0; index < 5; ++index )
+            list.push_back( sw::string( 1, static_cast<utf8>( 'a' + index ) ) );
+
+        list.erase( list.begin() + 3, list.begin() + 1 );
+
+        SW_EXPECT_EQUAL( size_t( 5 ), list.size() );
+        SW_EXPECT_STREQ( "a", list[0].c_str() );
+        SW_EXPECT_STREQ( "e", list[4].c_str() );
+    }
+
+    BLOCK( "erase — 정상 범위는 그대로 동작한다" )
+    {
+        sw::vector<sw::string> list;
+        for ( int32 index = 0; index < 5; ++index )
+            list.push_back( sw::string( 1, static_cast<utf8>( 'a' + index ) ) );
+
+        list.erase( list.begin() + 1, list.begin() + 3 );
+
+        SW_EXPECT_EQUAL( size_t( 3 ), list.size() );
+        SW_EXPECT_STREQ( "a", list[0].c_str() );
+        SW_EXPECT_STREQ( "d", list[1].c_str() );
+        SW_EXPECT_STREQ( "e", list[2].c_str() );
+    }
+
+    BLOCK( "insert — 담을 수 없는 개수는 아무것도 하지 않는다" )
+    {
+        sw::vector<int32> list;
+        list.push_back( 1 );
+        list.push_back( 2 );
+
+        list.insert( list.begin(), ~size_t{ 0 }, 7 );
+
+        SW_EXPECT_EQUAL( size_t( 2 ), list.size() );
+        SW_EXPECT_EQUAL( 1, list[0] );
+        SW_EXPECT_EQUAL( 2, list[1] );
+    }
+}

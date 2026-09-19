@@ -435,6 +435,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (Core 전체를 네 가지 모양으로 훑어 vector 에서 둘을 더 찾았다)
+
+Core 를 함수 단위로 다 읽은 뒤, **이번 훑기가 되풀이해 만난 네 모양**을 Core 전체에 기계적으로
+걸어 빠뜨린 곳이 없는지 확인했다:
+
+| 모양 | 후보 | 결과 |
+|------|------|------|
+| `a + b > cap` 덧셈 경계 검사 | 8 | **2건 실재** (아래), 나머지 6 은 값이 작아 넘칠 수 없다 |
+| `notify_one` | 2 | 둘 다 올바르다 — 대기자가 하나이거나(Logger) 조건이 같다(워커 풀) |
+| `fetch_sub` 하한 없음 | 18 | 17 은 증감이 짝을 이룬다(참조 수·태스크 수), 1 은 앞선 커밋에서 고쳤다 |
+| `SW_ASSERT` 만 두고 그 값으로 첨자 | — | `vector` · `formatstring` 에서 이미 고쳤다 |
+
+**찾은 둘 — `vector` 의 남은 덧셈 가드.**
+
+```cpp
+erase( first, last ) : if ( offset + count > _size )      // last < first 면 count 가 거대해진다
+insert( pos, count, value ) : if ( _size + count > _capacity )
+```
+
+`last < first` 인 이터레이터 쌍이면 `last - first` 가 음수라 `count` 가 `SIZE_MAX` 근처가 되고,
+그 합이 **작은 수로 접혀** 가드를 그냥 지나간다. **`SW_ASSERT( offset + count <= _size )` 도 같은
+식이라 같이 속는다** — Debug 에서도 울지 않는다. 그 뒤 `_size - count` 와 `fromIndex + count` 가
+전부 범위 밖을 가리킨다.
+
+이 파일은 이번 세션에서 이미 두 번 고쳤는데(자기 원소 이동 삽입 · `pop_back`), **덧셈 가드는
+그때 함께 보지 않았다.** 기계적으로 훑고 나서야 나왔다 — 읽기만으로는 남는 자리가 있다는 뜻이다.
+
+**검증.** `VectorTest.ReversedRangeAndHugeCountDoNotWrap`(뒤집힌 범위 · 정상 범위 · `SIZE_MAX`
+개수). 되돌리면 프로세스가 죽는다(exit 3).
+
 ### 2026-09-20 (세지 않은 해제가 프로파일러 카운터를 1.8e19 로 접었다)
 
 `MemoryProfiler::recordFree` 가 태그별 카운터를 그냥 뺐다:
