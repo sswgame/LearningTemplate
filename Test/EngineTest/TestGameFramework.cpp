@@ -6,17 +6,20 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSnapshot.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Base/GameService.h"
+#include "GameFramework/Base/GravityComponent.h"
 #include "GameFramework/Base/SaveGame.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Kits/Overworld/CameraControllerComponent.h"
 #include "GameFramework/Kits/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
@@ -2002,6 +2005,97 @@ SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecom
     // 멀쩡한 값은 그대로다.
     gameData._mapCustomProperty["goodInt"] = "8";
     SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "goodInt", 6 ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] `shake()` 는 **실제로 떨리고** 0 으로 잦아든다
+ * @details `shake()` 가 `_shakeFrequency` 를 건드리지 않았다. 그 값의 기본은 0 이고 코드에서
+ *          넣을 창구가 없었으므로(리플렉션 프로퍼티뿐), 코드로 부른 흔들림은 `sin( t * 0 ) = 0`
+ *          · `cos( t * 0 ) = 1` 이 되어 **떨리지 않고 한쪽으로 밀린 채** 있다가 툭 돌아왔다.
+ *          그리고 위상을 남은 시간으로 계산해서 끝나기 직전이 가장 크게 튀었다.
+ */
+SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
+{
+    CameraControllerComponent camera;
+    SW_EXPECT_TRUE( camera.isShaking() == false );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._x, 1e-5f );
+
+    camera.shake( 10.0f, 1.0f );
+    SW_ASSERT_TRUE( camera.isShaking() );
+
+    // 흔들림이 도는 동안 x 가 **부호를 바꾼다** — 밀려 있기만 하면 이것이 안 일어난다.
+    bool    bSawPositiveX{ false };
+    bool    bSawNegativeX{ false };
+    float32 maxAbsY{ 0.0f };
+    float32 lateAbsY{ 0.0f };
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
+        camera.onTick( 1.0f / 60.0f );
+        const float2 offset = camera.getShakeOffset();
+        if ( offset._x > 0.1f )
+            bSawPositiveX = true;
+        if ( offset._x < -0.1f )
+            bSawNegativeX = true;
+        maxAbsY = MathUtil::max( maxAbsY, MathUtil::abs( offset._y ) );
+        if ( frameIndex >= 55 )
+            lateAbsY = MathUtil::max( lateAbsY, MathUtil::abs( offset._y ) );
+    }
+
+    SW_EXPECT_TRUE_MSG( bSawPositiveX && bSawNegativeX, "흔들리지 않고 한쪽으로 밀려 있기만 합니다" );
+    SW_EXPECT_TRUE_MSG( lateAbsY < maxAbsY * 0.3f, "끝날 무렵에도 크기가 안 줄었습니다" );
+
+    // 시간이 다 되면 정확히 0 이다 — 툭 끊기지 않는다.
+    camera.onTick( 1.0f );
+    SW_EXPECT_TRUE( camera.isShaking() == false );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._x, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._y, 1e-5f );
+}
+
+/**
+ * @brief [GameFrameworkTest] 땅에 닿은 뒤에도 **다시 떨어질 수 있다**
+ * @details `_bIsGrounded` 는 한 번 참이 되면 영영 참이었다. 점프든 리프트든 순간이동이든
+ *          무엇이 올려 놓아도 중력이 다시는 안 걸렸고, 코드에서 되돌릴 창구조차 없었다
+ *          (리플렉션 프로퍼티뿐이었다). 땅을 "붙잡은 기억" 이 아니라 지금 위치로 판정한다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
+{
+    GameObjectManager manager;
+    GameObject*       pObj = manager.createGameObject( hashed_string( "Faller" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    manager.mergePendingAdds();
+
+    // 갓 만든 오브젝트에는 씬 컴포넌트가 없다 — 중력이 움직일 대상을 먼저 붙인다.
+    SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+
+    GravityComponent* pGravity = pObj->addComponent<GravityComponent>();
+    SW_ASSERT_NOT_NULL( pGravity );
+    pGravity->setGravity( -20.0f );
+    pGravity->setGroundY( 0.0f );
+    pGravity->onBeginPlay();
+
+    SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pSceneComp );
+    pSceneComp->setLocalPosition( float3{ 0.0f, 5.0f, 0.0f } );
+
+    // 1) 떨어져서 바닥에 닿는다.
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+        pGravity->onTick( 1.0f / 60.0f );
+    SW_ASSERT_TRUE( pGravity->isGrounded() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pSceneComp->getLocalPosition()._y, 1e-3f );
+
+    // 2) 무엇이 위로 올려 놓았다 — 그러면 다시 떨어져야 한다.
+    pSceneComp->setLocalPosition( float3{ 0.0f, 5.0f, 0.0f } );
+    pGravity->onTick( 1.0f / 60.0f );
+    SW_EXPECT_TRUE_MSG( pGravity->isGrounded() == false, "위로 올렸는데 여전히 땅에 붙어 있습니다" );
+
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+        pGravity->onTick( 1.0f / 60.0f );
+    SW_EXPECT_TRUE_MSG( pGravity->isGrounded(), "다시 떨어지지 않았습니다" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pSceneComp->getLocalPosition()._y, 1e-3f );
+
+    // 3) 점프도 같은 창구다.
+    pGravity->jump( 10.0f );
+    SW_EXPECT_TRUE( pGravity->isGrounded() == false );
 }
 
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )

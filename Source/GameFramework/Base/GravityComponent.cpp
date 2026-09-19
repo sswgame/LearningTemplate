@@ -42,6 +42,14 @@ namespace sw
             return;
 
         float3 pos = pSceneComp->getLocalPosition();
+
+        // **바닥 위로 올라가 있으면 다시 떨어진다.** 예전에는 한 번 닿으면 `_bIsGrounded` 가
+        // 영영 참이었다 — 점프든 리프트든 순간이동이든 무엇이 올려 놓아도 중력이 다시는 안
+        // 걸렸고, 코드에서 그것을 되돌릴 창구조차 없었다(리플렉션 프로퍼티뿐이었다).
+        // 땅을 "붙잡은 기억" 이 아니라 **지금 위치**로 판정한다.
+        if ( _bIsGrounded && pos._y > _groundY )
+            _bIsGrounded = false;
+
         if ( _bIsGrounded == false )
         {
             _velocityY += _gravity * deltaTime;

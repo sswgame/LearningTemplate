@@ -75,7 +75,13 @@ namespace sw
         MonsterDataCatalog( const MonsterDataCatalog& )            = delete;
         MonsterDataCatalog& operator=( const MonsterDataCatalog& ) = delete;
 
-        /** @brief XML 리소스 경로에서 몬스터 정의 테이블을 로드합니다. */
+        /**
+         * @brief XML 리소스 경로에서 몬스터 정의 테이블을 로드합니다.
+         * @return 하나라도 읽었으면 true. 그 밖에는 **최소 폴백을 심고** false 입니다.
+         * @details 실패는 셋이고 셋 다 같게 다룬다 — 파일이 없다, 루트가 `<MonsterCatalog>` 가
+         *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것이 한동안 성공으로
+         *          취급돼서, 태그 철자를 틀리면 텅 빈 카탈로그가 조용히 만들어졌다.
+         */
         bool loadFromResource( string_view assetRelativePath );
 
         /** @brief 몬스터 ID로 정의를 조회합니다. */

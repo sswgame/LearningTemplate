@@ -458,6 +458,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (코드에서 쓸 수 없던 기능 셋 — 흔들림 · 중력 · 몬스터 카탈로그)
+
+커밋 `TBD`. GameFramework 훑기의 마지막 셋. 공통점은 **상태가 `PROPERTY` 로만 있고 그것을
+움직일 창구가 없어서, 그 기능이 코드에서는 동작하지 않았다**는 것이다.
+
+1. **`CameraControllerComponent::shake()` 는 흔들림을 만들지 못했다.** 이 함수가
+   `_shakeFrequency` 를 **건드리지 않는다.** 그 값의 기본은 0 이고 코드에서 넣을 창구가
+   리플렉션 프로퍼티뿐이라, 코드로 부른 흔들림은 `sin( t * 0 ) = 0` · `cos( t * 0 ) = 1` 이
+   되어 **떨리지 않고 한쪽으로 밀린 채** 있다가 시간이 다 되면 툭 돌아왔다. 씬 파일에
+   `shakeFrequency` 를 손으로 적은 경우에만 제대로 흔들렸다.
+   그리고 위상을 **남은 시간**으로 계산해서 잦아들 무렵 `cos` 항이 최대가 됐다 — 끝나기
+   직전이 가장 크게 튀고 다음 프레임에 0 으로 끊겼다. 위상은 흐른 시간, 크기는 남은 비율.
+2. **`GravityComponent::_bIsGrounded` 는 한 번 참이 되면 영영 참이었다.** 점프든 리프트든
+   순간이동이든 무엇이 올려 놓아도 중력이 다시는 안 걸렸고, 코드에서 되돌릴 창구조차 없었다.
+   땅을 "붙잡은 기억" 이 아니라 **지금 위치**로 판정하고, `jump()` · `setGravity()` ·
+   `setGroundY()` · `isGrounded()` 를 붙였다.
+3. **`MonsterDataCatalog::loadFromResource` 의 세 번째 실패만 폴백을 안 심었다.** 파일이 없다 ·
+   루트가 없다 두 길은 심는데, **읽었는데 `<Monster>` 가 하나도 없는** 경우는 "0 개 로드" 라는
+   밝은 Info 한 줄과 텅 빈 카탈로그로 끝났다. `<Monster>` 를 `<monster>` 로 적은 오타 하나면
+   모든 `findMonster` 가 nullptr 이 된다.
+
+테스트 둘(`CameraShakeOscillatesAndDecaysToZero`, `GroundedObjectFallsAgainAfterBeingLifted`).
+카메라 쪽은 `getShakeOffset()` 이라는 테스트 이음새를 냈다 — 오프셋이 씬 컴포넌트 위치로만
+새어 나가서 밖에서 잴 수가 없었다.
+
 ### 2026-09-20 (도달할 수 없는 분기 둘 · 콜백 뒤에 상태를 덮어썼다 — 턴전투 · 전환 · GameData)
 
 커밋 `TBD`. GameFramework 마무리에서 나온 다섯.
