@@ -435,6 +435,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Core 마감 + Win32 문자열 변환 두 곳)
+
+**Core 18개 폴더를 다 봤다.** 남은 여섯(Log · Math · Process · Task · Time · Uuid)에서는 고칠
+것이 나오지 않았고, 대신 할당기 바닥에서 하나가 더 나왔다.
+
+**`sw::Allocator<T>::allocate( n )` 이 `n * sizeof( T )` 를 검사 없이 곱했다.** 그 곱이 뒤집히면
+**요청보다 훨씬 작은 블록**이 잡히고, 호출부는 원소 n 개를 쓸 수 있다고 믿고 그 밖으로 나간다.
+`vector::max_size()` 가 이미 그 한계(`SIZE_MAX / sizeof(T)`)를 말하고 있었는데 **아무도 강제하지
+않았다** — 표준 할당기가 같은 자리에서 던지는 이유가 이것이다. 이제 던진다.
+(`MemoryTest.AllocatorRejectsElementCountThatOverflows`, 가드를 빼면 두 단언이 진다.)
+
+**`D3D11RHICommandContext::beginEventMarker` 가 배열 밖을 읽을 수 있었다.** 이름을
+`utf16 wide[256]` 에 `MultiByteToWideChar` 로 직접 옮겼는데, 그 API 는 이름이 버퍼보다 길면
+**0 을 돌려주고 널 종단을 보장하지 않는다.** 그대로 `BeginEvent` 에 넘기면 널을 찾아 배열
+밖까지 읽는다.
+
+> 처음에는 고정 버퍼를 둔 채 "잘라서라도 담는" 쪽으로 고쳤는데, 사용자가 **`StringUtil` 을 쓰면
+> 되지 않나** 고 지적했다. 맞다 — `StringUtil::utf8ToUtf16` 은 길이 상한이 없으므로 이 종류가
+> 통째로 사라진다. 잘라 담을 일도, UTF-8 다중바이트 시퀀스가 중간에서 끊길 일도 없다(내 첫
+> 수정은 소스 바이트 수로 잘라서 그 위험이 남아 있었다). 마커는 그래픽스 디버거가 붙었을 때만
+> 동작하므로 할당 한 번을 아낄 이유도 없었다.
+
+**IME 조합 문자열 버퍼의 상한이 우연에 기대고 있었다.** `ImmGetCompositionStringW` 가 돌려주는
+것은 **바이트 수**인데 버퍼는 와이드 문자 배열이고, 검사 상수는 `kMaxBuffer512`(바이트),
+버퍼는 `fixed_wstring<kMaxBuffer256>`(문자)였다. 지금은 맞지만 **둘 중 하나만 고치면 조용히
+넘친다.** 상한을 버퍼 길이에서 직접 계산하게 했다.
+
+**검증.** 정적 씬 스크린샷이 dx11 을 포함한 **네 백엔드 모두** 기존 해시 `d2c61c1f8e57cf2d` 와
+일치한다. Debug·Release·Shipping·ASAN 경고 0, nogpu 7/7 × 3 프리셋, hostgpu 2/2, lint 19/19.
+
+**남은 Core 여섯에서 살펴보고 문제 없던 것:** `Logger`(디스패치가 락 밖에서 생포인터를 쓰지만
+`shutdown` 이 워커를 먼저 join 하고 `_listOutput` 은 비우지 않으므로 성립한다 / `LogRecord`·
+`LogEntry` 가 전부 소유하는 string 이라 큐를 건너도 안전하다 / 큐가 가득 차면 동기로 쓴다),
+`MathUtil::align`·`isPowerOfTwo`, `TaskManager` 의 참조 계수와 슬랩, `CpuTimer`(생성자가 중지
+상태로 시작하는 이유까지 이미 적혀 있다), `Uuid`(`tryParse` 가 하이픈 위치·개수를 다 거른다),
+`CrashContext`(할당도 stdio 도 쓰지 않는 크래시 경로).
+
+**Engine 훑기 시작 — 패턴 검사로 먼저 걸렀다.** 첨자 안 뺄셈 0건, 역방향 `>=` 루프 0건,
+assert-only 가드 0건(Engine 전체에 assert 가 11개뿐이다), `front()`/`back()` 후보 37건은
+**전부 오탐**이었다(가드가 같은 줄이나 함수 앞머리에 있었다 — `forEachContentLine` 이 빈 줄을
+거르고, `BlendSpace`·`RenderGraph`·`XmlDocument` 모두 앞에서 막고 있다).
+
 ### 2026-09-19 (널 바이트를 게이트가 맡는다 — 린트 19개)
 
 위 항목(주석에 박힌 널 바이트)은 "실수했는데 못 봤다" 가 아니라 **"봐도 안 보이는"** 종류다 —

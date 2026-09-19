@@ -57,8 +57,18 @@ namespace sw
         template <typename U>
         constexpr Allocator( const Allocator<U>& ) noexcept {}
 
+        /**
+         * @brief 원소 `n` 개 분량을 잡습니다.
+         * @details `n * sizeof( T )` 가 **뒤집히면 요청보다 훨씬 작은 블록이 잡히고**, 호출부는
+         *          원소 `n` 개를 쓸 수 있다고 믿고 그 밖으로 나간다. 표준 할당기가 같은 자리에서
+         *          던지는 이유가 그것이다 — `vector::max_size()` 가 이미 이 한계를 말하고 있는데
+         *          아무도 강제하지 않고 있었다.
+         */
         [[nodiscard]] T* allocate( size_t n )
         {
+            if ( n > ( ~size_t( 0 ) ) / sizeof( T ) )
+                throw std::bad_alloc();
+
             T* p = static_cast<T*>( Memory::allocate( n * sizeof( T ) ) );
             if ( p != nullptr )
                 return p;

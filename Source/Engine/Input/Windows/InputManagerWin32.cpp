@@ -272,10 +272,17 @@ namespace sw
                         HIMC hImc = ImmGetContext( pHwnd );
                         if ( hImc != nullptr )
                         {
+                            // `ImmGetCompositionStringW` 가 돌려주는 것은 **바이트 수**이고 버퍼는
+                            // 와이드 문자 배열이다 — 그래서 상한을 버퍼 길이에서 직접 계산한다.
+                            // 예전에는 `kMaxBuffer512`(바이트)와 `kMaxBuffer256`(문자) 두 상수가
+                            // 우연히 맞아떨어져 있었을 뿐이라, 어느 한쪽만 고치면 조용히 넘쳤다.
+                            using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
+                            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::kMaxBuffer256 * sizeof( utf16 ) );
+
                             const LONG size = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
-                            if ( size > 0 && size < static_cast<LONG>( constant::kMaxBuffer512 ) )
+                            if ( size > 0 && size < kMaxCompositionByteLength )
                             {
-                                fixed_wstring<constant::kMaxBuffer256> wstrBuf;
+                                CompositionBuffer wstrBuf;
                                 ImmGetCompositionStringW( hImc, GCS_COMPSTR, wstrBuf.data(), static_cast<DWORD>( size ) );
                                 wstrBuf.data()[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
                                 fixed_string<constant::kMaxBuffer512> utf8Buf;

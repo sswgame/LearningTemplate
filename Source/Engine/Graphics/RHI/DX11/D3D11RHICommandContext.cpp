@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
@@ -544,9 +545,14 @@ namespace sw
         ID3DUserDefinedAnnotation* pAnnotation = getAnnotation();
         if ( pAnnotation != nullptr )
         {
-            utf16 wide[constant::kMaxBuffer256]{};
-            MultiByteToWideChar( CP_UTF8, 0, pName, -1, wide, constant::kMaxBuffer256 );
-            pAnnotation->BeginEvent( wide );
+            // 예전에는 `utf16 wide[256]` 에 `MultiByteToWideChar` 로 직접 옮겼다. 그 API 는 이름이
+            // 버퍼보다 길면 **0 을 돌려주고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에
+            // 넘기면 널을 찾아 배열 밖까지 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUtf16` 을
+            // 쓰면 그 종류가 통째로 사라진다 — 잘라 담을 일도, 다중바이트 시퀀스가 중간에서
+            // 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
+            // 널이 아니다) 여기서 한 번 할당하는 비용은 캡처 비용에 묻힌다.
+            const wstring wideName = StringUtil::utf8ToUtf16( pName );
+            pAnnotation->BeginEvent( wideName.c_str() );
         }
     }
 

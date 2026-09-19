@@ -445,3 +445,52 @@ SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
         sw::Memory::free( pSmall );
     }
 }
+
+/**
+ * @brief [MemoryTest] 원소 개수 × 크기가 뒤집히면 **던진다** — 작은 블록을 내주지 않는다
+ * @details `sw::Allocator<T>::allocate( n )` 은 `n * sizeof( T )` 로 바이트 수를 구했다. 그 곱이
+ *          뒤집히면 **요청보다 훨씬 작은 블록**이 잡히고, 호출부는 원소 n 개를 쓸 수 있다고 믿고
+ *          그 밖으로 나간다. `vector::max_size()` 가 이미 이 한계(`SIZE_MAX / sizeof(T)`)를 말하고
+ *          있었는데 아무도 강제하지 않았다. 표준 할당기가 같은 자리에서 던지는 이유가 이것이다.
+ */
+SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
+{
+    sw::Allocator<int64> allocator;
+
+    // sizeof(int64) == 8 이므로 max_size 는 SIZE_MAX/8 이다. 그 위는 곱이 뒤집힌다.
+    const size_t overflowingCount = ( ~size_t( 0 ) / 8 ) + 1;
+
+    bool bThrew = false;
+    try
+    {
+        int64* pMemory = allocator.allocate( overflowingCount );
+        allocator.deallocate( pMemory, overflowingCount );
+    }
+    catch ( const std::bad_alloc& )
+    {
+        bThrew = true;
+    }
+    SW_EXPECT_TRUE_MSG( bThrew, "곱이 뒤집히는 개수에 블록을 내줬습니다 — 호출부가 그 밖으로 나갑니다" );
+
+    // vector 가 말하는 한계와 실제로 같은 자리인지 못박는다.
+    sw::vector<int64> listValue;
+    SW_EXPECT_EQUAL( ~size_t( 0 ) / sizeof( int64 ), listValue.max_size() );
+
+    bool bReserveThrew = false;
+    try
+    {
+        listValue.reserve( overflowingCount );
+    }
+    catch ( const std::bad_alloc& )
+    {
+        bReserveThrew = true;
+    }
+    SW_EXPECT_TRUE_MSG( bReserveThrew, "vector 가 max_size 를 넘는 reserve 를 받아들였습니다" );
+    SW_EXPECT_TRUE( listValue.empty() );
+
+    // 평범한 크기는 그대로 된다 — "다 막는다" 로 굳지 않는다.
+    listValue.reserve( 16 );
+    listValue.push_back( 42 );
+    SW_EXPECT_EQUAL( size_t( 1 ), listValue.size() );
+    SW_EXPECT_EQUAL( int64( 42 ), listValue[0] );
+}
