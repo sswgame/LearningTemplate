@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
@@ -222,7 +222,7 @@ namespace sw::editor
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
-    void EditorTransaction::recordCreation( GameObjectPtr pObj, string_view label )
+    void EditorTransaction::recordObjectLifetime( GameObjectPtr pObj, string_view label, ObjectLifetimeEdit edit )
     {
         GameObject* pRaw = pObj.get();
         if ( pRaw == nullptr )
@@ -235,9 +235,9 @@ namespace sw::editor
         const string   stateXml   = ObjectStateSerializer::saveToXmlString( pRaw );
         const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( objId ) : string{};
 
-        CommandStack::Command cmd{};
-        cmd._label = string{ label };
-        cmd._undo  = [guid, objId, objName]()
+        // 오브젝트를 없애는 절차. 선택에서 먼저 빼는 것이 중요하다 — 선택 목록이 죽은 오브젝트를
+        // 들고 있으면 다음 프레임의 인스펙터·기즈모가 그것을 따라간다.
+        Delegate<void()> destroyStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [guid, objId, objName]()
         {
             GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
             if ( pManager == nullptr )
@@ -251,9 +251,11 @@ namespace sw::editor
                     pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
                 pManager->destroyObject( pTarget );
             }
-        };
+        } );
 
-        cmd._redo = [guid, objName, stateXml, prefabPath]()
+        // 저장해 둔 XML 로 오브젝트를 되살리는 절차. guid 를 먼저 되돌려 놓아야 다음 되돌리기가
+        // 같은 오브젝트를 다시 찾을 수 있다.
+        Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [guid, objName, stateXml, prefabPath]()
         {
             GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
             if ( pManager == nullptr )
@@ -273,7 +275,14 @@ namespace sw::editor
                     pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
                 }
             }
-        };
+        } );
+
+        // **여기가 이 함수의 전부다** — 생성과 삭제는 같은 두 절차를 반대로 잇는 것이다.
+        CommandStack::Command cmd{};
+        cmd._label                         = string{ label };
+        const bool bUndoRecreatesTheObject = ( edit == ObjectLifetimeEdit::Destroyed );
+        cmd._undo                          = bUndoRecreatesTheObject ? recreateStep : destroyStep;
+        cmd._redo                          = bUndoRecreatesTheObject ? destroyStep : recreateStep;
 
         // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
         CommandStack* pStack = EditorTransactionInternal::getCommandStack();
@@ -282,64 +291,14 @@ namespace sw::editor
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
+    void EditorTransaction::recordCreation( GameObjectPtr pObj, string_view label )
+    {
+        recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Created );
+    }
+
     void EditorTransaction::recordDestruction( GameObjectPtr pObj, string_view label )
     {
-        GameObject* pRaw = pObj.get();
-        if ( pRaw == nullptr )
-            return;
-
-        EditorContext* pContext   = EditorContext::get();
-        const uint64   objId      = pRaw->getObjectId();
-        const Uuid     guid       = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
-        const string   objName    = string{ pRaw->getName().c_str() };
-        const string   stateXml   = ObjectStateSerializer::saveToXmlString( pRaw );
-        const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( objId ) : string{};
-
-        CommandStack::Command cmd{};
-        cmd._label = string{ label };
-        cmd._undo  = [guid, objName, stateXml, prefabPath]()
-        {
-            GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
-            if ( pManager == nullptr )
-                return;
-
-            GameObject* pCreated = pManager->createGameObject( hashed_string( objName.c_str() ) );
-            if ( pCreated != nullptr )
-            {
-                EditorContext* pCurrentContext = EditorContext::get();
-                if ( pCurrentContext != nullptr && guid.isNull() == false )
-                    pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), guid );
-                ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
-                ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
-                if ( pCurrentContext != nullptr )
-                {
-                    pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
-                    pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
-                }
-            }
-        };
-
-        cmd._redo = [guid, objId, objName]()
-        {
-            GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
-            if ( pManager == nullptr )
-                return;
-
-            GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
-            if ( pTarget != nullptr )
-            {
-                EditorContext* pCurrentContext = EditorContext::get();
-                if ( pCurrentContext != nullptr && pCurrentContext->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
-                    pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
-                pManager->destroyObject( pTarget );
-            }
-        };
-
-        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
-        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
-        if ( pStack != nullptr )
-            pStack->push( std::move( cmd ) );
-        EditorTransactionInternal::markActiveSceneDirty();
+        recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Destroyed );
     }
 
     void EditorTransaction::push( Delegate<void()> undo, Delegate<void()> redo, string_view label,

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `ad462035`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `bbcd956f`
 
 ---
 
@@ -434,6 +434,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (Undo 와 Redo 가 서로의 거울인데 코드는 네 벌이었다 — 그리고 그 왕복엔 테스트가 없었다)
+
+`recordCreation` 과 `recordDestruction` 은 **같은 두 절차를 반대로 이은 것**이다 — "없앤다" 와
+"저장해 둔 XML 로 되살린다". 그런데 그 두 절차가 **네 벌로 복사**돼 있었다(없애기 둘 · 되살리기 둘).
+지금은 바이트까지 같다는 것을 프로그램으로 확인했다 — **아직 갈라지지 않았을 뿐이다.**
+
+되살리기 쪽을 한 번 고치면(부모 복원·이름 충돌 처리 같은 것) 나머지 방향이 조용히 뒤처지고,
+증상은 **"Undo 는 되는데 Redo 는 안 된다"** 로 나온다. 사용자가 작업을 잃는 방식이면서 로그에는
+아무것도 남지 않는 종류다.
+
+`recordObjectLifetime( pObj, label, ObjectLifetimeEdit )` 하나로 모았다. 두 절차를 만들고
+**방향이 순서만 정한다** — `Created` 면 Undo 가 없애고, `Destroyed` 면 Undo 가 되살린다.
+`recordCreation`·`recordDestruction` 은 그 호출 한 줄이 됐다.
+
+**더 큰 발견은 그 왕복에 테스트가 하나도 없었다는 것이다.** 이 스위트의 기존 케이스들은 씬이 없어
+Undo/Redo 델리게이트가 **곧장 돌아가고 있었다** — 즉 절차의 본체는 한 번도 실행되지 않았다.
+`SceneManager` 를 지역 서비스로 걸면(`bindLocalService`) `editor::getActiveScene()` 이 답하므로
+델리게이트가 끝까지 지나간다. `ObjectLifetimeUndoRedoAreMirrors` 가 두 방향을 **실제로 실행해**
+살아 있는 오브젝트 수로 확인한다.
+
+변이 확인: 방향을 뒤집으면 세 단언이 실패한다(생성의 Undo 가 안 없애고, 생성의 Redo 가 안 되살리고,
+삭제의 Undo 가 안 되살린다).
+
+**검증.** Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 · 린트 17/17 ·
+`EditorTransactionTest` 4/4 · **테스트 씬**으로 DX12 에디터 실기동 `[Error]` 0건 · 패널 덤프 창 15개 ·
+내용 없는 패널 0개.
 
 ### 2026-09-19 (future 의 잠금 규약이 두 벌이었다 — `SharedFutureSignal` 하나로)
 

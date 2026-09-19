@@ -8,6 +8,8 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include "TestFramework/TestFramework.h"
@@ -35,6 +37,30 @@ namespace
         ScopedCommandStackService( const ScopedCommandStackService& )            = delete;
         ScopedCommandStackService& operator=( const ScopedCommandStackService& ) = delete;
     };
+
+    /** @brief 스코프 동안 씬 매니저를 지역 서비스로 걸어 둡니다 — `editor::getActiveScene()` 이 답하게 됩니다. */
+    class ScopedSceneManagerService
+    {
+    public:
+        explicit ScopedSceneManagerService( SceneManager& sceneManager ) { bindLocalService<SceneManager>( &sceneManager ); }
+        ~ScopedSceneManagerService() { unbindLocalService<SceneManager>(); }
+
+        ScopedSceneManagerService( const ScopedSceneManagerService& )            = delete;
+        ScopedSceneManagerService& operator=( const ScopedSceneManagerService& ) = delete;
+    };
+
+    /** @brief 살아 있는(pendingKill 이 아닌) 같은 이름의 오브젝트 수입니다. */
+    size_t countLiveObjectsNamed( GameObjectManager& manager, const utf8* pName )
+    {
+        const hashed_string wanted( pName );
+        size_t              count = 0;
+        manager.forEachGameObject( [&count, wanted]( GameObject* pObj )
+        {
+            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->getName() == wanted )
+                ++count;
+        } );
+        return count;
+    }
 
     /** @brief 트랜잭션 API 를 한 바퀴 다 불러 봅니다. 스택이 없어도 터지지 않아야 합니다. */
     void callEveryTransactionEntryPoint( GameObjectPtr target )
@@ -124,4 +150,71 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
     // 앞뒤가 같으면 애초에 기록하지 않는 계약이므로 일부러 다르게 준다.
     EditorTransaction::recordModify( GameObjectPtr{ pObject }, "<a/>", "<b/>", "Probe" );
     EditorTransaction::recordBinaryModify( GameObjectPtr{ pObject }, vector<uint8>{ 1 }, vector<uint8>{ 2 }, "Probe binary" );
+}
+
+/**
+ * @brief [EditorTransactionTest] 생성과 삭제의 Undo/Redo 는 **서로의 거울**이다
+ * @details 생성과 삭제는 같은 두 절차("없앤다" · "저장해 둔 XML 로 되살린다")를 **반대로 이은 것**이다.
+ *          예전에는 그 두 절차가 `recordCreation` 과 `recordDestruction` 에 네 벌로 복사돼 있었다 —
+ *          없애기 두 벌, 되살리기 두 벌, 바이트까지 같았다. 되살리기 쪽을 한 번 고치면 나머지 방향이
+ *          조용히 뒤처지고, 증상은 **"Undo 는 되는데 Redo 는 안 된다"** 로 나온다. 사용자가 작업을
+ *          잃는 방식이면서, 로그에는 아무것도 남지 않는 종류다.
+ *
+ *          이 케이스는 두 방향을 **실제로 실행해** 확인한다 — `SceneManager` 를 지역 서비스로 걸면
+ *          `editor::getActiveScene()` 이 답하므로 Undo/Redo 델리게이트가 끝까지 지나간다(그 전까지
+ *          이 스위트의 다른 케이스들은 씬이 없어 델리게이트가 곧장 돌아가고 있었다).
+ */
+SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "TransactionProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    SW_ASSERT_EQUAL( pScene, getActiveScene() );
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+
+    BLOCK( "생성 — Undo 가 없애고 Redo 가 되살린다" )
+    {
+        GameObject* pBorn = pManager->createGameObject( hashed_string( "Born" ) );
+        SW_ASSERT_NOT_NULL( pBorn );
+        pManager->mergePendingAdds();
+        SW_ASSERT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "Born" ) );
+
+        EditorTransaction::recordCreation( GameObjectPtr{ pBorn }, "Create Born" );
+        SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+
+        stack.undo();
+        pManager->mergePendingAdds();
+        SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Born" ) );
+
+        stack.redo();
+        pManager->mergePendingAdds();
+        SW_EXPECT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "Born" ) );
+    }
+
+    BLOCK( "삭제 — Undo 가 되살리고 Redo 가 없앤다" )
+    {
+        GameObject* pDoomed = pManager->createGameObject( hashed_string( "Doomed" ) );
+        SW_ASSERT_NOT_NULL( pDoomed );
+        pManager->mergePendingAdds();
+
+        // 기록은 **삭제 전** 스냅샷만 남긴다 — 실제로 지우는 것은 호출부의 몫이다.
+        EditorTransaction::recordDestruction( GameObjectPtr{ pDoomed }, "Delete Doomed" );
+        pManager->destroyObject( pDoomed );
+        SW_ASSERT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
+
+        stack.undo();
+        pManager->mergePendingAdds();
+        SW_EXPECT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
+
+        stack.redo();
+        pManager->mergePendingAdds();
+        SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
+    }
 }
