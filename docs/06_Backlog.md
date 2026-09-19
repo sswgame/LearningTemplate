@@ -435,6 +435,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Source 함수 단위 점검 — Core/File · Core/String)
+
+**깊은 경로에 설치하면 엔진이 조용히 아무것도 못 찾는다.** `FileUtil::getExecutablePath` 의
+윈도우 경로가 260자 고정 버퍼에 `GetModuleFileNameW` 를 부르고 **반환값을 보지 않았다.** 그 API 는
+버퍼가 모자라면 잘라서 돌려주고 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 잘린 경로의
+디렉터리를 기준으로 찾는 것이 모듈 DLL · RHI 백엔드 · 셰이더 · 리소스 매니저 · 로그 폴더까지
+**열 군데**다 — 전부 "없다" 가 되고 원인은 어디에도 안 남는다. 이제 다 담길 때까지 버퍼를 키우고,
+윈도우 경로 상한(32767자)에서 멈춘다.
+
+새 케이스 `FileTest.ExecutablePathPointsAtARealFile` 은 돌려준 경로가 **실제로 있는 파일**인지,
+절대 경로인지, 두 번 물어도 같은지를 본다. 260자를 넘는 설치 경로를 여기서 만들 수는 없으므로
+잘림 자체는 재현하지 못한다 — 대신 잘림 처리를 잘못 넣으면 이 검사가 먼저 진다.
+
+**`StringBuilder::ensureCapacity` 가 할당 실패를 보지 않았다.** `Memory::allocate` 의 결과를 곧장
+`Memory::copy` 의 목적지로 넘겼다 — 지면 널에 복사하고, 이어서 `_pBuffer` 가 널인 채 `_capacity`
+만 커져서 **그 뒤의 모든 append 가 널에 쓴다.** `appendFormat` 은 한 술 더 떠서, 못 키운 걸 모르고
+같은 크기로 다시 찍는 루프를 **영영 돌았다.** 이제 실패를 돌려주고 호출부 열한 곳이 그대로
+빠져나간다(버퍼는 손대지 않으므로 지금까지 쌓은 내용이 살아 있다).
+
+> 로그를 남기지 않는 이유는 **로거 자신이 이 클래스를 쓰기 때문이다** — `formatString.h` 가
+> 인자 개수 불일치를 stderr 로 직접 찍는 것과 같은 이유다.
+>
+> 할당 실패 경로에는 **테스트를 붙이지 못했다.** 실패를 주입할 창구가 없다. 잡지 못하는 검사를
+> 두느니 여기 적어 둔다 — 고친 것은 "널에 쓰지 않는다" 이고 그것은 코드를 읽어 확인했다.
+
+**덤:** `FileUtil.cpp` 에서 이제 안 쓰는 `fixed_string.h` include 를 지웠다(헤더 462개 전부
+여전히 혼자 선다).
+
+**살펴보고 문제 없던 것:** `FileUtil` 의 경로 조작 전부(`splitPath`·`getDirectoryPart`·
+`joinPath`·`removeExtension` 등 — `string_view::substr` 범위가 전부 안전하다), `readFile`·
+`readTextFile`(뺄셈으로 경계를 보고 짧은 읽기도 처리한다), `fixed_string`(`c_str()` 이 버퍼를
+그대로 돌려주고 `size()` 가 strlen 으로 다시 세므로 `data()` 에 외부 API 가 써도 맞는다).
+
 ### 2026-09-19 (Source 함수 단위 점검 — Core/Delegate · Core/Event · Core/Memory)
 
 **할당기 셋이 모두 `size + 무언가` 로 크기를 정하고 있었다.** `size` 가 클수록 그 합이 **뒤집혀

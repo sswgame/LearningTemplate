@@ -122,3 +122,33 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 
     sw::FileUtil::removeFile( testPath );
 }
+
+/**
+ * @brief [FileTest] 실행 파일 경로는 **실제로 있는 파일**을 가리킨다
+ * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고 그 사실을
+ *          반환값으로만 알린다. 예전에는 260자 고정 버퍼에 담고 반환값을 보지 않았다 — 그보다
+ *          깊은 경로에 설치되면 exe 위치가 조용히 틀려지고, 그 자리를 기준으로 찾는 모듈 DLL ·
+ *          RHI 백엔드 · 셰이더 · 리소스가 **전부** "없다" 가 된다. 원인은 어디에도 남지 않는다.
+ *
+ *          260자를 넘는 설치 경로를 여기서 만들어 낼 수는 없으므로, 이 검사는 **정상 경로가
+ *          여전히 온전한지**를 본다(잘림 처리를 잘못 넣으면 여기서 빈 문자열이나 깨진 경로가
+ *          나온다). 실제로 이 저장소의 테스트 상당수가 이 함수로 Bin 폴더를 찾으므로, 망가지면
+ *          그쪽이 먼저 무너진다.
+ */
+SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
+{
+    const sw::string executablePath = sw::FileUtil::getExecutablePath();
+
+    SW_ASSERT_TRUE( executablePath.empty() == false );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::fileExists( executablePath ),
+                        "실행 파일 경로가 없는 파일을 가리킵니다 — 잘렸거나 깨졌습니다" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::isAbsolutePath( executablePath ), "실행 파일 경로가 절대 경로가 아닙니다" );
+
+    // 디렉터리 부분도 실제로 있어야 한다 — 엔진이 리소스·모듈을 찾는 기준점이다.
+    const sw::string executableDirectory = sw::FileUtil::getDirectoryPart( executablePath );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::directoryExists( executableDirectory ),
+                        "실행 파일의 디렉터리가 없습니다" );
+
+    // 두 번 물어도 같은 답이어야 한다(버퍼를 키우는 루프가 상태를 남기지 않는다).
+    SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath() == executablePath );
+}

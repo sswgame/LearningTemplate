@@ -9,7 +9,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/fixed_string.h"
 #include "Core/String/string_splitter.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -41,6 +40,9 @@ namespace sw
             /// @brief cancelFileDialogResults 가 올린다. 이미 열려 있는 다이얼로그의 결과를 버리는 표식이다.
             inline static uint32 _s_generation{ 0 };
         };
+
+        /** @brief 윈도우 경로의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
+        constexpr size_t kMaxWindowsPathSize = 32768;
     } // namespace
 
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
@@ -450,9 +452,27 @@ namespace sw
     string FileUtil::getExecutablePath()
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        fixed_wstring<constant::kMaxPathSize> path;
-        GetModuleFileNameW( nullptr, path.data(), path.capacity() );
-        return StringUtil::utf16ToUtf8( path.c_str() );
+        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)
+        // 으로만 알린다. 그것을 안 보면 260자를 넘는 경로에 설치된 순간 exe 위치가 조용히 틀려지고,
+        // 그 자리를 기준으로 찾는 모듈 DLL·RHI 백엔드·셰이더·리소스가 **전부** "없다" 가 된다 —
+        // 어디에도 원인이 남지 않는다. 그래서 다 담길 때까지 버퍼를 키운다.
+        vector<utf16> listPathBuffer( constant::kMaxPathSize );
+        for ( ;; )
+        {
+            const DWORD writtenCount = GetModuleFileNameW( nullptr, listPathBuffer.data(), static_cast<DWORD>( listPathBuffer.size() ) );
+            if ( writtenCount == 0 )
+                return string{};
+
+            // 반환값이 버퍼 크기와 같으면 잘린 것이다(작으면 다 담긴 것이다).
+            if ( writtenCount < listPathBuffer.size() )
+                return StringUtil::utf16ToUtf8( listPathBuffer.data() );
+
+            // 윈도우 경로 상한(32767자)을 넘으면 더 키워 봐야 소용없다.
+            if ( listPathBuffer.size() >= kMaxWindowsPathSize )
+                return string{};
+
+            listPathBuffer.resize( listPathBuffer.size() * 2 );
+        }
 #elif defined( SW_PLATFORM_MACOS )
         utf8   arrPathBuf[constant::kMaxBuffer1024];
         uint32 bufSize = sizeof( arrPathBuf );
