@@ -421,6 +421,55 @@ SW_TEST_CASE( ActionMapTest, CommandPatternFuzzyCombo )
 }
 
 /**
+ * @brief [ActionMapTest] 바인딩 종류 표가 **비어 있는 칸 없이** 모든 종류를 덮는가
+ * @details 아래 `SaveAndLoadAllBindingKinds` 는 아홉 종류를 **손으로 나열한다** — 열 번째를 더한
+ *          사람이 그 목록도 같이 고쳐야 하므로, 새 종류는 그 케이스가 덮어 주지 못한다. 이 케이스는
+ *          `BindingKind::Count` 까지 돌면서 묻기 때문에 **더하는 순간 자동으로 적용된다.**
+ *
+ *          세 가지를 본다:
+ *          1. 모든 종류가 XML 이름을 갖는가 — 이름이 비면 저장은 `kind=""` 를 적고 로드는 못 읽는다.
+ *          2. 이름이 값으로 되돌아오는가(`fromName(toName(k)) == k`) — 저장과 로드가 같은 표를 쓰는지.
+ *          3. 이름이 서로 다른가 — 표 한 줄을 복사해 붙이고 이름만 안 고치면 두 종류가 한 이름을
+ *             공유하고, 그때 `fromName` 은 **먼저 나오는 쪽**을 돌려준다(조용히 다른 종류가 된다).
+ *             `static_assert` 는 줄 수만 세므로 이것은 잡지 못한다 — 그래서 테스트가 필요하다.
+ *          4. 충돌 슬롯 수가 슬롯 배열(4칸)을 넘지 않는가 — 넘으면 충돌 검사가 배열 밖을 읽는다.
+ */
+SW_TEST_CASE( ActionMapTest, BindingKindTableCoversEveryKind )
+{
+    const uint32 kindCount = static_cast<uint32>( sw::BindingKind::Count );
+    SW_ASSERT_TRUE( kindCount > 0 );
+
+    sw::vector<sw::string> listSeenName;
+    for ( uint32 kindIndex = 0; kindIndex < kindCount; ++kindIndex )
+    {
+        const sw::BindingKind kind  = static_cast<sw::BindingKind>( kindIndex );
+        const utf8* const     pName = sw::BindingKinds::toName( kind );
+
+        SW_ASSERT_NOT_NULL( pName );
+        SW_EXPECT_TRUE_MSG( pName[0] != 0, "XML 이름이 없는 바인딩 종류가 있습니다 — 표에 줄을 빠뜨렸습니다" );
+
+        // 저장이 적은 이름을 로드가 같은 종류로 되돌려야 한다.
+        SW_EXPECT_TRUE_MSG( sw::BindingKinds::fromName( pName ) == kind,
+                            "toName/fromName 이 서로의 역이 아닙니다 — 저장한 파일을 못 읽습니다" );
+
+        for ( const sw::string& seenName : listSeenName )
+        {
+            SW_EXPECT_TRUE_MSG( seenName != pName,
+                                "두 바인딩 종류가 같은 XML 이름을 씁니다 — 나중 것이 조용히 앞 것으로 읽힙니다" );
+        }
+        listSeenName.push_back( sw::string( pName ) );
+
+        // 충돌 검사는 이 수만큼 `_arrSlot` 을 훑는다. 배열은 4칸이다.
+        SW_EXPECT_TRUE_MSG( sw::BindingKinds::getConflictSlotCount( kind ) <= 4,
+                            "충돌 슬롯 수가 슬롯 배열보다 큽니다 — 배열 밖을 읽습니다" );
+    }
+
+    // 모르는 이름은 Count 로 돌아와야 한다 — 그래야 로드가 "모르는 종류" 를 구분해 소리를 낸다.
+    SW_EXPECT_TRUE( sw::BindingKinds::fromName( "nosuchkind" ) == sw::BindingKind::Count );
+    SW_EXPECT_TRUE( sw::BindingKinds::fromName( "" ) == sw::BindingKind::Count );
+}
+
+/**
  * @brief [ActionMapTest] XML 유저 바인딩 전면 직렬화 및 역직렬화 검증 (모든 BindingKind)
  */
 SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )

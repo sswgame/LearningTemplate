@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -22,7 +23,74 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief `BindingKind` 한 종류에 딸린 값들.
+         * @details 여기 없는 값은 종류마다 **정말로 다른 것**(어떤 특성을 읽고 쓰는가, 어떻게 평가하는가)
+         *          뿐이고, 그것들은 각자의 switch 에 남는다 — 대신 그 switch 들은 `default:` 를 두지
+         *          않아 종류가 늘면 컴파일러가 빠진 자리를 짚는다.
+         */
+        struct BindingKindTraits
+        {
+            BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 자기 값을 들고 있다.
+            const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
+            uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
+        };
+
+        // 종류를 더하면 **여기 한 줄**이다. 빠뜨리면 아래 static_assert 가 컴파일을 세운다.
+        constexpr BindingKindTraits kArrBindingKindTraits[] = {
+            {       BindingKind::SingleSlot,          "single", 1},
+            {  BindingKind::Axis1DComposite,          "axis1d", 2},
+            {BindingKind::Vector2DComposite,        "vector2d", 4},
+            {   BindingKind::GamepadStick2D,           "stick", 0},
+            {            BindingKind::Chord,           "chord", 2},
+            {     BindingKind::MouseDelta2D,      "mouseDelta", 0},
+            {         BindingKind::Shortcut,        "shortcut", 1},
+            {           BindingKind::AnyKey,          "anyKey", 0},
+            {BindingKind::VirtualJoystick2D, "virtualJoystick", 1},
+        };
+
+        static_assert( sizeof( kArrBindingKindTraits ) / sizeof( kArrBindingKindTraits[0] ) == static_cast<size_t>( BindingKind::Count ),
+                       "BindingKind 를 늘렸으면 kArrBindingKindTraits 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
+
+        /** @brief 표에서 종류의 줄을 찾습니다. 범위 밖이면 nullptr. */
+        const BindingKindTraits* findBindingKindTraits( BindingKind kind )
+        {
+            for ( const BindingKindTraits& traits : kArrBindingKindTraits )
+            {
+                if ( traits._kind == kind )
+                    return &traits;
+            }
+            return nullptr;
+        }
+    } // namespace
+
     SW_LOG_CALLER( "ActionMap" );
+
+    const utf8* BindingKinds::toName( BindingKind kind )
+    {
+        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
+        // 이름이 없으면 저장이 조용히 망가지므로, 모르는 종류는 빈 문자열로 **눈에 띄게** 둔다.
+        return ( pTraits != nullptr ) ? pTraits->_pXmlName : "";
+    }
+
+    BindingKind BindingKinds::fromName( string_view name )
+    {
+        for ( const BindingKindTraits& traits : kArrBindingKindTraits )
+        {
+            // string_view 오버로드를 쓴다 — `name.data()` 는 널 종료가 보장되지 않는다.
+            if ( StringUtil::equals( name, string_view{ traits._pXmlName }, true ) )
+                return traits._kind;
+        }
+        return BindingKind::Count;
+    }
+
+    uint32 BindingKinds::getConflictSlotCount( BindingKind kind )
+    {
+        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
+        return ( pTraits != nullptr ) ? pTraits->_conflictSlotCount : 0;
+    }
 
     ActionMap::ActionMap()
         : _pInput{ nullptr }
@@ -692,36 +760,9 @@ namespace sw
                 if ( binding._layer != targetLayer )
                     continue;
 
-                uint32 slotCount = 0;
-                switch ( binding._kind )
-                {
-                    case BindingKind::SingleSlot:
-                    case BindingKind::Shortcut:
-                    case BindingKind::VirtualJoystick2D:
-                    {
-                        slotCount = 1;
-                        break;
-                    }
-                    case BindingKind::Axis1DComposite:
-                    case BindingKind::Chord:
-                    {
-                        slotCount = 2;
-                        break;
-                    }
-                    case BindingKind::Vector2DComposite:
-                    {
-                        slotCount = 4;
-                        break;
-                    }
-                    case BindingKind::GamepadStick2D:
-                    case BindingKind::MouseDelta2D:
-                    case BindingKind::AnyKey:
-                    default:
-                    {
-                        slotCount = 0;
-                        break;
-                    }
-                }
+                // 예전에는 여기 switch 가 있었고 `default:` 가 0 을 줬다 — 새 종류를 더하면 충돌
+                // 검사가 그 바인딩을 **못 본 채** 지나가고, 같은 키를 두 번 걸어도 조용했다.
+                const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
 
                 for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
                 {

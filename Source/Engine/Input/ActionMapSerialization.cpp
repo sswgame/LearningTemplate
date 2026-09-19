@@ -355,12 +355,16 @@ namespace sw
                 XmlNode bindNode = root.appendChild( "bind" );
                 bindNode.appendAttribute( "action", actionName.c_str() );
                 bindNode.appendAttribute( "layer", b._layer.c_str() );
+                // 이름은 표에서 온다 — 예전에는 종류마다 리터럴을 적었고 읽는 쪽에 같은 리터럴이 따로
+                // 있어서, 한쪽만 고치면 파일이 조용히 왕복하지 않게 됐다.
+                bindNode.appendAttribute( "kind", BindingKinds::toName( b._kind ) );
 
+                // 예전에는 `default: break` 라, 종류를 늘리고 여기를 빠뜨리면 그 바인딩이 특성 하나
+                // 없이 저장돼 **조용히 사라졌다.** 이제 그 자리가 소리를 낸다(아래 default 참고).
                 switch ( b._kind )
                 {
                     case BindingKind::SingleSlot:
                     {
-                        bindNode.appendAttribute( "kind", "single" );
                         if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
                         {
                             const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
@@ -384,7 +388,6 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
-                        bindNode.appendAttribute( "kind", "axis1d" );
                         const Key negKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key posKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
                         bindNode.appendAttribute( "negKey", KeyCodes::toName( negKey ) );
@@ -393,7 +396,6 @@ namespace sw
                     }
                     case BindingKind::Vector2DComposite:
                     {
-                        bindNode.appendAttribute( "kind", "vector2d" );
                         const Key upKey    = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
                         const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
@@ -407,7 +409,6 @@ namespace sw
                     }
                     case BindingKind::GamepadStick2D:
                     {
-                        bindNode.appendAttribute( "kind", "stick" );
                         bindNode.appendAttribute( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
                         bindNode.appendAttribute( "pad", static_cast<int32>( b._deviceIndex ) );
                         bindNode.appendAttribute( "deadzone", b._deadzone );
@@ -417,13 +418,11 @@ namespace sw
                     }
                     case BindingKind::MouseDelta2D:
                     {
-                        bindNode.appendAttribute( "kind", "mouseDelta" );
                         bindNode.appendAttribute( "scale", b._scale );
                         break;
                     }
                     case BindingKind::VirtualJoystick2D:
                     {
-                        bindNode.appendAttribute( "kind", "virtualJoystick" );
                         const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
                         bindNode.appendAttribute( "button", MouseButtons::toName( activationButton ) );
                         bindNode.appendAttribute( "radius", b._scale );
@@ -433,7 +432,6 @@ namespace sw
                     }
                     case BindingKind::Chord:
                     {
-                        bindNode.appendAttribute( "kind", "chord" );
                         const Key modKey  = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key trigKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
                         bindNode.appendAttribute( "modKey", KeyCodes::toName( modKey ) );
@@ -442,7 +440,6 @@ namespace sw
                     }
                     case BindingKind::Shortcut:
                     {
-                        bindNode.appendAttribute( "kind", "shortcut" );
                         const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         bindNode.appendAttribute( "key", KeyCodes::toName( key ) );
                         bindNode.appendAttribute( "modifierMask", static_cast<int32>( b._modifierMask ) );
@@ -450,11 +447,18 @@ namespace sw
                     }
                     case BindingKind::AnyKey:
                     {
-                        bindNode.appendAttribute( "kind", "anyKey" );
+                        break; // 이름 말고 적을 것이 없다.
+                    }
+                    case BindingKind::Count:
+                    default:
+                    {
+                        // 종류를 늘리고 이 switch 를 빠뜨렸다. 이름은 표에서 왔으므로 `kind` 는
+                        // 제대로 적혔지만 **딸린 특성이 하나도 없어** 다시 읽을 수 없는 줄이 된다.
+                        // 예전에는 `default: break` 라 그 사실조차 남지 않았다.
+                        SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
+                                      BindingKinds::toName( b._kind ) );
                         break;
                     }
-                    default:
-                        break;
                 }
             }
         }
@@ -484,75 +488,102 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pAction ) )
                 continue;
 
-            if ( pKindStr != nullptr )
+            // 이름 → 종류는 표가 답한다. 예전에는 여기가 문자열 if/else 사슬이라 저장 쪽 리터럴과
+            // 짝이 맞는지 아무도 지켜 주지 않았고, 모르는 이름은 조용히 아래 레거시 경로로 떨어졌다.
+            const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
+            if ( parsedKind != BindingKind::Count )
             {
-                if ( StringUtil::equals( pKindStr, "axis1d", true ) )
+                bool bHandled = true;
+
+                switch ( parsedKind )
                 {
-                    const Key negKey = KeyCodes::fromName( bindNode.attribute( "negKey" ) );
-                    const Key posKey = KeyCodes::fromName( bindNode.attribute( "posKey" ) );
-                    if ( negKey != Key::Unknown && posKey != Key::Unknown )
-                        bindAxis1DComposite( pAction, negKey, posKey, layer );
-                    continue;
+                    case BindingKind::Axis1DComposite:
+                    {
+                        const Key negKey = KeyCodes::fromName( bindNode.attribute( "negKey" ) );
+                        const Key posKey = KeyCodes::fromName( bindNode.attribute( "posKey" ) );
+                        if ( negKey != Key::Unknown && posKey != Key::Unknown )
+                            bindAxis1DComposite( pAction, negKey, posKey, layer );
+                        break;
+                    }
+                    case BindingKind::Vector2DComposite:
+                    {
+                        const Key     upKey    = KeyCodes::fromName( bindNode.attribute( "up" ) );
+                        const Key     downKey  = KeyCodes::fromName( bindNode.attribute( "down" ) );
+                        const Key     leftKey  = KeyCodes::fromName( bindNode.attribute( "left" ) );
+                        const Key     rightKey = KeyCodes::fromName( bindNode.attribute( "right" ) );
+                        const float32 deadzone = bindNode.attributeFloat( "deadzone", 0.0f );
+                        if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
+                            bindVector2D( pAction, upKey, downKey, leftKey, rightKey, deadzone, layer );
+                        break;
+                    }
+                    case BindingKind::GamepadStick2D:
+                    {
+                        const utf8*        pStickStr     = bindNode.attribute( "stick" );
+                        const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
+                        const uint8        pad           = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
+                        const float32      deadzone      = bindNode.attributeFloat( "deadzone", 0.15f );
+                        const float32      outerDeadzone = bindNode.attributeFloat( "outerDeadzone", 1.0f );
+                        const float32      exp           = bindNode.attributeFloat( "exponent", 1.0f );
+                        bindGamepadStick2D( pAction, stick, deadzone, layer, pad, outerDeadzone, exp );
+                        break;
+                    }
+                    case BindingKind::MouseDelta2D:
+                    {
+                        const float32 scale = bindNode.attributeFloat( "scale", 1.0f );
+                        bindMouseDelta( pAction, scale, layer );
+                        break;
+                    }
+                    case BindingKind::VirtualJoystick2D:
+                    {
+                        const MouseButton activationButton = MouseButtons::fromName( bindNode.attribute( "button" ) );
+                        const float32     radius           = bindNode.attributeFloat( "radius", 64.0f );
+                        const float32     deadzone         = bindNode.attributeFloat( "deadzone", 0.1f );
+                        const float32     outerDeadzone    = bindNode.attributeFloat( "outerDeadzone", 1.0f );
+                        if ( activationButton != MouseButton::Count )
+                            bindVirtualJoystick2D( pAction, activationButton, radius, deadzone, layer, outerDeadzone );
+                        break;
+                    }
+                    case BindingKind::Chord:
+                    {
+                        const Key modKey  = KeyCodes::fromName( bindNode.attribute( "modKey" ) );
+                        const Key trigKey = KeyCodes::fromName( bindNode.attribute( "trigKey" ) );
+                        if ( modKey != Key::Unknown && trigKey != Key::Unknown )
+                            bindChord( pAction, modKey, trigKey, ActionTrigger::Pressed, layer );
+                        break;
+                    }
+                    case BindingKind::Shortcut:
+                    {
+                        const Key   key     = KeyCodes::fromName( bindNode.attribute( "key" ) );
+                        const uint8 modMask = static_cast<uint8>( bindNode.attributeInt( "modifierMask", 0 ) );
+                        if ( key != Key::Unknown )
+                            bindShortcut( pAction, key, modMask, ActionTrigger::Pressed, layer );
+                        break;
+                    }
+                    case BindingKind::AnyKey:
+                    {
+                        bindAnyKey( pAction, layer );
+                        break;
+                    }
+                    case BindingKind::SingleSlot:
+                    {
+                        // 아래 레거시 경로가 읽는다 — `kind="single"` 은 특성 이름(source/key/button)이
+                        // 그대로라 예전 파일과 같은 코드로 읽힌다.
+                        bHandled = false;
+                        break;
+                    }
+                    case BindingKind::Count:
+                    default:
+                    {
+                        // 표는 이름을 알았는데 여기가 모른다 — 종류를 늘리고 이 switch 를 빠뜨렸다.
+                        SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.",
+                                      pKindStr );
+                        bHandled = false;
+                        break;
+                    }
                 }
-                else if ( StringUtil::equals( pKindStr, "vector2d", true ) )
-                {
-                    const Key     upKey    = KeyCodes::fromName( bindNode.attribute( "up" ) );
-                    const Key     downKey  = KeyCodes::fromName( bindNode.attribute( "down" ) );
-                    const Key     leftKey  = KeyCodes::fromName( bindNode.attribute( "left" ) );
-                    const Key     rightKey = KeyCodes::fromName( bindNode.attribute( "right" ) );
-                    const float32 deadzone = bindNode.attributeFloat( "deadzone", 0.0f );
-                    if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
-                        bindVector2D( pAction, upKey, downKey, leftKey, rightKey, deadzone, layer );
+
+                if ( bHandled )
                     continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "stick", true ) )
-                {
-                    const utf8*        pStickStr     = bindNode.attribute( "stick" );
-                    const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                    const uint8        pad           = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
-                    const float32      deadzone      = bindNode.attributeFloat( "deadzone", 0.15f );
-                    const float32      outerDeadzone = bindNode.attributeFloat( "outerDeadzone", 1.0f );
-                    const float32      exp           = bindNode.attributeFloat( "exponent", 1.0f );
-                    bindGamepadStick2D( pAction, stick, deadzone, layer, pad, outerDeadzone, exp );
-                    continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "mouseDelta", true ) )
-                {
-                    const float32 scale = bindNode.attributeFloat( "scale", 1.0f );
-                    bindMouseDelta( pAction, scale, layer );
-                    continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "virtualJoystick", true ) )
-                {
-                    const MouseButton activationButton = MouseButtons::fromName( bindNode.attribute( "button" ) );
-                    const float32     radius           = bindNode.attributeFloat( "radius", 64.0f );
-                    const float32     deadzone         = bindNode.attributeFloat( "deadzone", 0.1f );
-                    const float32     outerDeadzone    = bindNode.attributeFloat( "outerDeadzone", 1.0f );
-                    if ( activationButton != MouseButton::Count )
-                        bindVirtualJoystick2D( pAction, activationButton, radius, deadzone, layer, outerDeadzone );
-                    continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "chord", true ) )
-                {
-                    const Key modKey  = KeyCodes::fromName( bindNode.attribute( "modKey" ) );
-                    const Key trigKey = KeyCodes::fromName( bindNode.attribute( "trigKey" ) );
-                    if ( modKey != Key::Unknown && trigKey != Key::Unknown )
-                        bindChord( pAction, modKey, trigKey, ActionTrigger::Pressed, layer );
-                    continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "shortcut", true ) )
-                {
-                    const Key   key     = KeyCodes::fromName( bindNode.attribute( "key" ) );
-                    const uint8 modMask = static_cast<uint8>( bindNode.attributeInt( "modifierMask", 0 ) );
-                    if ( key != Key::Unknown )
-                        bindShortcut( pAction, key, modMask, ActionTrigger::Pressed, layer );
-                    continue;
-                }
-                else if ( StringUtil::equals( pKindStr, "anyKey", true ) )
-                {
-                    bindAnyKey( pAction, layer );
-                    continue;
-                }
             }
 
             // Single slot fallback / legacy format

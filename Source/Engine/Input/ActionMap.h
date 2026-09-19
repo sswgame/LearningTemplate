@@ -47,7 +47,42 @@ namespace sw
         MouseDelta2D,      ///< 마우스 2D 센서 델타 (FPS/TPS 룩 벡터)
         Shortcut,          ///< 다중 수정자 마스크 + 키 조합 (Ctrl + Shift + Key)
         AnyKey,            ///< 임의의 키/버튼 입력 ("Press Any Key")
-        VirtualJoystick2D  ///< 마우스 드래그 기반 가상 조이스틱(온스크린 스틱 프로토타이핑/테스트용)
+        VirtualJoystick2D, ///< 마우스 드래그 기반 가상 조이스틱(온스크린 스틱 프로토타이핑/테스트용)
+        Count              ///< 종류 수. **저장되지 않는다** — 아래 표의 크기를 컴파일 시점에 맞추는 데만 쓴다.
+    };
+
+    /**
+     * @struct BindingKinds
+     * @brief `BindingKind` 하나에 딸린 값들을 모아 둔 표입니다 — 종류를 늘릴 때 **여기 한 줄**입니다.
+     *
+     * [왜 표인가]
+     * 예전에는 종류를 하나 더하려면 **여섯 곳**을 손으로 맞춰야 했다: 열거자 · 충돌 검사의 슬롯 수
+     * switch · 평가 switch · 저장 switch · 로드의 문자열 if/else 사슬 · 그리고 그 전부를 손으로
+     * 나열한 테스트. 게다가 세 switch 에 `default:` 가 있어 **빠뜨려도 컴파일러가 말해 주지 않았다** —
+     * 충돌 검사는 새 종류를 못 본 채 지나가고(같은 키를 두 번 바인드해도 조용하다), 저장은 그 바인딩을
+     * **파일에서 통째로 빠뜨린다.** 조용히 데이터를 버리는 쪽이 제일 나쁘다.
+     * 이제 표가 정본이고, `Count` 와의 `static_assert` 가 빠진 줄을 컴파일 오류로 만든다.
+     *
+     * [왜 리플렉션이 아닌가]
+     * 같은 폴더의 `KeyCodes`·`MouseButtons` 는 리플렉션 등록부로 이름을 얻는다. 여기서는 쓰지 않는다 —
+     * (1) XML 에 적히는 이름("single"·"axis1d")이 열거자 이름과 **일부러 다르고**(파일 포맷이다),
+     * (2) 등록부는 엔진 서비스가 묶여 있어야 답한다. 묶이지 않은 채 저장하면 `KeyCodes::toName` 이
+     * "Unknown" 을 돌려주듯 종류 이름도 "Unknown" 이 되어 **저장이 조용히 망가진다.** 저장 경로가
+     * 서비스 바인딩에 기대게 둘 이유가 없다. 아홉 줄짜리 표는 그 대가를 치를 만큼 크지도 않다.
+     */
+    struct SW_API BindingKinds
+    {
+        /** @brief XML `kind` 특성에 적는 이름입니다. 저장과 로드가 **이 하나**를 같이 씁니다. */
+        static const utf8* toName( BindingKind kind );
+        /** @brief 이름에서 종류를 찾습니다. 모르는 이름이면 `BindingKind::Count` 입니다. */
+        static BindingKind fromName( string_view name );
+        /**
+         * @brief 이 종류에서 **키 충돌 검사가 훑어야 할** 슬롯 수입니다.
+         * @details "쓰는 슬롯 수" 가 아니다 — 스틱·마우스 델타·AnyKey 는 슬롯을 쓰더라도 특정 키를
+         *          점유하지 않으므로 충돌 대상이 아니라 0 이다. 이름을 `getSlotCount` 로 줄이면
+         *          다음 사람이 그 차이를 모르고 슬롯 순회에 쓴다.
+         */
+        static uint32 getConflictSlotCount( BindingKind kind );
     };
 
     enum class ConflictResolution : uint8
