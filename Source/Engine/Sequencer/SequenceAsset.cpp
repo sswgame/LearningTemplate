@@ -85,29 +85,20 @@ namespace sw
         if ( _frameMax <= _frameMin )
             _frameMax = _frameMin + 1;
 
-        const JsonValue itemsVal = root.get( "items" );
-        if ( itemsVal.isArray() )
+        forEachObjectInArray( root, "items", [this]( const JsonValue& itemJson, size_t /*itemIndex*/ )
         {
-            const size_t itemCount = itemsVal.size();
-            for ( size_t itemIndex = 0; itemIndex < itemCount; ++itemIndex )
-            {
-                const JsonValue itemJson = itemsVal.at( itemIndex );
-                if ( itemJson.isObject() == false )
-                    continue;
-
-                SequenceTrackItem item{};
-                item._name         = itemJson.get( "name" ).asString();
-                item._targetObject = itemJson.get( "target" ).asString();
-                item._start        = static_cast<int32>( itemJson.get( "start" ).asInt( 0 ) );
-                item._end          = static_cast<int32>( itemJson.get( "end" ).asInt( 10 ) );
-                item._type         = static_cast<int32>( itemJson.get( "type" ).asInt( 0 ) );
-                item._color        = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
-                item._translation  = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
-                item._rotation     = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
-                item._scale        = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
-                _listItem.push_back( std::move( item ) );
-            }
-        }
+            SequenceTrackItem item{};
+            item._name         = itemJson.get( "name" ).asString();
+            item._targetObject = itemJson.get( "target" ).asString();
+            item._start        = static_cast<int32>( itemJson.get( "start" ).asInt( 0 ) );
+            item._end          = static_cast<int32>( itemJson.get( "end" ).asInt( 10 ) );
+            item._type         = static_cast<int32>( itemJson.get( "type" ).asInt( 0 ) );
+            item._color        = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
+            item._translation  = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
+            item._rotation     = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
+            item._scale        = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
+            _listItem.push_back( std::move( item ) );
+        } );
         return true;
     }
 

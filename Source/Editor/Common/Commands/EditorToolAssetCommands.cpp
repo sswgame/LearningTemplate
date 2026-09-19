@@ -320,42 +320,26 @@ namespace sw::editor
         const JsonValue root = doc.root();
         outData._atlasPath   = root.get( "atlas" ).asString();
 
-        const JsonValue framesVal = root.get( "frames" );
-        if ( framesVal.isArray() )
+        forEachObjectInArray( root, "frames", [&outData]( const JsonValue& frameJson, size_t /*frameIndex*/ )
         {
-            const size_t frameCount = framesVal.size();
-            for ( size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                const JsonValue frameJson = framesVal.at( frameIndex );
-                if ( frameJson.isObject() == false )
-                    continue;
-                EditorSpriteClipFrame frame{};
-                frame._u          = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
-                frame._v          = static_cast<float32>( frameJson.get( "v" ).asFloat( 0.0 ) );
-                frame._w          = static_cast<float32>( frameJson.get( "w" ).asFloat( 0.0 ) );
-                frame._h          = static_cast<float32>( frameJson.get( "h" ).asFloat( 0.0 ) );
-                frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
-                outData._listFrame.push_back( frame );
-            }
-        }
+            EditorSpriteClipFrame frame{};
+            frame._u          = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
+            frame._v          = static_cast<float32>( frameJson.get( "v" ).asFloat( 0.0 ) );
+            frame._w          = static_cast<float32>( frameJson.get( "w" ).asFloat( 0.0 ) );
+            frame._h          = static_cast<float32>( frameJson.get( "h" ).asFloat( 0.0 ) );
+            frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
+            outData._listFrame.push_back( frame );
+        } );
 
-        const JsonValue keysVal = root.get( "transformKeys" );
-        if ( keysVal.isArray() )
+        forEachObjectInArray( root, "transformKeys", [&outData]( const JsonValue& keyJson, size_t /*keyIndex*/ )
         {
-            const size_t keyCount = keysVal.size();
-            for ( size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex )
-            {
-                const JsonValue keyJson = keysVal.at( keyIndex );
-                if ( keyJson.isObject() == false )
-                    continue;
-                EditorSpriteClipKey key{};
-                key._time        = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
-                key._position._x = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
-                key._position._y = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
-                key._angleDeg    = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
-                outData._listKey.push_back( key );
-            }
-        }
+            EditorSpriteClipKey key{};
+            key._time        = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
+            key._position._x = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
+            key._position._y = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
+            key._angleDeg    = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
+            outData._listKey.push_back( key );
+        } );
         return true;
     }
 

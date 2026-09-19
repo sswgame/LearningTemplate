@@ -123,6 +123,32 @@ namespace sw
     };
 
     /**
+     * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
+     * @param pArrayName 배열 멤버 이름 ("nodes" · "links" …). 없거나 배열이 아니면 아무것도 하지 않는다.
+     * @param visit `(const JsonValue& element, size_t index)` 를 받는 호출 가능 객체.
+     * @details 손으로 읽는 JSON 자산이 **전부 이 네 줄을 각자** 적고 있었다 — 배열을 얻고, 배열인지
+     *          묻고, 개수를 세고, 원소가 객체가 아니면 건너뛴다. 아홉 곳에서 같은 모양이었고, 그중
+     *          하나라도 `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 자산이 통째로 깨진다.**
+     *          검사를 여기 한 번만 두면 새 자산이 그 실수를 할 자리가 없다.
+     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 자산이 있기 때문이다.
+     */
+    template <typename VisitFn>
+    void forEachObjectInArray( const JsonValue& parent, const utf8* pArrayName, VisitFn&& visit )
+    {
+        const JsonValue arrayValue = parent.get( pArrayName );
+        if ( arrayValue.isArray() == false )
+            return;
+
+        const size_t count = arrayValue.size();
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const JsonValue element = arrayValue.at( index );
+            if ( element.isObject() )
+                visit( element, index );
+        }
+    }
+
+    /**
      * @class JsonDocument
      * @brief JSON 트리. TypeInfo 없는 수동 로드용
      */

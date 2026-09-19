@@ -41,16 +41,9 @@ namespace sw::editor
     SW_LOG_CALLER( "AnimationGraph" );
 
     AnimationGraphPanel::AnimationGraphPanel()
-        : EditorDocumentPanel{ EditorAssetKind::AnimationGraph, true }
-        , _nodeGraph{}
-        , _listNode{}
-        , _listLink{}
+        : EditorGraphDocumentPanel{ EditorAssetKind::AnimationGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
         , _previewPlayer{}
         , _listPreviewClip{}
-        , _previewHoldSeconds{ 0.0f }
-        , _bGraphLayoutReady{ SW_FALSE }
-        , _bPreviewPlaying{ SW_FALSE }
-        , _reservedGraph{ 0 }
     {
     }
 
@@ -312,32 +305,6 @@ namespace sw::editor
         return saveGraphData();
     }
 
-    string AnimationGraphPanel::captureDocumentText() const
-    {
-        return captureGraphData().toJson();
-    }
-
-    void AnimationGraphPanel::applyDocumentText( string_view text )
-    {
-        AnimationGraphAsset restored;
-        if ( text.empty() == false )
-            restored.parseJson( text );
-        _listNode = std::move( restored._listNode );
-        _listLink = std::move( restored._listLink );
-        if ( _listNode.empty() )
-            ensureDefaults();
-        _bGraphLayoutReady = SW_FALSE;
-        _nodeGraph.requestContentFit();
-    }
-
-    AnimationGraphAsset AnimationGraphPanel::captureGraphData() const
-    {
-        AnimationGraphAsset data;
-        data._listNode = _listNode;
-        data._listLink = _listLink;
-        return data;
-    }
-
     void AnimationGraphPanel::syncPreviewGraph()
     {
         AnimationGraphAsset asset = captureGraphData();
@@ -349,23 +316,6 @@ namespace sw::editor
             _listPreviewClip.push_back( AnimClip( node._name, 0.75f ) );
         for ( AnimClip& clip : _listPreviewClip )
             _previewPlayer.registerClip( clip.getName(), &clip );
-    }
-
-    void AnimationGraphPanel::cacheNodeLayout()
-    {
-        bool bMoved{ false };
-        for ( GraphNode& node : _listNode )
-        {
-            const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
-            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._position._x ) == false ) || ( MathUtil::nearEqual( pos.y, node._position._y ) == false );
-            if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
-                bMoved = true;
-            node._position._x = pos.x;
-            node._position._y = pos.y;
-        }
-        if ( bMoved )
-            notifyDocumentEdited( "Move Animation Graph Nodes", "anim-graph-layout" );
-        _bGraphLayoutReady = SW_TRUE;
     }
 
     void AnimationGraphPanel::tickPreview( float32 deltaSeconds )
@@ -380,16 +330,6 @@ namespace sw::editor
             _bPreviewPlaying = SW_FALSE;
         else
             EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
-    }
-
-    int32 AnimationGraphPanel::nextNodeId() const
-    {
-        return nextItemId( _listNode );
-    }
-
-    int32 AnimationGraphPanel::nextLinkId() const
-    {
-        return nextItemId( _listLink );
     }
 
     void AnimationGraphPanel::addNamedNode( const utf8* pName )

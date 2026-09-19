@@ -22,23 +22,17 @@ namespace sw
         string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
         {
             if ( ppFrame == nullptr || frameCount == 0 )
-                return "[Empty CallStack]";
+                return kEmptyCallStackText;
+
+            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면 교착 대신
+            // 주소만 출력한다(맵 파일로 후처리할 수 있다). **이 관문은 플랫폼 공통**이고,
+            // 그 아래 본체만 플랫폼마다 완전히 다르다(DbgHelp vs backtrace_symbols).
+            std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
+            if ( lock.owns_lock() == false )
+                return formatRawCallStackFrames( ppFrame, frameCount );
 
             // 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
             StringBuilder<constant::kMaxBuffer8192> sb;
-
-            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면
-            // 교착 대신 주소만 출력한다(맵 파일로 후처리 가능).
-            std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
-            if ( lock.owns_lock() == false )
-            {
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-                {
-                    sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,
-                                     Fmt( reinterpret_cast<uint64>( ppFrame[frameIndex] ), Format().hex() ) );
-                }
-                return string( sb.view() );
-            }
 
             HANDLE                      process = GetCurrentProcess();
             alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];

@@ -49,44 +49,26 @@ namespace sw
 
     void AnimationGraphAsset::parseRoot( const JsonValue& root )
     {
-        const JsonValue nodesVal = root.get( "nodes" );
-        if ( nodesVal.isArray() )
+        forEachObjectInArray( root, "nodes", [this]( const JsonValue& nodeJson, size_t /*nodeIndex*/ )
         {
-            const size_t nodeCount = nodesVal.size();
-            for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            {
-                const JsonValue nodeJson = nodesVal.at( nodeIndex );
-                if ( nodeJson.isObject() == false )
-                    continue;
+            AnimationGraphNode node{};
+            node._id          = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
+            node._name        = nodeJson.get( "name" ).asString();
+            node._position._x = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
+            node._position._y = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+            if ( node._id > 0 )
+                _listNode.push_back( std::move( node ) );
+        } );
 
-                AnimationGraphNode node{};
-                node._id          = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-                node._name        = nodeJson.get( "name" ).asString();
-                node._position._x = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-                node._position._y = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
-                if ( node._id > 0 )
-                    _listNode.push_back( std::move( node ) );
-            }
-        }
-
-        const JsonValue linksVal = root.get( "links" );
-        if ( linksVal.isArray() )
+        forEachObjectInArray( root, "links", [this]( const JsonValue& linkJson, size_t /*linkIndex*/ )
         {
-            const size_t linkCount = linksVal.size();
-            for ( size_t linkIndex = 0; linkIndex < linkCount; ++linkIndex )
-            {
-                const JsonValue linkJson = linksVal.at( linkIndex );
-                if ( linkJson.isObject() == false )
-                    continue;
-
-                AnimationGraphLink link{};
-                link._id       = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
-                link._fromNode = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
-                link._toNode   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
-                if ( link._id > 0 )
-                    _listLink.push_back( link );
-            }
-        }
+            AnimationGraphLink link{};
+            link._id       = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
+            link._fromNode = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
+            link._toNode   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
+            if ( link._id > 0 )
+                _listLink.push_back( link );
+        } );
     }
 
     string AnimationGraphAsset::toJson() const

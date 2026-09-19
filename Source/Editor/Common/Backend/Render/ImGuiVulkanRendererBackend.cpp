@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerRecipe.h"
 
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
@@ -118,19 +119,9 @@ namespace sw::editor
             return false;
         }
 
-        // 엔진의 기본 샘플러(`VulkanRHIDevice::_defaultSampler`)와 지금은 값이 같지만 **합치지 않는다** —
-        // 저쪽은 씬 텍스처용이라 나중에 비등방 필터링이나 다른 주소 모드로 갈 수 있고, ImGui 폰트·아이콘은
-        // 그 변화를 따라가면 안 된다. 우연히 같은 것과 같아야 하는 것은 다르다.
-        // (`borderColor` 를 세우지 않는 것도 의도다 — 주소 모드가 CLAMP_TO_EDGE 라 그 값은 쓰이지 않는다.)
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType         = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter     = VK_FILTER_LINEAR;
-        samplerInfo.minFilter     = VK_FILTER_LINEAR;
-        samplerInfo.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.maxAnisotropy = 1.0f;
-        samplerInfo.maxLod        = 1000.0f;
+        // ImGui 폰트·아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 조리법**을 쓰지만 같은 객체는
+        // 아니다 — 저쪽이 씬 텍스처를 위해 비등방으로 바뀌어도 UI 는 따라가면 안 된다.
+        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
         if ( vkCreateSampler( _pDevice, &samplerInfo, nullptr, &_pSampler ) != VK_SUCCESS )
         {
             SW_LOG_ERROR( "Failed to create Vulkan sampler for ImGui textures" );

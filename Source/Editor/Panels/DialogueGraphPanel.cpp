@@ -74,16 +74,9 @@ namespace sw::editor
     SW_LOG_CALLER( "DialogueGraphPanel" );
 
     DialogueGraphPanel::DialogueGraphPanel()
-        : EditorDocumentPanel{ EditorAssetKind::DialogueGraph, true }
-        , _nodeGraph{}
-        , _listNode{}
-        , _listLink{}
+        : EditorGraphDocumentPanel{ EditorAssetKind::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }
         , _selectedNodeId{ 0 }
         , _previewNodeId{ 0 }
-        , _previewHoldSeconds{ 0.0f }
-        , _bGraphLayoutReady{ SW_FALSE }
-        , _bPreviewPlaying{ SW_FALSE }
-        , _reservedGraph{ 0 }
     {
     }
 
@@ -581,49 +574,6 @@ namespace sw::editor
         return saveGraphData();
     }
 
-    string DialogueGraphPanel::captureDocumentText() const
-    {
-        return captureGraphData().toJson();
-    }
-
-    void DialogueGraphPanel::applyDocumentText( string_view text )
-    {
-        DialogueGraphAsset restored;
-        if ( text.empty() == false )
-            restored.parseJson( text );
-        _listNode = std::move( restored._listNode );
-        _listLink = std::move( restored._listLink );
-        if ( _listNode.empty() )
-            ensureDefaults();
-        _bGraphLayoutReady = SW_FALSE;
-        _nodeGraph.requestContentFit();
-    }
-
-    DialogueGraphAsset DialogueGraphPanel::captureGraphData() const
-    {
-        DialogueGraphAsset data;
-        data._listNode = _listNode;
-        data._listLink = _listLink;
-        return data;
-    }
-
-    void DialogueGraphPanel::cacheNodeLayout()
-    {
-        bool bMoved{ false };
-        for ( DialogueNode& node : _listNode )
-        {
-            const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
-            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._position._x ) == false ) && ( MathUtil::nearEqual( pos.y, node._position._y ) == false );
-            if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
-                bMoved = true;
-            node._position._x = pos.x;
-            node._position._y = pos.y;
-        }
-        if ( bMoved )
-            notifyDocumentEdited( "Move Dialogue Nodes", "dialogue-graph-layout" );
-        _bGraphLayoutReady = SW_TRUE;
-    }
-
     void DialogueGraphPanel::drawPreviewToolbar()
     {
         ImGui::SameLine();
@@ -722,16 +672,6 @@ namespace sw::editor
             EditorViewportPreview::applyDialogueLine( pNext->_speaker, pNext->_text );
         if ( pNext != nullptr && pNext->_type == DialogueAssetNodeType::End )
             _bPreviewPlaying = SW_FALSE;
-    }
-
-    int32 DialogueGraphPanel::nextNodeId() const
-    {
-        return nextItemId( _listNode );
-    }
-
-    int32 DialogueGraphPanel::nextLinkId() const
-    {
-        return nextItemId( _listLink );
     }
 
     void DialogueGraphPanel::addNode( DialogueAssetNodeType type, const utf8* pSpeaker, const utf8* pText )

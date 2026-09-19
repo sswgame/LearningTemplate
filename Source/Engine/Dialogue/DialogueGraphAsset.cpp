@@ -85,58 +85,42 @@ namespace sw
 
     void DialogueGraphAsset::parseRoot( const JsonValue& root )
     {
-        const JsonValue nodesVal = root.get( "nodes" );
-        if ( nodesVal.isArray() )
+        forEachObjectInArray( root, "nodes", [this]( const JsonValue& nodeJson, size_t /*nodeIndex*/ )
         {
-            const size_t nodeCount = nodesVal.size();
-            for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+            DialogueAssetNode node{};
+            node._id            = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
+            node._type          = parseNodeType( nodeJson.get( "type" ).asString() );
+            node._speaker       = nodeJson.get( "speaker" ).asString();
+            node._text          = nodeJson.get( "text" ).asString();
+            node._condition     = nodeJson.get( "condition" ).asString();
+            node._actionCommand = nodeJson.get( "action" ).asString();
+            node._position._x   = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
+            node._position._y   = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+
+            // 선택지는 **문자열 배열**이라 객체만 거르는 위 헬퍼가 맞지 않는다 — 여기서 그대로 읽는다.
+            const JsonValue choicesVal = nodeJson.get( "choices" );
+            if ( choicesVal.isArray() )
             {
-                const JsonValue nodeJson = nodesVal.at( nodeIndex );
-                if ( nodeJson.isObject() == false )
-                    continue;
-
-                DialogueAssetNode node{};
-                node._id            = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-                node._type          = parseNodeType( nodeJson.get( "type" ).asString() );
-                node._speaker       = nodeJson.get( "speaker" ).asString();
-                node._text          = nodeJson.get( "text" ).asString();
-                node._condition     = nodeJson.get( "condition" ).asString();
-                node._actionCommand = nodeJson.get( "action" ).asString();
-                node._position._x   = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-                node._position._y   = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
-
-                const JsonValue choicesVal = nodeJson.get( "choices" );
-                if ( choicesVal.isArray() )
-                {
-                    const size_t choiceCount = choicesVal.size();
-                    node._listChoice.reserve( choiceCount );
-                    for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
-                        node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
-                }
-
-                if ( node._id > 0 )
-                    _listNode.push_back( std::move( node ) );
+                const size_t choiceCount = choicesVal.size();
+                node._listChoice.reserve( choiceCount );
+                for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
+                    node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
             }
-        }
 
-        const JsonValue linksVal = root.get( "links" );
-        if ( linksVal.isArray() )
+            if ( node._id > 0 )
+                _listNode.push_back( std::move( node ) );
+        } );
+
+        forEachObjectInArray( root, "links", [this]( const JsonValue& linkJson, size_t linkIndex )
         {
-            const size_t linkCount = linksVal.size();
-            for ( size_t linkIndex = 0; linkIndex < linkCount; ++linkIndex )
-            {
-                const JsonValue linkJson = linksVal.at( linkIndex );
-                if ( linkJson.isObject() == false )
-                    continue;
-
-                DialogueAssetLink link{};
-                link._id      = static_cast<int32>( linkJson.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
-                link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
-                link._toPin   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
-                if ( link._fromPin > 0 && link._toPin > 0 )
-                    _listLink.push_back( link );
-            }
-        }
+            DialogueAssetLink link{};
+            // id 가 없으면 순번을 쓴다 — 손으로 적은 파일이 id 를 빼먹는 일이 있다.
+            link._id      = static_cast<int32>( linkJson.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
+            link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
+            link._toPin   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
+            if ( link._fromPin > 0 && link._toPin > 0 )
+                _listLink.push_back( link );
+        } );
     }
 
     string DialogueGraphAsset::toJson() const

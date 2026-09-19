@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerRecipe.h"
 
 namespace sw
 {
@@ -395,16 +396,9 @@ namespace sw
         if ( vkAllocateCommandBuffers( _device, &allocInfo, _listCommandBuffer.data() ) != VK_SUCCESS )
             return false;
 
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType         = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter     = VK_FILTER_LINEAR;
-        samplerInfo.minFilter     = VK_FILTER_LINEAR;
-        samplerInfo.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.maxAnisotropy = 1.0f;
-        samplerInfo.borderColor   = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        samplerInfo.maxLod        = 1000.0f;
+        // 씬 텍스처의 기본 샘플러다. 지금 원하는 성질은 "선형 + 가장자리 고정" 이므로 그 조리법을
+        // 쓴다 — 비등방 같은 다른 성질이 필요해지면 여기서 조리법을 바꾸거나 직접 채우면 된다.
+        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
         if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_defaultSampler ) != VK_SUCCESS )
             return false;
 
