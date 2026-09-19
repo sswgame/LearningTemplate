@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `f0acf633`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `134d02cb`
 
 ---
 
@@ -215,10 +215,10 @@ cd build/Ninja-Debug/Bin
 | `GameFramework` (전체) | 6,777 | ✅ 2026-09-18 (3절 참고 — 널 가능 서비스 사용 린트 확대 · 죽은 등록 경로 제거) |
 | `Games/Empty` | 1,054 | ✅ 2026-09-18 (같은 훑기에 포함. 결함 없음) |
 
-### 1-0d. `Source/App` · `Tools` 훑기 — 아직 안 했다 (2026-09-19)
+### 1-0d. `Source/App` · `Tools` 훑기 — ✅ **끝났다** (2026-09-19, 2커밋)
 
-훑기 표 셋(`Core` · `Engine` · `Editor` · `GameFramework`/`Games`/`RuntimeAPI`)에 **`App` 과 `Tools` 가
-없다.** 빠뜨린 것이지 끝난 것이 아니다.
+훑기 표 셋(`Core` · `Engine` · `Editor` · `GameFramework`/`Games`/`RuntimeAPI`)에 `App` 과 `Tools` 가
+없어 빠뜨리고 있던 것을 2026-09-19 에 같은 방식으로 훑었다. 둘 다 결함이 나왔다 — 3절 참고.
 
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
@@ -226,9 +226,9 @@ cd build/Ninja-Debug/Bin
 | `Tools/ReflectionParser` | 6,064 | ✅ 2026-09-19 (3절 참고 — 도구가 자기 자신을 입력으로 세지 않았다) |
 
 **손대기 전에 알 것.** `App` 은 실행 파일이라 **링크할 라이브러리가 없다** — 테스트는 소스를 파일
-단위로 가져와야 한다(`SmokeTest` 가 `LiveReloadManager`·`ModuleCompiler` 를, `AppTest` 가
+단위로 가져와야 한다(`SmokeTest` 가 `LiveReloadManager`·`ModuleCompiler`·`ModuleHost` 를, `AppTest` 가
 `FrameTimeline` 을 그렇게 쓴다). 창·RHI·모듈이 필요한 것은 단위 테스트로 끌고 오지 말고 실기동으로
-본다.
+본다 — 그 실기동은 이제 `AppSmokeTest`(라벨 `hostgpu`)가 자동으로 돈다.
 
 ### 1-0e. 확장점 점검 — 상용 엔진과 견줘 남은 것 (2026-09-19)
 
