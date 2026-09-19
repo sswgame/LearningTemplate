@@ -435,6 +435,52 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Engine 훑기 — Animation · Audio)
+
+사용자가 **"비현실적이라도 해"** 라고 했으므로 패턴 검사로 대체하지 않고 Engine 도 파일을
+하나씩 읽는다. Core 와 같이 알파벳 순.
+
+**오디오를 내리는 순간 워커가 이미 해제된 XAudio2 로 보이스를 만들고 있었다 (메모리 안전).**
+`XAudio2System::shutdown()` 만 `_voiceMutex` 를 잡지 않고 보이스 목록을 훑었다 — 그 뮤텍스의
+주석이 처음부터 **"보이스·`_musicPath`·`_musicGeneration` 을 지킵니다"** 라고 적고 있었는데
+여기만 어긴 것이다. 그리고 `EngineLoop::shutdown` 은 오디오를 **TaskManager 보다 먼저** 내린다
+(419행 vs 431행) — 즉 shutdown 이 도는 동안 워커는 아직 `playDecodedClipTask` 안에 있다. 결과:
+
+1. 워커의 `push_back` 이 `_listActiveVoice` 를 재할당하면 shutdown 의 순회 참조가 **해제된
+   메모리**를 가리킨다.
+2. 잠금을 늦게 얻은 워커가 이미 `Release()` 한 `_pXAudio` 로 `CreateSourceVoice` 를 부른다.
+
+shutdown 이 잠그고 부수게 했고, `_bInitialized` 를 **잠금 안에서 먼저** 내려 기다리던 워커가
+그것을 보고 돌아가게 했다. 워커도 잠근 뒤에 다시 확인한다(첫 줄의 검사는 잠금 밖이라 못 믿는다).
+
+**왜 여태 안 보였나 — 기존 테스트가 정확히 이 구간을 비껴갔다.**
+`MultithreadedAudioDecodeAndPlayback` 은 `waitAll()` 을 **먼저** 부르고 내린다. 실제 엔진은
+그러지 않는다. 새 케이스 `ShutdownWhileDecodeTasksAreStillInFlight` 는 일부러 안 기다린다.
+
+**테스트를 무는 것으로 만드는 데 한 번 실패했다.** 처음에는 같은 WAV 하나를 24번 재생했는데,
+클립 캐시 덕에 두 번째부터는 즉시 끝나 워커가 잠금 구간에 들어가기도 전에 shutdown 이 지나갔다 —
+**수정을 빼고도 5/5 통과했다.** 파일을 매번 다르게 하고(캐시 우회) 크기를 키워 디코드를 실제로
+느리게 만들자 **5/5 재현**된다(ASan: `XAudio2System.cpp:648` 에서 access-violation).
+수정을 되돌리면 5/5 죽고, 넣으면 5/5 통과한다.
+
+> 교훈 하나 더: "테스트를 썼다" 와 "그 테스트가 문다" 는 다르다. 변이를 넣어 **실제로 지는지**
+> 보지 않았으면 이 케이스는 거짓 안심만 남기고 끝났을 것이다.
+
+**살펴보고 문제 없던 것 (Animation):** `AnimClip`(헤더가 스텁이라고 명시한다 — `sample()` 이
+항등을 주는 것은 의도다), `AnimPlayer`(`setSpeed` 가 음수를 0 으로 막아 크로스페이드가 멈추는
+경우가 없다), `Skeleton`(`addBone` 이 부모-자식 순서를 입구에서 막고, `updateCharacterSpaceTransforms`
+는 assert 말고 **진짜 if 가드**도 함께 둔다), `DualQuaternion`, `BlendSpace`(1D·2D 모두 빈 목록을
+입구에서 막고, 거리 0 은 조기 반환으로 나눗셈을 피한다), `AnimationGraphAsset`,
+`AnimationGraphPlayer`.
+
+**살펴보고 문제 없던 것 (Audio):** `update()` 의 swap-and-pop, 유휴 보이스 재사용(포맷 일치를
+확인한다), `playMusic` 이 **멈추기 전에** 리소스 존재를 보는 것, 세대 번호로 늦게 온 디코드를
+거르는 것 — 전부 주석에 이유까지 적혀 있다.
+
+**덤:** `D3D11RHICommandContext::endRenderPass()` 가 네 백엔드 중 유일하게 비어 있어 "빠뜨린 것"
+으로 읽히기 쉬워, **왜 비어 있는 것이 맞는지**를 주석으로 적었다(즉시 모드라 패스 객체가 없고,
+`D3D11RecordingState` 가 든 것은 패스 경계를 넘어 유지되어야 한다).
+
 ### 2026-09-19 (Core 마감 + Win32 문자열 변환 두 곳)
 
 **Core 18개 폴더를 다 봤다.** 남은 여섯(Log · Math · Process · Task · Time · Uuid)에서는 고칠

@@ -166,6 +166,17 @@ namespace sw
         _pContext->RSSetViewports( 1, &viewport );
     }
 
+    /**
+     * @brief D3D11 에는 끝낼 렌더 패스가 **없습니다** — 비어 있는 것이 맞습니다.
+     * @details 네 백엔드 중 여기만 본문이 비어 있어서 "빠뜨린 것" 으로 읽히기 쉽다. 아니다:
+     *          - **Vulkan** 은 `vkCmdEndRenderPass` 가 API 의 요구다.
+     *          - **GL** 은 기본 프레임버퍼와 `glClipControl` 을 되돌려야 한다(엔진 패스를 거치지
+     *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문).
+     *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러/깊이 타깃)를 지운다.
+     *          D3D11 은 즉시 모드라 패스 객체가 없고, 해저드는 런타임이 자동으로 추적한다.
+     *          `D3D11RecordingState` 가 들고 있는 것(메시 VB, 루트 상수 그림자)은 **패스 경계를
+     *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀린다.
+     */
     void D3D11RHICommandContext::endRenderPass()
     {
     }

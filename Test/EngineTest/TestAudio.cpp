@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -287,4 +288,65 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
     sw::FileUtil::removeFile( wavB );
 
     pAudioSystem->shutdown();
+}
+
+/**
+ * @brief [AudioSystemTest] 디코드 태스크가 아직 도는 중에 내려도 무너지지 않는다
+ * @details **실제 엔진의 순서가 이렇다.** `EngineLoop::shutdown` 은 오디오를 TaskManager 보다
+ *          **먼저** 내리므로, `XAudio2System::shutdown()` 이 도는 동안 워커가 아직
+ *          `playDecodedClipTask` 안에 있을 수 있다.
+ *
+ *          그런데 `shutdown()` 만 `_voiceMutex` 를 잡지 않고 보이스 목록을 훑었다 —
+ *          `_voiceMutex` 의 주석이 처음부터 "보이스를 지킨다" 고 적고 있었는데 여기만 어겼다.
+ *          워커의 `push_back` 이 `_listActiveVoice` 를 재할당하면 그 순회 참조가 그대로
+ *          **해제된 메모리**를 가리킨다. 게다가 뒤늦게 잠금을 얻은 워커는 이미 `Release()` 한
+ *          `_pXAudio` 로 보이스를 만들려 든다.
+ *
+ *          바로 위 `MultithreadedAudioDecodeAndPlayback` 은 `waitAll()` 을 **먼저** 부르고
+ *          내려서 이 구간을 통째로 비껴갔다 — 그래서 오래 안 보였다. 여기서는 일부러 안 기다린다.
+ *          (객체 자체는 `waitAll()` 뒤에 부순다. 그건 다른 이야기이고 엔진도 그 순서다.)
+ */
+SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
+{
+    const sw::string tempDir = sw::FileUtil::getTempDirectory();
+
+    // 경쟁 구간은 좁다 — 여러 판을 돌리고(`verify-nondeterministic-repro` 의 규칙), **파일을 매번
+    // 다르게** 해서 클립 캐시를 비껴간다. 같은 파일이면 두 번째부터는 캐시에서 즉시 나와
+    // 워커가 잠금 구간에 들어가기도 전에 끝나 버린다.
+    constexpr int32 kRoundCount = 12;
+    constexpr int32 kPlayCount  = 24;
+
+    sw::vector<sw::string> listWavPath;
+    listWavPath.reserve( kPlayCount );
+    for ( int32 wavIndex = 0; wavIndex < kPlayCount; ++wavIndex )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer256> nameBuilder;
+        nameBuilder.append( "test_shutdown_race_" );
+        nameBuilder.append( wavIndex );
+        nameBuilder.append( ".wav" );
+        sw::string path = sw::FileUtil::joinPath( tempDir, nameBuilder.view() );
+        SW_ASSERT_TRUE( writeTestWav( path, 200000 ) );
+        listWavPath.push_back( std::move( path ) );
+    }
+
+    for ( int32 round = 0; round < kRoundCount; ++round )
+    {
+        sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
+        SW_ASSERT_TRUE( pAudioSystem->initialize() );
+
+        for ( int32 playIndex = 0; playIndex < kPlayCount; ++playIndex )
+            pAudioSystem->play( listWavPath[static_cast<size_t>( playIndex )] );
+
+        // **일부러 기다리지 않는다.** 디코드 태스크가 도는 채로 내리는 것이 이 케이스의 전부다.
+        pAudioSystem->shutdown();
+
+        // 객체를 부수기 전에는 흘려보낸다 — 태스크가 `this` 를 들고 있기 때문이다.
+        if ( sw::engine::areEngineServicesBound() )
+            sw::engine::getTaskManager().waitAll();
+
+        SW_EXPECT_FALSE( pAudioSystem->isInitialized() );
+    }
+
+    for ( const sw::string& path : listWavPath )
+        sw::FileUtil::removeFile( path );
 }

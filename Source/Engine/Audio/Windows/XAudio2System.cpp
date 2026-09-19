@@ -392,35 +392,49 @@ namespace sw
         // 소멸자가 `XAudio2System::shutdown()` 을 한정해서 부르므로 파괴 중 가상 디스패치는 없다.
         // 여기서 `stopMusic()` 까지 한정하면 **정상 종료 경로**에서 파생 재정의가 무시되므로 두지 않는다.
         // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
-        stopMusic();
-        for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
+        stopMusic(); // 자기 안에서 `_voiceMutex` 를 잡는다 — 여기서 들고 있으면 안 된다.
+
         {
-            if ( voiceBuffer._pVoice != nullptr )
+            // **잠그고 부순다.** 오디오는 `EngineLoop::shutdown` 에서 **TaskManager 보다 먼저**
+            // 내려가므로, 바로 이 순간에도 워커가 `playDecodedClipTask` 안에서 `_listActiveVoice`
+            // 에 `push_back` 하고 있을 수 있다. 예전에는 여기만 잠금 없이 훑었다 — 그 push_back 이
+            // 벡터를 재할당하면 아래 루프의 참조가 **해제된 메모리**를 가리키고, 뒤늦게 잠금을 얻은
+            // 워커는 이미 `Release()` 한 `_pXAudio` 로 보이스를 만든다.
+            // `_bInitialized` 를 잠금 안에서 **먼저** 내려, 기다리던 워커가 그것을 보고 돌아가게 한다.
+            // (`_voiceMutex` 의 주석이 처음부터 "보이스를 지킨다" 고 적고 있었다 — 여기만 안 지켰다.)
+            std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
+            _impl->_bInitialized = SW_FALSE;
+
+            for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
             {
-                voiceBuffer._pVoice->Stop( 0 );
-                voiceBuffer._pVoice->DestroyVoice();
+                if ( voiceBuffer._pVoice != nullptr )
+                {
+                    voiceBuffer._pVoice->Stop( 0 );
+                    voiceBuffer._pVoice->DestroyVoice();
+                }
+            }
+            _impl->_listActiveVoice.clear();
+            for ( XAudio2SystemInternal::VoiceBuffer& idleBuffer : _impl->_listIdleVoice )
+            {
+                if ( idleBuffer._pVoice != nullptr )
+                {
+                    idleBuffer._pVoice->Stop( 0 );
+                    idleBuffer._pVoice->DestroyVoice();
+                }
+            }
+            _impl->_listIdleVoice.clear();
+            if ( _impl->_pMasterVoice != nullptr )
+            {
+                _impl->_pMasterVoice->DestroyVoice();
+                _impl->_pMasterVoice = nullptr;
+            }
+            if ( _impl->_pXAudio != nullptr )
+            {
+                _impl->_pXAudio->Release();
+                _impl->_pXAudio = nullptr;
             }
         }
-        _impl->_listActiveVoice.clear();
-        for ( XAudio2SystemInternal::VoiceBuffer& idleBuffer : _impl->_listIdleVoice )
-        {
-            if ( idleBuffer._pVoice != nullptr )
-            {
-                idleBuffer._pVoice->Stop( 0 );
-                idleBuffer._pVoice->DestroyVoice();
-            }
-        }
-        _impl->_listIdleVoice.clear();
-        if ( _impl->_pMasterVoice != nullptr )
-        {
-            _impl->_pMasterVoice->DestroyVoice();
-            _impl->_pMasterVoice = nullptr;
-        }
-        if ( _impl->_pXAudio != nullptr )
-        {
-            _impl->_pXAudio->Release();
-            _impl->_pXAudio = nullptr;
-        }
+
         if ( _impl->_bMfInitialized != SW_FALSE )
         {
             MFShutdown();
@@ -435,7 +449,6 @@ namespace sw
             std::scoped_lock<mutex> lock{ _impl->_clipCacheMutex };
             _impl->_mapClipCache.clear();
         }
-        _impl->_bInitialized = SW_FALSE;
         SW_LOG_INFO( "Shut down." );
     }
 
@@ -603,6 +616,12 @@ namespace sw
         }
 
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
+
+        // 이 함수 첫 줄의 `_pXAudio` 검사는 **잠금 밖**이라 못 믿는다. 디코드(느리다)와 잠금 대기
+        // 사이에 `shutdown()` 이 끝났을 수 있고, 그러면 `_pXAudio` 는 이미 `Release()` 된 것이다.
+        // 잠금 안에서 다시 본다.
+        if ( _impl->_bInitialized == SW_FALSE || _impl->_pXAudio == nullptr )
+            return;
 
         // 요청 번호로 거른다. 경로로 걸렀을 때는 (1) 요청자가 경로를 **제출 뒤에** 적어서 빠른
         // 워커가 자기 요청을 남의 것으로 착각해 통째로 버렸고, (2) A → B → A 처럼 같은 곡으로
