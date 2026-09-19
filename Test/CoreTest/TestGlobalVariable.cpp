@@ -122,8 +122,8 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 
     sw::CommandLineManager cmd;
     cmd.initialize();
-    cmd.addArgument<int32>( { "gv_testInt" }, true, int32{ 60 }, false );
-    cmd.addArgument<sw::string>( { "gv_testString" }, true, sw::string( "InitialValue" ), false );
+    cmd.addArgument<int32>( { "gv_testInt" }, int32{ 60 }, false );
+    cmd.addArgument<sw::string>( { "gv_testString" }, sw::string( "InitialValue" ), false );
 
     utf8  arg0[] = "CoreUtilityTest";
     utf8  arg1[] = "gv_testInt=777";

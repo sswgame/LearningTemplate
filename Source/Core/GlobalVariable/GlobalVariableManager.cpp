@@ -306,13 +306,13 @@ namespace sw
         for ( const auto& [name, info] : _mapVariable )
         {
             if ( std::holds_alternative<int32>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<int32>( { info->_name }, false, std::get<int32>( info->_defaultValue ), true );
+                pCmdLineManager->addArgument<int32>( { info->_name }, std::get<int32>( info->_defaultValue ), true );
             else if ( std::holds_alternative<float32>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<float32>( { info->_name }, false, std::get<float32>( info->_defaultValue ), true );
+                pCmdLineManager->addArgument<float32>( { info->_name }, std::get<float32>( info->_defaultValue ), true );
             else if ( std::holds_alternative<bool>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<bool>( { info->_name }, false, std::get<bool>( info->_defaultValue ), true );
+                pCmdLineManager->addArgument<bool>( { info->_name }, std::get<bool>( info->_defaultValue ), true );
             else if ( std::holds_alternative<string>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<string>( { info->_name }, false, string( std::get<string>( info->_defaultValue ) ), true );
+                pCmdLineManager->addArgument<string>( { info->_name }, string( std::get<string>( info->_defaultValue ) ), true );
         }
     }
 
@@ -423,9 +423,18 @@ namespace sw
             string pendingValue;
             if ( _pCmdLineManager->findPendingGlobalValue( strName, pendingValue ) )
             {
-                iter->second->setValueFromString( pendingValue );
-                if ( iter->second->_onValueChanged.isBound() )
-                    iter->second->_onValueChanged( iter->second.get() );
+                // 값이 타입에 맞지 않으면 여기서 말해 준다. 그러지 않으면 값을 빠뜨린
+                // `-gv_editorPanelDump`(보류표에 "true" 로 남는다)가 int 변수에 닿아 조용히 실패하고,
+                // 사용자 눈에는 "스위치가 아무 일도 안 한다" 로만 보인다.
+                //
+                // 변경 알림은 여기서 따로 부르지 않는다 — setValueFromString 이 타고 가는
+                // setValueAs* 넷이 모두 이미 _onValueChanged 를 쏜다. 예전엔 여기서 한 번 더 불러
+                // 모듈 변수만 콜백이 **두 번** 왔다.
+                if ( iter->second->setValueFromString( pendingValue ) == false )
+                {
+                    SW_LOG_WARNING( "-%#=%# : 값이 변수 타입과 맞지 않습니다. 무시됩니다",
+                                    strName.c_str(), pendingValue.c_str() );
+                }
             }
         }
 

@@ -158,8 +158,8 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
     cmdManager.initialize();
 
     // 커스텀 인자 등록
-    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, true, sw::string( "DefaultLevel" ), false );
-    cmdManager.addArgument<bool>( { "enable_profiler" }, false, false, false );
+    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ), false );
+    cmdManager.addArgument<bool>( { "enable_profiler" }, false, false );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -228,8 +228,8 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
-    cmdManager.addArgument<int32>( { "given_value" }, true, 7, true );
-    cmdManager.addArgument<int32>( { "omitted_value" }, true, 7, true );
+    cmdManager.addArgument<int32>( { "given_value" }, 7, true );
+    cmdManager.addArgument<int32>( { "omitted_value" }, 7, true );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -290,4 +290,134 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
     int32 none{ -1 };
     SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::Count, none ) );
     SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::Count ) == false );
+}
+
+/**
+ * @brief [CommandLineTest] 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
+ * @details 예전에는 "값 없이 적어도 되는가" 가 `_bMustHaveValue` 라는 **타입과 따로 노는 칸**이었다.
+ *          `GlobalVariableManager::registerToCommandLine` 이 전역 변수 전부를 타입과 무관하게
+ *          "값 없어도 됨" 으로 등록했으므로, 값을 빠뜨린 `-gv_benchMeshes` 가 int32 자리에
+ *          **bool `true` 를 밀어 넣었다.** 그러면 `_bParsed` 는 켜지는데 `readValue` 의
+ *          `get_if<int32>` 는 nullptr 이라, `getArgument` 가 기본값으로 돌아가지도 못하고 false 를
+ *          돌려줬다 — 경고 한 줄 없이 **스위치가 아무 일도 안 했다.**
+ *          이제는 값 없이 적을 수 있는 것이 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는
+ *          경고를 남기고 무시되므로 기본값이 그대로 살아 있다.
+ */
+SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ), true );
+    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f, true );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-gv_benchMeshes" ),  // 값을 빠뜨렸다
+        const_cast<utf8*>( "-gv_startupScene" ), //
+        const_cast<utf8*>( "-gv_lightRadius" ),  //
+    };
+    cmdManager.parse( 4, argv );
+
+    // 값이 없었으므로 **적히지 않은 것으로** 남고, 기본값이 그대로 읽힌다.
+    int32 meshCount{ -1 };
+    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ),
+                        "값을 빠뜨린 int 인자가 기본값조차 못 읽게 만들었습니다" );
+    SW_EXPECT_EQUAL( 200, meshCount );
+
+    sw::string sceneName;
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
+    SW_EXPECT_STREQ( "default", sceneName.c_str() );
+
+    float32 radius{ 0.0f };
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
+    SW_EXPECT_TRUE( radius > 4.4f && radius < 4.6f );
+
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "gv_benchMeshes" ) == false,
+                        "값 없이 적은 int 인자를 '주었다' 로 셌습니다" );
+
+    // 값을 제대로 준 같은 인자는 당연히 읽힌다 — 위가 "그냥 다 무시" 가 아님을 못박는다.
+    sw::CommandLineManager withValue;
+    withValue.initialize();
+    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    utf8* argvWithValue[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-gv_benchMeshes=512" ),
+    };
+    withValue.parse( 2, argvWithValue );
+
+    int32 givenCount{ 0 };
+    SW_EXPECT_TRUE( withValue.getArgument( std::string_view( "gv_benchMeshes" ), givenCount ) );
+    SW_EXPECT_EQUAL( 512, givenCount );
+    SW_EXPECT_TRUE( withValue.isArgumentProvided( "gv_benchMeshes" ) );
+}
+
+/**
+ * @brief [CommandLineTest] bool 인자는 값이 있어도 없어도 읽힌다
+ * @details 위 검사가 "값 없는 인자를 전부 막는다" 로 과하게 굳는 것을 막는다 — 단독 플래그는
+ *          엔진 전체가 쓰는 형식이다(`-dx12`, `-EnableEditor`).
+ */
+SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-EnableEditor" ), // 단독 플래그
+        const_cast<utf8*>( "-vsync=0" ),      // 명시적 false
+    };
+    cmdManager.parse( 3, argv );
+
+    bool bEditor{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::ENABLE_EDITOR, bEditor ) );
+    SW_EXPECT_TRUE( bEditor );
+
+    bool bVsync{ true };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::VSYNC, bVsync ) );
+    SW_EXPECT_FALSE( bVsync );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ),
+                        "`-vsync=0` 은 '적지 않은 것' 이 아니라 'false 로 적은 것' 이다" );
+}
+
+/**
+ * @brief [CommandLineTest] initialize 는 앞서 넣은 인자에 밀려나지 않는다
+ * @details 열거형 조회는 `_listArgument` 를 열거값으로 **바로 인덱싱**한다. 그 앞에 커스텀 인자가
+ *          하나라도 들어가 있으면 표 전체가 한 칸씩 밀려 `getArgument(WIDTH)` 가 **그 커스텀 인자를
+ *          읽는다.** 막는 것이 줄마다 걸린 assert 뿐이었고 그것은 Debug 에서만 산다 — Shipping 에서는
+ *          아무 말 없이 다른 인자의 값이 나왔다. 이제 initialize 가 표를 먼저 비운다.
+ *
+ *          비우기를 빼면 이 검사는 Debug 에서 assert 로 멈추고 Shipping 에서 아래 단언이 진다.
+ */
+SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.addArgument<int32>( { "early_custom" }, 99, true );
+    cmdManager.initialize();
+
+    // WIDTH 는 열거값 0 이다. 비우지 않았다면 0 번 자리는 early_custom 이고, 그것은 기본값 99 를
+    // 가지고 있으므로 **적지도 않은 WIDTH 가 99 로 읽힌다.**
+    int32 width{ -1 };
+    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) == false,
+                        "적지 않은 WIDTH 가 읽힙니다 — 열거값 인덱싱이 다른 인자를 가리킵니다" );
+    SW_EXPECT_EQUAL( -1, width );
+
+    // 비우기의 대가: 먼저 넣은 커스텀 인자는 함께 사라진다. 문서가 약속한 그대로인지 못박는다.
+    int32 custom{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "early_custom" ), custom ) );
+
+    // 표가 제자리이므로 평소의 파싱이 그대로 된다.
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-WIDTH=1920" ),
+        const_cast<utf8*>( "-dx12" ),
+    };
+    cmdManager.parse( 3, argv );
+
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
+    SW_EXPECT_EQUAL( 1920, width );
+
+    bool bDx12{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
+    SW_EXPECT_TRUE( bDx12 );
 }

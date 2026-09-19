@@ -1,10 +1,12 @@
 /**
  * @file ArgumentList.xxx
  * @brief 엔진이 아는 커맨드라인 인자 목록 (CommandLineArgument 열거 + 등록 정보 공유).
- * @details include 전에 SW_REGISTER_ARGUMENT( Name, bMustHaveValue, defaultValue, bUseDefaultValue, ... ) 정의.
+ * @details include 전에 SW_REGISTER_ARGUMENT( Name, defaultValue, bUseDefaultValue, ... ) 정의.
  *          Name             : 열거자 이름. 그대로 동의어 하나로도 등록된다.
- *          bMustHaveValue   : `-key=value` 로 값을 받아야 하는 인자인가. 단독 플래그는 false.
  *          defaultValue     : bUseDefaultValue 가 켜졌을 때 돌려줄 값. 저장 타입은 bool·int32·float32·string 넷뿐이다.
+ *                             **이 값의 타입이 곧 "값을 받아야 하는가" 다** — bool 만 `-key` 단독으로 적을 수
+ *                             있고(그때 true), 나머지는 `-key=value` 를 요구한다. 예전에는 그것이
+ *                             bMustHaveValue 라는 따로 적는 칸이었고, 둘이 어긋날 수 있었다(아래 경고 참조).
  *          bUseDefaultValue : 인자를 **주지 않아도** getArgument 가 true 를 돌려주고 defaultValue 를
  *                             써 줄 것인가. 아래 경고를 먼저 읽을 것.
  *          ...              : 추가 동의어. 없으면 비워 둔다.
@@ -23,15 +25,15 @@
 // 기본값이 false 인 단독 플래그는 켤 이유가 아예 없다. 켜 봐야 "주지 않았다" 와 "false 로 주었다" 를
 // 구별할 수 없게 만들 뿐이고, 호출부는 반환값을 믿지 못해 `getArgument(...) && bFlag` 로 한 번 더
 // 물어야 한다(RHI.cpp 가 실제로 그렇게 쓴다). 주지 않았는지 알고 싶으면 isArgumentProvided 를 쓴다.
-SW_REGISTER_ARGUMENT( WIDTH, true, 1280, false, "W" )
-SW_REGISTER_ARGUMENT( HEIGHT, true, 1280, false, "H" )
-SW_REGISTER_ARGUMENT( VSYNC, false, false, false, "vsync" )
-SW_REGISTER_ARGUMENT( DIRECTX_11, false, false, false, "dx11", "d3d11" )
-SW_REGISTER_ARGUMENT( DIRECTX_12, false, false, false, "dx12", "d3d12" )
-SW_REGISTER_ARGUMENT( VULKAN, false, false, false, "vk", "vulkan" )
-SW_REGISTER_ARGUMENT( OPENGL, false, false, false, "gl", "opengl" )
-SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, false, "EnableEditor" )
-SW_REGISTER_ARGUMENT( IP, true, "", false, )
-SW_REGISTER_ARGUMENT( PORT, true, 0, false, )
-SW_REGISTER_ARGUMENT( LANGUAGE, true, "", false, "lang", "language" )
-SW_REGISTER_ARGUMENT( BAKE_SHADERS, false, false, false, "bake-shaders", "bakeshaders" )
+SW_REGISTER_ARGUMENT( WIDTH, 1280, false, "W" )
+SW_REGISTER_ARGUMENT( HEIGHT, 1280, false, "H" )
+SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
+SW_REGISTER_ARGUMENT( DIRECTX_11, false, false, "dx11", "d3d11" )
+SW_REGISTER_ARGUMENT( DIRECTX_12, false, false, "dx12", "d3d12" )
+SW_REGISTER_ARGUMENT( VULKAN, false, false, "vk", "vulkan" )
+SW_REGISTER_ARGUMENT( OPENGL, false, false, "gl", "opengl" )
+SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, "EnableEditor" )
+SW_REGISTER_ARGUMENT( IP, "", false, )
+SW_REGISTER_ARGUMENT( PORT, 0, false, )
+SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang", "language" )
+SW_REGISTER_ARGUMENT( BAKE_SHADERS, false, false, "bake-shaders", "bakeshaders" )

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `b2b8d674`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `dbb2055b`
 
 ---
 
@@ -434,6 +434,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (Source 함수 단위 점검 — Core/CommandLine · Core/GlobalVariable)
+
+`Source/` 전체를 함수 하나씩 읽는 점검을 시작했다(Core → Engine → ReflectionParser → Editor →
+GameFramework → Games, Core 안은 폴더 알파벳 순). 첫 두 폴더에서 **조용히 실패하던 것 셋**이 나왔다.
+
+**1) 값을 빠뜨린 `-gv_*` 스위치가 아무 일도 하지 않았다 (진짜 버그).** `ArgumentInfo` 에는
+"값을 받아야 하는가" 를 적는 `_bMustHaveValue` 칸이 따로 있었는데, `GlobalVariableManager::
+registerToCommandLine` 이 **전역 변수 전부를 타입과 무관하게 "값 없어도 됨" 으로** 등록했다.
+그래서 `-gv_benchMeshes` 처럼 `=값` 을 빠뜨리면 파서가 int32 자리에 **bool `true` 를 밀어 넣었고**,
+뒤이어 `readValue` 의 `get_if<int32>` 가 nullptr 이라 `getArgument` 가 false 를 돌려줬다 —
+`_bParsed` 는 켜졌으니 기본값으로 돌아가지도 못했다. **경고 한 줄 없이 스위치가 죽었다.**
+
+고친 방법은 칸을 지우는 쪽이다. "값 없이 적을 수 있는가" 는 **저장 타입이 이미 아는 것**이다
+(bool 만 가능). `_bMustHaveValue` 와 `ArgumentList.xxx` 의 그 열, `addArgument` 의 그 인자를
+모두 없애고 `ArgumentInfo::isFlagArgument()` 하나로 바꿨다. 둘이 어긋날 자리가 사라진다.
+비-bool 을 값 없이 적으면 이제 경고를 남기고 무시되므로 **기본값이 그대로 산다.**
+
+**2) 같은 실패의 다른 길 — 모듈 전역 변수의 보류표.** 아직 등록 전인 `-gv_모듈변수` 는 보류표에
+문자열로 남고, 값이 없으면 `"true"` 로 적힌다. 모듈이 뜬 뒤 `setValueFromString("true")` 이
+int 변수에서 `parseInt` 에 실패하는데 **반환값을 아무도 안 봤다.** 이제 실패하면 경고한다.
+
+**3) `initialize()` 가 앞서 등록된 인자에 밀렸다.** 열거형 조회는 `_listArgument` 를 열거값으로
+바로 인덱싱한다. `initialize()` 전에 `addArgument` 가 한 번이라도 불리면 표가 한 칸씩 밀려
+`getArgument(WIDTH)` 가 **그 인자를 읽는다.** 막는 것이 줄마다 걸린 assert 뿐이었고 그것은
+Debug 에서만 산다. `initialize()` 가 표를 먼저 비우게 했다.
+
+**부수로 고친 것:** 보류 전역 변수를 적용할 때 변경 콜백이 **두 번** 불리고 있었다
+(`setValueFromString` 이 타고 가는 `setValueAs*` 가 이미 쏜다).
+
+**검증.** `CommandLineTest` 에 3 케이스를 더했고(13개), 변이 검사로 셋 다 실제로 문다 —
+값 검사를 예전 동작으로 되돌리면 `ValuelessNonBooleanArgumentKeepsItsType` 이 7군데서 지고,
+`clear()` 를 빼면 `InitializeIsNotShiftedByEarlierArguments` 가 **Shipping 에서** 6군데서 진다
+(Debug 에서는 그 전에 assert 가 프로세스를 멈춘다 — 이것이 바로 Shipping 을 못 지키던 이유다).
+
+**다음:** Core 의 나머지 폴더(Common → Compression → Concurrency → Container → Delegate → Event →
+File → Log → Math → Memory → Predefined → Process → String → Task → Time → Uuid).
 
 ### 2026-09-19 (리눅스에서 늘 빨갛던 셋 — 하나는 진짜 구멍이었고 둘은 환경이었다)
 

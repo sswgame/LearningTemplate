@@ -17,15 +17,22 @@ namespace sw
     // 한 줄마다 "지금 넣는 자리 == 그 줄의 열거값" 을 확인한다. 이 일치가 findArgument(enum) 을
     // 이름 없는 O(1) 인덱싱으로 만들어 주는 근거이고, 깨지는 경우는 하나뿐이다 —
     // initialize 를 두 번 부르거나, 그 전에 addArgument 를 먼저 부르는 것.
+    //
+    // 그래서 표를 **먼저 비운다.** 줄마다 거는 assert 는 Debug 에서만 살아 있고, Shipping 에서
+    // 어긋난 표는 조용히 **다른 인자의 값을 돌려준다** — `getArgument(WIDTH)` 가 VSYNC 를 읽는
+    // 식이다. 비우고 시작하면 최악이 "먼저 넣은 커스텀 인자가 사라진다" 로 끝나고, initialize 는
+    // 몇 번을 불러도 같은 표가 된다.
     // ============================================================================
     void CommandLineManager::initialize()
     {
+        _listArgument.clear();
+        _mapArgument.clear();
         _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
 
-#define SW_REGISTER_ARGUMENT( name, mustHaveValue, defaultValue, useDefaultValue, ... )       \
+#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                      \
     SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),  \
                    "인자 등록 순서가 CommandLineArgument 열거값과 어긋났습니다: %#", #name ); \
-    addArgument( { #name, __VA_ARGS__ }, mustHaveValue, defaultValue, useDefaultValue );
+    addArgument( { #name, __VA_ARGS__ }, defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -130,9 +137,11 @@ namespace sw
 
         ArgumentInfo& argument = _listArgument[iter->second];
 
-        // 필수 값 누락 검사
-        const bool bHasNoValue = ( argument._bMustHaveValue != SW_FALSE && bHasValue == false );
-        if ( bHasNoValue )
+        // 필수 값 누락 검사. 값 없이 적어도 되는 것은 bool 뿐이다 — `-dx12` 는 "true" 라는 뜻이지만
+        // `-WIDTH` 나 `-gv_benchMeshes` 에는 그런 뜻이 없다. 예전에는 이 판단이 타입과 따로 노는
+        // `_bMustHaveValue` 칸이었고, 그래서 값을 빠뜨린 `-gv_benchMeshes` 가 int32 자리에 bool 을
+        // 밀어 넣은 뒤 **경고 한 줄 없이 아무 일도 하지 않았다**(readValue 의 get_if 가 nullptr).
+        if ( bHasValue == false && argument.isFlagArgument() == false )
         {
             SW_LOG_WARNING( "Value가 입력되지 않았습니다 : %#. 무시됩니다", string( rawKey ).c_str() );
             return;

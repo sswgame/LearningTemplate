@@ -23,7 +23,7 @@ namespace sw
     enum class CommandLineArgument : uint8
     {
 /** @brief ArgumentList.xxx 한 줄을 열거 멤버로 펼칩니다. */
-#define SW_REGISTER_ARGUMENT( name, hasValue, defaultValue, ... ) name,
+#define SW_REGISTER_ARGUMENT( name, defaultValue, ... ) name,
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -39,17 +39,16 @@ namespace sw
      */
     class SW_API CommandLineManager final
     {
-        /** @brief 한 인자의 현재값·기본값·필수 여부입니다. */
+        /** @brief 한 인자의 현재값·기본값·파싱 여부입니다. */
         struct ArgumentInfo
         {
             using Value = std::variant<int32, bool, float32, string>;
 
             Value                  _value;
             Value                  _defaultValue;
-            uint8                  _bMustHaveValue   : 1;
             uint8                  _bUseDefaultValue : 1;
             uint8                  _bParsed          : 1;
-            [[maybe_unused]] uint8 _reserved         : 5;
+            [[maybe_unused]] uint8 _reserved         : 6;
 
             /**
              * @brief 값을 비우고 플래그를 끕니다.
@@ -59,10 +58,20 @@ namespace sw
             ArgumentInfo()
                 : _value{}
                 , _defaultValue{}
-                , _bMustHaveValue{ SW_FALSE }
                 , _bUseDefaultValue{ SW_FALSE }
                 , _bParsed{ SW_FALSE }
                 , _reserved{ 0 } {}
+
+            /**
+             * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인가.
+             * @details 그럴 수 있는 것은 bool 뿐이다 — 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만,
+             *          값 없는 `-WIDTH` 나 `-gv_benchMeshes` 에는 그런 뜻이 없다. 예전에는 이것이
+             *          `_bMustHaveValue` 라는 따로 적는 칸이었고, `GlobalVariableManager` 가 모든
+             *          전역 변수를 타입과 무관하게 "값 없어도 됨" 으로 등록했다. 그래서 값을 빠뜨린
+             *          `-gv_benchMeshes` 가 int32 자리에 bool 을 밀어 넣었고, 이후 `readValue` 의
+             *          `get_if<int32>` 가 nullptr 이라 **경고 한 줄 없이 아무 일도 일어나지 않았다.**
+             */
+            bool isFlagArgument() const { return std::holds_alternative<bool>( _defaultValue ); }
         };
 
     public:
@@ -84,6 +93,8 @@ namespace sw
          * @details 등록 순서는 그 파일의 줄 순서이고 `CommandLineArgument` 열거 멤버도 같은 파일에서
          *          같은 순서로 나온다 — 그래서 열거값이 곧 `_listArgument` 인덱스다. 그 일치를 여기서
          *          한 줄마다 assert 하므로, 열거형으로 하는 조회는 이름을 만들지도 해시하지도 않는다.
+         *          표를 **먼저 비우므로 몇 번을 불러도 같은 표가 된다** — 다만 그 전에 `addArgument`
+         *          로 넣어 둔 커스텀 인자는 함께 사라진다.
          */
         void initialize();
         /** @brief 파싱 결과는 프로세스 수명과 같으므로 할 일이 없습니다. */
@@ -136,10 +147,15 @@ namespace sw
         bool isArgumentProvided( CommandLineArgument argument ) const;
 
         /**
-         * @brief 인자를 추가합니다
+         * @brief 인자를 추가합니다.
+         * @tparam T 저장 타입. **이것이 값을 요구하는지까지 정한다** — `bool` 이면 `-key` 단독으로 적을
+         *         수 있고(그때 true), 나머지는 `-key=value` 를 요구한다(`ArgumentInfo::isFlagArgument`).
+         * @param listSynonym 이 인자를 부르는 이름들. 하나라도 이미 쓰이면 **아무것도 넣지 않는다.**
+         * @param defaultValue `bUseDefaultValue` 가 켜졌을 때 `getArgument` 가 돌려줄 값
+         * @param bUseDefaultValue 인자를 주지 않아도 `getArgument` 가 true 를 돌려줄 것인가
          */
         template <typename T>
-        void addArgument( const std::initializer_list<string_view>& listSynonym, bool bMustHaveValue, T defaultValue, bool bUseDefaultValue );
+        void addArgument( const std::initializer_list<string_view>& listSynonym, T defaultValue, bool bUseDefaultValue );
 
         /**
          * @brief 아직 등록된 인자가 없어 보류해 둔 `gv_` 값을 찾습니다.
@@ -235,7 +251,7 @@ namespace sw
     }
 
     template <typename T>
-    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listSynonym, const bool bMustHaveValue, T defaultValue, const bool bUseDefaultValue )
+    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listSynonym, T defaultValue, const bool bUseDefaultValue )
     {
         // 먼저 전부 검사한다 — 예전엔 겹치는 이름을 만난 자리에서 되돌아갔고, 그 앞에서 이미 넣은
         // 동의어들이 **끝내 만들어지지 않는 인덱스**를 가리킨 채 남았다. 그 동의어로 조회하면
@@ -250,7 +266,6 @@ namespace sw
         }
 
         ArgumentInfo argument{};
-        argument._bMustHaveValue   = bMustHaveValue ? SW_TRUE : SW_FALSE;
         argument._bUseDefaultValue = bUseDefaultValue ? SW_TRUE : SW_FALSE;
         argument._defaultValue     = std::move( defaultValue );
 
