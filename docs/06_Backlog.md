@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `f244fff1`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `ccb38057`
 
 ---
 
@@ -261,42 +261,6 @@ cd build/Ninja-Debug/Bin
 - ~~GPU 리소스 생성·삭제를 워커로~~ → **전부 닫았다.** 메시는 옮겼고(큰 이득), 머티리얼 상수버퍼와 PSO 는 **재 보고
   기각했다** — 아래 "재 보고 둘은 기각, 하나는 고쳤다" 참고. 다시 제안하기 전에 그 숫자를 먼저 볼 것.
 
-### 1-0b. `Process` 의 POSIX 구현을 fork/exec 으로 바꾼다 (2026-09-17)
-
-`Source/Core/Process/Posix/PosixProcess.cpp` 는 `popen` 위에 서 있다. `popen` 은 **자식 pid 를 주지
-않으므로** 그 위에서는 할 수 없는 일이 생긴다 — 그래서 한 헤더가 약속하는 것을 두 구현이 절반만
-지키고 있다. 지금은 못 하는 것을 헤더와 코드에 적어 두었고(조용히 다른 답을 내는 것보다 낫다),
-실제로 고치려면 `fork` + `execl("/bin/sh", "sh", "-c", …)` + `pipe` 로 바꿔야 한다.
-
-바꾸면 한 번에 풀리는 것들:
-
-| 함수 | 지금 POSIX | fork/exec 이후 |
-|------|-----------|----------------|
-| `getProcessId` | 언제나 0 | 진짜 pid |
-| `getNativeHandle` | 언제나 nullptr | pid |
-| `terminate` | **불가** (false 를 돌려주고 경고만 남긴다) | `kill(SIGKILL)` + reap |
-| `isRunning` | 자기 깃발만 본다 (자식이 죽어도 true) | `waitpid(WNOHANG)` |
-| `~Process` | `pclose` 라 **자식이 끝날 때까지 막힌다** | 분리 (Windows 와 같아진다) |
-
-**막고 있던 것이 없어졌다 (2026-09-19).** "이 PC 에 WSL 이 없다" 고 적어 두었던 것은 **틀렸다** —
-있다. 그래서 "컴파일도 못 해 본 플랫폼 코드" 라는 보류 사유는 더 이상 서지 않는다. `WSL-*` 프리셋으로
-직접 짓고 `-L nogpu` 까지 돌린 뒤 넣으면 된다(CI 도 리눅스를 Debug·ASan·Shipping 으로 짓는다).
-
-> **함정 — `WSL-*` 프리셋을 Windows 체크아웃(`/mnt/d/...`)에서 돌리지 말 것.** 그렇게 하면
-> 리눅스 트리플릿이 **같은 `build/vcpkg_installed`** 에 설치되면서 Windows 쪽 설치와
-> `vcpkg/compiler-file-hash-cache.json` 을 지운다 — 실제로 그렇게 Windows 트리가 통째로 서지
-> 않게 됐고 복구에 27분이 들었다(게다가 DrvFs 라 configure 자체가 끝까지 가지도 못한다, 1-2b 참고).
-> 리눅스 빌드는 **WSL 안의 클론**에서 한다 — 이 PC 에는 `~/LearningTemplate` 이 이미 있고
-> 자기 `build/vcpkg_installed` 를 따로 들고 있다. Windows 트리에서 가져올 때는 그 클론에서
-> `git fetch /mnt/d/Projects/Personal/LearningTemplate main` 한다.
-
-**같이 걷을 것**: `Test/CoreTest/TestProcess.cpp` 의 `TerminateProcess` 가 지금 POSIX 에서
-`SW_TEST_SKIP` 이다. pid 가 생기면 건너뛰기를 지우고 양쪽에서 돌린다.
-
-**호출부**: 유일한 실제 사용자는 `ModuleCompiler::cancel()`(`Source/App/Module/ModuleCompiler.cpp:84`)
-이고, 취소는 **전적으로** `terminate` 가 자식을 죽여 파이프가 닫히는 것에 기댄다 — 읽기 루프는
-`_bCancelRequested` 를 보지 않는다. 즉 리눅스에서는 지금 빌드 취소가 동작하지 않는다.
-
 ### 1-1. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
 `py -3 Scripts/lint/report/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
@@ -401,6 +365,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 (파일당 한 번씩 돌리는 이유: `--dry-run` 은 여러 파일을 한 번에 주면 결과가 조용히 잘린다.)
 
+> **함정 — `WSL-*` 프리셋을 Windows 체크아웃(`/mnt/d/...`)에서 돌리지 말 것.** 그렇게 하면
+> 리눅스 트리플릿이 **같은 `build/vcpkg_installed`** 에 설치되면서 Windows 쪽 설치와
+> `vcpkg/compiler-file-hash-cache.json` 을 지운다 — 실제로 그렇게 Windows 트리가 통째로 서지
+> 않게 됐고 복구에 27분이 들었다(게다가 DrvFs 라 configure 자체가 끝까지 가지도 못한다, 아래 참고).
+> 리눅스 빌드는 **WSL 안의 클론**에서 한다 — 이 PC 에는 `~/LearningTemplate` 이 이미 있고
+> 자기 `build/vcpkg_installed` 를 따로 들고 있다. Windows 트리에서 가져올 때는 그 클론에서
+> `git fetch /mnt/d/Projects/Personal/LearningTemplate main` 한다.
+
 **그대로 유효한 함정 (환경)**
 
 - **`/mnt/d` (DrvFs) 에서는 configure 가 안 된다.** `configure_file` 이 `Operation not permitted`
@@ -452,6 +424,73 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (리눅스에서 빌드 취소가 아무것도 하지 않았다 — POSIX `Process` 를 fork/exec 으로)
+
+`PosixProcess` 는 `popen` 위에 서 있었다. `popen` 은 **자식 pid 를 주지 않으므로** 한 헤더가
+약속한 것을 이 구현은 절반만 지켰다: `terminate` 는 언제나 false, `isRunning` 은 자기 깃발,
+`getProcessId` 는 언제나 0, 소멸자는 `pclose` 라 **자식이 끝날 때까지 막혔다.** 그 값을 실제로
+쓰는 곳이 있다 — `ModuleCompiler::cancel()` 은 **전적으로** `terminate` 가 자식을 죽여 파이프가
+닫히는 것에 기댄다(읽기 루프는 취소 깃발을 보지 않는다). 즉 **리눅스에서는 빌드 취소가 아무것도
+하지 않았다.**
+
+`fork` + `pipe` + `dup2` + `execl("/bin/sh", "sh", "-c", …)` 로 바꿔 자식을 직접 들게 했다.
+이제 두 구현이 같은 일을 한다.
+
+**세 가지가 그냥 되지는 않았다.**
+
+1. **`isRunning` 이 자식을 거두면 안 된다.** 가장 쉬운 구현은 `waitpid(WNOHANG)` 인데, 그것은 끝난
+   자식을 **그 자리에서 거둬 버린다** — 뒤이어 부르는 `waitForExit` 은 줄 것이 없어 -1 을 돌려준다.
+   `waitid(P_PID, …, WEXITED | WNOHANG | WNOWAIT)` 로 **묻기만** 한다. 변이로 확인했다: `waitpid`
+   판으로 바꾸면 새 케이스가 종료 코드에서 즉시 걸린다.
+
+2. **`terminate` 는 프로세스 그룹째 죽인다.** 자식에서 `setpgid(0,0)`, 부모에서도 한 번 더 부른다
+   (누가 먼저 도는지 정해져 있지 않다). 셸이 낳은 손자 — 빌드라면 진짜 컴파일러 — 까지 멈춰야
+   취소가 끝나기 때문이다. 대신 자식이 터미널을 읽을 수 없게 되는데, 이 클래스의 용도(명령을 돌리고
+   출력을 받는 것)에는 그쪽이 맞다.
+
+3. **하마터면 에디터를 통째로 죽일 뻔했다.** `cancel()` 은 UI 스레드에서 부르고 빌드 스레드는 같은
+   객체에서 `waitForExit` 을 돈다. `waitForExit` 이 거둔 뒤 `_processId` 를 0 으로 만드는데,
+   `terminate` 가 검사와 사용 사이에 그 0 을 읽으면 `kill( -0, SIGKILL )` 이 된다 — 그것은
+   **우리 자신의 프로세스 그룹에 SIGKILL** 이다. pid 를 지역 변수에 한 번만 읽어 창을 없앴다.
+   (거둔 뒤 pid 를 놓는 것 자체는 필요하다 — 들고 있으면 소멸자가 언젠가 재사용된 번호로 **남의
+   자식**을 거둔다.)
+
+신호로 죽은 자식에는 종료 코드가 없으므로 `waitForExit` 은 셸 규약대로 **128 + 신호번호**를 준다
+(SIGKILL 이면 137). 두 구현이 갈리는 곳은 이제 그 한 줄과 "종료 코드를 정해 줄 수 있는가" 둘뿐이고,
+헤더에 적었다.
+
+**테스트.** `TerminateProcess` 의 POSIX 건너뛰기를 걷어내 **양쪽에서 돈다.** 이 케이스는 한때 POSIX
+에서도 돌았고 *통과했다* — 죽여서가 아니라 `pclose` 가 `sleep 10` 을 10초 기다려 줬기 때문이다.
+그 모양이 실제로 재현된다: 죽이지 않도록 변이를 넣으면 **10,006ms 를 쓰고 종료 코드에서 실패한다.**
+새 케이스 `IsRunningTurnsFalseWithoutEatingTheExitCode` 는 "곧 false 가 되는가" 와 "묻는 것이 종료
+코드를 먹지 않는가" 를 함께 본다.
+
+**부수 수확 — 리눅스에서는 통과할 수 없는 테스트가 하나 있었다.**
+`CompressionCodecTest.CodecsRejectSizesTheirLibraryCannotHold` 가 8GiB 에 대해 zlib 이 0 을 준다고
+단언했는데, zlib 의 길이 타입 `uLong` 은 **Windows 에서만 32비트**다. 리눅스(LP64)에서는 64비트라
+8GiB 가 평범한 크기이고, 그래서 이 줄은 리눅스에서 **언제나 빨갰다**(CI 의 리눅스 잡도 같은 답을
+본다). 고친 것은 테스트다 — 코드는 처음부터 `(uLong)-1` 로 플랫폼마다 옳게 재고 있었다. 이제
+테스트도 플랫폼을 가르지 않고 **어느 쪽에서도 참인 계약**을 단언한다: 0 이면 "못 담는다" 는 뜻이고,
+0 이 아니면 그 값이 진짜 쓸 수 있는 한계여야 한다. 한계 검사를 빼면 잘린 크기(0)의 바운드인 **13**
+이 돌아오는데 그것은 둘 중 어느 쪽도 아니다 — Windows 에서 변이로 확인했다. (첫 수정은
+`sizeof(unsigned long)` 으로 플랫폼을 갈랐는데, 컨벤션 게이트가 기본 자료형을 막았다. 막힌 김에 보니
+**가르지 않는 편이 더 나은 단언**이었다 — 잘린 값을 두 플랫폼 모두에서 잡는다.)
+
+> **함정 (환경) — 번들 `Tools/LLVM/bin/ld.lld` 가 Ubuntu 26.04 에서 실행되지 않는다.**
+> 26.04 는 `libxml2.so.16` 만 싣고 `.so.2` 를 주지 않아 링커가 **뜨지도 못한다.** clang 이 남기는
+> 말은 `unable to execute command: No such file or directory` 뿐이라 원인이 보이지 않고, 링크는
+> 맨 끝에 오므로 수백 개를 다 컴파일한 뒤에 터진다. `SetupLinuxDevEnvironment.py` 가 이제 먼저
+> 실행해 보고 이름과 해법을 찍는다. 시스템 lld 를 쓰면 된다 — **셋을 다 줘야 한다**:
+> `-DCMAKE_EXE_LINKER_FLAGS` · `-DCMAKE_SHARED_LINKER_FLAGS` · `-DCMAKE_MODULE_LINKER_FLAGS`
+> 를 `"--ld-path=/usr/bin/ld.lld"` 로. RHI 백엔드는 MODULE 이라 앞의 둘만 주면 `libRHI_GL.so`
+> 에서 똑같이 터진다(실제로 겪었다).
+
+**검증.** Windows: Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 ·
+린트 17/17 · 에디터 실기동 `[Error]` 0건. **리눅스(WSL Ubuntu 26.04 · clang 20.1.8): 전체 빌드
+경고 0 · `-L nogpu` 7/7 (EngineTest 474 케이스 전부) · `ProcessTest` 5개 중 4통과 + 1건은 Windows
+전용 규약이라 건너뜀.** 변이 둘을 리눅스에서 확인했다(죽이지 않기 → 10,006ms 쓰고 실패, 거두는
+`isRunning` → 종료 코드 사라짐).
 
 ### 2026-09-19 (행렬 곱 둘과 참조 카운트 6N 개 — 게임 스레드를 다시 14% 깎았다)
 

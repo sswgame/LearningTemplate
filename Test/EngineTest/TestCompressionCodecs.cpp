@@ -127,6 +127,11 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
  *          zlib 의 `uLong` 은 Windows 에서 32비트라, 4GB 를 넘는 크기를 그대로 캐스팅하면 조용히
  *          잘린 값이 들어가고 `compress2` 는 그만큼만 압축한 뒤 성공을 보고한다 — 데이터를
  *          버리면서 성공이라고 말하는 셈이다. LZ4 도 int32 한계가 같은 자리에 있다.
+ * @note zlib 의 한계는 **플랫폼마다 다르다** — `uLong`(= `unsigned long`)이 Windows 에서는 32비트,
+ *       리눅스(LP64)에서는 64비트다. 그래서 8GiB 는 한쪽에서는 "담기지 않는 크기" 이고 다른 쪽에서는
+ *       평범한 크기다. 한쪽 답을 적어 두면 다른 쪽에서 반드시 틀린다 — 실제로 이 케이스가 리눅스에서
+ *       빨갰다(코드는 처음부터 `(uLong)-1` 로 옳게 재고 있었고, 틀린 것은 테스트였다). 그래서 여기서는
+ *       플랫폼을 가르지 않고 **어느 쪽에서도 참인 계약**을 단언한다.
  */
 SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
 {
@@ -141,8 +146,16 @@ SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
     {
         const size_t hugeSize = ( static_cast<size_t>( 1 ) << 33 ); // 8 GiB
 
+        // LZ4 의 한계는 int32 라 어디서나 같다.
         SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), lz4.compressBound( hugeSize ) );
-        SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), zlib.compressBound( hugeSize ) );
+
+        // zlib 은 플랫폼을 묻지 않고 **계약**을 묻는다: 0 이면 "못 담는다" 는 뜻이고, 0 이 아니면
+        // 그 값이 진짜 쓸 수 있는 한계여야 한다. 한계 검사를 빼면 잘린 크기(0)의 바운드인 **13 같은
+        // 작은 값**이 돌아오는데, 그것은 둘 중 어느 쪽도 아니라 여기서 걸린다. 플랫폼마다 답이
+        // 갈리는 것을 그대로 두면서도 잘못된 답만 잡는다.
+        const size_t zlibHugeBound = zlib.compressBound( hugeSize );
+        SW_EXPECT_TRUE_MSG( zlibHugeBound == 0 || zlibHugeBound >= hugeSize,
+                            "zlib 이 잘린 크기의 한계를 돌려줬다 — 호출자는 그 값을 믿고 버퍼를 잡는다" );
         // zstd 는 64비트 크기를 그대로 다루므로 0 이 아니어야 한다 — 한계가 없는 쪽도 못박는다.
         SW_EXPECT_TRUE( zstd.compressBound( hugeSize ) >= hugeSize );
     }

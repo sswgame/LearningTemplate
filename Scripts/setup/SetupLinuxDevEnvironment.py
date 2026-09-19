@@ -10,6 +10,7 @@ Linux 및 WSL 개발 환경에 필요한 홈 디렉터리 설정을 자동으로
 3. 클립보드 도구(xclip/xsel/wl-copy) 존재 여부 검사 및 안내
 4. 디버거(lldb) 존재 여부 검사 및 안내
 5. Vulkan/XCB/Wayland 그래픽스 개발 패키지 존재 여부 안내 (apt 설치 안내)
+6. 번들 링커(Tools/LLVM/bin/ld.lld)가 이 배포판에서 실행되는지 검사 및 안내
 
 CMake configure 시 SetupEnvironment.py 에서 자동 호출되며, 수동 실행도 가능합니다:
   python3 Scripts/setup/SetupLinuxDevEnvironment.py
@@ -20,6 +21,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -179,6 +181,60 @@ def checkGraphicsDevPackages() -> None:
         print("[SetupLinuxDevEnvironment] graphics headers: ok (xcb/vulkan/wayland)")
 
 
+def checkBundledLinker() -> None:
+    """
+    저장소가 들고 있는 `Tools/LLVM/bin/ld.lld` 가 **이 배포판에서 실행되는지** 봅니다.
+
+    링커는 빌드 맨 끝에서야 불린다 — 못 돌면 수백 개를 다 컴파일한 뒤에야 실패한다. 게다가
+    clang 이 남기는 말은 `unable to execute command: No such file or directory` 라서, 없는 것이
+    링커인지 소스인지조차 알기 어렵다(진짜 이유는 그 윗줄에 한 번 스쳐 가는
+    `libxml2.so.2: cannot open shared object file` 이다).
+
+    배포판이 libxml2 를 새 soname 으로 올리면 그대로 이 일이 난다 — Ubuntu 26.04 는
+    `libxml2.so.16` 을 싣고 `.so.2` 를 더 이상 주지 않아서 실제로 겪었다. 시스템에 lld 가 있으면
+    그것을 쓰면 되므로, 여기서 미리 알려 주고 쓰는 법까지 적는다.
+    """
+    bundledLinker = Path(__file__).resolve().parents[2] / "Tools" / "LLVM" / "bin" / "ld.lld"
+    if not bundledLinker.is_file():
+        return  # 번들 LLVM 이 없는 환경 — 시스템 툴체인을 쓰는 중이므로 볼 것이 없다
+
+    try:
+        completed = subprocess.run(
+            [str(bundledLinker), "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=30,
+            check=False,
+        )
+    except OSError as error:
+        detail = str(error)
+        completed = None
+    else:
+        if completed.returncode == 0:
+            print("[SetupLinuxDevEnvironment] bundled linker: ok (Tools/LLVM/bin/ld.lld)")
+            return
+        detail = completed.stdout.decode("utf-8", errors="replace").strip().splitlines()[-1:] or [""]
+        detail = detail[0]
+
+    host = "WSL" if isWslInternal() else "Linux"
+    systemLinker = next((name for name in ("ld.lld", "ld.lld-21", "ld.lld-20") if shutil.which(name)), None)
+    # 셋을 **다 줘야 한다.** 빠뜨리면 그 종류만 남아서 실패한다 — RHI 백엔드는 MODULE 이라
+    # EXE/SHARED 만 바꾸면 `libRHI_GL.so` 링크에서 똑같이 터진다(실제로 겪었다).
+    remedy = (
+        "cmake <빌드디렉터리> "
+        + " ".join(
+            f'-DCMAKE_{kind}_LINKER_FLAGS="--ld-path={shutil.which(systemLinker)}"'
+            for kind in ("EXE", "SHARED", "MODULE")
+        )
+        if systemLinker
+        else "sudo apt install lld"
+    )
+    print(
+        f"[SetupLinuxDevEnvironment] {host}: bundled Tools/LLVM/bin/ld.lld does not run "
+        f"({detail}). 링크 단계에서만 터지므로 빌드 끝에 가서야 보인다 — {remedy}"
+    )
+
+
 def setupLinuxDevEnvironment(home: Path | None = None) -> int:
     """
     Linux/WSL 환경에 필요한 개발 도구 검사 및 디버깅 환경(debuginfod 등)을 자동 설정합니다.
@@ -192,6 +248,7 @@ def setupLinuxDevEnvironment(home: Path | None = None) -> int:
     checkClipboardTools()
     checkDebugger()
     checkGraphicsDevPackages()
+    checkBundledLinker()
     return 0
 
 
