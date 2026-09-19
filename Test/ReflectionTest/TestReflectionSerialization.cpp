@@ -1750,6 +1750,37 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 인자 타입이 어긋난 RPC 봉투는 호출되지 않는다
+ * @details 봉투는 인자마다 **보낸 쪽의 타입 해시**를 싣는데 풀 때는 그것을 버리고(`(void)typeNameHash`)
+ *          받는 쪽 시그니처만 보고 읽었다. 시그니처가 어긋난 채 주고받으면(빌드가 다르거나 모듈이
+ *          핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 다른 타입으로 읽어 **터지지 않고
+ *          값만 조용히 달라진다** — `float32 1.5f` 를 `int32` 로 읽으면 `1069547520` 이 되는 식이다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnArgumentTypeThatDoesNotMatchTheWire )
+{
+    sw::RpcDemoActor actor;
+    actor._hp = 100;
+
+    sw::TaskArgs args;
+    args.add( int32{ 25 } );
+
+    sw::RpcEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
+                                                 sw::hashed_string( "applyDamage" ), args ) );
+
+    // 봉투 앞머리는 [인자 수][타입 해시][크기][payload] 다 — 첫 인자의 타입 해시만 바꾼다.
+    SW_ASSERT_TRUE( envelope._argumentBytes.size() >= sizeof( uint32 ) * 3 );
+    const uint32 wrongTypeHash = sw::hashed_string( "float32" ).getHash();
+    sw::Memory::copy( envelope._argumentBytes.data() + sizeof( uint32 ), &wrongTypeHash, sizeof( uint32 ) );
+
+    {
+        test::ScopedLogSuppressor suppressor;
+        sw::ReflectionRpc::unpackAndInvoke( &actor, envelope );
+    }
+    SW_EXPECT_TRUE_MSG( actor._hp == 100, "전선이 말한 타입과 다른데도 인자를 그대로 읽어 호출했습니다" );
+}
+
+/**
  * @brief [ReflectionSerializationTest] REFLECT Abstract/Static
  */
 SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )

@@ -503,6 +503,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (RPC 봉투도 인자 타입을 싣고 오는데 읽을 때 버렸다)
+
+`ReflectionRpc` 의 봉투는 인자마다 **보낸 쪽의 타입 해시**를 싣는다. 그런데 푸는 쪽은 그것을
+`(void)typeNameHash;` 로 버리고 받는 쪽 시그니처만 보고 바이트를 읽었다. 시그니처가 어긋난 채
+주고받으면(빌드가 다르거나 모듈이 핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 다른
+타입으로 읽어 **터지지 않고 값만 조용히 달라진다** — 바로 앞 항목의 스키마 이관과 같은 모양이다.
+
+정규 이름으로 대조한다(`canonicalTypeNameByHash` + `isType`) — 별칭 때문에 스펠링이 다를 수
+있기 때문이다. 등록부가 그 해시를 모르면 판단하지 않는다(그때는 아래 타입 분기가 걸러 낸다).
+
 ### 2026-09-20 (전선이 타입을 싣고 오는데 읽을 때 버리고 있었다 — 직렬화)
 
 `Engine/Serialization` 을 함수 단위로 읽어 셋을 고쳤다. 첫째가 실제로 값을 망가뜨린다.

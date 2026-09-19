@@ -116,8 +116,22 @@ namespace sw
                 if ( offset + size > dataSize )
                     return false;
 
-                (void)typeNameHash;
                 const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
+
+                // **보낸 쪽이 적어 둔 타입과 받는 쪽이 기대하는 타입이 같아야 한다.** 그 해시를 실어
+                // 보내면서 읽을 때는 버리고 있었다. 시그니처가 어긋난 채로 주고받으면(빌드가 다르거나
+                // 모듈이 핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 **다른 타입으로 읽어**
+                // 터지지 않고 값만 조용히 달라진다 — `float32 1.5f` 를 `int32` 로 읽으면
+                // `1069547520` 이 되는 식이다. 별칭 때문에 스펠링이 다를 수 있으므로 등록부의
+                // 정규 이름으로 비교하고, 등록부가 그 해시를 모르면 판단하지 않는다(그때는
+                // 아래 타입 분기가 어차피 걸러 낸다).
+                const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( typeNameHash );
+                if ( wireTypeName.empty() == false && engine::getTypeRegistry().isType( typeHash, wireTypeName ) == false )
+                {
+                    SW_LOG_WARNING( "RPC arg type mismatch: wire '%#', expected '%#'", wireTypeName.c_str(), typeName );
+                    return false;
+                }
+
                 const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, serializeContext );
                 size_t              local{ 0 };
                 bool                bMatched{ false };
