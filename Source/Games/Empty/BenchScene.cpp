@@ -50,6 +50,7 @@ namespace sw
     BenchScene::BenchScene()
         : _listBenchMesh{}
         , _keyLight{}
+        , _listBenchExtra{}
         , _glassMaterial{ nullptr }
         , _listChurnInstance{}
         , _churnRandom{ 0x9E3779B9u }
@@ -80,18 +81,44 @@ namespace sw
         SceneManager*      pSceneManager = game::getService<SceneManager>();
         Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        // `[[maybe_unused]]` 인 이유: 이 수는 아래 `SW_LOG_INFO` 에만 쓰이는데 그 매크로는
+        // Shipping 에서 통째로 사라진다 — 그러면 "set but not used" 경고가 된다.
+        [[maybe_unused]] uint32 removedCount = 0;
         if ( pObjects != nullptr )
         {
             // 핸들이 해석되면 그 소유 오브젝트를 지운다. 이미 없으면(씬이 바뀌었으면) 할 일이 없다.
             for ( const ComponentHandle& handle : _listBenchMesh )
             {
                 if ( Component* pComp = pObjects->resolveComponent( handle ) )
+                {
                     pObjects->destroyObject( pComp->getOwner() );
+                    ++removedCount;
+                }
             }
             if ( Component* pLight = pObjects->resolveComponent( _keyLight ) )
+            {
                 pObjects->destroyObject( pLight->getOwner() );
+                ++removedCount;
+            }
+
+            // 흩뿌린 라이트와 바닥도 **벤치가 만든 것**이다 — 같이 걷는다.
+            for ( const ComponentHandle& handle : _listBenchExtra )
+            {
+                if ( Component* pComp = pObjects->resolveComponent( handle ) )
+                {
+                    pObjects->destroyObject( pComp->getOwner() );
+                    ++removedCount;
+                }
+            }
         }
+
+        // **만든 수와 걷은 수가 같아야 한다.** 리로드·백엔드 교체는 despawn → spawn 을 한 쌍으로
+        // 도는데, 걷히지 않은 것은 그때마다 한 벌씩 쌓여 다음 측정을 오염시킨다.
+        SW_LOG_INFO( "[Bench] 오브젝트 %#개를 걷었습니다 (큐브 %# · 그 밖 %#).",
+                     removedCount, static_cast<uint32>( _listBenchMesh.size() ),
+                     static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
+        _listBenchExtra.clear();
         _listChurnInstance.clear();
         _keyLight = {};
     }
@@ -158,6 +185,7 @@ namespace sw
 
         _listBenchMesh.clear();
         _listBenchMesh.reserve( meshCount );
+        _listBenchExtra.clear();
 
         // 큐브별 머티리얼 인스턴스는 DX12 크래시를 재현하는 용도라 기본은 꺼 둔다.
         const bool bPerCubeMaterial = ( gv_benchMaterialInstances != 0 );
@@ -367,6 +395,7 @@ namespace sw
                 pSpot->setOuterConeAngle( 0.6f );
                 pSpot->setInnerConeAngle( 0.25f );
                 pSpot->setLocalPosition( position ); // 회전은 주지 않는다 — 기본 방향이 아래다
+                _listBenchExtra.push_back( pSpot->getHandle() );
                 continue;
             }
 
@@ -377,6 +406,7 @@ namespace sw
             pPoint->setIntensity( 2.5f );
             pPoint->setRadius( radius );
             pPoint->setLocalPosition( position );
+            _listBenchExtra.push_back( pPoint->getHandle() );
         }
 
         SW_LOG_INFO( "[Bench] 라이트 %#개를 흩뿌렸습니다 (반경 %#, 절반은 스포트). -gv_benchLightRadius 로 반경을 바꾼다.",
@@ -405,6 +435,7 @@ namespace sw
         // 평면의 면은 이제 로컬 y = 0 이다 — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
         pMesh->setLocalPosition( float3{ 0.0f, -0.6f, 0.0f } );
         pMesh->setVisible( true );
+        _listBenchExtra.push_back( pMesh->getHandle() );
 
         SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );
     }

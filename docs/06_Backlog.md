@@ -138,12 +138,21 @@ cd build/Ninja-Debug/Bin
 
 ### 0순위 — 지금 도는 두 패스
 
-**(A) 정확성 훑기 (진행 중).** `Source/` 전체를 함수 하나하나 읽으며 고칠 수 있으면 고친다.
-순서는 Core → Engine → ReflectionParser → Editor → GameFramework → Game. 2026-09-20 기준
-Core · Engine · ReflectionParser · Editor 를 마쳤고 GameFramework 를 보는 중이다. 되풀이해 만난
-모양은 "한 곳에 넣은 고침이 형제에게 안 갔다" 와 "정보를 싣고 와서 읽을 때 버렸다" 둘이다.
+**(A) 정확성 훑기 — ✅ 끝났다 (2026-09-20).** 순서는 Core → Engine → ReflectionParser → Editor
+→ GameFramework → Games 였고 전부 돌았다. 되풀이해 만난 모양은 넷이다.
 
-**(B) 성능·재사용성 개편 (A 가 끝난 뒤).** 같은 범위(`Source/` 전체 + `Tools/ReflectionParser`)를
+1. **한 곳에 넣은 고침이 형제에게 안 갔다** (가장 잦았다). `SaveGame` 이 파티 수는 자르고 옆의
+   `ppCount` 는 안 잘랐다, `TileMap::resize` 만 상한을 안 봤다, `MonsterDataCatalog` 의 세 실패
+   중 하나만 폴백을 안 심었다, `GameData` 만 로드 전에 안 비웠다, `transitionTo` 만 상태를 쥔 채
+   콜백을 불렀다, `game::getService` 만 단언을 들고 있었다.
+2. **정보를 싣고 와서 읽을 때 버렸다.** 스키마 마이그레이션과 RPC 가 둘 다 전송하던 타입을 버렸다.
+3. **상태 기계가 빠져나올 수 없는 칸을 갖고 있었다.** `LocomotionState::Walk` 는 시작한 프레임에
+   취소돼 한 번도 관측되지 않았고, `BattlePhase::Ended` 분기는 위쪽 가드에 막혀 도달 불가였다.
+4. **기능이 코드에서는 동작하지 않았다.** 상태가 `PROPERTY` 로만 있고 그것을 움직일 창구가 없어서 —
+   `shake()` 는 진동 수를 안 넣어 떨리지 않았고, `GravityComponent` 는 한 번 착지하면 영영 붙어
+   있었으며, `zoneRoleFromMapPath` 는 `SW_GF_API` 가 없어 모듈 밖에서 부를 수 없었다.
+
+**(B) 성능·재사용성 개편 — 다음 차례.** 같은 범위(`Source/` 전체 + `Tools/ReflectionParser`)를
 이번에는 **성능과 재사용성**으로 다시 훑는다. **구조가 크게 바뀌어도 된다.** (A) 는 "틀린 답을
 내는 곳" 만 보느라 성능·중복을 일부러 지나쳤다 — 지나친 것들의 예:
 
@@ -457,6 +466,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 (벤치가 리로드마다 라이트와 바닥을 한 벌씩 쌓았다 — (A) 패스 마감)
+
+커밋 `TBD`. `Source/Games` 를 끝으로 **정확성 훑기 (A) 가 끝났다.**
+
+`BenchScene::despawn()` 이 큐브와 주광만 걷었다. 흩뿌린 라이트와 바닥 평면의 핸들은 **아무
+데도 안 적혀 있었다.** 모듈 리로드 · RHI 교체는 `onBeforeStateSerialize`(despawn) →
+`onAfterStateDeserialize`(spawn) 을 한 쌍으로 도는데, 그때마다 라이트 4개와 바닥 1개가 한 벌씩
+더 쌓였다. **이 벤치가 존재하는 이유가 바로 그 경로를 재는 것**이라, 재려는 대상이 측정을
+오염시키고 있었다.
+
+검증은 실제 실행이다(`hostgpu` 영역이라 단위 테스트가 없다):
+```
+./App.exe -gv_benchMeshes=8 -gv_benchLights=4 -gv_benchGround=1 -gv_profileFrames=60           -gv_rhiSwapAtFrame=20 -dx12
+```
+`despawn()` 이 걷은 수를 로그로 남기게 했다 — 고친 뒤 **14개**(큐브 8 + 주광 1 + 그 밖 5),
+되돌리면 **9개**로 딱 5개가 샌다.
+
+곁들여: 그 카운터에 `[[maybe_unused]]` 가 필요했다. **`SW_LOG_INFO` 는 Shipping 에서 통째로
+사라지므로**, 로그에만 쓰이는 값은 그 빌드에서 "set but not used" 경고가 된다. 네 프리셋을
+다 지어야 보이는 종류다.
 
 ### 2026-09-20 (const 조회가 자기를 고치고 있었다 — 종족 카탈로그)
 

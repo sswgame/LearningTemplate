@@ -113,6 +113,14 @@ namespace sw
         vector<ComponentHandle> _listBenchMesh;
         /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */
         ComponentHandle _keyLight;
+        /**
+         * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들 — 흩뿌린 라이트와 바닥 평면.
+         * @details 이것들이 아무 데도 안 적혀 있어서 `despawn()` 이 큐브와 주광만 걷었다.
+         *          모듈 리로드 · RHI 교체는 `despawn()` → `spawnFromGlobals()` 를 한 쌍으로
+         *          도는데, 그때마다 **라이트와 바닥이 한 벌씩 더 쌓였다.** 이 벤치가 존재하는
+         *          이유가 바로 그 경로를 재는 것이라, 재려는 대상이 측정을 망가뜨리고 있었다.
+         */
+        vector<ComponentHandle> _listBenchExtra;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
         shared_ptr<Material> _glassMaterial;
         /**
