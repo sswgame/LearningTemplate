@@ -25,6 +25,21 @@ namespace sw
         {
             static constexpr int32 kMaxNestedContainerDepth = 3;
 
+            /** @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰. */
+            static string_view readRecordedSourcePath( string_view generatedContent )
+            {
+                constexpr string_view kSourceMarker{ "// Source: " };
+                const size_t          markerPos = generatedContent.find( kSourceMarker );
+                if ( markerPos == string_view::npos )
+                    return {};
+
+                const size_t valueStart = markerPos + kSourceMarker.size();
+                size_t       lineEnd    = generatedContent.find( '\n', valueStart );
+                if ( lineEnd == string_view::npos )
+                    lineEnd = generatedContent.size();
+                return StringUtil::trim( generatedContent.substr( valueStart, lineEnd - valueStart ) );
+            }
+
             /**
              * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
              */
@@ -292,6 +307,26 @@ namespace sw
             {
                 string existingContent;
                 FileUtil::readTextFile( _outputFilePath, existingContent );
+
+                // **다른 헤더가 이미 이 이름으로 썼는가.** 생성 파일 이름은 소스의 **파일 이름만**
+                // 으로 짓는다(`ParserUtil::makeGeneratedPath`) — 그래서 한 모듈 안에 같은 이름의
+                // 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을 덮고, **앞 헤더의 타입들은 아무 말
+                // 없이 등록되지 않는다.** 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로 나타나서
+                // 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
+                //
+                // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다 — 그러지
+                // 않으면 파일을 옮길 때마다 빌드가 막힌다.
+                const string_view recordedSource = CodeGeneratorInternal::readRecordedSourcePath( existingContent );
+                if ( recordedSource.empty() == false &&
+                     FileUtil::normalizeSeparators( recordedSource ) != FileUtil::normalizeSeparators( _sourceFilePath ) &&
+                     FileUtil::fileExists( recordedSource ) )
+                {
+                    SW_LOG_ERROR( "Generated file name collision: '%#' and '%#' both generate '%#'. "
+                                  "Two reflected headers in the same module cannot share a file name.",
+                                  recordedSource, _sourceFilePath, _outputFilePath );
+                    return false;
+                }
+
                 if ( existingContent.empty() == false && existingContent == newContent )
                 {
                     SW_LOG_TRACE( "Incremental check: %# is up-to-date, skipping write.", _outputFilePath );
@@ -794,10 +829,19 @@ namespace sw
 
                 if ( enumInfo._bNestedInType != SW_FALSE )
                 {
-                    SW_LOG_ERROR( "ENUM(Flags) 는 클래스 안에 둘 수 없습니다 — 밖에서 전방 선언할 수 없어 "
-                                  "비트 연산자 트레이트를 코드젠하지 못합니다: %#",
-                                  enumInfo._fullyQualifiedName );
-                    return false;
+                    // 클래스 안의 열거형은 밖에서 전방 선언할 수 없어 **비트 연산자 트레이트만**
+                    // 코드젠하지 못한다. 등록부의 비트플래그 표시(`EnumInfo::_bIsBitFlag`)는 그와
+                    // 무관하게 유효하다 — 인스펙터와 문자열 변환은 연산자를 쓰지 않는다. 그래서
+                    // 여기서 멈추지 않고 연산자만 건너뛴다.
+                    //
+                    // 예전에는 여기서 코드젠을 실패시켰고, 그 탓에 중첩 열거형은 `ENUM( Flags )`
+                    // 를 **쓸 수가 없어** 값 모양 자동 감지에 기대야 했다. 그 자동 감지가 평범한
+                    // 연속 열거형까지 플래그로 만들던 장본인이다. `|`·`&` 를 쓰면 그 자리에서
+                    // 컴파일이 막히므로 조용히 잘못될 여지는 없다.
+                    SW_LOG_WARNING( "ENUM(Flags) 가 클래스 안에 있어 비트 연산자는 코드젠하지 않습니다 "
+                                    "(등록부의 비트플래그 표시는 유지): %#",
+                                    enumInfo._fullyQualifiedName );
+                    continue;
                 }
                 if ( enumInfo._underlyingType.empty() )
                 {

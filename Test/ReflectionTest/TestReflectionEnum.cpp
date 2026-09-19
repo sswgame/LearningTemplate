@@ -196,3 +196,31 @@ SW_TEST_CASE( ReflectionEnumNamesTest, ContainerKindAndNetRoleNames )
     SW_EXPECT_STREQ( "Client", sw::toString( sw::FunctionNetRole::Client ) );
     SW_EXPECT_STREQ( "sw::FunctionNetRole::Server", sw::toCppExpr( sw::FunctionNetRole::Server ) );
 }
+
+/**
+ * @brief [ReflectionEnumBitFlagTest] 평범한 연속 열거형은 비트플래그로 등록되지 않는다
+ * @details 자동 감지는 "0 이 아닌 값이 모두 2의 거듭제곱" 이었는데, 그 조건은 `{ 0, 1, 2 }` 같은
+ *          **평범한 연속 열거형**에도 그대로 맞는다. 그래서 `CameraRole` · `PackEncryptionType` ·
+ *          `SampleStatus` 셋이 비트플래그로 등록돼 있었다 — 문자열 변환이 `toStringFlags` 로 가고
+ *          인스펙터가 콤보 대신 체크박스를 그린다. 값이 셋 이상이어야 켜지게 바꿨다(1·2·4 처럼
+ *          연속 열거형이라면 있어야 할 3 이 빠진 모양이라야 한다).
+ *
+ *          `ENUM( Flags )` 를 명시한 열거형은 값 모양과 무관하게 계속 비트플래그다 — 아래에서
+ *          그쪽도 함께 본다.
+ */
+SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
+{
+    const utf8* arrPlainEnum[] = { "sw::CameraRole", "sw::PackEncryptionType", "sw::PackCompressionType", "sw::SampleStatus" };
+    for ( const utf8* pName : arrPlainEnum )
+    {
+        const sw::EnumInfo* info = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( pName ) );
+        SW_ASSERT_NOT_NULL( info );
+        SW_EXPECT_TRUE_MSG( info->_bIsBitFlag == SW_FALSE,
+                            "연속 열거형이 비트플래그로 등록됐습니다 — 인스펙터와 문자열 변환이 달라집니다" );
+    }
+
+    // 명시한 쪽은 그대로여야 한다.
+    const sw::EnumInfo* pFlagInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::PackFlag" ) );
+    SW_ASSERT_NOT_NULL( pFlagInfo );
+    SW_EXPECT_TRUE( pFlagInfo->_bIsBitFlag != SW_FALSE );
+}

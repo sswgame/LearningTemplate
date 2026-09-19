@@ -411,7 +411,10 @@ namespace sw
                 int64 _id = 999;
             };
 
-            ENUM()
+            // 비트플래그는 **말해야** 한다 — 예전에는 값이 1·2·4 라는 이유로 자동 감지됐다.
+            // 중첩 열거형이라 비트 연산자는 코드젠되지 않지만(전방 선언 불가), 등록부의 표시는
+            // 이것으로 선다.
+            ENUM( Flags )
             enum class InnerEnum : uint32
             {
                 OptionA = 1,

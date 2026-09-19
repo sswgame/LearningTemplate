@@ -28,17 +28,25 @@ namespace
      * @details **`Bin` 옆이 아니라 `BuildTools` 에 있다.** 그것을 모르고 `Bin` 만 보던 검사는
      *          늘 스스로 건너뛰었고(백로그에 "스킵 1건" 으로 적혀 있었다), 그래서 파서를 부르는
      *          유일한 테스트가 한 번도 돈 적이 없었다. 두 자리를 다 본다.
+     *
+     *          **찾는 순서는 `BuildTools` 가 먼저다.** 지금 빌드가 파서를 놓는 곳이 거기이기
+     *          때문이다. 예전 배치에서는 `Bin` 에도 놓았는데, 그때 만들어진 실행 파일이 빌드
+     *          디렉터리에 그대로 남아 있으면(정리되지 않는다) `Bin` 을 먼저 보는 순서에서는
+     *          **몇 주 전 파서로 검사를 돌게 된다** — 실제로 ASAN 빌드에서 3주 묵은 바이너리가
+     *          집혀 새 검사가 이유 없이 졌다. 초록이든 빨강이든 그 결과는 지금 코드에 대한
+     *          답이 아니다.
      */
     sw::string findReflectionParserExecutable()
     {
         const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
         const sw::string buildRoot = sw::FileUtil::getDirectoryPart( binDir );
+        const sw::string toolsDir  = sw::FileUtil::joinPath( buildRoot, "BuildTools" );
 
         const sw::string arrCandidate[] = {
+            sw::FileUtil::joinPath( toolsDir, "ReflectionParser.exe" ),
+            sw::FileUtil::joinPath( toolsDir, "ReflectionParser" ),
             sw::FileUtil::joinPath( binDir, "ReflectionParser.exe" ),
             sw::FileUtil::joinPath( binDir, "ReflectionParser" ),
-            sw::FileUtil::joinPath( sw::FileUtil::joinPath( buildRoot, "BuildTools" ), "ReflectionParser.exe" ),
-            sw::FileUtil::joinPath( sw::FileUtil::joinPath( buildRoot, "BuildTools" ), "ReflectionParser" ),
         };
         for ( const sw::string& candidate : arrCandidate )
         {
@@ -472,4 +480,124 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     sw::FileUtil::removeFile( headerPath );
     sw::FileUtil::removeFile( genPath );
     sw::FileUtil::removeFile( genHeaderPath );
+}
+
+/**
+ * @brief [ReflectionParserTest] 같은 이름의 헤더 둘이 같은 산출물을 노리면 **조용히 덮지 않는다**
+ * @details 생성 파일 이름은 소스의 **파일 이름만** 으로 짓는다(`makeGeneratedPath`). 그래서 한 모듈
+ *          안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을 덮고, **앞 헤더의 타입들은
+ *          아무 말 없이 등록되지 않는다** — 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로 나타나
+ *          원인이 코드젠이라는 것을 짚기 어렵다. 지금은 그 자리에서 빌드를 세우고 두 경로를 다 적는다.
+ *
+ *          헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어써야 한다 — 이 케이스는
+ *          그것도 함께 본다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
+ */
+SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
+{
+    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+
+    const sw::string caseRoot  = sw::FileUtil::joinPath( binDir, "temp_collide" );
+    const sw::string dirA      = sw::FileUtil::joinPath( caseRoot, "A" );
+    const sw::string dirB      = sw::FileUtil::joinPath( caseRoot, "B" );
+    const sw::string outGenDir = sw::FileUtil::joinPath( caseRoot, "gen" );
+    sw::FileUtil::ensureDirectoryExists( dirA );
+    sw::FileUtil::ensureDirectoryExists( dirB );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    const sw::string headerA = sw::FileUtil::joinPath( dirA, "CollidingSample.h" );
+    const sw::string headerB = sw::FileUtil::joinPath( dirB, "CollidingSample.h" );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [headerA, headerB, outGenDir]()
+    {
+        sw::FileUtil::removeFile( headerA );
+        sw::FileUtil::removeFile( headerB );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.cpp" ) );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.h" ) );
+    } ) );
+
+    const auto makeHeader = []( const utf8* pTypeName ) -> sw::string
+    {
+        sw::string content = "#pragma once\n"
+                             "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                             "namespace sw\n"
+                             "{\n"
+                             "\tREFLECT()\n"
+                             "\tstruct ";
+        content += pTypeName;
+        content += "\n"
+                   "\t{\n"
+                   "\t\tREFLECT_BODY();\n"
+                   "\t\tPROPERTY()\n"
+                   "\t\tint32 _value{ 0 };\n"
+                   "\t};\n"
+                   "}\n";
+        return content;
+    };
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerA, makeHeader( "CollidingSampleA" ) ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerB, makeHeader( "CollidingSampleB" ) ) );
+
+    sw::string outLog;
+    const auto runParser = [&]( const sw::string& headerPath ) -> int32
+    {
+        const sw::string cmd = "\"" + parserExe + "\" " +
+                               "--input \"" + headerPath + "\" " +
+                               "--output \"" + outGenDir + "\" " +
+                               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
+                               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
+                               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
+                               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+
+        sw::ProcessOptions options;
+        options._workingDirectory = projectRoot;
+
+        // 파서가 무엇 때문에 졌는지 실패 메시지에 담는다 — 안 그러면 "exit 0" 만 남는다.
+        outLog.clear();
+        sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
+            sw::ProcessOutputDelegate,
+            [&outLog]( sw::string_view line )
+        {
+            outLog.append( line.data(), line.size() );
+            outLog.push_back( '\n' );
+        } );
+        return sw::Process::execute( cmd, options, outputCb );
+    };
+
+    // **남아 있는 산출물을 먼저 지운다.** 파서는 "이미 최신" 이면 통째로 건너뛰므로, 앞선 실행이
+    // 남긴 파일이 있으면 첫 단계가 아무것도 만들지 않고 지나가 이 케이스가 제 할 일을 못 한다.
+    const sw::string genCppPath = sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.cpp" );
+    sw::FileUtil::removeFile( genCppPath );
+    sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.h" ) );
+
+    // 첫 헤더는 정상적으로 산출물을 만든다.
+    const int32 firstExit = runParser( headerA );
+    SW_EXPECT_TRUE_MSG( firstExit == 0, outLog.c_str() );
+    SW_ASSERT_EQUAL( 0, firstExit );
+    SW_ASSERT_TRUE( sw::FileUtil::fileExists( genCppPath ) );
+
+    // 정말 A 로 만들어졌는지 확인한다 — 이 다음 단계가 그 사실에 기댄다.
+    sw::string firstGenerated;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genCppPath, firstGenerated ) );
+    SW_ASSERT_TRUE( firstGenerated.find( "CollidingSampleA" ) != sw::string::npos );
+
+    // 같은 이름의 다른 헤더는 그 산출물을 덮지 못한다.
+    const int32 collideExit = runParser( headerB );
+    SW_EXPECT_TRUE_MSG( collideExit != 0 && outLog.find( "file name collision" ) != sw::string::npos,
+                        outLog.c_str() );
+
+    // 앞 헤더의 타입이 산출물에 그대로 남아 있어야 한다.
+    sw::string generated;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genCppPath, generated ) );
+    SW_EXPECT_TRUE( generated.find( "CollidingSampleA" ) != sw::string::npos );
+
+    // **옮긴 헤더는 막지 않는다.** 앞 헤더를 지우면 B 가 그 자리를 이어받을 수 있어야 한다.
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( headerA ) );
+    SW_EXPECT_TRUE_MSG( runParser( headerB ) == 0,
+                        "옛 헤더가 사라졌는데도 산출물 갱신을 막았습니다 — 파일을 옮길 때마다 빌드가 막힙니다" );
 }
