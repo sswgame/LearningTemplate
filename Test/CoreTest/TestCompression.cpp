@@ -272,3 +272,90 @@ SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
     SW_EXPECT_TRUE_MSG( bDecompressed == false,
                         "이 빌드에 없는 코덱으로 적힌 스트림을 해제했다고 한다 — 내용은 원본이 아니다" );
 }
+
+/**
+ * @brief [CompressionTest] 헤더가 적어 낸 크기가 넘쳐도 버퍼 밖을 읽지 않는다
+ * @details 검사가 `_compressedSize + sizeof(헤더) > dataSize` 라는 **덧셈**이었다. `_compressedSize`
+ *          가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 **통과했고**, 그 값이 그대로 코덱의 srcSize 가
+ *          되어 `decompress` 가 SIZE_MAX 바이트를 읽으려 들었다 — 28바이트짜리 파일 하나로 버퍼 밖을
+ *          읽게 만들 수 있었다는 뜻이다. 이제 뺄셈으로 비교한다(같은 함정을 `BinarySerializer` 는
+ *          이미 뺄셈으로 피하고 있었다).
+ */
+SW_TEST_CASE( CompressionTest, HeaderSizeOverflowIsRejected )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    const sw::string  original( 4096, 'A' );
+    sw::vector<uint8> stream;
+    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream,
+                                                           sw::CompressionCodecType::RLE ) );
+    SW_ASSERT_TRUE( stream.size() > sizeof( sw::CompressionHeader ) );
+
+    // 1) 넘치는 _compressedSize — 예전에는 검사를 통과해 버퍼 밖을 읽었다.
+    {
+        sw::vector<uint8>      attack = stream;
+        sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
+        pHead->_compressedSize        = ~uint64{ 0 };
+
+        sw::CompressionHeader parsed{};
+        SW_EXPECT_TRUE_MSG( sw::CompressionStream::verifyHeader( attack.data(), attack.size(), parsed ) == false,
+                            "넘치는 _compressedSize 를 통과시켰습니다 — 코덱이 버퍼 밖을 읽습니다" );
+
+        sw::vector<uint8> out;
+        SW_EXPECT_FALSE( sw::CompressionStream::decompressBuffer( attack.data(), attack.size(), out ) );
+    }
+
+    // 2) 한 바이트만 더 크게 적어도 거절한다 — 경계가 헐겁지 않은지 본다.
+    {
+        sw::vector<uint8>      attack = stream;
+        sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
+        pHead->_compressedSize        = static_cast<uint64>( attack.size() - sizeof( sw::CompressionHeader ) ) + 1;
+
+        sw::CompressionHeader parsed{};
+        SW_EXPECT_FALSE( sw::CompressionStream::verifyHeader( attack.data(), attack.size(), parsed ) );
+    }
+
+    // 3) 정확히 맞는 크기는 통과한다 — "다 막는다" 로 굳지 않는다.
+    {
+        sw::CompressionHeader parsed{};
+        SW_EXPECT_TRUE( sw::CompressionStream::verifyHeader( stream.data(), stream.size(), parsed ) );
+        SW_EXPECT_EQUAL( static_cast<uint64>( stream.size() - sizeof( sw::CompressionHeader ) ), parsed._compressedSize );
+
+        sw::vector<uint8> out;
+        SW_EXPECT_TRUE( sw::CompressionStream::decompressBuffer( stream.data(), stream.size(), out ) );
+        SW_EXPECT_EQUAL( original.size(), out.size() );
+    }
+}
+
+/**
+ * @brief [CompressionTest] 터무니없는 해제 크기는 할당 전에 거절한다
+ * @details `_uncompressedSize` 는 **그대로 resize 인자**가 된다. 2^60 이 적힌 28바이트 헤더 하나면
+ *          코덱이 한 바이트도 읽기 전에 그 자리에서 메모리가 터졌다 — 압축 파일로 프로세스를 죽일 수
+ *          있었다. 코덱마다 팽창률이 달라 압축 크기로부터 정확한 상한은 못 내므로 컨테이너가 다루는
+ *          가장 큰 것보다 넉넉한 상한(`kMaxUncompressedSize`)을 두고 그 위를 자른다.
+ */
+SW_TEST_CASE( CompressionTest, AbsurdUncompressedSizeIsRejectedBeforeAllocating )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    const sw::string  original( 256, 'B' );
+    sw::vector<uint8> stream;
+    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream,
+                                                           sw::CompressionCodecType::RLE ) );
+
+    sw::vector<uint8>      attack = stream;
+    sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
+    pHead->_uncompressedSize      = uint64{ 1 } << 60;
+
+    sw::CompressionHeader parsed{};
+    SW_EXPECT_TRUE_MSG( sw::CompressionStream::verifyHeader( attack.data(), attack.size(), parsed ) == false,
+                        "2^60 바이트를 요구하는 헤더를 통과시켰습니다 — 그 다음 줄이 resize 입니다" );
+
+    sw::vector<uint8> out;
+    SW_EXPECT_FALSE( sw::CompressionStream::decompressBuffer( attack.data(), attack.size(), out ) );
+    SW_EXPECT_TRUE_MSG( out.empty(), "실패한 해제가 버퍼를 남겼습니다" );
+
+    // 상한 바로 아래는 헤더 검사를 통과한다 — 막는 것은 크기가 아니라 **터무니없는** 크기다.
+    pHead->_uncompressedSize = sw::CompressionStream::kMaxUncompressedSize;
+    SW_EXPECT_TRUE( sw::CompressionStream::verifyHeader( attack.data(), attack.size(), parsed ) );
+}

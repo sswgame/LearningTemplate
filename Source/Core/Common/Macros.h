@@ -6,6 +6,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include <type_traits> // SW_REQUIRES · arrayCountHelper 의 std::enable_if_t
+
 // ------------------------------------------------------------------------------
 // 1) 전처리기 유틸리티 (Pre-processor Utilities)
 // ------------------------------------------------------------------------------

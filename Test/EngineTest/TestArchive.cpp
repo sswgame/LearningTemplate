@@ -1796,3 +1796,113 @@ SW_TEST_CASE( ArchiveTest, CompactPayloadSizeIsBounded )
         SW_EXPECT_EQUAL( 1234, restored._gold );
     }
 }
+
+/**
+ * @brief [ArchiveTest] 32비트로 못 담는 varint 는 잘리는 대신 거절된다
+ * @details 32비트 디코더 둘은 오래도록 `static_cast` 한 줄이었다 — 범위 밖 값을 **조용히 잘라**
+ *          냈고, 그래서 망가진 아카이브가 거부되는 대신 엉뚱하게 읽혔다. 가장 아픈 자리가
+ *          `Archive::readPooledString` 이다: 거기 있는 `poolId >= getCount()` 검사는 이미 잘린
+ *          값을 보므로 `0x1'0000'0000 + n` 이 **유효한 n 인 척 통과한다.**
+ *          같은 파일의 주석은 처음부터 "범위를 거른다" 고 적혀 있었다 — 코드만 아니었다.
+ */
+SW_TEST_CASE( ArchiveTest, VarIntNarrowingRejectsOutOfRange )
+{
+    // 1) uint32 범위 밖 — 잘리면 5 로 보인다.
+    {
+        sw::vector<uint8> bytes;
+        sw::VarIntUtil::encodeVarUint64( 0x1'0000'0005ULL, bytes );
+
+        size_t offset = 0;
+        uint32 narrow = 0xDEADBEEF;
+        SW_EXPECT_TRUE_MSG( sw::VarIntUtil::decodeVarUint32( bytes.data(), bytes.size(), offset, narrow ) == false,
+                            "uint32 범위를 넘는 값을 잘라서 받았습니다" );
+        SW_EXPECT_EQUAL( 0xDEADBEEFu, narrow );
+        SW_EXPECT_TRUE_MSG( offset == 0, "실패한 읽기가 스트림을 먹고 갔습니다" );
+
+        // 64비트로는 그대로 읽힌다 — 바이트가 깨진 것이 아니라 폭이 모자랐을 뿐이다.
+        uint64 wide = 0;
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarUint64( bytes.data(), bytes.size(), offset, wide ) );
+        SW_EXPECT_EQUAL( 0x1'0000'0005ULL, wide );
+    }
+
+    // 2) int32 범위 밖 (양·음 양쪽)
+    {
+        sw::vector<uint8> bytes;
+        sw::VarIntUtil::encodeVarInt64( 3'000'000'000LL, bytes );
+        sw::VarIntUtil::encodeVarInt64( -3'000'000'000LL, bytes );
+
+        size_t offset = 0;
+        int32  narrow = 123;
+        SW_EXPECT_FALSE( sw::VarIntUtil::decodeVarInt32( bytes.data(), bytes.size(), offset, narrow ) );
+        SW_EXPECT_EQUAL( 123, narrow );
+        SW_EXPECT_EQUAL( size_t( 0 ), offset );
+
+        int64 wide = 0;
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarInt64( bytes.data(), bytes.size(), offset, wide ) );
+        SW_EXPECT_EQUAL( 3'000'000'000LL, wide );
+        SW_EXPECT_FALSE( sw::VarIntUtil::decodeVarInt32( bytes.data(), bytes.size(), offset, narrow ) );
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarInt64( bytes.data(), bytes.size(), offset, wide ) );
+        SW_EXPECT_EQUAL( -3'000'000'000LL, wide );
+    }
+
+    // 3) 경계는 통과한다 — "다 막는다" 로 굳지 않는다.
+    {
+        sw::vector<uint8> bytes;
+        sw::VarIntUtil::encodeVarUint64( 0xFFFF'FFFFULL, bytes );
+        sw::VarIntUtil::encodeVarInt64( 2'147'483'647LL, bytes );
+        sw::VarIntUtil::encodeVarInt64( -2'147'483'648LL, bytes );
+
+        size_t offset = 0;
+        uint32 maxU32 = 0;
+        int32  maxI32 = 0;
+        int32  minI32 = 0;
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarUint32( bytes.data(), bytes.size(), offset, maxU32 ) );
+        SW_EXPECT_EQUAL( 0xFFFF'FFFFu, maxU32 );
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarInt32( bytes.data(), bytes.size(), offset, maxI32 ) );
+        SW_EXPECT_EQUAL( 2147483647, maxI32 );
+        SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarInt32( bytes.data(), bytes.size(), offset, minI32 ) );
+        SW_EXPECT_EQUAL( -2147483647 - 1, minI32 );
+    }
+
+    // 4) Archive 도 같은 규칙이다 — 32비트 오버로드가 따로 구현돼 있어 따로 물어야 한다.
+    {
+        sw::Archive writeArch;
+        writeArch.writeVarUint( 0x1'0000'0005ULL );
+        writeArch.writeVarUint( static_cast<uint64>( 42 ) );
+
+        sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
+        uint32      narrow = 7;
+        SW_EXPECT_TRUE_MSG( readArch.readVarUint( narrow ) == false,
+                            "Archive 가 uint32 범위 밖 값을 잘라서 받았습니다" );
+        SW_EXPECT_EQUAL( 7u, narrow );
+        SW_EXPECT_TRUE_MSG( readArch.isError(), "범위 위반을 오류로 남기지 않았습니다" );
+    }
+}
+
+/**
+ * @brief [ArchiveTest] 10번째 바이트에 남는 비트가 켜져 있으면 거절한다
+ * @details LEB128 의 10번째 바이트에는 1비트만 남는다. 예전에는 그 위 비트들을 **조용히 버려서**
+ *          서로 다른 바이트열이 같은 값으로 읽혔다(장황한 인코딩 · 64비트 초과 값). 정상 인코더는
+ *          이 자리에 0 이나 1 만 내므로, 막아도 우리가 쓴 스트림은 하나도 다치지 않는다.
+ */
+SW_TEST_CASE( ArchiveTest, VarIntRejectsNonCanonicalTenthByte )
+{
+    // 9바이트의 continuation + 10번째 바이트에 여분 비트
+    sw::vector<uint8> bytes( 9, 0x80 );
+    bytes.push_back( 0x7F );
+
+    size_t offset = 0;
+    uint64 value  = 0;
+    SW_EXPECT_TRUE_MSG( sw::VarIntUtil::decodeVarUint64( bytes.data(), bytes.size(), offset, value ) == false,
+                        "10번째 바이트의 남는 비트를 조용히 버렸습니다" );
+
+    // uint64 최대값은 정상이다 — 10번째 바이트가 정확히 1 이다.
+    sw::vector<uint8> maxBytes;
+    sw::VarIntUtil::encodeVarUint64( 0xFFFF'FFFF'FFFF'FFFFULL, maxBytes );
+    SW_EXPECT_EQUAL( size_t( 10 ), maxBytes.size() );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( maxBytes.back() ) );
+
+    offset = 0;
+    SW_EXPECT_TRUE( sw::VarIntUtil::decodeVarUint64( maxBytes.data(), maxBytes.size(), offset, value ) );
+    SW_EXPECT_EQUAL( 0xFFFF'FFFF'FFFF'FFFFULL, value );
+}

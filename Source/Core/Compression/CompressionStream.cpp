@@ -86,7 +86,16 @@ namespace sw
         if ( outHeader._version != CompressionHeader::kVersion )
             return false;
 
-        if ( outHeader._compressedSize + sizeof( CompressionHeader ) > dataSize )
+        // **뺄셈으로 비교한다.** 덧셈으로 쓰면 스트림이 적어 낸 크기가 넘칠 때 뒤집힌다 —
+        // `_compressedSize` 가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 **통과했다.** 그 뒤
+        // `decompress` 에 srcSize 로 SIZE_MAX 가 그대로 들어가 코덱이 버퍼 밖을 읽었다.
+        // 위에서 `dataSize >= sizeof( CompressionHeader )` 를 이미 확인했으므로 이 뺄셈은 안전하다.
+        if ( outHeader._compressedSize > dataSize - sizeof( CompressionHeader ) )
+            return false;
+
+        // 압축 해제 뒤 크기도 여기서 한 번 본다. 이 값은 **곧바로 할당 크기가 된다**(vector 오버로드의
+        // resize) — 망가진 헤더가 2^60 을 적어 두면 코덱이 한 바이트도 읽기 전에 메모리가 터진다.
+        if ( outHeader._uncompressedSize > kMaxUncompressedSize )
             return false;
 
         return true;

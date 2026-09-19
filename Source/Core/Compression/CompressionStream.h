@@ -52,6 +52,18 @@ namespace sw
         static constexpr uint32 kMagicNumber = CompressionHeader::kMagic;
 
         /**
+         * @brief 스트림 하나가 풀어 놓을 수 있는 최대 바이트 수 (1 GiB).
+         * @details 헤더의 `_uncompressedSize` 는 **곧바로 할당 크기가 된다.** 망가진(또는 악의적인)
+         *          헤더가 2^60 을 적어 두면 코덱이 한 바이트도 읽기 전에 그 resize 에서 메모리가
+         *          터진다 — 압축 파일 몇 바이트로 프로세스를 죽일 수 있다는 뜻이다.
+         *          코덱마다 팽창률이 달라(RLE 65배, Deflate 는 1000배가 넘는다) 압축 크기로부터
+         *          정확한 상한을 낼 수는 없으므로, **이 컨테이너가 다루는 가장 큰 것**(씬·세이브·
+         *          리소스 팩 조각)보다 넉넉히 크고 기계를 재우기에는 충분히 작은 값을 못박는다.
+         *          여기에 걸린다면 압축 스트림이 아니라 그 데이터가 이 컨테이너에 맞지 않는 것이다.
+         */
+        static constexpr uint64 kMaxUncompressedSize = uint64{ 1 } * 1024 * 1024 * 1024;
+
+        /**
          * @brief 메모리 버퍼를 압축하여 헤더가 포함된 압축 바이너리 스트림으로 생성합니다.
          */
         static bool compressBuffer( const void*                     pSrc,

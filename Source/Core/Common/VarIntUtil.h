@@ -3,6 +3,7 @@
  * @brief LEB128 가변 길이 정수 인코딩 및 ZigZag 부호 있는 정수 압축 유틸리티
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
@@ -20,6 +21,35 @@ namespace sw
         // (`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
         // 반대로 **디코딩에는 있다** — 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을
         // 거르는 실제 검사를 하기 때문이다.
+        //
+        // 오래도록 그 설명만 맞고 코드는 틀렸다 — 32비트 디코더 둘 다 `static_cast` 한 줄이라
+        // 범위 밖 값을 **조용히 잘라** 냈다. 그래서 망가진 아카이브가 거부되는 대신 엉뚱하게
+        // 읽혔다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이
+        // n 으로 잘린 뒤라 통과한다). 이제 `narrowToUint32`·`narrowToInt32` 가 실제로 거른다.
+
+        /**
+         * @brief 64비트 값이 uint32 에 **손실 없이** 들어갈 때만 옮깁니다.
+         * @return 범위를 벗어나면 false — 그때 outValue 는 건드리지 않는다.
+         */
+        static bool narrowToUint32( uint64 value, uint32& outValue )
+        {
+            if ( value > static_cast<uint64>( std::numeric_limits<uint32>::max() ) )
+                return false;
+            outValue = static_cast<uint32>( value );
+            return true;
+        }
+
+        /**
+         * @brief 64비트 값이 int32 에 **손실 없이** 들어갈 때만 옮깁니다.
+         * @return 범위를 벗어나면 false — 그때 outValue 는 건드리지 않는다.
+         */
+        static bool narrowToInt32( int64 value, int32& outValue )
+        {
+            if ( value < static_cast<int64>( std::numeric_limits<int32>::lowest() ) || value > static_cast<int64>( std::numeric_limits<int32>::max() ) )
+                return false;
+            outValue = static_cast<int32>( value );
+            return true;
+        }
 
         /**
          * @brief 64비트 부호 없는 정수를 LEB128 가변 길이 바이트열로 벡터에 추가합니다.
@@ -47,7 +77,8 @@ namespace sw
          */
         static size_t encodeVarInt64( int64 value, vector<uint8>& outBytes )
         {
-            const uint64 zigZag = static_cast<uint64>( ( value << 1 ) ^ ( value >> 63 ) );
+            // 부호 있는 값의 왼쪽 시프트는 C++17 에서 **음수면 UB** 다. 부호 없는 쪽에서 민다.
+            const uint64 zigZag = ( static_cast<uint64>( value ) << 1 ) ^ static_cast<uint64>( value >> 63 );
             return encodeVarUint64( zigZag, outBytes );
         }
 
@@ -71,6 +102,11 @@ namespace sw
             while ( curOffset < dataSize && shift < 64 )
             {
                 const uint8 byte = pData[curOffset++];
+                // 10번째 바이트(shift == 63)에 남는 자리는 1비트뿐이다. 나머지가 켜져 있으면
+                // 64비트를 넘는 값이거나 장황한 인코딩이다 — 조용히 버리지 말고 거절한다.
+                // 정상 인코더는 여기서 0 이나 1 만 낸다(encodeVarUint64 의 마지막 바이트).
+                if ( shift == 63 && ( byte & 0x7E ) != 0 )
+                    return false;
                 result |= static_cast<uint64>( byte & 0x7FULL ) << shift;
                 if ( ( byte & 0x80 ) == 0 )
                 {
@@ -88,10 +124,14 @@ namespace sw
          */
         static bool decodeVarUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
         {
-            uint64 val64 = 0;
-            if ( decodeVarUint64( pData, dataSize, inoutOffset, val64 ) == false )
+            size_t curOffset = inoutOffset;
+            uint64 val64     = 0;
+            if ( decodeVarUint64( pData, dataSize, curOffset, val64 ) == false )
                 return false;
-            outValue = static_cast<uint32>( val64 );
+            // 범위를 벗어나면 **오프셋도 되돌린다** — 실패한 읽기가 스트림을 먹고 가면 안 된다.
+            if ( narrowToUint32( val64, outValue ) == false )
+                return false;
+            inoutOffset = curOffset;
             return true;
         }
 
@@ -113,10 +153,13 @@ namespace sw
          */
         static bool decodeVarInt32( const uint8* pData, size_t dataSize, size_t& inoutOffset, int32& outValue )
         {
-            int64 val64 = 0;
-            if ( decodeVarInt64( pData, dataSize, inoutOffset, val64 ) == false )
+            size_t curOffset = inoutOffset;
+            int64  val64     = 0;
+            if ( decodeVarInt64( pData, dataSize, curOffset, val64 ) == false )
                 return false;
-            outValue = static_cast<int32>( val64 );
+            if ( narrowToInt32( val64, outValue ) == false )
+                return false;
+            inoutOffset = curOffset;
             return true;
         }
     };

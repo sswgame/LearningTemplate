@@ -435,6 +435,37 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Source 함수 단위 점검 — Core/Common · Core/Compression)
+
+**손상된 스트림이 버퍼 밖을 읽게 할 수 있었다 (메모리 안전).** `CompressionStream::verifyHeader` 의
+길이 검사가 `_compressedSize + sizeof(헤더) > dataSize` 라는 **덧셈**이었다. `_compressedSize` 가
+UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 통과했고, 그 값이 그대로 코덱의 srcSize 가 되어
+`decompress` 가 SIZE_MAX 바이트를 읽으려 들었다. **28바이트짜리 헤더 하나로 힙 밖을 읽힐 수
+있었다는 뜻이다** — ASan 이 `RleCompressionCodec.cpp:124` 의 `pInput[readPos++]` 에서
+heap-buffer-overflow 로 찍어 확인했다. 뺄셈으로 비교하게 고쳤다(같은 함정을 `BinarySerializer` 는
+이미 뺄셈으로 피하고 있었는데 여기엔 안 옮겨져 있었다).
+
+**해제 크기가 곧 할당 크기였다 (가용성).** `_uncompressedSize` 는 검사 없이 `outBytes.resize()` 에
+들어갔다 — 2^60 이 적힌 헤더면 코덱이 한 바이트도 읽기 전에 메모리가 터진다. 코덱마다 팽창률이
+달라(RLE 65배, Deflate 1000배 초과) 압축 크기로부터 정확한 상한은 못 내므로,
+`CompressionStream::kMaxUncompressedSize`(1 GiB) 를 두고 헤더 검증에서 자른다.
+
+**32비트 varint 디코더가 조용히 잘랐다.** `VarIntUtil` 의 주석은 처음부터 "32비트 오버로드는
+캐스팅이 아니라 범위 검사를 한다" 고 적혀 있었는데 **코드는 `static_cast` 한 줄이었다.** 그래서
+`Archive::readPooledString` 의 `poolId >= getCount()` 검사가 이미 잘린 값을 보게 되어
+`0x1'0000'0000 + n` 이 유효한 n 인 척 통과했다. `narrowToUint32`·`narrowToInt32` 로 규칙을 한 곳에
+모으고 `VarIntUtil`·`Archive` 네 군데가 그것을 쓴다. 실패하면 **오프셋도 되돌린다.**
+
+**부수로 고친 것 셋:**
+- `encodeVarInt64` 의 ZigZag 가 `value << 1` 이었다 — C++17 에서 **음수의 왼쪽 시프트는 UB** 다.
+- LEB128 10번째 바이트의 남는 6비트를 조용히 버리고 있었다(서로 다른 바이트열이 같은 값으로
+  읽혔다). 정상 인코더는 그 자리에 0/1 만 내므로 막아도 우리가 쓴 스트림은 다치지 않는다.
+- `Macros.h` 가 `std::enable_if_t`(SW_REQUIRES · arrayCountHelper)를 쓰면서 `<type_traits>` 를
+  선언하지 않고 `Types.h` 의 `<string_view>` 가 우연히 끌어와 주는 것에 기대고 있었다.
+
+**검증.** 새 케이스 4개(`CompressionTest` 2 · `ArchiveTest` 2), 전부 변이 검사로 문다.
+Debug·Shipping·ASAN nogpu 7/7, lint 18/18, 경고 0건.
+
 ### 2026-09-19 (Source 함수 단위 점검 — Core/CommandLine · Core/GlobalVariable)
 
 `Source/` 전체를 함수 하나씩 읽는 점검을 시작했다(Core → Engine → ReflectionParser → Editor →
