@@ -95,7 +95,8 @@ namespace sw
         uint32 _screenshotFrameCounter; ///< 씬이 채워질 때까지 몇 프레임 기다린다
 
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
-        // sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)
+        // 게임 스레드와 렌더 스레드가 이 링을 **동시에** 만진다. 그래서 레이스 탐지기가 붙은
+        // sw::array 를 쓰지 않는다 — 이유는 Core/Container/array.h 머리말.
         std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
         atomic<uint32>                                  _head; ///< 생산자(GT)가 씀
         atomic<uint32>                                  _tail; ///< Written by consumer (RT)

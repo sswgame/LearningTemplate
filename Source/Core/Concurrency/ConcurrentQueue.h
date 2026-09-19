@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ConcurrentQueue.h
  * @brief 고정 용량 MPMC 락프리 큐 (Vyukov 시퀀스 넘버 링).
  * @note 파일 주석이 오래 **"뮤텍스 기반"** 이라고 되어 있었는데 이 파일에는 뮤텍스가 한 줄도 없다.
@@ -204,9 +204,8 @@ namespace sw
     private:
         static constexpr uint32 kMask = Capacity - 1;
 
-        // sw::array 대신 std::array 사용:
-        // sw::array는 단일 스레드 컨테이너로 DataRaceDetector가 내장되어 있어 멀티스레드 동시 접근 시 오탐(Data Race Error)을 유발합니다.
-        // ConcurrentQueue는 각 슬롯(Cell)의 원자적 sequence 변수로 락-프리 동기화를 수행하므로 레이스 탐지기가 없는 std::array를 사용합니다.
+        // 여러 스레드가 이 버퍼를 **일부러 동시에** 만진다(슬롯마다의 원자적 sequence 로 동기화한다).
+        // 그래서 레이스 탐지기가 붙은 sw::array 를 쓰지 않는다 — 이유는 Core/Container/array.h 머리말.
         std::array<Cell, Capacity> _arrBuffer{};
         alignas( 64 ) atomic<uint32> _enqueuePos{ 0 };
         alignas( 64 ) atomic<uint32> _dequeuePos{ 0 };

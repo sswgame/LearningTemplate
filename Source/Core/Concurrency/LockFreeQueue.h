@@ -92,9 +92,8 @@ namespace sw
     private:
         static constexpr uint32 kMask = Capacity - 1;
 
-        // sw::array 대신 std::array 사용:
-        // SPSC 환경에서 push(생산자)와 pop(소비자)이 서로 다른 스레드에서 _buffer에 동시 접근할 때
-        // sw::array의 DataRaceDetector 오탐(Data Race Error)을 방지하기 위해 std::array를 사용합니다.
+        // SPSC 라 push(생산자)와 pop(소비자)이 **서로 다른 스레드에서 동시에** 이 버퍼를 만진다.
+        // 그래서 레이스 탐지기가 붙은 sw::array 를 쓰지 않는다 — 이유는 Core/Container/array.h 머리말.
         std::array<T, Capacity> _buffer{};
         // 값은 여기 한 곳에만 둔다 — 예전에는 생성자에도 같은 0 이 적혀 있었다(AGENTS 의
         // "초기값의 집은 하나" 규칙). 생성자가 이기므로 헤더만 고치면 조용히 안 먹는다.
