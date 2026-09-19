@@ -458,6 +458,37 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (콜백에 자기 멤버를 참조로 넘겼다 — 대화 러너 · 모드 FSM)
+
+커밋 `TBD`. 둘 다 "콜백이 그 안에서 돌아와 나를 바꾼다" 는 한 모양이다.
+
+1. **`DialogueRunnerComponent` 가 델리게이트에 자기 멤버를 그대로 넘겼다.** 시그니처가
+   `const string&` · `const vector<string>&` 인데 인자가 `_currentText` · `_listCurrentChoice`
+   였다. 대화 UI 에서 가장 흔한 사용법 — "이 줄을 보고 바로 `advance()`", "선택지를 **돌면서**
+   `selectChoice()`" — 이 곧 자기가 받은 참조를 바꾸거나 비우는 일이었다. 핸들러는 돌아와서
+   다음 줄을 방금 받은 줄로 읽는다. `notifyLine()` · `notifyChoices()` 로 모아 **사본**을 넘긴다.
+   `executeAction` 도 `const string&` 로 `_graph` 가 쥔 문자열을 가리켰다 — 핸들러가 그래프를
+   갈면 죽은 메모리인데 그 뒤로도 `startsWith` · `substr` 로 계속 읽었다. 값으로 받는다.
+2. **`GameModeStateMachine` 이 핸들러를 반복자·생포인터로 불렀다.** 표는 `shared_ptr` 로 쥐는데
+   부르는 자리가 그 한 몫을 안 들었다. 핸들러가 `onExit` 안에서 자신을 해제하면 (1) 들고 있던
+   반복자가 죽은 채로 `erase( it )` 에 들어가고 (2) 표가 쥔 **마지막 참조**가 사라져 아직
+   실행 중인 `onExit` 의 `this` 가 파괴된다. 부르는 자리를 전부 `findHandler()` 하나로 모아
+   `shared_ptr` 를 지역으로 들게 했다.
+   덤으로 **나가는 길 셋이 서로 달랐다**: `unregisterHandler` 와 `reset` 은 상태를 먼저 옮기고
+   알리는데 `transitionTo` 만 `_currentMode` 를 쥔 채 `onExit` 을 불렀다. 그래서 `onExit`
+   안에서 자신을 해제하면 그쪽이 "아직 현재 모드다" 로 보고 **`onExit` 을 한 번 더** 불렀다.
+
+테스트 셋: `DialogueRunner_HandlerArgumentsSurviveReentrantAdvance`,
+`DialogueRunner_ChoiceListSurvivesSelectingWhileIterating`,
+`LocalizationManagerTest.GameModeHandlerCanUnregisterItselfWhileExiting`(예전 모양으로 되돌리면
+**프로세스가 사라진다**).
+
+**확인된 테스트 불안정성 — 아직 안 고침.** 검증 중 `Ninja-Shipping` 의 `EngineTest_NoGPU` 가
+한 번 실패했다가 다시 돌리니 통과했다. 원인은 `AudioSystemTest.WavParsingAndMalformedData` 가
+`%TEMP%/test_malformed.wav` 같은 **고정된 이름**에 쓰는 것이다. `Test/` 전체에 이런 자리가
+83 곳 있고 이름이 전부 고정이라, 두 프리셋의 테스트 프로세스가 겹치면 한쪽의 `removeFile` 이
+다른 쪽이 방금 쓴 파일을 지운다. 다음 커밋에서 프로세스별 고유 경로 헬퍼로 닫는다.
+
 ### 2026-09-20 (두 킷을 한 게임에서 같이 못 썼다 · 걷는 상태가 시작한 프레임에 취소됐다)
 
 커밋 `TBD`. GameFramework 킷 훑기에서 나온 여섯.

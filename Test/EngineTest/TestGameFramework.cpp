@@ -1779,6 +1779,97 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
     SW_EXPECT_TRUE_MSG( input._facing == FacingDir::Up, "두 킷이 같은 FacingDir 을 보고 있지 않습니다" );
 }
 
+/**
+ * @brief [GameFrameworkTest] 대화 핸들러가 **그 안에서** 진행시켜도 받은 값이 그대로다
+ * @details 델리게이트는 `const string&` · `const vector<string>&` 를 받는데, 그것이 러너의
+ *          멤버를 그대로 가리키고 있었다. 대화 UI 에서 가장 흔한 사용법 — "이 줄을 보고 바로
+ *          `advance()`", "선택지를 돌면서 `selectChoice()`" — 이 곧 **자기가 받은 참조를
+ *          바꾸거나 비우는** 일이었다. 핸들러는 돌아와서 다음 줄을 방금 받은 줄로 읽는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrantAdvance )
+{
+    DialogueRunnerComponent runner;
+
+    const string testJson = R"({
+		"nodes": [
+			{ "id": 1, "type": "Start" },
+			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "First line" },
+			{ "id": 3, "type": "Dialogue", "speaker": "NPC", "text": "Second line" },
+			{ "id": 4, "type": "End" }
+		],
+		"links": [
+			{ "from": 102, "to": 201 },
+			{ "from": 202, "to": 301 },
+			{ "from": 302, "to": 401 }
+		]
+	})";
+    SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
+
+    int32  lineCount{ 0 };
+    string firstLineAsSeenAfterAdvancing;
+    runner.setOnDialogueLine( [&]( const string& speaker, const string& text )
+    {
+        ++lineCount;
+        if ( lineCount != 1 )
+            return;
+
+        // 첫 줄을 받은 자리에서 **바로 다음으로 넘긴다** — 그 안에서 러너의 멤버가 바뀐다.
+        runner.advance();
+        // 그래도 내가 받은 인자는 여전히 첫 줄이어야 한다.
+        firstLineAsSeenAfterAdvancing = speaker + ": " + text;
+    } );
+
+    SW_ASSERT_TRUE( runner.startDialogue() );
+    SW_EXPECT_EQUAL( 2, lineCount );
+    SW_EXPECT_TRUE_MSG( firstLineAsSeenAfterAdvancing == "NPC: First line",
+                        "핸들러가 받은 줄이 진행 도중에 바뀌었습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 선택지 핸들러가 **목록을 돌면서** 고를 수 있다
+ * @details `_onChoices` 가 `_listCurrentChoice` 를 그대로 넘겨서, 핸들러가 돌면서
+ *          `selectChoice()` 를 부르면 그 순간 목록이 비워지고 다시 채워졌다 —
+ *          순회 중 컨테이너 변경이다.
+ */
+SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhileIterating )
+{
+    DialogueRunnerComponent runner;
+
+    const string testJson = R"({
+		"nodes": [
+			{ "id": 1, "type": "Start" },
+			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Pick", "choices": ["Alpha", "Beta", "Gamma"] },
+			{ "id": 3, "type": "Dialogue", "speaker": "Guide", "text": "Took Beta" },
+			{ "id": 4, "type": "End" }
+		],
+		"links": [
+			{ "from": 102, "to": 201 },
+			{ "from": 211, "to": 301 },
+			{ "from": 302, "to": 401 }
+		]
+	})";
+    SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
+
+    vector<string> seenChoice;
+    runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
+    {
+        for ( size_t choiceIndex = 0; choiceIndex < listChoice.size(); ++choiceIndex )
+        {
+            seenChoice.push_back( listChoice[choiceIndex] );
+            // 도는 도중에 고른다 — 러너는 이 자리에서 목록을 비우고 다시 채운다.
+            if ( choiceIndex == 1 )
+                runner.selectChoice( static_cast<int32>( choiceIndex ) );
+        }
+    } );
+
+    SW_ASSERT_TRUE( runner.startDialogue() );
+    SW_ASSERT_EQUAL( size_t( 3 ), seenChoice.size() );
+    SW_EXPECT_EQUAL( "Alpha", seenChoice[0] );
+    SW_EXPECT_EQUAL( "Beta", seenChoice[1] );
+    SW_EXPECT_TRUE_MSG( seenChoice[2] == "Gamma", "고르는 사이에 선택지 목록이 바뀌었습니다" );
+    SW_EXPECT_EQUAL( "Took Beta", runner.getCurrentText() );
+}
+
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.

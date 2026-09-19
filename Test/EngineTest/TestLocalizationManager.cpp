@@ -837,3 +837,80 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryPackIsDeterministic )
     sw::FileUtil::removeFile( forwardPath );
     sw::FileUtil::removeFile( reversePath );
 }
+
+/**
+ * @brief [GameFramework] 핸들러가 `onExit` 안에서 **자신을 해제**해도 살아남는다
+ * @details 표가 `shared_ptr` 로 핸들러를 쥐는데, 부르는 자리가 전부 반복자나 생포인터를 썼다.
+ *          핸들러가 `onExit` 안에서 자신을 해제하면 (1) 들고 있던 반복자가 죽은 채로
+ *          `erase( it )` 에 들어가고 (2) 표가 쥔 **마지막 참조**가 사라져 아직 실행 중인
+ *          `onExit` 의 `this` 가 파괴된다. 모드를 떠나면서 자기 핸들러를 정리하는 것은
+ *          이상한 일이 아니다.
+ * @note 고치기 전이라면 ASAN 이 해제 후 사용으로 잡거나 그 자리에서 죽는다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, GameModeHandlerCanUnregisterItselfWhileExiting )
+{
+    class SelfRemovingHandler : public sw::IGameModeHandler
+    {
+    public:
+        sw::GameModeStateMachine* _pFsm{ nullptr };
+        sw::hashed_string         _mode{};
+        uint32                    _exitCount{ 0 };
+        uint32                    _valueReadAfterRemoving{ 0 };
+
+        void onEnter( const sw::hashed_string& ) override {}
+        void onUpdate( float32 ) override {}
+        void onExit( const sw::hashed_string& ) override
+        {
+            ++_exitCount;
+            if ( _pFsm != nullptr )
+                _pFsm->unregisterHandler( _mode );
+            // 표에서 떨어진 **뒤에** 자기 멤버를 읽는다 — 고치기 전이라면 여기서 이미 죽었다.
+            _valueReadAfterRemoving = _exitCount;
+        }
+    };
+
+    // 1) 모드를 옮기다가 나가는 핸들러가 자신을 뗀다.
+    {
+        sw::GameModeStateMachine fsm;
+        auto                     handler = sw::make_shared<SelfRemovingHandler>();
+        handler->_pFsm                   = &fsm;
+        handler->_mode                   = sw::GameModes::title();
+        fsm.registerHandler( sw::GameModes::title(), handler );
+
+        SW_ASSERT_TRUE( fsm.transitionTo( sw::GameModes::title() ) );
+        SW_EXPECT_TRUE( fsm.transitionTo( sw::GameModes::gameplay() ) );
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_exitCount );
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_valueReadAfterRemoving );
+        SW_EXPECT_TRUE( fsm.getCurrentHandler() == nullptr );
+    }
+
+    // 2) 바깥에서 뗄 때도 마찬가지다 — 예전에는 죽은 반복자로 `erase` 했다.
+    {
+        sw::GameModeStateMachine fsm;
+        auto                     handler = sw::make_shared<SelfRemovingHandler>();
+        handler->_pFsm                   = &fsm;
+        handler->_mode                   = sw::GameModes::title();
+        fsm.registerHandler( sw::GameModes::title(), handler );
+
+        SW_ASSERT_TRUE( fsm.transitionTo( sw::GameModes::title() ) );
+        fsm.unregisterHandler( sw::GameModes::title() );
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_exitCount );
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_valueReadAfterRemoving );
+        SW_EXPECT_TRUE( fsm.getCurrentHandler() == nullptr );
+    }
+
+    // 3) `reset()` 도 같은 규칙을 따른다.
+    {
+        sw::GameModeStateMachine fsm;
+        auto                     handler = sw::make_shared<SelfRemovingHandler>();
+        handler->_pFsm                   = &fsm;
+        handler->_mode                   = sw::GameModes::title();
+        fsm.registerHandler( sw::GameModes::title(), handler );
+
+        SW_ASSERT_TRUE( fsm.transitionTo( sw::GameModes::title() ) );
+        fsm.reset();
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_exitCount );
+        SW_EXPECT_EQUAL( uint32( 1 ), handler->_valueReadAfterRemoving );
+        SW_EXPECT_TRUE( fsm.getCurrentMode().empty() );
+    }
+}

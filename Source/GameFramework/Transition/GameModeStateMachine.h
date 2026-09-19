@@ -105,6 +105,15 @@ namespace sw
         void setOnModeChanged( ModeChangedDelegate delegate ) { _onModeChanged = delegate; }
 
     private:
+        /**
+         * @brief 모드의 핸들러를 **소유권을 한 몫 들고** 돌려줍니다. 없으면 빈 포인터입니다.
+         * @details 핸들러를 부르는 자리는 모두 이것을 거친다. 표의 반복자나 생포인터로 부르면,
+         *          핸들러가 그 안에서 자신을 해제했을 때 (1) 반복자가 죽고 (2) 표가 쥔 마지막
+         *          참조가 사라져 **실행 중인 콜백의 `this` 가 파괴된다.** 한 몫을 들고 있으면
+         *          콜백이 끝날 때까지는 살아 있다.
+         */
+        shared_ptr<IGameModeHandler> findHandler( const hashed_string& mode ) const;
+
         hashed_string                                              _currentMode;
         hashed_string                                              _previousMode;
         unordered_map<hashed_string, shared_ptr<IGameModeHandler>> _mapHandler;
