@@ -12,9 +12,7 @@ namespace sw
     public:
         REFLECT_BODY();
         GravityComponent();
-        virtual ~GravityComponent() override                       = default;
-        GravityComponent( GravityComponent&& ) noexcept            = default;
-        GravityComponent& operator=( GravityComponent&& ) noexcept = default;
+        virtual ~GravityComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

@@ -12,9 +12,7 @@ namespace sw
     public:
         REFLECT_BODY();
         CameraControllerComponent();
-        virtual ~CameraControllerComponent() override                                = default;
-        CameraControllerComponent( CameraControllerComponent&& ) noexcept            = default;
-        CameraControllerComponent& operator=( CameraControllerComponent&& ) noexcept = default;
+        virtual ~CameraControllerComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

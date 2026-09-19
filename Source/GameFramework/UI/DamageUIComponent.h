@@ -12,9 +12,7 @@ namespace sw
     public:
         REFLECT_BODY();
         DamageUIComponent();
-        virtual ~DamageUIComponent() override                        = default;
-        DamageUIComponent( DamageUIComponent&& ) noexcept            = default;
-        DamageUIComponent& operator=( DamageUIComponent&& ) noexcept = default;
+        virtual ~DamageUIComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

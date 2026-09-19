@@ -34,38 +34,6 @@ namespace sw
         // 뿌리 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
     }
 
-    Component::Component( Component&& other ) noexcept
-        : _pOwner{ std::exchange( other._pOwner, nullptr ) }
-        , _componentId{ other._componentId }
-        , _componentName{ std::move( other._componentName ) }
-        , _subTickActiveMask{ other._subTickActiveMask.load( std::memory_order_relaxed ) }
-        , _bActive{ other._bActive.load( std::memory_order_relaxed ) }
-        , _bIsPendingKill{ other._bIsPendingKill.load( std::memory_order_relaxed ) }
-        , _tickGroup{ other._tickGroup }
-        , _bCanEverTick{ other._bCanEverTick }
-        , _reservedFlags{ other._reservedFlags }
-        , _listSubTick{ std::move( other._listSubTick ) }
-    {
-    }
-
-    Component& Component::operator=( Component&& other ) noexcept
-    {
-        if ( this != &other )
-        {
-            _pOwner        = std::exchange( other._pOwner, nullptr );
-            _componentId   = other._componentId;
-            _componentName = std::move( other._componentName );
-            _subTickActiveMask.store( other._subTickActiveMask.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-            _tickGroup = other._tickGroup;
-            _bActive.store( other._bActive.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-            _bCanEverTick  = other._bCanEverTick;
-            _reservedFlags = other._reservedFlags;
-            _bIsPendingKill.store( other._bIsPendingKill.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-            _listSubTick = std::move( other._listSubTick );
-        }
-        return *this;
-    }
-
     void Component::setDefaultGamedataPath( string_view path )
     {
         ComponentDefaults::setDefaultsPath( path );

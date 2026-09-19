@@ -14,9 +14,7 @@ namespace sw
     public:
         REFLECT_BODY();
         AttackBaseComponent();
-        virtual ~AttackBaseComponent() override                          = default;
-        AttackBaseComponent( AttackBaseComponent&& ) noexcept            = default;
-        AttackBaseComponent& operator=( AttackBaseComponent&& ) noexcept = default;
+        virtual ~AttackBaseComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

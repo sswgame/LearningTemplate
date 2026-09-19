@@ -12,9 +12,7 @@ namespace sw
     public:
         REFLECT_BODY();
         HPBarBaseComponent();
-        virtual ~HPBarBaseComponent() override                         = default;
-        HPBarBaseComponent( HPBarBaseComponent&& ) noexcept            = default;
-        HPBarBaseComponent& operator=( HPBarBaseComponent&& ) noexcept = default;
+        virtual ~HPBarBaseComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

@@ -1218,3 +1218,25 @@ SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 
     SW_EXPECT_EQUAL( beforeCount, pObj->getComponentCount() );
 }
+
+/**
+ * @brief [GameObjectTest] 컴포넌트가 이동 불가로 남아 있는지 검증(회귀 가드)
+ * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 그런데 이동 연산이
+ *          **있었고 틀려 있었다** — `Component` 는 `_componentId` 를 비우지 않고 복사만 해서
+ *          옮기고 나면 둘이 같은 id 를 가졌고, `SceneComponent` 는 자식들의 `_pParent` · 부모의
+ *          `_listChild` · 매니저의 루트 등록부를 하나도 고치지 않았다(이동 대입은 방금 옮겨 온
+ *          자식 목록을 그 자리에서 비우기까지 했다). 쓰는 곳이 없어 아무도 몰랐다.
+ *
+ *          다시 생기면 여기서 걸린다. 진짜 방어선은 `= delete` 이고 이 케이스는 그것이
+ *          유지되는지 본다.
+ */
+SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
+{
+    static_assert( std::is_move_constructible_v<sw::Component> == false, "Component must stay non-movable" );
+    static_assert( std::is_move_assignable_v<sw::Component> == false, "Component must stay non-movable" );
+    static_assert( std::is_move_constructible_v<sw::SceneComponent> == false, "SceneComponent must stay non-movable" );
+    static_assert( std::is_move_assignable_v<sw::SceneComponent> == false, "SceneComponent must stay non-movable" );
+
+    SW_EXPECT_FALSE( std::is_move_constructible_v<sw::Component> );
+    SW_EXPECT_FALSE( std::is_move_constructible_v<sw::SceneComponent> );
+}

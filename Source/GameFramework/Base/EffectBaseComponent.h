@@ -14,9 +14,7 @@ namespace sw
     public:
         REFLECT_BODY();
         EffectBaseComponent();
-        virtual ~EffectBaseComponent() override                          = default;
-        EffectBaseComponent( EffectBaseComponent&& ) noexcept            = default;
-        EffectBaseComponent& operator=( EffectBaseComponent&& ) noexcept = default;
+        virtual ~EffectBaseComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

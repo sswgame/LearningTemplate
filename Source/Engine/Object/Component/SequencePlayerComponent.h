@@ -19,9 +19,7 @@ namespace sw
     public:
         REFLECT_BODY();
         SequencePlayerComponent();
-        virtual ~SequencePlayerComponent() override                              = default;
-        SequencePlayerComponent( SequencePlayerComponent&& ) noexcept            = default;
-        SequencePlayerComponent& operator=( SequencePlayerComponent&& ) noexcept = default;
+        virtual ~SequencePlayerComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

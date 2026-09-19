@@ -23,9 +23,6 @@ namespace sw
         TagComponent( const TagComponent& )            = delete;
         TagComponent& operator=( const TagComponent& ) = delete;
 
-        TagComponent( TagComponent&& other ) noexcept            = default;
-        TagComponent& operator=( TagComponent&& other ) noexcept = default;
-
         void onBeginPlay() override;
 
         TagContainer&       getTags();

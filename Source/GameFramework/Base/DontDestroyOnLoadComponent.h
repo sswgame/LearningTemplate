@@ -14,9 +14,7 @@ namespace sw
     public:
         REFLECT_BODY();
         DontDestroyOnLoadComponent();
-        virtual ~DontDestroyOnLoadComponent() override                                 = default;
-        DontDestroyOnLoadComponent( DontDestroyOnLoadComponent&& ) noexcept            = default;
-        DontDestroyOnLoadComponent& operator=( DontDestroyOnLoadComponent&& ) noexcept = default;
+        virtual ~DontDestroyOnLoadComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

@@ -54,9 +54,7 @@ namespace sw
         using OnDialogueFinishedFunc = OnDialogueFinishedDelegate;
 
         DialogueRunnerComponent();
-        virtual ~DialogueRunnerComponent() override                              = default;
-        DialogueRunnerComponent( DialogueRunnerComponent&& ) noexcept            = default;
-        DialogueRunnerComponent& operator=( DialogueRunnerComponent&& ) noexcept = default;
+        virtual ~DialogueRunnerComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

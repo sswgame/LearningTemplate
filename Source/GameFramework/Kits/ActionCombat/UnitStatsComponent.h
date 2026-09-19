@@ -14,9 +14,7 @@ namespace sw
     public:
         REFLECT_BODY();
         UnitStatsComponent();
-        virtual ~UnitStatsComponent() override                         = default;
-        UnitStatsComponent( UnitStatsComponent&& ) noexcept            = default;
-        UnitStatsComponent& operator=( UnitStatsComponent&& ) noexcept = default;
+        virtual ~UnitStatsComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

@@ -104,10 +104,17 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         Component& operator=( const Component& ) = delete;
 
-        /** @brief 이동 생성자입니다. */
-        Component( Component&& other ) noexcept;
-        /** @brief 이동 대입입니다. */
-        Component& operator=( Component&& other ) noexcept;
+        /**
+         * @brief **옮기지 않습니다.** 컴포넌트는 풀에서 제자리 생성·소멸합니다.
+         * @details 예전에는 이동 연산이 있었고, `_componentId` 를 원본에서 **복사만** 했다 —
+         *          비우지 않았으므로 옮기고 나면 둘이 같은 id 를 갖고 `findComponentById` 가
+         *          어느 쪽이든 내놓을 수 있었다. 저장소 전체에서 컴포넌트를 옮기는 곳은
+         *          **한 군데도 없었으므로**(삭제로 바꿔 보니 그 두 정의 말고는 아무것도 깨지지
+         *          않았다) 고치는 대신 막는다. 파생 13종의 `= default` 선언도 같이 걷었다.
+         * @see SceneComponent — 그쪽은 계층 포인터까지 얽혀 있어 같은 이유로 막혀 있습니다.
+         */
+        Component( Component&& other )            = delete;
+        Component& operator=( Component&& other ) = delete;
 
         /** @brief 가상 소멸. GameObject가 sw_delete로 해제합니다. */
         virtual ~Component() = default;

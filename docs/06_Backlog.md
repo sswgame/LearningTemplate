@@ -435,6 +435,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (컴포넌트의 이동 연산은 전부 죽어 있었고, 전부 틀려 있었다)
+
+`SceneComponent` 쪽을 막고 나서 기반인 `Component` 도 같은 방법으로 재 봤다 — `= delete` 로
+바꾸고 빌드하면 쓰는 곳이 다 드러난다. 결과는 같았다: **정의 두 개 말고는 아무것도 깨지지
+않는다.** 저장소 전체에서 컴포넌트를 옮기는 코드가 한 줄도 없다.
+
+그런데 그 죽은 코드가 틀려 있었다:
+
+```cpp
+Component::Component( Component&& other ) noexcept
+    : _componentId{ other._componentId }   // 복사만 한다. other 를 비우지 않는다
+```
+
+옮기고 나면 **둘이 같은 `_componentId` 를 갖는다.** `findComponentById` 는 어느 쪽이든 내놓을
+수 있고, `ComponentHandle` 은 `(objectId, componentId)` 쌍이므로 핸들 해석도 갈린다.
+
+`= delete` 로 바꾸고 파생 13종의 `= default` 선언을 걷었다. 전부 경고 0 으로 클린 빌드된다.
+남은 방어선은 컴파일러이고, `GameObjectTest.ComponentsStayNonMovable` 이 `static_assert` 로
+그것을 못박는다.
+
+> **이 방법이 이번 훑기에서 가장 잘 들었다.** "이 코드가 쓰이나?" 를 grep 으로 묻는 대신
+> 삭제하고 빌드해 보는 것이다. 컴파일러가 호출부를 빠짐없이 세어 준다 — `SceneComponent`
+> (파생 8종)와 `Component`(파생 13종) 양쪽 다 이 방법으로 "아무도 안 쓴다" 를 몇 초 만에
+> 확정했다. 안 쓰이는 것으로 확인된 코드는 고치지 않고 **막는 쪽**이 맞다: 고쳐 봐야 검증할
+> 방법이 없고, 남겨 두면 다음 사람이 그것을 믿는다.
+
 ### 2026-09-19 (오브젝트를 인스펙터에서 보기만 해도 컴포넌트가 붙었다)
 
 `GameObject::getTags()` 에 오버로드가 둘 있었다:

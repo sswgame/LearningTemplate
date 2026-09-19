@@ -14,9 +14,7 @@ namespace sw
     public:
         REFLECT_BODY();
         ProjectileComponent();
-        virtual ~ProjectileComponent() override                          = default;
-        ProjectileComponent( ProjectileComponent&& ) noexcept            = default;
-        ProjectileComponent& operator=( ProjectileComponent&& ) noexcept = default;
+        virtual ~ProjectileComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;

@@ -18,9 +18,7 @@ namespace sw
     public:
         REFLECT_BODY();
         ColliderTileComponent();
-        virtual ~ColliderTileComponent() override                            = default;
-        ColliderTileComponent( ColliderTileComponent&& ) noexcept            = default;
-        ColliderTileComponent& operator=( ColliderTileComponent&& ) noexcept = default;
+        virtual ~ColliderTileComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;
