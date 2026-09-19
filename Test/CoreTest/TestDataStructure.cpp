@@ -48,6 +48,16 @@ namespace
     {
         bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
     };
+
+    /**
+     * @brief 모든 키를 같은 버킷으로 보내는 해시입니다.
+     * @details 충돌 체인을 **손으로** 만들기 위한 것이다 — 실제 해시로는 어떤 체인이 생길지가
+     *          운에 달려 있어서, swap-and-pop 이 고쳐야 하는 링크에 닿을지 보장할 수 없다.
+     */
+    struct AlwaysCollideHasher
+    {
+        size_t operator()( int32 ) const noexcept { return 0; }
+    };
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -1056,4 +1066,99 @@ SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
     SW_EXPECT_EQUAL( size_t{ 1 }, hashSet.count( probe ) );
     SW_EXPECT_TRUE( hashSet.contains( probe ) );
     SW_EXPECT_TRUE( hashSet.contains( missing ) == false );
+}
+
+/**
+ * @brief [DataStructureTest] 충돌 체인의 **어느 자리**를 지워도 나머지가 전부 남는다
+ * @details `sw::unordered_map` 은 밀집 배열 + 버킷 체인이고, `erase` 는 **마지막 원소를 지운
+ *          자리로 옮긴다**(swap-and-pop). 그러면 "마지막 원소를 가리키던 체인 링크"를 새 자리로
+ *          고쳐 줘야 하는데, 그 고치기가 어긋나면 **지우지도 않은 키가 조회에서 사라진다.**
+ *          특히 까다로운 것이 지우려는 원소의 **바로 앞 노드가 마지막 원소인** 경우다 — 링크를
+ *          끊는 것과 옮기는 것이 같은 노드를 건드린다.
+ *
+ *          해시를 전부 0 으로 만들어 한 버킷에 몰아넣고, 체인의 모든 위치를 하나씩 지워 본다.
+ *          같은 구조를 실제 해시로 재현하려면 운이 필요하므로 여기서는 충돌을 강제한다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapEraseFixesCollisionChainAtEveryPosition )
+{
+    constexpr int32 kCount = 8;
+
+    for ( int32 eraseTarget = 0; eraseTarget < kCount; ++eraseTarget )
+    {
+        sw::unordered_map<int32, int32, AlwaysCollideHasher> map;
+        for ( int32 key = 0; key < kCount; ++key )
+            map[key] = key * 100;
+
+        SW_ASSERT_EQUAL( size_t( kCount ), map.size() );
+
+        SW_EXPECT_EQUAL( size_t( 1 ), map.erase( eraseTarget ) );
+        SW_EXPECT_EQUAL( size_t( kCount - 1 ), map.size() );
+        SW_EXPECT_TRUE( map.find( eraseTarget ) == map.end() );
+
+        // 지우지 않은 키는 **전부** 제 값으로 남아 있어야 한다.
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            if ( key == eraseTarget )
+                continue;
+            auto iter = map.find( key );
+            SW_EXPECT_TRUE_MSG( iter != map.end(), "지우지 않은 키가 사라졌습니다 — 체인 고치기가 어긋났습니다" );
+            SW_EXPECT_EQUAL( key * 100, iter->second );
+        }
+
+        // 지운 자리에 다시 넣어도 체인이 성하다.
+        map[eraseTarget] = eraseTarget * 100 + 7;
+        SW_EXPECT_EQUAL( size_t( kCount ), map.size() );
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            auto iter = map.find( key );
+            SW_ASSERT_TRUE( iter != map.end() );
+            SW_EXPECT_EQUAL( key == eraseTarget ? key * 100 + 7 : key * 100, iter->second );
+        }
+    }
+}
+
+/**
+ * @brief [DataStructureTest] 충돌 체인을 전부 지워도 끝까지 일관된다
+ * @details 위 검사는 한 번 지운 직후만 본다. 이쪽은 **지우는 순서를 바꿔 가며 끝까지** 비운다 —
+ *          swap-and-pop 은 매번 배열 끝의 원소를 옮기므로, 어긋남이 있으면 여러 번 지운 뒤에야
+ *          드러나는 경우가 있다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapEraseAllInSeveralOrdersStaysConsistent )
+{
+    constexpr int32 kCount = 12;
+
+    // 앞에서부터 / 뒤에서부터 / 건너뛰며 — 세 순서 모두 같은 결과여야 한다.
+    for ( int32 orderKind = 0; orderKind < 3; ++orderKind )
+    {
+        sw::unordered_map<int32, int32, AlwaysCollideHasher> map;
+        sw::vector<int32>                                    listRemaining;
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            map[key] = key * 3;
+            listRemaining.push_back( key );
+        }
+
+        while ( listRemaining.empty() == false )
+        {
+            size_t pickIndex = 0;
+            if ( orderKind == 1 )
+                pickIndex = listRemaining.size() - 1;
+            else if ( orderKind == 2 )
+                pickIndex = listRemaining.size() / 2;
+
+            const int32 key = listRemaining[pickIndex];
+            listRemaining.erase( listRemaining.begin() + static_cast<ptrdiff_t>( pickIndex ) );
+
+            SW_ASSERT_EQUAL( size_t( 1 ), map.erase( key ) );
+            SW_EXPECT_EQUAL( listRemaining.size(), map.size() );
+
+            for ( int32 remaining : listRemaining )
+            {
+                auto iter = map.find( remaining );
+                SW_EXPECT_TRUE_MSG( iter != map.end(), "남아 있어야 할 키가 사라졌습니다" );
+                SW_EXPECT_EQUAL( remaining * 3, iter->second );
+            }
+        }
+        SW_EXPECT_TRUE( map.empty() );
+    }
 }
