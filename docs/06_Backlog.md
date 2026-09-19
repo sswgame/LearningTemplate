@@ -161,6 +161,24 @@ cd build/Ninja-Debug/Bin
 성능 주장은 **Release 숫자로만** 한다(`measure-in-release-not-debug`), 숫자 없는 최적화는
 하지 않는다(`measure-before-optimizing`).
 
+**(B) 를 시작하며 잰 기준선 — 렌더 스레드는 CPU 가 아니라 GPU 를 기다린다.**
+
+Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv_benchLights=8
+-gv_benchGround=1 -gv_profileFrames=600 -dx12`):
+
+| scope | avg us |
+|---|---|
+| RT.Frame | 1021 |
+| └ RT.BeginFrame (**GPU 백프레셔**) | **516** |
+| └ RT.ExecutePacket (기록) | 393 |
+| └ RT.Present (제출) | 110 |
+
+**`RT.BeginFrame` 이 렌더 스레드의 절반이고, 여기에는 스코프가 없었다.** 백엔드의
+`beginFrame` 이 이번 프레임 커맨드 얼로케이터가 풀릴 때까지 펜스를 기다리는 시간이다.
+큐브를 200 개로 줄여도 455us 로 거의 안 줄었다 — **씬 복잡도가 아니라 GPU·프레임 페이싱**이
+정한다. 즉 **기록 경로를 CPU 에서 깎아도 프레임 시간은 안 줄어든다.** (B) 패스에서 렌더
+CPU 경로를 건드릴 때는 이 표를 먼저 볼 것.
+
 **측정해서 기각한 것 — 다시 제안하지 말 것.**
 
 - `ContainerTypeMap::match` 의 선형 탐색. 규칙은 **11개**뿐이고, 파서 전체가 빌드 타임이다.
@@ -467,6 +485,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 (렌더 스레드의 절반이 표에 안 보였다 — 측정 구멍 메움)
+
+커밋 `TBD`. (B) 패스, Graphics.
+
+`RT.Frame` 평균 1021us 인데 그 안의 스코프들을 다 더해도 400us 뿐이었다 — **60%가 어떤
+스코프에도 안 잡혔다.** 구멍 셋에 스코프를 냈다.
+
+- `RT.BeginFrame` — `_pDevice->beginFrame()`. **여기가 GPU 백프레셔다.**
+- `RT.ExecutePacket` — 그래프 실행 바깥의 준비 작업까지 포함한다.
+- `RT.PresentHook` — 에디터 UI 가 백버퍼에 그리는 곳(에디터를 켜면 큰 몫인데 묻혀 있었다).
+
+메우고 나니 합이 맞는다: **1021 = BeginFrame 516 + ExecutePacket 393 + Present 110.**
+
+그리고 `RT.Frame` 위의 주석이 **틀렸다**는 것이 드러났다 — "RT.Frame 에서 RT.Present 를 빼면
+기록 시간" 이라고 적혀 있었는데, GPU 대기의 대부분은 Present 가 아니라 `beginFrame` 에 있어서
+그 차이가 통째로 "기록" 으로 오인됐다. 주석을 실측값과 함께 고쳤다.
+
+**이 패스 전체에 영향을 주는 결론:** 큐브를 2000 → 200 으로 줄여도 `RT.BeginFrame` 은
+516 → 455us 로 거의 안 줄었다. 이 대기는 씬 복잡도가 아니라 GPU·프레임 페이싱이 정한다 —
+**렌더 기록 경로를 CPU 에서 깎는 최적화는 프레임 시간을 안 줄인다.**
 
 ### 2026-09-20 (파서가 있는 무할당 오버로드를 두고 손수 풀고 있었다)
 

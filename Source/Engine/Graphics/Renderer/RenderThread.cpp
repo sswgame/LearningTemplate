@@ -264,8 +264,18 @@ namespace sw
         if ( packet._bValid == 0 )
             return false;
 
-        // 렌더 스레드 전체. GT.Packet.submit 이 크면 GT 가 여기를 기다린다는 뜻이고, 무엇을 기다리는지는
-        // 이 구간에서 RT.Present 를 뺀 값이 답한다 — 기록이 느린가, GPU 가 느린가.
+        // 렌더 스레드 전체. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
+        //
+        // **무엇을 기다리는지는 아래 세 스코프가 답한다** — `RT.BeginFrame`(GPU 백프레셔) ·
+        // `RT.ExecutePacket`(기록) · `RT.Present`(제출). 여기 예전에 "RT.Frame 에서 RT.Present 를
+        // 빼면 기록 시간" 이라고 적혀 있었는데 **틀렸다.** GPU 대기의 대부분은 Present 가 아니라
+        // `beginFrame` 에 있고(이번 프레임 얼로케이터가 풀릴 때까지 펜스를 기다린다), 그 시간이
+        // 스코프 없이 `RT.Frame` 에만 잡혀서 통째로 "기록" 으로 오인됐다.
+        //
+        // 2026-09-20 실측(Release · DX12 · 벤치 큐브 2000 · 600프레임):
+        //   RT.Frame 1021us = BeginFrame 516 + ExecutePacket 393 + Present 110 (합이 맞는다)
+        // 큐브를 200 개로 줄여도 BeginFrame 은 455us 로 거의 안 줄었다 — 이 대기는 **씬 복잡도가
+        // 아니라 GPU·프레임 페이싱**이 정한다. 기록 경로를 CPU 에서 깎아도 프레임은 안 줄어든다.
         SW_PROFILE_SCOPE( "RT.Frame" );
 
         ensureContextOnCurrentThread();
@@ -291,7 +301,14 @@ namespace sw
             SW_LOG_INFO( "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
         }
         _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
-        _pDevice->beginFrame( packet._clearColor );
+        {
+            // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
+            // 얼로케이터·프레임 리소스가 풀릴 때까지 펜스를 기다린다. 스코프가 없어서 이 시간이
+            // `RT.Frame` 에만 잡히고 어디로 갔는지 표에 안 보였다 — 위 주석이 "RT.Frame 에서
+            // RT.Present 를 빼면 기록 시간" 이라고 말하지만, 그 차이의 대부분이 실은 이 대기였다.
+            SW_PROFILE_SCOPE( "RT.BeginFrame" );
+            _pDevice->beginFrame( packet._clearColor );
+        }
 
         // 게임뷰 RT 확립. 예전엔 beginOffscreenPass 였는데, 그건 "렌더타깃 바인딩"과 "백엔드마다
         // 다른 스트림 분리"가 섞인 API 였다(Vulkan 만 별도 커맨드버퍼 + 블로킹 제출).
@@ -308,7 +325,12 @@ namespace sw
         }
 
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+        {
+            // 그래프 실행 바깥의 준비 작업(업로드 큐 정리 등)도 여기에 들어온다 — 안쪽의
+            // `RT.Graph.executeParallel` 만으로는 그 차이가 표에서 사라진다.
+            SW_PROFILE_SCOPE( "RT.ExecutePacket" );
             _pFrameRenderer->executePacket( _pDevice, packet );
+        }
 
         // 에디터가 게임뷰 텍스처를 샘플링한다 — 읽기 상태로 전환(열려 있는 렌더패스도 여기서 닫힌다).
         if ( bOffscreen )
@@ -330,7 +352,12 @@ namespace sw
         }
 
         if ( _presentHook.isBound() )
+        {
+            // 에디터 UI 가 이 훅으로 백버퍼에 그린다. 에디터를 켜면 이게 프레임의 큰 몫인데
+            // 스코프가 없어서 `RT.Frame` 안에 통째로 묻혀 있었다.
+            SW_PROFILE_SCOPE( "RT.PresentHook" );
             _presentHook( *_pDevice, packet );
+        }
 
         {
             // 제출과 Present. GPU 가 밀리면 여기서 기다린다.
