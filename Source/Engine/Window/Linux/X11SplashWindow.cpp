@@ -14,7 +14,21 @@ namespace sw
         : ISplashWindow{}
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
+        , _listScaledPixel{}
     {
+    }
+
+    void X11SplashWindow::buildScaledImage()
+    {
+        _listScaledPixel.clear();
+        if ( _splashData.isValid() == false || _splashData.getPixels() == nullptr )
+            return;
+        if ( _width == 0 || _height == 0 )
+            return;
+
+        _listScaledPixel.assign( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) * 4u, 0 );
+        scaleBgraImage( _splashData.getPixels(), _splashData._width, _splashData._height,
+                        _listScaledPixel.data(), _width, _height );
     }
 
     X11SplashWindow::~X11SplashWindow()
@@ -29,6 +43,7 @@ namespace sw
         _width  = width;
         _height = height;
         loadSplashImage();
+        buildScaledImage();
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
@@ -58,7 +73,11 @@ namespace sw
         XStoreName( pDisplay, win, pWinTitle );
         XSelectInput( pDisplay, win, ExposureMask | StructureNotifyMask );
         XMapRaised( pDisplay, win );
-        XFlush( pDisplay );
+
+        // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이고, 서버가 그것을 처리하기 전에 그리면
+        // 그 그리기는 버려진다 — 첫 화면이 통째로 비는 길이다. 한 번 왕복해 매핑을 확정하고 그린다
+        // (`override_redirect` 창이라 창 관리자를 기다릴 일은 없다).
+        XSync( pDisplay, 0 ); // discard=0. Xlib 의 `False` 매크로는 이 저장소가 해제한다.
 
         _pX11Display = pDisplay;
         _x11Window   = static_cast<uint64>( win );
@@ -85,16 +104,18 @@ namespace sw
             const int32 screen = DefaultScreen( pDisplay );
             GC          gc     = DefaultGC( pDisplay, screen );
 
-            if ( _splashData.isValid() && _splashData.getPixels() != nullptr )
+            // **창 크기로 줄여 둔 것**을 찍는다. `XPutImage` 는 늘리거나 줄이지 못하므로, 원본을
+            // 그대로 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본 · 480×280 창).
+            if ( _listScaledPixel.empty() == false )
             {
                 XImage* pImage = XCreateImage(
                     pDisplay, DefaultVisual( pDisplay, screen ),
-                    DefaultDepth( pDisplay, screen ), ZPixmap, 0,
-                    reinterpret_cast<utf8*>( _splashData.getPixels() ),
-                    _splashData._width, _splashData._height, 32, 0 );
+                    static_cast<uint32>( DefaultDepth( pDisplay, screen ) ), ZPixmap, 0,
+                    reinterpret_cast<utf8*>( _listScaledPixel.data() ),
+                    _width, _height, 32, 0 );
                 if ( pImage != nullptr )
                 {
-                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _splashData._width, _splashData._height );
+                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _width, _height );
                     pImage->data = nullptr;
                     XDestroyImage( pImage );
                 }

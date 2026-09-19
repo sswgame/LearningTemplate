@@ -146,21 +146,9 @@ namespace sw
         Gdiplus::GdiplusStartupInput gdiplusStartupInput{};
         Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
 
-        if ( loadSplashImage() && _splashData.getPixels() != nullptr )
-        {
-            if ( _splashData._bIsBgra == SW_FALSE )
-            {
-                // 픽셀 수와 바이트 오프셋을 size_t 로 센다. int 로 곱하면 큰 이미지에서 넘치고,
-                // 그 값이 포인터 오프셋으로 쓰이므로 버퍼 밖을 가리킨다.
-                const size_t totalPixels = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height );
-                for ( size_t index = 0; index < totalPixels; ++index )
-                {
-                    uint8* pPixel = _splashData.getPixels() + ( index * 4 );
-                    std::swap( pPixel[0], pPixel[2] );
-                }
-                _splashData._bIsBgra = SW_TRUE;
-            }
-        }
+        // 채널 뒤집기는 여기 있지 않다 — `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
+        // 이 자리에만 두었던 탓에 리눅스는 같은 보정을 받지 못하고 있었다.
+        loadSplashImage();
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
