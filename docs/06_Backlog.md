@@ -156,13 +156,16 @@ cd build/Ninja-Debug/Bin
 이번에는 **성능과 재사용성**으로 다시 훑는다. **구조가 크게 바뀌어도 된다.** (A) 는 "틀린 답을
 내는 곳" 만 보느라 성능·중복을 일부러 지나쳤다 — 지나친 것들의 예:
 
-- `AnnotationApply` 의 토큰 분해가 토큰마다 임시 `string` 을 만든다
-  (`trim( string( view ).c_str() )`) — `trim( string_view )` 오버로드가 이미 있다.
 - `SpatialHashGrid2D::queryRay` 가 좁은 판정 없이 셀 안 전부를 돌려준다(형제 둘은 좁힌다).
-- `ContainerTypeMap::match` 가 규칙 목록 선형 탐색 + 부분 문자열 검색이다.
 
 성능 주장은 **Release 숫자로만** 한다(`measure-in-release-not-debug`), 숫자 없는 최적화는
 하지 않는다(`measure-before-optimizing`).
+
+**측정해서 기각한 것 — 다시 제안하지 말 것.**
+
+- `ContainerTypeMap::match` 의 선형 탐색. 규칙은 **11개**뿐이고, 파서 전체가 빌드 타임이다.
+  Engine 코드젠 한 번이 **3.27초**인데 그 거의 전부가 libclang 의 번역 단위 파싱이다
+  (29개 입력 · 워커 16). 규칙 11개짜리 부분 문자열 탐색은 이 안에서 보이지 않는다.
 
 
 
@@ -464,6 +467,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 (파서가 있는 무할당 오버로드를 두고 손수 풀고 있었다)
+
+커밋 `TBD`. (B) 패스, ReflectionParser.
+
+`StringUtil::trim` 에는 **`string_view` 오버로드가 이미 있다**(무할당, `string_view` 반환).
+그런데 파서 네 자리가 `trim( string( view ).c_str() )` 로 불러서, 토큰마다 임시 `string` 을
+하나 만들고 `trim` 이 또 하나를 돌려줬다 — 필요 없는 할당 두 개다.
+
+**속도 이득은 주장하지 않는다.** 파서는 빌드 타임이고 Engine 코드젠 한 번이 3.27초인데 그
+거의 전부가 libclang 파싱이다. 있는 도구를 안 쓰고 있던 것을 고치는 재사용성 정리다.
+
+검증은 이 저장소의 파서 변경 정본인 **생성물 바이트 비교**다 — 구/신 파서로 각각
+`Engine_ReflectionGen` 을 돌려 62개 파일이 전부 동일함을 확인했다(`diff -r` 무차이).
 
 ### 2026-09-20 ((B) 패스 시작 — XML 역직렬화가 같은 문자열을 두 번 파싱했다)
 

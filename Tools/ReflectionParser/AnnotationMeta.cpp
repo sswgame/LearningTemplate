@@ -72,25 +72,26 @@ namespace sw
         const string_splitter lines( text, { "\r\n", "\n" } );
         for ( const string_view rawLine : lines.getSplitList() )
         {
-            const string line = StringUtil::trim( string( rawLine ).c_str() );
+            // `trim` 의 `string_view` 오버로드를 쓴다 — 줄마다 임시 `string` 을 만들지 않는다.
+            const string_view line = StringUtil::trim( rawLine );
             if ( line.empty() || line.front() == '#' || line.front() == ';' )
                 continue;
 
             if ( line.front() == '[' && line.back() == ']' && line.size() >= 3 )
             {
-                currentScope = StringUtil::trim( line.substr( 1, line.size() - 2 ).c_str() );
+                currentScope = StringUtil::trim( line.substr( 1, line.size() - 2 ) );
                 continue;
             }
             if ( currentScope.empty() )
                 continue;
 
             const size_t equalPos = line.find( '=' );
-            if ( equalPos == string::npos )
+            if ( equalPos == string_view::npos )
                 continue;
 
-            const string left  = StringUtil::trim( line.substr( 0, equalPos ).c_str() );
-            const string right = StringUtil::trim( line.substr( equalPos + 1 ).c_str() );
-            const size_t dot   = left.find( '.' );
+            const string_view left  = StringUtil::trim( line.substr( 0, equalPos ) );
+            const string_view right = StringUtil::trim( line.substr( equalPos + 1 ) );
+            const size_t      dot   = left.find( '.' );
             if ( dot == string::npos || dot == 0 || dot + 1 >= left.size() )
             {
                 SW_LOG_WARNING( "Expected kind.Field = aliases: %#", line );

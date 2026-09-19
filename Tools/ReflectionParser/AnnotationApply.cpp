@@ -69,15 +69,22 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다. */
+            /**
+             * @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다.
+             * @note `StringUtil::trim` 은 **`string_view` 오버로드가 있다**(무할당, `string_view`
+             *       반환). 예전에는 `trim( string( token ).c_str() )` 으로 불러서 토큰마다
+             *       임시 `string` 을 하나 만들고 `trim` 이 또 하나를 돌려줬다 — 필요 없는 할당
+             *       두 개다. 파서는 빌드 타임이라 **속도로 잰 이득은 없다**(코드젠 3.27초는
+             *       libclang 파싱이 거의 전부다). 있는 도구를 쓰는 쪽으로만 고친다.
+             */
             static void appendTypeAliases( vector<string>& outListAlias, const string& raw )
             {
                 const string_splitter parts( raw, { ",", ";" } );
                 for ( const string_view token : parts.getSplitList() )
                 {
-                    const string trimmed = StringUtil::trim( string( token ).c_str() );
+                    const string_view trimmed = StringUtil::trim( token );
                     if ( trimmed.empty() == false )
-                        outListAlias.push_back( trimmed );
+                        outListAlias.emplace_back( trimmed );
                 }
             }
 
@@ -87,20 +94,20 @@ namespace sw
                 const string_splitter parts( raw, { ",", ";" } );
                 for ( const string_view tokenView : parts.getSplitList() )
                 {
-                    string token = StringUtil::trim( string( tokenView ).c_str() );
+                    const string_view token = StringUtil::trim( tokenView );
                     if ( token.empty() )
                         continue;
                     const size_t eqPos = token.find( '=' );
-                    if ( eqPos != string::npos )
+                    if ( eqPos != string_view::npos )
                     {
-                        string key = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
-                        string val = StringUtil::trim( token.substr( eqPos + 1 ).c_str() );
+                        const string_view key = StringUtil::trim( token.substr( 0, eqPos ) );
+                        const string_view val = StringUtil::trim( token.substr( eqPos + 1 ) );
                         if ( key.empty() == false )
-                            outList.emplace_back( std::move( key ), std::move( val ) );
+                            outList.emplace_back( string( key ), string( val ) );
                     }
                     else
                     {
-                        outList.emplace_back( std::move( token ), "1" );
+                        outList.emplace_back( string( token ), "1" );
                     }
                 }
             }
@@ -126,19 +133,19 @@ namespace sw
                 const string_splitter parts( raw, { ",", ";" } );
                 for ( const string_view tokenView : parts.getSplitList() )
                 {
-                    string token = StringUtil::trim( string( tokenView ).c_str() );
+                    const string_view token = StringUtil::trim( tokenView );
                     if ( token.empty() )
                         continue;
                     const size_t colon = token.find( ':' );
-                    if ( colon == string::npos || colon == 0 || colon + 1 >= token.size() )
+                    if ( colon == string_view::npos || colon == 0 || colon + 1 >= token.size() )
                     {
                         SW_LOG_WARNING( "ENUM ValueAlias expected Old:Current, got '%#'", token );
                         continue;
                     }
-                    string alias     = StringUtil::trim( token.substr( 0, colon ).c_str() );
-                    string canonical = StringUtil::trim( token.substr( colon + 1 ).c_str() );
+                    const string_view alias     = StringUtil::trim( token.substr( 0, colon ) );
+                    const string_view canonical = StringUtil::trim( token.substr( colon + 1 ) );
                     if ( alias.empty() == false && canonical.empty() == false )
-                        enumInfo._listValueAlias.emplace_back( std::move( alias ), std::move( canonical ) );
+                        enumInfo._listValueAlias.emplace_back( string( alias ), string( canonical ) );
                 }
             }
 
