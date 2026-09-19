@@ -1672,3 +1672,63 @@ SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
     // Cleanup
     sw::FileUtil::removeFile( testSavePath );
 }
+
+/**
+ * @brief [ArchiveTest] 컴팩트 경로가 **컨테이너 프로퍼티**를 왕복시키는가
+ * @details `serializeCompact`/`deserializeCompact` 는 프로퍼티 이름 대신 **순번**으로 값을 싣는
+ *          조밀한 포맷이다. 그 경로의 "프로퍼티 하나를 인스턴스에 쓰는" 부분에는 비트필드·컨테이너·
+ *          그 외 값의 세 갈래가 있는데, 지금까지 이 경로를 태우는 테스트의 타입에 **컨테이너 프로퍼티가
+ *          하나도 없었다** — 즉 컨테이너 갈래는 한 번도 실행되지 않았다. 중복을 합치다 변이로 확인해
+ *          드러난 구멍이라, 여기서 닫는다.
+ * @note 이 케이스가 없으면 컴팩트 경로에서 컨테이너를 잘못 읽어도 **모든 테스트가 초록**이다.
+ */
+SW_TEST_CASE( ArchiveTest, CompactRoundTripsContainerProperties )
+{
+    struct CompactContainerState
+    {
+        int32                  _level{ 0 };
+        sw::vector<int32>      _listScore{};
+        sw::vector<sw::string> _listTag{};
+    };
+
+    static sw::TypeInfo s_typeInfo{};
+    if ( s_typeInfo._name.empty() )
+    {
+        s_typeInfo._name               = sw::hashed_string( "CompactContainerState" );
+        s_typeInfo._fullyQualifiedName = sw::hashed_string( "CompactContainerState" );
+        s_typeInfo._size               = sizeof( CompactContainerState );
+        s_typeInfo._listProperty       = {
+            {    sw::hashed_string( "_level" ),  sw::hashed_string( "int32" ),
+             SW_OFFSET_OF( CompactContainerState,     _level ), false,     sw::ContainerKind::None,
+             sw::hashed_string(), sw::hashed_string(),                                                      nullptr          },
+            {sw::hashed_string( "_listScore" ),  sw::hashed_string( "int32" ),
+             SW_OFFSET_OF( CompactContainerState, _listScore ),  true, sw::ContainerKind::Sequence,
+             sw::hashed_string( "int32" ), sw::hashed_string(),      sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
+            {  sw::hashed_string( "_listTag" ), sw::hashed_string( "string" ),
+             SW_OFFSET_OF( CompactContainerState,   _listTag ),  true, sw::ContainerKind::Sequence,
+             sw::hashed_string( "string" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<sw::string>>>()}
+        };
+    }
+
+    CompactContainerState source{};
+    source._level     = 7;
+    source._listScore = { 10, 20, 30 };
+    source._listTag   = { sw::string( "alpha" ), sw::string( "beta" ) };
+
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serializeCompact( &source, s_typeInfo, bytes );
+    SW_ASSERT_TRUE( bytes.empty() == false );
+
+    CompactContainerState restored{};
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, s_typeInfo, bytes.data(), bytes.size() ) );
+
+    SW_EXPECT_EQUAL( 7, restored._level );
+    SW_ASSERT_EQUAL( size_t( 3 ), restored._listScore.size() );
+    SW_EXPECT_EQUAL( 10, restored._listScore[0] );
+    SW_EXPECT_EQUAL( 20, restored._listScore[1] );
+    SW_EXPECT_EQUAL( 30, restored._listScore[2] );
+
+    SW_ASSERT_EQUAL( size_t( 2 ), restored._listTag.size() );
+    SW_EXPECT_EQUAL( sw::string( "alpha" ), restored._listTag[0] );
+    SW_EXPECT_EQUAL( sw::string( "beta" ), restored._listTag[1] );
+}

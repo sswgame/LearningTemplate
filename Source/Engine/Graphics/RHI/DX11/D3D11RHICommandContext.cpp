@@ -267,11 +267,8 @@ namespace sw
         _pContext->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &pStream, &stride, &offset );
     }
 
-    void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    bool D3D11RHICommandContext::bindGraphicsPipelineForDraw()
     {
-        if ( _pContext == nullptr || vertexCount == 0 )
-            return;
-
         ID3D11VertexShader*                             pVs  = nullptr;
         ID3D11PixelShader*                              pPs  = nullptr;
         ID3D11InputLayout*                              pIl  = nullptr;
@@ -285,9 +282,12 @@ namespace sw
             if ( pPso->_inputLayout )
                 pIl = pPso->_inputLayout.Get();
         }
-        if ( pVs == nullptr || pPs == nullptr )
-            return;
 
+        // 셰이더가 없으면 그릴 수 없다 — 호출자는 드로우를 건너뛴다.
+        if ( pVs == nullptr || pPs == nullptr )
+            return false;
+
+        // 메시가 자기 정점 버퍼를 걸었으면 그것을, 아니면 장치의 공용 버퍼를 쓴다.
         ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
         UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
         UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
@@ -299,6 +299,17 @@ namespace sw
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         _pContext->VSSetShader( pVs, nullptr, 0 );
         _pContext->PSSetShader( pPs, nullptr, 0 );
+        return true;
+    }
+
+    void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    {
+        if ( _pContext == nullptr || vertexCount == 0 )
+            return;
+
+        if ( bindGraphicsPipelineForDraw() == false )
+            return;
+
         _pContext->Draw( vertexCount, startVertex );
     }
 
@@ -307,33 +318,9 @@ namespace sw
         if ( _pContext == nullptr || vertexCount == 0 || instanceCount == 0 )
             return;
 
-        ID3D11VertexShader*                             pVs  = nullptr;
-        ID3D11PixelShader*                              pPs  = nullptr;
-        ID3D11InputLayout*                              pIl  = nullptr;
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPso != nullptr )
-        {
-            if ( pPso->_vs )
-                pVs = pPso->_vs.Get();
-            if ( pPso->_ps )
-                pPs = pPso->_ps.Get();
-            if ( pPso->_inputLayout )
-                pIl = pPso->_inputLayout.Get();
-        }
-        if ( pVs == nullptr || pPs == nullptr )
+        if ( bindGraphicsPipelineForDraw() == false )
             return;
 
-        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
-        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
-        if ( pVb != nullptr )
-            _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
-        bindInstanceSlotStream();
-
-        _pContext->IASetInputLayout( pIl );
-        _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        _pContext->VSSetShader( pVs, nullptr, 0 );
-        _pContext->PSSetShader( pPs, nullptr, 0 );
         _pContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
@@ -489,33 +476,9 @@ namespace sw
         // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 그런데 이
         // 경로에만 그 블록이 없어서, GPU 드리븐 경로(엔진 기본값 gpuDriven=1)의 모든 드로우가
         // 셰이더도 정점버퍼도 없이 나갔다 — 화면과 트랜지언트가 클리어 색만 남던 원인이다.
-        ID3D11VertexShader*                             pVs  = nullptr;
-        ID3D11PixelShader*                              pPs  = nullptr;
-        ID3D11InputLayout*                              pIl  = nullptr;
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPso != nullptr )
-        {
-            if ( pPso->_vs )
-                pVs = pPso->_vs.Get();
-            if ( pPso->_ps )
-                pPs = pPso->_ps.Get();
-            if ( pPso->_inputLayout )
-                pIl = pPso->_inputLayout.Get();
-        }
-        if ( pVs == nullptr || pPs == nullptr )
+        if ( bindGraphicsPipelineForDraw() == false )
             return;
 
-        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
-        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
-        if ( pVb != nullptr )
-            _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
-        bindInstanceSlotStream();
-
-        _pContext->IASetInputLayout( pIl );
-        _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        _pContext->VSSetShader( pVs, nullptr, 0 );
-        _pContext->PSSetShader( pPs, nullptr, 0 );
         for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
         {
             _pContext->DrawInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
@@ -524,12 +487,19 @@ namespace sw
 
     void D3D11RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        if ( _pContext != nullptr && argumentBuffer != 0 )
-        {
-            ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
-            if ( pBuf != nullptr )
-                _pContext->DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset );
-        }
+        if ( _pContext == nullptr || argumentBuffer == 0 )
+            return;
+
+        ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
+        if ( pBuf == nullptr )
+            return;
+
+        // 이 진입점에만 파이프라인을 거는 블록이 없었다 — `drawIndirect` 가 같은 이유로 아무것도 그리지
+        // 못했던 적이 있다. 엔진에서 아무도 부르지 않아 드러나지 않았을 뿐이라, 같이 고쳐 둔다.
+        if ( bindGraphicsPipelineForDraw() == false )
+            return;
+
+        _pContext->DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset );
     }
 
     void D3D11RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )

@@ -16,7 +16,47 @@ namespace sw
     {
         struct BinarySerializerInternal
         {
+            /**
+             * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계** — `uint64` 의 비트 수다.
+             * @details 이보다 많으면 해시 집합으로 넘어간다. 엄격·소프트 두 역직렬화 경로가 **같은 값을
+             *          써야 한다** — 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
+             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 된다. 예전에는 소프트 쪽이
+             *          리터럴 `64` 를 적고 있었다(값은 같아 증상은 없었다).
+             */
             static constexpr size_t kFastPropBitmaskThreshold = 64;
+
+            /**
+             * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false.
+             * @details 비트필드·컨테이너·그 외 값의 세 갈래를 가른다. 아카이브 경로 둘이 이 스무 줄을
+             *          **각자** 갖고 있었다 — 갈래를 하나 더하면(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
+             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 된다.
+             */
+            static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
+                                              size_t payloadStart, size_t payloadSize, const SerializeContext& ctx )
+            {
+                void* pPropPtr = prop.getRawPtr( pInstance );
+
+                if ( prop._bIsBitField == SW_TRUE )
+                {
+                    // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
+                    bool   bVal  = false;
+                    size_t local = payloadStart;
+                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
+                        return false;
+                    prop.setValue<bool>( pInstance, bVal );
+                    return true;
+                }
+
+                if ( prop._bIsContainer && prop.hasContainerWrapper() )
+                {
+                    size_t local = payloadStart;
+                    return SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData,
+                                                                             payloadStart + payloadSize, local, ctx );
+                }
+
+                size_t local = payloadStart;
+                return SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
+            }
 
             static bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
             {
@@ -238,7 +278,7 @@ namespace sw
         const size_t                numProps = listProp.size();
         uint64                      seenBitmask{ 0 };
         unordered_set<uint32>       uniqueSeenPropHashes;
-        if ( numProps > 64 )
+        if ( numProps > BinarySerializerInternal::kFastPropBitmaskThreshold )
             uniqueSeenPropHashes.reserve( numProps );
 
         for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
@@ -275,7 +315,7 @@ namespace sw
             }
 
             const PropertyInfo& prop = *pTargetProp;
-            if ( numProps <= 64 )
+            if ( numProps <= BinarySerializerInternal::kFastPropBitmaskThreshold )
                 seenBitmask |= ( 1ULL << matchedIndex );
             else
                 uniqueSeenPropHashes.insert( prop.getNameHash() );
@@ -308,7 +348,7 @@ namespace sw
 
         for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
         {
-            if ( numProps <= 64 )
+            if ( numProps <= BinarySerializerInternal::kFastPropBitmaskThreshold )
             {
                 if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
                     continue;
@@ -665,29 +705,9 @@ namespace sw
 
                 if ( propIndex < numProps )
                 {
-                    const PropertyInfo& prop     = listProp[propIndex];
-                    void*               pPropPtr = prop.getRawPtr( pInstance );
-
-                    if ( prop._bIsBitField == SW_TRUE )
-                    {
-                        bool   bVal  = false;
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                        prop.setValue<bool>( pInstance, bVal );
-                    }
-                    else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    {
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                    }
-                    else
-                    {
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                    }
+                    if ( BinarySerializerInternal::applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
+                                                                         pData, payloadStart, payloadSize, ctx ) == false )
+                        return false;
                 }
                 reader.skip( payloadSize );
             }
@@ -716,29 +736,9 @@ namespace sw
 
                 if ( propIndex < numProps )
                 {
-                    const PropertyInfo& prop     = listProp[static_cast<size_t>( propIndex )];
-                    void*               pPropPtr = prop.getRawPtr( pInstance );
-
-                    if ( prop._bIsBitField == SW_TRUE )
-                    {
-                        bool   bVal  = false;
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                        prop.setValue<bool>( pInstance, bVal );
-                    }
-                    else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    {
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                    }
-                    else
-                    {
-                        size_t local = payloadStart;
-                        if ( SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
-                            return false;
-                    }
+                    if ( BinarySerializerInternal::applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
+                                                                         pData, payloadStart, payloadSize, ctx ) == false )
+                        return false;
                 }
                 reader.skip( payloadSize );
             }

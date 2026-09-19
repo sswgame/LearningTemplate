@@ -44,6 +44,21 @@ namespace sw
         void setViewport( const RHIViewport& viewport ) override;
         /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 겁니다 — 걸려 있을 때만. */
         void bindInstanceSlotStream();
+
+        /**
+         * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 겁니다**. 걸 수 없으면 false(드로우하지 말 것).
+         *
+         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout·정점 버퍼·토폴로지는
+         *          드로우 시점에 건다. 그래서 드로우 진입점마다 이 블록이 필요하다 — 그런데 예전에
+         *          `drawIndirect` 에만 빠져 있어서 **GPU 드리븐 경로의 모든 드로우가 셰이더도 정점 버퍼도
+         *          없이 나갔다**(화면과 트랜지언트가 클리어 색만 남았다).
+         *
+         *          진입점이 넷(`draw` · `drawInstanced` · `drawIndirect` · `drawIndexedIndirect`)인데 블록은
+         *          세 벌로 복사돼 있었고, **넷째(`drawIndexedIndirect`)는 여전히 빠진 채였다** — 엔진에서
+         *          아무도 부르지 않아 드러나지 않았을 뿐이다. 한 곳으로 모으면 새 진입점이 같은 실수를 할
+         *          자리가 없어진다.
+         */
+        bool bindGraphicsPipelineForDraw();
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                            RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
