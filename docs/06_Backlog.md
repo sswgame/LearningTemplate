@@ -435,6 +435,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (메인 스레드 일감을 넣고 아무나 깨우고 있었다)
+
+`scheduleReadyTask` 가 **메인 스레드 전용** 일감을 큐에 넣은 뒤 이렇게 알렸다:
+
+```cpp
+std::scoped_lock<mutex> waitLock{ _waitAllMutex };
+_cvWaitAll.notify_one();      // <- 이 파일의 다른 다섯 통지는 전부 notify_all 이다
+```
+
+그 일감을 실행할 수 있는 것은 **메인 스레드뿐인데**(`dispatchMainThreadTasks`), `_cvWaitAll` 에는
+`waitAll` · `waitStage` 로 들어온 아무 스레드나 잠들어 있다. `notify_one` 이 엉뚱한 스레드를
+깨우면 그쪽은 자기 조건이 그대로임을 보고 다시 잠들고, **메인 스레드는 계속 잔다.**
+
+회복할 길도 없다. 완료 쪽 통지는 `_activeTaskCount` 가 0 이 될 때만 울리는데
+(`if ( activeLeft == 1 )`), 방금 넣은 메인 일감이 남아 있으므로 0 이 되지 않는다. 그리고
+`waitAll()` · `waitStage()` 의 기본 대기는 **타임아웃이 없다**(`_cvWaitAll.wait( lock )`).
+서로를 기다리며 둘 다 멈춘다.
+
+**같은 파일의 `_cvWorker` 쪽 `notify_one` 은 올바르다** — 워커들은 전부 같은 조건("일감이
+있나")을 기다리므로 하나만 깨우는 것이 맞고, 다 깨우면 우르르 몰린다. 대기자마다 **조건이
+다른** `_cvWaitAll` 에 그 방식을 그대로 가져온 것이 문제였다.
+
+> **무는 테스트를 쓰지 못했다.** 재현하려면 (1) 메인 스레드가 `waitAll()` 에서 스핀을 지나
+> 잠들어 있고, (2) 다른 스레드도 `_cvWaitAll` 에 잠들어 있으며, (3) 그 순간 메인 일감이
+> 들어오고, (4) `notify_one` 이 (2)를 고르는, 넷이 겹쳐야 한다. 결과가 **영구 정지**라
+> 테스트로 만들면 회귀 시 바이너리 전체가 타임아웃까지 붙잡힌다. 고침은 한 단어이고 형제
+> 다섯이 이미 그 형태라는 것으로 갈음한다.
+
+**같이 적어 두는 공백:** `Test/CoreTest` 에 **TaskManager 테스트 파일이 없다.** 1,355줄짜리
+동시성 핵심인데 `EngineTest` 의 다른 주제(AssetStreaming · Audio · GpuScene)를 통해 간접적으로만
+돌고 있다. 위 같은 결함이 테스트로 잡히지 않는 이유가 그것이다.
+
 ### 2026-09-20 (StringUtil::strncpy 가 플랫폼마다 다르게 동작했다)
 
 이름은 *"지정된 길이만큼 문자를 **안전하게** 복사합니다"* 인데, 두 갈래가 서로 다른 일을 했다:

@@ -1253,8 +1253,17 @@ namespace sw
                     else
                         std::this_thread::yield();
                 }
+                // **`notify_all` 이어야 한다.** 이 일감을 실행할 수 있는 것은 메인 스레드뿐인데
+                // (`dispatchMainThreadTasks`), `_cvWaitAll` 에는 `waitAll` · `waitStage` 로 들어온
+                // 아무 스레드나 잠들어 있다. `notify_one` 이 엉뚱한 스레드를 깨우면 그쪽은 자기
+                // 조건이 그대로임을 보고 다시 잠들고, **메인 스레드는 계속 잔다.**
+                //
+                // 그러면 회복할 길이 없다: 완료 쪽 통지는 `_activeTaskCount` 가 0 이 될 때만
+                // 울리는데(아래 `activeLeft == 1`), 지금 넣은 메인 일감이 남아 있으므로 0 이 되지
+                // 않는다. 서로를 기다리며 둘 다 멈춘다. 이 파일의 다른 다섯 통지는 전부
+                // `notify_all` 이고, 여기만 달랐다.
                 std::scoped_lock<mutex> waitLock{ _waitAllMutex };
-                _cvWaitAll.notify_one();
+                _cvWaitAll.notify_all();
             }
             else
             {
