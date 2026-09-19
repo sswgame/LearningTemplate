@@ -10,6 +10,23 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace sw
+{
+    namespace
+    {
+        /** @brief 질의 결과에 이 핸들이 있는지. */
+        bool containsHandle( const vector<ObjectHandle>& listHandle, ObjectHandle handle )
+        {
+            for ( const ObjectHandle candidate : listHandle )
+            {
+                if ( candidate == handle )
+                    return true;
+            }
+            return false;
+        }
+    } // namespace
+} // namespace sw
+
 // Engine_Spatial — 쿼드트리 · 옥트리 · 해시 그리드 · BVH 의 삽입/갱신/질의.
 
 SW_TEST_CASE( SpatialTest, SpatialQuadTreeInsertAndRangeQuery )
@@ -336,9 +353,18 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
         {60.0f, 60.0f, 210.0f}
     };
 
+    // 아래의 광선(원점 (1,1,0), +Z)이 **사거리 20 밖에서** 지나가는 상자다. 사거리의 뜻이
+    // 어긋나면 이것이 답에 섞여 든다.
+    const sw::ObjectHandle eBeyondRange = sw::ObjectHandle::make( 4, 1 );
+    const sw::AABB         boxBeyondRange{
+                {0.0f, 0.0f, 60.0f},
+                {2.0f, 2.0f, 70.0f}
+    };
+
     bvh.insert( eNear1, boxNear1 );
     bvh.insert( eNear2, boxNear2 );
     bvh.insert( eFar, boxFar );
+    bvh.insert( eBeyondRange, boxBeyondRange );
 
     sw::vector<sw::ObjectHandle> listAabb;
     const sw::AABB               testBox{
@@ -353,6 +379,12 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listRay.size() ) );
     if ( listRay.empty() == false )
         SW_EXPECT_EQUAL( eNear1, listRay[0] );
+
+    // 방향이 단위 길이가 아니어도 사거리의 뜻은 같아야 한다 — 예전에는 슬랩 판정이 maxDist 를
+    // 방향 벡터의 배수로 써서, 길이 4 짜리 방향이 사거리를 네 배로 늘렸다.
+    sw::vector<sw::ObjectHandle> listLongRay;
+    bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 4.0f }, 20.0f, listLongRay );
+    SW_EXPECT_EQUAL( listRay.size(), listLongRay.size() );
 
     sw::vector<sw::ObjectHandle> listSphere;
     bvh.querySphere( sw::float3{ 1.0f, 1.0f, 6.0f }, 3.0f, listSphere );
@@ -441,4 +473,182 @@ SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
     tree.queryRange( movedBounds, listFound );
     SW_ASSERT_EQUAL( size_t( 1 ), listFound.size() );
     SW_EXPECT_EQUAL( &userData, listFound[0]._pUserData );
+}
+
+// ------------------------------------------------------------------------------
+// 18) SpatialHashGrid2D 셀 수 상한 — 아주 큰 경계 상자가 그리드를 부수지 않는다
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [SpatialTest] 셀 수 상한을 넘는 핸들은 흩뿌리지 않지만 질의에는 여전히 걸린다
+ * @details 셀 범위는 **호출부가 준 좌표에서** 나온다. 상한이 없으면 큰 상자 하나가 수천만 개의
+ *          셀을 요구하고, 삽입이 그만큼 돌면서 해시 표를 채운다 — 이 모듈이 스스로 제공하는
+ *          `AABB2D::infinite()` 가 바로 그런 값이다. 넘치는 핸들은 목록 하나에 모아 두고 질의가
+ *          그 목록을 항상 함께 본다. `PhysicsWorld` 는 같은 이유로 이미 상한을 두고 있었다.
+ */
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
+{
+    const sw::ObjectHandle eHuge  = sw::ObjectHandle::make( 1, 1 );
+    const sw::ObjectHandle eSmall = sw::ObjectHandle::make( 2, 1 );
+
+    sw::SpatialHashGrid2D grid{ 2.0f };
+    // 101 x 101 = 10,201 셀 — kMaxHandleCellCount(1024) 를 훌쩍 넘는다.
+    grid.insert( eHuge, 0.0f, 0.0f, 200.0f, 200.0f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getHandleCount() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+    grid.insert( eSmall, 10.0f, 10.0f, 11.0f, 11.0f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+    // 셀에 없어도 세 질의 모두가 큰 핸들을 본다.
+    sw::vector<sw::ObjectHandle> listHandle;
+    grid.queryAabb( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eHuge ) );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eSmall ) );
+
+    grid.queryCircle( 10.5f, 10.5f, 1.0f, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eHuge ) );
+
+    grid.queryRay( 10.0f, 10.0f, 1.0f, 0.0f, 4.0f, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eHuge ) );
+
+    // 제거도 같은 계산을 써야 한다 — 어긋나면 큰 핸들이 목록에 영영 남는다.
+    grid.remove( eHuge );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getHandleCount() ) );
+    grid.queryAabb( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
+    SW_EXPECT_FALSE( sw::containsHandle( listHandle, eHuge ) );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eSmall ) );
+}
+
+/**
+ * @brief [SpatialTest] 무한대 경계 상자를 넣어도 삽입과 질의가 끝난다
+ * @details 상한이 없을 때 이 호출은 **돌아오지 않는다** — `floor(FLT_MAX / cellSize)` 만큼의 셀을
+ *          도려고 하기 때문이다. 게다가 그 몫은 int32 범위 밖이라 int 로 캐스팅하는 것 자체가
+ *          정의되지 않은 동작이다. 좌표는 범위 안으로 접고, 접힌 범위는 상한에 걸린다.
+ */
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
+{
+    const sw::ObjectHandle eInfinite = sw::ObjectHandle::make( 1, 1 );
+
+    sw::SpatialHashGrid2D grid{ 4.0f };
+    const sw::AABB2D      infinite = sw::AABB2D::infinite();
+    grid.insert( eInfinite, infinite._min._x, infinite._min._y, infinite._max._x, infinite._max._y );
+
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getHandleCount() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+    sw::vector<sw::ObjectHandle> listHandle;
+    grid.queryAabb( 0.0f, 0.0f, 1.0f, 1.0f, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
+
+    // 질의 쪽 범위가 무한대여도 마찬가지다 — 셀을 도는 대신 등록된 핸들 전부를 훑는다.
+    grid.queryAabb( infinite._min._x, infinite._min._y, infinite._max._x, infinite._max._y, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
+
+    // 사거리가 아주 긴 광선도 걸음 수 상한에 걸려 끝난다.
+    grid.queryRay( 0.0f, 0.0f, 1.0f, 0.0f, sw::MathUtil::MaxFloat, listHandle );
+    SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
+
+    grid.remove( eInfinite );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
+}
+
+// ------------------------------------------------------------------------------
+// 19) 질의 결과 벡터의 규약 — 덧붙이지 않고 덮어쓴다
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [SpatialTest] 모든 질의가 결과 벡터를 먼저 비운다
+ * @details 세 갈래가 서로 달랐다. `SpatialHashGrid2D` 와 `PhysicsWorld` 는 비우고 시작했고,
+ *          `BVHTree3D` 와 `SpatialTree` 는 **덧붙이기만** 했으며, 게다가 `BVHTree3D` 는 트리가
+ *          비면 벡터를 아예 건드리지 않고 돌아갔다 — 벡터 하나를 프레임마다 돌려 쓰는 호출부에
+ *          **지난 프레임의 답이 이번 답인 척** 남는다. 기존 테스트들이 질의마다 새 벡터를 넘겨서
+ *          아무도 눈치채지 못했다.
+ */
+SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
+{
+    const sw::AABB box{
+        { 0.0f,  0.0f,  0.0f},
+        {10.0f, 10.0f, 10.0f}
+    };
+    const sw::AABB probe{
+        {1.0f, 1.0f, 1.0f},
+        {2.0f, 2.0f, 2.0f}
+    };
+
+    BLOCK( "BVHTree3D" )
+    {
+        sw::BVHTree3D bvh;
+        bvh.insert( sw::ObjectHandle::make( 1, 1 ), box );
+
+        sw::vector<sw::ObjectHandle> listHit;
+        bvh.queryAabb( probe, listHit );
+        SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
+
+        // 같은 벡터로 한 번 더 — 답은 여전히 하나다.
+        bvh.queryAabb( probe, listHit );
+        SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
+
+        bvh.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listHit );
+        SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
+
+        // 빈 트리에 물으면 빈 답이어야 한다 — 이 경로가 이른 반환으로 벡터를 안 건드렸다.
+        bvh.clear();
+        bvh.queryAabb( probe, listHit );
+        SW_EXPECT_TRUE( listHit.empty() );
+
+        bvh.queryRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, listHit );
+        SW_EXPECT_TRUE( listHit.empty() );
+    }
+
+    BLOCK( "SpatialQuadTree" )
+    {
+        sw::SpatialQuadTree tree( sw::AABB2D{
+            sw::float2{-100.0f, -100.0f},
+            sw::float2{ 100.0f,  100.0f}
+        } );
+        tree.insert( 1, sw::AABB2D{
+                            sw::float2{0.0f, 0.0f},
+                            sw::float2{5.0f, 5.0f}
+        } );
+
+        const sw::AABB2D range{
+            sw::float2{1.0f, 1.0f},
+            sw::float2{2.0f, 2.0f}
+        };
+
+        sw::vector<sw::SpatialElement> listElement;
+        tree.queryRange( range, listElement );
+        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
+
+        tree.queryRange( range, listElement );
+        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
+
+        tree.queryPoint( 1.5f, 1.5f, listElement );
+        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
+
+        tree.clear();
+        tree.queryRange( range, listElement );
+        SW_EXPECT_TRUE( listElement.empty() );
+    }
+
+    BLOCK( "SpatialOctree" )
+    {
+        sw::SpatialOctree octree( sw::AABB{
+            {-100.0f, -100.0f, -100.0f},
+            { 100.0f,  100.0f,  100.0f}
+        } );
+        octree.insert( 1, box );
+
+        sw::vector<sw::SpatialElement3D> listElement;
+        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
+        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
+
+        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
+        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
+
+        octree.clear();
+        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
+        SW_EXPECT_TRUE( listElement.empty() );
+    }
 }

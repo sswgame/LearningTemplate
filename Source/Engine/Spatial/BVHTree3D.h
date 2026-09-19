@@ -43,9 +43,20 @@ namespace sw
         void  remove( ObjectHandle handle );
         void  clear();
 
+        /**
+         * @brief 상자에 겹치는 핸들을 찾습니다.
+         * @param outListHandle 결과입니다 — **호출 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
+         */
         void queryAabb( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const;
+        /**
+         * @brief 광선에 걸리는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다.
+         * @param direction 방향입니다. 단위 길이가 아니어도 됩니다 — 안에서 맞춥니다.
+         * @param maxDist 월드 단위 사거리입니다(방향 벡터의 배수가 아닙니다).
+         */
         void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const;
+        /** @brief 구체에 겹치는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다. */
         void querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const;
+        /** @brief 절두체 안의 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다. */
         void queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const;
 
         size_t getHandleCount() const;

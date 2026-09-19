@@ -194,7 +194,6 @@ namespace sw
             , _totalElements{ 0 }
             , _pRoot{ nullptr }
             , _mapElement{}
-            , _mapElementLocation{}
         {
         }
 
@@ -205,7 +204,6 @@ namespace sw
             , _totalElements{ 0 }
             , _pRoot{ nullptr }
             , _mapElement{}
-            , _mapElementLocation{}
         {
             initialize( worldBounds, maxElements, maxDepth );
         }
@@ -228,7 +226,6 @@ namespace sw
         {
             _pRoot.reset();
             _mapElement.clear();
-            _mapElementLocation.clear();
             _totalElements = 0;
         }
 
@@ -240,8 +237,7 @@ namespace sw
             ElementType elem{ id, bounds, pUserData };
             if ( _pRoot->insert( elem, _maxElementsPerNode, _maxDepth ) )
             {
-                _mapElement[id]         = elem;
-                _mapElementLocation[id] = bounds;
+                _mapElement[id] = elem;
                 ++_totalElements;
                 return true;
             }
@@ -260,7 +256,6 @@ namespace sw
             if ( _pRoot->remove( id, _maxElementsPerNode ) )
             {
                 _mapElement.erase( iter );
-                _mapElementLocation.erase( id );
                 if ( _totalElements > 0 )
                     --_totalElements;
                 return true;
@@ -296,8 +291,15 @@ namespace sw
             return false;
         }
 
+        /**
+         * @brief 범위에 겹치는 원소를 찾습니다.
+         * @param outListElement 결과입니다 — **호출 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
+         *                       예전에는 덧붙이기만 했고, 트리가 비면 아무것도 건드리지 않았다 —
+         *                       벡터 하나를 돌려 쓰는 호출부에 지난 답이 그대로 남았다.
+         */
         void queryRange( const BoundsType& range, vector<ElementType>& outListElement ) const
         {
+            outListElement.clear();
             if ( _pRoot != nullptr )
                 _pRoot->query( range, outListElement );
         }
@@ -467,6 +469,5 @@ namespace sw
         size_t                             _totalElements{ 0 };
         sw::unique_ptr<Node>               _pRoot{ nullptr };
         unordered_map<uint64, ElementType> _mapElement{};
-        unordered_map<uint64, BoundsType>  _mapElementLocation{};
     };
 } // namespace sw

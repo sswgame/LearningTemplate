@@ -455,3 +455,51 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
         SW_EXPECT_TRUE( handle != groundHandle );
     }
 }
+
+/**
+ * @brief [PhysicsTest] 셀 번호 범위를 넘는 좌표의 바디도 질의에 잡힌다
+ * @details 셀 번호는 `floor(좌표 / 셀크기)` 를 int32 로 캐스팅해 구했다. 그 캐스팅은 값이 int32
+ *          범위를 벗어나면 **정의되지 않은 동작**이고, x86 에서는 넘치든 모자라든 똑같이 int32
+ *          최솟값으로 붙는다 — 그래서 아주 넓은 AABB 의 최소와 최대가 **같은 셀 번호**가 되어
+ *          폭이 1 로 읽혔다. "너무 크다"(`kMaxBodyCellCount`) 판정을 통과해 버리고, 그 바디는
+ *          원점과 아무 상관 없는 셀 하나에만 등록된다 — 겹치는 자리를 보는 질의가 바디를 **못
+ *          찾는다.** 터지지 않고 답만 조용히 틀리는 종류다.
+ */
+SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
+{
+    PhysicsWorld world;
+    world.layers().setLayerCollision( 0, 0, true );
+
+    // 셀 크기(64)로 나눠도 int32 를 한참 넘는 좌표다.
+    AABB enormous;
+    enormous._min = float3( -1.0e12f, -1.0e12f, -1.0e12f );
+    enormous._max = float3( 1.0e12f, 1.0e12f, 1.0e12f );
+
+    const PhysicsWorld::BodyHandle enormousHandle = world.addBody( enormous, 0, 1 );
+    SW_ASSERT_TRUE( enormousHandle.isValid() );
+
+    // 셀 표에 흩뿌려지지 않아야 한다 — 넘치는 바디는 목록으로 간다.
+    SW_EXPECT_EQUAL( size_t( 0 ), world.getGridCellCount() );
+
+    AABB probe;
+    probe._min = float3( -1.0f, -1.0f, -1.0f );
+    probe._max = float3( 1.0f, 1.0f, 1.0f );
+
+    vector<PhysicsWorld::BodyHandle> listHit;
+    world.queryAabb( probe, 0, listHit );
+
+    bool bFound = false;
+    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    {
+        if ( handle == enormousHandle )
+            bFound = true;
+    }
+    SW_EXPECT_TRUE( bFound );
+
+    world.removeBody( enormousHandle );
+    world.queryAabb( probe, 0, listHit );
+    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    {
+        SW_EXPECT_TRUE( handle != enormousHandle );
+    }
+}

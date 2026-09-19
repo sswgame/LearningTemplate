@@ -456,6 +456,53 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 모두(현재/이전 프레임 일치, 값 100, 그리고 "이벤트가 발화하지 않는다")에서 지고, 자르기를 빼면
 `OutOfRangeFrameNumbersCannotOverflowSpans` 가 진다.
 
+### 2026-09-20 (공간 색인 넷이 같은 질문에 서로 다르게 답하고 있었다)
+
+`Engine/Spatial` 에는 색인이 넷 있고(`SpatialHashGrid2D` · `SpatialQuadTree` · `SpatialOctree` ·
+`BVHTree3D`) `PhysicsWorld` 가 자기 것을 하나 더 든다. **같은 질문 다섯 개에 다섯이 제각각
+답하고 있었다.** 다섯 다 실제로 틀린 답을 내거나 돌아오지 않는 경로였다.
+
+| 질문 | 어긋나 있던 모습 | 증상 |
+|------|-----------------|------|
+| 결과 벡터를 비우는가 | 그리드·물리는 비우고, BVH·트리는 **덧붙이기만** | 벡터를 돌려 쓰면 지난 답이 이번 답인 척 |
+| 셀 범위에 상한이 있는가 | 광선 질의만 2048 걸음, 삽입·AABB·원은 무제한 | 큰 상자 하나로 **삽입이 돌아오지 않음** |
+| 셀 수를 어떻게 세는가 | `spanX * spanY`(`* spanZ`) 를 그냥 곱함 | 2^64 로 **넘쳐서 0**, 상한 검사를 그대로 통과 |
+| 좌표를 셀 번호로 어떻게 바꾸는가 | `static_cast<int32>(floor(x/cell))` | 범위 밖은 UB, x86 에서 최소·최대가 **같은 셀**로 접힘 |
+| 구체 판정을 어떻게 하는가 | 옥트리만 "중심 거리 vs 반지름+최장변" | 상자 안에 든 구체조차 **놓침**(거짓 음성) |
+| 광선 방향을 정규화하는가 | 그리드는 하고 BVH 는 안 함 | 같은 `maxDist` 가 방향 길이만큼 늘어난 사거리를 뜻함 |
+
+**돌아오지 않는 경로가 실재했다.** `AABB2D::infinite()` 는 이 모듈이 **스스로 제공하는** 값인데,
+그것으로 `insert` 하면 `floor(FLT_MAX / cellSize)` 만큼의 셀을 돌려고 한다. 새로 쓴
+`SpatialHashGrid2DInfiniteBoundsTerminate` 는 상한을 넣기 전에 실제로 **테스트를 멈춰 세웠고**,
+그때서야 상한 자체가 곱셈 넘침으로 무력화돼 있다는 것이 드러났다 — 한 겹 더 아래였다.
+
+**물리 쪽 증상은 조용했다.** x86 의 float→int 변환은 넘치든 모자라든 똑같이 int32 최솟값으로
+붙는다. 그래서 `±1e12` 짜리 바디의 최소·최대가 같은 셀 번호가 되어 폭이 1 로 읽히고,
+"너무 크다" 판정을 통과한 뒤 **원점과 아무 상관 없는 셀 하나**에만 등록됐다. 겹치는 자리를 보는
+질의가 그 바디를 못 찾는다 — 터지지 않고 답만 틀리는 종류라 로그에도 안 남는다.
+
+고친 모양:
+
+- 셀 범위 계산을 `CellRange` **하나**로 모았다(삽입·제거·AABB·원 넷에 복사돼 있었다).
+  `PhysicsWorld::CellRange` 와 같은 모양이다 — 넣을 때와 뺄 때가 같은 셀을 보게 하는 자리.
+- 상한을 넘는 핸들은 흩뿌리지 않고 `_listOversizedHandle` 에 모으고, **모든 질의가 그것을 함께**
+  본다(물리의 `_listOversizedBody` 와 같은 규약).
+- `getCellCount()` 는 곱하기 **전에** 넘칠지 보고, 넘치면 `MathUtil::MaxInt64` 로 붙인다.
+  호출부는 상한과 견주기만 하므로 그것으로 답이 맞는다. 물리 쪽(세 축)도 같이 고쳤다.
+- `toCellCoord` 는 float64 로 나눈 뒤 int32 범위로 접는다(NaN 도 함께). float64 가 모든 int32 를
+  정확히 담아서 경계 비교가 어긋나지 않는다. 두 곳 다.
+- 질의 결과 벡터는 **언제나 먼저 비운다** — 색인이 비어 할 일이 없을 때도. 규약은
+  `Spatial/README.md` 에 적었다.
+- `SpatialOctree::querySphere` 는 형제 둘과 같은 **상자 위 최근접점** 판정으로 바꿨다.
+- `BVHTree3D::queryRay` 는 방향을 단위로 맞춘다. `maxDist` 는 이제 두 색인에서 같은 뜻이다.
+- `SpatialTree::_mapElementLocation` 을 지웠다 — 세 곳에서 쓰기만 하고 **읽는 곳이 없는**,
+  `_mapElement[id]._bounds` 의 두 번째 사본이었다.
+
+**무는지 확인했다.** 상한을 10만으로 풀면 `SpatialHashGrid2DOversizedBoundsStayQueryable` 이 지고,
+물리의 `toCellCoord` 를 되돌리면 `BodyBeyondCellCoordinateRangeIsStillFound` 가 지며,
+`clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
+`BVHTree3DAABBRaySphereQueries` 가 진다.
+
 ### 2026-09-20 (TaskManager 테스트 파일이 없었다 — 10 케이스로 채웠다)
 
 `Test/CoreTest` 에 **TaskManager 전용 케이스가 하나도 없었다.** 1,355 줄짜리 동시성 핵심인데

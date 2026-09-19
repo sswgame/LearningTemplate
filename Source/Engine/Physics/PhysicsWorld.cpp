@@ -13,11 +13,27 @@ namespace sw
         struct PhysicsWorldInternal
         {
             /**
-             * @brief 부동소수점 월드 좌표를 정수 그리드 셀 좌표로 변환합니다.
+             * @brief 부동소수점 월드 좌표를 정수 그리드 셀 번호로 바꿉니다.
+             * @details float 을 int 로 캐스팅하는 것은 값이 int32 범위 밖이면 **정의되지 않은 동작**
+             *          이고, NaN 도 마찬가지다. x86 에서 그 캐스팅은 넘치든 모자라든 똑같이 int32
+             *          최솟값으로 붙어 버리므로, `±FLT_MAX` 처럼 아주 넓은 AABB 의 최소·최대가 **같은
+             *          셀 번호**가 된다 — 폭이 1 로 읽혀서 "너무 크다" 판정을 통과하고, 그 바디가
+             *          원점 근처가 아닌 엉뚱한 셀 **하나**에만 등록된다. 그러면 그 바디가 겹치는
+             *          셀을 보는 질의가 바디를 못 찾는다(조용한 충돌 누락).
+             *
+             *          범위 안으로 접어 넣으면 넓은 AABB 는 넓은 셀 범위가 되고, 셀 수 상한에 걸려
+             *          `_listOversizedBody` 로 간다 — 질의가 항상 함께 보는 자리다. 나눗셈을
+             *          float64 로 하는 이유는 float64 가 모든 int32 를 정확히 담아서 경계 비교가
+             *          어긋나지 않기 때문이다.
              */
             static int32 toCellCoord( float32 val, float32 cellSize )
             {
-                return static_cast<int32>( MathUtil::floor( val / cellSize ) );
+                const float64 scaled = MathUtil::floor( static_cast<float64>( val ) / static_cast<float64>( cellSize ) );
+                if ( ( scaled >= static_cast<float64>( MathUtil::MinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
+                    return MathUtil::MinInt32;
+                if ( scaled > static_cast<float64>( MathUtil::MaxInt32 ) )
+                    return MathUtil::MaxInt32;
+                return static_cast<int32>( scaled );
             }
         };
     } // namespace
@@ -46,7 +62,21 @@ namespace sw
         const int64 spanX = static_cast<int64>( _maxX ) - static_cast<int64>( _minX ) + 1;
         const int64 spanY = static_cast<int64>( _maxY ) - static_cast<int64>( _minY ) + 1;
         const int64 spanZ = static_cast<int64>( _maxZ ) - static_cast<int64>( _minZ ) + 1;
-        return ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
+        if ( spanX <= 0 || spanY <= 0 || spanZ <= 0 )
+            return 0;
+
+        // **곱하기 전에 넘칠지 본다.** 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 세 축을 곱하면
+        // int64 를 한참 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
+        // `kMaxBodyCellCount` 검사를 통과해 **막으려던 순회를 그대로 돌게 된다** — 무한대 AABB 하나가
+        // 그리드 삽입을 돌아오지 않게 만든다. 호출부는 이 값을 상한과 견주기만 하므로, 넘칠 때는
+        // 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
+        int64 cellCount = spanX;
+        if ( cellCount > MathUtil::MaxInt64 / spanY )
+            return MathUtil::MaxInt64;
+        cellCount *= spanY;
+        if ( cellCount > MathUtil::MaxInt64 / spanZ )
+            return MathUtil::MaxInt64;
+        return cellCount * spanZ;
     }
 
     bool PhysicsWorld::shouldScanAllBodies( const CellRange& range ) const
