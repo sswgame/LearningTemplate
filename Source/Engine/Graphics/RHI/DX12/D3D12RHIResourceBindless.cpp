@@ -27,6 +27,28 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12RHIResource" );
 
+    RHIDescriptorIndex D3D12RHIResource::acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock )
+    {
+        // 잠금은 호출자의 것이다 — 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
+        SW_ASSERT( lock.owns_lock() );
+        (void)lock;
+
+        // 돌려받은 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다).
+        if ( _pDevice->_listFreeBindless.empty() == false )
+        {
+            const RHIDescriptorIndex reused = _pDevice->_listFreeBindless.back();
+            _pDevice->_listFreeBindless.pop_back();
+            return reused;
+        }
+
+        if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
+        {
+            SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        return _pDevice->_allocatedDescriptorsCount++;
+    }
+
     RHIDescriptorIndex D3D12RHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
@@ -38,21 +60,9 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
-        if ( _pDevice->_listFreeBindless.empty() == false )
-        {
-            index = _pDevice->_listFreeBindless.back();
-            _pDevice->_listFreeBindless.pop_back();
-        }
-        else
-        {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
-            {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
-                return kInvalidDescriptorIndex;
-            }
-            index = _pDevice->_allocatedDescriptorsCount++;
-        }
+        const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -98,21 +108,9 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
-        if ( _pDevice->_listFreeBindless.empty() == false )
-        {
-            index = _pDevice->_listFreeBindless.back();
-            _pDevice->_listFreeBindless.pop_back();
-        }
-        else
-        {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
-            {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
-                return kInvalidDescriptorIndex;
-            }
-            index = _pDevice->_allocatedDescriptorsCount++;
-        }
+        const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
         cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
@@ -191,22 +189,33 @@ namespace sw
         releaseBindlessSlot( index );
     }
 
-    void D3D12RHIResource::releaseBindlessSlot( RHIDescriptorIndex index )
+    void D3D12RHIResource::releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index )
     {
-        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index >= _pDevice->_listRegisteredBindless.size() )
+        const bool bUav = ( registry == BindlessRegistry::UnorderedAccess );
+
+        std::unique_lock<std::shared_mutex>             lock{ _pDevice->_bindlessMutex };
+        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        if ( index >= listRegistry.size() )
             return;
-        D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
+
+        D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
         // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다.
         if ( rec._resource == nullptr && rec._buffer == 0 && rec._texture == 0 )
         {
-            SW_LOG_ERROR( "Bindless index %# is already free; ignoring the duplicate release.", index );
+            SW_LOG_ERROR( "%# index %# is already free; ignoring the duplicate release.",
+                          bUav ? "Bindless UAV" : "Bindless", index );
             return;
         }
+
         rec._resource = nullptr;
         rec._buffer   = 0;
         rec._texture  = 0;
-        deferFreeBindlessIndex( index );
+        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
+    }
+
+    void D3D12RHIResource::releaseBindlessSlot( RHIDescriptorIndex index )
+    {
+        releaseBindlessRecord( BindlessRegistry::ShaderResource, index );
     }
 
     void D3D12RHIResource::deferFreeBindlessIndex( RHIDescriptorIndex index )
@@ -236,21 +245,9 @@ namespace sw
         // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다.
         // 예전엔 UAV 목록의 순번을 돌려줘서 힙 슬롯과 달랐다(테이블을 슬롯마다 따로 걸던 시절엔 상관없었다).
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
-        if ( _pDevice->_listFreeBindless.empty() == false )
-        {
-            index = _pDevice->_listFreeBindless.back();
-            _pDevice->_listFreeBindless.pop_back();
-        }
-        else
-        {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
-            {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
-                return kInvalidDescriptorIndex;
-            }
-            index = _pDevice->_allocatedDescriptorsCount++;
-        }
+        const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
         cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
@@ -300,21 +297,9 @@ namespace sw
 
         // 텍스처 UAV 도 같은 힙 인덱스 공간 — 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
-        if ( _pDevice->_listFreeBindless.empty() == false )
-        {
-            index = _pDevice->_listFreeBindless.back();
-            _pDevice->_listFreeBindless.pop_back();
-        }
-        else
-        {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
-            {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
-                return kInvalidDescriptorIndex;
-            }
-            index = _pDevice->_allocatedDescriptorsCount++;
-        }
+        const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
         cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
@@ -341,19 +326,7 @@ namespace sw
     void D3D12RHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
-        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index >= _pDevice->_listRegisteredUAV.size() )
-            return;
-        D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredUAV[index];
-        if ( rec._resource == nullptr && rec._buffer == 0 && rec._texture == 0 )
-        {
-            SW_LOG_ERROR( "Bindless UAV index %# is already free; ignoring the duplicate release.", index );
-            return;
-        }
-        rec._resource = nullptr;
-        rec._buffer   = 0;
-        rec._texture  = 0;
-        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
+        releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 
 } // namespace sw
