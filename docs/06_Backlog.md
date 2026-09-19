@@ -503,6 +503,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (파일과 사용자가 말한 크기를 그대로 잡고 있었다 — 타일맵)
+
+`TileMapXmlData::loadFromXml` 은 `<width> x <height>` 만큼의 칸을 배열 넷에 잡는데, 그 둘은
+파일이 주는 int32 였고 `<= 0` 만 걸렀다. `100000 x 100000` 한 줄이면 10^10 칸 요청이다.
+에디터도 같은 길이다 — `TileMapPanel` 의 Width/Height 는 `ImGui::InputInt` 이고 Apply Size 가
+그 값을 그대로 `resize()` 에 넘긴다. 숫자를 크게 적고 누르면 에디터가 죽는다.
+
+상한은 `TileMapXmlData::kMaxTileCount`(2048 x 2048) 하나로 두고 로더와 패널이 같은
+`isSizeSupported()` 를 본다. 곱은 int64 로 낸다 — `65536 x 65536` 은 int32 로 재면 2^32 라
+0 으로 접혀 "작다" 가 된다. 무는지 확인할 때 가드를 빼자 그 케이스가 **테스트 프로세스를
+데려갔다**(할당 실패).
+
+**`FrameProfiler::Scope::_pName` 은 형식상 데이터 레이스였다.** 슬롯을 잡는 쪽은 아무 스레드나
+될 수 있는데(워커가 자기 구간을 처음 만날 때 등록한다) 이름은 평범한 포인터로 적고, 같은 순간
+다른 스레드가 중복을 찾느라 그 칸을 읽었다. `atomic<const utf8*>` 로 바꾸고 release/acquire 로
+짝지었다. 이름이 같은 구간을 두 스레드가 동시에 처음 등록하면 여전히 슬롯이 둘 생길 수 있는데,
+그것까지 막으려면 등록에 잠금이 필요하고 "측정이 실행을 막지 않는다" 는 이 파일의 방침과
+맞지 않는다 — 그래서 헤더에 한계로 적어 두었다.
+
 ### 2026-09-20 (재진입 깃발을 네 곳에서 보고 한 곳에서 안 봤다 — 그 한 곳은 멈춘다)
 
 `Engine/Utility` 를 함수 단위로 읽어 셋을 고쳤다. 셋 다 "형제는 맞는데 하나만 다르다" 모양이다.

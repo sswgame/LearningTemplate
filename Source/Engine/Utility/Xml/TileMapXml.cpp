@@ -63,6 +63,15 @@ namespace sw
             _height = 8;
         }
 
+        // **파일이 말한 크기를 그대로 잡지 않는다.** 바로 아래에서 `_width x _height` 칸짜리
+        // 배열 넷을 잡으므로, 손상되거나 손으로 잘못 적은 맵 하나가 수십억 칸 요청이 된다.
+        if ( isSizeSupported( _width, _height ) == false )
+        {
+            SW_LOG_ERROR( "TileMap size %#x%# is beyond the supported tile count (%#)", _width, _height, kMaxTileCount );
+            *this = {};
+            return false;
+        }
+
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         _listWalkable.assign( count, 1 );
         _listEncounter.assign( count, 0 );

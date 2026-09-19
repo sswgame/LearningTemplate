@@ -240,3 +240,31 @@ SW_TEST_CASE( TileMapXmlTest, MalformedDocumentFailsAndLeavesAnEmptyMap )
     // 빈 경로는 파일을 뒤지지 않고 거절한다.
     SW_EXPECT_FALSE( loaded.load( "" ) );
 }
+
+/**
+ * @brief [TileMapXmlTest] 감당할 수 없는 크기는 거절한다 — 그만큼을 잡으려다 죽지 않는다
+ * @details `<width>` 와 `<height>` 는 파일이 주는 int32 이고, 바로 그 곱만큼의 칸을 배열 넷에
+ *          잡는다. 상한이 없으면 `100000 x 100000` 한 줄이 10^10 칸 요청이 되어 그 자리에서
+ *          죽는다. 에디터의 Width/Height 칸도 같은 경로라 `TileMapPanel::resize` 가 같은
+ *          `isSizeSupported` 를 본다.
+ */
+SW_TEST_CASE( TileMapXmlTest, SizeBeyondTheTileLimitIsRejected )
+{
+    SW_EXPECT_TRUE( sw::TileMapXmlData::isSizeSupported( 2048, 2048 ) );
+    SW_EXPECT_FALSE( sw::TileMapXmlData::isSizeSupported( 2048, 2049 ) );
+    // 곱을 int32 로 내면 접혀서 "작다" 로 읽히는 조합이다 (65536 x 65536 == 2^32).
+    SW_EXPECT_FALSE( sw::TileMapXmlData::isSizeSupported( 65536, 65536 ) );
+    SW_EXPECT_FALSE( sw::TileMapXmlData::isSizeSupported( 2147483647, 2147483647 ) );
+
+    sw::TileMapXmlData loaded;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( loaded.loadFromXml( "<TileMap><width>100000</width><height>100000</height></TileMap>" ) );
+    }
+    SW_EXPECT_TRUE( loaded._listWalkable.empty() );
+    SW_EXPECT_EQUAL( 0, loaded._width );
+
+    // 상한 안쪽은 그대로 열린다.
+    SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><width>64</width><height>64</height></TileMap>" ) );
+    SW_EXPECT_EQUAL( size_t( 4096 ), loaded._listWalkable.size() );
+}

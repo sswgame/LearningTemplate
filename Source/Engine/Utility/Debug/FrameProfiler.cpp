@@ -59,7 +59,9 @@ namespace sw
         const uint32 count = MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );
         for ( uint32 index = 0; index < count; ++index )
         {
-            if ( _arrScope[index]._pName != nullptr && StringUtil::equals( _arrScope[index]._pName, pName ) )
+            // 아직 이름이 안 실린 칸일 수 있다 — 슬롯을 잡는 것과 이름을 적는 것은 두 걸음이다.
+            const utf8* pExisting = _arrScope[index]._pName.load( std::memory_order_acquire );
+            if ( pExisting != nullptr && StringUtil::equals( pExisting, pName ) )
                 return index;
         }
 
@@ -80,7 +82,7 @@ namespace sw
             return kInvalidSlot;
         }
 
-        _arrScope[slot]._pName = pName;
+        _arrScope[slot]._pName.store( pName, std::memory_order_release );
         return slot;
     }
 
@@ -158,11 +160,12 @@ namespace sw
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
         {
-            const Scope& scope = _arrScope[index];
-            if ( scope._sampledFrames == 0 || scope._pName == nullptr )
+            const Scope& scope      = _arrScope[index];
+            const utf8*  pScopeName = scope._pName.load( std::memory_order_acquire );
+            if ( scope._sampledFrames == 0 || pScopeName == nullptr )
                 continue;
 
-            padRight( nameCol, scope._pName, 32 );
+            padRight( nameCol, pScopeName, 32 );
 
             // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다 — 시간 열은 의미가 없다.
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );

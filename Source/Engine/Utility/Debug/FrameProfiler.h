@@ -76,14 +76,25 @@ namespace sw
         /** @brief 구간 하나의 누적치. */
         struct Scope
         {
-            const utf8*    _pName{ nullptr };
-            atomic<uint64> _frameNanos{ 0 }; ///< 이번 프레임 누적 (endFrame 에서 비움)
-            atomic<uint64> _frameCalls{ 0 }; ///< 이번 프레임 호출/카운트
-            uint64         _totalNanos{ 0 }; ///< 전체 프레임 누적
-            uint64         _totalCalls{ 0 };
-            uint64         _minNanos{ 0 }; ///< 프레임 단위 최소/최대
-            uint64         _maxNanos{ 0 };
-            uint64         _sampledFrames{ 0 };
+            /**
+             * @brief 구간 이름입니다. 등록한 쪽이 넘긴 문자열 리터럴을 그대로 가리킵니다.
+             * @details **원자적이어야 한다.** 슬롯을 잡는 쪽은 아무 스레드나 될 수 있고(워커가
+             *          자기 구간을 처음 만날 때 등록한다), 같은 순간 다른 스레드가 중복을 찾느라
+             *          이 칸을 읽는다 — 평범한 포인터였을 때 그 둘은 형식상 데이터 레이스였다.
+             * @note 이름이 같은 구간을 두 스레드가 **동시에** 처음 등록하면 슬롯이 둘 생길 수
+             *       있다(표에 같은 이름이 두 줄). 슬롯 번호는 호출 지점마다 함수 지역 static 에
+             *       한 번만 담기므로 실제로는 같은 이름이 두 지점에서 동시에 처음 불릴 때뿐이고,
+             *       그때도 결과는 줄이 나뉘는 것까지다 — 막으려면 등록에 잠금이 필요한데,
+             *       측정이 실행을 막지 않는다는 이 파일의 방침과 맞지 않는다.
+             */
+            atomic<const utf8*> _pName{ nullptr };
+            atomic<uint64>      _frameNanos{ 0 }; ///< 이번 프레임 누적 (endFrame 에서 비움)
+            atomic<uint64>      _frameCalls{ 0 }; ///< 이번 프레임 호출/카운트
+            uint64              _totalNanos{ 0 }; ///< 전체 프레임 누적
+            uint64              _totalCalls{ 0 };
+            uint64              _minNanos{ 0 }; ///< 프레임 단위 최소/최대
+            uint64              _maxNanos{ 0 };
+            uint64              _sampledFrames{ 0 };
         };
 
         Scope          _arrScope[kMaxScope];
