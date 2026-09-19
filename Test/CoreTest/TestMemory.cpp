@@ -494,3 +494,43 @@ SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
     SW_EXPECT_EQUAL( size_t( 1 ), listValue.size() );
     SW_EXPECT_EQUAL( int64( 42 ), listValue[0] );
 }
+
+/**
+ * @brief [MemoryTest] 풀의 자유 목록이 고리가 되지 않는지 검증(회귀 가드)
+ * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 **자기 고리**가 된다 —
+ *          그 뒤 모든 할당이 같은 블록을 돌려주고, 서로 다른 두 객체가 같은 주소에 앉는다. 이번
+ *          훑기에서 실제로 겪었다(`GameObjectManager::destroyObject` 의 check-then-set 경쟁).
+ *
+ *          이제 Debug 에서는 `PoolAllocator::free` 가 **두 번째 반납 그 자리에서** 단언으로
+ *          멈춘다(표식 하나로 O(1) 에 본다 — 목록을 훑으면 해제가 O(n) 이 된다). 그 단언은
+ *          프로세스를 세우므로 테스트로 부를 수 없고, 여기서는 **정상 순환이 그대로인지**를
+ *          지킨다: 한 바퀴 돌린 뒤 새로 받은 블록들이 전부 다른 주소여야 한다.
+ */
+SW_TEST_CASE( MemoryTest, PoolFreeListDoesNotLoopAfterChurn )
+{
+    constexpr uint32  kBlockCount = 16;
+    sw::PoolAllocator pool{ 64, kBlockCount, false };
+
+    sw::vector<void*> listBlock;
+    listBlock.reserve( kBlockCount );
+    for ( uint32 index = 0; index < kBlockCount; ++index )
+    {
+        void* pBlock = pool.allocate();
+        SW_ASSERT_NOT_NULL( pBlock );
+        listBlock.push_back( pBlock );
+    }
+
+    for ( void* pBlock : listBlock )
+        pool.free( pBlock );
+
+    sw::unordered_set<void*> setFresh;
+    for ( uint32 index = 0; index < kBlockCount; ++index )
+    {
+        void* pBlock = pool.allocate();
+        SW_ASSERT_NOT_NULL( pBlock );
+        setFresh.insert( pBlock );
+    }
+
+    // 고리가 생겼으면 여기가 1 이 된다.
+    SW_EXPECT_EQUAL( size_t( kBlockCount ), setFresh.size() );
+}

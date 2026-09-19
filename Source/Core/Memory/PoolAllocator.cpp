@@ -46,7 +46,10 @@ namespace sw
         {
             FreeNode* pNode = reinterpret_cast<FreeNode*>( pData + ( index * _blockSize ) );
             pNode->_pNext   = _pFreeList;
-            _pFreeList      = pNode;
+#if defined( SW_DEBUG )
+            pNode->_freeMagic = kFreeBlockMagic;
+#endif
+            _pFreeList = pNode;
         }
     }
 
@@ -66,6 +69,10 @@ namespace sw
 
         FreeNode* pNode = _pFreeList;
         _pFreeList      = pNode->_pNext;
+#if defined( SW_DEBUG )
+        // 내주는 순간 표식을 지운다 — 남겨 두면 다음 반납이 "이미 자유" 로 잘못 읽는다.
+        pNode->_freeMagic = 0;
+#endif
         return pNode;
     }
 
@@ -98,11 +105,23 @@ namespace sw
         SW_ASSERT( bValidChunk && "PoolAllocator::free: Pointer does not belong to any allocated chunk!" );
         if ( bValidChunk == false )
             return;
+
+        // **이미 자유 목록에 있는 블록인가.** 두 번 넣으면 `_pNext` 가 자기 자신을 가리켜 목록이
+        // 자기 고리가 되고, 그 뒤 모든 할당이 같은 블록을 돌려준다. 여기서 멈추지 않으면 증상은
+        // 한참 뒤 엉뚱한 자리에서 터진다.
+        if ( static_cast<const FreeNode*>( pBlock )->_freeMagic == kFreeBlockMagic )
+        {
+            SW_ASSERT( false && "PoolAllocator::free: block is already in the free list (double free)" );
+            return;
+        }
 #endif
 
         FreeNode* pNode = static_cast<FreeNode*>( pBlock );
         pNode->_pNext   = _pFreeList;
-        _pFreeList      = pNode;
+#if defined( SW_DEBUG )
+        pNode->_freeMagic = kFreeBlockMagic;
+#endif
+        _pFreeList = pNode;
     }
 
     void PoolAllocator::clear()
