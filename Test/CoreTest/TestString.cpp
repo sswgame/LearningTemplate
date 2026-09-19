@@ -1326,3 +1326,62 @@ SW_TEST_CASE( StringTest, StrncpyAlwaysTerminatesAndTruncates )
         SW_EXPECT_EQUAL( size_t( 4 ), sw::wstring_view( buffer ).size() );
     }
 }
+
+/**
+ * @brief [StringTest] fixed_string::erase 가 큰 길이에서 첨자를 접지 않는지 검증
+ * @details 판정이 `pos + length >= currentSize` 였다. `npos` 가 아닌 큰 길이가 들어오면
+ *          (끝-시작 이 뒤집힌 계산 같은 것) 그 합이 `uint32` 안에서 접혀 작은 수가 되고,
+ *          "끝까지 지운다" 가 아니라 **범위 이동** 쪽으로 빠진다 — 거기서
+ *          `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. 같은 파일의 `substr` 은
+ *          처음부터 뺄셈 형태(`currentSize - pos`)였다.
+ */
+SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
+{
+    BLOCK( "npos 가 아닌 큰 길이 — 끝까지 지운 것과 같아야 한다" )
+    {
+        sw::fixed_string<32> str( "0123456789" );
+        str.erase( 5, 0xFFFFFFFCu );
+        SW_EXPECT_STREQ( "01234", str.c_str() );
+        SW_EXPECT_EQUAL( 5u, str.size() );
+    }
+
+    BLOCK( "평범한 지우기는 그대로다" )
+    {
+        sw::fixed_string<32> str( "0123456789" );
+        str.erase( 3, 4 );
+        SW_EXPECT_STREQ( "012789", str.c_str() );
+        SW_EXPECT_EQUAL( 6u, str.size() );
+    }
+
+    BLOCK( "npos 는 끝까지" )
+    {
+        sw::fixed_string<32> str( "0123456789" );
+        str.erase( 7 );
+        SW_EXPECT_STREQ( "0123456", str.c_str() );
+    }
+}
+
+/**
+ * @brief [StringTest] 용량 0 으로 부른 formatstring 이 버퍼 밖에 쓰지 않는지 검증
+ * @details 입구에 `SW_ASSERT( capacity > 0 )` 뿐이었다 — **Debug 밖에서는 통째로 사라진다.**
+ *          그 뒤로 `capacity` 는 어디서나 `capacity - 1` 로 쓰이므로(남은 자리 계산, 종결자
+ *          위치) 0 이면 그 뺄셈이 뒤집혀 4,294,967,295 가 되고, 길이 제한 없이 복사한다.
+ */
+SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
+{
+    // 한 칸이면 종결자만 들어간다 — 이쪽은 어느 빌드에서나 잰다.
+    sw::vector<utf8> oneBuffer( 1, utf8{ 'Z' } );
+    sw::formatstring( oneBuffer.data(), 1, "hello" );
+    SW_EXPECT_EQUAL( utf8{ 0 }, oneBuffer[0] );
+
+#if defined( SW_DEBUG )
+    // 용량 0 은 Debug 에서 `SW_ASSERT` 가 먼저 울려 프로세스를 세운다 — **그것이 의도다.**
+    // 아래 가드는 단언이 통째로 사라지는 빌드를 위한 것이라 거기서만 잴 수 있다.
+    SW_TEST_SKIP( "SW_ASSERT stops the process in Debug; the zero-capacity guard only matters where the assert is gone." );
+#else
+    // 딱 한 칸짜리 힙 버퍼 — 넘치면 ASAN 이 그 자리에서 잡고, 값으로도 드러난다.
+    sw::vector<utf8> tinyBuffer( 1, utf8{ 'Z' } );
+    sw::formatstring( tinyBuffer.data(), 0, "hello world %#", 42 );
+    SW_EXPECT_EQUAL( utf8{ 'Z' }, tinyBuffer[0] );
+#endif
+}

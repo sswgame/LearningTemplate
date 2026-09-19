@@ -524,7 +524,11 @@ namespace sw
         if ( pos >= currentSize )
             return *this;
 
-        if ( length == npos || pos + length >= currentSize )
+        // **뺄셈으로 잰다.** `pos + length` 는 `uint32` 안에서 넘칠 수 있다 — `npos` 가 아닌 큰
+        // 길이가 들어오면(끝-시작 이 뒤집힌 계산 같은 것) 합이 작은 수로 접혀 아래 `else` 로
+        // 빠지고, 거기서 `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. `pos < currentSize`
+        // 는 위에서 걸렀으므로 이 뺄셈은 안전하다. 형제인 `substr` 은 처음부터 이 형태였다.
+        if ( length == npos || length >= currentSize - pos )
         {
             _size           = pos;
             _arrData[_size] = T{ 0 };

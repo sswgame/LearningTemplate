@@ -435,6 +435,49 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (fixed_string::erase 가 큰 길이에서 첨자를 접었다 · formatstring 은 용량 0 에서 무제한으로 썼다)
+
+Core/String 을 함수 단위로 읽다가 둘 나왔다. 둘 다 **같은 파일 안에 올바른 형제가 있다.**
+
+**1) `basic_fixed_string::erase` — 덧셈 판정**
+
+```cpp
+if ( length == npos || pos + length >= currentSize )   // 끝까지 지우기
+else
+    Memory::move( _arrData + pos, _arrData + pos + length, ... );
+```
+
+`npos`(`0xFFFFFFFF`) 가 아닌 큰 길이가 들어오면 — 끝-시작 이 뒤집힌 계산 같은 것 — `pos + length`
+가 `uint32` 안에서 **접혀** 작은 수가 되고, "끝까지 지우기" 가 아니라 아래 **범위 이동** 으로
+빠진다. 거기서 `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. 변이로 되돌리면
+**세그폴트**다.
+
+같은 파일의 `substr` 은 처음부터 뺄셈(`MathUtil::min( length, currentSize - pos )`)이었다.
+`erase` 만 덧셈이었다.
+
+**2) `formatstring` — 용량 0**
+
+입구에 `SW_ASSERT( pBuffer != nullptr && capacity > 0 )` 뿐이었다. 그 뒤로 `capacity` 는 어디서나
+`capacity - 1` 로 쓰인다(`write` 의 남은 자리 계산, 종결자 위치). 0 이면 그 뺄셈이 뒤집혀
+4,294,967,295 가 되고 **길이 제한 없이** 복사한다. 한 칸짜리 버퍼에 `capacity = 0` 으로
+`"hello world %#"` 를 찍으면 그대로 다 들어간다(`Expected [Z], Actual [h]`, 힙이 깨져 종료코드 127).
+
+지금 호출부는 0 을 주지 않는다 — `StringBuilder::appendFormat` 은 남은 자리가 2 미만이면 먼저
+늘리고, `CrashContext::appendLine` 은 `inOutLength + 1 >= capacity` 를 먼저 본다. 그래도 공개
+API 이고 단언은 Debug 밖에서 사라지므로, 이 저장소가 `vector::erase` · `DynamicBitset::operator&=`
+에서 한 것과 같은 모양으로 진짜 가드를 둔다.
+
+**검증.** `StringTest.FixedStringEraseWithHugeLengthDoesNotWrap`(되돌리면 세그폴트) ·
+`StringTest.FormatStringWithZeroCapacityWritesNothing`(Debug 는 `SW_ASSERT` 가 먼저 우는 것이
+의도라 skip, Release·Shipping 에서만 잰다).
+
+**살펴보고 문제 없던 것 (Core/String).** `basic_fixed_string` 의 `insert` · `append` 계열은
+`clampToRemaining( currentSize, length )` 로 `N - currentSize` 를 넘지 못하게 막아
+`_arrData[N + 1]` 밖으로 나가지 않는다. `hashed_string` 은 아레나 할당이 `_globalAppendMutex`
+안에서만 일어나고, 락 순서가 양쪽 경로 모두 shard → global 이라 교착이 없으며, 락 없는
+`size()`/`c_str()` 도 **인덱스를 얻는 모든 경로**(같은 스레드 · 객체 전달 · 샤드 맵 조회)에
+동기화 간선이 있어 안전하다. `string_splitter` 는 `delimLength >= 1` 이 보장돼 제자리걸음이 없다.
+
 ### 2026-09-20 (메인 스레드 일감을 넣고 아무나 깨우고 있었다)
 
 `scheduleReadyTask` 가 **메인 스레드 전용** 일감을 큐에 넣은 뒤 이렇게 알렸다:

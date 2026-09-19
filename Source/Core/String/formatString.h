@@ -289,6 +289,13 @@ namespace sw
         static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
         {
             SW_ASSERT( pBuffer != nullptr && capacity > 0 );
+            // **단언은 Debug 밖에서 통째로 사라진다.** 그 뒤로 `capacity` 는 어디서나 `capacity - 1`
+            // 로 쓰이는데(`write` 의 남은 자리 계산, 아래 종결자 위치), 0 이면 그 뺄셈이 뒤집혀
+            // 4,294,967,295 가 된다 — `write` 가 **길이 제한 없이** 복사하고 종결자도 버퍼 밖에
+            // 찍힌다. 지금 호출부들은 0 을 주지 않지만(`StringBuilder` 는 2 미만이면 늘리고
+            // `CrashContext` 는 남은 자리를 먼저 본다) 이것은 공개 API 다.
+            if ( pBuffer == nullptr || capacity == 0 )
+                return;
 
             uint32 pos{ 0 };
             if constexpr ( sizeof...( args ) > 0 )
