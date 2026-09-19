@@ -152,12 +152,27 @@ namespace sw
             return false;
         }
 
+        // **개수를 버퍼 크기로 먼저 자른다.** `count` 는 파일에서 온 값이라, 망가진 헤더가
+        // 4,294,967,295 를 적어 두면 아래 `reserve` 가 그 자리에서 4G 개의 자리를 요구한다 —
+        // 항목을 하나도 읽어 보기 전에 죽는다(루프의 검사는 그 다음에야 돈다). 항목 하나는
+        // 아무리 짧아도 키 해시(8) + 길이(4) = 12바이트이므로, **남은 바이트로 담을 수 있는
+        // 최대 개수**가 정확한 상한이다 — 임의로 고른 숫자가 아니다.
+        constexpr size_t kMinEntryBytes = sizeof( uint64 ) + sizeof( uint32 );
+        const size_t     remainingBytes = static_cast<size_t>( pEnd - pPtr );
+        if ( static_cast<size_t>( count ) > remainingBytes / kMinEntryBytes )
+        {
+            SW_LOG_WARNING( "StringTable binary header claims %# entries but only %# bytes remain.", count, remainingBytes );
+            return false;
+        }
+
         std::unique_lock<std::shared_mutex> lock( _mutex );
         _mapTable.reserve( _mapTable.size() + count );
 
         for ( uint32 index = 0; index < count; ++index )
         {
-            if ( pPtr + sizeof( uint64 ) + sizeof( uint32 ) > pEnd )
+            // **더하지 말고 뺀다** — 남은 바이트와 필요한 바이트를 비교한다. `pPtr + n` 은 버퍼 끝을
+            // 한 칸 넘어서면 그 포인터를 만드는 것 자체가 규약 밖이다.
+            if ( static_cast<size_t>( pEnd - pPtr ) < kMinEntryBytes )
             {
                 SW_LOG_WARNING( "Corrupted StringTable binary buffer." );
                 return false;
@@ -170,7 +185,7 @@ namespace sw
             Memory::copy( &strLen, pPtr, sizeof( strLen ) );
             pPtr += sizeof( strLen );
 
-            if ( pPtr + strLen > pEnd )
+            if ( static_cast<size_t>( pEnd - pPtr ) < static_cast<size_t>( strLen ) )
             {
                 SW_LOG_WARNING( "Corrupted StringTable entry in binary buffer." );
                 return false;

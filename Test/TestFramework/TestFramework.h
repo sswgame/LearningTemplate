@@ -192,6 +192,27 @@ namespace test
         DefensiveTestLogSink _defensiveSink;
     };
 
+    /**
+     * @brief `SW_EXPECT_STREQ` 가 받은 값을 **널에도 안전하게** 비교용 문자열로 만듭니다.
+     * @details 널 `const utf8*` 로 `sw::string` 을 만들면 그 자리에서 죽는다. 그러면 실패를
+     *          찍어 보기도 전에 **테스트 바이너리 전체가 내려가고**, 같은 파일의 뒤쪽 케이스가
+     *          통째로 사라진다 — 어느 단언이 문제였는지도 남지 않는다. 그런데 "널을 돌려주기
+     *          시작한 회귀" 야말로 이 매크로가 가장 잡아야 할 것이다. 정확히 그 순간에
+     *          못 잡고 있었다.
+     */
+    inline sw::string toComparableText( const utf8* pText ) { return pText != nullptr ? sw::string( pText ) : sw::string( "<null>" ); }
+    inline sw::string toComparableText( const sw::string& text ) { return text; }
+    inline sw::string toComparableText( sw::string_view text ) { return sw::string( text ); }
+
+    /**
+     * @brief 비교 대상이 널 포인터였는지 알려줍니다.
+     * @details 널을 `"<null>"` 로 찍는 것만으로는 부족하다 — 진짜 `"<null>"` 문자열과 널이
+     *          같다고 나와 버린다. 널 여부를 따로 들고 비교한다.
+     */
+    inline bool isNullText( const utf8* pText ) { return pText == nullptr; }
+    inline bool isNullText( const sw::string& ) { return false; }
+    inline bool isNullText( sw::string_view ) { return false; }
+
     /** @brief 정적 초기화로 테스트를 레지스트리에 붙입니다. */
     class TestRegistrar
     {
@@ -343,9 +364,11 @@ namespace test
 #define SW_EXPECT_STREQ( expected, actual )                                                                                  \
     do                                                                                                                       \
     {                                                                                                                        \
-        const sw::string _sw_expect_streq_e( expected );                                                                     \
-        const sw::string _sw_expect_streq_a( actual );                                                                       \
-        if ( _sw_expect_streq_e != _sw_expect_streq_a )                                                                      \
+        const bool       _sw_expect_streq_en = test::isNullText( expected );                                                 \
+        const bool       _sw_expect_streq_an = test::isNullText( actual );                                                   \
+        const sw::string _sw_expect_streq_e  = test::toComparableText( expected );                                           \
+        const sw::string _sw_expect_streq_a  = test::toComparableText( actual );                                             \
+        if ( _sw_expect_streq_en != _sw_expect_streq_an || _sw_expect_streq_e != _sw_expect_streq_a )                        \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
             oss << "Expected [" << _sw_expect_streq_e << "], Actual [" << _sw_expect_streq_a << "]";                         \

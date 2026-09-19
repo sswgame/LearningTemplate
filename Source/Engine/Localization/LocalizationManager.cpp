@@ -12,9 +12,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Format/KeyValueFile.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {
@@ -76,6 +73,11 @@ namespace sw
         _currentLanguage.clear();
     }
 
+    // **확장자로 무엇을 할지 고르는 일은 StringTable 이 한다.** 여기서 그것을 다시 적으면 둘이
+    // 갈라진다 — 실제로 갈라져 있었다. `StringTable::loadFromFile` 은 `.bin` 이면 바이너리로
+    // 읽는데, 이쪽 사본은 `.bin` 을 몰라서 파일을 **텍스트로** 읽은 뒤 확장자 판별이 기본값인
+    // JSON 으로 떨어뜨렸다. 그래서 `initialize` 가 일부러 찾아 주는 `.bin` 언어 파일과
+    // `StringTable::saveToBinaryFile` 이 구워 낸 파일은 **하나도 읽히지 않았다.**
     bool LocalizationManager::loadLanguageFile( string_view languageCode, string_view filePath )
     {
         if ( languageCode.empty() || filePath.empty() )
@@ -84,18 +86,16 @@ namespace sw
             return false;
         }
 
-        string text;
-        if ( ResourceUtil::readTextResource( filePath, text ) == false && FileUtil::readTextFile( filePath, text ) == false )
+        StringTable* pTable = getOrCreateLanguageTable( languageCode );
+        if ( pTable == nullptr || pTable->loadFromFile( string( filePath ) ) == false )
         {
-            SW_LOG_WARNING( "Failed to read language file: %#", string( filePath ).c_str() );
+            SW_LOG_WARNING( "Failed to load language file: %#", string( filePath ).c_str() );
             return false;
         }
 
-        bool bSuccess = loadLanguageFromText( languageCode, filePath, text );
-        if ( bSuccess )
-            SW_LOG_INFO( "Loaded language '%#' from file '%#'.", string( languageCode ).c_str(), string( filePath ).c_str() );
-
-        return bSuccess;
+        markLanguageLoaded( languageCode );
+        SW_LOG_INFO( "Loaded language '%#' from file '%#'.", string( languageCode ).c_str(), string( filePath ).c_str() );
+        return true;
     }
 
     bool LocalizationManager::loadLanguageResource( string_view languageCode, string_view assetRelativePath )
@@ -106,33 +106,23 @@ namespace sw
             return false;
         }
 
-        string text;
-        string absPath;
-        if ( ResourceUtil::readTextResource( assetRelativePath, text, &absPath ) == false )
+        StringTable* pTable = getOrCreateLanguageTable( languageCode );
+        if ( pTable == nullptr || pTable->loadFromResource( assetRelativePath ) == false )
         {
-            SW_LOG_WARNING( "Failed to read language resource: %#", assetRelativePath );
+            SW_LOG_WARNING( "Failed to load language resource: %#", assetRelativePath );
             return false;
         }
 
-        bool bSuccess = loadLanguageFromText( languageCode, assetRelativePath, text );
-        if ( bSuccess )
-            SW_LOG_INFO( "Loaded language '%#' from resource '%#'.", string( languageCode ).c_str(), string( absPath ).c_str() );
-
-        return bSuccess;
+        markLanguageLoaded( languageCode );
+        SW_LOG_INFO( "Loaded language '%#' from resource '%#'.", string( languageCode ).c_str(), string( assetRelativePath ).c_str() );
+        return true;
     }
 
-    bool LocalizationManager::loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text )
+    void LocalizationManager::markLanguageLoaded( string_view languageCode )
     {
-        switch ( StringTable::detectTextFormat( pathHint ) )
-        {
-            case StringTableTextFormat::Xml:
-                return loadLanguageXml( languageCode, text );
-            case StringTableTextFormat::KeyValue:
-                return loadLanguageKeyValue( languageCode, text );
-            case StringTableTextFormat::Json:
-            default:
-                return loadLanguageJson( languageCode, text );
-        }
+        std::unique_lock<std::shared_mutex> lock( _mutex );
+        if ( _currentLanguage.empty() )
+            _currentLanguage = languageCode;
     }
 
     bool LocalizationManager::loadLanguageJson( string_view languageCode, string_view jsonText )
@@ -146,11 +136,7 @@ namespace sw
 
         const bool bSuccess = pTable->loadFromJsonText( jsonText );
         if ( bSuccess )
-        {
-            std::unique_lock<std::shared_mutex> lock( _mutex );
-            if ( _currentLanguage.empty() )
-                _currentLanguage = languageCode;
-        }
+            markLanguageLoaded( languageCode );
         return bSuccess;
     }
 
@@ -165,11 +151,7 @@ namespace sw
 
         const bool bSuccess = pTable->loadFromXmlText( xmlText );
         if ( bSuccess )
-        {
-            std::unique_lock<std::shared_mutex> lock( _mutex );
-            if ( _currentLanguage.empty() )
-                _currentLanguage = languageCode;
-        }
+            markLanguageLoaded( languageCode );
         return bSuccess;
     }
 
@@ -184,11 +166,7 @@ namespace sw
 
         const bool bSuccess = pTable->loadFromKeyValueText( kvText );
         if ( bSuccess )
-        {
-            std::unique_lock<std::shared_mutex> lock( _mutex );
-            if ( _currentLanguage.empty() )
-                _currentLanguage = languageCode;
-        }
+            markLanguageLoaded( languageCode );
         return bSuccess;
     }
 

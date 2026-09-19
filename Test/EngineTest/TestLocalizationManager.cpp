@@ -574,6 +574,103 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
 }
 
 /**
+ * @brief [LocalizationManagerTest] `.bin` 언어 파일이 매니저 경로로도 읽히는지 검증
+ * @details `initialize` 는 언어 디렉터리에서 `.bin` 을 **일부러 찾아 주고**,
+ *          `StringTable::saveToBinaryFile` 이 바로 그 파일을 구워 낸다. 그런데 매니저가 확장자
+ *          분기를 `StringTable` 과 따로 들고 있었고 그 사본만 `.bin` 을 몰랐다 — 파일을 텍스트로
+ *          읽어 JSON 파서에 넣었으므로 **구워 낸 파일이 하나도 읽히지 않았다.** 지금까지의
+ *          바이너리 테스트는 전부 `StringTable` 을 직접 부르거나 `loadFromBinaryPack` 을 썼기
+ *          때문에 이 사이의 구멍을 지나가지 않았다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager )
+{
+    const sw::string tempDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_loc_bin_dir" );
+    sw::FileUtil::ensureDirectoryExists( tempDir );
+
+    const sw::hashed_string kKeyWelcome{ "MSG_WELCOME" };
+    const sw::string        pathKo = sw::FileUtil::joinPath( tempDir, "ko_KR.bin" );
+    const sw::string        pathEn = sw::FileUtil::joinPath( tempDir, "en_US.bin" );
+    sw::FileUtil::removeFile( pathKo );
+    sw::FileUtil::removeFile( pathEn );
+
+    BLOCK( "엔진이 실제로 내놓는 형식 그대로 굽는다" )
+    {
+        sw::StringTable tableKo;
+        tableKo.setString( kKeyWelcome, "환영합니다!" );
+        SW_ASSERT_TRUE( tableKo.saveToBinaryFile( pathKo ) );
+
+        sw::StringTable tableEn;
+        tableEn.setString( kKeyWelcome, "Welcome!" );
+        SW_ASSERT_TRUE( tableEn.saveToBinaryFile( pathEn ) );
+    }
+
+    BLOCK( "파일 하나를 언어로 직접 읽는다" )
+    {
+        sw::LocalizationManager loc;
+        SW_EXPECT_TRUE( loc.loadLanguageFile( "ko_KR", pathKo ) );
+        SW_EXPECT_STREQ( "환영합니다!", loc.getStringFromLanguage( "ko_KR", kKeyWelcome ) );
+    }
+
+    BLOCK( "디렉터리째 읽는다 — initialize 가 .bin 에 쓰는 바로 그 경로다" )
+    {
+        sw::LocalizationManager loc;
+        SW_EXPECT_TRUE( loc.loadLanguageDirectory( tempDir, ".bin" ) );
+        SW_EXPECT_STREQ( "환영합니다!", loc.getStringFromLanguage( "ko_KR", kKeyWelcome ) );
+        SW_EXPECT_STREQ( "Welcome!", loc.getStringFromLanguage( "en_US", kKeyWelcome ) );
+    }
+
+    sw::FileUtil::removeFile( pathKo );
+    sw::FileUtil::removeFile( pathEn );
+    sw::FileUtil::removeFile( tempDir );
+}
+
+/**
+ * @brief [LocalizationManagerTest] 바이너리 헤더의 항목 개수가 버퍼 크기로 제한되는지 검증
+ * @details `count` 는 파일에서 오는 값인데 그대로 `reserve` 에 들어갔다. 망가진 헤더 하나면
+ *          항목을 **한 개도 읽어 보기 전에** 4G 개의 버킷을 요구한다. 루프 안의 범위 검사는
+ *          그 뒤에야 도는 터라 아무것도 막지 못했다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, BinaryHeaderEntryCountIsBoundedByTheBuffer )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    sw::StringTable sourceTable;
+    sourceTable.setString( sw::hashed_string( "KEY_A" ), "Apple" );
+
+    sw::vector<uint8> buffer;
+    SW_ASSERT_TRUE( sourceTable.saveToBinaryBuffer( buffer ) );
+    SW_ASSERT_TRUE( buffer.size() > 12 );
+
+    // 헤더의 세 번째 uint32(=개수)만 거짓말로 바꾼다 — 나머지 바이트는 그대로 멀쩡하다.
+    auto withEntryCount = [&]( uint32 count )
+    {
+        sw::vector<uint8> corruptedByte = buffer;
+        corruptedByte[8]                = static_cast<uint8>( count & 0xFFu );
+        corruptedByte[9]                = static_cast<uint8>( ( count >> 8 ) & 0xFFu );
+        corruptedByte[10]               = static_cast<uint8>( ( count >> 16 ) & 0xFFu );
+        corruptedByte[11]               = static_cast<uint8>( ( count >> 24 ) & 0xFFu );
+        return corruptedByte;
+    };
+
+    BLOCK( "버퍼가 담을 수 없는 개수면 한 항목도 읽지 않고 거절한다" )
+    {
+        const sw::vector<uint8> corruptedByte = withEntryCount( 1000 );
+        sw::StringTable         table;
+        SW_EXPECT_FALSE( table.loadFromBinaryBuffer( corruptedByte.data(), corruptedByte.size() ) );
+        // 고치기 전에는 멀쩡한 첫 항목을 **넣고 나서** 다음 항목에서야 실패를 알아차렸다.
+        SW_EXPECT_EQUAL( size_t( 0 ), table.size() );
+    }
+
+    BLOCK( "uint32 최대치도 즉시 거절한다 — reserve 가 자리를 요구하기 전에" )
+    {
+        const sw::vector<uint8> corruptedByte = withEntryCount( ~uint32{ 0 } );
+        sw::StringTable         table;
+        SW_EXPECT_FALSE( table.loadFromBinaryBuffer( corruptedByte.data(), corruptedByte.size() ) );
+        SW_EXPECT_EQUAL( size_t( 0 ), table.size() );
+    }
+}
+
+/**
  * @brief [GameFramework] GameModeStateMachine 상태 전환, 핸들러 호출 및 델리게이트 알림 검증
  */
 SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )

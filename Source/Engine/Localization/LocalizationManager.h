@@ -155,7 +155,8 @@ namespace sw
         void unregisterLanguageChangedCallback( uint32 callbackId );
 
     private:
-        bool loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text );
+        /** @brief 한 언어가 처음 들어왔을 때 활성 언어가 비어 있으면 그 언어로 세웁니다. */
+        void markLanguageLoaded( string_view languageCode );
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
         /**
          * @brief 미리 구한 해시로 활성 언어 → 폴백 언어 순으로 한 번만 훑습니다.

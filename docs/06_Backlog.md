@@ -435,6 +435,68 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (구워 낸 `.bin` 언어 파일이 하나도 읽히지 않았다)
+
+`StringTable` 은 확장자를 보고 `.bin` 이면 바이너리로 읽는다(`loadFromFile`·`loadFromResource` 둘 다).
+`LocalizationManager` 는 **그 분기를 따로 한 벌 더 들고 있었고, 그 사본만 `.bin` 을 몰랐다** —
+파일을 텍스트로 읽은 뒤 확장자 판별의 기본값인 JSON 파서에 넣었다. 그래서:
+
+- `StringTable::saveToBinaryFile` 이 구워 낸 언어 파일은 **매니저로는 한 개도 읽히지 않았다.**
+- `initialize` 는 언어 디렉터리에서 `.bin` 을 **일부러 찾아 준다**(`loadLanguageDirectory( dir, ".bin", true )`).
+  그 줄은 처음부터 끝까지 실패하는 일만 했다.
+
+기존 바이너리 테스트가 이것을 지나친 이유가 분명하다 — 전부 `StringTable` 을 **직접** 부르거나
+(`StringTableAndLocalizationBinaryCooking`) `loadFromBinaryPack` 을 썼다. 매니저의 파일 경로로
+`.bin` 이 들어가 본 적이 없었다. 둘 사이의 구멍이라 양쪽 테스트가 다 초록이었다.
+
+고친 방식은 **분기를 없애는 쪽**이다. `loadLanguageFile`/`loadLanguageResource` 가 직접 읽는 대신
+`StringTable::loadFromFile`/`loadFromResource` 에 맡긴다. 확장자를 보고 무엇을 할지 고르는 지식이
+한 곳에만 남으므로 다시 갈라질 수 없다. 사라진 사본과 함께 `loadLanguageFromText` 와 파서 헤더
+셋(`KeyValueFile`/`JsonDocument`/`XmlDocument`)도 필요 없어졌고, 세 텍스트 로더에 세 번 복사돼
+있던 "활성 언어가 비어 있으면 세운다" 블록은 `markLanguageLoaded` 하나로 모았다.
+
+**검증.** `LocalizationManagerTest.BinaryLanguageFileLoadsThroughTheManager`. 되돌리면 5개 단언이
+진다(파일 하나 직접 + 디렉터리째, 양쪽 다).
+
+### 2026-09-19 (바이너리 헤더가 적어 낸 항목 개수를 그대로 믿었다)
+
+`StringTable::loadFromBinaryBuffer` 는 파일에서 읽은 `count` 를 검사 없이 `_mapTable.reserve` 에
+넘겼다. 루프 안에는 범위 검사가 있지만 **`reserve` 가 그보다 먼저 돈다** — 망가진 헤더 하나면
+항목을 한 개도 읽어 보기 전에 죽는다.
+
+숫자로 재 봤다. 개수 칸만 `0xFFFFFFFF` 로 바꾼 40바이트짜리 버퍼를 먹이면 **72.5초**가 걸린다
+(고친 뒤에는 1ms 다). `reserve` 는 `_listBucket.assign( count, ... )` 이라 실제로 40억 개의 자리를
+요구한다. 파일 하나로 프로세스를 세울 수 있었다는 뜻이다.
+
+항목 하나는 아무리 짧아도 키 해시(8) + 길이(4) = 12바이트이므로 **남은 바이트가 곧 정확한 상한**이다
+— 임의의 상한을 고르지 않아도 된다. 같은 자리의 `pPtr + strLen > pEnd` 류도 뺄셈 형태로 바꿨다
+(버퍼 끝을 한 칸 넘어선 포인터는 만드는 것 자체가 규약 밖이다. 압축 헤더에서 고친 것과 같은 모양이다).
+
+**검증.** `LocalizationManagerTest.BinaryHeaderEntryCountIsBoundedByTheBuffer`. 되돌리면 두 단언이
+지는데, 진 이유가 두 가지다 — 개수가 1000 일 때는 **멀쩡한 첫 항목을 넣고 나서** 다음 항목에서야
+실패를 알아차려 `size()` 가 1 이고, `0xFFFFFFFF` 일 때는 위의 72.5초가 그대로 나온다.
+
+### 2026-09-19 (`SW_EXPECT_STREQ` 가 널을 받으면 테스트 바이너리를 통째로 죽였다)
+
+위 `.bin` 테스트를 변이로 돌리다 발견했다. 매크로는 받은 값으로 바로 `sw::string` 을 만들었다:
+
+```cpp
+const sw::string _sw_expect_streq_a( actual );   // actual 이 널이면 여기서 죽는다
+```
+
+`getStringFromLanguage` 처럼 **널을 돌려줄 수 있는** `const utf8*` 게터를 넣으면 프로세스가 그대로
+내려간다. 실패를 찍기도 전에 죽으므로 **그 파일의 뒤쪽 케이스가 통째로 사라지고**, 어느 단언이
+문제였는지도 남지 않는다. 실제로 처음 변이 실행에서 단언 하나만 `[FAILED]` 로 찍히고 요약도 없이
+끝났다 — 다섯 개가 물어야 할 자리였다.
+
+**널을 돌려주기 시작한 회귀야말로 이 매크로가 가장 잡아야 할 것인데, 정확히 그때 못 잡았다.**
+`test::toComparableText` / `test::isNullText` 로 널을 `<null>` 로 찍되 **널 여부는 따로 비교한다**
+(그러지 않으면 진짜 `"<null>"` 문자열과 널이 같다고 나온다). 고친 뒤 같은 변이가 5개 단언을
+`Expected [환영합니다!], Actual [<null>]` 로 정확히 찍는다.
+
+> 이 저장소에서 "테스트가 안 물었다" 를 몇 번 겪었는데, 여기는 **테스트가 물었는데 그 결과가
+> 전달되지 못한** 경우다. 변이 테스트를 할 때 *깨끗하게 실패했는지* 까지 봐야 하는 이유다.
+
 ### 2026-09-19 (구조 버퍼 크기 곱셈 — DX12 만 고쳐져 있었다)
 
 `createStructuredBuffer( elementSize, elementCount )` 는 네 백엔드가 각자 곱한다. **DX12 만 64비트로
