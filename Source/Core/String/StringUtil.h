@@ -178,9 +178,18 @@ namespace sw
         /** @brief 문자열 길이를 반환합니다. */
         static uint32 strlen( const utf16* pStr );
 
-        /** @brief 지정된 길이(length)만큼 문자를 안전하게 복사합니다. */
+        /**
+         * @brief 원본을 목적지에 복사합니다. **언제나 NUL 로 끝나고**, 들어가지 않으면 자릅니다.
+         * @param length 목적지 **버퍼의 크기**입니다(문자 수). 종결자 자리를 포함합니다.
+         * @details 예전에는 플랫폼마다 **다르게** 동작했다. Windows 는 `strncpy_s( dst, length,
+         *          src, length )` 라 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로
+         *          만들고** 잘못된 파라미터 핸들러를 부른다. Linux · macOS 는 `::strncpy` 라
+         *          `length` 글자를 복사하고 **종결자를 붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지
+         *          훑는다. 이름이 "안전하게 복사" 라고 말하는데 어느 쪽도 그렇지 않았다.
+         *          자를 때도 반드시 끝을 맺는 하나의 규약으로 맞춘다.
+         */
         static void strncpy( utf8* pOutDest, const utf8* pSource, uint32 length );
-        /** @brief 문자를 안전하게 복사합니다. */
+        /** @brief 위와 같습니다 — 언제나 NUL 로 끝나고, 들어가지 않으면 자릅니다. */
         static void strncpy( utf16* pOutDest, const utf16* pSource, uint32 length );
 
         /** @brief 부분 문자열(substr)이 처음으로 나타나는 위치를 반환합니다. */

@@ -10,6 +10,31 @@ namespace sw
     {
         struct StringUtilInternal
         {
+            /**
+             * @brief 목적지 버퍼에 원본을 채우고 **반드시** NUL 로 끝맺습니다. 들어가지 않으면 자릅니다.
+             * @details 두 오버로드(utf8 · utf16)가 같은 규약을 갖게 하려고 한 곳에 둔다. 예전에는
+             *          각자 플랫폼 함수를 불렀고, 그래서 **플랫폼마다 답이 달랐다.**
+             */
+            template <typename CharType>
+            static void copyTerminated( CharType* pOutDest, const CharType* pSource, uint32 length )
+            {
+                if ( pOutDest == nullptr || length == 0 )
+                    return;
+                if ( pSource == nullptr )
+                {
+                    pOutDest[0] = CharType{};
+                    return;
+                }
+
+                uint32 copiedCount = 0;
+                while ( copiedCount + 1 < length && pSource[copiedCount] != CharType{} )
+                {
+                    pOutDest[copiedCount] = pSource[copiedCount];
+                    ++copiedCount;
+                }
+                pOutDest[copiedCount] = CharType{};
+            }
+
             static constexpr uint32 kMaxUnicodeCodepoint = 0x10FFFF;
             static constexpr uint32 kSurrogateBegin      = 0xD800;
             static constexpr uint32 kSurrogateEnd        = 0xDFFF;
@@ -949,24 +974,12 @@ namespace sw
 
     void StringUtil::strncpy( utf8* pOutDest, const utf8* pSource, const uint32 length )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        strncpy_s( pOutDest, length, pSource, length );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-        ::strncpy( pOutDest, pSource, length );
-#else
-    #error "Unsupported platform"
-#endif
+        StringUtilInternal::copyTerminated( pOutDest, pSource, length );
     }
 
     void StringUtil::strncpy( utf16* pOutDest, const utf16* pSource, const uint32 length )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        wcsncpy_s( pOutDest, length, pSource, length );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-        ::wcsncpy( pOutDest, pSource, length );
-#else
-    #error "Unsupported platform"
-#endif
+        StringUtilInternal::copyTerminated( pOutDest, pSource, length );
     }
 
     const utf8* StringUtil::strstr( const utf8* pStr, const utf8* pSubstr )

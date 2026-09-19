@@ -1279,3 +1279,50 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
     SW_EXPECT_STREQ( "v=1234567 3.500000", direct );
     SW_EXPECT_STREQ( "v=1234567 3", tight );
 }
+
+/**
+ * @brief [StringTest] strncpy 가 플랫폼과 무관하게 **언제나 끝을 맺고** 넘치면 자르는지 검증
+ * @details 예전에는 플랫폼마다 답이 달랐다. Windows 는 `strncpy_s( dst, length, src, length )`
+ *          라 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 파라미터
+ *          핸들러를 부른다. Linux · macOS 는 `::strncpy` 라 `length` 글자를 복사하고 **종결자를
+ *          붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다. 이름은 "안전하게 복사" 인데
+ *          어느 쪽도 그렇지 않았고, 같은 코드가 WSL 빌드에서 다르게 움직였다.
+ */
+SW_TEST_CASE( StringTest, StrncpyAlwaysTerminatesAndTruncates )
+{
+    BLOCK( "들어가는 경우 — 그대로 복사하고 끝을 맺는다" )
+    {
+        utf8 buffer[16]{};
+        sw::StringUtil::strncpy( buffer, "Hero", 16 );
+        SW_EXPECT_STREQ( "Hero", buffer );
+    }
+
+    BLOCK( "안 들어가는 경우 — 자르되 반드시 끝을 맺는다" )
+    {
+        // 마지막 칸까지 미리 더럽혀 두고, 종결자가 실제로 쓰이는지 본다.
+        utf8 buffer[5] = { 'X', 'X', 'X', 'X', 'X' };
+        sw::StringUtil::strncpy( buffer, "HeroPlayer", 5 );
+        SW_EXPECT_STREQ( "Hero", buffer );
+    }
+
+    BLOCK( "길이 0 이면 아무것도 건드리지 않는다" )
+    {
+        utf8 buffer[4] = { 'a', 'b', 'c', '\0' };
+        sw::StringUtil::strncpy( buffer, "zzz", 0 );
+        SW_EXPECT_STREQ( "abc", buffer );
+    }
+
+    BLOCK( "널 원본이면 빈 문자열이 된다" )
+    {
+        utf8 buffer[4] = { 'a', 'b', 'c', '\0' };
+        sw::StringUtil::strncpy( buffer, static_cast<const utf8*>( nullptr ), 4 );
+        SW_EXPECT_STREQ( "", buffer );
+    }
+
+    BLOCK( "utf16 판도 같은 규약이다" )
+    {
+        utf16 buffer[5] = { L'X', L'X', L'X', L'X', L'X' };
+        sw::StringUtil::strncpy( buffer, L"HeroPlayer", 5 );
+        SW_EXPECT_EQUAL( size_t( 4 ), sw::wstring_view( buffer ).size() );
+    }
+}

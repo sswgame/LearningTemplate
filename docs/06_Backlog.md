@@ -435,6 +435,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (StringUtil::strncpy 가 플랫폼마다 다르게 동작했다)
+
+이름은 *"지정된 길이만큼 문자를 **안전하게** 복사합니다"* 인데, 두 갈래가 서로 다른 일을 했다:
+
+```cpp
+#if defined( SW_PLATFORM_WINDOWS )
+    strncpy_s( pOutDest, length, pSource, length );   // 안 들어가면 목적지를 **비우고** 핸들러 호출
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+    ::strncpy( pOutDest, pSource, length );           // `length` 글자만 복사하고 **끝을 안 맺는다**
+#endif
+```
+
+- **Windows**: `count >= destsz` 이고 원본이 더 길면 `strncpy_s` 는 목적지를 빈 문자열로 만들고
+  잘못된 파라미터 핸들러를 부른다 — 변이 실행에서 **프로세스가 그대로 죽었다**(exit 3).
+- **Linux · macOS**: 종결자가 없다. 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다.
+
+어느 쪽도 "안전하게" 가 아니고, 같은 코드가 WSL 빌드에서 다르게 움직였다. 두 오버로드가 한
+헬퍼(`StringUtilInternal::copyTerminated`)를 쓰게 해서 **언제나 NUL 로 끝나고 들어가지 않으면
+자르는** 하나의 규약으로 맞췄다(strlcpy 형태). `length` 는 목적지 **버퍼 크기**라는 것도
+헤더에 적었다 — 그 모호함이 애초 원인이다.
+
+> 엔진 안에는 호출부가 없고 테스트 둘만 쓰고 있었다. 그래서 고르는 길은 "지우거나 바로잡거나"
+> 였는데(이 훑기에서 컴포넌트 이동 연산은 지우는 쪽을 골랐다), 이쪽은 **쓰임새가 분명한
+> 기본 도구**라 바로잡는 쪽이 맞다 — 첫 엔진 호출자가 밟을 지뢰를 남겨 둘 이유가 없다.
+
+**검증.** `StringTest.StrncpyAlwaysTerminatesAndTruncates`(들어가는 경우 · 자르는 경우 ·
+길이 0 · 널 원본 · utf16). 되돌리면 자르는 블록에서 프로세스가 죽는다.
+
+**살펴보고 문제 없던 것 (Core/String).** `stristr` 는 남은 길이를 재지 않고
+`string_view( pStr, subLen )` 을 만들지만, `equals` 가 첫 불일치에서 멈추고 건초더미의 NUL 이
+바늘의 어떤 글자와도 다르므로 읽기가 종결자에서 끝난다 — 범위 밖으로 나가지 않는다.
+
 ### 2026-09-20 (sparse_set::emplace 가 칸을 먼저 지우고 그 지워진 것에서 지었다)
 
 같은 키로 다시 `emplace` 하면 그 칸을 **제자리에서 지우고 다시 지었다:**
