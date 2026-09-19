@@ -503,6 +503,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (임포트가 같은 이름의 자산을 아무 말 없이 덮었다)
+
+`EditorAssetCommands::importFiles` 는 `ResourceUtil::makeSavePath` 가 준 경로로 그냥 복사했다.
+그 함수는 폴더와 파일 이름을 잇기만 하므로, 같은 이름의 파일을 끌어다 놓으면 폴더에 있던 것이
+**아무 말 없이 사라진다** — 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 원래 있던
+것과 **같은 파일**인 경우는 바로 위에서 경로 비교로 이미 걸러지므로, 거기까지 오는 것은 다른
+파일인데 이름만 같은 경우다.
+
+`ResourceUtil::makeUniqueSavePath` 를 만들어 확장자 앞에 `_2` · `_3` … 을 붙인다(게임 오브젝트
+이름을 고르는 `makeUniqueNameUnlocked` 와 같은 규약). 같은 파일에서 하나 더: `deleteAsset` 이
+`".meta"` 를 리터럴로 적고 있었다 — `path::kMetaExtension` 이 정본이다.
+
 ### 2026-09-20 (같은 날 넣은 이중 반납 단언이 틀렸다 — "가득 참" 은 이중 반납이 아니다)
 
 이번 세션 앞쪽(`b94b2818`)에서 `LockFreeObjectPool::release` 에 "자유 큐가 가득 찼다 = 이 포인터가

@@ -139,6 +139,17 @@ namespace sw
          */
         static string makeSavePath( string_view absoluteFolder, string_view fileName );
 
+        /**
+         * @brief 저장/임포트용 절대 파일 경로를 만들되, **이미 있는 파일을 가리키지 않게** 합니다.
+         * @details 경로 규칙은 `makeSavePath` 와 같고, 그 자리에 파일이 이미 있으면 확장자 앞에
+         *          `_2` · `_3` … 을 붙여 비어 있는 이름을 찾는다. 게임 오브젝트 이름을 고를 때
+         *          쓰는 `GameObjectManager::makeUniqueNameUnlocked` 와 같은 규약이다.
+         * @note 이름을 고르는 것과 파일을 만드는 것 사이에는 틈이 있다 — 그 사이에 다른 프로세스가
+         *       같은 이름을 만들면 겹칠 수 있다. 에디터의 임포트는 한 스레드에서 도므로 이걸로 충분하다.
+         * @return 비어 있는 절대 경로. 후보를 다 써도 못 찾으면 `makeSavePath` 와 같은 경로.
+         */
+        static string makeUniqueSavePath( string_view absoluteFolder, string_view fileName );
+
     private:
         static atomic<bool>   _s_bInitialize;            ///< initialize() 완료 여부
         static string         _s_projectFolderPath;      ///< 프로젝트 루트

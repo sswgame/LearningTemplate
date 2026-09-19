@@ -585,6 +585,33 @@ namespace sw
         return result;
     }
 
+    string ResourceUtil::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
+    {
+        const string basePath = makeSavePath( absoluteFolder, fileName );
+        if ( basePath.empty() || FileUtil::fileExists( basePath ) == false )
+            return basePath;
+
+        const string stem      = FileUtil::removeExtension( basePath );
+        const string extension = FileUtil::getExtension( basePath );
+
+        // 오브젝트 이름과 같은 규약으로 센다 — 2 부터, 넉넉한 곳에서 멈춘다.
+        StringBuilder<constant::kMaxBuffer512> sb;
+        for ( uint32 nameSuffix = 2; nameSuffix < 10000; ++nameSuffix )
+        {
+            sb.clear();
+            sb.append( stem ).append( '_' ).append( nameSuffix ).append( extension );
+            const string candidate{ sb.view() };
+            if ( FileUtil::fileExists( candidate ) == false )
+            {
+                SW_LOG_WARNING( "Name already taken '%#' — using '%#'", basePath, candidate );
+                return candidate;
+            }
+        }
+
+        SW_LOG_WARNING( "Could not find a free name near '%#' — overwriting.", basePath );
+        return basePath;
+    }
+
     atomic<bool> ResourceUtil::_s_bInitialize{ false };
 
     string ResourceUtil::_s_projectFolderPath;

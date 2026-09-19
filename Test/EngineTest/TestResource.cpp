@@ -116,6 +116,53 @@ SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
 }
 
 /**
+ * @brief [ResourceTest] 저장 경로가 이미 있는 파일을 가리키지 않는다
+ * @details `makeSavePath` 는 폴더와 파일 이름을 잇기만 한다 — 그 자리에 이미 파일이 있어도 같은
+ *          경로를 돌려준다. 에디터의 임포트가 그 경로로 그냥 복사해서, 같은 이름의 파일을 끌어다
+ *          놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다**(임포트에는 되돌리기가 없다).
+ *          `makeUniqueSavePath` 는 확장자 앞에 `_2` · `_3` … 을 붙여 빈 자리를 찾는다.
+ */
+SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string tempFolder = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_unique_save" );
+    sw::FileUtil::ensureDirectoryExists( tempFolder );
+    SW_ASSERT_TRUE( sw::FileUtil::directoryExists( tempFolder ) );
+
+    const sw::string firstPath  = sw::ResourceUtil::makeUniqueSavePath( tempFolder, "hero.png" );
+    const sw::string secondPath = sw::FileUtil::joinPath( tempFolder, "hero_2.png" );
+    const sw::string thirdPath  = sw::FileUtil::joinPath( tempFolder, "hero_3.png" );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [firstPath, secondPath, thirdPath]()
+    {
+        sw::FileUtil::removeFile( firstPath );
+        sw::FileUtil::removeFile( secondPath );
+        sw::FileUtil::removeFile( thirdPath );
+    } ) );
+
+    sw::FileUtil::removeFile( firstPath );
+    sw::FileUtil::removeFile( secondPath );
+    sw::FileUtil::removeFile( thirdPath );
+
+    // 비어 있으면 `makeSavePath` 와 같은 경로다.
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( firstPath, sw::ResourceUtil::makeSavePath( tempFolder, "hero.png" ) ) );
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( firstPath, "first" ) );
+    const sw::string afterOne = sw::ResourceUtil::makeUniqueSavePath( tempFolder, "hero.png" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::pathsEqualNormalized( afterOne, secondPath ), afterOne.c_str() );
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( secondPath, "second" ) );
+    const sw::string afterTwo = sw::ResourceUtil::makeUniqueSavePath( tempFolder, "hero.png" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::pathsEqualNormalized( afterTwo, thirdPath ), afterTwo.c_str() );
+
+    // 앞서 쓴 것들이 그대로 남아 있어야 한다 — 덮지 않는 것이 이 함수의 전부다.
+    sw::string keptFirst;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( firstPath, keptFirst ) );
+    SW_EXPECT_STREQ( "first", keptFirst.c_str() );
+}
+
+/**
  * @brief [ResourceTest] formatVersion=0 passthrough; legacy unmigrated XML은 거부
  */
 SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )

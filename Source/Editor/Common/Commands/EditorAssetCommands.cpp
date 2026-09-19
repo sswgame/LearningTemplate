@@ -613,13 +613,18 @@ namespace sw::editor
             }
 
             const string fileName = FileUtil::getFileNamePart( sourcePath );
-            const string destPath = ResourceUtil::makeSavePath( destFolderAbs, fileName );
 
-            if ( FileUtil::pathsEqualNormalized( sourcePath, destPath ) )
+            if ( FileUtil::pathsEqualNormalized( sourcePath, ResourceUtil::makeSavePath( destFolderAbs, fileName ) ) )
             {
                 SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
                 continue;
             }
+
+            // **이미 있는 자산을 덮지 않는다.** 예전에는 `makeSavePath` 가 준 경로로 그냥 복사해서,
+            // 같은 이름의 파일을 끌어다 놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다** — 에디터의
+            // 임포트에는 되돌리기가 없으므로 그대로 잃는다. "원래 있던 것과 같은 파일인가" 는 바로
+            // 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은** 경우다.
+            const string destPath = ResourceUtil::makeUniqueSavePath( destFolderAbs, fileName );
 
             FileUtil::createParentDirectory( destPath );
             if ( FileUtil::copyFile( sourcePath, destPath ) == false )
@@ -647,7 +652,7 @@ namespace sw::editor
             return false;
         const string abs{ absolutePath };
         const bool   bRemoved = FileUtil::removeFile( abs );
-        const string metaPath = abs + ".meta";
+        const string metaPath = abs + path::kMetaExtension;
         if ( FileUtil::fileExists( metaPath ) )
             FileUtil::removeFile( metaPath );
         return bRemoved;
