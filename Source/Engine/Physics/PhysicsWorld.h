@@ -55,6 +55,13 @@ namespace sw
         /** @brief 레이어 필터를 반환합니다. */
         const CollisionLayers& layers() const { return _layers; }
 
+        /**
+         * @brief 셀 표에 들어 있는 셀 수입니다(진단용).
+         * @details 큰 바디가 그리드를 부풀리지 않는지 재는 데 씁니다 — 질의 결과로는 보이지 않는
+         *          비용이라 숫자로 봐야 합니다.
+         */
+        size_t getGridCellCount() const;
+
     private:
         struct CellCoord
         {
@@ -88,6 +95,21 @@ namespace sw
          *          질의 종류에 따라 다른 문턱이 된다.
          */
         static constexpr int64 kMaxQueryCellCount = 1024;
+
+        /**
+         * @brief 바디 하나가 이 셀 수를 넘게 덮으면 그리드에 넣지 않고 **언제나 후보**로 둡니다.
+         * @details 질의 쪽에는 상한이 있었는데 **삽입 쪽에는 없었다.** 큰 지형·바닥 콜라이더 하나가
+         *          자기 AABB 가 덮는 모든 셀에 핸들을 적으므로, 20,000 유닛짜리 바닥이면 셀 표에
+         *          **한 바디 때문에 십만 개 가까운 항목**이 생긴다(64 유닛 셀 기준). `setAabb` 로
+         *          움직이기라도 하면 그만큼을 매번 지웠다 다시 적는다.
+         *
+         *          넘치는 바디는 그리드에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드로 가는 질의가
+         *          그 목록을 **항상 함께** 본다. 그런 바디는 수가 적고 어차피 거의 모든 질의에
+         *          걸리므로, 셀에 흩어 두는 것이 이득이 되지 않는다.
+         * @note `kMaxQueryCellCount` 와 값이 같지만 **다른 질문**이다(질의 범위가 넓은가 / 바디가 큰가).
+         *       한쪽 사정으로 값을 바꿀 수 있어야 하므로 별칭을 두지 않고 따로 적는다.
+         */
+        static constexpr int64 kMaxBodyCellCount = 1024;
 
         /**
          * @struct CellRange
@@ -150,6 +172,9 @@ namespace sw
         void insertBodyToGrid( BodyHandle handle, const AABB& aabb );
         void removeBodyFromGrid( BodyHandle handle, const AABB& aabb );
 
+        /** @brief 이 AABB 는 그리드에 흩뿌리기에 너무 큰가 — 순수하게 AABB 만으로 정해집니다. */
+        static bool isOversizedForGrid( const AABB& aabb );
+
         /** @brief 그리드를 훑기보다 전체 바디를 도는 편이 나은가 — 범위가 비었거나 너무 넓으면 그렇습니다. */
         bool shouldScanAllBodies( const CellRange& range ) const;
         /** @brief 범위가 덮는 셀들의 바디 핸들을 **중복 없이** 모읍니다. */
@@ -160,5 +185,7 @@ namespace sw
         HandleTable<PhysicsBody>                                    _bodies;
         CollisionLayers                                             _layers;
         unordered_map<CellCoord, vector<BodyHandle>, CellCoordHash> _mapGrid;
+        /** @brief 그리드에 넣기엔 너무 큰 바디들. 그리드로 가는 질의가 **항상 함께** 봅니다. */
+        vector<BodyHandle> _listOversizedBody;
     };
 } // namespace sw

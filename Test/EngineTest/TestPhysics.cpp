@@ -392,3 +392,66 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
         SW_EXPECT_EQUAL( size_t( 0 ), findAtPoint( 190.0f, 190.0f, 190.0f ) );
     }
 }
+
+/**
+ * @brief [PhysicsTest] 큰 바디 하나가 셀 표를 불리지 않는지, 그러면서도 여전히 찾아지는지 검증
+ * @details 질의 쪽에는 셀 상한(`kMaxQueryCellCount`)이 있는데 **삽입 쪽에는 없었다.**
+ *          `insertBodyToGrid` 는 AABB 가 덮는 모든 셀에 핸들을 적으므로, 20,000 유닛짜리 바닥
+ *          콜라이더 하나면 64 유닛 셀 기준으로 셀 표에 **십만 칸 가까이** 생긴다 — 바디는
+ *          하나인데. `setAabb` 로 움직이면 그만큼을 매번 지웠다 다시 적는다.
+ *
+ *          큰 바디는 그리드에 흩뿌리는 대신 목록 하나에 모으고, 그리드로 가는 질의가 그것을
+ *          항상 함께 본다. 그래서 이 케이스는 **둘 다** 본다: 표가 작게 남는가, 그리고
+ *          그럼에도 질의가 그 바디를 찾아내는가.
+ */
+SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
+{
+    PhysicsWorld world;
+    world.layers().setLayerCollision( 0, 0, true );
+
+    // 20,000 x 10 x 20,000 — 흔한 지형/바닥 콜라이더 크기다.
+    AABB ground;
+    ground._min = float3( -10000.0f, -5.0f, -10000.0f );
+    ground._max = float3( 10000.0f, 5.0f, 10000.0f );
+
+    const PhysicsWorld::BodyHandle groundHandle = world.addBody( ground, 0, 1 );
+    SW_ASSERT_TRUE( groundHandle.isValid() );
+
+    // 셀 하나에 들어가는 평범한 바디도 하나 둔다.
+    AABB crate;
+    crate._min                                 = float3( 0.0f, 0.0f, 0.0f );
+    crate._max                                 = float3( 2.0f, 2.0f, 2.0f );
+    const PhysicsWorld::BodyHandle crateHandle = world.addBody( crate, 0, 2 );
+    SW_ASSERT_TRUE( crateHandle.isValid() );
+
+    // 고치기 전에는 여기가 십만 가까이 됐다. 지금은 상자가 차지한 셀들뿐이다.
+    SW_EXPECT_TRUE( world.getGridCellCount() < 16 );
+
+    // 그런데도 바닥은 여전히 찾아져야 한다 — 셀에 없다는 것이 답을 바꾸면 안 된다.
+    AABB probe;
+    probe._min = float3( 0.5f, -1.0f, 0.5f );
+    probe._max = float3( 1.5f, 1.0f, 1.5f );
+
+    vector<PhysicsWorld::BodyHandle> listHit;
+    world.queryAabb( probe, 0, listHit );
+
+    bool bFoundGround = false;
+    bool bFoundCrate  = false;
+    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    {
+        if ( handle == groundHandle )
+            bFoundGround = true;
+        if ( handle == crateHandle )
+            bFoundCrate = true;
+    }
+    SW_EXPECT_TRUE( bFoundGround );
+    SW_EXPECT_TRUE( bFoundCrate );
+
+    // 큰 바디를 지우면 목록에서도 빠져야 한다 — 넣을 때와 뺄 때의 판단이 같아야 성립한다.
+    world.removeBody( groundHandle );
+    world.queryAabb( probe, 0, listHit );
+    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    {
+        SW_EXPECT_TRUE( handle != groundHandle );
+    }
+}

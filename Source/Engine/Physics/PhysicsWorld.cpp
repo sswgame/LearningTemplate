@@ -55,6 +55,18 @@ namespace sw
         return cellCount <= 0 || cellCount > kMaxQueryCellCount || cellCount > static_cast<int64>( _bodies.size() );
     }
 
+    bool PhysicsWorld::isOversizedForGrid( const AABB& aabb )
+    {
+        const int64 cellCount = CellRange::fromAabb( aabb, kCellSize ).getCellCount();
+        return cellCount <= 0 || cellCount > kMaxBodyCellCount;
+    }
+
+    size_t PhysicsWorld::getGridCellCount() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        return _mapGrid.size();
+    }
+
     void PhysicsWorld::gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const
     {
         outListHandle.clear();
@@ -65,6 +77,9 @@ namespace sw
             if ( it != _mapGrid.end() )
                 outListHandle.insert( outListHandle.end(), it->second.begin(), it->second.end() );
         } );
+
+        // **큰 바디는 셀에 없다.** 그리드를 훑는 길로 왔더라도 그쪽을 함께 봐야 답이 맞는다.
+        outListHandle.insert( outListHandle.end(), _listOversizedBody.begin(), _listOversizedBody.end() );
 
         // 한 바디가 여러 셀에 걸쳐 있으므로 같은 핸들이 여러 번 들어온다.
         std::sort( outListHandle.begin(), outListHandle.end() );
@@ -79,6 +94,13 @@ namespace sw
         if ( aabb.isValid() == false )
             return;
 
+        // 너무 큰 바디는 셀마다 적지 않는다 — 적으면 한 바디가 셀 표를 통째로 불린다.
+        if ( isOversizedForGrid( aabb ) )
+        {
+            _listOversizedBody.push_back( handle );
+            return;
+        }
+
         CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
         {
             _mapGrid[coord].push_back( handle );
@@ -92,6 +114,21 @@ namespace sw
     {
         if ( aabb.isValid() == false )
             return;
+
+        // **넣을 때와 같은 판단을 쓴다.** 크기 판정은 AABB 만으로 정해지므로 넣을 때와 뺄 때가
+        // 반드시 같은 답을 낸다 — 다르면 큰 바디가 목록에 영원히 남거나, 셀에 죽은 핸들이 남는다.
+        if ( isOversizedForGrid( aabb ) )
+        {
+            for ( size_t slot = 0; slot < _listOversizedBody.size(); ++slot )
+            {
+                if ( _listOversizedBody[slot] != handle )
+                    continue;
+                _listOversizedBody[slot] = _listOversizedBody.back();
+                _listOversizedBody.pop_back();
+                break;
+            }
+            return;
+        }
 
         // **넣을 때와 같은 범위를 훑는다** — 이것이 이 타입이 있는 이유다. 덜 훑으면 죽은 핸들이 남는다.
         CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )

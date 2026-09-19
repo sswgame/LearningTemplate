@@ -435,6 +435,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (지형 콜라이더 하나가 물리 셀 표를 20만 칸으로 불렸다)
+
+`PhysicsWorld` 는 AABB 가 덮는 모든 셀에 바디 핸들을 적는다. **질의 쪽에는 상한이 있는데
+삽입 쪽에는 없었다:**
+
+```cpp
+bool PhysicsWorld::shouldScanAllBodies( const CellRange& range ) const   // 질의: 1024 칸 넘으면 그리드를 안 쓴다
+void PhysicsWorld::insertBodyToGrid( ... )                               // 삽입: 아무 제한 없이 다 적는다
+```
+
+셀 크기는 64 유닛이다. **20,000 x 10 x 20,000 짜리 바닥 콜라이더 하나면 셀 표에 약 196,000 칸
+(313 x 2 x 313)이 생긴다** — 바디는 하나인데. `setAabb` 로 움직이기라도 하면 그만큼을 매번
+지웠다 다시 적는다. 지형·바닥은 어느 게임에나 있고, 대개 그만큼 크다.
+
+큰 바디는 그리드에 흩뿌리는 대신 목록 하나(`_listOversizedBody`)에 모으고, 그리드로 가는 질의가
+그 목록을 **항상 함께** 본다. 그런 바디는 수가 적고 어차피 거의 모든 질의에 걸리므로 셀에
+흩어 두는 것이 이득이 되지 않는다. 크기 판정(`isOversizedForGrid`)은 **AABB 만으로** 정해지므로
+넣을 때와 뺄 때가 반드시 같은 답을 낸다 — 이 파일이 `CellRange` 를 따로 둔 것과 같은 이유다.
+
+`kMaxBodyCellCount` 는 `kMaxQueryCellCount` 와 값이 같지만 **다른 질문**이라(질의 범위가 넓은가 /
+바디가 큰가) 별칭을 두지 않고 따로 적었다 — 이 저장소의 상수 규칙 그대로다.
+
+**검증.** `PhysicsTest.OversizedBodyDoesNotInflateTheGrid` 가 둘을 함께 본다: 셀 표가 작게
+남는가, **그리고** 그럼에도 질의가 그 바디를 찾아내는가(셀에 없다는 것이 답을 바꾸면 안 된다).
+제한을 없애면 **0.07ms → 750ms** 로 10,000배 느려지고 셀 수 단언이 진다.
+
 ### 2026-09-20 (같은 모양을 저장소 전체에서 찾았다 — 언어 코드도 그랬다)
 
 `ComponentDefaults::getPath()` 를 고치고 나서 **"락을 잡은 함수가 뷰나 참조를 돌려주는 자리"**
