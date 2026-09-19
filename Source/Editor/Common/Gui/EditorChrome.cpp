@@ -58,6 +58,17 @@ namespace sw::editor
             static inline thread_local int32             s_floatingBarDisabledDepth{ 0 };
             static inline thread_local int32             s_arrOverlayStyleVars[kMaxOverlayDepth]{};
             static inline thread_local int32             s_overlayDepth{ 0 };
+
+            /**
+             * @brief 깊이 상한을 넘겨 **담지 못한** begin 의 수입니다. 두 스택이 각자 하나씩 든다.
+             * @details 상한을 넘은 begin 은 스택에 담기지 않는데, 그 짝인 end 는 그것을 모르고
+             *          **한 칸을 꺼낸다** — 그 순간부터 모든 짝이 한 칸씩 어긋난다. 섹션 쪽은
+             *          엉뚱한 `kind` 로 닫히고(그룹을 자식으로 닫는다), 오버레이 쪽은 **틀린
+             *          개수로 `PopStyleVar`** 를 불러 그 프레임의 스타일 스택이 통째로 무너진다.
+             *          담지 못한 수를 세어 두면 end 가 그만큼 먼저 흘려보내 짝이 맞는다.
+             */
+            static inline thread_local int32 s_sectionOverflow{ 0 };
+            static inline thread_local int32 s_overlayOverflow{ 0 };
         };
     } // namespace
 } // namespace sw::editor
@@ -126,6 +137,11 @@ namespace sw::editor
             EditorChromeInternal::s_arrSectionStack[EditorChromeInternal::s_sectionDepth] = desc._kind;
             ++EditorChromeInternal::s_sectionDepth;
         }
+        else
+        {
+            // 담지 못했다 — 짝인 end 가 이것을 알아야 한 칸씩 어긋나지 않는다.
+            ++EditorChromeInternal::s_sectionOverflow;
+        }
 
         if ( desc._kind == EditorSectionKind::Child )
         {
@@ -159,7 +175,12 @@ namespace sw::editor
     void EditorChrome::endSection()
     {
         EditorSectionKind kind = EditorSectionKind::Toolbar;
-        if ( EditorChromeInternal::s_sectionDepth > 0 )
+        if ( EditorChromeInternal::s_sectionOverflow > 0 )
+        {
+            // 담지 못한 begin 의 짝이다 — 스택에서 꺼내면 남의 칸을 꺼내게 된다.
+            --EditorChromeInternal::s_sectionOverflow;
+        }
+        else if ( EditorChromeInternal::s_sectionDepth > 0 )
         {
             --EditorChromeInternal::s_sectionDepth;
             kind = EditorChromeInternal::s_arrSectionStack[EditorChromeInternal::s_sectionDepth];
@@ -243,6 +264,14 @@ namespace sw::editor
             EditorChromeInternal::s_arrOverlayStyleVars[EditorChromeInternal::s_overlayDepth] = styleVarCount;
             ++EditorChromeInternal::s_overlayDepth;
         }
+        else
+        {
+            // 담지 못한 것은 **여기서 바로 되돌린다** — 아래 `Begin` 뒤에 짝인 end 가 이 개수를
+            // 알 길이 없고, 틀린 개수로 `PopStyleVar` 를 부르면 스타일 스택이 무너진다.
+            if ( styleVarCount > 0 )
+                ImGui::PopStyleVar( styleVarCount );
+            ++EditorChromeInternal::s_overlayOverflow;
+        }
 
         return ImGui::Begin( pId, desc._pOpen, EditorChromeInternal::toImGuiOverlayFlags( desc._flags ) );
     }
@@ -252,7 +281,12 @@ namespace sw::editor
         ImGui::End();
 
         int32 styleVarCount = 0;
-        if ( EditorChromeInternal::s_overlayDepth > 0 )
+        if ( EditorChromeInternal::s_overlayOverflow > 0 )
+        {
+            // 담지 못한 begin 의 짝이다. 그쪽에서 이미 되돌렸으므로 여기서는 아무것도 꺼내지 않는다.
+            --EditorChromeInternal::s_overlayOverflow;
+        }
+        else if ( EditorChromeInternal::s_overlayDepth > 0 )
         {
             --EditorChromeInternal::s_overlayDepth;
             styleVarCount = EditorChromeInternal::s_arrOverlayStyleVars[EditorChromeInternal::s_overlayDepth];

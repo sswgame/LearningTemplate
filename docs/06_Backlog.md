@@ -526,6 +526,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (깊이 상한을 넘긴 begin 이 end 와 한 칸씩 어긋났다 · 단언이 Shipping 에서 사라진다)
+
+`EditorChrome` 은 섹션과 오버레이를 깊이 8 짜리 스택에 담는다. 상한을 넘은 `begin` 은 **담기지
+않는데**, 그 짝인 `end` 는 그것을 모르고 **한 칸을 꺼낸다** — 그 순간부터 모든 짝이 한 칸씩
+어긋난다. 섹션 쪽은 엉뚱한 `kind` 로 닫히고(그룹을 자식으로 닫는다), 오버레이 쪽은 **틀린
+개수로 `PopStyleVar`** 를 불러 그 프레임의 ImGui 스타일 스택이 통째로 무너진다. 담지 못한 수를
+세어 `end` 가 그만큼 먼저 흘려보내게 했다. 오버레이는 담지 못한 자리에서 스타일을 **바로**
+되돌린다 — 짝인 `end` 가 그 개수를 알 길이 없기 때문이다.
+
+**`getEditorData()` 의 단언은 Shipping 에서 사라진다.** `SW_LOG_ASSERT` 는 Debug 에서만 멈추고
+Release·Shipping 에서는 로그만 남긴 뒤 **그대로 널을 역참조한다** — 막으려던 것을 못 막는다.
+이것은 하위 시스템이 아니라 **설정 데이터**이고 모든 필드가 뜻이 통하는 기본값을 들고 있으므로,
+결합 전에 물어보면 기본값을 돌려준다. `engine::getXxx()` 의 같은 모양은 일부러 두었다 — 그쪽은
+`TaskManager` 같은 하위 시스템이라 지어낼 기본값이 없고, 결합 여부는 `CheckEngineServiceBinding`
+린트가 따로 지킨다.
+
 ### 2026-09-20 (핀 번호를 짓는 곳과 푸는 곳이 또 갈라져 있었다 — 그래프 패널 둘)
 
 `DialogueGraphAsset.h` 의 "핀 번호 계약" 절은 **"에디터가 인코딩을, 애셋이 디코딩을 각자 적고
