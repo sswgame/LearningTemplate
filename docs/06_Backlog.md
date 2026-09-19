@@ -435,6 +435,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Engine 훑기 — Graphics/Shader · Renderer · RHI 공유 계층: 발견 없음)
+
+고칠 것이 나오지 않은 구간도 **무엇을 확인했는지** 남긴다 — 다음에 같은 자리를 다시 파지 않도록.
+
+**Shader (5.8k).** `ShaderReflectionSpirv` 는 헤더 20바이트를 먼저 보고, 명령어마다
+`offset + instrWords <= wordCount` 로 자르고, **분기마다 `instrWords >= N` 을 다시 본다** — 낡거나
+깨진 바이너리가 와도 워드 하나 넘어가지 않는다. `ShaderCache` 는 퍼뮤테이션 해시를 파일 이름에,
+유효 소스 해시를 **경로**에 넣어 스테일 판정을 시간이 아니라 내용으로 한다(예전 버그가 주석에
+그대로 남아 있다). `ShaderBakeStamp` 는 autocrlf 가 붙인 `\r` 까지 떼어 낸다.
+`ShaderCompiler` 의 DXBC 경로는 윈도우 밖에서 **이유가 드러나는 메시지**로 먼저 끝낸다.
+`ShaderBindingContract` 는 값을 바꾸지 않는 검증자다.
+
+**Renderer (10.6k).** `RenderThread` 는 패킷을 **실행한 뒤에** `_tail` 을 올린다 — 그래서
+`waitIdle()` 의 "큐가 비었다" 가 "프레임이 끝났다" 와 같은 뜻이 된다(그러지 않으면 리사이즈가
+in-flight 프레임과 겹친다). 링버퍼는 생산·소비가 다른 슬롯을 만지는 것이 `nextHead != _tail`
+대기로 보장된다. `RenderGraph` 는 Kahn 위상 정렬을 웨이브 단위로 돌리고 사이클을 검출한다.
+드로우 루프는 `groupEnd < batchCount` 로 병합 구간을 자른다.
+
+> `GpuSceneBuilder` 의 배치 정렬은 **포인터 값**으로 비교한다. 표준상 관련 없는 포인터의 `<` 는
+> unspecified 지만(총 순서는 `std::less` 가 보장한다) 평탄한 주소 공간에서는 일관되고, 앞 키가
+> `permutationHash` 라 그림에는 영향이 없다 — 정적 씬 해시가 실행마다 같은 것이 그 증거다.
+
+**RHI 공유 계층.** `RHIReleaseQueue` 는 콜백을 잠금 **밖에서** 부른다(해제 콜백이 또 enqueue 해도
+재진입 교착이 없다). `RHIConstantBufferSlot` 은 만들 때와 갱신할 때 크기가 어긋날 수 있는
+모양이지만, 호출부 다섯 곳이 전부 같은 `sizeof(T)` 를 쓴다 — 헤더가 "용량이 프레임마다 변하지
+않는다" 고 이미 못박아 둔 그대로다.
+
 ### 2026-09-19 (상수버퍼를 만들 때보다 큰 크기로 갱신할 수 있었다)
 
 `IRHIResource::updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 **적혀 있지 않은 전제**가 있었다 —
