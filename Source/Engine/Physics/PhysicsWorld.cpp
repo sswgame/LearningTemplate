@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "Engine/Physics/PhysicsWorld.h"
 
@@ -25,6 +25,52 @@ namespace sw
 
 namespace sw
 {
+    PhysicsWorld::CellRange PhysicsWorld::CellRange::fromAabb( const AABB& aabb, float32 cellSize )
+    {
+        // 뒤집힌 AABB(min > max)도 받는다 — 호출부마다 정규화를 적으면 그중 하나가 빠진다.
+        const float3 normMin = float3::min( aabb._min, aabb._max );
+        const float3 normMax = float3::max( aabb._min, aabb._max );
+
+        CellRange range{};
+        range._minX = PhysicsWorldInternal::toCellCoord( normMin._x, cellSize );
+        range._maxX = PhysicsWorldInternal::toCellCoord( normMax._x, cellSize );
+        range._minY = PhysicsWorldInternal::toCellCoord( normMin._y, cellSize );
+        range._maxY = PhysicsWorldInternal::toCellCoord( normMax._y, cellSize );
+        range._minZ = PhysicsWorldInternal::toCellCoord( normMin._z, cellSize );
+        range._maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, cellSize );
+        return range;
+    }
+
+    int64 PhysicsWorld::CellRange::getCellCount() const noexcept
+    {
+        const int64 spanX = static_cast<int64>( _maxX ) - static_cast<int64>( _minX ) + 1;
+        const int64 spanY = static_cast<int64>( _maxY ) - static_cast<int64>( _minY ) + 1;
+        const int64 spanZ = static_cast<int64>( _maxZ ) - static_cast<int64>( _minZ ) + 1;
+        return ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
+    }
+
+    bool PhysicsWorld::shouldScanAllBodies( const CellRange& range ) const
+    {
+        const int64 cellCount = range.getCellCount();
+        return cellCount <= 0 || cellCount > kMaxQueryCellCount || cellCount > static_cast<int64>( _bodies.size() );
+    }
+
+    void PhysicsWorld::gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const
+    {
+        outListHandle.clear();
+        outListHandle.reserve( 64 );
+        range.forEachCell( [this, &outListHandle]( const CellCoord& coord )
+        {
+            auto it = _mapGrid.find( coord );
+            if ( it != _mapGrid.end() )
+                outListHandle.insert( outListHandle.end(), it->second.begin(), it->second.end() );
+        } );
+
+        // 한 바디가 여러 셀에 걸쳐 있으므로 같은 핸들이 여러 번 들어온다.
+        std::sort( outListHandle.begin(), outListHandle.end() );
+        outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
+    }
+
     /**
      * @brief 대상 AABB가 점유하는 모든 3D 그리드 셀에 바디 핸들을 등록합니다.
      */
@@ -33,26 +79,10 @@ namespace sw
         if ( aabb.isValid() == false )
             return;
 
-        const float3 normMin = float3::min( aabb._min, aabb._max );
-        const float3 normMax = float3::max( aabb._min, aabb._max );
-
-        const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
-        const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
-        const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
-        const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
-        const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
-        const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
-
-        for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
+        CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
         {
-            for ( int32 gridY = minY; gridY <= maxY; ++gridY )
-            {
-                for ( int32 gridX = minX; gridX <= maxX; ++gridX )
-                {
-                    _mapGrid[CellCoord{ gridX, gridY, gridZ }].push_back( handle );
-                }
-            }
-        }
+            _mapGrid[coord].push_back( handle );
+        } );
     }
 
     /**
@@ -63,38 +93,23 @@ namespace sw
         if ( aabb.isValid() == false )
             return;
 
-        const float3 normMin = float3::min( aabb._min, aabb._max );
-        const float3 normMax = float3::max( aabb._min, aabb._max );
-
-        const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
-        const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
-        const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
-        const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
-        const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
-        const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
-
-        for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
+        // **넣을 때와 같은 범위를 훑는다** — 이것이 이 타입이 있는 이유다. 덜 훑으면 죽은 핸들이 남는다.
+        CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
         {
-            for ( int32 gridY = minY; gridY <= maxY; ++gridY )
+            auto it = _mapGrid.find( coord );
+            if ( it == _mapGrid.end() )
+                return;
+
+            vector<BodyHandle>& listHandle = it->second;
+            auto                handleIt   = std::find( listHandle.begin(), listHandle.end(), handle );
+            if ( handleIt != listHandle.end() )
             {
-                for ( int32 gridX = minX; gridX <= maxX; ++gridX )
-                {
-                    auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
-                    if ( it != _mapGrid.end() )
-                    {
-                        vector<BodyHandle>& listHandle = it->second;
-                        auto                handleIt   = std::find( listHandle.begin(), listHandle.end(), handle );
-                        if ( handleIt != listHandle.end() )
-                        {
-                            *handleIt = listHandle.back();
-                            listHandle.pop_back();
-                            if ( listHandle.empty() )
-                                _mapGrid.erase( it );
-                        }
-                    }
-                }
+                *handleIt = listHandle.back();
+                listHandle.pop_back();
+                if ( listHandle.empty() )
+                    _mapGrid.erase( it );
             }
-        }
+        } );
     }
 
     /**
@@ -137,29 +152,11 @@ namespace sw
         const AABB oldAABB = pBody->_aabb;
         if ( oldAABB.isValid() && aabb.isValid() )
         {
-            const float3 oldNormMin = float3::min( oldAABB._min, oldAABB._max );
-            const float3 oldNormMax = float3::max( oldAABB._min, oldAABB._max );
-            const float3 newNormMin = float3::min( aabb._min, aabb._max );
-            const float3 newNormMax = float3::max( aabb._min, aabb._max );
-
-            const int32 oldMinX = PhysicsWorldInternal::toCellCoord( oldNormMin._x, kCellSize );
-            const int32 oldMaxX = PhysicsWorldInternal::toCellCoord( oldNormMax._x, kCellSize );
-            const int32 oldMinY = PhysicsWorldInternal::toCellCoord( oldNormMin._y, kCellSize );
-            const int32 oldMaxY = PhysicsWorldInternal::toCellCoord( oldNormMax._y, kCellSize );
-            const int32 oldMinZ = PhysicsWorldInternal::toCellCoord( oldNormMin._z, kCellSize );
-            const int32 oldMaxZ = PhysicsWorldInternal::toCellCoord( oldNormMax._z, kCellSize );
-
-            const int32 newMinX = PhysicsWorldInternal::toCellCoord( newNormMin._x, kCellSize );
-            const int32 newMaxX = PhysicsWorldInternal::toCellCoord( newNormMax._x, kCellSize );
-            const int32 newMinY = PhysicsWorldInternal::toCellCoord( newNormMin._y, kCellSize );
-            const int32 newMaxY = PhysicsWorldInternal::toCellCoord( newNormMax._y, kCellSize );
-            const int32 newMinZ = PhysicsWorldInternal::toCellCoord( newNormMin._z, kCellSize );
-            const int32 newMaxZ = PhysicsWorldInternal::toCellCoord( newNormMax._z, kCellSize );
-
-            const bool bSameCells = ( oldMinX == newMinX && oldMaxX == newMaxX &&
-                                      oldMinY == newMinY && oldMaxY == newMaxY &&
-                                      oldMinZ == newMinZ && oldMaxZ == newMaxZ );
-            if ( bSameCells )
+            // 지름길: 덮는 셀이 그대로면 그리드를 건드릴 필요가 없다. 이 판단이 삽입·제거와 **같은
+            // 계산**을 써야 한다 — 아니면 바디가 틀린 셀에 앉은 채로 남는다.
+            const CellRange oldRange = CellRange::fromAabb( oldAABB, kCellSize );
+            const CellRange newRange = CellRange::fromAabb( aabb, kCellSize );
+            if ( oldRange == newRange )
             {
                 pBody->_aabb = aabb;
                 return;
@@ -221,22 +218,8 @@ namespace sw
         if ( box.isValid() == false )
             return;
 
-        const float3 normMin = float3::min( box._min, box._max );
-        const float3 normMax = float3::max( box._min, box._max );
-
-        const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
-        const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
-        const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
-        const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
-        const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
-        const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
-
-        const int64 spanX      = static_cast<int64>( maxX ) - static_cast<int64>( minX ) + 1;
-        const int64 spanY      = static_cast<int64>( maxY ) - static_cast<int64>( minY ) + 1;
-        const int64 spanZ      = static_cast<int64>( maxZ ) - static_cast<int64>( minZ ) + 1;
-        const int64 totalCells = ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
-
-        if ( totalCells <= 0 || totalCells > 1024 || totalCells > static_cast<int64>( _bodies.size() ) )
+        const CellRange range = CellRange::fromAabb( box, kCellSize );
+        if ( shouldScanAllBodies( range ) )
         {
             _bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
             {
@@ -247,22 +230,7 @@ namespace sw
         }
 
         vector<BodyHandle> listCandidateHandle;
-        listCandidateHandle.reserve( 64 );
-        for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
-        {
-            for ( int32 gridY = minY; gridY <= maxY; ++gridY )
-            {
-                for ( int32 gridX = minX; gridX <= maxX; ++gridX )
-                {
-                    auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
-                    if ( it != _mapGrid.end() )
-                        listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
-                }
-            }
-        }
-
-        std::sort( listCandidateHandle.begin(), listCandidateHandle.end() );
-        listCandidateHandle.erase( std::unique( listCandidateHandle.begin(), listCandidateHandle.end() ), listCandidateHandle.end() );
+        gatherCandidateHandles( range, listCandidateHandle );
 
         for ( BodyHandle handle : listCandidateHandle )
         {
@@ -288,26 +256,13 @@ namespace sw
             float3::min( movingBox._min, movingBox._min + displacement ),
             float3::max( movingBox._max, movingBox._max + displacement ) };
 
-        const float3 normMin = float3::min( sweptBounds._min, sweptBounds._max );
-        const float3 normMax = float3::max( sweptBounds._min, sweptBounds._max );
-
-        const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
-        const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
-        const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
-        const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
-        const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
-        const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
-
-        const int64 spanX      = static_cast<int64>( maxX ) - static_cast<int64>( minX ) + 1;
-        const int64 spanY      = static_cast<int64>( maxY ) - static_cast<int64>( minY ) + 1;
-        const int64 spanZ      = static_cast<int64>( maxZ ) - static_cast<int64>( minZ ) + 1;
-        const int64 totalCells = ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
+        const CellRange range = CellRange::fromAabb( sweptBounds, kCellSize );
 
         bool     bFoundHit = false;
         SweepHit nearestHit{};
         nearestHit._time = 1.0f;
 
-        if ( totalCells <= 0 || totalCells > 1024 || totalCells > static_cast<int64>( _bodies.size() ) )
+        if ( shouldScanAllBodies( range ) )
         {
             _bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
             {
@@ -336,22 +291,7 @@ namespace sw
         }
 
         vector<BodyHandle> listCandidateHandle;
-        listCandidateHandle.reserve( 64 );
-        for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
-        {
-            for ( int32 gridY = minY; gridY <= maxY; ++gridY )
-            {
-                for ( int32 gridX = minX; gridX <= maxX; ++gridX )
-                {
-                    auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
-                    if ( it != _mapGrid.end() )
-                        listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
-                }
-            }
-        }
-
-        std::sort( listCandidateHandle.begin(), listCandidateHandle.end() );
-        listCandidateHandle.erase( std::unique( listCandidateHandle.begin(), listCandidateHandle.end() ), listCandidateHandle.end() );
+        gatherCandidateHandles( range, listCandidateHandle );
 
         for ( BodyHandle handle : listCandidateHandle )
         {

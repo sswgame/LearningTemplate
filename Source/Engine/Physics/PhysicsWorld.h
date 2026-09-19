@@ -81,9 +81,79 @@ namespace sw
 
         static constexpr float32 kCellSize = 64.0f;
 
+        /**
+         * @brief 이 셀 수를 넘으면 그리드를 훑지 않고 전체 바디를 돕니다.
+         * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 전부 보는 값보다 비싸진다. 예전에는 이
+         *          숫자가 질의 두 곳에 리터럴로 적혀 있었다 — 값이 같아 증상은 없었지만 한쪽만 바꾸면
+         *          질의 종류에 따라 다른 문턱이 된다.
+         */
+        static constexpr int64 kMaxQueryCellCount = 1024;
+
+        /**
+         * @struct CellRange
+         * @brief AABB 하나가 덮는 그리드 셀 범위 — **삽입·제거·질의가 같은 집합을 보게 하는 자리**입니다.
+         *
+         * @details 이 계산("이 AABB 는 어느 셀들인가")이 **여섯 군데에 복사**돼 있었다: 삽입 · 제거 ·
+         *          `setAabb` 의 옛/새 비교 둘 · `queryAabb` · `sweepTest`.
+         *
+         *          어긋났을 때의 증상은 방향마다 다르고, **둘 다 그 자리에서 터지지 않는다**:
+         *          - **삽입이 덜 훑으면 충돌을 놓친다.** 바디가 실제로 겹치는 셀에 등록되지 않으므로
+         *            그 셀을 보는 질의가 바디를 **못 찾는다**. 틀린 답이 조용히 나온다.
+         *          - **제거가 덜 훑으면 그리드가 자란다.** 질의는 후보를 실제 AABB 로 다시 걸러내므로
+         *            틀린 답이 되지는 않지만, 옮겨 다닌 바디가 지나온 셀마다 죽은 핸들을 남겨
+         *            **셀 표가 끝없이 커지고** 후보 목록이 길어진다.
+         *
+         *          `setAabb` 의 "셀이 그대로면 그리드를 안 건드린다" 지름길도 같은 계산에 기댄다 —
+         *          이 비교가 삽입과 어긋나면 **새 셀에 등록되지 않은 채** 넘어가서 첫 번째 증상이 된다.
+         */
+        struct CellRange
+        {
+            int32 _minX{ 0 };
+            int32 _minY{ 0 };
+            int32 _minZ{ 0 };
+            int32 _maxX{ -1 }; /**< 기본값은 비어 있는 범위다 (max < min). */
+            int32 _maxY{ -1 };
+            int32 _maxZ{ -1 };
+
+            /** @brief AABB 가 덮는 셀 범위입니다. 뒤집힌 AABB 도 정규화해서 받습니다. */
+            static CellRange fromAabb( const AABB& aabb, float32 cellSize );
+
+            /** @brief 두 범위가 같은 셀 집합인지 여부입니다. */
+            bool operator==( const CellRange& other ) const noexcept
+            {
+                return _minX == other._minX && _maxX == other._maxX &&
+                       _minY == other._minY && _maxY == other._maxY &&
+                       _minZ == other._minZ && _maxZ == other._maxZ;
+            }
+
+            /** @brief 이 범위가 덮는 셀 수입니다. 비어 있으면 0 입니다. */
+            int64 getCellCount() const noexcept;
+
+            /** @brief 범위의 모든 셀에 대해 실행합니다. 비어 있으면 한 번도 부르지 않습니다. */
+            template <typename Func>
+            void forEachCell( Func&& func ) const
+            {
+                for ( int32 gridZ = _minZ; gridZ <= _maxZ; ++gridZ )
+                {
+                    for ( int32 gridY = _minY; gridY <= _maxY; ++gridY )
+                    {
+                        for ( int32 gridX = _minX; gridX <= _maxX; ++gridX )
+                        {
+                            func( CellCoord{ gridX, gridY, gridZ } );
+                        }
+                    }
+                }
+            }
+        };
+
     private:
         void insertBodyToGrid( BodyHandle handle, const AABB& aabb );
         void removeBodyFromGrid( BodyHandle handle, const AABB& aabb );
+
+        /** @brief 그리드를 훑기보다 전체 바디를 도는 편이 나은가 — 범위가 비었거나 너무 넓으면 그렇습니다. */
+        bool shouldScanAllBodies( const CellRange& range ) const;
+        /** @brief 범위가 덮는 셀들의 바디 핸들을 **중복 없이** 모읍니다. */
+        void gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const;
 
     private:
         mutable std::shared_mutex                                   _mutex;

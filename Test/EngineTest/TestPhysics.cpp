@@ -332,3 +332,63 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     SW_EXPECT_FALSE( sw::CCD::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
 }
+
+/**
+ * @brief [PhysicsTest] 여러 셀에 걸친 바디는 **걸친 셀 어디서든** 찾아진다
+ * @details 그리드 셀은 64 단위인데 이 스위트의 기존 바디는 전부 10~20 단위였다 — 즉 **한 셀 안에만**
+ *          있었고, "AABB 가 여러 셀을 덮을 때" 의 범위 계산은 한 번도 태워지지 않았다.
+ *
+ *          삽입이 범위를 덜 훑으면 바디가 실제로 겹치는 셀에 등록되지 않고, 그 셀을 보는 질의가
+ *          **바디를 못 찾는다** — 충돌을 놓치는 쪽이라 틀린 답이 조용히 나온다. 작은 질의 박스를
+ *          쓰는 것이 중요하다: 넓은 박스는 셀 수가 바디 수를 넘어 **전수 검사 갈래**로 새기 때문에
+ *          그리드를 아예 보지 않는다.
+ *
+ *          옮긴 뒤를 같이 보는 이유는 `setAabb` 의 "덮는 셀이 그대로면 그리드를 안 건드린다" 지름길이
+ *          삽입과 **같은 범위 계산**을 써야 하기 때문이다. 어긋나면 새 셀에 등록되지 않은 채 넘어간다.
+ */
+SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
+{
+    PhysicsWorld world;
+
+    // 셀 크기는 64 — 0..200 은 축마다 셀 4개(0,1,2,3)라 합쳐서 64개 셀을 덮는다.
+    AABB wideBox;
+    wideBox._min = float3( 0.0f, 0.0f, 0.0f );
+    wideBox._max = float3( 200.0f, 200.0f, 200.0f );
+
+    const PhysicsWorld::BodyHandle handle = world.addBody( wideBox, 0 );
+
+    /** @brief 한 셀 안에 들어가는 작은 질의 — 그리드 경로를 확실히 태웁니다. */
+    const auto findAtPoint = [&world]( float32 x, float32 y, float32 z )
+    {
+        AABB probe;
+        probe._min = float3( x - 1.0f, y - 1.0f, z - 1.0f );
+        probe._max = float3( x + 1.0f, y + 1.0f, z + 1.0f );
+
+        vector<PhysicsWorld::BodyHandle> listHit;
+        world.queryAabb( probe, 0, listHit );
+        return listHit.size();
+    };
+
+    BLOCK( "걸친 셀의 네 모서리 어디서든 찾아진다" )
+    {
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 10.0f, 10.0f, 10.0f ) );    // 첫 셀
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 190.0f, 10.0f, 10.0f ) );   // x 끝 셀
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 10.0f, 190.0f, 10.0f ) );   // y 끝 셀
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 10.0f, 10.0f, 190.0f ) );   // z 끝 셀
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 190.0f, 190.0f, 190.0f ) ); // 반대 모서리 셀
+    }
+
+    BLOCK( "멀리 옮기면 새 셀 전부에서 찾아지고 옛 셀에서는 안 찾아진다" )
+    {
+        AABB movedBox;
+        movedBox._min = float3( 5000.0f, 5000.0f, 5000.0f );
+        movedBox._max = float3( 5200.0f, 5200.0f, 5200.0f );
+        world.setAabb( handle, movedBox );
+
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 5010.0f, 5010.0f, 5010.0f ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 5190.0f, 5190.0f, 5190.0f ) );
+
+        SW_EXPECT_EQUAL( size_t( 0 ), findAtPoint( 10.0f, 10.0f, 10.0f ) );
+        SW_EXPECT_EQUAL( size_t( 0 ), findAtPoint( 190.0f, 190.0f, 190.0f ) );
+    }
+}
