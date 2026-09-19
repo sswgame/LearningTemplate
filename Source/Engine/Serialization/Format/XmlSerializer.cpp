@@ -179,25 +179,30 @@ namespace sw
                             return;
                         }
 
-                        pSeq->addElementDefault( pContainerPtr );
-                        void* pElemPtr = pSeq->getElement( pContainerPtr, elemIndex++ );
-                        if ( nested._elementNested != nullptr )
+                        // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다.
+                        ++elemIndex;
+                        pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
+                                                                                [&]( void* pElemPtr ) -> bool
                         {
-                            readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
-                            return;
-                        }
+                            if ( nested._elementNested != nullptr )
+                            {
+                                readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
+                                return true;
+                            }
 
-                        const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
-                        if ( pElemType != nullptr )
-                        {
-                            readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan );
-                            return;
-                        }
+                            const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+                            if ( pElemType != nullptr )
+                            {
+                                readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan );
+                                return true;
+                            }
 
-                        string itemText;
-                        backend.readText( itemText );
-                        if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
-                            noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
+                            string itemText;
+                            backend.readText( itemText );
+                            if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
+                                noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
+                            return true;
+                        } ) );
                     } ) );
                     return bAny;
                 }

@@ -295,16 +295,19 @@ namespace sw
         if ( pSeq != nullptr )
         {
             pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
+
+            // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다
+            // (트리에 들어간 원소를 제자리에서 고치면 정렬 불변식이 깨진다).
             for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
             {
-                pSeq->addElementDefault( pContainerPtr );
-                void* pElem = pSeq->getElement( pContainerPtr, elemIndex );
-                if ( nested._elementNested != nullptr )
+                const bool bAppended = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
+                                                                                               [&]( void* pElement ) -> bool
                 {
-                    if ( SerializerUtil::deserializeNestedContainerBinary( pElem, *nested._elementNested, pData, dataSize, offset, ctx ) == false )
-                        return false;
-                }
-                else if ( SerializerUtil::deserializeValueBinary( pElem, nested._elementTypeName, pData, dataSize, offset, ctx ) == false )
+                    if ( nested._elementNested != nullptr )
+                        return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx );
+                    return SerializerUtil::deserializeValueBinary( pElement, nested._elementTypeName, pData, dataSize, offset, ctx );
+                } ) );
+                if ( bAppended == false )
                     return false;
             }
             return true;

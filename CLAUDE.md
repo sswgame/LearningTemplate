@@ -158,7 +158,10 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 30 rules
   sweeping Debug · Release · Shipping because **the warning set differs per configuration**.
   The build you just ran already reports warnings your own change introduced (it recompiled exactly the
   affected TUs); this answers the other question — what is left in the tree. Run it when finishing a
-  chunk of work, not on every edit.
+  chunk of work, not on every edit. **A warning in the build log can also be an old one replayed by
+  sccache** (a cache hit replays the recorded stderr) — the tell is that the source line clang prints
+  does not match that line number in the file. `SCCACHE_RECACHE=1` forces a real compile; this report
+  never goes through the cache, so when the two disagree, the report is right.
 
 ## Architecture
 

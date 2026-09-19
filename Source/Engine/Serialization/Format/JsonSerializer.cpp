@@ -210,38 +210,36 @@ namespace sw
 
                 pSeq->reserve( pContainerPtr, items.size() );
                 bool bOk{ true };
+
+                // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다.
                 for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
                 {
-                    pSeq->addElementDefault( pContainerPtr );
-                    void*           pElemPtr = pSeq->getElement( pContainerPtr, elementIndex );
-                    const JsonValue elem     = items.at( elementIndex );
-                    if ( nested._elementNested != nullptr )
+                    const JsonValue elem = items.at( elementIndex );
+
+                    const bool bAppended = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
+                                                                                                   [&]( void* pElemPtr ) -> bool
                     {
-                        if ( readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx ) == false )
-                            bOk = false;
-                    }
-                    else
-                    {
+                        if ( nested._elementNested != nullptr )
+                            return readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx );
+
                         const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
-                        if ( pElemType != nullptr )
-                        {
-                            if ( elem.isObject() == false )
-                            {
-                                bOk = false;
-                                continue;
-                            }
-                            // 래핑 형식 { "TypeName": {body} } 이면 그 안을 읽고, 아니면 elem 자체를 body 로 본다.
-                            const vector<string> listMember = elem.memberNames();
-                            const bool           bWrapped =
-                                ( listMember.size() == 1 &&
-                                  engine::getTypeRegistry().findType( hashed_string( listMember[0].c_str() ) ) != nullptr );
-                            const JsonValue body = bWrapped ? elem.get( listMember[0], false ) : elem;
-                            if ( JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx ) == false )
-                                bOk = false;
-                        }
-                        else if ( readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx ) == false )
-                            bOk = false;
-                    }
+                        if ( pElemType == nullptr )
+                            return readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx );
+
+                        if ( elem.isObject() == false )
+                            return false;
+
+                        // 래핑 형식 { "TypeName": {body} } 이면 그 안을 읽고, 아니면 elem 자체를 body 로 본다.
+                        const vector<string> listMember = elem.memberNames();
+                        const bool           bWrapped =
+                            ( listMember.size() == 1 &&
+                              engine::getTypeRegistry().findType( hashed_string( listMember[0].c_str() ) ) != nullptr );
+                        const JsonValue body = bWrapped ? elem.get( listMember[0], false ) : elem;
+                        return JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx );
+                    } ) );
+
+                    if ( bAppended == false )
+                        bOk = false;
                 }
                 return bOk;
             }

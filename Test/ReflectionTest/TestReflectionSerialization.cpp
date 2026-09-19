@@ -7,6 +7,8 @@
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -1744,4 +1746,68 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
     const sw::PropertyInfo* albedo = typeInfo->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_TRUE( albedo != nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata._bAssetPath ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] `set` 프로퍼티가 **세 포맷 모두** 왕복한다
+ * @details 예전에는 **프로세스가 죽었다.** 역직렬화가 시퀀스 컨테이너를 "자리를 먼저 만들고
+ *          (`addElementDefault`) 그 자리에 제자리로 쓴다(`getElement`)" 로만 채웠는데, `set` 의 원소는
+ *          곧 정렬 키라 트리에 들어간 뒤 값을 바꾸면 정렬 불변식이 깨진다. 증상은 그 자리에서 나지
+ *          않고 나중에 엉뚱한 곳에서 터져, 원인을 찾기 어려운 모양이었다.
+ *          이제 컨테이너가 `appendElement` 로 **넣는 방법을 스스로 정한다** — `set` 은 다 읽은 뒤 insert 한다.
+ * @note 값을 **정렬되지 않은 순서로** 넣는 것이 중요하다. 순서대로 넣으면 제자리 쓰기 구현도 우연히
+ *       통과할 수 있다(각 원소가 마침 트리의 끝에 붙는다).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, SetPropertyRoundTripsInEveryFormat )
+{
+    struct SetHolder
+    {
+        sw::set<int32> _values{};
+    };
+
+    sw::TypeInfo info;
+    info._name               = sw::hashed_string( "SetRoundTripHolder" );
+    info._fullyQualifiedName = sw::hashed_string( "sw::SetRoundTripHolder" );
+    info._size               = sizeof( SetHolder );
+    info._listProperty       = {
+        { sw::hashed_string( "_values" ), sw::hashed_string( "int32" ),
+         SW_OFFSET_OF( SetHolder, _values ), true, sw::ContainerKind::Sequence,
+         sw::hashed_string( "int32" ), sw::hashed_string(), sw::make_shared<sw::SetWrapper<sw::set<int32>>>() }
+    };
+
+    SetHolder source{};
+    source._values = { 42, 5, 17 }; // 정렬되지 않은 순서로 적는다(위 @note 참고).
+
+    const auto expectContents = []( const SetHolder& restored, const utf8* pWhat )
+    {
+        SW_EXPECT_TRUE_MSG( restored._values.size() == 3, pWhat );
+        SW_EXPECT_TRUE_MSG( restored._values.find( 5 ) != restored._values.end(), pWhat );
+        SW_EXPECT_TRUE_MSG( restored._values.find( 17 ) != restored._values.end(), pWhat );
+        SW_EXPECT_TRUE_MSG( restored._values.find( 42 ) != restored._values.end(), pWhat );
+    };
+
+    // 1) Binary
+    {
+        sw::vector<uint8> bytes;
+        sw::BinarySerializer::serialize( &source, info, bytes );
+        SetHolder restored{};
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &restored, info, bytes.data(), bytes.size() ) );
+        expectContents( restored, "Binary 왕복이 set 을 잃었습니다" );
+    }
+
+    // 2) JSON
+    {
+        const sw::string json = sw::JsonSerializer::serialize( &source, info );
+        SetHolder        restored{};
+        SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &restored, info, json ) );
+        expectContents( restored, "JSON 왕복이 set 을 잃었습니다" );
+    }
+
+    // 3) XML
+    {
+        const sw::string xml = sw::XmlSerializer::serialize( &source, info );
+        SetHolder        restored{};
+        SW_ASSERT_TRUE( sw::XmlSerializer::deserialize( &restored, info, xml ) );
+        expectContents( restored, "XML 왕복이 set 을 잃었습니다" );
+    }
 }

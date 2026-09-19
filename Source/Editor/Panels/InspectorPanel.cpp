@@ -708,8 +708,18 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer128> headerBuf;
                 formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
 
+                // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다** — 고치는 순간
+                // 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
+                // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
+                const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
+                if ( bInPlaceEditable == false )
+                    bReadOnly = true;
+
                 if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
                 {
+                    if ( bInPlaceEditable == false )
+                        ImGui::TextDisabled( "정렬 컨테이너라 제자리 편집을 지원하지 않습니다 (읽기 전용)" );
+
                     if ( bReadOnly == false )
                     {
                         if ( ImGui::SmallButton( "+ Add" ) )

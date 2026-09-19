@@ -45,6 +45,13 @@ namespace sw
         virtual IMapContainerWrapper*      asMap() { return nullptr; }
     };
 
+    /**
+     * @brief 원소 하나를 채우는 콜백 — 인자는 **채울 원소의 주소**입니다. 실패하면 false.
+     * @details 읽는 방법(바이너리 스트림 · JSON 값 · XML 노드)은 호출자가 알고, **그 값을 컨테이너에
+     *          넣는 방법**은 컨테이너가 안다. 그 둘을 나누려고 둔다 (`appendElement` 참고).
+     */
+    using ElementFillDelegate = Delegate<bool( void* pElement )>;
+
     /// @brief 인덱스 시퀀스 컨테이너 래퍼
     struct ISequenceContainerWrapper : IContainerWrapper
     {
@@ -61,6 +68,39 @@ namespace sw
          */
         virtual void addElementDefault( void* pContainer ) const = 0;
         virtual void reserve( void*, size_t ) const {}
+
+        /**
+         * @brief 이미 들어 있는 원소를 **제자리에서 고쳐도 되는가.**
+         * @details 연관 컨테이너는 원소가 곧 정렬 키라 안 된다 — 고치는 순간 트리가 정렬을 잃는다.
+         *          역직렬화는 `appendElement` 로 이 문제를 피하지만, **인스펙터처럼 이미 들어 있는
+         *          원소를 편집하는 UI** 는 먼저 이것을 물어야 한다.
+         */
+        virtual bool allowsInPlaceElementWrite() const { return true; }
+
+        /**
+         * @brief 원소 하나를 읽어 **뒤에 넣습니다.** 읽기는 @p fill 이, 넣는 방법은 컨테이너가 정합니다.
+         *
+         * @details 역직렬화는 오랫동안 "자리를 먼저 만들고(`addElementDefault`) 그 자리에 제자리로
+         *          쓴다(`getElement`)" 는 한 가지 방법만 알았다. **연관 컨테이너에서는 그것이 틀렸다** —
+         *          `set` 의 원소는 곧 정렬 키라, 트리에 들어간 뒤에 값을 바꾸면 정렬 불변식이 깨진다.
+         *          (`SetWrapper::getElement` 가 `const_cast` 로 const 를 벗기고 있었다.) 증상은 그 자리에서
+         *          나지 않고 **나중에 엉뚱한 곳에서 터진다** — 실제로 `set<int32>` 프로퍼티를 왕복시키면
+         *          프로세스가 죽었다.
+         *
+         *          그래서 "어떻게 넣는가" 를 컨테이너에게 돌려준다. 기본 구현은 예전과 같고(연속·노드
+         *          컨테이너는 제자리 쓰기가 옳다), 연관 컨테이너만 **다 읽은 뒤 insert** 하도록 재정의한다.
+         *          새 컨테이너 래퍼를 더할 때 "내 컨테이너는 제자리 쓰기가 되는가" 만 답하면 된다.
+         */
+        virtual bool appendElement( void* pContainer, const ElementFillDelegate& fill ) const
+        {
+            addElementDefault( pContainer );
+
+            const size_t elementCount = getSize( pContainer );
+            if ( elementCount == 0 )
+                return false; // 자리를 만들지 못했다 — 읽을 곳이 없다.
+
+            return fill( getElement( pContainer, elementCount - 1 ) );
+        }
     };
 
     using MapForEachDelegate = Delegate<void( const void* pKey, const void* pVal )>;
@@ -238,6 +278,29 @@ namespace sw
         {
             using ElementType = typename TContainer::value_type;
             static_cast<TContainer*>( pContainer )->insert( ElementType{} );
+        }
+
+        /** @brief 원소가 곧 정렬 키라 제자리에서 고칠 수 없습니다. */
+        bool allowsInPlaceElementWrite() const override { return false; }
+
+        /**
+         * @brief **다 읽은 뒤에 넣습니다** — 트리에 들어간 원소를 제자리에서 고치지 않습니다.
+         * @details 기본 구현(자리를 만들고 제자리 쓰기)은 연관 컨테이너에서 틀렸다. 원소가 곧 정렬
+         *          키라서, 넣은 뒤에 값을 바꾸면 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다.
+         *          지역 변수에 읽어 `insert` 로 넘기면 컨테이너가 제자리를 스스로 정한다.
+         * @note 중복 키는 `insert` 가 조용히 버린다 — 그것이 `set` 의 계약이고, 원본에 중복이 없었다면
+         *       개수도 그대로다.
+         */
+        bool appendElement( void* pContainer, const ElementFillDelegate& fill ) const override
+        {
+            using ElementType = typename TContainer::value_type;
+
+            ElementType stagedElement{};
+            if ( fill( &stagedElement ) == false )
+                return false;
+
+            static_cast<TContainer*>( pContainer )->insert( std::move( stagedElement ) );
+            return true;
         }
     };
 
