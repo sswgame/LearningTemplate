@@ -43,7 +43,27 @@ namespace
         uint32 _lineCount{ 0 };
         string _firstErrorLine{};
         bool   _bLaunched{ false };
+        bool   _bBackendUnusableHere{ false }; /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
     };
+
+    /**
+     * @brief App 이 "이 기계에서는 이 백엔드를 못 돌린다" 고 **스스로 말한** 줄인가.
+     * @details 두 가지가 있고 **둘 다 결함이 아니라 환경**이다:
+     *          1. **백엔드가 이 빌드·플랫폼에 아예 없다.** 리눅스의 DX12·DX11 이 그렇다.
+     *          2. **있지만 이 기계의 드라이버가 필요한 기능을 안 준다.** WSLg 의 Mesa 에는
+     *             `GL_ARB_gl_spirv` 가 없는데 이 엔진의 GL 백엔드는 **SPIR-V 를 먹이므로** 못 돈다 —
+     *             백엔드가 그 확장 이름을 로그에 남기고 스스로 물러난다.
+     *
+     *          그 밖의 초기화 실패는 **그대로 진다.** "Failed to initialize RHI Device!" 만 보고
+     *          건너뛰면 진짜 회귀까지 같이 숨는다 — 그 한 줄은 이유를 말해 주지 않기 때문이다.
+     *
+     * @note 산문이 아니라 **고정된 표식**(영문 한 문장 · 확장 이름)만 본다.
+     */
+    bool isBackendUnusableLine( string_view line )
+    {
+        return line.find( "Requested RHI backend is unavailable" ) != string_view::npos ||
+               line.find( "GL_ARB_gl_spirv" ) != string_view::npos;
+    }
 
     /** @brief 플랫폼별 실행 파일 이름. */
     const utf8* getAppExecutableName()
@@ -105,6 +125,9 @@ namespace
         while ( process.readOutputLine( line ) )
         {
             ++result._lineCount;
+            if ( isBackendUnusableLine( line ) )
+                result._bBackendUnusableHere = true;
+
             if ( line.find( "[Error]" ) == string::npos )
                 continue;
 
@@ -117,14 +140,25 @@ namespace
         return result;
     }
 
-    /** @brief 한 판을 돌리고 계약(종료 코드 0 · 에러 0 · 출력 있음)을 검사합니다. */
-    void expectCleanRun( string_view arguments )
+    /**
+     * @brief 한 판을 돌리고 계약(종료 코드 0 · 에러 0 · 출력 있음)을 검사합니다.
+     * @return 실제로 검사했으면 true, 그 백엔드가 이 기계에 없어 건너뛰었으면 false.
+     */
+    bool expectCleanRun( string_view arguments )
     {
         const AppRunResult result = runApp( arguments );
 
         SW_EXPECT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
         if ( result._bLaunched == false )
-            return;
+            return false;
+
+        if ( result._bBackendUnusableHere )
+        {
+            // 어느 백엔드가 빠졌는지 **눈에 보이게** 남긴다. 조용히 건너뛰면 윈도우에서 백엔드 하나가
+            // 진짜로 죽은 날에도 초록으로 보인다.
+            SW_LOG_WARNING( "Skipping smoke run '%#' — no usable RHI backend on this machine.", string( arguments ).c_str() );
+            return false;
+        }
 
         SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
         SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
@@ -133,6 +167,7 @@ namespace
         // **배포본에서는 반대다** — Info 로그가 컴파일에서 빠져 깨끗한 실행이 곧 출력 0줄이다.
         SW_EXPECT_TRUE_MSG( result._lineCount > 0, "App 이 로그를 한 줄도 남기지 않았습니다 — 정말 돌았습니까?" );
 #endif
+        return true;
     }
 } // namespace
 
@@ -151,12 +186,19 @@ SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
 #else
     constexpr const utf8* kArrBackendSwitch[] = { "-dx12", "-dx11", "-vk", "-gl" };
 #endif
+    uint32 checkedCount = 0;
     for ( const utf8* pSwitch : kArrBackendSwitch )
     {
         string arguments{ "-gv_profileFrames=20 " };
         arguments += pSwitch;
-        expectCleanRun( arguments );
+        if ( expectCleanRun( arguments ) )
+            ++checkedCount;
     }
+
+    // 하나라도 돌았으면 그것으로 계약을 확인한 것이다. **하나도 못 돌았으면 아무것도 검사하지 않았으므로**
+    // 초록으로 두면 안 된다 — 건너뛴 것으로 남긴다.
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
 }
 
 #if !defined( SW_SHIPPING )
@@ -168,11 +210,17 @@ SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
 SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 {
     constexpr const utf8* kArrBackendSwitch[] = { "-dx12", "-gl" };
+
+    uint32 checkedCount = 0;
     for ( const utf8* pSwitch : kArrBackendSwitch )
     {
         string arguments{ "-gv_profileFrames=20 -EnableEditor " };
         arguments += pSwitch;
-        expectCleanRun( arguments );
+        if ( expectCleanRun( arguments ) )
+            ++checkedCount;
     }
+
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
 }
 #endif

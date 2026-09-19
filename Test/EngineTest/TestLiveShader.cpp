@@ -118,12 +118,27 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     } ) );
 
     sw::ShaderCompileDesc desc{};
-    desc._filePath     = shaderRel;
-    desc._entryPoint   = "VSMain";
-    desc._stage        = sw::ShaderStage::Vertex;
+    desc._filePath   = shaderRel;
+    desc._entryPoint = "VSMain";
+    desc._stage      = sw::ShaderStage::Vertex;
+
+    // **이 케이스가 보는 것은 포맷이 아니라 "`.hlsli` 를 고치면 다시 구운 바이트코드가 달라지는가"** 다.
+    // 그런데 타깃이 `DXBC_D3D11` 로 고정돼 있었고, DXBC 를 낼 수 있는 것은 윈도우의 FXC 뿐이라
+    // **리눅스에서는 늘 졌다**(2026-09-19 WSL 에서 확인). 포맷을 플랫폼이 낼 수 있는 것으로 고르면
+    // 같은 계약을 양쪽에서 실제로 검사한다.
+    #if defined( SW_PLATFORM_WINDOWS )
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
+    #else
+    desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
+    #endif
 
     const sw::ShaderCompileResult first = sw::ShaderCompiler::compileHlsl( desc );
+
+    // 그래도 컴파일러가 아예 없는 기계는 있다(DXC 미설치 등). 그때는 **결함이 아니라 환경**이므로
+    // 지지 말고 건너뛴다 — 늘 빨간 케이스는 새 회귀를 가린다. 다른 실패는 그대로 진다.
+    if ( first._bSuccess == false && first._errorMessage.find( "unavailable" ) != sw::string::npos )
+        SW_TEST_SKIP( first._errorMessage.c_str() );
+
     SW_ASSERT_TRUE( first._bSuccess );
     SW_ASSERT_FALSE( first._bytecode.empty() );
 
