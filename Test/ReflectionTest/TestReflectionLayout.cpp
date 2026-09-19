@@ -504,3 +504,29 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
     SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag64_A );
     SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag64_B );
 }
+
+/**
+ * @brief 고정 배열 래퍼는 **뒤에 넣기를 거절한다** — 물려받으면 조용히 덮어쓴다.
+ * @details `ISequenceContainerWrapper::appendElement` 의 기본 구현은 `addElementDefault` 로 자리를
+ *          만들고 마지막 칸에 쓴다. 고정 배열은 자라지 않으므로 그 "마지막 칸" 이 늘 같은 칸이고,
+ *          들어오는 원소가 전부 **한 칸에 덮어써진다.** 오류 없이 끝나므로 아무도 모른다.
+ *          거절하면 호출자(세 직렬화기)가 스트림을 거부한다.
+ */
+SW_TEST_CASE( ReflectionContainersTest, FixedArrayRefusesAppend )
+{
+    std::array<int32, 4>                   arr = { 1, 2, 3, 4 };
+    sw::ArrayWrapper<std::array<int32, 4>> arrWrapper;
+
+    bool       bFillCalled = false;
+    const bool bAppended   = arrWrapper.appendElement( &arr, SW_DELEGATE_LAMBDA( sw::ElementFillDelegate, [&]( void* pElement ) -> bool
+      {
+        bFillCalled                      = true;
+        *static_cast<int32*>( pElement ) = 999;
+        return true;
+    } ) );
+
+    SW_EXPECT_FALSE_MSG( bAppended, "고정 배열에 뒤에 넣기가 성공했다고 답하면 안 됩니다" );
+    SW_EXPECT_FALSE_MSG( bFillCalled, "거절했는데 읽기 콜백이 불렸습니다" );
+    SW_EXPECT_EQUAL( 4, arr[3] ); // 마지막 칸이 덮어써지지 않았다.
+    SW_EXPECT_EQUAL( 4u, arrWrapper.getSize( &arr ) );
+}

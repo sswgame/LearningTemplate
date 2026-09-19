@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ReflectionContainers.h
  * @brief 리플렉션 컨테이너 래퍼 (시퀀스 / 맵)
  */
@@ -334,13 +334,25 @@ namespace sw
             return &( ( *pContainerTyped )[index] );
         }
 
-        /** @brief 비웁니다. */
+        /** @brief 비웁니다 — 고정 배열은 크기가 줄지 않으므로 할 일이 없습니다. */
         void clear( void* ) const override {}
         /** @brief 제로된 저장소에 빈 컨테이너를 placement-new 합니다. */
         void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
         void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
-        /** @brief 기본 원소를 뒤에 추가합니다. */
+        /** @brief 고정 배열은 **자랄 수 없으므로** 아무 일도 하지 않습니다. */
         void addElementDefault( void* ) const override {}
+
+        /**
+         * @brief 고정 배열은 **뒤에 넣을 수 없습니다.** 항상 실패합니다.
+         * @details 기본 구현을 그대로 물려받으면 조용히 망가진다 — `addElementDefault` 가 아무 일도
+         *          하지 않으므로 개수가 늘지 않고, 들어오는 **모든 원소가 마지막 칸 하나에** 차례로
+         *          덮어써진다. 역직렬화는 오류 없이 끝나고 배열만 틀린 값이 된다. 지금 이 래퍼를 쓰는
+         *          리플렉션 타입은 없지만(코드젠이 고정 배열을 내보내지 않는다), 누군가 잇는 날
+         *          **첫 왕복부터 데이터가 깨진다.** 그래서 물려받지 않고 거절한다 — 호출자(세 직렬화기)는
+         *          `false` 를 스트림 거부로 다룬다.
+         *          고정 배열을 정말 지원하려면 "뒤에 넣기" 가 아니라 **인덱스로 채우는** 경로가 필요하다.
+         */
+        bool appendElement( void*, const ElementFillDelegate& ) const override { return false; }
     };
 
     template <typename TContainer>
