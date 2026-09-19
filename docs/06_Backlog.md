@@ -435,6 +435,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Engine 훑기 — Common · Compression · Config · Dialogue · Graphics 앞부분)
+
+고칠 것은 나오지 않았고, **말로 적혀 있지 않던 계약 두 개**를 적었다. 둘 다 "지금은 맞지만
+누가 한 줄만 옮기면 조용히 새는" 자리다.
+
+**`TextureCache::clear()` · `MaterialCache::clear()` 는 GPU 자원을 돌려주지 않는다.**
+`IAssetCache::clear()` 는 디바이스를 인자로 받지 않고(그 이유는 `MaterialCache.h` 머리말에 있다 —
+캐시가 디바이스를 들고 있으면 백엔드 교체 때 죽은 포인터가 된다) 캐시도 들고 있지 않으므로
+`releaseRhi` 를 부를 방법이 **없다.** 살아 있는 디바이스에서 부르면 텍스처 핸들과 **bindless SRV
+인덱스**가 샌다 — 후자는 프리리스트로 영영 안 돌아온다.
+
+지금 안전한 이유는 **순서 하나뿐**이다: `EngineLoop::shutdown` 이 `_rhi->shutdown()` 을 먼저
+불러 `RHIRenderResource` 등록부 전체에 `releaseRhi` 를 밀어 둔 뒤에야
+`ResourceManager::shutdown` → `clearAssetCaches()` 가 여기에 닿는다. 그 의존이 코드 어디에도
+적혀 있지 않아 두 `clear()` 에 계약으로 적었다.
+
+**`Texture2D::loadFromResource` 가 실패하고도 `_pDevice` 를 남겼다.** `registerBindlessTexture`
+실패 검사보다 **먼저** 대입하고 있었다. 지금은 무해하지만(`isRhiValid()` 가 핸들을 본다)
+`releaseRhi` 는 그 값으로 "남의 디바이스 통보인지" 를 가른다 — 가진 것이 없는데 주인만 적혀 있는
+상태를 애초에 만들지 않도록 성공한 뒤에만 적게 옮겼다.
+
+**살펴보고 문제 없던 것:** `EngineServices`(널 참조 반환은 계약이고 `areEngineServicesBound()` 와
+`CheckNullableServiceUse` 게이트가 그 짝이다), LZ4·zlib·zstd 코덱 셋(전부 `_safe` 변형과 타입
+한계 검사를 갖췄다 — zlib 의 `uLong` 이 윈도우에서 32비트라는 것까지 주석에 있다),
+`ConfigManager`(설정 타입별로 시작 때 한 번만 읽으므로 반환한 포인터가 무효화될 일이 없다),
+`DialogueGraphAsset`(핀 인코딩이 한 파일로 모였고 `*10` 레거시도 헤더에 적혀 있다),
+`GpuUploadQueue`, `Mesh`(`releaseRhi`·`forgetRhi`·소멸자 셋의 역할이 갈려 있다),
+`MeshUtil`(입력을 클램프하고 극의 퇴화 삼각형을 거른다), `Texture2D` 업로드
+(DX12 는 스테이징에 **동기 복사** 후 제출하므로 지역 `DdsImageData` 가 죽어도 안전하다).
+
+**검증.** 정적 씬 스크린샷 `d2c61c1f8e57cf2d` 유지, Debug·Shipping 경고 0, nogpu 7/7.
+
 ### 2026-09-19 (Engine 훑기 — Animation · Audio)
 
 사용자가 **"비현실적이라도 해"** 라고 했으므로 패턴 검사로 대체하지 않고 Engine 도 파일을

@@ -145,6 +145,17 @@ namespace sw
         }
     }
 
+    /**
+     * @brief 표를 통째로 비웁니다 — **GPU 자원을 돌려주지는 않습니다.**
+     * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** 이유는 `TextureCache::clear()` 와 같다:
+     *          `IAssetCache::clear()` 는 디바이스를 인자로 받지 않고(이 파일 헤더의 머리말 참고 —
+     *          캐시가 디바이스를 들고 있으면 백엔드 교체 때 죽은 포인터가 된다) 캐시도 들고 있지
+     *          않으므로 여기서 `releaseRhi` 를 부를 방법이 없다.
+     *
+     *          지금 이 함수로 오는 길은 `ResourceManager::shutdown` → `clearAssetCaches()` 하나뿐이고,
+     *          `EngineLoop::shutdown` 이 그보다 **먼저** `_rhi->shutdown()` 을 불러 등록부 전체에
+     *          `releaseRhi` 를 밀어 둔다. 평소 경로는 참조가 0 이 되는 `release()` 쪽이다.
+     */
     void MaterialCache::clear()
     {
         if ( _impl != nullptr )

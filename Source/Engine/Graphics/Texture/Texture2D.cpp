@@ -123,8 +123,6 @@ namespace sw
         }
 
         _srv = pResource->registerBindlessTexture( _handle );
-
-        _pDevice = pDevice;
         if ( _srv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath.data() );
@@ -133,6 +131,11 @@ namespace sw
             return false;
         }
 
+        // `_pDevice` 는 **성공한 뒤에만** 적는다. 예전에는 위 검사보다 먼저 적어서, 실패하고 돌아간
+        // 뒤에도 "이 디바이스에 올라가 있다" 는 표시만 남았다. 지금은 아무 해가 없지만(`isRhiValid`
+        // 가 핸들을 보므로) `releaseRhi` 는 이 값으로 **남의 디바이스 통보인지**를 가른다 —
+        // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
+        _pDevice  = pDevice;
         _path     = string{ relativePath };
         _width    = desc._width;
         _height   = desc._height;
