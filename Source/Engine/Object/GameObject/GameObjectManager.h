@@ -346,7 +346,12 @@ namespace sw
     private:
         /** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
         void tickComponents( float32 deltaTime );
-        /** @brief 서브트리 월드 행렬을 플러시합니다. */
+        /**
+         * @brief 한 루트 아래의 월드 트랜스폼을 갱신합니다 (명시적 스택 DFS).
+         * @details 스택 버퍼는 멤버(`_listTransformFlushStack`)를 **재사용**한다 — 이 함수는 루트마다
+         *          불리므로 호출마다 벡터를 만들면 그것이 곧 프레임당 오브젝트 수만큼의 힙 할당이다.
+         *          부르는 곳이 `flushSceneTransforms`(게임 스레드) 하나라 공유해도 안전하다.
+         */
         void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged );
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
@@ -387,15 +392,59 @@ namespace sw
         }
 
     private:
+        /**
+         * @struct ObjectSlotTable
+         * @brief `objectId → GameObject*` 를 **락 없이** 읽는 밀집 표.
+         *
+         * @details 핸들 해석(`resolveComponent`)이 프레임당 오브젝트 수만큼 일어난다. 예전에는 그 한
+         *          번마다 매니저 `_mutex` 를 공유 잠금하고 해시 맵을 조회했다 — 큐브 20,000 개 벤치에서
+         *          **호출당 110ns, 프레임당 2.2ms** 였다(핸들 대신 미리 푼 포인터를 쓰게 바꿔 실측).
+         *
+         *          id 는 단조 증가 카운터라 **밀집**하므로 배열이면 된다. 다만 배열을 늘리면 주소가
+         *          옮겨져 읽는 쪽과 부딪히므로, 절대 재배치되지 않는 **청크 표**로 둔다(`LinearAllocator`
+         *          의 블록 표와 같은 이유). 쓰기는 전부 매니저 락 안에서 일어나고, 읽기는 원자적
+         *          슬롯 로드 하나다.
+         *
+         * @note 표가 답하지 못하는 id(범위 밖)는 부르는 쪽이 기존 맵으로 떨어진다 — 표는 **빠른 길**이지
+         *       유일한 진실이 아니다. 그래서 표를 잘못 건드려도 답이 틀리지 않는다.
+         */
+        struct ObjectSlotTable
+        {
+            /** @brief 청크 하나가 담는 슬롯 수. */
+            static constexpr uint64 kChunkSize = 4096;
+            /** @brief 청크 표의 칸 수. `kChunkSize` 와 곱해 다룰 수 있는 id 범위가 된다(약 420만). */
+            static constexpr uint64 kMaxChunk = 1024;
+
+            ObjectSlotTable();
+            ~ObjectSlotTable();
+
+            ObjectSlotTable( const ObjectSlotTable& )            = delete;
+            ObjectSlotTable& operator=( const ObjectSlotTable& ) = delete;
+
+            /** @brief 슬롯에 포인터를 씁니다. 매니저 락을 쥔 채 부르십시오. 범위 밖이면 false. */
+            bool store( uint64 objectId, GameObject* pObject );
+            /** @brief 슬롯을 읽습니다. **락이 필요 없습니다.** 범위 밖이거나 비었으면 nullptr. */
+            GameObject* load( uint64 objectId ) const;
+            /** @brief 그 id 가 표가 다룰 수 있는 범위인지. 범위 밖이면 부르는 쪽이 맵으로 갑니다. */
+            static bool isInRange( uint64 objectId ) { return objectId < ( kChunkSize * kMaxChunk ); }
+            /** @brief 모든 슬롯을 비웁니다(청크는 그대로 둡니다). */
+            void clear();
+
+        private:
+            atomic<atomic<GameObject*>*> _arrChunk[kMaxChunk];
+        };
+
         TypedPoolAllocator<GameObject>                          _poolGameObject;
         unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN (TypeInfo 포인터는 재등록으로 바뀐다)
 
         vector<GameObject*>                       _listGameObject;
         unordered_map<hashed_string, GameObject*> _mapNameToObject;
         unordered_map<uint64, GameObject*>        _mapIdToObject;
-        vector<GameObject*>                       _listPendingAdd;
-        vector<GameObject*>                       _listPendingDestroyObject;
-        vector<Component*>                        _listPendingDestroyComponent;
+        /** @brief 위 맵의 **빠른 읽기 길**. 쓰기는 맵과 같은 자리에서 함께 한다. */
+        ObjectSlotTable     _objectSlotTable;
+        vector<GameObject*> _listPendingAdd;
+        vector<GameObject*> _listPendingDestroyObject;
+        vector<Component*>  _listPendingDestroyComponent;
 
         vector<GameObject*> _listProcessingDestroyObject;
         vector<Component*>  _listProcessingDestroyComponent;
@@ -410,12 +459,17 @@ namespace sw
         atomic<bool>                      _bTicking;
         atomic<bool>                      _bIsTickWavesDirty;
         vector<vector<TickExecutionItem>> _listCachedTickWave;
-        mutex                             _deferredTransformMutex;
-        vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;
-        vector<TransformUpdateDelegate>   _listProcessingTransform;
-        mutex                             _deferredPostTickMutex;
-        vector<PostTickDelegate>          _listDeferredPostTickUpdate;
-        vector<PostTickDelegate>          _listProcessingPostTick;
+        /**
+         * @brief 트랜스폼 플러시 DFS 가 재사용하는 스택 버퍼. 게임 스레드 전용.
+         * @details 루트마다 새 벡터를 만들면 그것이 곧 프레임당 오브젝트 수만큼의 힙 할당이다.
+         */
+        vector<pair<SceneComponent*, bool>> _listTransformFlushStack;
+        mutex                               _deferredTransformMutex;
+        vector<TransformUpdateDelegate>     _listDeferredTransformUpdate;
+        vector<TransformUpdateDelegate>     _listProcessingTransform;
+        mutex                               _deferredPostTickMutex;
+        vector<PostTickDelegate>            _listDeferredPostTickUpdate;
+        vector<PostTickDelegate>            _listProcessingPostTick;
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `134d02cb`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `9daf2a48`
 
 ---
 
@@ -278,10 +278,14 @@ cd build/Ninja-Debug/Bin
 | `isRunning` | 자기 깃발만 본다 (자식이 죽어도 true) | `waitpid(WNOHANG)` |
 | `~Process` | `pclose` 라 **자식이 끝날 때까지 막힌다** | 분리 (Windows 와 같아진다) |
 
-**왜 이번에 안 했는가.** 이 PC 에 WSL 이 없어서(`wsl.exe --install` 이 필요하다) 리눅스 빌드를
-돌릴 수 없다. 컴파일도 못 해 본 플랫폼 코드 80줄을 넣는 것은 이 저장소에서 반복해 고쳐 온
-"아무도 빌드하지 않는 플랫폼의 코드" 를 새로 만드는 일이라 하지 않았다. CI 는 리눅스를
-Debug·ASan·Shipping 으로 빌드하고 `-L nogpu` 까지 돌리므로, 바꾸면 검증은 CI 가 해 준다.
+**막고 있던 것이 없어졌다 (2026-09-19).** "이 PC 에 WSL 이 없다" 고 적어 두었던 것은 **틀렸다** —
+있다. 그래서 "컴파일도 못 해 본 플랫폼 코드" 라는 보류 사유는 더 이상 서지 않는다. `WSL-*` 프리셋으로
+직접 짓고 `-L nogpu` 까지 돌린 뒤 넣으면 된다(CI 도 리눅스를 Debug·ASan·Shipping 으로 짓는다).
+
+> **함정 — WSL 과 Windows 빌드를 동시에 돌리지 말 것.** 둘이 `build/vcpkg_installed` 를 공유해서,
+> 뒤에 시작한 쪽이 앞 트리플릿의 설치와 `vcpkg/compiler-file-hash-cache.json` 을 지운다. 실제로
+> 그렇게 Windows 트리가 통째로 서지 않게 됐고, 복구에 27분(`Ninja-Release` 재구성)이 들었다.
+> WSL 구성은 **Windows 빌드가 하나도 안 도는 때에 단독으로** 돌린다.
 
 **같이 걷을 것**: `Test/CoreTest/TestProcess.cpp` 의 `TerminateProcess` 가 지금 POSIX 에서
 `SW_TEST_SKIP` 이다. pid 가 생기면 건너뛰기를 지우고 양쪽에서 돌린다.
@@ -445,6 +449,60 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (프레임의 절반이 계측 밖에 있었다 — 게임 스레드 26% 단축)
+
+**측정부터 고쳤다.** 표 제목이 "frame breakdown" 인데 `GT.Frame` 은 `EngineLoop::tick` 만 잰다 —
+그 앞에서 도는 **게임 모듈 업데이트가 한 줄도 없었다.** `App::run` 에 `GT.Game.update` ·
+`GT.Game.fixedUpdate` · `GT.Editor.updateUi` 를 넣고, 깜깜하던 `GT.Scene.tick` 안도
+`flushTransforms` · `components` 로 갈랐다. 그러자 그림이 **달라졌다**:
+
+| scope | 계측 전 인식 | 실제(Release, 큐브 20,000, dx12, 60프레임) |
+|---|---|---|
+| `GT.Game.update` | 없음(안 보임) | **3,259us — 가장 큰 항목** |
+| `GT.Scene.tick` | 1,889us (안이 안 보임) | 그 중 `flushTransforms` **1,887us**, `components` **0us** |
+
+**1) 트랜스폼 플러시가 루트마다 벡터를 새로 만들었다.** `flushSceneComponentSubtree` 가 호출마다
+`vector` 를 만들고 `reserve(32)` 했는데, 이 함수는 **루트 씬 컴포넌트마다** 불린다 — 큐브 20,000 개면
+프레임당 힙 할당 20,000 번이다. 버퍼를 매니저 멤버로 올려 재사용했다(부르는 곳이 게임 스레드 한 곳뿐).
+→ `flushTransforms` **1,887 → 1,350us (-29%)**.
+
+**2) 핸들 해석이 호출마다 락 + 해시였다.** `resolveComponent` 는 `findGameObjectById` 로 시작하는데
+그것이 매니저 `_mutex` **공유 잠금 + 해시 조회**였다. 핸들은 프레임당 오브젝트 수만큼 풀린다.
+실측으로 값을 확정했다 — 벤치를 "미리 푼 포인터" 로 바꿔 보니 `GT.Game.update` 가 3,259 → 1,050us,
+즉 **해석에만 프레임당 2.2ms(호출당 110ns)**.
+
+id 는 단조 증가라 **밀집**하므로 배열이면 된다. 다만 늘리면 주소가 옮겨져 읽는 쪽과 부딪히므로
+**절대 재배치되지 않는 청크 표**로 뒀다(`LinearAllocator` 의 블록 표와 같은 이유). 쓰기는 전부 기존
+매니저 락 안에서 맵과 **같은 자리**에서 하고, 읽기는 원자적 슬롯 로드 하나다. 표가 다루지 못하는
+범위 밖 id 는 맵으로 떨어진다 — **표는 빠른 길이지 유일한 진실이 아니다.**
+→ `GT.Game.update` **3,259 → 1,919us (-41%)**.
+
+**합계(같은 벤치 3회 평균).**
+
+| | 전 | 후 |
+|---|---:|---:|
+| `GT.Game.update` | 3,259us | **1,919us** |
+| `GT.Scene.tick` | 1,889us | **1,350us** |
+| `GT.Frame` | 3,688us | **3,256us** |
+| 게임 스레드 합(둘) | 6,947us | **5,175us (-26%)** |
+
+**되돌린 것 — 숫자가 없어서.** `resolveAndTickItem` 이 파도에 담아 둔 포인터를 그냥 쓰게 바꿔 봤지만
+(파도는 구조가 바뀔 때마다 다시 세워지므로 안전하다) **이 벤치에서 `GT.Scene.tick.components` 가 0us**
+였다 — 틱하는 컴포넌트가 없어 이득을 잴 수 없었다. 되돌리고 그 사실을 코드 주석에 남겼다.
+틱이 실제로 도는 워크로드가 생기면 그때 숫자와 함께 다시 본다.
+
+**부수 수확 — `FindLlvmBin` 의 후보 경로가 한 칸씩 어긋나 있었다.** WSL 빌드를 같이 돌려 보다
+`build/vcpkg_installed` 를 두 트리플릿이 공유한다는 것을 알게 됐고(동시에 돌리면 Windows 쪽 설치가
+지워진다), 복구하다 이 버그를 밟았다: 후보 루트가 이 파일 기준 세·네 단계 위만 있어 **저장소 루트가
+목록에 없었다.** 평소에는 `CMAKE_SOURCE_DIR` 이 가려 주지만 **vcpkg 포트 빌드에서는 그것이 vcpkg 의
+scripts 폴더**라, PATH/ENV 를 비운 채 도는 그 자리에서 저장소의 `Tools/LLVM` 을 영영 못 찾는다.
+`compiler-file-hash-cache` 가 한 번 지워지면 그 뒤로 configure 가 서지 않는다 — 실제로 그렇게 막혔다.
+
+> **WSL 과 Windows 빌드는 동시에 돌리지 말 것.** 둘이 `build/vcpkg_installed` 를 공유한다.
+
+**검증.** Debug·Release·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 양쪽 2/2 ·
+린트 17/17 · 에디터 실기동 `[Error]` 0건.
 
 ### 2026-09-19 (모듈이 자기 에셋 종류를 올릴 수 있게 — 그리고 내려놓는 규칙을 못박았다)
 

@@ -22,6 +22,7 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -292,12 +293,26 @@ namespace sw
 
             pollReloadHotkeys( frameTime._deltaTime );
 
-            for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
-                _moduleHost->fixedUpdateGame( frameTime._fixedDeltaTime );
+            // **게임 모듈의 시간도 표에 올린다.** 예전에는 이 셋이 계측 밖이었다 — 표 제목이
+            // "frame breakdown" 인데 정작 게임 코드가 쓰는 시간은 한 줄도 없었고, 그래서
+            // `GT.Frame` 만 보고 "프레임의 전부" 라고 읽게 됐다(벤치의 큐브 2만 개 갱신이 통째로
+            // 보이지 않았다).
+            {
+                SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
+                for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
+                    _moduleHost->fixedUpdateGame( frameTime._fixedDeltaTime );
+            }
 
-            _moduleHost->updateGame( frameTime._deltaTime );
-            // 에디터가 없으면 즉시 반환한다. 이 호출이 게임 뷰포트 RT 와 씬 틱 여부를 확정한다.
-            _moduleHost->updateEditorUi( frameTime._deltaTime );
+            {
+                SW_PROFILE_SCOPE( "GT.Game.update" );
+                _moduleHost->updateGame( frameTime._deltaTime );
+            }
+
+            {
+                // 에디터가 없으면 즉시 반환한다. 이 호출이 게임 뷰포트 RT 와 씬 틱 여부를 확정한다.
+                SW_PROFILE_SCOPE( "GT.Editor.updateUi" );
+                _moduleHost->updateEditorUi( frameTime._deltaTime );
+            }
 
             // 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
             // 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
