@@ -40,6 +40,14 @@ namespace sw
                        "LockFreeObjectPool Capacity must be a power of 2 (ConcurrentQueue requirement)" );
 
     public:
+        /**
+         * @brief 반납이 자리를 얻지 못했을 때 다시 시도하는 최대 횟수입니다.
+         * @details 경합으로 인한 찰나의 "가득 참" 은 몇 번이면 지나간다. 이 수는 그것을 넉넉히
+         *          넘기면서, 정말 자리가 나지 않는 경우(남의 포인터·이중 반납)에 영영 돌지
+         *          않도록 끝을 정해 둔다.
+         */
+        static constexpr uint32 kMaxReleaseAttempt = 1024;
+
         /** @brief 스토리지 슬롯을 모두 유휴 큐에 넣습니다. */
         LockFreeObjectPool()
         {
@@ -98,15 +106,26 @@ namespace sw
 
             pPtr->~T();
 
-            // **반납이 실패하면 세지 않는다.** 자유 큐의 자리 수는 정확히 `Capacity` 이고 풀의 블록
-            // 수도 그만큼이다 — 가득 찼다는 것은 이 포인터가 이 풀의 것이 아니거나 **이미 반납된
-            // 것**이라는 뜻이다. 그런데도 `_activeCount` 를 줄이면 0 에서 뒤집혀 40억이 되고,
-            // 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 하게 된다.
-            if ( _freeQueue.enqueue( pPtr ) == false )
+            // **"가득 찼다" 는 답이 곧 이중 반납은 아니다.** 내부 MPMC 큐(Vyukov)는 소비자가 칸을
+            // 집어간 뒤 그 칸의 **순번을 아직 공개하지 않은 찰나**에도 생산자에게 가득 찼다고
+            // 답한다. 자리 수(`Capacity`)와 블록 수가 같으므로 그 찰나는 반드시 지나간다 —
+            // 그러니 한 번의 실패로 물러서면 안 된다. 물러서면 그 블록이 자유 목록으로 돌아가지
+            // 못해 **풀이 조용히 줄어들고**, 오래 돌수록 `acquire` 가 더 자주 널을 돌려준다.
+            //
+            // 정말로 이 풀의 것이 아니거나 이미 반납된 포인터라면 자유 큐에는 이미 `Capacity`
+            // 개가 들어 있어 아무리 기다려도 자리가 나지 않는다 — 그때만 말한다.
+            uint32 attemptCount = 0;
+            while ( _freeQueue.enqueue( pPtr ) == false )
             {
-                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue is full — the pointer is not this pool's, or was already released." );
-                pPtr = nullptr;
-                return;
+                if ( ++attemptCount >= kMaxReleaseAttempt )
+                {
+                    // **반납이 실패하면 세지 않는다.** `_activeCount` 를 줄이면 0 에서 뒤집혀
+                    // 40억이 되고, 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 하게 된다.
+                    SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full — the pointer is not this pool's, or was already released." );
+                    pPtr = nullptr;
+                    return;
+                }
+                std::this_thread::yield();
             }
 
             _activeCount.fetch_sub( 1, std::memory_order_relaxed );

@@ -503,6 +503,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (같은 날 넣은 이중 반납 단언이 틀렸다 — "가득 참" 은 이중 반납이 아니다)
+
+이번 세션 앞쪽(`b94b2818`)에서 `LockFreeObjectPool::release` 에 "자유 큐가 가득 찼다 = 이 포인터가
+이 풀의 것이 아니거나 이미 반납된 것" 이라는 단언을 넣었다. **그 전제가 틀렸다.**
+
+내부 MPMC 큐는 Vyukov 방식이라, 소비자가 칸을 집어간 뒤 그 칸의 **순번을 아직 공개하지 않은
+찰나**에도 생산자에게 가득 찼다고 답한다. 자리 수(`Capacity`)와 블록 수가 같으므로 그 찰나는
+반드시 지나가는데, 한 번의 실패로 물러서면 그 블록이 자유 목록으로 돌아가지 못한다 — 풀이
+**조용히 줄어들고** 오래 돌수록 `acquire` 가 더 자주 널을 돌려준다. Debug 에서는
+`SW_LOG_ASSERT` 가 `SW_DEBUG_BREAK` 까지 하므로 `CoreTest` 가 **간헐적으로 exit 3 으로 죽었다**
+(직접 실행 25회 중 1회, ctest 로도 재현). 물러서지 않고 다시 시도하도록 고쳤다.
+
+**기존 동시성 케이스는 이것을 못 잡았다.** `LockFreeObjectPoolConcurrent` 는 마지막에
+`getAvailableCount() == kCapacity` 를 보지만, Debug 에서는 그 줄에 닿기 전에 프로세스가 죽었고
+Release 에서는 그 찰나가 드물어 5회 연속으로 통과했다. 그래서 작은 풀(8칸)에 코어보다 많은
+스레드(8개)를 붙여 찰나를 자주 만드는 `LockFreeObjectPoolLosesNoBlockUnderContention` 을 새로
+넣었다 — "풀이 여전히 용량만큼 내줄 수 있는가" 하나만 묻는다. 물러서는 쪽으로 되돌리면
+Release 에서 **3회 모두** 진다.
+
 ### 2026-09-20 (ReflectionParser 셋 — 이름 충돌 · 3주 묵은 파서 · 연속 열거형이 비트플래그였다)
 
 **같은 이름의 헤더 둘이 한 산출물을 노리면 뒤엣것이 조용히 덮었다.** 생성 파일 이름은 소스의

@@ -1162,3 +1162,59 @@ SW_TEST_CASE( DataStructureTest, HashMapEraseAllInSeveralOrdersStaysConsistent )
         SW_EXPECT_TRUE( map.empty() );
     }
 }
+
+/**
+ * @brief [DataStructureTest] 경합 속에서 반납된 블록이 하나도 사라지지 않는다
+ * @details 내부 MPMC 큐는 소비자가 칸을 집어간 뒤 **순번을 아직 공개하지 않은 찰나**에도
+ *          생산자에게 "가득 찼다" 고 답한다. 반납이 그 답을 이중 반납으로 읽고 물러서면 그 블록은
+ *          자유 목록으로 돌아가지 못한다 — 풀이 **조용히 줄어들고**, 오래 돌수록 `acquire` 가 더
+ *          자주 널을 돌려준다. 자리 수와 블록 수가 같으므로 그 찰나는 반드시 지나가니, 반납은
+ *          물러서지 말고 다시 시도해야 한다.
+ *
+ *          작은 풀에 코어보다 많은 스레드를 붙여 그 찰나를 자주 만든다. 끝에 남는 질문은 하나다 —
+ *          **풀이 여전히 용량만큼 내줄 수 있는가.**
+ */
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolLosesNoBlockUnderContention )
+{
+    constexpr uint32 kCapacity   = 8;
+    constexpr int32  kThreads    = 8;
+    constexpr int32  kIterations = 20000;
+
+    sw::LockFreeObjectPool<int32, kCapacity> pool;
+
+    sw::vector<std::thread> workers;
+    for ( int32 threadIndex = 0; threadIndex < kThreads; ++threadIndex )
+    {
+        workers.emplace_back( [&pool]()
+        {
+            for ( int32 iter = 0; iter < kIterations; ++iter )
+            {
+                int32* pValue = pool.acquire( iter );
+                if ( pValue != nullptr )
+                    pool.release( pValue );
+            }
+        } );
+    }
+    for ( std::thread& worker : workers )
+    {
+        worker.join();
+    }
+
+    SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
+
+    // **용량만큼 다시 내줄 수 있어야 한다.** 블록 하나라도 잃었으면 여기서 널이 나온다.
+    sw::vector<int32*> listTaken;
+    for ( uint32 takeIndex = 0; takeIndex < kCapacity; ++takeIndex )
+    {
+        int32* pValue = pool.acquire( static_cast<int32>( takeIndex ) );
+        if ( pValue != nullptr )
+            listTaken.push_back( pValue );
+    }
+    SW_EXPECT_TRUE_MSG( listTaken.size() == kCapacity,
+                        "경합 중 반납된 블록이 사라졌습니다 — 풀이 용량보다 적게 내줍니다" );
+
+    for ( int32*& pValue : listTaken )
+    {
+        pool.release( pValue );
+    }
+}
