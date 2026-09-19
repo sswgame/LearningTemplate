@@ -955,3 +955,41 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
     input.endFrame();
     input.shutdown();
 }
+
+/**
+ * @brief [InputManagerTest] 마우스를 멈추면 스무딩 델타가 **0 으로 돌아온다**
+ * @details `MouseDevice::poll()` 이 하는 일이 이것 하나인데 **테스트가 없었다** — `poll` 의 스무딩
+ *          갱신을 통째로 지워도 이 스위트가 전부 초록이었다(2026-09-19 변이로 확인).
+ *
+ *          없으면 어떻게 되는가: 스무딩 델타는 마지막 입력 이벤트가 넣은 값에서 **멈추지 않는다.**
+ *          마우스를 놓아도 `getSmoothMouseDelta()` 가 계속 같은 값을 보고하고, 그 값으로 시점을 도는
+ *          쪽은 **손을 뗐는데도 계속 돈다.** 로그에는 아무것도 남지 않는다.
+ *
+ * @note 스무딩과 가속을 끄고 본다 — EMA 가 걸려 있으면 0 에 점근할 뿐 정확히 0 이 되지 않아
+ *       "돌아왔다" 를 단언할 수 없다. 여기서 보는 것은 필터의 모양이 아니라 **poll 이 프레임마다
+ *       위치 차이를 흘려 넣는다**는 사실이다.
+ */
+SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    input.setMouseSmoothing( 0.0f );
+    input.setMouseAcceleration( 1.0f );
+
+    // 1프레임: 마우스가 x 로 10 움직인다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getSmoothMouseDelta()._x, 0.001f );
+
+    // 2프레임: 이벤트가 없다. onFrameBegin 이 이번 프레임의 위치 차이(10)를 세고 poll 이 흘려 넣는다.
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getSmoothMouseDelta()._x, 0.001f );
+
+    // 3프레임: 여전히 이벤트가 없고 위치도 그대로다 — 위치 차이가 0 이므로 델타도 0 이어야 한다.
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getSmoothMouseDelta()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getSmoothMouseDelta()._y, 0.001f );
+
+    input.shutdown();
+}

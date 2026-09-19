@@ -117,6 +117,21 @@ namespace sw
         void setPointerInsideState( bool bInside );
 
     private:
+        /**
+         * @brief 델타에 **가속 곡선과 EMA 스무딩**을 적용해 `_smoothDelta` 를 갱신합니다.
+         * @details 이 계산이 `poll()` 에도 **글자까지 같은 사본**으로 들어 있었다. 마우스 감각을
+         *          조정하는 사람이 한쪽만 고치면 **입력 경로에 따라 감각이 달라진다** — 원시 입력이
+         *          오는 기계와 안 오는 기계가 서로 다르게 움직이고, 테스트는 부호만 보므로 잡히지 않는다.
+         *
+         * @note **아직 정하지 못한 것 — 한 프레임에 여러 번 적용된다.** `addRawDelta`·`setPosition` 이
+         *       입력 이벤트마다 이것을 부르고, `poll()` 이 프레임당 한 번 더 부른다(그때는 누적된
+         *       `_rawDelta`, 없으면 위치 기반 `_delta` 로). 즉 EMA 가 프레임당 "이벤트 수 + 1" 번
+         *       돌아서 **스무딩 양이 마우스 폴링 레이트에 따라 달라진다.** 1000Hz 와 125Hz 가 다른
+         *       감각이 된다는 뜻이다. 다만 `poll()` 의 "원시 델타가 0 이면 위치 델타를 쓴다" 는
+         *       폴백을 보면 **poll 이 프레임당 권위** 이고 이벤트 쪽은 프레임 중간 조회용이라는
+         *       읽기도 된다. 여기서는 **동작을 바꾸지 않았다** — 감각을 재려면 실제로 마우스를
+         *       움직여 봐야 하고 그것은 자동 검증이 안 된다. 손에 마우스를 쥔 사람이 정할 것.
+         */
         void updateSmoothDelta( float32 dx, float32 dy );
 
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
