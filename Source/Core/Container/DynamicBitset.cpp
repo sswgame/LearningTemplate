@@ -211,7 +211,14 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator&=( const DynamicBitset& other )
     {
-        SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
+        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
+        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        if ( _bitCount != other._bitCount )
+        {
+            SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );
+            return *this;
+        }
+
         for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
         {
             _listBlock[blockIndex] &= other._listBlock[blockIndex];
@@ -221,7 +228,14 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator|=( const DynamicBitset& other )
     {
-        SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
+        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
+        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        if ( _bitCount != other._bitCount )
+        {
+            SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );
+            return *this;
+        }
+
         for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
         {
             _listBlock[blockIndex] |= other._listBlock[blockIndex];
@@ -231,7 +245,14 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator^=( const DynamicBitset& other )
     {
-        SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
+        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
+        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        if ( _bitCount != other._bitCount )
+        {
+            SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );
+            return *this;
+        }
+
         for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
         {
             _listBlock[blockIndex] ^= other._listBlock[blockIndex];

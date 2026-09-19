@@ -95,13 +95,32 @@ namespace sw
         if ( _bInitialized.load() == false )
             return;
 
-        std::thread::id tid = std::this_thread::get_id();
+        const std::thread::id tid = std::this_thread::get_id();
 
         std::scoped_lock<sw::mutex> lock{ _mutex };
         ThreadState&                state = _mapThreadState[tid];
-        state._pWaitingLock               = nullptr;
+
+        // `lock()` 은 바로 앞에서 recordLockIntended 로 이 락을 기다린다고 적어 두므로, 그때 뜬 스택이
+        // 곧 획득 지점의 스택이다 — 한 번 더 뜨지 않는다. 하지만 **`try_lock()` 은 그 단계가 없다**
+        // (기다리지 않으니 사이클 검사를 돌릴 이유도 없다). 그 경로에서 예전 스택을 그대로 쓰면
+        // 데드락 덤프의 "Acquired at" 이 **전혀 다른 락을 잡던 자리**를 가리킨다 — 탐지기의 유일한
+        // 쓸모가 "어디서 잡았나" 인데 거기서 거짓말을 하게 된다. 그래서 기다린 락이 이 락일 때만
+        // 재사용하고, 아니면 여기서 뜬다. (판단에 쓰는 `_mapThreadState` 는 이 락 안에서만 만진다 —
+        // 밖에서 `operator[]` 로 들여다보면 그 자체가 공유 맵에 대한 쓰기다.)
+        if ( state._pWaitingLock == pLock )
+        {
+            state._mapAcquiredCallStack[pLock] = state._waitingCallStack;
+        }
+        else
+        {
+            CallStack acquiredStack;
+            CallStackCapture::capture( acquiredStack, 2 );
+            state._mapAcquiredCallStack[pLock] = acquiredStack;
+        }
+
+        state._threadId = tid;
         state._listHeldLock.push_back( pLock );
-        state._mapAcquiredCallStack[pLock] = state._waitingCallStack; // 획득 시점 스택은 대기 시작 시점의 스택과 동일
+        state._pWaitingLock = nullptr;
 
         _mapLockOwner[pLock] = tid;
     }

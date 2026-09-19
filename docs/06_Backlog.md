@@ -435,6 +435,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (Source 함수 단위 점검 — Core/Concurrency · Core/Container)
+
+**`sw::vector::insert( pos, count, value )` 가 두 가지로 범위 밖을 만졌다 (메모리 안전).**
+둘 다 ASan 이 확인해 줬다.
+
+1. **`count > _size`** — "옮길 원소인가" 를 `itemIndex - count >= offset` 으로 갈랐는데, 그 뺄셈이
+   size_t 로 뒤집혀 조건이 **언제나 참**이 되고 `_pData[2^64-k]` 에서 move 해 왔다.
+   `{10}` 에 `insert( begin, 2, 7 )` — 앞에 두 개 끼워 넣기 — 만으로 걸린다.
+2. **`count == 0` 이고 `offset == 0`** — 뒤로 미는 루프의 종료 조건이 `itemIndex >= offset + 0`,
+   즉 언제나 참이 되어 인덱스가 0 에서 한 번 더 줄어 뒤집혔다. **끝나지 않으면서 범위 밖에 쓴다**
+   (`vector.h:819` heap-buffer-overflow).
+
+밀기/채우기를 인덱스 뺄셈이 아니라 "목적지가 살아 있는 칸인가(`toIndex >= _size`)" 로 가르도록
+다시 썼다. 겸사겸사 **자기 원소를 넣는 경우**(`v.insert( v.begin(), 3, v[0] )`, 적법한 호출)도
+닫았다 — 재할당이 버퍼를 옮기면 `value` 참조가 죽는다(변이 검사에서 heap-use-after-free 로 확인).
+
+**`erase` 둘**은 `SW_ASSERT` 만 믿고 있었다. 그것은 Release 에서 **통째로 사라지므로**
+빈 벡터의 `_size - 1` 이 배포본에서만 뒤집힌다. 실제 가드를 넣었다.
+
+**`DynamicBitset::operator&=/|=/^=`** 도 같은 모양이었다 — `SW_LOG_ASSERT` 로 크기 일치를 적어
+두고 그대로 짧은 쪽 범위 밖을 읽었다. 이제 크기가 다르면 아무것도 하지 않는다.
+(테스트는 붙이지 못했다: Debug 에서는 assert 가 프로세스를 세우고, ASan 프리셋도 Debug 라
+그 경로에 못 닿는다. 잡지 못하는 검사는 두지 않는다.)
+
+**`DeadlockDetector::recordLockAcquired` 가 엉뚱한 콜스택을 적었다.** 획득 지점 스택을
+`_waitingCallStack` 재사용으로 때웠는데, `try_lock()` 은 `recordLockIntended` 를 거치지 않는다
+(기다리지 않으니 사이클 검사도 필요 없다). 그래서 덤프의 "Acquired at" 이 **전혀 다른 락을 잡던
+자리**를 가리켰다 — 탐지기의 유일한 쓸모가 거기인데. 기다린 락이 그 락일 때만 재사용한다.
+
+**`SW_ENABLE_DEADLOCK_DETECTION=ON` 은 아무 데서도 빌드되지 않는다** (기본 OFF, CI 에도 없다).
+이번에 켜서 확인했다 — 2026-09-19 기준 컴파일되고 CoreTest 218/218 통과하며 오탐도 없다.
+그대로 둘지(썩게 두는 것) CI 에 컴파일 검사만 넣을지는 아직 정하지 않았다.
+
+**살펴보고 문제 없던 것:** `ConcurrentQueue`(Vyukov 원본과 한 줄씩 대조), `WorkStealingDeque`
+(Chase-Lev), `LockFreeQueue`(SPSC), `LockFreeObjectPool`, `SpinLock`(TTAS), `sw::atomic`,
+`EnumUtil`, `Defines.h`. `DataRaceDetector` 의 `%s`·`%p`·`%u` 는 `formatString` 이 실제로 지원한다.
+
+**검증.** 새 케이스 3개, 셋 다 변이 검사로 문다(둘은 ASan 이 직접 잡는다).
+Debug·Release·Shipping·ASAN 빌드 경고 0, nogpu 7/7 × 3, hostgpu 2/2, lint 18/18.
+
 ### 2026-09-19 (Source 함수 단위 점검 — Core/Common · Core/Compression)
 
 **손상된 스트림이 버퍼 밖을 읽게 할 수 있었다 (메모리 안전).** `CompressionStream::verifyHeader` 의

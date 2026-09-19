@@ -800,36 +800,50 @@ namespace sw
     inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, size_type count, const T& value )
     {
         SW_SCOPED_RACE_WRITE();
-        size_t offset = static_cast<size_t>( pos - _pData );
+        const size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset <= _size );
+
+        // 0개 끼워 넣기는 아무 일도 하지 않는다. 예전엔 여기서 빠져나가지 않아 아래 "뒤로 밀기"
+        // 루프의 종료 조건이 `itemIndex >= offset + 0` 이 되었고, offset 이 0 이면 그것이 **언제나
+        // 참**이라 인덱스가 0 에서 한 번 더 줄어 size_t 로 뒤집혔다 — 범위 밖에 계속 쓰면서 끝나지
+        // 않았다(ASan: heap-buffer-overflow).
+        if ( count == 0 )
+            return _pData + offset;
+
+        // `value` 가 **이 벡터 안의 원소**일 수 있다(`v.insert( v.begin(), 3, v[0] )` 는 적법하다).
+        // 아래에서 그 자리를 덮어쓰고, 그 전에 reserveInternal 이 버퍼를 통째로 옮길 수도 있다.
+        // 그래서 손대기 전에 값으로 떠 둔다.
+        const T valueCopy = value;
+
         if ( _size + count > _capacity )
             reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
-        if ( offset < _size )
+        // 1) 뒤쪽 원소들을 count 칸 뒤로 민다. **뒤에서부터** 가야 아직 안 읽은 원소를 덮지 않는다.
+        //    목적지가 아직 살아 있는 칸이면 이동 대입, 미초기화 칸이면 placement new 다.
+        //    예전에는 이 구분을 `itemIndex - count >= offset` 으로 했는데, `count > _size` 면 그
+        //    뺄셈이 뒤집혀 조건이 언제나 참이 되고 **없는 원소에서 move 해 왔다**
+        //    (`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
+        const size_t tailCount = _size - offset;
+        for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
         {
-            for ( size_t itemIndex = _size; itemIndex < _size + count; ++itemIndex )
-            {
-                if ( itemIndex - count >= offset )
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( std::move( _pData[itemIndex - count] ) );
-                else
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
-            }
-            for ( size_t itemIndex = _size - 1; itemIndex >= offset + count; --itemIndex )
-            {
-                _pData[itemIndex] = std::move( _pData[itemIndex - count] );
-            }
-            for ( size_t itemIndex = offset; itemIndex < MathUtil::min( _size, offset + count ); ++itemIndex )
-            {
-                _pData[itemIndex] = value;
-            }
+            const size_t fromIndex = _size - 1 - movedCount;
+            const size_t toIndex   = fromIndex + count;
+            if ( toIndex >= _size )
+                sw_placement_new( ( _pData + ( toIndex ) ) ) T( std::move( _pData[fromIndex] ) );
+            else
+                _pData[toIndex] = std::move( _pData[fromIndex] );
         }
-        else
+
+        // 2) 빈 자리 [offset, offset + count) 를 채운다. 원래 살아 있던 칸은 대입, 그 뒤는 생성.
+        for ( size_t index = 0; index < count; ++index )
         {
-            for ( size_t index = 0; index < count; ++index )
-            {
-                sw_placement_new( ( _pData + ( offset + index ) ) ) T( value );
-            }
+            const size_t targetIndex = offset + index;
+            if ( targetIndex < _size )
+                _pData[targetIndex] = valueCopy;
+            else
+                sw_placement_new( ( _pData + ( targetIndex ) ) ) T( valueCopy );
         }
+
         _size += count;
         return _pData + offset;
     }
@@ -866,6 +880,10 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset < _size );
+        // `SW_ASSERT` 는 Release 에서 **통째로 사라진다.** 그 뒤의 `_size - 1` 은 빈 벡터에서
+        // 뒤집히므로, 배포본에서만 범위 밖을 훑게 된다.
+        if ( offset >= _size )
+            return _pData + _size;
         for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
         {
             _pData[itemIndex] = std::move( _pData[itemIndex + 1] );
@@ -882,6 +900,8 @@ namespace sw
         size_t offset = static_cast<size_t>( first - _pData );
         size_t count  = static_cast<size_t>( last - first );
         SW_ASSERT( offset + count <= _size );
+        if ( offset + count > _size )
+            return _pData + _size;
         if ( count > 0 )
         {
             for ( size_t itemIndex = offset; itemIndex < _size - count; ++itemIndex )

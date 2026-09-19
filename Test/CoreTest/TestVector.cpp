@@ -232,3 +232,92 @@ SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
     }
     SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
 }
+
+/**
+ * @brief [VectorTest] 가진 것보다 많이 끼워 넣어도 범위 밖을 읽지 않는다
+ * @details `insert( pos, count, value )` 의 첫 루프가 `itemIndex - count >= offset` 으로 "옮길
+ *          원소인가" 를 갈랐다. `count > _size` 면 그 뺄셈이 **size_t 로 뒤집혀** 조건이 언제나
+ *          참이 되고, 존재하지도 않는 `_pData[2^64-k]` 에서 move 해 온다. 앞쪽에 두 개만 끼워
+ *          넣어도(`{1} 에 insert(begin, 2, ...)`) 바로 걸린다.
+ */
+SW_TEST_CASE( VectorTest, InsertMoreThanSizeDoesNotReadOutOfBounds )
+{
+    {
+        sw::vector<int32> list{ 10 };
+        list.insert( list.begin(), 2, 7 );
+        SW_EXPECT_EQUAL( size_t( 3 ), list.size() );
+        SW_EXPECT_EQUAL( 7, list[0] );
+        SW_EXPECT_EQUAL( 7, list[1] );
+        SW_EXPECT_EQUAL( 10, list[2] );
+    }
+
+    {
+        sw::vector<int32> list{ 1, 2 };
+        list.insert( list.begin() + 1, 5, 9 );
+        SW_EXPECT_EQUAL( size_t( 7 ), list.size() );
+        SW_EXPECT_EQUAL( 1, list[0] );
+        for ( size_t index = 1; index <= 5; ++index )
+            SW_EXPECT_EQUAL( 9, list[index] );
+        SW_EXPECT_EQUAL( 2, list[6] );
+    }
+
+    // 정상 경우(count <= size)도 그대로여야 한다.
+    {
+        sw::vector<int32> list{ 1, 2, 3, 4, 5 };
+        list.insert( list.begin() + 1, 2, 0 );
+        const int32 arrExpected[] = { 1, 0, 0, 2, 3, 4, 5 };
+        SW_ASSERT_EQUAL( size_t( 7 ), list.size() );
+        for ( size_t index = 0; index < list.size(); ++index )
+            SW_EXPECT_EQUAL( arrExpected[index], list[index] );
+    }
+}
+
+/**
+ * @brief [VectorTest] 0개를 끼워 넣는 것은 아무 일도 하지 않는다
+ * @details count 가 0 이면 두 번째 루프의 종료 조건이 `itemIndex >= offset + 0` 이 된다. offset 이 0
+ *          이면 **언제나 참**이라 `itemIndex` 가 0 에서 한 번 더 줄어 size_t 로 뒤집히고, 범위 밖에
+ *          계속 쓰면서 끝나지 않는다. 그 전에 `_pData[i] = move(_pData[i])` 라는 자기 자신으로의
+ *          이동 대입도 돈다.
+ */
+SW_TEST_CASE( VectorTest, InsertZeroCountIsANoOp )
+{
+    sw::vector<int32> list{ 1, 2, 3 };
+    const auto        iter = list.insert( list.begin(), 0, 99 );
+
+    SW_EXPECT_EQUAL( size_t( 3 ), list.size() );
+    SW_EXPECT_EQUAL( 1, list[0] );
+    SW_EXPECT_EQUAL( 2, list[1] );
+    SW_EXPECT_EQUAL( 3, list[2] );
+    SW_EXPECT_TRUE( iter == list.begin() );
+
+    // 가운데·끝에서도 마찬가지다.
+    list.insert( list.begin() + 1, 0, 99 );
+    list.insert( list.end(), 0, 99 );
+    SW_EXPECT_EQUAL( size_t( 3 ), list.size() );
+    SW_EXPECT_EQUAL( 2, list[1] );
+}
+
+/**
+ * @brief [VectorTest] 자기 안의 원소를 끼워 넣어도 된다
+ * @details `v.insert( v.begin(), 3, v[0] )` 는 적법한 호출이다. 그런데 그 자리를 덮어쓰기도 하고,
+ *          그 전에 재할당이 버퍼를 통째로 옮기기도 한다 — 참조로 들고 있으면 둘 중 하나에서
+ *          **이미 사라진 값**을 복사하게 된다. 손대기 전에 값으로 떠 둔다.
+ */
+SW_TEST_CASE( VectorTest, InsertAcceptsAnElementOfItself )
+{
+    // 재할당이 반드시 일어나도록 용량을 딱 맞춰 둔다.
+    sw::vector<sw::string> list;
+    list.reserve( 2 );
+    list.push_back( sw::string( "alpha" ) );
+    list.push_back( sw::string( "beta" ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), list.capacity() );
+
+    list.insert( list.begin(), 3, list[0] );
+
+    SW_ASSERT_EQUAL( size_t( 5 ), list.size() );
+    SW_EXPECT_STREQ( "alpha", list[0].c_str() );
+    SW_EXPECT_STREQ( "alpha", list[1].c_str() );
+    SW_EXPECT_STREQ( "alpha", list[2].c_str() );
+    SW_EXPECT_STREQ( "alpha", list[3].c_str() );
+    SW_EXPECT_STREQ( "beta", list[4].c_str() );
+}
