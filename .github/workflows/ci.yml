@@ -1,4 +1,4 @@
-name: CI (Windows & Linux | clang-cl & Clang)
+name: CI (Windows · Linux · macOS | clang-cl & Clang)
 
 on:
   push:
@@ -68,6 +68,18 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Shipping
 
+          # macOS 는 **빌드만** 한다(`skipTests`). 러너에 GPU 컨텍스트가 없어 테스트는 어차피
+          # 환경 때문에 건너뛰고, 여기서 막으려는 것은 다른 것이다 — `Source/**/Mac/**` 713줄이
+          # **어디서도 컴파일되지 않는다**는 사실이다. CMake 는 macOS 를 지원한다고 말하고
+          # (`Platform/MacOS.cmake`, `APPLE` 분기들, `createPlatformWindow` 의 Cocoa 갈래)
+          # `vcpkg.json` 도 macOS 를 고려해 쓰여 있는데, 정작 그 코드를 읽는 컴파일러가 없었다.
+          # 그래서 두 번 썩었고 둘 다 눈으로만 찾았다(docs/06_Backlog.md 2026-09-17 · 파일워처,
+          # 그리고 `CocoaWindow` 가 `_onResize` 를 한 번도 안 부르는 것 — 아직 그대로다).
+          - name: Build macOS Debug (Clang)
+            os: macos-14
+            preset: CI-Debug
+            skipTests: true
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v5
@@ -105,6 +117,21 @@ jobs:
             break
           fi
         done
+
+    # macOS Environment Setup
+    - name: Setup macOS toolchain & dependencies
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install llvm ninja
+        llvmPrefix="$(brew --prefix llvm)"
+        # AppleClang 이 아니라 **brew 의 clang** 을 쓴다. ReflectionParser 가 libclang
+        # (`clang-c/Index.h`)을 필요로 하는데 AppleClang 은 그 헤더를 주지 않는다 —
+        # 리눅스 잡이 `/usr/lib/llvm-*` 를 찾는 것과 같은 이유다.
+        echo "$llvmPrefix/bin" >> "$GITHUB_PATH"
+        echo "LLVM_DIR=$llvmPrefix" >> "$GITHUB_ENV"
+        echo "LLVM_ROOT=$llvmPrefix" >> "$GITHUB_ENV"
+        echo "LLVM_HOME=$llvmPrefix" >> "$GITHUB_ENV"
 
     # vcpkg Cache and Setup
 
@@ -145,7 +172,10 @@ jobs:
     # 그 구성이다 — 실제로 Shipping 에서만 지는 렌더 테스트 둘이 오래 숨어 있었다
     # (docs/06_Backlog.md 2026-09-17 참고). GPU·디스플레이가 필요한 스위트는 `-L nogpu` 가
     # 계속 걸러내므로 러너에서 돌릴 수 있는 것만 는다.
+    # `skipTests` 를 세운 잡(macOS)만 건너뛴다. 키가 없는 잡에서 `matrix.skipTests` 는 빈
+    # 문자열이고 GitHub 식에서 빈 문자열은 `false` 와 같으므로, `!= true` 가 참이 되어 그대로 돈다.
     - name: Test
+      if: matrix.skipTests != true
       run: |
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 

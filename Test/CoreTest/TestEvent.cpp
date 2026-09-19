@@ -32,6 +32,27 @@ namespace
     {
         s_bWindowActivated = e._bIsActivate;
     }
+
+    /** @brief 소멸 횟수를 세는 시험용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
+    struct DestructorCountingEvent final : sw::IEvent
+    {
+        static int32 s_liveCount;
+
+        sw::string _payload; ///< 실제 게임플레이 이벤트처럼 힙을 드는 멤버
+
+        DestructorCountingEvent() { ++s_liveCount; }
+        DestructorCountingEvent( const DestructorCountingEvent& other )
+            : sw::IEvent( other )
+            , _payload{ other._payload }
+        {
+            ++s_liveCount;
+        }
+        ~DestructorCountingEvent() override { --s_liveCount; }
+
+        SW_DECLARE_GAMEPLAY_EVENT( DestructorCountingEvent );
+    };
+
+    int32 DestructorCountingEvent::s_liveCount = 0;
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -194,30 +215,6 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 
     dispatcher.clear();
 }
-
-namespace
-{
-    /** @brief 소멸 횟수를 세는 시험용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
-    struct DestructorCountingEvent final : sw::IEvent
-    {
-        static int32 s_liveCount;
-
-        sw::string _payload; ///< 실제 게임플레이 이벤트처럼 힙을 드는 멤버
-
-        DestructorCountingEvent() { ++s_liveCount; }
-        DestructorCountingEvent( const DestructorCountingEvent& other )
-            : sw::IEvent( other )
-            , _payload{ other._payload }
-        {
-            ++s_liveCount;
-        }
-        ~DestructorCountingEvent() override { --s_liveCount; }
-
-        SW_DECLARE_GAMEPLAY_EVENT( DestructorCountingEvent );
-    };
-
-    int32 DestructorCountingEvent::s_liveCount = 0;
-} // namespace
 
 /**
  * @brief [EventTest] `clear()` 는 큐에 남은 이벤트를 **파괴하고** 버린다

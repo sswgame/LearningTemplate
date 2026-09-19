@@ -1800,6 +1800,69 @@ class ExplicitTrueCompareRule( ConventionRule ):
         return violations
 
 
+class SingleAnonymousNamespaceRule( ConventionRule ):
+    """Structure/AnonymousNamespaceCount"""
+    category = "Structure/AnonymousNamespaceCount"
+    badSampleFile = "Source/Probe/TwoAnonymous.cpp"
+    badSample = (
+        '#include "pch.h"\n'
+        "\n"
+        "namespace sw\n"
+        "{\n"
+        "    namespace\n"
+        "    {\n"
+        "        int32 first = 0;\n"
+        "    } // namespace\n"
+        "\n"
+        "    namespace\n"
+        "    {\n"
+        "        int32 second = 0;\n"
+        "    } // namespace\n"
+        "} // namespace sw\n"
+    )
+
+    def __init__(self) -> None:
+        # **파일별로 나눠 둔다.** 규칙 객체는 하나인데 게이트는 파일을 **동시에** 훑는다 — 상태를
+        # 객체에 그냥 두면 파일 사이에 섞여 같은 트리에서 결과가 매번 달라진다(실제로 2·3·3 이
+        # 나왔다). 한 파일의 줄은 한 일꾼이 순서대로 보므로, 경로로 칸을 나누면 그 안은 안전하다.
+        self._stateByFile: dict[str, list[int]] = {}
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        # AGENTS.md "One anonymous namespace per file" — `.cpp` 하나에 익명 네임스페이스는 하나다.
+        # 여럿이면 번역 단위 지역 헬퍼가 흩어지고, 유니티 빌드에서 이름이 겹칠 자리가 는다.
+        if ctx.isSource is False:
+            return []
+
+        state = self._stateByFile.setdefault(ctx.relPath, [0, 0])  # [블록 수, 전처리 분기 깊이]
+
+        if ctx.trimmed.startswith("#if"):
+            state[1] += 1
+        elif ctx.trimmed.startswith("#endif") and state[1] > 0:
+            state[1] -= 1
+
+        if ctx.trimmed != "namespace":
+            return []
+
+        # 서로 배타적인 전처리 분기 안의 블록들은 번역 단위마다 하나씩이라 정당한 예외다
+        # (AGENTS.md 가 그렇게 적고 있다). 그래서 분기 밖의 것만 센다.
+        if state[1] > 0:
+            return []
+
+        state[0] += 1
+        if state[0] <= 1:
+            return []
+
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=ctx.lineNum,
+                rule_category=self.category,
+                message="익명 네임스페이스는 파일당 하나입니다. 번역 단위 지역 헬퍼는 맨 위 한 블록에 모으세요.",
+                snippet=ctx.trimmed,
+            )
+        ]
+
+
 class NegatedConditionRule( ConventionRule ):
     """Style/NegatedComparison"""
     category = "Style/NegatedComparison"

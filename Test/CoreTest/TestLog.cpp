@@ -119,6 +119,17 @@ namespace
         sw::DelegateHandle       _handle;
     };
 #endif // SW_DEBUG
+
+    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 시험용 출력 장치. */
+    class CountingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        bool open() override { return true; }
+        void close() override {}
+        void write( const sw::LogRecord& ) override { ++_writeCount; }
+
+        uint32 _writeCount{ 0 };
+    };
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -439,20 +450,6 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
     SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
-
-namespace
-{
-    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 시험용 출력 장치. */
-    class CountingLogOutput final : public sw::ILogOutput
-    {
-    public:
-        bool open() override { return true; }
-        void close() override {}
-        void write( const sw::LogRecord& ) override { ++_writeCount; }
-
-        uint32 _writeCount{ 0 };
-    };
-} // namespace
 
 /**
  * @brief [LogTest] 출력 장치 상한을 넘기면 **거절하고 경고한다** (조용히 삼키지 않는다)

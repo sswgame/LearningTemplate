@@ -202,6 +202,25 @@ namespace sw
             std::fclose( pFile );
             return true;
         }
+
+        /** @brief 이미 만들어진 팩 파일의 헤더를 읽고(있는 그대로) 다시 쓰는 테스트 헬퍼. */
+        bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
+        {
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
+                return false;
+            Memory::copy( &outHeader, bytes.data(), sizeof( PackHeader ) );
+            return true;
+        }
+
+        bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
+        {
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
+                return false;
+            Memory::copy( bytes.data(), &header, sizeof( PackHeader ) );
+            return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
+        }
     } // namespace
 } // namespace sw
 
@@ -702,27 +721,7 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    namespace
-    {
-        /** @brief 이미 만들어진 팩 파일의 헤더를 읽고(있는 그대로) 다시 쓰는 테스트 헬퍼. */
-        bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
-        {
-            vector<uint8> bytes;
-            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
-                return false;
-            Memory::copy( &outHeader, bytes.data(), sizeof( PackHeader ) );
-            return true;
-        }
 
-        bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
-        {
-            vector<uint8> bytes;
-            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
-                return false;
-            Memory::copy( bytes.data(), &header, sizeof( PackHeader ) );
-            return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
-        }
-    } // namespace
 } // namespace sw
 
 /**
