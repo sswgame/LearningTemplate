@@ -98,9 +98,12 @@ namespace sw
                              reinterpret_cast<const uint8*>( &splashTypeAtom ), 1 );
         }
 
-        // 위치를 우리가 정했다고 알린다 — 없으면 창 관리자가 자기 규칙대로 놓는다.
+        // **`PPosition` 이 아니라 `USPosition` 이다.** `PPosition` 은 "프로그램이 정한 위치" 라
+        // 창 관리자가 자기 배치 규칙으로 덮어써도 되는 힌트고, 실제로 덮어썼다 — 가운데를 요청했는데
+        // 좌상단 (38, 59) 에 놓여 메인 창과 겹쳤다. `USPosition` 은 "사용자가 정한 위치" 라
+        // 창 관리자가 존중해야 한다. 매핑 뒤에 한 번 더 옮겨 확실히 한다.
         XSizeHints sizeHints{};
-        sizeHints.flags      = PPosition | PSize | PMinSize | PMaxSize;
+        sizeHints.flags      = USPosition | USSize | PMinSize | PMaxSize;
         sizeHints.x          = posX;
         sizeHints.y          = posY;
         sizeHints.width      = static_cast<int32>( _width );
@@ -113,6 +116,9 @@ namespace sw
 
         XSelectInput( pDisplay, win, ExposureMask | StructureNotifyMask );
         XMapRaised( pDisplay, win );
+
+        // 매핑하면서 창 관리자가 다시 놓을 수 있으므로 그 뒤에 한 번 더 옮긴다.
+        XMoveWindow( pDisplay, win, posX, posY );
 
         // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이라, 서버가 처리하기 전에 그리면 그
         // 그리기는 버려진다. 한 번 왕복해 두면 이후의 그리기가 확실히 창에 닿는다.
