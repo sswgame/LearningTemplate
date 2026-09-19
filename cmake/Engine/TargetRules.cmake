@@ -456,11 +456,19 @@ function(sw_addDelayloadHook TARGET_NAME)
 		get_property(swHookSrc TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE)
 	endif()
 
-	if(NOT swHookSrc OR NOT EXISTS "${swHookSrc}")
+	# 속성이 **있는데 그 파일이 없으면** 그것은 설정 실수다. 조용히 넘어가면 안 된다 —
+	# 실제로 파일이 Utility/Module/ 에서 Module/ 로 옮겨간 뒤 속성만 옛 경로에 남아 있었고,
+	# 아래 폴백이 매번 대신 고쳐 주는 바람에 아무도 눈치채지 못했다. 속성을 두는 이유가
+	# "훅 소스의 위치를 한 곳에서 안다" 인데, 그 한 곳이 틀린 채로 굳어 있었다.
+	if(swHookSrc AND NOT EXISTS "${swHookSrc}")
+		message(FATAL_ERROR "[sw_addDelayloadHook] SW_DELAYLOAD_HOOK_SOURCE points at a file that does not exist: ${swHookSrc}")
+	endif()
+
+	if(NOT swHookSrc)
 		set(swHookSrc "${CMAKE_SOURCE_DIR}/Source/Engine/Module/DelayLoadNotifyHook.cpp")
 
 		if(NOT EXISTS "${swHookSrc}")
-			message(WARNING "[sw_addDelayloadHook] DelayLoadNotifyHook.cpp not found: ${swHookSrc}")
+			message(FATAL_ERROR "[sw_addDelayloadHook] DelayLoadNotifyHook.cpp not found: ${swHookSrc}")
 		endif()
 	endif()
 

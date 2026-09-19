@@ -435,6 +435,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (지연 로드 훅 경로가 이사 간 자리를 가리키고 있었다)
+
+`Source/Engine/CMakeLists.txt` 의 `SW_DELAYLOAD_HOOK_SOURCE` 가
+`Utility/Module/DelayLoadNotifyHook.cpp` 를 가리키고 있었다. 그 파일은 `83b6ea60`(Engine 레이어
+정리)에서 `Module/` 로 옮겨졌고, **속성만 옛 경로에 남았다.**
+
+아무도 눈치채지 못한 이유는 `sw_addDelayloadHook` 이 이렇게 생겼기 때문이다:
+
+```cmake
+if(NOT swHookSrc OR NOT EXISTS "${swHookSrc}")
+    set(swHookSrc ".../Source/Engine/Module/DelayLoadNotifyHook.cpp")   # 매번 여기로 떨어졌다
+```
+
+**폴백이 매번 대신 고쳐 주고 있었다.** 속성을 두는 이유가 "훅 소스의 위치를 한 곳에서 안다" 인데
+그 한 곳이 틀린 채로 굳어 있었고, 빌드는 멀쩡했으므로 신호가 없었다. 속성이 **있는데** 그 파일이
+없으면 그것은 설정 실수이므로 이제 `FATAL_ERROR` 로 멈춘다(속성이 아예 없는 경우만 폴백한다).
+되돌려 보면 `configure` 가 그 자리에서 진다.
+
+**살펴보고 문제 없던 것.** `Module/DelayLoadNotifyHook.cpp` 가 Engine 글롭에서 빠져 있는 것은
+의도한 것이 맞다 — 확인하는 데 시간이 들었으므로 그 이유를 `coreExclude` 위에 적어 두었다.
+훅 변수(`__pfnDliNotifyHook2`)는 **모듈마다 따로**라, 엔진 모듈 DLL 을 지연 로드하는 쪽
+(kit · SWGame)이 자기 바이너리에 넣어야 뜻이 있다. Engine 이 지연 로드하는 넷은 전부 시스템
+DLL(`d3dcompiler_47` · `mfplat` · `mfreadwrite` · `xaudio2_9`)이라 훅이 돌려줄 핸들이 없고,
+넣으면 오히려 **정상 로드마다 "못 찾았다" ERROR** 가 남는다. 훅이 붙은 타깃들이 지연 로드하는
+것은 `GameFramework.dll` 과 `GF_*.dll` 뿐이고 전부 Bin 에 있으므로, 그 ERROR 경로는 지금
+구성에서는 진짜 실패에만 닿는다.
+
+> 훅이 Engine 에서 한 번도 불리지 않는다는 것은 임시 프로브(`SW_LOG_WARNING` 을 훅 입구에)로
+> 확인했다 — 코드만 읽어서는 "안 불린다" 와 "불리는데 로그가 안 남는다" 를 가를 수 없었다.
+
 ### 2026-09-19 (구워 낸 `.bin` 언어 파일이 하나도 읽히지 않았다)
 
 `StringTable` 은 확장자를 보고 `.bin` 이면 바이너리로 읽는다(`loadFromFile`·`loadFromResource` 둘 다).

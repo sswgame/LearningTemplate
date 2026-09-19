@@ -21,6 +21,12 @@ endif()
 
 include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 
+# DelayLoadNotifyHook 이 Engine 에서 빠지는 것은 **의도한 것**이다. 이 훅은 지연 로드된 DLL 을
+# 이미 로드된 엔진 모듈 핸들로 돌려주는 물건이라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
+# sw_addDelayloadHook 으로 자기 바이너리에 넣어야 뜻이 있다 — 훅 변수는 모듈마다 따로다.
+# Engine 이 지연 로드하는 것은 d3dcompiler_47 · mfplat · mfreadwrite · xaudio2_9 로 전부 시스템
+# DLL 이고, 그것들은 훅이 돌려줄 핸들이 없다(Bin 에도 없다). 훅을 넣으면 정상 로드마다 훅이
+# "못 찾았다" 는 ERROR 를 남기게 된다.
 set(coreExclude
     "Graphics/RHI/Modules/"
     "Module/DelayLoadNotifyHook.cpp"
@@ -184,7 +190,7 @@ sw_configureEngineDllExports(Engine ${coreLibType})
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Module/DelayLoadNotifyHook.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/Module/DelayLoadNotifyHook.cpp")
 
 # Windows: Input(XInput) + Audio(XAudio2) + 파일 대화상자 + 셰이더 컴파일러 유틸리티
 if(WIN32)
