@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "TestFramework/TestFramework.h"
@@ -1384,4 +1385,35 @@ SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
     sw::formatstring( tinyBuffer.data(), 0, "hello world %#", 42 );
     SW_EXPECT_EQUAL( utf8{ 'Z' }, tinyBuffer[0] );
 #endif
+}
+
+/**
+ * @brief [StringTest] `contains` 는 `startsWith` · `endsWith` 와 같은 규칙을 따른다
+ * @details 셋은 같은 질문의 세 자리인데 **가운데만 없었다.** 그래서 부르는 쪽이
+ *          `str.find( sub ) != npos` 로 손수 적었고 그때마다 `bIgnoreCase` 를 잃었다 —
+ *          `zoneRoleFromMapPath` 가 그랬다. 빈 부분 문자열은 표준 `find` 와 같이 참이다.
+ */
+SW_TEST_CASE( StringTest, ContainsFollowsTheSameRulesAsItsTwoSiblings )
+{
+    using sw::StringUtil;
+
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/dungeon_01.scene", "dungeon" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/dungeon_01.scene", "levels" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/dungeon_01.scene", ".scene" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/dungeon_01.scene", "" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( "abc", "abc" ) );
+
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/dungeon_01.scene", "castle" ) == false );
+    SW_EXPECT_TRUE( StringUtil::contains( "ab", "abc" ) == false );
+    SW_EXPECT_TRUE( StringUtil::contains( "", "a" ) == false );
+
+    // 대소문자 무시는 **선택**이고, 켜면 세 자리 어디서든 같게 동작한다.
+    SW_EXPECT_TRUE( StringUtil::contains( "Levels/Dungeon_01.scene", "dungeon" ) == false );
+    SW_EXPECT_TRUE( StringUtil::contains( "Levels/Dungeon_01.scene", "dungeon", true ) );
+    SW_EXPECT_TRUE( StringUtil::contains( "levels/DUNGEON.scene", "Dungeon", true ) );
+    SW_EXPECT_TRUE( StringUtil::startsWith( "Levels/Dungeon_01.scene", "levels", true ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( "Levels/Dungeon_01.SCENE", ".scene", true ) );
+
+    // 끝자리에 걸친 것도 찾는다 — 마지막 시작 위치를 빠뜨리기 쉬운 자리다.
+    SW_EXPECT_TRUE( StringUtil::contains( "abcXYZ", "xyz", true ) );
 }

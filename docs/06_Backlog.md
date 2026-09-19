@@ -458,6 +458,49 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (두 킷을 한 게임에서 같이 못 썼다 · 걷는 상태가 시작한 프레임에 취소됐다)
+
+커밋 `TBD`. GameFramework 킷 훑기에서 나온 여섯.
+
+1. **`enum class FacingDir` 이 두 헤더에 똑같이 적혀 있었다.** `ActionRoom.h` 와
+   `PlayerLocomotion.h` 양쪽이 `namespace sw` 안에 같은 것을 선언해서, 두 헤더를 한 번역
+   단위에 넣으면 `error: redefinition of 'FacingDir'` 로 **빌드가 안 됐다** — 액션 전투 킷과
+   오버월드 킷을 한 게임에서 같이 쓸 수 없었다. 킷이 각자 빌드되는 동안은 아무도 부딪히지
+   않아 드러나지 않았다. `Base/FacingDir.h` 한 자리로 옮겼다(값·순서는 두 사본이 같았다).
+2. **`LocomotionState::Walk` 가 한 프레임도 살지 못했다.** `PlayerController::update` 가
+   걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소했다. 실제 입력 잠금은
+   옆에 따로 있던 **같은 길이(0.18)의 `_stepCooldown`** 이 하고 있었고, 걷는 애니메이션을
+   고를 근거인 `Walk` 는 바깥에서 한 번도 관측되지 않았다. 길이는 `kStepDuration` 하나로
+   모으고 잠금은 로코모션이 판정하게 해서 `_stepCooldown` 을 지웠다.
+3. **조우 확률 0 이 끄는 값이 아니라 켜는 값이었다.** `rate > 0.01f` 가 거짓일 때 주기를 3 으로
+   놓아서, `setEncounterRate( 0 )` 이 **세 걸음마다** 조우를 냈다. 1 을 넘는 값도 `1/rate` 를
+   정수로 자르면 0 이 돼 같은 자리로 떨어졌다. 판정을 `shouldEncounterOnStep` 으로 꺼냈다.
+4. **대시가 맞고 얻은 무적을 깎았다.** `ActionRoom` 의 대시가 `_invulnTimer` 에 자기 몫
+   (0.22초)을 그냥 대입해서, 피격 무적(0.7초) 중에 대시하면 **무적이 줄었다.** 긴 쪽을 남긴다.
+5. **`getDashFill()` 이 쿨다운 상수를 자기 몫으로 또 들고 있었다.** 값을 바꾸면 게이지가
+   거짓말을 한다. 이 킷의 조절 값을 `ActionRoomTuning` 한 자리로 모았다.
+6. **역할 ↔ 이름 대응이 `ZoneRuntime` 에 세 벌 있었다** (글자→역할, 경로→역할, 역할→태그).
+   그리고 이미 어긋나 있었다 — 글자 쪽은 대소문자를 무시하는데 경로 쪽은 맨 `find` 라서
+   `Dungeon_01` 은 던전이 아니었다. 표 하나로 모았고, `find( "dungeon_boss" )` 는 바로 다음
+   `find( "boss" )` 가 이미 잡으므로 **혼자 참인 적이 없어서** 지웠다. `zoneRoleFromMapPath` ·
+   `zoneRoleToTag` 는 공개 헤더에 있으면서 `SW_GF_API` 가 없어 **모듈 밖에서 부를 수 없었다** —
+   붙였다.
+
+곁들여 **`StringUtil::contains( str, sub, bIgnoreCase )`** 를 추가했다. `startsWith` ·
+`endsWith` 는 있는데 가운데만 없어서 부르는 쪽이 `str.find( sub ) != npos` 로 손수 적고
+그때마다 `bIgnoreCase` 를 잃었다 — 위 6번이 바로 그 자리였다.
+
+테스트 여덟(전부 변이로 물린다): `ActionRoom_DashDoesNotShortenHitInvulnerability`,
+`ActionRoom_DashGaugeFillsAtTheCooldownRate`, `ZoneRole_PathAndTextAgreeAndIgnoreCase`,
+`ZoneRole_TagNameRoundTripsBackToTheSameRole`, `PlayerLocomotion_StepStaysInWalkForItsDuration`,
+`PlayerController_ZeroEncounterRateNeverEncounters`,
+`ActionCombatAndOverworldKitsShareOneFacingDir`(값어치는 **컴파일된다는 것 자체**다),
+`StringTest.ContainsFollowsTheSameRulesAsItsTwoSiblings`.
+
+**게이지 테스트는 처음에 안 물렸다.** 양 끝(0 과 1)만 보면 이른 반환과 `saturate` 때문에
+분모가 무엇이든 끝점이 같다 — **중간 지점**을 봐야 한다. 쿨다운 길이는 테스트가 직접 재서
+쓴다(숫자를 테스트에 다시 적으면 그것이 세 번째 사본이 된다).
+
 ### 2026-09-20 (세이브가 말한 슬롯 수를 그대로 잡았다 · 단언이 nullable 계약을 Debug 에서만 죽였다)
 
 커밋 `TBD`. GameFramework 훑기에서 나온 넷.

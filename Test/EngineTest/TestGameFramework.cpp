@@ -14,9 +14,13 @@
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/SaveGame.h"
 #include "GameFramework/Data/GameData.h"
+#include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Kits/Overworld/PlayerController.h"
+#include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
+#include "GameFramework/Kits/Overworld/ZoneRuntime.h"
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Transition/ScreenTransitionManager.h"
@@ -1567,6 +1571,214 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
  *          `editor::getService<T>()` 는 처음부터 조용히 nullptr 을 돌려준다.
  * @note 이 테스트가 죽으면(단언 실패가 아니라 **프로세스가 사라지면**) 그 단언이 돌아온 것이다.
  */
+/**
+ * @brief [GameFrameworkTest] 대시가 맞고 얻은 무적을 **깎지 않는다**
+ * @details 대시는 `_invulnTimer` 에 자기 몫(0.22초)을 **그냥 대입**했다. 맞아서 받은 무적은
+ *          0.7초라서, 맞은 직후 대시하면 무적이 0.7 → 0.22 로 **줄었다.** 피해를 덜 보라고
+ *          있는 동작이 오히려 더 보게 만들고 있었다. 두 값 중 **긴 쪽**을 남긴다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability )
+{
+    ActionRoom room;
+    room.beginHall();
+
+    // 첫 그런트 바로 위에 선다 — 무적이 아니면 매 프레임 맞는 자리다.
+    ActionRoomFrameInput input;
+    input._playerPos = float2{ 5.0f, 2.5f };
+
+    const ActionRoomFrameResult hitFrame = room.update( 0.016f, input );
+    SW_ASSERT_TRUE( hitFrame._damageToPlayer > 0 );
+    SW_ASSERT_TRUE( room.isPlayerInvulnerable() );
+
+    // 맞은 **직후** 대시한다.
+    input._bDashPressed                   = SW_TRUE;
+    const ActionRoomFrameResult dashFrame = room.update( 0.016f, input );
+    SW_ASSERT_TRUE( dashFrame._bDashStarted == SW_TRUE );
+    input._bDashPressed = SW_FALSE;
+
+    // 0.4초를 흘린다 — 대시 무적(0.22)보다 길고 피격 무적(0.7)보다 짧다.
+    int32 damageAfterDash = 0;
+    for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+        damageAfterDash += room.update( 0.02f, input )._damageToPlayer;
+
+    SW_EXPECT_TRUE_MSG( damageAfterDash == 0, "대시가 맞고 얻은 무적을 깎았습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 대시 게이지가 쿨다운과 **같은 속도로** 찬다
+ * @details 게이지를 만드는 `getDashFill()` 이 쿨다운 값을 **자기 몫으로 또 들고** 있었다
+ *          (`kDashCd = 0.85f`). 한쪽만 바꾸면 게이지가 거짓말을 한다.
+ * @note 양 끝(0 과 1)만 보면 이 어긋남이 **안 잡힌다** — 이른 반환과 `saturate` 때문에 분모가
+ *       무엇이든 끝점은 같다. 그래서 **중간 지점**을 본다. 쿨다운 길이는 테스트가 직접 재서
+ *       쓴다(숫자를 여기 다시 적으면 그것도 세 번째 사본이 된다).
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
+{
+    ActionRoom room;
+    room.beginHall();
+
+    // 적에게서 멀리 — 이 테스트에 피격이 끼어들면 안 된다.
+    ActionRoomFrameInput input;
+    input._playerPos        = float2{ 0.0f, 0.0f };
+    input._bDashPressed     = SW_TRUE;
+    constexpr float32 kStep = 0.005f;
+
+    SW_ASSERT_TRUE( room.update( kStep, input )._bDashStarted == SW_TRUE );
+    SW_EXPECT_TRUE_MSG( room.getDashFill() < 0.1f, "대시 직후인데 게이지가 이미 차 있습니다" );
+
+    // 계속 누르고 있으면 쿨다운이 끝나는 프레임에 바로 나간다 — 그 프레임 수가 쿨다운 길이다.
+    int32 cooldownFrameCount = 0;
+    while ( cooldownFrameCount < 2000 )
+    {
+        ++cooldownFrameCount;
+        if ( room.update( kStep, input )._bDashStarted == SW_TRUE )
+            break;
+    }
+    SW_ASSERT_TRUE( cooldownFrameCount < 2000 );
+
+    // 방금 다시 대시했다. 쿨다운의 절반을 흘렸으면 게이지도 절반이어야 한다.
+    input._bDashPressed = SW_FALSE;
+    for ( int32 frameIndex = 0; frameIndex < cooldownFrameCount / 2; ++frameIndex )
+        room.update( kStep, input );
+
+    const float32 fill = room.getDashFill();
+    SW_EXPECT_TRUE_MSG( fill > 0.4f && fill < 0.6f, "쿨다운 절반인데 게이지는 절반이 아닙니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 역할을 경로로 묻든 글자로 묻든 **같은 답**이 나온다
+ * @details 같은 대응이 세 곳에 각각 적혀 있었다 — 글자 → 역할, 경로 → 역할, 역할 → 태그.
+ *          그리고 이미 어긋나 있었다: 글자 쪽은 대소문자를 무시하는데 경로 쪽은 맨 `find`
+ *          라서 구별했다. `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이었다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ZoneRole_PathAndTextAgreeAndIgnoreCase )
+{
+    // `ZoneRole` 은 enum class 라 ostream 이 없다 — 번호로 견준다.
+    const auto roleId = []( ZoneRole role )
+    { return static_cast<int32>( role ); };
+
+    // 경로로 물어도 대소문자를 가리지 않는다.
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Dungeon ), roleId( zoneRoleFromMapPath( "Levels/Dungeon_01.scene" ) ) );
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Dungeon ), roleId( zoneRoleFromMapPath( "levels/dungeon_01.scene" ) ) );
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Gym ), roleId( zoneRoleFromMapPath( "Levels/GYM_Rock.scene" ) ) );
+
+    // 표의 줄 순서가 우선순위다 — 보스가 던전보다 위라서 `dungeon_boss` 는 보스다.
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Boss ), roleId( zoneRoleFromMapPath( "levels/dungeon_boss.scene" ) ) );
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Boss ), roleId( zoneRoleFromMapPath( "levels/Dungeon_Boss.scene" ) ) );
+
+    // 아무것도 안 맞으면 마을이다.
+    SW_EXPECT_EQUAL( roleId( ZoneRole::Town ), roleId( zoneRoleFromMapPath( "levels/quiet_place.scene" ) ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 역할 → 태그 이름이 역할을 읽을 때 쓰는 이름과 **같다**
+ * @details 역할을 태그로 미러하는 `switch` 가 이름을 따로 들고 있었다. 태그 이름과 경로에서
+ *          역할을 읽는 이름이 어긋나면 `hasActiveZoneTag( "dungeon" )` 이 던전에서 거짓이 된다.
+ *          이 테스트는 **한 바퀴 돌아 제자리로 오는지**를 본다(이름을 여기 다시 적지 않는다).
+ */
+SW_TEST_CASE( GameFrameworkTest, ZoneRole_TagNameRoundTripsBackToTheSameRole )
+{
+    constexpr ZoneRole kArrRole[]{ ZoneRole::Town, ZoneRole::Route, ZoneRole::Center, ZoneRole::Mart,
+                                   ZoneRole::Gym, ZoneRole::Wild, ZoneRole::Battle, ZoneRole::Dungeon,
+                                   ZoneRole::Boss };
+    for ( const ZoneRole role : kArrRole )
+    {
+        const utf8* pTag = zoneRoleToTag( role );
+        SW_ASSERT_TRUE( pTag != nullptr );
+        SW_EXPECT_TRUE_MSG( zoneRoleFromMapPath( pTag ) == role, "태그 이름이 역할로 되돌아오지 않습니다" );
+    }
+
+    // 그리고 그 태그가 실제로 존에 붙는다.
+    ZoneRuntime zones;
+    zones.setFromMap( "Levels/Dungeon_01.scene", "dungeon01", 16, 16, "" );
+    SW_EXPECT_EQUAL( static_cast<int32>( ZoneRole::Dungeon ), static_cast<int32>( zones.getActiveRole() ) );
+    SW_EXPECT_TRUE_MSG( zones.hasActiveZoneTag( "dungeon" ), "역할은 던전인데 태그가 안 붙었습니다" );
+    SW_EXPECT_TRUE_MSG( zones.isClearGateLocked(), "던전인데 클리어 게이트가 안 잠겼습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 한 칸 걷는 동안 상태가 **실제로** `Walk` 다
+ * @details `PlayerController::update` 가 걸음을 시작한 그 프레임에 곧바로
+ *          `notifyStepFinished()` 로 취소했다. `Walk` 는 한 프레임도 살지 못했고 바깥에서
+ *          한 번도 관측되지 않았다 — 걷는 애니메이션을 고를 근거가 통째로 죽어 있었다.
+ *          실제 입력 잠금은 옆에 따로 있던 같은 길이의 `_stepCooldown` 이 하고 있었다.
+ */
+SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration )
+{
+    PlayerLocomotion loco;
+    SW_ASSERT_TRUE( loco.canAcceptMoveInput() );
+
+    loco.notifyStepStarted();
+    SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Walk, "걸음을 시작했는데 Walk 가 아닙니다" );
+    SW_EXPECT_TRUE( loco.canAcceptMoveInput() == false );
+
+    // 걸음 길이의 절반만 흘리면 아직 걷는 중이다.
+    loco.update( PlayerLocomotion::kStepDuration * 0.5f );
+    SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Walk, "걸음 중간인데 Walk 가 끝났습니다" );
+
+    // 다 흘리면 스스로 끝난다 — 아무도 끝내 주지 않아도 된다.
+    loco.update( PlayerLocomotion::kStepDuration );
+    SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Idle, "걸음 길이를 넘겼는데 Walk 가 안 끝납니다" );
+    SW_EXPECT_TRUE( loco.canAcceptMoveInput() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 조우 확률 0 은 **끄는** 값이다
+ * @details `rate > 0.01f` 가 거짓일 때 주기를 3 으로 놓고 있었다. 그래서 야생 조우를 끄려고
+ *          `setEncounterRate( 0 )` 을 부르면 **세 걸음마다** 났다 — 끄는 값이 켜는 값이었다.
+ *          1 을 넘는 값도 `1/rate` 를 정수로 자르면 0 이 돼 같은 자리로 떨어졌다.
+ */
+SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounters )
+{
+    for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
+    {
+        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 0.0f, stepCount ) == false, "확률 0 인데 조우가 났습니다" );
+        SW_ASSERT_TRUE( shouldEncounterOnStep( -1.0f, stepCount ) == false );
+    }
+
+    // 1 이상은 매 걸음이다 — 예전에는 여기가 "세 걸음마다" 로 떨어졌다.
+    for ( uint32 stepCount = 1; stepCount <= 10; ++stepCount )
+    {
+        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 1.0f, stepCount ), "확률 1 인데 조우가 안 납니다" );
+        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 2.0f, stepCount ), "확률 2 인데 조우가 안 납니다" );
+    }
+
+    // 0.33 이면 세 걸음마다 한 번이다.
+    int32 encounterCount = 0;
+    for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
+    {
+        if ( shouldEncounterOnStep( 0.33f, stepCount ) )
+            ++encounterCount;
+    }
+    SW_EXPECT_EQUAL( int32( 10 ), encounterCount );
+}
+
+/**
+ * @brief [GameFrameworkTest] 액션 전투 킷과 오버월드 킷을 **한 번역 단위에서 같이** 쓸 수 있다
+ * @details `enum class FacingDir` 이 `ActionRoom.h` 와 `PlayerLocomotion.h` 양쪽에 똑같이
+ *          적혀 있었다. 둘 다 `namespace sw` 라서 두 헤더를 같이 넣으면
+ *          `error: redefinition of 'FacingDir'` 로 **빌드가 안 됐다** — 두 킷을 한 게임에서
+ *          같이 쓸 수 없었다는 뜻이고, 킷이 따로 빌드되는 동안은 아무도 부딪히지 않았다.
+ * @note 이 케이스의 값어치는 **컴파일된다는 것 자체**다. 이 파일 맨 위가 두 헤더를 모두
+ *       넣고 있고, 아래 두 줄은 그 하나의 `FacingDir` 이 양쪽 API 에 그대로 통한다는 것을 든다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
+{
+    PlayerLocomotion loco;
+    loco.setFacing( FacingDir::Left );
+    SW_ASSERT_TRUE( loco.getFacing() == FacingDir::Left );
+
+    // 같은 타입이 액션 룸 입력에도 그대로 들어간다.
+    ActionRoomFrameInput input;
+    input._facing = loco.getFacing();
+    SW_EXPECT_TRUE( input._facing == FacingDir::Left );
+
+    // 로코모션이 델타로 정한 방향도 마찬가지다.
+    loco.setFacingFromDelta( 0, -1 );
+    input._facing = loco.getFacing();
+    SW_EXPECT_TRUE_MSG( input._facing == FacingDir::Up, "두 킷이 같은 FacingDir 을 보고 있지 않습니다" );
+}
+
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.

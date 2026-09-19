@@ -12,7 +12,6 @@ namespace sw
     }
 
     void PlayerLocomotion::setState( LocomotionState state )
-
     {
         _state      = state;
         _stateTimer = 0.0f;
@@ -35,7 +34,7 @@ namespace sw
     void PlayerLocomotion::notifyStepStarted()
     {
         _state      = LocomotionState::Walk;
-        _stateTimer = 0.18f;
+        _stateTimer = kStepDuration;
     }
 
     void PlayerLocomotion::notifyStepFinished()

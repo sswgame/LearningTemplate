@@ -10,23 +10,15 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CollisionLayers.h"
 
+#include "GameFramework/Base/FacingDir.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/GameFrameworkMinimal.h"
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) FacingDir & 룸 종류 · 프레임 입출력
+    // 1) 룸 종류 · 프레임 입출력 (FacingDir 은 Base/FacingDir.h)
     // ------------------------------------------------------------------------------
-    /** @brief 2D 액션 캐릭터가 바라보는 4방향 */
-    enum class FacingDir : uint8
-    {
-        Down = 0,
-        Left,
-        Right,
-        Up
-    };
-
     /** @brief 액션 룸 전투 종류 */
     enum class ActionRoomKind : uint8
     {

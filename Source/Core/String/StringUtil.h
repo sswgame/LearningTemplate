@@ -145,6 +145,16 @@ namespace sw
         static bool startsWith( string_view str, string_view prefix, bool bIgnoreCase = false ) noexcept;
         /** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 확인합니다 (Zero Allocation). */
         static bool endsWith( string_view str, string_view suffix, bool bIgnoreCase = false ) noexcept;
+        /**
+         * @brief 문자열 **안 어딘가에** 부분 문자열이 있는지 확인합니다 (Zero Allocation).
+         * @details `startsWith` · `endsWith` 의 빠져 있던 형제다. 셋이 같은 질문의 세 자리인데
+         *          가운데만 없어서, 부르는 쪽이 `str.find( sub ) != npos` 로 손수 적고 그때마다
+         *          **`bIgnoreCase` 를 잃었다.** 실제로 `zoneRoleFromMapPath` 가 그랬다 — 같은
+         *          역할을 글자로 묻는 짝은 대소문자를 무시하는데 경로로 묻는 쪽만 구별해서,
+         *          `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이었다.
+         * @return 있으면 true. `sub` 가 비었으면 true(표준 `find` 와 같다).
+         */
+        static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
 
         /** @brief 문자열 앞(시작 부분)의 공백(Whitespace) 문자를 모두 제거합니다. */
         static string trimStart( const utf8* pInput );

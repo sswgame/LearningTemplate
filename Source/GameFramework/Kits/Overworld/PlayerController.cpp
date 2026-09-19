@@ -11,6 +11,21 @@ namespace sw
 {
     SW_LOG_CALLER( "PlayerController" );
 
+    SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
+    {
+        // 0 이면 **안 난다.** 예전에는 `rate > 0.01f` 가 거짓일 때 주기를 3 으로 놓아서,
+        // 야생 조우를 끄려고 `setEncounterRate( 0 )` 을 부르면 오히려 **세 걸음마다** 났다.
+        if ( encounterRate <= 0.0f )
+            return false;
+        // 1 이상이면 매 걸음이다. 1/rate 를 uint32 로 자르면 그 구간이 통째로 0 이 돼
+        // "주기 0" 이 되고, 예전 코드는 그것을 다시 3 으로 바꿔 **높은 확률이 낮은 빈도**가 됐다.
+        if ( encounterRate >= 1.0f )
+            return true;
+
+        const uint32 period = static_cast<uint32>( 1.0f / encounterRate );
+        return period <= 1u || ( stepCount % period ) == 0u;
+    }
+
     PlayerController::PlayerController()
         : _pTileMap{ nullptr }
         , _pActionMap{ nullptr }
@@ -19,7 +34,6 @@ namespace sw
         , _tile{ 1, 1 }
         , _pendingWarpSpawn{ 1, 1 }
         , _encounterStepCounter{ 0 }
-        , _stepCooldown{ 0.0f }
         , _encounterRate{ 0.33f }
         , _bMoved{ SW_FALSE }
         , _bWarpPending{ SW_FALSE }
@@ -38,14 +52,14 @@ namespace sw
 
     void PlayerController::update( float32 deltaTime, InputManager& input )
     {
+        // 걸음·상호작용이 끝나는 것은 **로코모션 하나가 판정한다.** 예전에는 여기에 같은
+        // 길이의 `_stepCooldown` 이 따로 있었고, 걸음을 시작하자마자 `notifyStepFinished()`
+        // 로 취소해 버려서 실제 잠금은 그 쿨다운이 하고 `Walk` 는 죽은 상태였다.
         _loco.update( deltaTime );
-        _stepCooldown -= deltaTime;
 
         if ( _bInputEnabled == SW_FALSE )
             return;
         if ( _loco.canAcceptMoveInput() == false )
-            return;
-        if ( _stepCooldown > 0.0f )
             return;
 
         ActionMap* pActionMap = _pActionMap != nullptr ? _pActionMap : &input.getActionMap();
@@ -74,15 +88,9 @@ namespace sw
         if ( deltaX == 0 && deltaY == 0 )
             return;
 
-        if ( tryStep( deltaX, deltaY ) )
-        {
-            _stepCooldown = 0.18f;
-            _loco.notifyStepFinished();
-        }
-        else
-        {
+        // 걸음이 시작됐으면 그대로 둔다 — `_loco.update` 가 `kStepDuration` 뒤에 끝낸다.
+        if ( tryStep( deltaX, deltaY ) == false )
             _loco.setFacingFromDelta( deltaX, deltaY );
-        }
     }
 
     bool PlayerController::consumeMovedFlag()
@@ -173,8 +181,8 @@ namespace sw
         }
         else if ( _pTileMap->isEncounterTile( _tile._x, _tile._y ) )
         {
-            const uint32 period = _encounterRate > 0.01f ? static_cast<uint32>( 1.0f / _encounterRate ) : 3u;
-            if ( ( ++_encounterStepCounter % ( period < 1 ? 3u : period ) ) == 0 )
+            ++_encounterStepCounter;
+            if ( shouldEncounterOnStep( _encounterRate, _encounterStepCounter ) )
             {
                 _bEncounterPending = SW_TRUE;
                 SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tile._x, _tile._y );

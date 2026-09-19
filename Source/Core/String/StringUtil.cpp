@@ -812,6 +812,25 @@ namespace sw
         return str.compare( str.size() - suffix.size(), suffix.size(), suffix ) == 0;
     }
 
+    bool StringUtil::contains( string_view str, string_view sub, bool bIgnoreCase ) noexcept
+    {
+        if ( sub.empty() )
+            return true;
+        if ( str.size() < sub.size() )
+            return false;
+        if ( bIgnoreCase == false )
+            return str.find( sub ) != string_view::npos;
+
+        // 대소문자를 무시할 때는 시작 위치마다 `equals` 로 본다 — 사본을 만들지 않는다.
+        const size_t lastStart = str.size() - sub.size();
+        for ( size_t start = 0; start <= lastStart; ++start )
+        {
+            if ( equals( str.substr( start, sub.size() ), sub, true ) )
+                return true;
+        }
+        return false;
+    }
+
     string StringUtil::trimStart( const utf8* pInput )
     {
         if ( isNullOrEmpty( pInput ) )

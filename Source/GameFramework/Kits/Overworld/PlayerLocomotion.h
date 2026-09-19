@@ -5,22 +5,14 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "GameFramework/Base/FacingDir.h"
 #include "GameFramework/GameFrameworkMinimal.h"
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) FacingDir & LocomotionState — 바라보는 방향 및 타일 스텝 이동 FSM
+    // 1) LocomotionState — 타일 스텝 이동 FSM (FacingDir 은 Base/FacingDir.h)
     // ------------------------------------------------------------------------------
-    /** @brief 2D 캐릭터가 바라보는 4방향 */
-    enum class FacingDir : uint8
-    {
-        Down = 0,
-        Left,
-        Right,
-        Up
-    };
-
     /** @brief 타일 스텝 이동 상태 */
     enum class LocomotionState : uint8
     {
@@ -37,6 +29,13 @@ namespace sw
     class SW_GF_API PlayerLocomotion
     {
     public:
+        /**
+         * @brief 한 칸을 밟는 데 걸리는 시간(초) — **여기가 정본이다.**
+         * @details `PlayerController` 가 다음 입력을 막는 시간으로 같은 `0.18` 을 따로 들고
+         *          있었다. 한쪽만 바꾸면 걷는 연출과 입력 잠금이 어긋난다.
+         */
+        static constexpr float32 kStepDuration = 0.18f;
+
         PlayerLocomotion();
 
         /** @brief 이동 상태를 설정합니다. */
@@ -45,7 +44,14 @@ namespace sw
         void update( float32 deltaTime );
         /** @brief 타일 스텝 시작을 알립니다. */
         void notifyStepStarted();
-        /** @brief 타일 스텝 종료를 알립니다. */
+        /**
+         * @brief 타일 스텝을 **지금 당장** 끝냅니다 — 텔레포트처럼 걷는 시간이 없을 때만.
+         * @warning 걸음을 시작한 그 프레임에 이것을 부르면 `Walk` 상태가 **한 프레임도 살지
+         *          못한다.** `PlayerController::update` 가 정확히 그렇게 하고 있어서
+         *          `LocomotionState::Walk` 는 바깥에서 **한 번도 관측되지 않았다** — 걷는
+         *          애니메이션을 고를 근거가 통째로 죽어 있었다. 보통은 이것을 부르지 말고
+         *          `update( deltaTime )` 이 `kStepDuration` 뒤에 스스로 끝내게 둔다.
+         */
         void notifyStepFinished();
         /** @brief 상호작용 상태를 시작합니다. */
         void beginInteract( float32 duration = 0.2f );

@@ -105,5 +105,12 @@ namespace sw
     // 3) 맵 경로 → ZoneRole (setFromMap 폴백)
     // ------------------------------------------------------------------------------
     /** @brief 맵 경로에서 존 역할을 추론합니다. */
-    ZoneRole zoneRoleFromMapPath( string_view mapPath );
+    SW_GF_API ZoneRole zoneRoleFromMapPath( string_view mapPath );
+    /**
+     * @brief 역할을 태그 이름으로 바꿉니다 — `zoneRoleFromMapPath` 와 **같은 표**를 봅니다.
+     * @details 장르에 매이지 않은 코드가 `ZoneRole` 을 모른 채 `hasActiveZoneTag( "dungeon" )`
+     *          으로 물을 수 있도록 역할을 태그로 미러한다. 그 이름과 경로/글자에서 역할을 읽을
+     *          때 쓰는 이름은 **같아야 하므로 한 표에서 나온다.**
+     */
+    SW_GF_API const utf8* zoneRoleToTag( ZoneRole role );
 } // namespace sw

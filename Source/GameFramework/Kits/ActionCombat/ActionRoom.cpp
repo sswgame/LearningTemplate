@@ -11,6 +11,41 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 이 킷의 조절 값 — **한 자리에 모아 둔다.**
+         * @details 여기 흩어져 있던 숫자 중 `0.85` 는 두 자리에 각각 적혀 있었다. `update()` 가
+         *          대시할 때 `_dashCooldown = 0.85f` 로 넣고, 게이지를 만드는 `getDashFill()` 이
+         *          **자기 몫으로 또 `kDashCd = 0.85f` 를 들고** 나눗셈을 했다. 값을 바꾸면
+         *          한쪽만 따라가서 **게이지가 거짓말을 한다** — 쿨다운을 1.2 초로 늘리면
+         *          게이지는 0.85 초에 이미 가득 찬다. 나머지도 같은 이유로 함께 모았다.
+         */
+        struct ActionRoomTuning
+        {
+            /** @brief 대시 쿨다운(초). `getDashFill()` 의 분모이기도 하다. */
+            static constexpr float32 kDashCooldown = 0.85f;
+            /** @brief 대시가 주는 무적 시간(초). */
+            static constexpr float32 kDashInvulnerable = 0.22f;
+            /** @brief 맞았을 때의 무적 시간(초). 대시가 주는 것보다 **길다.** */
+            static constexpr float32 kHitInvulnerable = 0.7f;
+            /** @brief 플레이어 공격 쿨다운(초). */
+            static constexpr float32 kAttackCooldown = 0.28f;
+
+            /** @brief 보스가 탄을 쏘는 간격(초)과 첫 발까지의 시간. */
+            static constexpr float32 kBossFireInterval   = 1.6f;
+            static constexpr float32 kBossFirstFireDelay = 1.2f;
+
+            /** @brief 플레이어 공격이 주는 피해 — 보스는 덜 아프다. */
+            static constexpr float32 kDamageToBoss  = 18.0f;
+            static constexpr float32 kDamageToGrunt = 34.0f;
+            /** @brief 플레이어가 받는 피해. */
+            static constexpr int32 kDamageFromBoss       = 12;
+            static constexpr int32 kDamageFromGrunt      = 8;
+            static constexpr int32 kDamageFromProjectile = 10;
+        };
+    } // namespace
+
     ActionRoom::ActionRoom()
         : _kind{ ActionRoomKind::None }
         , _layers{}
@@ -69,10 +104,9 @@ namespace sw
 
     float32 ActionRoom::getDashFill() const
     {
-        constexpr float32 kDashCd = 0.85f;
         if ( _dashCooldown <= 0.0f )
             return 1.0f;
-        return MathUtil::saturate( 1.0f - ( _dashCooldown / kDashCd ) );
+        return MathUtil::saturate( 1.0f - ( _dashCooldown / ActionRoomTuning::kDashCooldown ) );
     }
 
     float32 ActionRoom::getBossHpFill() const
@@ -110,8 +144,10 @@ namespace sw
 
         if ( input._bDashPressed == SW_TRUE && _dashCooldown <= 0.0f )
         {
-            _dashCooldown        = 0.85f;
-            _invulnTimer         = 0.22f;
+            _dashCooldown = ActionRoomTuning::kDashCooldown;
+            // **줄이지 않는다.** 그냥 대입하면 맞고 얻은 0.7 초짜리 무적이 대시 한 번에
+            // 0.22 초로 **깎인다** — 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 했다.
+            _invulnTimer         = MathUtil::max( _invulnTimer, ActionRoomTuning::kDashInvulnerable );
             result._bDashStarted = SW_TRUE;
         }
 
@@ -189,7 +225,7 @@ namespace sw
         a._hp          = a._hpMax;
         a._radius      = 0.7f;
         a._speed       = 0.9f;
-        a._attackTimer = 1.2f;
+        a._attackTimer = ActionRoomTuning::kBossFirstFireDelay;
         a._bAlive      = SW_TRUE;
         _bossMaxHp     = a._hpMax;
         _listActor.push_back( a );
@@ -202,7 +238,7 @@ namespace sw
         if ( input._bAttackPressed == SW_FALSE )
             return;
 
-        _attackCooldown = 0.28f;
+        _attackCooldown = ActionRoomTuning::kAttackCooldown;
         const AABB atk  = playerAttackBox( input._playerPos._x, input._playerPos._y, input._facing );
         for ( Actor& actor : _listActor )
         {
@@ -210,7 +246,8 @@ namespace sw
                 continue;
             if ( queryOverlaps( atk, kLayerPlayerAtk, actor.bounds(), kLayerEnemy, _layers ) == false )
                 continue;
-            const float32 dmg = ( actor._kind == ActorKind::Boss ) ? 18.0f : 34.0f;
+            const float32 dmg =
+                ( actor._kind == ActorKind::Boss ) ? ActionRoomTuning::kDamageToBoss : ActionRoomTuning::kDamageToGrunt;
             actor._hp -= dmg;
             if ( actor._hp <= 0.0f )
             {
@@ -237,7 +274,7 @@ namespace sw
             actor._attackTimer -= deltaTime;
             if ( actor._attackTimer > 0.0f )
                 continue;
-            actor._attackTimer = 1.6f;
+            actor._attackTimer = ActionRoomTuning::kBossFireInterval;
 
             const float2 projDir = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
 
@@ -291,8 +328,9 @@ namespace sw
                 continue;
             if ( queryOverlaps( hurt, kLayerPlayer, actor.bounds(), kLayerEnemy, _layers ) == false )
                 continue;
-            out._damageToPlayer += ( actor._kind == ActorKind::Boss ) ? 12 : 8;
-            _invulnTimer = 0.7f;
+            out._damageToPlayer +=
+                ( actor._kind == ActorKind::Boss ) ? ActionRoomTuning::kDamageFromBoss : ActionRoomTuning::kDamageFromGrunt;
+            _invulnTimer = ActionRoomTuning::kHitInvulnerable;
             return;
         }
         for ( Projectile& projectile : _listProjectile )
@@ -301,9 +339,9 @@ namespace sw
                 continue;
             if ( queryOverlaps( hurt, kLayerPlayer, projectile.bounds(), kLayerProjectile, _layers ) == false )
                 continue;
-            out._damageToPlayer += 10;
+            out._damageToPlayer += ActionRoomTuning::kDamageFromProjectile;
             projectile._bAlive = SW_FALSE;
-            _invulnTimer       = 0.7f;
+            _invulnTimer       = ActionRoomTuning::kHitInvulnerable;
             return;
         }
     }

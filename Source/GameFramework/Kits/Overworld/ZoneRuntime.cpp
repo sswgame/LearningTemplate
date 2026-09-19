@@ -8,28 +8,48 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 역할과 이름의 **정본 표 하나.**
+         * @details 예전에는 같은 대응이 세 곳에 각각 적혀 있었다 — 글자에서 역할을 읽는 곳,
+         *          맵 경로에서 역할을 읽는 곳, 역할을 태그로 미러하는 `switch`. 역할을 하나
+         *          더하려면 세 곳을 고쳐야 하고, **한 곳만 고치면 그때부터 조용히 어긋난다.**
+         *          실제로 이미 어긋나 있었다: 글자로 묻는 쪽은 대소문자를 무시하는데 경로로
+         *          묻는 쪽은 맨 `find` 라서 구별했다 — `Dungeon_01` 은 던전이 아니었다.
+         *
+         *          **줄 순서가 곧 우선순위다.** 경로에 여러 이름이 들어 있으면 위의 것이 이긴다
+         *          (`dungeon_boss` 는 보스다). 그래서 `Town` 은 맨 아래이자 기본값이다.
+         *          예전의 `find( "dungeon_boss" )` 줄은 바로 다음 `find( "boss" )` 가 이미
+         *          같은 것을 잡으므로 **한 번도 혼자 참인 적이 없었다** — 지웠다.
+         */
+        struct ZoneRoleName
+        {
+            ZoneRole    _role;
+            const utf8* _pName;
+        };
+
+        constexpr ZoneRoleName kArrZoneRoleName[]{
+            {   ZoneRole::Boss,    "boss"},
+            {ZoneRole::Dungeon, "dungeon"},
+            { ZoneRole::Battle,  "battle"},
+            {  ZoneRole::Route,   "route"},
+            { ZoneRole::Center,  "center"},
+            {   ZoneRole::Mart,    "mart"},
+            {    ZoneRole::Gym,     "gym"},
+            {   ZoneRole::Wild,    "wild"},
+            {   ZoneRole::Town,    "town"},
+        };
+
         struct ZoneRuntimeInternal
         {
             static ZoneRole zoneRoleFromText( string_view roleText, string_view mapPath )
             {
                 if ( roleText.empty() )
                     return zoneRoleFromMapPath( mapPath );
-                if ( StringUtil::equals( roleText, "boss", true ) )
-                    return ZoneRole::Boss;
-                if ( StringUtil::equals( roleText, "dungeon", true ) )
-                    return ZoneRole::Dungeon;
-                if ( StringUtil::equals( roleText, "battle", true ) )
-                    return ZoneRole::Battle;
-                if ( StringUtil::equals( roleText, "route", true ) )
-                    return ZoneRole::Route;
-                if ( StringUtil::equals( roleText, "center", true ) )
-                    return ZoneRole::Center;
-                if ( StringUtil::equals( roleText, "mart", true ) )
-                    return ZoneRole::Mart;
-                if ( StringUtil::equals( roleText, "gym", true ) )
-                    return ZoneRole::Gym;
-                if ( StringUtil::equals( roleText, "wild", true ) )
-                    return ZoneRole::Wild;
+                for ( const ZoneRoleName& entry : kArrZoneRoleName )
+                {
+                    if ( StringUtil::equals( roleText, entry._pName, true ) )
+                        return entry._role;
+                }
                 return ZoneRole::Town;
             }
 
@@ -39,6 +59,16 @@ namespace sw
             }
         };
     } // namespace
+
+    const utf8* zoneRoleToTag( ZoneRole role )
+    {
+        for ( const ZoneRoleName& entry : kArrZoneRoleName )
+        {
+            if ( entry._role == role )
+                return entry._pName;
+        }
+        return "town";
+    }
 } // namespace sw
 
 namespace sw
@@ -95,56 +125,8 @@ namespace sw
         z._bounds._max._y   = height > 0 ? height - 1 : 0;
         z._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( z._role ) ? 1 : 0;
         // 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 합니다.
-        switch ( z._role )
-        {
-            case ZoneRole::Town:
-            {
-                z.addTag( "town" );
-                break;
-            }
-            case ZoneRole::Route:
-            {
-                z.addTag( "route" );
-                break;
-            }
-            case ZoneRole::Dungeon:
-            {
-                z.addTag( "dungeon" );
-                break;
-            }
-            case ZoneRole::Boss:
-            {
-                z.addTag( "boss" );
-                break;
-            }
-            case ZoneRole::Battle:
-            {
-                z.addTag( "battle" );
-                break;
-            }
-            case ZoneRole::Center:
-            {
-                z.addTag( "center" );
-                break;
-            }
-            case ZoneRole::Mart:
-            {
-                z.addTag( "mart" );
-                break;
-            }
-            case ZoneRole::Gym:
-            {
-                z.addTag( "gym" );
-                break;
-            }
-            case ZoneRole::Wild:
-            {
-                z.addTag( "wild" );
-                break;
-            }
-            default:
-                break;
-        }
+        // 이름은 위의 표 하나에서 온다 — 여기에 `switch` 로 다시 적으면 세 번째 사본이 된다.
+        z.addTag( zoneRoleToTag( z._role ) );
         _listZone.push_back( std::move( z ) );
         _activeIndex = 0;
     }
@@ -208,22 +190,13 @@ namespace sw
 
     ZoneRole zoneRoleFromMapPath( string_view mapPath )
     {
-        if ( mapPath.find( "dungeon_boss" ) != string::npos || mapPath.find( "boss" ) != string::npos )
-            return ZoneRole::Boss;
-        if ( mapPath.find( "dungeon" ) != string::npos )
-            return ZoneRole::Dungeon;
-        if ( mapPath.find( "battle" ) != string::npos )
-            return ZoneRole::Battle;
-        if ( mapPath.find( "route" ) != string::npos )
-            return ZoneRole::Route;
-        if ( mapPath.find( "center" ) != string::npos )
-            return ZoneRole::Center;
-        if ( mapPath.find( "mart" ) != string::npos )
-            return ZoneRole::Mart;
-        if ( mapPath.find( "gym" ) != string::npos )
-            return ZoneRole::Gym;
-        if ( mapPath.find( "wild" ) != string::npos )
-            return ZoneRole::Wild;
+        // 표의 **줄 순서가 우선순위**다. 글자로 묻는 짝과 같은 표를 보고, 같이 대소문자를
+        // 무시한다 — 예전에는 여기만 맨 `find` 여서 `Dungeon_01` 이 던전이 아니었다.
+        for ( const ZoneRoleName& entry : kArrZoneRoleName )
+        {
+            if ( StringUtil::contains( mapPath, entry._pName, true ) )
+                return entry._role;
+        }
         return ZoneRole::Town;
     }
 } // namespace sw
