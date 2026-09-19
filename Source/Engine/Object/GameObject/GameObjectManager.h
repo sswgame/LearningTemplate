@@ -72,6 +72,16 @@ namespace sw
         /** @brief rename API — setName과 동일하게 이름 맵을 유지합니다. */
         bool renameGameObject( GameObject* pObj, hashed_string newName );
 
+        /**
+         * @brief 핸들이 쓸 매니저를 정합니다 — 붙잡아 둔 것이 있으면 그것, 없으면 **활성 씬**의 것.
+         * @param pPreferred 핸들이 들고 있는 매니저. nullptr 이면 활성 씬에게 묻는다.
+         * @return 쓸 매니저. 엔진 서비스가 묶여 있지 않거나 활성 씬이 없으면 nullptr.
+         * @details `ComponentPtr` 와 `GameObjectPtr` 가 **같은 여덟 줄을 각자** 들고 있었다. 지연 해석은
+         *          "씬이 통째로 바뀌어도 이름으로 다시 찾는다" 는 계약의 핵심이라, 한쪽만 규칙이 바뀌면
+         *          두 핸들이 서로 다른 씬을 보게 된다.
+         */
+        static GameObjectManager* resolveOwningManager( GameObjectManager* pPreferred );
+
         /** @brief 이름으로 GameObject를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
 

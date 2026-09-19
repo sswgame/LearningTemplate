@@ -343,19 +343,9 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 최대 4개 컨트롤러 (/dev/input/js0 ~ js3). 연결되지 않은 슬롯은 poll()이 알아서 재시도 타이머로 넘어갑니다.
-        for ( uint32 padIdx = 0; padIdx < 4; ++padIdx )
-        {
-            auto pGamepad = make_unique<GamepadJoystick>( padIdx );
-            if ( padIdx == 0 )
-                _pGamepad = pGamepad.get();
-            pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
-            {
-                if ( _onGamepadConnectionChanged.isBound() )
-                    _onGamepadConnectionChanged( index, bConnected );
-            } );
-            registerDevice( std::move( pGamepad ) );
-        }
+        // 슬롯 수·0번 캐시·연결 콜백은 엔진 정책이라 기반이 돈다 — 여기서 정하는 것은 `/dev/input/js*`
+        // 를 읽는 구현이라는 것뿐이다. 연결되지 않은 슬롯은 poll() 이 재시도 타이머로 넘어간다.
+        registerGamepadSlots<GamepadJoystick>();
     }
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )

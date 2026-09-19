@@ -77,6 +77,15 @@ namespace sw::editor
         static void drawToolbarSeparator();
 
         /**
+         * @brief 기즈모 조작 모드(이동·회전·크기)와 로컬 공간 토글을 한 줄로 그립니다.
+         * @details 뷰포트 툴바와 인스펙터 **둘이 같은 다섯 줄을 각자** 그리고 있었다. 라디오 값
+         *          `0`·`1`·`2` 가 양쪽에 숫자 그대로 박혀 있어서, 모드를 하나 더하려면 두 곳을 고쳐야
+         *          했고 **한쪽만 고치면 두 화면이 서로 다른 모드를 가리킨다.** 값은 워크스페이스가
+         *          들고 있으므로(`getGizmoOperation`), 그리는 방법만 여기로 모은다.
+         */
+        static void drawGizmoOperationControls();
+
+        /**
          * @brief 활성/비활성 색이 바뀌는 토글·필터 칩 버튼. 클릭되면 true.
          */
         static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive );

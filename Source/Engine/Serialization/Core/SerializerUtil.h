@@ -172,6 +172,21 @@ namespace sw
         /** @brief 키 문자열이 일치하는지 비교합니다 (대소문자 옵션 지원). */
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
 
+        /**
+         * @brief Alias·옛 이름을 `SerializeContext` 핸들러가 아는 정본 이름(`_name`)으로 바꿉니다.
+         * @details 세 TU(`SerializerUtil` · `JsonSerializer`)가 같은 열세 줄을 각자 들고 있었다.
+         *          핸들러 조회 규칙이 바뀌면 그 전부를 같이 고쳐야 했다.
+         */
+        SW_API static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx );
+
+        /**
+         * @brief 원소 타입 이름이 **소유 포인터**인지 봅니다 (이름에 `*` 가 있으면 그렇다).
+         * @details `JsonSerializer` 와 `XmlSerializer` 가 같은 함수를 각자 들고 있었다. 판정 기준이
+         *          "이름에 별표가 있는가" 라는 문자열 규칙이라, 한쪽만 고치면 두 포맷이 서로 다른
+         *          컨테이너를 소유로 보게 된다.
+         */
+        SW_API static bool isOwnedPointerElementType( hashed_string elementTypeName );
+
         /** @brief 프로퍼티 목록에서 키에 일치하는 프로퍼티 메타데이터를 검색합니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
                                                   bool bIgnoreCaseKeys, bool& bCaseVariant );

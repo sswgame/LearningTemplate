@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `61bd51cd`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `8e680e97`
 
 ---
 
@@ -432,6 +432,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (복붙 후보 21건을 끝까지 따라갔다 — 다섯은 합치고, 여섯은 이유를 적고 남겼다)
+
+앞의 두 항목과 같은 조사(공백·주석을 지운 연속 8줄 창 해시)에서 나온 **나머지를 전부** 처리했다.
+21건 중 **10건은 include 묶음**이라 중복이 아니고, 남은 11건을 하나씩 봤다.
+
+**합친 것 다섯.**
+
+| 자리 | 무엇이 같았나 | 왜 위험했나 |
+|---|---|---|
+| `SerializerUtil` · `JsonSerializer` · `XmlSerializer` | `resolveHandlerTypeName`(13줄) · `isOwnedPointerElementType` | 핸들러 조회 규칙·소유 포인터 판정이 **포맷마다 갈릴 수 있었다** |
+| `ComponentPtr` · `GameObjectPtr` | "매니저를 어디서 얻나" 8줄 | 지연 해석의 핵심 계약이다 — 한쪽만 바뀌면 두 핸들이 **다른 씬**을 본다 |
+| `RenderPassResource` · `RenderPipelineResource` | XML 읽기·쓰기 배관(≈24줄) | 세 번째 렌더 리소스를 넣을 때 또 복사해야 했다 |
+| `InputManagerWin32` · `InputManagerX11` | `registerPlatformGamepads` 전체 | 슬롯 수·0번 캐시·콜백 연결은 **엔진 정책**인데 플랫폼마다 한 벌씩 있었다 |
+| `EditorViewportToolbar` · `InspectorComponentManager` | 기즈모 라디오 + Local 체크박스 | 값 `0`·`1`·`2` 가 양쪽에 숫자로 박혀 있어, 모드를 더하면 **두 화면이 서로 다른 모드**를 가리킨다 |
+| `D3D11RHIResourcePipeline` · `D3D12RHIResourcePipeline` | 정점 속성 → DXGI 포맷 판단 | 성분 수를 하나 더하면 **그 백엔드만 정점이 어긋난다**(이 저장소가 여러 번 겪은 모양) |
+
+배관을 놓을 자리를 고르는 데도 규칙이 있었다. 렌더 리소스의 XML 배관은 자연스러운 자리가
+`XmlSerializer`(직렬화)나 `ResourceUtil`(경로)인데 **둘 다 안 된다** — 직렬화는 티어 2 라 티어 4 인
+`Resource` 를 못 보고(`Source/Engine/README.md` 티어 표), `ResourceUtil` 은 헤더에 "경로 I/O 만
+담당한다" 고 못박혀 있다. 그래서 쓰는 쪽 옆에 뒀고, 그 이유를 파일 머리에 적었다.
+
+**합치지 않은 것 여섯 — 이유와 함께 남긴다.** (다시 제안하기 전에 여기를 볼 것.)
+
+- **`AnimationGraphPanel` · `DialogueGraphPanel` 의 `applyDocumentText`** — 11줄이 글자까지 같지만,
+  그 줄들이 **패널마다 타입이 다른 멤버**(`_listNode`·`_listLink`)를 만진다. 공유하려면 인자를
+  넷~여섯 개 받아야 해서 **없애는 줄보다 늘어나는 줄이 많다.** 제대로 하려면 두 패널의 소유 구조를
+  `EditorGraphDocument` 같은 믹스인으로 다시 세워야 하는데, 에디터 패널은 **단위 테스트가 없어**
+  시각 검증밖에 없다 — 2절의 "EditorContext 소유 구조를 더 쪼개지 않는다" 와 같은 판단이다.
+- **`AnimationGraphAsset` · `DialogueGraphAsset` 의 링크 파싱** — 같은 것은 "JSON 배열을 돌며 객체만
+  고른다" 는 **여섯 줄짜리 관용구**이고, 안에서 채우는 필드는 완전히 다르다(`_fromNode` vs `_fromPin`).
+- **`PosixCallStackCapture` · `WindowsCallStackCapture` 의 `symbolizeFrames`** — 앞부분 가드(빈 스택 ·
+  `try_lock` 실패 시 주소만)는 같지만 본체는 완전히 다르다(DbgHelp vs `backtrace_symbols`).
+  **크래시 경로라 간접 호출을 끼워 넣는 것 자체가 위험**이다. 대신 Windows 에만 있던 "왜 try_lock 인가"
+  설명을 POSIX 쪽에도 적어, 다음 사람이 한쪽만 바꾸지 않게 했다.
+- **엔진 Vulkan 기본 샘플러 · 에디터 ImGui 샘플러** — 지금 값이 같지만 **우연이다.** 엔진 쪽은 씬
+  텍스처용이라 나중에 비등방 필터링으로 갈 수 있고, ImGui 폰트·아이콘이 그 변화를 따라가면 안 된다.
+  합치면 **없는 결합을 만드는 셈**이다. 그 의도를 에디터 쪽 주석에 적었다(`borderColor` 를 세우지
+  않는 것도 의도다 — 주소 모드가 CLAMP_TO_EDGE 라 그 값은 쓰이지 않는다).
+- **include 묶음 10건** — 같은 헤더를 여러 파일이 include 하는 것은 중복이 아니다. 탐지기가 8줄 창을
+  보기 때문에 걸릴 뿐이고, 다음에 이 조사를 다시 할 때도 같은 것이 나온다.
+
+**검증.** Windows: Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 ·
+린트 17/17 · 에디터 실기동(테스트 씬 · 패널 전부 열기) `[Error]` 0건 · **창 33개 · 내용 없는 패널 0개**.
+리눅스(WSL): 전체 빌드 경고 0 · `-L nogpu` 7/7 — 플랫폼 입력·창 쪽 변경이 실제로 컴파일되는 것까지 봤다.
 
 ### 2026-09-19 (창을 다시 만드는 절차가 세 벌이었고, 기반의 것이 창을 숨겼다)
 

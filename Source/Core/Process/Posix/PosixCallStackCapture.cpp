@@ -64,6 +64,9 @@ namespace sw
 
             StringBuilder<constant::kMaxBuffer8192> sb;
 
+            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면 교착 대신
+            // 주소만 출력한다(맵 파일로 후처리할 수 있다). Windows 쪽에도 같은 규칙이 있다 — 본체는
+            // 플랫폼마다 완전히 다르지만(DbgHelp vs backtrace_symbols) **이 가드만은 같아야 한다.**
             std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
             if ( lock.owns_lock() == false )
             {

@@ -14,6 +14,8 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -418,6 +420,20 @@ namespace sw
             return false;
         pObj->setName( newName );
         return true;
+    }
+
+    GameObjectManager* GameObjectManager::resolveOwningManager( GameObjectManager* pPreferred )
+    {
+        if ( pPreferred != nullptr )
+            return pPreferred;
+
+        // 붙잡아 둔 매니저가 없으면 활성 씬의 것을 쓴다. 서비스가 묶이기 전(테스트·초기화 중)에는
+        // 물어볼 곳이 없으므로 nullptr 이다 — 호출부는 그때 해석을 그냥 미룬다.
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
+
+        Scene* pScene = engine::getSceneManager().getActiveScene();
+        return ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const

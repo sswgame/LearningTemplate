@@ -204,6 +204,35 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice()로 등록합니다 (Windows: XInput, Linux: 조이스틱 API). */
         void registerPlatformGamepads();
+
+        /** @brief 게임패드 슬롯 수. XInput 규격이 넷이고, 조이스틱도 `js0`~`js3` 로 맞춰 둔다. */
+        static constexpr uint32 kMaxGamepadSlot = 4;
+
+        /**
+         * @brief 게임패드 슬롯 넷을 만들어 등록합니다 — **만드는 타입만** 플랫폼이 정합니다.
+         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치 (`GamepadXInput` · `GamepadJoystick`).
+         * @details 슬롯 수(4) · 0번을 편의 포인터로 잡는 것 · 연결 콜백을 이어 주는 것은 **엔진 정책**인데,
+         *          예전에는 그 정책이 플랫폼 파일마다 한 벌씩 있었다. 슬롯 수를 늘리거나 콜백 규칙을
+         *          바꾸면 두 곳을 같이 고쳐야 했고, 한쪽만 고치면 **그 플랫폼만 조용히 다르게** 동작했다.
+         */
+        template <typename GamepadType>
+        void registerGamepadSlots()
+        {
+            for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+            {
+                auto pGamepad = make_unique<GamepadType>( padIndex );
+                // 0번은 편의 API(`getGamepad()` 인자 없는 형태)가 쓰는 캐시다.
+                if ( padIndex == 0 )
+                    _pGamepad = pGamepad.get();
+
+                pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
+                {
+                    if ( _onGamepadConnectionChanged.isBound() )
+                        _onGamepadConnectionChanged( index, bConnected );
+                } );
+                registerDevice( std::move( pGamepad ) );
+            }
+        }
         /** @brief 커서 표시/숨김을 OS에 실제로 적용합니다 (setCursorVisible()의 플랫폼 훅). */
         void setCursorVisiblePlatform( bool bVisible );
 

@@ -62,29 +62,43 @@ namespace sw
     {
         struct SerializerUtilInternal
         {
-            /** @brief Alias/옛 이름 → SerializeContext 핸들러용 canonical (_name). */
-            static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
-            {
-                if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
-                    return typeName;
-
-                TypeRegistry&   registry  = engine::getTypeRegistry();
-                const TypeInfo* pTypeInfo = registry.findType( typeName );
-                if ( pTypeInfo != nullptr )
-                {
-                    if ( pTypeInfo->_name.empty() == false &&
-                         ( ctx.findBinaryWriter( pTypeInfo->_name ) != nullptr ||
-                           ctx.findTextWriter( pTypeInfo->_name ) != nullptr ) )
-                        return pTypeInfo->_name;
-                }
-                return typeName;
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    hashed_string SerializerUtil::resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
+    {
+        // 등록된 이름 그대로 핸들러가 있으면 그것이 정본이다.
+        if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
+            return typeName;
+
+        // 없으면 리플렉션이 아는 정본 이름(`_name`)으로 한 번 더 물어본다 — Alias·옛 이름으로 들어온 경우다.
+        TypeRegistry&   registry  = engine::getTypeRegistry();
+        const TypeInfo* pTypeInfo = registry.findType( typeName );
+        if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
+             ( ctx.findBinaryWriter( pTypeInfo->_name ) != nullptr || ctx.findTextWriter( pTypeInfo->_name ) != nullptr ) )
+            return pTypeInfo->_name;
+
+        return typeName;
+    }
+
+    bool SerializerUtil::isOwnedPointerElementType( hashed_string elementTypeName )
+    {
+        // 판정 기준은 이름에 `*` 가 있는가 하나다 — 리플렉션이 포인터 원소를 그렇게 적는다.
+        const utf8* pName = elementTypeName.c_str();
+        if ( pName == nullptr )
+            return false;
+
+        for ( const utf8* pCursor = pName; *pCursor != 0; ++pCursor )
+        {
+            if ( *pCursor == '*' )
+                return true;
+        }
+        return false;
+    }
+
     const utf8* SerializerUtil::containerTypeTagName( hashed_string typeName )
     {
         const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
@@ -103,7 +117,7 @@ namespace sw
     void SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
                                                vector<uint8>& listBuffer, const SerializeContext& ctx )
     {
-        const hashed_string                    resolved = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
+        const hashed_string                    resolved = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
         const SerializeContext::BinaryWriteFn* pWriter  = ctx.findBinaryWriter( resolved );
         if ( pWriter != nullptr )
         {
@@ -158,7 +172,7 @@ namespace sw
                                                  const uint8* pData, size_t dataSize, size_t& offset,
                                                  const SerializeContext& ctx )
     {
-        const hashed_string                   resolved = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
+        const hashed_string                   resolved = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
         const SerializeContext::BinaryReadFn* pReader  = ctx.findBinaryReader( resolved );
         if ( pReader != nullptr )
             return ( *pReader )( pValuePtr, pData, dataSize, offset );
@@ -328,7 +342,7 @@ namespace sw
     void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
                                       const SerializeContext& ctx )
     {
-        const hashed_string                  resolved    = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
+        const hashed_string                  resolved    = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
         const SerializeContext::TextWriteFn* pTextWriter = ctx.findTextWriter( resolved );
         if ( pTextWriter != nullptr )
         {
@@ -363,7 +377,7 @@ namespace sw
     bool SerializerUtil::parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
                                          const SerializeContext& ctx )
     {
-        const hashed_string                 resolved    = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
+        const hashed_string                 resolved    = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
         const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
         if ( pTextReader != nullptr )
             return ( *pTextReader )( pValPtr, valStr );

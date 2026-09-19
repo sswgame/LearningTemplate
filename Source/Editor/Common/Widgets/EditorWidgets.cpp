@@ -8,6 +8,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -162,6 +164,24 @@ namespace sw::editor
         if ( StringUtil::isNullOrEmpty( pSubtitle ) == false )
             ImGui::TextDisabled( "%s", pSubtitle );
         ImGui::Separator();
+    }
+
+    void EditorWidgets::drawGizmoOperationControls()
+    {
+        // 라디오 값은 `EditorWorkspace` 의 기즈모 조작 번호다 — 여기 숫자는 그 표현일 뿐이고,
+        // 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
+        int32 operation = EditorContext::get()->getWorkspace().getGizmoOperation();
+        ImGui::RadioButton( "Translate", &operation, 0 );
+        ImGui::SameLine();
+        ImGui::RadioButton( "Rotate", &operation, 1 );
+        ImGui::SameLine();
+        ImGui::RadioButton( "Scale", &operation, 2 );
+        ImGui::SameLine();
+        EditorContext::get()->getWorkspace().setGizmoOperation( operation );
+
+        bool bLocalSpace = EditorContext::get()->getWorkspace().isGizmoLocalSpace();
+        if ( ImGui::Checkbox( "Local", &bLocalSpace ) )
+            EditorContext::get()->getWorkspace().setGizmoLocalSpace( bLocalSpace );
     }
 
     void EditorWidgets::drawToolbarSeparator()

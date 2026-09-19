@@ -44,10 +44,7 @@ namespace sw
             {
                 const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
                 arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
-                arrInputElement[attributeIndex].Format               = ( attribute._bUint != SW_FALSE )   ? DXGI_FORMAT_R32_UINT
-                                                                     : ( attribute._componentCount == 4 ) ? DXGI_FORMAT_R32G32B32A32_FLOAT
-                                                                     : ( attribute._componentCount == 2 ) ? DXGI_FORMAT_R32G32_FLOAT
-                                                                                                          : DXGI_FORMAT_R32G32B32_FLOAT;
+                arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
                 arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
                 arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
                 arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA

@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderResourceXml.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -18,23 +19,9 @@ namespace sw
 
     bool RenderPipelineResource::loadFromXmlFile( string_view assetRelativePath )
     {
-        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType<RenderPipelineDesc>();
-        if ( pTypeInfo == nullptr )
-        {
-            SW_LOG_ERROR( "RenderPipelineDesc TypeInfo 를 찾을 수 없습니다 — 리플렉션 생성이 빠졌습니다" );
-            return false;
-        }
-
         _desc = {};
-
-        // PROPERTY 그래프를 그대로 읽는다. 예전엔 파서가 두 벌(정식/구형 짧은 이름)에 라이터가 따로
-        // 있어서, 필드를 하나 추가하려면 세 곳을 고쳐야 했고 하나만 빠뜨리면 값이 조용히 비었다 —
-        // `_depthAttachment` 를 넣을 때 실제로 그 함정에 걸렸다.
-        if ( XmlSerializer::loadFile( assetRelativePath, &_desc, *pTypeInfo ) == false )
-        {
-            SW_LOG_ERROR( "RenderPipeline XML 로드 실패: %#", assetRelativePath );
+        if ( RenderResourceXml::loadDesc( assetRelativePath, _desc ) == false )
             return false;
-        }
 
         validate( assetRelativePath );
 
@@ -238,21 +225,10 @@ namespace sw
 
     bool RenderPipelineResource::saveToXmlFile( string_view assetRelativePath ) const
     {
-        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType<RenderPipelineDesc>();
-        if ( pTypeInfo == nullptr )
+        if ( RenderResourceXml::saveDesc( assetRelativePath, _desc ) == false )
             return false;
 
-        string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-        if ( absPath.empty() )
-            absPath = assetRelativePath;
-
-        if ( XmlSerializer::saveFile( absPath, &_desc, *pTypeInfo ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write XML file: %#", absPath );
-            return false;
-        }
-
-        SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, absPath );
+        SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, assetRelativePath );
         return true;
     }
 

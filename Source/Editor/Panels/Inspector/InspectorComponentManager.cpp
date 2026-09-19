@@ -31,19 +31,7 @@ namespace sw::editor
 
                 ImGui::SeparatorText( "Transform" );
 
-                int32 op = EditorContext::get()->getWorkspace().getGizmoOperation();
-                ImGui::RadioButton( "Translate", &op, 0 );
-                ImGui::SameLine();
-                ImGui::RadioButton( "Rotate", &op, 1 );
-                ImGui::SameLine();
-                ImGui::RadioButton( "Scale", &op, 2 );
-                ImGui::SameLine();
-                EditorContext::get()->getWorkspace().setGizmoOperation( op );
-
-                ImGui::SameLine();
-                bool bLocal = EditorContext::get()->getWorkspace().isGizmoLocalSpace();
-                if ( ImGui::Checkbox( "Local", &bLocal ) )
-                    EditorContext::get()->getWorkspace().setGizmoLocalSpace( bLocal );
+                EditorWidgets::drawGizmoOperationControls();
 
                 float3 pos = pSceneComp->getLocalPosition();
                 float3 rot = pSceneComp->getLocalRotation();

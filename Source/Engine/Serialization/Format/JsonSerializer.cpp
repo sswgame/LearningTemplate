@@ -17,36 +17,6 @@ namespace sw
     {
         struct JsonSerializerInternal
         {
-            static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
-            {
-                if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
-                    return typeName;
-
-                TypeRegistry&   registry  = engine::getTypeRegistry();
-                const TypeInfo* pTypeInfo = registry.findType( typeName );
-                if ( pTypeInfo != nullptr )
-                {
-                    if ( pTypeInfo->_name.empty() == false &&
-                         ( ctx.findBinaryWriter( pTypeInfo->_name ) != nullptr ||
-                           ctx.findTextWriter( pTypeInfo->_name ) != nullptr ) )
-                        return pTypeInfo->_name;
-                }
-                return typeName;
-            }
-
-            static bool isOwnedPointerElementType( hashed_string elementTypeName )
-            {
-                const utf8* pName = elementTypeName.c_str();
-                if ( pName == nullptr )
-                    return false;
-                for ( const utf8* pCursor = pName; *pCursor != '\0'; ++pCursor )
-                {
-                    if ( *pCursor == '*' )
-                        return true;
-                }
-                return false;
-            }
-
             static const TypeInfo* findNestedJsonObjectType( hashed_string typeName, const SerializeContext& ctx )
             {
                 if ( ctx.findTextWriter( typeName ) != nullptr )
@@ -64,7 +34,7 @@ namespace sw
                 if ( dst.isValid() == false )
                     return;
 
-                const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
+                const hashed_string resolved  = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
                 const bool          bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
                                          resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
                                          resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
@@ -172,7 +142,7 @@ namespace sw
                 if ( dst.isValid() == false || pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return;
 
-                const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+                const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
 
                 ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
                 if ( pSeq != nullptr )
@@ -332,7 +302,7 @@ namespace sw
 
                 if ( src.isArray() && nested._wrapper->asSequence() != nullptr )
                 {
-                    const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+                    const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
                     if ( bOwnedPtr == false )
                         nested._wrapper->clear( pContainerPtr );
                     return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx );
@@ -351,7 +321,7 @@ namespace sw
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return false;
 
-                const hashed_string                 resolved    = resolveHandlerTypeName( typeName, ctx );
+                const hashed_string                 resolved    = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
                 const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
                 if ( pTextReader != nullptr )
                 {

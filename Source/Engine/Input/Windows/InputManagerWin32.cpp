@@ -358,19 +358,8 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 최대 4개 컨트롤러 (XInput 슬롯 규격)
-        for ( uint32 padIdx = 0; padIdx < 4; ++padIdx )
-        {
-            auto pGamepad = make_unique<GamepadXInput>( padIdx );
-            if ( padIdx == 0 )
-                _pGamepad = pGamepad.get();
-            pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
-            {
-                if ( _onGamepadConnectionChanged.isBound() )
-                    _onGamepadConnectionChanged( index, bConnected );
-            } );
-            registerDevice( std::move( pGamepad ) );
-        }
+        // 슬롯 수·0번 캐시·연결 콜백은 엔진 정책이라 기반이 돈다 — 여기서 정하는 것은 XInput 이라는 것뿐이다.
+        registerGamepadSlots<GamepadXInput>();
     }
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )

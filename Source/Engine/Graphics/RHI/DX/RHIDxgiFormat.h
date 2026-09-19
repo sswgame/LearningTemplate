@@ -53,6 +53,30 @@ namespace sw
     }
 
     /**
+     * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다 (DX11/DX12 공유).
+     * @details 입력 레이아웃은 **공용 표**(`constant::arrVertexAttribute`)에서 만들지만, 그 표의 한 줄을
+     *          DXGI 포맷으로 옮기는 이 판단은 두 백엔드가 **각자** 적고 있었다. 성분 수를 하나 더하면
+     *          (예: 스칼라 float 속성) 한쪽만 고치기 쉬운 자리이고, 그러면 **그 백엔드만 정점이 어긋난
+     *          채로 그려진다** — 이 저장소가 여러 번 겪은 "백엔드 하나만 다른 그림" 의 전형이다.
+     */
+    inline DXGI_FORMAT toDxgiVertexFormat( const RHIVertexAttribute& attribute )
+    {
+        if ( attribute._bUint != SW_FALSE )
+            return DXGI_FORMAT_R32_UINT;
+
+        switch ( attribute._componentCount )
+        {
+            case 4:
+                return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case 2:
+                return DXGI_FORMAT_R32G32_FLOAT;
+            default:
+                break;
+        }
+        return DXGI_FORMAT_R32G32B32_FLOAT;
+    }
+
+    /**
      * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown.
      * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부다.
      *          -Wswitch-enum 은 default 가 있어도 모든 값을 적으라고 하는데, 여기서는 그 목록을 유지할 수도

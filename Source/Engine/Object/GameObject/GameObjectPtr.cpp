@@ -94,15 +94,8 @@ namespace sw
             return;
         }
 
-        GameObjectManager* pObjMgr = _pManager;
-        if ( pObjMgr == nullptr && engine::areEngineServicesBound() )
-        {
-            SceneManager& sceneMgr = engine::getSceneManager();
-            Scene*        pScene   = sceneMgr.getActiveScene();
-            if ( pScene != nullptr )
-                pObjMgr = pScene->getObjectManager();
-        }
-
+        // 씬이 통째로 바뀌어도 이름으로 다시 찾는다 — 어느 매니저에게 물을지는 한 곳이 정한다.
+        GameObjectManager* pObjMgr = GameObjectManager::resolveOwningManager( _pManager );
         if ( pObjMgr == nullptr )
             return;
 

@@ -31,19 +31,6 @@ namespace sw
                 return pTypeInfo;
             }
 
-            static bool isOwnedPointerElementType( hashed_string elementTypeName )
-            {
-                const utf8* pName = elementTypeName.c_str();
-                if ( pName == nullptr )
-                    return false;
-                for ( const utf8* pCursor = pName; *pCursor != '\0'; ++pCursor )
-                {
-                    if ( *pCursor == '*' )
-                        return true;
-                }
-                return false;
-            }
-
             static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
             {
                 bFieldError = true;
@@ -70,7 +57,7 @@ namespace sw
                 if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return;
 
-                const bool                 bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+                const bool                 bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
                 ISequenceContainerWrapper* pSeq      = nested._wrapper->asSequence();
                 IMapContainerWrapper*      pMapWrap  = nested._wrapper->asMap();
 
@@ -166,7 +153,7 @@ namespace sw
                 if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return false;
 
-                const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+                const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
                 if ( bOwnedPtr == false )
                     nested._wrapper->clear( pContainerPtr );
 
