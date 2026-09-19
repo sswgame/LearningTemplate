@@ -699,70 +699,92 @@ namespace sw::editor
     {
         const utf8* pLabel = "##value";
 
+        // 이 함수의 **모든 갈래는 무언가를 그리고 끝난다.** 예전에는 시퀀스가 아니면 아무것도 그리지
+        // 않고 돌아갔고, 인스펙터에는 **빈 칸 하나**만 남았다 — 값이 비었는지, 그리지 못하는 것인지,
+        // 버그인지 화면만 보고는 구분할 수 없었다. 모르는 타입조차 "No inspector for ..." 라고 말하는데
+        // 컨테이너만 조용했다. 맵 프로퍼티는 실제로 있다(`GameData::_mapCustomProperty` 등).
         void* pContainer = prop.getRawPtr( pInstance );
-        if ( pContainer != nullptr )
+        if ( pContainer == nullptr )
         {
-            ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-            if ( pSeq != nullptr )
+            ImGui::TextDisabled( "컨테이너를 읽을 수 없습니다 (%s)", prop._typeName.c_str() );
+            return;
+        }
+
+        ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+        if ( pSeq == nullptr )
+        {
+            IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
+            if ( pMap == nullptr )
             {
-                const size_t                          count = pSeq->getSize( pContainer );
-                fixed_string<constant::kMaxBuffer128> headerBuf;
-                formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
-
-                // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다** — 고치는 순간
-                // 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
-                // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
-                const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
-                const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, bInPlaceEditable );
-                if ( bInPlaceEditable == false )
-                    bReadOnly = true;
-
-                if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
-                {
-                    if ( bInPlaceEditable == false )
-                        ImGui::TextDisabled( "정렬 컨테이너라 제자리 편집을 지원하지 않습니다 (읽기 전용)" );
-
-                    if ( bReadOnly == false )
-                    {
-                        if ( ImGui::SmallButton( "+ Add" ) )
-                            pSeq->addElementDefault( pContainer );
-                        ImGui::SameLine();
-                        if ( ImGui::SmallButton( "Clear" ) )
-                            pSeq->clear( pContainer );
-                        ImGui::Separator();
-                    }
-
-                    // 원소 위젯도 같은 규칙을 받아야 한다. 예전에는 `bReadOnly` 가 위의 버튼만 가려서
-                    // **`ReadOnly` 컨테이너의 원소가 그대로 편집됐다.**
-                    ImGui::BeginDisabled( bElementEditable == false );
-
-                    const size_t newCount = pSeq->getSize( pContainer );
-                    for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
-                    {
-                        void* pElem = pSeq->getElement( pContainer, elemIndex );
-                        if ( pElem == nullptr )
-                            continue;
-
-                        ImGui::PushID( static_cast<int32>( elemIndex ) );
-                        ImGui::AlignTextToFramePadding();
-                        ImGui::Text( "[%zu]", elemIndex );
-                        ImGui::SameLine();
-
-                        PropertyInfo elemProp{};
-                        elemProp._typeName = prop._elementTypeName;
-                        elemProp._name     = prop._name;
-                        elemProp._metadata = prop._metadata;
-
-                        ImGui::SetNextItemWidth( -FLT_MIN );
-                        drawPropertyWidget( pElem, elemProp );
-                        ImGui::PopID();
-                    }
-
-                    ImGui::EndDisabled();
-                    ImGui::TreePop();
-                }
+                ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
                 return;
             }
+
+            // 맵을 편집하려면 래퍼에 **쓸 수 있는 값 접근자**가 있어야 한다 — `forEach` 는 키·값을
+            // 모두 const 로만 준다. (키는 어차피 정렬 키라 제자리 편집이 불가능하다. `set` 과 같다.)
+            // 그때까지는 적어도 **몇 개 들어 있는지는 말한다.**
+            size_t entryCount = 0;
+            pMap->forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void*, const void* )
+            { ++entryCount; } ) );
+            ImGui::TextDisabled( "맵 컨테이너는 아직 인스펙터가 그리지 않습니다 (%zu entries)", entryCount );
+            return;
+        }
+
+        const size_t                          count = pSeq->getSize( pContainer );
+        fixed_string<constant::kMaxBuffer128> headerBuf;
+        formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
+
+        // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다** — 고치는 순간
+        // 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
+        // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
+        const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
+        const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, bInPlaceEditable );
+        if ( bInPlaceEditable == false )
+            bReadOnly = true;
+
+        if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
+        {
+            if ( bInPlaceEditable == false )
+                ImGui::TextDisabled( "정렬 컨테이너라 제자리 편집을 지원하지 않습니다 (읽기 전용)" );
+
+            if ( bReadOnly == false )
+            {
+                if ( ImGui::SmallButton( "+ Add" ) )
+                    pSeq->addElementDefault( pContainer );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Clear" ) )
+                    pSeq->clear( pContainer );
+                ImGui::Separator();
+            }
+
+            // 원소 위젯도 같은 규칙을 받아야 한다. 예전에는 `bReadOnly` 가 위의 버튼만 가려서
+            // **`ReadOnly` 컨테이너의 원소가 그대로 편집됐다.**
+            ImGui::BeginDisabled( bElementEditable == false );
+
+            const size_t newCount = pSeq->getSize( pContainer );
+            for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
+            {
+                void* pElem = pSeq->getElement( pContainer, elemIndex );
+                if ( pElem == nullptr )
+                    continue;
+
+                ImGui::PushID( static_cast<int32>( elemIndex ) );
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text( "[%zu]", elemIndex );
+                ImGui::SameLine();
+
+                PropertyInfo elemProp{};
+                elemProp._typeName = prop._elementTypeName;
+                elemProp._name     = prop._name;
+                elemProp._metadata = prop._metadata;
+
+                ImGui::SetNextItemWidth( -FLT_MIN );
+                drawPropertyWidget( pElem, elemProp );
+                ImGui::PopID();
+            }
+
+            ImGui::EndDisabled();
+            ImGui::TreePop();
         }
     }
 
