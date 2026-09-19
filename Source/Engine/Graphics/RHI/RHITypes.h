@@ -527,11 +527,20 @@ namespace sw
      */
     struct SW_API RHITextureDesc
     {
-        float4                 _clearColor;             ///< 초기화 색상 (16 bytes)
-        uint32                 _width;                  ///< 너비 (4 bytes)
-        uint32                 _height;                 ///< 높이 (4 bytes)
-        uint32                 _depth;                  ///< 깊이 (4 bytes)
-        uint32                 _mipLevels;              ///< 밉 레벨 수 (4 bytes)
+        float4 _clearColor; ///< 초기화 색상 (16 bytes)
+        uint32 _width;      ///< 너비 (4 bytes)
+        uint32 _height;     ///< 높이 (4 bytes)
+        uint32 _depth;      ///< 깊이 (4 bytes)
+        /**
+         * @brief 밉 레벨 수 (4 bytes). **1 이상을 주십시오 — 0 은 백엔드마다 뜻이 다릅니다.**
+         * @details 바로 아래 `RHITextureUploadDesc::_mipLevels` 는 0 을 "텍스처가 가진 밉 전부" 로
+         *          정의하지만 **이쪽은 그런 약속이 없다.** D3D11 은 0 을 "전체 밉 체인을 만들어라"
+         *          로 읽고, GL 은 `mipLevels > 0 ? mipLevels : 1` 로 접어 **1단계만** 만든다 —
+         *          같은 값이 백엔드마다 다른 텍스처를 낳는다. 기본 생성자가 1 을 넣고 호출부도
+         *          전부 1 이상을 주므로 지금은 닿지 않지만, 두 필드의 이름이 같아서 한쪽 규약을
+         *          다른 쪽에 옮겨 적기 쉽다.
+         */
+        uint32                 _mipLevels;
         RHIFormat              _format;                 ///< 텍스처 포맷 (4 bytes)
         float32                _clearDepth;             ///< 초기화 깊이 (4 bytes)
         uint8                  _clearStencil;           ///< 초기화 스텐실 (1 byte)
