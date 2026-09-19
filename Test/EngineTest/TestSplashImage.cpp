@@ -115,3 +115,10 @@ SW_TEST_CASE( SplashImageTest, EmptyInputIsLeftAlone )
 
     SW_EXPECT_TRUE_MSG( listDest == listExpected, "빈 입력인데 목적지를 건드렸습니다" );
 }
+
+// **실제 에셋으로 재 보는 케이스는 두지 않았다 — 두 번 시도했고 둘 다 이 버그를 구분하지 못했다.**
+// 좌상단만 그리는 변이를 넣고 (1) 전체 평균색, (2) 네 분면 평균색을 각각 비교해 봤는데 **둘 다
+// 통과했다.** 지금 아트의 좌상단 480×280 이 그림 전체와 색 분포가 비슷해서다. 잡지 못하는 검사를
+// 남겨 두면 "실제 그림도 본다" 는 거짓 안심만 생긴다 — 위의 합성 케이스들은 같은 변이에서 실제로
+// 진다(`DownscaleAveragesTheCoveredPixels` · `UpscaleReplicatesSourcePixels`).
+// 진짜 그림을 보려면 창을 띄워 픽셀을 되읽어야 하고, 그것은 `hostgpu` 쪽 일이다.
