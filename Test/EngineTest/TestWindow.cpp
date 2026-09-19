@@ -161,3 +161,50 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
 
     window->destroy();
 }
+
+/**
+ * @brief [WindowTest] 최소화해도 창이 기억하는 크기가 0 이 되지 않는다
+ * @details 최소화는 클라이언트 영역 `0x0` 짜리 `WM_SIZE` 로 온다. 그 값을 그대로 `_width`/`_height`
+ *          에 적으면 "창이 0 칸이다" 가 되어 버린다 — 그리고 `recreate()`(백엔드 교체가 이 길로
+ *          온다)는 바로 그 값으로 창을 다시 만든다. 최소화 상태에서 백엔드를 바꾸면 복원한 뒤에도
+ *          창이 0 칸짜리로 남는다. 최소화가 말하는 것은 "안 보인다" 지 "0 칸이다" 가 아니다.
+ * @note 최소화를 요청하는 길이 플랫폼마다 달라 여기서는 Win32 만 본다. X11 은 아이코니파이가
+ *       `ConfigureNotify` 를 0 으로 주지 않으므로 같은 함정이 없다.
+ */
+SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+
+    constexpr uint32 kReqW = 480;
+    constexpr uint32 kReqH = 320;
+    SW_ASSERT_TRUE( window->initializeWindow( "MinimizeTestWindow", kReqW, kReqH ) );
+    window->showWindow( true );
+    window->processMessages();
+
+    const uint32 widthBefore  = window->getWidth();
+    const uint32 heightBefore = window->getHeight();
+    SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
+
+    HWND hWnd = static_cast<HWND>( window->getNativeHandle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
+
+    ShowWindow( hWnd, SW_MINIMIZE );
+    window->processMessages();
+
+    SW_EXPECT_TRUE_MSG( window->getWidth() == widthBefore && window->getHeight() == heightBefore,
+                        "최소화가 창 크기를 0 으로 덮었습니다 — 이 상태로 recreate 하면 0칸 창이 됩니다" );
+
+    // 그리고 이 상태에서 다시 만들어도 크기를 지켜야 한다 — 백엔드 교체가 정확히 이 길이다.
+    if ( window->recreate() )
+    {
+        SW_EXPECT_EQUAL( widthBefore, window->getWidth() );
+        SW_EXPECT_EQUAL( heightBefore, window->getHeight() );
+    }
+
+    window->destroy();
+#else
+    SW_TEST_SKIP( "최소화 요청 경로가 플랫폼마다 달라 Win32 에서만 봅니다" );
+#endif
+}

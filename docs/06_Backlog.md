@@ -503,6 +503,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (최소화한 창의 크기를 0 으로 기억하고 있었다)
+
+Win32 의 `WM_SIZE` 는 최소화를 **클라이언트 영역 0x0** 으로 알린다. `Win32Window::wndProc` 은
+그 값을 조건 없이 `_width`/`_height` 에 적고 나서야 `SIZE_MINIMIZED` 를 봤다 — 리사이즈 콜백은
+안 부르지만 **크기는 이미 0 으로 덮였다.**
+
+`IWindow::recreate()`(백엔드 교체가 이 길로 온다)는 기억해 둔 `_width`/`_height` 로 창을 다시
+만든다. 그래서 최소화한 채 백엔드를 바꾸면 0x0 창이 만들어지고, 복원해도 그 크기가 남는다.
+최소화가 말하는 것은 "안 보인다" 지 "0 칸이다" 가 아니다.
+
+`WindowTest.MinimizingDoesNotForgetTheWindowSize` 를 추가했다 — 진짜 창을 띄우고 최소화한 뒤
+크기를 보고, 그 상태에서 `recreate()` 까지 해 본다. 가드를 되돌리면 세 단언이 모두 진다.
+(`WindowTest` 는 hostgpu 라 CI 가 못 돈다 — Shipping 에서 `-L hostgpu` 로 확인했다.)
+
 ### 2026-09-20 (파일과 사용자가 말한 크기를 그대로 잡고 있었다 — 타일맵)
 
 `TileMapXmlData::loadFromXml` 은 `<width> x <height>` 만큼의 칸을 배열 넷에 잡는데, 그 둘은
