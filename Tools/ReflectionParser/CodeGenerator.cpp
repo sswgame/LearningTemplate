@@ -25,11 +25,15 @@ namespace sw
         {
             static constexpr int32 kMaxNestedContainerDepth = 3;
 
-            /** @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰. */
+            /**
+             * @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰.
+             * @note 표식 문자열은 **설정이 정본**이다(`_emitSourcePathMarker`) — 쓰는 쪽(FileHeader.tpl)
+             *       과 읽는 쪽(여기 · `ReflectionParser::hasMatchingSourcePath`)이 같은 값을 봐야 한다.
+             */
             static string_view readRecordedSourcePath( string_view generatedContent )
             {
-                constexpr string_view kSourceMarker{ "// Source: " };
-                const size_t          markerPos = generatedContent.find( kSourceMarker );
+                const string& kSourceMarker = ParserContext::getSharedConfig()._emitSourcePathMarker;
+                const size_t  markerPos     = generatedContent.find( kSourceMarker );
                 if ( markerPos == string_view::npos )
                     return {};
 
