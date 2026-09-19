@@ -435,6 +435,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (소스 파일 하나가 git 에게 바이너리였다)
+
+`Source/Core/String/StringBuilder.h` 주석 안에 **널 바이트 하나가 실제로 박혀 있었다.**
+쓰려던 것은 `[0] = ' '` 이라는 두 글자 이스케이프인데, 어느 세션의 heredoc 이 그것을 **진짜
+0 바이트로** 바꿔 놓았다(AGENTS 가 경고하는 그 함정이다). 결과:
+
+- `git diff` · `git log -p` 가 이 파일을 **`Bin 12872 -> 14252 bytes`** 로만 보여 준다 —
+  리뷰에서 무엇이 바뀌었는지 볼 수 없다.
+- `grep` 이 `Binary file ... matches` 만 찍고 줄을 안 보여 준다.
+- 줄 끝 정규화(`core.autocrlf`)가 건너뛴다.
+
+이스케이프로 되돌렸다. 저장소 전체를 다시 훑었고(빌드·.git·ThirdParty·Tools 제외, 소스·문서·
+스크립트 확장자 전부) **널 바이트가 든 텍스트 파일은 이 하나뿐이었다.**
+
+> 다음 커밋부터 이 파일의 diff 가 정상으로 보인다. 이번 커밋의 diff 는 여전히 `Bin` 인데,
+> 비교 대상인 옛 blob 에 널이 남아 있기 때문이다.
+
 ### 2026-09-19 (Source 함수 단위 점검 — Core/File · Core/String)
 
 **깊은 경로에 설치하면 엔진이 조용히 아무것도 못 찾는다.** `FileUtil::getExecutablePath` 의
