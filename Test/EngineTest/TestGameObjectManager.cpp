@@ -1,5 +1,9 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_set.h"
+
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -542,4 +546,67 @@ SW_TEST_CASE( GameObjectManagerPoolTest, PendingKillNameIsFreeForReuse )
     // 실제 파괴가 지나가도 살아 있는 쪽의 이름 항목을 지우지 않는다(같은 이름이므로 덮어쓰기 주의).
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( manager.findGameObjectByName( sw::hashed_string( "Recycled" ) ) == pSecond );
+}
+
+/**
+ * @brief [GameObjectManagerPoolTest] 같은 오브젝트를 여러 스레드가 동시에 없애도 한 번만 파괴되는지 검증
+ * @details `onTick` 은 병렬로 돈다. 총알 둘이 같은 프레임에 같은 적을 맞히면 두 스레드가 같은
+ *          `destroyObject` 를 부른다 — 흔한 경우다. 예전 코드는 `isPendingKill()` 로 보고 나서
+ *          `markPendingKill()` 을 했고, 그 사이가 벌어져 있어 둘 다 통과하면 파괴 목록에 같은
+ *          포인터가 두 번 들어갔다. 그러면 풀이 같은 블록을 두 번 받아 자유 목록이 망가지고,
+ *          **다음에 만드는 두 오브젝트가 같은 주소를 받는다.**
+ *
+ *          레이스라 한 번으로는 못 믿는다 — 라운드를 여러 번 돌려 확률을 올린다.
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, ConcurrentDestroyDestroysTheObjectOnlyOnce )
+{
+    constexpr uint32 kRound       = 24;
+    constexpr uint32 kObjectCount = 32;
+    constexpr uint32 kThreadCount = 8;
+
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        sw::GameObjectManager manager;
+
+        sw::vector<GameObject*> listObject;
+        listObject.reserve( kObjectCount );
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            GameObject* pObj = manager.createGameObject( sw::hashed_string( "Target" ) );
+            SW_ASSERT_NOT_NULL( pObj );
+            listObject.push_back( pObj );
+        }
+        manager.mergePendingAdds();
+
+        // 모든 스레드가 **같은** 목록을 같은 순서로 없앤다 — 겹치라고 그렇게 한다.
+        sw::atomic<bool>        bGo{ false };
+        sw::vector<std::thread> listThread;
+        listThread.reserve( kThreadCount );
+        for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+        {
+            listThread.emplace_back( [&manager, &listObject, &bGo]()
+            {
+                while ( bGo.load( std::memory_order_acquire ) == false )
+                    std::this_thread::yield();
+                for ( GameObject* pObj : listObject )
+                    manager.destroyObject( pObj );
+            } );
+        }
+        bGo.store( true, std::memory_order_release );
+        for ( std::thread& thread : listThread )
+            thread.join();
+
+        manager.processDeferredDestruction();
+        SW_ASSERT_TRUE( manager.getAllGameObjects().empty() );
+
+        // 풀이 같은 블록을 두 번 받았으면 여기서 같은 주소가 두 번 나온다.
+        sw::unordered_set<GameObject*> setFresh;
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            GameObject* pFresh = manager.createGameObject( sw::hashed_string( "Fresh" ) );
+            SW_ASSERT_NOT_NULL( pFresh );
+            setFresh.insert( pFresh );
+        }
+        SW_EXPECT_EQUAL( size_t( kObjectCount ), setFresh.size() );
+    }
 }

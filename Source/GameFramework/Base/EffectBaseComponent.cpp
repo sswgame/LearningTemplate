@@ -41,10 +41,14 @@ namespace sw
             _currentAlpha = 1.0f - ( _currentTimer / _duration );
             if ( _currentAlpha < 0.0f )
             {
-                _currentAlpha      = 0.0f;
+                _currentAlpha = 0.0f;
+                // **표시만 해서는 사라지지 않는다.** `markPendingKill()` 은 무덤 표시일 뿐이라
+                // 파괴 목록에 들어가지 않는다 — 오브젝트는 틱·조회에서 빠지지만 풀로 돌아가지
+                // 않고 `_listGameObject` 에 영원히 남아, 수명이 다한 것이 쌓일수록 프레임마다
+                // 훑는 양이 늘어난다. 지우려면 `destroy()` 여야 한다.
                 GameObject* pOwner = getOwner();
                 if ( pOwner != nullptr )
-                    pOwner->markPendingKill();
+                    pOwner->destroy();
             }
         }
     }

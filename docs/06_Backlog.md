@@ -435,6 +435,59 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-19 (같은 오브젝트를 둘이 없애면 풀이 같은 블록을 두 번 받았다)
+
+`destroyObject` 가 이렇게 생겼다:
+
+```cpp
+if ( pObj != nullptr && pObj->isPendingKill() == false )   // 본다
+{
+    pObj->markPendingKill();                               // 그리고 세운다
+    ...
+    _listPendingDestroyObject.push_back( pObj );            // 목록에 넣는다
+}
+```
+
+플래그는 원자적인데 **보고 나서 세우는 두 걸음이 원자적이지 않다.** 두 스레드가 그 사이를
+나란히 통과하면 같은 포인터가 파괴 목록에 두 번 들어가고, `_poolGameObject.destroy` 가 같은
+블록을 두 번 반납해 자유 목록이 망가진다.
+
+**이것은 흔한 경로다.** `onTick` 은 병렬로 돈다(`dispatchWave` 가 16개부터 `emplaceParallel`).
+같은 오브젝트의 컴포넌트끼리는 `splitWaveByObject` 가 갈라 주지만, **서로 다른** 오브젝트의
+컴포넌트 둘이 같은 대상을 없애는 것은 못 막는다 — 총알 둘이 같은 프레임에 같은 적을 맞히면
+정확히 그 모양이다.
+
+고친 방식은 **자리를 원자적으로 잡는 것**이다(`tryMarkPendingKill` = `exchange`). `true` 를 받은
+스레드 하나만 목록에 넣는다. `destroyComponent` 도 같은 모양이라 같이 고쳤다.
+
+**검증.** `GameObjectManagerPoolTest.ConcurrentDestroyDestroysTheObjectOnlyOnce` — 8 스레드가
+같은 32개를 24라운드 동안 동시에 없애고, 뒤에 새로 만든 32개의 주소가 전부 다른지 본다
+(자유 목록이 같은 블록을 두 번 받았으면 같은 주소가 두 번 나온다). **되돌리면 5/5 세그폴트**,
+고친 뒤 5/5 통과. 레이스지만 재현율이 100% 라 한 번으로 끝나지 않고 다섯 번 재 봤다.
+
+### 2026-09-19 (수명이 다한 총알·데미지 숫자·이펙트가 풀로 돌아오지 않았다)
+
+위 레이스를 고치면서 `markPendingKill` 호출부를 전부 훑다가 나왔다. **세 곳이
+`destroyObject` 를 거치지 않고 오브젝트를 직접 표시하고 있었다:**
+
+- `EffectBaseComponent::onTick` — 이펙트 알파가 0 이 됐을 때
+- `ProjectileComponent::onTick` — 총알 수명이 끝났을 때
+- `DamageUIComponent::onTick` — 데미지 숫자가 다 페이드됐을 때
+
+`markPendingKill()` 은 **무덤 표시일 뿐**이다. 파괴 목록에 넣는 것은 `destroyObject` 이므로,
+표시만 한 오브젝트는 틱·조회·렌더에서는 빠지지만 `_listGameObject` 에 **영원히 남고** 풀로
+돌아오지 않는다. 하필 그 셋이 게임에서 가장 자주 났다 사라지는 것들이라, 플레이가 길어질수록
+매 프레임 훑는 오브젝트 수가 단조 증가한다.
+
+셋 다 `pOwner->destroy()` 로 바꿨다(그쪽이 `destroyObject` 를 탄다).
+
+**검증.** `GameFrameworkTest.ExpiredEffectObjectReturnsToThePool`. 틱 웨이브 배선이 아니라
+"만료가 무엇을 하는가" 가 검사 대상이라 컴포넌트의 `onTick` 을 직접 부른다. 되돌리면
+`getAllGameObjects().empty()` 가 진다 — 레이스가 아니라 **결정적**이다.
+
+> 표시와 파괴를 두 이름으로 나눠 둔 것이 함정이었다. `markPendingKill` 은 공개돼 있고 이름만
+> 보면 "없앤다" 로 읽힌다. 세 곳 다 그렇게 읽고 쓴 것으로 보인다.
+
 ### 2026-09-19 (지연 로드 훅 경로가 이사 간 자리를 가리키고 있었다)
 
 `Source/Engine/CMakeLists.txt` 의 `SW_DELAYLOAD_HOOK_SOURCE` 가

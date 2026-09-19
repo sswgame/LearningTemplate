@@ -49,7 +49,8 @@ namespace sw
 
             if ( _currentLife >= _lifeTime )
             {
-                pOwner->markPendingKill();
+                // 표시만 하면 파괴 목록에 들어가지 않아 오브젝트가 풀로 돌아오지 않는다.
+                pOwner->destroy();
                 return;
             }
 

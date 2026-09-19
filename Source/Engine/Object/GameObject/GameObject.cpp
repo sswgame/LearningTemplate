@@ -125,7 +125,12 @@ namespace sw
 
     void GameObject::markPendingKill()
     {
-        _bIsPendingKill.store( true, std::memory_order_release );
+        tryMarkPendingKill();
+    }
+
+    bool GameObject::tryMarkPendingKill()
+    {
+        return _bIsPendingKill.exchange( true, std::memory_order_acq_rel ) == false;
     }
 
     /**

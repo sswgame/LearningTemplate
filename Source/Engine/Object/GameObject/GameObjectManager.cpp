@@ -770,46 +770,54 @@ namespace sw
 
     void GameObjectManager::destroyObject( GameObject* pObj, bool bDestroyChildren )
     {
-        if ( pObj != nullptr && pObj->isPendingKill() == false )
+        if ( pObj == nullptr )
+            return;
+
+        // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingKill()` 로 보고 나서
+        // `markPendingKill()` 을 했다 — 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
+        // 없애는 두 스레드가 나란히 통과하면 파괴 목록에 같은 포인터가 두 번 들어가고
+        // `_poolGameObject.destroy` 가 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 돌고
+        // (총알 둘이 같은 적을 맞히는) 그 경우는 흔하다. 자리를 잡은 스레드만 진행한다.
+        if ( pObj->tryMarkPendingKill() == false )
+            return;
+
+        vector<GameObject*> listChildren;
+        if ( bDestroyChildren )
+            listChildren = pObj->getChildren();
+
+        for ( Component* pComp : pObj->getAllComponents() )
         {
-            vector<GameObject*> listChildren;
-            if ( bDestroyChildren )
-                listChildren = pObj->getChildren();
-
-            pObj->markPendingKill();
-            for ( Component* pComp : pObj->getAllComponents() )
-            {
-                if ( pComp != nullptr )
-                    pComp->markPendingKill();
-            }
-            pObj->refreshActiveInHierarchy();
-
-            if ( bDestroyChildren )
-            {
-                for ( GameObject* pChild : listChildren )
-                {
-                    if ( pChild != nullptr && pChild->isPendingKill() == false )
-                        destroyObject( pChild, true );
-                }
-            }
-
-            {
-                std::unique_lock<std::shared_mutex> lock{ _mutex };
-                _listPendingDestroyObject.push_back( pObj );
-            }
-            markTickWavesDirty();
+            if ( pComp != nullptr )
+                pComp->markPendingKill();
         }
+        pObj->refreshActiveInHierarchy();
+
+        if ( bDestroyChildren )
+        {
+            for ( GameObject* pChild : listChildren )
+            {
+                if ( pChild != nullptr )
+                    destroyObject( pChild, true );
+            }
+        }
+
+        {
+            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            _listPendingDestroyObject.push_back( pObj );
+        }
+        markTickWavesDirty();
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )
     {
-        if ( pComp != nullptr && pComp->isPendingKill() == false )
-        {
-            pComp->markPendingKill();
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            _listPendingDestroyComponent.push_back( pComp );
-            markTickWavesDirty();
-        }
+        // destroyObject 와 같은 이유로 자리부터 잡는다 — 여기 목록에 두 번 들어가면
+        // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
+        if ( pComp == nullptr || pComp->tryMarkPendingKill() == false )
+            return;
+
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        _listPendingDestroyComponent.push_back( pComp );
+        markTickWavesDirty();
     }
 
     void GameObjectManager::destroyComponentInstance( Component* pComp )

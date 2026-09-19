@@ -75,6 +75,16 @@ namespace sw
         /** @brief 지연 삭제 (Tombstone) 플래그 마킹 */
         void markPendingKill();
 
+        /**
+         * @brief 삭제 예정 표시를 **이 호출이 처음으로 세웠는지** 돌려줍니다.
+         * @details `isPendingKill()` 로 보고 나서 `markPendingKill()` 하는 두 걸음은 원자적이지
+         *          않다. 두 스레드가 그 사이를 나란히 통과하면 파괴 목록에 같은 포인터가 **두 번**
+         *          들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 돌기 때문에
+         *          (총알 둘이 같은 적을 같은 프레임에 맞히는) 흔한 경우다. 없애는 쪽은 반드시
+         *          이 함수가 `true` 를 준 스레드 **하나만** 진행해야 한다.
+         */
+        bool tryMarkPendingKill();
+
         /** @brief 현재 이 오브젝트가 삭제 예정인지 확인 */
         bool isPendingKill() const { return _bIsPendingKill.load( std::memory_order_acquire ); }
 
