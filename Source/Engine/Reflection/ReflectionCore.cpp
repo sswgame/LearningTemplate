@@ -18,6 +18,26 @@ namespace sw
         struct ReflectionCoreInternal
         {
             /**
+             * @brief 부모 체인을 걸을 때 **이미 지나온 타입이면 멈추라고** 알려 줍니다.
+             * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 공개 API 이고
+             *          그 값을 검사하지 않는다. 모듈이 따로따로 등록되는 핫리로드에서는 A→B→A
+             *          가 만들어질 수 있고, 그러면 체인을 거는 쪽이 멈추지 않는다(루프면 행,
+             *          재귀면 스택 오버플로). 체인은 보통 다섯을 넘지 않으므로 지나온 것을
+             *          적어 두는 값이 싸다.
+             * @return 처음 보는 타입이면 true(계속 걸어도 된다), 이미 지나왔으면 false.
+             */
+            static bool markVisitedOrStop( vector<const TypeInfo*>& inoutListVisited, const TypeInfo* pType )
+            {
+                for ( const TypeInfo* pVisited : inoutListVisited )
+                {
+                    if ( pVisited == pType )
+                        return false;
+                }
+                inoutListVisited.push_back( pType );
+                return true;
+            }
+
+            /**
              * @brief canonical FQN 의 네임스페이스를 alias 앞에 붙입니다.
              * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN·리프를
              *          모두 등록하는 것과 맞추려면 별칭도 FQN 형태를 함께 등록해야 합니다.
@@ -210,7 +230,7 @@ namespace sw
         , _bIsPODFastPath{ SW_FALSE }
         , _bIsPODCalculated{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _reservedTypeFlags{ 0 }
+        , _bBuildingPropertyWithBase{ SW_FALSE }
         , _reservedPadding{ 0, 0, 0 } {}
 
     TypeInfo::TypeInfo( const TypeInfo& other )
@@ -234,7 +254,7 @@ namespace sw
         , _bIsPODFastPath{ SW_FALSE }
         , _bIsPODCalculated{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _reservedTypeFlags{ 0 }
+        , _bBuildingPropertyWithBase{ SW_FALSE }
         , _reservedPadding{ 0, 0, 0 }
     {
     }
@@ -260,7 +280,7 @@ namespace sw
         , _bIsPODFastPath{ SW_FALSE }
         , _bIsPODCalculated{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _reservedTypeFlags{ 0 }
+        , _bBuildingPropertyWithBase{ SW_FALSE }
         , _reservedPadding{ 0, 0, 0 }
     {
         other._typeId          = 0;
@@ -295,6 +315,7 @@ namespace sw
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
+        _bBuildingPropertyWithBase  = SW_FALSE;
 
         return *this;
     }
@@ -325,6 +346,7 @@ namespace sw
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
+        _bBuildingPropertyWithBase  = SW_FALSE;
 
         other._typeId          = 0;
         other._size            = 0;
@@ -383,6 +405,16 @@ namespace sw
         if ( _bListPropertyWithBaseBuilt == SW_TRUE )
             return _listPropertyWithBase;
 
+        // **순환에서 멈춘다.** 이 타입에서 이미 짓는 중인데 다시 들어왔다는 것은 부모 체인이
+        // 돌아왔다는 뜻이다 — 더 올라가면 스택이 넘친다. 자기 것만 돌려주고 끊는다.
+        if ( _bBuildingPropertyWithBase == SW_TRUE )
+        {
+            SW_LOG_ERROR( "Reflection parent chain loops at '%#' — returning own properties only.",
+                          _fullyQualifiedName.c_str() );
+            return _listProperty;
+        }
+        _bBuildingPropertyWithBase = SW_TRUE;
+
         const TypeInfo*             pParent      = engine::getTypeRegistry().findType( _parentFQN );
         const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
         const size_t                totalCount   = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
@@ -409,6 +441,7 @@ namespace sw
         }
 
         _bListPropertyWithBaseBuilt = SW_TRUE;
+        _bBuildingPropertyWithBase  = SW_FALSE;
         return _listPropertyWithBase;
     }
 
@@ -754,10 +787,20 @@ namespace sw
         if ( _parentFQN.empty() )
             return false;
 
-        const TypeRegistry& registry = engine::getTypeRegistry();
-        const TypeInfo*     pCurrent = this;
+        // **순환에서 멈춘다.** 여기는 `while` 이라 순환이면 영원히 돈다(재귀가 아니므로 스택도
+        // 넘지 않고 그냥 멈춰 선다 — 더 알아채기 어렵다). 체인은 보통 다섯을 넘지 않으므로
+        // 방문한 것을 적어 두고 다시 만나면 끊는다. `ComponentDefaults::collectTypeChain` 이
+        // 이미 같은 일을 하고 있었는데 이쪽으로 옮겨지지 않았다.
+        const TypeRegistry&     registry = engine::getTypeRegistry();
+        const TypeInfo*         pCurrent = this;
+        vector<const TypeInfo*> listVisited;
+        listVisited.reserve( 8 );
+
         while ( pCurrent != nullptr && pCurrent->_parentFQN.empty() == false )
         {
+            if ( ReflectionCoreInternal::markVisitedOrStop( listVisited, pCurrent ) == false )
+                return false;
+
             if ( pCurrent->_parentFQN == targetFqn )
                 return true;
             pCurrent = registry.findType( pCurrent->_parentFQN );
@@ -769,14 +812,25 @@ namespace sw
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
     {
-        const PropertyInfo* pProp = findProperty( propNameOrAlias );
-        if ( pProp != nullptr )
-            return pProp;
+        // 재귀였다 — 부모 체인이 순환하면 스택이 넘친다. 루프로 바꾸고 방문한 것을 적어 둔다.
+        const TypeRegistry&     registry = engine::getTypeRegistry();
+        const TypeInfo*         pCurrent = this;
+        vector<const TypeInfo*> listVisited;
+        listVisited.reserve( 8 );
 
-        if ( _parentFQN.empty() )
-            return nullptr;
+        while ( pCurrent != nullptr )
+        {
+            if ( ReflectionCoreInternal::markVisitedOrStop( listVisited, pCurrent ) == false )
+                return nullptr;
 
-        const TypeInfo* pParent = engine::getTypeRegistry().findType( _parentFQN );
-        return pParent != nullptr ? pParent->findPropertyInHierarchy( propNameOrAlias ) : nullptr;
+            const PropertyInfo* pProp = pCurrent->findProperty( propNameOrAlias );
+            if ( pProp != nullptr )
+                return pProp;
+
+            if ( pCurrent->_parentFQN.empty() )
+                return nullptr;
+            pCurrent = registry.findType( pCurrent->_parentFQN );
+        }
+        return nullptr;
     }
 } // namespace sw

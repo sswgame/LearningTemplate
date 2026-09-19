@@ -592,3 +592,52 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, LookupCachesAreBuiltAfterRegistrationB
     SW_EXPECT_TRUE( checkedCount > 0 );
     SW_EXPECT_EQUAL( 0u, coldCount );
 }
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 부모 체인이 순환해도 멈추는지 검증
+ * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 **공개 API 이고 그 값을
+ *          검사하지 않는다.** 모듈이 따로따로 등록되는 핫리로드에서는 A→B→A 가 만들어질 수
+ *          있는데, 부모 체인을 거는 세 곳이 전부 그것을 대비하지 않고 있었다:
+ *          `isDerivedFrom`(루프 — **행**), `findPropertyInHierarchy`(재귀 — 스택 오버플로),
+ *          `getPropertiesWithBase`(재귀 — 스택 오버플로).
+ *
+ *          같은 저장소의 `ComponentDefaults::collectTypeChain` 은 "순환 방지" 를 명시적으로
+ *          하고 있었다 — 그 가드가 형제들로 옮겨지지 않은 것이다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    sw::TypeInfo typeA;
+    typeA._name               = sw::hashed_string( "LoopA" );
+    typeA._fullyQualifiedName = sw::hashed_string( "swtest::LoopA" );
+    typeA._parentFQN          = sw::hashed_string( "swtest::LoopB" );
+    typeA._moduleName         = sw::hashed_string( "TestParentLoop" );
+
+    sw::TypeInfo typeB;
+    typeB._name               = sw::hashed_string( "LoopB" );
+    typeB._fullyQualifiedName = sw::hashed_string( "swtest::LoopB" );
+    typeB._parentFQN          = sw::hashed_string( "swtest::LoopA" );
+    typeB._moduleName         = sw::hashed_string( "TestParentLoop" );
+
+    registry.registerClass( typeA );
+    registry.registerClass( typeB );
+
+    const sw::TypeInfo* pLoopA = registry.findType( sw::hashed_string( "swtest::LoopA" ) );
+    SW_ASSERT_NOT_NULL( pLoopA );
+
+    // 고치기 전에는 이 줄에서 영원히 돈다 — 없는 이름을 물으면 체인이 끝나지 않는다.
+    SW_EXPECT_FALSE( pLoopA->isDerivedFrom( sw::hashed_string( "swtest::NotThere" ) ) );
+    // 재귀였던 둘은 스택을 넘긴다.
+    SW_EXPECT_TRUE( pLoopA->findPropertyInHierarchy( sw::hashed_string( "nope" ) ) == nullptr );
+    SW_EXPECT_TRUE( pLoopA->getPropertiesWithBase().empty() );
+
+    // 순환이어도 실제로 답이 있는 질문에는 맞게 답해야 한다.
+    SW_EXPECT_TRUE( pLoopA->isDerivedFrom( sw::hashed_string( "swtest::LoopB" ) ) );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestParentLoop" );
+#endif
+}

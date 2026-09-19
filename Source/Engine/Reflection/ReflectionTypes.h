@@ -609,12 +609,19 @@ namespace sw
         /** @brief REFLECT(Static) type (function-library). Not the same as FunctionMetadata::_bStatic. */
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라/문자열 (int32, bool, sw::string, …). REFLECT codegen 없음. */
-        uint8                  _bPrimitive                 : 1;
-        mutable uint8          _bIsCacheBuilt              : 1;
-        mutable uint8          _bIsPODFastPath             : 1;
-        mutable uint8          _bIsPODCalculated           : 1;
-        mutable uint8          _bListPropertyWithBaseBuilt : 1;
-        [[maybe_unused]] uint8 _reservedTypeFlags          : 1;
+        uint8         _bPrimitive                 : 1;
+        mutable uint8 _bIsCacheBuilt              : 1;
+        mutable uint8 _bIsPODFastPath             : 1;
+        mutable uint8 _bIsPODCalculated           : 1;
+        mutable uint8 _bListPropertyWithBaseBuilt : 1;
+        /**
+         * @brief `getPropertiesWithBase()` 가 지금 이 타입에서 재귀 중인지.
+         * @details 부모 체인이 순환하면(`_parentFQN` 이 자기 자신이나 자손을 가리키면) 그 재귀가
+         *          돌아오지 않는다 — 스택이 넘친다. `_parentFQN` 은 코드젠이 적는 값이지만
+         *          `registerClass` 는 공개 API 이고 그 값을 검사하지 않으며, 모듈이 따로따로
+         *          등록되는 핫리로드에서는 A→B→A 가 만들어질 수 있다.
+         */
+        mutable uint8          _bBuildingPropertyWithBase : 1;
         [[maybe_unused]] uint8 _reservedPadding[3];
 
         /** @brief 빈 TypeInfo. */

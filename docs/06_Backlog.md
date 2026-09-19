@@ -435,6 +435,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (부모 체인을 거는 세 곳이 전부 순환에서 멈추지 않았다)
+
+`TypeInfo` 의 부모 체인(`_parentFQN`)을 거는 곳이 셋 있는데 **셋 다** 순환을 대비하지 않았다:
+
+| 함수 | 모양 | 순환일 때 |
+|------|------|-----------|
+| `isDerivedFrom` | `while` 루프 | **영원히 돈다** (스택도 안 넘으니 더 알아채기 어렵다) |
+| `findPropertyInHierarchy` | 재귀 | 스택 오버플로 |
+| `getPropertiesWithBase` | 재귀 | 스택 오버플로 |
+
+같은 저장소의 `ComponentDefaults::collectTypeChain` 은 *"순환 방지 — 이미 담은 타입이면 멈춘다"*
+를 **명시적으로** 하고 있었다. 그 가드가 형제들로 옮겨지지 않았다 — 이번 훑기에서 네 번째로
+만난 같은 모양이다.
+
+`_parentFQN` 은 코드젠이 적는 값이라 정상 C++ 로는 순환이 나오지 않는다. 그런데
+**`registerClass` 는 공개 API 이고 그 값을 검사하지 않는다.** 모듈이 따로따로 등록되는
+핫리로드에서는 A 가 B 를 부모로 적고 B 가 나중에 A 를 부모로 적는 조합이 만들어질 수 있다.
+
+지나온 타입을 적어 두는 `markVisitedOrStop` 하나를 두고 앞의 둘이 쓴다(재귀였던
+`findPropertyInHierarchy` 는 루프로 바꿨다). `getPropertiesWithBase` 는 부모의 **캐시**를
+받아야 해서 평평한 순회로 못 바꾸므로, 재진입 깃발
+(`_bBuildingPropertyWithBase`, 남아 있던 예약 비트를 썼다)로 끊는다.
+
+**검증.** `ReflectionTypeRegistryTest.ParentChainLoopDoesNotHang` — A→B→A 를 실제로 등록하고
+셋을 모두 부른다. 가드를 빼면 **60초 타임아웃**(`exit=124`)으로 걸린다. 순환이어도 답이 있는
+질문(`LoopA` 가 `LoopB` 에서 왔는가)에는 맞게 답하는지도 함께 본다.
+
 ### 2026-09-20 (지형 콜라이더 하나가 물리 셀 표를 20만 칸으로 불렸다)
 
 `PhysicsWorld` 는 AABB 가 덮는 모든 셀에 바디 핸들을 적는다. **질의 쪽에는 상한이 있는데
