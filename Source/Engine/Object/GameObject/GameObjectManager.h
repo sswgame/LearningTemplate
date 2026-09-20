@@ -9,7 +9,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
-#include "Core/Container/InlineAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -17,6 +16,7 @@
 #include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
@@ -158,17 +158,18 @@ namespace sw
         void tick( float32 deltaTime );
 
         /**
-         * @brief 루트 씬 컴포넌트가 이 수 이상이면 트랜스폼 플러시를 루트 서브트리 단위로 잡에 나눕니다.
-         * @details 잡 디스패치 바닥이 ~50 us(잠든 워커 웨이크)라 그보다 작은 일은 직렬이 빠르다. 루트 2000 은
-         *          직렬 ~60 us 라 나눠도 같고, 8000 은 직렬 200 us 가 병렬 110 us 다(Release · 큐브 전부 이동).
+         * @brief 트랜스폼 계층 — 루트 목록·더티 세대·플러시 알고리즘. 매니저는 소유하고 tick 의 단계만 정한다.
+         * @details `PhysicsWorld`·`PrimitiveRegistry` 와 같은 자리다: 능력은 별도 타입, 매니저는 순서. 병렬 시스템을
+         *          하나 더하려면 이런 타입 하나와 tick 의 한 줄이면 된다 — 매니저가 그 알고리즘을 알 필요가 없다.
          */
-        static constexpr uint32 kParallelTransformFlushRootCount = 2048;
+        SceneTransformHierarchy&       getTransformHierarchy() { return _transformHierarchy; }
+        const SceneTransformHierarchy& getTransformHierarchy() const { return _transformHierarchy; }
 
-        /** @brief 모든 루트 SceneComponent 월드 캐시를 계층 순으로 갱신합니다 (dirty만). 루트가 많으면 병렬. */
-        void flushSceneTransforms();
+        /** @brief 모든 루트 SceneComponent 월드 캐시를 계층 순으로 갱신합니다 (dirty만). `getTransformHierarchy().flush()` 다. */
+        void flushSceneTransforms() { _transformHierarchy.flush(); }
 
         /** @brief 어떤 루트라도 dirty/descendant dirty가 있으면 true. */
-        bool hasDirtySceneTransforms() const;
+        bool hasDirtySceneTransforms() const { return _transformHierarchy.hasDirty(); }
 
         /** @brief 현재 매니저가 병렬 틱(읽기 전용 트랜스폼) 구간인지 확인합니다. */
         bool isParallelTransformReadOnly() const { return _bParallelTransformReadOnly.load( std::memory_order_relaxed ); }
@@ -345,10 +346,10 @@ namespace sw
         /** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
         vector<hashed_string> getRegisteredComponentTypeNames() const;
 
-        /** @brief 트랜스폼이 변경되었음을 매니저에 알려 세대 카운터를 원자적으로 갱신합니다. */
-        void notifyTransformDirtied() { _dirtyTransformGeneration.fetch_add( 1, std::memory_order_relaxed ); }
+        /** @brief 트랜스폼이 변경되었음을 알려 세대를 올립니다 (`getTransformHierarchy().notifyDirtied()`). */
+        void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
-        uint64 getTransformGeneration() const { return _dirtyTransformGeneration.load( std::memory_order_relaxed ); }
+        uint64 getTransformGeneration() const { return _transformHierarchy.getGeneration(); }
 
         /** @brief 이미 생성된 GameObject를 매니저에 등록하고 소유권을 가져갑니다. */
         void registerGameObject( GameObject* pObj );
@@ -364,22 +365,6 @@ namespace sw
     private:
         /** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
         void tickComponents( float32 deltaTime );
-        /**
-         * @brief 서브트리 DFS 스택. 인라인 64 칸이라 보통 깊이의 계층은 힙을 만지지 않는다.
-         * @details 병렬 플러시는 잡마다 스택을 하나씩 든다 — 힙 벡터였을 때는 큐브 8000 프레임마다 청크 수(28)만큼
-         *          할당이 생겼다(프레임당 할당 상위 1위). 그보다 깊은 계층만 힙으로 넘어간다.
-         */
-        using TransformFlushStack = vector<pair<SceneComponent*, bool>, InlineAllocator<pair<SceneComponent*, bool>, 64>>;
-
-        /**
-         * @brief 한 루트 아래의 월드 트랜스폼을 갱신합니다 (명시적 스택 DFS).
-         * @details 스택 버퍼는 **부르는 쪽이 준다** — 루트마다 벡터를 만들면 프레임당 오브젝트 수만큼의
-         *          힙 할당이고, 멤버 하나를 나눠 쓰면 병렬로 돌 수 없다. 직렬 경로는 멤버
-         *          `_listTransformFlushStack` 을, 병렬 경로는 잡마다 지역 스택을 넘긴다.
-         *          서로 다른 루트의 서브트리는 겹치지 않으므로 잡 사이에 공유 쓰기가 없다 — 단 하나,
-         *          메시 컴포넌트가 렌더 더티를 찍는 `PrimitiveRegistry::markDirty` 는 락 없는 원자 플래그다.
-         */
-        void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, TransformFlushStack& stack );
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
@@ -476,7 +461,6 @@ namespace sw
         vector<GameObject*> _listProcessingDestroyObject;
         vector<Component*>  _listProcessingDestroyComponent;
 
-        vector<SceneComponent*>   _listRootSceneComponent;
         mutable std::shared_mutex _mutex;
         atomic<uint64>            _nextId;
 
@@ -486,25 +470,19 @@ namespace sw
         atomic<bool>                      _bTicking;
         atomic<bool>                      _bIsTickWavesDirty;
         vector<vector<TickExecutionItem>> _listCachedTickWave;
-        /**
-         * @brief 트랜스폼 플러시 DFS 가 재사용하는 스택 버퍼. 게임 스레드 전용.
-         * @details 루트마다 새 벡터를 만들면 그것이 곧 프레임당 오브젝트 수만큼의 힙 할당이다.
-         */
-        TransformFlushStack             _listTransformFlushStack;
-        mutex                           _deferredTransformMutex;
-        vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
-        vector<TransformUpdateDelegate> _listProcessingTransform;
-        mutex                           _deferredPostTickMutex;
-        vector<PostTickDelegate>        _listDeferredPostTickUpdate;
-        vector<PostTickDelegate>        _listProcessingPostTick;
+        mutex                             _deferredTransformMutex;
+        vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;
+        vector<TransformUpdateDelegate>   _listProcessingTransform;
+        mutex                             _deferredPostTickMutex;
+        vector<PostTickDelegate>          _listDeferredPostTickUpdate;
+        vector<PostTickDelegate>          _listProcessingPostTick;
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;
         hashed_string                                          _activeModuleName;
 
-        atomic<uint64> _dirtyTransformGeneration;
-        uint64         _lastFlushedTransformGeneration;
-
+        /** @brief 트랜스폼 계층. PhysicsWorld 처럼 매니저가 소유만 합니다. */
+        SceneTransformHierarchy _transformHierarchy;
         /** @brief 그릴 수 있는 컴포넌트의 등록부. PhysicsWorld 처럼 매니저가 소유만 합니다. */
         PrimitiveRegistry _primitiveRegistry;
         /** @brief 빛 컴포넌트의 등록부. 같은 규칙으로 소유만 합니다. */

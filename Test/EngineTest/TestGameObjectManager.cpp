@@ -7,6 +7,7 @@
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -678,5 +679,5 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
     };
 
     runScene( 16 );
-    runScene( sw::GameObjectManager::kParallelTransformFlushRootCount + 37 );
+    runScene( sw::SceneTransformHierarchy::kParallelFlushRootCount + 37 );
 }

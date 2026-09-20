@@ -68,6 +68,24 @@ flowchart TD
   I --> J[지연 삭제 처리]
 ```
 
+### 병렬 시스템의 모양 — 트랜스폼 flush 가 첫 예
+
+B·I 의 "씬 트랜스폼 flush" 는 매니저의 알고리즘이 아니라 **`SceneTransformHierarchy`**(`Component/`)의 것이다.
+루트 목록·더티 세대·DFS 스택·"루트가 2048 개 이상이면 루트 서브트리 단위로 잡에 나눈다" 가 전부 그 타입 안에
+있고, 매니저는 `PhysicsWorld`·`PrimitiveRegistry` 처럼 **소유하고 `tick` 의 단계만 정한다**
+(`flushSceneTransforms()` 는 `getTransformHierarchy().flush()` 로 전달한다).
+
+병렬로 도는 시스템을 하나 더하려면(애니메이션 포즈, 물리 동기화 …) 같은 모양 세 단계다:
+
+1. 상태를 가진 시스템 타입 하나 — 등록부·더티 세대·`update()`.
+2. 그 안에서 `engine::runParallel( count, 문턱, body )` 한 줄(`Engine/Common/EngineParallel.h`). 워커는 컨테이너를
+   만지지 않고 포인터만 받고, 스크래치가 필요하면 `engine::getParallelScratchSlot()` 로 **스레드 슬롯별** 하나를 쓴다
+   — 잡마다 만들면 프레임당 청크 수만큼 힙 할당이다.
+3. 매니저 `tick` 의 단계에 한 줄.
+
+스테이지를 만들고 병렬 블록을 넣고 기다리는 열 줄을 다시 쓰지 말 것 — 예전엔 세 곳이 각자 들고 있었다. 시스템이
+둘을 넘어 서로의 결과에 기대기 시작하면 그때 읽기/쓰기 집합을 선언하는 등록부로 순서를 자동화한다.
+
 ### 초심자가 꼭 기억할 것
 
 1. **`onTick` 안에서는 여러 오브젝트가 동시에 돌아갑니다.**  

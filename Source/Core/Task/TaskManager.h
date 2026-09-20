@@ -111,6 +111,14 @@ namespace sw
          */
         TaskHandle emplaceParallelBlock( uint32 start, uint32 end, const ParallelBlockDelegate& delegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
+        /**
+         * @brief 포크-조인 병렬 for — [0, count) 를 잡으로 나눠 돌리고 끝날 때까지 기다립니다. 상용 엔진의 ParallelFor.
+         * @details `count` 가 `serialThreshold` 미만이거나 워커가 없으면 현재 스레드가 한 번에 돈다 — 디스패치 바닥
+         *          (~50 us, 잠든 워커 웨이크)보다 작은 일을 나누면 느려진다. 스테이지·그룹 콜러블은 풀에서 오므로
+         *          정상 상태에서 힙을 만지지 않는다. 엔진 코드는 서비스 바인딩까지 감싼 `engine::runParallel` 을 쓴다.
+         */
+        void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
+
         /** @brief 전역 맵에 등록되지 않는 익명 스테이지를 생성합니다. (임시 동기화 및 메모리 누수 방지용) */
         TaskStageHandle createAnonymousStage( string_view stageName );
 

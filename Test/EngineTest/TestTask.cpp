@@ -1051,3 +1051,58 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
 
     taskMgr.clear();
 }
+
+/**
+ * @brief [TaskTest] runParallel 은 문턱 아래에서는 나누지 않고, 위에서는 구간을 빠짐없이 한 번씩 덮는다
+ * @details 디스패치 바닥(~50 us)보다 작은 일을 나누면 느려지므로 문턱 아래는 본문이 **한 번**, (0, count) 로 불려야 한다.
+ *          문턱 위에서는 어떤 인덱스도 두 번 오거나 빠지면 안 된다 — 청크 경계 오류를 잡는다.
+ */
+SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
+{
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+
+    static sw::atomic<uint32> s_callCount{ 0 };
+    static sw::atomic<uint32> s_arrHit[4096];
+    struct RangeContext
+    {
+        static void countRange( uint32 start, uint32 end )
+        {
+            s_callCount.fetch_add( 1, std::memory_order_relaxed );
+            for ( uint32 index = start; index < end; ++index )
+                s_arrHit[index].fetch_add( 1, std::memory_order_relaxed );
+        }
+    };
+    auto resetHits = [&]( uint32 count )
+    {
+        s_callCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
+            s_arrHit[index] = 0;
+    };
+
+    // 문턱 아래: 한 번에, 나누지 않는다.
+    resetHits( 10 );
+    taskMgr.runParallel( 10, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), s_callCount.load() );
+    for ( uint32 index = 0; index < 10; ++index )
+        SW_EXPECT_EQUAL( uint32( 1 ), s_arrHit[index].load() );
+
+    // 문턱 위: 여러 청크로 나뉘되 인덱스는 한 번씩.
+    resetHits( 4096 );
+    taskMgr.runParallel( 4096, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
+    SW_EXPECT_TRUE( s_callCount.load() > 1 );
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < 4096; ++index )
+    {
+        if ( s_arrHit[index].load() != 1 )
+            ++wrongCount;
+    }
+    SW_EXPECT_TRUE_MSG( wrongCount == 0, ( sw::string( "한 번이 아닌 인덱스 " ) + sw::to_string( wrongCount ) + " 개" ).c_str() );
+
+    // 0 개는 아무것도 부르지 않는다.
+    resetHits( 1 );
+    taskMgr.runParallel( 0, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), s_callCount.load() );
+
+    taskMgr.clear();
+}

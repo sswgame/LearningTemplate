@@ -316,7 +316,6 @@ namespace sw
         , _listPendingDestroyComponent{}
         , _listProcessingDestroyObject{}
         , _listProcessingDestroyComponent{}
-        , _listRootSceneComponent{}
         , _mutex{}
         , _nextId{ 1 }
         , _physicsWorld{}
@@ -333,8 +332,7 @@ namespace sw
         , _mapFactory{}
         , _mapFactoryModule{}
         , _activeModuleName{}
-        , _dirtyTransformGeneration{ 1 }
-        , _lastFlushedTransformGeneration{ 0 }
+        , _transformHierarchy{}
         , _primitiveRegistry{}
     {
         _listDeferredTransformUpdate.reserve( 128 );
@@ -671,76 +669,6 @@ namespace sw
         processDeferredDestruction();
     }
 
-    void GameObjectManager::flushSceneTransforms()
-    {
-        const uint64 currentGen = _dirtyTransformGeneration.load( std::memory_order_relaxed );
-        if ( currentGen == _lastFlushedTransformGeneration )
-            return;
-
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-
-        // **루트 서브트리 단위로 병렬이다.** 서브트리끼리는 트리라 겹치지 않고, 부모의 월드 행렬을 읽는
-        // 것은 같은 잡 안에서 순서대로 일어난다. 큐브 8000 개가 전부 움직이는 프레임에 이 플러시가
-        // 게임 스레드의 300 us 였다 — 상용 엔진이 트랜스폼 갱신을 잡으로 돌리는 자리다.
-        // 작은 씬은 직렬이다: 잡 나누기·합치기 비용이 일 자체보다 크다.
-        const uint32 rootCount = static_cast<uint32>( _listRootSceneComponent.size() );
-        if ( rootCount < kParallelTransformFlushRootCount || engine::areEngineServicesBound() == false )
-        {
-            for ( SceneComponent* pRoot : _listRootSceneComponent )
-            {
-                if ( pRoot != nullptr )
-                    flushSceneComponentSubtree( pRoot, false, _listTransformFlushStack );
-            }
-        }
-        else
-        {
-            // 워커는 컨테이너를 만지지 않는다 — 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
-            struct RootFlushJob
-            {
-                GameObjectManager*     _pManager{ nullptr };
-                SceneComponent* const* _ppRoot{ nullptr };
-
-                void flushRange( uint32 start, uint32 end )
-                {
-                    TransformFlushStack stack;
-                    for ( uint32 rootIndex = start; rootIndex < end; ++rootIndex )
-                    {
-                        if ( _ppRoot[rootIndex] != nullptr )
-                            _pManager->flushSceneComponentSubtree( _ppRoot[rootIndex], false, stack );
-                    }
-                }
-            };
-            RootFlushJob job{};
-            job._pManager = this;
-            job._ppRoot   = _listRootSceneComponent.data();
-
-            TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "TransformFlush" );
-            TaskHandle      handle = engine::getTaskManager().emplaceParallelBlock(
-                0, rootCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RootFlushJob::flushRange, &job ) );
-            stage.addTask( handle );
-            handle.submit();
-            engine::getTaskManager().waitStage( stage );
-        }
-        _lastFlushedTransformGeneration = currentGen;
-    }
-
-    bool GameObjectManager::hasDirtySceneTransforms() const
-    {
-        if ( _dirtyTransformGeneration.load( std::memory_order_relaxed ) == _lastFlushedTransformGeneration )
-            return false;
-
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        for ( const SceneComponent* pRoot : _listRootSceneComponent )
-        {
-            if ( pRoot != nullptr )
-            {
-                if ( pRoot->isTransformDirty() || pRoot->hasDirtyDescendant() )
-                    return true;
-            }
-        }
-        return false;
-    }
-
     void GameObjectManager::deferTransformUpdate( TransformUpdateDelegate func )
     {
         if ( func.isBound() == false )
@@ -769,31 +697,12 @@ namespace sw
 
     void GameObjectManager::registerRootSceneComponent( SceneComponent* pComp )
     {
-        if ( pComp == nullptr )
-            return;
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        for ( SceneComponent* pExisting : _listRootSceneComponent )
-        {
-            if ( pExisting == pComp )
-                return;
-        }
-        _listRootSceneComponent.push_back( pComp );
+        _transformHierarchy.registerRoot( pComp );
     }
 
     void GameObjectManager::unregisterRootSceneComponent( SceneComponent* pComp )
     {
-        if ( pComp == nullptr )
-            return;
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        for ( size_t rootIndex = 0; rootIndex < _listRootSceneComponent.size(); ++rootIndex )
-        {
-            if ( _listRootSceneComponent[rootIndex] == pComp )
-            {
-                _listRootSceneComponent[rootIndex] = _listRootSceneComponent.back();
-                _listRootSceneComponent.pop_back();
-                return;
-            }
-        }
+        _transformHierarchy.unregisterRoot( pComp );
     }
 
     Component* GameObjectManager::resolveComponent( sw::ComponentHandle handle )
@@ -1000,7 +909,7 @@ namespace sw
             _mapNameToObject.clear();
             _mapIdToObject.clear();
             _objectSlotTable.clear();
-            _listRootSceneComponent.clear();
+            _transformHierarchy.clear();
             _listCachedTickWave.clear();
         }
 
@@ -1313,44 +1222,6 @@ namespace sw
         _objectSlotTable.store( newObjectId, pObj );
 
         _listPendingAdd.push_back( pObj );
-    }
-
-    void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, TransformFlushStack& stack )
-    {
-        if ( pRoot == nullptr )
-            return;
-
-        // 깊은 계층에서 스택이 넘치지 않도록 명시적 스택으로 도는 DFS. 원소는 (노드, 부모가 바뀌었나).
-        //
-        // **버퍼는 매니저가 들고 재사용한다.** 예전에는 이 함수가 호출마다 `vector` 를 만들고
-        // `reserve(32)` 했는데, 이 함수는 **루트 씬 컴포넌트마다** 불린다 — 큐브 20,000 개 벤치에서
-        // 프레임당 20,000 번의 힙 할당이었다. 재사용해도 안전한 이유는 부르는 곳이 하나
-        // (`flushSceneTransforms`, 게임 스레드)뿐이기 때문이다.
-        stack.clear();
-        stack.emplace_back( pRoot, bParentChanged );
-
-        while ( stack.empty() == false )
-        {
-            auto [node, parentDirty] = stack.back();
-            stack.pop_back();
-
-            if ( node == nullptr )
-                continue;
-
-            const bool bNeedsUpdate = parentDirty || node->isTransformDirty();
-            if ( bNeedsUpdate )
-                node->updateWorldTransformFromParent();
-
-            if ( bNeedsUpdate || node->hasDirtyDescendant() )
-            {
-                const auto& children = node->getChildren();
-                for ( auto it = children.rbegin(); it != children.rend(); ++it )
-                {
-                    stack.emplace_back( *it, bNeedsUpdate );
-                }
-            }
-            node->clearDirtyDescendant();
-        }
     }
 
     uint64 GameObjectManager::generateNewId()

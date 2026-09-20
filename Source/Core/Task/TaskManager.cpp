@@ -974,6 +974,29 @@ namespace sw
         return parentTask;
     }
 
+    void TaskManager::runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
+    {
+        if ( count == 0 || body.isBound() == false )
+            return;
+        // 문턱 아래·워커 없음은 이 스레드가 한 번에 돈다 — 나누는 비용이 일보다 크다.
+        if ( _bInitialized == false || getWorkerCount() == 0 || count < serialThreshold )
+        {
+            body( 0, count );
+            return;
+        }
+
+        TaskStageHandle stage  = createAnonymousStage( "RunParallel" );
+        TaskHandle      handle = emplaceParallelBlock( 0, count, body );
+        if ( handle.isValid() == false )
+        {
+            body( 0, count );
+            return;
+        }
+        stage.addTask( handle );
+        submit( handle );
+        waitStage( stage );
+    }
+
     TaskStageHandle TaskManager::createAnonymousStage( string_view stageName )
     {
         // 풀에서 온다 — 프레임마다 웨이브 수만큼 만드는 자리라 힙을 만지면 그 수만큼 churn 이다.

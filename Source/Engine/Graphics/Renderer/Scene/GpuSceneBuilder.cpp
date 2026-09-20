@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -423,19 +424,7 @@ namespace sw
             job._pCandidate  = _listScratchCandidate.data();
             job._pIncluded   = _listCandidateIncluded.data();
 
-            if ( primitiveCount < kParallelCollectPrimitiveCount || engine::areEngineServicesBound() == false )
-            {
-                job.fillRange( 0, primitiveCount );
-            }
-            else
-            {
-                TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "GpuSceneCollect" );
-                TaskHandle      handle = engine::getTaskManager().emplaceParallelBlock(
-                    0, primitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
-                stage.addTask( handle );
-                handle.submit();
-                engine::getTaskManager().waitStage( stage );
-            }
+            engine::runParallel( primitiveCount, kParallelCollectPrimitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
 
             // **2) 앞으로 당긴다.** 전부 실리는 씬(벤치가 그렇다)에서는 자리가 그대로라 한 칸도 옮기지 않는다.
             for ( uint32 primitiveIndex = 0; primitiveIndex < primitiveCount; ++primitiveIndex )
@@ -661,7 +650,11 @@ namespace sw
                 uint32                _rawCount{ 0 };
                 InstanceRefreshChunk* _pChunk{ nullptr };
 
-                void refreshOne( uint32 chunkIndex ) { refreshInstanceChunk( _pInstance, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] ); }
+                void refreshRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 chunkIndex = start; chunkIndex < end; ++chunkIndex )
+                        refreshInstanceChunk( _pInstance, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] );
+                }
             };
             RefreshJob job{};
             job._pInstance = _listInstanceWork.data();
@@ -670,20 +663,8 @@ namespace sw
             job._rawCount  = rawCount;
             job._pChunk    = _listRefreshChunk.data();
 
-            if ( chunkCount <= 1 || engine::areEngineServicesBound() == false )
-            {
-                for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
-                    job.refreshOne( chunkIndex );
-            }
-            else
-            {
-                TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "GpuSceneRefresh" );
-                TaskHandle      handle = engine::getTaskManager().emplaceParallel(
-                    chunkCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &RefreshJob::refreshOne, &job ) );
-                stage.addTask( handle );
-                handle.submit();
-                engine::getTaskManager().waitStage( stage );
-            }
+            // 청크 하나면 나눌 것이 없다 — 문턱 2.
+            engine::runParallel( chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
 
             // 합친다 — 실패 하나면 전체 실패, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
             size_t totalRunCount = 0;

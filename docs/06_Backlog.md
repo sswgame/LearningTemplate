@@ -515,6 +515,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-21 (병렬 시스템의 모양을 하나로 — `runParallel` + 트랜스폼 계층을 매니저에서 분리)
+
+"향후 다른 컴포넌트도 병렬로 돌 텐데 트랜스폼만 따로 예외 처리해도 괜찮은가, 상용 엔진과 견줘 재사용성이
+떨어지거나 특정 컴포넌트 내용이 매니저에 너무 들어가 있지 않은가" — **둘 다 맞았다.**
+
+**판단.** 트랜스폼 계층을 특별 취급하는 것 자체는 상용 엔진도 같다(언리얼 `UpdateComponentToWorld`, 유니티
+`TransformHierarchy` — 부모→자식 순서와 더티 전파가 있는 유일한 컴포넌트다). 문제는 **어디에** 있었느냐다:
+루트 목록·더티 세대·DFS 스택·병렬 잡·문턱이 전부 `GameObjectManager` 안에 있었고, 씬 수집·제자리 갱신은
+같은 "스테이지 만들고 → 병렬 블록 넣고 → 기다린다" 열 줄을 각자 들고 있었다(세 벌). 다음 병렬 시스템(애니메이션
+포즈·물리 동기화)을 더하면 매니저가 또 그만큼 부풀고 네 번째 벌이 생긴다.
+
+**바꾼 것.**
+- `TaskManager::runParallel( count, serialThreshold, body )` — 포크-조인 병렬 for(상용 엔진의 `ParallelFor`).
+  문턱 아래·워커 없음은 현재 스레드가 한 번에 돈다. 엔진 쪽은 서비스 바인딩까지 감싼 `engine::runParallel`
+  (`Engine/Common/EngineParallel.h`) 을 쓴다. 세 벌이 이 한 줄이 됐다.
+- **`SceneTransformHierarchy`**(`Engine/Object/Component/`) — 루트 목록·더티 세대·플러시(직렬/병렬)·DFS 스택이
+  이 타입의 것이다. 매니저는 `PhysicsWorld`·`PrimitiveRegistry` 처럼 **소유하고 tick 의 단계만 정한다**
+  (`flushSceneTransforms()` 는 `getTransformHierarchy().flush()` 로 전달). 루트 목록의 락도 이 타입 안이다.
+- 스크래치는 **스레드 슬롯마다 하나**(`engine::getParallelScratchSlot()`, 워커 수 + 메인 몫 1) — 잡마다 스택을
+  만들면 프레임당 청크 수만큼 할당이었다.
+
+**병렬 시스템 하나를 더하는 모양(세 단계).** ① 상태를 가진 시스템 타입 하나(등록부·더티 세대·`update()`),
+② 그 안에서 `engine::runParallel` 한 줄(워커는 포인터만 받고, 스크래치는 슬롯별), ③ 매니저 `tick` 의 단계에
+한 줄. 시스템이 둘을 넘어 서로의 결과에 기대기 시작하면 그때 읽기/쓰기 집합을 선언하는 등록부로 순서를
+자동화한다 — 지금은 `tick` 의 순서가 그 지식이다(1-0e 의 "하나 더하려면 몇 곳을 고쳐야 하는가" 기준).
+
+**숫자(Release · DX12 · 3회 p50).** 옮긴 뒤에도 같다 — 큐브 8000 `GT.Scene.tick.flushTransforms` 114~131 us(전 106~114,
+편차 안), `GT.Frame` 589~655, `RT.Graph.executeParallel` 131~147; 큐브 100 은 전부 그대로다.
+
+**테스트.** `TaskTest.RunParallelSplitsOnlyAboveThreshold`(문턱 아래는 본문 한 번·위는 인덱스마다 정확히 한 번,
+문턱을 무시하는 변이에 "Expected 1, Actual 10" 으로 실패), `GameObjectManagerTest.ParallelTransformFlushMatchesSerial`
+은 `SceneTransformHierarchy::kParallelFlushRootCount` 를 본다.
+
 ### 2026-09-21 (Core 를 상용급 기준으로 훑었다 — 프레임당 할당 수를 재는 계측을 붙이고, 잡 디스패치를 힙 할당 0 으로)
 
 "Core 도 상용 엔진 대비 향후 필요한 성능·구조 개선을 판단해 크게 바꿔도 좋다" — 훑은 결과와 한 일.
