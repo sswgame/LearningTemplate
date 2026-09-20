@@ -61,7 +61,7 @@ namespace sw
         return *this;
     }
 
-    int32 Process::execute( string_view command, const ProcessOptions& options, ProcessOutputDelegate onOutput )
+    int32 Process::execute( string_view command, const ProcessOptions& options, const ProcessOutputDelegate& onOutput )
     {
         Process proc;
         if ( proc.launch( command, options ) == false )

@@ -26,7 +26,7 @@ namespace sw
         {
             _pDevice->unregisterCommandList( this );
             _pDevice->releaseOnlineBlocksDeferred( _state );
-            _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
+            _pDevice->recycleCommandListEntryDeferred( _entry );
         }
     }
 
@@ -55,7 +55,7 @@ namespace sw
         // 새 쌍은 이미 펜스를 통과한 것만 들어있는 풀에서 빌린다. 풀은 in-flight 깊이만큼만 늘어난다.
         if ( _bEntryDirty != SW_FALSE )
         {
-            _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
+            _pDevice->recycleCommandListEntryDeferred( _entry );
             _entry = _pDevice->acquireCommandListEntry();
             _context.rebindCommandList( _entry._list.Get() );
             _bEntryDirty = SW_FALSE;

@@ -104,7 +104,7 @@ namespace sw::editor
         pStack->cancelTransaction();
     }
 
-    string EditorTransaction::captureSnapshot( GameObjectPtr pObj )
+    string EditorTransaction::captureSnapshot( const GameObjectPtr& pObj )
     {
         GameObject* pRaw = pObj.get();
         if ( pRaw == nullptr )
@@ -112,7 +112,7 @@ namespace sw::editor
         return ObjectStateSerializer::saveToXmlString( pRaw );
     }
 
-    bool EditorTransaction::captureBinarySnapshot( GameObjectPtr pObj, vector<uint8>& outBytes )
+    bool EditorTransaction::captureBinarySnapshot( const GameObjectPtr& pObj, vector<uint8>& outBytes )
     {
         GameObject* pRaw = pObj.get();
         if ( pRaw == nullptr )
@@ -120,23 +120,24 @@ namespace sw::editor
         return ObjectStateSerializer::saveToBinaryBuffer( pRaw, outBytes );
     }
 
-    void EditorTransaction::recordBinaryModify( GameObjectPtr pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
+    void EditorTransaction::recordBinaryModify( const GameObjectPtr& pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
                                                 string_view label )
     {
         GameObject* pRaw = pObj.get();
         if ( pRaw == nullptr || beforeBytes == afterBytes )
             return;
 
-        EditorContext*      pContext  = EditorContext::get();
-        const uint64        objId     = pRaw->getObjectId();
-        const Uuid          guid      = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
-        const string        objName   = string{ pRaw->getName().c_str() };
-        const vector<uint8> beforeBuf = beforeBytes;
-        const vector<uint8> afterBuf  = afterBytes;
+        EditorContext* pContext = EditorContext::get();
+        const uint64   objId    = pRaw->getObjectId();
+        const Uuid     guid     = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
+        const string   objName  = string{ pRaw->getName().c_str() };
 
+        // **람다가 직접 캡처한다.** 예전에는 여기서 `beforeBuf`/`afterBuf` 지역 사본을 하나씩
+        // 만들고 그것을 다시 람다가 값으로 캡처해서, 스냅샷마다 **바이트를 두 번** 복사했다.
+        // 오브젝트 하나의 바이너리 스냅샷은 수 KB 가 될 수 있고 편집마다 기록된다.
         CommandStack::Command cmd{};
         cmd._label = string{ label };
-        cmd._undo  = [guid, objId, objName, beforeBuf]()
+        cmd._undo  = [guid, objId, objName, beforeBuf = beforeBytes]()
         {
             GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
             if ( pManager == nullptr || beforeBuf.empty() )
@@ -150,7 +151,7 @@ namespace sw::editor
             }
         };
 
-        cmd._redo = [guid, objId, objName, afterBuf]()
+        cmd._redo = [guid, objId, objName, afterBuf = afterBytes]()
         {
             GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
             if ( pManager == nullptr || afterBuf.empty() )
@@ -171,7 +172,7 @@ namespace sw::editor
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
-    void EditorTransaction::recordModify( GameObjectPtr pObj, string_view beforeXml, string_view afterXml,
+    void EditorTransaction::recordModify( const GameObjectPtr& pObj, string_view beforeXml, string_view afterXml,
                                           string_view label )
     {
         GameObject* pRaw = pObj.get();
@@ -222,7 +223,7 @@ namespace sw::editor
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
-    void EditorTransaction::recordObjectLifetime( GameObjectPtr pObj, string_view label, ObjectLifetimeEdit edit )
+    void EditorTransaction::recordObjectLifetime( const GameObjectPtr& pObj, string_view label, ObjectLifetimeEdit edit )
     {
         GameObject* pRaw = pObj.get();
         if ( pRaw == nullptr )
@@ -291,12 +292,12 @@ namespace sw::editor
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
-    void EditorTransaction::recordCreation( GameObjectPtr pObj, string_view label )
+    void EditorTransaction::recordCreation( const GameObjectPtr& pObj, string_view label )
     {
         recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Created );
     }
 
-    void EditorTransaction::recordDestruction( GameObjectPtr pObj, string_view label )
+    void EditorTransaction::recordDestruction( const GameObjectPtr& pObj, string_view label )
     {
         recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Destroyed );
     }
@@ -319,13 +320,13 @@ namespace sw::editor
     }
 
     void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-                                                EditorDocumentRestoreDelegate restore, string_view coalesceKey )
+                                                const EditorDocumentRestoreDelegate& restore, string_view coalesceKey )
     {
         recordDocumentText( beforeText, afterText, label, restore, {}, coalesceKey );
     }
 
     void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-                                                EditorDocumentRestoreDelegate restore, EditorDocumentCaptureDelegate capture,
+                                                const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
                                                 string_view coalesceKey )
     {
         if ( beforeText == afterText || restore.isBound() == false )

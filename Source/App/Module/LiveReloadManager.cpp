@@ -304,22 +304,22 @@ namespace sw
 
     void LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onBeforeReload = delegate;
+        _mapModule[string( moduleName )]._onBeforeReload = std::move( delegate );
     }
 
     void LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onAfterReload = delegate;
+        _mapModule[string( moduleName )]._onAfterReload = std::move( delegate );
     }
 
     void LiveReloadManager::setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
     {
-        _onBeforeCommitBatch = delegate;
+        _onBeforeCommitBatch = std::move( delegate );
     }
 
     void LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
     {
-        _drainWorkers = delegate;
+        _drainWorkers = std::move( delegate );
     }
 
     void LiveReloadManager::clearReloadCallbacks()

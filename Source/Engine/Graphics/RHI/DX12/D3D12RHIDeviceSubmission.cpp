@@ -285,7 +285,7 @@ namespace sw
         return entry;
     }
 
-    void D3D12RHIDevice::recycleCommandListEntryDeferred( D3D12CommandListEntry entry )
+    void D3D12RHIDevice::recycleCommandListEntryDeferred( const D3D12CommandListEntry& entry )
     {
         if ( entry._list == nullptr || entry._allocator == nullptr )
             return;
@@ -382,7 +382,7 @@ namespace sw
         // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
         for ( D3D12CommandListEntry& segment : _listFrameSegment )
         {
-            recycleCommandListEntryDeferred( std::move( segment ) );
+            recycleCommandListEntryDeferred( segment );
         }
         _listFrameSegment.clear();
 

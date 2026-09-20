@@ -486,6 +486,55 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (성능 검사군이 아예 꺼져 있었다 — clang-tidy performance-* 314건 정리)
+
+커밋 `TBD`. (B) 패스의 뼈대.
+
+**`.clang-tidy` 가 `bugprone-*` 와 `clang-analyzer-*` 만 켜 두고 `performance-*` 는 꺼져
+있었다.** 이 패스의 도구가 아예 안 돌고 있었던 셈이다. 켜자 **314건**이 나왔다.
+
+| 검사 | 건수 | 처리 |
+|---|---|---|
+| performance-enum-size | 150 | **기각** (아래 이유) |
+| performance-unnecessary-value-param | 84 (고유 42) | 전부 수정 |
+| performance-no-int-to-ptr | 29 | **기각** (Win32 API) |
+| performance-move-const-arg | 27 | 전부 수정 |
+| performance-noexcept-move-constructor | 14 (고유 2) | 수정 |
+| performance-unnecessary-copy-initialization | 5 | 수정 |
+| performance-trivially-destructible | 3 | 수정 |
+| performance-no-automatic-move | 2 | 수정 |
+
+**지금은 0건**이고, `performance-*` 를 `.clang-tidy` 에 **영구히 켰다**(기각한 둘은 이유와 함께
+`-performance-...` 로 적어 뒀다). 다시 쌓이면 리포트가 잡는다.
+
+값어치가 큰 것부터:
+
+1. **되돌리기 버퍼를 두 번 복사하고 있었다.** `EditorTransaction::recordBinaryModify` 와
+   `EditorInspectorCommands::pushPodEdit`/`pushStringEdit` 이 값 매개변수를 지역 사본으로 받고
+   그 사본을 다시 람다가 값으로 캡처했다 — 편집 하나마다 스냅샷 바이트가 **두 벌** 생겼다.
+   람다 init-capture 로 옮겨 한 벌로 줄였다(부르는 쪽이 임시를 주면 0 벌).
+2. **`TaskHandle` 을 값으로 넘기고 있었다.** 이 핸들은 복사 생성자가 `retain()` 을 부르는
+   **refcount 핸들**이라, 값 전달마다 원자적 증가 + 감소가 붙는다. 태스크 그래프는 프레임마다
+   다시 짜인다. `precede` · `then` · `addTask` · `waitStage` · `isStageComplete` · `submit` 을
+   `const&` 로 바꿨다.
+3. **`IEvent` 의 이동 연산에 `noexcept` 가 없었다.** 몸통이 비어 있어 던질 수 없는데 표시가
+   없어서, 컨테이너가 재할당할 때 강한 예외 보장을 지키려고 **이동 대신 복사**로 떨어진다.
+4. `ResourceUtil::makeUniqueSavePath` 의 `const string basePath` 가 **반환 시 자동 이동을
+   막고** 있었다(두 return 이 모두 이 변수를 돌려준다).
+5. `getRootFolderPath()` 는 `const string&` 를 돌려주는데 세 자리가 값으로 받아 복사했다.
+
+**기각한 둘.**
+
+- `performance-enum-size` (150) — "열거형 기반 타입이 값 범위에 비해 크다". 이 저장소에서
+  열거형 폭은 **바꾸면 안 되는 것**이다. RHI ABI 스탬프(`RHIModuleAbi.h`)와 직렬화된 데이터가
+  거기 달려 있어서, 줄이는 순간 구운 파일과 백엔드 DLL 이 조용히 어긋난다.
+- `performance-no-int-to-ptr` (29) — Win32 `GetWindowLongPtr`/`SetWindowLongPtr` 왕복.
+  그 API 가 정수로 주고받도록 설계돼 있어 캐스팅을 뺄 방법이 없다.
+
+**숫자는 주장하지 않는다.** 이 중 프레임 시간으로 잴 수 있는 것은 없다 — 위 렌더 스레드 표가
+말하듯 프레임은 GPU 대기가 정한다. 되돌리기 이중 복사와 refcount 왕복은 **낭비가 자명해서**
+고친 것이고, 그 자명함이 근거다.
+
 ### 2026-09-20 (렌더 스레드의 절반이 표에 안 보였다 — 측정 구멍 메움)
 
 커밋 `TBD`. (B) 패스, Graphics.

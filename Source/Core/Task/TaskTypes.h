@@ -376,7 +376,7 @@ namespace sw
          * @brief 이 태스크가 targetTask보다 반드시 '먼저' 실행 완료되도록 DAG 선후 의존성을 겁니다.
          * @param targetTask 이 태스크 완료 후 실행될 후속 태스크
          */
-        TaskHandle& precede( TaskHandle targetTask );
+        TaskHandle& precede( const TaskHandle& targetTask );
 
         /**
          * @brief dependencyTask가 반드시 '먼저' 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
@@ -390,7 +390,7 @@ namespace sw
          * @param affinity 후속 태스크가 실행될 스레드 친화도
          * @return 새롭게 생성된 후속 태스크 핸들
          */
-        TaskHandle then( TaskDelegate nextTaskDelegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
+        TaskHandle then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /** @brief 태스크를 취소합니다. 이미 실행 중이지 않은 경우 본문 실행이 생략됩니다. */
         bool cancel();
@@ -450,7 +450,7 @@ namespace sw
          * @brief 특정 태스크를 이 스테이지에 추가합니다.
          * @param task 스테이지에 소속시킬 태스크 핸들
          */
-        TaskStageHandle& addTask( TaskHandle task );
+        TaskStageHandle& addTask( const TaskHandle& task );
 
     private:
         shared_ptr<StageNode> _node;

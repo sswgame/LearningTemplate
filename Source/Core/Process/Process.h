@@ -122,7 +122,7 @@ namespace sw
          * @param onOutput 출력 라인 수신 델리게이트 (표준 에러가 합쳐져 들어온다)
          * @return 프로세스 종료 코드 (-1 = 실행 실패)
          */
-        static int32 execute( string_view command, const ProcessOptions& options = {}, ProcessOutputDelegate onOutput = {} );
+        static int32 execute( string_view command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
 
     private:
         void shutdown();

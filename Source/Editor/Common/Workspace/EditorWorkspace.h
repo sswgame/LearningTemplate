@@ -83,8 +83,8 @@ namespace sw::editor
         void          setSelectedComponentKey( string_view key ) { _selectedComponentKey = key; }
         void          clearSelection();
 
-        void selectGameObject( GameObjectPtr pObj, SelectionMode mode = SelectionMode::Replace );
-        void selectComponent( GameObjectPtr pObj, ComponentPtr pComp );
+        void selectGameObject( const GameObjectPtr& pObj, SelectionMode mode = SelectionMode::Replace );
+        void selectComponent( const GameObjectPtr& pObj, const ComponentPtr& pComp );
         void remapSelectionByObjectName( GameObjectManager* pGameObjectManager );
 
         // ------------------------------------------------------------------------------

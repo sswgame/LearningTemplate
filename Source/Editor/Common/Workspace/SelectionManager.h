@@ -34,7 +34,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 멤버 메서드
         // ------------------------------------------------------------------------------
-        void                         selectObject( GameObjectPtr pObj, SelectionMode mode = SelectionMode::Replace );
+        void                         selectObject( const GameObjectPtr& pObj, SelectionMode mode = SelectionMode::Replace );
         void                         selectObjects( const vector<GameObjectPtr>& listObj, SelectionMode mode = SelectionMode::Replace );
         bool                         hasObject( const GameObjectPtr& pObj ) const;
         GameObjectPtr                getPrimaryObject() const;

@@ -212,7 +212,7 @@ namespace sw
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         record._pipeline = newPipeline;
-        return _pDevice->_pipelineStates.insert( std::move( record ) );
+        return _pDevice->_pipelineStates.insert( record );
     }
 
     RHIPipelineStateHandle VulkanRHIResource::createComputePipelineState( string_view shaderPath, string_view entryPoint )
@@ -227,7 +227,7 @@ namespace sw
         if ( csResult._bSuccess == false )
         {
             VulkanRHIDevice::VulkanPipelineStateRecord record{};
-            return _pDevice->_pipelineStates.insert( std::move( record ) );
+            return _pDevice->_pipelineStates.insert( record );
         }
 
         VkShaderModuleCreateInfo csInfo{};
@@ -263,7 +263,7 @@ namespace sw
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         record._pipeline = newPipeline;
-        return _pDevice->_pipelineStates.insert( std::move( record ) );
+        return _pDevice->_pipelineStates.insert( record );
     }
 
     void VulkanRHIResource::destroyPipelineState( RHIPipelineStateHandle pso )

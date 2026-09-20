@@ -695,7 +695,7 @@ namespace sw::editor
     {
         outList.clear();
 
-        const string resourceFolder = ResourceUtil::getRootFolderPath();
+        const string& resourceFolder = ResourceUtil::getRootFolderPath();
         if ( resourceFolder.empty() )
             return;
 
@@ -744,7 +744,7 @@ namespace sw::editor
 
     void EditorAssetCommands::collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts )
     {
-        const string resPath = ResourceUtil::getRootFolderPath();
+        const string& resPath = ResourceUtil::getRootFolderPath();
         if ( resPath.empty() )
             return;
 

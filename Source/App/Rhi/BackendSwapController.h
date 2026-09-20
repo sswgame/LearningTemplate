@@ -25,7 +25,7 @@ namespace sw
     {
     public:
         BackendSwapController();
-        ~BackendSwapController();
+        ~BackendSwapController() = default;
 
         BackendSwapController( const BackendSwapController& )            = delete;
         BackendSwapController& operator=( const BackendSwapController& ) = delete;

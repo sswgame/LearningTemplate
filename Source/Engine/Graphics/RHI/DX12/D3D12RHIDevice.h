@@ -262,7 +262,7 @@ namespace sw
          * @details 제출 직후 파괴되더라도 GPU는 아직 그 얼로케이터의 커맨드 메모리를 읽고 있으므로,
          *          해제 큐에 실어 현재 펜스가 통과한 다음에 재사용 풀로 되돌린다.
          */
-        void recycleCommandListEntryDeferred( D3D12CommandListEntry entry );
+        void recycleCommandListEntryDeferred( const D3D12CommandListEntry& entry );
 
     private:
         /** @brief 불투명 버퍼 핸들을 GPU 리소스로 풉니다. */

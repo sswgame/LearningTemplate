@@ -102,7 +102,7 @@ namespace sw
         IGameModeHandler* getCurrentHandler() const;
 
         /** @brief 모드 변경 시 호출될 콜백 델리게이트를 설정합니다. */
-        void setOnModeChanged( ModeChangedDelegate delegate ) { _onModeChanged = delegate; }
+        void setOnModeChanged( ModeChangedDelegate delegate ) { _onModeChanged = std::move( delegate ); }
 
     private:
         /**

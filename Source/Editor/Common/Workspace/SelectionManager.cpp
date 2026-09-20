@@ -11,7 +11,7 @@
 
 namespace sw::editor
 {
-    void SelectionManager::selectObject( GameObjectPtr pObj, SelectionMode mode )
+    void SelectionManager::selectObject( const GameObjectPtr& pObj, SelectionMode mode )
     {
         pruneInvalid();
 

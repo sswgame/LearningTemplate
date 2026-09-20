@@ -76,10 +76,15 @@ private:                                                            \
         IEvent( const IEvent& ) {}
         /** @brief 큐 링크는 복사하지 않고 자신을 유지합니다. */
         IEvent& operator=( const IEvent& ) { return *this; }
-        /** @brief 큐 링크는 가져오지 않습니다. */
-        IEvent( IEvent&& ) {}
+        /**
+         * @brief 큐 링크는 가져오지 않습니다.
+         * @note `noexcept` 가 **계약의 일부**다. 이동이 noexcept 가 아니면 `vector` 같은 컨테이너는
+         *       재할당 때 강한 예외 보장을 지키려고 **이동 대신 복사**로 떨어진다. 이 둘은 몸통이
+         *       비어 있어 던질 수가 없는데도 그 표시가 없었다.
+         */
+        IEvent( IEvent&& ) noexcept {}
         /** @brief 큐 링크는 가져오지 않고 자신을 유지합니다. */
-        IEvent& operator=( IEvent&& ) { return *this; }
+        IEvent& operator=( IEvent&& ) noexcept { return *this; }
         /** @brief 가상 소멸로 파생 이벤트를 안전하게 지웁니다. */
         virtual ~IEvent();
         /** @brief 등록된 이벤트 타입 ID입니다. */

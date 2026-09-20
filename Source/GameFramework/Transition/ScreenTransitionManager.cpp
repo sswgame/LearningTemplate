@@ -93,7 +93,7 @@ namespace sw
 
     void ScreenTransitionManager::beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration, float32 fadeInDuration )
     {
-        _pendingAction         = onExecute;
+        _pendingAction         = std::move( onExecute );
         _pendingFadeInDuration = fadeInDuration;
         _phase                 = Phase::FadeOut;
 

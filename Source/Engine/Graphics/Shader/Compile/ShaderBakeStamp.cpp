@@ -246,8 +246,8 @@ namespace sw
 
         // 경로까지 섞는다 — 헤더를 **지우기만** 해도 값이 달라져야 한다(내용만 XOR 하면 같은 내용 둘이
         // 서로를 지운다). 정렬은 collectFiles 순서에 기대지 않고 곱셈 누적으로 순서 무관하게 만든다.
-        uint64       combined = 0;
-        const string rootDir  = ResourceUtil::getRootFolderPath();
+        uint64        combined = 0;
+        const string& rootDir  = ResourceUtil::getRootFolderPath();
         if ( rootDir.empty() == false )
         {
             vector<string> listHeader;

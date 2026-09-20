@@ -27,7 +27,7 @@ namespace sw
         bone._characterSpaceTransform = boneSpaceTransform;
 
         const int32 newIndex = boneCount;
-        _listBone.push_back( std::move( bone ) );
+        _listBone.push_back( bone );
         _listSkinningMatrix.push_back( float4x4::Identity );
         return newIndex;
     }

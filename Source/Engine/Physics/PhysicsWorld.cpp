@@ -189,7 +189,7 @@ namespace sw
         body._layer    = layer;
         body._objectId = objectId;
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        BodyHandle                          handle = _bodies.insert( std::move( body ) );
+        BodyHandle                          handle = _bodies.insert( body );
         insertBodyToGrid( handle, aabb );
         return handle;
     }

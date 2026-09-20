@@ -157,22 +157,22 @@ namespace sw
 
     void DialogueRunnerComponent::setOnDialogueLine( OnDialogueLineFunc func )
     {
-        _onLine = func;
+        _onLine = std::move( func );
     }
 
     void DialogueRunnerComponent::setOnDialogueChoices( OnDialogueChoicesFunc func )
     {
-        _onChoices = func;
+        _onChoices = std::move( func );
     }
 
     void DialogueRunnerComponent::setOnDialogueEvent( OnDialogueEventFunc func )
     {
-        _onEvent = func;
+        _onEvent = std::move( func );
     }
 
     void DialogueRunnerComponent::setOnDialogueFinished( OnDialogueFinishedFunc func )
     {
-        _onFinished = func;
+        _onFinished = std::move( func );
     }
 
     void DialogueRunnerComponent::notifyLine()

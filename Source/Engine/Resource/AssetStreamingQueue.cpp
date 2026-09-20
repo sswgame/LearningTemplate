@@ -54,7 +54,7 @@ namespace sw
         _bInitialized = false;
     }
 
-    bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, OnStreamingCompleteDelegate onComplete )
+    bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, const OnStreamingCompleteDelegate& onComplete )
     {
         // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
         (void)priority;
@@ -122,7 +122,7 @@ namespace sw
         return true;
     }
 
-    bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, OnStreamingDataCompleteDelegate onComplete )
+    bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, const OnStreamingDataCompleteDelegate& onComplete )
     {
         // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
         (void)priority;

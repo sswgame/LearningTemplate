@@ -74,7 +74,7 @@ namespace sw
         virtual string getTargetName() const override;
 
     private:
-        void   runBuildThread( string targetName );
+        void   runBuildThread( const string& targetName );
         string findBuildDirectory() const;
 
     private:

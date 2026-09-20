@@ -12,6 +12,9 @@ Checks: >
   -*,
   bugprone-*,
   clang-analyzer-*,
+  performance-*,
+  -performance-enum-size,
+  -performance-no-int-to-ptr,
   -bugprone-easily-swappable-parameters,
   -bugprone-invalid-enum-default-initialization,
   -bugprone-derived-method-shadowing-base-method,
@@ -19,6 +22,20 @@ Checks: >
   -clang-analyzer-optin.core.EnumCastOutOfRange,
   -clang-analyzer-optin.performance.Padding
 
+# performance-*
+#     2026-09-20 에 켰다. 켜자마자 314건이 나왔고 그 중 실제로 고칠 값어치가 있던 것이 42+27+12 건이다
+#     (값 전달 델리게이트·핸들, 효과 없는 std::move, const 가 막은 자동 이동, 되돌리기 버퍼 이중 복사).
+#     이 검사군이 꺼져 있어서 그것들이 쌓이는 동안 아무도 몰랐다.
+#
+# -performance-enum-size
+#     "열거형의 기반 타입이 값 범위에 비해 크다" 를 150건 짚는다. 이 저장소에서 열거형 크기는
+#     **바꾸면 안 되는 것**이다 — RHI ABI 스탬프(RHIModuleAbi.h)와 직렬화된 데이터가 그 폭에
+#     달려 있다. 줄이는 순간 구운 파일과 백엔드 DLL 이 조용히 어긋난다. 영구 오탐이다.
+#
+# -performance-no-int-to-ptr
+#     Win32 의 `GetWindowLongPtr`/`SetWindowLongPtr` 왕복을 29건 짚는다. 그 API 가 정수로
+#     주고받도록 설계돼 있어서 캐스팅을 뺄 방법이 없다.
+#
 # -bugprone-easily-swappable-parameters
 #     같은 타입 인자가 인접하면 전부 짚는다(Core/App 43건, Engine/Editor 115건). 수학·그래픽스
 #     API 는 (x, y, z) / (width, height) 가 본질이어서 끝이 없고, 바꿀 수도 없다. 설계 취향이지

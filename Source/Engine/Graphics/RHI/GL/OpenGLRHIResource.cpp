@@ -463,7 +463,7 @@ namespace sw
                 record._fbo = fbo;
         }
 
-        return _pDevice->_gpuTextures.insert( std::move( record ) );
+        return _pDevice->_gpuTextures.insert( record );
     }
 
     void OpenGLRHIResource::destroyTexture( RHITextureHandle texture )

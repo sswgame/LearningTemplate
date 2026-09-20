@@ -406,7 +406,7 @@ namespace sw
         record._buffer = buffer;
         record._memory = memory;
         record._size   = sizeBytes;
-        return _pDevice->_gpuBuffers.insert( std::move( record ) );
+        return _pDevice->_gpuBuffers.insert( record );
     }
 
     void VulkanRHIResource::destroyBuffer( RHIBufferHandle buffer )
@@ -574,7 +574,7 @@ namespace sw
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
-        return _pDevice->_gpuTextures.insert( std::move( record ) );
+        return _pDevice->_gpuTextures.insert( record );
     }
 
     bool VulkanRHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )

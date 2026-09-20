@@ -117,7 +117,7 @@ namespace sw
         record._bEnableBlend      = desc._bEnableBlend ? 1 : 0;
         record._reserved          = 0;
 
-        return _pDevice->_pipelineStates.insert( std::move( record ) );
+        return _pDevice->_pipelineStates.insert( record );
     }
 
     RHIPipelineStateHandle OpenGLRHIResource::createComputePipelineState( string_view shaderPath, string_view entryPoint )
@@ -180,7 +180,7 @@ namespace sw
         if ( record._program == 0 )
             return 0;
 
-        return _pDevice->_pipelineStates.insert( std::move( record ) );
+        return _pDevice->_pipelineStates.insert( record );
     }
 
     void OpenGLRHIResource::destroyPipelineState( RHIPipelineStateHandle pso )

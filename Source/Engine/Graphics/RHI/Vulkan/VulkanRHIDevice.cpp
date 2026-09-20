@@ -528,7 +528,7 @@ namespace sw
         record._usage  = usageFlags;
         record._state  = RHIBufferState::Common;
 
-        return _gpuBuffers.insert( std::move( record ) );
+        return _gpuBuffers.insert( record );
     }
 
     // ------------------------------------------------------------------------------

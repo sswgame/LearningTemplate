@@ -262,10 +262,10 @@ namespace sw
     TypeInfo::TypeInfo( TypeInfo&& other ) noexcept
         : _size{ other._size }
         , _destroyInstance{ other._destroyInstance }
-        , _name{ std::move( other._name ) }
-        , _fullyQualifiedName{ std::move( other._fullyQualifiedName ) }
-        , _parentFQN{ std::move( other._parentFQN ) }
-        , _moduleName{ std::move( other._moduleName ) }
+        , _name{ other._name }
+        , _fullyQualifiedName{ other._fullyQualifiedName }
+        , _parentFQN{ other._parentFQN }
+        , _moduleName{ other._moduleName }
         , _listProperty{ std::move( other._listProperty ) }
         , _listMethod{ std::move( other._listMethod ) }
         , _metadata{ std::move( other._metadata ) }
@@ -327,10 +327,10 @@ namespace sw
 
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
-        _name               = std::move( other._name );
-        _fullyQualifiedName = std::move( other._fullyQualifiedName );
-        _parentFQN          = std::move( other._parentFQN );
-        _moduleName         = std::move( other._moduleName );
+        _name               = other._name;
+        _fullyQualifiedName = other._fullyQualifiedName;
+        _parentFQN          = other._parentFQN;
+        _moduleName         = other._moduleName;
         _listProperty       = std::move( other._listProperty );
         _listMethod         = std::move( other._listMethod );
         _metadata           = std::move( other._metadata );

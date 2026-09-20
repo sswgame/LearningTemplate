@@ -427,7 +427,7 @@ namespace sw
         return _pNode != nullptr ? _pNode->_priority : TaskPriority::Normal;
     }
 
-    TaskHandle& TaskHandle::precede( TaskHandle targetTask )
+    TaskHandle& TaskHandle::precede( const TaskHandle& targetTask )
     {
         TaskNode* pTargetNode = targetTask.getNode();
         if ( _pNode != nullptr && pTargetNode != nullptr && _pNode != pTargetNode )
@@ -445,7 +445,7 @@ namespace sw
         return *this;
     }
 
-    TaskHandle TaskHandle::then( TaskDelegate nextTaskDelegate, TaskThreadAffinity affinity )
+    TaskHandle TaskHandle::then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity )
     {
         if ( _pNode == nullptr || _pNode->_pOwner == nullptr )
             return TaskHandle{};
@@ -477,7 +477,7 @@ namespace sw
         _pNode->_pOwner->submit( *this );
     }
 
-    TaskStageHandle& TaskStageHandle::addTask( TaskHandle task )
+    TaskStageHandle& TaskStageHandle::addTask( const TaskHandle& task )
     {
         TaskNode* pTaskNode = task.getNode();
         if ( _node != nullptr && pTaskNode != nullptr )
@@ -837,7 +837,7 @@ namespace sw
         return TaskStageHandle{ stage };
     }
 
-    void TaskManager::waitStage( TaskStageHandle stage )
+    void TaskManager::waitStage( const TaskStageHandle& stage )
     {
         if ( stage._node == nullptr )
             return;
@@ -878,7 +878,7 @@ namespace sw
         }
     }
 
-    bool TaskManager::isStageComplete( TaskStageHandle stage )
+    bool TaskManager::isStageComplete( const TaskStageHandle& stage )
     {
         if ( stage._node == nullptr )
             return true;
@@ -886,7 +886,7 @@ namespace sw
         return stage._node->_remainingTasks.load( std::memory_order_relaxed ) == 0;
     }
 
-    void TaskManager::submit( TaskHandle handle )
+    void TaskManager::submit( const TaskHandle& handle )
     {
         if ( handle.isValid() == false )
             return;

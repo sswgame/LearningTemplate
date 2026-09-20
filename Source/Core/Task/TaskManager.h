@@ -121,16 +121,16 @@ namespace sw
         TaskStageHandle getOrCreateStage( string_view stageName );
 
         /** @brief 특정 스테이지에 소속된 모든 태스크가 완료될 때까지 호출 스레드를 블로킹 대기합니다. (Work Helping 수행) */
-        void waitStage( TaskStageHandle stage );
+        void waitStage( const TaskStageHandle& stage );
 
         /** @brief 특정 스테이지의 모든 작업이 완료되었는지 여부를 확인합니다. */
-        bool isStageComplete( TaskStageHandle stage );
+        bool isStageComplete( const TaskStageHandle& stage );
 
         /**
          * @brief 생성(Builder) 시 부여되었던 임시 잠금 의존성을 해제하고 스케줄러에 태스크를 제출합니다.
          * @details precede/succeed 등 의존성 설정이 끝난 후 호출하여 작업이 준비되었음을 알립니다.
          */
-        void submit( TaskHandle handle );
+        void submit( const TaskHandle& handle );
 
         /**
          * @brief 현재 시스템에 등록된 모든 비동기 태스크가 완료될 때까지 대기합니다.

@@ -42,10 +42,10 @@ namespace sw
         void shutdown();
         void update( size_t maxCompletionsPerFrame = 32 );
 
-        bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, OnStreamingCompleteDelegate onComplete = {} );
+        bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingCompleteDelegate& onComplete = {} );
 
         /** @brief 에셋 바이너리 데이터를 백그라운드에서 직접 프리페치하고 완료 콜백으로 전달받습니다. */
-        bool requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, OnStreamingDataCompleteDelegate onComplete = {} );
+        bool requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingDataCompleteDelegate& onComplete = {} );
 
         /** @brief 에셋 프리페치를 비동기 요청하고 완료 상태를 TaskFuture<bool>로 반환합니다. */
         TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );

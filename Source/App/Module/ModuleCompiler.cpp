@@ -110,7 +110,7 @@ namespace sw
         return resultDir;
     }
 
-    void ModuleCompiler::runBuildThread( string targetName )
+    void ModuleCompiler::runBuildThread( const string& targetName )
     {
         const string buildDir = findBuildDirectory();
         if ( buildDir.empty() || FileUtil::directoryExists( buildDir ) == false )

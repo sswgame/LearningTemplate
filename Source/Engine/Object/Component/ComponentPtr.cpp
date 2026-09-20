@@ -46,8 +46,8 @@ namespace sw
     }
 
     ComponentPtr::ComponentPtr( ComponentPtr&& other ) noexcept
-        : _targetObjectName{ std::move( other._targetObjectName ) }
-        , _targetComponentType{ std::move( other._targetComponentType ) }
+        : _targetObjectName{ other._targetObjectName }
+        , _targetComponentType{ other._targetComponentType }
         , _pCachedPtr{ other._pCachedPtr }
         , _cachedObjectId{ other._cachedObjectId }
         , _pManager{ other._pManager }
@@ -58,8 +58,6 @@ namespace sw
         other._cachedObjectId      = 0;
         other._pManager            = nullptr;
     }
-
-    ComponentPtr::~ComponentPtr() = default;
 
     ComponentPtr& ComponentPtr::operator=( Component* pTarget )
     {
@@ -98,8 +96,8 @@ namespace sw
     {
         if ( this != &other )
         {
-            _targetObjectName    = std::move( other._targetObjectName );
-            _targetComponentType = std::move( other._targetComponentType );
+            _targetObjectName    = other._targetObjectName;
+            _targetComponentType = other._targetComponentType;
             _pCachedPtr          = other._pCachedPtr;
             _cachedObjectId      = other._cachedObjectId;
             _pManager            = other._pManager;

@@ -26,7 +26,7 @@ namespace sw
         GameObjectPtr( GameObject* pTarget );
         GameObjectPtr( const GameObjectPtr& other );
         GameObjectPtr( GameObjectPtr&& other ) noexcept;
-        ~GameObjectPtr();
+        ~GameObjectPtr() = default;
 
         GameObjectPtr& operator=( GameObject* pTarget );
         GameObjectPtr& operator=( const GameObjectPtr& other );

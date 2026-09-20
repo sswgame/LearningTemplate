@@ -26,7 +26,7 @@ namespace sw
         ComponentPtr( Component* pTarget );
         ComponentPtr( const ComponentPtr& other );
         ComponentPtr( ComponentPtr&& other ) noexcept;
-        ~ComponentPtr();
+        ~ComponentPtr() = default;
 
         ComponentPtr& operator=( Component* pTarget );
         ComponentPtr& operator=( const ComponentPtr& other );

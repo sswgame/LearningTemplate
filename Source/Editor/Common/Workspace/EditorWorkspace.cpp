@@ -168,7 +168,7 @@ namespace sw::editor
         _selectedComponentKey.clear();
     }
 
-    void EditorWorkspace::selectGameObject( GameObjectPtr pObj, SelectionMode mode )
+    void EditorWorkspace::selectGameObject( const GameObjectPtr& pObj, SelectionMode mode )
     {
         if ( _pSelectionManager != nullptr )
             _pSelectionManager->selectObject( pObj, mode );
@@ -177,7 +177,7 @@ namespace sw::editor
         _inspectMode = InspectMode::GameObject;
     }
 
-    void EditorWorkspace::selectComponent( GameObjectPtr pObj, ComponentPtr pComp )
+    void EditorWorkspace::selectComponent( const GameObjectPtr& pObj, const ComponentPtr& pComp )
     {
         if ( _pSelectionManager != nullptr )
             _pSelectionManager->selectObject( pObj, SelectionMode::Replace );

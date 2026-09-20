@@ -26,24 +26,24 @@ namespace sw::editor
         static void cancelTransaction();
 
         /** @brief 단일 오브젝트의 상태 변경(수정) 전/후를 기록하여 Undo/Redo에 등록합니다. */
-        static void recordModify( GameObjectPtr pObj, string_view beforeXml, string_view afterXml,
+        static void recordModify( const GameObjectPtr& pObj, string_view beforeXml, string_view afterXml,
                                   string_view label = "Modify GameObject" );
 
         /** @brief 단일 오브젝트의 바이너리 상태 변경(수정) 전/후를 기록하여 Undo/Redo에 등록합니다. */
-        static void recordBinaryModify( GameObjectPtr pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
+        static void recordBinaryModify( const GameObjectPtr& pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
                                         string_view label = "Modify GameObject" );
 
         /** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
-        static void recordCreation( GameObjectPtr pObj, string_view label = "Create GameObject" );
+        static void recordCreation( const GameObjectPtr& pObj, string_view label = "Create GameObject" );
 
         /** @brief 게임오브젝트 삭제를 Undo/Redo에 등록합니다 (삭제 전 스냅샷 보존). */
-        static void recordDestruction( GameObjectPtr pObj, string_view label = "Delete GameObject" );
+        static void recordDestruction( const GameObjectPtr& pObj, string_view label = "Delete GameObject" );
 
         /** @brief 현재 게임오브젝트의 전체 상태를 XML 스냅샷 문자열로 캡처합니다. */
-        static string captureSnapshot( GameObjectPtr pObj );
+        static string captureSnapshot( const GameObjectPtr& pObj );
 
         /** @brief 현재 게임오브젝트의 전체 상태를 바이너리 스냅샷 버퍼로 캡처합니다. */
-        static bool captureBinarySnapshot( GameObjectPtr pObj, vector<uint8>& outBytes );
+        static bool captureBinarySnapshot( const GameObjectPtr& pObj, vector<uint8>& outBytes );
 
         /**
          * @brief 오브젝트 수명 편집의 방향 — 어느 쪽이 "되살리기" 인지를 정합니다.
@@ -59,16 +59,16 @@ namespace sw::editor
         };
 
         /** @brief 생성·삭제를 한 절차로 기록합니다. 두 절차를 만들고 @p edit 이 순서를 정합니다. */
-        static void recordObjectLifetime( GameObjectPtr pObj, string_view label, ObjectLifetimeEdit edit );
+        static void recordObjectLifetime( const GameObjectPtr& pObj, string_view label, ObjectLifetimeEdit edit );
 
         /** @brief 문서 Undo/Redo를 스택에 올립니다. */
         static void push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
                           string_view coalesceKey = {} );
         /** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
         static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-                                        EditorDocumentRestoreDelegate restore, string_view coalesceKey = {} );
+                                        const EditorDocumentRestoreDelegate& restore, string_view coalesceKey = {} );
         static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-                                        EditorDocumentRestoreDelegate restore, EditorDocumentCaptureDelegate capture,
+                                        const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
                                         string_view coalesceKey = {} );
     };
 } // namespace sw::editor

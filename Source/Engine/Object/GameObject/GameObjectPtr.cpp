@@ -35,7 +35,7 @@ namespace sw
     }
 
     GameObjectPtr::GameObjectPtr( GameObjectPtr&& other ) noexcept
-        : _targetName{ std::move( other._targetName ) }
+        : _targetName{ other._targetName }
         , _pCachedPtr{ other._pCachedPtr }
         , _cachedObjectId{ other._cachedObjectId }
         , _pManager{ other._pManager }
@@ -45,8 +45,6 @@ namespace sw
         other._cachedObjectId = 0;
         other._pManager       = nullptr;
     }
-
-    GameObjectPtr::~GameObjectPtr() = default;
 
     GameObjectPtr& GameObjectPtr::operator=( GameObject* pTarget )
     {
@@ -73,7 +71,7 @@ namespace sw
     {
         if ( this != &other )
         {
-            _targetName           = std::move( other._targetName );
+            _targetName           = other._targetName;
             _pCachedPtr           = other._pCachedPtr;
             _cachedObjectId       = other._cachedObjectId;
             _pManager             = other._pManager;

@@ -42,8 +42,6 @@ namespace sw
     {
     }
 
-    BackendSwapController::~BackendSwapController() = default;
-
     void BackendSwapController::initialize( EngineLoop* pEngineLoop, ModuleHost* pModuleHost, bool bEnableEditor )
     {
         _pEngineLoop   = pEngineLoop;

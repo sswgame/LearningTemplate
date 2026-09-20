@@ -102,13 +102,13 @@ namespace sw
         bool isVisibleIntended() const { return _bVisibleIntent == SW_TRUE; }
 
         /** @brief 외부 이벤트 핸들러(예: ImGui)를 연결합니다. */
-        void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = handler; }
+        void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = std::move( handler ); }
 
         /** @brief 윈도우 크기 변경 시 호출될 콜백을 설정합니다. */
-        void setResizeCallback( WindowResizeDelegate callback ) { _onResize = callback; }
+        void setResizeCallback( WindowResizeDelegate callback ) { _onResize = std::move( callback ); }
 
         /** @brief 닫기 전에 호출됩니다. false면 닫기를 보류합니다. */
-        void setCloseQueryHandler( WindowCloseQueryDelegate handler ) { _closeQuery = handler; }
+        void setCloseQueryHandler( WindowCloseQueryDelegate handler ) { _closeQuery = std::move( handler ); }
         /** @brief 확인 없이 종료 플래그를 켭니다. */
         void requestClose();
         /** @brief 닫기 쿼리를 거쳐 종료를 시도합니다. 허용되면 true입니다. */

@@ -199,6 +199,10 @@ namespace sw::editor
         EditorResourceCatalogCounts counts{};
         EditorAssetCommands::collectResourceCatalogCounts( counts );
 
+        // `std::move` 는 여기서 **필요하다.** `publish` 가 rvalue 레퍼런스로 받는다 —
+        // clang-tidy 의 `performance-move-const-arg` 는 "자명 복사 가능이라 효과 없음" 으로
+        // 짚지만, 그것을 떼면 오버로드가 안 맞아 컴파일이 깨진다.
+        // NOLINTNEXTLINE(performance-move-const-arg)
         publish( pState, generation, std::move( counts ) );
     }
 } // namespace sw::editor

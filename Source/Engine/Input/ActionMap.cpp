@@ -1086,7 +1086,7 @@ namespace sw
 
         _listLayerName.push_back( def._name );
         const uint32 index = static_cast<uint32>( _listLayerEntry.size() );
-        _listLayerEntry.push_back( std::move( def ) );
+        _listLayerEntry.push_back( def );
         _mapLayer.emplace( name, index );
         return _listLayerEntry[index];
     }

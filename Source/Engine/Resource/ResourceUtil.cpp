@@ -587,7 +587,9 @@ namespace sw
 
     string ResourceUtil::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
     {
-        const string basePath = makeSavePath( absoluteFolder, fileName );
+        // `const` 를 붙이면 **반환할 때 자동 이동이 막힌다**(복사가 된다). 아래 두 return 이
+        // 모두 이 변수를 돌려주므로 const 를 떼는 편이 맞다.
+        string basePath = makeSavePath( absoluteFolder, fileName );
         if ( basePath.empty() || FileUtil::fileExists( basePath ) == false )
             return basePath;
 
