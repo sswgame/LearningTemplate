@@ -6,9 +6,9 @@ SWBAKE 3
 4b2c961e616b70ae ssao.hlsl
 4f2eef0e5276d87c taa.hlsl
 60d9fb390c741984 common.hlsli
+6f9c1d6844791276 postbloom.hlsl
 7fc9b4905c8b5ddf gbuffernormal.hlsl
 816ce09d851a26c9 gbufferalbedo.hlsl
-8bd6c0d14d5e0858 postbloom.hlsl
 92180f8fc06e188e gbuffer.hlsl
 9c9f41323a7cd436 deferredlighting.hlsl
 a588e78688835ccd meshmorph.hlsl
