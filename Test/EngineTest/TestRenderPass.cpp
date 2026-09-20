@@ -337,6 +337,50 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassWaves )
 }
 
 /**
+ * @brief [RenderPassTest] 파이프라인 XML 의 포맷 표기가 리플렉션으로 해석되는가 — 안 되면 **왜 안 되는지까지** 적는다
+ * @details 아래 `ShippedPipelinesValidateClean` 이 리눅스 CI 에서만 일곱 건으로 졌는데, 그 일곱은 전부 한 뿌리였다:
+ *          `RHIFormat` 이 리플렉션으로 해석되지 않아 첨부 포맷이 모두 "알 수 없는 포맷" 이 되고, 그러면 깊이 판정이
+ *          무너져 `SceneDepth` 가 SourceColor 역할로 잡히며 입력 계약까지 연쇄로 틀어진다. 로컬(윈도우 · WSL 리눅스,
+ *          유니티 ON/OFF)에서는 재현되지 않았다 — 러너 쪽 툴체인(ubuntu-22.04 의 clang · libclang)만 다르다.
+ *
+ *          그래서 이 케이스는 **연쇄가 시작되는 한 지점만** 보고, 졌을 때 어디가 끊겼는지 메시지에 담는다:
+ *          `typeFqn` 이 무엇으로 읽혔는지 · FQN 으로 찾히는지 · 짧은 이름으로 찾히는지 · 이름표가 몇 개인지 ·
+ *          등록된 enum 이 모두 몇 개인지. 같은 경로를 쓰는 `RenderPassType` 이 대조군이다 — 그쪽이 되고 이쪽이
+ *          안 되면 리플렉션 전체가 아니라 이 헤더 하나의 문제다.
+ */
+SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    uint32 registeredEnumCount = 0;
+    registry.forEachEnum( [&registeredEnumCount]( const sw::EnumInfo& )
+    { ++registeredEnumCount; } );
+
+    const sw::hashed_string formatFqn = sw::typeFqn<sw::RHIFormat>();
+    const sw::EnumInfo*     pByFqn    = registry.findEnum( formatFqn );
+    const sw::EnumInfo*     pByLeaf   = registry.findEnum( sw::hashed_string( "RHIFormat" ) );
+    const sw::EnumInfo*     pFound    = ( pByFqn != nullptr ) ? pByFqn : pByLeaf;
+
+    const sw::string diagnosis =
+        sw::string( "typeFqn='" ) + ( formatFqn.c_str() != nullptr ? formatFqn.c_str() : "(null)" ) +
+        "' byFqn=" + ( pByFqn != nullptr ? "1" : "0" ) +
+        " byLeaf=" + ( pByLeaf != nullptr ? "1" : "0" ) +
+        " names=" + sw::to_string( pFound != nullptr ? static_cast<uint64>( pFound->_mapNameToValue.size() ) : uint64( 0 ) ) +
+        " enums=" + sw::to_string( registeredEnumCount );
+
+    sw::RHIFormat parsedFormat{};
+    const bool    bFormatParsed = registry.enumFromString( sw::string_view( "R8G8B8A8_UNORM" ), parsedFormat );
+    SW_EXPECT_TRUE_MSG( bFormatParsed,
+                        ( sw::string( "RHIFormat 이 리플렉션으로 해석되지 않습니다 — " ) + diagnosis ).c_str() );
+    if ( bFormatParsed )
+        SW_EXPECT_TRUE( parsedFormat == sw::RHIFormat::R8G8B8A8_UNORM );
+
+    sw::RenderPassType parsedPassType{};
+    SW_EXPECT_TRUE_MSG( registry.enumFromString( sw::string_view( "Present" ), parsedPassType ),
+                        ( sw::string( "대조군 RenderPassType 도 해석되지 않습니다 — " ) + diagnosis ).c_str() );
+}
+
+/**
  * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
  * @details forward/deferred 둘 다 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나
  *          조용히 잘못 그리거나 GPU 가 죽는다(`ae7fb078` 이 그 사례였다).

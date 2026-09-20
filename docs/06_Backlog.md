@@ -318,11 +318,10 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
-### 1-0f. 리눅스 CI 의 `EngineTest_NoGPU` 10 건 (2026-09-21 보고됨, 원인 미확인)
+### 1-0f. 리눅스 CI 의 `EngineTest_NoGPU` 10 건 — **뿌리는 하나다: `RHIFormat` 이 리플렉션으로 안 풀린다** (2026-09-21)
 
-사용자가 붙여 준 리눅스 CI 로그에서 **539 / 552** 로 열 건이 진다. 같은 목록이 윈도우에서는 전부 초록이다
-(Ninja-Debug 전체 nogpu **604 / 604**, 유니티 빌드를 켠 별도 빌드에서도 초록 — 즉 `SW_ENABLE_UNITY_BUILD`
-차이는 아니다).
+CI 로그에서 **539 / 552**. 열 건 중 렌더패스 둘은 원인이 확정됐고, 나머지 여덟도 같은 모양(리플렉션 enum 해석)일
+가능성이 높다.
 
 ```
 ActionMapTest.LoadFromDefaultInputXmlResource / GlyphResolutionWithDeviceTypeAndChords / SaveAndLoadAllBindingKinds
@@ -333,17 +332,47 @@ ResourcePackTest.StringPoolReadStopsAtPoolEnd
 SceneTest.CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad
 ```
 
-**아직 재현하지 못했다.** WSL 클론에서 CI 프리셋을 새로 지으려 했으나 vcpkg 가 x64-linux 포트를 다시 굽는
-중이고(spirv-tools 등), 그 사이 WSL 이 재시작돼 작업이 죽었다. 다음 사람이 이어서 할 것:
+**확정된 것.** CI 로그의 검증 오류 일곱 건(forward) · 열아홉 건(deferred)은 **전부 한 줄에서 파생된다**:
 
-1. `wsl` 에서 `cmake --preset CI-Debug-ASAN` → `--build` → `ctest -L nogpu`. 열 건이 나오는지부터 본다.
-2. 나오면 하나(가장 단순한 `ResourcePackTest.StringPoolReadStopsAtPoolEnd`)를 골라 좁힌다.
-3. **낡은 바이너리를 재현으로 착각하지 말 것.** 이번에 한 번 그랬다: 클론의 `build/CI-Debug/Bin/EngineTest` 는
-   9월 19일 것이라 `RenderPassTest.ShippedPipelinesValidateClean` 이 졌는데, 그 원인(`4a8b4bba` 가 Present 의
-   선택 입력에 `SceneDepth` 를 더한 것)은 **바이너리보다 나중**이었다. 빌드 시각을 먼저 볼 것.
+```
+attachment 'SceneColor': 알 수 없는 포맷 'R8G8B8A8_UNORM'
+```
 
-공통점 후보: 열 건 중 아홉이 **직렬화 왕복이거나 리소스 XML 로드**다. 반대로 `SW_ENABLE_UNITY_BUILD` 는
-아니라는 것이 확인됐고, 쿠킹 산출물(`Bin/Packs`)도 아니다 — `CookAssets` 는 Shipping 에서만 `all` 에 든다.
+`enumFromString<RHIFormat>` 이 실패하면 → 첨부 포맷이 전부 미상 → 깊이 첨부 판정(`fmt != D24_UNORM_S8_UINT`)이
+무너지고 → `resolveRenderPassInputRole` 의 `bDepthFormat` 이 false 라 `SceneDepth` 가 **SourceColor 역할**로 잡혀 →
+"SourceColor 가 2개" · "필수 입력 SceneDepth 없음" 이 줄줄이 따라온다. 그러니 **고칠 것은 한 곳**이다.
+
+대조군으로 같은 경로를 쓰는 `RenderPassType` 은 **해석된다**(로그가 `pass 'Shading'(Lighting)` 의 계약을 실제로
+검사하고 있다 — `findRenderPassInputContract( _resolvedType )` 이 널이 아니었다는 뜻). 즉 리플렉션 전체가 죽은
+것이 아니라 `RHITypes.h` 쪽 하나다.
+
+**재현 실패 — 아래는 전부 배제됐다.**
+
+| 후보 | 확인 방법 | 결과 |
+|------|-----------|------|
+| 유니티 빌드(`SW_ENABLE_UNITY_BUILD`) | 윈도우에 `Ninja-Debug-Unity` 를 따로 지어 10건 실행 | 43/43 초록 — 아님 |
+| CTest 병렬(`-j 4`) | 윈도우 `ctest -L nogpu -j 4` | 초록 — 아님 |
+| 쿠킹 산출물(`Bin/Packs`) | `CookAssets` 는 Shipping 에서만 `all` 에 든다 | 아님 |
+| 코드젠 누락 | 리눅스 `generated/Engine/RHITypes.gen.cpp` 28 KB, `s_sw_RHIFormat_registrar` 심볼 존재 | 아님 |
+| 리눅스 자체 | WSL `WSL-Debug`(유니티 OFF) · `CI-Debug`(유니티 ON) 둘 다 전체 **553/553 초록** | 아님 |
+
+남은 차이는 **러너 툴체인**뿐이다: CI 는 ubuntu-22.04 의 `clang`/`libclang-dev`(LLVM 14~15)로 짓고, 이 PC 의 WSL 은
+LLVM 20(번들) · 21(배포판)뿐이라 그 버전을 깔 수 없다(`clang-14` 패키지가 없고 `sudo` 가 비밀번호를 요구한다).
+
+**다음 사람이 할 일.**
+
+1. 이번에 넣은 `RenderPassTest.PipelineFormatNamesResolveThroughReflection` 이 CI 에서 어떤 메시지를 남기는지 본다.
+   실패하면 한 줄에 다 적힌다: `typeFqn='…' byFqn=0/1 byLeaf=0/1 names=N enums=N`.
+   - `byFqn=0 byLeaf=0` → 등록 자체가 안 됐다(정적 초기화 · 링크 쪽).
+   - `byFqn=1 names=0` → 등록은 됐는데 이름표 맵이 비었다(`sw::unordered_map` 복사 쪽).
+   - `byFqn=1 names=14` 인데도 실패 → 조회 키가 어긋난다(`hashed_string` 은 **intern 인덱스로 같다/다르다를
+     가린다** — 같은 글자가 다른 인덱스를 받으면 맵이 빗나간다).
+2. 그래도 안 좁혀지면 CI 를 ubuntu-24.04 로 올려 보는 것이 가장 싼 A/B 다. 22.04 의 clang 14 는 이 저장소가
+   로컬에서 한 번도 쓰지 않는 버전이다.
+
+**함정 — 낡은 바이너리를 재현으로 착각하지 말 것.** 이번에 한 번 그랬다: WSL 클론의
+`build/CI-Debug/Bin/EngineTest` 는 9월 19일 것이라 `ShippedPipelinesValidateClean` 이 졌는데, 그 원인(`4a8b4bba` 가
+Present 의 선택 입력에 `SceneDepth` 를 더한 것)은 **바이너리보다 나중**이었다. 빌드 시각을 먼저 볼 것.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -524,6 +553,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (리눅스 CI 10 건의 뿌리를 한 곳으로 좁히고, 그 자리에 진단을 심었다)
+
+붙여 받은 CI 로그를 읽어 렌더패스 두 건의 원인을 **한 줄**로 좁혔다: `RHIFormat` 이 리플렉션으로 해석되지 않는다.
+검증 오류 일곱(forward)·열아홉(deferred)은 전부 그 하나에서 파생된 연쇄다(포맷 미상 → 깊이 판정 붕괴 → `SceneDepth`
+가 SourceColor 역할 → 계약 위반). 자세한 배제 목록과 다음 단계는 1-0f 절에 적었다.
+
+**재현은 못 했다.** 유니티 빌드 · CTest 병렬 · 쿠킹 산출물 · 코드젠 누락 · "리눅스라서" 를 하나씩 재서 전부
+배제했고(WSL 에서 유니티 ON/OFF 둘 다 **553/553 초록**), 남은 차이는 러너의 clang/libclang 버전(ubuntu-22.04,
+LLVM 14~15)뿐인데 이 PC 에는 그 버전을 깔 수 없다.
+
+**그래서 진단을 심었다** — `RenderPassTest.PipelineFormatNamesResolveThroughReflection`. 연쇄가 시작되는 한 지점만
+보고, 졌을 때 `typeFqn='…' byFqn=… byLeaf=… names=… enums=…` 를 남긴다. 이 한 줄이 "등록이 안 됐다 / 맵이 비었다 /
+조회 키가 어긋난다" 셋을 가른다. `RenderPassType` 을 같은 케이스에 대조군으로 넣어 리플렉션 전체 문제인지도 함께
+가른다. 되돌려 확인: 이름을 없는 것으로 바꾸면
+`typeFqn='sw::RHIFormat' byFqn=1 byLeaf=1 names=14 enums=16` 이 찍히며 진다.
+
+**검증.** 네 프리셋 EngineTest 경고 0 · nogpu 4/4 초록 · 린트 20/20 · WSL 리눅스 전체 553/553.
 
 ### 2026-09-21 (리눅스 CI 의 LeakSanitizer — 스테이지 노드를 아무도 안 지우고 있었다)
 
