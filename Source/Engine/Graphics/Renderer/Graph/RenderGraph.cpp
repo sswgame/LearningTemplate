@@ -354,9 +354,11 @@ namespace sw
                 if ( handle.isValid() )
                 {
                     stage.addTask( handle );
-                    handle.submit();
+                    // 웨이브의 패스를 다 넣은 뒤 한 번만 깨운다 — 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
+                    pTaskManager->submitWithoutWake( handle );
                 }
             }
+            pTaskManager->wakeSleepingWorkers( static_cast<uint32>( listPassEntry.size() ) );
 
             pTaskManager->waitStage( stage );
             pDevice->setParallelRecording( false );

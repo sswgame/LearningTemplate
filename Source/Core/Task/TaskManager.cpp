@@ -21,14 +21,24 @@ namespace sw
         thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
 
-        /**
-         * @brief 워커가 잠들기 전에 일감을 기다리며 도는 `cpuPause` 횟수(약 2 us).
-         * @details **더 길게 돌리면 안 된다 — 재 봤다.** 50 us 로 늘리자 디스패치 비용은 줄었지만 워커
-         *          열다섯이 전역 큐를 두드리며 게임·렌더 스레드의 코어를 빼앗아 프레임 전체가 느려졌다
-         *          (큐브 8000: GT 889 -> 1305 us, 렌더 그래프 병렬 기록 170 -> 368 us). 잠든 워커를 깨우는
-         *          비용은 그룹당 한 번만 내는 것(wakeSleepingWorkers)으로 줄인다.
-         */
+        /// @brief 대기 함수(waitStage/waitAll)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us). 대기 중엔 남의 일을 돕는다.
         constexpr uint32 kIdleSpinCount = 64;
+        /**
+         * @brief 워커가 잠들기 전에 일감을 기다리며 도는 시간(마이크로초). 짧다 — 재 봤다.
+         * @details 스핀은 `_workEpoch` 한 줄만 읽으므로 큐 경합은 없다. 그런데도 길게(50 us) 돌리면 손해다:
+         *          워커가 SMT 형제 코어를 점유해 게임·렌더 스레드가 느려진다 — 렌더 그래프 병렬 기록이
+         *          150~192 us(2 us 스핀) 대 214~242 us(50 us 스핀). 소수만 길게 돌리는 hot pool(2·4 개)도
+         *          이득이 없었다. 이 엔진의 프레임(~0.7 ms)은 잡 사이 빈틈이 워커 수만큼의 코어를 데워 둘
+         *          만큼 길지 않다 — 상용 엔진의 8~16 ms 프레임에서는 답이 달라질 수 있으니 상수로 남긴다.
+         */
+        constexpr int64 kWorkerIdleSpinMicro = 2;
+        /**
+         * @brief 워커 수를 정할 때 하드웨어 스레드에서 빼 두는 수 — 게임 스레드와 렌더 스레드 몫.
+         * @details 예전엔 하드웨어 스레드 수만큼 워커를 만들었다(16 코어에 워커 16 + GT + RT + 메인).
+         *          그러면 워커가 일하는 동안 GT·RT 가 코어를 나눠 써야 해서, 게임 스레드가 잡을 돌리면
+         *          렌더 스레드의 병렬 기록이 밀렸다(170 -> 261 us). 상용 엔진도 전용 스레드 몫을 뺀다.
+         */
+        constexpr uint32 kReservedThreadCount = 2;
 #if !defined( SW_SHIPPING )
         constexpr uint32 kTaskNameCapacity = 31;
 #endif
@@ -506,6 +516,8 @@ namespace sw
         , _listWorkerQueue{}
         , _nextWorkerQueueIndex{ 0 }
         , _sleepingWorkerCount{ 0 }
+        , _workEpoch{ 0 }
+        , _wakeSignalCount{ 0 }
         , _globalWorkerQueue{}
         , _queueMainThread{}
         , _workerMutex{}
@@ -550,6 +562,10 @@ namespace sw
             threadCount = std::thread::hardware_concurrency();
             if ( threadCount == 0 )
                 threadCount = kDefaultThreadCount;
+            else if ( threadCount > kReservedThreadCount + 1 )
+                threadCount -= kReservedThreadCount;
+            else
+                threadCount = 1;
         }
 
         _mainThreadId = std::this_thread::get_id();
@@ -749,7 +765,7 @@ namespace sw
             submitWithoutWake( subHandle );
         }
         // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
-        wakeSleepingWorkers();
+        wakeSleepingWorkers( numChunks );
 
         return parentTask;
     }
@@ -795,7 +811,7 @@ namespace sw
             submitWithoutWake( subHandle );
         }
         // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
-        wakeSleepingWorkers();
+        wakeSleepingWorkers( numChunks );
 
         return parentTask;
     }
@@ -1208,15 +1224,28 @@ namespace sw
                 continue;
             }
 
-            bool bFoundInSpin = false;
-            for ( uint32 spin = 0; spin < kIdleSpinCount; ++spin )
+            // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 일감이 세대를 올려 스핀이 알아챈다.
+            // (읽은 뒤에 들어온 것은 세대가 바뀌고, 읽기 전에 들어온 것은 바로 아래 tryTakeTask 가 본다.)
+            bool       bFoundInSpin = false;
+            uint32     epochSeen    = _workEpoch.load( std::memory_order_acquire );
+            const auto spinStart    = std::chrono::steady_clock::now();
+            for ( ;; )
             {
-                sw::cpuPause();
-                if ( tryTakeTask( workerId, pNode ) )
+                if ( _workEpoch.load( std::memory_order_acquire ) != epochSeen )
                 {
-                    bFoundInSpin = true;
-                    break;
+                    epochSeen = _workEpoch.load( std::memory_order_acquire );
+                    if ( tryTakeTask( workerId, pNode ) )
+                    {
+                        bFoundInSpin = true;
+                        break;
+                    }
                 }
+                // 시계는 32 번에 한 번만 본다 — 매번 보면 그 자체가 스핀 비용이다.
+                for ( uint32 spin = 0; spin < 32; ++spin )
+                    sw::cpuPause();
+                const int64 spentMicro = std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now() - spinStart ).count();
+                if ( spentMicro >= kWorkerIdleSpinMicro )
+                    break;
             }
 
             if ( bFoundInSpin && pNode != nullptr )
@@ -1263,10 +1292,27 @@ namespace sw
 
     void TaskManager::wakeSleepingWorkers()
     {
-        if ( _sleepingWorkerCount.load( std::memory_order_acquire ) <= 0 )
+        wakeSleepingWorkers( 0xFFFFFFFFu );
+    }
+
+    void TaskManager::wakeSleepingWorkers( uint32 wantedCount )
+    {
+        // 스핀 중인 워커는 세대로 이미 알았다. 잠든 워커만 시그널이 필요하다.
+        _workEpoch.fetch_add( 1, std::memory_order_release );
+        const int32 sleeping = _sleepingWorkerCount.load( std::memory_order_acquire );
+        if ( sleeping <= 0 )
             return;
+        _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
+        // **필요한 수만 깨운다.** `notify_all` 은 워커 열넷이 한꺼번에 깨어 일감 여섯을 다투는 천둥 무리다 —
+        // 렌더 그래프 병렬 기록이 150~192 us 에서 329~380 us 로 두 배 느려졌다(재 봤다).
         std::scoped_lock<mutex> workerLock{ _workerMutex };
-        _cvWorker.notify_all();
+        if ( wantedCount >= static_cast<uint32>( sleeping ) )
+        {
+            _cvWorker.notify_all();
+            return;
+        }
+        for ( uint32 index = 0; index < wantedCount; ++index )
+            _cvWorker.notify_one();
     }
 
     void TaskManager::scheduleReadyTask( TaskNode* pNode, bool bWakeWorker )
@@ -1324,8 +1370,11 @@ namespace sw
                         }
                     }
 
+                    // 스핀 중인 워커에게 알린다 — 큐를 만진 뒤(release) 세대를 올려야 그쪽이 집을 수 있다.
+                    _workEpoch.fetch_add( 1, std::memory_order_release );
                     if ( bWakeWorker && _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
                     {
+                        _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
                         std::scoped_lock<mutex> workerLock{ _workerMutex };
                         _cvWorker.notify_one();
                     }

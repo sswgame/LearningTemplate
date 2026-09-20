@@ -851,3 +851,39 @@ SW_TEST_CASE( TaskTest, InvalidFutureThenStaysInvalid )
         SW_EXPECT_EQUAL( 42, chained.get() );
     }
 }
+
+/**
+ * @brief [TaskTest] 병렬 그룹은 잠든 워커를 한 번만 깨운다
+ * @details 서브태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 청크 수만큼 반복된다 — 청크 32 개에
+ *          디스패치가 125 us 였고 그 안의 일은 몇 us 였다. 그룹 하나는 시그널 하나여야 한다.
+ *          부모 태스크가 준비될 때(마지막 자식이 끝날 때) 워커가 한 번 더 깨울 수 있으므로 상한은 2 다.
+ */
+SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
+{
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+
+    // 워커를 재운다 — 스핀 예산(수십 us)이 지나야 잠들므로 넉넉히 기다린다.
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    const uint32 wakeBefore = taskMgr.getWakeSignalCount();
+
+    static sw::atomic<uint32> s_processedCount{ 0 };
+    s_processedCount = 0;
+    struct WakeOnceContext
+    {
+        static void processRange( uint32 start, uint32 end ) { s_processedCount.fetch_add( end - start, std::memory_order_relaxed ); }
+    };
+
+    constexpr uint32    kItemCount = 64;
+    sw::TaskStageHandle stage      = taskMgr.createAnonymousStage( "WakeOnce" );
+    sw::TaskHandle      handle     = taskMgr.emplaceParallelBlock( 0, kItemCount, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, WakeOnceContext::processRange ) );
+    stage.addTask( handle );
+    handle.submit();
+    taskMgr.waitStage( stage );
+
+    SW_EXPECT_EQUAL( kItemCount, s_processedCount.load() );
+    const uint32 wakeCount = taskMgr.getWakeSignalCount() - wakeBefore;
+    SW_EXPECT_TRUE_MSG( wakeCount <= 2, ( sw::string( "병렬 그룹 하나가 워커를 " ) + sw::to_string( wakeCount ) + " 번 깨웠다 — 서브태스크마다 깨우고 있다" ).c_str() );
+
+    taskMgr.clear();
+}

@@ -131,6 +131,22 @@ namespace sw
          * @details precede/succeed 등 의존성 설정이 끝난 후 호출하여 작업이 준비되었음을 알립니다.
          */
         void submit( const TaskHandle& handle );
+        /**
+         * @brief `submit` 과 같되 잠든 워커를 깨우지 않습니다. 여러 태스크를 한 번에 넣을 때 쓴다.
+         * @details 태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 태스크 수만큼 반복된다 — 청크 32 개에
+         *          디스패치가 125 us 였고 그 안의 일은 몇 us 였다. 다 넣은 뒤 `wakeSleepingWorkers` 한 번이다.
+         */
+        void submitWithoutWake( const TaskHandle& handle );
+        /** @brief 잠든 워커를 전부 깨웁니다. 태스크 수를 아는 쪽은 아래 오버로드로 **필요한 수만** 깨운다. */
+        void wakeSleepingWorkers();
+        /**
+         * @brief 잠든 워커 중 @p wantedCount 명만 깨웁니다. `submitWithoutWake` 로 다 넣은 뒤 부른다.
+         * @details 전부 깨우면 워커 열넷이 일감 여섯을 다투는 천둥 무리가 된다 — 렌더 그래프 병렬 기록이
+         *          두 배 느려졌다(150~192 -> 329~380 us). 넣은 태스크 수만큼만 깨우는 것이 가장 빨랐다.
+         */
+        void wakeSleepingWorkers( uint32 wantedCount );
+        /** @brief 지금까지 워커를 깨운 시그널 수. 테스트가 "그룹 하나에 한 번" 을 확인하는 데 쓴다. */
+        uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
 
         /**
          * @brief 현재 시스템에 등록된 모든 비동기 태스크가 완료될 때까지 대기합니다.
@@ -191,17 +207,8 @@ namespace sw
         void workerLoop( uint32 workerId );
         /** @brief 의존성이 충족된 태스크 노드를 적절한 워커 큐 또는 메인 스레드 큐로 라우팅합니다. */
         void scheduleReadyTask( TaskNode* pNode );
-        /**
-         * @brief 준비된 태스크를 큐에 넣되, @p bWakeWorker 가 false 면 잠든 워커를 깨우지 않습니다.
-         * @details 병렬 그룹은 서브태스크를 전부 넣은 뒤 `wakeSleepingWorkers` 로 **한 번만** 깨운다.
-         *          서브태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 청크 수만큼 반복된다 —
-         *          청크 32 개에 디스패치가 125 us 였고, 그 안의 일은 몇 us 였다.
-         */
+        /** @brief 준비된 태스크를 큐에 넣되, @p bWakeWorker 가 false 면 잠든 워커를 깨우지 않습니다 (`submitWithoutWake`). */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
-        /** @brief `submit` 과 같되 워커를 깨우지 않습니다 — 병렬 그룹 전용. */
-        void submitWithoutWake( const TaskHandle& handle );
-        /** @brief 잠든 워커가 있으면 전부 깨웁니다 (시그널 한 번). */
-        void wakeSleepingWorkers();
         /** @brief 단일 태스크 노드의 본문을 실행하고 후속 의존성을 트리거합니다. */
         void executeTask( TaskNode* pNode );
         /** @brief 태스크 완료 시 후속 태스크들의 카운트다운을 감소시키고 완료 조건을 전파합니다. */
@@ -230,6 +237,14 @@ namespace sw
         vector<unique_ptr<WorkerQueue>> _listWorkerQueue;   ///< 각 워커별 독립 대기열
         alignas( 64 ) atomic<uint32> _nextWorkerQueueIndex; ///< 라운드 로빈 작업 분배용 인덱스
         alignas( 64 ) atomic<int32> _sleepingWorkerCount;   ///< 현재 조건 변수 대기(Sleep) 중인 워커 수
+        /**
+         * @brief 일감이 들어올 때마다 오르는 세대. 스핀 중인 워커는 **이것만 읽는다.**
+         * @details 예전 스핀은 매 회 `tryTakeTask` 를 불렀다 — 전역 MPMC 큐의 CAS 와 열네 개 덱의 steal 을
+         *          워커 열다섯이 동시에 두드려, 스핀을 늘리자 게임·렌더 스레드의 코어까지 빼앗았다.
+         *          읽기 전용 한 줄만 보면 경합이 없고, 세대가 바뀌었을 때만 큐를 만진다.
+         */
+        alignas( 64 ) atomic<uint32> _workEpoch;
+        atomic<uint32> _wakeSignalCount; ///< 워커를 깨운 시그널 수 (통계 · 테스트용)
 
         ConcurrentQueue<TaskNode*, 4096> _globalWorkerQueue; ///< 외부 스레드에서 인큐되는 전역 작업 대기열
         ConcurrentQueue<TaskNode*, 1024> _queueMainThread;   ///< 메인 스레드 전용 태스크 큐 (락-프리)
