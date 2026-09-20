@@ -48,7 +48,8 @@
 ```bash
 py -3 -m Scripts cook --all
 # 또는 직접 실행:
-py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only]
+py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only] [--app <App 실행 파일>]
+# 씬 쿠킹은 App --cook-scenes 라 App 이 먼저 서 있어야 한다. CMake 의 CookAssets 타겟은 App 뒤에 돌며 경로를 --app 으로 넘긴다.
 py -3 Scripts/generate/BakeShippingHostDefaults.py <output_header_path>
 py -3 Scripts/generate/GenerateDocs.py [--open]
 ```

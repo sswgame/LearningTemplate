@@ -498,6 +498,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-21 (리눅스 CI 가 씬 쿠킹에서 죽었다 — 쿠킹은 App 뒤로, App 경로는 CMake 가 넘긴다)
+
+CI-Shipping(리눅스)이 `[CookScenes Error] App.exe 를 찾지 못해 씬을 굽지 못했습니다` 로 빌드 실패. 원인 둘이
+겹쳐 있었다.
+
+**1. 의존 방향이 거꾸로였다.** Shipping App 이 `CookAssets` 에 의존했다("팩을 먼저"). 그런데 씬 쿠킹은
+`App --cook-scenes` 라 App 이 있어야 한다 — 깨끗한 트리(CI)에서는 아직 없는 App 을 찾다가 죽고, 로컬에서는
+**다른 프리셋의 낡은 App.exe** 가 우연히 있어 지나갔다(그래서 Windows 에서 한 번도 안 보였다). 이제
+`CookAssets` 가 App 에 의존하고 Shipping 에서는 `all` 에 든다(`EXCLUDE_FROM_ALL FALSE`) — `cmake --build`
+한 번이면 App → 씬 쿠킹 → 팩 순서로 선다. Dev 프리셋은 전과 같이 쿠킹하지 않는다(Cooked 는 Dev 에서
+마운트되지 않는다).
+
+**2. 리눅스에는 `App.exe` 가 없다.** `findAppExecutable` 이 Windows 이름만 알았다 — `AppBinary.py` 의
+주석이 "리눅스에서는 못 찾으니 건너뛴다, 바꾸려면 따로 확인하고" 라고 적어 둔 그것이다. CMake 가
+`--app $<TARGET_FILE:App>` 로 경로를 그대로 넘기고(명시 경로가 있으면 빌드 폴더를 뒤져 낡은 것으로 대신하지
+않는다), 손으로 돌릴 때의 후보에는 확장자 없는 `App` 과 CI/WSL 프리셋 폴더를 더했다.
+
+부수 효과: 팩에 쿠킹된 씬이 **이제야** 들어간다 — CI 의 `game_empty.pack` 은 5 파일 24 KB 였고, 지금은
+10 파일 209 KB(씬 .bin 다섯). 검증: Windows Shipping 빌드에서 쿠킹이 App 뒤(9/10)에 돌고 `Cooked/` 에 씬
+바이너리가 생기며 nogpu·hostgpu 초록. 리눅스는 WSL-Debug 에서 `--target App` 뒤 `--target CookAssets` 로 확인했다 —
+헤드리스 `App --cook-scenes` 가 리눅스에서도 돌아 씬 1개(`editortest`)·팩 3개가 나왔다(exit 0).
+
 ### 2026-09-20 (상용급 구조를 앞당겨 넣었다 — 우선순위 레인 · 병렬 씬 갱신 · 프로파일러 p50/p99)
 
 "향후 상용 엔진급을 기준으로 최선을 골라 적용하라 — 지금 성능이 조금 줄어도 된다" 는 지시로, 앞

@@ -148,15 +148,18 @@ function(sw_configureAppDependencies TARGET_NAME)
 		add_dependencies(${TARGET_NAME} ${mod})
 	endforeach()
 
-	# 2) Shipping 은 게임을 정적으로 링크하고 에셋을 먼저 굽는다.
+	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 굽는다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
+	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
+	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
 	if(SW_SHIPPING_BUILD)
 		if(TARGET SWGame)
 			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
 		endif()
 
 		if(TARGET CookAssets)
-			add_dependencies(${TARGET_NAME} CookAssets)
+			add_dependencies(CookAssets ${TARGET_NAME})
+			set_target_properties(CookAssets PROPERTIES EXCLUDE_FROM_ALL FALSE)
 		endif()
 	endif()
 endfunction()

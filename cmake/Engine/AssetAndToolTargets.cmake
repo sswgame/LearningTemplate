@@ -66,7 +66,11 @@ if(Python3_Interpreter_FOUND)
 	# 이 검사를 걸 이유가 없다.
 	# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
 	# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
-	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked")
+	# 씬 쿠킹은 엔진 안(App --cook-scenes)에서 돈다 — 리플렉션이 필요해서다. 그래서 이 타겟은 App **뒤**에
+	# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 예전에는 Shipping App 이
+	# CookAssets 에 의존했는데(팩을 먼저), 그러면 깨끗한 트리(CI)에서는 아직 없는 App 을 찾다가 죽었다 —
+	# 로컬에서는 다른 프리셋의 낡은 App.exe 가 우연히 있어 지나갔다. 의존 방향은 sw_configureAppDependencies 가 건다.
+	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:App>")
 	if(SW_SHIPPING_BUILD)
 		list(APPEND swCookArgs --verify-shaders)
 	endif()

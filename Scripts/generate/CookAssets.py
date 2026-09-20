@@ -152,7 +152,7 @@ def cookPrefabs(resourceRoot: Path | None = None, cookedDir: Path | None = None)
 # 3. Scene 쿠커
 # ==============================================================================
 
-def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None) -> int:
+def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, appExePath: Path | None = None) -> int:
     """씬을 `App.exe --cook-scenes` 로 굽습니다 (엔티티 상태까지 바이너리로).
 
     **왜 파이썬이 직접 안 쓰는가.** 예전에는 여기서 SCN1 을 직접 썼는데, 그 파일은 엔티티마다
@@ -168,10 +168,12 @@ def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None) 
         # 엔진 쪽은 마운트된 리소스 루트를 스스로 찾는다 — 부분 트리 쿠킹은 아직 받지 않는다.
         print(f"[CookScenes] resourceRoot={resourceRoot} 는 무시됩니다 (엔진이 리소스 루트를 정합니다).")
 
-    appExe = findAppExecutable(projectRoot)
+    appExe = findAppExecutable(projectRoot, appExePath)
     if appExe is None:
-        print("[CookScenes Error] App.exe 를 찾지 못해 씬을 굽지 못했습니다.", file=sys.stderr)
+        print("[CookScenes Error] App 실행 파일을 찾지 못해 씬을 굽지 못했습니다.", file=sys.stderr)
         print("                   씬 쿠킹은 리플렉션이 필요해 엔진 안에서 돕니다 - 먼저 App 을 빌드하세요.", file=sys.stderr)
+        if appExePath is not None:
+            print(f"                   (--app {appExePath} 가 없습니다 - CookAssets 는 App 뒤에 돌아야 합니다.)", file=sys.stderr)
         return 1
 
     print(f"[CookScenes] Running headless scene cook: {appExe} --cook-scenes --cooked-dir={cookedDir}")
@@ -271,11 +273,11 @@ def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path |
     return "dx12"
 
 
-def bakeShadersInternal(projectRoot: Path) -> bool:
-    """App.exe --bake-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
-    appExe = findAppExecutable(projectRoot)
+def bakeShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bool:
+    """App --bake-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
+    appExe = findAppExecutable(projectRoot, appExePath)
     if appExe is None:
-        print("[CookAssets Warning] App.exe not found to run --bake-shaders", file=sys.stderr)
+        print("[CookAssets Warning] App executable not found to run --bake-shaders", file=sys.stderr)
         return False
 
     print(f"[CookAssets] Running headless shader bake: {appExe} --bake-shaders")
@@ -744,12 +746,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target-rhi", type=str, default="", help="타깃 RHI 백엔드 (DirectX12, Vulkan, DirectX11)")
     parser.add_argument("--bake-shaders", action="store_true", help="패킹 전 App.exe --bake-shaders 를 실행하여 셰이더 일괄 사전 빌드")
     parser.add_argument("--verify-shaders", action="store_true", help="구운 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
+    parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 베이크에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
+    appExePath = Path(args.app) if args.app else None
 
     if args.bake_shaders:
-        bakeShadersInternal(projectRoot)
+        bakeShadersInternal(projectRoot, appExePath)
 
     doPrefabs = args.prefabs_only or (not args.scenes_only and not args.packs_only)
     doScenes = args.scenes_only or (not args.prefabs_only and not args.packs_only)
@@ -761,7 +765,7 @@ def main(argv: list[str] | None = None) -> int:
     if doPrefabs:
         exitCode = cookPrefabs(cookedDir=cookedDir) or exitCode
     if doScenes:
-        exitCode = cookScenes(cookedDir=cookedDir) or exitCode
+        exitCode = cookScenes(cookedDir=cookedDir, appExePath=appExePath) or exitCode
     if doPacks:
         stripNames = not args.include_debug_names
         configPath = Path(args.config) if args.config else (projectRoot / kFilePackConfig)
@@ -776,7 +780,7 @@ def main(argv: list[str] | None = None) -> int:
             problems = verifyShaderBakeInternal(projectRoot, targetRhi)
             # 낡았을 뿐이라면 베이커가 있는 자리에서는 스스로 고친다 — 로컬 Shipping 빌드가
             # 셰이더 한 줄 고칠 때마다 손으로 --bake-shaders 를 부르라고 요구할 이유는 없다.
-            if problems and not args.bake_shaders and bakeShadersInternal(projectRoot):
+            if problems and not args.bake_shaders and bakeShadersInternal(projectRoot, appExePath):
                 problems = verifyShaderBakeInternal(projectRoot, targetRhi)
             if problems:
                 print("[CookAssets Error] 구워둔 셰이더가 현재 소스와 맞지 않습니다.", file=sys.stderr)

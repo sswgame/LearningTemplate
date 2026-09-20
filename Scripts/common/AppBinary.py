@@ -19,9 +19,9 @@ Shipping 이 목록에 있는 이유는 쿠커 쪽 주석에 적혀 있었다 �
 
 목록이 둘이면 이렇게 갈라진다. 여기가 그 목록의 한 자리다.
 
-@note 이름이 `App.exe` 로 고정이라 지금은 Windows 에서만 찾아진다. 리눅스에서는 두 호출부 모두
-      "못 찾았으니 건너뛴다" 로 끝난다 — 예전 동작 그대로다. 리눅스에서도 굽게 하려면 후보에
-      확장자 없는 `App` 을 더하면 되지만, 그건 동작을 바꾸는 일이라 따로 확인하고 한다.
+**찾는 순서.** 부르는 쪽이 경로를 알면(CMake 는 `$<TARGET_FILE:App>` 을 안다) 그것을 쓴다 — 빌드 폴더를
+뒤지는 것은 사람이 손으로 스크립트를 돌릴 때의 편의다. 후보에는 리눅스 이름(확장자 없는 `App`)과
+CI 프리셋 폴더도 있다: 리눅스 CI 는 `App.exe` 만 찾다가 씬 쿠킹에서 "App 을 먼저 빌드하세요" 로 죽었다.
 """
 
 from __future__ import annotations
@@ -29,22 +29,41 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-#: 빌드된 App 을 찾는 자리 — 앞에서부터 본다 (저장소 루트 기준).
-kAppExecutableRelPath: tuple[str, ...] = (
-    "build/Ninja-Debug/Bin/App.exe",
-    "build/Ninja-Release/Bin/App.exe",
-    # Shipping App 도 베이커를 링크한다(로그만 안 남는다). 두 번째 Shipping 빌드부터는
-    # 이 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시 굽는다.
-    "build/Ninja-Shipping/Bin/App.exe",
-    "Bin/App.exe",
+#: App 이 있을 수 있는 빌드 폴더 — 앞에서부터 본다 (저장소 루트 기준).
+#: Shipping App 도 베이커·쿠커를 링크한다(로그만 안 남는다). 두 번째 Shipping 빌드부터는
+#: 그 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시 굽는다.
+kAppBuildBinDir: tuple[str, ...] = (
+    "build/Ninja-Debug/Bin",
+    "build/Ninja-Release/Bin",
+    "build/Ninja-Shipping/Bin",
+    "build/CI-Debug/Bin",
+    "build/CI-Shipping/Bin",
+    "build/WSL-Debug/Bin",
+    "build/WSL-Release/Bin",
+    "build/WSL-Shipping/Bin",
+    "Bin",
+)
+
+#: 플랫폼별 실행 파일 이름. 리눅스는 확장자가 없다.
+kAppExecutableName: tuple[str, ...] = ( "App.exe", "App" )
+
+#: 빌드된 App 을 찾는 자리 — 폴더 × 이름, 앞에서부터.
+kAppExecutableRelPath: tuple[str, ...] = tuple(
+    f"{binDir}/{name}" for binDir in kAppBuildBinDir for name in kAppExecutableName
 )
 
 #: 베이커가 셰이더 컴파일 실패를 알릴 때 쓰는 문구. 이 줄이 있으면 종료 코드와 무관하게 실패다.
 kShaderCompileFailureMark = "Failed to compile shader"
 
 
-def findAppExecutable(projectRoot: Path) -> Path | None:
-    """빌드된 App 실행 파일을 찾습니다 (없으면 None — 아직 빌드하지 않았다는 뜻이다)."""
+def findAppExecutable(projectRoot: Path, explicitPath: Path | None = None) -> Path | None:
+    """빌드된 App 실행 파일을 찾습니다 (없으면 None — 아직 빌드하지 않았다는 뜻이다).
+
+    `explicitPath` 가 있으면 그것만 본다 — CMake 가 `--app $<TARGET_FILE:App>` 로 넘기는 자리라,
+    있어야 할 것이 없으면 다른 프리셋의 낡은 App 으로 조용히 대신하지 않는다.
+    """
+    if explicitPath is not None:
+        return explicitPath if explicitPath.is_file() else None
     for relPath in kAppExecutableRelPath:
         candidate = projectRoot / relPath
         if candidate.is_file():
