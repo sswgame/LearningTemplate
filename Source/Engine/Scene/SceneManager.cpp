@@ -229,35 +229,30 @@ namespace sw
         if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
             return;
 
-        // **로드는 프레임 밖에서 한 번 일어난다** — `SW_PROFILE_SCOPE` 의 프레임 집계에는
-        // 안 잡힌다. 그래서 두 단계를 여기서 직접 재서 남긴다. 여기 계측이 하나도 없어서
-        // 씬 로드가 얼마나 걸리는지 아무도 알 수 없었다.
-        CpuTimer loadTimer;
-        loadTimer.resetTimer();
-        loadTimer.startTimer();
-
+        // **로드는 프레임 밖에서 한 번 일어난다** — `SW_PROFILE_SCOPE` 의 프레임 집계에는 안
+        // 잡힌다. 여기 계측이 하나도 없어서 씬 로드가 얼마나 걸리는지 아무도 알 수 없었고,
+        // 실제로 로드 시간의 81% 를 먹는 결함이 그동안 안 보였다(`ComponentDefaults` 가 없는
+        // 파일을 컴포넌트마다 다시 열고 있었다).
+        //
+        // 재는 것은 `ScopeCpuTimer` 가 한다 — 스코프 동안 재고 소멸할 때 남긴다. 로그가
+        // 사라지는 빌드에서는 경과 계산도 함께 사라지므로 따로 가려 줄 것이 없다.
         SceneDocument doc{};
-        const bool    ok = doc.load( pathStr );
-
-        loadTimer.updateTimer();
-        // `[[maybe_unused]]` 인 이유: 아래 `SW_LOG_INFO` 는 Shipping 에서 통째로 사라진다 —
-        // 그러면 이 둘이 "선언했는데 안 쓴다" 가 된다.
-        [[maybe_unused]] const float64 parseMs = static_cast<float64>( loadTimer.getTotalTime() ) * 1000.0;
+        bool          ok = false;
+        {
+            ScopeCpuTimer parseTimer{ "Scene.load.parse" };
+            ok = doc.load( pathStr );
+        }
 
         sw::unique_ptr<Scene> newScene;
         if ( ok )
         {
+            ScopeCpuTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name );
             newScene->setSourcePath( pathStr );
             newScene->instantiate( doc );
         }
 
-        loadTimer.updateTimer();
-        [[maybe_unused]] const float64 totalMs = static_cast<float64>( loadTimer.getTotalTime() ) * 1000.0;
-        SW_LOG_INFO( "[SceneLoad] '%#' 엔티티 %#개 — 파싱 %# ms + 생성 %# ms = %# ms",
-                     pathStr, static_cast<uint32>( doc._listEntityNode.size() ),
-                     static_cast<int32>( parseMs ), static_cast<int32>( totalMs - parseMs ),
-                     static_cast<int32>( totalMs ) );
+        SW_LOG_INFO( "[SceneLoad] '%#' 엔티티 %#개", pathStr, static_cast<uint32>( doc._listEntityNode.size() ) );
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
         {
