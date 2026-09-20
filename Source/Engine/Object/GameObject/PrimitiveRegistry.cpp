@@ -82,6 +82,18 @@ namespace sw
     void PrimitiveRegistry::clearDirty()
     {
         std::scoped_lock<mutex> lock{ _mutex };
+        clearDirtyLocked();
+    }
+
+    void PrimitiveRegistry::consumeDirty( vector<uint32>& outListSlot )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        outListSlot = _listDirty;
+        clearDirtyLocked();
+    }
+
+    void PrimitiveRegistry::clearDirtyLocked()
+    {
         for ( uint32 slot : _listDirty )
         {
             if ( slot < _listPrimitive.size() && _listPrimitive[slot] != nullptr )

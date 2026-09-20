@@ -630,6 +630,81 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 }
 
 /**
+ * @brief [GpuSceneTest] 많은 물체 중 하나만 움직여도 그 하나가 갱신되고 나머지는 그대로인지 검증
+ *
+ * @details 수집은 이제 **바뀐 프리미티브만** 다시 모은다(등록부의 더티 목록). 예전에는 8000 개 중
+ *          10 개만 움직여도 8000 개를 전부 다시 모았다(수집 244 us — 전부 움직일 때와 같았다).
+ *          고친 뒤 같은 조건에서 1 us 다.
+ *
+ *          **이 최적화가 틀리는 모습은 "움직인 물체가 화면에서 얼어붙는 것"이다** — 더티 표시가
+ *          빠지거나 후보 자리를 잘못 찾으면 그렇게 된다. 컴파일로도, 평균 픽셀로도 안 잡힌다.
+ *          그래서 여기서는 움직인 것과 안 움직인 것을 **둘 다** 단언한다.
+ */
+SW_TEST_CASE( GpuSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
+{
+    sw::Scene scene( "PartialCollectScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( mesh.get() );
+
+    constexpr uint32               kObjectCount = 8;
+    sw::vector<sw::MeshComponent*> listComp;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( ( "Cube" + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        sw::MeshComponent* pComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pComp );
+        pComp->setMesh( mesh );
+        pComp->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 2.0f, 0.0f, 0.0f } );
+        listComp.push_back( pComp );
+    }
+    scene.getObjectManager()->flushSceneTransforms();
+
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, -20.0f };
+
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot first;
+    builder.exportCpuSnapshot( first );
+    SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( first.getInstances().size() ) );
+
+    // 하나만 움직인다 — 나머지 일곱은 더티가 아니라 수집에서 건너뛴다.
+    listComp[5]->setLocalPosition( sw::float3{ 10.0f, 6.0f, 0.0f } );
+    scene.getObjectManager()->flushSceneTransforms();
+    builder.buildFromScene( &scene, cameraPos );
+
+    sw::GpuSceneSnapshot moved;
+    builder.exportCpuSnapshot( moved );
+    SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( moved.getInstances().size() ) );
+
+    // 1. 움직인 것이 실제로 갱신됐어야 한다 — 빠지면 화면에서 얼어붙는다.
+    uint32 movedSlotCount = 0;
+    for ( const sw::GpuInstance& inst : moved.getInstances() )
+    {
+        if ( inst._world.getTranslation()._y > 5.0f )
+            ++movedSlotCount;
+    }
+    SW_EXPECT_EQUAL( 1u, movedSlotCount );
+
+    // 2. 나머지는 그대로여야 한다 — 부분 수집이 엉뚱한 자리를 덮어썼으면 여기서 걸린다.
+    uint32 stillCount = 0;
+    for ( const sw::GpuInstance& inst : moved.getInstances() )
+    {
+        if ( inst._world.getTranslation()._y < 0.001f )
+            ++stillCount;
+    }
+    SW_EXPECT_EQUAL( kObjectCount - 1u, stillCount );
+
+    // 3. 아무것도 안 움직인 프레임은 **같은 배열이 그대로 실려야 한다** — 수집도 발행도 하지 않는다.
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot idle;
+    builder.exportCpuSnapshot( idle );
+    SW_EXPECT_TRUE( idle._pListInstance.get() == moved._pListInstance.get() );
+}
+
+/**
  * @brief [GpuSceneTest] 인스턴스 배열을 발행(공유)한 뒤에도 제자리 갱신이 움직임을 반영하는지 검증
  *
  * @details 인스턴스 배열은 값이 아니라 `shared_ptr` 로 **공유**된다 — RT 는 읽기만 하므로 안 바뀐

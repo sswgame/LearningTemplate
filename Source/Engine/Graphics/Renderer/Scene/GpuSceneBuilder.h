@@ -211,6 +211,24 @@ namespace sw
             }
         };
 
+        /**
+         * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임·비활성·메시 없음) false.
+         * @details **전체 수집과 부분 수집이 같은 이 함수를 쓴다** — 채우는 규칙이 두 곳으로 갈리면
+         *          부분 갱신만 낡은 필드를 남기고, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
+         */
+        bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
+
+        /** @brief 후보 배열에 실리지 않은 프리미티브 표시. */
+        static constexpr uint32 kInvalidCandidateIndex = 0xFFFFFFFFu;
+        /** @brief 이번 프레임에 "바뀌었다"고 표시된 프리미티브의 등록부 인덱스. */
+        vector<uint32> _listDirtyPrimitive;
+        /** @brief 등록부 인덱스 -> 후보 인덱스 (`kInvalidCandidateIndex` = 후보에 안 실림). */
+        vector<uint32> _listPrimitiveToCandidate;
+        /** @brief 마지막 수집이 만든 후보 수 — 부분 수집이 자리 수를 그대로 이어받는다. */
+        size_t _lastCandidateCount{ 0 };
+        /** @brief 부분 수집이 한 프리미티브를 채워 볼 임시 자리 (프레임마다 할당하지 않는다). */
+        DrawCandidate _candidateProbe;
+
         vector<DrawCandidate> _listScratchCandidate;
         /** @brief 마지막으로 반영된 후보 집합. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
         vector<DrawCandidate> _listBuiltCandidate;

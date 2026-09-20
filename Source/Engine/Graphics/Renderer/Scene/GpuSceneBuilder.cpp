@@ -212,6 +212,55 @@ namespace sw
         }
     }
 
+    bool GpuSceneBuilder::fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand )
+    {
+        if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
+            return false;
+        GameObject* pObj = pMeshComp->getOwner();
+        if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
+            return false;
+        Mesh* pMesh = pMeshComp->getRawMesh();
+        if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+            return false;
+
+        const float4x4 world = pMeshComp->getWorldMatrix();
+        cand._world          = world;
+        cand._boundsCenter   = world.getTranslation();
+        cand._boundsRadius   = pMeshComp->getBoundsRadius();
+        cand._spinSeed       = pMeshComp->getGpuSpinSeed();
+        // 소유를 싣는다 — RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼·인스턴스의 소유도
+        // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
+        // 먼저 비교**한다 — 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
+        if ( cand._mesh.get() != pMesh )
+            cand._mesh = pMeshComp->getMesh();
+        if ( cand._instance.get() != pMeshComp->getRawMaterialInstance() )
+            cand._instance = pMeshComp->getMaterialInstance();
+        // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼).
+        Material* pMaterial = pMeshComp->getMaterial();
+        if ( pMaterial == nullptr )
+            pMaterial = pScene->getMaterial();
+        if ( cand._material.get() != pMaterial )
+            cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
+
+        // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
+        // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
+        // 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다.
+        //
+        // 인스턴스만 붙은 메시는 **인스턴스의 부모 머티리얼**이 정본이다(인스턴스는 값만 덮어쓰고
+        // 블렌드 모드는 갖지 않는다). 둘 다 없을 때만 컴포넌트 값을 쓴다 — 머티리얼이 없는
+        // 디버그·픽스처 메시가 그 경우다.
+        // (예전에는 인스턴스를 이 판단 **뒤에** 채워서 이 폴백이 한 번도 걸리지 않았다.)
+        const Material* pBlendSource = cand._material.get();
+        if ( pBlendSource == nullptr && cand._instance != nullptr )
+            pBlendSource = cand._instance->getParent();
+        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
+                                                      : static_cast<uint32>( pMeshComp->getBlendMode() );
+        // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
+        // 나누기·정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
+        cand._permutationHash = permutationHashFor( cand._material.get(), cand._instance.get() );
+        return true;
+    }
+
     void GpuSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
     {
         SW_PROFILE_SCOPE( "GT.GpuScene.build" );
@@ -252,7 +301,8 @@ namespace sw
         if ( bSetSame && bCamSame && bPermSame && primitives.hasDirty() == false )
             return;
 
-        pObjects->getPrimitiveRegistry().clearDirty();
+        _listDirtyPrimitive.clear();
+        pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive );
 
         const vector<MeshComponent*>& listPrimitive = primitives.getAll();
 
@@ -268,61 +318,85 @@ namespace sw
 
         size_t candidateCount = 0;
 
-        // 등록부에는 그릴 수 있는 것만 들어 있다 — 타입 검사가 없다.
+        // **바뀐 것만 다시 모은다.** 집합 세대가 그대로면 등록부의 자리 배치가 그대로이므로, 지난
+        // 프레임 후보를 그대로 두고 더티 프리미티브의 자리만 새로 채우면 된다. 예전에는 8000 개 중
+        // 10 개만 움직여도 8000 개를 전부 다시 모았다(수집 244 us — 전부 움직일 때와 같은 값이었다).
+        //
+        // 조건이 하나라도 어긋나면 **아래 전체 수집으로 떨어진다** — 부분 갱신이 틀리는 것보다 느린
+        // 것이 낫고, 두 경로가 같은 `fillCandidateFromPrimitive` 를 쓰므로 채우는 규칙이 갈리지 않는다.
+        const bool bCanPartial = bSetSame && bPermSame && _listPrimitiveToCandidate.size() == listPrimitive.size() &&
+                                 _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
+                                 _listDirtyPrimitive.size() * 4 < listPrimitive.size();
+        bool bPartialDone      = false;
+        bool bPartialKeysSame  = true;
+        bool bPartialAnyChange = false;
+        if ( bCanPartial )
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
-            for ( MeshComponent* pMeshComp : listPrimitive )
+            // 지난 프레임 후보를 작업 자리로 가져온다 — 이중 버퍼라 scratch 는 두 프레임 전 것이다.
+            _listScratchCandidate.swap( _listBuiltCandidate );
+            bPartialDone = _listScratchCandidate.size() >= _lastCandidateCount;
+
+            for ( uint32 slot : _listDirtyPrimitive )
             {
-                if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-                    continue;
-                GameObject* pObj = pMeshComp->getOwner();
-                if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
-                    continue;
-                Mesh* pMesh = pMeshComp->getRawMesh();
-                if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+                if ( bPartialDone == false )
+                    break;
+                if ( slot >= listPrimitive.size() )
+                {
+                    bPartialDone = false;
+                    break;
+                }
+                const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
+                const bool   bWasIncluded   = ( candidateIndex != kInvalidCandidateIndex );
+
+                _candidateProbe      = DrawCandidate{};
+                const bool bIncluded = fillCandidateFromPrimitive( listPrimitive[slot], pScene, _candidateProbe );
+                // 실릴지 말지가 바뀌면 자리 배치가 달라진다 — 그때는 통째로 다시 모은다.
+                if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
+                {
+                    bPartialDone = false;
+                    break;
+                }
+                if ( bIncluded == false )
                     continue;
 
-                const float4x4 world = pMeshComp->getWorldMatrix();
-                DrawCandidate& cand  = _listScratchCandidate[candidateCount];
-                cand._world          = world;
-                cand._boundsCenter   = world.getTranslation();
-                cand._boundsRadius   = pMeshComp->getBoundsRadius();
-                cand._spinSeed       = pMeshComp->getGpuSpinSeed();
-                // 소유를 싣는다 — RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼·인스턴스의 소유도
-                // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
-                // 먼저 비교**한다 — 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
-                if ( cand._mesh.get() != pMesh )
-                    cand._mesh = pMeshComp->getMesh();
-                if ( cand._instance.get() != pMeshComp->getRawMaterialInstance() )
-                    cand._instance = pMeshComp->getMaterialInstance();
-                // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼).
-                Material* pMaterial = pMeshComp->getMaterial();
-                if ( pMaterial == nullptr )
-                    pMaterial = pScene->getMaterial();
-                if ( cand._material.get() != pMaterial )
-                    cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
+                DrawCandidate& cand = _listScratchCandidate[candidateIndex];
+                if ( cand.hasSameBatchKey( _candidateProbe ) == false )
+                    bPartialKeysSame = false;
+                if ( cand != _candidateProbe )
+                {
+                    bPartialAnyChange = true;
+                    cand              = _candidateProbe;
+                }
+            }
 
-                // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
-                // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
-                // 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다.
-                //
-                // 인스턴스만 붙은 메시는 **인스턴스의 부모 머티리얼**이 정본이다(인스턴스는 값만 덮어쓰고
-                // 블렌드 모드는 갖지 않는다). 둘 다 없을 때만 컴포넌트 값을 쓴다 — 머티리얼이 없는
-                // 디버그·픽스처 메시가 그 경우다.
-                // (예전에는 인스턴스를 이 판단 **뒤에** 채워서 이 폴백이 한 번도 걸리지 않았다.)
-                const Material* pBlendSource = cand._material.get();
-                if ( pBlendSource == nullptr && cand._instance != nullptr )
-                    pBlendSource = cand._instance->getParent();
-                cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
-                                                              : static_cast<uint32>( pMeshComp->getBlendMode() );
-                // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
-                // 나누기·정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
-                cand._permutationHash = permutationHashFor( cand._material.get(), cand._instance.get() );
+            if ( bPartialDone )
+            {
+                candidateCount = _lastCandidateCount;
+            }
+            else
+            {
+                // 되돌린다 — 아래 전체 수집이 scratch 를 처음부터 채운다.
+                _listScratchCandidate.swap( _listBuiltCandidate );
+            }
+        }
+
+        // 등록부에는 그릴 수 있는 것만 들어 있다 — 타입 검사가 없다.
+        if ( bPartialDone == false )
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
+            _listPrimitiveToCandidate.assign( listPrimitive.size(), kInvalidCandidateIndex );
+            for ( size_t primitiveIndex = 0; primitiveIndex < listPrimitive.size(); ++primitiveIndex )
+            {
+                if ( fillCandidateFromPrimitive( listPrimitive[primitiveIndex], pScene, _listScratchCandidate[candidateCount] ) == false )
+                    continue;
+                _listPrimitiveToCandidate[primitiveIndex] = static_cast<uint32>( candidateCount );
                 ++candidateCount;
             }
             // 걸러진 만큼 줄인다 — 남은 원소는 여기서 소유를 놓는다.
             _listScratchCandidate.resize( candidateCount );
         }
+        _lastCandidateCount = candidateCount;
 
         if ( _listScratchCandidate.empty() )
         {
@@ -335,7 +409,10 @@ namespace sw
         bool bContentSame = false;
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.compare" );
-            bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _snapshot.getInstances().empty() == false;
+            // 부분 수집을 했으면 **무엇이 바뀌었는지 이미 안다** — 두 배열을 통째로 비교하지 않는다.
+            // (그리고 그때 `_listBuiltCandidate` 는 두 프레임 전 것이라 비교 대상이 될 수도 없다.)
+            bContentSame = bPartialDone ? ( bPartialAnyChange == false && _snapshot.getInstances().empty() == false )
+                                        : ( bHasCache && _listBuiltCandidate == _listScratchCandidate && _snapshot.getInstances().empty() == false );
         }
 
         if ( bContentSame && bCamSame )
@@ -356,7 +433,8 @@ namespace sw
         bool bBatchKeysSame = false;
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.batchKeys" );
-            bBatchKeysSame = bHasCache && bContentSame == false && hasSameBatchKeysAsBuilt();
+            bBatchKeysSame = bPartialDone ? ( bContentSame == false && bPartialKeysSame )
+                                          : ( bHasCache && bContentSame == false && hasSameBatchKeysAsBuilt() );
         }
 
         if ( bContentSame == false )

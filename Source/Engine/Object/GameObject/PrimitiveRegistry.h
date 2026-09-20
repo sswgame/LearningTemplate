@@ -66,8 +66,17 @@ namespace sw
         bool hasDirty() const;
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
         void clearDirty();
+        /**
+         * @brief 더티 목록을 `outListSlot` 으로 옮기고 표시를 지웁니다 (`clearDirty` + 목록 가져오기).
+         * @details 받는 쪽은 **바뀐 것만 다시 모으려고** 이 목록을 쓴다 — 예전에는 지우기만 하고
+         *          목록을 버려서, 8000 개 중 10 개만 움직여도 8000 개를 전부 다시 모았다.
+         */
+        void consumeDirty( vector<uint32>& outListSlot );
 
     private:
+        /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
+        void clearDirtyLocked();
+
         /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
         vector<MeshComponent*> _listPrimitive;
         /** @brief 렌더 상태가 바뀐 프리미티브의 _listPrimitive 인덱스. */
