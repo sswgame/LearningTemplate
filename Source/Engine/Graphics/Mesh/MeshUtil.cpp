@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -174,23 +176,77 @@ namespace sw
         return mesh;
     }
 
-    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId )
+    /**
+     * @brief 프리미티브 id 를 정본 이름 하나로 모읍니다 (별칭·대소문자 흡수). 모르면 nullptr.
+     * @details 만들기와 공유 캐시가 **같은 판정**을 써야 한다 — 따로 적으면 "Quad" 와 "Rect" 가
+     *          같은 기하인데 캐시에서는 다른 자리를 차지한다(배치도 그만큼 갈린다).
+     */
+    static const utf8* canonicalPrimitiveIdVal( string_view meshId )
     {
         if ( meshId.empty() || StringUtil::equals( meshId, "Cube", true ) )
-            return createUnitCube();
+            return "cube";
         if ( StringUtil::equals( meshId, "Quad", true ) || StringUtil::equals( meshId, "Rect", true ) )
-            return createRectMesh();
+            return "quad";
         if ( StringUtil::equals( meshId, "Plane", true ) || StringUtil::equals( meshId, "Ground", true ) )
-            return createPlane();
+            return "plane";
         if ( StringUtil::equals( meshId, "Sphere", true ) )
-            return createSphere();
+            return "sphere";
         if ( StringUtil::equals( meshId, "Cylinder", true ) )
-            return createCylinder();
+            return "cylinder";
         if ( StringUtil::equals( meshId, "Capsule", true ) )
-            return createCapsule();
+            return "capsule";
         if ( StringUtil::equals( meshId, "Cone", true ) )
-            return createCone();
-        return {};
+            return "cone";
+        return nullptr;
+    }
+
+    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId )
+    {
+        const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
+        if ( pCanonical == nullptr )
+            return {};
+
+        const string_view canonical( pCanonical );
+        if ( canonical == "cube" )
+            return createUnitCube();
+        if ( canonical == "quad" )
+            return createRectMesh();
+        if ( canonical == "plane" )
+            return createPlane();
+        if ( canonical == "sphere" )
+            return createSphere();
+        if ( canonical == "cylinder" )
+            return createCylinder();
+        if ( canonical == "capsule" )
+            return createCapsule();
+        return createCone();
+    }
+
+    shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshId )
+    {
+        const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
+        if ( pCanonical == nullptr )
+            return {};
+
+        // 캐시는 **약한 참조**다 — 소유는 쓰는 쪽에 있고, 마지막 사용자가 놓으면 메시도 같이 사라진다.
+        // 그래서 디바이스가 내려갈 때 이 표가 붙들고 있는 GPU 자원이 없다.
+        static mutex                                        s_mutexPrimitive;
+        static unordered_map<hashed_string, weak_ptr<Mesh>> s_mapPrimitive;
+
+        const hashed_string key( pCanonical );
+
+        std::scoped_lock<mutex> lock{ s_mutexPrimitive };
+        auto                    iter = s_mapPrimitive.find( key );
+        if ( iter != s_mapPrimitive.end() )
+        {
+            if ( shared_ptr<Mesh> pShared = iter->second.lock() )
+                return pShared;
+        }
+
+        shared_ptr<Mesh> pMesh = createPrimitive( meshId );
+        if ( pMesh != nullptr )
+            s_mapPrimitive[key] = pMesh;
+        return pMesh;
     }
 
     shared_ptr<Mesh> MeshUtil::createSphere( uint32 stackCount, uint32 sliceCount )

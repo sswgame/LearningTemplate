@@ -85,7 +85,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.GpuScene.upload" );
 
-        if ( pDevice == nullptr || _snapshot._listInstance.empty() || _snapshot._listAllBatch.empty() )
+        if ( pDevice == nullptr || _snapshot.getInstances().empty() || _snapshot._listAllBatch.empty() )
             return false;
 
         // RT-owned context: pack MaterialInstance overrides and upload meshes in a single pass.
@@ -154,7 +154,7 @@ namespace sw
             return true;
         }
 
-        const uint32 instanceCount = static_cast<uint32>( _snapshot._listInstance.size() );
+        const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
         const uint32 argsCount     = static_cast<uint32>( _snapshot._listAllBatch.size() );
 
         if ( bCpuDirty )
@@ -166,8 +166,8 @@ namespace sw
             {
                 SW_PROFILE_SCOPE( "RT.GpuScene.instanceBuffer" );
                 if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuInstance ) ), instanceCount, kInstanceUsage, true, true,
-                                                _snapshot._listInstance.data() ) )
-                    _instances.upload( pDevice, _snapshot._listInstance.data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
+                                                _snapshot.getInstances().data() ) )
+                    _instances.upload( pDevice, _snapshot.getInstances().data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
             }
 
             // 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해

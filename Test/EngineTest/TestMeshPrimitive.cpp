@@ -35,6 +35,53 @@
 
 // MeshPrimitiveTest — MeshUtil 이 만드는 기본 도형의 위상 · 노멀 · UV. 디바이스 없음(nogpu).
 /**
+ * @brief [MeshPrimitiveTest] 같은 id 는 **같은 메시 객체**를 돌려주고, create 는 매번 새로 만드는지 검증
+ *
+ * @details 배치 키가 메시 **포인터**라, 씬에서 온 컴포넌트가 저마다 제 Mesh 를 만들면 같은 큐브
+ *          8000 개가 배치 8000 개로 갈린다(GPU 정점 버퍼도 8000 벌). 실제로 그랬고, 벤치는 메시
+ *          하나를 나눠 써서 배치가 2 개였기 때문에 **벤치에는 한 번도 안 보였다.**
+ *
+ *          고친 뒤 정적 8002 엔티티 씬에서 배치 8000 -> 6, 프레임 2469 -> 1462 us 였고,
+ *          백엔드 사이 픽셀 불일치도 15~30% -> 0.1~0.8% 로 줄었다(버퍼 8000 벌이 백엔드마다
+ *          다르게 무너지고 있었다).
+ *
+ *          `createPrimitive` 가 매번 새로 만드는 성질도 같이 지킨다 — 벤치가 그것으로 도형 변종을
+ *          갈라 배치를 일부러 나눈다(`BenchScene`).
+ */
+
+SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
+{
+    // 1. 같은 id -> 같은 객체.
+    sw::shared_ptr<sw::Mesh> sharedA = sw::MeshUtil::acquirePrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> sharedB = sw::MeshUtil::acquirePrimitive( "Cube" );
+    SW_ASSERT_TRUE( sharedA != nullptr );
+    SW_EXPECT_TRUE( sharedA.get() == sharedB.get() );
+
+    // 2. 별칭도 같은 자리다 — "Quad" 와 "Rect" 는 같은 기하이므로 배치가 갈리면 안 된다.
+    sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::acquirePrimitive( "Quad" );
+    sw::shared_ptr<sw::Mesh> rect = sw::MeshUtil::acquirePrimitive( "Rect" );
+    SW_ASSERT_TRUE( quad != nullptr );
+    SW_EXPECT_TRUE( quad.get() == rect.get() );
+    SW_EXPECT_TRUE( quad.get() != sharedA.get() );
+
+    // 3. 대소문자가 달라도 같은 자리다.
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "cube" ).get() == sharedA.get() );
+
+    // 4. create 는 **매번 새로** 만든다 — 벤치가 이 성질로 배치를 나눈다.
+    sw::shared_ptr<sw::Mesh> freshA = sw::MeshUtil::createPrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> freshB = sw::MeshUtil::createPrimitive( "Cube" );
+    SW_ASSERT_TRUE( freshA != nullptr && freshB != nullptr );
+    SW_EXPECT_TRUE( freshA.get() != freshB.get() );
+    SW_EXPECT_TRUE( freshA.get() != sharedA.get() );
+
+    // 5. 공유본과 새로 만든 것의 기하는 같아야 한다.
+    SW_EXPECT_EQUAL( freshA->getVertices().size(), sharedA->getVertices().size() );
+
+    // 6. 모르는 id 는 둘 다 nullptr.
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "NoSuchShape" ) == nullptr );
+}
+
+/**
  * @brief [MeshPrimitiveTest] 내장 도형이 닫혀 있고 바깥을 향하는지 (GPU 불필요).
  * @details 감김이 뒤집힌 메시는 **화면에서 그냥 사라진다**(후면 컬링). 그림으로는 "안 그려진다" 로만
  *          보여서 렌더러 버그로 오인하기 쉬우므로, 기하 자체를 CPU 에서 본다. 원점 중심 볼록 도형이면

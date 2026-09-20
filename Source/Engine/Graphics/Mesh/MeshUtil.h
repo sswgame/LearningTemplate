@@ -60,5 +60,21 @@ namespace sw
          *          씬 XML 의 `_meshId` 와 벤치의 도형 섞기가 같은 이름을 쓴다.
          */
         static shared_ptr<Mesh> createPrimitive( string_view meshId );
+
+        /**
+         * @brief 프리미티브 id 로 **공유되는** 내장 도형을 돌려줍니다. 같은 id 면 같은 객체입니다.
+         *
+         * @details **돌려받은 메시를 고치지 마세요** — 씬 전체가 그 하나를 나눠 씁니다. 자기만의
+         *          기하가 필요하면 `createPrimitive`(매번 새로 만든다) 나 개별 `createXxx` 를 쓰세요.
+         *
+         *          씬에서 온 `MeshComponent` 는 전부 이쪽을 쓴다. 예전에는 컴포넌트마다
+         *          `createPrimitive` 로 **자기 Mesh 객체를 따로** 만들었는데, 배치 키가 메시 포인터라
+         *          같은 큐브 8000 개가 배치 8000 개로 갈렸다(벤치는 하나를 나눠 써서 배치 2 개였고,
+         *          그래서 이 결함이 벤치에는 한 번도 안 보였다). GPU 정점 버퍼도 8000 벌이었다.
+         *
+         *          캐시는 `weak_ptr` 이라 아무도 안 쓰면 알아서 사라진다 — 수명을 따로 관리하지
+         *          않으므로 디바이스가 내려갈 때 붙들고 있는 것이 없다.
+         */
+        static shared_ptr<Mesh> acquirePrimitive( string_view meshId );
     };
 } // namespace sw

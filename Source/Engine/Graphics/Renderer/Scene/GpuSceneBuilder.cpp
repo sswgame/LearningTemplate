@@ -84,7 +84,8 @@ namespace sw
 
     void GpuSceneBuilder::clear()
     {
-        _snapshot._listInstance.clear();
+        _listInstanceWork.clear();
+        _snapshot._pListInstance.reset();
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
         _snapshot._listAllBatch.clear();
@@ -334,7 +335,7 @@ namespace sw
         bool bContentSame = false;
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.compare" );
-            bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _snapshot._listInstance.empty() == false;
+            bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _snapshot.getInstances().empty() == false;
         }
 
         if ( bContentSame && bCamSame )
@@ -383,7 +384,7 @@ namespace sw
             const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace();
             if ( bRefreshed == false )
             {
-                _snapshot._listInstance.clear();
+                _listInstanceWork.clear();
                 _snapshot._listOpaqueBatch.clear();
                 _snapshot._listTransparentBatch.clear();
                 _snapshot._listAllBatch.clear();
@@ -400,6 +401,12 @@ namespace sw
         _lastPrimitiveSetGeneration = setGeneration;
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
+
+        // **내용이 바뀐 이 자리에서만 새 배열을 발행한다.** 복사가 아니라 옮기는 것이라 전체 재구축
+        // 경로에는 복사가 아예 없다. 발행 뒤 작업 배열은 비고, 다음에 제자리 갱신이 필요하면 위에서
+        // 되돌려 받는다. 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
+        _snapshot._pListInstance = make_shared<const vector<GpuInstance>>( std::move( _listInstanceWork ) );
+        _listInstanceWork.clear();
     }
 
     void GpuSceneBuilder::requestGpuUploads( GpuUploadQueue& queue ) const
@@ -427,8 +434,14 @@ namespace sw
 
     bool GpuSceneBuilder::refreshInstancesInPlace()
     {
+        // 지난 프레임에 **발행하며 옮겨 줬으면 되돌려 받는다.** 제자리 갱신은 이전 값이 필요하다
+        // (`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로 그대로 쓴다). 이 복사는
+        // 내용이 실제로 바뀌는 프레임에만 일어난다 — 정적 씬은 여기까지 오지 않는다.
+        if ( _listInstanceWork.empty() && _snapshot._pListInstance != nullptr )
+            _listInstanceWork = *_snapshot._pListInstance;
+
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
-        if ( _snapshot._listInstance.empty() || _listInstanceSrcIndex.size() != _snapshot._listInstance.size() )
+        if ( _listInstanceWork.empty() || _listInstanceSrcIndex.size() != _listInstanceWork.size() )
             return false;
         // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 어느 인스턴스가 어느 자리에
         // 앉는지가 달라지므로 매핑을 그대로 쓸 수 없다.
@@ -437,7 +450,7 @@ namespace sw
 
         const uint32 rawCount        = static_cast<uint32>( _listScratchRaw.size() );
         _snapshot._spinInstanceCount = 0;
-        for ( size_t slot = 0; slot < _snapshot._listInstance.size(); ++slot )
+        for ( size_t slot = 0; slot < _listInstanceWork.size(); ++slot )
         {
             const uint32 srcIndex = _listInstanceSrcIndex[slot];
             if ( srcIndex >= rawCount )
@@ -445,7 +458,7 @@ namespace sw
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다 — 바뀐 것은
             // 트랜스폼과 바운드, 그리고 회전 시드뿐이다.
-            GpuInstance&       inst = _snapshot._listInstance[slot];
+            GpuInstance&       inst = _listInstanceWork[slot];
             const GpuInstance& raw  = _listScratchRaw[srcIndex];
             inst._world             = raw._world;
             inst._boundsCenter      = raw._boundsCenter;
@@ -460,7 +473,7 @@ namespace sw
         // 시계가 멈춰, 안 쓰이게 된 머티리얼 원소가 영원히 회수되지 않는다(자리가 조금씩 샌다).
         // 지금 인스턴스가 가리키는 원소는 전부 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
         ++_buildCounter;
-        for ( const GpuInstance& inst : _snapshot._listInstance )
+        for ( const GpuInstance& inst : _listInstanceWork )
         {
             if ( inst._meshBatchIndex >= _snapshot._listAllBatch.size() )
                 continue;
@@ -476,7 +489,7 @@ namespace sw
 
     void GpuSceneBuilder::buildBatches()
     {
-        _snapshot._listInstance.reserve( _listScratchCandidate.size() );
+        _listInstanceWork.reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
         _snapshot._spinInstanceCount = 0;
@@ -501,7 +514,7 @@ namespace sw
                     GpuMeshBatch   batch{};
                     batch._mesh          = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx]._mesh; // 키는 정체성, 소유는 배치 머리 후보의 것
                     batch._vertexCount   = batch._mesh->getVertexCount();
-                    batch._instanceBase  = static_cast<uint32>( _snapshot._listInstance.size() );
+                    batch._instanceBase  = static_cast<uint32>( _listInstanceWork.size() );
                     batch._instanceCount = entryIndex - batchStart;
                     batch._blendMode     = RHIBlendMode::Opaque;
                     // 키의 포인터는 정체성이고 소유는 배치 머리 후보의 것을 빌린다. 합치기가 켜지면 키의 인스턴스는
@@ -537,7 +550,7 @@ namespace sw
                         if ( inst._spinSeed != 0 )
                             ++_snapshot._spinInstanceCount;
                         _listInstanceSrcIndex.push_back( srcIdx );
-                        _snapshot._listInstance.push_back( inst );
+                        _listInstanceWork.push_back( inst );
                     }
                     // 두 목록이 같은 배치를 든다. 앞쪽은 복사해야 하지만 마지막 하나는 옮길 수 있다 —
                     // 배치마다 shared_ptr 셋의 참조 카운트가 한 벌씩 줄어든다.
@@ -577,7 +590,7 @@ namespace sw
                     GpuMeshBatch         batch{};
                     batch._mesh             = cand._mesh;
                     batch._vertexCount      = batch._mesh->getVertexCount();
-                    batch._instanceBase     = static_cast<uint32>( _snapshot._listInstance.size() );
+                    batch._instanceBase     = static_cast<uint32>( _listInstanceWork.size() );
                     batch._instanceCount    = entryIndex - batchStart;
                     batch._blendMode        = RHIBlendMode::Transparent;
                     batch._materialInstance = cand._instance;
@@ -604,7 +617,7 @@ namespace sw
                         if ( inst._spinSeed != 0 )
                             ++_snapshot._spinInstanceCount;
                         _listInstanceSrcIndex.push_back( srcIdx );
-                        _snapshot._listInstance.push_back( inst );
+                        _listInstanceWork.push_back( inst );
                     }
                     _snapshot._listTransparentBatch.push_back( batch );
                     _snapshot._listAllBatch.push_back( std::move( batch ) );

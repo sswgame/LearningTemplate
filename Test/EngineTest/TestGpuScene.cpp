@@ -630,6 +630,63 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 }
 
 /**
+ * @brief [GpuSceneTest] 인스턴스 배열을 발행(공유)한 뒤에도 제자리 갱신이 움직임을 반영하는지 검증
+ *
+ * @details 인스턴스 배열은 값이 아니라 `shared_ptr` 로 **공유**된다 — RT 는 읽기만 하므로 안 바뀐
+ *          프레임에 복사할 이유가 없다(정적 8000 엔티티에서 export 441 -> 3 us). 그래서 빌더는 다 지은
+ *          배열을 **옮겨서** 발행하고, 자기 작업 배열은 비운다.
+ *
+ *          **여기서 지키는 것은 "발행한 배열은 다시 고치지 않는다" 하나다.** 빌더가 이미 넘긴
+ *          배열을 제자리에서 갱신하면, 렌더 스레드가 그 프레임에 읽고 있는 데이터가 밑에서
+ *          바뀐다(스레드를 넘는 데이터 레이스이고, 지난 프레임 패킷도 같이 변질된다). 그래서
+ *          내용이 바뀐 프레임마다 **새 배열을 발행**한다 — 아래 마지막 두 단언이 그것이다.
+ *
+ *          (되돌려 받는 단계가 빠지는 실수는 안전하게 무너진다 — 제자리 갱신이 조건에 안 맞아
+ *          전체 재구축으로 떨어질 뿐, 화면은 맞는다. 그래서 그쪽은 테스트가 잡지 않는다.)
+ */
+SW_TEST_CASE( GpuSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
+{
+    sw::Scene scene( "MoveAfterPublishScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( mesh.get() );
+
+    sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Mover" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMeshComp );
+    pMeshComp->setMesh( mesh );
+    pMeshComp->setLocalPosition( sw::float3{ 1.0f, 0.0f, 0.0f } );
+    scene.getObjectManager()->flushSceneTransforms();
+
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, -5.0f };
+
+    // 1 프레임: 전체 빌드 -> 발행. 여기서 작업 배열이 비워진다.
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot first;
+    builder.exportCpuSnapshot( first );
+    SW_ASSERT_TRUE( first.getInstances().empty() == false );
+    const float32 firstX = first.getInstances()[0]._world.getTranslation()._x;
+    SW_EXPECT_NEAR_EQUAL( 1.0f, firstX, 0.001f );
+
+    // 2 프레임: 물체만 움직인다 — 배치 구성은 그대로라 제자리 갱신 경로를 탄다.
+    pMeshComp->setLocalPosition( sw::float3{ 7.0f, 0.0f, 0.0f } );
+    scene.getObjectManager()->flushSceneTransforms();
+    builder.buildFromScene( &scene, cameraPos );
+
+    sw::GpuSceneSnapshot second;
+    builder.exportCpuSnapshot( second );
+    SW_ASSERT_TRUE( second.getInstances().empty() == false );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, second.getInstances()[0]._world.getTranslation()._x, 0.001f );
+
+    // 발행본은 서로 다른 배열이어야 한다 — 같은 것을 고쳐 보내면 RT 가 이미 든 스냅샷이 바뀐다.
+    SW_EXPECT_TRUE( first._pListInstance.get() != second._pListInstance.get() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, first.getInstances()[0]._world.getTranslation()._x, 0.001f );
+}
+
+/**
  * @brief [GpuSceneTest] CPU 스냅샷이 **퍼뮤테이션 표까지** 건너오는지 검증.
  * @details 배치의 `_shaderPermutation` 은 `GpuScene::getShaderPermutations()` 의 **인덱스**다. 표를
  *          함께 보내지 않으면 받는 쪽에서 `findShaderPermutation` 이 늘 nullptr 을 돌려주고, 배치는

@@ -36,7 +36,8 @@ namespace sw
     {
         if ( _mesh != nullptr )
             return;
-        _mesh = MeshUtil::createPrimitive( _meshId );
+        // **공유되는** 프리미티브를 받는다 — 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        _mesh = MeshUtil::acquirePrimitive( _meshId );
         markRenderStateDirty();
     }
 

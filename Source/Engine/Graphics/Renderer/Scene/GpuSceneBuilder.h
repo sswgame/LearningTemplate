@@ -71,7 +71,7 @@ namespace sw
         void setMergeBatchesAcrossMaterials( bool bMerge );
 
         /** @brief 인스턴스 목록을 반환합니다. */
-        const vector<GpuInstance>& getInstances() const { return _snapshot._listInstance; }
+        const vector<GpuInstance>& getInstances() const { return _snapshot.getInstances(); }
         /** @brief 불투명 배치를 반환합니다. */
         const vector<GpuMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */
@@ -122,7 +122,7 @@ namespace sw
         /**
          * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
          * @details 배치 키가 그대로고 투명 정렬 순서도 그대로일 때만 쓸 수 있다. 그 두 조건이 맞으면
-         *          `_snapshot._listInstance` 의 자리 배치와 각 원소의 `_meshBatchIndex`/`_materialIndex` 가 그대로라,
+         *          `getInstances()` 의 자리 배치와 각 원소의 `_meshBatchIndex`/`_materialIndex` 가 그대로라,
          *          바뀐 것은 트랜스폼과 바운드뿐이다.
          * @return 갱신했으면 true, 조건이 안 맞아 전체 재구축이 필요하면 false.
          */
@@ -246,7 +246,15 @@ namespace sw
         vector<SortEntry> _listScratchOpaqueEntry;
         vector<uint32>    _listScratchTransparentIdx;
         /**
-         * @brief `_snapshot._listInstance[i]` 가 어느 후보에서 왔는지 (buildBatches 가 채운다).
+         * @brief 인스턴스를 짓는 **작업 배열**. 스냅샷에는 다 지은 뒤 `shared_ptr` 로 발행한다.
+         * @details 발행은 옮기기라서 그 뒤 이것은 비어 있다. 제자리 갱신(`refreshInstancesInPlace`)이
+         *          이전 값을 필요로 할 때만 발행본에서 되돌려 받는다 — 그래서 내용이 그대로인
+         *          프레임에는 인스턴스 배열이 **한 번도 복사되지 않는다.**
+         */
+        vector<GpuInstance> _listInstanceWork;
+
+        /**
+         * @brief `getInstances()[i]` 가 어느 후보에서 왔는지 (buildBatches 가 채운다).
          * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
          *          값만 **제자리에서** 갱신하면 된다 — 언리얼 GPUScene 이 프리미티브가 움직였을 때
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 자리다.

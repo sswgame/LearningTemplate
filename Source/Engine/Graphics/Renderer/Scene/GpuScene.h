@@ -118,7 +118,7 @@ namespace sw
         void releaseGpu( IRHIDevice* pDevice );
 
         /** @brief 인스턴스 목록을 반환합니다. */
-        const vector<GpuInstance>& getInstances() const { return _snapshot._listInstance; }
+        const vector<GpuInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
          * @brief GPU 회전을 요청한(시드가 0 이 아닌) 인스턴스 수.
          * @details 0 이면 애니메이션 디스패치를 통째로 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도 매 프레임

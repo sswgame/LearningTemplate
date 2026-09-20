@@ -206,16 +206,34 @@ namespace sw
      */
     struct GpuSceneSnapshot
     {
-        vector<GpuInstance>      _listInstance;
-        vector<GpuMeshBatch>     _listOpaqueBatch;
-        vector<GpuMeshBatch>     _listTransparentBatch;
-        vector<GpuMeshBatch>     _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
-        vector<GpuMaterialGroup> _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
+        /**
+         * @brief 인스턴스 배열 — **값이 아니라 공유한다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없다.
+         *
+         * @details 예전에는 값이었고 `exportCpuSnapshot` 이 매 프레임 통째로 복사했다. 아무것도 움직이지
+         *          않는 정적 씬에서도 인스턴스당 55 ns 가 들었고(엔티티 8000 개면 441 us), 그때 그것이
+         *          **게임 스레드의 유일한 실제 작업**이었다(build 0 · flushTransforms 0 · update 0).
+         *
+         *          배치·머티리얼 목록은 그대로 값이다 — **RT 가 GPU 핸들을 거기에 덧칠하므로**
+         *          공유하면 안 된다(`GpuMeshBatch::_firstVertex` · `_materialCb` 주석 참고). 대신 개수가
+         *          적어 복사가 싸다. 큰 것만 공유하고 작은 것은 복사하는 것이 이 타입의 규칙이다.
+         */
+        shared_ptr<const vector<GpuInstance>> _pListInstance;
+        vector<GpuMeshBatch>                  _listOpaqueBatch;
+        vector<GpuMeshBatch>                  _listTransparentBatch;
+        vector<GpuMeshBatch>                  _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
+        vector<GpuMaterialGroup>              _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
         /// @brief 퍼뮤테이션 목록 — 배치의 `_shaderPermutation` 이 가리킨다. 빌드마다 비우지 않는다(RT 가 지난 스냅샷을 읽는다).
         vector<GpuShaderPermutation> _listShaderPermutation;
         /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
         uint32 _spinInstanceCount{ 0 };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는가. RT 는 0 이면 인스턴스 재업로드를 생략한다.
         uint8 _bCpuDirty{ SW_TRUE };
+
+        /** @brief 인스턴스 배열. 아직 발행 전이면 빈 배열을 돌려준다. */
+        const vector<GpuInstance>& getInstances() const
+        {
+            static const vector<GpuInstance> s_listEmpty{};
+            return ( _pListInstance != nullptr ) ? *_pListInstance : s_listEmpty;
+        }
     };
 } // namespace sw
