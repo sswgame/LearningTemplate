@@ -1,19 +1,18 @@
 <!--
-	후처리(블룸·외곽선·톤맵)를 **Present 한 패스**로 합친 포워드 파이프라인.
+	후처리를 **패스마다 따로** 두는 형태. 지금 기본(forwardpipeline.xml)은 이것을 Present 한 패스로
+	합쳐 쓴다 — 중간 타깃 왕복 둘이 사라져 GPU 프레임이 그만큼 싸다.
 
-	왜 합쳤나: 전체화면 패스의 비용은 픽셀당이고(해상도를 1/4 로 줄이면 비용도 1/4), 그 대부분이
-	계산이 아니라 **중간 타깃에 쓰고 다시 읽는 왕복**이다 — 720p 왕복 하나가 약 57 us 다.
-	합치기 전에는 SceneColor -> BloomColor -> OutlineColor -> 백버퍼로 세 번 왕복했다.
-
-	조립은 그대로다: 무엇을 적용할지는 아래 `_listPermutation` 한 줄씩이고, 효과 자체는 각각
-	`postbloom.hlsli` · `postoutline.hlsli` 의 함수다. 패스 단위로 나눠 쓰고 싶으면
-	`forwardpipelinestaged.xml` 이 그 형태 그대로 있다(같은 그림을 내는지 테스트가 대조한다).
+	이 파일을 남겨 두는 이유는 둘이다.
+	  1) 합친 판이 **같은 그림**을 내는지 재는 기준이다 (RenderPassGpuTest.FusedPostChainMatchesStaged).
+	  2) 효과를 패스 단위로 끼우고 빼는 조립이 여전히 가능하다는 증거다 — 합치기가 그 길을 막지 않았다.
 -->
-<RenderPipelineDesc _name="ForwardPipeline" _shadingModel="Forward">
+<RenderPipelineDesc _name="ForwardPipelineStaged" _shadingModel="Forward">
 	<_listAttachment>
 		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="BloomColor" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="OutlineColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"
@@ -74,9 +73,9 @@
 				<item>SW_TRANSPARENT=1</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Present"
-		                     _type="Present"
-		                     _shaderPath="engine/shaders/postchain.hlsl"
+		<RenderGraphPassDesc _name="PostBloom"
+		                     _type="Bloom"
+		                     _shaderPath="engine/shaders/postbloom.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
@@ -85,16 +84,46 @@
 		                     _bEnableBlend="false">
 			<_listInput>
 				<item>SceneColor</item>
+			</_listInput>
+			<_listOutput>
+				<item>BloomColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Outline"
+		                     _type="Outline"
+		                     _shaderPath="common/shaders/postoutline.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>BloomColor</item>
 				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>OutlineColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Present"
+		                     _type="Present"
+		                     _shaderPath="engine/shaders/fullscreenblit.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>OutlineColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>Swapchain</item>
 			</_listOutput>
-			<_listPermutation>
-				<item>SW_POST_BLOOM=1</item>
-				<item>SW_POST_OUTLINE=1</item>
-				<item>SW_POST_TONEMAP=1</item>
-			</_listPermutation>
+			<_listPermutation />
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>

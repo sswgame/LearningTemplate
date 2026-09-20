@@ -397,9 +397,12 @@ namespace sw
         }
         else if ( passType == RenderPassType::Present )
         {
-            const string           srcName   = resolvePresentSource();
-            const RHITextureHandle src       = srcName.empty() ? 0 : findTransient( srcName );
-            const RHITextureHandle dstTarget = _outputRenderTarget;
+            const string           srcName = resolvePresentSource();
+            const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
+            // 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고 끝에 복사한다 — 백버퍼는 핸들이 없어
+            // 읽을 수 없고, 후처리가 Present 안에서 끝나면 그 결과를 볼 길이 그것뿐이다.
+            const bool             bCapture  = ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
+            const RHITextureHandle dstTarget = bCapture ? _presentCapture : _outputRenderTarget;
             // PSO 는 대상의 실제 포맷으로 고른다 — 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
             // GameView RT 는 텍스처가 기록한 포맷. 렌더타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
             const RHIFormat              targetFormat = ( dstTarget == 0 ) ? _pDevice->getBackBufferFormat()
@@ -408,6 +411,10 @@ namespace sw
             if ( src != 0 && psoBlit != 0 )
             {
                 registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
+                // 선언한 입력을 **전부** 건다. Present 가 후처리 체인을 겸하면 깊이(외곽선)·AO 가 필요하고,
+                // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
+                if ( pPassDesc != nullptr )
+                    registerDeclaredInputs( ctx, *pPassDesc );
                 RHIRenderPassBeginInfo beginInfo{};
                 beginInfo._bBindColor        = SW_TRUE;
                 beginInfo._arrColorTarget[0] = dstTarget;
@@ -418,9 +425,15 @@ namespace sw
                 ctx._pCmd->beginRenderPass( beginInfo );
                 drawFullscreen( ctx, psoBlit, passCb );
                 ctx._pCmd->endRenderPass();
+                if ( bCapture )
+                    ctx._pCmd->blitTexture( dstTarget, 0 );
             }
             else if ( src != 0 )
+            {
                 ctx._pCmd->blitTexture( src, dstTarget );
+                if ( bCapture )
+                    ctx._pCmd->blitTexture( dstTarget, 0 );
+            }
             else
             {
                 RHIRenderPassBeginInfo beginInfo{};

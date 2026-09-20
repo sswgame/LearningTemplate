@@ -264,6 +264,11 @@ namespace sw
         if ( packet._bValid == 0 )
             return false;
 
+        // 스크린샷 실행에서만 Present 결과를 텍스처로 받아 둔다 — 전체화면 복사 한 번이 더 붙는다.
+        // **프레임마다 맞춘다**: bind() 시점에는 커맨드라인이 아직 전역 변수에 붙기 전일 수 있다.
+        if ( _pFrameRenderer != nullptr )
+            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false );
+
         // 렌더 스레드 전체. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
         //
         // **무엇을 기다리는지는 아래 세 스코프가 답한다** — `RT.BeginFrame`(GPU 백프레셔) ·
@@ -386,12 +391,21 @@ namespace sw
                 _bScreenshotTaken = SW_TRUE;
                 // 기본값은 **Present 패스가 받는 첨부**다 — 곧 화면에 나간 그림. 예전엔 `"SceneColor"`
                 // 리터럴이라 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍혔다.
-                string_view attachment = string_view{ gv_screenshotAttachment };
-                if ( attachment.empty() )
-                    attachment = _pFrameRenderer->getPresentedAttachmentName();
-                if ( attachment.empty() )
-                    attachment = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-                _pFrameRenderer->dumpTransientToPpm( attachment, gv_screenshot );
+                const string_view attachment{ gv_screenshotAttachment };
+                if ( attachment.empty() == false )
+                {
+                    // 중간 단계를 보고 싶다고 이름을 찍어 준 경우 — 그 첨부를 그대로 덤프한다.
+                    _pFrameRenderer->dumpTransientToPpm( attachment, gv_screenshot );
+                }
+                else if ( _pFrameRenderer->dumpPresentCaptureToPpm( gv_screenshot ) == false )
+                {
+                    // 캡처가 없으면(오프스크린 출력 등) 예전 방식으로 — Present 가 **읽는** 첨부.
+                    // 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
+                    string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
+                    if ( fallback.empty() )
+                        fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
+                    _pFrameRenderer->dumpTransientToPpm( fallback, gv_screenshot );
+                }
             }
         }
 

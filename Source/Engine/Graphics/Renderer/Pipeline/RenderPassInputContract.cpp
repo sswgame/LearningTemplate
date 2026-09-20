@@ -32,14 +32,16 @@ namespace sw
 
         /// 풀스크린 패스 타입의 계약. 여기 없는 타입은 메시 패스다.
         constexpr RenderPassInputContract s_arrContract[] = {
-            {RenderPassType::Lighting, { RenderPassInputRole::GBufferAlbedo, RenderPassInputRole::GBufferNormal, RenderPassInputRole::SceneDepth }, 3,        { RenderPassInputRole::ShadowMap }, 1},
-            {    RenderPassType::SSAO,                                     { RenderPassInputRole::GBufferNormal, RenderPassInputRole::SceneDepth }, 2,                                        {}, 0},
-            {   RenderPassType::Bloom,                                                                        { RenderPassInputRole::SourceColor }, 1, { RenderPassInputRole::AmbientOcclusion }, 1},
-            { RenderPassType::Outline,                                       { RenderPassInputRole::SourceColor, RenderPassInputRole::SceneDepth }, 2,                                        {}, 0},
-            {     RenderPassType::TAA,                                                                        { RenderPassInputRole::SourceColor }, 1,                                        {}, 0},
-            { RenderPassType::Tonemap,                                                                        { RenderPassInputRole::SourceColor }, 1,                                        {}, 0},
+            {RenderPassType::Lighting, { RenderPassInputRole::GBufferAlbedo, RenderPassInputRole::GBufferNormal, RenderPassInputRole::SceneDepth }, 3,                                                                           { RenderPassInputRole::ShadowMap }, 1},
+            {    RenderPassType::SSAO,                                     { RenderPassInputRole::GBufferNormal, RenderPassInputRole::SceneDepth }, 2,                                                                                                           {}, 0},
+            {   RenderPassType::Bloom,                                                                        { RenderPassInputRole::SourceColor }, 1,                                                                    { RenderPassInputRole::AmbientOcclusion }, 1},
+            { RenderPassType::Outline,                                       { RenderPassInputRole::SourceColor, RenderPassInputRole::SceneDepth }, 2,                                                                                                           {}, 0},
+            {     RenderPassType::TAA,                                                                        { RenderPassInputRole::SourceColor }, 1,                                                                                                           {}, 0},
+            { RenderPassType::Tonemap,                                                                        { RenderPassInputRole::SourceColor }, 1,                                                                                                           {}, 0},
             // Present 는 선언 입력이 없으면 "가장 나중 컬러" 후보 사슬로 폴백한다(resolvePresentSource) — 그래서 선택이다.
-            { RenderPassType::Present,                                                                                                          {}, 0,      { RenderPassInputRole::SourceColor }, 1},
+            // 깊이·AO 도 선택으로 받는다: Present 가 후처리 체인(postchain.hlsl)을 겸할 수 있기 때문이다.
+            // 전체화면 패스는 중간 타깃 왕복이 계산보다 비싸서, 마지막 패스 하나로 합치는 것이 가장 싸다.
+            { RenderPassType::Present,                                                                                                          {}, 0, { RenderPassInputRole::SourceColor, RenderPassInputRole::SceneDepth, RenderPassInputRole::AmbientOcclusion }, 3},
         };
     } // namespace
 

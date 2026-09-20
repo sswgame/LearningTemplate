@@ -84,6 +84,8 @@ namespace sw
         , _outputRenderTarget{ 0 }
         , _taaHistory{ 0 }
         , _taaHistorySrv{ kInvalidDescriptorIndex }
+        , _presentCapture{ 0 }
+        , _bPresentCaptureEnabled{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _statusMessage{}
         , _bCallbacksBound{ SW_FALSE }

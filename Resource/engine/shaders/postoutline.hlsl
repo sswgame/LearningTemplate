@@ -1,5 +1,7 @@
 #include "binding.hlsli"
 
+#include "postoutline.hlsli"
+
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -18,17 +20,8 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	// 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 선형 필터는 섞을 것이 없으면서 값만 비싸다.
+	// 본문은 postoutline.hlsli 하나다 — 합친 체인(postchain.hlsl)과 **같은 코드**를 쓴다.
 	float2 texel = g_OutlineParams.yz;
-	float  center;
-	float4 listNeighbor;
-	SampleDepthCross(input.uv, texel, center, listNeighbor);
-
-	// 네 이웃과의 차이 합. **합이라 이웃 순서는 상관없다** — 게더 성분 순서가 백엔드마다 달라도 같은 값이다.
-	float4 diff = abs(listNeighbor - center.xxxx);
-	float  edge = saturate((diff.x + diff.y + diff.z + diff.w) * 4.0f - g_OutlineParams.x);
-	edge *= g_OutlineColor.a;
-
 	float3 color = SampleSourcePoint(input.uv).rgb;
-	return float4(lerp(color, g_OutlineColor.rgb, edge), 1.0f);
+	return float4(SwApplyOutline(input.uv, texel, color), 1.0f);
 }

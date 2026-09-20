@@ -43,6 +43,30 @@ namespace sw
         return outLayout._width != 0 && outLayout._height != 0;
     }
 
+    bool FrameRenderer::readbackPresentCapture( vector<uint8>& outByte, RHITextureMipSpan& outLayout )
+    {
+        if ( _pDevice == nullptr || isPresentCaptureEnabled() == false )
+            return false;
+        if ( _pDevice->getResource()->readbackTexture2D( _presentCapture, 0, outByte, outLayout ) == false )
+        {
+            SW_LOG_ERROR( "readbackPresentCapture: readbackTexture2D 실패." );
+            return false;
+        }
+        return outLayout._width != 0 && outLayout._height != 0;
+    }
+
+    bool FrameRenderer::dumpPresentCaptureToPpm( string_view outFilePath )
+    {
+        if ( outFilePath.empty() )
+            return false;
+
+        vector<uint8>     bytes;
+        RHITextureMipSpan layout{};
+        if ( readbackPresentCapture( bytes, layout ) == false )
+            return false;
+        return writePpm( bytes, layout, constant::kBackBufferFormat, outFilePath );
+    }
+
     bool FrameRenderer::dumpTransientToPpm( string_view attachmentName, string_view outFilePath )
     {
         if ( _pDevice == nullptr || outFilePath.empty() )
@@ -53,10 +77,15 @@ namespace sw
         RHIFormat         format = RHIFormat::R8G8B8A8_UNORM;
         if ( readbackTransient( attachmentName, bytes, layout, format ) == false )
             return false;
+        return writePpm( bytes, layout, format, outFilePath );
+    }
+
+    bool FrameRenderer::writePpm( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath )
+    {
         const uint32 bytesPerPixel = getRhiFormatBytesPerPixel( format );
         if ( bytesPerPixel < 3 )
         {
-            SW_LOG_ERROR( "dumpTransientToPpm: PPM 으로 덤프할 수 없는 포맷입니다 ('%#').", string( attachmentName ).c_str() );
+            SW_LOG_ERROR( "writePpm: PPM 으로 덤프할 수 없는 포맷입니다 (%#).", static_cast<uint32>( format ) );
             return false;
         }
 
@@ -77,7 +106,7 @@ namespace sw
                          reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
         for ( uint32 row = 0; row < layout._height; ++row )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            const uint8* pRow = byte.data() + static_cast<size_t>( row ) * layout._rowBytes;
             for ( uint32 col = 0; col < layout._width; ++col )
             {
                 const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
@@ -98,11 +127,10 @@ namespace sw
 
         if ( FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() ) == false )
         {
-            SW_LOG_ERROR( "dumpTransientToPpm: 파일 쓰기 실패 (%#).", string( outFilePath ).c_str() );
+            SW_LOG_ERROR( "writePpm: 파일 쓰기 실패 (%#).", string( outFilePath ).c_str() );
             return false;
         }
-        SW_LOG_INFO( "Screenshot: '%#' %#×%# -> %#", string( attachmentName ).c_str(), layout._width, layout._height,
-                     string( outFilePath ).c_str() );
+        SW_LOG_INFO( "Screenshot: %#×%# -> %#", layout._width, layout._height, string( outFilePath ).c_str() );
         return true;
     }
 } // namespace sw

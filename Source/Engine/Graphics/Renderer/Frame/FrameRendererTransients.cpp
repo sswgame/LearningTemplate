@@ -86,6 +86,7 @@ namespace sw
         }
 
         ensureTaaHistory();
+        ensurePresentCapture();
         publishRenderTargets();
     }
 
@@ -125,6 +126,39 @@ namespace sw
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
 
+    void FrameRenderer::setPresentCaptureEnabled( bool bEnabled )
+    {
+        _bPresentCaptureEnabled = bEnabled ? SW_TRUE : SW_FALSE;
+        if ( bEnabled == false )
+        {
+            if ( _presentCapture != 0 && _pDevice != nullptr )
+            {
+                _pDevice->getResource()->destroyTexture( _presentCapture );
+                _presentCapture = 0;
+            }
+            return;
+        }
+        // **여기서 만들어야 한다.** 트랜지언트 할당은 크기가 그대로면 통째로 건너뛰므로, 켜는
+        // 시점이 그 뒤면(커맨드라인은 프레임이 돌기 시작한 뒤에야 반영된다) 영영 안 만들어진다.
+        ensurePresentCapture();
+    }
+
+    void FrameRenderer::ensurePresentCapture()
+    {
+        if ( _pDevice == nullptr || _bPresentCaptureEnabled == SW_FALSE || _presentCapture != 0 )
+            return;
+
+        // 포맷은 **계약값**이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
+        // 늘 같은 포맷이라 PPM 으로 푸는 쪽이 한 가지만 알면 된다. Present PSO 변종에도 이 포맷이 있다.
+        RHITextureDesc captureDesc{};
+        captureDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
+        captureDesc._height            = _transientPool.getHeight() != 0 ? _transientPool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
+        captureDesc._format            = constant::kBackBufferFormat;
+        captureDesc._bIsRenderTarget   = SW_TRUE;
+        captureDesc._bIsShaderResource = SW_TRUE;
+        _presentCapture                = _pDevice->getResource()->createTexture2D( captureDesc );
+    }
+
     void FrameRenderer::releaseTransientResources()
     {
         // 목록을 먼저 비운다 — 놓는 도중에 UI 가 죽은 핸들을 집어 가면 안 된다.
@@ -134,8 +168,9 @@ namespace sw
         if ( _pDevice == nullptr )
         {
             _transientPool.forget();
-            _taaHistory    = 0;
-            _taaHistorySrv = kInvalidDescriptorIndex;
+            _taaHistory     = 0;
+            _taaHistorySrv  = kInvalidDescriptorIndex;
+            _presentCapture = 0;
             return;
         }
 
@@ -150,6 +185,12 @@ namespace sw
         {
             _pDevice->getResource()->destroyTexture( _taaHistory );
             _taaHistory = 0;
+        }
+        // 캡처도 트랜지언트와 크기가 같아야 한다 — 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
+        if ( _presentCapture != 0 )
+        {
+            _pDevice->getResource()->destroyTexture( _presentCapture );
+            _presentCapture = 0;
         }
 
         _transientPool.release( _pDevice );

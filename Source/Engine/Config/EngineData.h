@@ -57,6 +57,9 @@ namespace sw
         string _shaderPostOutlineEngine{ "engine/shaders/postoutline.hlsl" };
         PROPERTY()
         string _shaderFullscreenBlit{ "engine/shaders/fullscreenblit.hlsl" };
+        /// @brief 후처리를 한 패스로 합친 셰이더. 무엇을 적용할지는 파이프라인 XML 의 퍼뮤테이션이 정한다.
+        PROPERTY()
+        string _shaderPostChain{ "engine/shaders/postchain.hlsl" };
         PROPERTY()
         string _shaderGpuCull{ "engine/shaders/gpucull.hlsl" };
         PROPERTY()

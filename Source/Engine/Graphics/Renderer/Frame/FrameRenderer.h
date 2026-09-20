@@ -138,6 +138,28 @@ namespace sw
         bool dumpTransientToPpm( string_view attachmentName, string_view outFilePath );
 
         /**
+         * @brief Present 결과를 텍스처로도 받아 둘지 정합니다 (`-gv_screenshot` 실행 전용).
+         * @details 켜면 Present 가 백버퍼 대신 캡처 텍스처에 그리고 그것을 백버퍼로 복사한다 —
+         *          전체화면 복사 한 번이 더 붙으므로 평소에는 꺼 둔다.
+         */
+        void setPresentCaptureEnabled( bool bEnabled );
+        /** @brief 이 렌더러가 Present 결과를 받아 두고 있으면 true. */
+        bool isPresentCaptureEnabled() const { return _bPresentCaptureEnabled != SW_FALSE && _presentCapture != 0; }
+        /**
+         * @brief 받아 둔 Present 결과(= 화면에 나간 그림)를 CPU 로 읽습니다.
+         * @details 포맷은 늘 `constant::kBackBufferFormat` 이다. 테스트가 **최종 화면**을 픽셀로
+         *          비교하는 유일한 길이다 — 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없다.
+         */
+        bool readbackPresentCapture( vector<uint8>& outByte, RHITextureMipSpan& outLayout );
+        /** @brief 받아 둔 Present 결과(= 화면에 나간 그림)를 PPM 으로 씁니다. */
+        bool dumpPresentCaptureToPpm( string_view outFilePath );
+
+    private:
+        /** @brief 읽어 온 바이트를 PPM(P6) 파일로 씁니다 — 트랜지언트 덤프와 Present 캡처 덤프가 같이 쓴다. */
+        static bool writePpm( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
+
+    public:
+        /**
          * @brief 화면에 나간 첨부의 이름 — Present 패스가 입력으로 받는 것입니다. 없으면 빈 문자열.
          * @details 스크린샷 기본값이 `"SceneColor"` 리터럴이라 **디퍼드에서는 한 장도 못 찍었다**
          *          (디퍼드 첨부 목록에 그 이름이 없다 — 읽기 실패 로그만 남고 파일은 안 생긴다).
@@ -289,6 +311,8 @@ namespace sw
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 다 알 수 있다.
          */
         void ensureTaaHistory();
+        /** @brief Present 캡처 텍스처를 한 번만 만듭니다 (켜져 있을 때만). */
+        void ensurePresentCapture();
         /** @brief 일시 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번 바인딩합니다. */
@@ -627,11 +651,19 @@ namespace sw
         RHITextureHandle                     _outputRenderTarget;
         RHITextureHandle                     _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
         RHIDescriptorIndex                   _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
-        FrameRendererStatus                  _status;
-        string                               _statusMessage;
-        uint8                                _bCallbacksBound     : 1;
-        uint8                                _bPassResourcesReady : 1;
-        [[maybe_unused]] uint8               _reservedFlags       : 5;
+        /**
+         * @brief Present 결과를 받아 두는 텍스처 (0 = 안 받음). 스크린샷이 **최종 화면**을 보게 하는 길이다.
+         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없다. 그래서 예전에는 Present 가
+         *          **읽는** 첨부를 찍었다 — 즉 톤맵은 한 번도 찍힌 적이 없었고, 후처리를 Present 로
+         *          합치자 후처리 전체가 스크린샷에서 사라졌다. 받아 두면 둘 다 풀린다.
+         */
+        RHITextureHandle       _presentCapture;
+        uint8                  _bPresentCaptureEnabled; ///< `-gv_screenshot` 실행에서만 켠다 (전체화면 복사 한 번이 더 붙는다).
+        FrameRendererStatus    _status;
+        string                 _statusMessage;
+        uint8                  _bCallbacksBound     : 1;
+        uint8                  _bPassResourcesReady : 1;
+        [[maybe_unused]] uint8 _reservedFlags       : 5;
 
         // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와

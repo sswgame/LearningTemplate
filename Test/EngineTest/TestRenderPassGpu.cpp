@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -3182,4 +3183,167 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the structured buffer overflow test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 후처리를 한 패스로 합쳐도 같은 그림이 나온다
+ * @details 합치기는 **성능 변경이지 룩 변경이 아니어야 한다.** `forwardpipeline.xml` 은 블룸·외곽선·
+ *          톤맵을 Present 한 패스에서 끝내고, `forwardpipelinestaged.xml` 은 예전처럼 패스 셋으로
+ *          나눈다. 같은 씬을 둘로 그려 픽셀을 맞춘다.
+ *
+ *          허용 오차가 1 인 이유: 나눈 판은 중간 타깃(`R8G8B8A8_UNORM`)에 두 번 쓰면서 그때마다
+ *          8비트로 반올림하고, 합친 판은 마지막에 한 번만 반올림한다. 그 차이 말고는 없어야 한다.
+ *
+ *          **최종 화면을 읽으려면 Present 캡처가 필요하다** — 백버퍼는 핸들이 없어 읽을 수 없고,
+ *          트랜지언트를 읽으면 Present 패스가 한 일(합친 판에서는 후처리 전부)이 빠진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    uint32 comparedCount{ 0 };
+
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+
+        // 씬은 한 번만 만든다 — 두 파이프라인이 **같은 입력**을 받아야 비교가 성립한다.
+        sw::Scene scene( "FusedPostChainScene" );
+        bool      bOk = scene.ensureDefaultCameras();
+
+        // 주광을 둔다 — 그림자 패스까지 태워야 두 파이프라인이 같은 일을 하는지 보는 의미가 있다.
+        //
+        // **덮지 못하는 것 하나를 적어 둔다.** `postchain.hlsl` 은 블룸 뒤에 `saturate` 를 한다 —
+        // 나눈 판이 중간 타깃(UNORM8)에 쓰면서 자르던 것을 그대로 재현하려는 것이다. 그런데 이 씬은
+        // 어두워서(RGB 평균 약 26) 블룸 결과가 1 을 넘지 않아 그 자름이 아무 일도 하지 않는다 —
+        // 자름을 빼는 변이를 걸어도 이 테스트는 통과한다. 그쪽은 벤치 씬에서 앱으로 확인했다
+        // (`-gv_benchMeshes=200 -gv_benchAnimate=0`: 자름이 있으면 나눈 판과 최대 차이 1,
+        //  빼면 31). 밝은 머티리얼을 쓰는 씬을 여기 세우면 이 구멍도 닫힌다.
+        if ( bOk )
+        {
+            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            if ( pLightObject != nullptr )
+            {
+                if ( sw::DirectionalLightComponent* pLight = pLightObject->addComponent<sw::DirectionalLightComponent>();
+                     pLight != nullptr )
+                {
+                    pLight->setIntensity( 6.0f );
+                    pLight->setCastShadow( true );
+                }
+            }
+        }
+
+        constexpr uint32         kCubeCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];
+        for ( uint32 index = 0; index < kCubeCount && bOk; ++index )
+        {
+            arrMesh[index] = sw::MeshUtil::createUnitCube();
+            bOk            = arrMesh[index] != nullptr;
+            if ( bOk == false )
+                break;
+
+            const sw::string objectName = sw::string( "Cube" ) + sw::to_string( index );
+            sw::GameObject*  pObject    = scene.getObjectManager()->createGameObject(
+                sw::hashed_string( objectName.c_str(), static_cast<uint32>( objectName.size() ) ) );
+            bOk = pObject != nullptr;
+            if ( bOk == false )
+                break;
+
+            sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+            bOk                      = pMesh != nullptr;
+            if ( bOk == false )
+                break;
+            pMesh->setMesh( arrMesh[index] );
+            // 깊이 불연속이 있어야 외곽선이 생긴다 — 서로 겹치지 않게 벌려 둔다.
+            pMesh->setLocalPosition( sw::float3{ ( static_cast<float32>( index ) - 1.0f ) * 1.5f, 1.0f, 0.0f } );
+        }
+
+        // 파이프라인 하나로 몇 프레임 돌리고 **화면에 나간 그림**을 읽어 온다.
+        auto renderThrough = [&]( const utf8* pPipelinePath, sw::vector<uint8>& outByte, sw::RHITextureMipSpan& outLayout ) -> bool
+        {
+            sw::FrameRenderer renderer;
+            if ( renderer.initialize( device.get(), pPipelinePath ) == false || renderer.isReady() == false )
+                return false;
+            renderer.setPresentCaptureEnabled( true );
+
+            // 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
+            constexpr uint32 kWarmupFrameCount = 3;
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
+            {
+                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                if ( renderer.execute( device.get(), &scene ) == false )
+                {
+                    device->endFrame( false, false );
+                    return false;
+                }
+                device->endFrame( false, false );
+                device->waitIdle();
+            }
+            const bool bRead = renderer.readbackPresentCapture( outByte, outLayout );
+            renderer.shutdown();
+            return bRead;
+        };
+
+        sw::vector<uint8>     listFused;
+        sw::vector<uint8>     listStaged;
+        sw::RHITextureMipSpan layoutFused{};
+        sw::RHITextureMipSpan layoutStaged{};
+        const utf8*           pName = device->getBackendName();
+
+        if ( bOk )
+            bOk = renderThrough( "engine/pipeline/forwardpipeline.xml", listFused, layoutFused );
+        if ( bOk )
+            bOk = renderThrough( "engine/pipeline/forwardpipelinestaged.xml", listStaged, layoutStaged );
+
+        if ( bOk && layoutFused._width == layoutStaged._width && layoutFused._height == layoutStaged._height )
+        {
+            ++comparedCount;
+            const size_t compareCount = ( listFused.size() < listStaged.size() ) ? listFused.size() : listStaged.size();
+            uint32       differCount{ 0 };
+            uint32       maxDelta{ 0 };
+            for ( size_t index = 0; index < compareCount; ++index )
+            {
+                const uint32 delta = ( listFused[index] > listStaged[index] )
+                                       ? static_cast<uint32>( listFused[index] - listStaged[index] )
+                                       : static_cast<uint32>( listStaged[index] - listFused[index] );
+                if ( delta == 0 )
+                    continue;
+                ++differCount;
+                if ( delta > maxDelta )
+                    maxDelta = delta;
+            }
+
+            // 중간 타깃 반올림 말고는 달라질 것이 없다 — 한 칸을 넘으면 합친 셰이더가 다른 계산을 한 것이다.
+            SW_EXPECT_TRUE_MSG( maxDelta <= 1,
+                                ( sw::string( pName ) + ": 합친 후처리가 나눈 것과 다른 값을 낸다 (최대 차이 " +
+                                  sw::to_string( maxDelta ) + ")" )
+                                    .c_str() );
+            // 반올림 차이는 드물게 흩어져야 한다. 절반이 1 씩 어긋나면 그건 반올림이 아니라 밝기 이동이다.
+            const uint32 differPercent = compareCount > 0 ? static_cast<uint32>( differCount * 100u / compareCount ) : 0u;
+            SW_EXPECT_TRUE_MSG( differPercent <= 5,
+                                ( sw::string( pName ) + ": 합친 후처리가 너무 많은 픽셀에서 다르다 (" +
+                                  sw::to_string( differPercent ) + "%)" )
+                                    .c_str() );
+        }
+        else if ( bOk == false )
+            SW_LOG_WARNING( "FusedPostChainMatchesStaged: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+
+        // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 자원을 놓는다.
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseRhi( device.get() );
+        }
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run both pipelines" );
 }
