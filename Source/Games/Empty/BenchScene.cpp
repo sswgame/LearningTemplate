@@ -277,7 +277,10 @@ namespace sw
 
             // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
             // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
-            pMesh->setGpuSpinSeed( index + 1u );
+            // `-gv_benchAnimate=0` 이면 시드를 주지 않는다 — 각도가 벽시계 시간에서 나와 같은 프레임을
+            // 찍어도 그림이 달라지므로, 픽셀 비교 검증에는 멈춘 격자가 필요하다.
+            if ( gv_benchAnimate != 0 )
+                pMesh->setGpuSpinSeed( index + 1u );
             pMesh->setVisible( true );
             _listBenchMesh.push_back( pMesh->getHandle() );
         }
@@ -510,6 +513,11 @@ namespace sw
             return;
 
         updateMaterialChurn( pObjects );
+
+        // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
+        // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다. 실제로 그렇게 재다 틀릴 뻔했다.
+        if ( gv_benchAnimate == 0 )
+            return;
 
         const uint32 count = static_cast<uint32>( _listBenchMesh.size() );
         for ( uint32 index = 0; index < count; ++index )

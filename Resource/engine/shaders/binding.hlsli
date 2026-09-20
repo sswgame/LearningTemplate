@@ -337,6 +337,23 @@ float4 SW_SampleIndex( uint index, float2 uv )
 {
 	return SW_SampleIndexWith( index, SW_SAMPLER_LINEAR_WRAP, uv );
 }
+/**
+ * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
+ * @details 게더는 필터를 하지 않고 텍셀 넷을 그대로 돌려준다 — 값은 바이리니어 샘플 하나와 비슷한데
+ *          텍셀은 넷이다. 그래서 십자 다섯 칸이 샘플 다섯 번이 아니라 게더 두 번이면 된다.
+ * @note 샘플러 3 번은 `SW_SAMPLER_POINT_CLAMP` 다 (bindingslots.hlsli 4 의 표).
+ *       게더는 필터 모드를 안 보지만 **주소 모드는 본다** — 화면 가장자리에서 WRAP 이면 반대편을 읽는다.
+ */
+float4 SW_GatherDepthRed( float2 uv )
+{
+	if ( g_SceneDepthIndex == SW_INVALID_INDEX )
+		return float4( 1, 1, 1, 1 );
+#if defined( __spirv__ )
+	return g_SwBindlessTex2D[NonUniformResourceIndex( g_SceneDepthIndex )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+#else
+	return g_SwBindlessTex2D[NonUniformResourceIndex( g_SceneDepthIndex )].GatherRed( g_SwSampler3, uv );
+#endif
+}
 /** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
 float SW_SampleShadowCmp( uint index, float2 uv, float depth )
 {
@@ -425,6 +442,17 @@ float4 SW_SampleIndex( uint index, float2 uv )
 	if ( index == g_SceneDepthIndex )
 		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
 	return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
+}
+/**
+ * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
+ * @details 에뮬 백엔드는 깊이가 늘 슬롯 3 이다(위 표와 같은 순서) — 인덱스로 되짚을 필요가 없다.
+ *          샘플러는 슬롯에 걸린 것을 그대로 쓴다. 게더는 필터 모드를 보지 않는다.
+ */
+float4 SW_GatherDepthRed( float2 uv )
+{
+	if ( g_SceneDepthIndex == SW_INVALID_INDEX )
+		return float4( 1, 1, 1, 1 );
+	return g_SwSlot3.GatherRed( g_SwSlot3Sampler, uv );
 }
 #if defined( DX11 )
 /** @brief DX11: 텍스처는 슬롯 멀티플렉싱(SW_SampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerId 로 고른다. */
@@ -519,6 +547,32 @@ float4 SampleAlbedo( float2 uv )      { return SW_SampleIndex( g_GBufferAlbedoIn
 float4 SampleNormal( float2 uv )      { return SW_SampleIndex( g_GBufferNormalIndex, uv ); }
 float4 SampleDepth( float2 uv )       { return SW_SampleIndex( g_SceneDepthIndex, uv ); }
 float4 SampleSource( float2 uv )      { return SW_SampleIndex( g_SourceColorIndex, uv ); }
+/**
+ * @brief 화면과 1:1 인 전체화면 패스 전용 — 텍셀 중심에 정확히 떨어지므로 선형 필터가 **할 일이 없다**.
+ * @details 그런데도 값은 공짜가 아니다: 선형 샘플은 텍셀 넷을 읽어 섞고, 깊이 같은 포맷은 그 경로가
+ *          더 비싸다. 배율이 1 이 아닌 패스(블룸의 바이리니어 2탭 같은 것)에는 쓰면 안 된다 —
+ *          거기서는 섞는 것이 목적이다.
+ * @note CLAMP 인 것도 의미가 있다. 화면 가장자리에서 한 텍셀 비낀 샘플이 WRAP 이면 반대편을 읽는다.
+ */
+float4 SampleDepthPoint( float2 uv )  { return SW_SampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv ); }
+float4 SampleSourcePoint( float2 uv ) { return SW_SampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv ); }
+/**
+ * @brief 깊이의 십자 다섯 칸(중심 + 상하좌우 한 텍셀)을 읽습니다 — 게더가 있으면 **두 번**에 끝낸다.
+ * @details 반 텍셀 비낀 두 게더의 2x2 가 십자 다섯 칸을 정확히 덮는다(중심은 둘 다에 들어 있다).
+ *          같은 텍셀을 읽으므로 점 샘플 다섯 번과 **값이 같다** — 근사가 아니다.
+ * @note `outListNeighbor` 의 **순서는 약속하지 않는다.** 게더 성분 순서는 백엔드마다 다를 수 있고,
+ *       쓰는 쪽(외곽선)이 네 이웃의 **합**만 보므로 순서가 결과를 바꾸지 않는다. 방향이 필요한
+ *       계산에는 쓰지 말 것.
+ */
+void SampleDepthCross( float2 uv, float2 texel, out float outCenter, out float4 outListNeighbor )
+{
+	// **반 텍셀이 아니라 1/4 텍셀이다.** 정확히 텍셀 모서리에 찍으면 어느 2x2 를 잡을지가 반올림에
+	// 달려 버려 백엔드·드라이버마다 갈릴 수 있다. 1/4 은 의도한 2x2 안쪽이라 어디서든 같은 넷이다.
+	float4 gatherHi = SW_GatherDepthRed( uv + texel * 0.25f );
+	float4 gatherLo = SW_GatherDepthRed( uv - texel * 0.25f );
+	outCenter       = gatherHi.w;
+	outListNeighbor = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
+}
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 float SampleAmbientOcclusion( float2 uv )
 {

@@ -18,15 +18,17 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
+	// 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 선형 필터는 섞을 것이 없으면서 값만 비싸다.
 	float2 texel = g_OutlineParams.yz;
-	float  d0 = SampleDepth(input.uv).r;
-	float  d1 = SampleDepth(input.uv + float2(texel.x, 0)).r;
-	float  d2 = SampleDepth(input.uv + float2(0, texel.y)).r;
-	float  d3 = SampleDepth(input.uv + float2(-texel.x, 0)).r;
-	float  d4 = SampleDepth(input.uv + float2(0, -texel.y)).r;
-	float  edge = saturate((abs(d0 - d1) + abs(d0 - d2) + abs(d0 - d3) + abs(d0 - d4)) * 4.0f - g_OutlineParams.x);
+	float  center;
+	float4 listNeighbor;
+	SampleDepthCross(input.uv, texel, center, listNeighbor);
+
+	// 네 이웃과의 차이 합. **합이라 이웃 순서는 상관없다** — 게더 성분 순서가 백엔드마다 달라도 같은 값이다.
+	float4 diff = abs(listNeighbor - center.xxxx);
+	float  edge = saturate((diff.x + diff.y + diff.z + diff.w) * 4.0f - g_OutlineParams.x);
 	edge *= g_OutlineColor.a;
 
-	float3 color = SampleSource(input.uv).rgb;
+	float3 color = SampleSourcePoint(input.uv).rgb;
 	return float4(lerp(color, g_OutlineColor.rgb, edge), 1.0f);
 }
