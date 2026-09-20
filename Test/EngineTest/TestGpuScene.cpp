@@ -687,6 +687,78 @@ SW_TEST_CASE( GpuSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
 }
 
 /**
+ * @brief [GpuSceneTest] 물체 하나만 움직이면 그 인스턴스 구간 하나만 더티로 표시되는지 검증
+ *
+ * @details 인스턴스 버퍼는 뭐 하나라도 바뀌면 **전체**를 다시 올리고 있었다 — 8000 개 중 10 개만
+ *          움직여도 800 개를 움직일 때와 같은 100 us 를 썼다. 지금은 빌더가 바뀐 구간만 적어 주고
+ *          받는 쪽이 그 구간들을 **한 번의 호출**로 올린다(1/20/800 개 이동 = 16/18/34 us).
+ *
+ *          여기서 지키는 것은 그 구간 계산이다. 너무 넓게 잡으면 이득이 사라지고, **너무 좁게 잡으면
+ *          움직인 물체가 화면에서 얼어붙는다** — 둘 다 컴파일로는 안 잡힌다.
+ */
+SW_TEST_CASE( GpuSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
+{
+    sw::Scene scene( "DirtyRunScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( mesh.get() );
+
+    sw::vector<sw::MeshComponent*> listComp;
+    for ( uint32 index = 0; index < 4; ++index )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( ( "Cube" + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        sw::MeshComponent* pComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pComp );
+        pComp->setMesh( mesh );
+        pComp->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 2.0f, 0.0f, 0.0f } );
+        listComp.push_back( pComp );
+    }
+    scene.getObjectManager()->flushSceneTransforms();
+
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, -10.0f };
+
+    // 1 프레임: 전체 빌드 — 전부 더티여야 한다.
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot first;
+    builder.exportCpuSnapshot( first );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( first.getInstances().size() ) );
+    SW_EXPECT_TRUE( first._bAllInstancesDirty != SW_FALSE );
+
+    // 2 프레임: 아무것도 안 움직인다 — 빌드가 통째로 건너뛰므로 스냅샷은 지난 것 그대로다.
+    builder.buildFromScene( &scene, cameraPos );
+
+    // 3 프레임: 하나만 움직인다.
+    listComp[2]->setLocalPosition( sw::float3{ 4.0f, 5.0f, 0.0f } );
+    scene.getObjectManager()->flushSceneTransforms();
+    builder.buildFromScene( &scene, cameraPos );
+
+    sw::GpuSceneSnapshot moved;
+    builder.exportCpuSnapshot( moved );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( moved.getInstances().size() ) );
+
+    // 전부가 아니라 **구간 하나**여야 한다.
+    SW_EXPECT_TRUE( moved._bAllInstancesDirty == SW_FALSE );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( moved._listDirtyInstanceRun.size() ) );
+    SW_EXPECT_EQUAL( 1u, moved._listDirtyInstanceRun[0]._count );
+
+    // 그 구간이 실제로 움직인 인스턴스를 가리켜야 한다 — 좁게 잡으면 화면이 언다.
+    const uint32 dirtySlot = moved._listDirtyInstanceRun[0]._start;
+    SW_ASSERT_TRUE( dirtySlot < moved.getInstances().size() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, moved.getInstances()[dirtySlot]._world.getTranslation()._y, 0.001f );
+
+    // 나머지는 그대로다.
+    for ( uint32 slot = 0; slot < moved.getInstances().size(); ++slot )
+    {
+        if ( slot == dirtySlot )
+            continue;
+        SW_EXPECT_NEAR_EQUAL( 0.0f, moved.getInstances()[slot]._world.getTranslation()._y, 0.001f );
+    }
+}
+
+/**
  * @brief [GpuSceneTest] CPU 스냅샷이 **퍼뮤테이션 표까지** 건너오는지 검증.
  * @details 배치의 `_shaderPermutation` 은 `GpuScene::getShaderPermutations()` 의 **인덱스**다. 표를
  *          함께 보내지 않으면 받는 쪽에서 `findShaderPermutation` 이 늘 nullptr 을 돌려주고, 배치는

@@ -186,17 +186,28 @@ namespace sw
         return createBuffer( desc );
     }
 
-    void OpenGLRHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void OpenGLRHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                           const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pData == nullptr || size == 0 )
+        if ( _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 )
             return;
 
         GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo == 0 )
             return;
+
+        // GL 은 제출·배리어가 없어 조각마다 부르는 비용이 거의 없다 — 바인딩만 한 번 하고 돈다.
         ScopedOpenGLContext ctxScope( _pDevice );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );
-        glBufferSubData( GL_SHADER_STORAGE_BUFFER, 0, static_cast<GLsizeiptr>( size ), pData );
+        const uint8* pBase = static_cast<const uint8*>( pBaseSource );
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( region._size == 0 )
+                continue;
+            glBufferSubData( GL_SHADER_STORAGE_BUFFER, static_cast<GLintptr>( region._dstOffset ),
+                             static_cast<GLsizeiptr>( region._size ), pBase + region._srcOffset );
+        }
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
     }
 

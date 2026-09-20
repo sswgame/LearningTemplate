@@ -355,6 +355,19 @@ namespace sw
     };
 
     /**
+     * @struct RHIBufferCopyRegion
+     * @brief 버퍼 부분 갱신의 한 조각 — 원본 블롭 안의 위치와 목적 버퍼 안의 위치, 그리고 크기.
+     * @details 여러 조각을 **한 번의 호출**로 넘기기 위한 것이다. 조각마다 따로 부르면 백엔드가
+     *          스테이징 확보와 큐 제출을 그만큼 되풀이한다 (DX12 에서 호출당 ~3.3 us 였다).
+     */
+    struct RHIBufferCopyRegion
+    {
+        uint32 _srcOffset{ 0 }; ///< 넘긴 원본 포인터 기준 바이트 오프셋
+        uint32 _dstOffset{ 0 }; ///< 목적 버퍼 안의 바이트 오프셋
+        uint32 _size{ 0 };      ///< 옮길 바이트 수
+    };
+
+    /**
      * @struct RHIBufferDesc
      * @brief 범용 버퍼 생성 서술체
      */

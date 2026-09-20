@@ -165,9 +165,41 @@ namespace sw
                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
             {
                 SW_PROFILE_SCOPE( "RT.GpuScene.instanceBuffer" );
+                // 버퍼가 새로 만들어졌는지 봐야 한다 — 새 버퍼에는 아직 아무것도 없으므로 구간만
+                // 올리면 나머지가 쓰레기다. 핸들이 바뀌었으면 다시 만들어진 것이다.
+                const RHIBufferHandle bufferBefore = _instances._buffer;
                 if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuInstance ) ), instanceCount, kInstanceUsage, true, true,
                                                 _snapshot.getInstances().data() ) )
-                    _instances.upload( pDevice, _snapshot.getInstances().data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
+                {
+                    constexpr uint32   kStride    = static_cast<uint32>( sizeof( GpuInstance ) );
+                    const GpuInstance* pSource    = _snapshot.getInstances().data();
+                    const bool         bRecreated = ( _instances._buffer != bufferBefore );
+
+                    if ( bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty() )
+                    {
+                        _instances.upload( pDevice, pSource, instanceCount * kStride );
+                    }
+                    else
+                    {
+                        // **바뀐 구간만, 그리고 한 번의 호출로 올린다.** 구간마다 따로 부르면 백엔드가
+                        // 스테이징 확보와 큐 제출을 그만큼 되풀이한다(DX12 에서 호출당 ~3.3 us).
+                        _listScratchCopyRegion.clear();
+                        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRun.size() );
+                        for ( const GpuInstanceRun& run : _snapshot._listDirtyInstanceRun )
+                        {
+                            if ( run._count == 0 || run._start >= instanceCount )
+                                continue;
+                            const uint32 count = MathUtil::min( run._count, instanceCount - run._start );
+                            _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, count * kStride } );
+                        }
+                        if ( _listScratchCopyRegion.empty() == false )
+                        {
+                            pDevice->getResource()->updateStructuredBufferRegions( _instances._buffer, pSource,
+                                                                                   _listScratchCopyRegion.data(),
+                                                                                   static_cast<uint32>( _listScratchCopyRegion.size() ) );
+                        }
+                    }
+                }
             }
 
             // 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해

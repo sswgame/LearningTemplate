@@ -46,8 +46,8 @@ namespace sw
         bool ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
                              bool bNeedsSrv, bool bNeedsUav, const void* pInitialData );
 
-        /** @brief 앞에서부터 byteSize 만큼 올립니다 (버퍼가 없으면 아무것도 하지 않습니다). */
-        void upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize ) const;
+        /** @brief `byteOffset` 부터 byteSize 만큼 올립니다 (버퍼가 없으면 아무것도 하지 않습니다). */
+        void upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset = 0 ) const;
 
         /** @brief 뷰를 등록 해제하고 버퍼를 지웁니다. 여러 번 불러도 안전합니다. */
         void release( IRHIDevice* pDevice );

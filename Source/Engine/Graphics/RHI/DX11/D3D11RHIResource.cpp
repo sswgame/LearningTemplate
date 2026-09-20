@@ -190,15 +190,39 @@ namespace sw
         return handle;
     }
 
-    void D3D11RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D11RHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                          const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        if ( buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr )
+        if ( buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_deviceContext == nullptr )
             return;
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return;
+
+        const uint8*            pBase = static_cast<const uint8*>( pBaseSource );
         std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
-        _pDevice->_deviceContext->UpdateSubresource( pRes, 0, nullptr, pData, size, 0 );
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( region._size == 0 )
+                continue;
+
+            if ( region._dstOffset == 0 && regionCount == 1 )
+            {
+                _pDevice->_deviceContext->UpdateSubresource( pRes, 0, nullptr, pBase, region._size, 0 );
+                continue;
+            }
+
+            // 부분 갱신은 상자로 준다 — 버퍼는 1차원이므로 x 만 쓰고 y·z 는 1 이다.
+            D3D11_BOX box{};
+            box.left   = region._dstOffset;
+            box.right  = region._dstOffset + region._size;
+            box.top    = 0;
+            box.bottom = 1;
+            box.front  = 0;
+            box.back   = 1;
+            _pDevice->_deviceContext->UpdateSubresource( pRes, 0, &box, pBase + region._srcOffset, region._size, 0 );
+        }
     }
 
     RHIBufferHandle D3D11RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )

@@ -216,6 +216,8 @@ namespace sw
         vector<uint8>                         _listMaterialScratch;
         vector<RHIDrawIndirectCommand>        _listScratchIndirectCmd;
         vector<GpuBatchInfo>                  _listScratchBatchInfo;
+        /// @brief 부분 인스턴스 업로드용 영역 목록 — 프레임마다 다시 채워 쓴다(할당을 되풀이하지 않는다).
+        vector<RHIBufferCopyRegion> _listScratchCopyRegion;
 
         RHIStructuredBufferSlot _instances;
         /**

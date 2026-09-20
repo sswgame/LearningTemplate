@@ -448,6 +448,14 @@ namespace sw
         if ( _listScratchTransparentIdx != _listBuiltTransparentIdx )
             return false;
 
+        // **바뀐 슬롯만 적어 둔다.** 받는 쪽이 그 구간만 GPU 에 올린다 — 예전에는 하나만 움직여도
+        // 인스턴스 버퍼 전체를 다시 올렸다. 구간이 너무 잘게 흩어지면 작은 업로드가 도리어 비싸므로
+        // 상한을 넘기면 전체로 돌린다(그때는 구간 목록이 뜻을 잃는다).
+        _snapshot._listDirtyInstanceRun.clear();
+        _snapshot._bAllInstancesDirty = SW_FALSE;
+        bool   bTooManyRuns           = false;
+        size_t lastDirtySlot          = static_cast<size_t>( -1 );
+
         const uint32 rawCount        = static_cast<uint32>( _listScratchRaw.size() );
         _snapshot._spinInstanceCount = 0;
         for ( size_t slot = 0; slot < _listInstanceWork.size(); ++slot )
@@ -460,13 +468,44 @@ namespace sw
             // 트랜스폼과 바운드, 그리고 회전 시드뿐이다.
             GpuInstance&       inst = _listInstanceWork[slot];
             const GpuInstance& raw  = _listScratchRaw[srcIndex];
-            inst._world             = raw._world;
-            inst._boundsCenter      = raw._boundsCenter;
-            inst._boundsRadius      = raw._boundsRadius;
-            inst._blendMode         = raw._blendMode;
-            inst._spinSeed          = raw._spinSeed;
+
+            // 비교는 **비트 그대로** 한다 — 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를
+            // 영원히 "안 바뀜" 으로 보고 화면에 오차를 누적시킨다(DrawCandidate::operator== 와 같은 이유).
+            const bool bChanged = Memory::compare( &inst._world, &raw._world, sizeof( inst._world ) ) != 0 ||
+                                  Memory::compare( &inst._boundsCenter, &raw._boundsCenter, sizeof( inst._boundsCenter ) ) != 0 ||
+                                  Memory::compare( &inst._boundsRadius, &raw._boundsRadius, sizeof( inst._boundsRadius ) ) != 0 ||
+                                  inst._blendMode != raw._blendMode || inst._spinSeed != raw._spinSeed;
+
+            inst._world        = raw._world;
+            inst._boundsCenter = raw._boundsCenter;
+            inst._boundsRadius = raw._boundsRadius;
+            inst._blendMode    = raw._blendMode;
+            inst._spinSeed     = raw._spinSeed;
             if ( inst._spinSeed != 0 )
                 ++_snapshot._spinInstanceCount;
+
+            if ( bChanged == false || bTooManyRuns )
+                continue;
+
+            if ( lastDirtySlot + 1 == slot && _snapshot._listDirtyInstanceRun.empty() == false )
+            {
+                ++_snapshot._listDirtyInstanceRun.back()._count;
+            }
+            else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+            {
+                bTooManyRuns = true;
+            }
+            else
+            {
+                _snapshot._listDirtyInstanceRun.push_back( GpuInstanceRun{ static_cast<uint32>( slot ), 1 } );
+            }
+            lastDirtySlot = slot;
+        }
+
+        if ( bTooManyRuns )
+        {
+            _snapshot._listDirtyInstanceRun.clear();
+            _snapshot._bAllInstancesDirty = SW_TRUE;
         }
 
         // 배치 구성은 그대로지만 **회수 시계는 돌아야 한다**. 안 그러면 물체가 움직이기만 하는 씬에서
@@ -489,6 +528,9 @@ namespace sw
 
     void GpuSceneBuilder::buildBatches()
     {
+        // 전체 재구축이다 — 구간을 적어 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
+        _snapshot._bAllInstancesDirty = SW_TRUE;
+        _snapshot._listDirtyInstanceRun.clear();
         _listInstanceWork.reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );

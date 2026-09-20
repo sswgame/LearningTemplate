@@ -273,24 +273,66 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void VulkanRHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                           const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         // 예전엔 목적 버퍼를 직접 vkMapMemory 해서 썼다. 링 오프셋 버그(71cd9755)를 걷어낸 뒤에도
         // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 남아 있었다.
         // 지금은 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다 — 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( pRecord == nullptr || pData == nullptr || size == 0 || pRecord->_buffer == VK_NULL_HANDLE ||
-             _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE )
+        if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
+             pRecord->_buffer == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE )
             return;
-        if ( size > pRecord->_size )
-            size = pRecord->_size;
+
+        // **조각을 전부 한 스테이징에 모아 배리어 한 쌍·복사 한 번으로 끝낸다.** 조각마다 부르면
+        // 스테이징 확보와 제출이 그만큼 되풀이된다(DX12 에서 호출당 ~3.3 us 로 재었다).
+        // `vkCmdCopyBuffer` 는 영역 배열을 그대로 받으므로 여기서는 나눌 이유가 아예 없다.
+        constexpr uint32     kCopyAlignment = 4;
+        vector<VkBufferCopy> listRegion;
+        listRegion.reserve( regionCount );
+        uint32 totalSize = 0;
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( region._size == 0 || region._dstOffset >= pRecord->_size )
+                continue;
+            totalSize += MathUtil::align( region._size, kCopyAlignment );
+        }
+        if ( totalSize == 0 )
+            return;
 
         uint64   stagingOffset{ 0 };
         VkBuffer stagingBuffer{ VK_NULL_HANDLE };
-        if ( acquireStructuredUploadStaging( size, stagingOffset, stagingBuffer ) == false )
+        if ( acquireStructuredUploadStaging( totalSize, stagingOffset, stagingBuffer ) == false )
             return;
-        Memory::copy( static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->_currentFrame]._pMapped ) + stagingOffset, pData, size );
+
+        const uint8* pBase  = static_cast<const uint8*>( pBaseSource );
+        uint8* const pStage = static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->_currentFrame]._pMapped );
+        uint64       cursor{ stagingOffset };
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( region._size == 0 || region._dstOffset >= pRecord->_size )
+                continue;
+
+            // 클램프는 **오프셋을 포함해서** 해야 한다 — 앞에서부터 쓸 때만 맞던 식이었다.
+            uint32 copySize = region._size;
+            if ( copySize > pRecord->_size - region._dstOffset )
+                copySize = static_cast<uint32>( pRecord->_size - region._dstOffset );
+
+            Memory::copy( pStage + cursor, pBase + region._srcOffset, copySize );
+
+            VkBufferCopy vkRegion{};
+            vkRegion.srcOffset = cursor;
+            vkRegion.dstOffset = region._dstOffset;
+            vkRegion.size      = copySize;
+            listRegion.push_back( vkRegion );
+
+            cursor += MathUtil::align( region._size, kCopyAlignment );
+        }
+        if ( listRegion.empty() )
+            return;
 
         // 프레임 안이면 프레임 스트림에 기록한다(제출 순서상 이번 프레임의 패스 리스트보다 앞). 프레임 밖
         // (초기 업로드·테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
@@ -337,11 +379,7 @@ namespace sw
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         vkCmdPipelineBarrier( cmd, kConsumerStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr );
 
-        VkBufferCopy region{};
-        region.srcOffset = stagingOffset;
-        region.dstOffset = 0;
-        region.size      = size;
-        vkCmdCopyBuffer( cmd, stagingBuffer, pRecord->_buffer, 1, &region );
+        vkCmdCopyBuffer( cmd, stagingBuffer, pRecord->_buffer, static_cast<uint32_t>( listRegion.size() ), listRegion.data() );
 
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = kConsumerAccess;

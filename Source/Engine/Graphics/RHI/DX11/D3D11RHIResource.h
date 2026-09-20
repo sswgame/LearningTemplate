@@ -22,7 +22,8 @@ namespace sw
         void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
         RHIBufferHandle        createBuffer( const RHIBufferDesc& desc ) override;
-        void                   updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;

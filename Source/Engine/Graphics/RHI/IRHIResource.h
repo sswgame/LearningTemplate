@@ -56,8 +56,32 @@ namespace sw
         /** @brief Structured / Storage 버퍼를 만듭니다. */
         virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
-        /** @brief Structured / Storage 버퍼 데이터를 갱신합니다. */
-        virtual void updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
+        /**
+         * @brief Structured / Storage 버퍼의 **여러 조각**을 한 번에 갱신합니다.
+         * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭.
+         *
+         * @details 오프셋이 필요한 이유는 하나다 — **바뀐 것만 올리기 위해서다.** 인스턴스 버퍼는
+         *          하나만 움직여도 전체를 다시 올리고 있었고, 8000 개 중 10 개만 움직여도 800 개를
+         *          움직일 때와 같은 100 us 를 썼다(`docs/06_Backlog.md` 2026-09-20).
+         *
+         * @warning 크기와 마찬가지로 **범위를 백엔드가 검사해 주지 않는다.** `byteOffset + size` 가
+         *          버퍼를 넘으면 버퍼 밖까지 쓴다 — 부르는 쪽이 지켜야 한다.
+         */
+        virtual void updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                    const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
+
+        /** @brief 한 조각만 갱신합니다 (`updateStructuredBufferRegions` 의 영역 1 개). */
+        void updateStructuredBufferRange( RHIBufferHandle buffer, const void* pData, uint32 size, uint32 byteOffset )
+        {
+            const RHIBufferCopyRegion region{ 0, byteOffset, size };
+            updateStructuredBufferRegions( buffer, pData, &region, 1 );
+        }
+
+        /** @brief Structured / Storage 버퍼를 앞에서부터 갱신합니다 (`updateStructuredBufferRange` 의 오프셋 0). */
+        void updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+        {
+            updateStructuredBufferRange( buffer, pData, size, 0 );
+        }
 
         /** @brief 불변/정적 버텍스 버퍼 (POSITION+COLOR 레이아웃). */
         virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;

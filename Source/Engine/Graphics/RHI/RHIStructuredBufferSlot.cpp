@@ -55,11 +55,11 @@ namespace sw
         return true;
     }
 
-    void RHIStructuredBufferSlot::upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize ) const
+    void RHIStructuredBufferSlot::upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset ) const
     {
         if ( pDevice == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0 )
             return;
-        pDevice->getResource()->updateStructuredBuffer( _buffer, pData, byteSize );
+        pDevice->getResource()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
     }
 
     void RHIStructuredBufferSlot::release( IRHIDevice* pDevice )

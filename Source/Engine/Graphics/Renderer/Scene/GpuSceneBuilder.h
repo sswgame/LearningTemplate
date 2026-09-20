@@ -246,6 +246,18 @@ namespace sw
         vector<SortEntry> _listScratchOpaqueEntry;
         vector<uint32>    _listScratchTransparentIdx;
         /**
+         * @brief 부분 업로드로 나눌 구간 수 상한. 넘으면 전체를 올린다.
+         *
+         * @details 구간들은 **한 번의 호출**로 올라가므로(`updateStructuredBufferRegions`) 비용이 구간
+         *          수에 비례하지 않는다. 그래도 상한을 두는 이유는 두 가지다 — 구간 목록 자체가 스냅샷에
+         *          실려 복사되고, 변경이 배열 전체에 고르게 흩어졌다면 통째로 올리는 것이 단순하고 싸다.
+         *
+         *          (구간마다 따로 부르던 때는 이 값이 성능을 직접 좌우했다: DX12 · 8000 인스턴스에서
+         *          구간 1/2/5/20/64 가 17/34/45/113/209 us 였고 통째로는 ~100 us 였다.)
+         */
+        static constexpr size_t kMaxDirtyInstanceRun = 256;
+
+        /**
          * @brief 인스턴스를 짓는 **작업 배열**. 스냅샷에는 다 지은 뒤 `shared_ptr` 로 발행한다.
          * @details 발행은 옮기기라서 그 뒤 이것은 비어 있다. 제자리 갱신(`refreshInstancesInPlace`)이
          *          이전 값을 필요로 할 때만 발행본에서 되돌려 받는다 — 그래서 내용이 그대로인

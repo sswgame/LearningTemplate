@@ -190,6 +190,13 @@ namespace sw
         uint8                 _bHasLast{ SW_FALSE };
     };
 
+    /** @brief 인스턴스 배열에서 바뀐 구간 `[_start, _start + _count)`. */
+    struct GpuInstanceRun
+    {
+        uint32 _start{ 0 };
+        uint32 _count{ 0 };
+    };
+
     /**
      * @struct GpuSceneSnapshot
      * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**.
@@ -228,6 +235,19 @@ namespace sw
         uint32 _spinInstanceCount{ 0 };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는가. RT 는 0 이면 인스턴스 재업로드를 생략한다.
         uint8 _bCpuDirty{ SW_TRUE };
+        /**
+         * @brief 1 이면 인스턴스 배열 **전체**가 바뀌었다. 0 이면 `_listDirtyInstanceRun` 만 바뀌었다.
+         * @details 전체 재구축은 1, 물체만 움직인 프레임은 0 이다. 버퍼를 새로 만든 프레임도 받는 쪽이
+         *          전체로 취급해야 한다 — 새 버퍼에는 아직 아무것도 없다.
+         */
+        uint8 _bAllInstancesDirty{ SW_TRUE };
+        /**
+         * @brief 바뀐 인스턴스 구간들 (`_bAllInstancesDirty` 가 0 일 때만 뜻이 있다).
+         * @details 인스턴스 버퍼는 하나만 움직여도 **전체**를 다시 올리고 있었다 — 8000 개 중 10 개만
+         *          움직여도 800 개를 움직일 때와 같은 100 us 였다. 구간이 너무 잘게 흩어지면
+         *          작은 업로드가 도리어 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌린다.
+         */
+        vector<GpuInstanceRun> _listDirtyInstanceRun;
 
         /** @brief 인스턴스 배열. 아직 발행 전이면 빈 배열을 돌려준다. */
         const vector<GpuInstance>& getInstances() const

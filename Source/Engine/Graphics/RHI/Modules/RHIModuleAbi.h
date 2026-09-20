@@ -13,7 +13,7 @@ namespace sw
 {
     class IRHIDevice;
 
-    inline constexpr uint32 kRHIModuleAbiVersion = 4;
+    inline constexpr uint32 kRHIModuleAbiVersion = 5;
     /** @brief 불투명 표면 지문. CL/디바이스 ABI가 바뀌면 문자열을 바꿉니다.
      *         v3: IRHICommandList/ICommandReplayTarget 에 bindConstantBuffer/bindStructuredBuffer 추가.
      *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가.
@@ -30,8 +30,10 @@ namespace sw
      *             백엔드(DX11/GL/Vulkan)에서 텍스처 SRV 를 버퍼 해제로 넘기던 오염을 끊는다.
      *         v9: IRHIResource::uploadTexture2D + RHITextureUploadDesc — 처음으로 텍스처에 픽셀을 올리는 길.
      *         v10: readbackTexture2D(동기 읽기) + RHIFormat BC1~BC7 — 업로드 내용을 바이트로 검증할 수 있게.
-     *         v11: IRHIResource::registerBindlessTextureUav + IRHICommandList::prepareTextureForUnorderedAccess — 컴퓨트 RW 텍스처. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v14-2026-09";
+     *         v11: IRHIResource::registerBindlessTextureUav + IRHICommandList::prepareTextureForUnorderedAccess — 컴퓨트 RW 텍스처.
+     *         v15: IRHIResource::updateStructuredBuffer -> updateStructuredBufferRange (목적 버퍼 오프셋 추가).
+     *              바뀐 인스턴스만 올리기 위해서다 — 8000 개 중 10 개만 움직여도 전체를 올리고 있었다. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v15-2026-09";
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
