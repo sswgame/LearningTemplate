@@ -139,6 +139,75 @@ namespace sw
                 }
             }
         };
+
+        /**
+         * @brief 리소스 하나를 찾아 읽습니다 — **순서는 텍스트·바이너리가 같습니다.**
+         * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
+         * @param readFromPack 마운트된 팩에서 읽는 방법(찾았으면 팩 경로를 `outPackPath` 에 담는다).
+         * @details 순서는 넷이다 — (0) OS 절대 경로면 디스크에서 바로, (1) 낱개 파일 우선이 켜져
+         *          있으면 디스크, (2) 마운트된 팩, (3) 낱개 경로를 못 푼 경우의 마지막 폴백.
+         *
+         *          예전에는 이 순서가 `readTextResource` 와 `readBinaryResource` 에 **두 벌**
+         *          적혀 있었다. 한쪽만 고치면 텍스트와 바이너리가 다른 파일을 읽게 된다.
+         *
+         *          그리고 둘 다 못 찾을 때 `getResourcePath` 와 `fileExists` 를 **두 번씩** 했다.
+         *          1단계가 이미 "그 경로에 없다" 를 확인했는데 3단계가 같은 경로를 다시 물었다 —
+         *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 못 푼 경우에만** 의미가 있다.
+         */
+        template <typename DiskReadFn, typename PackReadFn>
+        bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
+                                 const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
+        {
+            if ( relativePath.empty() )
+                return false;
+
+            // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
+            if ( FileUtil::isAbsolutePath( relativePath ) )
+            {
+                if ( FileUtil::fileExists( relativePath ) == false )
+                    return false;
+                if ( pOutAbsPath != nullptr )
+                    *pOutAbsPath = string( relativePath );
+                return readFromDisk( relativePath );
+            }
+
+            ResourcePackManager& packManager = ResourceUtil::getPackManager();
+            const bool           bLooseFirst = packManager.isAllowLooseFiles();
+
+            // 낱개 경로는 **여기서 한 번만** 푼다.
+            string loosePath;
+            if ( bLooseFirst )
+            {
+                loosePath = ResourceUtil::getResourcePath( relativePath );
+                if ( loosePath.empty() == false && FileUtil::fileExists( loosePath ) )
+                {
+                    if ( pOutAbsPath != nullptr )
+                        *pOutAbsPath = loosePath;
+                    return readFromDisk( loosePath );
+                }
+            }
+
+            // 2. VFS 마운트된 팩들에서 O(1) 해시 룩업 및 압축 해제 읽기
+            const string normalizedKey = FileUtil::normalizePath( relativePath );
+            string       mountedPackPath;
+            if ( readFromPack( normalizedKey, mountedPackPath ) )
+            {
+                if ( pOutAbsPath != nullptr )
+                    *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
+                return true;
+            }
+
+            // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
+            //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
+            if ( bLooseFirst && loosePath.empty() && FileUtil::fileExists( relativePath ) )
+            {
+                if ( pOutAbsPath != nullptr )
+                    *pOutAbsPath = string( relativePath );
+                return readFromDisk( relativePath );
+            }
+
+            return false;
+        }
     } // namespace
 } // namespace sw
 
@@ -307,98 +376,22 @@ namespace sw
     bool ResourceUtil::readTextResource( string_view relativePath, string& outText,
                                          string* pOutAbsPath )
     {
-        if ( relativePath.empty() )
-            return false;
-
-        // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
-        if ( FileUtil::isAbsolutePath( relativePath ) )
-        {
-            if ( FileUtil::fileExists( relativePath ) )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = string( relativePath );
-                return FileUtil::readTextFile( relativePath, outText );
-            }
-            return false;
-        }
-
-        const string         normalizedKey = FileUtil::normalizePath( relativePath );
-        ResourcePackManager& packManager   = getPackManager();
-
-        // 1. 낱개 파일 우선 로드가 켜져 있는 경우, 디스크 파일 먼저 확인
-        if ( packManager.isAllowLooseFiles() )
-        {
-            const string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = absPath;
-                return FileUtil::readTextFile( absPath, outText );
-            }
-        }
-
-        // 2. VFS 마운트된 팩들에서 O(1) 해시 룩업 및 압축 해제 읽기
-        string mountedPackPath;
-        if ( packManager.readTextFile( normalizedKey, outText, &mountedPackPath ) )
-        {
-            if ( pOutAbsPath != nullptr )
-                *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
-            return true;
-        }
-
-        // 3. 낱개 파일 우선 로드가 켜져 있는 경우에만 디스크 fallback 읽기
-        if ( packManager.isAllowLooseFiles() )
-        {
-            string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() )
-                absPath = string( relativePath );
-            if ( FileUtil::fileExists( absPath ) )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = absPath;
-                return FileUtil::readTextFile( absPath, outText );
-            }
-        }
-
-        return false;
+        return readResourceCommon(
+            relativePath, pOutAbsPath,
+            [&outText]( string_view absPath )
+        { return FileUtil::readTextFile( absPath, outText ); },
+            [&outText]( string_view key, string& outPackPath )
+        { return getPackManager().readTextFile( key, outText, &outPackPath ); } );
     }
 
     bool ResourceUtil::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
     {
-        if ( relativePath.empty() )
-            return false;
-
-        // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
-        if ( FileUtil::isAbsolutePath( relativePath ) )
-        {
-            if ( FileUtil::fileExists( relativePath ) )
-                return FileUtil::readFile( relativePath, outBytes );
-            return false;
-        }
-
-        const string         normalizedKey = FileUtil::normalizePath( relativePath );
-        ResourcePackManager& packManager   = getPackManager();
-
-        if ( packManager.isAllowLooseFiles() )
-        {
-            const string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
-                return FileUtil::readFile( absPath, outBytes );
-        }
-
-        if ( packManager.readFile( normalizedKey, outBytes ) )
-            return true;
-
-        if ( packManager.isAllowLooseFiles() )
-        {
-            string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() )
-                absPath = string( relativePath );
-            if ( FileUtil::fileExists( absPath ) )
-                return FileUtil::readFile( absPath, outBytes );
-        }
-
-        return false;
+        return readResourceCommon(
+            relativePath, nullptr,
+            [&outBytes]( string_view absPath )
+        { return FileUtil::readFile( absPath, outBytes ); },
+            [&outBytes]( string_view key, string& )
+        { return getPackManager().readFile( key, outBytes ); } );
     }
 
     bool ResourceUtil::hasResource( string_view relativePath )

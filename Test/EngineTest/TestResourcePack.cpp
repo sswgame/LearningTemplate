@@ -491,6 +491,70 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
     sw::FileUtil::removeFile( loosePath );
 }
 
+/**
+ * @brief [ResourcePackTest] 텍스트 읽기와 바이너리 읽기가 **같은 것을 고른다**
+ * @details `readTextResource` 와 `readBinaryResource` 는 찾는 순서가 같아야 한다 —
+ *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 예전에는 그 순서가 **두 벌로 따로** 적혀
+ *          있어서, 한쪽만 고치면 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽게 된다.
+ *          지금은 한 자리(`readResourceCommon`)를 같이 쓴다.
+ * @note **이 테스트가 덮는 것과 아닌 것.** 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게
+ *       되는" 변이다(팩을 건너뛰게 만들면 깨진다). **낱개 파일과 팩이 경쟁할 때의 우선순위는
+ *       못 덮는다** — 같은 상대 키로 디스크와 팩에 서로 다른 내용을 두려면 리소스 루트 안에
+ *       파일을 심어야 하는데, 검색 폴더를 테스트에서 더할 창구가 없다(`initialize()` 가
+ *       리소스 루트에서만 채운다). 그 창구가 생기면 여기에 우선순위 케이스를 붙일 것.
+ */
+SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
+{
+    const sw::GlobalVfsScope vfsScope;
+
+    const sw::string packPath = test::makeTempPath( "same_source.pack" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
+    {
+        sw::FileUtil::removeFile( packPath );
+    } ) );
+
+    constexpr const utf8* kKey     = "config/same_source.txt";
+    constexpr const utf8* kPayload = "PAYLOAD_FROM_PACK";
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                            { kKey, kPayload }
+    } ) );
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+    packManager.unmountAll();
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
+
+    // 낱개 우선을 켠 상태와 끈 상태 **둘 다** 두 함수가 같은 답을 내야 한다.
+    for ( const bool bAllowLoose : { false, true } )
+    {
+        packManager.setAllowLooseFiles( bAllowLoose );
+
+        sw::string textContent;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( kKey, textContent ) );
+
+        sw::vector<uint8> binaryContent;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( kKey, binaryContent ) );
+
+        const sw::string binaryAsText( reinterpret_cast<const utf8*>( binaryContent.data() ), binaryContent.size() );
+        SW_EXPECT_TRUE_MSG( textContent == binaryAsText,
+                            "같은 키인데 텍스트 읽기와 바이너리 읽기가 다른 내용을 냈습니다" );
+        SW_EXPECT_EQUAL( sw::string( kPayload ), textContent );
+    }
+
+    // 없는 키는 둘 다 실패해야 한다 — 폴백 단계도 같은 순서라는 뜻이다.
+    {
+        sw::string        missingText;
+        sw::vector<uint8> missingBytes;
+        const bool        bTextOk   = sw::ResourceUtil::readTextResource( "config/no_such_key.txt", missingText );
+        const bool        bBinaryOk = sw::ResourceUtil::readBinaryResource( "config/no_such_key.txt", missingBytes );
+        SW_EXPECT_TRUE_MSG( bTextOk == bBinaryOk, "없는 키에 대해 두 읽기의 답이 갈렸습니다" );
+        SW_EXPECT_TRUE( bTextOk == false );
+    }
+
+    packManager.setAllowLooseFiles( true );
+    packManager.unmountAll();
+}
+
 // ------------------------------------------------------------------------------
 // Test 5: 동적 우선순위 자동 산출 (Dynamic Priority Auto-Calculation) 고도화 검증
 // ------------------------------------------------------------------------------
