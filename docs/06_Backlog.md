@@ -498,6 +498,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (씬 로드를 더 줄일 수 있나 — 쿠킹된 "바이너리" 씬은 XML 문자열 통이었다)
+
+**코드 변경 없음.** 로드 결함을 고친 뒤 "여기서 더 되나" 를 재서 답한 회차.
+
+고친 뒤 상태(Release · 엔티티 4002 개): **파싱 8.4 ms + 생성 30.2 ms ≈ 39 ms.**
+엔티티당 9.7us 다. 남은 30 ms 를 쪼개 봤다.
+
+**빗나간 가설 하나 — 엔티티당 XML 재파싱.** `SceneDocument::loadXml` 은 씬을 한 번 파싱한 뒤
+엔티티마다 `<GameObject>` 하위 트리를 **다시 문자열로 직렬화**해 `_embeddedXml` 에 담고,
+`instantiate` 가 그 문자열을 **또 파싱**한다. 파싱 → 직렬화 → 파싱이라 크게 보였는데,
+재 보니 **2 ms** 뿐이다(500바이트짜리는 빨리 파싱된다). 구조를 바꿀 값어치가 없다.
+
+**진짜 발견 — 쿠킹된 `.bin` 이 생성 단계를 전혀 줄이지 않는다.**
+`SceneDocument::load` 는 `.bin` 이 있으면 그것을 먼저 쓰고 **Shipping 은 요구**한다. 그런데
+`saveBinary` 는 `_embeddedXml` 을 **문자열 그대로** 싣는다(`arch << entity._embeddedXml`) —
+2.17 MB XML 이 1.47 MB `.bin` 이 될 뿐이고, 로더는 같은 문자열을 같은 방식으로 다시 읽는다.
+
+| | Scene.load.parse | Scene.load.instantiate | 합 |
+|---|---|---|---|
+| `.scene.xml` | 8.4 ms | 30.2 ms | 39 ms |
+| 쿠킹된 `.scene.bin` | **2.2 ms** | **29.1 ms** | 31 ms |
+
+**쿠킹이 줄이는 것은 바깥 파싱뿐이고, 로드의 75% 인 생성 단계는 그대로다.**
+
+**다음에 열 사람에게 — 후보와 그 근거.**
+
+1. **엔티티 상태를 진짜 바이너리로.** `ObjectStateSerializer` 에는 이미
+   `saveToBinaryBuffer`/`loadFromBinaryBuffer` 가 있고 `BinarySerializer` 도 있다. 쿠커가
+   엔티티마다 XML 문자열 대신 그것을 싣게 하면 생성 단계의 리플렉션 텍스트 파싱이 사라진다.
+   **다만 이것은 가설이다** — 바이너리 역직렬화가 실제로 얼마나 빠른지는 안 재 봤다.
+   먼저 `BinarySerializer` vs `XmlSerializer` 로 GameObject 하나를 왕복시켜 재고 시작할 것.
+   포맷 변경이라 쿠커·로더·버전을 같이 건드려야 한다.
+2. **나머지는 얇게 퍼져 있다.** 생성 30 ms 안에서 리플렉션 프로퍼티 읽기 ~12 ms,
+   컴포넌트 생성 ~4 ms, `createGameObject` ~4 ms, 컨텍스트 만들기 ~3 ms,
+   꼬리(`setActive`·`applyLoadedHierarchy`) ~4 ms 다. **단일 지배 항목이 없다** — XML 경로를
+   유지하는 한 큰 덩어리는 안 나온다.
+
+재는 법은 `Scripts/dev/GenerateStressScene.py` 로 씬을 만들고 `Config/Game/GameConfig.json` 의
+`_startupScene` 을 가리킨 뒤 `ScopeCpuTimer` 가 남기는 `Scene.load.*` 두 줄을 보면 된다.
+(만든 씬과 설정 변경은 재고 나서 되돌릴 것 — `Resource/` 는 배포되는 콘텐츠 트리다.)
+
 ### 2026-09-20 (없는 기본값 파일을 컴포넌트마다 다시 열고 있었다 — 씬 로드 255 → 44 ms)
 
 커밋 `TBD`. 로드 경로를 **처음으로** 재서 나온 결함.
