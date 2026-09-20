@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -163,16 +164,25 @@ namespace sw
     {
     public:
         /** @brief 빈 그래프입니다. */
-        RenderGraph() = default;
+        RenderGraph();
+        /** @brief 병렬 기록용 커맨드 리스트를 놓습니다. 디바이스가 살아 있을 때 `releaseCommandLists` 로 먼저 놓아야 한다. */
+        ~RenderGraph();
 
         /** @brief 복사를 금지합니다. */
         RenderGraph( const RenderGraph& ) = delete;
         /** @brief 대입을 금지합니다. */
         RenderGraph& operator=( const RenderGraph& ) = delete;
         /** @brief 이동 생성자입니다. */
-        RenderGraph( RenderGraph&& ) = default;
+        RenderGraph( RenderGraph&& ) noexcept;
         /** @brief 이동 대입입니다. */
-        RenderGraph& operator=( RenderGraph&& ) = default;
+        RenderGraph& operator=( RenderGraph&& ) noexcept;
+
+        /**
+         * @brief 병렬 기록이 노드마다 들고 있는 커맨드 리스트를 놓습니다. 디바이스를 바꾸거나 놓기 **전에** 부른다.
+         * @details 리스트는 프레임을 넘어 재사용된다 — 예전에는 패스마다 프레임마다 새로 만들었다(래퍼 + 백엔드 할당).
+         *          `clear()` 도 이것을 부른다.
+         */
+        void releaseCommandLists();
 
         /**
          * @brief 렌더 그래프에 새 렌더 패스 노드 추가
@@ -281,6 +291,10 @@ namespace sw
         vector<RenderGraphBarrier> _listWaveBarrier;
         /// @brief 배리어를 추리는 동안 쓰는 스크래치: 자원 이름 → `_listWaveBarrier` 인덱스 (웨이브 안 중복 제거).
         unordered_map<hashed_string, size_t> _mapWaveBarrierIndex;
+
+        /** @brief 병렬 기록이 프레임마다 다시 쓰는 것 — 패스 엔트리 목록과 노드별 커맨드 리스트. 완전한 타입은 cpp 에만. */
+        struct ParallelScratch;
+        unique_ptr<ParallelScratch> _pParallelScratch;
         /// @brief compile() 이 계산한 리소스 수명 — 첫/마지막 사용 패스와 읽힘/쓰임 여부.
         vector<RenderGraphResourceLifetime>  _listResourceLifetime;
         unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;

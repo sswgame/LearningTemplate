@@ -42,6 +42,8 @@ namespace sw
         , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
+        , _liveCmdListMutex{}
+        , _listLiveCmd{}
         , _frameSegmentCursor{ 0 }
         , _bFrameAcquireWaitPending{ SW_FALSE }
         , _bMaterialCbSlotWarned{ SW_FALSE }
@@ -258,6 +260,18 @@ namespace sw
             _releaseQueue.flushAll();
             _frameStreamContext.reset();
 
+            // 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임 너머 든다). 여기서 연결을 끊고 쌍을 부순다 —
+            // 안 그러면 그쪽 소멸자가 죽은 디바이스에 반납하려 들고, 풀은 새어 검증 레이어가 잡는다.
+            {
+                std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+                for ( VulkanRHICommandList* pLiveList : _listLiveCmd )
+                {
+                    if ( pLiveList != nullptr )
+                        pLiveList->detachFromDevice();
+                }
+                _listLiveCmd.clear();
+            }
+
             if ( _commandPool )
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );
@@ -354,6 +368,13 @@ namespace sw
             {
                 vkFreeMemory( _device, _bindlessDummyMemory, nullptr );
                 _bindlessDummyMemory = nullptr;
+            }
+
+            // 타임스탬프 쿼리 풀 — 계측을 켠 적이 있으면 있다. 안 부수면 검증 레이어가 종료 때 새는 객체로 잡는다.
+            if ( _timestampPool != VK_NULL_HANDLE )
+            {
+                vkDestroyQueryPool( _device, _timestampPool, nullptr );
+                _timestampPool = VK_NULL_HANDLE;
             }
 
             if ( _defaultSampler )

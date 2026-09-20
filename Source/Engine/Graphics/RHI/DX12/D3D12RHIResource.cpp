@@ -165,7 +165,9 @@ namespace sw
         _pDevice->_fenceValue++;
         if ( _pDevice->waitForFenceValue( fenceToWait ) == false )
             return false;
-        _pDevice->_releaseQueue.tickCompleted( _pDevice->_fence->GetCompletedValue() );
+        const uint64 completedFence = _pDevice->_fence->GetCompletedValue();
+        _pDevice->_releaseQueue.tickCompleted( completedFence );
+        _pDevice->recycleCompletedOnlineBlocks( completedFence );
         return true;
     }
 

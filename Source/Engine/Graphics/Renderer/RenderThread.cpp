@@ -125,7 +125,7 @@ namespace sw
         SW_LOG_TRACE( "Stopped" );
     }
 
-    void RenderThread::submit( RenderFramePacket&& packet )
+    void RenderThread::submit( RenderFramePacket& packet )
     {
         if ( _pDevice == nullptr )
         {
@@ -174,7 +174,8 @@ namespace sw
             if ( _bStop.load( std::memory_order_relaxed ) )
                 return;
 
-            _arrRingBuffer[currentHead] = std::move( packet );
+            // 바꿔치기 — 호출자는 이 자리에 있던 지난 패킷의 저장소를 받아 다음 프레임에 그대로 쓴다.
+            std::swap( _arrRingBuffer[currentHead], packet );
             _head.store( nextHead, std::memory_order_release );
         }
         _cvConsume.notify_one();
@@ -220,8 +221,9 @@ namespace sw
             if ( _bStop.load( std::memory_order_relaxed ) && currentTail == _head.load( std::memory_order_acquire ) )
                 break;
 
-            RenderFramePacket packet = std::move( _arrRingBuffer[currentTail] );
-            executePacket( packet );
+            // 자리에서 그대로 처리한다 — 옮겨 오면 링 자리의 저장소가 비어 GT 가 다음에 다시 할당한다. 생산자는
+            // tail 이 앞으로 갈 때까지 이 자리를 덮어쓰지 않는다.
+            executePacket( _arrRingBuffer[currentTail] );
 
             {
                 std::scoped_lock<mutex> lock{ _mutex };

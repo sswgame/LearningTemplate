@@ -161,8 +161,14 @@ namespace sw
          *          여러 태스크 스레드가 부르므로 잠근다(블록 단위라 드로우마다 걸리지는 않는다).
          */
         uint32 acquireOnlineBlock();
-        /** @brief 기록 상태가 빌린 온라인 블록들을 현재 펜스 뒤에 프리리스트로 돌려보냅니다 (리스트가 닫힐 때). */
+        /**
+         * @brief 기록 상태가 빌린 온라인 블록들을 현재 펜스 뒤에 프리리스트로 돌려보냅니다 (리스트가 닫힐 때).
+         * @details 블록 벡터를 **통째로 옮겨** 묶음에 넣는다 — 예전에는 벡터를 복사해 람다에 잡았고, 그 람다가 SBO 를 넘어
+         *          힙으로 갔다(리스트마다 프레임마다 둘). 상태는 빈 벡터(용량 남음)를 돌려받는다.
+         */
         void releaseOnlineBlocksDeferred( D3D12RecordingState& state );
+        /** @brief 펜스가 지난 묶음의 블록을 프리리스트로 돌려보냅니다. 펜스 완료 값을 읽는 자리에서 부른다. */
+        void recycleCompletedOnlineBlocks( uint64 completedFence );
         /** @brief 오프라인(CPU 전용) 뷰 힙의 index 번째 핸들. */
         D3D12_CPU_DESCRIPTOR_HANDLE offlineDescriptorAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들 (복사 목적지). */
@@ -445,10 +451,18 @@ namespace sw
         mutex                        _liveCmdListMutex;
         vector<D3D12RHICommandList*> _listLiveCmd;
         /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
-        mutex             _onlineBlockMutex;
-        vector<uint32>    _listFreeOnlineBlock;
-        uint8             _bOnlineHeapExhaustedLogged;
-        FrameResourceRing _frameRing;
+        mutex          _onlineBlockMutex;
+        vector<uint32> _listFreeOnlineBlock;
+        /** @brief 펜스를 기다리는 온라인 블록 묶음 — 리스트가 닫힐 때 상태의 블록 벡터를 통째로 옮겨 온다. */
+        struct OnlineBlockRecycleBatch
+        {
+            uint64         _fence{ 0 };
+            vector<uint32> _listBlock;
+        };
+        vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle;
+        vector<vector<uint32>>          _listOnlineRecyclePool; ///< 돌아온 빈 벡터 — 용량을 남긴다
+        uint8                           _bOnlineHeapExhaustedLogged;
+        FrameResourceRing               _frameRing;
 
         /**
          * @brief GPU 타임스탬프 — 링 슬롯마다 `constant::kMaxGpuTimestampSlot` 칸을 쓴다.

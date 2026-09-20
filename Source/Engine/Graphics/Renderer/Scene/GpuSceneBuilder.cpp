@@ -137,9 +137,15 @@ namespace sw
         permutation._shaderPath = pMaterial->getShaderPath();
         permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
         permutation._hash       = hash;
-        _snapshot._listShaderPermutation.push_back( std::move( permutation ) );
 
-        const uint32 index = static_cast<uint32>( _snapshot._listShaderPermutation.size() - 1 );
+        // copy-on-write — 목록은 RT 와 공유하므로 제자리에 더하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
+        shared_ptr<vector<GpuShaderPermutation>> pList = ( _snapshot._pListShaderPermutation != nullptr )
+                                                           ? make_shared<vector<GpuShaderPermutation>>( *_snapshot._pListShaderPermutation )
+                                                           : make_shared<vector<GpuShaderPermutation>>();
+        pList->push_back( std::move( permutation ) );
+        _snapshot._pListShaderPermutation = pList;
+
+        const uint32 index = static_cast<uint32>( pList->size() - 1 );
         _mapPermutationToIndex.emplace( hash, index );
         return index;
     }
@@ -793,9 +799,9 @@ namespace sw
             const uint32 groupIndex = _snapshot._listAllBatch[inst._meshBatchIndex]._materialGroup;
             if ( groupIndex >= _snapshot._listMaterialGroup.size() )
                 continue;
-            GpuMaterialGroup& group = _snapshot._listMaterialGroup[groupIndex];
-            if ( inst._materialIndex < group._listEntryLastSeenBuild.size() )
-                group._listEntryLastSeenBuild[inst._materialIndex] = _buildCounter;
+            MaterialGroupState& state = _listMaterialGroupState[groupIndex];
+            if ( inst._materialIndex < state._listEntryLastSeenBuild.size() )
+                state._listEntryLastSeenBuild[inst._materialIndex] = _buildCounter;
         }
         return true;
     }
@@ -861,8 +867,8 @@ namespace sw
         // 이제 처음 본 (머티리얼, 인스턴스) 쌍에만 자리를 주고, 안 쓰이면 아래 retireUnusedMaterialElements 가
         // 지연 회수한다. 자리를 옮기지 않으므로 인덱스는 안정적이다.
         ++_buildCounter;
-        for ( GpuMaterialGroup& group : _snapshot._listMaterialGroup )
-            group._bHasLast = SW_FALSE;
+        for ( MaterialGroupState& state : _listMaterialGroupState )
+            state._bHasLast = SW_FALSE;
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {
@@ -1005,22 +1011,25 @@ namespace sw
             return;
         const uint64 staleBefore = _buildCounter - constant::kRenderFrameQueueDepth;
 
-        for ( GpuMaterialGroup& group : _snapshot._listMaterialGroup )
+        const size_t groupCount = MathUtil::min( _snapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
+        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
+            GpuMaterialGroup&   group = _snapshot._listMaterialGroup[groupIndex];
+            MaterialGroupState& state = _listMaterialGroupState[groupIndex];
             for ( uint32 index = 0; index < group._listEntry.size(); ++index )
             {
                 if ( group._listEntry[index]._material == nullptr )
                     continue;
-                if ( group._listEntryLastSeenBuild[index] >= staleBefore )
+                if ( index < state._listEntryLastSeenBuild.size() && state._listEntryLastSeenBuild[index] >= staleBefore )
                     continue;
 
                 const GpuMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
-                group._mapEntryToIndex.erase( key );
+                state._mapEntryToIndex.erase( key );
                 // 자리는 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
                 group._listEntry[index] = GpuMaterialElement{};
-                group._listFreeEntry.push_back( index );
-                group._bHasLast = SW_FALSE;
+                state._listFreeEntry.push_back( index );
+                state._bHasLast = SW_FALSE;
             }
         }
     }
@@ -1028,8 +1037,9 @@ namespace sw
     void GpuSceneBuilder::resetMaterialRegistry()
     {
         _snapshot._listMaterialGroup.clear();
+        _listMaterialGroupState.clear();
         _mapShaderPathToGroup.clear();
-        _snapshot._listShaderPermutation.clear();
+        _snapshot._pListShaderPermutation.reset();
         _mapPermutationToIndex.clear();
     }
 
@@ -1045,6 +1055,7 @@ namespace sw
         GpuMaterialGroup group{};
         group._shaderPath = shaderPath;
         _snapshot._listMaterialGroup.push_back( std::move( group ) );
+        _listMaterialGroupState.emplace_back();
         const uint32 groupIndex = static_cast<uint32>( _snapshot._listMaterialGroup.size() - 1 );
         _mapShaderPathToGroup.emplace( shaderPath, groupIndex );
         return groupIndex;
@@ -1054,39 +1065,39 @@ namespace sw
     {
         Material* const         pMaterial = material.get();
         MaterialInstance* const pInstance = instance.get();
-        if ( pMaterial == nullptr || groupIndex >= _snapshot._listMaterialGroup.size() )
+        if ( pMaterial == nullptr || groupIndex >= _snapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size() )
             return 0;
         GpuMaterialGroup&           group = _snapshot._listMaterialGroup[groupIndex];
+        MaterialGroupState&         state = _listMaterialGroupState[groupIndex];
         const GpuMaterialElementKey key{ pMaterial, pInstance };
         // 배치 안의 인스턴스는 같은 원소를 연속으로 묻는다 — 포인터 비교 한 번으로 끝낸다.
-        if ( group._bHasLast != SW_FALSE && group._lastKey == key )
-            return group._lastIndex;
-
-        const auto it = group._mapEntryToIndex.find( key );
+        if ( state._bHasLast != SW_FALSE && state._lastKey == key )
+            return state._lastIndex;
+        const auto it = state._mapEntryToIndex.find( key );
         uint32     elementIndex{ 0 };
-        if ( it != group._mapEntryToIndex.end() )
+        if ( it != state._mapEntryToIndex.end() )
         {
             elementIndex = it->second;
         }
-        else if ( group._listFreeEntry.empty() == false )
+        else if ( state._listFreeEntry.empty() == false )
         {
             // 회수된 자리를 재사용한다 — 새 자리를 늘리면 버퍼가 단조 증가한다.
-            elementIndex = group._listFreeEntry.back();
-            group._listFreeEntry.pop_back();
+            elementIndex = state._listFreeEntry.back();
+            state._listFreeEntry.pop_back();
             group._listEntry[elementIndex] = GpuMaterialElement{ material, instance };
-            group._mapEntryToIndex.emplace( key, elementIndex );
+            state._mapEntryToIndex.emplace( key, elementIndex );
         }
         else
         {
             group._listEntry.push_back( GpuMaterialElement{ material, instance } );
-            group._listEntryLastSeenBuild.push_back( 0 );
+            state._listEntryLastSeenBuild.push_back( 0 );
             elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
-            group._mapEntryToIndex.emplace( key, elementIndex );
+            state._mapEntryToIndex.emplace( key, elementIndex );
         }
-        group._listEntryLastSeenBuild[elementIndex] = _buildCounter;
-        group._lastKey                              = key;
-        group._lastIndex                            = elementIndex;
-        group._bHasLast                             = SW_TRUE;
+        state._listEntryLastSeenBuild[elementIndex] = _buildCounter;
+        state._lastKey                              = key;
+        state._lastIndex                            = elementIndex;
+        state._bHasLast                             = SW_TRUE;
         return elementIndex;
     }
 } // namespace sw

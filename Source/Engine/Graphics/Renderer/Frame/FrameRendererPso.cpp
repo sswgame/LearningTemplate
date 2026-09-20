@@ -290,11 +290,13 @@ namespace sw
             }
         };
 
-        bool           bCreatedVariant{ false };
-        vector<uint32> listOpaquePermutation;
-        vector<uint32> listTransparentPermutation;
-        bool           bOpaqueHasPlain{ false };
-        bool           bTransparentHasPlain{ false };
+        bool            bCreatedVariant{ false };
+        vector<uint32>& listOpaquePermutation      = _listOpaquePermutationScratch;
+        vector<uint32>& listTransparentPermutation = _listTransparentPermutationScratch;
+        listOpaquePermutation.clear();
+        listTransparentPermutation.clear();
+        bool bOpaqueHasPlain{ false };
+        bool bTransparentHasPlain{ false };
         collect( _gpuScene.getOpaqueBatches(), listOpaquePermutation, bOpaqueHasPlain );
         collect( _gpuScene.getTransparentBatches(), listTransparentPermutation, bTransparentHasPlain );
         if ( listOpaquePermutation.empty() && listTransparentPermutation.empty() && bOpaqueHasPlain == false &&

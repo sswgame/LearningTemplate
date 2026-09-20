@@ -41,6 +41,8 @@ namespace sw
         void beginCommandList() override;
         void endCommandList() override;
         void writeTimestamp( uint32 slotIndex ) override;
+        /** @brief 디바이스가 내려가는 중이다 — 쌍을 지금 부수고 연결을 끊습니다 (디바이스 종료가 부른다). */
+        void detachFromDevice();
 
     private:
         VulkanRHIDevice*        _pDevice;

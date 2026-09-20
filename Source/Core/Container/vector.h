@@ -409,6 +409,24 @@ namespace sw
         {
             SW_SCOPED_RACE_WRITE();
             SW_SCOPED_RACE_READ_OTHER( other );
+            // 용량이 넉넉하면 겹치는 앞부분은 **대입**한다 — 원소 안의 힙(문자열·벡터·맵)이 제 용량을 남긴다.
+            // 예전에는 전부 부수고 새로 만들었다: 프레임마다 링 자리와 바꿔 가며 다시 채우는 스냅샷의 그룹 목록이
+            // 겉 벡터는 용량을 남기면서도 안의 문자열은 매번 새로 할당했다(std::vector 의 대입과 같은 규칙으로 맞춘다).
+            if constexpr ( std::is_copy_assignable_v<T> && is_bitwise_copyable_v<T> == false )
+            {
+                if ( other._size <= _capacity )
+                {
+                    const size_t assignCount = ( _size < other._size ) ? _size : other._size;
+                    for ( size_t index = 0; index < assignCount; ++index )
+                        _pData[index] = other._pData[index];
+                    for ( size_t index = assignCount; index < other._size; ++index )
+                        sw_placement_new( ( _pData + ( index ) ) ) T( other._pData[index] );
+                    for ( size_t index = other._size; index < _size; ++index )
+                        _pData[index].~T();
+                    _size = other._size;
+                    return *this;
+                }
+            }
             clearInternal();
             reserveInternal( other._size );
             copyFromInternal( other._pData, other._size );

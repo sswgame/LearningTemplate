@@ -16,10 +16,8 @@ namespace sw
     {
         struct RenderGraphInternal
         {
-            static void recordRenderPassTask( const TaskArgs& args )
+            static void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList )
             {
-                RenderGraphNode* pNode    = args.get<RenderGraphNode*>( 0 );
-                IRHICommandList* pCmdList = args.get<IRHICommandList*>( 1 );
                 if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
                     return;
 
@@ -39,6 +37,48 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "RenderGraph" );
+
+    /**
+     * @brief 병렬 기록 한 웨이브의 패스와 그것을 기록할 리스트 — 리스트는 노드가 들고 있는 것을 빌린다(소유하지 않는다).
+     * @details 태스크는 이 엔트리의 메서드에 묶인다(`record`). 예전에는 `MakeTaskArgs( pNode, pCmdList )` 로 인자를 실었다 —
+     *          인자 벡터가 패스마다 프레임마다 힙이었고, 인자를 노드 안에 인라인으로 넣어 봤더니 노드가 두 배로 부풀어
+     *          렌더 그래프 기록이 122 → 196 us 로 느려졌다(재 봤다). 메서드 델리게이트는 포인터 둘이라 어느 쪽도 아니다.
+     *          엔트리 목록은 태스크를 넣기 전에 다 채우므로 기록 중에 옮겨지지 않는다.
+     */
+    struct ParallelPassEntry
+    {
+        RenderGraphNode* _pNode{ nullptr };
+        IRHICommandList* _pPassCmdList{ nullptr };
+
+        void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList ); }
+    };
+
+    struct RenderGraph::ParallelScratch
+    {
+        vector<ParallelPassEntry> _listPassEntry;
+        /// @brief 노드 인덱스 → 그 패스가 프레임마다 다시 여는 커맨드 리스트. 처음 쓸 때 만들고 그 뒤로 재사용한다.
+        vector<unique_ptr<IRHICommandList>> _listNodeCmdList;
+        /// @brief 리스트를 만든 디바이스 — 다른 디바이스가 오면 먼저 놓는다(백엔드 교체).
+        IRHIDevice* _pCmdListDevice{ nullptr };
+    };
+
+    RenderGraph::RenderGraph()
+        : _pParallelScratch{ make_unique<ParallelScratch>() }
+    {
+    }
+
+    RenderGraph::~RenderGraph()                                   = default;
+    RenderGraph::RenderGraph( RenderGraph&& ) noexcept            = default;
+    RenderGraph& RenderGraph::operator=( RenderGraph&& ) noexcept = default;
+
+    void RenderGraph::releaseCommandLists()
+    {
+        if ( _pParallelScratch == nullptr )
+            return;
+        _pParallelScratch->_listNodeCmdList.clear();
+        _pParallelScratch->_listPassEntry.clear();
+        _pParallelScratch->_pCmdListDevice = nullptr;
+    }
 
     /**
      * @brief 모든 노드 및 실행 순서 초기화
@@ -265,18 +305,19 @@ namespace sw
 
         context.reset();
 
-        struct ParallelPassEntry
+        // 엔트리 목록과 노드별 커맨드 리스트는 프레임을 넘어 재사용한다(`ParallelScratch`, 완전한 타입은 이 파일에만).
+        // 예전에는 패스마다 프레임마다 리스트를 새로 만들었다 — 래퍼 하나에 백엔드 할당까지 프레임당 패스 수의 몇 배였다.
+        if ( _pParallelScratch == nullptr )
+            _pParallelScratch = make_unique<ParallelScratch>();
+        if ( _pParallelScratch->_pCmdListDevice != pDevice )
         {
-            RenderGraphNode*            _pNode{ nullptr };
-            unique_ptr<IRHICommandList> _pPassCmdList{ nullptr };
-        };
-
-        // 웨이브 루프 **밖**에서 한 번 만들고 웨이브마다 비워 쓴다. 안에 두면 웨이브 수만큼
-        // 힙 할당이 프레임마다 생긴다. 멤버로 올리면 그 하나마저 없앨 수 있지만,
-        // unique_ptr<IRHICommandList> 를 헤더 멤버로 두려면 삭제자 인스턴스화에 완전한 타입이
-        // 필요해 RenderGraph.h 가 RHI 커맨드리스트 헤더를 끌어와야 한다 — 프레임당 할당 하나와
-        // 바꾸기엔 비싼 의존이다.
-        vector<ParallelPassEntry> listPassEntry;
+            releaseCommandLists(); // 지난 디바이스의 리스트다 — 새 디바이스에서 다시 만든다
+            _pParallelScratch->_pCmdListDevice = pDevice;
+        }
+        ParallelScratch&           scratch       = *_pParallelScratch;
+        vector<ParallelPassEntry>& listPassEntry = scratch._listPassEntry;
+        if ( scratch._listNodeCmdList.size() < _listNode.size() )
+            scratch._listNodeCmdList.resize( _listNode.size() );
 
         // 웨이브(의존성 레벨) 단위로 처리한다 — 같은 웨이브의 패스들만 동시에 병렬 기록하고,
         // 웨이브 경계마다 태스크를 기다린 뒤 그 웨이브의 커맨드리스트를 먼저 GPU 큐에 제출한다.
@@ -311,7 +352,9 @@ namespace sw
                 if ( node._execute.isBound() == false )
                     continue;
 
-                unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList();
+                unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[indexIt->second];
+                if ( passCmd == nullptr )
+                    passCmd = pDevice->createCommandList();
                 if ( passCmd == nullptr )
                 {
                     // 디바이스가 죽으면 매 프레임 여기로 떨어지므로, 같은 경고를 무한 반복하지 않는다.
@@ -323,7 +366,7 @@ namespace sw
                     }
                     return execute( context );
                 }
-                listPassEntry.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
+                listPassEntry.push_back( ParallelPassEntry{ &node, passCmd.get() } );
             }
 
             if ( listPassEntry.empty() )
@@ -343,13 +386,7 @@ namespace sw
 
             for ( ParallelPassEntry& entry : listPassEntry )
             {
-                RenderGraphNode* pNode    = entry._pNode;
-                IRHICommandList* pCmdList = entry._pPassCmdList.get();
-
-                TaskHandle handle = pTaskManager->emplaceTask(
-                    "RenderPassRecord",
-                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderGraphInternal::recordRenderPassTask ),
-                    MakeTaskArgs( pNode, pCmdList ) );
+                TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
 
                 if ( handle.isValid() )
                 {
@@ -369,7 +406,7 @@ namespace sw
             for ( ParallelPassEntry& entry : listPassEntry )
             {
                 if ( entry._pPassCmdList != nullptr )
-                    pDevice->executeCommandList( entry._pPassCmdList.get() );
+                    pDevice->executeCommandList( entry._pPassCmdList );
             }
         }
 
@@ -608,6 +645,7 @@ namespace sw
      */
     void RenderGraph::clear()
     {
+        releaseCommandLists();
         _listNode.clear();
         _listCompiledExecutionOrder.clear();
         _listCompiledWave.clear();

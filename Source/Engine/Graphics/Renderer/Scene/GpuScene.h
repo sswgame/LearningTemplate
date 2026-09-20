@@ -108,10 +108,12 @@ namespace sw
         /** @brief 스냅샷(과 그것이 든 소유)을 놓고 개수를 0 으로 되돌립니다. GPU 버퍼는 `releaseGpu` 가 놓는다. */
         void clear();
         /**
-         * @brief 스냅샷을 *this 로 옮깁니다. GPU 핸들·용량·간접 개수 같은 RT 소유 상태는 타입이 달라 건드릴 수 없습니다.
-         * @details RT(FrameRenderer)가 영속 소유한 GpuScene 에 매 프레임 패킷의 스냅샷을 반영할 때 쓴다.
+         * @brief 패킷의 스냅샷을 받아 갑니다 — **바꿔치기**한다. 받는 쪽의 지난 스냅샷이 패킷 자리로 돌아간다.
+         *        GPU 핸들·용량·간접 개수 같은 RT 소유 상태는 타입이 달라 건드릴 수 없다.
+         * @details 옮겨 오기(move)만 하면 패킷 자리의 저장소가 비어, 다음에 GT 가 그 자리를 다시 채울 때 전부 새로
+         *          할당한다. 바꿔치기면 저장소가 GT → 링 → RT → 링 → GT 로 돌아 용량이 남는다(프레임당 할당 0).
          */
-        void adoptCpuSnapshot( GpuSceneSnapshot&& snapshot );
+        void adoptCpuSnapshot( GpuSceneSnapshot& snapshot );
         /** @brief 인스턴스 SRV와 배치별 간접 인자를 업로드합니다 (RT/디바이스 스레드). */
         bool upload( IRHIDevice* pDevice );
         /** @brief GPU 버퍼를 해제합니다. */
@@ -136,7 +138,8 @@ namespace sw
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
         const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
         {
-            return ( index < _snapshot._listShaderPermutation.size() ) ? &_snapshot._listShaderPermutation[index] : nullptr;
+            const vector<GpuShaderPermutation>* pList = _snapshot._pListShaderPermutation.get();
+            return ( pList != nullptr && index < pList->size() ) ? &( *pList )[index] : nullptr;
         }
         /**
          * @brief 배치마다 모프 풀 구간을 적습니다 (RT 전용).
@@ -214,8 +217,16 @@ namespace sw
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
         unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
         vector<uint8>                         _listMaterialScratch;
-        vector<RHIDrawIndirectCommand>        _listScratchIndirectCmd;
-        vector<GpuBatchInfo>                  _listScratchBatchInfo;
+        /// @brief 그룹 → (버퍼, SRV, 원소 수) 표 — 배치 루프가 조회 대신 읽는다. 프레임마다 다시 채운다.
+        struct ResolvedGroup
+        {
+            RHIBufferHandle    _buffer{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+            uint32             _elementCount{ 0 };
+        };
+        vector<ResolvedGroup>          _listResolvedGroupScratch;
+        vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
+        vector<GpuBatchInfo>           _listScratchBatchInfo;
         /// @brief 부분 인스턴스 업로드용 영역 목록 — 프레임마다 다시 채워 쓴다(할당을 되풀이하지 않는다).
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
 

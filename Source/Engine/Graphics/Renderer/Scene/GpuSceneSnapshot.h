@@ -169,25 +169,9 @@ namespace sw
     {
         string                     _shaderPath;
         vector<GpuMaterialElement> _listEntry;
-        /**
-         * @brief 원소 키 → `_listEntry` 인덱스.
-         * @details 예전엔 인스턴스마다 `_listEntry` 를 처음부터 훑어 같은 쌍을 찾았다 — 인스턴스 N 개와 머티리얼 M 종에
-         *          O(N·M) 이라 머티리얼이 늘수록 빌드가 제곱으로 느려졌다(벤치는 머티리얼이 하나라 안 보였다).
-         *          언리얼은 등록 시점에 영속 ID 를 주고 더티만 갱신한다 — 여기서는 최소한 조회를 상수 시간으로 만든다.
-         */
-        unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
-        /// @brief 원소별 마지막으로 쓰인 빌드 번호 — 오래 안 쓰인 원소를 회수하는 기준.
-        vector<uint64> _listEntryLastSeenBuild;
-        /// @brief 회수된 원소 자리. **인덱스를 옮기지 않고** 재사용한다 — 옮기면 영속 ID 가 아니게 된다.
-        vector<uint32> _listFreeEntry;
-        /**
-         * @brief 직전 조회 결과 — 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻는다.
-         * @details 맵만 두면 머티리얼이 하나뿐인 흔한 경우가 오히려 느려진다(포인터 비교 한 번 → 해시+탐색).
-         *          실측으로 확인했다: 큐브 2000 개·머티리얼 1 종에서 배치 구성이 665us → 901us 로 늘었다.
-         */
-        GpuMaterialElementKey _lastKey{};
-        uint32                _lastIndex{ 0 };
-        uint8                 _bHasLast{ SW_FALSE };
+        // 원소 인덱스 표(키 → 인덱스 · 마지막 사용 빌드 · 프리리스트 · 직전 조회)는 **빌더의 것**이다
+        // (`GpuSceneBuilder::MaterialGroupState`). 스냅샷에는 RT 가 읽는 것만 싣는다 — 예전에는 표까지 이 안에 있어
+        // 프레임마다 패킷으로 복사됐다(맵 하나 + 벡터 둘, 그룹마다).
     };
 
     /** @brief 인스턴스 배열에서 바뀐 구간 `[_start, _start + _count)`. */
@@ -229,8 +213,12 @@ namespace sw
         vector<GpuMeshBatch>                  _listTransparentBatch;
         vector<GpuMeshBatch>                  _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
         vector<GpuMaterialGroup>              _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
-        /// @brief 퍼뮤테이션 목록 — 배치의 `_shaderPermutation` 이 가리킨다. 빌드마다 비우지 않는다(RT 가 지난 스냅샷을 읽는다).
-        vector<GpuShaderPermutation> _listShaderPermutation;
+        /**
+         * @brief 퍼뮤테이션 목록 — 배치의 `_shaderPermutation` 이 가리킨다. **불변 목록을 공유한다.**
+         * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 전부 힙이었다(프레임당 ~30 회).
+         *          빌더는 새 퍼뮤테이션이 나타날 때만 목록을 새로 만들어 바꿔 끼운다(copy-on-write). RT 는 읽기만 한다.
+         */
+        shared_ptr<const vector<GpuShaderPermutation>> _pListShaderPermutation;
         /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
         uint32 _spinInstanceCount{ 0 };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는가. RT 는 0 이면 인스턴스 재업로드를 생략한다.

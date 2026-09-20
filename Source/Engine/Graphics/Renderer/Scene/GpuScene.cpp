@@ -395,9 +395,10 @@ namespace sw
         _snapshot._bCpuDirty         = SW_TRUE;
     }
 
-    void GpuScene::adoptCpuSnapshot( GpuSceneSnapshot&& snapshot )
+    void GpuScene::adoptCpuSnapshot( GpuSceneSnapshot& snapshot )
     {
-        _snapshot = std::move( snapshot );
+        // 바꿔치기 — 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GpuScene.h 참고).
+        std::swap( _snapshot, snapshot );
     }
 
     void GpuScene::uploadMaterialGroups( IRHIDevice* pDevice )
@@ -471,15 +472,10 @@ namespace sw
         // **그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.**
         // 예전에는 배치마다 셰이더 **경로 문자열**로 해시 조회를 했다 — 그룹은 한둘인데 배치는 수백이라
         // 같은 답을 배치 수만큼 다시 구한 셈이다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
-        // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다.
-        struct ResolvedGroup
-        {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            uint32             _elementCount{ 0 };
-        };
-        const uint32          groupCount = static_cast<uint32>( _snapshot._listMaterialGroup.size() );
-        vector<ResolvedGroup> listResolved( groupCount );
+        // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다. 표는 멤버라 프레임마다 힙을 만지지 않는다.
+        const uint32           groupCount   = static_cast<uint32>( _snapshot._listMaterialGroup.size() );
+        vector<ResolvedGroup>& listResolved = _listResolvedGroupScratch;
+        listResolved.assign( groupCount, ResolvedGroup{} );
         for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
             const GpuMaterialGroup& group = _snapshot._listMaterialGroup[groupIndex];

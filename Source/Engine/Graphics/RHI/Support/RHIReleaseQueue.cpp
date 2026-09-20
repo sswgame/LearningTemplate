@@ -42,7 +42,9 @@ namespace sw
 
     void RHIReleaseQueue::tickFrame()
     {
+        // 스크래치를 빌려 쓴다 — 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하게, 잠깐 꺼내 두고 끝나면 돌려놓는다.
         vector<RHIResourceReleaseDelegate> listReady;
+        listReady.swap( _listReadyScratch );
         {
             std::scoped_lock<SpinLock> lock{ _spinLock };
             _currentFrame++;
@@ -65,11 +67,15 @@ namespace sw
             if ( callback.isBound() )
                 callback();
         }
+        listReady.clear();
+        _listReadyScratch.swap( listReady );
     }
 
     void RHIReleaseQueue::tickCompleted( uint64 completedFence )
     {
+        // 스크래치를 빌려 쓴다 — 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하게, 잠깐 꺼내 두고 끝나면 돌려놓는다.
         vector<RHIResourceReleaseDelegate> listReady;
+        listReady.swap( _listReadyScratch );
         {
             std::scoped_lock<SpinLock> lock{ _spinLock };
 
@@ -90,6 +96,8 @@ namespace sw
             if ( callback.isBound() )
                 callback();
         }
+        listReady.clear();
+        _listReadyScratch.swap( listReady );
     }
 
     void RHIReleaseQueue::flushAll()

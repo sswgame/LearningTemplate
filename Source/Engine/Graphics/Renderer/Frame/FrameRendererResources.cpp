@@ -200,6 +200,9 @@ namespace sw
             return;
         }
 
+        // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다 — 디바이스가 살아 있을 때 놓는다.
+        _graph.releaseCommandLists();
+
         // PSO 는 캐시가 순서대로 놓는다 — 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
         _psoCache.releaseAll( _pDevice );
 

@@ -71,8 +71,10 @@ namespace sw
 
         vector<FrameDeferredEntry> _listFrameEntry;
         vector<GpuDeferredEntry>   _listGpuEntry;
-        mutable SpinLock           _spinLock;
-        uint64                     _currentFrame;
-        uint32                     _frameLatency;
+        /// @brief tick 이 완료된 콜백을 옮겨 담는 자리 — 잠금 밖에서 부르려고 옮긴다. 프레임마다 다시 채워 용량이 남는다.
+        vector<RHIResourceReleaseDelegate> _listReadyScratch;
+        mutable SpinLock                   _spinLock;
+        uint64                             _currentFrame;
+        uint32                             _frameLatency;
     };
 } // namespace sw

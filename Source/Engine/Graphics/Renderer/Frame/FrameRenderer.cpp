@@ -247,6 +247,7 @@ namespace sw
         // 스냅샷이 든 머티리얼·인스턴스의 소유를 **디바이스가 살아 있을 때** 놓는다. 스냅샷은 소유를 함께
         // 실으므로(GpuScene.h) 여기서 비우지 않으면 렌더러가 죽을 때까지 그것들이 살아, 디바이스가 먼저
         // 사라진 뒤 소멸자가 죽은 디바이스에 GPU 자원을 돌려주려 한다(ASAN 이 잡았다).
+        _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGpu( _pDevice );
         _gpuScene.clear();
@@ -355,6 +356,11 @@ namespace sw
 
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
+        // 패스 컨텍스트 슬롯은 병렬 기록 **전**에 맞춘다 — 기록 중에 늘리면 워커끼리 경합한다.
+        const size_t passCount = _pipelineResource.getGraphPass().size();
+        if ( _listPassContext.size() < passCount + 1 )
+            _listPassContext.resize( passCount + 1 );
+
         _pCmd->beginCommandList();
         _bGpuCullingActive = SW_FALSE;
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
@@ -463,9 +469,9 @@ namespace sw
         // 패킷 경로와 **같은 길**이다 — 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GpuScene 에는 씬을 읽는 메서드가 없다.
         _sceneBuilder.buildFromScene( pScene, cameraPos );
         {
-            GpuSceneSnapshot snapshot{};
-            _sceneBuilder.exportCpuSnapshot( snapshot );
-            _gpuScene.adoptCpuSnapshot( std::move( snapshot ) );
+            // 스크래치 하나를 돌려 쓴다 — 바꿔치기라 지난 스냅샷의 저장소가 여기로 돌아온다.
+            _sceneBuilder.exportCpuSnapshot( _sceneSnapshotScratch );
+            _gpuScene.adoptCpuSnapshot( _sceneSnapshotScratch );
         }
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
@@ -508,7 +514,7 @@ namespace sw
         // _gpuScene는 FrameRenderer가 프레임 간 영속 소유(GPU 버퍼/핸들/MaterialRetireQueue 보존) —
         // 패킷에서는 CPU 스냅샷(인스턴스/배치 목록)만 옮겨온다. 통째로 move하면 직전 프레임에 업로드한
         // GPU 버퍼/디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 생성하는 리크가 됐었다.
-        _gpuScene.adoptCpuSnapshot( std::move( packet._gpuScene ) );
+        _gpuScene.adoptCpuSnapshot( packet._gpuScene );
 
         // 주광은 씬이 아니라 패킷으로 온다 — 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
         if ( packet._bHasLight != SW_FALSE )

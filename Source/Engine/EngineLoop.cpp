@@ -582,7 +582,8 @@ namespace sw
 
         BLOCK( "RenderFramePacket 제출" )
         {
-            RenderFramePacket packet{};
+            RenderFramePacket& packet = _packetScratch;
+            packet.resetForFrame();
             packet._bValid           = 1;
             packet._gameRenderTarget = gameRenderTarget;
             packet._viewportWidth    = vpWidth;
@@ -643,7 +644,7 @@ namespace sw
             {
                 // GT 가 여기서 기다린다면 그것은 렌더 스레드가 밀린 것이다 — 링이 차면 submit 이 막는다.
                 SW_PROFILE_SCOPE( "GT.Packet.submit" );
-                _renderThread->submit( std::move( packet ) );
+                _renderThread->submit( packet );
             }
         }
     }

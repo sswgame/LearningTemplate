@@ -165,8 +165,14 @@ namespace sw
         unique_ptr<RenderThread>     _renderThread;
         /** @brief GT 쪽 씬 스냅샷 빌더 — buildFromScene 의 재구축 판단 캐시가 프레임 간 유지되도록 여기 소유.
          *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다. */
-        GpuSceneBuilder  _gpuSceneBuilder;
-        Delegate<void()> _onScenesReleased;
+        GpuSceneBuilder _gpuSceneBuilder;
+        /**
+         * @brief GT 가 매 프레임 채우는 패킷 — 링 자리와 바꿔 가며 돈다(`RenderThread::submit`).
+         * @details 지역 변수였을 때는 스냅샷의 배치·그룹 목록과 라이트 목록이 프레임마다 새로 할당됐다. 이제 링에서
+         *          돌아온 저장소를 그대로 다시 채운다.
+         */
+        RenderFramePacket _packetScratch;
+        Delegate<void()>  _onScenesReleased;
         /**
          * @brief 셰이더 라이브 리로드. **Shipping 에는 없고**(파일째 빌드에서 빠진다) Debug 에서만 실제로 만들어집니다.
          * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**다. 예전에는 RHI 가 들고 있었는데, RHI 는

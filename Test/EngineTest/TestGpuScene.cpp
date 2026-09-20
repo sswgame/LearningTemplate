@@ -879,7 +879,7 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
     sw::GpuSceneSnapshot packetScene;
     gtScene.exportCpuSnapshot( packetScene );
     sw::GpuScene rtScene;
-    rtScene.adoptCpuSnapshot( std::move( packetScene ) );
+    rtScene.adoptCpuSnapshot( packetScene ); // 바꿔치기 — 패킷 자리에는 RT 의 지난(빈) 스냅샷이 남는다
 
     const sw::vector<sw::GpuMeshBatch>& rtBatches = rtScene.getTransparentBatches();
     SW_EXPECT_TRUE_MSG( rtBatches.empty() == false, "스냅샷에 반투명 배치가 없다" );

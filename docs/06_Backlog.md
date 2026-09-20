@@ -318,22 +318,13 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
-### 1-0f. 프레임당 힙 할당 143 → 0 에 가깝게 — Engine 쪽 churn (2026-09-21 계측)
+### 1-0f. Dev 빌드에서만 지는 hostgpu 테스트 하나 — `RenderPassGpuTest.InstanceConstantBufferIsRecreatedWhenLayoutGrows` (2026-09-21 발견)
 
-Core 는 0 이 됐다(3절 2026-09-21). 남은 것은 전부 렌더 쪽이고 `-gv_profileAllocSites=40` 이 자리를 짚어 준다
-(Debug App, 큐브 100 기준 회/프레임):
-
-| 회/프레임 | 자리 | 고치는 방향 |
-|---|---|---|
-| ~30 | `GpuShaderPermutation` 의 `string`·`vector<string>` 이 스냅샷 대입(`GpuSceneSnapshot::operator=`)마다 복사 | 퍼뮤테이션을 불변 공유 객체(`shared_ptr<const>`)로 — 복사는 참조 계수 |
-| ~20 | `RenderGraph::executeParallel` 웨이브마다 `listPassEntry`·패스 엔트리(314·349) | 그래프 멤버로 재사용, 패스 슬롯별 |
-| 12 | `recordRenderPassTask` 안 백엔드 커맨드 리스트 래퍼(`createCommandList` 마다 `unique_ptr` + 백엔드 할당) | 패스 슬롯별 커맨드 리스트를 프레임 링에서 재사용 |
-| ~25 | `RHIReleaseQueue` 엔트리·192 B 람다 캡처(`GpuDeferredEntry`, `tickCompleted` 의 `listReady`) | 캡처를 핸들·포인터로 줄여 SBO 안에, 목록은 멤버 재사용 |
-| ~14 | `FrameResourceRegistry` 맵이 패스 컨텍스트마다 새로 자란다 | 패스 컨텍스트를 슬롯별로 유지해 용량을 남긴다 |
-| 8 | `PassConstantValues` 벡터 | 같은 방식 |
-| 나머지 | `GpuSceneSnapshot` 대입, `AssetStreamingQueue::update`, `collectSceneLights`, `drawGpuBatches` 등 1~3 회 | 멤버 재사용 |
-
-끝나면 `-gv_profileFrames` 보고의 `alloc/frame` 을 회귀 게이트로 쓸 수 있다(hostgpu 테스트에서 상한 단언).
+Shipping 에서는 통과하고 **Debug·Release 에서는 진다**(마지막 백엔드 OpenGL 에서 "상수버퍼를 다시 만들지 않고 더 큰
+크기로 갱신했습니다"). 커밋 `87c3413e`(이번 churn 작업 전) Release 에서도 같은 결과라 이번 일과 무관한 **기존 결함**이다.
+hostgpu 는 CI 가 못 돌리고 로컬 습관이 Shipping 뿐이라 안 보였다 — 이제 Debug hostgpu 도 같이 돌리니 매번 보인다.
+살펴볼 곳: 인스턴스 상수버퍼가 커질 때 bindless 인덱스가 같은 값으로 다시 나오는 이유(해제 지연 vs 즉시 회수가
+빌드 구성에 따라 다른가).
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -514,6 +505,49 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (프레임당 힙 할당 155 → 10 — 패킷 저장소 순환, 퍼뮤테이션 공유, 패스 컨텍스트 슬롯, 커맨드 리스트 재사용)
+
+앞 회차 1-0f 의 Engine 쪽 churn 을 닫았다. Debug App · 큐브 100 기준 **155 → 10.3 회/프레임**(8000 은 190 → ~11).
+남은 열 개는 Debug 전용 MSVC 이터레이터 프록시(문자열 16 B) 여섯, 발행 배열의 `make_shared` 와 되복사 각 하나
+(풀은 앞서 재서 기각했다 — GpuSceneBuilder 주석), 나머지는 프레임 끝 보고 로그다.
+
+**바꾼 것.**
+- **패킷·스냅샷 저장소 순환.** `RenderThread::submit` 이 옮겨 넣기(move) 대신 **바꿔치기**(swap)라 GT 스크래치 패킷이
+  링 자리의 지난 저장소를 돌려받고, RT 는 `executePacket( _arrRingBuffer[tail] )` 로 자리에서 처리하며
+  `GpuScene::adoptCpuSnapshot` 도 바꿔치기다. 저장소가 GT → 링 → RT → 링 → GT 로 돌아 용량이 남는다.
+  `EngineLoop` 의 지역 패킷은 멤버 `_packetScratch` 가 됐고 `resetForFrame()` 이 값 필드만 되돌린다.
+- **퍼뮤테이션은 불변 공유**(`shared_ptr<const vector<GpuShaderPermutation>>`, copy-on-write) — 문자열이 든 값이라
+  프레임마다 복사하면 그것만 ~30 회였다. **머티리얼 그룹의 인덱스 표**(키→인덱스·마지막 빌드·프리리스트)는
+  빌더의 `MaterialGroupState` 로 옮겨 스냅샷에는 RT 가 읽는 것만 남겼다.
+- `sw::vector::operator=` 가 용량이 넉넉하면 원소를 **대입**한다(std 와 같은 규칙) — 겉 벡터 용량만 남기고 안의
+  문자열은 매번 새로 만들던 것을 닫았다(`VectorTest.CopyAssignReusesElementStorage`, 인라인 이동은
+  `InlineStorageMoveKeepsElements`).
+- **패스 컨텍스트는 슬롯별 멤버**(`_listPassContext`)에 프레임 시드를 대입한다 — 상수 값 목록·레지스트리 맵이 패스마다
+  새로 자라던 것이 없어졌다. 크기는 병렬 기록 전(`submitGraph`)에 맞추고, 워커는 `std::as_const(...).data()` 로
+  읽는다(비-const 인덱싱은 레이스 탐지기가 벡터 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다 — 실제로 울렸다).
+- **렌더 그래프의 커맨드 리스트는 노드별로 재사용**(`ParallelScratch`, 완전한 타입은 cpp 에만). 패스 태스크는
+  `MakeTaskArgs` 대신 **엔트리의 메서드 델리게이트**에 묶는다. 디바이스가 바뀌면 먼저 놓고, `FrameRenderer` 의
+  종료·디바이스 해제 경로가 `releaseCommandLists()` 를 부른다.
+- **Vulkan 에도 살아 있는 리스트 추적 + 종료 시 분리**를 넣었다(DX12·DX11 은 있었다). 리스트가 디바이스보다 오래
+  살게 되자 `RenderGraphExecuteParallelRunsOnRealDevice` 가 죽은 디바이스에 반납하려다 매달렸다(180 초 타임아웃).
+  같은 자리에서 **타임스탬프 쿼리 풀이 종료 때 안 부서지던 것**(`vkDestroyQueryPool` 없음, 2026-09-20 계측 커밋의
+  누락)도 검증 레이어가 잡아 닫았다 — Shipping 에는 레이어가 없어 안 보였다.
+- DX12 온라인 디스크립터 블록 반납은 벡터를 람다에 복사하던 것을 **묶음으로 옮기고** 펜스 완료 때 돌려준다
+  (`recycleCompletedOnlineBlocks`). 릴리스 큐의 준비 목록, PSO 퍼뮤테이션 수집, 머티리얼 그룹 해석 표는 멤버 스크래치다.
+
+**재서 기각한 것 — `TaskArgs` 인라인 저장.** 인자 벡터를 노드 안 인라인 네 칸(`InlineAllocator`)으로 바꿨더니
+프레임당 할당은 8 회 줄었지만 **`TaskNode` 가 두 배로 부풀어** 렌더 그래프 기록이 122 → 196 us 로 느려졌다
+(같은 기계 · 같은 시각 A/B: HEAD 122/122/114, 인라인 196/212/131, 인라인만 되돌리자 122/114/98). 노드 풀의 모든 노드가
+그 크기를 지불한다. 그래서 `TaskArgs` 는 힙 벡터 그대로 두고, 프레임마다 도는 곳(렌더 패스)만 인자 없이 메서드
+델리게이트로 갔다 — 인자 수를 늘릴 자리는 여전히 벡터라 상한이 없다.
+
+**숫자** (Release · DX12 · 3회 p50 us): 큐브 100 `RT.Graph.executeParallel` 122 → **106~114**, `RT.ExecutePacket`
+212 → **196**, `GT.Frame` 393~425 그대로; 8000 은 131 / 294 / 589 그대로. 네 백엔드 스크린샷은 바이트 단위로 같다
+(`-gv_benchAnimate=0`, md5 동일).
+
+**남은 것.** Debug 에서만 지는 `InstanceConstantBufferIsRecreatedWhenLayoutGrows` 는 이번 일과 무관한 기존 결함으로
+1-0f 에 적었다. 상한 게이트(hostgpu 테스트에서 alloc/frame 단언)는 Debug 전용 프록시 할당이 섞여 아직 두지 않았다.
 
 ### 2026-09-21 (병렬 시스템의 모양을 하나로 — `runParallel` + 트랜스폼 계층을 매니저에서 분리)
 

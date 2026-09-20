@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/InlineAllocator.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
 #include "TestFramework/TestFramework.h"
@@ -446,4 +448,65 @@ SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
         SW_EXPECT_EQUAL( 1, list[0] );
         SW_EXPECT_EQUAL( 2, list[1] );
     }
+}
+
+/**
+ * @brief [VectorTest] 인라인 저장소의 벡터를 옮겨도 원소가 그대로다
+ * @details `InlineAllocator` 벡터는 포인터를 훔칠 수 없어 원소를 하나씩 옮긴다 — 그 경로가 개수·값을 지켜야 한다.
+ *          TaskArgs 가 이 경로로 노드에 실린다.
+ */
+SW_TEST_CASE( VectorTest, InlineStorageMoveKeepsElements )
+{
+    using InlineVector = sw::vector<sw::string, sw::InlineAllocator<sw::string, 4>>;
+    InlineVector source;
+    source.emplace_back( "alpha-long-enough-to-leave-sso-behind" );
+    source.emplace_back( "beta" );
+    source.emplace_back( "gamma-long-enough-to-leave-sso-behind" );
+    source.emplace_back( "delta" );
+    SW_ASSERT_EQUAL( size_t( 4 ), source.size() );
+
+    InlineVector moved = std::move( source );
+    SW_EXPECT_EQUAL( size_t( 4 ), moved.size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), source.size() );
+    SW_EXPECT_TRUE( moved[0] == "alpha-long-enough-to-leave-sso-behind" );
+    SW_EXPECT_TRUE( moved[1] == "beta" );
+    SW_EXPECT_TRUE( moved[2] == "gamma-long-enough-to-leave-sso-behind" );
+    SW_EXPECT_TRUE( moved[3] == "delta" );
+
+    // 다시 채워도 된다 — 옮겨진 쪽은 빈 인라인 벡터다.
+    source.emplace_back( "again" );
+    SW_EXPECT_EQUAL( size_t( 1 ), source.size() );
+}
+
+/**
+ * @brief [VectorTest] 복사 대입은 용량이 넉넉하면 원소를 **대입**한다 — 원소 안의 힙이 제 용량을 남긴다
+ * @details 부수고 다시 만들면 겉 벡터의 용량은 남아도 안의 문자열은 매번 새 힙이다(스냅샷의 그룹 목록이 그랬다).
+ *          std::vector 와 같은 규칙: 겹치는 앞부분 대입, 남는 뒤는 새로 만들거나 부순다.
+ */
+SW_TEST_CASE( VectorTest, CopyAssignReusesElementStorage )
+{
+    sw::vector<sw::string> source;
+    source.emplace_back( "first-value-long-enough-to-leave-sso-behind" );
+    source.emplace_back( "second-value-long-enough-to-leave-sso-behind" );
+
+    sw::vector<sw::string> target;
+    target.emplace_back( "0123456789012345678901234567890123456789-old" ); // 소스보다 긴 버퍼
+    target.emplace_back( "0123456789012345678901234567890123456789-old" );
+    target.emplace_back( "third-that-goes-away" );
+    const utf8* pFirstBufferBefore = target[0].data();
+
+    target = source;
+    SW_EXPECT_EQUAL( size_t( 2 ), target.size() );
+    SW_EXPECT_TRUE( target[0] == source[0] );
+    SW_EXPECT_TRUE( target[1] == source[1] );
+    // 대입이면 첫 원소의 버퍼가 그대로다 — 새로 만들었다면 주소가 바뀐다.
+    SW_EXPECT_TRUE_MSG( target[0].data() == pFirstBufferBefore, "복사 대입이 원소를 새로 만들었다 — 안의 힙 용량이 버려진다" );
+
+    // 용량이 모자라면 예전처럼 늘린다.
+    sw::vector<sw::string> bigger;
+    for ( uint32 index = 0; index < 8; ++index )
+        bigger.emplace_back( "value-long-enough-to-leave-sso-behind" );
+    target = bigger;
+    SW_EXPECT_EQUAL( size_t( 8 ), target.size() );
+    SW_EXPECT_TRUE( target[7] == bigger[7] );
 }

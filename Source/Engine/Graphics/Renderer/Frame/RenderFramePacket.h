@@ -63,5 +63,29 @@ namespace sw
             , _reserved{ 0 }
         {
         }
+
+        /**
+         * @brief 새 프레임을 채우기 전에 값 필드를 기본값으로 되돌립니다 — **저장소는 남긴다.**
+         * @details 패킷은 GT 의 스크래치 하나가 링 자리와 바꿔 가며 돈다(`RenderThread::submit`). 그래서 이 객체에는 몇 프레임
+         *          전의 값이 남아 있고, 조건부로만 쓰는 필드(빛·뷰프로젝션)는 여기서 지워야 한다. 벡터·스냅샷은 비우기만 해
+         *          용량이 남는다.
+         */
+        void resetForFrame()
+        {
+            _clearColor        = float4{ 0.12f, 0.15f, 0.18f, 1.0f };
+            _cameraPos         = float3{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
+            _viewProj          = float4x4{};
+            _lightViewProj     = float4x4{};
+            _lightDirIntensity = float4{};
+            _lightColorAmbient = float4{};
+            _listLight.clear();
+            _gameRenderTarget = 0;
+            _viewportWidth    = 0;
+            _viewportHeight   = 0;
+            _frameIndex       = 0;
+            _bHasViewProj     = SW_FALSE;
+            _bValid           = SW_FALSE;
+            _bHasLight        = SW_FALSE;
+        }
     };
 } // namespace sw

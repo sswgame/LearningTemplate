@@ -16,12 +16,29 @@ namespace sw
         , _context{ pDevice, _entry._buffer, &_state, _entry._pDescriptorPoolSet }
     {
         _pContext = &_context;
+        if ( _pDevice != nullptr )
+            _pDevice->registerCommandList( this );
     }
 
     VulkanRHICommandList::~VulkanRHICommandList()
     {
         if ( _pDevice != nullptr )
+        {
+            _pDevice->unregisterCommandList( this );
             _pDevice->recycleCommandListEntryDeferred( _entry );
+        }
+    }
+
+    void VulkanRHICommandList::detachFromDevice()
+    {
+        // 디바이스가 내려가는 중이다 — 반납하지 않고 쌍을 지금 부순다. 디스크립터 풀 셋은 디바이스가 통째로 비운다.
+        if ( _pDevice != nullptr )
+            _pDevice->destroyCommandListEntryImmediate( _entry );
+        _state = VulkanRecordingState{};
+        _entry = VulkanCommandListEntry{};
+        _context.rebindCommandBuffer( VK_NULL_HANDLE, nullptr );
+        _pDevice  = nullptr;
+        _pContext = nullptr;
     }
 
     void VulkanRHICommandList::writeTimestamp( uint32 slotIndex )

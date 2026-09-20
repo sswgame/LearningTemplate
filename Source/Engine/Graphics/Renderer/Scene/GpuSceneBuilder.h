@@ -89,7 +89,8 @@ namespace sw
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
         const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
         {
-            return ( index < _snapshot._listShaderPermutation.size() ) ? &_snapshot._listShaderPermutation[index] : nullptr;
+            const vector<GpuShaderPermutation>* pList = _snapshot._pListShaderPermutation.get();
+            return ( pList != nullptr && index < pList->size() ) ? &( *pList )[index] : nullptr;
         }
         /** @brief 마지막 buildFromScene이 CPU 스냅샷을 바꿨으면 true. */
         bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != SW_FALSE; }
@@ -142,6 +143,24 @@ namespace sw
         GpuSceneSnapshot _snapshot;
         /// @brief 셰이더 경로 → `_snapshot._listMaterialGroup` 인덱스. 예전엔 배치마다 그룹 목록을 string 비교로 훑었다.
         unordered_map<string, uint32> _mapShaderPathToGroup;
+
+        /**
+         * @brief 머티리얼 그룹의 원소 인덱스 표 — `_snapshot._listMaterialGroup` 과 같은 인덱스로 나란히 간다.
+         * @details 스냅샷의 그룹에는 RT 가 읽는 것(경로·원소)만 남기고 표는 여기 둔다. 프레임마다 패킷으로 복사되지 않는다.
+         */
+        struct MaterialGroupState
+        {
+            unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
+            /// @brief 원소별 마지막으로 쓰인 빌드 번호 — 오래 안 쓰인 원소를 회수하는 기준.
+            vector<uint64> _listEntryLastSeenBuild;
+            /// @brief 회수된 원소 자리. **인덱스를 옮기지 않고** 재사용한다 — 옮기면 영속 ID 가 아니게 된다.
+            vector<uint32> _listFreeEntry;
+            /// @brief 직전 조회 결과 — 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻는다.
+            GpuMaterialElementKey _lastKey{};
+            uint32                _lastIndex{ 0 };
+            uint8                 _bHasLast{ SW_FALSE };
+        };
+        vector<MaterialGroupState> _listMaterialGroupState;
         /// @brief 빌드 번호. 원소가 마지막으로 쓰인 시점을 재는 데만 쓴다(회수 판정).
         uint64 _buildCounter{ 0 };
         /**

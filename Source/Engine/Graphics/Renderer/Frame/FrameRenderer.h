@@ -520,6 +520,18 @@ namespace sw
          * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
          */
         FramePassContext _frameCtx;
+        /**
+         * @brief 패스 슬롯별 컨텍스트 — 프레임마다 `_frameCtx` 를 **대입**해 쓴다(용량이 남아 힙을 만지지 않는다).
+         * @details 예전에는 패스마다 지역 복사본을 만들었다 — 상수 값 목록·레지스트리 맵이 프레임마다 패스 수만큼 새로
+         *          자랐다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춘다 — 기록 중에 늘리면 워커끼리 경합한다.
+         *          마지막 칸은 이름을 못 찾은 패스의 몫이다.
+         */
+        vector<FramePassContext> _listPassContext;
+        /// @brief 씬 직접 경로가 내보내는 스냅샷 — 바꿔치기로 저장소가 돌아온다.
+        GpuSceneSnapshot _sceneSnapshotScratch;
+        /// @brief `ensureMaterialPsos` 가 이번 프레임 배치에서 모으는 퍼뮤테이션 — 프레임마다 다시 채운다.
+        vector<uint32> _listOpaquePermutationScratch;
+        vector<uint32> _listTransparentPermutationScratch;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지 어림값 (그림자·프리패스·불투명·반투명).
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스·드로우별 상수버퍼 슬롯 링 — 병렬 기록에서 드로우마다 하나씩 집어간다.

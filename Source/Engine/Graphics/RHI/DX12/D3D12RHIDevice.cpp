@@ -160,15 +160,37 @@ namespace sw
             return;
 
         // GPU 가 이 리스트의 테이블을 아직 읽는 중이다 — 현재 펜스가 지난 뒤에야 블록을 다시 내준다.
-        vector<uint32> listBlock = std::move( state._listOnlineBlock );
-        state._listOnlineBlock.clear();
-        auto recycleCb = [this, listBlock]()
+        // 벡터를 복사하지 않고 통째로 묶음에 옮긴다. 상태는 풀에서 온 빈 벡터를 받아 다음 기록에 그대로 쓴다.
+        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        OnlineBlockRecycleBatch batch{};
+        batch._fence = _fenceValue;
+        if ( _listOnlineRecyclePool.empty() == false )
         {
-            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
-            for ( const uint32 block : listBlock )
+            batch._listBlock.swap( _listOnlineRecyclePool.back() );
+            _listOnlineRecyclePool.pop_back();
+        }
+        batch._listBlock.swap( state._listOnlineBlock );
+        _listPendingOnlineRecycle.push_back( std::move( batch ) );
+    }
+
+    void D3D12RHIDevice::recycleCompletedOnlineBlocks( uint64 completedFence )
+    {
+        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        for ( size_t index = 0; index < _listPendingOnlineRecycle.size(); )
+        {
+            OnlineBlockRecycleBatch& batch = _listPendingOnlineRecycle[index];
+            if ( batch._fence > completedFence )
+            {
+                ++index;
+                continue;
+            }
+            for ( const uint32 block : batch._listBlock )
                 _listFreeOnlineBlock.push_back( block );
-        };
-        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
+            batch._listBlock.clear();
+            _listOnlineRecyclePool.push_back( std::move( batch._listBlock ) );
+            _listPendingOnlineRecycle[index] = std::move( _listPendingOnlineRecycle.back() );
+            _listPendingOnlineRecycle.pop_back();
+        }
     }
 
     RHIBufferHandle D3D12RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer )

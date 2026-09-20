@@ -146,6 +146,8 @@ namespace sw
         }
     };
 
+    class VulkanRHICommandList;
+
     /**
      * @class VulkanRHIDevice
      * @brief Vulkan 1.3 그래픽스 및 컴퓨트 디바이스 구현체 (Descriptor Indexing / Bindless 지원)
@@ -441,6 +443,12 @@ namespace sw
         VulkanCommandListEntry acquireCommandListEntry();
         /** @brief 빌린 쌍을 GPU 펜스 통과 후 재사용 풀로 돌려보냅니다. */
         void recycleCommandListEntryDeferred( VulkanCommandListEntry entry );
+        /** @brief 빌린 쌍을 **지금** 부숩니다 — 디바이스가 내려가며 살아 있는 리스트를 분리할 때만. */
+        void destroyCommandListEntryImmediate( VulkanCommandListEntry& entry );
+        /** @brief 살아 있는 리스트를 적어 둡니다 — 디바이스가 먼저 내려가면 종료 때 연결을 끊어 준다. */
+        void registerCommandList( VulkanRHICommandList* pCmdList );
+        /** @brief 리스트가 죽을 때 목록에서 뺍니다. */
+        void unregisterCommandList( VulkanRHICommandList* pCmdList );
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
 
@@ -495,6 +503,14 @@ namespace sw
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀. 펜스를 통과한 것만 들어 있다.
         mutable mutex                  _cmdListPoolMutex;
         vector<VulkanCommandListEntry> _listFreeCmdListEntry;
+        /**
+         * @brief 살아 있는 커맨드 리스트 (소유하지 않는다). 종료할 때 연결을 끊어 준다.
+         * @details 렌더 그래프가 리스트를 프레임 너머 들고 있으므로 디바이스가 먼저 내려갈 수 있다 — 끊지 않으면
+         *          리스트 소멸자가 죽은 디바이스에 쌍을 반납하려 들고, 쌍의 풀은 새어 검증 레이어가 잡는다.
+         *          DX12·DX11 은 이 보호를 갖고 있었고 Vulkan 만 없었다.
+         */
+        mutex                         _liveCmdListMutex;
+        vector<VulkanRHICommandList*> _listLiveCmd;
         /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들 — 기록 순서 = 실행 순서.
         vector<VkCommandBuffer> _listPendingSubmit;
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼(프레임 슬롯별 재사용).

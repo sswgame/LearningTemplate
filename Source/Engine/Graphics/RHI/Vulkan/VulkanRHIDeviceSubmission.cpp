@@ -342,6 +342,32 @@ namespace sw
         return entry;
     }
 
+    void VulkanRHIDevice::destroyCommandListEntryImmediate( VulkanCommandListEntry& entry )
+    {
+        if ( _device != nullptr && entry._pool != VK_NULL_HANDLE )
+            vkDestroyCommandPool( _device, entry._pool, nullptr ); // 풀을 부수면 버퍼도 같이 간다
+        entry = VulkanCommandListEntry{};
+    }
+
+    void VulkanRHIDevice::registerCommandList( VulkanRHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        _listLiveCmd.push_back( pCmdList );
+    }
+
+    void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
+        {
+            if ( _listLiveCmd[index] != pCmdList )
+                continue;
+            _listLiveCmd[index] = _listLiveCmd.back();
+            _listLiveCmd.pop_back();
+            return;
+        }
+    }
+
     void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )
     {
         if ( entry._pool == VK_NULL_HANDLE || entry._buffer == VK_NULL_HANDLE )

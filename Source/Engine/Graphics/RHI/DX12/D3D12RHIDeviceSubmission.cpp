@@ -221,7 +221,9 @@ namespace sw
             return;
         }
         _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
-        _releaseQueue.tickCompleted( _fence->GetCompletedValue() );
+        const uint64 completedFence = _fence->GetCompletedValue();
+        _releaseQueue.tickCompleted( completedFence );
+        recycleCompletedOnlineBlocks( completedFence );
     }
 
     ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()

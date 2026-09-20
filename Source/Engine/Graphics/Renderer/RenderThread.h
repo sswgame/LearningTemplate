@@ -50,8 +50,13 @@ namespace sw
         /** @brief 워커를 멈춥니다. */
         void stop();
 
-        /** @brief 워커가 있으면 큐에 넣고, 없으면 executeInline. */
-        void submit( RenderFramePacket&& packet );
+        /**
+         * @brief 워커가 있으면 링에 넣고, 없으면 executeInline.
+         * @details 패킷은 **바꿔치기**로 들어간다 — 호출자의 패킷은 링 자리에 있던 지난 패킷(저장소 포함)을 돌려받는다.
+         *          그래서 호출자가 패킷 하나를 스크래치로 들고 매 프레임 다시 채우면 프레임당 할당이 없다. 옮겨 넣기(move)
+         *          였을 때는 링 자리의 저장소가 프레임마다 버려졌다.
+         */
+        void submit( RenderFramePacket& packet );
         /** @brief RT 큐를 비웁니다 (inline이면 no-op). 붙어 있으면 device waitIdle. */
         void waitIdle();
         /** @brief 호출 스레드에서 패킷 하나를 처리합니다. */

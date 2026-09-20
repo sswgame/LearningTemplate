@@ -92,7 +92,17 @@ namespace sw
         // 패스 로컬 상태를 새로 만든다. 예전에는 멤버 _pCmd 를 저장/복원했는데, 그건
         // "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어썼다.
         // 프레임 시드에서 복사해 뷰/조명 등 프레임 공통값을 물려받는다.
-        FramePassContext passCtx = _frameCtx;
+        // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다 — 복사본을 새로 만들면 값 목록·레지스트리가 프레임마다 다시
+        // 자란다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 못 찾으면 마지막 칸(직렬 경로에서만 온다).
+        const size_t passCount    = _pipelineResource.getGraphPass().size();
+        const auto   passSlotIter = _mapPassNameToIndex.find( graphCtx._passName );
+        const size_t passSlot     = ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount;
+        if ( _listPassContext.size() <= passSlot )
+            _listPassContext.resize( passCount + 1 );
+        // 벡터 **자체**는 병렬 기록 중 읽기만 한다(칸은 패스마다 다르다). 비-const 인덱싱·data() 는 컨테이너 레이스
+        // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다 — const 로 읽고 칸만 고쳐 쓴다.
+        FramePassContext& passCtx = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
+        passCtx                   = _frameCtx;
         if ( graphCtx._pCmdList != nullptr )
             passCtx._pCmd = graphCtx._pCmdList;
         // 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연인데 상수 쓰기는 즉시라,
