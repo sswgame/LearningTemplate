@@ -1218,3 +1218,39 @@ SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolLosesNoBlockUnderContention )
         pool.release( pValue );
     }
 }
+
+/**
+ * @brief [DataStructureTest] 풀은 자기 블록만 자기 것이라고 말한다
+ * @details `release` 가 남의 포인터를 **기다리지 않고** 가려내는 근거다. 예전에는 남의 포인터도
+ *          "자리가 안 난다" 는 증상으로 알아냈는데, 그 증상은 경합 중인 **정상 반납**과 구별되지
+ *          않는다 — 그래서 코어가 적은 CI 에서 진짜 반납이 그 단언에 걸려 프로세스가 죽었다.
+ *          범위와 간격은 기다릴 필요 없이 확정된다.
+ */
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolOwnsOnlyItsOwnBlocks )
+{
+    constexpr uint32 kCapacity = 4;
+
+    sw::LockFreeObjectPool<int64, kCapacity> pool;
+    sw::LockFreeObjectPool<int64, kCapacity> other;
+
+    SW_EXPECT_FALSE( pool.owns( nullptr ) );
+
+    int64 stackValue{ 7 };
+    SW_EXPECT_FALSE_MSG( pool.owns( &stackValue ), "스택 변수를 자기 블록이라고 말했다" );
+
+    int64* pMine = pool.acquire( 1 );
+    SW_ASSERT_NOT_NULL( pMine );
+    SW_EXPECT_TRUE_MSG( pool.owns( pMine ), "자기가 내준 블록을 자기 것이 아니라고 말했다" );
+
+    int64* pTheirs = other.acquire( 2 );
+    SW_ASSERT_NOT_NULL( pTheirs );
+    SW_EXPECT_FALSE_MSG( pool.owns( pTheirs ), "다른 풀의 블록을 자기 것이라고 말했다" );
+    SW_EXPECT_FALSE_MSG( other.owns( pMine ), "다른 풀의 블록을 자기 것이라고 말했다" );
+
+    // 블록 **중간**을 가리키는 포인터는 이 풀의 것이 아니다 — 범위만 보고 간격을 안 보면 통과한다.
+    const int64* pInterior = reinterpret_cast<const int64*>( reinterpret_cast<const uint8*>( pMine ) + 1 );
+    SW_EXPECT_FALSE_MSG( pool.owns( pInterior ), "블록 중간을 가리키는 포인터를 자기 블록이라고 말했다" );
+
+    pool.release( pMine );
+    other.release( pTheirs );
+}

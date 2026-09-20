@@ -41,12 +41,21 @@ namespace sw
 
     public:
         /**
-         * @brief 반납이 자리를 얻지 못했을 때 다시 시도하는 최대 횟수입니다.
-         * @details 경합으로 인한 찰나의 "가득 참" 은 몇 번이면 지나간다. 이 수는 그것을 넉넉히
-         *          넘기면서, 정말 자리가 나지 않는 경우(남의 포인터·이중 반납)에 영영 돌지
-         *          않도록 끝을 정해 둔다.
+         * @brief 자리가 나기를 기다릴 때, 순수 yield 로 버티는 횟수입니다. 이후로는 짧게 재웁니다.
+         * @details 기다림의 끝은 **횟수가 아니라 시간**이다(아래). 이 값은 "CPU 를 태우며 기다릴
+         *          구간" 의 길이일 뿐이라 정확할 필요가 없다.
          */
-        static constexpr uint32 kMaxReleaseAttempt = 1024;
+        static constexpr uint32 kReleaseYieldAttempt = 256;
+
+        /**
+         * @brief 자리가 나기를 기다리는 최대 **시간**(밀리초).
+         * @details **횟수로 끊으면 안 된다.** 앞선 판은 1024 번 시도하고 포기했는데, 코어가 적은
+         *          CI 러너에서 진짜 반납이 그 단언에 걸려 프로세스가 죽었다 — `yield()` 1024 번은
+         *          마이크로초만에 끝나지만, 칸을 집어간 소비자가 순번을 공개하기 전에 선점되면
+         *          그 창은 스케줄러 퀀텀(밀리초) 동안 열려 있다. 시간으로 끊으면 "느린 기계" 와
+         *          "정말 자리가 없다" 가 갈린다. 여기 걸리는 것은 버그 경로뿐이라 넉넉히 준다.
+         */
+        static constexpr uint32 kReleaseWaitMilli = 1000;
 
         /** @brief 스토리지 슬롯을 모두 유휴 큐에 넣습니다. */
         LockFreeObjectPool()
@@ -95,6 +104,25 @@ namespace sw
         }
 
         /**
+         * @brief 이 풀의 스토리지에서 나온 포인터인지 봅니다 (반납 전에 가려내는 용도).
+         * @details 범위와 간격으로 판정하므로 **기다릴 필요가 없다.** 예전에는 남의 포인터도
+         *          "자리가 안 난다" 는 증상으로 알아냈는데, 그 증상은 경합 중인 정상 반납과
+         *          구별되지 않는다 — 같은 단언이 양쪽에 붙어 있었다.
+         * @note 이미 반납된 포인터는 여기서 못 가린다(범위 안이다). 그쪽은 시간으로 가른다.
+         */
+        SW_INLINE bool owns( const T* pPtr ) const
+        {
+            if ( pPtr == nullptr )
+                return false;
+            const uintptr_t base  = reinterpret_cast<uintptr_t>( _arrStorage.data() );
+            const uintptr_t value = reinterpret_cast<uintptr_t>( pPtr );
+            if ( value < base || value >= base + static_cast<uintptr_t>( Capacity ) * sizeof( T ) )
+                return false;
+            // 슬롯 경계에 정확히 걸려야 한다 — 블록 중간을 가리키는 포인터는 이 풀의 것이 아니다.
+            return ( ( value - base ) % sizeof( T ) ) == 0;
+        }
+
+        /**
          * @brief 객체 소멸자를 호출하고 풀에 메모리를 반납합니다. 포인터를 nullptr로 초기화합니다.
          * @param pPtr 반납할 객체 포인터 (참조로 받아 반납 후 nullptr로 만듦)
          * @note release 후 pPtr은 반드시 nullptr이 됩니다. 소멸 후 사용을 방지합니다.
@@ -104,6 +132,14 @@ namespace sw
             if ( pPtr == nullptr )
                 return;
 
+            // 남의 포인터는 기다릴 이유가 없다 — 즉시, 정확히 가린다.
+            if ( owns( pPtr ) == false )
+            {
+                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: the pointer is not from this pool's storage." );
+                pPtr = nullptr;
+                return;
+            }
+
             pPtr->~T();
 
             // **"가득 찼다" 는 답이 곧 이중 반납은 아니다.** 내부 MPMC 큐(Vyukov)는 소비자가 칸을
@@ -112,20 +148,27 @@ namespace sw
             // 그러니 한 번의 실패로 물러서면 안 된다. 물러서면 그 블록이 자유 목록으로 돌아가지
             // 못해 **풀이 조용히 줄어들고**, 오래 돌수록 `acquire` 가 더 자주 널을 돌려준다.
             //
-            // 정말로 이 풀의 것이 아니거나 이미 반납된 포인터라면 자유 큐에는 이미 `Capacity`
-            // 개가 들어 있어 아무리 기다려도 자리가 나지 않는다 — 그때만 말한다.
+            // 여기까지 온 포인터는 이 풀의 블록이다. 그러니 자리는 **반드시** 난다 — 이미 반납된
+            // 것만 아니라면. 그 하나를 가르는 기준이 시간이다(kReleaseWaitMilli).
+            const std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::now() + std::chrono::milliseconds( kReleaseWaitMilli );
             uint32 attemptCount = 0;
             while ( _freeQueue.enqueue( pPtr ) == false )
             {
-                if ( ++attemptCount >= kMaxReleaseAttempt )
-                {
-                    // **반납이 실패하면 세지 않는다.** `_activeCount` 를 줄이면 0 에서 뒤집혀
-                    // 40억이 되고, 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 하게 된다.
-                    SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full — the pointer is not this pool's, or was already released." );
-                    pPtr = nullptr;
-                    return;
-                }
-                std::this_thread::yield();
+                ++attemptCount;
+                if ( attemptCount <= kReleaseYieldAttempt )
+                    std::this_thread::yield();
+                else
+                    std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
+
+                if ( std::chrono::steady_clock::now() < deadline )
+                    continue;
+
+                // **반납이 실패하면 세지 않는다.** `_activeCount` 를 줄이면 0 에서 뒤집혀
+                // 40억이 되고, 소멸자의 "다 반납됐나" 단언이 엉뚱한 말을 하게 된다.
+                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full for the whole wait — this block was already released." );
+                pPtr = nullptr;
+                return;
             }
 
             _activeCount.fetch_sub( 1, std::memory_order_relaxed );
