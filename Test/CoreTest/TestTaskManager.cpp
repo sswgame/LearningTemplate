@@ -18,6 +18,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -29,6 +30,29 @@ namespace
 
     /** @brief 워커 수를 고정해 둔다 — 코어 수에 따라 답이 갈리면 안 되는 것만 본다. */
     constexpr uint32 kWorkerCount = 4;
+
+    /** @brief 누수 탐침이 한 번에 붙드는 스테이지 수. 풀이 재사용하지 못하게 전부 동시에 쥔다. */
+    constexpr uint32 kLeakProbeStageCount = 32;
+
+    /**
+     * @brief 매니저를 하나 세워 스테이지를 @p stageCount 개 동시에 쥐었다 놓고 부숩니다.
+     * @details 동시에 쥐는 것이 핵심이다 — 하나씩 쥐었다 놓으면 풀이 같은 노드를 돌려써서 한 개만 난다.
+     */
+    void runStageLifetimeCycle( uint32 stageCount )
+    {
+        sw::TaskManager manager;
+        if ( manager.initialize( kWorkerCount ) == false )
+            return;
+        {
+            sw::vector<sw::TaskStageHandle> listStage;
+            listStage.reserve( stageCount );
+            for ( uint32 index = 0; index < stageCount; ++index )
+            {
+                listStage.push_back( manager.createAnonymousStage( "LeakProbe" ) );
+            }
+        }
+        manager.shutdown();
+    }
 } // namespace
 
 /**
@@ -388,4 +412,37 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
     SW_EXPECT_EQUAL( kProducerCount * kPerProducer, ranCount.load() );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 부서진 매니저는 자기 스테이지 노드를 돌려놓는다
+ * @details 스테이지를 풀로 옮기면서 **풀 소멸자가 스테이지를 지우는 자리를 빠뜨렸다.** 스테이지는 재사용되므로
+ *          돌고 있는 동안에는 새지 않고, 새는 것은 프로세스가 끝날 때다 — 그래서 윈도우에서는 아무 테스트도 지지
+ *          않았고 리눅스 CI 의 LeakSanitizer 만 보고했다(`StageNode` + 태스크 목록 + 조건변수의 뮤텍스).
+ *
+ *          여기서는 살아 있는 할당 수로 같은 것을 본다: 매니저를 세워 스테이지를 여럿 **동시에** 쥐었다 부수는
+ *          한 바퀴를 돌고, 그 전후의 살아 있는 할당 수가 제자리로 돌아오는지 본다. 첫 바퀴는 워밍업이다 —
+ *          로거·스레드 런타임이 한 번만 잡는 것들을 재지 않기 위해서다.
+ */
+SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
+{
+    sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
+    SW_ASSERT_NOT_NULL( pMemory );
+
+    runStageLifetimeCycle( kLeakProbeStageCount ); // 워밍업
+
+    const bool bWasTracking = pMemory->isTrackingEnabled();
+    pMemory->setTrackingEnabled( true );
+    const uint64 before = pMemory->getLiveAllocationCount();
+    runStageLifetimeCycle( kLeakProbeStageCount );
+    const uint64 after = pMemory->getLiveAllocationCount();
+    pMemory->setTrackingEnabled( bWasTracking );
+
+    // 스테이지 하나가 새면 그 안의 목록·뮤텍스까지 따라 남으므로 새면 스테이지 수보다 크게 벌어진다.
+    // 문턱을 스테이지 수로 둔 것은 로거가 아직 안 비운 메시지 같은 잡음을 결함으로 읽지 않기 위해서다.
+    const uint64 leaked = after > before ? after - before : 0;
+    SW_EXPECT_TRUE_MSG( leaked < kLeakProbeStageCount,
+                        ( sw::string( "매니저를 부순 뒤에도 살아 있는 할당이 " ) + sw::to_string( leaked ) +
+                          " 개 남았다 — 스테이지 " + sw::to_string( kLeakProbeStageCount ) + " 개를 돌려놓지 않았다" )
+                            .c_str() );
 }

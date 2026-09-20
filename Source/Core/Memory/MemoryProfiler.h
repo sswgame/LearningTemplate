@@ -134,6 +134,13 @@ namespace sw
         /** @brief 모든 태그의 할당 횟수 누계 합. 프레임당 할당 수는 두 시점의 차다. */
         uint64 getTotalAllocationCount() const;
 
+        /**
+         * @brief 지금 **살아 있는** 할당 수의 합 — 해제하면 줄어든다. 두 시점의 차가 0 이 아니면 그만큼 남은 것이다.
+         * @details 위 누계(churn)와 쓰임이 다르다: 이쪽은 "돌려놨는가" 를 본다. 소유자를 만들었다 부순 전후로 재면
+         *          그 소유자가 흘린 것을 세고, LeakSanitizer 가 없는 구성(윈도우 Debug)에서도 같은 결함을 잡는다.
+         */
+        uint64 getLiveAllocationCount() const;
+
         /** @brief 콜스택별 집계를 @p order 기준으로 내림차순 정렬해 돌려줍니다 (세부 추적이 켜져 있을 때만 채워진다). */
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;
 

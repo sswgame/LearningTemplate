@@ -377,6 +377,14 @@ namespace sw
         return total;
     }
 
+    uint64 MemoryProfiler::getLiveAllocationCount() const
+    {
+        uint64 total = 0;
+        for ( const MemoryProfileStats& stat : _arrStat )
+            total += stat._currentAllocationCount.load( std::memory_order_relaxed );
+        return total;
+    }
+
     vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
         vector<CallStackAllocInfo> listResult;

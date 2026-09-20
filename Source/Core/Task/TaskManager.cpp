@@ -280,6 +280,11 @@ namespace sw
     public:
         TaskNodePool() = default;
 
+        /**
+         * @brief 태스크 슬랩을 되돌립니다. 스테이지는 `_listStageAll` 이 소유하므로 여기서 할 일이 없다.
+         * @details 슬랩만 손으로 푸는 것은 `Memory::allocate` 로 원소 64 개를 한 번에 잡고 배치 new 로
+         *          짓기 때문이다 — 그쪽은 짝이 되는 해제도 손으로 해야 한다.
+         */
         ~TaskNodePool()
         {
             std::scoped_lock<mutex> lock{ _slabMutex };
@@ -388,10 +393,11 @@ namespace sw
             }
             if ( pStage == nullptr )
             {
-                pStage = sw_new StageNode();
+                unique_ptr<StageNode> uniqueStage = make_unique<StageNode>();
+                pStage                            = uniqueStage.get();
                 pStage->_listTask.reserve( 16 );
                 std::scoped_lock<mutex> lock{ _stageMutex };
-                _listStageAll.push_back( pStage );
+                _listStageAll.push_back( std::move( uniqueStage ) );
             }
             pStage->_name.clear();
             pStage->_listTask.clear();
@@ -423,10 +429,10 @@ namespace sw
             vector<StageNode*> listLive;
             {
                 std::scoped_lock<mutex> lock{ _stageMutex };
-                for ( StageNode* pStage : _listStageAll )
+                for ( const unique_ptr<StageNode>& uniqueStage : _listStageAll )
                 {
-                    if ( pStage != nullptr && pStage->_refCount.load( std::memory_order_relaxed ) > 0 )
-                        listLive.push_back( pStage );
+                    if ( uniqueStage != nullptr && uniqueStage->_refCount.load( std::memory_order_relaxed ) > 0 )
+                        listLive.push_back( uniqueStage.get() );
                 }
             }
             for ( StageNode* pStage : listLive )
@@ -444,10 +450,17 @@ namespace sw
         vector<TaskNode*>                _listOverflowFree;
         vector<TaskNode*>                _listSlab;
         mutex                            _slabMutex;
-        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지 — 다음 createAnonymousStage 가 먼저 집는다
-        vector<StageNode*>               _listStageAll;  ///< 만든 스테이지 전부 (소멸·강제 정리용)
-        mutex                            _stageMutex;
-        SharedTaskCallablePool           _sharedCallablePool;
+        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지 — 다음 createAnonymousStage 가 먼저 집는다. 빌려 쓰는 것이라 소유하지 않는다
+        /**
+         * @brief 만든 스테이지 전부 — **소유한다.**
+         * @details 처음에는 raw 포인터 목록이었고 풀 소멸자가 지우는 자리를 빠뜨려 스테이지가 프로세스
+         *          끝까지 남았다(리눅스 CI 의 LeakSanitizer 가 잡았다 — 윈도우 테스트는 전부 초록이었다).
+         *          소유를 타입으로 적으면 그 자리를 빠뜨릴 수 없다. 꺼내 쓰는 쪽(`_listStageFree`)은
+         *          여전히 raw 라 할당 경로에 간접이 늘지 않는다.
+         */
+        vector<unique_ptr<StageNode>> _listStageAll;
+        mutex                         _stageMutex;
+        SharedTaskCallablePool        _sharedCallablePool;
     };
 
     void InlineSuccessorList::clearAndRelease()

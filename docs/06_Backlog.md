@@ -318,6 +318,33 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
+### 1-0f. 리눅스 CI 의 `EngineTest_NoGPU` 10 건 (2026-09-21 보고됨, 원인 미확인)
+
+사용자가 붙여 준 리눅스 CI 로그에서 **539 / 552** 로 열 건이 진다. 같은 목록이 윈도우에서는 전부 초록이다
+(Ninja-Debug 전체 nogpu **604 / 604**, 유니티 빌드를 켠 별도 빌드에서도 초록 — 즉 `SW_ENABLE_UNITY_BUILD`
+차이는 아니다).
+
+```
+ActionMapTest.LoadFromDefaultInputXmlResource / GlyphResolutionWithDeviceTypeAndChords / SaveAndLoadAllBindingKinds
+GameFrameworkTest.TurnBattleSaveGame_VariableMoveSlotRoundtrip / TurnBattleSaveGame_ReflectionSaveRoundtrip
+GameObjectTest.ObjectStateBinaryCarriesTagsAndAttachHierarchy
+RenderPassTest.ShippedPipelinesValidateClean / PipelineValidationCatchesInconsistencies
+ResourcePackTest.StringPoolReadStopsAtPoolEnd
+SceneTest.CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad
+```
+
+**아직 재현하지 못했다.** WSL 클론에서 CI 프리셋을 새로 지으려 했으나 vcpkg 가 x64-linux 포트를 다시 굽는
+중이고(spirv-tools 등), 그 사이 WSL 이 재시작돼 작업이 죽었다. 다음 사람이 이어서 할 것:
+
+1. `wsl` 에서 `cmake --preset CI-Debug-ASAN` → `--build` → `ctest -L nogpu`. 열 건이 나오는지부터 본다.
+2. 나오면 하나(가장 단순한 `ResourcePackTest.StringPoolReadStopsAtPoolEnd`)를 골라 좁힌다.
+3. **낡은 바이너리를 재현으로 착각하지 말 것.** 이번에 한 번 그랬다: 클론의 `build/CI-Debug/Bin/EngineTest` 는
+   9월 19일 것이라 `RenderPassTest.ShippedPipelinesValidateClean` 이 졌는데, 그 원인(`4a8b4bba` 가 Present 의
+   선택 입력에 `SceneDepth` 를 더한 것)은 **바이너리보다 나중**이었다. 빌드 시각을 먼저 볼 것.
+
+공통점 후보: 열 건 중 아홉이 **직렬화 왕복이거나 리소스 XML 로드**다. 반대로 `SW_ENABLE_UNITY_BUILD` 는
+아니라는 것이 확인됐고, 쿠킹 산출물(`Bin/Packs`)도 아니다 — `CookAssets` 는 Shipping 에서만 `all` 에 든다.
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -497,6 +524,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (리눅스 CI 의 LeakSanitizer — 스테이지 노드를 아무도 안 지우고 있었다)
+
+리눅스 CI(`CI-Debug-ASAN`)에서 `CoreTest` 와 `EngineTest_NoGPU` 가 LeakSanitizer 로 졌다
+(`StageNode` 288 B + 태스크 목록 176 B + `condition_variable_any` 의 뮤텍스 56 B, 3 건 520 B).
+
+**원인.** 앞 회차에서 스테이지를 `shared_ptr` 에서 **풀 + 침입형 참조 계수**로 옮기면서(프레임마다 웨이브
+수만큼 만드는 자리라 힙 churn 이었다) `TaskNodePool` 이 스테이지를 `sw_new` 로 만들고 `_listStageAll` 에
+raw 포인터로 적어 두었는데, **풀 소멸자가 그 목록을 지우지 않았다.** 태스크 슬랩(`_listSlab`)만 풀고 있었다.
+스테이지는 재사용되므로 돌고 있는 동안에는 새지 않는다 — 새는 것은 프로세스가 끝날 때뿐이라 윈도우
+테스트는 전부 초록이었고, LeakSanitizer 가 도는 리눅스 ASan 잡에서만 보였다.
+
+**고침은 소멸자에 지우는 줄을 더하는 것이 아니라 소유를 타입으로 적는 것이다.** `_listStageAll` 을
+`vector<unique_ptr<StageNode>>` 로 바꿨다 — 빠뜨릴 자리 자체가 없어진다. 꺼내 쓰는 쪽(`_listStageFree`,
+`resetAllStages` 의 활성 목록)은 그대로 raw 라 할당 경로에 간접이 늘지 않는다. 손으로 푸는 것은
+슬랩만 남는데, 그쪽은 `Memory::allocate` + 배치 new 라 짝이 되는 해제도 손으로 해야 한다.
+
+**회귀 테스트** `TaskManagerTest.DestroyedManagerReturnsItsStageNodes`. 매니저를 하나 세워 스테이지를
+**동시에** 32 개 쥐었다 놓고 부수는 한 바퀴를 돌고, 그 전후의 **살아 있는 할당 수**가 제자리로 오는지 본다
+(`MemoryProfiler::getLiveAllocationCount` 를 새로 뒀다 — 기존 `getTotalAllocationCount` 는 churn 누계라
+"돌려놨는가" 를 못 본다). 동시에 쥐는 것이 핵심이다: 하나씩 쥐었다 놓으면 풀이 같은 노드를 돌려써서
+한 개만 난다. 첫 바퀴는 워밍업이다. 되돌려 확인: 64 개가 남아 진다.
+
+**같이 고친 것 — 부하가 걸린 기계에서만 지던 `TaskTest.StageDispatchDoesNotAllocate`.** 세 빌드를 같이
+돌리는 중에 `50 회에 힙 할당 2 회` 로 졌다(단독 실행은 6/6 통과). `waitStage` 는 남은 태스크가 0 이 되면
+돌아오지만 그 0 을 만든 워커가 스테이지의 **자기 참조**를 놓는 것은 그 다음이다 — 그 틈에 다음 디스패치가
+오면 풀이 비어 노드를 하나 더 만든다(노드 + 소유 목록 = 2 회). 재는 대상이 그 경합이 아니라 정상 상태의
+churn 이므로, 워밍업에서 스테이지 여덟 개를 미리 만들어 틈을 메웠다. CI 처럼 붐비는 기계에서 잠재적
+플레이크였다.
+
+**검증.** 네 프리셋 빌드 경고 0 · nogpu 4/4 초록 · hostgpu Shipping·Debug 초록 · 린트 20/20 · 변이 확인.
+리눅스 쪽 나머지(위 1-0f 열 건)는 아직 재현 중이다.
 
 ### 2026-09-21 (프레임당 힙 할당 155 → 10 — 패킷 저장소 순환, 퍼뮤테이션 공유, 패스 컨텍스트 슬롯, 커맨드 리스트 재사용)
 

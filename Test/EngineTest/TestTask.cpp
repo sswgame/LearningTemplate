@@ -1037,6 +1037,21 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
     for ( uint32 round = 0; round < 4; ++round )
         dispatchOnce();
 
+    // 스테이지 노드를 **여러 개** 미리 만들어 둔다. 하나만으로는 부하가 걸린 기계에서 진다:
+    // `waitStage` 는 남은 태스크가 0 이 되면 돌아오지만, 그 0 을 만든 워커가 스테이지의 자기 참조를
+    // 놓는 것은 그 다음이다. 그 틈에 다음 디스패치가 오면 풀에 남은 것이 없어 하나를 더 만든다
+    // (노드 하나 + 소유 목록이 늘며 두 번). 이 테스트가 재는 것은 그 경합이 아니라 정상 상태의
+    // churn 이므로, 여유분을 미리 만들어 틈을 메운다 — CI 처럼 붐비는 기계에서만 지던 이유다.
+    {
+        constexpr uint32                kSpareStageCount = 8;
+        sw::vector<sw::TaskStageHandle> listSpareStage;
+        listSpareStage.reserve( kSpareStageCount );
+        for ( uint32 index = 0; index < kSpareStageCount; ++index )
+        {
+            listSpareStage.push_back( taskMgr.createAnonymousStage( "NoAllocWarmup" ) );
+        }
+    }
+
     const bool bWasTracking = pMemory->isTrackingEnabled();
     pMemory->setTrackingEnabled( true );
     const uint64     before = pMemory->getTotalAllocationCount();
