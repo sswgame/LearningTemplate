@@ -117,6 +117,8 @@ namespace sw
         , _customDefaultsPath{}
         , _defaultsMutex{}
         , _bDefaultsLoaded{ false }
+        , _bLoadAttempted{ false }
+        , _loadAttemptCount{ 0 }
     {
     }
 
@@ -128,18 +130,34 @@ namespace sw
     {
         // 이중 검사 잠금이다 — 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
         // 스레드가 그 앞에서 지어진 `_defaultsDoc` 도 함께 본다.
-        if ( _bDefaultsLoaded.load( std::memory_order_acquire ) )
+        //
+        // **보는 깃발은 "시도했는가" 다.** 예전에는 "성공했는가" 만 봐서, 파일이 없으면 실패한
+        // 채로 깃발이 false 로 남고 **다음 컴포넌트가 또 열었다.** 기본값 파일은 없어도 되는
+        // 것이라, 없는 게 정상인 게임에서는 씬 로드가 `컴포넌트 수 x 파일 열기 실패` 가 됐다.
+        if ( _bLoadAttempted.load( std::memory_order_acquire ) )
             return;
 
         std::scoped_lock<mutex> lock{ _defaultsMutex };
-        if ( _bDefaultsLoaded.load( std::memory_order_relaxed ) )
-            return;
-        if ( _customDefaultsPath.empty() )
+        if ( _bLoadAttempted.load( std::memory_order_relaxed ) )
             return;
 
+        if ( _customDefaultsPath.empty() )
+        {
+            // 경로조차 없으면 읽을 것이 없다 — 이것도 "시도했다" 로 친다.
+            _bLoadAttempted.store( true, std::memory_order_release );
+            return;
+        }
+
         string absPath;
-        if ( _defaultsDoc.loadResource( _customDefaultsPath.c_str(), &absPath ) )
+        _loadAttemptCount.fetch_add( 1, std::memory_order_relaxed );
+        const bool bLoaded = _defaultsDoc.loadResource( _customDefaultsPath.c_str(), &absPath );
+        if ( bLoaded )
             _bDefaultsLoaded.store( true, std::memory_order_release );
+        else
+            SW_LOG_TRACE( "Component defaults not found at '%#' — skipping defaults for this run.", _customDefaultsPath );
+
+        // **성공하든 실패하든 시도는 끝났다.** 이 줄이 없으면 실패가 매번 되풀이된다.
+        _bLoadAttempted.store( true, std::memory_order_release );
     }
 
     void ComponentDefaults::apply( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
@@ -164,13 +182,33 @@ namespace sw
         if ( defaultsNode.isValid() == false )
             return;
 
+        // 어느 단계에 무엇을 적용할지는 **타입당 한 번만** 푼다.
+        const ResolvedDefaults& resolved = resolveFor( typeInfo, pAliasTypeInfo );
+        for ( const auto& [pLevelType, levelNode] : resolved._listLevel )
+            applyNodeToProperties( pInstance, *pLevelType, levelNode );
+    }
+
+    const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo,
+                                                                              const TypeInfo* pAliasTypeInfo )
+    {
+        {
+            std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
+            const auto                          it = _mapResolved.find( &typeInfo );
+            if ( it != _mapResolved.end() )
+                return it->second;
+        }
+
         // 뿌리 기반 타입부터 적용해 파생이 마지막에 덮어쓴다. 별칭 타입은 파생과 같은 단계로 본다.
+        ResolvedDefaults        resolved;
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
+        const XmlNode root         = _defaultsDoc.root( "GameData" );
+        const XmlNode defaultsNode = root.isValid() ? root.child( "Defaults" ) : XmlNode{};
+
         for ( const TypeInfo* pLevelType : listType )
         {
-            if ( pLevelType == nullptr )
+            if ( pLevelType == nullptr || defaultsNode.isValid() == false )
                 continue;
 
             vector<string> listName;
@@ -182,8 +220,14 @@ namespace sw
             if ( levelNode.isValid() == false )
                 continue;
 
-            applyNodeToProperties( pInstance, *pLevelType, levelNode );
+            resolved._listLevel.emplace_back( pLevelType, levelNode );
         }
+
+        std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
+        // 그 사이에 다른 스레드가 넣었으면 그것을 쓴다 — 어차피 같은 값이다.
+        const auto [it, bInserted] = _mapResolved.try_emplace( &typeInfo, std::move( resolved ) );
+        (void)bInserted;
+        return it->second;
     }
 
     void ComponentDefaults::applyNodeToProperties( void* pInstance, const TypeInfo& typeInfo, const XmlNode& compNode )
@@ -224,6 +268,8 @@ namespace sw
         std::scoped_lock<mutex> lock{ _defaultsMutex };
         _customDefaultsPath = path;
         _bDefaultsLoaded.store( false, std::memory_order_release );
+        _bLoadAttempted.store( false, std::memory_order_release );
+        clearResolvedCache();
     }
 
     string ComponentDefaults::getPath() const
@@ -238,6 +284,16 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _defaultsMutex };
         _bDefaultsLoaded.store( false, std::memory_order_release );
+        _bLoadAttempted.store( false, std::memory_order_release );
+        clearResolvedCache();
+    }
+
+    void ComponentDefaults::clearResolvedCache()
+    {
+        // **문서를 다시 읽으면 캐시는 통째로 버린다.** 캐시는 `XmlNode` 를 들고 있는데 그것은
+        // 문서 안을 가리키는 것이라, 안 버리면 죽은 노드를 읽거나 옛 기본값이 계속 먹는다.
+        std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
+        _mapResolved.clear();
     }
 
     void ComponentDefaults::applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )

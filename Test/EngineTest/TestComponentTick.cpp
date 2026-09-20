@@ -754,6 +754,57 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 }
 
 /**
+ * @brief [ComponentDefaultsTest] **없는** 기본값 파일은 딱 한 번만 열어 본다
+ * @details 예전에는 성공 깃발 하나만 봐서, 로드가 실패하면 그 깃발이 false 로 남고
+ *          **컴포넌트를 만들 때마다 파일을 다시 열었다.** 기본값 파일은 있어도 되고 없어도
+ *          되는 것이라 없는 게 정상인데, 없을 때 씬 로드가
+ *          `컴포넌트 수 x 파일 열기 실패` 가 됐다.
+ *
+ *          2026-09-20 실측: 엔티티 4000 개짜리 씬의 로드 **255 ms 중 207 ms** 가 이것이었다.
+ *          고친 뒤 같은 씬이 **44 ms** 다.
+ * @note 시간으로 재면 흔들리므로 **열어 본 횟수**로 본다.
+ */
+SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
+{
+    if ( sw::engine::areEngineServicesBound() == false )
+    {
+        SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
+        return;
+    }
+    sw::ComponentDefaults& defaults = sw::engine::getComponentDefaults();
+
+    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+
+    // 일부러 없는 경로를 준다 — 이것이 "기본값 없음" 의 정상 상태다.
+    const sw::string missingPath = test::makeTempPath( "no_such_component_defaults.xml" );
+    sw::FileUtil::removeFile( missingPath );
+    defaults.setPath( missingPath );
+
+    const uint32 before = defaults.getLoadAttemptCount();
+
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "DefaultsRetryTarget" ) );
+        SW_ASSERT_TRUE( pObject != nullptr );
+
+        // 컴포넌트를 여럿 만든다 — 예전에는 이 수만큼 파일을 다시 열었다.
+        constexpr int32 kComponentCount = 32;
+        for ( int32 index = 0; index < kComponentCount; ++index )
+        {
+            sw::GameObject* pEach = manager.createGameObject( sw::hashed_string( "Each" ) );
+            SW_ASSERT_TRUE( pEach != nullptr );
+            SW_ASSERT_TRUE( pEach->addComponent<sw::MeshComponent>() != nullptr );
+        }
+    }
+
+    const uint32 attempts = defaults.getLoadAttemptCount() - before;
+    SW_EXPECT_TRUE_MSG( attempts <= 1, "없는 기본값 파일을 컴포넌트마다 다시 열었습니다" );
+
+    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::ComponentDefaults::reloadDefaults();
+}
+
+/**
  * @brief [ComponentDefaultsTest] 기본값 경로가 **값으로** 돌아오는지 검증
  * @details `getDefaultGamedataPath()` 가 `string_view` 를 돌려주고 있었다. 그 뷰는 뮤텍스로
  *          지키는 `_customDefaultsPath` 의 내부 버퍼를 가리키는데, **뮤텍스는 함수가 끝나면서
