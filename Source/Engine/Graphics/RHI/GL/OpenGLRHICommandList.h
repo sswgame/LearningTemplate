@@ -41,6 +41,11 @@ namespace sw
                 _pDevice->bindGraphicsContext();
         }
         void endCommandList() override {}
+        void writeTimestamp( uint32 slotIndex ) override
+        {
+            if ( _pDevice != nullptr )
+                _pDevice->writeTimestampSlot( slotIndex );
+        }
 
     private:
         OpenGLRHIDevice*        _pDevice;

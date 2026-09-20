@@ -50,6 +50,8 @@ namespace sw
         /** @brief `IRHIDevice::executeCommandList` 가 실제 제출에 쓰는 네이티브 포인터. */
         ID3D12GraphicsCommandList* getNativeCommandList() const { return _entry._list.Get(); }
 
+        void writeTimestamp( uint32 slotIndex ) override;
+
         void beginCommandList() override;
         void endCommandList() override;
 

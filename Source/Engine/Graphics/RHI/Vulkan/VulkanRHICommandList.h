@@ -40,6 +40,7 @@ namespace sw
 
         void beginCommandList() override;
         void endCommandList() override;
+        void writeTimestamp( uint32 slotIndex ) override;
 
     private:
         VulkanRHIDevice*        _pDevice;

@@ -38,6 +38,12 @@ namespace sw
         , _mapCompositeFbo{}
         , _listRegisteredTexture{}
         , _listTextureFree{}
+        , _arrTimestampQuery{}
+        , _arrTimestampMask{}
+        , _timestampFrameIndex{ 0 }
+        , _bTimestampEnabled{ SW_FALSE }
+        , _bTimestampReady{ SW_FALSE }
+        , _listTimestampMicro{}
         , _computeRootConstantUbo{ 0 }
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}

@@ -82,6 +82,36 @@ namespace sw
         virtual void beginFrame( const float4& clearColor ) = 0;
         /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 생략합니다. */
         virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
+
+        /**
+         * @brief 타임스탬프 계측을 켜고 끕니다. **끄면 백엔드는 아무 자원도 만들지 않고 아무것도 읽지 않습니다.**
+         * @details 계측은 공짜가 아니다 — 쿼리 힙·풀, 프레임마다의 리셋·resolve·읽기가 따라붙는다.
+         *          그래서 "잴 사람이 있을 때만" 켠다. **정책은 엔진의 것이고 여기는 메커니즘만 둔다** —
+         *          백엔드는 별도 모듈이라 엔진 전역(프로파일러)을 볼 수 없다.
+         *          켠 다음 프레임부터 슬롯이 열린다(자원을 그때 만든다).
+         */
+        virtual void setTimestampEnabled( bool bEnabled ) { (void)bEnabled; }
+
+        /**
+         * @brief 이번 프레임에 쓸 수 있는 타임스탬프 슬롯 수. 0 이면 이 백엔드·드라이버가 지원하지 않습니다.
+         * @details 슬롯은 프레임마다 0 부터 다시 쓴다. 기록은 `IRHICommandList::writeTimestamp` 가 한다.
+         */
+        virtual uint32 getTimestampSlotCount() const { return 0; }
+
+        /**
+         * @brief **이미 끝난 프레임**의 타임스탬프를 마이크로초로 읽습니다 (프레임 시작 기준 누적).
+         * @return 읽을 것이 있으면 true. GPU 가 아직 안 끝냈으면 false — 다음 프레임에 다시 물으면 된다.
+         * @details 결과는 몇 프레임 늦는다. **기다리지 않는다** — 기다리면 재려던 그 파이프라인을
+         *          멈춰 세워 숫자가 거짓이 된다.
+         *          이번 프레임에 적히지 않은 슬롯은 **음수**로 온다 — 백엔드마다 안 적은 칸에 남는
+         *          것이 다르기 때문이다(DX12·DX11 은 지난 사이클 값, Vulkan·GL 은 미가용).
+         *          호출자는 음수가 하나라도 낀 구간을 통째로 버려야 한다.
+         */
+        virtual bool readTimestampsMicros( vector<float32>& outListMicro )
+        {
+            outListMicro.clear();
+            return false;
+        }
         /** @brief 백버퍼 크기를 바꿉니다. */
         virtual void          resize( uint32 width, uint32 height ) = 0;
         virtual IRHIResource* getResource() { return nullptr; }

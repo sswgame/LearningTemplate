@@ -49,6 +49,11 @@ namespace sw
 
         void beginCommandList() override;
         void endCommandList() override;
+        void writeTimestamp( uint32 slotIndex ) override
+        {
+            if ( _pDevice != nullptr )
+                _pDevice->writeTimestampSlot( _pNativeContext.Get(), slotIndex );
+        }
 
         /**
          * @brief 기록해 둔 커맨드 리스트를 버리고 Deferred Context 바인딩을 비웁니다.

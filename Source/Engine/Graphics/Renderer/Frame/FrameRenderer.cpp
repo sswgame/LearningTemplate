@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -163,6 +164,53 @@ namespace sw
     void FrameRenderer::bindServices( TaskManager* pTaskManager )
     {
         _pTaskManager = pTaskManager;
+    }
+
+    const utf8* FrameRenderer::gpuScopeNameFor( const string& passName )
+    {
+        // 프로파일러는 이름 포인터를 들고 있으므로 **수명이 프레임을 넘겨야 한다** — 맵에 담아 둔다.
+        const hashed_string key{ passName.c_str() };
+        const auto          iter = _mapGpuScopeName.find( key );
+        if ( iter != _mapGpuScopeName.end() )
+            return iter->second.c_str();
+        return _mapGpuScopeName.emplace( key, string( "GPU." ) + passName ).first->second.c_str();
+    }
+
+    void FrameRenderer::reportGpuPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
+    {
+#if SW_LOG_LEVEL_COMPILED( 2 )
+        // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 재려던 그 파이프라인을 멈춰 세워
+        // 숫자가 거짓이 된다 — 늦은 대신 정확한 쪽을 고른다.
+        if ( pDevice == nullptr )
+            return;
+
+        // **여기가 계측 스위치다.** 프로파일러가 꺼져 있으면 백엔드는 쿼리 자원조차 만들지 않는다 —
+        // Shipping 에서는 이 블록이 통째로 사라지므로 스위치가 켜질 일도 없다.
+        pDevice->setTimestampEnabled( engine::getFrameProfiler().isEnabled() );
+        if ( pDevice->getTimestampSlotCount() == 0 )
+            return;
+        if ( pDevice->readTimestampsMicros( _listGpuTimestampMicro ) == false )
+            return;
+
+        const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+        for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
+        {
+            const size_t beginSlot = passIndex * 2;
+            if ( beginSlot + 1 >= _listGpuTimestampMicro.size() )
+                break;
+
+            const float32 beginMicro = _listGpuTimestampMicro[beginSlot];
+            const float32 endMicro   = _listGpuTimestampMicro[beginSlot + 1];
+            // 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를 건너뛰었거나 첫 사이클) — 버린다.
+            // 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
+            if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
+                continue;
+
+            const float32 micro = endMicro - beginMicro;
+            const uint32  slot  = engine::getFrameProfiler().registerScope( gpuScopeNameFor( listPass[passIndex]._name ) );
+            engine::getFrameProfiler().addSample( slot, static_cast<uint64>( micro * 1000.0f ) );
+        }
+#endif
     }
 
     void FrameRenderer::shutdown()
@@ -385,6 +433,7 @@ namespace sw
         const bool bOk             = submitGraph( pDevice );
         _pScene                    = nullptr;
         _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
+        reportGpuPassTimes( pDevice );
         return bOk;
     }
 
@@ -454,6 +503,7 @@ namespace sw
 
         const bool bOk             = submitGraph( pDevice );
         _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
+        reportGpuPassTimes( pDevice );
         return bOk;
     }
 } // namespace sw

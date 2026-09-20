@@ -46,6 +46,11 @@ namespace sw
         , _bFrameAcquireWaitPending{ SW_FALSE }
         , _bMaterialCbSlotWarned{ SW_FALSE }
         , _activeFrameBuffer{ nullptr }
+        , _timestampPool{ nullptr }
+        , _timestampPeriod{ 0.0f }
+        , _bTimestampEnabled{ SW_FALSE }
+        , _listTimestampMicro{}
+        , _arrTimestampSubmitted{}
         , _listCommandBuffer{}
         , _listInFlightFence{}
         , _listImagesInFlight{}

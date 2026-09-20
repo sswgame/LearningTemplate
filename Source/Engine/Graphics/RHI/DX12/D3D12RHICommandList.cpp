@@ -30,6 +30,15 @@ namespace sw
         }
     }
 
+    void D3D12RHICommandList::writeTimestamp( uint32 slotIndex )
+    {
+        ID3D12QueryHeap* pHeap = ( _pDevice != nullptr ) ? _pDevice->getTimestampHeap() : nullptr;
+        if ( pHeap == nullptr || slotIndex >= constant::kMaxGpuTimestampSlot || _entry._list == nullptr )
+            return;
+        _entry._list->EndQuery( pHeap, D3D12_QUERY_TYPE_TIMESTAMP, _pDevice->getTimestampBase() + slotIndex );
+        _pDevice->noteTimestampWritten( slotIndex );
+    }
+
     void D3D12RHICommandList::detachFromDevice()
     {
         // 디바이스가 내려가는 중이다 — 반납하지 않고 놓는다. 온라인 블록 풀과 리스트 풀은

@@ -30,9 +30,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 기록 범위 · 뷰포트 · PSO · 렌더 패스
         // ------------------------------------------------------------------------------
-        virtual void beginCommandList()                                         = 0;
-        virtual void endCommandList()                                           = 0;
-        virtual void setViewport( const RHIViewport& viewport )                 = 0;
+        virtual void beginCommandList()                         = 0;
+        virtual void endCommandList()                           = 0;
+        virtual void setViewport( const RHIViewport& viewport ) = 0;
+        /**
+         * @brief 이 지점의 GPU 시각을 슬롯에 적습니다. 지원하지 않는 백엔드에서는 아무 일도 하지 않습니다.
+         * @param slotIndex `IRHIDevice::getTimestampSlotCount()` 미만이어야 합니다.
+         */
+        virtual void writeTimestamp( uint32 slotIndex ) { (void)slotIndex; }
+
         virtual void setPipelineState( RHIPipelineStateHandle pso )             = 0;
         virtual void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) = 0;
         virtual void endRenderPass()                                            = 0;

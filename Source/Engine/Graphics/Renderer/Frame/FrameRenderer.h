@@ -523,6 +523,10 @@ namespace sw
         int32 _vertexPoolOverride;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수 — 패스가 병렬로 기록하므로 원자.
         atomic<uint32> _indirectDrawCallCount;
+        /** @brief 지난 프레임의 타임스탬프(마이크로초, 프레임 시작 기준 누적). */
+        vector<float32> _listGpuTimestampMicro;
+        /** @brief 패스 이름 -> `GPU.<패스>` 문자열. 프로파일러가 이름 포인터를 들고 있어 수명이 필요하다. */
+        unordered_map<hashed_string, string> _mapGpuScopeName;
         /// @brief 마지막 프레임의 값 (getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트 — 그 역할의 입력은 걸지 않는다.
@@ -549,6 +553,16 @@ namespace sw
 
         /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 (업로드 전에 GpuScene 에 알린다). */
         bool wantsGpuGeneratedCommands() const;
+
+        /**
+         * @brief 지난 프레임의 패스별 GPU 시간을 프로파일러에 `GPU.<패스>` 로 넣습니다.
+         * @details GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로
+         *          추측하거나 패스를 지워 가며 차이로 구해야 한다 — 그렇게 재다가 "당연히 이것이겠지"
+         *          를 두 번 틀렸다(클리어·포맷). 상용 엔진이 전부 갖춘 이유가 그것이다.
+         */
+        void reportGpuPassTimes( IRHIDevice* pDevice );
+        /** @brief 패스 이름으로 `GPU.<패스>` 스코프 이름을 만들어 캐시합니다(포인터 수명이 필요하다). */
+        const utf8* gpuScopeNameFor( const string& passName );
         /**
          * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다 (instanceanim.hlsl).
          * @details **컬링보다 먼저** 돌아야 한다 — 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의

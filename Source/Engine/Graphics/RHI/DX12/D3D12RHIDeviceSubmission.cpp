@@ -301,11 +301,111 @@ namespace sw
         _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
 
+    uint32 D3D12RHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
+                 ? constant::kMaxGpuTimestampSlot
+                 : 0u;
+    }
+
+    bool D3D12RHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    {
+        outListMicro = _listTimestampMicro;
+        return outListMicro.empty() == false;
+    }
+
+    void D3D12RHIDevice::ensureTimestampResources()
+    {
+        if ( _bTimestampEnabled == SW_FALSE || _timestampHeap != nullptr || _device == nullptr || _commandQueue == nullptr )
+            return;
+
+        UINT64 frequency{ 0 };
+        if ( FAILED( _commandQueue->GetTimestampFrequency( &frequency ) ) || frequency == 0 )
+            return;
+
+        D3D12_QUERY_HEAP_DESC heapDesc{};
+        heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        heapDesc.Count = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        if ( FAILED( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ) ) )
+            return;
+
+        // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다 — 슬롯마다 구간이 겹치지 않는다.
+        D3D12_HEAP_PROPERTIES heapProps{};
+        heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+        D3D12_RESOURCE_DESC bufferDesc{};
+        bufferDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+        bufferDesc.Width            = sizeof( uint64 ) * heapDesc.Count;
+        bufferDesc.Height           = 1;
+        bufferDesc.DepthOrArraySize = 1;
+        bufferDesc.MipLevels        = 1;
+        bufferDesc.SampleDesc.Count = 1;
+        bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                       D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                       IID_PPV_ARGS( &_timestampReadback ) ) ) )
+        {
+            _timestampHeap.Reset();
+            return;
+        }
+        _timestampFrequency = frequency;
+    }
+
+    void D3D12RHIDevice::collectTimestampsForSlot()
+    {
+        // 이 슬롯은 방금 펜스를 통과했다 — 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
+        _listTimestampMicro.clear();
+        const uint32 writtenMask = _arrTimestampMask[_frameRing.currentIndex()];
+        if ( _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0 )
+            return;
+
+        const uint32 base       = getTimestampBase();
+        const size_t byteOffset = sizeof( uint64 ) * base;
+        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGpuTimestampSlot };
+
+        void* pMapped{ nullptr };
+        if ( FAILED( _timestampReadback->Map( 0, &range, &pMapped ) ) || pMapped == nullptr )
+            return;
+
+        // DX12 는 쿼리 힙을 리셋하지 않는다 — 안 적은 칸엔 **지난 사이클의 값**이 그대로 남는다.
+        // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
+        const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
+        uint64        origin = 0;
+        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
+        {
+            if ( ( writtenMask & ( 1u << index ) ) == 0 )
+                continue;
+            origin = pTicks[index];
+            break;
+        }
+
+        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
+        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
+        {
+            // 안 쓰인 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
+            if ( ( writtenMask & ( 1u << index ) ) == 0 )
+            {
+                _listTimestampMicro[index] = -1.0f;
+                continue;
+            }
+            const uint64 ticks         = ( pTicks[index] >= origin ) ? ( pTicks[index] - origin ) : 0;
+            _listTimestampMicro[index] = static_cast<float32>( static_cast<float64>( ticks ) * 1000000.0 /
+                                                               static_cast<float64>( _timestampFrequency ) );
+        }
+
+        const D3D12_RANGE emptyRange{ 0, 0 };
+        _timestampReadback->Unmap( 0, &emptyRange );
+    }
+
     void D3D12RHIDevice::beginFrame( const float4& clearColor )
     {
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
+            // **여기가 타임스탬프를 읽는 유일한 안전한 자리다** — 이 슬롯의 펜스를 방금 통과했으므로
+            // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
+            ensureTimestampResources();
+            collectTimestampsForSlot();
+            _timestampWrittenMask.store( 0, std::memory_order_relaxed );
             // 링 슬롯이 정해졌다 — 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
             refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다 — 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
@@ -364,6 +464,18 @@ namespace sw
 
         if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
         {
+            // 구간 전체를 읽기 버퍼로 옮긴다 — 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
+            // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸엔 지난 사이클 값이 남아 있다).
+            // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
+            const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
+            _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
+            if ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                 writtenMask != 0 )
+            {
+                const uint32 base = getTimestampBase();
+                _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,
+                                                     constant::kMaxGpuTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
+            }
             _pActiveFrameList->Close();
             _listPendingSubmit.push_back( _pActiveFrameList );
             _frameStreamState._bRecording = SW_FALSE;

@@ -14,6 +14,90 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
+    uint32 VulkanRHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
+                 ? constant::kMaxGpuTimestampSlot
+                 : 0u;
+    }
+
+    bool VulkanRHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    {
+        outListMicro = _listTimestampMicro;
+        return outListMicro.empty() == false;
+    }
+
+    void VulkanRHIDevice::ensureTimestampPool()
+    {
+        if ( _bTimestampEnabled == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
+             _physicalDevice == VK_NULL_HANDLE )
+            return;
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+        // 주기가 0 이면 이 디바이스는 타임스탬프를 세지 않는다. 큐가 유효 비트를 안 주는 경우도 같다.
+        if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
+            return;
+
+        VkQueryPoolCreateInfo poolInfo{};
+        poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
+        poolInfo.queryCount = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_timestampPool ) != VK_SUCCESS )
+        {
+            _timestampPool = VK_NULL_HANDLE;
+            return;
+        }
+        _timestampPeriod = properties.limits.timestampPeriod;
+    }
+
+    void VulkanRHIDevice::collectTimestampsForSlot()
+    {
+        _listTimestampMicro.clear();
+        if ( _bTimestampEnabled == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
+             _arrTimestampSubmitted[_currentFrame] == SW_FALSE )
+            return;
+
+        // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다** — 이번 프레임에 안 쓰인
+        // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
+        uint64       arrResult[constant::kMaxGpuTimestampSlot * 2]{};
+        const uint32 base = getTimestampBase();
+        // **기다리지 않는다**(WAIT 비트 없음) — 재려던 파이프라인을 멈추면 숫자가 거짓이 된다.
+        // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
+        const VkResult result =
+            vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGpuTimestampSlot, sizeof( arrResult ), arrResult,
+                                   sizeof( uint64 ) * 2, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT );
+        if ( result != VK_SUCCESS && result != VK_NOT_READY )
+            return;
+
+        uint64 origin       = 0;
+        bool   bOriginFound = false;
+        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot && bOriginFound == false; ++index )
+        {
+            if ( arrResult[index * 2 + 1] == 0 )
+                continue;
+            origin       = arrResult[index * 2];
+            bOriginFound = true;
+        }
+        if ( bOriginFound == false )
+            return;
+
+        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
+        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
+        {
+            // 안 쓰인 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
+            if ( arrResult[index * 2 + 1] == 0 )
+            {
+                _listTimestampMicro[index] = -1.0f;
+                continue;
+            }
+            const uint64 value         = arrResult[index * 2];
+            const uint64 ticks         = ( value >= origin ) ? ( value - origin ) : 0;
+            _listTimestampMicro[index] = static_cast<float32>( static_cast<float64>( ticks ) *
+                                                               static_cast<float64>( _timestampPeriod ) / 1000.0 );
+        }
+    }
+
     void VulkanRHIDevice::beginFrame( const float4& clearColor )
     {
         _bFrameStarted = SW_FALSE;
@@ -31,6 +115,9 @@ namespace sw
             return;
 
         vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
+        // **여기가 타임스탬프를 읽는 유일한 안전한 자리다** — 이 슬롯의 펜스를 방금 통과했다.
+        ensureTimestampPool();
+        collectTimestampsForSlot();
         // 이 링 슬롯의 펜스가 신호됐다는 건 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
         // GPU 작업이 실제로 끝났다는 뜻이다 — 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
@@ -79,6 +166,9 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
+        // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다 — 안 하면 결과가 정의되지 않는다.
+        if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGpuTimestampSlot );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
         _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
@@ -164,6 +254,9 @@ namespace sw
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다 — 그 전에 읽으면 미정의다.
+        if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+            _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
 
         if ( bPresent )
         {

@@ -80,6 +80,15 @@ namespace sw
         /** @brief 프레임 종료 (SwapBuffers / wglSwapBuffers) */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
+        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32 getTimestampSlotCount() const override;
+        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        /**
+         * @brief 커맨드 리스트가 부르는 기록 지점 — GL 은 커맨드 버퍼가 없어 그 자리에서 발행한다.
+         * @details 그래서 락이 없다. GL 호출은 컨텍스트를 쥔 한 스레드에서만 나간다.
+         */
+        void writeTimestampSlot( uint32 slotIndex );
+
         IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
         IRHICommandContext* getFrameStreamContext() override;
@@ -144,6 +153,11 @@ namespace sw
         void executeCommandList( IRHICommandList* pCmdList ) override;
 
     private:
+        /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
+        void ensureTimestampQueries();
+        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 풉니다 (기다리지 않습니다). */
+        void collectTimestampsForSlot();
+
         /**
          * @brief 풀스크린 삼각형 VAO/VBO를 만듭니다.
          */
@@ -292,6 +306,18 @@ namespace sw
 
         vector<BindlessTextureRecord> _listRegisteredTexture;
         vector<uint32>                _listTextureFree;
+
+        /**
+         * @brief GPU 타임스탬프 — 프레임 링만큼 쿼리 묶음을 돌려 쓴다.
+         * @details 읽기는 그 묶음을 **다시 쓰기 직전**(= 링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
+         *          로 먼저 물어보고 준비된 칸만 푼다 — 준비 안 된 칸을 바로 읽으면 GL 이 거기서 막는다.
+         */
+        uint32          _arrTimestampQuery[constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight];
+        uint32          _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        uint32          _timestampFrameIndex;
+        uint8           _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
+        uint8           _bTimestampReady;
+        vector<float32> _listTimestampMicro;
 
         uint32 _computeRootConstantUbo;
         uint32 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];

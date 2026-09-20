@@ -217,6 +217,28 @@ namespace sw
         /** @brief 독립 커맨드 리스트 제출 */
         void beginFrame( const float4& clearColor ) override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
+
+        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32 getTimestampSlotCount() const override;
+        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+
+        /** @brief 타임스탬프 쿼리 힙. 준비되지 않았으면 nullptr. */
+        ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
+        /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스. */
+        uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::kMaxGpuTimestampSlot; }
+        /** @brief 슬롯 하나를 적었다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
+        void noteTimestampWritten( uint32 slotIndex )
+        {
+            _timestampWrittenMask.fetch_or( 1u << slotIndex, std::memory_order_relaxed );
+        }
+
+    private:
+        /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
+        void ensureTimestampResources();
+        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 풉니다. */
+        void collectTimestampsForSlot();
+
+    public:
         void resize( uint32 width, uint32 height ) override;
 
         void executeCommandList( IRHICommandList* pCmdList ) override;
@@ -423,10 +445,27 @@ namespace sw
         mutex                        _liveCmdListMutex;
         vector<D3D12RHICommandList*> _listLiveCmd;
         /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
-        mutex                _onlineBlockMutex;
-        vector<uint32>       _listFreeOnlineBlock;
-        uint8                _bOnlineHeapExhaustedLogged;
-        FrameResourceRing    _frameRing;
+        mutex             _onlineBlockMutex;
+        vector<uint32>    _listFreeOnlineBlock;
+        uint8             _bOnlineHeapExhaustedLogged;
+        FrameResourceRing _frameRing;
+
+        /**
+         * @brief GPU 타임스탬프 — 링 슬롯마다 `constant::kMaxGpuTimestampSlot` 칸을 쓴다.
+         * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 **직후**에 한다 — 그때가
+         *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 자리라, 재려고 파이프라인을
+         *          멈춰 세우는 일이 없다.
+         */
+        Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
+        Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
+        uint64                                  _timestampFrequency{ 0 };
+        /// @brief 엔진이 켜기 전에는 힙도 만들지 않는다 — 계측은 공짜가 아니다.
+        uint8 _bTimestampEnabled{ SW_FALSE };
+        /// @brief 이번 프레임에 실제로 적힌 슬롯 비트. 패스가 병렬로 기록하므로 원자.
+        atomic<uint32> _timestampWrittenMask{ 0 };
+        /// @brief 링 슬롯별로 굳힌 비트 — 그 슬롯이 다시 돌아왔을 때 어느 칸이 진짜 값인지 가린다.
+        uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight]{};
+        vector<float32>      _listTimestampMicro;
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;

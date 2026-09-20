@@ -1189,3 +1189,104 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
     if ( okCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the compute RW texture test" );
 }
+
+/**
+ * @brief [RHIDeviceTest] 네 백엔드가 같은 계약으로 GPU 타임스탬프를 돌려준다
+ * @details 계약이 셋이다 — (1) 적은 칸은 0 이상이고 뒤 칸이 앞 칸보다 크거나 같다,
+ *          (2) **안 적은 칸은 음수**로 온다, (3) 기다리지 않으므로 값은 몇 프레임 늦는다.
+ *          (2) 가 이 테스트의 핵심이다. 안 적은 칸에 남는 것이 백엔드마다 다르다 — DX12·DX11 은
+ *          지난 사이클 값이 그대로 남고(쿼리 힙을 리셋하지 않는다), Vulkan·GL 은 "아직 준비 안 됨"
+ *          이다. 그걸 가리지 않으면 건너뛴 패스가 0us 로, 혹은 지난 프레임 값으로 보고된다.
+ */
+SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    /// @brief 몇 프레임 늦게 오므로 링 깊이보다 넉넉히 돌린다.
+    constexpr uint32 kFrameCount = 12;
+
+    uint32 attemptedCount{ 0 };
+    uint32 reportedCount{ 0 };
+
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+
+        ++attemptedCount;
+        const utf8* pName = device->getBackendName();
+
+        // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
+        device->setTimestampEnabled( true );
+
+        sw::vector<float32> listMicro;
+        bool                bGotSample{ false };
+        uint32              slotCount{ 0 };
+        for ( uint32 frameIndex = 0; frameIndex < kFrameCount && bGotSample == false; ++frameIndex )
+        {
+            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            // **쿼리 자원은 첫 beginFrame 에서 만들어진다** — 프레임 밖에서 물으면 아직 0 이다.
+            slotCount = device->getTimestampSlotCount();
+
+            sw::unique_ptr<sw::IRHICommandList> cmdList = slotCount != 0 ? device->createCommandList() : nullptr;
+            if ( cmdList != nullptr )
+            {
+                cmdList->beginCommandList();
+                // 0 · 1 만 적는다 — 나머지 칸은 "안 적은 칸" 계약의 증인이다.
+                cmdList->writeTimestamp( 0 );
+                cmdList->writeTimestamp( 1 );
+                cmdList->endCommandList();
+                device->executeCommandList( cmdList.get() );
+            }
+
+            // Present 는 하지 않는다 — 이 테스트는 화면이 아니라 쿼리 결과만 본다.
+            device->endFrame( false, false );
+            cmdList.reset();
+            // **Present 가 없으면 아무도 큐를 밀어 주지 않는다.** DX11 은 GetData(DONOTFLUSH) 가,
+            // GL 은 QUERY_RESULT_AVAILABLE 이 스스로 flush 하지 않아 쿼리가 영영 안 끝난다 —
+            // 앱에서는 Present 가 하던 일을 여기서는 이것이 대신한다.
+            device->waitIdle();
+
+            if ( device->readTimestampsMicros( listMicro ) )
+                bGotSample = true;
+        }
+
+        if ( bGotSample )
+        {
+            ++reportedCount;
+            SW_EXPECT_TRUE_MSG( slotCount == sw::constant::kMaxGpuTimestampSlot,
+                                ( sw::string( pName ) + ": slot count is not the shared contract value" ).c_str() );
+            SW_EXPECT_TRUE_MSG( listMicro.size() == sw::constant::kMaxGpuTimestampSlot,
+                                ( sw::string( pName ) + ": timestamp list size mismatch" ).c_str() );
+            if ( listMicro.size() == sw::constant::kMaxGpuTimestampSlot )
+            {
+                SW_EXPECT_TRUE_MSG( listMicro[0] >= 0.0f && listMicro[1] >= 0.0f,
+                                    ( sw::string( pName ) + ": written slots must not be negative" ).c_str() );
+                SW_EXPECT_TRUE_MSG( listMicro[1] >= listMicro[0],
+                                    ( sw::string( pName ) + ": later slot must not go backwards" ).c_str() );
+
+                uint32 unwrittenCount{ 0 };
+                for ( uint32 slotIndex = 2; slotIndex < sw::constant::kMaxGpuTimestampSlot; ++slotIndex )
+                {
+                    if ( listMicro[slotIndex] < 0.0f )
+                        ++unwrittenCount;
+                }
+                SW_EXPECT_TRUE_MSG( unwrittenCount == sw::constant::kMaxGpuTimestampSlot - 2,
+                                    ( sw::string( pName ) + ": unwritten slots must be marked negative (" +
+                                      sw::to_string( unwrittenCount ) + ")" )
+                                        .c_str() );
+            }
+        }
+
+        device->waitIdle();
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could be initialized" );
+    if ( reportedCount == 0 )
+        SW_TEST_SKIP( "No backend reported GPU timestamps (driver support missing)" );
+}

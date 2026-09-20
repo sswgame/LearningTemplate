@@ -101,6 +101,16 @@ namespace sw
 
         /** @brief 스왑체인 Present 실행 */
         void endFrame( bool vsync = true, bool bPresent = true ) override;
+
+        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32 getTimestampSlotCount() const override;
+        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        /**
+         * @brief 커맨드 리스트가 **자기 Deferred Context 에** 타임스탬프를 겁니다.
+         * @details 칸 번호는 패스 인덱스로 고정이라 쿼리 객체 하나를 두 컨텍스트가 건드릴 일이 없다 —
+         *          D3D11 이 금지하는 것이 바로 그것이다.
+         */
+        void writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex );
         /** @brief D3D11 디버그 레이어의 CORRUPTION/ERROR 메시지를 로그로 비웁니다 (SW_DEBUG, 프레임 끝). */
         void flushDebugMessages( const utf8* pStage );
 
@@ -191,6 +201,11 @@ namespace sw
         static ID3D11DeviceContext* getRecordingContext();
 
     private:
+        /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
+        void ensureTimestampResources();
+        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 풉니다 (기다리지 않습니다). */
+        void collectTimestampsForSlot();
+
         /**
          * @brief 풀스크린 삼각형 버텍스 버퍼를 만듭니다.
          */
@@ -308,6 +323,34 @@ namespace sw
         ///          꼴로 깨뜨렸다 — 크래시이거나, 패스 CB 가 옆 패스 값으로 덮여 Bloom 이 AO 대신 HDR
         ///          컬러를 샘플링해 화면이 하얗게 탔다. 둘 다 같은 원인이다.
         mutable mutex _immediateContextMutex;
+
+        /**
+         * @struct D3D11TimestampFrame
+         * @brief 프레임 하나분의 타임스탬프 쿼리 묶음.
+         * @details D3D11 은 틱을 초로 바꿀 주파수를 disjoint 쿼리로만 준다 — 그 구간 안에서 GPU
+         *          클럭이 바뀌었으면 `Disjoint` 가 서고, 그 프레임 값은 통째로 버려야 한다.
+         */
+        struct D3D11TimestampFrame
+        {
+            Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
+            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::kMaxGpuTimestampSlot];
+            uint32                              _writtenMask{ 0 };
+            uint8                               _bPending{ SW_FALSE };
+        };
+
+        /**
+         * @brief GPU 타임스탬프 — 프레임 링만큼 묶음을 돌려 쓴다.
+         * @details 읽기는 그 묶음을 **다시 쓰기 직전**(= 링 한 바퀴 뒤)에 DONOTFLUSH 로 한 번만 묻는다.
+         *          아직이면 이번 바퀴는 건너뛴다 — 기다리면 재려던 파이프라인을 멈춰 세운다.
+         */
+        D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
+        uint32              _timestampFrameIndex{ 0 };
+        /// @brief 이번 프레임에 적힌 칸 비트. 패스가 병렬로 기록하므로 원자.
+        atomic<uint32>  _timestampWrittenMask{ 0 };
+        uint8           _bTimestampEnabled{ SW_FALSE }; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
+        uint8           _bTimestampReady{ SW_FALSE };
+        uint8           _bTimestampFrameOpen{ SW_FALSE };
+        vector<float32> _listTimestampMicro;
 
         vector<RHIBufferHandle> _listRegisteredBindless;
         vector<uint32>          _listBindlessFree;

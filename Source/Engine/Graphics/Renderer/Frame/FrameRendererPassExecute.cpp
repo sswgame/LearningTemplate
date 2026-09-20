@@ -107,6 +107,7 @@ namespace sw
         hashed_string              depthAttachment;
         const RenderGraphPassDesc* pPassDesc{ nullptr };
         const auto                 iter = _mapPassNameToIndex.find( graphCtx._passName );
+        [[maybe_unused]] size_t    passIndex{ listPass.size() };
         if ( iter != _mapPassNameToIndex.end() && iter->second < listPass.size() )
         {
             const RenderGraphPassDesc& pass = listPass[iter->second];
@@ -114,8 +115,30 @@ namespace sw
             pPassName                       = pass._name.c_str();
             depthAttachment                 = pass._resolvedDepthAttachment;
             pPassDesc                       = &pass;
+            passIndex                       = iter->second;
         }
+
+#if SW_LOG_LEVEL_COMPILED( 2 )
+        // **GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 적는다.** 패스는 병렬로 기록될 수 있어
+        // 흐르는 카운터를 쓰면 경쟁이 된다 — 인덱스로 고정하면 각 패스가 자기 두 칸만 건드린다.
+        //
+        // **계측이 공짜는 아니다.** 타임스탬프 하나가 GPU 파이프라인에 표식을 박고 프레임 끝에
+        // resolve 와 읽기가 붙는다. 그래서 (1) Shipping 에서는 이 블록이 통째로 사라지고,
+        // (2) Dev 에서도 프로파일러가 켜져 있을 때만 찍는다(`-gv_profileFrames`).
+        const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
+        const bool   bWriteGpuTime  = _pDevice != nullptr && passCtx._pCmd != nullptr &&
+                                   engine::getFrameProfiler().isEnabled() &&
+                                   ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
+        if ( bWriteGpuTime )
+            passCtx._pCmd->writeTimestamp( timestampBegin );
+#endif
+
         executePass( passCtx, passType, pPassName, depthAttachment, pPassDesc );
+
+#if SW_LOG_LEVEL_COMPILED( 2 )
+        if ( bWriteGpuTime )
+            passCtx._pCmd->writeTimestamp( timestampBegin + 1u );
+#endif
     }
 
     void FrameRenderer::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )

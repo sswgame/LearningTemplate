@@ -191,6 +191,14 @@ namespace sw
         inline constexpr uint32 kMaxFrameCountInFlight = 3;
 
         /**
+         * @brief 프레임 하나에 찍을 수 있는 GPU 타임스탬프 칸 수.
+         * @details 패스 인덱스로 칸을 고정해 쓴다(패스당 begin/end 두 칸) — 4개 백엔드가 같은 값으로
+         *          쿼리 힙·풀·쿼리 배열 크기를 잡으므로 한쪽만 바꾸면 다른 쪽이 구간 밖을 읽는다.
+         *          32 칸 = 패스 16 개까지. 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 조용히 빠진다.
+         */
+        inline constexpr uint32 kMaxGpuTimestampSlot = 32;
+
+        /**
          * @brief GPU 리소스 지연 해제 프레임 수 (RHIReleaseQueue 기본 frameLatency).
          * @details 4개 RHI 백엔드(DX11/DX12/Vulkan/OpenGL)가 전부 같은 값을 써야 하는 계약 —
          *          한쪽만 바꾸면 아직 GPU가 참조 중인 리소스를 조기 해제할 위험이 있다.

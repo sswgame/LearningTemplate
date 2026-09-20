@@ -27,6 +27,97 @@ namespace sw
 {
     SW_LOG_CALLER( "OpenGL" );
 
+    uint32 OpenGLRHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
+    }
+
+    bool OpenGLRHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    {
+        outListMicro = _listTimestampMicro;
+        return outListMicro.empty() == false;
+    }
+
+    void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
+    {
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGpuTimestampSlot )
+            return;
+
+        // glQueryCounter 는 Begin/End 쌍이 아니다 — 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
+        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGpuTimestampSlot + slotIndex], GL_TIMESTAMP );
+        _arrTimestampMask[_timestampFrameIndex] |= ( 1u << slotIndex );
+    }
+
+    void OpenGLRHIDevice::ensureTimestampQueries()
+    {
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE )
+            return;
+        // GL 3.3 코어이지만 로더가 못 채웠을 수 있다 — 없으면 이 백엔드는 조용히 보고하지 않는다.
+        if ( glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
+             glGetQueryObjectiv == nullptr )
+            return;
+
+        constexpr uint32 kQueryCount = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        glGenQueries( static_cast<GLsizei>( kQueryCount ), _arrTimestampQuery );
+        if ( _arrTimestampQuery[0] == 0 )
+            return;
+        _bTimestampReady = SW_TRUE;
+    }
+
+    void OpenGLRHIDevice::collectTimestampsForSlot()
+    {
+        _listTimestampMicro.clear();
+        const uint32 writtenMask = _arrTimestampMask[_timestampFrameIndex];
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0 )
+            return;
+
+        const uint32 base = _timestampFrameIndex * constant::kMaxGpuTimestampSlot;
+        uint64       arrTick[constant::kMaxGpuTimestampSlot]{};
+        uint32       readyMask{ 0 };
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            if ( ( writtenMask & ( 1u << slotIndex ) ) == 0 )
+                continue;
+
+            // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
+            // 재려던 파이프라인을 멈춰 세운다 — 그러면 숫자가 거짓이 된다.
+            GLint bAvailable{ 0 };
+            glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );
+            if ( bAvailable == GL_FALSE )
+                continue;
+
+            GLuint64 tick{ 0 };
+            glGetQueryObjectui64v( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT, &tick );
+            arrTick[slotIndex] = tick;
+            readyMask |= ( 1u << slotIndex );
+        }
+        if ( readyMask == 0 )
+            return;
+
+        uint64 origin{ 0 };
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
+                continue;
+            origin = arrTick[slotIndex];
+            break;
+        }
+
+        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            // 안 적힌 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
+            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
+            {
+                _listTimestampMicro[slotIndex] = -1.0f;
+                continue;
+            }
+            // GL 타임스탬프는 나노초다.
+            const uint64 ticks             = ( arrTick[slotIndex] >= origin ) ? ( arrTick[slotIndex] - origin ) : 0;
+            _listTimestampMicro[slotIndex] = static_cast<float32>( static_cast<float64>( ticks ) / 1000.0 );
+        }
+    }
+
     void OpenGLRHIDevice::beginFrame( const float4& clearColor )
     {
         if ( _bInitialized == SW_FALSE )
@@ -40,12 +131,20 @@ namespace sw
         // (docs/05_RHI_FrameContract.md S2). 뷰포트는 기본 상태로 남겨둔다.
         (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
+
+        // 이 묶음은 곧 다시 쓴다 — 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        ensureTimestampQueries();
+        collectTimestampsForSlot();
+        _arrTimestampMask[_timestampFrameIndex] = 0;
     }
 
     void OpenGLRHIDevice::endFrame( bool vsync, bool bPresent )
     {
         if ( _bInitialized == SW_FALSE )
             return;
+
+        // present 여부와 무관하게 이번 프레임의 칸은 다 찍혔다 — 다음 묶음으로 넘긴다.
+        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
 
         if ( bPresent == false )
         {

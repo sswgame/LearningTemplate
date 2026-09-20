@@ -20,10 +20,136 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D11" );
 
+    uint32 D3D11RHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
+    }
+
+    bool D3D11RHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    {
+        outListMicro = _listTimestampMicro;
+        return outListMicro.empty() == false;
+    }
+
+    void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
+    {
+        if ( pContext == nullptr || _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE ||
+             slotIndex >= constant::kMaxGpuTimestampSlot )
+            return;
+
+        // 이 프레임 묶음의 칸 하나. Deferred Context 마다 다른 칸이라 같은 쿼리 객체가 겹치지 않는다.
+        ID3D11Query* pQuery = _arrTimestampFrame[_timestampFrameIndex]._arrQuery[slotIndex].Get();
+        if ( pQuery == nullptr )
+            return;
+        // 타임스탬프 쿼리는 Begin 이 없다 — End 하나가 "지금 GPU 시각" 이다.
+        pContext->End( pQuery );
+        _timestampWrittenMask.fetch_or( 1u << slotIndex, std::memory_order_relaxed );
+    }
+
+    void D3D11RHIDevice::ensureTimestampResources()
+    {
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE || _device == nullptr )
+            return;
+
+        D3D11_QUERY_DESC disjointDesc{};
+        disjointDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+        D3D11_QUERY_DESC stampDesc{};
+        stampDesc.Query = D3D11_QUERY_TIMESTAMP;
+
+        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
+        {
+            D3D11TimestampFrame& frame = _arrTimestampFrame[frameIndex];
+            if ( FAILED( _device->CreateQuery( &disjointDesc, &frame._disjoint ) ) )
+                return;
+            for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+            {
+                if ( FAILED( _device->CreateQuery( &stampDesc, &frame._arrQuery[slotIndex] ) ) )
+                    return;
+            }
+        }
+        _bTimestampReady = SW_TRUE;
+    }
+
+    void D3D11RHIDevice::collectTimestampsForSlot()
+    {
+        _listTimestampMicro.clear();
+        D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || frame._bPending == SW_FALSE ||
+             frame._writtenMask == 0 )
+            return;
+
+        std::scoped_lock<mutex> lock{ _immediateContextMutex };
+        // **GetData 는 즉시 컨텍스트 전용이다** — Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
+        // DONOTFLUSH 로 묻는다: 아직이면 S_FALSE 를 받고 그냥 물러난다(재려던 것을 멈추지 않는다).
+        D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData{};
+        if ( _deviceContext->GetData( frame._disjoint.Get(), &disjointData, sizeof( disjointData ),
+                                      D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )
+            return;
+
+        frame._bPending = SW_FALSE;
+        // 이 구간에서 GPU 클럭이 흔들렸다 — 틱을 초로 바꿀 근거가 없으니 프레임을 통째로 버린다.
+        if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
+            return;
+
+        uint64 arrTick[constant::kMaxGpuTimestampSlot]{};
+        uint32 readyMask{ 0 };
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            if ( ( frame._writtenMask & ( 1u << slotIndex ) ) == 0 )
+                continue;
+
+            uint64 tick{ 0 };
+            if ( _deviceContext->GetData( frame._arrQuery[slotIndex].Get(), &tick, sizeof( tick ),
+                                          D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )
+                continue;
+            arrTick[slotIndex] = tick;
+            readyMask |= ( 1u << slotIndex );
+        }
+        if ( readyMask == 0 )
+            return;
+
+        uint64 origin{ 0 };
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
+                continue;
+            origin = arrTick[slotIndex];
+            break;
+        }
+
+        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        {
+            // 안 적힌 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
+            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
+            {
+                _listTimestampMicro[slotIndex] = -1.0f;
+                continue;
+            }
+            const uint64 ticks = ( arrTick[slotIndex] >= origin ) ? ( arrTick[slotIndex] - origin ) : 0;
+            _listTimestampMicro[slotIndex] =
+                static_cast<float32>( static_cast<float64>( ticks ) * 1000000.0 / static_cast<float64>( disjointData.Frequency ) );
+        }
+    }
+
     void D3D11RHIDevice::beginFrame( const float4& clearColor )
     {
         if ( _deviceContext == nullptr || _swapChain.isValid() == false )
             return;
+
+        // 이 묶음은 곧 다시 쓴다 — 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        ensureTimestampResources();
+        collectTimestampsForSlot();
+        if ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE )
+        {
+            _arrTimestampFrame[_timestampFrameIndex]._writtenMask = 0;
+            _timestampWrittenMask.store( 0, std::memory_order_relaxed );
+
+            std::scoped_lock<mutex> timestampLock{ _immediateContextMutex };
+            // disjoint 는 프레임 전체를 감싼다 — 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
+            _deviceContext->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
+            _bTimestampFrameOpen = SW_TRUE;
+        }
 
         // FLIP_DISCARD 는 백버퍼를 돌려 쓴다 — Present 가 보여줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
@@ -58,6 +184,20 @@ namespace sw
     #if defined( SW_DEBUG )
         flushDebugMessages( "endFrame" );
     #endif
+        // beginFrame 이 열었으면 반드시 닫는다 — 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.
+        if ( _bTimestampFrameOpen != SW_FALSE )
+        {
+            D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
+            {
+                std::scoped_lock<mutex> timestampLock{ _immediateContextMutex };
+                _deviceContext->End( frame._disjoint.Get() );
+            }
+            frame._writtenMask   = _timestampWrittenMask.load( std::memory_order_relaxed );
+            frame._bPending      = ( frame._writtenMask != 0 ) ? SW_TRUE : SW_FALSE;
+            _bTimestampFrameOpen = SW_FALSE;
+            _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
+        }
+
         if ( _swapChain.isValid() == false )
             return;
 

@@ -180,6 +180,22 @@ namespace sw
         /** @brief 프레임 종료 (vkQueueSubmit 및 vkQueuePresentKHR 제출) */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
+        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32 getTimestampSlotCount() const override;
+        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+
+        /** @brief 타임스탬프 쿼리 풀. 준비되지 않았으면 VK_NULL_HANDLE. */
+        VkQueryPool getTimestampPool() const { return _timestampPool; }
+        /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스. */
+        uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGpuTimestampSlot; }
+
+    private:
+        /** @brief 쿼리 풀을 한 번만 만듭니다. */
+        void ensureTimestampPool();
+        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 풉니다. */
+        void collectTimestampsForSlot();
+
+    public:
         /** @brief 오프스크린 패스를 시작합니다. */
         IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
@@ -510,6 +526,17 @@ namespace sw
         uint8 _bMaterialCbSlotWarned;
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
         VkCommandBuffer _activeFrameBuffer;
+
+        /**
+         * @brief GPU 타임스탬프 — 링 슬롯마다 `constant::kMaxGpuTimestampSlot` 칸.
+         * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 한다 — 그 슬롯의 GPU 작업이 이미
+         *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않는다.
+         */
+        VkQueryPool     _timestampPool; ///< VK_NULL_HANDLE — 이 헤더는 vulkan.h 를 안 들인다.
+        float32         _timestampPeriod;
+        uint8           _bTimestampEnabled; ///< 엔진이 켜기 전에는 풀도 만들지 않는다.
+        vector<float32> _listTimestampMicro;
+        uint8           _arrTimestampSubmitted[constant::kMaxFrameCountInFlight];
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;
