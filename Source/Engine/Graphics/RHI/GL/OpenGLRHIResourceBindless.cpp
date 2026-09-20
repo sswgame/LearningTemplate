@@ -52,25 +52,15 @@ namespace sw
 
     void OpenGLRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        // 빈 슬롯(텍스처 인덱스가 잘못 넘어왔거나 이중 해제)을 다시 넣으면 같은 인덱스가 두 버퍼에 발급된다.
-        if ( index < _pDevice->_listRegisteredBindless.size() && _pDevice->_listRegisteredBindless[index]._buffer == 0 )
-        {
-            SW_LOG_ERROR( "Bindless buffer index %# is already free; ignoring the duplicate release.", index );
-            return;
-        }
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다 — 종류 이름만 넘겨 로그를 맞춘다.
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index,
-                              OpenGLRHIDevice::BindlessResourceRecord{} );
+                              OpenGLRHIDevice::BindlessResourceRecord{}, "buffer" );
     }
 
     void OpenGLRHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index]._texture == 0 )
-        {
-            SW_LOG_ERROR( "Bindless texture index %# is already free; ignoring the duplicate release.", index );
-            return;
-        }
         releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index,
-                              OpenGLRHIDevice::BindlessTextureRecord{} );
+                              OpenGLRHIDevice::BindlessTextureRecord{}, "texture" );
     }
 
     RHIDescriptorIndex OpenGLRHIResource::registerBindlessUav( RHIBufferHandle buffer )
@@ -96,7 +86,9 @@ namespace sw
 
     void OpenGLRHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
+        // **여기가 원래 가드가 없던 자리다.** 이중 해제가 그대로 통과해 같은 인덱스가
+        // 프리리스트에 두 번 들어갔다 — 이제 헬퍼가 막는다.
         releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
-                              OpenGLRHIDevice::BindlessResourceRecord{} );
+                              OpenGLRHIDevice::BindlessResourceRecord{}, "uav" );
     }
 } // namespace sw

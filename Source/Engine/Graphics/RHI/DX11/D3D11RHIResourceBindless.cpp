@@ -58,25 +58,17 @@ namespace sw
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 빈 슬롯(텍스처 인덱스가 잘못 넘어왔거나 이중 해제)을 다시 넣으면 같은 인덱스가 두 버퍼에 발급된다.
-        if ( index < _pDevice->_listRegisteredBindless.size() && _pDevice->_listRegisteredBindless[index] == 0 )
-        {
-            SW_LOG_ERROR( "Bindless buffer index %# is already free; ignoring the duplicate release.", index );
-            return;
-        }
-        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다 — 종류 이름만 넘겨 로그를 맞춘다.
+        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 },
+                              "buffer" );
     }
 
     void D3D11RHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] == 0 )
-        {
-            SW_LOG_ERROR( "Bindless texture index %# is already free; ignoring the duplicate release.", index );
-            return;
-        }
-        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
+        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 },
+                              "texture" );
     }
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessUav( RHIBufferHandle buffer )

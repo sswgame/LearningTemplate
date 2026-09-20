@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Logger.h"
 
 namespace sw
 {
@@ -45,13 +46,31 @@ namespace sw
 
     /**
      * @brief 범위 안이면 이전 값을 반환하고 슬롯을 clearValue로 비운 뒤 freeList에 반환합니다.
-     *        범위 밖이면 아무 것도 하지 않고 clearValue를 반환합니다.
+     * @param pKindName 로그에 쓸 종류 이름("texture" 등). 비면 "resource" 로 적는다.
+     * @return 비우기 전의 값. 범위 밖이거나 **이미 비어 있으면** clearValue.
+     * @details **이미 빈 슬롯을 다시 반납하면 안 된다.** 그러면 프리리스트에 같은 인덱스가 두 번
+     *          들어가고, 다음 두 번의 할당이 그 인덱스를 **서로 다른 리소스에 발급한다.**
+     *
+     *          이 가드는 원래 부르는 쪽마다 손으로 적혀 있었고 종류마다 모양이 달랐다 —
+     *          DX11 · GL 의 buffer/texture 는 가드 + 에러 로그, DX11 의 uav 는 조용한 반환,
+     *          **GL 의 uav 는 가드가 아예 없었다.** 그래서 GL 에서만 UAV 이중 해제가 통과했다.
+     *          가드를 여기 한 자리에 두면 지금 쓰는 곳과 앞으로 쓸 곳이 같이 막힌다.
+     * @note `T` 는 `clearValue` 와 `==` 로 견줄 수 있어야 한다 — "비었다" 를 알아야 하기 때문이다.
      */
     template <typename T>
-    T releaseFreeListIndex( vector<T>& listRegistered, vector<uint32>& listFree, uint32 index, T clearValue = T{} )
+    T releaseFreeListIndex( vector<T>& listRegistered, vector<uint32>& listFree, uint32 index, T clearValue = T{},
+                            const utf8* pKindName = nullptr )
     {
         if ( index >= listRegistered.size() )
             return clearValue;
+
+        if ( listRegistered[index] == clearValue )
+        {
+            SW_LOG_ERROR( "Bindless %# index %# is already free; ignoring the duplicate release.",
+                          pKindName != nullptr ? pKindName : "resource", index );
+            return clearValue;
+        }
+
         T old                 = std::move( listRegistered[index] );
         listRegistered[index] = clearValue;
         listFree.push_back( index );

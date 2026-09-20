@@ -170,6 +170,13 @@ namespace sw
         {
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0 이 아니다
+
+            /** @brief `releaseFreeListIndex` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            bool operator==( const BindlessResourceRecord& other ) const
+            {
+                return _buffer == other._buffer && _texture == other._texture;
+            }
+            bool operator!=( const BindlessResourceRecord& other ) const { return ( *this == other ) == false; }
         };
 
         /// @brief GLuint 텍스처 + 타깃/포맷
@@ -227,6 +234,10 @@ namespace sw
         struct BindlessTextureRecord
         {
             RHITextureHandle _texture{ 0 };
+
+            /** @brief `releaseFreeListIndex` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
+            bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
         };
 
         /// @brief 프로그램 + 래스터/블렌드/깊이 상태

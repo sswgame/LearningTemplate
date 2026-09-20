@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 
@@ -165,4 +166,46 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
     const sw::RHIGraphicsShaderRequest noPs = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXIL_D3D12 );
     SW_EXPECT_TRUE( noPs._bHasPixelShader == SW_FALSE );
     SW_EXPECT_EQUAL( 2u, noPs._numRenderTargets );
+}
+
+/**
+ * @brief [RHIIndexFreeListTest] 이미 빈 슬롯을 다시 반납하면 **거절한다**
+ * @details 거절하지 않으면 프리리스트에 같은 인덱스가 **두 번** 들어가고, 다음 두 번의 할당이
+ *          그 인덱스를 **서로 다른 리소스에 발급한다**. 그 뒤로는 한쪽이 다른 쪽의 디스크립터를
+ *          덮어쓴다.
+ *
+ *          이 가드는 원래 백엔드마다 손으로 적혀 있었고 종류마다 모양이 달랐다 — DX11 · GL 의
+ *          buffer/texture 는 가드 + 에러 로그, DX11 의 uav 는 조용한 반환, **GL 의 uav 는 가드가
+ *          아예 없었다.** 그래서 GL 에서만 UAV 이중 해제가 통과했다. 가드를 이 헬퍼 한 자리로
+ *          옮겨 지금 쓰는 곳과 앞으로 쓸 곳이 같이 막히게 했다.
+ */
+SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
+{
+    sw::vector<uint32> listRegistered;
+    sw::vector<uint32> listFree;
+
+    const uint32 indexA = sw::allocateFreeListIndex( listRegistered, listFree, 100u );
+    const uint32 indexB = sw::allocateFreeListIndex( listRegistered, listFree, 200u );
+    SW_ASSERT_TRUE( indexA != indexB );
+
+    // 한 번 반납하면 그 자리가 프리리스트로 간다.
+    SW_EXPECT_EQUAL( 100u, sw::releaseFreeListIndex( listRegistered, listFree, indexA, 0u, "test" ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listFree.size() );
+
+    // **두 번째 반납은 거절된다** — 안 그러면 프리리스트에 같은 인덱스가 둘이 된다.
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, indexA, 0u, "test" ) );
+    }
+    SW_EXPECT_TRUE_MSG( listFree.size() == 1, "이중 해제가 프리리스트에 같은 인덱스를 두 번 넣었습니다" );
+
+    // 그래서 다음 두 할당이 서로 다른 인덱스를 받는다.
+    const uint32 reused = sw::allocateFreeListIndex( listRegistered, listFree, 300u );
+    const uint32 fresh  = sw::allocateFreeListIndex( listRegistered, listFree, 400u );
+    SW_EXPECT_EQUAL( indexA, reused );
+    SW_EXPECT_TRUE_MSG( fresh != reused, "같은 인덱스가 두 리소스에 발급됐습니다" );
+    SW_EXPECT_TRUE( fresh != indexB );
+
+    // 범위 밖은 조용히 무시한다(로그도 남기지 않는다) — 예전 동작 그대로다.
+    SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, 9999u, 0u, "test" ) );
 }
