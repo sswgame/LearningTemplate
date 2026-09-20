@@ -248,15 +248,39 @@ namespace sw
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려졌다 — 실측). 멀티 드로우가 없는
         // 백엔드(DX11)는 하나씩 부른다. 2026-09-13 벤치: 871 배치의 드로우 루프가 RT 프레임의 41% 였고 비용은 호출 수였다.
-        const bool bMerge        = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
-        auto       sameDrawGroup = [this, pso]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
+        const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
+
+        // **머티리얼 CB 를 실제로 거는 셰이더에서만** 그 값을 병합 키에 넣는다.
+        //
+        // GPUScene 경로의 머티리얼은 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로
+        // 읽는다 — 그런 셰이더에는 머티리얼 CB 슬롯이 아예 없어서 `bindForDraw` 가 그 값을 걸지도
+        // 않는다. 그런데도 `_materialCb` 가 병합 키에 있어서, 깊이순으로 섞인 투명 배치들이
+        // **그리기에 아무 영향 없는 값 때문에** 하나씩 따로 그려지고 있었다
+        // (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회. 이 값을 빼면 3 회이고 화면은 같다).
+        auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPso ) -> bool
+        {
+            const ShaderBindingLayout* pLayout = layoutForPso( batchPso );
+            if ( pLayout == nullptr )
+                return false;
+            static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
+            for ( const ShaderBindingSlot& slot : pLayout->getSlots() )
+            {
+                if ( slot._name == s_materialCbName )
+                    return true;
+            }
+            return false;
+        };
+
+        auto sameDrawGroup = [this, pso, &layoutBindsMaterialCb]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
         {
             if ( other._vertexBuffer == 0 || other._instanceCount == 0 )
                 return false;
             if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
                 return false;
-            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCb != head._materialCb ||
+            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv ||
                  other._materialCount != head._materialCount )
+                return false;
+            if ( other._materialCb != head._materialCb && layoutBindsMaterialCb( psoForBatch( pso, head ) ) )
                 return false;
             for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
             {
