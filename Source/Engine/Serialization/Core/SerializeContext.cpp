@@ -173,25 +173,46 @@ namespace sw
     const SerializeContext::BinaryWriteFn* SerializeContext::findBinaryWriter( hashed_string typeName ) const
     {
         auto it = _mapBinaryWriter.find( typeName );
-        return it != _mapBinaryWriter.end() ? &it->second : nullptr;
+        if ( it != _mapBinaryWriter.end() )
+            return &it->second;
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findBinaryWriter( typeName ) : nullptr;
     }
 
     const SerializeContext::BinaryReadFn* SerializeContext::findBinaryReader( hashed_string typeName ) const
     {
         auto it = _mapBinaryReader.find( typeName );
-        return it != _mapBinaryReader.end() ? &it->second : nullptr;
+        if ( it != _mapBinaryReader.end() )
+            return &it->second;
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findBinaryReader( typeName ) : nullptr;
     }
 
     const SerializeContext::TextWriteFn* SerializeContext::findTextWriter( hashed_string typeName ) const
     {
         auto it = _mapTextWriter.find( typeName );
-        return it != _mapTextWriter.end() ? &it->second : nullptr;
+        if ( it != _mapTextWriter.end() )
+            return &it->second;
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findTextWriter( typeName ) : nullptr;
     }
 
     const SerializeContext::TextReadFn* SerializeContext::findTextReader( hashed_string typeName ) const
     {
         auto it = _mapTextReader.find( typeName );
-        return it != _mapTextReader.end() ? &it->second : nullptr;
+        if ( it != _mapTextReader.end() )
+            return &it->second;
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findTextReader( typeName ) : nullptr;
+    }
+
+    SerializeContext SerializeContext::deriveFromDefault()
+    {
+        const SerializeContext& defaultCtx = getDefault();
+
+        SerializeContext derived;
+        derived._pHandlerFallback = &defaultCtx;
+        // 표만 빌리고 **설정은 물려받는다** — 예전 `= getDefault()` 와 같은 동작이어야 한다.
+        derived.setIgnoreCaseKeys( defaultCtx.ignoresCaseKeys() );
+        derived.setAllowUnknownProperties( defaultCtx.allowsUnknownProperties() );
+        derived.setEnableObjectDeduplication( defaultCtx.isObjectDeduplicationEnabled() );
+        return derived;
     }
 
     const SerializeContext& SerializeContext::getDefault()

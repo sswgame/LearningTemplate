@@ -698,6 +698,93 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryBufferRoundtrip )
 }
 
 /**
+ * @brief [GameObjectTest] 같은 오브젝트 안에서 컴포넌트끼리 부착해도 계층 순회가 자신으로 되돌아오지 않는지 검증
+ *
+ * @details `getChildren()` 은 자식 GameObject 를 primary SceneComponent 의 **자식 컴포넌트들의 owner**
+ *          로 구한다. 한 오브젝트 안에서 SceneComponent 를 다른 SceneComponent 에 붙이면 그 owner 는
+ *          자기 자신이라, 자신이 자기 자식으로 나왔다 — `refreshActiveInHierarchy` 가 무한 재귀해
+ *          스택을 넘겼다. 부착 없이는 멀쩡하고 부착하는 순간 죽어서, 부착을 쓰는 경로(씬 로드·
+ *          에디터 복제·상태 복원)에서만 터졌다.
+ */
+SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "SelfRig" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+
+    sw::SceneComponent* pRootSc = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRootSc );
+    sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_TRUE( pMesh->attachToComponent( pRootSc ) );
+
+    // 자기 자신은 자식 목록에 없어야 한다.
+    for ( sw::GameObject* pChild : pObj->getChildren() )
+        SW_EXPECT_TRUE( pChild != pObj );
+
+    // 계층 갱신이 돌아와야 한다 — 예전에는 여기서 스택이 넘쳤다.
+    pObj->setActive( false );
+    SW_EXPECT_FALSE( pObj->isActiveInHierarchy() );
+    pObj->setActive( true );
+    SW_EXPECT_TRUE( pObj->isActiveInHierarchy() );
+
+    // 파괴도 마찬가지다(`~GameObject` 가 같은 순회를 탄다).
+    manager.clear();
+}
+
+/**
+ * @brief [GameObjectTest] 바이너리 상태가 태그와 컴포넌트 간 부착 계층까지 실어 나르는지 검증
+ *
+ * @details 예전 바이너리 경로는 이름·태그·컴포넌트·부착표를 손으로 한 줄씩 적었고, 그래서 XML·JSON
+ *          과 다른 세 번째 구현이었다. 지금은 셋 다 리플렉션 상태(`_name`/`_bActive`/`_listComponent`)
+ *          하나를 쓴다 — 태그는 `TagComponent::_tags`, 부착은 `SceneComponent` 자신의 필드로 실린다.
+ *          **손으로 적던 것을 지웠으니, 그것들이 여전히 건너오는지는 여기서 지킨다.**
+ */
+SW_TEST_CASE( GameObjectTest, ObjectStateBinaryCarriesTagsAndAttachHierarchy )
+{
+    constexpr TagID kTagElite = "Enemy.Elite"_tag;
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "BinaryRig" ) );
+    SW_ASSERT_NOT_NULL( pSource );
+    pSource->addTag( kTagElite );
+
+    sw::SceneComponent* pRootSc = pSource->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRootSc );
+    sw::MeshComponent* pMesh = pSource->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_TRUE( pMesh->attachToComponent( pRootSc ) );
+    pMesh->setLocalPosition( sw::float3{ 3.0f, 4.0f, 5.0f } );
+
+    sw::vector<uint8> buffer;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, buffer ) );
+
+    manager.clear();
+
+    sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string( "Blank" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+
+    sw::string   parentName;
+    const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size(), parentName );
+    SW_EXPECT_EQUAL( buffer.size(), bytesRead );
+
+    // 1. 태그 — `TagComponent` 가 상태에 실려 왔어야 한다.
+    SW_EXPECT_TRUE( pTarget->hasTag( kTagElite ) );
+
+    // 2. 컴포넌트와 그 값 — 다형 소유 포인터가 실렸어야 한다.
+    sw::MeshComponent* pRestoredMesh = pTarget->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pRestoredMesh );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pRestoredMesh->getLocalPosition()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pRestoredMesh->getLocalPosition()._z, 0.001f );
+
+    // 3. 부착 계층 — 메시는 루트 SceneComponent 의 자식으로 돌아와야 한다.
+    sw::SceneComponent* pRestoredParent = pRestoredMesh->getParent();
+    SW_ASSERT_NOT_NULL( pRestoredParent );
+    SW_EXPECT_TRUE( pRestoredParent != pRestoredMesh );
+    SW_EXPECT_NOT_NULL( sw::castTo<sw::SceneComponent>( pRestoredParent ) );
+}
+
+/**
  * @brief [GameObjectTest] 5,000개 대규모 GameObject 생성, 컴포넌트 부착 및 지연 일괄 해제 스트레스 테스트
  */
 SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest )

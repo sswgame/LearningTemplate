@@ -183,6 +183,16 @@ namespace sw
         /** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
         static const SerializeContext& getDefault();
 
+        /**
+         * @brief 기본 컨텍스트의 **핸들러를 빌려 쓰는** 빈 컨텍스트를 만듭니다.
+         *
+         * `SerializeContext ctx = getDefault();` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
+         * 복사한다 — 오브젝트 하나당 659 ns 였고, 씬 로드는 그것을 엔티티마다 한다(4000 개면 2.6 ms).
+         * 표는 만들어진 뒤 바뀌지 않으므로 복사할 이유가 없다. 이 쪽은 표를 가리키기만 하고,
+         * 필요하면 자기 표에 덧등록한다(조회는 자기 것 먼저, 없으면 빌려온 쪽).
+         */
+        static SerializeContext deriveFromDefault();
+
     private:
         unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
         unordered_map<hashed_string, BinaryReadFn>  _mapBinaryReader;
@@ -190,13 +200,15 @@ namespace sw
         unordered_map<hashed_string, TextReadFn>    _mapTextReader;
         mutable unordered_map<const void*, uint32>  _mapObjectToId;
         mutable unordered_map<uint32, void*>        _mapIdToObject;
-        void*                                       _pOuterInstance;
-        OwnedPointerCreateFn                        _pOwnedPointerCreateFn;
-        RuntimeTypeInfoFn                           _pRuntimeTypeInfoFn;
-        uint8                                       _bIgnoreCaseKeys            : 1;
-        uint8                                       _bAllowUnknownProperties    : 1;
-        uint8                                       _bEnableObjectDeduplication : 1;
-        [[maybe_unused]] uint8                      _reservedFlags              : 5;
+        /** @brief 자기 표에 없을 때 물어볼 곳. 전역 기본 컨텍스트라 수명은 프로그램 전체다. */
+        const SerializeContext* _pHandlerFallback{ nullptr };
+        void*                   _pOuterInstance;
+        OwnedPointerCreateFn    _pOwnedPointerCreateFn;
+        RuntimeTypeInfoFn       _pRuntimeTypeInfoFn;
+        uint8                   _bIgnoreCaseKeys            : 1;
+        uint8                   _bAllowUnknownProperties    : 1;
+        uint8                   _bEnableObjectDeduplication : 1;
+        [[maybe_unused]] uint8  _reservedFlags              : 5;
     };
 
 } // namespace sw

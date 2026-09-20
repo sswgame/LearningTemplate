@@ -26,57 +26,7 @@ namespace sw
     {
         struct ObjectStateSerializerInternal
         {
-            static constexpr uint32 kMaxSerializedCount = 100000;
-
-            /** @brief Tags 배열 복원으로 이미 생긴 TagComponent는 재사용합니다. */
-            static Component* addOrReuseComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
-            {
-                if ( pGameObject == nullptr )
-                    return nullptr;
-                if ( typeName == hashed_string( "TagComponent" ) )
-                {
-                    TagComponent* pExisting = pGameObject->getComponent<TagComponent>();
-                    if ( pExisting != nullptr )
-                        return pExisting;
-                }
-                if ( typeName == hashed_string( "SceneComponent" ) )
-                {
-                    SceneComponent* pExisting = pGameObject->getComponent<SceneComponent>();
-                    if ( pExisting != nullptr )
-                        return pExisting;
-                }
-                GameObjectManager* pManager = pGameObject->getManager();
-                if ( pManager == nullptr )
-                    return nullptr;
-                return pManager->addComponentByName( pGameObject, typeName, bLogWarning );
-            }
-
-            static string formatTagId( const TagID& tag )
-            {
-                if ( tag._pString != nullptr )
-                    return string( "str:" ) + tag._pString;
-                return to_string( tag._id );
-            }
-
-            static bool parseTagId( string_view text, TagID& outTag )
-            {
-                outTag = TagID{};
-                if ( text.empty() )
-                    return false;
-
-                if ( StringUtil::startsWith( text, "str:" ) )
-                {
-                    outTag = TagID::request( text.substr( 4 ) );
-                    return outTag.isValid();
-                }
-
-                uint64 tagId{ 0 };
-                if ( StringUtil::parseUint64( text, tagId, 10 ) == false )
-                    return false;
-                outTag._id = tagId;
-                return outTag.isValid();
-            }
-
+            /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다 (역직렬화 팩토리). */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
@@ -95,7 +45,7 @@ namespace sw
 
             static SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
             {
-                SerializeContext ctx = SerializeContext::getDefault();
+                SerializeContext ctx = SerializeContext::deriveFromDefault();
                 ctx.setOuterInstance( pGameObject );
                 ctx.setOwnedPointerFactory( &createOwnedComponent );
                 ctx.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
@@ -142,80 +92,30 @@ namespace sw
         if ( pGameObject == nullptr )
             return false;
 
+        pGameObject->prepareSerialize();
+
+        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
+        if ( pTypeInfo == nullptr )
+            return false;
+
         BinaryStreamWriter writer( outBuffer );
 
-        // 1. Name
-        writer.writeString( pGameObject->getName().c_str() );
-
-        // 2. Parent Name
+        // **바깥에 남는 것은 부모 이름 하나뿐이다.** 오브젝트 사이의 부모 관계만 리플렉션 상태에
+        // 없고(씬이 나중에 rebind 한다), 이름·활성·태그·컴포넌트·컴포넌트 간 부착은 전부
+        // `_name` / `_bActive` / `_listComponent` 로 실린다 — XML·JSON 과 같은 상태다.
         string parentName;
         if ( pGameObject->getParent() != nullptr )
             parentName = pGameObject->getParent()->getName().c_str();
         writer.writeString( parentName );
 
-        // 3. IsActive
-        writer.write( static_cast<uint8>( pGameObject->isActive() ? 1 : 0 ) );
+        // 본문 크기를 앞에 둔다 — 세이브게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
+        const size_t sizeHeaderPos = writer.getOffset();
+        writer.write( static_cast<uint32>( 0 ) );
 
-        // 4. Tags
-        const auto& tags = pGameObject->getTags().getTags();
-        writer.write( static_cast<uint32>( tags.size() ) );
-        for ( TagID tag : tags )
-        {
-            writer.writeString( ObjectStateSerializerInternal::formatTagId( tag ) );
-        }
-
-        // 5. Components
-        const vector<Component*> listComponent = pGameObject->getAllComponents();
-        writer.write( static_cast<uint32>( listComponent.size() ) );
-        vector<uint8> compBytes; // Hoisted for performance
-        for ( Component* pComp : listComponent )
-        {
-            if ( pComp == nullptr )
-            {
-                writer.writeString( "" );
-                continue;
-            }
-            const TypeInfo* pTi = pComp->getTypeInfo();
-            string          typeName;
-            if ( pTi != nullptr && pTi->_name.empty() == false )
-                typeName = pTi->_name.c_str();
-            else
-                typeName = pComp->getComponentName().c_str();
-            writer.writeString( typeName );
-
-            compBytes.clear();
-            if ( pTi != nullptr )
-                BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTi, compBytes );
-            writer.writeBytes( compBytes );
-        }
-
-        // 6. SceneComponent Attach Hierarchy (intra-GameObject)
-        struct AttachRecord
-        {
-            uint32 _childIdx;
-            uint32 _parentIdx;
-        };
-        vector<AttachRecord> listAttach;
-        for ( uint32 componentIndex = 0; componentIndex < listComponent.size(); ++componentIndex )
-        {
-            SceneComponent* pSc = castTo<SceneComponent>( listComponent[componentIndex] );
-            if ( pSc != nullptr )
-            {
-                SceneComponent* pParentSc = pSc->getParent();
-                if ( pParentSc != nullptr )
-                {
-                    auto it = std::find( listComponent.begin(), listComponent.end(), pParentSc );
-                    if ( it != listComponent.end() )
-                        listAttach.push_back( { componentIndex, static_cast<uint32>( std::distance( listComponent.begin(), it ) ) } );
-                }
-            }
-        }
-        writer.write( static_cast<uint32>( listAttach.size() ) );
-        for ( const auto& att : listAttach )
-        {
-            writer.write( att._childIdx );
-            writer.write( att._parentIdx );
-        }
+        const size_t     bodyStart = writer.getOffset();
+        SerializeContext ctx       = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, ctx );
+        writer.writeAt( sizeHeaderPos, static_cast<uint32>( writer.getOffset() - bodyStart ) );
 
         return true;
     }
@@ -225,99 +125,38 @@ namespace sw
         if ( pGameObject == nullptr || pData == nullptr || size == 0 )
             return 0;
 
-        BinaryStreamReader reader( pData, size );
-
-        string name;
-        if ( reader.readString( name ) == false )
+        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
+        if ( pTypeInfo == nullptr )
             return 0;
-        if ( name.empty() == false )
-            pGameObject->setName( hashed_string( name.c_str() ) );
 
+        BinaryStreamReader reader( pData, size );
         if ( reader.readString( outParentName ) == false )
             return 0;
-        // 핫리로드에서는 부모 관계를 씬 레벨에서 rebind 할 수 있도록 outParentName 반환
 
-        uint8 isActive = 1;
-        if ( reader.read( isActive ) == false )
+        uint32 bodySize{ 0 };
+        if ( reader.read( bodySize ) == false )
             return 0;
-        pGameObject->setActive( isActive != 0 );
 
-        uint32 numTags = 0;
-        if ( reader.read( numTags ) == false || numTags > ObjectStateSerializerInternal::kMaxSerializedCount )
+        const size_t bodyStart = reader.getOffset();
+        if ( bodyStart + bodySize > size )
             return 0;
-        pGameObject->clearTags();
-        for ( uint32 tagIndex = 0; tagIndex < numTags; ++tagIndex )
-        {
-            string tagStr;
-            if ( reader.readString( tagStr ) == false )
-                return 0;
-            TagID tag;
-            if ( ObjectStateSerializerInternal::parseTagId( tagStr, tag ) )
-                pGameObject->addTag( tag );
-        }
 
+        const hashed_string oldName = pGameObject->getName();
         pGameObject->clearComponents();
 
-        uint32 numComps = 0;
-        if ( reader.read( numComps ) == false || numComps > ObjectStateSerializerInternal::kMaxSerializedCount )
+        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32           ver{ 0 };
+        if ( BinarySerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+                                                     kObjectReflectedSchemaVersion, nullptr, nullptr, ctx ) == false )
             return 0;
-        vector<Component*> listLoadedComponent;
-        listLoadedComponent.reserve( MathUtil::min( numComps, constant::kMaxBuffer4096 ) );
 
-        for ( uint32 compIndex = 0; compIndex < numComps; ++compIndex )
-        {
-            string typeName;
-            if ( reader.readString( typeName ) == false )
-                return 0;
-            vector<uint8> compDataBytes;
-            if ( reader.readBytes( compDataBytes ) == false )
-                return 0;
+        if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
+            pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
 
-            if ( typeName.empty() )
-            {
-                listLoadedComponent.push_back( nullptr );
-                continue;
-            }
+        pGameObject->setActive( pGameObject->isActive() );
+        pGameObject->applyLoadedHierarchy();
 
-            Component* pComp = ObjectStateSerializerInternal::addOrReuseComponentByName( pGameObject, hashed_string( typeName.c_str() ), false );
-            listLoadedComponent.push_back( pComp );
-            if ( pComp == nullptr )
-                continue;
-
-            if ( compDataBytes.empty() == false )
-            {
-                uint32          ver{ 0 };
-                const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-                if ( pTypeInfo != nullptr )
-                    BinarySerializer::deserializeVersioned( ver, pComp, *pTypeInfo, compDataBytes.data(), compDataBytes.size(), kObjectReflectedSchemaVersion );
-                SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-                if ( pSceneComp != nullptr )
-                    pSceneComp->markTransformDirty();
-            }
-        }
-
-        // 6. SceneComponent Attach Hierarchy (intra-GameObject)
-        uint32 numAttaches = 0;
-        if ( reader.read( numAttaches ) )
-        {
-            if ( numAttaches > ObjectStateSerializerInternal::kMaxSerializedCount )
-                return 0;
-            for ( uint32 attachIndex = 0; attachIndex < numAttaches; ++attachIndex )
-            {
-                uint32 childIdx = 0, parentIdx = 0;
-                if ( reader.read( childIdx ) == false || reader.read( parentIdx ) == false )
-                    return 0;
-                if ( childIdx < listLoadedComponent.size() && parentIdx < listLoadedComponent.size() )
-                {
-                    SceneComponent* pChildSc  = castTo<SceneComponent>( listLoadedComponent[childIdx] );
-                    SceneComponent* pParentSc = castTo<SceneComponent>( listLoadedComponent[parentIdx] );
-                    if ( pChildSc != nullptr && pParentSc != nullptr )
-                        pChildSc->attachToComponent( pParentSc );
-                }
-            }
-        }
-
-        return reader.getOffset();
+        return bodyStart + bodySize;
     }
 
     bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString )
