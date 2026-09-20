@@ -118,7 +118,7 @@ namespace sw
             passIndex                       = iter->second;
         }
 
-#if SW_LOG_LEVEL_COMPILED( 2 )
+#if SW_PROFILE_COMPILED
         // **GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 적는다.** 패스는 병렬로 기록될 수 있어
         // 흐르는 카운터를 쓰면 경쟁이 된다 — 인덱스로 고정하면 각 패스가 자기 두 칸만 건드린다.
         //
@@ -128,6 +128,7 @@ namespace sw
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
         const bool   bWriteGpuTime  = _pDevice != nullptr && passCtx._pCmd != nullptr &&
                                    engine::getFrameProfiler().isEnabled() &&
+                                   ( timestampBegin + 1u ) < FrameRendererUtil::kGpuTimestampPassSlotEnd &&
                                    ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
         if ( bWriteGpuTime )
             passCtx._pCmd->writeTimestamp( timestampBegin );
@@ -135,7 +136,7 @@ namespace sw
 
         executePass( passCtx, passType, pPassName, depthAttachment, pPassDesc );
 
-#if SW_LOG_LEVEL_COMPILED( 2 )
+#if SW_PROFILE_COMPILED
         if ( bWriteGpuTime )
             passCtx._pCmd->writeTimestamp( timestampBegin + 1u );
 #endif

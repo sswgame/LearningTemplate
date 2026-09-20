@@ -20,6 +20,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Log/Logger.h"
 
 namespace sw
 {
@@ -123,6 +124,14 @@ namespace sw
         uint32 _slot;
     };
 } // namespace sw
+
+/**
+ * @brief 프레임 계측(GPU 타임스탬프·보고표)이 이 빌드에 컴파일되는가.
+ * @details 계측은 Info 로그를 따라간다 — 결과가 `SW_LOG_INFO` 로만 나가므로 그것이 사라지는 빌드(Shipping)
+ *          에서는 계측 자체도 사라져야 값 없는 비용이 남지 않는다. 호출부는 "왜 Info 인가" 를 몰라도
+ *          되도록 이 이름 하나만 본다.
+ */
+#define SW_PROFILE_COMPILED SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
 
 /** @brief 두 토큰을 붙입니다(매크로 확장 후). */
 #define SW_PROFILE_CONCAT_INNER( a, b ) a##b

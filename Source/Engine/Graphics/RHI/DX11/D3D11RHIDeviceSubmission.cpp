@@ -108,13 +108,14 @@ namespace sw
         if ( readyMask == 0 )
             return;
 
-        uint64 origin{ 0 };
+        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
+        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
+        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
+        uint64 origin{ UINT64_MAX };
         for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
         {
-            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
-                continue;
-            origin = arrTick[slotIndex];
-            break;
+            if ( ( readyMask & ( 1u << slotIndex ) ) != 0 && arrTick[slotIndex] < origin )
+                origin = arrTick[slotIndex];
         }
 
         _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );

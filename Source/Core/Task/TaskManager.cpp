@@ -21,6 +21,13 @@ namespace sw
         thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
 
+        /**
+         * @brief 워커가 잠들기 전에 일감을 기다리며 도는 `cpuPause` 횟수(약 2 us).
+         * @details **더 길게 돌리면 안 된다 — 재 봤다.** 50 us 로 늘리자 디스패치 비용은 줄었지만 워커
+         *          열다섯이 전역 큐를 두드리며 게임·렌더 스레드의 코어를 빼앗아 프레임 전체가 느려졌다
+         *          (큐브 8000: GT 889 -> 1305 us, 렌더 그래프 병렬 기록 170 -> 368 us). 잠든 워커를 깨우는
+         *          비용은 그룹당 한 번만 내는 것(wakeSleepingWorkers)으로 줄인다.
+         */
         constexpr uint32 kIdleSpinCount = 64;
 #if !defined( SW_SHIPPING )
         constexpr uint32 kTaskNameCapacity = 31;
@@ -739,8 +746,10 @@ namespace sw
 
             TaskHandle subHandle{ pSubTask };
             subHandle.precede( parentTask );
-            subHandle.submit();
+            submitWithoutWake( subHandle );
         }
+        // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
+        wakeSleepingWorkers();
 
         return parentTask;
     }
@@ -783,8 +792,10 @@ namespace sw
 
             TaskHandle subHandle{ pSubTask };
             subHandle.precede( parentTask );
-            subHandle.submit();
+            submitWithoutWake( subHandle );
         }
+        // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
+        wakeSleepingWorkers();
 
         return parentTask;
     }
@@ -1236,6 +1247,30 @@ namespace sw
 
     void TaskManager::scheduleReadyTask( TaskNode* pNode )
     {
+        scheduleReadyTask( pNode, true );
+    }
+
+    void TaskManager::submitWithoutWake( const TaskHandle& handle )
+    {
+        if ( handle.isValid() == false )
+            return;
+
+        TaskNode* pNode     = handle.getNode();
+        int32     remaining = pNode->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel );
+        if ( remaining == 1 )
+            scheduleReadyTask( pNode, false );
+    }
+
+    void TaskManager::wakeSleepingWorkers()
+    {
+        if ( _sleepingWorkerCount.load( std::memory_order_acquire ) <= 0 )
+            return;
+        std::scoped_lock<mutex> workerLock{ _workerMutex };
+        _cvWorker.notify_all();
+    }
+
+    void TaskManager::scheduleReadyTask( TaskNode* pNode, bool bWakeWorker )
+    {
         if ( pNode == nullptr )
             return;
 
@@ -1289,7 +1324,7 @@ namespace sw
                         }
                     }
 
-                    if ( _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
+                    if ( bWakeWorker && _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
                     {
                         std::scoped_lock<mutex> workerLock{ _workerMutex };
                         _cvWorker.notify_one();

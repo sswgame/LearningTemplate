@@ -1,6 +1,5 @@
 SWBAKE 3
 1aee117c70cef5ec fullscreentriangle.hlsl
-1d9ea46a131840bd instancesort.hlsl
 26e5c7925670d4ba postbloom.hlsli
 2e4c04e420a4b790 lighting.hlsli
 37f6254d361e1411 instanceanim.hlsl
@@ -23,4 +22,5 @@ d8ef31b0b6562291 fullscreenblit.hlsl
 d8ef31b0b6562291 tonemap.hlsl
 e1a2fdceadc33a96 sprite2d.hlsl
 e8c6cf517a6e6b77 gpucull.hlsl
+ea9b973b66b48193 instancesort.hlsl
 f3ece41ed410ef1d forwardlit.hlsl

@@ -248,9 +248,9 @@ SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
  */
 SW_TEST_CASE( LogTest, ErrorAndWarningSurviveEveryBuild )
 {
-    static_assert( SW_LOG_COMPILED_VERBOSITY >= 1, "Error/Warning 은 어떤 빌드에서도 컴파일되어야 한다" );
-    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( 0 ) );
-    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( 1 ) );
+    static_assert( SW_LOG_COMPILED_VERBOSITY >= SW_LOG_VERBOSITY_WARNING, "Error/Warning 은 어떤 빌드에서도 컴파일되어야 한다" );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR ) );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING ) );
 }
 
 /**

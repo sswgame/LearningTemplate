@@ -70,13 +70,17 @@ namespace sw
         if ( result != VK_SUCCESS && result != VK_NOT_READY )
             return;
 
-        uint64 origin       = 0;
+        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
+        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
+        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
+        uint64 origin       = UINT64_MAX;
         bool   bOriginFound = false;
-        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot && bOriginFound == false; ++index )
+        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
         {
             if ( arrResult[index * 2 + 1] == 0 )
                 continue;
-            origin       = arrResult[index * 2];
+            if ( arrResult[index * 2] < origin )
+                origin = arrResult[index * 2];
             bOriginFound = true;
         }
         if ( bOriginFound == false )

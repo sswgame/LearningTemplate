@@ -3215,14 +3215,11 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
         sw::Scene scene( "FusedPostChainScene" );
         bool      bOk = scene.ensureDefaultCameras();
 
-        // 주광을 둔다 — 그림자 패스까지 태워야 두 파이프라인이 같은 일을 하는지 보는 의미가 있다.
-        //
-        // **덮지 못하는 것 하나를 적어 둔다.** `postchain.hlsl` 은 블룸 뒤에 `saturate` 를 한다 —
-        // 나눈 판이 중간 타깃(UNORM8)에 쓰면서 자르던 것을 그대로 재현하려는 것이다. 그런데 이 씬은
-        // 어두워서(RGB 평균 약 26) 블룸 결과가 1 을 넘지 않아 그 자름이 아무 일도 하지 않는다 —
-        // 자름을 빼는 변이를 걸어도 이 테스트는 통과한다. 그쪽은 벤치 씬에서 앱으로 확인했다
-        // (`-gv_benchMeshes=200 -gv_benchAnimate=0`: 자름이 있으면 나눈 판과 최대 차이 1,
-        //  빼면 31). 밝은 머티리얼을 쓰는 씬을 여기 세우면 이 구멍도 닫힌다.
+        // **밝아야 한다.** `postchain.hlsl` 은 블룸 뒤에 `saturate` 를 한다 — 나눈 판이 중간 타깃(UNORM8)에
+        // 쓰면서 자르던 것을 재현하는 것이다. 블룸이 1 을 넘는 픽셀이 없으면 그 자름은 아무 일도 하지
+        // 않아 빼는 변이가 통과한다. 실제로 그랬다 — 둘이 빠져 있었다: (1) 씬 경로가 주광을 채우지
+        // 않았고(패킷 경로만 채웠다), (2) 머티리얼이 없어 알베도가 0 이라 조명을 아무리 세게 줘도 검었다.
+        // 흰 머티리얼 + 센 주광이면 큐브 면이 날아가 블룸이 넘친다.
         if ( bOk )
         {
             sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
@@ -3232,10 +3229,18 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
                      pLight != nullptr )
                 {
                     pLight->setIntensity( 6.0f );
-                    pLight->setCastShadow( true );
+                    // 그림자 볼륨 기본값(2 유닛)이 큐브를 다 덮지 못해 바깥이 어두워진다 — 여기서는 밝기가 목적이다.
+                    pLight->setCastShadow( false );
                 }
             }
         }
+
+        // 실제 에셋 + setPropertyValue 로 간다 — 손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨려 백엔드마다
+        // 다르게 무너진다(백로그 "손으로 지은 머티리얼 XML 함정").
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        if ( bOk )
+            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
+                  material->setPropertyValue( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];
@@ -3258,6 +3263,7 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
             if ( bOk == false )
                 break;
             pMesh->setMesh( arrMesh[index] );
+            pMesh->setMaterial( material.get() );
             // 깊이 불연속이 있어야 외곽선이 생긴다 — 서로 겹치지 않게 벌려 둔다.
             pMesh->setLocalPosition( sw::float3{ ( static_cast<float32>( index ) - 1.0f ) * 1.5f, 1.0f, 0.0f } );
         }

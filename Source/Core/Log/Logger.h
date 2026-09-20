@@ -190,23 +190,34 @@ namespace sw
 //    언리얼처럼 **카테고리 상세도**로 자른다: 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는
 //    Shipping 에도 남는다. 관례대로 Warning 이상은 어떤 빌드에서도 살린다.
 //
-//    SW_LOG_COMPILED_VERBOSITY 는 LogLevel 의 순서(Error 0 → Trace 3)와 같은 숫자다.
+//    SW_LOG_COMPILED_VERBOSITY 는 LogLevel 의 순서와 같은 숫자다 — 아래 SW_LOG_VERBOSITY_* 가 그 이름이고,
+//    static_assert 가 열거자와 어긋나지 않게 지킨다. 전처리기 조건에는 열거자를 쓸 수 없어 매크로가 필요하다.
 // ------------------------------------------------------------------------------
+
+/// @brief 레벨 번호의 이름. `SW_LOG_LEVEL_COMPILED( 2 )` 처럼 숫자로 적으면 읽는 사람이 2 가 무엇인지 알 수 없다.
+#define SW_LOG_VERBOSITY_ERROR   0
+#define SW_LOG_VERBOSITY_WARNING 1
+#define SW_LOG_VERBOSITY_INFO    2
+#define SW_LOG_VERBOSITY_TRACE   3
+static_assert( static_cast<int32>( sw::LogLevel::Error ) == SW_LOG_VERBOSITY_ERROR, "SW_LOG_VERBOSITY_ERROR 가 LogLevel 과 어긋났다" );
+static_assert( static_cast<int32>( sw::LogLevel::Warning ) == SW_LOG_VERBOSITY_WARNING, "SW_LOG_VERBOSITY_WARNING 이 LogLevel 과 어긋났다" );
+static_assert( static_cast<int32>( sw::LogLevel::Info ) == SW_LOG_VERBOSITY_INFO, "SW_LOG_VERBOSITY_INFO 가 LogLevel 과 어긋났다" );
+static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRACE, "SW_LOG_VERBOSITY_TRACE 가 LogLevel 과 어긋났다" );
 
 #if !defined( SW_LOG_COMPILED_VERBOSITY )
     #if defined( SW_SHIPPING )
-  /// @brief 배포본은 Warning 까지만 컴파일한다 — Info/Trace 는 호출 자체가 사라진다.
-        #define SW_LOG_COMPILED_VERBOSITY 1
+    /// @brief 배포본은 Warning 까지만 컴파일한다 — Info/Trace 는 호출 자체가 사라진다.
+        #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_WARNING
     #elif defined( SW_DEBUG )
-        #define SW_LOG_COMPILED_VERBOSITY 3
+        #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_TRACE
     #else
-  /// @brief 개발(Release) 빌드는 Info 까지. Trace 는 비용이 커서 뺀다.
-        #define SW_LOG_COMPILED_VERBOSITY 2
+    /// @brief 개발(Release) 빌드는 Info 까지. Trace 는 비용이 커서 뺀다.
+        #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_INFO
     #endif
 #endif
 
-/// @brief 이 레벨이 이 빌드에 컴파일되어 있는가 (숫자는 LogLevel 순서와 같다).
-#define SW_LOG_LEVEL_COMPILED( levelIndex ) ( ( levelIndex ) <= SW_LOG_COMPILED_VERBOSITY )
+/// @brief 이 레벨이 이 빌드에 컴파일되어 있는가. 인자는 SW_LOG_VERBOSITY_* 로 적는다.
+#define SW_LOG_LEVEL_COMPILED( verbosity ) ( ( verbosity ) <= SW_LOG_COMPILED_VERBOSITY )
 
 /**
  * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
@@ -235,28 +246,28 @@ namespace sw
         }                                                                                              \
     } while ( false )
 
-#if SW_LOG_LEVEL_COMPILED( 0 )
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR )
     /** @brief Error 레벨로 포맷해 남깁니다. 어떤 빌드에도 남습니다. */
     #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
 #else
     #define SW_LOG_ERROR( ... )
 #endif
 
-#if SW_LOG_LEVEL_COMPILED( 1 )
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING )
     /** @brief Warning 레벨로 포맷해 남깁니다. 배포본에도 남습니다. */
     #define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
 #else
     #define SW_LOG_WARNING( ... )
 #endif
 
-#if SW_LOG_LEVEL_COMPILED( 2 )
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
     /** @brief Info 레벨로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. */
     #define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
 #else
     #define SW_LOG_INFO( ... )
 #endif
 
-#if SW_LOG_LEVEL_COMPILED( 3 )
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
     /** @brief Trace 레벨로 포맷해 남깁니다. Debug 에만 컴파일됩니다. */
     #define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
 #else

@@ -191,6 +191,17 @@ namespace sw
         void workerLoop( uint32 workerId );
         /** @brief 의존성이 충족된 태스크 노드를 적절한 워커 큐 또는 메인 스레드 큐로 라우팅합니다. */
         void scheduleReadyTask( TaskNode* pNode );
+        /**
+         * @brief 준비된 태스크를 큐에 넣되, @p bWakeWorker 가 false 면 잠든 워커를 깨우지 않습니다.
+         * @details 병렬 그룹은 서브태스크를 전부 넣은 뒤 `wakeSleepingWorkers` 로 **한 번만** 깨운다.
+         *          서브태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 청크 수만큼 반복된다 —
+         *          청크 32 개에 디스패치가 125 us 였고, 그 안의 일은 몇 us 였다.
+         */
+        void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
+        /** @brief `submit` 과 같되 워커를 깨우지 않습니다 — 병렬 그룹 전용. */
+        void submitWithoutWake( const TaskHandle& handle );
+        /** @brief 잠든 워커가 있으면 전부 깨웁니다 (시그널 한 번). */
+        void wakeSleepingWorkers();
         /** @brief 단일 태스크 노드의 본문을 실행하고 후속 의존성을 트리거합니다. */
         void executeTask( TaskNode* pNode );
         /** @brief 태스크 완료 시 후속 태스크들의 카운트다운을 감소시키고 완료 조건을 전파합니다. */

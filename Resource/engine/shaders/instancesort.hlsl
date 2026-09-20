@@ -87,8 +87,20 @@ void CSMain(uint3 gid : SV_GroupID, uint3 gtid : SV_GroupThreadID)
 	const uint count = min(g_IndirectArgs[batchIndex].instanceCount, (uint)SW_SORT_MAX_ELEMENTS);
 	const uint base  = info.instanceBase;
 
-	// 그룹공유로 올린다. 남는 자리는 키를 -1 로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
-	// (바이토닉은 2의 거듭제곱 길이를 요구하므로 패딩이 필요하다.)
+	// **실제 개수의 다음 2의 거듭제곱까지만 일한다.** 예전에는 늘 512 칸을 채우고 512 칸을 비교했다 —
+	// 배치에 인스턴스가 열 개여도 512 칸 분량이었다. 큐브 100 개짜리 씬에서 컬링·정렬 프리패스가
+	// GPU 프레임의 100 us 를 먹고 있었고 그 대부분이 이 패딩이었다.
+	// (바이토닉은 2의 거듭제곱 길이를 요구하므로 count 까지가 아니라 그 위 거듭제곱까지다.)
+	//
+	// **루프 경계는 그대로 상수다.** `count` 는 UAV 에서 읽은 값이라 컴파일러(FXC)에게는 "스레드마다
+	// 다를 수 있는 값" 이고, 그 값에 걸린 흐름 안의 배리어는 X4026 으로 거부된다 — 실제로는 그룹 안에서
+	// 같은 값이지만 증명할 수 없다. 그래서 배리어는 상수 루프에 두고 **비교·교환만** n 안으로 줄인다.
+	// 배리어 45 번은 남지만 그것은 싸고, 비쌌던 것은 칸마다의 그룹공유 읽기·쓰기였다.
+	uint n = 2u;
+	while (n < count)
+		n <<= 1u;
+
+	// 그룹공유로 올린다. n 밖의 자리는 키를 -1 로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
 	for (uint load = gtid.x; load < (uint)SW_SORT_MAX_ELEMENTS; load += SW_SORT_THREADS)
 	{
 		if (load < count)
@@ -117,7 +129,8 @@ void CSMain(uint3 gid : SV_GroupID, uint3 gtid : SV_GroupThreadID)
 	{
 		for (uint j = k >> 1u; j > 0u; j >>= 1u)
 		{
-			for (uint i = gtid.x; i < (uint)SW_SORT_MAX_ELEMENTS; i += SW_SORT_THREADS)
+			// n 을 넘는 단계는 할 일이 없다 — 분기 안에 배리어가 없으므로 가변 값으로 걸러도 된다.
+			for (uint i = gtid.x; i < n && k <= n; i += SW_SORT_THREADS)
 			{
 				const uint partner = i ^ j;
 				if (partner > i)

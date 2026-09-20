@@ -369,13 +369,14 @@ namespace sw
         // DX12 는 쿼리 힙을 리셋하지 않는다 — 안 적은 칸엔 **지난 사이클의 값**이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
-        uint64        origin = 0;
+        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
+        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
+        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
+        uint64 origin = UINT64_MAX;
         for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
         {
-            if ( ( writtenMask & ( 1u << index ) ) == 0 )
-                continue;
-            origin = pTicks[index];
-            break;
+            if ( ( writtenMask & ( 1u << index ) ) != 0 && pTicks[index] < origin )
+                origin = pTicks[index];
         }
 
         _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );

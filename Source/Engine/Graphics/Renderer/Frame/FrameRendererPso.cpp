@@ -387,7 +387,7 @@ namespace sw
         // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태인데 바꾼 주체가 셋이다(툴바·커맨드라인·코드) —
         // 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
         // 배포본에서는 SW_LOG_INFO 가 사라지므로 이름표까지 함께 컴파일 아웃한다(안 그러면 미사용 경고).
-#if SW_LOG_LEVEL_COMPILED( 2 )
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         static const utf8* s_arrName[] = { "Lit", "Unlit", "Wireframe" };
         SW_LOG_INFO( "뷰 모드: %#", s_arrName[static_cast<uint8>( viewMode )] );
 #endif

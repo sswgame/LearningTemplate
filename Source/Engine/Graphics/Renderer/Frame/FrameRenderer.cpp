@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
@@ -180,7 +181,7 @@ namespace sw
 
     void FrameRenderer::reportGpuPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
     {
-#if SW_LOG_LEVEL_COMPILED( 2 )
+#if SW_PROFILE_COMPILED
         // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 재려던 그 파이프라인을 멈춰 세워
         // 숫자가 거짓이 된다 — 늦은 대신 정확한 쪽을 고른다.
         if ( pDevice == nullptr )
@@ -194,23 +195,46 @@ namespace sw
         if ( pDevice->readTimestampsMicros( _listGpuTimestampMicro ) == false )
             return;
 
+        // 한 구간을 프로파일러에 넣는다. 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를
+        // 건너뛰었거나 첫 사이클) — 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
+        auto reportSpan = [&]( const utf8* pScopeName, size_t beginSlot, size_t endSlot ) -> float32
+        {
+            if ( endSlot >= _listGpuTimestampMicro.size() )
+                return -1.0f;
+            const float32 beginMicro = _listGpuTimestampMicro[beginSlot];
+            const float32 endMicro   = _listGpuTimestampMicro[endSlot];
+            if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
+                return -1.0f;
+            const float32 micro = endMicro - beginMicro;
+            const uint32  slot  = engine::getFrameProfiler().registerScope( pScopeName );
+            engine::getFrameProfiler().addSample( slot, static_cast<uint64>( micro * 1000.0f ) );
+            return endMicro;
+        };
+
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+        float32                            lastEndMicro{ -1.0f };
         for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
         {
             const size_t beginSlot = passIndex * 2;
-            if ( beginSlot + 1 >= _listGpuTimestampMicro.size() )
+            if ( beginSlot + 1 >= FrameRendererUtil::kGpuTimestampPassSlotEnd )
                 break;
+            const float32 endMicro = reportSpan( gpuScopeNameFor( listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
+            if ( endMicro > lastEndMicro )
+                lastEndMicro = endMicro;
+        }
 
-            const float32 beginMicro = _listGpuTimestampMicro[beginSlot];
-            const float32 endMicro   = _listGpuTimestampMicro[beginSlot + 1];
-            // 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를 건너뛰었거나 첫 사이클) — 버린다.
-            // 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
-            if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
-                continue;
-
-            const float32 micro = endMicro - beginMicro;
-            const uint32  slot  = engine::getFrameProfiler().registerScope( gpuScopeNameFor( listPass[passIndex]._name ) );
-            engine::getFrameProfiler().addSample( slot, static_cast<uint64>( micro * 1000.0f ) );
+        // 패스 밖의 GPU 시간. `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지 — 패스 합과의
+        // 차이가 컴퓨트 프리패스·업로드·배리어다. 이것이 없으면 "패스는 270 us 인데 펜스는 왜 400 us 를
+        // 기다리나" 에 답할 수 없다(프레임 사이 유휴는 여기 안 잡힌다 — 그건 CPU 쪽 RT.Frame 과의 차이다).
+        reportSpan( "GPU.Compute", FrameRendererUtil::kGpuTimestampSlotComputeBegin, FrameRendererUtil::kGpuTimestampSlotComputeEnd );
+        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGpuTimestampSlotFrameBegin < _listGpuTimestampMicro.size() )
+        {
+            const float32 frameBegin = _listGpuTimestampMicro[FrameRendererUtil::kGpuTimestampSlotFrameBegin];
+            if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
+            {
+                const uint32 slot = engine::getFrameProfiler().registerScope( "GPU.Frame" );
+                engine::getFrameProfiler().addSample( slot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
+            }
         }
 #endif
     }
@@ -336,12 +360,29 @@ namespace sw
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
         _animTimer.updateTimer();
 
+#if SW_PROFILE_COMPILED
+        // 프레임의 첫 GPU 명령 자리 — 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
+        // 프리패스·업로드·배리어)이다. 게이트는 패스 타임스탬프와 같다(FrameRendererPassExecute).
+        const bool bWriteGpuTime = engine::getFrameProfiler().isEnabled() &&
+                                   FrameRendererUtil::kGpuTimestampSlotFrameBegin < pDevice->getTimestampSlotCount();
+        if ( bWriteGpuTime )
+        {
+            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotFrameBegin );
+            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeBegin );
+        }
+#endif
+
         // GPU 드리븐 프리패스 — **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
         // 이번 프레임에 회전하기 전의 바운드로 판정한다.
         const uint32 animInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animInstanceCount );
         dispatchMeshMorph();
         dispatchCullAndSort( animInstanceCount );
+
+#if SW_PROFILE_COMPILED
+        if ( bWriteGpuTime )
+            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeEnd );
+#endif
 
         // 병렬 기록 가능(백엔드 capability + TaskManager + 웨이브가 나올 만큼 컴파일된 그래프)이면
         // 컬링 디스패치(위에서 _pCmd에 이미 기록됨)를 먼저 닫아 GPU 큐에 제출해서, 각 패스의 독립
@@ -384,6 +425,23 @@ namespace sw
         // 다르면 에디터에서 본 그림과 게임 화면이 갈린다.
         collectSceneLights( pScene, _listScratchLight );
         _lightBuffer.update( pDevice, _listScratchLight );
+        // 주광(그림자 행렬·앰비언트·목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
+        // 씬에서 읽는다. 예전에는 이 경로가 주광을 채우지 않아, 테스트가 씬에 방향광을 아무리 세게 두어도
+        // 그림이 어두웠다 — 조명이 필요한 픽셀 검증(블룸이 1 을 넘는 자리)이 그래서 불가능했다.
+        DirectionalLightComponent* pKeyLight = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
+        if ( pKeyLight != nullptr )
+        {
+            const float3 lightDir           = pKeyLight->getLightDirection();
+            const float3 lightColor         = pKeyLight->getColor();
+            _frameLight._dirIntensity       = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
+            _frameLight._colorAmbient       = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
+            _frameLight._shadowViewProj     = pKeyLight->castsShadow() ? pKeyLight->buildShadowViewProj() : float4x4{};
+            _frameLight._bHasShadowViewProj = SW_TRUE;
+        }
+        else
+        {
+            _frameLight = FrameLightState{};
+        }
         ensurePassResources();
         ensureTransientResources();
         resetPassCbRing();

@@ -78,14 +78,27 @@ namespace sw
             static constexpr auto kCSMain = "CSMain";
         };
 
-        static constexpr uint32  kDefaultTransientSize = 1280;
-        static constexpr auto    kDefaultMainPassName  = "DefaultMainPass";
-        static constexpr float4  kBlackClear           = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static constexpr float4  kSceneClear           = { 0.12f, 0.15f, 0.18f, 1.0f };
-        static constexpr float4  kDepthClear           = { 1.0f, 0.0f, 0.0f, 0.0f };
-        static constexpr float4  kBloomClear           = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static constexpr float4  kNormalClear          = { 0.5f, 0.5f, 1.0f, 1.0f };
-        static constexpr float32 kDefaultCameraPos[3]  = { 0.0f, 1.2f, 3.2f };
+        static constexpr uint32 kDefaultTransientSize = 1280;
+
+        /**
+         * @brief GPU 타임스탬프 칸 배치. 칸은 `constant::kMaxGpuTimestampSlot`(32) 개다.
+         * @details 패스는 앞에서부터 인덱스 x 2 쌍을 쓰고(병렬 기록이라 흐르는 카운터가 아니라 고정 칸),
+         *          프레임 전체·컴퓨트 프리패스는 **뒤쪽 세 칸**을 쓴다. 그래서 패스는 14 개까지다.
+         *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 칸이 먼저 적혀도 값이 잘리지 않는다.
+         */
+        static constexpr uint32 kGpuTimestampSlotComputeBegin = 29;
+        static constexpr uint32 kGpuTimestampSlotComputeEnd   = 30;
+        static constexpr uint32 kGpuTimestampSlotFrameBegin   = 31;
+        /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함) — 위 예약 칸과 겹치지 않게.
+        static constexpr uint32 kGpuTimestampPassSlotEnd = kGpuTimestampSlotComputeBegin;
+        static_assert( kGpuTimestampSlotFrameBegin < constant::kMaxGpuTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
+        static constexpr auto    kDefaultMainPassName = "DefaultMainPass";
+        static constexpr float4  kBlackClear          = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static constexpr float4  kSceneClear          = { 0.12f, 0.15f, 0.18f, 1.0f };
+        static constexpr float4  kDepthClear          = { 1.0f, 0.0f, 0.0f, 0.0f };
+        static constexpr float4  kBloomClear          = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static constexpr float4  kNormalClear         = { 0.5f, 0.5f, 1.0f, 1.0f };
+        static constexpr float32 kDefaultCameraPos[3] = { 0.0f, 1.2f, 3.2f };
 
         /**
          * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭 (라디안/초).
