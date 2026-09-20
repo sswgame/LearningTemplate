@@ -206,7 +206,9 @@ namespace sw::editor
         // 화면 밖으로 밀린다 — 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _locFilter.c_str() };
 
-        vector<size_t> listVisibleIndex;
+        // **멤버 버퍼를 다시 쓴다.** 지역 `vector` 였을 때는 그리는 매 프레임 할당 + 해제였다.
+        vector<size_t>& listVisibleIndex = _listVisibleLocIndex;
+        listVisibleIndex.clear();
         listVisibleIndex.reserve( _listLocRecord.size() );
         for ( size_t recordIndex = 0; recordIndex < _listLocRecord.size(); ++recordIndex )
         {

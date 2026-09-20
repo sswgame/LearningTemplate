@@ -633,13 +633,17 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetView()
     {
-        vector<AssetEntry> listVisible;
+        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 예전에는 자산이
+        // 수백 개면 프레임마다 문자열 수천 개를 복사했다. 보는 쪽 둘은 읽기만 하므로 포인터로
+        // 충분하고, 버퍼도 멤버로 올려 두면 첫 프레임 뒤로는 할당이 없다.
+        vector<const AssetEntry*>& listVisible = _listVisibleEntry;
+        listVisible.clear();
         listVisible.reserve( _listEntry.size() );
         for ( const AssetEntry& entry : _listEntry )
         {
             if ( passesTypeFilter( entry ) == false || passesSearchFilter( entry ) == false )
                 continue;
-            listVisible.push_back( entry );
+            listVisible.push_back( &entry );
         }
 
         editor::EditorSectionDesc assetsDesc{};
@@ -760,7 +764,7 @@ namespace sw::editor
         }
     }
 
-    void ContentBrowserPanel::drawTilesView( const vector<AssetEntry>& listVisible )
+    void ContentBrowserPanel::drawTilesView( const vector<const AssetEntry*>& listVisible )
     {
         const float32 cell       = _tileSize;
         const float32 paddingX   = ImGui::GetStyle().ItemSpacing.x;
@@ -787,7 +791,7 @@ namespace sw::editor
                     if ( index >= itemCount )
                         break;
 
-                    const AssetEntry& entry = listVisible[static_cast<size_t>( index )];
+                    const AssetEntry& entry = *listVisible[static_cast<size_t>( index )];
                     ImGui::PushID( entry._absolutePath.c_str() );
 
                     if ( col > 0 )
@@ -826,7 +830,7 @@ namespace sw::editor
         }
     }
 
-    void ContentBrowserPanel::drawListView( const vector<AssetEntry>& listVisible )
+    void ContentBrowserPanel::drawListView( const vector<const AssetEntry*>& listVisible )
     {
         constexpr ImGuiTableFlags flags =
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
@@ -844,7 +848,7 @@ namespace sw::editor
             {
                 for ( int32 itemIndex = clipper.DisplayStart; itemIndex < clipper.DisplayEnd; ++itemIndex )
                 {
-                    const AssetEntry& entry = listVisible[static_cast<size_t>( itemIndex )];
+                    const AssetEntry& entry = *listVisible[static_cast<size_t>( itemIndex )];
                     ImGui::PushID( entry._absolutePath.c_str() );
                     ImGui::TableNextRow();
 

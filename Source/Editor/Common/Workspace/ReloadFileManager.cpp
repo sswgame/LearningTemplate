@@ -156,9 +156,11 @@ namespace sw
         WatchEntry entry{};
         entry._handle = FileWatchHandle{ _nextWatchId++ };
         // Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
-        entry._pathPrefix    = FileUtil::normalizeSeparators( pathPrefix );
-        entry._listExtension = listExtension;
-        entry._onMatch       = onMatch;
+        entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
+        // 맞춰 볼 때 쓰는 꼴로 **여기서 한 번** 만들어 둔다.
+        entry._normalizedPrefix = FileUtil::normalizePath( entry._pathPrefix );
+        entry._listExtension    = listExtension;
+        entry._onMatch          = onMatch;
         _listWatch.push_back( entry );
 
         SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
@@ -176,11 +178,11 @@ namespace sw
                           _listWatch.end() );
     }
 
-    bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const
+    bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
+                                          string_view normalizedFullPath ) const
     {
-        const string prefix   = FileUtil::normalizePath( entry._pathPrefix );
-        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-        if ( FileUtil::startsWithPathComponent( fullPath, prefix ) == false )
+        // 정규화는 둘 다 **이미 끝나 있다** — 접두사는 등록할 때, 전체 경로는 이벤트마다 한 번.
+        if ( FileUtil::startsWithPathComponent( normalizedFullPath, entry._normalizedPrefix ) == false )
             return false;
 
         return isExtensionAllowed( entry, changeEvent._filename );
@@ -190,6 +192,10 @@ namespace sw
     {
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
+            // **이벤트당 한 번** 만든다. 예전에는 `matchesWatch` 안에 있어서 감시 수만큼 다시 만들었다.
+            const string normalizedFullPath =
+                FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
+
             bool bAnyMatch{ false };
             // **콜백이 감시를 등록·해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
             // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 들고 있던 참조가 뜬 메모리를
@@ -200,7 +206,7 @@ namespace sw
             // 이 방식이 원래 받아들이는 값이다(부르는 도중 목록을 바꾼 쪽의 몫이다).
             for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
             {
-                if ( matchesWatch( _listWatch[watchIndex], changeEvent ) == false )
+                if ( matchesWatch( _listWatch[watchIndex], changeEvent, normalizedFullPath ) == false )
                     continue;
 
                 bAnyMatch                            = true;

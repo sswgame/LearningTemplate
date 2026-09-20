@@ -486,6 +486,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (프레임마다 다시 만들던 것들 · 여섯 벌로 흩어진 대응)
+
+커밋 `TBD`. (B) 패스.
+
+**1. 에디터 패널 셋이 그리는 매 프레임 컨테이너를 새로 할당했다.**
+`DataTablePanel` · `GlobalVariablesPanel` · `ContentBrowserPanel` 이 `draw*()` 안에서 `vector`
+를 만들고 `reserve()` 했다. 멤버 버퍼로 올리고 `clear()` 만 하면 용량이 남아 첫 프레임 뒤로는
+할당이 없다.
+
+그 중 `ContentBrowserPanel` 은 한 가지가 더 있었다 — 걸러 낸 목록에 **엔트리를 통째로 복사**
+했다. `EditorFolderListingEntry` 는 `string` 이 넷이라, 자산이 수백 개면 프레임마다 문자열
+수천 개를 베낀 셈이다. 보는 쪽 둘(`drawTilesView` · `drawListView`)은 읽기만 하므로 포인터로
+바꿨다.
+
+검증은 패널 덤프다(에디터 패널은 단위 테스트가 없다):
+`-EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40` → **창 33개 · 내용 없는 패널
+0개**로 백로그 기준선과 같고, 바꾼 세 패널 모두 정점이 있다(Content Browser 1064 · Data Table
+950 · Global Variables 1030).
+
+**2. `ReloadFileManager::matchesWatch` 가 같은 값을 E x W 번 다시 만들었다.**
+이벤트 E 개 · 감시 W 개면 접두사 정규화와 전체 경로 정규화가 **각각 E x W 번**이었다. 접두사는
+감시마다 하나뿐이고(등록할 때 정해진다) 전체 경로는 이벤트마다 하나뿐이다 — 등록 시점에 한 번,
+이벤트당 한 번으로 옮겨 W + E 로 줄였다.
+
+**3. `TileMap` ↔ `TileMapXmlData` 의 필드별 복사 루프 여섯.**
+세 쌍의 같은 대응을 두 방향으로 두 번씩 적고 있었다. 필드를 하나 더하면 두 곳을 고쳐야 하고,
+한쪽을 빠뜨리면 그 필드가 **저장에서만 혹은 로드에서만 조용히 사라진다.**
+
+타입을 하나로 합칠 수는 없다 — `TileMapXml` 은 Engine 이고 `TileMap` 은 GameFramework 라
+Engine 이 그쪽을 포함하면 레이어 린트가 막는다. 그래서 두 방향을 `TileMapXmlConvert` 한 자리에
+나란히 두고, **`static_assert` 로 어느 쪽 구조체가 커지면 빌드가 깨지게** 했다. 변이로 확인했다
+— XML 쪽 `Visual` 에 `uint8` 하나를 더하니 정확히 그 단언이
+`"TileVisual and TileMapXmlData::Visual diverged - update TileMapXmlConvert"` 로 깨졌다.
+
+**숫자는 주장하지 않는다.** 셋 다 프레임 시간으로 잴 수 있는 크기가 아니다(프레임은 GPU 대기가
+정한다). 프레임마다 같은 값을 다시 만드는 것과 대응을 여섯 벌로 두는 것은 **낭비와 어긋남의
+위험이 자명해서** 고친 것이다.
+
 ### 2026-09-20 (성능 검사군이 아예 꺼져 있었다 — clang-tidy performance-* 314건 정리)
 
 커밋 `TBD`. (B) 패스의 뼈대.

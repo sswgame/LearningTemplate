@@ -6,6 +6,90 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief `TileMap` 의 타입과 `TileMapXmlData` 의 타입 사이 변환 — **두 방향이 나란히** 있습니다.
+         * @details 예전에는 이 대응이 `loadFromXml` 과 `saveToXml` 안에 **여섯 개의 루프**로
+         *          흩어져 있었다. 필드를 하나 더하면 두 곳을 고쳐야 하고, 한쪽을 빠뜨리면
+         *          그 필드가 저장에서만 혹은 로드에서만 조용히 사라진다.
+         *
+         *          타입을 아예 하나로 합칠 수는 없다 — `TileMapXml` 은 Engine 이고 `TileMap` 은
+         *          GameFramework 라 Engine 이 그쪽을 포함하면 레이어 린트가 막는다. 그래서
+         *          두 방향을 한 자리에 붙여 두고, 아래 `static_assert` 로 **어느 쪽이든 필드가
+         *          늘면 빌드가 깨지게** 했다. 그때 이 자리를 같이 고치면 된다.
+         */
+        struct TileMapXmlConvert
+        {
+            static TileVisual toRuntime( const TileMapXmlData::Visual& src )
+            {
+                TileVisual dst{};
+                dst._height  = src._height;
+                dst._tintR   = src._tintR;
+                dst._tintG   = src._tintG;
+                dst._tintB   = src._tintB;
+                dst._atlasId = src._atlasId;
+                return dst;
+            }
+            static TileMapXmlData::Visual toXml( const TileVisual& src )
+            {
+                TileMapXmlData::Visual dst{};
+                dst._height  = src._height;
+                dst._tintR   = src._tintR;
+                dst._tintG   = src._tintG;
+                dst._tintB   = src._tintB;
+                dst._atlasId = src._atlasId;
+                return dst;
+            }
+
+            static TileWarp toRuntime( const TileMapXmlData::Warp& src )
+            {
+                TileWarp dst{};
+                dst._tileX       = src._tileX;
+                dst._tileY       = src._tileY;
+                dst._targetMap   = src._targetMap;
+                dst._targetTileX = src._targetTileX;
+                dst._targetTileY = src._targetTileY;
+                dst._pairId      = src._pairId;
+                return dst;
+            }
+            static TileMapXmlData::Warp toXml( const TileWarp& src )
+            {
+                TileMapXmlData::Warp dst{};
+                dst._tileX       = src._tileX;
+                dst._tileY       = src._tileY;
+                dst._targetMap   = src._targetMap;
+                dst._targetTileX = src._targetTileX;
+                dst._targetTileY = src._targetTileY;
+                dst._pairId      = src._pairId;
+                return dst;
+            }
+
+            static TileEncounterEntry toRuntime( const TileMapXmlData::Encounter& src )
+            {
+                TileEncounterEntry dst{};
+                dst._speciesId = src._speciesId;
+                dst._weight    = src._weight;
+                return dst;
+            }
+            static TileMapXmlData::Encounter toXml( const TileEncounterEntry& src )
+            {
+                TileMapXmlData::Encounter dst{};
+                dst._speciesId = src._speciesId;
+                dst._weight    = src._weight;
+                return dst;
+            }
+        };
+
+        // **필드가 늘면 여기서 깨진다.** 위 변환은 필드를 하나하나 적으므로, 어느 쪽 구조체에
+        // 필드가 붙어도 컴파일러가 알려 주지 않는다 — 크기를 못 박아 그 순간을 잡는다.
+        static_assert( sizeof( TileVisual ) == sizeof( TileMapXmlData::Visual ),
+                       "TileVisual and TileMapXmlData::Visual diverged - update TileMapXmlConvert" );
+        static_assert( sizeof( TileWarp ) == sizeof( TileMapXmlData::Warp ),
+                       "TileWarp and TileMapXmlData::Warp diverged - update TileMapXmlConvert" );
+        static_assert( sizeof( TileEncounterEntry ) == sizeof( TileMapXmlData::Encounter ),
+                       "TileEncounterEntry and TileMapXmlData::Encounter diverged - update TileMapXmlConvert" );
+    } // namespace
     SW_LOG_CALLER( "TileMap" );
 
     TileMap::TileMap()
@@ -49,37 +133,17 @@ namespace sw
         _listVisual.clear();
         _listVisual.reserve( xmlData._listVisual.size() );
         for ( const TileMapXmlData::Visual& src : xmlData._listVisual )
-        {
-            TileVisual dst{};
-            dst._height  = src._height;
-            dst._tintR   = src._tintR;
-            dst._tintG   = src._tintG;
-            dst._tintB   = src._tintB;
-            dst._atlasId = src._atlasId;
-            _listVisual.push_back( dst );
-        }
+            _listVisual.push_back( TileMapXmlConvert::toRuntime( src ) );
+
         _listWarp.clear();
         _listWarp.reserve( xmlData._listWarp.size() );
         for ( const TileMapXmlData::Warp& src : xmlData._listWarp )
-        {
-            TileWarp dst{};
-            dst._tileX       = src._tileX;
-            dst._tileY       = src._tileY;
-            dst._targetMap   = src._targetMap;
-            dst._targetTileX = src._targetTileX;
-            dst._targetTileY = src._targetTileY;
-            dst._pairId      = src._pairId;
-            _listWarp.push_back( std::move( dst ) );
-        }
+            _listWarp.push_back( TileMapXmlConvert::toRuntime( src ) );
+
         _listEncounterEntry.clear();
         _listEncounterEntry.reserve( xmlData._listEncounterEntry.size() );
         for ( const TileMapXmlData::Encounter& src : xmlData._listEncounterEntry )
-        {
-            TileEncounterEntry dst{};
-            dst._speciesId = src._speciesId;
-            dst._weight    = src._weight;
-            _listEncounterEntry.push_back( std::move( dst ) );
-        }
+            _listEncounterEntry.push_back( TileMapXmlConvert::toRuntime( src ) );
         rebuildWarpIndex();
         return true;
     }
@@ -100,35 +164,15 @@ namespace sw
         xmlData._listPassThrough = _listPassThrough;
         xmlData._listVisual.reserve( _listVisual.size() );
         for ( const TileVisual& src : _listVisual )
-        {
-            TileMapXmlData::Visual dst{};
-            dst._height  = src._height;
-            dst._tintR   = src._tintR;
-            dst._tintG   = src._tintG;
-            dst._tintB   = src._tintB;
-            dst._atlasId = src._atlasId;
-            xmlData._listVisual.push_back( dst );
-        }
+            xmlData._listVisual.push_back( TileMapXmlConvert::toXml( src ) );
+
         xmlData._listWarp.reserve( _listWarp.size() );
         for ( const TileWarp& src : _listWarp )
-        {
-            TileMapXmlData::Warp dst{};
-            dst._tileX       = src._tileX;
-            dst._tileY       = src._tileY;
-            dst._targetMap   = src._targetMap;
-            dst._targetTileX = src._targetTileX;
-            dst._targetTileY = src._targetTileY;
-            dst._pairId      = src._pairId;
-            xmlData._listWarp.push_back( dst );
-        }
+            xmlData._listWarp.push_back( TileMapXmlConvert::toXml( src ) );
+
         xmlData._listEncounterEntry.reserve( _listEncounterEntry.size() );
         for ( const TileEncounterEntry& src : _listEncounterEntry )
-        {
-            TileMapXmlData::Encounter dst{};
-            dst._speciesId = src._speciesId;
-            dst._weight    = src._weight;
-            xmlData._listEncounterEntry.push_back( dst );
-        }
+            xmlData._listEncounterEntry.push_back( TileMapXmlConvert::toXml( src ) );
         return xmlData.save( assetRelativePath );
     }
 

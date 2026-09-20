@@ -62,17 +62,19 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> _locFilter;
         fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
         vector<LocRecord>                     _listLocRecord;
-        vector<GameDataFileEntry>             _listGameDataFile;
-        string                                _selectedGameDataRawText;
-        string                                _savedGameDataRawText;
-        EditorLocalizationLoadJob             _locJob;
-        EditorGameDataScanJob                 _gameDataJob;
-        int32                                 _activeTab;
-        int32                                 _selectedGameDataIndex;
-        uint8                                 _bLocLoaded      : 1;
-        uint8                                 _bGameDataLoaded : 1;
-        uint8                                 _bLocDirty       : 1;
-        uint8                                 _bGameDataDirty  : 1;
-        [[maybe_unused]] uint8                _reserved        : 4;
+        /** @brief 이번 프레임에 보일 행의 인덱스. 매 프레임 지우고 다시 채우는 재사용 버퍼입니다. */
+        vector<size_t>            _listVisibleLocIndex;
+        vector<GameDataFileEntry> _listGameDataFile;
+        string                    _selectedGameDataRawText;
+        string                    _savedGameDataRawText;
+        EditorLocalizationLoadJob _locJob;
+        EditorGameDataScanJob     _gameDataJob;
+        int32                     _activeTab;
+        int32                     _selectedGameDataIndex;
+        uint8                     _bLocLoaded      : 1;
+        uint8                     _bGameDataLoaded : 1;
+        uint8                     _bLocDirty       : 1;
+        uint8                     _bGameDataDirty  : 1;
+        [[maybe_unused]] uint8    _reserved        : 4;
     };
 } // namespace sw::editor

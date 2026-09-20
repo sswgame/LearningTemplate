@@ -194,7 +194,9 @@ namespace sw::editor
 
         const EditorListFilter filter{ _searchFilter.c_str() };
 
-        vector<GlobalVariableInfo*> listFiltered;
+        // 멤버 버퍼를 다시 쓴다 — 지역 `vector` 는 그리는 매 프레임 할당이었다.
+        vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
+        listFiltered.clear();
         listFiltered.reserve( listAllName.size() );
 
         for ( const string& varName : listAllName )

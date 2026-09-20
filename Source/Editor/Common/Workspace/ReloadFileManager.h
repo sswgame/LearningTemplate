@@ -71,14 +71,26 @@ namespace sw
         /// @brief path prefix + 확장자 필터 + 콜백
         struct WatchEntry
         {
-            FileWatchHandle        _handle;
-            string                 _pathPrefix;
+            FileWatchHandle _handle;
+            string          _pathPrefix;
+            /**
+             * @brief `_pathPrefix` 를 `normalizePath` 한 것 — **등록할 때 한 번** 만듭니다.
+             * @details `matchesWatch` 가 이벤트마다 이것을 다시 만들고 있었다. 접두사는 감시가
+             *          등록된 뒤로 바뀌지 않으므로, 이벤트 E 개 · 감시 W 개면 E x W 번의 정규화가
+             *          전부 같은 값을 다시 구하는 일이었다.
+             */
+            string                 _normalizedPrefix;
             vector<string>         _listExtension;
             FileWatchMatchDelegate _onMatch;
         };
 
-        /** @brief 이벤트가 이 watch의 prefix/확장자와 맞으면 true. */
-        bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const;
+        /**
+         * @brief 이벤트가 이 watch의 prefix/확장자와 맞으면 true.
+         * @param normalizedFullPath 이벤트의 전체 경로를 정규화한 것 — **부르는 쪽이 이벤트당 한 번**
+         *        만들어 넘깁니다. 예전에는 이 함수가 감시마다 같은 값을 다시 만들었다.
+         */
+        bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
+                           string_view normalizedFullPath ) const;
         /**
          * @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다.
          * @param sinceTimestamp 이 시각(파일 시계, 초) 이후 mtime 인 파일만 낸다 — 직전 드레인 시각.

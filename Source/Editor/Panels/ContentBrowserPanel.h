@@ -79,9 +79,9 @@ namespace sw::editor
         /** @brief 현재 폴더의 브레드크럼 경로를 그립니다. */
         void drawBreadcrumbs();
         /** @brief 보이는 항목의 타일 그리드를 그립니다. */
-        void drawTilesView( const vector<AssetEntry>& listVisible );
+        void drawTilesView( const vector<const AssetEntry*>& listVisible );
         /** @brief 보이는 항목의 리스트 행을 그립니다. */
-        void drawListView( const vector<AssetEntry>& listVisible );
+        void drawListView( const vector<const AssetEntry*>& listVisible );
         /** @brief 애셋 항목 우클릭 컨텍스트 메뉴를 그립니다. */
         void drawAssetContextMenu( const AssetEntry& entry );
         /** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
@@ -124,8 +124,16 @@ namespace sw::editor
         void processPendingImports();
 
     private:
-        vector<ContentRoot>                   _listRoot;
-        vector<AssetEntry>                    _listEntry;
+        vector<ContentRoot> _listRoot;
+        vector<AssetEntry>  _listEntry;
+        /**
+         * @brief 이번 프레임에 보일 엔트리 — **`_listEntry` 를 가리키기만** 합니다.
+         * @details 그리는 함수 안의 지역 `vector` 였다. 프레임마다 할당·해제였고, 게다가
+         *          엔트리를 통째로 복사해서 `string` 넷씩을 자산 수만큼 베꼈다. 멤버로 두면
+         *          용량이 남아 첫 프레임 뒤로는 할당이 없다.
+         * @warning `_listEntry` 가 바뀌면 이 포인터들은 죽는다 — 매 프레임 다시 채운다.
+         */
+        vector<const AssetEntry*>             _listVisibleEntry;
         vector<HistoryEntry>                  _listHistory;
         string                                _selectedFolderAbs;
         string                                _breadcrumb; /**< 예: "Game / Shaders" */

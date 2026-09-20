@@ -57,9 +57,11 @@ namespace sw::editor
         void markSessionDirty();
 
     private:
-        unordered_set<string>                 _uniquePinnedVar;
-        EditorFileCollectJob                  _presetJob;
-        vector<string>                        _listPresetFile;
+        unordered_set<string> _uniquePinnedVar;
+        EditorFileCollectJob  _presetJob;
+        vector<string>        _listPresetFile;
+        /** @brief 이번 프레임에 보일 변수 — 매 프레임 지우고 다시 채우는 재사용 버퍼입니다. */
+        vector<GlobalVariableInfo*>           _listFilteredVariable;
         fixed_string<constant::kMaxBuffer128> _searchFilter;
         fixed_string<constant::kMaxBuffer64>  _presetNameBuf;
         uint8                                 _bGroupByModule   : 1;
