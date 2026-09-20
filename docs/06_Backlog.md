@@ -318,14 +318,6 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
-### 1-0f. Dev 빌드에서만 지는 hostgpu 테스트 하나 — `RenderPassGpuTest.InstanceConstantBufferIsRecreatedWhenLayoutGrows` (2026-09-21 발견)
-
-Shipping 에서는 통과하고 **Debug·Release 에서는 진다**(마지막 백엔드 OpenGL 에서 "상수버퍼를 다시 만들지 않고 더 큰
-크기로 갱신했습니다"). 커밋 `87c3413e`(이번 churn 작업 전) Release 에서도 같은 결과라 이번 일과 무관한 **기존 결함**이다.
-hostgpu 는 CI 가 못 돌리고 로컬 습관이 Shipping 뿐이라 안 보였다 — 이제 Debug hostgpu 도 같이 돌리니 매번 보인다.
-살펴볼 곳: 인스턴스 상수버퍼가 커질 때 bindless 인덱스가 같은 값으로 다시 나오는 이유(해제 지연 vs 즉시 회수가
-빌드 구성에 따라 다른가).
-
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -546,8 +538,12 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 212 → **196**, `GT.Frame` 393~425 그대로; 8000 은 131 / 294 / 589 그대로. 네 백엔드 스크린샷은 바이트 단위로 같다
 (`-gv_benchAnimate=0`, md5 동일).
 
-**남은 것.** Debug 에서만 지는 `InstanceConstantBufferIsRecreatedWhenLayoutGrows` 는 이번 일과 무관한 기존 결함으로
-1-0f 에 적었다. 상한 게이트(hostgpu 테스트에서 alloc/frame 단언)는 Debug 전용 프록시 할당이 섞여 아직 두지 않았다.
+**Debug 에서만 지던 `InstanceConstantBufferIsRecreatedWhenLayoutGrows` 도 닫았다.** 결함이 아니라 **테스트의 대리
+지표**가 틀렸다: "버퍼를 다시 만들었는가" 를 bindless 디스크립터 인덱스가 바뀌었는지로 봤는데, DX11·GL 은 인덱스를
+즉시 회수해 다음 등록이 같은 번호를 받는다(DX12·Vulkan 은 펜스 뒤 회수라 새 번호). 둘 다 옳은 동작이다. 이제
+`MaterialInstance::getConstantBufferHandle()` 의 **세대가 든 버퍼 핸들**로 가른다 — 네 백엔드 모두 Debug 에서 통과한다.
+Shipping 은 두 백엔드에서 로그가 없어 안 보였을 뿐이다. 상한 게이트(hostgpu 테스트에서 alloc/frame 단언)는 Debug
+전용 프록시 할당이 섞여 두지 않았다.
 
 ### 2026-09-21 (병렬 시스템의 모양을 하나로 — `runParallel` + 트랜스폼 계층을 매니저에서 분리)
 

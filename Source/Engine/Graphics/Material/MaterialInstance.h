@@ -107,6 +107,11 @@ namespace sw
         uint64 getPermutationHash() const;
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */
         RHIDescriptorIndex getDescriptorIndex() const;
+        /**
+         * @brief 상수버퍼 핸들 (0 이면 아직 없다). 핸들은 세대를 품으므로 "다시 만들었는가" 를 이것으로 가른다.
+         * @details 디스크립터 인덱스로는 못 가른다 — DX11·GL 은 인덱스를 즉시 회수해 다음 등록이 같은 번호를 받는다.
+         */
+        RHIBufferHandle getConstantBufferHandle() const { return _constant._buffer; }
         /** @brief 인스턴스 패킹 버퍼를 반환합니다. */
         const vector<uint8>& getBuffer() const { return _bytes; }
         /** @brief 파라미터가 오버라이드됐으면 true. */

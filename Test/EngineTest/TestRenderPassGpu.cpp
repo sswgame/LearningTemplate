@@ -3058,7 +3058,10 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
  *          쓰고 새 크기로 갱신했다. 라이브 셰이더 편집 + 파라미터 변경이 겹치면 그 자리를 밟는다.
  *
  *          GPU 메모리로 넘치는 것이라 ASan 도 단언도 잡지 못한다. 대신 **버퍼를 다시 만들었는지**
- *          를 본다 — 다시 만들면 bindless 디스크립터 인덱스가 새로 발급되므로 그것으로 가른다.
+ *          를 본다 — 다시 만들면 버퍼 핸들이 새 세대로 발급되므로 그것으로 가른다. 처음엔 bindless
+ *          디스크립터 인덱스로 갈랐는데, DX11·GL 은 인덱스를 즉시 회수해 다음 등록이 **같은 번호**를
+ *          받는다(둘 다 옳은 동작이다) — 그래서 Dev 빌드에서만 지는 테스트였다(Shipping 은 그 두
+ *          백엔드에서 로그가 없어 안 보였다).
  */
 SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrows )
 {
@@ -3078,8 +3081,9 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
 
-            const sw::RHIDescriptorIndex firstIndex = instance->getDescriptorIndex();
-            const size_t                 firstSize  = instance->getBuffer().size();
+            const sw::RHIBufferHandle firstBuffer = instance->getConstantBufferHandle();
+            const size_t              firstSize   = instance->getBuffer().size();
+            SW_ASSERT_TRUE( firstBuffer != 0 );
             SW_ASSERT_TRUE( firstSize > 0 );
 
             // 셰이더를 다시 구워 레이아웃이 커진 상황을 만든다 — 부모 상수버퍼가 256 을 넘게 한다.
@@ -3104,7 +3108,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
 
             SW_EXPECT_TRUE_MSG( instance->getBuffer().size() > firstSize,
                                 "인스턴스가 커진 부모 레이아웃을 따라가지 않았습니다" );
-            SW_EXPECT_TRUE_MSG( instance->getDescriptorIndex() != firstIndex,
+            SW_EXPECT_TRUE_MSG( instance->getConstantBufferHandle() != firstBuffer,
                                 "상수버퍼를 다시 만들지 않고 더 큰 크기로 갱신했습니다 — 슬롯 밖으로 씁니다" );
 
             instance->releaseRhi( device.get() );
