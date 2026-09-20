@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
@@ -884,6 +885,121 @@ SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
     SW_EXPECT_EQUAL( kItemCount, s_processedCount.load() );
     const uint32 wakeCount = taskMgr.getWakeSignalCount() - wakeBefore;
     SW_EXPECT_TRUE_MSG( wakeCount <= 2, ( sw::string( "병렬 그룹 하나가 워커를 " ) + sw::to_string( wakeCount ) + " 번 깨웠다 — 서브태스크마다 깨우고 있다" ).c_str() );
+
+    taskMgr.clear();
+}
+
+/**
+ * @brief [TaskTest] High 우선순위 태스크는 줄 앞으로 간다
+ * @details 워커를 전부 문 앞에 세우고(문이 열릴 때까지 도는 Normal 태스크), 그 뒤에 Normal 을 잔뜩 줄 세운 다음
+ *          High 하나를 넣고 문을 연다. 처음 비는 워커가 High 를 집어야 한다 — 시작 순번이 워커 수의 두 배를
+ *          넘지 않는다. 우선순위를 저장만 하고 보지 않으면 High 는 FIFO 꼬리라 순번이 (전체 - 워커 수) 뒤다.
+ */
+SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
+{
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+    const uint32 workerCount = taskMgr.getWorkerCount();
+    SW_ASSERT_TRUE( workerCount >= 1 );
+
+    // 지역 구조체는 정적 멤버를 못 가진다 — 함수 지역 static 으로 둔다(위 WakeOnce 와 같은 꼴).
+    static sw::atomic<bool>   s_bGateOpen{ false };
+    static sw::atomic<uint32> s_runningCount{ 0 };
+    static sw::atomic<uint32> s_startOrder{ 0 };
+    static sw::atomic<uint32> s_highOrder{ 0 };
+    s_bGateOpen    = false;
+    s_runningCount = 0;
+    s_startOrder   = 0;
+    s_highOrder    = 0;
+
+    struct PriorityContext
+    {
+        /** @brief 문이 열릴 때까지 워커를 붙든다. 끝은 횟수가 아니라 시간으로 잡는다(고장 나도 CI 가 매달리지 않게). */
+        static void gatedNormal()
+        {
+            s_startOrder.fetch_add( 1, std::memory_order_relaxed );
+            s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+            while ( s_bGateOpen.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() < deadline )
+                std::this_thread::yield();
+        }
+
+        static void high() { s_highOrder.store( s_startOrder.fetch_add( 1, std::memory_order_relaxed ) + 1, std::memory_order_relaxed ); }
+    };
+
+    const uint32 normalCount = workerCount * 4 < 16 ? 16 : workerCount * 4;
+    for ( uint32 index = 0; index < normalCount; ++index )
+    {
+        sw::TaskHandle handle = taskMgr.emplaceTask( "GatedNormal", SW_DELEGATE_FUNCTION( sw::TaskDelegate, PriorityContext::gatedNormal ) );
+        SW_ASSERT_TRUE( handle.isValid() );
+        handle.submit();
+    }
+
+    // 워커가 전부 문에 닿을 때까지 — 나머지 Normal 은 그 뒤에 줄 서 있다.
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && std::chrono::steady_clock::now() < deadline )
+            std::this_thread::yield();
+    }
+    SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
+
+    sw::TaskHandle highHandle = taskMgr.emplaceTask( "HighLane", SW_DELEGATE_FUNCTION( sw::TaskDelegate, PriorityContext::high ) );
+    SW_ASSERT_TRUE( highHandle.isValid() );
+    highHandle.setPriority( sw::TaskPriority::High );
+    highHandle.submit();
+
+    s_bGateOpen.store( true, std::memory_order_release );
+    const bool bAllDone = taskMgr.waitAll( 5000 );
+    if ( bAllDone == false )
+    {
+        // 실패해도 매니저는 비우고 나간다 — 남은 태스크를 다음 테스트가 영원히 기다리면 안 된다.
+        taskMgr.clear();
+        SW_ASSERT_TRUE( bAllDone );
+    }
+
+    // 처음 비는 워커가 집는다. 동시에 끝난 워커 몇이 Normal 을 먼저 세어도 워커 수 두 배 안이다.
+    const uint32 highOrder = s_highOrder.load();
+    SW_EXPECT_TRUE_MSG( highOrder >= 1 && highOrder <= workerCount * 2,
+                        ( sw::string( "High 태스크의 시작 순번이 " ) + sw::to_string( highOrder ) + " — 워커 " + sw::to_string( workerCount ) +
+                          " 개, Normal " + sw::to_string( normalCount ) + " 개 뒤에 줄을 섰다(우선순위를 보지 않는다)" )
+                            .c_str() );
+
+    taskMgr.clear();
+}
+
+/**
+ * @brief [TaskTest] waitStage 가 돌아온 순간 활성 태스크 수는 0 이다
+ * @details 완료 처리가 스테이지에 먼저 알리고 활성 수를 나중에 내리면, `waitStage` 뒤에 부르는 `clear()` 가
+ *          0 으로 놓은 수를 뒤늦은 감소가 0xFFFFFFFF 로 감아 버린다 — 이후의 `waitAll` 은 영원히 기다린다.
+ *          창이 좁아 한 번엔 안 걸리므로 여러 번 돈다(CTest 아래에서는 매번 걸렸다).
+ */
+SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
+{
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+
+    static sw::atomic<uint32> s_touchCount{ 0 };
+    s_touchCount = 0;
+    struct TouchContext
+    {
+        static void touchRange( uint32 start, uint32 end ) { s_touchCount.fetch_add( end - start, std::memory_order_relaxed ); }
+    };
+
+    constexpr uint32 kRound      = 500;
+    constexpr uint32 kItemCount  = 64;
+    uint32           staleRounds = 0;
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        sw::TaskStageHandle stage  = taskMgr.createAnonymousStage( "NoLeftover" );
+        sw::TaskHandle      handle = taskMgr.emplaceParallelBlock( 0, kItemCount, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, TouchContext::touchRange ) );
+        stage.addTask( handle );
+        handle.submit();
+        taskMgr.waitStage( stage );
+        if ( taskMgr.getActiveTaskCount() != 0 )
+            ++staleRounds;
+    }
+    SW_EXPECT_EQUAL( kRound * kItemCount, s_touchCount.load() );
+    SW_EXPECT_TRUE_MSG( staleRounds == 0, ( sw::string( "waitStage 직후 활성 태스크가 남아 있던 회차: " ) + sw::to_string( staleRounds ) + " / " + sw::to_string( kRound ) ).c_str() );
 
     taskMgr.clear();
 }

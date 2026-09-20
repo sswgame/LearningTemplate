@@ -21,7 +21,6 @@ namespace sw
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
-        , _bRenderDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

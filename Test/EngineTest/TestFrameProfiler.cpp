@@ -73,3 +73,44 @@ SW_TEST_CASE( FrameProfilerTest, DisabledCollectsNothingAndEnabledAccumulates )
     profiler.reset();
     SW_EXPECT_EQUAL( uint64( 0 ), profiler.getFrameCount() );
 }
+
+/**
+ * @brief [FrameProfilerTest] p50 · p99 는 분포를 따라간다 — 평균은 어느 쪽도 아니다
+ * @details 100 us 가 90 프레임, 10 ms 가 10 프레임이면 p50 은 100 us 칸, p99 는 10 ms 칸이다. 평균(1.09 ms)으로
+ *          대신하면 둘 다 틀린다 — `RT.BeginFrame` 평균 400 us 가 실제로는 40 프레임의 1~18 ms 히치였다.
+ *          값은 칸의 아래 끝이라 표본보다 작거나 같고 한 칸(약 12%) 안이어야 한다.
+ */
+SW_TEST_CASE( FrameProfilerTest, PercentilesFollowTheDistribution )
+{
+    sw::FrameProfiler profiler;
+    const uint32      slot = profiler.registerScope( "Hitchy" );
+    SW_ASSERT_TRUE( slot != sw::FrameProfiler::kInvalidSlot );
+    profiler.setEnabled( true );
+
+    constexpr uint64 kQuietNanos = 100'000;    // 100 us
+    constexpr uint64 kHitchNanos = 10'000'000; // 10 ms
+    for ( uint32 frame = 0; frame < 90; ++frame )
+    {
+        profiler.beginFrame();
+        profiler.addSample( slot, kQuietNanos );
+        profiler.endFrame();
+    }
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        profiler.beginFrame();
+        profiler.addSample( slot, kHitchNanos );
+        profiler.endFrame();
+    }
+    SW_ASSERT_EQUAL( uint64( 100 ), profiler.getFrameCount() );
+
+    const uint64 p50 = profiler.getPercentileNanos( slot, 50 );
+    const uint64 p99 = profiler.getPercentileNanos( slot, 99 );
+    SW_EXPECT_TRUE_MSG( p50 <= kQuietNanos && p50 > kQuietNanos * 7 / 8, ( sw::string( "p50 = " ) + sw::to_string( p50 ) + " ns" ).c_str() );
+    SW_EXPECT_TRUE_MSG( p99 <= kHitchNanos && p99 > kHitchNanos * 7 / 8, ( sw::string( "p99 = " ) + sw::to_string( p99 ) + " ns" ).c_str() );
+    SW_EXPECT_TRUE( p50 < p99 );
+
+    // 표본이 없는 슬롯과 경계 밖 슬롯은 0 이다 — 표에 헛값이 나오면 안 된다.
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getPercentileNanos( sw::FrameProfiler::kMaxScope, 50 ) );
+    profiler.reset();
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getPercentileNanos( slot, 50 ) );
+}

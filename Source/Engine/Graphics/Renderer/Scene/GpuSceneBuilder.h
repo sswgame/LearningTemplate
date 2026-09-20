@@ -37,6 +37,14 @@ namespace sw
         GpuSceneBuilder( const GpuSceneBuilder& )            = delete;
         GpuSceneBuilder& operator=( const GpuSceneBuilder& ) = delete;
 
+        /**
+         * @brief 프리미티브가 이 수 이상이면 전체 수집의 채우기를 잡에 나눕니다.
+         * @details 채우기는 프리미티브당 ~12 ns 라 8000 개가 직렬 100 us 다 — 잡 디스패치 바닥(~50 us)과 같은
+         *          자릿수라 지금은 병렬이 86 us 로 비기는 수준이다. 프리미티브당 일이 늘면(LOD 선택·스키닝 바운드)
+         *          바로 남는 구조라 문턱만 두고 유지한다. 부분 수집(더티 < 1/4)은 직렬이다 — 그쪽은 일이 작다.
+         */
+        static constexpr uint32 kParallelCollectPrimitiveCount = 4096;
+
         /** @brief 스냅샷·캐시·머티리얼 등록부를 비웁니다 (스냅샷이 든 소유도 여기서 놓인다). */
         void clear();
         /**
@@ -217,6 +225,8 @@ namespace sw
          *          부분 갱신만 낡은 필드를 남기고, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
         bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
+        /** @brief 후보의 퍼뮤테이션 해시를 찍습니다 — 게임 스레드 전용(머티리얼의 지연 캐시를 건드린다). */
+        static void stampPermutationHash( DrawCandidate& cand );
 
         /** @brief 후보 배열에 실리지 않은 프리미티브 표시. */
         static constexpr uint32 kInvalidCandidateIndex = 0xFFFFFFFFu;
@@ -224,6 +234,8 @@ namespace sw
         vector<uint32> _listDirtyPrimitive;
         /** @brief 등록부 인덱스 -> 후보 인덱스 (`kInvalidCandidateIndex` = 후보에 안 실림). */
         vector<uint32> _listPrimitiveToCandidate;
+        /// @brief 전체 수집이 프리미티브 번호 자리에 채운 뒤 "실렸는가" 표시 — 앞으로 당길 때 읽는다.
+        vector<uint8> _listCandidateIncluded;
         /** @brief 후보 인덱스 -> 인스턴스 슬롯 (`kInvalidCandidateIndex` = 인스턴스 없음). `_listInstanceSrcIndex` 의 역이다. */
         vector<uint32> _listCandidateToInstance;
         /** @brief 마지막 수집이 만든 후보 수 — 부분 수집이 자리 수를 그대로 이어받는다. */
@@ -276,6 +288,28 @@ namespace sw
          *          구간 1/2/5/20/64 가 17/34/45/113/209 us 였고 통째로는 ~100 us 였다.)
          */
         static constexpr size_t kMaxDirtyInstanceRun = 256;
+
+        /**
+         * @struct InstanceRefreshChunk
+         * @brief 전체 제자리 갱신을 청크로 나눠 돌릴 때 청크 하나의 결과.
+         * @details 청크는 인스턴스 슬롯의 연속 구간이라 더티 구간(run)도 청크 안에서 만들고, 끝난 뒤
+         *          경계가 맞닿는 구간만 이어 붙인다. 회전 인스턴스 수도 청크마다 세어 합친다.
+         */
+        struct InstanceRefreshChunk
+        {
+            uint32         _start{ 0 };
+            uint32         _end{ 0 };
+            uint32         _spinCount{ 0 };
+            uint32         _runCount{ 0 };
+            uint8          _bFailed{ SW_FALSE };
+            uint8          _bTooManyRun{ SW_FALSE };
+            GpuInstanceRun _arrRun[kMaxDirtyInstanceRun];
+        };
+        vector<InstanceRefreshChunk> _listRefreshChunk;
+
+        /** @brief 청크 하나의 슬롯 구간을 제자리 갱신합니다 (워커에서 돈다 — 포인터만 만진다). */
+        static void refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pRaw, const uint32* pSrcIndex, uint32 rawCount,
+                                          InstanceRefreshChunk& chunk );
 
         /**
          * @brief 인스턴스를 짓는 **작업 배열**. 스냅샷에는 다 지은 뒤 `shared_ptr` 로 발행한다.

@@ -48,8 +48,14 @@ namespace sw
         void remove( MeshComponent* pComp );
 
         /**
-         * @brief 프리미티브 하나의 렌더 상태가 바뀌었음을 표시합니다.
-         * @details 트랜스폼 갱신·PROPERTY 편집·세터 호출이 전부 여기로 모인다.
+         * @brief 이 프리미티브의 렌더 상태가 바뀌었다고 표시합니다. **락이 없다** — 워커 스레드에서 불러도 된다.
+         * @details 트랜스폼 플러시가 루트 서브트리마다 병렬로 돌면서 여기를 부른다. 예전에는 뮤텍스를 쥐고
+         *          목록에 push 했는데, 큐브 8000 개가 전부 움직이는 프레임에는 워커들이 그 락을 8000 번
+         *          다투게 된다. 지금은 칸마다 원자 플래그 하나다 — 0→1 로 바꾼 쪽만 개수를 올린다. 컴포넌트
+         *          쪽에는 더티 표시가 없다(비트필드라 워커의 쓰기가 이웃 비트와 같은 바이트를 고쳤다) — 이 플래그가
+         *          유일한 정본이고, 같은 프리미티브를 몇 번 찍든 exchange 한 번씩이다.
+         *          `_listPrimitive` 는 락 없이 읽는다: add/remove 는 게임 스레드가 병렬 구간 밖에서만 부른다
+         *          (컴포넌트 추가·제거는 틱 중에 미뤄진다). 그 전제가 깨지면 컨테이너 레이스 탐지기가 잡는다.
          */
         void markDirty( MeshComponent* pComp );
         /**
@@ -77,15 +83,22 @@ namespace sw
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked();
 
+        /** @brief 더티 플래그 배열을 최소 @p count 칸으로 키웁니다 (`_mutex` 를 쥔 채, 병렬 구간 밖). */
+        void growDirtyFlags( uint32 count );
+
         /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
         vector<MeshComponent*> _listPrimitive;
-        /** @brief 렌더 상태가 바뀐 프리미티브의 _listPrimitive 인덱스. */
-        vector<uint32> _listDirty;
+        /// @brief 칸마다 "바뀌었다" 표시. 원자라 워커 여럿이 동시에 찍어도 된다. 용량은 `_listPrimitive` 이상이다.
+        std::unique_ptr<atomic<uint8>[]> _arrDirtyFlag;
+        uint32                           _dirtyFlagCapacity{ 0 };
         /**
-         * @brief 목록과 더티 표시를 함께 지킵니다.
-         * @details 트랜스폼 플러시는 단일 스레드라 실제 경합은 거의 없지만, 세터는 병렬 tick 에서도
-         *          불릴 수 있어 잠근다.
+         * @brief "서 있는 플래그가 하나라도 있다". `hasDirty` 가 배열을 훑지 않고 답하는 근거.
+         * @details 개수가 아니라 플래그인 이유: 개수는 워커 열넷이 같은 캐시 라인을 8000 번 fetch_add 하는 것이라
+         *          병렬 플러시가 직렬(200 us)보다 느려졌다(262 us). 플래그는 이미 서 있으면 읽기만 하므로(쓰기는
+         *          프레임에 한 번) 라인이 공유 상태로 머문다.
          */
+        atomic<uint8> _bAnyDirty{ 0 };
+        /// @brief add/remove(구조 변경)만 잡는다. 더티 표시는 잡지 않는다.
         mutable mutex  _mutex;
         atomic<uint64> _setGeneration{ 1 };
     };

@@ -3,6 +3,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -609,4 +610,73 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ConcurrentDestroyDestroysTheObjectOnlyO
         }
         SW_EXPECT_EQUAL( size_t( kObjectCount ), setFresh.size() );
     }
+}
+
+/**
+ * @brief [GameObjectManagerTest] 루트가 문턱을 넘으면 플러시가 잡으로 나뉘어도 결과는 직렬과 같다
+ * @details 루트 서브트리마다 워커가 따로 돈다 — 자식은 자기 루트 잡 안에서 부모 다음에 계산돼야 하고, 마지막
+ *          청크의 루트도 빠지면 안 된다. 문턱 아래(직렬)와 위(병렬) 두 씬을 같은 검사로 본다. 병렬 경로가
+ *          벤치에서만 돌면 조용히 썩는다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
+{
+    auto runScene = [&]( uint32 rootCount )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents( manager );
+
+        sw::vector<MockTickSceneComponent*> listChild;
+        listChild.reserve( rootCount );
+        for ( uint32 index = 0; index < rootCount; ++index )
+        {
+            GameObject* pRootObject  = manager.createGameObject( hashed_string( ( sw::string( "Root" ) + sw::to_string( index ) ).c_str() ) );
+            GameObject* pChildObject = manager.createGameObject( hashed_string( ( sw::string( "Child" ) + sw::to_string( index ) ).c_str() ) );
+            SW_ASSERT_NOT_NULL( pRootObject );
+            SW_ASSERT_NOT_NULL( pChildObject );
+            MockTickSceneComponent* pRoot  = pRootObject->addComponent<MockTickSceneComponent>();
+            MockTickSceneComponent* pChild = pChildObject->addComponent<MockTickSceneComponent>();
+            SW_ASSERT_NOT_NULL( pRoot );
+            SW_ASSERT_NOT_NULL( pChild );
+            pRoot->setLocalPosition( float3( static_cast<float32>( index ), 0.0f, 0.0f ) );
+            pChild->setLocalPosition( float3( 0.0f, 1.0f, 0.0f ) );
+            SW_ASSERT_TRUE( pChild->attachToComponent( pRoot ) );
+            listChild.push_back( pChild );
+        }
+        manager.mergePendingAdds();
+
+        SW_EXPECT_TRUE( manager.hasDirtySceneTransforms() );
+        manager.flushSceneTransforms();
+        SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+
+        // **플러시가 정말 다 돌았는지는 더티 비트로 본다.** `getWorldPosition` 은 더티면 그 자리에서 다시
+        // 계산해 주므로(게으른 갱신) 값만 봐서는 빠진 루트를 못 잡는다 — 청크의 마지막 루트를 빠뜨려도 통과했다.
+        uint32 dirtyCount = 0;
+        for ( uint32 index = 0; index < rootCount; ++index )
+        {
+            if ( listChild[index]->getParent()->isTransformDirty() || listChild[index]->isTransformDirty() )
+                ++dirtyCount;
+        }
+        SW_EXPECT_TRUE_MSG( dirtyCount == 0, ( sw::string( "플러시 뒤에도 더티인 서브트리가 " ) + sw::to_string( dirtyCount ) + " 개 — 잡이 루트를 빠뜨렸다" ).c_str() );
+
+        // 자식의 월드 = 루트(index, 0, 0) + 로컬(0, 1, 0). 하나라도 어긋나면 어느 루트인지 말한다.
+        uint32 wrongCount = 0;
+        for ( uint32 index = 0; index < rootCount; ++index )
+        {
+            const float3 world = listChild[index]->getWorldPosition();
+            if ( sw::MathUtil::nearEqual( world._x, static_cast<float32>( index ) ) == false || sw::MathUtil::nearEqual( world._y, 1.0f ) == false )
+                ++wrongCount;
+        }
+        SW_EXPECT_TRUE_MSG( wrongCount == 0, ( sw::string( "루트 " ) + sw::to_string( rootCount ) + " 개 중 " + sw::to_string( wrongCount ) + " 개의 자식 월드가 틀렸다" ).c_str() );
+
+        // 일부만 움직여도 그 서브트리만 다시 계산돼 맞아야 한다.
+        listChild[rootCount - 1]->getParent()->setLocalPosition( float3( -5.0f, 0.0f, 0.0f ) );
+        manager.flushSceneTransforms();
+        SW_EXPECT_NEAR_EQUAL( -5.0f, listChild[rootCount - 1]->getWorldPosition()._x, 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, listChild[0]->getWorldPosition()._x, 1e-4f );
+
+        manager.clear();
+    };
+
+    runScene( 16 );
+    runScene( sw::GameObjectManager::kParallelTransformFlushRootCount + 37 );
 }

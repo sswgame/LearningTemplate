@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
@@ -1058,4 +1059,139 @@ SW_TEST_CASE( GpuSceneTest, ReusedCandidateSlotsCarryNoStaleData )
     const sw::GpuInstance& instance = gpuScene.getInstances()[batch._instanceBase];
     SW_EXPECT_TRUE_MSG( sw::MathUtil::nearEqual( instance._boundsCenter._x, 3.0f ),
                         "바운드 중심이 숨긴 큐브의 자리다 — 슬롯이 덜 덮어써졌다" );
+}
+
+/**
+ * @brief [GpuSceneTest] 등록부는 더티 표시를 프리미티브당 한 번만 센다 — 락 없이, 워커 여럿이 동시에 찍어도
+ * @details `markDirty` 는 락 없는 원자 exchange 다. 같은 프리미티브를 몇 번 찍든 개수는 하나여야 하고,
+ *          `consumeDirty` 는 슬롯을 한 번씩만 돌려주며 그 뒤 `hasDirty` 는 false 다. 개수를 무조건 올리면
+ *          소비한 뒤에도 "더티가 남았다" 가 되어 매 프레임 헛수집을 한다.
+ */
+SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
+{
+    sw::Scene scene( "GpuScenePrimitiveRegistryOnce" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    constexpr uint32               kMeshCount = 8;
+    sw::vector<sw::MeshComponent*> listMesh;
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
+        sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( ( sw::string( "Once" ) + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( cube );
+        listMesh.push_back( pMesh );
+    }
+    sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    SW_ASSERT_EQUAL( size_t( kMeshCount ), registry.getAll().size() );
+    registry.clearDirty();
+    SW_ASSERT_FALSE( registry.hasDirty() );
+
+    // 1) 같은 프리미티브를 세 번 찍어도 하나다.
+    listMesh[0]->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    listMesh[0]->setLocalPosition( sw::float3( 2.0f, 0.0f, 0.0f ) );
+    listMesh[0]->setVisible( true );
+    SW_EXPECT_TRUE( registry.hasDirty() );
+    sw::vector<uint32> listSlot;
+    registry.consumeDirty( listSlot );
+    SW_EXPECT_EQUAL( size_t( 1 ), listSlot.size() );
+    SW_EXPECT_FALSE( registry.hasDirty() );
+
+    // 2) 스레드 여덟이 전부를 동시에, 여러 번 찍는다 — 슬롯은 한 번씩만 나오고 소비한 뒤엔 남는 게 없다.
+    constexpr uint32        kThreadCount = 8;
+    constexpr uint32        kRepeat      = 256;
+    sw::atomic<bool>        bGo{ false };
+    sw::vector<std::thread> listThread;
+    listThread.reserve( kThreadCount );
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listThread.emplace_back( [&registry, &listMesh, &bGo]()
+        {
+            while ( bGo.load( std::memory_order_acquire ) == false )
+                std::this_thread::yield();
+            for ( uint32 repeat = 0; repeat < kRepeat; ++repeat )
+            {
+                for ( sw::MeshComponent* pMesh : listMesh )
+                    registry.markDirty( pMesh );
+            }
+        } );
+    }
+    bGo.store( true, std::memory_order_release );
+    for ( std::thread& thread : listThread )
+        thread.join();
+
+    SW_EXPECT_TRUE( registry.hasDirty() );
+    registry.consumeDirty( listSlot );
+    SW_EXPECT_EQUAL( size_t( kMeshCount ), listSlot.size() );
+    sw::vector<uint8> listSeen( kMeshCount, 0 );
+    for ( uint32 slot : listSlot )
+    {
+        SW_ASSERT_TRUE( slot < kMeshCount );
+        SW_EXPECT_EQUAL( uint8( 0 ), listSeen[slot] );
+        listSeen[slot] = 1;
+    }
+    SW_EXPECT_FALSE( registry.hasDirty() );
+    registry.consumeDirty( listSlot );
+    SW_EXPECT_TRUE( listSlot.empty() );
+}
+
+/**
+ * @brief [GpuSceneTest] 프리미티브가 문턱을 넘으면 수집 채우기가 잡으로 나뉘어도 결과는 직렬과 같다
+ * @details 워커는 프리미티브 번호 자리에만 쓰고, 앞으로 당기기와 해시는 직렬이다. 인스턴스 수와 위치의 합이
+ *          직렬 씬과 같은 규칙으로 맞아야 하고, 전부 움직인 뒤(부분 수집 불가 → 다시 전체 수집) 도 그래야 한다.
+ */
+SW_TEST_CASE( GpuSceneTest, ParallelCollectMatchesSerial )
+{
+    auto runScene = [&]( uint32 primitiveCount )
+    {
+        sw::Scene scene( "GpuSceneParallelCollect" );
+        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        sw::GameObjectManager* pObjects = scene.getObjectManager();
+        SW_ASSERT_NOT_NULL( pObjects );
+        sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( cube.get() );
+
+        for ( uint32 index = 0; index < primitiveCount; ++index )
+        {
+            sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( ( sw::string( "PC" ) + sw::to_string( index ) ).c_str() ) );
+            SW_ASSERT_NOT_NULL( pObject );
+            sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( cube );
+            pMesh->setLocalPosition( sw::float3( static_cast<float32>( index ), 0.0f, -1.0f ) );
+            pMesh->setVisible( true );
+        }
+
+        sw::GpuSceneBuilder builder;
+        const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+        builder.buildFromScene( &scene, camPos );
+        SW_ASSERT_EQUAL( primitiveCount, static_cast<uint32>( builder.getInstances().size() ) );
+
+        // 위치 x 는 0..N-1 이 한 번씩 — 합과 범위로 본다(순서는 배치 정렬이 바꿔도 된다).
+        auto sumOfX = [&]() -> float64
+        {
+            float64 sum = 0.0;
+            for ( const sw::GpuInstance& inst : builder.getInstances() )
+                sum += static_cast<float64>( inst._boundsCenter._x );
+            return sum;
+        };
+        const float64 expectedSum = static_cast<float64>( primitiveCount ) * static_cast<float64>( primitiveCount - 1 ) * 0.5;
+        SW_EXPECT_NEAR_EQUAL( expectedSum, sumOfX(), 0.5 );
+
+        // 전부 옮기면 부분 수집이 안 되어 다시 전체 수집(병렬)이다 — 합이 N 만큼 밀린다.
+        for ( sw::MeshComponent* pMesh : pObjects->getPrimitiveRegistry().getAll() )
+            pMesh->setLocalPosition( pMesh->getLocalPosition() + sw::float3( 1.0f, 0.0f, 0.0f ) );
+        builder.buildFromScene( &scene, camPos );
+        SW_ASSERT_EQUAL( primitiveCount, static_cast<uint32>( builder.getInstances().size() ) );
+        SW_EXPECT_NEAR_EQUAL( expectedSum + static_cast<float64>( primitiveCount ), sumOfX(), 0.5 );
+    };
+
+    runScene( 64 );
+    runScene( sw::GpuSceneBuilder::kParallelCollectPrimitiveCount + 29 );
 }

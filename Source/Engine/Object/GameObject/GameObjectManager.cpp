@@ -678,10 +678,49 @@ namespace sw
             return;
 
         std::shared_lock<std::shared_mutex> lock{ _mutex };
-        for ( SceneComponent* pRoot : _listRootSceneComponent )
+
+        // **루트 서브트리 단위로 병렬이다.** 서브트리끼리는 트리라 겹치지 않고, 부모의 월드 행렬을 읽는
+        // 것은 같은 잡 안에서 순서대로 일어난다. 큐브 8000 개가 전부 움직이는 프레임에 이 플러시가
+        // 게임 스레드의 300 us 였다 — 상용 엔진이 트랜스폼 갱신을 잡으로 돌리는 자리다.
+        // 작은 씬은 직렬이다: 잡 나누기·합치기 비용이 일 자체보다 크다.
+        const uint32 rootCount = static_cast<uint32>( _listRootSceneComponent.size() );
+        if ( rootCount < kParallelTransformFlushRootCount || engine::areEngineServicesBound() == false )
         {
-            if ( pRoot != nullptr )
-                flushSceneComponentSubtree( pRoot, false );
+            for ( SceneComponent* pRoot : _listRootSceneComponent )
+            {
+                if ( pRoot != nullptr )
+                    flushSceneComponentSubtree( pRoot, false, _listTransformFlushStack );
+            }
+        }
+        else
+        {
+            // 워커는 컨테이너를 만지지 않는다 — 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
+            struct RootFlushJob
+            {
+                GameObjectManager*     _pManager{ nullptr };
+                SceneComponent* const* _ppRoot{ nullptr };
+
+                void flushRange( uint32 start, uint32 end )
+                {
+                    vector<pair<SceneComponent*, bool>> stack;
+                    stack.reserve( 32 );
+                    for ( uint32 rootIndex = start; rootIndex < end; ++rootIndex )
+                    {
+                        if ( _ppRoot[rootIndex] != nullptr )
+                            _pManager->flushSceneComponentSubtree( _ppRoot[rootIndex], false, stack );
+                    }
+                }
+            };
+            RootFlushJob job{};
+            job._pManager = this;
+            job._ppRoot   = _listRootSceneComponent.data();
+
+            TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "TransformFlush" );
+            TaskHandle      handle = engine::getTaskManager().emplaceParallelBlock(
+                0, rootCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RootFlushJob::flushRange, &job ) );
+            stage.addTask( handle );
+            handle.submit();
+            engine::getTaskManager().waitStage( stage );
         }
         _lastFlushedTransformGeneration = currentGen;
     }
@@ -1277,7 +1316,7 @@ namespace sw
         _listPendingAdd.push_back( pObj );
     }
 
-    void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged )
+    void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, vector<pair<SceneComponent*, bool>>& stack )
     {
         if ( pRoot == nullptr )
             return;
@@ -1288,9 +1327,7 @@ namespace sw
         // `reserve(32)` 했는데, 이 함수는 **루트 씬 컴포넌트마다** 불린다 — 큐브 20,000 개 벤치에서
         // 프레임당 20,000 번의 힙 할당이었다. 재사용해도 안전한 이유는 부르는 곳이 하나
         // (`flushSceneTransforms`, 게임 스레드)뿐이기 때문이다.
-        vector<pair<SceneComponent*, bool>>& stack = _listTransformFlushStack;
         stack.clear();
-        stack.reserve( 32 );
         stack.emplace_back( pRoot, bParentChanged );
 
         while ( stack.empty() == false )

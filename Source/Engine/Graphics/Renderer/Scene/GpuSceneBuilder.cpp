@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -255,10 +256,17 @@ namespace sw
             pBlendSource = cand._instance->getParent();
         cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
                                                       : static_cast<uint32>( pMeshComp->getBlendMode() );
+        // 퍼뮤테이션 해시는 **여기서 구하지 않는다** — 부르는 쪽이 게임 스레드에서 찍는다(stampPermutationHash).
+        // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
+        // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
+        return true;
+    }
+
+    void GpuSceneBuilder::stampPermutationHash( DrawCandidate& cand )
+    {
         // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기·정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
         cand._permutationHash = permutationHashFor( cand._material.get(), cand._instance.get() );
-        return true;
     }
 
     void GpuSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
@@ -351,6 +359,8 @@ namespace sw
 
                 _candidateProbe      = DrawCandidate{};
                 const bool bIncluded = fillCandidateFromPrimitive( listPrimitive[slot], pScene, _candidateProbe );
+                if ( bIncluded )
+                    stampPermutationHash( _candidateProbe );
                 // 실릴지 말지가 바뀌면 자리 배치가 달라진다 — 그때는 통째로 다시 모은다.
                 if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
                 {
@@ -385,11 +395,57 @@ namespace sw
         if ( bPartialDone == false )
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
-            _listPrimitiveToCandidate.assign( listPrimitive.size(), kInvalidCandidateIndex );
-            for ( size_t primitiveIndex = 0; primitiveIndex < listPrimitive.size(); ++primitiveIndex )
+            const uint32 primitiveCount = static_cast<uint32>( listPrimitive.size() );
+            _listPrimitiveToCandidate.assign( primitiveCount, kInvalidCandidateIndex );
+            _listCandidateIncluded.assign( primitiveCount, 0u );
+
+            // **1) 프리미티브 번호 자리에 그대로 채운다 — 병렬.** 자리를 앞으로 당기는 것은 아래에서
+            // 한 번에 한다. 채우기는 프리미티브마다 독립이다: 컴포넌트를 읽고 자기 칸에만 쓴다.
+            // 워커는 컨테이너를 만지지 않는다 — 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
+            struct CollectJob
             {
-                if ( fillCandidateFromPrimitive( listPrimitive[primitiveIndex], pScene, _listScratchCandidate[candidateCount] ) == false )
+                GpuSceneBuilder*      _pBuilder{ nullptr };
+                Scene*                _pScene{ nullptr };
+                MeshComponent* const* _ppPrimitive{ nullptr };
+                DrawCandidate*        _pCandidate{ nullptr };
+                uint8*                _pIncluded{ nullptr };
+
+                void fillRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                        _pIncluded[index] = _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, _pCandidate[index] ) ? 1u : 0u;
+                }
+            };
+            CollectJob job{};
+            job._pBuilder    = this;
+            job._pScene      = pScene;
+            job._ppPrimitive = listPrimitive.data();
+            job._pCandidate  = _listScratchCandidate.data();
+            job._pIncluded   = _listCandidateIncluded.data();
+
+            if ( primitiveCount < kParallelCollectPrimitiveCount || engine::areEngineServicesBound() == false )
+            {
+                job.fillRange( 0, primitiveCount );
+            }
+            else
+            {
+                TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "GpuSceneCollect" );
+                TaskHandle      handle = engine::getTaskManager().emplaceParallelBlock(
+                    0, primitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
+                stage.addTask( handle );
+                handle.submit();
+                engine::getTaskManager().waitStage( stage );
+            }
+
+            // **2) 앞으로 당긴다.** 전부 실리는 씬(벤치가 그렇다)에서는 자리가 그대로라 한 칸도 옮기지 않는다.
+            for ( uint32 primitiveIndex = 0; primitiveIndex < primitiveCount; ++primitiveIndex )
+            {
+                if ( _listCandidateIncluded[primitiveIndex] == 0u )
                     continue;
+                if ( candidateCount != primitiveIndex )
+                    _listScratchCandidate[candidateCount] = std::move( _listScratchCandidate[primitiveIndex] );
+                // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서 찍는다.
+                stampPermutationHash( _listScratchCandidate[candidateCount] );
                 _listPrimitiveToCandidate[primitiveIndex] = static_cast<uint32>( candidateCount );
                 ++candidateCount;
             }
@@ -578,7 +634,88 @@ namespace sw
 
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.loop" );
         const size_t slotCount = _listInstanceWork.size();
-        const size_t stepCount = bPartialRefresh ? _listDirtyPrimitive.size() : slotCount;
+
+        // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
+        // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 예전 직렬 루프 그대로다.
+        if ( bPartialRefresh == false )
+        {
+            constexpr uint32 kRefreshChunkSize = 2048;
+            const uint32     chunkCount        = static_cast<uint32>( ( slotCount + kRefreshChunkSize - 1 ) / kRefreshChunkSize );
+            _listRefreshChunk.resize( chunkCount );
+            for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+            {
+                InstanceRefreshChunk& chunk = _listRefreshChunk[chunkIndex];
+                chunk._start                = chunkIndex * kRefreshChunkSize;
+                chunk._end                  = static_cast<uint32>( MathUtil::min<size_t>( chunk._start + kRefreshChunkSize, slotCount ) );
+                chunk._spinCount            = 0;
+                chunk._runCount             = 0;
+                chunk._bFailed              = SW_FALSE;
+                chunk._bTooManyRun          = SW_FALSE;
+            }
+
+            struct RefreshJob
+            {
+                GpuInstance*          _pInstance{ nullptr };
+                const GpuInstance*    _pRaw{ nullptr };
+                const uint32*         _pSrcIndex{ nullptr };
+                uint32                _rawCount{ 0 };
+                InstanceRefreshChunk* _pChunk{ nullptr };
+
+                void refreshOne( uint32 chunkIndex ) { refreshInstanceChunk( _pInstance, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] ); }
+            };
+            RefreshJob job{};
+            job._pInstance = _listInstanceWork.data();
+            job._pRaw      = _listScratchRaw.data();
+            job._pSrcIndex = _listInstanceSrcIndex.data();
+            job._rawCount  = rawCount;
+            job._pChunk    = _listRefreshChunk.data();
+
+            if ( chunkCount <= 1 || engine::areEngineServicesBound() == false )
+            {
+                for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+                    job.refreshOne( chunkIndex );
+            }
+            else
+            {
+                TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "GpuSceneRefresh" );
+                TaskHandle      handle = engine::getTaskManager().emplaceParallel(
+                    chunkCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &RefreshJob::refreshOne, &job ) );
+                stage.addTask( handle );
+                handle.submit();
+                engine::getTaskManager().waitStage( stage );
+            }
+
+            // 합친다 — 실패 하나면 전체 실패, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
+            size_t totalRunCount = 0;
+            for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
+            {
+                if ( chunk._bFailed != SW_FALSE )
+                    return false;
+                _snapshot._spinInstanceCount += chunk._spinCount;
+                if ( chunk._bTooManyRun != SW_FALSE )
+                    bTooManyRuns = true;
+                totalRunCount += chunk._runCount;
+            }
+            if ( bTooManyRuns == false && totalRunCount > kMaxDirtyInstanceRun )
+                bTooManyRuns = true;
+            if ( bTooManyRuns == false )
+            {
+                for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
+                {
+                    for ( uint32 runIndex = 0; runIndex < chunk._runCount; ++runIndex )
+                    {
+                        const GpuInstanceRun& run = chunk._arrRun[runIndex];
+                        if ( _snapshot._listDirtyInstanceRun.empty() == false &&
+                             _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == run._start )
+                            _snapshot._listDirtyInstanceRun.back()._count += run._count;
+                        else
+                            _snapshot._listDirtyInstanceRun.push_back( run );
+                    }
+                }
+            }
+        }
+
+        const size_t stepCount = bPartialRefresh ? _listDirtyPrimitive.size() : 0;
         for ( size_t step = 0; step < stepCount; ++step )
         {
             size_t slot = step;
@@ -680,6 +817,49 @@ namespace sw
                 group._listEntryLastSeenBuild[inst._materialIndex] = _buildCounter;
         }
         return true;
+    }
+
+    void GpuSceneBuilder::refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pRaw, const uint32* pSrcIndex, uint32 rawCount,
+                                                InstanceRefreshChunk& chunk )
+    {
+        uint32 lastDirtySlot = 0xFFFFFFFFu;
+        for ( uint32 slot = chunk._start; slot < chunk._end; ++slot )
+        {
+            const uint32 srcIndex = pSrcIndex[slot];
+            if ( srcIndex >= rawCount )
+            {
+                chunk._bFailed = SW_TRUE;
+                return;
+            }
+
+            // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다 — 바뀐 것은
+            // 트랜스폼과 바운드, 그리고 회전 시드뿐이다. 비교는 비트 그대로 한다(직렬 루프와 같은 이유).
+            GpuInstance&       inst     = pInstance[slot];
+            const GpuInstance& raw      = pRaw[srcIndex];
+            const bool         bChanged = Memory::compare( &inst._world, &raw._world, sizeof( inst._world ) ) != 0 ||
+                                  Memory::compare( &inst._boundsCenter, &raw._boundsCenter, sizeof( inst._boundsCenter ) ) != 0 ||
+                                  Memory::compare( &inst._boundsRadius, &raw._boundsRadius, sizeof( inst._boundsRadius ) ) != 0 ||
+                                  inst._blendMode != raw._blendMode || inst._spinSeed != raw._spinSeed;
+
+            inst._world        = raw._world;
+            inst._boundsCenter = raw._boundsCenter;
+            inst._boundsRadius = raw._boundsRadius;
+            inst._blendMode    = raw._blendMode;
+            inst._spinSeed     = raw._spinSeed;
+            if ( inst._spinSeed != 0 )
+                ++chunk._spinCount;
+
+            if ( bChanged == false || chunk._bTooManyRun != SW_FALSE )
+                continue;
+
+            if ( lastDirtySlot + 1 == slot && chunk._runCount > 0 )
+                ++chunk._arrRun[chunk._runCount - 1]._count;
+            else if ( chunk._runCount >= kMaxDirtyInstanceRun )
+                chunk._bTooManyRun = SW_TRUE;
+            else
+                chunk._arrRun[chunk._runCount++] = GpuInstanceRun{ slot, 1 };
+            lastDirtySlot = slot;
+        }
     }
 
     void GpuSceneBuilder::buildBatches()

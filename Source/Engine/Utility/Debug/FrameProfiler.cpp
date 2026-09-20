@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -22,6 +23,28 @@ namespace sw
         {
             return static_cast<uint64>(
                 std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() );
+        }
+
+        /** @brief 값이 들어갈 칸. 옥타브 = floor(log2), 그 안을 상위 비트로 등분한다. 한 옥타브 미만은 값 그대로다. */
+        uint32 bucketOf( uint64 nanos )
+        {
+            if ( nanos < FrameProfiler::kSubBucketCount )
+                return static_cast<uint32>( nanos );
+            uint32 octave = 0;
+            for ( uint64 value = nanos; value > 1u; value >>= 1 )
+                ++octave;
+            const uint32 mantissa = static_cast<uint32>( nanos >> ( octave - FrameProfiler::kSubBucketBit ) ) & FrameProfiler::kSubBucketMask;
+            return ( octave << FrameProfiler::kSubBucketBit ) + mantissa;
+        }
+
+        /** @brief 칸의 아래 끝 값. 백분위는 이 값으로 답한다 — 표본보다 작거나 같고 한 칸 안이다. */
+        uint64 bucketLowerNanos( uint32 bucket )
+        {
+            if ( bucket < FrameProfiler::kSubBucketCount )
+                return bucket;
+            const uint32 octave   = bucket >> FrameProfiler::kSubBucketBit;
+            const uint64 mantissa = bucket & FrameProfiler::kSubBucketMask;
+            return ( uint64( FrameProfiler::kSubBucketCount ) + mantissa ) << ( octave - FrameProfiler::kSubBucketBit );
         }
 
         // 이 둘은 report() 의 표 출력에만 쓰인다. 배포본에서는 SW_LOG_INFO 가 사라져 report()
@@ -134,9 +157,32 @@ namespace sw
                 scope._minNanos = nanos;
             if ( nanos > scope._maxNanos )
                 scope._maxNanos = nanos;
+            ++scope._arrBucket[bucketOf( nanos )];
             ++scope._sampledFrames;
         }
         _frameCount.fetch_add( 1, std::memory_order_relaxed );
+    }
+
+    uint64 FrameProfiler::getPercentileNanos( uint32 slot, uint32 percent ) const
+    {
+        if ( slot >= kMaxScope || percent == 0 )
+            return 0;
+        const Scope& scope = _arrScope[slot];
+        if ( scope._sampledFrames == 0 )
+            return 0;
+        if ( percent > kPercentMax )
+            percent = kPercentMax;
+
+        // 순위는 1 부터, 올림 — p99 는 100 프레임 중 99 번째다.
+        const uint64 rank       = ( scope._sampledFrames * percent + ( kPercentMax - 1 ) ) / kPercentMax;
+        uint64       cumulative = 0;
+        for ( uint32 bucket = 0; bucket < kBucketCount; ++bucket )
+        {
+            cumulative += scope._arrBucket[bucket];
+            if ( cumulative >= rank )
+                return bucketLowerNanos( bucket );
+        }
+        return scope._maxNanos;
     }
 
     void FrameProfiler::report( [[maybe_unused]] const utf8* pTitle ) const
@@ -155,7 +201,7 @@ namespace sw
         padRight( nameCol, "scope", 32 );
 
         SW_LOG_INFO( "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );
-        SW_LOG_INFO( "[Profile] %#  avg_us   min_us   max_us   per_frame", nameCol.c_str() );
+        SW_LOG_INFO( "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameCol.c_str() );
 
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
@@ -171,9 +217,10 @@ namespace sw
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
             const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
 
-            SW_LOG_INFO( "[Profile] %#  %#   %#   %#   %#.%#",
-                         nameCol.c_str(), avgUs, toMicros( scope._minNanos ), toMicros( scope._maxNanos ),
-                         perFrameX10 / 10, perFrameX10 % 10 );
+            SW_LOG_INFO( "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
+                         nameCol.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
+                         toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
+                         toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );
         }
 #endif
     }
@@ -191,6 +238,7 @@ namespace sw
             scope._minNanos      = 0;
             scope._maxNanos      = 0;
             scope._sampledFrames = 0;
+            Memory::set( scope._arrBucket, 0, sizeof( scope._arrBucket ) );
         }
         _frameCount.store( 0, std::memory_order_relaxed );
     }

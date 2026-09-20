@@ -518,7 +518,9 @@ namespace sw
         , _sleepingWorkerCount{ 0 }
         , _workEpoch{ 0 }
         , _wakeSignalCount{ 0 }
+        , _globalHighQueue{}
         , _globalWorkerQueue{}
+        , _globalLowQueue{}
         , _queueMainThread{}
         , _workerMutex{}
         , _cvWorker{}
@@ -993,7 +995,19 @@ namespace sw
         }
         {
             TaskNode* pTemp{ nullptr };
+            while ( _globalHighQueue.dequeue( pTemp ) )
+            {
+                if ( pTemp == nullptr )
+                    continue;
+                pTemp->release();
+            }
             while ( _globalWorkerQueue.dequeue( pTemp ) )
+            {
+                if ( pTemp == nullptr )
+                    continue;
+                pTemp->release();
+            }
+            while ( _globalLowQueue.dequeue( pTemp ) )
             {
                 if ( pTemp == nullptr )
                     continue;
@@ -1145,6 +1159,11 @@ namespace sw
     {
         pNode = nullptr;
 
+        // 레인 순서: High -> 내 덱 -> Normal 전역 -> 훔치기 -> Low. 빈 큐의 dequeue 는 시퀀스 한 줄 읽기라
+        // High 를 매번 먼저 보는 비용은 없다시피 하다.
+        if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+            return true;
+
         WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[workerId];
         if ( localQ._queue.pop( pNode ) && pNode != nullptr )
             return true;
@@ -1161,6 +1180,9 @@ namespace sw
                 return true;
         }
 
+        if ( _globalLowQueue.dequeue( pNode ) && pNode != nullptr )
+            return true;
+
         pNode = nullptr;
         return false;
     }
@@ -1170,7 +1192,12 @@ namespace sw
         const int32 workerId = getCurrentWorkerIndex();
         if ( workerId >= 0 )
         {
-            TaskNode*    pNode{ nullptr };
+            TaskNode* pNode{ nullptr };
+            if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+            {
+                executeTask( pNode );
+                return true;
+            }
             WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
             if ( localQ._queue.pop( pNode ) && pNode != nullptr )
             {
@@ -1189,6 +1216,12 @@ namespace sw
             return false;
 
         TaskNode* pNode{ nullptr };
+        if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+        {
+            executeTask( pNode );
+            return true;
+        }
+
         if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
         {
             executeTask( pNode );
@@ -1206,6 +1239,12 @@ namespace sw
                 executeTask( pNode );
                 return true;
             }
+        }
+
+        if ( _globalLowQueue.dequeue( pNode ) && pNode != nullptr )
+        {
+            executeTask( pNode );
+            return true;
         }
         return false;
     }
@@ -1351,8 +1390,20 @@ namespace sw
                 const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
                 if ( numWorkers > 0 )
                 {
-                    int32 workerId = getCurrentWorkerIndex();
-                    if ( workerId >= 0 )
+                    // 레인은 우선순위가 정한다. High/Low 는 워커에서 넣어도 자기 덱이 아니라 전역 레인이다 —
+                    // 덱은 LIFO 라 "먼저" 도 "나중" 도 약속하지 못한다.
+                    const int32 workerId = getCurrentWorkerIndex();
+                    if ( pNode->_priority == TaskPriority::High )
+                    {
+                        while ( _globalHighQueue.enqueue( pNode ) == false )
+                            std::this_thread::yield();
+                    }
+                    else if ( pNode->_priority == TaskPriority::Low )
+                    {
+                        while ( _globalLowQueue.enqueue( pNode ) == false )
+                            std::this_thread::yield();
+                    }
+                    else if ( workerId >= 0 )
                     {
                         WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
                         while ( localQ._queue.push( pNode ) == false )
@@ -1390,6 +1441,20 @@ namespace sw
             return;
 
         pNode->_state.store( TaskState::Completed, std::memory_order_seq_cst );
+
+        // **활성 수는 스테이지·부모보다 먼저 내린다.** 예전에는 맨 끝(후속 트리거 뒤)에서 내렸는데, 그러면
+        // `waitStage` 가 스테이지 완료 통지를 받고 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다.
+        // 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가 0xFFFFFFFF 로 감아 버려 이후의
+        // `waitAll` 이 영원히 기다린다 — CTest 아래에서만 재현되던 EngineTest_NoGPU 180 초 타임아웃이 이것이다.
+        // 후속 태스크는 만들 때 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
+        {
+            const uint32 activeLeft = _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
+            if ( activeLeft == 1 )
+            {
+                std::scoped_lock<mutex> lock{ _waitAllMutex };
+                _cvWaitAll.notify_all();
+            }
+        }
 
         BLOCK( "Update Parent Task" )
         {
@@ -1435,13 +1500,6 @@ namespace sw
 
             pNode->_callable = std::monostate{};
             pNode->_pParent  = nullptr;
-
-            uint32 activeLeft = _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
-            if ( activeLeft == 1 )
-            {
-                std::scoped_lock<mutex> lock{ _waitAllMutex };
-                _cvWaitAll.notify_all();
-            }
         }
     }
 

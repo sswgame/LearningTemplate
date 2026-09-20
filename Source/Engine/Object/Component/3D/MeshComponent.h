@@ -115,12 +115,7 @@ namespace sw
         /** @brief 등록부 슬롯. 등록부를 소유한 매니저만 만집니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
         /** @brief 등록부 슬롯을 설정합니다. */
-        void setPrimitiveIndex( uint32 index ) { _primitiveIndex = index; }
-        /** @brief 더티 목록에 이미 들어가 있으면 true. */
-        bool isRenderStateDirty() const { return _bRenderDirty == SW_TRUE; }
-        /** @brief 더티 목록 등재 여부를 설정합니다. */
-        void setRenderStateDirty( bool bDirty ) { _bRenderDirty = bDirty ? SW_TRUE : SW_FALSE; }
-
+        void                         setPrimitiveIndex( uint32 index ) { _primitiveIndex = index; }
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
@@ -136,8 +131,9 @@ namespace sw
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯. 미등록이면 kInvalidPrimitiveIndex. */
         uint32 _primitiveIndex;
-        uint8  _bVisible     : 1;
-        uint8  _bRenderDirty : 1;
-        uint8  _reserved     : 6;
+        // "더티" 비트는 여기 없다 — 등록부의 원자 플래그 하나가 정본이다. 비트필드였을 때는 워커의 더티 쓰기가
+        // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 형식상 레이스였다.
+        uint8 _bVisible : 1;
+        uint8 _reserved : 7;
     };
 } // namespace sw

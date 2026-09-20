@@ -147,6 +147,8 @@ namespace sw
         void wakeSleepingWorkers( uint32 wantedCount );
         /** @brief 지금까지 워커를 깨운 시그널 수. 테스트가 "그룹 하나에 한 번" 을 확인하는 데 쓴다. */
         uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
+        /** @brief 만들어졌고 아직 끝나지 않은 태스크 수. `waitStage`/`waitAll` 이 돌아온 직후엔 그 몫이 빠져 있어야 한다(테스트용). */
+        uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
 
         /**
          * @brief 현재 시스템에 등록된 모든 비동기 태스크가 완료될 때까지 대기합니다.
@@ -246,12 +248,23 @@ namespace sw
         alignas( 64 ) atomic<uint32> _workEpoch;
         atomic<uint32> _wakeSignalCount; ///< 워커를 깨운 시그널 수 (통계 · 테스트용)
 
-        ConcurrentQueue<TaskNode*, 4096> _globalWorkerQueue; ///< 외부 스레드에서 인큐되는 전역 작업 대기열
-        ConcurrentQueue<TaskNode*, 1024> _queueMainThread;   ///< 메인 스레드 전용 태스크 큐 (락-프리)
-        mutex                            _workerMutex;       ///< 워커 조건 변수 보호용 뮤텍스
-        std::condition_variable_any      _cvWorker;          ///< 유휴 워커 깨우기용 조건 변수
-        mutable mutex                    _waitAllMutex;      ///< waitAll 대기용 뮤텍스
-        std::condition_variable_any      _cvWaitAll;         ///< 모든 작업 완료 알림용 조건 변수
+        /**
+         * @brief `TaskPriority::High` 전용 전역 큐. **모든 워커가 자기 덱보다 먼저 본다.**
+         * @details 게임 스레드의 대량 잡(트랜스폼 플러시·씬 수집)과 렌더 스레드의 병렬 패스 기록이 같은 풀을
+         *          쓴다. 레인이 없으면 렌더 스레드가 방금 넣은 기록 태스크가 게임 스레드의 청크 수십 개 뒤에
+         *          줄을 서고, 렌더 스레드는 그 스테이지를 곧바로 기다리므로 그 줄이 그대로 프레임 지연이다
+         *          (큐브 8000 에서 GT 잡을 켜자 RT 그래프 기록 170 -> 261 us). 상용 엔진이 렌더·오디오 잡을
+         *          별도 레인에 두는 이유다. `_priority` 는 그동안 저장만 되고 스케줄러가 보지 않았다.
+         */
+        ConcurrentQueue<TaskNode*, 1024> _globalHighQueue;
+        ConcurrentQueue<TaskNode*, 4096> _globalWorkerQueue; ///< `Normal` 전역 큐 — 워커 밖(게임·렌더 스레드)에서 넣는 자리
+        /** @brief `TaskPriority::Low` 전용 전역 큐. 훔칠 것도 없을 때만 본다 — 백그라운드 I/O·통계의 자리. */
+        ConcurrentQueue<TaskNode*, 1024> _globalLowQueue;
+        ConcurrentQueue<TaskNode*, 1024> _queueMainThread; ///< 메인 스레드 전용 태스크 큐 (락-프리)
+        mutex                            _workerMutex;     ///< 워커 조건 변수 보호용 뮤텍스
+        std::condition_variable_any      _cvWorker;        ///< 유휴 워커 깨우기용 조건 변수
+        mutable mutex                    _waitAllMutex;    ///< waitAll 대기용 뮤텍스
+        std::condition_variable_any      _cvWaitAll;       ///< 모든 작업 완료 알림용 조건 변수
 
         vector<weak_ptr<StageNode>> _listAllStage;     ///< 등록된 전체 스테이지 목록 (약한 참조)
         mutable mutex               _stageMutex;       ///< 스테이지 목록 동기화 뮤텍스

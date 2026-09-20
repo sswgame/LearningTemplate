@@ -353,6 +353,9 @@ namespace sw
 
                 if ( handle.isValid() )
                 {
+                    // 렌더 스레드는 이 스테이지를 곧바로 기다린다 — 게임 스레드의 대량 잡(트랜스폼 플러시·씬 수집)
+                    // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
+                    handle.setPriority( TaskPriority::High );
                     stage.addTask( handle );
                     // 웨이브의 패스를 다 넣은 뒤 한 번만 깨운다 — 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
                     pTaskManager->submitWithoutWake( handle );

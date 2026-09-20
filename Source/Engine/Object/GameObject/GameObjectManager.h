@@ -156,7 +156,14 @@ namespace sw
          */
         void tick( float32 deltaTime );
 
-        /** @brief 모든 루트 SceneComponent 월드 캐시를 계층 순으로 갱신합니다 (dirty만). */
+        /**
+         * @brief 루트 씬 컴포넌트가 이 수 이상이면 트랜스폼 플러시를 루트 서브트리 단위로 잡에 나눕니다.
+         * @details 잡 디스패치 바닥이 ~50 us(잠든 워커 웨이크)라 그보다 작은 일은 직렬이 빠르다. 루트 2000 은
+         *          직렬 ~60 us 라 나눠도 같고, 8000 은 직렬 200 us 가 병렬 110 us 다(Release · 큐브 전부 이동).
+         */
+        static constexpr uint32 kParallelTransformFlushRootCount = 2048;
+
+        /** @brief 모든 루트 SceneComponent 월드 캐시를 계층 순으로 갱신합니다 (dirty만). 루트가 많으면 병렬. */
         void flushSceneTransforms();
 
         /** @brief 어떤 루트라도 dirty/descendant dirty가 있으면 true. */
@@ -358,11 +365,13 @@ namespace sw
         void tickComponents( float32 deltaTime );
         /**
          * @brief 한 루트 아래의 월드 트랜스폼을 갱신합니다 (명시적 스택 DFS).
-         * @details 스택 버퍼는 멤버(`_listTransformFlushStack`)를 **재사용**한다 — 이 함수는 루트마다
-         *          불리므로 호출마다 벡터를 만들면 그것이 곧 프레임당 오브젝트 수만큼의 힙 할당이다.
-         *          부르는 곳이 `flushSceneTransforms`(게임 스레드) 하나라 공유해도 안전하다.
+         * @details 스택 버퍼는 **부르는 쪽이 준다** — 루트마다 벡터를 만들면 프레임당 오브젝트 수만큼의
+         *          힙 할당이고, 멤버 하나를 나눠 쓰면 병렬로 돌 수 없다. 직렬 경로는 멤버
+         *          `_listTransformFlushStack` 을, 병렬 경로는 잡마다 지역 스택을 넘긴다.
+         *          서로 다른 루트의 서브트리는 겹치지 않으므로 잡 사이에 공유 쓰기가 없다 — 단 하나,
+         *          메시 컴포넌트가 렌더 더티를 찍는 `PrimitiveRegistry::markDirty` 는 락 없는 원자 플래그다.
          */
-        void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged );
+        void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, vector<pair<SceneComponent*, bool>>& stack );
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */

@@ -498,6 +498,72 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (상용급 구조를 앞당겨 넣었다 — 우선순위 레인 · 병렬 씬 갱신 · 프로파일러 p50/p99)
+
+"향후 상용 엔진급을 기준으로 최선을 골라 적용하라 — 지금 성능이 조금 줄어도 된다" 는 지시로, 앞
+회차에서 "지금 불필요, 영영 불필요 아님" 으로 미뤄 둔 셋을 넣었다. 조건은 **지금 수치가 나빠지지
+않는 문턱**이었고, 재 보니 하나(플러시)는 지금도 남는다.
+
+**1. 잡 우선순위 레인.** `TaskPriority` 는 저장만 되고 스케줄러가 보지 않았다 — `setPriority` 를
+불러도 아무 일도 안 했다. High/Low 전역 큐를 두고 `tryTakeTask` · `tryStealAndExecute` ·
+`tryHelpAndExecute` 가 **High → 내 덱 → Normal 전역 → 훔치기 → Low** 순으로 본다(빈 MPMC 큐의
+dequeue 는 시퀀스 한 줄 읽기라 High 를 매번 먼저 보는 비용은 없다). 렌더 그래프 웨이브의 기록
+태스크가 High 다 — 렌더 스레드가 그 스테이지를 곧바로 기다리므로 GT 잡 뒤에 줄 서면 그 줄이 그대로
+프레임 지연이다. `TaskTest.HighPriorityTaskJumpsTheQueue`: 워커를 전부 문 앞에 세우고 Normal 을 줄
+세운 뒤 High 를 넣고 문을 열면 처음 비는 워커가 High 를 집는다(우선순위를 무시하는 변이에 실패).
+
+**2. 병렬 씬 갱신 — 문턱을 두고.** 트랜스폼 플러시(루트 ≥ `GameObjectManager::kParallelTransformFlushRootCount`
+2048 이면 루트 서브트리 단위 잡, DFS 스택은 잡마다), 전체 수집(프리미티브 ≥
+`GpuSceneBuilder::kParallelCollectPrimitiveCount` 4096 이면 프리미티브 번호 자리에 병렬로 채운 뒤 직렬로
+당기기 — 퍼뮤테이션 해시는 지연 캐시라 직렬 구간에서), 제자리 갱신(전체 훑기는 2048 청크 + 더티 구간
+경계 병합, 부분 훑기는 직렬 그대로). `PrimitiveRegistry::markDirty` 는 락 없는 칸별 원자 플래그다.
+
+함정 하나 — **공유 카운터.** 처음엔 "서 있는 플래그 수" 를 `fetch_add` 로 셌는데, 워커 열넷이 같은
+캐시 라인을 8000 번 두드려 병렬 플러시가 **직렬(200 us)보다 느렸다(262 us).** "하나라도 있다" 플래그
+(프레임에 한 번만 쓰고 그 뒤는 읽기)로 바꾸고 이미 선 칸은 읽기만 하게 하자 106~114 us. 같은 이유로
+`MeshComponent` 의 더티 비트를 없앴다 — 비트필드라 워커의 쓰기가 `_bVisible` 과 같은 바이트를
+읽고-고치고-쓰는 것이었다. 정본은 등록부 플래그 하나다.
+
+**Debug 만 잡은 것 하나.** 워커가 `_listPrimitive[slot]` 을 비-const 로 읽자 컨테이너 레이스 탐지기가 그것을
+**쓰기**로 잡아 새 테스트 둘이 Debug 에서 죽었다 — Release 벤치는 조용했다. 워커 쪽 컨테이너 읽기는
+`std::as_const` 로(TaskManager 의 `_listWorkerQueue` 가 같은 이유로 그렇게 되어 있다).
+
+**숫자** (Release · DX12 · 큐브 전부 이동 · 300 프레임 × 3회, p50 us · 앞뒤는 같은 바이너리에서 문턱만 바꿈):
+
+| | 2000 직렬 | 2000 (문턱 아래 = 직렬) | 8000 직렬 | 8000 병렬 |
+|---|---|---|---|---|
+| GT.Scene.tick.flushTransforms | 53~65 | 61~65 | 196~212 | **106~114** |
+| GT.GpuScene.build.collect | 32 | 32~36 | 131~163 | 131~147 |
+| GT.GpuScene.build | 98 | 90~98 | 425~491 | 458~491 |
+| GT.Frame | 491 | 458~491 | 655~720 | **589** |
+| RT.Graph.executeParallel | 131~147 | 131 | 147~163 | 131~147 |
+
+수집은 비긴다: 채우기가 프리미티브당 ~12 ns 라 8000 개가 직렬 100 us 인데 디스패치 바닥이 50 us 다
+(병렬 86 · 직렬 당기기 45 는 양쪽 같음). 프리미티브당 일이 커지면(LOD 선택·스키닝 바운드) 그대로 남는
+구조라 문턱만 두고 유지한다. **RT 그래프는 GT 잡을 켜도 느려지지 않는다** — 앞 회차의 170 → 261 us 는
+레인이 없어서였다.
+
+**3. 프로파일러 p50 · p99.** 구간마다 옥타브 × 8 칸(해상도 ±9%) 히스토그램을 `endFrame` 이 쌓고, 표에
+`p50_us p99_us` 열이 붙었다(열 순서 `avg p50 p99 min max per_frame` — 표를 awk 로 읽던 스크립트는
+per_frame 이 5열에서 7열로 옮겼다). `getPercentileNanos` 는 칸의 아래 끝을 답한다.
+`FrameProfilerTest.PercentilesFollowTheDistribution`(평균으로 대신하는 변이에 실패). 앞 회차에서 임시
+히스토그램으로 봤던 "평균 400 은 히치" 가 이제 표에서 바로 보인다 — 큐브 8000: `RT.BeginFrame`
+avg 137 · **p50 28 · p99 7864**.
+
+**4. 잡 완료 순서 버그 — CTest 에서만 죽던 180 초 타임아웃.** `onTaskFinished` 가 스테이지에 "끝났다" 를
+먼저 알리고 `_activeTaskCount` 는 맨 끝(후속 트리거 뒤)에서 내렸다. `waitStage` 가 돌아온 직후 `clear()` 가
+수를 0 으로 놓으면 뒤늦은 `fetch_sub` 가 0xFFFFFFFF 로 감아, 다음 `waitAll` 이 영원히 기다린다. 앞 회차의
+`ParallelGroupWakesWorkersOnce`(waitStage → clear) 뒤에 새 테스트가 `waitAll( 5000 )` 을 부르자 CTest 아래에서
+매번 걸렸고 직접 실행(7 초)은 지나갔다 — 스케줄링 차이다. 감소를 스테이지·부모 통지 **앞**으로 옮겼다(후속은
+만들 때 이미 세어져 있어 `waitAll` 이 일찍 돌아오지 않는다). `TaskTest.WaitStageLeavesNoActiveTaskBehind` 가
+500 회 돌며 `getActiveTaskCount() == 0` 을 본다 — 옛 순서로 되돌리면 169/500 회 남는다.
+
+**테스트.** 병렬 경로가 벤치에서만 돌면 조용히 썩는다 — 문턱을 넘는 씬으로 직접 탄다.
+`GameObjectManagerTest.ParallelTransformFlushMatchesSerial`(루트 2085 · 자식 월드 = 루트 + 로컬 · 청크의
+마지막 루트를 빠뜨리는 변이에 실패), `GpuSceneTest.ParallelCollectMatchesSerial`(프리미티브 4125 · 위치
+합 · 같은 변이에 실패), `GpuSceneTest.PrimitiveRegistryCountsEachMarkOnce`(세 번 찍어도 하나 · 스레드
+8 × 256 회 동시 표시 · "하나라도" 플래그를 안 내리는 변이에 실패).
+
 ### 2026-09-20 (상용급을 기준으로 다시 물었다 — 잡 시스템을 행렬로 재고, 씬 갱신 병렬화는 "지금 불필요" 로 고쳐 적는다)
 
 "현재 기준이 아니라 상용엔진급을 한다고 쳤을 때도 불필요한가" — **아니다.** 앞 회차에서 기각한 것은
@@ -529,6 +595,8 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 트랜스폼 플러시(루트 서브트리 병렬, 스택은 잡마다) → 수집(프리미티브 번호 자리에 병렬로 채운 뒤
 직렬로 당기기 — 퍼뮤테이션 해시는 지연 캐시라 직렬 구간에서) → 제자리 갱신(청크 + 더티 구간 경계
 병합) → `PrimitiveRegistry::markDirty` 를 원자 플래그로. 그때 우선순위 레인(RT 기록 먼저)도 같이.
+**→ 바로 다음 회차에 그 순서대로 넣었다**(위 "상용급 구조를 앞당겨 넣었다" 항목). 문턱을 둔 병렬 플러시는
+8000 에서 지금도 2 배 남고, 수집은 비기며, 레인 덕에 RT 그래프는 GT 잡의 영향을 안 받는다.
 
 ### 2026-09-20 (GPU 프레임 전체를 재니 "기다림" 은 처리량이 아니라 히치였다 — 정렬 커널 고정 512 루프 · 잡 풀 경합 · 기각 셋)
 
@@ -556,7 +624,7 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 50 us 미만(히치 없음, 프레임 424 us). 재 보고 기각한 것 셋 — 펜스 시그널을 Present 앞으로(분포 그대로),
 백버퍼 수(이미 3), 인라인 제출·즉시 제출(같은 꼬리). 남은 후보는 DWM·드라이버 영역이다 —
 DXGI 대기 가능 스왑체인(`FRAME_LATENCY_WAITABLE_OBJECT` + `SetMaximumFrameLatency`)이 다음에 걸 것이고
-**재지 않았다.** 프로파일러에 백분위가 없어 평균만 보이는 것도 구멍이다.
+**재지 않았다.** 프로파일러에 백분위가 없어 평균만 보이는 것도 구멍이다(→ 다음 회차에 p50/p99 열을 붙였다).
 
 **4. 게임 스레드 병렬화는 기각 — 숫자와 함께.** 큐브 8000 이 전부 움직이면 GT 가 한계다(플러시 303 +
 GpuScene 빌드 423 us). 루트 서브트리 병렬 플러시 · 수집 청크 병렬 · 제자리 갱신 청크 병렬 · 락 없는

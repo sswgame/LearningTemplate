@@ -41,6 +41,16 @@ namespace sw
         static constexpr uint32 kMaxScope = 64;
         /** @brief 슬롯을 못 받았을 때의 값. */
         static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
+        /** @brief 분포 히스토그램의 옥타브(2 배 구간) 안 세분 비트 수. 3 이면 옥타브당 8 칸, 해상도 약 9%. */
+        static constexpr uint32 kSubBucketBit = 3;
+        /** @brief 옥타브당 칸 수. */
+        static constexpr uint32 kSubBucketCount = 1u << kSubBucketBit;
+        /** @brief 옥타브 안 칸 번호를 뽑는 마스크. */
+        static constexpr uint32 kSubBucketMask = kSubBucketCount - 1;
+        /** @brief 히스토그램 칸 수 — 64 옥타브(uint64 전체) × 옥타브당 칸 수. */
+        static constexpr uint32 kBucketCount = 64u << kSubBucketBit;
+        /** @brief 백분위의 최대값. */
+        static constexpr uint32 kPercentMax = 100;
 
         FrameProfiler() = default;
 
@@ -68,7 +78,15 @@ namespace sw
         /** @brief endFrame 이 불린 횟수입니다. */
         uint64 getFrameCount() const { return _frameCount.load( std::memory_order_relaxed ); }
 
-        /** @brief 모은 통계를 로그로 남깁니다. */
+        /**
+         * @brief 구간의 프레임 값 분포에서 @p percent 백분위(나노초)를 돌려줍니다.
+         * @details 평균·최소·최대만으로는 히치가 평균으로 뭉개진다 — `RT.BeginFrame` 평균 400 us 는 600 프레임
+         *          중 40 개의 1~18 ms 였다. 값은 해당 칸의 **아래 끝**이라 표본보다 작거나 같고 한 칸(약 12%)
+         *          안이다. 표본이 없으면 0.
+         */
+        uint64 getPercentileNanos( uint32 slot, uint32 percent ) const;
+
+        /** @brief 모은 통계를 로그로 남깁니다. avg · p50 · p99 · min · max · per_frame 순이다. */
         void report( const utf8* pTitle ) const;
         /** @brief 통계와 프레임 수를 비웁니다. 워밍업 구간을 버릴 때 씁니다. */
         void reset();
@@ -96,6 +114,11 @@ namespace sw
             uint64              _minNanos{ 0 }; ///< 프레임 단위 최소/최대
             uint64              _maxNanos{ 0 };
             uint64              _sampledFrames{ 0 };
+            /**
+             * @brief 프레임 값의 분포. 옥타브마다 `kSubBucketCount` 칸이라 해상도는 약 ±9% 다.
+             * @details `endFrame` 만 쓴다(게임 스레드 하나) — 원자가 아니어도 된다. 구간 64 × 칸 512 × 4 바이트 = 128 KB.
+             */
+            uint32 _arrBucket[kBucketCount]{};
         };
 
         Scope          _arrScope[kMaxScope];
