@@ -29,6 +29,53 @@ namespace sw
                 return static_cast<int32>( scaled );
             }
         };
+
+        /**
+         * @brief 광선이 상자를 실제로 지나는지 — 슬랩(slab) 판정입니다.
+         * @param originX 광선 시작점 X. @param originY 광선 시작점 Y.
+         * @param dirX **정규화된** 방향 X. @param dirY **정규화된** 방향 Y.
+         * @param maxDist 광선 길이. @param bounds 대상 상자.
+         * @details 축마다 들어가는 t 와 나오는 t 를 구해 구간을 좁힌다. 구간이 뒤집히면 안 맞는다.
+         *          방향 성분이 0 인 축은 그 축의 시작 좌표가 상자 안에 있어야만 통과한다.
+         */
+        bool doesRayHitBounds( float32 originX, float32 originY, float32 dirX, float32 dirY, float32 maxDist,
+                               const AABB2D& bounds )
+        {
+            float32 tEnter = 0.0f;
+            float32 tExit  = maxDist;
+
+            const float32 arrOrigin[2]{ originX, originY };
+            const float32 arrDir[2]{ dirX, dirY };
+            const float32 arrMin[2]{ bounds._min._x, bounds._min._y };
+            const float32 arrMax[2]{ bounds._max._x, bounds._max._y };
+
+            for ( int32 axis = 0; axis < 2; ++axis )
+            {
+                if ( MathUtil::abs( arrDir[axis] ) <= MathUtil::Epsilon )
+                {
+                    // 이 축으로는 움직이지 않는다 — 시작부터 상자 밖이면 영영 못 만난다.
+                    if ( arrOrigin[axis] < arrMin[axis] || arrOrigin[axis] > arrMax[axis] )
+                        return false;
+                    continue;
+                }
+
+                const float32 invDir = 1.0f / arrDir[axis];
+                float32       tNear  = ( arrMin[axis] - arrOrigin[axis] ) * invDir;
+                float32       tFar   = ( arrMax[axis] - arrOrigin[axis] ) * invDir;
+                if ( tNear > tFar )
+                {
+                    const float32 swapT = tNear;
+                    tNear               = tFar;
+                    tFar                = swapT;
+                }
+
+                tEnter = MathUtil::max( tEnter, tNear );
+                tExit  = MathUtil::min( tExit, tFar );
+                if ( tEnter > tExit )
+                    return false;
+            }
+            return true;
+        }
     } // namespace
 
     SpatialHashGrid2D::CellRange SpatialHashGrid2D::CellRange::fromBounds( float32 minX, float32 minY, float32 maxX, float32 maxY,
@@ -216,8 +263,13 @@ namespace sw
         const float32 ndy = dir._y;
 
         // 그리드에 흩뿌리기엔 너무 큰 핸들은 어느 셀에도 없다 — 다른 질의들과 같이 **항상 함께** 본다.
+        // 형제들이 그렇듯 여기도 **좁힘을 거친다**: 크다는 이유로 무조건 맞았다고 하지 않는다.
         for ( const ObjectHandle handle : _listOversizedHandle )
-            outListHandle.push_back( handle );
+        {
+            const auto boundIt = _mapHandleBound.find( handle );
+            if ( boundIt != _mapHandleBound.end() && doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
+                outListHandle.push_back( handle );
+        }
 
         const CellRange startCell = CellRange::fromBounds( startX, startY, startX, startY, _cellSize );
         int32           cellX     = startCell._minX;
@@ -253,8 +305,12 @@ namespace sw
             {
                 for ( const ObjectHandle handle : bucketIt->second )
                 {
-                    auto boundIt = _mapHandleBound.find( handle );
-                    if ( boundIt != _mapHandleBound.end() )
+                    // **좁힌다.** 예전에는 지나간 셀의 핸들을 전부 담아서, 광선이 스치지도 않은
+                    // 것이 결과에 들어갔다. 형제 둘(`queryAabb` · `queryCircle`)은 처음부터
+                    // 각자의 판정을 거친다 — 이쪽만 후보 목록을 그대로 내놓고 있었다.
+                    const auto boundIt = _mapHandleBound.find( handle );
+                    if ( boundIt != _mapHandleBound.end() &&
+                         doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
                         outListHandle.push_back( handle );
                 }
             }

@@ -280,6 +280,42 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listRay.size() ) );
 }
 
+/**
+ * @brief [SpatialTest] 광선 질의가 **스치지도 않은 것**을 돌려주지 않는다
+ * @details `queryRay` 만 좁힘 판정이 없어서, 광선이 지나간 **셀** 안의 핸들을 전부 담았다.
+ *          형제 둘은 처음부터 각자의 판정을 거친다 — `queryAabb` 는 `intersects`,
+ *          `queryCircle` 은 가장 가까운 점까지의 거리. 이름이 `queryRay` 인데 후보 목록을
+ *          내놓고 있었으므로, 걸러 주지 않는 호출부는 틀린 답을 받았다.
+ * @note 셀 크기(64)보다 작은 상자 둘을 **같은 셀**에 넣고 그 중 하나만 지나는 광선을 쏜다.
+ *       좁힘이 없으면 같은 셀에 있다는 이유로 둘 다 나온다.
+ */
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DRayIgnoresBoxesItNeverTouches )
+{
+    const sw::ObjectHandle eOnRay  = sw::ObjectHandle::make( 11, 1 );
+    const sw::ObjectHandle eOffRay = sw::ObjectHandle::make( 12, 1 );
+
+    // 셀 하나가 64 이므로 아래 둘은 같은 셀(0,0)에 들어간다.
+    sw::SpatialHashGrid2D grid{ 64.0f };
+    grid.insert( eOnRay, 10.0f, 0.0f, 20.0f, 4.0f );    // y = 2 를 지나는 광선이 맞는다
+    grid.insert( eOffRay, 10.0f, 50.0f, 20.0f, 60.0f ); // 같은 셀이지만 한참 위라 안 맞는다
+
+    sw::vector<sw::ObjectHandle> listRay;
+    grid.queryRay( 0.0f, 2.0f, 1.0f, 0.0f, 100.0f, listRay );
+
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listRay.size() ) );
+    SW_EXPECT_TRUE_MSG( listRay[0] == eOnRay, "광선이 스치지도 않은 상자가 결과에 들어왔습니다" );
+
+    // 사거리가 짧으면 앞에 있어도 안 닿는다 — t 구간을 실제로 보고 있다는 뜻이다.
+    sw::vector<sw::ObjectHandle> listShort;
+    grid.queryRay( 0.0f, 2.0f, 1.0f, 0.0f, 5.0f, listShort );
+    SW_EXPECT_TRUE_MSG( listShort.empty(), "사거리 밖의 상자가 결과에 들어왔습니다" );
+
+    // 반대 방향으로 쏘면 아무것도 없다 — 음수 t 를 걸러야 한다.
+    sw::vector<sw::ObjectHandle> listBack;
+    grid.queryRay( 0.0f, 2.0f, -1.0f, 0.0f, 100.0f, listBack );
+    SW_EXPECT_TRUE_MSG( listBack.empty(), "광선 뒤쪽의 상자가 결과에 들어왔습니다" );
+}
+
 // ------------------------------------------------------------------------------
 // 16) BVHTree3D 3D 동적 트리 엔티티 등록, 이동, 삭제 및 트리 균형/높이 검증
 // ------------------------------------------------------------------------------

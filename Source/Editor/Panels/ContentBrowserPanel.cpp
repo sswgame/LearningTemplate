@@ -921,6 +921,13 @@ namespace sw::editor
                 newEntry._folderPathAbs = normalizedPath;
                 newEntry._breadcrumb    = string{ breadcrumb };
                 _listHistory.push_back( std::move( newEntry ) );
+
+                // **가장 오래된 것부터 버린다.** 상한이 없으면 세션이 길수록 계속 쌓인다.
+                if ( _listHistory.size() > kMaxHistoryCount )
+                {
+                    const size_t dropCount = _listHistory.size() - kMaxHistoryCount;
+                    _listHistory.erase( _listHistory.begin(), _listHistory.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
+                }
                 _historyIndex = static_cast<int32>( _listHistory.size() ) - 1;
             }
         }
