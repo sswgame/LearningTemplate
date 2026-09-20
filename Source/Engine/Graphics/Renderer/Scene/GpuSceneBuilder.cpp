@@ -423,6 +423,8 @@ namespace sw
         }
 
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
+        // 크기가 그대로면 raw 의 지난 프레임 값이 살아 있다 — 부분 채우기의 전제다.
+        const bool bRawKept = ( _listScratchRaw.size() == count );
         _listScratchRaw.resize( count );
 
         // 물체가 움직이기만 했으면 배치 구성은 그대로다 — 인스턴스 값만 새로 채우고, 나누기와
@@ -442,7 +444,27 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.GpuScene.build.fill" );
             // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다** — 원소당 일이
             // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GpuScene.h buildFromScene 주석의 숫자).
-            GpuSceneBuilderInternal::fillRangePtr( _listScratchCandidate.data(), _listScratchRaw.data(), 0, count );
+            //
+            // 부분 수집을 했으면 **바뀐 후보만** 옮긴다. raw 는 후보에서 1:1 로 나오는 값이라, 손대지
+            // 않은 후보의 raw 는 지난 프레임 것이 그대로 맞다. (전체 수집 프레임에는 raw 자체가
+            // 새로 만들어지므로 전부 채워야 한다.)
+            if ( bPartialDone && bRawKept )
+            {
+                for ( uint32 slot : _listDirtyPrimitive )
+                {
+                    if ( slot >= _listPrimitiveToCandidate.size() )
+                        continue;
+                    const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
+                    if ( candidateIndex >= count )
+                        continue;
+                    GpuSceneBuilderInternal::fillRangePtr( _listScratchCandidate.data(), _listScratchRaw.data(), candidateIndex,
+                                                           candidateIndex + 1 );
+                }
+            }
+            else
+            {
+                GpuSceneBuilderInternal::fillRangePtr( _listScratchCandidate.data(), _listScratchRaw.data(), 0, count );
+            }
 
             if ( bBatchKeysSame == false )
             {
@@ -459,7 +481,7 @@ namespace sw
             // 예전엔 물체가 하나만 움직여도 인스턴스·배치 목록을 통째로 비우고 다시 만들었다(측정에서
             // 이 블록이 GpuScene 빌드의 절반이 넘었다). 언리얼 GPUScene 도 프리미티브가 움직였다고
             // 자료구조를 다시 만들지는 않는다.
-            const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace();
+            const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace( bPartialDone );
             if ( bRefreshed == false )
             {
                 _listInstanceWork.clear();
@@ -480,9 +502,15 @@ namespace sw
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
 
-        // **내용이 바뀐 이 자리에서만 새 배열을 발행한다.** 복사가 아니라 옮기는 것이라 전체 재구축
-        // 경로에는 복사가 아예 없다. 발행 뒤 작업 배열은 비고, 다음에 제자리 갱신이 필요하면 위에서
-        // 되돌려 받는다. 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
+        // **내용이 바뀐 이 자리에서만 새 배열을 발행한다.** 내용이 그대로인 프레임은 여기까지 오지
+        // 않으므로 지난 배열이 그대로 실린다.
+        //
+        // 발행은 **풀에서 빈 배열을 빌려 덮어쓰는 것**이다. 예전에는 작업 배열을 옮겨 주고 다음
+        // 프레임에 되복사했는데, 그 되복사가 매 프레임 800 KB 를 새로 할당했다(74 us). 지금은
+        // 작업 배열이 그대로 남아 되복사가 없고, 빌린 배열은 용량이 남아 있어 할당도 없다.
+        // 복사가 아니라 **옮긴다** — 다음 프레임에 제자리 갱신이 필요하면 발행본에서 되돌려 받는다.
+        // (발행용 배열을 풀에 돌려 쓰는 것도 재 봤는데 더 느렸다: 풀 2/3/8 에서 발행 85/78/76 us 로
+        //  갓 할당한 블록보다 차가웠다. 800 KB 복사 자체가 ~75 us 이고 할당은 그 안에서 작다.)
         _snapshot._pListInstance = make_shared<const vector<GpuInstance>>( std::move( _listInstanceWork ) );
         _listInstanceWork.clear();
     }
@@ -510,13 +538,16 @@ namespace sw
         { return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, cameraPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, cameraPos ); } );
     }
 
-    bool GpuSceneBuilder::refreshInstancesInPlace()
+    bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )
     {
         // 지난 프레임에 **발행하며 옮겨 줬으면 되돌려 받는다.** 제자리 갱신은 이전 값이 필요하다
-        // (`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로 그대로 쓴다). 이 복사는
-        // 내용이 실제로 바뀌는 프레임에만 일어난다 — 정적 씬은 여기까지 오지 않는다.
+        // (`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로 그대로 쓴다). 800 KB 복사라
+        // ~73 us 다 — 내용이 바뀌는 프레임에만 일어나고, 정적 씬은 여기까지 오지 않는다.
         if ( _listInstanceWork.empty() && _snapshot._pListInstance != nullptr )
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.restore" );
             _listInstanceWork = *_snapshot._pListInstance;
+        }
 
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
         if ( _listInstanceWork.empty() || _listInstanceSrcIndex.size() != _listInstanceWork.size() )
@@ -534,10 +565,39 @@ namespace sw
         bool   bTooManyRuns           = false;
         size_t lastDirtySlot          = static_cast<size_t>( -1 );
 
-        const uint32 rawCount        = static_cast<uint32>( _listScratchRaw.size() );
-        _snapshot._spinInstanceCount = 0;
-        for ( size_t slot = 0; slot < _listInstanceWork.size(); ++slot )
+        const uint32 rawCount = static_cast<uint32>( _listScratchRaw.size() );
+
+        // **바뀐 인스턴스만 훑는다.** 부분 수집을 했으면 어느 후보가 달라졌는지 알고, 후보 -> 인스턴스
+        // 역매핑이 있으니 그 자리만 고치면 된다. 8000 개 중 10 개가 움직일 때 이 루프가 59 -> 1 us 다.
+        //
+        // 회전 인스턴스 수는 전부 훑지 않으므로 **증감으로 유지한다** — 슬롯 하나를 고칠 때 옛 값이
+        // 0 이 아니었으면 빼고 새 값이 0 이 아니면 더한다. 전체 훑기 경로만 0 부터 다시 센다.
+        const bool bPartialRefresh = bPartialCollect && _listCandidateToInstance.size() == _listScratchCandidate.size();
+        if ( bPartialRefresh == false )
+            _snapshot._spinInstanceCount = 0;
+
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.loop" );
+        const size_t slotCount = _listInstanceWork.size();
+        const size_t stepCount = bPartialRefresh ? _listDirtyPrimitive.size() : slotCount;
+        for ( size_t step = 0; step < stepCount; ++step )
         {
+            size_t slot = step;
+            if ( bPartialRefresh )
+            {
+                const uint32 primitiveSlot = _listDirtyPrimitive[step];
+                if ( primitiveSlot >= _listPrimitiveToCandidate.size() )
+                    return false;
+                const uint32 candidateIndex = _listPrimitiveToCandidate[primitiveSlot];
+                if ( candidateIndex >= _listCandidateToInstance.size() )
+                    continue;
+                const uint32 instanceSlot = _listCandidateToInstance[candidateIndex];
+                if ( instanceSlot == kInvalidCandidateIndex )
+                    continue;
+                if ( instanceSlot >= slotCount )
+                    return false;
+                slot = instanceSlot;
+            }
+
             const uint32 srcIndex = _listInstanceSrcIndex[slot];
             if ( srcIndex >= rawCount )
                 return false;
@@ -554,13 +614,23 @@ namespace sw
                                   Memory::compare( &inst._boundsRadius, &raw._boundsRadius, sizeof( inst._boundsRadius ) ) != 0 ||
                                   inst._blendMode != raw._blendMode || inst._spinSeed != raw._spinSeed;
 
-            inst._world        = raw._world;
-            inst._boundsCenter = raw._boundsCenter;
-            inst._boundsRadius = raw._boundsRadius;
-            inst._blendMode    = raw._blendMode;
-            inst._spinSeed     = raw._spinSeed;
-            if ( inst._spinSeed != 0 )
+            inst._world                   = raw._world;
+            inst._boundsCenter            = raw._boundsCenter;
+            inst._boundsRadius            = raw._boundsRadius;
+            inst._blendMode               = raw._blendMode;
+            const uint32 previousSpinSeed = inst._spinSeed;
+            inst._spinSeed                = raw._spinSeed;
+            if ( bPartialRefresh )
+            {
+                if ( previousSpinSeed != 0 && inst._spinSeed == 0 && _snapshot._spinInstanceCount > 0 )
+                    --_snapshot._spinInstanceCount;
+                else if ( previousSpinSeed == 0 && inst._spinSeed != 0 )
+                    ++_snapshot._spinInstanceCount;
+            }
+            else if ( inst._spinSeed != 0 )
+            {
                 ++_snapshot._spinInstanceCount;
+            }
 
             if ( bChanged == false || bTooManyRuns )
                 continue;
@@ -589,7 +659,15 @@ namespace sw
         // 배치 구성은 그대로지만 **회수 시계는 돌아야 한다**. 안 그러면 물체가 움직이기만 하는 씬에서
         // 시계가 멈춰, 안 쓰이게 된 머티리얼 원소가 영원히 회수되지 않는다(자리가 조금씩 샌다).
         // 지금 인스턴스가 가리키는 원소는 전부 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
+        // **부분 갱신 프레임에는 회수 시계를 돌리지 않는다.** 시계를 돌리면서 더티 인스턴스의 원소만
+        // 도장을 찍으면, 손대지 않은(그러나 여전히 쓰이는) 원소가 낡은 것으로 보여 회수돼 버린다.
+        // 시계를 멈추면 아무것도 낡지 않으므로 잘못된 회수가 생기지 않는다 — 회수는 전체 훑기
+        // 프레임(집합 변화·큰 변경)으로 미뤄질 뿐이다.
+        if ( bPartialRefresh )
+            return true;
+
         ++_buildCounter;
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.stamp" );
         for ( const GpuInstance& inst : _listInstanceWork )
         {
             if ( inst._meshBatchIndex >= _snapshot._listAllBatch.size() )
@@ -612,6 +690,8 @@ namespace sw
         _listInstanceWork.reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
+        // 후보 -> 인스턴스 슬롯 역매핑. 더티 후보의 인스턴스 자리를 바로 찾기 위한 것이다.
+        _listCandidateToInstance.assign( _listScratchCandidate.size(), kInvalidCandidateIndex );
         _snapshot._spinInstanceCount = 0;
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
@@ -669,6 +749,8 @@ namespace sw
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
                             ++_snapshot._spinInstanceCount;
+                        if ( srcIdx < _listCandidateToInstance.size() )
+                            _listCandidateToInstance[srcIdx] = static_cast<uint32>( _listInstanceSrcIndex.size() );
                         _listInstanceSrcIndex.push_back( srcIdx );
                         _listInstanceWork.push_back( inst );
                     }
@@ -736,6 +818,8 @@ namespace sw
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
                             ++_snapshot._spinInstanceCount;
+                        if ( srcIdx < _listCandidateToInstance.size() )
+                            _listCandidateToInstance[srcIdx] = static_cast<uint32>( _listInstanceSrcIndex.size() );
                         _listInstanceSrcIndex.push_back( srcIdx );
                         _listInstanceWork.push_back( inst );
                     }

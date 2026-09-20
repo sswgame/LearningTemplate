@@ -126,7 +126,7 @@ namespace sw
          *          바뀐 것은 트랜스폼과 바운드뿐이다.
          * @return 갱신했으면 true, 조건이 안 맞아 전체 재구축이 필요하면 false.
          */
-        bool refreshInstancesInPlace();
+        bool refreshInstancesInPlace( bool bPartialCollect );
         /** @brief 캐시 무효화. */
         void invalidateBuildCache();
 
@@ -224,6 +224,8 @@ namespace sw
         vector<uint32> _listDirtyPrimitive;
         /** @brief 등록부 인덱스 -> 후보 인덱스 (`kInvalidCandidateIndex` = 후보에 안 실림). */
         vector<uint32> _listPrimitiveToCandidate;
+        /** @brief 후보 인덱스 -> 인스턴스 슬롯 (`kInvalidCandidateIndex` = 인스턴스 없음). `_listInstanceSrcIndex` 의 역이다. */
+        vector<uint32> _listCandidateToInstance;
         /** @brief 마지막 수집이 만든 후보 수 — 부분 수집이 자리 수를 그대로 이어받는다. */
         size_t _lastCandidateCount{ 0 };
         /** @brief 부분 수집이 한 프리미티브를 채워 볼 임시 자리 (프레임마다 할당하지 않는다). */
