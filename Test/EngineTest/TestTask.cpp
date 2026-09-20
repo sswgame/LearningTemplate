@@ -2,6 +2,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
 
@@ -1000,6 +1001,53 @@ SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
     }
     SW_EXPECT_EQUAL( kRound * kItemCount, s_touchCount.load() );
     SW_EXPECT_TRUE_MSG( staleRounds == 0, ( sw::string( "waitStage 직후 활성 태스크가 남아 있던 회차: " ) + sw::to_string( staleRounds ) + " / " + sw::to_string( kRound ) ).c_str() );
+
+    taskMgr.clear();
+}
+
+/**
+ * @brief [TaskTest] 스테이지 디스패치는 정상 상태에서 힙을 만지지 않는다
+ * @details 상용 잡 시스템의 기준이다 — 프레임마다 도는 병렬 그룹이 힙을 두드리면 그 수가 곧 프레임당 할당 수다.
+ *          스테이지 노드는 풀·침입형 참조, 그룹 콜러블은 락프리 풀, 이름은 fixed_string 이라 워밍업 뒤에는 0 이어야 한다.
+ *          `MemoryProfiler` 의 할당 횟수 누계로 잰다(sw 할당자만 센다 — 이 경로의 할당은 전부 그것이다).
+ */
+SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
+{
+    sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
+    SW_ASSERT_NOT_NULL( pMemory );
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+
+    static sw::atomic<uint32> s_dispatchTouch{ 0 };
+    s_dispatchTouch = 0;
+    struct DispatchContext
+    {
+        static void touchRange( uint32 start, uint32 end ) { s_dispatchTouch.fetch_add( end - start, std::memory_order_relaxed ); }
+    };
+    auto dispatchOnce = [&]()
+    {
+        sw::TaskStageHandle stage  = taskMgr.createAnonymousStage( "NoAllocStage" );
+        sw::TaskHandle      handle = taskMgr.emplaceParallelBlock( 0, 64, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, DispatchContext::touchRange ) );
+        stage.addTask( handle );
+        handle.submit();
+        taskMgr.waitStage( stage );
+    };
+
+    // 워밍업 — 풀 슬랩·스테이지 노드·목록 용량은 처음 한 번만 잡는다.
+    for ( uint32 round = 0; round < 4; ++round )
+        dispatchOnce();
+
+    const bool bWasTracking = pMemory->isTrackingEnabled();
+    pMemory->setTrackingEnabled( true );
+    const uint64     before = pMemory->getTotalAllocationCount();
+    constexpr uint32 kRound = 50;
+    for ( uint32 round = 0; round < kRound; ++round )
+        dispatchOnce();
+    const uint64 allocations = pMemory->getTotalAllocationCount() - before;
+    pMemory->setTrackingEnabled( bWasTracking );
+
+    SW_EXPECT_EQUAL( uint32( 64 * ( kRound + 4 ) ), s_dispatchTouch.load() );
+    SW_EXPECT_TRUE_MSG( allocations == 0, ( sw::string( "스테이지 디스패치 " ) + sw::to_string( kRound ) + " 회에 힙 할당 " + sw::to_string( allocations ) + " 회 — 프레임마다 그만큼 churn 이다" ).c_str() );
 
     taskMgr.clear();
 }

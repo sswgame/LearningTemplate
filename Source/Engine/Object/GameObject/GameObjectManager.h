@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/InlineAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -364,6 +365,13 @@ namespace sw
         /** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
         void tickComponents( float32 deltaTime );
         /**
+         * @brief 서브트리 DFS 스택. 인라인 64 칸이라 보통 깊이의 계층은 힙을 만지지 않는다.
+         * @details 병렬 플러시는 잡마다 스택을 하나씩 든다 — 힙 벡터였을 때는 큐브 8000 프레임마다 청크 수(28)만큼
+         *          할당이 생겼다(프레임당 할당 상위 1위). 그보다 깊은 계층만 힙으로 넘어간다.
+         */
+        using TransformFlushStack = vector<pair<SceneComponent*, bool>, InlineAllocator<pair<SceneComponent*, bool>, 64>>;
+
+        /**
          * @brief 한 루트 아래의 월드 트랜스폼을 갱신합니다 (명시적 스택 DFS).
          * @details 스택 버퍼는 **부르는 쪽이 준다** — 루트마다 벡터를 만들면 프레임당 오브젝트 수만큼의
          *          힙 할당이고, 멤버 하나를 나눠 쓰면 병렬로 돌 수 없다. 직렬 경로는 멤버
@@ -371,7 +379,7 @@ namespace sw
          *          서로 다른 루트의 서브트리는 겹치지 않으므로 잡 사이에 공유 쓰기가 없다 — 단 하나,
          *          메시 컴포넌트가 렌더 더티를 찍는 `PrimitiveRegistry::markDirty` 는 락 없는 원자 플래그다.
          */
-        void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, vector<pair<SceneComponent*, bool>>& stack );
+        void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, TransformFlushStack& stack );
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
@@ -482,13 +490,13 @@ namespace sw
          * @brief 트랜스폼 플러시 DFS 가 재사용하는 스택 버퍼. 게임 스레드 전용.
          * @details 루트마다 새 벡터를 만들면 그것이 곧 프레임당 오브젝트 수만큼의 힙 할당이다.
          */
-        vector<pair<SceneComponent*, bool>> _listTransformFlushStack;
-        mutex                               _deferredTransformMutex;
-        vector<TransformUpdateDelegate>     _listDeferredTransformUpdate;
-        vector<TransformUpdateDelegate>     _listProcessingTransform;
-        mutex                               _deferredPostTickMutex;
-        vector<PostTickDelegate>            _listDeferredPostTickUpdate;
-        vector<PostTickDelegate>            _listProcessingPostTick;
+        TransformFlushStack             _listTransformFlushStack;
+        mutex                           _deferredTransformMutex;
+        vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
+        vector<TransformUpdateDelegate> _listProcessingTransform;
+        mutex                           _deferredPostTickMutex;
+        vector<PostTickDelegate>        _listDeferredPostTickUpdate;
+        vector<PostTickDelegate>        _listProcessingPostTick;
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;

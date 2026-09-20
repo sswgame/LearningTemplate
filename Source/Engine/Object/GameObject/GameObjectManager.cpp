@@ -702,8 +702,7 @@ namespace sw
 
                 void flushRange( uint32 start, uint32 end )
                 {
-                    vector<pair<SceneComponent*, bool>> stack;
-                    stack.reserve( 32 );
+                    TransformFlushStack stack;
                     for ( uint32 rootIndex = start; rootIndex < end; ++rootIndex )
                     {
                         if ( _ppRoot[rootIndex] != nullptr )
@@ -1316,7 +1315,7 @@ namespace sw
         _listPendingAdd.push_back( pObj );
     }
 
-    void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, vector<pair<SceneComponent*, bool>>& stack )
+    void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged, TransformFlushStack& stack )
     {
         if ( pRoot == nullptr )
             return;

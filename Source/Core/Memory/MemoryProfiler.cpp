@@ -270,6 +270,7 @@ namespace sw
         _arrStat[tagIdx]._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
         _arrStat[tagIdx]._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
         _arrStat[tagIdx]._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed );
+        _arrStat[tagIdx]._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
 
         uint64 outHash{ 0 };
 
@@ -290,6 +291,8 @@ namespace sw
                     info._stack = stack;
                 info._currentBytes += size;
                 info._currentCount++;
+                info._totalBytes += size;
+                info._totalCount++;
             }
             MemoryProfilerInternal::t_bIsInsideProfiler = false;
         }
@@ -366,7 +369,15 @@ namespace sw
         return _arrStat[tagIdx];
     }
 
-    vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks() const
+    uint64 MemoryProfiler::getTotalAllocationCount() const
+    {
+        uint64 total = 0;
+        for ( const MemoryProfileStats& stat : _arrStat )
+            total += stat._totalAllocationCount.load( std::memory_order_relaxed );
+        return total;
+    }
+
+    vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
         vector<CallStackAllocInfo> listResult;
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
@@ -375,15 +386,22 @@ namespace sw
             listResult.reserve( _mapCallStackAllocInfo.size() );
             for ( const auto& [hash, info] : _mapCallStackAllocInfo )
             {
-                if ( info._currentBytes > 0 )
+                const bool bWanted = ( order == TopCallStackOrder::LiveBytes ) ? ( info._currentBytes > 0 ) : ( info._totalCount > 0 );
+                if ( bWanted )
                     listResult.push_back( info );
             }
         }
         MemoryProfilerInternal::t_bIsInsideProfiler = false;
-
-        std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
-        { return infoA._currentBytes > infoB._currentBytes; } );
-
+        if ( order == TopCallStackOrder::LiveBytes )
+        {
+            std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
+            { return infoA._currentBytes > infoB._currentBytes; } );
+        }
+        else
+        {
+            std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
+            { return infoA._totalCount > infoB._totalCount; } );
+        }
         return listResult;
     }
 } // namespace sw

@@ -37,6 +37,12 @@ namespace sw
         atomic<uint64> _totalFreedBytes{ 0 };
         atomic<uint64> _currentAllocatedBytes{ 0 };
         atomic<uint64> _currentAllocationCount{ 0 };
+        /**
+         * @brief 추적을 켠 뒤 세어진 할당 **횟수** 누계 — 해제해도 줄지 않는다.
+         * @details "살아 있는 양"(위 셋)은 프레임 안에서 잡았다 놓은 것을 못 본다 — 그것이 churn 이고, 상용 엔진이
+         *          프레임당 할당 수로 감시하는 것이다. 두 시점의 차를 프레임 수로 나눠 읽는다(`FrameProfileSession`).
+         */
+        atomic<uint64> _totalAllocationCount{ 0 };
     };
 
     /** @brief 콜스택별 현재 할당량입니다. */
@@ -45,6 +51,15 @@ namespace sw
         CallStack _stack;
         uint64    _currentBytes{ 0 };
         uint64    _currentCount{ 0 };
+        uint64    _totalBytes{ 0 }; ///< 이 자리에서 지금까지 할당한 바이트 누계 (churn)
+        uint64    _totalCount{ 0 }; ///< 이 자리에서 지금까지 할당한 횟수 누계 (churn)
+    };
+
+    /** @brief `getTopCallStacks` 의 정렬 기준. */
+    enum class TopCallStackOrder : uint8
+    {
+        LiveBytes,  ///< 지금 살아 있는 바이트 — 누수·상주 메모리를 볼 때
+        TotalCount, ///< 할당 횟수 누계 — 프레임마다 잡았다 놓는 자리(churn)를 볼 때
     };
 
     // ------------------------------------------------------------------------------
@@ -116,9 +131,11 @@ namespace sw
 
         /** @brief 태그별 할당 통계를 반환합니다. */
         const MemoryProfileStats& getStats( MemoryTag tag ) const;
+        /** @brief 모든 태그의 할당 횟수 누계 합. 프레임당 할당 수는 두 시점의 차다. */
+        uint64 getTotalAllocationCount() const;
 
-        /** @brief 콜스택별 현재 할당량을 복사해 돌려줍니다. */
-        vector<CallStackAllocInfo> getTopCallStacks() const;
+        /** @brief 콜스택별 집계를 @p order 기준으로 내림차순 정렬해 돌려줍니다 (세부 추적이 켜져 있을 때만 채워진다). */
+        vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;
 
     private:
         atomic<bool> _bInitialized;

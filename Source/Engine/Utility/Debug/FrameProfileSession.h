@@ -39,6 +39,9 @@ namespace sw
         bool wantsQuit() const { return _bWantsQuit == SW_TRUE; }
 
     private:
+        /** @brief 측정 창의 프레임당 할당 수와(켰다면) 콜스택별 상위 자리를 로그로 남깁니다. */
+        void reportAllocations( uint64 frames );
+
         /** @brief 잴 프레임 수. 0 이면 계측하지 않습니다. */
         uint64 _frameTarget{ 0 };
         /** @brief 보고를 이미 냈으면 true — 매 프레임 다시 찍지 않습니다. */
@@ -47,5 +50,9 @@ namespace sw
         uint8 _bWantsQuit{ SW_FALSE };
         /** @brief 워밍업 구간을 이미 버렸으면 true. */
         uint8 _bWarmedUp{ SW_FALSE };
+        /** @brief 측정 구간에서 할당 추적을 켰으면 true (보고 뒤 세부 추적을 끈다). */
+        uint8 _bAllocationTrackingStarted{ SW_FALSE };
+        /** @brief 측정 구간이 시작될 때의 할당 횟수 누계 — 프레임당 할당 수는 보고 시점과의 차다. */
+        uint64 _allocationCountAtStart{ 0 };
     };
 } // namespace sw

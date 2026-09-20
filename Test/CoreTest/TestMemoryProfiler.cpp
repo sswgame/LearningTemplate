@@ -78,3 +78,35 @@ SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
 
     profiler.shutdown();
 }
+
+/**
+ * @brief [MemoryProfilerTest] 할당 횟수 누계는 해제해도 줄지 않는다 — churn 을 세는 근거
+ * @details 살아 있는 양은 잡았다 놓은 것을 못 본다. 같은 자리에서 세 번 잡았다 놓으면 누계는 3, 살아 있는 것은 0 이고,
+ *          횟수 순 표에는 그 자리가 남지만 살아 있는 바이트 순 표에는 없다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+    profiler.setDetailedTrackingEnabled( true );
+
+    const uint64 totalBefore = profiler.getTotalAllocationCount();
+    void*        pDummy      = reinterpret_cast<void*>( 0x2468'ACE0 );
+    for ( uint32 round = 0; round < 3; ++round )
+    {
+        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::Core );
+        profiler.recordFree( pDummy, 256, MemoryTag::Core, hash );
+    }
+
+    SW_EXPECT_EQUAL( uint64( 3 ), profiler.getTotalAllocationCount() - totalBefore );
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::Core )._currentAllocationCount.load() );
+
+    const vector<CallStackAllocInfo> listByChurn = profiler.getTopCallStacks( TopCallStackOrder::TotalCount );
+    SW_ASSERT_FALSE( listByChurn.empty() );
+    SW_EXPECT_EQUAL( uint64( 3 ), listByChurn.front()._totalCount );
+    SW_EXPECT_EQUAL( uint64( 0 ), listByChurn.front()._currentCount );
+    SW_EXPECT_TRUE( profiler.getTopCallStacks( TopCallStackOrder::LiveBytes ).empty() );
+
+    profiler.shutdown();
+}

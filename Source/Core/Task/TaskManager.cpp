@@ -3,11 +3,13 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/fixed_string.h"
 
 namespace sw
 {
@@ -81,27 +83,74 @@ namespace sw
         ParallelTaskDelegate,
         ParallelBlockDelegate>;
 
+    struct SharedTaskCallable;
+    /** @brief 병렬 그룹 하나가 콜러블 하나를 쓴다 — 동시에 살아 있는 그룹 수의 상한이지 청크 수가 아니다. */
+    constexpr uint32 kSharedCallablePoolCapacity = 512;
+    using SharedTaskCallablePool                 = LockFreeObjectPool<SharedTaskCallable, kSharedCallablePoolCapacity>;
+
+    /**
+     * @brief 병렬 그룹의 서브태스크들이 나눠 쓰는 콜러블. 풀에서 오고, 마지막 서브태스크가 놓으면 풀로 돌아간다.
+     * @details 예전에는 그룹마다 `sw_new` 였다 — 렌더 그래프 웨이브·트랜스폼 플러시·씬 수집이 프레임마다 그룹을 만드니
+     *          그 수만큼 힙을 두드렸다. 풀이 비면(동시에 512 그룹) 힙으로 물러나고, 그 경우만 `_pPool` 이 null 이다.
+     */
     struct SharedTaskCallable
     {
-        TaskCallable  _callable;
-        atomic<int32> _refCount{ 0 };
+        TaskCallable            _callable;
+        atomic<int32>           _refCount{ 0 };
+        SharedTaskCallablePool* _pPool{ nullptr }; ///< 돌아갈 풀. 힙에서 왔으면 null.
 
-        static SharedTaskCallable* create( TaskCallable callable, int32 refCount )
+        static SharedTaskCallable* create( SharedTaskCallablePool* pPool, TaskCallable callable, int32 refCount )
         {
-            SharedTaskCallable* pShared = sw_new SharedTaskCallable();
-            pShared->_callable          = std::move( callable );
+            SharedTaskCallable* pShared = ( pPool != nullptr ) ? pPool->acquire() : nullptr;
+            if ( pShared == nullptr )
+                pShared = sw_new SharedTaskCallable();
+            else
+                pShared->_pPool = pPool;
+            pShared->_callable = std::move( callable );
             pShared->_refCount.store( refCount, std::memory_order_relaxed );
             return pShared;
         }
 
         void release()
         {
-            if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
-                sw_delete( this );
+            if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
+                return;
+            SharedTaskCallablePool* pPool = _pPool;
+            if ( pPool != nullptr )
+            {
+                SharedTaskCallable* pSelf = this;
+                pPool->release( pSelf ); // ~SharedTaskCallable 뒤 반납
+                return;
+            }
+            sw_delete( this );
         }
     };
 
     struct TaskNode;
+
+    class TaskNodePool;
+
+    /**
+     * @brief 스테이지 — 태스크 묶음의 완료를 기다리는 단위. 매니저의 풀에서 오고 침입형 참조 계수로 산다.
+     * @details 참조는 둘이 쥔다: 핸들 사본과, **남은 태스크가 있는 동안의 스테이지 자신**(0→1 에서 잡고 1→0 에서
+     *          놓는다). 태스크 노드는 참조를 쥐지 않는다 — 노드가 스테이지를 쥐고 스테이지가 노드 목록을 쥐면
+     *          고리가 되어 어느 쪽도 못 돌아간다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고,
+     *          그 동안은 스테이지가 스스로를 쥐고 있으므로 안전하다.
+     */
+    struct StageNode
+    {
+        fixed_string<constant::kMaxBuffer64> _name; ///< 이름 있는 스테이지의 조회 키. 힙을 만지지 않는다.
+        vector<TaskNode*>                    _listTask;
+        atomic<uint32>                       _remainingTasks{ 0 };
+        mutex                                _mutex;
+        std::condition_variable_any          _cv;
+        atomic<int32>                        _refCount{ 0 };
+        TaskNodePool*                        _pPool{ nullptr };
+
+        void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
+        /** @brief 마지막 참조가 놓이면 남은 태스크 참조를 놓고 풀로 돌아갑니다. */
+        void release();
+    };
 
     /**
      * @struct InlineSuccessorList
@@ -207,7 +256,7 @@ namespace sw
         InlineSuccessorList _successors;
         TaskCallable        _callable;
         SharedTaskCallable* _pSharedCallable{ nullptr };
-        weak_ptr<StageNode> _parentStage;
+        StageNode*          _parentStage{ nullptr }; ///< 남은 태스크가 있는 동안만 유효 — 스테이지가 그 동안 스스로를 쥔다
 
         uint32        _rangeStart{ 0 };
         uint32        _rangeEnd{ 0 };
@@ -306,8 +355,8 @@ namespace sw
             if ( pNode == nullptr )
                 return;
             pNode->_successors.clearAndRelease();
-            pNode->_callable = std::monostate{};
-            pNode->_parentStage.reset();
+            pNode->_callable    = std::monostate{};
+            pNode->_parentStage = nullptr;
 #if !defined( SW_SHIPPING )
             pNode->_arrName[0] = 0;
 #endif
@@ -325,11 +374,80 @@ namespace sw
             }
         }
 
+        /** @brief 스테이지 노드를 꺼냅니다 — 풀에 남은 것이 없을 때만 새로 만든다(용량은 그 뒤로 남는다). */
+        StageNode* allocateStage()
+        {
+            StageNode* pStage{ nullptr };
+            {
+                std::scoped_lock<mutex> lock{ _stageMutex };
+                if ( _listStageFree.empty() == false )
+                {
+                    pStage = _listStageFree.back();
+                    _listStageFree.pop_back();
+                }
+            }
+            if ( pStage == nullptr )
+            {
+                pStage = sw_new StageNode();
+                pStage->_listTask.reserve( 16 );
+                std::scoped_lock<mutex> lock{ _stageMutex };
+                _listStageAll.push_back( pStage );
+            }
+            pStage->_name.clear();
+            pStage->_listTask.clear();
+            pStage->_remainingTasks.store( 0, std::memory_order_relaxed );
+            pStage->_refCount.store( 1, std::memory_order_relaxed );
+            pStage->_pPool = this;
+            return pStage;
+        }
+
+        /** @brief 마지막 참조가 놓인 스테이지를 되돌립니다. 기다리지 않고 버린 스테이지의 태스크 참조도 여기서 놓는다. */
+        void deallocateStage( StageNode* pStage )
+        {
+            if ( pStage == nullptr )
+                return;
+            for ( TaskNode* pTask : pStage->_listTask )
+            {
+                if ( pTask != nullptr )
+                    pTask->release();
+            }
+            pStage->_listTask.clear();
+            pStage->_name.clear();
+            std::scoped_lock<mutex> lock{ _stageMutex };
+            _listStageFree.push_back( pStage );
+        }
+
+        /** @brief 강제 정리(`clear`) — 살아 있는 스테이지를 전부 되돌립니다. 아무것도 돌고 있지 않을 때만. */
+        void resetAllStages()
+        {
+            vector<StageNode*> listLive;
+            {
+                std::scoped_lock<mutex> lock{ _stageMutex };
+                for ( StageNode* pStage : _listStageAll )
+                {
+                    if ( pStage != nullptr && pStage->_refCount.load( std::memory_order_relaxed ) > 0 )
+                        listLive.push_back( pStage );
+                }
+            }
+            for ( StageNode* pStage : listLive )
+            {
+                pStage->_refCount.store( 0, std::memory_order_relaxed );
+                pStage->_remainingTasks.store( 0, std::memory_order_relaxed );
+                deallocateStage( pStage );
+            }
+        }
+
+        SharedTaskCallablePool& getSharedCallablePool() { return _sharedCallablePool; }
+
     private:
         ConcurrentQueue<TaskNode*, 4096> _freeQueue;
         vector<TaskNode*>                _listOverflowFree;
         vector<TaskNode*>                _listSlab;
         mutex                            _slabMutex;
+        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지 — 다음 createAnonymousStage 가 먼저 집는다
+        vector<StageNode*>               _listStageAll;  ///< 만든 스테이지 전부 (소멸·강제 정리용)
+        mutex                            _stageMutex;
+        SharedTaskCallablePool           _sharedCallablePool;
     };
 
     void InlineSuccessorList::clearAndRelease()
@@ -366,19 +484,55 @@ namespace sw
         }
     }
 
-    struct StageNode
+    void StageNode::release()
     {
-        StageNode()
-        {
-            _listTask.reserve( 16 );
-        }
+        if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
+            return;
+        if ( _pPool != nullptr )
+            _pPool->deallocateStage( this );
+    }
 
-        string                      _name;
-        vector<TaskNode*>           _listTask;
-        atomic<uint32>              _remainingTasks{ 0 };
-        mutex                       _mutex;
-        std::condition_variable_any _cv;
-    };
+    TaskStageHandle::TaskStageHandle( const TaskStageHandle& other )
+        : _pNode{ other._pNode }
+    {
+        if ( _pNode != nullptr )
+            _pNode->retain();
+    }
+
+    TaskStageHandle::TaskStageHandle( TaskStageHandle&& other ) noexcept
+        : _pNode{ other._pNode }
+    {
+        other._pNode = nullptr;
+    }
+
+    TaskStageHandle& TaskStageHandle::operator=( const TaskStageHandle& other )
+    {
+        if ( this == &other )
+            return *this;
+        if ( other._pNode != nullptr )
+            other._pNode->retain();
+        if ( _pNode != nullptr )
+            _pNode->release();
+        _pNode = other._pNode;
+        return *this;
+    }
+
+    TaskStageHandle& TaskStageHandle::operator=( TaskStageHandle&& other ) noexcept
+    {
+        if ( this == &other )
+            return *this;
+        if ( _pNode != nullptr )
+            _pNode->release();
+        _pNode       = other._pNode;
+        other._pNode = nullptr;
+        return *this;
+    }
+
+    TaskStageHandle::~TaskStageHandle()
+    {
+        if ( _pNode != nullptr )
+            _pNode->release();
+    }
 
     TaskHandle::TaskHandle( TaskNode* pNode )
         : _pNode{ pNode }
@@ -497,13 +651,15 @@ namespace sw
     TaskStageHandle& TaskStageHandle::addTask( const TaskHandle& task )
     {
         TaskNode* pTaskNode = task.getNode();
-        if ( _node != nullptr && pTaskNode != nullptr )
+        if ( _pNode != nullptr && pTaskNode != nullptr )
         {
-            std::scoped_lock<mutex> lock{ _node->_mutex };
+            std::scoped_lock<mutex> lock{ _pNode->_mutex };
             pTaskNode->retain();
-            _node->_listTask.push_back( pTaskNode );
-            pTaskNode->_parentStage = _node;
-            _node->_remainingTasks.fetch_add( 1, std::memory_order_relaxed );
+            _pNode->_listTask.push_back( pTaskNode );
+            pTaskNode->_parentStage = _pNode;
+            // 남은 태스크가 생기는 순간 스테이지가 스스로를 쥔다 — 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.
+            if ( _pNode->_remainingTasks.fetch_add( 1, std::memory_order_relaxed ) == 0 )
+                _pNode->retain();
         }
         return *this;
     }
@@ -747,7 +903,7 @@ namespace sw
         if ( parentTask.isValid() == false )
             return parentTask;
 
-        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
+        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( &_nodePool->getSharedCallablePool(), TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
         for ( uint32 start = 0; start < count; start += chunkSize )
         {
             uint32    end      = MathUtil::min( start + chunkSize, count );
@@ -792,7 +948,7 @@ namespace sw
         if ( parentTask.isValid() == false )
             return parentTask;
 
-        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
+        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( &_nodePool->getSharedCallablePool(), TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
         for ( uint32 offset = 0; offset < count; offset += chunkSize )
         {
             uint32    chunkStart = start + offset;
@@ -820,25 +976,22 @@ namespace sw
 
     TaskStageHandle TaskManager::createAnonymousStage( string_view stageName )
     {
-        shared_ptr<StageNode> stage = sw::make_shared<StageNode>();
-        stage->_name                = stageName;
-        return TaskStageHandle{ stage };
+        // 풀에서 온다 — 프레임마다 웨이브 수만큼 만드는 자리라 힙을 만지면 그 수만큼 churn 이다.
+        StageNode* pStage = _nodePool->allocateStage();
+        pStage->_name     = stageName;
+        return TaskStageHandle{ pStage };
     }
 
     TaskStageHandle TaskManager::getStage( string_view stageName )
     {
         std::scoped_lock<mutex> lock{ _stageMutex };
-        for ( auto it = _listAllStage.begin(); it != _listAllStage.end(); )
+        for ( StageNode* pStage : _listAllStage )
         {
-            shared_ptr<StageNode> pStage = it->lock();
-            if ( pStage != nullptr )
+            if ( pStage != nullptr && string_view{ pStage->_name.c_str(), pStage->_name.size() } == stageName )
             {
-                if ( pStage->_name == stageName )
-                    return TaskStageHandle{ pStage };
-                ++it;
+                pStage->retain();
+                return TaskStageHandle{ pStage };
             }
-            else
-                it = _listAllStage.erase( it );
         }
         return TaskStageHandle{};
     }
@@ -846,33 +999,29 @@ namespace sw
     TaskStageHandle TaskManager::getOrCreateStage( string_view stageName )
     {
         std::scoped_lock<mutex> lock{ _stageMutex };
-        for ( auto it = _listAllStage.begin(); it != _listAllStage.end(); )
+        for ( StageNode* pStage : _listAllStage )
         {
-            shared_ptr<StageNode> pStage = it->lock();
-            if ( pStage != nullptr )
+            if ( pStage != nullptr && string_view{ pStage->_name.c_str(), pStage->_name.size() } == stageName )
             {
-                if ( pStage->_name == stageName )
-                    return TaskStageHandle{ pStage };
-                ++it;
+                pStage->retain();
+                return TaskStageHandle{ pStage };
             }
-            else
-                it = _listAllStage.erase( it );
         }
 
-        shared_ptr<StageNode> stage = sw::make_shared<StageNode>();
-        stage->_name                = stageName;
-        _listAllStage.push_back( stage );
-
-        return TaskStageHandle{ stage };
+        StageNode* pStage = _nodePool->allocateStage();
+        pStage->_name     = stageName;
+        pStage->retain(); // 목록이 하나 쥔다 — clear 가 놓는다
+        _listAllStage.push_back( pStage );
+        return TaskStageHandle{ pStage };
     }
 
     void TaskManager::waitStage( const TaskStageHandle& stage )
     {
-        if ( stage._node == nullptr )
+        if ( stage._pNode == nullptr )
             return;
 
         uint32 spinCount = 0;
-        while ( stage._node->_remainingTasks.load( std::memory_order_acquire ) > 0 )
+        while ( stage._pNode->_remainingTasks.load( std::memory_order_acquire ) > 0 )
         {
             if ( isMainThread() )
                 dispatchMainThreadTasks();
@@ -891,28 +1040,28 @@ namespace sw
             }
 
             std::unique_lock<mutex> lock{ _waitAllMutex };
-            if ( stage._node->_remainingTasks.load( std::memory_order_acquire ) > 0 )
+            if ( stage._pNode->_remainingTasks.load( std::memory_order_acquire ) > 0 )
                 _cvWaitAll.wait( lock );
         }
 
         {
-            std::scoped_lock<mutex> doneLock{ stage._node->_mutex };
-            for ( TaskNode* pTask : stage._node->_listTask )
+            std::scoped_lock<mutex> doneLock{ stage._pNode->_mutex };
+            for ( TaskNode* pTask : stage._pNode->_listTask )
             {
                 if ( pTask == nullptr )
                     continue;
                 pTask->release();
             }
-            stage._node->_listTask.clear();
+            stage._pNode->_listTask.clear();
         }
     }
 
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
     {
-        if ( stage._node == nullptr )
+        if ( stage._pNode == nullptr )
             return true;
 
-        return stage._node->_remainingTasks.load( std::memory_order_relaxed ) == 0;
+        return stage._pNode->_remainingTasks.load( std::memory_order_relaxed ) == 0;
     }
 
     void TaskManager::submit( const TaskHandle& handle )
@@ -972,6 +1121,11 @@ namespace sw
     {
         {
             std::scoped_lock<mutex> lock{ _stageMutex };
+            for ( StageNode* pStage : _listAllStage )
+            {
+                if ( pStage != nullptr )
+                    pStage->release();
+            }
             _listAllStage.clear();
         }
         for ( auto& wq : _listWorkerQueue )
@@ -1015,6 +1169,8 @@ namespace sw
             }
         }
         _activeTaskCount.store( 0, std::memory_order_release );
+        // 큐를 다 비웠으니 아무 태스크도 돌지 않는다 — 살아 있는 스테이지를 전부 되돌린다.
+        _nodePool->resetAllStages();
         {
             std::scoped_lock<mutex> lock{ _waitAllMutex };
             _cvWaitAll.notify_all();
@@ -1470,7 +1626,8 @@ namespace sw
 
         BLOCK( "Update Stage" )
         {
-            shared_ptr<StageNode> pStage = pNode->_parentStage.lock();
+            StageNode* pStage   = pNode->_parentStage;
+            pNode->_parentStage = nullptr;
             if ( pStage != nullptr )
             {
                 uint32 prev = pStage->_remainingTasks.fetch_sub( 1, std::memory_order_release );
@@ -1480,8 +1637,12 @@ namespace sw
                         std::scoped_lock<mutex> lock{ pStage->_mutex };
                         pStage->_cv.notify_all();
                     }
-                    std::scoped_lock<mutex> waitLock{ _waitAllMutex };
-                    _cvWaitAll.notify_all();
+                    {
+                        std::scoped_lock<mutex> waitLock{ _waitAllMutex };
+                        _cvWaitAll.notify_all();
+                    }
+                    // 마지막 태스크가 끝났다 — addTask 에서 잡은 자기 참조를 놓는다(핸들이 없으면 여기서 풀로).
+                    pStage->release();
                 }
             }
         }

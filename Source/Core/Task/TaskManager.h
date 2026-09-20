@@ -266,8 +266,8 @@ namespace sw
         mutable mutex                    _waitAllMutex;    ///< waitAll 대기용 뮤텍스
         std::condition_variable_any      _cvWaitAll;       ///< 모든 작업 완료 알림용 조건 변수
 
-        vector<weak_ptr<StageNode>> _listAllStage;     ///< 등록된 전체 스테이지 목록 (약한 참조)
-        mutable mutex               _stageMutex;       ///< 스테이지 목록 동기화 뮤텍스
+        vector<StageNode*> _listAllStage;              ///< 이름 있는 스테이지 목록 — 참조를 하나씩 쥔다 (clear 가 놓는다)
+        mutable mutex      _stageMutex;                ///< 스테이지 목록 동기화 뮤텍스
         alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 현재 시스템에서 실행/대기 중인 활성 태스크 총 개수
         unique_ptr<TaskNodePool> _nodePool;            ///< 태스크 노드 슬랩 풀 매니저
     };

@@ -437,22 +437,26 @@ namespace sw
     {
         friend class TaskManager;
 
-        /** @brief 빈 스테이지 핸들. */
         constexpr TaskStageHandle() = default;
-
-        explicit TaskStageHandle( shared_ptr<StageNode> node )
-            : _node{ std::move( node ) } {}
-
-        /** @brief 스테이지 노드가 유효한지 여부를 반환합니다. */
-        bool isValid() const { return _node != nullptr; }
-
         /**
-         * @brief 특정 태스크를 이 스테이지에 추가합니다.
-         * @param task 스테이지에 소속시킬 태스크 핸들
+         * @brief 노드의 참조 하나를 **넘겨받아** 핸들을 만듭니다 (매니저 전용).
+         * @details 예전에는 `shared_ptr<StageNode>` 였다 — 스테이지마다 제어 블록 하나가 힙에 잡혔고, 렌더 그래프는
+         *          프레임마다 웨이브 수만큼 스테이지를 만든다. 지금은 `TaskHandle` 처럼 침입형 참조 계수이고
+         *          노드는 매니저의 풀에서 온다 — 프레임 정상 상태에서 스테이지 디스패치는 힙을 만지지 않는다.
          */
+        explicit TaskStageHandle( StageNode* pNode ) noexcept
+            : _pNode{ pNode } {}
+        TaskStageHandle( const TaskStageHandle& other );
+        TaskStageHandle( TaskStageHandle&& other ) noexcept;
+        TaskStageHandle& operator=( const TaskStageHandle& other );
+        TaskStageHandle& operator=( TaskStageHandle&& other ) noexcept;
+        ~TaskStageHandle();
+
+        bool isValid() const { return _pNode != nullptr; }
+
         TaskStageHandle& addTask( const TaskHandle& task );
 
     private:
-        shared_ptr<StageNode> _node;
+        StageNode* _pNode{ nullptr };
     };
 } // namespace sw

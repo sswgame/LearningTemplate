@@ -318,6 +318,23 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
+### 1-0f. 프레임당 힙 할당 143 → 0 에 가깝게 — Engine 쪽 churn (2026-09-21 계측)
+
+Core 는 0 이 됐다(3절 2026-09-21). 남은 것은 전부 렌더 쪽이고 `-gv_profileAllocSites=40` 이 자리를 짚어 준다
+(Debug App, 큐브 100 기준 회/프레임):
+
+| 회/프레임 | 자리 | 고치는 방향 |
+|---|---|---|
+| ~30 | `GpuShaderPermutation` 의 `string`·`vector<string>` 이 스냅샷 대입(`GpuSceneSnapshot::operator=`)마다 복사 | 퍼뮤테이션을 불변 공유 객체(`shared_ptr<const>`)로 — 복사는 참조 계수 |
+| ~20 | `RenderGraph::executeParallel` 웨이브마다 `listPassEntry`·패스 엔트리(314·349) | 그래프 멤버로 재사용, 패스 슬롯별 |
+| 12 | `recordRenderPassTask` 안 백엔드 커맨드 리스트 래퍼(`createCommandList` 마다 `unique_ptr` + 백엔드 할당) | 패스 슬롯별 커맨드 리스트를 프레임 링에서 재사용 |
+| ~25 | `RHIReleaseQueue` 엔트리·192 B 람다 캡처(`GpuDeferredEntry`, `tickCompleted` 의 `listReady`) | 캡처를 핸들·포인터로 줄여 SBO 안에, 목록은 멤버 재사용 |
+| ~14 | `FrameResourceRegistry` 맵이 패스 컨텍스트마다 새로 자란다 | 패스 컨텍스트를 슬롯별로 유지해 용량을 남긴다 |
+| 8 | `PassConstantValues` 벡터 | 같은 방식 |
+| 나머지 | `GpuSceneSnapshot` 대입, `AssetStreamingQueue::update`, `collectSceneLights`, `drawGpuBatches` 등 1~3 회 | 멤버 재사용 |
+
+끝나면 `-gv_profileFrames` 보고의 `alloc/frame` 을 회귀 게이트로 쓸 수 있다(hostgpu 테스트에서 상한 단언).
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -497,6 +514,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (Core 를 상용급 기준으로 훑었다 — 프레임당 할당 수를 재는 계측을 붙이고, 잡 디스패치를 힙 할당 0 으로)
+
+"Core 도 상용 엔진 대비 향후 필요한 성능·구조 개선을 판단해 크게 바꿔도 좋다" — 훑은 결과와 한 일.
+
+**Core 가 이미 상용급 모양인 것:** 밀집 해시맵(`unordered_map`, 노드 대신 인덱스 체인·이종 조회), SBO 벡터
+(`InlineAllocator`), 샤드 락 문자열 풀(`hashed_string`), SBO 델리게이트(24 B), 비동기 로거(장치별 락),
+락프리 큐·덱·오브젝트 풀, 프레임 아레나·선형·풀 할당자, 워크스틸링 잡 시스템(이번 주에 에포크 스핀·레인·
+0 할당까지). **비어 있는 것과 결정:** ① 전역 소형 블록 할당자 — mimalloc 은 **쓰지 않기로 했다**(사용자 결정);
+자체 구현은 프레임당 할당 수가 먼저 0 에 가까워진 뒤 로드 시간으로 판단한다. ② SIMD 수학 — **지금은 적용하지
+않는다**(플랫폼별로 갈린다, 사용자 결정). 벤치의 트랜스폼은 루트뿐이라 행렬 곱이 프레임 경로에 없기도 하다.
+③ 비동기 파일 IO(오버랩드/io_uring) — 스트리밍이 워커 블로킹 읽기로 충분한 동안 미룬다. ④ FNV-1a 문자열 해시는
+쿠킹 산출물·파이썬 쿠커와 같은 값이라 바꾸지 않는다.
+
+**1. 프레임당 할당 수를 잰다 — 시간 표에 안 보이던 비용.** `MemoryProfiler` 에 할당 **횟수 누계**
+(`_totalAllocationCount`, 해제해도 줄지 않는다)와 콜스택별 churn(`_totalCount`·`_totalBytes`,
+`getTopCallStacks( TopCallStackOrder::TotalCount )`)을 더했고, `-gv_profileFrames` 보고가 측정 창의
+**alloc/frame** 을 찍는다. `-gv_profileAllocSites=N` 이면 상위 N 곳을 심볼화한 콜스택으로 보인다(할당마다
+콜스택을 잡으니 시간은 같이 재지 말 것). 프로파일러는 Debug 에만 있으므로 **Debug App 으로 센다** — 횟수는
+최적화와 무관하다. `MemoryProfilerTest.TotalAllocationCountSurvivesFrees`.
+
+**잰 것 (Debug · 120 프레임):** 큐브 100 에 **155 회/프레임**(88 곳), 8000 에 **190 회/프레임**. 상용 엔진의
+정상 상태 프레임은 0 에 가깝다. 상위는 `GpuShaderPermutation` 의 문자열 복사(스냅샷 대입, ~30), 렌더 그래프
+웨이브의 스테이지·패스 목록(~20), 패스마다 커맨드 리스트 래퍼(12), `FrameResourceRegistry` 맵 재성장(~14),
+`RHIReleaseQueue` 엔트리·192 B 람다(~25), `PassConstantValues`(8), 그리고 8000 에서는 트랜스폼 플러시 잡의
+청크별 스택(28).
+
+**2. Core 쪽을 0 으로.** 스테이지 노드는 `shared_ptr`(스테이지마다 제어 블록 하나) 에서 **침입형 참조 계수 +
+매니저 풀**로, 이름은 `string` 에서 `fixed_string`, 그룹 콜러블(`SharedTaskCallable`)은 `sw_new` 에서
+락프리 풀(512, 넘치면 힙)로. 참조 규칙: 핸들 사본 + **남은 태스크가 있는 동안의 스테이지 자신**(0→1 잡고 1→0
+놓는다) — 노드가 스테이지를 쥐고 스테이지가 노드 목록을 쥐면 고리가 된다. 기다리지 않고 버린 스테이지의
+태스크 참조는 마지막 핸들이 놓을 때 같이 놓는다(예전엔 `clear` 까지 샜다). 트랜스폼 플러시 잡의 스택은 SBO 64 칸.
+`TaskTest.StageDispatchDoesNotAllocate`(스테이지 + 병렬 블록 50 회에 sw 할당 0, 콜러블을 힙으로 되돌리는 변이에 실패).
+
+**결과:** 큐브 100 **155 → 143**, 8000 **190 → 143** 회/프레임. 남은 143 은 전부 Engine 쪽이다 — 1절 1-0f.
 
 ### 2026-09-21 (리눅스 CI 가 씬 쿠킹에서 죽었다 — 쿠킹은 App 뒤로, App 경로는 CMake 가 넘긴다)
 
