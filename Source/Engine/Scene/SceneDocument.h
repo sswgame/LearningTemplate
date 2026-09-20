@@ -15,13 +15,20 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct SceneDocument
     {
-        /** @brief 씬 문서 내 단일 엔티티 (프리팹 참조 또는 임베디드 GameObject XML) */
+        /** @brief 씬 문서 내 단일 엔티티 (프리팹 참조 또는 임베디드 GameObject 상태) */
         struct EntityNode
         {
             string _name;
             string _prefab;
             string _prefabGuid;
             string _embeddedXml;
+            /**
+             * @brief 쿠킹된 리플렉션 바이너리 상태. **비어 있지 않으면 XML 대신 이것을 쓴다.**
+             *
+             * XML 은 사람이 고치는 정본이고 이것은 그것을 구운 것이다. 둘 다 실리는 일은 없다 —
+             * 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고, 실패하면 XML 을 그대로 남긴다.
+             */
+            vector<uint8> _embeddedStateBytes;
         };
 
         string             _name;

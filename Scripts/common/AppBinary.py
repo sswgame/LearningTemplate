@@ -64,8 +64,35 @@ def runShaderBake(
     `bCapture` 가 False 면 출력이 그대로 콘솔로 흐른다(쿠킹처럼 오래 걸리는 자리에서 진행이 보인다).
     True 면 붙잡아 돌려준다 — 커밋 훅이 그 안에서 컴파일 실패 줄을 찾아야 하기 때문이다.
     """
+    return runHeadlessTask(appExe, ["--bake-shaders"], cwd=cwd, bCapture=bCapture)
+
+
+def runSceneCook(
+    appExe: Path,
+    cookedDir: Path,
+    *,
+    cwd: Path | None = None,
+    bCapture: bool = False,
+) -> subprocess.CompletedProcess:
+    """
+    `App.exe --cook-scenes --cooked-dir=<dir>` 를 돌립니다.
+
+    씬 쿠킹이 엔진 안에 있는 이유는 **리플렉션** 하나다 — 엔티티 상태를 바이너리로 구우려면
+    `TypeInfo` 와 프로퍼티 표가 필요하고, 파이썬에는 그것이 없다. 셰이더 베이크와 같은 자리다.
+    """
+    return runHeadlessTask(appExe, ["--cook-scenes", f"--cooked-dir={cookedDir}"], cwd=cwd, bCapture=bCapture)
+
+
+def runHeadlessTask(
+    appExe: Path,
+    arguments: list[str],
+    *,
+    cwd: Path | None = None,
+    bCapture: bool = False,
+) -> subprocess.CompletedProcess:
+    """App.exe 를 헤드리스 작업 인자로 돌립니다 (베이크·쿠킹이 같은 모양이라 한 자리에 둡니다)."""
     return subprocess.run(
-        [str(appExe), "--bake-shaders"],
+        [str(appExe), *arguments],
         cwd=str(cwd) if cwd else None,
         capture_output=bCapture,
         text=bCapture,

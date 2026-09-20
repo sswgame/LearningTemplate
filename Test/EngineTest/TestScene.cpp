@@ -1,17 +1,21 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/TagID.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 
 #include "TestFramework/TestFramework.h"
@@ -19,6 +23,74 @@
 // ------------------------------------------------------------------------------
 // 1) SceneTest — 활성 씬·비동기 로드
 // ------------------------------------------------------------------------------
+/**
+ * @brief [SceneTest] 쿠킹된 바이너리 엔티티 상태가 파일을 건너 살아남고, 로더가 그것을 쓰는지 검증
+ *
+ * @details 쿠킹된 씬은 오래도록 엔티티마다 `<GameObject ...>` **XML 문자열**을 담고 있었다 —
+ *          바깥 파싱만 줄이고 정작 비싼 생성 단계는 하나도 못 줄였다(로드의 75%).
+ *          이제 `SceneCooker` 가 그 XML 을 리플렉션 바이너리로 굽고 XML 을 비운다.
+ *
+ *          **`_embeddedXml` 이 비어 있다는 것이 이 테스트의 핵심이다** — 마지막에 컴포넌트가
+ *          되살아났다면 그것은 바이너리 경로로만 올 수 있다.
+ */
+
+SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
+{
+    const sw::TagID  kTagCooked    = sw::TagID::request( "Cook.Marked" );
+    const sw::string tempScenePath = test::makeTempPath( "temp_cooked_scene.bin" );
+
+    // 1) 엔티티 하나 분량의 XML 상태를 만든다.
+    sw::string sourceXml;
+    {
+        sw::GameObjectManager scratch;
+        sw::GameObject*       pSource = scratch.createGameObject( sw::hashed_string( "CookedHero" ) );
+        SW_ASSERT_NOT_NULL( pSource );
+        pSource->addTag( kTagCooked );
+        sw::MeshComponent* pMesh = pSource->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setLocalPosition( sw::float3{ 7.0f, 8.0f, 9.0f } );
+
+        sourceXml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+        SW_ASSERT_TRUE( sourceXml.empty() == false );
+    }
+
+    // 2) 문서에 싣고 굽는다.
+    sw::SceneDocument doc{};
+    doc._name = "CookedScene";
+    sw::SceneDocument::EntityNode node{};
+    node._name        = "CookedHero";
+    node._embeddedXml = sourceXml;
+    doc._listEntityNode.push_back( node );
+
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookEntityState( doc ) );
+    SW_ASSERT_TRUE( doc._listEntityNode[0]._embeddedStateBytes.empty() == false );
+    SW_EXPECT_TRUE( doc._listEntityNode[0]._embeddedXml.empty() );
+
+    // 3) 파일을 건너도 상태가 남는지 — 여기서 실패하면 SCN1 이 그 필드를 안 싣는 것이다.
+    SW_ASSERT_TRUE( doc.saveBinary( tempScenePath ) );
+
+    sw::SceneDocument loaded{};
+    SW_ASSERT_TRUE( loaded.loadBinary( tempScenePath ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded._listEntityNode.size() ) );
+    SW_ASSERT_TRUE( loaded._listEntityNode[0]._embeddedStateBytes.empty() == false );
+    SW_EXPECT_TRUE( loaded._listEntityNode[0]._embeddedXml.empty() );
+
+    // 4) 로더가 그 바이너리를 실제로 쓰는지 — XML 이 비었으니 다른 길은 없다.
+    sw::Scene scene{ "CookedScene" };
+    SW_ASSERT_TRUE( scene.instantiate( loaded ) );
+
+    sw::GameObjectManager* pManager = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+    sw::GameObject* pRestored = pManager->findGameObjectByName( sw::hashed_string( "CookedHero" ) );
+    SW_ASSERT_NOT_NULL( pRestored );
+
+    SW_EXPECT_TRUE( pRestored->hasTag( kTagCooked ) );
+    sw::MeshComponent* pRestoredMesh = pRestored->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pRestoredMesh );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pRestoredMesh->getLocalPosition()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, pRestoredMesh->getLocalPosition()._z, 0.001f );
+}
+
 /**
  * @brief [SceneTest] 빈 매니저에서 createScene 이 활성 씬을 설정
  */

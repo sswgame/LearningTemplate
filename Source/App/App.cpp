@@ -61,9 +61,11 @@ namespace sw
             return false;
         }
 
-        // 헤드리스 모드(예: --bake-shaders)인 경우 스플래시 창 및 윈도우 UI 생성을 건너뛰고 정상 완료
+        // 헤드리스 모드(예: --bake-shaders, --cook-scenes)면 스플래시·윈도우 UI 를 건너뛴다.
+        // 작업이 실패했으면 **초기화 실패로 돌려준다** — 그래야 종료 코드가 0 이 아니고,
+        // 이것을 부르는 `CookAssets.py` 가 "구워지지 않았다" 를 알아챌 수 있다.
         if ( _engineLoop.isHeadless() )
-            return true;
+            return _engineLoop.didHeadlessTaskFail() == false;
 
         SplashWindow splash;
         splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );

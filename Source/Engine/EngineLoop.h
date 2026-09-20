@@ -135,6 +135,8 @@ namespace sw
         ShaderCache*         getShaderCache() const { return _owned._pShaderCache.get(); }
         ComponentDefaults*   getComponentDefaults() const { return _owned._pComponentDefaults.get(); }
         bool                 isHeadless() const { return _bHeadless; }
+        /** @brief 헤드리스 작업(셰이더 베이크·씬 쿠킹)이 실패했는지. 호출자는 이것을 종료 코드로 내보낸다. */
+        bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 
     private:
         /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
@@ -179,6 +181,7 @@ namespace sw
 
         bool _bShellActionsBound;
         bool _bHeadless;
+        bool _bHeadlessTaskFailed;
 
         /** @brief `-gv_profileFrames` 계측 한 판. 판정은 전부 이 안에 있고 루프는 두 줄만 부른다. */
         FrameProfileSession _profileSession;

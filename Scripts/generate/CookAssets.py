@@ -47,6 +47,7 @@ from common import (
     packLengthPrefixedString,
     readJsonDictInternal,
     resolveDefaultOutputDir,
+    runSceneCook,
     runShaderBake,
     writeBinaryIfChanged,
 )
@@ -57,9 +58,6 @@ from common import (
 
 _kPfb2Magic = 0x50464232  # 'PFB2'
 _kPfb2Version = 0
-
-_kScn1Magic = 0x53434E31  # 'SCN1'
-_kScn1Version = 0
 
 # ------------------------------------------------------------------------------
 # .pack 바이너리 포맷 계약 — Config/Engine/PackFormat.json 이 단일 출처다.
@@ -154,91 +152,33 @@ def cookPrefabs(resourceRoot: Path | None = None, cookedDir: Path | None = None)
 # 3. Scene 쿠커
 # ==============================================================================
 
-def readXmlSceneInternal(path: Path) -> tuple[str, list[tuple[str, str, str, str]]]:
-    """XML 씬 파일에서 씬 이름과 엔티티 목록 (이름, 프리팹 경로, 프리팹 GUID, 본문 XML) 을 추출합니다.
-
-    항목 순서는 C++ SceneDocument::saveBinary/loadBinary 와 같아야 한다 — 예전엔 여기가 prefabGuid 를 빼먹어
-    배포본은 옮긴 프리팹을 GUID 로 찾을 길이 없었고, 네 문자열을 읽는 리더가 세 문자열 스트림을 어긋나게 읽었다.
-    """
-    tree = ET.parse(path)
-    root = tree.getroot()
-    sceneName = root.get("name", "")
-    if (nameNode := root.find("name")) is not None and nameNode.text:
-        sceneName = nameNode.text.strip()
-    if not sceneName:
-        sceneName = path.stem.split(".")[0]
-
-    entitiesList: list[tuple[str, str, str]] = []
-    if (entitiesNode := root.find("entities")) is not None:
-        for entityNode in entitiesNode.findall("entity"):
-            entityName = entityNode.get("name", "")
-            if (entNameChild := entityNode.find("name")) is not None and entNameChild.text:
-                entityName = entNameChild.text.strip()
-            if not entityName:
-                entityName = "Entity"
-
-            prefabPath = entityNode.get("prefab", "")
-            if (prefabChild := entityNode.find("prefab")) is not None and prefabChild.text:
-                prefabPath = prefabChild.text.strip()
-
-            prefabGuid = entityNode.get("prefabGuid", "")
-            if (guidChild := entityNode.find("prefabGuid")) is not None and guidChild.text:
-                prefabGuid = guidChild.text.strip()
-
-            embeddedXml = ""
-            if (stateNode := entityNode.find("GameObject")) is not None:
-                embeddedXml = ET.tostring(stateNode, encoding="unicode")
-            elif (stateNode := entityNode.find("GameObjectState")) is not None:
-                embeddedXml = ET.tostring(stateNode, encoding="unicode")
-
-            entitiesList.append((entityName, prefabPath, prefabGuid, embeddedXml))
-
-    return sceneName, entitiesList
-
-
-def writeScn1Internal(outputPath: Path, sceneName: str, entitiesList: list[tuple[str, str, str, str]]) -> bool:
-    """씬 데이터를 SCN1 바이너리로 변환하여 변경 시에만 기록합니다 (엔티티마다 이름·프리팹·프리팹 GUID·본문 순)."""
-    chunks = [
-        struct.pack("<II", _kScn1Magic, _kScn1Version),
-        packLengthPrefixedString(sceneName),
-        struct.pack("<I", len(entitiesList)),
-    ]
-    for entityName, prefabPath, prefabGuid, embeddedXml in entitiesList:
-        chunks.extend([
-            packLengthPrefixedString(entityName),
-            packLengthPrefixedString(prefabPath),
-            packLengthPrefixedString(prefabGuid),
-            packLengthPrefixedString(embeddedXml),
-        ])
-    return writeBinaryIfChanged(outputPath, b"".join(chunks))
-
-
 def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None) -> int:
-    """Resource 하위의 모든 .scene.xml 파일을 .bin 으로 변환합니다 (스테이징 폴더에)."""
+    """씬을 `App.exe --cook-scenes` 로 굽습니다 (엔티티 상태까지 바이너리로).
+
+    **왜 파이썬이 직접 안 쓰는가.** 예전에는 여기서 SCN1 을 직접 썼는데, 그 파일은 엔티티마다
+    `<GameObject ...>` **XML 문자열을 그대로** 담고 있었다 — 쿠킹이 바깥 파싱만 줄이고 정작
+    비싼 엔티티 생성 단계는 하나도 못 줄였다(로드의 75%). 상태를 진짜 바이너리로 만들려면
+    리플렉션이 필요하고 그것은 엔진 안에만 있으므로, 이 단계는 셰이더 베이크와 같은 방식으로
+    엔진에 넘긴다. 같은 포맷을 두 곳에서 쓰던 것도 이것으로 하나가 된다.
+    """
     projectRoot = getProjectRoot()
-    resourceDir = projectRoot / "Resource"
     cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
-    root = resourceRoot or resourceDir
-    if not root.is_dir():
-        print(f"[CookScenes] Resource dir not found: {root}")
-        return 0
 
-    sceneFiles = sorted(root.rglob("*.scene.xml"))
-    if not sceneFiles:
-        print(f"[CookScenes] No .scene.xml found under {root}")
-        return 0
+    if resourceRoot is not None:
+        # 엔진 쪽은 마운트된 리소스 루트를 스스로 찾는다 — 부분 트리 쿠킹은 아직 받지 않는다.
+        print(f"[CookScenes] resourceRoot={resourceRoot} 는 무시됩니다 (엔진이 리소스 루트를 정합니다).")
 
-    def cookOne(xmlPath: Path) -> bool:
-        # 런타임(SceneDocument::load)은 `<name>.scene.xml` 의 짝을 `<name>.scene.bin` 으로 찾는다 — 예전엔 `.scene` 까지
-        # 벗겨 `<name>.bin` 을 만들어 배포본이 씬을 한 번도 열지 못했다(시작 씬이 없어 드러나지 않았다).
-        outputBinaryFile = cookedOutputPathInternal(xmlPath, resourceDir, cookedDir, xmlPath.with_suffix(".bin").name)
-        sceneName, entitiesList = readXmlSceneInternal(xmlPath)
-        wrote = writeScn1Internal(outputBinaryFile, sceneName, entitiesList)
-        if wrote:
-            print(f"[CookScenes] Cooked {xmlPath.relative_to(root)} -> {outputBinaryFile.name} ({len(entitiesList)} entities)")
-        return wrote
+    appExe = findAppExecutable(projectRoot)
+    if appExe is None:
+        print("[CookScenes Error] App.exe 를 찾지 못해 씬을 굽지 못했습니다.", file=sys.stderr)
+        print("                   씬 쿠킹은 리플렉션이 필요해 엔진 안에서 돕니다 - 먼저 App 을 빌드하세요.", file=sys.stderr)
+        return 1
 
-    batchCookAssets(sceneFiles, cookOne, label="CookScenes")
+    print(f"[CookScenes] Running headless scene cook: {appExe} --cook-scenes --cooked-dir={cookedDir}")
+    completed = runSceneCook(appExe, cookedDir)
+    if completed.returncode != 0:
+        print(f"[CookScenes Error] 씬 쿠킹이 실패했습니다 (exit {completed.returncode}).", file=sys.stderr)
+        return 1
     return 0
 
 

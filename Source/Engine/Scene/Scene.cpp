@@ -144,6 +144,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
+        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 그래서 두 번째 판이 있다.
         vector<pair<GameObject*, string_view>> listRebindTarget;
         listRebindTarget.reserve( doc._listEntityNode.size() );
 
@@ -167,7 +168,17 @@ namespace sw
                 if ( ent._prefab.empty() == false )
                     _mapPrefabSource[pGo->getObjectId()] = ent._prefab;
 
-                if ( ent._embeddedXml.empty() == false )
+                // **구워진 바이너리 상태가 있으면 그것이 정본이다.** 쿠커가 왕복 검증에 성공한
+                // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
+                if ( ent._embeddedStateBytes.empty() == false )
+                {
+                    string parentName;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, ent._embeddedStateBytes.data(), ent._embeddedStateBytes.size(), parentName ) == 0 )
+                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", ent._name );
+                    else
+                        listRebindTarget.emplace_back( pGo, string_view{} );
+                }
+                else if ( ent._embeddedXml.empty() == false )
                 {
                     if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
                         SW_LOG_WARNING( "Embedded state apply failed for '%#'", ent._name );

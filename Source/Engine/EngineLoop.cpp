@@ -51,6 +51,7 @@
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/SceneCooker.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
@@ -98,6 +99,7 @@ namespace sw
         , _gpuUploadQueue{ nullptr }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
+        , _bHeadlessTaskFailed{ false }
     {
     }
 
@@ -264,6 +266,19 @@ namespace sw
                 _bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
                 ShaderBaker::bakeAllShaders();
+                return true;
+            }
+
+            // 씬 쿠킹도 같은 자리다 — 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
+            // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
+            bool bCookScenes = false;
+            if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
+            {
+                _bHeadless = true;
+                string cookedDir;
+                _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+                SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
+                _bHeadlessTaskFailed = ( SceneCooker::cookAllScenes( cookedDir ) == 0 );
                 return true;
             }
 

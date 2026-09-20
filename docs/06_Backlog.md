@@ -498,6 +498,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (쿠킹된 씬이 드디어 XML 문자열 통이 아니게 됐다 - 로드 36 -> 16 ms)
+
+앞 회차에서 "쿠커는 아직 XML 문자열을 싣는다, C++ 쿡 단계가 필요하다" 로 남겨 둔 것을 마감.
+
+**왜 파이썬이 못 했나.** `Scripts/generate/CookAssets.py` 가 SCN1 을 직접 썼는데, 엔티티 상태를
+바이너리로 만들려면 리플렉션(`TypeInfo`·프로퍼티 표)이 필요하고 그것은 엔진 안에만 있다.
+그래서 **셰이더 베이크와 같은 방식**으로 넘겼다 — `App.exe --cook-scenes --cooked-dir=<dir>`.
+헤드리스 분기(`EngineLoop`)에 `--bake-shaders` 바로 옆에 붙는다.
+
+**한 일**
+
+- `SceneDocument::EntityNode` 에 `_embeddedStateBytes` 추가, SCN1 **v0 -> v1**. v0 파일도 계속
+  읽는다(읽기가 버전으로 갈린다). 엔티티 개수 가드의 최소 필드 수도 버전에 맞췄다.
+- `SceneCooker` 신설. 엔티티 XML 을 리플렉션 바이너리로 굽고 **XML 은 비운다**(둘 다 실으면
+  파일만 커진다).
+- `Scene::instantiate` 는 `_embeddedStateBytes` 가 있으면 그것을 쓰고, 없을 때만 XML 로 간다.
+- 파이썬의 SCN1 라이터·XML 리더(`writeScn1Internal`/`readXmlSceneInternal`)를 **삭제**했다.
+  같은 포맷을 두 곳이 쓰던 것이 하나가 됐다. `cookScenes()` 는 이제 App.exe 를 부르고, 없으면
+  **에러로 멈춘다**(조용히 v0 를 쓰지 않는다).
+
+**왕복으로 검증하고 나서만 바꾼다.** 구운 바이트를 그 자리에서 되읽어 컴포넌트 구성 지문을
+대조하고, 어긋나면 그 엔티티는 XML 로 남긴다. 모르는 컴포넌트 타입(이 프로세스에 안 올라온
+게임 모듈의 것)이 섞여도 **쿠킹이 조용히 컴포넌트를 떨어뜨리는 일은 없다.** 몇 개가 XML 로
+남았는지는 `SW_LOG_WARNING` 으로 남긴다 — 요약 줄은 `SW_LOG_INFO` 라 Shipping 에서 사라지는데,
+"구웠다고 했지만 실은 XML 그대로" 는 그때도 알아야 한다.
+
+**측정 (Release · 엔티티 4002 개 · 3회):**
+
+| | Scene.load.parse | Scene.load.instantiate | 합 |
+|---|---|---|---|
+| `.scene.xml` | 8.98 ms | 27.09 ms | **36.1 ms** |
+| 쿠킹 v0 (XML 문자열 통) | 2.2 ms | 29.1 ms | 31.3 ms |
+| 쿠킹 v1 (바이너리 상태) | **2.29 ms** | **13.61 ms** | **15.9 ms** |
+
+생성 단계가 **2.0 배**, 로드 전체가 **2.3 배**다. 파일도 2173 KB -> 1209 KB 로 줄었다.
+4002 개 **전부** 바이너리 상태로 구워졌다.
+
+**알아 둘 것 - Dev 런타임은 `Cooked/` 를 안 본다.** 엔진은 `build/<preset>/Bin/Cooked` 를
+마운트하지 않는다. 그 폴더는 **팩으로 들어가는 자리**이고, Dev 는 `Resource/` 옆의 `.bin` 을
+`ResourceUtil::hasResource` 로 찾는다. 위 측정은 `--cooked-dir=<repo>/Resource` 로 소스 옆에
+구워서 쟀고, 재고 나서 지웠다. 쿠킹 효과를 손으로 확인할 때는 이 점을 기억할 것.
+
 ### 2026-09-20 (바이너리는 정말 빨랐다 - 다만 벤치가 거짓말을 하고 있었고, 그 김에 무한 재귀 하나를 찾았다)
 
 앞 회차의 "엔티티 상태를 진짜 바이너리로" 가설을 실제로 재 본 회차. **가설은 맞았다.**
@@ -557,12 +599,6 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 찾는 데 든 것: 로그는 비동기라 크래시 직전 줄이 사라져 쓸모가 없었고(`fopen`+`fflush` 직접
 쓰기로 갈아탐), ASAN 은 `stack-overflow` 라고만 하고 스택을 못 풀어 줬다. **함수마다 호출을
 파일에 찍어 되풀이 패턴을 보는 것**이 결국 답이었다.
-
-**남은 것 - 쿠커는 아직 XML 문자열을 싣는다.** 이번 변경으로 엔티티 상태를 바이너리로 굽는
-것이 **의미 있는 일이 되었지만**(생성 단계가 엔티티당 4254 → 1602 ns), 쿠커는
-`Scripts/generate/CookAssets.py` 라 **리플렉션이 없어 그 변환을 못 한다**. C++ 쿡 단계
-(예: `App.exe` 의 `-gv_cookScenes` 모드)가 있어야 한다. 참고로 C++ `SceneDocument::saveBinary` 는
-**아무도 부르지 않는다** - 같은 SCN1 포맷의 두 번째 구현이 죽은 채 남아 있다.
 
 ### 2026-09-20 (씬 로드를 더 줄일 수 있나 — 쿠킹된 "바이너리" 씬은 XML 문자열 통이었다)
 
