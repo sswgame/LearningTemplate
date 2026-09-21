@@ -637,7 +637,111 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
     // 순환이어도 실제로 답이 있는 질문에는 맞게 답해야 한다.
     SW_EXPECT_TRUE( pLoopA->isDerivedFrom( sw::hashed_string( "swtest::LoopB" ) ) );
 
+    // 포인터 걷기도 같은 순환에서 멈추고, 있는 답은 낸다.
+    const sw::TypeInfo* pLoopB = registry.findType( sw::hashed_string( "swtest::LoopB" ) );
+    SW_ASSERT_NOT_NULL( pLoopB );
+    SW_EXPECT_TRUE( pLoopA->isDerivedFrom( pLoopB ) );
+    SW_EXPECT_TRUE( pLoopB->isDerivedFrom( pLoopA ) );
+    sw::TypeInfo typeStranger;
+    typeStranger._fullyQualifiedName = sw::hashed_string( "swtest::LoopStranger" );
+    SW_EXPECT_FALSE( pLoopA->isDerivedFrom( &typeStranger ) );
+
 #if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestParentLoop" );
+#endif
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 부모 포인터가 배치 끝에서 풀리고, 포인터 걷기가 이름 걷기와 같은 답을 내는지
+ * @details `isDerivedFrom` 은 조상마다 `findType(_parentFQN)` 을 불렀다(잠금 + 해시맵). 이제 등록 배치 끝
+ *          (`buildLookupCaches`)에서 부모를 포인터로 한 번 풀어 두고, 캐스트는 그 포인터만 걷는다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch )
+{
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    sw::TypeInfo typeRoot;
+    typeRoot._name               = sw::hashed_string( "ChainRoot" );
+    typeRoot._fullyQualifiedName = sw::hashed_string( "swtest::ChainRoot" );
+    typeRoot._moduleName         = sw::hashed_string( "TestParentChain" );
+
+    sw::TypeInfo typeMid;
+    typeMid._name               = sw::hashed_string( "ChainMid" );
+    typeMid._fullyQualifiedName = sw::hashed_string( "swtest::ChainMid" );
+    typeMid._parentFQN          = sw::hashed_string( "swtest::ChainRoot" );
+    typeMid._moduleName         = sw::hashed_string( "TestParentChain" );
+
+    sw::TypeInfo typeLeaf;
+    typeLeaf._name               = sw::hashed_string( "ChainLeaf" );
+    typeLeaf._fullyQualifiedName = sw::hashed_string( "swtest::ChainLeaf" );
+    typeLeaf._parentFQN          = sw::hashed_string( "swtest::ChainMid" );
+    typeLeaf._moduleName         = sw::hashed_string( "TestParentChain" );
+
+    registry.registerClass( typeRoot );
+    registry.registerClass( typeMid );
+    registry.registerClass( typeLeaf );
+    registry.buildLookupCaches();
+
+    const sw::TypeInfo* pRoot = registry.findType( sw::hashed_string( "swtest::ChainRoot" ) );
+    const sw::TypeInfo* pMid  = registry.findType( sw::hashed_string( "swtest::ChainMid" ) );
+    const sw::TypeInfo* pLeaf = registry.findType( sw::hashed_string( "swtest::ChainLeaf" ) );
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_ASSERT_NOT_NULL( pMid );
+    SW_ASSERT_NOT_NULL( pLeaf );
+
+    // 배치 끝에서 풀린 포인터는 레지스트리의 그 항목 자체다.
+    SW_EXPECT_TRUE( pLeaf->getParentType() == pMid );
+    SW_EXPECT_TRUE( pMid->getParentType() == pRoot );
+    SW_EXPECT_NULL( pRoot->getParentType() );
+
+    // 포인터 걷기 — 자기 자신·조상은 true, 자손·무관·nullptr 은 false.
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pMid ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pRoot ) );
+    SW_EXPECT_FALSE( pRoot->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_FALSE( pMid->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( static_cast<const sw::TypeInfo*>( nullptr ) ) );
+
+    // 이름 걷기도 같은 답 — FQN 과 짧은 이름 둘 다.
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( sw::hashed_string( "swtest::ChainRoot" ) ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( sw::hashed_string( "ChainRoot" ) ) );
+    SW_EXPECT_FALSE( pRoot->isDerivedFrom( sw::hashed_string( "swtest::ChainLeaf" ) ) );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestParentChain" );
+#endif
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] `TypeLookupCache` 가 레지스트리 세대를 따라 답을 갱신하는지
+ * @details 코드젠의 `StaticType()` 과 `Component::getTypeInfo()` 가 이 칸을 쓴다. 세대가 같으면 지난 답,
+ *          등록·해제로 세대가 오르면 다시 찾는다 — 미등록 → 등록 → 해제 세 단계에서 답이 따라와야 한다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGeneration )
+{
+    sw::TypeRegistry&       registry = sw::engine::getTypeRegistry();
+    const sw::hashed_string fqn( "swtest::CacheProbe" );
+    sw::TypeLookupCache     cache;
+
+    const uint32 generationBefore = registry.getGeneration();
+    SW_EXPECT_NULL( cache.find( fqn ) );
+    // 같은 세대의 두 번째 조회는 캐시에서 온다(값은 같아야 한다).
+    SW_EXPECT_NULL( cache.find( fqn ) );
+
+    sw::TypeInfo typeProbe;
+    typeProbe._name               = sw::hashed_string( "CacheProbe" );
+    typeProbe._fullyQualifiedName = fqn;
+    typeProbe._moduleName         = sw::hashed_string( "TestLookupCache" );
+    registry.registerClass( typeProbe );
+
+    SW_EXPECT_TRUE( registry.getGeneration() != generationBefore );
+    const sw::TypeInfo* pProbe = cache.find( fqn );
+    SW_ASSERT_NOT_NULL( pProbe );
+    SW_EXPECT_TRUE( pProbe == registry.findType( fqn ) );
+    SW_EXPECT_TRUE( cache.find( fqn ) == pProbe );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestLookupCache" );
+    SW_EXPECT_NULL( cache.find( fqn ) );
 #endif
 }

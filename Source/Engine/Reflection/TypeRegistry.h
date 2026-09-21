@@ -77,6 +77,34 @@ namespace sw
     }
 
     /**
+     * @brief FQN 하나의 `findType` 결과를 레지스트리 세대와 함께 적어 두는 칸.
+     * @details 코드젠의 `StaticType()` 은 부를 때마다 `findType( hashed_string( "sw::Foo" ) )` 을
+     *          했다 — 문자열 intern(샤드 뮤텍스) + shared_mutex 잠금 + 해시맵 조회. 캐스트 한 번마다
+     *          그것이 들어갔다. 이 칸은 `TypeRegistry::getGeneration()` 이 같은 동안 지난 답을 그대로
+     *          돌려주고, 등록·해제로 세대가 바뀌면 한 번만 다시 찾는다.
+     *
+     *          **왜 세대인가.** `findType` 이 내준 포인터는 다음 등록에서 무효가 된다(타입 표가 밀집
+     *          배열이라 커질 때 원소를 옮긴다). 세대는 그 모든 사건에서 오르므로, 세대가 같으면
+     *          포인터는 아직 그 자리다. 핫리로드로 모듈이 사라지면 그 모듈의 정적 칸도 같이 사라지고,
+     *          다시 올라온 모듈의 칸은 세대 0 으로 시작해 첫 호출에 다시 찾는다.
+     *
+     *          두 원자값을 따로 쓰는 경쟁은 무해하다: 쓰는 쪽은 포인터를 먼저, 세대를 나중에(release)
+     *          적고, 읽는 쪽은 세대를 먼저(acquire) 본다. 세대를 읽고 나서 찾는 사이에 등록이 끼면
+     *          "옛 세대 도장 + 새 포인터" 가 남는데, 다음 호출이 도장이 다르다고 보고 다시 찾는다 —
+     *          "새 도장 + 옛 포인터" 는 만들어지지 않는다.
+     */
+    struct SW_API TypeLookupCache
+    {
+        mutable atomic<const TypeInfo*> _pType{ nullptr };
+        mutable atomic<uint32>          _generation{ 0 };
+
+        /** @brief fqn 의 TypeInfo. 세대가 같으면 캐시, 아니면 `findType` 뒤 갱신. 미등록이면 nullptr. */
+        const TypeInfo* find( const hashed_string& fqn ) const;
+        /** @brief 다음 호출이 반드시 다시 찾게 한다(조회 키가 바뀌었을 때). */
+        void reset() { _generation.store( 0, std::memory_order_relaxed ); }
+    };
+
+    /**
      * @class TypeRegistry
      * @brief 리플렉션 TypeInfo / EnumInfo 등록·조회·별칭
      */
@@ -127,6 +155,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 이름 또는 FQN으로 TypeInfo를 찾습니다. */
         const TypeInfo* findType( const hashed_string& nameOrFqn ) const;
+        /**
+         * @brief 타입 표가 바뀔 때마다 오르는 세대. `findType` 이 내준 포인터는 이 값이 같은 동안만 유효하다.
+         * @details 등록·별칭·모듈 해제 모두에서 오른다. 0 은 "아직 아무것도 등록되지 않음" 이라
+         *          `TypeLookupCache` 의 초기값과 구별된다.
+         */
+        uint32 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
         /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
@@ -330,6 +364,7 @@ namespace sw
         unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
         unordered_map<uint32, hashed_string>        _mapHashToCanonicalName;
         hashed_string                               _activeModuleName;
+        atomic<uint32>                              _generation;
     };
 
     // ------------------------------------------------------------------------------

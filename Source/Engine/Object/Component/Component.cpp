@@ -13,6 +13,7 @@ namespace sw
         : _pOwner{ nullptr }
         , _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
         , _componentName{}
+        , _typeInfoCache{}
         , _subTickActiveMask{ 0 }
         , _bActive{ true }
         , _bIsPendingKill{ false }
@@ -231,7 +232,7 @@ namespace sw
             return nullptr;
         if ( _componentName.empty() == false )
         {
-            const TypeInfo* pType = engine::getTypeRegistry().findType( _componentName );
+            const TypeInfo* pType = _typeInfoCache.find( _componentName );
             if ( pType != nullptr )
                 return pType;
         }

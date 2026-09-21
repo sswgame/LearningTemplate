@@ -3,6 +3,7 @@
  * @brief 리플렉션용 프로퍼티 / enum / 함수 / 타입 메타데이터
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -603,7 +604,21 @@ namespace sw
         mutable vector<PropertyInfo>                              _listPropertyWithBase;
         mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
         mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
-        uint32                                                    _typeId;
+        /**
+         * @brief `_parentFQN` 을 한 번 풀어 둔 부모 `TypeInfo`. 없거나 아직 못 풀었으면 nullptr.
+         * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)` 을 불렀다 — 조상 하나당
+         *          shared_mutex 잠금 + 해시맵 조회. 캐스트가 실패하는 흔한 경우엔 사슬 끝까지 그것을
+         *          두 번 걸었다. 등록 배치 끝(`TypeRegistry::buildLookupCaches`)에서 한 번 풀어 두면
+         *          걷는 일은 포인터 역참조 몇 번이다.
+         *
+         *          **포인터는 등록·해제 때 무효가 된다.** 타입 표는 밀집 배열이라 커질 때 원소를 옮기고
+         *          (이동 생성자가 이 칸을 비운다), 모듈 해제는 마지막 원소를 빈 자리로 옮긴다(해제가
+         *          남은 타입 전부의 이 칸을 비운다). 비어 있으면 `getParentType()` 이 이름으로 다시
+         *          푼다. 원자값인 이유: 배치 밖에서 등록된 타입(테스트)은 첫 조회가 여러 스레드에서
+         *          동시에 올 수 있고, 같은 값을 쓰는 경쟁이라 relaxed 로 충분하다.
+         */
+        mutable atomic<const TypeInfo*> _pParentType;
+        uint32                          _typeId;
         /** @brief REFLECT(Abstract) / C++ abstract — not constructible (UCLASS(Abstract)). */
         uint8 _bAbstract : 1;
         /** @brief REFLECT(Static) type (function-library). Not the same as FunctionMetadata::_bStatic. */
@@ -688,8 +703,21 @@ namespace sw
 
         /** @brief 직렬화/복사 시 memcpy POD 경로를 쓸 수 있으면 true. */
         bool usesPodCopyFastPath() const;
-        /** @brief 이 타입이 targetFqn이거나 그 파생이면 true. */
+        /** @brief 이 타입이 targetFqn이거나 그 파생이면 true. 부모가 미등록이어도 `_parentFQN` 이 같으면 true. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
+        /**
+         * @brief 이 타입이 pTarget 이거나 그 파생이면 true. 잠금·할당 없이 부모 포인터만 걷는다.
+         * @details 캐스트의 핫패스. 걸음마다 포인터를 먼저 견주고, 다르면 FQN(intern 인덱스 정수)을 한 번
+         *          더 견준다 — 레지스트리 밖의 사본(테스트 목의 `StaticType()`)도 같은 타입으로 본다.
+         *          pTarget 이 nullptr 이면 false.
+         */
+        bool isDerivedFrom( const TypeInfo* pTarget ) const;
+        /** @brief 부모 TypeInfo. 풀어 둔 것이 없으면 이름으로 찾아 적어 둔다. 부모가 없거나 미등록이면 nullptr. */
+        const TypeInfo* getParentType() const;
+        /** @brief 부모 포인터를 이름으로 다시 푼다. 등록 배치 끝에서 `TypeRegistry` 가 부른다. */
+        void resolveParentType() const;
+        /** @brief 부모 포인터를 비운다. 타입 표에서 원소가 옮겨질 수 있는 해제 뒤에 부른다. */
+        void clearParentType() const { _pParentType.store( nullptr, std::memory_order_relaxed ); }
 
         /**
          * @brief 자신 + 상속 베이스 프로퍼티 (단일 부모 체인).

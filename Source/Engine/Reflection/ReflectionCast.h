@@ -77,46 +77,54 @@ namespace sw
     template <typename T>
     inline constexpr bool HasGetTypeInfo_v = HasGetTypeInfo<T>::value;
 
-    /** @brief TypeInfo 상속 체인을 보고 To*로 캐스트. 실패 시 nullptr. */
+    /**
+     * @brief TypeInfo 상속 체인을 보고 To*로 캐스트. 실패 시 nullptr.
+     * @details 업캐스트(To 가 From 의 기반)는 컴파일 타임에 끝나 런타임 비용이 0 이다. 다운캐스트는
+     *          `getTypeInfo()` 가 준 동적 타입에서 부모 포인터를 걷는다 — 잠금·할당·이름 비교 없음.
+     *          예전엔 사슬을 이름으로 두 번 걸었다(한 번은 정적 타입으로 폴백할지 정하려고). 동적
+     *          타입이 To 의 자손이 아니면 그보다 위인 정적 타입도 자손일 리 없으므로 그 가드는 답을
+     *          바꾸지 않았다. 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 한다.
+     */
     template <typename To, typename From>
     To* castTo( From* pSrc )
     {
-        if ( pSrc == nullptr )
-            return nullptr;
-
-        if constexpr ( std::is_same_v<To, From> )
-            return pSrc;
-
-        const TypeInfo* pToType = nullptr;
-        if constexpr ( HasStaticType_v<To> )
-            pToType = To::StaticType();
-        else if constexpr ( HasReflectStaticType_v<To> )
-            pToType = ReflectTypeTraits<To>::StaticType();
-        else if constexpr ( std::is_base_of_v<To, From> || std::is_base_of_v<From, To> )
-            return static_cast<To*>( pSrc );
-        else
-            return nullptr;
-
-        const TypeInfo* pSrcType = nullptr;
-        if constexpr ( HasGetTypeInfo_v<From> )
+        if constexpr ( std::is_same_v<To, From> || std::is_base_of_v<To, From> )
         {
-            pSrcType = pSrc->getTypeInfo();
-            if constexpr ( HasStaticType_v<From> )
-            {
-                if ( pSrcType == nullptr || ( pToType != nullptr && pSrcType != pToType && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) == false ) )
-                    pSrcType = From::StaticType();
-            }
+            return pSrc;
         }
-        else if constexpr ( HasStaticType_v<From> )
-            pSrcType = From::StaticType();
-        else if constexpr ( HasReflectStaticType_v<From> )
-            pSrcType = ReflectTypeTraits<From>::StaticType();
+        else
+        {
+            if ( pSrc == nullptr )
+                return nullptr;
 
-        if ( pSrcType == pToType )
-            return reinterpret_cast<To*>( pSrc );
-        if ( pSrcType != nullptr && pToType != nullptr && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) )
-            return reinterpret_cast<To*>( pSrc );
-        return nullptr;
+            const TypeInfo* pToType = nullptr;
+            if constexpr ( HasStaticType_v<To> )
+                pToType = To::StaticType();
+            else if constexpr ( HasReflectStaticType_v<To> )
+                pToType = ReflectTypeTraits<To>::StaticType();
+            else if constexpr ( std::is_base_of_v<From, To> )
+                return static_cast<To*>( pSrc );
+            else
+                return nullptr;
+
+            const TypeInfo* pSrcType = nullptr;
+            if constexpr ( HasGetTypeInfo_v<From> )
+                pSrcType = pSrc->getTypeInfo();
+            if ( pSrcType == nullptr )
+            {
+                if constexpr ( HasStaticType_v<From> )
+                    pSrcType = From::StaticType();
+                else if constexpr ( HasReflectStaticType_v<From> )
+                    pSrcType = ReflectTypeTraits<From>::StaticType();
+            }
+
+            if ( pSrcType == nullptr || pSrcType->isDerivedFrom( pToType ) == false )
+                return nullptr;
+            if constexpr ( std::is_base_of_v<From, To> )
+                return static_cast<To*>( pSrc );
+            else
+                return reinterpret_cast<To*>( pSrc );
+        }
     }
 
     /** @brief TypeInfo 상속 체인을 보고 const To*로 캐스트. 실패 시 nullptr. */

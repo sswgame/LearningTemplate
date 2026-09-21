@@ -375,7 +375,7 @@ Release · DX12 · 큐브 8000 · 1000 프레임, 이전/이후 번갈아 2회 (
 - 더티 플래그 둘(`_bIsTransformDirty` · `_bHasDirtyDescendant`)을 **비트필드에서 바이트로**. 워커들이 부모의 자손 더티와
   자식의 더티를 같이 세우는데, 비트필드는 이웃 비트를 같은 바이트로 다시 쓴다. 바이트 저장에 TRUE 를 겹쳐 쓰는 것은 무해하다.
 - 워커에서 `castTo<SceneComponent>` 를 쓰면 **세터보다 느렸다**(8000 건 2.1 ms — 타입 사슬을 이름으로 걷는다). 컴포넌트
-  플래그 비트 `isSceneComponent()` 로 바꿨다.
+  플래그 비트 `isSceneComponent()` 로 바꿨다. (09-22 에 `castTo` 자체를 5배 빠르게 고쳤다 — 3절. 비트는 그대로 둔다.)
 - 벤치는 쓰기 목록을 채워 배치로 넘긴다. 격자 자리는 생성 때 식으로 다시 계산한다 — 핸들을 풀어 읽던 것이 옮긴 비용의 3 분의 1 이었다.
 - 회귀 테스트 `GameObjectTest.ApplyTransformBatchMatchesSetters` — 세터와 월드 행렬 동일 · 자식만 써도 부모에 자손 더티 ·
   같은 값은 0 건과 세대 불변. 부모 전파를 빼면 실제로 실패한다(변이 검사).
@@ -730,6 +730,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-22 (`castTo` 를 5배 — 잠금·할당·이름 걷기를 등록 시점의 포인터 하나로)
+
+`castTo<SceneComponent>` 가 워커에서 세터보다 느려 `isSceneComponent()` 비트로 피해 갔던 것(위 09-21 항목)의 **원인 쪽**을
+고쳤다. 실패하는 캐스트 한 건이 하던 일: `getTypeInfo()` 가 `_componentName` 으로 레지스트리를 **매번** 찾고(shared_mutex +
+해시맵, 짧은 이름이면 별칭 표까지 두 번), `castTo` 가 `isDerivedFrom` 을 **두 번** 부르고(한 번은 정적 타입으로 폴백할지
+정하려고 — 동적 타입이 To 의 자손이 아니면 그 위의 정적 타입도 자손일 리 없으니 답을 바꾸지 않던 가드), `isDerivedFrom` 이
+조상마다 `findType(_parentFQN)` 을 부르며(잠금 + 맵) 순환 검출용 `vector` 를 **호출마다 힙에** 만들었다. 코드젠의
+`StaticType()` 도 부를 때마다 `findType( hashed_string( "sw::Foo" ) )` — 문자열 intern(샤드 뮤텍스)까지 들어갔다.
+
+**고친 것 넷.**
+
+1. `TypeInfo::_pParentType` — 등록 배치 끝(`buildLookupCaches`)에서 `_parentFQN` 을 포인터로 한 번 푼다. `isDerivedFrom` ·
+   `findPropertyInHierarchy` · `getPropertiesWithBase` 가 전부 그 포인터를 걷는다. 순환은 방문 목록 대신 걸음 상한
+   (`kMaxParentChainDepth` 32)으로 막는다 — 할당 0. 새 오버로드 `isDerivedFrom( const TypeInfo* )` 가 캐스트의 핫패스.
+2. `TypeRegistry::getGeneration()` + `TypeLookupCache` — 등록·별칭·모듈 해제마다 세대가 오르고, 캐시는 세대가 같은 동안만
+   지난 포인터를 돌려준다. 코드젠 템플릿(`ReflectTypeTraits.tpl` · `TypeInfoAccessors.tpl`)의 `StaticType()` 과
+   `Component::getTypeInfo()`(`_typeInfoCache`) 가 이것을 쓴다. 템플릿은 CMake 가 글롭으로 지켜보므로 고치면 재생성된다.
+3. `castTo` — 업캐스트는 `if constexpr` 로 컴파일 타임에 끝나고, 다운캐스트는 사슬을 **한 번** 걷는다. 정적 타입 폴백은
+   `getTypeInfo()` 가 nullptr 일 때만.
+4. 포인터 걷기의 각 걸음은 포인터가 다르면 FQN(intern 인덱스 정수)을 한 번 더 견준다 — **테스트 목의 손으로 만든
+   `StaticType()` 이 레지스트리 밖 사본을 돌려주기 때문**이다(`TestGameObjectMocks`). 포인터 동일성만 보면
+   `GameObjectTest.MultiLevelComponentGameObjectPolymorphicLookup` 이 떨어진다.
+
+**숫자 (Release, 단일 스레드, 객체 2000 × 컴포넌트 4, 50회 — 절반은 실패 캐스트).**
+
+| 경로 | 전 (ns/호출) | 후 (ns/호출) |
+|---|---|---|
+| `castTo<SceneComponent>` (실제 엔진 컴포넌트) | 117~123 | **24** |
+| `getComponent<SpriteComponent>` (실패 둘 뒤 성공) | 310~321 | **75** |
+| `Component::getTypeInfo()` | 22~24 | **11** |
+| 코드젠 `StaticType()` | 50 | **4** |
+
+**포인터 무효화가 함정이다.** `findType` 이 내준 포인터는 다음 등록에서 무효가 된다(타입 표가 밀집 배열이라 커질 때 원소를
+옮기고, 모듈 해제는 마지막 원소를 빈 자리로 옮긴다). 그래서 (a) `TypeInfo` 이동·복사가 `_pParentType` 을 비우고, (b)
+`unregisterTypesByModule` 이 남은 타입 전부의 `_pParentType` 을 비우며, (c) 세대가 그 모든 사건에서 오른다. 비어 있으면
+`getParentType()` 이 이름으로 다시 푼다(같은 값을 쓰는 경쟁이라 relaxed 원자값). 회귀 테스트:
+`ReflectionTypeRegistryTest.ParentTypePointerIsResolvedAfterBatch` · `TypeLookupCacheFollowsRegistryGeneration`, 순환 테스트에
+포인터 오버로드 추가. 테스트 목의 `getTypeInfo()` 는 여전히 뮤텍스 + 맵이라 목으로 잰 수치(135 ns)는 엔진 비용이 아니다.
 
 ### 2026-09-21 (Engine 구조를 상용 엔진과 대조해 고쳤다 — 코어의 강결합 묶음 7 → 0)
 

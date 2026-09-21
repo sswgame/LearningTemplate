@@ -182,13 +182,22 @@ namespace sw
         void setTickGroup( TickGroup group );
         /** @brief Primary tick 등록 여부를 설정합니다. 비주얼 컴포넌트는 false가 기본입니다. */
         void setCanEverTick( bool bCanEverTick );
-        /** @brief 컴포넌트 해시 명칭 설정 */
-        void setComponentName( hashed_string name ) { _componentName = name; }
+        /** @brief 컴포넌트 해시 명칭 설정. 이름이 곧 TypeInfo 조회 키라 캐시도 같이 버린다. */
+        void setComponentName( hashed_string name )
+        {
+            _componentName = name;
+            _typeInfoCache.reset();
+        }
 
         /** @brief 이 인스턴스의 컴포넌트 핸들을 반환합니다. */
         sw::ComponentHandle getHandle() const;
 
-        /** @brief 런타임 타입 리플렉션 정보(TypeInfo) 반환 */
+        /**
+         * @brief 런타임 타입 리플렉션 정보(TypeInfo) 반환
+         * @details `_componentName` 으로 레지스트리를 매번 찾았다(잠금 + 해시맵, 짧은 이름이면 별칭 표까지
+         *          두 번) — 캐스트 한 번의 비용 절반이 여기였다. 레지스트리 세대가 같은 동안은 적어 둔
+         *          답을 돌려준다(`TypeLookupCache`).
+         */
         virtual const TypeInfo* getTypeInfo() const;
         /** @brief 소유자 GameObject 반환 */
         GameObject* getOwner() const { return _pOwner; }
@@ -231,9 +240,10 @@ namespace sw
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
     protected:
-        GameObject*   _pOwner;        ///< 소유자 GameObject 포인터 참조
-        uint64        _componentId;   ///< 컴포넌트 고유 시리얼 ID
-        hashed_string _componentName; ///< 컴포넌트 식별 이름
+        GameObject*             _pOwner;        ///< 소유자 GameObject 포인터 참조
+        uint64                  _componentId;   ///< 컴포넌트 고유 시리얼 ID
+        hashed_string           _componentName; ///< 컴포넌트 식별 이름
+        mutable TypeLookupCache _typeInfoCache; ///< `_componentName` 의 TypeInfo, 레지스트리 세대로 무효화
 
         atomic<uint64>      _subTickActiveMask; ///< 서브틱 1~63 활성 상태 O(1) 원자적 비트마스크
         atomic<bool>        _bActive;           ///< 컴포넌트 개별 활성화

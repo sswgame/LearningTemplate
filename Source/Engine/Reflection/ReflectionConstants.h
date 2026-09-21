@@ -39,6 +39,13 @@ namespace sw::constants::reflection
     inline constexpr const utf8* kStructPrefix = "struct ";
     /** @brief 소규모 프로퍼티/메서드 목록 선형 탐색 임계값입니다. */
     inline constexpr size_t kLinearSearchThreshold = 4;
+    /**
+     * @brief 부모 체인을 걸을 때의 걸음 상한입니다.
+     * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 공개 API 라 순환(A→B→A)을
+     *          막지 못한다. 방문 목록을 힙에 만들어 막는 대신 걸음 수를 세면, 캐스트 한 번에 할당이
+     *          없고 순환이어도 여기서 멈춘다. 실제 체인은 다섯을 넘지 않는다.
+     */
+    inline constexpr uint32 kMaxParentChainDepth = 32;
 } // namespace sw::constants::reflection
 
 namespace sw::constants::propertyHint

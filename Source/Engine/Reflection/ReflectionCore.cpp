@@ -18,23 +18,16 @@ namespace sw
         struct ReflectionCoreInternal
         {
             /**
-             * @brief 부모 체인을 걸을 때 **이미 지나온 타입이면 멈추라고** 알려 줍니다.
-             * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 공개 API 이고
-             *          그 값을 검사하지 않는다. 모듈이 따로따로 등록되는 핫리로드에서는 A→B→A
-             *          가 만들어질 수 있고, 그러면 체인을 거는 쪽이 멈추지 않는다(루프면 행,
-             *          재귀면 스택 오버플로). 체인은 보통 다섯을 넘지 않으므로 지나온 것을
-             *          적어 두는 값이 싸다.
-             * @return 처음 보는 타입이면 true(계속 걸어도 된다), 이미 지나왔으면 false.
+             * @brief 두 TypeInfo 가 같은 타입을 말하는지 — 포인터가 달라도 이름이 같으면 같은 타입.
+             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있다
+             *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 돌려준다). 포인터 걷기가
+             *          그 사본을 만나면 이름으로 한 번 더 본다 — intern 인덱스 정수 비교 한 번이다.
              */
-            static bool markVisitedOrStop( vector<const TypeInfo*>& inoutListVisited, const TypeInfo* pType )
+            static bool isSameTypeName( const TypeInfo& lhs, const TypeInfo& rhs )
             {
-                for ( const TypeInfo* pVisited : inoutListVisited )
-                {
-                    if ( pVisited == pType )
-                        return false;
-                }
-                inoutListVisited.push_back( pType );
-                return true;
+                if ( lhs._fullyQualifiedName.empty() == false )
+                    return lhs._fullyQualifiedName == rhs._fullyQualifiedName;
+                return lhs._name.empty() == false && lhs._name == rhs._name;
             }
 
             /**
@@ -222,6 +215,7 @@ namespace sw
         , _listPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
+        , _pParentType{ nullptr }
         , _typeId{ 0 }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
@@ -246,6 +240,7 @@ namespace sw
         , _listPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
+        , _pParentType{ nullptr }
         , _typeId{ other._typeId }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
@@ -272,6 +267,7 @@ namespace sw
         , _listPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
+        , _pParentType{ nullptr }
         , _typeId{ other._typeId }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
@@ -311,6 +307,7 @@ namespace sw
         _listPropertyWithBase.clear();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
+        _pParentType.store( nullptr, std::memory_order_relaxed );
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
@@ -342,6 +339,7 @@ namespace sw
         _listPropertyWithBase.clear();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
+        _pParentType.store( nullptr, std::memory_order_relaxed );
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
@@ -415,7 +413,7 @@ namespace sw
         }
         _bBuildingPropertyWithBase = SW_TRUE;
 
-        const TypeInfo*             pParent      = engine::getTypeRegistry().findType( _parentFQN );
+        const TypeInfo*             pParent      = getParentType();
         const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
         const size_t                totalCount   = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
 
@@ -451,6 +449,7 @@ namespace sw
     } // namespace generated
 
     TypeRegistry::TypeRegistry()
+        : _generation{ 0 }
     {
         generated::forceLinkBuiltinTypes();
     }
@@ -494,6 +493,8 @@ namespace sw
             _mapAliasToFqn.insert_or_assign( stored._name, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
         }
+        // 표가 커졌으면 원소가 옮겨졌다 — 밖에서 들고 있던 포인터(TypeLookupCache)는 이제 무효다.
+        _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -555,6 +556,8 @@ namespace sw
         {
             if ( pType == nullptr )
                 continue;
+            // 부모 포인터부터 — 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스가 이것만 본다.
+            pType->resolveParentType();
             pType->buildLookupCache();
             (void)pType->getPropertiesWithBase();
         }
@@ -606,6 +609,14 @@ namespace sw
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
+        // 지운 자리에 마지막 원소가 옮겨 왔다 — 남은 타입이 풀어 둔 부모 포인터가 그 원소를 가리키고
+        // 있었을 수 있다. 전부 비우고, 다음 조회(또는 다음 배치의 buildLookupCaches)가 다시 푼다.
+        for ( const auto& [fqn, info] : _mapFqnToClassType )
+        {
+            (void)fqn;
+            info.clearParentType();
+        }
+        _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 #endif
 
@@ -639,6 +650,8 @@ namespace sw
 
         _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
         _mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
+        // 별칭이 생기면 같은 이름의 답이 nullptr 에서 타입으로 바뀔 수 있다.
+        _generation.fetch_add( 1, std::memory_order_acq_rel );
 
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
@@ -683,6 +696,19 @@ namespace sw
 
         const auto canonicalIt = _mapFqnToClassType.find( aliasIt->second );
         return canonicalIt != _mapFqnToClassType.end() ? &canonicalIt->second : nullptr;
+    }
+
+    const TypeInfo* TypeLookupCache::find( const hashed_string& fqn ) const
+    {
+        const TypeRegistry& registry   = engine::getTypeRegistry();
+        const uint32        generation = registry.getGeneration();
+        if ( _generation.load( std::memory_order_acquire ) == generation )
+            return _pType.load( std::memory_order_relaxed );
+
+        const TypeInfo* pType = registry.findType( fqn );
+        _pType.store( pType, std::memory_order_relaxed );
+        _generation.store( generation, std::memory_order_release );
+        return pType;
     }
 
     const EnumInfo* TypeRegistry::findEnum( const hashed_string& nameOrFqn ) const
@@ -780,56 +806,71 @@ namespace sw
 namespace sw
 {
 
+    const TypeInfo* TypeInfo::getParentType() const
+    {
+        const TypeInfo* pParent = _pParentType.load( std::memory_order_relaxed );
+        if ( pParent != nullptr || _parentFQN.empty() )
+            return pParent;
+
+        // 배치 밖에서 등록된 타입이거나 해제로 비워진 뒤다 — 이름으로 풀어 적어 둔다. 부모가 아직
+        // 등록되지 않았으면(모듈 로드 순서) nullptr 를 남겨 다음 호출이 다시 찾게 한다.
+        pParent = engine::getTypeRegistry().findType( _parentFQN );
+        if ( pParent == this )
+            pParent = nullptr;
+        _pParentType.store( pParent, std::memory_order_relaxed );
+        return pParent;
+    }
+
+    void TypeInfo::resolveParentType() const
+    {
+        _pParentType.store( nullptr, std::memory_order_relaxed );
+        (void)getParentType();
+    }
+
     bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
     {
-        if ( _fullyQualifiedName == targetFqn || _name == targetFqn )
-            return true;
-        if ( _parentFQN.empty() )
-            return false;
-
-        // **순환에서 멈춘다.** 여기는 `while` 이라 순환이면 영원히 돈다(재귀가 아니므로 스택도
-        // 넘지 않고 그냥 멈춰 선다 — 더 알아채기 어렵다). 체인은 보통 다섯을 넘지 않으므로
-        // 방문한 것을 적어 두고 다시 만나면 끊는다. `ComponentDefaults::collectTypeChain` 이
-        // 이미 같은 일을 하고 있었는데 이쪽으로 옮겨지지 않았다.
-        const TypeRegistry&     registry = engine::getTypeRegistry();
-        const TypeInfo*         pCurrent = this;
-        vector<const TypeInfo*> listVisited;
-        listVisited.reserve( 8 );
-
-        while ( pCurrent != nullptr && pCurrent->_parentFQN.empty() == false )
+        // **순환에서 멈춘다.** 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
+        // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다 — 모듈이 아직 안
+        // 올라온 동안 이름으로 묻는 쪽(직렬화)이 그것에 기대 왔다.
+        const TypeInfo* pCurrent = this;
+        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
-            if ( ReflectionCoreInternal::markVisitedOrStop( listVisited, pCurrent ) == false )
+            if ( pCurrent->_fullyQualifiedName == targetFqn || pCurrent->_name == targetFqn )
+                return true;
+            if ( pCurrent->_parentFQN.empty() )
                 return false;
-
             if ( pCurrent->_parentFQN == targetFqn )
                 return true;
-            pCurrent = registry.findType( pCurrent->_parentFQN );
-            if ( pCurrent != nullptr && ( pCurrent->_fullyQualifiedName == targetFqn || pCurrent->_name == targetFqn ) )
+            pCurrent = pCurrent->getParentType();
+        }
+        return false;
+    }
+
+    bool TypeInfo::isDerivedFrom( const TypeInfo* pTarget ) const
+    {
+        if ( pTarget == nullptr )
+            return false;
+
+        const TypeInfo* pCurrent = this;
+        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        {
+            if ( pCurrent == pTarget || ReflectionCoreInternal::isSameTypeName( *pCurrent, *pTarget ) )
                 return true;
+            pCurrent = pCurrent->getParentType();
         }
         return false;
     }
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
     {
-        // 재귀였다 — 부모 체인이 순환하면 스택이 넘친다. 루프로 바꾸고 방문한 것을 적어 둔다.
-        const TypeRegistry&     registry = engine::getTypeRegistry();
-        const TypeInfo*         pCurrent = this;
-        vector<const TypeInfo*> listVisited;
-        listVisited.reserve( 8 );
-
-        while ( pCurrent != nullptr )
+        // 재귀였다 — 부모 체인이 순환하면 스택이 넘친다. 걸음 수를 세는 루프로 걷는다.
+        const TypeInfo* pCurrent = this;
+        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
-            if ( ReflectionCoreInternal::markVisitedOrStop( listVisited, pCurrent ) == false )
-                return nullptr;
-
             const PropertyInfo* pProp = pCurrent->findProperty( propNameOrAlias );
             if ( pProp != nullptr )
                 return pProp;
-
-            if ( pCurrent->_parentFQN.empty() )
-                return nullptr;
-            pCurrent = registry.findType( pCurrent->_parentFQN );
+            pCurrent = pCurrent->getParentType();
         }
         return nullptr;
     }
