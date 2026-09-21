@@ -141,7 +141,7 @@ jobs:
         path: |
           ${{ github.workspace }}/Tools/vcpkg
           ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
+        key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}
         restore-keys: |
           vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-
           vcpkg-${{ runner.os }}-${{ matrix.preset }}-

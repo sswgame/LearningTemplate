@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-20 · 기준 커밋 `baaa78ee`
+> 마지막 갱신: 2026-09-21 · 기준 커밋 `3ae36793`
 
 ---
 
@@ -318,61 +318,15 @@ Release · DX12 · 벤치 큐브 2000 · 600프레임 (`-gv_benchMeshes=2000 -gv
 질문을 한다(값을 저장하는 쪽 vs 위젯을 그리는 쪽). `BindingKind` 만 **같은 질문을 세 번** 하고
 있었고, 그것을 닫았다(3절). 다시 세어 볼 때는 "백엔드마다 다른가" 를 먼저 묻고 시작할 것.
 
-### 1-0f. 리눅스 CI 의 `EngineTest_NoGPU` 10 건 — **뿌리는 하나다: `RHIFormat` 이 리플렉션으로 안 풀린다** (2026-09-21)
+### 1-0f. ~~리눅스 CI 의 `EngineTest_NoGPU` 10 건~~ — **닫았다 (2026-09-21, 3절)**
 
-CI 로그에서 **539 / 552**. 열 건 중 렌더패스 둘은 원인이 확정됐고, 나머지 여덟도 같은 모양(리플렉션 enum 해석)일
-가능성이 높다.
+뿌리는 리플렉션이 아니라 **링크**였다. Shipping 정적 링크에서 열거형만 든 `.gen.cpp` 오브젝트를 링커가 버리는 것을
+막는 `/WHOLEARCHIVE` 블록이 `WIN32` 가드 안에만 있었고, 실패한 잡은 처음부터 **Linux Shipping** 이었다(Debug 가
+아니다). 전날 심은 진단이 CI 에서 `byFqn=0 byLeaf=0 names=0 enums=2` 를 남겨 "등록 자체가 안 됐다" 로 갈라 줬다.
 
-```
-ActionMapTest.LoadFromDefaultInputXmlResource / GlyphResolutionWithDeviceTypeAndChords / SaveAndLoadAllBindingKinds
-GameFrameworkTest.TurnBattleSaveGame_VariableMoveSlotRoundtrip / TurnBattleSaveGame_ReflectionSaveRoundtrip
-GameObjectTest.ObjectStateBinaryCarriesTagsAndAttachHierarchy
-RenderPassTest.ShippedPipelinesValidateClean / PipelineValidationCatchesInconsistencies
-ResourcePackTest.StringPoolReadStopsAtPoolEnd
-SceneTest.CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad
-```
-
-**확정된 것.** CI 로그의 검증 오류 일곱 건(forward) · 열아홉 건(deferred)은 **전부 한 줄에서 파생된다**:
-
-```
-attachment 'SceneColor': 알 수 없는 포맷 'R8G8B8A8_UNORM'
-```
-
-`enumFromString<RHIFormat>` 이 실패하면 → 첨부 포맷이 전부 미상 → 깊이 첨부 판정(`fmt != D24_UNORM_S8_UINT`)이
-무너지고 → `resolveRenderPassInputRole` 의 `bDepthFormat` 이 false 라 `SceneDepth` 가 **SourceColor 역할**로 잡혀 →
-"SourceColor 가 2개" · "필수 입력 SceneDepth 없음" 이 줄줄이 따라온다. 그러니 **고칠 것은 한 곳**이다.
-
-대조군으로 같은 경로를 쓰는 `RenderPassType` 은 **해석된다**(로그가 `pass 'Shading'(Lighting)` 의 계약을 실제로
-검사하고 있다 — `findRenderPassInputContract( _resolvedType )` 이 널이 아니었다는 뜻). 즉 리플렉션 전체가 죽은
-것이 아니라 `RHITypes.h` 쪽 하나다.
-
-**재현 실패 — 아래는 전부 배제됐다.**
-
-| 후보 | 확인 방법 | 결과 |
-|------|-----------|------|
-| 유니티 빌드(`SW_ENABLE_UNITY_BUILD`) | 윈도우에 `Ninja-Debug-Unity` 를 따로 지어 10건 실행 | 43/43 초록 — 아님 |
-| CTest 병렬(`-j 4`) | 윈도우 `ctest -L nogpu -j 4` | 초록 — 아님 |
-| 쿠킹 산출물(`Bin/Packs`) | `CookAssets` 는 Shipping 에서만 `all` 에 든다 | 아님 |
-| 코드젠 누락 | 리눅스 `generated/Engine/RHITypes.gen.cpp` 28 KB, `s_sw_RHIFormat_registrar` 심볼 존재 | 아님 |
-| 리눅스 자체 | WSL `WSL-Debug`(유니티 OFF) · `CI-Debug`(유니티 ON) 둘 다 전체 **553/553 초록** | 아님 |
-
-남은 차이는 **러너 툴체인**뿐이다: CI 는 ubuntu-22.04 의 `clang`/`libclang-dev`(LLVM 14~15)로 짓고, 이 PC 의 WSL 은
-LLVM 20(번들) · 21(배포판)뿐이라 그 버전을 깔 수 없다(`clang-14` 패키지가 없고 `sudo` 가 비밀번호를 요구한다).
-
-**다음 사람이 할 일.**
-
-1. 이번에 넣은 `RenderPassTest.PipelineFormatNamesResolveThroughReflection` 이 CI 에서 어떤 메시지를 남기는지 본다.
-   실패하면 한 줄에 다 적힌다: `typeFqn='…' byFqn=0/1 byLeaf=0/1 names=N enums=N`.
-   - `byFqn=0 byLeaf=0` → 등록 자체가 안 됐다(정적 초기화 · 링크 쪽).
-   - `byFqn=1 names=0` → 등록은 됐는데 이름표 맵이 비었다(`sw::unordered_map` 복사 쪽).
-   - `byFqn=1 names=14` 인데도 실패 → 조회 키가 어긋난다(`hashed_string` 은 **intern 인덱스로 같다/다르다를
-     가린다** — 같은 글자가 다른 인덱스를 받으면 맵이 빗나간다).
-2. 그래도 안 좁혀지면 CI 를 ubuntu-24.04 로 올려 보는 것이 가장 싼 A/B 다. 22.04 의 clang 14 는 이 저장소가
-   로컬에서 한 번도 쓰지 않는 버전이다.
-
-**함정 — 낡은 바이너리를 재현으로 착각하지 말 것.** 이번에 한 번 그랬다: WSL 클론의
-`build/CI-Debug/Bin/EngineTest` 는 9월 19일 것이라 `ShippedPipelinesValidateClean` 이 졌는데, 그 원인(`4a8b4bba` 가
-Present 의 선택 입력에 `SceneDepth` 를 더한 것)은 **바이너리보다 나중**이었다. 빌드 시각을 먼저 볼 것.
+**전날의 배제 표가 틀린 자리.** "리눅스 자체 — WSL `CI-Debug` 553/553 초록 → 아님" 은 잘못된 배제였다. Debug 는
+Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
+쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -553,6 +507,50 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (리눅스 Shipping CI 11 건 · macOS CI configure — 둘 다 닫았다)
+
+**1) 리눅스 Shipping 의 `EngineTest_NoGPU` 11 건 (+ `ReflectionTest` 1 건) — 원인은 링커였다.**
+
+전날 심은 진단 `RenderPassTest.PipelineFormatNamesResolveThroughReflection` 이 CI 에서 남긴 한 줄:
+`typeFqn='sw::RHIFormat' byFqn=0 byLeaf=0 names=0 enums=2`. 등록된 열거형이 레지스트리 전체에서 **둘**이라는
+뜻이다(윈도우 Shipping 은 16). 그리고 잡 목록을 다시 보니 실패한 것은 처음부터 **Build Linux Shipping** 이었다 —
+Linux Debug · Linux ASan 은 초록이었다.
+
+Shipping 은 Engine · GF_* · SWGame 이 정적 라이브러리다. `*.gen.cpp` 의 등록기는 파일 스코프 static 이라 외부에서
+참조되는 심볼이 없고, 링커는 아카이브에서 "아무도 참조하지 않는 멤버" 를 올리지 않는다. 클래스는 같은 파일에
+`StaticType()` 정의가 있어 살아남지만 **열거형만 든 `.gen.cpp`(RHITypes · CameraRole · PackEncryptionType …)는 통째로
+사라진다.** 윈도우는 이것을 이미 알고 있었다 — `Source/App/CMakeLists.txt` 와 `sw_addTestExecutable` 에
+`/WHOLEARCHIVE` 블록이 있었다. 그 블록이 `if(SW_SHIPPING_BUILD AND WIN32)` 였다.
+
+고침: `sw_linkWholeArchive(target libs…)`(cmake/Engine/TargetRules.cmake) 하나로 모으고 링커별 플래그를 고른다 —
+link.exe/lld-link `/WHOLEARCHIVE:` · ld64 `-force_load` · GNU ld/lld `--whole-archive … --no-whole-archive`. 두
+호출부의 `WIN32` 가드를 뗐다. 같이 지던 `ReflectionEnumBitFlagTest.PlainSequentialEnumIsNotABitFlag`(`findEnum` 이
+null)도 같은 뿌리다.
+
+**왜 전날 재현이 안 됐나.** 배제 표의 "리눅스 자체" 는 WSL 의 `CI-Debug` 로 확인한 것이었다. Debug 는 Engine 이
+SHARED 라 이 결함이 원리상 나올 수 없다. 실패한 잡의 **이름**(Shipping)을 먼저 봤어야 했다.
+
+**2) macOS CI 가 configure(vcpkg install)에서 죽던 것 — `imgui-node-editor` 포트의 `<exception>` 누락.**
+
+`crude_json.cpp` 가 `std::terminate()` 를 부르면서 `<exception>` 을 include 하지 않는다. libc++ 19+ 가 전이 include 를
+끊어 러너의 brew LLVM 23 에서 `no member named 'terminate' in namespace 'std'` 로 포트 빌드가 선다. 업스트림 vcpkg 는
+아직 그대로라(port-version 4) `ThirdParty/imgui-node-editor/vcpkg-port/` 오버레이(내장 포트 복사 + 패치 한 장,
+port-version 5)를 얹었다 — imgui-notify 가 쓰는 것과 같은 자리이고, `Vcpkg.cmake` 의 매니페스트 스탬프 해시가 그
+폴더를 이미 본다. CI 의 vcpkg 캐시 키에도 `ThirdParty/*/vcpkg-port/**` 를 넣었다. 패치는 `.gitattributes` 의
+`*.patch -text` 로 바이트 그대로 둔다 — 업스트림 패치 하나(remove-getkeyindex)가 CRLF 라 autocrlf 에 변형되면 안 된다.
+업스트림이 같은 고침을 받으면 오버레이는 지운다.
+
+덤으로 잡은 것: `Vcpkg.cmake` 의 트리플릿 감지가 project() 앞이라 `CMAKE_SYSTEM_PROCESSOR` 가 비어 **호스트가
+무엇이든 x64** 였다(Apple Silicon 러너가 `x64-osx` 이름으로 굽고 있었다 — 오버레이 트리플릿이 아키텍처를 강제하지
+않아 실제 코드는 arm64 였으니 이름만 틀린 셈). `cmake_host_system_information(OS_PLATFORM)` 을 대신 본다.
+
+이전 런의 macOS 실패(`brew install llvm` 의 패치 체크섬 불일치)는 brew 쪽 일시 장애였다.
+
+**리눅스·macOS 는 이 PC 에서 돌릴 수 없다(WSL 없음).** 그래서 이 항목의 리눅스 검증은 CI 가 한다 — 아래 검증 줄의
+CI 결과가 그것이다.
+
+**검증.** 윈도우에서 `cmake --preset Ninja-Shipping` 이 오버레이 포트를 집어 `imgui-node-editor:x64-windows@0.9.3#5` 를 패치 넉 장(새 것 포함) 적용해 빌드했다 — 패치가 `git apply` 를 통과한다는 뜻이다. 린트 15/16 — 지는 하나는 `CheckSourceGlob` 이고 이 PC 의 `Ninja-Debug` compile DB 가 낡아서(재설정 필요) 이 변경과 무관하다. `sw_linkWholeArchive` 의 윈도우 갈래는 예전 블록과 같은 `/WHOLEARCHIVE` 줄이라 동작이 같다. **리눅스 Shipping · macOS configure 는 CI 가 판정한다** — 이 커밋의 CI 런을 볼 것. (푸시 시점에 윈도우 Shipping 빌드·테스트는 vcpkg 재설치가 끝나지 않아 아직 돌리지 못했다 — 윈도우 CI 두 잡이 같은 것을 돈다.)
 
 ### 2026-09-21 (리눅스 CI 10 건의 뿌리를 한 곳으로 좁히고, 그 자리에 진단을 심었다)
 

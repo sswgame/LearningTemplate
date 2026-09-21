@@ -1,0 +1,12 @@
+diff --git a/crude_json.cpp b/crude_json.cpp
+index 078427a..9a54928 100644
+--- a/crude_json.cpp
++++ b/crude_json.cpp
+@@ -16,6 +16,7 @@
+ # include <clocale>
+ # include <cmath>
+ # include <cstring>
++# include <exception>
+ # if CRUDE_JSON_IO
+ #     include <stdio.h>
+ #     include <memory>

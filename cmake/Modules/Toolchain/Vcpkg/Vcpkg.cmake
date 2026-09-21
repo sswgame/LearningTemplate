@@ -195,11 +195,24 @@ endif()
 # overlay ports는 install 게이트 전에 보여야 함 (imgui-notify 등)
 # ------------------------------------------------------------------------------
 if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Aa][Rr][Mm]64")
+    # 이 파일은 project() **앞**에서 include 되므로 CMAKE_SYSTEM_PROCESSOR 가 아직 비어 있다.
+    # 그 상태로 매치를 돌리면 언제나 마지막 else() 로 떨어져 **호스트가 무엇이든 x64** 가 됐다 —
+    # GitHub 의 macos-14 러너(Apple Silicon)가 `x64-osx` 이름으로 포트를 굽고 있었다. 호스트
+    # 아키텍처는 project() 없이도 물을 수 있으니(OS_PLATFORM: AMD64 · x86_64 · arm64 · aarch64)
+    # 프로세서가 비어 있으면 그것을 대신 본다. 대소문자는 OS 마다 달라서 낮춰서 본다.
+    set(sw_vcpkg_processor "${CMAKE_SYSTEM_PROCESSOR}")
+
+    if(sw_vcpkg_processor STREQUAL "")
+        cmake_host_system_information(RESULT sw_vcpkg_processor QUERY OS_PLATFORM)
+    endif()
+
+    string(TOLOWER "${sw_vcpkg_processor}" sw_vcpkg_processor)
+
+    if(sw_vcpkg_processor MATCHES "^(aarch64|arm64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Aa][Rr][Mm]64")
         set(sw_vcpkg_arch "arm64")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|x64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Xx]64")
+    elseif(sw_vcpkg_processor MATCHES "^(x86_64|amd64|x64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Xx]64")
         set(sw_vcpkg_arch "x64")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|i[3-6]86)$")
+    elseif(sw_vcpkg_processor MATCHES "^(x86|i[3-6]86)$")
         set(sw_vcpkg_arch "x86")
     else()
         set(sw_vcpkg_arch "x64")

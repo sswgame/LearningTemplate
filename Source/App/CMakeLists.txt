@@ -61,19 +61,13 @@ sw_emitRuntimeCopies(App)
 # 실제로 RHITypes.gen.cpp 가 빠져 RHIBackend 열거형이 등록되지 않았고, EngineConfig 의
 # _window._defaultRHI 역직렬화가 실패해 엔진 설정이 통째로 기본값으로 떨어졌다
 # (→ 리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
-# 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다.
-if(SW_SHIPPING_BUILD AND WIN32)
+# 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다 — 플랫폼별 링커 플래그는
+# `sw_linkWholeArchive`(cmake/Engine/TargetRules.cmake) 가 고른다. 한때 이 블록이 `WIN32`
+# 가드 안에 있어 리눅스 Shipping 만 조용히 깨졌다(docs/06_Backlog.md 2026-09-21).
+if(SW_SHIPPING_BUILD)
 	set(swReflectionStaticLibs Engine)
 	sw_getDynamicModules(swDynamicModules)
 	list(APPEND swReflectionStaticLibs ${swDynamicModules})
 	list(REMOVE_DUPLICATES swReflectionStaticLibs)
-
-	foreach(reflLib IN LISTS swReflectionStaticLibs)
-		if(TARGET ${reflLib})
-			get_target_property(reflLibType ${reflLib} TYPE)
-			if(reflLibType STREQUAL "STATIC_LIBRARY")
-				target_link_options(App PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
-			endif()
-		endif()
-	endforeach()
+	sw_linkWholeArchive(App ${swReflectionStaticLibs})
 endif()

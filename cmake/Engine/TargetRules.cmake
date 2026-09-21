@@ -35,6 +35,56 @@ function(sw_setModuleBinOutput TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# 정적 라이브러리 통째 링크 — 리플렉션 등록기 보존
+# ------------------------------------------------------------------------------
+# 생성된 *.gen.cpp 의 등록기는 파일 스코프 static 객체(생성자가 전역 링크드 리스트에 자신을
+# 매단다)라 외부에서 참조되는 심볼이 없다. Dev 는 Engine 이 DLL 이라 전부 로드되지만, Shipping 은
+# 정적 라이브러리라 링커가 "아무도 참조 안 하는 오브젝트 파일" 을 통째로 버린다. 타입은
+# (StaticType() 정의가 같은 파일에 있어) 살아남고 **열거형만 조용히 사라진다** — RHITypes.gen.cpp
+# 가 빠지면 RHIBackend · RHIFormat 이 등록되지 않아 EngineConfig 역직렬화가 기본값으로 떨어지고,
+# 렌더패스 포맷이 전부 미상이 되며, KeyCodes::fromName 이 Unknown 만 내서 InputMap 바인딩이
+# 하나도 안 붙고, SaveGame 의 리플렉션 왕복이 깨진다. 그래서 리플렉션을 담은 정적 라이브러리는
+# 통째로 링크한다.
+#
+# 플래그는 링커마다 다르다. 예전엔 `/WHOLEARCHIVE` 하나가 `WIN32` 가드 안에 있었고, 그래서
+# 리눅스 Shipping 은 등록된 열거형이 **둘뿐인 채로** 테스트를 돌렸다(EngineTest_NoGPU 11건 —
+# docs/06_Backlog.md 2026-09-21). 로컬에서 재현이 안 됐던 이유도 같다: WSL 에서 돌린 것은
+# `CI-Debug`(Engine 이 SHARED)뿐이었다.
+#
+#   | 링커                  | 플래그                                     |
+#   | --------------------- | ------------------------------------------ |
+#   | link.exe · lld-link   | `/WHOLEARCHIVE:<lib>`                      |
+#   | ld64 (Apple)          | `-force_load <lib>`                        |
+#   | GNU ld · lld · gold   | `--whole-archive <lib> --no-whole-archive` |
+#
+# 링크 옵션은 오브젝트보다 앞에 놓이지만 문제없다 — 통째로 올라온 멤버가 필요로 하는 심볼은 뒤에
+# 오는 라이브러리가 채우고, 같은 아카이브가 뒤에 한 번 더 나와도 이미 올라온 멤버는 다시 올리지
+# 않는다. STATIC 이 아닌 타겟(SHARED/MODULE/OBJECT)이나 없는 타겟은 조용히 건너뛴다 — 호출부가
+# 구성마다 다른 목록을 그대로 넘겨도 되게.
+function(sw_linkWholeArchive TARGET_NAME)
+	foreach(reflLib IN LISTS ARGN)
+		if(NOT TARGET ${reflLib})
+			continue()
+		endif()
+
+		get_target_property(reflLibType ${reflLib} TYPE)
+
+		if(NOT reflLibType STREQUAL "STATIC_LIBRARY")
+			continue()
+		endif()
+
+		if(MSVC)
+			target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
+		elseif(APPLE)
+			target_link_options(${TARGET_NAME} PRIVATE "LINKER:-force_load,$<TARGET_FILE:${reflLib}>")
+		else()
+			target_link_options(${TARGET_NAME} PRIVATE
+				"LINKER:--whole-archive,$<TARGET_FILE:${reflLib}>,--no-whole-archive")
+		endif()
+	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
 # 동적 모듈 레지스트리 — **만드는 자리가 등록하고, 쓰는 자리는 묻는다**
 #
 # 예전에는 이 목록이 세 가지 방식으로 관리되고 있었다:
@@ -381,21 +431,11 @@ function(sw_addTestExecutable TARGET_NAME)
 		sw_global_options
 	)
 
-	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다.
-	# *.gen.cpp 의 등록기는 파일 스코프 static 이고 외부에서 참조되는 심볼이 없어서, Shipping
-	# 처럼 Engine 이 정적 라이브러리인 빌드에서는 링커가 그 오브젝트를 통째로 버린다. 그러면
-	# 타입은 (StaticType() 정의가 같은 파일에 있어) 살아남는데 **열거형만 조용히 사라진다** —
-	# KeyCodes::fromName 이 전부 Unknown 을 내서 InputMap XML 의 바인딩이 하나도 안 붙고,
-	# SaveGame 의 리플렉션 왕복도 깨진다. Source/App/CMakeLists.txt 의 같은 블록 참고.
-	if(SW_SHIPPING_BUILD AND WIN32)
-		foreach(reflLib IN LISTS ARG_LIBS)
-			if(TARGET ${reflLib})
-				get_target_property(reflLibType ${reflLib} TYPE)
-				if(reflLibType STREQUAL "STATIC_LIBRARY")
-					target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
-				endif()
-			endif()
-		endforeach()
+	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다 —
+	# 왜 그래야 하는지, 플랫폼마다 무슨 플래그인지는 `sw_linkWholeArchive` 머리말에 있다.
+	# 플랫폼 가드는 여기 두지 않는다: 한때 `WIN32` 가 여기 있어서 리눅스 Shipping 만 조용히 깨졌다.
+	if(SW_SHIPPING_BUILD)
+		sw_linkWholeArchive(${TARGET_NAME} ${ARG_LIBS})
 	endif()
 
 	target_compile_definitions(${TARGET_NAME}
