@@ -78,8 +78,14 @@ namespace sw
     private:
         /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
-        D3D11RHIDevice*            _pDevice;
-        ID3D11DeviceContext*       _pContext;
+        /**
+         * @brief 루트 상수 흉내 — 그림자 배열에 쓰고 계약 슬롯의 작은 상수버퍼를 다시 채워 겁니다.
+         * @details DX11 에는 루트 상수가 없다. 그래픽스·컴퓨트 진입점이 이 스무 줄을 각자 갖고 있었고 다른 것은 어느
+         *          스테이지에 거는가뿐이다(VS+PS / CS). 상한 검사·WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐진다.
+         */
+        void                 writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+        D3D11RHIDevice*      _pDevice;
+        ID3D11DeviceContext* _pContext;
         /// @brief 이 컨텍스트가 갱신할 기록 상태.
         D3D11RecordingState* _pState;
         /** @brief _pContext 수명 동안 불변이라 최초 QueryInterface 결과를 재사용한다(마커마다 QI 방지). */

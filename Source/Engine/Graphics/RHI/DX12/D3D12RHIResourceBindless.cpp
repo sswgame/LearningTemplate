@@ -27,6 +27,17 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12RHIResource" );
 
+    D3D12RHIResource::BindlessHandleSet D3D12RHIResource::bindlessHandlesAt( RHIDescriptorIndex index ) const
+    {
+        BindlessHandleSet handle{};
+        handle._cpu = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
+        handle._cpu.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
+        handle._gpu = _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        handle._gpu.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
+        handle._offline = _pDevice->offlineDescriptorAt( index );
+        return handle;
+    }
+
     RHIDescriptorIndex D3D12RHIResource::acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock )
     {
         // 잠금은 호출자의 것이다 — 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
@@ -78,20 +89,14 @@ namespace sw
         else
             srvDesc.Format = resFmt;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
 
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
-        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
-
-        _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
-        _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
+        _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, handle._cpu );
+        _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, handle._offline );
 
         if ( index >= _pDevice->_listRegisteredBindless.size() )
             _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]          = { pRes, cpuHandle, gpuHandle, offlineHandle };
+        _pDevice->_listRegisteredBindless[index]          = { pRes, handle._cpu, handle._gpu, handle._offline };
         _pDevice->_listRegisteredBindless[index]._texture = texture;
 
         return index;
@@ -112,13 +117,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
-        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
 
         // 구조 버퍼면 StructuredBuffer SRV (셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
         // 그 외(상수 버퍼 ring)면 CBV.
@@ -137,12 +136,12 @@ namespace sw
             // 온라인 힙과 오프라인 힙에 각각 한 번씩 — 예전에는 오프라인 쪽을 **두 번** 불렀다
             // (복사-붙여넣기). 같은 뷰를 덮어쓰는 것이라 결과는 같았지만, 읽는 사람에게는 "둘이
             // 달라야 하는데 잘못 적은 것" 으로 보인다.
-            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
-            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
+            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, handle._cpu );
+            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, handle._offline );
 
             if ( index >= _pDevice->_listRegisteredBindless.size() )
                 _pDevice->_listRegisteredBindless.resize( index + 1 );
-            _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
+            _pDevice->_listRegisteredBindless[index]         = { pRes, handle._cpu, handle._gpu, handle._offline };
             _pDevice->_listRegisteredBindless[index]._buffer = buffer;
             return index;
         }
@@ -167,12 +166,12 @@ namespace sw
                 return kInvalidDescriptorIndex;
         }
 
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, cpuHandle );
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, offlineHandle );
+        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._cpu );
+        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._offline );
 
         if ( index >= _pDevice->_listRegisteredBindless.size() )
             _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
+        _pDevice->_listRegisteredBindless[index]         = { pRes, handle._cpu, handle._gpu, handle._offline };
         _pDevice->_listRegisteredBindless[index]._buffer = buffer;
 
         return index;
@@ -251,12 +250,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
-        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
 
         // 구조 버퍼면 StructuredBuffer UAV, 아니면 RAW UAV (RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0).
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
@@ -277,12 +271,12 @@ namespace sw
             uavDesc.Buffer.StructureByteStride = 0;
             uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_RAW;
         }
-        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
-        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, offlineHandle );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, handle._cpu );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, handle._offline );
 
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
+        _pDevice->_listRegisteredUAV[index]         = { pRes, handle._cpu, handle._gpu, handle._offline };
         _pDevice->_listRegisteredUAV[index]._buffer = buffer;
 
         return index;
@@ -303,24 +297,19 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
-        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.Format               = pRes->GetDesc().Format;
         uavDesc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
         uavDesc.Texture2D.MipSlice   = 0;
         uavDesc.Texture2D.PlaneSlice = 0;
-        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
-        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, offlineHandle );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, handle._cpu );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, handle._offline );
 
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]          = { pRes, cpuHandle, gpuHandle, offlineHandle };
+        _pDevice->_listRegisteredUAV[index]          = { pRes, handle._cpu, handle._gpu, handle._offline };
         _pDevice->_listRegisteredUAV[index]._texture = texture;
         return index;
     }

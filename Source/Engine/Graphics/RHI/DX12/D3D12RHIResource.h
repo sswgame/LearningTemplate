@@ -55,6 +55,21 @@ namespace sw
          */
         RHIDescriptorIndex acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock );
 
+        /** @brief 힙 인덱스 하나가 가리키는 세 디스크립터 — 온라인 힙의 CPU/GPU 핸들과 오프라인 힙의 CPU 핸들. */
+        struct BindlessHandleSet
+        {
+            D3D12_CPU_DESCRIPTOR_HANDLE _cpu{};
+            D3D12_GPU_DESCRIPTOR_HANDLE _gpu{};
+            D3D12_CPU_DESCRIPTOR_HANDLE _offline{};
+        };
+        /**
+         * @brief 힙 인덱스의 디스크립터 핸들 셋을 계산합니다.
+         * @details 뷰는 온라인 힙과 오프라인 힙에 **같이** 만든다(슬롯 테이블 t#/u# 은 오프라인에서 온라인 블록으로 복사한다).
+         *          네 등록 함수가 이 여섯 줄을 각자 갖고 있었다 — 오프라인 힙을 더하던 날 넷 중 하나만 빠뜨리면 그 종류의
+         *          리소스만 슬롯 테이블에서 사라진다.
+         */
+        BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
+
         /**
          * @brief 어느 bindless 등록부인가 — **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
          * @details 둘이 같은 프리리스트를 쓰므로(`_listFreeBindless`) 인덱스는 섞이지 않는다.
