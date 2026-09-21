@@ -238,7 +238,7 @@ namespace sw
         return readBytes( outBytes.data(), size );
     }
 
-    uint32 Archive::calculateChecksum() const
+    uint32 Archive::computeChecksum() const
     {
         if ( _pData == nullptr || _dataSize == 0 )
             return 0;
@@ -248,7 +248,7 @@ namespace sw
 
     void Archive::writeChecksum()
     {
-        uint32 checksum = calculateChecksum();
+        uint32 checksum = computeChecksum();
         ( *this ) << checksum;
     }
 

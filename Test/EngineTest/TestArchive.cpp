@@ -310,7 +310,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveChecksumAndCorruptionDetection )
     writeArch << sw::string( "SafeSecurePayloadData" );
     writeArch << 424242;
 
-    const uint32 crc = writeArch.calculateChecksum();
+    const uint32 crc = writeArch.computeChecksum();
     SW_EXPECT_TRUE( crc != 0 );
 
     writeArch.writeChecksum();

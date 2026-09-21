@@ -439,7 +439,7 @@ namespace sw
                     binding._bJoystickAnchored = true;
                 }
 
-                outValue = VirtualJoystick::calculateVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );
+                outValue = VirtualJoystick::computeVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );
                 return ( outValue._x != 0.0f || outValue._y != 0.0f );
             }
             case BindingKind::Shortcut:

@@ -749,6 +749,26 @@ Core·Engine 헤더의 공개 함수는 5367 개(구조체 708)였다. 첫 훑�
   컴파일이 됐다. 처음엔 제한 없는 템플릿이었는데 `setValue( sw::string )` 이 `string_view` 변환보다 템플릿을 골라
   `is_arithmetic` SFINAE 를 붙였다.
 
+**2차 (같은 날) — 이름이 반대로 읽히던 것과 두 어휘.**
+
+- **`GameObject::getAllComponents()` 삭제.** "전부" 라는 이름으로 `getComponents()` 보다 **적게**(pending-kill 제외)
+  복사해 돌려줬고, 호출처 열둘이 전부 스스로 null 을 다시 걸렀다. 목록은 `getComponents()`(참조, 무할당) 하나, 걸러
+  보려면 `forEachComponent`. `ComponentPtr` 의 느린 경로만 pending-kill 검사를 명시했다.
+- **`GameObjectManager::renameGameObject()` 삭제** — `GameObject::setName()` 을 부르는 것이 전부였고 호출처 0.
+  `getAllGameObjects` 의 값 반환·출력 인자 두 판은 **남긴다** — 출력 인자 판은 에디터가 이중 할당을 피하려고 일부러 쓴다(주석이 그 이유를 적고 있다).
+- **`Material` 을 `MaterialInstance` 와 같은 어휘로.** 한 클래스는 `setPropertyValue / setTextureProperty /
+  setParameterFloat`, 다른 클래스는 `setParameter / setTextureParameter / setScalarParameter` 였다. 언리얼의 셋
+  (Scalar · Vector · Texture **parameter**)으로 통일: `setParameter` `setTextureParameter` `setScalarParameter`
+  `getScalarParameter` `resetParameterToDefault` `setParameterData` `getParameterData`. `MaterialProperty` ·
+  `findProperty` 는 **선언(슬롯)** 이라 그대로 — property 는 레이아웃, parameter 는 값.
+- **`calculate*` → `compute*`** (6 개: Checksum · BlockCount · BitmaskBytes · Vector · Step · PackDefaultPriority).
+  한 개념 한 동사 — `CheckFunctionVocabulary` 에 `calculate` / `calc` 를 금지어로 넣고 AGENTS.md · 04 문서 표에 줄을 더했다.
+
+**남은 것 — 다음 훑기가 볼 곳 (숫자는 헤더 선언 기준).** `ActionMap` 164 (이름·핸들·문자열 3중 오버로드 ×20 —
+`hashed_string` 이 문자열에서 암묵 변환되지 않아 `string_view` 판을 지우면 호출처 170 곳이 바뀐다, 보류),
+`FrameRenderer` 100, `InputManager` 65, `Archive` 81(형식별 `serializeXxxObject` 5 가족), `StringUtil` 73,
+`FileUtil` 55. `getCount`(6) 와 `getSize`(9) 가 컨테이너 밖에서 섞여 쓰인다 — 다음 후보.
+
 ### 2026-09-22 (`castTo` 를 5배 — 잠금·할당·이름 걷기를 등록 시점의 포인터 하나로)
 
 `castTo<SceneComponent>` 가 워커에서 세터보다 느려 `isSceneComponent()` 비트로 피해 갔던 것(위 09-21 항목)의 **원인 쪽**을

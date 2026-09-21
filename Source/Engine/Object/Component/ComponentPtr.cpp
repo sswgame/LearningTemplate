@@ -130,7 +130,7 @@ namespace sw
             if ( pFound != nullptr && pFound->isPendingKill() == false )
             {
                 bool bComponentFound = false;
-                for ( Component* pComp : pFound->getAllComponents() )
+                for ( Component* pComp : pFound->getComponents() )
                 {
                     if ( pComp == _pCachedPtr && pComp->isPendingKill() == false )
                     {
@@ -151,9 +151,9 @@ namespace sw
         GameObject* pObj = pObjMgr->findGameObjectByName( _targetObjectName );
         if ( pObj != nullptr && pObj->isPendingKill() == false )
         {
-            for ( Component* pComp : pObj->getAllComponents() )
+            for ( Component* pComp : pObj->getComponents() )
             {
-                if ( pComp->getComponentName() == _targetComponentType )
+                if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->getComponentName() == _targetComponentType )
                 {
                     _pCachedPtr     = pComp;
                     _cachedObjectId = pObj->getObjectId();

@@ -356,7 +356,7 @@ namespace sw
         if ( _pParentMaterial != nullptr )
         {
             float32 value = defaultValue;
-            if ( _pParentMaterial->getParameterFloat( name, value ) )
+            if ( _pParentMaterial->getScalarParameter( name, value ) )
                 return value;
         }
         return defaultValue;
@@ -369,7 +369,7 @@ namespace sw
             return pVal->data();
         if ( _pParentMaterial != nullptr )
         {
-            const void* pData = _pParentMaterial->getPropertyData( name.c_str() ? name.c_str() : "" );
+            const void* pData = _pParentMaterial->getParameterData( name.c_str() ? name.c_str() : "" );
             return pData ? reinterpret_cast<const float32*>( pData ) : nullptr;
         }
         return nullptr;

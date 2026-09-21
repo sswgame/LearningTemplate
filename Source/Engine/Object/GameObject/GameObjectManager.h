@@ -70,9 +70,6 @@ namespace sw
          */
         void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
 
-        /** @brief rename API — setName과 동일하게 이름 맵을 유지합니다. */
-        bool renameGameObject( GameObject* pObj, hashed_string newName );
-
         /**
          * @brief 핸들이 쓸 매니저를 정합니다 — 붙잡아 둔 것이 있으면 그것, 없으면 **활성 씬**의 것.
          * @param pPreferred 핸들이 들고 있는 매니저. nullptr 이면 활성 씬에게 묻는다.

@@ -57,7 +57,7 @@ namespace sw
         void shrink_to_fit() { _listBlock.shrink_to_fit(); }
 
         /** @brief 용량을 예약합니다. */
-        void reserve( const uint32 newCapacity ) { _listBlock.reserve( calculateBlockCount( newCapacity ) ); }
+        void reserve( const uint32 newCapacity ) { _listBlock.reserve( computeBlockCount( newCapacity ) ); }
         /**
          * @brief 크기를 변경합니다
          */
@@ -166,7 +166,7 @@ namespace sw
         /** @brief 블록 내 비트 인덱스를 반환합니다. */
         static uint32 getBitIndexInBlock( const uint32 bitPosition ) { return bitPosition & kBlockMask; }
         /** @brief 필요한 블록 수를 계산합니다. */
-        static uint32 calculateBlockCount( const uint32 bitCount ) { return bitCount == 0 ? 0 : ( bitCount + kBitsPerBlock - 1 ) >> kBlockShift; }
+        static uint32 computeBlockCount( const uint32 bitCount ) { return bitCount == 0 ? 0 : ( bitCount + kBitsPerBlock - 1 ) >> kBlockShift; }
         /** @brief 해당 위치의 비트 마스크를 반환합니다. */
         static BlockType bitMask( const uint32 bitPosition ) { return static_cast<BlockType>( 1 ) << getBitIndexInBlock( bitPosition ); }
 

@@ -550,7 +550,7 @@ namespace sw
             writer.write( PresenceMaskUtil::kModeDense );
             writer.writeVarUint( static_cast<uint64>( totalProps ) );
 
-            const size_t               bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
+            const size_t               bitmaskBytes = PresenceMaskUtil::computeBitmaskBytes( totalProps );
             thread_local vector<uint8> t_bitmask;
             t_bitmask.assign( bitmaskBytes, 0 );
 
@@ -628,7 +628,7 @@ namespace sw
             if ( totalProps > remainingBytes * 8 )
                 return false;
 
-            const size_t  bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( static_cast<size_t>( totalProps ) );
+            const size_t  bitmaskBytes = PresenceMaskUtil::computeBitmaskBytes( static_cast<size_t>( totalProps ) );
             vector<uint8> bitmask( bitmaskBytes, 0 );
             for ( size_t byteIndex = 0; byteIndex < bitmaskBytes; ++byteIndex )
             {

@@ -164,10 +164,12 @@ namespace sw
         /** @brief 소유 Component 개수. pending-kill은 제외합니다. */
         size_t getComponentCount() const;
 
-        /** @brief 소유 Component 포인터. pending-kill은 제외합니다. */
-        vector<Component*> getAllComponents() const;
-
-        /** @brief 소유 Component 벡터에 대한 직접 상수 참조를 반환합니다. */
+        /**
+         * @brief 소유 Component 목록 그대로 — 빈 칸(nullptr)과 pending-kill 이 섞여 있을 수 있다.
+         * @details 걸러서 보려면 `forEachComponent` / `forEachComponentOfType`(할당 없음). 예전엔 걸러서
+         *          복사해 주는 `getComponents()` 가 따로 있었는데, 이름이 반대로 읽혔고(전부 → 더 적게)
+         *          호출처 열둘이 전부 스스로 null 을 다시 걸렀다.
+         */
         const vector<Component*>& getComponents() const { return _listComponent; }
 
         /** @brief 힙 할당 없이 유효한 모든 컴포넌트를 방문합니다. */

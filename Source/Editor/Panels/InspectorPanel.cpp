@@ -250,7 +250,7 @@ namespace sw::editor
         ImGui::SeparatorText( "Components" );
         EditorContext*           pSelEditorContext = EditorContext::get();
         IRHIDevice*              pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
-        const vector<Component*> listComponent     = pObj->getAllComponents();
+        const vector<Component*> listComponent     = pObj->getComponents();
         for ( Component* pComp : listComponent )
         {
             if ( pComp == nullptr )

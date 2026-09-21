@@ -94,7 +94,7 @@ namespace sw
         /** @brief 프로퍼티를 패킹 CB에 다시 씁니다. */
         bool rebuildPackedBuffer();
         /** @brief 한 프로퍼티를 `_defaultValue`로 되돌리고 CB를 다시 올립니다. */
-        bool resetPropertyToDefault( IRHIDevice* pRhi, hashed_string name );
+        bool resetParameterToDefault( IRHIDevice* pRhi, hashed_string name );
         /** @brief 모든 프로퍼티를 기본값으로 되돌립니다. */
         void resetAllToDefaults( IRHIDevice* pRhi );
         /**
@@ -114,11 +114,11 @@ namespace sw
         bool packRawDataIntoBuffer( hashed_string name, const void* pData, uint32 byteSize, vector<uint8>& inoutBuffer ) const;
 
         /** @brief 패킹 버퍼 오프셋에 raw 바이트를 씁니다. */
-        void setPropertyData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData );
+        void setParameterData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData );
         /** @brief 이름 프로퍼티 값을 텍스트로 설정합니다. */
-        bool setPropertyValue( IRHIDevice* pRhi, hashed_string name, string_view value );
+        bool setParameter( IRHIDevice* pRhi, hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 넣습니다. */
-        bool setTextureProperty( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx );
+        bool setTextureParameter( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
          * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). shutdown 이 releaseTextureAssets 로 되돌린다.
@@ -143,7 +143,7 @@ namespace sw
         /** @brief 블렌드 모드를 설정합니다. */
         void setBlendMode( RHIBlendMode mode );
         /** @brief float32 파라미터를 설정합니다. */
-        bool setParameterFloat( IRHIDevice* pRhi, hashed_string name, float32 value );
+        bool setScalarParameter( IRHIDevice* pRhi, hashed_string name, float32 value );
 
         /** @brief 디스크립터를 반환합니다. */
         const MaterialDesc& getDesc() const { return _desc; }
@@ -162,7 +162,7 @@ namespace sw
         /** @brief 이름 프로퍼티를 찾습니다. */
         MaterialProperty* findProperty( hashed_string name );
         /** @brief 프로퍼티 raw 데이터를 반환합니다. */
-        const void* getPropertyData( string_view name ) const;
+        const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
         /** @brief 셰이더 키워드 목록을 모읍니다. */
@@ -200,7 +200,7 @@ namespace sw
         /** @brief 블렌드 모드를 반환합니다. */
         RHIBlendMode getBlendMode() const { return _blendMode; }
         /** @brief float32 파라미터를 읽습니다. */
-        bool getParameterFloat( hashed_string name, float32& outValue ) const;
+        bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
         /// @brief 비동기 셰이더 컴파일 진행 상태

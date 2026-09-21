@@ -1265,7 +1265,7 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
-                 material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                 material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
                 material.reset();
             return material;
         };
@@ -3239,12 +3239,12 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
             }
         }
 
-        // 실제 에셋 + setPropertyValue 로 간다 — 손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨려 백엔드마다
+        // 실제 에셋 + setParameter 로 간다 — 손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨려 백엔드마다
         // 다르게 무너진다(백로그 "손으로 지은 머티리얼 XML 함정").
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
             bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
-                  material->setPropertyValue( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];

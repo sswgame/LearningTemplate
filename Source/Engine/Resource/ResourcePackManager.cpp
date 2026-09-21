@@ -45,7 +45,7 @@ namespace sw
             /**
              * @brief EngineConfig 리소스 우선순위 목록(listPriority)을 기반으로 팩의 기본 마운트 우선순위를 동적 계산합니다 (Zero Allocation).
              */
-            static int32 calculatePackDefaultPriority( string_view packFileName, const vector<string>& listPriority )
+            static int32 computePackDefaultPriority( string_view packFileName, const vector<string>& listPriority )
             {
                 string_view fileName;
                 FileUtil::getFileNamePart( packFileName, fileName );
@@ -184,7 +184,7 @@ namespace sw
 
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
-            effectivePriority = ResourcePackManagerInternal::calculatePackDefaultPriority( packFilePath, ResourceUtil::getSearchPriority() );
+            effectivePriority = ResourcePackManagerInternal::computePackDefaultPriority( packFilePath, ResourceUtil::getSearchPriority() );
 
         auto pReader = make_unique<ResourcePackReader>();
         if ( pReader->open( normalizedPath ) == false )
@@ -431,7 +431,7 @@ namespace sw
             if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false )
                 continue;
 
-            const int32 priority = ResourcePackManagerInternal::calculatePackDefaultPriority( packPath, listPriority );
+            const int32 priority = ResourcePackManagerInternal::computePackDefaultPriority( packPath, listPriority );
             if ( mountPack( packPath, priority ) )
                 bAnyMounted = true;
         }

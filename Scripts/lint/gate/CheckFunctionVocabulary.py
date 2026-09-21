@@ -66,6 +66,8 @@ _kBannedVerb: dict[str, str] = {
     "retrieve": "get / find",
     "lookup": "find",
     "obtain": "get / acquire",
+    "calculate": "compute",
+    "calc": "compute",
 }
 _kBannedVerbRe = re.compile(r"^(" + "|".join(sorted(_kBannedVerb, key=len, reverse=True)) + r")(?=[A-Z0-9]|$)")
 

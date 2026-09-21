@@ -30,13 +30,13 @@ namespace sw
         }
 
         /** @brief 현재 터치/마우스 위치(currentPos)를 전달받아 [-1.0, 1.0] 범위의 정규화된 2D 축 벡터를 산출합니다. */
-        float2 calculateVector( const float2 currentPos ) const noexcept
+        float2 computeVector( const float2 currentPos ) const noexcept
         {
-            return calculateVector( _anchorPos, currentPos, _radius, _deadzone, _outerDeadzone );
+            return computeVector( _anchorPos, currentPos, _radius, _deadzone, _outerDeadzone );
         }
 
         /** @brief 정적 헬퍼 함수로 2D 가상 스틱 축 벡터를 계산합니다. */
-        static float2 calculateVector( const float2 anchor, const float2 currentPos, const float32 radius, const float32 deadzone = 0.1f, const float32 outerDeadzone = 1.0f ) noexcept
+        static float2 computeVector( const float2 anchor, const float2 currentPos, const float32 radius, const float32 deadzone = 0.1f, const float32 outerDeadzone = 1.0f ) noexcept
         {
             const float32 dx     = currentPos._x - anchor._x;
             const float32 dy     = currentPos._y - anchor._y;

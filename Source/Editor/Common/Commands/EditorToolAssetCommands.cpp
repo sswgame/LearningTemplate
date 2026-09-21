@@ -428,7 +428,7 @@ namespace sw::editor
     void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
     {
         const SerializeContext& ctx = SerializeContext::getDefault();
-        for ( Component* pInstComp : pInstance->getAllComponents() )
+        for ( Component* pInstComp : pInstance->getComponents() )
         {
             if ( pInstComp == nullptr || pInstComp->getTypeInfo() == nullptr )
                 continue;

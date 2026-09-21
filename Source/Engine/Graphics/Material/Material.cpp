@@ -113,7 +113,7 @@ namespace sw
         pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
         _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
 
-        // 텍스처는 CB 가 생긴 뒤에 — setTextureProperty 가 인덱스를 CB 에 바로 올린다.
+        // 텍스처는 CB 가 생긴 뒤에 — setTextureParameter 가 인덱스를 CB 에 바로 올린다.
         resolveTextureAssets( pRhi );
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
@@ -153,7 +153,7 @@ namespace sw
 
             _listAcquiredTexturePath.push_back( prop._assetPath );
             _listMaterialTextureSrv.push_back( pTexture->getSrv() );
-            setTextureProperty( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
+            setTextureParameter( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
         }
     }
 
@@ -173,7 +173,7 @@ namespace sw
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
                 continue;
-            // _value 도 비운다 — setTextureProperty 가 인덱스를 문자열로도 남기므로, 그대로 두면
+            // _value 도 비운다 — setTextureParameter 가 인덱스를 문자열로도 남기므로, 그대로 두면
             // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 되살린다.
             prop._textureIndex = kInvalidDescriptorIndex;
             prop._value.clear();
@@ -480,12 +480,12 @@ namespace sw
         return bAllPacked;
     }
 
-    bool Material::resetPropertyToDefault( IRHIDevice* pRhi, hashed_string name )
+    bool Material::resetParameterToDefault( IRHIDevice* pRhi, hashed_string name )
     {
         MaterialProperty* prop = findProperty( name );
         if ( prop == nullptr )
             return false;
-        return setPropertyValue( pRhi, name, prop->_defaultValue );
+        return setParameter( pRhi, name, prop->_defaultValue );
     }
 
     void Material::resetAllToDefaults( IRHIDevice* pRhi )
@@ -541,7 +541,7 @@ namespace sw
         return true;
     }
 
-    void Material::setPropertyData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData )
+    void Material::setParameterData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData )
     {
         if ( pData == nullptr || offset + size > _data._bytes.size() )
             return;
@@ -552,7 +552,7 @@ namespace sw
             pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
-    bool Material::setPropertyValue( IRHIDevice* pRhi, hashed_string name, string_view value )
+    bool Material::setParameter( IRHIDevice* pRhi, hashed_string name, string_view value )
     {
         MaterialProperty* prop = findProperty( name );
         if ( prop == nullptr )
@@ -570,7 +570,7 @@ namespace sw
         return true;
     }
 
-    bool Material::setTextureProperty( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx )
+    bool Material::setTextureParameter( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx )
     {
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -663,7 +663,7 @@ namespace sw
         _desc._blendMode = MaterialUtil::blendModeToString( mode );
     }
 
-    bool Material::setParameterFloat( IRHIDevice* pRhi, hashed_string name, float32 value )
+    bool Material::setScalarParameter( IRHIDevice* pRhi, hashed_string name, float32 value )
     {
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -699,7 +699,7 @@ namespace sw
         return nullptr;
     }
 
-    const void* Material::getPropertyData( string_view name ) const
+    const void* Material::getParameterData( string_view name ) const
     {
         for ( const MaterialProperty& prop : _data._listProperty )
         {
@@ -784,7 +784,7 @@ namespace sw
         return _cachedPermutationHash;
     }
 
-    bool Material::getParameterFloat( hashed_string name, float32& outValue ) const
+    bool Material::getScalarParameter( hashed_string name, float32& outValue ) const
     {
         for ( const MaterialProperty& prop : _data._listProperty )
         {

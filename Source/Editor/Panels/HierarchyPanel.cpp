@@ -37,7 +37,7 @@ namespace sw::editor
                 if ( pObj == nullptr || typeFilter.empty() )
                     return false;
 
-                for ( Component* pComp : pObj->getAllComponents() )
+                for ( Component* pComp : pObj->getComponents() )
                 {
                     if ( pComp == nullptr )
                         continue;
@@ -403,7 +403,7 @@ namespace sw::editor
                 // 뱃지는 리플렉션 Category 에서 끌어온다 — 위 컴포넌트 추가 메뉴가 이미 쓰는
                 // 그 데이터다. 타입 이름을 비교하면 게임이 넣은 컴포넌트는 뱃지가 없다.
                 string badgeStr;
-                for ( const Component* pComp : pObj->getAllComponents() )
+                for ( const Component* pComp : pObj->getComponents() )
                 {
                     if ( pComp == nullptr )
                         continue;
@@ -476,7 +476,7 @@ namespace sw::editor
                                             bFocusRenameInput );
                     }
 
-                    const vector<Component*>& listComponent = pObj->getAllComponents();
+                    const vector<Component*>& listComponent = pObj->getComponents();
                     for ( Component* pComp : listComponent )
                     {
                         if ( pComp == nullptr )

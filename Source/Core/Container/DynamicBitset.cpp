@@ -10,7 +10,7 @@ namespace sw
         : _listBlock{}
         , _bitCount{ size }
     {
-        const uint32 blockCount = calculateBlockCount( size );
+        const uint32 blockCount = computeBlockCount( size );
         _listBlock.resize( blockCount, 0 );
     }
 
@@ -18,7 +18,7 @@ namespace sw
         : _listBlock{}
         , _bitCount{ static_cast<uint32>( str.length() ) }
     {
-        const uint32 blockCount = calculateBlockCount( _bitCount );
+        const uint32 blockCount = computeBlockCount( _bitCount );
         _listBlock.resize( blockCount, 0 );
 
         for ( uint32 bitIndex = 0; bitIndex < _bitCount; ++bitIndex )
@@ -35,7 +35,7 @@ namespace sw
         : _listBlock{}
         , _bitCount{ size }
     {
-        const uint32 blockCount = calculateBlockCount( size );
+        const uint32 blockCount = computeBlockCount( size );
         _listBlock.resize( blockCount, 0 );
         if ( blockCount > 0 )
             _listBlock[0] = value;
@@ -45,7 +45,7 @@ namespace sw
     void DynamicBitset::resize( const uint32 newSize, const bool value )
     {
         const uint32 oldBitCount   = _bitCount;
-        const uint32 newBlockCount = calculateBlockCount( newSize );
+        const uint32 newBlockCount = computeBlockCount( newSize );
 
         _bitCount = newSize;
         _listBlock.resize( newBlockCount, value ? ~static_cast<BlockType>( 0 ) : 0 );

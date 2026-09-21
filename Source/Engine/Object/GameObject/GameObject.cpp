@@ -405,17 +405,6 @@ namespace sw
         return count;
     }
 
-    vector<Component*> GameObject::getAllComponents() const
-    {
-        vector<Component*> listResult;
-        for ( Component* pComp : _listComponent )
-        {
-            if ( pComp != nullptr && pComp->isPendingKill() == false )
-                listResult.push_back( pComp );
-        }
-        return listResult;
-    }
-
     Component* GameObject::findComponentByTypeName( hashed_string typeName ) const
     {
         if ( typeName.empty() )

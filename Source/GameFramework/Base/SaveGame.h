@@ -50,7 +50,7 @@ namespace sw
             if ( payloadArch.serializeObject( saveObject ) == false )
                 return false;
 
-            const uint32 crc = payloadArch.calculateChecksum();
+            const uint32 crc = payloadArch.computeChecksum();
 
             Archive fileArch;
             fileArch << kSaveBinMagic;

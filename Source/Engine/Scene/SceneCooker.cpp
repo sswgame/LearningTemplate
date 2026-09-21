@@ -24,7 +24,7 @@ namespace sw
                 if ( pGameObject == nullptr )
                     return fingerprint;
 
-                for ( const Component* pComp : pGameObject->getAllComponents() )
+                for ( const Component* pComp : pGameObject->getComponents() )
                 {
                     const TypeInfo* pTypeInfo = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
                     fingerprint += ( pTypeInfo != nullptr ) ? pTypeInfo->_name.c_str() : "<null>";

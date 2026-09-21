@@ -102,6 +102,7 @@ able to guess the rest; that is the whole point.
   | hand out and take back memory or a slot | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
   | build and return a new value | `create` (owning) · `make` (plain value) | `build`, `construct`, `generate` |
   | look something up | `get` (always there) · `find` (may miss) | `fetch`, `retrieve`, `lookup`, `obtain` |
+  | work out a value from inputs | `compute` | `calculate`, `calc` |
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).

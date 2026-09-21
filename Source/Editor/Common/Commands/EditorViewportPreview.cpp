@@ -159,7 +159,7 @@ namespace sw::editor
             {
                 if ( pObject == nullptr )
                     continue;
-                const vector<Component*> listComp = pObject->getAllComponents();
+                const vector<Component*> listComp = pObject->getComponents();
                 for ( Component* pComp : listComp )
                 {
                     if ( pComp == nullptr )

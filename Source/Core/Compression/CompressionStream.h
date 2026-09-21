@@ -101,6 +101,6 @@ namespace sw
         /**
          * @brief 버퍼의 FNV-1a 32비트 체크섬을 계산합니다.
          */
-        static uint32 calculateChecksum( const void* pData, size_t dataSize );
+        static uint32 computeChecksum( const void* pData, size_t dataSize );
     };
 } // namespace sw

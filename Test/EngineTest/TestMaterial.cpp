@@ -30,7 +30,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_EQUAL( sw::string( "DefaultMaterial" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
 
-    const float32* color = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
+    const float32* color = reinterpret_cast<const float32*>( material->getParameterData( "color" ) );
     SW_EXPECT_TRUE( color != nullptr );
     if ( color )
     {
@@ -131,8 +131,8 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
 
-    const uint32* shade = reinterpret_cast<const uint32*>( material->getPropertyData( "shadeMode" ) );
-    const uint32* flags = reinterpret_cast<const uint32*>( material->getPropertyData( "flags" ) );
+    const uint32* shade = reinterpret_cast<const uint32*>( material->getParameterData( "shadeMode" ) );
+    const uint32* flags = reinterpret_cast<const uint32*>( material->getParameterData( "flags" ) );
     SW_EXPECT_TRUE( shade != nullptr && flags != nullptr );
     if ( shade && flags )
     {
@@ -153,17 +153,17 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    SW_EXPECT_TRUE( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), "0.25 0.50 0.75 1.0" ) );
-    const float32* color = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "color" ), "0.25 0.50 0.75 1.0" ) );
+    const float32* color = reinterpret_cast<const float32*>( material->getParameterData( "color" ) );
     SW_ASSERT_NOT_NULL( color );
     SW_EXPECT_NEAR_EQUAL( 0.25f, color[0], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.50f, color[1], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, color[2], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, color[3], 1e-3f );
 
-    SW_EXPECT_TRUE( material->setParameterFloat( nullptr, sw::hashed_string( "roughness" ), 0.42f ) );
+    SW_EXPECT_TRUE( material->setScalarParameter( nullptr, sw::hashed_string( "roughness" ), 0.42f ) );
     float32 roughness = -1.0f;
-    SW_EXPECT_TRUE( material->getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
+    SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "roughness" ), roughness ) );
     SW_EXPECT_NEAR_EQUAL( 0.42f, roughness, 1e-3f );
 }
 
@@ -195,10 +195,10 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     if ( colorProp )
         SW_EXPECT_TRUE( colorProp->_defaultValue.find( "1.0" ) != sw::string::npos || colorProp->_defaultValue.find( "1" ) != sw::string::npos );
 
-    SW_EXPECT_TRUE( material->setPropertyValue( nullptr, sw::hashed_string( "roughness" ), "0.9" ) );
-    SW_EXPECT_TRUE( material->resetPropertyToDefault( nullptr, sw::hashed_string( "roughness" ) ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "roughness" ), "0.9" ) );
+    SW_EXPECT_TRUE( material->resetParameterToDefault( nullptr, sw::hashed_string( "roughness" ) ) );
     float32 roughness = -1.0f;
-    SW_EXPECT_TRUE( material->getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
+    SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "roughness" ), roughness ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, roughness, 1e-3f );
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
@@ -210,7 +210,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     SW_EXPECT_TRUE( colorOverride.find( "0.2" ) != sw::string::npos || colorOverride.find( "0.20" ) != sw::string::npos );
 
     // 인스턴스 오버라이드는 updateRhi 전까지 마스터 기본 버퍼를 바꾸지 않는다.
-    const float32* masterColor = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
+    const float32* masterColor = reinterpret_cast<const float32*>( material->getParameterData( "color" ) );
     SW_EXPECT_TRUE( masterColor != nullptr );
     if ( masterColor )
         SW_EXPECT_NEAR_EQUAL( 1.0f, masterColor[0], 1e-3f );

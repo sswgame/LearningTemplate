@@ -435,14 +435,6 @@ namespace sw
         _mapNameToObject.insert_or_assign( uniqueName, pObj );
     }
 
-    bool GameObjectManager::renameGameObject( GameObject* pObj, hashed_string newName )
-    {
-        if ( pObj == nullptr )
-            return false;
-        pObj->setName( newName );
-        return true;
-    }
-
     GameObjectManager* GameObjectManager::resolveOwningManager( GameObjectManager* pPreferred )
     {
         if ( pPreferred != nullptr )
@@ -808,11 +800,8 @@ namespace sw
         if ( bDestroyChildren )
             listChildren = pObj->getChildren();
 
-        for ( Component* pComp : pObj->getAllComponents() )
-        {
-            if ( pComp != nullptr )
-                pComp->markPendingKill();
-        }
+        pObj->forEachComponent( []( Component* pComp )
+        { pComp->markPendingKill(); } );
         pObj->refreshActiveInHierarchy();
 
         if ( bDestroyChildren )

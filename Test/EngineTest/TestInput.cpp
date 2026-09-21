@@ -564,17 +564,17 @@ SW_TEST_CASE( VirtualJoystickTest, CalculateVectorAndDeadzone )
     const float32    deadzone = 0.2f;
 
     const sw::float2 touchInDeadzone{ 105.0f, 100.0f };
-    const sw::float2 vecDead = sw::VirtualJoystick::calculateVector( center, touchInDeadzone, radius, deadzone );
+    const sw::float2 vecDead = sw::VirtualJoystick::computeVector( center, touchInDeadzone, radius, deadzone );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._y, 1e-4f );
 
     const sw::float2 touchFarRight{ 200.0f, 100.0f };
-    const sw::float2 vecFar = sw::VirtualJoystick::calculateVector( center, touchFarRight, radius, deadzone );
+    const sw::float2 vecFar = sw::VirtualJoystick::computeVector( center, touchFarRight, radius, deadzone );
     SW_EXPECT_NEAR_EQUAL( 1.0f, vecFar._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vecFar._y, 1e-4f );
 
     const sw::float2 touchDiag{ 150.0f, 150.0f };
-    const sw::float2 vecDiag = sw::VirtualJoystick::calculateVector( center, touchDiag, radius, 0.0f );
+    const sw::float2 vecDiag = sw::VirtualJoystick::computeVector( center, touchDiag, radius, 0.0f );
     SW_EXPECT_TRUE( vecDiag._x > 0.0f && vecDiag._y > 0.0f );
     const float32 len = sw::MathUtil::sqrt( vecDiag._x * vecDiag._x + vecDiag._y * vecDiag._y );
     SW_EXPECT_NEAR_EQUAL( 1.0f, len, 1e-4f );
@@ -821,11 +821,11 @@ SW_TEST_CASE( VirtualJoystickTest, SafeDivisionAndClamping )
     // deadzone == outerDeadzone 영 분모 경계 조건
     const sw::VirtualJoystick stick( anchor, 50.0f, 0.5f, 0.5f );
 
-    const sw::float2 zeroVec = stick.calculateVector( anchor );
+    const sw::float2 zeroVec = stick.computeVector( anchor );
     SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._y, 0.001f );
 
-    const sw::float2 farVec = stick.calculateVector( sw::float2{ 200.0f, 100.0f } );
+    const sw::float2 farVec = stick.computeVector( sw::float2{ 200.0f, 100.0f } );
     SW_EXPECT_NEAR_EQUAL( 1.0f, farVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, farVec._y, 0.001f );
 }

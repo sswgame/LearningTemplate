@@ -65,7 +65,7 @@ namespace sw::editor
                     return {};
 
                 unordered_map<string, int32> mapOccurrence;
-                for ( Component* pComp : pGameObject->getAllComponents() )
+                for ( Component* pComp : pGameObject->getComponents() )
                 {
                     if ( pComp == nullptr )
                         continue;
@@ -84,7 +84,7 @@ namespace sw::editor
                     return nullptr;
 
                 unordered_map<string, int32> mapOccurrence;
-                for ( Component* pComp : pGameObject->getAllComponents() )
+                for ( Component* pComp : pGameObject->getComponents() )
                 {
                     if ( pComp == nullptr )
                         continue;

@@ -59,7 +59,7 @@ namespace sw
 {
     SW_LOG_CALLER( "CompressionStream" );
 
-    uint32 CompressionStream::calculateChecksum( const void* pData, size_t dataSize )
+    uint32 CompressionStream::computeChecksum( const void* pData, size_t dataSize )
     {
         if ( pData == nullptr || dataSize == 0 )
             return 0;
@@ -131,7 +131,7 @@ namespace sw
         pHeader->_codecType        = codecType;
         pHeader->_flags            = CompressionHeader::kFlagChecksum;
         pHeader->_uncompressedSize = static_cast<uint64>( srcSize );
-        pHeader->_checksum         = calculateChecksum( pSrc, srcSize );
+        pHeader->_checksum         = computeChecksum( pSrc, srcSize );
 
         uint8* const pDstPayload    = outBytes.data() + sizeof( CompressionHeader );
         size_t       compressedSize = 0;
@@ -220,7 +220,7 @@ namespace sw
 
         if ( ( header._flags & CompressionHeader::kFlagChecksum ) != 0 )
         {
-            const uint32 calculatedChecksum = calculateChecksum( pDst, outUncompressedSize );
+            const uint32 calculatedChecksum = computeChecksum( pDst, outUncompressedSize );
             if ( calculatedChecksum != header._checksum )
             {
                 SW_LOG_ERROR( "Checksum mismatch: expected %x, got %x", header._checksum, calculatedChecksum );

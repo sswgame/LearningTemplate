@@ -58,6 +58,7 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | 메모리·슬롯을 내주고 돌려받는다 | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
 | 새 값을 만들어 돌려준다 | `create`(소유) · `make`(값) | `build`, `construct`, `generate` |
 | 찾는다 | `get`(반드시 있다) · `find`(없을 수 있다) | `fetch`, `retrieve`, `lookup`, `obtain` |
+| 입력에서 값을 셈한다 | `compute` | `calculate`, `calc` |
 | GPU 리소스 수명 | `initRhi` / `updateRhi` / `releaseRhi` / `forgetRhi` / `isRhiValid` | 그 밖의 모든 것 |
 
 **3) 술어는 질문처럼 읽힌다.** `is` / `has` / `was` / `can` / `should` 로 시작하거나 3인칭 동사를 쓴다

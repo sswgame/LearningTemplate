@@ -98,7 +98,7 @@ namespace sw
         bool readStringView( string_view& outView );
 
         /** @brief 현재 버퍼 데이터의 CRC32 체크섬을 계산합니다. */
-        uint32 calculateChecksum() const;
+        uint32 computeChecksum() const;
         /** @brief 계산된 체크섬을 아카이브에 기록합니다. */
         void writeChecksum();
         /** @brief 읽어들인 체크섬이 올바른지 검증합니다. */

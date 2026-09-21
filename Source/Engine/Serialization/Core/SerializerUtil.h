@@ -28,7 +28,7 @@ namespace sw
         }
 
         /** @brief 비트마스크 바이트 수 계산: ceil(totalBits / 8) */
-        static size_t calculateBitmaskBytes( size_t totalBits )
+        static size_t computeBitmaskBytes( size_t totalBits )
         {
             return ( totalBits + 7 ) / 8;
         }
