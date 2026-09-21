@@ -198,6 +198,12 @@ namespace sw
         TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
         /** @brief 매니저 tick 웨이브에 들어가면 true. */
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
+        /**
+         * @brief 씬 컴포넌트(트랜스폼을 가진 것)인가 — 리플렉션 없이 답한다.
+         * @details `castTo<SceneComponent>` 는 타입 사슬을 이름으로 걷는다. 워커 열넷이 건마다 그것을 부르자 배치
+         *          트랜스폼 쓰기가 세터보다 **느려졌다**(8000 건 2.1 ms). 생성자에서 세우는 비트 하나면 된다.
+         */
+        bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 
         /** @brief 컴포넌트 고유 ID 반환 */
         uint64 getComponentId() const { return _componentId; }
@@ -233,8 +239,9 @@ namespace sw
         atomic<bool>        _bActive;           ///< 컴포넌트 개별 활성화
         atomic<bool>        _bIsPendingKill;    ///< 지연 삭제 플래그
         TickGroup           _tickGroup;         ///< TickGroup 슬롯
-        uint8               _bCanEverTick  : 1;
-        uint8               _reservedFlags : 7;
+        uint8               _bCanEverTick      : 1;
+        uint8               _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
+        uint8               _reservedFlags     : 6;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
     };
 } // namespace sw

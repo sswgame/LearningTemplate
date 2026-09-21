@@ -171,9 +171,9 @@ namespace sw
         , _listChild{}
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
-        , _reservedTransform{ 0 }
     {
-        _bCanEverTick = SW_FALSE;
+        _bCanEverTick      = SW_FALSE;
+        _bIsSceneComponent = SW_TRUE;
     }
 
     // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터·자식 목록·매니저의 루트
@@ -459,6 +459,53 @@ namespace sw
             _pManager->registerRootSceneComponent( this );
 
         markTransformDirty();
+    }
+
+    bool SceneComponent::applyTransformWrite( const SceneTransformWrite& write )
+    {
+        bool bChanged = false;
+        if ( write._bSetPosition != SW_FALSE && float3::getDistanceSquared( _localPosition, write._localPosition ) > MathUtil::EpsilonSquared )
+        {
+            _localPosition = write._localPosition;
+            bChanged       = true;
+        }
+        if ( write._bSetRotation != SW_FALSE && float3::getDistanceSquared( _localRotation, write._localRotation ) > MathUtil::EpsilonSquared )
+        {
+            _localRotation = write._localRotation;
+            bChanged       = true;
+        }
+        if ( write._bSetScale != SW_FALSE && float3::getDistanceSquared( _localScale, write._localScale ) > MathUtil::EpsilonSquared )
+        {
+            _localScale = write._localScale;
+            bChanged    = true;
+        }
+        if ( bChanged == false )
+            return false;
+
+        // markTransformDirty 와 같은 표시 — 세대 올리기와 지연 경로만 뺐다. 전부 바이트 저장이라 워커에서 안전하다.
+        _bIsTransformDirty = SW_TRUE;
+        for ( SceneComponent* pParentComp = _pParent; pParentComp != nullptr; pParentComp = pParentComp->_pParent )
+        {
+            if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
+                break;
+            pParentComp->_bHasDirtyDescendant = SW_TRUE;
+        }
+        for ( SceneComponent* pChild : _listChild )
+        {
+            if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
+                pChild->markDirtySubtree();
+        }
+        return true;
+    }
+
+    void SceneComponent::markDirtySubtree()
+    {
+        _bIsTransformDirty = SW_TRUE;
+        for ( SceneComponent* pChild : _listChild )
+        {
+            if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
+                pChild->markDirtySubtree();
+        }
     }
 
     void SceneComponent::markTransformDirty()

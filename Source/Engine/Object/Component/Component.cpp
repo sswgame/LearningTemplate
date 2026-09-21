@@ -18,6 +18,7 @@ namespace sw
         , _bIsPendingKill{ false }
         , _tickGroup{ TickGroup::DuringPhysics }
         , _bCanEverTick{ SW_TRUE }
+        , _bIsSceneComponent{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {

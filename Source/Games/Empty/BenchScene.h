@@ -14,6 +14,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
+
 namespace sw
 {
     class CameraComponent;
@@ -111,6 +113,8 @@ namespace sw
          *          핸들은 해석이 nullptr 로 끝날 뿐 죽은 주소가 될 수 없다.
          */
         vector<ComponentHandle> _listBenchMesh;
+        /// @brief 프레임마다 다시 채우는 배치 쓰기 목록 — 큐브마다 세터를 부르지 않는다(update 주석).
+        vector<SceneTransformWrite> _listTransformWrite;
         /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */
         ComponentHandle _keyLight;
         /**

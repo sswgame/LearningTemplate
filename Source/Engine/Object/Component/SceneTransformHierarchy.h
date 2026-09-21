@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
@@ -14,6 +15,25 @@
 namespace sw
 {
     class SceneComponent;
+
+    /**
+     * @struct SceneTransformWrite
+     * @brief 배치 트랜스폼 쓰기 한 건 — 어느 컴포넌트에, 어느 로컬 값을.
+     * @details `GameObjectManager::applyTransformBatch` 가 받는다. 세터를 컴포넌트마다 부르는 대신 한 프레임의 쓰기를
+     *          모아 워커에 나눈다 — Unity 의 `TransformAccessArray` + `IJobParallelForTransform`, 언리얼 ISM 의
+     *          `BatchUpdateInstancesTransforms` 가 있는 자리다. 세터 하나가 ~24 ns 라 큐브 8000 에 세터 둘이면
+     *          프레임당 380 us 였고, 그것이 8000 규모 게임 스레드의 가장 큰 항목이었다.
+     */
+    struct SceneTransformWrite
+    {
+        ComponentHandle _handle;
+        float3          _localPosition{};
+        float3          _localRotation{};
+        float3          _localScale{ 1.0f, 1.0f, 1.0f };
+        uint8           _bSetPosition{ SW_FALSE };
+        uint8           _bSetRotation{ SW_FALSE };
+        uint8           _bSetScale{ SW_FALSE };
+    };
 
     /**
      * @class SceneTransformHierarchy
@@ -38,6 +58,11 @@ namespace sw
          *          직렬 ~60 us 라 나눠도 같고, 8000 은 직렬 200 us 가 병렬 110 us 다(Release · 큐브 전부 이동).
          */
         static constexpr uint32 kParallelFlushRootCount = 2048;
+        /**
+         * @brief 배치 쓰기가 이 건수 이상이면 워커에 나눕니다.
+         * @details 한 건이 핸들 해석 + 필드 셋 + 더티 표시라 ~60 ns 다 — 잡 디스패치 바닥 ~50 us 를 넘기려면 천 건은 돼야 한다.
+         */
+        static constexpr uint32 kParallelWriteCount = 1024;
 
         /** @brief 서브트리 DFS 스택. 인라인 64 칸이라 보통 깊이의 계층은 힙을 만지지 않는다. */
         using FlushStack = vector<pair<SceneComponent*, bool>, InlineAllocator<pair<SceneComponent*, bool>, 64>>;

@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -199,6 +200,15 @@ namespace sw
                     listOccupied[slot].insert( objectId );
                 }
                 return listSubwave;
+            }
+
+            /** @brief 핸들을 씬 컴포넌트로 풉니다 — 리플렉션 캐스트 없이(플래그 비트). 아니거나 죽었으면 nullptr. */
+            static SceneComponent* resolveSceneComponent( GameObjectManager* pManager, ComponentHandle handle )
+            {
+                Component* pComp = pManager->resolveComponent( handle );
+                if ( pComp == nullptr || pComp->isSceneComponent() == false || pComp->isPendingKill() )
+                    return nullptr;
+                return static_cast<SceneComponent*>( pComp );
             }
 
             static void resolveAndTickItem( GameObjectManager* pManager, float32 deltaTime, const GameObjectManager::TickExecutionItem& item )
@@ -676,6 +686,63 @@ namespace sw
         }
 
         processDeferredDestruction();
+    }
+
+    uint32 GameObjectManager::applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count )
+    {
+        if ( pWrite == nullptr || count == 0 )
+            return 0;
+
+        // 틱 중이면 세터로 — 세터가 지연 경로를 탄다. 배치의 병렬 쓰기는 틱 밖에서만 안전하다.
+        if ( isStructuralMutationFrozen() )
+        {
+            uint32 deferredCount = 0;
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                SceneComponent* pScene = GameObjectManagerInternal::resolveSceneComponent( this, pWrite[index]._handle );
+                if ( pScene == nullptr )
+                    continue;
+                if ( pWrite[index]._bSetPosition != SW_FALSE )
+                    pScene->setLocalPosition( pWrite[index]._localPosition );
+                if ( pWrite[index]._bSetRotation != SW_FALSE )
+                    pScene->setLocalRotation( pWrite[index]._localRotation );
+                if ( pWrite[index]._bSetScale != SW_FALSE )
+                    pScene->setLocalScale( pWrite[index]._localScale );
+                ++deferredCount;
+            }
+            return deferredCount;
+        }
+
+        // 워커는 컨테이너를 만지지 않는다 — 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 건의
+        // 컴포넌트(와 부모·자식의 더티 바이트)뿐이다.
+        struct WriteJob
+        {
+            GameObjectManager*         _pManager{ nullptr };
+            const SceneTransformWrite* _pWrite{ nullptr };
+            atomic<uint32>             _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                uint32 changedCount = 0;
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    SceneComponent* pScene = GameObjectManagerInternal::resolveSceneComponent( _pManager, _pWrite[index]._handle );
+                    if ( pScene != nullptr && pScene->applyTransformWrite( _pWrite[index] ) )
+                        ++changedCount;
+                }
+                if ( changedCount > 0 )
+                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
+            }
+        };
+        WriteJob job{};
+        job._pManager = this;
+        job._pWrite   = pWrite;
+        engine::runParallel( count, SceneTransformHierarchy::kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
+
+        const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
+        if ( changedCount > 0 )
+            _transformHierarchy.notifyDirtied();
+        return changedCount;
     }
 
     void GameObjectManager::deferTransformUpdate( TransformUpdateDelegate func )

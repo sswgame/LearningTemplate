@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    struct SceneTransformWrite;
+
     class GameObjectManager;
 
     /**
@@ -119,6 +121,14 @@ namespace sw
 
         /** @brief 트랜스폼 변경 시 행렬 캐시 재계산 더티 마킹 */
         void markTransformDirty();
+        /**
+         * @brief 배치 쓰기 한 건을 적용합니다 — **워커에서 불린다** (`GameObjectManager::applyTransformBatch` 전용).
+         * @details 값이 같으면 아무것도 하지 않고 false. 바뀌면 필드를 쓰고 더티를 표시한다 — 세대는 올리지 않는다(배치가
+         *          끝에 한 번 올린다). 더티 표시는 **바이트 저장**뿐이라(부모의 자손 더티 · 자식의 더티) 여러 워커가 같은
+         *          바이트에 TRUE 를 겹쳐 써도 무해하다 — 그래서 이 두 플래그는 비트필드가 아니다(비트필드는 이웃 비트를
+         *          같이 쓴다). 구조 변경(attach·detach)이 없는 구간에서만 부른다 — 배치가 그 전제를 단언한다.
+         */
+        bool applyTransformWrite( const SceneTransformWrite& write );
 
         /** @brief 트랜스폼 캐시가 더티면 true. */
         bool isTransformDirty() const { return _bIsTransformDirty == SW_TRUE; }
@@ -141,6 +151,8 @@ namespace sw
          *          없으므로 소멸자는 반드시 이쪽을 씁니다.
          */
         void detachFromParentImmediate();
+        /** @brief 이 노드와 자손의 더티를 바이트 저장으로 세웁니다 (`applyTransformWrite` 의 자식 쪽). 세대는 건드리지 않는다. */
+        void markDirtySubtree();
 
         PROPERTY( Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
         float3 _localPosition;
@@ -164,8 +176,8 @@ namespace sw
         GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
-        uint8                   _bIsTransformDirty   : 1;
-        uint8                   _bHasDirtyDescendant : 1;
-        uint8                   _reservedTransform   : 6;
+        /// @brief 비트필드가 **아니다** — 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세운다(`applyTransformWrite`).
+        uint8 _bIsTransformDirty;
+        uint8 _bHasDirtyDescendant;
     };
 } // namespace sw

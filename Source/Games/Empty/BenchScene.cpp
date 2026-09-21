@@ -519,22 +519,27 @@ namespace sw
         if ( gv_benchAnimate == 0 )
             return;
 
-        const uint32 count = static_cast<uint32>( _listBenchMesh.size() );
+        // **쓰기를 모아 배치로 넘긴다** (Unity 의 IJobParallelForTransform 자리). 예전에는 큐브마다 핸들을 풀고
+        // 세터 둘을 불렀다 — 세터 하나 ~24 ns, 8000 개면 프레임당 380 us 였고 8000 규모 게임 스레드의 가장 큰 항목이었다.
+        // 배치는 핸들 해석·필드 쓰기·더티 표시를 워커에 나누고 세대를 한 번만 올린다.
+        const uint32  count  = static_cast<uint32>( _listBenchMesh.size() );
+        const uint32  side   = MathUtil::max( _benchGridSide, 1u );
+        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        _listTransformWrite.resize( count );
         for ( uint32 index = 0; index < count; ++index )
         {
-            // 핸들은 MeshComponent 에서 만들었으므로 해석 결과도 MeshComponent 다.
-            MeshComponent* pMesh = static_cast<MeshComponent*>( pObjects->resolveComponent( _listBenchMesh[index] ) );
-            if ( pMesh == nullptr )
-                continue;
-
             // 인덱스마다 위상을 어긋나게 해 전부 같은 값이 되지 않도록 한다 — 전부 같으면
             // 배치 키는 물론 트랜스폼까지 동일해져 실제와 다른(너무 좋은) 결과가 나온다.
             const float32 phase = static_cast<float32>( index ) * 0.37f;
             const float32 wave  = MathUtil::sin( _benchElapsed + phase );
 
-            float3 position = pMesh->getLocalPosition();
-            position._y     = wave * 0.75f;
-            pMesh->setLocalPosition( position );
+            // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치로 옮긴 비용의 3 분의 1 이었다).
+            SceneTransformWrite& write = _listTransformWrite[index];
+            write._handle              = _listBenchMesh[index];
+            write._localPosition       = float3{ origin + static_cast<float32>( index % side ) * kBenchSpacing,
+                                           wave * 0.75f,
+                                           origin + static_cast<float32>( index / side ) * kBenchSpacing };
+            write._bSetPosition        = SW_TRUE;
             // 회전은 **컴퓨트가 만든다**(instanceanim.hlsl). 예전엔 여기서 전부 45도/초로 돌렸는데,
             // 속도가 하나뿐이라 큐브가 몇 천 개여도 한 덩어리처럼 보였다. 지금은 시드 해시가
             // 인스턴스마다 속도와 방향을 갈라 준다. CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
@@ -543,8 +548,10 @@ namespace sw
             // 스케일도 흔든다 — 위치·회전만 바꾸면 월드 행렬의 회전/이동 성분만 갱신되므로
             // 스케일 경로(및 바운드 반지름을 쓰는 컬링)가 검증되지 않는다.
             const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
-            pMesh->setLocalScale( float3{ scale, scale, scale } );
+            write._localScale   = float3{ scale, scale, scale };
+            write._bSetScale    = SW_TRUE;
         }
+        pObjects->applyTransformBatch( _listTransformWrite.data(), count );
     }
 
     uint32 BenchScene::nextChurnRandom()

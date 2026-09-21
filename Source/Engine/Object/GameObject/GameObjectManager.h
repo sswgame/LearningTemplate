@@ -183,6 +183,17 @@ namespace sw
         /** @brief 어떤 루트라도 dirty/descendant dirty가 있으면 true. */
         bool hasDirtySceneTransforms() const { return _transformHierarchy.hasDirty(); }
 
+        /**
+         * @brief 트랜스폼 쓰기 여러 건을 한 번에 적용합니다 — 건수가 많으면 워커에 나눈다.
+         * @details 세터를 컴포넌트마다 부르는 것과 결과가 같다(값이 같으면 건너뛰고, 바뀌면 더티 표시). 다른 것은
+         *          (1) 핸들 해석·필드 쓰기·더티 표시가 워커에서 나란히 돌고 (2) 세대는 배치 끝에 한 번 오른다는 것.
+         *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뛴다.
+         *          **틱 중에는 부를 수 없다** — 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
+         *          부모 사슬이 흔들린다. 그때는 건마다 세터로 돌린다(세터가 지연 경로를 탄다).
+         * @return 실제로 값이 바뀐 건수.
+         */
+        uint32 applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count );
+
         /** @brief 현재 매니저가 병렬 틱(읽기 전용 트랜스폼) 구간인지 확인합니다. */
         bool isParallelTransformReadOnly() const { return _bParallelTransformReadOnly.load( std::memory_order_relaxed ); }
 

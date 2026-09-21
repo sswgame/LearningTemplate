@@ -1,5 +1,9 @@
 #include "pch.h"
 
+#include "Core/Common/Defines.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -561,6 +565,91 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
     // Setting a new value should dirty the transform
     pSceneComp->setLocalPosition( sw::float3( 15.0f, 20.0f, 30.0f ) );
     SW_EXPECT_TRUE( manager.hasDirtySceneTransforms() );
+}
+
+/**
+ * @brief [GameObjectTest] 배치 트랜스폼 쓰기는 세터와 같은 결과를 내고, 부모의 자손 더티와 세대를 세운다.
+ * @details `applyTransformBatch` 는 워커에 나눠 필드를 쓰고 더티를 바이트 저장으로 표시한다. 세터 경로와 갈리면
+ *          안 되는 것 셋 — (1) 플러시 뒤 월드 행렬이 같다 (2) 자식만 써도 부모에 자손 더티가 서서 플러시가 내려간다
+ *          (3) 값이 같은 건은 건너뛰고 세대도 안 올린다. 문턱(kParallelWriteCount)을 넘겨 실제로 병렬 경로를 탄다.
+ */
+SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
+{
+    constexpr uint32 kObjectCount = sw::SceneTransformHierarchy::kParallelWriteCount + 37;
+
+    // 두 매니저에 같은 계층을 만든다 — 하나는 세터, 하나는 배치.
+    sw::GameObjectManager               managerSetter;
+    sw::GameObjectManager               managerBatch;
+    sw::vector<sw::SceneComponent*>     listSetterComp;
+    sw::vector<sw::SceneComponent*>     listBatchComp;
+    sw::vector<sw::SceneTransformWrite> listWrite;
+
+    auto build = [&]( sw::GameObjectManager& manager, sw::vector<sw::SceneComponent*>& outListComp )
+    {
+        sw::GameObject*     pParent     = manager.createGameObject( sw::hashed_string( "BatchParent" ) );
+        sw::SceneComponent* pParentComp = pParent->addComponent<sw::SceneComponent>();
+        outListComp.push_back( pParentComp );
+        for ( uint32 index = 1; index < kObjectCount; ++index )
+        {
+            sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+            name.append( "BatchObj" ).append( index );
+            sw::GameObject*     pObj  = manager.createGameObject( sw::hashed_string( name.c_str() ) );
+            sw::SceneComponent* pComp = pObj->addComponent<sw::SceneComponent>();
+            // 절반은 부모 아래에 붙인다 — 자손 더티 전파를 본다.
+            if ( ( index % 2 ) == 0 )
+                pComp->attachToComponent( pParentComp );
+            outListComp.push_back( pComp );
+        }
+        manager.flushSceneTransforms();
+    };
+    build( managerSetter, listSetterComp );
+    build( managerBatch, listBatchComp );
+    SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( listBatchComp.size() ) );
+
+    // 부모(0 번)는 건드리지 않는다 — 자식만 써도 플러시가 부모를 거쳐 내려가야 한다.
+    for ( uint32 index = 1; index < kObjectCount; ++index )
+    {
+        const float32           base = static_cast<float32>( index );
+        sw::SceneTransformWrite write;
+        write._handle        = listBatchComp[index]->getHandle();
+        write._localPosition = sw::float3( base, base * 0.5f, -base );
+        write._localScale    = sw::float3( 1.0f + base * 0.01f, 1.0f, 1.0f );
+        write._bSetPosition  = SW_TRUE;
+        write._bSetScale     = SW_TRUE;
+        listWrite.push_back( write );
+
+        listSetterComp[index]->setLocalPosition( write._localPosition );
+        listSetterComp[index]->setLocalScale( write._localScale );
+    }
+
+    const uint64 generationBefore = managerBatch.getTransformGeneration();
+    const uint32 changedCount     = managerBatch.applyTransformBatch( listWrite.data(), static_cast<uint32>( listWrite.size() ) );
+    SW_EXPECT_EQUAL( kObjectCount - 1, changedCount );
+    SW_EXPECT_TRUE( managerBatch.getTransformGeneration() > generationBefore );
+    // (2) 부모는 안 썼지만 자손 더티가 서 있다.
+    SW_EXPECT_TRUE( listBatchComp[0]->hasDirtyDescendant() );
+    SW_EXPECT_TRUE( managerBatch.hasDirtySceneTransforms() );
+
+    managerSetter.flushSceneTransforms();
+    managerBatch.flushSceneTransforms();
+
+    // (1) 월드 행렬이 전부 같다 — 부모 아래 것도.
+    uint32 mismatchCount = 0;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        const sw::float4x4 worldSetter = listSetterComp[index]->getWorldMatrix();
+        const sw::float4x4 worldBatch  = listBatchComp[index]->getWorldMatrix();
+        if ( sw::Memory::compare( &worldSetter, &worldBatch, sizeof( sw::float4x4 ) ) != 0 )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatchCount );
+    SW_EXPECT_FALSE( managerBatch.hasDirtySceneTransforms() );
+
+    // (3) 같은 값을 다시 쓰면 아무 일도 없다 — 바뀐 건 0, 세대 그대로.
+    const uint64 generationSettled = managerBatch.getTransformGeneration();
+    SW_EXPECT_EQUAL( 0u, managerBatch.applyTransformBatch( listWrite.data(), static_cast<uint32>( listWrite.size() ) ) );
+    SW_EXPECT_EQUAL( generationSettled, managerBatch.getTransformGeneration() );
+    SW_EXPECT_FALSE( managerBatch.hasDirtySceneTransforms() );
 }
 
 /**
