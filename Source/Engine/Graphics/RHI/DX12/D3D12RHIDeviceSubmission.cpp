@@ -508,8 +508,10 @@ namespace sw
         // Present 의 300 us 가 어디로 가는지 — 닫기·제출 / DXGI Present / 펜스 신호·다음 이미지 로 나눠 잰다.
         {
             SW_PROFILE_SCOPE( "RT.Present.submit" );
+            static const uint32 s_slotSubmitListCount = engine::getFrameProfiler().registerScope( "RT.Present.submit.listCount" );
             if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
             {
+                SW_PROFILE_SCOPE( "RT.Present.submit.close" );
                 // 구간 전체를 읽기 버퍼로 옮긴다 — 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
                 // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸엔 지난 사이클 값이 남아 있다).
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
@@ -537,6 +539,8 @@ namespace sw
             // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
             if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
             {
+                SW_PROFILE_SCOPE( "RT.Present.submit.execute" );
+                engine::getFrameProfiler().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
                 _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
                                                     _listPendingSubmit.data() );
             }
