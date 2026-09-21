@@ -84,16 +84,16 @@ namespace
      */
     string findAppExecutablePath()
     {
-        const string workingCandidate = FileUtil::joinPath( FileUtil::getCurrentPath(), getAppExecutableName() );
-        if ( FileUtil::fileExists( workingCandidate ) )
-            return workingCandidate;
+        // 반환은 이 변수 하나로만 한다 — 갈래마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
+        string candidate = FileUtil::joinPath( FileUtil::getCurrentPath(), getAppExecutableName() );
+        if ( FileUtil::fileExists( candidate ) )
+            return candidate;
 
         const string executableFolder = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        const string siblingCandidate = FileUtil::joinPath( executableFolder, getAppExecutableName() );
-        if ( FileUtil::fileExists( siblingCandidate ) )
-            return siblingCandidate;
-
-        return {};
+        candidate                     = FileUtil::joinPath( executableFolder, getAppExecutableName() );
+        if ( FileUtil::fileExists( candidate ) == false )
+            candidate.clear();
+        return candidate;
     }
 
     /**

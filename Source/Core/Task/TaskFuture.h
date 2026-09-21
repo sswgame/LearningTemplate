@@ -79,17 +79,21 @@ namespace sw
             template <typename TDelegate, typename FStoreValue>
             TDelegate markReadyAndTakeContinuation( TDelegate& storage, FStoreValue&& storeValue )
             {
+                // 반환은 이 변수 하나로만 한다 — 갈래마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
                 TDelegate continuation;
+                bool      bMarkedNow = false;
                 {
                     std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _bReady.load( std::memory_order_relaxed ) )
-                        return TDelegate{};
-
-                    storeValue();
-                    _bReady.store( true, std::memory_order_release );
-                    continuation = std::move( storage );
+                    if ( _bReady.load( std::memory_order_relaxed ) == false )
+                    {
+                        storeValue();
+                        _bReady.store( true, std::memory_order_release );
+                        continuation = std::move( storage );
+                        bMarkedNow   = true;
+                    }
                 }
-                _cv.notify_all();
+                if ( bMarkedNow )
+                    _cv.notify_all();
                 return continuation;
             }
 

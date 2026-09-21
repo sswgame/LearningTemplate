@@ -580,14 +580,14 @@ namespace sw
 
     string ResourceUtil::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
     {
-        // `const` 를 붙이면 **반환할 때 자동 이동이 막힌다**(복사가 된다). 아래 두 return 이
-        // 모두 이 변수를 돌려주므로 const 를 떼는 편이 맞다.
-        string basePath = makeSavePath( absoluteFolder, fileName );
-        if ( basePath.empty() || FileUtil::fileExists( basePath ) == false )
-            return basePath;
+        // 반환은 `savePath` 하나로만 한다 — 갈래마다 다른 변수를 돌려주면 NRVO 가 막힌다(-Wnrvo).
+        // 그래서 `const` 도 붙이지 않는다(반환할 때 자동 이동이 막힌다).
+        string savePath = makeSavePath( absoluteFolder, fileName );
+        if ( savePath.empty() || FileUtil::fileExists( savePath ) == false )
+            return savePath;
 
-        const string stem      = FileUtil::removeExtension( basePath );
-        const string extension = FileUtil::getExtension( basePath );
+        const string stem      = FileUtil::removeExtension( savePath );
+        const string extension = FileUtil::getExtension( savePath );
 
         // 오브젝트 이름과 같은 규약으로 센다 — 2 부터, 넉넉한 곳에서 멈춘다.
         StringBuilder<constant::kMaxBuffer512> sb;
@@ -595,16 +595,16 @@ namespace sw
         {
             sb.clear();
             sb.append( stem ).append( '_' ).append( nameSuffix ).append( extension );
-            const string candidate{ sb.view() };
-            if ( FileUtil::fileExists( candidate ) == false )
+            if ( FileUtil::fileExists( sb.view() ) == false )
             {
-                SW_LOG_WARNING( "Name already taken '%#' — using '%#'", basePath, candidate );
-                return candidate;
+                SW_LOG_WARNING( "Name already taken '%#' — using '%#'", savePath, sb.view() );
+                savePath.assign( sb.view() );
+                return savePath;
             }
         }
 
-        SW_LOG_WARNING( "Could not find a free name near '%#' — overwriting.", basePath );
-        return basePath;
+        SW_LOG_WARNING( "Could not find a free name near '%#' — overwriting.", savePath );
+        return savePath;
     }
 
     atomic<bool> ResourceUtil::_s_bInitialize{ false };
