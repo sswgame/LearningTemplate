@@ -86,7 +86,13 @@ namespace sw
 
     void GpuSceneBuilder::clear()
     {
-        _listInstanceWork.clear();
+        _listInstanceRing.clear();
+        _listInstanceRingBuild.clear();
+        _pInstanceWrite.reset();
+        _writeSlotIndex = 0;
+        _pInstancePublished.reset();
+        _listPublishHistory.clear();
+        _publishCounter = 0;
         _snapshot._pListInstance.reset();
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
@@ -603,7 +609,7 @@ namespace sw
             const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace( bPartialDone );
             if ( bRefreshed == false )
             {
-                _listInstanceWork.clear();
+                instanceWork().clear();
                 _snapshot._listOpaqueBatch.clear();
                 _snapshot._listTransparentBatch.clear();
                 _snapshot._listAllBatch.clear();
@@ -623,18 +629,105 @@ namespace sw
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
 
-        // **내용이 바뀐 이 자리에서만 새 배열을 발행한다.** 내용이 그대로인 프레임은 여기까지 오지
-        // 않으므로 지난 배열이 그대로 실린다.
-        //
-        // 발행은 **풀에서 빈 배열을 빌려 덮어쓰는 것**이다. 예전에는 작업 배열을 옮겨 주고 다음
-        // 프레임에 되복사했는데, 그 되복사가 매 프레임 800 KB 를 새로 할당했다(74 us). 지금은
-        // 작업 배열이 그대로 남아 되복사가 없고, 빌린 배열은 용량이 남아 있어 할당도 없다.
-        // 복사가 아니라 **옮긴다** — 다음 프레임에 제자리 갱신이 필요하면 발행본에서 되돌려 받는다.
-        // (발행용 배열을 풀에 돌려 쓰는 것도 재 봤는데 더 느렸다: 풀 2/3/8 에서 발행 85/78/76 us 로
-        //  갓 할당한 블록보다 차가웠다. 800 KB 복사 자체가 ~75 us 이고 할당은 그 안에서 작다.)
+        // **내용이 바뀐 이 자리에서만 발행한다.** 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
+        // 발행은 링 슬롯의 포인터를 넘기는 것이다 — 복사도 옮기기도 되복사도 없다(헤더의 링 주석).
         SW_PROFILE_SCOPE( "GT.GpuScene.build.publish" );
-        _snapshot._pListInstance = make_shared<const vector<GpuInstance>>( std::move( _listInstanceWork ) );
-        _listInstanceWork.clear();
+        publishInstances();
+    }
+
+    vector<GpuInstance>& GpuSceneBuilder::instanceWork()
+    {
+        if ( _pInstanceWrite != nullptr )
+            return *_pInstanceWrite;
+
+        // 아무도 안 읽는 슬롯 — 링만 들고 있는 것. 발행본과 패킷이 든 슬롯은 use_count 가 2 이상이라 걸러진다.
+        for ( uint32 slotIndex = 0; slotIndex < _listInstanceRing.size(); ++slotIndex )
+        {
+            if ( _listInstanceRing[slotIndex] != nullptr && _listInstanceRing[slotIndex].use_count() == 1 )
+            {
+                _pInstanceWrite = _listInstanceRing[slotIndex];
+                _writeSlotIndex = slotIndex;
+                return *_pInstanceWrite;
+            }
+        }
+        // 모자라면 하나 더 — 렌더 큐가 깊은 만큼만 자란다(패킷이 슬롯을 놓으면 그 슬롯이 다시 골라진다).
+        _listInstanceRing.push_back( make_shared<vector<GpuInstance>>() );
+        _listInstanceRingBuild.push_back( 0 );
+        _writeSlotIndex = static_cast<uint32>( _listInstanceRing.size() - 1 );
+        _pInstanceWrite = _listInstanceRing.back();
+        return *_pInstanceWrite;
+    }
+
+    void GpuSceneBuilder::publishInstances()
+    {
+        if ( _pInstanceWrite == nullptr )
+            return;
+        ++_publishCounter;
+        if ( _writeSlotIndex < _listInstanceRingBuild.size() )
+            _listInstanceRingBuild[_writeSlotIndex] = _publishCounter;
+
+        PublishRecord record{};
+        record._build = _publishCounter;
+        record._bAll  = _snapshot._bAllInstancesDirty;
+        if ( record._bAll == SW_FALSE )
+            record._listRun = _snapshot._listDirtyInstanceRun;
+        if ( _listPublishHistory.size() >= kPublishHistoryCount )
+            _listPublishHistory.erase( _listPublishHistory.begin() );
+        _listPublishHistory.push_back( std::move( record ) );
+
+        _pInstancePublished      = _pInstanceWrite;
+        _snapshot._pListInstance = _pInstancePublished;
+        _pInstanceWrite.reset();
+    }
+
+    void GpuSceneBuilder::syncWriteSlotFromPublished()
+    {
+        if ( _pInstancePublished == nullptr )
+            return;
+        const vector<GpuInstance>& prev = *_pInstancePublished;
+        vector<GpuInstance>&       work = instanceWork();
+
+        // 슬롯이 발행된 뒤 무엇이 바뀌었나 — 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
+        const uint64 slotBuild = ( _writeSlotIndex < _listInstanceRingBuild.size() ) ? _listInstanceRingBuild[_writeSlotIndex] : 0;
+        bool         bWhole    = ( slotBuild == 0 ) || ( work.size() != prev.size() );
+        uint64       expected  = slotBuild + 1;
+        if ( bWhole == false )
+        {
+            for ( const PublishRecord& record : _listPublishHistory )
+            {
+                if ( record._build <= slotBuild )
+                    continue;
+                // 이력이 끊겼으면(중간 발행이 밀려났으면) 통째로.
+                if ( record._build != expected || record._bAll != SW_FALSE )
+                {
+                    bWhole = true;
+                    break;
+                }
+                ++expected;
+            }
+            if ( expected != _publishCounter + 1 )
+                bWhole = true;
+        }
+
+        work.resize( prev.size() );
+        if ( bWhole )
+        {
+            if ( prev.empty() == false )
+                Memory::copy( work.data(), prev.data(), prev.size() * sizeof( GpuInstance ) );
+            return;
+        }
+        for ( const PublishRecord& record : _listPublishHistory )
+        {
+            if ( record._build <= slotBuild )
+                continue;
+            for ( const GpuInstanceRun& run : record._listRun )
+            {
+                const size_t start = MathUtil::min<size_t>( run._start, prev.size() );
+                const size_t end   = MathUtil::min<size_t>( static_cast<size_t>( run._start ) + run._count, prev.size() );
+                if ( end > start )
+                    Memory::copy( work.data() + start, prev.data() + start, ( end - start ) * sizeof( GpuInstance ) );
+            }
+        }
     }
 
     void GpuSceneBuilder::requestGpuUploads( GpuUploadQueue& queue ) const
@@ -680,22 +773,16 @@ namespace sw
 
     bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )
     {
-        // 지난 프레임에 **발행하며 옮겨 줬으면 되돌려 받는다.** 제자리 갱신은 이전 값이 필요하다
-        // (`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로 그대로 쓴다). 800 KB 복사라
-        // ~73 us 다 — 내용이 바뀌는 프레임에만 일어나고, 정적 씬은 여기까지 오지 않는다.
-        if ( _listInstanceWork.empty() && _snapshot._pListInstance != nullptr )
-        {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.restore" );
-            _listInstanceWork = *_snapshot._pListInstance;
-        }
-
+        // 이전 값은 마지막 발행본에서 **읽기만** 한다(`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로
+        // 그대로 옮긴다). 결과는 아무도 안 읽는 링 슬롯에 쓴다 — 되복사가 없다(헤더의 링 주석).
+        const vector<GpuInstance>* pPrevious = _pInstancePublished.get();
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
-        if ( _listInstanceWork.empty() || _listInstanceSrcIndex.size() != _listInstanceWork.size() )
+        if ( pPrevious == nullptr || pPrevious->empty() || _listInstanceSrcIndex.size() != pPrevious->size() )
             return false;
         // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 투명 인스턴스의 자리가 달라지지만
         // **불투명 접두부는 그대로다** — 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
         const bool bTransparentOrderChanged = ( _listScratchTransparentIdx != _listBuiltTransparentIdx );
-        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > _listInstanceWork.size() || _opaqueBatchCount > _snapshot._listAllBatch.size() ||
+        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > pPrevious->size() || _opaqueBatchCount > _snapshot._listAllBatch.size() ||
                                            _opaqueElementEntryCount > _listBatchElementIndex.size() ) )
             return false;
 
@@ -720,8 +807,20 @@ namespace sw
             _snapshot._spinInstanceCount = 0;
 
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.loop" );
+        // 쓰기 슬롯을 잡는다. 전체 훑기는 슬롯 전부를 새로 쓰므로 낡은 내용이 상관없고, 부분 훑기는 안 건드릴 자리가
+        // 발행본과 같아야 하므로 먼저 맞춘다(슬롯이 발행된 뒤 바뀐 구간만).
+        vector<GpuInstance>& work = instanceWork();
+        if ( bPartialRefresh )
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.sync" );
+            syncWriteSlotFromPublished();
+        }
+        else
+        {
+            work.resize( pPrevious->size() );
+        }
         // 꼬리를 다시 지을 때는 접두부만 제자리 갱신이다.
-        const size_t slotCount = bTransparentOrderChanged ? _opaqueInstanceCount : _listInstanceWork.size();
+        const size_t slotCount = bTransparentOrderChanged ? _opaqueInstanceCount : pPrevious->size();
 
         // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
         // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 예전 직렬 루프 그대로다.
@@ -744,6 +843,7 @@ namespace sw
             struct RefreshJob
             {
                 GpuInstance*          _pInstance{ nullptr };
+                const GpuInstance*    _pPrevious{ nullptr };
                 const GpuInstance*    _pRaw{ nullptr };
                 const uint32*         _pSrcIndex{ nullptr };
                 uint32                _rawCount{ 0 };
@@ -752,11 +852,12 @@ namespace sw
                 void refreshRange( uint32 start, uint32 end )
                 {
                     for ( uint32 chunkIndex = start; chunkIndex < end; ++chunkIndex )
-                        refreshInstanceChunk( _pInstance, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] );
+                        refreshInstanceChunk( _pInstance, _pPrevious, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] );
                 }
             };
             RefreshJob job{};
-            job._pInstance = _listInstanceWork.data();
+            job._pInstance = work.data();
+            job._pPrevious = pPrevious->data();
             job._pRaw      = _listScratchRaw.data();
             job._pSrcIndex = _listInstanceSrcIndex.data();
             job._rawCount  = rawCount;
@@ -799,7 +900,7 @@ namespace sw
         {
             rebuildTransparentTail();
             // 꼬리는 통째로 새 값이다 — 접두부 구간 뒤에 한 구간으로 잇는다.
-            const uint32 tailCount = static_cast<uint32>( _listInstanceWork.size() ) - _opaqueInstanceCount;
+            const uint32 tailCount = static_cast<uint32>( work.size() ) - _opaqueInstanceCount;
             if ( bTooManyRuns == false && tailCount > 0 )
             {
                 if ( _snapshot._listDirtyInstanceRun.empty() == false &&
@@ -838,10 +939,12 @@ namespace sw
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다 — 바뀐 것은
             // 트랜스폼과 바운드, 그리고 회전 시드뿐이다. 판정과 복사는 청크 갱신과 **같은 헬퍼**다.
-            GpuInstance&       inst             = _listInstanceWork[slot];
+            const GpuInstance& prev             = ( *pPrevious )[slot];
+            GpuInstance&       inst             = work[slot];
             const GpuInstance& raw              = _listScratchRaw[srcIndex];
-            const bool         bChanged         = GpuSceneBuilderInternal::isPayloadChanged( inst, raw );
-            const uint32       previousSpinSeed = inst._spinSeed;
+            const bool         bChanged         = GpuSceneBuilderInternal::isPayloadChanged( prev, raw );
+            const uint32       previousSpinSeed = prev._spinSeed;
+            inst                                = prev;
             GpuSceneBuilderInternal::copyPayload( raw, inst );
             if ( bPartialRefresh )
             {
@@ -910,8 +1013,8 @@ namespace sw
         return true;
     }
 
-    void GpuSceneBuilder::refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pRaw, const uint32* pSrcIndex, uint32 rawCount,
-                                                InstanceRefreshChunk& chunk )
+    void GpuSceneBuilder::refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pPrevious, const GpuInstance* pRaw, const uint32* pSrcIndex,
+                                                uint32 rawCount, InstanceRefreshChunk& chunk )
     {
         uint32 lastDirtySlot = 0xFFFFFFFFu;
         for ( uint32 slot = chunk._start; slot < chunk._end; ++slot )
@@ -925,9 +1028,11 @@ namespace sw
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다 — 바뀐 것은
             // 트랜스폼과 바운드, 그리고 회전 시드뿐이다. 판정과 복사는 직렬 루프와 **같은 헬퍼**다.
+            const GpuInstance& prev     = pPrevious[slot];
             GpuInstance&       inst     = pInstance[slot];
             const GpuInstance& raw      = pRaw[srcIndex];
-            const bool         bChanged = GpuSceneBuilderInternal::isPayloadChanged( inst, raw );
+            const bool         bChanged = GpuSceneBuilderInternal::isPayloadChanged( prev, raw );
+            inst                        = prev;
             GpuSceneBuilderInternal::copyPayload( raw, inst );
             if ( inst._spinSeed != 0 )
                 ++chunk._spinCount;
@@ -950,7 +1055,7 @@ namespace sw
         // 전체 재구축이다 — 구간을 적어 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
         _snapshot._bAllInstancesDirty = SW_TRUE;
         _snapshot._listDirtyInstanceRun.clear();
-        _listInstanceWork.reserve( _listScratchCandidate.size() );
+        instanceWork().reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
         // 후보 -> 인스턴스 슬롯 역매핑. 더티 후보의 인스턴스 자리를 바로 찾기 위한 것이다.
@@ -990,7 +1095,7 @@ namespace sw
         }
 
         // 투명 꼬리를 자르는 자리를 적어 둔다 — 투명 순서만 바뀐 프레임은 여기서부터 다시 방출한다.
-        _opaqueInstanceCount     = static_cast<uint32>( _listInstanceWork.size() );
+        _opaqueInstanceCount     = static_cast<uint32>( instanceWork().size() );
         _opaqueBatchCount        = static_cast<uint32>( _snapshot._listAllBatch.size() );
         _opaqueElementEntryCount = static_cast<uint32>( _listBatchElementIndex.size() );
 
@@ -1042,7 +1147,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.transparentTail" );
         // 꼬리를 잘라 낸다. 용량은 남아 있으므로 다시 붙일 때 할당이 없다.
-        _listInstanceWork.resize( _opaqueInstanceCount );
+        instanceWork().resize( _opaqueInstanceCount );
         _listInstanceSrcIndex.resize( _opaqueInstanceCount );
         _snapshot._listAllBatch.resize( _opaqueBatchCount );
         _snapshot._listTransparentBatch.clear();
@@ -1061,13 +1166,14 @@ namespace sw
         const DrawCandidate& headCand = _listScratchCandidate[pSrcIdx[begin]];
 
         GpuMeshBatch batch{};
-        batch._mesh             = headCand._mesh; // 소유는 배치 머리 후보의 것
-        batch._vertexCount      = batch._mesh->getVertexCount();
-        batch._instanceBase     = static_cast<uint32>( _listInstanceWork.size() );
-        batch._instanceCount    = end - begin;
-        batch._blendMode        = blendMode;
-        batch._material         = material;
-        batch._materialInstance = instance;
+        batch._mesh               = headCand._mesh; // 소유는 배치 머리 후보의 것
+        batch._vertexCount        = batch._mesh->getVertexCount();
+        vector<GpuInstance>& work = instanceWork();
+        batch._instanceBase       = static_cast<uint32>( work.size() );
+        batch._instanceCount      = end - begin;
+        batch._blendMode          = blendMode;
+        batch._material           = material;
+        batch._materialInstance   = instance;
         if ( instance != nullptr )
             batch._materialCb = instance->getDescriptorIndex();
         else
@@ -1111,7 +1217,7 @@ namespace sw
             if ( srcIdx < _listCandidateToInstance.size() )
                 _listCandidateToInstance[srcIdx] = static_cast<uint32>( _listInstanceSrcIndex.size() );
             _listInstanceSrcIndex.push_back( srcIdx );
-            _listInstanceWork.push_back( inst );
+            work.push_back( inst );
         }
 
         // 두 목록이 같은 배치를 든다. 앞쪽은 복사해야 하지만 마지막 하나는 옮길 수 있다 —

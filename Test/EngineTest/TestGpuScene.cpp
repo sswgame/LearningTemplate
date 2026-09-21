@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -175,6 +177,102 @@ SW_TEST_CASE( GpuSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
             bTailCovered = true;
     }
     SW_EXPECT_TRUE( bTailCovered );
+}
+
+/**
+ * @brief 인스턴스 링: 발행본은 불변이고, 되쓰이는 슬롯은 그 뒤에 일어난 변경을 전부 따라잡는다.
+ * @details 게임 스레드는 아무도 안 읽는 슬롯에 짓고 포인터만 발행한다(되복사 없음). 그러면 두 가지가 보장돼야 한다 —
+ *          (1) 패킷이 든 발행본은 다음 프레임이 짓는 동안 **바뀌지 않는다**(렌더 스레드가 읽는 중이다).
+ *          (2) 몇 프레임 전에 발행된 슬롯을 다시 쓸 때 부분 갱신은 그 사이 프레임들의 변경을 **먼저 따라잡는다**
+ *              — 안 그러면 이번 프레임에 안 움직인 물체가 몇 프레임 전 자리로 되돌아간다.
+ */
+SW_TEST_CASE( GpuSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
+{
+    sw::Scene scene( "GpuSceneInstanceRing" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    // 8 개 — 하나만 움직이면 더티 < 1/4 이라 부분 수집·부분 갱신 경로를 탄다.
+    constexpr uint32               kMeshCount = 8;
+    sw::vector<sw::MeshComponent*> listMesh;
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        name.append( "Ring" ).append( index );
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( name.c_str() ) );
+        SW_ASSERT_NOT_NULL( go );
+        sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( mesh );
+        mesh->setMesh( cube );
+        mesh->setLocalPosition( sw::float3( static_cast<float32>( index ), 0.0f, -1.0f ) );
+        mesh->setVisible( true );
+        listMesh.push_back( mesh );
+    }
+
+    auto countAtX = [&]( const sw::vector<sw::GpuInstance>& listInstance, float32 x ) -> uint32
+    {
+        uint32 count = 0;
+        for ( const sw::GpuInstance& inst : listInstance )
+        {
+            if ( sw::MathUtil::abs( inst._boundsCenter._x - x ) < 1e-4f )
+                ++count;
+        }
+        return count;
+    };
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+
+    // f1: 전체 빌드 → 발행본 1 (잠깐 들었다가 놓는다 — 이 슬롯이 f4 에서 되쓰인다).
+    gpuScene.buildFromScene( &scene, camPos );
+    sw::GpuSceneSnapshot snapshot1;
+    gpuScene.exportCpuSnapshot( snapshot1 );
+    SW_ASSERT_EQUAL( kMeshCount, static_cast<uint32>( snapshot1.getInstances().size() ) );
+
+    // f2: 0 번만 이동 → 발행본 2 (렌더 스레드처럼 계속 든다).
+    listMesh[0]->setLocalPosition( sw::float3( 100.0f, 0.0f, -1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    sw::GpuSceneSnapshot snapshot2;
+    gpuScene.exportCpuSnapshot( snapshot2 );
+    SW_EXPECT_EQUAL( 1u, countAtX( snapshot2.getInstances(), 100.0f ) );
+
+    // f3: 1 번만 이동 → 발행본 3 (역시 든다).
+    listMesh[1]->setLocalPosition( sw::float3( 200.0f, 0.0f, -1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    sw::GpuSceneSnapshot snapshot3;
+    gpuScene.exportCpuSnapshot( snapshot3 );
+    SW_EXPECT_EQUAL( 1u, countAtX( snapshot3.getInstances(), 200.0f ) );
+
+    // 발행본 1 을 놓는다 — 이제 그 슬롯만 "아무도 안 읽는" 슬롯이라 f4 가 그것을 되쓴다.
+    snapshot1 = sw::GpuSceneSnapshot{};
+
+    // f4: 2 번만 이동. 되쓰인 슬롯에는 f2·f3 의 변경이 없으므로 따라잡아야 한다.
+    listMesh[2]->setLocalPosition( sw::float3( 300.0f, 0.0f, -1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    sw::GpuSceneSnapshot snapshot4;
+    gpuScene.exportCpuSnapshot( snapshot4 );
+    const sw::vector<sw::GpuInstance>& instances4 = snapshot4.getInstances();
+    SW_ASSERT_EQUAL( kMeshCount, static_cast<uint32>( instances4.size() ) );
+    SW_EXPECT_EQUAL( 1u, countAtX( instances4, 100.0f ) ); // f2 의 변경이 따라잡혔다
+    SW_EXPECT_EQUAL( 1u, countAtX( instances4, 200.0f ) ); // f3 의 변경이 따라잡혔다
+    SW_EXPECT_EQUAL( 1u, countAtX( instances4, 300.0f ) ); // 이번 변경
+    SW_EXPECT_EQUAL( 0u, countAtX( instances4, 0.0f ) );   // 0 번의 옛 자리로 되돌아가지 않았다
+    SW_EXPECT_EQUAL( 0u, countAtX( instances4, 1.0f ) );
+
+    // (1) 들고 있던 발행본 2·3 은 그대로다 — f4 가 그것들을 쓰지 않았다.
+    SW_EXPECT_EQUAL( 1u, countAtX( snapshot2.getInstances(), 100.0f ) );
+    SW_EXPECT_EQUAL( 1u, countAtX( snapshot2.getInstances(), 1.0f ) );
+    SW_EXPECT_EQUAL( 0u, countAtX( snapshot2.getInstances(), 300.0f ) );
+    SW_EXPECT_EQUAL( 1u, countAtX( snapshot3.getInstances(), 200.0f ) );
+    SW_EXPECT_EQUAL( 0u, countAtX( snapshot3.getInstances(), 300.0f ) );
+    // 발행본은 서로 다른 배열이다.
+    SW_EXPECT_TRUE( snapshot2.getInstances().data() != snapshot3.getInstances().data() );
+    SW_EXPECT_TRUE( snapshot3.getInstances().data() != instances4.data() );
 }
 
 /**
