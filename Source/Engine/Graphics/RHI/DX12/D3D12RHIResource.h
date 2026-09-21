@@ -96,14 +96,13 @@ namespace sw
         /**
          * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당하고 복사 리스트를 열어 둡니다.
          * @details 얼로케이터는 펜스 구간이 바뀔 때만 Reset 한다 — 같은 구간의 앞선 복사가 GPU 에서 도는 중일 수
-         *          있다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록하고
-         *          submitUploadSlot 으로 닫는다. updateStructuredBuffer / uploadTexture2D 공용.
+         *          있다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록한다.
+         *          리스트는 **닫지 않는다** — 프레임 끝(또는 큐 대기 직전)에 `D3D12RHIDevice::flushPendingUploads` 가
+         *          한 번 닫아 제출한다. updateStructuredBuffer / uploadTexture2D 공용. 부르는 쪽이 `_uploadSlotMutex` 를 쥔다.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
         /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다(스테이징 없이 — readback 처럼 소스가 다른 곳일 때). */
         bool openUploadSlot( uint32& outSlotIndex );
-        /** @brief acquireUploadStaging / openUploadSlot 으로 연 복사 리스트를 닫고 그래픽스 큐에 제출합니다. */
-        void submitUploadSlot( uint32 slotIndex );
         /** @brief 지금까지 큐에 넣은 작업이 끝날 때까지 CPU 를 세웁니다(readback 전용 — 프레임 경로에서 부르지 말 것). */
         bool waitForQueueDrain();
 

@@ -275,6 +275,10 @@ namespace sw
 
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
+            {
+                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                flushPendingUploads( true );
+            }
             _commandList->Close();
             ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
             if ( _commandQueue != nullptr )

@@ -97,6 +97,16 @@ namespace sw
         D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
         const bool                            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
 
+        // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다 — 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
+        if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
+        {
+            outSlotIndex = slotIndex;
+            return true;
+        }
+        // 구간이 바뀌었는데 열려 있다면 flush 를 빠뜨린 것이다 — 얼로케이터를 Reset 하기 전에 지금 내보낸다.
+        if ( slot._bListOpen != SW_FALSE )
+            _pDevice->flushPendingUploads( true );
+
         if ( slot._copyAllocator == nullptr )
         {
             if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
@@ -145,7 +155,8 @@ namespace sw
             SW_LOG_ERROR( "openUploadSlot: copy command list Reset failed" );
             return false;
         }
-        outSlotIndex = slotIndex;
+        slot._bListOpen = SW_TRUE;
+        outSlotIndex    = slotIndex;
         return true;
     }
 
@@ -155,6 +166,9 @@ namespace sw
             return false;
         if ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) )
             return false;
+
+        // 열어 둔 복사가 있으면 먼저 내보낸다 — 아래 펜스가 그것까지 덮어야 한다.
+        _pDevice->flushPendingUploads( true );
 
         // waitForPreviousFrame 은 스왑체인 acquire 까지 하므로 프레임 중간에 부를 수 없다 — 펜스만 올리고 기다린다.
         // _fenceValue 가 올라가므로 다음 openUploadSlot 은 새 구간으로 보고 얼로케이터를 Reset 한다 — 방금
@@ -235,16 +249,6 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResource::submitUploadSlot( uint32 slotIndex )
-    {
-        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        if ( slot._copyCommandList == nullptr )
-            return;
-        slot._copyCommandList->Close();
-        ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
-        _pDevice->_commandQueue->ExecuteCommandLists( 1, arrList );
-    }
-
     void D3D12RHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                           const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
@@ -255,6 +259,8 @@ namespace sw
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )
             return;
+
+        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         // **조각을 전부 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
         // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(재 보니 호출당 ~3.3 us 였다).
@@ -321,8 +327,7 @@ namespace sw
         toUav.Transition.StateAfter  = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toUav );
-
-        submitUploadSlot( slotIndex );
+        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번 — D3D12RHIDevice::flushPendingUploads.
 
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -335,6 +340,8 @@ namespace sw
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
             return false;
+
+        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
         RHITextureMipSpan         arrMip[constant::kMaxTextureMipCount]{};
@@ -416,8 +423,7 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-
-        submitUploadSlot( slotIndex );
+        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번 — D3D12RHIDevice::flushPendingUploads.
         return true;
     }
 
@@ -442,6 +448,8 @@ namespace sw
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
             return false;
+
+        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
         if ( mip >= resDesc.MipLevels )
@@ -502,7 +510,7 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        submitUploadSlot( slotIndex );
+        // 큐 대기가 열어 둔 복사를 먼저 내보낸다(flushPendingUploads) — 이 readback 도 그 안에 있다.
         if ( waitForQueueDrain() == false )
             return false;
 

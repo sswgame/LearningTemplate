@@ -207,12 +207,15 @@ namespace sw
             // **뷰마다 하나씩**이다 — 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
             constexpr RHIBufferUsage kVisibleUsage =
                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+            SW_PROFILE_SCOPE( "RT.GpuScene.visibleBuffers" );
             for ( GpuCullViewResources& view : _arrCullView )
             {
                 view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true,
                                                        true, nullptr );
             }
         }
+
+        SW_PROFILE_SCOPE( "RT.GpuScene.batchTables" );
 
         // 배치 구간 — 컬링 컴퓨트가 "이 배치의 인스턴스는 어디서 시작하나"를 읽는다.
         _listScratchBatchInfo.resize( argsCount );

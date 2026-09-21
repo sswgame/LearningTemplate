@@ -7,9 +7,11 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Common/EngineServices.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+    #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -79,6 +81,11 @@ namespace sw
         if ( pList == nullptr )
             return;
 
+        // 이 리스트가 방금 올린 버퍼를 읽을 수 있다 — 열어 둔 업로드 복사를 먼저 내보낸다.
+        {
+            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( true );
+        }
         ID3D12CommandList* arr[] = { pList };
         _commandQueue->ExecuteCommandLists( 1, arr );
     }
@@ -106,6 +113,11 @@ namespace sw
         // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다 — 제출 시점만 앞당긴다.
         if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
         {
+            // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다 — 앞에 끼운다.
+            {
+                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                flushPendingUploads( false );
+            }
             _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
             _listPendingSubmit.clear();
         }
@@ -134,6 +146,29 @@ namespace sw
         pNextSegment->RSSetScissorRects( 1, &scissor );
     }
 
+    void D3D12RHIDevice::flushPendingUploads( bool bExecuteNow )
+    {
+        if ( _commandQueue == nullptr )
+            return;
+        for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+        {
+            if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
+                continue;
+            slot._copyCommandList->Close();
+            slot._bListOpen = SW_FALSE;
+            if ( bExecuteNow )
+            {
+                ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
+                _commandQueue->ExecuteCommandLists( 1, arrList );
+            }
+            else
+            {
+                // 프레임 리스트 앞에 — 큐 순서가 실행 순서다.
+                _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
+            }
+        }
+    }
+
     void D3D12RHIDevice::waitForPreviousFrame()
     {
         if ( _commandQueue == nullptr || _fence == nullptr )
@@ -141,6 +176,11 @@ namespace sw
 
         if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
             return;
+
+        {
+            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( true );
+        }
 
         const UINT64  fenceToWait = _fenceValue;
         const HRESULT signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
@@ -465,34 +505,44 @@ namespace sw
         if ( bPresent )
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
-        if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
+        // Present 의 300 us 가 어디로 가는지 — 닫기·제출 / DXGI Present / 펜스 신호·다음 이미지 로 나눠 잰다.
         {
-            // 구간 전체를 읽기 버퍼로 옮긴다 — 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
-            // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸엔 지난 사이클 값이 남아 있다).
-            // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
-            const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
-            _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
-            if ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
-                 writtenMask != 0 )
+            SW_PROFILE_SCOPE( "RT.Present.submit" );
+            if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
             {
-                const uint32 base = getTimestampBase();
-                _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,
-                                                     constant::kMaxGpuTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
+                // 구간 전체를 읽기 버퍼로 옮긴다 — 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
+                // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸엔 지난 사이클 값이 남아 있다).
+                // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
+                const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
+                _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
+                if ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                     writtenMask != 0 )
+                {
+                    const uint32 base = getTimestampBase();
+                    _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,
+                                                         constant::kMaxGpuTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
+                }
+                _pActiveFrameList->Close();
+                _listPendingSubmit.push_back( _pActiveFrameList );
+                _frameStreamState._bRecording = SW_FALSE;
+                releaseOnlineBlocksDeferred( _frameStreamState );
             }
-            _pActiveFrameList->Close();
-            _listPendingSubmit.push_back( _pActiveFrameList );
-            _frameStreamState._bRecording = SW_FALSE;
-            releaseOnlineBlocksDeferred( _frameStreamState );
-        }
 
-        // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
-        if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
-        {
-            _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
-                                                _listPendingSubmit.data() );
+            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼운다 — 프레임에 한 번의 제출.
+            {
+                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                flushPendingUploads( false );
+            }
+
+            // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
+            if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
+            {
+                _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
+                                                    _listPendingSubmit.data() );
+            }
+            _listPendingSubmit.clear();
+            _pActiveFrameList = nullptr;
         }
-        _listPendingSubmit.clear();
-        _pActiveFrameList = nullptr;
 
         // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
         for ( D3D12CommandListEntry& segment : _listFrameSegment )
@@ -503,7 +553,11 @@ namespace sw
 
         if ( bPresent )
         {
-            const HRESULT presentHr = _swapChain.present( vsync );
+            HRESULT presentHr = S_OK;
+            {
+                SW_PROFILE_SCOPE( "RT.Present.present" );
+                presentHr = _swapChain.present( vsync );
+            }
             if ( FAILED( presentHr ) )
             {
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
@@ -518,8 +572,11 @@ namespace sw
                 flushDebugMessages( "after Present" );
             }
         }
-        signalCurrentFrame();
-        _swapChain.acquireNextImage();
+        {
+            SW_PROFILE_SCOPE( "RT.Present.signalAcquire" );
+            signalCurrentFrame();
+            _swapChain.acquireNextImage();
+        }
         if ( bPresent )
             _swapChain.markPresented();
     }

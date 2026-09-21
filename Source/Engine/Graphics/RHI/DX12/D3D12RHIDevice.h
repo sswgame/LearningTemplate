@@ -415,7 +415,20 @@ namespace sw
             uint64                                            _capacity{ 0 };
             uint64                                            _uploadOffset{ 0 };        ///< 이번 펜스 구간에서 쓴 스테이징 바이트
             uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간
+            uint8                                             _bListOpen{ SW_FALSE };    ///< 복사 리스트가 열려 있고 아직 제출 안 된 복사가 있다
         };
+        /**
+         * @brief 열어 둔 복사 리스트를 닫아 제출합니다 — **프레임에 한 번**.
+         * @details 예전에는 업로드 호출마다 리스트를 닫고 `ExecuteCommandLists` 를 불렀다. 인스턴스 · 배치 표 · 뷰마다의
+         *          간접 인자 · 머티리얼 그룹까지 프레임에 대여섯 번이고, 제출 하나가 수십 us 라 렌더 스레드의
+         *          `RT.GpuScene.batchTables` 106 us 의 정체가 그것이었다. 지금은 열어 두고 기록만 하다가 여기서 한 번 닫는다.
+         *          큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 예전과 같은 순서다.
+         * @param bExecuteNow true 면 지금 큐에 넣는다(펜스 대기 직전 · readback). false 면 `_listPendingSubmit` 맨 앞에 끼워
+         *                    endFrame 의 한 번의 제출에 같이 나간다.
+         */
+        void flushPendingUploads( bool bExecuteNow );
+        /// @brief 복사 리스트는 게임 스레드(텍스처 · 메시 업로드)와 렌더 스레드(인스턴스 · 표)가 같이 쓴다 — 열어 두는 동안 잠근다.
+        mutex _uploadSlotMutex;
 
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
