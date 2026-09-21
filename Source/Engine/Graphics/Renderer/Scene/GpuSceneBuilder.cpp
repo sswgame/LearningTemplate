@@ -608,9 +608,11 @@ namespace sw
                 _snapshot._listTransparentBatch.clear();
                 _snapshot._listAllBatch.clear();
                 buildBatches();
-                _listBuiltTransparentIdx = _listScratchTransparentIdx;
             }
-            retireUnusedMaterialElements();
+            {
+                SW_PROFILE_SCOPE( "GT.GpuScene.build.retire" );
+                retireUnusedMaterialElements();
+            }
         }
 
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다 — 복사 없이 두 버퍼를
@@ -630,6 +632,7 @@ namespace sw
         // 복사가 아니라 **옮긴다** — 다음 프레임에 제자리 갱신이 필요하면 발행본에서 되돌려 받는다.
         // (발행용 배열을 풀에 돌려 쓰는 것도 재 봤는데 더 느렸다: 풀 2/3/8 에서 발행 85/78/76 us 로
         //  갓 할당한 블록보다 차가웠다. 800 KB 복사 자체가 ~75 us 이고 할당은 그 안에서 작다.)
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.publish" );
         _snapshot._pListInstance = make_shared<const vector<GpuInstance>>( std::move( _listInstanceWork ) );
         _listInstanceWork.clear();
     }
@@ -653,8 +656,26 @@ namespace sw
     {
         if ( _listScratchTransparentIdx.size() <= 1 )
             return;
-        std::sort( _listScratchTransparentIdx.begin(), _listScratchTransparentIdx.end(), [&]( uint32 idxA, uint32 idxB )
-        { return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, cameraPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, cameraPos ); } );
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.sortTransparent" );
+
+        // 키를 한 번만 구한다 — 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(헤더 주석).
+        const size_t transparentCount = _listScratchTransparentIdx.size();
+        _listTransparentSortKey.resize( transparentCount );
+        for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
+        {
+            const uint32 candidateIndex                         = _listScratchTransparentIdx[sortIndex];
+            _listTransparentSortKey[sortIndex]._distanceSquared = float3::getDistanceSquared( _listScratchRaw[candidateIndex]._boundsCenter, cameraPos );
+            _listTransparentSortKey[sortIndex]._candidateIndex  = candidateIndex;
+        }
+        // 먼 것부터. 거리가 같으면 후보 인덱스로 — 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
+        std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), []( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
+        {
+            if ( keyA._distanceSquared != keyB._distanceSquared )
+                return keyA._distanceSquared > keyB._distanceSquared;
+            return keyA._candidateIndex < keyB._candidateIndex;
+        } );
+        for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
+            _listScratchTransparentIdx[sortIndex] = _listTransparentSortKey[sortIndex]._candidateIndex;
     }
 
     bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )
@@ -671,9 +692,11 @@ namespace sw
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
         if ( _listInstanceWork.empty() || _listInstanceSrcIndex.size() != _listInstanceWork.size() )
             return false;
-        // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 어느 인스턴스가 어느 자리에
-        // 앉는지가 달라지므로 매핑을 그대로 쓸 수 없다.
-        if ( _listScratchTransparentIdx != _listBuiltTransparentIdx )
+        // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 투명 인스턴스의 자리가 달라지지만
+        // **불투명 접두부는 그대로다** — 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
+        const bool bTransparentOrderChanged = ( _listScratchTransparentIdx != _listBuiltTransparentIdx );
+        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > _listInstanceWork.size() || _opaqueBatchCount > _snapshot._listAllBatch.size() ||
+                                           _opaqueElementEntryCount > _listBatchElementIndex.size() ) )
             return false;
 
         // **바뀐 슬롯만 적어 둔다.** 받는 쪽이 그 구간만 GPU 에 올린다 — 예전에는 하나만 움직여도
@@ -691,12 +714,14 @@ namespace sw
         //
         // 회전 인스턴스 수는 전부 훑지 않으므로 **증감으로 유지한다** — 슬롯 하나를 고칠 때 옛 값이
         // 0 이 아니었으면 빼고 새 값이 0 이 아니면 더한다. 전체 훑기 경로만 0 부터 다시 센다.
-        const bool bPartialRefresh = bPartialCollect && _listCandidateToInstance.size() == _listScratchCandidate.size();
+        // 투명 꼬리를 다시 짓는 프레임은 접두부를 통째로 훑는다 — 더티 목록에는 자리가 바뀔 투명 후보도 섞여 있다.
+        const bool bPartialRefresh = bPartialCollect && bTransparentOrderChanged == false && _listCandidateToInstance.size() == _listScratchCandidate.size();
         if ( bPartialRefresh == false )
             _snapshot._spinInstanceCount = 0;
 
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.loop" );
-        const size_t slotCount = _listInstanceWork.size();
+        // 꼬리를 다시 지을 때는 접두부만 제자리 갱신이다.
+        const size_t slotCount = bTransparentOrderChanged ? _opaqueInstanceCount : _listInstanceWork.size();
 
         // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
         // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 예전 직렬 루프 그대로다.
@@ -767,6 +792,23 @@ namespace sw
                             _snapshot._listDirtyInstanceRun.push_back( run );
                     }
                 }
+            }
+        }
+
+        if ( bTransparentOrderChanged )
+        {
+            rebuildTransparentTail();
+            // 꼬리는 통째로 새 값이다 — 접두부 구간 뒤에 한 구간으로 잇는다.
+            const uint32 tailCount = static_cast<uint32>( _listInstanceWork.size() ) - _opaqueInstanceCount;
+            if ( bTooManyRuns == false && tailCount > 0 )
+            {
+                if ( _snapshot._listDirtyInstanceRun.empty() == false &&
+                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == _opaqueInstanceCount )
+                    _snapshot._listDirtyInstanceRun.back()._count += tailCount;
+                else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+                    bTooManyRuns = true;
+                else
+                    _snapshot._listDirtyInstanceRun.push_back( GpuInstanceRun{ _opaqueInstanceCount, tailCount } );
             }
         }
 
@@ -849,16 +891,21 @@ namespace sw
 
         ++_buildCounter;
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.stamp" );
-        for ( const GpuInstance& inst : _listInstanceWork )
+        // 도장은 원소에 찍는다 — 인스턴스 8000 개를 돌 것 없이 배치가 적어 둔 (배치, 원소) 쌍만 돈다.
+        const size_t batchCount = MathUtil::min( _snapshot._listAllBatch.size(), _listBatchElementRange.size() );
+        for ( size_t batchIndex = 0; batchIndex < batchCount; ++batchIndex )
         {
-            if ( inst._meshBatchIndex >= _snapshot._listAllBatch.size() )
+            const uint32 groupIndex = _snapshot._listAllBatch[batchIndex]._materialGroup;
+            if ( groupIndex >= _listMaterialGroupState.size() )
                 continue;
-            const uint32 groupIndex = _snapshot._listAllBatch[inst._meshBatchIndex]._materialGroup;
-            if ( groupIndex >= _snapshot._listMaterialGroup.size() )
-                continue;
-            MaterialGroupState& state = _listMaterialGroupState[groupIndex];
-            if ( inst._materialIndex < state._listEntryLastSeenBuild.size() )
-                state._listEntryLastSeenBuild[inst._materialIndex] = _buildCounter;
+            MaterialGroupState&   state = _listMaterialGroupState[groupIndex];
+            const GpuInstanceRun& range = _listBatchElementRange[batchIndex];
+            for ( uint32 entry = range._start; entry < range._start + range._count && entry < _listBatchElementIndex.size(); ++entry )
+            {
+                const uint32 elementIndex = _listBatchElementIndex[entry];
+                if ( elementIndex < state._listEntryLastSeenBuild.size() )
+                    state._listEntryLastSeenBuild[elementIndex] = _buildCounter;
+            }
         }
         return true;
     }
@@ -908,7 +955,11 @@ namespace sw
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
         // 후보 -> 인스턴스 슬롯 역매핑. 더티 후보의 인스턴스 자리를 바로 찾기 위한 것이다.
         _listCandidateToInstance.assign( _listScratchCandidate.size(), kInvalidCandidateIndex );
+        _listCandidateMaterialElement.assign( _listScratchCandidate.size(), 0u );
+        _bReuseMaterialElement       = SW_FALSE;
         _snapshot._spinInstanceCount = 0;
+        _listBatchElementIndex.clear();
+        _listBatchElementRange.clear();
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
         // 예전엔 여기서 그룹을 통째로 지우고 인스턴스마다 다시 부여했다 — 인스턴스 N 개와 머티리얼 M 종에
@@ -938,6 +989,17 @@ namespace sw
             }
         }
 
+        // 투명 꼬리를 자르는 자리를 적어 둔다 — 투명 순서만 바뀐 프레임은 여기서부터 다시 방출한다.
+        _opaqueInstanceCount     = static_cast<uint32>( _listInstanceWork.size() );
+        _opaqueBatchCount        = static_cast<uint32>( _snapshot._listAllBatch.size() );
+        _opaqueElementEntryCount = static_cast<uint32>( _listBatchElementIndex.size() );
+
+        emitTransparentBatches();
+        _listBuiltTransparentIdx = _listScratchTransparentIdx;
+    }
+
+    void GpuSceneBuilder::emitTransparentBatches()
+    {
         // back-to-front 정렬된 transparent 인덱스에서 연속 동일 mesh/mat/instance 만 머지.
         if ( _listScratchTransparentIdx.empty() == false )
         {
@@ -976,6 +1038,23 @@ namespace sw
         }
     }
 
+    void GpuSceneBuilder::rebuildTransparentTail()
+    {
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.transparentTail" );
+        // 꼬리를 잘라 낸다. 용량은 남아 있으므로 다시 붙일 때 할당이 없다.
+        _listInstanceWork.resize( _opaqueInstanceCount );
+        _listInstanceSrcIndex.resize( _opaqueInstanceCount );
+        _snapshot._listAllBatch.resize( _opaqueBatchCount );
+        _snapshot._listTransparentBatch.clear();
+        _listBatchElementIndex.resize( _opaqueElementEntryCount );
+        _listBatchElementRange.resize( _opaqueBatchCount );
+        // 배치 키가 그대로인 프레임에만 오는 자리다 — 원소 인덱스는 지난 방출의 것을 그대로 쓴다(영속 ID).
+        _bReuseMaterialElement = ( _listCandidateMaterialElement.size() == _listScratchCandidate.size() ) ? SW_TRUE : SW_FALSE;
+        emitTransparentBatches();
+        _bReuseMaterialElement   = SW_FALSE;
+        _listBuiltTransparentIdx = _listScratchTransparentIdx;
+    }
+
     void GpuSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
                                      const shared_ptr<MaterialInstance>& instance )
     {
@@ -1003,14 +1082,28 @@ namespace sw
         batch._materialIndex     = 0;
 
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다 — 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 산다.
+        // 배치가 쓰는 원소는 중복 없이 적어 둔다(회수 도장이 인스턴스가 아니라 이 목록을 돈다). 정렬돼 있어 같은
+        // 원소는 연속으로 오므로 직전 것과 다를 때만 더한다.
         const uint32 batchIndex = static_cast<uint32>( _snapshot._listAllBatch.size() );
+        _listBatchElementRange.push_back( GpuInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );
         for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
         {
             const uint32         srcIdx = pSrcIdx[entryIndex];
             const DrawCandidate& cand   = _listScratchCandidate[srcIdx];
             GpuInstance          inst   = _listScratchRaw[srcIdx];
             inst._meshBatchIndex        = batchIndex;
-            inst._materialIndex         = assignMaterialElement( cand._material, cand._instance, batch._materialGroup );
+            if ( _bReuseMaterialElement != SW_FALSE && srcIdx < _listCandidateMaterialElement.size() )
+                inst._materialIndex = _listCandidateMaterialElement[srcIdx];
+            else
+                inst._materialIndex = assignMaterialElement( cand._material, cand._instance, batch._materialGroup );
+            if ( srcIdx < _listCandidateMaterialElement.size() )
+                _listCandidateMaterialElement[srcIdx] = inst._materialIndex;
+            GpuInstanceRun& elementRange = _listBatchElementRange.back();
+            if ( elementRange._count == 0 || _listBatchElementIndex.back() != inst._materialIndex )
+            {
+                _listBatchElementIndex.push_back( inst._materialIndex );
+                ++elementRange._count;
+            }
             if ( entryIndex == begin )
                 batch._materialIndex = inst._materialIndex;
             if ( inst._spinSeed != 0 )

@@ -98,6 +98,19 @@ namespace sw
     private:
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
         void buildBatches();
+        /**
+         * @brief 정렬된 투명 후보를 배치로 방출합니다 (buildBatches 의 뒷부분). 불투명 뒤에 이어 붙는다.
+         * @details 전체 재구축과 **투명 꼬리만 다시 짓기**(`rebuildTransparentTail`)가 같은 이 함수를 쓴다.
+         */
+        void emitTransparentBatches();
+        /**
+         * @brief 투명 정렬 순서만 바뀐 프레임에 불투명 접두부는 두고 투명 꼬리만 다시 방출합니다.
+         * @details 투명 인스턴스는 불투명 뒤에 연속으로 앉는다(`_opaqueInstanceCount`). 예전에는 투명 순서가
+         *          바뀌면 `refreshInstancesInPlace` 가 실패해 **불투명 8000 개까지** 통째로 다시 지었다 —
+         *          투명 큐브가 위아래로 흔들리는 벤치에서 거의 매 프레임 그랬다(배치 단계 최소 139 · p50 327 us).
+         *          접두부는 제자리 갱신이 이미 끝났고, 여기서는 꼬리를 잘라 내고 새 순서로 다시 붙인다.
+         */
+        void rebuildTransparentTail();
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
         void retireUnusedMaterialElements();
         /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다 (그룹 기준이 바뀌었을 때). */
@@ -254,6 +267,15 @@ namespace sw
          */
         void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
                         const shared_ptr<MaterialInstance>& instance );
+        /**
+         * @brief 후보 인덱스 -> 마지막 방출이 그 후보에 준 머티리얼 원소 인덱스.
+         * @details 원소 인덱스는 (머티리얼, 인스턴스) 쌍에 영속이라 배치 키가 그대로인 프레임에는 다시 묻지 않아도 된다.
+         *          투명 꼬리를 다시 지을 때 인스턴스 2000 개가 해시 표를 다시 묻던 것(깊이순이라 원소가 번갈아 와서
+         *          직전 조회 캐시도 못 맞힌다)을 배열 읽기 하나로 바꾼다. 전체 재구축이 채우고, 꼬리 재방출이 읽는다.
+         */
+        vector<uint32> _listCandidateMaterialElement;
+        /// @brief 꼬리 재방출 중이면 true — `emitBatch` 가 원소를 표에서 다시 묻지 않고 `_listCandidateMaterialElement` 를 읽는다.
+        uint8 _bReuseMaterialElement{ SW_FALSE };
 
         /**
          * @brief 전체 수집이 프리미티브 칸마다 남기는 표시 (비트).
@@ -371,8 +393,34 @@ namespace sw
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 자리다.
          */
         vector<uint32> _listInstanceSrcIndex;
-        /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
+        /// @brief 마지막 방출이 쓴 투명 정렬 순서. 이게 바뀌면 투명 꼬리를 다시 방출한다(`rebuildTransparentTail`).
         vector<uint32> _listBuiltTransparentIdx;
+        /// @brief 마지막 전체 빌드에서 불투명이 차지한 인스턴스 수 · 배치 수 · 원소 표 항목 수 — 투명 꼬리를 자르는 자리.
+        uint32 _opaqueInstanceCount{ 0 };
+        uint32 _opaqueBatchCount{ 0 };
+        uint32 _opaqueElementEntryCount{ 0 };
+
+        /** @brief 투명 정렬 키 — (카메라 거리², 후보 인덱스). 정렬 전에 한 번 계산해 둔다. */
+        struct TransparentSortKey
+        {
+            float32 _distanceSquared{ 0.0f };
+            uint32  _candidateIndex{ 0 };
+        };
+        /**
+         * @brief 투명 정렬의 작업 배열.
+         * @details 예전에는 비교 함수가 원소마다 raw 에서 바운드를 읽어 거리를 **다시** 구했다 — 투명 2000 개면
+         *          비교 22000 번에 무작위 읽기 44000 번이고, 그 raw 는 다른 코어가 방금 쓴 것이라 원격 캐시에서 왔다.
+         *          키를 한 번 계산해 두면 읽기는 2000 번이고 정렬은 12 바이트 연속 배열 위에서 돈다.
+         */
+        vector<TransparentSortKey> _listTransparentSortKey;
+
+        /**
+         * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없이) — `_listBatchElementRange` 로 자른다.
+         * @details 회수 시계 도장은 **원소**에 찍는 것이라 인스턴스 8000 개가 아니라 (배치, 원소) 쌍만 돌면 된다.
+         *          합치기가 꺼져 있으면 배치당 원소 하나, 켜져 있어도 배치당 머티리얼 종류 수다.
+         */
+        vector<uint32>         _listBatchElementIndex;
+        vector<GpuInstanceRun> _listBatchElementRange;
 
         float3 _lastCameraPos{};
         /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */

@@ -100,6 +100,84 @@ SW_TEST_CASE( GpuSceneTest, BuildBatchesAndSortTransparent )
 }
 
 /**
+ * @brief 투명 정렬 순서만 바뀐 프레임: 불투명 인스턴스는 제자리, 투명 꼬리만 새 순서로 다시 앉고, 그 꼬리가 더티로 실린다.
+ * @details 예전에는 투명 순서가 바뀌면 배치 전체(불투명까지)를 다시 지었다. 지금은 꼬리만 다시 방출하므로
+ *          (1) 불투명 슬롯의 내용이 그대로여야 하고 (2) 투명은 여전히 먼 것부터여야 하며 (3) 받는 쪽이 꼬리를
+ *          다시 올리도록 더티 구간이 꼬리를 덮어야 한다. 셋 중 하나라도 빠지면 화면이 조용히 어긋난다.
+ */
+SW_TEST_CASE( GpuSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
+{
+    sw::Scene scene( "GpuSceneTransparentTail" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    auto addMeshAt = [&]( const utf8* pName, float32 x, float32 z, sw::RHIBlendMode blend ) -> sw::MeshComponent*
+    {
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
+        if ( go == nullptr )
+            return nullptr;
+        sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+        if ( mesh == nullptr )
+            return nullptr;
+        mesh->setMesh( cube );
+        mesh->setLocalPosition( sw::float3( x, 0.0f, z ) );
+        mesh->setBlendMode( blend );
+        mesh->setVisible( true );
+        return mesh;
+    };
+
+    sw::MeshComponent* pOpaqueA = addMeshAt( "TailOpaqueA", 0.0f, -1.0f, sw::RHIBlendMode::Opaque );
+    sw::MeshComponent* pOpaqueB = addMeshAt( "TailOpaqueB", 1.0f, -1.0f, sw::RHIBlendMode::Opaque );
+    sw::MeshComponent* pFar     = addMeshAt( "TailFar", 0.0f, -10.0f, sw::RHIBlendMode::Transparent );
+    sw::MeshComponent* pNear    = addMeshAt( "TailNear", 0.0f, -2.0f, sw::RHIBlendMode::Transparent );
+    SW_ASSERT_NOT_NULL( pOpaqueA );
+    SW_ASSERT_NOT_NULL( pOpaqueB );
+    SW_ASSERT_NOT_NULL( pFar );
+    SW_ASSERT_NOT_NULL( pNear );
+
+    sw::GpuSceneBuilder  gpuScene;
+    sw::GpuSceneSnapshot snapshot;
+    const sw::float3     camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.exportCpuSnapshot( snapshot );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+    const uint32 tailBase = gpuScene.getTransparentBatches()[0]._instanceBase;
+    SW_EXPECT_EQUAL( 2u, tailBase );
+    // 먼 것(-10)이 먼저 앉는다.
+    SW_EXPECT_TRUE( gpuScene.getInstances()[tailBase]._boundsCenter._z < gpuScene.getInstances()[tailBase + 1]._boundsCenter._z );
+
+    // 먼 것을 가까운 것보다 앞으로 당긴다 — 키(메시·머티리얼·블렌드)는 그대로, 순서만 뒤집힌다.
+    pFar->setLocalPosition( sw::float3( 0.0f, 0.0f, -1.5f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.exportCpuSnapshot( snapshot );
+
+    const sw::vector<sw::GpuInstance>& instances = gpuScene.getInstances();
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( instances.size() ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+    SW_EXPECT_EQUAL( tailBase, gpuScene.getTransparentBatches()[0]._instanceBase );
+    // (1) 불투명 슬롯은 제자리다 — x 가 0, 1 그대로.
+    SW_EXPECT_TRUE( sw::MathUtil::abs( instances[0]._boundsCenter._x - 0.0f ) < 1e-4f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( instances[1]._boundsCenter._x - 1.0f ) < 1e-4f );
+    // (2) 투명은 여전히 먼 것부터 — 이제 Near(-2) 가 더 멀다.
+    SW_EXPECT_TRUE( sw::MathUtil::abs( instances[tailBase]._boundsCenter._z - ( -2.0f ) ) < 1e-4f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( instances[tailBase + 1]._boundsCenter._z - ( -1.5f ) ) < 1e-4f );
+    // (3) 꼬리가 더티로 실린다 — 전부 더티거나, 구간 하나가 [tailBase, 4) 를 덮는다.
+    bool bTailCovered = snapshot._bAllInstancesDirty != SW_FALSE;
+    for ( const sw::GpuInstanceRun& run : snapshot._listDirtyInstanceRun )
+    {
+        if ( run._start <= tailBase && tailBase + 2 <= run._start + run._count )
+            bTailCovered = true;
+    }
+    SW_EXPECT_TRUE( bTailCovered );
+}
+
+/**
  * @brief 프리미티브 등록부: 변경을 알린 것만 다시 만들고, 알린 게 없으면 수집조차 하지 않는다.
  * @details 이 구조의 최악 실패 모드는 "움직였는데 화면이 안 따라오는 것"이다. 등록·해제·더티
  *          신호 중 하나라도 빠지면 여기서 걸린다.
