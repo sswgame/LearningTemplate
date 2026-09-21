@@ -362,41 +362,6 @@ namespace sw
         return XmlNode{ pChild.internal_object() };
     }
 
-    XmlNode XmlNode::appendChild( const utf8* pName, string_view value ) const
-    {
-        XmlNode childNode = appendChild( pName );
-        childNode.setValue( value );
-        return childNode;
-    }
-
-    XmlNode XmlNode::appendChild( const utf8* pName, int32 value ) const
-    {
-        XmlNode childNode = appendChild( pName );
-        childNode.setValue( value );
-        return childNode;
-    }
-
-    XmlNode XmlNode::appendChild( const utf8* pName, uint32 value ) const
-    {
-        XmlNode childNode = appendChild( pName );
-        childNode.setValue( value );
-        return childNode;
-    }
-
-    XmlNode XmlNode::appendChild( const utf8* pName, float32 value ) const
-    {
-        XmlNode childNode = appendChild( pName );
-        childNode.setValue( value );
-        return childNode;
-    }
-
-    XmlNode XmlNode::appendChild( const utf8* pName, bool value ) const
-    {
-        XmlNode childNode = appendChild( pName );
-        childNode.setValue( value );
-        return childNode;
-    }
-
     void XmlNode::appendAttribute( const utf8* pName, const utf8* pValue ) const
     {
         pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
@@ -421,27 +386,6 @@ namespace sw
             const string valStr( value );
             pAttr.set_value( valStr.c_str() );
         }
-    }
-
-    void XmlNode::appendAttribute( const utf8* pName, int32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        appendAttribute( pName, sb.c_str() );
-    }
-
-    void XmlNode::appendAttribute( const utf8* pName, uint32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        appendAttribute( pName, sb.c_str() );
-    }
-
-    void XmlNode::appendAttribute( const utf8* pName, float32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        appendAttribute( pName, sb.c_str() );
     }
 
     void XmlNode::appendAttribute( const utf8* pName, bool value ) const
@@ -478,27 +422,6 @@ namespace sw
         }
     }
 
-    void XmlNode::setAttribute( const utf8* pName, int32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setAttribute( pName, sb.c_str() );
-    }
-
-    void XmlNode::setAttribute( const utf8* pName, uint32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setAttribute( pName, sb.c_str() );
-    }
-
-    void XmlNode::setAttribute( const utf8* pName, float32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setAttribute( pName, sb.c_str() );
-    }
-
     void XmlNode::setAttribute( const utf8* pName, bool value ) const
     {
         setAttribute( pName, value ? "1" : "0" );
@@ -527,27 +450,6 @@ namespace sw
             return;
         const string valStr( value );
         pNode.text().set( valStr.c_str() );
-    }
-
-    void XmlNode::setValue( int32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setValue( sb.c_str() );
-    }
-
-    void XmlNode::setValue( uint32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setValue( sb.c_str() );
-    }
-
-    void XmlNode::setValue( float32 value ) const
-    {
-        StringBuilder<constant::kMaxBuffer32> sb;
-        sb.append( value );
-        setValue( sb.c_str() );
     }
 
     void XmlNode::setValue( bool value ) const

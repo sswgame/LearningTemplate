@@ -408,7 +408,7 @@ namespace sw::editor
         if ( pCdo == nullptr )
             return;
 
-        const string body = StringUtil::trim( pLoaded->getStateData().c_str() );
+        const string body{ StringUtil::trim( pLoaded->getStateData() ) };
         bool         bLoadedCdo{ false };
         if ( body.empty() == false && body.front() == '{' )
             bLoadedCdo = ObjectStateSerializer::loadFromJsonString( pCdo, pLoaded->getStateData() );

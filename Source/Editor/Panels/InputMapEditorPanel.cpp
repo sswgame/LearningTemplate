@@ -551,7 +551,7 @@ namespace sw::editor
             dx                        = vecMouseDelta3._x;
             dy                        = vecMouseDelta3._y;
             float32      smoothDx = 0.0f, smoothDy = 0.0f;
-            const float2 vecSmoothDelta2 = pInput->getSmoothMouseDelta();
+            const float2 vecSmoothDelta2 = pInput->getMouse() != nullptr ? pInput->getMouse()->getSmoothDelta() : float2{};
             smoothDx                     = vecSmoothDelta2._x;
             smoothDy                     = vecSmoothDelta2._y;
 

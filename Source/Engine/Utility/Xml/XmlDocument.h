@@ -4,9 +4,11 @@
  * @note 리플렉션 객체 그래프는 XmlSerializer / IXmlBackend를 사용합니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -96,42 +98,40 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 새 자식 노드를 추가합니다. */
         XmlNode appendChild( const utf8* pName ) const;
-        /** @brief 새 자식 노드를 추가하고 텍스트를 설정합니다. */
-        XmlNode appendChild( const utf8* pName, string_view value ) const;
-        /** @brief 새 자식 노드를 추가하고 정수 텍스트를 설정합니다. */
-        XmlNode appendChild( const utf8* pName, int32 value ) const;
-        /** @brief 새 자식 노드를 추가하고 부호 없는 정수 텍스트를 설정합니다. */
-        XmlNode appendChild( const utf8* pName, uint32 value ) const;
-        /** @brief 새 자식 노드를 추가하고 실수 텍스트를 설정합니다. */
-        XmlNode appendChild( const utf8* pName, float32 value ) const;
-        /** @brief 새 자식 노드를 추가하고 bool 텍스트(1/0)를 설정합니다. */
-        XmlNode appendChild( const utf8* pName, bool value ) const;
+        /** @brief 새 자식 노드를 추가하고 값을 설정합니다. 값 타입은 `setValue` 가 받는 것 전부. */
+        template <typename T>
+        XmlNode appendChild( const utf8* pName, const T& value ) const
+        {
+            XmlNode childNode = appendChild( pName );
+            childNode.setValue( value );
+            return childNode;
+        }
 
         /** @brief 새 속성을 추가합니다. */
         void appendAttribute( const utf8* pName, const utf8* pValue ) const;
         /** @brief 새 속성을 추가합니다. */
         void appendAttribute( const utf8* pName, string_view value ) const;
-        /** @brief 정수 속성을 추가합니다. */
-        void appendAttribute( const utf8* pName, int32 value ) const;
-        /** @brief 부호 없는 정수 속성을 추가합니다. */
-        void appendAttribute( const utf8* pName, uint32 value ) const;
-        /** @brief 실수 속성을 추가합니다. */
-        void appendAttribute( const utf8* pName, float32 value ) const;
         /** @brief bool 속성(1/0)을 추가합니다. */
         void appendAttribute( const utf8* pName, bool value ) const;
+        /** @brief 숫자 속성을 추가합니다 (int32 · uint32 · float32). */
+        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+        void appendAttribute( const utf8* pName, T value ) const
+        {
+            appendAttribute( pName, formatNumber( value ).c_str() );
+        }
 
         /** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
         void setAttribute( const utf8* pName, const utf8* pValue ) const;
         /** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
         void setAttribute( const utf8* pName, string_view value ) const;
-        /** @brief 정수 속성을 설정합니다. */
-        void setAttribute( const utf8* pName, int32 value ) const;
-        /** @brief 부호 없는 정수 속성을 설정합니다. */
-        void setAttribute( const utf8* pName, uint32 value ) const;
-        /** @brief 실수 속성을 설정합니다. */
-        void setAttribute( const utf8* pName, float32 value ) const;
         /** @brief bool 속성(1/0)을 설정합니다. */
         void setAttribute( const utf8* pName, bool value ) const;
+        /** @brief 숫자 속성을 설정합니다 (int32 · uint32 · float32). */
+        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+        void setAttribute( const utf8* pName, T value ) const
+        {
+            setAttribute( pName, formatNumber( value ).c_str() );
+        }
 
         /** @brief 노드 이름을 설정합니다. */
         void setName( const utf8* pName ) const;
@@ -139,19 +139,34 @@ namespace sw
         void setValue( const utf8* pValue ) const;
         /** @brief 노드 값을 설정합니다. */
         void setValue( string_view value ) const;
-        /** @brief 노드 값을 정수로 설정합니다. */
-        void setValue( int32 value ) const;
-        /** @brief 노드 값을 부호 없는 정수로 설정합니다. */
-        void setValue( uint32 value ) const;
-        /** @brief 노드 값을 실수로 설정합니다. */
-        void setValue( float32 value ) const;
         /** @brief 노드 값을 bool(1/0)로 설정합니다. */
         void setValue( bool value ) const;
+        /** @brief 노드 값을 숫자로 설정합니다 (int32 · uint32 · float32). */
+        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+        void setValue( T value ) const
+        {
+            setValue( formatNumber( value ).c_str() );
+        }
 
         /** @brief 이 서브트리를 XML 문자열로 직렬화합니다 (Prefab/임베드용). */
         string toString() const;
         /** @brief 다른 문서의 서브트리를 이 노드의 자식으로 복사합니다. */
         XmlNode appendClone( XmlNode src ) const;
+
+    private:
+        /**
+         * @brief 숫자를 XML 텍스트로. 받는 타입을 셋으로 못박는다 — 예전엔 오버로드 여섯이 암묵 변환을
+         *        허용해 int64 를 int32 로 잘라 적어도 컴파일이 됐다. 다른 타입은 여기서 컴파일 오류다.
+         */
+        template <typename T>
+        static StringBuilder<constant::kMaxBuffer32> formatNumber( T value )
+        {
+            static_assert( std::is_same_v<T, int32> || std::is_same_v<T, uint32> || std::is_same_v<T, float32>,
+                           "XmlNode number text: int32 / uint32 / float32 only" );
+            StringBuilder<constant::kMaxBuffer32> sb;
+            sb.append( value );
+            return sb;
+        }
 
     private:
         friend class XmlDocument;

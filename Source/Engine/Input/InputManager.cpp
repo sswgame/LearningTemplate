@@ -462,16 +462,11 @@ namespace sw
         return _pMouse != nullptr ? _pMouse->getDelta() : int2{};
     }
 
-    float2 InputManager::getRawMouseDelta() const
-    {
-        return _pMouse != nullptr ? _pMouse->getRawDelta() : float2{};
-    }
-
     bool InputManager::isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const
     {
-        if ( isPointerInside() == false )
+        if ( _pMouse == nullptr || _pMouse->isPointerInside() == false )
             return false;
-        const int2 mousePos = getMousePosition();
+        const int2 mousePos = _pMouse->getPosition();
         return ( x <= mousePos._x && mousePos._x < ( x + width ) && y <= mousePos._y && mousePos._y < ( y + height ) );
     }
 

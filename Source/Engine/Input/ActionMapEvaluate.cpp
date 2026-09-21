@@ -405,7 +405,7 @@ namespace sw
             }
             case BindingKind::MouseDelta2D:
             {
-                const float2 rawDelta = _pInput->getRawMouseDelta();
+                const float2 rawDelta = _pInput->getMouse() != nullptr ? _pInput->getMouse()->getRawDelta() : float2{};
                 float32      rdx      = rawDelta._x;
                 float32      rdy      = rawDelta._y;
                 if ( rdx == 0.0f && rdy == 0.0f )

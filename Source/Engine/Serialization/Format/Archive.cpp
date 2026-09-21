@@ -517,28 +517,23 @@ namespace sw
         return *this;
     }
 
-    bool Archive::serializeObject( void* pInstance, const TypeInfo* pTypeInfo )
+    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo )
     {
-        if ( pInstance == nullptr || pTypeInfo == nullptr )
+        if ( pInstance == nullptr )
         {
             _bError = SW_TRUE;
             return false;
         }
 
-        BinarySerializer::serialize( pInstance, *pTypeInfo, _bytes );
+        BinarySerializer::serialize( pInstance, typeInfo, _bytes );
         _pData    = _bytes.data();
         _dataSize = _bytes.size();
         return true;
     }
 
-    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo )
+    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
     {
-        return serializeObject( pInstance, &typeInfo );
-    }
-
-    bool Archive::deserializeObject( void* pInstance, const TypeInfo* pTypeInfo )
-    {
-        if ( pInstance == nullptr || pTypeInfo == nullptr || _pData == nullptr )
+        if ( pInstance == nullptr || _pData == nullptr )
         {
             _bError = SW_TRUE;
             return false;
@@ -550,12 +545,7 @@ namespace sw
             return false;
         }
 
-        return BinarySerializer::deserialize( pInstance, *pTypeInfo, _pData + _offset, _dataSize - _offset );
-    }
-
-    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
-    {
-        return deserializeObject( pInstance, &typeInfo );
+        return BinarySerializer::deserialize( pInstance, typeInfo, _pData + _offset, _dataSize - _offset );
     }
 
     bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )

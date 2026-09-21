@@ -68,7 +68,7 @@ namespace sw
             static int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
             {
                 const string tokenNt( token );
-                const string name = StringUtil::trim( tokenNt.c_str() );
+                const string name{ StringUtil::trim( tokenNt ) };
                 if ( name.empty() )
                     return 0;
 
@@ -125,7 +125,7 @@ namespace sw
             static uint32 parseChannelMask( string_view value )
             {
                 const string valueNt( value );
-                const string trimmedValue = StringUtil::trim( valueNt.c_str() );
+                const string trimmedValue{ StringUtil::trim( valueNt ) };
                 if ( trimmedValue.empty() )
                     return 0xFu;
 

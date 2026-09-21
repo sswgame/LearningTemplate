@@ -69,8 +69,8 @@ SW_TEST_CASE( StringTest, StringUtilBasic )
     SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( "" ) );
     SW_EXPECT_FALSE( sw::StringUtil::isNullOrEmpty( "Hello" ) );
 
-    sw::string text    = "  Hello World!  ";
-    sw::string trimmed = sw::StringUtil::trim( text.c_str() );
+    sw::string text = "  Hello World!  ";
+    sw::string trimmed{ sw::StringUtil::trim( text ) };
     SW_EXPECT_EQUAL( sw::string( "Hello World!" ), trimmed );
 
     sw::string upper = sw::StringUtil::toUpper( "hello" );

@@ -98,7 +98,7 @@ namespace sw
                 if ( xmlBody.empty() )
                     return false;
 
-                string bodyTrimmed = StringUtil::trim( xmlBody.c_str() );
+                string bodyTrimmed{ StringUtil::trim( xmlBody ) };
                 if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
                     return true; // JSON 본문은 XML 업그레이드 대상이 아님
 
@@ -288,7 +288,7 @@ namespace sw
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
         string xmlBody = _stateData;
-        string trimmed = StringUtil::trim( xmlBody.c_str() );
+        string trimmed{ StringUtil::trim( xmlBody ) };
 
         // JSON인 경우 GameObject를 통해 XML로 변환
         if ( trimmed.empty() == false && trimmed.front() == '{' )
@@ -336,7 +336,7 @@ namespace sw
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
         string jsonStr;
-        string trimmed = StringUtil::trim( _stateData.c_str() );
+        string trimmed{ StringUtil::trim( _stateData ) };
         if ( trimmed.empty() == false && trimmed.front() == '{' )
         {
             jsonStr = _stateData;
@@ -408,7 +408,7 @@ namespace sw
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
     {
         outListPath.clear();
-        const string trimmed = StringUtil::trim( _stateData.c_str() );
+        const string trimmed{ StringUtil::trim( _stateData ) };
         if ( trimmed.empty() )
             return;
         if ( trimmed.front() == '{' )
@@ -580,7 +580,7 @@ namespace sw
         if ( pAsset->getStateData().empty() == false )
         {
             bool   bLoadSuccess{ false };
-            string bodyStr = StringUtil::trim( pAsset->getStateData().c_str() );
+            string bodyStr{ StringUtil::trim( pAsset->getStateData() ) };
             if ( bodyStr.empty() == false && bodyStr.front() == '{' )
                 bLoadSuccess = ObjectStateSerializer::loadFromJsonString( pGameObject, pAsset->getStateData() );
             else if ( bodyStr.empty() == false )

@@ -66,6 +66,12 @@ namespace sw
             : Base( pS, count, alloc ) {}
 
         /** @brief 널 종료 C 문자열을 복사합니다. */
+        /** @brief 뷰의 문자를 복사해 소유합니다. std 와 같이 explicit — 뷰를 돌려주는 API 의 결과를 담을 때 `string{ view }`. */
+        explicit basic_string( std::basic_string_view<CharT> sv, const Allocator& alloc = Allocator() )
+            : Base( sv.data(), sv.size(), alloc )
+        {
+        }
+
         basic_string( const CharT* pS, const Allocator& alloc = Allocator() )
             : Base( pS, alloc ) {}
 

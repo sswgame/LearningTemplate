@@ -114,15 +114,6 @@ namespace sw
         outFileName      = fullPath.substr( found + 1 );
     }
 
-    void FileUtil::splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName )
-    {
-        string_view dirView;
-        string_view fileView;
-        splitPath( fullPath, dirView, fileView );
-        outDirectoryPath = string{ dirView };
-        outFileName      = string{ fileView };
-    }
-
     void FileUtil::getFileNamePart( string_view fullPath, string_view& outFileName )
     {
         if ( fullPath.empty() )
@@ -139,13 +130,6 @@ namespace sw
         }
 
         outFileName = fullPath.substr( found + 1 );
-    }
-
-    void FileUtil::getFileNamePart( string_view fullPath, string& outFileName )
-    {
-        string_view fileView;
-        getFileNamePart( fullPath, fileView );
-        outFileName = string{ fileView };
     }
 
     string FileUtil::getFileNamePart( string_view fullPath )
@@ -185,13 +169,6 @@ namespace sw
         outDirectoryPath = v.substr( 0, found );
     }
 
-    void FileUtil::getDirectoryPart( string_view fullPath, string& outDirectoryPath )
-    {
-        string_view dirView;
-        getDirectoryPart( fullPath, dirView );
-        outDirectoryPath = string{ dirView };
-    }
-
     string FileUtil::getDirectoryPart( string_view fullPath )
     {
         string_view dirView;
@@ -220,13 +197,6 @@ namespace sw
             return;
         }
         outExtension = fileName.substr( dot );
-    }
-
-    void FileUtil::getExtension( string_view fileName, string& outExtension )
-    {
-        string_view extView;
-        getExtension( fileName, extView );
-        outExtension = string{ extView };
     }
 
     string FileUtil::getExtension( string_view fileName )
@@ -309,13 +279,6 @@ namespace sw
         }
 
         outFileName = fileName;
-    }
-
-    void FileUtil::removeExtension( string_view fileName, string& outFileName )
-    {
-        string_view stemView;
-        removeExtension( fileName, stemView );
-        outFileName = string{ stemView };
     }
 
     string FileUtil::removeExtension( string_view fileName )

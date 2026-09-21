@@ -23,7 +23,7 @@ namespace sw
             {
                 if ( node.isValid() == false || node.text() == nullptr )
                     return {};
-                return StringUtil::trim( node.text() );
+                return string{ StringUtil::trim( node.text() ) };
             }
 
             static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& outListEntry )
@@ -94,10 +94,10 @@ namespace sw
 
         const utf8* pAttr = node.attribute( pName, false );
         if ( pAttr != nullptr )
-            return StringUtil::trim( pAttr );
+            return string{ StringUtil::trim( pAttr ) };
         const utf8* pText = node.childText( pName, false );
         if ( pText != nullptr )
-            return StringUtil::trim( pText );
+            return string{ StringUtil::trim( pText ) };
         return {};
     }
 

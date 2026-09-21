@@ -108,7 +108,10 @@ namespace sw
         bool isInputMuted() const { return _bInputMuted == SW_TRUE; }
 
         // ------------------------------------------------------------------------------
-        // 5) 키보드/마우스 편의성 위임 포워딩 API (100% 호환성 보장)
+        // 5) 게임플레이가 프레임마다 묻는 것만 여기서 답한다 — 키·버튼·위치·델타·휠, 그리고 플랫폼에
+        //    적용까지 해야 하는 잠금·커서·클립. 장치 설정(스무딩·가속)과 드문 조회(포인터 진입·이탈,
+        //    가로 휠, 원시 델타, 잠금 모드 읽기)는 장치가 답한다: `getMouse()->setSmoothing()`.
+        //    같은 답을 두 이름으로 내지 않는다 — 예전엔 마우스 API 23 개가 여기 그대로 복제돼 있었다.
         // ------------------------------------------------------------------------------
         bool isKeyDown( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->isKeyDown( key ) : false; }
         bool wasKeyPressed( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->wasKeyPressed( key ) : false; }
@@ -119,17 +122,10 @@ namespace sw
         bool wasMouseButtonReleased( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonReleased( button ) : false; }
 
         int2    getMousePosition() const { return _pMouse != nullptr ? _pMouse->getPosition() : int2{}; }
-        int32   getMousePositionX() const { return _pMouse != nullptr ? _pMouse->getPositionX() : 0; }
-        int32   getMousePositionY() const { return _pMouse != nullptr ? _pMouse->getPositionY() : 0; }
         float2  getMousePositionNormalized() const;
         int2    getMouseDelta() const;
-        float2  getRawMouseDelta() const;
         float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
-        float32 getMouseWheelHorizontal() const { return _pMouse != nullptr ? _pMouse->getMouseWheelHorizontal() : 0.0f; }
 
-        bool isPointerInside() const { return _pMouse != nullptr ? _pMouse->isPointerInside() : false; }
-        bool wasPointerEntered() const { return _pMouse != nullptr ? _pMouse->wasPointerEntered() : false; }
-        bool wasPointerLeft() const { return _pMouse != nullptr ? _pMouse->wasPointerLeft() : false; }
         /**
          * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true.
          * @details 예전에는 ActionMap 에 있었다. 하지만 이것은 **액션이 아니라 장치 상태**이고, 쓰는 값도
@@ -137,33 +133,13 @@ namespace sw
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
-        MouseLockMode getMouseLockMode() const { return _pMouse != nullptr ? _pMouse->getLockMode() : MouseLockMode::None; }
-        void          setMouseLockMode( MouseLockMode mode );
-        bool          isCursorVisible() const { return _pMouse != nullptr ? _pMouse->isCursorVisible() : true; }
-        void          setCursorVisible( bool bVisible );
+        void setMouseLockMode( MouseLockMode mode );
+        void setCursorVisible( bool bVisible );
 
         void setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom );
-        bool getMouseClipSubRect( int32& outLeft, int32& outTop, int32& outRight, int32& outBottom ) const
-        {
-            return _pMouse != nullptr && _pMouse->getClipSubRect( outLeft, outTop, outRight, outBottom );
-        }
         void clearMouseClipSubRect();
         void applyMouseLockMode();
         void releaseMouseLockMode();
-
-        void setMouseSmoothing( float32 factor )
-        {
-            if ( _pMouse != nullptr )
-                _pMouse->setSmoothing( factor );
-        }
-        float32 getMouseSmoothing() const { return _pMouse != nullptr ? _pMouse->getSmoothing() : 0.0f; }
-        void    setMouseAcceleration( float32 power )
-        {
-            if ( _pMouse != nullptr )
-                _pMouse->setAcceleration( power );
-        }
-        float32 getMouseAcceleration() const { return _pMouse != nullptr ? _pMouse->getAcceleration() : 1.0f; }
-        float2  getSmoothMouseDelta() const { return _pMouse != nullptr ? _pMouse->getSmoothDelta() : float2{}; }
 
         // ------------------------------------------------------------------------------
         // 6) 게임패드 편의성 위임 포워딩 API

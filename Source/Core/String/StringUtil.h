@@ -156,28 +156,16 @@ namespace sw
          */
         static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
 
-        /** @brief 문자열 앞(시작 부분)의 공백(Whitespace) 문자를 모두 제거합니다. */
-        static string trimStart( const utf8* pInput );
-        /** @brief 앞 공백을 제거합니다. */
-        static wstring trimStart( const utf16* pInput );
         /** @brief string_view의 앞 공백을 제거한 뷰를 반환합니다. */
         static string_view trimStart( string_view input );
         /** @brief wstring_view의 앞 공백을 제거한 뷰를 반환합니다. */
         static wstring_view trimStart( wstring_view input );
 
-        /** @brief 문자열 뒤(끝 부분)의 공백 문자를 모두 제거합니다. */
-        static string trimEnd( const utf8* pInput );
-        /** @brief 뒤 공백을 제거합니다. */
-        static wstring trimEnd( const utf16* pInput );
         /** @brief string_view의 뒤 공백을 제거한 뷰를 반환합니다. */
         static string_view trimEnd( string_view input );
         /** @brief wstring_view의 뒤 공백을 제거한 뷰를 반환합니다. */
         static wstring_view trimEnd( wstring_view input );
 
-        /** @brief 문자열 양 끝의 공백 문자를 모두 제거합니다. */
-        static string trim( const utf8* pInput );
-        /** @brief 양끝 공백을 제거합니다. */
-        static wstring trim( const utf16* pInput );
         /** @brief string_view의 앞뒤 공백을 제거한 뷰를 반환합니다 (Zero Allocation). */
         static string_view trim( string_view input );
         /** @brief wstring_view의 앞뒤 공백을 제거한 뷰를 반환합니다 (Zero Allocation). */

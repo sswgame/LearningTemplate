@@ -588,24 +588,24 @@ SW_TEST_CASE( InputManagerTest, MouseLockModeAndSubRect )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::None );
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == sw::MouseLockMode::None );
 
     input.setMouseLockMode( sw::MouseLockMode::ConfinedToWindow );
-    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::ConfinedToWindow );
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == sw::MouseLockMode::ConfinedToWindow );
 
     input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
-    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::LockedInCenter );
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == sw::MouseLockMode::LockedInCenter );
 
     input.setMouseClipSubRect( 10, 20, 300, 400 );
     int32 subX = 0, subY = 0, subW = 0, subH = 0;
-    SW_EXPECT_TRUE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
+    SW_EXPECT_TRUE( input.getMouse()->getClipSubRect( subX, subY, subW, subH ) );
     SW_EXPECT_EQUAL( 10, subX );
     SW_EXPECT_EQUAL( 20, subY );
     SW_EXPECT_EQUAL( 300, subW );
     SW_EXPECT_EQUAL( 400, subH );
 
     input.clearMouseClipSubRect();
-    SW_EXPECT_FALSE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
+    SW_EXPECT_FALSE( input.getMouse()->getClipSubRect( subX, subY, subW, subH ) );
 
     input.shutdown();
 }
@@ -618,15 +618,15 @@ SW_TEST_CASE( InputManagerTest, MouseWheelHorizontal )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getMouseWheelHorizontal(), 1e-4f );
 
     input.postRawEvent( sw::RawInputEvent::makeMouseHorizontalWheel( 1.5f ) );
     input.beginFrame( 0.016f );
 
-    SW_EXPECT_NEAR_EQUAL( 1.5f, input.getMouseWheelHorizontal(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, input.getMouse()->getMouseWheelHorizontal(), 1e-4f );
 
     input.endFrame();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getMouseWheelHorizontal(), 1e-4f );
 
     input.shutdown();
 }
@@ -741,15 +741,15 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    input.setMouseSmoothing( 0.5f );
-    input.setMouseAcceleration( 2.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouseSmoothing(), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouseAcceleration(), 0.001f );
+    input.getMouse()->setSmoothing( 0.5f );
+    input.getMouse()->setAcceleration( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouse()->getSmoothing(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouse()->getAcceleration(), 0.001f );
 
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
 
-    const sw::float2 vecSmoothDelta3 = input.getSmoothMouseDelta();
+    const sw::float2 vecSmoothDelta3 = input.getMouse()->getSmoothDelta();
     SW_EXPECT_TRUE( vecSmoothDelta3._x > 0.0f );
 
     input.shutdown();
@@ -869,7 +869,7 @@ SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
         input.endFrame();
     }
 
-    SW_EXPECT_FALSE( input.isPointerInside() );
+    SW_EXPECT_FALSE( input.getMouse()->isPointerInside() );
     input.shutdown();
 }
 
@@ -936,8 +936,8 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    input.setMouseSmoothing( 0.5f );
-    input.setMouseAcceleration( 2.0f ); // 2차 거듭제곱 가속
+    input.getMouse()->setSmoothing( 0.5f );
+    input.getMouse()->setAcceleration( 2.0f ); // 2차 거듭제곱 가속
 
     // 극한의 고속 이동 (+10000 픽셀 플릭)
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10000, 5000, 10000, 5000 ) );
@@ -945,7 +945,7 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
 
     float32          smoothDx{ 0.0f };
     float32          smoothDy{ 0.0f };
-    const sw::float2 vecSmoothDelta4 = input.getSmoothMouseDelta();
+    const sw::float2 vecSmoothDelta4 = input.getMouse()->getSmoothDelta();
     smoothDx                         = vecSmoothDelta4._x;
     smoothDy                         = vecSmoothDelta4._y;
 
@@ -962,7 +962,7 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
  *          갱신을 통째로 지워도 이 스위트가 전부 초록이었다(2026-09-19 변이로 확인).
  *
  *          없으면 어떻게 되는가: 스무딩 델타는 마지막 입력 이벤트가 넣은 값에서 **멈추지 않는다.**
- *          마우스를 놓아도 `getSmoothMouseDelta()` 가 계속 같은 값을 보고하고, 그 값으로 시점을 도는
+ *          마우스를 놓아도 `MouseDevice::getSmoothDelta()` 가 계속 같은 값을 보고하고, 그 값으로 시점을 도는
  *          쪽은 **손을 뗐는데도 계속 돈다.** 로그에는 아무것도 남지 않는다.
  *
  * @note 스무딩과 가속을 끄고 본다 — EMA 가 걸려 있으면 0 에 점근할 뿐 정확히 0 이 되지 않아
@@ -974,22 +974,22 @@ SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
 
-    input.setMouseSmoothing( 0.0f );
-    input.setMouseAcceleration( 1.0f );
+    input.getMouse()->setSmoothing( 0.0f );
+    input.getMouse()->setAcceleration( 1.0f );
 
     // 1프레임: 마우스가 x 로 10 움직인다.
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getSmoothMouseDelta()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );
 
     // 2프레임: 이벤트가 없다. onFrameBegin 이 이번 프레임의 위치 차이(10)를 세고 poll 이 흘려 넣는다.
     input.beginFrame( 0.016f );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getSmoothMouseDelta()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );
 
     // 3프레임: 여전히 이벤트가 없고 위치도 그대로다 — 위치 차이가 0 이므로 델타도 0 이어야 한다.
     input.beginFrame( 0.016f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getSmoothMouseDelta()._x, 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getSmoothMouseDelta()._y, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothDelta()._y, 0.001f );
 
     input.shutdown();
 }

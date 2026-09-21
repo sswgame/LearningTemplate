@@ -731,6 +731,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 공개 함수 -36, 1차)
+
+Core·Engine 헤더의 공개 함수는 5367 개(구조체 708)였다. 첫 훑기에서 걷어낸 것은 "같은 일을 하는 두 번째 이름"
+이다 — 파사드 복제, 반환형만 다른 오버로드, 타입마다 하나씩 있던 오버로드.
+
+- **`InputManager` 마우스 파사드 23 → 8.** 장치 설정(스무딩·가속)과 드문 조회(포인터 진입·이탈, 가로 휠, 원시 델타,
+  잠금 모드 읽기, 클립 읽기)는 `getMouse()->…` 로 묻는다. 남긴 것은 게임플레이가 프레임마다 묻는 키·버튼·위치·델타·휠과,
+  플랫폼에 적용까지 해야 하는 잠금·커서·클립 세터다(헤더 5절에 규칙을 적었다).
+- **`FileUtil` 경로 조각 함수의 `string&` 출력 오버로드 5 개 삭제** — 호출처 0. `string` 반환과 `string_view&` 출력(무할당) 둘만 남는다.
+- **`StringUtil::trim*` 포인터 오버로드 6 개 삭제.** `trim( string_view )` 하나가 뷰를 돌려주고, 소유가 필요하면
+  `string{ view }` — 그 생성자가 없었다. `sw::string` 에 std 와 같은 **explicit `string_view` 생성자**를 넣었다.
+- **`Archive::serializeObject`** 포인터 `TypeInfo*` 판과 `T*` 템플릿 판 4 개 삭제. 템플릿 판은 `StaticType()` 이
+  nullptr 이면 false 를 돌려준다(예전엔 포인터 판이 그 검사를 했다).
+- **`XmlNode`** 의 타입별 오버로드 24 → 14. 숫자는 템플릿 하나(`formatNumber`, `is_arithmetic` 로 제한)로, bool 과
+  문자열은 그대로. 받는 숫자 타입을 int32 · uint32 · float32 로 **못박았다** — 예전엔 int64 가 int32 로 잘려도
+  컴파일이 됐다. 처음엔 제한 없는 템플릿이었는데 `setValue( sw::string )` 이 `string_view` 변환보다 템플릿을 골라
+  `is_arithmetic` SFINAE 를 붙였다.
+
 ### 2026-09-22 (`castTo` 를 5배 — 잠금·할당·이름 걷기를 등록 시점의 포인터 하나로)
 
 `castTo<SceneComponent>` 가 워커에서 세터보다 느려 `isSceneComponent()` 비트로 피해 갔던 것(위 09-21 항목)의 **원인 쪽**을

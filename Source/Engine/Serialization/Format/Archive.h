@@ -202,36 +202,24 @@ namespace sw
         // 1) 기본 바이너리 직렬화/역직렬화 (BinarySerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
-        bool serializeObject( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
         bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
-        bool deserializeObject( void* pInstance, const TypeInfo* pTypeInfo );
         /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
         bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
 
+        /** @brief REFLECT 타입을 직렬화합니다. 타입이 미등록이면 false. */
         template <typename T>
         bool serializeObject( const T& instance )
         {
-            return serializeObject( const_cast<T*>( &instance ), T::StaticType() );
+            const TypeInfo* pTypeInfo = T::StaticType();
+            return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo );
         }
 
+        /** @brief REFLECT 타입을 역직렬화합니다. 타입이 미등록이면 false. */
         template <typename T>
         bool deserializeObject( T& instance )
         {
-            return deserializeObject( &instance, T::StaticType() );
-        }
-
-        template <typename T>
-        bool serializeObject( const T* pInstance )
-        {
-            return ( pInstance != nullptr ) ? serializeObject( const_cast<T*>( pInstance ), T::StaticType() ) : false;
-        }
-
-        template <typename T>
-        bool deserializeObject( T* pInstance )
-        {
-            return ( pInstance != nullptr ) ? deserializeObject( pInstance, T::StaticType() ) : false;
+            const TypeInfo* pTypeInfo = T::StaticType();
+            return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo );
         }
 
         // ------------------------------------------------------------------------------

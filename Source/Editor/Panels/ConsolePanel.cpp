@@ -114,7 +114,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        const string filterStr = StringUtil::trim( _filterBuffer.c_str() );
+        const string filterStr{ StringUtil::trim( _filterBuffer.c_str() ) };
 
         // 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
         bool bLevelChanged{ false };
