@@ -77,7 +77,13 @@ namespace sw
         uint32                 _activeColorTargetCount;
         uint8                  _bActiveSwapchainRT : 1;
         uint8                  _bRecording         : 1;
-        [[maybe_unused]] uint8 _reserved           : 6;
+        /**
+         * @brief 이 리스트에 명령이 하나라도 기록됐다 (컨텍스트의 `commandListForRecord` 가 세운다).
+         * @details 프레임 스트림 조각이 비어 있으면 `executeCommandList` 가 자르지 않는다 — 웨이브 배리어를 패스 리스트로
+         *          옮긴 뒤 웨이브 사이의 조각은 늘 비어 있는데, 잘라 내보내면 큐에 빈 리스트가 나가고 그 제출이 리스트당 ~7 us 다.
+         */
+        uint8                  _bRecordedAny : 1;
+        [[maybe_unused]] uint8 _reserved     : 5;
 
         /** @brief 기록 안 한 상태로 초기화. */
         D3D12RecordingState()
@@ -100,6 +106,7 @@ namespace sw
             , _activeColorTargetCount{ 0 }
             , _bActiveSwapchainRT{ SW_FALSE }
             , _bRecording{ SW_FALSE }
+            , _bRecordedAny{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

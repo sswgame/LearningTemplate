@@ -105,6 +105,26 @@ namespace sw
         // 그래프 뒤에 실행됐다 — 오프스크린 경로의 게임 RT 클리어가 대표적이다.
         // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
         // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
+        //
+        // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(웨이브 배리어가 패스 리스트로 옮겨간 뒤
+        // 웨이브 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다 — 그 조각은 뒤에 기록될
+        // 것만 담으므로 뒤에 제출돼도 순서가 맞다. 잘라 내보내면 큐에 빈 리스트가 나가고 제출이 리스트당 ~7 us 다.
+        const bool bSegmentEmpty = ( _frameStreamState._bRecordedAny == SW_FALSE );
+        if ( bSegmentEmpty )
+        {
+            _listPendingSubmit.push_back( pList );
+            if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
+            {
+                {
+                    std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                    flushPendingUploads( false );
+                }
+                _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+                _listPendingSubmit.clear();
+            }
+            return;
+        }
+
         _pActiveFrameList->Close();
         releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _pActiveFrameList );

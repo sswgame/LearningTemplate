@@ -44,6 +44,13 @@ namespace sw
 
 namespace sw
 {
+    ID3D12GraphicsCommandList* D3D12RHICommandContext::commandListForRecord()
+    {
+        if ( _pState != nullptr )
+            _pState->_bRecordedAny = SW_TRUE;
+        return _pCmdList;
+    }
+
     void D3D12RHICommandContext::ensureRecording()
     {
         if ( _pDevice == nullptr || _pState->_bRecording != SW_FALSE )
@@ -53,7 +60,7 @@ namespace sw
         if ( pAllocator == nullptr || _pCmdList == nullptr )
             return;
         pAllocator->Reset();
-        _pCmdList->Reset( pAllocator, nullptr );
+        commandListForRecord()->Reset( pAllocator, nullptr );
         _pState->_bRecording             = SW_TRUE;
         _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
         _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트엔 슬롯 테이블도 없다 — 첫 드로우가 다시 굳힌다.
@@ -158,9 +165,9 @@ namespace sw
             if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) )
             {
                 if ( bCompute )
-                    _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+                    commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
                 else
-                    _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+                    commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
                 state._bSrvDirty = SW_FALSE;
             }
         }
@@ -170,7 +177,7 @@ namespace sw
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
             if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) )
             {
-                _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
+                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
                 state._bUavDirty = SW_FALSE;
             }
         }
@@ -187,7 +194,7 @@ namespace sw
                                                     ? pVb->GetDesc().Width - _pState->_boundMeshOffset
                                                     : 0 );
         vbv.StrideInBytes  = _pState->_boundMeshStride;
-        _pCmdList->IASetVertexBuffers( 0, 1, &vbv );
+        commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
     }
 
     void D3D12RHICommandContext::bindMeshVertexBufferOrFallback()
@@ -209,7 +216,7 @@ namespace sw
                                                             ? pStream->GetDesc().Width - _pState->_boundInstanceSlotOffset
                                                             : 0 );
                 vbv.StrideInBytes  = constant::kInstanceSlotStreamStride;
-                _pCmdList->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &vbv );
+                commandListForRecord()->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &vbv );
             }
         }
     }
@@ -222,7 +229,7 @@ namespace sw
         vbv.BufferLocation = _pDevice->_vertexBuffer->GetGPUVirtualAddress();
         vbv.SizeInBytes    = static_cast<UINT>( sizeof( RHIVertex ) * 3 );
         vbv.StrideInBytes  = static_cast<UINT>( sizeof( RHIVertex ) );
-        _pCmdList->IASetVertexBuffers( 0, 1, &vbv );
+        commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
     }
 
     void D3D12RHICommandContext::bindBoundIndexBuffer()
@@ -236,7 +243,7 @@ namespace sw
                                                     ? pIb->GetDesc().Width - _pState->_boundIndexOffset
                                                     : 0 );
         ibv.Format         = ( _pState->_boundIndexStride == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-        _pCmdList->IASetIndexBuffer( &ibv );
+        commandListForRecord()->IASetIndexBuffer( &ibv );
     }
 
     void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
@@ -263,7 +270,7 @@ namespace sw
         barrier.Transition.StateBefore = record._state;
         barrier.Transition.StateAfter  = newState;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        _pCmdList->ResourceBarrier( 1, &barrier );
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
         record._state = newState;
     }
 
@@ -337,7 +344,7 @@ namespace sw
         {
             if ( bSwapchainDst )
             {
-                _pDevice->_swapChain.transitionTo( _pCmdList, stateAfter );
+                _pDevice->_swapChain.transitionTo( commandListForRecord(), stateAfter );
                 return;
             }
 
@@ -349,7 +356,7 @@ namespace sw
             barrier.Transition.StateBefore = stateBefore;
             barrier.Transition.StateAfter  = stateAfter;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            _pCmdList->ResourceBarrier( 1, &barrier );
+            commandListForRecord()->ResourceBarrier( 1, &barrier );
 
             auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
             if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
@@ -359,7 +366,7 @@ namespace sw
         if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
             transitionDst( dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
 
-        _pCmdList->CopyResource( pDstRes, pSrcRes );
+        commandListForRecord()->CopyResource( pDstRes, pSrcRes );
 
         transitionDst( D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
     }
@@ -416,7 +423,7 @@ namespace sw
         if ( texture == 0 )
         {
             // 백버퍼. 뎁스로 쓰이는 일은 없다.
-            _pDevice->_swapChain.transitionTo( _pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET );
+            _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
             return;
         }
 
@@ -453,7 +460,7 @@ namespace sw
         const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
-        _pCmdList->SetComputeRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
+        commandListForRecord()->SetComputeRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -495,14 +502,14 @@ namespace sw
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
-            _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+            commandListForRecord()->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
         // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
         flushSlotTables( false );
-        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
-        _pCmdList->DrawInstanced( vertexCount, 1, startVertex, 0 );
+        commandListForRecord()->DrawInstanced( vertexCount, 1, startVertex, 0 );
     }
 
     void D3D12RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
@@ -516,13 +523,13 @@ namespace sw
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
-            _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+            commandListForRecord()->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
         flushSlotTables( false );
-        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
-        _pCmdList->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
+        commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -538,7 +545,7 @@ namespace sw
         const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
-        _pCmdList->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
+        commandListForRecord()->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -552,7 +559,7 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
         flushSlotTables( true );
-        _pCmdList->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
+        commandListForRecord()->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
     void D3D12RHICommandContext::setViewport( const RHIViewport& viewport )
@@ -567,14 +574,14 @@ namespace sw
         d3dViewport.Height   = viewport._height;
         d3dViewport.MinDepth = viewport._minDepth;
         d3dViewport.MaxDepth = viewport._maxDepth;
-        _pCmdList->RSSetViewports( 1, &d3dViewport );
+        commandListForRecord()->RSSetViewports( 1, &d3dViewport );
 
         D3D12_RECT scissor{
             static_cast<LONG>( viewport._x ),
             static_cast<LONG>( viewport._y ),
             static_cast<LONG>( viewport._x + viewport._width ),
             static_cast<LONG>( viewport._y + viewport._height ) };
-        _pCmdList->RSSetScissorRects( 1, &scissor );
+        commandListForRecord()->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
@@ -593,12 +600,12 @@ namespace sw
         // 다른 세 백엔드는 원래 메시 VB 를 우선한다.
         flushSlotTables( false );
         bindMeshVertexBufferOrFallback();
-        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
         // countBuffer 가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한). ExecuteIndirect 는 둘을 같이 받는다.
         ID3D12Resource* pCountRes = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
-        _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountRes,
-                                    ( pCountRes != nullptr ) ? countBufferOffset : 0 );
+        commandListForRecord()->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountRes,
+                                                 ( pCountRes != nullptr ) ? countBufferOffset : 0 );
     }
 
     void D3D12RHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
@@ -612,7 +619,7 @@ namespace sw
 
         const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
-        _pCmdList->SetComputeRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
+        commandListForRecord()->SetComputeRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
     void D3D12RHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
@@ -626,7 +633,7 @@ namespace sw
 
         const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
-        _pCmdList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
+        commandListForRecord()->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
     void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -643,8 +650,8 @@ namespace sw
         flushSlotTables( false );
         bindMeshVertexBuffer();
         bindBoundIndexBuffer();
-        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        _pCmdList->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
+        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 
     void D3D12RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -657,7 +664,7 @@ namespace sw
             return;
 
         flushSlotTables( true );
-        _pCmdList->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
+        commandListForRecord()->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 
     void D3D12RHICommandContext::beginEventMarker( const utf8* pName )
@@ -693,7 +700,7 @@ namespace sw
             return;
 
         // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState) — PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
-        _pCmdList->SetPipelineState( pRecord->_pso.Get() );
+        commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
         // draw()/drawInstanced()가 같은 PSO로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시.
         _pState->_boundNativeGraphicsPso = pso;
     }
@@ -708,7 +715,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
 
-        _pCmdList->SetPipelineState( pRecord->_pso.Get() );
+        commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
     }
 
     void D3D12RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
@@ -738,7 +745,7 @@ namespace sw
             {
                 if ( attachmentIndex > 0 || _pDevice->_swapChain.isBackBufferReady() == false )
                     break;
-                _pDevice->_swapChain.transitionTo( _pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET );
+                _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = _pDevice->_swapChain.getCurrentRtv();
                 bValid                                  = true;
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
@@ -766,7 +773,7 @@ namespace sw
             const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
             const float32*            pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
             if ( loadOp == RHIRenderPassLoadOp::Clear )
-                _pCmdList->ClearRenderTargetView( rtv, pClear, 0, nullptr );
+                commandListForRecord()->ClearRenderTargetView( rtv, pClear, 0, nullptr );
 
             rtvHandles[rtCount++] = rtv;
         }
@@ -785,16 +792,16 @@ namespace sw
                 pDsv                        = &dsvHandle;
                 _pState->_activeDepthTarget = beginInfo._depthTarget;
                 if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )
-                    _pCmdList->ClearDepthStencilView( dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
-                                                      beginInfo._clearDepth, 0, 0, nullptr );
+                    commandListForRecord()->ClearDepthStencilView( dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+                                                                   beginInfo._clearDepth, 0, 0, nullptr );
             }
         }
 
         _pState->_activeColorTargetCount = rtCount;
         if ( rtCount > 0 )
-            _pCmdList->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDsv );
+            commandListForRecord()->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDsv );
         else if ( pDsv != nullptr )
-            _pCmdList->OMSetRenderTargets( 0, nullptr, FALSE, pDsv );
+            commandListForRecord()->OMSetRenderTargets( 0, nullptr, FALSE, pDsv );
 
         const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth();
         const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight();
@@ -803,10 +810,10 @@ namespace sw
         viewport.Height   = static_cast<float32>( vpH );
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
-        _pCmdList->RSSetViewports( 1, &viewport );
+        commandListForRecord()->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( vpW ), static_cast<LONG>( vpH ) };
-        _pCmdList->RSSetScissorRects( 1, &scissor );
+        commandListForRecord()->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D12RHICommandContext::endRenderPass()
@@ -837,7 +844,7 @@ namespace sw
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
         barrier.UAV.pResource = pResource;
-        _pCmdList->ResourceBarrier( 1, &barrier );
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
     }
 
     void D3D12RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
@@ -868,7 +875,7 @@ namespace sw
         barrier.Transition.StateBefore = stateBefore;
         barrier.Transition.StateAfter  = stateAfter;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        _pCmdList->ResourceBarrier( 1, &barrier );
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
     }
 
 } // namespace sw

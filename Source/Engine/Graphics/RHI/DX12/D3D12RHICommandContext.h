@@ -36,6 +36,12 @@ namespace sw
         ID3D12GraphicsCommandList* getNativeCommandList() const { return _pCmdList; }
         /** @brief 기록 대상 네이티브 리스트를 교체합니다(소유자가 얼로케이터 쌍을 바꿔 낄 때). */
         void rebindCommandList( ID3D12GraphicsCommandList* pCmdList ) { _pCmdList = pCmdList; }
+        /**
+         * @brief 명령을 기록할 네이티브 리스트 — 부르는 것 자체가 "이 리스트에 뭔가 적었다" 표시다.
+         * @details 모든 기록 호출이 이 창구를 지난다(`_pCmdList->` 직접 접근은 널 검사와 루트 상태 바인딩뿐). 프레임 스트림
+         *          조각이 비어 있는지를 디바이스가 이 표시로 안다 — 빈 조각은 잘라 내보내지 않는다(D3D12RecordingState).
+         */
+        ID3D12GraphicsCommandList* commandListForRecord();
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;

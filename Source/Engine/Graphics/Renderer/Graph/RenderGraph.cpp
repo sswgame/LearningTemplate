@@ -16,12 +16,14 @@ namespace sw
     {
         struct RenderGraphInternal
         {
-            static void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList )
+            static void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
             {
                 if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
                     return;
 
-                pCmdList->beginCommandList();
+                // 웨이브의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다 — 이어서 기록한다.
+                if ( bAlreadyBegun == false )
+                    pCmdList->beginCommandList();
                 RenderGraphPassContext ctx;
                 ctx._passName     = pNode->_name;
                 ctx._pListInputs  = &pNode->_listInput;
@@ -49,8 +51,10 @@ namespace sw
     {
         RenderGraphNode* _pNode{ nullptr };
         IRHICommandList* _pPassCmdList{ nullptr };
+        /// @brief 렌더 스레드가 이미 열고 웨이브 배리어를 기록한 리스트다 (웨이브의 첫 엔트리).
+        bool _bAlreadyBegun{ false };
 
-        void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList ); }
+        void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
     };
 
     struct RenderGraph::ParallelScratch
@@ -372,11 +376,18 @@ namespace sw
             if ( listPassEntry.empty() )
                 continue;
 
-            // 이 웨이브가 만질 자원의 배리어를 **여기서 미리** 발행한다 — 프레임 스트림은 이 웨이브의
-            // 패스 리스트보다 먼저 제출되므로(executeCommandList 가 스트림을 잘라 앞에 붙인다) GPU
-            // 타임라인에서도 앞선다. 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를
-            // 바꾸지 않는다 — 배리어를 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다.
-            issueBarriers( pDevice->getFrameStreamContext() );
+            // 이 웨이브가 만질 자원의 배리어를 **여기서 미리**, 웨이브 **첫 패스 리스트의 앞머리**에 발행한다
+            // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 자리). 판단과 기록 모두 렌더 스레드가 병렬 기록
+            // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다 — 배리어를
+            // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 웨이브의 다른 리스트는 큐 순서상 첫
+            // 리스트 뒤에 실행되므로 배리어가 앞선다.
+            //
+            // 예전에는 프레임 스트림에 기록했다 — 그러면 웨이브마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트
+            // 하나로 나갔다(DX12 · 큐브 8000: 프레임당 리스트 12 개, 제출 81~90 us 가 리스트당 ~7 us 였다).
+            ParallelPassEntry& firstEntry = listPassEntry[0];
+            firstEntry._pPassCmdList->beginCommandList();
+            firstEntry._bAlreadyBegun = true;
+            issueBarriers( firstEntry._pPassCmdList );
 
             // 이 구간 동안 bindless 레지스트리는 불변이어야 한다 — 기록 중 등록/해제가 일어나면
             // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
