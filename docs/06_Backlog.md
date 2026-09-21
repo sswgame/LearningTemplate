@@ -731,9 +731,9 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
-### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 헤더 선언 5367 → 5272)
+### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 헤더 선언 5367 → 5270)
 
-Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 세 커밋 뒤 5272 이다(같은 스크립트로 셈, 정규식이라 근사).
+Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 네 커밋 뒤 5270 이다(같은 스크립트로 셈, 정규식이라 근사).
 걷어낸 것은 "같은 일을 하는 두 번째 이름" 이다 — 파사드 복제, 반환형만 다른 오버로드, 타입마다 하나씩 있던 오버로드,
 반대로 읽히는 이름, 클래스 둘이 따로 쓰던 어휘.
 
@@ -784,6 +784,18 @@ Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 세 커밋
   `Archive` 의 형식별 `serializeXxxObject` 5 가족을 "미사용" 으로 잘못 보고 지웠다가 되돌렸다. 테스트가 덮는 기능 API 라
   **남긴다**. 헤더 선언 이름이 트리 전체에 한 번만 나오는 것을 세는 쪽이 맞다(그 목록엔 게임이 쓰라고 둔 세터도 섞여
   있으니 하나씩 판단할 것).
+
+**4차 (같은 날) — 규칙을 린트로 못박고, 맨이름 게터를 걷어냈다.**
+
+- `CheckFunctionVocabulary` 에 규칙 둘을 더했다. **NamePair**: 같은 이름에 `string_view` 판과 `const hashed_string&` 판이
+  매개변수 수까지 같으면 위반(리터럴 호출이 모호해진다). **BareGetter**: `setX()` 와 짝인 게터가 맨이름 `x()` 면 위반
+  (술어 접두사 `is/has/was/can/should` 와, `getX`/`isX` 가 따로 있어 `x()` 가 동작인 경우는 통과). 둘 다 자가검사 조각이 있다.
+- 그것이 잡은 것: `Skeleton::findBoneIndex` · `TypeRegistry::isType` 의 `string_view` 판 삭제, `StringTable`/`LocalizationManager`
+  의 intern 하지 않는 조회는 이름을 따로 — `findStringByText` / `getStringByText`(대사 원문처럼 키가 아닐 수 있는 텍스트용,
+  intern 누수를 막는 그 경로). `XmlNode`·`XmlAttribute`·`XmlDocument`·`JsonValue`·`JsonDocument` 의 맨이름 접근자 20 개를
+  규칙대로 — `getName` `getValue` `getText` `getNext` `findAttribute` `getAttributeInt/Float/Bool` `findChild` `findNextSibling`
+  `findChildText` `getChildInt/Float/Bool` `getFirstAttribute` `getRoot` `getType` `getMemberNames`. 호출처 350 여 곳은 빌드
+  로그의 "no member named" 를 읽어 그 줄만 바꾸는 스크립트로 다섯 바퀴 돌려 고쳤다.
 
 **남은 것 — 다음 훑기가 볼 곳.** `FrameRenderer` 100 은 이미 주제별 9 파일로 나뉘어 있고, 클래스를 쪼개도 함수가 옮겨질 뿐
 줄지 않아 손대지 않았다. `Archive` 형식별 가족은 위 이유로 남는다. `TaskArgs::getCount` · `GpuLightBuffer::getCount` ·

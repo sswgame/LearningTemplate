@@ -16,6 +16,11 @@
   2) BannedVerb  — 한 개념에 동사 하나. `setup`/`startup`/`cleanup` → `initialize`/`shutdown`,
                    `alloc` → `allocate`, `fetch`/`retrieve`/`lookup`/`obtain` → `get`/`find`.
   3) CheckVerb   — `check*` 는 술어가 아니다. bool 이면 `is*`/`has*`, void 면 `assert*` 다.
+  4) NamePair    — 같은 이름에 `string_view` 판과 `const hashed_string&` 판을 둘 다 두지 않는다.
+                   `hashed_string` 은 리터럴에서 암묵 변환되므로 `f( "Jump" )` 가 **모호**해진다. 이름은
+                   `hashed_string` 하나로 받고, 동적 텍스트는 호출부가 `hashed_string( x )` 로 올린다.
+  5) BareGetter  — `setX()` 와 짝인 게터는 `getX()` / `isX()` 다. 맨이름 `x()` 는 안 된다
+                   (`setName`/`name()` 이 한 클래스에 있으면 잡는다).
 
 **헤더만 본다.** 호출부까지 보면 우리 것이 아닌 이름(`vkGetPhysicalDeviceSurfaceCapabilitiesKHR`)
 을 잡는다. 선언은 어차피 헤더에 있고, 규칙이 말하는 것도 그 표면이다.
@@ -73,6 +78,12 @@ _kBannedVerbRe = re.compile(r"^(" + "|".join(sorted(_kBannedVerb, key=len, rever
 
 _kCheckVerbRe = re.compile(r"^check(?=[A-Z])")
 
+# 첫 매개변수 타입 — 4) NamePair 용. `f( string_view a` / `f( const hashed_string& a`.
+_kFirstParamRe = re.compile(r"\(\s*(?:const\s+)?(string_view|hashed_string)\b")
+
+# 5) BareGetter 가 건너뛰는 것 — 술어 접두사는 규칙이 허용하는 게터 모양이다.
+_kPredicatePrefixRe = re.compile(r"^(is|has|was|can|should)[A-Z]")
+
 # 규칙보다 오래된 이름 중 **바꾸면 남의 계약이 깨지는 것**만 여기 적는다. 이유 없이 늘리지 말 것.
 _kAllowedName: frozenset[str] = frozenset()
 
@@ -87,6 +98,8 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     violations: list[str] = []
     seenName: set[str] = set()
+    mapNameToFirstParam: dict[str, set[str]] = {}
+    mapNameToLine: dict[str, int] = {}
 
     for lineIndex, rawLine in enumerate(text.split("\n"), 1):
         line = re.sub(r"//.*$", "", rawLine)
@@ -99,7 +112,15 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
             continue
 
         name = match.group(1)
-        if name in _kAllowedName or name in seenName:
+        if name in _kAllowedName:
+            continue
+        firstParam = _kFirstParamRe.search(line[match.end() - 1 :])
+        if firstParam is not None:
+            # 매개변수 수가 같은 쌍만 모호하다 — `f( string_view )` 와 `f( const hashed_string&, int )` 는 아니다.
+            paramCount = line[match.end() - 1 :].count(",")
+            mapNameToFirstParam.setdefault(name, set()).add(f"{firstParam.group(1)}/{paramCount}")
+        mapNameToLine.setdefault(name, lineIndex)
+        if name in seenName:
             continue
         seenName.add(name)
 
@@ -120,6 +141,27 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
             violations.append(
                 f"{relativePath}:{lineIndex}: [CheckVerb] '{name}' — check 는 술어가 아닙니다."
                 f" bool 이면 is*/has*, void 로 단언하면 assert* 입니다."
+            )
+
+    for name, kinds in sorted(mapNameToFirstParam.items()):
+        ambiguous = any(f"string_view/{count}" in kinds and f"hashed_string/{count}" in kinds for count in range(0, 8))
+        if ambiguous:
+            violations.append(
+                f"{relativePath}:{mapNameToLine[name]}: [NamePair] '{name}' — string_view 판과 hashed_string 판이 같이 있습니다."
+                f" 리터럴 호출이 모호해지니 hashed_string 하나만 두고, 동적 텍스트는 호출부에서 hashed_string( x ) 로 올립니다."
+            )
+
+    for name in sorted(seenName):
+        if len(name) > 3 and name.startswith("set") and name[3].isupper():
+            bare = name[3].lower() + name[4:]
+            # 술어 모양(`canEverTick`)은 허용. `isX`/`getX` 가 따로 있으면 맨이름은 게터가 아니라 동작(`open()`)이다.
+            if bare not in seenName or bare == "bool" or _kPredicatePrefixRe.match(bare):
+                continue
+            if ("get" + name[3:]) in seenName or ("is" + name[3:]) in seenName:
+                continue
+            violations.append(
+                f"{relativePath}:{mapNameToLine[bare]}: [BareGetter] '{bare}()' — '{name}()' 과 짝인 게터는"
+                f" 'get{name[3:]}()' (bool 이면 'is{name[3:]}()', 없을 수 있으면 'find{name[3:]}()') 입니다. 맨이름은 쓰지 않습니다."
             )
 
     return violations
@@ -165,6 +207,14 @@ class CheckFunctionVocabularyGate(LintGate):
         {
             "name": "술어가 check 로 시작한다",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool checkCollision( int32 a ) const;\n    };\n}\n"},
+        },
+        {
+            "name": "같은 이름에 string_view 판과 hashed_string 판",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool hasAction( string_view action ) const;\n        bool hasAction( const hashed_string& action ) const;\n    };\n}\n"},
+        },
+        {
+            "name": "setName 과 짝인 게터가 맨이름 name()",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        const utf8* name() const;\n        void setName( const utf8* pName );\n    };\n}\n"},
         },
     ]
 

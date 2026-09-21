@@ -129,7 +129,7 @@ namespace sw
          *          을 만들어 물으면 그 텍스트가 intern 아레나에 영구히 남아, 콘텐츠가 늘수록 함께
          *          늘어나는 누수가 된다.
          */
-        const utf8* getString( string_view key, const utf8* pDefaultText = "" ) const;
+        const utf8* getStringByText( string_view keyText, const utf8* pDefaultText = "" ) const;
 
         /**
          * @brief 지정한 특정 언어에서 문자열을 직접 조회합니다 (Fallback 없음).

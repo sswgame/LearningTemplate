@@ -16,7 +16,7 @@ SW_TEST_CASE( JsonDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Name":"Demo","_score":12,"Items":[{"id":1},{"id":2}]})" ) );
 
-    sw::JsonValue root = doc.root();
+    sw::JsonValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.isObject() );
     SW_EXPECT_EQUAL( sw::string( "Demo" ), root.get( "name" ).asString() );
     SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).asInt() );
@@ -37,7 +37,7 @@ SW_TEST_CASE( JsonDocumentTest, CaseSensitiveKeyOptOut )
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Child":"ok"})" ) );
 
-    sw::JsonValue root = doc.root();
+    sw::JsonValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.get( "child", false ).isValid() == false );
     SW_EXPECT_TRUE( root.get( "Child", false ).isValid() );
     SW_EXPECT_EQUAL( sw::string( "ok" ), root.get( "Child", false ).asString() );
@@ -50,7 +50,7 @@ SW_TEST_CASE( JsonDocumentTest, UnicodeEscapeAndRejectMalformed )
 {
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Title":"A\u0020B","Nested":{"k":1}})" ) );
-    SW_EXPECT_EQUAL( sw::string( "A B" ), doc.root().get( "Title" ).asString() );
+    SW_EXPECT_EQUAL( sw::string( "A B" ), doc.getRoot().get( "Title" ).asString() );
     SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( R"({"Title":"Hero"})", "title", true ) == sw::string( "Hero" ) );
     SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( R"({"Title":"Hero"})", "title", false ).empty() );
 
@@ -82,9 +82,9 @@ SW_TEST_CASE( JsonDocumentTest, WriteAndDumpRoundtrip )
 
     sw::JsonDocument loaded;
     SW_EXPECT_TRUE( loaded.parse( doc.dump() ) );
-    SW_EXPECT_EQUAL( sw::string( "Demo" ), loaded.root().get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 3, loaded.root().get( "count" ).asInt() );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( loaded.root().get( "items" ).size() ) );
+    SW_EXPECT_EQUAL( sw::string( "Demo" ), loaded.getRoot().get( "name" ).asString() );
+    SW_EXPECT_EQUAL( 3, loaded.getRoot().get( "count" ).asInt() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( loaded.getRoot().get( "items" ).size() ) );
 }
 
 /**
@@ -106,7 +106,7 @@ SW_TEST_CASE( JsonDocumentTest, BooleanFloatAndDeepNestedObject )
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( jsonStr ) );
 
-    sw::JsonValue root = doc.root();
+    sw::JsonValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.get( "bEnabled" ).asBool() );
     SW_EXPECT_FALSE( root.get( "bPaused" ).asBool() );
     SW_EXPECT_NEAR_EQUAL( 2.75, root.get( "scale" ).asFloat(), 1e-4 );
@@ -134,7 +134,7 @@ SW_TEST_CASE( JsonDocumentTest, FloatToIntTypeSafetyAndCoercion )
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( jsonStr ) );
 
-    sw::JsonValue root = doc.root();
+    sw::JsonValue root = doc.getRoot();
     SW_EXPECT_EQUAL( 3, root.get( "floatVal" ).asInt() );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( root.get( "floatVal" ).asUint() ) );
     SW_EXPECT_EQUAL( 42, root.get( "intVal" ).asInt() );
@@ -154,7 +154,7 @@ SW_TEST_CASE( JsonDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
     sw::JsonDocument doc;
     SW_ASSERT_TRUE( doc.parse( R"({"big":18446744073709551615,"color":4289362560})" ) );
 
-    const sw::JsonValue root = doc.root();
+    const sw::JsonValue root = doc.getRoot();
     SW_ASSERT_TRUE( root.isObject() );
 
     SW_EXPECT_EQUAL( uint64( 18446744073709551615ull ), root.get( "big" ).asUint( 0 ) );

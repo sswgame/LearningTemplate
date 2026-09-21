@@ -579,7 +579,7 @@ namespace sw
         if ( doc.parse( xmlText ) == false )
             return false;
 
-        XmlNode root = doc.root( "MaterialInstanceDesc" );
+        XmlNode root = doc.getRoot( "MaterialInstanceDesc" );
         if ( root.isValid() == false )
             return false;
 
@@ -592,10 +592,10 @@ namespace sw
         _desc._parentPath = MaterialUtil::fieldText( root, "parentPath" );
         _desc._quality    = MaterialUtil::fieldText( root, "quality" );
 
-        XmlNode overrides = root.child( "_overrides" );
+        XmlNode overrides = root.findChild( "_overrides" );
         if ( overrides.isValid() )
         {
-            for ( XmlNode item = overrides.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::Override overrideItem{};
                 overrideItem._name      = MaterialUtil::fieldText( item, "name" );
@@ -605,10 +605,10 @@ namespace sw
                     _desc._listOverride.push_back( std::move( overrideItem ) );
             }
         }
-        XmlNode keywords = root.child( "_keywords" );
+        XmlNode keywords = root.findChild( "_keywords" );
         if ( keywords.isValid() )
         {
-            for ( XmlNode item = keywords.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::KeywordOverride keywordItem{};
                 keywordItem._name     = MaterialUtil::fieldText( item, "name" );
@@ -617,10 +617,10 @@ namespace sw
                     _desc._listKeyword.push_back( std::move( keywordItem ) );
             }
         }
-        XmlNode multiCompileNode = root.child( "_multiCompiles" );
+        XmlNode multiCompileNode = root.findChild( "_multiCompiles" );
         if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = multiCompileNode.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
                 multiCompileItem._name     = MaterialUtil::fieldText( item, "name" );

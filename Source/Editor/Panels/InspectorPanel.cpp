@@ -71,27 +71,27 @@ namespace sw::editor
                     formatstring( pOutBuf, cap, "(void / empty)" );
                     return true;
                 }
-                if ( registry.isType( returnType, "int32" ) )
+                if ( registry.isType( hashed_string( returnType ), "int32" ) )
                 {
                     formatstring( pOutBuf, cap, "%#", value.getValue<int32>() );
                     return true;
                 }
-                if ( registry.isType( returnType, "int64" ) )
+                if ( registry.isType( hashed_string( returnType ), "int64" ) )
                 {
                     formatstring( pOutBuf, cap, "%#", value.getValue<int64>() );
                     return true;
                 }
-                if ( registry.isType( returnType, "float32" ) )
+                if ( registry.isType( hashed_string( returnType ), "float32" ) )
                 {
                     formatstring( pOutBuf, cap, "%#", static_cast<float64>( value.getValue<float32>() ) );
                     return true;
                 }
-                if ( registry.isType( returnType, "float64" ) )
+                if ( registry.isType( hashed_string( returnType ), "float64" ) )
                 {
                     formatstring( pOutBuf, cap, "%#", value.getValue<float64>() );
                     return true;
                 }
-                if ( registry.isType( returnType, "bool" ) )
+                if ( registry.isType( hashed_string( returnType ), "bool" ) )
                 {
                     formatstring( pOutBuf, cap, "%#", value.getValue<bool>() ? "true" : "false" );
                     return true;
@@ -912,11 +912,11 @@ namespace sw::editor
                 formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, p.c_str() );
 
                 TypeRegistry& registry = *editor::getService<TypeRegistry>();
-                if ( registry.isType( p, "int32" ) || registry.isType( p, "int64" ) )
+                if ( registry.isType( hashed_string( p ), "int32" ) || registry.isType( hashed_string( p ), "int64" ) )
                     ImGui::InputInt( label.c_str(), &_arrArgInt[paramIndex] );
-                else if ( registry.isType( p, "float32" ) )
+                else if ( registry.isType( hashed_string( p ), "float32" ) )
                     ImGui::DragFloat( label.c_str(), &_arrArgFloat[paramIndex], 0.1f );
-                else if ( registry.isType( p, "bool" ) )
+                else if ( registry.isType( hashed_string( p ), "bool" ) )
                     ImGui::Checkbox( label.c_str(), &_arrArgBool[paramIndex] );
                 else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
                     ImGui::InputText( label.c_str(), _arrArgString[paramIndex].data(), _arrArgString[paramIndex].capacity() );
@@ -943,13 +943,13 @@ namespace sw::editor
                 {
                     const string& p        = method._listParameterTypeName[paramIndex];
                     TypeRegistry& registry = *editor::getService<TypeRegistry>();
-                    if ( registry.isType( p, "int32" ) )
+                    if ( registry.isType( hashed_string( p ), "int32" ) )
                         args.add( int32{ _arrArgInt[paramIndex] } );
-                    else if ( registry.isType( p, "int64" ) )
+                    else if ( registry.isType( hashed_string( p ), "int64" ) )
                         args.add( int64{ _arrArgInt[paramIndex] } );
-                    else if ( registry.isType( p, "float32" ) )
+                    else if ( registry.isType( hashed_string( p ), "float32" ) )
                         args.add( _arrArgFloat[paramIndex] );
-                    else if ( registry.isType( p, "bool" ) )
+                    else if ( registry.isType( hashed_string( p ), "bool" ) )
                         args.add( _arrArgBool[paramIndex] );
                     else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
                         args.add( string( _arrArgString[paramIndex].c_str() ) );

@@ -45,7 +45,7 @@ namespace sw
          *          물어보는 자리(대사 원문 등)는 반드시 이쪽을 쓴다 — `hashed_string` 을 만들면
          *          그 텍스트가 intern 아레나에 **영구히** 남는다.
          */
-        const utf8* getString( string_view key ) const;
+        const utf8* findStringByText( string_view keyText ) const;
         /**
          * @brief 미리 구한 해시로 곧바로 조회합니다. 없으면 nullptr 입니다.
          * @details `LocalizationManager` 가 활성 언어와 폴백 언어를 훑을 때 **해시를 한 번만**

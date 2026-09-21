@@ -317,7 +317,7 @@ namespace sw::editor
         if ( doc.parse( jsonView ) == false )
             return false;
 
-        const JsonValue root = doc.root();
+        const JsonValue root = doc.getRoot();
         outData._atlasPath   = root.get( "atlas" ).asString();
 
         forEachObjectInArray( root, "frames", [&outData]( const JsonValue& frameJson, size_t /*frameIndex*/ )

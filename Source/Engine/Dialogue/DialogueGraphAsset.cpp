@@ -56,7 +56,7 @@ namespace sw
             return false;
         // 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다 — 같은 JSON 을 두 번
         // 파싱하고 그 사이에 문서 전체 길이의 문자열을 한 번 더 만들던 자리다.
-        parseRoot( doc.root() );
+        parseRoot( doc.getRoot() );
         return true;
     }
 
@@ -79,7 +79,7 @@ namespace sw
         if ( doc.parse( jsonView ) == false )
             return false;
 
-        parseRoot( doc.root() );
+        parseRoot( doc.getRoot() );
         return true;
     }
 
@@ -282,7 +282,7 @@ namespace sw
         // **키가 아닐 수도 있는 텍스트로 물어본다.** `hashed_string` 을 만들어 물으면 그 대사 원문이
         // intern 아레나에 영구히 남는다 — 대화가 늘수록 함께 늘어나는 누수였다. 표는 해시로만
         // 열리므로 intern 없이 물어볼 수 있다.
-        const utf8* pResolved = engine::getLocalizationManager().getString( textOrKey, nullptr );
+        const utf8* pResolved = engine::getLocalizationManager().getStringByText( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };
         return string{ pResolved };

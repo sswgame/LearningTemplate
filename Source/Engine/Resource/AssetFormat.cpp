@@ -28,7 +28,7 @@ namespace sw
     {
         if ( root.isValid() == false )
             return AssetFormatVersions::kUnversioned;
-        const utf8* pAttr = root.attribute( kXmlAttrName );
+        const utf8* pAttr = root.findAttribute( kXmlAttrName );
         if ( StringUtil::isNullOrEmpty( pAttr ) == false )
         {
             uint64 ver{ AssetFormatVersions::kUnversioned };
@@ -45,7 +45,7 @@ namespace sw
 
         const string versionStr = sw::to_string( static_cast<uint32>( version ) );
 
-        if ( root.attribute( kXmlAttrName ) != nullptr )
+        if ( root.findAttribute( kXmlAttrName ) != nullptr )
         {
             root.setAttribute( kXmlAttrName, versionStr.c_str() );
             return;

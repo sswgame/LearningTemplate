@@ -67,7 +67,7 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( "GameData" );
+        XmlNode root = doc.getRoot( "GameData" );
         if ( root.isValid() == false )
         {
             SW_LOG_WARNING( "Missing <GameData> in %# — using defaults.", absPath );
@@ -85,9 +85,9 @@ namespace sw
         root.takeChildText( "inputMap", _inputMap );
 
         // 표준 필드 이외의 모든 태그는 _mapCustomProperty 에 자동 보관
-        for ( XmlNode child = root.child(); child.isValid() == true; child = child.next() )
+        for ( XmlNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
         {
-            const utf8* pName = child.name();
+            const utf8* pName = child.getName();
             if ( StringUtil::isNullOrEmpty( pName ) )
                 continue;
 
@@ -104,17 +104,17 @@ namespace sw
 
             if ( StringUtil::equals( pName, "custom" ) )
             {
-                for ( XmlNode prop = child.child( "prop" ); prop.isValid() == true; prop = prop.next( "prop" ) )
+                for ( XmlNode prop = child.findChild( "prop" ); prop.isValid() == true; prop = prop.findNextSibling( "prop" ) )
                 {
-                    const utf8* pKey = prop.attribute( "key" );
-                    const utf8* pVal = prop.text();
+                    const utf8* pKey = prop.findAttribute( "key" );
+                    const utf8* pVal = prop.getText();
                     if ( StringUtil::isNullOrEmpty( pKey ) == false && pVal != nullptr )
                         _mapCustomProperty[pKey] = pVal;
                 }
                 continue;
             }
 
-            const utf8* pText = child.text();
+            const utf8* pText = child.getText();
             if ( pText != nullptr )
                 _mapCustomProperty[pName] = pText;
         }

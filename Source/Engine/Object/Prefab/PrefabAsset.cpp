@@ -61,10 +61,10 @@ namespace sw
             {
                 if ( node.isValid() == false )
                     return;
-                collectPrefabRefsFromText( node.text(), outListPath );
-                for ( XmlAttribute attr = node.firstAttribute(); attr; attr = attr.next() )
-                    collectPrefabRefsFromText( attr.value(), outListPath );
-                for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
+                collectPrefabRefsFromText( node.getText(), outListPath );
+                for ( XmlAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
+                    collectPrefabRefsFromText( attr.getValue(), outListPath );
+                for ( XmlNode childNode = node.findChild(); childNode; childNode = childNode.findNextSibling() )
                     collectPrefabRefsFromXml( childNode, outListPath );
             }
 
@@ -80,7 +80,7 @@ namespace sw
                 }
                 if ( value.isObject() )
                 {
-                    const vector<string> listKey = value.memberNames();
+                    const vector<string> listKey = value.getMemberNames();
                     for ( const string& key : listKey )
                         collectPrefabRefsFromJson( value.get( key ), outListPath );
                     return;
@@ -108,7 +108,7 @@ namespace sw
                 XmlDocument wrapDoc;
                 if ( wrapDoc.parse( wrapped ) == false )
                     return false;
-                XmlNode wrapRoot = wrapDoc.root( kRoot );
+                XmlNode wrapRoot = wrapDoc.getRoot( kRoot );
                 if ( wrapRoot.isValid() == false )
                     return false;
                 if ( engine::areEngineServicesBound() )
@@ -117,7 +117,7 @@ namespace sw
                                                                                            AssetFormatVersions::kPrefab ) == false )
                         return false;
                 }
-                XmlNode bodyNode = wrapRoot.child( kGameObject );
+                XmlNode bodyNode = wrapRoot.findChild( kGameObject );
                 if ( bodyNode.isValid() == false )
                     return false;
                 xmlBody = bodyNode.toString();
@@ -148,7 +148,7 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( PrefabAssetInternal::kRoot );
+        XmlNode root = doc.getRoot( PrefabAssetInternal::kRoot );
         if ( root.isValid() )
         {
             if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) ==
@@ -158,17 +158,17 @@ namespace sw
                 return false;
             }
 
-            const utf8* pNameAttr = root.attribute( PrefabAssetInternal::kName );
+            const utf8* pNameAttr = root.findAttribute( PrefabAssetInternal::kName );
             if ( pNameAttr != nullptr )
                 _name = pNameAttr;
             else
             {
-                const utf8* pNameNode = root.childText( PrefabAssetInternal::kName );
+                const utf8* pNameNode = root.findChildText( PrefabAssetInternal::kName );
                 if ( pNameNode != nullptr )
                     _name = pNameNode;
             }
 
-            XmlNode bodyNode = root.child( PrefabAssetInternal::kGameObject );
+            XmlNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
             if ( bodyNode.isValid() )
                 _stateData = bodyNode.toString();
             else
@@ -177,10 +177,10 @@ namespace sw
         else
         {
             // 루트가 <GameObject> 등 직접적인 XML인 경우 지원
-            XmlNode goNode = doc.root( PrefabAssetInternal::kGameObject );
+            XmlNode goNode = doc.getRoot( PrefabAssetInternal::kGameObject );
             if ( goNode.isValid() )
             {
-                const utf8* pNameAttr = goNode.attribute( "_name" );
+                const utf8* pNameAttr = goNode.findAttribute( "_name" );
                 if ( pNameAttr != nullptr )
                     _name = pNameAttr;
                 _stateData = doc.saveToString();
@@ -211,7 +211,7 @@ namespace sw
             return false;
         }
 
-        JsonValue root = doc.root();
+        JsonValue root = doc.getRoot();
         if ( root.has( "GameObject" ) )
         {
             _name = root.get( "name" ).asString();
@@ -307,7 +307,7 @@ namespace sw
             XmlDocument bodyDoc;
             if ( bodyDoc.parse( xmlBody ) )
             {
-                XmlNode bodyRoot = bodyDoc.root();
+                XmlNode bodyRoot = bodyDoc.getRoot();
                 if ( bodyRoot.isValid() )
                     root.appendClone( bodyRoot );
             }
@@ -416,13 +416,13 @@ namespace sw
             JsonDocument doc;
             if ( doc.parse( trimmed ) == false )
                 return;
-            PrefabAssetInternal::collectPrefabRefsFromJson( doc.root(), outListPath );
+            PrefabAssetInternal::collectPrefabRefsFromJson( doc.getRoot(), outListPath );
             return;
         }
         XmlDocument doc;
         if ( doc.parse( trimmed ) == false )
             return;
-        PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outListPath );
+        PrefabAssetInternal::collectPrefabRefsFromXml( doc.getRoot(), outListPath );
     }
 
     void PrefabManager::reload( string_view assetRelativePath, IRHIDevice* )

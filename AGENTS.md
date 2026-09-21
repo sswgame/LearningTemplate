@@ -104,6 +104,12 @@ able to guess the rest; that is the whole point.
   | look something up | `get` (always there) · `find` (may miss) | `fetch`, `retrieve`, `lookup`, `obtain` |
   | work out a value from inputs | `compute` | `calculate`, `calc` |
 
+- **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts
+  implicitly (`isActionDown( "Jump" )`), while pointers, `string_view` and `string` stay explicit so that interning
+  dynamic text is visible at the call site (`hashed_string( text )`). Never declare a `string_view` overload next to
+  the `hashed_string` one — with the same parameter count a literal call is ambiguous. A lookup that must **not**
+  intern (free text that may not be a key) gets its own name: `findStringByText( string_view )`.
+
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).
   `check*` is not a predicate — a `check*` that returns `bool` is an `is*`/`has*`, and one that returns

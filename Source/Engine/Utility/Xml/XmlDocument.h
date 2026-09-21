@@ -28,11 +28,11 @@ namespace sw
         explicit operator bool() const { return isValid(); }
 
         /** @brief 속성 이름을 반환합니다. */
-        const utf8* name() const;
+        const utf8* getName() const;
         /** @brief 속성 값을 반환합니다. */
-        const utf8* value() const;
+        const utf8* getValue() const;
         /** @brief 다음 속성을 반환합니다. */
-        XmlAttribute next() const;
+        XmlAttribute getNext() const;
 
     private:
         friend class XmlNode;
@@ -62,36 +62,36 @@ namespace sw
         // 1) 읽기 — 이름, 텍스트, 속성, 자식/형제
         // ------------------------------------------------------------------------------
         /** @brief 엘리먼트 이름을 반환합니다. */
-        const utf8* name() const;
+        const utf8* getName() const;
         /** @brief 엘리먼트 텍스트. 유효하면 빈 문자열이어도 nullptr이 아님. */
-        const utf8* text() const;
+        const utf8* getText() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
-        const utf8* attribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 정수로 반환합니다. */
-        int32 attributeInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
+        int32 getAttributeInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 실수로 반환합니다. */
-        float32 attributeFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
+        float32 getAttributeFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on). */
-        bool attributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
+        bool getAttributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 자식 노드를 찾습니다. pName==nullptr이면 첫 자식. */
-        XmlNode child( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XmlNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 다음 형제 노드를 반환합니다. */
-        XmlNode next( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XmlNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식의 텍스트를 반환합니다. */
-        const utf8* childText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        const utf8* findChildText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식 텍스트를 정수로 반환합니다. */
-        int32 childInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
+        int32 getChildInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식 텍스트를 실수로 반환합니다. */
-        float32 childFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
+        float32 getChildFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식 텍스트를 bool로 반환합니다. */
-        bool childBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
+        bool getChildBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 비어 있지 않은 자식 텍스트를 dst에 복사합니다. 썼으면 true. */
         bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 첫 속성을 반환합니다. */
-        XmlAttribute firstAttribute() const;
+        XmlAttribute getFirstAttribute() const;
 
         // ------------------------------------------------------------------------------
         // 2) 쓰기 — 메모리는 문서 풀에서 할당
@@ -223,7 +223,7 @@ namespace sw
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
 
         /** @brief 첫 엘리먼트. pName이 있으면 이름으로 매칭 (기본 대소문자 무시). */
-        XmlNode root( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XmlNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
 
         // ------------------------------------------------------------------------------
         // 5) 쓰기

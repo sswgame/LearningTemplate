@@ -110,7 +110,7 @@ namespace sw::editor
             return false;
         }
 
-        const JsonValue root = doc.root();
+        const JsonValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
             SW_LOG_ERROR( "TextureImportConfig root is not an object." );
@@ -124,7 +124,7 @@ namespace sw::editor
         const JsonValue presetsVal = root.get( "presets" );
         if ( presetsVal.isObject() )
         {
-            const vector<string> listName = presetsVal.memberNames();
+            const vector<string> listName = presetsVal.getMemberNames();
             for ( const auto& name : listName )
             {
                 const JsonValue   presetObj = presetsVal.get( name );

@@ -73,7 +73,7 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( "SpeciesCatalog" );
+        XmlNode root = doc.getRoot( "SpeciesCatalog" );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing <SpeciesCatalog> in %# — using fallback.", absPath );
@@ -81,20 +81,20 @@ namespace sw
             return false;
         }
 
-        XmlNode movesNode = root.child( "moves" );
+        XmlNode movesNode = root.findChild( "moves" );
         if ( movesNode.isValid() )
         {
-            for ( XmlNode moveNode = movesNode.child( "move" ); moveNode.isValid(); moveNode = moveNode.next( "move" ) )
+            for ( XmlNode moveNode = movesNode.findChild( "move" ); moveNode.isValid(); moveNode = moveNode.findNextSibling( "move" ) )
             {
-                const utf8* pId = moveNode.attribute( "id" );
+                const utf8* pId = moveNode.findAttribute( "id" );
                 if ( StringUtil::isNullOrEmpty( pId ) )
                     continue;
-                const utf8* pName = moveNode.attribute( "name" );
+                const utf8* pName = moveNode.findAttribute( "name" );
                 MoveDef     def{};
                 def._id    = pId;
                 def._name  = pName != nullptr ? pName : pId;
-                def._power = moveNode.attributeInt( "power", 0 );
-                def._ppMax = moveNode.attributeInt( "ppMax", 0 );
+                def._power = moveNode.getAttributeInt( "power", 0 );
+                def._ppMax = moveNode.getAttributeInt( "ppMax", 0 );
                 _listMove.push_back( std::move( def ) );
             }
         }
@@ -102,26 +102,26 @@ namespace sw
         // 종족 파싱이 findMoveIndex 를 부르므로 기술 맵이 먼저 서 있어야 한다.
         rebuildLookup();
 
-        XmlNode speciesNode = root.child( "species" );
+        XmlNode speciesNode = root.findChild( "species" );
         if ( speciesNode.isValid() )
         {
-            for ( XmlNode entryNode = speciesNode.child( "entry" ); entryNode.isValid(); entryNode = entryNode.next( "entry" ) )
+            for ( XmlNode entryNode = speciesNode.findChild( "entry" ); entryNode.isValid(); entryNode = entryNode.findNextSibling( "entry" ) )
             {
-                const utf8* pId = entryNode.attribute( "id" );
+                const utf8* pId = entryNode.findAttribute( "id" );
                 if ( StringUtil::isNullOrEmpty( pId ) )
                     continue;
-                const utf8* pName = entryNode.attribute( "name" );
+                const utf8* pName = entryNode.findAttribute( "name" );
                 SpeciesDef  def{};
                 def._id      = pId;
                 def._name    = pName != nullptr ? pName : pId;
-                def._baseHp  = entryNode.attributeInt( "baseHp", 1 );
-                def._baseAtk = entryNode.attributeInt( "baseAtk", 1 );
+                def._baseHp  = entryNode.getAttributeInt( "baseHp", 1 );
+                def._baseAtk = entryNode.getAttributeInt( "baseAtk", 1 );
                 // move0, move1, ... 을 끊길 때까지 읽는다 — 슬롯 수를 코드가 아니라 데이터가 정한다.
                 def._listMoveIndex.clear();
                 for ( int32 slot = 0;; ++slot )
                 {
                     const string attrName = string( "move" ) + to_string( slot );
-                    const utf8*  pMoveId  = entryNode.attribute( attrName.c_str() );
+                    const utf8*  pMoveId  = entryNode.findAttribute( attrName.c_str() );
                     if ( StringUtil::isNullOrEmpty( pMoveId ) )
                         break;
 

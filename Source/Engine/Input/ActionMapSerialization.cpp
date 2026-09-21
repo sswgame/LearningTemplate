@@ -93,17 +93,17 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( ActionMapSerializationInternal::InputMapXml::kRoot );
+        XmlNode root = doc.getRoot( ActionMapSerializationInternal::InputMapXml::kRoot );
         if ( root.isValid() == false )
         {
             SW_LOG_WARNING( "Missing <InputMap> in %#", absPath );
             return false;
         }
 
-        const float32 dblClick  = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
-        const float32 dblDist   = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
-        const float32 holdThr   = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
-        const utf8*   pDefLayer = root.attribute( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
+        const float32 dblClick  = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
+        const float32 dblDist   = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
+        const float32 holdThr   = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
+        const utf8*   pDefLayer = root.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
 
         clear();
         setDoubleClickTime( dblClick );
@@ -112,19 +112,19 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pDefLayer ) == false )
             _defaultLayerName = hashed_string( pDefLayer );
 
-        XmlNode layersNode = root.child( ActionMapSerializationInternal::InputMapXml::kLayers );
+        XmlNode layersNode = root.findChild( ActionMapSerializationInternal::InputMapXml::kLayers );
         if ( layersNode.isValid() )
         {
-            for ( XmlNode layerNode = layersNode.child( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid();
-                  layerNode         = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
+            for ( XmlNode layerNode = layersNode.findChild( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid();
+                  layerNode         = layerNode.findNextSibling( ActionMapSerializationInternal::InputMapXml::kLayer ) )
             {
-                const utf8* pLayerName = layerNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
+                const utf8* pLayerName = layerNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
                 if ( StringUtil::isNullOrEmpty( pLayerName ) )
                     continue;
-                const int32 priority   = layerNode.attributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
-                const bool  enabled    = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
-                const bool  blockLower = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
-                const bool  alwaysOn   = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
+                const int32 priority   = layerNode.getAttributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
+                const bool  enabled    = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
+                const bool  blockLower = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
+                const bool  alwaysOn   = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
                 registerLayer( hashed_string( pLayerName ), priority, enabled, blockLower, alwaysOn );
             }
         }
@@ -133,18 +133,18 @@ namespace sw
 
         auto loadAction = [this]( XmlNode actionNode, string_view inheritedLayer )
         {
-            const utf8* pActionName = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
+            const utf8* pActionName = actionNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
             if ( StringUtil::isNullOrEmpty( pActionName ) )
                 return;
 
             hashed_string layer      = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
-            const utf8*   pLayerAttr = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
+            const utf8*   pLayerAttr = actionNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
             if ( StringUtil::isNullOrEmpty( pLayerAttr ) == false )
                 layer = hashed_string( pLayerAttr );
             ensureLayer( layer );
 
             auto        defaultTrigger = ActionTrigger::Pressed;
-            const utf8* pTriggerAttr   = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
+            const utf8* pTriggerAttr   = actionNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
             if ( pTriggerAttr != nullptr )
             {
                 const ActionTrigger parsed = actionTriggerFromName( pTriggerAttr );
@@ -153,16 +153,16 @@ namespace sw
             }
 
             // 1) <bind> 태그 파싱
-            for ( XmlNode bindNode = actionNode.child( ActionMapSerializationInternal::InputMapXml::kBind ); bindNode.isValid();
-                  bindNode         = bindNode.next( ActionMapSerializationInternal::InputMapXml::kBind ) )
+            for ( XmlNode bindNode = actionNode.findChild( ActionMapSerializationInternal::InputMapXml::kBind ); bindNode.isValid();
+                  bindNode         = bindNode.findNextSibling( ActionMapSerializationInternal::InputMapXml::kBind ) )
             {
-                const utf8* pSource = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrSource );
-                const utf8* pCode   = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrCode );
+                const utf8* pSource = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrSource );
+                const utf8* pCode   = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrCode );
                 if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
                     continue;
 
                 ActionTrigger trigger          = defaultTrigger;
-                const utf8*   pBindTriggerAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
+                const utf8*   pBindTriggerAttr = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
                 if ( pBindTriggerAttr != nullptr )
                 {
                     const ActionTrigger parsed = actionTriggerFromName( pBindTriggerAttr );
@@ -171,14 +171,14 @@ namespace sw
                 }
 
                 hashed_string bindLayer      = layer;
-                const utf8*   pBindLayerAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
+                const utf8*   pBindLayerAttr = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
                 if ( StringUtil::isNullOrEmpty( pBindLayerAttr ) == false )
                 {
                     bindLayer = hashed_string( pBindLayerAttr );
                     ensureLayer( bindLayer );
                 }
 
-                const utf8* pModifierAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
+                const utf8* pModifierAttr = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
                 if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
                 {
                     Key modKey = KeyCodes::fromName( pModifierAttr );
@@ -209,12 +209,12 @@ namespace sw
                 {
                     if ( StringUtil::equals( pCode, "LeftStick", true ) )
                     {
-                        const float32 deadzone = bindNode.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
+                        const float32 deadzone = bindNode.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
                         bindGamepadStick2D( hashed_string( pActionName ), GamepadStick::Left, deadzone, hashed_string( bindLayer.view() ) );
                     }
                     else if ( StringUtil::equals( pCode, "RightStick", true ) )
                     {
-                        const float32 deadzone = bindNode.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
+                        const float32 deadzone = bindNode.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
                         bindGamepadStick2D( hashed_string( pActionName ), GamepadStick::Right, deadzone, hashed_string( bindLayer.view() ) );
                     }
                     else
@@ -233,15 +233,15 @@ namespace sw
             }
 
             // 2) <vector2d> 태그 파싱
-            for ( XmlNode compNode = actionNode.child( "vector2d" ); compNode.isValid(); compNode = compNode.next( "vector2d" ) )
+            for ( XmlNode compNode = actionNode.findChild( "vector2d" ); compNode.isValid(); compNode = compNode.findNextSibling( "vector2d" ) )
             {
-                const Key     upKey          = KeyCodes::fromName( compNode.attribute( "up" ) );
-                const Key     downKey        = KeyCodes::fromName( compNode.attribute( "down" ) );
-                const Key     leftKey        = KeyCodes::fromName( compNode.attribute( "left" ) );
-                const Key     rightKey       = KeyCodes::fromName( compNode.attribute( "right" ) );
-                const float32 deadzone       = compNode.attributeFloat( "deadzone", 0.0f );
+                const Key     upKey          = KeyCodes::fromName( compNode.findAttribute( "up" ) );
+                const Key     downKey        = KeyCodes::fromName( compNode.findAttribute( "down" ) );
+                const Key     leftKey        = KeyCodes::fromName( compNode.findAttribute( "left" ) );
+                const Key     rightKey       = KeyCodes::fromName( compNode.findAttribute( "right" ) );
+                const float32 deadzone       = compNode.getAttributeFloat( "deadzone", 0.0f );
                 hashed_string compLayer      = layer;
-                const utf8*   pCompLayerAttr = compNode.attribute( "layer" );
+                const utf8*   pCompLayerAttr = compNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pCompLayerAttr ) == false )
                 {
                     compLayer = hashed_string( pCompLayerAttr );
@@ -252,12 +252,12 @@ namespace sw
             }
 
             // 3) <axis1d> 태그 파싱
-            for ( XmlNode axisNode = actionNode.child( "axis1d" ); axisNode.isValid(); axisNode = axisNode.next( "axis1d" ) )
+            for ( XmlNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
             {
-                const Key     posKey         = KeyCodes::fromName( axisNode.attribute( "positive" ) );
-                const Key     negKey         = KeyCodes::fromName( axisNode.attribute( "negative" ) );
+                const Key     posKey         = KeyCodes::fromName( axisNode.findAttribute( "positive" ) );
+                const Key     negKey         = KeyCodes::fromName( axisNode.findAttribute( "negative" ) );
                 hashed_string axisLayer      = layer;
-                const utf8*   pAxisLayerAttr = axisNode.attribute( "layer" );
+                const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
                 {
                     axisLayer = hashed_string( pAxisLayerAttr );
@@ -268,31 +268,31 @@ namespace sw
             }
 
             // 4) <stick> 태그 파싱
-            for ( XmlNode stickNode = actionNode.child( "stick" ); stickNode.isValid(); stickNode = stickNode.next( "stick" ) )
+            for ( XmlNode stickNode = actionNode.findChild( "stick" ); stickNode.isValid(); stickNode = stickNode.findNextSibling( "stick" ) )
             {
-                const utf8*        pStickName      = stickNode.attribute( "stick" );
+                const utf8*        pStickName      = stickNode.findAttribute( "stick" );
                 const GamepadStick stick           = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
-                const float32      deadzone        = stickNode.attributeFloat( "deadzone", 0.15f );
+                const float32      deadzone        = stickNode.getAttributeFloat( "deadzone", 0.15f );
                 hashed_string      stickLayer      = layer;
-                const utf8*        pStickLayerAttr = stickNode.attribute( "layer" );
+                const utf8*        pStickLayerAttr = stickNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pStickLayerAttr ) == false )
                 {
                     stickLayer = hashed_string( pStickLayerAttr );
                     ensureLayer( stickLayer );
                 }
-                const uint8   padIndex         = static_cast<uint8>( stickNode.attributeInt( "pad", 0 ) );
-                const float32 outerDeadzone    = stickNode.attributeFloat( "outerDeadzone", 1.0f );
-                const float32 responseExponent = stickNode.attributeFloat( "responseExponent", 1.0f );
+                const uint8   padIndex         = static_cast<uint8>( stickNode.getAttributeInt( "pad", 0 ) );
+                const float32 outerDeadzone    = stickNode.getAttributeFloat( "outerDeadzone", 1.0f );
+                const float32 responseExponent = stickNode.getAttributeFloat( "responseExponent", 1.0f );
                 bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent );
             }
 
             // 5) <chord> 태그 파싱
-            for ( XmlNode chordNode = actionNode.child( "chord" ); chordNode.isValid(); chordNode = chordNode.next( "chord" ) )
+            for ( XmlNode chordNode = actionNode.findChild( "chord" ); chordNode.isValid(); chordNode = chordNode.findNextSibling( "chord" ) )
             {
-                const Key     modKey    = KeyCodes::fromName( chordNode.attribute( "modifier" ) );
-                const Key     trigKey   = KeyCodes::fromName( chordNode.attribute( "trigger" ) );
+                const Key     modKey    = KeyCodes::fromName( chordNode.findAttribute( "modifier" ) );
+                const Key     trigKey   = KeyCodes::fromName( chordNode.findAttribute( "trigger" ) );
                 ActionTrigger trig      = defaultTrigger;
-                const utf8*   pTrigAttr = chordNode.attribute( "triggerMode" );
+                const utf8*   pTrigAttr = chordNode.findAttribute( "triggerMode" );
                 if ( StringUtil::isNullOrEmpty( pTrigAttr ) == false )
                 {
                     const ActionTrigger parsed = actionTriggerFromName( pTrigAttr );
@@ -300,7 +300,7 @@ namespace sw
                         trig = parsed;
                 }
                 hashed_string chordLayer      = layer;
-                const utf8*   pChordLayerAttr = chordNode.attribute( "layer" );
+                const utf8*   pChordLayerAttr = chordNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pChordLayerAttr ) == false )
                 {
                     chordLayer = hashed_string( pChordLayerAttr );
@@ -311,28 +311,28 @@ namespace sw
             }
         };
 
-        for ( XmlNode layerNode = root.child( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
+        for ( XmlNode layerNode = root.findChild( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( ActionMapSerializationInternal::InputMapXml::kLayer ) )
         {
-            const utf8* pLayerName = layerNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
+            const utf8* pLayerName = layerNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
             if ( StringUtil::isNullOrEmpty( pLayerName ) )
                 continue;
             if ( hasLayer( hashed_string( pLayerName ) ) == false )
             {
-                const int32 priority   = layerNode.attributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
-                const bool  enabled    = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
-                const bool  blockLower = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
-                const bool  alwaysOn   = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
+                const int32 priority   = layerNode.getAttributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
+                const bool  enabled    = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
+                const bool  blockLower = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
+                const bool  alwaysOn   = layerNode.getAttributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
                 registerLayer( hashed_string( pLayerName ), priority, enabled, blockLower, alwaysOn );
             }
-            for ( XmlNode actionNode = layerNode.child( ActionMapSerializationInternal::InputMapXml::kAction ); actionNode.isValid();
-                  actionNode         = actionNode.next( ActionMapSerializationInternal::InputMapXml::kAction ) )
+            for ( XmlNode actionNode = layerNode.findChild( ActionMapSerializationInternal::InputMapXml::kAction ); actionNode.isValid();
+                  actionNode         = actionNode.findNextSibling( ActionMapSerializationInternal::InputMapXml::kAction ) )
             {
                 loadAction( actionNode, pLayerName );
             }
         }
 
-        for ( XmlNode actionNode = root.child( ActionMapSerializationInternal::InputMapXml::kAction ); actionNode.isValid();
-              actionNode         = actionNode.next( ActionMapSerializationInternal::InputMapXml::kAction ) )
+        for ( XmlNode actionNode = root.findChild( ActionMapSerializationInternal::InputMapXml::kAction ); actionNode.isValid();
+              actionNode         = actionNode.findNextSibling( ActionMapSerializationInternal::InputMapXml::kAction ) )
         {
             loadAction( actionNode, _defaultLayerName.view() );
         }
@@ -474,15 +474,15 @@ namespace sw
         if ( doc.loadPath( filePath ) == false )
             return false;
 
-        XmlNode root = doc.root( "UserBindings" );
+        XmlNode root = doc.getRoot( "UserBindings" );
         if ( root.isValid() == false )
             return false;
 
-        for ( XmlNode bindNode = root.child( "bind" ); bindNode.isValid(); bindNode = bindNode.next( "bind" ) )
+        for ( XmlNode bindNode = root.findChild( "bind" ); bindNode.isValid(); bindNode = bindNode.findNextSibling( "bind" ) )
         {
-            const utf8*       pAction   = bindNode.attribute( "action" );
-            const utf8*       pKindStr  = bindNode.attribute( "kind" );
-            const utf8*       pLayerStr = bindNode.attribute( "layer" );
+            const utf8*       pAction   = bindNode.findAttribute( "action" );
+            const utf8*       pKindStr  = bindNode.findAttribute( "kind" );
+            const utf8*       pLayerStr = bindNode.findAttribute( "layer" );
             const string_view layer     = ( StringUtil::isNullOrEmpty( pLayerStr ) == false ) ? string_view( pLayerStr ) : string_view{};
 
             if ( StringUtil::isNullOrEmpty( pAction ) )
@@ -499,62 +499,62 @@ namespace sw
                 {
                     case BindingKind::Axis1DComposite:
                     {
-                        const Key negKey = KeyCodes::fromName( bindNode.attribute( "negKey" ) );
-                        const Key posKey = KeyCodes::fromName( bindNode.attribute( "posKey" ) );
+                        const Key negKey = KeyCodes::fromName( bindNode.findAttribute( "negKey" ) );
+                        const Key posKey = KeyCodes::fromName( bindNode.findAttribute( "posKey" ) );
                         if ( negKey != Key::Unknown && posKey != Key::Unknown )
                             bindAxis1DComposite( hashed_string( pAction ), negKey, posKey, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
                     {
-                        const Key     upKey    = KeyCodes::fromName( bindNode.attribute( "up" ) );
-                        const Key     downKey  = KeyCodes::fromName( bindNode.attribute( "down" ) );
-                        const Key     leftKey  = KeyCodes::fromName( bindNode.attribute( "left" ) );
-                        const Key     rightKey = KeyCodes::fromName( bindNode.attribute( "right" ) );
-                        const float32 deadzone = bindNode.attributeFloat( "deadzone", 0.0f );
+                        const Key     upKey    = KeyCodes::fromName( bindNode.findAttribute( "up" ) );
+                        const Key     downKey  = KeyCodes::fromName( bindNode.findAttribute( "down" ) );
+                        const Key     leftKey  = KeyCodes::fromName( bindNode.findAttribute( "left" ) );
+                        const Key     rightKey = KeyCodes::fromName( bindNode.findAttribute( "right" ) );
+                        const float32 deadzone = bindNode.getAttributeFloat( "deadzone", 0.0f );
                         if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
                             bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::GamepadStick2D:
                     {
-                        const utf8*        pStickStr     = bindNode.attribute( "stick" );
+                        const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
                         const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                        const uint8        pad           = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
-                        const float32      deadzone      = bindNode.attributeFloat( "deadzone", 0.15f );
-                        const float32      outerDeadzone = bindNode.attributeFloat( "outerDeadzone", 1.0f );
-                        const float32      exp           = bindNode.attributeFloat( "exponent", 1.0f );
+                        const uint8        pad           = static_cast<uint8>( bindNode.getAttributeInt( "pad", 0 ) );
+                        const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
+                        const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
+                        const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
                         bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp );
                         break;
                     }
                     case BindingKind::MouseDelta2D:
                     {
-                        const float32 scale = bindNode.attributeFloat( "scale", 1.0f );
+                        const float32 scale = bindNode.getAttributeFloat( "scale", 1.0f );
                         bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::VirtualJoystick2D:
                     {
-                        const MouseButton activationButton = MouseButtons::fromName( bindNode.attribute( "button" ) );
-                        const float32     radius           = bindNode.attributeFloat( "radius", 64.0f );
-                        const float32     deadzone         = bindNode.attributeFloat( "deadzone", 0.1f );
-                        const float32     outerDeadzone    = bindNode.attributeFloat( "outerDeadzone", 1.0f );
+                        const MouseButton activationButton = MouseButtons::fromName( bindNode.findAttribute( "button" ) );
+                        const float32     radius           = bindNode.getAttributeFloat( "radius", 64.0f );
+                        const float32     deadzone         = bindNode.getAttributeFloat( "deadzone", 0.1f );
+                        const float32     outerDeadzone    = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
                         if ( activationButton != MouseButton::Count )
                             bindVirtualJoystick2D( hashed_string( pAction ), activationButton, radius, deadzone, hashed_string( layer ), outerDeadzone );
                         break;
                     }
                     case BindingKind::Chord:
                     {
-                        const Key modKey  = KeyCodes::fromName( bindNode.attribute( "modKey" ) );
-                        const Key trigKey = KeyCodes::fromName( bindNode.attribute( "trigKey" ) );
+                        const Key modKey  = KeyCodes::fromName( bindNode.findAttribute( "modKey" ) );
+                        const Key trigKey = KeyCodes::fromName( bindNode.findAttribute( "trigKey" ) );
                         if ( modKey != Key::Unknown && trigKey != Key::Unknown )
                             bindChord( hashed_string( pAction ), modKey, trigKey, ActionTrigger::Pressed, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::Shortcut:
                     {
-                        const Key   key     = KeyCodes::fromName( bindNode.attribute( "key" ) );
-                        const uint8 modMask = static_cast<uint8>( bindNode.attributeInt( "modifierMask", 0 ) );
+                        const Key   key     = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
+                        const uint8 modMask = static_cast<uint8>( bindNode.getAttributeInt( "modifierMask", 0 ) );
                         if ( key != Key::Unknown )
                             bindShortcut( hashed_string( pAction ), key, modMask, ActionTrigger::Pressed, hashed_string( layer ) );
                         break;
@@ -587,11 +587,11 @@ namespace sw
             }
 
             // Single slot fallback / legacy format
-            const utf8* pKeyStr    = bindNode.attribute( "key" );
-            const utf8* pCodeStr   = bindNode.attribute( "code" );
-            const utf8* pButtonStr = bindNode.attribute( "button" );
-            const utf8* pSourceStr = bindNode.attribute( "source" );
-            const uint8 padIndex   = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
+            const utf8* pKeyStr    = bindNode.findAttribute( "key" );
+            const utf8* pCodeStr   = bindNode.findAttribute( "code" );
+            const utf8* pButtonStr = bindNode.findAttribute( "button" );
+            const utf8* pSourceStr = bindNode.findAttribute( "source" );
+            const uint8 padIndex   = static_cast<uint8>( bindNode.getAttributeInt( "pad", 0 ) );
 
             if ( pKeyStr != nullptr )
             {

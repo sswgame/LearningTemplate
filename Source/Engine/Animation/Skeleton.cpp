@@ -32,11 +32,6 @@ namespace sw
         return newIndex;
     }
 
-    int32 Skeleton::findBoneIndex( string_view name ) const
-    {
-        return findBoneIndex( hashed_string( name ) );
-    }
-
     int32 Skeleton::findBoneIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listBone.size(); ++index )

@@ -179,15 +179,15 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 
     sw::XmlDocument doc;
     doc.parse( kCurrent );
-    sw::XmlNode root = doc.root( "MaterialDesc" );
+    sw::XmlNode root = doc.getRoot( "MaterialDesc" );
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
     SW_EXPECT_TRUE( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
                                                                                           sw::AssetFormatVersions::kMaterial, &source ) );
     SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
-    SW_EXPECT_TRUE( root.attribute( "formatVersion" ) != nullptr );
-    SW_EXPECT_STREQ( "0", root.attribute( "formatVersion" ) );
+    SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
+    SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
 
     const sw::string tempPath = test::makeTempPath( "test_current_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),

@@ -222,7 +222,7 @@ namespace sw
             return false;
         }
 
-        const JsonValue root = doc.root();
+        const JsonValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
             SW_LOG_WARNING( "StringTable root is not an object in JSON text." );
@@ -230,7 +230,7 @@ namespace sw
         }
 
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        for ( const string& key : root.memberNames() )
+        for ( const string& key : root.getMemberNames() )
         {
             const JsonValue value = root.get( key, false );
             if ( value.isValid() == false || value.isObject() || value.isArray() )
@@ -252,11 +252,11 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( "GameStrings" );
+        XmlNode root = doc.getRoot( "GameStrings" );
         if ( root.isValid() == false )
-            root = doc.root( "Strings" );
+            root = doc.getRoot( "Strings" );
         if ( root.isValid() == false )
-            root = doc.root();
+            root = doc.getRoot();
 
         if ( root.isValid() == false )
         {
@@ -265,19 +265,19 @@ namespace sw
         }
 
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        for ( XmlNode strNode = root.child(); strNode; strNode = strNode.next() )
+        for ( XmlNode strNode = root.findChild(); strNode; strNode = strNode.findNextSibling() )
         {
-            const utf8* pKey = strNode.attribute( "key" );
+            const utf8* pKey = strNode.findAttribute( "key" );
             if ( StringUtil::isNullOrEmpty( pKey ) )
-                pKey = strNode.attribute( "id" );
+                pKey = strNode.findAttribute( "id" );
             if ( StringUtil::isNullOrEmpty( pKey ) )
                 continue;
 
-            const utf8* pValue = strNode.attribute( "value" );
+            const utf8* pValue = strNode.findAttribute( "value" );
             if ( StringUtil::isNullOrEmpty( pValue ) == false )
                 _mapTable[hashed_string( pKey ).getHash()] = pValue;
             else
-                _mapTable[hashed_string( pKey ).getHash()] = strNode.text();
+                _mapTable[hashed_string( pKey ).getHash()] = strNode.getText();
         }
 
         return true;
@@ -332,11 +332,11 @@ namespace sw
         return findByHash( key.getHash() );
     }
 
-    const utf8* StringTable::getString( string_view key ) const
+    const utf8* StringTable::findStringByText( string_view keyText ) const
     {
-        if ( key.empty() )
+        if ( keyText.empty() )
             return nullptr;
-        return findByHash( hashed_string::computeHash( key ) );
+        return findByHash( hashed_string::computeHash( keyText ) );
     }
 
     const utf8* StringTable::findByHash( uint64 keyHash ) const

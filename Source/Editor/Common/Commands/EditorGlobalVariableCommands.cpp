@@ -89,14 +89,14 @@ namespace sw::editor
         if ( doc.loadFile( filePath ) == false )
             return false;
 
-        XmlNode rootNode = doc.root();
+        XmlNode rootNode = doc.getRoot();
         if ( rootNode.isValid() == false )
             return false;
 
-        for ( XmlNode varNode = rootNode.child( "Var" ); varNode.isValid(); varNode = varNode.next( "Var" ) )
+        for ( XmlNode varNode = rootNode.findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
         {
-            const utf8* pName = varNode.attribute( "name" );
-            const utf8* pVal  = varNode.attribute( "value" );
+            const utf8* pName = varNode.findAttribute( "name" );
+            const utf8* pVal  = varNode.findAttribute( "value" );
             if ( pName == nullptr || pVal == nullptr )
                 continue;
 

@@ -54,7 +54,7 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( "MonsterCatalog" );
+        XmlNode root = doc.getRoot( "MonsterCatalog" );
         if ( root.isValid() == false )
         {
             SW_LOG_WARNING( "Missing <MonsterCatalog> root in %# — using fallback.", absPath );
@@ -62,64 +62,64 @@ namespace sw
             return false;
         }
 
-        for ( XmlNode node = root.child( "Monster" ); node; node = node.next( "Monster" ) )
+        for ( XmlNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
         {
-            const utf8* pIdStr = node.attribute( "id" );
+            const utf8* pIdStr = node.findAttribute( "id" );
             if ( StringUtil::isNullOrEmpty( pIdStr ) )
                 continue;
 
             MonsterDef monsterDef;
             monsterDef._id       = pIdStr;
-            const utf8* pNameStr = node.attribute( "name" );
+            const utf8* pNameStr = node.findAttribute( "name" );
             if ( pNameStr != nullptr )
                 monsterDef._name = pNameStr;
             else
                 monsterDef._name = monsterDef._id;
 
-            monsterDef._archetype = parseArchetype( node.attribute( "archetype" ) );
+            monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ) );
 
-            XmlNode statsNode = node.child( "Stats" );
+            XmlNode statsNode = node.findChild( "Stats" );
             if ( statsNode.isValid() )
             {
-                monsterDef._hp            = statsNode.attributeInt( "hp", monsterDef._hp );
-                monsterDef._maxHp         = statsNode.attributeInt( "maxHp", monsterDef._maxHp );
-                monsterDef._atk           = statsNode.attributeInt( "atk", monsterDef._atk );
-                monsterDef._def           = statsNode.attributeInt( "def", monsterDef._def );
-                monsterDef._speed         = statsNode.attributeFloat( "speed", monsterDef._speed );
-                monsterDef._invincibility = statsNode.attributeFloat( "invincibility", monsterDef._invincibility );
+                monsterDef._hp            = statsNode.getAttributeInt( "hp", monsterDef._hp );
+                monsterDef._maxHp         = statsNode.getAttributeInt( "maxHp", monsterDef._maxHp );
+                monsterDef._atk           = statsNode.getAttributeInt( "atk", monsterDef._atk );
+                monsterDef._def           = statsNode.getAttributeInt( "def", monsterDef._def );
+                monsterDef._speed         = statsNode.getAttributeFloat( "speed", monsterDef._speed );
+                monsterDef._invincibility = statsNode.getAttributeFloat( "invincibility", monsterDef._invincibility );
             }
 
-            XmlNode aiNode = node.child( "AI" );
+            XmlNode aiNode = node.findChild( "AI" );
             if ( aiNode.isValid() )
             {
-                monsterDef._patrolRange    = aiNode.attributeFloat( "patrolRange", monsterDef._patrolRange );
-                monsterDef._detectRange    = aiNode.attributeFloat( "detectRange", monsterDef._detectRange );
-                monsterDef._attackRange    = aiNode.attributeFloat( "attackRange", monsterDef._attackRange );
-                monsterDef._attackCoolTime = aiNode.attributeFloat( "coolTime", monsterDef._attackCoolTime );
-                const utf8* pProj          = aiNode.attribute( "projectilePrefab" );
+                monsterDef._patrolRange    = aiNode.getAttributeFloat( "patrolRange", monsterDef._patrolRange );
+                monsterDef._detectRange    = aiNode.getAttributeFloat( "detectRange", monsterDef._detectRange );
+                monsterDef._attackRange    = aiNode.getAttributeFloat( "attackRange", monsterDef._attackRange );
+                monsterDef._attackCoolTime = aiNode.getAttributeFloat( "coolTime", monsterDef._attackCoolTime );
+                const utf8* pProj          = aiNode.findAttribute( "projectilePrefab" );
                 if ( pProj != nullptr )
                     monsterDef._projectilePrefab = pProj;
             }
 
-            XmlNode prefabNode = node.child( "Prefab" );
+            XmlNode prefabNode = node.findChild( "Prefab" );
             if ( prefabNode.isValid() )
             {
-                const utf8* pPath = prefabNode.attribute( "path" );
+                const utf8* pPath = prefabNode.findAttribute( "path" );
                 if ( pPath != nullptr )
                     monsterDef._prefabPath = pPath;
             }
 
-            XmlNode dropNode = node.child( "Drop" );
+            XmlNode dropNode = node.findChild( "Drop" );
             if ( dropNode.isValid() )
             {
                 // 속성 이름이 곧 보상 이름이다 — 코드가 보상 종류를 알 필요가 없다.
-                for ( XmlAttribute attr = dropNode.firstAttribute(); attr.isValid(); attr = attr.next() )
+                for ( XmlAttribute attr = dropNode.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
-                    const utf8* pRewardId = attr.name();
+                    const utf8* pRewardId = attr.getName();
                     if ( StringUtil::isNullOrEmpty( pRewardId ) )
                         continue;
                     monsterDef._mapDrop.insert_or_assign( hashed_string( pRewardId ),
-                                                          dropNode.attributeInt( pRewardId, 0 ) );
+                                                          dropNode.getAttributeInt( pRewardId, 0 ) );
                 }
             }
 

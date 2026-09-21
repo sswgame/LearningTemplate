@@ -44,8 +44,6 @@ namespace sw
          */
         int32 addBone( string_view name, int32 parentIndex, const float4x4& invReferencePose, const float4x4& boneSpaceTransform );
         /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
-        int32 findBoneIndex( string_view name ) const;
-        /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
         int32 findBoneIndex( const hashed_string& name ) const;
 
         /** @brief 본 하나의 로컬 변환을 바꿉니다. 범위를 벗어난 인덱스는 무시합니다. */

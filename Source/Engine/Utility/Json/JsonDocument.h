@@ -50,19 +50,19 @@ namespace sw
         // 1) 읽기 — 타입, 스칼라, 객체/배열
         // ------------------------------------------------------------------------------
         /** @brief JSON 타입을 반환합니다. 무효면 Null. */
-        JsonType type() const;
+        JsonType getType() const;
         /** @brief 객체이면 true. */
-        bool isObject() const { return type() == JsonType::Object; }
+        bool isObject() const { return getType() == JsonType::Object; }
         /** @brief 배열이면 true. */
-        bool isArray() const { return type() == JsonType::Array; }
+        bool isArray() const { return getType() == JsonType::Array; }
         /** @brief 문자열이면 true. */
-        bool isString() const { return type() == JsonType::String; }
+        bool isString() const { return getType() == JsonType::String; }
         /** @brief 숫자이면 true. */
-        bool isNumber() const { return type() == JsonType::Number; }
+        bool isNumber() const { return getType() == JsonType::Number; }
         /** @brief 불리언이면 true. */
-        bool isBool() const { return type() == JsonType::Bool; }
+        bool isBool() const { return getType() == JsonType::Bool; }
         /** @brief null이면 true. */
-        bool isNull() const { return type() == JsonType::Null; }
+        bool isNull() const { return getType() == JsonType::Null; }
 
         /** @brief 문자열 내용. 문자열이 아니면 dump한 스칼라(따옴표 없음). */
         string asString() const;
@@ -78,7 +78,7 @@ namespace sw
         /** @brief 객체 멤버 또는 배열 원소 개수. */
         size_t size() const;
         /** @brief 객체 멤버 이름을 삽입 순으로 반환합니다. */
-        vector<string> memberNames() const;
+        vector<string> getMemberNames() const;
         /** @brief 객체 멤버를 찾습니다. 없으면 무효 핸들. */
         JsonValue get( string_view key, bool bIgnoreCaseKeys = true ) const;
         /** @brief 객체에 키가 있으면 true. */
@@ -200,7 +200,7 @@ namespace sw
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
 
         /** @brief 루트 값. */
-        JsonValue root() const;
+        JsonValue getRoot() const;
 
         // ------------------------------------------------------------------------------
         // 5) 쓰기

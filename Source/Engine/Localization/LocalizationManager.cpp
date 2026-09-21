@@ -478,11 +478,11 @@ namespace sw
         return findByHash( key.getHash(), pDefaultText );
     }
 
-    const utf8* LocalizationManager::getString( string_view key, const utf8* pDefaultText ) const
+    const utf8* LocalizationManager::getStringByText( string_view keyText, const utf8* pDefaultText ) const
     {
-        if ( key.empty() )
+        if ( keyText.empty() )
             return pDefaultText;
-        return findByHash( hashed_string::computeHash( key ), pDefaultText );
+        return findByHash( hashed_string::computeHash( keyText ), pDefaultText );
     }
 
     const utf8* LocalizationManager::findByHash( uint64 keyHash, const utf8* pDefaultText ) const

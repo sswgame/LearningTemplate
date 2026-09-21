@@ -447,16 +447,16 @@ namespace sw
 
                 // 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
                 // 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.
-                for ( XmlNode child = root.child( nullptr, bIgnore ); child.isValid(); child = child.next( nullptr, bIgnore ) )
+                for ( XmlNode child = root.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
                 {
-                    const utf8* pChildName = child.name();
+                    const utf8* pChildName = child.getName();
                     if ( pChildName == nullptr )
                         continue;
                     if ( StringUtil::equals( pChildName, kSchemaVersionKey ) )
                         continue;
                     if ( isNameKnown( uniqueKnownNames, pChildName ) )
                         continue;
-                    const utf8* pNameAttr = child.attribute( kXmlPropertyNameAttr, bIgnore );
+                    const utf8* pNameAttr = child.findAttribute( kXmlPropertyNameAttr, bIgnore );
                     if ( pNameAttr != nullptr && isNameKnown( uniqueKnownNames, pNameAttr ) )
                         continue;
 
@@ -464,13 +464,13 @@ namespace sw
                     SchemaOrphanValue   orphan;
                     orphan._name     = nameHs;
                     orphan._nameHash = nameHs.getHash();
-                    orphan._text     = child.text() != nullptr ? child.text() : "";
+                    orphan._text     = child.getText() != nullptr ? child.getText() : "";
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
 
-                for ( XmlAttribute attr = root.firstAttribute(); attr.isValid(); attr = attr.next() )
+                for ( XmlAttribute attr = root.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
-                    const utf8* pAttrName = attr.name();
+                    const utf8* pAttrName = attr.getName();
                     if ( pAttrName == nullptr )
                         continue;
                     if ( StringUtil::equals( pAttrName, kSchemaVersionKey ) )
@@ -482,7 +482,7 @@ namespace sw
                     SchemaOrphanValue   orphan;
                     orphan._name     = nameHs;
                     orphan._nameHash = nameHs.getHash();
-                    orphan._text     = attr.value() != nullptr ? attr.value() : "";
+                    orphan._text     = attr.getValue() != nullptr ? attr.getValue() : "";
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
             }
@@ -498,9 +498,9 @@ namespace sw
                     return false;
 
                 const bool bIgnore = ctx.ignoresCaseKeys();
-                XmlNode    root    = doc.root( typeInfo._name.c_str(), bIgnore );
+                XmlNode    root    = doc.getRoot( typeInfo._name.c_str(), bIgnore );
                 if ( root.isValid() == false )
-                    root = doc.root( nullptr, bIgnore );
+                    root = doc.getRoot( nullptr, bIgnore );
                 if ( root.isValid() == false )
                     return false;
 
@@ -645,9 +645,9 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pRootTagName );
-        XmlNode root = _impl->_doc.root( sTag.c_str(), ignoresCaseKeys() );
+        XmlNode root = _impl->_doc.getRoot( sTag.c_str(), ignoresCaseKeys() );
         if ( root.isValid() == false )
-            root = _impl->_doc.root( nullptr, ignoresCaseKeys() );
+            root = _impl->_doc.getRoot( nullptr, ignoresCaseKeys() );
 
         if ( root.isValid() == false )
             return false;
@@ -664,11 +664,11 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XmlNode node = _impl->_currentParent.child( sTag.c_str(), ignoresCaseKeys() );
+        XmlNode node = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
         if ( node.isValid() == false )
             return false;
 
-        outValue = node.text() != nullptr ? node.text() : "";
+        outValue = node.getText() != nullptr ? node.getText() : "";
         return true;
     }
 
@@ -678,7 +678,7 @@ namespace sw
             return false;
 
         string      sName = Impl::sanitizeTag( pAttrName );
-        const utf8* pVal  = _impl->_currentParent.attribute( sName.c_str(), ignoresCaseKeys() );
+        const utf8* pVal  = _impl->_currentParent.findAttribute( sName.c_str(), ignoresCaseKeys() );
         if ( pVal == nullptr )
             return false;
 
@@ -696,14 +696,14 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
             string sTag = Impl::sanitizeTag( pTagName );
-            arrNode     = _impl->_currentParent.child( sTag.c_str(), bIgnore );
+            arrNode     = _impl->_currentParent.findChild( sTag.c_str(), bIgnore );
             if ( arrNode.isValid() == false )
                 return false;
         }
 
-        for ( XmlNode item = arrNode.child( "item", bIgnore ); item; item = item.next( "item", bIgnore ) )
+        for ( XmlNode item = arrNode.findChild( "item", bIgnore ); item; item = item.findNextSibling( "item", bIgnore ) )
         {
-            callback( item.text() != nullptr ? item.text() : "" );
+            callback( item.getText() != nullptr ? item.getText() : "" );
         }
 
         return true;
@@ -719,23 +719,23 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
             string sTag = Impl::sanitizeTag( pTagName );
-            mapNode     = _impl->_currentParent.child( sTag.c_str(), bIgnore );
+            mapNode     = _impl->_currentParent.findChild( sTag.c_str(), bIgnore );
             if ( mapNode.isValid() == false )
                 return false;
         }
 
-        for ( XmlNode child = mapNode.child( nullptr, bIgnore ); child; child = child.next( nullptr, bIgnore ) )
+        for ( XmlNode child = mapNode.findChild( nullptr, bIgnore ); child; child = child.findNextSibling( nullptr, bIgnore ) )
         {
-            const utf8* pChildName = child.name();
+            const utf8* pChildName = child.getName();
             if ( pChildName == nullptr )
                 continue;
 
             if ( StringUtil::equals( pChildName, "entry", true ) )
             {
-                XmlNode kNode = child.child( "key", bIgnore );
-                XmlNode vNode = child.child( "value", bIgnore );
+                XmlNode kNode = child.findChild( "key", bIgnore );
+                XmlNode vNode = child.findChild( "value", bIgnore );
                 if ( kNode.isValid() && vNode.isValid() )
-                    callback( kNode.text() != nullptr ? kNode.text() : "", vNode.text() != nullptr ? vNode.text() : "" );
+                    callback( kNode.getText() != nullptr ? kNode.getText() : "", vNode.getText() != nullptr ? vNode.getText() : "" );
                 continue;
             }
 
@@ -751,7 +751,7 @@ namespace sw
             return false;
 
         string  sTag  = Impl::sanitizeTag( pTagName );
-        XmlNode child = _impl->_currentParent.child( sTag.c_str(), ignoresCaseKeys() );
+        XmlNode child = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
 
@@ -764,7 +764,7 @@ namespace sw
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        XmlNode child = _impl->_currentParent.child( nullptr, ignoresCaseKeys() );
+        XmlNode child = _impl->_currentParent.findChild( nullptr, ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
         _impl->_listNodeStack.push_back( child );
@@ -782,7 +782,7 @@ namespace sw
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        const utf8* pText = _impl->_currentParent.text();
+        const utf8* pText = _impl->_currentParent.getText();
         outText           = ( pText != nullptr ) ? pText : "";
         return true;
     }
@@ -794,13 +794,13 @@ namespace sw
 
         const XmlNode parent = _impl->_currentParent;
         bool          bAny{ false };
-        for ( XmlNode child = parent.child( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.next( nullptr, ignoresCaseKeys() ) )
+        for ( XmlNode child = parent.findChild( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.findNextSibling( nullptr, ignoresCaseKeys() ) )
         {
             // 콜백이 도는 동안 그 자식이 현재 노드가 되어야 재귀 순회가 가능하다.
             _impl->_listNodeStack.push_back( child );
             _impl->_currentParent = child;
 
-            const utf8* pName = child.name();
+            const utf8* pName = child.getName();
             callback( string_view( pName != nullptr ? pName : "" ) );
             bAny = true;
 
@@ -928,7 +928,7 @@ namespace sw
         if ( pOutVersion != nullptr )
         {
             *pOutVersion     = 0;
-            const utf8* pVer = root.attribute( kSchemaVersionKey, bIgnore );
+            const utf8* pVer = root.findAttribute( kSchemaVersionKey, bIgnore );
             if ( pVer != nullptr )
             {
                 uint64 ver{ 0 };

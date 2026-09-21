@@ -65,15 +65,15 @@ namespace sw::editor
                     return;
 
                 JsonDocument doc;
-                if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
+                if ( doc.loadFile( path ) == false || doc.getRoot().isObject() == false )
                     return;
 
-                const vector<string> listKey = doc.root().memberNames();
+                const vector<string> listKey = doc.getRoot().getMemberNames();
                 for ( const string& key : listKey )
                 {
                     LocRecord& rec = mapRecord[key];
                     rec._key       = key;
-                    setLocField( rec, lang, doc.root().get( key ).asString() );
+                    setLocField( rec, lang, doc.getRoot().get( key ).asString() );
                 }
             }
 

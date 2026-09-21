@@ -254,8 +254,6 @@ namespace sw
         bool isType( const hashed_string& nameOrFqn, const hashed_string& canonicalName ) const;
         /** @brief C 문자열 canonical 이름으로 타입 일치 여부를 검사합니다. */
         bool isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const;
-        /** @brief string_view 이름으로 타입 일치 여부를 검사합니다. */
-        bool isType( string_view nameOrFqn, const utf8* pCanonicalName ) const;
 
         // ------------------------------------------------------------------------------
         // 5) Enum 변환 · 비트플래그
@@ -430,14 +428,6 @@ namespace sw
 
     /** @brief C 문자열 canonical 이름으로 타입 일치 여부를 검사합니다. */
     inline bool TypeRegistry::isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const { return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) ); }
-
-    /** @brief string_view 이름으로 타입 일치 여부를 검사합니다. */
-    inline bool TypeRegistry::isType( string_view nameOrFqn, const utf8* pCanonicalName ) const
-    {
-        if ( nameOrFqn.empty() || pCanonicalName == nullptr )
-            return false;
-        return isType( hashed_string{ nameOrFqn }, pCanonicalName );
-    }
 
     /** @brief 부모 FQN을 따라가며 targetFqn에서 파생됐는지 검사합니다. */
 } // namespace sw

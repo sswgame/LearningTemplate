@@ -21,9 +21,9 @@ namespace sw
         {
             static string nodeText( XmlNode node )
             {
-                if ( node.isValid() == false || node.text() == nullptr )
+                if ( node.isValid() == false || node.getText() == nullptr )
                     return {};
-                return string{ StringUtil::trim( node.text() ) };
+                return string{ StringUtil::trim( node.getText() ) };
             }
 
             static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& outListEntry )
@@ -31,12 +31,12 @@ namespace sw
                 outListEntry.clear();
                 if ( parent.isValid() == false )
                     return;
-                XmlNode list = parent.child( "_enumEntries" );
+                XmlNode list = parent.findChild( "_enumEntries" );
                 if ( list.isValid() == false )
-                    list = parent.child( "enumEntries" );
+                    list = parent.findChild( "enumEntries" );
                 if ( list.isValid() == false )
                     return;
-                for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
+                for ( XmlNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     MaterialEnumEntry entry{};
                     entry._name            = MaterialUtil::fieldText( item, "name" );
@@ -57,7 +57,7 @@ namespace sw
                 outListItem.clear();
                 if ( list.isValid() == false )
                     return;
-                for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
+                for ( XmlNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     string itemText = nodeText( item );
                     if ( itemText.empty() )
@@ -92,10 +92,10 @@ namespace sw
         if ( node.isValid() == false || pName == nullptr )
             return {};
 
-        const utf8* pAttr = node.attribute( pName, false );
+        const utf8* pAttr = node.findAttribute( pName, false );
         if ( pAttr != nullptr )
             return string{ StringUtil::trim( pAttr ) };
-        const utf8* pText = node.childText( pName, false );
+        const utf8* pText = node.findChildText( pName, false );
         if ( pText != nullptr )
             return string{ StringUtil::trim( pText ) };
         return {};
@@ -195,7 +195,7 @@ namespace sw
         out = MaterialPermutationDesc{};
         if ( root.isValid() == false )
             return;
-        XmlNode perm = root.child( "_permutations" );
+        XmlNode perm = root.findChild( "_permutations" );
         if ( perm.isValid() == false )
             return;
 
@@ -217,13 +217,13 @@ namespace sw
                 out._usage = static_cast<MaterialUsageFlags>( pUsageEnum->stringFlagsToValue( usage ) );
         }
 
-        XmlNode always = perm.child( "_alwaysDefines" );
+        XmlNode always = perm.findChild( "_alwaysDefines" );
         MaterialXmlInternal::parseStringListItems( always, out._listAlwaysDefine );
 
-        XmlNode switches = perm.child( "_staticSwitches" );
+        XmlNode switches = perm.findChild( "_staticSwitches" );
         if ( switches.isValid() )
         {
-            for ( XmlNode item = switches.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialStaticSwitch entry{};
                 entry._name           = MaterialUtil::fieldText( item, "name" );
@@ -238,15 +238,15 @@ namespace sw
             }
         }
 
-        XmlNode multiCompileNode = perm.child( "_multiCompiles" );
+        XmlNode multiCompileNode = perm.findChild( "_multiCompiles" );
         if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = multiCompileNode.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialMultiCompile multiCompile{};
                 multiCompile._name     = MaterialUtil::fieldText( item, "name" );
                 multiCompile._selected = MaterialUtil::fieldText( item, "selected" );
-                XmlNode opts           = item.child( "_options" );
+                XmlNode opts           = item.findChild( "_options" );
                 MaterialXmlInternal::parseStringListItems( opts, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
                     out._listMultiCompile.push_back( std::move( multiCompile ) );
@@ -414,7 +414,7 @@ namespace sw
         if ( doc.parse( xmlText ) == false )
             return false;
 
-        XmlNode root = doc.root( "MaterialDesc" );
+        XmlNode root = doc.getRoot( "MaterialDesc" );
         if ( root.isValid() == false )
             return false;
 
@@ -427,10 +427,10 @@ namespace sw
         setShaderPath( MaterialUtil::fieldText( root, "shaderPath" ) );
         _desc._blendMode = MaterialUtil::fieldText( root, "blendMode" );
 
-        XmlNode props = root.child( "_properties" );
+        XmlNode props = root.findChild( "_properties" );
         if ( props.isValid() )
         {
-            for ( XmlNode item = props.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialProperty prop = MaterialUtil::parsePropertyNode( item );
                 if ( prop._name.empty() == false )

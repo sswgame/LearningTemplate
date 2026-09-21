@@ -91,7 +91,7 @@ namespace sw
         JsonImpl root{ nullptr };
     };
 
-    JsonType JsonValue::type() const
+    JsonType JsonValue::getType() const
     {
         const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
         if ( pValue == nullptr || pValue->is_null() )
@@ -183,7 +183,7 @@ namespace sw
         return pValue->size();
     }
 
-    vector<string> JsonValue::memberNames() const
+    vector<string> JsonValue::getMemberNames() const
     {
         vector<string>  listName;
         const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
@@ -388,7 +388,7 @@ namespace sw
         return loadResource( path, pOutAbsPath );
     }
 
-    JsonValue JsonDocument::root() const
+    JsonValue JsonDocument::getRoot() const
     {
         if ( _impl == nullptr )
             return {};
@@ -400,7 +400,7 @@ namespace sw
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->root = JsonImpl::object();
-        return root();
+        return getRoot();
     }
 
     JsonValue JsonDocument::makeArray()
@@ -408,7 +408,7 @@ namespace sw
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->root = JsonImpl::array();
-        return root();
+        return getRoot();
     }
 
     string JsonDocument::dump( int32 indent ) const
@@ -456,7 +456,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.parse( json ) == false )
             return {};
-        const JsonValue root = doc.root();
+        const JsonValue root = doc.getRoot();
         if ( root.isObject() == false )
             return {};
         const JsonValue field = root.get( fieldName, bIgnoreCaseKeys );

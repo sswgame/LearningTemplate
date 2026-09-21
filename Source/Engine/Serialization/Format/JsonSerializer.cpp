@@ -63,9 +63,9 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, pValPtr, typeName, ctx );
                     JsonDocument parsed;
-                    if ( parsed.parse( text.view() ) && parsed.root().isObject() == false && parsed.root().isArray() == false )
+                    if ( parsed.parse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false )
                     {
-                        dst.assignFrom( parsed.root() );
+                        dst.assignFrom( parsed.getRoot() );
                         return;
                     }
                     dst.setString( text.view() );
@@ -192,7 +192,7 @@ namespace sw
                         const JsonValue elem = items.at( elementIndex );
                         if ( elem.isObject() == false )
                             continue;
-                        const vector<string> listKey = elem.memberNames();
+                        const vector<string> listKey = elem.getMemberNames();
                         if ( listKey.size() != 1 )
                             continue;
                         const hashed_string typeName( listKey[0].c_str() );
@@ -230,7 +230,7 @@ namespace sw
                             return false;
 
                         // 래핑 형식 { "TypeName": {body} } 이면 그 안을 읽고, 아니면 elem 자체를 body 로 본다.
-                        const vector<string> listMember = elem.memberNames();
+                        const vector<string> listMember = elem.getMemberNames();
                         const bool           bWrapped =
                             ( listMember.size() == 1 &&
                               engine::getTypeRegistry().findType( hashed_string( listMember[0].c_str() ) ) != nullptr );
@@ -254,18 +254,18 @@ namespace sw
 
                 vector<uint8> listKBuf( pMapWrap->getKeySize() );
                 vector<uint8> listVBuf( pMapWrap->getValueSize() );
-                for ( const string& key : entries.memberNames() )
+                for ( const string& key : entries.getMemberNames() )
                 {
                     pMapWrap->defaultConstructKey( listKBuf.data() );
                     pMapWrap->defaultConstructValue( listVBuf.data() );
                     JsonDocument keyDoc;
-                    keyDoc.root().setString( key );
+                    keyDoc.getRoot().setString( key );
                     bool                                kOk{ false };
                     const SerializeContext::TextReadFn* pKeyReader = ctx.findTextReader( nested._keyTypeName );
                     if ( pKeyReader != nullptr )
                         kOk = ( *pKeyReader )( listKBuf.data(), key );
                     else
-                        kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.root(), ctx );
+                        kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.getRoot(), ctx );
 
                     bool            vOk{ false };
                     const JsonValue valJson = entries.get( key, false );
@@ -484,7 +484,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        return readObject( doc.root(), pInstance, typeInfo, nullptr, nullptr, ctx );
+        return readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, ctx );
     }
 
     void JsonSerializer::writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,
@@ -516,7 +516,7 @@ namespace sw
         if ( pOutVersion != nullptr )
             *pOutVersion = 0;
 
-        for ( const string& keyRaw : src.memberNames() )
+        for ( const string& keyRaw : src.getMemberNames() )
         {
             const JsonValue field = src.get( keyRaw, false );
             if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey, bIgnoreCaseKeys ) )
@@ -581,7 +581,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.parse( jsonStr ) == false )
             return false;
-        return readObject( doc.root(), pInstance, typeInfo, pOutListOrphan, pOutVersion, ctx );
+        return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, ctx );
     }
 
     string JsonSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

@@ -62,7 +62,7 @@ namespace sw
             return false;
         // 읽은 문서를 **그대로** 읽는다. 예전에는 `parseJson( doc.dump( -1 ) )` 이었다 —
         // 파일 전체를 문자열로 되돌렸다가 다시 파싱하는, 같은 일을 두 번 하는 경로였다.
-        return parseRoot( doc.root() );
+        return parseRoot( doc.getRoot() );
     }
 
     bool SequenceAsset::saveToFile( string_view path ) const
@@ -84,7 +84,7 @@ namespace sw
             *this = SequenceAsset{};
             return false;
         }
-        return parseRoot( doc.root() );
+        return parseRoot( doc.getRoot() );
     }
 
     bool SequenceAsset::parseRoot( const JsonValue& root )

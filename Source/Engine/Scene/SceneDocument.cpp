@@ -37,20 +37,20 @@ namespace sw
                 if ( node.isValid() == false )
                     return;
 
-                const utf8* pNodeName = node.name();
+                const utf8* pNodeName = node.getName();
                 if ( StringUtil::isNullOrEmpty( pNodeName ) )
                     return;
 
                 out.append( '<' ).append( pNodeName );
-                for ( XmlAttribute attr = node.firstAttribute(); attr; attr = attr.next() )
+                for ( XmlAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
                 {
-                    out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( XmlDocument::escapeString( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
+                    out.append( ' ' ).append( attr.getName() ).append( "=\"" ).append( XmlDocument::escapeString( attr.getValue() != nullptr ? attr.getValue() : "" ) ).append( '"' );
                 }
 
                 bool bHasElementChild = false;
-                for ( XmlNode child = node.child(); child; child = child.next() )
+                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    const utf8* pChildName = child.name();
+                    const utf8* pChildName = child.getName();
                     if ( StringUtil::isNullOrEmpty( pChildName ) == false )
                     {
                         bHasElementChild = true;
@@ -58,7 +58,7 @@ namespace sw
                     }
                 }
 
-                const bool bHasValue = StringUtil::isNullOrEmpty( node.text() ) == false;
+                const bool bHasValue = StringUtil::isNullOrEmpty( node.getText() ) == false;
                 if ( bHasElementChild == false && bHasValue == false )
                 {
                     out.append( "/>" );
@@ -67,11 +67,11 @@ namespace sw
 
                 out.append( '>' );
                 if ( bHasValue )
-                    out.append( XmlDocument::escapeString( node.text() ) );
+                    out.append( XmlDocument::escapeString( node.getText() ) );
 
-                for ( XmlNode child = node.child(); child; child = child.next() )
+                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    const utf8* pChildName = child.name();
+                    const utf8* pChildName = child.getName();
                     if ( StringUtil::isNullOrEmpty( pChildName ) == false )
                         appendNodeXml( out, child );
                 }
@@ -99,7 +99,7 @@ namespace sw
             return false;
         }
 
-        XmlNode root = doc.root( SceneDocumentInternal::kRoot );
+        XmlNode root = doc.getRoot( SceneDocumentInternal::kRoot );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing root <Scene>: %#", absPath );
@@ -113,38 +113,38 @@ namespace sw
             return false;
         }
 
-        const utf8* pSceneName = root.attribute( "name" );
+        const utf8* pSceneName = root.findAttribute( "name" );
         if ( pSceneName == nullptr )
-            pSceneName = root.childText( SceneDocumentInternal::kName );
+            pSceneName = root.findChildText( SceneDocumentInternal::kName );
 
         if ( pSceneName != nullptr )
             _name = pSceneName;
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        XmlNode entities = root.child( SceneDocumentInternal::kEntities );
+        XmlNode entities = root.findChild( SceneDocumentInternal::kEntities );
 
         if ( entities.isValid() )
         {
-            for ( XmlNode entityNode = entities.child( SceneDocumentInternal::kEntity ); entityNode.isValid();
-                  entityNode         = entityNode.next( SceneDocumentInternal::kEntity ) )
+            for ( XmlNode entityNode = entities.findChild( SceneDocumentInternal::kEntity ); entityNode.isValid();
+                  entityNode         = entityNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
                 EntityNode  node{};
-                const utf8* pName = entityNode.attribute( SceneDocumentInternal::kName );
+                const utf8* pName = entityNode.findAttribute( SceneDocumentInternal::kName );
                 if ( pName == nullptr )
-                    pName = entityNode.childText( SceneDocumentInternal::kName );
+                    pName = entityNode.findChildText( SceneDocumentInternal::kName );
                 if ( pName != nullptr )
                     node._name = pName;
 
-                const utf8* pPrefabGuid = entityNode.attribute( "prefabGuid" );
+                const utf8* pPrefabGuid = entityNode.findAttribute( "prefabGuid" );
                 if ( pPrefabGuid == nullptr )
-                    pPrefabGuid = entityNode.childText( "prefabGuid" );
+                    pPrefabGuid = entityNode.findChildText( "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
 
-                const utf8* pPrefab = entityNode.attribute( SceneDocumentInternal::kPrefab );
+                const utf8* pPrefab = entityNode.findAttribute( SceneDocumentInternal::kPrefab );
                 if ( pPrefab == nullptr )
-                    pPrefab = entityNode.childText( SceneDocumentInternal::kPrefab );
+                    pPrefab = entityNode.findChildText( SceneDocumentInternal::kPrefab );
                 if ( pPrefab != nullptr )
                     node._prefab = pPrefab;
 
@@ -160,7 +160,7 @@ namespace sw
                     }
                 }
 
-                XmlNode stateNode = entityNode.child( SceneDocumentInternal::kGameObject );
+                XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
                 if ( stateNode.isValid() )
                 {
                     StringBuilder<constant::kMaxBuffer8192> stateSb;
@@ -209,7 +209,7 @@ namespace sw
                 XmlDocument goDoc;
                 if ( goDoc.parse( entity._embeddedXml ) )
                 {
-                    XmlNode goRoot = goDoc.root();
+                    XmlNode goRoot = goDoc.getRoot();
                     if ( goRoot.isValid() )
                         entityNode.appendClone( goRoot );
                 }

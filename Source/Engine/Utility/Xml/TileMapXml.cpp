@@ -38,7 +38,7 @@ namespace sw
         if ( doc.parse( xml ) == false )
             return false;
 
-        XmlNode root = doc.root( "TileMap" );
+        XmlNode root = doc.getRoot( "TileMap" );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing <TileMap>" );
@@ -46,15 +46,15 @@ namespace sw
         }
 
         root.takeChildText( "name", _name );
-        _width  = root.childInt( "width", 0 );
-        _height = root.childInt( "height", 0 );
+        _width  = root.getChildInt( "width", 0 );
+        _height = root.getChildInt( "height", 0 );
         root.takeChildText( "scene", _scenePath );
         root.takeChildText( "role", _role );
-        XmlNode spawn = root.child( "spawn" );
+        XmlNode spawn = root.findChild( "spawn" );
         if ( spawn.isValid() )
         {
-            _spawnX = spawn.attributeInt( "x", _spawnX );
-            _spawnY = spawn.attributeInt( "y", _spawnY );
+            _spawnX = spawn.getAttributeInt( "x", _spawnX );
+            _spawnY = spawn.getAttributeInt( "y", _spawnY );
         }
 
         if ( _width <= 0 || _height <= 0 )
@@ -78,34 +78,34 @@ namespace sw
         _listPassThrough.assign( count, 0 );
         _listVisual.assign( count, Visual{} );
 
-        XmlNode tiles = root.child( "tiles" );
+        XmlNode tiles = root.findChild( "tiles" );
         if ( tiles.isValid() )
         {
             int32 index{ 0 };
-            for ( XmlNode tileNode = tiles.child( "t" ); tileNode && index < static_cast<int32>( count );
-                  tileNode         = tileNode.next( "t" ), ++index )
+            for ( XmlNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count );
+                  tileNode         = tileNode.findNextSibling( "t" ), ++index )
             {
-                const utf8*  pText             = tileNode.text();
+                const utf8*  pText             = tileNode.getText();
                 const size_t elementIndex      = static_cast<size_t>( index );
                 _listWalkable[elementIndex]    = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
-                _listEncounter[elementIndex]   = tileNode.attributeInt( "enc", 0 ) != 0 ? 1 : 0;
-                _listPassThrough[elementIndex] = tileNode.attributeInt( "pt", 0 ) != 0 ? 1 : 0;
+                _listEncounter[elementIndex]   = tileNode.getAttributeInt( "enc", 0 ) != 0 ? 1 : 0;
+                _listPassThrough[elementIndex] = tileNode.getAttributeInt( "pt", 0 ) != 0 ? 1 : 0;
 
                 Visual tileVisual{};
-                if ( tileNode.attribute( "h" ) != nullptr )
-                    tileVisual._height = static_cast<uint8>( tileNode.attributeInt( "h", 0 ) );
+                if ( tileNode.findAttribute( "h" ) != nullptr )
+                    tileVisual._height = static_cast<uint8>( tileNode.getAttributeInt( "h", 0 ) );
                 else
                     tileVisual._height = _listEncounter[elementIndex] != 0 ? 2 : ( _listWalkable[elementIndex] != 0 ? 1 : 0 );
 
-                if ( tileNode.attribute( "atlas" ) != nullptr )
-                    tileVisual._atlasId = static_cast<uint8>( tileNode.attributeInt( "atlas", 0 ) );
+                if ( tileNode.findAttribute( "atlas" ) != nullptr )
+                    tileVisual._atlasId = static_cast<uint8>( tileNode.getAttributeInt( "atlas", 0 ) );
 
-                const bool bHasTint = tileNode.attribute( "tr" ) != nullptr || tileNode.attribute( "tg" ) != nullptr || tileNode.attribute( "tb" ) != nullptr;
+                const bool bHasTint = tileNode.findAttribute( "tr" ) != nullptr || tileNode.findAttribute( "tg" ) != nullptr || tileNode.findAttribute( "tb" ) != nullptr;
                 if ( bHasTint )
                 {
-                    tileVisual._tintR = static_cast<uint8>( tileNode.attributeInt( "tr", 255 ) );
-                    tileVisual._tintG = static_cast<uint8>( tileNode.attributeInt( "tg", 255 ) );
-                    tileVisual._tintB = static_cast<uint8>( tileNode.attributeInt( "tb", 255 ) );
+                    tileVisual._tintR = static_cast<uint8>( tileNode.getAttributeInt( "tr", 255 ) );
+                    tileVisual._tintG = static_cast<uint8>( tileNode.getAttributeInt( "tg", 255 ) );
+                    tileVisual._tintB = static_cast<uint8>( tileNode.getAttributeInt( "tb", 255 ) );
                 }
                 else if ( _listEncounter[elementIndex] != 0 )
                 {
@@ -129,36 +129,36 @@ namespace sw
             }
         }
 
-        XmlNode warps = root.child( "warps" );
+        XmlNode warps = root.findChild( "warps" );
         if ( warps.isValid() )
         {
-            for ( XmlNode warpNode = warps.child( "warp" ); warpNode; warpNode = warpNode.next( "warp" ) )
+            for ( XmlNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
             {
                 Warp warp{};
-                warp._tileX      = warpNode.attributeInt( "x", 0 );
-                warp._tileY      = warpNode.attributeInt( "y", 0 );
-                const utf8* pMap = warpNode.attribute( "map" );
+                warp._tileX      = warpNode.getAttributeInt( "x", 0 );
+                warp._tileY      = warpNode.getAttributeInt( "y", 0 );
+                const utf8* pMap = warpNode.findAttribute( "map" );
                 if ( pMap != nullptr )
                     warp._targetMap = pMap;
-                warp._targetTileX = warpNode.attributeInt( "tx", 0 );
-                warp._targetTileY = warpNode.attributeInt( "ty", 0 );
-                const utf8* pPair = warpNode.attribute( "pair" );
+                warp._targetTileX = warpNode.getAttributeInt( "tx", 0 );
+                warp._targetTileY = warpNode.getAttributeInt( "ty", 0 );
+                const utf8* pPair = warpNode.findAttribute( "pair" );
                 if ( pPair != nullptr )
                     warp._pairId = pPair;
                 _listWarp.push_back( std::move( warp ) );
             }
         }
 
-        XmlNode encounters = root.child( "encounters" );
+        XmlNode encounters = root.findChild( "encounters" );
         if ( encounters.isValid() )
         {
-            for ( XmlNode encNode = encounters.child( "e" ); encNode; encNode = encNode.next( "e" ) )
+            for ( XmlNode encNode = encounters.findChild( "e" ); encNode; encNode = encNode.findNextSibling( "e" ) )
             {
                 Encounter   entry{};
-                const utf8* pId = encNode.attribute( "id" );
+                const utf8* pId = encNode.findAttribute( "id" );
                 if ( pId != nullptr )
                     entry._speciesId = pId;
-                entry._weight = encNode.attributeFloat( "weight", 0.f );
+                entry._weight = encNode.getAttributeFloat( "weight", 0.f );
                 if ( entry._speciesId.empty() == false )
                     _listEncounterEntry.push_back( std::move( entry ) );
             }

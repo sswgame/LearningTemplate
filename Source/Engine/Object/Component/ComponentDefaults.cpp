@@ -100,7 +100,7 @@ namespace sw
                 {
                     if ( name.empty() )
                         continue;
-                    XmlNode node = defaultsNode.child( name.c_str() );
+                    XmlNode node = defaultsNode.findChild( name.c_str() );
                     if ( node.isValid() )
                         return node;
                 }
@@ -174,11 +174,11 @@ namespace sw
         // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
         // 쪽의 몫이다.
 
-        XmlNode root = _defaultsDoc.root( "GameData" );
+        XmlNode root = _defaultsDoc.getRoot( "GameData" );
         if ( root.isValid() == false )
             return;
 
-        XmlNode defaultsNode = root.child( "Defaults" );
+        XmlNode defaultsNode = root.findChild( "Defaults" );
         if ( defaultsNode.isValid() == false )
             return;
 
@@ -203,8 +203,8 @@ namespace sw
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
-        const XmlNode root         = _defaultsDoc.root( "GameData" );
-        const XmlNode defaultsNode = root.isValid() ? root.child( "Defaults" ) : XmlNode{};
+        const XmlNode root         = _defaultsDoc.getRoot( "GameData" );
+        const XmlNode defaultsNode = root.isValid() ? root.findChild( "Defaults" ) : XmlNode{};
 
         for ( const TypeInfo* pLevelType : listType )
         {
@@ -237,7 +237,7 @@ namespace sw
             const utf8* pPropName = prop._name.c_str();
             if ( pPropName == nullptr )
                 return;
-            const utf8* pAttrVal = compNode.attribute( pPropName );
+            const utf8* pAttrVal = compNode.findAttribute( pPropName );
             if ( pAttrVal == nullptr )
             {
                 for ( const hashed_string& alias : prop._listAlias )
@@ -245,7 +245,7 @@ namespace sw
                     const utf8* pAliasName = alias.c_str();
                     if ( pAliasName == nullptr )
                         continue;
-                    pAttrVal = compNode.attribute( pAliasName );
+                    pAttrVal = compNode.findAttribute( pAliasName );
                     if ( pAttrVal != nullptr )
                         break;
                 }
