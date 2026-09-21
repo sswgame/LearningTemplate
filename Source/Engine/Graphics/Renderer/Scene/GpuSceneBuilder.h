@@ -126,8 +126,6 @@ namespace sw
         void sortTransparent( const float3& cameraPos );
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
-        /** @brief 직전 후보와 배치 키가 모두 같은지(= 트랜스폼만 달라졌는지) 확인합니다. */
-        bool hasSameBatchKeysAsBuilt() const;
         /**
          * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
          * @details 배치 키가 그대로고 투명 정렬 순서도 그대로일 때만 쓸 수 있다. 그 두 조건이 맞으면
@@ -246,6 +244,32 @@ namespace sw
         bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다 — 게임 스레드 전용(머티리얼의 지연 캐시를 건드린다). */
         static void stampPermutationHash( DrawCandidate& cand );
+        /** @brief 후보에서 GPU 인스턴스 페이로드(월드·바운드·블렌드·시드)를 채웁니다. 배치·머티리얼 인덱스는 손대지 않는다. */
+        static void fillPayload( const DrawCandidate& cand, GpuInstance& outInstance );
+        /**
+         * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다 (buildBatches 안).
+         * @details 불투명과 투명이 **같은 함수**를 쓴다. 예전에는 둘이 같은 40여 줄을 따로 들고 있어 한쪽에 넣은
+         *          고침(역매핑·회전 수·머티리얼 원소)이 다른 쪽에 안 가는 모양이었다. 다른 것은 인자로 준다 —
+         *          배치가 실을 머티리얼·인스턴스(불투명은 합치기 대표, 투명은 머리 후보의 것)와 블렌드 모드.
+         */
+        void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
+                        const shared_ptr<MaterialInstance>& instance );
+
+        /**
+         * @brief 전체 수집이 프리미티브 칸마다 남기는 표시 (비트).
+         * @details 워커가 자기 칸을 채우면서 **지난 후보와의 비교까지** 한 번에 끝낸다. 예전에는 직렬 패스 둘이
+         *          같은 8000 칸을 따로 지나갔다 — 해시 찍기(전부, 머티리얼 게터 둘씩) · 배치 키 비교(전부).
+         *          해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대) 의 함수라 셋이 같으면 지난 값이 그대로 맞다.
+         *          Release · 큐브 8000 전부 이동 · 300 프레임 ×2: 빌드 p50 786/851 → 720/720 us, 배치 키 비교
+         *          65~81 → 0, 수집은 늘지 않았다(245/262 → 229/245). raw 채우기는 여기 넣지 않는다 — `buildFromScene` 주석.
+         */
+        enum CollectFlag : uint8
+        {
+            kCollectIncluded    = 1u << 0, ///< 후보에 실린다
+            kCollectNeedsStamp  = 1u << 1, ///< 해시를 직렬 구간에서 찍어야 한다 (머티리얼·인스턴스·세대 중 하나가 달라졌다)
+            kCollectKeySame     = 1u << 2, ///< 지난 후보와 배치 키가 같다
+            kCollectContentSame = 1u << 3, ///< 지난 후보와 내용이 전부 같다
+        };
 
         /** @brief 후보 배열에 실리지 않은 프리미티브 표시. */
         static constexpr uint32 kInvalidCandidateIndex = 0xFFFFFFFFu;
@@ -253,8 +277,8 @@ namespace sw
         vector<uint32> _listDirtyPrimitive;
         /** @brief 등록부 인덱스 -> 후보 인덱스 (`kInvalidCandidateIndex` = 후보에 안 실림). */
         vector<uint32> _listPrimitiveToCandidate;
-        /// @brief 전체 수집이 프리미티브 번호 자리에 채운 뒤 "실렸는가" 표시 — 앞으로 당길 때 읽는다.
-        vector<uint8> _listCandidateIncluded;
+        /// @brief 전체 수집이 프리미티브 번호 자리에 남긴 `CollectFlag` — 앞으로 당길 때 읽는다.
+        vector<uint8> _listCollectFlag;
         /** @brief 후보 인덱스 -> 인스턴스 슬롯 (`kInvalidCandidateIndex` = 인스턴스 없음). `_listInstanceSrcIndex` 의 역이다. */
         vector<uint32> _listCandidateToInstance;
         /** @brief 마지막 수집이 만든 후보 수 — 부분 수집이 자리 수를 그대로 이어받는다. */
@@ -295,7 +319,9 @@ namespace sw
         };
 
         vector<SortEntry> _listScratchOpaqueEntry;
-        vector<uint32>    _listScratchTransparentIdx;
+        /// @brief 정렬된 불투명 항목의 후보 인덱스만 뽑은 것 — `emitBatch` 가 투명 쪽과 같은 모양으로 받는다.
+        vector<uint32> _listScratchOpaqueIdx;
+        vector<uint32> _listScratchTransparentIdx;
         /**
          * @brief 부분 업로드로 나눌 구간 수 상한. 넘으면 전체를 올린다.
          *
