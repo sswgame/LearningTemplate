@@ -176,16 +176,6 @@ namespace sw
         return string{ dirView };
     }
 
-    void FileUtil::getExtensionPart( string_view fileName, vector<string>& outListPart )
-    {
-        const string_splitter splitter{ fileName, { "." } };
-        outListPart.reserve( splitter.getCount() );
-        for ( string_view part : splitter.getSplitList() )
-        {
-            outListPart.push_back( string{ part } );
-        }
-    }
-
     void FileUtil::getExtension( string_view fileName, string_view& outExtension )
     {
         const size_t slash = fileName.find_last_of( "/\\" );

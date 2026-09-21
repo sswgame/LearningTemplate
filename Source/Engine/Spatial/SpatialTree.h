@@ -304,8 +304,7 @@ namespace sw
                 _pRoot->query( range, outListElement );
         }
 
-        size_t            getTotalElements() const { return _totalElements; }
-        const BoundsType& getWorldBounds() const { return _worldBounds; }
+        size_t getTotalElements() const { return _totalElements; }
 
     protected:
         struct Node

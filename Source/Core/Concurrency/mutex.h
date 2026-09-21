@@ -40,9 +40,6 @@ namespace sw
         /** @brief 보유한 락을 해제합니다. */
         void unlock();
 
-        /** @brief 조건 변수 등에 넘길 내부 std::mutex 입니다. 가급적 사용을 자제하세요. */
-        std::mutex& getStdMutex() { return _mutex; }
-
     private:
         void notifyIntended();
         void notifyAcquired();

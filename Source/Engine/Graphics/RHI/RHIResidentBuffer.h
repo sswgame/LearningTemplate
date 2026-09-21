@@ -30,8 +30,6 @@ namespace sw
         bool isResident() const { return _buffer != 0; }
         /** @brief 이 버퍼를 만들어 준 디바이스입니다. 통보 덕에 여기 남아 있다면 아직 살아 있습니다. */
         IRHIDevice* getLiveDevice() const { return isResident() ? _pDevice : nullptr; }
-        /** @brief 다른 디바이스의 것이면 true — 통보를 놓친 경로가 있는지 드러냅니다. */
-        bool isFromOtherDevice( const IRHIDevice* pDevice ) const { return _buffer != 0 && _pDevice != pDevice; }
         /** @brief 방금 만든 핸들을 현재 세대로 들입니다. */
         void adopt( IRHIDevice* pDevice, RHIBufferHandle buffer )
         {

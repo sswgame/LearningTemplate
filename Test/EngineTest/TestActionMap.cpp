@@ -366,7 +366,7 @@ SW_TEST_CASE( ActionMapTest, RingBufferZeroAllocation )
     {
         sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
         sb.append( "Action_" ).append( index );
-        actionMap.bufferAction( sb.view(), 0.5f );
+        actionMap.bufferAction( sw::hashed_string( sb.view() ), 0.5f );
     }
     SW_EXPECT_TRUE( actionMap.consumeBufferedAction( "Action_19" ) );
     SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
@@ -564,7 +564,7 @@ SW_TEST_CASE( ActionMapTest, LayerCacheStableAcrossMassiveDynamicRegistration )
     {
         sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
         sb.append( "Layer_" ).append( layerIndex );
-        actionMap.registerLayer( sb.view(), 0, true );
+        actionMap.registerLayer( sw::hashed_string( sb.view() ), 0, true );
     }
 
     // 3) 재할당 이후에도 EarlyAction의 레이어 활성 판정이 정확해야 한다.
@@ -606,8 +606,8 @@ SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
         sb.append( "Action_A_" ).append( actionIndex );
 
-        actionMap.bind( sb.view(), sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
-        const sw::ActionHandle handle = actionMap.getActionHandle( sb.view() );
+        actionMap.bind( sw::hashed_string( sb.view() ), sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
+        const sw::ActionHandle handle = actionMap.getActionHandle( sw::hashed_string( sb.view() ) );
         SW_EXPECT_TRUE( handle.isValid() );
         listHandle.push_back( handle );
     }
@@ -627,7 +627,7 @@ SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
     {
         sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
         sb.append( "Action_B_" ).append( actionIndex );
-        actionMap.bind( sb.view(), sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
+        actionMap.bind( sw::hashed_string( sb.view() ), sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
     }
 
     // 구버전 핸들은 새 액션 슬롯과 인덱스가 겹쳐도 세대 불일치로 절대 트리거되지 않아야 함

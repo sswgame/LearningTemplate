@@ -149,11 +149,6 @@ namespace sw
         return nullptr;
     }
 
-    const MonsterDef* MonsterDataCatalog::findMonster( const string& id ) const
-    {
-        return findMonster( hashed_string( id.c_str() ) );
-    }
-
     const unordered_map<hashed_string, MonsterDef>& MonsterDataCatalog::getAllMonsters() const
     {
         return _mapMonster;

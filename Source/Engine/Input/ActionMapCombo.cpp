@@ -14,11 +14,6 @@
 
 namespace sw
 {
-    void ActionMap::bufferAction( string_view action, float32 expirationSeconds )
-    {
-        bufferAction( hashed_string( action ), expirationSeconds );
-    }
-
     void ActionMap::bufferAction( const hashed_string& action, float32 expirationSeconds )
     {
         if ( action.empty() )
@@ -31,11 +26,6 @@ namespace sw
             ++_bufferedActionCount;
         else
             _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
-    }
-
-    bool ActionMap::consumeBufferedAction( string_view action )
-    {
-        return consumeBufferedAction( hashed_string( action ) );
     }
 
     bool ActionMap::consumeBufferedAction( const hashed_string& action )
@@ -92,22 +82,6 @@ namespace sw
         return matchIdx == 0;
     }
 
-    bool ActionMap::wasCommandSequenceTriggered( const vector<string>& listSequence, float32 maxWindowSeconds ) const
-    {
-        if ( listSequence.empty() )
-            return false;
-        vector<hashed_string> listHashed;
-        listHashed.reserve( listSequence.size() );
-        for ( const string& s : listSequence )
-            listHashed.push_back( hashed_string( s ) );
-        return wasCommandSequenceTriggered( listHashed, maxWindowSeconds );
-    }
-
-    bool ActionMap::wasCommandPatternTriggered( string_view pattern, float32 maxWindowSeconds ) const
-    {
-        return wasCommandPatternTriggered( hashed_string( pattern ), maxWindowSeconds );
-    }
-
     bool ActionMap::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
     {
         string_view patternText = pattern.view();
@@ -121,21 +95,21 @@ namespace sw
         {
             const utf8 character = patternText[index];
             if ( character == '2' )
-                listExpected.push_back( hashed_string( "Down" ) );
+                listExpected.push_back( "Down" );
             else if ( character == '3' )
-                listExpected.push_back( hashed_string( "DownRight" ) );
+                listExpected.push_back( "DownRight" );
             else if ( character == '6' )
-                listExpected.push_back( hashed_string( "Right" ) );
+                listExpected.push_back( "Right" );
             else if ( character == '4' )
-                listExpected.push_back( hashed_string( "Left" ) );
+                listExpected.push_back( "Left" );
             else if ( character == '1' )
-                listExpected.push_back( hashed_string( "DownLeft" ) );
+                listExpected.push_back( "DownLeft" );
             else if ( character == '7' )
-                listExpected.push_back( hashed_string( "UpLeft" ) );
+                listExpected.push_back( "UpLeft" );
             else if ( character == '8' )
-                listExpected.push_back( hashed_string( "Up" ) );
+                listExpected.push_back( "Up" );
             else if ( character == '9' )
-                listExpected.push_back( hashed_string( "UpRight" ) );
+                listExpected.push_back( "UpRight" );
             else
                 actionToken.push_back( character );
         }

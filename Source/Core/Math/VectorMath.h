@@ -347,7 +347,7 @@ namespace sw
         static float3 project( const float3& from, const float3& to ) noexcept;
 
         /** @brief 벡터의 다른 벡터에 대한 수직(Perpendicular) 성분을 구합니다. */
-        static float3 perpedicular( const float3& from, const float3& to ) noexcept;
+        static float3 perpendicular( const float3& from, const float3& to ) noexcept;
 
         /** @brief 노멀에 대한 입사 벡터의 굴절(Refraction) 벡터를 구합니다. */
         static float3 refract( const float3& source, const float3& normal, float32 refractionIndex ) noexcept;

@@ -264,7 +264,7 @@ namespace sw
         return direction * dotProduct;
     }
 
-    float3 float3::perpedicular( const float3& from, const float3& to ) noexcept
+    float3 float3::perpendicular( const float3& from, const float3& to ) noexcept
     {
         return from - project( from, to );
     }

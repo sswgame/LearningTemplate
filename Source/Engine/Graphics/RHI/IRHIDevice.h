@@ -276,9 +276,6 @@ namespace sw
          */
         void setParallelRecording( bool bEnable ) { _bParallelRecording = bEnable; }
 
-        /** @brief setParallelRecording 참고. 백엔드가 규칙 위반을 감지하는 데 쓴다. */
-        bool isParallelRecording() const { return _bParallelRecording; }
-
         /**
          * @brief 지금 리소스 테이블(bindless 레지스트리·텍스처 레코드)을 바꿔도 되는 시점인지 확인합니다.
          * @details 백엔드의 register/unregister 진입부에서 부른다. 규칙이 깨지면 로그를 남기고

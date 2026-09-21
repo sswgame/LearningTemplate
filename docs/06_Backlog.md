@@ -731,9 +731,9 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
-### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 헤더 선언 5367 → 5323)
+### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 헤더 선언 5367 → 5272)
 
-Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 두 커밋 뒤 5323 이다(같은 스크립트로 셈, 정규식이라 근사).
+Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 세 커밋 뒤 5272 이다(같은 스크립트로 셈, 정규식이라 근사).
 걷어낸 것은 "같은 일을 하는 두 번째 이름" 이다 — 파사드 복제, 반환형만 다른 오버로드, 타입마다 하나씩 있던 오버로드,
 반대로 읽히는 이름, 클래스 둘이 따로 쓰던 어휘.
 
@@ -765,10 +765,29 @@ Core·Engine 헤더의 함수 선언은 5367 개(구조체 708)였고 두 커밋
 - **`calculate*` → `compute*`** (6 개: Checksum · BlockCount · BitmaskBytes · Vector · Step · PackDefaultPriority).
   한 개념 한 동사 — `CheckFunctionVocabulary` 에 `calculate` / `calc` 를 금지어로 넣고 AGENTS.md · 04 문서 표에 줄을 더했다.
 
-**남은 것 — 다음 훑기가 볼 곳 (숫자는 헤더 선언 기준).** `ActionMap` 164 (이름·핸들·문자열 3중 오버로드 ×20 —
-`hashed_string` 이 문자열에서 암묵 변환되지 않아 `string_view` 판을 지우면 호출처 170 곳이 바뀐다, 보류),
-`FrameRenderer` 100, `InputManager` 65, `Archive` 81(형식별 `serializeXxxObject` 5 가족), `StringUtil` 73,
-`FileUtil` 55. `getCount`(6) 와 `getSize`(9) 가 컨테이너 밖에서 섞여 쓰인다 — 다음 후보.
+**3차 (같은 날) — 이름은 `hashed_string` 하나로, 그리고 호출처 0 인 것.**
+
+- **`hashed_string` 은 이제 문자열 리터럴에서 암묵 변환된다** (`isActionDown( "Jump" )`). 리터럴은 컴파일 타임에 정해진
+  유한 집합이라 intern 이 늘 수 없고, 포인터·`string_view`·`string` 에서의 변환은 그대로 explicit 이다 — 동적 텍스트를
+  이름으로 올리는 자리(XML 로더 `ActionMapSerialization`, 에디터 입력창)는 `hashed_string( x )` 로 눈에 보인다.
+  이 규칙 하나로 **`ActionMap` 의 `string_view` 쌍둥이 37 개**를 지웠고, `string_view` 만 있던 함수 22 개는
+  `const hashed_string&` 로 바꿨다(호출처 170 곳은 리터럴이라 손대지 않았다). 같은 이름에 `string_view` 판과
+  `hashed_string` 판을 둘 다 두면 리터럴 호출이 모호해지므로 그런 쌍은 앞으로 두지 않는다 — `MonsterDataCatalog::findMonster`
+  의 `string` 판이 바로 그렇게 걸려 지웠다. 액션·레이어 이름 상수(`ActionMapDefaults::k*`)는 `string_view` 에서
+  `utf8[]` 배열로 — 배열이라야 리터럴 생성자에 붙는다.
+- `ConcurrentQueue::getCount()`(= `size()` 별칭), `InputManager::setGamepadPollingEnabled()`(빈 함수), `FileUtil::getExtensionPart`
+  · `mutex::getStdMutex` · `FrameRenderer::getRenderPassManager` · `IRHIDevice::isParallelRecording` · `GpuUploadQueue::isParallel`
+  · `RHIResidentBuffer::isFromOtherDevice` · `Skeleton::getBones` · `Scene::getDefaultMaterialPath` · `SpatialTree::getWorldBounds`
+  · `DebugDrawQueue::getLineCount/getSphereCount` — 트리 어디에서도 부르지 않는 접근자를 지웠다. `float3::perpedicular` 는
+  오타라 `perpendicular` 로.
+- **호출처 0 을 찾는 스크립트의 함정.** `grep -v "Archive\.\(h\|cpp\)"` 는 `TestArchive.cpp` 까지 걸러 낸다 — 그래서
+  `Archive` 의 형식별 `serializeXxxObject` 5 가족을 "미사용" 으로 잘못 보고 지웠다가 되돌렸다. 테스트가 덮는 기능 API 라
+  **남긴다**. 헤더 선언 이름이 트리 전체에 한 번만 나오는 것을 세는 쪽이 맞다(그 목록엔 게임이 쓰라고 둔 세터도 섞여
+  있으니 하나씩 판단할 것).
+
+**남은 것 — 다음 훑기가 볼 곳.** `FrameRenderer` 100 은 이미 주제별 9 파일로 나뉘어 있고, 클래스를 쪼개도 함수가 옮겨질 뿐
+줄지 않아 손대지 않았다. `Archive` 형식별 가족은 위 이유로 남는다. `TaskArgs::getCount` · `GpuLightBuffer::getCount` ·
+`InputSnapshot::getCount` · `StringPool::getCount` 는 컨테이너가 아니라 "몇 개" 를 묻는 것이라 그대로 두었다.
 
 ### 2026-09-22 (`castTo` 를 5배 — 잠금·할당·이름 걷기를 등록 시점의 포인터 하나로)
 

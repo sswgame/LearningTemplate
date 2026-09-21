@@ -111,9 +111,16 @@ namespace sw
         explicit basic_hashed_string( const std::array<value_type, U>& scopedString ) noexcept
             : _stringKeyIndex{ helper( scopedString.data() ) } {}
 
-        /** @brief 리터럴 배열을 intern 하고 인덱스를 붙입니다. */
+        /**
+         * @brief 리터럴 배열을 intern 하고 인덱스를 붙입니다. **암묵 변환** — `isActionDown( "Jump" )` 가 된다.
+         * @details 리터럴은 컴파일 타임에 정해진 유한 집합이라 intern 이 늘어날 수 없다. 포인터·`string_view`·
+         *          `string` 에서의 변환은 그대로 explicit 이다 — 동적 텍스트를 이름으로 올리는 자리는 눈에 보여야 한다
+         *          (StringTable 처럼 조회만 하려는 텍스트를 intern 하면 그것이 곧 누수다).
+         *          같은 이름에 `string_view` 판과 `hashed_string` 판을 **둘 다** 두면 리터럴 호출이 모호해진다 —
+         *          그런 쌍은 두지 않는다(ActionMap 의 쌍 37 개를 이 규칙으로 걷어냈다).
+         */
         template <size_type U>
-        explicit basic_hashed_string( const value_type ( &str )[U] ) noexcept
+        basic_hashed_string( const value_type ( &str )[U] ) noexcept
             : _stringKeyIndex{ helper( str ) } {}
 
         /** @brief 널 종료 문자열을 intern 하고 인덱스를 붙입니다. */

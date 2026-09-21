@@ -977,7 +977,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
     // 1) MonsterDataCatalog fallback 및 조회 검증
     MonsterDataCatalog catalog;
     catalog.loadFromResource( "non_existent_monster.xml" );
-    const MonsterDef* pMonster = catalog.findMonster( hashed_string( "default_monster" ) );
+    const MonsterDef* pMonster = catalog.findMonster( "default_monster" );
     SW_ASSERT_NOT_NULL( pMonster );
     SW_EXPECT_EQUAL( string( "default_monster" ), pMonster->_id );
     SW_EXPECT_EQUAL( 100, pMonster->_hp );
@@ -1019,15 +1019,15 @@ SW_TEST_CASE( GameFrameworkTest, RuntimeHud_GenericGaugeMapSystem )
     SW_EXPECT_EQUAL( size_t( 0 ), hud.getAllGauges().size() );
 
     // 1) 게이지 등록 및 조회
-    hud.setGauge( hashed_string( "player_shield" ), 0.75f, 0.1f, 0.1f, 0.2f, 0.05f );
-    hud.setGauge( hashed_string( "turbo_boost" ), 0.5f );
+    hud.setGauge( "player_shield", 0.75f, 0.1f, 0.1f, 0.2f, 0.05f );
+    hud.setGauge( "turbo_boost", 0.5f );
 
     SW_EXPECT_EQUAL( size_t( 2 ), hud.getAllGauges().size() );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, hud.getGaugeFill( hashed_string( "player_shield" ) ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, hud.getGaugeFill( hashed_string( "turbo_boost" ) ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, hud.getGaugeFill( hashed_string( "unknown_gauge" ) ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, hud.getGaugeFill( "player_shield" ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, hud.getGaugeFill( "turbo_boost" ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, hud.getGaugeFill( "unknown_gauge" ), 1e-4f );
 
-    const HudGauge* pShield = hud.getGauge( hashed_string( "player_shield" ) );
+    const HudGauge* pShield = hud.getGauge( "player_shield" );
     SW_ASSERT_NOT_NULL( pShield );
     SW_EXPECT_NEAR_EQUAL( 0.1f, pShield->_x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.2f, pShield->_w, 1e-4f );
@@ -1139,7 +1139,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
     SW_EXPECT_FALSE( map.consumeBufferedAction( "Attack" ) ); // 1회 소비 후 소멸
 
     // 2) 커맨드 시퀀스
-    vector<string> listHadouken;
+    vector<sw::hashed_string> listHadouken;
     listHadouken.push_back( "Down" );
     listHadouken.push_back( "DownRight" );
     listHadouken.push_back( "Right" );
@@ -1536,7 +1536,7 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
 {
     sw::GameObjectManager manager;
 
-    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "Effect" ) );
+    sw::GameObject* pObj = manager.createGameObject( "Effect" );
     SW_ASSERT_NOT_NULL( pObj );
     manager.mergePendingAdds();
 
@@ -1546,7 +1546,7 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
     // `_duration` 은 공개 setter 가 없는 리플렉션 프로퍼티다.
     const sw::TypeInfo* pTypeInfo = pEffect->getTypeInfo();
     SW_ASSERT_NOT_NULL( pTypeInfo );
-    const sw::PropertyInfo* pDuration = pTypeInfo->findPropertyInHierarchy( sw::hashed_string( "duration" ) );
+    const sw::PropertyInfo* pDuration = pTypeInfo->findPropertyInHierarchy( "duration" );
     SW_ASSERT_NOT_NULL( pDuration );
     pDuration->setValue<float32>( pEffect, 0.01f );
 
@@ -2060,7 +2060,7 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 {
     GameObjectManager manager;
-    GameObject*       pObj = manager.createGameObject( hashed_string( "Faller" ) );
+    GameObject*       pObj = manager.createGameObject( "Faller" );
     SW_ASSERT_NOT_NULL( pObj );
     manager.mergePendingAdds();
 

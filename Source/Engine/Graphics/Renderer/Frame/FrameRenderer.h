@@ -86,7 +86,6 @@ namespace sw
          *          들고 있어 RHI 가 Renderer 를 include 했다. 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯,
          *          소유는 렌더러의 것이다.
          */
-        RenderPassManager* getRenderPassManager() const { return _renderPassManager.get(); }
 
         // ------------------------------------------------------------------------------
         // 2) 파이프라인 · 실행 — XML 로드, execute / executePacket

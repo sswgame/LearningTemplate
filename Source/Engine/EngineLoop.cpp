@@ -809,6 +809,6 @@ namespace sw
     {
         if ( _mapDebugAction == nullptr )
             return false;
-        return _mapDebugAction->wasActionTriggered( actionName );
+        return _mapDebugAction->wasActionTriggered( hashed_string( actionName ) );
     }
 } // namespace sw

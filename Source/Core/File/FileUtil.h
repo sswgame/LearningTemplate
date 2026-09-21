@@ -55,8 +55,6 @@ namespace sw
         static string getDirectoryPart( string_view fullPath );
         /** @brief 경로에서 디렉터리 부분의 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */
         static void getDirectoryPart( string_view fullPath, string_view& outDirectoryPath );
-        /** @brief 파일명의 확장자 토큰을 수집합니다. */
-        static void getExtensionPart( string_view fileName, vector<string>& outListPart );
         /** @brief 파일 경로의 마지막 확장자(예: ".hlsl")를 포함하여 반환합니다. 없을 경우 빈 문자열입니다. */
         static string getExtension( string_view fileName );
         /** @brief 파일 경로의 마지막 확장자 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */

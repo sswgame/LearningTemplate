@@ -80,20 +80,10 @@ namespace sw
 
 namespace sw
 {
-    string ActionMap::getGlyphForAction( string_view action ) const
-    {
-        return getGlyphForAction( hashed_string( action ) );
-    }
-
     string ActionMap::getGlyphForAction( const hashed_string& action ) const
     {
         const InputDeviceType device = _pInput != nullptr ? _pInput->getActiveDeviceType() : InputDeviceType::KeyboardMouse;
         return getGlyphForActionInternal( action, device );
-    }
-
-    string ActionMap::getGlyphForAction( string_view action, InputDeviceType previewDevice ) const
-    {
-        return getGlyphForAction( hashed_string( action ), previewDevice );
     }
 
     string ActionMap::getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const

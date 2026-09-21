@@ -87,9 +87,6 @@ namespace sw
         /** @brief 몬스터 ID로 정의를 조회합니다. */
         const MonsterDef* findMonster( const hashed_string& id ) const;
 
-        /** @brief 몬스터 ID(문자열)로 정의를 조회합니다. */
-        const MonsterDef* findMonster( const string& id ) const;
-
         /** @brief 전체 몬스터 테이블을 반환합니다. */
         const unordered_map<hashed_string, MonsterDef>& getAllMonsters() const;
 

@@ -163,7 +163,7 @@ namespace sw::editor
             {
                 if ( pActionMap->isActionDown( act ) )
                 {
-                    const string text = pActionMap->getGlyphForAction( act.view() ) + " " + string( act.c_str() );
+                    const string text = pActionMap->getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
                     pDrawList->AddText( ImVec2( boxMin.x + 150.0f * config._scale, boxMin.y + offsetY ), IM_COL32( 255, 220, 100, alphaByte ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )

@@ -151,7 +151,6 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseWheelAndEdges )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
-    input.setGamepadPollingEnabled( false );
 
     // 초기 휠 상태
     SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheel(), 1e-4f );
@@ -426,7 +425,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
 {
     sw::ConcurrentQueue<sw::RawInputEvent, 16> queue;
     SW_EXPECT_TRUE( queue.isEmpty() );
-    SW_EXPECT_EQUAL( 0u, queue.getCount() );
+    SW_EXPECT_EQUAL( 0u, queue.size() );
 
     // 1) 5개 아이템 Push
     for ( uint16 index = 0; index < 5; ++index )
@@ -434,7 +433,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
         SW_EXPECT_TRUE( queue.push( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
     }
     SW_EXPECT_FALSE( queue.isEmpty() );
-    SW_EXPECT_EQUAL( 5u, queue.getCount() );
+    SW_EXPECT_EQUAL( 5u, queue.size() );
 
     // 2) 2개 아이템 Pop
     sw::RawInputEvent item0{};
@@ -445,7 +444,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
     sw::RawInputEvent item1{};
     SW_EXPECT_TRUE( queue.pop( item1 ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( item1._payload._keyData._nativeVirtualKey ) );
-    SW_EXPECT_EQUAL( 3u, queue.getCount() );
+    SW_EXPECT_EQUAL( 3u, queue.size() );
 
     // 3) 나머지 3개 일괄 Drain
     sw::RawInputEvent arrDrained[8]{};

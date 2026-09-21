@@ -48,10 +48,6 @@ namespace sw
         const sw::vector<DebugLine>& getLines() const { return _listLine; }
         /** @brief 예약된 구체 목록을 반환합니다. */
         const sw::vector<DebugSphere>& getSpheres() const { return _listSphere; }
-        /** @brief 선 개수를 반환합니다. */
-        uint32 getLineCount() const { return static_cast<uint32>( _listLine.size() ); }
-        /** @brief 구체 개수를 반환합니다. */
-        uint32 getSphereCount() const { return static_cast<uint32>( _listSphere.size() ); }
 
     private:
         sw::vector<DebugLine>   _listLine;

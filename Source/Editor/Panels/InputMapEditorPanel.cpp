@@ -276,7 +276,7 @@ namespace sw::editor
                     bool bEnabled = _actionMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
                     {
-                        _actionMap.setLayerEnabled( layerName.view(), bEnabled );
+                        _actionMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
                         markDocumentDirty();
                     }
                     ImGui::PopID();
@@ -324,7 +324,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( pTrigName != nullptr ? pTrigName : "Unknown" );
 
                 ImGui::TableNextColumn();
-                const string glyph = _actionMap.getGlyphForAction( actionName.view() );
+                const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 EditorThemeUtil::textInfo( glyph.c_str() );
 
                 ImGui::TableNextColumn();
@@ -365,7 +365,7 @@ namespace sw::editor
                 ImGui::PushID( ( string( actionName.c_str() ) + "_reset" ).c_str() );
                 if ( ImGui::Button( "Reset" ) )
                 {
-                    _actionMap.resetActionToDefault( actionName.view() );
+                    _actionMap.resetActionToDefault( sw::hashed_string( actionName.view() ) );
                     markDocumentDirty();
                 }
                 ImGui::PopID();
@@ -390,7 +390,7 @@ namespace sw::editor
             {
                 static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
                 const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( _newActionValueType, 0, 2 )];
-                _actionMap.createAction( _newActionName.c_str(), valueType );
+                _actionMap.createAction( sw::hashed_string( _newActionName.c_str() ), valueType );
                 _newActionName = "";
                 markDocumentDirty();
             }
@@ -460,17 +460,17 @@ namespace sw::editor
     void InputMapEditorPanel::rebindSelectedAction( sw::Key newKey )
     {
         // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩 자신이 안다.
-        const sw::ActionBinding* pBinding = _actionMap.getBinding( _selectedAction.c_str(), _capturingBindIndex );
+        const sw::ActionBinding* pBinding = _actionMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
         const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
 
         sw::string conflictingAction;
-        if ( _actionMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), layer, conflictingAction ) && conflictingAction != _selectedAction )
+        if ( _actionMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
         {
             SW_LOG_WARNING( "'%#' 을(를) %# 에 바인딩합니다 — 같은 레이어의 '%#' 과(와) 겹칩니다.",
                             _selectedAction.c_str(), sw::KeyCodes::toName( newKey ), conflictingAction.c_str() );
         }
 
-        _actionMap.rebindKey( _selectedAction.c_str(), newKey, _capturingBindIndex );
+        _actionMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex );
         markDocumentDirty();
     }
 
@@ -671,14 +671,14 @@ namespace sw::editor
             for ( size_t idxA = 0; idxA < listAction.size(); ++idxA )
             {
                 const hashed_string& nameA  = listAction[idxA];
-                const string         glyphA = _actionMap.getGlyphForAction( nameA.view() );
+                const string         glyphA = _actionMap.getGlyphForAction( sw::hashed_string( nameA.view() ) );
                 if ( glyphA == "[ Unbound ]" || glyphA.empty() )
                     continue;
 
                 for ( size_t idxB = idxA + 1; idxB < listAction.size(); ++idxB )
                 {
                     const hashed_string& nameB  = listAction[idxB];
-                    const string         glyphB = _actionMap.getGlyphForAction( nameB.view() );
+                    const string         glyphB = _actionMap.getGlyphForAction( sw::hashed_string( nameB.view() ) );
 
                     if ( glyphA == glyphB )
                     {
@@ -707,7 +707,7 @@ namespace sw::editor
                         ImGui::PushID( static_cast<int32>( idxA * 1000 + idxB + 500 ) );
                         if ( ImGui::Button( "Unbind B" ) )
                         {
-                            _actionMap.rebindKey( nameB.c_str(), Key::Unknown, 0 );
+                            _actionMap.rebindKey( sw::hashed_string( nameB.c_str() ), Key::Unknown, 0 );
                             markDocumentDirty();
                         }
                         ImGui::PopID();
@@ -940,11 +940,11 @@ namespace sw::editor
                 ImGui::TextUnformatted( actionName.c_str() );
 
                 ImGui::TableNextColumn();
-                const string glyph = _actionMap.getGlyphForAction( actionName.view() );
+                const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 ImGui::TextUnformatted( glyph.c_str() );
 
                 ImGui::TableNextColumn();
-                const string previewGlyph = _actionMap.getGlyphForAction( actionName.view(), previewDevice );
+                const string previewGlyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ), previewDevice );
                 if ( _selectedGlyphPlatform == 0 )
                     ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", previewGlyph.c_str() );
                 else if ( _selectedGlyphPlatform == 1 )
@@ -1008,7 +1008,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Combo Pattern (Numpad Notation)", _testComboPattern, 150.0f );
 
         ImGui::SameLine();
-        const bool bPatternMatched = _actionMap.wasCommandPatternTriggered( _testComboPattern.c_str(), 0.8f );
+        const bool bPatternMatched = _actionMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f );
         if ( bPatternMatched )
             EditorThemeUtil::textSuccess( "MATCHED! (Success)" );
         else

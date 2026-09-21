@@ -55,8 +55,6 @@ namespace sw
 
         /** @brief 정점 셰이더에 올릴 최종 스키닝 행렬 배열입니다. */
         const vector<float4x4>& getSkinningMatrices() const { return _listSkinningMatrix; }
-        /** @brief 본 배열입니다. 부모는 항상 자식보다 앞에 있습니다. */
-        const vector<Bone>& getBones() const { return _listBone; }
         /** @brief 본 개수입니다. */
         size_t getBoneCount() const { return _listBone.size(); }
         /** @brief 본과 스키닝 행렬을 모두 비웁니다. */

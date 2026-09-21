@@ -73,9 +73,6 @@ namespace sw
         /** @brief 아직 만들지 않은 요청 수입니다. */
         uint32 getPendingCount() const { return static_cast<uint32>( _listPendingMesh.size() ); }
 
-        /** @brief 워커로 병렬 생성이 가능한 백엔드면 true (OpenGL 은 false). */
-        bool isParallel() const { return _bParallel == SW_TRUE; }
-
     private:
         /** @brief 워커가 쓰는 디바이스. 소유하지 않습니다. */
         IRHIDevice* _pDevice{ nullptr };

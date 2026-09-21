@@ -177,14 +177,14 @@ namespace sw
         bind( "Pause", GamepadButton::Start, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
     }
 
-    void ActionMap::createAction( string_view action, InputActionValueType valueType )
+    void ActionMap::createAction( const hashed_string& action, InputActionValueType valueType )
     {
         if ( action.empty() )
             return;
         getOrCreateAction( hashed_string( action ), valueType );
     }
 
-    void ActionMap::bind( string_view action, InputSlot slot, ActionTrigger trigger, string_view layer )
+    void ActionMap::bind( const hashed_string& action, InputSlot slot, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( action.empty() )
             return;
@@ -206,28 +206,28 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bind( string_view action, Key key, ActionTrigger trigger, string_view layer )
+    void ActionMap::bind( const hashed_string& action, Key key, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( key == Key::Unknown )
             return;
         bind( action, InputSlot::fromKey( key ), trigger, layer );
     }
 
-    void ActionMap::bind( string_view action, GamepadButton button, ActionTrigger trigger, string_view layer )
+    void ActionMap::bind( const hashed_string& action, GamepadButton button, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( button == GamepadButton::Count )
             return;
         bind( action, InputSlot::fromGamepadButton( button ), trigger, layer );
     }
 
-    void ActionMap::bind( string_view action, MouseButton mouse, ActionTrigger trigger, string_view layer )
+    void ActionMap::bind( const hashed_string& action, MouseButton mouse, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( mouse == MouseButton::Count )
             return;
         bind( action, InputSlot::fromMouseButton( mouse ), trigger, layer );
     }
 
-    void ActionMap::bindAxis1DComposite( string_view action, Key negativeKey, Key positiveKey, string_view layer )
+    void ActionMap::bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer )
     {
         if ( action.empty() )
             return;
@@ -250,11 +250,6 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    float32 ActionMap::getAxis1D( string_view action ) const
-    {
-        return getAxis1D( hashed_string( action ) );
-    }
-
     float32 ActionMap::getAxis1D( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
@@ -272,7 +267,7 @@ namespace sw
         return val < -1.0f ? -1.0f : ( val > 1.0f ? 1.0f : val );
     }
 
-    void ActionMap::bindVector2D( string_view action, Key up, Key down, Key left, Key right, float32 deadzone, string_view layer )
+    void ActionMap::bindVector2D( const hashed_string& action, Key up, Key down, Key left, Key right, float32 deadzone, const hashed_string& layer )
     {
         if ( action.empty() )
             return;
@@ -298,7 +293,7 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bindGamepadStick2D( string_view action, GamepadStick stick, float32 deadzone, string_view layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent )
+    void ActionMap::bindGamepadStick2D( const hashed_string& action, GamepadStick stick, float32 deadzone, const hashed_string& layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent )
     {
         if ( action.empty() )
             return;
@@ -322,11 +317,6 @@ namespace sw
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
-    }
-
-    float2 ActionMap::getVector2D( string_view action ) const
-    {
-        return getVector2D( hashed_string( action ) );
     }
 
     float2 ActionMap::getVector2D( const hashed_string& action ) const
@@ -354,11 +344,6 @@ namespace sw
         return val;
     }
 
-    void ActionMap::bindMouseDelta( string_view action, float32 sensitivity, string_view layer )
-    {
-        bindMouseDelta( hashed_string( action ), sensitivity, hashed_string( layer ) );
-    }
-
     void ActionMap::bindMouseDelta( const hashed_string& action, float32 sensitivity, const hashed_string& layer )
     {
         if ( action.empty() )
@@ -380,7 +365,7 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bindVirtualJoystick2D( string_view action, MouseButton activationButton, float32 radius, float32 deadzone, string_view layer, float32 outerDeadzone )
+    void ActionMap::bindVirtualJoystick2D( const hashed_string& action, MouseButton activationButton, float32 radius, float32 deadzone, const hashed_string& layer, float32 outerDeadzone )
     {
         if ( action.empty() || activationButton == MouseButton::Count )
             return;
@@ -405,11 +390,6 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bindShortcut( string_view action, Key key, uint8 modifierMask, ActionTrigger trigger, string_view layer )
-    {
-        bindShortcut( hashed_string( action ), key, modifierMask, trigger, hashed_string( layer ) );
-    }
-
     void ActionMap::bindShortcut( const hashed_string& action, Key key, uint8 modifierMask, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( action.empty() || key == Key::Unknown )
@@ -432,11 +412,6 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bindAnyKey( string_view action, string_view layer )
-    {
-        bindAnyKey( hashed_string( action ), hashed_string( layer ) );
-    }
-
     void ActionMap::bindAnyKey( const hashed_string& action, const hashed_string& layer )
     {
         if ( action.empty() )
@@ -457,7 +432,7 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    void ActionMap::bindChord( string_view action, Key modifierKey, Key triggerKey, ActionTrigger trigger, string_view layer )
+    void ActionMap::bindChord( const hashed_string& action, Key modifierKey, Key triggerKey, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( action.empty() || modifierKey == Key::Unknown || triggerKey == Key::Unknown )
             return;
@@ -480,11 +455,6 @@ namespace sw
         entry._listBindingState.push_back( ActionBindingState{} );
     }
 
-    bool ActionMap::isChordDown( string_view action ) const
-    {
-        return isChordDown( hashed_string( action ) );
-    }
-
     bool ActionMap::isChordDown( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
@@ -502,11 +472,6 @@ namespace sw
             }
         }
         return false;
-    }
-
-    bool ActionMap::wasChordTriggered( string_view action ) const
-    {
-        return wasChordTriggered( hashed_string( action ) );
     }
 
     bool ActionMap::wasChordTriggered( const hashed_string& action ) const
@@ -528,7 +493,7 @@ namespace sw
         return false;
     }
 
-    void ActionMap::bindActionCallback( string_view action, ActionTrigger trigger, ActionCallbackDelegate callback )
+    void ActionMap::bindActionCallback( const hashed_string& action, ActionTrigger trigger, ActionCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
             return;
@@ -539,7 +504,7 @@ namespace sw
         entry._listActionCallback.push_back( std::move( cbEntry ) );
     }
 
-    void ActionMap::bindPhaseCallback( string_view action, ActionPhase phase, ActionCallbackDelegate callback )
+    void ActionMap::bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
             return;
@@ -550,7 +515,7 @@ namespace sw
         entry._listPhaseCallback.push_back( std::move( cbEntry ) );
     }
 
-    void ActionMap::bindVector2DCallback( string_view action, Vector2DCallbackDelegate callback )
+    void ActionMap::bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
             return;
@@ -568,19 +533,19 @@ namespace sw
         }
     }
 
-    void ActionMap::registerLayer( string_view name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
+    void ActionMap::registerLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
     {
         ensureLayer( name, priority, enabled, blockLower, alwaysOn );
     }
 
-    void ActionMap::setLayerEnabled( string_view layer, bool enabled )
+    void ActionMap::setLayerEnabled( const hashed_string& layer, bool enabled )
     {
         LayerDef* pDef = findLayer( layer );
         if ( pDef != nullptr )
             pDef->_bEnabled = enabled ? SW_TRUE : SW_FALSE;
     }
 
-    void ActionMap::pushLayer( string_view layer, bool blockLower, bool showCursor )
+    void ActionMap::pushLayer( const hashed_string& layer, bool blockLower, bool showCursor )
     {
         const hashed_string hLayer( layer );
         ensureLayer( hLayer, 0, true, blockLower );
@@ -610,7 +575,7 @@ namespace sw
             _listLayerStack.pop_back();
     }
 
-    void ActionMap::popLayer( string_view layer )
+    void ActionMap::popLayer( const hashed_string& layer )
     {
         const hashed_string hLayer( layer );
         for ( auto it = _listLayerStack.rbegin(); it != _listLayerStack.rend(); ++it )
@@ -630,7 +595,7 @@ namespace sw
         return _defaultLayerName.view();
     }
 
-    void ActionMap::enableOnlyLayer( string_view layer )
+    void ActionMap::enableOnlyLayer( const hashed_string& layer )
     {
         const hashed_string hLayer( layer );
         for ( auto& [name, index] : _mapLayer )
@@ -644,17 +609,12 @@ namespace sw
         _listLayerStack.push_back( hLayer );
     }
 
-    void ActionMap::setToggleMode( string_view action, bool bToggle )
+    void ActionMap::setToggleMode( const hashed_string& action, bool bToggle )
     {
         ActionEntry& entry = getOrCreateAction( hashed_string( action ) );
         entry._bToggleMode = bToggle ? SW_TRUE : SW_FALSE;
         if ( bToggle == false )
             entry._bToggleState = SW_FALSE;
-    }
-
-    bool ActionMap::isActionToggled( string_view action ) const
-    {
-        return isActionToggled( hashed_string( action ) );
     }
 
     bool ActionMap::isActionToggled( const hashed_string& action ) const
@@ -663,7 +623,7 @@ namespace sw
         return pEntry != nullptr && pEntry->_bToggleState == SW_TRUE;
     }
 
-    bool ActionMap::rebindKey( string_view action, Key newKey, uint32 bindIndex )
+    bool ActionMap::rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
@@ -674,7 +634,7 @@ namespace sw
         return true;
     }
 
-    bool ActionMap::rebindSlot( string_view action, InputSlot slot, uint32 bindIndex )
+    bool ActionMap::rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
@@ -683,11 +643,6 @@ namespace sw
         pEntry->_listBinding[bindIndex]._kind       = BindingKind::SingleSlot;
         pEntry->_listBinding[bindIndex]._arrSlot[0] = slot;
         return true;
-    }
-
-    bool ActionMap::rebindWithResolution( string_view action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
-    {
-        return rebindWithResolution( hashed_string( action ), newSlot, strategy, bindIndex );
     }
 
     bool ActionMap::rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
@@ -748,7 +703,7 @@ namespace sw
         return true;
     }
 
-    bool ActionMap::hasBindingConflict( const InputSlot& slot, string_view layer, string& outConflictingAction ) const
+    bool ActionMap::hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const
     {
         const hashed_string targetLayer = layer.empty() ? _defaultLayerName : hashed_string( layer );
 
@@ -777,7 +732,7 @@ namespace sw
         return false;
     }
 
-    bool ActionMap::resetActionToDefault( string_view action )
+    bool ActionMap::resetActionToDefault( const hashed_string& action )
     {
         ActionEntry* pEntry = findAction( action );
         if ( pEntry == nullptr || pEntry->_listDefaultBinding.empty() )
@@ -817,29 +772,14 @@ namespace sw
         _holdThreshold = MathUtil::clamp( seconds, ActionMapDefaults::kHoldThresholdMin, ActionMapDefaults::kHoldThresholdMax );
     }
 
-    bool ActionMap::hasLayer( string_view layer ) const
-    {
-        return hasLayer( hashed_string( layer ) );
-    }
-
     bool ActionMap::hasLayer( const hashed_string& layer ) const
     {
         return _mapLayer.find( layer ) != _mapLayer.end();
     }
 
-    bool ActionMap::isLayerEnabled( string_view layer ) const
-    {
-        return isLayerActiveInternal( hashed_string( layer ) );
-    }
-
     bool ActionMap::isLayerEnabled( const hashed_string& layer ) const
     {
         return isLayerActiveInternal( layer );
-    }
-
-    int32 ActionMap::getLayerPriority( string_view layer ) const
-    {
-        return getLayerPriority( hashed_string( layer ) );
     }
 
     int32 ActionMap::getLayerPriority( const hashed_string& layer ) const
@@ -848,19 +788,9 @@ namespace sw
         return pDef != nullptr ? pDef->_priority : 0;
     }
 
-    bool ActionMap::hasAction( string_view action ) const
-    {
-        return hasAction( hashed_string( action ) );
-    }
-
     bool ActionMap::hasAction( const hashed_string& action ) const
     {
         return _mapAction.find( action ) != _mapAction.end();
-    }
-
-    ActionTrigger ActionMap::getBindingTrigger( string_view action, uint32 bindIndex ) const
-    {
-        return getBindingTrigger( hashed_string( action ), bindIndex );
     }
 
     ActionTrigger ActionMap::getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const
@@ -871,20 +801,10 @@ namespace sw
         return pEntry->_listBinding[bindIndex]._trigger;
     }
 
-    uint32 ActionMap::getBindingCount( string_view action ) const
-    {
-        return getBindingCount( hashed_string( action ) );
-    }
-
     uint32 ActionMap::getBindingCount( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
         return pEntry != nullptr ? static_cast<uint32>( pEntry->_listBinding.size() ) : 0;
-    }
-
-    const ActionBinding* ActionMap::getBinding( string_view action, uint32 bindIndex ) const
-    {
-        return getBinding( hashed_string( action ), bindIndex );
     }
 
     const ActionBinding* ActionMap::getBinding( const hashed_string& action, uint32 bindIndex ) const
@@ -895,31 +815,16 @@ namespace sw
         return &pEntry->_listBinding[bindIndex];
     }
 
-    bool ActionMap::wasActionTriggered( string_view action ) const
-    {
-        return wasActionTriggered( hashed_string( action ) );
-    }
-
     bool ActionMap::wasActionTriggered( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
         return pEntry != nullptr && pEntry->_bTriggered == SW_TRUE;
     }
 
-    bool ActionMap::isActionDown( string_view action ) const
-    {
-        return isActionDown( hashed_string( action ) );
-    }
-
     bool ActionMap::isActionDown( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
         return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
-    }
-
-    ActionHandle ActionMap::getActionHandle( string_view action ) const
-    {
-        return getActionHandle( hashed_string( action ) );
     }
 
     ActionHandle ActionMap::getActionHandle( const hashed_string& action ) const
@@ -953,11 +858,6 @@ namespace sw
         return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
     }
 
-    bool ActionMap::wasActionPressed( string_view action ) const
-    {
-        return wasActionPressed( hashed_string( action ) );
-    }
-
     bool ActionMap::wasActionPressed( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
@@ -968,11 +868,6 @@ namespace sw
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
         return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
-    }
-
-    bool ActionMap::wasActionReleased( string_view action ) const
-    {
-        return wasActionReleased( hashed_string( action ) );
     }
 
     bool ActionMap::wasActionReleased( const hashed_string& action ) const
@@ -987,11 +882,6 @@ namespace sw
         return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
     }
 
-    bool ActionMap::wasActionDoubleClicked( string_view action ) const
-    {
-        return wasActionDoubleClicked( hashed_string( action ) );
-    }
-
     bool ActionMap::wasActionDoubleClicked( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
@@ -1004,11 +894,6 @@ namespace sw
         return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
     }
 
-    bool ActionMap::wasActionHoldThreshold( string_view action ) const
-    {
-        return wasActionHoldThreshold( hashed_string( action ) );
-    }
-
     bool ActionMap::wasActionHoldThreshold( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
@@ -1019,11 +904,6 @@ namespace sw
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
         return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
-    }
-
-    float32 ActionMap::getActionHoldDuration( string_view action ) const
-    {
-        return getActionHoldDuration( hashed_string( action ) );
     }
 
     float32 ActionMap::getActionHoldDuration( const hashed_string& action ) const
@@ -1042,11 +922,6 @@ namespace sw
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
         return pEntry != nullptr ? pEntry->_currentValue : float2{ 0.0f, 0.0f };
-    }
-
-    ActionPhase ActionMap::getActionPhase( string_view action ) const
-    {
-        return getActionPhase( hashed_string( action ) );
     }
 
     ActionPhase ActionMap::getActionPhase( const hashed_string& action ) const

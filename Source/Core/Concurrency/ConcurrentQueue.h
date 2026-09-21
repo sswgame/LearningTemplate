@@ -190,9 +190,6 @@ namespace sw
             return ( tail - head );
         }
 
-        /** @brief getCount 별칭입니다 (size 호출). */
-        SW_INLINE uint32 getCount() const { return size(); }
-
         /** @brief 비어 있는지 반환합니다. */
         SW_INLINE bool empty() const { return size() == 0; }
         /** @brief isEmpty 별칭입니다 (empty 호출). */

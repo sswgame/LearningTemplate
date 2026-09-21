@@ -65,8 +65,6 @@ namespace sw
         const string& getName() const { return _name; }
         /** @brief 마지막 로드/저장 경로(리소스 상대 또는 절대)를 반환합니다. */
         const string& getSourcePath() const { return _sourcePath; }
-        /** @brief 기본 머티리얼 에셋 경로(MaterialCache 키)를 반환합니다. */
-        const string& getDefaultMaterialPath() const { return _defaultMaterialPath; }
         /** @brief 씬이 소유한 GameObjectManager 반환 */
         GameObjectManager* getObjectManager() const { return _objectManager.get(); }
         /** @brief MaterialCache에서 빌린 포인터(비소유)를 반환합니다. */

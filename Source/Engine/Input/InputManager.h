@@ -74,7 +74,7 @@ namespace sw
         bool postRawEvent( const RawInputEvent& rawEvent );
         /** @brief 대기 중인 원시 이벤트를 드레인합니다. */
         uint32 drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount );
-        uint32 getPendingRawEventCount() const { return _queueRawEvent.getCount(); }
+        uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
 
         // ------------------------------------------------------------------------------
         // 3) 다형적 디바이스 레지스트리 (Device Registry)
@@ -85,7 +85,6 @@ namespace sw
         KeyboardDevice* getKeyboard() const { return _pKeyboard; }
         MouseDevice*    getMouse() const { return _pMouse; }
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
-        void            setGamepadPollingEnabled( [[maybe_unused]] bool bEnabled ) {}
 
         // ------------------------------------------------------------------------------
         // 4) ActionMap & 장치 상태 조회

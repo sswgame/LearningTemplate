@@ -250,7 +250,7 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
         sbName.append( "StressAction_" ).append( index );
         const sw::string actionName( sbName.view() );
-        actionMap.bind( actionName, sw::Key::Space );
+        actionMap.bind( sw::hashed_string( actionName ), sw::Key::Space );
     }
 
     // 100개 액션 간 충돌 해결 (Override 전략)
@@ -259,7 +259,7 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
         sbName.append( "StressAction_" ).append( index );
         const sw::string actionName( sbName.view() );
-        actionMap.rebindWithResolution( actionName, sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
+        actionMap.rebindWithResolution( sw::hashed_string( actionName ), sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
     }
 
     SW_EXPECT_TRUE( actionMap.hasAction( "StressAction_0" ) );
