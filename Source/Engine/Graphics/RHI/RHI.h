@@ -19,6 +19,8 @@ namespace sw
 
 namespace sw
 {
+    class IRenderSurface;
+
     extern SW_API RHIBackend gv_rhiBackend;
 
     /**
@@ -66,8 +68,12 @@ namespace sw
         /** @brief 이동 대입을 금지합니다. */
         RHI& operator=( RHI&& ) = delete;
 
-        /** @brief 기본 백엔드로 디바이스를 초기화합니다. */
-        bool initialize();
+        /**
+         * @brief 기본 백엔드로 디바이스를 초기화합니다.
+         * @param pSurface 스왑체인을 걸 표면(보통 활성 `IWindow`). RHI 는 창 시스템을 모른다 — 호출자가 넘긴다.
+         *                 백엔드 교체(`recreateDevice`)도 같은 표면을 다시 쓴다.
+         */
+        bool initialize( IRenderSurface* pSurface );
         /** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. initialize 전에 호출합니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync ? SW_TRUE : SW_FALSE; }
         /** @brief 디바이스를 종료하고 모듈을 언로드합니다. */
@@ -115,6 +121,7 @@ namespace sw
 
     private:
         unique_ptr<IRHIDevice> _device;
+        IRenderSurface*        _pSurface;
 
         RHIBackend             _pendingRHIBackend;
         RHIBackend             _committedRHIBackend;

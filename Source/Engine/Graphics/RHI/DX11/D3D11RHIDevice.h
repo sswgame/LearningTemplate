@@ -94,7 +94,7 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief 스왑체인 뷰포트 크기 변경 */
-        void resize( uint32 width, uint32 height ) override;
+        void resizeInternal( uint32 width, uint32 height ) override;
 
         /** @brief 프레임 시작 (백버퍼 렌더 타깃 클리어) */
         void beginFrame( const float4& clearColor ) override;
@@ -401,7 +401,7 @@ namespace sw
 
         bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
         void shutdownInternal() override {}
-        void resize( uint32, uint32 ) override {}
+        void resizeInternal( uint32, uint32 ) override {}
         void beginFrame( const float4& ) override {}
         void endFrame( bool, bool = true ) override {}
 

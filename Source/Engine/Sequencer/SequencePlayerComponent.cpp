@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/SequencePlayerComponent.h"
+#include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "Core/Log/Logger.h"
 

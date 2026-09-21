@@ -63,7 +63,7 @@ namespace
             outWindow.reset();
             return false;
         }
-        outDevice->setInitialWindow( outWindow.get() );
+        outDevice->setRenderSurface( outWindow.get() );
         if ( outDevice->initialize() == false )
         {
             outDevice.reset();
@@ -2046,7 +2046,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitialWindow( window.get() );
+    device->setRenderSurface( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
     SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
 
@@ -2183,7 +2183,7 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
 
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitialWindow( window.get() );
+    device->setRenderSurface( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
 
     // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
@@ -2244,7 +2244,7 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     // 새 디바이스에는 **새로** 올라가야 한다. 옛 핸들을 그대로 돌려주면 그 드로우는 남의 버퍼를 읽는다.
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitialWindow( window.get() );
+    device->setRenderSurface( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );

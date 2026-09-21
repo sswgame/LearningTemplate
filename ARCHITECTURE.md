@@ -27,7 +27,12 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 - **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. `SW_RHI_AS_MODULES`는 CACHE FORCE로 OFF.
 
 ### Engine 내부 레이어
-순환(Reflection ↔ Graphics 등) 때문에 단일 라이브러리로 링크하되, include 방향은 아래로만 허용합니다. 상세·린트는 [Source/Engine/README.md](Source/Engine/README.md)와 `Scripts/lint/gate/CheckEngineLayers.py`를 참고하세요.
+단일 라이브러리로 링크하지만 폴더 간 include 그래프는 **DAG** 입니다(2026-09-21 부터 강결합 묶음 없음):
+토대(Common·Physics) → Reflection·Utility → Serialization → Config → Resource → Graphics(RHI·셰이더·GPU 에셋)·Window
+→ Object·Input → Scene·Sequencer → Graphics/Renderer·Module → 루트. 상용 엔진과 같은 선입니다 — **RHI 는 창을
+모르고(표면만 받는다), 월드는 렌더러를 모르고, 렌더러가 씬을 읽어 그립니다.** 상세·린트는
+[Source/Engine/README.md](Source/Engine/README.md)와 `Scripts/lint/gate/CheckEngineLayers.py`, 상용 엔진과의 대조는
+[docs/07_EngineStructureVsCommercial.md](docs/07_EngineStructureVsCommercial.md)를 참고하세요.
 
 ### 리소스 도메인
 - `Resource/engine/` — 엔진 기본 셰이더, 기본 텍스처, 파이프라인 에셋

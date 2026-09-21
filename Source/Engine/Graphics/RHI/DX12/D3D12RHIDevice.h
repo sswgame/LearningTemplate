@@ -245,7 +245,7 @@ namespace sw
         void collectTimestampsForSlot();
 
     public:
-        void resize( uint32 width, uint32 height ) override;
+        void resizeInternal( uint32 width, uint32 height ) override;
 
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
@@ -561,7 +561,7 @@ namespace sw
 
         bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
         void shutdownInternal() override {}
-        void resize( uint32, uint32 ) override {}
+        void resizeInternal( uint32, uint32 ) override {}
         void beginFrame( const float4& ) override {}
         void endFrame( bool, bool = true ) override {}
 

@@ -7,37 +7,47 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 ## 내부 티어 (허용 의존 방향)
 
 물리적으로 SHARED를 쪼개지 않은 상태이므로, 폴더 간 include 방향으로만 순환을 가둡니다.
-아래 표는 **include 그래프를 Tarjan SCC 로 줄여 위상 정렬해 얻은 것**입니다. 손으로 고른
-순서가 아니므로, 코드가 바뀌면 표도 다시 계산해야 합니다.
+아래 표는 **include 그래프를 위상 정렬해 얻은 것**입니다. 손으로 고른 순서가 아니므로, 코드가
+바뀌면 표도 다시 계산해야 합니다(`Scripts/lint/report/RunEngineLayerGraph.py`).
 
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
-| 0 | `Common` · `Physics` · `Utility` | 토대. Engine 의 어느 것도 참조하지 않는다. |
-| 1 | `Reflection` · `Animation` · `Audio` · `Localization` · `Spatial` | 리플렉션과, 코어가 쓰는 잎 서브시스템. |
-| 2 | `Serialization` · `Dialogue` | 리플렉션 위에 올라가는 직렬화. |
-| 3 | `Config` | 리플렉션·직렬화로 읽히고, 코어가 읽는다. |
-| 4 | `Graphics` · `Module` · `Object` · `Resource` · `Scene` · `Sequencer` · `Window` | **코어 묶음 — 강결합이다. 내부 순서는 없다.** |
-| 5 | `Input` | 코어 위에 올라가는 것. |
-| 6 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
+| 0 | `Common` · `Compression` · `Physics` | 토대. Engine 의 어느 것도 참조하지 않는다. |
+| 1 | `Audio` · `Reflection` · `Spatial` · `Utility` | 리플렉션과, 토대 위의 잎 서브시스템·헬퍼. |
+| 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
+| 3 | `Config` · `Dialogue` | 설정 — 리플렉션·직렬화로 읽힌다. |
+| 4 | `Resource` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. |
+| 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
+| 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
+| 7 | `Scene` · `Sequencer` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈. **월드는 액터를 알고 액터는 월드를 모른다.** |
+| 8 | `Graphics/Renderer` · `Module` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Bake)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. |
+| 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
-**티어 4 는 하나의 강결합 묶음입니다.** 일곱 폴더가 서로 도달 가능합니다 — 씬이 에셋을 읽고,
-컴포넌트가 머티리얼을 들고, 핫리로드가 씬의 TypeInfo 를 다시 묶고, 그래픽스가 스왑체인 때문에
-창을 압니다. 그러니 그 안의 **내부 순서를 주장하지 않습니다.** 거짓인 순서를 문서에 적어 두는
-것보다, 참인 경계(티어 간 방향)를 검사하는 편이 낫습니다. 남은 엣지와 푸는 순서는
-[docs/06_Backlog.md](../../docs/06_Backlog.md) 에 있습니다.
+**강결합 묶음은 이제 없습니다 (2026-09-21).** 이 표는 DAG 이고 `CheckEngineLayers` 가 그대로 강제합니다.
+다시 계산하려면 `py -3 Scripts/lint/report/RunEngineLayerGraph.py` — 게이트와 같은 규칙(prelude·배선 예외,
+`Graphics/Renderer` 분리)으로 묶음과 티어를 찍습니다. `Graphics` 만 폴더보다 잘게 봅니다: `Graphics/Renderer`
+는 위(8), 나머지 `Graphics` 는 아래(5) — 상용 엔진의 RHI/RenderCore ↔ Renderer 사이의 선과 같습니다.
+상용 엔진과 어디가 같고 어디가 다른지는 [docs/07_EngineStructureVsCommercial.md](../../docs/07_EngineStructureVsCommercial.md).
 
-> 이 묶음은 **열 개였습니다.** `Reflection`·`Serialization`·`Config` 가 끌려 들어가 있었고,
-> 원인은 세 줄이었습니다.
+> **일곱 폴더 묶음이 어떻게 풀렸나 (2026-09-21).** 엣지 다섯이었고 전부 "위층 것을 아래층이 들고 있던" 모양이었다.
 >
-> - 직렬화기가 `TagID`·`ComponentHandle` 때문에 `Object` 를 include 했습니다. 두 타입 모두
->   **Core 기능만 쓰는 값 타입**인데 `Object/Component/` 에 있었습니다 → `Core/String/TagID.h`,
->   `Core/Container/ComponentHandle.h` 로 내렸습니다(후자는 형제 `ObjectHandle` 옆입니다).
-> - `Reflection` 이 `ReflectAny`·`Rpc` 의 **인코딩** 때문에 `Serialization` 을 include 했습니다
->   → 규칙 하나로 정리했습니다: **리플렉션 타입의 인코딩은 Serialization 이 갖는다**
->   (`SerializeReflectAny.cpp`, `SerializeReflectionRpc.cpp`). 선언은 Reflection 에 남습니다.
-> - `EngineConfig` 가 `RHIBackend` **이름 하나** 때문에 `RHITypes.h`(732줄, 44개 타입)를 전부
->   끌어왔습니다 → `Config/RHIBackendType.h` 로 옮겼습니다. "어느 백엔드를 쓰는가" 는 설정값이고,
->   `Graphics` 는 이미 `Config` 를 참조합니다.
+> - `Object → Scene`: 핸들의 지연 해석이 활성 씬을 `SceneManager` 에게 물었다 → 슬롯은 Object 가 갖고 Scene 이
+>   채운다(`GameObjectManager::setActiveManager`, 언리얼 `GWorld` · Godot `SceneTree` 의 자리). 나머지 셋은 쓰지도
+>   않는 include 였다.
+> - `RHI → Renderer`: `IRHIDevice` 가 `RenderPassManager`(패스 **에셋** 캐시)를 소유했다 → `FrameRenderer` 가 소유한다.
+> - `Graphics → Window`: RHI 와 렌더러가 `IWindow::getActiveWindow()` 전역을 읽었다 → `Common/IRenderSurface` 를
+>   `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다(`RHI::initialize( surface )`). 렌더러의 첨부 크기는 창이 아니라
+>   디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)다.
+> - `Scene → Renderer`: `SceneManager` 가 에디터 툴바 하나를 위해 `FrameRenderer*` 를 들었다 → 렌더러는 호스트가
+>   내주는 선택 서비스다(`EngineServiceList.xxx` 의 `_pFrameRenderer`).
+> - `Object ↔ Sequencer` · `Shader → Renderer`: `SequencePlayerComponent` 는 `Sequencer/` 로, 베이크의 정책(무엇을 ·
+>   전부)은 `Renderer/Bake/ShaderBakeDriver` 로. 기능 모듈이 오브젝트 위에, 정책이 메커니즘 위에 있게 됐다.
+>
+> 그 전(2026-09-13)에는 **열 개**였고 `Reflection`·`Serialization`·`Config` 가 세 줄 때문에 끌려 들어가 있었다:
+> 직렬화기가 `TagID`·`ComponentHandle` 때문에 `Object` 를 include 했고(두 타입 모두 Core 기능만 쓰는 값 타입이라
+> `Core/String/TagID.h` · `Core/Container/ComponentHandle.h` 로 내렸다), `Reflection` 이 `ReflectAny`·`Rpc` 의
+> **인코딩** 때문에 `Serialization` 을 include 했고(규칙: 리플렉션 타입의 인코딩은 Serialization 이 갖는다),
+> `EngineConfig` 가 `RHIBackend` 이름 하나 때문에 `RHITypes.h` 전체를 끌어왔다(→ `Config/RHIBackendType.h`).
 
 티어가 아닌 것이 둘 있습니다. 검사도 이 둘을 예외로 둡니다.
 

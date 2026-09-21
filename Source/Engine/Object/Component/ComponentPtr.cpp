@@ -6,8 +6,6 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {

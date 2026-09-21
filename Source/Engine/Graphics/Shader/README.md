@@ -17,10 +17,12 @@ Shader/
 - `ShaderCompiler` — DXC / D3DCompiler 로 HLSL 을 DXIL · SPIR-V · DXBC 로 만듭니다.
 - `ShaderCache` — (경로 + define + 타깃) → 컴파일 결과. 파일이 바뀌면 다시 컴파일합니다.
   이름과 달리 `ResourceManager` 가 아닙니다 — 셰이더 바이트코드는 RHI/컴파일러 수명입니다.
-- `ShaderBaker` — 오프라인 베이크. `App.exe --bake-shaders` 가 여기를 부릅니다.
+- `ShaderBaker` — 오프라인 베이크의 **메커니즘**. 한 장을 굽고 이름을 짓는다. "무엇을 구울지" 와
+  "전부 굽기"(`App.exe --bake-shaders` 가 부르는 것)는 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라
+  `Renderer/Bake/ShaderBakeDriver` 에 있다 — 그래서 `Shader/` 는 `Renderer/` 를 include 하지 않는다.
   바이너리와 함께 **리플렉션 매니페스트**(`Reflection/ShaderReflectionLibrary`)도 굽습니다.
-  세 파일로 나뉘고 각자 입력이 다릅니다:
-  - `ShaderBakeRecipe` — **무엇을 구울지**. 파이프라인 XML 과 머티리얼을 훑어 `ShaderBakeRecipe` 목록을 만든다.
+  세 조각으로 나뉘고 각자 입력이 다릅니다:
+  - `Renderer/Bake/ShaderBakeRecipe.cpp` — **무엇을 구울지**. 파이프라인 XML 과 머티리얼을 훑어 `ShaderBakeRecipe` 목록을 만든다.
     런타임이 만드는 퍼뮤테이션과 어긋나면 Shipping 이 매니페스트 미스로 떨어지므로, define 합치기와 패스 기본 셰이더를
     고르는 규칙이 런타임과 같은 자리를 봐야 한다.
   - `ShaderBakeStamp` — **이미 최신인가**. 판정은 파일 시간이 아니라 **내용 해시**다(`bake.stamp`).

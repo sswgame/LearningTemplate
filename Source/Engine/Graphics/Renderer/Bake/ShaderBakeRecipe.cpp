@@ -1,7 +1,7 @@
 /**
  * @file ShaderBakeRecipe.cpp
  * @brief **무엇을 구울지** 정한다 — 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만든다.
- * @details 굽는 일(`ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문이다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
+ * @details 굽는 일(`Shader/Compile/ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문이다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
  *          저쪽 입력은 레시피 하나다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 에서
  *          매니페스트 미스로 떨어지므로, define 을 합치는 규칙(`mergeDefines`)과 패스 기본 셰이더를 고르는 규칙이
  *          런타임과 같은 자리를 봐야 한다 — 그 대조가 이 파일의 일이다.
@@ -13,6 +13,7 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
@@ -347,7 +348,7 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderBaker" );
 
-    void ShaderBaker::collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe )
+    void ShaderBakeDriver::collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe )
     {
         ShaderBakeRecipeInternal::collectAllRecipes( rootDir, outListRecipe );
     }

@@ -71,7 +71,8 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RHIStructuredBufferSlot` · `RHIConstantBufferSlot` | RHI/ | 버퍼 + 뷰/인덱스 한 벌 — 만들기·갱신·해제 순서를 타입이 안다. 구조버퍼는 용량이 변하고(`ensureCapacity`) 상수버퍼는 안 변한다(`create`) |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
 | `ShaderCompiler` · `ShaderCache` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
-| `ShaderBakeRecipe` · `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크 — 무엇을 구울지 · 이미 최신인지(내용 해시) · 굽고 이름 짓기 |
+| `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크의 **메커니즘** — 이미 최신인지(내용 해시) · 한 장 굽고 이름 짓기 |
+| `ShaderBakeDriver` (+ `ShaderBakeRecipe.cpp`) | Renderer/Bake/ | 오프라인 베이크의 **정책** — 무엇을 구울지(파이프라인 XML·머티리얼 → 레시피) · 전부 굽기. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |

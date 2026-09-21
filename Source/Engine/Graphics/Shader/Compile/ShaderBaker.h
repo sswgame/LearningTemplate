@@ -78,24 +78,8 @@ namespace sw
                                 const vector<string>* pListPermutation = nullptr,
                                 ShaderBakeResult*     pOutResult       = nullptr );
 
-        /**
-         * @brief 렌더 파이프라인 에셋(pipeline XML) 및 엔진 부트스트랩 데이터(enginedata.xml)를 기반으로
-         *        실제 게임 런타임에 필요한 셰이더와 순열(Permutations)만을 4대 RHI 바이너리로 일괄 베이킹합니다.
-         * @param resourceRoot 리소스 루트 디렉터리 (비어있으면 ResourceUtil 기준 자동 탐색)
-         * @param targetFormat 대상 포맷 (Count이면 DX11, DX12, Vulkan, OpenGL 전체 베이킹)
-         * @param bForceAll true이면 타임스탬프와 무관하게 전면 재컴파일
-         * @return 성공적으로 베이킹된 바이너리 파일 총 개수
-         */
-        static uint32 bakeAllShaders( string_view        resourceRoot = {},
-                                      ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
-                                      bool               bForceAll    = false );
-
-        /**
-         * @brief 이 리소스 트리가 구워야 할 레시피를 전부 모읍니다 (파이프라인 XML + 머티리얼).
-         * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 이 매니페스트 미스로 떨어진다 —
-         *          그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 자리를 봐야 한다.
-         */
-        static void collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe );
+        // "무엇을 구울지" 와 "전부 굽기" 는 여기 없다 — 파이프라인 XML·패스 종류를 아는 렌더러의 정책이라
+        // `Renderer/Bake/ShaderBakeDriver` 에 있다. 여기는 한 장을 굽는 법과 이름 짓기·최신 판정만 든다.
 
         /** @brief `bin/<rhi>/bake.stamp` 를 지금 소스의 내용 해시로 다시 씁니다 (베이크가 끝난 뒤). */
         static void writeBakeStamp( string_view binDirectory );

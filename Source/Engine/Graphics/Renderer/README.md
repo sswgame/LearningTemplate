@@ -13,6 +13,7 @@ Renderer/
   Frame/      실제로 그리는 것
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(라인/스피어 큐)
+  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(레시피) · 전부 굽기(드라이버). Shader/ 는 한 장을 굽는 법만 안다
   RenderThread.cpp/h   위를 구동하는 스레드
 ```
 

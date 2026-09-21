@@ -72,7 +72,7 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief glViewport 크기 변경 */
-        void resize( uint32 width, uint32 height ) override;
+        void resizeInternal( uint32 width, uint32 height ) override;
 
         /** @brief 프레임 시작 (glClearColor 및 glClear) */
         void beginFrame( const float4& clearColor ) override;

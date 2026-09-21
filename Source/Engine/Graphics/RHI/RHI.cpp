@@ -6,12 +6,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Common/IRenderSurface.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -158,6 +158,7 @@ namespace sw
 
     RHI::RHI()
         : _device{ nullptr }
+        , _pSurface{ nullptr }
         , _pendingRHIBackend{ RHIBackend::DirectX12 }
         , _committedRHIBackend{ RHIBackend::DirectX12 }
         , _bPreferredVSync{ SW_FALSE }
@@ -168,8 +169,9 @@ namespace sw
 
     RHI::~RHI() = default;
 
-    bool RHI::initialize()
+    bool RHI::initialize( IRenderSurface* pSurface )
     {
+        _pSurface = pSurface;
         // Priority: explicit CLI > current GVM value > OS default > first available
         RHIBackend currentBackend = gv_rhiBackend;
 
@@ -198,9 +200,7 @@ namespace sw
             return false;
         }
 
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow != nullptr )
-            _device->setInitialWindow( pWindow );
+        _device->setRenderSurface( _pSurface );
         _device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
         if ( _device->initialize() == false )
@@ -237,7 +237,6 @@ namespace sw
             return false;
         }
 
-        IWindow*         pWindow         = IWindow::getActiveWindow();
         const RHIBackend previousBackend = _committedRHIBackend;
 
         if ( _device )
@@ -250,16 +249,15 @@ namespace sw
 
         const RHICapabilities currentCaps  = RHIAvailability::query( backend );
         const RHICapabilities previousCaps = RHIAvailability::query( previousBackend );
-        if ( ( currentCaps._bRequiresWindowRecreate != SW_FALSE || previousCaps._bRequiresWindowRecreate != SW_FALSE ) && pWindow != nullptr )
-            pWindow->recreate();
+        if ( ( currentCaps._bRequiresWindowRecreate != SW_FALSE || previousCaps._bRequiresWindowRecreate != SW_FALSE ) && _pSurface != nullptr )
+            _pSurface->recreateSurface();
 
         gv_rhiBackend = backend;
         _device       = createDevice( backend );
         if ( _device == nullptr )
             return false;
 
-        if ( pWindow != nullptr )
-            _device->setInitialWindow( pWindow );
+        _device->setRenderSurface( _pSurface );
         _device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
         if ( _device->initialize() == false )

@@ -127,6 +127,16 @@ namespace sw
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getTaskManager() );
 
+        _renderPassManager = make_unique<RenderPassManager>();
+        if ( _renderPassManager->initialize() == false )
+        {
+            _renderPassManager.reset();
+            _status        = FrameRendererStatus::Failed;
+            _statusMessage = "RenderPassManager initialize failed";
+            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            return false;
+        }
+
         // 커맨드라인이 뷰 모드를 정했으면 여기서 받는다. 에디터가 있으면 툴바가 다시 덮어쓴다 —
         // 초기값이므로 순서가 맞다.
         if ( gv_viewMode > 0 )
@@ -136,7 +146,7 @@ namespace sw
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
         const EngineData&  engineData = engine::getEngineData();
-        RenderPassManager& rpm        = pDevice->getRenderPassManager();
+        RenderPassManager& rpm        = *_renderPassManager;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineData._defaultRenderPass );
 
@@ -260,6 +270,12 @@ namespace sw
         // 지우지 않으면 첫 프레임이 "이미 렌더타깃 상태" 로 믿고 배리어를 건너뛴다.
         _graphContext.reset();
         _frameCmd.reset();
+        // 패스·파이프라인 에셋은 위의 패스 자원·그래프가 놓은 **뒤에** 비운다 — 그쪽이 이 캐시의 포인터를 든다.
+        if ( _renderPassManager != nullptr )
+        {
+            _renderPassManager->shutdown();
+            _renderPassManager.reset();
+        }
         _pCmdOwnerDevice = nullptr;
         _pCmd            = nullptr;
         _frameCtx._pCmd  = nullptr;
@@ -285,9 +301,9 @@ namespace sw
             return false;
         }
 
-        if ( _pDevice != nullptr )
+        if ( _renderPassManager != nullptr )
         {
-            RenderPassManager& rpm = _pDevice->getRenderPassManager();
+            RenderPassManager& rpm = *_renderPassManager;
             rpm.loadPipeline( pipelineXmlPath );
             for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
             {

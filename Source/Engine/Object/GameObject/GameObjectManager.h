@@ -83,6 +83,18 @@ namespace sw
          */
         static GameObjectManager* resolveOwningManager( GameObjectManager* pPreferred );
 
+        /**
+         * @brief 활성 씬의 매니저를 **Object 층에** 알립니다. 씬 층(`SceneManager`)이 활성 씬을 바꿀 때 부릅니다.
+         * @details `resolveOwningManager` 의 폴백("붙잡아 둔 매니저가 없으면 활성 씬의 것")이 읽는 슬롯이다.
+         *          예전에는 그 질문을 `SceneManager` 에게 직접 했고, 그래서 Object 가 Scene 을 include 했다 —
+         *          월드가 액터를 아는 것은 맞지만 액터 층이 월드 관리자를 아는 것은 방향이 거꾸로다. 언리얼의
+         *          `GWorld` · Godot 의 `SceneTree` 처럼 **슬롯은 아래층이 갖고 위층이 채운다.** nullptr 을 주면
+         *          비운다. 매니저가 사라질 때는 스스로 슬롯에서 빠지므로 죽은 포인터가 남지 않는다.
+         */
+        static void setActiveManager( GameObjectManager* pManager );
+        /** @brief 활성 씬의 매니저. 씬 층이 채우기 전이거나 활성 씬이 없으면 nullptr. */
+        static GameObjectManager* getActiveManager();
+
         /** @brief 이름으로 GameObject를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
 
@@ -487,5 +499,8 @@ namespace sw
         PrimitiveRegistry _primitiveRegistry;
         /** @brief 빛 컴포넌트의 등록부. 같은 규칙으로 소유만 합니다. */
         LightRegistry _lightRegistry;
+
+        /** @brief 활성 씬의 매니저 슬롯 — `setActiveManager` 참고. 메인 스레드가 씬 전환 때만 쓴다. */
+        static GameObjectManager* _s_pActive;
     };
 } // namespace sw

@@ -60,4 +60,5 @@ SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfile
 // areEngineServicesBound() 가 영영 false 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다 —
 // 위 CommandStack 주석이 그 실례다. 진단용 목록 하나 때문에 그런 일이 나서는 안 된다.
 SW_ENGINE_SERVICE_OPT( _pRenderTargetRegistry, class, RenderTargetRegistry, getRenderTargetRegistry, 0, 1 )
+SW_ENGINE_SERVICE_OPT( _pFrameRenderer, class, FrameRenderer, getFrameRenderer, 0, 0 )
 

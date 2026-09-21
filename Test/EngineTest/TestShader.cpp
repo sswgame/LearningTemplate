@@ -3,6 +3,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
@@ -289,7 +290,7 @@ SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
     SW_EXPECT_FALSE( bBakeInvalid );
     SW_EXPECT_FALSE( result._bSuccess == SW_TRUE );
 
-    const uint32 bakedCount = sw::ShaderBaker::bakeAllShaders(
+    const uint32 bakedCount = sw::ShaderBakeDriver::bakeAllShaders(
         "invalid_resource_root_path_99999",
         sw::ShaderTargetFormat::DXIL_D3D12,
         false );

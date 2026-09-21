@@ -14,8 +14,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -364,6 +362,21 @@ namespace sw
     GameObjectManager::~GameObjectManager()
     {
         clear();
+        // 활성 슬롯이 나를 가리키고 있었다면 비운다 — 씬 층이 잊어도 죽은 포인터는 남지 않는다.
+        if ( _s_pActive == this )
+            _s_pActive = nullptr;
+    }
+
+    GameObjectManager* GameObjectManager::_s_pActive = nullptr;
+
+    void GameObjectManager::setActiveManager( GameObjectManager* pManager )
+    {
+        _s_pActive = pManager;
+    }
+
+    GameObjectManager* GameObjectManager::getActiveManager()
+    {
+        return _s_pActive;
     }
 
     /**
@@ -425,13 +438,9 @@ namespace sw
         if ( pPreferred != nullptr )
             return pPreferred;
 
-        // 붙잡아 둔 매니저가 없으면 활성 씬의 것을 쓴다. 서비스가 묶이기 전(테스트·초기화 중)에는
-        // 물어볼 곳이 없으므로 nullptr 이다 — 호출부는 그때 해석을 그냥 미룬다.
-        if ( engine::areEngineServicesBound() == false )
-            return nullptr;
-
-        Scene* pScene = engine::getSceneManager().getActiveScene();
-        return ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        // 붙잡아 둔 매니저가 없으면 활성 씬의 것을 쓴다. 씬 층이 슬롯을 채우기 전(테스트·초기화 중)에는
+        // nullptr 이다 — 호출부는 그때 해석을 그냥 미룬다. 씬 층에 직접 묻지 않는다(setActiveManager 참고).
+        return _s_pActive;
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const

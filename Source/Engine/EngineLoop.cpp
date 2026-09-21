@@ -28,6 +28,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
@@ -35,7 +36,6 @@
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
@@ -202,6 +202,8 @@ namespace sw
             services._pAudioSystem    = _audioSystem.get();
             services._pMemoryProfiler = _memoryProfiler.get();
             services._pCommandStack   = _commandStack.get();
+            // 렌더러는 씬이 아니라 **호스트**가 내준다 — 에디터가 뷰 모드를 바꾸려고 찾는 창구다.
+            services._pFrameRenderer = _frameRenderer.get();
 
             engine::bindEngineServices( services );
             engine::registerModuleTypes( "Engine" );
@@ -265,7 +267,7 @@ namespace sw
             {
                 _bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
-                ShaderBaker::bakeAllShaders();
+                ShaderBakeDriver::bakeAllShaders();
                 return true;
             }
 
@@ -306,7 +308,8 @@ namespace sw
 
             _rhi = make_unique<RHI>();
             _rhi->setPreferredVSync( pEngineConfig->_window._bVSync );
-            if ( _rhi->initialize() == false )
+            // RHI 는 창 시스템을 모른다 — 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
+            if ( _rhi->initialize( IWindow::getActiveWindow() ) == false )
                 return false;
             // GT 쪽 GpuScene 이 배치를 만든다 — 텍스처를 인덱스로 고를 수 있는 백엔드면 셰이더 타입 단위로 합친다(언리얼 GPUScene).
             // 백엔드가 정해졌으니 크래시 리포트에 남긴다 — 이 저장소는 백엔드가 넷이라 "어느
@@ -379,10 +382,7 @@ namespace sw
             }
 
             if ( _owned._pSceneManager != nullptr )
-            {
                 _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
-                _owned._pSceneManager->setFrameRenderer( _frameRenderer.get() );
-            }
         }
 
         _profileSession.begin();
@@ -397,10 +397,7 @@ namespace sw
         BLOCK( "RHI / Window 정리" )
         {
             if ( _owned._pSceneManager != nullptr )
-            {
-                _owned._pSceneManager->setFrameRenderer( nullptr );
                 _owned._pSceneManager->setRhiDevice( nullptr );
-            }
             if ( _renderThread != nullptr )
             {
                 _renderThread->waitIdle();
@@ -676,10 +673,7 @@ namespace sw
         BLOCK( "기존 RHI / Scene 리소스 정리" )
         {
             if ( _owned._pSceneManager != nullptr )
-            {
-                _owned._pSceneManager->setFrameRenderer( nullptr );
                 _owned._pSceneManager->setRhiDevice( nullptr );
-            }
             if ( _renderThread != nullptr )
                 _renderThread->stop();
             if ( _frameRenderer != nullptr )
@@ -739,10 +733,7 @@ namespace sw
         }
 
         if ( _owned._pSceneManager != nullptr )
-        {
             _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
-            _owned._pSceneManager->setFrameRenderer( _frameRenderer.get() );
-        }
 
         Scene* pScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )

@@ -24,7 +24,6 @@ namespace sw
         , _pActiveScene{ nullptr }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
-        , _pFrameRenderer{ nullptr }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _queuedPromise{}
@@ -101,7 +100,7 @@ namespace sw
             scene->shutdown();
         }
         _listLoadedScene.clear();
-        _pActiveScene = nullptr;
+        activateScene( nullptr );
 #if !defined( SW_SHIPPING )
         if ( engine::areEngineServicesBound() )
             engine::getCommandStack().clear();
@@ -121,7 +120,7 @@ namespace sw
 
         if ( _pActiveScene == nullptr )
         {
-            _pActiveScene = pScene;
+            activateScene( pScene );
             ++_sceneGeneration;
         }
 
@@ -135,7 +134,7 @@ namespace sw
         Scene*            pPrevious = _pActiveScene;
 
         _listLoadedScene.push_back( std::move( scene ) );
-        _pActiveScene = pScene;
+        activateScene( pScene );
         ++_sceneGeneration;
 
         if ( _pRHIDevice != nullptr )
@@ -393,7 +392,7 @@ namespace sw
         }
 
         Scene* const pPreviousActive = _pActiveScene;
-        _pActiveScene                = pendingScene.get();
+        activateScene( pendingScene.get() );
         _listLoadedScene.push_back( std::move( pendingScene ) );
         ++_sceneGeneration;
 
@@ -439,6 +438,12 @@ namespace sw
                _queuedPath.empty() == false;
     }
 
+    void SceneManager::activateScene( Scene* pScene )
+    {
+        _pActiveScene = pScene;
+        GameObjectManager::setActiveManager( ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr );
+    }
+
     /**
      * @brief 지정된 씬을 메모리에서 해제하고 로드된 씬 목록에서 제거합니다.
      */
@@ -448,7 +453,7 @@ namespace sw
             return;
 
         if ( _pActiveScene == pScene )
-            _pActiveScene = nullptr;
+            activateScene( nullptr );
 
         pScene->shutdown();
 

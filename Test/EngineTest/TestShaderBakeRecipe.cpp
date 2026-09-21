@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -51,7 +52,7 @@ SW_TEST_CASE( ShaderBakeRecipeTest, PassDefineReachesBakedRecipes )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::vector<sw::ShaderBakeRecipe> listRecipe;
-    sw::ShaderBaker::collectAllRecipes( sw::ResourceUtil::getRootFolderPath(), listRecipe );
+    sw::ShaderBakeDriver::collectAllRecipes( sw::ResourceUtil::getRootFolderPath(), listRecipe );
     SW_EXPECT_TRUE_MSG( listRecipe.empty() == false, "레시피를 하나도 모으지 못했다 — 리소스 루트를 못 찾았을 수 있다" );
     SW_ASSERT_TRUE( listRecipe.empty() == false );
 
@@ -78,7 +79,7 @@ SW_TEST_CASE( ShaderBakeRecipeTest, RecipesAreUnique )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::vector<sw::ShaderBakeRecipe> listRecipe;
-    sw::ShaderBaker::collectAllRecipes( sw::ResourceUtil::getRootFolderPath(), listRecipe );
+    sw::ShaderBakeDriver::collectAllRecipes( sw::ResourceUtil::getRootFolderPath(), listRecipe );
     SW_ASSERT_TRUE( listRecipe.empty() == false );
 
     uint32 duplicateCount = 0;

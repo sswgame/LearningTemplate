@@ -443,7 +443,7 @@ namespace sw
         _listImagesInFlight.clear();
     }
 
-    void VulkanRHIDevice::resize( uint32 width, uint32 height )
+    void VulkanRHIDevice::resizeInternal( uint32 width, uint32 height )
     {
         if ( _width == width && _height == height )
             return;

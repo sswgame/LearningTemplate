@@ -8,6 +8,7 @@ Engine 레이어 금지 include 검사.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
      (게임 쪽은 GameFramework/Base/GameService.h 의 game:: 만 사용).
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
+     `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
 
 티어는 **include 그래프에서 계산한 것**이다. 예전에는 손으로 고른 네 쌍(Utility->Graphics 등)만
 경고로 찍고 실패시키지 않았다 — 근거 없는 목록이라 늘릴 기준도 없고, 실패하지 않으니 쌓여도
@@ -77,22 +78,27 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
 # Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
 _kRootLayerName = "<root>"
 
+# 최상위 폴더보다 잘게 보는 유일한 자리 — Graphics 안의 "그리는 쪽". 아래 표의 설명 참고.
+_kGraphicsRendererLayerName = "Graphics/Renderer"
+
 # ------------------------------------------------------------------------------
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다. 같은 티어끼리는 서로 참조해도 된다.
 #
-# 이 표는 include 그래프를 Tarjan SCC 로 줄여 위상 정렬해서 얻었다. 손으로 고른 순서가 아니므로,
-# 코드가 바뀌면 표도 다시 계산해야 한다.
+# 이 표는 include 그래프를 위상 정렬해서 얻었다(`Scripts/lint/report/RunEngineLayerGraph.py` 가 같은
+# 규칙으로 다시 계산한다). 손으로 고른 순서가 아니므로, 코드가 바뀌면 표도 다시 계산해야 한다.
 #
-# **티어 4 의 일곱 폴더는 하나의 강결합 묶음이다.** Graphics·Module·Object·Resource·Scene·
-# Sequencer·Window 이 서로 도달 가능하다(씬이 에셋을 읽고, 컴포넌트가 머티리얼을 들고, 핫리로드가
-# 씬의 TypeInfo 를 다시 묶고, 그래픽스가 스왑체인 때문에 창을 안다). 그 안에는 지킬 수 있는
-# 순서가 없으므로 순서를 주장하지 않는다 — 남은 엣지와 푸는 순서는 docs/06_Backlog.md 에 있다.
+# **강결합 묶음은 없다 (2026-09-21).** 그래프가 DAG 라 모든 폴더에 참인 순서가 있다. 예전에는 티어 4
+# 가 일곱 폴더(Graphics·Module·Object·Resource·Scene·Sequencer·Window)의 묶음이었고, 그 안에서는
+# 순서를 주장하지 않았다. 묶음을 푼 엣지 다섯은 전부 "위층 것을 아래층이 들고 있던" 모양이었다 —
+# Object 가 SceneManager 에게 활성 씬을 묻고, RHI 디바이스가 렌더 패스 에셋 캐시를 소유하고, RHI 가
+# IWindow 전역을 읽고, SceneManager 가 FrameRenderer 를 들고, 셰이더 컴파일 폴더가 렌더러의 패스
+# 지식을 include 했다. 자세한 것은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
 #
-# 예전에는 이 묶음이 **열 개**였다. Reflection·Serialization·Config 가 끌려 들어가 있었고, 원인은
-# 세 줄이었다: 직렬화기가 TagID·ComponentHandle 때문에 Object 를 include 했고(두 타입 모두
-# Core 기능만 쓰는 값 타입인데 Object/Component/ 에 있었다), Reflection 이 ReflectAny·Rpc 의
-# 인코딩 때문에 Serialization 을 include 했고, EngineConfig 가 RHIBackend 이름 하나 때문에
-# RHITypes.h(732줄) 전체를 끌어왔다.
+# `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
+# RenderThread · Bake)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
+# Shader · Material · Mesh · Texture · Upload)는 컴포넌트가 드는 **디바이스와 GPU 에셋**이라 그 아래(5)
+# 다 — 언리얼의 RHI/RenderCore 와 Renderer 사이의 선이다. 그래서 RHI·Shader 가 Renderer 를 include 하면
+# 실패한다(`engineLayerOfInternal` 참고).
 # ------------------------------------------------------------------------------
 _kEngineTier: dict[str, int] = {
     # 0: 토대 — Engine 의 어느 것도 참조하지 않는다.
@@ -101,30 +107,34 @@ _kEngineTier: dict[str, int] = {
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
     "Physics": 0,
-    "Utility": 0,
-    # 1: 리플렉션과, 코어가 쓰는 잎 서브시스템.
-    "Animation": 1,
+    # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
     "Audio": 1,
-    "Localization": 1,
     "Reflection": 1,
     "Spatial": 1,
-    # 2: 리플렉션 위에 올라가는 직렬화.
-    "Dialogue": 2,
+    "Utility": 1,
+    # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
+    "Animation": 2,
+    "Localization": 2,
     "Serialization": 2,
-    # 3: 설정 — 리플렉션·직렬화로 읽히고, 코어가 읽는다.
+    # 3: 설정 — 리플렉션·직렬화로 읽힌다.
     "Config": 3,
-    # 4: 코어 묶음 (강결합). 내부 순서는 없다.
-    "Graphics": 4,
-    "Module": 4,
-    "Object": 4,
+    "Dialogue": 3,
+    # 4: 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다.
     "Resource": 4,
-    "Scene": 4,
-    "Sequencer": 4,
-    "Window": 4,
-    # 5: 코어 위에 올라가는 것.
-    "Input": 5,
-    # 6: 전부를 엮는 자리.
-    _kRootLayerName: 6,
+    # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
+    "Graphics": 5,
+    "Window": 5,
+    # 6: 컴포넌트 모델 · 입력. 컴포넌트가 머티리얼·메시(5)를 든다.
+    "Input": 6,
+    "Object": 6,
+    # 7: 월드와, 오브젝트 위에서 도는 기능 모듈. 월드는 액터를 알고 액터는 월드를 모른다.
+    "Scene": 7,
+    "Sequencer": 7,
+    # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
+    _kGraphicsRendererLayerName: 8,
+    "Module": 8,
+    # 9: 전부를 엮는 자리.
+    _kRootLayerName: 9,
 }
 
 # 티어가 아니라 **prelude·경로 헬퍼**인 헤더. 어느 티어에서 include 해도 된다.
@@ -156,6 +166,16 @@ def engineTierOfInternal(folderName: str) -> int | None:
     return _kEngineTier.get(folderName)
 
 
+def engineLayerOfInternal(engineRelativePath: str) -> str:
+    """Engine/ 아래 상대 경로 → 레이어 이름. `Graphics/Renderer/**` 만 최상위 폴더보다 잘게 본다."""
+    parts = engineRelativePath.split("/")
+    if len(parts) == 1:
+        return _kRootLayerName
+    if parts[0] == "Graphics" and len(parts) > 2 and parts[1] == "Renderer":
+        return _kGraphicsRendererLayerName
+    return parts[0]
+
+
 def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
     """파일 하나의 금지 include 와 티어 위반을 돌려줍니다. 읽지 못하면 `GateError` 입니다."""
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
@@ -184,7 +204,7 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
 
     enginePrefixLen = len(kDirSourceEngine) + 1
     engineRelativePath = relativeFilePath[enginePrefixLen:]
-    sourceLayer = engineRelativePath.split("/", 1)[0] if "/" in engineRelativePath else _kRootLayerName
+    sourceLayer = engineLayerOfInternal(engineRelativePath)
     sourceTier = engineTierOfInternal(sourceLayer)
     if sourceTier is None:
         fileViolations.append(f"{relativeFilePath}: Engine 최상위 폴더 '{sourceLayer}' 가 티어 표(_kEngineTier)에 없습니다.")
@@ -197,7 +217,7 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         if normalizedInclude in _kUbiquitousHeaders:
             continue
         destRelative = normalizedInclude[len("Engine/") :]
-        destLayer = destRelative.split("/", 1)[0] if "/" in destRelative else _kRootLayerName
+        destLayer = engineLayerOfInternal(destRelative)
         if destLayer == sourceLayer:
             continue
         destTier = engineTierOfInternal(destLayer)
@@ -225,6 +245,20 @@ class CheckEngineLayersGate(LintGate):
             "name": "Engine 이 Editor 를 include",
             "files": {
                 "Source/Engine/Scene/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Common/Workspace/EditorContext.h"\n',
+            },
+        },
+        {
+            # 액터 층이 월드 관리자를 아는 방향 — 2026-09-21 에 뗀 엣지가 되돌아오면 잡아야 한다.
+            "name": "Object 가 Scene 을 include (아래층이 위층을)",
+            "files": {
+                "Source/Engine/Object/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
+            },
+        },
+        {
+            # Graphics 안의 선 — 디바이스·셰이더가 그리는 쪽을 알면 안 된다.
+            "name": "Graphics 의 아래(RHI)가 Graphics/Renderer 를 include",
+            "files": {
+                "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"\n',
             },
         },
     ]

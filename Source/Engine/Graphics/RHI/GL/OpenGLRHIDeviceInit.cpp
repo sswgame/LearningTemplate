@@ -388,7 +388,7 @@ namespace sw
         SW_LOG_INFO( "OpenGL RHI Device Shutdown cleanly." );
     }
 
-    void OpenGLRHIDevice::resize( uint32 width, uint32 height )
+    void OpenGLRHIDevice::resizeInternal( uint32 width, uint32 height )
     {
         _width  = width;
         _height = height;

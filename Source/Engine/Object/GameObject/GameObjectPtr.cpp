@@ -5,8 +5,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {

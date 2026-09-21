@@ -9,7 +9,6 @@
 
 namespace sw
 {
-    class FrameRenderer;
     class IRHIDevice;
     class Scene;
 
@@ -64,20 +63,6 @@ namespace sw
 
         /** @brief 비동기 로드로 만든 씬 초기화에 쓸 디바이스를 설정합니다. */
         void setRhiDevice( IRHIDevice* pRhiDevice ) { _pRHIDevice = pRhiDevice; }
-        /**
-         * @brief App 이 소유한 FrameRenderer 를 연결합니다 (비소유).
-         * @details **씬에는 내려보내지 않는다** — 씬은 그리는 쪽을 모른다(Scene::tick 주석). 여기 두는 이유는
-         *          에디터 뷰포트 툴바가 뷰 모드를 바꾸려고 `getFrameRenderer()` 로 찾아오기 때문이고,
-         *          그 하나뿐이다.
-         */
-        void setFrameRenderer( FrameRenderer* pFrameRenderer ) { _pFrameRenderer = pFrameRenderer; }
-        /**
-         * @brief 현재 붙어 있는 FrameRenderer 입니다 (없으면 nullptr).
-         * @details 에디터가 렌더러 상태(뷰 모드 등)를 정할 때 쓰는 유일한 경로다 — Engine 은 Editor 를
-         *          include 할 수 없으므로 방향은 항상 Editor -> Engine 이다.
-         */
-        FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
-
         /** @brief 현재 활성화된(주요) 씬 반환 */
         Scene* getActiveScene() const { return _pActiveScene; }
         /** @brief 활성 씬이 바뀐 횟수입니다. 에디터가 로드/뉴 씬 동기화에 씁니다. */
@@ -92,6 +77,12 @@ namespace sw
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
+        /**
+         * @brief 활성 씬을 바꾸고 그 사실을 Object 층에 알립니다 — `_pActiveScene` 대입은 전부 여기로 온다.
+         * @details 핸들의 지연 해석은 Object 층의 활성 매니저 슬롯(`GameObjectManager::setActiveManager`)을
+         *          읽는다. 대입 자리가 다섯이라 한 곳이라도 슬롯을 빠뜨리면 그 씬의 핸들이 풀리지 않는다.
+         */
+        void activateScene( Scene* pScene );
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
          * @details 요청 경로와 대기열 경로가 **같은 자리**로 모이게 하려고 뽑았다 — 예전에는
@@ -116,7 +107,6 @@ namespace sw
         Scene*                    _pActiveScene;
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
-        FrameRenderer*            _pFrameRenderer;
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;

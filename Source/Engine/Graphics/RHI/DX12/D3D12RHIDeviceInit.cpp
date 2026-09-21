@@ -268,7 +268,7 @@ namespace sw
         _cbvDescriptorSize = 0;
     }
 
-    void D3D12RHIDevice::resize( uint32 width, uint32 height )
+    void D3D12RHIDevice::resizeInternal( uint32 width, uint32 height )
     {
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;

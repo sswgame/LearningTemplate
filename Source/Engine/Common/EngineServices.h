@@ -58,7 +58,8 @@ namespace sw
         /**
          * @brief `required=1` 인 매니저가 모두 바인딩되었는지 반환합니다.
          * @details 선택(`required=0`)인 것은 목록이 정본이다 — 지금은 `CommandStack`(Shipping 에
-         *          없다)과 `SW_ENGINE_SERVICE_OPT` 로 적힌 `MemoryProfiler` · `RenderTargetRegistry`.
+         *          없다)과 `SW_ENGINE_SERVICE_OPT` 로 적힌 `MemoryProfiler` · `RenderTargetRegistry` ·
+         *          `FrameRenderer`(호스트가 렌더러를 세운 뒤에만 있다 — 테스트 하네스에는 없다).
          *          **여기에 이름을 다시 적지 않는다** — 예전에는 존재하지도 않는 `GameData` 를
          *          선택 항목으로 적어 두고 있었다.
          */

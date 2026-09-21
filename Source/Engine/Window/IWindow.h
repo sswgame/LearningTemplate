@@ -3,6 +3,7 @@
  * @brief 플랫폼 독립적인 윈도우(OS 디스플레이 창) 생성 및 메시지 처리를 위한 인터페이스
  */
 #pragma once
+#include "Engine/Common/IRenderSurface.h"
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -17,14 +18,16 @@ namespace sw
      * @class IWindow
      * @brief 애플리케이션의 주 화면 또는 보조 화면을 추상화하는 기본 인터페이스입니다.
      * @details 플랫폼별(Windows, Linux, macOS 등) 구체 클래스는 이 인터페이스를 상속하여 구현합니다.
+     *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 본다 — `Graphics` 가 `Window` 를
+     *          include 하지 않는 이유다(Engine/Common/IRenderSurface.h).
      */
-    class SW_API IWindow
+    class SW_API IWindow : public IRenderSurface
     {
     public:
         /** @brief 빈 창 인터페이스. */
         IWindow();
         /** @brief 가상 소멸. */
-        virtual ~IWindow();
+        ~IWindow() override;
         /** @brief 복사를 금지합니다. */
         IWindow( const IWindow& ) = delete;
         /** @brief 대입을 금지합니다. */
@@ -74,6 +77,15 @@ namespace sw
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
         virtual uint32 getHeight() const { return _height; }
+
+        // ------------------------------------------------------------------------------
+        // IRenderSurface — RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
+        // ------------------------------------------------------------------------------
+        void*  getSurfaceHandle() const override { return getNativeHandle(); }
+        void*  getSurfaceDisplay() const override { return getNativeDisplay(); }
+        uint32 getSurfaceWidth() const override { return getWidth(); }
+        uint32 getSurfaceHeight() const override { return getHeight(); }
+        bool   recreateSurface() override { return recreate(); }
         /**
          * @brief 윈도우를 화면에 표시하거나 숨깁니다. **"보이기로 했다" 는 사실을 기억합니다.**
          * @details 이것은 가상이 아니다 — 의도를 기록하는 일을 플랫폼이 빠뜨릴 수 없게 한다.

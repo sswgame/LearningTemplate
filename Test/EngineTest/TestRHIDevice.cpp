@@ -42,7 +42,7 @@ namespace
             return false;
         }
 
-        outDevice->setInitialWindow( outWindow.get() );
+        outDevice->setRenderSurface( outWindow.get() );
         if ( outDevice->initialize() == false )
         {
             outDevice.reset();

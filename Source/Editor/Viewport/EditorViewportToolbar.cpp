@@ -16,7 +16,6 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -54,13 +53,15 @@ namespace sw::editor
             }
 
             /**
-             * @brief 지금 붙어 있는 FrameRenderer (없으면 nullptr).
-             * @details 씬이 없거나(스플래시 중) 디바이스를 다시 만드는 중에는 없다 — 그때 콤보는 비활성이다.
+             * @brief 호스트가 내준 FrameRenderer (없으면 nullptr).
+             * @details 렌더러는 **호스트 서비스**다(`EngineServiceList.xxx` 의 선택 행). 예전에는 `SceneManager`
+             *          가 렌더러 포인터를 들고 있었고 그 하나 때문에 씬 층이 렌더러를 알았다 — 월드는 그리는
+             *          쪽을 모르는 것이 맞다(Scene::tick 주석). 테스트 하네스처럼 렌더러가 없는 호스트에서는
+             *          nullptr 이고, 그때 콤보는 비활성이다.
              */
             static FrameRenderer* findFrameRenderer()
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                return ( pSceneManager != nullptr ) ? pSceneManager->getFrameRenderer() : nullptr;
+                return editor::getService<FrameRenderer>();
             }
         };
     } // namespace

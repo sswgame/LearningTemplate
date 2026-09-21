@@ -12,11 +12,10 @@
 namespace sw
 {
 
+    class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
     class IRHIResource;
-    class IWindow;
-    class RenderPassManager;
 
     /**
      * @class IRHIDevice
@@ -33,7 +32,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 가상 소멸. */
         virtual ~IRHIDevice();
-        /** @brief 빈 디바이스. initialize 전에 setInitialWindow. */
+        /** @brief 빈 디바이스. initialize 전에 setRenderSurface. */
         IRHIDevice();
         /** @brief 복사를 금지합니다. */
         IRHIDevice( const IRHIDevice& ) = delete;
@@ -42,7 +41,7 @@ namespace sw
 
         /** @brief 스왑체인 서술로 디바이스를 초기화합니다. */
         virtual bool initialize();
-        /** @brief 디바이스와 렌더 패스 매니저를 종료합니다. */
+        /** @brief 디바이스를 종료합니다. 자원을 든 쪽에는 내리기 전에 알립니다. */
         virtual void shutdown();
 
         /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
@@ -50,6 +49,9 @@ namespace sw
 
         /** @brief 디바이스를 종료하고 관련 리소스를 정리합니다. */
         virtual void shutdownInternal() = 0;
+
+        /** @brief 백버퍼(스왑체인)를 새 크기로 다시 만듭니다. `resize` 가 크기를 적은 뒤 부릅니다. */
+        virtual void resizeInternal( uint32 width, uint32 height ) = 0;
 
         /** @brief GPU의 대기 중인 작업을 모두 끝낼 때까지 기다립니다. */
         virtual void waitIdle() {}
@@ -112,8 +114,18 @@ namespace sw
             outListMicro.clear();
             return false;
         }
-        /** @brief 백버퍼 크기를 바꿉니다. */
-        virtual void          resize( uint32 width, uint32 height ) = 0;
+        /**
+         * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 답합니다.
+         * @details 크기를 여기 적어 두는 이유: 렌더러가 첨부 크기를 정할 때 **창에 묻지 않고 디바이스에 묻게**
+         *          하려는 것이다 — 렌더러가 보는 것은 스왑체인이지 OS 창이 아니다(언리얼 `FRHIViewport` 의 자리).
+         *          예전에는 `FrameRenderer` 가 `IWindow::getActiveWindow()` 전역을 읽었고, 그래서 Graphics 가
+         *          Window 를 include 했다.
+         */
+        void resize( uint32 width, uint32 height );
+        /** @brief 백버퍼 너비 — initialize 때의 표면 크기, 그 뒤로는 마지막 `resize` 값. */
+        uint32 getBackBufferWidth() const { return _backBufferWidth; }
+        /** @brief 백버퍼 높이 — initialize 때의 표면 크기, 그 뒤로는 마지막 `resize` 값. */
+        uint32                getBackBufferHeight() const { return _backBufferHeight; }
         virtual IRHIResource* getResource() { return nullptr; }
 
         /**
@@ -196,8 +208,8 @@ namespace sw
             return nullptr;
         }
 
-        /** @brief initializeInternal에 넘길 윈도우를 저장합니다. */
-        void setInitialWindow( IWindow* pWindow ) { _pInitWindow = pWindow; }
+        /** @brief 스왑체인을 걸 표면을 저장합니다. `initialize` 가 핸들·크기를 여기서 읽습니다. */
+        void setRenderSurface( IRenderSurface* pSurface ) { _pSurface = pSurface; }
         /** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. `initialize` 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
         /**
@@ -208,9 +220,6 @@ namespace sw
          *          그래서 `_bVSync: false` 설정으로도 프레임이 모니터 주사율에 묶여 있었다.
          */
         bool isVSyncEnabled() const { return _bPreferredVSync; }
-        /** @brief 디바이스가 소유한 RenderPassManager를 반환합니다. */
-        RenderPassManager& getRenderPassManager() const;
-
         // ------------------------------------------------------------------------------
         // 14) 커맨드 리스트 — 생성, 그래픽스 스레드에서만 execute
         // ------------------------------------------------------------------------------
@@ -292,9 +301,10 @@ namespace sw
         void noteBarrierDuringRecording( const utf8* pWhat ) const;
 
     protected:
-        IWindow*                      _pInitWindow;
-        unique_ptr<RenderPassManager> _renderPassManager;
-        bool                          _bPreferredVSync;
+        IRenderSurface* _pSurface;
+        uint32          _backBufferWidth;
+        uint32          _backBufferHeight;
+        bool            _bPreferredVSync;
         /// @brief setImmediateSubmit 참고 — 프레임 스트림을 자를 때마다 즉시 제출할지.
         bool _bImmediateSubmit;
         /// @brief setParallelRecording 참고 — 지금이 병렬 패스 기록 구간인가.

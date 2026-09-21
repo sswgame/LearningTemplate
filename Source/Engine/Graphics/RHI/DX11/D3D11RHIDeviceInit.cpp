@@ -221,7 +221,7 @@ namespace sw
         _device.Reset();
     }
 
-    void D3D11RHIDevice::resize( uint32 width, uint32 height )
+    void D3D11RHIDevice::resizeInternal( uint32 width, uint32 height )
     {
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;

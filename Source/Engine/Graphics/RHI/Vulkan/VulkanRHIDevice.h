@@ -174,7 +174,7 @@ namespace sw
         void waitIdle() override;
 
         /** @brief 스왑체인 재창조 */
-        void resize( uint32 width, uint32 height ) override;
+        void resizeInternal( uint32 width, uint32 height ) override;
         bool createRenderPass();
         /** @brief 프레임 시작 (vkAcquireNextImageKHR 및 커맨드버퍼 기록 시작) */
         void beginFrame( const float4& clearColor ) override;

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-21 · 기준 커밋 `3ae36793`
+> 마지막 갱신: 2026-09-21 · 기준 커밋 `3a535b9e`
 
 ---
 
@@ -507,6 +507,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-21 (Engine 구조를 상용 엔진과 대조해 고쳤다 — 코어의 강결합 묶음 7 → 0)
+
+기준은 하나였다: **의존 방향이 언리얼·Unity·Godot 과 같은가.** 폴더 이름이 아니라 "누가 누구를 아는가" 다. 층별
+대조표와 판단은 [docs/07_EngineStructureVsCommercial.md](07_EngineStructureVsCommercial.md) 에 있고, 여기는 한 일과
+근거만 적는다.
+
+**결과.** Engine 코어의 강결합 묶음(`Graphics` `Module` `Object` `Resource` `Scene` `Sequencer` `Window` 일곱)이
+**사라졌다** — 폴더 간 include 그래프가 DAG 다. 티어 10 개 전부에 참인 순서가 있고 `CheckEngineLayers` 가 그대로
+강제한다(`Graphics/Renderer` 는 폴더보다 잘게 본다: 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래 — 언리얼의
+RHI/RenderCore ↔ Renderer 의 선). 다시 재는 도구는 새로 넣었다: `py -3 Scripts/lint/report/RunEngineLayerGraph.py`
+(게이트 모듈의 규칙을 그대로 import 해서 묶음·티어를 찍고, 게이트 표와 다르면 표시한다).
+
+**뗀 엣지 다섯 — 전부 "위층 것을 아래층이 들고 있던" 모양이었다.**
+
+1. `Object → Scene`: `resolveOwningManager` 의 폴백이 `SceneManager` 에게 활성 씬을 물었다(나머지 세 파일의 include 는
+   쓰지도 않았다). → 슬롯은 Object 가 갖고 Scene 이 채운다(`GameObjectManager::setActiveManager`, 언리얼 `GWorld` 의
+   자리). `SceneManager::activateScene` 이 `_pActiveScene` 대입 다섯 자리를 하나로 모은다. 매니저 소멸자가 자기 슬롯을
+   비우므로 죽은 포인터는 남지 않는다.
+2. `RHI → Renderer`: `IRHIDevice` 가 `RenderPassManager`(패스 **에셋** 캐시)를 소유했고, 쓰는 곳은 `FrameRenderer`
+   둘뿐이었다. → `FrameRenderer` 가 소유(패스 자원·그래프를 놓은 **뒤에** 비운다 — 그쪽이 캐시의 포인터를 든다).
+3. `Graphics → Window`: RHI 파사드·디바이스·렌더러 셋이 `IWindow::getActiveWindow()` 전역을 읽었다. → `Common/IRenderSurface`
+   (핸들·디스플레이·크기·재생성 훅)를 `IWindow` 가 구현하고 `EngineLoop` 이 `RHI::initialize( surface )` 로 넘긴다.
+   렌더러의 첨부 크기는 창이 아니라 디바이스의 백버퍼 크기 — `IRHIDevice::resize` 가 적어 두고 `resizeInternal` 이
+   백엔드로 내려간다(`initialize/initializeInternal` 과 같은 모양, 백엔드 넷 + 스텁 둘 이름만 바뀜).
+4. `Scene → Renderer`: `SceneManager::set/getFrameRenderer` 의 소비자는 에디터 뷰포트 툴바 하나. → 렌더러는 호스트가
+   내주는 **선택 서비스**(`EngineServiceList.xxx` 의 `_pFrameRenderer`, owned=0). 테스트 하네스에는 없다.
+5. `Object ↔ Sequencer` · `Shader → Renderer`: `SequencePlayerComponent` 두 파일을 `Sequencer/` 로(기능 모듈은 오브젝트
+   위). 베이크의 정책(`collectAllRecipes` · `bakeAllShaders`)을 `Renderer/Bake/ShaderBakeDriver` 로 — `Shader/Compile/ShaderBaker`
+   에는 한 장 굽기·이름 짓기·최신 판정만 남는다(정책이 메커니즘 위). `ShaderBaker.cpp` 의 Renderer include 둘은 쓰지도
+   않는 것이었다.
+
+**같아서 두는 것 (다시 제안하지 말 것).** 컴포넌트가 머티리얼·메시를 드는 것(언리얼도 그렇다) · 렌더러가 컴포넌트 등록부를
+읽는 것(`FScene` 의 방향) · `EngineLoop` 의 크기 · `Scene` 의 기본 머티리얼 · `Dialogue`/`Sequencer` 가 Engine 안에 있는 것 ·
+물리 모듈 분할(별 PR — 이제 그래프가 DAG 라 어디를 잘라도 순환이 없다). 이유는 07 문서 4절.
+
+**되돌아오는 길을 막았다.** 게이트 자가 검사에 "Object 가 Scene 을 include" · "RHI 가 Graphics/Renderer 를 include" 두 조각을
+더했다(`CheckLintsAreAlive` 30 케이스 / 17 게이트).
+
+**검증.** 윈도우 `Ninja-Debug`: 빌드 경고 0(이 변경으로 난 것 없음 — `-Wnrvo` 넷은 손대지 않은 `ResourceUtil.cpp` · `TestAppSmoke.cpp` 의 기존 것) · `ctest -L nogpu` 7/7 · `ctest -L hostgpu` 2/2 — RHIDeviceTest · RenderPassGpuTest · WindowTest · AppSmokeTest(네 백엔드 + 에디터). RHI/창 경계와 디바이스 `resize` 경로를 바꾼 뒤라 **이 hostgpu 가 핵심 검증**이다. `Ninja-Shipping`: 빌드 · nogpu 7/7 · hostgpu 2/2. 린트 스위트 20/20(`CheckLintsAreAlive` 30 케이스 — 새 자가 검사 둘 포함; 스위트를 Shipping 빌드와 같이 돌려 두 게이트가 타임아웃으로 찍혔고 직접 돌리니 OK). `RunEngineLayerGraph.py`: 묶음 없음, 계산한 티어 = 게이트 표. 리눅스·macOS 는 CI 가 판정한다(이 PC 에 WSL 이 없다).
 
 ### 2026-09-21 (리눅스 Shipping CI 11 건 · macOS CI configure — 둘 다 닫았다)
 

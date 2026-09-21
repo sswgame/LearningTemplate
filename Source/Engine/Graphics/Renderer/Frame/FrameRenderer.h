@@ -37,6 +37,7 @@ namespace sw
     class IRHIDevice;
     class Material;
     class MaterialInstance;
+    class RenderPassManager;
     class Scene;
     class ShaderBindingLayout;
     class TaskArgs;
@@ -79,6 +80,13 @@ namespace sw
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
         void shutdown();
+        /**
+         * @brief 렌더 패스·파이프라인 에셋 캐시. `initialize` 뒤에만 있고 `shutdown` 이 비웁니다.
+         * @details 예전에는 `IRHIDevice` 가 이것을 소유했다 — 디바이스 추상(RHI)이 렌더러의 에셋 개념을
+         *          들고 있어 RHI 가 Renderer 를 include 했다. 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯,
+         *          소유는 렌더러의 것이다.
+         */
+        RenderPassManager* getRenderPassManager() const { return _renderPassManager.get(); }
 
         // ------------------------------------------------------------------------------
         // 2) 파이프라인 · 실행 — XML 로드, execute / executePacket
@@ -500,13 +508,14 @@ namespace sw
         void buildPresentPsoVariants();
 
     private:
-        IRHIDevice*                 _pDevice;
-        IRHIDevice*                 _pCmdOwnerDevice;
-        unique_ptr<IRHICommandList> _frameCmd;
-        IRHICommandList*            _pCmd;
-        Scene*                      _pScene;
-        TaskManager*                _pTaskManager;
-        GpuScene                    _gpuScene;
+        IRHIDevice*                   _pDevice;
+        unique_ptr<RenderPassManager> _renderPassManager;
+        IRHIDevice*                   _pCmdOwnerDevice;
+        unique_ptr<IRHICommandList>   _frameCmd;
+        IRHICommandList*              _pCmd;
+        Scene*                        _pScene;
+        TaskManager*                  _pTaskManager;
+        GpuScene                      _gpuScene;
         /// @brief 씬 직접 경로(`execute( pScene )`, 에디터·테스트)가 쓰는 빌더 — 패킷 경로에서는 EngineLoop 의 것이 대신한다.
         GpuSceneBuilder        _sceneBuilder;
         RenderPipelineResource _pipelineResource;

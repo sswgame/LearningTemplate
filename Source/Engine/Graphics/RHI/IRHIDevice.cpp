@@ -6,9 +6,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Common/IRenderSurface.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
-#include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -54,8 +53,9 @@ namespace sw
     }
 
     IRHIDevice::IRHIDevice()
-        : _pInitWindow{ nullptr }
-        , _renderPassManager{ nullptr }
+        : _pSurface{ nullptr }
+        , _backBufferWidth{ 0 }
+        , _backBufferHeight{ 0 }
         , _bPreferredVSync{ false }
         , _bImmediateSubmit{ false }
         , _bParallelRecording{ false }
@@ -70,20 +70,18 @@ namespace sw
 
     bool IRHIDevice::initialize()
     {
-        if ( _pInitWindow == nullptr )
-            return false;
-
-        _renderPassManager = make_unique<RenderPassManager>();
-        if ( _renderPassManager->initialize() == false )
+        if ( _pSurface == nullptr )
             return false;
 
         constexpr uint32 kBackBufferCount = 3;
 
         RHISwapChainDesc swapChainDesc{};
-        swapChainDesc._pWindowHandle  = _pInitWindow->getNativeHandle();
-        swapChainDesc._pWindowDisplay = _pInitWindow->getNativeDisplay();
-        swapChainDesc._width          = _pInitWindow->getWidth();
-        swapChainDesc._height         = _pInitWindow->getHeight();
+        swapChainDesc._pWindowHandle  = _pSurface->getSurfaceHandle();
+        swapChainDesc._pWindowDisplay = _pSurface->getSurfaceDisplay();
+        swapChainDesc._width          = _pSurface->getSurfaceWidth();
+        swapChainDesc._height         = _pSurface->getSurfaceHeight();
+        _backBufferWidth              = swapChainDesc._width;
+        _backBufferHeight             = swapChainDesc._height;
         swapChainDesc._bufferCount    = kBackBufferCount;
         swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
@@ -104,22 +102,19 @@ namespace sw
         return true;
     }
 
+    void IRHIDevice::resize( uint32 width, uint32 height )
+    {
+        _backBufferWidth  = width;
+        _backBufferHeight = height;
+        resizeInternal( width, height );
+    }
+
     void IRHIDevice::shutdown()
     {
-        if ( _renderPassManager )
-        {
-            _renderPassManager->shutdown();
-            _renderPassManager.reset();
-        }
         // **자원을 내리기 전에** 알린다. 아직 디바이스가 살아 있으므로 든 쪽이 제대로 돌려줄 수 있다 —
         // 언리얼의 FRenderResource::ReleaseRHI 와 같은 자리다. 죽은 뒤에 "살아 있었나" 를 되묻지 않아도 되는 이유가 이것이다.
         RHIRenderResource::releaseAllFor( this );
 
         shutdownInternal();
-    }
-
-    RenderPassManager& IRHIDevice::getRenderPassManager() const
-    {
-        return *_renderPassManager;
     }
 } // namespace sw

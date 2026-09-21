@@ -13,8 +13,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"

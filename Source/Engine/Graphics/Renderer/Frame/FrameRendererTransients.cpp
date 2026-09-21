@@ -13,7 +13,6 @@
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -33,14 +32,11 @@ namespace sw
         }
         else
         {
-            IWindow* pWindow = IWindow::getActiveWindow();
-            if ( pWindow != nullptr )
-            {
-                if ( pWindow->getWidth() > 0 )
-                    width = pWindow->getWidth();
-                if ( pWindow->getHeight() > 0 )
-                    height = pWindow->getHeight();
-            }
+            // 창이 아니라 **스왑체인**의 크기다 — 렌더러는 OS 창을 모른다(IRHIDevice::resize 참고).
+            if ( _pDevice->getBackBufferWidth() > 0 )
+                width = _pDevice->getBackBufferWidth();
+            if ( _pDevice->getBackBufferHeight() > 0 )
+                height = _pDevice->getBackBufferHeight();
         }
 
         if ( width == _transientPool.getWidth() && height == _transientPool.getHeight() && _transientPool.isEmpty() == false )
