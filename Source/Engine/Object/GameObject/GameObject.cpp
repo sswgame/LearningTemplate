@@ -31,6 +31,7 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingKill{ false }
         , _listComponent{}
+        , _componentGeneration{ 0 }
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
         , _arrTickGroupBegin{}
@@ -49,6 +50,7 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingKill{ false }
         , _listComponent{}
+        , _componentGeneration{ 0 }
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
         , _arrTickGroupBegin{}
@@ -479,9 +481,10 @@ namespace sw
 
     void GameObject::clearComponents()
     {
-        // 옮긴다 — 복사하면 파괴마다 할당 하나다.
-        vector<Component*> listOwned = std::move( _listComponent );
+        // 인라인 네 칸을 그대로 복사한다 — 힙을 만지지 않는다(다섯 개 이상일 때만).
+        ComponentList listOwned( _listComponent.begin(), _listComponent.end() );
         _listComponent.clear();
+        ++_componentGeneration;
         _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         // 파괴 뒤에는 물을 수 없으니 지금 본다 — 틱에 참여하던 것이 하나라도 있었을 때만 웨이브를 다시 만든다.
         bool bTickWork = false;
@@ -546,6 +549,8 @@ namespace sw
                 break;
             }
         }
+        if ( bRemoved )
+            ++_componentGeneration;
         if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         if ( bRemoved == false )
@@ -581,6 +586,8 @@ namespace sw
 
     void GameObject::applyLoadedHierarchy()
     {
+        // 로드는 목록을 리플렉션으로 채운다(세터를 지나지 않는다) — 로드가 끝나는 이 자리에서 세대를 올린다.
+        ++_componentGeneration;
         for ( Component* pComp : _listComponent )
         {
             SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );

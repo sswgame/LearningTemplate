@@ -480,7 +480,7 @@ namespace sw::editor
                                             bFocusRenameInput );
                     }
 
-                    const vector<Component*>& listComponent = pObj->getComponents();
+                    const ComponentList& listComponent = pObj->getComponents();
                     for ( Component* pComp : listComponent )
                     {
                         if ( pComp == nullptr )

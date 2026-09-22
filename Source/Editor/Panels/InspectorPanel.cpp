@@ -248,9 +248,10 @@ namespace sw::editor
     void InspectorPanel::drawComponentList( GameObject* pObj, EditorWorkspace& workspace )
     {
         ImGui::SeparatorText( "Components" );
-        EditorContext*           pSelEditorContext = EditorContext::get();
-        IRHIDevice*              pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
-        const vector<Component*> listComponent     = pObj->getComponents();
+        EditorContext* pSelEditorContext = EditorContext::get();
+        IRHIDevice*    pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
+        // 복사한다 — 아래 루프가 컴포넌트를 뗄 수 있어 원본을 돌 수 없다.
+        const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
         {
             if ( pComp == nullptr )

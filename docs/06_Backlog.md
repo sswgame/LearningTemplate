@@ -735,11 +735,19 @@ Release · DX12 · 큐브 8000 · 1000 프레임, 이전/이후 (p50 us):
 
 검증: Debug 경고 0 · 린트 20/20 · nogpu 7/7 · hostgpu 2/2 · Shipping nogpu 7/7 · hostgpu 2/2.
 
-**남은 것.** 무버 1 의 GT.Scene.tick 524 는 병렬 틱 212(오브젝트 8000 × ~26 ns) + 큐 적용 163 + post 플러시 114 다. 큐 적용은
-슬롯 수(워커 14 + 도우미 8)만큼 잡을 내는데 도우미 슬롯은 대개 비어 있다 — 비어 있지 않은 슬롯만 세면 잡 몇 개가 준다(후보, 작다).
-`ComponentPtr::get()` 은 접근마다 소유자의 컴포넌트 목록을 훑어 캐시를 검증한다 — 루프 안에서 쓰면 비싸다(후보, 호출처가 늘면).
-`GameObject::_listComponent` 의 첫 push 가 스폰마다 할당 하나다 — 인라인 몇 칸(`InlineAllocator`)이면 없어지지만 `getComponents()`
-의 반환 타입이 바뀌어 호출처 열둘이 따라와야 한다(후보). 인스턴스 배치의 병렬 쓰기 기각(아래)은 그대로다.
+**같은 날 둘째 커밋 — 남긴 셋을 닫았다.**
+
+- **큐 적용은 비어 있지 않은 슬롯만 잡을 낸다.** 도우미 슬롯(렌더·로더 몫 8)은 대개 비어 있었다. `queuedTransforms` 163 → **131**,
+  무버 1 의 GT.Frame 917 → **851** (2회 모두).
+- **`ComponentPtr` 는 목록을 훑지 않는다.** `GameObject::getComponentGeneration()` — 붙이기·떼기·비우기·로드(`applyLoadedHierarchy`)가
+  올리는 세대 — 가 캐시를 잡을 때와 같으면 포인터는 아직 그 목록에 있다(떼는 길은 전부 세대를 올린다). 세대를 먼저 보고 나서야
+  포인터를 역참조하므로 지워진 메모리를 읽지 않는다. 로드는 목록을 리플렉션으로 채우므로 `clearComponents`(시작)와
+  `applyLoadedHierarchy`(끝)가 올린다 — 로드 경로는 전부 그 둘을 지난다(`ObjectStateSerializer` · 인스펙터 되돌리기).
+- **`_listComponent` 는 인라인 네 칸** (`ComponentList` = `vector<Component*, InlineAllocator<…, 4>>`). 보통의 오브젝트는 힙을 만지지
+  않는다. 리플렉션은 `decltype(멤버)` 로 래퍼를 내므로 생성 코드는 그대로다. 호출처 셋만 따라왔다(복사하던 둘은 반복자 생성으로,
+  참조 하나는 별칭으로). `clearComponents` 는 이동 대신 인라인 복사(네 칸)다.
+
+churn 100 의 GT.Frame 983 → **917**, GT.Game.update 98 → 90. 인스턴스 배치의 병렬 쓰기 기각(아래)은 그대로다.
 
 **분석해서 두는 것 — 다시 제안하기 전에 읽을 것.**
 

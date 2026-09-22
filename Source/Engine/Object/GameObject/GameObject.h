@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/InlineAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -22,6 +23,12 @@ namespace sw
     class GameObjectManager;
     class ObjectStateSerializer;
     class SceneComponent;
+
+    /**
+     * @brief 오브젝트의 컴포넌트 목록 — 인라인 네 칸. 보통의 오브젝트(씬 + 메시 + 로직 한둘)는 힙을 만지지 않는다.
+     * @details 예전엔 첫 push 가 스폰마다 할당 하나였다(총알처럼 스폰이 잦은 게임의 비용). 다섯 개째부터 힙으로 간다.
+     */
+    using ComponentList = vector<Component*, InlineAllocator<Component*, 4>>;
 
     /**
      * @class GameObject
@@ -180,7 +187,14 @@ namespace sw
          *          복사해 주는 `getComponents()` 가 따로 있었는데, 이름이 반대로 읽혔고(전부 → 더 적게)
          *          호출처 열둘이 전부 스스로 null 을 다시 걸렀다.
          */
-        const vector<Component*>& getComponents() const { return _listComponent; }
+        const ComponentList& getComponents() const { return _listComponent; }
+
+        /**
+         * @brief 컴포넌트 목록이 바뀔 때마다 오르는 세대 — 붙이기 · 떼기 · 비우기 · 로드.
+         * @details `ComponentPtr` 가 캐시를 검증하는 근거다: 세대가 같으면 캐시된 포인터는 아직 이 목록에 있다(떼는 길은 전부 세대를
+         *          올린다). 예전에는 접근마다 목록을 훑어 포인터를 찾았다.
+         */
+        uint32 getComponentGeneration() const { return _componentGeneration; }
 
         /** @brief 힙 할당 없이 유효한 모든 컴포넌트를 방문합니다. */
         template <typename Func>
@@ -291,8 +305,10 @@ namespace sw
         atomic<bool> _bActive;              ///< 자체 활성화 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
         atomic<bool> _bIsPendingKill;       ///< 지연 삭제 대기 묘비 플래그
+        /// @brief 이 액터가 소유한 컴포넌트 (= `ComponentList`, 인라인 네 칸). 별칭으로 적으면 리플렉션 파서가 컨테이너로 보지 못한다.
         PROPERTY()
-        vector<Component*> _listComponent; ///< 이 액터가 소유한 컴포넌트
+        vector<Component*, InlineAllocator<Component*, 4>> _listComponent;
+        uint32                                             _componentGeneration; ///< 목록이 바뀔 때마다 오른다 (`getComponentGeneration`)
         /**
          * @brief primary SceneComponent 캐시 (`getPrimarySceneComponent`). 없거나 모르면 nullptr — 다음 호출이 목록에서 찾아 적는다.
          * @details 원자인 이유: 틱 중 워커들이 읽고, 죽은 것을 발견한 워커가 다시 찾아 적는다(같은 답을 겹쳐 쓴다).
@@ -364,6 +380,7 @@ namespace sw
         pComp->applyTypeDefaults( pTypeInfo );
 
         _listComponent.push_back( pComp );
+        ++_componentGeneration;
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.

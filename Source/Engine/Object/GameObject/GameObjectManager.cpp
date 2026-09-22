@@ -448,6 +448,7 @@ namespace sw
         , _lastWaveGeneration{ 0 }
         , _tickWaveBuildCount{ 0 }
         , _listCachedTickWave{}
+        , _listActiveWriteSlot{}
         , _deferredTransformMutex{}
         , _listDeferredTransformUpdate{}
         , _listProcessingTransform{}
@@ -896,8 +897,15 @@ namespace sw
         const uint32                 slotCount  = _transformHierarchy.getQueuedWriteSlotCount();
         vector<SceneTransformWrite>* pSlot      = _transformHierarchy.getQueuedWriteSlots();
         uint32                       totalCount = 0;
+        // 비어 있지 않은 슬롯만 잡을 낸다 — 도우미 슬롯(렌더·로더 스레드 몫)은 대개 비어 있다.
+        _listActiveWriteSlot.clear();
         for ( uint32 slot = 0; slot < slotCount; ++slot )
+        {
+            if ( pSlot[slot].empty() )
+                continue;
             totalCount += static_cast<uint32>( pSlot[slot].size() );
+            _listActiveWriteSlot.push_back( slot );
+        }
         if ( totalCount == 0 )
             return 0;
 
@@ -906,14 +914,15 @@ namespace sw
         {
             GameObjectManager*           _pManager{ nullptr };
             vector<SceneTransformWrite>* _pSlot{ nullptr };
+            const uint32*                _pActiveSlot{ nullptr };
             atomic<uint32>               _changedCount{ 0 };
 
             void applyRange( uint32 start, uint32 end )
             {
                 uint32 changedCount = 0;
-                for ( uint32 slot = start; slot < end; ++slot )
+                for ( uint32 index = start; index < end; ++index )
                 {
-                    const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[slot] );
+                    const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[_pActiveSlot[index]] );
                     changedCount += GameObjectManagerInternal::applyTransformWriteRange( _pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ) );
                 }
                 if ( changedCount > 0 )
@@ -921,13 +930,15 @@ namespace sw
             }
         };
         SlotWriteJob job{};
-        job._pManager = this;
-        job._pSlot    = pSlot;
+        job._pManager            = this;
+        job._pSlot               = pSlot;
+        job._pActiveSlot         = _listActiveWriteSlot.data();
+        const uint32 activeCount = static_cast<uint32>( _listActiveWriteSlot.size() );
         _transformHierarchy.mergeQueuedDirtyRoots();
         if ( totalCount < SceneTransformHierarchy::kParallelWriteCount )
-            job.applyRange( 0, slotCount );
+            job.applyRange( 0, activeCount );
         else
-            engine::runParallel( slotCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SlotWriteJob::applyRange, &job ) );
+            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SlotWriteJob::applyRange, &job ) );
         _transformHierarchy.mergeQueuedDirtyRoots();
         _transformHierarchy.clearQueuedWrites();
 

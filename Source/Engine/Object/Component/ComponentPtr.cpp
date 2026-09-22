@@ -14,6 +14,7 @@ namespace sw
         , _targetComponentType{}
         , _pCachedPtr{ nullptr }
         , _cachedObjectId{ 0 }
+        , _cachedComponentGeneration{ 0 }
         , _pManager{ nullptr }
     {
     }
@@ -23,14 +24,16 @@ namespace sw
         , _targetComponentType{}
         , _pCachedPtr{ pTarget }
         , _cachedObjectId{ 0 }
+        , _cachedComponentGeneration{ 0 }
         , _pManager{ nullptr }
     {
         if ( pTarget != nullptr && pTarget->getOwner() != nullptr )
         {
-            _targetObjectName    = pTarget->getOwner()->getName();
-            _targetComponentType = pTarget->getComponentName();
-            _cachedObjectId      = pTarget->getOwner()->getObjectId();
-            _pManager            = pTarget->getOwner()->getManager();
+            _targetObjectName          = pTarget->getOwner()->getName();
+            _targetComponentType       = pTarget->getComponentName();
+            _cachedObjectId            = pTarget->getOwner()->getObjectId();
+            _cachedComponentGeneration = pTarget->getOwner()->getComponentGeneration();
+            _pManager                  = pTarget->getOwner()->getManager();
         }
     }
 
@@ -39,6 +42,7 @@ namespace sw
         , _targetComponentType{ other._targetComponentType }
         , _pCachedPtr{ other._pCachedPtr }
         , _cachedObjectId{ other._cachedObjectId }
+        , _cachedComponentGeneration{ other._cachedComponentGeneration }
         , _pManager{ other._pManager }
     {
     }
@@ -48,13 +52,15 @@ namespace sw
         , _targetComponentType{ other._targetComponentType }
         , _pCachedPtr{ other._pCachedPtr }
         , _cachedObjectId{ other._cachedObjectId }
+        , _cachedComponentGeneration{ other._cachedComponentGeneration }
         , _pManager{ other._pManager }
     {
-        other._pCachedPtr          = nullptr;
-        other._targetObjectName    = hashed_string{};
-        other._targetComponentType = hashed_string{};
-        other._cachedObjectId      = 0;
-        other._pManager            = nullptr;
+        other._pCachedPtr                = nullptr;
+        other._targetObjectName          = hashed_string{};
+        other._targetComponentType       = hashed_string{};
+        other._cachedObjectId            = 0;
+        other._cachedComponentGeneration = 0;
+        other._pManager                  = nullptr;
     }
 
     ComponentPtr& ComponentPtr::operator=( Component* pTarget )
@@ -62,17 +68,19 @@ namespace sw
         _pCachedPtr = pTarget;
         if ( pTarget != nullptr && pTarget->getOwner() != nullptr )
         {
-            _targetObjectName    = pTarget->getOwner()->getName();
-            _targetComponentType = pTarget->getComponentName();
-            _cachedObjectId      = pTarget->getOwner()->getObjectId();
-            _pManager            = pTarget->getOwner()->getManager();
+            _targetObjectName          = pTarget->getOwner()->getName();
+            _targetComponentType       = pTarget->getComponentName();
+            _cachedObjectId            = pTarget->getOwner()->getObjectId();
+            _cachedComponentGeneration = pTarget->getOwner()->getComponentGeneration();
+            _pManager                  = pTarget->getOwner()->getManager();
         }
         else
         {
-            _targetObjectName    = hashed_string{};
-            _targetComponentType = hashed_string{};
-            _cachedObjectId      = 0;
-            _pManager            = nullptr;
+            _targetObjectName          = hashed_string{};
+            _targetComponentType       = hashed_string{};
+            _cachedObjectId            = 0;
+            _cachedComponentGeneration = 0;
+            _pManager                  = nullptr;
         }
         return *this;
     }
@@ -81,11 +89,12 @@ namespace sw
     {
         if ( this != &other )
         {
-            _targetObjectName    = other._targetObjectName;
-            _targetComponentType = other._targetComponentType;
-            _pCachedPtr          = other._pCachedPtr;
-            _cachedObjectId      = other._cachedObjectId;
-            _pManager            = other._pManager;
+            _targetObjectName          = other._targetObjectName;
+            _targetComponentType       = other._targetComponentType;
+            _pCachedPtr                = other._pCachedPtr;
+            _cachedObjectId            = other._cachedObjectId;
+            _cachedComponentGeneration = other._cachedComponentGeneration;
+            _pManager                  = other._pManager;
         }
         return *this;
     }
@@ -94,17 +103,19 @@ namespace sw
     {
         if ( this != &other )
         {
-            _targetObjectName    = other._targetObjectName;
-            _targetComponentType = other._targetComponentType;
-            _pCachedPtr          = other._pCachedPtr;
-            _cachedObjectId      = other._cachedObjectId;
-            _pManager            = other._pManager;
+            _targetObjectName          = other._targetObjectName;
+            _targetComponentType       = other._targetComponentType;
+            _pCachedPtr                = other._pCachedPtr;
+            _cachedObjectId            = other._cachedObjectId;
+            _cachedComponentGeneration = other._cachedComponentGeneration;
+            _pManager                  = other._pManager;
 
-            other._targetObjectName    = hashed_string{};
-            other._targetComponentType = hashed_string{};
-            other._pCachedPtr          = nullptr;
-            other._cachedObjectId      = 0;
-            other._pManager            = nullptr;
+            other._targetObjectName          = hashed_string{};
+            other._targetComponentType       = hashed_string{};
+            other._pCachedPtr                = nullptr;
+            other._cachedObjectId            = 0;
+            other._cachedComponentGeneration = 0;
+            other._pManager                  = nullptr;
         }
         return *this;
     }
@@ -123,25 +134,15 @@ namespace sw
         if ( pObjMgr == nullptr )
             return;
 
-        // 1) 빠른 경로
-        if ( _cachedObjectId != 0 )
+        // 1) 빠른 경로 — 소유자가 살아 있고 목록 세대가 캐시를 잡을 때와 같으면 포인터는 아직 그 목록에 있다(떼는 길은 전부
+        //    세대를 올린다). 예전에는 접근마다 목록을 훑어 포인터를 찾았다 — 루프 안에서 부르면 그 훑기가 비용이었다.
+        if ( _cachedObjectId != 0 && _pCachedPtr != nullptr )
         {
             GameObject* pFound = pObjMgr->findGameObjectById( _cachedObjectId );
-            if ( pFound != nullptr && pFound->isPendingKill() == false )
-            {
-                bool bComponentFound = false;
-                for ( Component* pComp : pFound->getComponents() )
-                {
-                    if ( pComp == _pCachedPtr && pComp->isPendingKill() == false )
-                    {
-                        bComponentFound = true;
-                        break;
-                    }
-                }
-
-                if ( bComponentFound && pFound->getName() == _targetObjectName && _pCachedPtr->getComponentName() == _targetComponentType )
-                    return; // 캐시 유효
-            }
+            if ( pFound != nullptr && pFound->isPendingKill() == false &&
+                 pFound->getComponentGeneration() == _cachedComponentGeneration && _pCachedPtr->isPendingKill() == false &&
+                 pFound->getName() == _targetObjectName && _pCachedPtr->getComponentName() == _targetComponentType )
+                return; // 캐시 유효
         }
 
         // 2) 느린 경로
@@ -155,8 +156,9 @@ namespace sw
             {
                 if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->getComponentName() == _targetComponentType )
                 {
-                    _pCachedPtr     = pComp;
-                    _cachedObjectId = pObj->getObjectId();
+                    _pCachedPtr                = pComp;
+                    _cachedObjectId            = pObj->getObjectId();
+                    _cachedComponentGeneration = pObj->getComponentGeneration();
                     break;
                 }
             }

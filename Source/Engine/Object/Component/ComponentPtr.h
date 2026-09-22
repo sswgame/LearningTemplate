@@ -70,6 +70,7 @@ namespace sw
 
         mutable Component*             _pCachedPtr;
         mutable uint64                 _cachedObjectId;
+        mutable uint32                 _cachedComponentGeneration; ///< 캐시를 잡을 때의 소유자 목록 세대 — 같으면 포인터가 아직 목록에 있다
         mutable sw::GameObjectManager* _pManager;
     };
 

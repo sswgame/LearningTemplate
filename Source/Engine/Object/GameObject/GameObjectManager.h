@@ -536,9 +536,10 @@ namespace sw
 
         atomic<bool>                      _bParallelTransformReadOnly;
         atomic<bool>                      _bTicking;
-        uint64                            _lastWaveGeneration; ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
-        atomic<uint32>                    _tickWaveBuildCount; ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<vector<TickExecutionItem>> _listCachedTickWave; ///< 선행 종속성이 있을 때만 쓰는 DAG 웨이브
+        uint64                            _lastWaveGeneration;  ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
+        atomic<uint32>                    _tickWaveBuildCount;  ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<vector<TickExecutionItem>> _listCachedTickWave;  ///< 선행 종속성이 있을 때만 쓰는 DAG 웨이브
+        vector<uint32>                    _listActiveWriteSlot; ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯 (할당 재사용)
         mutex                             _deferredTransformMutex;
         vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;
         vector<TransformUpdateDelegate>   _listProcessingTransform;
