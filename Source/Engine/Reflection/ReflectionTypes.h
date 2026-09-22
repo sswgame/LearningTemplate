@@ -719,12 +719,29 @@ namespace sw
         /** @brief 이 타입이 targetFqn이거나 그 파생이면 true. 부모가 미등록이어도 `_parentFQN` 이 같으면 true. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**
-         * @brief 이 타입이 pTarget 이거나 그 파생이면 true. 잠금·할당 없이 부모 포인터만 걷는다.
-         * @details 캐스트의 핫패스. 걸음마다 포인터를 먼저 견주고, 다르면 FQN(intern 인덱스 정수)을 한 번
-         *          더 견준다 — 레지스트리 밖의 사본(테스트 목의 `StaticType()`)도 같은 타입으로 본다.
+         * @brief 이 타입이 pTarget 이거나 그 파생이면 true. 조상 표가 있으면 로드 둘과 비교 하나, 여기 인라인.
+         * @details 캐스트의 핫패스라 DLL 경계를 넘지 않는다. 둘 다 표가 서 있으면 `표[pTarget 의 깊이] == pTarget 의
+         *          이름` 으로 끝난다. 표가 아직 없거나 세울 수 없는 쪽은 `isDerivedFromSlow` 가 세우거나 부모 포인터를
+         *          걷는다 — 레지스트리 밖의 사본(테스트 목의 `StaticType()`)도 이름이 같으면 같은 타입으로 본다.
          *          pTarget 이 nullptr 이면 false.
          */
-        bool isDerivedFrom( const TypeInfo* pTarget ) const;
+        bool isDerivedFrom( const TypeInfo* pTarget ) const
+        {
+            if ( pTarget == nullptr )
+                return false;
+            if ( pTarget == this )
+                return true;
+            const uint8 selfDepth   = _ancestorDepth.load( std::memory_order_acquire );
+            const uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
+            if ( selfDepth < constants::reflection::kAncestorDisplayDepth && targetDepth < constants::reflection::kAncestorDisplayDepth )
+            {
+                return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
+                                                       pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
+            }
+            return isDerivedFromSlow( pTarget );
+        }
+        /** @brief 표가 없을 때의 길 — 세울 수 있으면 세워서 답하고, 아니면 부모 포인터를 걷는다. */
+        bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
         /** @brief 부모 TypeInfo. 풀어 둔 것이 없으면 이름으로 찾아 적어 둔다. 부모가 없거나 미등록이면 nullptr. */
         const TypeInfo* getParentType() const;
         /** @brief 부모 포인터를 이름으로 다시 푼다. 등록 배치 끝에서 `TypeRegistry` 가 부른다. */

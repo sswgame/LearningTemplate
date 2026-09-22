@@ -193,11 +193,22 @@ namespace sw
         template <typename TComponent, typename Func>
         void forEachComponentOfType( Func&& func ) const
         {
+            forEachComponentOfType<TComponent>( findStaticType<TComponent>(), std::forward<Func>( func ) );
+        }
+
+        /**
+         * @brief 위와 같되 TComponent 의 TypeInfo 를 밖에서 받습니다 — 씬 전체를 도는 매니저가 한 번만 구해 넘긴다.
+         * @details `castTo<T>( pComp )` 는 컴포넌트마다 `T::StaticType()`(세대 검사 캐시 조회)을 다시 묻는다. 목록을
+         *          도는 자리는 그것을 루프 밖에서 한 번 구한다.
+         */
+        template <typename TComponent, typename Func>
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
+        {
             for ( Component* pComp : _listComponent )
             {
                 if ( pComp != nullptr && pComp->isPendingKill() == false )
                 {
-                    TComponent* pTyped = castTo<TComponent>( pComp );
+                    TComponent* pTyped = castTo<TComponent>( pComp, pToType );
                     if ( pTyped != nullptr )
                         func( pTyped );
                 }
@@ -218,11 +229,13 @@ namespace sw
             static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>,
                            "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 
+            // T 의 TypeInfo 는 루프 밖에서 한 번 — 컴포넌트마다 세대 검사 캐시 조회를 내지 않는다.
+            const TypeInfo* pToType = findStaticType<T>();
             for ( Component* pComp : _listComponent )
             {
                 if ( pComp == nullptr || pComp->isPendingKill() )
                     continue;
-                T* pCast = castTo<T>( pComp );
+                T* pCast = castTo<T>( pComp, pToType );
                 if ( pCast != nullptr )
                     return pCast;
             }

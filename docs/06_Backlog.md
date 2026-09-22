@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-22 · 기준 커밋 `7fe7218e` (+ castTo O(1) 커밋)
+> 마지막 갱신: 2026-09-22 · 기준 커밋 `7ca7a591` (+ castTo 두 번째 라운드 커밋)
 
 ---
 
@@ -481,6 +481,45 @@ Release · 마이크로벤치(4M 회 · 단일 객체 · 캐시 뜨거움, ns) �
 못했다), 빌드가 끝난 뒤 두 번은 통과했다 — 여덟째 커밋 때의 타임아웃과 같은 부류다. GPU·시간 민감 스위트는 빌드와
 겹쳐 돌리지 말 것. 남은 프레임 경로 캐스트: 에디터 시각화(콜라이더·카메라)는 객체마다 `getComponent` — 콜라이더 등록부가
 없어 그대로(이제 객체당 약 35 ns). GameFramework 틱 컴포넌트의 `getPrimarySceneComponent()` 도 그대로(적중 16 ns).
+
+**(B) 열째 커밋 — 2026-09-22 · `castTo` 두 번째 라운드: 남은 15 ns 를 6 ns 로. 캐스트마다 내던 것을 밖으로 · 적중 경로는 헤더에.**
+
+아홉째 커밋 뒤 캐스트 한 번(15.5 ns)은 세대 검사 캐시 조회 둘(`getTypeInfo()` 6.9 · `StaticType()` 4.7)과 표 비교(4.9)였다.
+셋 다 **DLL 경계를 넘는 호출**이었고, 조회 루프는 그중 하나를 컴포넌트마다 다시 냈다. 네 가지를 한 번에 재고 전부 남겼다:
+
+- **`To::StaticType()` 을 조회 루프 밖으로.** `findStaticType<T>()` 가 To 의 TypeInfo 를 한 번 구하고, `castTo( pSrc, pToType )`
+  가 그것을 받는다. `GameObject::getComponent<T>` · `forEachComponentOfType<T>` · 매니저의 씬 전체 순회가 이 판을 쓴다
+  (매니저는 씬 전체에 한 번). 컴포넌트당 4 ns.
+- **세대 검사 캐시의 적중 경로를 헤더에 인라인.** 세대는 레지스트리 객체가 아니라 내보낸 전역 `gv_typeTableGeneration` 에
+  산다 — 서비스 표에서 레지스트리를 꺼내(널 검사 + 역참조) 읽지 않는다. `TypeLookupCache::find` 는 원자 로드 셋이고
+  빗나감만 `findSlow` 로 나간다.
+- **`Component::findCachedTypeInfo()`.** 이름 캐시가 적중이면 가상 `getTypeInfo()` 를 부르지 않는다. `castTo` 가 이것을
+  먼저 본다(`HasFindCachedTypeInfo_v`). 목처럼 오버라이드한 타입도 이름이 같은 사본을 주므로 이름으로 답하는 상속 검사엔
+  같은 결과 — 회귀 테스트 `GameObjectTest.CastFastPathsMatchVirtualPath`(적중 · 실패 · nullptr · 빈 이름).
+- **`isDerivedFrom` 의 표 비교를 헤더에 인라인.** pTarget 의 자기 칸이 곧 pTarget 의 이름이라 이름을 다시 계산하지 않는다.
+  표가 없는 쪽만 `isDerivedFromSlow`(세우거나 걷는다).
+
+Release · 마이크로벤치(4M 회 · 단일 객체 · 캐시 뜨거움, ns) — 아홉째 커밋 → 이 커밋:
+
+| 항목 | 아홉째 | 이 커밋 |
+|---|---|---|
+| `getTypeInfo()` 가상 / `findCachedTypeInfo()` | 6.9 / – | 4.5 / **1.8** |
+| `SceneComponent::StaticType()` | 4.7 | 2.2 |
+| `isDerivedFrom` 적중 / 실패 | 4.9 / 4.9 | **1.9 / 2.1** |
+| `castTo<Scene>(mesh)` 적중 / `castTo<Scene>(tag)` 실패 | 15.8 / 15.5 | **5.4 / 5.9** |
+| `castTo( pSrc, pToType )` 적중 / 실패 | – | **3.8 / 3.4** |
+| `getComponent<Camera>()` 실패, 컴포넌트 2 개 | 35 | **12.5** |
+| `getComponent<Scene>()` 적중, 첫 컴포넌트 | 18.4 | 6.9 |
+
+(B) 시작 시점의 실패 캐스트 39.4 ns 가 5.9 ns 다. 마지막 라운드는 실행 간 잡음이 컸다(한 행이 3.4 와 10.9 를 오갔다) —
+두 라운드 중 안정된 쪽을 적었다. **남은 것은 캐시 라인 셋**(컴포넌트의 이름 캐시 · `StaticType()` 의 정적 칸 · 두 TypeInfo 의
+표)이라 더 깎으려면 세대 검사 자체를 없애야 하는데, 그것은 TypeInfo 의 주소를 고정하는 일(밀집 배열 → 안정 저장소, 해제는
+묘비)이라 다른 날의 일이다. 코드젠 `StaticType()` 의 `s_fqn` 정적 가드(약 0.3 ns 급)는 재지 않고 두었다.
+
+**검증 중 밟은 것 — 후보.** 새 테스트가 살아 있는 컴포넌트의 이름을 `setComponentName( {} )` 로 비운 채 끝냈더니 Shipping
+`EngineTest_NoGPU` 가 **힙 손상(0xc0000374)** 으로 죽었다(Debug·ASan 은 통과). 컴포넌트 이름이 파괴 때 풀을 찾는 키라,
+빈 이름은 풀을 못 찾아 힙 해제로 간다. 테스트는 이름을 되돌리게 고쳤다. `setComponentName` 이 풀 키를 바꿀 수 있는 것
+자체가 함정이다 — 풀 키를 생성 시점의 TypeInfo 로 따로 들거나, 살아 있는 컴포넌트의 이름 변경을 단정으로 막을 것.
 
 **분석해서 두는 것 — 다시 제안하기 전에 읽을 것.**
 

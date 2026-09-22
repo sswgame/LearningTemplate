@@ -136,13 +136,14 @@ namespace sw
             } );
         }
 
-        /** @brief 힙 할당 없이 씬의 특정 타입 TComponent 파생 컴포넌트들을 순회합니다. */
+        /** @brief 힙 할당 없이 씬의 특정 타입 TComponent 파생 컴포넌트들을 순회합니다. TypeInfo 는 씬 전체에 한 번 구한다. */
         template <typename TComponent, typename Func>
         void forEachComponentOfType( Func&& func ) const
         {
-            forEachGameObject( [&func]( GameObject* pObj )
+            const TypeInfo* pToType = findStaticType<TComponent>();
+            forEachGameObject( [&func, pToType]( GameObject* pObj )
             {
-                pObj->forEachComponentOfType<TComponent>( func );
+                pObj->forEachComponentOfType<TComponent>( pToType, func );
             } );
         }
 

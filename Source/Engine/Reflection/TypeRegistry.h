@@ -77,6 +77,14 @@ namespace sw
     }
 
     /**
+     * @brief 타입 표의 세대 — `TypeRegistry::getGeneration()` 의 값. 등록·별칭·모듈 해제마다 오른다.
+     * @details 레지스트리 객체 밖, 내보낸 전역에 두는 이유는 `TypeLookupCache::find` 의 적중 경로다: 캐스트마다 두 번
+     *          오는 자리라 서비스 표를 거치지도, DLL 경계를 넘는 호출을 하지도 않고 헤더에서 원자 로드로 읽는다.
+     *          레지스트리는 엔진에 하나뿐이라 같은 값이다. 쓰는 쪽은 `TypeRegistry` 뿐이다.
+     */
+    extern SW_API atomic<uint32> gv_typeTableGeneration;
+
+    /**
      * @brief FQN 하나의 `findType` 결과를 레지스트리 세대와 함께 적어 두는 칸.
      * @details 코드젠의 `StaticType()` 은 부를 때마다 `findType( hashed_string( "sw::Foo" ) )` 을
      *          했다 — 문자열 intern(샤드 뮤텍스) + shared_mutex 잠금 + 해시맵 조회. 캐스트 한 번마다
@@ -98,8 +106,20 @@ namespace sw
         mutable atomic<const TypeInfo*> _pType{ nullptr };
         mutable atomic<uint32>          _generation{ 0 };
 
-        /** @brief fqn 의 TypeInfo. 세대가 같으면 캐시, 아니면 `findType` 뒤 갱신. 미등록이면 nullptr. */
-        const TypeInfo* find( const hashed_string& fqn ) const;
+        /**
+         * @brief fqn 의 TypeInfo. 세대가 같으면 캐시, 아니면 `findType` 뒤 갱신. 미등록이면 nullptr.
+         * @details 적중 경로는 원자 로드 셋이고 여기 인라인이다 — 캐스트마다 `StaticType()` 과 `getTypeInfo()` 로 두 번
+         *          오는 자리라 DLL 경계 호출 하나가 곧 비용이었다. 빗나감만 `findSlow` 로 나간다.
+         */
+        const TypeInfo* find( const hashed_string& fqn ) const
+        {
+            const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+            if ( _generation.load( std::memory_order_acquire ) == generation )
+                return _pType.load( std::memory_order_relaxed );
+            return findSlow( fqn, generation );
+        }
+        /** @brief 세대가 달라 다시 찾는 길. 레지스트리가 없으면 캐시를 건드리지 않고 nullptr. */
+        const TypeInfo* findSlow( const hashed_string& fqn, uint32 generation ) const;
         /** @brief 다음 호출이 반드시 다시 찾게 한다(조회 키가 바뀌었을 때). */
         void reset() { _generation.store( 0, std::memory_order_relaxed ); }
     };
@@ -158,9 +178,10 @@ namespace sw
         /**
          * @brief 타입 표가 바뀔 때마다 오르는 세대. `findType` 이 내준 포인터는 이 값이 같은 동안만 유효하다.
          * @details 등록·별칭·모듈 해제 모두에서 오른다. 0 은 "아직 아무것도 등록되지 않음" 이라
-         *          `TypeLookupCache` 의 초기값과 구별된다.
+         *          `TypeLookupCache` 의 초기값과 구별된다. 값은 `gv_typeTableGeneration` 이다 — 왜 레지스트리 객체
+         *          밖에 사는지는 그 선언에 적혀 있다.
          */
-        uint32 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
+        uint32 getGeneration() const;
         /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
@@ -362,7 +383,6 @@ namespace sw
         unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
         unordered_map<uint32, hashed_string>        _mapHashToCanonicalName;
         hashed_string                               _activeModuleName;
-        atomic<uint32>                              _generation;
     };
 
     // ------------------------------------------------------------------------------

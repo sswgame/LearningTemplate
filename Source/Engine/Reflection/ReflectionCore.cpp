@@ -467,10 +467,16 @@ namespace sw
         void forceLinkBuiltinTypes();
     } // namespace generated
 
+    atomic<uint32> gv_typeTableGeneration{ 0 };
+
     TypeRegistry::TypeRegistry()
-        : _generation{ 0 }
     {
         generated::forceLinkBuiltinTypes();
+    }
+
+    uint32 TypeRegistry::getGeneration() const
+    {
+        return gv_typeTableGeneration.load( std::memory_order_acquire );
     }
     TypeRegistry::~TypeRegistry() = default;
 
@@ -520,7 +526,7 @@ namespace sw
             _mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
         }
         // 표가 커졌으면 원소가 옮겨졌다 — 밖에서 들고 있던 포인터(TypeLookupCache)는 이제 무효다.
-        _generation.fetch_add( 1, std::memory_order_acq_rel );
+        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -649,7 +655,7 @@ namespace sw
             info.clearParentType();
             info.clearAncestorDisplay();
         }
-        _generation.fetch_add( 1, std::memory_order_acq_rel );
+        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 #endif
 
@@ -684,7 +690,7 @@ namespace sw
         _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
         _mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 타입으로 바뀔 수 있다.
-        _generation.fetch_add( 1, std::memory_order_acq_rel );
+        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
@@ -731,14 +737,12 @@ namespace sw
         return canonicalIt != _mapFqnToClassType.end() ? &canonicalIt->second : nullptr;
     }
 
-    const TypeInfo* TypeLookupCache::find( const hashed_string& fqn ) const
+    const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn, const uint32 generation ) const
     {
-        const TypeRegistry& registry   = engine::getTypeRegistry();
-        const uint32        generation = registry.getGeneration();
-        if ( _generation.load( std::memory_order_acquire ) == generation )
-            return _pType.load( std::memory_order_relaxed );
-
-        const TypeInfo* pType = registry.findType( fqn );
+        // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 낸다(다음 호출이 다시 본다).
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
+        const TypeInfo* pType = engine::getTypeRegistry().findType( fqn );
         _pType.store( pType, std::memory_order_relaxed );
         _generation.store( generation, std::memory_order_release );
         return pType;
@@ -879,15 +883,10 @@ namespace sw
         return false;
     }
 
-    bool TypeInfo::isDerivedFrom( const TypeInfo* pTarget ) const
+    bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
-        if ( pTarget == nullptr )
-            return false;
-        if ( pTarget == this )
-            return true;
-
-        // 조상 표 — 둘 다 표가 있으면 로드 둘과 비교 하나로 끝난다. 아직 안 세운 쪽은 여기서 세운다(배치 밖에서
-        // 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
+        // 헤더의 인라인 판이 nullptr · 자기 자신 · 둘 다 표 있음 을 걸렀다. 아직 안 세운 쪽은 여기서 세운다(배치
+        // 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
         uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth == constants::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
             selfDepth = _ancestorDepth.load( std::memory_order_acquire );
@@ -896,8 +895,9 @@ namespace sw
             targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constants::reflection::kAncestorDisplayDepth && targetDepth < constants::reflection::kAncestorDisplayDepth )
         {
+            // pTarget 의 자기 칸이 곧 pTarget 의 이름이다 — 이름을 다시 계산하지 않는다.
             return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
-                                                   ReflectionCoreInternal::canonicalNameIndex( *pTarget );
+                                                   pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
         }
 
         // 표가 없는 쪽(이름 없음 · 순환 · 표보다 깊은 사슬)은 부모 포인터를 걷는다.

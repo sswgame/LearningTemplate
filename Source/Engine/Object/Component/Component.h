@@ -199,6 +199,17 @@ namespace sw
          *          답을 돌려준다(`TypeLookupCache`).
          */
         virtual const TypeInfo* getTypeInfo() const;
+        /**
+         * @brief 이름 캐시가 답을 들고 있으면 그 TypeInfo, 아니면 가상 `getTypeInfo()`.
+         * @details `castTo` 의 핫패스다. 캐시 적중이면 가상 호출 없이 원자 로드 셋으로 끝난다. 테스트 목처럼
+         *          `getTypeInfo()` 를 오버라이드해 자기 사본을 돌려주는 타입도 이름은 같으므로, 이름으로 답하는
+         *          상속 검사에는 같은 결과다. 캐시가 비었을 때만(이름 없음 · 미등록) 가상으로 간다.
+         */
+        const TypeInfo* findCachedTypeInfo() const
+        {
+            const TypeInfo* pType = _typeInfoCache.find( _componentName );
+            return pType != nullptr ? pType : getTypeInfo();
+        }
         /** @brief 소유자 GameObject 반환 */
         GameObject* getOwner() const { return _pOwner; }
         /** @brief 활성화 상태 확인 (자체 활성화 여부 및 소유자 활성화 여부 모두 확인) */

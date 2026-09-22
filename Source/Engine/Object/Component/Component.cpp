@@ -228,13 +228,14 @@ namespace sw
 
     const TypeInfo* Component::getTypeInfo() const
     {
-        // 캐스트마다 부르는 자리다. 바인딩 검사는 플래그 하나고, 이름이 비었는지는 묻지 않는다 — `empty()` 는
-        // intern 테이블을 읽고, 빈 이름은 캐시가 세대당 한 번 헛조회하고 nullptr 를 내어 아래 폴백으로 간다.
-        if ( engine::areEngineServicesBound() == false )
-            return nullptr;
+        // 캐스트마다 부르는 자리다. 적중은 캐시 조회 하나(원자 로드 셋)로 끝난다 — 바인딩 검사는 빗나갔을 때만,
+        // 이름이 비었는지는 묻지 않는다(`empty()` 는 intern 테이블을 읽는다. 빈 이름은 캐시가 세대당 한 번 헛조회하고
+        // nullptr 를 내어 아래 폴백으로 간다).
         const TypeInfo* pType = _typeInfoCache.find( _componentName );
         if ( pType != nullptr )
             return pType;
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
         return engine::getTypeRegistry().findType<Component>();
     }
 

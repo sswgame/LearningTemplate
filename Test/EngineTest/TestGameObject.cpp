@@ -579,6 +579,59 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
 }
 
 /**
+ * @brief 캐스트 핫패스의 창구 셋이 가상 경로와 같은 답을 내는지 — `findStaticType` · `castTo( pSrc, pToType )` · `findCachedTypeInfo`.
+ * @details 셋 다 "컴포넌트마다 내던 비용을 밖으로" 옮긴 자리다: `findStaticType<T>()` 는 조회 루프가 한 번만 구하는 To 의
+ *          TypeInfo, `castTo( pSrc, pToType )` 는 그것을 받는 판, `findCachedTypeInfo()` 는 이름 캐시 적중이면 가상 호출 없이
+ *          답하는 판. 규칙이 갈리면 `getComponent<T>` 가 조용히 다른 답을 낸다. 적중 · 실패 · nullptr · 빈 이름 넷을 본다.
+ */
+SW_TEST_CASE( GameObjectTest, CastFastPathsMatchVirtualPath )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj   = manager.createGameObject( sw::hashed_string( "CastFastPaths" ) );
+    sw::MeshComponent*    pMesh  = pObj->addComponent<sw::MeshComponent>();
+    sw::SceneComponent*   pScene = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::Component* pMeshBase  = pMesh;
+    sw::Component* pSceneBase = pScene;
+
+    // findStaticType 은 StaticType 그대로. 리플렉션 본체가 없는 기반(Component)은 nullptr.
+    const sw::TypeInfo* pSceneType = sw::findStaticType<sw::SceneComponent>();
+    const sw::TypeInfo* pMeshType  = sw::findStaticType<sw::MeshComponent>();
+    SW_EXPECT_TRUE( pSceneType == sw::SceneComponent::StaticType() );
+    SW_EXPECT_TRUE( pMeshType == sw::MeshComponent::StaticType() );
+    SW_EXPECT_NULL( sw::findStaticType<sw::Component>() );
+
+    // 이름 캐시 판은 가상 판과 같은 타입(이름)을 준다.
+    const sw::TypeInfo* pVirtual = pMeshBase->getTypeInfo();
+    const sw::TypeInfo* pCached  = pMeshBase->findCachedTypeInfo();
+    SW_ASSERT_NOT_NULL( pVirtual );
+    SW_ASSERT_NOT_NULL( pCached );
+    SW_EXPECT_TRUE( pCached->_fullyQualifiedName == pVirtual->_fullyQualifiedName );
+
+    // TypeInfo 를 받는 판 == 받지 않는 판 — 적중(업캐스트 결과) · 실패 · nullptr 둘.
+    SW_EXPECT_TRUE( sw::castTo<sw::SceneComponent>( pMeshBase, pSceneType ) == static_cast<sw::SceneComponent*>( pMesh ) );
+    SW_EXPECT_TRUE( sw::castTo<sw::SceneComponent>( pMeshBase ) == static_cast<sw::SceneComponent*>( pMesh ) );
+    SW_EXPECT_TRUE( sw::castTo<sw::MeshComponent>( pMeshBase, pMeshType ) == pMesh );
+    SW_EXPECT_NULL( sw::castTo<sw::MeshComponent>( pSceneBase, pMeshType ) );
+    SW_EXPECT_NULL( sw::castTo<sw::MeshComponent>( pSceneBase ) );
+    SW_EXPECT_NULL( sw::castTo<sw::MeshComponent>( pMeshBase, nullptr ) );
+    SW_EXPECT_NULL( sw::castTo<sw::MeshComponent>( static_cast<sw::Component*>( nullptr ), pMeshType ) );
+
+    // getComponent 는 위 판들로 답한다 — 첫 컴포넌트(Mesh)가 SceneComponent 로도 잡힌다.
+    SW_EXPECT_TRUE( pObj->getComponent<sw::MeshComponent>() == pMesh );
+    SW_EXPECT_TRUE( pObj->getComponent<sw::SceneComponent>() == static_cast<sw::SceneComponent*>( pMesh ) );
+
+    // 이름이 빈 컴포넌트는 캐시가 비어 가상으로 간다 — 같은 답. **이름은 되돌린다**: 파괴 때 컴포넌트 풀을 찾는 키가
+    // 이 이름이라, 빈 채로 두면 매니저 소멸이 풀 메모리를 힙으로 반납해 Shipping 에서 힙이 깨진다(0xc0000374).
+    const sw::hashed_string savedName = pMesh->getComponentName();
+    pMesh->setComponentName( sw::hashed_string{} );
+    SW_EXPECT_TRUE( pMeshBase->findCachedTypeInfo() == pMeshBase->getTypeInfo() );
+    pMesh->setComponentName( savedName );
+    SW_EXPECT_TRUE( pObj->getComponent<sw::MeshComponent>() == pMesh );
+}
+
+/**
  * @brief [GameObjectTest] 배치 트랜스폼 쓰기는 세터와 같은 결과를 내고, 부모의 자손 더티와 세대를 세운다.
  * @details `applyTransformBatch` 는 워커에 나눠 필드를 쓰고 더티를 바이트 저장으로 표시한다. 세터 경로와 갈리면
  *          안 되는 것 셋 — (1) 플러시 뒤 월드 행렬이 같다 (2) 자식만 써도 부모에 자손 더티가 서서 플러시가 내려간다
