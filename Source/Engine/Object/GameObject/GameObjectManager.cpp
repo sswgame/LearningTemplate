@@ -47,15 +47,57 @@ namespace sw
                 vector<SubTickHandle> _listPrerequisite;
             };
 
-            static vector<vector<GameObjectManager::TickExecutionItem>> sortTickCandidates( vector<TickCandidate>& listCandidate )
+            /**
+             * @brief 후보를 웨이브로 정렬합니다. outContiguousByObject 는 "훑은 순서 그대로라 같은 오브젝트의 항목이 붙어 있다".
+             * @details 선행 종속성도 없고 순서 키도 전부 같으면(보통) 정렬조차 하지 않는다 — 8000 후보의 안정 정렬이 재구성의
+             *          큰 몫이었다. 그 경우 항목은 오브젝트 순서 그대로라 서브웨이브 분할도 해시 없이 한 번에 된다.
+             */
+            static vector<vector<GameObjectManager::TickExecutionItem>> sortTickCandidates( vector<TickCandidate>& listCandidate, bool& outContiguousByObject )
             {
-                const size_t count = listCandidate.size();
+                outContiguousByObject = false;
+                const size_t count    = listCandidate.size();
                 if ( count == 0 )
                     return {};
 
                 if ( count == 1 )
                 {
                     return { { { listCandidate[0]._pComponent, listCandidate[0]._handle, listCandidate[0]._subTickId } } };
+                }
+
+                // 선행 종속성이 하나도 없으면(보통) 맵·인접 리스트를 만들지 않는다 — 8000 후보에 그 할당이 재구성의
+                // 대부분이었다. 아래의 같은 빠른 길은 "적혀는 있지만 아무도 못 찾는 종속성" 을 위해 남는다.
+                bool bAnyPrerequisite = false;
+                for ( const TickCandidate& cand : listCandidate )
+                {
+                    if ( cand._listPrerequisite.empty() == false )
+                    {
+                        bAnyPrerequisite = true;
+                        break;
+                    }
+                }
+                if ( bAnyPrerequisite == false )
+                {
+                    bool bAllSameOrder = true;
+                    for ( size_t index = 1; index < count && bAllSameOrder; ++index )
+                        bAllSameOrder = listCandidate[index]._orderKey == listCandidate[0]._orderKey;
+                    if ( bAllSameOrder )
+                    {
+                        outContiguousByObject = true; // 훑은 순서 그대로 — 후보는 originalIndex 순이다
+                    }
+                    else
+                    {
+                        std::stable_sort( listCandidate.begin(), listCandidate.end(), []( const TickCandidate& left, const TickCandidate& right )
+                        {
+                            if ( left._orderKey != right._orderKey )
+                                return left._orderKey < right._orderKey;
+                            return left._originalIndex < right._originalIndex;
+                        } );
+                    }
+                    vector<GameObjectManager::TickExecutionItem> listSingleWave;
+                    listSingleWave.reserve( count );
+                    for ( const TickCandidate& cand : listCandidate )
+                        listSingleWave.push_back( { cand._pComponent, cand._handle, cand._subTickId } );
+                    return { std::move( listSingleWave ) };
                 }
 
                 // SubTickHandle -> 후보자 인덱스 빠른 매핑 맵 구성
@@ -176,28 +218,41 @@ namespace sw
                 return listDagWave;
             }
 
-            static vector<vector<GameObjectManager::TickExecutionItem>> splitWaveByObject( const vector<GameObjectManager::TickExecutionItem>& listWave )
+            static vector<vector<GameObjectManager::TickExecutionItem>> splitWaveByObject( const vector<GameObjectManager::TickExecutionItem>& listWave,
+                                                                                           bool                                                bContiguousByObject )
             {
                 vector<vector<GameObjectManager::TickExecutionItem>> listSubwave;
-                vector<unordered_set<uint64>>                        listOccupied;
+                if ( bContiguousByObject )
+                {
+                    // 같은 오브젝트의 항목이 붙어 있다 — 이어지는 동안 자리를 하나씩 올리고, 오브젝트가 바뀌면 0 번부터.
+                    uint64 lastObjectId = 0;
+                    uint32 runSlot      = 0;
+                    for ( const GameObjectManager::TickExecutionItem& item : listWave )
+                    {
+                        if ( item._handle.isValid() == false )
+                            continue;
+                        const uint64 objectId = item._handle.objectId();
+                        runSlot               = ( objectId == lastObjectId && listSubwave.empty() == false ) ? runSlot + 1 : 0;
+                        lastObjectId          = objectId;
+                        if ( runSlot == listSubwave.size() )
+                            listSubwave.emplace_back();
+                        listSubwave[runSlot].push_back( item );
+                    }
+                    return listSubwave;
+                }
+                // 오브젝트마다 "이미 든 서브웨이브 수" 하나면 된다 — 같은 오브젝트의 항목은 0 번부터 차례로 차므로 그 수가
+                // 곧 다음 자리다. 예전엔 서브웨이브마다 unordered_set 을 두고 항목마다 앞에서부터 물었다.
+                unordered_map<uint64, uint32> mapNextSlot;
+                mapNextSlot.reserve( listWave.size() );
                 for ( const GameObjectManager::TickExecutionItem& item : listWave )
                 {
                     if ( item._handle.isValid() == false )
                         continue;
-                    const uint64 objectId = item._handle.objectId();
-                    size_t       slot{ 0 };
-                    for ( ; slot < listSubwave.size(); ++slot )
-                    {
-                        if ( listOccupied[slot].count( objectId ) == 0 )
-                            break;
-                    }
+                    uint32& slot = mapNextSlot[item._handle.objectId()];
                     if ( slot == listSubwave.size() )
-                    {
                         listSubwave.emplace_back();
-                        listOccupied.emplace_back();
-                    }
                     listSubwave[slot].push_back( item );
-                    listOccupied[slot].insert( objectId );
+                    ++slot;
                 }
                 return listSubwave;
             }
@@ -318,6 +373,7 @@ namespace sw
         , _mapComponentPool{}
         , _listGameObject{}
         , _mapNameToObject{}
+        , _mapNameNextSuffix{}
         , _mapIdToObject{}
         , _listPendingAdd{}
         , _listPendingDestroyObject{}
@@ -330,6 +386,7 @@ namespace sw
         , _bParallelTransformReadOnly{ false }
         , _bTicking{ false }
         , _bIsTickWavesDirty{ true }
+        , _tickWaveBuildCount{ 0 }
         , _listCachedTickWave{}
         , _deferredTransformMutex{}
         , _listDeferredTransformUpdate{}
@@ -820,7 +877,14 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listPendingDestroyObject.push_back( pObj );
         }
-        markTickWavesDirty();
+        // 틱에 참여하는 컴포넌트가 있을 때만 웨이브를 다시 만든다 — 그렇지 않은 물체는 웨이브에 없다.
+        bool bTickWork = false;
+        pObj->forEachComponent( [&bTickWork]( Component* pComp )
+        {
+            bTickWork = bTickWork || pComp->hasTickWork();
+        } );
+        if ( bTickWork )
+            markTickWavesDirty();
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )
@@ -832,7 +896,8 @@ namespace sw
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp );
-        markTickWavesDirty();
+        if ( pComp->hasTickWork() )
+            markTickWavesDirty();
     }
 
     void GameObjectManager::destroyComponentInstance( Component* pComp )
@@ -932,7 +997,7 @@ namespace sw
             if ( pObj != nullptr )
                 _poolGameObject.destroy( pObj );
         }
-        markTickWavesDirty();
+        // 웨이브는 지우라고 한 자리(destroyObject · destroyComponent · removeComponent)가 틱 멤버십을 보고 더럽혔다.
     }
 
     void GameObjectManager::clear()
@@ -1042,7 +1107,7 @@ namespace sw
             if ( pObj != nullptr )
                 pObj->refreshActiveInHierarchy();
         }
-        markTickWavesDirty();
+        // 웨이브는 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 더럽혔다 — 병합 자체는 멤버십을 바꾸지 않는다.
     }
 
     void GameObjectManager::registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
@@ -1183,6 +1248,7 @@ namespace sw
     {
         if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
         {
+            _tickWaveBuildCount.fetch_add( 1, std::memory_order_relaxed );
             array<vector<GameObjectManagerInternal::TickCandidate>, 4> arrListGroup;
             uint32                                                     totalCandidateCount = 0;
 
@@ -1244,10 +1310,11 @@ namespace sw
                 if ( groupCandidates.empty() )
                     continue;
 
-                vector<vector<TickExecutionItem>> listDagWaves = GameObjectManagerInternal::sortTickCandidates( groupCandidates );
+                bool                              bContiguousByObject = false;
+                vector<vector<TickExecutionItem>> listDagWaves        = GameObjectManagerInternal::sortTickCandidates( groupCandidates, bContiguousByObject );
                 for ( const vector<TickExecutionItem>& dagWave : listDagWaves )
                 {
-                    vector<vector<TickExecutionItem>> listSubwave = GameObjectManagerInternal::splitWaveByObject( dagWave );
+                    vector<vector<TickExecutionItem>> listSubwave = GameObjectManagerInternal::splitWaveByObject( dagWave, bContiguousByObject );
                     for ( vector<TickExecutionItem>& subwave : listSubwave )
                     {
                         if ( subwave.empty() == false )
@@ -1292,7 +1359,7 @@ namespace sw
         return it != _mapNameToObject.end() && it->second != nullptr && it->second->isPendingKill() == false;
     }
 
-    hashed_string GameObjectManager::makeUniqueNameUnlocked( hashed_string requested ) const
+    hashed_string GameObjectManager::makeUniqueNameUnlocked( hashed_string requested )
     {
         if ( isNameTakenUnlocked( requested ) == false )
             return requested;
@@ -1305,15 +1372,26 @@ namespace sw
         if ( baseView.size() > 96 )
             baseView = baseView.substr( 0, 96 );
 
+        // 이름마다 **다음 번호를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전엔 매번 _2 부터 다시 물어, 같은
+        // 이름 N 개면 생성 하나가 N 번 조회였다 — 8000 개에 2.6 초(개당 326 µs). 지운 이름의 번호는 되쓰지 않는다(오르기만 한다).
         StringBuilder<constant::kMaxBuffer128> sb;
-        for ( uint32 nameSuffix = 2; nameSuffix < 10000; ++nameSuffix )
+        const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
+        uint32&                                nextSuffix      = _mapNameNextSuffix[baseKey];
+        const bool                             bFirstDuplicate = nextSuffix < 2;
+        if ( bFirstDuplicate )
+            nextSuffix = 2;
+        for ( uint32 probeCount = 0; probeCount < 10000; ++probeCount )
         {
+            const uint32 nameSuffix = nextSuffix++;
             sb.clear();
             sb.append( baseView ).append( '_' ).append( nameSuffix );
             const hashed_string candidate( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( candidate ) == false )
             {
-                SW_LOG_WARNING( "Duplicate name '%#' — using '%#'", requested.c_str(), candidate.c_str() );
+                // 이름당 첫 중복만 경고한다 — 총알처럼 같은 이름으로 수천 개를 스폰하는 게임에서 줄마다 경고는 로그 스팸이고,
+                // 그 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비쌌다. 그 뒤로는 조용히 번호를 붙인다.
+                if ( bFirstDuplicate )
+                    SW_LOG_WARNING( "Duplicate name '%#' — using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );
                 return candidate;
             }
         }

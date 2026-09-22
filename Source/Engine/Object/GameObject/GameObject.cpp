@@ -444,6 +444,10 @@ namespace sw
     {
         vector<Component*> listOwned = _listComponent;
         _listComponent.clear();
+        // 파괴 뒤에는 물을 수 없으니 지금 본다 — 틱에 참여하던 것이 하나라도 있었을 때만 웨이브를 다시 만든다.
+        bool bTickWork = false;
+        for ( Component* pComp : listOwned )
+            bTickWork = bTickWork || ( pComp != nullptr && pComp->hasTickWork() );
         for ( Component* pComp : listOwned )
         {
             if ( pComp == nullptr )
@@ -457,7 +461,8 @@ namespace sw
             else
                 sw_delete( pComp );
         }
-        markTickOrderDirty();
+        if ( bTickWork )
+            markTickOrderDirty();
     }
 
     Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingKill ) const
@@ -477,6 +482,8 @@ namespace sw
     {
         if ( pComp == nullptr || pComp->getOwner() != this )
             return false;
+        // 파괴 뒤에는 물을 수 없으니 지금 본다.
+        const bool bTickWork = pComp->hasTickWork();
 
         if ( _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen() )
         {
@@ -509,7 +516,8 @@ namespace sw
             else
                 sw_delete( pComp );
         }
-        markTickOrderDirty();
+        if ( bRemoved && bTickWork )
+            markTickOrderDirty();
         return bRemoved;
     }
 

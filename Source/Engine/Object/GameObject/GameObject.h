@@ -341,7 +341,9 @@ namespace sw
         _listComponent.push_back( pComp );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
-        markTickOrderDirty();
+        // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.
+        if ( pComp->hasTickWork() )
+            markTickOrderDirty();
         return pComp;
     }
 } // namespace sw

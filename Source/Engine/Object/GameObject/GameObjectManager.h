@@ -367,6 +367,13 @@ namespace sw
 
         /** @brief Tick 웨이브를 다음 beginTick에서 다시 만듭니다. */
         void markTickWavesDirty() { _bIsTickWavesDirty.store( true, std::memory_order_release ); }
+        /**
+         * @brief 틱 웨이브를 다시 만든 횟수 — 진단·회귀 테스트용.
+         * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 한다.
+         *          예전엔 아무 구조 변경에나 다시 만들었다 — 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이 8000
+         *          컴포넌트를 전부 훑었다(2 ms).
+         */
+        uint32 getTickWaveBuildCount() const { return _tickWaveBuildCount.load( std::memory_order_relaxed ); }
 
         /** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
         vector<hashed_string> getRegisteredComponentTypeNames() const;
@@ -393,7 +400,7 @@ namespace sw
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
-        hashed_string makeUniqueNameUnlocked( hashed_string requested ) const;
+        hashed_string makeUniqueNameUnlocked( hashed_string requested );
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
          * @details 지연 파괴 대기(pending kill) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없다 — 그 이름은 비어 있는
@@ -477,6 +484,7 @@ namespace sw
 
         vector<GameObject*>                       _listGameObject;
         unordered_map<hashed_string, GameObject*> _mapNameToObject;
+        unordered_map<hashed_string, uint32>      _mapNameNextSuffix; ///< 이름마다 다음 번호 — 중복 유일화가 O(1) (언리얼 MakeUniqueObjectName 의 자리)
         unordered_map<uint64, GameObject*>        _mapIdToObject;
         /** @brief 위 맵의 **빠른 읽기 길**. 쓰기는 맵과 같은 자리에서 함께 한다. */
         ObjectSlotTable     _objectSlotTable;
@@ -495,6 +503,7 @@ namespace sw
         atomic<bool>                      _bParallelTransformReadOnly;
         atomic<bool>                      _bTicking;
         atomic<bool>                      _bIsTickWavesDirty;
+        atomic<uint32>                    _tickWaveBuildCount; ///< 웨이브를 다시 만든 횟수(진단)
         vector<vector<TickExecutionItem>> _listCachedTickWave;
         mutex                             _deferredTransformMutex;
         vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;

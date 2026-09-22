@@ -172,6 +172,8 @@ namespace sw
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
+        , _rootIndex{ kNotInList }
+        , _dirtyRootIndex{ kNotInList }
     {
         _bCanEverTick      = SW_FALSE;
         _bIsSceneComponent = SW_TRUE;

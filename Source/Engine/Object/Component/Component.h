@@ -223,6 +223,8 @@ namespace sw
         TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
         /** @brief 매니저 tick 웨이브에 들어가면 true. */
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
+        /** @brief 틱 웨이브에 들어갈 일이 있는가 — 주 틱이 켜졌거나 서브틱이 하나라도 등록되어 있으면. 웨이브를 다시 만들지 정하는 기준. */
+        bool hasTickWork() const { return canEverTick() || _listSubTick.empty() == false; }
         /**
          * @brief 씬 컴포넌트(트랜스폼을 가진 것)인가 — 리플렉션 없이 답한다.
          * @details `castTo<SceneComponent>` 는 가상 호출 + 캐시 조회 둘 + 조상 표 비교다(약 8 ns). 워커 열넷이

@@ -32,17 +32,12 @@ namespace sw
             return;
         {
             std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-            bool                                bKnown = false;
-            for ( SceneComponent* pExisting : _listRoot )
+            // 자기 자리를 들고 있으면 이미 루트다 — 목록을 훑지 않는다(8000 개면 등록마다 8000 번 비교였다).
+            if ( pComp->_rootIndex == SceneComponent::kNotInList )
             {
-                if ( pExisting == pComp )
-                {
-                    bKnown = true;
-                    break;
-                }
-            }
-            if ( bKnown == false )
+                pComp->_rootIndex = static_cast<uint32>( _listRoot.size() );
                 _listRoot.push_back( pComp );
+            }
         }
         // 컴포넌트는 더티로 태어난다 — 루트가 되는 순간 플러시 목록에도 올라야 첫 플러시가 월드 캐시를 만든다.
         if ( pComp->isTransformDirty() || pComp->hasDirtyDescendant() )
@@ -54,27 +49,54 @@ namespace sw
         if ( pComp == nullptr )
             return;
         std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-        for ( size_t rootIndex = 0; rootIndex < _listRoot.size(); ++rootIndex )
+
+        // 자기 자리로 O(1) swap-remove — 선형으로 찾던 때는 8000 개를 지우면 3200만 번 비교였다(개당 2 µs).
+        const uint32 rootIndex = pComp->_rootIndex;
+        if ( rootIndex != SceneComponent::kNotInList && rootIndex < _listRoot.size() && _listRoot[rootIndex] == pComp )
         {
-            if ( _listRoot[rootIndex] == pComp )
-            {
-                _listRoot[rootIndex] = _listRoot.back();
-                _listRoot.pop_back();
-                break;
-            }
+            SceneComponent* pMoved = _listRoot.back();
+            _listRoot[rootIndex]   = pMoved;
+            pMoved->_rootIndex     = rootIndex;
+            _listRoot.pop_back();
         }
-        // 더 이상 루트가 아니다 — 플러시 목록에서도 뺀다(부모 아래로 들어갔으면 그 루트가 대신 오른다).
+        pComp->_rootIndex = SceneComponent::kNotInList;
+
+        // 더 이상 루트가 아니다 — 플러시 목록에서도 뺀다(부모 아래로 들어갔으면 그 루트가 대신 오른다). 자리를 알면 O(1),
+        // 병렬 스크래치에 있어 모르면(배치 도중의 재부모는 금지라 실제로는 없다) 훑는다.
         if ( pComp->_bQueuedDirtyRoot.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE )
         {
-            for ( size_t dirtyIndex = 0; dirtyIndex < _listDirtyRoot.size(); ++dirtyIndex )
+            const uint32 dirtyIndex = pComp->_dirtyRootIndex;
+            if ( dirtyIndex < _listDirtyRoot.size() && _listDirtyRoot[dirtyIndex] == pComp )
             {
-                if ( _listDirtyRoot[dirtyIndex] == pComp )
+                SceneComponent* pMoved     = _listDirtyRoot.back();
+                _listDirtyRoot[dirtyIndex] = pMoved;
+                if ( pMoved != nullptr )
+                    pMoved->_dirtyRootIndex = dirtyIndex;
+                _listDirtyRoot.pop_back();
+            }
+            else
+            {
+                for ( size_t index = 0; index < _listDirtyRoot.size(); ++index )
                 {
-                    _listDirtyRoot[dirtyIndex] = _listDirtyRoot.back();
+                    if ( _listDirtyRoot[index] != pComp )
+                        continue;
+                    SceneComponent* pMoved = _listDirtyRoot.back();
+                    _listDirtyRoot[index]  = pMoved;
+                    if ( pMoved != nullptr )
+                        pMoved->_dirtyRootIndex = static_cast<uint32>( index );
                     _listDirtyRoot.pop_back();
                     break;
                 }
+                for ( vector<SceneComponent*>& listScratch : _listDirtyRootScratch )
+                {
+                    for ( SceneComponent*& pQueued : listScratch )
+                    {
+                        if ( pQueued == pComp )
+                            pQueued = nullptr; // 병합·플러시가 빈 자리를 건너뛴다
+                    }
+                }
             }
+            pComp->_dirtyRootIndex = SceneComponent::kNotInList;
         }
     }
 
@@ -87,6 +109,7 @@ namespace sw
     {
         if ( pRoot == nullptr || tryMarkQueued( pRoot ) == false )
             return;
+        pRoot->_dirtyRootIndex = static_cast<uint32>( _listDirtyRoot.size() );
         _listDirtyRoot.push_back( pRoot );
     }
 
@@ -99,7 +122,11 @@ namespace sw
         if ( slot < _dirtyRootScratchCount )
             _pDirtyRootScratch[slot].push_back( pRoot );
         else
-            _listDirtyRoot.push_back( pRoot ); // 서비스가 안 묶인 곳(테스트·도구)은 직렬이라 본 목록에 바로.
+        {
+            // 서비스가 안 묶인 곳(테스트·도구)은 직렬이라 본 목록에 바로.
+            pRoot->_dirtyRootIndex = static_cast<uint32>( _listDirtyRoot.size() );
+            _listDirtyRoot.push_back( pRoot );
+        }
     }
 
     void SceneTransformHierarchy::mergeQueuedDirtyRoots()
@@ -113,8 +140,15 @@ namespace sw
         {
             if ( listScratch.empty() )
                 continue;
+            const size_t firstIndex = _listDirtyRoot.size();
             _listDirtyRoot.insert( _listDirtyRoot.end(), listScratch.begin(), listScratch.end() );
             listScratch.clear();
+            // 스크래치에 있던 동안은 자리를 몰랐다 — 본 목록에 들어온 지금 적는다.
+            for ( size_t index = firstIndex; index < _listDirtyRoot.size(); ++index )
+            {
+                if ( _listDirtyRoot[index] != nullptr )
+                    _listDirtyRoot[index]->_dirtyRootIndex = static_cast<uint32>( index );
+            }
         }
     }
 
@@ -162,8 +196,10 @@ namespace sw
         // 목록을 비우며 대기 플래그를 내린다 — 다음 더티가 다시 올릴 수 있게.
         for ( SceneComponent* pRoot : _listDirtyRoot )
         {
-            if ( pRoot != nullptr )
-                pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
+            if ( pRoot == nullptr )
+                continue;
+            pRoot->_dirtyRootIndex = SceneComponent::kNotInList;
+            pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
         }
         _listDirtyRoot.clear();
         _lastFlushedGeneration = currentGeneration;
@@ -174,12 +210,19 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _rootMutex };
         for ( SceneComponent* pRoot : _listDirtyRoot )
         {
-            if ( pRoot != nullptr )
-                pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
+            if ( pRoot == nullptr )
+                continue;
+            pRoot->_dirtyRootIndex = SceneComponent::kNotInList;
+            pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
         }
         _listDirtyRoot.clear();
         for ( vector<SceneComponent*>& listScratch : _listDirtyRootScratch )
             listScratch.clear();
+        for ( SceneComponent* pRoot : _listRoot )
+        {
+            if ( pRoot != nullptr )
+                pRoot->_rootIndex = SceneComponent::kNotInList;
+        }
         _listRoot.clear();
     }
 

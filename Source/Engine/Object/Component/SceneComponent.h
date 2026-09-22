@@ -187,5 +187,13 @@ namespace sw
          * @details 원자인 이유: 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 오르게(exchange).
          */
         atomic<uint8> _bQueuedDirtyRoot;
+        /**
+         * @brief 계층의 루트 목록 · 더티 루트 목록에서 자기 자리. 목록에 없으면 `kNotInList`. `SceneTransformHierarchy` 만 만진다.
+         * @details 등록이 중복 검사로 목록 전체를 훑고 해제가 선형으로 찾던 것을 O(1) swap-remove 로 — 8000 개를 만들고 지우면
+         *          각각 3200만 번 비교였다(파괴 개당 2 µs). 더티 목록 자리는 플러시가 비운다.
+         */
+        static constexpr uint32 kNotInList = 0xFFFFFFFFu;
+        uint32                  _rootIndex;
+        uint32                  _dirtyRootIndex;
     };
 } // namespace sw

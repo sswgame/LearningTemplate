@@ -579,6 +579,133 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
 }
 
 /**
+ * @brief 같은 이름의 오브젝트 N 개는 다시 훑지 않고 유일해진다 — 첫 것은 원래 이름, 나머지는 번호, 전부 찾을 수 있다.
+ * @details 예전엔 중복마다 `_2` 부터 다시 물어 N 개면 생성 하나가 N 번 조회였다(8000 개 2.6 초). 이제 이름마다 다음 번호를
+ *          기억한다. 번호는 오르기만 하므로 지웠다 다시 만들어도 옛 번호를 되쓰지 않는다 — 그것이 O(1) 의 조건이다.
+ */
+SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
+{
+    SW_TEST_SUPPRESS_LOGS();
+    sw::GameObjectManager       manager;
+    constexpr uint32            kCount = 3000;
+    sw::vector<sw::GameObject*> listObj;
+    listObj.reserve( kCount );
+    for ( uint32 index = 0; index < kCount; ++index )
+        listObj.push_back( manager.createGameObject( sw::hashed_string( "Dup" ) ) );
+    SW_EXPECT_STREQ( "Dup", listObj[0]->getName().c_str() );
+    SW_EXPECT_STREQ( "Dup_2", listObj[1]->getName().c_str() );
+    SW_EXPECT_STREQ( "Dup_3000", listObj[kCount - 1]->getName().c_str() );
+    for ( uint32 index = 0; index < kCount; index += 997 )
+        SW_EXPECT_TRUE( manager.findGameObjectByName( listObj[index]->getName() ) == listObj[index] );
+
+    // 지우고 다시 만들어도 번호는 이어진다(되쓰지 않는다).
+    manager.destroyObject( listObj[1], false );
+    manager.processDeferredDestruction();
+    sw::GameObject* pAgain = manager.createGameObject( sw::hashed_string( "Dup" ) );
+    SW_ASSERT_NOT_NULL( pAgain );
+    SW_EXPECT_STREQ( "Dup_3001", pAgain->getName().c_str() );
+}
+
+/**
+ * @brief 루트 목록은 자리(인덱스)로 지우고 되돌린다 — 가운데를 지워도, 붙였다 떼도 남은 루트가 그대로 플러시된다.
+ * @details 등록의 중복 검사와 해제의 선형 탐색을 O(1) 로 바꿨다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나 두 번 들어간다 —
+ *          그러면 어떤 루트는 움직여도 월드 위치가 갱신되지 않는다. 그것을 본다.
+ */
+SW_TEST_CASE( GameObjectTest, RootListSurvivesIndexedRemoval )
+{
+    sw::GameObjectManager           manager;
+    sw::vector<sw::SceneComponent*> listRoot;
+    for ( uint32 index = 0; index < 6; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        name.append( "Root" ).append( index );
+        sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( name.c_str() ) );
+        listRoot.push_back( pObj->addComponent<sw::SceneComponent>() );
+    }
+    manager.flushSceneTransforms();
+    SW_EXPECT_EQUAL( size_t( 6 ), manager.getTransformHierarchy().getRootCount() );
+
+    // 가운데 둘을 지운다 — swap-remove 가 뒤의 루트를 앞자리로 옮긴다. 그 옮겨진 루트(5 번)도 이어서 지운다 — 옮겨진 것의
+    // 자리가 갱신되지 않았다면 여기서 못 찾아 목록에 남는다.
+    manager.destroyObject( listRoot[1]->getOwner(), false );
+    manager.destroyObject( listRoot[4]->getOwner(), false );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t( 4 ), manager.getTransformHierarchy().getRootCount() );
+    manager.destroyObject( listRoot[5]->getOwner(), false );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getRootCount() );
+
+    // 남은 루트는 전부 움직이고 플러시되어야 한다.
+    const uint32 arrRemaining[3] = { 0, 2, 3 };
+    for ( uint32 index : arrRemaining )
+        listRoot[index]->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 10.0f, 1.0f, 0.0f } );
+    manager.flushSceneTransforms();
+    for ( uint32 index : arrRemaining )
+        SW_EXPECT_TRUE( sw::MathUtil::nearEqual( listRoot[index]->getWorldPosition()._x, static_cast<float32>( index ) * 10.0f ) );
+
+    // 붙이면 루트에서 빠지고, 떼면 다시 루트다 — 되돌아온 뒤에도 플러시된다.
+    listRoot[3]->attachToComponent( listRoot[0] );
+    SW_EXPECT_EQUAL( size_t( 2 ), manager.getTransformHierarchy().getRootCount() );
+    listRoot[3]->detachFromComponent();
+    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getRootCount() );
+    listRoot[3]->setLocalPosition( sw::float3{ 77.0f, 0.0f, 0.0f } );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( sw::MathUtil::nearEqual( listRoot[3]->getWorldPosition()._x, 77.0f ) );
+}
+
+/**
+ * @brief 틱 웨이브는 틱 멤버십이 바뀔 때만 다시 만든다 — 틱하지 않는 컴포넌트를 붙였다 떼는 것은 세지 않는다.
+ * @details 예전엔 아무 구조 변경에나(병합 · 지연 파괴 처리 · 메시 추가) 다시 만들었다. 8000 틱 컴포넌트에 재구성 하나가 2 ms 라,
+ *          총알이 매 프레임 생기는 게임은 그것을 매 프레임 냈다. 횟수(`getTickWaveBuildCount`)로 본다.
+ */
+SW_TEST_CASE( GameObjectTest, TickWavesRebuildOnlyWhenTickWorkChanges )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "WaveGate" ) );
+    manager.tick( 0.016f );
+    const uint32 baseCount = manager.getTickWaveBuildCount();
+    SW_EXPECT_TRUE( baseCount >= 1 );
+
+    // 틱하지 않는 컴포넌트 — 붙이고, 틱하고, 지우고, 틱해도 그대로.
+    sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount, manager.getTickWaveBuildCount() );
+    manager.destroyComponent( pMesh );
+    manager.processDeferredDestruction();
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount, manager.getTickWaveBuildCount() );
+
+    // 틱하는 컴포넌트 — 붙이면 한 번, 틱을 끄면 한 번, 지우면 한 번.
+    sw::MockTickSceneComponent* pTick = pObj->addComponent<sw::MockTickSceneComponent>();
+    SW_ASSERT_NOT_NULL( pTick );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickWaveBuildCount() );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickWaveBuildCount() );
+    pTick->setCanEverTick( false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 2, manager.getTickWaveBuildCount() );
+    pTick->setCanEverTick( true );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 3, manager.getTickWaveBuildCount() );
+    manager.destroyComponent( pTick );
+    manager.processDeferredDestruction();
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickWaveBuildCount() );
+
+    // 오브젝트를 지우는 것도 틱하는 컴포넌트가 있을 때만.
+    sw::GameObject* pQuiet = manager.createGameObject( sw::hashed_string( "QuietObj" ) );
+    pQuiet->addComponent<sw::MeshComponent>();
+    manager.tick( 0.016f );
+    manager.destroyObject( pQuiet, false );
+    manager.processDeferredDestruction();
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickWaveBuildCount() );
+}
+
+/**
  * @brief 컴포넌트는 이름이 바뀌어도 **자기가 나온 풀**로 돌아간다.
  * @details 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 다시 찾던 때는, 이름을 비운 채 파괴하면 풀을 못 찾아
  *          풀 블록을 힙으로 반납했다 — Shipping 에서 힙 손상(0xc0000374), Debug·ASan 은 조용했다. 이제 컴포넌트가
