@@ -602,6 +602,7 @@ namespace sw
         vector<FunctionInfo>                                      _listMethod;
         TypeMetadata                                              _metadata;
         mutable vector<PropertyInfo>                              _listPropertyWithBase;
+        mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록의 이름·별칭 → 항목. 목록과 함께 짓는다
         mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
         mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
         /**
@@ -618,7 +619,14 @@ namespace sw
          *          동시에 올 수 있고, 같은 값을 쓰는 경쟁이라 relaxed 로 충분하다.
          */
         mutable atomic<const TypeInfo*> _pParentType;
-        uint32                          _typeId;
+        /**
+         * @brief `_parentFQN` 을 이름으로 풀어 봤지만 못 푼 타입 표 세대. 0 이면 아직 안 해 봤다.
+         * @details `Component` 처럼 REFLECT 가 아닌 기반은 이름만 적혀 있고 등록되지 않는다 — 예전엔 부모를 묻는
+         *          자리마다(계층 프로퍼티 조회 · 이름 걷기 · 기본값의 사슬 수집) 레지스트리를 잠금 잡고 다시 찾았다
+         *          (호출당 24 ns). 같은 세대면 답이 같으므로 세대를 적어 두고, 등록·해제로 세대가 바뀔 때만 다시 찾는다.
+         */
+        mutable atomic<uint32> _parentMissGeneration;
+        uint32                 _typeId;
         /**
          * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 표. `_ancestorDepth` 가 자기 칸이다.
          * @details 캐스트의 핫패스가 이것만 본다: `표[pTarget 의 깊이] == pTarget 의 이름`. 포인터가 아니라 이름이라 타입
@@ -754,8 +762,12 @@ namespace sw
         const TypeInfo* getParentType() const;
         /** @brief 부모 포인터를 이름으로 다시 푼다. 등록 배치 끝에서 `TypeRegistry` 가 부른다. */
         void resolveParentType() const;
-        /** @brief 부모 포인터를 비운다. 타입 표에서 원소가 옮겨질 수 있는 해제 뒤에 부른다. */
-        void clearParentType() const { _pParentType.store( nullptr, std::memory_order_relaxed ); }
+        /** @brief 부모 포인터와 "못 풀었다" 기억을 비운다. 해제 뒤(부모가 죽었을 수 있다) `TypeRegistry` 가 부른다. */
+        void clearParentType() const
+        {
+            _pParentType.store( nullptr, std::memory_order_relaxed );
+            _parentMissGeneration.store( 0, std::memory_order_relaxed );
+        }
 
         /** @brief 조상 표가 세워져 있으면 true — 상속 검사가 걷지 않고 O(1) 로 답한다. */
         bool hasAncestorDisplay() const
@@ -864,7 +876,12 @@ namespace sw
             return it != _mapNameToMethod.end() ? it->second : nullptr;
         }
 
-        /** @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 (평탄화 캐시 미사용 제로 할당 검색). */
+        /**
+         * @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 — 계층 병합 목록과 함께 지은 맵 하나로.
+         * @details 예전엔 단계마다 `findProperty` 를 따로 불렀고, 사슬 끝의 못 푸는 부모 이름을 잠금 잡고 찾았다
+         *          (적중 17 · 실패 34 ns). 이제 `getPropertiesWithBase()` 가 지어 둔 맵을 한 번 본다. 파생이 기반과 같은
+         *          이름을 다시 적으면 파생이 이긴다(병합 규칙과 같다).
+         */
         const PropertyInfo* findPropertyInHierarchy( const hashed_string& propertyNameOrAlias ) const;
 
         /**

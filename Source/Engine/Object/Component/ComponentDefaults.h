@@ -67,8 +67,25 @@ namespace sw
         static void   reloadDefaults();
 
     private:
-        /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 그 타입의 프로퍼티에 주입합니다. */
-        static void applyNodeToProperties( void* pInstance, const TypeInfo& typeInfo, const XmlNode& compNode );
+        /**
+         * @brief 프로퍼티 하나에 넣을 기본값 — 타입당 한 번 풀어 둔다(언리얼의 CDO 자리).
+         * @details 예전엔 **인스턴스마다** XML 노드에서 속성을 문자열로 찾고 텍스트를 파싱했다(값 넷에 약 800 ns —
+         *          스폰 한 사이클 300 ns 의 세 배). memcpy 로 넣을 수 있는 타입(스칼라 · 벡터 같은 POD)은 텍스트를 한 번
+         *          파싱해 바이트로 들고 인스턴스마다 memcpy 다. 문자열 · 컨테이너 · 비트필드 · enum 은 원문을 들고
+         *          인스턴스마다 파싱한다(예전과 같다).
+         */
+        struct DefaultPatch
+        {
+            const PropertyInfo* _pProperty = nullptr;
+            string              _text;    ///< memcpy 가 아닌 타입의 원문
+            vector<uint8>       _arrByte; ///< memcpy 타입의 파싱된 값 — 크기는 필드 타입의 크기
+            uint8               _bMemcpy = SW_FALSE;
+        };
+
+        /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 패치로 푼다 — 속성 찾기와 텍스트 파싱을 여기서 한 번 한다. */
+        static void resolveNodeToPatches( const TypeInfo& typeInfo, const XmlNode& compNode, vector<DefaultPatch>& inoutListPatch );
+        /** @brief 패치 하나를 인스턴스에 넣는다 — memcpy 또는 텍스트 파싱. */
+        static void applyPatch( void* pInstance, const DefaultPatch& patch );
 
         void ensureDefaultsLoaded();
 
@@ -82,12 +99,13 @@ namespace sw
          */
         struct ResolvedDefaults
         {
-            vector<pair<const TypeInfo*, XmlNode>> _listLevel;
+            vector<DefaultPatch> _listPatch;      ///< 뿌리 → 파생 순서. 같은 프로퍼티를 파생이 다시 적으면 뒤가 이긴다
+            uint32               _generation = 0; ///< 풀 때의 타입 표 세대 — 재등록으로 프로퍼티 목록이 갈리면 다시 푼다
         };
 
-        /** @brief 타입별 해석 결과. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버립니다. */
+        /** @brief 타입별 해석 결과. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 푼다. */
         const ResolvedDefaults& resolveFor( const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo );
-        /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다 — `XmlNode` 가 그 문서를 가리킵니다. */
+        /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다 — 패치는 그 문서에서 푼 값이다. */
         void clearResolvedCache();
 
         XmlDocument _defaultsDoc;

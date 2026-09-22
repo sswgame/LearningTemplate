@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -92,6 +93,28 @@ namespace sw
                     outListType[head]     = outListType[tail - 1];
                     outListType[tail - 1] = pTemp;
                 }
+            }
+
+            /**
+             * @brief 이 프로퍼티의 기본값을 바이트로 들고 memcpy 로 넣어도 되는가.
+             * @details 컨테이너 · 비트필드 · 문자열(intern 인덱스) 은 아니다. 필드 타입이 등록되어 있고(프리미티브 또는
+             *          POD 구조체) 크기를 알아야 한다. enum 은 TypeInfo 가 없어 텍스트 경로로 간다.
+             */
+            static bool isMemcpyProperty( const TypeRegistry& registry, const PropertyInfo& prop, size_t& outSize )
+            {
+                outSize = 0;
+                if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop._bIsBitField == SW_TRUE )
+                    return false;
+                if ( registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_string } ) ||
+                     registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_hashed_string } ) )
+                    return false;
+                const TypeInfo* pFieldType = registry.findType( prop._typeName );
+                if ( pFieldType == nullptr || pFieldType->_size == 0 )
+                    return false;
+                if ( pFieldType->isPrimitive() == false && pFieldType->usesPodCopyFastPath() == false )
+                    return false;
+                outSize = pFieldType->_size;
+                return true;
             }
 
             static XmlNode findDefaultsNode( XmlNode defaultsNode, const vector<string>& listName )
@@ -182,24 +205,27 @@ namespace sw
         if ( defaultsNode.isValid() == false )
             return;
 
-        // 어느 단계에 무엇을 적용할지는 **타입당 한 번만** 푼다.
+        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다 — 인스턴스마다는 memcpy 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo, pAliasTypeInfo );
-        for ( const auto& [pLevelType, levelNode] : resolved._listLevel )
-            applyNodeToProperties( pInstance, *pLevelType, levelNode );
+        for ( const DefaultPatch& patch : resolved._listPatch )
+            applyPatch( pInstance, patch );
     }
 
     const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo,
                                                                               const TypeInfo* pAliasTypeInfo )
     {
+        // 세대가 같은 동안만 쓴다 — 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
+        const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         {
             std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
             const auto                          it = _mapResolved.find( &typeInfo );
-            if ( it != _mapResolved.end() )
+            if ( it != _mapResolved.end() && it->second._generation == generation )
                 return it->second;
         }
 
-        // 뿌리 기반 타입부터 적용해 파생이 마지막에 덮어쓴다. 별칭 타입은 파생과 같은 단계로 본다.
-        ResolvedDefaults        resolved;
+        // 뿌리 기반 타입부터 풀어 파생이 마지막에 덮어쓴다. 별칭 타입은 파생과 같은 단계로 본다.
+        ResolvedDefaults resolved;
+        resolved._generation = generation;
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
@@ -220,18 +246,22 @@ namespace sw
             if ( levelNode.isValid() == false )
                 continue;
 
-            resolved._listLevel.emplace_back( pLevelType, levelNode );
+            resolveNodeToPatches( *pLevelType, levelNode, resolved._listPatch );
         }
 
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
-        // 그 사이에 다른 스레드가 넣었으면 그것을 쓴다 — 어차피 같은 값이다.
-        const auto [it, bInserted] = _mapResolved.try_emplace( &typeInfo, std::move( resolved ) );
-        (void)bInserted;
+        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다 — 어차피 같은 값이다. 세대가 지난 것은 갈아 끼운다.
+        auto it = _mapResolved.find( &typeInfo );
+        if ( it == _mapResolved.end() )
+            it = _mapResolved.emplace( &typeInfo, std::move( resolved ) ).first;
+        else if ( it->second._generation != generation )
+            it->second = std::move( resolved );
         return it->second;
     }
 
-    void ComponentDefaults::applyNodeToProperties( void* pInstance, const TypeInfo& typeInfo, const XmlNode& compNode )
+    void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XmlNode& compNode, vector<DefaultPatch>& inoutListPatch )
     {
+        const TypeRegistry& registry = engine::getTypeRegistry();
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
             const utf8* pPropName = prop._name.c_str();
@@ -253,9 +283,33 @@ namespace sw
             if ( pAttrVal == nullptr )
                 return;
 
-            void* pPropPtr = prop.getRawPtr( pInstance );
-            parseTextValueCoerced( pPropPtr, prop._typeName, pAttrVal, SerializeContext::getDefault() );
+            DefaultPatch patch;
+            patch._pProperty = &prop;
+            patch._text      = pAttrVal;
+
+            // POD 는 지금 한 번 파싱해 바이트로 든다. 파싱이 실패하면 예전처럼 인스턴스마다 텍스트 경로로 간다.
+            size_t fieldSize = 0;
+            if ( ComponentDefaultsInternal::isMemcpyProperty( registry, prop, fieldSize ) )
+            {
+                patch._arrByte.assign( fieldSize, 0 );
+                if ( parseTextValueCoerced( patch._arrByte.data(), prop._typeName, patch._text, SerializeContext::getDefault() ) )
+                    patch._bMemcpy = SW_TRUE;
+                else
+                    patch._arrByte.clear();
+            }
+            inoutListPatch.push_back( std::move( patch ) );
         } );
+    }
+
+    void ComponentDefaults::applyPatch( void* pInstance, const DefaultPatch& patch )
+    {
+        void* pPropPtr = patch._pProperty->getRawPtr( pInstance );
+        if ( patch._bMemcpy == SW_TRUE )
+        {
+            Memory::copy( pPropPtr, patch._arrByte.data(), patch._arrByte.size() );
+            return;
+        }
+        parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault() );
     }
 
     void ComponentDefaults::apply( Component* pComp, const TypeInfo& typeInfo )
@@ -290,8 +344,7 @@ namespace sw
 
     void ComponentDefaults::clearResolvedCache()
     {
-        // **문서를 다시 읽으면 캐시는 통째로 버린다.** 캐시는 `XmlNode` 를 들고 있는데 그것은
-        // 문서 안을 가리키는 것이라, 안 버리면 죽은 노드를 읽거나 옛 기본값이 계속 먹는다.
+        // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
     }

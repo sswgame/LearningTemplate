@@ -853,6 +853,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_ASSERT_NOT_NULL( pOrphan );
     SW_ASSERT_NOT_NULL( pRoot );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
+    // 못 푸는 부모는 같은 세대 동안 다시 찾지 않는다 — 두 번 물어도 nullptr 이고, 부모가 등록되면(세대가 오르면) 풀린다.
+    SW_EXPECT_NULL( pOrphan->getParentType() );
     SW_EXPECT_NULL( pOrphan->getParentType() );
     SW_EXPECT_FALSE( pOrphan->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pOrphan ) );
@@ -860,6 +862,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     pOrphan = find( "swtest::DispOrphan" );
     pRoot   = find( "swtest::DispRoot" );
     SW_ASSERT_NOT_NULL( pOrphan );
+    SW_EXPECT_TRUE( pOrphan->getParentType() == find( "swtest::DispLateParent" ) );
     SW_EXPECT_FALSE( pOrphan->hasAncestorDisplay() );
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
@@ -877,6 +880,100 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_EXPECT_TRUE( pActor->hasAncestorDisplay() );
     SW_EXPECT_FALSE( pBase->isDerivedFrom( pActor ) );
     SW_EXPECT_NULL( find( "swtest::DispLeaf" ) );
+#endif
+}
+
+/**
+ * @brief [ReflectionTypeInfoTest] 계층 프로퍼티 조회는 병합 목록과 같은 답을 낸다 — 이름 · 별칭 · 실패
+ * @details `findPropertyInHierarchy` 는 이제 `getPropertiesWithBase()` 가 지어 둔 맵 하나로 답한다(단계마다 걷던 때 적중
+ *          17 · 실패 34 ns). 병합 목록의 모든 항목이 이름으로 그 항목 자신을 내고, 별칭도 같은 항목을 내며, 없는 이름은
+ *          nullptr 여야 한다. 부모가 없는 타입은 자기 목록으로 답한다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeInfo*     pActor   = registry.findType( sw::hashed_string( "sw::DummyActor" ) );
+    const sw::TypeInfo*     pBase    = registry.findType( sw::hashed_string( "sw::DummyBase" ) );
+    SW_ASSERT_NOT_NULL( pActor );
+    SW_ASSERT_NOT_NULL( pBase );
+
+    const sw::vector<sw::PropertyInfo>& listMerged = pActor->getPropertiesWithBase();
+    SW_EXPECT_TRUE( listMerged.size() >= pActor->_listProperty.size() );
+    uint32 checkedCount = 0;
+    for ( const sw::PropertyInfo& prop : listMerged )
+    {
+        const sw::PropertyInfo* pFound = pActor->findPropertyInHierarchy( prop._name );
+        SW_ASSERT_NOT_NULL( pFound );
+        SW_EXPECT_TRUE( pFound == &prop );
+        for ( const sw::hashed_string& alias : prop._listAlias )
+        {
+            if ( alias.empty() == false )
+                SW_EXPECT_TRUE( pActor->findPropertyInHierarchy( alias ) == &prop );
+        }
+        ++checkedCount;
+    }
+    SW_EXPECT_TRUE( checkedCount > 0 );
+    SW_EXPECT_NULL( pActor->findPropertyInHierarchy( sw::hashed_string( "_noSuchPropertyAnywhere" ) ) );
+
+    // 부모가 없는 기반은 자기 목록으로 답한다 — 병합 목록이 곧 자기 목록이다.
+    for ( const sw::PropertyInfo& prop : pBase->getPropertiesWithBase() )
+        SW_EXPECT_TRUE( pBase->findPropertyInHierarchy( prop._name ) == pBase->findProperty( prop._name ) );
+}
+
+/**
+ * @brief [ReflectionTypeInfoTest] 병합 목록이 선형 임계(4)를 넘는 타입은 **맵**으로 답한다 — 이름 · 별칭 · 파생 우선 · 실패
+ * @details 위 테스트의 픽스처는 병합 목록이 작아 선형 경로만 지난다. 여기서는 손으로 만든 사슬(기반 3 · 파생 3, 파생이
+ *          기반 이름 하나를 다시 적는다)로 맵 경로를 지나게 한다. 파생이 다시 적은 이름은 파생의 항목(오프셋이 다르다)이
+ *          나와야 한다 — 병합 규칙과 같다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLarge )
+{
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    sw::TypeInfo typeRoot;
+    typeRoot._name               = sw::hashed_string( "MapRoot" );
+    typeRoot._fullyQualifiedName = sw::hashed_string( "swtest::MapRoot" );
+    typeRoot._moduleName         = sw::hashed_string( "TestHierarchyMap" );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_alpha" ), sw::hashed_string( "int32" ), 0 );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), 4 );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_gamma" ), sw::hashed_string( "int32" ), 8 );
+    typeRoot._listProperty.back()._listAlias.push_back( sw::hashed_string( "_gammaOld" ) );
+
+    sw::TypeInfo typeLeaf;
+    typeLeaf._name               = sw::hashed_string( "MapLeaf" );
+    typeLeaf._fullyQualifiedName = sw::hashed_string( "swtest::MapLeaf" );
+    typeLeaf._parentFQN          = sw::hashed_string( "swtest::MapRoot" );
+    typeLeaf._moduleName         = sw::hashed_string( "TestHierarchyMap" );
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_delta" ), sw::hashed_string( "int32" ), 12 );
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), 16 ); // 기반 이름을 다시 적는다
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_epsilon" ), sw::hashed_string( "int32" ), 20 );
+
+    registry.registerClass( typeRoot );
+    registry.registerClass( typeLeaf );
+    registry.buildLookupCaches();
+
+    const sw::TypeInfo* pLeaf = registry.findType( sw::hashed_string( "swtest::MapLeaf" ) );
+    SW_ASSERT_NOT_NULL( pLeaf );
+    const sw::vector<sw::PropertyInfo>& listMerged = pLeaf->getPropertiesWithBase();
+    SW_EXPECT_EQUAL( size_t( 5 ), listMerged.size() ); // 3 + 3 - 겹친 이름 1
+    SW_EXPECT_TRUE( listMerged.size() > sw::constants::reflection::kLinearSearchThreshold );
+
+    // 이름마다 병합 목록의 그 항목 자신.
+    for ( const sw::PropertyInfo& prop : listMerged )
+        SW_EXPECT_TRUE( pLeaf->findPropertyInHierarchy( prop._name ) == &prop );
+    // 파생이 다시 적은 이름은 파생의 오프셋.
+    const sw::PropertyInfo* pBeta = pLeaf->findPropertyInHierarchy( sw::hashed_string( "_beta" ) );
+    SW_ASSERT_NOT_NULL( pBeta );
+    SW_EXPECT_EQUAL( size_t( 16 ), pBeta->_offset );
+    // 기반의 별칭도 같은 항목.
+    const sw::PropertyInfo* pGamma = pLeaf->findPropertyInHierarchy( sw::hashed_string( "_gammaOld" ) );
+    SW_ASSERT_NOT_NULL( pGamma );
+    SW_EXPECT_TRUE( pGamma->_name == sw::hashed_string( "_gamma" ) );
+    SW_EXPECT_EQUAL( size_t( 8 ), pGamma->_offset );
+    SW_EXPECT_NULL( pLeaf->findPropertyInHierarchy( sw::hashed_string( "_zeta" ) ) );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestHierarchyMap" );
 #endif
 }
 

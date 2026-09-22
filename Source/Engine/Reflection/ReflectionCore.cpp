@@ -224,9 +224,11 @@ namespace sw
         , _listMethod{}
         , _metadata{}
         , _listPropertyWithBase{}
+        , _mapNameToPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
+        , _parentMissGeneration{ 0 }
         , _typeId{ 0 }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
@@ -252,9 +254,11 @@ namespace sw
         , _listMethod{ other._listMethod }
         , _metadata{ other._metadata }
         , _listPropertyWithBase{}
+        , _mapNameToPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
+        , _parentMissGeneration{ 0 }
         , _typeId{ other._typeId }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
@@ -282,9 +286,11 @@ namespace sw
         , _listMethod{ std::move( other._listMethod ) }
         , _metadata{ std::move( other._metadata ) }
         , _listPropertyWithBase{}
+        , _mapNameToPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
+        , _parentMissGeneration{ 0 }
         , _typeId{ other._typeId }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
@@ -325,9 +331,10 @@ namespace sw
         _bPrimitive         = other._bPrimitive;
 
         _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
-        _pParentType.store( nullptr, std::memory_order_relaxed );
+        clearParentType();
         clearAncestorDisplay();
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
@@ -358,9 +365,10 @@ namespace sw
         _bPrimitive         = other._bPrimitive;
 
         _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
-        _pParentType.store( nullptr, std::memory_order_relaxed );
+        clearParentType();
         clearAncestorDisplay();
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
@@ -440,6 +448,7 @@ namespace sw
         const size_t                totalCount   = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
 
         _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
         _listPropertyWithBase.reserve( totalCount );
         if ( pParentProps != nullptr )
             _listPropertyWithBase = *pParentProps;
@@ -458,6 +467,20 @@ namespace sw
             }
             if ( replaced == false )
                 _listPropertyWithBase.push_back( prop );
+        }
+
+        // 이름·별칭 → 항목 맵을 목록과 함께 짓는다 — `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않도록.
+        // 뒤의 항목(파생)이 앞(기반)을 덮는다.
+        _mapNameToPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
+        for ( const PropertyInfo& prop : _listPropertyWithBase )
+        {
+            _mapNameToPropertyWithBase[prop._name] = &prop;
+            for ( const hashed_string& alias : prop._listAlias )
+            {
+                if ( alias.empty() == false )
+                    _mapNameToPropertyWithBase[alias] = &prop;
+            }
         }
 
         _bListPropertyWithBaseBuilt = SW_TRUE;
@@ -874,18 +897,25 @@ namespace sw
         if ( pParent != nullptr || _parentFQN.empty() )
             return pParent;
 
-        // 배치 밖에서 등록된 타입이거나 해제로 비워진 뒤다 — 이름으로 풀어 적어 둔다. 부모가 아직
-        // 등록되지 않았으면(모듈 로드 순서) nullptr 를 남겨 다음 호출이 다시 찾게 한다.
+        // 못 푼 이름은 세대가 같은 동안 다시 찾지 않는다 — 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 전부
+        // 여기로 오는데, 예전엔 그때마다 레지스트리를 잠금 잡고 찾았다. 등록·해제가 세대를 올리면 한 번 더 찾는다.
+        const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+        if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
+            return nullptr;
+
         pParent = engine::getTypeRegistry().findType( _parentFQN );
         if ( pParent == this )
             pParent = nullptr;
-        _pParentType.store( pParent, std::memory_order_relaxed );
+        if ( pParent != nullptr )
+            _pParentType.store( pParent, std::memory_order_relaxed );
+        else
+            _parentMissGeneration.store( generation, std::memory_order_release );
         return pParent;
     }
 
     void TypeInfo::resolveParentType() const
     {
-        _pParentType.store( nullptr, std::memory_order_relaxed );
+        clearParentType();
         (void)getParentType();
     }
 
@@ -941,6 +971,7 @@ namespace sw
         _listProperty.clear();
         _listMethod.clear();
         _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
         _metadata                   = {};
@@ -986,15 +1017,24 @@ namespace sw
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
     {
-        // 재귀였다 — 부모 체인이 순환하면 스택이 넘친다. 걸음 수를 세는 루프로 걷는다.
-        const TypeInfo* pCurrent = this;
-        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        // 부모가 없거나(또는 순환으로 자기 것만 돌려주는 경우) 자기 목록만 본다.
+        const vector<PropertyInfo>& listWithBase = getPropertiesWithBase();
+        if ( &listWithBase == &_listProperty )
+            return findProperty( propNameOrAlias );
+
+        // 작으면 선형 — 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 답을 낸다.
+        if ( listWithBase.size() <= constants::reflection::kLinearSearchThreshold )
         {
-            const PropertyInfo* pProp = pCurrent->findProperty( propNameOrAlias );
-            if ( pProp != nullptr )
-                return pProp;
-            pCurrent = pCurrent->getParentType();
+            for ( size_t index = listWithBase.size(); index > 0; --index )
+            {
+                const PropertyInfo& prop = listWithBase[index - 1];
+                if ( prop.matchesName( propNameOrAlias ) )
+                    return &prop;
+            }
+            return nullptr;
         }
-        return nullptr;
+
+        const auto it = _mapNameToPropertyWithBase.find( propNameOrAlias );
+        return it != _mapNameToPropertyWithBase.end() ? it->second : nullptr;
     }
 } // namespace sw
