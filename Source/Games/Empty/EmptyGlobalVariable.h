@@ -144,4 +144,19 @@ namespace sw
      * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchGround );
+
+    /**
+     * @brief `-gv_benchTickMovers=N` — 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치·스케일을 씁니다.
+     * @details 0 이면 예전처럼 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 보통 모양(`onTick` 안의 세터 —
+     *          병렬 틱 중이라 지연 경로를 탄다)을 재고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
+     *          비용을 잰다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchTickMovers );
+
+    /**
+     * @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다 (총알처럼 스폰이 잦은 게임의 모양).
+     * @details 스폰·파괴 경로(이름 유일화 · 풀 · 등록부)와 "틱 멤버십이 매 프레임 바뀌는" 틱 등록부를 잰다. 새 큐브는 같은 메시
+     *          종류·기본 머티리얼이고, 무버(`-gv_benchTickMovers`)도 같이 붙는다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchSpawnChurn );
 } // namespace sw

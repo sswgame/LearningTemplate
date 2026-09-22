@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
@@ -208,6 +209,13 @@ namespace sw
         void deferTransformUpdate( TransformUpdateDelegate func );
 
         /**
+         * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다 — 세터가 `isParallelTransformReadOnly()` 일 때 부른다.
+         * @details 큐는 `SceneTransformHierarchy` 의 것이고, 틱 뒤 `applyQueuedTransformWrites` 가 `applyTransformBatch` 와 같은
+         *          병렬 적용을 돈다. 슬롯이 준비되지 않은 드문 경우(틱 밖에서 읽기 전용 구간을 흉내 낼 때)만 지연 델리게이트로 간다.
+         */
+        void queueTransformWrite( const SceneTransformWrite& write );
+
+        /**
          * @brief 병렬 tick 이후(finishTick 뒤) 메인 스레드에서 실행할 작업을 넣습니다.
          * @details GO 생성·addComponent·데미지·태그 변경 등 구조/공유 상태 변경에 사용합니다.
          */
@@ -242,6 +250,15 @@ namespace sw
         LightRegistry& getLightRegistry() { return _lightRegistry; }
         /** @brief 빛 컴포넌트의 등록부입니다. */
         const LightRegistry& getLightRegistry() const { return _lightRegistry; }
+
+        /**
+         * @brief 틱에 참여하는 오브젝트의 등록부 — 언리얼 `FTickTaskManager` 의 자리. 자세한 사연은 TickRegistry.h.
+         * @details 같은 규칙으로 소유만 한다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, `tick` 이 디스패치 전에
+         *          표시된 오브젝트만 다시 훑는다 — 씬 전체를 훑어 웨이브를 다시 짓던 0.5~1 ms 가 사라진 자리다.
+         */
+        TickRegistry& getTickRegistry() { return _tickRegistry; }
+        /** @brief 틱에 참여하는 오브젝트의 등록부입니다. */
+        const TickRegistry& getTickRegistry() const { return _tickRegistry; }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. pending-kill이면 nullptr. */
         Component* resolveComponent( ComponentHandle handle );
@@ -365,13 +382,13 @@ namespace sw
             return pComp;
         }
 
-        /** @brief Tick 웨이브를 다음 beginTick에서 다시 만듭니다. */
-        void markTickWavesDirty() { _bIsTickWavesDirty.store( true, std::memory_order_release ); }
+        /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다 (타입 재바인딩 · 씬 초기화). */
+        void markTickWavesDirty() { _tickRegistry.markAllDirty(); }
         /**
-         * @brief 틱 웨이브를 다시 만든 횟수 — 진단·회귀 테스트용.
+         * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수 — 진단·회귀 테스트용.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 한다.
-         *          예전엔 아무 구조 변경에나 다시 만들었다 — 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이 8000
-         *          컴포넌트를 전부 훑었다(2 ms).
+         *          예전엔 아무 구조 변경에나 씬 전체 웨이브를 다시 만들었다 — 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이
+         *          8000 컴포넌트를 전부 훑었다(2 ms). 지금은 바뀐 오브젝트의 컴포넌트 몇 개를 훑는 값이다.
          */
         uint32 getTickWaveBuildCount() const { return _tickWaveBuildCount.load( std::memory_order_relaxed ); }
 
@@ -397,10 +414,22 @@ namespace sw
     private:
         /** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
         void tickComponents( float32 deltaTime );
+        /**
+         * @brief 틱 중 슬롯 큐에 쌓인 트랜스폼 쓰기를 슬롯 단위로 나눠 적용하고 큐를 비웁니다 (틱 뒤, 게임 스레드).
+         * @details 같은 슬롯의 건은 한 워커가 순서대로 적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이긴다. 다른 슬롯이
+         *          같은 컴포넌트를 쓴 경우는 예전(뮤텍스 순서)과 같이 순서가 없다.
+         * @return 실제로 값이 바뀐 건수.
+         */
+        uint32 applyQueuedTransformWrites();
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
         hashed_string makeUniqueNameUnlocked( hashed_string requested );
+        /**
+         * @brief 잠금 없이 id 가 등록된 오브젝트(삭제 대기 포함)인지 봅니다 — 슬롯 표, 범위 밖이면 맵.
+         * @details `findGameObjectById` 와 달리 삭제 대기 오브젝트도 돌려주고 잠그지 않는다 — 이미 `_mutex` 를 쥔 자리용.
+         */
+        GameObject* findRegisteredUnlocked( uint64 objectId ) const;
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
          * @details 지연 파괴 대기(pending kill) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없다 — 그 이름은 비어 있는
@@ -485,8 +514,13 @@ namespace sw
         vector<GameObject*>                       _listGameObject;
         unordered_map<hashed_string, GameObject*> _mapNameToObject;
         unordered_map<hashed_string, uint32>      _mapNameNextSuffix; ///< 이름마다 다음 번호 — 중복 유일화가 O(1) (언리얼 MakeUniqueObjectName 의 자리)
-        unordered_map<uint64, GameObject*>        _mapIdToObject;
-        /** @brief 위 맵의 **빠른 읽기 길**. 쓰기는 맵과 같은 자리에서 함께 한다. */
+        /**
+         * @brief id → 오브젝트. **슬롯 표가 다루지 못하는 id(범위 밖)만** 든다.
+         * @details 예전에는 모든 오브젝트를 여기에도 넣었다 — 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다
+         *          해제 하나였다(총알처럼 스폰이 잦은 게임의 비용). 표가 답하는 범위(약 420만 id)에서는 비어 있다.
+         */
+        unordered_map<uint64, GameObject*> _mapIdToObject;
+        /** @brief id → 오브젝트의 **빠른 읽기 길**이자 정본. 범위 밖 id 만 위 맵으로 간다. */
         ObjectSlotTable     _objectSlotTable;
         vector<GameObject*> _listPendingAdd;
         vector<GameObject*> _listPendingDestroyObject;
@@ -502,9 +536,9 @@ namespace sw
 
         atomic<bool>                      _bParallelTransformReadOnly;
         atomic<bool>                      _bTicking;
-        atomic<bool>                      _bIsTickWavesDirty;
-        atomic<uint32>                    _tickWaveBuildCount; ///< 웨이브를 다시 만든 횟수(진단)
-        vector<vector<TickExecutionItem>> _listCachedTickWave;
+        uint64                            _lastWaveGeneration; ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
+        atomic<uint32>                    _tickWaveBuildCount; ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<vector<TickExecutionItem>> _listCachedTickWave; ///< 선행 종속성이 있을 때만 쓰는 DAG 웨이브
         mutex                             _deferredTransformMutex;
         vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;
         vector<TransformUpdateDelegate>   _listProcessingTransform;
@@ -522,6 +556,8 @@ namespace sw
         PrimitiveRegistry _primitiveRegistry;
         /** @brief 빛 컴포넌트의 등록부. 같은 규칙으로 소유만 합니다. */
         LightRegistry _lightRegistry;
+        /** @brief 틱에 참여하는 오브젝트의 등록부. 같은 규칙으로 소유만 합니다. */
+        TickRegistry _tickRegistry;
 
         /** @brief 활성 씬의 매니저 슬롯 — `setActiveManager` 참고. 메인 스레드가 씬 전환 때만 쓴다. */
         static GameObjectManager* _s_pActive;

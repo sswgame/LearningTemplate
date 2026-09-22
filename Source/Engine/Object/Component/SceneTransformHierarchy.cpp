@@ -19,6 +19,9 @@ namespace sw
         , _listDirtyRootScratch{}
         , _pDirtyRootScratch{ nullptr }
         , _dirtyRootScratchCount{ 0 }
+        , _listWriteScratch{}
+        , _pWriteScratch{ nullptr }
+        , _writeScratchCount{ 0 }
         , _rootMutex{}
         , _listScratchStack{}
         , _dirtyGeneration{ 1 }
@@ -150,6 +153,63 @@ namespace sw
                     _listDirtyRoot[index]->_dirtyRootIndex = static_cast<uint32>( index );
             }
         }
+    }
+
+    void SceneTransformHierarchy::beginQueuedWrites()
+    {
+        const uint32 slotCount = engine::getParallelScratchSlotCount();
+        if ( _listWriteScratch.size() < slotCount )
+            _listWriteScratch.resize( slotCount );
+        _pWriteScratch     = _listWriteScratch.data();
+        _writeScratchCount = static_cast<uint32>( _listWriteScratch.size() );
+    }
+
+    bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write )
+    {
+        const uint32 slot = engine::getParallelScratchSlot();
+        if ( slot >= _writeScratchCount )
+            return false;
+
+        vector<SceneTransformWrite>& listSlot = _pWriteScratch[slot];
+        // 같은 컴포넌트에 잇따라 쓰면 한 건으로 — 마지막 값이 이긴다(세터를 차례로 부른 것과 같다).
+        if ( listSlot.empty() == false && listSlot.back()._handle == write._handle )
+        {
+            SceneTransformWrite& last = listSlot.back();
+            if ( write._bSetPosition != SW_FALSE )
+            {
+                last._localPosition = write._localPosition;
+                last._bSetPosition  = SW_TRUE;
+            }
+            if ( write._bSetRotation != SW_FALSE )
+            {
+                last._localRotation = write._localRotation;
+                last._bSetRotation  = SW_TRUE;
+            }
+            if ( write._bSetScale != SW_FALSE )
+            {
+                last._localScale = write._localScale;
+                last._bSetScale  = SW_TRUE;
+            }
+            return true;
+        }
+        listSlot.push_back( write );
+        return true;
+    }
+
+    bool SceneTransformHierarchy::hasQueuedWrites() const
+    {
+        for ( const vector<SceneTransformWrite>& listSlot : _listWriteScratch )
+        {
+            if ( listSlot.empty() == false )
+                return true;
+        }
+        return false;
+    }
+
+    void SceneTransformHierarchy::clearQueuedWrites()
+    {
+        for ( vector<SceneTransformWrite>& listSlot : _listWriteScratch )
+            listSlot.clear();
     }
 
     void SceneTransformHierarchy::flush()

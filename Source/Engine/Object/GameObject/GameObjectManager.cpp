@@ -266,6 +266,19 @@ namespace sw
                 return static_cast<SceneComponent*>( pComp );
             }
 
+            /** @brief 쓰기 [start, end) 를 순서대로 적용합니다 — 워커에서 불린다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뛴다. */
+            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end )
+            {
+                uint32 changedCount = 0;
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    SceneComponent* pScene = resolveSceneComponent( pManager, pWrite[index]._handle );
+                    if ( pScene != nullptr && pScene->applyTransformWrite( pWrite[index] ) )
+                        ++changedCount;
+                }
+                return changedCount;
+            }
+
             static void resolveAndTickItem( GameObjectManager* pManager, float32 deltaTime, const GameObjectManager::TickExecutionItem& item )
             {
                 // 핸들로 다시 푼다 — 파도가 캐시돼 있으므로 담아 둔 포인터를 그냥 쓰고 싶지만, 그
@@ -304,13 +317,60 @@ namespace sw
                 }
             };
 
+            /** @brief 이 수 미만의 항목(오브젝트)은 나누지 않고 이 스레드가 돈다 — 디스패치 바닥보다 작은 일이다. */
+            static constexpr uint32 kParallelTickThreshold = 16;
+
+            /**
+             * @brief 오브젝트 하나의 그룹 `group` 항목을 순서대로 틱합니다 — 워커에서 불린다.
+             * @details 항목은 등록부가 지은 것이라 살아 있는 컴포넌트만 가리킨다(지워진 컴포넌트는 소유 오브젝트가 표시되어 틱 전에
+             *          다시 지어진다). 삭제 대기 · 비활성은 여기서 건너뛴다 — 예전 `resolveAndTickItem` 이 핸들을 다시 풀던 것과 같은
+             *          검사이고, 핸들 해석(오브젝트 슬롯 + 컴포넌트 목록 탐색)만 없다.
+             */
+            static void tickObjectGroup( float32 deltaTime, GameObject* pObj, uint32 group )
+            {
+                if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
+                    return;
+                const vector<TickItem>& listItem = pObj->getTickItems();
+                const uint32            end      = pObj->getTickGroupBegin( group + 1 );
+                for ( uint32 index = pObj->getTickGroupBegin( group ); index < end; ++index )
+                {
+                    const TickItem& item  = listItem[index];
+                    Component*      pComp = item._pComponent;
+                    if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
+                        continue;
+                    if ( item._subTickId == 0 )
+                    {
+                        if ( pComp->canEverTick() )
+                            pComp->onTick( deltaTime );
+                    }
+                    else
+                    {
+                        if ( pComp->isSubTickActive( item._subTickId ) )
+                            pComp->onSubTick( item._subTickId, deltaTime );
+                    }
+                }
+            }
+
+            /** @brief 한 그룹의 오브젝트 목록을 [start, end) 로 나눠 도는 잡 본문. 워커는 포인터 배열만 받는다. */
+            struct ObjectGroupTick
+            {
+                GameObject* const* _ppObject{ nullptr };
+                float32            _deltaTime{ 0.0f };
+                uint32             _group{ 0 };
+
+                void tickRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                        tickObjectGroup( _deltaTime, _ppObject[index], _group );
+                }
+            };
+
             static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<GameObjectManager::TickExecutionItem>& listWave )
             {
                 if ( listWave.empty() )
                     return;
 
-                constexpr uint32 kParallelThreshold = 16;
-                if ( listWave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
+                if ( listWave.size() < kParallelTickThreshold || engine::areEngineServicesBound() == false )
                 {
                     for ( const GameObjectManager::TickExecutionItem& item : listWave )
                         resolveAndTickItem( pManager, deltaTime, item );
@@ -385,7 +445,7 @@ namespace sw
         , _physicsWorld{}
         , _bParallelTransformReadOnly{ false }
         , _bTicking{ false }
-        , _bIsTickWavesDirty{ true }
+        , _lastWaveGeneration{ 0 }
         , _tickWaveBuildCount{ 0 }
         , _listCachedTickWave{}
         , _deferredTransformMutex{}
@@ -399,6 +459,8 @@ namespace sw
         , _activeModuleName{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
+        , _lightRegistry{}
+        , _tickRegistry{}
     {
         _listDeferredTransformUpdate.reserve( 128 );
         _listProcessingTransform.reserve( 128 );
@@ -462,8 +524,8 @@ namespace sw
             pObj->_pOwnerManager     = this;
 
             _mapNameToObject.insert_or_assign( uniqueName, pObj );
-            _mapIdToObject.insert_or_assign( newObjectId, pObj );
-            _objectSlotTable.store( newObjectId, pObj );
+            if ( _objectSlotTable.store( newObjectId, pObj ) == false )
+                _mapIdToObject.insert_or_assign( newObjectId, pObj );
 
             _listPendingAdd.push_back( pObj );
         }
@@ -479,7 +541,7 @@ namespace sw
             return;
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        if ( _mapIdToObject.find( pObj->getObjectId() ) == _mapIdToObject.end() )
+        if ( findRegisteredUnlocked( pObj->getObjectId() ) != pObj )
             return;
 
         const auto oldIt = _mapNameToObject.find( oldName );
@@ -586,6 +648,14 @@ namespace sw
         }
     }
 
+    GameObject* GameObjectManager::findRegisteredUnlocked( uint64 objectId ) const
+    {
+        if ( ObjectSlotTable::isInRange( objectId ) )
+            return _objectSlotTable.load( objectId );
+        const auto it = _mapIdToObject.find( objectId );
+        return ( it != _mapIdToObject.end() ) ? it->second : nullptr;
+    }
+
     GameObject* GameObjectManager::findGameObjectById( uint64 objectId ) const
     {
         // **빠른 길: 락도 해시도 없다.** 핸들 해석이 프레임당 오브젝트 수만큼 도는 자리라
@@ -676,8 +746,14 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() )
             engine::getTaskManager().dispatchMainThreadTasks();
-        processDeferredDestruction();
-        mergePendingAdds();
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.destroy" );
+            processDeferredDestruction();
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.merge" );
+            mergePendingAdds();
+        }
 
         if ( _listGameObject.empty() )
             return;
@@ -687,6 +763,8 @@ namespace sw
             flushSceneTransforms();
         }
 
+        // 틱 중의 세터가 쌓을 쓰기 큐 — 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
+        _transformHierarchy.beginQueuedWrites();
         _bParallelTransformReadOnly.store( true, std::memory_order_relaxed );
         _bTicking.store( true, std::memory_order_release );
 
@@ -703,16 +781,25 @@ namespace sw
 
         // Apply deferred transforms while instances still exist (before deferred post-tick/destruction).
         {
-            std::scoped_lock<mutex> lock{ _deferredTransformMutex };
-            if ( _listDeferredTransformUpdate.empty() == false )
-                _listProcessingTransform.swap( _listDeferredTransformUpdate );
+            SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
+            {
+                std::scoped_lock<mutex> lock{ _deferredTransformMutex };
+                if ( _listDeferredTransformUpdate.empty() == false )
+                    _listProcessingTransform.swap( _listDeferredTransformUpdate );
+            }
+            for ( auto& func : _listProcessingTransform )
+            {
+                if ( func.isBound() )
+                    func();
+            }
+            _listProcessingTransform.clear();
         }
-        for ( auto& func : _listProcessingTransform )
+
+        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기 — 구조 변경(위의 지연 attach·detach)이 끝난 뒤라 부모 사슬이 안정됐다.
         {
-            if ( func.isBound() )
-                func();
+            SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
+            applyQueuedTransformWrites();
         }
-        _listProcessingTransform.clear();
 
         // Spawns / damage / tags queued from parallel onTick.
         {
@@ -772,13 +859,7 @@ namespace sw
 
             void applyRange( uint32 start, uint32 end )
             {
-                uint32 changedCount = 0;
-                for ( uint32 index = start; index < end; ++index )
-                {
-                    SceneComponent* pScene = GameObjectManagerInternal::resolveSceneComponent( _pManager, _pWrite[index]._handle );
-                    if ( pScene != nullptr && pScene->applyTransformWrite( _pWrite[index] ) )
-                        ++changedCount;
-                }
+                const uint32 changedCount = GameObjectManagerInternal::applyTransformWriteRange( _pManager, _pWrite, start, end );
                 if ( changedCount > 0 )
                     _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
             }
@@ -790,6 +871,65 @@ namespace sw
         _transformHierarchy.mergeQueuedDirtyRoots();
         engine::runParallel( count, SceneTransformHierarchy::kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
         _transformHierarchy.mergeQueuedDirtyRoots();
+
+        const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
+        if ( changedCount > 0 )
+            _transformHierarchy.notifyDirtied();
+        return changedCount;
+    }
+
+    void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
+    {
+        if ( _transformHierarchy.queueWriteParallel( write ) )
+            return;
+
+        // 슬롯이 준비되지 않았다 — 틱 밖에서 읽기 전용 구간을 흉내 내는 곳(테스트·도구)뿐이다. 예전 지연 경로로.
+        deferTransformUpdate( [this, write]()
+        {
+            if ( GameObjectManagerInternal::applyTransformWriteRange( this, &write, 0, 1 ) > 0 )
+                _transformHierarchy.notifyDirtied();
+        } );
+    }
+
+    uint32 GameObjectManager::applyQueuedTransformWrites()
+    {
+        const uint32                 slotCount  = _transformHierarchy.getQueuedWriteSlotCount();
+        vector<SceneTransformWrite>* pSlot      = _transformHierarchy.getQueuedWriteSlots();
+        uint32                       totalCount = 0;
+        for ( uint32 slot = 0; slot < slotCount; ++slot )
+            totalCount += static_cast<uint32>( pSlot[slot].size() );
+        if ( totalCount == 0 )
+            return 0;
+
+        // 슬롯 하나가 잡 하나 — 같은 슬롯의 건은 쌓인 순서대로 한 워커가 적용한다(마지막 값이 이긴다).
+        struct SlotWriteJob
+        {
+            GameObjectManager*           _pManager{ nullptr };
+            vector<SceneTransformWrite>* _pSlot{ nullptr };
+            atomic<uint32>               _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                uint32 changedCount = 0;
+                for ( uint32 slot = start; slot < end; ++slot )
+                {
+                    const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[slot] );
+                    changedCount += GameObjectManagerInternal::applyTransformWriteRange( _pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ) );
+                }
+                if ( changedCount > 0 )
+                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
+            }
+        };
+        SlotWriteJob job{};
+        job._pManager = this;
+        job._pSlot    = pSlot;
+        _transformHierarchy.mergeQueuedDirtyRoots();
+        if ( totalCount < SceneTransformHierarchy::kParallelWriteCount )
+            job.applyRange( 0, slotCount );
+        else
+            engine::runParallel( slotCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SlotWriteJob::applyRange, &job ) );
+        _transformHierarchy.mergeQueuedDirtyRoots();
+        _transformHierarchy.clearQueuedWrites();
 
         const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
         if ( changedCount > 0 )
@@ -877,14 +1017,7 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listPendingDestroyObject.push_back( pObj );
         }
-        // 틱에 참여하는 컴포넌트가 있을 때만 웨이브를 다시 만든다 — 그렇지 않은 물체는 웨이브에 없다.
-        bool bTickWork = false;
-        pObj->forEachComponent( [&bTickWork]( Component* pComp )
-        {
-            bTickWork = bTickWork || pComp->hasTickWork();
-        } );
-        if ( bTickWork )
-            markTickWavesDirty();
+        // 틱 등록부에는 아무것도 알리지 않는다 — 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 등록부에서 뺀다.
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )
@@ -896,8 +1029,9 @@ namespace sw
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp );
+        // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다 — 나머지는 등록부와 무관하다.
         if ( pComp->hasTickWork() )
-            markTickWavesDirty();
+            _tickRegistry.markObjectDirty( pComp->getOwner() );
     }
 
     void GameObjectManager::destroyComponentInstance( Component* pComp )
@@ -955,14 +1089,7 @@ namespace sw
             {
                 if ( pObj != nullptr )
                 {
-                    auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
-                    if ( pendingIt != _listPendingAdd.end() )
-                    {
-                        *pendingIt = _listPendingAdd.back();
-                        _listPendingAdd.pop_back();
-                    }
-
-                    uint32 index = pObj->_managerIndex;
+                    const uint32 index = pObj->_managerIndex;
                     if ( index < _listGameObject.size() && _listGameObject[index] == pObj )
                     {
                         GameObject* pBackObj    = _listGameObject.back();
@@ -970,11 +1097,22 @@ namespace sw
                         pBackObj->_managerIndex = index;
                         _listGameObject.pop_back();
                     }
+                    else
+                    {
+                        // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다 — 그때만 대기 목록을 훑는다.
+                        // (예전엔 무조건 훑어, 프레임에 100 개를 만들고 100 개를 지우면 만 번 비교였다.)
+                        auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
+                        if ( pendingIt != _listPendingAdd.end() )
+                        {
+                            *pendingIt = _listPendingAdd.back();
+                            _listPendingAdd.pop_back();
+                        }
+                    }
                     const auto nameIt = _mapNameToObject.find( pObj->getName() );
                     if ( nameIt != _mapNameToObject.end() && nameIt->second == pObj )
                         _mapNameToObject.erase( nameIt );
-                    _mapIdToObject.erase( pObj->getObjectId() );
-                    _objectSlotTable.store( pObj->getObjectId(), nullptr );
+                    if ( _objectSlotTable.store( pObj->getObjectId(), nullptr ) == false )
+                        _mapIdToObject.erase( pObj->getObjectId() );
                 }
             }
         }
@@ -994,10 +1132,12 @@ namespace sw
 
         for ( GameObject* pObj : listDying )
         {
-            if ( pObj != nullptr )
-                _poolGameObject.destroy( pObj );
+            if ( pObj == nullptr )
+                continue;
+            // 등록부의 그룹 목록에서 뺀다 — 메모리를 놓기 전에. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
+            _tickRegistry.unregisterObject( pObj );
+            _poolGameObject.destroy( pObj );
         }
-        // 웨이브는 지우라고 한 자리(destroyObject · destroyComponent · removeComponent)가 틱 멤버십을 보고 더럽혔다.
     }
 
     void GameObjectManager::clear()
@@ -1052,6 +1192,7 @@ namespace sw
         }
 
         _listCachedTickWave.clear();
+        _tickRegistry.clear();
         markTickWavesDirty();
     }
 
@@ -1089,15 +1230,13 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listGameObject.reserve( _listGameObject.size() + listLocalPending.size() );
+            // 이름 맵·id 표는 만들 때(createGameObject · registerGameObject) 이미 넣었다 — 여기서 다시 넣지 않는다.
             for ( GameObject* pObj : listLocalPending )
             {
                 if ( pObj != nullptr )
                 {
                     pObj->_managerIndex = static_cast<uint32>( _listGameObject.size() );
                     _listGameObject.push_back( pObj );
-                    _mapNameToObject[pObj->getName()]   = pObj;
-                    _mapIdToObject[pObj->getObjectId()] = pObj;
-                    _objectSlotTable.store( pObj->getObjectId(), pObj );
                 }
             }
         }
@@ -1246,9 +1385,39 @@ namespace sw
 
     void GameObjectManager::tickComponents( float32 deltaTime )
     {
-        if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
         {
-            _tickWaveBuildCount.fetch_add( 1, std::memory_order_relaxed );
+            // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다 — 씬 전체를 훑지 않는다.
+            SW_PROFILE_SCOPE( "GT.Scene.tick.registry" );
+            if ( _tickRegistry.refresh( *this ) )
+                _tickWaveBuildCount.fetch_add( 1, std::memory_order_relaxed );
+        }
+
+        if ( _tickRegistry.hasPrerequisites() == false )
+        {
+            // 보통 경로 — 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다. 한 오브젝트의 항목은 한 워커가 (순서 키 순으로)
+            // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다. 예전에는 같은 오브젝트의 항목을 서브웨이브로 갈라
+            // 서브웨이브마다 포크-조인이었다 — 오브젝트마다 틱 컴포넌트가 k 개면 그룹마다 k 번의 디스패치 바닥.
+            for ( uint32 group = 0; group < TickRegistry::kGroupCount; ++group )
+            {
+                const vector<GameObject*>& listObject = _tickRegistry.getObjects( group );
+                if ( listObject.empty() )
+                    continue;
+                GameObjectManagerInternal::ObjectGroupTick job{};
+                job._ppObject  = listObject.data();
+                job._deltaTime = deltaTime;
+                job._group     = group;
+                engine::runParallel( static_cast<uint32>( listObject.size() ), GameObjectManagerInternal::kParallelTickThreshold,
+                                     SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerInternal::ObjectGroupTick::tickRange, &job ) );
+            }
+            return;
+        }
+
+        // 선행 종속성이 있다 — 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 DAG 웨이브로 간다(드물다).
+        // 웨이브 캐시는 등록부 세대로 무효화한다.
+        if ( _lastWaveGeneration != _tickRegistry.getGeneration() )
+        {
+            _lastWaveGeneration = _tickRegistry.getGeneration();
+            SW_PROFILE_SCOPE( "GT.Scene.tick.waves" );
             array<vector<GameObjectManagerInternal::TickCandidate>, 4> arrListGroup;
             uint32                                                     totalCandidateCount = 0;
 
@@ -1342,8 +1511,8 @@ namespace sw
             pObj->_name = makeUniqueNameUnlocked( pObj->getName() );
 
         _mapNameToObject.insert_or_assign( pObj->getName(), pObj );
-        _mapIdToObject.insert_or_assign( newObjectId, pObj );
-        _objectSlotTable.store( newObjectId, pObj );
+        if ( _objectSlotTable.store( newObjectId, pObj ) == false )
+            _mapIdToObject.insert_or_assign( newObjectId, pObj );
 
         _listPendingAdd.push_back( pObj );
     }

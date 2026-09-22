@@ -100,6 +100,29 @@ namespace sw
         /** @brief 워커 스크래치의 더티 루트를 본 목록으로 옮깁니다 (배치 쓰기 뒤, 게임 스레드). */
         void mergeQueuedDirtyRoots();
 
+        /**
+         * @brief 병렬 틱 동안 세터가 쌓을 쓰기 큐를 스레드 슬롯 수만큼 준비합니다 (틱 시작, 게임 스레드).
+         * @details 슬롯 배열은 한 번 자라면 그대로다 — 프레임마다 잡는 것이 없다. 큐 자체는 `clearQueuedWrites` 가 비운다.
+         */
+        void beginQueuedWrites();
+        /**
+         * @brief 틱 중의 세터 한 건을 **자기 스레드 슬롯**의 큐에 올립니다 — 워커에서 불린다. 잠금도 할당도 없다(정상 상태).
+         * @details 예전에는 세터가 람다(매니저 포인터 + 핸들 + float3 = 36 바이트, 델리게이트 인라인 24 바이트를 넘는다)를
+         *          **힙에 만들고** 뮤텍스 하나에 줄을 서서 지연 큐에 넣었고, 틱 뒤에 게임 스레드가 건마다 핸들을 다시 풀어
+         *          세터를 **직렬로** 돌렸다 — 큐브 8000 개가 틱 안에서 움직이면 틱 2.9 ms + 재적용 1.0 ms 였다(Release).
+         *          같은 슬롯의 직전 건이 같은 컴포넌트면 합친다(위치·스케일을 잇따라 부르는 흔한 모양).
+         * @return 큐에 올렸으면 true. 슬롯이 준비되지 않았으면 false — 부르는 쪽이 지연 델리게이트로 돌린다.
+         */
+        bool queueWriteParallel( const SceneTransformWrite& write );
+        /** @brief 어느 슬롯에든 쌓인 쓰기가 있으면 true. */
+        bool hasQueuedWrites() const;
+        /** @brief 쓰기 큐 슬롯 수. `getQueuedWriteSlots()` 배열의 길이다. */
+        uint32 getQueuedWriteSlotCount() const { return _writeScratchCount; }
+        /** @brief 슬롯별 쓰기 큐. 적용하는 쪽(`GameObjectManager::applyQueuedTransformWrites`)이 읽는다. */
+        vector<SceneTransformWrite>* getQueuedWriteSlots() { return _pWriteScratch; }
+        /** @brief 모든 슬롯의 쓰기 큐를 비웁니다 (적용 뒤, 게임 스레드). */
+        void clearQueuedWrites();
+
         /** @brief 어떤 트랜스폼이 바뀌었음을 알려 세대를 올립니다. 워커에서 불러도 된다. */
         void notifyDirtied() { _dirtyGeneration.fetch_add( 1, std::memory_order_relaxed ); }
         /** @brief 현재 더티 세대입니다. 플러시가 이 값을 따라잡으면 할 일이 없다. */
@@ -136,6 +159,11 @@ namespace sw
         /// @brief 워커가 자기 칸을 찾는 포인터 — 바깥 컨테이너를 워커가 인덱싱하면 레이스 탐지기가 쓰기로 센다. `mergeQueuedDirtyRoots` 가 맞춘다.
         vector<SceneComponent*>* _pDirtyRootScratch;
         uint32                   _dirtyRootScratchCount;
+        /** @brief 병렬 틱 중 세터가 쌓는 쓰기 큐 (스레드 슬롯마다 하나). 틱이 끝나면 배치로 적용된다. */
+        vector<vector<SceneTransformWrite>> _listWriteScratch;
+        /// @brief 워커가 자기 칸을 찾는 포인터 — `_pDirtyRootScratch` 와 같은 이유. `beginQueuedWrites` 가 맞춘다.
+        vector<SceneTransformWrite>* _pWriteScratch;
+        uint32                       _writeScratchCount;
         /** @brief 루트 목록의 락 — 등록/해제는 배타, 플러시는 공유. 이 타입의 락은 가장 안쪽이다. */
         mutable std::shared_mutex _rootMutex;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택 (`engine::getParallelScratchSlotCount()` 크기). */

@@ -21,6 +21,7 @@ namespace sw
         thread_local bool      t_bTaskWorkerThread   = false;   ///< 현재 스레드가 TaskManager 워커 스레드인지 여부
         thread_local bool      t_bInsideParallelTask = false;   ///< 현재 병렬 배치 태스크 내부 실행 중인지 여부
         thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스
+        thread_local int32     t_helperScratchSlot   = -1;      ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호 (0..). 아직이면 -1
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
 
         /// @brief 대기 함수(waitStage/waitAll)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us). 대기 중엔 남의 일을 돕는다.
@@ -683,6 +684,7 @@ namespace sw
         , _bStop{ false }
         , _listWorker{}
         , _listWorkerQueue{}
+        , _helperSlotCount{ 0 }
         , _nextWorkerQueueIndex{ 0 }
         , _sleepingWorkerCount{ 0 }
         , _workEpoch{ 0 }
@@ -808,6 +810,25 @@ namespace sw
     int32 TaskManager::getCurrentWorkerIndex() const
     {
         return t_currentWorkerIndex;
+    }
+
+    uint32 TaskManager::getCurrentThreadScratchSlot()
+    {
+        if ( t_currentWorkerIndex >= 0 )
+            return static_cast<uint32>( t_currentWorkerIndex );
+        if ( t_helperScratchSlot < 0 )
+        {
+            const uint32 assigned = _helperSlotCount.fetch_add( 1, std::memory_order_relaxed );
+            if ( assigned >= kMaxHelperThreadCount )
+            {
+                // 넘치면 마지막 칸을 나눠 쓴다 — 스크래치가 겹칠 수 있으니 알린다. 엔진에서는 닿지 않는 수다.
+                SW_LOG_ERROR( "More than %# non-worker threads execute tasks — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+                t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
+            }
+            else
+                t_helperScratchSlot = static_cast<int32>( assigned );
+        }
+        return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
     }
 
     bool TaskManager::isWorkerThread() const

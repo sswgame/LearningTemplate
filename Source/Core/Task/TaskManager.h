@@ -203,6 +203,25 @@ namespace sw
         /** @brief 현재 워커 스레드의 인덱스를 반환합니다. (워커가 아니면 -1) */
         int32 getCurrentWorkerIndex() const;
 
+        /**
+         * @brief 태스크 본문을 실행할 수 있는 스레드가 최대 몇 개인가 — 워커 수 + 대기 중에 남의 일을 돕는 스레드 몫(`kMaxHelperThreadCount`).
+         * @details 스레드마다 하나씩 쓰는 스크래치(플러시 DFS 스택 · 더티 루트 · 트랜스폼 쓰기 큐)의 배열 크기다.
+         *          **워커가 아닌 스레드도 태스크를 실행한다** — `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안
+         *          `tryHelpAndExecute` 로 아무 준비된 잡이나 돕는데, 메인 스레드뿐 아니라 렌더 스레드(패스 기록 대기) ·
+         *          로더 스레드(스트리밍 대기)도 그 자리를 지난다. 예전에는 그 전부가 "마지막 칸" 하나를 나눠 썼고, 메인과
+         *          렌더가 같은 프레임에 같은 슬롯 벡터에 push 해 벡터가 깨졌다(틱 중 트랜스폼 쓰기 큐에서 세그폴트로 드러났다).
+         */
+        uint32 getScratchSlotCount() const { return getWorkerCount() + kMaxHelperThreadCount; }
+        /**
+         * @brief 지금 스레드의 스크래치 슬롯 — 워커면 그 번호, 아니면 처음 물을 때 받는 고유한 도우미 번호(워커 수 + n).
+         * @details 도우미 번호는 스레드마다 한 번 배정되어 스레드가 사는 동안 그대로다. 상한(`kMaxHelperThreadCount`)을 넘는
+         *          스레드는 마지막 칸을 나눠 쓴다 — 그 경우를 로그로 알린다(엔진에서 태스크를 기다리는 스레드는 메인 · 렌더 ·
+         *          로더 · 업로드 정도라 넘지 않는다).
+         */
+        uint32 getCurrentThreadScratchSlot();
+        /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한 (메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
+        static constexpr uint32 kMaxHelperThreadCount = 8;
+
         bool isWorkerThread() const;
         /** @brief Debug: 워커 스레드가 아니면 assert를 발생시킵니다. */
         void ensureWorkerThread() const;
@@ -245,6 +264,7 @@ namespace sw
         atomic<bool>                    _bStop;             ///< 워커 스레드 종료 플래그
         vector<std::thread>             _listWorker;        ///< 워커 스레드 핸들 목록
         vector<unique_ptr<WorkerQueue>> _listWorkerQueue;   ///< 각 워커별 독립 대기열
+        atomic<uint32>                  _helperSlotCount;   ///< 지금까지 도우미 슬롯을 받은 비-워커 스레드 수
         alignas( 64 ) atomic<uint32> _nextWorkerQueueIndex; ///< 라운드 로빈 작업 분배용 인덱스
         alignas( 64 ) atomic<int32> _sleepingWorkerCount;   ///< 현재 조건 변수 대기(Sleep) 중인 워커 수
         /**

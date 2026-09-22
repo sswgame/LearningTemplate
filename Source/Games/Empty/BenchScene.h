@@ -22,6 +22,7 @@ namespace sw
     class GameObjectManager;
     class Material;
     class MaterialInstance;
+    class Mesh;
     class MeshComponent;
     class MeshInstanceBatch;
     class Scene;
@@ -75,6 +76,13 @@ namespace sw
         /** @brief 씬에 주광을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
         void spawnLight( Scene* pScene, float32 halfExtent );
         /**
+         * @brief 큐브 하나를 격자 자리 index 에 만듭니다 — 메시 종류 · 위치 · 시드 · 무버까지. 만든 메시 컴포넌트를 돌려준다.
+         * @details 첫 스폰과 `-gv_benchSpawnChurn` 의 재스폰이 같은 함수를 쓴다. 투명·큐브별 머티리얼은 첫 스폰만 덧입힌다.
+         */
+        MeshComponent* spawnCube( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 index, uint32 side, float32 origin );
+        /** @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다. */
+        void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
+        /**
          * @brief `-gv_benchLights=N` 개의 점광·스포트라이트를 격자 위에 흩뿌립니다.
          * @details 자리는 **결정적 해시**로 정한다 — 실행마다 같은 그림이 나와야 스크린샷 비교가 된다.
          *          홀수 번째는 스포트라이트다(점광만 두면 원뿔 감쇠 경로가 한 번도 안 돈다).
@@ -120,6 +128,10 @@ namespace sw
          */
         vector<shared_ptr<MeshInstanceBatch>> _listInstanceBatch;
         uint32                                _instanceCubeCount;
+        /** @brief 벤치가 섞어 쓰는 메시 종류 — 큐브 i 는 i % 종류수. 재스폰이 같은 종류를 다시 쓴다. */
+        vector<shared_ptr<Mesh>> _listMeshVariant;
+        /** @brief 재스폰이 다음에 갈아 끼울 큐브 자리 (라운드 로빈). */
+        uint32 _churnCursor;
         /// @brief 프레임마다 다시 채우는 배치 쓰기 목록 — 큐브마다 세터를 부르지 않는다(update 주석).
         vector<SceneTransformWrite> _listTransformWrite;
         /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */

@@ -31,6 +31,12 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingKill{ false }
         , _listComponent{}
+        , _pPrimaryScene{ nullptr }
+        , _listTickItem{}
+        , _arrTickGroupBegin{}
+        , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
+        , _tickPrerequisiteCount{ 0 }
+        , _bTickDirty{ SW_FALSE }
         , _managerIndex{ invalid_index::kUint32 }
     {
     }
@@ -43,6 +49,12 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingKill{ false }
         , _listComponent{}
+        , _pPrimaryScene{ nullptr }
+        , _listTickItem{}
+        , _arrTickGroupBegin{}
+        , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
+        , _tickPrerequisiteCount{ 0 }
+        , _bTickDirty{ SW_FALSE }
         , _managerIndex{ invalid_index::kUint32 }
     {
     }
@@ -56,12 +68,19 @@ namespace sw
         // 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
         detachFromParent();
 
-        vector<GameObject*> listChildObject;
-        getChildren( listChildObject );
-        for ( GameObject* pChildPtr : listChildObject )
+        // 자식 목록을 복사하지 않는다 — 떼면 그 자리가 swap-remove 되므로 뒤에서 앞으로 돈다(뒤에서 온 원소는 이미 본 것).
+        if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
         {
-            if ( pChildPtr != nullptr )
-                pChildPtr->detachFromParent();
+            const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
+            for ( size_t childIndex = listChildComp.size(); childIndex-- > 0; )
+            {
+                if ( childIndex >= listChildComp.size() )
+                    continue;
+                SceneComponent* pChildComp = listChildComp[childIndex];
+                GameObject*     pChildObj  = ( pChildComp != nullptr ) ? pChildComp->getOwner() : nullptr;
+                if ( pChildObj != nullptr && pChildObj != this )
+                    pChildObj->detachFromParent();
+            }
         }
 
         clearComponents();
@@ -250,12 +269,15 @@ namespace sw
         if ( bWasActive != bActiveInHierarchy )
             markPrimitiveSetDirtyOnManager();
 
-        vector<GameObject*> listChild;
-        getChildren( listChild );
-        for ( GameObject* pChild : listChild )
+        // 자식 목록을 만들지 않는다 — 재귀는 계층을 바꾸지 않으므로 그대로 돈다. 병합되는 오브젝트마다 불리는 자리다.
+        if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
         {
-            if ( pChild != nullptr )
-                pChild->refreshActiveInHierarchy();
+            for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
+            {
+                GameObject* pChildObj = ( pChildComp != nullptr ) ? pChildComp->getOwner() : nullptr;
+                if ( pChildObj != nullptr && pChildObj != this )
+                    pChildObj->refreshActiveInHierarchy();
+            }
         }
     }
 
@@ -315,7 +337,22 @@ namespace sw
 
     SceneComponent* GameObject::getPrimarySceneComponent() const
     {
-        return getComponent<SceneComponent>();
+        Component* pCached = _pPrimaryScene.load( std::memory_order_relaxed );
+        if ( pCached != nullptr && pCached->isPendingKill() == false )
+            return static_cast<SceneComponent*>( pCached );
+
+        // 캐시가 비었거나 죽었다 — 살아 있는 첫 씬 컴포넌트를 목록에서 찾아 적는다(리플렉션 캐스트 없이 플래그 비트).
+        Component* pFound = nullptr;
+        for ( Component* pComp : _listComponent )
+        {
+            if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->isSceneComponent() )
+            {
+                pFound = pComp;
+                break;
+            }
+        }
+        _pPrimaryScene.store( pFound, std::memory_order_relaxed );
+        return static_cast<SceneComponent*>( pFound );
     }
 
     void GameObject::addTag( TagID tag )
@@ -442,8 +479,10 @@ namespace sw
 
     void GameObject::clearComponents()
     {
-        vector<Component*> listOwned = _listComponent;
+        // 옮긴다 — 복사하면 파괴마다 할당 하나다.
+        vector<Component*> listOwned = std::move( _listComponent );
         _listComponent.clear();
+        _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         // 파괴 뒤에는 물을 수 없으니 지금 본다 — 틱에 참여하던 것이 하나라도 있었을 때만 웨이브를 다시 만든다.
         bool bTickWork = false;
         for ( Component* pComp : listOwned )
@@ -507,6 +546,8 @@ namespace sw
                 break;
             }
         }
+        if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
+            _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         if ( bRemoved == false )
             SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
         else
@@ -523,8 +564,9 @@ namespace sw
 
     void GameObject::markTickOrderDirty()
     {
-        if ( _pOwnerManager != nullptr )
-            _pOwnerManager->markTickWavesDirty();
+        // 죽어 가는 오브젝트는 파괴 때 등록부에서 빠진다 — 표시할 것이 없다.
+        if ( _pOwnerManager != nullptr && isPendingKill() == false )
+            _pOwnerManager->getTickRegistry().markObjectDirty( this );
     }
 
     void GameObject::prepareSerialize() const

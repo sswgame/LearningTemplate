@@ -23,6 +23,7 @@
 
 #include "GameFramework/Base/GameService.h"
 
+#include "Games/Empty/BenchMoverComponent.h"
 #include "Games/Empty/EmptyGlobalVariable.h"
 
 namespace sw
@@ -53,6 +54,8 @@ namespace sw
         : _listBenchMesh{}
         , _listInstanceBatch{}
         , _instanceCubeCount{ 0 }
+        , _listMeshVariant{}
+        , _churnCursor{ 0 }
         , _keyLight{}
         , _listBenchExtra{}
         , _glassMaterial{ nullptr }
@@ -167,7 +170,8 @@ namespace sw
 
         // 같은 기하를 여러 객체로 만든다 — 배치만 갈린다. 도형을 섞으면 배치마다 정점 수가 달라져
         // 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
-        vector<shared_ptr<Mesh>> listMeshVariant;
+        vector<shared_ptr<Mesh>>& listMeshVariant = _listMeshVariant;
+        listMeshVariant.clear();
         listMeshVariant.reserve( meshVariantCount );
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
@@ -268,47 +272,26 @@ namespace sw
             return;
         }
 
-        StringBuilder<constant::kMaxBuffer64> nameBuilder;
         for ( uint32 index = 0; index < meshCount; ++index )
         {
-            nameBuilder.clear();
-            nameBuilder.append( "BenchMesh_" ).append( index );
-
-            GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
-            if ( pObject == nullptr )
-                continue;
-            MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
+            MeshComponent* pMesh = spawnCube( pObjects, pSceneMaterial, index, side, origin );
             if ( pMesh == nullptr )
                 continue;
+            _listBenchMesh.push_back( pMesh->getHandle() );
 
-            const uint32 col = index % side;
-            const uint32 row = index / side;
-            pMesh->setMesh( listMeshVariant[index % meshVariantCount] );
-            // 기본 머티리얼은 씬 **로드** 경로(bindSceneMeshDefaults)에서만 붙는다.
-            // createScene 으로 직접 만든 씬은 그 단계를 지나지 않으므로 여기서 붙여준다 —
-            // 없으면 배치는 만들어지는데 화면에는 아무것도 안 나온다.
-            if ( pSceneMaterial != nullptr )
+            // 큐브마다 자기 머티리얼 인스턴스를 준다. 색이 달라지는 것도 목적이지만, 배치 키가
+            // 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우 경로가
+            // 그제야 실제 부하를 받는다(전부 같은 인스턴스면 drawInstanced 한 번으로 끝난다).
+            //
+            // 다만 DX12 에서는 이게 기존 커맨드 얼로케이터 버그를 100% 터뜨린다(아래 참고).
+            // 기본 벤치가 네 백엔드에서 다 돌아야 하므로 옵트인으로 둔다.
+            if ( bPerCubeMaterial && pSceneMaterial != nullptr )
             {
-                pMesh->setMaterial( pSceneMaterial );
-
-                // 큐브마다 자기 머티리얼 인스턴스를 준다. 색이 달라지는 것도 목적이지만, 배치 키가
-                // 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우 경로가
-                // 그제야 실제 부하를 받는다(전부 같은 인스턴스면 drawInstanced 한 번으로 끝난다).
-                //
-                // 다만 DX12 에서는 이게 기존 커맨드 얼로케이터 버그를 100% 터뜨린다(아래 참고).
-                // 기본 벤치가 네 백엔드에서 다 돌아야 하므로 옵트인으로 둔다.
-                if ( bPerCubeMaterial )
-                {
-                    shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
-                    instance->setVectorParameter( hashed_string( "color" ), makeBenchColor( index ) );
-                    _listChurnInstance.push_back( instance );
-                    pMesh->setMaterialInstance( std::move( instance ) );
-                }
+                shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
+                instance->setVectorParameter( hashed_string( "color" ), makeBenchColor( index ) );
+                _listChurnInstance.push_back( instance );
+                pMesh->setMaterialInstance( std::move( instance ) );
             }
-            // 격자를 원점 기준으로 X/Z 양쪽에 펼친다 — 카메라를 정면에서 뒤로 빼면 전부 들어온다.
-            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( col ) * kBenchSpacing,
-                                             0.0f,
-                                             origin + static_cast<float32>( row ) * kBenchSpacing } );
             // 일부를 투명으로 — 블렌드 모드가 배치를 가르고, 컬링이 압축한 순서를 instancesort 가
             // 깊이순으로 되돌린다. 투명 큐브끼리는 머티리얼 인스턴스를 나눠 쓰므로 한 배치에 여럿 들어간다.
             if ( isBenchTransparent( index, transparentPercent ) && arrTransparentMaterial[0] != nullptr )
@@ -317,15 +300,6 @@ namespace sw
                 pMesh->setMaterial( _glassMaterial.get() );
                 pMesh->setMaterialInstance( arrTransparentMaterial[index % kTransparentMaterialCount] );
             }
-
-            // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
-            // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
-            // `-gv_benchAnimate=0` 이면 시드를 주지 않는다 — 각도가 벽시계 시간에서 나와 같은 프레임을
-            // 찍어도 그림이 달라지므로, 픽셀 비교 검증에는 멈춘 격자가 필요하다.
-            if ( gv_benchAnimate != 0 )
-                pMesh->setGpuSpinSeed( index + 1u );
-            pMesh->setVisible( true );
-            _listBenchMesh.push_back( pMesh->getHandle() );
         }
 
         spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
@@ -338,6 +312,78 @@ namespace sw
                      meshVariantCount, shapeCount );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#×%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
+    }
+
+    MeshComponent* BenchScene::spawnCube( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 index, uint32 side, float32 origin )
+    {
+        if ( pObjects == nullptr || _listMeshVariant.empty() )
+            return nullptr;
+
+        StringBuilder<constant::kMaxBuffer64> nameBuilder;
+        nameBuilder.append( "BenchMesh_" ).append( index );
+
+        GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
+        if ( pObject == nullptr )
+            return nullptr;
+        MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
+        if ( pMesh == nullptr )
+            return nullptr;
+
+        const uint32 col = index % side;
+        const uint32 row = index / side;
+        pMesh->setMesh( _listMeshVariant[index % static_cast<uint32>( _listMeshVariant.size() )] );
+        // 기본 머티리얼은 씬 **로드** 경로(bindSceneMeshDefaults)에서만 붙는다.
+        // createScene 으로 직접 만든 씬은 그 단계를 지나지 않으므로 여기서 붙여준다 —
+        // 없으면 배치는 만들어지는데 화면에는 아무것도 안 나온다.
+        if ( pSceneMaterial != nullptr )
+            pMesh->setMaterial( pSceneMaterial );
+        // 격자를 원점 기준으로 X/Z 양쪽에 펼친다 — 카메라를 정면에서 뒤로 빼면 전부 들어온다.
+        const float3 position{ origin + static_cast<float32>( col ) * kBenchSpacing, 0.0f, origin + static_cast<float32>( row ) * kBenchSpacing };
+        pMesh->setLocalPosition( position );
+
+        // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
+        // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
+        // `-gv_benchAnimate=0` 이면 시드를 주지 않는다 — 각도가 벽시계 시간에서 나와 같은 프레임을
+        // 찍어도 그림이 달라지므로, 픽셀 비교 검증에는 멈춘 격자가 필요하다.
+        if ( gv_benchAnimate != 0 )
+            pMesh->setGpuSpinSeed( index + 1u );
+        pMesh->setVisible( true );
+
+        // 틱 무버 — 첫 번째만 틱 안에서 위치·스케일을 쓴다(게임플레이의 보통 모양). 나머지는 틱만 돌아,
+        // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 잰다.
+        const int32  moverCount  = gv_benchTickMovers;
+        const uint32 movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
+        for ( int32 moverIndex = 0; moverIndex < moverCount; ++moverIndex )
+        {
+            BenchMoverComponent* pMover = pObject->addComponent<BenchMoverComponent>();
+            if ( pMover == nullptr )
+                break;
+            pMover->setTarget( pMesh, position, static_cast<float32>( index ) * 0.37f,
+                               moverIndex == 0 && gv_benchAnimate != 0 && ( index % 100u ) < movePercent );
+        }
+        return pMesh;
+    }
+
+    void BenchScene::updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene )
+    {
+        const uint32 churnCount = ( gv_benchSpawnChurn > 0 ) ? static_cast<uint32>( gv_benchSpawnChurn ) : 0u;
+        const uint32 cubeCount  = static_cast<uint32>( _listBenchMesh.size() );
+        if ( churnCount == 0 || cubeCount == 0 || pObjects == nullptr || pScene == nullptr )
+            return;
+
+        const uint32  side   = MathUtil::max( _benchGridSide, 1u );
+        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        for ( uint32 step = 0; step < churnCount; ++step )
+        {
+            const uint32 index = _churnCursor;
+            _churnCursor       = ( _churnCursor + 1 ) % cubeCount;
+            // 지우고 같은 자리에 새로 — 이름도 같다(총알처럼 같은 이름으로 거듭 만드는 모양). 죽은 것은 아직 지연 파괴 목록에
+            // 있지만 이름은 비어 있는 것으로 본다.
+            if ( Component* pOld = pObjects->resolveComponent( _listBenchMesh[index] ) )
+                pObjects->destroyObject( pOld->getOwner() );
+            MeshComponent* pMesh  = spawnCube( pObjects, pScene->getMaterial(), index, side, origin );
+            _listBenchMesh[index] = ( pMesh != nullptr ) ? pMesh->getHandle() : ComponentHandle{};
+        }
     }
 
     float4 BenchScene::makeBenchColor( uint32 index )
@@ -556,6 +602,7 @@ namespace sw
             return;
 
         updateMaterialChurn( pObjects );
+        updateSpawnChurn( pObjects, pScene );
 
         // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
         // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다. 실제로 그렇게 재다 틀릴 뻔했다.
@@ -589,6 +636,9 @@ namespace sw
             }
             return;
         }
+        // 틱 무버가 있으면 큐브가 틱 안에서 스스로 쓴다 — 여기서 또 쓰면 두 번 쓰는 셈이다.
+        if ( gv_benchTickMovers > 0 )
+            return;
         _listTransformWrite.clear();
         _listTransformWrite.reserve( count );
         for ( uint32 index = 0; index < count; ++index )

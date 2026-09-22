@@ -13,6 +13,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -31,6 +32,7 @@ namespace sw
     {
         friend class GameObjectManager;
         friend class ObjectStateSerializer;
+        friend class TickRegistry; ///< 틱 항목·그룹 자리를 짓고 지운다
 
     public:
         REFLECT_BODY();
@@ -133,8 +135,10 @@ namespace sw
         bool isDescendantOf( const GameObject* pAncestor ) const;
 
         /**
-         * @brief transform 계층의 primary SceneComponent (목록에서 첫 SceneComponent 파생).
-         * @details 없으면 nullptr.
+         * @brief transform 계층의 primary SceneComponent (목록에서 살아 있는 첫 SceneComponent 파생).
+         * @details 없으면 nullptr. 답은 캐시된다 — 부모·자식·부착·에디터 계층 패널이 전부 여기를 지나는데, 예전에는 부를 때마다
+         *          목록을 캐스트로 훑었다(호출처 35 곳). 캐시는 첫 씬 컴포넌트가 붙을 때 적히고, 그것이 빠지거나 죽으면
+         *          다음 호출이 목록에서 다시 찾는다.
          */
         class SceneComponent* getPrimarySceneComponent() const;
 
@@ -254,8 +258,13 @@ namespace sw
         /** @brief componentId로 소유 컴포넌트를 찾습니다. */
         Component* findComponentById( uint64 componentId, bool bIncludePendingKill = false ) const;
 
-        /** @brief Tick 웨이브를 다시 만들도록 표시합니다. */
+        /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 등록부에 알립니다 — 다음 틱 전에 항목을 다시 짓는다. */
         void markTickOrderDirty();
+
+        /** @brief 틱 등록부의 항목 — (그룹, 순서 키) 순. `TickRegistry` 가 짓고 매니저의 디스패치가 읽는다. */
+        const vector<TickItem>& getTickItems() const { return _listTickItem; }
+        /** @brief 그룹 `group` 의 항목이 시작하는 자리. `group + 1` 의 시작이 그 끝이다(`TickRegistry::kGroupCount` 까지 물을 수 있다). */
+        uint32 getTickGroupBegin( uint32 group ) const { return _arrTickGroupBegin[group]; }
 
         /** @brief 직렬화 직전에 SceneComponent Attach* 를 `_pParent`에서 채웁니다. */
         void prepareSerialize() const;
@@ -284,7 +293,23 @@ namespace sw
         atomic<bool> _bIsPendingKill;       ///< 지연 삭제 대기 묘비 플래그
         PROPERTY()
         vector<Component*> _listComponent; ///< 이 액터가 소유한 컴포넌트
-        uint32             _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
+        /**
+         * @brief primary SceneComponent 캐시 (`getPrimarySceneComponent`). 없거나 모르면 nullptr — 다음 호출이 목록에서 찾아 적는다.
+         * @details 원자인 이유: 틱 중 워커들이 읽고, 죽은 것을 발견한 워커가 다시 찾아 적는다(같은 답을 겹쳐 쓴다).
+         *          `Component*` 로 드는 이유: 이 헤더는 SceneComponent 를 모른다 — 씬 컴포넌트인지는 플래그 비트로 안다.
+         */
+        mutable atomic<Component*> _pPrimaryScene;
+        /** @brief 틱 등록부의 항목 — (그룹, 순서 키) 순. `TickRegistry` 만 짓는다. 틱할 것이 없는 오브젝트는 비어 있다. */
+        vector<TickItem> _listTickItem;
+        /** @brief 그룹별 항목 시작 자리 (`kGroupCount` + 1 칸, 마지막은 전체 수). */
+        uint32 _arrTickGroupBegin[TickRegistry::kGroupCount + 1];
+        /** @brief 등록부의 그룹 목록에서 자기 자리. 없으면 `TickRegistry::kNotInList`. */
+        uint32 _arrTickIndex[TickRegistry::kGroupCount];
+        /** @brief 이 오브젝트의 서브틱에 등록된 선행 종속성 수 — 등록부가 총수를 유지하는 데 쓴다. */
+        uint32 _tickPrerequisiteCount;
+        /** @brief 틱 멤버십이 바뀌어 등록부의 더티 목록에 올라 있다 (원자: 워커에서 표시한다). */
+        atomic<uint8> _bTickDirty;
+        uint32        _managerIndex; ///< Manager의 _gameObjects 내 인덱스
     };
 
 } // namespace sw
@@ -339,6 +364,8 @@ namespace sw
         pComp->applyTypeDefaults( pTypeInfo );
 
         _listComponent.push_back( pComp );
+        if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
+            _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
         // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.

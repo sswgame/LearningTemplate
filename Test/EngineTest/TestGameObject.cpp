@@ -706,6 +706,94 @@ SW_TEST_CASE( GameObjectTest, TickWavesRebuildOnlyWhenTickWorkChanges )
 }
 
 /**
+ * @brief [GameObjectTest] 틱 등록부는 멤버십이 바뀐 오브젝트만 다시 짓고, 파괴된 오브젝트는 목록에서 빠진다.
+ * @details 예전에는 틱 멤버십이 하나라도 바뀌면 씬 전체를 훑어 웨이브를 다시 만들었다. 지금은 오브젝트가 자기 항목을 들고
+ *          등록부는 그룹마다 오브젝트 목록을 든다. 지켜야 할 것: (1) 틱하는 컴포넌트가 붙은 오브젝트만 그 그룹 목록에 오르고
+ *          항목은 (그룹, 순서 키) 순이다 (2) 서브틱을 켜고 끄면 그 오브젝트의 항목만 바뀐다 (3) 선행 종속성이 있으면
+ *          `hasPrerequisites` 가 서고, 떼면 내려간다 (4) 오브젝트를 파괴하면 목록에서 빠지고 옮겨진 오브젝트의 자리가 맞는다
+ *          (5) 한 오브젝트에 틱 컴포넌트가 둘이면 둘 다 틱한다.
+ */
+SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    const sw::TickRegistry& registry = manager.getTickRegistry();
+
+    sw::GameObject* pQuiet = manager.createGameObject( sw::hashed_string( "RegQuiet" ) );
+    pQuiet->addComponent<sw::MeshComponent>();
+    sw::GameObject*        pTicker = manager.createGameObject( sw::hashed_string( "RegTicker" ) );
+    sw::MockMeshComponent* pMeshA  = pTicker->addComponent<sw::MockMeshComponent>();
+    sw::MockMeshComponent* pMeshB  = pTicker->addComponent<sw::MockMeshComponent>();
+    pMeshB->setTickGroup( sw::TickGroup::PostUpdate );
+    sw::GameObject*        pSub  = manager.createGameObject( sw::hashed_string( "RegSub" ) );
+    sw::MockRootComponent* pRoot = pSub->addComponent<sw::MockRootComponent>();
+    pRoot->setCanEverTick( false );
+    pRoot->registerSubTick( sw::TickGroup::PostPhysics, 7, sw::TickPhase::Late );
+    pRoot->registerSubTick( sw::TickGroup::PostPhysics, 8, sw::TickPhase::Early );
+
+    manager.tick( 0.016f );
+
+    // (1) 그룹 목록 — 틱하지 않는 오브젝트는 어디에도 없다.
+    const uint32 kDuring = static_cast<uint32>( sw::TickGroup::DuringPhysics );
+    const uint32 kPost   = static_cast<uint32>( sw::TickGroup::PostPhysics );
+    const uint32 kUpdate = static_cast<uint32>( sw::TickGroup::PostUpdate );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( pTicker, registry.getObjects( kDuring )[0] );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kUpdate ).size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
+    SW_EXPECT_EQUAL( pSub, registry.getObjects( kPost )[0] );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pQuiet->getTickItems().size() ) );
+    // (5) 둘 다 틱했고, 항목은 그룹 순이다.
+    SW_EXPECT_EQUAL( 1, pMeshA->_tickCount );
+    SW_EXPECT_EQUAL( 1, pMeshB->_tickCount );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( pTicker->getTickItems().size() ) );
+    SW_EXPECT_EQUAL( pMeshA, static_cast<sw::MockMeshComponent*>( pTicker->getTickItems()[0]._pComponent ) );
+    SW_EXPECT_EQUAL( pMeshB, static_cast<sw::MockMeshComponent*>( pTicker->getTickItems()[1]._pComponent ) );
+    // 서브틱은 순서 키 순 — Early(8) 가 Late(7) 앞이다.
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( pSub->getTickItems().size() ) );
+    SW_EXPECT_EQUAL( 8u, pSub->getTickItems()[0]._subTickId );
+    SW_EXPECT_EQUAL( 7u, pSub->getTickItems()[1]._subTickId );
+
+    // (2) 서브틱을 끄면 그 오브젝트의 항목만 줄고, 다른 오브젝트는 다시 짓지 않는다(세대는 오른다).
+    const uint32 buildBefore = manager.getTickWaveBuildCount();
+    pRoot->setSubTickActive( 7, false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( buildBefore + 1, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pSub->getTickItems().size() ) );
+    SW_EXPECT_EQUAL( 2, pMeshA->_tickCount );
+    pRoot->unregisterSubTick( 8 );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
+
+    // (3) 선행 종속성 — 있으면 DAG 경로, 떼면 다시 오브젝트 경로.
+    SW_EXPECT_FALSE( registry.hasPrerequisites() );
+    const sw::SubTickHandle handleA = pRoot->registerSubTick( sw::TickGroup::PostPhysics, 9, sw::TickPhase::Normal );
+    sw::MockRootComponent*  pOther  = pQuiet->addComponent<sw::MockRootComponent>();
+    pOther->setCanEverTick( false );
+    pOther->registerSubTick( sw::TickGroup::PostPhysics, 10, sw::TickPhase::Normal );
+    pOther->addSubTickPrerequisite( 10, handleA );
+    manager.tick( 0.016f );
+    SW_EXPECT_TRUE( registry.hasPrerequisites() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
+    pOther->unregisterSubTick( 10 );
+    manager.tick( 0.016f );
+    SW_EXPECT_FALSE( registry.hasPrerequisites() );
+
+    // (4) 파괴 — 목록에서 빠지고 남은 오브젝트가 계속 틱한다.
+    sw::GameObject*        pTicker2 = manager.createGameObject( sw::hashed_string( "RegTicker2" ) );
+    sw::MockMeshComponent* pMesh2   = pTicker2->addComponent<sw::MockMeshComponent>();
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
+    manager.destroyObject( pTicker, false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( pTicker2, registry.getObjects( kDuring )[0] );
+    SW_EXPECT_EQUAL( 2, pMesh2->_tickCount );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 3, pMesh2->_tickCount );
+}
+
+/**
  * @brief 컴포넌트는 이름이 바뀌어도 **자기가 나온 풀**로 돌아간다.
  * @details 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 다시 찾던 때는, 이름을 비운 채 파괴하면 풀을 못 찾아
  *          풀 블록을 힙으로 반납했다 — Shipping 에서 힙 손상(0xc0000374), Debug·ASan 은 조용했다. 이제 컴포넌트가
@@ -865,6 +953,93 @@ SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
     SW_EXPECT_EQUAL( 0u, managerBatch.applyTransformBatch( listWrite.data(), static_cast<uint32>( listWrite.size() ) ) );
     SW_EXPECT_EQUAL( generationSettled, managerBatch.getTransformGeneration() );
     SW_EXPECT_FALSE( managerBatch.hasDirtySceneTransforms() );
+}
+
+/**
+ * @brief [GameObjectTest] 틱 안의 세터는 슬롯 큐에 쌓였다가 틱 뒤에 배치로 적용된다 — 결과는 틱 밖 세터와 같다.
+ * @details 예전에는 틱 중 세터마다 람다를 힙에 만들어 뮤텍스 하나에 줄을 서고, 틱 뒤 게임 스레드가 직렬로 되돌렸다.
+ *          지금은 워커가 자기 슬롯에 POD 로 쌓고 틱 뒤 슬롯 단위로 나눠 적용한다. 지켜야 할 것 넷: (1) 틱 안에서 쓴 값이
+ *          틱 뒤 월드 행렬에 반영된다(부모 아래 것도) (2) 같은 컴포넌트에 잇따라 쓴 값은 마지막이 이긴다 (3) 위치에 이어
+ *          스케일을 쓰면 둘 다 적용된다(같은 건으로 합쳐진다) (4) 다른 오브젝트의 컴포넌트를 쓰는 것도 같다. 틱이 끝나면
+ *          큐는 비어 있고 더티도 남지 않는다(post 플러시). 병렬 적용 문턱을 넘는 수로 돌린다.
+ */
+SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
+{
+    constexpr uint32 kObjectCount = sw::SceneTransformHierarchy::kParallelWriteCount + 37;
+
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObjectManager managerReference;
+    sw::RegisterMockComponents( managerReference );
+
+    sw::vector<sw::MockTickSceneComponent*> listTickComp;
+    sw::vector<sw::SceneComponent*>         listReferenceComp;
+
+    sw::GameObject*             pParent     = manager.createGameObject( sw::hashed_string( "QueueParent" ) );
+    sw::MockTickSceneComponent* pParentComp = pParent->addComponent<sw::MockTickSceneComponent>();
+    listTickComp.push_back( pParentComp );
+    sw::GameObject*     pReferenceParent     = managerReference.createGameObject( sw::hashed_string( "QueueParent" ) );
+    sw::SceneComponent* pReferenceParentComp = pReferenceParent->addComponent<sw::SceneComponent>();
+    listReferenceComp.push_back( pReferenceParentComp );
+
+    for ( uint32 index = 1; index < kObjectCount; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        name.append( "QueueObj" ).append( index );
+        const float32 base = static_cast<float32>( index );
+
+        sw::GameObject*             pObj  = manager.createGameObject( sw::hashed_string( name.c_str() ) );
+        sw::MockTickSceneComponent* pComp = pObj->addComponent<sw::MockTickSceneComponent>();
+        pComp->_tickLocalPos              = sw::float3( base, base * 0.5f, -base );
+        pComp->_tickLocalScale            = sw::float3( 1.0f + base * 0.01f, 1.0f, 1.0f );
+        pComp->_bWriteLocalOnTick         = SW_TRUE;
+        pComp->_bWriteScaleOnTick         = SW_TRUE;
+        pComp->_bWriteTwiceOnTick         = ( index % 3 == 0 ) ? SW_TRUE : SW_FALSE;
+        if ( ( index % 2 ) == 0 )
+            pComp->attachToComponent( pParentComp );
+        listTickComp.push_back( pComp );
+
+        sw::GameObject*     pReferenceObj  = managerReference.createGameObject( sw::hashed_string( name.c_str() ) );
+        sw::SceneComponent* pReferenceComp = pReferenceObj->addComponent<sw::SceneComponent>();
+        if ( ( index % 2 ) == 0 )
+            pReferenceComp->attachToComponent( pReferenceParentComp );
+        pReferenceComp->setLocalPosition( pComp->_tickLocalPos );
+        pReferenceComp->setLocalScale( pComp->_tickLocalScale );
+        listReferenceComp.push_back( pReferenceComp );
+    }
+
+    // (4) 다른 오브젝트의 컴포넌트를 틱 안에서 쓰는 것 — 부모(0 번)를 별도 오브젝트의 틱이 옮긴다.
+    sw::GameObject*        pMover     = manager.createGameObject( sw::hashed_string( "QueueMover" ) );
+    sw::MockMeshComponent* pMoverComp = pMover->addComponent<sw::MockMeshComponent>();
+    pMoverComp->_pTickMoveComp        = pParentComp;
+    pMoverComp->_tickMovePos          = sw::float3( 7.0f, 8.0f, 9.0f );
+    pReferenceParentComp->setLocalPosition( pMoverComp->_tickMovePos );
+
+    manager.tick( 0.016f );
+    managerReference.flushSceneTransforms();
+
+    SW_EXPECT_FALSE( manager.getTransformHierarchy().hasQueuedWrites() );
+    SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+
+    uint32 mismatchCount = 0;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        const sw::float4x4 worldTick      = listTickComp[index]->getWorldMatrix();
+        const sw::float4x4 worldReference = listReferenceComp[index]->getWorldMatrix();
+        if ( sw::Memory::compare( &worldTick, &worldReference, sizeof( sw::float4x4 ) ) != 0 )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatchCount );
+    // (2) 두 번 쓴 것은 마지막 값 — 먼저 쓴 +1000 이 남아 있으면 안 된다.
+    SW_EXPECT_NEAR_EQUAL( 3.0f, listTickComp[3]->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pParentComp->getWorldPosition()._x, 1e-4f );
+
+    // 같은 값을 다시 쓰는 틱은 아무것도 바꾸지 않는다 — 세대 그대로.
+    pMoverComp->_pTickMoveComp     = nullptr;
+    const uint64 generationSettled = manager.getTransformGeneration();
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( generationSettled, manager.getTransformGeneration() );
+    SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
 }
 
 /**

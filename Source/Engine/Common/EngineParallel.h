@@ -34,22 +34,22 @@ namespace sw
         }
 
         /**
-         * @brief 병렬 본문이 스레드마다 하나씩 쓰는 스크래치의 슬롯 수 — 워커마다 하나, 도와주는 메인 스레드 몫 하나.
+         * @brief 병렬 본문이 스레드마다 하나씩 쓰는 스크래치의 슬롯 수 — 워커마다 하나, 대기 중에 돕는 비-워커 스레드 몫 몇.
          * @details 잡마다 스크래치를 만들면 프레임당 청크 수만큼 할당이다. 슬롯 배열을 이 크기로 한 번 잡아 두고
-         *          본문이 `getParallelScratchSlot()` 으로 자기 칸을 찾는다.
+         *          본문이 `getParallelScratchSlot()` 으로 자기 칸을 찾는다. 돕는 스레드가 메인 하나가 아니라는 것
+         *          (렌더 · 로더도 기다리며 돕는다)은 `TaskManager::getScratchSlotCount` 주석에 있다.
          */
         inline uint32 getParallelScratchSlotCount()
         {
-            return areEngineServicesBound() ? getTaskManager().getWorkerCount() + 1 : 1;
+            return areEngineServicesBound() ? getTaskManager().getScratchSlotCount() : 1;
         }
 
-        /** @brief 지금 스레드의 스크래치 슬롯. 워커면 그 번호, 아니면(메인 스레드가 도울 때) 마지막 칸. */
+        /** @brief 지금 스레드의 스크래치 슬롯. 워커면 그 번호, 아니면 그 스레드가 처음 물을 때 받은 고유한 도우미 칸. */
         inline uint32 getParallelScratchSlot()
         {
             if ( areEngineServicesBound() == false )
                 return 0;
-            const int32 workerIndex = getTaskManager().getCurrentWorkerIndex();
-            return workerIndex >= 0 ? static_cast<uint32>( workerIndex ) : getTaskManager().getWorkerCount();
+            return getTaskManager().getCurrentThreadScratchSlot();
         }
     } // namespace engine
 } // namespace sw

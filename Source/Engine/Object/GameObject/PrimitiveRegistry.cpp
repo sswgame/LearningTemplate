@@ -61,15 +61,22 @@ namespace sw
              _listPrimitive[slot] != pComp )
             return;
 
-        // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스를 고쳐준다.
-        // 집합이 바뀌면 빌더는 어차피 전부 다시 모은다 — 더티 표시는 통째로 지운다(예전과 같다).
-        clearDirtyLocked();
-
-        MeshComponent* pMoved = _listPrimitive.back();
-        _listPrimitive[slot]  = pMoved;
+        // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스와 **깃발**을 같이 옮긴다. 예전에는 지울 때마다 깃발
+        // 전부(번호 공간만큼)를 훑어 내렸다 — 프레임에 100 개를 지우는 씬에서 8000 칸 × 100 이라 지우기 하나가 4 us 였다.
+        // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다; 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
+        // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
+        MeshComponent* pMoved   = _listPrimitive.back();
+        const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
+        _listPrimitive[slot]    = pMoved;
         _listPrimitive.pop_back();
         if ( pMoved != pComp )
             pMoved->setPrimitiveIndex( slot );
+        if ( lastSlot < _dirtyFlagCapacity )
+        {
+            const uint8 movedFlag = _arrDirtyFlag[lastSlot].exchange( 0u, std::memory_order_acq_rel );
+            if ( slot != lastSlot )
+                _arrDirtyFlag[slot].store( movedFlag, std::memory_order_release );
+        }
         pComp->setPrimitiveIndex( MeshComponent::kInvalidPrimitiveIndex );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }

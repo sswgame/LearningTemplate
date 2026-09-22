@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -246,14 +247,12 @@ namespace sw
     {
         if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = _pManager;
-            const sw::ComponentHandle handle = getHandle();
-            pMgr->deferTransformUpdate( [pMgr, handle, pos]()
-            {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-                if ( pSelf != nullptr )
-                    pSelf->setLocalPosition( pos );
-            } );
+            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
+            SceneTransformWrite write{};
+            write._handle        = getHandle();
+            write._localPosition = pos;
+            write._bSetPosition  = SW_TRUE;
+            _pManager->queueTransformWrite( write );
             return;
         }
         // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
@@ -274,14 +273,12 @@ namespace sw
     {
         if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = _pManager;
-            const sw::ComponentHandle handle = getHandle();
-            pMgr->deferTransformUpdate( [pMgr, handle, rot]()
-            {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-                if ( pSelf != nullptr )
-                    pSelf->setLocalRotation( rot );
-            } );
+            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
+            SceneTransformWrite write{};
+            write._handle        = getHandle();
+            write._localRotation = rot;
+            write._bSetRotation  = SW_TRUE;
+            _pManager->queueTransformWrite( write );
             return;
         }
         if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::EpsilonSquared )
@@ -299,14 +296,12 @@ namespace sw
     {
         if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = _pManager;
-            const sw::ComponentHandle handle = getHandle();
-            pMgr->deferTransformUpdate( [pMgr, handle, scale]()
-            {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-                if ( pSelf != nullptr )
-                    pSelf->setLocalScale( scale );
-            } );
+            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
+            SceneTransformWrite write{};
+            write._handle     = getHandle();
+            write._localScale = scale;
+            write._bSetScale  = SW_TRUE;
+            _pManager->queueTransformWrite( write );
             return;
         }
         if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::EpsilonSquared )

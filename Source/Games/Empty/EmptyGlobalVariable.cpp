@@ -29,4 +29,6 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_benchLights, 0, "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)" );
     SW_GLOBAL_VARIABLE_FLOAT( gv_benchLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
     SW_GLOBAL_VARIABLE_INT( gv_benchGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
+    SW_GLOBAL_VARIABLE_INT( gv_benchTickMovers, 0, "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)" );
+    SW_GLOBAL_VARIABLE_INT( gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
 } // namespace sw

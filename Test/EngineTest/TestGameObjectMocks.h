@@ -143,13 +143,19 @@ namespace sw
 
         float3*                _pObservedWorld;
         float3                 _tickLocalPos;
+        float3                 _tickLocalScale;
         uint8                  _bWriteLocalOnTick : 1;
-        [[maybe_unused]] uint8 _reserved          : 7;
+        uint8                  _bWriteScaleOnTick : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
+        uint8                  _bWriteTwiceOnTick : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
+        [[maybe_unused]] uint8 _reserved          : 5;
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
             , _tickLocalPos{}
+            , _tickLocalScale{ 1.0f, 1.0f, 1.0f }
             , _bWriteLocalOnTick{ SW_FALSE }
+            , _bWriteScaleOnTick{ SW_FALSE }
+            , _bWriteTwiceOnTick{ SW_FALSE }
             , _reserved{ 0 }
         {
             setCanEverTick( true );
@@ -166,8 +172,12 @@ namespace sw
             SceneComponent::onTick( deltaTime );
             if ( _pObservedWorld != nullptr )
                 *_pObservedWorld = getWorldPosition();
+            if ( _bWriteTwiceOnTick == SW_TRUE )
+                setLocalPosition( float3( _tickLocalPos._x + 1000.0f, _tickLocalPos._y, _tickLocalPos._z ) );
             if ( _bWriteLocalOnTick == SW_TRUE )
                 setLocalPosition( _tickLocalPos );
+            if ( _bWriteScaleOnTick == SW_TRUE )
+                setLocalScale( _tickLocalScale );
         }
     };
 
