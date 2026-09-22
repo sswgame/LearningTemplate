@@ -23,6 +23,7 @@ namespace sw
     class Material;
     class MaterialInstance;
     class MeshComponent;
+    class MeshInstanceBatch;
     class Scene;
 
     /**
@@ -58,7 +59,7 @@ namespace sw
         void update( float32 deltaTime );
 
         /** @brief 벤치가 씬을 만들어 두었으면 true. */
-        bool isActive() const { return _listBenchMesh.empty() == false; }
+        bool isActive() const { return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false; }
 
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
@@ -113,6 +114,12 @@ namespace sw
          *          핸들은 해석이 nullptr 로 끝날 뿐 죽은 주소가 될 수 없다.
          */
         vector<ComponentHandle> _listBenchMesh;
+        /**
+         * @brief `-gv_benchInstanced=1` 의 큐브 — 메시 종류마다 배치 하나. 큐브 i 는 배치 i % 종류수 의 항목 i / 종류수 다.
+         * @details 씬 컴포넌트가 없으므로 `_listBenchMesh` 는 비어 있고, update 가 월드 행렬을 항목에 바로 적는다.
+         */
+        vector<shared_ptr<MeshInstanceBatch>> _listInstanceBatch;
+        uint32                                _instanceCubeCount;
         /// @brief 프레임마다 다시 채우는 배치 쓰기 목록 — 큐브마다 세터를 부르지 않는다(update 주석).
         vector<SceneTransformWrite> _listTransformWrite;
         /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */

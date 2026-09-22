@@ -26,6 +26,8 @@ namespace sw
      * @class GpuSceneBuilder
      * @brief 씬 → 스냅샷. 게임 스레드 전용이며 GPU 를 모른다.
      */
+    struct PrimitiveInstanceEntry;
+
     class SW_API GpuSceneBuilder
     {
     public:
@@ -256,6 +258,8 @@ namespace sw
          *          부분 갱신만 낡은 필드를 남기고, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
         bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
+        /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다 — 메시 컴포넌트 판과 같은 규칙, 소유는 배치의 것. */
+        bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& cand );
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다 — 게임 스레드 전용(머티리얼의 지연 캐시를 건드린다). */
         static void stampPermutationHash( DrawCandidate& cand );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드·바운드·블렌드·시드)를 채웁니다. 배치·머티리얼 인덱스는 손대지 않는다. */

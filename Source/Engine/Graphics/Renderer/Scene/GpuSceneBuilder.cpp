@@ -15,6 +15,8 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
@@ -260,6 +262,37 @@ namespace sw
         return true;
     }
 
+    bool GpuSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& cand )
+    {
+        const MeshInstanceBatch* pBatch = entry._pBatch;
+        if ( pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount() )
+            return false;
+        Mesh* pMesh = pBatch->getRawMesh();
+        if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+            return false;
+        const MeshInstanceBatch::Entry& item = pBatch->getEntry( entry._index );
+        cand._world                          = item._world;
+        cand._boundsCenter                   = item._world.getTranslation();
+        cand._boundsRadius                   = item._boundsRadius;
+        cand._spinSeed                       = item._spinSeed;
+        // 메시 컴포넌트 판과 같은 규칙 — 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
+        if ( cand._mesh.get() != pMesh )
+            cand._mesh = pBatch->getMesh();
+        if ( cand._instance.get() != pBatch->getRawMaterialInstance() )
+            cand._instance = pBatch->getMaterialInstance();
+        Material* pMaterial = pBatch->getMaterial();
+        if ( pMaterial == nullptr )
+            pMaterial = pScene->getMaterial();
+        if ( cand._material.get() != pMaterial )
+            cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
+        const Material* pBlendSource = cand._material.get();
+        if ( pBlendSource == nullptr && cand._instance != nullptr )
+            pBlendSource = cand._instance->getParent();
+        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
+                                                      : static_cast<uint32>( RHIBlendMode::Opaque );
+        return true;
+    }
+
     void GpuSceneBuilder::stampPermutationHash( DrawCandidate& cand )
     {
         // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
@@ -319,7 +352,11 @@ namespace sw
         _listDirtyPrimitive.clear();
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive );
 
-        const vector<MeshComponent*>& listPrimitive = primitives.getAll();
+        const vector<MeshComponent*>&         listPrimitive     = primitives.getAll();
+        const vector<PrimitiveInstanceEntry>& listInstanceEntry = primitives.getInstanceEntries();
+        // 프리미티브 번호 공간 = 메시 컴포넌트 뒤에 인스턴스 배치의 항목들. 아래 전부가 이 공간을 돈다.
+        const uint32 meshCount = static_cast<uint32>( listPrimitive.size() );
+        const uint32 slotCount = meshCount + static_cast<uint32>( listInstanceEntry.size() );
 
         // 후보 배열을 **비우지 않고 제자리에 덮어쓴다.** `clear()` + `push_back` 은 원소마다
         // shared_ptr 셋의 참조 카운트를 내렸다(clear) 올린다(push_back) — 프레임당 원자 연산이
@@ -328,8 +365,8 @@ namespace sw
         //
         // **필드는 전부 다시 채워야 한다.** 비우지 않으므로 채우지 않은 필드에는 지난 프레임 값이
         // 남는다 — `DrawCandidate` 에 필드를 더하면 아래 루프에도 같이 적을 것.
-        if ( _listScratchCandidate.size() < listPrimitive.size() )
-            _listScratchCandidate.resize( listPrimitive.size() );
+        if ( _listScratchCandidate.size() < slotCount )
+            _listScratchCandidate.resize( slotCount );
 
         size_t candidateCount = 0;
 
@@ -339,9 +376,9 @@ namespace sw
         //
         // 조건이 하나라도 어긋나면 **아래 전체 수집으로 떨어진다** — 부분 갱신이 틀리는 것보다 느린
         // 것이 낫고, 두 경로가 같은 `fillCandidateFromPrimitive` 를 쓰므로 채우는 규칙이 갈리지 않는다.
-        const bool bCanPartial = bSetSame && bPermSame && _listPrimitiveToCandidate.size() == listPrimitive.size() &&
+        const bool bCanPartial = bSetSame && bPermSame && _listPrimitiveToCandidate.size() == slotCount &&
                                  _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
-                                 _listDirtyPrimitive.size() * 4 < listPrimitive.size();
+                                 _listDirtyPrimitive.size() * 4 < slotCount;
         bool bPartialDone      = false;
         bool bPartialKeysSame  = true;
         bool bPartialAnyChange = false;
@@ -356,7 +393,7 @@ namespace sw
             {
                 if ( bPartialDone == false )
                     break;
-                if ( slot >= listPrimitive.size() )
+                if ( slot >= slotCount )
                 {
                     bPartialDone = false;
                     break;
@@ -365,7 +402,8 @@ namespace sw
                 const bool   bWasIncluded   = ( candidateIndex != kInvalidCandidateIndex );
 
                 _candidateProbe      = DrawCandidate{};
-                const bool bIncluded = fillCandidateFromPrimitive( listPrimitive[slot], pScene, _candidateProbe );
+                const bool bIncluded = ( slot < meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], pScene, _candidateProbe )
+                                                            : fillCandidateFromInstanceEntry( listInstanceEntry[slot - meshCount], pScene, _candidateProbe );
                 if ( bIncluded )
                     stampPermutationHash( _candidateProbe );
                 // 실릴지 말지가 바뀌면 자리 배치가 달라진다 — 그때는 통째로 다시 모은다.
@@ -413,7 +451,7 @@ namespace sw
         if ( bPartialDone == false )
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
-            const uint32 primitiveCount = static_cast<uint32>( listPrimitive.size() );
+            const uint32 primitiveCount = slotCount;
             _listCollectFlag.resize( primitiveCount );
 
             // 지난 프레임의 "프리미티브 -> 후보" 표는 집합 세대가 같을 때만 뜻이 있다(해제는 자리를 옮긴다).
@@ -426,23 +464,27 @@ namespace sw
             // 지난 후보 배열은 **읽기만** 한다 — const 로 꺼낸 포인터다.
             struct CollectJob
             {
-                GpuSceneBuilder*      _pBuilder{ nullptr };
-                Scene*                _pScene{ nullptr };
-                MeshComponent* const* _ppPrimitive{ nullptr };
-                DrawCandidate*        _pCandidate{ nullptr };
-                uint8*                _pFlag{ nullptr };
-                const uint32*         _pPrevMap{ nullptr };
-                const DrawCandidate*  _pPrevCandidate{ nullptr };
-                uint32                _prevCount{ 0 };
-                bool                  _bPermSame{ false };
+                GpuSceneBuilder*              _pBuilder{ nullptr };
+                Scene*                        _pScene{ nullptr };
+                MeshComponent* const*         _ppPrimitive{ nullptr };
+                const PrimitiveInstanceEntry* _pEntry{ nullptr };
+                uint32                        _meshCount{ 0 };
+                DrawCandidate*                _pCandidate{ nullptr };
+                uint8*                        _pFlag{ nullptr };
+                const uint32*                 _pPrevMap{ nullptr };
+                const DrawCandidate*          _pPrevCandidate{ nullptr };
+                uint32                        _prevCount{ 0 };
+                bool                          _bPermSame{ false };
 
                 void fillRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        DrawCandidate& cand = _pCandidate[index];
-                        uint8          flag = 0u;
-                        if ( _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, cand ) )
+                        DrawCandidate& cand    = _pCandidate[index];
+                        uint8          flag    = 0u;
+                        const bool     bFilled = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, cand )
+                                                                        : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, cand );
+                        if ( bFilled )
                         {
                             flag                   = kCollectIncluded | kCollectNeedsStamp;
                             const uint32 prevIndex = ( _pPrevMap != nullptr ) ? _pPrevMap[index] : kInvalidCandidateIndex;
@@ -473,6 +515,8 @@ namespace sw
             job._pBuilder       = this;
             job._pScene         = pScene;
             job._ppPrimitive    = listPrimitive.data();
+            job._pEntry         = listInstanceEntry.data();
+            job._meshCount      = meshCount;
             job._pCandidate     = _listScratchCandidate.data();
             job._pFlag          = _listCollectFlag.data();
             job._pPrevMap       = bPrevAligned ? std::as_const( _listPrimitiveToCandidate ).data() : nullptr;

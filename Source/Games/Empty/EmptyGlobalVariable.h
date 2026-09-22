@@ -112,6 +112,12 @@ namespace sw
      *          전부 움직이는 벤치에서는 보이지 않는다. 10 이면 열 개 중 하나만 쓴다(index % 100 < percent).
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMovePercent );
+    /**
+     * @brief `-gv_benchInstanced=1` — 큐브를 GameObject·SceneComponent 없이 메시 인스턴스 배치(언리얼 ISM 자리)로 만듭니다.
+     * @details 같은 격자·같은 움직임·같은 시드라 그림은 같아야 한다. 플러시와 배치 트랜스폼 쓰기가 사라지는 대신 월드 행렬을
+     *          항목에 바로 적는다. 큐브별 머티리얼 인스턴스·투명 비율은 이 모드에서 지원하지 않는다(배치 하나 = 메시·머티리얼 하나).
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchInstanced );
 
     /**
      * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).

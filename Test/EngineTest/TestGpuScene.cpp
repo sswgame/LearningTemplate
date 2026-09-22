@@ -32,6 +32,8 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -100,6 +102,81 @@ SW_TEST_CASE( GpuSceneTest, BuildBatchesAndSortTransparent )
     gpuScene.buildFromScene( &scene, camMoved );
     SW_EXPECT_TRUE( gpuScene.isCpuSnapshotDirty() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+}
+
+/**
+ * @brief 메시 인스턴스 배치 — 씬 컴포넌트 없이 N 개가 실리고, 같은 메시·머티리얼의 컴포넌트와 한 배치로 합쳐지며, 항목 하나만
+ *        고치면 등록부가 더티를 알고, 배치를 놓으면 사라진다.
+ * @details 언리얼 ISM 의 자리. 배치의 항목은 등록부의 프리미티브 번호 공간에서 메시 컴포넌트 **뒤에** 이어지므로, 부분 수집·
+ *          배치 병합·더티 구간이 컴포넌트와 같은 경로를 탄다. 항목 하나를 고친 뒤의 빌드가 그 인스턴스의 위치를 바꾸고
+ *          나머지는 그대로여야 한다 — 번호가 어긋나면 엉뚱한 인스턴스가 움직인다.
+ */
+SW_TEST_CASE( GpuSceneTest, MeshInstanceBatchRendersWithoutComponents )
+{
+    sw::Scene scene( "GpuSceneInstanceBatch" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    // 비교 대상: 같은 메시의 컴포넌트 하나.
+    sw::GameObject*    pObj  = objects->createGameObject( sw::hashed_string( "ComponentCube" ) );
+    sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( cube );
+    pMesh->setLocalPosition( sw::float3( 5.0f, 0.0f, 0.0f ) );
+    pMesh->setVisible( true );
+
+    // 배치: 항목 셋, 씬 컴포넌트 없음.
+    sw::shared_ptr<sw::MeshInstanceBatch> pBatch = sw::make_shared<sw::MeshInstanceBatch>( cube, nullptr, nullptr, 3u );
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        pBatch->setWorld( index, sw::float4x4::createTrs( sw::float3( static_cast<float32>( index ), 0.0f, -2.0f ), sw::float3( 0.0f, 0.0f, 0.0f ),
+                                                          sw::float3( 1.0f, 1.0f, 1.0f ) ) );
+    }
+    objects->getPrimitiveRegistry().addInstanceBatch( pBatch.get() );
+    SW_EXPECT_TRUE( pBatch->isRegistered() );
+    SW_EXPECT_EQUAL( 4u, objects->getPrimitiveRegistry().getSlotCount() );
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    // 같은 메시·머티리얼·블렌드라 컴포넌트와 항목 셋이 한 불투명 배치다.
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getOpaqueBatches().size() ) );
+    SW_EXPECT_EQUAL( 4u, gpuScene.getOpaqueBatches()[0]._instanceCount );
+
+    // 항목 하나만 옮긴다 — 등록부가 더티를 알고, 빌드 뒤 그 인스턴스만 새 자리다.
+    SW_EXPECT_FALSE( objects->getPrimitiveRegistry().hasDirty() );
+    pBatch->setWorld( 1, sw::float4x4::createTrs( sw::float3( 1.0f, 7.0f, -2.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
+    SW_EXPECT_TRUE( objects->getPrimitiveRegistry().hasDirty() );
+    gpuScene.buildFromScene( &scene, camPos );
+    uint32 movedCount = 0;
+    uint32 stillCount = 0;
+    for ( const sw::GpuInstance& instance : gpuScene.getInstances() )
+    {
+        if ( sw::MathUtil::nearEqual( instance._boundsCenter._y, 7.0f ) )
+            ++movedCount;
+        else if ( sw::MathUtil::nearEqual( instance._boundsCenter._y, 0.0f ) )
+            ++stillCount;
+    }
+    SW_EXPECT_EQUAL( 1u, movedCount );
+    SW_EXPECT_EQUAL( 3u, stillCount );
+
+    // 숨기면 항목 전부가 빠지고, 다시 보이면 돌아온다.
+    pBatch->setVisible( false );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    pBatch->setVisible( true );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 배치를 놓으면 소멸자가 등록부에서 빠진다 — 컴포넌트 하나만 남는다.
+    pBatch.reset();
+    SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
 }
 
 /**

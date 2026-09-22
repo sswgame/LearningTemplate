@@ -23,6 +23,18 @@
 namespace sw
 {
     class MeshComponent;
+    class MeshInstanceBatch;
+
+    /**
+     * @brief 인스턴스 배치의 항목 하나 — 등록부의 프리미티브 번호 공간에서 메시 컴포넌트 뒤에 이어 붙는다.
+     * @details 번호 = 메시 컴포넌트 수 + 배치의 첫 항목 자리 + 항목 인덱스. 메시 컴포넌트가 늘거나 줄면 이 번호가 밀리는데,
+     *          그 변경은 집합 세대를 올려 빌더가 전체 수집으로 가므로 더티 번호가 어긋나도 답이 틀리지 않는다.
+     */
+    struct PrimitiveInstanceEntry
+    {
+        MeshInstanceBatch* _pBatch{ nullptr };
+        uint32             _index{ 0 };
+    };
 
     /**
      * @class PrimitiveRegistry
@@ -36,8 +48,11 @@ namespace sw
     public:
         /** @brief 빈 등록부를 만듭니다. */
         PrimitiveRegistry() = default;
-        /** @brief 등록부를 비웁니다. 프리미티브 수명은 GameObject 가 쥡니다. */
-        ~PrimitiveRegistry() = default;
+        /**
+         * @brief 등록부를 비웁니다. 프리미티브 수명은 GameObject 가 쥡니다.
+         * @details 아직 등록된 인스턴스 배치가 있으면 그 배치의 등록부 포인터를 비운다 — 배치가 나중에 죽어도 여기로 오지 않게.
+         */
+        ~PrimitiveRegistry();
 
         PrimitiveRegistry( const PrimitiveRegistry& )            = delete;
         PrimitiveRegistry& operator=( const PrimitiveRegistry& ) = delete;
@@ -79,15 +94,33 @@ namespace sw
          */
         void consumeDirty( vector<uint32>& outListSlot );
 
+        /**
+         * @brief 인스턴스 배치를 등록합니다 — 항목마다 프리미티브 번호 하나(메시 컴포넌트 뒤에 이어서). 집합 세대가 오른다.
+         * @details 배치는 소유하지 않는다. 배치가 먼저 죽으면 자기 소멸자에서 빠지고, 등록부가 먼저 죽으면 배치의 포인터를 비운다.
+         */
+        void addInstanceBatch( MeshInstanceBatch* pBatch );
+        /** @brief 인스턴스 배치를 뺍니다 — 항목 구간을 지우고 뒤 배치의 자리를 당긴다. 집합 세대가 오른다. */
+        void removeInstanceBatch( MeshInstanceBatch* pBatch );
+        /** @brief 배치의 항목 하나를 더티로 표시합니다 — 그 항목의 프리미티브 번호에 깃발을 세운다. */
+        void markInstanceDirty( MeshInstanceBatch* pBatch, uint32 index );
+        /** @brief 인스턴스 배치의 항목들 — 메시 컴포넌트 목록 뒤에 이어지는 프리미티브들. */
+        const vector<PrimitiveInstanceEntry>& getInstanceEntries() const { return _listInstanceEntry; }
+        /** @brief 프리미티브 번호 공간의 크기 = 메시 컴포넌트 수 + 인스턴스 항목 수. */
+        uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
+
     private:
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked();
 
         /** @brief 더티 플래그 배열을 최소 @p count 칸으로 키웁니다 (`_mutex` 를 쥔 채, 병렬 구간 밖). */
         void growDirtyFlags( uint32 count );
+        /** @brief 번호 하나에 깃발을 세운다 — 메시 컴포넌트와 인스턴스 항목이 같은 길을 쓴다. */
+        void markSlotDirty( uint32 slot );
 
         /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
-        vector<MeshComponent*> _listPrimitive;
+        vector<MeshComponent*>         _listPrimitive;
+        vector<PrimitiveInstanceEntry> _listInstanceEntry; ///< 배치 순서대로 이어 붙은 항목들
+        vector<MeshInstanceBatch*>     _listInstanceBatch; ///< 등록된 배치 — 빼기와 자리 당기기에 쓴다
         /// @brief 칸마다 "바뀌었다" 표시. 원자라 워커 여럿이 동시에 찍어도 된다. 용량은 `_listPrimitive` 이상이다.
         std::unique_ptr<atomic<uint8>[]> _arrDirtyFlag;
         uint32                           _dirtyFlagCapacity{ 0 };

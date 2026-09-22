@@ -16,6 +16,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -49,6 +51,8 @@ namespace sw
 
     BenchScene::BenchScene()
         : _listBenchMesh{}
+        , _listInstanceBatch{}
+        , _instanceCubeCount{ 0 }
         , _keyLight{}
         , _listBenchExtra{}
         , _glassMaterial{ nullptr }
@@ -118,6 +122,8 @@ namespace sw
                      removedCount, static_cast<uint32>( _listBenchMesh.size() ),
                      static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
+        _listInstanceBatch.clear(); // 소멸자가 등록부에서 빠진다
+        _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _listChurnInstance.clear();
         _keyLight = {};
@@ -223,6 +229,43 @@ namespace sw
                 _listChurnInstance.push_back( instance );
                 arrTransparentMaterial[slot] = std::move( instance );
             }
+        }
+
+        if ( gv_benchInstanced != 0 )
+        {
+            // 씬 컴포넌트 없이 — 메시 종류마다 배치 하나, 큐브 i 는 배치 i % 종류수 의 항목 i / 종류수. 격자·시드는 컴포넌트
+            // 경로와 같아 그림이 같아야 한다(픽셀 비교로 검증). 큐브별 머티리얼 인스턴스와 투명 비율은 이 모드에 없다.
+            if ( bPerCubeMaterial || transparentPercent > 0 )
+                SW_LOG_WARNING( "[Bench] -gv_benchInstanced=1 은 큐브별 머티리얼 인스턴스·투명 비율을 지원하지 않습니다 — 무시합니다." );
+            _listInstanceBatch.clear();
+            _listInstanceBatch.reserve( meshVariantCount );
+            for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
+            {
+                const uint32 entryCount = ( meshCount - variantIndex + meshVariantCount - 1 ) / meshVariantCount;
+                _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount ) );
+            }
+            for ( uint32 index = 0; index < meshCount; ++index )
+            {
+                const uint32       col = index % side;
+                const uint32       row = index / side;
+                const float3       position{ origin + static_cast<float32>( col ) * kBenchSpacing, 0.0f, origin + static_cast<float32>( row ) * kBenchSpacing };
+                MeshInstanceBatch& batch = *_listInstanceBatch[index % meshVariantCount];
+                const uint32       entry = index / meshVariantCount;
+                batch.setWorld( entry, float4x4::createTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
+                if ( gv_benchAnimate != 0 )
+                    batch.setSpinSeed( entry, index + 1u );
+            }
+            for ( const shared_ptr<MeshInstanceBatch>& batch : _listInstanceBatch )
+                pObjects->getPrimitiveRegistry().addInstanceBatch( batch.get() );
+            _instanceCubeCount = meshCount;
+            spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
+            spawnBenchLights( pScene, halfExtentOf( side, kBenchSpacing ) );
+            spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
+            _benchGridSide = side;
+            frameCameras( pScene, side, kBenchSpacing );
+            SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
+                         pScene->getName(), meshCount, meshVariantCount, side, side );
+            return;
         }
 
         StringBuilder<constant::kMaxBuffer64> nameBuilder;
@@ -522,10 +565,30 @@ namespace sw
         // **쓰기를 모아 배치로 넘긴다** (Unity 의 IJobParallelForTransform 자리). 예전에는 큐브마다 핸들을 풀고
         // 세터 둘을 불렀다 — 세터 하나 ~24 ns, 8000 개면 프레임당 380 us 였고 8000 규모 게임 스레드의 가장 큰 항목이었다.
         // 배치는 핸들 해석·필드 쓰기·더티 표시를 워커에 나누고 세대를 한 번만 올린다.
-        const uint32  count       = static_cast<uint32>( _listBenchMesh.size() );
+        const uint32  count       = _listInstanceBatch.empty() ? static_cast<uint32>( _listBenchMesh.size() ) : _instanceCubeCount;
         const uint32  side        = MathUtil::max( _benchGridSide, 1u );
         const float32 origin      = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
         const uint32  movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
+        if ( _listInstanceBatch.empty() == false )
+        {
+            // 인스턴스 배치: 씬 컴포넌트도 배치 쓰기도 없다 — 월드 행렬을 항목에 바로 적는다(언리얼 ISM 의 자리). 회전은
+            // 컴포넌트 경로와 같이 GPU 가 시드로 만든다.
+            const uint32 variantCount = static_cast<uint32>( _listInstanceBatch.size() );
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                if ( ( index % 100u ) >= movePercent )
+                    continue;
+                const float32 phase = static_cast<float32>( index ) * 0.37f;
+                const float32 wave  = MathUtil::sin( _benchElapsed + phase );
+                const float3  position{ origin + static_cast<float32>( index % side ) * kBenchSpacing,
+                                       wave * 0.75f,
+                                       origin + static_cast<float32>( index / side ) * kBenchSpacing };
+                const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
+                _listInstanceBatch[index % variantCount]->setWorld(
+                    index / variantCount, float4x4::createTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ scale, scale, scale } ) );
+            }
+            return;
+        }
         _listTransformWrite.clear();
         _listTransformWrite.reserve( count );
         for ( uint32 index = 0; index < count; ++index )
