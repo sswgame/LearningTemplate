@@ -57,8 +57,9 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pObjName ) )
                     pObjName = "GameObject";
 
-                const vector<GameObject*>& listChildren = pObj->getChildren();
-                ImGuiTreeNodeFlags         flags        = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+                vector<GameObject*> listChildren;
+                pObj->getChildren( listChildren );
+                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
                 if ( listChildren.empty() && pObj->getPrimarySceneComponent() == nullptr )
                     flags |= ImGuiTreeNodeFlags_Leaf;
 

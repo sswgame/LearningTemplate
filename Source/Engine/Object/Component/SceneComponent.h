@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -25,6 +26,8 @@ namespace sw
     REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy" )
     class SW_API SceneComponent : public Component
     {
+        friend class SceneTransformHierarchy;
+
     public:
         REFLECT_BODY();
 
@@ -179,5 +182,10 @@ namespace sw
         /// @brief 비트필드가 **아니다** — 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세운다(`applyTransformWrite`).
         uint8 _bIsTransformDirty;
         uint8 _bHasDirtyDescendant;
+        /**
+         * @brief 루트일 때, 계층의 더티 루트 목록에 올라 있다. `SceneTransformHierarchy` 만 만진다.
+         * @details 원자인 이유: 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 오르게(exchange).
+         */
+        atomic<uint8> _bQueuedDirtyRoot;
     };
 } // namespace sw

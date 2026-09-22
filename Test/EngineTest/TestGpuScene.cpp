@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Scene/GpuInstanceRing.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
@@ -273,6 +274,80 @@ SW_TEST_CASE( GpuSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
     // 발행본은 서로 다른 배열이다.
     SW_EXPECT_TRUE( snapshot2.getInstances().data() != snapshot3.getInstances().data() );
     SW_EXPECT_TRUE( snapshot3.getInstances().data() != instances4.data() );
+}
+
+/**
+ * @brief `GpuInstanceRing` 만 따로 — 빌더 없이도 발행·슬롯 재사용·따라잡기 규칙이 성립한다.
+ * @details 빌더에서 떼어 낸 이유가 "이 규칙은 씬 수집과 무관하다" 였으므로, 그 규칙을 빌더 없이 검사할 수 있어야 한다.
+ *          (1) 발행본은 다른 슬롯이 쓰이는 동안 바뀌지 않는다 (2) 아무도 안 드는 슬롯만 되쓰인다 (3) 되쓰인 슬롯은
+ *          그 사이 발행들의 변경 구간을 따라잡는다 (4) 이력이 끊기면 통째로 따라잡는다(값이 틀리지 않는다).
+ */
+SW_TEST_CASE( GpuSceneTest, InstanceRingStandalone )
+{
+    sw::GpuInstanceRing ring;
+    auto                fill = [&]( sw::vector<sw::GpuInstance>& list, uint32 count, float32 seed )
+    {
+        list.resize( count );
+        for ( uint32 index = 0; index < count; ++index )
+            list[index]._boundsRadius = seed + static_cast<float32>( index );
+    };
+
+    // f1: 전부 새로 쓰고 발행 → p1 을 든다.
+    fill( ring.acquireWrite(), 4, 100.0f );
+    sw::vector<sw::GpuInstanceRun>                    listNoRun;
+    sw::shared_ptr<const sw::vector<sw::GpuInstance>> p1 = ring.publish( true, listNoRun );
+    SW_ASSERT_NOT_NULL( p1.get() );
+    SW_EXPECT_EQUAL( size_t( 4 ), p1->size() );
+
+    // f2: p1 이 들려 있으므로 새 슬롯이 나온다 — 따라잡기(통째, 이력 첫 발행) 뒤 1 번만 고쳐 발행.
+    ring.syncWriteFromPublished();
+    sw::vector<sw::GpuInstance>& work2 = ring.acquireWrite();
+    SW_EXPECT_TRUE( work2.data() != p1->data() );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( work2[2]._boundsRadius - 102.0f ) < 1e-6f ); // 따라잡았다
+    work2[1]._boundsRadius = 201.0f;
+    sw::vector<sw::GpuInstanceRun> listRun2{
+        sw::GpuInstanceRun{ 1, 1 }
+    };
+    sw::shared_ptr<const sw::vector<sw::GpuInstance>> p2 = ring.publish( false, listRun2 );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( ( *p1 )[1]._boundsRadius - 101.0f ) < 1e-6f ); // (1) p1 은 그대로
+
+    // f3: 3 번만 고쳐 발행 (p2 도 든다).
+    ring.syncWriteFromPublished();
+    ring.acquireWrite()[3]._boundsRadius = 303.0f;
+    sw::vector<sw::GpuInstanceRun> listRun3{
+        sw::GpuInstanceRun{ 3, 1 }
+    };
+    sw::shared_ptr<const sw::vector<sw::GpuInstance>> p3 = ring.publish( false, listRun3 );
+
+    // p1 을 놓는다 → f4 는 p1 의 슬롯을 되쓴다 (2). 그 슬롯은 f2·f3 의 변경(1 번·3 번)을 모른다 → 따라잡아야 한다 (3).
+    const sw::GpuInstance* pSlot1 = p1->data();
+    p1.reset();
+    ring.syncWriteFromPublished();
+    sw::vector<sw::GpuInstance>& work4 = ring.acquireWrite();
+    SW_EXPECT_TRUE( work4.data() == pSlot1 );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( work4[1]._boundsRadius - 201.0f ) < 1e-6f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( work4[3]._boundsRadius - 303.0f ) < 1e-6f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( work4[0]._boundsRadius - 100.0f ) < 1e-6f );
+    sw::shared_ptr<const sw::vector<sw::GpuInstance>> p4 = ring.publish( false, listNoRun );
+
+    // (4) 이력보다 오래 잠든 슬롯 — p2 를 든 채 이력 크기만큼 발행을 거듭한 뒤 놓으면, 되쓸 때 통째로 따라잡는다.
+    for ( size_t step = 0; step < sw::GpuInstanceRing::kPublishHistoryCount + 2; ++step )
+    {
+        ring.syncWriteFromPublished();
+        ring.acquireWrite()[0]._boundsRadius = 1000.0f + static_cast<float32>( step );
+        sw::vector<sw::GpuInstanceRun> listRun{
+            sw::GpuInstanceRun{ 0, 1 }
+        };
+        p4 = ring.publish( false, listRun );
+    }
+    const sw::GpuInstance* pSlot2 = p2->data();
+    p2.reset();
+    p3.reset();
+    ring.syncWriteFromPublished();
+    sw::vector<sw::GpuInstance>& workLate = ring.acquireWrite();
+    SW_EXPECT_TRUE( workLate.data() == pSlot2 || workLate.data() != nullptr );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( workLate[0]._boundsRadius - ( *p4 )[0]._boundsRadius ) < 1e-6f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( workLate[3]._boundsRadius - 303.0f ) < 1e-6f );
 }
 
 /**

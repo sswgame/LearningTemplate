@@ -106,6 +106,12 @@ namespace sw
      *          먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아 여전히 0.05% 흔들렸다).
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchAnimate );
+    /**
+     * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
+     * @details "일부만 움직이는 씬" 을 재기 위한 것이다 — 트랜스폼 플러시가 더티 루트만 돌게 된 뒤(2026-09-22) 그 이득은
+     *          전부 움직이는 벤치에서는 보이지 않는다. 10 이면 열 개 중 하나만 쓴다(index % 100 < percent).
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMovePercent );
 
     /**
      * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).

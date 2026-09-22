@@ -86,13 +86,7 @@ namespace sw
 
     void GpuSceneBuilder::clear()
     {
-        _listInstanceRing.clear();
-        _listInstanceRingBuild.clear();
-        _pInstanceWrite.reset();
-        _writeSlotIndex = 0;
-        _pInstancePublished.reset();
-        _listPublishHistory.clear();
-        _publishCounter = 0;
+        _instanceRing.clear();
         _snapshot._pListInstance.reset();
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
@@ -635,99 +629,9 @@ namespace sw
         publishInstances();
     }
 
-    vector<GpuInstance>& GpuSceneBuilder::instanceWork()
-    {
-        if ( _pInstanceWrite != nullptr )
-            return *_pInstanceWrite;
-
-        // 아무도 안 읽는 슬롯 — 링만 들고 있는 것. 발행본과 패킷이 든 슬롯은 use_count 가 2 이상이라 걸러진다.
-        for ( uint32 slotIndex = 0; slotIndex < _listInstanceRing.size(); ++slotIndex )
-        {
-            if ( _listInstanceRing[slotIndex] != nullptr && _listInstanceRing[slotIndex].use_count() == 1 )
-            {
-                _pInstanceWrite = _listInstanceRing[slotIndex];
-                _writeSlotIndex = slotIndex;
-                return *_pInstanceWrite;
-            }
-        }
-        // 모자라면 하나 더 — 렌더 큐가 깊은 만큼만 자란다(패킷이 슬롯을 놓으면 그 슬롯이 다시 골라진다).
-        _listInstanceRing.push_back( make_shared<vector<GpuInstance>>() );
-        _listInstanceRingBuild.push_back( 0 );
-        _writeSlotIndex = static_cast<uint32>( _listInstanceRing.size() - 1 );
-        _pInstanceWrite = _listInstanceRing.back();
-        return *_pInstanceWrite;
-    }
-
     void GpuSceneBuilder::publishInstances()
     {
-        if ( _pInstanceWrite == nullptr )
-            return;
-        ++_publishCounter;
-        if ( _writeSlotIndex < _listInstanceRingBuild.size() )
-            _listInstanceRingBuild[_writeSlotIndex] = _publishCounter;
-
-        PublishRecord record{};
-        record._build = _publishCounter;
-        record._bAll  = _snapshot._bAllInstancesDirty;
-        if ( record._bAll == SW_FALSE )
-            record._listRun = _snapshot._listDirtyInstanceRun;
-        if ( _listPublishHistory.size() >= kPublishHistoryCount )
-            _listPublishHistory.erase( _listPublishHistory.begin() );
-        _listPublishHistory.push_back( std::move( record ) );
-
-        _pInstancePublished      = _pInstanceWrite;
-        _snapshot._pListInstance = _pInstancePublished;
-        _pInstanceWrite.reset();
-    }
-
-    void GpuSceneBuilder::syncWriteSlotFromPublished()
-    {
-        if ( _pInstancePublished == nullptr )
-            return;
-        const vector<GpuInstance>& prev = *_pInstancePublished;
-        vector<GpuInstance>&       work = instanceWork();
-
-        // 슬롯이 발행된 뒤 무엇이 바뀌었나 — 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
-        const uint64 slotBuild = ( _writeSlotIndex < _listInstanceRingBuild.size() ) ? _listInstanceRingBuild[_writeSlotIndex] : 0;
-        bool         bWhole    = ( slotBuild == 0 ) || ( work.size() != prev.size() );
-        uint64       expected  = slotBuild + 1;
-        if ( bWhole == false )
-        {
-            for ( const PublishRecord& record : _listPublishHistory )
-            {
-                if ( record._build <= slotBuild )
-                    continue;
-                // 이력이 끊겼으면(중간 발행이 밀려났으면) 통째로.
-                if ( record._build != expected || record._bAll != SW_FALSE )
-                {
-                    bWhole = true;
-                    break;
-                }
-                ++expected;
-            }
-            if ( expected != _publishCounter + 1 )
-                bWhole = true;
-        }
-
-        work.resize( prev.size() );
-        if ( bWhole )
-        {
-            if ( prev.empty() == false )
-                Memory::copy( work.data(), prev.data(), prev.size() * sizeof( GpuInstance ) );
-            return;
-        }
-        for ( const PublishRecord& record : _listPublishHistory )
-        {
-            if ( record._build <= slotBuild )
-                continue;
-            for ( const GpuInstanceRun& run : record._listRun )
-            {
-                const size_t start = MathUtil::min<size_t>( run._start, prev.size() );
-                const size_t end   = MathUtil::min<size_t>( static_cast<size_t>( run._start ) + run._count, prev.size() );
-                if ( end > start )
-                    Memory::copy( work.data() + start, prev.data() + start, ( end - start ) * sizeof( GpuInstance ) );
-            }
-        }
+        _snapshot._pListInstance = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRun );
     }
 
     void GpuSceneBuilder::requestGpuUploads( GpuUploadQueue& queue ) const
@@ -775,7 +679,7 @@ namespace sw
     {
         // 이전 값은 마지막 발행본에서 **읽기만** 한다(`_meshBatchIndex`·`_materialIndex` 는 배치 구성이 같으므로
         // 그대로 옮긴다). 결과는 아무도 안 읽는 링 슬롯에 쓴다 — 되복사가 없다(헤더의 링 주석).
-        const vector<GpuInstance>* pPrevious = _pInstancePublished.get();
+        const vector<GpuInstance>* pPrevious = _instanceRing.getPublished();
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
         if ( pPrevious == nullptr || pPrevious->empty() || _listInstanceSrcIndex.size() != pPrevious->size() )
             return false;

@@ -12,6 +12,17 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace
+{
+    /** @brief 테스트 편의 — 자식 GameObject 목록을 값으로 (엔진 API 는 out 인자다). */
+    sw::vector<sw::GameObject*> childrenOf( const sw::GameObject& gameObject )
+    {
+        sw::vector<sw::GameObject*> listChild;
+        gameObject.getChildren( listChild );
+        return listChild;
+    }
+} // namespace
+
 using namespace sw;
 
 /**
@@ -195,10 +206,10 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_EXPECT_NULL( parent->getParent() );
     SW_EXPECT_EQUAL( parent, child->getParent() );
     SW_EXPECT_EQUAL( child, grand->getParent() );
-    SW_EXPECT_EQUAL( size_t( 1 ), parent->getChildren().size() );
-    SW_EXPECT_EQUAL( child, parent->getChildren()[0] );
-    SW_EXPECT_EQUAL( size_t( 1 ), child->getChildren().size() );
-    SW_EXPECT_EQUAL( grand, child->getChildren()[0] );
+    SW_EXPECT_EQUAL( size_t( 1 ), childrenOf( *parent ).size() );
+    SW_EXPECT_EQUAL( child, childrenOf( *parent )[0] );
+    SW_EXPECT_EQUAL( size_t( 1 ), childrenOf( *child ).size() );
+    SW_EXPECT_EQUAL( grand, childrenOf( *child )[0] );
 
     const sw::float3 parentPos = parent->getComponent<sw::SceneComponent>()->getLocalPosition();
     const sw::float3 childPos  = child->getComponent<sw::SceneComponent>()->getLocalPosition();

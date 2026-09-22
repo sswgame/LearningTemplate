@@ -101,8 +101,6 @@ namespace sw
         bool isKeywordEnabled( hashed_string keyword ) const;
         /** @brief 캐시된 셰이더 define을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
-        /** @brief 셰이더 키워드 목록을 모읍니다. */
-        vector<string> collectShaderKeywords() const { return getCachedShaderDefines(); }
         /** @brief permutation 해시를 반환합니다. */
         uint64 getPermutationHash() const;
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */

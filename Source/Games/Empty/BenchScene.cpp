@@ -522,19 +522,25 @@ namespace sw
         // **쓰기를 모아 배치로 넘긴다** (Unity 의 IJobParallelForTransform 자리). 예전에는 큐브마다 핸들을 풀고
         // 세터 둘을 불렀다 — 세터 하나 ~24 ns, 8000 개면 프레임당 380 us 였고 8000 규모 게임 스레드의 가장 큰 항목이었다.
         // 배치는 핸들 해석·필드 쓰기·더티 표시를 워커에 나누고 세대를 한 번만 올린다.
-        const uint32  count  = static_cast<uint32>( _listBenchMesh.size() );
-        const uint32  side   = MathUtil::max( _benchGridSide, 1u );
-        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
-        _listTransformWrite.resize( count );
+        const uint32  count       = static_cast<uint32>( _listBenchMesh.size() );
+        const uint32  side        = MathUtil::max( _benchGridSide, 1u );
+        const float32 origin      = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        const uint32  movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
+        _listTransformWrite.clear();
+        _listTransformWrite.reserve( count );
         for ( uint32 index = 0; index < count; ++index )
         {
+            // 일부만 움직이는 씬 — 나머지는 쓰기 목록에 아예 넣지 않는다(실제 게임에서 안 움직이는 물체가 그렇다).
+            if ( ( index % 100u ) >= movePercent )
+                continue;
             // 인덱스마다 위상을 어긋나게 해 전부 같은 값이 되지 않도록 한다 — 전부 같으면
             // 배치 키는 물론 트랜스폼까지 동일해져 실제와 다른(너무 좋은) 결과가 나온다.
             const float32 phase = static_cast<float32>( index ) * 0.37f;
             const float32 wave  = MathUtil::sin( _benchElapsed + phase );
 
             // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치로 옮긴 비용의 3 분의 1 이었다).
-            SceneTransformWrite& write = _listTransformWrite[index];
+            _listTransformWrite.emplace_back();
+            SceneTransformWrite& write = _listTransformWrite.back();
             write._handle              = _listBenchMesh[index];
             write._localPosition       = float3{ origin + static_cast<float32>( index % side ) * kBenchSpacing,
                                            wave * 0.75f,
@@ -551,7 +557,7 @@ namespace sw
             write._localScale   = float3{ scale, scale, scale };
             write._bSetScale    = SW_TRUE;
         }
-        pObjects->applyTransformBatch( _listTransformWrite.data(), count );
+        pObjects->applyTransformBatch( _listTransformWrite.data(), static_cast<uint32>( _listTransformWrite.size() ) );
     }
 
     uint32 BenchScene::nextChurnRandom()

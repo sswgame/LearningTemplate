@@ -729,7 +729,10 @@ namespace sw
         WriteJob job{};
         job._pManager = this;
         job._pWrite   = pWrite;
+        // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다 — 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
+        _transformHierarchy.mergeQueuedDirtyRoots();
         engine::runParallel( count, SceneTransformHierarchy::kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
+        _transformHierarchy.mergeQueuedDirtyRoots();
 
         const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
         if ( changedCount > 0 )
@@ -798,7 +801,7 @@ namespace sw
 
         vector<GameObject*> listChildren;
         if ( bDestroyChildren )
-            listChildren = pObj->getChildren();
+            pObj->getChildren( listChildren );
 
         pObj->forEachComponent( []( Component* pComp )
         { pComp->markPendingKill(); } );

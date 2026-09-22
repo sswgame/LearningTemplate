@@ -66,7 +66,7 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    sw::vector<sw::string> listDef = material->collectShaderKeywords();
+    sw::vector<sw::string> listDef = material->getCachedShaderDefines();
     auto                   has     = [&]( const utf8* pDefine )
     {
         return std::find( listDef.begin(), listDef.end(), pDefine ) != listDef.end();
@@ -80,11 +80,11 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP" ) == false );
 
     material->setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
-    listDef = material->collectShaderKeywords();
+    listDef = material->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "MATERIAL_NORMALMAP" ) != listDef.end() );
 
     material->setMultiCompile( sw::hashed_string( "FogMode" ), "FOG_LINEAR" );
-    listDef = material->collectShaderKeywords();
+    listDef = material->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_LINEAR" ) != listDef.end() );
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_OFF" ) == listDef.end() );
 
@@ -95,7 +95,7 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     instance->enableKeyword( sw::hashed_string( "CUSTOM_KEYWORD" ) );
-    sw::vector<sw::string> listInstDef = instance->collectShaderKeywords();
+    sw::vector<sw::string> listInstDef = instance->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listInstDef.begin(), listInstDef.end(), "CUSTOM_KEYWORD" ) != listInstDef.end() );
     SW_EXPECT_TRUE( instance->getPermutationHash() != material->getPermutationHash() );
 }

@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Renderer/Scene/GpuInstanceRing.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 
 namespace sw
@@ -383,48 +384,18 @@ namespace sw
                                           uint32 rawCount, InstanceRefreshChunk& chunk );
 
         /**
-         * @brief 인스턴스 배열 **링** — 게임 스레드가 짓는 슬롯과 렌더 스레드가 읽는 슬롯이 다른 메모리다.
-         * @details 예전에는 작업 배열 하나를 발행하며 **옮겨** 주고, 다음 프레임에 제자리 갱신이 이전 값을 보려고
-         *          발행본을 **되복사**했다(800 KB · 73 us, 물체가 움직이는 프레임마다). 지금은 슬롯을 돌려 쓴다:
-         *          - 발행은 슬롯의 `shared_ptr` 를 스냅샷에 넘기는 것이다. 복사도 옮기기도 없다.
-         *          - 다음 프레임은 **아무도 안 읽는 슬롯**(`use_count() == 1`, 링만 든다)을 골라 쓴다. 패킷이
-         *            들고 있는 동안은 골라지지 않으므로 렌더 큐 깊이를 알 필요가 없다 — 모자라면 슬롯을 하나 더 만든다.
-         *          - 이전 값은 마지막 발행본(`_pInstancePublished`)에서 **읽기만** 한다. 전체 갱신은 슬롯 전부를 새로
-         *            쓰므로 슬롯의 낡은 내용은 상관없다. 부분 갱신은 낡은 슬롯을 먼저 발행본에 맞춘다 — 그 슬롯이
-         *            발행된 뒤 바뀐 구간만(`_listPublishHistory`) 복사하고, 이력이 모자라면 통째로 복사한다.
+         * @brief 인스턴스 배열 링 — 되복사 없는 발행과 낡은 슬롯 따라잡기는 `GpuInstanceRing` 이 든다.
+         * @details 빌더는 세 창구만 쓴다: `instanceWork()`(이번 프레임 쓰기 슬롯) · `syncWriteSlotFromPublished()`(부분 갱신 전)
+         *          · `publishInstances()`(스냅샷에 포인터 넘기기). 규칙과 이유는 그 타입의 주석에 있다.
          */
-        vector<shared_ptr<vector<GpuInstance>>> _listInstanceRing;
-        /// @brief 링 슬롯의 내용이 몇 번째 발행인가 (0 = 한 번도 발행 안 됨). `_listInstanceRing` 과 나란히 간다.
-        vector<uint64> _listInstanceRingBuild;
-        /// @brief 이번 프레임에 짓는 슬롯. 발행하면 비운다.
-        shared_ptr<vector<GpuInstance>> _pInstanceWrite;
-        /// @brief `_pInstanceWrite` 가 링의 몇 번째인가.
-        uint32 _writeSlotIndex{ 0 };
-        /// @brief 마지막 발행본 — 제자리 갱신이 이전 값을 읽는 곳. `_snapshot._pListInstance` 와 같은 객체다.
-        shared_ptr<const vector<GpuInstance>> _pInstancePublished;
-        /// @brief 발행 번호. 슬롯과 이력이 이 번호로 서로를 찾는다.
-        uint64 _publishCounter{ 0 };
+        GpuInstanceRing _instanceRing;
 
-        /** @brief 발행 하나가 그 직전 발행에 비해 바꾼 구간. 낡은 슬롯을 따라잡힐 때 읽는다. */
-        struct PublishRecord
-        {
-            uint64                 _build{ 0 };
-            uint8                  _bAll{ SW_FALSE };
-            vector<GpuInstanceRun> _listRun;
-        };
-        /// @brief 이력을 이만큼 든다 — 링 슬롯 수(렌더 큐 깊이 + 1)보다 넉넉하면 된다.
-        static constexpr size_t kPublishHistoryCount = 8;
-        vector<PublishRecord>   _listPublishHistory;
-
-        /** @brief 이번 프레임의 쓰기 슬롯. 없으면 아무도 안 읽는 슬롯을 고르거나 하나 만든다. */
-        vector<GpuInstance>& instanceWork();
-        /** @brief 쓰기 슬롯을 발행합니다 — 포인터만 넘기고 이력을 적는다. */
+        /** @brief 이번 프레임의 쓰기 슬롯 (`GpuInstanceRing::acquireWrite`). */
+        vector<GpuInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
+        /** @brief 쓰기 슬롯을 발행합니다 — 이번 빌드의 더티 구간을 이력으로 남긴다. */
         void publishInstances();
-        /**
-         * @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다.
-         * @details 슬롯이 발행된 뒤 바뀐 구간만 복사한다. 이력이 끊겼거나 크기가 다르면 통째로 복사한다(예전의 되복사와 같은 값).
-         */
-        void syncWriteSlotFromPublished();
+        /** @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다 (`GpuInstanceRing::syncWriteFromPublished`). */
+        void syncWriteSlotFromPublished() { _instanceRing.syncWriteFromPublished(); }
 
         /**
          * @brief `getInstances()[i]` 가 어느 후보에서 왔는지 (buildBatches 가 채운다).

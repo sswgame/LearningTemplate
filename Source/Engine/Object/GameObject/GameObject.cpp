@@ -56,7 +56,8 @@ namespace sw
         // 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
         detachFromParent();
 
-        vector<GameObject*> listChildObject = getChildren();
+        vector<GameObject*> listChildObject;
+        getChildren( listChildObject );
         for ( GameObject* pChildPtr : listChildObject )
         {
             if ( pChildPtr != nullptr )
@@ -249,22 +250,24 @@ namespace sw
         if ( bWasActive != bActiveInHierarchy )
             markPrimitiveSetDirtyOnManager();
 
-        for ( GameObject* pChild : getChildren() )
+        vector<GameObject*> listChild;
+        getChildren( listChild );
+        for ( GameObject* pChild : listChild )
         {
             if ( pChild != nullptr )
                 pChild->refreshActiveInHierarchy();
         }
     }
 
-    vector<GameObject*> GameObject::getChildren() const
+    void GameObject::getChildren( vector<GameObject*>& outListChild ) const
     {
-        vector<GameObject*> listResult;
-        SceneComponent*     pSceneComp = getPrimarySceneComponent();
+        outListChild.clear();
+        SceneComponent* pSceneComp = getPrimarySceneComponent();
         if ( pSceneComp == nullptr )
-            return listResult;
+            return;
 
         const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
-        listResult.reserve( listChildComp.size() );
+        outListChild.reserve( listChildComp.size() );
         for ( SceneComponent* pChildComp : listChildComp )
         {
             if ( pChildComp == nullptr )
@@ -276,9 +279,24 @@ namespace sw
             // 자기 자식으로** 나왔다. `refreshActiveInHierarchy` 가 그대로 무한 재귀해 스택을 넘겼다.
             if ( pChildObj == nullptr || pChildObj == this )
                 continue;
-            listResult.push_back( pChildObj );
+            outListChild.push_back( pChildObj );
         }
-        return listResult;
+    }
+
+    bool GameObject::hasChildren() const
+    {
+        SceneComponent* pSceneComp = getPrimarySceneComponent();
+        if ( pSceneComp == nullptr )
+            return false;
+        for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
+        {
+            if ( pChildComp == nullptr )
+                continue;
+            GameObject* pChildObj = pChildComp->getOwner();
+            if ( pChildObj != nullptr && pChildObj != this )
+                return true;
+        }
+        return false;
     }
 
     bool GameObject::isDescendantOf( const GameObject* pAncestor ) const

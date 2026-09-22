@@ -265,7 +265,16 @@ namespace sw
         createInfo.imageColorSpace  = surfaceFormat.colorSpace;
         createInfo.imageExtent      = extent;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        // 백버퍼는 그리기(COLOR_ATTACHMENT)만이 아니라 **블릿의 목적지**(포스트 체인의 마지막 블릿 · 오프스크린 → 백버퍼)와
+        // **읽기의 출처**(스크린샷 · 리드백)로도 쓰인다. 예전에는 COLOR_ATTACHMENT 만 줘서 백버퍼로 블릿하는 프레임마다
+        // 검증 레이어가 "TRANSFER_DST 없이 TRANSFER_DST_OPTIMAL 레이아웃" 을 찍었다(RenderPassGpuTest.FusedPostChainMatchesStaged
+        // 의 Vulkan 구간에서 [Error] 12 줄). 서피스가 허락하는 것만 더한다.
+        VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if ( ( capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) != 0 )
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        if ( ( capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) != 0 )
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        createInfo.imageUsage       = imageUsage;
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.preTransform     = preTransform;
         createInfo.compositeAlpha   = compositeAlpha;

@@ -89,7 +89,9 @@ namespace sw::editor
                     return false;
                 if ( nameMatchesFilter( pObj, pFilter ) )
                     return true;
-                for ( GameObject* pChild : pObj->getChildren() )
+                vector<GameObject*> listChild;
+                pObj->getChildren( listChild );
+                for ( GameObject* pChild : listChild )
                 {
                     if ( subtreeMatchesFilter( pChild, pFilter ) )
                         return true;
@@ -419,7 +421,7 @@ namespace sw::editor
                 else
                     formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectId );
 
-                const bool bHasChildGos   = pObj->getChildren().empty() == false;
+                const bool bHasChildGos   = pObj->hasChildren();
                 const bool bHasComponents = pObj->getComponentCount() > 0;
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
@@ -470,7 +472,9 @@ namespace sw::editor
 
                 if ( bOpen )
                 {
-                    for ( GameObject* pChild : pObj->getChildren() )
+                    vector<GameObject*> listChild;
+                    pObj->getChildren( listChild );
+                    for ( GameObject* pChild : listChild )
                     {
                         drawGameObjectNode( pChild, pManager, pFilter, renamingObjectId, renameBuffer,
                                             bFocusRenameInput );

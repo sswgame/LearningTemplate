@@ -15,6 +15,17 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace
+{
+    /** @brief 테스트 편의 — 자식 GameObject 목록을 값으로 (엔진 API 는 out 인자다). */
+    sw::vector<sw::GameObject*> childrenOf( const sw::GameObject& gameObject )
+    {
+        sw::vector<sw::GameObject*> listChild;
+        gameObject.getChildren( listChild );
+        return listChild;
+    }
+} // namespace
+
 using namespace sw;
 
 // GameObject 자체 — 컴포넌트 붙이기/떼기 · 계층 · 활성 상태 · 약참조.
@@ -233,8 +244,8 @@ SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
     SW_EXPECT_TRUE( grand.attachToParent( &child ) );
     SW_EXPECT_EQUAL( &parent, child.getParent() );
     SW_EXPECT_EQUAL( &child, grand.getParent() );
-    SW_EXPECT_EQUAL( size_t( 1 ), parent.getChildren().size() );
-    SW_EXPECT_EQUAL( &child, parent.getChildren()[0] );
+    SW_EXPECT_EQUAL( size_t( 1 ), childrenOf( parent ).size() );
+    SW_EXPECT_EQUAL( &child, childrenOf( parent )[0] );
 
     // 순환 attach 는 실패해야 한다.
     SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
@@ -255,7 +266,7 @@ SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
 
     grand.detachFromParent();
     SW_EXPECT_NULL( grand.getParent() );
-    SW_EXPECT_EQUAL( size_t( 0 ), child.getChildren().size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), childrenOf( child ).size() );
     // 분리된 grand 는 다시 루트이고, 자체 active 는 true 이다.
     SW_EXPECT_TRUE( grand.isActive() );
     SW_EXPECT_TRUE( grand.isActiveInHierarchy() );
@@ -653,6 +664,71 @@ SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
 }
 
 /**
+ * @brief [GameObjectTest] 플러시 목록에는 더러워진 루트만, 한 번씩 오른다 — 세터 경로와 배치 경로 모두.
+ * @details 예전에는 플러시가 루트 전부를 돌며 더티인지 물었다(루트마다 캐시 미스). 지금은 더러워진 노드가 자기 루트를
+ *          올리고 플러시는 그 목록만 돈다. 그래서 (1) 루트 N 개 중 하나만 움직이면 목록은 1 (2) 같은 루트 아래 자식 둘이
+ *          움직여도 1 (3) 플러시 뒤 0 (4) 부모를 바꾼 자식은 옛 루트가 아니라 새 루트를 올린다 — 어느 하나가 어긋나면
+ *          움직인 물체가 화면에 안 따라오거나(빠짐) 같은 서브트리를 두 잡이 동시에 만진다(중복).
+ */
+SW_TEST_CASE( GameObjectTest, FlushQueuesOnlyDirtyRoots )
+{
+    sw::GameObjectManager           manager;
+    sw::vector<sw::SceneComponent*> listRoot;
+    for ( uint32 index = 0; index < 8; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        name.append( "DirtyRoot" ).append( index );
+        sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( name.c_str() ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        listRoot.push_back( pObj->addComponent<sw::SceneComponent>() );
+    }
+    sw::GameObject*     pChildObjA = manager.createGameObject( sw::hashed_string( "DirtyChildA" ) );
+    sw::GameObject*     pChildObjB = manager.createGameObject( sw::hashed_string( "DirtyChildB" ) );
+    sw::SceneComponent* pChildA    = pChildObjA->addComponent<sw::SceneComponent>();
+    sw::SceneComponent* pChildB    = pChildObjB->addComponent<sw::SceneComponent>();
+    SW_EXPECT_TRUE( pChildA->attachToComponent( listRoot[0] ) );
+    SW_EXPECT_TRUE( pChildB->attachToComponent( listRoot[0] ) );
+
+    // 갓 만든 것은 전부 더티다 — 첫 플러시가 비운다.
+    SW_EXPECT_EQUAL( size_t( 8 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.flushSceneTransforms();
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+
+    // (1) 루트 하나만.
+    listRoot[3]->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    // (2) 같은 루트 아래 자식 둘 — 루트 0 이 한 번만 오른다.
+    pChildA->setLocalPosition( sw::float3( 2.0f, 0.0f, 0.0f ) );
+    pChildB->setLocalPosition( sw::float3( 3.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    // (3) 플러시 뒤 비고, 월드는 맞다.
+    manager.flushSceneTransforms();
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( pChildA->getWorldMatrix().getTranslation()._x - 2.0f ) < 1e-4f );
+
+    // 배치 경로도 같다 — 같은 루트 아래 자식 둘을 배치로 쓰면 루트 0 하나.
+    sw::SceneTransformWrite arrWrite[2];
+    arrWrite[0]._handle        = pChildA->getHandle();
+    arrWrite[0]._localPosition = sw::float3( 4.0f, 0.0f, 0.0f );
+    arrWrite[0]._bSetPosition  = SW_TRUE;
+    arrWrite[1]._handle        = pChildB->getHandle();
+    arrWrite[1]._localPosition = sw::float3( 5.0f, 0.0f, 0.0f );
+    arrWrite[1]._bSetPosition  = SW_TRUE;
+    SW_EXPECT_EQUAL( 2u, manager.applyTransformBatch( arrWrite, 2 ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( sw::MathUtil::abs( pChildB->getWorldMatrix().getTranslation()._x - 5.0f ) < 1e-4f );
+
+    // (4) 부모를 바꾸면 새 루트가 오른다 — 옛 루트(0)가 아니라 루트 5.
+    SW_EXPECT_TRUE( pChildA->attachToComponent( listRoot[5] ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( sw::MathUtil::abs( pChildA->getWorldMatrix().getTranslation()._x - 4.0f ) < 1e-4f );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
+}
+
+/**
  * @brief [GameObjectTest] Transform Dirty Generation 세대 카운터 및 O(1) 조기 탈출 검증
  */
 SW_TEST_CASE( GameObjectTest, TransformDirtyGenerationEarlyExit )
@@ -808,7 +884,7 @@ SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
     SW_ASSERT_TRUE( pMesh->attachToComponent( pRootSc ) );
 
     // 자기 자신은 자식 목록에 없어야 한다.
-    for ( sw::GameObject* pChild : pObj->getChildren() )
+    for ( sw::GameObject* pChild : childrenOf( *pObj ) )
         SW_EXPECT_TRUE( pChild != pObj );
 
     // 계층 갱신이 돌아와야 한다 — 예전에는 여기서 스택이 넘쳤다.

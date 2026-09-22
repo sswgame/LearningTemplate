@@ -1,6 +1,6 @@
 /**
  * @file SceneTransformHierarchy.h
- * @brief 씬 컴포넌트 트랜스폼 계층 — 루트 목록·더티 세대·월드 캐시 플러시(직렬/병렬).
+ * @brief 씬 컴포넌트 트랜스폼 계층 — 루트 목록·더티 루트 목록·더티 세대·월드 캐시 플러시(직렬/병렬).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -45,15 +45,21 @@ namespace sw
      *          병렬 시스템 하나의 모양이고, 이 타입이 그 첫 예다. 시스템이 둘을 넘어 서로의 결과에 기대기 시작하면
      *          그때 읽기/쓰기 집합을 선언하는 등록부로 순서를 자동화한다 — 지금은 tick 의 순서가 그 지식이다.
      *
+     *          **플러시는 더티 루트만 돈다.** 더러워진 노드는 자기 루트를 `_listDirtyRoot` 에 한 번만 올린다
+     *          (`queueDirtyRoot`, 루트의 `_bQueuedDirtyRoot` 가 중복을 막는다). 예전에는 플러시가 **루트 전부**를 돌며
+     *          더티인지 물었다 — 루트마다 캐시 미스 하나라, 8000 개 중 10 개만 움직여도 8000 개를 다 만졌다. 언리얼이
+     *          `MarkRenderTransformDirty` 로 더티 컴포넌트를 목록에 올리고 그 목록만 보내는 것과 같은 모양이다.
+     *
      *          병렬 규칙: 루트 서브트리끼리는 겹치지 않으므로 루트 단위로 나눈다. 워커는 컨테이너를 만지지 않고
      *          포인터만 받는다. DFS 스택은 스레드 슬롯마다 하나씩 재사용한다 — 잡마다 만들면 프레임당 청크 수만큼
-     *          할당이었다(큐브 8000 에서 프레임당 할당 1위).
+     *          할당이었다(큐브 8000 에서 프레임당 할당 1위). 배치 쓰기의 워커는 더티 루트를 슬롯별 스크래치에 모으고
+     *          배치가 끝난 뒤 `mergeQueuedDirtyRoots` 가 한 목록으로 합친다.
      */
     class SW_API SceneTransformHierarchy
     {
     public:
         /**
-         * @brief 루트가 이 수 이상이면 플러시를 루트 서브트리 단위로 잡에 나눕니다.
+         * @brief 더티 루트가 이 수 이상이면 플러시를 루트 서브트리 단위로 잡에 나눕니다.
          * @details 잡 디스패치 바닥이 ~50 us(잠든 워커 웨이크)라 그보다 작은 일은 직렬이 빠르다. 루트 2000 은
          *          직렬 ~60 us 라 나눠도 같고, 8000 은 직렬 200 us 가 병렬 110 us 다(Release · 큐브 전부 이동).
          */
@@ -75,21 +81,37 @@ namespace sw
         SceneTransformHierarchy( const SceneTransformHierarchy& )            = delete;
         SceneTransformHierarchy& operator=( const SceneTransformHierarchy& ) = delete;
 
-        /** @brief 루트가 된 씬 컴포넌트를 등록합니다. 이미 있으면 무시합니다. */
+        /** @brief 루트가 된 씬 컴포넌트를 등록합니다. 이미 있으면 무시합니다. 더티로 태어난 루트는 더티 목록에도 오른다. */
         void registerRoot( SceneComponent* pComp );
-        /** @brief 부모가 생기거나 파괴된 씬 컴포넌트를 루트에서 뺍니다. 멱등입니다. */
+        /** @brief 부모가 생기거나 파괴된 씬 컴포넌트를 루트에서 뺍니다(더티 목록에서도). 멱등입니다. */
         void unregisterRoot( SceneComponent* pComp );
+
+        /**
+         * @brief 더러워진 노드의 루트를 플러시 목록에 올립니다 — **게임 스레드 전용**. 이미 올라 있으면 아무 일도 없다.
+         * @details `markTransformDirty` 가 부모 사슬을 걸어 올라가 루트에 닿았을 때 부른다. 사슬 중간에서 이미
+         *          "자손 더티" 가 서 있는 조상을 만나면 그 루트는 이미 올라 있으므로 걷기를 멈춘다 — 그 불변식이 이 목록의 근거다.
+         */
+        void queueDirtyRoot( SceneComponent* pRoot );
+        /**
+         * @brief 워커에서 부르는 판 — 자기 스레드 슬롯의 스크래치에 올린다. 배치가 끝나면 `mergeQueuedDirtyRoots`.
+         * @details 중복은 루트의 원자 플래그가 막으므로 같은 루트 아래의 두 자식을 다른 워커가 써도 한 번만 오른다.
+         */
+        void queueDirtyRootParallel( SceneComponent* pRoot );
+        /** @brief 워커 스크래치의 더티 루트를 본 목록으로 옮깁니다 (배치 쓰기 뒤, 게임 스레드). */
+        void mergeQueuedDirtyRoots();
 
         /** @brief 어떤 트랜스폼이 바뀌었음을 알려 세대를 올립니다. 워커에서 불러도 된다. */
         void notifyDirtied() { _dirtyGeneration.fetch_add( 1, std::memory_order_relaxed ); }
         /** @brief 현재 더티 세대입니다. 플러시가 이 값을 따라잡으면 할 일이 없다. */
         uint64 getGeneration() const { return _dirtyGeneration.load( std::memory_order_relaxed ); }
-        /** @brief 어떤 루트라도 더티/자손 더티가 있으면 true. */
-        bool hasDirty() const;
+        /** @brief 플러시할 루트가 하나라도 있으면 true — 목록만 본다, 루트를 돌지 않는다. */
+        bool hasDirty() const { return _listDirtyRoot.empty() == false; }
+        /** @brief 지금 플러시를 기다리는 루트 수. */
+        size_t getDirtyRootCount() const { return _listDirtyRoot.size(); }
 
-        /** @brief 모든 루트의 월드 캐시를 계층 순으로 갱신합니다 (더티만). 루트가 문턱을 넘으면 병렬. */
+        /** @brief 더티 루트의 월드 캐시를 계층 순으로 갱신하고 목록을 비웁니다. 루트가 문턱을 넘으면 병렬. */
         void flush();
-        /** @brief 루트 목록을 비웁니다 (매니저 clear). */
+        /** @brief 루트 목록과 더티 목록을 비웁니다 (매니저 clear). */
         void clear();
         /** @brief 등록된 루트 수. */
         size_t getRootCount() const;
@@ -102,8 +124,18 @@ namespace sw
         static void flushSubtree( SceneComponent* pRoot, bool bParentChanged, FlushStack& stack );
 
     private:
+        /** @brief 루트의 대기 플래그를 잡아 본 목록에 올립니다. 이미 잡혀 있으면 false. */
+        static bool tryMarkQueued( SceneComponent* pRoot );
+
         /** @brief 루트 씬 컴포넌트 목록. 소유하지 않는다. */
         vector<SceneComponent*> _listRoot;
+        /** @brief 이번 플러시가 돌 루트 — 더러워진 노드가 자기 루트를 한 번씩 올린다. */
+        vector<SceneComponent*> _listDirtyRoot;
+        /** @brief 워커가 올린 더티 루트 (스레드 슬롯마다 하나, `engine::getParallelScratchSlotCount()` 크기). */
+        vector<vector<SceneComponent*>> _listDirtyRootScratch;
+        /// @brief 워커가 자기 칸을 찾는 포인터 — 바깥 컨테이너를 워커가 인덱싱하면 레이스 탐지기가 쓰기로 센다. `mergeQueuedDirtyRoots` 가 맞춘다.
+        vector<SceneComponent*>* _pDirtyRootScratch;
+        uint32                   _dirtyRootScratchCount;
         /** @brief 루트 목록의 락 — 등록/해제는 배타, 플러시는 공유. 이 타입의 락은 가장 안쪽이다. */
         mutable std::shared_mutex _rootMutex;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택 (`engine::getParallelScratchSlotCount()` 크기). */

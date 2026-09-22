@@ -140,7 +140,10 @@ namespace sw
             if ( _pDevice->_swapChain.getCurrentImage() == VK_NULL_HANDLE )
                 return;
             dstImage = _pDevice->_swapChain.getCurrentImage();
-            _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            // 이전 레이아웃은 UNDEFINED 로 — 블릿이 백버퍼 전체를 덮어쓰므로 내용을 버려도 되고, 갓 만든 스왑체인 이미지
+            // (아직 한 번도 present 되지 않아 실제로 UNDEFINED)에도 맞다. PRESENT_SRC 로 못박으면 첫 프레임에 검증 레이어가
+            // "PRESENT_SRC 를 기대했는데 UNDEFINED" 를 찍는다(RenderPassGpuTest.FusedPostChainMatchesStaged).
+            _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                              VK_IMAGE_ASPECT_COLOR_BIT );
         }

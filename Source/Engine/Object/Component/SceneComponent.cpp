@@ -171,6 +171,7 @@ namespace sw
         , _listChild{}
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
+        , _bQueuedDirtyRoot{ SW_FALSE }
     {
         _bCanEverTick      = SW_FALSE;
         _bIsSceneComponent = SW_TRUE;
@@ -483,13 +484,19 @@ namespace sw
             return false;
 
         // markTransformDirty 와 같은 표시 — 세대 올리기와 지연 경로만 뺐다. 전부 바이트 저장이라 워커에서 안전하다.
-        _bIsTransformDirty = SW_TRUE;
+        // 루트는 워커 스크래치에 올린다 — 같은 루트를 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
+        _bIsTransformDirty    = SW_TRUE;
+        SceneComponent* pRoot = ( _pParent == nullptr ) ? this : nullptr;
         for ( SceneComponent* pParentComp = _pParent; pParentComp != nullptr; pParentComp = pParentComp->_pParent )
         {
             if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
                 break;
             pParentComp->_bHasDirtyDescendant = SW_TRUE;
+            if ( pParentComp->_pParent == nullptr )
+                pRoot = pParentComp;
         }
+        if ( pRoot != nullptr && _pManager != nullptr )
+            _pManager->getTransformHierarchy().queueDirtyRootParallel( pRoot );
         for ( SceneComponent* pChild : _listChild )
         {
             if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
@@ -528,14 +535,21 @@ namespace sw
         if ( _pManager != nullptr )
             _pManager->notifyTransformDirtied();
 
+        // 부모 사슬을 올라가며 "자손 더티" 를 세우고, 루트에 닿으면 플러시 목록에 올린다. 이미 서 있는 조상을 만나면
+        // 그 루트는 이미 올라 있다(불변식) — 거기서 멈춘다. 내가 루트면 나를 올린다.
         SceneComponent* pParentComp = _pParent;
+        SceneComponent* pRoot       = ( pParentComp == nullptr ) ? this : nullptr;
         while ( pParentComp != nullptr )
         {
             if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
                 break;
             pParentComp->_bHasDirtyDescendant = SW_TRUE;
-            pParentComp                       = pParentComp->_pParent;
+            if ( pParentComp->_pParent == nullptr )
+                pRoot = pParentComp;
+            pParentComp = pParentComp->_pParent;
         }
+        if ( pRoot != nullptr && _pManager != nullptr )
+            _pManager->getTransformHierarchy().queueDirtyRoot( pRoot );
 
         for ( SceneComponent* pChild : _listChild )
         {

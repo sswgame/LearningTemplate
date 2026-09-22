@@ -117,8 +117,14 @@ namespace sw
         /** @brief 부모 GameObject. primary SceneComponent의 부모 소유자입니다. */
         GameObject* getParent() const;
 
-        /** @brief 자식 GameObject 목록. primary SceneComponent의 자식 소유자입니다. */
-        vector<GameObject*> getChildren() const;
+        /**
+         * @brief 자식 GameObject 를 `outListChild` 에 채웁니다(비우고 채운다). primary SceneComponent 의 자식 소유자입니다.
+         * @details 예전에는 값으로 돌려줬다 — 부르는 자리마다 벡터 하나였고, 에디터 계층 패널은 "자식이 있나" 를 물으려고
+         *          노드마다 프레임마다 그 벡터를 만들었다. 있는지만 볼 때는 `hasChildren`.
+         */
+        void getChildren( vector<GameObject*>& outListChild ) const;
+        /** @brief 자식 GameObject 가 하나라도 있으면 true. 목록을 만들지 않는다. */
+        bool hasChildren() const;
 
         /**
          * @brief 이 오브젝트가 pAncestor와 같거나 그 자식 계층에 있으면 true.
