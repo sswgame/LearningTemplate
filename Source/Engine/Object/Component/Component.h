@@ -219,6 +219,8 @@ namespace sw
         GameObject* getOwner() const { return _pOwner; }
         /** @brief 활성화 상태 확인 (자체 활성화 여부 및 소유자 활성화 여부 모두 확인) */
         bool isActive() const;
+        /** @brief 자체 활성 비트만 — 소유자 활성은 이미 본 자리(오브젝트 단위 틱 디스패치)용. */
+        bool isSelfActive() const { return _bActive.load( std::memory_order_relaxed ); }
         /** @brief 현재 Tick 그룹 반환 */
         TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
         /** @brief 매니저 tick 웨이브에 들어가면 true. */

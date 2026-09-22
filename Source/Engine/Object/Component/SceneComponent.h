@@ -132,6 +132,7 @@ namespace sw
          *          같이 쓴다). 구조 변경(attach·detach)이 없는 구간에서만 부른다 — 배치가 그 전제를 단언한다.
          */
         bool applyTransformWrite( const SceneTransformWrite& write );
+        // 잎 루트(부모도 자식도 없음)는 위 함수가 월드 행렬까지 그 자리에서 만들고 더티 목록에 올리지 않는다.
 
         /** @brief 트랜스폼 캐시가 더티면 true. */
         bool isTransformDirty() const { return _bIsTransformDirty == SW_TRUE; }

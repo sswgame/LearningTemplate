@@ -1043,6 +1043,46 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
 }
 
 /**
+ * @brief [GameObjectTest] 잎 루트(부모도 자식도 없음)에 배치로 쓰면 월드 행렬이 그 자리에서 만들어지고 더티 목록에 오르지 않는다.
+ * @details 쓴 라인이 뜨거운 채로 같은 워커가 합성한다 — 큐브 8000 개가 전부 움직이는 프레임의 사후 플러시(114 us)가 사라진 자리.
+ *          자식이 있는 루트는 예전처럼 더티 목록에 올라 플러시가 내려간다(위 `FlushQueuesOnlyDirtyRoots`). 메시 컴포넌트면
+ *          렌더 더티도 그 자리에서 찍혀야 한다.
+ */
+SW_TEST_CASE( GameObjectTest, LeafRootWriteFlushesInPlace )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pLeaf     = manager.createGameObject( sw::hashed_string( "LeafRoot" ) );
+    sw::MeshComponent*    pLeafMesh = pLeaf->addComponent<sw::MeshComponent>();
+    sw::GameObject*       pParent   = manager.createGameObject( sw::hashed_string( "BranchRoot" ) );
+    sw::SceneComponent*   pRoot     = pParent->addComponent<sw::SceneComponent>();
+    sw::GameObject*       pChildObj = manager.createGameObject( sw::hashed_string( "BranchChild" ) );
+    sw::SceneComponent*   pChild    = pChildObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pChild->attachToComponent( pRoot ) );
+    manager.flushSceneTransforms();
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.getPrimitiveRegistry().clearDirty();
+
+    sw::SceneTransformWrite arrWrite[2];
+    arrWrite[0]._handle        = pLeafMesh->getHandle();
+    arrWrite[0]._localPosition = sw::float3( 3.0f, 0.0f, 0.0f );
+    arrWrite[0]._bSetPosition  = SW_TRUE;
+    arrWrite[1]._handle        = pRoot->getHandle();
+    arrWrite[1]._localPosition = sw::float3( 7.0f, 0.0f, 0.0f );
+    arrWrite[1]._bSetPosition  = SW_TRUE;
+    SW_EXPECT_EQUAL( 2u, manager.applyTransformBatch( arrWrite, 2 ) );
+
+    // 잎 루트: 플러시 전에 이미 월드가 맞고 더티도 아니다. 자식 있는 루트: 목록에 올라 있고 아직 더티다.
+    SW_EXPECT_FALSE( pLeafMesh->isTransformDirty() );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( pLeafMesh->getWorldMatrix().getTranslation()._x - 3.0f ) < 1e-4f );
+    SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    SW_EXPECT_TRUE( pRoot->isTransformDirty() );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( sw::MathUtil::abs( pChild->getWorldMatrix().getTranslation()._x - 7.0f ) < 1e-4f );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
+}
+
+/**
  * @brief [GameObjectTest] 플러시 목록에는 더러워진 루트만, 한 번씩 오른다 — 세터 경로와 배치 경로 모두.
  * @details 예전에는 플러시가 루트 전부를 돌며 더티인지 물었다(루트마다 캐시 미스). 지금은 더러워진 노드가 자기 루트를
  *          올리고 플러시는 그 목록만 돈다. 그래서 (1) 루트 N 개 중 하나만 움직이면 목록은 1 (2) 같은 루트 아래 자식 둘이

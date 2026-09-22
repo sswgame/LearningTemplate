@@ -250,6 +250,7 @@ namespace sw
             // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
             SceneTransformWrite write{};
             write._handle        = getHandle();
+            write._pTarget       = this;
             write._localPosition = pos;
             write._bSetPosition  = SW_TRUE;
             _pManager->queueTransformWrite( write );
@@ -276,6 +277,7 @@ namespace sw
             // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
             SceneTransformWrite write{};
             write._handle        = getHandle();
+            write._pTarget       = this;
             write._localRotation = rot;
             write._bSetRotation  = SW_TRUE;
             _pManager->queueTransformWrite( write );
@@ -479,6 +481,16 @@ namespace sw
         }
         if ( bChanged == false )
             return false;
+
+        // 잎 루트(부모도 자식도 없다)는 **여기서 곧장** 월드를 만든다 — 방금 쓴 라인이 뜨거운 채로, 같은 워커가. 자손이 없으니
+        // 순서를 기다릴 것이 없고 플러시 패스가 이 루트를 만질 일도 없다(더티 목록에 오르지 않는다). 큐브 8000 개가 전부 움직이는
+        // 프레임에서 사후 플러시 114 us 가 통째로 사라진 자리다. 계층이 있는 것은 예전처럼 루트를 올리고 플러시가 내려간다.
+        if ( _pParent == nullptr && _listChild.empty() )
+        {
+            _bIsTransformDirty = SW_TRUE;
+            updateWorldTransformFromParent();
+            return true;
+        }
 
         // markTransformDirty 와 같은 표시 — 세대 올리기와 지연 경로만 뺐다. 전부 바이트 저장이라 워커에서 안전하다.
         // 루트는 워커 스크래치에 올린다 — 같은 루트를 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.

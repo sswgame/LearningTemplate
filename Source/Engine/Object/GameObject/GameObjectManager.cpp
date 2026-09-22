@@ -266,13 +266,24 @@ namespace sw
                 return static_cast<SceneComponent*>( pComp );
             }
 
-            /** @brief 쓰기 [start, end) 를 순서대로 적용합니다 — 워커에서 불린다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뛴다. */
-            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end )
+            /**
+             * @brief 쓰기 [start, end) 를 순서대로 적용합니다 — 워커에서 불린다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뛴다.
+             * @param bTrustTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않는다 — 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만.
+             */
+            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bTrustTarget )
             {
                 uint32 changedCount = 0;
                 for ( uint32 index = start; index < end; ++index )
                 {
-                    SceneComponent* pScene = resolveSceneComponent( pManager, pWrite[index]._handle );
+                    SceneComponent* pScene = nullptr;
+                    if ( bTrustTarget && pWrite[index]._pTarget != nullptr )
+                    {
+                        pScene = pWrite[index]._pTarget;
+                        if ( pScene->isPendingKill() )
+                            continue;
+                    }
+                    else
+                        pScene = resolveSceneComponent( pManager, pWrite[index]._handle );
                     if ( pScene != nullptr && pScene->applyTransformWrite( pWrite[index] ) )
                         ++changedCount;
                 }
@@ -336,7 +347,8 @@ namespace sw
                 {
                     const TickItem& item  = listItem[index];
                     Component*      pComp = item._pComponent;
-                    if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
+                    // 소유자의 활성은 위에서 봤다 — 컴포넌트 자체 비트만.
+                    if ( pComp == nullptr || pComp->isPendingKill() || pComp->isSelfActive() == false )
                         continue;
                     if ( item._subTickId == 0 )
                     {
@@ -860,7 +872,7 @@ namespace sw
 
             void applyRange( uint32 start, uint32 end )
             {
-                const uint32 changedCount = GameObjectManagerInternal::applyTransformWriteRange( _pManager, _pWrite, start, end );
+                const uint32 changedCount = GameObjectManagerInternal::applyTransformWriteRange( _pManager, _pWrite, start, end, false );
                 if ( changedCount > 0 )
                     _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
             }
@@ -887,7 +899,7 @@ namespace sw
         // 슬롯이 준비되지 않았다 — 틱 밖에서 읽기 전용 구간을 흉내 내는 곳(테스트·도구)뿐이다. 예전 지연 경로로.
         deferTransformUpdate( [this, write]()
         {
-            if ( GameObjectManagerInternal::applyTransformWriteRange( this, &write, 0, 1 ) > 0 )
+            if ( GameObjectManagerInternal::applyTransformWriteRange( this, &write, 0, 1, false ) > 0 )
                 _transformHierarchy.notifyDirtied();
         } );
     }
@@ -923,7 +935,7 @@ namespace sw
                 for ( uint32 index = start; index < end; ++index )
                 {
                     const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[_pActiveSlot[index]] );
-                    changedCount += GameObjectManagerInternal::applyTransformWriteRange( _pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ) );
+                    changedCount += GameObjectManagerInternal::applyTransformWriteRange( _pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ), true );
                 }
                 if ( changedCount > 0 )
                     _changedCount.fetch_add( changedCount, std::memory_order_relaxed );

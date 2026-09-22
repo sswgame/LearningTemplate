@@ -27,6 +27,13 @@ namespace sw
     struct SceneTransformWrite
     {
         ComponentHandle _handle;
+        /**
+         * @brief 틱 큐 전용 — 세터가 자기 자신을 적는다. 바깥에서 주는 배치는 비워 둔다(핸들로 푼다).
+         * @details 큐에 쌓인 건은 같은 `tick()` 호출 안에서 적용되고 그 사이 컴포넌트는 해제되지 않는다(파괴는 틱 밖에서만 메모리를
+         *          놓는다). 그래서 핸들을 다시 풀 필요가 없다 — 슬롯 표 · 오브젝트 · 컴포넌트 목록의 캐시 미스 셋이 사라진다.
+         *          삭제 대기는 적용 쪽이 본다.
+         */
+        SceneComponent* _pTarget{ nullptr };
         float3          _localPosition{};
         float3          _localRotation{};
         float3          _localScale{ 1.0f, 1.0f, 1.0f };
