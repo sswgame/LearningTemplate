@@ -209,8 +209,9 @@ namespace sw
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
         /**
          * @brief 씬 컴포넌트(트랜스폼을 가진 것)인가 — 리플렉션 없이 답한다.
-         * @details `castTo<SceneComponent>` 는 타입 사슬을 이름으로 걷는다. 워커 열넷이 건마다 그것을 부르자 배치
-         *          트랜스폼 쓰기가 세터보다 **느려졌다**(8000 건 2.1 ms). 생성자에서 세우는 비트 하나면 된다.
+         * @details `castTo<SceneComponent>` 는 가상 호출 + 캐시 조회 둘 + 조상 표 비교다(약 8 ns). 워커 열넷이
+         *          건마다 그것을 부르자 배치 트랜스폼 쓰기가 세터보다 **느려졌다**(사슬을 걷던 때 8000 건 2.1 ms).
+         *          생성자에서 세우는 비트 하나면 된다.
          */
         bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 

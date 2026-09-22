@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-22 · 기준 커밋 `75b272f7` (+ 더티 루트 플러시 · 링 분리 · API 정리 커밋)
+> 마지막 갱신: 2026-09-22 · 기준 커밋 `7fe7218e` (+ castTo O(1) 커밋)
 
 ---
 
@@ -426,6 +426,61 @@ Release · DX12 · 큐브 8000 · 1000 프레임, 이전(엔진만 옛것 + 같�
 `COLOR_ATTACHMENT` 만으로 만들어 백버퍼로 블릿할 때 `TRANSFER_DST` 가 없었다 → 서피스가 허락하면 TRANSFER_DST/SRC 를 더한다.
 (2) 백버퍼 블릿의 이전 레이아웃을 `PRESENT_SRC` 로 못박아 첫 프레임(실제로는 UNDEFINED)에 어긋났다 → 전체를 덮어쓰는 블릿이라
 `UNDEFINED` 로. 그 테스트의 `[Error]` 는 17 → 0 이다. **검증 레이어 오류를 테스트가 세지 않는 것** 자체가 구멍이다 — 백로그 후보.
+
+**(B) 아홉째 커밋 — 2026-09-22 · `castTo` 를 O(1) 로: 조상 표(HotSpot 의 primary supers display 자리) · 바인딩 플래그 · 걷기의 intern 접근 제거 · 계층 패널은 비트로.**
+
+- **`TypeInfo` 가 조상 표를 든다.** 루트부터 자기까지의 **이름(FQN intern 인덱스)** 을 깊이 순서로 적어 두고,
+  `isDerivedFrom( const TypeInfo* )` 는 `표[pTarget 의 깊이] == pTarget 의 이름` — 로드 둘과 비교 하나다. 등록 배치 끝
+  (`buildLookupCaches`)이 세우고, `registerClass` 와 `unregisterTypesByModule` 이 **전부** 비우며(사슬이 바뀔 수 있다),
+  첫 조회가 다시 세운다. 표가 없는 쪽(이름 없음 · 순환 · 깊이 8 초과)은 부모 포인터 걷기로 폴백한다.
+  - **왜 `_typeId` 가 아니라 이름인가.** 테스트 목의 손으로 만든 `StaticType()` 사본은 자기 `_typeId` 를 따로 가진다
+    (`makeMockComponentTypeInfo` 가 이름 해시를 넣는다). id 표는 `MultiLevelComponentGameObjectPolymorphicLookup` 을
+    깨뜨렸다. 이름은 걷기의 `isSameTypeName` 과 같은 규칙이라 사본도 같은 타입으로 본다.
+  - **안 풀리는 부모는 사슬의 끝이다.** `Component` 는 REFLECT 가 아니라 **등록되지 않는데** 자식들의 `_parentFQN` 에는
+    "sw::Component" 가 적혀 있다. 예전 걷기는 실패 캐스트마다 그 이름을 **잠금 잡고 레지스트리에서 찾았고**, 찾을 수
+    없으니 캐시도 안 됐다 — 실패 캐스트 28 ns 의 대부분이 이것이었다. 표는 그 부모 앞에서 멈추고, 그 부모가 뒤늦게
+    등록되면 등록이 표를 비운다(회귀 테스트 `AncestorDisplayMatchesWalkAndFollowsRechain` (3b)).
+- **`areEngineServicesBound()` 는 플래그 하나.** 예전엔 부를 때마다 필수 서비스 22 칸을 훑었고, `Component::getTypeInfo()`
+  가 캐스트마다 그것을 불렀다. bind/unbind 때 한 번 세운다. 테스트가 바인딩을 흔들 창구는 `test::rebindEngineServices`
+  하나다 — `bindEngineServices(` 를 부르는 파일은 `CheckEngineServiceBinding` 이 호스트로 잡는다.
+- **작은 것 둘.** `Component::getTypeInfo()` 의 `_componentName.empty()` (intern 테이블 읽기)를 뺐다 — 빈 이름은 캐시가
+  세대당 한 번 헛조회하고 폴백으로 간다. 걷기의 `isSameTypeName` 이 걸음마다 `empty()` 둘을 부르던 것을 인덱스 비교로
+  바꿨다(적중 때만 `empty()`). 계층 패널은 노드마다 프레임마다 `castTo<SceneComponent>` 대신 `isSceneComponent()` 비트.
+
+Release · 마이크로벤치(4M 회 · 단일 객체 · 캐시 뜨거움, ns) — 이전 / 이후:
+
+| 항목 | 이전 | 이후 |
+|---|---|---|
+| `getTypeInfo()` 가상 호출 | 10.5 | 6.9 |
+| `SceneComponent::StaticType()` | 4.1 | 4.7 |
+| `isDerivedFrom` 적중, 1 걸음 | 5.5 | 4.9 |
+| `isDerivedFrom` 실패, 3 걸음 | 28.4 | **4.9** |
+| `castTo<Scene>(mesh)` 적중 | 20.7 | 15.8 |
+| `castTo<Scene>(tag)` 실패 | 39.4 | **15.5** |
+| `getComponent<Camera>()` 실패, 컴포넌트 2 개 | 89 | **35** |
+
+남은 15 ns 는 세대 검사 캐시 조회 둘(`StaticType()` 4.7 + `getTypeInfo()` 6.9)과 표 비교 5 다. 더 줄이려면 코드젠이
+`getTypeInfo()` 오버라이드를 내어 `StaticType()` 을 돌려주는 것(언리얼 `GetClass()` 자리)인데, `REFLECT_BODY` 가 Component
+아닌 타입에도 쓰여 가상 함수를 무조건 낼 수 없다 — 후보.
+
+프레임 단위 (Release · DX12 · 큐브 8000 · 1000 프레임, 이전/이후 번갈아 2회, p50 us):
+
+| | 이전 | 이후 |
+|---|---|---|
+| 표준 벤치 GT.Frame | 786 / 786 | 786 / 786 |
+| 표준 벤치 벽시계 | 2.42 / 2.36 초 | 2.41 / 2.35 초 |
+| `-EnableEditor` GT.Frame | 425 / 425 | **212 / 212** |
+
+표준 벤치는 캐스트가 프레임 경로에 없어 그대로다(예상대로). 에디터를 켠 8000 객체에서 GT.Frame 이 두 번 모두 반으로
+줄었는데, 게이트 56 곳 중 어느 것이 프레임마다 불리던 것인지는 짚지 않았다. **에디터 UI 시간(`GT.Editor.updateUi`)은
+재지 못했다** — `RT.BeginFrame` 이 67 ms 를 기다려(창 가림·present 대기) 같은 바이너리가 실행마다 5.8 ms 와 75 ms 를
+오간다. 에디터 벤치를 믿으려면 창을 전면에 두고 present 대기를 뺀 자리를 재야 한다 — 후보.
+
+뮤테이션: 등록 시 표 비우기를 빼면 `AncestorDisplay…` 테스트가, 플래그를 항상 true 로 하면 `BoundFlag…` 테스트가 실패하는
+것을 확인했다. 검증 중 Shipping `EngineTest_NoGPU` 가 **ASan 빌드와 겹쳐 돌린** 첫 실행에서 한 번 실패했고(출력을 남기지
+못했다), 빌드가 끝난 뒤 두 번은 통과했다 — 여덟째 커밋 때의 타임아웃과 같은 부류다. GPU·시간 민감 스위트는 빌드와
+겹쳐 돌리지 말 것. 남은 프레임 경로 캐스트: 에디터 시각화(콜라이더·카메라)는 객체마다 `getComponent` — 콜라이더 등록부가
+없어 그대로(이제 객체당 약 35 ns). GameFramework 틱 컴포넌트의 `getPrimarySceneComponent()` 도 그대로(적중 16 ns).
 
 **분석해서 두는 것 — 다시 제안하기 전에 읽을 것.**
 

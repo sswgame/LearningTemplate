@@ -486,9 +486,10 @@ namespace sw::editor
                         if ( pComp == nullptr )
                             continue;
 
-                        SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-                        if ( pSceneComp != nullptr )
+                        // 노드마다 프레임마다 묻는 자리 — 리플렉션 캐스트 대신 생성자에서 세운 비트를 본다.
+                        if ( pComp->isSceneComponent() )
                         {
+                            SceneComponent*       pSceneComp    = static_cast<SceneComponent*>( pComp );
                             const SceneComponent* pParent       = pSceneComp->getParent();
                             const bool            bRootOnThisGo = pParent == nullptr || pParent->getOwner() != pObj;
                             if ( bRootOnThisGo )

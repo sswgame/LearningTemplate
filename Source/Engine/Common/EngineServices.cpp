@@ -2,6 +2,8 @@
 
 #include "Engine/Common/EngineServices.h"
 
+#include "Core/Concurrency/atomic.h"
+
 #include "RuntimeAPI/Service/ModuleService.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
@@ -17,6 +19,12 @@ namespace sw
     {
         /** @brief App 이 바인딩해 둔 서비스 포인터 묶음입니다. */
         EngineServices s_services{};
+        /**
+         * @brief `areEngineServicesBound()` 의 답. bind/unbind 때만 바뀐다.
+         * @details 예전엔 부를 때마다 필수 서비스 22 칸을 훑었다 — `Component::getTypeInfo()` 가 캐스트마다
+         *          그것을 불러, 캐스트 한 번의 절반이 이 훑기였다. 표는 bind/unbind 에서만 바뀌므로 그때 한 번 센다.
+         */
+        atomic<bool> s_bServicesBound{ false };
     } // namespace
 
     namespace engine
@@ -29,6 +37,7 @@ namespace sw
             // 엉뚱한 자리에서 나타난다 — `areEngineServicesBound()` 로 게이팅되는 스무 곳이 전부
             // 조용히 폴백으로 가기 때문이다(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽었다).
             const utf8* pMissing = findUnboundRequiredServiceName( s_services );
+            s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
             if ( pMissing != nullptr )
             {
                 SW_LOG_WARNING( "필수 엔진 서비스 '%#' 가 비어 있습니다 — areEngineServicesBound() 가 false 가 되어 "
@@ -40,6 +49,7 @@ namespace sw
         void unbindEngineServices()
         {
             s_services = {};
+            s_bServicesBound.store( false, std::memory_order_release );
         }
 
         const utf8* findUnboundRequiredServiceName( const EngineServices& services )
@@ -72,7 +82,7 @@ namespace sw
 
         bool areEngineServicesBound()
         {
-            return findUnboundRequiredServiceName( s_services ) == nullptr;
+            return s_bServicesBound.load( std::memory_order_acquire );
         }
 
         void fillModuleServices( ModuleService& outService, bool bGameModuleOnly )

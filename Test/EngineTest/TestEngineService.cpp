@@ -77,6 +77,33 @@ SW_TEST_CASE( EngineServiceTest, TestHarnessBindsEveryRequiredService )
 }
 
 /**
+ * @brief [EngineServiceTest] `areEngineServicesBound()` 는 bind/unbind 를 따라오는 플래그 하나다
+ * @details 예전엔 부를 때마다 필수 서비스 22 칸을 훑었다 — `Component::getTypeInfo()` 가 캐스트마다 그것을
+ *          불러 캐스트 한 번의 절반이 이 훑기였다. 이제 bind/unbind 때 한 번 센 플래그를 읽는다. 훑기와 같은
+ *          답이어야 한다: 빈 표 → false, 필수 하나가 빈 표 → false, 완전한 표 → true. 전역 표를 흔드는
+ *          테스트라 **원래 표를 그대로 되돌린다** — 뒤따르는 테스트가 전부 이 답으로 게이팅된다. 바인딩은
+ *          하네스의 창구(`test::rebindEngineServices`)로 한다 — 이 파일이 직접 부르면 호스트로 잡힌다.
+ */
+SW_TEST_CASE( EngineServiceTest, BoundFlagFollowsBindAndUnbind )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    const EngineServices saved = engine::getBoundEngineServices();
+    SW_ASSERT_TRUE( engine::areEngineServicesBound() );
+
+    engine::unbindEngineServices();
+    SW_EXPECT_FALSE( engine::areEngineServicesBound() );
+
+    EngineServices missingTask = saved;
+    missingTask._pTaskManager  = nullptr;
+    test::rebindEngineServices( missingTask );
+    SW_EXPECT_FALSE( engine::areEngineServicesBound() );
+
+    test::rebindEngineServices( saved );
+    SW_EXPECT_TRUE( engine::areEngineServicesBound() );
+}
+
+/**
  * @brief [EngineServiceTest] 비어 있는 필수 서비스는 **이름으로** 보고된다
  * @details `areEngineServicesBound()` 가 false 라는 사실만으로는 아무도 원인을 못 짚는다 — 그 함수로
  *          게이팅되는 자리가 스무 곳이 넘고, 하나가 비면 그 스무 곳이 전부 조용히 폴백으로 간다.

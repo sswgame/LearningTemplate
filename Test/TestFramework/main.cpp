@@ -40,6 +40,15 @@
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
 
+namespace test
+{
+    void rebindEngineServices( const sw::EngineServices& services )
+    {
+        // 이 파일이 호스트다(위의 main 이 표를 채운다). 테스트는 이 창구로만 표를 갈아 끼운다.
+        sw::engine::bindEngineServices( services );
+    }
+} // namespace test
+
 int main( int32 argc, utf8* argv[] )
 {
     sw::HashedStringPool::initialize();

@@ -642,6 +642,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
     SW_ASSERT_NOT_NULL( pLoopB );
     SW_EXPECT_TRUE( pLoopA->isDerivedFrom( pLoopB ) );
     SW_EXPECT_TRUE( pLoopB->isDerivedFrom( pLoopA ) );
+    // 순환은 조상 표를 세울 수 없다 — 그래도 위 답은 걷기가 냈다.
+    SW_EXPECT_FALSE( pLoopA->hasAncestorDisplay() );
     sw::TypeInfo typeStranger;
     typeStranger._fullyQualifiedName = sw::hashed_string( "swtest::LoopStranger" );
     SW_EXPECT_FALSE( pLoopA->isDerivedFrom( &typeStranger ) );
@@ -709,6 +711,170 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
 
 #if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestParentChain" );
+#endif
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 조상 표 — 배치 끝에 세워지고, 걷기와 같은 답을 내며, 사슬이 바뀌면 따라온다
+ * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 예전엔 조상마다 이름 비교 둘과 부모 포인터
+ *          로드였다 — 실패 캐스트는 루트까지 약 28 ns. 이제 등록 배치 끝에 타입마다 루트부터의 `_typeId` 표를
+ *          적어 두고, 검사는 로드 둘과 비교 하나다(HotSpot 의 primary supers display). 지켜야 할 것 넷:
+ *          (1) 표의 답은 걷기의 답과 같다 (2) 표가 없는 쪽 — 레지스트리 밖 사본·표보다 깊은 사슬 — 은 걷기로
+ *          폴백해 같은 답을 낸다 (3) 재등록으로 부모가 바뀌면 옛 표로 답하지 않는다 (4) 모듈 해제 뒤 남은
+ *          타입은 표를 다시 세워 답한다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRechain )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    sw::TypeRegistry&       registry = sw::engine::getTypeRegistry();
+    const sw::hashed_string moduleName( "TestAncestorDisplay" );
+
+    auto makeType = [&]( const utf8* pName, const utf8* pFqn, const utf8* pParentFqn )
+    {
+        sw::TypeInfo type;
+        type._name               = sw::hashed_string( pName );
+        type._fullyQualifiedName = sw::hashed_string( pFqn );
+        if ( pParentFqn != nullptr )
+            type._parentFQN = sw::hashed_string( pParentFqn );
+        type._moduleName = moduleName;
+        return type;
+    };
+
+    registry.registerClass( makeType( "DispRoot", "swtest::DispRoot", nullptr ) );
+    registry.registerClass( makeType( "DispMid", "swtest::DispMid", "swtest::DispRoot" ) );
+    registry.registerClass( makeType( "DispLeaf", "swtest::DispLeaf", "swtest::DispMid" ) );
+    registry.registerClass( makeType( "DispOther", "swtest::DispOther", nullptr ) );
+    // 표보다 깊은 사슬 — Deep0 … Deep9 (깊이 9).
+    const utf8* arrDeepFqn[10] = { "swtest::Deep0", "swtest::Deep1", "swtest::Deep2", "swtest::Deep3", "swtest::Deep4",
+                                   "swtest::Deep5", "swtest::Deep6", "swtest::Deep7", "swtest::Deep8", "swtest::Deep9" };
+    for ( uint32 index = 0; index < 10; ++index )
+        registry.registerClass( makeType( arrDeepFqn[index] + 8, arrDeepFqn[index], index == 0 ? nullptr : arrDeepFqn[index - 1] ) );
+    registry.buildLookupCaches();
+
+    auto find = [&]( const utf8* pFqn )
+    {
+        const sw::TypeInfo* pType = registry.findType( sw::hashed_string( pFqn ) );
+        return pType;
+    };
+    const sw::TypeInfo* pRoot  = find( "swtest::DispRoot" );
+    const sw::TypeInfo* pMid   = find( "swtest::DispMid" );
+    const sw::TypeInfo* pLeaf  = find( "swtest::DispLeaf" );
+    const sw::TypeInfo* pOther = find( "swtest::DispOther" );
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_ASSERT_NOT_NULL( pMid );
+    SW_ASSERT_NOT_NULL( pLeaf );
+    SW_ASSERT_NOT_NULL( pOther );
+
+    // 배치 끝에 표가 서 있다.
+    SW_EXPECT_TRUE( pRoot->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pMid->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pLeaf->hasAncestorDisplay() );
+
+    // (1) 표의 답 — 자기·조상은 true, 자손·형제·무관·nullptr 은 false.
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pMid ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pRoot ) );
+    SW_EXPECT_FALSE( pRoot->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_FALSE( pMid->isDerivedFrom( pLeaf ) );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( pOther ) );
+    SW_EXPECT_FALSE( pOther->isDerivedFrom( pRoot ) );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( static_cast<const sw::TypeInfo*>( nullptr ) ) );
+
+    // (2a) 레지스트리 밖 사본 — 손으로 만든 같은 이름의 TypeInfo(테스트 목의 `StaticType()` 이 이렇다. 자기 `_typeId`
+    //      를 따로 가진다)는 **이름**으로 같은 타입이다. 표가 이름을 적는 이유. 표 쪽에서도, 걷기 쪽에서도 같은 답.
+    sw::TypeInfo midCopy;
+    midCopy._name               = sw::hashed_string( "DispMid" );
+    midCopy._fullyQualifiedName = sw::hashed_string( "swtest::DispMid" );
+    midCopy._parentFQN          = sw::hashed_string( "swtest::DispRoot" );
+    midCopy._typeId             = 0xC0FFEE;
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( &midCopy ) );
+    SW_EXPECT_TRUE( midCopy.isDerivedFrom( pRoot ) );
+    SW_EXPECT_FALSE( midCopy.isDerivedFrom( pLeaf ) );
+    SW_EXPECT_FALSE( midCopy.isDerivedFrom( pOther ) );
+    SW_EXPECT_TRUE( midCopy.hasAncestorDisplay() );
+    // 이름이 없는 TypeInfo 는 표를 세울 수 없다 — 아무와도 같지 않다.
+    sw::TypeInfo nameless;
+    SW_EXPECT_FALSE( nameless.isDerivedFrom( pRoot ) );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( &nameless ) );
+    SW_EXPECT_FALSE( nameless.hasAncestorDisplay() );
+    // 레지스트리 항목의 복사본은 표가 비어 나온다 — 첫 조회가 다시 세운다.
+    sw::TypeInfo leafCopy = *pLeaf;
+    SW_EXPECT_FALSE( leafCopy.hasAncestorDisplay() );
+    SW_EXPECT_TRUE( leafCopy.isDerivedFrom( pRoot ) );
+    SW_EXPECT_TRUE( leafCopy.hasAncestorDisplay() );
+    SW_EXPECT_FALSE( leafCopy.isDerivedFrom( pOther ) );
+
+    // (2b) 표보다 깊은 사슬 — Deep7 까지는 표, Deep8 부터는 걷기. 답은 같다.
+    const sw::TypeInfo* pDeep0 = find( "swtest::Deep0" );
+    const sw::TypeInfo* pDeep7 = find( "swtest::Deep7" );
+    const sw::TypeInfo* pDeep8 = find( "swtest::Deep8" );
+    const sw::TypeInfo* pDeep9 = find( "swtest::Deep9" );
+    SW_ASSERT_NOT_NULL( pDeep0 );
+    SW_ASSERT_NOT_NULL( pDeep7 );
+    SW_ASSERT_NOT_NULL( pDeep8 );
+    SW_ASSERT_NOT_NULL( pDeep9 );
+    SW_EXPECT_TRUE( pDeep7->hasAncestorDisplay() );
+    SW_EXPECT_FALSE( pDeep8->hasAncestorDisplay() );
+    SW_EXPECT_FALSE( pDeep9->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pDeep9->isDerivedFrom( pDeep0 ) );
+    SW_EXPECT_TRUE( pDeep9->isDerivedFrom( pDeep8 ) );
+    SW_EXPECT_TRUE( pDeep8->isDerivedFrom( pDeep7 ) );
+    SW_EXPECT_FALSE( pDeep0->isDerivedFrom( pDeep9 ) );
+    SW_EXPECT_FALSE( pDeep7->isDerivedFrom( pDeep8 ) );
+    SW_EXPECT_FALSE( pDeep9->isDerivedFrom( pRoot ) );
+
+    // (3) 재등록으로 Mid 의 부모가 Root → Other 로 바뀐다. 등록이 표를 비우므로, 배치 끝을 부르기 **전**에도
+    //     옛 표로 답하지 않아야 한다(첫 조회가 새 사슬로 다시 세운다). 등록으로 포인터가 옮겨질 수 있어 다시 찾는다.
+    registry.registerClass( makeType( "DispMid", "swtest::DispMid", "swtest::DispOther" ) );
+    pRoot  = find( "swtest::DispRoot" );
+    pMid   = find( "swtest::DispMid" );
+    pLeaf  = find( "swtest::DispLeaf" );
+    pOther = find( "swtest::DispOther" );
+    SW_ASSERT_NOT_NULL( pLeaf );
+    SW_EXPECT_FALSE( pLeaf->hasAncestorDisplay() );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( pRoot ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pOther ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pMid ) );
+    registry.buildLookupCaches();
+    SW_EXPECT_TRUE( pLeaf->hasAncestorDisplay() );
+    SW_EXPECT_FALSE( pLeaf->isDerivedFrom( pRoot ) );
+    SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pOther ) );
+
+    // (3b) 부모가 **아직 등록되지 않은** 타입 — `Component` 처럼 REFLECT 가 아닌 기반이거나 아직 안 올라온 모듈.
+    //      안 풀리는 부모는 사슬의 끝이라 표는 선다(걷기가 매번 그 이름을 잠금 잡고 찾던 것이 사라진다). 부모가
+    //      뒤늦게 등록되면 등록이 표를 비우고, 다음 조회가 이어진 사슬로 다시 세운다.
+    registry.registerClass( makeType( "DispOrphan", "swtest::DispOrphan", "swtest::DispLateParent" ) );
+    registry.buildLookupCaches();
+    const sw::TypeInfo* pOrphan = find( "swtest::DispOrphan" );
+    pRoot                       = find( "swtest::DispRoot" );
+    SW_ASSERT_NOT_NULL( pOrphan );
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
+    SW_EXPECT_NULL( pOrphan->getParentType() );
+    SW_EXPECT_FALSE( pOrphan->isDerivedFrom( pRoot ) );
+    SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pOrphan ) );
+    registry.registerClass( makeType( "DispLateParent", "swtest::DispLateParent", "swtest::DispRoot" ) );
+    pOrphan = find( "swtest::DispOrphan" );
+    pRoot   = find( "swtest::DispRoot" );
+    SW_ASSERT_NOT_NULL( pOrphan );
+    SW_EXPECT_FALSE( pOrphan->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pRoot ) );
+    SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pOrphan->isDerivedFrom( find( "swtest::DispLateParent" ) ) );
+
+#if !defined( SW_SHIPPING )
+    // (4) 모듈 해제는 남은 타입의 표도 비운다 — 이 바이너리의 픽스처(DummyActor → DummyBase)가 다시 세워 답한다.
+    registry.unregisterTypesByModule( "TestAncestorDisplay" );
+    const sw::TypeInfo* pActor = find( "sw::DummyActor" );
+    const sw::TypeInfo* pBase  = find( "sw::DummyBase" );
+    SW_ASSERT_NOT_NULL( pActor );
+    SW_ASSERT_NOT_NULL( pBase );
+    SW_EXPECT_FALSE( pActor->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pActor->isDerivedFrom( pBase ) );
+    SW_EXPECT_TRUE( pActor->hasAncestorDisplay() );
+    SW_EXPECT_FALSE( pBase->isDerivedFrom( pActor ) );
+    SW_EXPECT_NULL( find( "swtest::DispLeaf" ) );
 #endif
 }
 

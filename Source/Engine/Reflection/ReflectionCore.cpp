@@ -17,6 +17,13 @@ namespace sw
     {
         struct ReflectionCoreInternal
         {
+            /** @brief 조상 표에 적는 이름 — FQN 의 intern 인덱스, 없으면 짧은 이름의. 둘 다 없으면 None. */
+            static uint32 canonicalNameIndex( const TypeInfo& type )
+            {
+                constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
+                return type._fullyQualifiedName.isPredefinedType( kNone ) ? type._name.getIndex() : type._fullyQualifiedName.getIndex();
+            }
+
             /**
              * @brief 두 TypeInfo 가 같은 타입을 말하는지 — 포인터가 달라도 이름이 같으면 같은 타입.
              * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있다
@@ -25,9 +32,13 @@ namespace sw
              */
             static bool isSameTypeName( const TypeInfo& lhs, const TypeInfo& rhs )
             {
-                if ( lhs._fullyQualifiedName.empty() == false )
-                    return lhs._fullyQualifiedName == rhs._fullyQualifiedName;
-                return lhs._name.empty() == false && lhs._name == rhs._name;
+                // 걸음마다 부르는 자리라 intern 테이블은 만지지 않는다 — `empty()` 는 길이를 보려고 테이블을
+                // 읽는다(걸음당 캐시 라인 둘). 인덱스가 None 이 아니면 이름이 있는 것으로 보고, 인덱스가
+                // 같을 때(사슬이 끝나는 적중)만 빈 이름을 걸러 낸다.
+                constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
+                if ( lhs._fullyQualifiedName.isPredefinedType( kNone ) == false )
+                    return lhs._fullyQualifiedName == rhs._fullyQualifiedName && lhs._fullyQualifiedName.empty() == false;
+                return lhs._name.isPredefinedType( kNone ) == false && lhs._name == rhs._name && lhs._name.empty() == false;
             }
 
             /**
@@ -217,6 +228,8 @@ namespace sw
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
         , _typeId{ 0 }
+        , _arrAncestorNameIndex{}
+        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
@@ -242,6 +255,8 @@ namespace sw
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
         , _typeId{ other._typeId }
+        , _arrAncestorNameIndex{}
+        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
         , _bPrimitive{ other._bPrimitive }
@@ -269,6 +284,8 @@ namespace sw
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
         , _typeId{ other._typeId }
+        , _arrAncestorNameIndex{}
+        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
         , _bPrimitive{ other._bPrimitive }
@@ -308,6 +325,7 @@ namespace sw
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
         _pParentType.store( nullptr, std::memory_order_relaxed );
+        clearAncestorDisplay();
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
@@ -340,6 +358,7 @@ namespace sw
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
         _pParentType.store( nullptr, std::memory_order_relaxed );
+        clearAncestorDisplay();
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
@@ -488,6 +507,13 @@ namespace sw
         // (`buildLookupCaches`).
         _mapFqnToClassType.insert_or_assign( canonicalKey, stored );
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
+        // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
+        // 조상 표를 전부 비운다. 배치 끝의 buildLookupCaches 나 첫 상속 검사가 다시 세운다.
+        for ( const auto& [storedFqn, storedInfo] : _mapFqnToClassType )
+        {
+            (void)storedFqn;
+            storedInfo.clearAncestorDisplay();
+        }
         if ( stored._name.empty() == false && stored._name != canonicalKey )
         {
             _mapAliasToFqn.insert_or_assign( stored._name, canonicalKey );
@@ -561,6 +587,12 @@ namespace sw
             pType->buildLookupCache();
             (void)pType->getPropertiesWithBase();
         }
+        // 부모 포인터가 **전부** 풀린 뒤에 조상 표를 세운다 — 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
+        for ( const TypeInfo* pType : listType )
+        {
+            if ( pType != nullptr )
+                (void)pType->buildAncestorDisplay();
+        }
     }
 
 #if !defined( SW_SHIPPING )
@@ -615,6 +647,7 @@ namespace sw
         {
             (void)fqn;
             info.clearParentType();
+            info.clearAncestorDisplay();
         }
         _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
@@ -850,7 +883,24 @@ namespace sw
     {
         if ( pTarget == nullptr )
             return false;
+        if ( pTarget == this )
+            return true;
 
+        // 조상 표 — 둘 다 표가 있으면 로드 둘과 비교 하나로 끝난다. 아직 안 세운 쪽은 여기서 세운다(배치 밖에서
+        // 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
+        uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
+        if ( selfDepth == constants::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
+            selfDepth = _ancestorDepth.load( std::memory_order_acquire );
+        uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
+        if ( targetDepth == constants::reflection::kAncestorDepthUnknown && pTarget->buildAncestorDisplay() )
+            targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
+        if ( selfDepth < constants::reflection::kAncestorDisplayDepth && targetDepth < constants::reflection::kAncestorDisplayDepth )
+        {
+            return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
+                                                   ReflectionCoreInternal::canonicalNameIndex( *pTarget );
+        }
+
+        // 표가 없는 쪽(이름 없음 · 순환 · 표보다 깊은 사슬)은 부모 포인터를 걷는다.
         const TypeInfo* pCurrent = this;
         for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
@@ -859,6 +909,39 @@ namespace sw
             pCurrent = pCurrent->getParentType();
         }
         return false;
+    }
+
+    bool TypeInfo::buildAncestorDisplay() const
+    {
+        constexpr uint32 kDepth = constants::reflection::kAncestorDisplayDepth;
+        constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
+
+        // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **안 풀리는 부모는 사슬의 끝이다** — `Component`
+        // 처럼 REFLECT 가 아닌 기반은 이름만 적혀 있고 등록되지 않는데, 예전 걷기는 그 이름을 실패 캐스트마다
+        // 잠금 잡고 레지스트리에서 찾았다(찾을 수 없으니 캐시도 안 됐다). 부모가 나중에 등록되면 registerClass 가
+        // 표를 전부 비우므로 그때 다시 이어진다.
+        uint32          arrChain[kDepth];
+        uint32          chainCount = 0;
+        const TypeInfo* pCurrent   = this;
+        while ( pCurrent != nullptr )
+        {
+            const uint32 nameIndex = ReflectionCoreInternal::canonicalNameIndex( *pCurrent );
+            if ( chainCount == kDepth || nameIndex == kNone )
+            {
+                _ancestorDepth.store( constants::reflection::kAncestorDepthNone, std::memory_order_release );
+                return false;
+            }
+            arrChain[chainCount++] = nameIndex;
+            if ( pCurrent->_parentFQN.empty() )
+                break;
+            pCurrent = pCurrent->getParentType();
+        }
+
+        // 루트가 0 번 칸이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다 — 깊이를 본 쪽은 칸이 다 채워진 뒤다.
+        for ( uint32 index = 0; index < chainCount; ++index )
+            _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
+        _ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
+        return true;
     }
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const

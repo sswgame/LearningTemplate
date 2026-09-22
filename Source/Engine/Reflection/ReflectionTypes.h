@@ -619,6 +619,19 @@ namespace sw
          */
         mutable atomic<const TypeInfo*> _pParentType;
         uint32                          _typeId;
+        /**
+         * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 표. `_ancestorDepth` 가 자기 칸이다.
+         * @details 캐스트의 핫패스가 이것만 본다: `표[pTarget 의 깊이] == pTarget 의 이름`. 포인터가 아니라 이름이라 타입
+         *          표가 원소를 옮겨도 그대로 맞고, 레지스트리 밖 사본(테스트 목의 손으로 만든 `StaticType()`)도 같은
+         *          이름이면 같은 타입으로 본다 — 걷기의 `isSameTypeName` 과 같은 규칙이다. `_typeId` 를 쓰지 않는 이유가
+         *          그 사본이다: 사본은 자기 id 를 따로 가진다. 등록·해제로 사슬이 바뀔 수 있으면 `TypeRegistry` 가 깊이를
+         *          `kAncestorDepthUnknown` 으로 비우고, 배치 끝(`buildLookupCaches`)이나 첫 상속 검사가 다시 세운다.
+         *          원자값인 이유는 `_pParentType` 과 같다 — 첫 조회는 여러 스레드에서 올 수 있고 같은 값을 쓴다. 등록과
+         *          캐스트가 겹치는 것은 `_pParentType` 과 마찬가지로 전제하지 않는다(모듈 로드는 단일 스레드).
+         */
+        mutable atomic<uint32> _arrAncestorNameIndex[constants::reflection::kAncestorDisplayDepth];
+        /** @brief 조상 표에서 자기 칸의 깊이. Unknown 이면 아직 안 세웠고, None 이면 세울 수 없어 부모 포인터를 걷는다. */
+        mutable atomic<uint8> _ancestorDepth;
         /** @brief REFLECT(Abstract) / C++ abstract — not constructible (UCLASS(Abstract)). */
         uint8 _bAbstract : 1;
         /** @brief REFLECT(Static) type (function-library). Not the same as FunctionMetadata::_bStatic. */
@@ -718,6 +731,25 @@ namespace sw
         void resolveParentType() const;
         /** @brief 부모 포인터를 비운다. 타입 표에서 원소가 옮겨질 수 있는 해제 뒤에 부른다. */
         void clearParentType() const { _pParentType.store( nullptr, std::memory_order_relaxed ); }
+
+        /** @brief 조상 표가 세워져 있으면 true — 상속 검사가 걷지 않고 O(1) 로 답한다. */
+        bool hasAncestorDisplay() const
+        {
+            return _ancestorDepth.load( std::memory_order_acquire ) < constants::reflection::kAncestorDisplayDepth;
+        }
+        /**
+         * @brief 부모 포인터를 따라 조상 표를 세운다. 사슬이 다 풀려 있고 표 깊이 안이면 true.
+         * @details 이름이 없거나, 순환이거나, 표보다 깊으면 `kAncestorDepthNone` 을 적고 false — 그 타입은 다음
+         *          등록·해제까지 부모 포인터 걷기로 답한다. 안 풀리는 부모(REFLECT 가 아닌 기반 ·
+         *          아직 안 올라온 모듈)는 사슬의 끝으로 본다 — 그 부모가 등록되는 순간 `registerClass` 가 표를 비운다.
+         *          등록 배치 끝에서 `TypeRegistry` 가 부르고, 배치 밖 타입은 첫 상속 검사가 부른다.
+         */
+        bool buildAncestorDisplay() const;
+        /** @brief 조상 표를 비운다. 사슬이 바뀔 수 있는 등록·해제 뒤에 `TypeRegistry` 가 부른다. */
+        void clearAncestorDisplay() const
+        {
+            _ancestorDepth.store( constants::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
+        }
 
         /**
          * @brief 자신 + 상속 베이스 프로퍼티 (단일 부모 체인).

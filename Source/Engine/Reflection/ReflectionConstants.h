@@ -46,6 +46,17 @@ namespace sw::constants::reflection
      *          없고 순환이어도 여기서 멈춘다. 실제 체인은 다섯을 넘지 않는다.
      */
     inline constexpr uint32 kMaxParentChainDepth = 32;
+    /**
+     * @brief 조상 표의 칸 수 — 이 깊이까지의 타입은 상속 검사가 O(1) 이다.
+     * @details HotSpot 의 primary supers display 와 같은 방식이다. 타입마다 루트부터 자기까지의 이름을
+     *          깊이 순서로 적어 두면 "T 가 U 의 자손인가" 는 `표[U 의 깊이] == U 의 이름` 한 번이다. 이보다
+     *          깊은 사슬은 표 없이 부모 포인터를 걷는다 — 실제 사슬은 다섯을 넘지 않는다.
+     */
+    inline constexpr uint32 kAncestorDisplayDepth = 8;
+    /** @brief 조상 표를 아직 세우지 않았다는 깊이 표시. 첫 상속 검사가 세운다. */
+    inline constexpr uint8 kAncestorDepthUnknown = 0xFF;
+    /** @brief 조상 표를 세울 수 없다는 깊이 표시(이름 없음·순환·표보다 깊은 사슬). 등록·해제가 다시 비운다. */
+    inline constexpr uint8 kAncestorDepthNone = 0xFE;
 } // namespace sw::constants::reflection
 
 namespace sw::constants::propertyHint
