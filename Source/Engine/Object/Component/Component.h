@@ -15,6 +15,7 @@ namespace sw
 
     class GameObject;
     class GameObjectManager;
+    class PoolAllocator;
     /**
      * @enum TickGroup
      * @brief 프레임 내 컴포넌트 tick 실행 순서 슬롯
@@ -94,6 +95,7 @@ namespace sw
     class SW_API Component
     {
         friend class GameObject;
+        friend class GameObjectManager; ///< 생성이 `_pPool` 을 적고 파괴가 읽는다
 
     public:
         /** @brief 기본 컴포넌트를 만듭니다. */
@@ -182,7 +184,10 @@ namespace sw
         void setTickGroup( TickGroup group );
         /** @brief Primary tick 등록 여부를 설정합니다. 비주얼 컴포넌트는 false가 기본입니다. */
         void setCanEverTick( bool bCanEverTick );
-        /** @brief 컴포넌트 해시 명칭 설정. 이름이 곧 TypeInfo 조회 키라 캐시도 같이 버린다. */
+        /**
+         * @brief 컴포넌트 해시 명칭 설정. 이름이 곧 TypeInfo 조회 키라 캐시도 같이 버린다.
+         * @note 풀 키는 **아니다** — 파괴는 `_pPool` 로 돌아간다. 이름을 바꿔도 메모리는 제 풀로 간다.
+         */
         void setComponentName( hashed_string name )
         {
             _componentName = name;
@@ -256,6 +261,13 @@ namespace sw
         uint64                  _componentId;   ///< 컴포넌트 고유 시리얼 ID
         hashed_string           _componentName; ///< 컴포넌트 식별 이름
         mutable TypeLookupCache _typeInfoCache; ///< `_componentName` 의 TypeInfo, 레지스트리 세대로 무효화
+        /**
+         * @brief 이 인스턴스를 내준 풀. 힙에서 왔으면 nullptr. 생성이 한 번 적고 파괴가 읽는다.
+         * @details 예전엔 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 **다시 찾았다** — 이름이 바뀌었거나(공개
+         *          `setComponentName`) 그 타입이 그새 해제되었으면 풀을 못 찾아 풀 블록을 힙으로 반납했고, Shipping 에서
+         *          힙이 깨졌다(0xc0000374 — Debug·ASan 은 조용했다). 어디서 왔는지는 온 순간에 적는 것이 맞다.
+         */
+        PoolAllocator* _pPool;
 
         atomic<uint64>      _subTickActiveMask; ///< 서브틱 1~63 활성 상태 O(1) 원자적 비트마스크
         atomic<bool>        _bActive;           ///< 컴포넌트 개별 활성화

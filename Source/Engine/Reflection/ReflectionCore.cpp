@@ -230,6 +230,7 @@ namespace sw
         , _typeId{ 0 }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
+        , _bAlive{ SW_TRUE }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
@@ -257,6 +258,7 @@ namespace sw
         , _typeId{ other._typeId }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
+        , _bAlive{ SW_TRUE }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
         , _bPrimitive{ other._bPrimitive }
@@ -286,6 +288,7 @@ namespace sw
         , _typeId{ other._typeId }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
+        , _bAlive{ SW_TRUE }
         , _bAbstract{ other._bAbstract }
         , _bStatic{ other._bStatic }
         , _bPrimitive{ other._bPrimitive }
@@ -501,24 +504,31 @@ namespace sw
 
         auto existingIt = _mapFqnToClassType.find( canonicalKey );
         if ( existingIt != _mapFqnToClassType.end() )
-            stored._typeId = existingIt->second._typeId;
+            stored._typeId = existingIt->second->_typeId;
         else
             stored._typeId = _s_typeIdCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
 
-        // 여기서 캐시를 만들어 두지 않는다 — **다음 등록에서 맵이 커지면 날아간다.**
-        // `sw::unordered_map` 은 밀집 배열이라 커질 때 원소를 옮기고, `TypeInfo` 이동 생성자는
-        // `mutable` 캐시를 비운다. 그래서 캐시는 **배치 등록이 끝난 뒤** 한 번에 만든다
-        // (`buildLookupCaches`).
-        _mapFqnToClassType.insert_or_assign( canonicalKey, stored );
+        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다 — 밖에서 든 포인터
+        // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 전부 그대로 맞는다. 새 타입은 새 객체다.
+        // 캐시는 배치 끝(`buildLookupCaches`)이 단일 스레드에서 만든다.
+        if ( existingIt != _mapFqnToClassType.end() )
+        {
+            *existingIt->second = stored;
+            existingIt->second->_bAlive.store( SW_TRUE, std::memory_order_release );
+        }
+        else
+        {
+            _mapFqnToClassType.emplace( canonicalKey, make_unique<TypeInfo>( std::move( stored ) ) );
+        }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
         // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
         // 조상 표를 전부 비운다. 배치 끝의 buildLookupCaches 나 첫 상속 검사가 다시 세운다.
-        for ( const auto& [storedFqn, storedInfo] : _mapFqnToClassType )
+        for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
         {
             (void)storedFqn;
-            storedInfo.clearAncestorDisplay();
+            pStoredInfo->clearAncestorDisplay();
         }
         if ( stored._name.empty() == false && stored._name != canonicalKey )
         {
@@ -575,10 +585,11 @@ namespace sw
         {
             std::shared_lock<std::shared_mutex> lock{ _mutex };
             listType.reserve( _mapFqnToClassType.size() );
-            for ( const auto& [fqn, info] : _mapFqnToClassType )
+            for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
-                listType.push_back( &info );
+                if ( pInfo->isAlive() )
+                    listType.push_back( pInfo.get() );
             }
         }
 
@@ -607,18 +618,24 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         hashed_string                       hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
-        for ( auto it = _mapFqnToClassType.begin(); it != _mapFqnToClassType.end(); )
+        // 지우지 않고 **묘비**를 세운다 — 밖에서 든 포인터(`TypeLookupCache` 의 정적 칸 · 다른 모듈 타입의 부모 포인터)
+        // 가 매달린 채 남지 않도록 객체는 그 자리에 둔다. `findType` 은 죽은 타입을 nullptr 로 답하고, 같은 FQN 이
+        // 다시 올라오면 같은 객체를 되살린다.
+        for ( auto& [fqn, pInfo] : _mapFqnToClassType )
         {
-            if ( it->second._moduleName == hashModule )
-                it = _mapFqnToClassType.erase( it );
-            else
-                ++it;
+            (void)fqn;
+            if ( pInfo->_moduleName != hashModule )
+                continue;
+            // 내용은 지금 비운다 — 모듈 코드를 가리키는 델리게이트를 모듈이 내려간 뒤에 파괴하면 안 된다.
+            pInfo->clearContent();
+            pInfo->_bAlive.store( SW_FALSE, std::memory_order_release );
         }
 
         // 사라진 타입을 가리키던 별칭도 같이 걷어낸다. 남겨두면 조회가 빈 항목을 타고 nullptr 를 낸다.
         for ( auto it = _mapAliasToFqn.begin(); it != _mapAliasToFqn.end(); )
         {
-            if ( _mapFqnToClassType.find( it->second ) == _mapFqnToClassType.end() )
+            const auto typeIt = _mapFqnToClassType.find( it->second );
+            if ( typeIt == _mapFqnToClassType.end() || typeIt->second->isAlive() == false )
                 it = _mapAliasToFqn.erase( it );
             else
                 ++it;
@@ -633,9 +650,11 @@ namespace sw
         }
 
         _mapHashToCanonicalName.clear();
-        for ( const auto& [fqn, info] : _mapFqnToClassType )
+        for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
-            const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
+            if ( pInfo->isAlive() == false )
+                continue;
+            const hashed_string canonicalName = pInfo->_name.empty() == false ? pInfo->_name : pInfo->_fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( fqn.getHash(), canonicalName );
         }
         for ( const auto& [alias, fqn] : _mapAliasToFqn )
@@ -643,17 +662,17 @@ namespace sw
             const auto typeIt = _mapFqnToClassType.find( fqn );
             if ( typeIt == _mapFqnToClassType.end() )
                 continue;
-            const TypeInfo&     info          = typeIt->second;
+            const TypeInfo&     info          = *typeIt->second;
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
-        // 지운 자리에 마지막 원소가 옮겨 왔다 — 남은 타입이 풀어 둔 부모 포인터가 그 원소를 가리키고
-        // 있었을 수 있다. 전부 비우고, 다음 조회(또는 다음 배치의 buildLookupCaches)가 다시 푼다.
-        for ( const auto& [fqn, info] : _mapFqnToClassType )
+        // 부모 포인터는 옮겨지지 않지만 **죽은 부모**를 가리킬 수 있다 — 비워서 다음 조회가 이름으로 다시 풀게 한다
+        // (죽은 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도 같이.
+        for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
-            info.clearParentType();
-            info.clearAncestorDisplay();
+            pInfo->clearParentType();
+            pInfo->clearAncestorDisplay();
         }
         gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
@@ -670,7 +689,8 @@ namespace sw
 
         // pCanonicalName 자체가 짧은 이름(=별칭)일 수 있으니 FQN 까지 한 번 더 따라간다.
         hashed_string canonicalKey{ pCanonicalName };
-        if ( _mapFqnToClassType.find( canonicalKey ) == _mapFqnToClassType.end() )
+        const auto    directIt = _mapFqnToClassType.find( canonicalKey );
+        if ( directIt == _mapFqnToClassType.end() || directIt->second->isAlive() == false )
         {
             const auto redirectIt = _mapAliasToFqn.find( canonicalKey );
             if ( redirectIt == _mapAliasToFqn.end() )
@@ -679,11 +699,11 @@ namespace sw
         }
 
         const auto typeIt = _mapFqnToClassType.find( canonicalKey );
-        if ( typeIt == _mapFqnToClassType.end() )
+        if ( typeIt == _mapFqnToClassType.end() || typeIt->second->isAlive() == false )
             return;
 
         // insert_or_assign: 핫리로드 재등록 시 옛 별칭이 남지 않게 함.
-        const TypeInfo&     stored        = typeIt->second;
+        const TypeInfo&     stored        = *typeIt->second;
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string aliasHash{ pAliasName };
 
@@ -725,25 +745,30 @@ namespace sw
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
 
+        // 죽은 타입(모듈 해제 · 묘비)은 없는 것으로 답한다 — 객체는 남아 있어도 이름 조회는 산 것만 낸다.
         const auto it = _mapFqnToClassType.find( nameOrFqn );
         if ( it != _mapFqnToClassType.end() )
-            return &it->second;
+            return it->second->isAlive() ? it->second.get() : nullptr;
 
         const auto aliasIt = _mapAliasToFqn.find( nameOrFqn );
         if ( aliasIt == _mapAliasToFqn.end() )
             return nullptr;
 
         const auto canonicalIt = _mapFqnToClassType.find( aliasIt->second );
-        return canonicalIt != _mapFqnToClassType.end() ? &canonicalIt->second : nullptr;
+        if ( canonicalIt == _mapFqnToClassType.end() || canonicalIt->second->isAlive() == false )
+            return nullptr;
+        return canonicalIt->second.get();
     }
 
-    const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn, const uint32 generation ) const
+    const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
         // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 낸다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
-        const TypeInfo* pType = engine::getTypeRegistry().findType( fqn );
-        _pType.store( pType, std::memory_order_relaxed );
+        // 세대는 찾기 **전에** 읽는다 — 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
+        const uint32    generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+        const TypeInfo* pType      = engine::getTypeRegistry().findType( fqn );
+        _pType.store( pType, std::memory_order_release );
         _generation.store( generation, std::memory_order_release );
         return pType;
     }
@@ -909,6 +934,21 @@ namespace sw
             pCurrent = pCurrent->getParentType();
         }
         return false;
+    }
+
+    void TypeInfo::clearContent()
+    {
+        _listProperty.clear();
+        _listMethod.clear();
+        _listPropertyWithBase.clear();
+        _mapNameToProperty.clear();
+        _mapNameToMethod.clear();
+        _metadata                   = {};
+        _destroyInstance            = nullptr;
+        _bIsCacheBuilt              = SW_FALSE;
+        _bIsPODCalculated           = SW_FALSE;
+        _bIsPODFastPath             = SW_FALSE;
+        _bListPropertyWithBaseBuilt = SW_FALSE;
     }
 
     bool TypeInfo::buildAncestorDisplay() const

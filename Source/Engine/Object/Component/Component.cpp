@@ -14,6 +14,7 @@ namespace sw
         , _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
         , _componentName{}
         , _typeInfoCache{}
+        , _pPool{ nullptr }
         , _subTickActiveMask{ 0 }
         , _bActive{ true }
         , _bIsPendingKill{ false }

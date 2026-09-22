@@ -579,6 +579,30 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
 }
 
 /**
+ * @brief 컴포넌트는 이름이 바뀌어도 **자기가 나온 풀**로 돌아간다.
+ * @details 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 다시 찾던 때는, 이름을 비운 채 파괴하면 풀을 못 찾아
+ *          풀 블록을 힙으로 반납했다 — Shipping 에서 힙 손상(0xc0000374), Debug·ASan 은 조용했다. 이제 컴포넌트가
+ *          `_pPool` 을 들고 그리로 돌아간다. 풀의 자유 목록은 LIFO 라, 반납이 풀로 갔으면 다음 할당이 **같은 주소**를
+ *          받는다. 힙으로 갔으면 다른 블록이 나온다 — 그것이 검사다(Debug 에서도 잡힌다).
+ */
+SW_TEST_CASE( GameObjectTest, ComponentReturnsToItsPoolAfterRename )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj  = manager.createGameObject( sw::hashed_string( "PoolReturn" ) );
+    sw::MeshComponent*    pMesh = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    const void* pBlock = pMesh;
+
+    pMesh->setComponentName( sw::hashed_string{} );
+    manager.destroyComponent( pMesh );
+    manager.processDeferredDestruction();
+
+    sw::MeshComponent* pAgain = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pAgain );
+    SW_EXPECT_TRUE( static_cast<const void*>( pAgain ) == pBlock );
+}
+
+/**
  * @brief 캐스트 핫패스의 창구 셋이 가상 경로와 같은 답을 내는지 — `findStaticType` · `castTo( pSrc, pToType )` · `findCachedTypeInfo`.
  * @details 셋 다 "컴포넌트마다 내던 비용을 밖으로" 옮긴 자리다: `findStaticType<T>()` 는 조회 루프가 한 번만 구하는 To 의
  *          TypeInfo, `castTo( pSrc, pToType )` 는 그것을 받는 판, `findCachedTypeInfo()` 는 이름 캐시 적중이면 가상 호출 없이

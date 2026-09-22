@@ -341,23 +341,27 @@ namespace sw
             else if constexpr ( HasReflectStaticType_v<T> )
                 pTypeInfo = ReflectTypeTraits<T>::StaticType();
 
-            void* pMem = nullptr;
+            void*          pMem  = nullptr;
+            PoolAllocator* pPool = nullptr;
             if ( pTypeInfo != nullptr )
             {
-                PoolAllocator* pPool = getOrCreateComponentPool( pTypeInfo, sizeof( T ) );
+                pPool = getOrCreateComponentPool( pTypeInfo, sizeof( T ) );
                 if ( pPool != nullptr )
                     pMem = pPool->allocate();
             }
 
             if ( pMem == nullptr )
             {
-                pMem = Memory::allocate( sizeof( T ) );
+                pPool = nullptr;
+                pMem  = Memory::allocate( sizeof( T ) );
                 if ( pMem == nullptr )
                     return nullptr;
             }
 
             T* pComp = sw_placement_new( pMem ) T( std::forward<Args>( args )... );
             pComp->setOwner( pOwner );
+            // 파괴가 이것으로 돌아간다 — 이름·타입 표를 다시 묻지 않는다(둘 다 그새 바뀔 수 있다).
+            pComp->_pPool = pPool;
             return pComp;
         }
 
@@ -407,6 +411,7 @@ namespace sw
          *          `destroyComponentInstance` 가 엉뚱한 풀에 블록을 반납하고
          *          `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk" 단정이
          *          걸린다(테스트 씬을 로드한 뒤 종료할 때 실제로 그랬다). FQN 은 재등록에도 변하지 않는다.
+         *          해제는 이 표를 보지 않는다 — 컴포넌트가 `_pPool` 로 자기 풀을 들고, 그리로 돌아간다.
          */
         PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
         {

@@ -632,6 +632,14 @@ namespace sw
         mutable atomic<uint32> _arrAncestorNameIndex[constants::reflection::kAncestorDisplayDepth];
         /** @brief 조상 표에서 자기 칸의 깊이. Unknown 이면 아직 안 세웠고, None 이면 세울 수 없어 부모 포인터를 걷는다. */
         mutable atomic<uint8> _ancestorDepth;
+        /**
+         * @brief 레지스트리에 살아 있는 타입인가. 모듈 해제는 항목을 지우지 않고 이것을 내린다(묘비).
+         * @details `TypeInfo` 의 주소는 고정이다 — 레지스트리가 `unique_ptr` 로 들고, 표가 커져도 옮기지 않으며, 해제해도
+         *          지우지 않는다. 그래서 `TypeLookupCache` 와 `_pParentType` 은 세대 검사 없이 포인터를 그대로 쓰고, 이
+         *          플래그 하나로 "해제됐나" 를 본다. 같은 FQN 이 다시 등록되면 같은 객체에 덮어써 되살린다. 레지스트리
+         *          밖에서 만든 사본은 늘 살아 있다.
+         */
+        mutable atomic<uint8> _bAlive;
         /** @brief REFLECT(Abstract) / C++ abstract — not constructible (UCLASS(Abstract)). */
         uint8 _bAbstract : 1;
         /** @brief REFLECT(Static) type (function-library). Not the same as FunctionMetadata::_bStatic. */
@@ -767,6 +775,15 @@ namespace sw
         {
             _ancestorDepth.store( constants::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
+        /** @brief 레지스트리에 살아 있으면 true. 모듈 해제가 내리고 재등록이 올린다. 사본은 늘 true. */
+        bool isAlive() const { return _bAlive.load( std::memory_order_acquire ) != SW_FALSE; }
+        /**
+         * @brief 묘비로 남길 때 모듈이 든 내용을 비운다 — 이름·id·모듈만 남는다.
+         * @details 프로퍼티·메서드 목록은 그 모듈의 코드(델리게이트 · `$ctor` · 소멸 함수)를 가리킨다. 모듈이 내려간 뒤에
+         *          이것을 파괴하면(재등록 대입 · 레지스트리 소멸) 사라진 코드를 부른다 — SmokeTest 의 핫리로드가 그렇게
+         *          죽었다. 그래서 해제 시점, **모듈이 아직 살아 있을 때** 여기서 비운다.
+         */
+        void clearContent();
 
         /**
          * @brief 자신 + 상속 베이스 프로퍼티 (단일 부모 체인).

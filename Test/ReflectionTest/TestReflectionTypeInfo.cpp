@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/Serializer.h"
@@ -909,5 +911,64 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
 #if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
+    SW_EXPECT_NULL( registry.findType( fqn ) );
+    // 주소 고정 · 묘비: 같은 FQN 을 다시 등록하면 **같은 객체**가 되살아나고, 칸은 다시 찾지 않고 그것을 낸다.
+    registry.registerClass( typeProbe );
+    SW_EXPECT_TRUE( registry.findType( fqn ) == pProbe );
+    SW_EXPECT_TRUE( cache.find( fqn ) == pProbe );
+    SW_EXPECT_TRUE( pProbe->isAlive() );
+    registry.unregisterTypesByModule( "TestLookupCache" );
+    SW_EXPECT_NULL( cache.find( fqn ) );
+    SW_EXPECT_FALSE( pProbe->isAlive() );
+#endif
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] `TypeInfo` 의 주소는 등록이 아무리 이어져도 고정이다
+ * @details 예전엔 타입 표가 밀집 배열이라 커질 때 원소를 옮겼고, `findType` 이 내준 포인터는 다음 등록에서 무효였다 —
+ *          그래서 `TypeLookupCache` 가 세대를 견줬고 `rebindAllCachedTypeInfo` 가 있었다. 이제 `unique_ptr` 로 든다.
+ *          200 개를 더 등록해 표를 몇 번 키운 뒤에도 처음 포인터가 그 타입이어야 하고, 내용이 온전해야 한다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrations )
+{
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    sw::TypeInfo typeFirst;
+    typeFirst._name               = sw::hashed_string( "StableFirst" );
+    typeFirst._fullyQualifiedName = sw::hashed_string( "swtest::StableFirst" );
+    typeFirst._moduleName         = sw::hashed_string( "TestStableAddress" );
+    typeFirst._size               = 48;
+    registry.registerClass( typeFirst );
+    const sw::TypeInfo* pFirst = registry.findType( sw::hashed_string( "swtest::StableFirst" ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+
+    for ( uint32 index = 0; index < 200; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        name.append( "swtest::StableFiller" ).append( index );
+        sw::TypeInfo typeFiller;
+        typeFiller._fullyQualifiedName = sw::hashed_string( name.c_str() );
+        typeFiller._name               = typeFiller._fullyQualifiedName;
+        typeFiller._moduleName         = sw::hashed_string( "TestStableAddress" );
+        registry.registerClass( typeFiller );
+    }
+    registry.buildLookupCaches();
+
+    SW_EXPECT_TRUE( registry.findType( sw::hashed_string( "swtest::StableFirst" ) ) == pFirst );
+    SW_EXPECT_TRUE( pFirst->_fullyQualifiedName == sw::hashed_string( "swtest::StableFirst" ) );
+    SW_EXPECT_EQUAL( size_t( 48 ), pFirst->_size );
+    SW_EXPECT_TRUE( pFirst->isAlive() );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestStableAddress" );
+    SW_EXPECT_NULL( registry.findType( sw::hashed_string( "swtest::StableFirst" ) ) );
+    SW_EXPECT_FALSE( pFirst->isAlive() );
+    uint32 aliveFillerCount = 0;
+    registry.forEachType( [&aliveFillerCount]( const sw::TypeInfo& typeInfo )
+    {
+        if ( typeInfo._moduleName == sw::hashed_string( "TestStableAddress" ) )
+            ++aliveFillerCount;
+    } );
+    SW_EXPECT_EQUAL( 0u, aliveFillerCount );
 #endif
 }

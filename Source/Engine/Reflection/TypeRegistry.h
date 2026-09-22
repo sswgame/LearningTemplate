@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/EnumUtil.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -85,43 +86,46 @@ namespace sw
     extern SW_API atomic<uint32> gv_typeTableGeneration;
 
     /**
-     * @brief FQN 하나의 `findType` 결과를 레지스트리 세대와 함께 적어 두는 칸.
+     * @brief FQN 하나의 `findType` 결과를 적어 두는 칸.
      * @details 코드젠의 `StaticType()` 은 부를 때마다 `findType( hashed_string( "sw::Foo" ) )` 을
      *          했다 — 문자열 intern(샤드 뮤텍스) + shared_mutex 잠금 + 해시맵 조회. 캐스트 한 번마다
-     *          그것이 들어갔다. 이 칸은 `TypeRegistry::getGeneration()` 이 같은 동안 지난 답을 그대로
-     *          돌려주고, 등록·해제로 세대가 바뀌면 한 번만 다시 찾는다.
+     *          그것이 들어갔다. 이 칸은 한 번 찾은 포인터를 그대로 돌려준다.
      *
-     *          **왜 세대인가.** `findType` 이 내준 포인터는 다음 등록에서 무효가 된다(타입 표가 밀집
-     *          배열이라 커질 때 원소를 옮긴다). 세대는 그 모든 사건에서 오르므로, 세대가 같으면
-     *          포인터는 아직 그 자리다. 핫리로드로 모듈이 사라지면 그 모듈의 정적 칸도 같이 사라지고,
-     *          다시 올라온 모듈의 칸은 세대 0 으로 시작해 첫 호출에 다시 찾는다.
-     *
-     *          두 원자값을 따로 쓰는 경쟁은 무해하다: 쓰는 쪽은 포인터를 먼저, 세대를 나중에(release)
-     *          적고, 읽는 쪽은 세대를 먼저(acquire) 본다. 세대를 읽고 나서 찾는 사이에 등록이 끼면
-     *          "옛 세대 도장 + 새 포인터" 가 남는데, 다음 호출이 도장이 다르다고 보고 다시 찾는다 —
-     *          "새 도장 + 옛 포인터" 는 만들어지지 않는다.
+     *          **세대를 보지 않는 이유.** `TypeInfo` 의 주소는 고정이다 — 레지스트리가 `unique_ptr` 로 들고,
+     *          표가 커져도 옮기지 않으며, 모듈 해제는 지우는 대신 `_bAlive` 를 내린다(묘비). 같은 FQN 이 다시
+     *          등록되면 같은 객체에 덮어써 되살린다. 그래서 적중은 "포인터 하나 + 살아 있나" 로 끝난다. 예전엔
+     *          레지스트리 세대와 자기 세대를 견주는 로드 둘이 더 있었다 — 캐스트마다 두 번 오는 자리다.
+     *          세대(`gv_typeTableGeneration`)는 **빈 답**(미등록)을 매번 다시 찾지 않으려고만 쓴다.
+     *          핫리로드로 모듈이 사라지면 그 모듈의 정적 칸도 같이 사라지고, 다시 올라온 모듈의 칸은
+     *          비어서 첫 호출에 찾는다.
      */
     struct SW_API TypeLookupCache
     {
         mutable atomic<const TypeInfo*> _pType{ nullptr };
-        mutable atomic<uint32>          _generation{ 0 };
+        mutable atomic<uint32>          _generation{ 0 }; ///< 빈 답을 적은 세대 — `_pType` 이 nullptr 일 때만 본다
 
         /**
-         * @brief fqn 의 TypeInfo. 세대가 같으면 캐시, 아니면 `findType` 뒤 갱신. 미등록이면 nullptr.
-         * @details 적중 경로는 원자 로드 셋이고 여기 인라인이다 — 캐스트마다 `StaticType()` 과 `getTypeInfo()` 로 두 번
-         *          오는 자리라 DLL 경계 호출 하나가 곧 비용이었다. 빗나감만 `findSlow` 로 나간다.
+         * @brief fqn 의 TypeInfo. 찾아 둔 포인터가 있으면 그것(해제됐으면 nullptr), 없으면 `findSlow`. 미등록이면 nullptr.
+         * @details 적중 경로는 여기 인라인이다 — 캐스트마다 `StaticType()` 과 `getTypeInfo()` 로 두 번 오는 자리라
+         *          DLL 경계 호출 하나가 곧 비용이었다.
          */
         const TypeInfo* find( const hashed_string& fqn ) const
         {
-            const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
-            if ( _generation.load( std::memory_order_acquire ) == generation )
-                return _pType.load( std::memory_order_relaxed );
-            return findSlow( fqn, generation );
+            const TypeInfo* pType = _pType.load( std::memory_order_acquire );
+            if ( pType != nullptr )
+                return pType->isAlive() ? pType : nullptr;
+            if ( _generation.load( std::memory_order_acquire ) == gv_typeTableGeneration.load( std::memory_order_acquire ) )
+                return nullptr;
+            return findSlow( fqn );
         }
-        /** @brief 세대가 달라 다시 찾는 길. 레지스트리가 없으면 캐시를 건드리지 않고 nullptr. */
-        const TypeInfo* findSlow( const hashed_string& fqn, uint32 generation ) const;
+        /** @brief 아직 못 찾았거나 빈 답의 세대가 지났을 때의 길. 레지스트리가 없으면 캐시를 건드리지 않고 nullptr. */
+        const TypeInfo* findSlow( const hashed_string& fqn ) const;
         /** @brief 다음 호출이 반드시 다시 찾게 한다(조회 키가 바뀌었을 때). */
-        void reset() { _generation.store( 0, std::memory_order_relaxed ); }
+        void reset()
+        {
+            _pType.store( nullptr, std::memory_order_relaxed );
+            _generation.store( 0, std::memory_order_relaxed );
+        }
     };
 
     /**
@@ -176,10 +180,11 @@ namespace sw
         /** @brief 이름 또는 FQN으로 TypeInfo를 찾습니다. */
         const TypeInfo* findType( const hashed_string& nameOrFqn ) const;
         /**
-         * @brief 타입 표가 바뀔 때마다 오르는 세대. `findType` 이 내준 포인터는 이 값이 같은 동안만 유효하다.
+         * @brief 타입 표가 바뀔 때마다 오르는 세대. `TypeLookupCache` 가 빈 답을 다시 찾을지 이것으로 정한다.
          * @details 등록·별칭·모듈 해제 모두에서 오른다. 0 은 "아직 아무것도 등록되지 않음" 이라
          *          `TypeLookupCache` 의 초기값과 구별된다. 값은 `gv_typeTableGeneration` 이다 — 왜 레지스트리 객체
-         *          밖에 사는지는 그 선언에 적혀 있다.
+         *          밖에 사는지는 그 선언에 적혀 있다. `findType` 이 내준 포인터는 세대와 무관하게 **영원히 유효**하다
+         *          (주소 고정 · 묘비) — 살아 있는지는 `TypeInfo::isAlive()` 가 답한다.
          */
         uint32 getGeneration() const;
         /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
@@ -210,12 +215,9 @@ namespace sw
          *          잠금 없이** 채운다. 그래서 워커 둘이 같은 타입을 처음 조회하면 같은 맵에 동시에
          *          삽입한다. 등록이 끝난 직후 **단일 스레드에서** 한 번 만들어 그 창을 없앤다.
          *
-         *          **등록하는 자리에서 하나씩 만들 수는 없다.** `_mapFqnToClassType` 은
-         *          `sw::unordered_map`(밀집 배열)이라 커질 때 원소를 **옮기고**, `TypeInfo` 이동
-         *          생성자는 `mutable` 캐시를 비운다 — 그래서 뒤이은 등록 하나가 앞서 만든 캐시를
-         *          전부 날린다. 배치의 마지막 삽입 뒤에 한 번 도는 것이 유일하게 성립하는 자리다.
-         *          같은 이유로 `findType()` 이 내준 `const TypeInfo*` 도 **다음 등록에서 무효가 된다**
-         *          (`GameObjectManager::rebindAllCachedTypeInfo` 가 그래서 있다).
+         *          `TypeInfo` 는 `unique_ptr` 로 들어 주소가 고정이므로 등록하는 자리에서 만들어도 날아가지는
+         *          않는다 — 그래도 배치 끝 한 자리에서 만드는 이유는 위의 단일 스레드 보장이다. 재등록은 같은
+         *          객체에 덮어쓰며 캐시를 비우므로, 그 뒤에도 여기가 다시 만든다.
          * @note 레지스트리 잠금을 **잡지 않은 채** 만든다 — 상속 병합이 부모를 찾으려고 레지스트리를
          *       다시 잠그는데 `shared_mutex` 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
          */
@@ -226,10 +228,11 @@ namespace sw
         void forEachType( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
+            for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
-                func( typeInfo );
+                if ( pTypeInfo->isAlive() )
+                    func( *pTypeInfo );
             }
         }
 
@@ -257,11 +260,11 @@ namespace sw
             vector<const TypeInfo*> listResult;
 
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
+            for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
-                if ( &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
-                    listResult.push_back( &typeInfo );
+                if ( pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType && pTypeInfo->isDerivedFrom( baseFqn ) )
+                    listResult.push_back( pTypeInfo.get() );
             }
             return listResult;
         }
@@ -375,9 +378,10 @@ namespace sw
         /**
          * @brief FQN 하나당 TypeInfo **하나**. 짧은 이름·별칭은 값을 복사하지 않고 `_mapAliasToFqn`
          *        으로 이 항목을 가리킨다 — `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
-         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 된다.
+         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 된다. 값은 **주소 고정** — 커져도
+         *        옮기지 않고, 모듈 해제는 지우지 않고 `_bAlive` 를 내린다(묘비).
          */
-        unordered_map<hashed_string, TypeInfo> _mapFqnToClassType;
+        unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType;
         /** @brief 짧은 이름·별칭 → FQN. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모인다. */
         unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
         unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
