@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-23 · 기준 커밋 `14c893f0` + (B) 스물한째(SIMD 없는 게임 스레드 최적화)
+> 마지막 갱신: 2026-09-23 · 기준 커밋 `ae2ea357` + (B) 스물둘째(Core 최적화)
 
 ---
 
@@ -1181,6 +1181,87 @@ std 에서는 `RT.Frame` 이 프레임당 **1.1 번** 불린다 — 게임 스�
 
 **검증.** Debug · Release · Shipping · ASan 빌드 경고 0(바뀐 TU 기준). `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트 프리셋 20/20, 바뀐 파일의 규약 · 중괄호 · 어휘 · include 순서 게이트 OK. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0(평균 RGB 가 백엔드끼리 ±0.3 안). 에디터 ON(`-EnableEditor -gv_editorPanelDump=25`) dx12 · dx11 · vk · gl 창 15 / 빈 0 · 오류 0. **함정 하나:** 첫 dx12 실행이 끝나면서 `Config/Editor/windows.ini` 에 `input_map=0` 을 적어 뒤의 세 백엔드가 창 14 로 떴다(Input & ActionMap Editor 가 빠짐) — 1 로 되돌리고 네 백엔드를 다시 돌리니 전부 창 15 이고 값도 1 로 남았다(재현 안 됨). 창 수가 하나 모자라면 코드보다 이 파일을 먼저 볼 것.
 
+
+
+**(B) 스물둘째 — 2026-09-23 · Core 최적화: 해시 컨테이너의 버킷 번호에서 나눗셈을 뺐다 · 문자열 키 해시는 8 바이트씩 · `vector` 의 성장 갈래를 밖으로(`push_back` 이 인라인된다) · `resize` 는 기하급수로 · Windows 파일 읽기는 Win32 로.**
+
+요청은 "Core 쪽도 최적화할 수 있는지 확인해서 적용", 조건은 앞 회차와 같이 **SIMD 등은 쓰지 않는다**. 먼저 **어디가 뜨거운지를 쟀다** — 이 PC 에는
+VTune · WPA 가 없어서 Release + PDB 빌드 폴더(`build/Ninja-Release-Prof`, 프리셋 아님)와 작은 외부 샘플러(스레드를 멈추고 DbgHelp 로 스택을
+걷는다, 사이클 증가량을 가중치로)를 썼다. 벤치(dx12 · 큐브 8000 · std / mover)와 시작 시간을 쟀다.
+
+**잰 것 — 프레임 안에서 Core 자신의 몫은 작다.** 게임 · 렌더 스레드의 시간은 거의 다 Engine 코드(잡 본문 · 드라이버)다. Core 에서 보인 것:
+- **워커 깨우기 시스템 호출**(`WakeByAddressSingle` → `NtAlertThreadByThreadIdEx`) — 게임 스레드 바쁜 시간의 ~4.7 %, 렌더 스레드 ~4.4 %.
+  호출자는 `RenderGraph::executeParallel` 54 % · 게임 스레드의 `runParallel` 39 %.
+- **줄 밖으로 불리는 `push_back`** — `vector::reserveInternal`(할당 · 옮기기 루프)이 `push_back` 안에 인라인돼 `push_back` 이 커지고, 그래서
+  부르는 쪽에 **인라인되지 않았다**. 프레임에 8000 번 부르는 `PrimitiveRegistry::consumeDirty` · `SceneTransformHierarchy::queueWriteParallel`
+  이 함수 호출을 했다(프로파일에는 ICF 로 접힌 `vector<std::thread::id>` · `vector<GpuLight>` 이름으로 보였다 — 크기만 같은 남의 함수다).
+- **해시 컨테이너의 `hash % 버킷 수`** — 64 비트 나눗셈이 조회 하나마다(이 CPU 에서 수십 사이클).
+- 시작 시간: `FileUtil::readFile` 이 게임 스레드 초기화의 12.6 %(셰이더 굽기 도장이 소스를 읽어 해시한다). 그 안의 대부분은 파일 열기 — **이
+  PC 에서 파일 하나 여는 데 ~200 us**(필터 드라이버).
+
+**한 것.**
+- **해시 컨테이너 버킷 번호** (`unordered_map` · `unordered_set`). 버킷 수를 늘 2 의 거듭제곱으로(`reserve( 3000 )` → 4096, 최소 16) 두고 번호는
+  `bucketIndexOf` 하나로 — 피보나치 상수를 곱하고 윗 절반을 아랫 절반에 접어 마스크. 나눗셈이 곱 하나 · 접기 하나 · 마스크 하나가 됐다. 윗
+  비트를 섞으므로 **항등 해시**(libstdc++ · libc++ 의 정수 · 포인터 `std::hash`)도 고르게 퍼진다 — 예전엔 기본 성장 크기가 2 의 거듭제곱이라
+  `%` 가 아랫 비트만 봤고 8 정렬 포인터는 버킷 여덟 개 중 하나에 몰렸다. 스무 자리가 같은 함수를 부른다(지우기의 체인 고치기 포함 — 한 곳만
+  달라도 옮긴 원소가 사라진다).
+- **문자열 키 해시** (`std::hash<sw::string>` · `std::hash<sw::wstring>` → `sw::RuntimeStringHash`). 예전엔 `std::hash<string_view>` — MSVC 에서
+  바이트마다 곱셈 하나가 앞 결과를 기다리는 FNV-1a 였다. 8 바이트씩 읽어 섞고 splitmix64 로 마무리한다. **프로세스 안에서만 쓰는 값이다** —
+  남는 해시(쿠킹 · intern)는 `StringUtil::computeHash64`(FNV-1a)가 정본이고 그대로다. 해시 값을 파일에 남기는 곳이 없음을 확인했다.
+- **`vector` 성장 갈래를 밖으로** — `reserveInternal` 을 `SW_NOINLINE`. `push_back` · `emplace_back` 의 빠른 갈래(비교 · 놓기 · 크기 올리기)가
+  부르는 쪽에 인라인된다. 새 프로파일에서 줄 밖 `push_back` 이 사라졌고 `consumeDirty` 의 몫이 게임 스레드 바쁜 시간의 12.6 → 3.5 % 다.
+- **`vector::resize` 는 두 배 이상으로** — 용량을 넘으면 `max( count, capacity * 2 )`. 예전엔 딱 `count` 라 `resize( size() + 1 )` 을 되풀이하면
+  매번 통째로 옮겼다(N 번에 O(N^2)). 빈 벡터의 `resize( n )` 은 여전히 딱 n.
+- **Windows 파일 읽기** (`readFile` · `readTextFile` → `FileUtilInternal::readRange`). `fopen_s` → 끝으로 옮기기 → 위치 묻기 → 되감기 → `fread` 를
+  `CreateFileW` → `GetFileSizeEx` → `ReadFile`(OVERLAPPED 오프셋) → `CloseHandle` 로. 덤으로 **UTF-8 경로가 제대로 열린다** — `fopen_s` 는 좁은
+  경로를 ANSI 코드 페이지로 풀어서 한글 폴더가 깨졌다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않는다). 공유 모드는 stdio 와 같다. 리눅스 ·
+  맥은 stdio 그대로.
+
+| Release, ns/연산 (`ContainerBenchTest`, 옛 · 새 빌드를 번갈아) | 전 | 후 |
+|---|---|---|
+| `unordered_map<uint64>` 적중 (50000 개) | 22~24 | 14~15 |
+| `unordered_map<uint64>` 빗나감 | 27~30 | 19.5~20 |
+| `unordered_map<uint64>` 적중 (`reserve( 3000 )`) | 13.5~14 | 6.6~6.9 |
+| `unordered_set<uint64>` 적중 | 21~23 | 14.6~15 |
+| `unordered_map<string>` 을 `string_view` 로 (35 자 키) | 59.8 | 34.6 |
+| `hashed_string` intern 적중 (24 자) | 52 | 47 |
+| `vector<uint32>::resize( size() + 1 )` 20000 번 | 1030~1085 | 2.3 |
+
+파일 읽기(저장소의 텍스트 리소스 43 개 × 20 번, 독립 프로그램): stdio 203~212 · Win32 193~199 us/파일 — 약 5 %. 여는 비용 자체가 이 PC 의 필터
+드라이버라 더 줄지 않는다.
+
+**앱 수준 (Release · dx12 · 큐브 8000, `BinCoreOld` 와 번갈아 세 번씩 · 순서를 바꿔 한 번 더).** `GT.Frame` std 641~676 → 618~631(약 −3 %),
+mover 1260~1329 → 1240~1299(약 −1.8 %). mover 의 렌더 스레드 `RT.ExecutePacket` 은 **양쪽 순서 모두** 약 +20 us(3.5 %) 높았다 — 하위 구간
+(`RT.Graph.executeParallel` · `RT.GpuScene.upload`(복사) · `RT.Present.submit`)에 5~8 us 씩 고루 퍼져 있고 std 에서는 차이가 없다. 바뀐 Core
+코드를 거의 안 지나는 구간까지 같이 올라서 코드 회귀보다는 **게임 스레드가 빨라져 병렬 구간이 워커 · 메모리를 더 자주 다투는** 쪽으로 본다
+— 원인은 가르지 못했다. mover 는 게임 스레드가 병목(~1270 대 ~1100 us)이라 프레임은 게임 스레드를 따른다.
+
+**재고 두었다.**
+- **워커 깨우기** — 비용은 확인했지만 손대지 않았다. 호출자가 하나만 깨우고 깨어난 워커가 다음을 깨우는 사슬은 모형으로 따져 보니 마지막 워커가
+  늦게 들어와(깨움 지연 L > 시스템 호출 s) 합이 더 나쁘다(시작 지연 합 7L + 11s 대 4L + 14s). 스핀을 늘리는 쪽은 `TaskManager.cpp` 의
+  `kWorkerIdleSpinMicro` 주석대로 이미 재서 기각됐다.
+- **intern 적중 47 ns** — FNV-1a(쿠킹과 같은 값이라 못 바꾼다) + 샤드 공유 락 + 맵 조회. 프레임마다 intern 하는 호출자는 Engine
+  (`FrameRenderer::gpuScopeNameFor`)이라 그쪽에서 이름을 한 번 만들어 두는 것이 맞다.
+- `fixed_string` 의 해시는 대소문자를 무시하는 FNV 다(맞지만 느리다) — 프로파일에 안 보여 두었다.
+- `SW_ENABLE_STL_CONTAINER` 를 켜면 `sw::string` 이 `std::string` 이 되어 `std::hash<sw::string>` 특수화가 표준의 것과 겹친다 — **이번 변경 전부터**
+  그랬다(옵션은 꺼져 있다). 고치려면 그 특수화를 `#if !defined( SW_ENABLE_STL_CONTAINER )` 로 감싼다.
+- 프리페치 · SIMD(요청 조건) · mimalloc(사용자 결정, 09-21).
+
+**Engine 쪽에서 보인 것 — 다음 후보.** (1) `PrimitiveRegistry::consumeDirty` 가 8000 개 바이트 플래그마다 원자 교환 — 64 칸짜리 워드 비트셋이면
+교환 125 번이다. (2) `FrameRenderer::gpuScopeNameFor` 가 매 프레임 이름을 intern 한다(렌더 스레드). (3) 시작 시간의 13 % 가 스플래시 창 다시
+그리기(`Win32SplashWindow::updateStatus` → `UpdateWindow`). (4) 셰이더 굽기 도장이 시작할 때마다 소스를 다시 읽어 해시한다(열기 한 번 ~200 us).
+(5) DX12 병렬 기록 중 `D3D12RHIDevice::releaseOnlineBlocksDeferred` 의 뮤텍스 경합(렌더 스레드 `mutex::lock` 의 79 %).
+
+**함정 둘.** 컨테이너의 인라인 코드는 **모듈마다 복사된다** — 버킷 함수를 바꾼 `Engine.dll` 과 옛 `App.exe` 가 섞이면 `Engine.dll` 이 넣은 설정을
+`App.exe` 가 못 찾아 로그 없이 -1 로 끝난다(실제로 밟았다 — 백그라운드 빌드 중에 헤더를 고쳐 PCH 가 깨지고 빌드가 반쯤 멈췄다). 컨테이너
+내부를 바꾸면 모든 모듈을 같이 다시 빌드한다(RHI ABI 도장과 같은 이유). 그리고 **CoreTest 만 빌드해도 `Engine.dll` 이 다시 링크된다**(Core 는
+Engine 에 흡수된다) — 돌연변이 확인 뒤에는 전체를 다시 빌드한 다음에 bin 을 쓴다.
+
+**테스트.** `DataStructureTest.HashMapOddReserveGrowAndEraseStaysConsistent`(2 의 거듭제곱이 아닌 `reserve` · 여러 번 성장 · 셋에 하나 지우기 ·
+다시 넣기 — 지우기의 체인 고치기를 옛 `%` 로 되돌리는 돌연변이에 실패) · `StringHashAgreesAcrossKeyFormsAndSeparatesKeys`(세 키 모양이 같은 값 ·
+자투리 · 길이만 다른 키) · `VectorResizeByOneGrowsGeometrically`(용량 변경 4096 번 → 14 번 이하). 숫자는 `ContainerBenchTest` 넷이 찍는다.
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0. Release 전 테스트(CoreTest 264 + 건너뜀 8 · EngineTest 648, GPU 스위트 포함) 실패 0. `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트 프리셋 20/20, 바뀐 파일의 규약 · 중괄호 · 어휘 · include 순서 · 테스트 스위트 게이트 OK. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0(평균 RGB 가 백엔드끼리 ±0.3 안). 에디터 ON(`-EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60`) dx12 · dx11 · vk · gl 창 15 / 빈 0 · 오류 0 · 종료 0. **에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙일 것** — `-gv_editorPanelDump` 는 덤프만 하고 스스로 끝나지 않는다(사용자가 창을 닫고 있었다).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

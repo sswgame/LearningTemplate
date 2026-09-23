@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -1161,6 +1162,142 @@ SW_TEST_CASE( DataStructureTest, HashMapEraseAllInSeveralOrdersStaysConsistent )
         }
         SW_EXPECT_TRUE( map.empty() );
     }
+}
+
+/**
+ * @brief [DataStructureTest] 2 의 거듭제곱이 아닌 `reserve` 뒤에 여러 번 자라고 반을 지워도 조회가 맞다
+ * @details 버킷 번호는 `hash % 버킷 수` 가 아니라 곱 · 접기 · 마스크로 뽑는다 — 그래서 버킷 수는 늘 2 의 거듭제곱이어야 하고,
+ *          `reserve( 1000 )` 은 1024 로 올라간다(올리기를 빠뜨리면 마스크가 버킷 일부만 가리켜 체인이 길어진다).
+ *          지우기는 마지막 원소를 옮겨 오며 그 원소의 버킷 체인을 고치는데, 그 버킷도 같은 함수로 찾아야 한다 — 한 곳만
+ *          `%` 로 남으면 옮긴 원소가 사라진다. 실제 해시(흩어진 64비트 키)로 여러 크기를 지나가며 셋 다 본다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
+{
+    auto mixKey = []( uint64 value )
+    {
+        value += 0x9E3779B97F4A7C15ull;
+        value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
+        value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
+        return value ^ ( value >> 31 );
+    };
+    constexpr uint64 kCount = 5000;
+
+    sw::unordered_map<uint64, uint64> map;
+    sw::unordered_set<uint64>         set;
+    map.reserve( 1000 );
+    set.reserve( 1000 );
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        map.emplace( mixKey( index ), index );
+        set.insert( mixKey( index ) );
+    }
+    SW_ASSERT_EQUAL( size_t( kCount ), map.size() );
+    SW_ASSERT_EQUAL( size_t( kCount ), set.size() );
+
+    // 셋에 하나씩 지운다 — 지울 때마다 배열 끝의 원소가 옮겨 온다.
+    for ( uint64 index = 0; index < kCount; index += 3 )
+    {
+        SW_EXPECT_EQUAL( size_t( 1 ), map.erase( mixKey( index ) ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), set.erase( mixKey( index ) ) );
+    }
+
+    uint32 wrongCount = 0;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const bool bErased   = ( index % 3 ) == 0;
+        const auto iter      = map.find( mixKey( index ) );
+        const bool bInMap    = iter != map.end() && iter->second == index;
+        const bool bInSet    = set.contains( mixKey( index ) );
+        const bool bExpected = bErased == false;
+        if ( bInMap != bExpected || bInSet != bExpected )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    // 지운 자리에 다시 넣으면 전부 찾는다.
+    for ( uint64 index = 0; index < kCount; index += 3 )
+        map.emplace( mixKey( index ), index + 1 );
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const auto iter = map.find( mixKey( index ) );
+        if ( iter == map.end() || iter->second != ( ( index % 3 ) == 0 ? index + 1 : index ) )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
+ * @brief [DataStructureTest] 문자열 키 해시는 `string` · `string_view` · C 문자열에서 같은 값이고, 서로 다른 키는 갈린다
+ * @details 해시 컨테이너의 이종 조회(`find( string_view )`)는 세 모양이 같은 바이트에 같은 해시를 낼 때만 맞다 — 하나라도
+ *          다르면 넣은 키를 다른 모양으로 못 찾는다. 해시는 8 바이트씩 읽으므로 끝 자투리(0 ~ 7 바이트)와 길이만 다른 키
+ *          (`"a"` · `"a\0"`)도 본다.
+ */
+SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys )
+{
+    const std::hash<sw::string> hasher{};
+    sw::unordered_set<uint64>   setHash;
+    for ( uint32 length = 0; length < 40; ++length )
+    {
+        sw::string text;
+        for ( uint32 index = 0; index < length; ++index )
+            text.push_back( static_cast<utf8>( 'a' + ( ( index * 7 + length ) % 26 ) ) );
+        const size_t fromString = hasher( text );
+        const size_t fromView   = hasher( sw::string_view( text.data(), text.size() ) );
+        const size_t fromCStr   = hasher( text.c_str() );
+        SW_EXPECT_EQUAL( fromString, fromView );
+        SW_EXPECT_EQUAL( fromString, fromCStr );
+        setHash.insert( static_cast<uint64>( fromString ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 40 ), setHash.size() );
+
+    const utf8 kWithNul[] = { 'a', '\0' };
+    SW_EXPECT_TRUE( hasher( sw::string_view( kWithNul, 1 ) ) != hasher( sw::string_view( kWithNul, 2 ) ) );
+
+    // 끝 자투리만 다른 키 — 8 바이트 묶음 뒤의 한 글자.
+    SW_EXPECT_TRUE( hasher( sw::string_view( "abcdefgh1" ) ) != hasher( sw::string_view( "abcdefgh2" ) ) );
+
+    // 조회도 세 모양으로 된다.
+    sw::unordered_map<sw::string, int32> mapName;
+    mapName.emplace( sw::string( "engine/materials/glassmaterial.material" ), 7 );
+    SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
+    SW_EXPECT_TRUE( mapName.find( sw::string( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
+    SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.materia" ) ) == mapName.end() );
+}
+
+/**
+ * @brief [DataStructureTest] `vector::resize( size() + 1 )` 를 되풀이해도 재할당은 로그 번이다
+ * @details 예전엔 용량을 넘으면 딱 `count` 만 잡아서 한 칸 늘릴 때마다 통째로 옮겼다(N 번에 O(N^2), 20000 번에 1 us/회).
+ *          std::vector 처럼 두 배 이상으로 키우면 용량이 바뀌는 횟수는 log2(N) 남짓이다.
+ */
+SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
+{
+    sw::vector<uint32> listValue;
+    size_t             lastCapacity   = listValue.capacity();
+    uint32             capacityChange = 0;
+    for ( uint32 index = 0; index < 4096; ++index )
+    {
+        listValue.resize( listValue.size() + 1 );
+        listValue.back() = index;
+        if ( listValue.capacity() != lastCapacity )
+        {
+            ++capacityChange;
+            lastCapacity = listValue.capacity();
+        }
+    }
+    SW_EXPECT_EQUAL( size_t( 4096 ), listValue.size() );
+    SW_EXPECT_TRUE_MSG( capacityChange <= 14, "resize 가 용량을 기하급수로 늘리지 않습니다" );
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < 4096; ++index )
+    {
+        if ( listValue[index] != index )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    // 한 번에 크게 늘리면 딱 그만큼 — 빈 벡터의 `resize( n )` 은 넘치게 잡지 않는다.
+    sw::vector<uint32> listOnce;
+    listOnce.resize( 1000 );
+    SW_EXPECT_EQUAL( size_t( 1000 ), listOnce.capacity() );
 }
 
 /**

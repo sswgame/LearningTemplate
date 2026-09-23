@@ -27,6 +27,7 @@ namespace sw
     {
         struct FileUtilInternal
         {
+#if !defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief 읽으려고 열고 크기를 잽니다(맨 앞으로 되감긴 채). 실패하면 로그를 남기고 nullptr — 연 파일은 호출자가 닫는다.
              * @details `readFile` · `readTextFile` 이 이 열두 줄을 각자 들었고, 크기를 못 잴 때 한쪽만 로그를 남겼다.
@@ -49,6 +50,94 @@ namespace sw
                     return nullptr;
                 }
                 return pFile;
+            }
+#endif
+
+            /**
+             * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼). 실패하면 로그 + false.
+             * @details `readFile` · `readTextFile` 의 몸통이다. **Windows 는 Win32 로 곧장 읽는다** — 열기 · 크기 · 읽기 · 닫기 네 번의
+             *          시스템 호출. stdio 경로(`fopen_s` → 끝으로 옮기기 → 위치 묻기 → 처음으로 되감기 → `fread`)는 크기를 재려고
+             *          파일 위치를 세 번 옮겼고 UCRT 의 잠금 · 버퍼 준비를 지났다. 게다가 `fopen_s` 는 좁은 경로를 **ANSI 코드 페이지**로
+             *          풀어서 UTF-8 경로의 한글이 깨졌다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않는다) — 여기서는 UTF-16 으로 바꿔 연다.
+             *          2026-09-23 시작 시간 프로파일에서 `readFile` 이 게임 스레드 초기화의 12.6 % 였다(셰이더 굽기 도장이 소스를 읽어 해시한다).
+             *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허락한다 — 에디터가 쓰는 중인 파일도 전처럼 열린다.
+             */
+            template <typename BufferType>
+            static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                const string  filePath = FileUtil::normalizeSeparators( fileName );
+                const wstring widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
+                HANDLE        hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                                                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr );
+                if ( hFile == INVALID_HANDLE_VALUE )
+                {
+                    SW_LOG_ERROR( "File not found: %#", fileName );
+                    return false;
+                }
+
+                LARGE_INTEGER fileSize{};
+                if ( GetFileSizeEx( hFile, &fileSize ) == FALSE || fileSize.QuadPart < 0 )
+                {
+                    CloseHandle( hFile );
+                    SW_LOG_ERROR( "Failed to query size of: %#", fileName );
+                    return false;
+                }
+                const uint64 uFileSize = static_cast<uint64>( fileSize.QuadPart );
+                if ( offset > uFileSize )
+                {
+                    CloseHandle( hFile );
+                    SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
+                    return false;
+                }
+
+                const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
+                outBuffer.resize( static_cast<size_t>( dataSize ) );
+                // 읽을 자리는 OVERLAPPED 의 오프셋으로 준다(동기 핸들이면 위치 옮기기 호출이 따로 필요 없다). ReadFile 은 한 번에 4 GB 미만.
+                uint64 readTotal = 0;
+                while ( readTotal < dataSize )
+                {
+                    constexpr uint64 kMaxChunk = 1ull << 30;
+                    const DWORD      chunkSize = static_cast<DWORD>( MathUtil::min( dataSize - readTotal, kMaxChunk ) );
+                    const uint64     position  = offset + readTotal;
+                    OVERLAPPED       overlapped{};
+                    overlapped.Offset     = static_cast<DWORD>( position & 0xFFFFFFFFull );
+                    overlapped.OffsetHigh = static_cast<DWORD>( position >> 32 );
+                    DWORD readNow         = 0;
+                    if ( ReadFile( hFile, reinterpret_cast<uint8*>( outBuffer.data() ) + readTotal, chunkSize, &readNow, &overlapped ) == FALSE || readNow == 0 )
+                        break;
+                    readTotal += readNow;
+                }
+                CloseHandle( hFile );
+                if ( readTotal != dataSize )
+                    outBuffer.resize( static_cast<size_t>( readTotal ) );
+                return true;
+#else
+                int64 fileSize{ 0 };
+                FILE* pFile = openForReading( fileName, fileSize );
+                if ( pFile == nullptr )
+                    return false;
+
+                const uint64 uFileSize = static_cast<uint64>( fileSize );
+                if ( offset > uFileSize )
+                {
+                    std::fclose( pFile );
+                    SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
+                    return false;
+                }
+
+                const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
+                PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET );
+                outBuffer.resize( static_cast<size_t>( dataSize ) );
+                if ( dataSize > 0 )
+                {
+                    const size_t readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
+                    if ( readBytes != static_cast<size_t>( dataSize ) )
+                        outBuffer.resize( readBytes );
+                }
+                std::fclose( pFile );
+                return true;
+#endif
             }
         };
 
@@ -620,48 +709,13 @@ namespace sw
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint32 offset, const uint32 maxReadCount )
     {
-        int64 fileSize{ 0 };
-        FILE* pFile = FileUtilInternal::openForReading( fileName, fileSize );
-        if ( pFile == nullptr )
-            return false;
-
-        const uint64 uFileSize = static_cast<uint64>( fileSize );
-        if ( offset > uFileSize )
-        {
-            std::fclose( pFile );
-            SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
-            return false;
-        }
-
-        const uint64 dataSize = MathUtil::min( uFileSize - offset, static_cast<uint64>( maxReadCount ) );
-        PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET );
-        outBytes.resize( dataSize );
-        if ( dataSize > 0 )
-        {
-            const size_t readBytes = std::fread( outBytes.data(), 1, static_cast<size_t>( dataSize ), pFile );
-            if ( readBytes != static_cast<size_t>( dataSize ) )
-                outBytes.resize( readBytes );
-        }
-        std::fclose( pFile );
-        return true;
+        return FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes );
     }
 
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
-        int64 fileSize{ 0 };
-        FILE* pFile = FileUtilInternal::openForReading( fileName, fileSize );
-        if ( pFile == nullptr )
+        if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
-
-        const size_t dataSize = static_cast<size_t>( fileSize );
-        outText.resize( dataSize );
-        if ( dataSize > 0 )
-        {
-            const size_t readBytes = std::fread( outText.data(), 1, dataSize, pFile );
-            if ( readBytes != dataSize )
-                outText.resize( readBytes );
-        }
-        std::fclose( pFile );
 
         // BOM 판정은 아래 skipUtf8Bom 이 정본이다. 여기서 바이트를 또 세고 있었다 — 한쪽만
         // 고치면 읽기 경로와 질의 경로가 서로 다른 답을 준다.

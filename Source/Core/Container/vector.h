@@ -148,7 +148,14 @@ namespace sw
         bool           is_inline( const T* p ) const;
         T*             do_allocate( size_t n );
         void           do_deallocate( T* p, size_t n );
-        void           reserveInternal( size_t new_cap );
+        /**
+         * @brief 용량을 @p new_cap 으로 늘립니다 (옮기기 · 옛 버퍼 해제까지). **인라인하지 않는다.**
+         * @details `push_back` · `emplace_back` 의 느린 갈래가 이것 하나다. 이 몸통(할당 · 원소 옮기기 루프)이 인라인되면
+         *          `push_back` 이 커져서 **부르는 쪽에 인라인되지 않는다** — 빠른 갈래(비교 · 놓기 · 크기 올리기)가
+         *          호출 한 번이 된다. 2026-09-23 프로파일에서 한 프레임에 8000 번 부르는 자리(`PrimitiveRegistry::consumeDirty`,
+         *          `SceneTransformHierarchy::queueWriteParallel`)의 `push_back` 이 따로 된 함수로 잡혔다.
+         */
+        SW_NOINLINE void reserveInternal( size_t new_cap );
         /** @brief 비어 있는(size=0, 용량 확보된) 버퍼 앞에서부터 count 개를 복사해 넣습니다. */
         void copyFromInternal( const T* pSource, size_t count );
         void clearInternal() noexcept;
@@ -215,7 +222,7 @@ namespace sw
     }
 
     template <typename T, typename Allocator>
-    inline void vector<T, Allocator>::reserveInternal( size_t new_cap )
+    SW_NOINLINE void vector<T, Allocator>::reserveInternal( size_t new_cap )
     {
         if ( new_cap <= _capacity )
             return;
@@ -1035,7 +1042,10 @@ namespace sw
         }
         else if ( count > _size )
         {
-            reserveInternal( count );
+            // 용량을 넘으면 **두 배 이상**으로 — `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 번이다. 딱 `count` 만 잡으면
+            // 한 칸 늘릴 때마다 통째로 옮겨 N 번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
+            if ( count > _capacity )
+                reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
                 sw_placement_new( ( _pData + ( itemIndex ) ) ) T();
         }
@@ -1053,7 +1063,9 @@ namespace sw
         }
         else if ( count > _size )
         {
-            reserveInternal( count );
+            // 위 오버로드와 같은 이유로 두 배 이상.
+            if ( count > _capacity )
+                reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
                 sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
         }

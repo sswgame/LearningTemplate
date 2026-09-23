@@ -722,29 +722,86 @@ namespace sw
 #endif
     using u16string = basic_string<char16_t>;
     using u32string = basic_string<char32_t>;
+
+    /**
+     * @struct RuntimeStringHash
+     * @brief 프로세스 안에서만 쓰는 바이트 해시 — 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` 이 쓴다.
+     * @details **파일 · 네트워크에 남기지 말 것.** 이 구현이 바뀌면 값이 달라진다. 남는 해시(쿠킹 산출물 · intern 이름)는
+     *          `StringUtil::computeHash64`(FNV-1a)가 정본이고 그것은 바꾸지 않는다.
+     *          예전엔 `std::hash<std::string_view>` 로 넘겼다 — MSVC STL 의 그것은 바이트마다 곱셈 하나가 앞 결과를 기다리는
+     *          FNV-1a 라, 35 자 경로 키 하나에 곱셈 35 번이 한 줄로 섰다(`ContainerBenchTest.StringKeyLookup`). 여기서는
+     *          8 바이트씩 읽어 섞으므로 기다리는 곱셈이 8 분의 1 이다. 마지막에 splitmix64 의 마무리로 비트를 고르게 흩어
+     *          버킷 번호를 어느 비트에서 뽑아도 된다. 길이를 씨앗에 넣어 끝의 0 바이트만 다른 두 키도 갈린다.
+     */
+    struct RuntimeStringHash
+    {
+        /** @brief @p pData 의 @p byteCount 바이트를 해시합니다. */
+        static uint64 compute( const void* pData, size_t byteCount ) noexcept
+        {
+            constexpr uint64 kWordMultiplier  = 0xBF58476D1CE4E5B9ull;
+            constexpr uint64 kStateMultiplier = 0x94D049BB133111EBull;
+            const uint8*     pByte            = static_cast<const uint8*>( pData );
+            uint64           hash             = 0x9E3779B97F4A7C15ull ^ ( static_cast<uint64>( byteCount ) * 0xC2B2AE3D27D4EB4Full );
+            while ( byteCount >= 8 )
+            {
+                uint64 word = 0;
+                // 정렬되지 않은 8 바이트 읽기 — 크기가 상수라 적재 한 번으로 접힌다(`Memory::copy` 는 함수 호출이다).
+                std::memcpy( &word, pByte, 8 );
+                hash ^= word * kWordMultiplier;
+                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * kStateMultiplier;
+                pByte += 8;
+                byteCount -= 8;
+            }
+            if ( byteCount > 0 )
+            {
+                uint64 word = 0;
+                for ( size_t byteIndex = 0; byteIndex < byteCount; ++byteIndex )
+                    word |= static_cast<uint64>( pByte[byteIndex] ) << ( byteIndex * 8 );
+                hash ^= word * kWordMultiplier;
+                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * kStateMultiplier;
+            }
+            hash ^= hash >> 30;
+            hash *= kWordMultiplier;
+            hash ^= hash >> 27;
+            hash *= kStateMultiplier;
+            hash ^= hash >> 31;
+            return hash;
+        }
+    };
 } // namespace sw
 
 namespace std
 {
-    /** @brief sw::string 을 unordered_map 키로 쓸 때 std::string_view 해시를 씁니다. */
+    /**
+     * @brief sw::string 을 해시 컨테이너 키로 쓸 때의 해시 — `sw::RuntimeStringHash`. 세 오버로드가 같은 바이트에 같은 값을 낸다(이종 조회).
+     */
     template <>
     struct hash<sw::string>
     {
         using is_transparent = void;
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( const sw::string& s ) const noexcept { return hash<std::string_view>{}( std::string_view{ s.data(), s.size() } ); }
-        size_t operator()( std::string_view s ) const noexcept { return hash<std::string_view>{}( s ); }
-        size_t operator()( const utf8* s ) const noexcept { return hash<std::string_view>{}( std::string_view{ s } ); }
+        size_t operator()( std::string_view s ) const noexcept { return static_cast<size_t>( sw::RuntimeStringHash::compute( s.data(), s.size() ) ); }
+        /** @brief 내용 바이트를 해시합니다. */
+        size_t operator()( const sw::string& s ) const noexcept { return operator()( std::string_view{ s.data(), s.size() } ); }
+        /** @brief 널 종료 문자열의 바이트를 해시합니다. */
+        size_t operator()( const utf8* s ) const noexcept { return operator()( std::string_view{ s } ); }
     };
 
-    /** @brief sw::wstring 을 unordered_map 키로 쓸 때 std::wstring_view 해시를 씁니다. */
+    /**
+     * @brief sw::wstring 을 해시 컨테이너 키로 쓸 때의 해시 — 문자 바이트를 `sw::RuntimeStringHash` 로.
+     */
     template <>
     struct hash<sw::wstring>
     {
         using is_transparent = void;
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( const sw::wstring& s ) const noexcept { return hash<std::wstring_view>{}( std::wstring_view{ s.data(), s.size() } ); }
-        size_t operator()( std::wstring_view s ) const noexcept { return hash<std::wstring_view>{}( s ); }
-        size_t operator()( const utf16* s ) const noexcept { return hash<std::wstring_view>{}( std::wstring_view{ s } ); }
+        size_t operator()( std::wstring_view s ) const noexcept
+        {
+            return static_cast<size_t>( sw::RuntimeStringHash::compute( s.data(), s.size() * sizeof( utf16 ) ) );
+        }
+        /** @brief 내용 바이트를 해시합니다. */
+        size_t operator()( const sw::wstring& s ) const noexcept { return operator()( std::wstring_view{ s.data(), s.size() } ); }
+        /** @brief 널 종료 문자열의 바이트를 해시합니다. */
+        size_t operator()( const utf16* s ) const noexcept { return operator()( std::wstring_view{ s } ); }
     };
 } // namespace std
