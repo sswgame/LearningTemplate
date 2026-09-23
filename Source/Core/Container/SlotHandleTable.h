@@ -1,14 +1,14 @@
 /**
- * @file HandleTable.h
- * @brief ObjectHandle로 T 슬롯을 보관합니다. 핸들 기본값은 무효입니다.
+ * @file SlotHandleTable.h
+ * @brief SlotHandle로 T 슬롯을 보관합니다. 핸들 기본값은 무효입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/ObjectHandle.h"
 #include "Core/Container/PagedArray.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -27,11 +27,11 @@ namespace sw
      *          파괴하지 않는 책임(예: GPU 펜스 기반 지연 해제)은 상위 계층에 있다.
      */
     template <typename T>
-    class HandleTable
+    class SlotHandleTable
     {
     public:
         /** @brief 값을 넣고 핸들을 반환합니다. */
-        ObjectHandle insert( T value )
+        SlotHandle insert( T value )
         {
             std::scoped_lock<mutex> lock{ _mutex };
 
@@ -41,29 +41,29 @@ namespace sw
                 _listFree.pop_back();
                 Slot* pSlot = _listSlot.at( index );
                 if ( pSlot == nullptr )
-                    return ObjectHandle{};
+                    return SlotHandle{};
                 // 세대는 retireSlot 에서 이미 올려뒀으므로 그대로 쓴다 — 옛 핸들은 계속 무효.
                 const uint32 generation = pSlot->generation( std::memory_order_relaxed );
                 pSlot->_value           = std::move( value );
                 pSlot->_state.store( Slot::kOccupiedBit | generation, std::memory_order_release );
-                return ObjectHandle::make( index, generation );
+                return SlotHandle::make( index, generation );
             }
 
             const uint32 index = _listSlot.pushBack( Slot{} );
             if ( index == decltype( _listSlot )::kInvalidIndex )
-                return ObjectHandle{};
+                return SlotHandle{};
 
             Slot* pSlot   = _listSlot.at( index );
             pSlot->_value = std::move( value );
             pSlot->_state.store( Slot::kOccupiedBit | 1u, std::memory_order_release );
-            return ObjectHandle::make( index, 1u );
+            return SlotHandle::make( index, 1u );
         }
 
         /** @brief 핸들이 유효하면 슬롯 포인터, 아니면 nullptr. 락이 없습니다. */
-        T* get( ObjectHandle handle ) { return const_cast<T*>( static_cast<const HandleTable*>( this )->get( handle ) ); }
+        T* get( SlotHandle handle ) { return const_cast<T*>( static_cast<const SlotHandleTable*>( this )->get( handle ) ); }
 
         /** @brief 핸들이 유효하면 슬롯 포인터, 아니면 nullptr. 락이 없습니다. */
-        const T* get( ObjectHandle handle ) const
+        const T* get( SlotHandle handle ) const
         {
             if ( handle.isValid() == false )
                 return nullptr;
@@ -78,7 +78,7 @@ namespace sw
         }
 
         /** @brief 슬롯을 비우고 generation을 올립니다. 꺼낸 값을 반환합니다. */
-        bool take( ObjectHandle handle, T& outValue )
+        bool take( SlotHandle handle, T& outValue )
         {
             std::scoped_lock<mutex> lock{ _mutex };
             Slot*                   pSlot = findOccupiedSlot( handle );
@@ -90,7 +90,7 @@ namespace sw
         }
 
         /** @brief 핸들을 무효화합니다. */
-        void erase( ObjectHandle handle )
+        void erase( SlotHandle handle )
         {
             std::scoped_lock<mutex> lock{ _mutex };
             Slot*                   pSlot = findOccupiedSlot( handle );
@@ -113,7 +113,7 @@ namespace sw
             }
         }
 
-        /** @brief 모든 점유 슬롯에 fn(ObjectHandle, T&)를 호출합니다. */
+        /** @brief 모든 점유 슬롯에 fn(SlotHandle, T&)를 호출합니다. */
         template <typename Fn>
         void forEachHandle( Fn&& fn )
         {
@@ -123,11 +123,11 @@ namespace sw
             {
                 Slot* pSlot = _listSlot.at( slotIndex );
                 if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
-                    fn( ObjectHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
+                    fn( SlotHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
         }
 
-        /** @brief 모든 점유 슬롯에 fn(ObjectHandle, const T&)를 호출합니다. */
+        /** @brief 모든 점유 슬롯에 fn(SlotHandle, const T&)를 호출합니다. */
         template <typename Fn>
         void forEachHandle( Fn&& fn ) const
         {
@@ -137,7 +137,7 @@ namespace sw
             {
                 const Slot* pSlot = _listSlot.at( slotIndex );
                 if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
-                    fn( ObjectHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
+                    fn( SlotHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
         }
 
@@ -209,7 +209,7 @@ namespace sw
         };
 
         /** @brief 핸들이 가리키는 점유 중인 슬롯을 찾습니다(뮤텍스를 이미 잡은 상태에서 호출). */
-        Slot* findOccupiedSlot( ObjectHandle handle )
+        Slot* findOccupiedSlot( SlotHandle handle )
         {
             if ( handle.isValid() == false )
                 return nullptr;

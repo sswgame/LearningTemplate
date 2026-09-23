@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -45,14 +45,14 @@ namespace sw
         SpatialHashGrid2D( SpatialHashGrid2D&& ) noexcept            = default;
         SpatialHashGrid2D& operator=( SpatialHashGrid2D&& ) noexcept = default;
 
-        void insert( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
-        void update( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
-        void remove( ObjectHandle handle );
+        void insert( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
+        void update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
+        void remove( SlotHandle handle );
         void clear();
 
-        void queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const;
-        void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outListHandle ) const;
-        void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const;
+        void queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const;
+        void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<SlotHandle>& outListHandle ) const;
+        void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<SlotHandle>& outListHandle ) const;
 
         float32 getCellSize() const { return _cellSize; }
         size_t  getHandleCount() const { return _mapHandleBound.size(); }
@@ -114,7 +114,7 @@ namespace sw
             }
 
             // 그리드에 흩뿌리기엔 너무 큰 핸들은 어느 셀에도 없다 — **항상 함께** 본다.
-            for ( const ObjectHandle handle : _listOversizedHandle )
+            for ( const SlotHandle handle : _listOversizedHandle )
                 func( handle );
 
             range.forEachCell( [this, &func]( int32 cellX, int32 cellY )
@@ -122,7 +122,7 @@ namespace sw
                 const auto bucketIt = _mapBucket.find( getCellKey( cellX, cellY ) );
                 if ( bucketIt == _mapBucket.end() )
                     return;
-                for ( const ObjectHandle handle : bucketIt->second )
+                for ( const SlotHandle handle : bucketIt->second )
                     func( handle );
             } );
         }
@@ -133,10 +133,10 @@ namespace sw
                    ( static_cast<uint64>( static_cast<uint32>( cellY ) ) );
         }
 
-        float32                                     _cellSize;
-        unordered_map<uint64, vector<ObjectHandle>> _mapBucket;
-        unordered_map<ObjectHandle, AABB2D>         _mapHandleBound;
+        float32                                   _cellSize;
+        unordered_map<uint64, vector<SlotHandle>> _mapBucket;
+        unordered_map<SlotHandle, AABB2D>         _mapHandleBound;
         /** @brief 그리드에 흩뿌리기엔 너무 큰 핸들들. 그리드를 보는 질의가 **항상 함께** 봅니다. */
-        vector<ObjectHandle> _listOversizedHandle;
+        vector<SlotHandle> _listOversizedHandle;
     };
 } // namespace sw

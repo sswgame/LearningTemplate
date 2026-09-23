@@ -1,30 +1,30 @@
 #include "pch.h"
 
-#include "Core/Container/HandleTable.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
+#include "Core/Container/SlotHandleTable.h"
 
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
 
-SW_TEST_CASE( ObjectHandleTest, PackedRoundTripAndInvalid )
+SW_TEST_CASE( SlotHandleTest, PackedRoundTripAndInvalid )
 {
-    ObjectHandle invalid;
+    SlotHandle invalid;
     SW_EXPECT_FALSE( invalid.isValid() );
     SW_EXPECT_EQUAL( 0u, invalid.packed() );
 
-    const ObjectHandle handle = ObjectHandle::make( 7u, 3u );
+    const SlotHandle handle = SlotHandle::make( 7u, 3u );
     SW_EXPECT_TRUE( handle.isValid() );
     SW_EXPECT_EQUAL( 7u, handle.index() );
     SW_EXPECT_EQUAL( 3u, handle.generation() );
-    SW_EXPECT_EQUAL( handle, ObjectHandle::fromPacked( handle.packed() ) );
-    SW_EXPECT_NOT_EQUAL( handle, ObjectHandle::make( 7u, 4u ) );
+    SW_EXPECT_EQUAL( handle, SlotHandle::fromPacked( handle.packed() ) );
+    SW_EXPECT_NOT_EQUAL( handle, SlotHandle::make( 7u, 4u ) );
 }
 
-SW_TEST_CASE( HandleTableTest, GenerationInvalidatesStaleHandles )
+SW_TEST_CASE( SlotHandleTableTest, GenerationInvalidatesStaleHandles )
 {
-    HandleTable<uint32> table;
-    const ObjectHandle  first = table.insert( 42u );
+    SlotHandleTable<uint32> table;
+    const SlotHandle        first = table.insert( 42u );
     SW_EXPECT_TRUE( first.isValid() );
     uint32* slot = table.get( first );
     SW_ASSERT_NOT_NULL( slot );
@@ -35,7 +35,7 @@ SW_TEST_CASE( HandleTableTest, GenerationInvalidatesStaleHandles )
     SW_EXPECT_EQUAL( 42u, taken );
     SW_EXPECT_TRUE( table.get( first ) == nullptr );
 
-    const ObjectHandle second = table.insert( 99u );
+    const SlotHandle second = table.insert( 99u );
     SW_EXPECT_EQUAL( first.index(), second.index() );
     SW_EXPECT_NOT_EQUAL( first, second );
     SW_EXPECT_TRUE( table.get( first ) == nullptr );
@@ -44,13 +44,13 @@ SW_TEST_CASE( HandleTableTest, GenerationInvalidatesStaleHandles )
     SW_EXPECT_EQUAL( 99u, *reused );
 }
 
-SW_TEST_CASE( HandleTableTest, MultiSlotAndFreeListRecycling )
+SW_TEST_CASE( SlotHandleTableTest, MultiSlotAndFreeListRecycling )
 {
-    HandleTable<int32> table;
-    ObjectHandle       h0 = table.insert( 100 );
-    ObjectHandle       h1 = table.insert( 200 );
-    ObjectHandle       h2 = table.insert( 300 );
-    ObjectHandle       h3 = table.insert( 400 );
+    SlotHandleTable<int32> table;
+    SlotHandle             h0 = table.insert( 100 );
+    SlotHandle             h1 = table.insert( 200 );
+    SlotHandle             h2 = table.insert( 300 );
+    SlotHandle             h3 = table.insert( 400 );
 
     SW_EXPECT_EQUAL( 100, *table.get( h0 ) );
     SW_EXPECT_EQUAL( 200, *table.get( h1 ) );
@@ -67,8 +67,8 @@ SW_TEST_CASE( HandleTableTest, MultiSlotAndFreeListRecycling )
     SW_EXPECT_TRUE( table.get( h2 ) != nullptr );
 
     // 새로운 아이템 삽입 (프리 리스트에서 재활용)
-    ObjectHandle hRecycle1 = table.insert( 500 );
-    ObjectHandle hRecycle2 = table.insert( 600 );
+    SlotHandle hRecycle1 = table.insert( 500 );
+    SlotHandle hRecycle2 = table.insert( 600 );
 
     // 재활용된 슬롯은 인덱스는 같으나 generation이 증가하여 고유함
     SW_EXPECT_TRUE( hRecycle1.index() == h3.index() || hRecycle1.index() == h1.index() );
@@ -79,12 +79,12 @@ SW_TEST_CASE( HandleTableTest, MultiSlotAndFreeListRecycling )
     SW_EXPECT_EQUAL( 600, *table.get( hRecycle2 ) );
 }
 
-SW_TEST_CASE( HandleTableTest, ForEachAndIteration )
+SW_TEST_CASE( SlotHandleTableTest, ForEachAndIteration )
 {
-    HandleTable<int32> table;
-    ObjectHandle       h0 = table.insert( 10 );
-    ObjectHandle       h1 = table.insert( 20 );
-    ObjectHandle       h2 = table.insert( 30 );
+    SlotHandleTable<int32> table;
+    SlotHandle             h0 = table.insert( 10 );
+    SlotHandle             h1 = table.insert( 20 );
+    SlotHandle             h2 = table.insert( 30 );
     table.erase( h1 );
 
     // 1) forEach
@@ -97,7 +97,7 @@ SW_TEST_CASE( HandleTableTest, ForEachAndIteration )
 
     // 2) forEachHandle (non-const)
     uint32 visitedCount{ 0 };
-    table.forEachHandle( [&visitedCount]( ObjectHandle handle, int32& val )
+    table.forEachHandle( [&visitedCount]( SlotHandle handle, int32& val )
     {
         SW_EXPECT_TRUE( handle.isValid() );
         val += 1;
@@ -108,9 +108,9 @@ SW_TEST_CASE( HandleTableTest, ForEachAndIteration )
     SW_EXPECT_EQUAL( 31, *table.get( h2 ) );
 
     // 3) forEachHandle (const)
-    const HandleTable<int32>& constTable = table;
-    int32                     constSum{ 0 };
-    constTable.forEachHandle( [&constSum]( ObjectHandle handle, const int32& val )
+    const SlotHandleTable<int32>& constTable = table;
+    int32                         constSum{ 0 };
+    constTable.forEachHandle( [&constSum]( SlotHandle handle, const int32& val )
     {
         SW_EXPECT_TRUE( handle.isValid() );
         constSum += val;
@@ -118,20 +118,20 @@ SW_TEST_CASE( HandleTableTest, ForEachAndIteration )
     SW_EXPECT_EQUAL( 42, constSum );
 }
 
-SW_TEST_CASE( HandleTableTest, ClearAndInvalidHandleSafety )
+SW_TEST_CASE( SlotHandleTableTest, ClearAndInvalidHandleSafety )
 {
-    HandleTable<int32> table;
-    ObjectHandle       h0 = table.insert( 10 );
-    ObjectHandle       h1 = table.insert( 20 );
+    SlotHandleTable<int32> table;
+    SlotHandle             h0 = table.insert( 10 );
+    SlotHandle             h1 = table.insert( 20 );
 
     // 1) 무효 핸들 접근
-    ObjectHandle invalidHandle{};
+    SlotHandle invalidHandle{};
     SW_EXPECT_TRUE( table.get( invalidHandle ) == nullptr );
     int32 takenVal{ 0 };
     SW_EXPECT_FALSE( table.take( invalidHandle, takenVal ) );
 
     // 2) 범위 밖의 인덱스 핸들
-    ObjectHandle outOfRange = ObjectHandle::make( 9999u, 1u );
+    SlotHandle outOfRange = SlotHandle::make( 9999u, 1u );
     SW_EXPECT_TRUE( table.get( outOfRange ) == nullptr );
 
     // 3) clear
@@ -140,11 +140,11 @@ SW_TEST_CASE( HandleTableTest, ClearAndInvalidHandleSafety )
     SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
 }
 
-SW_TEST_CASE( HandleTableTest, StressGenerationRolloverAndRandomChurn )
+SW_TEST_CASE( SlotHandleTableTest, StressGenerationRolloverAndRandomChurn )
 {
-    HandleTable<int32>   table;
-    constexpr size_t     kCount = 500;
-    vector<ObjectHandle> listHandles;
+    SlotHandleTable<int32> table;
+    constexpr size_t       kCount = 500;
+    vector<SlotHandle>     listHandles;
     listHandles.reserve( kCount );
 
     // 1) 500개 연속 할당
@@ -169,7 +169,7 @@ SW_TEST_CASE( HandleTableTest, StressGenerationRolloverAndRandomChurn )
     }
 
     // 3) 250개 신규 재할당 (프리리스트 재사용 및 Generation 증가 검증)
-    vector<ObjectHandle> listReusedHandles;
+    vector<SlotHandle> listReusedHandles;
     listReusedHandles.reserve( kCount / 2 );
     for ( size_t index = 0; index < kCount / 2; ++index )
     {
@@ -192,27 +192,27 @@ SW_TEST_CASE( HandleTableTest, StressGenerationRolloverAndRandomChurn )
 }
 
 /**
- * @brief [HandleTableTest] 세대는 점유 비트와 절대 섞이지 않는다
+ * @brief [SlotHandleTableTest] 세대는 점유 비트와 절대 섞이지 않는다
  * @details 슬롯의 "점유 중인가" 와 "몇 번째 세대인가" 는 **한 원자값**에 같이 산다 — 따로 두면 락
  *          없이 읽는 `get()` 이 둘을 두 번에 나눠 읽게 되고, 그 사이에 `erase()` 가 끼면
  *          "점유 중 + 옛 세대" 라는 있어서는 안 되는 조합이 보여 **비워지는 중인 값의 주소**가
  *          돌아간다. 합치는 대가로 세대가 31비트가 되었으므로, 최상위 비트를 켠 세대를 들고 온
  *          핸들이 **점유 비트를 세대로 오해받아 통과하지 않는지**를 여기서 못박는다.
  */
-SW_TEST_CASE( HandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
+SW_TEST_CASE( SlotHandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
 {
-    HandleTable<int32> table;
-    const ObjectHandle handle = table.insert( 77 );
+    SlotHandleTable<int32> table;
+    const SlotHandle       handle = table.insert( 77 );
     SW_ASSERT_TRUE( handle.isValid() );
     SW_ASSERT_NOT_NULL( table.get( handle ) );
 
     // 슬롯의 상태 워드에서 점유 비트가 켜지는 자리(최상위)를 세대에 얹은 핸들.
-    const ObjectHandle forgedHigh = ObjectHandle::make( handle.index(), handle.generation() | 0x80000000u );
+    const SlotHandle forgedHigh = SlotHandle::make( handle.index(), handle.generation() | 0x80000000u );
     SW_EXPECT_TRUE_MSG( table.get( forgedHigh ) == nullptr,
                         "최상위 비트를 켠 세대가 점유 비트와 겹쳐 통과했습니다" );
 
     // 최상위 비트만 켠 것도 마찬가지다.
-    const ObjectHandle forgedOnlyBit = ObjectHandle::make( handle.index(), 0x80000000u );
+    const SlotHandle forgedOnlyBit = SlotHandle::make( handle.index(), 0x80000000u );
     SW_EXPECT_TRUE( table.get( forgedOnlyBit ) == nullptr );
 
     // 진짜 핸들은 그대로 읽힌다.
@@ -222,12 +222,12 @@ SW_TEST_CASE( HandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
 
     // 지운 뒤 재사용된 슬롯에도 같은 규칙이 선다.
     table.erase( handle );
-    const ObjectHandle reused = table.insert( 88 );
+    const SlotHandle reused = table.insert( 88 );
     SW_ASSERT_EQUAL( handle.index(), reused.index() );
     SW_EXPECT_TRUE( reused.generation() != handle.generation() );
     SW_EXPECT_TRUE( ( reused.generation() & 0x80000000u ) == 0 );
     SW_EXPECT_TRUE( table.get( handle ) == nullptr );
-    SW_EXPECT_TRUE( table.get( ObjectHandle::make( reused.index(), reused.generation() | 0x80000000u ) ) == nullptr );
+    SW_EXPECT_TRUE( table.get( SlotHandle::make( reused.index(), reused.generation() | 0x80000000u ) ) == nullptr );
     SW_ASSERT_NOT_NULL( table.get( reused ) );
     SW_EXPECT_EQUAL( 88, *table.get( reused ) );
 }

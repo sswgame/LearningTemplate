@@ -1,6 +1,8 @@
 /**
- * @file ObjectHandle.h
+ * @file SlotHandle.h
  * @brief index|generation 불투명 핸들. generation 0은 무효입니다.
+ * @note `SlotHandleTable` 의 슬롯을 가리키는 범용 핸들입니다. RHI 리소스 · 물리 바디 · 공간 분할 키가 이것을 씁니다.
+ *       게임 오브젝트와는 관계가 없습니다. 예전 이름 `ObjectHandle` 은 `GameObject` 쪽 참조로 오해되기 쉬워 바꿨습니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -13,23 +15,23 @@ namespace sw
      * @details 파괴 후 인덱스를 재사용해도 옛 핸들은 세대가 달라 무효입니다.
      *          packed 레이아웃은 (generation << 32) | index 이며, 값 0은 무효입니다.
      */
-    class ObjectHandle
+    class SlotHandle
     {
     public:
         /** @brief 무효 핸들(index 0, generation 0)을 만듭니다. */
-        constexpr ObjectHandle() noexcept = default;
+        constexpr SlotHandle() noexcept = default;
 
         /** @brief 인덱스와 세대로 핸들을 만듭니다. generation 0은 무효입니다. */
-        static constexpr ObjectHandle make( uint32 index, uint32 generation ) noexcept
+        static constexpr SlotHandle make( uint32 index, uint32 generation ) noexcept
         {
-            ObjectHandle handle;
+            SlotHandle handle;
             handle._index      = index;
             handle._generation = generation;
             return handle;
         }
 
         /** @brief packed uint64에서 핸들을 복원합니다. */
-        static constexpr ObjectHandle fromPacked( uint64 packed ) noexcept { return make( static_cast<uint32>( packed ), static_cast<uint32>( packed >> 32 ) ); }
+        static constexpr SlotHandle fromPacked( uint64 packed ) noexcept { return make( static_cast<uint32>( packed ), static_cast<uint32>( packed >> 32 ) ); }
 
         /** @brief 슬롯 인덱스를 반환합니다. */
         [[nodiscard]] constexpr uint32 index() const noexcept { return _index; }
@@ -43,11 +45,11 @@ namespace sw
         /** @brief isValid()와 같습니다. */
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return isValid(); }
 
-        friend constexpr bool operator==( ObjectHandle lhs, ObjectHandle rhs ) noexcept { return lhs._index == rhs._index && lhs._generation == rhs._generation; }
-        friend constexpr bool operator!=( ObjectHandle lhs, ObjectHandle rhs ) noexcept { return ( lhs == rhs ) == false; }
-        friend constexpr bool operator<( ObjectHandle lhs, ObjectHandle rhs ) noexcept { return lhs.packed() < rhs.packed(); }
+        friend constexpr bool operator==( SlotHandle lhs, SlotHandle rhs ) noexcept { return lhs._index == rhs._index && lhs._generation == rhs._generation; }
+        friend constexpr bool operator!=( SlotHandle lhs, SlotHandle rhs ) noexcept { return ( lhs == rhs ) == false; }
+        friend constexpr bool operator<( SlotHandle lhs, SlotHandle rhs ) noexcept { return lhs.packed() < rhs.packed(); }
 
-        friend std::ostream& operator<<( std::ostream& os, ObjectHandle handle )
+        friend std::ostream& operator<<( std::ostream& os, SlotHandle handle )
         {
             os << handle._index << ':' << handle._generation;
             return os;
@@ -60,7 +62,7 @@ namespace sw
 } // namespace sw
 
 template <>
-struct std::hash<sw::ObjectHandle>
+struct std::hash<sw::SlotHandle>
 {
-    size_t operator()( sw::ObjectHandle handle ) const noexcept { return std::hash<uint64>{}( handle.packed() ); }
+    size_t operator()( sw::SlotHandle handle ) const noexcept { return std::hash<uint64>{}( handle.packed() ); }
 };

@@ -128,7 +128,7 @@ namespace sw
         if ( _pPhysics == nullptr || _physicsBody.isValid() == false )
             return;
         _pPhysics->removeBody( _physicsBody );
-        _physicsBody = ObjectHandle{};
+        _physicsBody = SlotHandle{};
     }
 
     void BoxCollider2DComponent::syncPhysicsBody()

@@ -7,7 +7,7 @@
 #include "Core/Concurrency/WorkStealingDeque.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
-#include "Core/Container/HandleTable.h"
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/list.h"
@@ -985,13 +985,13 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
 }
 
 /**
- * @brief [DataStructureTest] HandleTable insert, erase, generation 증가 및 재사용 검증
+ * @brief [DataStructureTest] SlotHandleTable insert, erase, generation 증가 및 재사용 검증
  */
 SW_TEST_CASE( DataStructureTest, HandleTableInsertEraseAndGenerationIncrement )
 {
-    sw::HandleTable<sw::string> table;
-    sw::ObjectHandle            h1 = table.insert( "Entity_1" );
-    sw::ObjectHandle            h2 = table.insert( "Entity_2" );
+    sw::SlotHandleTable<sw::string> table;
+    sw::SlotHandle                  h1 = table.insert( "Entity_1" );
+    sw::SlotHandle                  h2 = table.insert( "Entity_2" );
 
     SW_ASSERT_TRUE( h1.isValid() );
     SW_ASSERT_TRUE( h2.isValid() );
@@ -1003,7 +1003,7 @@ SW_TEST_CASE( DataStructureTest, HandleTableInsertEraseAndGenerationIncrement )
     SW_EXPECT_NULL( table.get( h1 ) );
 
     // 새 엔트리 삽입 시 동일 슬롯 재사용 및 세대 번호(generation) 증가 검증
-    sw::ObjectHandle h3 = table.insert( "Entity_3" );
+    sw::SlotHandle h3 = table.insert( "Entity_3" );
     SW_ASSERT_TRUE( h3.isValid() );
     SW_EXPECT_EQUAL( h1.index(), h3.index() );
     SW_EXPECT_TRUE( h1.generation() < h3.generation() );

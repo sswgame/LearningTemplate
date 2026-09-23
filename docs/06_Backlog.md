@@ -1440,7 +1440,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
   **디바이스가 죽기 전에 통보**하게 했다(위 "언리얼의 FRenderResource 를 들여온다"). 통보가 오므로 CPU 쪽이 핸들을
   들고 있어도 되고, 세대 번호는 사라졌다. 남은 축(참조 카운트 RHI 핸들)은 리소스를 여럿이 나눠 들기 시작할 때.
-- **Mesh · Material 을 `ObjectHandle`(index|generation) 로 들 수 있나.** 가능하지만 지금은 권하지 않는다. 핸들은 **해석해 줄 표**가
+- **Mesh · Material 을 `SlotHandle`(index|generation) 로 들 수 있나.** 가능하지만 지금은 권하지 않는다. 핸들은 **해석해 줄 표**가
   필요하고(MaterialCache 는 있지만 Mesh 는 없다), 렌더 스레드가 그 표를 프레임이 도는 동안 읽어야 하므로 표가 RT 안전해야 하며,
   "핸들이 죽었다" 는 것을 아는 것과 "이 프레임이 끝날 때까지 살아 있어야 한다" 는 것은 다른 문제다 — 후자를 핸들로 풀면
   방금 지운 retire 큐가 다시 생긴다. `shared_ptr` 은 그 둘을 한 번에 준다. 핸들이 맞는 자리는 해석기가 이미 있고 nullptr 로
@@ -1614,6 +1614,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (`ObjectHandle` → `SlotHandle`, `HandleTable` → `SlotHandleTable` — 게임 오브젝트 참조로 읽히던 이름을 실체대로)
+
+`Core/Container/ObjectHandle.h` 는 `HandleTable` 의 "슬롯 번호 + 세대" 핸들이다. RHI 리소스(`RHIHandleTable`) · 물리 바디(`BodyHandle`) ·
+공간 분할(`BVHTree3D` · `SpatialHashGrid2D`) 키가 쓰고, **게임 오브젝트와는 관계가 없다.** 그런데 이름이 `GameObjectPtr` · `ComponentHandle`
+옆에서 오브젝트 참조로 읽혔다. 오브젝트 · 컴포넌트 참조를 핸들로 통일하는 일(같은 날 이어서 한다 — `GameObjectHandle` 이 새로 생긴다)
+앞에서 이름부터 비웠다. 뜻 · 레이아웃 · 텍스트 직렬화 형식(packed uint64)은 그대로이고, 리플렉션 내장 타입 이름만 `SlotHandle` 로
+바뀌었다(그 타입을 `PROPERTY` 로 가진 곳은 없다). 테스트 스위트 `ObjectHandleTest` → `SlotHandleTest`(파일도 `TestSlotHandle.cpp`).
+
+표도 짝이 보이게 `SlotHandleTable`(`SlotHandleTable.h`)로 바꿨다. **두 파일을 합치지 않은 것은 일부러다** — 표 없이 핸들 **값**만 드는
+헤더가 여섯(`BVHTree3D` · `SpatialHashGrid2D` · `CCD` · `BoxCollider2DComponent` · `ReflectGenerated` …)이고, 특히 `ReflectGenerated.h` 는
+생성된 `.gen.cpp` 전부가 include 한다. 합치면 그 전부가 뮤텍스 · `PagedArray` · `vector` 를 끌고 간다. 스위트 `HandleTableTest` →
+`SlotHandleTableTest`. `RHIHandleTable` 은 RHI 쪽 래퍼라 이름을 두었다.
+검증: Debug 빌드 경고 0 · `nogpu` + 린트 27/27.
 
 ### 2026-09-24 (placement new 표기를 `sw_placement_new` 하나로 — 린트 `Style/PlacementNew`)
 

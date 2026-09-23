@@ -288,7 +288,7 @@ namespace sw
         const CellRange range = CellRange::fromAabb( box, kCellSize );
         if ( shouldScanAllBodies( range ) )
         {
-            _bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
+            _bodies.forEachHandle( [&]( SlotHandle handle, const PhysicsBody& body )
             {
                 if ( queryOverlaps( box, layer, body._aabb, body._layer, _layers ) )
                     outListHandle.push_back( handle );
@@ -331,7 +331,7 @@ namespace sw
 
         if ( shouldScanAllBodies( range ) )
         {
-            _bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
+            _bodies.forEachHandle( [&]( SlotHandle handle, const PhysicsBody& body )
             {
                 if ( _layers.shouldCollide( layer, body._layer ) )
                 {

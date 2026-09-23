@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -390,7 +390,7 @@ namespace sw
 
             auto packedWrite = []( const void* pPtr ) -> string
             {
-                const uint64 packed = static_cast<const ObjectHandle*>( pPtr )->packed();
+                const uint64 packed = static_cast<const SlotHandle*>( pPtr )->packed();
                 return sw::to_string( packed );
             };
             auto packedRead = []( void* pPtr, string_view strView ) -> bool
@@ -398,10 +398,10 @@ namespace sw
                 uint64 packed{ 0 };
                 if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
                     return false;
-                *static_cast<ObjectHandle*>( pPtr ) = ObjectHandle::fromPacked( packed );
+                *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
                 return true;
             };
-            ctx.registerTextHandler( hashed_string( "ObjectHandle" ), packedWrite, packedRead );
+            ctx.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
 
             ctx.registerTextHandler(
                 hashed_string( "ComponentHandle" ),

@@ -13,7 +13,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"

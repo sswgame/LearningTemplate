@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
@@ -13,12 +13,12 @@ namespace sw
      */
     struct SweepHit
     {
-        bool         _bHit{ false };
-        float32      _time{ 1.0f };
-        float3       _hitPoint{ 0.0f, 0.0f, 0.0f };
-        float3       _hitNormal{ 0.0f, 0.0f, 0.0f };
-        uint64       _hitObjectId{ 0 };
-        ObjectHandle _hitBody{};
+        bool       _bHit{ false };
+        float32    _time{ 1.0f };
+        float3     _hitPoint{ 0.0f, 0.0f, 0.0f };
+        float3     _hitNormal{ 0.0f, 0.0f, 0.0f };
+        uint64     _hitObjectId{ 0 };
+        SlotHandle _hitBody{};
     };
 
     /**

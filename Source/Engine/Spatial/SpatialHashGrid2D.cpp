@@ -120,7 +120,7 @@ namespace sw
         return cellCount <= 0 || cellCount > kMaxQueryCellCount || cellCount > static_cast<int64>( _mapHandleBound.size() );
     }
 
-    void SpatialHashGrid2D::insert( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
+    void SpatialHashGrid2D::insert( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
     {
         if ( handle.isValid() == false )
             return;
@@ -148,12 +148,12 @@ namespace sw
         } );
     }
 
-    void SpatialHashGrid2D::update( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
+    void SpatialHashGrid2D::update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
     {
         insert( handle, minX, minY, maxX, maxY );
     }
 
-    void SpatialHashGrid2D::remove( ObjectHandle handle )
+    void SpatialHashGrid2D::remove( SlotHandle handle )
     {
         auto boundIt = _mapHandleBound.find( handle );
         if ( boundIt == _mapHandleBound.end() )
@@ -206,7 +206,7 @@ namespace sw
         _listOversizedHandle.clear();
     }
 
-    void SpatialHashGrid2D::queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const
+    void SpatialHashGrid2D::queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
 
@@ -215,7 +215,7 @@ namespace sw
             float2{MathUtil::max( minX, maxX ), MathUtil::max( minY, maxY )}
         };
 
-        forEachCandidateHandle( CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize ), [&]( ObjectHandle handle )
+        forEachCandidateHandle( CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize ), [&]( SlotHandle handle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
             if ( boundIt != _mapHandleBound.end() && queryBounds.intersects( boundIt->second ) )
@@ -226,7 +226,7 @@ namespace sw
         outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
     }
 
-    void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outListHandle ) const
+    void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
 
@@ -234,7 +234,7 @@ namespace sw
         const float2  center{ centerX, centerY };
 
         const CellRange range = CellRange::fromBounds( centerX - radius, centerY - radius, centerX + radius, centerY + radius, _cellSize );
-        forEachCandidateHandle( range, [&]( ObjectHandle handle )
+        forEachCandidateHandle( range, [&]( SlotHandle handle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
             if ( boundIt == _mapHandleBound.end() )
@@ -250,7 +250,7 @@ namespace sw
         outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
     }
 
-    void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
+    void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
 
@@ -264,7 +264,7 @@ namespace sw
 
         // 그리드에 흩뿌리기엔 너무 큰 핸들은 어느 셀에도 없다 — 다른 질의들과 같이 **항상 함께** 본다.
         // 형제들이 그렇듯 여기도 **좁힘을 거친다**: 크다는 이유로 무조건 맞았다고 하지 않는다.
-        for ( const ObjectHandle handle : _listOversizedHandle )
+        for ( const SlotHandle handle : _listOversizedHandle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
             if ( boundIt != _mapHandleBound.end() && doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
@@ -303,7 +303,7 @@ namespace sw
 
             if ( bucketIt != _mapBucket.end() )
             {
-                for ( const ObjectHandle handle : bucketIt->second )
+                for ( const SlotHandle handle : bucketIt->second )
                 {
                     // **좁힌다.** 예전에는 지나간 셀의 핸들을 전부 담아서, 광선이 스치지도 않은
                     // 것이 결과에 들어갔다. 형제 둘(`queryAabb` · `queryCircle`)은 처음부터

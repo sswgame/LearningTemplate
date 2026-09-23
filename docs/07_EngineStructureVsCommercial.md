@@ -78,7 +78,7 @@ RHI → Renderer)는 자가 검사 조각으로 못박았다(`selfTestCases`).
 
 - **컴포넌트가 머티리얼·메시를 든다 (Object → Graphics 저층).** 언리얼의 `UStaticMeshComponent` 가 `UStaticMesh` ·
   `UMaterialInterface` 를 드는 것과 같다. Godot 식 "노드는 RID 만 안다" 로 바꾸면 모든 컴포넌트에 해석 표가 생기고,
-  `shared_ptr` 로 이미 풀어 둔 렌더 패킷 수명 문제가 되살아난다(백로그 1-0 "Mesh · Material 을 ObjectHandle 로").
+  `shared_ptr` 로 이미 풀어 둔 렌더 패킷 수명 문제가 되살아난다(백로그 1-0 "Mesh · Material 을 SlotHandle 로").
 - **렌더러가 컴포넌트를 읽는다 (Graphics/Renderer → Object · Scene).** `GpuSceneBuilder` 가 `PrimitiveRegistry` ·
   `LightRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향이다. 영속 렌더 씬(`FScene`
   모델)은 2026-09 에 재 보고 기각했다(커밋 `c6777ae3`).

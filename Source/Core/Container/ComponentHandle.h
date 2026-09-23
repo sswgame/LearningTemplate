@@ -2,7 +2,7 @@
  * @file ComponentHandle.h
  * @brief 컴포넌트 핸들. 저장은 핸들, T*는 resolve 순간에만 씁니다.
  *
- * @note `ObjectHandle` 과 같은 자리(`Core/Container`)에 둔다. objectId+componentId 두 정수뿐인
+ * @note `SlotHandle` 과 같은 자리(`Core/Container`)에 둔다. objectId+componentId 두 정수뿐인
  *       값 타입이라 Core 밖을 전혀 모른다. 예전에는 `Engine/Object/Component/` 에 있었고, 그
  *       탓에 직렬화기가 이 핸들의 텍스트 핸들러를 등록하려고 Object 를 include 해야 했다.
  */

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Physics/AABB.h"
@@ -16,9 +16,9 @@ namespace sw
     namespace
     {
         /** @brief 질의 결과에 이 핸들이 있는지. */
-        bool containsHandle( const vector<ObjectHandle>& listHandle, ObjectHandle handle )
+        bool containsHandle( const vector<SlotHandle>& listHandle, SlotHandle handle )
         {
-            for ( const ObjectHandle candidate : listHandle )
+            for ( const SlotHandle candidate : listHandle )
             {
                 if ( candidate == handle )
                     return true;
@@ -225,9 +225,9 @@ SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInsertUpdateRemoveAndCount )
 {
-    const sw::ObjectHandle e1 = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle e2 = sw::ObjectHandle::make( 2, 1 );
-    const sw::ObjectHandle e3 = sw::ObjectHandle::make( 3, 1 );
+    const sw::SlotHandle e1 = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle e2 = sw::SlotHandle::make( 2, 1 );
+    const sw::SlotHandle e3 = sw::SlotHandle::make( 3, 1 );
 
     sw::SpatialHashGrid2D grid{ 32.0f };
     SW_EXPECT_NEAR_EQUAL( 32.0f, grid.getCellSize(), 0.001f );
@@ -257,26 +257,26 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInsertUpdateRemoveAndCount )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
 {
-    const sw::ObjectHandle eTarget1 = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle eTarget2 = sw::ObjectHandle::make( 2, 1 );
-    const sw::ObjectHandle eFarAway = sw::ObjectHandle::make( 3, 1 );
+    const sw::SlotHandle eTarget1 = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle eTarget2 = sw::SlotHandle::make( 2, 1 );
+    const sw::SlotHandle eFarAway = sw::SlotHandle::make( 3, 1 );
 
     sw::SpatialHashGrid2D grid{ 64.0f };
     grid.insert( eTarget1, 10.0f, 10.0f, 30.0f, 30.0f );
     grid.insert( eTarget2, 40.0f, 40.0f, 60.0f, 60.0f );
     grid.insert( eFarAway, 500.0f, 500.0f, 520.0f, 520.0f );
 
-    sw::vector<sw::ObjectHandle> listAabb;
+    sw::vector<sw::SlotHandle> listAabb;
     grid.queryAabb( 0.0f, 0.0f, 70.0f, 70.0f, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 
-    sw::vector<sw::ObjectHandle> listCircle;
+    sw::vector<sw::SlotHandle> listCircle;
     grid.queryCircle( 20.0f, 20.0f, 20.0f, listCircle );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listCircle.size() ) );
     if ( listCircle.empty() == false )
         SW_EXPECT_EQUAL( eTarget1, listCircle[0] );
 
-    sw::vector<sw::ObjectHandle> listRay;
+    sw::vector<sw::SlotHandle> listRay;
     grid.queryRay( 0.0f, 0.0f, 1.0f, 1.0f, 120.0f, listRay );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listRay.size() ) );
 }
@@ -292,27 +292,27 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DRayIgnoresBoxesItNeverTouches )
 {
-    const sw::ObjectHandle eOnRay  = sw::ObjectHandle::make( 11, 1 );
-    const sw::ObjectHandle eOffRay = sw::ObjectHandle::make( 12, 1 );
+    const sw::SlotHandle eOnRay  = sw::SlotHandle::make( 11, 1 );
+    const sw::SlotHandle eOffRay = sw::SlotHandle::make( 12, 1 );
 
     // 셀 하나가 64 이므로 아래 둘은 같은 셀(0,0)에 들어간다.
     sw::SpatialHashGrid2D grid{ 64.0f };
     grid.insert( eOnRay, 10.0f, 0.0f, 20.0f, 4.0f );    // y = 2 를 지나는 광선이 맞는다
     grid.insert( eOffRay, 10.0f, 50.0f, 20.0f, 60.0f ); // 같은 셀이지만 한참 위라 안 맞는다
 
-    sw::vector<sw::ObjectHandle> listRay;
+    sw::vector<sw::SlotHandle> listRay;
     grid.queryRay( 0.0f, 2.0f, 1.0f, 0.0f, 100.0f, listRay );
 
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listRay.size() ) );
     SW_EXPECT_TRUE_MSG( listRay[0] == eOnRay, "광선이 스치지도 않은 상자가 결과에 들어왔습니다" );
 
     // 사거리가 짧으면 앞에 있어도 안 닿는다 — t 구간을 실제로 보고 있다는 뜻이다.
-    sw::vector<sw::ObjectHandle> listShort;
+    sw::vector<sw::SlotHandle> listShort;
     grid.queryRay( 0.0f, 2.0f, 1.0f, 0.0f, 5.0f, listShort );
     SW_EXPECT_TRUE_MSG( listShort.empty(), "사거리 밖의 상자가 결과에 들어왔습니다" );
 
     // 반대 방향으로 쏘면 아무것도 없다 — 음수 t 를 걸러야 한다.
-    sw::vector<sw::ObjectHandle> listBack;
+    sw::vector<sw::SlotHandle> listBack;
     grid.queryRay( 0.0f, 2.0f, -1.0f, 0.0f, 100.0f, listBack );
     SW_EXPECT_TRUE_MSG( listBack.empty(), "광선 뒤쪽의 상자가 결과에 들어왔습니다" );
 }
@@ -327,9 +327,9 @@ SW_TEST_CASE( SpatialTest, BVHTree3DInsertUpdateRemoveAndCount )
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bvh.getHandleCount() ) );
     SW_EXPECT_EQUAL( 0, bvh.getTreeHeight() );
 
-    const sw::ObjectHandle e1 = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle e2 = sw::ObjectHandle::make( 2, 1 );
-    const sw::ObjectHandle e3 = sw::ObjectHandle::make( 3, 1 );
+    const sw::SlotHandle e1 = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle e2 = sw::SlotHandle::make( 2, 1 );
+    const sw::SlotHandle e3 = sw::SlotHandle::make( 3, 1 );
 
     const sw::AABB b1{
         { 0.0f,  0.0f,  0.0f},
@@ -373,9 +373,9 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
 {
     sw::BVHTree3D bvh;
 
-    const sw::ObjectHandle eNear1 = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle eNear2 = sw::ObjectHandle::make( 2, 1 );
-    const sw::ObjectHandle eFar   = sw::ObjectHandle::make( 3, 1 );
+    const sw::SlotHandle eNear1 = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle eNear2 = sw::SlotHandle::make( 2, 1 );
+    const sw::SlotHandle eFar   = sw::SlotHandle::make( 3, 1 );
 
     const sw::AABB boxNear1{
         {0.0f, 0.0f, 5.0f},
@@ -392,10 +392,10 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
 
     // 아래의 광선(원점 (1,1,0), +Z)이 **사거리 20 밖에서** 지나가는 상자다. 사거리의 뜻이
     // 어긋나면 이것이 답에 섞여 든다.
-    const sw::ObjectHandle eBeyondRange = sw::ObjectHandle::make( 4, 1 );
-    const sw::AABB         boxBeyondRange{
-                {0.0f, 0.0f, 60.0f},
-                {2.0f, 2.0f, 70.0f}
+    const sw::SlotHandle eBeyondRange = sw::SlotHandle::make( 4, 1 );
+    const sw::AABB       boxBeyondRange{
+              {0.0f, 0.0f, 60.0f},
+              {2.0f, 2.0f, 70.0f}
     };
 
     bvh.insert( eNear1, boxNear1 );
@@ -403,15 +403,15 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
     bvh.insert( eFar, boxFar );
     bvh.insert( eBeyondRange, boxBeyondRange );
 
-    sw::vector<sw::ObjectHandle> listAabb;
-    const sw::AABB               testBox{
-                      {-1.0f, -1.0f,  0.0f},
-                      { 6.0f,  5.0f, 15.0f}
+    sw::vector<sw::SlotHandle> listAabb;
+    const sw::AABB             testBox{
+                    {-1.0f, -1.0f,  0.0f},
+                    { 6.0f,  5.0f, 15.0f}
     };
     bvh.queryAabb( testBox, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 
-    sw::vector<sw::ObjectHandle> listRay;
+    sw::vector<sw::SlotHandle> listRay;
     bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, 20.0f, listRay );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listRay.size() ) );
     if ( listRay.empty() == false )
@@ -419,11 +419,11 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
 
     // 방향이 단위 길이가 아니어도 사거리의 뜻은 같아야 한다 — 예전에는 슬랩 판정이 maxDist 를
     // 방향 벡터의 배수로 써서, 길이 4 짜리 방향이 사거리를 네 배로 늘렸다.
-    sw::vector<sw::ObjectHandle> listLongRay;
+    sw::vector<sw::SlotHandle> listLongRay;
     bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 4.0f }, 20.0f, listLongRay );
     SW_EXPECT_EQUAL( listRay.size(), listLongRay.size() );
 
-    sw::vector<sw::ObjectHandle> listSphere;
+    sw::vector<sw::SlotHandle> listSphere;
     bvh.querySphere( sw::float3{ 1.0f, 1.0f, 6.0f }, 3.0f, listSphere );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listSphere.size() ) );
     if ( listSphere.empty() == false )
@@ -435,16 +435,16 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFiltering )
 {
-    sw::SpatialHashGrid2D  grid( 10.0f );
-    const sw::ObjectHandle h1 = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle h2 = sw::ObjectHandle::make( 2, 1 );
+    sw::SpatialHashGrid2D grid( 10.0f );
+    const sw::SlotHandle  h1 = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle  h2 = sw::SlotHandle::make( 2, 1 );
 
     // h1은 (0,0)부터 (25,25)까지 9개 셀에 걸쳐 삽입
     grid.insert( h1, 0.0f, 0.0f, 25.0f, 25.0f );
     // h2는 (5,5)부터 (8,8)까지 1개 셀
     grid.insert( h2, 5.0f, 5.0f, 8.0f, 8.0f );
 
-    sw::vector<sw::ObjectHandle> listResults;
+    sw::vector<sw::SlotHandle> listResults;
     grid.queryAabb( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
 
     // 중복 없이 h1, h2 총 2개만 반환되어야 함
@@ -525,8 +525,8 @@ SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
 {
-    const sw::ObjectHandle eHuge  = sw::ObjectHandle::make( 1, 1 );
-    const sw::ObjectHandle eSmall = sw::ObjectHandle::make( 2, 1 );
+    const sw::SlotHandle eHuge  = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle eSmall = sw::SlotHandle::make( 2, 1 );
 
     sw::SpatialHashGrid2D grid{ 2.0f };
     // 101 x 101 = 10,201 셀 — kMaxHandleCellCount(1024) 를 훌쩍 넘는다.
@@ -538,7 +538,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getActiveBucketCount() ) );
 
     // 셀에 없어도 세 질의 모두가 큰 핸들을 본다.
-    sw::vector<sw::ObjectHandle> listHandle;
+    sw::vector<sw::SlotHandle> listHandle;
     grid.queryAabb( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eHuge ) );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eSmall ) );
@@ -565,7 +565,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
 {
-    const sw::ObjectHandle eInfinite = sw::ObjectHandle::make( 1, 1 );
+    const sw::SlotHandle eInfinite = sw::SlotHandle::make( 1, 1 );
 
     sw::SpatialHashGrid2D grid{ 4.0f };
     const sw::AABB2D      infinite = sw::AABB2D::infinite();
@@ -574,7 +574,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getHandleCount() ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
 
-    sw::vector<sw::ObjectHandle> listHandle;
+    sw::vector<sw::SlotHandle> listHandle;
     grid.queryAabb( 0.0f, 0.0f, 1.0f, 1.0f, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
 
@@ -616,9 +616,9 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
     BLOCK( "BVHTree3D" )
     {
         sw::BVHTree3D bvh;
-        bvh.insert( sw::ObjectHandle::make( 1, 1 ), box );
+        bvh.insert( sw::SlotHandle::make( 1, 1 ), box );
 
-        sw::vector<sw::ObjectHandle> listHit;
+        sw::vector<sw::SlotHandle> listHit;
         bvh.queryAabb( probe, listHit );
         SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
 
@@ -701,16 +701,16 @@ SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
           sw::float3{x - 0.5f, y - 0.5f, z - 0.5f},
           sw::float3{x + 0.5f, y + 0.5f, z + 0.5f}
  }; };
-    tree.insert( sw::ObjectHandle::make( 1, 1 ), makeBox( 0.0f, 0.0f, 0.0f ) );    // 정면
-    tree.insert( sw::ObjectHandle::make( 2, 1 ), makeBox( 0.0f, 0.0f, 20.0f ) );   // 카메라 뒤
-    tree.insert( sw::ObjectHandle::make( 3, 1 ), makeBox( 60.0f, 0.0f, 0.0f ) );   // 옆으로 멀리
-    tree.insert( sw::ObjectHandle::make( 4, 1 ), makeBox( 0.0f, 0.0f, -500.0f ) ); // 원평면 너머
+    tree.insert( sw::SlotHandle::make( 1, 1 ), makeBox( 0.0f, 0.0f, 0.0f ) );    // 정면
+    tree.insert( sw::SlotHandle::make( 2, 1 ), makeBox( 0.0f, 0.0f, 20.0f ) );   // 카메라 뒤
+    tree.insert( sw::SlotHandle::make( 3, 1 ), makeBox( 60.0f, 0.0f, 0.0f ) );   // 옆으로 멀리
+    tree.insert( sw::SlotHandle::make( 4, 1 ), makeBox( 0.0f, 0.0f, -500.0f ) ); // 원평면 너머
 
     const sw::float4x4 view = sw::float4x4::createLookAt( sw::float3{ 0.0f, 0.0f, 5.0f }, sw::float3::Zero, sw::float3::Up );
     const sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
 
-    sw::vector<sw::ObjectHandle> listVisible;
+    sw::vector<sw::SlotHandle> listVisible;
     tree.queryFrustum( view * proj, listVisible );
     SW_ASSERT_TRUE( listVisible.size() == 1 );
-    SW_EXPECT_TRUE( listVisible[0] == sw::ObjectHandle::make( 1, 1 ) );
+    SW_EXPECT_TRUE( listVisible[0] == sw::SlotHandle::make( 1, 1 ) );
 }

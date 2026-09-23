@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 

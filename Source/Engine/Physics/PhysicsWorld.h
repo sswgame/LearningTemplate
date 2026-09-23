@@ -2,7 +2,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/HandleTable.h"
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -27,7 +27,7 @@ namespace sw
     class SW_API PhysicsWorld
     {
     public:
-        using BodyHandle = ObjectHandle;
+        using BodyHandle = SlotHandle;
 
         /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. */
         PhysicsWorld() = default;
@@ -182,7 +182,7 @@ namespace sw
 
     private:
         mutable std::shared_mutex                                   _mutex;
-        HandleTable<PhysicsBody>                                    _bodies;
+        SlotHandleTable<PhysicsBody>                                _bodies;
         CollisionLayers                                             _layers;
         unordered_map<CellCoord, vector<BodyHandle>, CellCoordHash> _mapGrid;
         /** @brief 그리드에 넣기엔 너무 큰 바디들. 그리드로 가는 질의가 **항상 함께** 봅니다. */

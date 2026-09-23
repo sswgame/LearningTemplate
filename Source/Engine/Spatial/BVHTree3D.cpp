@@ -26,7 +26,7 @@ namespace sw
              */
             template <typename OverlapFn>
             static void collectOverlapping( const vector<BVHNode3D>& listNode, int32 rootIndex, OverlapFn&& overlaps,
-                                            vector<ObjectHandle>& outListHandle )
+                                            vector<SlotHandle>& outListHandle )
             {
                 if ( rootIndex == invalid_index::kInt32 )
                     return;
@@ -118,12 +118,12 @@ namespace sw
             _listNode[static_cast<size_t>( nodeIndex )]._parent     = invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._leftChild  = invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._rightChild = invalid_index::kInt32;
-            _listNode[static_cast<size_t>( nodeIndex )]._handle     = ObjectHandle{};
+            _listNode[static_cast<size_t>( nodeIndex )]._handle     = SlotHandle{};
             _listFreeNode.push_back( nodeIndex );
         }
     }
 
-    int32 BVHTree3D::insert( ObjectHandle handle, const AABB& bounds )
+    int32 BVHTree3D::insert( SlotHandle handle, const AABB& bounds )
     {
         if ( handle.isValid() == false )
             return invalid_index::kInt32;
@@ -142,12 +142,12 @@ namespace sw
         return leafIndex;
     }
 
-    void BVHTree3D::update( ObjectHandle handle, const AABB& bounds )
+    void BVHTree3D::update( SlotHandle handle, const AABB& bounds )
     {
         insert( handle, bounds );
     }
 
-    void BVHTree3D::remove( ObjectHandle handle )
+    void BVHTree3D::remove( SlotHandle handle )
     {
         auto it = _mapHandleToNode.find( handle );
         if ( it == _mapHandleToNode.end() )
@@ -442,7 +442,7 @@ namespace sw
         return nodeIndex;
     }
 
-    void BVHTree3D::queryAabb( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const
+    void BVHTree3D::queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
     {
         // **먼저 비운다.** 이 네 질의는 결과를 덧붙이기만 했고, 게다가 트리가 비면 아무것도 건드리지
         // 않고 돌아갔다 — 호출부가 벡터 하나를 돌려 쓰면 지난 질의의 답이 이번 답인 척 남는다.
@@ -453,7 +453,7 @@ namespace sw
                                                outListHandle );
     }
 
-    void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
+    void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
         if ( maxDist <= 0.0f )
@@ -479,7 +479,7 @@ namespace sw
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, rayIntersects, outListHandle );
     }
 
-    void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const
+    void BVHTree3D::querySphere( const float3& center, float32 radius, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
         if ( radius <= 0.0f )
@@ -494,7 +494,7 @@ namespace sw
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, sphereIntersects, outListHandle );
     }
 
-    void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const
+    void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
         // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다 — 예전에는 여기에 같은 식의 사본이 있었다.

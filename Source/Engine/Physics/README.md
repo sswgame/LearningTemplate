@@ -84,7 +84,7 @@ sw::SweepHit hit{};
 if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 {
     // 가장 먼저 부딪힌 바디 핸들 및 오브젝트
-    sw::ObjectHandle hitBody = hit._hitBody;
+    sw::SlotHandle hitBody = hit._hitBody;
     uint64 hitObjectId = hit._hitObjectId;
 }
 ```
