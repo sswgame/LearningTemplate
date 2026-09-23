@@ -17,8 +17,8 @@ namespace sw
     struct ParserUtil
     {
         /**
-         * @brief 출력 디렉터리 + stem + 확장자(.gen.cpp / .gen.h)
-         * @note FileUtil::normalizePath는 Windows에서 소문자화하므로 CMake OUTPUT과 맞추기 위해 사용하지 않음
+         * @brief 출력 디렉터리 + stem + 확장자(.gen.cpp / .gen.h)로 생성 경로를 만듭니다.
+         * @note FileUtil::normalizePath 는 Windows 에서 소문자로 바꾸므로, CMake OUTPUT 과 맞추려고 쓰지 않습니다.
          */
         static string makeGeneratedPath( const string& outputDir, const string& sourceFilePath,
                                          const string_view extension )

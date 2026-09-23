@@ -103,7 +103,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct jsonKeyConstants
     {
-        // Nested schema
+        // 중첩 스키마
         inline static constexpr const utf8* kParserArgsSection = "parser_args";
         inline static constexpr const utf8* kArgsDefault       = "default";
         inline static constexpr const utf8* kArgsPlatform      = "platform";

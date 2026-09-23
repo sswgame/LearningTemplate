@@ -17,7 +17,7 @@ namespace sw
     // 1) AstVisitor — CXTranslationUnit 순회, REFLECT/ENUM 수집
     // ------------------------------------------------------------------------------
     /**
-     * @brief libclang CXTranslationUnit을 순회하여 REFLECT, ENUM 등을 수집하는 클래스
+     * @brief libclang CXTranslationUnit 을 순회하며 REFLECT, ENUM 등을 수집합니다.
      */
     class AstVisitor
     {

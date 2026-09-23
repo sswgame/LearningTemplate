@@ -1,6 +1,6 @@
 /**
  * @file AnnotationMeta.h
- * @brief AnnotationMeta.txt — REFLECT/PROPERTY/FUNCTION 토큰 → 필드 바인딩.
+ * @brief AnnotationMeta.txt 를 읽어 REFLECT/ENUM/PROPERTY/FUNCTION 토큰을 필드 바인딩으로 바꿉니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,7 +12,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) parse — AnnotationMeta.txt 토큰 → Kind/필드 바인딩
     // ------------------------------------------------------------------------------
-    /** @brief 어노테이션 토큰이 가리키는 종류와 대상 필드. */
+    /** @brief 어노테이션 토큰이 가리키는 종류와 대상 필드입니다. */
     struct AnnotationBinding
     {
         enum class Kind : uint8
@@ -54,7 +54,7 @@ namespace sw
         /** @brief 파일이 로드되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
-        /** @brief 단독 플래그/넷롤 토큰을 조회합니다 (scope: REFLECT|PROPERTY|FUNCTION). */
+        /** @brief 단독 플래그 · 넷 역할 토큰을 조회합니다(scope: REFLECT|ENUM|PROPERTY|FUNCTION). */
         const AnnotationBinding* findBare( const string_view scope, const string_view token ) const;
 
         /** @brief key= 쪽 바인딩을 조회합니다. */

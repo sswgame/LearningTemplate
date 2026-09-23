@@ -1,8 +1,9 @@
 /**
  * @file AnnotationApply.h
- * @brief REFLECT/PROPERTY/FUNCTION/ENUM 어노테이션 문자열 → Parsed* 필드 적용
- * @details AnnotationMeta.txt 별칭을 정규 필드명으로 바꾼 뒤, 여기 테이블이 실제 멤버에 값을 넣습니다.
- *          새 PROPERTY 필드를 추가하면: AnnotationMeta.txt + 이 모듈의 apply 테이블을 함께 수정하세요.
+ * @brief REFLECT/PROPERTY/FUNCTION/ENUM 어노테이션 문자열을 Parsed* 필드에 적용합니다.
+ * @details AnnotationMeta.txt 의 별칭을 정규 필드명으로 바꾼 뒤, 필드 테이블이 실제 멤버에 값을 넣습니다.
+ *          새 필드를 추가하려면 PredefinedAnnotationField.xxx 에 한 줄을 더하고(대상 멤버는 ParsedReflection.h),
+ *          별칭이 필요하면 AnnotationMeta.txt 에 적으십시오.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

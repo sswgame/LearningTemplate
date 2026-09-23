@@ -1,6 +1,6 @@
 /**
  * @file CodeGenerator.h
- * @brief 파싱된 타입/열거형 메타데이터로부터 .gen.cpp 생성 (골격=.tpl, 분기=CodeEmit)
+ * @brief 파싱한 타입 · 열거형 메타데이터로 .gen.cpp 를 만듭니다(골격은 .tpl, 분기는 CodeEmit).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -30,7 +30,6 @@ namespace sw
         bool generate();
         /** @brief 생성된 .gen.cpp 경로를 반환합니다. */
         const string& getOutputFilePath() const { return _outputFilePath; }
-        /** @brief 생성된 .gen.h 경로를 반환합니다. */
 
     private:
         // ------------------------------------------------------------------------------
@@ -51,7 +50,7 @@ namespace sw
         /** @brief 메서드 호출용 invoker 람다를 출력합니다. */
         void emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
                                 const string& retType, const string& callArgs ) const;
-        /** @brief ReflectTypeTraits 특화를 출력합니다. */
+        /** @brief ReflectTypeTraits 특수화를 출력합니다. */
         void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
         /** @brief StaticType / getTypeInfo 접근자를 출력합니다. */
         void emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;

@@ -98,7 +98,7 @@ namespace sw
 
     string TypeNameMap::normalize( const string& clangSpelling ) const
     {
-        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
         // 재귀 호출마다 string 이 복사된다(이 함수는 템플릿 인자마다 자기를 다시 부른다).
         string result = TypeNameMapInternal::stripClangDecorations( clangSpelling );
         if ( result.empty() )
@@ -150,7 +150,7 @@ namespace sw
             return result;
         }
 
-        // 5) scopeLeaf fallback
+        // 5) 마지막으로 scopeLeaf 로 다시 찾는다
         const string_view bare = ParserUtil::scopeLeaf( result );
         if ( bare != result )
         {

@@ -26,9 +26,9 @@ namespace sw
             static constexpr int32 kMaxNestedContainerDepth = 3;
 
             /**
-             * @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰.
-             * @note 표식 문자열은 **설정이 정본**이다(`_emitSourcePathMarker`) — 쓰는 쪽(FileHeader.tpl)
-             *       과 읽는 쪽(여기 · `ReflectionParser::hasMatchingSourcePath`)이 같은 값을 봐야 한다.
+             * @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰입니다.
+             * @note 표식 문자열의 정본은 **설정**입니다(`_emitSourcePathMarker`). 쓰는 쪽(FileHeader.tpl)과 읽는 쪽(여기 ·
+             *       `ReflectionParser::hasMatchingSourcePath`)이 같은 값을 봐야 합니다.
              */
             static string_view readRecordedSourcePath( string_view generatedContent )
             {
@@ -313,12 +313,12 @@ namespace sw
                 FileUtil::readTextFile( _outputFilePath, existingContent );
 
                 // **다른 헤더가 이미 이 이름으로 썼는가.** 생성 파일 이름은 소스의 **파일 이름만**
-                // 으로 짓는다(`ParserUtil::makeGeneratedPath`) — 그래서 한 모듈 안에 같은 이름의
+                // 으로 짓는다(`ParserUtil::makeGeneratedPath`). 그래서 한 모듈 안에 같은 이름의
                 // 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을 덮고, **앞 헤더의 타입들은 아무 말
                 // 없이 등록되지 않는다.** 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로 나타나서
                 // 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
                 //
-                // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다 — 그러지
+                // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지
                 // 않으면 파일을 옮길 때마다 빌드가 막힌다.
                 const string_view recordedSource = CodeGeneratorInternal::readRecordedSourcePath( existingContent );
                 if ( recordedSource.empty() == false &&
@@ -814,12 +814,12 @@ namespace sw
 
         if ( bNeedFlags )
         {
-            // 비트 연산자(|, &, ^, ~, |=, &=, ^=)와 hasFlag/hasAnyFlag/setFlag/clearFlag는 enum마다
-            // 코드젠하지 않고 Core/Common/EnumUtil.h의 제네릭 sw::IsBitFlagEnum<E> 트레이트 + 전역
-            // 스코프 SFINAE 연산자로 통일합니다 — 로직이 모든 enum에서 동일해 타입별 코드젠이 필요
-            // 없습니다. 여기서는 그 트레이트를 opt-in 하는 한 줄짜리 명시적 특수화만 생성합니다.
+            // 비트 연산자(|, &, ^, ~, |=, &=, ^=)와 hasFlag/hasAnyFlag/setFlag/clearFlag 는 enum 마다
+            // 코드젠하지 않고, Core/Common/EnumUtil.h 의 제네릭 sw::IsBitFlagEnum<E> 트레이트와 전역
+            // 스코프 SFINAE 연산자로 통일한다. 로직이 모든 enum 에서 같아 타입별 코드젠이 필요
+            // 없다. 여기서는 그 트레이트를 켜는(opt-in) 한 줄짜리 명시적 특수화만 생성한다.
             //
-            // **열거형을 전방 선언한 뒤 특수화한다.** 원본 헤더를 include 하지 않는다 — 이 파일을
+            // **열거형을 전방 선언한 뒤 특수화한다.** 원본 헤더를 include 하지 않는다. 이 파일을
             // 모으는 우산(`FlagOps.gen.h`)이 타깃 전 TU 에 `/FI` 로 들어가므로, 여기서 원본 헤더를
             // 들이면 그 헤더가 끌어오는 것 전부가 **모든 TU 에 이미 있는 이름**이 되어 다른 헤더들의
             // include 누락을 통째로 가린다(2026-09-18 에 Engine 헤더 230 개 중 5 개가 그렇게 숨어
@@ -835,12 +835,12 @@ namespace sw
                 {
                     // 클래스 안의 열거형은 밖에서 전방 선언할 수 없어 **비트 연산자 트레이트만**
                     // 코드젠하지 못한다. 등록부의 비트플래그 표시(`EnumInfo::_bIsBitFlag`)는 그와
-                    // 무관하게 유효하다 — 인스펙터와 문자열 변환은 연산자를 쓰지 않는다. 그래서
+                    // 무관하게 유효하다. 인스펙터와 문자열 변환은 연산자를 쓰지 않는다. 그래서
                     // 여기서 멈추지 않고 연산자만 건너뛴다.
                     //
                     // 예전에는 여기서 코드젠을 실패시켰고, 그 탓에 중첩 열거형은 `ENUM( Flags )`
                     // 를 **쓸 수가 없어** 값 모양 자동 감지에 기대야 했다. 그 자동 감지가 평범한
-                    // 연속 열거형까지 플래그로 만들던 장본인이다. `|`·`&` 를 쓰면 그 자리에서
+                    // 연속 열거형까지 플래그로 만들던 장본인이다. `|` · `&` 를 쓰면 그 자리에서
                     // 컴파일이 막히므로 조용히 잘못될 여지는 없다.
                     SW_LOG_WARNING( "ENUM(Flags) 가 클래스 안에 있어 비트 연산자는 코드젠하지 않습니다 "
                                     "(등록부의 비트플래그 표시는 유지): %#",

@@ -28,11 +28,11 @@ namespace sw
     namespace
     {
         /**
-         * @brief 이 도구의 CLI 인자 한 벌.
-         * @details 이 번역 단위 밖에서 쓰지 않는다. 예전에는 헬퍼들과 함께 sw 네임스페이스에 그냥
-         *          놓여 있었는데, `CommandLineArgs` / `isUpToDate` / `isPlaceholder` 처럼 흔한 이름이
-         *          외부 링키지를 갖는다는 뜻이라 유니티 빌드에서 다른 파일과 부딪힐 수 있다
-         *          (AGENTS.md "Helpers: Util vs Internal"). 나머지 파서 파일들은 이미 이 형태다.
+         * @brief 이 도구의 CLI 인자 한 벌입니다.
+         * @details 이 번역 단위 밖에서는 쓰지 않습니다. 예전에는 도우미들과 함께 sw 네임스페이스에 그냥 놓여 있었는데,
+         *          `CommandLineArgs` / `isUpToDate` / `isPlaceholder` 처럼 흔한 이름이 외부 링키지를 갖는다는 뜻이라 유니티
+         *          빌드에서 다른 파일과 부딪힐 수 있었습니다(AGENTS.md "Helpers: Util vs Internal"). 나머지 파서 파일들은
+         *          이미 이 형태입니다.
          */
         struct CommandLineArgs
         {
@@ -49,7 +49,7 @@ namespace sw
             uint64                 _annotationMetaTimestamp = 0;
         };
 
-        /** @brief ReflectionParser.cpp 전용 헬퍼 — main 의 단계 1~5 를 구성하는 조각들. */
+        /** @brief ReflectionParser.cpp 전용 도우미입니다. main 의 단계 1~5 를 이루는 조각들입니다. */
         struct ReflectionParserInternal
         {
             /** @brief --input/--output/--include/--builtins 등 CLI를 채웁니다. */
@@ -135,9 +135,9 @@ namespace sw
 
             /**
              * @brief 산출물 머리말에 적힌 원본 경로가 지금 입력과 같은지 확인합니다.
-             * @details 헤더를 **옮기기만** 하면 내용도 mtime 도 그대로라 타임스탬프 비교는 "최신" 이라고 답한다.
-             *          그런데 .gen.cpp 는 원본을 절대경로로 #include 하므로, 그대로 두면 없는 경로를 가리켜
-             *          빌드가 깨진다. 머리말의 경로를 대조해 이동을 잡는다.
+             * @details 헤더를 **옮기기만** 하면 내용도 mtime 도 그대로라 타임스탬프 비교는 "최신" 이라고 답합니다. 그런데
+             *          .gen.cpp 는 원본을 절대 경로로 #include 하므로, 그대로 두면 없는 경로를 가리켜 빌드가 깨집니다. 머리말의
+             *          경로를 대조해 이동을 잡습니다.
              */
             static bool hasMatchingSourcePath( const string_view existingGen, const sw::string& inputFile )
             {
@@ -157,9 +157,9 @@ namespace sw
             }
 
             /**
-             * @brief 이 파서 실행 파일 자신의 타임스탬프. 한 번만 재고 캐시합니다.
-             * @details **도구도 입력이다.** 산출물의 모양을 정하는 것은 템플릿만이 아니라 그것을
-             *          조립하는 이 코드(`AstVisitor` · `CodeGenerator` · `AnnotationApply`)다.
+             * @brief 이 파서 실행 파일 자신의 타임스탬프입니다. 한 번만 재고 캐시합니다.
+             * @details **도구도 입력입니다.** 산출물의 모양을 정하는 것은 템플릿만이 아니라 그것을 조립하는 이 코드
+             *          (`AstVisitor` · `CodeGenerator` · `AnnotationApply`)입니다.
              */
             static uint64 getParserTimestamp()
             {
@@ -188,14 +188,14 @@ namespace sw
                 if ( commandLineArgs._maxTemplateTimestamp > 0 && genTime < commandLineArgs._maxTemplateTimestamp )
                     return false;
                 // **파서 자신도 본다.** 예전에는 템플릿(.tpl)과 builtins 의 시간만 보고 정작 그것을
-                // 조립하는 실행 파일은 보지 않았다 — 그래서 `CodeGenerator` 나 `AstVisitor` 를 고쳐
+                // 조립하는 실행 파일은 보지 않았다. 그래서 `CodeGenerator` 나 `AstVisitor` 를 고쳐
                 // 다시 빌드해도 산출물이 **예전 모양 그대로** 남았다(CMake 는 exe 를 DEPENDS 에 걸어
                 // 파서를 다시 부르지만, 파서가 스스로 "최신" 이라며 건너뛰었다. 실측으로 확인했다).
                 // 그 상태에서 일부 파일만 다른 이유로 다시 만들어지면 **두 모양이 섞인다.**
                 if ( genTime < getParserTimestamp() )
                     return false;
 
-                // 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)
+                // 타임스탬프가 최신일 때만 플레이스홀더인지 검사한다(앞부분 수 KB 만 읽어 I/O 를 줄인다)
                 constexpr uint32  kPlaceholderProbeBytes = 4096;
                 sw::vector<uint8> genHeadBytes;
                 sw::vector<uint8> headerHeadBytes;
@@ -215,7 +215,8 @@ namespace sw
             }
 
             /**
-             * @brief 소스 파일 텍스트에서 리플렉션 핵심 매크로 키워드가 존재하는지 SIMD 벡터화 스캔으로 고속 검사합니다.
+             * @brief 소스 텍스트에 리플렉션 핵심 매크로 키워드(REFLECT · ENUM · PROPERTY · FUNCTION)가 있는지 검사합니다.
+             * @details 첫 글자 후보를 `find_first_of` 로 건너뛰며 비교합니다.
              */
             static bool hasReflectionKeywords( string_view source )
             {
@@ -239,9 +240,9 @@ namespace sw
             }
 
             /**
-             * @brief 파일 앞부분에서 REFLECT/ENUM/PROPERTY/FUNCTION 키워드를 검사합니다.
+             * @brief 파일 전체를 읽어 REFLECT/ENUM/PROPERTY/FUNCTION 키워드가 있는지 검사합니다.
              *
-             * [목적]: 리플렉션 매크로가 전혀 없는 헤더는 무거운 libclang 파싱을 아예 건너뛰어 빌드 시간을 크게 단축합니다.
+             * 목적: 리플렉션 매크로가 전혀 없는 헤더는 무거운 libclang 파싱을 아예 건너뛰어 빌드 시간을 크게 줄입니다.
              */
             static bool loadSourceIfHasReflectionKeywords( const sw::string& path, sw::string& outContent )
             {
@@ -335,12 +336,11 @@ namespace sw
 
             /**
              * @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다.
-             * @details 이 파일은 타깃 전 TU 에 `/FI` 로 강제 include 된다 — 트레이트는 열거형이
-             *          보이는 곳이면 어디서나 함께 보여야 하기 때문이다. 그래서 **원본 헤더는 절대
-             *          들이지 않는다.** 예전에는 `#include "<원본>.h"` 와 `#include "<원본>.gen.h"` 를
-             *          쌍으로 적었고, 그 바람에 Graphics 헤더 넷(다시 `Engine/Common/Common.h` 까지)이
-             *          모든 TU 에 들어가 다른 헤더들의 include 누락을 통째로 가렸다. 지금은 `.gen.h`
-             *          자신이 열거형을 전방 선언하므로 그것 하나만 모으면 된다.
+             * @details 이 파일은 타깃의 모든 TU 에 `/FI` 로 강제 include 됩니다. 트레이트는 열거형이 보이는 곳이면 어디서나
+             *          함께 보여야 하기 때문입니다. 그래서 **원본 헤더는 절대 들이지 않습니다.** 예전에는 `#include "<원본>.h"` 와
+             *          `#include "<원본>.gen.h"` 를 쌍으로 적었고, 그 바람에 Graphics 헤더 넷(다시 `Engine/Common/Common.h` 까지)이
+             *          모든 TU 에 들어가 다른 헤더들의 include 누락을 통째로 가렸습니다. 지금은 `.gen.h` 자신이 열거형을 전방
+             *          선언하므로 그것 하나만 모으면 됩니다.
              */
             static bool emitFlagOpsUmbrella( const CommandLineArgs& commandLineArgs )
             {
@@ -392,10 +392,10 @@ namespace sw
         };
 
         /**
-         * @brief main 이 어디서 빠져나가든 로거를 내린다.
-         * @details 예전엔 `logger->shutdown(); return 1;` 을 조기 반환마다 손으로 적었다(11곳).
-         *          로거는 비동기라 내리지 않으면 마지막 메시지가 유실되는데, 실패 경로일수록 그
-         *          메시지가 필요하다. 새 조기 반환을 넣는 사람이 잊을 수 있는 구조였다.
+         * @brief main 이 어디서 빠져나가든 로거를 내립니다.
+         * @details 예전에는 `logger->shutdown(); return 1;` 을 조기 반환마다 손으로 적었습니다(11곳). 로거는 비동기라
+         *          내리지 않으면 마지막 메시지를 잃는데, 실패 경로일수록 그 메시지가 필요합니다. 새 조기 반환을 넣는 사람이
+         *          잊을 수 있는 구조였습니다.
          */
         class LoggerScope
         {
@@ -417,20 +417,20 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief clang 설정·builtins·템플릿을 로드한 뒤 입력을 병렬 파싱합니다.
+ * @brief clang 설정 · builtins · 템플릿을 로드한 뒤 입력을 병렬로 파싱합니다.
  *
- * 초심자용 단계:
+ * 단계:
  *  1) CLI 파싱
  *  2) builtins-gen 전용 모드면 여기서 종료
  *  3) builtins / AnnotationMeta / Templates 로드
  *  4) ParserContext 공유 clang 설정 1회 로드
- *  5) 타임스탬프 캐시 후 TaskManager 워커 풀에서 processInputFile
+ *  5) 타임스탬프를 캐시한 뒤 TaskManager 워커 풀에서 processInputFile
  */
 int32 main( int32 argc, utf8* argv[] )
 {
     const sw::LoggerScope loggerScope;
 
-    // 파서 한 번 실행이 쓰는 표들 — 여기가 소유자다. 예전에는 넷이 각자 instance() 싱글턴이라
+    // 파서 한 번 실행이 쓰는 표들이다. 여기가 소유자다. 예전에는 넷이 각자 instance() 싱글턴이라
     // 채우는 곳과 읽는 곳이 호출 그래프에 드러나지 않았다.
     sw::ParserSession session;
 
@@ -466,7 +466,7 @@ int32 main( int32 argc, utf8* argv[] )
         return ok ? 0 : 1;
     }
 
-    // 출력 디렉터리를 인클루드 경로 최상단에 1회 선행 배치 (스레드별 벡터 복사/삽입 제거)
+    // 출력 디렉터리를 include 경로 맨 앞에 한 번만 넣는다(스레드마다 벡터를 복사 · 삽입하지 않도록)
     if ( commandLineArgs._outputDir.empty() == false )
         commandLineArgs._listIncludePath.insert( commandLineArgs._listIncludePath.begin(), commandLineArgs._outputDir );
 
@@ -511,7 +511,7 @@ int32 main( int32 argc, utf8* argv[] )
         return 1;
     }
 
-    // clang 공통 인자 (parser_config) 1회 캐시
+    // clang 공통 인자(parser_config)를 한 번 읽어 캐시한다
     if ( sw::ParserContext::ensureSharedConfig() == false )
         return 1;
 

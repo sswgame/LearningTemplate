@@ -559,7 +559,7 @@ namespace sw
 
         BLOCK( "Parse Translation Unit" )
         {
-            // DetailedPreprocessingRecord는 annotate 매크로 경로에서 불필요하며 TU 비용이 큼
+            // DetailedPreprocessingRecord 는 annotate 매크로 경로에 필요 없고 TU 비용만 크다
             constexpr uint32 kParseFlags =
                 CXTranslationUnit_SkipFunctionBodies |
                 CXTranslationUnit_Incomplete;

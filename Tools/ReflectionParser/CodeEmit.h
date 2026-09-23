@@ -1,6 +1,6 @@
 /**
  * @file CodeEmit.h
- * @brief 들여쓰기를 유지하며 .gen.cpp 를 출력하는 ReflectionParser 헬퍼.
+ * @brief 들여쓰기를 유지하며 .gen.cpp 를 출력하는 ReflectionParser 도우미입니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

@@ -30,7 +30,7 @@ namespace sw
             // A) clang CXString / AnnotateAttr 검색 / 소스 폴백
             // ------------------------------------------------------------------------------
             /**
-             * @brief Clang 내부 문자열 객체(CXString)를 C++ 표준 string으로 복사 후 안전하게 해제합니다.
+             * @brief libclang 문자열(CXString)을 string 으로 복사한 뒤 해제합니다.
              * @param cxStr libclang이 반환한 CXString
              * @return sw::string 변환 결과
              */
@@ -45,7 +45,7 @@ namespace sw
             }
 
             /**
-             * @brief CXString을 힙 할당 없이 즉시 string_view로 비교 후 안전하게 해제합니다.
+             * @brief CXString 을 힙 할당 없이 string_view 로 비교한 뒤 해제합니다.
              */
             static bool cxStringEquals( CXString cxStr, string_view target )
             {
@@ -56,7 +56,7 @@ namespace sw
             }
 
             /**
-             * @brief `CXCursor_AnnotateAttr` 노드에서 특정 접두사를 검색하기 위한 컨텍스트 DTO
+             * @brief `CXCursor_AnnotateAttr` 노드에서 특정 접두사를 찾을 때 쓰는 검색 상태입니다.
              */
             struct AnnotationSearch
             {
@@ -75,7 +75,7 @@ namespace sw
             };
 
             /**
-             * @brief AST 자식 커서들을 순회하며 `CXCursor_AnnotateAttr` 속성이 지정한 접두사를 포함하는지 검사하는 콜백
+             * @brief AST 자식 커서를 순회하며 `CXCursor_AnnotateAttr` 가 주어진 접두사를 포함하는지 검사하는 콜백입니다.
              */
             static CXChildVisitResult annotationSearchVisitor( CXCursor cursor, CXCursor, CXClientData data )
             {
@@ -140,7 +140,7 @@ namespace sw
             };
 
             /**
-             * @brief 여러 어노테이션 접두사를 한 번의 자식 순회로 매칭하는 콜백.
+             * @brief 여러 어노테이션 접두사를 한 번의 자식 순회로 매칭하는 콜백입니다.
              */
             static CXChildVisitResult multiAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
             {
@@ -169,7 +169,7 @@ namespace sw
             }
 
             /**
-             * @brief 스레드별 소스 파일 내용 캐시 (동일 헤더 내 여러 커서의 중복 디스크 I/O 제거)
+             * @brief 스레드별 소스 파일 내용 캐시입니다(같은 헤더의 여러 커서가 디스크를 거듭 읽지 않게 합니다).
              */
 
             static const string& getCachedFileContent( const string& path )
@@ -185,7 +185,7 @@ namespace sw
                 return insertedIt->second;
             }
 
-            /** @brief 윈도우 내에서 주석 바깥에 있는 문자열을 뒤에서부터 찾습니다. */
+            /** @brief 검색 구간 안에서 주석 밖에 있는 문자열을 뒤에서부터 찾습니다. */
             static size_t rfindOutsideComments( const string_view& window, const string_view& searchStr )
             {
                 size_t searchEnd = string::npos;
@@ -244,13 +244,13 @@ namespace sw
             }
 
             /**
-             * @brief Clang AST의 매크로 확장 버그 등으로 인해 자식 어노테이션 커서가 누락된 경우,
-             *        실제 소스 파일의 커서 위치 주변을 직접 스캔하여 기본 어노테이션이 존재하는지 보정합니다.
+             * @brief clang AST 의 매크로 확장 문제 등으로 자식 어노테이션 커서가 빠진 경우, 소스 파일에서 커서 위치 주변을
+             *        직접 훑어 기본 어노테이션이 있는지 확인합니다.
              */
             static bool sourceHasPrimaryAnnotation( CXCursor cursor, string_view prefix )
             {
-                // kReflectAnnotations[] 테이블에서 prefix가 일치하는 항목의 macroOpen을 찾습니다.
-                // 새 어노테이션이 PredefinedReflectAnnotation.xxx에 추가되면 자동으로 반영됩니다.
+                // kReflectAnnotations[] 표에서 prefix 가 일치하는 항목의 macroOpen 을 찾는다.
+                // PredefinedReflectAnnotation.xxx 에 새 어노테이션을 추가하면 자동으로 반영된다.
                 const utf8* pMacroOpen = nullptr;
                 for ( const ReflectAnnotationDesc& desc : kReflectAnnotations )
                 {
@@ -276,7 +276,7 @@ namespace sw
                 if ( content.empty() || offset > content.size() )
                     return false;
 
-                // 커서 위치 이전 1KB 윈도우 스캔
+                // 커서 위치 앞쪽 구간(source_lookback_bytes, 기본 512바이트)을 훑는다
                 const size_t      lookback    = ParserContext::getSharedConfig()._sourceLookbackBytes;
                 const size_t      windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
                 const string_view window( content.data() + windowStart, offset - windowStart );
@@ -307,8 +307,8 @@ namespace sw
             }
 
             /**
-             * @brief AST 자식에 어노테이션이 없는 경우, 소스 파일에서 직접 매크로 괄호 `(...)` 내용을 추적하여
-             *        "PREFIX;args" 형태의 표준 어노테이션 텍스트를 재구성합니다.
+             * @brief AST 자식에 어노테이션이 없는 경우, 소스 파일에서 매크로 괄호 `(...)` 안을 직접 읽어
+             *        "PREFIX;args" 형태의 어노테이션 텍스트를 다시 만듭니다.
              */
             static string sourceExtractMacroAnnotation( CXCursor cursor, string_view macroName, string_view annotatePrefix )
             {
@@ -343,7 +343,7 @@ namespace sw
                         return {};
                 }
 
-                // 매크로 괄호 깊이 추적 파싱
+                // 매크로 괄호 깊이를 추적하며 읽는다
                 size_t charIndex = windowStart + macroPos + macroName.size();
                 size_t argsStart = charIndex;
 
@@ -657,13 +657,13 @@ namespace sw
                 if ( kind != CXCursor_CXXMethod && kind != CXCursor_Constructor && kind != CXCursor_FunctionTemplate )
                     return CXChildVisit_Continue;
 
-                // REFLECT_BODY / COMPONENT_FACTORY 마커 — 리플렉트 FUNCTION 이 아님.
+                // REFLECT_BODY / COMPONENT_FACTORY 마커다. 리플렉트 FUNCTION 이 아니다.
                 if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn ) ||
                      cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kComponentFactoryMarkerFn ) )
                     return CXChildVisit_Continue;
 
-                // REFLECT 타입: 사용자/암시 생성자를 자동 등록합니다(FUNCTION 불필요).
-                // Abstract / Static 타입은 생성할 수 없습니다(Unreal UCLASS(Abstract) 스타일).
+                // REFLECT 타입은 사용자 · 암시 생성자를 자동 등록한다(FUNCTION 불필요).
+                // Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract) 스타일).
                 if ( kind == CXCursor_Constructor )
                 {
                     if ( collector->_bSkipConstructors == SW_TRUE )
@@ -727,8 +727,8 @@ namespace sw
                     funcSpelling = search._spelling;
                 }
 
-                // 순수 가상은 실제 AnnotateAttr 가 있어야 합니다. 소스 창 휴리스틱이
-                // 이전 타입의 FUNCTION(...) 을 집어 `= 0` 메서드를 잘못 등록할 수 있습니다.
+                // 순수 가상 함수는 실제 AnnotateAttr 가 있어야 한다. 소스 창 휴리스틱이
+                // 앞 타입의 FUNCTION(...) 을 집어 `= 0` 메서드를 잘못 등록할 수 있다.
                 if ( bHasFuncAnn == false )
                 {
                     if ( clang_CXXMethod_isPureVirtual( cursor ) )
@@ -779,14 +779,13 @@ namespace sw
 
             /**
              * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다 (단일 상속 체인).
-             * @details PropertyInfo 의 오프셋 접근/캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0에
-             *          있다"는 전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI가 offset 0을 보장하지만, 두
-             *          번째 이후 베이스는 그렇지 않습니다). 그래서 부모는 선언 순서와 무관하게 채택하지 않고
-             *          항상 첫 번째 베이스로 고정합니다.
-             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스/믹스인(예: IFlagStore)이면 잃을
-             *          프로퍼티가 없으므로 조용히 무시합니다. REFLECT() 가 붙은 베이스가 두 번째 이후에
-             *          있으면 — 실제로 프로퍼티가 유실되거나(경고가 아니라) 조용히 오프셋이 잘못될 수 있는
-             *          상황이므로 — 빌드를 실패시키는 에러로 처리합니다. 첫 번째 베이스로 옮기면 해결됩니다.
+             * @details PropertyInfo 의 오프셋 접근 · 캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다" 는
+             *          전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스는 그렇지
+             *          않습니다). 그래서 부모는 항상 선언 순서상 첫 번째 베이스로 고정합니다.
+             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스 · 믹스인(예: IFlagStore)이면 잃을 프로퍼티가 없으므로
+             *          조용히 무시합니다. REFLECT() 가 붙은 베이스가 두 번째 이후에 있으면 프로퍼티가 유실되거나 조용히 오프셋이
+             *          잘못될 수 있으므로, 경고가 아니라 빌드를 실패시키는 에러로 처리합니다. 그 베이스를 첫 번째로 옮기면
+             *          해결됩니다.
              */
             static CXChildVisitResult baseClassVisitor( CXCursor cursor, CXCursor, CXClientData data )
             {
@@ -807,9 +806,9 @@ namespace sw
                     return CXChildVisit_Continue;
                 }
 
-                // 두 번째 이후 베이스 — REFLECT() 가 없으면 잃을 프로퍼티가 없으므로 조용히 넘어갑니다.
-                // clang_getTypeDeclaration 이 돌려주는 커서는 AnnotateAttr 자식 순회가 누락되는 경우가 있어
-                // (다른 어노테이션 검사와 동일하게) 소스 텍스트 폴백까지 함께 검사합니다.
+                // 두 번째 이후 베이스다. REFLECT() 가 없으면 잃을 프로퍼티가 없으므로 조용히 넘어간다.
+                // clang_getTypeDeclaration 이 반환하는 커서는 AnnotateAttr 자식 순회에서 빠지는 경우가 있어
+                // (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사한다.
                 bool bBaseHasReflect = false;
                 if ( clang_Cursor_isNull( baseDecl ) == 0 )
                 {
@@ -890,7 +889,7 @@ namespace sw
                         return CXChildVisit_Continue;
                     }
 
-                    // bodyAnn / factoryAnn / functionAnn 을 한 번의 순회로 수집합니다.
+                    // bodyAnn / factoryAnn / functionAnn 을 한 번의 순회로 수집한다.
                     MultiAnnotationSearch multi;
                     multi.add( annotationConstants::kReflectBodyPrefix );
                     multi.add( annotationConstants::kComponentFactoryPrefix );
@@ -913,7 +912,7 @@ namespace sw
                 return CXChildVisit_Continue;
             }
 
-            /** @brief AnnotateAttr 접두사만 검사합니다 (소스 폴백 없음 — 검증용 경량 경로). */
+            /** @brief AnnotateAttr 접두사만 검사합니다(소스 폴백 없음. 검증용 가벼운 경로). */
             static bool hasAnnotateAttrPrefix( CXCursor cursor, string_view prefix )
             {
                 AnnotationSearch search{ prefix };
@@ -941,7 +940,7 @@ namespace sw
 
             static bool isDerivedFromComponent( CXCursor cursor )
             {
-                // thread_local 캐시: 동일 중간 베이스 클래스에 대한 반복 재귀 탐색을 방지합니다.
+                // thread_local 캐시: 같은 중간 베이스 클래스를 거듭 재귀 탐색하지 않게 한다.
                 thread_local unordered_map<string, bool> s_componentCache;
 
                 const string             fqn = AstVisitor::buildFullyQualifiedName( cursor );
@@ -956,7 +955,7 @@ namespace sw
                 if ( cacheIt != s_componentCache.end() )
                     return cacheIt->second;
 
-                // 캐시 미스 — 순환 참조 방지를 위해 먼저 false 로 삽입
+                // 캐시 미스. 순환 참조를 막으려고 먼저 false 로 넣는다
                 s_componentCache[fqn] = false;
 
                 bool bDerives = false;
@@ -1018,7 +1017,7 @@ namespace sw
         if ( kind == CXCursor_Namespace )
             return CXChildVisit_Recurse;
 
-        // 인클루드된 외부/시스템 헤더 선언들은 즉시 스킵하여 AST 순회 비용 대폭 절감
+        // include 된 외부 · 시스템 헤더의 선언은 바로 건너뛴다(AST 순회 비용을 크게 줄인다)
         const CXSourceLocation loc = clang_getCursorLocation( cursor );
         if ( clang_Location_isFromMainFile( loc ) == 0 )
             return CXChildVisit_Continue;
@@ -1067,8 +1066,8 @@ namespace sw
             return CXChildVisit_Continue;
         }
 
-        // 클래스 템플릿은 FQN 에 인자가 없어 offsetof / TypeRegistrar<T> 가 성립하지 않습니다.
-        // 조용히 빠지면 원인 파악이 어려우므로 경고만 남기고 건너뜁니다.
+        // 클래스 템플릿은 FQN 에 인자가 없어 offsetof / TypeRegistrar<T> 가 성립하지 않는다.
+        // 조용히 빠지면 원인을 찾기 어려우므로 경고만 남기고 건너뛴다.
 
         if ( kind == CXCursor_ClassTemplate || kind == CXCursor_ClassTemplatePartialSpecialization )
         {
@@ -1099,7 +1098,7 @@ namespace sw
     }
 
     /**
-     * @brief 대상 커서가 메인 소스 파일에 위치하며 지정한 어노테이션 접두사를 가지는지 검사합니다.
+     * @brief 커서가 메인 소스 파일에 있고 주어진 어노테이션 접두사를 가지는지 검사합니다.
      */
     bool AstVisitor::hasAnnotation( CXCursor cursor, string_view prefix )
     {
@@ -1112,19 +1111,19 @@ namespace sw
         if ( search._bFound == SW_TRUE )
             return true;
 
-        // 기본 매크로만 — "ENUM;BitFlag" 같은 세분 태그에는 폴백하지 않습니다.
+        // 기본 매크로만 본다. "ENUM;BitFlag" 같은 세부 태그에는 폴백하지 않는다.
         return AstVisitorInternal::sourceHasPrimaryAnnotation( cursor, prefix );
     }
 
     /**
      * @brief `REFLECT(...)` 매크로가 붙은 struct/class 선언을 파싱합니다.
      *
-     * [수집 항목 단계]:
-     * 1. 클래스 이름 및 전체 네임스페이스 경로(FQN) 추출
-     * 2. `REFLECT(...)` 매크로 인자 파싱 (Abstract, Static, Category, Alias 등)
-     * 3. 부모 기본 클래스(Base Class) 탐색 및 상속 관계 연결
-     * 4. `REFLECT_BODY()` 및 `COMPONENT_FACTORY()` 매크로 존재 여부 확인
-     * 5. 자식 멤버 변수(`PROPERTY`) 및 멤버 함수(`FUNCTION`) 메타데이터 재귀 수집
+     * 수집 단계:
+     * 1. 클래스 이름과 네임스페이스를 포함한 전체 경로(FQN)
+     * 2. `REFLECT(...)` 매크로 인자(Abstract, Static, Category, Alias 등)
+     * 3. 부모 클래스를 찾아 상속 관계 연결
+     * 4. `REFLECT_BODY()` · `COMPONENT_FACTORY()` 매크로가 있는지 확인
+     * 5. 멤버 변수(`PROPERTY`)와 멤버 함수(`FUNCTION`) 메타데이터 수집
      */
     void AstVisitor::onStructDeclaration( CXCursor cursor )
     {
@@ -1143,7 +1142,7 @@ namespace sw
             }
             if ( reflectSearch._bFound == SW_TRUE )
                 sw::AnnotationApply::parseReflectAnnotation( reflectSearch._spelling, typeInfo, _pSession->_annotationMeta );
-            // C++ 순수 가상 함수가 포함된 추상 클래스이면 UCLASS(Abstract)처럼 플래그 설정
+            // 순수 가상 함수가 있는 추상 클래스이면 UCLASS(Abstract) 처럼 Abstract 플래그를 켠다
             if ( clang_CXXRecord_isAbstract( cursor ) != 0 )
                 typeInfo._bAbstract = SW_TRUE;
         }
@@ -1169,9 +1168,9 @@ namespace sw
         }
 
         // REFLECT() 를 붙였으면 REFLECT_BODY() 도 있어야 한다. 없으면 그 타입만 StaticType() 이
-        // 없어서, 다른 타입은 `T::StaticType()` 으로 되는 일이 그 타입만 레지스트리 이름 조회로
-        // 우회해야 한다 — 쓰는 쪽이 타입마다 접근 방법을 외워야 하는 상태가 된다. 경고로 두면
-        // 지나치므로 생성 자체를 실패시킨다.
+        // 없어서, 다른 타입은 `T::StaticType()` 으로 되는 일을 그 타입만 레지스트리 이름 조회로
+        // 우회해야 한다. 쓰는 쪽이 타입마다 접근 방법을 외워야 하는 상태가 된다. 경고로 두면
+        // 그냥 지나치게 되므로 생성 자체를 실패시킨다.
         if ( typeInfo._bReflectBody == SW_FALSE )
         {
             SW_LOG_ERROR( "ERROR: REFLECT() is used in class/struct '%#', but it lacks REFLECT_BODY()! "
@@ -1192,10 +1191,10 @@ namespace sw
     /**
      * @brief `ENUM(...)` 매크로가 붙은 열거형(Enum / Enum Class) 선언을 파싱합니다.
      *
-     * [수집 항목 단계]:
-     * 1. 열거형의 모든 원소(Enumerator) 이름 및 정수 값 추출
-     * 2. `ENUM(...)` 어노테이션 속성(Alias, Count, Invalid 등) 파싱
-     * 3. 모든 값이 2의 거듭제곱 형태인지 자동 분석하여 비트플래그(BitFlag) 여부 판정
+     * 수집 단계:
+     * 1. 열거형의 모든 원소(Enumerator) 이름과 정수 값
+     * 2. `ENUM(...)` 어노테이션 속성(Alias, Count, Invalid 등)
+     * 3. 비트플래그 여부는 `ENUM( Flags )` 선언으로만 정합니다(값 모양으로 추측하지 않습니다. 본문 주석 참고).
      */
     void AstVisitor::onEnumDeclaration( CXCursor cursor )
     {
@@ -1206,13 +1205,13 @@ namespace sw
         BLOCK( "Collect forward-declaration facts" )
         {
             // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 **전방 선언** 한 뒤 특수화한다
-            // (`CodeGenerator::generateHeader`). 그래서 기반 정수 타입이 필요하다 — 정본 철자로
+            // (`CodeGenerator::emitGeneratedHeader`). 그래서 기반 정수 타입이 필요하다. 정본 철자로
             // 받아야 `uint8` 같은 별칭이 아니라 `unsigned char` 가 나와 재선언이 어긋나지 않는다.
             enumInfo._underlyingType = AstVisitorInternal::cxStringToStd(
                 clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( cursor ) ) ) );
 
             // 클래스 안에 든 열거형은 밖에서 전방 선언할 수 없다. 코드젠이 그 사실을 알아야
-            // 조용히 깨진 헤더를 뱉지 않고 그 자리에서 말한다.
+            // 조용히 깨진 헤더를 내보내지 않고 그 자리에서 알린다.
             const CXCursorKind parentKind = clang_getCursorKind( clang_getCursorSemanticParent( cursor ) );
             enumInfo._bNestedInType       = ( parentKind == CXCursor_ClassDecl || parentKind == CXCursor_StructDecl ||
                                         parentKind == CXCursor_ClassTemplate || parentKind == CXCursor_UnionDecl )
@@ -1229,7 +1228,7 @@ namespace sw
 
         BLOCK( "Parse ENUM annotation (Alias / …)" )
         {
-            // 소스 ENUM(...) 을 우선해 Alias= 가 BitFlag annotate 에 가려지지 않게 합니다.
+            // 소스의 ENUM(...) 을 우선해 Alias= 가 BitFlag annotate 에 가려지지 않게 한다.
             string enumSpelling = AstVisitorInternal::sourceExtractMacroAnnotation( cursor, annotationConstants::kEnumMacroOpen, annotationConstants::kEnumPrefix );
             if ( enumSpelling.empty() )
             {
@@ -1243,7 +1242,7 @@ namespace sw
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
         }
 
-        // **비트플래그인지는 선언이 정한다 — 값의 모양이 아니다.**
+        // **비트플래그인지는 선언이 정한다. 값의 모양이 아니다.**
         //
         // 처음부터(초기 커밋) "0 이 아닌 값이 모두 2의 거듭제곱이면 BitFlag" 라는 자동 감지가
         // 있었는데, 그 조건은 `{ Game = 0, Editor = 1, Custom = 2 }` 같은 **평범한 연속 열거형**
@@ -1251,12 +1250,12 @@ namespace sw
         // 비트플래그로 등록돼 있었고, 그러면 문자열 변환이 `toStringFlags` 로 가고 인스펙터가
         // 콤보 대신 체크박스를 그린다.
         //
-        // 더 얄궂은 것은 **같은 파싱이 같은 질문에 두 답을 냈다는 점**이다: C++ 트레이트
-        // (`IsBitFlagEnum<>`) 는 명시한 `ENUM( Flags )` 로만 나가므로 그 셋에는 없었다.
+        // 더 얄궂은 것은 **같은 파싱이 같은 질문에 두 답을 냈다는 점**이다. C++ 트레이트
+        // (`IsBitFlagEnum<>`)는 명시한 `ENUM( Flags )` 로만 나가므로 그 셋에는 없었다.
         // 등록부는 "플래그다", 트레이트는 "아니다" 였다.
         //
-        // 그래서 자동 감지를 없앤다. 비트플래그 열거형은 `ENUM( Flags )` 로 **말한다** —
-        // 말하지 않아 놓친 쪽은 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 말하지
+        // 그래서 자동 감지를 없앤다. 비트플래그 열거형은 `ENUM( Flags )` 로 **명시한다.**
+        // 명시하지 않아 놓친 쪽은 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지
         // 않았는데 켜지는 쪽은 조용히 틀린다.
 
         SW_LOG_INFO( "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
@@ -1266,7 +1265,7 @@ namespace sw
     }
 
     /**
-     * @brief 커서의 순수 식별자 명칭을 반환합니다.
+     * @brief 커서의 식별자 이름만 반환합니다.
      */
     string AstVisitor::getCursorSpelling( CXCursor cursor )
     {

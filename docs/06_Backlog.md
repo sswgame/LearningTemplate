@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser 주석 정리
 
 ---
 
@@ -1435,7 +1435,7 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
-### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor ✅)
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor · ReflectionParser ✅)
 
 코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
 
@@ -1444,8 +1444,8 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `Core` | 3,242 | ✅ 2026-09-24 (3절 참고 — 동작과 다른 설명이 스무 곳 넘게 나왔다) |
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
-| `Tools/ReflectionParser` | 354 | 다음 |
-| `Engine` | 7,865 | 하위 폴더 단위로 나눠 커밋한다 |
+| `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
+| `Engine` | 7,865 | 다음. 하위 폴더 단위로 나눠 커밋한다 |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1637,6 +1637,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (ReflectionParser 주석 정리 — 1-0g 네 번째 폴더)
+
+**한 것.** `Tools/ReflectionParser` 의 .h · .cpp · .xxx 19 개와 `CMakeLists.txt` 주석을 같은 규칙으로 다시 썼다.
+`Templates/*.tpl` 의 주석은 그대로 생성물(.gen.cpp)에 찍히므로 건드리지 않았다. 사실과 달랐던 것:
+- `ReflectionParser.cpp` — 키워드 검사가 "SIMD 벡터화 스캔" 이라고 적혀 있었다 → `find_first_of` 루프다. 그 위 함수는
+  "파일 앞부분에서 검사한다" 고 했지만 파일 전체를 읽는다.
+- `AstVisitor.cpp` — `onEnumDeclaration` 의 doc 이 "2의 거듭제곱이면 비트플래그로 자동 판정" 을 단계로 적고 있었다 → 그 자동
+  감지는 이미 없앴다(같은 함수 본문 주석이 그 이유를 적고 있다). 소스 되짚기 창 "1KB" → `source_lookback_bytes`(기본 512).
+  없는 함수 `CodeGenerator::generateHeader` → `emitGeneratedHeader`.
+- `ParsedReflection.h` — `_underlyingType` 이 "`uint8` 등" 을 담는다고 했다 → 정본 철자(`unsigned char`)를 담는다.
+- `PredefinedAnnotationField.xxx` — 없는 Kind `Custom` 을 설명했다 → `*Fn`. `AnnotationApply.h` 는 새 필드를 "이 모듈의 apply
+  테이블" 에 더하라고 했다 → PredefinedAnnotationField.xxx. `AnnotationMeta` 설명에 빠져 있던 ENUM 스코프를 넣었다.
+- `CodeGenerator.h` — 선언 없이 남은 고아 doc 주석(".gen.h 경로를 반환합니다") 삭제. `CMakeLists.txt` 의 빠진 절 번호 2) 를 채웠다.
+
+**검증.** Debug · Shipping 빌드 경고 0(파서가 다시 빌드돼 생성물을 모두 다시 만들었고, 저장소 안 파일은 바뀌지 않았다) ·
+`RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 · 주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Editor 주석 정리 — 1-0g 세 번째 폴더)
 

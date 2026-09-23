@@ -1,23 +1,23 @@
 /**
  * @file PredefinedAnnotationField.xxx
  * @brief REFLECT / ENUM / PROPERTY / FUNCTION 애노테이션 필드를 한 곳에 정의합니다.
- * @details include 전에 REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) 를 정의하세요.
+ * @details include 하기 전에 REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) 를 정의하십시오.
  *          Scope  : Reflect | Enum | Property | Function  (PredefinedReflectAnnotation.xxx 의 Id)
- *          Kind   : Flag | Bool | String            (단순 대입 — 적용 함수를 생성한다)
- *                   FlagFn | StringFn | FloatFn      (손으로 쓴 함수를 부른다)
+ *          Kind   : Flag | Bool | String            (단순 대입. 적용 함수를 생성합니다)
+ *                   FlagFn | StringFn | FloatFn      (손으로 쓴 함수를 부릅니다)
  *                   Flag     단독 토큰   -> 멤버에 SW_TRUE
  *                   Bool     key=value   -> 멤버에 파싱된 bool
  *                   String   key=value   -> 멤버에 문자열
- *                   *Fn 접미사는 그 인자 형태를 그대로 받는 커스텀 함수라는 뜻이다.
- *                   (테이블 원소 타입이 시그니처로 갈리므로 Kind 에 형태를 드러낸다)
- *          Id     : 애노테이션 토큰 철자. 그대로 문자열 키로도 쓰인다.
- *          Member : Kind != Custom 이면 대상 멤버 이름, Custom 이면 적용 함수 이름.
+ *                   *Fn 접미사는 그 인자 형태를 그대로 받는 커스텀 함수라는 뜻입니다.
+ *                   (테이블 원소 타입이 시그니처로 갈리므로 Kind 에 형태를 드러냅니다)
+ *          Id     : 애노테이션 토큰 철자. 그대로 문자열 키로도 쓰입니다.
+ *          Member : *Fn 이 아니면 대상 멤버 이름, *Fn 이면 적용 함수 이름.
  *
- *          플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터를 만들 수 없다. 그래서
- *          바인딩 테이블을 만들 수 없고, 여기서 대입 코드를 생성한다.
+ *          플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터를 만들 수 없습니다. 그래서
+ *          바인딩 테이블을 만들 수 없고, 여기서 대입 코드를 생성합니다.
  *
- *          행 순서 = CodeGenerator 의 메타데이터 emit 순서. (적용은 이름 조회라 순서 무관)
- *          별칭만 늘릴 때는 AnnotationMeta.txt 만 고치면 된다.
+ *          행 순서 = CodeGenerator 의 메타데이터 출력 순서. (적용은 이름 조회라 순서와 무관합니다)
+ *          별칭만 늘릴 때는 AnnotationMeta.txt 만 고치면 됩니다.
  */
 
 // ── REFLECT (타입) ────────────────────────────────────────────────

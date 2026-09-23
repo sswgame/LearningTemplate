@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) LLVM/libclang 경로 — env → toolchain_config.json
+# 1) LLVM/libclang 경로 찾기 (환경 변수 → toolchain_config.json)
 # ------------------------------------------------------------------------------
 set(DETECTED_LLVM_DIR "$ENV{LLVM_DIR}")
 
@@ -13,14 +13,14 @@ if(NOT DETECTED_LLVM_DIR)
 endif()
 
 # toolchain_config.json 은 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이
-# 이미 변수로 풀어 두었다 — 여기서 다시 파싱하지 않는다.
+# 이미 변수로 풀어 두었다. 여기서 다시 파싱하지 않는다.
 if(NOT DETECTED_LLVM_DIR)
     set(DETECTED_LLVM_DIR "${SW_TOOLCHAIN_LLVM_PATH}")
     set(DETECTED_LIBCLANG_DLL "${SW_TOOLCHAIN_LIBCLANG_DLL_PATH}")
 endif()
 
-# env/toolchain 에 없으면 distro 패키지 경로를 찾습니다 (Ubuntu 의 /usr/lib/llvm-N). 버전 목록을 손으로 들고 있으면
-# 목록보다 새 LLVM 이 깔린 호스트에서 조용히 빠지므로, 설치된 것 중 가장 높은 메이저를 고른다.
+# 환경 변수 · toolchain 에 없으면 배포판 패키지 경로를 찾는다(Ubuntu 의 /usr/lib/llvm-N). 버전 목록을 손으로 들고
+# 있으면 목록보다 새 LLVM 이 깔린 호스트에서 조용히 빠지므로, 설치된 것 중 가장 높은 메이저 버전을 고른다.
 if(NOT DETECTED_LLVM_DIR)
     file(GLOB _swLlvmCandidates LIST_DIRECTORIES true "/usr/lib/llvm-*")
     list(SORT _swLlvmCandidates COMPARE NATURAL ORDER DESCENDING)
@@ -37,7 +37,7 @@ if(NOT DETECTED_LLVM_DIR)
     unset(_swLlvmCandidate)
 endif()
 
-# llvm_path 가 없으면 검색을 포기합니다.
+# llvm_path 가 없으면 검색을 포기한다.
 if(NOT DETECTED_LLVM_DIR)
     message(STATUS "[ReflectionParser] LLVM directory not detected, skipping.")
     return()
@@ -50,7 +50,7 @@ set(CLANG_SEARCH_PATHS
     "${LLVM_INSTALL_PREFIX}"
 )
 
-# distro 패키지는 libclang-N.so 처럼 버전이 붙은 이름만 있을 수 있다 — 여기도 목록 대신 glob 으로 모은다.
+# 배포판 패키지에는 libclang-N.so 처럼 버전이 붙은 이름만 있을 수 있다. 여기도 목록 대신 glob 으로 모은다.
 file(GLOB _swLibclangVersioned "${LLVM_INSTALL_PREFIX}/lib/libclang-*.so")
 set(_swLibclangNames libclang clang)
 
@@ -95,6 +95,9 @@ if(NOT LIBCLANG_LIB OR NOT LIBCLANG_INCLUDE_DIR)
     return()
 endif()
 
+# ------------------------------------------------------------------------------
+# 2) ReflectionParser 실행 파일
+# ------------------------------------------------------------------------------
 file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
 add_executable(ReflectionParser ${PARSER_SOURCES})
@@ -127,9 +130,9 @@ endif()
 
 set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
 
-# 빌드 타임 전용 도구다 — 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
-# libclang.dll(수십 MB)이 그대로 따라 들어간다. 별도 디렉터리로 내보낸다.
-# 호출부는 전부 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
+# 빌드 타임 전용 도구다. 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
+# libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다.
+# 호출부는 모두 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
 set(swReflectionParserOutDir "${CMAKE_BINARY_DIR}/BuildTools")
 set_target_properties(ReflectionParser PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${swReflectionParserOutDir}"

@@ -1,8 +1,8 @@
 /**
  * @file ParsedReflection.h
- * @brief AstVisitor가 수집하고 CodeGenerator가 emit하는 파싱 결과 DTO
- * @details 초심자: “헤더에서 뭘 뽑았는지”만 보려면 이 파일부터 보면 됩니다.
- *          AST 순회 로직은 AstVisitor, 코드 출력은 CodeGenerator 쪽입니다.
+ * @brief AstVisitor 가 수집하고 CodeGenerator 가 출력하는 파싱 결과 DTO 입니다.
+ * @details "헤더에서 무엇을 뽑았는지" 만 보려면 이 파일부터 보면 됩니다.
+ *          AST 순회 로직은 AstVisitor, 코드 출력은 CodeGenerator 에 있습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -72,7 +72,7 @@ namespace sw
         uint8                           _bHasRange     : 1;
         uint8                           _bIsContainer  : 1;
         uint8                           _bTransient    : 1;
-        /** @brief 값이 비어 있으면 직렬화에서 생략 (PROPERTY(SkipIfEmpty)). */
+        /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
         uint8                   _bSkipIfEmpty     : 1;
         uint8                   _bHideInInspector : 1;
         [[maybe_unused]] uint8  _reserved         : 7;
@@ -217,11 +217,11 @@ namespace sw
         vector<ParsedEnumeratorInfo> _listEnumerator;
         string                       _invalidEnumerator;
         string                       _countEnumerator;
-        /** @brief 기반 정수 타입 철자(`uint8` 등). 전방 선언을 코드젠하는 데 쓴다. */
+        /** @brief 기반 정수 타입의 정본 철자입니다(`uint8` 이 아니라 `unsigned char`). 전방 선언을 코드젠하는 데 씁니다. */
         string _underlyingType;
         uint8  _bIsBitFlag   : 1;
         uint8  _bEmitFlagOps : 1;
-        /** @brief 클래스/구조체 **안에** 선언된 열거형인가. 그러면 밖에서 전방 선언할 수 없다. */
+        /** @brief 클래스 · 구조체 **안에** 선언된 열거형이면 1 입니다. 그러면 밖에서 전방 선언할 수 없습니다. */
         uint8                  _bNestedInType : 1;
         [[maybe_unused]] uint8 _reserved      : 5;
 

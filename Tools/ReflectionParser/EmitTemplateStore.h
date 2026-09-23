@@ -12,7 +12,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @class EmitTemplateStore
-     * @brief 파일 기반 emit 골격(registrar·traits 등). 제어 흐름은 C++에 둡니다.
+     * @brief 파일로 두는 emit 골격(registrar · traits 등)입니다. 제어 흐름은 C++ 에 둡니다.
      */
     class EmitTemplateStore
     {

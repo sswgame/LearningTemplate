@@ -70,12 +70,11 @@ namespace sw
             }
 
             /**
-             * @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다.
-             * @note `StringUtil::trim` 은 **`string_view` 오버로드가 있다**(무할당, `string_view`
-             *       반환). 예전에는 `trim( string( token ).c_str() )` 으로 불러서 토큰마다
-             *       임시 `string` 을 하나 만들고 `trim` 이 또 하나를 돌려줬다 — 필요 없는 할당
-             *       두 개다. 파서는 빌드 타임이라 **속도로 잰 이득은 없다**(코드젠 3.27초는
-             *       libclang 파싱이 거의 전부다). 있는 도구를 쓰는 쪽으로만 고친다.
+             * @brief 쉼표 · 세미콜론으로 나눈 타입 별칭을 붙입니다.
+             * @note `StringUtil::trim` 에는 **`string_view` 오버로드가 있습니다**(할당 없이 `string_view` 를 반환). 예전에는
+             *       `trim( string( token ).c_str() )` 으로 불러서 토큰마다 임시 `string` 을 하나 만들고 `trim` 이 또 하나를
+             *       반환했습니다. 필요 없는 할당 두 개입니다. 파서는 빌드 타임에만 돌아 **속도로 잰 이득은 없습니다**(코드젠
+             *       3.27초는 거의 전부 libclang 파싱입니다). 있는 도구를 쓰는 쪽으로만 고쳤습니다.
              */
             static void appendTypeAliases( vector<string>& outListAlias, const string& raw )
             {
@@ -199,9 +198,9 @@ namespace sw
             }
 
 // ------------------------------------------------------------------------------
-// 애노테이션 필드 테이블 — PredefinedAnnotationField.xxx 한 곳에서 전개합니다.
-// 플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터 바인딩이 불가능해, 대입 람다를 씁니다.
-// 각 Scope별로 1회의 #include 전개로 모든 Kind 항목을 통합 테이블에 등록합니다.
+// 애노테이션 필드 테이블. PredefinedAnnotationField.xxx 한 곳에서 전개한다.
+// 플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터로 바인딩할 수 없어 대입 람다를 쓴다.
+// Scope 마다 #include 를 한 번 전개해 모든 Kind 항목을 한 테이블에 등록한다.
 // ------------------------------------------------------------------------------
 #define REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) SW_ANN_##Scope( Kind, Id, Member )
 
@@ -453,7 +452,7 @@ namespace sw
             if ( binding == nullptr )
                 continue;
 
-            // `Flags = true` 도 단독 토큰 `Flags` 와 같게 받는다 — 나머지 세 스코프가 이미 그렇게 한다.
+            // `Flags = true` 도 단독 토큰 `Flags` 와 같게 받는다. 나머지 세 스코프가 이미 그렇게 한다.
             if ( binding->_kind == AnnotationBinding::Kind::Bool )
             {
                 if ( AnnotationApplyInternal::parseAnnotationBool( val ) == false )

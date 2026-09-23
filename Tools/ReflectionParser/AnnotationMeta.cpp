@@ -38,7 +38,7 @@ namespace sw
             return;
         const uint64 hash = hashScopeAndKey( scope, alias );
 
-        // flag 한 줄이 두 형태를 함께 책임진다 — 단독 토큰 `X` 와 `X=true`. 예전에는 파일이 `flag.X`
+        // flag 한 줄이 두 형태를 함께 맡는다. 단독 토큰 `X` 와 `X=true` 다. 예전에는 파일이 `flag.X`
         // 와 `bool.X` 를 따로 적었고 그 둘이 어긋나 있었다(플래그 열셋 중 여섯에 bool 줄이 없었다).
         // 그러면 `PROPERTY( Polymorphic = true )` 가 _mapKey 에 없어 경고 없이 버려진다.
         if ( binding._kind == AnnotationBinding::Kind::Flag )
@@ -48,7 +48,7 @@ namespace sw
             return;
         }
 
-        // 넷롤은 단독 토큰뿐이다 — FUNCTION( Server ) 는 역할을 고르는 것이라 참/거짓이 없다.
+        // 넷 역할(NetRole)은 단독 토큰뿐이다. FUNCTION( Server ) 는 역할을 고르는 것이라 참/거짓이 없다.
         if ( binding._kind == AnnotationBinding::Kind::NetRole )
             _mapBare.insert_or_assign( hash, std::move( binding ) );
         else
@@ -72,7 +72,7 @@ namespace sw
         const string_splitter lines( text, { "\r\n", "\n" } );
         for ( const string_view rawLine : lines.getSplitList() )
         {
-            // `trim` 의 `string_view` 오버로드를 쓴다 — 줄마다 임시 `string` 을 만들지 않는다.
+            // `trim` 의 `string_view` 오버로드를 쓴다. 줄마다 임시 `string` 을 만들지 않는다.
             const string_view line = StringUtil::trim( rawLine );
             if ( line.empty() || line.front() == '#' || line.front() == ';' )
                 continue;
