@@ -78,6 +78,8 @@ namespace sw
     private:
         /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
+        /** @brief bindless 인덱스가 가리키는 구조버퍼의 SRV — 범위 밖 · 미등록이면 nullptr. 그래픽스 · 컴퓨트 바인딩이 같은 조회다. */
+        ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
         /**
          * @brief 루트 상수 흉내 — 그림자 배열에 쓰고 계약 슬롯의 작은 상수버퍼를 다시 채워 겁니다.
          * @details DX11 에는 루트 상수가 없다. 그래픽스·컴퓨트 진입점이 이 스무 줄을 각자 갖고 있었고 다른 것은 어느

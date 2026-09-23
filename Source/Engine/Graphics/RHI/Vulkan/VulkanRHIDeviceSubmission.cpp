@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
@@ -70,36 +71,17 @@ namespace sw
         if ( result != VK_SUCCESS && result != VK_NOT_READY )
             return;
 
-        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
-        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
-        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
-        uint64 origin       = UINT64_MAX;
-        bool   bOriginFound = false;
+        // 가용 비트가 선 칸만 준비된 것이다 — 값과 비트를 갈라 공통 규칙에 넘긴다.
+        uint64 arrTick[constant::kMaxGpuTimestampSlot]{};
+        uint32 readyMask{ 0 };
         for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
         {
             if ( arrResult[index * 2 + 1] == 0 )
                 continue;
-            if ( arrResult[index * 2] < origin )
-                origin = arrResult[index * 2];
-            bOriginFound = true;
+            arrTick[index] = arrResult[index * 2];
+            readyMask |= ( 1u << index );
         }
-        if ( bOriginFound == false )
-            return;
-
-        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
-        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
-        {
-            // 안 쓰인 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
-            if ( arrResult[index * 2 + 1] == 0 )
-            {
-                _listTimestampMicro[index] = -1.0f;
-                continue;
-            }
-            const uint64 value         = arrResult[index * 2];
-            const uint64 ticks         = ( value >= origin ) ? ( value - origin ) : 0;
-            _listTimestampMicro[index] = static_cast<float32>( static_cast<float64>( ticks ) *
-                                                               static_cast<float64>( _timestampPeriod ) / 1000.0 );
-        }
+        RHIGpuTimestamp::resolveMicro( arrTick, readyMask, static_cast<float64>( _timestampPeriod ) / 1000.0, _listTimestampMicro );
     }
 
     void VulkanRHIDevice::beginFrame( const float4& clearColor )

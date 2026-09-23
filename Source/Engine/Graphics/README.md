@@ -67,6 +67,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 명령 기록 — 모든 백엔드가 소프트웨어 replay 없이 즉시 `*RHICommandContext`를 호출 |
 | `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/Support/ | 핸들·프레임링·지연 해제 |
+| `RHIShaderRequest` · `RHIGpuTimestamp` · `RHIBufferSize` | RHI/Support/ | 넷이 각자 갖던 규칙 하나 — 서술체 → 컴파일 요청 · 타임스탬프 칸 → 마이크로초 · 32비트 버퍼 크기 |
 | `RHIRenderResource` · `RHIResidentBuffer` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 |
 | `RHIStructuredBufferSlot` · `RHIConstantBufferSlot` | RHI/ | 버퍼 + 뷰/인덱스 한 벌 — 만들기·갱신·해제 순서를 타입이 안다. 구조버퍼는 용량이 변하고(`ensureCapacity`) 상수버퍼는 안 변한다(`create`) |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |

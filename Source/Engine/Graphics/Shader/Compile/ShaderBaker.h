@@ -97,9 +97,6 @@ namespace sw
         static string computeBinaryFileName( string_view stemLower, ShaderStage stage,
                                              string_view entryPoint, uint64 permHash, string_view ext );
 
-        /** @brief 셰이더 스테이지별 기본 진입점 이름(VSMain, PSMain, CSMain, GSMain 등)을 반환합니다. */
-        static string_view getDefaultEntryPointForStage( ShaderStage stage );
-
         /**
          * @brief 소스와 **공유 헤더(.hlsli)** 를 합친 내용 해시 — 산출물이 최신인지 보는 **유일한 기준**.
          * @details `.hlsl` 하나만 보면 `binding.hlsli` 같은 공유 헤더를 고쳐도 아무것도 다시 굽지 않아,
@@ -139,8 +136,5 @@ namespace sw
 
         /** @brief 서브폴더 이름으로부터 ShaderTargetFormat을 역산출합니다. */
         static ShaderTargetFormat getFormatForSubfolder( string_view subfolder );
-
-        /** @brief 셰이더 스테이지 축약 태그("vs", "ps", "cs", "gs", "hs", "ds", "ms", "as")를 반환합니다. */
-        static string_view getStageTag( ShaderStage stage );
     };
 } // namespace sw

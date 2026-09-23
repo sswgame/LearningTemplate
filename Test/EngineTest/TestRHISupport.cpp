@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -208,4 +209,28 @@ SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
 
     // 범위 밖은 조용히 무시한다(로그도 남기지 않는다) — 예전 동작 그대로다.
     SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, 9999u, 0u, "test" ) );
+}
+
+/**
+ * @brief [RHIGpuTimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다
+ */
+SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative )
+{
+    uint64 arrTick[sw::constant::kMaxGpuTimestampSlot]{};
+    arrTick[0]             = 1000; // 낮은 번호지만 늦은 시각 — 이것을 기준으로 삼으면 슬롯 5 가 음수(→ 0)가 된다
+    arrTick[5]             = 400;
+    arrTick[31]            = 1600;
+    const uint32 readyMask = ( 1u << 0 ) | ( 1u << 5 ) | ( 1u << 31 );
+
+    sw::vector<float32> listMicro;
+    SW_ASSERT_TRUE( sw::RHIGpuTimestamp::resolveMicro( arrTick, readyMask, 0.5, listMicro ) );
+    SW_ASSERT_TRUE( listMicro.size() == sw::constant::kMaxGpuTimestampSlot );
+    SW_EXPECT_NEAR_EQUAL( 300.0f, listMicro[0], 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listMicro[5], 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 600.0f, listMicro[31], 1e-3f );
+    SW_EXPECT_TRUE( listMicro[1] < 0.0f && listMicro[30] < 0.0f );
+
+    // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
+    SW_EXPECT_TRUE( sw::RHIGpuTimestamp::resolveMicro( arrTick, 0, 0.5, listMicro ) == false );
+    SW_EXPECT_TRUE( listMicro.empty() );
 }

@@ -93,6 +93,11 @@ namespace sw
         bool ensureShaderLayout( IRHIDevice* pDevice );
         /** @brief 프로퍼티를 패킹 CB에 다시 씁니다. */
         bool rebuildPackedBuffer();
+        /**
+         * @brief 프로퍼티의 오프셋 · 크기대로 바이트 버퍼를 다시 채웁니다 — 리플렉션 동기화의 두 갈래가 같은 길이다.
+         * @param minimumByteSize 셰이더가 선언한 크기. 프로퍼티가 그 밖으로 나가면 그만큼 늘리고, 끝은 256 정렬한다.
+         */
+        void packPropertiesIntoBytes( uint32 minimumByteSize );
         /** @brief 한 프로퍼티를 `_defaultValue`로 되돌리고 CB를 다시 올립니다. */
         bool resetParameterToDefault( IRHIDevice* pRhi, hashed_string name );
         /** @brief 모든 프로퍼티를 기본값으로 되돌립니다. */

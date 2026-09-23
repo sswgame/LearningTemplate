@@ -30,32 +30,6 @@ namespace sw
             return ShaderBindingKind::Unknown;
         }
 
-        ShaderStageFlag toStageFlag( ShaderStage stage )
-        {
-            switch ( stage )
-            {
-                case ShaderStage::Vertex:
-                    return ShaderStageFlag::Vertex;
-                case ShaderStage::Pixel:
-                    return ShaderStageFlag::Pixel;
-                case ShaderStage::Compute:
-                    return ShaderStageFlag::Compute;
-                case ShaderStage::Geometry:
-                    return ShaderStageFlag::Geometry;
-                case ShaderStage::Hull:
-                    return ShaderStageFlag::Hull;
-                case ShaderStage::Domain:
-                    return ShaderStageFlag::Domain;
-                case ShaderStage::Mesh:
-                    return ShaderStageFlag::Mesh;
-                case ShaderStage::Amplification:
-                    return ShaderStageFlag::Amplification;
-                case ShaderStage::Count:
-                default:
-                    return ShaderStageFlag::None;
-            }
-        }
-
         /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` → `"ShadowMap"` (레지스트리 조회 키). */
         string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
         {
@@ -116,7 +90,7 @@ namespace sw
         {
             if ( pReflection == nullptr )
                 continue;
-            const ShaderStageFlag visibility = toStageFlag( stage );
+            const ShaderStageFlag visibility = toShaderStageFlag( stage );
 
             // 1) 상수 버퍼 — 멤버 오프셋까지 채운다.
             for ( const ShaderBufferInfo& cb : pReflection->_listConstantBuffer )

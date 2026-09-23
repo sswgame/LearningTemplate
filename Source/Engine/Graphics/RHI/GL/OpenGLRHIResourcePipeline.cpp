@@ -8,6 +8,7 @@
 
 #include "Core/Common/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
@@ -35,12 +36,9 @@ namespace sw
         const ShaderCompileDesc&       vsDesc          = request._vertex;
         const ShaderCompileDesc&       psDesc          = request._pixel;
         const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( vsDesc );
+        ShaderCompileResult            vsResult{};
         ShaderCompileResult            psResult{};
-        if ( bHasPixelShader )
-            psResult = RHIShaderRequest::compile( psDesc );
-
-        if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
@@ -72,20 +70,10 @@ namespace sw
                 glAttachShader( program, vertexShader );
                 if ( bHasPixelShader )
                     glAttachShader( program, pixelShader );
-                glLinkProgram( program );
-
-                GLint isLinked{ 0 };
-                glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
-                if ( isLinked == GL_TRUE )
+                StringBuilder<constant::kMaxBuffer512> linkLabel;
+                linkLabel.appendFormat( "Graphics (%# / %#)", desc._vertexShaderPath, desc._pixelShaderPath );
+                if ( linkProgram( program, linkLabel.c_str() ) )
                     record._program = program;
-                else
-                {
-                    GLchar infoLog[constant::kMaxBuffer1024];
-                    glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
-                    SW_LOG_ERROR( "Graphics program link failed (%# / %#): %#",
-                                  desc._vertexShaderPath, desc._pixelShaderPath, infoLog );
-                    glDeleteProgram( program );
-                }
             }
             else
             {
@@ -155,19 +143,8 @@ namespace sw
             {
                 GLuint program = glCreateProgram();
                 glAttachShader( program, computeShader );
-                glLinkProgram( program );
-
-                GLint isLinked{ 0 };
-                glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
-                if ( isLinked == GL_TRUE )
+                if ( linkProgram( program, "Compute shader" ) )
                     record._program = program;
-                else
-                {
-                    GLchar infoLog[constant::kMaxBuffer1024];
-                    glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
-                    SW_LOG_ERROR( "Compute shader program link failed: %#", infoLog );
-                    glDeleteProgram( program );
-                }
             }
             else
             {
@@ -234,5 +211,21 @@ namespace sw
             return;
         _pDevice->_listRenderPass[pass - 1]._bAlive = SW_FALSE;
         _pDevice->_listRenderPass[pass - 1]._desc   = RHIRenderPassDesc{};
+    }
+
+    bool OpenGLRHIResource::linkProgram( uint32 program, const utf8* pLabel )
+    {
+        glLinkProgram( program );
+
+        GLint isLinked{ 0 };
+        glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
+        if ( isLinked == GL_TRUE )
+            return true;
+
+        GLchar infoLog[constant::kMaxBuffer1024];
+        glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
+        SW_LOG_ERROR( "%# program link failed: %#", pLabel, infoLog );
+        glDeleteProgram( program );
+        return false;
     }
 } // namespace sw

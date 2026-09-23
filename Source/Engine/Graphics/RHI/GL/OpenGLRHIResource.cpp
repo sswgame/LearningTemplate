@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -24,99 +25,65 @@ namespace sw
         constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
         constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
 
+        /**
+         * @brief RHIFormat 하나의 GL 세 값 — internalFormat · (pixel) format · type.
+         * @details 예전에는 셋이 각자 switch 였다 — 포맷을 하나 더하면 세 자리를 같이 고쳐야 했고, `R16G16B16A16_FLOAT` 의 type 이
+         *          한 자리에서만 틀렸던 적이 있다(아래 주석). 압축 포맷은 internal 만 있다(glCompressedTexImage 경로라 format · type 은
+         *          쓰지 않는다). 표에 없는 포맷(`Unknown` = 첨부 없음)은 셋 다 0 이다.
+         */
+        struct OpenGLFormatRow
+        {
+            RHIFormat _format;
+            GLenum    _internalFormat;
+            GLenum    _pixelFormat;
+            GLenum    _pixelType;
+        };
+
+        constexpr OpenGLFormatRow arrFormatRow[] = {
+            {         RHIFormat::BC1_UNORM,     kGlCompressedRgbaS3tcDxt1,                0,                    0},
+            {         RHIFormat::BC2_UNORM,     kGlCompressedRgbaS3tcDxt3,                0,                    0},
+            {         RHIFormat::BC3_UNORM,     kGlCompressedRgbaS3tcDxt5,                0,                    0},
+            {         RHIFormat::BC4_UNORM,       GL_COMPRESSED_RED_RGTC1,                0,                    0},
+            {         RHIFormat::BC5_UNORM,          kGlCompressedRgRgtc2,                0,                    0},
+            {         RHIFormat::BC7_UNORM, GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
+            {    RHIFormat::R8G8B8A8_UNORM,                      GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
+            {    RHIFormat::B8G8R8A8_UNORM,                      GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
+            // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
+            // 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 정본) — 되읽기가 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를
+            // CPU 로 읽는 경로(스크린샷 · 렌더 타깃 패널)가 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다.
+            {RHIFormat::R16G16B16A16_FLOAT,                    GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
+            { RHIFormat::D24_UNORM_S8_UINT,           GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
+            {   RHIFormat::R32G32B32_FLOAT,                     GL_RGB32F,           GL_RGB,             GL_FLOAT},
+            {      RHIFormat::R32G32_FLOAT,                      GL_RG32F,            GL_RG,             GL_FLOAT},
+            {         RHIFormat::R32_FLOAT,                       GL_R32F,           GL_RED,             GL_FLOAT},
+        };
+
+        const OpenGLFormatRow* findFormatRow( RHIFormat format )
+        {
+            for ( const OpenGLFormatRow& row : arrFormatRow )
+            {
+                if ( row._format == format )
+                    return &row;
+            }
+            return nullptr;
+        }
+
         GLenum toGlInternalFormat( RHIFormat format )
         {
-            switch ( format )
-            {
-                case RHIFormat::BC1_UNORM:
-                    return kGlCompressedRgbaS3tcDxt1;
-                case RHIFormat::BC2_UNORM:
-                    return kGlCompressedRgbaS3tcDxt3;
-                case RHIFormat::BC3_UNORM:
-                    return kGlCompressedRgbaS3tcDxt5;
-                case RHIFormat::BC4_UNORM:
-                    return GL_COMPRESSED_RED_RGTC1;
-                case RHIFormat::BC5_UNORM:
-                    return kGlCompressedRgRgtc2;
-                case RHIFormat::BC7_UNORM:
-                    return GL_COMPRESSED_RGBA_BPTC_UNORM;
-                case RHIFormat::R8G8B8A8_UNORM:
-                case RHIFormat::B8G8R8A8_UNORM:
-                    return GL_RGBA8;
-                case RHIFormat::R16G16B16A16_FLOAT:
-                    return GL_RGBA16F;
-                case RHIFormat::D24_UNORM_S8_UINT:
-                    return GL_DEPTH24_STENCIL8;
-                case RHIFormat::R32G32B32_FLOAT:
-                    return GL_RGB32F;
-                case RHIFormat::R32G32_FLOAT:
-                    return GL_RG32F;
-                case RHIFormat::R32_FLOAT:
-                    return GL_R32F;
-                case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
-                default:
-                    return 0;
-            }
+            const OpenGLFormatRow* pRow = findFormatRow( format );
+            return pRow != nullptr ? pRow->_internalFormat : 0;
         }
 
         GLenum toGlFormat( RHIFormat format )
         {
-            switch ( format )
-            {
-                case RHIFormat::R8G8B8A8_UNORM:
-                case RHIFormat::R16G16B16A16_FLOAT:
-                    return GL_RGBA;
-                case RHIFormat::B8G8R8A8_UNORM:
-                    return GL_BGRA;
-                case RHIFormat::D24_UNORM_S8_UINT:
-                    return GL_DEPTH_STENCIL;
-                case RHIFormat::R32G32B32_FLOAT:
-                    return GL_RGB;
-                case RHIFormat::R32G32_FLOAT:
-                    return GL_RG;
-                case RHIFormat::R32_FLOAT:
-                    return GL_RED;
-                case RHIFormat::BC1_UNORM:
-                case RHIFormat::BC2_UNORM:
-                case RHIFormat::BC3_UNORM:
-                case RHIFormat::BC4_UNORM:
-                case RHIFormat::BC5_UNORM:
-                case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
-                case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
-                default:
-                    return 0;
-            }
+            const OpenGLFormatRow* pRow = findFormatRow( format );
+            return pRow != nullptr ? pRow->_pixelFormat : 0;
         }
 
         GLenum toGlType( RHIFormat format )
         {
-            switch ( format )
-            {
-                case RHIFormat::R8G8B8A8_UNORM:
-                case RHIFormat::B8G8R8A8_UNORM:
-                    return GL_UNSIGNED_BYTE;
-                // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데
-                // 엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 정본) — 되읽기가
-                // 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를 CPU 로 읽는 경로(스크린샷·
-                // 렌더 타깃 패널)가 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다.
-                case RHIFormat::R16G16B16A16_FLOAT:
-                    return GL_HALF_FLOAT;
-                case RHIFormat::R32G32B32_FLOAT:
-                case RHIFormat::R32G32_FLOAT:
-                case RHIFormat::R32_FLOAT:
-                    return GL_FLOAT;
-                case RHIFormat::D24_UNORM_S8_UINT:
-                    return GL_UNSIGNED_INT_24_8;
-                case RHIFormat::BC1_UNORM:
-                case RHIFormat::BC2_UNORM:
-                case RHIFormat::BC3_UNORM:
-                case RHIFormat::BC4_UNORM:
-                case RHIFormat::BC5_UNORM:
-                case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
-                case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
-                default:
-                    return 0;
-            }
+            const OpenGLFormatRow* pRow = findFormatRow( format );
+            return pRow != nullptr ? pRow->_pixelType : 0;
         }
     } // namespace
 
@@ -165,18 +132,10 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // **64비트로 곱하고 담기지 않으면 거절한다.** `elementSize * elementCount` 를 uint32 로 곱하면
-        // 넘쳐서 **조용히 작은 버퍼**가 만들어지고, 셰이더는 원래 개수만큼 쓰므로 그 밖으로 나간다.
-        // DX12 는 이 함정을 이미 고쳤는데(그쪽은 `Width` 가 UINT64 라 넓히는 것으로 끝났다)
-        // 나머지 백엔드로는 옮겨지지 않았다 — 여기서는 아래 API 가 전부 32비트 크기를 받으므로
-        // 넓힐 수가 없다. 담기지 않으면 만들지 않는 것이 맞다.
-        const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
-        if ( totalBytes > static_cast<uint64>( ~uint32{ 0 } ) )
-        {
-            SW_LOG_ERROR( "구조 버퍼가 32비트 크기에 담기지 않습니다 (%# x %# = %# 바이트).",
-                          elementSize, elementCount, totalBytes );
+        // 32비트 API 다 — 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        uint32 totalBytes{ 0 };
+        if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
-        }
 
         RHIBufferDesc desc{};
         desc._elementSize  = elementSize;

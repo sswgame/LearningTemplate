@@ -104,8 +104,8 @@ namespace sw
     string ShaderBaker::computeBinaryFileName( string_view stemLower, ShaderStage stage,
                                                string_view entryPoint, uint64 permHash, string_view ext )
     {
-        const string_view stageTag  = getStageTag( stage );
-        const string_view defEntry  = getDefaultEntryPointForStage( stage );
+        const string_view stageTag  = getShaderStageInfo( stage )._pTag;
+        const string_view defEntry  = getShaderStageInfo( stage )._pEntryPoint;
         const bool        bStdEntry = entryPoint.empty() || StringUtil::equals( entryPoint, defEntry, true );
 
         string basePart = string( stemLower ) + "_";
@@ -123,33 +123,6 @@ namespace sw
 
         basePart += string( ext );
         return basePart;
-    }
-
-    string_view ShaderBaker::getDefaultEntryPointForStage( ShaderStage stage )
-    {
-        switch ( stage )
-        {
-            case ShaderStage::Vertex:
-                return "VSMain";
-            case ShaderStage::Pixel:
-                return "PSMain";
-            case ShaderStage::Compute:
-                return "CSMain";
-            case ShaderStage::Geometry:
-                return "GSMain";
-            case ShaderStage::Hull:
-                return "HSMain";
-            case ShaderStage::Domain:
-                return "DSMain";
-            case ShaderStage::Mesh:
-                return "MSMain";
-            case ShaderStage::Amplification:
-                return "ASMain";
-            case ShaderStage::Count:
-            default:
-                break;
-        }
-        return "Main";
     }
 
     string_view ShaderBaker::getSubfolderForFormat( ShaderTargetFormat format )
@@ -202,33 +175,6 @@ namespace sw
         if ( subfolder == "opengl" || subfolder == "gl" )
             return ShaderTargetFormat::SPIRV_OpenGL;
         return ShaderTargetFormat::Count;
-    }
-
-    string_view ShaderBaker::getStageTag( ShaderStage stage )
-    {
-        switch ( stage )
-        {
-            case ShaderStage::Vertex:
-                return "vs";
-            case ShaderStage::Pixel:
-                return "ps";
-            case ShaderStage::Compute:
-                return "cs";
-            case ShaderStage::Geometry:
-                return "gs";
-            case ShaderStage::Hull:
-                return "hs";
-            case ShaderStage::Domain:
-                return "ds";
-            case ShaderStage::Mesh:
-                return "ms";
-            case ShaderStage::Amplification:
-                return "as";
-            case ShaderStage::Count:
-            default:
-                break;
-        }
-        return "vs";
     }
 
     bool ShaderBaker::bakeShader( string_view sourcePath, string_view outputPath, string_view entryPoint,

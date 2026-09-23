@@ -3,7 +3,6 @@
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -31,7 +30,7 @@ namespace sw
             request._bDepthOnly != SW_FALSE ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
 
         request._vertex._filePath     = desc._vertexShaderPath;
-        request._vertex._entryPoint   = desc._vertexEntryPoint.empty() ? string( ShaderBaker::getDefaultEntryPointForStage( ShaderStage::Vertex ) )
+        request._vertex._entryPoint   = desc._vertexEntryPoint.empty() ? string( getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint )
                                                                        : desc._vertexEntryPoint;
         request._vertex._stage        = ShaderStage::Vertex;
         request._vertex._targetFormat = targetFormat;
@@ -39,7 +38,7 @@ namespace sw
         if ( request._bHasPixelShader != SW_FALSE )
         {
             request._pixel._filePath     = desc._pixelShaderPath;
-            request._pixel._entryPoint   = desc._pixelEntryPoint.empty() ? string( ShaderBaker::getDefaultEntryPointForStage( ShaderStage::Pixel ) )
+            request._pixel._entryPoint   = desc._pixelEntryPoint.empty() ? string( getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint )
                                                                          : desc._pixelEntryPoint;
             request._pixel._stage        = ShaderStage::Pixel;
             request._pixel._targetFormat = targetFormat;
@@ -61,5 +60,14 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             return engine::getShaderCache().getOrCompile( desc );
         return ShaderCompiler::compileHlsl( desc );
+    }
+
+    bool RHIShaderRequest::compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel )
+    {
+        outVertex = compile( request._vertex );
+        outPixel  = ShaderCompileResult{};
+        if ( request._bHasPixelShader != SW_FALSE )
+            outPixel = compile( request._pixel );
+        return outVertex._bSuccess && ( request._bHasPixelShader == SW_FALSE || outPixel._bSuccess );
     }
 } // namespace sw

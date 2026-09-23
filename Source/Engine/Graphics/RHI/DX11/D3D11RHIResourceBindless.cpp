@@ -104,22 +104,7 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRes, &uavDesc, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;
 
-        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
-        if ( _pDevice->_listUavFree.empty() == false )
-        {
-            index = _pDevice->_listUavFree.back();
-            _pDevice->_listUavFree.pop_back();
-            _pDevice->_listRegisteredUAV[index]   = uav;
-            _pDevice->_listUavSourceBuffer[index] = buffer;
-        }
-        else
-        {
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-            _pDevice->_listRegisteredUAV.push_back( uav );
-            _pDevice->_listUavSourceBuffer.push_back( buffer );
-        }
-        return index;
+        return registerUavView( uav.Get(), buffer );
     }
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessTextureUav( RHITextureHandle texture )
@@ -136,21 +121,23 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;
 
+        return registerUavView( uav.Get(), RHIBufferHandle{ 0 } );
+    }
+
+    RHIDescriptorIndex D3D11RHIResource::registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer )
+    {
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  index;
         if ( _pDevice->_listUavFree.empty() == false )
         {
-            index = _pDevice->_listUavFree.back();
+            const RHIDescriptorIndex index = _pDevice->_listUavFree.back();
             _pDevice->_listUavFree.pop_back();
-            _pDevice->_listRegisteredUAV[index]   = uav;
-            _pDevice->_listUavSourceBuffer[index] = RHIBufferHandle{ 0 };
+            _pDevice->_listRegisteredUAV[index]   = pUav;
+            _pDevice->_listUavSourceBuffer[index] = sourceBuffer;
+            return index;
         }
-        else
-        {
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-            _pDevice->_listRegisteredUAV.push_back( uav );
-            _pDevice->_listUavSourceBuffer.push_back( RHIBufferHandle{ 0 } );
-        }
+        const RHIDescriptorIndex index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+        _pDevice->_listRegisteredUAV.push_back( pUav );
+        _pDevice->_listUavSourceBuffer.push_back( sourceBuffer );
         return index;
     }
 

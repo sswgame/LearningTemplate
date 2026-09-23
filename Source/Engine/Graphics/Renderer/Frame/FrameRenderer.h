@@ -438,6 +438,14 @@ namespace sw
          */
         bool submitGraph( IRHIDevice* pDevice );
 
+        /**
+         * @brief execute() / executePacket() 공통의 뒷부분: 스냅샷을 GPU 로 올리고, 기록 전에 만들어야 하는 것(콜백 · 상수버퍼
+         *        슬롯 · 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
+         * @details 두 진입점이 같은 여덟 걸음을 각자 들고 있었다 — 예전에 시드 채우기가 그렇게 둘로 갈려 한쪽만 상수가 빠졌었다.
+         * @param pCallerName 오류 로그 식별용 호출자 이름
+         */
+        bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
+
         // ------------------------------------------------------------------------------
         // 6) 어태치먼트 · PSO
         // ------------------------------------------------------------------------------

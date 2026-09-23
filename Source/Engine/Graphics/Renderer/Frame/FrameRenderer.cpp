@@ -489,33 +489,8 @@ namespace sw
             _sceneBuilder.exportCpuSnapshot( _sceneSnapshotScratch );
             _gpuScene.adoptCpuSnapshot( _sceneSnapshotScratch );
         }
-        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
-        // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
-        _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
-        // 모프 풀 오프셋은 배치 표에 실려 업로드 시점에 완성돼야 한다.
-        prepareMeshMorphPool();
-        _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
-        _gpuScene.upload( pDevice );
-
-        if ( _bCallbacksBound == SW_FALSE )
-            bindPassCallbacks();
-
-        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
-        ensurePassCbCapacityForFrame();
-
-        // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
-        ensureMaterialPsos();
-
-        if ( prepareCommandList( pDevice, "execute" ) == false )
-        {
-            _pScene = nullptr;
-            return false;
-        }
-
-        const bool bOk             = submitGraph( pDevice );
-        _pScene                    = nullptr;
-        _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
-        reportGpuPassTimes( pDevice );
+        const bool bOk = uploadSceneAndSubmit( pDevice, "execute" );
+        _pScene        = nullptr;
         return bOk;
     }
 
@@ -563,6 +538,11 @@ namespace sw
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
+        return uploadSceneAndSubmit( pDevice, "executePacket" );
+    }
+
+    bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
+    {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
@@ -580,7 +560,7 @@ namespace sw
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPsos();
 
-        if ( prepareCommandList( pDevice, "executePacket" ) == false )
+        if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;
 
         const bool bOk             = submitGraph( pDevice );

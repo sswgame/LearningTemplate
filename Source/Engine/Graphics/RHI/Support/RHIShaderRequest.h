@@ -45,5 +45,11 @@ namespace sw
 
         /** @brief 엔진 서비스가 묶여 있으면 ShaderCache 를, 아니면(테스트·툴) 컴파일러를 직접 씁니다. */
         static ShaderCompileResult compile( const ShaderCompileDesc& desc );
+
+        /**
+         * @brief 그래픽스 요청의 버텍스 · (있으면) 픽셀 스테이지를 컴파일합니다 — DX12 · GL · Vulkan 이 같은 일곱 줄을 각자 들었다.
+         * @return 버텍스가 성공했고, 픽셀은 없거나 성공했으면 true. 실패한 쪽의 메시지는 그 결과에 남는다.
+         */
+        static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
     };
 } // namespace sw

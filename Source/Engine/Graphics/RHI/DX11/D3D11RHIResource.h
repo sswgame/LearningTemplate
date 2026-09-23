@@ -3,6 +3,8 @@
 
 #include "Engine/Graphics/RHI/IRHIResource.h"
 
+struct ID3D11UnorderedAccessView;
+
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
@@ -40,6 +42,9 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
+        /** @brief UAV 를 등록부에 넣고 인덱스를 돌려줍니다 — 돌려받은 자리를 먼저 쓴다. 버퍼 · 텍스처 UAV 가 같은 길이다. */
+        RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
+
         D3D11RHIDevice* _pDevice;
     };
 } // namespace sw

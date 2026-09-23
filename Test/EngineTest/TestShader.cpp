@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -572,4 +573,34 @@ SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
     // 되돌리면 다시 최신이다.
     SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
     SW_EXPECT_EQUAL( hashForward, sw::ShaderBaker::computeEffectiveSourceHash( shaderPath ) );
+}
+
+/**
+ * @brief [ShaderStageTest] 스테이지 표는 빠진 줄이 없고, 태그 · 진입점 · 프로파일이 서로 맞는다
+ */
+SW_TEST_CASE( ShaderStageTest, StageInfoTableIsComplete )
+{
+    for ( uint8 stageIndex = 0; stageIndex < static_cast<uint8>( sw::ShaderStage::Count ); ++stageIndex )
+    {
+        const sw::ShaderStage      stage = static_cast<sw::ShaderStage>( stageIndex );
+        const sw::ShaderStageInfo& info  = sw::getShaderStageInfo( stage );
+        SW_ASSERT_TRUE( info._pTag != nullptr && info._pEntryPoint != nullptr && info._pProfileSm6 != nullptr );
+        SW_ASSERT_TRUE( sw::string_view{ info._pTag }.size() == 2 );
+
+        // 진입점은 태그의 대문자 + "Main", 프로파일은 태그 + "_5_0" / "_6_6" — 표의 줄이 서로 어긋나면 여기서 잡힌다.
+        sw::string expectedEntry;
+        expectedEntry += static_cast<utf8>( info._pTag[0] - 'a' + 'A' );
+        expectedEntry += static_cast<utf8>( info._pTag[1] - 'a' + 'A' );
+        expectedEntry += "Main";
+        SW_EXPECT_EQUAL( expectedEntry, sw::string{ info._pEntryPoint } );
+        SW_EXPECT_EQUAL( sw::string{ info._pTag } + "_6_6", sw::string{ info._pProfileSm6 } );
+        if ( info._pProfileSm5 != nullptr )
+            SW_EXPECT_EQUAL( sw::string{ info._pTag } + "_5_0", sw::string{ info._pProfileSm5 } );
+    }
+
+    // SM5 에 없는 두 스테이지, 그리고 범위 밖은 버텍스 줄이다
+    SW_EXPECT_TRUE( sw::getShaderStageInfo( sw::ShaderStage::Mesh )._pProfileSm5 == nullptr );
+    SW_EXPECT_TRUE( sw::getShaderStageInfo( sw::ShaderStage::Amplification )._pProfileSm5 == nullptr );
+    SW_EXPECT_TRUE( sw::getShaderStageInfo( sw::ShaderStage::Vertex )._pProfileSm5 != nullptr );
+    SW_EXPECT_EQUAL( sw::string{ "VSMain" }, sw::string{ sw::getShaderStageInfo( sw::ShaderStage::Count )._pEntryPoint } );
 }

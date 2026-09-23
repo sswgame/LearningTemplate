@@ -4,6 +4,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -431,29 +432,8 @@ namespace sw
         // DX12 는 쿼리 힙을 리셋하지 않는다 — 안 적은 칸엔 **지난 사이클의 값**이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
-        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
-        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
-        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
-        uint64 origin = UINT64_MAX;
-        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
-        {
-            if ( ( writtenMask & ( 1u << index ) ) != 0 && pTicks[index] < origin )
-                origin = pTicks[index];
-        }
-
-        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
-        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
-        {
-            // 안 쓰인 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
-            if ( ( writtenMask & ( 1u << index ) ) == 0 )
-            {
-                _listTimestampMicro[index] = -1.0f;
-                continue;
-            }
-            const uint64 ticks         = ( pTicks[index] >= origin ) ? ( pTicks[index] - origin ) : 0;
-            _listTimestampMicro[index] = static_cast<float32>( static_cast<float64>( ticks ) * 1000000.0 /
-                                                               static_cast<float64>( _timestampFrequency ) );
-        }
+        // 그래서 writtenMask 가 곧 준비 비트다 — 이 슬롯은 방금 펜스를 통과했다.
+        RHIGpuTimestamp::resolveMicro( pTicks, writtenMask, 1000000.0 / static_cast<float64>( _timestampFrequency ), _listTimestampMicro );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );

@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -90,18 +91,10 @@ namespace sw
         if ( elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // **64비트로 곱하고 담기지 않으면 거절한다.** `elementSize * elementCount` 를 uint32 로 곱하면
-        // 넘쳐서 **조용히 작은 버퍼**가 만들어지고, 셰이더는 원래 개수만큼 쓰므로 그 밖으로 나간다.
-        // DX12 는 이 함정을 이미 고쳤는데(그쪽은 `Width` 가 UINT64 라 넓히는 것으로 끝났다)
-        // 나머지 백엔드로는 옮겨지지 않았다 — 여기서는 아래 API 가 전부 32비트 크기를 받으므로
-        // 넓힐 수가 없다. 담기지 않으면 만들지 않는 것이 맞다.
-        const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
-        if ( totalBytes > static_cast<uint64>( ~uint32{ 0 } ) )
-        {
-            SW_LOG_ERROR( "구조 버퍼가 32비트 크기에 담기지 않습니다 (%# x %# = %# 바이트).",
-                          elementSize, elementCount, totalBytes );
+        // 32비트 API 다 — 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        uint32 totalBytes{ 0 };
+        if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
-        }
 
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage               = D3D11_USAGE_DEFAULT;

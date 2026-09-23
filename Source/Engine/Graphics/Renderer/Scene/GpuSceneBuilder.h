@@ -261,6 +261,15 @@ namespace sw
         bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다 — 메시 컴포넌트 판과 같은 규칙, 소유는 배치의 것. */
         bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& cand );
+        /**
+         * @brief 후보의 머티리얼과 블렌드 모드 — 메시 컴포넌트 판과 인스턴스 배치 판이 같은 규칙이다.
+         * @details 머티리얼이 없으면 씬 기본 머티리얼(언리얼의 기본 머티리얼). **블렌드 모드는 머티리얼의 성질이다** — 언리얼도
+         *          블렌드 모드가 머티리얼 에셋에 있고, 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면
+         *          불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다. 인스턴스만 붙은 메시는 **인스턴스의
+         *          부모 머티리얼**이 정본이고(인스턴스는 값만 덮어쓴다), 둘 다 없을 때만 폴백을 쓴다 — 머티리얼이 없는 디버그 ·
+         *          픽스처 메시가 그 경우다. (예전에는 인스턴스를 이 판단 **뒤에** 채워서 이 폴백이 한 번도 걸리지 않았다.)
+         */
+        static void fillCandidateMaterial( DrawCandidate& cand, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다 — 게임 스레드 전용(머티리얼의 지연 캐시를 건드린다). */
         static void stampPermutationHash( DrawCandidate& cand );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드·바운드·블렌드·시드)를 채웁니다. 배치·머티리얼 인덱스는 손대지 않는다. */

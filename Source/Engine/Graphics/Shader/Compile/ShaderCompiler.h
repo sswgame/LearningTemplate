@@ -55,6 +55,38 @@ namespace sw
     }
 
     /**
+     * @struct ShaderStageInfo
+     * @brief 스테이지 하나의 표 한 줄 — 축약 태그 · 기본 진입점 · 컴파일 프로파일(SM5 / SM6).
+     * @details 예전에는 이 넷이 세 파일의 switch 다섯이었다(베이커의 태그 · 기본 진입점, 컴파일러의 프로파일 둘, 바인딩
+     *          레이아웃의 비트 변환). 스테이지를 하나 더하면 열거형과 이 표의 한 줄이다. `_pProfileSm5` 가 nullptr 이면
+     *          SM5(DXBC · D3D11)에 그 스테이지가 없다는 뜻이다.
+     */
+    struct ShaderStageInfo
+    {
+        const utf8* _pTag;        ///< 파일 이름 · 로그의 축약 ("vs")
+        const utf8* _pEntryPoint; ///< 기본 진입점 ("VSMain")
+        const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일 ("vs_5_0"), 없으면 nullptr
+        const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일 ("vs_6_6")
+    };
+
+    /** @brief 스테이지의 표 한 줄. `Count` 이상이면 버텍스 줄이다(예전 switch 들의 폴백과 같다). */
+    inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
+    {
+        static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
+            {"vs", "VSMain", "vs_5_0", "vs_6_6"}, // Vertex
+            {"ps", "PSMain", "ps_5_0", "ps_6_6"}, // Pixel
+            {"cs", "CSMain", "cs_5_0", "cs_6_6"}, // Compute
+            {"gs", "GSMain", "gs_5_0", "gs_6_6"}, // Geometry
+            {"hs", "HSMain", "hs_5_0", "hs_6_6"}, // Hull
+            {"ds", "DSMain", "ds_5_0", "ds_6_6"}, // Domain
+            {"ms", "MSMain",  nullptr, "ms_6_6"}, // Mesh — SM5 에는 없다
+            {"as", "ASMain",  nullptr, "as_6_6"}, // Amplification — SM5 에는 없다
+        };
+        const size_t index = ( stage < ShaderStage::Count ) ? static_cast<size_t>( stage ) : 0;
+        return arrInfo[index];
+    }
+
+    /**
      * @enum ShaderTargetFormat
      * @brief 컴파일 출력 타깃 바이트코드 포맷
      */

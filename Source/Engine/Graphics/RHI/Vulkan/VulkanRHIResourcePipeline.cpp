@@ -32,12 +32,9 @@ namespace sw
         const ShaderCompileDesc&       vsDesc          = request._vertex;
         const ShaderCompileDesc&       psDesc          = request._pixel;
         const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( vsDesc );
+        ShaderCompileResult            vsResult{};
         ShaderCompileResult            psResult{};
-        if ( bHasPixelShader )
-            psResult = RHIShaderRequest::compile( psDesc );
-
-        if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false )
         {
             SW_LOG_WARNING( "createPipelineState: shader compile failed (vs=%# ps=%#)",
                             vsResult._bSuccess, psResult._bSuccess );

@@ -138,58 +138,15 @@ namespace sw
 
             /**
              * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
-             * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
+             * @details DX11 은 SM5.0, DX12/Vulkan/OpenGL 은 Native Bindless 및 Descriptor Indexing 을 위해 SM6.6 이다. 스테이지마다
+             *          다른 것은 `ShaderStageInfo` 표의 줄이고, SM5 에 없는 스테이지(메시 · 앰플리피케이션)는 예전처럼 vs_5_0 으로 폴백한다.
              */
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
+                const ShaderStageInfo& info = getShaderStageInfo( stage );
                 if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
-                {
-                    switch ( stage )
-                    {
-                        case ShaderStage::Vertex:
-                            return "vs_5_0";
-                        case ShaderStage::Pixel:
-                            return "ps_5_0";
-                        case ShaderStage::Compute:
-                            return "cs_5_0";
-                        case ShaderStage::Geometry:
-                            return "gs_5_0";
-                        case ShaderStage::Hull:
-                            return "hs_5_0";
-                        case ShaderStage::Domain:
-                            return "ds_5_0";
-                        case ShaderStage::Mesh:
-                        case ShaderStage::Amplification:
-                        case ShaderStage::Count:
-                        default:
-                            break;
-                    }
-                    return "vs_5_0";
-                }
-                // DX12, Vulkan, OpenGL: 최신 표준 SM6.6 Native Bindless 및 힙 인덱싱 지원
-                switch ( stage )
-                {
-                    case ShaderStage::Vertex:
-                        return "vs_6_6";
-                    case ShaderStage::Pixel:
-                        return "ps_6_6";
-                    case ShaderStage::Compute:
-                        return "cs_6_6";
-                    case ShaderStage::Geometry:
-                        return "gs_6_6";
-                    case ShaderStage::Hull:
-                        return "hs_6_6";
-                    case ShaderStage::Domain:
-                        return "ds_6_6";
-                    case ShaderStage::Mesh:
-                        return "ms_6_6";
-                    case ShaderStage::Amplification:
-                        return "as_6_6";
-                    case ShaderStage::Count:
-                    default:
-                        break;
-                }
-                return "vs_6_6";
+                    return info._pProfileSm5 != nullptr ? info._pProfileSm5 : getShaderStageInfo( ShaderStage::Vertex )._pProfileSm5;
+                return info._pProfileSm6;
             }
 
 #if defined( SW_HAS_DXC_API )

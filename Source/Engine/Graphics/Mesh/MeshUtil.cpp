@@ -123,6 +123,40 @@ namespace sw
         {
             return float2{ static_cast<float32>( slice ) / static_cast<float32>( sliceCount ), v };
         }
+
+        /** @brief 회전체 옆면 한 조각의 네 꼭짓점 — 원통과 캡슐의 몸통이 같은 조각이다. */
+        struct RevolvedQuad
+        {
+            float3 _lower0;
+            float3 _lower1;
+            float3 _upper0;
+            float3 _upper1;
+        };
+
+        RevolvedQuad makeRevolvedQuad( uint32 slice, uint32 sliceCount, float32 radius, float32 halfY )
+        {
+            const float32 angle0 = sliceAngle( slice, sliceCount );
+            const float32 angle1 = sliceAngle( slice + 1, sliceCount );
+            RevolvedQuad  quad{};
+            quad._lower0 = float3{ radius * MathUtil::cos( angle0 ), -halfY, radius * MathUtil::sin( angle0 ) };
+            quad._lower1 = float3{ radius * MathUtil::cos( angle1 ), -halfY, radius * MathUtil::sin( angle1 ) };
+            quad._upper0 = float3{ quad._lower0._x, halfY, quad._lower0._z };
+            quad._upper1 = float3{ quad._lower1._x, halfY, quad._lower1._z };
+            return quad;
+        }
+
+        /** @brief 옆면 조각을 두 삼각형으로 냅니다. 노멀은 **축을 뺀 방사 방향**이다 — 위치를 그대로 정규화하면 위아래로 기운다. */
+        void pushRevolvedSide( vector<RHIVertex>& outList, const RevolvedQuad& quad, uint32 slice, uint32 sliceCount, float32 vUpper, float32 vLower )
+        {
+            const float3      side0 = float3{ quad._lower0._x, 0.0f, quad._lower0._z }.normalize();
+            const float3      side1 = float3{ quad._lower1._x, 0.0f, quad._lower1._z }.normalize();
+            const BuildVertex sideLower0{ quad._lower0, side0, revolvedUv( slice, sliceCount, vLower ) };
+            const BuildVertex sideLower1{ quad._lower1, side1, revolvedUv( slice + 1, sliceCount, vLower ) };
+            const BuildVertex sideUpper0{ quad._upper0, side0, revolvedUv( slice, sliceCount, vUpper ) };
+            const BuildVertex sideUpper1{ quad._upper1, side1, revolvedUv( slice + 1, sliceCount, vUpper ) };
+            pushTriangle( outList, sideLower0, sideUpper0, sideLower1 );
+            pushTriangle( outList, sideLower1, sideUpper0, sideUpper1 );
+        }
     } // namespace
 
     shared_ptr<Mesh> MeshUtil::createUnitCube()
@@ -308,26 +342,12 @@ namespace sw
         constexpr float32 kHalfY  = 0.5f;
         for ( uint32 slice = 0; slice < sliceCount; ++slice )
         {
-            const float32 angle0 = sliceAngle( slice, sliceCount );
-            const float32 angle1 = sliceAngle( slice + 1, sliceCount );
-            const float3  lower0{ kRadius * MathUtil::cos( angle0 ), -kHalfY, kRadius * MathUtil::sin( angle0 ) };
-            const float3  lower1{ kRadius * MathUtil::cos( angle1 ), -kHalfY, kRadius * MathUtil::sin( angle1 ) };
-            const float3  upper0{ lower0._x, kHalfY, lower0._z };
-            const float3  upper1{ lower1._x, kHalfY, lower1._z };
-
-            // 옆면 노멀은 **축을 뺀 방사 방향**이다 — 위치를 그대로 정규화하면 위아래로 기운다.
-            const float3 side0 = float3{ lower0._x, 0.0f, lower0._z }.normalize();
-            const float3 side1 = float3{ lower1._x, 0.0f, lower1._z }.normalize();
             // 옆면 UV: u 는 둘레, v 는 높이. 뚜껑은 평면 투영이라 `pushFlatTriangle` 이 알아서 한다.
-            const BuildVertex sideLower0{ lower0, side0, revolvedUv( slice, sliceCount, 1.0f ) };
-            const BuildVertex sideLower1{ lower1, side1, revolvedUv( slice + 1, sliceCount, 1.0f ) };
-            const BuildVertex sideUpper0{ upper0, side0, revolvedUv( slice, sliceCount, 0.0f ) };
-            const BuildVertex sideUpper1{ upper1, side1, revolvedUv( slice + 1, sliceCount, 0.0f ) };
-            pushTriangle( listVert, sideLower0, sideUpper0, sideLower1 );
-            pushTriangle( listVert, sideLower1, sideUpper0, sideUpper1 );
+            const RevolvedQuad quad = makeRevolvedQuad( slice, sliceCount, kRadius, kHalfY );
+            pushRevolvedSide( listVert, quad, slice, sliceCount, 0.0f, 1.0f );
             // 뚜껑은 실제로 평평하다 — 면 노멀(±Y)이 맞다.
-            pushFlatTriangle( listVert, float3{ 0.0f, kHalfY, 0.0f }, upper0, upper1 );
-            pushFlatTriangle( listVert, float3{ 0.0f, -kHalfY, 0.0f }, lower1, lower0 );
+            pushFlatTriangle( listVert, float3{ 0.0f, kHalfY, 0.0f }, quad._upper0, quad._upper1 );
+            pushFlatTriangle( listVert, float3{ 0.0f, -kHalfY, 0.0f }, quad._lower1, quad._lower0 );
         }
 
         mesh->setVertices( std::move( listVert ) );
@@ -358,21 +378,8 @@ namespace sw
 
         for ( uint32 slice = 0; slice < sliceCount; ++slice )
         {
-            const float32 angle0 = sliceAngle( slice, sliceCount );
-            const float32 angle1 = sliceAngle( slice + 1, sliceCount );
-            const float3  lower0{ kRadius * MathUtil::cos( angle0 ), -kHalfY, kRadius * MathUtil::sin( angle0 ) };
-            const float3  lower1{ kRadius * MathUtil::cos( angle1 ), -kHalfY, kRadius * MathUtil::sin( angle1 ) };
-            const float3  upper0{ lower0._x, kHalfY, lower0._z };
-            const float3  upper1{ lower1._x, kHalfY, lower1._z };
-            const float3  side0 = float3{ lower0._x, 0.0f, lower0._z }.normalize();
-            const float3  side1 = float3{ lower1._x, 0.0f, lower1._z }.normalize();
             // 원통부의 v 는 [0.25, 0.75] 를 쓴다 — 위아래 반구가 나머지 절반을 나눠 갖는다.
-            const BuildVertex sideLower0{ lower0, side0, revolvedUv( slice, sliceCount, 0.75f ) };
-            const BuildVertex sideLower1{ lower1, side1, revolvedUv( slice + 1, sliceCount, 0.75f ) };
-            const BuildVertex sideUpper0{ upper0, side0, revolvedUv( slice, sliceCount, 0.25f ) };
-            const BuildVertex sideUpper1{ upper1, side1, revolvedUv( slice + 1, sliceCount, 0.25f ) };
-            pushTriangle( listVert, sideLower0, sideUpper0, sideLower1 );
-            pushTriangle( listVert, sideLower1, sideUpper0, sideUpper1 );
+            pushRevolvedSide( listVert, makeRevolvedQuad( slice, sliceCount, kRadius, kHalfY ), slice, sliceCount, 0.25f, 0.75f );
 
             // 반구의 노멀은 **그 반구의 중심**(0, ±kHalfY, 0) 기준 방향이다 — 원점 기준으로 잡으면
             // 캡슐이 길수록 어긋난다(구가 아니라 원통부만큼 밀려 있다).

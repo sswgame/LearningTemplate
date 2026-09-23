@@ -69,6 +69,9 @@ namespace sw
         static string makeLocalCachePath( const ShaderCompileDesc& desc );
 
     private:
+        /** @brief 인메모리 캐시에 넣습니다 — 로컬 캐시 · 사전 베이크 · 라이브 컴파일 세 갈래가 같은 항목을 만든다. */
+        void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, uint64 sourceHash );
+
         unordered_map<string, ShaderCacheEntry> _mapCache;
         mutable mutex                           _mutexCache;
     };

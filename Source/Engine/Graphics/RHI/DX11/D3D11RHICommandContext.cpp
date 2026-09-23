@@ -349,20 +349,28 @@ namespace sw
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );
     }
 
+    ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSrv( RHIDescriptorIndex index ) const
+    {
+        if ( index == kInvalidDescriptorIndex || index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+            return nullptr;
+        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
+        if ( buffer == 0 )
+            return nullptr;
+        const auto it = _pDevice->_mapBufferSrv.find( buffer );
+        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
+            return nullptr;
+        return it->second.Get();
+    }
+
     void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
         // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). createStructuredBuffer 에서 만든 SRV 를
         // 리플렉션 t 슬롯에 바인딩한다.
-        if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        if ( _pContext == nullptr )
             return;
-        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
-        if ( buffer == 0 )
+        ID3D11ShaderResourceView* pSrv = findBindlessBufferSrv( index );
+        if ( pSrv == nullptr )
             return;
-        const auto it = _pDevice->_mapBufferSrv.find( buffer );
-        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
-            return;
-        ID3D11ShaderResourceView* pSrv = it->second.Get();
         _pContext->VSSetShaderResources( slot, 1, &pSrv );
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
     }
@@ -381,16 +389,11 @@ namespace sw
     void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // gpucull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
-        if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        if ( _pContext == nullptr )
             return;
-        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
-        if ( buffer == 0 )
+        ID3D11ShaderResourceView* pSrv = findBindlessBufferSrv( index );
+        if ( pSrv == nullptr )
             return;
-        const auto it = _pDevice->_mapBufferSrv.find( buffer );
-        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
-            return;
-        ID3D11ShaderResourceView* pSrv = it->second.Get();
         _pContext->CSSetShaderResources( slot, 1, &pSrv );
     }
 

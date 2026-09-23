@@ -323,19 +323,7 @@ namespace sw
                     }
                 }
             }
-            _data._bytes.clear();
-            uint32 maxEnd = pSchemaCb->_totalSize;
-            for ( const MaterialProperty& prop : _data._listProperty )
-            {
-                maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
-            }
-            _data._bytes.assign( maxEnd, 0 );
-            for ( MaterialProperty& prop : _data._listProperty )
-            {
-                MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
-            }
-            const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
-            _data._bytes.resize( alignedTotal, 0 );
+            packPropertiesIntoBytes( pSchemaCb->_totalSize );
             _desc._listProperty = _data._listProperty;
             SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
             return true;
@@ -385,7 +373,14 @@ namespace sw
             }
         }
 
-        uint32 maxEnd = pSchemaCb->_totalSize;
+        packPropertiesIntoBytes( pSchemaCb->_totalSize );
+        _desc._listProperty = _data._listProperty;
+        return bAllPacked;
+    }
+
+    void Material::packPropertiesIntoBytes( uint32 minimumByteSize )
+    {
+        uint32 maxEnd = minimumByteSize;
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::isNonBufferType( prop._type ) == false )
@@ -393,13 +388,10 @@ namespace sw
         }
         _data._bytes.assign( maxEnd, 0 );
         for ( MaterialProperty& prop : _data._listProperty )
-        {
             MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
-        }
+
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
-        _desc._listProperty = _data._listProperty;
-        return bAllPacked;
     }
 
     bool Material::rebuildPackedBuffer()

@@ -138,12 +138,7 @@ namespace sw
                     result._bytecode = std::move( cacheBytes );
                     result._bSuccess = true;
 
-                    std::scoped_lock<mutex> lock{ _mutexCache };
-                    ShaderCacheEntry        entry{};
-                    entry._lastTimestamp = currentSourceHash;
-                    entry._desc          = desc;
-                    entry._result        = result;
-                    _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+                    storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
                     return result;
                 }
             }
@@ -187,12 +182,7 @@ namespace sw
             result._bytecode = std::move( prebakedBytes );
             result._bSuccess = true;
 
-            std::scoped_lock<mutex> lock{ _mutexCache };
-            ShaderCacheEntry        entry{};
-            entry._lastTimestamp = currentSourceHash;
-            entry._desc          = desc;
-            entry._result        = result;
-            _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+            storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
             return result;
         }
 
@@ -213,12 +203,7 @@ namespace sw
                 FileUtil::ensureDirectoryExists( localDir );
             FileUtil::writeFile( localCachePath, compiledResult._bytecode.data(), compiledResult._bytecode.size() );
 
-            std::scoped_lock<mutex> lock{ _mutexCache };
-            ShaderCacheEntry        entry{};
-            entry._lastTimestamp = currentSourceHash;
-            entry._desc          = desc;
-            entry._result        = compiledResult;
-            _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+            storeEntry( std::move( cacheKey ), desc, compiledResult, currentSourceHash );
         }
         return compiledResult;
 #else
@@ -249,5 +234,15 @@ namespace sw
             if ( entry.second._desc._filePath.empty() == false )
                 outListDesc.push_back( entry.second._desc );
         }
+    }
+
+    void ShaderCache::storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, uint64 sourceHash )
+    {
+        std::scoped_lock<mutex> lock{ _mutexCache };
+        ShaderCacheEntry        entry{};
+        entry._lastTimestamp = sourceHash;
+        entry._desc          = desc;
+        entry._result        = result;
+        _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
     }
 } // namespace sw

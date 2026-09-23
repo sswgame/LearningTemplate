@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -105,32 +106,7 @@ namespace sw
             arrTick[slotIndex] = tick;
             readyMask |= ( 1u << slotIndex );
         }
-        if ( readyMask == 0 )
-            return;
-
-        // 기준점은 **가장 이른 시각**이다 — 번호가 낮은 칸이 아니다. 프레임 시작 표식은 번호가 큰 칸에
-        // 적히므로(패스 칸과 안 겹치게 뒤쪽을 쓴다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로
-        // 잘린다. 어느 칸을 기준으로 삼든 구간 차이는 같다.
-        uint64 origin{ UINT64_MAX };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
-        {
-            if ( ( readyMask & ( 1u << slotIndex ) ) != 0 && arrTick[slotIndex] < origin )
-                origin = arrTick[slotIndex];
-        }
-
-        _listTimestampMicro.resize( constant::kMaxGpuTimestampSlot );
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
-        {
-            // 안 적힌 칸은 음수로 표시한다 — 호출자가 그 쌍을 통째로 버리는 약속이다.
-            if ( ( readyMask & ( 1u << slotIndex ) ) == 0 )
-            {
-                _listTimestampMicro[slotIndex] = -1.0f;
-                continue;
-            }
-            const uint64 ticks = ( arrTick[slotIndex] >= origin ) ? ( arrTick[slotIndex] - origin ) : 0;
-            _listTimestampMicro[slotIndex] =
-                static_cast<float32>( static_cast<float64>( ticks ) * 1000000.0 / static_cast<float64>( disjointData.Frequency ) );
-        }
+        RHIGpuTimestamp::resolveMicro( arrTick, readyMask, 1000000.0 / static_cast<float64>( disjointData.Frequency ), _listTimestampMicro );
     }
 
     void D3D11RHIDevice::beginFrame( const float4& clearColor )

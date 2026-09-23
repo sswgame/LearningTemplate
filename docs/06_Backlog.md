@@ -1026,6 +1026,53 @@ Editor 는 2026-09-10 에 "하나 더하려면 N 곳" 패턴을 걷어낸 뒤라
 972 줄로 여전히 Editor 에서 가장 긴 파일이지만, 남은 것은 기즈모 · 그리드 · 오버레이 그리기라 쪼개도 총량이 줄지 않는다
 (정해진 방향: 쪼개기보다 공통 빼기).
 
+**(B) 열아홉째 — 2026-09-23 · Graphics 구조 정리: 넷이 각자 들던 규칙 셋을 `RHI/Support` 하나로 · 스테이지 switch 다섯을 표 한 줄로 · GL 포맷 switch 셋을 표 하나로 · 같은 파일 안의 되풀이 아홉.**
+
+Graphics 는 09-12 · 09-13 · 09-18 · 09-21 에 구조를 네 번 봤고 그때 "백엔드 이름을 지우면 같아지는 함수 0 건" 이었다. 이번엔
+`RunDuplicateCode.py --filter Source/Engine/Graphics --no-headers --min-lines 6` 로 다시 쟀다 — 41 건. 백엔드 헤더의 override 선언(그때
+기각, 여전히 맞다)이 아니라 **소스 안**의 되풀이였고, 그중 셋은 "백엔드가 다르게 해야 할 이유가 없는 규칙" 이었다. 정리 뒤 24 건이고
+남은 것은 대부분 6 줄짜리 API 호출 모양이다.
+
+- **넷이 각자 들던 규칙 셋 → `RHI/Support`.** ① GPU 타임스탬프 칸을 마이크로초로 푸는 규칙(기준점은 가장 이른 틱 · 안 적힌 칸은
+  −1)이 DX11 · DX12 · GL · Vulkan 에 같은 스무 줄이었다 — 백엔드가 다른 것은 틱을 **읽는 방법**과 단위뿐이다.
+  `RHIGpuTimestamp::resolveMicro` 하나, `RHIGpuTimestampTest`(디바이스 없이). ② 구조 버퍼의 32비트 크기 검사(넘치면 만들지 않는다)가
+  DX11 · GL · Vulkan 에 같은 열두 줄이었고 주석이 "다른 백엔드로 옮겨지지 않았다" 고 스스로 적고 있었다 — `RHIBufferSize`.
+  ③ 그래픽스 파이프라인의 VS · (있으면) PS 컴파일 일곱 줄이 DX12 · GL · Vulkan 에 — `RHIShaderRequest::compileGraphics`.
+- **셰이더 스테이지는 표 한 줄** (`ShaderStageInfo` · `getShaderStageInfo`, `ShaderCompiler.h`). 태그("vs") · 기본 진입점("VSMain") ·
+  SM5/SM6 프로파일이 세 파일의 switch 다섯이었다(베이커 둘 · 컴파일러 둘 · 바인딩 레이아웃은 이미 있던 `toShaderStageFlag` 의
+  사본). 스테이지를 하나 더하면 열거형과 표의 한 줄이다. 베이크 파일 이름은 같은 문자열이라 바뀌지 않는다(`ShaderBakeRecipeTest` ·
+  Shipping 팩 로드가 그것을 본다). `ShaderStageTest` +1: 표의 줄이 서로 맞는지(진입점 = 태그 대문자 + Main, 프로파일 = 태그 + _6_6).
+- **GL 포맷은 표 하나** (`OpenGLRHIResource.cpp` 의 `arrFormatRow`). internalFormat · format · type 이 switch 셋이었고 포맷을 하나
+  더하면 세 자리였다 — `R16G16B16A16_FLOAT` 의 type 이 한 자리에서만 틀렸던 것이 그 구조의 결과였다(그 주석은 표의 줄 위로 옮겼다).
+- **같은 파일 안의 되풀이 아홉.** `FrameRenderer` 의 두 진입점(씬 · 패킷)이 같은 여덟 걸음(업로드 → 콜백 → 슬롯 → 머티리얼 PSO →
+  기록 → 제출 → 보고)을 각자 들었다 → `uploadSceneAndSubmit` · `GpuSceneBuilder` 의 후보 채우기 둘(컴포넌트 · 인스턴스 배치)의
+  머티리얼 · 블렌드 규칙 → `fillCandidateMaterial` · DX12 드로우 둘의 PSO 바인딩 → `bindActiveGraphicsPso` · GL 드로우 넷의
+  프로그램 · 토폴로지 해석 → `resolveDrawProgram` · GL 링크 검사 둘 → `linkProgram` · `ShaderCache` 의 항목 저장 세 갈래 →
+  `storeEntry` · `Material` 의 리플렉션 동기화 두 갈래의 패킹 → `packPropertiesIntoBytes` · DX11 의 bindless SRV 조회 둘 →
+  `findBindlessBufferSrv` · UAV 등록 둘 → `registerUavView` · `MeshUtil` 의 원통 · 캡슐 옆면 → `pushRevolvedSide`.
+
+**재서 기각.** `MaterialPacking.cpp` 의 숫자 타입 13 줄 case 목록 둘은 `default` 와 같은 일을 하지만 지울 수 없다 — 이 트리는
+`-Wswitch-enum` 이 켜져 있어 열거자를 전부 적지 않으면 경고다(지웠더니 경고 둘). 열거자 열거는 "타입이 늘면 컴파일러가 알려 주는"
+장치라 그대로 둔다. DX12 의 텍스처 추적 상태 조회 둘은 반환 타입(`D3D12_RESOURCE_STATES`)이 헤더에 없어 멤버로 빼면 헤더가 D3D12 를
+알아야 한다 — 8 줄 둘이라 두었다. `ShaderReflectionDx` 의 D3D11/D3D12 채우기 두 함수는 겉은 같지만 CB 바인드 포인트 처리가 다르다
+(D3D11 은 이름으로 실제 슬롯을 찾고 D3D12 는 0) — 그 차이가 의도인지부터 봐야 해서 손대지 않았다.
+
+**검증.** Debug · Shipping · ASan 빌드 경고 0. Debug `EngineTest.exe` 를 **필터 없이 통째로** 645/645(GPU 스위트 포함) · `nogpu` 7/7 을 Debug ·
+Shipping · ASan 셋 다 · Shipping `hostgpu` 2/2 · 린트 프리셋 20/20. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0 ·
+평균 RGB 가 백엔드끼리 ±0.3 안(GL 포맷 표 · GL 드로우 프로그램 · DX11 bindless · DX12 PSO · Vulkan 타임스탬프가 전부 이 길을 탄다).
+에디터 ON(`-EnableEditor -gv_editorPanelDump=25`) dx12 · dx11 · vk · gl 넷 다 종료 0 · 오류 0 · 창 15 / 빈 패널 0. 바뀐 헤더 열넷은
+단독 컴파일 OK. 6 줄 중복 창 41 → 24 건.
+
+**한 번 본 것 — 재현 안 됨 (셋째).** Debug 체인의 `EngineTest_HostOnly` 가 **한 번** 세그폴트로 죽었다 — `--output-on-failure` 전체를
+남겼고, 그 자리는 `RenderPassGpuTest.MaterialLifetimeFollowsPacket` 의 `[ RUN ]` 직후 **로그 한 줄도 찍기 전**이다. 즉 앞 케이스의
+`[ OK ]` 뒤, 이 케이스의 `tryInitDeviceForFrameRenderer( DirectX11 …)` 안 — 디바이스 · 창 생성 자리다. 앞의 두 번(위 표의 메모)과
+같은 자리이고 셰이더 · 머티리얼 로직까지 가지 않았다. 같은 바이너리로 `EngineTest_HostOnly` 3 회 · 그 케이스 단독 10 회 · 전체 645 통과.
+이번엔 체인이 GPU 스위트를 빌드와 겹치지 않고 돌렸으므로(스모크 먼저, 체인 나중) 부하 타임아웃도 아니다. 다음 순서는 백로그 메모대로
+`-gv_` 로 백엔드를 하나씩 빼 보는 것 — DX11 이 첫 시도라 DX11 창/디바이스 생성부터.
+
+**남긴 것.** 남은 24 건은 6 줄짜리가 스물이고, 백엔드 API 호출 모양(디스크립터 뷰 만들기 · 배리어 한 줄)이라 합치면 읽기가 나빠진다.
+볼 만한 것은 `ShaderReflectionDx` 의 두 채우기 함수 하나 — 바인드 포인트 규칙이 같아도 되는지 확인되면 템플릿 하나로 줄 수 있다.
+
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

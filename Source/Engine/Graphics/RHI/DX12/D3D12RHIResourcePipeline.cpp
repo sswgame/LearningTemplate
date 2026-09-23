@@ -30,12 +30,9 @@ namespace sw
         // PS 리플렉션을 요구했다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
         const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( request._vertex );
+        ShaderCompileResult            vsResult{};
         ShaderCompileResult            psResult{};
-        if ( bHasPixelShader )
-            psResult = RHIShaderRequest::compile( request._pixel );
-
-        if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
             // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — 예전엔 네 백엔드가
             // 각자 손으로 적어, 속성을 하나 더하면 네 곳을 같이 고쳐야 했다.

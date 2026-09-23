@@ -236,26 +236,7 @@ namespace sw
             cand._mesh = pMeshComp->getMesh();
         if ( cand._instance.get() != pMeshComp->getRawMaterialInstance() )
             cand._instance = pMeshComp->getMaterialInstance();
-        // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼).
-        Material* pMaterial = pMeshComp->getMaterial();
-        if ( pMaterial == nullptr )
-            pMaterial = pScene->getMaterial();
-        if ( cand._material.get() != pMaterial )
-            cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
-
-        // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
-        // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
-        // 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다.
-        //
-        // 인스턴스만 붙은 메시는 **인스턴스의 부모 머티리얼**이 정본이다(인스턴스는 값만 덮어쓰고
-        // 블렌드 모드는 갖지 않는다). 둘 다 없을 때만 컴포넌트 값을 쓴다 — 머티리얼이 없는
-        // 디버그·픽스처 메시가 그 경우다.
-        // (예전에는 인스턴스를 이 판단 **뒤에** 채워서 이 폴백이 한 번도 걸리지 않았다.)
-        const Material* pBlendSource = cand._material.get();
-        if ( pBlendSource == nullptr && cand._instance != nullptr )
-            pBlendSource = cand._instance->getParent();
-        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
-                                                      : static_cast<uint32>( pMeshComp->getBlendMode() );
+        fillCandidateMaterial( cand, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) );
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다** — 부르는 쪽이 게임 스레드에서 찍는다(stampPermutationHash).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
@@ -280,17 +261,22 @@ namespace sw
             cand._mesh = pBatch->getMesh();
         if ( cand._instance.get() != pBatch->getRawMaterialInstance() )
             cand._instance = pBatch->getMaterialInstance();
-        Material* pMaterial = pBatch->getMaterial();
+        fillCandidateMaterial( cand, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
+        return true;
+    }
+
+    void GpuSceneBuilder::fillCandidateMaterial( DrawCandidate& cand, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
+    {
         if ( pMaterial == nullptr )
             pMaterial = pScene->getMaterial();
+        // 날 포인터로 먼저 견주고, 다르면 소유를 싣는다 — 같으면 참조 카운트를 건드리지 않는다.
         if ( cand._material.get() != pMaterial )
             cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
+
         const Material* pBlendSource = cand._material.get();
         if ( pBlendSource == nullptr && cand._instance != nullptr )
             pBlendSource = cand._instance->getParent();
-        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
-                                                      : static_cast<uint32>( RHIBlendMode::Opaque );
-        return true;
+        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
     }
 
     void GpuSceneBuilder::stampPermutationHash( DrawCandidate& cand )

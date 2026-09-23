@@ -491,20 +491,27 @@ namespace sw
         _pState->_boundMeshOffset = offset;
     }
 
-    void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    bool D3D12RHICommandContext::bindActiveGraphicsPso()
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
-            return;
-
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRec = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
-            return;
+            return false;
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
             commandListForRecord()->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
+        return true;
+    }
+
+    void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    {
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
+            return;
+
+        if ( bindActiveGraphicsPso() == false )
+            return;
         // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
         flushSlotTables( false );
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -517,15 +524,8 @@ namespace sw
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0 )
             return;
 
-        const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRec = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
+        if ( bindActiveGraphicsPso() == false )
             return;
-
-        if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
-        {
-            commandListForRecord()->SetPipelineState( pPsoRec->_pso.Get() );
-            _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
-        }
         flushSlotTables( false );
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();

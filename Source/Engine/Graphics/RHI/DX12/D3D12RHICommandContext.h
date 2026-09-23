@@ -99,6 +99,8 @@ namespace sw
         void bindMeshVertexBuffer();
         /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
         void bindMeshVertexBufferOrFallback();
+        /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 겁니다(바뀌었을 때만). PSO 가 없으면 false — 드로우를 내지 않는다. */
+        bool bindActiveGraphicsPso();
         void bindFullscreenVertexBuffer();
         void bindBoundIndexBuffer();
         void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );

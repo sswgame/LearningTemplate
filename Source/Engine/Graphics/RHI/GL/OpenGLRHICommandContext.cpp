@@ -482,25 +482,27 @@ namespace sw
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
     }
 
+    bool OpenGLRHICommandContext::resolveDrawProgram( uint32& outProgram, uint32& outMode ) const
+    {
+        outProgram                                             = _pDevice->_shaderProgram;
+        outMode                                                = GL_TRIANGLES;
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
+        if ( pPso != nullptr && pPso->_program != 0 )
+        {
+            outProgram = pPso->_program;
+            outMode    = toGlPrimitive( pPso->_topology );
+        }
+        return outProgram != 0;
+    }
+
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 )
             return;
 
-        GLuint program = _pDevice->_shaderProgram;
-        GLenum mode    = GL_TRIANGLES;
-
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
-        if ( pPso != nullptr )
-        {
-            if ( pPso->_program != 0 )
-            {
-                program = pPso->_program;
-                mode    = toGlPrimitive( pPso->_topology );
-            }
-        }
-
-        if ( program == 0 )
+        GLuint program{ 0 };
+        GLenum mode{ GL_TRIANGLES };
+        if ( resolveDrawProgram( program, mode ) == false )
             return;
 
         glUseProgram( program );
@@ -531,17 +533,9 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0 )
             return;
 
-        GLuint program = _pDevice->_shaderProgram;
-        GLenum mode    = GL_TRIANGLES;
-
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
-        if ( pPso != nullptr && pPso->_program != 0 )
-        {
-            program = pPso->_program;
-            mode    = toGlPrimitive( pPso->_topology );
-        }
-
-        if ( program == 0 )
+        GLuint program{ 0 };
+        GLenum mode{ GL_TRIANGLES };
+        if ( resolveDrawProgram( program, mode ) == false )
             return;
 
         glUseProgram( program );
@@ -669,19 +663,9 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || drawCount == 0 )
             return;
 
-        // 프로그램과 토폴로지는 PSO 가 정한다. 예전 멀티 경로는 이걸 빠뜨리고 GL_TRIANGLES 로 굳혀 놨었다 —
-        // 아무도 안 부르는 경로라 드러나지 않았다.
-        GLuint program = _pDevice->_shaderProgram;
-        GLenum mode    = GL_TRIANGLES;
-        if ( const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso ) )
-        {
-            if ( pPso->_program != 0 )
-            {
-                program = pPso->_program;
-                mode    = toGlPrimitive( pPso->_topology );
-            }
-        }
-        if ( program == 0 )
+        GLuint program{ 0 };
+        GLenum mode{ GL_TRIANGLES };
+        if ( resolveDrawProgram( program, mode ) == false )
             return;
 
         glUseProgram( program );
@@ -728,20 +712,9 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
             return;
 
-        GLuint program = _pDevice->_shaderProgram;
-        GLenum mode    = GL_TRIANGLES;
-
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
-        if ( pPso != nullptr )
-        {
-            if ( pPso->_program != 0 )
-            {
-                program = pPso->_program;
-                mode    = toGlPrimitive( pPso->_topology );
-            }
-        }
-
-        if ( program == 0 )
+        GLuint program{ 0 };
+        GLenum mode{ GL_TRIANGLES };
+        if ( resolveDrawProgram( program, mode ) == false )
             return;
 
         glUseProgram( program );
