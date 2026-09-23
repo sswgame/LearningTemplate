@@ -21,7 +21,7 @@ namespace sw
     {
         struct ShaderCompilerInternal
         {
-            /** @brief 셰이더 #include 검색 디렉터리 (engine/shaders, common/shaders, 소스 폴더). */
+            /** @brief 셰이더 #include 검색 디렉터리(engine/shaders, common/shaders, 소스 폴더)를 모읍니다. */
             static void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outListDir )
             {
                 outListDir.clear();
@@ -39,7 +39,7 @@ namespace sw
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief 다중 루트 ID3DInclude — common/shaders → engine/shaders/bindless.hlsli 등. */
+            /** @brief 여러 루트를 도는 ID3DInclude 입니다(common/shaders → engine/shaders/binding.hlsli 등). */
             class MultiRootD3DInclude final : public ID3DInclude
             {
             public:
@@ -92,11 +92,11 @@ namespace sw
 #endif
 
             /**
-             * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다 (InstanceIndex→InstanceId, VertexIndex→VertexId).
-             * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 낸다. ARB_gl_spirv 는 그 둘을
-             *          지원하지 않아 드라이버가 조용히 0 을 돌려줬다 — 인스턴스드 드로우가 전부 원소 0 을 읽어 큐브 16개가 한
-             *          자리에 겹쳤다. 엔진은 시작 인스턴스를 g_InstanceBase 로 넘기고 startInstance 0 으로 그리므로
-             *          gl_InstanceID(베이스 제외) 로도 뜻이 같다. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댄다.
+             * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다(InstanceIndex→InstanceId, VertexIndex→VertexId).
+             * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 냅니다. ARB_gl_spirv 는 그 둘을
+             *          지원하지 않아 드라이버가 조용히 0 을 반환했습니다. 인스턴스드 드로우가 모두 원소 0 을 읽어 큐브 16개가 한
+             *          자리에 겹쳤습니다. 엔진은 시작 인스턴스를 g_InstanceBase 로 넘기고 startInstance 0 으로 그리므로
+             *          gl_InstanceID(베이스 제외)로도 뜻이 같습니다. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
              */
             static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
             {
@@ -137,9 +137,9 @@ namespace sw
             }
 
             /**
-             * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
-             * @details DX11 은 SM5.0, DX12/Vulkan/OpenGL 은 Native Bindless 및 Descriptor Indexing 을 위해 SM6.6 이다. 스테이지마다
-             *          다른 것은 `ShaderStageInfo` 표의 줄이고, SM5 에 없는 스테이지(메시 · 앰플리피케이션)는 예전처럼 vs_5_0 으로 폴백한다.
+             * @brief 셰이더 스테이지와 타깃 포맷에 맞는 프로파일 문자열을 반환합니다.
+             * @details DX11 은 SM5.0, DX12 · Vulkan · OpenGL 은 네이티브 bindless 와 Descriptor Indexing 을 위해 SM6.6 입니다. 스테이지마다
+             *          다른 것은 `ShaderStageInfo` 표의 줄이고, SM5 에 없는 스테이지(메시 · 앰플리피케이션)는 예전처럼 vs_5_0 으로 폴백합니다.
              */
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
@@ -216,12 +216,12 @@ namespace sw
                     hash = StringUtil::computeHash64( sourceStr, false, hash );
                 }
                 // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
-                // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그걸 "새로 컴파일한 것" 으로 알고 라이브 캐시에
+                // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
-                // ShaderBaker 의 유효 소스 해시(모든 .hlsli 포함) 를 키에 섞는다.
+                // ShaderBaker 의 유효 소스 해시(모든 .hlsli 포함)를 키에 섞는다.
                 hash = StringUtil::computeHash64( to_string( ShaderBaker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
-                // 디버그 코드젠 여부도 키다 — 같은 소스라도 바이트코드가 다르다.
-                // string_view 로 넘긴다 — 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
+                // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
+                // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
                 hash = StringUtil::computeHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
 
@@ -276,7 +276,7 @@ namespace sw
         if ( absPathStr.empty() || FileUtil::fileExists( absPathStr ) == false )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
-            // 호출부가 존재 여부를 먼저 검사하는 것이 정상. 없는 파일은 ERROR가 아니라 조용히 실패.
+            // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
             return result;
         }
 
@@ -372,8 +372,8 @@ namespace sw
 #if !defined( SW_PLATFORM_WINDOWS )
         // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
         // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
-        // 모른다며 "invalid profile vs_5_0" 로 죽는다 — 그 메시지로는 "이 플랫폼엔 D3D11 이 없다"는
-        // 진짜 이유가 드러나지 않아 호출부가 환경 문제와 셰이더 문제를 구분하지 못한다.
+        // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
+        // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
         if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
         {
             result._bSuccess     = false;
@@ -466,11 +466,11 @@ namespace sw
                         listArgument.push_back( L"-spirv" );
                         listArgument.push_back( L"-fspv-target-env=vulkan1.3" );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
-                        // cbuffer·StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다 — 머티리얼 데이터 원소(g_SwMaterials)를
-                        // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride/오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
+                        // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
+                        // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
                         listArgument.push_back( L"-fvk-use-dx-layout" );
-                        // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호 (bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
-                        // 쓰고 [[vk::binding]] 을 적지 않는다 — 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
+                        // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
+                        // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
                         static const wstring s_bShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kBShift ).c_str() );
                         static const wstring s_tShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kTShift ).c_str() );
                         static const wstring s_uShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kUShift ).c_str() );
@@ -489,12 +489,12 @@ namespace sw
                         listArgument.push_back( L"-spirv" );
                         listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
-                        listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유 — 네 백엔드 원소 레이아웃 일치
+                        listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
                         listArgument.push_back( L"-fvk-b-shift" );
                         listArgument.push_back( L"16" );
                         listArgument.push_back( L"0" );
-                        // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0) 이 정한다 — common.hlsli 의 OPENGL 용
-                        // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트 무관.
+                        // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
+                        // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
                         static const wstring s_uavShift = StringUtil::utf8ToUtf16( to_string( shaderslot::gl::kUavBinding0 ).c_str() );
                         listArgument.push_back( L"-fvk-u-shift" );
                         listArgument.push_back( s_uavShift.c_str() );
@@ -505,15 +505,15 @@ namespace sw
                     if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
                     {
                         listArgument.push_back( L"DX12=1" );
-                        // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1), 버퍼는
-                        // 루트 디스크립터 슬롯. SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
+                        // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1)이고, 버퍼는
+                        // space0 슬롯이다(CB 는 루트 CBV, t · u 는 디스크립터 테이블). SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_BINDLESS=1" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
                         listArgument.push_back( L"VULKAN=1" );
-                        // 네이티브 bindless 텍스처 — 세트 1 배열. 버퍼는 세트 0 의 슬롯(시프트된 binding).
+                        // 네이티브 bindless 텍스처는 세트 1 배열이다. 버퍼는 세트 0 의 슬롯(시프트된 binding)이다.
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_BINDLESS=1" );
                     }
@@ -523,7 +523,7 @@ namespace sw
                         listArgument.push_back( L"DX11=1" );
                     if ( desc._stage == ShaderStage::Compute )
                     {
-                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열/슬롯, binding.hlsli 3)의 스위치.
+                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli 3)의 스위치.
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_STAGE_COMPUTE=1" );
                     }
@@ -609,7 +609,7 @@ namespace sw
             }
 
     #if defined( SW_PLATFORM_WINDOWS )
-            // FXC는 DXBC만 생성 — SPIR-V 타깃(Vulkan/OpenGL)에는 절대 폴백하지 않음.
+            // FXC 는 DXBC 만 만든다. SPIR-V 타깃(Vulkan · OpenGL)에는 절대 폴백하지 않는다.
             if ( desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan && desc._targetFormat != ShaderTargetFormat::SPIRV_OpenGL )
             {
                 UINT                             compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;

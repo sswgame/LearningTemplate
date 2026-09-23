@@ -34,10 +34,10 @@ namespace sw
         switch ( dxgiFormat )
         {
             case 28: // DXGI_FORMAT_R8G8B8A8_UNORM
-            case 29: // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB — sRGB 디코드는 아직 없다: 선형으로 샘플링한다
+            case 29: // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB. sRGB 디코드는 아직 없다: 선형으로 샘플링한다
                 return RHIFormat::R8G8B8A8_UNORM;
             case 87: // DXGI_FORMAT_B8G8R8A8_UNORM
-            case 88: // DXGI_FORMAT_B8G8R8X8_UNORM — X 채널을 알파로 읽는다(불투명 텍스처라면 255)
+            case 88: // DXGI_FORMAT_B8G8R8X8_UNORM. X 채널을 알파로 읽는다(불투명 텍스처라면 255)
             case 91: // DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
                 return RHIFormat::B8G8R8A8_UNORM;
             case 10: // DXGI_FORMAT_R16G16B16A16_FLOAT
@@ -109,7 +109,7 @@ namespace sw
             return false;
         }
 
-        // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치 — uploadTexture2D 의 규약과 같다.
+        // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치다. uploadTexture2D 의 규약과 같다.
         RHITextureUploadDesc upload{};
         upload._pData     = image.getPixels();
         upload._sizeBytes = static_cast<uint32>( image._bytes.size() );
@@ -133,7 +133,7 @@ namespace sw
 
         // `_pDevice` 는 **성공한 뒤에만** 적는다. 예전에는 위 검사보다 먼저 적어서, 실패하고 돌아간
         // 뒤에도 "이 디바이스에 올라가 있다" 는 표시만 남았다. 지금은 아무 해가 없지만(`isRhiValid`
-        // 가 핸들을 보므로) `releaseRhi` 는 이 값으로 **남의 디바이스 통보인지**를 가른다 —
+        // 가 핸들을 보므로) `releaseRhi` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
         // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
         _pDevice  = pDevice;
         _path     = string{ relativePath };
@@ -148,7 +148,7 @@ namespace sw
 
     bool Texture2D::initRhi( IRHIDevice* pDevice )
     {
-        // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다 — 두 번 올리면 그대로 새는 것이다.
+        // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다. 두 번 올리면 그대로 새는 것이다.
         if ( isRhiValid() )
             return true;
         if ( pDevice == nullptr || _path.empty() )
@@ -160,7 +160,7 @@ namespace sw
     {
         if ( _pDevice != pDevice )
             return;
-        // 디바이스가 이미 없다 — 텍스처는 그와 함께 갔다.
+        // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다.
         _handle  = 0;
         _srv     = kInvalidDescriptorIndex;
         _pDevice = nullptr;

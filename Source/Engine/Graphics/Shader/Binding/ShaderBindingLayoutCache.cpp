@@ -19,7 +19,7 @@ namespace sw
     {
         struct LayoutCacheInternal
         {
-            /** @brief "NAME" 또는 "NAME=VALUE" 문자열을 ShaderMacroDefine 으로. */
+            /** @brief "NAME" 또는 "NAME=VALUE" 문자열을 ShaderMacroDefine 으로 바꿉니다. */
             static void fillDefines( const vector<string>& listDefineText, vector<ShaderMacroDefine>& outListDefine )
             {
                 for ( const string& define : listDefineText )
@@ -30,7 +30,7 @@ namespace sw
                 }
             }
 
-            /** @brief 한 스테이지를 컴파일·리플렉션합니다. 실패 시 false. */
+            /** @brief 한 스테이지를 컴파일하고 리플렉션합니다. 실패하면 false 입니다. */
             static bool reflectStage( string_view shaderPath, string_view entryPoint, ShaderStage stage,
                                       ShaderTargetFormat targetFormat, const vector<ShaderMacroDefine>& listDefine,
                                       ShaderReflectionData& outReflection )
@@ -42,11 +42,11 @@ namespace sw
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;
 
-                // 매니페스트 우선 / 개발 빌드는 런타임 리플렉션 폴백 — 정책은 ShaderReflectionLibrary 한 곳에 있다.
+                // 매니페스트가 먼저이고, 개발 빌드는 런타임 리플렉션으로 폴백한다. 정책은 ShaderReflectionLibrary 한 곳에 있다.
                 if ( ShaderReflectionLibrary::getOrReflect( compileDesc, outReflection ) == false )
                     return false;
 
-                // 리플렉션을 얻는 순간 계약과 대조한다 — 어긋나면 로그에 이름·숫자로 남는다 (검증 에러는 안 난다).
+                // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름 · 숫자로 남는다(검증 에러는 안 난다).
                 ShaderBindingContract::validate( outReflection, targetFormat, shaderPath );
                 return true;
             }

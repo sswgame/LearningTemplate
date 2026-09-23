@@ -20,7 +20,7 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::create()
     {
-        // Material · MaterialInstance 와 같은 규칙이다 — 제어 블록(소멸 코드)이 Engine.dll 에 살아야
+        // Material · MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 살아야
         // 게임 모듈이 만든 메시를 엔진이 마지막까지 들 수 있다. 도형을 채우는 것은 MeshUtil 의 일이다.
         return sw::make_shared<Mesh>( CreateKey{} );
     }
@@ -43,7 +43,7 @@ namespace sw
             return false;
 
         // 워커에서 만들어도 되는지는 **백엔드가 말한다**. DX12 · DX11 · Vulkan 은 버퍼 생성이 디바이스 레벨이고
-        // 핸들 테이블도 잠겨 있어 안전하다. OpenGL 은 glGen* 이 현재 컨텍스트를 필요로 해서 안 된다 — 그 백엔드에서
+        // 핸들 테이블도 잠겨 있어 안전하다. OpenGL 은 glGen* 이 현재 컨텍스트를 필요로 해서 안 된다. 그 백엔드에서
         // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GpuUploadQueue 는 그 경우 인라인으로 돈다).
         if ( engine::areEngineServicesBound() && pDevice->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE )
             SW_ASSERT( engine::getTaskManager().isWorkerThread() == false );
@@ -69,7 +69,7 @@ namespace sw
 
     void Mesh::releaseRhi( IRHIDevice* pDevice )
     {
-        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
+        // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
         if ( pDevice == nullptr || _vertex._pDevice != pDevice )
             return;
         releaseVertexBuffer();
@@ -77,17 +77,17 @@ namespace sw
 
     void Mesh::forgetRhi( IRHIDevice* pDevice )
     {
-        // 남의 디바이스가 죽었다는 통보다 — 내 버퍼는 멀쩡하다.
+        // 남의 디바이스가 죽었다는 통보다. 내 버퍼는 멀쩡하다.
         if ( _vertex._pDevice != pDevice )
             return;
-        // 디바이스가 이미 없다 — 버퍼는 그와 함께 갔다. destroy 하면 해제 후 사용이다.
+        // 디바이스가 이미 없다. 버퍼는 그와 함께 갔다. destroy 하면 해제 후 사용이다.
         _vertex.forget();
     }
 
     void Mesh::releaseVertexBuffer()
     {
         // 소멸자에서도 불린다. 그 시점에 디바이스가 이미 죽었다면 통보가 먼저 와서 여기를 비워 놓았으므로,
-        // getLiveDevice() 는 널을 돌려주고 destroy 로 뛰어들지 않는다.
+        // getLiveDevice() 는 널을 반환하고 destroy 로 뛰어들지 않는다.
         if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
         {
             IRHIResource* pResource = pLiveDevice->getResource();

@@ -1,6 +1,6 @@
 /**
  * @file ShaderCompiler.h
- * @brief DirectX Shader Compiler (DXC) 및 D3DCompiler를 이용한 크로스 백엔드 HLSL 셰이더 컴파일러 인터페이스
+ * @brief DXC 와 D3DCompiler 로 HLSL 을 여러 백엔드용으로 컴파일하는 셰이더 컴파일러 인터페이스입니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -10,7 +10,7 @@ namespace sw
 {
     /**
      * @enum ShaderStage
-     * @brief 단일 셰이더 파이프라인 스테이지 종류 (배열 인덱싱 및 컴파일 단위)
+     * @brief 셰이더 파이프라인 스테이지 종류입니다(배열 인덱싱과 컴파일 단위).
      */
     ENUM()
     enum class ShaderStage : uint8
@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @enum ShaderStageFlag
-     * @brief 리소스 바인딩 가시성(Visibility) 및 파이프라인 스테이지 조합용 비트플래그
+     * @brief 리소스 바인딩 가시성과 파이프라인 스테이지 조합용 비트 플래그입니다.
      */
     ENUM( Flags )
     enum class ShaderStageFlag : uint8
@@ -56,20 +56,20 @@ namespace sw
 
     /**
      * @struct ShaderStageInfo
-     * @brief 스테이지 하나의 표 한 줄 — 축약 태그 · 기본 진입점 · 컴파일 프로파일(SM5 / SM6).
-     * @details 예전에는 이 넷이 세 파일의 switch 다섯이었다(베이커의 태그 · 기본 진입점, 컴파일러의 프로파일 둘, 바인딩
-     *          레이아웃의 비트 변환). 스테이지를 하나 더하면 열거형과 이 표의 한 줄이다. `_pProfileSm5` 가 nullptr 이면
-     *          SM5(DXBC · D3D11)에 그 스테이지가 없다는 뜻이다.
+     * @brief 스테이지 하나의 표 한 줄입니다. 축약 태그 · 기본 진입점 · 컴파일 프로파일(SM5 / SM6)을 담습니다.
+     * @details 예전에는 이 넷이 세 파일의 switch 다섯이었습니다(베이커의 태그 · 기본 진입점, 컴파일러의 프로파일 둘, 바인딩
+     *          레이아웃의 비트 변환). 스테이지를 하나 더하면 열거형과 이 표의 한 줄입니다. `_pProfileSm5` 가 nullptr 이면
+     *          SM5(DXBC · D3D11)에 그 스테이지가 없다는 뜻입니다.
      */
     struct ShaderStageInfo
     {
-        const utf8* _pTag;        ///< 파일 이름 · 로그의 축약 ("vs")
-        const utf8* _pEntryPoint; ///< 기본 진입점 ("VSMain")
-        const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일 ("vs_5_0"), 없으면 nullptr
-        const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일 ("vs_6_6")
+        const utf8* _pTag;        ///< 파일 이름 · 로그의 축약("vs")
+        const utf8* _pEntryPoint; ///< 기본 진입점("VSMain")
+        const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일("vs_5_0"). 없으면 nullptr
+        const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일("vs_6_6")
     };
 
-    /** @brief 스테이지의 표 한 줄. `Count` 이상이면 버텍스 줄이다(예전 switch 들의 폴백과 같다). */
+    /** @brief 스테이지의 표 한 줄입니다. `Count` 이상이면 버텍스 줄입니다(예전 switch 들의 폴백과 같습니다). */
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
         static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
@@ -79,8 +79,8 @@ namespace sw
             {"gs", "GSMain", "gs_5_0", "gs_6_6"}, // Geometry
             {"hs", "HSMain", "hs_5_0", "hs_6_6"}, // Hull
             {"ds", "DSMain", "ds_5_0", "ds_6_6"}, // Domain
-            {"ms", "MSMain",  nullptr, "ms_6_6"}, // Mesh — SM5 에는 없다
-            {"as", "ASMain",  nullptr, "as_6_6"}, // Amplification — SM5 에는 없다
+            {"ms", "MSMain",  nullptr, "ms_6_6"}, // Mesh. SM5 에는 없다
+            {"as", "ASMain",  nullptr, "as_6_6"}, // Amplification. SM5 에는 없다
         };
         const size_t index = ( stage < ShaderStage::Count ) ? static_cast<size_t>( stage ) : 0;
         return arrInfo[index];
@@ -88,20 +88,20 @@ namespace sw
 
     /**
      * @enum ShaderTargetFormat
-     * @brief 컴파일 출력 타깃 바이트코드 포맷
+     * @brief 컴파일 출력 바이트코드 포맷입니다.
      */
     enum class ShaderTargetFormat : uint8
     {
-        DXBC_D3D11,   ///< Direct3D 11용 DXBC 바이트코드 (d3dcompiler 사용)
-        DXIL_D3D12,   ///< Direct3D 12용 DXIL 바이트코드 (dxc 사용)
-        SPIRV_Vulkan, ///< Vulkan 1.3용 SPIR-V 바이트코드 (dxc -spirv 사용)
-        SPIRV_OpenGL, ///< OpenGL용 SPIR-V 바이트코드 (dxc -spirv 사용)
+        DXBC_D3D11,   ///< Direct3D 11용 DXBC 바이트코드(d3dcompiler 사용)
+        DXIL_D3D12,   ///< Direct3D 12용 DXIL 바이트코드(dxc 사용)
+        SPIRV_Vulkan, ///< Vulkan 1.3용 SPIR-V 바이트코드(dxc -spirv 사용)
+        SPIRV_OpenGL, ///< OpenGL용 SPIR-V 바이트코드(dxc -spirv 사용)
         Count
     };
 
     /**
      * @struct ShaderMacroDefine
-     * @brief 셰이더 전처리 매크로 정의 (NAME=VALUE)
+     * @brief 셰이더 전처리 매크로 정의입니다(NAME=VALUE).
      */
     struct ShaderMacroDefine
     {
@@ -110,8 +110,8 @@ namespace sw
 
         /**
          * @brief `"NAME=VALUE"` 또는 `"NAME"`(값 1) 한 줄을 매크로로 해석합니다.
-         * @details PSO 생성 경로(DX11/DX12/GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 쓴다 —
-         *          예전엔 백엔드마다 같은 파싱 람다를 복사해 두고 있었다.
+         * @details PSO 생성 경로(DX11 · DX12 · GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 씁니다.
+         *          예전에는 백엔드마다 같은 파싱 람다를 복사해 두고 있었습니다.
          */
         static ShaderMacroDefine parse( string_view define )
         {
@@ -134,58 +134,58 @@ namespace sw
 
     /**
      * @struct ShaderCompileDesc
-     * @brief 셰이더 컴파일 요청 서술체
+     * @brief 셰이더 컴파일 요청 서술체입니다.
      */
     struct ShaderCompileDesc
     {
-        string                    _filePath;                                        ///< HLSL 소스 파일 경로 (상대/절대 경로)
-        string                    _entryPoint;                                      ///< 진입점 함수 이름 (예: "VSMain", "CSMain")
-        vector<ShaderMacroDefine> _listDefine;                                      ///< 추가 전처리 매크로 (-D NAME=VALUE)
+        string                    _filePath;                                        ///< HLSL 소스 파일 경로(상대 · 절대 경로)
+        string                    _entryPoint;                                      ///< 진입점 함수 이름(예: "VSMain", "CSMain")
+        vector<ShaderMacroDefine> _listDefine;                                      ///< 추가 전처리 매크로(-D NAME=VALUE)
         ShaderStage               _stage        = ShaderStage::Vertex;              ///< 컴파일 대상 셰이더 스테이지
         ShaderTargetFormat        _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
         /**
-         * @brief 디버그 정보 + 최적화 끔(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`)으로 컴파일할지.
-         * @details 예전엔 **빌드 구성**(SW_DEBUG)이 이걸 정했다. 그러면 구운 바이너리(저장소에 커밋되고 배포에
-         *          실리는 것)의 내용이 "어느 App.exe 가 베이커로 돌았나" 에 따라 달라진다 — 쿠커가 Debug 를
-         *          먼저 집으므로 커밋된 셰이더가 전부 무최적화였다. 지금은 **요청하는 쪽**이 정한다: 런타임
-         *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 베이커는 절대 켜지 않는다.
+         * @brief 디버그 정보 + 최적화 끔(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`)으로 컴파일할지 여부입니다.
+         * @details 예전에는 **빌드 구성**(SW_DEBUG)이 이것을 정했습니다. 그러면 구운 바이너리(저장소에 커밋되고 배포에
+         *          실리는 것)의 내용이 "어느 App.exe 가 베이커로 돌았나" 에 따라 달라집니다. 쿠커가 Debug 를
+         *          먼저 집으므로 커밋된 셰이더가 모두 무최적화였습니다. 지금은 **요청하는 쪽**이 정합니다. 런타임
+         *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 베이커는 절대 켜지 않습니다.
          */
         uint8 _bDebugCodegen = SW_FALSE;
     };
 
     /**
      * @struct ShaderCompileResult
-     * @brief 셰이더 컴파일 결과 객체
+     * @brief 셰이더 컴파일 결과입니다.
      */
     struct ShaderCompileResult
     {
-        vector<uint8> _bytecode;               ///< 컴파일된 이진 바이트코드 데이터
-        string        _errorMessage;           ///< 실패 시 오류 컴파일러 메세지
+        vector<uint8> _bytecode;               ///< 컴파일된 바이트코드
+        string        _errorMessage;           ///< 실패했을 때의 컴파일러 오류 메시지
         string        _normalizedRelativePath; ///< 정규화된 자원 상대 경로
         bool          _bSuccess{ false };      ///< 컴파일 성공 여부
     };
 
     /**
      * @class ShaderCompiler
-     * @brief HLSL 소스를 각 RHI 백엔드 전용 바이트코드(DXIL, SPIR-V, DXBC)로 동적 컴파일하는 파사드 클래스
+     * @brief HLSL 소스를 RHI 백엔드별 바이트코드(DXIL, SPIR-V, DXBC)로 컴파일하는 파사드입니다.
      */
     class SW_API ShaderCompiler
     {
     public:
         /**
-         * @brief HLSL 셰이더 컴파일 실행 (디스크 캐시 활성화 시 바이트코드 캐시 활용)
+         * @brief HLSL 셰이더를 컴파일합니다(디스크 캐시가 켜져 있으면 바이트코드 캐시를 씁니다).
          * @param desc 컴파일 서술체
-         * @return 컴파일 결과 (성공 여부 및 바이트코드 배열)
+         * @return 컴파일 결과(성공 여부와 바이트코드)
          */
         static ShaderCompileResult compileHlsl( const ShaderCompileDesc& desc );
 
-        /** @brief 셰이더 바이트코드 디스크 캐시 활성화 여부를 설정합니다. */
+        /** @brief 셰이더 바이트코드 디스크 캐시를 켜거나 끕니다. */
         static void enableDiskCache( bool bEnable );
 
-        /** @brief 셰이더 바이트코드 디스크 캐시 활성화 여부를 반환합니다. */
+        /** @brief 셰이더 바이트코드 디스크 캐시가 켜져 있는지 반환합니다. */
         static bool isDiskCacheEnabled();
 
-        /** @brief 저장된 셰이더 디스크 캐시 파일들을 모두 삭제합니다. */
+        /** @brief 저장된 셰이더 디스크 캐시 파일을 모두 지웁니다. */
         static void clearDiskCache();
     };
 } // namespace sw

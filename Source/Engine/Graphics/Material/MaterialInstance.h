@@ -1,6 +1,6 @@
 /**
  * @file MaterialInstance.h
- * @brief 마스터 Material 위의 드로우/액터 단위 오버라이드
+ * @brief 마스터 Material 위에 드로우 · 액터 단위로 덮어쓰는 오버라이드입니다.
  */
 #pragma once
 #include "Core/Memory/Memory.h"
@@ -13,16 +13,16 @@ namespace sw
 {
     /**
      * @class MaterialInstance
-     * @brief 마스터 Material 위의 드로우/액터 오버라이드 (UE MaterialInstanceDynamic).
+     * @brief 마스터 Material 위의 드로우 · 액터 오버라이드입니다(UE MaterialInstanceDynamic).
      */
     class SW_API MaterialInstance final : public RHIRenderResource
     {
     public:
         /**
-         * @brief 생성 열쇠 — create() 만 만들 수 있다.
-         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 **컴파일되지 않는다.**
-         *          모든 MaterialInstance 이 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장한다 — 렌더 패킷이
-         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없다. 린트가 아니라 타입이 지킨다.
+         * @brief 생성 열쇠입니다. create() 만 만들 수 있습니다.
+         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 **컴파일되지 않습니다.**
+         *          모든 MaterialInstance 가 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장합니다. 렌더 패킷이
+         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없습니다. 린트가 아니라 타입이 지킵니다.
          */
         struct CreateKey
         {
@@ -30,16 +30,16 @@ namespace sw
             CreateKey() = default;
             friend class MaterialInstance;
         };
-        /** @brief create() 전용 생성자 — 마스터 머티리얼에 붙습니다. */
+        /** @brief create() 전용 생성자입니다. 마스터 머티리얼에 붙습니다. */
         MaterialInstance( CreateKey, Material* pParentMaterial );
         /**
          * @brief Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 산다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께
+         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 삽니다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께
          *          실으므로 게임 모듈이 만든 인스턴스를 엔진이 마지막까지 들 수 있고, 모듈이 내려간 뒤 놓으면
-         *          없는 코드로 뛰어든다. 여기서 만들면 누가 마지막에 놓든 Engine 코드다.
+         *          없는 코드로 뛰어듭니다. 여기서 만들면 누가 마지막에 놓든 Engine 코드입니다.
          */
         static shared_ptr<MaterialInstance> create( Material* pParentMaterial );
-        /** @brief 오버라이드 CB를 정리합니다. */
+        /** @brief 오버라이드 CB 를 정리합니다. */
         ~MaterialInstance() override;
 
         /** @brief 복사를 금지합니다. */
@@ -49,16 +49,16 @@ namespace sw
 
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. 예전 이름은 shutdown 이었습니다. */
         void releaseRhi( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
         void forgetRhi( IRHIDevice* pDevice ) override;
 
-        /** @brief 오버라이드만 있는 MaterialInstanceDesc XML을 로드합니다. 부모는 따로 설정. */
+        /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
         bool loadFromFile( string_view assetRelativePath );
-        /** @brief 인스턴스 XML을 저장합니다. */
+        /** @brief 인스턴스 XML 을 저장합니다. */
         bool saveToFile( string_view assetRelativePath ) const;
         /**
-         * @brief CPU 버퍼 = 부모 기본값 + 오버라이드. 인스턴스 CB를 만들거나 갱신합니다.
-         * @return 드로우용 bindless 인덱스. 실패/오버라이드 없으면 부모로 폴백.
+         * @brief CPU 버퍼(부모 기본값 + 오버라이드)를 만들고 인스턴스 CB 를 만들거나 갱신합니다.
+         * @return 인스턴스 CB 와 bindless 인덱스가 준비됐으면 true 입니다. 부모가 없거나 부모 버퍼가 비었거나 버퍼를 만들지 못하면 false 입니다.
          */
         bool updateRhi( IRHIDevice* pRhi );
         /** @brief 오버라이드를 모두 지웁니다. */
@@ -72,7 +72,7 @@ namespace sw
         void setParent( Material* pParentMaterial );
         /** @brief 인스턴스 이름을 설정합니다. */
         void setName( string_view name ) { _desc._name = name; }
-        /** @brief 일반 오버라이드 (Enum/BitFlag/Color/Range/Bool/스칼라 텍스트). */
+        /** @brief 일반 오버라이드입니다(Enum/BitFlag/Color/Range/Bool/스칼라 텍스트). */
         void setParameter( hashed_string name, string_view value );
         /** @brief 스칼라 파라미터를 설정합니다. */
         void setScalarParameter( hashed_string name, float32 value );
@@ -89,7 +89,7 @@ namespace sw
         Material* getParent() const { return _pParentMaterial; }
         /** @brief 인스턴스 디스크립터를 반환합니다. */
         const MaterialInstanceDesc& getDesc() const { return _desc; }
-        /** @brief 이름 파라미터 텍스트를 읽습니다. */
+        /** @brief 이름으로 찾은 파라미터 텍스트를 읽습니다. */
         bool getParameter( hashed_string name, string& outValue ) const;
         /** @brief 스칼라 파라미터를 반환합니다. */
         float32 getScalarParameter( hashed_string name, float32 defaultValue = 0.0f ) const;
@@ -97,28 +97,28 @@ namespace sw
         const float32* getVectorParameter( hashed_string name ) const;
         /** @brief 텍스처 파라미터를 반환합니다. */
         RHIDescriptorIndex getTextureParameter( hashed_string name ) const;
-        /** @brief 키워드가 켜져 있으면 true. */
+        /** @brief 키워드가 켜져 있으면 true 입니다. */
         bool isKeywordEnabled( hashed_string keyword ) const;
-        /** @brief 캐시된 셰이더 define을 반환합니다. */
+        /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
-        /** @brief permutation 해시를 반환합니다. */
+        /** @brief 퍼뮤테이션 해시를 반환합니다. */
         uint64 getPermutationHash() const;
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */
         RHIDescriptorIndex getDescriptorIndex() const;
         /**
-         * @brief 상수버퍼 핸들 (0 이면 아직 없다). 핸들은 세대를 품으므로 "다시 만들었는가" 를 이것으로 가른다.
-         * @details 디스크립터 인덱스로는 못 가른다 — DX11·GL 은 인덱스를 즉시 회수해 다음 등록이 같은 번호를 받는다.
+         * @brief 상수버퍼 핸들입니다(0 이면 아직 없습니다). 핸들은 세대를 품으므로 "다시 만들었는가" 를 이것으로 가릅니다.
+         * @details 디스크립터 인덱스로는 못 가릅니다. DX11 · GL 은 인덱스를 즉시 회수해 다음 등록이 같은 번호를 받습니다.
          */
         RHIBufferHandle getConstantBufferHandle() const { return _constant._buffer; }
         /** @brief 인스턴스 패킹 버퍼를 반환합니다. */
         const vector<uint8>& getBuffer() const { return _bytes; }
-        /** @brief 파라미터가 오버라이드됐으면 true. */
+        /** @brief 파라미터가 오버라이드됐으면 true 입니다. */
         bool isParameterOverridden( hashed_string name ) const;
         /** @brief 리플렉션과 파라미터를 대조합니다. */
         bool validateParametersWithReflection( const ShaderReflectionData& reflectionData ) const;
 
     private:
-        /** @brief 런타임 오버라이드를 Desc에 다시 씁니다. */
+        /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
         bool loadFromXml( string_view xmlText );
@@ -135,16 +135,16 @@ namespace sw
         MaterialQualityLevel                            _qualityOverride;
 
         vector<uint8> _bytes;
-        /** @brief 상수버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). 인덱스는 이 버퍼의 것이다. */
+        /** @brief 상수버퍼입니다. 어느 디바이스의 것인지를 세대로 압니다(RHIResidentBuffer). 인덱스는 이 버퍼의 것입니다. */
         RHIResidentBuffer  _constant;
         RHIDescriptorIndex _descriptorIndex;
         /**
          * @brief `_constant` 를 **만들 때 준 바이트 수**입니다.
-         * @details `updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 적혀 있지 않은 전제가 있다 —
-         *          그 크기는 버퍼를 만들 때 준 크기를 넘으면 안 된다. 네 백엔드 중 셋은 그것을
-         *          검사하지 않고 그대로 복사하므로(GL 만 API 가 막아 준다) 넘기면 프레임 슬롯 밖까지
-         *          쓴다. 부모 머티리얼의 상수버퍼는 **셰이더를 다시 굽는 동안 커질 수 있으므로**
-         *          (레이아웃이 바뀐다) 만들 때의 크기를 들고 있다가 커지면 다시 만든다.
+         * @details `updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 적혀 있지 않은 전제가 있습니다. 그
+         *          크기는 버퍼를 만들 때 준 크기를 넘으면 안 됩니다. 네 백엔드 중 셋은 그것을
+         *          검사하지 않고 그대로 복사하므로(GL 만 API 가 막아 줍니다) 넘기면 프레임 슬롯 밖까지
+         *          씁니다. 부모 머티리얼의 상수버퍼는 **셰이더를 다시 굽는 동안 커질 수 있으므로**
+         *          (레이아웃이 바뀝니다) 만들 때의 크기를 들고 있다가 커지면 다시 만듭니다.
          */
         uint32 _constantByteSize;
 

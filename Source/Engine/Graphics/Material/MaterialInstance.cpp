@@ -54,7 +54,7 @@ namespace sw
 {
     shared_ptr<MaterialInstance> MaterialInstance::create( Material* pParentMaterial )
     {
-        // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다 — 한정해야 sw 것이 잡힌다.
+        // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다. 한정해야 sw 것이 잡힌다.
         return sw::make_shared<MaterialInstance>( CreateKey{}, pParentMaterial );
     }
 
@@ -82,7 +82,7 @@ namespace sw
     MaterialInstance::~MaterialInstance()
     {
         // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). 든 디바이스 포인터는 생 포인터라
-        // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다 — Mesh::releaseGpu 와 같은 함정이다.
+        // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다. Mesh::releaseVertexBuffer 와 같은 함정이다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
             releaseRhi( pLiveDevice );
         _constant.forget();
@@ -93,7 +93,7 @@ namespace sw
     {
         if ( _constant._pDevice != pDevice )
             return;
-        // 디바이스가 이미 없다 — 상수버퍼는 그와 함께 갔다.
+        // 디바이스가 이미 없다. 상수버퍼는 그와 함께 갔다.
         _constant.forget();
         _descriptorIndex  = kInvalidDescriptorIndex;
         _constantByteSize = 0;
@@ -102,7 +102,7 @@ namespace sw
 
     void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
     {
-        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
+        // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
         if ( pRhi != nullptr && _constant._buffer != 0 && _constant._pDevice != pRhi )
             return;
 
@@ -184,8 +184,8 @@ namespace sw
         if ( pRhi == nullptr || _pParentMaterial == nullptr )
             return false;
 
-        // 백엔드가 바뀌었으면 상수버퍼·인덱스는 옛 디바이스 것이다 — 잊고 새로 만든다(destroy 는 UAF).
-        // 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다 — RHIResidentBuffer 가 세대로 가른다.
+        // 백엔드가 바뀌었으면 상수버퍼 · 인덱스는 옛 디바이스 것이다. 잊고 새로 만든다(destroy 는 해제 후 사용이다).
+        // 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다. RHIResidentBuffer 가 세대로 가른다.
         if ( _constant._buffer != 0 && _constant.isResident() == false )
         {
             _constant.forget();
@@ -214,7 +214,7 @@ namespace sw
         const uint32 size = static_cast<uint32>( _bytes.size() );
 
         // 부모의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이 바뀐다). 그때 예전
-        // 버퍼를 그대로 쓰면 `updateConstantBuffer` 가 만들 때보다 큰 크기로 복사한다 — 그 함수는
+        // 버퍼를 그대로 쓰면 `updateConstantBuffer` 가 만들 때보다 큰 크기로 복사한다. 그 함수는
         // 크기를 검사하지 않으므로(GL 만 API 가 막아 준다) 프레임 슬롯 밖까지 쓴다.
         // 커졌으면 버리고 다시 만든다.
         if ( _constant._buffer != 0 && size > _constantByteSize )
@@ -570,7 +570,7 @@ namespace sw
         else
             self->_desc._quality.clear();
         if ( _pParentMaterial != nullptr )
-            self->_desc._parentPath.clear(); // runtime parent; path filled by caller if desired
+            self->_desc._parentPath.clear(); // 런타임 부모다. 경로가 필요하면 부르는 쪽이 채운다.
     }
 
     bool MaterialInstance::loadFromXml( string_view xmlText )

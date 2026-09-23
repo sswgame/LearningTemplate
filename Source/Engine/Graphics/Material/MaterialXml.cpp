@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 헬퍼. */
+        /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
         struct MaterialXmlInternal
         {
             static string nodeText( XmlNode node )
@@ -86,7 +86,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief Attribute first, then same-name child element. */
+    /** @brief 속성을 먼저 보고, 없으면 같은 이름의 자식 요소를 봅니다. */
     string MaterialUtil::fieldText( XmlNode node, const utf8* pName )
     {
         if ( node.isValid() == false || pName == nullptr )

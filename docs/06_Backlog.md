@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑤) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑥) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1652,6 +1652,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ⑥ — Graphics 의 Material · Mesh · Shader · Texture · Upload)
+
+**한 것.** 위 다섯 폴더의 43 개 파일 주석을 1-0g 규칙으로 다시 썼다(영어 주석도 옮겼다). 사실과 달랐던 것:
+- **셰이더 신선도가 아직 파일 시간인 것처럼 적힌 자리들.** 판정은 `bake.stamp` 의 내용 해시로 바뀌었는데
+  `LiveShaderManager.cpp` 는 "키에 `.hlsl` mtime 과 헤더 타임스탬프", "쓴 파일의 mtime 이 소스보다 새로우므로" 라고,
+  `ShaderReflectionLibrary::getOrReflect` 는 "신선도 판정은 초 단위(getFileTimestamp)" 라고 적고 있었다. 로컬 캐시 경로
+  (`Saved/ShaderCache/<rhi>/<유효 소스 해시>-<opt|dbg>/`)도 옛 형식으로 적혀 있었다.
+- `LiveShaderManager` 가 "등록된 셰이더 · 워치" 를 다룬다고 했다 → 등록표도 감시도 없고, 이 실행에서 컴파일된 셰이더
+  (`ShaderCache::collectCompiledDescs`)가 대상이다.
+- DX12 의 t · u 슬롯을 "루트 디스크립터" 라고 했다(계약 검증기 · `ShaderBindingSlots.h` · 컴파일러) → CB 만 루트 CBV 이고
+  t · u 는 디스크립터 테이블이다. 계약 검증기 머리말의 검사 목록에 실제로 하는 5번(정점 입력)을 더했다.
+- `Material` 의 스키마 우선순위가 지운 폴백("멤버가 있는 첫 CB")을 셋째로 적고 있었다. `AsyncLoadState` 는 "비동기
+  셰이더 컴파일" 이 아니라 비동기 파일 로드용이다. `MaterialCache.h` 의 "다른 점 셋" → 둘(셋째는 없앴다).
+  `MaterialInstance::updateRhi` 의 `@return` 이 "bindless 인덱스, 부모로 폴백" → bool 이다. 없는 `Material::shutdown` ·
+  `Mesh::releaseGpu` 를 가리키던 주석 넷.
+- `Mesh` 소멸자가 "디바이스 경유 destroy 를 하지 않는다(createUnitCube static 캐시 때문)" 고 했다 → 살아 있는 디바이스면
+  돌려주고, 공유 캐시는 `acquirePrimitive` 의 `weak_ptr` 표다. 정점은 "POSITION+COLOR" 가 아니라 위치 · 노멀 · UV · 색이다.
+  `createPrimitive` 설명에 "Plane"/"Ground" 가 빠져 있었다. `GpuUploadQueue.h` 의 `upload()` → `initRhi()`.
+- 구조버퍼 stride 가 "백엔드마다 다르다(SPIR-V std430)" 고만 적혀 있었다 → 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을
+  따른다고 덧붙였다. 없는 `bindless.hlsli` 예시 → `binding.hlsli`.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ⑤ — Input · Window · Audio · Animation)
 

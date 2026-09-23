@@ -18,7 +18,7 @@ namespace sw
             {
                 const utf8*          _pName;
                 MaterialPropertyType _type;
-                uint32               _size; ///< Packed size when used as shader/CB type (0 = non-CB)
+                uint32               _size; ///< 셰이더 · CB 타입으로 쓸 때의 패킹 크기(0 = CB 에 안 들어감)
             };
 
             inline static const PropertyTypeDesc s_PropertyTypes[] = {
@@ -46,7 +46,7 @@ namespace sw
                 {     "Texture3D",      MaterialPropertyType::Texture3D,  4},
                 {"Texture2DArray", MaterialPropertyType::Texture2DArray,  4},
                 {       "Keyword",        MaterialPropertyType::Keyword,  0},
-                // Aliases (Unity / Unreal naming)
+                // 별칭(Unity · Unreal 이름)
                 {        "Scalar",          MaterialPropertyType::Float,  4},
                 {        "Vector",         MaterialPropertyType::Float4, 16},
                 {       "Vector2",         MaterialPropertyType::Float2,  8},
@@ -72,7 +72,7 @@ namespace sw
                 if ( name.empty() )
                     return 0;
 
-                // Numeric literal
+                // 숫자 리터럴
                 {
                     int64 parsedValue{ 0 };
                     if ( StringUtil::parseInt64( name, parsedValue, 0 ) )
@@ -129,7 +129,7 @@ namespace sw
                 if ( trimmedValue.empty() )
                     return 0xFu;
 
-                // Numeric
+                // 숫자
                 uint64 numericValue{ 0 };
                 if ( StringUtil::parseUint64( trimmedValue, numericValue, 0 ) )
                     return static_cast<uint32>( numericValue );
@@ -169,13 +169,13 @@ namespace sw
             /**
              * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
              * @details 아래 `writeNumericValue` 는 처음부터 `packSize < need` 를 보고 있었는데,
-             *          switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**은 그 검사를 건너뛰었다.
+             *          switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**은 그 검사를 건너뛰었습니다.
              *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
-             *          머티리얼 XML 의 `shaderType` 이 정하므로 **둘이 어긋날 수 있다** —
-             *          예를 들어 셰이더가 `uint` (4바이트)로 선언한 자리에 XML 이
-             *          `ChannelMask` + `shaderType="Float4"` 를 적으면 4바이트 칸에 16바이트를 쓴다.
+             *          머티리얼 XML 의 `shaderType` 이 정하므로 **둘이 어긋날 수 있습니다.**
+             *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 XML 이
+             *          `ChannelMask` + `shaderType="Float4"` 를 적으면 4바이트 칸에 16바이트를 씁니다.
              *          손으로 지은 머티리얼 XML 이 이 저장소를 여러 번 물었으므로, 조용히 넘치는
-             *          대신 쓰지 않고 false 를 돌려준다(호출부가 경고한다).
+             *          대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
              */
             static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
             {
@@ -270,7 +270,7 @@ namespace sw
     {
         uint32 size{ 0 };
         MaterialUtil::stringToType( MaterialUtil::typeToString( type ), size );
-        // Prefer first matching entry size for known enum values
+        // 알려진 enum 값이면 표에서 처음 맞는 항목의 크기를 쓴다
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
             if ( desc._type == type )
@@ -337,7 +337,7 @@ namespace sw
             const MaterialPropertyType reflectedType = MaterialUtil::stringToType( typeName, ignored );
             if ( reflectedType != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( reflectedType ) == false && MaterialUtil::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool )
                 return reflectedType;
-            // Bool from HLSL often reported as Bool
+            // HLSL 의 bool 은 보통 "Bool" 로 보고된다
             if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )
                 return MaterialPropertyType::Uint;
         }
@@ -451,7 +451,7 @@ namespace sw
                 uint32 textureIndex = prop._textureIndex;
                 if ( textureIndex == kInvalidDescriptorIndex && prop._value.empty() == false )
                 {
-                    // Allow numeric override in _value
+                    // _value 에 숫자를 적어 덮어쓰는 것도 허용한다
                     uint64 numericVal{ 0 };
                     if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) )
                         textureIndex = static_cast<uint32>( numericVal );

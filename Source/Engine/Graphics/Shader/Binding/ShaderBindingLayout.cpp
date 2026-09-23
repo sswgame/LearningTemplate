@@ -12,7 +12,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 리플렉션 문자열 타입 라벨 → ShaderBindingKind. */
+        /** @brief 리플렉션 문자열 타입 라벨을 ShaderBindingKind 로 바꿉니다. */
         ShaderBindingKind shaderBindingKindFromTypeLabel( string_view typeLabel )
         {
             if ( typeLabel == "Texture" || typeLabel == "TextureOrSampler" )
@@ -30,7 +30,7 @@ namespace sw
             return ShaderBindingKind::Unknown;
         }
 
-        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` → `"ShadowMap"` (레지스트리 조회 키). */
+        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` 을 `"ShadowMap"`(레지스트리 조회 키)으로 모읍니다. */
         string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
         {
             string_view name = identifier;
@@ -92,7 +92,7 @@ namespace sw
                 continue;
             const ShaderStageFlag visibility = toShaderStageFlag( stage );
 
-            // 1) 상수 버퍼 — 멤버 오프셋까지 채운다.
+            // 1) 상수 버퍼: 멤버 오프셋까지 채운다.
             for ( const ShaderBufferInfo& cb : pReflection->_listConstantBuffer )
             {
                 ShaderBindingSlot& slot = touchSlot( ShaderBindingKind::ConstantBuffer, hashed_string( static_cast<string_view>( cb._name ) ),
@@ -108,13 +108,13 @@ namespace sw
                 }
             }
 
-            // 2) 텍스처 / 샘플러 / 버퍼 바인딩
+            // 2) 텍스처 · 샘플러 · 버퍼 바인딩
             for ( const ShaderResourceBinding& res : pReflection->_listResource )
             {
                 const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
                 if ( kind == ShaderBindingKind::Unknown )
                     continue;
-                // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신.
+                // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신한다.
                 if ( kind == ShaderBindingKind::ConstantBuffer )
                 {
                     touchSlot( kind, hashed_string( static_cast<string_view>( res._name ) ),
@@ -126,7 +126,7 @@ namespace sw
             }
         }
 
-        // 3) 구조버퍼 원소 stride — 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
+        // 3) 구조버퍼 원소 stride: 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
         //    이 슬롯에 거는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다.
         for ( const auto& [stage, pReflection] : listStageReflection )
         {

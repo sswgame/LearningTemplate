@@ -113,7 +113,7 @@ namespace sw
         pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
         _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
 
-        // 텍스처는 CB 가 생긴 뒤에 — setTextureParameter 가 인덱스를 CB 에 바로 올린다.
+        // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
         resolveTextureAssets( pRhi );
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
@@ -125,8 +125,8 @@ namespace sw
         if ( pRhi == nullptr || engine::areEngineServicesBound() == false )
             return;
 
-        // DX12/Vulkan 은 셰이더가 전역 bindless 인덱스로 직접 힙/배열을 찌른다. DX11/GL 은 그게 안 되므로
-        // (SM5.0 은 리소스 배열 동적 인덱싱 없음, GL 은 SPIR-V 라 ARB_bindless_texture 불가) 엔진이
+        // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
+        // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
         // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRhi->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getResourceManager().getTextureManager();
@@ -173,7 +173,7 @@ namespace sw
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
                 continue;
-            // _value 도 비운다 — setTextureParameter 가 인덱스를 문자열로도 남기므로, 그대로 두면
+            // _value 도 비운다. setTextureParameter 가 인덱스를 문자열로도 남기므로, 그대로 두면
             // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 되살린다.
             prop._textureIndex = kInvalidDescriptorIndex;
             prop._value.clear();
@@ -182,7 +182,7 @@ namespace sw
 
     bool Material::initRhi( IRHIDevice* pDevice )
     {
-        // 통보 순서는 정해져 있지 않다 — 이미 올라가 있으면 그대로 둔다.
+        // 통보 순서는 정해져 있지 않다. 이미 올라가 있으면 그대로 둔다.
         if ( isRhiValid() )
             return true;
         // 한 번도 initialize 되지 않은 머티리얼이다. 되살릴 내용 자체가 없다.
@@ -196,7 +196,7 @@ namespace sw
         if ( _pRHIDevice != pDevice )
             return;
 
-        // 빌린 텍스처도 **여기서 놓는다** — 널 디바이스로 부르면 `TextureCache` 가 참조만 돌려주고
+        // 빌린 텍스처도 **여기서 놓는다.** 널 디바이스로 부르면 `TextureCache` 는 참조 수만 줄이고
         // GPU 호출은 하지 않는다(디바이스가 이미 없으므로 그것이 맞다).
         //
         // 예전에는 `releaseRhi` 만 이 목록을 비웠다. 둘 다 "디바이스가 사라졌다" 는 통보인데 남기는
@@ -206,7 +206,7 @@ namespace sw
         // 남는다. 통보 둘이 같은 상태를 남기게 한다.
         releaseTextureAssets( nullptr );
 
-        // 디바이스가 이미 없다 — GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 는 해제 후 사용이다).
+        // 디바이스가 이미 없다. GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 를 부르면 해제 후 사용이다).
         _constantBuffer  = 0;
         _descriptorIndex = kInvalidDescriptorIndex;
         _pRHIDevice      = nullptr;
@@ -233,9 +233,9 @@ namespace sw
 
     bool Material::ensureShaderLayout( IRHIDevice* pDevice )
     {
-        // 머티리얼 바이트의 정본은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData_t 원소 레이아웃**이다(언리얼도
-        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전엔 셰이더 핫리로드 경로에서만 맞췄고 로드 경로에서는 XML
-        // 순서로 패킹해 stride 가 0 이었다 — 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
+        // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData_t 원소 레이아웃**이다(언리얼도
+        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전에는 셰이더 핫 리로드 경로에서만 맞췄고 로드 경로에서는 XML
+        // 순서로 패킹해 stride 가 0 이었다. 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         if ( pDevice == nullptr || _desc._shaderPath.empty() )
             return false;
         const uint32 backendBit = 1u << static_cast<uint32>( pDevice->getBackendType() );
@@ -263,7 +263,7 @@ namespace sw
         if ( reflectionData._listConstantBuffer.empty() && reflectionData._listStructuredElement.empty() )
             return true;
 
-        // 스키마 우선순위: GPUScene 머티리얼 데이터(g_SwMaterials 구조버퍼 원소) → MaterialCB → 멤버가 있는 첫 CB(레거시).
+        // 스키마 우선순위: GPUScene 머티리얼 데이터(g_SwMaterials 구조버퍼 원소) → MaterialCB. 둘 다 없으면 아래에서 경고하고 끝낸다.
         const ShaderBufferInfo* pSchemaCb = nullptr;
         for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
         {
@@ -286,9 +286,9 @@ namespace sw
                 }
             }
         }
-        // 예전엔 여기에 "멤버가 있는 **첫** 상수버퍼를 머티리얼 스키마로 삼는" 폴백이 있었다. 지금은
+        // 예전에는 여기에 "멤버가 있는 **첫** 상수버퍼를 머티리얼 스키마로 삼는" 폴백이 있었다. 지금은
         // 모든 셰이더가 SW_MATERIAL_BEGIN/END(g_SwMaterials) 아니면 MaterialCB 를 선언하므로 도달하지
-        // 않는다 — 그리고 도달했다면 **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한 오프셋에
+        // 않는다. 그리고 도달했다면 **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한 오프셋에
         // 값을 써 넣었을 것이다. 조용히 틀리느니 못 찾았다고 알린다.
         if ( pSchemaCb == nullptr )
         {
@@ -310,7 +310,7 @@ namespace sw
                 _data._listProperty.push_back( prop );
             }
             rebuildPackedBuffer();
-            // restore reflection offsets after sequential rebuild
+            // 순서대로 다시 쌓은 뒤 리플렉션 오프셋을 되돌린다
             for ( MaterialProperty& prop : _data._listProperty )
             {
                 for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
@@ -332,7 +332,7 @@ namespace sw
         bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            // Textures / keywords / UI-only fields are not MaterialCB variables.
+            // 텍스처 · 키워드 · UI 전용 필드는 MaterialCB 변수가 아니다.
             if ( MaterialUtil::isNonBufferType( prop._type ) || MaterialUtil::isTextureType( prop._type ) )
                 continue;
 
@@ -349,7 +349,7 @@ namespace sw
                     prop._shaderType = reflected;
                 else if ( MaterialUtil::packedSizeOf( prop._shaderType ) != 0 && MaterialUtil::packedSizeOf( prop._shaderType ) != var._size )
                 {
-                    // Allow conversion if sizes match reflected size after remap
+                    // 기본 셰이더 타입으로 바꿨을 때 크기가 리플렉션과 맞으면 그 타입으로 바꾼다
                     if ( MaterialUtil::packedSizeOf( MaterialUtil::defaultShaderTypeFor( prop._type ) ) == var._size )
                         prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
                     else if ( reflected != MaterialPropertyType::Unknown )

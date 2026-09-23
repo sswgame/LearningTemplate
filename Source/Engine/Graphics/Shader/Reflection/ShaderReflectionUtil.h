@@ -1,6 +1,6 @@
 /**
  * @file ShaderReflectionUtil.h
- * @brief ShaderReflection 포맷별 TU 공유 선언.
+ * @brief ShaderReflection 포맷별 TU 가 함께 쓰는 선언입니다.
  */
 #pragma once
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     enum class ShaderTargetFormat : uint8;
 
-    /** @brief 백엔드별 셰이더 리플렉션 */
+    /** @brief 백엔드별 셰이더 리플렉션입니다. */
     struct ShaderReflectionUtil
     {
         static ShaderReflectionData reflectSpirv( const vector<uint8>& bytecode );

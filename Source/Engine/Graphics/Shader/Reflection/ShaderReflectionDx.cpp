@@ -28,7 +28,7 @@ namespace sw
                     case static_cast<uint32>( D3D_SIT_BYTEADDRESS ):
                         return "StructuredBuffer";
                     case static_cast<uint32>( D3D_SIT_UAV_RWTYPED ):
-                        return "RWTexture"; // RWTexture2D 등 — 계약이 버퍼 UAV 와 구분한다 (RWBuffer<T> 는 쓰지 않는다)
+                        return "RWTexture"; // RWTexture2D 등. 계약이 버퍼 UAV 와 구분한다(RWBuffer<T> 는 쓰지 않는다)
                     case static_cast<uint32>( D3D_SIT_UAV_RWSTRUCTURED ):
                     case static_cast<uint32>( D3D_SIT_UAV_RWBYTEADDRESS ):
                         return "UAV";
@@ -81,10 +81,10 @@ namespace sw
             }
 
             /**
-             * @brief 타입 하나가 cbuffer 안에서 차지하는 바이트 수 (HLSL 패킹 규칙).
-             * @details 리플렉션의 타입 서술에는 크기가 없고 변수 서술에만 있다 — 구조체 **멤버** 를 펼칠 때는
-             *          여기서 계산한다. 규칙: 배열 원소와 구조체는 16바이트 정렬, 마지막 원소 뒤 패딩은 없다
-             *          (D3D 가 변수 Size 로 보고하는 값과 같은 규칙 — `float arr[3]` 은 36, `float4 arr[6]` 은 96).
+             * @brief 타입 하나가 cbuffer 안에서 차지하는 바이트 수입니다(HLSL 패킹 규칙).
+             * @details 리플렉션의 타입 서술에는 크기가 없고 변수 서술에만 있습니다. 구조체 **멤버**를 펼칠 때는
+             *          여기서 계산합니다. 규칙: 배열 원소와 구조체는 16바이트 정렬, 마지막 원소 뒤 패딩은 없습니다
+             *          (D3D 가 변수 Size 로 보고하는 값과 같은 규칙. `float arr[3]` 은 36, `float4 arr[6]` 은 96).
              */
             template <typename TType, typename TTypeDesc>
             static uint32 computePackedSize( TType* pType )
@@ -114,7 +114,7 @@ namespace sw
                     const uint32 columns = desc.Columns > 0 ? desc.Columns : 1;
                     if ( desc.Class == D3D_SVC_MATRIX_ROWS || desc.Class == D3D_SVC_MATRIX_COLUMNS )
                     {
-                        // 행렬은 벡터 하나가 16바이트 레지스터 하나를 쓴다 (row_major 면 행, 아니면 열) — 마지막 벡터만 실제 폭.
+                        // 행렬은 벡터 하나가 16바이트 레지스터 하나를 쓴다(row_major 면 행, 아니면 열). 마지막 벡터만 실제 폭이다.
                         const uint32 vectorCount = ( desc.Class == D3D_SVC_MATRIX_ROWS ) ? rows : columns;
                         const uint32 vectorWidth = ( desc.Class == D3D_SVC_MATRIX_ROWS ) ? columns : rows;
                         elementSize              = ( vectorCount - 1 ) * 16 + vectorWidth * 4;
@@ -134,12 +134,12 @@ namespace sw
             }
 
             /**
-             * @brief cbuffer 의 변수 목록을 멤버 표로 만든다. **구조체 하나로 감싼 cbuffer 는 한 겹 벗긴다.**
+             * @brief cbuffer 의 변수 목록을 멤버 표로 만듭니다. **구조체 하나로 감싼 cbuffer 는 한 겹 벗깁니다.**
              * @details 엔진 cbuffer(PassCB 등)는 맨 필드로 선언하지만, `cbuffer name { name_t data; }` 나
              *          `ConstantBuffer<name_t>` 처럼 구조체 하나로 감싼 cbuffer 도 리플렉션에는 "구조체 변수 하나짜리 CB" 로
-             *          보인다. 엔진(ShaderBindingBinder)과 머티리얼 패커는 **필드 이름** 으로 오프셋을 찾으므로 변수가
-             *          하나뿐이고 그것이 구조체면 그 멤버들을 CB 의 멤버로 올린다. 오프셋은 구조체 시작(= 변수 StartOffset)
-             *          기준으로 더한다. 맨 필드 cbuffer 는 그대로 통과한다.
+             *          보입니다. 엔진(ShaderBindingBinder)과 머티리얼 패커는 **필드 이름**으로 오프셋을 찾으므로 변수가
+             *          하나뿐이고 그것이 구조체면 그 멤버들을 CB 의 멤버로 올립니다. 오프셋은 구조체 시작(= 변수 StartOffset)
+             *          기준으로 더합니다. 맨 필드 cbuffer 는 그대로 통과합니다.
              */
             template <typename TCb, typename TVar, typename TVarDesc, typename TType, typename TTypeDesc>
             static void fillConstantBufferMembers( TCb* pCb, UINT variableCount, ShaderBufferInfo& outBuffer )
@@ -202,10 +202,10 @@ namespace sw
             }
 
             /**
-             * @brief 정점 셰이더의 입력 시그니처를 정점 입력 목록으로 옮깁니다 (DX11/DX12 공통).
-             * @details 시스템 값(SV_*)은 정점 버퍼에서 오지 않으므로 뺀다. `Register` 는 시그니처 순서 = HLSL 선언 순서라
-             *          Vulkan·GL 이 매길 location 과 같다 — DX 는 이름으로 묶어 이 값이 틀려도 화면은 맞지만, 계약 검사가
-             *          같은 규칙으로 네 바이너리를 대조할 수 있게 같은 자리에 둔다.
+             * @brief 정점 셰이더의 입력 시그니처를 정점 입력 목록으로 옮깁니다(DX11 · DX12 공통).
+             * @details 시스템 값(SV_*)은 정점 버퍼에서 오지 않으므로 뺍니다. `Register` 는 시그니처 순서 = HLSL 선언 순서라
+             *          Vulkan · GL 이 매길 location 과 같습니다. DX 는 이름으로 묶어 이 값이 틀려도 화면은 맞지만, 계약 검사가
+             *          같은 규칙으로 네 바이너리를 대조할 수 있게 같은 자리에 둡니다.
              */
             template <typename TReflection, typename TParamDesc>
             static void fillVertexInputs( TReflection* pReflection, uint32 inputParameterCount, ShaderReflectionData& outData )
@@ -242,15 +242,15 @@ namespace sw
                     D3D11_SHADER_BUFFER_DESC cbDesc{};
                     pCb->GetDesc( &cbDesc );
 
-                    // cbIndex(열거 순서) 는 register(bN) 과 다를 수 있다 — 이름으로 실제 바인드 포인트를 찾는다.
+                    // cbIndex(열거 순서)는 register(bN) 과 다를 수 있다. 이름으로 실제 바인드 포인트를 찾는다.
                     UINT                         realBindPoint = cbIndex;
                     D3D11_SHADER_INPUT_BIND_DESC nameBindDesc{};
                     if ( cbDesc.Name != nullptr && SUCCEEDED( pReflection->GetResourceBindingDescByName( cbDesc.Name, &nameBindDesc ) ) )
                         realBindPoint = nameBindDesc.BindPoint;
 
                     // GetConstantBufferByIndex 는 실제 cbuffer 블록뿐 아니라 StructuredBuffer<T> 의 원소 타입 레이아웃도
-                    // "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나) 로 열거한다. 그건 CB 가 아니라
-                    // **원소 레이아웃** 으로 따로 낸다 — GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 정본이다.
+                    // "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나)로 열거한다. 그건 CB 가 아니라
+                    // **원소 레이아웃**으로 따로 낸다. GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
                     if ( cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO )
                     {
                         ShaderBufferInfo element{};
@@ -310,7 +310,7 @@ namespace sw
                     D3D12_SHADER_BUFFER_DESC              cbDesc{};
                     pCb->GetDesc( &cbDesc );
 
-                    // StructuredBuffer<T> 의 원소 타입 레이아웃("가상 CB", Type == D3D_CT_RESOURCE_BIND_INFO) 은 원소 레이아웃 목록으로.
+                    // StructuredBuffer<T> 의 원소 타입 레이아웃("가상 CB", Type == D3D_CT_RESOURCE_BIND_INFO)은 원소 레이아웃 목록으로 보낸다.
                     if ( cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO )
                     {
                         ShaderBufferInfo element{};
@@ -355,9 +355,9 @@ namespace sw
                     resBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
                     resBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
 
-                    // 이 짝맞추기는 **move 하기 전에** 해야 한다 — 예전엔 push_back( std::move ) 뒤에 비어 버린 이름과
+                    // 이 짝맞추기는 **move 하기 전에** 해야 한다. 예전에는 push_back( std::move ) 뒤에 비어 버린 이름과
                     // 비교해 한 번도 맞지 않았고, DXIL 의 모든 cbuffer 가 bindPoint 0 으로 보고됐다(MaterialCB 도 b0).
-                    // 엔진 바인더는 정본 슬롯으로 걸어 가려졌지만 계약 검증이 "PassCB 와 MaterialCB 가 같은 자리" 로 잡아냈다.
+                    // 엔진 바인더는 기준 슬롯으로 걸어 가려졌지만 계약 검증이 "PassCB 와 MaterialCB 가 같은 자리" 로 잡아냈다.
                     if ( bindDesc.Type == D3D_SIT_CBUFFER )
                     {
                         for ( ShaderBufferInfo& cb : data._listConstantBuffer )
@@ -447,7 +447,7 @@ namespace sw
                 }
                 else
                 {
-                    // Some DXC builds expose DXIL reflection as ID3D11ShaderReflection.
+                    // DXC 빌드에 따라 DXIL 리플렉션을 ID3D11ShaderReflection 으로 내놓는 경우가 있다.
                     Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection11;
                     hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection11.GetAddressOf() ) );
                     if ( SUCCEEDED( hr ) && reflection11 != nullptr )

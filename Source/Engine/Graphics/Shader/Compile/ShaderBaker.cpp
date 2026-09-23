@@ -53,8 +53,8 @@ namespace sw
 
         // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다. 런타임은 ShaderMacroDefine::parse 로 값 없는
         // define 에 "1" 을 채운 **뒤** 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
-        // 베이크와 런타임에서 서로 다른 해시가 된다 — 구워둔 변형을 아무도 못 찾는다. 파이프라인
-        // XML 은 `SW_FORWARD=1` 처럼 값을 적어 우연히 맞았고, 값이 없는 머티리얼 define 은 전부
+        // 베이크와 런타임에서 서로 다른 해시가 된다. 그러면 구워둔 변형을 아무도 못 찾는다. 파이프라인
+        // XML 은 `SW_FORWARD=1` 처럼 값을 적어 우연히 맞았고, 값이 없는 머티리얼 define 은 모두
         // 어긋나 있었다. 두 오버로드가 같은 문자열을 보도록 여기서 맞춘다.
         vector<string> listSorted;
         listSorted.reserve( listPermutation.size() );
@@ -72,7 +72,7 @@ namespace sw
 
         std::sort( listSorted.begin(), listSorted.end() );
 
-        uint64 hash{ 14695981039346656037ull }; // FNV-1a 64-bit offset basis
+        uint64 hash{ 14695981039346656037ull }; // FNV-1a 64비트 오프셋 기저값
         for ( const string& def : listSorted )
         {
             if ( def.empty() )
@@ -153,7 +153,7 @@ namespace sw
             case ShaderTargetFormat::DXIL_D3D12:
                 return ".dxil";
             // 둘 다 SPIR-V 라 확장자가 같다. 따로 적어 두면 "우연히 같은 값" 처럼 보여서, 한쪽만
-            // 바꾸는 실수가 나기 쉽다 — 같이 묶어 같아야 한다는 것을 드러낸다.
+            // 바꾸는 실수가 나기 쉽다. 같이 묶어 같아야 한다는 것을 드러낸다.
             case ShaderTargetFormat::SPIRV_Vulkan:
             case ShaderTargetFormat::SPIRV_OpenGL:
                 return ".spv";

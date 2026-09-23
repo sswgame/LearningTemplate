@@ -20,7 +20,7 @@ namespace sw
         {
             static inline atomic<uint32> s_totalViolation{ 0 };
 
-            /// @brief 한 리소스를 이름공간 키로 만들 때 쓰는 레지스터 종류 (DX 기준).
+            /// @brief 한 리소스를 이름공간 키로 만들 때 쓰는 레지스터 종류입니다(DX 기준).
             enum class RegisterClass : uint8
             {
                 ConstantBuffer,  // b
@@ -30,7 +30,7 @@ namespace sw
                 Other
             };
 
-            /// @brief GL 이름공간 — GL 은 set 을 버리고 binding 만 보므로 종류별로 번호 공간이 갈린다.
+            /// @brief GL 이름공간입니다. GL 은 set 을 버리고 binding 만 보므로 종류별로 번호 공간이 갈립니다.
             enum class GlNamespace : uint8
             {
                 UniformBuffer,
@@ -144,9 +144,9 @@ namespace sw
             }
 
             /**
-             * @brief 종류가 계약과 "같다" 고 볼 수 있는가.
+             * @brief 종류가 계약과 "같다" 고 볼 수 있는지 반환합니다.
              * @details SPIR-V 는 읽기/쓰기 구조버퍼를 모두 StorageBuffer 로만 보고하고, 결합 이미지 샘플러는
-             *          텍스처와 샘플러를 하나로 보고한다 — 그 차이는 어긋남이 아니다.
+             *          텍스처와 샘플러를 하나로 보고합니다. 그 차이는 어긋남이 아닙니다.
              */
             static bool kindMatches( ShaderBindingKind expected, ShaderBindingKind actual, ShaderTargetFormat target )
             {
@@ -167,14 +167,14 @@ namespace sw
             }
 
             /**
-             * @brief `[shift, shift + width)` 안에 드는가.
-             * @details 부호 없는 뺄셈이라 `binding < shift` 면 아주 큰 값으로 감겨 width 를 넘는다 —
-             *          그래서 하한 비교가 따로 필요 없다. b 밴드의 shift 는 0 이라 `binding >= 0` 이
-             *          늘 참이었고, 컴파일러가 그걸 짚어 줬다.
+             * @brief `[shift, shift + width)` 안에 드는지 반환합니다.
+             * @details 부호 없는 뺄셈이라 `binding < shift` 면 아주 큰 값으로 감겨 width 를 넘습니다.
+             *          그래서 하한 비교가 따로 필요 없습니다. b 밴드의 shift 는 0 이라 `binding >= 0` 이
+             *          늘 참이었고, 컴파일러가 그것을 짚어 줬습니다.
              */
             static bool inBand( uint32 binding, uint32 shift, uint32 width ) { return ( binding - shift ) < width; }
 
-            /// @brief Vulkan 세트 0 binding 이 어느 레지스터 밴드(b/t/u)인가. 밴드 밖이면 Other.
+            /// @brief Vulkan 세트 0 binding 이 어느 레지스터 밴드(b/t/u)인지 반환합니다. 밴드 밖이면 Other 입니다.
             static RegisterClass vulkanBandOf( uint32 binding )
             {
                 namespace vk = shaderslot::vk;
@@ -187,7 +187,7 @@ namespace sw
                 return RegisterClass::Other;
             }
 
-            /// @brief SPIR-V 는 읽기/쓰기 구조버퍼를 구분하지 않으므로 t/u 밴드 모두 StorageBuffer 를 받는다.
+            /// @brief SPIR-V 는 읽기/쓰기 구조버퍼를 구분하지 않으므로 t/u 밴드 모두 StorageBuffer 를 받습니다.
             static bool vulkanBandAcceptsKind( RegisterClass band, ShaderBindingKind kind )
             {
                 switch ( band )
@@ -215,7 +215,7 @@ namespace sw
                 static constexpr uint32 kUnknownCount = 0xFFFFFFFFu;
             };
 
-            /// @brief CB 목록과 리소스 목록을 (이름, 종류) 로 중복 없이 합칩니다 — DX 리플렉션은 cbuffer 를 양쪽에 다 넣는다.
+            /// @brief CB 목록과 리소스 목록을 (이름, 종류)로 중복 없이 합칩니다. DX 리플렉션은 cbuffer 를 양쪽에 다 넣습니다.
             static void collect( const ShaderReflectionData& reflection, vector<Seen>& outList )
             {
                 auto push = [&]( const string& name, ShaderBindingKind kind, uint32 space, uint32 bindPoint, uint32 bindCount )
@@ -233,7 +233,7 @@ namespace sw
                     seen._bindCount = bindCount;
                     outList.push_back( std::move( seen ) );
                 };
-                // 리소스 목록이 바인딩 위치의 1차 출처다(cbuffer 도 여기 들어 있다). CB 목록은 그 다음 — 리플렉터가
+                // 리소스 목록이 바인딩 위치의 1차 출처다(cbuffer 도 여기 들어 있다). CB 목록은 그 다음이다. 리플렉터가
                 // CB 쪽 bindPoint 를 못 채우는 경우가 있었다(DXIL, move 뒤 이름 비교).
                 for ( const ShaderResourceBinding& res : reflection._listResource )
                 {
@@ -278,7 +278,7 @@ namespace sw
             return ShaderReservedLocation{};
         }
 
-        /// @brief 계약 표 — 값은 전부 shaderslot 에서 온다. 백엔드가 선언하지 않는 자리는 none().
+        /// @brief 계약 표입니다. 값은 모두 shaderslot 에서 옵니다. 백엔드가 선언하지 않는 자리는 none() 입니다.
         const vector<ShaderReservedBinding>& reservedBindings()
         {
             static const vector<ShaderReservedBinding> s_list = []()
@@ -298,7 +298,7 @@ namespace sw
                     r._opengl = opengl;
                     list.push_back( r );
                 };
-                // 슬롯 리소스는 DX11/DX12/GL 이 (space 0, register) 로 같고, Vulkan 만 세트 0 의 시프트된 binding 이다.
+                // 슬롯 리소스는 DX11 · DX12 · GL 이 (space 0, register) 로 같고, Vulkan 만 세트 0 의 시프트된 binding 이다.
                 auto slotB = [&]( uint32 reg )
                 { return at( 0, reg ); };
                 auto vkB = [&]( uint32 reg )
@@ -308,7 +308,7 @@ namespace sw
                 auto vkU = [&]( uint32 reg )
                 { return at( 0, vk::kUShift + reg ); };
 
-                // 상수버퍼 — b0 / b1
+                // 상수버퍼: b0 / b1
                 add( shaderslot::cbname::kPass, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kPassConstantBuffer ), slotB( shaderslot::kPassConstantBuffer ), vkB( shaderslot::kPassConstantBuffer ), slotB( shaderslot::kPassConstantBuffer ) );
                 add( shaderslot::cbname::kMaterial, ShaderBindingKind::ConstantBuffer,
@@ -319,29 +319,29 @@ namespace sw
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 add( shaderslot::cbname::kAnim, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
-                // 루트/푸시 상수 블록 — DX12 b0 space2, DX11/GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
+                // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
                 add( shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kRootConstantEmulSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotB( shaderslot::kRootConstantEmulSlot ) );
-                // GPUScene 버퍼 — 인스턴스 t4, 머티리얼 데이터 t9 (네 백엔드 공통)
+                // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t9 (네 백엔드 공통)
                 add( shaderslot::resname::kInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ), vkT( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ) );
                 add( shaderslot::resname::kMaterials, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ), vkT( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ) );
-                // 컬링이 만든 가시 인스턴스 ID 목록 — 그래픽스 t10 (네 백엔드 공통).
+                // 컬링이 만든 가시 인스턴스 ID 목록: 그래픽스 t10 (네 백엔드 공통).
                 add( shaderslot::resname::kVisibleInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ),
                      vkT( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ) );
-                // 씬 배치 표 — 그래픽스 t13 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
+                // 씬 배치 표: 그래픽스 t13 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
                 add( shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ), vkT( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ) );
-                // gpucull 컴퓨트 — t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
+                // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
                 add( shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
                 add( shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );
                 add( shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
                 add( shaderslot::resname::kCullVisibleIds, ShaderBindingKind::RwStructuredBuffer, slotB( 1 ), slotB( 1 ), vkU( 1 ), slotB( shaderslot::gl::kUavBinding0 + 1 ) );
-                // instanceanim 컴퓨트 — 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
+                // instanceanim 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
                 add( shaderslot::resname::kAnimInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
-                // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t5..t8 — 에뮬 백엔드(DX11/GL)만. Vulkan/DX12 는 선언 자체가 없어야 한다.
+                // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t5..t8: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
                 static string s_arrEngineName[shaderslot::kEngineTextureCount];
                 static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
                 static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
@@ -362,7 +362,7 @@ namespace sw
                     add( s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
                     add( s_arrMaterialSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, slotB( reg ), none(), none(), slotB( reg ) );
                 }
-                // 컴퓨트 RW 텍스처 슬롯 u4..u7 — 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
+                // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
                 static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
                 for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUavSlotCount; ++slotIndex )
                 {
@@ -370,12 +370,12 @@ namespace sw
                     add( s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotB( shaderslot::kComputeTextureUav0 + slotIndex ), none(), none(),
                          slotB( shaderslot::gl::kImageUnit0 + slotIndex ) );
                 }
-                // 네이티브 bindless 텍스처 배열 — DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
+                // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
                 add( shaderslot::resname::kBindlessTextures, ShaderBindingKind::Texture, none(),
                      at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkTextureBinding ), none() );
                 add( shaderslot::resname::kBindlessRwTextures, ShaderBindingKind::RwTexture, none(),
                      at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkRwTextureBinding ), none() );
-                // 정적 샘플러 세트 — DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable).
+                // 정적 샘플러 세트: DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable).
                 // DX11 은 같은 세트를 s9..s15 샘플러 상태로 건다(bindStaticSamplers). GL 은 결합 샘플러뿐이라 없다.
                 add( shaderslot::resname::kSamplers, ShaderBindingKind::Sampler, none(),
                      none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
@@ -420,7 +420,7 @@ namespace sw
         const bool  bDx12      = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
         const utf8* pLocFormat = bVulkan ? "set/binding" : "space/register";
 
-        // 1) 예약 리소스 — 종류와 위치
+        // 1) 예약 리소스: 종류와 위치
         for ( const Internal::Seen& seen : listSeen )
         {
             const ShaderReservedBinding* pReserved{ nullptr };
@@ -466,7 +466,7 @@ namespace sw
 
             if ( bDx12 && seenA._kind != ShaderBindingKind::Unknown )
             {
-                // space0 = 슬롯(루트 디스크립터·정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다.
+                // space0 = 슬롯(CB 는 루트 CBV, t · u 는 디스크립터 테이블, 그리고 정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다.
                 const Internal::RegisterClass registerClass = Internal::registerClassOf( seenA._kind );
                 if ( seenA._space == 0 )
                 {
@@ -593,9 +593,9 @@ namespace sw
             }
         }
 
-        // 5) 정점 입력 — 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan·GL 은 location 까지 같은가.
+        // 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
         //    DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
-        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 예전엔 픽셀로만 드러났다.
+        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 예전에는 픽셀로만 드러났다.
         for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
         {
             const RHIVertexAttribute* pAttribute{ nullptr };

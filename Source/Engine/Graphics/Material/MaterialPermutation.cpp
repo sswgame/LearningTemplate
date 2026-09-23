@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        /// @brief MaterialUtil::getPermutationGeneration 참고 — 정지한 씬이 퍼뮤테이션 변경을 알아채는 유일한 신호.
+        /// @brief MaterialUtil::getPermutationGeneration 참고. 정지한 씬이 퍼뮤테이션 변경을 알아채는 유일한 신호입니다.
         atomic<uint64> s_permutationGeneration{ 1 };
     } // namespace
 } // namespace sw
