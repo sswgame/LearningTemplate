@@ -11,11 +11,12 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
 {
+    struct RHIPipelineStateDesc;
+
     /**
      * @struct RHIGraphicsShaderRequest
      * @brief 그래픽스 파이프라인 하나가 컴파일해야 할 스테이지와, 그 판정에 쓴 사실들.

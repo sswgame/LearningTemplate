@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/FileLogOutput.h"
+#include "Core/Log/ILogOutput.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"

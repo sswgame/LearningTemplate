@@ -17,6 +17,7 @@ namespace sw
 
 namespace sw::editor
 {
+
     /** @brief 에디터 패널 카테고리 */
     enum class EditorPanelCategory : uint8
     {

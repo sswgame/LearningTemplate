@@ -4,12 +4,13 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
 
 namespace sw
 {
     struct PropertyInfo;
     struct TypeInfo;
+
+    class SerializeContext;
 
     // ------------------------------------------------------------------------------
     // 1) SchemaOrphanValue — 현재 TypeInfo에 매칭·적용 실패한 와이어 필드

@@ -135,6 +135,7 @@ py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄�
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
 py -3 Scripts/lint/report/RunHeaderSelfContained.py            # headers that only compile thanks to someone else
+py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a header could replace with a forward declaration (`--apply` rewrites; then build + RunHeaderSelfContained)
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)

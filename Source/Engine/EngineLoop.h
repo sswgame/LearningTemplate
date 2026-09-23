@@ -3,19 +3,20 @@
  * @brief 엔진 코어 메인 루프 및 서브시스템 소유권 관리
  */
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Common/Common.h"
 #include "Engine/EngineOwnedServices.h"
-#include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 
 namespace sw
 {
     struct DebugOverlayState;
     struct EngineData;
+    struct RenderFramePacket;
 
     class ActionMap;
     class AssetStreamingQueue;
@@ -31,6 +32,7 @@ namespace sw
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
+    class GpuSceneBuilder;
     class GpuUploadQueue;
     class IAudioSystem;
     class InputManager;
@@ -164,15 +166,16 @@ namespace sw
         unique_ptr<FrameRenderer>    _frameRenderer;
         unique_ptr<RenderThread>     _renderThread;
         /** @brief GT 쪽 씬 스냅샷 빌더 — buildFromScene 의 재구축 판단 캐시가 프레임 간 유지되도록 여기 소유.
-         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다. */
-        GpuSceneBuilder _gpuSceneBuilder;
+         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다.
+         *         패킷과 함께 힙에 둔다 — 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 간다(전방 선언으로 끊는다). */
+        unique_ptr<GpuSceneBuilder> _gpuSceneBuilder;
         /**
          * @brief GT 가 매 프레임 채우는 패킷 — 링 자리와 바꿔 가며 돈다(`RenderThread::submit`).
          * @details 지역 변수였을 때는 스냅샷의 배치·그룹 목록과 라이트 목록이 프레임마다 새로 할당됐다. 이제 링에서
          *          돌아온 저장소를 그대로 다시 채운다.
          */
-        RenderFramePacket _packetScratch;
-        Delegate<void()>  _onScenesReleased;
+        unique_ptr<RenderFramePacket> _packetScratch;
+        Delegate<void()>              _onScenesReleased;
         /**
          * @brief 셰이더 라이브 리로드. **Shipping 에는 없고**(파일째 빌드에서 빠진다) Debug 에서만 실제로 만들어집니다.
          * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**다. 예전에는 RHI 가 들고 있었는데, RHI 는

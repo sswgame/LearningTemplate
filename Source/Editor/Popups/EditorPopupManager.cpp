@@ -2,6 +2,7 @@
 
 #include "Editor/Popups/EditorPopupManager.h"
 
+#include "Editor/Common/Gui/IEditorPopup.h"
 #include "Editor/Popups/BoneHierarchyPopup.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"

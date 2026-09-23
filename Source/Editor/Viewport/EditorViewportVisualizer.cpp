@@ -7,6 +7,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 
 #include "Editor/Viewport/EditorViewportProjection.h"
 

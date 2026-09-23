@@ -10,13 +10,13 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
 namespace sw
 {
+    class IOpenGLPlatformContext;
     class OpenGLRHICommandContext;
     class OpenGLRHIResource;
 

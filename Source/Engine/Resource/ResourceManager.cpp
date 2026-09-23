@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 

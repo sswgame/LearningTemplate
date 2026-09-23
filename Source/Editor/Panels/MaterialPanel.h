@@ -4,7 +4,10 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Engine/Graphics/Material/Material.h"
+namespace sw
+{
+    class Material;
+} // namespace sw
 
 namespace sw::editor
 {

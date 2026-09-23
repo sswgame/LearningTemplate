@@ -2,10 +2,14 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 
 namespace sw
 {
+    struct VulkanDescriptorPoolSet;
+    struct VulkanRecordingState;
+
+    class VulkanRHIDevice;
 
     class VulkanRHICommandContext : public IRHICommandContext
     {

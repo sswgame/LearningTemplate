@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 

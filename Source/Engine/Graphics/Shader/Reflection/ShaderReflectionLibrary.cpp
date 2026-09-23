@@ -10,6 +10,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"

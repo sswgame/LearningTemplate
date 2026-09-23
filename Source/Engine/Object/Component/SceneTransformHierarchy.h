@@ -11,6 +11,7 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {

@@ -1384,6 +1384,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-23 (전방 선언으로 끊을 수 있는 include 를 찾아 끊었다 — 도구 하나, 헤더 스물넷)
+
+**시작은 `EngineLoop.h`.** `GpuSceneBuilder` · `RenderFramePacket` 을 **값으로** 들어, App 까지 Graphics 의 씬 스냅샷 헤더들
+(`GpuSceneSnapshot` · `GpuInstanceRing` · `GpuLightBuffer` …)을 끌고 갔다. 둘을 `unique_ptr` 로 바꾸고(소멸자는 이미 cpp 에 있다)
+전방 선언으로 끊었다. `PresentHookDelegate` 는 패킷 헤더 안에 선언돼 있어 형만 필요한 곳도 패킷 헤더를 들여야 했다 — 작은
+`PresentHookDelegate.h` 로 떼었다(참조 인자뿐이라 전방 선언으로 선다). `Common.h` 우산(FileUtil · Math · CpuTimer · ResourceUtil …)
+대신 실제로 쓰는 셋(`Macros` · `Types` · `Delegate`)만 남겼다. `FrameProfileSession` 은 값으로 두었다 — 그 헤더는 Core 둘뿐이라
+전방 선언으로 얻을 것이 없고, 인라인 `wantsQuit()` 이 그것을 부른다.
+
+**"사용할 수 있는 곳" 을 손으로 세지 않고 도구로 찾았다** — `Scripts/lint/report/RunForwardDeclarationCandidates.py`. include 한
+헤더가 정의하는 이름(class/struct · enum · alias · 함수 · 상수 · 매크로 · 템플릿)을 모으고, 포함한 헤더가 그중 class/struct 만
+**포인터 · 참조 · 스마트 포인터 · `vector<T*>` · friend** 로 쓰고 다른 이름은 하나도 안 쓰면 후보다. 우산 헤더(정의 없음)는 건드리지
+않는다. `--apply` 는 include 를 지우고 같은 네임스페이스 머리에 `class X;` 를(struct → class, 알파벳 순) 넣고 짝 cpp 에 include 를
+옮긴다. 판정은 휴리스틱이라 **빌드와 헤더 자립성 검사가 최종 심판**이다.
+
+- 후보 20 건 중 18 건이 섰다. 컴파일러가 거부한 둘은 `EditorPanelManager.h` · `EditorPopupManager.h` — `unique_ptr<IEditorPanel>` 을
+  담은 항목 벡터를 헤더 안 소멸자(`= default`)가 파괴하므로 완전한 타입이 필요하다(도구는 이것을 보지 않는다 — 문서에 적었다).
+- 끊고 나니 **남이 include 해 준 덕에 컴파일되던 자리**가 드러났다 — 그 자리마다 직접 include 를 넣었다: `Archive.h` ·
+  `ComponentDefaults.cpp`(`SerializeContext`), `VulkanRHICommandList.h`(디바이스 헤더), `VulkanRHICommandContext.h`(`VulkanRHIHandle.h` —
+  `VkCommandBuffer` 는 매크로 핸들이라 색인에 없어 손으로), `EditorDockLayout.cpp` · `EditorMenuBar.cpp`(`IEditorPanel.h`),
+  `TestLog.cpp`(`ILogOutput.h`), `ILogOutput.h`(`SW_API` 의 `Macros.h`).
+- 전 트리 헤더 자립성 검사를 돌리니 **이번 일과 무관하게** 혼자 못 서던 둘이 있었다 — `ComponentDefaults.h`(`PropertyInfo` 포인터 →
+  전방 선언) · `SceneTransformHierarchy.h`(`float3` 값 → `VectorMath.h`). 오늘 오전의 Object 정리가 남긴 것이다. 같이 고쳤다.
+
+**검증.** Debug · Shipping · ASan 빌드 경고 0 · `nogpu` 7/7 셋 다 · `hostgpu` 2/2 Debug · Shipping 둘 다(Debug 는 체인 안에서 한 번 타임아웃했다 — 전 트리 헤더 자립성 검사(clang 24 개)와 겹쳐 돌린 부하 때문이고, 단독 재실행은 2/2 · 21 초. GPU 스위트는 빌드 · 헤더 검사와 겹치지 말 것 — 또 밟았다) · 린트 20/20 · 에디터 ON dx12 창 15 / 빈 0 · 전 트리 헤더 자립성 검사 OK · include 순서 OK. 순 효과: 헤더 24 개에서 include 18 개가 전방 선언이 됐고, `EngineLoop.h` 를 포함하는 TU 는 Graphics 의 씬 스냅샷 헤더들을 더 이상 보지 않는다.
+
+**남긴 것.** 도구의 "쓰임을 못 찾은 include" 205 건은 `--show-unused` 로만 보인다 — 기본형 · 매크로 우산(`Types.h` · `Macros.h` ·
+`Defines.h`)이 대부분이라 거짓이고, 손으로 볼 것. 후보 규칙이 `unique_ptr` 멤버의 소멸자 위치를 보지 않는 것도 그대로다 — 두 매니저처럼
+컴파일러가 거른다.
+
 ### 2026-09-23 (세 번 본 간헐 세그폴트의 원인 — DX11 의 "기록 중인 Deferred Context" 스레드 로컬이 리스트보다 오래 살았다)
 
 **증상.** `EngineTest_HostOnly` 가 드물게 세그폴트로 죽었다 — 09-21 Shipping `EngineTest_NoGPU` 1 회, 09-22 Debug `EngineTest_HostOnly`

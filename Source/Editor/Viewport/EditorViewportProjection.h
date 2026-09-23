@@ -4,13 +4,18 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Math/MatrixMath.h"
-#include "Core/Math/VectorMath.h"
 
 // ImGui 헤더를 프로젝트 헤더에서 include 하지 않는다. 화면 좌표 out 파라미터는 참조로만
 // 받으므로 전방 선언으로 충분하다 (EditorViewportClient.h 의 ImDrawList 와 같은 방식).
 
 struct ImVec2;
+
+namespace sw
+{
+    struct float2;
+    struct float3;
+    struct float4x4;
+} // namespace sw
 
 namespace sw::editor
 {

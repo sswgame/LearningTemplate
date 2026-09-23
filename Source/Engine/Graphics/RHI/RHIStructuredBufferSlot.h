@@ -3,12 +3,13 @@
  * @brief 구조버퍼 하나와 그 뷰(SRV/UAV)·용량을 함께 들고 다니는 자리
  */
 #pragma once
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
+    class IRHIDevice;
+
     /**
      * @struct RHIStructuredBufferSlot
      * @brief 매 프레임 크기가 변할 수 있는 구조버퍼의 수명·뷰 등록을 한 자리에 모읍니다.

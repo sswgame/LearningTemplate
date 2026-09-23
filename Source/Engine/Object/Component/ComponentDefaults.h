@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    struct PropertyInfo;
     struct TypeInfo;
 
     class Component;

@@ -12,6 +12,7 @@
 
 namespace sw::editor
 {
+
     /** @brief 등록된 팝업 항목 메타데이터 */
     struct EditorPopupEntry
     {

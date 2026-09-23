@@ -16,7 +16,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Log/ILogOutput.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/String/formatString.h"
 
@@ -28,6 +27,7 @@
 namespace sw
 {
     class FileLogOutput;
+    class ILogOutput;
 
     // ------------------------------------------------------------------------------
     // 2) ILogSink — 매크로가 말을 거는 전역 파사드 (장치는 ILogOutput 이다)

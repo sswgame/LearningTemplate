@@ -10,6 +10,7 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Core/StringPool.h"
 
 namespace sw
@@ -20,8 +21,6 @@ namespace sw
     struct float4;
     struct float4x4;
     struct TypeInfo;
-
-    class SerializeContext;
 
     /// @brief 바이너리 아카이브 읽기/쓰기 (선택 리플렉션 직렬화)
     class SW_API Archive

@@ -2,6 +2,9 @@
 
 #include "Editor/Viewport/EditorViewportProjection.h"
 
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
+
 #include <imgui.h>
 
 namespace sw::editor

@@ -15,12 +15,13 @@
  *       것인가" 를 함께 알아야 하고(디바이스 수명 통보를 받는다) 여기는 소유자가 해제 시점을 이미 안다.
  */
 #pragma once
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
+    class IRHIDevice;
+
     /**
      * @struct RHIConstantBufferSlot
      * @brief 상수버퍼 + bindless 인덱스. 만들기·갱신·해제를 한 자리에 모읍니다.

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Log/ILogOutput.h"
 #include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestFramework.h"

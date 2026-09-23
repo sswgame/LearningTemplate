@@ -4,11 +4,12 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
 {
+    struct float4x4;
+
     class Component;
     class GameObject;
     class GameObjectManager;

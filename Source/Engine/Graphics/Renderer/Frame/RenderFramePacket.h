@@ -5,17 +5,12 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 
 namespace sw
 {
-    struct RenderFramePacket;
-
-    class IRHIDevice;
-
-    SW_DECLARE_DELEGATE( void, PresentHookDelegate, IRHIDevice&, RenderFramePacket& );
-
     /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷
     struct RenderFramePacket
     {

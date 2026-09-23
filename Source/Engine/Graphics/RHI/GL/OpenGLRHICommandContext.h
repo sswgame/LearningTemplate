@@ -1,11 +1,14 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 namespace sw
 {
+    struct OpenGLRecordingState;
+
+    class OpenGLRHIDevice;
+
     class OpenGLRHICommandContext : public IRHICommandContext
     {
     public:

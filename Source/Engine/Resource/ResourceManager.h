@@ -19,10 +19,10 @@
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/IAssetCache.h"
 
 namespace sw
 {
+    class IAssetCache;
     class MaterialCache;
     class PrefabManager;
     class ResourcePackManager;

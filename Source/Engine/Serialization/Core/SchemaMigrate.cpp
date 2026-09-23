@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 
 namespace sw

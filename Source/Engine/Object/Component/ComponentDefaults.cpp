@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

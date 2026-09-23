@@ -2,12 +2,14 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+    struct D3D11RecordingState;
+
+    class D3D11RHIDevice;
 
     /**
      * @class D3D11RHICommandContext

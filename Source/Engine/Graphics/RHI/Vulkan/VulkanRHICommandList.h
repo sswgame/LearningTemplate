@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICommandListForwarder.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 namespace sw
 {

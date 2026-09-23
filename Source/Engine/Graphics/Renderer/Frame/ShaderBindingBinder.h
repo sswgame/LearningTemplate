@@ -12,13 +12,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 
 namespace sw
 {
     class FrameResourceRegistry;
     class IRHICommandList;
     class IRHIDevice;
+    class PassConstantValues;
     class ShaderBindingLayout;
 
     /// @brief 엔진(PassCB 등) 상수 버퍼 슬롯 — 버퍼 핸들 + bindless 인덱스.

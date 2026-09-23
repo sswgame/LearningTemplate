@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/EditorPanelManager.h"
 
+#include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Panels/AnimationGraphPanel.h"
 #include "Editor/Panels/ConsolePanel.h"
 #include "Editor/Panels/ContentBrowserPanel.h"

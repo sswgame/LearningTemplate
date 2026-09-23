@@ -4,6 +4,8 @@
 
 #include "Core/Common/EnumUtil.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+
 namespace sw
 {
     bool RHIStructuredBufferSlot::ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,

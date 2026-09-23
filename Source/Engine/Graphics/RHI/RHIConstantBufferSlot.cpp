@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+
 namespace sw
 {
     bool RHIConstantBufferSlot::create( IRHIDevice* pDevice, uint32 byteSize )

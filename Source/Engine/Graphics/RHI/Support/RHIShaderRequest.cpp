@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw

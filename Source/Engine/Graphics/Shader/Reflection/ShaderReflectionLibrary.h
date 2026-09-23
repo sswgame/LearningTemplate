@@ -7,11 +7,12 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {
+    struct ShaderCompileDesc;
+
     /**
      * @class ShaderReflectionLibrary
      * @brief 셰이더 바인딩 리플렉션을 **런타임이 아니라 쿠킹 시점에** 뽑아 두고 읽어 쓰는 라이브러리.

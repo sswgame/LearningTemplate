@@ -5,13 +5,14 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
-#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 struct ImDrawList;
 
 namespace sw
 {
+    struct float4x4;
+
     class CameraComponent;
     class GameObject;
 } // namespace sw

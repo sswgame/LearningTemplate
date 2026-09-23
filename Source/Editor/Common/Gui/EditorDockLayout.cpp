@@ -9,6 +9,7 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorGlobalVariable.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"

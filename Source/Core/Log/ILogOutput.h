@@ -12,11 +12,13 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Log/LogTypes.h"
 
 namespace sw
 {
+    struct LogRecord;
+
     /**
      * @class ILogOutput
      * @brief 완성된 로그 한 줄을 받아 쓰는 출력 장치
