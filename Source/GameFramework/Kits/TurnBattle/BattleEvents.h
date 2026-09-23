@@ -1,6 +1,6 @@
 /**
  * @file BattleEvents.h
- * @brief 턴제 전투 수명주기 이벤트
+ * @brief 턴제 전투 수명주기 이벤트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,7 +23,7 @@ namespace sw
         uint8                  _bPlayerWon : 1; ///< 플레이어 승리
         [[maybe_unused]] uint8 _reserved   : 7;
 
-        /** @brief 패배·예약 비트를 0으로 둡니다. */
+        /** @brief 패배 · 예약 비트를 0 으로 둡니다. */
         BattleEndedEvent() noexcept
             : _bPlayerWon{ SW_FALSE }
             , _reserved{ 0 } {}

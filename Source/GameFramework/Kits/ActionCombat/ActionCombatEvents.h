@@ -1,6 +1,6 @@
 /**
  * @file ActionCombatEvents.h
- * @brief 액션 룸 및 전투 룸 이벤트
+ * @brief 액션 룸 · 전투 룸 이벤트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@ namespace sw
         uint8                  _bBossDefeated : 1; ///< 보스 처치 여부
         [[maybe_unused]] uint8 _reserved      : 7;
 
-        /** @brief 보스 미처치·예약 비트를 0으로 둡니다. */
+        /** @brief 보스 미처치 · 예약 비트를 0 으로 둡니다. */
         RoomClearedEvent() noexcept
             : _bBossDefeated{ SW_FALSE }
             , _reserved{ 0 } {}
@@ -40,7 +40,7 @@ namespace sw
         uint8                  _bTriggered : 1; ///< 방 진입 시 닫힘 트리거
         [[maybe_unused]] uint8 _reserved   : 6;
 
-        /** @brief 열림·비트리거·예약 비트를 0으로 둡니다. */
+        /** @brief 열림 · 비트리거 · 예약 비트를 0 으로 둡니다. */
         ClearGateStateChangedEvent() noexcept
             : _bLocked{ SW_FALSE }
             , _bTriggered{ SW_FALSE }

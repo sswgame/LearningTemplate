@@ -23,9 +23,9 @@ namespace sw
         /** @brief 바닥 높이를 설정합니다. 이 아래로는 내려가지 않습니다. */
         void setGroundY( float32 groundY ) { _groundY = groundY; }
         /**
-         * @brief 위로 튕겨 냅니다 — 땅에 붙어 있던 상태를 **뗍니다.**
-         * @details 이 창구가 없었다. `_bIsGrounded` 는 리플렉션 프로퍼티일 뿐이어서, 한 번
-         *          땅에 닿으면 코드로는 다시 떨어뜨릴 방법이 없었다.
+         * @brief 위로 튕겨 냅니다. 땅에 붙어 있던 상태를 **뗍니다.**
+         * @details 이 창구가 없었습니다. `_bIsGrounded` 는 리플렉션 프로퍼티일 뿐이어서, 한 번
+         *          땅에 닿으면 코드로는 다시 떨어뜨릴 방법이 없었습니다.
          */
         void jump( float32 speed )
         {

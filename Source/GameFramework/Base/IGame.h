@@ -1,6 +1,6 @@
 /**
  * @file IGame.h
- * @brief 게임 로직 모듈의 런타임 추상 인터페이스
+ * @brief 게임 로직 모듈의 런타임 추상 인터페이스입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -13,10 +13,10 @@ namespace sw
     class IWindow;
 
     // ------------------------------------------------------------------------------
-    // 1) IGame — SWGame MODULE이 구현하는 수명주기
-    //    App이 GameAPI로 생성하고 initialize / update / shutdown을 호출
+    // 1) IGame — SWGame MODULE 이 구현하는 수명주기
+    //    App(ModuleHost)이 GameAPI 로 만들고 initialize / update / shutdown 을 부른다
     // ------------------------------------------------------------------------------
-    /** @brief SWGame 모듈이 구현하는 게임 로직 인터페이스 */
+    /** @brief SWGame 모듈이 구현하는 게임 로직 인터페이스입니다. */
     class SW_GF_API IGame
     {
     public:
@@ -30,7 +30,7 @@ namespace sw
         /** @brief 복사 대입을 금지합니다. */
         IGame& operator=( const IGame& ) = delete;
 
-        /** @brief 윈도우·RHI로 게임 상태를 초기화합니다. */
+        /** @brief 윈도우 · RHI 로 게임 상태를 초기화합니다. */
         virtual bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) = 0;
         /** @brief 게임 리소스를 해제합니다. */
         virtual void shutdown() = 0;
@@ -41,7 +41,7 @@ namespace sw
 
         /**
          * @brief 게임의 상태를 버퍼에 직렬화하거나 필요한 버퍼 크기를 계산합니다.
-         * @param pOutBuffer 상태를 저장할 버퍼 (nullptr이면 inOutSize에 크기만 반환)
+         * @param pOutBuffer 상태를 저장할 버퍼 (nullptr 이면 pInOutSize 에 크기만 반환)
          * @param pInOutSize 버퍼의 크기 (입력/출력)
          * @return 지원하면 true
          */

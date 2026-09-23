@@ -14,32 +14,32 @@ namespace sw
     namespace
     {
         /**
-         * @brief 이 킷의 조절 값 — **한 자리에 모아 둔다.**
-         * @details 여기 흩어져 있던 숫자 중 `0.85` 는 두 자리에 각각 적혀 있었다. `update()` 가
+         * @brief 이 킷의 조절 값입니다. **한 자리에 모아 둡니다.**
+         * @details 여기 흩어져 있던 숫자 중 `0.85` 는 두 자리에 각각 적혀 있었습니다. `update()` 가
          *          대시할 때 `_dashCooldown = 0.85f` 로 넣고, 게이지를 만드는 `getDashFill()` 이
-         *          **자기 몫으로 또 `kDashCd = 0.85f` 를 들고** 나눗셈을 했다. 값을 바꾸면
-         *          한쪽만 따라가서 **게이지가 거짓말을 한다** — 쿨다운을 1.2 초로 늘리면
-         *          게이지는 0.85 초에 이미 가득 찬다. 나머지도 같은 이유로 함께 모았다.
+         *          **자기 몫으로 또 `kDashCd = 0.85f` 를 들고** 나눗셈을 했습니다. 값을 바꾸면
+         *          한쪽만 따라가서 **게이지가 거짓말을 합니다.** 쿨다운을 1.2 초로 늘리면
+         *          게이지는 0.85 초에 이미 가득 찹니다. 나머지도 같은 이유로 함께 모았습니다.
          */
         struct ActionRoomTuning
         {
-            /** @brief 대시 쿨다운(초). `getDashFill()` 의 분모이기도 하다. */
+            /** @brief 대시 쿨다운(초)입니다. `getDashFill()` 의 분모이기도 합니다. */
             static constexpr float32 kDashCooldown = 0.85f;
-            /** @brief 대시가 주는 무적 시간(초). */
+            /** @brief 대시가 주는 무적 시간(초)입니다. */
             static constexpr float32 kDashInvulnerable = 0.22f;
-            /** @brief 맞았을 때의 무적 시간(초). 대시가 주는 것보다 **길다.** */
+            /** @brief 맞았을 때의 무적 시간(초)입니다. 대시가 주는 것보다 **깁니다.** */
             static constexpr float32 kHitInvulnerable = 0.7f;
-            /** @brief 플레이어 공격 쿨다운(초). */
+            /** @brief 플레이어 공격 쿨다운(초)입니다. */
             static constexpr float32 kAttackCooldown = 0.28f;
 
-            /** @brief 보스가 탄을 쏘는 간격(초)과 첫 발까지의 시간. */
+            /** @brief 보스가 탄을 쏘는 간격(초)과 첫 발까지의 시간입니다. */
             static constexpr float32 kBossFireInterval   = 1.6f;
             static constexpr float32 kBossFirstFireDelay = 1.2f;
 
-            /** @brief 플레이어 공격이 주는 피해 — 보스는 덜 아프다. */
+            /** @brief 플레이어 공격이 주는 피해입니다. 보스는 덜 아픕니다. */
             static constexpr float32 kDamageToBoss  = 18.0f;
             static constexpr float32 kDamageToGrunt = 34.0f;
-            /** @brief 플레이어가 받는 피해. */
+            /** @brief 플레이어가 받는 피해입니다. */
             static constexpr int32 kDamageFromBoss       = 12;
             static constexpr int32 kDamageFromGrunt      = 8;
             static constexpr int32 kDamageFromProjectile = 10;
@@ -146,7 +146,7 @@ namespace sw
         {
             _dashCooldown = ActionRoomTuning::kDashCooldown;
             // **줄이지 않는다.** 그냥 대입하면 맞고 얻은 0.7 초짜리 무적이 대시 한 번에
-            // 0.22 초로 **깎인다** — 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 했다.
+            // 0.22 초로 **깎인다.** 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 했다.
             _invulnTimer         = MathUtil::max( _invulnTimer, ActionRoomTuning::kDashInvulnerable );
             result._bDashStarted = SW_TRUE;
         }

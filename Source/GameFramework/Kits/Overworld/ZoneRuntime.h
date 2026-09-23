@@ -1,6 +1,6 @@
 ﻿/**
  * @file ZoneRuntime.h
- * @brief 역할 태그와 카메라 경계로 존을 활성화/일시정지합니다 (룸 개념)
+ * @brief 역할 태그와 카메라 경계로 활성 존을 고릅니다(룸 개념).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@ namespace sw
     // 1) ZoneRole · 경계 · 정의
     //    클리어 게이트가 잠기면 워프를 막음 (액션 룸)
     // ------------------------------------------------------------------------------
-    /** @brief 맵 역할 (BGM·조우·액션 룸 분기) */
+    /** @brief 맵 역할입니다(BGM · 조우 · 액션 룸 분기). */
     enum class ZoneRole : uint8
     {
         Town = 0,
@@ -31,14 +31,14 @@ namespace sw
         Boss
     };
 
-    /** @brief 카메라가 머물 타일 경계 */
+    /** @brief 카메라가 머물 타일 경계입니다. */
     struct ZoneBounds
     {
-        int2 _min{ 0, 0 }; ///< 정수판 AABB — float 판은 AABB2D 가 같은 모양이다
+        int2 _min{ 0, 0 }; ///< 정수판 AABB. float 판은 AABB2D 가 같은 모양이다
         int2 _max{ 0, 0 };
     };
 
-    /** @brief 한 존의 ID·역할·경계·태그 */
+    /** @brief 한 존의 ID · 역할 · 경계 · 태그입니다. */
     struct ZoneDef
     {
         string                 _id; ///< 안정적인 존 ID (맵 이름 / 경로)
@@ -59,9 +59,9 @@ namespace sw
 
     // ------------------------------------------------------------------------------
     // 2) ZoneRuntime — 존 목록 + 활성 존 조회
-    //    1개 맵 = 1개 기본 존 (setFromMap) 또는 타일맵 메타에서 다중 존 (loadFromXml)
+    //    지금은 1개 맵 = 1개 기본 존(setFromMap)뿐이다. 여러 존을 채우는 로더는 아직 없다
     // ------------------------------------------------------------------------------
-    /** @brief 런타임 존 상태 (경계, 역할, 클리어 게이트, 태그) */
+    /** @brief 런타임 존 상태입니다(경계, 역할, 클리어 게이트, 태그). */
     class SW_GF_API ZoneRuntime
     {
     public:
@@ -89,7 +89,7 @@ namespace sw
 
         /** @brief 활성 존 정의를 반환합니다. */
         const ZoneDef* getActiveZone() const;
-        /** @brief getActiveZone()->_id의 별칭입니다 (없으면 빈 문자열). */
+        /** @brief getActiveZone()->_id 의 별칭입니다(없으면 빈 문자열). */
         string getActiveZoneId() const;
         /** @brief 활성 존 역할을 반환합니다. */
         ZoneRole getActiveRole() const;
@@ -107,10 +107,10 @@ namespace sw
     /** @brief 맵 경로에서 존 역할을 추론합니다. */
     SW_GF_API ZoneRole zoneRoleFromMapPath( string_view mapPath );
     /**
-     * @brief 역할을 태그 이름으로 바꿉니다 — `zoneRoleFromMapPath` 와 **같은 표**를 봅니다.
+     * @brief 역할을 태그 이름으로 바꿉니다. `zoneRoleFromMapPath` 와 **같은 표**를 봅니다.
      * @details 장르에 매이지 않은 코드가 `ZoneRole` 을 모른 채 `hasActiveZoneTag( "dungeon" )`
-     *          으로 물을 수 있도록 역할을 태그로 미러한다. 그 이름과 경로/글자에서 역할을 읽을
-     *          때 쓰는 이름은 **같아야 하므로 한 표에서 나온다.**
+     *          으로 물을 수 있도록 역할을 태그로 미러합니다. 그 이름과 경로 · 글자에서 역할을 읽을
+     *          때 쓰는 이름은 **같아야 하므로 한 표에서 나옵니다.**
      */
     SW_GF_API const utf8* zoneRoleToTag( ZoneRole role );
 } // namespace sw

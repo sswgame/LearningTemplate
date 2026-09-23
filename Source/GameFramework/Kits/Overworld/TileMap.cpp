@@ -9,15 +9,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief `TileMap` 의 타입과 `TileMapXmlData` 의 타입 사이 변환 — **두 방향이 나란히** 있습니다.
+         * @brief `TileMap` 의 타입과 `TileMapXmlData` 의 타입 사이 변환입니다. **두 방향이 나란히** 있습니다.
          * @details 예전에는 이 대응이 `loadFromXml` 과 `saveToXml` 안에 **여섯 개의 루프**로
-         *          흩어져 있었다. 필드를 하나 더하면 두 곳을 고쳐야 하고, 한쪽을 빠뜨리면
-         *          그 필드가 저장에서만 혹은 로드에서만 조용히 사라진다.
+         *          흩어져 있었습니다. 필드를 하나 더하면 두 곳을 고쳐야 하고, 한쪽을 빠뜨리면
+         *          그 필드가 저장에서만 혹은 로드에서만 조용히 사라집니다.
          *
-         *          타입을 아예 하나로 합칠 수는 없다 — `TileMapXml` 은 Engine 이고 `TileMap` 은
-         *          GameFramework 라 Engine 이 그쪽을 포함하면 레이어 린트가 막는다. 그래서
+         *          타입을 아예 하나로 합칠 수는 없습니다. `TileMapXml` 은 Engine 이고 `TileMap` 은
+         *          GameFramework 라 Engine 이 그쪽을 포함하면 레이어 린트가 막습니다. 그래서
          *          두 방향을 한 자리에 붙여 두고, 아래 `static_assert` 로 **어느 쪽이든 필드가
-         *          늘면 빌드가 깨지게** 했다. 그때 이 자리를 같이 고치면 된다.
+         *          늘면 빌드가 깨지게** 했습니다. 그때 이 자리를 같이 고치면 됩니다.
          */
         struct TileMapXmlConvert
         {
@@ -82,7 +82,7 @@ namespace sw
         };
 
         // **필드가 늘면 여기서 깨진다.** 위 변환은 필드를 하나하나 적으므로, 어느 쪽 구조체에
-        // 필드가 붙어도 컴파일러가 알려 주지 않는다 — 크기를 못 박아 그 순간을 잡는다.
+        // 필드가 붙어도 컴파일러가 알려 주지 않는다. 크기를 못 박아 그 순간을 잡는다.
         static_assert( sizeof( TileVisual ) == sizeof( TileMapXmlData::Visual ),
                        "TileVisual and TileMapXmlData::Visual diverged - update TileMapXmlConvert" );
         static_assert( sizeof( TileWarp ) == sizeof( TileMapXmlData::Warp ),
@@ -197,7 +197,7 @@ namespace sw
 
     void TileMap::resize( int32 width, int32 height )
     {
-        // 크기 상한은 `TileMapXmlData` 가 정본이다 — 로더(`TileMapXmlData::loadFromXml`)와 에디터
+        // 크기 상한은 `TileMapXmlData` 가 기준이다. 로더(`TileMapXmlData::loadFromXml`)와 에디터
         // (`TileMapPanel::resize`)가 같은 것을 본다. 여기만 없으면 같은 맵을 코드로 만들 때
         // `100000 x 100000` 한 줄이 10^10 칸 요청이 된다.
         if ( TileMapXmlData::isSizeSupported( width, height ) == false )

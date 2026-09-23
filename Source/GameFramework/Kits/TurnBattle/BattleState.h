@@ -1,6 +1,6 @@
 /**
  * @file BattleState.h
- * @brief 턴제 야생 / 트레이너 전투 (Fight / Run + 얇은 적 정책)
+ * @brief 턴제 야생 · 트레이너 전투입니다(Fight / Run + 얇은 적 정책).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -15,7 +15,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 페이즈 · 명령 — Intro → 선택 → 양쪽 Resolve → Ended
     // ------------------------------------------------------------------------------
-    /** @brief 턴제 전투 페이즈 */
+    /** @brief 턴제 전투 페이즈입니다. */
     enum class BattlePhase : uint8
     {
         Inactive = 0,
@@ -26,7 +26,7 @@ namespace sw
         Ended
     };
 
-    /** @brief 플레이어가 고른 한 턴 명령 */
+    /** @brief 플레이어가 고른 한 턴 명령입니다. */
     enum class BattleCommand : uint8
     {
         None = 0,
@@ -36,20 +36,20 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) BattleState — 선두 vs 야생/적, 상태 텍스트는 HUD용
+    // 2) BattleState — 선두 vs 야생/적, 상태 텍스트는 HUD 용
     // ------------------------------------------------------------------------------
     /**
-     * @brief 적이 쓸 기술 슬롯을 고릅니다 — **가진 슬롯 안에서** 고릅니다.
+     * @brief 적이 쓸 기술 슬롯을 고릅니다. **가진 슬롯 안에서** 고릅니다.
      * @param hp 적의 남은 체력. @param hpMax 적의 최대 체력.
      * @param moveSlotCount 적이 실제로 가진 기술 슬롯 수(`PartyMember::_listPp` 의 길이).
-     * @details 예전에는 체력이 절반 아래면 무조건 1 번 슬롯이었다. 슬롯 수는 **데이터가
+     * @details 예전에는 체력이 절반 아래면 무조건 1 번 슬롯이었습니다. 슬롯 수는 **데이터가
      *          정하므로** 기술이 하나뿐인 종족이 있을 수 있고, 그러면 `applyMove` 가 없는
-     *          슬롯으로 보고 "no PP" 만 찍는다 — 적이 절반 이하로 떨어지는 순간부터 한 대도
-     *          못 때렸다. 판정을 밖으로 꺼내 테스트가 직접 물을 수 있게 한다.
+     *          슬롯으로 보고 "no PP" 만 찍습니다. 적이 절반 이하로 떨어지는 순간부터 한 대도
+     *          못 때렸습니다. 판정을 밖으로 꺼내 테스트가 직접 물을 수 있게 했습니다.
      */
     SW_GF_API int32 pickFoeMoveSlot( int32 hp, int32 hpMax, size_t moveSlotCount );
 
-    /** @brief 턴제 야생/트레이너 전투 상태 */
+    /** @brief 턴제 야생 · 트레이너 전투 상태입니다. */
     class SW_GF_API BattleState
     {
     public:

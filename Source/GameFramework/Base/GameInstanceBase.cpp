@@ -23,10 +23,10 @@ namespace sw
         struct GameInstanceBaseInternal
         {
             /**
-             * @brief 활성 씬의 오브젝트 매니저. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr.
-             * @details 씬 저장과 복원이 이 열다섯 줄을 각자 들었다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
-             *          보므로 아래 널 검사는 사실상 닿지 않지만, `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수라
-             *          `CheckNullableServiceUse` 린트가 요구하는 모양을 예외 없이 지킨다.
+             * @brief 활성 씬의 오브젝트 매니저를 반환합니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다.
+             * @details 씬 저장과 복원이 이 열다섯 줄을 각자 들고 있었습니다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
+             *          보므로 아래 널 검사는 사실상 닿지 않지만, `game::getService<T>()` 가 nullptr 을 반환할 수 있는 함수라
+             *          `CheckNullableServiceUse` 린트가 요구하는 모양을 예외 없이 지킵니다.
              */
             static GameObjectManager* findActiveObjectManager()
             {
@@ -44,12 +44,12 @@ namespace sw
         {
             static constexpr uint32 kMagic = 0x53575354u; // 'SWST' (SW State Snapshot)
             /**
-             * @brief 봉투 버전. 2 부터 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
-             * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 되살리고, 다르면(다른 실행의 세이브 파일) 읽고 버린다.
-             *          다른 실행에서 나간 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
+             * @brief 봉투 버전입니다. 2 부터 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
+             * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 되살리고, 다르면(다른 실행의 세이브 파일) 읽고 버립니다.
+             *          다른 실행에서 나간 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문입니다.
              */
             static constexpr uint32 kVersion = 2;
-            /** @brief 오브젝트마다 id 가 실리기 시작한 버전. */
+            /** @brief 오브젝트마다 id 가 실리기 시작한 버전입니다. */
             static constexpr uint32 kFirstVersionWithIdentity = 2;
         };
     } // namespace
@@ -92,14 +92,14 @@ namespace sw
         if ( pObjectManager == nullptr )
             return false;
 
-        // 살아 있는 것만 — `forEachGameObject` 는 파괴 대기 오브젝트를 이미 건너뛴다(값 반환 목록을 받아 다시 거를 일이 없다).
+        // 살아 있는 것만 담는다. `forEachGameObject` 는 파괴 대기 오브젝트를 이미 건너뛴다(값 반환 목록을 받아 다시 거를 일이 없다).
         vector<GameObject*> listValidObject;
         pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
         { listValidObject.push_back( pObj ); } );
 
         outBytes.clear();
 
-        // 게임오브젝트 갯수를 맨 앞에 기록
+        // 게임오브젝트 개수를 맨 앞에 기록
         const uint32 count   = static_cast<uint32>( listValidObject.size() );
         const size_t oldSize = outBytes.size();
         outBytes.resize( oldSize + sizeof( uint32 ) );
@@ -140,7 +140,7 @@ namespace sw
 
         // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 오브젝트 하나는 적어도 길이 4바이트를
         // 쓰므로, 남은 바이트 / 4 보다 많은 오브젝트는 어떤 스냅샷에도 있을 수 없다. 아래 읽기는
-        // 잘린 데이터에서 어차피 멈추지만, **그 전에 이 `reserve` 가 먼저 터진다** — `count` 가
+        // 잘린 데이터에서 어차피 멈추지만, **그 전에 이 `reserve` 가 먼저 터진다.** `count` 가
         // 40억이면 이 한 줄이 수십 기가를 요구한다. `SceneDocument::loadBinary` 가 같은 이유로
         // 같은 계산을 한다.
         constexpr size_t kMinBytesPerObject = sizeof( uint32 );
@@ -214,7 +214,7 @@ namespace sw
         //
         // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원되는 사용법이라
         // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다) 여기서 끊으면 안 된다.
-        // 다만 예전엔 반환값을 **아무 흔적 없이** 버렸다 — 씬이 있어야 할 상황에서 오브젝트가 하나도 없는
+        // 다만 예전에는 반환값을 **아무 흔적 없이** 버렸다. 씬이 있어야 할 상황에서 오브젝트가 하나도 없는
         // 세이브가 나와도 로드할 때까지 아무도 몰랐다. 빈 섹션은 그대로 쓰되 실마리는 남긴다.
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( bytesScene ) == false )
@@ -229,7 +229,7 @@ namespace sw
         const void*     pStateInstance = getStateInstance();
         if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
         {
-            // serialize 는 void 라 성공 여부를 돌려주지 않는다. 결과가 비면 **단정하지 않고 남긴다** —
+            // serialize 는 void 라 성공 여부를 반환하지 않는다. 결과가 비면 **단정하지 않고 남긴다.**
             // 프로퍼티가 없는 상태 타입도 있을 수 있어 여기서 실패로 끊으면 멀쩡한 저장을 막는다.
             // 나중에 "상태가 비어서 돌아왔다" 를 추적할 실마리는 있어야 한다.
             vector<uint8> bytesState;

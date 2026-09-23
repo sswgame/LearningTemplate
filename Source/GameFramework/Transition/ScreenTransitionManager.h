@@ -1,6 +1,6 @@
 /**
  * @file ScreenTransitionManager.h
- * @brief 화면 페이드 인/아웃 및 씬 전환 시퀀스(FadeOut -> OnExecute -> FadeIn) FSM 관리자
+ * @brief 화면 페이드 인/아웃과 씬 전환 시퀀스(FadeOut → OnExecute → FadeIn) FSM 관리자입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) FadeService — 화면 페이드 아웃/인 알파 보간 서비스
     // ------------------------------------------------------------------------------
-    /** @brief 화면 페이드 아웃/인 단계 */
+    /** @brief 화면 페이드 아웃 · 인 단계입니다. */
     enum class FadePhase : uint8
     {
         Idle = 0,
@@ -23,11 +23,11 @@ namespace sw
         FadingIn
     };
 
-    /** @brief 화면 페이드 아웃/인 알파를 갱신합니다. */
+    /** @brief 화면 페이드 아웃 · 인 알파를 갱신합니다. */
     class SW_GF_API FadeService
     {
     public:
-        /** @brief Idle·알파 0으로 시작합니다. */
+        /** @brief Idle · 알파 0 으로 시작합니다. */
         FadeService();
 
         /** @brief 페이드 아웃을 시작합니다. */
@@ -43,7 +43,7 @@ namespace sw
         bool isBusy() const { return _phase != FadePhase::Idle; }
         /** @brief 현재 페이드 페이즈를 반환합니다. */
         FadePhase getPhase() const { return _phase; }
-        /** @brief 오버레이 알파를 반환합니다 (0 = 투명, 1 = 완전 검정). */
+        /** @brief 오버레이 알파를 반환합니다(0 = 투명, 1 = 완전 검정). */
         float32 getOverlayAlpha() const { return _alpha; }
 
     private:
@@ -58,10 +58,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) TransitionCallbacks — 전환 시 입력 잠금/복원 및 커스텀 훅 콜백
     // ------------------------------------------------------------------------------
-    /** @brief 씬/화면 전환 시 호출되는 콜백 모음 */
+    /** @brief 씬 · 화면 전환 때 부르는 콜백 모음입니다. */
     struct TransitionCallbacks
     {
-        Delegate<void( bool bEnable )> setPlayerInputEnabled; ///< 전환 중 입력 잠금/복원
+        Delegate<void( bool bEnable )> setPlayerInputEnabled; ///< 전환 중 입력 잠금 · 복원
         Delegate<void()>               onTransitionStarted;   ///< 전환 시작 훅
         Delegate<void()>               onTransitionFinished;  ///< 전환 완료 훅
     };
@@ -69,11 +69,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) ScreenTransitionManager — 페이드 효과와 결합된 범용 화면 전환 관리자
     // ------------------------------------------------------------------------------
-    /** @brief 화면 페이드와 연동하여 씬 전환 시퀀스(FadeOut -> Execute -> FadeIn)를 일원화 관리합니다. */
+    /** @brief 화면 페이드와 연동해 씬 전환 시퀀스(FadeOut → Execute → FadeIn)를 한곳에서 관리합니다. */
     class SW_GF_API ScreenTransitionManager
     {
     public:
-        /** @brief 전환 단계 (None -> FadeOut -> Loading -> FadeIn -> None) */
+        /** @brief 전환 단계입니다(None → FadeOut → Loading → FadeIn → None). */
         enum class Phase : uint8
         {
             None = 0,
@@ -82,13 +82,13 @@ namespace sw
             FadeIn
         };
 
-        /** @brief 초기 상태로 생성합니다. */
+        /** @brief 초기 상태로 만듭니다. */
         ScreenTransitionManager();
 
-        /** @brief 범용 전환 시퀀스(FadeOut -> onExecute 콜백 실행 -> FadeIn)를 시작합니다. */
+        /** @brief 범용 전환 시퀀스(FadeOut → onExecute 콜백 실행 → FadeIn)를 시작합니다. */
         void beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration = 0.35f, float32 fadeInDuration = 0.35f );
 
-        /** @brief 전환 FSM 및 페이드 알파를 갱신합니다. */
+        /** @brief 전환 FSM 과 페이드 알파를 갱신합니다. */
         void update( float32 deltaTime );
         /** @brief 전환 상태를 초기화합니다. */
         void reset();

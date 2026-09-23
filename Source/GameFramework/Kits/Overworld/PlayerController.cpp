@@ -88,7 +88,7 @@ namespace sw
         if ( deltaX == 0 && deltaY == 0 )
             return;
 
-        // 걸음이 시작됐으면 그대로 둔다 — `_loco.update` 가 `kStepDuration` 뒤에 끝낸다.
+        // 걸음이 시작됐으면 그대로 둔다. `_loco.update` 가 `kStepDuration` 뒤에 끝낸다.
         if ( tryStep( deltaX, deltaY ) == false )
             _loco.setFacingFromDelta( deltaX, deltaY );
     }

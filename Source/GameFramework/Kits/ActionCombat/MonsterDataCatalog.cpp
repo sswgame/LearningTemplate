@@ -112,7 +112,7 @@ namespace sw
             XmlNode dropNode = node.findChild( "Drop" );
             if ( dropNode.isValid() )
             {
-                // 속성 이름이 곧 보상 이름이다 — 코드가 보상 종류를 알 필요가 없다.
+                // 속성 이름이 곧 보상 이름이다. 코드가 보상 종류를 알 필요가 없다.
                 for ( XmlAttribute attr = dropNode.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
                     const utf8* pRewardId = attr.getName();

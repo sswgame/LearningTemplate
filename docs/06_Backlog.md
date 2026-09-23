@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework 주석 정리
 
 ---
 
@@ -1435,7 +1435,7 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
-### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor · ReflectionParser ✅)
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor · ReflectionParser · Engine · GameFramework ✅)
 
 코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
 
@@ -1446,7 +1446,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
 | `Engine` | 7,865 | ✅ 2026-09-24 (3절 참고). 하위 폴더 단위로 아홉 번 나눠 커밋했다: ① 루트 · Common · Compression · Config · Module · Utility · ② Reflection · Serialization · ③ Object · Scene · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics · ⑤ Input · Window · Audio · Animation · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload · ⑦ Graphics/Renderer · ⑧ Graphics/RHI 공통 · D3D · ⑨ Graphics/RHI GL · Vulkan |
-| `GameFramework` | 668 | |
+| `GameFramework` | 668 | ✅ 2026-09-24 (3절 참고. `CMakeLists.txt` · `README.md` 의 주석은 범위 밖이라 두었다) |
 | `RuntimeAPI` | 94 | |
 
 **규칙.** 문서 주석(`/** */` · `///<`)은 "~합니다" 체, 함수 본문 `//` 주석은 "~다" 체로 한 블록 안에서 통일한다.
@@ -1683,6 +1683,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (GameFramework 주석 정리)
+
+**한 것.** `Source/GameFramework` 42 개 파일 주석을 1-0g 규칙으로 다시 썼다(`GameModeStateMachine.cpp` 의 영어 절 머리도
+옮겼다). 사실과 달랐던 것:
+- `GameInstanceBase.h` 머리 절이 "EmptyGame 처럼 최소 모듈은 configureBootstrap 만 오버라이드" 라고 했다 → EmptyGame 은
+  on* 훅 다섯도 함께 오버라이드한다. `initialize` 문서에는 GameConfig 의 팩 루트가 우선한다는 것이 빠져 있었다.
+- `PlayerLocomotion::notifyStepFinished` 의 @warning 이 "`PlayerController::update` 가 정확히 그렇게 하고 있다" 고
+  현재형으로 적고 있었다 → 이미 고쳐져 로코모션이 스스로 끝낸다(`PlayerController.cpp` 가 그 사연을 적고 있다).
+- `ZoneRuntime`: 파일 머리의 "존을 활성화/일시정지" → 일시정지는 없다. 절 머리의 "타일맵 메타에서 다중 존
+  (loadFromXml)" → 그런 로더는 처음(`70973948`)부터 없었다. 지금은 맵 하나에 기본 존 하나뿐이다.
+- `TileMap.h` 의 절 번호가 1 · 3 · 4 였다. TurnBattle `SaveGame::_mapPath` 의 "비어 있으면 GameData::_startMap" →
+  그렇게 채우는 코드가 킷에 없다(`_startMap` 은 읽고 로그만 남긴다).
+- `IGame::serializeState` 의 @param 이 없는 이름(`inOutSize`)을 가리켰다. `BootstrapConfig::load` 의 "컴포넌트 Defaults
+  경로를 연결" 이 무엇인지(`Component::setDefaultGamedataPath`) 적었다.
+- `GameEvents.h` 의 "발행자도 구독자도 없다" 를 다시 확인했다(열두 종과 `gameEventChannel()` 모두 여전히 0 곳).
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ⑨ — Graphics/RHI GL · Vulkan)
 

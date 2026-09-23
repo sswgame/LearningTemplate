@@ -121,7 +121,7 @@ namespace sw
                 if ( _pendingAction.isBound() == true )
                 {
                     // **사본으로 부른다.** 액션이 그 안에서 `beginTransition()` 을 부르면
-                    // `_pendingAction` 이 **실행 중에 갈린다** — 지금 돌고 있는 델리게이트를
+                    // `_pendingAction` 이 **실행 중에 갈린다.** 지금 돌고 있는 델리게이트를
                     // 밟는 것이다. "다음 맵을 읽고, 그 맵이 또 전환을 건다" 는 흔한 흐름이다.
                     const Delegate<void()> action = _pendingAction;
                     action();

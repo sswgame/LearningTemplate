@@ -89,10 +89,10 @@ namespace sw
         void executeNode( int32 nodeId, int32 recursionDepth = 0 );
         void executeAction( string actionCmd );
         /**
-         * @brief `_onLine` 을 **사본으로** 부릅니다 — 핸들러가 그 안에서 진행시켜도 안전합니다.
+         * @brief `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
          * @details 델리게이트가 받는 `const string&` 가 이 객체의 멤버를 그대로 가리키면,
          *          핸들러가 `advance()` · `stopDialogue()` 를 부르는 순간 자기가 받은 참조가
-         *          바뀌거나 비워진다. 대화 UI 에서 가장 흔한 사용법이 바로 그것이다.
+         *          바뀌거나 비워집니다. 대화 UI 에서 가장 흔한 사용법이 바로 그것입니다.
          */
         void notifyLine();
         /** @brief `_onChoices` 를 사본으로 부릅니다. 핸들러가 돌면서 `selectChoice()` 를 불러도 됩니다. */

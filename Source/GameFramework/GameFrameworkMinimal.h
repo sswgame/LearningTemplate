@@ -1,6 +1,6 @@
 /**
  * @file GameFrameworkMinimal.h
- * @brief GameFramework 소비자를 위한 공통 최소 포함 헤더
+ * @brief GameFramework 소비자를 위한 공통 최소 포함 헤더입니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

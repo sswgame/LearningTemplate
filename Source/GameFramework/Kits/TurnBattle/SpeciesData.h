@@ -1,6 +1,6 @@
 /**
  * @file SpeciesData.h
- * @brief 종족 / 기술 테이블 + 파티 멤버 (game/<pack>/data/species.xml에서 로드)
+ * @brief 종족 · 기술 테이블 + 파티 멤버입니다(game/<pack>/data/species.xml 에서 로드).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,20 +20,20 @@ namespace sw
     // 1) 데이터 — 기술 정의, 종족 정의, 런타임 파티 멤버
     //    _name 기본값은 XML 폴백 리터럴 (번역하지 않음)
     // ------------------------------------------------------------------------------
-    /** @brief 기술 한 칸 (위력·PP) */
+    /** @brief 기술 한 칸입니다(위력 · PP). */
     struct MoveDef
     {
         string _id{ "tackle" };
-        string _name{ "Tackle" }; ///< 표시 이름 (strings.xml과 별개 폴백)
+        string _name{ "Tackle" }; ///< 표시 이름 (strings.xml 과 별개 폴백)
         int32  _power{ 40 };
         int32  _ppMax{ 35 };
     };
 
     /**
-     * @brief 종족 한 행 (기초 스탯 + 기술 슬롯)
-     * @details 기술 슬롯 수는 **데이터가 정한다**. 예전엔 `_move0` / `_move1` 두 칸 고정이라
-     *          기술이 넷인 턴제 게임을 이 키트로 만들 수 없었다 — 장르 공통 뼈대가 게임 하나의
-     *          스키마를 박아 두고 있던 셈이다. XML 은 `move0`, `move1`, ... 를 없을 때까지 읽는다.
+     * @brief 종족 한 행입니다(기초 스탯 + 기술 슬롯).
+     * @details 기술 슬롯 수는 **데이터가 정합니다.** 예전에는 `_move0` / `_move1` 두 칸 고정이라
+     *          기술이 넷인 턴제 게임을 이 킷으로 만들 수 없었습니다. 장르 공통 뼈대가 게임 하나의
+     *          스키마를 박아 두고 있던 셈입니다. XML 은 `move0`, `move1`, ... 를 없을 때까지 읽습니다.
      */
     struct SpeciesDef
     {
@@ -44,7 +44,7 @@ namespace sw
         vector<int32> _listMoveIndex{ 0, 1 }; ///< MoveDef 인덱스 (슬롯 순서)
     };
 
-    /** @brief 런타임 파티 멤버 (세이브에 들어감) */
+    /** @brief 런타임 파티 멤버입니다(세이브에 들어갑니다). */
     REFLECT()
     struct SW_GF_API PartyMember
     {
@@ -60,7 +60,7 @@ namespace sw
         int32 _hp{ 40 };
         PROPERTY()
         int32 _hpMax{ 40 };
-        /** @brief 슬롯별 잔여 PP. SpeciesDef::_listMoveIndex 와 같은 길이·같은 순서다. */
+        /** @brief 슬롯별 남은 PP 입니다. SpeciesDef::_listMoveIndex 와 같은 길이 · 같은 순서입니다. */
         PROPERTY()
         vector<int32> _listPp{ 35, 20 };
         PROPERTY()
@@ -73,32 +73,32 @@ namespace sw
     // 2) SpeciesCatalog — 종족 / 기술 카탈로그 인스턴스
     //    로드 실패 시 최소 폴백을 심어 전투가 비지 않게
     // ------------------------------------------------------------------------------
-    /** @brief species.xml 종족·기술 테이블 서비스 */
+    /** @brief species.xml 종족 · 기술 테이블 서비스입니다. */
     class SW_GF_API SpeciesCatalog
     {
     public:
         /**
-         * @brief 레벨의 상한입니다 — **곱하기 전에 자르는 데** 씁니다.
-         * @details 레벨은 세이브에서 오고 세이브는 손으로 고칠 수 있다. `40 + level * 10`
-         *          한 줄이 부호 있는 정수 오버플로(= 미정의 동작)가 된다.
+         * @brief 레벨의 상한입니다. **곱하기 전에 자르는 데** 씁니다.
+         * @details 레벨은 세이브에서 오고 세이브는 손으로 고칠 수 있습니다. `40 + level * 10`
+         *          한 줄이 부호 있는 정수 오버플로(= 미정의 동작)가 됩니다.
          */
         static constexpr int32 kMaxLevel = 999;
 
-        /** @brief 최소 폴백 표를 심고 시작합니다 — 빈 카탈로그로는 만들어지지 않습니다. */
+        /** @brief 최소 폴백 표를 심고 시작합니다. 빈 카탈로그로는 만들어지지 않습니다. */
         SpeciesCatalog();
         ~SpeciesCatalog();
 
         SpeciesCatalog( const SpeciesCatalog& )            = delete;
         SpeciesCatalog& operator=( const SpeciesCatalog& ) = delete;
 
-        /** @brief 리소스 경로에서 기술/종족을 로드합니다. 실패 시 최소 폴백을 심습니다. */
+        /** @brief 리소스 경로에서 기술 · 종족을 로드합니다. 실패하면 최소 폴백을 심습니다. */
         bool loadFromResource( string_view assetRelativePath );
 
-        /** @brief ID로 종족 정의를 찾습니다. 못 찾으면 첫 종족, **표가 비었으면 nullptr** 입니다. */
+        /** @brief ID 로 종족 정의를 찾습니다. 못 찾으면 첫 종족, **표가 비었으면 nullptr** 입니다. */
         const SpeciesDef* findSpecies( const utf8* pId ) const;
         /** @brief 인덱스로 기술 정의를 찾습니다. 범위 밖이면 첫 기술, **표가 비었으면 nullptr** 입니다. */
         const MoveDef* findMove( int32 index ) const;
-        /** @brief ID로 기술 인덱스를 찾습니다. */
+        /** @brief ID 로 기술 인덱스를 찾습니다. */
         int32 findMoveIndex( const utf8* pId ) const;
 
         /** @brief 종족의 슬롯 번호에 해당하는 기술을 찾습니다. 슬롯이 없으면 nullptr 입니다. */
@@ -121,11 +121,11 @@ namespace sw
         vector<SpeciesDef> _listSpecies;
 
         /**
-         * @brief id → 행 인덱스. 벡터가 정본이고 이건 조회용이다.
-         * @details 예전엔 id 조회가 벡터 선형 탐색 + string 비교였다. 형제 키트인 ActionCombat 의
+         * @brief id → 행 인덱스입니다. 벡터가 기준이고 이것은 조회용입니다.
+         * @details 예전에는 id 조회가 벡터 선형 탐색 + string 비교였습니다. 형제 킷인 ActionCombat 의
          *          MonsterDataCatalog 는 같은 문제를 이미 hashed_string 맵으로 풀고 있었는데,
-         *          한 프레임워크 안에서 같은 일을 두 방식으로 하고 있었다. 인덱스는 SpeciesDef 에
-         *          적혀 직렬화되므로 **벡터의 자리는 그대로 두고** 맵만 곁에 둔다.
+         *          한 프레임워크 안에서 같은 일을 두 방식으로 하고 있었습니다. 인덱스는 SpeciesDef 에
+         *          적혀 직렬화되므로 **벡터의 자리는 그대로 두고** 맵만 곁에 둡니다.
          */
         unordered_map<hashed_string, size_t> _mapMoveIndex;
         unordered_map<hashed_string, size_t> _mapSpeciesIndex;

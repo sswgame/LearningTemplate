@@ -1,6 +1,6 @@
 /**
  * @file PlayerLocomotion.h
- * @brief 타일 스텝 이동 FSM (Idle / Walk / Interact)
+ * @brief 타일 스텝 이동 FSM(Idle / Walk / Interact)입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -13,7 +13,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) LocomotionState — 타일 스텝 이동 FSM (FacingDir 은 Base/FacingDir.h)
     // ------------------------------------------------------------------------------
-    /** @brief 타일 스텝 이동 상태 */
+    /** @brief 타일 스텝 이동 상태입니다. */
     enum class LocomotionState : uint8
     {
         Idle = 0,
@@ -22,17 +22,17 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) PlayerLocomotion — 상태·바라보는 방향·입력 가능 여부
-    //    실제 타일 좌표는 PlayerController가 소유
+    // 2) PlayerLocomotion — 상태 · 바라보는 방향 · 입력 가능 여부
+    //    실제 타일 좌표는 PlayerController 가 소유
     // ------------------------------------------------------------------------------
-    /** @brief 타일 스텝 이동 FSM */
+    /** @brief 타일 스텝 이동 FSM 입니다. */
     class SW_GF_API PlayerLocomotion
     {
     public:
         /**
-         * @brief 한 칸을 밟는 데 걸리는 시간(초) — **여기가 정본이다.**
+         * @brief 한 칸을 밟는 데 걸리는 시간(초)입니다. **여기가 기준입니다.**
          * @details `PlayerController` 가 다음 입력을 막는 시간으로 같은 `0.18` 을 따로 들고
-         *          있었다. 한쪽만 바꾸면 걷는 연출과 입력 잠금이 어긋난다.
+         *          있었습니다. 한쪽만 바꾸면 걷는 연출과 입력 잠금이 어긋납니다.
          */
         static constexpr float32 kStepDuration = 0.18f;
 
@@ -45,12 +45,12 @@ namespace sw
         /** @brief 타일 스텝 시작을 알립니다. */
         void notifyStepStarted();
         /**
-         * @brief 타일 스텝을 **지금 당장** 끝냅니다 — 텔레포트처럼 걷는 시간이 없을 때만.
+         * @brief 타일 스텝을 **지금 당장** 끝냅니다. 텔레포트처럼 걷는 시간이 없을 때만 씁니다.
          * @warning 걸음을 시작한 그 프레임에 이것을 부르면 `Walk` 상태가 **한 프레임도 살지
-         *          못한다.** `PlayerController::update` 가 정확히 그렇게 하고 있어서
-         *          `LocomotionState::Walk` 는 바깥에서 **한 번도 관측되지 않았다** — 걷는
-         *          애니메이션을 고를 근거가 통째로 죽어 있었다. 보통은 이것을 부르지 말고
-         *          `update( deltaTime )` 이 `kStepDuration` 뒤에 스스로 끝내게 둔다.
+         *          못합니다.** 예전 `PlayerController::update` 가 정확히 그렇게 해서
+         *          `LocomotionState::Walk` 는 바깥에서 **한 번도 관측되지 않았습니다.** 걷는
+         *          애니메이션을 고를 근거가 통째로 죽어 있었습니다. 보통은 이것을 부르지 말고
+         *          `update( deltaTime )` 이 `kStepDuration` 뒤에 스스로 끝내게 둡니다.
          */
         void notifyStepFinished();
         /** @brief 상호작용 상태를 시작합니다. */
@@ -70,7 +70,7 @@ namespace sw
     private:
         LocomotionState _state;
         FacingDir       _facing;
-        float32         _stateTimer; ///< Walk/Interact 남은 시간(초)
+        float32         _stateTimer; ///< Walk · Interact 남은 시간(초)
     };
 
 } // namespace sw

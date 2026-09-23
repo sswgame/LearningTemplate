@@ -151,7 +151,7 @@ namespace sw
         const size_t          slot     = static_cast<size_t>( MathUtil::max( moveSlot, 0 ) );
         const MoveDef*        pMove    = ( pCatalog != nullptr && pSpecies != nullptr ) ? pCatalog->findMoveAtSlot( *pSpecies, slot ) : nullptr;
 
-        // 슬롯 수는 데이터가 정하므로 없는 슬롯을 고를 수 있다 — PP 가 없는 것과 같이 다룬다.
+        // 슬롯 수는 데이터가 정하므로 없는 슬롯을 고를 수 있다. PP 가 없는 것과 같이 다룬다.
         if ( slot >= attacker._listPp.size() )
         {
             formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
@@ -159,10 +159,10 @@ namespace sw
             return;
         }
 
-        // 기술 정의가 없을 수 있다 — 종족이나 카탈로그가 빠지면 위에서 pMove 가 nullptr 이 된다.
+        // 기술 정의가 없을 수 있다. 종족이나 카탈로그가 빠지면 위에서 pMove 가 nullptr 이 된다.
         // 아래 dmg 계산은 `pMove != nullptr` 을 확인하므로 **dmg > 0 분기는 안전**하지만, dmg == 0
         // 분기는 pMove->_name 을 그대로 읽었다. 즉 데이터가 빠진 순간 널 역참조였고, 정상 데이터로는
-        // 절대 걸리지 않아 오래 숨어 있었다. 쓸 기술이 없으면 PP 를 쓰기 전에 끝낸다 — 슬롯이
+        // 절대 걸리지 않아 오래 숨어 있었다. 쓸 기술이 없으면 PP 를 쓰기 전에 끝낸다. 슬롯이
         // 없을 때와 같은 취급이다.
         if ( pMove == nullptr )
         {
@@ -201,10 +201,10 @@ namespace sw
         if ( moveSlotCount == 0 )
             return 0;
 
-        // **가진 슬롯 안에서 고른다.** 예전에는 체력이 절반 아래면 무조건 1 번을 돌려줬는데,
+        // **가진 슬롯 안에서 고른다.** 예전에는 체력이 절반 아래면 무조건 1 번을 반환했는데,
         // 슬롯 수는 데이터가 정하므로 기술이 하나뿐인 종족이 있을 수 있다. 그러면
         // `applyMove` 가 "없는 슬롯" 으로 보고 "no PP" 만 찍고 돌아가서, **적은 절반 이하로
-        // 떨어지는 순간부터 한 대도 못 때린다** — 몰려야 할 때 오히려 무해해졌다.
+        // 떨어지는 순간부터 한 대도 못 때린다.** 몰려야 할 때 오히려 무해해졌다.
         const int32 lastSlot = static_cast<int32>( moveSlotCount - 1 );
         if ( hp * 2 < hpMax )
             return MathUtil::min( 1, lastSlot );

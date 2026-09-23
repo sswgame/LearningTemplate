@@ -9,17 +9,17 @@ namespace sw
     namespace
     {
         /**
-         * @brief 역할과 이름의 **정본 표 하나.**
-         * @details 예전에는 같은 대응이 세 곳에 각각 적혀 있었다 — 글자에서 역할을 읽는 곳,
-         *          맵 경로에서 역할을 읽는 곳, 역할을 태그로 미러하는 `switch`. 역할을 하나
-         *          더하려면 세 곳을 고쳐야 하고, **한 곳만 고치면 그때부터 조용히 어긋난다.**
-         *          실제로 이미 어긋나 있었다: 글자로 묻는 쪽은 대소문자를 무시하는데 경로로
-         *          묻는 쪽은 맨 `find` 라서 구별했다 — `Dungeon_01` 은 던전이 아니었다.
+         * @brief 역할과 이름의 **기준 표 하나입니다.**
+         * @details 예전에는 같은 대응이 세 곳에 각각 적혀 있었습니다. 글자에서 역할을 읽는 곳,
+         *          맵 경로에서 역할을 읽는 곳, 역할을 태그로 미러하는 `switch` 입니다. 역할을 하나
+         *          더하려면 세 곳을 고쳐야 하고, **한 곳만 고치면 그때부터 조용히 어긋납니다.**
+         *          실제로 이미 어긋나 있었습니다: 글자로 묻는 쪽은 대소문자를 무시하는데 경로로
+         *          묻는 쪽은 맨 `find` 라서 구별했습니다. `Dungeon_01` 은 던전이 아니었습니다.
          *
-         *          **줄 순서가 곧 우선순위다.** 경로에 여러 이름이 들어 있으면 위의 것이 이긴다
-         *          (`dungeon_boss` 는 보스다). 그래서 `Town` 은 맨 아래이자 기본값이다.
+         *          **줄 순서가 곧 우선순위입니다.** 경로에 여러 이름이 들어 있으면 위의 것이 이깁니다
+         *          (`dungeon_boss` 는 보스입니다). 그래서 `Town` 은 맨 아래이자 기본값입니다.
          *          예전의 `find( "dungeon_boss" )` 줄은 바로 다음 `find( "boss" )` 가 이미
-         *          같은 것을 잡으므로 **한 번도 혼자 참인 적이 없었다** — 지웠다.
+         *          같은 것을 잡으므로 **한 번도 혼자 참인 적이 없었습니다.** 지웠습니다.
          */
         struct ZoneRoleName
         {
@@ -124,8 +124,8 @@ namespace sw
         z._bounds._max._x   = width > 0 ? width - 1 : 0;
         z._bounds._max._y   = height > 0 ? height - 1 : 0;
         z._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( z._role ) ? 1 : 0;
-        // 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 합니다.
-        // 이름은 위의 표 하나에서 온다 — 여기에 `switch` 로 다시 적으면 세 번째 사본이 된다.
+        // 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 한다.
+        // 이름은 위의 표 하나에서 온다. 여기에 `switch` 로 다시 적으면 세 번째 사본이 된다.
         z.addTag( zoneRoleToTag( z._role ) );
         _listZone.push_back( std::move( z ) );
         _activeIndex = 0;
@@ -191,7 +191,7 @@ namespace sw
     ZoneRole zoneRoleFromMapPath( string_view mapPath )
     {
         // 표의 **줄 순서가 우선순위**다. 글자로 묻는 짝과 같은 표를 보고, 같이 대소문자를
-        // 무시한다 — 예전에는 여기만 맨 `find` 여서 `Dungeon_01` 이 던전이 아니었다.
+        // 무시한다. 예전에는 여기만 맨 `find` 여서 `Dungeon_01` 이 던전이 아니었다.
         for ( const ZoneRoleName& entry : kArrZoneRoleName )
         {
             if ( StringUtil::contains( mapPath, entry._pName, true ) )

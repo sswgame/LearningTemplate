@@ -1,6 +1,6 @@
 /**
  * @file ActionRoom.h
- * @brief 던전 / 보스 룸용 실시간 클리어 게이트 전투 (던그리드 스타일 아이디어).
+ * @brief 던전 · 보스 룸용 실시간 클리어 게이트 전투입니다(던그리드 스타일 아이디어).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 룸 종류 · 프레임 입출력 (FacingDir 은 Base/FacingDir.h)
     // ------------------------------------------------------------------------------
-    /** @brief 액션 룸 전투 종류 */
+    /** @brief 액션 룸 전투 종류입니다. */
     enum class ActionRoomKind : uint8
     {
         None = 0,
@@ -27,7 +27,7 @@ namespace sw
         Boss
     };
 
-    /** @brief 한 프레임 플레이어 입력 (위치·방향·공격/대시) */
+    /** @brief 한 프레임의 플레이어 입력입니다(위치 · 방향 · 공격/대시). */
     struct ActionRoomFrameInput
     {
         float2                 _playerPos{ 0.0f, 0.0f };
@@ -36,14 +36,14 @@ namespace sw
         uint8                  _bDashPressed   : 1;
         [[maybe_unused]] uint8 _reserved       : 6;
 
-        /** @brief 공격·대시 비트를 0으로 둡니다. */
+        /** @brief 공격 · 대시 비트를 0 으로 둡니다. */
         ActionRoomFrameInput()
             : _bAttackPressed{ SW_FALSE }
             , _bDashPressed{ SW_FALSE }
             , _reserved{ 0 } {}
     };
 
-    /** @brief 한 프레임 전투 결과 (피격·클리어·대시 시작) */
+    /** @brief 한 프레임의 전투 결과입니다(피격 · 클리어 · 대시 시작). */
     struct ActionRoomFrameResult
     {
         int32                  _damageToPlayer{ 0 }; ///< 이번 프레임 플레이어 피해
@@ -52,7 +52,7 @@ namespace sw
         uint8                  _bDashStarted      : 1;
         [[maybe_unused]] uint8 _reserved          : 5;
 
-        /** @brief 클리어·보스·대시 비트를 0으로 둡니다. */
+        /** @brief 클리어 · 보스 · 대시 비트를 0 으로 둡니다. */
         ActionRoomFrameResult()
             : _bClearedThisFrame{ SW_FALSE }
             , _bBossDefeated{ SW_FALSE }
@@ -63,11 +63,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) ActionRoom — 적/투사체 스폰, 클리어 시 게이트 개방
     // ------------------------------------------------------------------------------
-    /** @brief 적·보스 투사체를 스폰하고, 클리어 시 클리어 게이트를 엽니다. */
+    /** @brief 적 · 보스 투사체를 스폰하고, 클리어하면 클리어 게이트를 엽니다. */
     class SW_GF_API ActionRoom
     {
     public:
-        /** @brief 비활성(None)·게이트 닫힘으로 시작합니다. */
+        /** @brief 비활성(None) · 게이트 닫힘으로 시작합니다. */
         ActionRoom();
 
         /** @brief 룸 상태와 액터를 비웁니다. */
@@ -91,7 +91,7 @@ namespace sw
         float32 getDashFill() const;
         /** @brief 보스 HP 게이지(0~1)를 반환합니다. */
         float32 getBossHpFill() const;
-        /** @brief 살아있는 적 수를 반환합니다. */
+        /** @brief 살아 있는 적 수를 반환합니다. */
         int32 getAliveEnemyCount() const;
 
         /** @brief 한 프레임 전투를 갱신합니다. */
@@ -100,14 +100,14 @@ namespace sw
         void drawDebug() const;
 
     private:
-        /** @brief 적 액터 종류 */
+        /** @brief 적 액터 종류입니다. */
         enum class ActorKind : uint8
         {
             Grunt = 0,
             Boss
         };
 
-        /** @brief 적 위치·HP·공격 타이머 */
+        /** @brief 적 위치 · HP · 공격 타이머입니다. */
         struct Actor
         {
             ActorKind              _kind;
@@ -134,11 +134,11 @@ namespace sw
             {
             }
 
-            /** @brief 액터 AABB를 반환합니다. */
+            /** @brief 액터 AABB 를 반환합니다. */
             AABB bounds() const;
         };
 
-        /** @brief 적 투사체 */
+        /** @brief 적 투사체입니다. */
         struct Projectile
         {
             float2                 _position;
@@ -159,7 +159,7 @@ namespace sw
             {
             }
 
-            /** @brief 투사체 AABB를 반환합니다. */
+            /** @brief 투사체 AABB 를 반환합니다. */
             AABB bounds() const;
         };
 

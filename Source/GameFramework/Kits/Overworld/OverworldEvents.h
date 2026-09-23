@@ -1,6 +1,6 @@
 /**
  * @file OverworldEvents.h
- * @brief 오버월드 타일맵 이동 및 워프 이벤트
+ * @brief 오버월드 타일맵 이동 · 워프 이벤트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

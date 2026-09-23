@@ -1,6 +1,6 @@
 /**
  * @file GameData.h
- * @brief 게임플레이 씬 흐름, 다국어, 입력, 세이브 부트스트랩 및 커스텀 게임 데이터
+ * @brief 게임플레이 씬 흐름 · 다국어 · 입력 · 세이브 부트스트랩과 커스텀 게임 데이터입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,9 +14,9 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) GameData — 씬 흐름·입력·다국어·세이브 부트스트랩 및 범용 커스텀 설정
+    // 1) GameData — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
     // ------------------------------------------------------------------------------
-    /** @brief 씬 흐름, 기본 세이브, 다국어, 입력 및 범용 게임플레이 튜닝 설정 */
+    /** @brief 씬 흐름 · 기본 세이브 · 다국어 · 입력과 범용 게임플레이 튜닝 설정입니다. */
     REFLECT()
     struct SW_GF_API GameData
     {
@@ -53,7 +53,7 @@ namespace sw
         PROPERTY( Alias = "customProperties, CustomProperties" )
         map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소
 
-        /** @brief 커스텀 문자열 프로퍼티를 조회합니다 (없으면 fallback 반환). */
+        /** @brief 커스텀 문자열 프로퍼티를 조회합니다(없으면 fallback 을 반환합니다). */
         string_view getCustomProperty( string_view key, string_view fallback = {} ) const;
         /** @brief 커스텀 정수 프로퍼티를 조회합니다. */
         int32 getCustomPropertyInt( string_view key, int32 fallback = 0 ) const;
@@ -69,7 +69,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) BootstrapConfig — 팩 루트 + GameData
     // ------------------------------------------------------------------------------
-    /** @brief Resource 아래 팩 루트와 gamedata 로딩 */
+    /** @brief Resource 아래 팩 루트와 gamedata 로딩입니다. */
     REFLECT()
     struct SW_GF_API BootstrapConfig
     {
@@ -82,10 +82,10 @@ namespace sw
         PROPERTY( Alias = "data, Data" )
         GameData _data{}; ///< `{packRoot}/data/gamedata.xml` 테이블
 
-        /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듦 */
+        /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듭니다. */
         string resolve( string_view packRelative ) const;
 
-        /** @brief `{packRoot}/data/gamedata.xml`을 로드하고 컴포넌트 Defaults 경로를 연결합니다. */
+        /** @brief `{packRoot}/data/gamedata.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGamedataPath`)로 등록합니다. */
         bool load( string_view gamedataFileName = "data/gamedata.xml" );
     };
 } // namespace sw

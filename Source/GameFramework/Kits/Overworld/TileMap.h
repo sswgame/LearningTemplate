@@ -1,6 +1,6 @@
 /**
  * @file TileMap.h
- * @brief HD-2D 오버월드 타일맵 (그리드 + TileFlags + 워프 / 조우)
+ * @brief HD-2D 오버월드 타일맵입니다(그리드 + TileFlags + 워프 / 조우).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,9 +16,9 @@ namespace sw
 {
     // ------------------------------------------------------------------------------
     // 1) TileFlags — 보행 / 조우 / 워프 / 솔리드 / 통과
-    //    Solid는 Walkable의 역(작성 편의). PassThrough는 낭떠러지 힌트
+    //    Solid 는 Walkable 의 역(작성 편의). PassThrough 는 낭떠러지 힌트
     // ------------------------------------------------------------------------------
-    /** @brief 타일 한 칸의 충돌·이벤트 비트 */
+    /** @brief 타일 한 칸의 충돌 · 이벤트 비트입니다. */
     ENUM( Flags )
     enum class TileFlags : uint8
     {
@@ -26,14 +26,14 @@ namespace sw
         Walkable    = SW_BIT( 0 ),
         Encounter   = SW_BIT( 1 ),
         Warp        = SW_BIT( 2 ),
-        Solid       = SW_BIT( 3 ), ///< 차단 (Walkable의 역)
+        Solid       = SW_BIT( 3 ), ///< 차단 (Walkable 의 역)
         PassThrough = SW_BIT( 4 )  ///< 낭떠러지 / 일방 힌트 (보행은 가능)
     };
 
     // ------------------------------------------------------------------------------
-    // 3) 워프 · 조우 테이블 · HD-2D 비주얼
+    // 2) 워프 · 조우 테이블 · HD-2D 비주얼
     // ------------------------------------------------------------------------------
-    /** @brief 타일 좌표에서 다른 맵으로 보내는 워프 */
+    /** @brief 타일 좌표에서 다른 맵으로 보내는 워프입니다. */
     struct TileWarp
     {
         int32  _tileX{ 0 };
@@ -44,14 +44,14 @@ namespace sw
         string _pairId{};         ///< 선택적 WarpDoor 페어 ID
     };
 
-    /** @brief 맵 조우 테이블의 한 행 (가중치 추첨) */
+    /** @brief 맵 조우 테이블의 한 행입니다(가중치 추첨). */
     struct TileEncounterEntry
     {
         string  _speciesId{};
         float32 _weight{ 1.0f }; ///< 상대 가중치
     };
 
-    /** @brief HD-2D 1차: 타일별 가짜 높이 + 틴트 (메시 패스 전까지 소프트웨어/디버그) */
+    /** @brief HD-2D 1차: 타일별 가짜 높이 + 틴트입니다(메시 패스 전까지 소프트웨어 · 디버그). */
     struct TileVisual
     {
         uint8 _height{ 0 }; ///< 가짜 높이
@@ -61,7 +61,7 @@ namespace sw
         uint8 _atlasId{ 0 }; ///< 아틀라스 슬롯
     };
 
-    /** @brief 타일맵 에디터 페인트 레이어 */
+    /** @brief 타일맵 에디터 페인트 레이어입니다. */
     enum class TilePaintLayer : uint8
     {
         Visual = 0,
@@ -72,18 +72,18 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) TileMap — XML 그리드 + 워프 목록 + 조우 테이블
+    // 3) TileMap — XML 그리드 + 워프 목록 + 조우 테이블
     // ------------------------------------------------------------------------------
-    /** @brief HD-2D 오버월드 타일 그리드 */
+    /** @brief HD-2D 오버월드 타일 그리드입니다. */
     class SW_GF_API TileMap
     {
     public:
         TileMap();
 
-        /** @brief Resource 상대 XML에서 타일맵을 불러옵니다. */
+        /** @brief Resource 상대 XML 에서 타일맵을 불러옵니다. */
         bool loadFromXml( string_view assetRelativePath );
 
-        /** @brief Resource 상대 XML로 타일맵을 저장합니다. */
+        /** @brief Resource 상대 XML 로 타일맵을 저장합니다. */
         bool saveToXml( string_view assetRelativePath ) const;
         /** @brief 맵 데이터를 비웁니다. */
         void clear();
@@ -121,7 +121,7 @@ namespace sw
 
         /** @brief 맵 조우 테이블을 반환합니다. */
         const vector<TileEncounterEntry>& getEncounters() const { return _listEncounterEntry; }
-        /** @brief 맵 조우 테이블에서 가중치 추첨합니다. 없으면 빈 문자열. */
+        /** @brief 맵 조우 테이블에서 가중치로 추첨합니다. 없으면 빈 문자열입니다. */
         string pickEncounterSpeciesId() const;
 
         /** @brief 보행 가능 여부를 반환합니다. */
@@ -151,7 +151,7 @@ namespace sw
         void setOrUpdateWarp( const TileWarp& warp );
         /** @brief 워프를 제거합니다. */
         void removeWarp( int32 x, int32 y );
-        /** @brief 가장자리 워프 프리셋을 페인트합니다 (0=N,1=E,2=S,3=W). */
+        /** @brief 가장자리 워프 프리셋을 칠합니다(0=N, 1=E, 2=S, 3=W). */
         void paintEdgeWarpPreset( int32 edge /*0=N,1=E,2=S,3=W*/, string_view targetMap, int32 tx, int32 ty );
 
         /** @brief HD-2D 타일 디버그 로그를 남깁니다. */
@@ -160,7 +160,7 @@ namespace sw
     private:
         /** @brief 좌표가 맵 범위 안인지 반환합니다. */
         bool isInBounds( int32 x, int32 y ) const;
-        /** @brief (x, y)의 행 우선 1차원 인덱스를 반환합니다. */
+        /** @brief (x, y) 의 행 우선 1차원 인덱스를 반환합니다. */
         size_t indexOf( int32 x, int32 y ) const
         {
             // 곱셈을 size_t 로 한다. int 로 곱하면 큰 맵에서 넘친 뒤에 확대되므로, 캐스트가 값을

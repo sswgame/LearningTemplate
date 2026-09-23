@@ -1,6 +1,6 @@
 /**
  * @file RuntimeHud.h
- * @brief 런타임 HUD 상태 (범용 게이지 맵 + 대사 한 줄 + 화면 사각형 앵커)
+ * @brief 런타임 HUD 상태입니다(범용 게이지 맵 + 대사 한 줄 + 화면 사각형 앵커).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 레이아웃 — NDC 게이지 / 화면 사각형
     // ------------------------------------------------------------------------------
-    /** @brief 정규화 화면 좌표(NDC)의 게이지 정보 */
+    /** @brief 정규화 화면 좌표(NDC)의 게이지 정보입니다. */
     struct HudGauge
     {
         float32 _fill{ 1.0f }; ///< 0~1 채움
@@ -26,7 +26,7 @@ namespace sw
         float32 _h{ 0.04f };   ///< 높이
     };
 
-    /** @brief HUD가 붙는 화면 사각형 (NDC) */
+    /** @brief HUD 가 붙는 화면 사각형(NDC)입니다. */
     struct ScreenRect
     {
         float32 _x{ 0.0f }; ///< 왼쪽
@@ -36,9 +36,9 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) RuntimeHud — 범용 게이지 맵·대사·페이드, 에디터 Game View로 스냅샷
+    // 2) RuntimeHud — 범용 게이지 맵 · 대사 · 페이드, 에디터 Game View 로 스냅샷
     // ------------------------------------------------------------------------------
-    /** @brief 런타임 HUD 상태 관리 */
+    /** @brief 런타임 HUD 상태를 관리합니다. */
     class SW_GF_API RuntimeHud
     {
     public:
@@ -52,9 +52,9 @@ namespace sw
         /** @brief 대사를 지웁니다. */
         void clearDialogue();
 
-        /** @brief 범용 게이지를 등록/갱신합니다. */
+        /** @brief 범용 게이지를 등록하거나 갱신합니다. */
         void setGauge( const hashed_string& key, float32 fill, float32 x = 0.05f, float32 y = 0.05f, float32 w = 0.28f, float32 h = 0.04f );
-        /** @brief 범용 게이지를 조회합니다. 없으면 nullptr 반환 */
+        /** @brief 범용 게이지를 조회합니다. 없으면 nullptr 입니다. */
         const HudGauge* getGauge( const hashed_string& key ) const;
         /** @brief 범용 게이지 채움 비율(0..1)을 조회합니다. */
         float32 getGaugeFill( const hashed_string& key, float32 fallback = 0.0f ) const;
@@ -77,7 +77,7 @@ namespace sw
         /** @brief 페이드 알파를 반환합니다. */
         float32 getFadeAlpha() const { return _fadeAlpha; }
 
-        /** @brief 에디터 Game View 오버레이용 DebugOverlayState에 게시합니다. */
+        /** @brief 에디터 Game View 오버레이용 DebugOverlayState 에 게시합니다. */
         void publishSnapshot( bool actionMode = false ) const;
         /** @brief HUD 스냅샷을 로그합니다. */
         void logSnapshot() const;

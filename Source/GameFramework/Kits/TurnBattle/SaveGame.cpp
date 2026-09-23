@@ -36,13 +36,13 @@ namespace sw
 
             /**
              * @brief 세이브에서 읽은 수를 그대로 믿지 않기 위한 하드 상한입니다.
-             * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있다. 파티 수는 이미 잘라
+             * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있습니다. 파티 수는 이미 잘라
              *          쓰고 있었는데 **바로 옆의 `ppCount` 는 자르지 않아서**,
-             *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 된다.
-             *          데이터가 정하는 `maxPartySize` 도 데이터가 망가지면 같은 문제이므로 함께 자른다.
+             *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 됩니다.
+             *          데이터가 정하는 `maxPartySize` 도 데이터가 망가지면 같은 문제이므로 함께 자릅니다.
              */
             static constexpr int32 kHardPartyCap = 64;
-            /** @brief 한 파티원이 가질 수 있는 최대 기술 슬롯 수입니다. 기본 세이브는 둘을 쓴다. */
+            /** @brief 한 파티원이 가질 수 있는 최대 기술 슬롯 수입니다. 기본 세이브는 둘을 씁니다. */
             static constexpr int32 kHardPpCap = 16;
 
             static size_t partyCap()
@@ -206,7 +206,7 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pNick ) == false )
                 m._nickname = pNick;
             // **레벨도 자른다.** 아래 `_expNext = 40 + level * 10` 과 `makeWild` 의
-            // `baseHp + level * 2` 가 곱셈이다 — 손으로 고친 `level=2000000000` 한 줄이
+            // `baseHp + level * 2` 가 곱셈이다. 손으로 고친 `level=2000000000` 한 줄이
             // 부호 있는 정수 오버플로(= 미정의 동작)가 된다. 파티 수 · PP 수와 같은 규칙이다.
             m._level = MathUtil::clamp(
                 KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level ),
@@ -219,7 +219,7 @@ namespace sw
             const int32 ppCount = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "ppCount" ).c_str(), -1 );
             if ( ppCount >= 0 )
             {
-                // **파일이 말한 수를 그대로 잡지 않는다** — 바로 위 파티 수와 같은 규칙이다.
+                // **파일이 말한 수를 그대로 잡지 않는다.** 바로 위 파티 수와 같은 규칙이다.
                 const size_t slotCount = MathUtil::min( static_cast<size_t>( ppCount ), SaveGameInternal::ppCap() );
                 m._listPp.assign( slotCount, 0 );
                 for ( size_t slot = 0; slot < slotCount; ++slot )
