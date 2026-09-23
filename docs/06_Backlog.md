@@ -932,7 +932,7 @@ App 벤치(큐브 8000 · 번갈아 2회): 기본은 전 스코프 같고(p50 �
 
 검증: Debug 경고 0 · 린트 프리셋 20/20 · nogpu 7/7 · hostgpu 2/2, Shipping nogpu 7/7 · hostgpu 2/2, ASan nogpu 7/7, 바뀐 헤더 7개 단독 컴파일 OK.
 **한 번 본 것 — 재현 안 됨 (셋째).** 첫 검증에서 Shipping `CoreTest` 가 한 번 졌다 — 출력은 `Failed to deserialize config from: shipping_host_baked`
-한 줄(내는 곳: (찾지 못함)). 같은 바이너리로 3회 연속 통과. 이 커밋은 Core 를 만지지 않는다. 다음에 또 보이면 그 케이스의 전체 출력을 파일로 남길 것.
+한 줄(내는 곳: `Engine/Config/ConfigManager.h` 의 `loadConfigFromJson` — Shipping 이 구운 설정 JSON 을 읽는 자리, CoreTest 의 테스트 환경이 지난다). 같은 바이너리로 3회 연속 통과. 이 커밋은 Core 를 만지지 않는다. 다음에 또 보이면 그 케이스의 전체 출력을 파일로 남길 것.
 
 **남긴 것.** 스폰 1.1 us 의 대부분은 이름 유일화(`BenchObject_N` 인턴)와 풀·표·맵 잠금 여섯이다 — 총알 수백 개/프레임에도 0.1 ms 미만이라
 그대로. 틱 무버 350~450 us 는 메모리 이동(기록 코어 ≠ 적용 코어)이라 오브젝트 층에서 더 깎을 자리가 없고, 답은 "같은 워커가 적용" 인데
