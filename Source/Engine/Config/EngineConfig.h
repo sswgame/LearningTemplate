@@ -54,21 +54,21 @@ namespace sw
         WindowConfig _window; ///< 창·백엔드 설정
 
         /**
-         * @brief 한 프레임이 인정하는 최대 가변 델타(초). 디버거 정지 같은 긴 멈춤을 잘라낸다.
-         * @note 아래 셋은 0 이하여도 기동을 막지 않는다 — `FrameTimeline::configure` 가 그 자리에서
-         *       내장 기본값으로 바꾼다. 설정 파일 하나가 프레임 루프를 세우지 못하게 하려는 것이다.
+         * @brief 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다.
+         * @note 아래 셋은 0 이하여도 기동을 막지 않습니다. `FrameTimeline::configure` 가 그 자리에서
+         *       내장 기본값으로 바꿉니다. 설정 파일 하나 때문에 프레임 루프가 서지 못하는 일을 막으려는 것입니다.
          */
         PROPERTY()
         float32 _maxFrameDeltaTime{ 0.1f };
 
-        /** @brief 고정 주기 업데이트 한 스텝의 길이(초). 기본 60Hz. */
+        /** @brief 고정 주기 업데이트 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다. */
         PROPERTY()
         float32 _fixedDeltaTime{ 1.0f / 60.0f };
 
         /**
-         * @brief 한 프레임이 돌릴 수 있는 고정 스텝 수 상한.
-         * @details 상한을 넘긴 잔여 시간은 버린다 — 남기면 느린 프레임이 더 많은 스텝을 불러
-         *          더 느려지는 되먹임이 된다. FrameTimeline 이 이 값을 집행한다.
+         * @brief 한 프레임이 돌릴 수 있는 고정 스텝 수의 상한입니다.
+         * @details 상한을 넘긴 남은 시간은 버립니다. 남기면 느린 프레임이 더 많은 스텝을 불러
+         *          더 느려지는 악순환이 됩니다. FrameTimeline 이 이 값을 적용합니다.
          */
         PROPERTY()
         uint32 _maxFixedStepPerFrame{ 6 };

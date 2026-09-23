@@ -1,6 +1,6 @@
 /**
  * @file KeyValueFile.h
- * @brief 공유 key=value 텍스트 테이블 파싱/로드 (세이브 슬롯, 에디터 ini)
+ * @brief 여러 곳이 함께 쓰는 key=value 텍스트 테이블 파싱 · 로드입니다(세이브 슬롯, 에디터 ini).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -11,7 +11,7 @@
 namespace sw
 {
     /**
-     * @brief 투명 std::less<> (C++14/17) — 임시 키 없이 find(string_view/const utf8*).
+     * @brief 투명 비교자 std::less<> (C++14/17) 를 씁니다. 임시 키 없이 find(string_view/const utf8*) 가 됩니다.
      * @note C++20 unordered_map 이종 조회는 C++17 빌드 때문에 쓰지 않습니다.
      */
     using KeyValueMap = map<string, string, std::less<>>;
@@ -26,7 +26,7 @@ namespace sw
         uint8                  _bSkipBracketSections   : 1; ///< "[section]" 줄 스킵
         [[maybe_unused]] uint8 _reserved               : 6;
 
-        /** @brief 세미콜론 주석과 브래킷 섹션을 스킵하는 기본값. */
+        /** @brief 세미콜론 주석과 대괄호 섹션을 건너뛰는 기본값입니다. */
         KeyValueParseOptions() noexcept
             : _commentChar{ '#' }
             , _bSkipSemicolonComments{ SW_TRUE }
@@ -44,7 +44,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 파싱 · 로드
         // ------------------------------------------------------------------------------
-        /** @brief 텍스트를 out에 파싱합니다 (먼저 clear). */
+        /** @brief 텍스트를 outMap 에 파싱합니다(먼저 비웁니다). */
         static bool parse( string_view text, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
@@ -55,7 +55,7 @@ namespace sw
                                   string* pOutAbsPath = nullptr );
 
         /**
-         * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+         * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
          */
         static bool loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt = {},
                               string* pOutAbsPath = nullptr );
@@ -77,7 +77,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief key=value 텍스트를 만듭니다.
-         * @param headerComment 비어 있지 않으면 `# ` 접두(이미 #이면 그대로) 뒤 개행.
+         * @param headerComment 비어 있지 않으면 `# ` 을 앞에 붙여(이미 # 이면 그대로) 한 줄로 씁니다.
          * @param sectionName 비어 있지 않으면 `[sectionName]` 줄을 넣습니다.
          */
         static string dump( const KeyValueMap& mapData, string_view headerComment = {}, string_view sectionName = {} );
@@ -87,7 +87,7 @@ namespace sw
 
         /**
          * @brief 비어 있지 않고 주석이 아닌 각 줄에 callback(trimmedLine)을 호출합니다.
-         * @note 브래킷 섹션 헤더는 그대로 넘깁니다 (callback이 결정).
+         * @note 대괄호 섹션 헤더는 그대로 넘깁니다(처리는 callback 이 정합니다).
          */
         template <typename Fn>
         static void forEachContentLine( string_view text, Fn&& callback, utf8 commentChar = '#' )
@@ -103,7 +103,7 @@ namespace sw
                 if ( line.empty() == false && line.back() == '\r' )
                     line.remove_suffix( 1 );
 
-                // 줄마다 할당하지 않도록 인라인 trim
+                // 줄마다 할당하지 않도록 직접 trim 한다
                 while ( line.empty() == false && ( line.front() == ' ' || line.front() == '\t' ) )
                 {
                     line.remove_prefix( 1 );

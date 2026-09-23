@@ -88,8 +88,8 @@ namespace sw
         }
 
         // **`_safe` 를 쓴다.** 입력 크기를 믿고 읽는 변형(`LZ4_decompress_fast`)은 손상된 데이터에
-        // 대해 대상 버퍼 밖으로 쓴다 — 팩·세이브는 외부에서 오는 바이트다.
-        // 대상 용량은 한계까지만 알려 준다 — 실제 버퍼보다 좁게 보는 것은 안전한 방향이다
+        // 대해 대상 버퍼 밖으로 쓴다. 팩 · 세이브는 외부에서 오는 바이트다.
+        // 대상 용량은 한계까지만 알려 준다. 실제 버퍼보다 좁게 보는 것은 안전한 방향이다
         // (넘치면 LZ4 가 실패로 끝낸다). 그냥 캐스팅하면 음수가 될 수 있다.
         const int32 dstBytes = static_cast<int32>( MathUtil::min( dstCapacity, static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) ) );
         const int32 written  = LZ4_decompress_safe( static_cast<const utf8*>( pSrc ), static_cast<utf8*>( pDst ),

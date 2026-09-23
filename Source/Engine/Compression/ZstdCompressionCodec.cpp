@@ -59,7 +59,7 @@ namespace sw
         if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
             return false;
 
-        // ZSTD_decompress 는 프레임 헤더의 크기를 보고 대상 용량을 스스로 검사한다 — 손상된 입력이
+        // ZSTD_decompress 는 프레임 헤더의 크기를 보고 대상 용량을 스스로 검사한다. 손상된 입력이
         // 버퍼 밖으로 쓰지 않는다. 실패는 에러 코드로 돌아온다.
         const size_t result = ZSTD_decompress( pDst, dstCapacity, pSrc, srcSize );
         if ( ZSTD_isError( result ) != 0 )

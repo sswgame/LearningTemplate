@@ -32,7 +32,7 @@ namespace sw
                         return reinterpret_cast<FARPROC>( pHandle );
                 }
 
-                // Fallback: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨진 경우 실행 파일 디렉터리(Bin)에서 DLL 직접 로드
+                // 폴백: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨졌으면 실행 파일 디렉터리(Bin)에서 DLL 을 직접 로드한다
                 const string binDir   = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 const string fullPath = FileUtil::joinPath( binDir, dllName );
                 if ( FileUtil::fileExists( fullPath ) )

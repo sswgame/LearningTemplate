@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 다음. 하위 폴더 단위로 나눠 커밋한다 |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1637,6 +1637,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ① — 루트 · Common · Compression · Config · Module · Utility)
+
+**한 것.** 위 폴더의 .h · .cpp · .xxx 47 개와 `Source/Engine/CMakeLists.txt` 주석을 1-0g 규칙으로 다시 썼다. 사실과 달랐던 것:
+- `EngineDefines.h` 머리말이 "엔진 상수(렌더 큐)" 라고 했다 → 렌더 프레임 상수는 이미 `RHITypes.h` 로 옮겨졌다(같은 파일 본문 주석).
+- `EngineServiceList.xxx` 가 `EngineOwnedServices` 의 경로를 `Engine/Common/` 으로 적었다 → `Engine/` 바로 아래(그 파일이 이유를 적고 있다).
+- `EngineServices.h` 의 `areEngineServicesBound` 설명이 선택 항목을 나열한 뒤 "여기에 이름을 다시 적지 않는다" 고 해서 스스로
+  어긋났다 → 목록이 정본이라고 적고, 지금 항목은 예시로 남겼다.
+- `EngineLoop.cpp` — GpuScene 배치 합치기 설명이 코드가 아래로 옮겨 간 뒤 크래시 리포트 줄 위에 남아 있었다 →
+  `setMergeBatchesAcrossMaterials` 위로 옮겼다. 없어진 이름 `_shellActions` → `_mapDebugAction`.
+- `FrameProfiler::beginFrame` 이 "이번 프레임 누적을 비운다" 고 적혀 있었다 → 이제 비우지 않는다(`endFrame` 이 exchange 로 읽으며 비운다).
+- `XmlDocument.h` 가 세 곳에서 RapidXML 을 말했다 → 구현은 pugixml 이다.
+- `Source/Engine/CMakeLists.txt` 머리말의 "단일 SHARED 라이브러리" → Dev 는 SHARED, Shipping 은 STATIC.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (ReflectionParser 주석 정리 — 1-0g 네 번째 폴더)
 

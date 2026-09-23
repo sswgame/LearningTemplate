@@ -25,7 +25,7 @@ namespace sw
                 std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() );
         }
 
-        /** @brief 값이 들어갈 칸. 옥타브 = floor(log2), 그 안을 상위 비트로 등분한다. 한 옥타브 미만은 값 그대로다. */
+        /** @brief 값이 들어갈 칸입니다. 옥타브 = floor(log2) 이고, 그 안을 상위 비트로 등분합니다. 한 옥타브 미만은 값 그대로입니다. */
         uint32 bucketOf( uint64 nanos )
         {
             if ( nanos < FrameProfiler::kSubBucketCount )
@@ -37,7 +37,7 @@ namespace sw
             return ( octave << FrameProfiler::kSubBucketBit ) + mantissa;
         }
 
-        /** @brief 칸의 아래 끝 값. 백분위는 이 값으로 답한다 — 표본보다 작거나 같고 한 칸 안이다. */
+        /** @brief 칸의 아래 끝 값입니다. 백분위는 이 값으로 답합니다. 표본보다 작거나 같고, 차이는 한 칸 안입니다. */
         uint64 bucketLowerNanos( uint32 bucket )
         {
             if ( bucket < FrameProfiler::kSubBucketCount )
@@ -48,11 +48,11 @@ namespace sw
         }
 
         // 이 둘은 report() 의 표 출력에만 쓰인다. 배포본에서는 SW_LOG_INFO 가 사라져 report()
-        // 본문이 통째로 빠지므로 여기도 같은 조건으로 묶는다 — 안 묶으면 쓰이지 않는 함수 경고가 난다.
+        // 본문이 통째로 빠지므로 여기도 같은 조건으로 묶는다. 묶지 않으면 쓰이지 않는 함수 경고가 난다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         /**
          * @brief 나노초를 마이크로초 정수로 바꿉니다.
-         * @details 실수로 찍으면 값마다 소수 자릿수가 달라져 표가 어긋난다. 정수 us 로 고정한다.
+         * @details 실수로 찍으면 값마다 소수 자릿수가 달라져 표가 어긋납니다. 정수 us 로 고정합니다.
          */
         uint64 toMicros( uint64 nanos ) { return nanos / 1000; }
 
@@ -82,7 +82,7 @@ namespace sw
         const uint32 count = MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );
         for ( uint32 index = 0; index < count; ++index )
         {
-            // 아직 이름이 안 실린 칸일 수 있다 — 슬롯을 잡는 것과 이름을 적는 것은 두 걸음이다.
+            // 아직 이름이 실리지 않은 칸일 수 있다. 슬롯을 잡는 것과 이름을 적는 것은 별개의 두 단계다.
             const utf8* pExisting = _arrScope[index]._pName.load( std::memory_order_acquire );
             if ( pExisting != nullptr && StringUtil::equals( pExisting, pName ) )
                 return index;
@@ -91,11 +91,11 @@ namespace sw
         const uint32 slot = _scopeCount.fetch_add( 1, std::memory_order_acq_rel );
         if ( slot >= kMaxScope )
         {
-            // 넘친 뒤에는 카운터를 표 크기에 붙여 둔다 — 그러지 않으면 등록 시도마다 계속 자라고,
+            // 넘친 뒤에는 카운터를 표 크기로 고정해 둔다. 그러지 않으면 등록 시도마다 계속 자라고,
             // 오래 돌면 `uint32` 를 한 바퀴 돌아 0 이 되어 남의 슬롯을 내주게 된다.
             _scopeCount.store( kMaxScope, std::memory_order_release );
 
-            // 측정이 실행을 막으면 안 된다 — 한 번만 알리고 조용히 무시한다.
+            // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다.
             static bool s_bWarned = false;
             if ( s_bWarned == false )
             {
@@ -145,7 +145,7 @@ namespace sw
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
         {
             Scope& scope = _arrScope[index];
-            // 읽기와 비우기가 한 연산이어야 한다 — 그 사이에 렌더 스레드가 더한 값이 사라지면 안 된다.
+            // 읽기와 비우기가 한 연산이어야 한다. 그 사이에 렌더 스레드가 더한 값이 사라지면 안 된다.
             const uint64 calls = scope._frameCalls.exchange( 0, std::memory_order_relaxed );
             const uint64 nanos = scope._frameNanos.exchange( 0, std::memory_order_relaxed );
             if ( calls == 0 )
@@ -173,7 +173,7 @@ namespace sw
         if ( percent > kPercentMax )
             percent = kPercentMax;
 
-        // 순위는 1 부터, 올림 — p99 는 100 프레임 중 99 번째다.
+        // 순위는 1 부터 세고 올림한다. p99 는 100 프레임 중 99 번째다.
         const uint64 rank       = ( scope._sampledFrames * percent + ( kPercentMax - 1 ) ) / kPercentMax;
         uint64       cumulative = 0;
         for ( uint32 bucket = 0; bucket < kBucketCount; ++bucket )
@@ -188,7 +188,7 @@ namespace sw
     void FrameProfiler::report( [[maybe_unused]] const utf8* pTitle ) const
     {
         // 보고는 Info 로그로만 나간다. 배포본에서는 SW_LOG_INFO 가 사라지므로 아래 전부가 출력
-        // 없는 계산이 된다 — 구간을 다 돌고 평균까지 내고 버렸다. 로그가 컴파일될 때만 돈다.
+        // 없는 계산이 된다. 구간을 다 돌고 평균까지 내고 버렸다. 로그가 컴파일될 때만 돈다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         const uint64 frames = _frameCount.load( std::memory_order_relaxed );
         if ( frames == 0 )
@@ -213,7 +213,7 @@ namespace sw
 
             padRight( nameCol, pScopeName, 32 );
 
-            // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다 — 시간 열은 의미가 없다.
+            // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다. 시간 열은 의미가 없다.
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
             const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
 

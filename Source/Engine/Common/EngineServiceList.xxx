@@ -1,29 +1,29 @@
 /**
  * @file Engine/Common/EngineServiceList.xxx
- * @brief App이 소유하고 Engine.dll이 조회하는 코어 서비스 단일 등록표 (X-macro).
- * @details include 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다 (#pragma once 없음).
+ * @brief 호스트가 소유하고 Engine.dll 이 조회하는 코어 서비스의 단일 등록표입니다(X-macro).
+ * @details include 하기 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다(#pragma once 없음).
  *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · areEngineServicesBound() 본문 ·
- *          ModuleServiceId 열거형 · ModuleServiceTraits가 이 목록에서 생성됩니다.
+ *          ModuleServiceId 열거형 · ModuleServiceTraits 가 이 목록에서 생성됩니다.
  *
  * SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )
- *   Type& getter()        — 바인딩 안 됐으면 assert. required=1이면 areEngineServicesBound() 검사에 포함.
- *                           gameAllowed=1이면 게임 모듈(SWGame)에 노출, 0이면 호스트/에디터 전용(게임 요청 시 nullptr).
+ *   Type& getter()        — 바인딩되지 않았으면 assert. required=1 이면 areEngineServicesBound() 검사에 포함.
+ *                           gameAllowed=1 이면 게임 모듈(SWGame)에 노출, 0 이면 호스트 · 에디터 전용(게임이 요청하면 nullptr).
  * SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned )
- *   const Type& getter()  — 위와 동일, const 참조 반환.
+ *   const Type& getter()  — 위와 같고, const 참조를 반환.
  * SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )
  *   Type* getter()        — assert 없음(널 허용). bound 검사에서 제외.
  *
- * owned — **누가 만드는가.** 1이면 `EngineOwnedServices`(Engine/Common/EngineOwnedServices.h)가
- *         `make_unique<Type>()` 으로 만들고 표에 꽂는다. 호스트(EngineLoop · TestFramework)는
- *         그 저장소를 하나 들고 `createAll()` · `bindInto()` 만 부르면 된다 — 그래서 서비스를
- *         늘릴 때 **이 줄 하나만** 고치면 두 호스트가 같이 따라온다.
- *         0이면 만드는 방법이 특별해서 호스트가 직접 만들고 직접 꽂는다. 지금 셋뿐이고 이유가 있다:
- *           - IAudioSystem  : 팩토리(`IAudioSystem::create()`)가 플랫폼에 따라 구현을 고른다.
- *           - CommandStack  : 배포본에는 **아예 만들지 않는다**(`#if !defined(SW_SHIPPING)`).
- *           - MemoryProfiler: Debug 에만 만든다.
- *         `CheckEngineServiceBinding.py` 가 owned=0 인 필수 행을 호스트가 실제로 채우는지 본다.
+ * owned — **누가 만드는가.** 1 이면 `EngineOwnedServices`(Engine/EngineOwnedServices.h)가
+ *         `make_unique<Type>()` 으로 만들고 표에 연결합니다. 호스트(EngineLoop · TestFramework)는
+ *         그 저장소를 하나 들고 `createAll()` · `bindInto()` 만 부르면 됩니다. 그래서 서비스를
+ *         늘릴 때 **이 줄 하나만** 고치면 두 호스트가 함께 따라옵니다.
+ *         0 이면 만드는 방법이 특별해서 호스트가 직접 만들고 직접 연결합니다. 지금은 셋뿐이고 이유가 있습니다.
+ *           - IAudioSystem  : 팩토리(`IAudioSystem::create()`)가 플랫폼에 따라 구현을 고릅니다.
+ *           - CommandStack  : 배포본에는 **아예 만들지 않습니다**(`#if !defined(SW_SHIPPING)`).
+ *           - MemoryProfiler: Debug 에서만 만듭니다.
+ *         `CheckEngineServiceBinding.py` 가 owned=0 인 필수 행을 호스트가 실제로 채우는지 봅니다.
  *
- * 정의하지 않은 변형은 includer가 빈 매크로로 채워야 합니다.
+ * 정의하지 않은 변형은 include 하는 쪽이 빈 매크로로 채워야 합니다.
  */
 
 SW_ENGINE_SERVICE( _pCommandLineManager, class, CommandLineManager, getCommandLineManager, 1, 0, 1 )
@@ -37,11 +37,11 @@ SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, 1, 1, 0 )
 SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, 1, 1, 1 )
 SW_ENGINE_SERVICE( _pResourceManager, class, ResourceManager, getResourceManager, 1, 1, 1 )
 SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, 1, 0, 1 )
-// CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 생성되지 않는다
+// CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
 // (EngineLoop 의 #if !defined(SW_SHIPPING) 참고). 그런데 required=1 이면
 // areEngineServicesBound() 가 Shipping 에서 영영 false 가 되고, 그 함수로 게이팅되는 경로가
-// 전부 무력화된다 — 실제로 셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다가
-// (Shipping 에는 DXC 가 없어서) 죽었다. 소비자는 이미 전부 Shipping 에서 제외돼 있다.
+// 모두 무력화된다. 실제로 셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다가
+// (Shipping 에는 DXC 가 없어서) 죽었다. 이것을 쓰는 곳은 이미 모두 Shipping 에서 빠져 있다.
 SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, 0, 0, 0 )
 SW_ENGINE_SERVICE( _pDebugOverlayState, struct, DebugOverlayState, getDebugOverlayState, 1, 1, 1 )
 SW_ENGINE_SERVICE( _pDebugDrawQueue, class, DebugDrawQueue, getDebugDrawQueue, 1, 1, 1 )
@@ -55,10 +55,10 @@ SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, 1, 1
 SW_ENGINE_SERVICE_CONST( _pEngineData, struct, EngineData, getEngineData, 1, 0, 1 )
 
 SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfiler, 0, 0 )
-// 렌더 타깃 목록 — 렌더러가 공개하고 에디터 패널이 읽는다(에디터는 FrameRenderer 인스턴스를 쥘 수 없다).
-// **OPT 다.** required=1 로 두면 이것을 바인딩하지 않는 호스트(툴·테스트 하네스)에서
-// areEngineServicesBound() 가 영영 false 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다 —
-// 위 CommandStack 주석이 그 실례다. 진단용 목록 하나 때문에 그런 일이 나서는 안 된다.
+// 렌더 타깃 목록. 렌더러가 공개하고 에디터 패널이 읽는다(에디터는 FrameRenderer 인스턴스를 쥘 수 없다).
+// **OPT 다.** required=1 로 두면 이것을 바인딩하지 않는 호스트(도구 · 테스트 하네스)에서
+// areEngineServicesBound() 가 영영 false 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다.
+// 위 CommandStack 주석이 그 실례다. 진단용 목록 하나 때문에 그런 일이 생겨서는 안 된다.
 SW_ENGINE_SERVICE_OPT( _pRenderTargetRegistry, class, RenderTargetRegistry, getRenderTargetRegistry, 0, 1 )
 SW_ENGINE_SERVICE_OPT( _pFrameRenderer, class, FrameRenderer, getFrameRenderer, 0, 0 )
 

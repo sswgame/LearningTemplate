@@ -47,7 +47,7 @@ namespace sw
         void undo();
         /** @brief 취소한 명령을 다시 실행합니다. */
         void redo();
-        /** @brief 스택을 초기화합니다. */
+        /** @brief 스택을 비웁니다. */
         void clear();
         /** @brief 취소할 명령의 레이블을 반환합니다. */
         const string& peekUndoLabel() const;
@@ -70,7 +70,7 @@ namespace sw
         string          _lastCoalesceKey;
         string          _empty;
         size_t          _index{ 0 };
-        /** @brief 중첩 트랜잭션 깊이. 최외곽(0 으로 복귀)에서만 하나의 복합 커맨드로 커밋합니다. */
+        /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth{ 0 };
         bool   _bIsExecuting{ false };
     };

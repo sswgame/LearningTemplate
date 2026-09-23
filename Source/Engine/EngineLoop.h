@@ -1,6 +1,6 @@
 /**
  * @file EngineLoop.h
- * @brief 엔진 코어 메인 루프 및 서브시스템 소유권 관리
+ * @brief 엔진 코어의 메인 루프와 서브시스템 소유권을 관리합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -52,15 +52,15 @@ namespace sw
     class TypeRegistry;
 
     /**
-     * @brief 이번 프레임 뷰 카메라를 돌려줍니다.
-     * @details tick 내부의 핫리로드/씬 전환이 GameObject 를 파괴할 수 있으므로,
-     *          카메라는 미리 캡처하지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
+     * @brief 이번 프레임의 뷰 카메라를 반환합니다.
+     * @details tick 안의 핫 리로드 · 씬 전환이 GameObject 를 파괴할 수 있으므로,
+     *          카메라는 미리 잡아 두지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
      */
     SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
 
     /**
      * @class EngineLoop
-     * @brief App이 보유하던 코어 매니저들을 캡슐화하고 메인 루프(tick)를 담당합니다.
+     * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다(예전에는 App 이 들고 있었습니다).
      */
     class SW_API EngineLoop
     {
@@ -71,7 +71,7 @@ namespace sw
         EngineLoop( const EngineLoop& )            = delete;
         EngineLoop& operator=( const EngineLoop& ) = delete;
 
-        /** @brief 서브시스템(윈도우, RHI 포함)을 초기화합니다. */
+        /** @brief 서브시스템(창, RHI 포함)을 초기화합니다. */
         bool initialize( int32 argc, utf8* pArgv[] );
         /** @brief 매니저들을 종료하고 정리합니다. */
         void shutdown();
@@ -97,14 +97,14 @@ namespace sw
         bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------
-        // 헬퍼
+        // 도우미
         // ----------------------------------------------------------------------
         /**
          * @brief 씬이 모두 정리됐고 엔진 서비스는 **아직 살아 있는** 지점에 불릴 훅을 겁니다.
          * @details 종료 시퀀스에는 "씬은 사라졌지만 서비스(SceneManager · TaskManager · 로거)는 아직 있다" 는 좁은
-         *          구간이 있다. 모듈 DLL 을 내리는 일이 정확히 거기서 일어나야 한다 — 더 일찍이면 씬이 든 컴포넌트
-         *          팩토리 델리게이트가 사라진 코드를 가리키고, 더 늦으면 언로드가 쓰는 서비스와 로거가 이미 없다.
-         *          Engine 은 그것이 무엇인지 모른다. 자리만 내주고, 무엇을 할지는 건 쪽이 정한다.
+         *          구간이 있습니다. 모듈 DLL 을 내리는 일은 정확히 거기서 일어나야 합니다. 더 일찍이면 씬이 든 컴포넌트
+         *          팩토리 델리게이트가 사라진 코드를 가리키고, 더 늦으면 언로드가 쓰는 서비스와 로거가 이미 없습니다.
+         *          Engine 은 그것이 무엇인지 모릅니다. 자리만 내주고, 무엇을 할지는 훅을 건 쪽이 정합니다.
          */
         void setOnScenesReleased( Delegate<void()> onScenesReleased );
 
@@ -113,21 +113,21 @@ namespace sw
         void updateShellActions( float32 deltaTime );
 
         /**
-         * @brief 엔진이 스스로 종료를 원하면 true (`-gv_profileFrames=N` 을 다 채운 경우).
-         * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알린다.
+         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).
+         * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
         bool wantsQuit() const { return _profileSession.wantsQuit(); }
 
         /**
-         * @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다.
-         * @details Engine 이 내주는 것은 **입력 사실**뿐이다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
-         *          에디터를 다시 올린다)는 그 기계를 가진 쪽이 정한다 — 예전에는 리로드 콜백을 받아 Engine 이
-         *          직접 부르는 함수가 있었고, 그래서 Shipping 헤더에도 리로드 델리게이트가 남아 있었다.
+         * @brief 셸 디버그 ActionMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
+         * @details Engine 이 내주는 것은 **입력 사실**뿐입니다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
+         *          에디터를 다시 올린다)는 그 장치를 가진 쪽이 정합니다. 예전에는 리로드 콜백을 받아 Engine 이
+         *          직접 부르는 함수가 있었고, 그래서 Shipping 헤더에도 리로드 델리게이트가 남아 있었습니다.
          */
         bool wasDebugActionTriggered( string_view actionName ) const;
 
         // ----------------------------------------------------------------------
-        // Getter (App이 ModuleHost 등과 연동하기 위해 필요)
+        // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
         ConfigManager*       getConfigManager() const { return _configManager.get(); }
         CommandLineManager*  getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
@@ -137,7 +137,7 @@ namespace sw
         ShaderCache*         getShaderCache() const { return _owned._pShaderCache.get(); }
         ComponentDefaults*   getComponentDefaults() const { return _owned._pComponentDefaults.get(); }
         bool                 isHeadless() const { return _bHeadless; }
-        /** @brief 헤드리스 작업(셰이더 베이크·씬 쿠킹)이 실패했는지. 호출자는 이것을 종료 코드로 내보낸다. */
+        /** @brief 헤드리스 작업(셰이더 베이크 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 
     private:
@@ -150,9 +150,9 @@ namespace sw
 
     private:
         /**
-         * @brief 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스 저장소 — 생성·바인딩이 여기서 나온다.
-         * @details 목록에 줄을 더하면 이 저장소가 같이 자란다. 만드는 방법이 특별한 셋
-         *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있다.
+         * @brief 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
+         * @details 목록에 줄을 더하면 이 저장소가 같이 자랍니다. 만드는 방법이 특별한 셋
+         *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있습니다.
          */
         EngineOwnedServices _owned;
 
@@ -165,26 +165,26 @@ namespace sw
         unique_ptr<IAudioSystem>     _audioSystem;
         unique_ptr<FrameRenderer>    _frameRenderer;
         unique_ptr<RenderThread>     _renderThread;
-        /** @brief GT 쪽 씬 스냅샷 빌더 — buildFromScene 의 재구축 판단 캐시가 프레임 간 유지되도록 여기 소유.
-         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다.
-         *         패킷과 함께 힙에 둔다 — 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 간다(전방 선언으로 끊는다). */
+        /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다.
+         *         프레임마다 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
+         *         패킷과 함께 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다). */
         unique_ptr<GpuSceneBuilder> _gpuSceneBuilder;
         /**
-         * @brief GT 가 매 프레임 채우는 패킷 — 링 자리와 바꿔 가며 돈다(`RenderThread::submit`).
-         * @details 지역 변수였을 때는 스냅샷의 배치·그룹 목록과 라이트 목록이 프레임마다 새로 할당됐다. 이제 링에서
-         *          돌아온 저장소를 그대로 다시 채운다.
+         * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`).
+         * @details 지역 변수였을 때는 스냅샷의 배치 · 그룹 목록과 라이트 목록이 프레임마다 새로 할당됐습니다. 이제 링에서
+         *          돌아온 저장소를 그대로 다시 채웁니다.
          */
         unique_ptr<RenderFramePacket> _packetScratch;
         Delegate<void()>              _onScenesReleased;
         /**
-         * @brief 셰이더 라이브 리로드. **Shipping 에는 없고**(파일째 빌드에서 빠진다) Debug 에서만 실제로 만들어집니다.
-         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**다. 예전에는 RHI 가 들고 있었는데, RHI 는
-         *          디바이스 추상이지 파일 감시자의 집이 아니다 — 돌리는 쪽(EngineLoop)이 갖는 것이 맞다.
+         * @brief 셰이더 라이브 리로드입니다. **Shipping 에는 없고**(파일째 빌드에서 빠집니다) Debug 에서만 실제로 만들어집니다.
+         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. 예전에는 RHI 가 들고 있었는데, RHI 는
+         *          디바이스 추상화이지 파일 감시자가 있을 곳이 아닙니다. 돌리는 쪽(EngineLoop)이 갖는 것이 맞습니다.
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveShaderManager> _liveShaderManager;
 #endif
-        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 owned=0). */
+        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 owned=0). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GpuUploadQueue> _gpuUploadQueue;
 
@@ -192,7 +192,7 @@ namespace sw
         bool _bHeadless;
         bool _bHeadlessTaskFailed;
 
-        /** @brief `-gv_profileFrames` 계측 한 판. 판정은 전부 이 안에 있고 루프는 두 줄만 부른다. */
+        /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
     };
 } // namespace sw

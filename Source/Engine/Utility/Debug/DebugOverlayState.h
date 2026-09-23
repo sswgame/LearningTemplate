@@ -1,6 +1,6 @@
 /**
  * @file DebugOverlayState.h
- * @brief Cross-module debug overlay (game writes keys, Editor reads).
+ * @brief 모듈 사이에서 쓰는 디버그 오버레이입니다(게임이 키를 쓰고 에디터가 읽습니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,8 +12,8 @@
 namespace sw
 {
     /**
-     * @brief 장르 중립 디버그 오버레이 상태.
-     * @details float32 gauge / 짧은 문자열을 hashed_string 키로 기록합니다.
+     * @brief 장르에 묶이지 않는 디버그 오버레이 상태입니다.
+     * @details float32 게이지 · 짧은 문자열을 hashed_string 키로 기록합니다.
      */
     struct SW_API DebugOverlayState
     {

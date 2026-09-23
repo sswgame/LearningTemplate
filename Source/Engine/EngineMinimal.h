@@ -1,6 +1,6 @@
 /**
  * @file EngineMinimal.h
- * @brief Core engine minimal surface (CoreMinimal + EngineServices + EngineDefines/Platform).
+ * @brief 엔진의 최소 공통 헤더입니다(CoreMinimal + EngineServices + EngineDefines/Platform).
  */
 #pragma once
 #include "Core/CoreMinimal.h"

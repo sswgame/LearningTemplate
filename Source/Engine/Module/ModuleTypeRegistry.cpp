@@ -35,7 +35,7 @@ namespace sw
     {
         void registerModuleTypes( string_view moduleName )
         {
-            // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다 — 그것을 걷어서 넘긴다.
+            // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다. 그것을 걷어서 넘긴다.
             // **캐시 병합은 아래 오버로드가 한 자리에서 한다.** 예전에는 같은 18줄이 여기에도
             // 한 벌 더 있었고(조건만 뒤집힌 같은 로직), 그러고 나서 아래를 불러 또 병합했다.
             registerModuleTypes( moduleName,
@@ -43,7 +43,7 @@ namespace sw
                                  EnumRegistrar::getHead(),
                                  sw::ComponentFactoryRegistrar::getHead() );
 
-            // 소비했으므로 비운다 — 다음 DLL 이 자기 것만 매달도록.
+            // 소비했으므로 비운다. 다음 DLL 이 자기 것만 매달도록.
             TypeRegistrar::getHead()                 = nullptr;
             EnumRegistrar::getHead()                 = nullptr;
             sw::ComponentFactoryRegistrar::getHead() = nullptr;
@@ -99,7 +99,7 @@ namespace sw
         {
             getModuleHeadCache().erase( string{ moduleName } );
             GameObjectManager::unregisterModuleFactoryHead( moduleName );
-            // 씬은 엔진이 소유해 모듈보다 오래 산다 — 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
+            // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
             // 팩토리를 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             for ( const auto& scene : getSceneManager().getLoadedScenes() )
             {

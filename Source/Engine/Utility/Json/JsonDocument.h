@@ -27,13 +27,13 @@ namespace sw
 
     /**
      * @class JsonValue
-     * @brief JsonDocument 안의 경량 핸들 (clear/destroy 이후 무효)
-     * @warning **같은 부모에 항목을 더하면 앞서 받은 핸들이 무효가 된다.** 이 핸들은 문서 안의
+     * @brief JsonDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
+     * @warning **같은 부모에 항목을 더하면 앞서 받은 핸들이 무효가 됩니다.** 이 핸들은 문서 안의
      *          노드를 가리키는 **빌린 포인터**이고, 객체도 배열도 연속 저장(`std::vector`)이라
      *          `set( 새 키 )` 나 `pushBack()` 이 재할당을 일으키면 그 부모에서 앞서 꺼낸 핸들이
-     *          해제된 메모리를 가리킨다. 안전한 쓰기 순서는 **하나 받아서 다 채우고 다음 것을
-     *          받는 것**이다 — 형제 핸들을 여럿 들고 번갈아 쓰지 않는다. 읽기(`get`/`at`)만
-     *          하는 동안에는 문서가 변하지 않으므로 여러 핸들을 들고 있어도 된다.
+     *          해제된 메모리를 가리킵니다. 안전한 쓰기 순서는 **하나를 받아 다 채운 뒤 다음 것을
+     *          받는 것**입니다. 형제 핸들을 여럿 들고 번갈아 쓰지 마십시오. 읽기(`get`/`at`)만
+     *          하는 동안에는 문서가 변하지 않으므로 여러 핸들을 들고 있어도 됩니다.
      */
     class SW_API JsonValue
     {
@@ -64,7 +64,7 @@ namespace sw
         /** @brief null이면 true. */
         bool isNull() const { return getType() == JsonType::Null; }
 
-        /** @brief 문자열 내용. 문자열이 아니면 dump한 스칼라(따옴표 없음). */
+        /** @brief 문자열 내용입니다. 문자열이 아니면 스칼라를 dump 한 값(따옴표 없음)입니다. */
         string asString() const;
         /** @brief 정수로 읽습니다. */
         int64 asInt( int64 fallback = 0 ) const;
@@ -130,13 +130,13 @@ namespace sw
 
     /**
      * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
-     * @param pArrayName 배열 멤버 이름 ("nodes" · "links" …). 없거나 배열이 아니면 아무것도 하지 않는다.
+     * @param pArrayName 배열 멤버 이름 ("nodes" · "links" …). 없거나 배열이 아니면 아무것도 하지 않습니다.
      * @param visit `(const JsonValue& element, size_t index)` 를 받는 호출 가능 객체.
-     * @details 손으로 읽는 JSON 자산이 **전부 이 네 줄을 각자** 적고 있었다 — 배열을 얻고, 배열인지
-     *          묻고, 개수를 세고, 원소가 객체가 아니면 건너뛴다. 아홉 곳에서 같은 모양이었고, 그중
-     *          하나라도 `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 자산이 통째로 깨진다.**
-     *          검사를 여기 한 번만 두면 새 자산이 그 실수를 할 자리가 없다.
-     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 자산이 있기 때문이다.
+     * @details 손으로 읽는 JSON 에셋이 **모두 이 네 줄을 각자** 적고 있었습니다. 배열을 얻고, 배열인지
+     *          묻고, 개수를 세고, 원소가 객체가 아니면 건너뛰는 것입니다. 아홉 곳에서 같은 모양이었고, 그중
+     *          하나라도 `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 에셋이 통째로 깨집니다.**
+     *          검사를 여기 한 번만 두면 새 에셋이 그 실수를 할 자리가 없습니다.
+     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 에셋이 있기 때문입니다.
      */
     template <typename VisitFn>
     void forEachObjectInArray( const JsonValue& parent, const utf8* pArrayName, VisitFn&& visit )
@@ -156,7 +156,7 @@ namespace sw
 
     /**
      * @class JsonDocument
-     * @brief JSON 트리. TypeInfo 없는 수동 로드용
+     * @brief JSON 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.
      */
     class SW_API JsonDocument
     {
@@ -166,7 +166,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 빈(null) 문서를 만듭니다. */
         JsonDocument();
-        /** @brief 파스 트리를 해제합니다. */
+        /** @brief 파싱 트리를 해제합니다. */
         ~JsonDocument();
 
         /** @brief 복사를 금지합니다. */
@@ -194,12 +194,12 @@ namespace sw
         bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
         /**
-         * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+         * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
          * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
          */
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
 
-        /** @brief 루트 값. */
+        /** @brief 루트 값입니다. */
         JsonValue getRoot() const;
 
         // ------------------------------------------------------------------------------
@@ -223,7 +223,7 @@ namespace sw
         static string unescapeString( string_view value );
         /**
          * @brief 최상위 객체에서 필드를 문자열로 추출합니다.
-         * @details 문자열이면 내용, 그 외 스칼라는 dump. 객체/배열은 empty.
+         * @details 문자열이면 내용을, 그 밖의 스칼라는 dump 한 값을 반환합니다. 객체 · 배열이면 빈 문자열입니다.
          */
         static string extractStringField( string_view json, string_view fieldName,
                                           bool bIgnoreCaseKeys = true );

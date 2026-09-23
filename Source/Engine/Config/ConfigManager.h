@@ -1,13 +1,13 @@
 /**
  * @file ConfigManager.h
- * @brief Config/ 호스트 JSON (EngineConfig 등). Resource/ 팩 에셋이 아니므로 ResourceManager와 분리합니다.
+ * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Resource/ 팩 에셋이 아니므로 ResourceManager 와 분리합니다.
  *
- * @note **설정의 정체성은 타입이다 — 이름 문자열이 아니다.** 예전에는 `hashed_string( "EngineConfig" )`
+ * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 예전에는 `hashed_string( "EngineConfig" )`
  *       를 호출부마다 손으로 적어 넘겼고(`EngineLoop` · `App` · 테스트 하네스, 셋이 같은 글자를 따로
- *       들고 있었다), 한 곳만 철자가 어긋나면 `getConfig` 가 조용히 nullptr 을 돌려줬다. 게다가
- *       표의 열쇠가 그 이름의 **해시**여서, 이름이 달라도 해시가 같으면 같은 칸을 가리켰다 —
- *       `hashed_string` 자신은 intern 인덱스로 비교하는데(그래서 충돌이 없다) 표만 해시를 쓰고
- *       있었던 것이다. 지금은 열쇠를 `T::StaticType()->_fullyQualifiedName` 에서 뽑는다.
+ *       들고 있었습니다), 한 곳만 철자가 어긋나면 `getConfig` 가 조용히 nullptr 을 반환했습니다. 게다가
+ *       표의 열쇠가 그 이름의 **해시**여서, 이름이 달라도 해시가 같으면 같은 칸을 가리켰습니다.
+ *       `hashed_string` 자신은 intern 인덱스로 비교하는데(그래서 충돌이 없습니다) 표만 해시를 쓰고
+ *       있었던 것입니다. 지금은 열쇠를 `T::StaticType()->_fullyQualifiedName` 에서 뽑습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -34,12 +34,12 @@ namespace sw
 
         /**
          * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
-         * @details `Config/...` 경로는 상대 경로라 예전엔 **현재 작업 디렉터리 기준**으로만 찾았다.
+         * @details `Config/...` 경로는 상대 경로라 예전에는 **현재 작업 디렉터리 기준**으로만 찾았습니다.
          *          실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어서,
-         *          EngineConfig/GameConfig/AppConfig 가 매 실행마다 전부 "없음"으로 떨어지고 베이크된
-         *          기본값으로 조용히 대체되고 있었다(창 크기·VSync·리소스 우선순위·게임킷 모듈 목록이
-         *          전부 무시됨). `Resource/` 는 상위 디렉터리를 거슬러 올라가 루트를 찾는데
-         *          (`ResourceUtil`) Config 만 그 혜택을 못 받고 있었다 — 그 루트를 여기에 넣어준다.
+         *          EngineConfig/GameConfig/AppConfig 가 실행할 때마다 모두 "없음" 으로 떨어지고 베이크된
+         *          기본값으로 조용히 대체되고 있었습니다(창 크기 · VSync · 리소스 우선순위 · 게임 키트 모듈 목록이
+         *          모두 무시됨). `Resource/` 는 상위 디렉터리를 거슬러 올라가 루트를 찾는데(`ResourceUtil`)
+         *          Config 만 그 혜택을 받지 못하고 있었습니다. 그 루트를 여기에 넣어 줍니다.
          */
         void setRootDirectory( string_view rootDirectory ) { _rootDirectory = string( rootDirectory ); }
 
@@ -55,9 +55,9 @@ namespace sw
             string resolvedPath;
             if ( resolveConfigPath( filePath, resolvedPath ) == false )
             {
-                // 존재하지 않는 설정 파일은 오류가 아니다 — 호출부(ensureConfig)가 베이크된 기본값으로
+                // 존재하지 않는 설정 파일은 오류가 아니다. 호출부(ensureConfig)가 베이크된 기본값으로
                 // 정상 폴백한다. 여기서 곧바로 readTextFile 을 부르면 FileUtil 이 [Error] 를 남겨서
-                // "정상 기동인데 매번 오류 3건"이 되어 진짜 오류를 가린다.
+                // "정상 기동인데 매번 오류 3건" 이 되어 진짜 오류를 가린다.
                 SW_LOG_WARNING( "Failed to load config from: %#", filePath.c_str() );
                 return false;
             }
@@ -91,9 +91,9 @@ namespace sw
         }
 
         /**
-         * @brief 파일 로드 성공 시 그 값, 실패 시 bakedJson(있으면) 또는 T{} 를 등록하고 포인터 반환.
-         * @details missing/깨진 JSON으로 기동을 중단하지 않는다 (Shipping/Dev soft-fail).
-         *          **Shipping 은 디스크의 `Config/` 를 아예 보지 않는다** — 베이크된 JSON 만 쓴다.
+         * @brief 파일을 읽으면 그 값을, 실패하면 bakedJson(있으면) 또는 T{} 를 등록하고 포인터를 반환합니다.
+         * @details 파일이 없거나 JSON 이 깨져도 기동을 멈추지 않습니다(Shipping · Dev 모두).
+         *          **Shipping 은 디스크의 `Config/` 를 아예 보지 않습니다.** 베이크된 JSON 만 씁니다.
          */
         template <typename T>
         T* ensureConfig( const string& filePath, const utf8* pBakedJson = nullptr )
@@ -150,9 +150,9 @@ namespace sw
     private:
         /**
          * @brief 설정 타입 하나를 가리키는 표의 열쇠입니다.
-         * @details `hashed_string` 의 intern 인덱스라 **충돌이 없다**(해시와 달리). 그리고 T 에서
-         *          뽑으므로, 표에 담긴 것이 T 가 아닌 일은 생기지 않는다 — 아래 `static_cast` 가
-         *          안전한 이유가 여기 있다.
+         * @details `hashed_string` 의 intern 인덱스라 **충돌이 없습니다**(해시와 달리). 그리고 T 에서
+         *          뽑으므로, 표에 담긴 것이 T 가 아닌 일은 생기지 않습니다. 아래 `static_cast` 가
+         *          안전한 이유가 여기 있습니다.
          */
         template <typename T>
         static uint32 getConfigKey()
@@ -162,10 +162,10 @@ namespace sw
 
         /**
          * @brief 설정 파일의 실제 위치를 찾습니다.
-         * @details 절대경로 → 현재 작업 디렉터리 → 루트 디렉터리(프로젝트 루트) → 실행 파일 디렉터리
-         *          순으로 **존재 여부만** 확인한다. 읽기 전에 존재를 확인하므로, 없을 때 FileUtil 이
-         *          [Error] 를 남기지 않는다.
-         * @return 찾으면 true 이고 @p outResolvedPath 에 실제 경로가 담긴다.
+         * @details 절대 경로 → 현재 작업 디렉터리 → 루트 디렉터리(프로젝트 루트) → 실행 파일 디렉터리
+         *          순으로 **존재 여부만** 확인합니다. 읽기 전에 존재를 확인하므로, 없을 때 FileUtil 이
+         *          [Error] 를 남기지 않습니다.
+         * @return 찾으면 true 이고 @p outResolvedPath 에 실제 경로가 담깁니다.
          */
         bool resolveConfigPath( const string& filePath, string& outResolvedPath ) const
         {
@@ -208,7 +208,7 @@ namespace sw
         }
 
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        /// @brief 상대 Config 경로의 기준 디렉터리. 비어 있으면 작업 디렉터리/실행 파일 위치만 본다.
+        /// @brief 상대 Config 경로의 기준 디렉터리입니다. 비어 있으면 작업 디렉터리 · 실행 파일 위치만 봅니다.
         string _rootDirectory;
     };
 

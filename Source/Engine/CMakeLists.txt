@@ -1,10 +1,10 @@
 # ==============================================================================
 # @file Source/Engine/CMakeLists.txt
-# @brief 코어 모듈(RHI, Reflection, Object, Utility, Window 등) 빌드 타겟 스크립트
+# @brief 코어 모듈(RHI, Reflection, Object, Utility, Window 등)을 빌드하는 타깃 스크립트
 # @details
-# 헤더(Common/Reflection/...)는 소스 구성을 위한 것이며
-# 모듈 간 순환 참조(Reflection <-> Graphics 등) 때문에
-# 단일 SHARED 라이브러리로 링크합니다.
+# 폴더(Common/Reflection/...)는 소스를 나눠 두기 위한 것이고, 모듈 사이의
+# 순환 참조(Reflection <-> Graphics 등) 때문에 하나의 라이브러리로 링크한다
+# (Dev 는 SHARED, Shipping 은 STATIC).
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -22,8 +22,8 @@ endif()
 include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 
 # DelayLoadNotifyHook 이 Engine 에서 빠지는 것은 **의도한 것**이다. 이 훅은 지연 로드된 DLL 을
-# 이미 로드된 엔진 모듈 핸들로 돌려주는 물건이라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
-# sw_addDelayloadHook 으로 자기 바이너리에 넣어야 뜻이 있다 — 훅 변수는 모듈마다 따로다.
+# 이미 로드된 엔진 모듈 핸들로 돌려주는 장치라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
+# sw_addDelayloadHook 으로 자기 바이너리에 넣어야 의미가 있다. 훅 변수는 모듈마다 따로다.
 # Engine 이 지연 로드하는 것은 d3dcompiler_47 · mfplat · mfreadwrite · xaudio2_9 로 전부 시스템
 # DLL 이고, 그것들은 훅이 돌려줄 핸들이 없다(Bin 에도 없다). 훅을 넣으면 정상 로드마다 훅이
 # "못 찾았다" 는 ERROR 를 남기게 된다.
@@ -32,8 +32,8 @@ set(coreExclude
     "Module/DelayLoadNotifyHook.cpp"
 )
 
-# 셰이더 라이브 리로드는 개발 도구다 — Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
-# 실행되지 않는 것으로는 부족하다: 바이너리에서 빠져야 한다.
+# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
+# 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 if(SW_SHIPPING_BUILD)
     list(APPEND coreExclude "Graphics/Shader/Compile/LiveShaderManager\.(cpp|h)$")
 endif()
@@ -61,13 +61,13 @@ endforeach()
 # ResourcePackReader 가 uncompress 를 직접 부른다.
 find_package(ZLIB REQUIRED)
 
-# LZ4 · Zstd 코덱(Engine/Compression). zlib 과 같은 이유로 **Engine 에만** 붙인다 —
-# Core 는 압축 라이브러리에 종속되지 않게 두고, ReflectionParser 가 끌고 가지 않게 한다.
+# LZ4 · Zstd 코덱(Engine/Compression). zlib 과 같은 이유로 **Engine 에만** 붙인다.
+# Core 는 압축 라이브러리에 의존하지 않게 두고, ReflectionParser 가 끌고 가지 않게 한다.
 find_package(lz4 CONFIG REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 
 # zstd 는 vcpkg 구성(정적/공유)에 따라 노출하는 타겟 이름이 다르다. 하나만 적으면 다른 구성에서
-# configure 가 조용히 지나가고 링크에서 터진다 — zlib 이 준 교훈과 같은 자리다.
+# configure 가 조용히 지나가고 링크에서 터진다. zlib 에서 얻은 교훈과 같다.
 if(TARGET zstd::libzstd)
 	set(swZstdTarget zstd::libzstd)
 elseif(TARGET zstd::libzstd_shared)
@@ -100,7 +100,7 @@ endif()
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-# 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다 — ShaderBindingSlots.h 가 include 한다.
+# 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
 target_link_libraries(Engine
     PUBLIC
@@ -117,8 +117,8 @@ target_link_libraries(Engine
     # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
     ZLIB::ZLIB
     # 임포트 타겟 **하나에만** 기대지 않는다. Linux CI 에서 `libEngine.so: undefined reference to uncompress`
-    # 가 세 번 났는데, 매번 링크 줄에 zlib 이 아예 안 붙은 결과였다(임포트 타겟이 왜 비었는지는 여기서
-    # 재현할 수 없었다 — 이 머신에 Linux 환경이 없다). find_package 가 채우는 ZLIB_LIBRARIES 는
+    # 가 세 번 났는데, 매번 링크 줄에 zlib 이 아예 붙지 않은 결과였다(임포트 타겟이 왜 비었는지는 이
+    # 머신에서 재현하지 못했다). find_package 가 채우는 ZLIB_LIBRARIES 는
     # `optimized;<경로>;debug;<경로>` 형태의 **확정된 경로 목록**이라 타겟 속성 해석에 좌우되지 않는다.
     # 둘 다 걸어 어느 한쪽이 비어도 심볼이 남지 않게 한다(중복 지정은 링커가 무시한다).
     ${ZLIB_LIBRARIES}
@@ -138,7 +138,7 @@ target_sources(Engine PRIVATE
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
 add_dependencies(Engine Core_objects)
 
-# ThirdParty include/link는 PRIVATE: Engine 외부로 헤더 노출을 차단하여 C-ABI 격리 유지
+# ThirdParty include/link 는 PRIVATE 로 둔다. Engine 밖으로 헤더가 노출되지 않게 해 C-ABI 격리를 유지한다.
 if(TARGET sw_third_party_includes)
     target_link_libraries(Engine PRIVATE sw_third_party_includes)
 endif()
@@ -227,12 +227,12 @@ endif()
 #
 # 예전에는 한 클래스를 여러 .cpp 로 나눈 TU 19 개를 `sw_skipUnitySources` 로 손수 빼 두었다.
 # 그 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**였고(하루에 셋이 늘기도 했다) 빠뜨려도
-# Ninja-* 프리셋은 유니티가 꺼져 있어 조용히 지나갔다 — CI 에서만 터진다.
+# Ninja-* 프리셋은 유니티가 꺼져 있어 조용히 지나갔다. CI 에서만 터졌다.
 #
 # 목록이 있던 이유는 "익명 네임스페이스가 합쳐져 이름이 부딪친다" 였는데, 그건 **이름 규칙으로
-# 이미 막혀 있다**: 익명 네임스페이스의 헬퍼는 클래스가 아니라 **TU 이름**을 딴다
+# 이미 막혀 있다**. 익명 네임스페이스의 도우미는 클래스가 아니라 **TU 이름**을 딴다
 # (`ShaderBakeStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
-# `Naming/DuplicateInternalHelper` 가 그것을 검사한다 — 목록이 아니라 린트가 지킨다.
+# `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
 #
 # 목록 없이 유니티(CI-Debug) 빌드와 테스트 5/5 를 확인하고 지웠다(2026-09-13). 다시 넣고 싶어지면
 # 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.

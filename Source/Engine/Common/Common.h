@@ -1,7 +1,7 @@
 /**
  * @file Common.h
- * @brief 엔진 전체에서 공통으로 사용되는 핵심 모듈 헤더들을 단일 경로로 제공합니다.
- * @details Math, String, File, Resource, Time 등 엔진 전역에서 빈번하게 참조되는 유틸리티들을 묶어서 편의성을 높입니다.
+ * @brief 엔진 전체에서 공통으로 쓰는 핵심 헤더를 한 번에 include 합니다.
+ * @details Math, String, File, Resource, Time 등 엔진 곳곳에서 자주 쓰는 유틸리티를 묶어 둡니다.
  */
 #pragma once
 #include "Core/File/FileUtil.h"

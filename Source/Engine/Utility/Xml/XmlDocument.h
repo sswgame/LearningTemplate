@@ -14,7 +14,7 @@ namespace sw
 {
     /**
      * @class XmlAttribute
-     * @brief XML 속성 경량 핸들
+     * @brief XML 속성의 가벼운 핸들입니다.
      */
     class SW_API XmlAttribute
     {
@@ -36,7 +36,7 @@ namespace sw
 
     private:
         friend class XmlNode;
-        /** @brief RapidXML 속성 포인터로 핸들을 만듭니다. */
+        /** @brief pugixml 속성 포인터로 핸들을 만듭니다. */
         explicit XmlAttribute( void* pAttr )
             : _pAttr{ pAttr } {}
 
@@ -45,7 +45,7 @@ namespace sw
 
     /**
      * @class XmlNode
-     * @brief XmlDocument 안의 경량 핸들 (clear/destroy 이후 무효)
+     * @brief XmlDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
      */
     class SW_API XmlNode
     {
@@ -63,7 +63,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 엘리먼트 이름을 반환합니다. */
         const utf8* getName() const;
-        /** @brief 엘리먼트 텍스트. 유효하면 빈 문자열이어도 nullptr이 아님. */
+        /** @brief 엘리먼트 텍스트입니다. 노드가 유효하면 빈 문자열이어도 nullptr 이 아닙니다. */
         const utf8* getText() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
         const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on). */
         bool getAttributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
-        /** @brief 자식 노드를 찾습니다. pName==nullptr이면 첫 자식. */
+        /** @brief 자식 노드를 찾습니다. pName 이 nullptr 이면 첫 자식입니다. */
         XmlNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 다음 형제 노드를 반환합니다. */
         XmlNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
@@ -98,7 +98,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 새 자식 노드를 추가합니다. */
         XmlNode appendChild( const utf8* pName ) const;
-        /** @brief 새 자식 노드를 추가하고 값을 설정합니다. 값 타입은 `setValue` 가 받는 것 전부. */
+        /** @brief 새 자식 노드를 추가하고 값을 설정합니다. 값 타입은 `setValue` 가 받는 것이면 무엇이든 됩니다. */
         template <typename T>
         XmlNode appendChild( const utf8* pName, const T& value ) const
         {
@@ -155,8 +155,8 @@ namespace sw
 
     private:
         /**
-         * @brief 숫자를 XML 텍스트로. 받는 타입을 셋으로 못박는다 — 예전엔 오버로드 여섯이 암묵 변환을
-         *        허용해 int64 를 int32 로 잘라 적어도 컴파일이 됐다. 다른 타입은 여기서 컴파일 오류다.
+         * @brief 숫자를 XML 텍스트로 바꿉니다. 받는 타입을 셋으로 고정합니다. 예전에는 오버로드 여섯이 암묵 변환을
+         *        허용해 int64 를 int32 로 잘라 적어도 컴파일이 됐습니다. 다른 타입은 여기서 컴파일 오류가 납니다.
          */
         template <typename T>
         static StringBuilder<constant::kMaxBuffer32> formatNumber( T value )
@@ -170,7 +170,7 @@ namespace sw
 
     private:
         friend class XmlDocument;
-        /** @brief RapidXML 노드 포인터로 핸들을 만듭니다. */
+        /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */
         explicit XmlNode( void* pNode )
             : _pNode{ pNode } {}
 
@@ -179,7 +179,7 @@ namespace sw
 
     /**
      * @class XmlDocument
-     * @brief 파스 버퍼 + RapidXML 트리. TypeInfo 없는 수동 로드용
+     * @brief pugixml 문서 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.
      */
     class SW_API XmlDocument
     {
@@ -189,7 +189,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 빈 문서를 만듭니다. */
         XmlDocument();
-        /** @brief 파스 버퍼를 해제합니다. */
+        /** @brief 파싱한 문서를 해제합니다. */
         ~XmlDocument();
 
         /** @brief 복사를 금지합니다. */
@@ -217,12 +217,12 @@ namespace sw
         bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
         /**
-         * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+         * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
          * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
          */
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
 
-        /** @brief 첫 엘리먼트. pName이 있으면 이름으로 매칭 (기본 대소문자 무시). */
+        /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(기본은 대소문자 무시). */
         XmlNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
 
         // ------------------------------------------------------------------------------

@@ -15,17 +15,17 @@ namespace sw
 {
     namespace
     {
-        /// @brief 자산 XML 저장 포맷. 줄 접기는 pugixml 이 아니라 wrapLongElementLines 가 한다.
+        /// @brief 에셋 XML 저장 포맷입니다. 줄 접기는 pugixml 이 아니라 wrapLongElementLines 가 합니다.
         inline constexpr uint32 kXmlSaveFormat = pugi::format_default | pugi::format_no_declaration;
 
-        /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접는다.
+        /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접습니다.
         inline constexpr size_t kXmlWrapColumn = 120;
 
         /**
-         * @brief 한 줄에 담긴 속성들을 잘라, 다음 속성이 시작되는 위치들을 모읍니다.
-         * @details 속성 값 안에도 공백이 있으므로 따옴표 밖의 공백만 경계로 센다. 값 안의 따옴표는
-         *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전하다.
-         * @param outListEnd 각 속성의 끝 위치(반열림). 첫 원소가 첫 속성의 끝이다.
+         * @brief 한 줄에 담긴 속성들의 끝 위치를 모읍니다.
+         * @details 속성 값 안에도 공백이 있으므로 따옴표 밖의 공백만 경계로 셉니다. 값 안의 따옴표는
+         *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전합니다.
+         * @param outListEnd 각 속성의 끝 위치(반열림). 첫 원소가 첫 속성의 끝입니다.
          */
         void collectAttributeEnds( string_view line, size_t from, vector<size_t>& outListEnd )
         {
@@ -42,14 +42,14 @@ namespace sw
 
         /**
          * @brief 너무 긴 요소 줄을 속성 단위로 접습니다.
-         * @details 리플렉션 직렬화는 스칼라를 속성으로 쓴다. 필드가 20개면 속성 20개짜리 요소가
+         * @details 리플렉션 직렬화는 스칼라를 속성으로 씁니다. 필드가 20개면 속성 20개짜리 요소가
          *          한 줄이 되어 1,000자를 넘고, 읽기도 어렵고 한 글자만 고쳐도 diff 가 줄 전체를
-         *          바뀐 것으로 표시한다.
+         *          바뀐 것으로 표시합니다.
          *
-         *          pugixml 의 `format_indent_attributes` 는 태그 이름만 남기고 속성을 전부 아래로
-         *          내려서, 짧은 요소까지 여러 줄로 흩어지고 무슨 요소인지 눈에 덜 들어온다.
-         *          그래서 직접 접는다 — **짧은 줄은 그대로 두고**, 긴 줄만 첫 속성을 태그 옆에
-         *          남긴 채 나머지를 한 줄에 하나씩 내린다.
+         *          pugixml 의 `format_indent_attributes` 는 태그 이름만 남기고 속성을 모두 아래로
+         *          내려서, 짧은 요소까지 여러 줄로 흩어지고 무슨 요소인지 눈에 덜 들어옵니다.
+         *          그래서 직접 접습니다. **짧은 줄은 그대로 두고**, 긴 줄만 첫 속성을 태그 옆에
+         *          남긴 채 나머지를 한 줄에 하나씩 내립니다.
          *
          *              <RenderGraphPassDesc _name="Shadow"
          *                  _type="Shadow"
@@ -93,7 +93,7 @@ namespace sw
                     continue;
                 }
 
-                // 태그 + 첫 속성은 같은 줄에 둔다 — 무슨 요소인지가 먼저 보여야 한다.
+                // 태그 + 첫 속성은 같은 줄에 둔다. 무슨 요소인지가 먼저 보여야 한다.
                 // 길이를 함께 넘기므로 널 종단이 필요 없다(검사기가 (ptr, count) 오버로드를 모른다).
                 // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                 result.append( line.data(), listAttrEnd[0] );

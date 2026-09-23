@@ -1,6 +1,6 @@
 /**
  * @file EngineData.h
- * @brief enginedata.xml에서 로드하는 엔진 셸 경로 (Scene / App / FrameRenderer / RHI)
+ * @brief enginedata.xml 에서 읽는 엔진 셸 경로입니다(Scene / App / FrameRenderer / RHI).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,10 +16,10 @@ namespace sw
     //    게임플레이 경로는 GameData, 에디터 도구 경로는 EditorData
     // ------------------------------------------------------------------------------
     /**
-     * @brief enginedata.xml 엔진 셸 경로
-     * @details 로드는 `XmlSerializer` 가 PROPERTY 그래프로 한다 — 필드를 하나 추가하면 읽기가 저절로
-     *          따라온다. 예전엔 필드마다 `takeChildText` 를 손으로 나열해서, 추가할 때 그 줄을
-     *          빠뜨리면 값이 조용히 기본값으로 남았다.
+     * @brief enginedata.xml 의 엔진 셸 경로입니다.
+     * @details 읽기는 `XmlSerializer` 가 PROPERTY 그래프로 합니다. 필드를 하나 추가하면 읽기가 저절로
+     *          따라옵니다. 예전에는 필드마다 `takeChildText` 를 손으로 나열해서, 추가할 때 그 줄을
+     *          빠뜨리면 값이 조용히 기본값으로 남았습니다.
      */
     REFLECT()
     struct SW_API EngineData
@@ -57,7 +57,7 @@ namespace sw
         string _shaderPostOutlineEngine{ "engine/shaders/postoutline.hlsl" };
         PROPERTY()
         string _shaderFullscreenBlit{ "engine/shaders/fullscreenblit.hlsl" };
-        /// @brief 후처리를 한 패스로 합친 셰이더. 무엇을 적용할지는 파이프라인 XML 의 퍼뮤테이션이 정한다.
+        /// @brief 후처리를 한 패스로 합친 셰이더입니다. 무엇을 적용할지는 파이프라인 XML 의 퍼뮤테이션이 정합니다.
         PROPERTY()
         string _shaderPostChain{ "engine/shaders/postchain.hlsl" };
         PROPERTY()
@@ -77,7 +77,7 @@ namespace sw
         PROPERTY()
         string _shaderTonemap{ "engine/shaders/tonemap.hlsl" };
 
-        /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로는 path::kEngineData입니다. */
+        /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineData 를 씁니다. */
 
         bool loadFromResource( string_view assetRelativePath = {} );
     };

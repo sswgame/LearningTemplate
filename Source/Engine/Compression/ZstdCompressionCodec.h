@@ -6,7 +6,7 @@ namespace sw
     /**
      * @class ZstdCompressionCodec
      * @brief Zstandard 압축 코덱 (외부 라이브러리 `zstd`)
-     * @details 압축률과 속도의 균형이 필요한 자리용입니다 — 배포 팩·세이브처럼 한 번 굽고 여러 번
+     * @details 압축률과 속도의 균형이 필요한 자리에 씁니다. 배포 팩 · 세이브처럼 한 번 굽고 여러 번
      *          읽는 데이터에 맞습니다. 같은 압축률이면 zlib 보다 해제가 빠릅니다.
      * @note `compressionLevel` 이 0 이면 zstd 기본 레벨(3)을 씁니다. 음수는 고속 레벨입니다.
      */
