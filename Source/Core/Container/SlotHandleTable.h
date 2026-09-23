@@ -20,9 +20,10 @@ namespace sw
      *          스레드가 `get()`으로 받아둔 포인터가 그대로 dangling 이 됐다(RHI 백엔드에서 렌더
      *          스레드가 리소스를 그리는 동안 게임 스레드가 리소스를 만들면 바로 이 상황이 된다).
      *
-     *          **동시성 계약**: `get`/`size`/`empty`는 락 없이 동시 호출해도 안전하다(드로우마다
-     *          불리는 뜨거운 경로라 의도적으로 락을 두지 않았다). 구조를 바꾸는
-     *          `insert`/`erase`/`take`/`clear`/`forEach*`는 내부 뮤텍스로 서로 직렬화된다.
+     *          **동시성 계약**: `get`은 락 없이 동시 호출해도 안전하다(드로우마다 불리는 뜨거운 경로라
+     *          의도적으로 락을 두지 않았다). 나머지(`insert`/`erase`/`take`/`clear`/`forEach*`/`size`)는
+     *          내부 뮤텍스로 서로 직렬화된다. 락 없는 `get` 이 성립하는 이유는 둘이다 — 새 청크는 슬롯을 전부
+     *          초기화한 뒤에 발행되고(`PagedArray::ensure`), 슬롯의 점유 여부와 세대는 원자값 하나에 산다.
      *          다만 "쓰는 중인 슬롯의 값을 동시에 읽는 것"까지 막아주지는 않는다 — 사용 중인 자원을
      *          파괴하지 않는 책임(예: GPU 펜스 기반 지연 해제)은 상위 계층에 있다.
      */
@@ -39,7 +40,7 @@ namespace sw
             {
                 const uint32 index = _listFree.back();
                 _listFree.pop_back();
-                Slot* pSlot = _listSlot.at( index );
+                Slot* pSlot = _listSlot.find( index );
                 if ( pSlot == nullptr )
                     return SlotHandle{};
                 // 세대는 retireSlot 에서 이미 올려뒀으므로 그대로 쓴다 — 옛 핸들은 계속 무효.
@@ -49,13 +50,15 @@ namespace sw
                 return SlotHandle::make( index, generation );
             }
 
-            const uint32 index = _listSlot.pushBack( Slot{} );
-            if ( index == decltype( _listSlot )::kInvalidIndex )
+            // 새 슬롯은 청크와 함께 초기화된 채(비어 있음 · 세대 1)로 이미 발행돼 있을 수 있다. 값을 채운 뒤
+            // 점유 비트를 release 로 켜야 락 없이 읽는 쪽이 채워지는 중인 값을 받지 않는다.
+            const uint32 index = _slotCount;
+            Slot*        pSlot = _listSlot.ensure( index );
+            if ( pSlot == nullptr )
                 return SlotHandle{};
-
-            Slot* pSlot   = _listSlot.at( index );
             pSlot->_value = std::move( value );
             pSlot->_state.store( Slot::kOccupiedBit | 1u, std::memory_order_release );
+            ++_slotCount;
             return SlotHandle::make( index, 1u );
         }
 
@@ -67,7 +70,7 @@ namespace sw
         {
             if ( handle.isValid() == false )
                 return nullptr;
-            const Slot* pSlot = _listSlot.at( handle.index() );
+            const Slot* pSlot = _listSlot.find( handle.index() );
             if ( pSlot == nullptr )
                 return nullptr;
             // 점유 여부와 세대를 **한 번에** 본다 — 둘로 나눠 읽으면 그 사이에 erase 가 끼어
@@ -104,10 +107,9 @@ namespace sw
         void forEach( Fn&& fn )
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            const uint32            count = _listSlot.size();
-            for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
+            for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
-                Slot* pSlot = _listSlot.at( slotIndex );
+                Slot* pSlot = _listSlot.find( slotIndex );
                 if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
                     fn( pSlot->_value );
             }
@@ -118,10 +120,9 @@ namespace sw
         void forEachHandle( Fn&& fn )
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            const uint32            count = _listSlot.size();
-            for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
+            for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
-                Slot* pSlot = _listSlot.at( slotIndex );
+                Slot* pSlot = _listSlot.find( slotIndex );
                 if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
                     fn( SlotHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
@@ -132,30 +133,30 @@ namespace sw
         void forEachHandle( Fn&& fn ) const
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            const uint32            count = _listSlot.size();
-            for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
+            for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
-                const Slot* pSlot = _listSlot.at( slotIndex );
+                const Slot* pSlot = _listSlot.find( slotIndex );
                 if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
                     fn( SlotHandle::make( slotIndex, pSlot->generation( std::memory_order_relaxed ) ), pSlot->_value );
             }
         }
 
-        /** @brief 현재 활성화된 슬롯 개수를 반환합니다. */
+        /** @brief 현재 점유 중인 슬롯 개수를 반환합니다. */
         uint32 size() const
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            return _listSlot.size() - static_cast<uint32>( _listFree.size() );
+            return _slotCount - static_cast<uint32>( _listFree.size() );
         }
 
         /** @brief 테이블이 비어 있는지 반환합니다. */
         bool empty() const { return size() == 0; }
 
-        /** @brief 모든 슬롯을 비웁니다. */
+        /** @brief 모든 슬롯을 비웁니다. 락 없이 `get` 하는 스레드가 없을 때만 부릅니다(청크를 해제합니다). */
         void clear()
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _listSlot.clear();
+            _listSlot.releaseChunks();
+            _slotCount = 0;
             _listFree.clear();
         }
 
@@ -178,22 +179,6 @@ namespace sw
             T              _value{};
             atomic<uint32> _state{ 1 }; /**< kOccupiedBit | generation */
 
-            /** @brief 빈 슬롯입니다. */
-            Slot() = default;
-            /** @brief PagedArray 저장을 위해 값과 상태를 옮깁니다. */
-            Slot( Slot&& other ) noexcept
-                : _value{ std::move( other._value ) }
-                , _state{ other._state.load( std::memory_order_relaxed ) }
-            {
-            }
-            /** @brief PagedArray 저장을 위해 값과 상태를 옮깁니다. */
-            Slot& operator=( Slot&& other ) noexcept
-            {
-                _value = std::move( other._value );
-                _state.store( other._state.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-                return *this;
-            }
-
             /** @brief 점유 중이고 세대가 맞으면 true 입니다 (원자값을 **한 번**만 읽습니다). */
             bool matches( uint32 generation, std::memory_order order ) const
             {
@@ -213,7 +198,7 @@ namespace sw
         {
             if ( handle.isValid() == false )
                 return nullptr;
-            Slot* pSlot = _listSlot.at( handle.index() );
+            Slot* pSlot = _listSlot.find( handle.index() );
             if ( pSlot == nullptr || pSlot->matches( handle.generation(), std::memory_order_relaxed ) == false )
                 return nullptr;
             return pSlot;
@@ -235,5 +220,6 @@ namespace sw
         PagedArray<Slot> _listSlot;
         vector<uint32>   _listFree;
         mutable mutex    _mutex;
+        uint32           _slotCount{ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
     };
 } // namespace sw

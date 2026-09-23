@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/PagedArray.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -437,9 +438,9 @@ namespace sw
          *          **호출당 110ns, 프레임당 2.2ms** 였다(핸들 대신 미리 푼 포인터를 쓰게 바꿔 실측).
          *
          *          id 는 단조 증가 카운터라 **밀집**하므로 배열이면 된다. 다만 배열을 늘리면 주소가
-         *          옮겨져 읽는 쪽과 부딪히므로, 절대 재배치되지 않는 **청크 표**로 둔다(`LinearAllocator`
-         *          의 블록 표와 같은 이유). 쓰기는 전부 매니저 락 안에서 일어나고, 읽기는 원자적
-         *          슬롯 로드 하나다.
+         *          옮겨져 읽는 쪽과 부딪히므로, 절대 재배치되지 않는 청크 배열(`PagedArray`)에 둔다.
+         *          쓰기는 전부 매니저 락 안에서 일어나고, 읽기는 청크 포인터 하나와 슬롯 하나의 원자적 로드다.
+         *          예전에는 이 표가 청크 관리를 따로 구현했다 — `SlotHandleTable` 이 쓰는 `PagedArray` 와 같은 일이었다.
          *
          * @note 표가 답하지 못하는 id(범위 밖)는 부르는 쪽이 기존 맵으로 떨어진다 — 표는 **빠른 길**이지
          *       유일한 진실이 아니다. 그래서 표를 잘못 건드려도 답이 틀리지 않는다.
@@ -447,27 +448,23 @@ namespace sw
         struct ObjectSlotTable
         {
             /** @brief 청크 하나가 담는 슬롯 수. */
-            static constexpr uint64 kChunkSize = 4096;
+            static constexpr uint32 kChunkSize = 4096;
             /** @brief 청크 표의 칸 수. `kChunkSize` 와 곱해 다룰 수 있는 id 범위가 된다(약 420만). */
-            static constexpr uint64 kMaxChunk = 1024;
+            static constexpr uint32 kMaxChunk = 1024;
 
-            ObjectSlotTable();
-            ~ObjectSlotTable();
-
-            ObjectSlotTable( const ObjectSlotTable& )            = delete;
-            ObjectSlotTable& operator=( const ObjectSlotTable& ) = delete;
+            using SlotArray = PagedArray<atomic<GameObject*>, kChunkSize, kMaxChunk>;
 
             /** @brief 슬롯에 포인터를 씁니다. 매니저 락을 쥔 채 부르십시오. 범위 밖이면 false. */
             bool store( uint64 objectId, GameObject* pObject );
             /** @brief 슬롯을 읽습니다. **락이 필요 없습니다.** 범위 밖이거나 비었으면 nullptr. */
             GameObject* load( uint64 objectId ) const;
             /** @brief 그 id 가 표가 다룰 수 있는 범위인지. 범위 밖이면 부르는 쪽이 맵으로 갑니다. */
-            static bool isInRange( uint64 objectId ) { return objectId < ( kChunkSize * kMaxChunk ); }
-            /** @brief 모든 슬롯을 비웁니다(청크는 그대로 둡니다). */
+            static bool isInRange( uint64 objectId ) { return SlotArray::isInRange( objectId ); }
+            /** @brief 모든 슬롯을 비웁니다(청크는 그대로 둡니다 — 락 없이 읽는 쪽이 있을 수 있다). */
             void clear();
 
         private:
-            atomic<atomic<GameObject*>*> _arrChunk[kMaxChunk];
+            SlotArray _listSlot;
         };
 
         TypedPoolAllocator<GameObject>                          _poolGameObject;

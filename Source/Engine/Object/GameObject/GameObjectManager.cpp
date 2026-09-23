@@ -222,74 +222,30 @@ namespace sw
     // ObjectSlotTable — id → GameObject* 를 락 없이 읽는 밀집 표
     // ======================================================================
 
-    GameObjectManager::ObjectSlotTable::ObjectSlotTable()
-    {
-        for ( uint64 chunkIndex = 0; chunkIndex < kMaxChunk; ++chunkIndex )
-        {
-            _arrChunk[chunkIndex].store( nullptr, std::memory_order_relaxed );
-        }
-    }
-
-    GameObjectManager::ObjectSlotTable::~ObjectSlotTable()
-    {
-        for ( uint64 chunkIndex = 0; chunkIndex < kMaxChunk; ++chunkIndex )
-        {
-            atomic<GameObject*>* pChunk = _arrChunk[chunkIndex].load( std::memory_order_relaxed );
-            if ( pChunk != nullptr )
-                delete[] pChunk;
-            _arrChunk[chunkIndex].store( nullptr, std::memory_order_relaxed );
-        }
-    }
-
     bool GameObjectManager::ObjectSlotTable::store( uint64 objectId, GameObject* pObject )
     {
         if ( isInRange( objectId ) == false )
             return false;
 
-        const uint64         chunkIndex = objectId / kChunkSize;
-        atomic<GameObject*>* pChunk     = _arrChunk[chunkIndex].load( std::memory_order_acquire );
-        if ( pChunk == nullptr )
-        {
-            // 지우는 길이라면 청크를 새로 만들 이유가 없다.
-            if ( pObject == nullptr )
-                return true;
-
-            // 쓰기는 전부 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
-            pChunk = new atomic<GameObject*>[kChunkSize];
-            for ( uint64 slot = 0; slot < kChunkSize; ++slot )
-            {
-                pChunk[slot].store( nullptr, std::memory_order_relaxed );
-            }
-            _arrChunk[chunkIndex].store( pChunk, std::memory_order_release );
-        }
-
-        pChunk[objectId % kChunkSize].store( pObject, std::memory_order_release );
+        // 지우는 길이라면 청크를 새로 만들 이유가 없다. 쓰기는 전부 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
+        atomic<GameObject*>* pSlot = ( pObject != nullptr ) ? _listSlot.ensure( objectId ) : _listSlot.find( objectId );
+        if ( pSlot != nullptr )
+            pSlot->store( pObject, std::memory_order_release );
         return true;
     }
 
     GameObject* GameObjectManager::ObjectSlotTable::load( uint64 objectId ) const
     {
-        if ( isInRange( objectId ) == false )
-            return nullptr;
-
-        const atomic<GameObject*>* pChunk = _arrChunk[objectId / kChunkSize].load( std::memory_order_acquire );
-        if ( pChunk == nullptr )
-            return nullptr;
-        return pChunk[objectId % kChunkSize].load( std::memory_order_acquire );
+        const atomic<GameObject*>* pSlot = _listSlot.find( objectId );
+        return ( pSlot != nullptr ) ? pSlot->load( std::memory_order_acquire ) : nullptr;
     }
 
     void GameObjectManager::ObjectSlotTable::clear()
     {
-        for ( uint64 chunkIndex = 0; chunkIndex < kMaxChunk; ++chunkIndex )
+        _listSlot.forEachElement( []( atomic<GameObject*>& slot )
         {
-            atomic<GameObject*>* pChunk = _arrChunk[chunkIndex].load( std::memory_order_acquire );
-            if ( pChunk == nullptr )
-                continue;
-            for ( uint64 slot = 0; slot < kChunkSize; ++slot )
-            {
-                pChunk[slot].store( nullptr, std::memory_order_release );
-            }
-        }
+            slot.store( nullptr, std::memory_order_release );
+        } );
     }
 
     GameObject* GameObjectManager::findRegisteredUnlocked( uint64 objectId ) const

@@ -1615,6 +1615,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (`PagedArray` 하나로 — `SlotHandleTable` 과 `GameObjectManager::ObjectSlotTable` 이 같은 청크 배열을 쓴다)
+
+**왜.** `PagedArray` 는 쓰는 곳이 `SlotHandleTable` 하나뿐이었는데, `GameObjectManager::ObjectSlotTable`(objectId → `GameObject*`)이 같은
+일을 따로 구현하고 있었다 — 고정 크기 청크 표, 쓰기는 락 안, 읽기는 락 없이. 기능 자체는 필요하다: RHI 가 드로우마다 `get()` 을
+락 없이 부르고 핸들 해석도 오브젝트마다 id 표를 락 없이 읽는데, 다른 스레드가 원소를 더해도 이미 돌려준 주소가 움직이면 안 된다
+(`vector` 는 옮기고, `deque` 는 내부 맵을 재할당하며 읽기와 경합한다).
+
+**한 것.** `PagedArray` 를 **인덱스 기반**으로 바꿨다 — `find(index)`(락 없음, 청크가 아직 없으면 nullptr) · `ensure(index)`(쓰는 쪽,
+청크를 만들어 원소를 값 초기화한 뒤 release 로 발행) · `forEachElement` · `releaseChunks`. 청크 포인터가 원자값이라 원소 개수를
+따로 발행할 필요가 없다. `SlotHandleTable` 은 슬롯 수(`_slotCount`)를 뮤텍스 안에서 스스로 세고, `Slot` 의 이동 연산은 필요 없어져
+지웠다. `ObjectSlotTable` 은 `store` · `load` · `clear` · `isInRange` 네 함수만 남긴 얇은 래퍼(`PagedArray<atomic<GameObject*>, 4096, 1024>`)가
+됐다 — 호출부는 그대로다. `SlotHandleTable` 주석이 `size`/`empty` 도 락이 없다고 적고 있었는데 실제로는 뮤텍스를 잡는다 — 바로잡았다.
+`LinearAllocator` 의 블록 표는 크기가 제각각인 블록 64 개를 가리키는 포인터 표라 모양이 달라 넣지 않았다.
+
+**측정.** Release, 옛/새 바이너리를 같은 시각에 번갈아(3 회 + 5 회): `SlotHandleTable<uint64>::get`(슬롯 16384, 흩은 순서)
+1.0~1.1 ↔ 1.1 ns, `findGameObjectById`(8000 개, 흩은 순서) 3.6~3.8 ↔ 3.6~3.8 ns — **차이 없음.** 처음 옛 바이너리만 잰 값은
+1.8 / 6.1 ns 였다 — 무거운 빌드 직후라 기계 상태가 달랐다. 번갈아 재지 않았다면 "빨라졌다" 로 읽었을 것이다.
+벤치 케이스 `ContainerBenchTest.SlotHandleTableGet` · `GameObjectBenchTest.FindById` 를 새로 넣었고, `PagedArrayTest` 넷을 더했다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `nogpu` + 린트 27/27 · `hostgpu` 2/2(Shipping) — 앞의 이름 변경(`SlotHandle`)의 Shipping 검증도 여기서 같이 했다.
+
 ### 2026-09-24 (`ObjectHandle` → `SlotHandle`, `HandleTable` → `SlotHandleTable` — 게임 오브젝트 참조로 읽히던 이름을 실체대로)
 
 `Core/Container/ObjectHandle.h` 는 `HandleTable` 의 "슬롯 번호 + 세대" 핸들이다. RHI 리소스(`RHIHandleTable`) · 물리 바디(`BodyHandle`) ·

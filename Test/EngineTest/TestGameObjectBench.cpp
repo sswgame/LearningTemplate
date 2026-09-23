@@ -9,6 +9,7 @@
  *          - 틱 안에서 위치·스케일을 쓰는 무버 8000 개의 `tick()` — 병렬 틱 + 슬롯 큐 적용 + 플러시.
  *          - 깊은 계층(1000 단)의 활성 토글 — 계층 재계산이 몇 번 도는가.
  *          - 컴포넌트 조회 `getComponent<T>` 의 뜨거운 비용.
+ *          - `findGameObjectById` 의 락 없는 id 표 조회(흩어진 순서).
  */
 #include "pch.h"
 
@@ -223,4 +224,53 @@ SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
     [[maybe_unused]] const int64 micro = elapsedMicro( start );
     SW_LOG_INFO( "[Bench] getComponent<SceneComponent> (third of three, two misses first): %# ns per call", ( micro * 1000 ) / kIterationCount );
     SW_EXPECT_TRUE( sink != 0 );
+}
+
+/**
+ * @brief [GameObjectBenchTest] findGameObjectById — 락 없는 id 표 조회. 컴포넌트 핸들을 풀 때마다 지나는 길입니다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, FindById )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    sw::vector<uint64> listObjectId;
+    listObjectId.reserve( kObjectCount );
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "BenchObject" ) );
+        if ( pObj != nullptr )
+            listObjectId.push_back( pObj->getObjectId() );
+    }
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( listObjectId.size() ) );
+
+    // 조회 순서를 흩는다. id 는 연속이라 순서대로 읽으면 캐시가 실제보다 좋다(곱셈 해시로 섞는다).
+    constexpr uint32   kProbeCount = 1u << 18;
+    sw::vector<uint64> listProbe;
+    listProbe.reserve( kProbeCount );
+    for ( uint32 index = 0; index < kProbeCount; ++index )
+        listProbe.push_back( listObjectId[( static_cast<uint64>( index ) * 2654435761ull ) % kObjectCount] );
+
+    // 다섯 판 중 가장 빠른 판 — 첫 판의 캐시 · 페이지 비용을 걸러낸다.
+    int64  bestNanos  = std::numeric_limits<int64>::max();
+    uint32 wrongCount = 0;
+    for ( uint32 round = 0; round < 5; ++round )
+    {
+        uintptr_t  sink  = 0;
+        const auto start = std::chrono::steady_clock::now();
+        for ( uint32 index = 0; index < kProbeCount; ++index )
+        {
+            const sw::GameObject* pFound = manager.findGameObjectById( listProbe[index] );
+            if ( pFound == nullptr )
+                ++wrongCount;
+            sink += reinterpret_cast<uintptr_t>( pFound );
+        }
+        const int64 nanos = std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now() - start ).count();
+        bestNanos         = std::min( bestNanos, nanos );
+        SW_EXPECT_TRUE( sink != 0 );
+    }
+    [[maybe_unused]] const int64 deciNanos = ( bestNanos * 10 ) / kProbeCount;
+    SW_LOG_INFO( "[Bench] findGameObjectById (8000 objects, scattered): %#.%# ns per call", deciNanos / 10, deciNanos % 10 );
+    SW_EXPECT_EQUAL( 0u, wrongCount );
 }

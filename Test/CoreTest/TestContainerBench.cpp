@@ -11,12 +11,15 @@
  *          - `unordered_map<string, uint32>` 를 `string_view` 로 조회(이종 조회).
  *          - 이미 intern 된 이름으로 `hashed_string` 만들기(샤드 락 + 맵 조회).
  *          - `vector::resize( size() + 1 )` 를 되풀이하기 — 재할당이 기하급수로 줄어드는가.
+ *          - `SlotHandleTable::get` 락 없는 조회(흩어진 순서).
  *
  * @note Release 로 읽는다. Debug 의 컨테이너 레이스 탐지기가 숫자를 다른 것으로 만든다.
  */
 #include "pch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/SlotHandle.h"
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -239,4 +242,44 @@ SW_TEST_CASE( ContainerBenchTest, VectorGrowByResize )
     } );
     SW_EXPECT_EQUAL( 0u, wrongCount );
     logDeciNanos( "vector<uint32>::resize( size() + 1 ) x20000", deci );
+}
+
+/**
+ * @brief [ContainerBenchTest] `SlotHandleTable::get` — 락 없는 조회. RHI 백엔드가 드로우마다 버퍼 · 텍스처 · 파이프라인을 찾는 길입니다.
+ */
+SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
+{
+    constexpr uint32 kSlotCount  = 16384;
+    constexpr uint32 kProbeCount = 1u << 18;
+
+    sw::SlotHandleTable<uint64> table;
+    sw::vector<sw::SlotHandle>  listHandle;
+    listHandle.reserve( kSlotCount );
+    for ( uint32 index = 0; index < kSlotCount; ++index )
+        listHandle.push_back( table.insert( index ) );
+
+    // 조회 순서를 흩는다. 인덱스 순서대로 읽으면 청크 하나가 캐시에 머물러 실제보다 빨라 보인다.
+    sw::vector<sw::SlotHandle> listProbe;
+    listProbe.reserve( kProbeCount );
+    for ( uint32 index = 0; index < kProbeCount; ++index )
+        listProbe.push_back( listHandle[static_cast<uint32>( mixKey( index ) % kSlotCount )] );
+
+    const sw::SlotHandle* pProbe     = listProbe.data();
+    uint32                wrongCount = 0;
+    const int64           getDeci    = bestDeciNanosPerOp( kProbeCount, [&]()
+                 {
+        uint64 sum = 0;
+        for ( uint32 index = 0; index < kProbeCount; ++index )
+        {
+            const uint64* pValue = std::as_const( table ).get( pProbe[index] );
+            if ( pValue == nullptr || *pValue != pProbe[index].index() )
+                ++wrongCount;
+            else
+                sum += *pValue;
+        }
+        s_benchSink = sum;
+    } );
+
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+    logDeciNanos( "SlotHandleTable<uint64>::get hit (16384 slots, scattered)", getDeci );
 }
