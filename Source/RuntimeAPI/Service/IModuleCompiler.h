@@ -1,10 +1,10 @@
 /**
  * @file IModuleCompiler.h
- * @brief 인-에디터 백그라운드 컴파일러 서비스 인터페이스
+ * @brief 에디터 안 백그라운드 컴파일러 서비스 인터페이스입니다.
  *
- * @note 이것은 **C-ABI 가 아니라 C++ 가상 함수 테이블**이다. 서비스 로케이터로 건네지므로
- *       호스트와 모듈이 같은 툴체인·같은 플래그로 빌드된다는 전제에 의존한다. 진짜 C 경계는
- *       `ABI/` 쪽의 함수 포인터 테이블뿐이다.
+ * @note 이것은 **C-ABI 가 아니라 C++ 가상 함수 테이블**입니다. 서비스 로케이터로 건네지므로
+ *       호스트와 모듈이 같은 툴체인 · 같은 플래그로 빌드된다는 전제에 의존합니다. 진짜 C 경계는
+ *       `ABI/` 쪽의 함수 포인터 테이블뿐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief 컴파일러 빌드 상태
+     * @brief 컴파일러 빌드 상태입니다.
      */
     enum class BuildState : uint8
     {
@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @class IModuleCompiler
-     * @brief 백그라운드 C++ 모듈 컴파일러 제어 인터페이스
+     * @brief 백그라운드 C++ 모듈 컴파일러를 제어하는 인터페이스입니다.
      */
     class IModuleCompiler
     {
@@ -57,13 +57,13 @@ namespace sw
         virtual float32 getElapsedTimeSec() const = 0;
         /** @brief 마지막 빌드에 소요된 시간(초)을 반환합니다. */
         virtual float32 getLastDurationSec() const = 0;
-        /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다. (0 = 성공) */
+        /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다(0 = 성공). */
         virtual int32 getLastExitCode() const = 0;
         /**
          * @brief 현재 또는 마지막으로 컴파일된 타겟 이름을 반환합니다.
-         * @note **값으로 돌려주는 것이 의도다.** 이름은 빌드 워커 스레드가 갱신하므로 구현이
-         *       잠금 아래에서 복사해 넘긴다. `const utf8*` 로 바꾸면 호출자가 잠금 밖에서
-         *       읽게 되어 데이터 레이스가 된다.
+         * @note **값으로 반환하는 것이 의도입니다.** 이름은 빌드 워커 스레드가 갱신하므로 구현이
+         *       잠금 아래에서 복사해 넘깁니다. `const utf8*` 로 바꾸면 부르는 쪽이 잠금 밖에서
+         *       읽게 되어 데이터 레이스가 됩니다.
          */
         virtual string getTargetName() const = 0;
     };

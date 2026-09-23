@@ -1,6 +1,6 @@
 /**
  * @file ModuleService.h
- * @brief App ↔ 모듈 공통 서비스 로케이터. 게임 모듈이 요청할 수 있는 id만 여기에 둡니다.
+ * @brief App ↔ 모듈 공통 서비스 로케이터입니다. 엔진 · 호스트 서비스 id 를 모두 두고, 게임 모듈에는 gameAllowed=1 인 칸만 채워 넘깁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

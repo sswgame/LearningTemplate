@@ -1,9 +1,9 @@
 /**
  * @file EditorModuleExports.h
- * @brief 에디터 모듈의 진입점(C-ABI) 구현을 위한 매크로 모음
+ * @brief 에디터 모듈의 진입점(C-ABI) 구현을 위한 매크로 모음입니다.
  *
- * @note 이 헤더는 **경계 계약이 아니라 모듈 쪽 접착제**다. 그래서 `ABI/` 와 달리 모듈 자신의
- *       서비스 로케이터(`Editor/`)를 끌어온다 — 모듈 구현 `.cpp` 만 include 한다.
+ * @note 이 헤더는 **경계 계약이 아니라 모듈 쪽 접착제**입니다. 그래서 `ABI/` 와 달리 모듈 자신의
+ *       서비스 로케이터(`Editor/`)를 끌어옵니다. 모듈 구현 `.cpp` 만 include 합니다.
  */
 #pragma once
 #include "Core/Memory/Memory.h"
@@ -22,13 +22,13 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 에디터 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로
- * @param EditorClass sw::IEditor를 구현하는 에디터 클래스 (보통 sw::editor::ImGuiEditor)
- * @details 핸들 캐스팅과 널 검사는 `ModuleForwardUtil` 이 한다. 테이블에 항목을 하나 더
- *          붙일 때 건드릴 곳은 `EditorAPI` 구조체 한 줄과 여기 한 줄이어야 한다.
+ * @brief 에디터 모듈의 C-ABI 함수 테이블을 한 줄로 구현하고 export 하는 매크로입니다.
+ * @param EditorClass sw::IEditor 를 구현하는 에디터 클래스 (보통 sw::editor::ImGuiEditor)
+ * @details 핸들 캐스팅과 널 검사는 `ModuleForwardUtil` 이 합니다. 테이블에 항목을 하나 더
+ *          붙일 때 건드릴 곳은 `EditorAPI` 구조체 한 줄과 여기 한 줄이어야 합니다.
  */
 // 이 매크로 인자는 **타입 이름**이다. 괄호로 감싸면 `sw_new (EditorClass)()` 처럼 되어
-// 문법이 깨진다 — 검사기는 인자를 식으로 가정한다. 매크로 본문은 줄 연결이라 중간에
+// 문법이 깨진다. 검사기는 인자를 식으로 가정한다. 매크로 본문은 줄 연결이라 중간에
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                                                                                  \

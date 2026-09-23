@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝)
 
 ---
 
@@ -1435,7 +1435,7 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
-### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor · ReflectionParser · Engine · GameFramework ✅)
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 — ✅ **주석은 모두 끝났다** (2026-09-24, 15커밋. 아래 결함 · 범위 밖 항목은 남았다)
 
 코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
 
@@ -1447,7 +1447,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
 | `Engine` | 7,865 | ✅ 2026-09-24 (3절 참고). 하위 폴더 단위로 아홉 번 나눠 커밋했다: ① 루트 · Common · Compression · Config · Module · Utility · ② Reflection · Serialization · ③ Object · Scene · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics · ⑤ Input · Window · Audio · Animation · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload · ⑦ Graphics/Renderer · ⑧ Graphics/RHI 공통 · D3D · ⑨ Graphics/RHI GL · Vulkan |
 | `GameFramework` | 668 | ✅ 2026-09-24 (3절 참고. `CMakeLists.txt` · `README.md` 의 주석은 범위 밖이라 두었다) |
-| `RuntimeAPI` | 94 | |
+| `RuntimeAPI` | 94 | ✅ 2026-09-24 (3절 참고) |
 
 **규칙.** 문서 주석(`/** */` · `///<`)은 "~합니다" 체, 함수 본문 `//` 주석은 "~다" 체로 한 블록 안에서 통일한다.
 직역어는 표준 용어로 바꾼다(천둥 무리 → thundering herd, 호송 → 락 컨보이, 방송 → 브로드캐스트, 합류 → 조인,
@@ -1683,6 +1683,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (RuntimeAPI 주석 정리 — 1-0g 끝)
+
+**한 것.** `Source/RuntimeAPI` 10 개 파일 주석을 1-0g 규칙으로 다시 썼다. 이것으로 사용자가 정한 여섯 폴더
+(App → Editor → ReflectionParser → Engine → GameFramework → RuntimeAPI, 앞서 Core)의 주석 정리가 모두 끝났다. 사실과 달랐던 것:
+- `EditorAPI` · `GameAPI` 표 문서가 "App 이 채우고 모듈이 구현한다" 고 했다 → 모듈이 `exportEditorApi` · `exportGameApi`
+  로 채우고(`SW_IMPLEMENT_*_MODULE` 매크로) App 이 부른다. `PFN_Export*` 는 심볼 이름이 아니라 그 함수의 형이다.
+- 두 헤더의 절 번호가 2) · 3) 이었다. 1) 이던 핸들 절은 `ABI/RuntimeHandles.h` 로 옮겨 갔다.
+- `ModuleService.h` 가 "게임 모듈이 요청할 수 있는 id 만 여기에 둔다" 고 했다 → 엔진 · 호스트 서비스 id 가 모두 있고,
+  게임 모듈에는 `gameAllowed=1` 인 칸만 채워 넘긴다(`ModuleHost` · `EngineServices`).
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (GameFramework 주석 정리)
 
