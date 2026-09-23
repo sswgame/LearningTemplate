@@ -19,9 +19,21 @@ namespace sw
 
     namespace
     {
-        /// @brief 이 스레드가 지금 기록 중인 Deferred Context (기록 중이 아니면 nullptr).
-        ///        `D3D11RHIDevice::bindRecordingContext` 주석이 왜 스레드별인지 설명한다.
-        thread_local ID3D11DeviceContext* s_pRecordingContext = nullptr;
+        /**
+         * @struct D3D11RecordingToken
+         * @brief 이 스레드가 기록 중인 리스트의 토큰 — 컨텍스트 포인터를 들지 않는다. 디바이스가 슬롯 표로 검증한다
+         *        (`D3D11RHIDevice::acquireRecordingSlot` 주석).
+         */
+        struct D3D11RecordingToken
+        {
+            uint64 _deviceSerial;
+            uint64 _generation;
+            uint32 _slot;
+        };
+        thread_local D3D11RecordingToken s_recordingToken{};
+
+        /// @brief 디바이스 일련번호의 출처 — 같은 주소에 새 디바이스가 서도 옛 토큰이 맞지 않게.
+        atomic<uint64> s_deviceSerialCounter{ 0 };
 
     #if defined( SW_DEBUG )
         // 아래 표와 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
@@ -90,7 +102,10 @@ namespace sw
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _arrRecordingSlot{}
+        , _serial{ 0 }
     {
+        _serial       = s_deviceSerialCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
         _resourceImpl = sw::make_unique<D3D11RHIResource>( this );
     }
 
@@ -102,23 +117,86 @@ namespace sw
     IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
-    void D3D11RHIDevice::bindRecordingContext( ID3D11DeviceContext* pContext )
+    uint32 D3D11RHIDevice::acquireRecordingSlot( ID3D11DeviceContext* pContext )
     {
-        // 묶인 채 다른 리스트를 묶는 것은 정상이다 — 스테이지를 기다리는 렌더 스레드가 다른 패스의 기록 태스크를 대신 돌린다
-        // (TaskManager 의 대기자 돕기). 그래서 "이미 묶여 있다" 를 단정하지 않는다. 묶임이 리스트보다 오래 사는 것만 막으면 된다
-        // (`unbindRecordingContextIf`).
-        s_pRecordingContext = pContext;
+        if ( pContext == nullptr )
+            return kNoRecordingSlot;
+        for ( uint32 slot = 0; slot < kMaxRecordingSlot; ++slot )
+        {
+            // 빈 슬롯(nullptr)을 CAS 로 집는다 — 잠금 없이, 어느 스레드에서 리스트를 만들어도 된다. 세대는 되돌리지 않는다:
+            // 되쓰는 슬롯의 옛 토큰이 새 리스트의 세대와 맞아떨어지면 안 된다.
+            ID3D11DeviceContext* pExpected = nullptr;
+            if ( _arrRecordingSlot[slot]._pContext.compare_exchange_strong( pExpected, pContext, std::memory_order_acq_rel ) )
+                return slot;
+        }
+        SW_LOG_WARNING( "D3D11 recording slots exhausted (%#) — this command list's in-record updates fall back to the immediate context", kMaxRecordingSlot );
+        return kNoRecordingSlot;
     }
 
-    void D3D11RHIDevice::unbindRecordingContext() { s_pRecordingContext = nullptr; }
-
-    void D3D11RHIDevice::unbindRecordingContextIf( ID3D11DeviceContext* pContext )
+    void D3D11RHIDevice::releaseRecordingSlot( uint32 slot )
     {
-        if ( pContext != nullptr && s_pRecordingContext == pContext )
-            s_pRecordingContext = nullptr;
+        if ( slot >= kMaxRecordingSlot )
+            return;
+        D3D11RecordingSlot& entry = _arrRecordingSlot[slot];
+        // 세대를 반드시 바꾼다(다음 짝수) — 리스트가 기록 중에 죽었어도 남은 토큰은 전부 무효가 된다.
+        const uint64 generation = entry._generation.load( std::memory_order_relaxed );
+        entry._generation.store( ( generation | 1 ) + 1, std::memory_order_release );
+        entry._pContext.store( nullptr, std::memory_order_release );
     }
 
-    ID3D11DeviceContext* D3D11RHIDevice::getRecordingContext() { return s_pRecordingContext; }
+    void D3D11RHIDevice::beginRecording( uint32 slot )
+    {
+        if ( slot >= kMaxRecordingSlot )
+            return;
+        D3D11RecordingSlot& entry      = _arrRecordingSlot[slot];
+        const uint64        generation = entry._generation.load( std::memory_order_relaxed );
+        // 늘 새 세대다 — 닫지 않고 다시 열어도 앞 세션의 토큰은 무효가 된다.
+        const uint64 recordingGeneration = ( ( generation & 1 ) != 0 ) ? generation + 2 : generation + 1;
+        entry._generation.store( recordingGeneration, std::memory_order_release );
+        s_recordingToken = D3D11RecordingToken{ _serial, recordingGeneration, slot };
+    }
+
+    void D3D11RHIDevice::endRecording( uint32 slot )
+    {
+        if ( slot >= kMaxRecordingSlot )
+            return;
+        D3D11RecordingSlot& entry      = _arrRecordingSlot[slot];
+        const uint64        generation = entry._generation.load( std::memory_order_relaxed );
+        if ( ( generation & 1 ) != 0 )
+            entry._generation.store( generation + 1, std::memory_order_release );
+        // 이 스레드의 토큰이 이 슬롯이면 비운다 — 세대가 바뀌어 어차피 무효지만, 다음 조회를 짧게 끝낸다.
+        if ( s_recordingToken._deviceSerial == _serial && s_recordingToken._slot == slot )
+            s_recordingToken = D3D11RecordingToken{};
+    }
+
+    void D3D11RHIDevice::bindRecordingThread( ID3D11DeviceContext* pContext )
+    {
+        if ( pContext == nullptr || pContext == _deviceContext.Get() )
+            return;
+        for ( uint32 slot = 0; slot < kMaxRecordingSlot; ++slot )
+        {
+            const D3D11RecordingSlot& entry = _arrRecordingSlot[slot];
+            if ( entry._pContext.load( std::memory_order_acquire ) != pContext )
+                continue;
+            const uint64 generation = entry._generation.load( std::memory_order_acquire );
+            if ( ( generation & 1 ) != 0 )
+                s_recordingToken = D3D11RecordingToken{ _serial, generation, slot };
+            return;
+        }
+    }
+
+    ID3D11DeviceContext* D3D11RHIDevice::resolveRecordingContext() const
+    {
+        const D3D11RecordingToken& token = s_recordingToken;
+        if ( token._deviceSerial != _serial || token._slot >= kMaxRecordingSlot )
+            return nullptr;
+        const D3D11RecordingSlot& entry    = _arrRecordingSlot[token._slot];
+        ID3D11DeviceContext*      pContext = entry._pContext.load( std::memory_order_acquire );
+        // 컨텍스트를 먼저 읽고 세대를 나중에 본다 — 세대가 아직 토큰과 같으면 그 컨텍스트는 그 세대의 것이다.
+        if ( entry._generation.load( std::memory_order_acquire ) != token._generation )
+            return nullptr;
+        return pContext;
+    }
 
     void D3D11RHIDevice::bindStaticSamplers( ID3D11DeviceContext* pContext ) const
     {

@@ -33,31 +33,39 @@ namespace sw
         : _pDevice{ pDevice }
         , _pNativeContext{ createNativeContext( pDevice ) }
         , _pFinishedList{ nullptr }
+        , _recordingSlot{ D3D11RHIDevice::kNoRecordingSlot }
         , _recordingState{}
         , _context{ pDevice, _pNativeContext.Get(), &_recordingState }
     {
         _pContext = &_context;
         if ( _pDevice != nullptr )
+        {
             _pDevice->registerCommandList( this );
+            _recordingSlot = _pDevice->acquireRecordingSlot( _pNativeContext.Get() );
+        }
     }
 
     D3D11RHICommandList::~D3D11RHICommandList()
     {
-        // 이 스레드가 이 리스트를 열어 두고(배리어 기록) 워커가 닫았으면 묶임이 여기 남아 있다 — 리스트와 함께 푼다.
-        D3D11RHIDevice::unbindRecordingContextIf( _pNativeContext.Get() );
         if ( _pDevice != nullptr )
+        {
+            // 슬롯을 돌려주면 세대가 바뀐다 — 어느 스레드가 이 리스트의 토큰을 들고 있든 그 순간 무효다.
+            _pDevice->releaseRecordingSlot( _recordingSlot );
             _pDevice->unregisterCommandList( this );
+        }
     }
 
     void D3D11RHICommandList::detachFromDevice()
     {
+        if ( _pDevice != nullptr )
+            _pDevice->releaseRecordingSlot( _recordingSlot );
+        _recordingSlot = D3D11RHIDevice::kNoRecordingSlot;
         releaseRecordedState();
         _pDevice = nullptr;
     }
 
     void D3D11RHICommandList::releaseRecordedState()
     {
-        D3D11RHIDevice::unbindRecordingContextIf( _pNativeContext.Get() );
         _pFinishedList.Reset();
         if ( _pNativeContext != nullptr )
             _pNativeContext->ClearState();
@@ -70,13 +78,16 @@ namespace sw
         _pFinishedList.Reset();
         if ( _pDevice != nullptr )
             _pDevice->bindStaticSamplers( _pNativeContext.Get() );
-        // 이 스레드의 리소스 갱신이 즉시 컨텍스트가 아니라 **이 Deferred Context** 로 가게 한다.
-        D3D11RHIDevice::bindRecordingContext( _pNativeContext.Get() );
+        // 이 스레드의 리소스 갱신이 즉시 컨텍스트가 아니라 **이 Deferred Context** 로 가게 한다 — 새 기록 세대를 열고 토큰을 묶는다.
+        if ( _pDevice != nullptr )
+            _pDevice->beginRecording( _recordingSlot );
     }
 
     void D3D11RHICommandList::endCommandList()
     {
-        D3D11RHIDevice::unbindRecordingContext();
+        // 세대를 닫는다 — 이 리스트를 연 스레드가 누구든 그쪽 토큰도 여기서 무효가 된다.
+        if ( _pDevice != nullptr )
+            _pDevice->endRecording( _recordingSlot );
         if ( _pNativeContext == nullptr )
             return;
         _pNativeContext->FinishCommandList( FALSE, _pFinishedList.ReleaseAndGetAddressOf() );

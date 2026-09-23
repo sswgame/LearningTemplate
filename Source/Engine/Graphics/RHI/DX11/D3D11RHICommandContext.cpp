@@ -59,10 +59,9 @@ namespace sw
 
     void D3D11RHICommandContext::ensureRecordingBinding()
     {
-        if ( _pContext == nullptr || _pDevice == nullptr || _pContext == _pDevice->_deviceContext.Get() )
+        if ( _pContext == nullptr || _pDevice == nullptr )
             return;
-        if ( D3D11RHIDevice::getRecordingContext() != _pContext )
-            D3D11RHIDevice::bindRecordingContext( _pContext );
+        _pDevice->bindRecordingThread( _pContext );
     }
 
     void D3D11RHICommandContext::setPipelineState( RHIPipelineStateHandle pso )

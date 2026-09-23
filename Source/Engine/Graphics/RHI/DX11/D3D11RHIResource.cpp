@@ -64,8 +64,9 @@ namespace sw
         // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다 —
         // D3D11 런타임이 커맨드 리스트 단위로 이 버퍼를 버저닝하므로 그 리스트의 드로우가 기록
         // 시점의 값을 보고, 컨텍스트가 스레드마다 따로라 락도 필요 없다. 그것이 D3D11 이 문서화한
-        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::bindRecordingContext` 주석).
-        ID3D11DeviceContext*     pRecording = D3D11RHIDevice::getRecordingContext();
+        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::acquireRecordingSlot` 주석). 토큰이 살아 있는 세대를 가리킬 때만 나온다 —
+        // 리스트가 닫혔거나 죽었으면 nullptr 이라 즉시 컨텍스트로 간다.
+        ID3D11DeviceContext*     pRecording = _pDevice->resolveRecordingContext();
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if ( pRecording != nullptr )
         {

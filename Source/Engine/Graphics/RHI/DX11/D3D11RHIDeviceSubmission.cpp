@@ -267,11 +267,8 @@ namespace sw
     {
         if ( pCmdList == nullptr || _deviceContext == nullptr )
             return;
-        auto* pNative = static_cast<D3D11RHICommandList*>( pCmdList );
-        // 제출하는 스레드는 이 리스트의 기록을 마쳤다. 이 스레드가 열고 다른 스레드가 닫은 리스트(병렬 웨이브의 첫 리스트)는
-        // 여기가 묶임을 푸는 유일한 자리다 — 안 풀면 다음 프레임의 기록 밖 갱신이 이 Deferred Context 로 새어 들어간다.
-        unbindRecordingContextIf( pNative->getNativeContext() );
-        ID3D11CommandList* pList = pNative->getNativeCommandList();
+        auto*              pNative = static_cast<D3D11RHICommandList*>( pCmdList );
+        ID3D11CommandList* pList   = pNative->getNativeCommandList();
         if ( pList == nullptr )
             return;
         // DX11 은 스트림을 자를 필요가 없다. 기록 대상(Deferred Context)과 제출 대상(Immediate

@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -183,31 +184,42 @@ namespace sw
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D11RHICommandList* pCmdList );
 
+        /** @brief 기록 슬롯 표의 크기 — 동시에 살아 있는 커맨드 리스트 수의 상한. 넘치면 그 리스트의 기록 중 갱신은 즉시 컨텍스트(잠금)로 간다. */
+        static constexpr uint32 kMaxRecordingSlot = 64;
+        /** @brief 슬롯 없음. */
+        static constexpr uint32 kNoRecordingSlot = 0xFFFFFFFFu;
+
         /**
-         * @brief 이 스레드가 지금 기록 중인 Deferred Context 를 알립니다 (`beginCommandList` 마다).
-         * @details **리소스 갱신이 어느 스트림으로 나갈지 정하는 손잡이다.** `IRHIResource` 는 커맨드
-         *          스트림을 모르는 디바이스 레벨 인터페이스라, `updateConstantBuffer` 가 쓸 수 있는
-         *          컨텍스트는 원래 디바이스의 **즉시 컨텍스트** 하나뿐이었다. 그런데 그 함수는 드로우마다
-         *          불리므로 웨이브를 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다
-         *          (`ID3D11DeviceContext` 는 스레드 안전하지 않다). 인터페이스에 커맨드 리스트를 끼워
-         *          넣으면 RHI 모듈 ABI 가 바뀌므로, **스레드가 자기 컨텍스트를 들고 있게** 해서 백엔드
-         *          안에서 푼다. `Map(WRITE_DISCARD)` 를 Deferred Context 에 하면 D3D11 런타임이 커맨드
-         *          리스트 단위로 버퍼를 버저닝하므로, 그 리스트의 드로우가 **기록 시점의 값**을 본다.
+         * @brief 리스트가 태어날 때 기록 슬롯을 내줍니다. 표가 차면 `kNoRecordingSlot`.
+         * @details **리소스 갱신이 어느 스트림으로 나갈지 정하는 장치다.** `IRHIResource` 는 커맨드 스트림을 모르는 디바이스 레벨
+         *          인터페이스라 `updateConstantBuffer` 가 쓸 수 있는 컨텍스트는 원래 즉시 컨텍스트 하나뿐이었다. 그런데 그 함수는
+         *          드로우마다 불리므로 웨이브를 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다
+         *          (`ID3D11DeviceContext` 는 스레드 안전하지 않다). 인터페이스에 리스트를 끼우면 RHI 모듈 ABI 가 바뀌므로 백엔드
+         *          안에서 푼다: `Map(WRITE_DISCARD)` 를 Deferred Context 에 하면 D3D11 런타임이 리스트 단위로 버퍼를 버저닝하므로
+         *          그 리스트의 드로우가 **기록 시점의 값**을 본다.
+         *
+         *          예전에는 스레드 로컬이 **컨텍스트 포인터**를 그대로 들었다. 리스트를 연 스레드와 닫은 스레드가 다르면(RenderGraph
+         *          병렬 웨이브의 첫 리스트 — 렌더 스레드가 열어 배리어를 적고 워커가 닫는다) 연 쪽의 포인터가 리스트보다 오래 살아,
+         *          그 리스트가 파괴된 뒤 죽은 컨텍스트에 Map 했다(세 번 본 간헐 세그폴트, 2026-09-23). 풀어 주는 자리를 늘리는 것은
+         *          "빠뜨리지 않는다" 에 기대는 고침이라, 구조를 바꿨다 — **스레드 로컬은 (디바이스 일련번호 · 슬롯 · 기록 세대) 토큰만
+         *          들고, 컨텍스트는 디바이스가 소유한 이 슬롯 표에서 세대가 맞을 때만 나온다.** 닫거나 놓으면 세대가 바뀌므로 어느
+         *          스레드의 토큰이든 저절로 무효고, 표는 디바이스와 수명이 같아 죽은 메모리를 가리킬 길이 없다.
          */
-        static void bindRecordingContext( ID3D11DeviceContext* pContext );
-        /** @brief 기록이 끝났음을 알립니다 (`endCommandList` 마다). 이후 갱신은 즉시 컨텍스트로 간다. */
-        static void unbindRecordingContext();
-        /** @brief 이 스레드가 기록 중인 Deferred Context. 기록 중이 아니면 nullptr. */
-        static ID3D11DeviceContext* getRecordingContext();
+        uint32 acquireRecordingSlot( ID3D11DeviceContext* pContext );
+        /** @brief 슬롯을 돌려줍니다 — 세대를 올려 남아 있는 토큰을 전부 무효로 만든다. 잠그지 않는다(디바이스 종료의 detach 안에서도 불린다). */
+        void releaseRecordingSlot( uint32 slot );
+        /** @brief 기록 시작(`beginCommandList`) — 새 세대(홀수)를 열고 이 스레드에 토큰을 묶습니다. */
+        void beginRecording( uint32 slot );
+        /** @brief 기록 끝(`endCommandList`) — 세대를 짝수로 올립니다. 어느 스레드가 들고 있든 그 토큰은 이제 아무것도 가리키지 않는다. */
+        void endRecording( uint32 slot );
         /**
-         * @brief 이 컨텍스트가 이 스레드의 기록 컨텍스트로 묶여 있으면 풉니다 — 리스트를 제출 · 파괴 · 재설정하는 자리마다.
-         * @details begin 과 end 는 **다른 스레드**에서 일어날 수 있다. RenderGraph 의 병렬 웨이브는 렌더 스레드가 첫 패스 리스트를
-         *          열어 배리어를 앞머리에 적고, 워커가 패스를 기록해 닫는다. `endCommandList` 는 닫는 스레드의 묶임만 풀므로 연
-         *          스레드의 묶임은 그대로 남았고, 그 리스트가 파괴된 뒤 그 스레드의 `updateConstantBuffer` 가 죽은 Deferred
-         *          Context 에 Map 했다 — 테스트에서 세 번 본 간헐 세그폴트가 이것이었다(2026-09-23). 리스트가 손을 떠나는 자리
-         *          (제출 · 파괴 · `releaseRecordedState`)에서 되짚어 풀면 묶임이 리스트보다 오래 살지 않는다.
+         * @brief 이 스레드가 이 Deferred Context 로 기록한다고 알립니다 — 리스트를 **다른 스레드가 열었을 때** 기록하는 쪽이 패스 시작에서 부른다.
+         * @details 기록 중(세대 홀수)인 슬롯의 컨텍스트가 아니면 아무것도 하지 않는다. 즉시 컨텍스트는 슬롯이 없으므로 묶이지 않는다 —
+         *          그쪽은 `_immediateContextMutex` 로 지키는 공유 자원이다.
          */
-        static void unbindRecordingContextIf( ID3D11DeviceContext* pContext );
+        void bindRecordingThread( ID3D11DeviceContext* pContext );
+        /** @brief 이 스레드의 토큰이 **이 디바이스의, 지금 기록 중인** 리스트를 가리키면 그 Deferred Context, 아니면 nullptr. */
+        ID3D11DeviceContext* resolveRecordingContext() const;
 
     private:
         /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
@@ -391,6 +403,18 @@ namespace sw
 
         sw::unique_ptr<D3D11RHICommandContext> _frameStreamContext;
         sw::unique_ptr<D3D11RHIResource>       _resourceImpl;
+
+        /**
+         * @struct D3D11RecordingSlot
+         * @brief 리스트 하나의 기록 슬롯 — 세대(홀수 = 기록 중)와 그 리스트의 Deferred Context. 디바이스가 소유하므로 리스트가 죽어도 남는다.
+         */
+        struct D3D11RecordingSlot
+        {
+            atomic<uint64>               _generation; ///< 0 = 한 번도 안 쓴 슬롯. begin 이 홀수로, end · 반납이 짝수로 올린다
+            atomic<ID3D11DeviceContext*> _pContext;   ///< 내줄 때 적고 돌려받을 때 비운다(소유하지 않는다). nullptr 이면 빈 슬롯
+        };
+        D3D11RecordingSlot _arrRecordingSlot[kMaxRecordingSlot];
+        uint64             _serial; ///< 디바이스마다 유일 — 죽은 디바이스의 토큰이 새 디바이스에 맞아떨어지지 않게
     };
 } // namespace sw
 

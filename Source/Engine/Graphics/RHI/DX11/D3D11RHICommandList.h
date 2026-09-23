@@ -44,8 +44,6 @@ namespace sw
         bool isValid() const { return _pNativeContext != nullptr; }
         /** @brief `IRHIDevice::executeCommandList` 가 실제 제출에 쓰는 네이티브 커맨드 리스트. */
         ID3D11CommandList* getNativeCommandList() const { return _pFinishedList.Get(); }
-        /** @brief 이 리스트가 기록하는 Deferred Context — 디바이스가 제출할 때 이 스레드의 기록 묶임을 되짚어 푸는 데 쓴다. */
-        ID3D11DeviceContext* getNativeContext() const { return _pNativeContext.Get(); }
         /** @brief 이 리스트의 기록 상태 — 자원이 사라질 때 디바이스가 캐시를 지우려고 읽는다. */
         D3D11RecordingState& getRecordingState() { return _recordingState; }
 
@@ -80,6 +78,8 @@ namespace sw
         D3D11RHIDevice*                             _pDevice;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _pNativeContext;
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
+        /** @brief 디바이스의 기록 슬롯 — begin/end 가 세대를 올리고, 갱신은 그 세대의 토큰으로 이 리스트의 컨텍스트를 찾는다. */
+        uint32 _recordingSlot;
         /**
          * @brief **이 리스트만의** 기록 상태. `_context` 보다 먼저 선언해야 한다(생성자가 주소를 넘긴다).
          * @details 예전엔 컨텍스트가 디바이스의 `_recordingState` 를 가리켰다. 리스트는 각자 Deferred
