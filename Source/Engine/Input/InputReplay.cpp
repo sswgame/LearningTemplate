@@ -15,10 +15,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief 리플레이 파일 머리말.
-         * @details **버전은 읽는 쪽이 반드시 본다.** 예전에는 매직만 보고 버전을 그냥 지나쳐서,
-         *          다른 판의 파일도 지금 판의 배치로 읽어 조용히 엉뚱한 프레임이 나왔다 —
-         *          버전 필드를 두고도 쓰지 않은 셈이다.
+         * @brief 리플레이 파일 머리말입니다.
+         * @details **버전은 읽는 쪽이 반드시 봅니다.** 예전에는 매직만 보고 버전을 그냥 지나쳐서,
+         *          다른 판의 파일도 지금 판의 배치로 읽어 조용히 엉뚱한 프레임이 나왔습니다.
+         *          버전 필드를 두고도 쓰지 않은 셈입니다.
          */
         struct ReplayHeader
         {
@@ -30,8 +30,8 @@ namespace sw
 
         /**
          * @brief 지금 쓰는 리플레이 파일 판입니다.
-         * @details 1 → 2: `InputSnapshot` 을 구조체째로 적던 것을 필드 순서대로 적게 바꿨다
-         *          (정렬 패딩이 파일로 나가지 않는다). 프레임 배치가 달라졌으므로 판을 올린다.
+         * @details 1 → 2: `InputSnapshot` 을 구조체째로 적던 것을 필드 순서대로 적게 바꿨습니다
+         *          (정렬 패딩이 파일로 나가지 않습니다). 프레임 배치가 달라졌으므로 판을 올립니다.
          */
         constexpr uint32 kReplayVersion = 2;
     } // namespace
@@ -146,9 +146,9 @@ namespace sw
         if ( _currentPlaybackIndex > 0 )
         {
             --_currentPlaybackIndex;
-            // 원시 이벤트는 KeyDown/KeyUp처럼 방향성을 가진 상태 전이라, 목표 프레임의 이벤트만
-            // 그대로 재주입하면(정방향 의미) 역방향 탐색 시 눌림 상태가 고착될 수 있습니다.
-            // 0번 프레임부터 목표 프레임까지 장치 상태를 리셋 후 순서대로 재생하여 재구성합니다.
+            // 원시 이벤트는 KeyDown/KeyUp 처럼 방향이 있는 상태 전이라, 목표 프레임의 이벤트만
+            // 그대로 다시 넣으면(정방향 의미) 뒤로 탐색할 때 눌림 상태가 고착될 수 있다.
+            // 장치 상태를 리셋한 뒤 0번 프레임부터 목표 프레임까지 순서대로 재생해 재구성한다.
             resyncUpTo( pInput, _currentPlaybackIndex + 1 );
         }
     }
@@ -288,7 +288,7 @@ namespace sw
         if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
             return false;
 
-        // 판이 다르면 프레임 배치도 다르다 — 읽어 봐야 엉뚱한 값이 나온다. 여기서 멈춘다.
+        // 판이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
         if ( header._version != kReplayVersion )
         {
             SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#",

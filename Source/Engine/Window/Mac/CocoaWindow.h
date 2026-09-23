@@ -1,6 +1,6 @@
 /**
  * @file CocoaWindow.h
- * @brief macOS Cocoa 네이티브 윈도우
+ * @brief macOS Cocoa 네이티브 창입니다.
  */
 #pragma once
 #include "Engine/Window/IWindow.h"
@@ -8,26 +8,26 @@
 namespace sw
 {
 
-    /// @brief Cocoa NSWindow + Metal 레이어
+    /// @brief Cocoa NSWindow 와 Metal 레이어입니다.
     class CocoaWindow : public IWindow
     {
     public:
         /** @brief NSWindow 없이 시작합니다. */
         CocoaWindow();
-        /** @brief NSWindow를 파괴합니다. */
+        /** @brief NSWindow 를 파괴합니다. */
         virtual ~CocoaWindow() override;
 
         /** @brief Cocoa 창을 만들고 화면에 띄웁니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
-        /** @brief Cocoa 윈도우를 파괴합니다. */
+        /** @brief Cocoa 창을 파괴합니다. */
         void destroy() override;
-        /** @brief 기존 창의 크기와 위치를 유지한 채 Cocoa 윈도우를 재생성합니다. */
+        /** @brief 창 다시 만들기를 지원하지 않습니다. 항상 false 를 반환합니다. */
         bool recreate() override;
-        /** @brief Cocoa 이벤트를 처리합니다. 종료 요청 시 false를 반환합니다. */
+        /** @brief Cocoa 이벤트를 처리합니다. 종료 요청이 있으면 false 를 반환합니다. */
         bool processMessages() override;
-        /** @brief 창 표시 / 숨김 제어 */
+        /** @brief 창을 띄우거나 숨깁니다. */
         void applyWindowVisibility( bool bShow ) override;
-        /** @brief 창이 현재 표시 중인지 여부 */
+        /** @brief 창이 지금 화면에 보이는지 반환합니다. */
         bool isVisible() const override;
 
 #if defined( SW_PLATFORM_MACOS )

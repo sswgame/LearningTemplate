@@ -80,7 +80,7 @@ namespace sw
         const AnimSample next  = _pNext->sample( _nextTime, _bNextLoop );
         const float32    alpha = MathUtil::clamp( _fadeElapsed / _fadeDuration, 0.0f, 1.0f );
         // 두 클립의 정규화 시간을 섞은 값은 길이가 다르면 어느 쪽 위상도 아니다. 스텁 클립이
-        // 항등 변환만 돌려주는 동안의 임시 값이며, 실제 포즈가 생기면 `_transform` 만 남는다.
+        // 항등 변환만 반환하는 동안의 임시 값이며, 실제 포즈가 생기면 `_transform` 만 남는다.
         result._normalizedTime = result._normalizedTime * ( 1.0f - alpha ) + next._normalizedTime * alpha;
         result._transform      = float4x4::lerp( result._transform, next._transform, alpha );
         return result;

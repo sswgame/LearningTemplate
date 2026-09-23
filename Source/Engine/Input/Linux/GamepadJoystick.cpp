@@ -23,9 +23,9 @@ namespace sw
     namespace
     {
         /**
-         * @brief Xbox 호환(xpad 드라이버) 조이스틱 축/버튼 인덱스 상수.
-         * @note 실제 하드웨어에 따라 인덱스가 다를 수 있습니다 — SDL의 게임패드 매핑 DB 같은
-         *       기기별 보정은 하지 않는, 가장 흔한 xpad 배치를 기준으로 한 최선 추정치입니다.
+         * @brief Xbox 호환(xpad 드라이버) 조이스틱 축 · 버튼 인덱스 상수입니다.
+         * @note 실제 하드웨어에 따라 인덱스가 다를 수 있습니다. SDL 의 게임패드 매핑 DB 같은
+         *       기기별 보정은 하지 않고, 가장 흔한 xpad 배치를 기준으로 한 최선 추정치입니다.
          */
         struct GamepadJoystickInternal
         {
@@ -46,7 +46,7 @@ namespace sw
             static constexpr uint8                  kButtonRightShoulder = 5;
             static constexpr uint8                  kButtonBack          = 6;
             static constexpr uint8                  kButtonStart         = 7;
-            [[maybe_unused]] static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton에 대응값 없음 (무시).
+            [[maybe_unused]] static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton 에 대응값 없음(무시).
             static constexpr uint8                  kButtonLeftThumb     = 9;
             static constexpr uint8                  kButtonRightThumb    = 10;
 
@@ -57,7 +57,7 @@ namespace sw
                 return ( ( pBits[bitIndex / kBitsPerWord] >> ( bitIndex % kBitsPerWord ) ) & uintptr_t{ 1 } ) != 0;
             }
 
-            /** @brief js_event 축 값(-32767~32767)을 [-1, 1] 스틱 축으로 정규화합니다. bInvertY면 부호를 뒤집습니다. */
+            /** @brief js_event 축 값(-32767~32767)을 [-1, 1] 스틱 축으로 정규화합니다. bInvert 면 부호를 뒤집습니다. */
             static float32 normalizeStickAxis( int16 rawValue, bool bInvert )
             {
                 float32 normalized = static_cast<float32>( rawValue ) / 32767.0f;
@@ -66,14 +66,14 @@ namespace sw
                 return MathUtil::clamp( normalized, -1.0f, 1.0f );
             }
 
-            /** @brief js_event 축 값(-32767~32767)을 [0, 1] 트리거 압력으로 정규화합니다 (rest=-32767 가정). */
+            /** @brief js_event 축 값(-32767~32767)을 [0, 1] 트리거 압력으로 정규화합니다(쉬는 값 -32767 가정). */
             static float32 normalizeTriggerAxis( int16 rawValue )
             {
                 const float32 normalized = ( static_cast<float32>( rawValue ) + 32767.0f ) / 65534.0f;
                 return MathUtil::clamp( normalized, 0.0f, 1.0f );
             }
 
-            /** @brief GamepadButton::A/B/X/Y/... enum에 대응하는 js_event 버튼 인덱스인지 변환합니다. */
+            /** @brief js_event 버튼 인덱스를 GamepadButton 으로 바꿉니다. 대응값이 없으면 Count 입니다. */
             static GamepadButton mapJsButtonIndex( uint8 jsButtonIndex )
             {
                 switch ( jsButtonIndex )
@@ -160,7 +160,7 @@ namespace sw
     void GamepadJoystick::tryOpenForceFeedback()
     {
         // /sys/class/input/jsN/device/ 는 실제 입력 장치 디렉터리를 가리키고, 같은 물리 컨트롤러의
-        // evdev 노드(eventM)가 그 안에 형제 항목으로 존재합니다. 이를 찾아 /dev/input/eventM을 엽니다.
+        // evdev 노드(eventM)가 그 안에 형제 항목으로 있다. 그것을 찾아 /dev/input/eventM 을 연다.
         StringBuilder<constant::kMaxPathSize> sysfsPathBuilder;
         sysfsPathBuilder.appendFormat( "/sys/class/input/js%#/device", _deviceIndex );
 
@@ -190,8 +190,8 @@ namespace sw
         if ( fd < 0 )
             return;
 
-        // 이 evdev 노드가 실제로 force-feedback(EV_FF)을 지원하는지 확인합니다.
-        // EVIOCGBIT 커널 비트맵 규격상 네이티브 word 폭 배열이 필요해 uintptr_t를 씁니다.
+        // 이 evdev 노드가 실제로 force-feedback(EV_FF)을 지원하는지 확인한다.
+        // EVIOCGBIT 커널 비트맵 규격상 네이티브 워드 폭 배열이 필요해 uintptr_t 를 쓴다.
         uintptr_t arrFeatureBits[( FF_MAX + 1 ) / ( sizeof( uintptr_t ) * 8 ) + 1]{};
         if ( ioctl( fd, EVIOCGBIT( EV_FF, sizeof( arrFeatureBits ) ), arrFeatureBits ) < 0 )
         {
@@ -199,8 +199,8 @@ namespace sw
             return;
         }
 
-        // 예전엔 비트맵을 **받아만 두고 검사하지 않아** 럼블이 없는 노드도 통과했다. 그러면
-        // setVibration 이 매번 EVIOCSFF 에서 실패한다 — 지원 여부는 여기서 한 번에 가린다.
+        // 예전에는 비트맵을 **받아만 두고 검사하지 않아** 럼블이 없는 노드도 통과했다. 그러면
+        // setVibration 이 매번 EVIOCSFF 에서 실패한다. 지원 여부는 여기서 한 번에 가린다.
         if ( GamepadJoystickInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
         {
             close( fd );
@@ -258,7 +258,7 @@ namespace sw
             {
                 if ( bytesRead < 0 && errno != EAGAIN )
                 {
-                    // 장치가 뽑혔거나(ENODEV) 그 밖의 읽기 오류 — 연결 해제로 전환합니다.
+                    // 장치가 뽑혔거나(ENODEV) 그 밖의 읽기 오류다. 연결 해제로 전환한다.
                     closeForceFeedback();
                     closeJoystick();
                     _bConnected     = SW_FALSE;
@@ -346,7 +346,7 @@ namespace sw
         if ( _bHasForceFeedback == SW_TRUE && strongMagnitude == _ffStrongMagnitude && weakMagnitude == _ffWeakMagnitude )
             return true;
 
-        // evdev FF 이펙트는 세기를 직접 갱신하는 API가 없어, 지우고 다시 만듭니다.
+        // evdev FF 이펙트는 세기를 직접 갱신하는 API 가 없어, 지우고 다시 만든다.
         if ( _ffEffectId >= 0 )
         {
             ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
@@ -366,7 +366,7 @@ namespace sw
         effect.id                        = -1; // -1 = 새 이펙트 슬롯 할당 요청
         effect.u.rumble.strong_magnitude = strongMagnitude;
         effect.u.rumble.weak_magnitude   = weakMagnitude;
-        effect.replay.length             = 0; // 0 = stop 이벤트를 받을 때까지 재생 지속
+        effect.replay.length             = 0; // 0 = stop 이벤트를 받을 때까지 계속 재생
         effect.replay.delay              = 0;
 
         if ( ioctl( _fdForceFeedback, EVIOCSFF, &effect ) < 0 )

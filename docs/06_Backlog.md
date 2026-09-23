@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~④) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑤) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1467,6 +1467,11 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   로 보낸다(그 함수는 제 타입 읽기부터 한다). 바이너리 orphan 의 타입 변경 테스트를 같이 넣는다.
 - **`kJsonContainerItemKey` · `kJsonContainerEntryKey`(`SchemaMigrate.h`)는 죽은 상수다.** `535181b4`(2026-09-01)에서
   JSON 래핑 읽기를 지운 뒤 아무도 쓰지 않는다. 지워도 된다.
+- **XInput 게임패드는 트리거 데드존을 거치지 않는다.** `_triggerDeadzone` 은 `GamepadDevice::setAxis`(리눅스 조이스틱 ·
+  원시 이벤트 · 에디터 시뮬레이터 경로)에서만 적용되는데, `GamepadXInput::poll` 은 `_leftTrigger` · `_rightTrigger` 에
+  `bLeftTrigger / 255` 를 곧바로 쓴다. 그래서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없고, `Input/README.md` 의
+  "트리거 아날로그 값 자체의 노이즈만 걸러낸다" 는 설명도 Windows 에서는 틀리다. 고칠 때는 poll 도 `setAxis( 4, … )` ·
+  `setAxis( 5, … )` 로 쓰게 한다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -1647,6 +1652,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ⑤ — Input · Window · Audio · Animation)
+
+**한 것.** 위 네 폴더의 64 개 파일 주석을 1-0g 규칙으로 다시 썼다(영어 주석도 옮겼다). 사실과 달랐던 것:
+- `InputKeyMap::getWin32PollKeyTable` 이 "`Key::Unknown` 항목으로 끝나는 표, vk 는 미사용" 이라 했다 → 끝 표시 항목은 없고
+  개수를 `outCount` 로 준다. vk 는 `GetAsyncKeyState` 가 쓴다.
+- `MouseDevice::updateSmoothDelta` 의 메모가 `poll()` 의 "원시 델타가 0 이면 위치 델타" 폴백을 근거로 들었다 → 그 폴백은 이미
+  없고 `poll()` 은 위치 차이만 흘려 넣는다. 근거 문장을 지웠다(프레임당 여러 번 적용된다는 미결 사항은 그대로 둔다).
+- `ActionMap.cpp` 의 `BindingKindTraits` 가 "switch 들은 `default:` 를 두지 않아 컴파일러가 빠진 자리를 짚는다" 고 했다 →
+  이 저장소는 `-Wswitch-default` 로 모든 switch 에 `default:` 를 요구한다. 컴파일 시점에 잡히는 것은 표의 빠진 줄뿐이고,
+  switch 쪽은 `default:` 가 오류 로그 · 단언으로 소리를 낸다. `ActionMapEvaluate.cpp` 의 같은 설명도 그렇게 고쳤다.
+- `IWindow::initializeWindow` · Win32 · X11 이 "만들고 화면에 표시한다" 고 했다 → 만들기만 하고, 띄우는 것은 `showWindow`
+  다(Cocoa 만 만들면서 띄운다). `CocoaWindow::recreate` 가 "크기와 위치를 유지한 채 재생성" 한다고 했다 → 항상 false 다.
+  `Win32Window::captureRestorePosition` 위에는 옛 `recreate` 설명이 붙어 있었다. `IWindow::recreate` 가 가리키던
+  `RHI::applyPendingChange` 는 없다 → `RHI::recreateDevice`.
+- `ISplashWindow::loadSplashImage` 가 "Win32 가 그리기 전에 픽셀을 뒤집는다" 고 했다 → 뒤집기는 `normalizeSplashToBgra` 로
+  올라와 모든 플랫폼이 거친다. `XAudio2System::playInternal` 이 "로드 · 디코딩해 보이스를 만든다" 고 했다 → 경로만 확인하고
+  디코드 · 재생은 워커 태스크(`playDecodedClipTask`)가 한다.
+- `InputManager.h` 의 절 번호가 6 → 8 → 7 → 8 이었다 → 6~9 로 바로잡았다. `GamepadJoystick` 의 `bInvertY` → 인자 이름은
+  `bInvert`. 트리거 데드존은 위 "코드 결함" 에 적었다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ④ — Resource · Localization · Dialogue · Sequencer · Spatial · Physics)
 

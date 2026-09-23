@@ -1,6 +1,6 @@
 /**
  * @file InputManager.h
- * @brief App / Game용 다형적 입력 장치 레지스트리, 락프리 비동기 이벤트 큐 및 이벤트 디스패치 중앙 허브
+ * @brief App · Game 용 입력 장치 등록부, 락프리 비동기 이벤트 큐, 이벤트 디스패치를 한데 모은 허브입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -24,7 +24,7 @@ namespace sw
 
     class ActionMap;
 
-    /** @brief 현재 활성화된 입력 장치 타입 (UI 글리프 자동 변환용) */
+    /** @brief 지금 활성인 입력 장치 타입입니다(UI 글리프 자동 전환용). */
     enum class InputDeviceType : uint8
     {
         KeyboardMouse = 0,
@@ -35,7 +35,7 @@ namespace sw
 
     /**
      * @class InputManager
-     * @brief 다형적 IInputDevice들을 등록·관리하고, 락프리 원시 이벤트 큐를 통해 OS 메시지를 프레임 동기화하는 중앙 허브
+     * @brief 다형 IInputDevice 들을 등록 · 관리하고, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
      */
     class SW_API InputManager
     {
@@ -51,33 +51,33 @@ namespace sw
         InputManager& operator=( const InputManager& ) = delete;
 
         // ------------------------------------------------------------------------------
-        // 1) 수명주기 및 프레임 제어
+        // 1) 수명주기 · 프레임 제어
         // ------------------------------------------------------------------------------
         bool initialize();
         void shutdown();
 
-        /** @brief 프레임 시작 시 락프리 큐 드레인, 디바이스 상태 갱신 및 프레임 엣지 동기화 */
+        /** @brief 프레임을 시작합니다. 락프리 큐를 비우고, 장치 상태를 갱신하고, 프레임 엣지를 맞춥니다. */
         void beginFrame( float32 deltaSeconds = 0.016f );
-        /** @brief 프레임 종료 시 엣지 플래그 및 원시 델타 리셋 */
+        /** @brief 프레임을 마치며 엣지 플래그와 원시 델타를 리셋합니다. */
         void endFrame();
-        /** @brief 윈도우 포커스 인 시 마우스 락 모드 재적용 */
+        /** @brief 창이 포커스를 얻으면 마우스 잠금 모드를 다시 적용합니다. */
         void onWindowFocusGained();
-        /** @brief 윈도우 포커스 아웃 시 모든 장치 입력 상태 초기화 및 마우스 클리핑 해제 */
+        /** @brief 창이 포커스를 잃으면 모든 장치 입력 상태를 초기화하고 마우스 클리핑을 풉니다. */
         void onWindowFocusLost();
-        /** @brief 등록된 모든 장치의 입력 상태(키/버튼/축)를 초기화합니다 (리플레이 재동기화 등에 사용). */
+        /** @brief 등록된 모든 장치의 입력 상태(키 · 버튼 · 축)를 초기화합니다(리플레이 재동기화 등에 씁니다). */
         void resetAllDeviceState();
 
         // ------------------------------------------------------------------------------
-        // 2) 락프리 원시 이벤트 큐 (Lock-Free Event Queue)
+        // 2) 락프리 원시 이벤트 큐(Lock-Free Event Queue)
         // ------------------------------------------------------------------------------
-        /** @brief OS 윈도우 스레드 / 백그라운드 폴러에서 락 없이 원시 이벤트를 인입합니다. */
+        /** @brief OS 창 스레드 · 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. */
         bool postRawEvent( const RawInputEvent& rawEvent );
-        /** @brief 대기 중인 원시 이벤트를 드레인합니다. */
+        /** @brief 대기 중인 원시 이벤트를 꺼냅니다. */
         uint32 drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount );
         uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
 
         // ------------------------------------------------------------------------------
-        // 3) 다형적 디바이스 레지스트리 (Device Registry)
+        // 3) 다형 장치 등록부(Device Registry)
         // ------------------------------------------------------------------------------
         void            registerDevice( unique_ptr<IInputDevice> pDevice );
         void            unregisterDevice( IInputDevice* pDevice );
@@ -87,7 +87,7 @@ namespace sw
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
 
         // ------------------------------------------------------------------------------
-        // 4) ActionMap & 장치 상태 조회
+        // 4) ActionMap · 장치 상태 조회
         // ------------------------------------------------------------------------------
         ActionMap&       getActionMap() { return *_pActionMap; }
         const ActionMap& getActionMap() const { return *_pActionMap; }
@@ -107,10 +107,10 @@ namespace sw
         bool isInputMuted() const { return _bInputMuted == SW_TRUE; }
 
         // ------------------------------------------------------------------------------
-        // 5) 게임플레이가 프레임마다 묻는 것만 여기서 답한다 — 키·버튼·위치·델타·휠, 그리고 플랫폼에
-        //    적용까지 해야 하는 잠금·커서·클립. 장치 설정(스무딩·가속)과 드문 조회(포인터 진입·이탈,
+        // 5) 게임플레이가 프레임마다 묻는 것만 여기서 답한다: 키 · 버튼 · 위치 · 델타 · 휠, 그리고 플랫폼에
+        //    적용까지 해야 하는 잠금 · 커서 · 클립. 장치 설정(스무딩 · 가속)과 드문 조회(포인터 진입 · 이탈,
         //    가로 휠, 원시 델타, 잠금 모드 읽기)는 장치가 답한다: `getMouse()->setSmoothing()`.
-        //    같은 답을 두 이름으로 내지 않는다 — 예전엔 마우스 API 23 개가 여기 그대로 복제돼 있었다.
+        //    같은 답을 두 이름으로 내지 않는다. 예전에는 마우스 API 23 개가 여기 그대로 복제돼 있었다.
         // ------------------------------------------------------------------------------
         bool isKeyDown( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->isKeyDown( key ) : false; }
         bool wasKeyPressed( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->wasKeyPressed( key ) : false; }
@@ -126,9 +126,9 @@ namespace sw
         float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
 
         /**
-         * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true.
-         * @details 예전에는 ActionMap 에 있었다. 하지만 이것은 **액션이 아니라 장치 상태**이고, 쓰는 값도
-         *          전부 여기 있다(isPointerInside · getMousePosition) — 물어볼 곳이 하나여야 한다.
+         * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true 입니다.
+         * @details 예전에는 ActionMap 에 있었습니다. 하지만 이것은 **액션이 아니라 장치 상태**이고, 쓰는 값도
+         *          모두 여기 있습니다(isPointerInside · getMousePosition). 물어볼 곳이 하나여야 합니다.
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
@@ -141,7 +141,7 @@ namespace sw
         void releaseMouseLockMode();
 
         // ------------------------------------------------------------------------------
-        // 6) 게임패드 편의성 위임 포워딩 API
+        // 6) 게임패드 편의 API(장치로 넘겨 줌)
         // ------------------------------------------------------------------------------
         float32            getGamepadLeftTrigger( uint32 deviceIndex = 0 ) const;
         float32            getGamepadRightTrigger( uint32 deviceIndex = 0 ) const;
@@ -154,7 +154,7 @@ namespace sw
         bool playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex = 0 );
 
         // ------------------------------------------------------------------------------
-        // 8) 롤백 / 리플레이 입력 스냅샷 버퍼 (Input Snapshot & History) & 가상 입력 주입
+        // 7) 롤백 · 리플레이 입력 스냅샷 버퍼(Input Snapshot & History)와 가상 입력 주입
         // ------------------------------------------------------------------------------
         void                      recordSnapshot( uint32 tickNumber );
         const InputSnapshot*      getSnapshot( uint32 tickNumber ) const { return _inputHistory.getSnapshot( tickNumber ); }
@@ -162,7 +162,7 @@ namespace sw
         const InputHistoryBuffer& getInputHistory() const { return _inputHistory; }
 
         // ------------------------------------------------------------------------------
-        // 7) 플랫폼 네이티브 이벤트 처리 및 접근성 제어
+        // 8) 플랫폼 네이티브 이벤트 처리와 접근성 제어
         // ------------------------------------------------------------------------------
         void onNativeWindowEvent( const NativeWindowEvent& event );
         void processNativeEvent( const NativeWindowEvent& event );
@@ -174,21 +174,21 @@ namespace sw
         void dispatchRawEvent( const RawInputEvent& rawEvt );
 
         // ------------------------------------------------------------------------------
-        // 8) 플랫폼별 구현 (Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp)
-        //    이 파일(InputManager.cpp)은 이 함수들을 호출만 합니다 — 여기에 #ifdef를 추가하지 마세요.
+        // 9) 플랫폼별 구현(Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp)
+        //    InputManager.cpp 는 이 함수들을 부르기만 한다. 거기에 #ifdef 를 더하지 말 것.
         // ------------------------------------------------------------------------------
-        /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice()로 등록합니다 (Windows: XInput, Linux: 조이스틱 API). */
+        /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice() 로 등록합니다(Windows: XInput, Linux: 조이스틱 API). */
         void registerPlatformGamepads();
 
-        /** @brief 게임패드 슬롯 수. XInput 규격이 넷이고, 조이스틱도 `js0`~`js3` 로 맞춰 둔다. */
+        /** @brief 게임패드 슬롯 수입니다. XInput 규격이 넷이고, 조이스틱도 `js0`~`js3` 로 맞춰 둡니다. */
         static constexpr uint32 kMaxGamepadSlot = 4;
 
         /**
-         * @brief 게임패드 슬롯 넷을 만들어 등록합니다 — **만드는 타입만** 플랫폼이 정합니다.
-         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치 (`GamepadXInput` · `GamepadJoystick`).
+         * @brief 게임패드 슬롯 넷을 만들어 등록합니다. 플랫폼이 정하는 것은 **만드는 타입뿐**입니다.
+         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치(`GamepadXInput` · `GamepadJoystick`).
          * @details 슬롯 수(4) · 0번을 편의 포인터로 잡는 것 · 연결 콜백을 이어 주는 것은 **엔진 정책**인데,
-         *          예전에는 그 정책이 플랫폼 파일마다 한 벌씩 있었다. 슬롯 수를 늘리거나 콜백 규칙을
-         *          바꾸면 두 곳을 같이 고쳐야 했고, 한쪽만 고치면 **그 플랫폼만 조용히 다르게** 동작했다.
+         *          예전에는 그 정책이 플랫폼 파일마다 한 벌씩 있었습니다. 슬롯 수를 늘리거나 콜백 규칙을
+         *          바꾸면 두 곳을 같이 고쳐야 했고, 한쪽만 고치면 **그 플랫폼만 조용히 다르게** 동작했습니다.
          */
         template <typename GamepadType>
         void registerGamepadSlots()
@@ -208,20 +208,20 @@ namespace sw
                 registerDevice( std::move( pGamepad ) );
             }
         }
-        /** @brief 커서 표시/숨김을 OS에 실제로 적용합니다 (setCursorVisible()의 플랫폼 훅). */
+        /** @brief 커서 표시 · 숨김을 OS 에 실제로 적용합니다(setCursorVisible() 의 플랫폼 훅). */
         void setCursorVisiblePlatform( bool bVisible );
 
     private:
-        ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;        /**< OS/폴러 스레드가 postRawEvent()로 넣는 락프리 원시 이벤트 큐. beginFrame()이 매 프레임 드레인. */
-        atomic<uint32>                       _droppedRawEventCount; /**< 큐 포화로 드롭된 원시 이벤트 수 누적. beginFrame()에서 요약 로깅 후 0으로 리셋. */
-        vector<unique_ptr<IInputDevice>>     _listDevice;           /**< 등록된 모든 장치(키보드/마우스/게임패드 등)의 소유 목록. */
-        KeyboardDevice*                      _pKeyboard;            /**< 편의 API용 캐시 포인터. 실제 소유는 _listDevice가 함. */
-        MouseDevice*                         _pMouse;               /**< 편의 API용 캐시 포인터. */
-        GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API용 캐시 포인터 (1~3번은 getGamepad(index)로 조회). */
-        unique_ptr<ActionMap>                _pActionMap;           /**< 이 InputManager에 연결된 기본 ActionMap 인스턴스. */
-        vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame()에서 큐를 드레인해 담아두는 임시 버퍼 (매 프레임 재사용). */
-        InputHistoryBuffer                   _inputHistory;         /**< 롤백/리플레이용 프레임별 입력 스냅샷 링버퍼. */
-        InputDeviceType                      _activeDeviceType;     /**< 마지막으로 조작이 감지된 장치 종류 (UI 글리프 자동 전환용). */
+        ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;        /**< OS · 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐. beginFrame() 이 매 프레임 비움. */
+        atomic<uint32>                       _droppedRawEventCount; /**< 큐가 가득 차 버린 원시 이벤트 수 누적. beginFrame() 에서 요약 로그를 남기고 0 으로 리셋. */
+        vector<unique_ptr<IInputDevice>>     _listDevice;           /**< 등록된 모든 장치(키보드 · 마우스 · 게임패드 등)의 소유 목록. */
+        KeyboardDevice*                      _pKeyboard;            /**< 편의 API 용 캐시 포인터. 실제 소유는 _listDevice. */
+        MouseDevice*                         _pMouse;               /**< 편의 API 용 캐시 포인터. */
+        GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터(1~3번은 getGamepad(index) 로 조회). */
+        unique_ptr<ActionMap>                _pActionMap;           /**< 이 InputManager 에 연결된 기본 ActionMap 인스턴스. */
+        vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼(매 프레임 재사용). */
+        InputHistoryBuffer                   _inputHistory;         /**< 롤백 · 리플레이용 프레임별 입력 스냅샷 링 버퍼. */
+        InputDeviceType                      _activeDeviceType;     /**< 마지막으로 조작이 감지된 장치 종류(UI 글리프 자동 전환용). */
         ActiveDeviceChangedDelegate          _onActiveDeviceChanged;
         GamepadConnectionDelegate            _onGamepadConnectionChanged;
         TextInputDelegate                    _onTextInput;

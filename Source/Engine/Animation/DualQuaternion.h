@@ -1,10 +1,10 @@
 /**
  * @file DualQuaternion.h
- * @brief 회전 + 이동만 담는 듀얼 쿼터니언과 그 선형 혼합(DLB).
+ * @brief 회전 + 이동만 담는 듀얼 쿼터니언과 그 선형 혼합(DLB)입니다.
  *
- * @warning **스케일은 담지 못한다.** 강체 변환 전용이므로 `fromMatrix` 는 행렬의 스케일을 떼어
- *          버리고, `toMatrix4x4` 는 스케일 1 인 행렬을 돌려준다. 스케일이 있는 포즈를 섞어야 하면
- *          스케일을 따로 보간한 뒤 다시 곱해야 한다 — `BlendSpace` 가 그렇게 한다.
+ * @warning **스케일은 담지 못합니다.** 강체 변환 전용이므로 `fromMatrix` 는 행렬의 스케일을 떼어
+ *          버리고, `toMatrix4x4` 는 스케일 1 인 행렬을 반환합니다. 스케일이 있는 포즈를 섞어야 하면
+ *          스케일을 따로 보간한 뒤 다시 곱해야 합니다. `BlendSpace` 가 그렇게 합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@
 namespace sw
 {
     /**
-     * @brief 3D 강체 변환(회전 + 이동)을 표현하는 듀얼 쿼터니언. 캔디랩퍼 왜곡 없는 스키닝에 사용됩니다.
+     * @brief 3D 강체 변환(회전 + 이동)을 나타내는 듀얼 쿼터니언입니다. 캔디 래퍼 왜곡 없는 스키닝에 씁니다.
      */
     struct SW_API DualQuaternion
     {
@@ -50,7 +50,7 @@ namespace sw
         /** @brief 변환 행렬로 되돌립니다. 스케일은 항상 1 입니다. */
         float4x4 toMatrix4x4() const;
 
-        /** @brief 두 변환을 선형 결합 후 정규화(DLB)해 최단 경로 스크류 보간을 만듭니다. */
+        /** @brief 두 변환을 선형 결합한 뒤 정규화(DLB)해 최단 경로 스크루 보간을 만듭니다. */
         static DualQuaternion dlb( const DualQuaternion& a, const DualQuaternion& b, float32 t );
     };
 } // namespace sw

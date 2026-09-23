@@ -14,10 +14,10 @@ namespace sw
     {
         /**
          * @brief 포즈 행렬과 (스케일 + 강체 변환) 사이를 오갑니다.
-         * @details `DualQuaternion` 은 스케일을 담지 못한다. 그래서 포즈를 섞을 때는 스케일을
-         *          따로 떼어 선형 보간하고, 나머지 회전·이동만 DLB 로 섞은 뒤 다시 곱한다.
+         * @details `DualQuaternion` 은 스케일을 담지 못합니다. 그래서 포즈를 섞을 때는 스케일을
+         *          따로 떼어 선형 보간하고, 나머지 회전 · 이동만 DLB 로 섞은 뒤 다시 곱합니다.
          *          떼지 않고 섞으면 표본 지점에서는 원본 포즈가 그대로 나오는데 그 사이에서만
-         *          스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로 포즈가 튄다.
+         *          스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로 포즈가 튑니다.
          */
         struct BlendSpaceInternal
         {
@@ -27,7 +27,7 @@ namespace sw
                 quaternion rotation{};
                 float3     translation{};
                 // 축 하나가 0 이면 회전을 뽑을 수 없어 decompose 가 Identity 를 준다. 그래도
-                // 스케일 0 은 그대로 살려 둔다 — 눌린 포즈를 되살리면 그것대로 틀린 그림이다.
+                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 되살리면 그것대로 틀린 그림이다.
                 pose.decompose( outScale, rotation, translation );
                 return DualQuaternion( rotation, translation );
             }
@@ -118,9 +118,9 @@ namespace sw
         if ( _listSample.size() == 1 )
             return _listSample.front()._pose;
 
-        // 역거리 가중치(IDW). 표본 수에 상한이 없다 — 예전에는 가중치를 `float[32]` 에 담고
+        // 역거리 가중치(IDW). 표본 수에 상한이 없다. 예전에는 가중치를 `float[32]` 에 담고
         // 표본 수를 그 길이로 min 해서, 33번째 표본부터 한 마디 없이 버렸다. 거리 제곱을
-        // 두 번 구하는 값으로 그 고정 버퍼를 없앴다.
+        // 두 번 구하는 대신 그 고정 버퍼를 없앴다.
         const float2 targetParam{ paramX, paramY };
         float32      totalWeight = 0.0f;
         for ( const BlendSample2D& sample : _listSample )

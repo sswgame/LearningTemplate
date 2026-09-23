@@ -1,6 +1,6 @@
 /**
  * @file GamepadDevice.h
- * @brief 모든 플랫폼 게임패드 구현체의 공통 추상 기본 클래스
+ * @brief 모든 플랫폼 게임패드 구현이 함께 쓰는 추상 기반 클래스입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -37,7 +37,7 @@ namespace sw
 
     /**
      * @class GamepadDevice
-     * @brief 게임패드 버튼, 아날로그 스틱, 트리거 압력 및 럼블 진동 인터페이스를 정의하는 추상 기본 클래스
+     * @brief 게임패드 버튼 · 아날로그 스틱 · 트리거 압력 · 럼블 진동 인터페이스를 정의하는 추상 기반 클래스입니다.
      */
     class SW_API GamepadDevice : public IInputDevice
     {
@@ -68,7 +68,7 @@ namespace sw
         float32 getControlValue( uint16 controlIndex ) const override;
 
         // ------------------------------------------------------------------------------
-        // 2) 게임패드 전용 쿼리 & 햅틱 진동
+        // 2) 게임패드 전용 쿼리 · 햅틱 진동
         // ------------------------------------------------------------------------------
         bool isButtonDown( GamepadButton button ) const;
         bool wasButtonPressed( GamepadButton button ) const;
@@ -122,20 +122,20 @@ namespace sw
 
     protected:
         GamepadConnectionDelegate _onConnectionChanged;
-        uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스 (로컬 멀티플레이어 0~3번 패드). */
-        uint32                    _buttonMask;                /**< 이번 프레임의 디지털 버튼 눌림 비트마스크 (GamepadButton 인덱스로 비트 조회). */
-        uint32                    _prevButtonMask;            /**< 직전 프레임의 버튼 비트마스크. wasButtonPressed/Released의 엣지 판정에 사용. */
-        float2                    _leftStick;                 /**< 왼쪽 스틱 [-1.0, 1.0] (데드존 미적용 원시값). */
+        uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스(로컬 멀티플레이어 0~3번 패드). */
+        uint32                    _buttonMask;                /**< 이번 프레임의 디지털 버튼 눌림 비트마스크(GamepadButton 인덱스로 비트 조회). */
+        uint32                    _prevButtonMask;            /**< 직전 프레임의 버튼 비트마스크. wasButtonPressed/Released 의 엣지 판정에 씀. */
+        float2                    _leftStick;                 /**< 왼쪽 스틱 [-1.0, 1.0](데드존 미적용 원시값). */
         float2                    _rightStick;                /**< 오른쪽 스틱 [-1.0, 1.0]. */
-        float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0] (_triggerDeadzone 필터 적용됨). */
+        float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0]. `setAxis` 로 들어온 값만 _triggerDeadzone 을 거침(XInput 의 poll() 은 직접 씀). */
         float32                   _rightTrigger;              /**< 오른쪽 트리거 압력 [0.0, 1.0]. */
-        float32                   _prevLeftTrigger;           /**< 직전 프레임의 왼쪽 트리거 값. wasControlPressed/Released 임계값(0.5) 판정에 사용. */
+        float32                   _prevLeftTrigger;           /**< 직전 프레임의 왼쪽 트리거 값. wasControlPressed/Released 의 임계값(0.5) 판정에 씀. */
         float32                   _prevRightTrigger;          /**< 직전 프레임의 오른쪽 트리거 값. */
         float32                   _leftMotorSpeed;            /**< 마지막으로 설정한 왼쪽(저주파) 진동 모터 세기 [0.0, 1.0]. */
         float32                   _rightMotorSpeed;           /**< 마지막으로 설정한 오른쪽(고주파) 진동 모터 세기 [0.0, 1.0]. */
-        float32                   _vibrationDurationTimer;    /**< playVibration()으로 시작한 타이머 진동의 잔여 시간(초). 0 이하가 되면 자동 정지. */
-        float32                   _triggerDeadzone;           /**< 트리거 축 노이즈 필터용 데드존. 이 값 미만이면 0으로 취급 (디지털 눌림 판정용 0.5 임계값과는 별개). */
-        uint8                     _bTimedVibrationActive : 1; /**< playVibration()으로 시작된 타이머 진동이 진행 중인지. */
+        float32                   _vibrationDurationTimer;    /**< playVibration() 으로 시작한 타이머 진동의 남은 시간(초). 0 이하가 되면 저절로 멈춤. */
+        float32                   _triggerDeadzone;           /**< 트리거 축 노이즈를 거르는 데드존. 이 값 미만이면 0 으로 취급(디지털 눌림 판정용 0.5 임계값과는 별개). `setAxis` 에서만 적용됨. */
+        uint8                     _bTimedVibrationActive : 1; /**< playVibration() 으로 시작한 타이머 진동이 진행 중인지 여부. */
         [[maybe_unused]] uint8    _reserved              : 7;
     };
 } // namespace sw

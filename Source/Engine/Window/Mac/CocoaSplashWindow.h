@@ -1,6 +1,6 @@
 /**
  * @file CocoaSplashWindow.h
- * @brief macOS Cocoa 기반 ISplashWindow 구현체 헤더
+ * @brief macOS Cocoa 기반 ISplashWindow 구현입니다.
  */
 #pragma once
 #include "Engine/Window/ISplashWindow.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     /**
      * @class CocoaSplashWindow
-     * @brief macOS Cocoa 기반의 경량 스플래시 창
+     * @brief macOS Cocoa 기반의 가벼운 스플래시 창입니다.
      */
     class CocoaSplashWindow : public ISplashWindow
     {

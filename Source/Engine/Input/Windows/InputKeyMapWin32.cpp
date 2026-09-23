@@ -171,7 +171,7 @@ namespace sw
                 {  VK_SUBTRACT, Key::NumpadSubtract},
                 {       VK_ADD,      Key::NumpadAdd},
                 {   VK_DECIMAL,  Key::NumpadDecimal},
-                // Numpad Enter shares VK_RETURN; poll cannot distinguish — rely on Key::Enter.
+                // 숫자 패드 Enter 는 VK_RETURN 을 같이 쓴다. 폴링으로는 구분할 수 없으므로 Key::Enter 에 맡긴다.
             };
         };
     } // namespace

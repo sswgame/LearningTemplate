@@ -11,10 +11,10 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Window/IWindow.h"
 
-// 이 파일은 플랫폼 독립적입니다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금/가시성,
-// 접근성 단축키 억제)은 registerPlatformGamepads() 등 8)번 훅을 통해서만 연결되며,
-// 실제 구현은 Windows/InputManagerWin32.cpp · Linux/InputManagerX11.cpp에 있습니다.
-// 새 플랫폼을 추가하거나 플랫폼 동작을 바꿀 때 이 파일을 건드릴 필요가 없어야 합니다.
+// 이 파일은 플랫폼 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금 · 표시,
+// 접근성 단축키 억제)은 InputManager.h 의 "플랫폼별 구현" 절에 있는 훅(registerPlatformGamepads() 등)으로만
+// 연결되고, 실제 구현은 Windows/InputManagerWin32.cpp · Linux/InputManagerX11.cpp 에 있다.
+// 새 플랫폼을 더하거나 플랫폼 동작을 바꿀 때 이 파일을 건드릴 필요가 없어야 한다.
 
 namespace sw
 {
@@ -60,20 +60,20 @@ namespace sw
         _listDrainedEvent.clear();
         _inputHistory.clear();
 
-        // 1) 표준 키보드 장치 등록
+        // 1) 표준 키보드 장치를 등록한다
         auto pKeyboard = make_unique<KeyboardDevice>();
         _pKeyboard     = pKeyboard.get();
         registerDevice( std::move( pKeyboard ) );
 
-        // 2) 표준 마우스 장치 등록
+        // 2) 표준 마우스 장치를 등록한다
         auto pMouse = make_unique<MouseDevice>();
         _pMouse     = pMouse.get();
         registerDevice( std::move( pMouse ) );
 
-        // 3) 표준 게임패드 장치 등록 (플랫폼별 구현은 registerPlatformGamepads() 참고)
+        // 3) 표준 게임패드 장치를 등록한다(플랫폼별 구현은 registerPlatformGamepads() 참고)
         registerPlatformGamepads();
 
-        // 4) 통합 ActionMap 인스턴스 생성 및 연결
+        // 4) 통합 ActionMap 인스턴스를 만들어 연결한다
         _pActionMap = make_unique<ActionMap>();
         _pActionMap->setInputManager( this );
 
@@ -160,7 +160,7 @@ namespace sw
             }
         }
 
-        // 대표 편의 포인터(키보드/마우스/게임패드)가 해제되면 남은 장치 중 동일 종류로 재바인딩합니다.
+        // 대표 편의 포인터(키보드 · 마우스 · 게임패드)가 해제되면 남은 장치 중 같은 종류로 다시 잡는다.
         if ( bWasKeyboard == false && bWasMouse == false && bWasGamepad == false )
             return;
 
@@ -199,7 +199,7 @@ namespace sw
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
-        // 1) 등록된 모든 장치에 대해 프레임 시작 (이전 프레임 엣지 초기화) 및 폴링 호출
+        // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
@@ -209,17 +209,17 @@ namespace sw
             }
         }
 
-        // 2) 락프리 큐에서 비동기 인입된 이번 프레임 원시 이벤트들을 일괄 드레인
+        // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
 
-        // 3) 드레인된 원시 이벤트를 각 디바이스로 디스패치 (새 프레임 엣지 플래그 설정)
+        // 3) 꺼낸 원시 이벤트를 각 장치로 디스패치한다(새 프레임 엣지 플래그 설정)
         for ( const RawInputEvent& rawEvt : _listDrainedEvent )
         {
             dispatchRawEvent( rawEvt );
         }
 
-        // 4) 활성 장치 자동 감지 (O(1) 플래그 쿼리)
+        // 4) 활성 장치 자동 감지(O(1) 플래그 조회)
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
         {
             const float2 stick        = _pGamepad->getLeftStick();
@@ -527,7 +527,7 @@ namespace sw
         InputSnapshot snapshot{};
         snapshot._tickNumber = tickNumber;
 
-        // 1) 2D 축 벡터 (Move & Look)
+        // 1) 2D 축 벡터(Move · Look)
         if ( _pActionMap != nullptr && _pActionMap->hasAction( "Move" ) )
             snapshot._moveVector = _pActionMap->getVector2D( "Move" );
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
@@ -542,7 +542,7 @@ namespace sw
         snapshot._leftTrigger  = getGamepadLeftTrigger();
         snapshot._rightTrigger = getGamepadRightTrigger();
 
-        // 3) 64비트 버튼/액션 비트마스크
+        // 3) 64비트 버튼 · 액션 비트마스크
         uint64 mask = 0;
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
         {

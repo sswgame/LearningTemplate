@@ -10,9 +10,9 @@ namespace sw
 
     namespace
     {
-        /** @brief 복원 위치의 "알아서" 값. X11 에는 `CW_USEDEFAULT` 같은 약속이 없어 좌표를 하나 정해 둔다. */
+        /** @brief 복원 위치의 "알아서" 값입니다. X11 에는 `CW_USEDEFAULT` 같은 약속이 없어 좌표를 하나 정해 둡니다. */
         constexpr int32 kDefaultRestoreX = 100;
-        /** @brief 위와 같다. */
+        /** @brief 위와 같습니다(세로 좌표). */
         constexpr int32 kDefaultRestoreY = 100;
     } // namespace
 
@@ -23,7 +23,7 @@ namespace sw
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 돈다 — 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 
@@ -136,7 +136,7 @@ namespace sw
 
     void X11Window::clearRestorePosition()
     {
-        // X11 에는 `CW_USEDEFAULT` 같은 값이 없다 — 창 관리자에게 맡기는 관례적 시작점을 쓴다.
+        // X11 에는 `CW_USEDEFAULT` 같은 값이 없다. 창 관리자에게 맡기는 관례적 시작점을 쓴다.
         _restoreX = kDefaultRestoreX;
         _restoreY = kDefaultRestoreY;
     }

@@ -35,7 +35,7 @@ namespace sw
 
     DualQuaternion DualQuaternion::fromMatrix( const float4x4& mat )
     {
-        // 스케일이 섞인 행렬에 createFromRotationMatrix 를 바로 걸면 회전이 틀린다 — 축 길이로
+        // 스케일이 섞인 행렬에 createFromRotationMatrix 를 바로 걸면 회전이 틀린다. 축 길이로
         // 먼저 나눠야 한다. 그 일은 Core 의 decompose 가 이미 하므로 여기서 다시 적지 않는다.
         // (스케일 (2,1,1) + Z 90도 행렬이 112.6도로 읽히던 자리다.)
         float3     scale{};

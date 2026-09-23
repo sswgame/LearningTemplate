@@ -1,6 +1,6 @@
 /**
  * @file AnimClip.h
- * @brief 최소 애니메이션 클립 샘플 스텁.
+ * @brief 최소한의 애니메이션 클립입니다(샘플은 아직 스텁입니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,12 +19,12 @@ namespace sw
 
     /**
      * @class AnimClip
-     * @brief 이름과 길이를 가진 클립. sample()은 스텁 weight/transform을 반환합니다.
+     * @brief 이름과 길이를 가진 클립입니다. sample() 은 정규화 시간과 항등 변환(스텁)을 반환합니다.
      */
     class SW_API AnimClip
     {
     public:
-        /** @brief 기본 클립입니다. */
+        /** @brief 이름 없는 1초짜리 클립으로 만듭니다. */
         AnimClip();
         /** @brief 이름과 길이로 클립을 만듭니다. */
         AnimClip( string_view name, float32 durationSeconds );
@@ -40,8 +40,8 @@ namespace sw
         void setDuration( float32 durationSeconds );
 
         /**
-         * @brief @p timeSeconds에서 클립을 샘플합니다 (루프면 래핑).
-         * @details 스텁: `_normalizedTime` = [0,1] 정규화 시간, `_transform` = 항등.
+         * @brief @p timeSeconds 에서 클립을 샘플합니다(루프면 되감고, 아니면 [0, 길이]로 자릅니다).
+         * @details 스텁입니다. `_normalizedTime` 은 [0,1] 정규화 시간, `_transform` 은 항등입니다.
          */
         AnimSample sample( float32 timeSeconds, bool bLooping = true ) const;
 

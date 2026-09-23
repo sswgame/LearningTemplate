@@ -21,24 +21,24 @@ namespace sw
     namespace
     {
         /**
-         * @brief 텍스트 입력(XIM/XIC)과 접근성(XKB) 상태를 창 생명주기와 별개로 지연 초기화해 보관합니다.
-         * @note XIM은 "on-the-spot"/"root-window" 스타일 입력기의 커밋 문자열은 잡아내지만, 조합(preedit)
-         *       후보 창을 직접 그려주는 완전한 프리에딧 렌더링은 구현하지 않았습니다.
+         * @brief 텍스트 입력(XIM/XIC)과 접근성(XKB) 상태를 창 생명주기와 따로 지연 초기화해 들고 있습니다.
+         * @note XIM 은 "on-the-spot" · "root-window" 스타일 입력기의 커밋 문자열은 잡지만, 조합(preedit)
+         *       후보 창을 직접 그려 주는 완전한 프리에딧 렌더링은 구현하지 않았습니다.
          */
         struct X11InputInternal
         {
             static inline XIM    s_pInputMethod{ nullptr };
             static inline XIC    s_pInputContext{ nullptr };
-            static inline void*  s_pImDisplay{ nullptr };     ///< XIC를 만들 때 쓴 Display*.
-            static inline Window s_imWindow{ 0 };             ///< XIC의 XNClientWindow. **창이 바뀌면 반드시 재생성해야 한다.**
-            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음). X11MacroUndef.h가 None 매크로를 지우므로 리터럴 0을 씁니다.
-            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display* (다르면 다시 만든다).
+            static inline void*  s_pImDisplay{ nullptr };     ///< XIC 를 만들 때 쓴 Display*.
+            static inline Window s_imWindow{ 0 };             ///< XIC 의 XNClientWindow. **창이 바뀌면 반드시 다시 만들어야 함.**
+            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음). X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씀.
+            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display*(다르면 다시 만듦).
             static inline bool   s_bAccessibilityDisabled{ false };
-            /** @brief 창이 X11 포커스를 쥐고 있는가 (FocusIn/FocusOut 로 갱신). 보조 폴링 생략 판단에 쓴다. */
+            /** @brief 창이 X11 포커스를 쥐고 있는지 여부입니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
             static inline bool   s_bWindowFocused{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
 
-            /** @brief 활성 창에 대한 XIC를 지연 생성해 반환합니다 (실패하면 nullptr). */
+            /** @brief 활성 창에 대한 XIC 를 지연 생성해 반환합니다(실패하면 nullptr). */
             static XIC getOrCreateInputContext()
             {
                 IWindow* pWindow = IWindow::getActiveWindow();
@@ -50,8 +50,8 @@ namespace sw
                 if ( pDisplay == nullptr || x11Window == 0 )
                     return nullptr;
 
-                // 예전엔 Display 만 비교했다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
-                // 창을 반복 생성/파괴) 캐시된 XIC 가 **이미 파괴된 Window** 를 XNClientWindow 로 물고 있어
+                // 예전에는 Display 만 비교했다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
+                // 창을 반복 생성 · 파괴) 캐시된 XIC 가 **이미 파괴된 Window** 를 XNClientWindow 로 물고 있어
                 // 텍스트 입력이 조용히 죽는다. 창까지 함께 봐야 한다.
                 if ( s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window )
                     return s_pInputContext;
@@ -82,10 +82,10 @@ namespace sw
                 return s_pInputContext;
             }
 
-            /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서"를 만들어 캐싱합니다. */
+            /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서" 를 만들어 캐시합니다. */
             static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
             {
-                // 커서도 Display 소유 리소스다 — 다른 Display 에서 그대로 쓰면 잘못된 리소스 id 가 된다.
+                // 커서도 Display 소유 리소스다. 다른 Display 에서 그대로 쓰면 잘못된 리소스 id 가 된다.
                 if ( s_invisibleCursor != 0 && s_pCursorDisplay == pDisplay )
                     return s_invisibleCursor;
                 if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
@@ -133,9 +133,9 @@ namespace sw
 {
     void InputManager::pollPlatform()
     {
-        // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없습니다
-        // (Win32의 GetAsyncKeyState 폴백은 메시지 유실을 보완하기 위한 것으로, X11엔 대응 문제가 없음).
-        // 마우스는 창 밖에서 버튼을 뗀 경우 등 이벤트를 놓칠 수 있는 경로가 있어 위치/버튼을 보조로 폴링합니다.
+        // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없다
+        // (Win32 의 GetAsyncKeyState 폴백은 메시지 유실을 메우기 위한 것이고, X11 에는 같은 문제가 없다).
+        // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치 · 버튼을 보조로 폴링한다.
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
@@ -154,7 +154,7 @@ namespace sw
 
         Window rootReturn{}, childReturn{};
         int32  rootX{}, rootY{}, winX{}, winY{};
-        // XQueryPointer가 요구하는 포인터 폭과 uint32가 동일합니다.
+        // XQueryPointer 의 mask_return 은 unsigned int 라 uint32 와 폭이 같다.
         uint32 maskReturn{};
         if ( XQueryPointer( pDisplay, x11Window, &rootReturn, &childReturn, &rootX, &rootY, &winX, &winY, &maskReturn ) )
         {
@@ -191,7 +191,7 @@ namespace sw
                 else
                     postRawEvent( RawInputEvent::makeKeyUp( key ) );
 
-                // 텍스트 입력: XIC를 통해 커밋된 UTF-8 문자열을 얻습니다 (완전한 프리에딧 후보창 렌더링은 미구현).
+                // 텍스트 입력: XIC 로 커밋된 UTF-8 문자열을 얻는다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음).
                 if ( bDown )
                 {
                     XIC pInputContext = X11InputInternal::getOrCreateInputContext();
@@ -343,7 +343,7 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 슬롯 수·0번 캐시·연결 콜백은 엔진 정책이라 기반이 돈다 — 여기서 정하는 것은 `/dev/input/js*`
+        // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 `/dev/input/js*`
         // 를 읽는 구현이라는 것뿐이다. 연결되지 않은 슬롯은 poll() 이 재시도 타이머로 넘어간다.
         registerGamepadSlots<GamepadJoystick>();
     }
@@ -388,11 +388,11 @@ namespace sw
             return;
         }
 
-        // X11 XGrabPointer는 창 전체에만 가둘 수 있습니다 (임의의 서브 사각형 confine은 네이티브 지원이
-        // 없어, 포인터를 매 MotionNotify마다 되돌리는 소프트웨어 클리핑이 필요합니다 — 여기선 미구현).
+        // X11 XGrabPointer 는 창 전체에만 가둘 수 있다. 임의의 서브 사각형에 가두는 기능은 네이티브로
+        // 없어서, 포인터를 MotionNotify 마다 되돌리는 소프트웨어 클리핑이 필요하다(여기서는 구현하지 않음).
         const uint32 mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-        // owner_events=1(True), confine_to/cursor 뒤 두 인자는 각각 x11Window/None(0). X11MacroUndef.h가
-        // True/None 매크로를 지우므로 리터럴 값을 씁니다.
+        // owner_events=1(True), confine_to/cursor 뒤 두 인자는 각각 x11Window/None(0). X11MacroUndef.h 가
+        // True/None 매크로를 지우므로 리터럴 값을 쓴다.
         XGrabPointer( pDisplay, x11Window, 1, mask, GrabModeAsync, GrabModeAsync, x11Window, 0, CurrentTime );
 
         if ( lockMode == MouseLockMode::LockedInCenter )
@@ -420,9 +420,9 @@ namespace sw
 
     void InputManager::disableWindowsAccessibilityShortcuts()
     {
-        // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h의 공개 API), 여기선 X11
-        // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제합니다 — 게임 도중 방향키를 연타하다
-        // AccessX 팝업이 뜨는 것을 막기 위함입니다.
+        // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h 의 공개 API), 여기서는 X11
+        // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제한다. 게임 도중 방향키를 연타하다
+        // AccessX 팝업이 뜨는 것을 막기 위해서다.
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled )
             return;
@@ -435,7 +435,7 @@ namespace sw
         if ( pXkb == nullptr )
             return;
 
-        // 반환값 0 == X11 Success. X11MacroUndef.h가 Success 매크로를 지우므로 리터럴 0을 씁니다.
+        // 반환값 0 == X11 Success. X11MacroUndef.h 가 Success 매크로를 지우므로 리터럴 0 을 쓴다.
         if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
             X11InputInternal::s_prevXkbEnabledControls = pXkb->ctrls->enabled_ctrls;
@@ -443,12 +443,12 @@ namespace sw
             XkbSetControls( pDisplay, XkbControlsEnabledMask, pXkb );
             X11InputInternal::s_bAccessibilityDisabled = true;
         }
-        XkbFreeKeyboard( pXkb, 0, 1 ); // freeDesc=1(True). X11MacroUndef.h가 True 매크로를 지웁니다.
+        XkbFreeKeyboard( pXkb, 0, 1 ); // freeDesc=1(True). X11MacroUndef.h 가 True 매크로를 지운다.
     }
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
-        // 이 함수가 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC/커서 해제도 여기서 한다.
+        // 이 함수가 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC · 커서 해제도 여기서 한다.
         // Display 가 닫히기 전에 풀어야 X 리소스가 남지 않는다.
         X11InputInternal::releaseAll();
 

@@ -1,6 +1,6 @@
 /**
  * @file BlendSpace.h
- * @brief 1D · 2D 파라미터로 포즈를 합성하는 Blend Space.
+ * @brief 1D · 2D 파라미터로 포즈를 합성하는 Blend Space 입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
     class Skeleton;
 
     /**
-     * @brief 1D 파라미터 모션 샘플 노드
+     * @brief 1D 파라미터 표본 하나입니다.
      */
     struct BlendSample1D
     {
@@ -25,7 +25,7 @@ namespace sw
     };
 
     /**
-     * @brief 2D 파라미터 모션 샘플 노드
+     * @brief 2D 파라미터 표본 하나입니다.
      */
     struct BlendSample2D
     {
@@ -35,7 +35,7 @@ namespace sw
     };
 
     /**
-     * @brief 1차원 파라미터(예: Speed 0~10)에 따라 Idle -> Walk -> Run 포즈를 보간하는 1D Blend Space
+     * @brief 1차원 파라미터(예: Speed 0~10)에 따라 Idle → Walk → Run 포즈를 보간하는 1D Blend Space 입니다.
      */
     class SW_API BlendSpace1D
     {
@@ -51,8 +51,8 @@ namespace sw
         void addSample( float32 parameter, string_view clipName, const float4x4& pose );
         /**
          * @brief 파라미터에 해당하는 포즈를 합성합니다.
-         * @details 양 끝 바깥에서는 끝 표본을 그대로 돌려주고, 사이에서는 이웃한 두 표본을
-         *          DLB(회전·이동) + 선형 보간(스케일)으로 섞습니다.
+         * @details 양 끝 바깥에서는 끝 표본을 그대로 반환하고, 사이에서는 이웃한 두 표본을
+         *          DLB(회전 · 이동) + 선형 보간(스케일)으로 섞습니다.
          */
         float4x4 evaluate( float32 parameter ) const;
         /** @brief 합성한 포즈를 스켈레톤 루트 본에 얹고 캐릭터 공간 변환을 갱신합니다. */
@@ -68,7 +68,7 @@ namespace sw
     };
 
     /**
-     * @brief 2차원 파라미터(예: Direction, Speed)에 따라 다방향 보행 모션을 보간하는 2D Blend Space
+     * @brief 2차원 파라미터(예: Direction, Speed)에 따라 여러 방향의 보행 모션을 보간하는 2D Blend Space 입니다.
      */
     class SW_API BlendSpace2D
     {
@@ -84,7 +84,7 @@ namespace sw
         void addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose );
         /**
          * @brief (x, y) 에 해당하는 포즈를 역거리 가중치(IDW)로 합성합니다.
-         * @details 회전·이동은 DLB 로, 스케일은 같은 가중치의 선형 결합으로 섞습니다.
+         * @details 회전 · 이동은 DLB 로, 스케일은 같은 가중치의 선형 결합으로 섞습니다.
          */
         float4x4 evaluate( float32 paramX, float32 paramY ) const;
 

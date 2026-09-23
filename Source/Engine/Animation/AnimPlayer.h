@@ -1,6 +1,6 @@
 /**
  * @file AnimPlayer.h
- * @brief 두 AnimClip 사이 재생 / 크로스페이드.
+ * @brief AnimClip 재생과 두 클립 사이의 크로스페이드입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,12 +12,12 @@ namespace sw
 {
     /**
      * @class AnimPlayer
-     * @brief 선형 크로스페이드를 가진 두 슬롯 클립 플레이어.
+     * @brief 선형 크로스페이드를 하는 두 칸짜리 클립 플레이어입니다.
      */
     class SW_API AnimPlayer
     {
     public:
-        /** @brief 기본 플레이어입니다. */
+        /** @brief 빈 플레이어로 만듭니다. */
         AnimPlayer() = default;
 
         /** @brief 클립을 즉시 재생합니다. */
@@ -27,12 +27,12 @@ namespace sw
 
         /** @brief 재생 시각과 페이드를 갱신합니다. */
         void update( float32 deltaSeconds );
-        /** @brief 현재(또는 페이드 중 혼합) 샘플을 평가합니다. */
+        /** @brief 현재 샘플을 평가합니다. 페이드 중이면 두 클립을 섞은 값입니다. */
         AnimSample evaluate() const;
 
         /**
-         * @brief 재생 속도 배율을 설정합니다. (1.0 = 표준 속도, 0.0 = 일시정지, 2.0 = 2배속 등)
-         * @details 역재생은 지원하지 않습니다 — 음수는 0(일시정지)으로 막습니다. 음수를 그대로
+         * @brief 재생 속도 배율을 설정합니다(1.0 = 보통 속도, 0.0 = 일시정지, 2.0 = 2배속).
+         * @details 역재생은 지원하지 않습니다. 음수는 0(일시정지)으로 막습니다. 음수를 그대로
          *          흘리면 크로스페이드 경과 시간이 뒤로 흘러 페이드가 영원히 끝나지 않습니다.
          *          `update` 가 음수 델타를 0 으로 막는 것과 같은 이유입니다.
          */
@@ -46,7 +46,7 @@ namespace sw
         const AnimClip* getNextClip() const { return _pNext; }
         /** @brief 크로스페이드 중인지 반환합니다. */
         bool isCrossfading() const { return _fadeDuration > 0.0f && _pNext != nullptr; }
-        /** @brief 현재 클립이 루프 없이 끝까지 재생됐으면 true입니다. */
+        /** @brief 현재 클립이 루프 없이 끝까지 재생됐으면 true 입니다. 클립이 없어도 true 입니다. */
         bool hasFinished() const;
         /** @brief 현재 클립 재생 시각(초)을 반환합니다. */
         float32 getCurrentTime() const { return _currentTime; }

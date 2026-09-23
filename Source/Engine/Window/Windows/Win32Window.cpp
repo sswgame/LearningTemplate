@@ -15,7 +15,7 @@ namespace sw
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 돈다 — 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 
@@ -25,7 +25,7 @@ namespace sw
     }
 
     /**
-     * @brief Win32 윈도우 클래스를 등록하고 오버랩 윈도우(WS_OVERLAPPEDWINDOW)를 생성합니다.
+     * @brief Win32 창 클래스를 등록하고 오버랩 창(WS_OVERLAPPEDWINDOW)을 만듭니다. 띄우는 것은 showWindow() 입니다.
      */
     bool Win32Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
     {
@@ -35,7 +35,7 @@ namespace sw
 
         HINSTANCE hInstance = GetModuleHandle( nullptr );
 
-        // CS_OWNDC: DXGI↔OpenGL 핫스왑 시 WGL GetDC/SwapBuffers의 안정성을 보장하기 위해 필수
+        // CS_OWNDC: DXGI↔OpenGL 핫스왑 때 WGL GetDC/SwapBuffers 가 안정적으로 돌려면 꼭 필요하다
         WNDCLASSEXW wc{};
         wc.cbSize        = sizeof( WNDCLASSEXW );
         wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -71,7 +71,7 @@ namespace sw
     }
 
     /**
-     * @brief Win32 윈도우 핸들을 파괴하고 리소스를 정리합니다.
+     * @brief Win32 창 핸들을 파괴하고 리소스를 정리합니다.
      */
     void Win32Window::destroy()
     {
@@ -106,7 +106,7 @@ namespace sw
     }
 
     /**
-     * @brief RHI 백엔드 핫스왑 등을 위해 이전 윈도우 좌표를 유지한 채 윈도우를 다시 생성합니다.
+     * @brief 다시 만들기 직전의 창 위치를 `GetWindowRect` 로 `_restoreX` · `_restoreY` 에 담습니다.
      */
     void Win32Window::captureRestorePosition()
     {
@@ -172,7 +172,7 @@ namespace sw
                 case WM_SIZE:
                 {
                     // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
-                    // 0x0 짜리 WM_SIZE 로 온다 — 그 값을 `_width`/`_height` 에 적어 두면 창이
+                    // 0x0 짜리 WM_SIZE 로 온다. 그 값을 `_width`/`_height` 에 적어 두면 창이
                     // 0 칸짜리가 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
                     // 이 길로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
                     // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 지 "0 칸이다" 가 아니다.
@@ -183,10 +183,10 @@ namespace sw
 
                     pThis->_width  = clientWidth;
                     pThis->_height = clientHeight;
-                    // DPI 변경 등으로 ShowWindow/SetForegroundWindow 처리 중 OS가 GetSystemMetricsForDpi
-                    // 등을 통해 SendMessageW로 같은 스레드에 재진입 WM_SIZE를 보낼 수 있다 — 재진입 가드
-                    // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 재생성 중인 렌더타겟을
-                    // 다시 정리/재생성하게 되어 DataRaceDetector가 레이스로 감지해 크래시한다.
+                    // DPI 변경 등으로 ShowWindow/SetForegroundWindow 를 처리하는 중에 OS 가 GetSystemMetricsForDpi
+                    // 등을 거쳐 SendMessageW 로 같은 스레드에 WM_SIZE 를 재진입시킬 수 있다. 재진입 가드
+                    // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 다시 만드는 중인 렌더 타깃을
+                    // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
                     if ( pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
                     {
                         pThis->_bResizing = SW_TRUE;

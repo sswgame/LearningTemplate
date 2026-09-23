@@ -1,6 +1,6 @@
 /**
  * @file X11Window.h
- * @brief Linux X11 네이티브 윈도우
+ * @brief Linux X11 네이티브 창입니다.
  */
 #pragma once
 #include "Engine/Window/IWindow.h"
@@ -8,7 +8,7 @@
 namespace sw
 {
 
-    /// @brief X11 네이티브 창
+    /// @brief X11 네이티브 창입니다.
     class X11Window : public IWindow
     {
     public:
@@ -17,24 +17,24 @@ namespace sw
         /** @brief X11 창을 파괴합니다. */
         virtual ~X11Window() override;
 
-        /** @brief X11 창을 만들고 화면에 띄웁니다. */
+        /** @brief X11 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
-        /** @brief X11 윈도우를 파괴합니다. */
+        /** @brief X11 창을 파괴합니다. */
         void destroy() override;
-        /** @brief X11 이벤트를 처리합니다. 종료 요청 시 false를 반환합니다. */
+        /** @brief X11 이벤트를 처리합니다. 종료 요청이 있으면 false 를 반환합니다. */
         bool processMessages() override;
 
-        /** @brief X11 윈도우를 화면에 표시하거나 숨깁니다. */
+        /** @brief X11 창을 화면에 띄우거나 숨깁니다. */
         void applyWindowVisibility( bool bShow ) override;
-        /** @brief X11 윈도우 표시 여부를 반환합니다. */
+        /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
 
 #if defined( SW_PLATFORM_LINUX )
-        /** @brief X11 윈도우 핸들을 반환합니다. */
+        /** @brief X11 창 핸들을 반환합니다. */
         void* getNativeHandle() const override { return reinterpret_cast<void*>( _x11Window ); }
         /** @brief X11 디스플레이 연결 핸들을 반환합니다. */
         void* getNativeDisplay() const override { return _pX11Display; }
-        /** @brief X11 전용 윈도우 ID를 반환합니다. */
+        /** @brief X11 전용 창 ID 를 반환합니다. */
         uint64 getX11Window() const { return _x11Window; }
 #else
         void* getNativeHandle() const override { return nullptr; }

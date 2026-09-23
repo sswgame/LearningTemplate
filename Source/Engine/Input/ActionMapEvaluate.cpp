@@ -9,13 +9,13 @@
 
 /**
  * @file ActionMapEvaluate.cpp
- * @brief ActionMap의 매 프레임 평가 로직 — update()가 매 틱 호출하는 상태 머신입니다.
+ * @brief ActionMap 의 매 프레임 평가 로직입니다. update() 가 매 틱 부르는 상태 머신입니다.
  *
- * 초심자 가이드: 액션이 지금 눌려 있는지, 막 트리거됐는지가 어떻게 결정되는지 보려면 이 파일부터 보세요.
- *  1) update() : 모든 액션을 순회하며 아래 두 함수를 호출하고, ActionPhase(Started/Ongoing/...)를 갱신합니다.
- *  2) evaluateBindingDown() : 바인딩 하나(키/스틱/조합키/가상 조이스틱 등)가 지금 얼마나 눌려 있는지 원시 장치에서 읽어옵니다.
+ * 액션이 지금 눌려 있는지, 막 트리거됐는지가 어떻게 정해지는지 보려면 이 파일부터 보십시오.
+ *  1) update() : 모든 액션을 돌며 아래 두 함수를 부르고, ActionPhase(Started/Ongoing/...)를 갱신합니다.
+ *  2) evaluateBindingDown() : 바인딩 하나(키 · 스틱 · 조합 키 · 가상 조이스틱 등)가 지금 얼마나 눌려 있는지 원시 장치에서 읽습니다.
  *  3) evaluateTrigger() : ActionTrigger(Pressed/Released/Hold/Tap/...)가 이번 프레임에 발화했는지 판정합니다.
- *  4) isBindingLayerActive() : 해당 바인딩이 속한 레이어가 지금 활성 상태인지(LIFO 스택/enabled) 확인합니다.
+ *  4) isBindingLayerActive() : 그 바인딩이 속한 레이어가 지금 활성인지(LIFO 스택 · enabled) 확인합니다.
  */
 
 namespace sw
@@ -24,7 +24,7 @@ namespace sw
     {
         _totalElapsedTime += deltaSeconds;
 
-        // 1) 선입력 버퍼 갱신 (Ring Buffer O(1) 정리)
+        // 1) 선입력 버퍼를 갱신한다(링 버퍼, O(1) 정리)
         for ( uint32 index = 0; index < _bufferedActionCount; ++index )
         {
             const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
@@ -36,7 +36,7 @@ namespace sw
             --_bufferedActionCount;
         }
 
-        // 2) 커맨드 이력 만료 제거 (Ring Buffer O(1) 정리, 2.0초 초과)
+        // 2) 2.0초가 지난 커맨드 이력을 지운다(링 버퍼, O(1) 정리)
         while ( _commandHistoryCount > 0 && ( _totalElapsedTime - _arrCommandHistory[_commandHistoryHead]._timestamp ) > 2.0f )
         {
             _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
@@ -48,7 +48,7 @@ namespace sw
 
         const int2 curMousePos = _pInput->getMousePosition();
 
-        // 3) 통합 액션 런타임 평가 및 ActionPhase 상태 머신
+        // 3) 액션마다 런타임 평가와 ActionPhase 상태 머신을 돌린다
         for ( auto& [actionName, actIndex] : _mapAction )
         {
             ActionEntry& actionEntry = _listActionEntry[actIndex];
@@ -166,7 +166,7 @@ namespace sw
             actionEntry._bTriggered     = anyTriggered ? SW_TRUE : SW_FALSE;
             actionEntry._holdDuration   = maxHold;
 
-            // 모디파이어 적용 (축 반전 및 클램핑/원형 정규화)
+            // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화)
             if ( _bInvertX == SW_TRUE )
                 totalAccumValue._x = -totalAccumValue._x;
             if ( _bInvertY == SW_TRUE )
@@ -190,7 +190,7 @@ namespace sw
             actionEntry._currentValue = totalAccumValue;
 
             // --------------------------------------------------------------------------
-            // 상용 엔진 표준 ActionPhase 상태 머신 전이
+            // ActionPhase 상태 머신 전이
             // --------------------------------------------------------------------------
             if ( actionEntry._bTriggered == SW_TRUE )
             {
@@ -219,7 +219,7 @@ namespace sw
             if ( actionEntry._bPressed == SW_TRUE && actionEntry._bToggleMode == SW_TRUE )
                 actionEntry._bToggleState = ( actionEntry._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
 
-            // 커맨드 이력 기록 (Ring Buffer)
+            // 커맨드 이력 기록(링 버퍼)
             if ( actionEntry._bTriggered == SW_TRUE )
             {
                 const uint32 insertIdx                   = ( _commandHistoryHead + _commandHistoryCount ) % kMaxCommandHistory;
@@ -231,7 +231,7 @@ namespace sw
                     _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
             }
 
-            // 델리게이트 이벤트 디스패치 (Triggered)
+            // 델리게이트 이벤트 디스패치(Triggered)
             if ( actionEntry._bTriggered == SW_TRUE )
             {
                 for ( const ActionCallbackEntry& cbEntry : actionEntry._listActionCallback )
@@ -241,7 +241,7 @@ namespace sw
                 }
             }
 
-            // 페이즈 델리게이트 디스패치 (Phase)
+            // 페이즈 델리게이트 디스패치(Phase)
             if ( actionEntry._currentPhase != ActionPhase::None )
             {
                 for ( const PhaseCallbackEntry& phaseEntry : actionEntry._listPhaseCallback )
@@ -274,8 +274,8 @@ namespace sw
             case BindingKind::SingleSlot:
             {
                 IInputDevice* pDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                // isControlDown()만 보면 같은 프레임 안에서 Down+Up이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력)을
-                // 놓칩니다. wasControlPressed()를 함께 확인해 그 프레임엔 "눌렸었다"로 취급합니다.
+                // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력)을
+                // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다.
                 if ( pDevice != nullptr && ( pDevice->isControlDown( binding._arrSlot[0]._controlIndex ) || pDevice->wasControlPressed( binding._arrSlot[0]._controlIndex ) ) )
                 {
                     if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
@@ -432,7 +432,7 @@ namespace sw
                 const int2   curTilePos = _pInput->getMousePosition();
                 const float2 curPos     = curTilePos.toFloat2();
 
-                // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에서 플로팅됩니다 (모바일 온스크린 스틱 표준 UX).
+                // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에 놓인다(모바일 온스크린 스틱의 흔한 UX).
                 if ( binding._bJoystickAnchored == false )
                 {
                     binding._joystickAnchor    = curPos;
@@ -475,11 +475,11 @@ namespace sw
             case BindingKind::Count:
             default:
             {
-                // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 여기서는
-                // 컴파일러가 빠진 종류를 짚어 줄 수 없다 — 대신 **표가 컴파일 시점에 짚는다**
+                // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러가
+                // 이 switch 에서 빠진 종류를 짚어 주지 못한다. 컴파일 시점에 잡히는 것은 표에서 빠진 줄뿐이다
                 // (`kArrBindingKindTraits` 의 static_assert). 여기까지 왔다는 것은 종류를 늘리고
                 // 이 switch 를 빠뜨렸다는 뜻이고, 그 액션은 영원히 발동하지 않는다.
-                // 평가는 매 프레임 도는 자리라 로그는 남기지 않는다 — 개발 빌드에서 단언으로 멈춘다.
+                // 평가는 매 프레임 도는 자리라 로그는 남기지 않고, 개발 빌드에서 단언으로 멈춘다.
                 SW_ASSERT( false );
                 return false;
             }

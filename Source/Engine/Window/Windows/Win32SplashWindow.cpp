@@ -17,7 +17,7 @@ namespace sw
         struct Win32SplashWindowInternal
         {
             static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
-            /// @brief 아래 상태 띠(그라디언트 · 글자 · 진행 막대)의 높이. 상태가 바뀌면 이 띠만 다시 그린다.
+            /// @brief 아래 상태 띠(그라디언트 · 글자 · 진행 막대)의 높이입니다. 상태가 바뀌면 이 띠만 다시 그립니다.
             static constexpr int32 kStatusBandHeight = 54;
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
@@ -85,7 +85,7 @@ namespace sw
         Gdiplus::GdiplusStartupInput gdiplusStartupInput{};
         Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
 
-        // 채널 뒤집기는 여기 있지 않다 — `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
+        // 채널 뒤집기는 여기 있지 않다. `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
         // 이 자리에만 두었던 탓에 리눅스는 같은 보정을 받지 못하고 있었다.
         loadSplashImage();
 
@@ -156,7 +156,7 @@ namespace sw
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
-            // 바뀌는 것은 아래 상태 띠(글자 · 진행 막대)뿐이다 — 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
+            // 바뀌는 것은 아래 상태 띠(글자 · 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
             RECT rcClient{};
             GetClientRect( _hWnd, &rcClient );
             const RECT rcBand = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBandHeight, rcClient.right, rcClient.bottom };
@@ -188,7 +188,7 @@ namespace sw
         const int32 width  = rc.right - rc.left;
         const int32 height = rc.bottom - rc.top;
 
-        // 1) 배경 — 창 크기로 늘린 그림을 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
+        // 1) 배경: 창 크기로 늘린 그림을 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
         if ( _hBackgroundDC == nullptr || _backgroundWidth != width || _backgroundHeight != height )
         {
             releasePaintCache();
@@ -201,7 +201,7 @@ namespace sw
             BITMAPINFO bmi{};
             bmi.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
             bmi.bmiHeader.biWidth       = static_cast<LONG>( splashData._width );
-            bmi.bmiHeader.biHeight      = -static_cast<LONG>( splashData._height ); // Top-down
+            bmi.bmiHeader.biHeight      = -static_cast<LONG>( splashData._height ); // 위에서 아래로(top-down)
             bmi.bmiHeader.biPlanes      = 1;
             bmi.bmiHeader.biBitCount    = 32;
             bmi.bmiHeader.biCompression = BI_RGB;
@@ -214,7 +214,7 @@ namespace sw
         BitBlt( hDC, rcPaint.left, rcPaint.top, rcPaint.right - rcPaint.left, rcPaint.bottom - rcPaint.top, _hBackgroundDC, rcPaint.left,
                 rcPaint.top, SRCCOPY );
 
-        // 2) 하단 상태 띠 그라디언트 오버레이 — 배경을 다시 깐 위에 그리므로 겹쳐 짙어지지 않는다.
+        // 2) 아래 상태 띠 그라디언트 오버레이. 배경을 다시 깐 위에 그리므로 겹쳐 짙어지지 않는다.
         const int32                  bandHeight = Win32SplashWindowInternal::kStatusBandHeight;
         Gdiplus::Graphics            graphics( hDC );
         Gdiplus::Rect                gradientRect( 0, rc.bottom - bandHeight, rc.right, bandHeight );
@@ -222,7 +222,7 @@ namespace sw
                                                     Gdiplus::LinearGradientModeVertical );
         graphics.FillRectangle( &gradientBrush, gradientRect );
 
-        // 3) 상태 진행 텍스트 (Segoe UI) — 글꼴은 한 번 만들어 둔다.
+        // 3) 상태 진행 텍스트(Segoe UI). 글꼴은 한 번 만들어 둔다.
         if ( _hStatusFont == nullptr )
         {
             _hStatusFont = CreateFontW( -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
@@ -236,13 +236,13 @@ namespace sw
         RECT          rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
         DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
 
-        // 4) 하단 프로그레스 바 배경 (어두운 차콜)
+        // 4) 아래쪽 진행 막대 배경(어두운 차콜)
         RECT   rcProgBg     = { 0, rc.bottom - 4, rc.right, rc.bottom };
         HBRUSH hProgBgBrush = CreateSolidBrush( RGB( 20, 24, 30 ) );
         FillRect( hDC, &rcProgBg, hProgBgBrush );
         DeleteObject( hProgBgBrush );
 
-        // 5) 실제 진행률에 따른 프로그레스 라인
+        // 5) 실제 진행률만큼 채우는 진행 선
         const float32 progress        = getProgress();
         const float32 clampedProgress = ( progress < 0.0f ) ? 0.0f : ( ( progress > 1.0f ) ? 1.0f : progress );
         const int32   fillWidth       = static_cast<int32>( static_cast<float32>( rc.right ) * clampedProgress );

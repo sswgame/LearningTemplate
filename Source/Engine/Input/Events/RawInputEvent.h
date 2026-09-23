@@ -1,6 +1,6 @@
 /**
  * @file RawInputEvent.h
- * @brief OS 윈도우 스레드 / 백그라운드 입력 폴러에서 발생하는 정밀 원시 입력 이벤트 패킷
+ * @brief OS 창 스레드 · 백그라운드 입력 폴러에서 생기는 정밀 원시 입력 이벤트 패킷입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -23,7 +23,7 @@ namespace sw
         inline constexpr uint8 Super = SW_BIT( 3 );
     } // namespace ModifierKey
 
-    /** @brief 원시 입력 이벤트 종류 */
+    /** @brief 원시 입력 이벤트 종류입니다. */
     enum class RawInputEventType : uint8
     {
         None = 0,
@@ -47,7 +47,7 @@ namespace sw
 
     /**
      * @struct RawInputEvent
-     * @brief 락프리 큐를 통해 스레드 간 안전하게 전달되는 고성능 원시 입력 이벤트 구조체
+     * @brief 락프리 큐로 스레드 사이에 안전하게 넘기는 원시 입력 이벤트 구조체입니다.
      */
     struct RawInputEvent
     {

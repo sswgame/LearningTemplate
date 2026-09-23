@@ -7,11 +7,11 @@
 
 /**
  * @file ActionMapGlyph.cpp
- * @brief 바인딩을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회 기능입니다.
+ * @brief 바인딩을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회입니다.
  *
- * 초심자 가이드: getGlyphForAction()은 현재 활성 장치(키보드/Xbox/PlayStation/Switch)에 맞는 표기를 고릅니다.
- * previewDevice를 직접 넘기는 오버로드는 실제 장치와 무관하게 특정 플랫폼 표기를 강제로 미리보기할 때 씁니다
- * (에디터의 Glyph Previewer 탭이 이걸로 각 플랫폼 표기를 동시에 비교해서 보여줍니다).
+ * getGlyphForAction() 은 현재 활성 장치(키보드 · Xbox · PlayStation · Switch)에 맞는 표기를 고릅니다.
+ * previewDevice 를 직접 넘기는 오버로드는 실제 장치와 상관없이 특정 플랫폼 표기를 미리 볼 때 씁니다
+ * (에디터의 Glyph Previewer 탭이 이것으로 플랫폼별 표기를 나란히 비교해 보여 줍니다).
  */
 
 namespace sw
@@ -58,7 +58,7 @@ namespace sw
                         }
                         else if ( device == InputDeviceType::GamepadSwitch )
                         {
-                            // 닌텐도 배치: Xbox 기준 A/B, X/Y 위치가 서로 뒤바뀝니다.
+                            // 닌텐도 배치: Xbox 기준으로 A/B, X/Y 위치가 서로 뒤바뀐다.
                             if ( btn == GamepadButton::A )
                                 return "B";
                             if ( btn == GamepadButton::B )

@@ -114,9 +114,9 @@ namespace sw
 
     bool GamepadDevice::isControlDown( uint16 controlIndex ) const
     {
-        if ( controlIndex == 100 ) // Left Trigger
+        if ( controlIndex == 100 ) // 왼쪽 트리거
             return isLeftTriggerDown();
-        if ( controlIndex == 101 ) // Right Trigger
+        if ( controlIndex == 101 ) // 오른쪽 트리거
             return isRightTriggerDown();
         if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
             return false;
@@ -147,17 +147,17 @@ namespace sw
 
     float32 GamepadDevice::getControlValue( uint16 controlIndex ) const
     {
-        if ( controlIndex == 100 ) // Left Trigger
+        if ( controlIndex == 100 ) // 왼쪽 트리거
             return _leftTrigger;
-        if ( controlIndex == 101 ) // Right Trigger
+        if ( controlIndex == 101 ) // 오른쪽 트리거
             return _rightTrigger;
-        if ( controlIndex == 102 ) // Left Stick X
+        if ( controlIndex == 102 ) // 왼쪽 스틱 X
             return _leftStick._x;
-        if ( controlIndex == 103 ) // Left Stick Y
+        if ( controlIndex == 103 ) // 왼쪽 스틱 Y
             return _leftStick._y;
-        if ( controlIndex == 104 ) // Right Stick X
+        if ( controlIndex == 104 ) // 오른쪽 스틱 X
             return _rightStick._x;
-        if ( controlIndex == 105 ) // Right Stick Y
+        if ( controlIndex == 105 ) // 오른쪽 스틱 Y
             return _rightStick._y;
         return isControlDown( controlIndex ) ? 1.0f : 0.0f;
     }

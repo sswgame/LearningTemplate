@@ -1,6 +1,6 @@
 /**
  * @file Skeleton.h
- * @brief 계층형 본 배열과 그로부터 나오는 스키닝 행렬.
+ * @brief 계층형 본 배열과 거기서 나오는 스키닝 행렬입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,7 @@
 namespace sw
 {
     /**
-     * @brief 3D 스켈레탈 애니메이션의 단일 본(Bone) 노드
+     * @brief 3D 스켈레탈 애니메이션의 본(Bone) 하나입니다.
      */
     struct SW_API Bone
     {
@@ -24,7 +24,7 @@ namespace sw
     };
 
     /**
-     * @brief 계층형 본 구조체와 최종 스키닝 행렬을 관리하는 스켈레톤 클래스
+     * @brief 계층형 본과 최종 스키닝 행렬을 관리하는 스켈레톤입니다.
      */
     class SW_API Skeleton
     {
@@ -38,7 +38,7 @@ namespace sw
 
         /**
          * @brief 본 하나를 끝에 붙이고 그 인덱스를 반환합니다.
-         * @param parentIndex 부모 본 인덱스. **이미 추가된 본만 가리킬 수 있습니다** (루트는 -1).
+         * @param parentIndex 부모 본 인덱스. **이미 추가된 본만 가리킬 수 있습니다**(루트는 -1).
          *                    `updateCharacterSpaceTransforms` 가 배열을 앞에서 뒤로 한 번만 훑기
          *                    때문입니다. 범위를 벗어나면 아무것도 추가하지 않고 -1 을 반환합니다.
          */

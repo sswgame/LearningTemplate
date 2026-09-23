@@ -1,6 +1,6 @@
 /**
  * @file GamepadXInput.h
- * @brief Windows XInput 게임패드 구현체 (GamepadDevice 상속)
+ * @brief Windows XInput 게임패드 구현입니다(GamepadDevice 상속).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,7 @@ namespace sw
 {
     /**
      * @class GamepadXInput
-     * @brief Windows XInput API를 통해 하드웨어 게임패드를 폴링하고 진동을 제어하는 GamepadDevice 구현체
+     * @brief Windows XInput API 로 하드웨어 게임패드를 폴링하고 진동을 제어하는 GamepadDevice 구현입니다.
      */
     class SW_API GamepadXInput : public GamepadDevice
     {

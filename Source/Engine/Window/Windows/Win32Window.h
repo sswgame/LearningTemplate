@@ -1,6 +1,6 @@
 /**
  * @file Win32Window.h
- * @brief Microsoft Windows OS 전용(Win32 API 기반) IWindow 구현체 헤더
+ * @brief Windows 전용(Win32 API 기반) IWindow 구현입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     /**
      * @class Win32Window
-     * @brief Win32 HWND 창과 메시지 펌프
+     * @brief Win32 HWND 창과 메시지 펌프입니다.
      */
     class Win32Window : public IWindow
     {
@@ -32,21 +32,21 @@ namespace sw
         /** @brief HWND를 파괴합니다. */
         virtual ~Win32Window() override;
 
-        /** @brief Win32 창을 생성하고 화면에 표시합니다. */
+        /** @brief Win32 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
 
-        /** @brief 생성된 윈도우(HWND)를 파괴합니다. */
+        /** @brief 만든 창(HWND)을 파괴합니다. */
         void destroy() override;
 
         /** @brief Windows 메시지 큐(PeekMessage)를 처리합니다. */
         bool processMessages() override;
 
-        /** @brief 윈도우를 화면에 표시하거나 숨깁니다. */
+        /** @brief 창을 화면에 띄우거나 숨깁니다. */
         void applyWindowVisibility( bool bShow ) override;
-        /** @brief 윈도우 표시 여부를 반환합니다. */
+        /** @brief 창이 지금 보이는지 반환합니다. */
         bool isVisible() const override;
 
-        /** @brief 네이티브 윈도우 핸들(HWND)을 반환합니다. */
+        /** @brief 네이티브 창 핸들(HWND)을 반환합니다. */
         void* getNativeHandle() const override { return _hWnd; }
 
         /** @brief Win32 전용 HWND 핸들을 반환합니다. */

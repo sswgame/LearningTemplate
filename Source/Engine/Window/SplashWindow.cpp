@@ -19,9 +19,9 @@ namespace sw
     bool SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
 #if defined( SW_SHIPPING )
-        // 스플래시는 에디터 초기화 표시용 기능이고 이미지도 editor 도메인 자산이다
+        // 스플래시는 에디터 초기화 표시용 기능이고 이미지도 editor 도메인 에셋이다
         // (Resource/editor/textures/splash.dds). Shipping 은 에디터를 빼고 editor.pack 도
-        // 만들지 않으므로 아예 띄우지 않는다 — 예전엔 그대로 띄우려다 매 기동마다
+        // 만들지 않으므로 아예 띄우지 않는다. 예전에는 그대로 띄우려다 매 기동마다
         // "Failed to read DDS resource: textures/splash.dds" 만 남겼다.
         // _pImpl 이 널로 남으므로 이후 updateStatus/setProgress/dismiss 는 모두 무해한 no-op 이다.
         (void)pTitle;

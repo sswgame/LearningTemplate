@@ -4,12 +4,11 @@
 
 /**
  * @file ActionMapCombo.cpp
- * @brief 선입력 버퍼링과 격투 게임식 커맨드 시퀀스/패턴 판정을 담당합니다.
+ * @brief 선입력 버퍼링과 격투 게임식 커맨드 시퀀스 · 패턴 판정입니다.
  *
- * 초심자 가이드:
- *  - bufferAction/consumeBufferedAction : 공격 버튼을 살짝 일찍 눌러도 인정해주는 선입력 유예 링버퍼입니다.
- *  - wasCommandSequenceTriggered : 최근 트리거된 액션 이력(_arrCommandHistory)에서 주어진 순서가 시간 윈도우 안에 나왔는지 검사합니다.
- *  - wasCommandPatternTriggered : "236P"(하-우하-우+펀치) 같은 넘패드 표기법 문자열을 액션 이름 시퀀스로 바꾼 뒤 wasCommandSequenceTriggered에 위임합니다.
+ *  - bufferAction/consumeBufferedAction : 공격 버튼을 살짝 일찍 눌러도 인정해 주는 선입력 유예 링 버퍼입니다.
+ *  - wasCommandSequenceTriggered : 최근 트리거된 액션 이력(_arrCommandHistory)에서 주어진 순서가 시간 창 안에 나왔는지 검사합니다.
+ *  - wasCommandPatternTriggered : "236P"(하-우하-우+펀치) 같은 넘패드 표기 문자열을 액션 이름 시퀀스로 바꾼 뒤 wasCommandSequenceTriggered 에 맡깁니다.
  */
 
 namespace sw

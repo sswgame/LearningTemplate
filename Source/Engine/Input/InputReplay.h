@@ -1,6 +1,6 @@
 /**
  * @file InputReplay.h
- * @brief 프레임 단위 결정론적 입력 녹화, 파일 직렬화 및 재생(Playback/Scrubbing) 시스템
+ * @brief 프레임 단위 결정론적 입력 녹화, 파일 직렬화, 재생(Playback/Scrubbing) 시스템입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @struct InputReplayFrame
-     * @brief 단일 틱/프레임 동안 발생한 모든 입력 스냅샷과 원시 이벤트 패킷 묶음
+     * @brief 한 틱(프레임) 동안 생긴 입력 스냅샷과 원시 이벤트 패킷 묶음입니다.
      */
     struct SW_API InputReplayFrame
     {
@@ -29,7 +29,7 @@ namespace sw
 
     /**
      * @class InputReplay
-     * @brief 게임플레이 입력을 파일(.swreplay)로 녹화하고 프레임 스크러빙/재생/QA 버그 재현을 수행하는 엔진 시스템
+     * @brief 게임플레이 입력을 파일(.swreplay)로 녹화하고, 프레임 스크러빙 · 재생 · QA 버그 재현을 하는 엔진 시스템입니다.
      */
     class SW_API InputReplay
     {
@@ -45,7 +45,7 @@ namespace sw
         /** @brief 입력 녹화를 시작합니다. */
         void startRecording( string_view replayName = {} );
 
-        /** @brief 현재 프레임의 입력 스냅샷 및 이벤트를 녹화 버퍼에 추가합니다. */
+        /** @brief 현재 프레임의 입력 스냅샷과 이벤트를 녹화 버퍼에 더합니다. */
         void recordFrame( uint32 tickNumber, float32 deltaTime, const InputSnapshot& snapshot, const vector<RawInputEvent>& listEvent );
 
         /** @brief 입력 녹화를 종료합니다. */
@@ -60,25 +60,25 @@ namespace sw
         /** @brief 일시정지된 리플레이를 다시 재생합니다. */
         void resume();
 
-        /** @brief 리플레이 재생을 정지하고 처음으로 되돌립니다. */
+        /** @brief 리플레이 재생을 멈추고 처음으로 되돌립니다. */
         void stop();
 
-        /** @brief 1프레임 앞으로 전진하여 해당 프레임 입력을 엔진에 주입합니다. */
+        /** @brief 한 프레임 앞으로 가서 그 프레임 입력을 엔진에 넣습니다. */
         void stepForward( InputManager* pInput );
 
-        /** @brief 1프레임 뒤로 후진합니다. */
+        /** @brief 한 프레임 뒤로 갑니다. */
         void stepBackward( InputManager* pInput );
 
         /** @brief 특정 프레임 인덱스로 이동합니다. */
         void seek( uint32 frameIndex );
 
-        /** @brief 매 프레임 업데이트하여 저장된 입력을 InputManager로 주입합니다. */
+        /** @brief 매 프레임 갱신하며 저장된 입력을 InputManager 로 넣습니다. */
         void updatePlayback( float32 deltaTime, InputManager* pInput );
 
         /** @brief 바이너리 파일(.swreplay)로 저장합니다. */
         bool saveToFile( string_view filePath ) const;
 
-        /** @brief 바이너리 파일(.swreplay)로부터 리플레이를 로드합니다. */
+        /** @brief 바이너리 파일(.swreplay)에서 리플레이를 로드합니다. */
         bool loadFromFile( string_view filePath );
 
         /** @brief 녹화된 모든 프레임 버퍼를 비웁니다. */
@@ -101,7 +101,7 @@ namespace sw
         const vector<InputReplayFrame>& getFrames() const { return _listFrame; }
 
     private:
-        /** @brief 모든 장치 상태를 리셋한 뒤, [0, exclusiveEndIndex) 프레임을 순서대로 재생하여 재구성합니다. */
+        /** @brief 모든 장치 상태를 리셋한 뒤 [0, exclusiveEndIndex) 프레임을 순서대로 재생해 재구성합니다. */
         void resyncUpTo( InputManager* pInput, uint32 exclusiveEndIndex ) const;
 
         vector<InputReplayFrame> _listFrame;

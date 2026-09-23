@@ -1,6 +1,6 @@
 /**
  * @file MouseDevice.h
- * @brief 독립된 표준 마우스 입력 장치 클래스 (버튼, 좌표, 1:1 Raw 델타, 휠, 커서 모드)
+ * @brief 표준 마우스 입력 장치입니다(버튼, 좌표, 1:1 원시 델타, 휠, 커서 모드).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    /** @brief 마우스 커서 잠금 및 클리핑 모드 */
+    /** @brief 마우스 커서 잠금과 클리핑 모드입니다. */
     enum class MouseLockMode : uint8
     {
         None = 0,
@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @class MouseDevice
-     * @brief 마우스 버튼, 좌표, 센서 델타 및 커서 컨텍스트를 전담하는 IInputDevice 구현체
+     * @brief 마우스 버튼 · 좌표 · 센서 델타 · 커서 상태를 맡는 IInputDevice 구현입니다.
      */
     class SW_API MouseDevice : public IInputDevice
     {
@@ -107,7 +107,7 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 3) OS 이벤트 핸들러
+        // 3) OS 이벤트 처리기
         // ------------------------------------------------------------------------------
         void setButtonDown( MouseButton button, bool bDown );
         void setPosition( int32 x, int32 y );
@@ -119,46 +119,44 @@ namespace sw
     private:
         /**
          * @brief 델타에 **가속 곡선과 EMA 스무딩**을 적용해 `_smoothDelta` 를 갱신합니다.
-         * @details 이 계산이 `poll()` 에도 **글자까지 같은 사본**으로 들어 있었다. 마우스 감각을
-         *          조정하는 사람이 한쪽만 고치면 **입력 경로에 따라 감각이 달라진다** — 원시 입력이
-         *          오는 기계와 안 오는 기계가 서로 다르게 움직이고, 테스트는 부호만 보므로 잡히지 않는다.
+         * @details 이 계산이 `poll()` 에도 **글자까지 같은 사본**으로 들어 있었습니다. 마우스 감각을
+         *          조정하는 사람이 한쪽만 고치면 **입력 경로에 따라 감각이 달라집니다.** 원시 입력이
+         *          오는 기계와 안 오는 기계가 서로 다르게 움직이고, 테스트는 부호만 보므로 잡히지 않습니다.
          *
-         * @note **아직 정하지 못한 것 — 한 프레임에 여러 번 적용된다.** `addRawDelta`·`setPosition` 이
-         *       입력 이벤트마다 이것을 부르고, `poll()` 이 프레임당 한 번 더 부른다(그때는 누적된
-         *       `_rawDelta`, 없으면 위치 기반 `_delta` 로). 즉 EMA 가 프레임당 "이벤트 수 + 1" 번
-         *       돌아서 **스무딩 양이 마우스 폴링 레이트에 따라 달라진다.** 1000Hz 와 125Hz 가 다른
-         *       감각이 된다는 뜻이다. 다만 `poll()` 의 "원시 델타가 0 이면 위치 델타를 쓴다" 는
-         *       폴백을 보면 **poll 이 프레임당 권위** 이고 이벤트 쪽은 프레임 중간 조회용이라는
-         *       읽기도 된다. 여기서는 **동작을 바꾸지 않았다** — 감각을 재려면 실제로 마우스를
-         *       움직여 봐야 하고 그것은 자동 검증이 안 된다. 손에 마우스를 쥔 사람이 정할 것.
+         * @note **아직 정하지 못한 것: 한 프레임에 여러 번 적용됩니다.** `addRawDelta` · `setPosition` 이
+         *       입력 이벤트마다 이것을 부르고, `poll()` 이 프레임당 한 번 더 부릅니다(그때는 프레임 시작
+         *       시점의 위치 차이 `_delta` 로). 즉 EMA 가 프레임당 "이벤트 수 + 1" 번 돌아서 **스무딩 양이
+         *       마우스 폴링 레이트에 따라 달라집니다.** 1000Hz 와 125Hz 가 다른 감각이 된다는 뜻입니다.
+         *       여기서는 **동작을 바꾸지 않았습니다.** 감각을 재려면 실제로 마우스를 움직여 봐야 하고
+         *       그것은 자동 검증이 안 됩니다. 손에 마우스를 쥔 사람이 정할 일입니다.
          */
         void updateSmoothDelta( float32 dx, float32 dy );
 
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표 (윈도우 클라이언트 기준). */
-        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표. getDelta() 계산에 쓴다. */
-        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse). 화면 경계에 막히면 실제 이동보다 작다. */
-        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계 클램핑 없이 실제 이동량을 반영 (FPS 카메라 룩에 적합). */
-        float2                 _smoothDelta;               /**< 감도/가속/스무딩(EMA)이 적용된 최종 델타. getSmoothDelta()가 반환하는 값. */
-        float32                _smoothingFactor;           /**< EMA 스무딩 계수 [0.0, 0.99]. 0이면 스무딩 없이 원시 델타를 그대로 사용. */
-        float32                _accelerationPower;         /**< 마우스 가속 지수. 1.0이면 가속 없음, 클수록 빠르게 움직일 때 델타가 더 커짐. */
-        float32                _mouseWheelDelta;           /**< 이번 프레임 수직 휠 회전량. getMouseWheel()이 반환하는 값. */
-        float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 수평 휠(틸트) 회전량. */
-        int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역(클라이언트 좌표 기준, setClipSubRect로 설정). */
+        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표(창 클라이언트 기준). */
+        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표. 델타 계산에 씀. */
+        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse). 화면 경계에 막히면 실제 이동보다 작음. */
+        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계에 막히지 않는 실제 이동량(FPS 카메라 룩에 알맞음). */
+        float2                 _smoothDelta;               /**< 가속 · 스무딩(EMA)을 적용한 최종 델타. getSmoothDelta() 가 반환하는 값. */
+        float32                _smoothingFactor;           /**< EMA 스무딩 계수 [0.0, 0.99]. 0 이면 스무딩 없이 델타를 그대로 씀. */
+        float32                _accelerationPower;         /**< 마우스 가속 지수. 1.0 이면 가속 없음. 클수록 빠르게 움직일 때 델타가 더 커짐. */
+        float32                _mouseWheelDelta;           /**< 이번 프레임 세로 휠 회전량. getMouseWheel() 이 반환하는 값. */
+        float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 가로 휠(틸트) 회전량. */
+        int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역(클라이언트 좌표 기준, setClipSubRect 로 설정). */
         int32                  _clipSubRectTop;
         int32                  _clipSubRectRight;
         int32                  _clipSubRectBottom;
-        MouseLockMode          _lockMode;     /**< 커서 잠금 모드 (None/ConfinedToWindow/LockedInCenter). InputManager::applyMouseLockMode()가 실제 OS ClipCursor를 적용. */
-        uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크 (MouseButton 인덱스로 비트 조회). */
-        uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크 (엣지). onFrameBegin/onFrameEnd에서 초기화. */
-        uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크 (엣지). */
+        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter). 실제 OS 클리핑은 InputManager::applyMouseLockMode() 가 적용. */
+        uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크(MouseButton 인덱스로 비트 조회). */
+        uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지). onFrameBegin/onFrameEnd 에서 초기화. */
+        uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지). */
         uint8                  _bCursorVisible    : 1;
-        uint8                  _bPointerInside    : 1; /**< 마우스 포인터가 현재 창 클라이언트 영역 안에 있는지. */
-        uint8                  _bPointerEntered   : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지(엣지). */
-        uint8                  _bPointerLeft      : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지(엣지). */
-        uint8                  _bAnyButtonPressed : 1; /**< 이번 프레임에 어떤 버튼이든 새로 눌렸는지. wasAnyButtonPressed()가 참조. */
-        uint8                  _bHasSubRect       : 1; /**< _clipSubRectXxx로 지정한 서브 영역 클리핑이 활성화되어 있는지. */
+        uint8                  _bPointerInside    : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 여부. */
+        uint8                  _bPointerEntered   : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 여부(엣지). */
+        uint8                  _bPointerLeft      : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 여부(엣지). */
+        uint8                  _bAnyButtonPressed : 1; /**< 이번 프레임에 어떤 버튼이든 새로 눌렸는지 여부. wasAnyButtonPressed() 가 참조. */
+        uint8                  _bHasSubRect       : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 여부. */
         [[maybe_unused]] uint8 _reserved          : 2;
     };
 } // namespace sw

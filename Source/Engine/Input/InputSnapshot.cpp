@@ -33,7 +33,7 @@ namespace sw
         if ( pOutBuffer == nullptr || bufferSize < kSerializedSize )
             return 0;
 
-        // **필드를 순서대로 적는다 — 구조체를 통째로 복사하지 않는다.** `_tickNumber` 뒤에는 정렬
+        // **필드를 순서대로 적는다. 구조체를 통째로 복사하지 않는다.** `_tickNumber` 뒤에는 정렬
         // 패딩 4바이트가 있고, 그 값은 아무도 정하지 않는다. 통째로 복사하면 그 패딩까지 파일과
         // 네트워크로 나가서, 같은 입력을 두 번 저장해도 바이트가 달라진다.
         uint8* pCursor = pOutBuffer;

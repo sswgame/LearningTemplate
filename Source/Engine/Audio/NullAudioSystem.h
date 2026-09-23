@@ -1,9 +1,9 @@
 /**
  * @file NullAudioSystem.h
- * @brief 오디오 출력이 지원되지 않는 플랫폼을 위한 더미 구현
+ * @brief 오디오 출력을 지원하지 않는 플랫폼용 더미 구현입니다.
  *
- * @note Windows 에서는 쓰이지 않지만 **항상 컴파일된다** (`IAudioSystem.cpp` 가 무조건 include 한다).
- *       `#else` 안에만 두면 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다.
+ * @note Windows 에서는 쓰이지 않지만 **항상 컴파일됩니다**(`IAudioSystem.cpp` 가 무조건 include 합니다).
+ *       `#else` 안에만 두면 Windows 에서 한 번도 컴파일되지 않아 조용히 썩습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @class NullAudioSystem
-     * @brief 소리를 내지 않는 오디오 시스템입니다. 요청의 성공/실패 판정만 진짜와 같게 흉내 냅니다.
+     * @brief 소리를 내지 않는 오디오 시스템입니다. 요청의 성공 · 실패 판정만 실제 백엔드와 같게 흉내 냅니다.
      */
     class NullAudioSystem : public IAudioSystem
     {

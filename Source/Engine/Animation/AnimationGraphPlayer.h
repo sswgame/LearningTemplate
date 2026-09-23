@@ -1,6 +1,6 @@
 /**
  * @file AnimationGraphPlayer.h
- * @brief AnimationGraphAsset 노드를 AnimClip에 묶어 AnimPlayer로 재생합니다.
+ * @brief AnimationGraphAsset 노드를 AnimClip 에 묶어 AnimPlayer 로 재생합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,12 +15,12 @@ namespace sw
 {
     /**
      * @class AnimationGraphPlayer
-     * @brief 그래프 노드 이름 → AnimClip 매핑. 클립이 끝나면 첫 나가는 링크로 크로스페이드합니다.
+     * @brief 그래프 노드 이름을 AnimClip 에 묶어 재생합니다. 클립이 끝나면 나가는 첫 링크를 따라 크로스페이드합니다.
      */
     class SW_API AnimationGraphPlayer
     {
     public:
-        /** @brief 빈 플레이어입니다. */
+        /** @brief 빈 플레이어로 만듭니다. */
         AnimationGraphPlayer();
 
         /** @brief JSON 그래프를 로드합니다. */
@@ -32,24 +32,24 @@ namespace sw
         /** @brief 등록된 클립을 모두 지웁니다. */
         void clearClips();
 
-        /** @brief 노드 이름(없으면 진입 노드)부터 재생합니다. */
+        /** @brief 노드 이름부터 재생합니다. 이름이 비었거나 없는 노드면 진입 노드부터 재생합니다. */
         bool play( string_view nodeName = {}, bool bLoopClip = false );
         /** @brief 재생을 멈춥니다. */
         void stop();
         /** @brief 클립 시각을 갱신하고, 끝나면 그래프를 따라갑니다. */
         void update( float32 deltaSeconds );
-        /** @brief 현재(또는 페이드 중 혼합) 샘플입니다. */
+        /** @brief 현재 샘플입니다. 페이드 중이면 두 클립을 섞은 값입니다. */
         AnimSample evaluate() const;
 
         /** @brief 크로스페이드 길이(초)를 설정합니다. */
         void setCrossfadeSeconds( float32 seconds );
         /** @brief 현재 노드 이름을 반환합니다. */
         const string& getCurrentNodeName() const { return _currentNodeName; }
-        /** @brief 현재 노드 id입니다. 재생 중이 아니면 0입니다. */
+        /** @brief 현재 노드 id 입니다. 재생 중이 아니면 0 입니다. */
         int32 getCurrentNodeId() const { return _currentNodeId; }
-        /** @brief 나가는 첫 링크로 넘어갑니다. 더 없으면 false입니다. */
+        /** @brief 나가는 첫 링크로 넘어갑니다. 더 없으면 false 입니다. */
         bool advance();
-        /** @brief 내부 AnimPlayer입니다. */
+        /** @brief 내부 AnimPlayer 입니다. */
         AnimPlayer&       getAnimPlayer() { return _player; }
         const AnimPlayer& getAnimPlayer() const { return _player; }
         /** @brief 로드된 그래프입니다. */

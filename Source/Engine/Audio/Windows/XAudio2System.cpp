@@ -15,7 +15,7 @@ namespace sw
         struct XAudio2SystemInternal
         {
             /**
-             * @brief 디코딩된 PCM 오디오 포맷 및 바이트 버퍼를 보관하는 구조체
+             * @brief 디코딩한 PCM 오디오 포맷과 바이트 버퍼를 담는 구조체입니다.
              */
             struct PcmClip
             {
@@ -30,7 +30,7 @@ namespace sw
             };
 
             /**
-             * @brief 호출 스레드에서 COM 및 Media Foundation이 초기화되어 있음을 보장하는 RAII 헬퍼
+             * @brief 부르는 스레드에서 COM 과 Media Foundation 이 초기화되어 있게 하는 RAII 도우미입니다.
              */
             struct ScopedThreadComAndMf
             {
@@ -62,7 +62,7 @@ namespace sw
             };
 
             /**
-             * @brief Little-Endian 16비트 정수를 비정렬 안전하게 읽습니다.
+             * @brief 리틀 엔디언 16비트 정수를 정렬과 상관없이 안전하게 읽습니다.
              */
             static inline uint16 readUint16LE( const uint8* pBytes )
             {
@@ -71,7 +71,7 @@ namespace sw
             }
 
             /**
-             * @brief Little-Endian 32비트 정수를 비정렬 안전하게 읽습니다.
+             * @brief 리틀 엔디언 32비트 정수를 정렬과 상관없이 안전하게 읽습니다.
              */
             static inline uint32 readUint32LE( const uint8* pBytes )
             {
@@ -82,7 +82,7 @@ namespace sw
             }
 
             /**
-             * @brief 메모리 버퍼로부터 표준 RIFF WAV 데이터를 파싱하여 PCM 데이터를 추출합니다.
+             * @brief 메모리 버퍼의 표준 RIFF WAV 데이터를 파싱해 PCM 데이터를 뽑습니다.
              */
             static bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& outClip )
             {
@@ -138,8 +138,8 @@ namespace sw
             }
 
             /**
-             * @brief 표준 RIFF WAV 파일의 fmt 및 data 청크를 파싱하여 PCM 데이터를 추출합니다.
-             * @param path 리소스 상대 경로도 절대 경로도 받습니다 — 리소스로 먼저 물어보고, 없으면 파일로 읽습니다.
+             * @brief 표준 RIFF WAV 파일의 fmt · data 청크를 파싱해 PCM 데이터를 뽑습니다.
+             * @param path 리소스 상대 경로와 절대 경로를 모두 받습니다. 리소스로 먼저 찾고, 없으면 파일로 읽습니다.
              */
             static bool loadWavPcm( string_view path, PcmClip& outClip )
             {
@@ -151,7 +151,7 @@ namespace sw
             }
 
             /**
-             * @brief Windows Media Foundation을 사용하여 MP3/압축 오디오를 PCM 바이트 스트림으로 디코딩합니다.
+             * @brief Windows Media Foundation 으로 MP3 등 압축 오디오를 PCM 바이트 스트림으로 디코딩합니다.
              */
             static bool loadViaMediaFoundation( string_view absPath, PcmClip& outClip )
             {
@@ -164,7 +164,7 @@ namespace sw
                     return false;
 
                 IMFMediaType* pPartial{ nullptr };
-                // 실패하면 pPartial 이 nullptr 인 채로 돌아온다 — 결과를 안 보면 바로 널 역참조다.
+                // 실패하면 pPartial 이 nullptr 인 채로 돌아온다. 결과를 보지 않으면 바로 널 역참조다.
                 if ( FAILED( MFCreateMediaType( &pPartial ) ) || pPartial == nullptr )
                 {
                     pReader->Release();
@@ -249,9 +249,9 @@ namespace sw
     SW_LOG_CALLER( "XAudio2System" );
 
     /**
-     * @brief XAudio2 백엔드의 상태 전부. 헤더가 XAudio2 헤더를 끌지 않도록 여기 숨긴다.
-     * @note 볼륨과 음소거는 여기 없다 — `IAudioSystem` 이 한 자리에서 들고 있고, 이 구조체는
-     *       그 값을 살아 있는 보이스에 반영하기만 한다.
+     * @brief XAudio2 백엔드의 상태 전부입니다. 헤더가 XAudio2 헤더를 끌어오지 않도록 여기 숨깁니다.
+     * @note 볼륨과 음소거는 여기 없습니다. `IAudioSystem` 이 한 자리에서 들고 있고, 이 구조체는
+     *       그 값을 살아 있는 보이스에 반영하기만 합니다.
      */
     struct XAudio2SystemImpl
     {
@@ -268,7 +268,7 @@ namespace sw
         string                                                            _musicPath;           /**< 마지막으로 요청된 배경음악 경로입니다. */
         uint64                                                            _musicGeneration;     /**< 배경음악 요청 번호입니다. 늦게 도착한 디코드를 버리는 데 씁니다. */
         mutex                                                             _clipCacheMutex;      /**< `_mapClipCache` 를 지킵니다. */
-        mutex                                                             _voiceMutex;          /**< 보이스·`_musicPath`·`_musicGeneration` 을 지킵니다. */
+        mutex                                                             _voiceMutex;          /**< 보이스 · `_musicPath` · `_musicGeneration` 을 지킵니다. */
         uint8                                                             _bInitialized    : 1; /**< initialize 가 끝났는지 여부입니다. */
         uint8                                                             _bComInitialized : 1; /**< 이 시스템이 COM 을 초기화했는지 여부입니다. */
         uint8                                                             _bMfInitialized  : 1; /**< 이 시스템이 Media Foundation 을 초기화했는지 여부입니다. */
@@ -383,7 +383,7 @@ namespace sw
     }
 
     /**
-     * @brief 오디오 시스템을 종료하고 모든 활성 사운드 보이스 및 XAudio2 마스터링 보이스를 파괴합니다.
+     * @brief 오디오 시스템을 내리고 모든 사운드 보이스와 XAudio2 마스터링 보이스를 파괴합니다.
      */
     void XAudio2System::shutdown()
     {
@@ -392,16 +392,16 @@ namespace sw
         // 소멸자가 `XAudio2System::shutdown()` 을 한정해서 부르므로 파괴 중 가상 디스패치는 없다.
         // 여기서 `stopMusic()` 까지 한정하면 **정상 종료 경로**에서 파생 재정의가 무시되므로 두지 않는다.
         // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
-        stopMusic(); // 자기 안에서 `_voiceMutex` 를 잡는다 — 여기서 들고 있으면 안 된다.
+        stopMusic(); // 자기 안에서 `_voiceMutex` 를 잡는다. 여기서 들고 있으면 안 된다.
 
         {
             // **잠그고 부순다.** 오디오는 `EngineLoop::shutdown` 에서 **TaskManager 보다 먼저**
             // 내려가므로, 바로 이 순간에도 워커가 `playDecodedClipTask` 안에서 `_listActiveVoice`
-            // 에 `push_back` 하고 있을 수 있다. 예전에는 여기만 잠금 없이 훑었다 — 그 push_back 이
+            // 에 `push_back` 하고 있을 수 있다. 예전에는 여기만 잠금 없이 훑었다. 그 push_back 이
             // 벡터를 재할당하면 아래 루프의 참조가 **해제된 메모리**를 가리키고, 뒤늦게 잠금을 얻은
             // 워커는 이미 `Release()` 한 `_pXAudio` 로 보이스를 만든다.
             // `_bInitialized` 를 잠금 안에서 **먼저** 내려, 기다리던 워커가 그것을 보고 돌아가게 한다.
-            // (`_voiceMutex` 의 주석이 처음부터 "보이스를 지킨다" 고 적고 있었다 — 여기만 안 지켰다.)
+            // (`_voiceMutex` 의 주석은 처음부터 "보이스를 지킨다" 고 적고 있었는데, 여기만 지키지 않았다.)
             std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
             _impl->_bInitialized = SW_FALSE;
 
@@ -466,7 +466,7 @@ namespace sw
     }
 
     /**
-     * @brief 매 프레임 재생이 종료된(큐 버퍼가 0이 된) 원샷 사운드 보이스를 감지하여 정리하거나 유휴 풀에 보관합니다.
+     * @brief 매 프레임 재생이 끝난(큐 버퍼가 0 이 된) 원샷 보이스를 찾아 유휴 풀에 두거나 파괴합니다.
      */
     void XAudio2System::update( float32 )
     {
@@ -504,7 +504,7 @@ namespace sw
     }
 
     /**
-     * @brief 단발성 효과음(SFX)을 비동기 원샷으로 1회 재생합니다.
+     * @brief 효과음(SFX)을 한 번 재생합니다. 디코드와 재생은 워커 태스크에서 비동기로 합니다.
      */
     bool XAudio2System::play( string_view path )
     {
@@ -512,7 +512,7 @@ namespace sw
     }
 
     /**
-     * @brief 배경음악(BGM)을 루프로 재생합니다. 기존 BGM이 있다면 교체합니다.
+     * @brief 배경음악(BGM)을 루프로 재생합니다. 재생 중인 BGM 이 있으면 교체합니다.
      */
     bool XAudio2System::playMusic( string_view path )
     {
@@ -526,7 +526,7 @@ namespace sw
         }
 
         // 있는 곡인지 **멈추기 전에** 본다. 예전에는 stopMusic() 을 먼저 불렀기 때문에, 없는
-        // 곡을 요청하면 틀어져 있던 BGM 만 꺼지고 새 곡은 시작되지 않았다 — 요청은 실패했는데
+        // 곡을 요청하면 틀어져 있던 BGM 만 꺼지고 새 곡은 시작되지 않았다. 요청은 실패했는데
         // 결과는 "정적" 이었다.
         if ( ResourceUtil::hasResource( path ) == false )
         {
@@ -539,7 +539,7 @@ namespace sw
     }
 
     /**
-     * @brief 현재 재생 중인 배경음악(BGM)을 정지하고 리소스를 해제합니다.
+     * @brief 재생 중인 배경음악(BGM)을 멈추고 보이스와 PCM 을 놓습니다.
      */
     void XAudio2System::stopMusic()
     {
@@ -665,7 +665,7 @@ namespace sw
             audioBuffer.LoopCount = XAUDIO2_LOOP_INFINITE;
             _impl->_pMusicClip    = pClip;
             _impl->_pMusicVoice   = pVoice;
-            // 음소거는 마스터 보이스가 든다 — 여기서는 음악 볼륨만 건다.
+            // 음소거는 마스터 보이스가 맡는다. 여기서는 음악 볼륨만 건다.
             pVoice->SetVolume( getMusicVolume() );
         }
         else
@@ -698,7 +698,7 @@ namespace sw
     }
 
     /**
-     * @brief 오디오 파일을 로드/디코딩하여 XAudio2 소스 보이스를 생성하고 버퍼를 제출하여 재생을 시작합니다.
+     * @brief 경로를 확인하고 디코드 · 재생을 워커 태스크(`playDecodedClipTask`)로 넘깁니다. 루프면 음악 경로와 요청 번호를 먼저 적습니다.
      */
     bool XAudio2System::playInternal( string_view path, bool bLoop )
     {
@@ -717,7 +717,7 @@ namespace sw
         const string requestedPath = string( path );
 
         // **제출보다 먼저** 기록한다. 예전에는 `.submit()` 뒤에 `_musicPath` 를 적었고, 잠금도
-        // 잡지 않았다 — 클립이 캐시에 있으면 워커가 먼저 도착해 "요청한 곡이 아니다" 로 판단하고
+        // 잡지 않았다. 클립이 캐시에 있으면 워커가 먼저 도착해 "요청한 곡이 아니다" 로 판단하고
         // 조용히 돌아갔다. 그러면 BGM 이 아무 말 없이 시작되지 않는다.
         uint64 musicGeneration = 0;
         if ( bLoop )

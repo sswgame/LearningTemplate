@@ -37,9 +37,9 @@ namespace sw
         }
 
         /**
-         * @brief 마우스 버튼 메시지의 커서 위치 — lParam 에 좌표가 있으면 그것을 장치에 적고, 없으면 장치의 마지막 위치.
-         * @details 버튼 누름 · 더블클릭 · 뗌 세 메시지가 이 열네 줄을 각자 들었다. 좌표는 부호 있는 16 비트다 — 창 밖 캡처 중에는
-         *          음수가 온다.
+         * @brief 마우스 버튼 메시지의 커서 위치를 구합니다. lParam 에 좌표가 있으면 그것을 장치에 적고, 없으면 장치의 마지막 위치를 씁니다.
+         * @details 버튼 누름 · 더블클릭 · 뗌 세 메시지가 이 열네 줄을 각자 들고 있었습니다. 좌표는 부호 있는 16 비트입니다. 창 밖 캡처 중에는
+         *          음수가 옵니다.
          */
         void readMouseEventPositionInternal( MouseDevice* pMouse, LPARAM lParam, int32& outX, int32& outY )
         {
@@ -57,7 +57,7 @@ namespace sw
                 pMouse->setPosition( outX, outY );
         }
 
-        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키/토글 키/필터 키) 이전 상태 보관 (disable/restoreAccessibilityShortcuts용). */
+        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키 · 토글 키 · 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
         struct AccessibilityInternal
         {
             static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
@@ -257,8 +257,8 @@ namespace sw
                         HIMC hImc = ImmGetContext( pHwnd );
                         if ( hImc != nullptr )
                         {
-                            // `ImmGetCompositionStringW` 가 돌려주는 것은 **바이트 수**이고 버퍼는
-                            // 와이드 문자 배열이다 — 그래서 상한을 버퍼 길이에서 직접 계산한다.
+                            // `ImmGetCompositionStringW` 가 반환하는 것은 **바이트 수**이고 버퍼는
+                            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다.
                             // 예전에는 `kMaxBuffer512`(바이트)와 `kMaxBuffer256`(문자) 두 상수가
                             // 우연히 맞아떨어져 있었을 뿐이라, 어느 한쪽만 고치면 조용히 넘쳤다.
                             using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
@@ -350,7 +350,7 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 슬롯 수·0번 캐시·연결 콜백은 엔진 정책이라 기반이 돈다 — 여기서 정하는 것은 XInput 이라는 것뿐이다.
+        // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 XInput 이라는 것뿐이다.
         registerGamepadSlots<GamepadXInput>();
     }
 

@@ -9,12 +9,12 @@
 
 /**
  * @file ActionMapSerialization.cpp
- * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장/로드(런타임 리매핑 영속화)를 담당합니다.
+ * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장 · 로드(런타임 리매핑 영속화)입니다.
  *
- * 초심자 가이드: 두 XML 포맷은 서로 다른 용도입니다.
- *  - loadFromResource() : Resource/의 InputMap XML(레이어-액션-기본 바인딩 정의)을 읽어 ActionMap을 처음 구성합니다.
- *  - saveUserBindings()/loadUserBindings() : 플레이어가 키를 리매핑한 결과를 저장/복원하는 별도의 유저 바인딩 XML입니다.
- *  - actionTriggerFromName()/actionTriggerToName() : 두 포맷 모두에서 쓰는 ActionTrigger 이름-enum 변환 표입니다.
+ * 두 XML 포맷은 용도가 다릅니다.
+ *  - loadFromResource() : Resource/ 의 InputMap XML(레이어-액션-기본 바인딩 정의)을 읽어 ActionMap 을 처음 구성합니다.
+ *  - saveUserBindings()/loadUserBindings() : 플레이어가 키를 리매핑한 결과를 저장 · 복원하는 별도의 유저 바인딩 XML 입니다.
+ *  - actionTriggerFromName()/actionTriggerToName() : 두 포맷이 함께 쓰는 ActionTrigger 이름 ↔ enum 변환 표입니다.
  */
 
 namespace sw
@@ -355,7 +355,7 @@ namespace sw
                 XmlNode bindNode = root.appendChild( "bind" );
                 bindNode.appendAttribute( "action", actionName.c_str() );
                 bindNode.appendAttribute( "layer", b._layer.c_str() );
-                // 이름은 표에서 온다 — 예전에는 종류마다 리터럴을 적었고 읽는 쪽에 같은 리터럴이 따로
+                // 이름은 표에서 온다. 예전에는 종류마다 리터럴을 적었고 읽는 쪽에 같은 리터럴이 따로
                 // 있어서, 한쪽만 고치면 파일이 조용히 왕복하지 않게 됐다.
                 bindNode.appendAttribute( "kind", BindingKinds::toName( b._kind ) );
 
@@ -566,7 +566,7 @@ namespace sw
                     }
                     case BindingKind::SingleSlot:
                     {
-                        // 아래 레거시 경로가 읽는다 — `kind="single"` 은 특성 이름(source/key/button)이
+                        // 아래 레거시 경로가 읽는다. `kind="single"` 은 특성 이름(source/key/button)이
                         // 그대로라 예전 파일과 같은 코드로 읽힌다.
                         bHandled = false;
                         break;
@@ -574,7 +574,7 @@ namespace sw
                     case BindingKind::Count:
                     default:
                     {
-                        // 표는 이름을 알았는데 여기가 모른다 — 종류를 늘리고 이 switch 를 빠뜨렸다.
+                        // 표는 이름을 알았는데 여기가 모른다. 종류를 늘리고 이 switch 를 빠뜨린 것이다.
                         SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.",
                                       pKindStr );
                         bHandled = false;
@@ -586,7 +586,7 @@ namespace sw
                     continue;
             }
 
-            // Single slot fallback / legacy format
+            // 단일 슬롯 폴백 · 레거시 포맷
             const utf8* pKeyStr    = bindNode.findAttribute( "key" );
             const utf8* pCodeStr   = bindNode.findAttribute( "code" );
             const utf8* pButtonStr = bindNode.findAttribute( "button" );

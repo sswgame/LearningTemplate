@@ -11,13 +11,13 @@
 
 /**
  * @file ActionMap.cpp
- * @brief ActionMap의 핵심(수명주기/바인딩 등록/레이어 스택/리바인드/조회 API)을 담당합니다.
+ * @brief ActionMap 의 핵심(수명주기 · 바인딩 등록 · 레이어 스택 · 리바인드 · 조회 API)입니다.
  *
- * 초심자 가이드: ActionMap의 실제 로직은 여러 파일에 나뉘어 있습니다. 무엇을 찾는지에 따라 아래 파일을 보세요.
+ * ActionMap 의 실제 로직은 여러 파일에 나뉘어 있습니다. 찾는 것에 따라 아래 파일을 보십시오.
  *  - ActionMap.cpp (이 파일)     : 생성자, bind*() 등록 함수들, 레이어 스택(pushLayer/popLayer), 리바인드, is/wasActionXxx() 조회.
- *  - ActionMapEvaluate.cpp      : update()가 매 프레임 호출하는 상태 머신 (액션이 지금 눌렸는지/트리거됐는지 판정).
- *  - ActionMapSerialization.cpp : InputMap XML 로드 및 유저 키 리매핑 저장/로드.
- *  - ActionMapCombo.cpp         : 선입력 버퍼링, 격투 게임식 커맨드 시퀀스/패턴 판정.
+ *  - ActionMapEvaluate.cpp      : update() 가 매 프레임 부르는 상태 머신(액션이 지금 눌렸는지 · 트리거됐는지 판정).
+ *  - ActionMapSerialization.cpp : InputMap XML 로드와 유저 키 리매핑 저장 · 로드.
+ *  - ActionMapCombo.cpp         : 선입력 버퍼링, 격투 게임식 커맨드 시퀀스 · 패턴 판정.
  *  - ActionMapGlyph.cpp         : 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회.
  */
 
@@ -26,14 +26,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief `BindingKind` 한 종류에 딸린 값들.
+         * @brief `BindingKind` 한 종류에 딸린 값들입니다.
          * @details 여기 없는 값은 종류마다 **정말로 다른 것**(어떤 특성을 읽고 쓰는가, 어떻게 평가하는가)
-         *          뿐이고, 그것들은 각자의 switch 에 남는다 — 대신 그 switch 들은 `default:` 를 두지
-         *          않아 종류가 늘면 컴파일러가 빠진 자리를 짚는다.
+         *          뿐이고, 그것들은 각자의 switch 에 남습니다. 이 저장소는 모든 switch 에 `default:` 를
+         *          요구하므로(-Wswitch-default) 컴파일러가 그 switch 에서 빠진 종류를 짚어 주지는 못합니다.
+         *          대신 그 `default:` 가 소리를 냅니다(저장 · 로드는 오류 로그, 평가는 단언).
          */
         struct BindingKindTraits
         {
-            BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 자기 값을 들고 있다.
+            BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 들고 있는 자기 값.
             const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
         };
@@ -54,7 +55,7 @@ namespace sw
         static_assert( sizeof( kArrBindingKindTraits ) / sizeof( kArrBindingKindTraits[0] ) == static_cast<size_t>( BindingKind::Count ),
                        "BindingKind 를 늘렸으면 kArrBindingKindTraits 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
 
-        /** @brief 표에서 종류의 줄을 찾습니다. 범위 밖이면 nullptr. */
+        /** @brief 표에서 종류의 줄을 찾습니다. 범위 밖이면 nullptr 입니다. */
         const BindingKindTraits* findBindingKindTraits( BindingKind kind )
         {
             for ( const BindingKindTraits& traits : kArrBindingKindTraits )
@@ -79,7 +80,7 @@ namespace sw
     {
         for ( const BindingKindTraits& traits : kArrBindingKindTraits )
         {
-            // string_view 오버로드를 쓴다 — `name.data()` 는 널 종료가 보장되지 않는다.
+            // string_view 오버로드를 쓴다. `name.data()` 는 널 종료가 보장되지 않는다.
             if ( StringUtil::equals( name, string_view{ traits._pXmlName }, true ) )
                 return traits._kind;
         }
@@ -154,7 +155,7 @@ namespace sw
         registerLayer( "UI", 100, true, false, false );
         registerLayer( ActionMapDefaults::kDefaultLayerName, 0, true, false, false );
 
-        // 디버그 핫키 격리: Ctrl + F6, Ctrl + F7, Ctrl + F8 (게임플레이 F1~F12 스킬과 충돌 원천 차단)
+        // 디버그 핫키 격리: Ctrl + F6, Ctrl + F7, Ctrl + F8 (게임플레이의 F1~F12 스킬과 겹치지 않게 한다)
 #if !defined( SW_SHIPPING )
         bindChord( ActionMapDefaults::kReloadEditorAction, Key::LeftControl, Key::F6, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
         bindChord( ActionMapDefaults::kReloadGameAction, Key::LeftControl, Key::F7, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
@@ -632,7 +633,7 @@ namespace sw
                 if ( binding._layer != targetLayer )
                     continue;
 
-                // 예전에는 여기 switch 가 있었고 `default:` 가 0 을 줬다 — 새 종류를 더하면 충돌
+                // 예전에는 여기 switch 가 있었고 `default:` 가 0 을 줬다. 새 종류를 더하면 충돌
                 // 검사가 그 바인딩을 **못 본 채** 지나가고, 같은 키를 두 번 걸어도 조용했다.
                 const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
 
