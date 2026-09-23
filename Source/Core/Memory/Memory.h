@@ -165,7 +165,7 @@ namespace sw
             void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )
                 throw std::bad_alloc();
-            return unique_ptr<T>( new ( pMem ) T( std::forward<Args>( args )... ) );
+            return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
         }
         else
         {

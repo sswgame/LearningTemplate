@@ -10,6 +10,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -80,9 +81,9 @@ namespace sw
                            "FrameArenaAllocator only supports Trivially Destructible types (destructors are not invoked on reset)!" );
             void* pMem = allocate( sizeof( T ), alignof( T ) );
             if constexpr ( std::is_aggregate_v<T> )
-                return new ( pMem ) T{ std::forward<Args>( args )... };
+                return sw_placement_new( pMem ) T{ std::forward<Args>( args )... };
             else
-                return new ( pMem ) T( std::forward<Args>( args )... );
+                return sw_placement_new( pMem ) T( std::forward<Args>( args )... );
         }
 
         /**

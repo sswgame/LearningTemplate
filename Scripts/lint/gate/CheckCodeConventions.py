@@ -1082,6 +1082,17 @@ _kBasicTypesRe = re.compile(
     r'\b(?:unsigned\s+int|unsigned\s+short|unsigned\s+long\s+long|unsigned\s+char|long\s+long|unsigned\s+long|long|int|float|double|short|char|wchar_t)\b'
 )
 
+# [placement new 표기 검사]
+# 정규식 패턴: r'(?<!\w)new\s*\('
+#   - (?<!\w)  : 앞이 식별자 글자가 아니어야 한다 — `sw_new` · `sw_placement_new(` 는 여기서 빠진다
+#   - new\s*\( : `new` 바로 뒤에 괄호가 오는 형태, 즉 placement 구문
+# `operator new(` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
+# 매칭 예시 (위반): new ( pMemory ) T();, ::new ( &storage ) T( value );
+# 올바른 예시: sw_placement_new( pMemory ) T();, sw_new T();
+# 컨벤션 규칙: 이미 잡아 둔 메모리에 객체를 만들 때는 Memory.h 의 sw_placement_new 를 씁니다.
+_kRawPlacementNewRe = re.compile(r'(?<!\w)new\s*\(')
+_kOperatorKeywordTailRe = re.compile(r'\boperator\s*$')
+
 # [생성자 멤버 초기화 리스트 괄호 검사]
 # 정규식 패턴: r'^[,\:]\s*([a-zA-Z0-9_]+)\s*(\([^\)]*\)|\{[^\}]*\})'
 #   - ^[,\:]\s*                               : 줄 시작의 콜론(:) 또는 쉼표(,) 매칭
@@ -1964,6 +1975,37 @@ class BasicTypeAliasRule( ConventionRule ):
                         snippet=ctx.trimmed,
                     )
                 )
+        return violations
+
+
+class PlacementNewRule( ConventionRule ):
+    """Style/PlacementNew"""
+    category = "Style/PlacementNew"
+    badSampleFile = "Source/Probe/PlacementNew.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( void* pMemory )\n{\n    new ( pMemory ) int32( 0 );\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 매크로 정의(`sw_placement_new` · `sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
+        if ctx.trimmed.startswith("#"):
+            return violations
+        for newMatch in _kRawPlacementNewRe.finditer(ctx.codeWithoutStrings):
+            # `operator new( size_t, ... )` 는 할당 함수 선언이지 객체 생성이 아니다.
+            if _kOperatorKeywordTailRe.search(ctx.codeWithoutStrings[:newMatch.start()]):
+                continue
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/PlacementNew",
+                    message=(
+                        "placement new 는 `sw_placement_new( p ) T( ... )` 로 쓰세요(Core/Memory/Memory.h). "
+                        "매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러내고, 표기가 하나여야 한 곳만 고쳐 전체에 반영됩니다."
+                    ),
+                    snippet=ctx.trimmed,
+                )
+            )
+            break
         return violations
 
 

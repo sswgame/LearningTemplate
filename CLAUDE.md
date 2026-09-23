@@ -139,7 +139,7 @@ py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a heade
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
-py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 30 rules still bite? (CI gate)
+py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 32 rules still bite? (CI gate)
 ```
 
 - **A header that compiles is not a header that stands alone.** A header that forgets an include still

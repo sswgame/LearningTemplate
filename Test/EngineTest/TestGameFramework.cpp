@@ -1215,8 +1215,8 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_SnapshotSerializationIsDeterminis
     Memory::set( arrStorageA, 0x00, sizeof( arrStorageA ) );
     Memory::set( arrStorageB, 0xCD, sizeof( arrStorageB ) );
 
-    InputSnapshot* pSnapshotA = new ( arrStorageA ) InputSnapshot{};
-    InputSnapshot* pSnapshotB = new ( arrStorageB ) InputSnapshot{};
+    InputSnapshot* pSnapshotA = sw_placement_new( arrStorageA ) InputSnapshot{};
+    InputSnapshot* pSnapshotB = sw_placement_new( arrStorageB ) InputSnapshot{};
     fillFields( *pSnapshotA );
     fillFields( *pSnapshotB );
 

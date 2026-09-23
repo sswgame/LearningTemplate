@@ -11,6 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Event/EventType.h"
 #include "Core/Memory/LinearAllocator.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include <thread>
@@ -158,7 +159,7 @@ namespace sw
                 _arrListOverflowAllocation[allocIdx].push_back( pMem );
             }
 
-            T* pQueuedEvent = new ( pMem ) T( event );
+            T* pQueuedEvent = sw_placement_new( pMem ) T( event );
 
             auto iter = _mapChannelQueue.find( channel );
             if ( iter == _mapChannelQueue.end() )

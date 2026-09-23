@@ -19,6 +19,7 @@
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Container/array.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -96,7 +97,7 @@ namespace sw
             T* pPtr{ nullptr };
             if ( _freeQueue.dequeue( pPtr ) && pPtr != nullptr )
             {
-                new ( pPtr ) T( std::forward<Args>( args )... );
+                sw_placement_new( pPtr ) T( std::forward<Args>( args )... );
                 _activeCount.fetch_add( 1, std::memory_order_relaxed );
                 return pPtr;
             }

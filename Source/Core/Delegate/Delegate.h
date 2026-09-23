@@ -199,7 +199,7 @@ namespace sw
             constexpr bool bIsSBO = sizeof( Lambda ) <= kInlineBufferSize && alignof( Lambda ) <= alignof( std::max_align_t ) && std::is_nothrow_move_constructible_v<Lambda>;
             if constexpr ( bIsSBO )
             {
-                new ( &newDelegate._inlineBuffer ) Lambda( lambdaFunc );
+                sw_placement_new( &newDelegate._inlineBuffer ) Lambda( lambdaFunc );
                 newDelegate._pInstance = &newDelegate._inlineBuffer;
             }
             else
@@ -262,7 +262,7 @@ namespace sw
                 {
                     if constexpr ( bIsSBO )
                     {
-                        new ( pDest ) Lambda( *static_cast<const Lambda*>( pSrc ) );
+                        sw_placement_new( pDest ) Lambda( *static_cast<const Lambda*>( pSrc ) );
                         return pDest;
                     }
                     else
@@ -276,7 +276,7 @@ namespace sw
                 {
                     if constexpr ( bIsSBO )
                     {
-                        new ( pDest ) Lambda( std::move( *static_cast<Lambda*>( const_cast<void*>( pSrc ) ) ) );
+                        sw_placement_new( pDest ) Lambda( std::move( *static_cast<Lambda*>( const_cast<void*>( pSrc ) ) ) );
                         return pDest;
                     }
                     else

@@ -48,7 +48,7 @@ namespace
                 ctorInfo._hashName = sw::hashed_string( "$ctor" );
                 ctorInfo._invoker  = []( void* pPtr, const sw::TaskArgs& ) -> sw::TaskValue
                 {
-                    new ( pPtr ) TestReflectedPlayer();
+                    sw_placement_new( pPtr ) TestReflectedPlayer();
                     return sw::TaskValue{};
                 };
                 s_typeInfo._listMethod.push_back( ctorInfo );
@@ -95,7 +95,7 @@ namespace
                 ctorInfo._hashName = sw::hashed_string( "$ctor" );
                 ctorInfo._invoker  = []( void* pPtr, const sw::TaskArgs& ) -> sw::TaskValue
                 {
-                    new ( pPtr ) TestSparseReflectedConfig();
+                    sw_placement_new( pPtr ) TestSparseReflectedConfig();
                     return sw::TaskValue{};
                 };
                 s_typeInfo._listMethod.push_back( ctorInfo );

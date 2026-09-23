@@ -150,6 +150,9 @@ able to guess the rest; that is the whole point.
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.
+- Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
+  (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
+  `CheckCodeConventions.py` (`Style/PlacementNew`).
 - Do not spell out buffer/path-size magic numbers (e.g. `char buf[64]`,
   `fixed_string<256>`, `StringBuilder<32>`). Use the sentinels in the
   `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`

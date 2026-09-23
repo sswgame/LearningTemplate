@@ -38,7 +38,7 @@ namespace sw
                 TaskNode* pSlab = static_cast<TaskNode*>( Memory::allocate( sizeof( TaskNode ) * kSlabSize ) );
                 for ( uint32 index = 0; index < kSlabSize; ++index )
                 {
-                    new ( &pSlab[index] ) TaskNode();
+                    sw_placement_new( &pSlab[index] ) TaskNode();
                 }
                 {
                     std::scoped_lock<mutex> lock{ _slabMutex };

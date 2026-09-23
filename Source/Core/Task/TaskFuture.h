@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -151,7 +152,7 @@ namespace sw
             {
                 Delegate<void( const T& )> continuation = markReadyAndTakeContinuation( _continuation, [&]()
                 {
-                    new ( &_storage ) T( value );
+                    sw_placement_new( &_storage ) T( value );
                     _bHasValue.store( true, std::memory_order_release );
                 } );
                 if ( continuation.isBound() )
@@ -163,7 +164,7 @@ namespace sw
             {
                 Delegate<void( const T& )> continuation = markReadyAndTakeContinuation( _continuation, [&]()
                 {
-                    new ( &_storage ) T( std::move( value ) );
+                    sw_placement_new( &_storage ) T( std::move( value ) );
                     _bHasValue.store( true, std::memory_order_release );
                 } );
                 if ( continuation.isBound() )

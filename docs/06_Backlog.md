@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-23 · 기준 커밋 `4dfa22ea` + (B) 스물셋째(Engine 후속 넷 · 시작 시간 · 실제 프레임 시간 계측)
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 표기 통일(`Style/PlacementNew`)
 
 ---
 
@@ -1614,6 +1614,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (placement new 표기를 `sw_placement_new` 하나로 — 린트 `Style/PlacementNew`)
+
+**왜.** `Memory.h` 의 `sw_placement_new( p )`(= `new ( static_cast<void*>( p ) )`)는 첫 커밋부터 있었지만 `vector` ·
+`PoolAllocator` · Engine 의 리플렉션·직렬화에서만 쓰였다. `Delegate`(3) · `TaskTypes`(3) · `TaskFuture`(2) · `FrameArenaAllocator`(2) ·
+`TaskNodePool` · `LockFreeObjectPool` · `EventDispatcher` · `make_unique` · 테스트 넷은 맨 `new ( p )` 였다 — 강제하는 것이 없었다.
+지금 트리에서는 두 표기가 같은 `operator new( size_t, void* )` 를 부르므로 동작 차이는 없다(전역 오버로드는 `MemoryAllocTag` 하나뿐).
+
+**한 것.** 18 곳을 매크로로 바꿨다. 새로 매크로에 기대게 된 헤더 다섯(`LockFreeObjectPool` · `EventDispatcher` · `FrameArenaAllocator` ·
+`TaskFuture` · `TaskTypes`)은 `Memory.h` 를 직접 include 한다. `CheckCodeConventions.py` 에 `PlacementNewRule`(`Style/PlacementNew`) —
+`#define` 줄과 `operator new(` 선언은 거른다. 고치기 전 트리에서 18 건을 전부 잡는 것을 확인했다. 규칙은 `AGENTS.md` ·
+`04_CodingGuidelines.md` 에 적었다.
+
+**남긴 것.** 코드 생성기(`CodeGenerator.cpp` 의 `new ( self ) …`)는 문자열이라 린트가 보지 않고, 바꾸면 생성물 바이트가 달라져
+그대로 두었다. 매크로에 `::` 를 붙이면(`::new`) 클래스 전용 `operator new` 를 가진 T 에도 안전하지만, 그런 타입이 지금 없다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `nogpu` 7/7 · 린트 20/20 · `hostgpu` 2/2(Shipping) · 규칙 자가 테스트 32 카테고리.
 
 ### 2026-09-23 (전방 선언으로 끊을 수 있는 include 를 찾아 끊었다 — 도구 하나, 헤더 스물넷)
 

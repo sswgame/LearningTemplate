@@ -8,6 +8,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -55,11 +56,11 @@ namespace sw
             },
                 []( const void* pSrc, void* pDst )
             {
-                new ( pDst ) T( *reinterpret_cast<const T*>( pSrc ) );
+                sw_placement_new( pDst ) T( *reinterpret_cast<const T*>( pSrc ) );
             },
                 []( void* pSrc, void* pDst )
             {
-                new ( pDst ) T( std::move( *reinterpret_cast<T*>( pSrc ) ) );
+                sw_placement_new( pDst ) T( std::move( *reinterpret_cast<T*>( pSrc ) ) );
                 reinterpret_cast<T*>( pSrc )->~T();
             },
                 sizeof( T ),
@@ -156,7 +157,7 @@ namespace sw
             if constexpr ( kIsInline<Decayed> )
             {
                 _pVtable = getInlineVtable<Decayed>();
-                new ( _arrStorage ) Decayed( std::forward<T>( value ) );
+                sw_placement_new( _arrStorage ) Decayed( std::forward<T>( value ) );
             }
             else
             {
