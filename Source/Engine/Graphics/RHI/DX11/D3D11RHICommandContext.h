@@ -78,6 +78,14 @@ namespace sw
     private:
         /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
+        /**
+         * @brief 이 컨텍스트가 Deferred Context 면 이 스레드의 기록 컨텍스트로 묶습니다 — 패스가 시작되는 자리마다.
+         * @details 리스트를 연 스레드와 기록하는 스레드가 다를 수 있다(RenderGraph 병렬 웨이브의 첫 리스트). `beginCommandList` 는
+         *          연 스레드만 묶으므로, 기록하는 스레드는 여기서 자기 것을 묶는다 — 그래야 그 스레드의 드로우별 상수버퍼 갱신이
+         *          즉시 컨텍스트가 아니라 **이 리스트**로 간다(D3D11 의 리스트 단위 버저닝). 즉시 컨텍스트는 묶지 않는다 — 그쪽은
+         *          `_immediateContextMutex` 로 지키는 공유 자원이라 묶으면 그 잠금을 건너뛰게 된다.
+         */
+        void ensureRecordingBinding();
         /** @brief bindless 인덱스가 가리키는 구조버퍼의 SRV — 범위 밖 · 미등록이면 nullptr. 그래픽스 · 컴퓨트 바인딩이 같은 조회다. */
         ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
         /**

@@ -84,6 +84,11 @@ RHI/
 - `SW_RHI_AS_MODULES` (기본 ON) 이면 백엔드는 별도 DLL 입니다. 그래서 Engine 의 전역 변수를
   백엔드에서 그냥 `extern` 으로 참조할 수 없습니다 — 정책은 Engine 이 정하고 디바이스는
   메커니즘만 갖는 형태로 넘깁니다(`IRHIDevice::setImmediateSubmit` 참고).
+- **DX11 의 "이 스레드가 기록 중인 Deferred Context" 는 스레드 로컬입니다** (`D3D11RHIDevice::bindRecordingContext`).
+  `beginCommandList` 를 부른 스레드와 `endCommandList` 를 부른 스레드가 다를 수 있으므로(RenderGraph 병렬
+  웨이브의 첫 리스트), 묶임은 세 자리에서 풀립니다 — 닫을 때 · 제출할 때 · 리스트를 놓을 때. 기록하는 스레드는
+  패스 시작(`setPipelineState` · `beginRenderPass` · `dispatch*`)에서 자기 것을 묶습니다. 이 규칙이 없던 동안
+  리스트를 연 스레드의 묶임이 리스트보다 오래 살아 죽은 컨텍스트에 `Map` 했습니다(간헐 세그폴트).
 
 ## 스왑체인 — 같은 개념, 다른 무게
 

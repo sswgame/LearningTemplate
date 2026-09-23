@@ -102,9 +102,21 @@ namespace sw
     IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
-    void D3D11RHIDevice::bindRecordingContext( ID3D11DeviceContext* pContext ) { s_pRecordingContext = pContext; }
+    void D3D11RHIDevice::bindRecordingContext( ID3D11DeviceContext* pContext )
+    {
+        // 묶인 채 다른 리스트를 묶는 것은 정상이다 — 스테이지를 기다리는 렌더 스레드가 다른 패스의 기록 태스크를 대신 돌린다
+        // (TaskManager 의 대기자 돕기). 그래서 "이미 묶여 있다" 를 단정하지 않는다. 묶임이 리스트보다 오래 사는 것만 막으면 된다
+        // (`unbindRecordingContextIf`).
+        s_pRecordingContext = pContext;
+    }
 
     void D3D11RHIDevice::unbindRecordingContext() { s_pRecordingContext = nullptr; }
+
+    void D3D11RHIDevice::unbindRecordingContextIf( ID3D11DeviceContext* pContext )
+    {
+        if ( pContext != nullptr && s_pRecordingContext == pContext )
+            s_pRecordingContext = nullptr;
+    }
 
     ID3D11DeviceContext* D3D11RHIDevice::getRecordingContext() { return s_pRecordingContext; }
 

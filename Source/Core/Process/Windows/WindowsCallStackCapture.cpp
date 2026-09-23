@@ -34,7 +34,10 @@ namespace sw
             // 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
             StringBuilder<constant::kMaxBuffer8192> sb;
 
-            HANDLE                      process = GetCurrentProcess();
+            HANDLE process = GetCurrentProcess();
+            // 나중에 실린 모듈(RHI_*.dll 같은 MODULE)도 심볼화되게 목록을 새로 읽는다 — 초기화 때 한 번만 읽으면
+            // 그 뒤에 실린 DLL 의 프레임이 주소로만 남는다(크래시 지점 [0] 이 그렇게 비어 있었다).
+            SymRefreshModuleList( process );
             alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
             SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
             pSymbol->SizeOfStruct               = sizeof( SYMBOL_INFO );

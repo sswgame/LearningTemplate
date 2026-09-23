@@ -10,6 +10,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <thread>
+
 // 실제 RHI 디바이스를 만드는 케이스만 모은다 — 네 백엔드의 생성·바인드리스·업로드·리드백·드로우.
 //
 // SW_TEST_REQUIRES_HOST( RHIDeviceTest ): 실제 GPU 디바이스를 만든다. CI 러너엔 GPU 가 없고,
@@ -1043,6 +1045,43 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
     cmdList.reset();
 
     shutdownDeviceWithWindow( rhiDevice, window );
+}
+
+/**
+ * @brief [RHIDeviceTest] 리스트를 연 스레드와 닫은 스레드가 달라도, 리스트가 사라진 뒤의 상수버퍼 갱신은 살아 있는 컨텍스트로 간다
+ * @details RenderGraph 의 병렬 웨이브가 하는 일이다 — 렌더 스레드가 첫 패스 리스트를 열어 배리어를 적고 워커가 닫는다. DX11 은
+ *          "이 스레드가 기록 중인 Deferred Context" 를 스레드 로컬로 들므로, 닫는 스레드가 풀어도 연 스레드의 묶임은 남았다.
+ *          리스트가 파괴된 뒤 그 스레드의 `updateConstantBuffer` 가 죽은 컨텍스트에 Map 해 간헐 세그폴트가 났다(세 번 보고 잡았다).
+ *          제출 · 파괴가 연 스레드의 묶임을 되짚어 푸는지 본다 — 풀리지 않으면 아래 갱신이 해제된 메모리를 밟는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX11, window, device ) == false )
+        SW_TEST_SKIP( "DirectX11 unavailable" );
+
+    for ( uint32 round = 0; round < 4; ++round )
+    {
+        sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
+        SW_ASSERT_TRUE( cmdList != nullptr );
+        cmdList->beginCommandList(); // 이 스레드가 연다 — 렌더 스레드의 자리
+        std::thread worker( [&cmdList]()
+        { cmdList->endCommandList(); } ); // 워커가 닫는다
+        worker.join();
+        device->executeCommandList( cmdList.get() );
+        cmdList.reset(); // 리스트가 사라진다 — 연 스레드의 묶임이 남아 있으면 죽은 컨텍스트를 가리킨다
+
+        // 기록 밖의 갱신 — 즉시 컨텍스트로 가야 한다.
+        const sw::RHIBufferHandle cb = device->getResource()->createConstantBuffer( 64 );
+        SW_ASSERT_TRUE( cb != 0 );
+        float32 arrValue[16]{};
+        arrValue[0] = static_cast<float32>( round );
+        device->getResource()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
+        device->getResource()->destroyBuffer( cb );
+    }
+    device->waitIdle();
+    shutdownDeviceWithWindow( device, window );
 }
 
 /**

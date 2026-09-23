@@ -199,6 +199,15 @@ namespace sw
         static void unbindRecordingContext();
         /** @brief 이 스레드가 기록 중인 Deferred Context. 기록 중이 아니면 nullptr. */
         static ID3D11DeviceContext* getRecordingContext();
+        /**
+         * @brief 이 컨텍스트가 이 스레드의 기록 컨텍스트로 묶여 있으면 풉니다 — 리스트를 제출 · 파괴 · 재설정하는 자리마다.
+         * @details begin 과 end 는 **다른 스레드**에서 일어날 수 있다. RenderGraph 의 병렬 웨이브는 렌더 스레드가 첫 패스 리스트를
+         *          열어 배리어를 앞머리에 적고, 워커가 패스를 기록해 닫는다. `endCommandList` 는 닫는 스레드의 묶임만 풀므로 연
+         *          스레드의 묶임은 그대로 남았고, 그 리스트가 파괴된 뒤 그 스레드의 `updateConstantBuffer` 가 죽은 Deferred
+         *          Context 에 Map 했다 — 테스트에서 세 번 본 간헐 세그폴트가 이것이었다(2026-09-23). 리스트가 손을 떠나는 자리
+         *          (제출 · 파괴 · `releaseRecordedState`)에서 되짚어 풀면 묶임이 리스트보다 오래 살지 않는다.
+         */
+        static void unbindRecordingContextIf( ID3D11DeviceContext* pContext );
 
     private:
         /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */

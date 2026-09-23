@@ -57,8 +57,17 @@ namespace sw
         _pContext->CopyResource( dstTex.Get(), pSrcRecord->_texture.Get() );
     }
 
+    void D3D11RHICommandContext::ensureRecordingBinding()
+    {
+        if ( _pContext == nullptr || _pDevice == nullptr || _pContext == _pDevice->_deviceContext.Get() )
+            return;
+        if ( D3D11RHIDevice::getRecordingContext() != _pContext )
+            D3D11RHIDevice::bindRecordingContext( _pContext );
+    }
+
     void D3D11RHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
+        ensureRecordingBinding();
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
@@ -85,11 +94,13 @@ namespace sw
 
     void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
+        ensureRecordingBinding();
         setPipelineState( pso );
     }
 
     void D3D11RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
+        ensureRecordingBinding();
         if ( _pContext == nullptr )
             return;
 
@@ -399,6 +410,7 @@ namespace sw
 
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
+        ensureRecordingBinding();
         if ( _pContext != nullptr )
             _pContext->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
@@ -513,6 +525,7 @@ namespace sw
 
     void D3D11RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
+        ensureRecordingBinding();
         if ( _pContext != nullptr && argumentBuffer != 0 )
         {
             ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );

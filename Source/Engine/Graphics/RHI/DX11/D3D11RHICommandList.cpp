@@ -43,6 +43,8 @@ namespace sw
 
     D3D11RHICommandList::~D3D11RHICommandList()
     {
+        // 이 스레드가 이 리스트를 열어 두고(배리어 기록) 워커가 닫았으면 묶임이 여기 남아 있다 — 리스트와 함께 푼다.
+        D3D11RHIDevice::unbindRecordingContextIf( _pNativeContext.Get() );
         if ( _pDevice != nullptr )
             _pDevice->unregisterCommandList( this );
     }
@@ -55,6 +57,7 @@ namespace sw
 
     void D3D11RHICommandList::releaseRecordedState()
     {
+        D3D11RHIDevice::unbindRecordingContextIf( _pNativeContext.Get() );
         _pFinishedList.Reset();
         if ( _pNativeContext != nullptr )
             _pNativeContext->ClearState();

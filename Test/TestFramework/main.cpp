@@ -6,6 +6,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -68,6 +69,9 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::CommandStack>     commandStack     = sw::make_unique<sw::CommandStack>();
     sw::unique_ptr<sw::IAudioSystem>     audioSystem      = sw::IAudioSystem::create();
     logger->initialize();
+    // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다(EngineLoop 과 같은 자리). 예전에는 테스트 실행 파일에
+    // 핸들러가 없어서 간헐 세그폴트가 "SEGFAULT" 한 단어로만 남았다 — 세 번을 보고도 자리를 몰랐다.
+    sw::CrashHandler::initialize();
     // 리소스 루트는 로거 다음에 찾는다(EngineLoop 과 같은 순서) — 실패했을 때의 진단이 남아야 하고,
     // 아래 `configManager->setRootDirectory` 가 여기서 정해지는 프로젝트 루트를 바로 쓴다.
     // 예전에는 `owned._pResourceManager->initialize()` 가 대신 불러 줬는데, 그건 설정보다 뒤였다.
@@ -206,6 +210,7 @@ int main( int32 argc, utf8* argv[] )
     memoryProfiler.reset();
     deadlockDetector.reset();
 
+    sw::CrashHandler::shutdown();
     logger->shutdown();
     logger.reset();
 

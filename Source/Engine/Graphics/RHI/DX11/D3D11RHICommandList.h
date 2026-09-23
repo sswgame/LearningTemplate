@@ -44,6 +44,8 @@ namespace sw
         bool isValid() const { return _pNativeContext != nullptr; }
         /** @brief `IRHIDevice::executeCommandList` 가 실제 제출에 쓰는 네이티브 커맨드 리스트. */
         ID3D11CommandList* getNativeCommandList() const { return _pFinishedList.Get(); }
+        /** @brief 이 리스트가 기록하는 Deferred Context — 디바이스가 제출할 때 이 스레드의 기록 묶임을 되짚어 푸는 데 쓴다. */
+        ID3D11DeviceContext* getNativeContext() const { return _pNativeContext.Get(); }
         /** @brief 이 리스트의 기록 상태 — 자원이 사라질 때 디바이스가 캐시를 지우려고 읽는다. */
         D3D11RecordingState& getRecordingState() { return _recordingState; }
 

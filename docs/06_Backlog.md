@@ -1067,8 +1067,8 @@ Shipping · ASan 셋 다 · Shipping `hostgpu` 2/2 · 린트 프리셋 20/20. `B
 남겼고, 그 자리는 `RenderPassGpuTest.MaterialLifetimeFollowsPacket` 의 `[ RUN ]` 직후 **로그 한 줄도 찍기 전**이다. 즉 앞 케이스의
 `[ OK ]` 뒤, 이 케이스의 `tryInitDeviceForFrameRenderer( DirectX11 …)` 안 — 디바이스 · 창 생성 자리다. 앞의 두 번(위 표의 메모)과
 같은 자리이고 셰이더 · 머티리얼 로직까지 가지 않았다. 같은 바이너리로 `EngineTest_HostOnly` 3 회 · 그 케이스 단독 10 회 · 전체 645 통과.
-이번엔 체인이 GPU 스위트를 빌드와 겹치지 않고 돌렸으므로(스모크 먼저, 체인 나중) 부하 타임아웃도 아니다. 다음 순서는 백로그 메모대로
-`-gv_` 로 백엔드를 하나씩 빼 보는 것 — DX11 이 첫 시도라 DX11 창/디바이스 생성부터.
+이번엔 체인이 GPU 스위트를 빌드와 겹치지 않고 돌렸으므로(스모크 먼저, 체인 나중) 부하 타임아웃도 아니다. → **원인을 찾아 고쳤다** — 3 절의
+2026-09-23 항목(DX11 기록 컨텍스트 스레드 로컬). "로그 한 줄도 찍기 전" 은 ctest 출력의 버퍼링이 만든 착시였다.
 
 **남긴 것.** 남은 24 건은 6 줄짜리가 스물이고, 백엔드 API 호출 모양(디스크립터 뷰 만들기 · 배리어 한 줄)이라 합치면 읽기가 나빠진다.
 볼 만한 것은 `ShaderReflectionDx` 의 두 채우기 함수 하나 — 바인드 포인트 규칙이 같아도 되는지 확인되면 템플릿 하나로 줄 수 있다.
@@ -1383,6 +1383,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-23 (세 번 본 간헐 세그폴트의 원인 — DX11 의 "기록 중인 Deferred Context" 스레드 로컬이 리스트보다 오래 살았다)
+
+**증상.** `EngineTest_HostOnly` 가 드물게 세그폴트로 죽었다 — 09-21 Shipping `EngineTest_NoGPU` 1 회, 09-22 Debug `EngineTest_HostOnly`
+1 회(Vulkan 구간 직후), 09-23 Debug 체인 1 회(`MaterialLifetimeFollowsPacket` 진입 직후). 셋 다 "디바이스 생성 · 해제 근처" 로만 적혀 있었다.
+
+**왜 자리를 몰랐나 — 둘.** ① 테스트 실행 파일에 크래시 핸들러가 없었다(엔진 루프만 설치했다). 남는 것이 `SEGFAULT` 한 단어뿐이었다.
+② ctest 의 `--output-on-failure` 출력에서 마지막 줄이 `[ RUN ]` 이라 "그 직후, 창을 만들기도 전에" 로 읽었는데 틀렸다 —
+`ConsoleLogOutput` 은 Error 만 flush 하고 Info 는 파이프에 버퍼링되므로 크래시 때 통째로 사라진다(`[ RUN ]` 은 프레임워크가 직접
+flush 한다). 같은 명령을 직접 실행해 파일로 받으니 창 생성 · 디바이스 초기화 · 렌더러 준비까지 다 찍혀 있었다.
+
+**잡은 방법.** 같은 명령을 반복해 **3 회 중 1 회** 재현 → `Test/TestFramework/main.cpp` 에 `CrashHandler::initialize()`(엔진 루프와 같은 자리)
+→ 다음 재현에서 스택이 나왔다: `GpuScene::upload → MaterialInstance::updateRhi(239) → D3D11 updateConstantBuffer` 안. 프레임 [0] 은
+주소로만 남았는데, `SymRefreshModuleList` 를 초기화 때 한 번만 불러 그 뒤에 실린 `RHI_DX11.dll` 이 심볼화되지 않아서다 — 이제
+`symbolize` 마다 새로 읽는다.
+
+**원인.** `D3D11RHIResource::updateConstantBuffer` 는 "이 스레드가 기록 중인 Deferred Context"(`thread_local s_pRecordingContext`)가
+있으면 즉시 컨텍스트 대신 그쪽에 `Map` 한다 — 병렬 기록에서 워커 여럿이 즉시 컨텍스트를 동시에 Map 하지 않게 넣은 장치다. 묶는 곳은
+`beginCommandList`, 푸는 곳은 `endCommandList` 뿐이었다. 그런데 `RenderGraph::executeParallel` 은 **렌더 스레드가 웨이브의 첫 패스
+리스트를 열어 배리어를 앞머리에 적고, 워커가 그 리스트를 기록해 닫는다.** 닫는 쪽은 자기(워커) 스레드 로컬만 풀므로 연 스레드(렌더
+스레드 · 테스트에서는 메인)의 묶임은 그 리스트를 가리킨 채 남았다. 테스트가 끝나 디바이스와 리스트가 파괴된 뒤, 다음 테스트의 첫
+`updateConstantBuffer`(`GpuScene::upload` 의 머티리얼 인스턴스 CB — `beginCommandList` 보다 앞이다)가 **해제된 Deferred Context 에
+Map** 했다. 해제된 메모리가 그대로면 지나가고 재사용됐으면 죽는다 — 그래서 3 회 중 1 회였고, 병렬 웨이브를 돈 첫 테스트
+(`GpuSceneBufferReusedAcrossPackets` 의 둘째 패킷) **바로 다음** 테스트에서만 났다. 앱에서는 렌더 스레드의 묶임이 (살아 있는) 패스 0
+리스트를 가리킨 채 프레임을 넘어, 기록 밖의 갱신(프레임 시작의 머티리얼 CB)이 즉시 컨텍스트가 아니라 패스 0 리스트로 새어 들어갔다 —
+패스 0 이 먼저 실행되어 화면은 맞았지만 설계와 달랐다.
+
+**고침 (DX11 백엔드 안, ABI 변경 없음).** 묶임이 리스트보다 오래 살지 못하게 세 자리에서 되짚어 푼다(`unbindRecordingContextIf`) —
+`executeCommandList`(제출한 스레드는 기록을 마쳤다) · `~D3D11RHICommandList` · `releaseRecordedState`(파괴 · 디바이스 종료의 detach ·
+리사이즈). 그리고 기록하는 스레드가 연 스레드와 다를 때 워커가 **묶이지 않은 채** 기록하던 구멍도 메웠다:
+`D3D11RHICommandContext::ensureRecordingBinding` 이 패스 시작(`setPipelineState` · `beginRenderPass` · `dispatch*`)에서 자기 Deferred
+Context 를 묶는다(즉시 컨텍스트는 묶지 않는다 — 그쪽은 `_immediateContextMutex` 로 지키는 공유 자원이다). "이미 묶여 있는데 다른 것을
+묶는다" 를 경고로 두었다가 뺐다 — 스테이지를 기다리는 렌더 스레드가 다른 패스의 기록 태스크를 대신 돌리는 정상 경로에서 난다.
+
+**검증 · 남긴 것.** 테스트 `RHIDeviceTest.CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext`(연 스레드 ≠ 닫은 스레드 →
+제출 · 파괴 → 기록 밖 갱신 ×4). 같은 명령 **12 회 + 6 회 연속 통과**(고치기 전 3 회 중 1 회 세그폴트) · BackendSmoke 네 백엔드 오류 0 ·
+에디터 ON 네 백엔드 오류 0 · Debug · Shipping · ASan 빌드 경고 0 · `nogpu` 7/7 셋 다 · `hostgpu` 2/2 Debug · Shipping 둘 다 · 린트 20/20. 앞의 두 사례는 로그가 없어 같은 원인이라고 **단정하지 않는다** — 모양(병렬 프레임 → 디바이스
+파괴 → 다음 디바이스의 갱신)은 같다. 테스트 실행 파일의 크래시 핸들러는 그대로 둔다 — 다음 간헐 실패는 스택과 함께 온다.
 
 ### 2026-09-22 (같은 답을 두 이름으로 내던 API 를 걷어냈다 — Core·Engine 헤더 선언 5367 → 5270)
 
