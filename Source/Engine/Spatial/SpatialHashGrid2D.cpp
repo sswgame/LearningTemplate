@@ -14,10 +14,10 @@ namespace sw
             /**
              * @brief 좌표 하나를 셀 번호로 바꿉니다.
              * @details float 을 int 로 캐스팅하는 것은 값이 int32 범위 밖이면 **정의되지 않은 동작**
-             *          이고, NaN 도 마찬가지다. 좌표 하나가 이상하다고 프로그램이 이상해지면 안 되므로
-             *          범위 안으로 접어 넣는다 — 그렇게 접힌 범위는 어차피 셀 수 상한에 걸려
-             *          "너무 넓다" 로 처리된다. 나눗셈을 float64 로 하는 이유는 float64 가 모든
-             *          int32 를 정확히 담아서 경계 비교가 어긋나지 않기 때문이다.
+             *          이고, NaN 도 마찬가지입니다. 좌표 하나가 이상하다고 프로그램이 이상해지면 안 되므로
+             *          범위 안으로 접어 넣습니다. 그렇게 접힌 범위는 어차피 셀 수 상한에 걸려
+             *          "너무 넓다" 로 처리됩니다. 나눗셈을 float64 로 하는 이유는 float64 가 모든
+             *          int32 를 정확히 담아서 경계 비교가 어긋나지 않기 때문입니다.
              */
             static int32 toCellCoord( float32 value, float32 cellSize )
             {
@@ -31,12 +31,12 @@ namespace sw
         };
 
         /**
-         * @brief 광선이 상자를 실제로 지나는지 — 슬랩(slab) 판정입니다.
+         * @brief 광선이 상자를 실제로 지나는지 슬랩(slab)으로 판정합니다.
          * @param originX 광선 시작점 X. @param originY 광선 시작점 Y.
          * @param dirX **정규화된** 방향 X. @param dirY **정규화된** 방향 Y.
          * @param maxDist 광선 길이. @param bounds 대상 상자.
-         * @details 축마다 들어가는 t 와 나오는 t 를 구해 구간을 좁힌다. 구간이 뒤집히면 안 맞는다.
-         *          방향 성분이 0 인 축은 그 축의 시작 좌표가 상자 안에 있어야만 통과한다.
+         * @details 축마다 들어가는 t 와 나오는 t 를 구해 구간을 좁힙니다. 구간이 뒤집히면 맞지 않습니다.
+         *          방향 성분이 0 인 축은 그 축의 시작 좌표가 상자 안에 있어야만 통과합니다.
          */
         bool doesRayHitBounds( float32 originX, float32 originY, float32 dirX, float32 dirY, float32 maxDist,
                                const AABB2D& bounds )
@@ -53,7 +53,7 @@ namespace sw
             {
                 if ( MathUtil::abs( arrDir[axis] ) <= MathUtil::Epsilon )
                 {
-                    // 이 축으로는 움직이지 않는다 — 시작부터 상자 밖이면 영영 못 만난다.
+                    // 이 축으로는 움직이지 않는다. 시작부터 상자 밖이면 영영 만나지 못한다.
                     if ( arrOrigin[axis] < arrMin[axis] || arrOrigin[axis] > arrMax[axis] )
                         return false;
                     continue;
@@ -81,7 +81,7 @@ namespace sw
     SpatialHashGrid2D::CellRange SpatialHashGrid2D::CellRange::fromBounds( float32 minX, float32 minY, float32 maxX, float32 maxY,
                                                                            float32 cellSize )
     {
-        // 뒤집힌 상자(min > max)도 받는다 — 호출부마다 정규화를 적으면 그중 하나가 빠진다.
+        // 뒤집힌 상자(min > max)도 받는다. 부르는 쪽마다 정규화를 적으면 그중 하나가 빠진다.
         CellRange range{};
         range._minX = SpatialHashGrid2DInternal::toCellCoord( MathUtil::min( minX, maxX ), cellSize );
         range._maxX = SpatialHashGrid2DInternal::toCellCoord( MathUtil::max( minX, maxX ), cellSize );
@@ -98,8 +98,8 @@ namespace sw
             return 0;
 
         // **곱하기 전에 넘칠지 본다.** 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 두 축을 곱하면
-        // 2^64 — int64 를 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
-        // 상한 검사를 통과해서 **막으려던 순회를 그대로 돌게 된다**. 호출부는 이 값을 상한과 견주기만
+        // 2^64 라 int64 를 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
+        // 상한 검사를 통과해서 **막으려던 순회를 그대로 돌게 된다.** 부르는 쪽은 이 값을 상한과 견주기만
         // 하므로, 넘칠 때는 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
         if ( spanX > MathUtil::MaxInt64 / spanY )
             return MathUtil::MaxInt64;
@@ -137,7 +137,7 @@ namespace sw
         const CellRange range = CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
-            // 흩뿌리지 않는다 — 이유는 `kMaxHandleCellCount` 참고. 질의가 이 목록을 함께 본다.
+            // 흩뿌리지 않는다. 이유는 `kMaxHandleCellCount` 참고. 질의가 이 목록을 함께 본다.
             _listOversizedHandle.push_back( handle );
             return;
         }
@@ -162,7 +162,7 @@ namespace sw
         const AABB2D bounds = boundIt->second;
         _mapHandleBound.erase( boundIt );
 
-        // 넣을 때와 **같은 계산**으로 같은 셀들을 본다 — 어긋나면 죽은 핸들이 셀에 남는다.
+        // 넣을 때와 **같은 계산**으로 같은 셀들을 본다. 어긋나면 죽은 핸들이 셀에 남는다.
         const CellRange range = CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
@@ -262,8 +262,8 @@ namespace sw
         const float32 ndx = dir._x;
         const float32 ndy = dir._y;
 
-        // 그리드에 흩뿌리기엔 너무 큰 핸들은 어느 셀에도 없다 — 다른 질의들과 같이 **항상 함께** 본다.
-        // 형제들이 그렇듯 여기도 **좁힘을 거친다**: 크다는 이유로 무조건 맞았다고 하지 않는다.
+        // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. 다른 질의들처럼 **항상 함께** 본다.
+        // 형제들이 그렇듯 여기도 **좁힘을 거친다.** 크다는 이유로 무조건 맞았다고 하지 않는다.
         for ( const SlotHandle handle : _listOversizedHandle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
@@ -278,7 +278,7 @@ namespace sw
         const int32 stepX = ( ndx > 0.0f ) ? 1 : ( ( ndx < 0.0f ) ? -1 : 0 );
         const int32 stepY = ( ndy > 0.0f ) ? 1 : ( ( ndy < 0.0f ) ? -1 : 0 );
 
-        // 셀 번호는 좌표에서 나오고 좌표는 호출부에서 온다 — int32 끝에 접혀 있을 수 있으므로
+        // 셀 번호는 좌표에서 나오고 좌표는 부르는 쪽에서 온다. int32 끝에 접혀 있을 수 있으므로
         // `+ 1` 은 넓은 타입에서 한다.
         const int64   boundaryCellX = static_cast<int64>( cellX ) + ( ( stepX > 0 ) ? 1 : 0 );
         const int64   boundaryCellY = static_cast<int64>( cellY ) + ( ( stepY > 0 ) ? 1 : 0 );
@@ -291,7 +291,7 @@ namespace sw
         const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / ndx : MathUtil::MaxFloat;
         const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / ndy : MathUtil::MaxFloat;
 
-        // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다 — 셀 크기에 견줘 사거리가
+        // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다. 셀 크기에 견줘 사거리가
         // 길면 훑을 셀이 끝없이 늘어난다. 상한은 `kMaxQueryCellCount` 하나를 같이 쓴다.
         float32 currentT  = 0.0f;
         int64   stepCount = 0;
@@ -305,9 +305,9 @@ namespace sw
             {
                 for ( const SlotHandle handle : bucketIt->second )
                 {
-                    // **좁힌다.** 예전에는 지나간 셀의 핸들을 전부 담아서, 광선이 스치지도 않은
+                    // **좁힌다.** 예전에는 지나간 셀의 핸들을 모두 담아서, 광선이 스치지도 않은
                     // 것이 결과에 들어갔다. 형제 둘(`queryAabb` · `queryCircle`)은 처음부터
-                    // 각자의 판정을 거친다 — 이쪽만 후보 목록을 그대로 내놓고 있었다.
+                    // 각자의 판정을 거친다. 이쪽만 후보 목록을 그대로 내놓고 있었다.
                     const auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() &&
                          doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
@@ -315,7 +315,7 @@ namespace sw
                 }
             }
 
-            // 셀 번호가 int32 끝에 닿았으면 더 나아갈 수 없다 — 증감 자체가 넘침이다.
+            // 셀 번호가 int32 끝에 닿았으면 더 나아갈 수 없다. 증감 자체가 넘침이다.
             if ( ( stepX > 0 && cellX == MathUtil::MaxInt32 ) || ( stepX < 0 && cellX == MathUtil::MinInt32 ) ||
                  ( stepY > 0 && cellY == MathUtil::MaxInt32 ) || ( stepY < 0 && cellY == MathUtil::MinInt32 ) )
                 break;

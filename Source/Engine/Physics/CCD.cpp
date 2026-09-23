@@ -11,10 +11,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false.
-         * @details 슬랩 검사는 축마다 똑같다. 예전에는 이 22줄이 **여섯 벌**(두 함수 × 세 축)
+         * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false 입니다.
+         * @details 슬랩 검사는 축마다 똑같습니다. 예전에는 이 22줄이 **여섯 벌**(두 함수 × 세 축)
          *          있었고, 한 축의 부호나 첨자를 잘못 적어도 나머지 다섯과 비교해 보지 않는 한
-         *          보이지 않았다 — 증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵다.
+         *          보이지 않았습니다. 증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵습니다.
          * @param origin 이동 시작점의 이 축 좌표
          * @param delta 이 축의 변위
          * @param slabMin 슬랩(확장된 대상 상자)의 이 축 최소값
@@ -26,7 +26,7 @@ namespace sw
                        const float3& negativeNormal, const float3& positiveNormal,
                        float32& inoutNear, float32& inoutFar, float3& inoutNearNormal )
         {
-            // 이 축으로 움직이지 않으면 시작 좌표가 슬랩 안에 있는지만 본다 — 나누면 무한대가 된다.
+            // 이 축으로 움직이지 않으면 시작 좌표가 슬랩 안에 있는지만 본다. 나누면 무한대가 된다.
             if ( MathUtil::abs( delta ) < MathUtil::Epsilon )
                 return slabMin <= origin && origin <= slabMax;
 
@@ -34,7 +34,7 @@ namespace sw
             float32       tEnter   = ( slabMin - origin ) * invDelta;
             float32       tExit    = ( slabMax - origin ) * invDelta;
 
-            // 음의 방향으로 가면 두 면의 순서가 뒤집힌다 — 법선도 같이 뒤집는다.
+            // 음의 방향으로 가면 두 면의 순서가 뒤집힌다. 법선도 같이 뒤집는다.
             const bool bReversed = tEnter > tExit;
             if ( bReversed )
                 std::swap( tEnter, tExit );
@@ -49,7 +49,7 @@ namespace sw
             return inoutNear <= inoutFar && inoutFar >= 0.0f;
         }
 
-        /** @brief 세 축을 모두 잘라 진입 시각과 그 면의 법선을 구합니다. 빗나가면 false. */
+        /** @brief 세 축을 모두 잘라 진입 시각과 그 면의 법선을 구합니다. 빗나가면 false 입니다. */
         bool clipAllSlabs( const float3& origin, const float3& displacement, const AABB& slabBox,
                            float32& outNear, float3& outNearNormal )
         {
@@ -75,7 +75,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 상자를 각 축으로 @p halfExtents 만큼 부풀립니다 (민코프스키 합). */
+        /** @brief 상자를 각 축으로 @p halfExtents 만큼 부풀립니다(민코프스키 합). */
         AABB expandBox( const AABB& box, const float3& halfExtents )
         {
             return AABB{
@@ -91,8 +91,8 @@ namespace sw
     bool CCD::sweepAabb( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
         // **빗나가면 outHit 은 비어 있다.** 예전에는 이 함수만 비우지 않아서, 결과 구조체를
-        // 재사용하는 호출자가 false 를 받고도 이전 호출의 `_bHit` 을 그대로 읽을 수 있었다
-        // (형제 함수 `sweepSphere` 는 처음부터 비우고 있었다 — 둘이 다른 약속을 하고 있었다).
+        // 재사용하는 쪽이 false 를 받고도 이전 호출의 `_bHit` 을 그대로 읽을 수 있었다
+        // (형제 함수 `sweepSphere` 는 처음부터 비우고 있었다. 둘이 다른 약속을 하고 있었다).
         outHit = SweepHit{};
 
         const float3 movingHalfExtents = movingBox.getExtents();
@@ -104,7 +104,7 @@ namespace sw
             outHit._bHit     = true;
             outHit._time     = 0.0f;
             outHit._hitPoint = movingCenter;
-            // 이미 겹친 상태에서는 진입면이 없다 — 밀어내는 방향으로 위를 준다.
+            // 이미 겹친 상태에서는 진입면이 없다. 밀어내는 방향으로 위를 준다.
             outHit._hitNormal = float3{ 0.0f, 1.0f, 0.0f };
             return true;
         }
@@ -128,7 +128,7 @@ namespace sw
     {
         outHit = SweepHit{};
 
-        // 1) 초기 오버랩 검사 (t = 0)
+        // 1) 처음부터 겹쳐 있는지 본다(t = 0)
         const float3  initialClosest  = startCenter.clamped( targetBox._min, targetBox._max );
         const float3  toCenterInitial = startCenter - initialClosest;
         const float32 distSqInitial   = toCenterInitial.getLengthSquared();
@@ -142,12 +142,12 @@ namespace sw
             return true;
         }
 
-        // 2) 변위 벡터가 0에 가까우면 추가 스윕 불필요
+        // 2) 변위가 0 에 가까우면 더 쓸어 볼 필요가 없다
         const float32 dispLenSq = displacement.getLengthSquared();
         if ( dispLenSq < 0.000001f )
             return false;
 
-        // 3) 확장 AABB (TargetBox + Radius) 에 대한 슬랩 스윕
+        // 3) 반지름만큼 부풀린 AABB(TargetBox + Radius)에 대해 슬랩으로 쓸어 본다
         const AABB expandedBox = expandBox( targetBox, float3{ radius, radius, radius } );
 
         float32 tNear{ 0.0f };
@@ -158,7 +158,7 @@ namespace sw
         if ( tNear < 0.0f || tNear > 1.0f )
             return false;
 
-        // 4) 충돌 시점의 구 중심 및 타겟 박스 최근접점 검증
+        // 4) 충돌 시점의 구 중심과 대상 상자의 최근접점을 확인한다
         const float3  sphereCenterAtHit = startCenter + displacement * tNear;
         const float3  closestOnBox      = sphereCenterAtHit.clamped( targetBox._min, targetBox._max );
         const float3  toCenter          = sphereCenterAtHit - closestOnBox;
@@ -174,7 +174,7 @@ namespace sw
             return true;
         }
 
-        // Edge/Corner 영역 광선-구체 2차 보정
+        // 모서리 · 꼭짓점 영역은 광선-구 교차로 다시 보정한다
         const float3  rayToClosest      = closestOnBox - startCenter;
         const float32 dotVal            = rayToClosest.dot( displacement );
         const float32 proj              = dotVal / dispLenSq;

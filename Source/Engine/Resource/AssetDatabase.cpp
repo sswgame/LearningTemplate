@@ -21,7 +21,7 @@ namespace sw
                 string result = ResourceUtil::getResourcePath( relativePath );
                 if ( result.empty() )
                 {
-                    // Write-side: invent absolute path from domain-qualified global ID only.
+                    // 쓰기 쪽: 도메인을 포함한 전역 ID 만으로 절대 경로를 만든다.
                     result = ResourceUtil::makeAbsolutePath( relativePath );
                 }
                 return result;
@@ -91,10 +91,10 @@ namespace sw
             {
 #if defined( SW_SHIPPING )
                 // 배포 빌드는 .meta 를 팩에 넣지 않는다(PackConfig 의 `*.meta` 제외). 여기서 GUID 를 지어내 쓰면
-                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Resource/)에 떨어진다 —
+                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Resource/)에 떨어진다.
                 // 실제로 Shipping 실기동 한 번에 defaultmaterial.material.meta 의 GUID 가 바뀌어 작업 트리가
-                // 더러워졌다. 배포본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다; 없으면 없는 것이다
-                // (호출부는 모두 null GUID 를 허용한다 — 씬·프리팹 로더는 경로로 물러난다).
+                // 더러워졌다. 배포본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
+                // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 return result;
 #else
                 result = Uuid::generate();

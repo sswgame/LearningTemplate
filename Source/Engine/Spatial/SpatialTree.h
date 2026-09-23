@@ -1,6 +1,6 @@
 /**
  * @file SpatialTree.h
- * @brief 2D/3D 공통 공간 분할 트리 템플릿 (QuadTree / Octree 공통 기반)
+ * @brief 2D/3D 공통 공간 분할 트리 템플릿입니다(QuadTree · Octree 의 공통 기반).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -15,11 +15,11 @@ namespace sw
 {
     /**
      * @struct AABB2D
-     * @brief 2차원 축 정렬 경계 상자 (Axis-Aligned Bounding Box)
+     * @brief 2차원 축 정렬 경계 상자(Axis-Aligned Bounding Box)입니다.
      */
     struct AABB2D
     {
-        /** @note 3차원 `AABB` 와 같은 모양이다 — 그쪽도 `float3 _min/_max` 를 든다. */
+        /** @note 3차원 `AABB` 와 같은 모양입니다. 그쪽도 `float3 _min/_max` 를 듭니다. */
         float2 _min{ 0.0f, 0.0f };
         float2 _max{ 0.0f, 0.0f };
 
@@ -76,7 +76,7 @@ namespace sw
 
     /**
      * @struct SpatialElement
-     * @brief 2D 공간 트리에 등록되는 단위 객체
+     * @brief 2D 공간 트리에 등록되는 단위 객체입니다.
      */
     struct SpatialElement
     {
@@ -87,7 +87,7 @@ namespace sw
 
     /**
      * @struct SpatialElement3D
-     * @brief 3D 공간 트리에 등록되는 단위 객체
+     * @brief 3D 공간 트리에 등록되는 단위 객체입니다.
      */
     struct SpatialElement3D
     {
@@ -98,7 +98,7 @@ namespace sw
 
     /**
      * @struct QuadTreeTraits
-     * @brief 2차원 4분할 트리 정책
+     * @brief 2차원 4분할 트리 정책입니다.
      */
     struct QuadTreeTraits
     {
@@ -114,22 +114,22 @@ namespace sw
             const float32 midX = parent.getCenterX();
             const float32 midY = parent.getCenterY();
 
-            // 0: Top-Left (NW)
+            // 0: 왼쪽 위(NW)
             outArrChildren[0] = AABB2D{
                 float2{parent._min._x,           midY},
                 float2{          midX, parent._max._y}
             };
-            // 1: Top-Right (NE)
+            // 1: 오른쪽 위(NE)
             outArrChildren[1] = AABB2D{
                 float2{          midX,           midY},
                 float2{parent._max._x, parent._max._y}
             };
-            // 2: Bottom-Left (SW)
+            // 2: 왼쪽 아래(SW)
             outArrChildren[2] = AABB2D{
                 float2{parent._min._x, parent._min._y},
                 float2{          midX,           midY}
             };
-            // 3: Bottom-Right (SE)
+            // 3: 오른쪽 아래(SE)
             outArrChildren[3] = AABB2D{
                 float2{          midX, parent._min._y},
                 float2{parent._max._x,           midY}
@@ -139,7 +139,7 @@ namespace sw
 
     /**
      * @struct OctreeTraits
-     * @brief 3차원 8분할 트리 정책
+     * @brief 3차원 8분할 트리 정책입니다.
      */
     struct OctreeTraits
     {
@@ -175,7 +175,7 @@ namespace sw
 
     /**
      * @class SpatialTree
-     * @brief 2D/3D 공통 공간 분할 인덱서 템플릿
+     * @brief 2D/3D 공통 공간 분할 색인 템플릿입니다.
      */
     template <typename Traits>
     class SpatialTree
@@ -265,13 +265,13 @@ namespace sw
 
         /**
          * @brief 원소를 새 경계로 옮깁니다. 실패하면 **있던 자리에 그대로** 남습니다.
-         * @details 옮기기는 지우고 다시 넣는 것으로 한다. 그런데 새 경계가 월드 밖이면
-         *          `insert` 가 실패하는데, 예전에는 그때 원소가 **이미 지워진 뒤**였다 —
-         *          호출부는 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라졌다.
-         *          월드를 벗어나는 오브젝트에서 바로 일어나는 일이다. 형제 둘
+         * @details 옮기기는 지우고 다시 넣는 것으로 합니다. 그런데 새 경계가 월드 밖이면
+         *          `insert` 가 실패하는데, 예전에는 그때 원소가 **이미 지워진 뒤**였습니다.
+         *          부르는 쪽은 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라졌습니다.
+         *          월드를 벗어나는 오브젝트에서 바로 일어나는 일입니다. 형제 둘
          *          (`SpatialHashGrid2D` · `BVHTree3D`)의 update 는 그냥 insert 에 맡겨서
-         *          이 구멍이 없었다 — 셋 중 이것만 원소를 잃었다.
-         * @return 새 경계로 옮겼으면 true. false 면 아무것도 바뀌지 않았다.
+         *          이 구멍이 없었습니다. 셋 중 이것만 원소를 잃었습니다.
+         * @return 새 경계로 옮겼으면 true 입니다. false 면 아무것도 바뀌지 않았습니다.
          */
         bool update( uint64 id, const BoundsType& newBounds )
         {
@@ -293,9 +293,9 @@ namespace sw
 
         /**
          * @brief 범위에 겹치는 원소를 찾습니다.
-         * @param outListElement 결과입니다 — **호출 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
-         *                       예전에는 덧붙이기만 했고, 트리가 비면 아무것도 건드리지 않았다 —
-         *                       벡터 하나를 돌려 쓰는 호출부에 지난 답이 그대로 남았다.
+         * @param outListElement 결과입니다. **부르기 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
+         *                       예전에는 덧붙이기만 했고, 트리가 비면 아무것도 건드리지 않았습니다.
+         *                       벡터 하나를 돌려 쓰는 쪽에 지난 답이 그대로 남았습니다.
          */
         void queryRange( const BoundsType& range, vector<ElementType>& outListElement ) const
         {

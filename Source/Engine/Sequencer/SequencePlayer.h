@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class SequencePlayer
-     * @brief fps로 프레임을 진행하고 collectActiveItems로 현재 클립/이벤트를 조회합니다.
+     * @brief fps 로 프레임을 진행하고 collectActiveItems 로 현재 클립 · 이벤트를 찾습니다.
      */
     class SW_API SequencePlayer
     {
@@ -22,7 +22,7 @@ namespace sw
 
         /** @brief JSON 시퀀스를 로드합니다. */
         bool loadFromFile( string_view path );
-        /** @brief 이미 파싱된 애셋을 설정합니다. */
+        /** @brief 이미 파싱된 에셋을 설정합니다. */
         void setAsset( const SequenceAsset& asset );
 
         void play();

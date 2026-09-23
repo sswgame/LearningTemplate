@@ -121,7 +121,7 @@ namespace sw
         {
             if ( item._type != 1 )
                 continue;
-            // 지나갔는가 — 이전 프레임에는 아직 안 닿았고 이번 프레임에는 닿았다.
+            // 지나갔는가: 이전 프레임에는 아직 닿지 않았고 이번 프레임에는 닿았다.
             if ( previousFrame >= item._start || item._start > frame )
                 continue;
             if ( pOutListCrossedEvent != nullptr )

@@ -16,8 +16,8 @@ namespace sw
         {
             /**
              * @brief JSON 이 준 프레임 번호를 다룰 수 있는 범위로 자릅니다.
-             * @details `asInt` 는 int64 를 준다 — int32 로 그냥 캐스팅하면 큰 값이 **음수로 접힌다**.
-             *          자르는 이유는 `kSequenceFrameLimit` 에 적혀 있다.
+             * @details `asInt` 는 int64 를 줍니다. int32 로 그냥 캐스팅하면 큰 값이 **음수로 접힙니다.**
+             *          자르는 이유는 `kSequenceFrameLimit` 에 적혀 있습니다.
              */
             static int32 clampFrame( int64 value )
             {
@@ -60,7 +60,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 읽은 문서를 **그대로** 읽는다. 예전에는 `parseJson( doc.dump( -1 ) )` 이었다 —
+        // 읽은 문서를 **그대로** 읽는다. 예전에는 `parseJson( doc.dump( -1 ) )` 이었다.
         // 파일 전체를 문자열로 되돌렸다가 다시 파싱하는, 같은 일을 두 번 하는 경로였다.
         return parseRoot( doc.getRoot() );
     }
@@ -80,7 +80,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.parse( jsonView ) == false )
         {
-            // 반쯤 찬 애셋을 남기지 않는다 — 실패는 "아무것도 읽지 않았다" 여야 한다.
+            // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
             *this = SequenceAsset{};
             return false;
         }
@@ -91,7 +91,7 @@ namespace sw
     {
         _listItem.clear();
 
-        // 파일에서 온 프레임 번호는 여기서 한 번 잘라 둔다 — 아래의 `+ 1` 과 재생/타임라인 쪽의
+        // 파일에서 온 프레임 번호는 여기서 한 번 잘라 둔다. 아래의 `+ 1` 과 재생/타임라인 쪽의
         // 뺄셈들이 넘치지 않는 것은 이 잘라 둠에 기댄다. 자세한 이유는 `kSequenceFrameLimit` 참고.
         _frameMin = SequenceAssetInternal::clampFrame( root.get( "frameMin" ).asInt( 0 ) );
         _frameMax = SequenceAssetInternal::clampFrame( root.get( "frameMax" ).asInt( 100 ) );

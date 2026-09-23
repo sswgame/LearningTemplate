@@ -14,15 +14,15 @@ namespace sw
         {
             static constexpr float32 kSurfaceAreaFactor = 2.0f;
             /**
-             * @brief 순회 스택의 칸 수. 트리는 삽입 · 삭제마다 회전으로 균형을 잡으므로 높이는 원소 수의 로그로 자라고,
-             *        깊이 우선 스택은 높이 + 1 을 넘지 않는다 — 256 이면 원소 수와 무관하게 남는다.
+             * @brief 순회 스택의 칸 수입니다. 트리는 삽입 · 삭제마다 회전으로 균형을 잡으므로 높이는 원소 수의 로그로 자라고,
+             *        깊이 우선 스택은 높이 + 1 을 넘지 않습니다. 256 이면 원소 수와 상관없이 남습니다.
              */
             static constexpr int32 kTraversalStackCapacity = static_cast<int32>( constant::kMaxBuffer256 );
 
             /**
-             * @brief 경계가 `overlaps` 를 만족하는 잎의 핸들을 모읍니다 — 네 질의(상자 · 광선 · 구 · 절두체)의 공통 순회.
-             * @details 예전에는 네 질의가 이 스무 줄을 각자 들고 판정식만 달랐다. 스택이 차면 자식을 **조용히 버렸다** — 균형
-             *          트리에서는 닿지 않는 자리지만, 닿으면 질의 결과가 빠지므로 이제는 단언이 알린다.
+             * @brief 경계가 `overlaps` 를 만족하는 잎의 핸들을 모읍니다. 네 질의(상자 · 광선 · 구 · 절두체)의 공통 순회입니다.
+             * @details 예전에는 네 질의가 이 스무 줄을 각자 들고 판정식만 달랐습니다. 스택이 차면 자식을 **조용히 버렸습니다.** 균형
+             *          트리에서는 닿지 않는 자리지만, 닿으면 질의 결과가 빠지므로 이제는 단언이 알립니다.
              */
             template <typename OverlapFn>
             static void collectOverlapping( const vector<BVHNode3D>& listNode, int32 rootIndex, OverlapFn&& overlaps,
@@ -53,9 +53,9 @@ namespace sw
             }
 
             /**
-             * @brief 광선을 축 하나의 슬랩으로 잘라 [inoutNear, inoutFar] 를 좁힙니다. 이 축에서 빗나가면 false.
-             * @details 슬랩 검사는 축마다 똑같다 — 예전에는 이 열다섯 줄이 축마다 한 벌씩 세 벌이었다(`Physics/CCD.cpp` 가
-             *          같은 이유로 `clipSlab` 하나로 모은 모양이다). 이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 본다.
+             * @brief 광선을 축 하나의 슬랩으로 잘라 [inoutNear, inoutFar] 를 좁힙니다. 이 축에서 빗나가면 false 입니다.
+             * @details 슬랩 검사는 축마다 똑같습니다. 예전에는 이 열다섯 줄이 축마다 한 벌씩 세 벌이었습니다(`Physics/CCD.cpp` 가
+             *          같은 이유로 `clipSlab` 하나로 모은 모양입니다). 이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 봅니다.
              */
             static bool clipRaySlab( float32 origin, float32 direction, float32 slabMin, float32 slabMax, float32& inoutNear,
                                      float32& inoutFar )
@@ -176,7 +176,7 @@ namespace sw
             return;
         }
 
-        // Surface Area Heuristic (SAH) to find best sibling
+        // 표면적 휴리스틱(SAH)으로 가장 좋은 형제 노드를 찾는다
         const AABB leafAABB = _listNode[static_cast<size_t>( leafIndex )]._bounds;
         int32      index    = _rootIndex;
 
@@ -192,7 +192,7 @@ namespace sw
             const float32 cost            = BVHTree3DInternal::kSurfaceAreaFactor * combinedArea;
             const float32 inheritanceCost = BVHTree3DInternal::kSurfaceAreaFactor * ( combinedArea - area );
 
-            // Cost of descending into left child
+            // 왼쪽 자식으로 내려갈 때의 비용
             float32 costLeft = 0.0f;
             if ( _listNode[static_cast<size_t>( leftChild )].isLeaf() )
             {
@@ -207,7 +207,7 @@ namespace sw
                 costLeft              = ( newArea - oldArea ) + inheritanceCost;
             }
 
-            // Cost of descending into right child
+            // 오른쪽 자식으로 내려갈 때의 비용
             float32 costRight = 0.0f;
             if ( _listNode[static_cast<size_t>( rightChild )].isLeaf() )
             {
@@ -230,7 +230,7 @@ namespace sw
 
         const int32 sibling = index;
 
-        // Create a new parent node
+        // 새 부모 노드를 만든다
         const int32 oldParent = _listNode[static_cast<size_t>( sibling )]._parent;
         const int32 newParent = allocateNode();
 
@@ -255,7 +255,7 @@ namespace sw
             _rootIndex = newParent;
         }
 
-        // Walk back up the tree refitting AABBs and balancing
+        // 트리를 거슬러 올라가며 AABB 를 다시 맞추고 균형을 잡는다
         index = _listNode[static_cast<size_t>( leafIndex )]._parent;
         while ( index != invalid_index::kInt32 )
         {
@@ -339,7 +339,7 @@ namespace sw
 
         const int32 balanceFactor = C._height - B._height;
 
-        // Rotate C up
+        // C 를 위로 회전한다
         if ( balanceFactor > 1 )
         {
             const int32 iF = C._leftChild;
@@ -389,7 +389,7 @@ namespace sw
             return iC;
         }
 
-        // Rotate B up
+        // B 를 위로 회전한다
         if ( balanceFactor < -1 )
         {
             const int32 iD = B._leftChild;
@@ -445,7 +445,7 @@ namespace sw
     void BVHTree3D::queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
     {
         // **먼저 비운다.** 이 네 질의는 결과를 덧붙이기만 했고, 게다가 트리가 비면 아무것도 건드리지
-        // 않고 돌아갔다 — 호출부가 벡터 하나를 돌려 쓰면 지난 질의의 답이 이번 답인 척 남는다.
+        // 않고 돌아갔다. 부르는 쪽이 벡터 하나를 돌려 쓰면 지난 질의의 답이 이번 답인 척 남는다.
         // 형제들(`SpatialHashGrid2D` · `PhysicsWorld`)은 이미 비우고 시작한다.
         outListHandle.clear();
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&queryBox]( const AABB& box )
@@ -460,7 +460,7 @@ namespace sw
             return;
 
         // **방향을 단위 길이로 맞춘다.** `maxDist` 는 이름 그대로 거리인데, 슬랩 판정은 `tMax = maxDist` 를 방향 벡터
-        // 배수로 쓴다 — 정규화하지 않으면 같은 인자가 방향 길이에 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가
+        // 배수로 쓴다. 정규화하지 않으면 같은 인자가 방향 길이에 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가
         // 두 배가 된다). 형제 `SpatialHashGrid2D::queryRay` 는 이미 정규화하고 있었고, 두 자료구조의 같은 인자가 서로
         // 다른 뜻이었다.
         float3 unitDirection = direction;
@@ -497,7 +497,7 @@ namespace sw
     void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
-        // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다 — 예전에는 여기에 같은 식의 사본이 있었다.
+        // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다. 예전에는 여기에 같은 식의 사본이 있었다.
         const Frustum frustum = Frustum::fromViewProjection( viewProj );
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&frustum]( const AABB& box )
         { return frustum.overlapsBox( box._min, box._max ); },

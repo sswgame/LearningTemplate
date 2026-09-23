@@ -74,7 +74,7 @@ namespace sw
     }
 
     // **확장자로 무엇을 할지 고르는 일은 StringTable 이 한다.** 여기서 그것을 다시 적으면 둘이
-    // 갈라진다 — 실제로 갈라져 있었다. `StringTable::loadFromFile` 은 `.bin` 이면 바이너리로
+    // 갈라진다. 실제로 갈라져 있었다. `StringTable::loadFromFile` 은 `.bin` 이면 바이너리로
     // 읽는데, 이쪽 사본은 `.bin` 을 몰라서 파일을 **텍스트로** 읽은 뒤 확장자 판별이 기본값인
     // JSON 으로 떨어뜨렸다. 그래서 `initialize` 가 일부러 찾아 주는 `.bin` 언어 파일과
     // `StringTable::saveToBinaryFile` 이 구워 낸 파일은 **하나도 읽히지 않았다.**
@@ -217,14 +217,14 @@ namespace sw
         }
         else if ( FileUtil::directoryExists( absDirPath ) )
         {
-            // Check if a pre-cooked binary pack exists in the directory (e.g. localization.loc.bin)
+            // 디렉터리에 미리 구운 바이너리 팩(localization.loc.bin)이 있는지 본다
             const string binPackPath = FileUtil::joinPath( absDirPath, "localization.loc.bin" );
             if ( FileUtil::fileExists( binPackPath ) )
                 bLoadedAny = loadFromBinaryPack( binPackPath );
 
             if ( bLoadedAny == false )
             {
-                // 텍스트 확장자 목록은 StringTable 이 정본이다 — 여기 따로 적으면 셋째 목록이 된다.
+                // 텍스트 확장자 목록은 StringTable 이 기준이다. 여기 따로 적으면 셋째 목록이 된다.
                 for ( const string_view extension : StringTable::getTextExtensions() )
                     bLoadedAny = loadLanguageDirectory( absDirPath, extension, true ) || bLoadedAny;
                 bLoadedAny = loadLanguageDirectory( absDirPath, ".bin", true ) || bLoadedAny;
@@ -295,7 +295,7 @@ namespace sw
         appendBytes( &languageCount, sizeof( languageCount ) );
 
         // **언어 코드 순으로 적는다.** `_mapLanguageTable` 은 `unordered_map` 이라 순회 순서가
-        // 정해져 있지 않다 — 같은 내용을 두 번 구워도 파일 바이트가 달라진다(`StringTable` 쪽도 같다).
+        // 정해져 있지 않다. 같은 내용을 두 번 구워도 파일 바이트가 달라진다(`StringTable` 쪽도 같다).
         vector<string> listLanguageCode;
         listLanguageCode.reserve( _mapLanguageTable.size() );
         for ( const auto& [langCode, pTable] : _mapLanguageTable )
@@ -310,7 +310,7 @@ namespace sw
             if ( codeLen > 0 )
                 appendBytes( langCode.data(), codeLen );
 
-            // Encode language table
+            // 언어 테이블을 인코딩한다
             vector<uint8> tableBuffer;
             if ( pTable != nullptr )
                 pTable->saveToBinaryBuffer( tableBuffer );
@@ -474,7 +474,7 @@ namespace sw
 
     const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
     {
-        // intern 된 키는 해시를 이미 들고 있다 — 다시 계산하지 않는다.
+        // intern 된 키는 해시를 이미 들고 있다. 다시 계산하지 않는다.
         return findByHash( key.getHash(), pDefaultText );
     }
 
@@ -489,7 +489,7 @@ namespace sw
     {
         std::shared_lock<std::shared_mutex> lock( _mutex );
 
-        // 1) 현재 활성 언어 테이블에서 검색
+        // 1) 현재 활성 언어 테이블에서 찾는다
         const auto currentIter = _mapLanguageTable.find( _currentLanguage );
         if ( currentIter != _mapLanguageTable.end() && currentIter->second != nullptr )
         {
@@ -498,7 +498,7 @@ namespace sw
                 return pFound;
         }
 
-        // 2) 누락 시 Fallback 언어 테이블에서 검색
+        // 2) 없으면 폴백 언어 테이블에서 찾는다
         if ( _fallbackLanguage.empty() == false && _fallbackLanguage != _currentLanguage )
         {
             const auto fallbackIter = _mapLanguageTable.find( _fallbackLanguage );
@@ -510,7 +510,7 @@ namespace sw
             }
         }
 
-        // 3) 기본 텍스트 반환
+        // 3) 기본 텍스트를 반환한다
         return pDefaultText;
     }
 

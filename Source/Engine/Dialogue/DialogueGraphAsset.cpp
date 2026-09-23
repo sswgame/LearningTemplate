@@ -15,10 +15,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief 노드 타입 ↔ 이름 표. **이름을 짓는 쪽과 읽는 쪽이 같은 표를 본다.**
-         * @details 예전에는 `nodeTypeName` 의 switch 와 `parseNodeType` 의 if 사슬이 따로 있었다.
+         * @brief 노드 타입 ↔ 이름 표입니다. **이름을 짓는 쪽과 읽는 쪽이 같은 표를 봅니다.**
+         * @details 예전에는 `nodeTypeName` 의 switch 와 `parseNodeType` 의 if 사슬이 따로 있었습니다.
          *          열거자를 하나 더하고 한쪽만 고치면, 그 이름은 저장은 되는데 읽을 때 조용히
-         *          `Dialogue` 로 떨어진다 — 파일은 멀쩡한데 대화만 달라진다.
+         *          `Dialogue` 로 떨어집니다. 파일은 멀쩡한데 대화만 달라집니다.
          */
         struct DialogueGraphAssetInternal
         {
@@ -29,7 +29,7 @@ namespace sw
                 const utf8*           _pName; /**< JSON 에 적히는 이름입니다. */
             };
 
-            /** @brief 저장·해석에 함께 쓰는 유일한 표입니다. */
+            /** @brief 저장 · 해석에 함께 쓰는 유일한 표입니다. */
             static constexpr NodeTypeName kArrNodeTypeName[] = {
                 {   DialogueAssetNodeType::Start,    "Start"},
                 {DialogueAssetNodeType::Dialogue, "Dialogue"},
@@ -54,7 +54,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다 — 같은 JSON 을 두 번
+        // 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다. 같은 JSON 을 두 번
         // 파싱하고 그 사이에 문서 전체 길이의 문자열을 한 번 더 만들던 자리다.
         parseRoot( doc.getRoot() );
         return true;
@@ -97,7 +97,7 @@ namespace sw
             node._position._x   = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
             node._position._y   = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
 
-            // 선택지는 **문자열 배열**이라 객체만 거르는 위 헬퍼가 맞지 않는다 — 여기서 그대로 읽는다.
+            // 선택지는 **문자열 배열**이라 객체만 거르는 위 도우미가 맞지 않는다. 여기서 그대로 읽는다.
             const JsonValue choicesVal = nodeJson.get( "choices" );
             if ( choicesVal.isArray() )
             {
@@ -114,7 +114,7 @@ namespace sw
         forEachObjectInArray( root, "links", [this]( const JsonValue& linkJson, size_t linkIndex )
         {
             DialogueAssetLink link{};
-            // id 가 없으면 순번을 쓴다 — 손으로 적은 파일이 id 를 빼먹는 일이 있다.
+            // id 가 없으면 순번을 쓴다. 손으로 적은 파일이 id 를 빼먹는 일이 있다.
             link._id      = static_cast<int32>( linkJson.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
             link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
             link._toPin   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
@@ -188,8 +188,8 @@ namespace sw
 
     int32 DialogueGraphAsset::encodePin( int32 nodeId, int32 pinOffset )
     {
-        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시킨다 — 링크가 **다른 노드**를 가리키게 된다.
-        // 조용히 그런 값을 만들지 않고 0(없는 핀)을 돌려준다.
+        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시킨다. 링크가 **다른 노드**를 가리키게 된다.
+        // 조용히 그런 값을 만들지 않고 0(없는 핀)을 반환한다.
         if ( nodeId <= 0 || pinOffset <= 0 || pinOffset >= kPinScale )
             return 0;
         return nodeId * kPinScale + pinOffset;
@@ -280,7 +280,7 @@ namespace sw
             return string{ textOrKey };
 
         // **키가 아닐 수도 있는 텍스트로 물어본다.** `hashed_string` 을 만들어 물으면 그 대사 원문이
-        // intern 아레나에 영구히 남는다 — 대화가 늘수록 함께 늘어나는 누수였다. 표는 해시로만
+        // intern 아레나에 영구히 남는다. 대화가 늘수록 함께 늘어나는 누수였다. 표는 해시로만
         // 열리므로 intern 없이 물어볼 수 있다.
         const utf8* pResolved = engine::getLocalizationManager().getStringByText( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )

@@ -92,7 +92,7 @@ namespace sw
         _pFileHandle  = pFile;
         _packFilePath = normalizedPath;
 
-        // 1. 헤더(64B) 로드
+        // 1. 헤더(64B)를 읽는다
         if ( std::fread( &_header, 1, sizeof( PackHeader ), pFile ) != sizeof( PackHeader ) )
         {
             SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
@@ -115,7 +115,7 @@ namespace sw
             return false;
         }
 
-        // 2. FAT 인덱스 및 스트링 풀 로드
+        // 2. FAT 인덱스와 스트링 풀을 읽는다
         if ( loadIndexTable() == false )
         {
             SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
@@ -206,7 +206,7 @@ namespace sw
         outBytes.resize( entry._uncompressedSize );
         const auto compression = static_cast<PackCompressionType>( _header._compressionType );
 
-        // 1. 비압축(Raw) 에셋인 경우 outBytes 버퍼로 직접 I/O (중간 버퍼 할당 및 복사 방지)
+        // 1. 비압축(Raw) 에셋이면 outBytes 버퍼로 바로 읽는다(중간 버퍼 할당과 복사를 피한다)
         if ( compression == PackCompressionType::None )
         {
             std::scoped_lock<mutex> lock( _fileMutex );
@@ -257,7 +257,7 @@ namespace sw
             }
         }
 
-        // CRC32 무결성 검증
+        // CRC32 로 무결성을 검증한다
         const bool bHasCrc32 = ( ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0 );
 
         if ( bHasCrc32 && entry._crc32 != 0 )
@@ -326,7 +326,7 @@ namespace sw
         if ( validateHeaderGeometry( fileSize ) == false )
             return false;
 
-        // 스트링 풀 로드 (포함된 경우)
+        // 스트링 풀을 읽는다(들어 있으면)
         const bool bHasStringPool = engine::areEngineServicesBound()
                                       ? engine::getTypeRegistry().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
                                       : ( ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0 );
@@ -342,7 +342,7 @@ namespace sw
             }
         }
 
-        // FAT 인덱스 테이블(32B x FileCount) 로드
+        // FAT 인덱스 테이블(32B x FileCount)을 읽는다
         vector<PackFileEntryOnDisk> listDiskEntry;
         listDiskEntry.resize( _header._fileCount );
 
@@ -361,7 +361,7 @@ namespace sw
         for ( const auto& diskEntry : listDiskEntry )
         {
             // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 가 헤더의 구역(인덱스 ·
-            // 스트링 풀)을 재면서 **항목은 재지 않고 있었다** — 그런데 `readFile` 은 항목이 적어 둔
+            // 스트링 풀)을 재면서 **항목은 재지 않고 있었다.** 그런데 `readFile` 은 항목이 적어 둔
             // 크기를 그대로 `resize` 에 넣는다. 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
             // 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, fileSize ) == false )
@@ -378,7 +378,7 @@ namespace sw
             if ( _stringPoolBytes.empty() == false && diskEntry._stringPoolOffset < _stringPoolBytes.size() )
             {
                 // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아
-                // 풀 **밖까지** 훑는다 — 마지막 문자열이 잘린 팩(끊긴 다운로드·손상)이면
+                // 풀 **밖까지** 훑는다. 마지막 문자열이 잘린 팩(끊긴 다운로드 · 손상)이면
                 // 버퍼 밖 읽기다. 시작 오프셋만 검사해서는 끝을 보장하지 못한다.
                 const utf8*       pPool = reinterpret_cast<const utf8*>( _stringPoolBytes.data() );
                 const string_view raw{ pPool + diskEntry._stringPoolOffset, _stringPoolBytes.size() - diskEntry._stringPoolOffset };
@@ -404,7 +404,7 @@ namespace sw
         const uint64 sizeBytes = static_cast<uint64>( fileSize );
         outFileSize            = sizeBytes;
 
-        // 헤더가 인덱스 크기를 **두 번** 말한다 — `_indexSize` 로 한 번, `_fileCount` 로 한 번.
+        // 헤더가 인덱스 크기를 **두 번** 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
         // 리더는 예전에 뒤엣것만 쓰고 앞엣것은 읽지도 않았다. 둘이 어긋난 팩은 리더와 쿠커가
         // 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
         const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
@@ -416,7 +416,7 @@ namespace sw
         }
 
         // 그리고 그 구역들이 실제 파일 안에 있어야 한다. 예전에는 헤더의 수를 그대로 믿고
-        // `resize` 했다 — 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있었다.
+        // `resize` 했다. 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있었다.
         if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
         {
             SW_LOG_ERROR( "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
@@ -437,7 +437,7 @@ namespace sw
 
     bool ResourcePackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
     {
-        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 잰다** — `offset + size` 는 넘칠 수 있다.
+        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 잰다.** `offset + size` 는 넘칠 수 있다.
         if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
         {
             SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
@@ -445,7 +445,7 @@ namespace sw
             return false;
         }
 
-        // 비압축 팩은 `_uncompressedSize` 만큼을 **파일에서 그대로 읽는다** — 그것도 안에 있어야 한다.
+        // 비압축 팩은 `_uncompressedSize` 만큼을 **파일에서 그대로 읽는다.** 그것도 파일 안에 있어야 한다.
         if ( static_cast<PackCompressionType>( _header._compressionType ) == PackCompressionType::None &&
              diskEntry._uncompressedSize > fileSize - diskEntry._dataOffset )
         {
@@ -455,7 +455,7 @@ namespace sw
         }
 
         // 압축 항목의 원본 크기는 파일 크기로 묶이지 않는다(그것이 압축의 요점이다). 상한은
-        // `CompressionStream` 이 같은 이유로 이미 정해 둔 것을 쓴다 — "이 컨테이너가 다루는
+        // `CompressionStream` 이 같은 이유로 이미 정해 둔 것을 쓴다. "이 컨테이너가 다루는
         // 가장 큰 조각" 의 답이 두 개일 이유가 없다.
         if ( static_cast<uint64>( diskEntry._uncompressedSize ) > CompressionStream::kMaxUncompressedSize )
         {
@@ -482,7 +482,7 @@ namespace sw
 
         // **코덱 구현은 공유하고, 고르는 것은 팩이 자기 enum 으로 한다.**
         // 팩의 `PackCompressionType` 과 스트림의 `CompressionCodecType` 은 서로 다른 파일의 독립된
-        // on-disk 포맷이라 값이 다르다 — 숫자를 건너다니지 않고 여기서 직접 고른다.
+        // on-disk 포맷이라 값이 다르다. 숫자를 건너다니지 않고 여기서 직접 고른다.
         // (예전에는 RLE 은 코덱 클래스를, zlib 은 `uncompress` 를 이 함수 안에서 직접 불렀다.)
         RleCompressionCodec  rleCodec;
         ZlibCompressionCodec zlibCodec;
@@ -512,8 +512,8 @@ namespace sw
                 pCodec = &zstdCodec;
                 break;
             }
-            case PackCompressionType::None:   // 위에서 이미 돌려보냈다
-            case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것 — 엔진은 모른다
+            case PackCompressionType::None:   // 위에서 이미 반환했다
+            case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것이라 엔진은 모른다
             default:
                 break;
         }

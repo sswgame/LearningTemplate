@@ -1,6 +1,6 @@
 /**
  * @file SequencePlayerComponent.h
- * @brief SequenceAsset을 재생하고 대상 오브젝트에 클립/이벤트를 적용합니다.
+ * @brief SequenceAsset 을 재생하고 대상 오브젝트에 클립 · 이벤트를 적용합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

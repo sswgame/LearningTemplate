@@ -12,7 +12,7 @@
 namespace sw
 {
     struct SweepHit;
-    /** @brief PhysicsWorld에 등록된 AABB 바디입니다. */
+    /** @brief PhysicsWorld 에 등록된 AABB 바디입니다. */
     struct PhysicsBody
     {
         AABB   _aabb{};
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class PhysicsWorld
-     * @brief 겹침 질의와 레이어 필터. step()은 적분하지 않습니다.
+     * @brief 겹침 질의와 레이어 필터입니다. step() 은 적분하지 않습니다.
      */
     class SW_API PhysicsWorld
     {
@@ -36,18 +36,18 @@ namespace sw
         BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0 );
         /** @brief 바디를 제거합니다. */
         void removeBody( BodyHandle handle );
-        /** @brief 바디 AABB를 갱신합니다. */
+        /** @brief 바디 AABB 를 갱신합니다. */
         void setAabb( BodyHandle handle, const AABB& aabb );
-        /** @brief 핸들이 유효하면 out에 복사하고 true. */
+        /** @brief 핸들이 유효하면 out 에 복사하고 true 를 반환합니다. */
         bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
-        /** @brief 솔버 자리. 현재는 질의를 바꾸지 않습니다. */
+        /** @brief 솔버 자리입니다. 지금은 아무것도 하지 않습니다(적분하지 않고, 부르는 곳도 없습니다). */
         void step( float32 deltaTime );
 
-        /** @brief 두 바디가 레이어와 AABB 모두에서 겹치면 true. */
+        /** @brief 두 바디가 레이어와 AABB 모두에서 겹치면 true 입니다. */
         bool overlaps( BodyHandle a, BodyHandle b ) const;
-        /** @brief box와 겹치는 바디 핸들을 out에 넣습니다. */
+        /** @brief box 와 겹치는 바디 핸들을 out 에 넣습니다. */
         void queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const;
-        /** @brief movingBox가 displacement만큼 이동할 때 layer의 대상들과 연속 충돌(CCD) 검사를 수행합니다. */
+        /** @brief movingBox 가 displacement 만큼 움직일 때 layer 의 대상들과 연속 충돌(CCD)을 검사합니다. */
         bool sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const;
 
         /** @brief 레이어 필터를 반환합니다. */
@@ -57,7 +57,7 @@ namespace sw
 
         /**
          * @brief 셀 표에 들어 있는 셀 수입니다(진단용).
-         * @details 큰 바디가 그리드를 부풀리지 않는지 재는 데 씁니다 — 질의 결과로는 보이지 않는
+         * @details 큰 바디가 그리드를 부풀리지 않는지 재는 데 씁니다. 질의 결과로는 보이지 않는
          *          비용이라 숫자로 봐야 합니다.
          */
         size_t getGridCellCount() const;
@@ -89,51 +89,51 @@ namespace sw
         static constexpr float32 kCellSize = 64.0f;
 
         /**
-         * @brief 이 셀 수를 넘으면 그리드를 훑지 않고 전체 바디를 돕니다.
-         * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 전부 보는 값보다 비싸진다. 예전에는 이
-         *          숫자가 질의 두 곳에 리터럴로 적혀 있었다 — 값이 같아 증상은 없었지만 한쪽만 바꾸면
-         *          질의 종류에 따라 다른 문턱이 된다.
+         * @brief 이 셀 수를 넘으면 그리드를 훑지 않고 모든 바디를 돕니다.
+         * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 모두 보는 값보다 비싸집니다. 예전에는 이
+         *          숫자가 질의 두 곳에 리터럴로 적혀 있었습니다. 값이 같아 증상은 없었지만 한쪽만 바꾸면
+         *          질의 종류에 따라 다른 문턱이 됩니다.
          */
         static constexpr int64 kMaxQueryCellCount = 1024;
 
         /**
          * @brief 바디 하나가 이 셀 수를 넘게 덮으면 그리드에 넣지 않고 **언제나 후보**로 둡니다.
-         * @details 질의 쪽에는 상한이 있었는데 **삽입 쪽에는 없었다.** 큰 지형·바닥 콜라이더 하나가
+         * @details 질의 쪽에는 상한이 있었는데 **삽입 쪽에는 없었습니다.** 큰 지형 · 바닥 콜라이더 하나가
          *          자기 AABB 가 덮는 모든 셀에 핸들을 적으므로, 20,000 유닛짜리 바닥이면 셀 표에
-         *          **한 바디 때문에 십만 개 가까운 항목**이 생긴다(64 유닛 셀 기준). `setAabb` 로
-         *          움직이기라도 하면 그만큼을 매번 지웠다 다시 적는다.
+         *          **한 바디 때문에 십만 개 가까운 항목**이 생깁니다(64 유닛 셀 기준). `setAabb` 로
+         *          움직이기라도 하면 그만큼을 매번 지웠다 다시 적습니다.
          *
          *          넘치는 바디는 그리드에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드로 가는 질의가
-         *          그 목록을 **항상 함께** 본다. 그런 바디는 수가 적고 어차피 거의 모든 질의에
-         *          걸리므로, 셀에 흩어 두는 것이 이득이 되지 않는다.
-         * @note `kMaxQueryCellCount` 와 값이 같지만 **다른 질문**이다(질의 범위가 넓은가 / 바디가 큰가).
-         *       한쪽 사정으로 값을 바꿀 수 있어야 하므로 별칭을 두지 않고 따로 적는다.
+         *          그 목록을 **항상 함께** 봅니다. 그런 바디는 수가 적고 어차피 거의 모든 질의에
+         *          걸리므로, 셀에 흩어 두는 것이 이득이 되지 않습니다.
+         * @note `kMaxQueryCellCount` 와 값이 같지만 **다른 질문**입니다(질의 범위가 넓은가 / 바디가 큰가).
+         *       한쪽 사정으로 값을 바꿀 수 있어야 하므로 별칭을 두지 않고 따로 적습니다.
          */
         static constexpr int64 kMaxBodyCellCount = 1024;
 
         /**
          * @struct CellRange
-         * @brief AABB 하나가 덮는 그리드 셀 범위 — **삽입·제거·질의가 같은 집합을 보게 하는 자리**입니다.
+         * @brief AABB 하나가 덮는 그리드 셀 범위입니다. **삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리**입니다.
          *
-         * @details 이 계산("이 AABB 는 어느 셀들인가")이 **여섯 군데에 복사**돼 있었다: 삽입 · 제거 ·
-         *          `setAabb` 의 옛/새 비교 둘 · `queryAabb` · `sweepTest`.
+         * @details 이 계산("이 AABB 는 어느 셀들인가")이 **여섯 군데에 복사**돼 있었습니다. 삽입 · 제거 ·
+         *          `setAabb` 의 옛/새 비교 둘 · `queryAabb` · `sweepTest` 입니다.
          *
-         *          어긋났을 때의 증상은 방향마다 다르고, **둘 다 그 자리에서 터지지 않는다**:
-         *          - **삽입이 덜 훑으면 충돌을 놓친다.** 바디가 실제로 겹치는 셀에 등록되지 않으므로
-         *            그 셀을 보는 질의가 바디를 **못 찾는다**. 틀린 답이 조용히 나온다.
-         *          - **제거가 덜 훑으면 그리드가 자란다.** 질의는 후보를 실제 AABB 로 다시 걸러내므로
+         *          어긋났을 때의 증상은 방향마다 다르고, **둘 다 그 자리에서 터지지 않습니다.**
+         *          - **삽입이 덜 훑으면 충돌을 놓칩니다.** 바디가 실제로 겹치는 셀에 등록되지 않으므로
+         *            그 셀을 보는 질의가 바디를 **찾지 못합니다**. 틀린 답이 조용히 나옵니다.
+         *          - **제거가 덜 훑으면 그리드가 자랍니다.** 질의는 후보를 실제 AABB 로 다시 걸러내므로
          *            틀린 답이 되지는 않지만, 옮겨 다닌 바디가 지나온 셀마다 죽은 핸들을 남겨
-         *            **셀 표가 끝없이 커지고** 후보 목록이 길어진다.
+         *            **셀 표가 끝없이 커지고** 후보 목록이 길어집니다.
          *
-         *          `setAabb` 의 "셀이 그대로면 그리드를 안 건드린다" 지름길도 같은 계산에 기댄다 —
-         *          이 비교가 삽입과 어긋나면 **새 셀에 등록되지 않은 채** 넘어가서 첫 번째 증상이 된다.
+         *          `setAabb` 의 "셀이 그대로면 그리드를 건드리지 않는다" 지름길도 같은 계산에 기댑니다.
+         *          이 비교가 삽입과 어긋나면 **새 셀에 등록되지 않은 채** 넘어가서 첫 번째 증상이 됩니다.
          */
         struct CellRange
         {
             int32 _minX{ 0 };
             int32 _minY{ 0 };
             int32 _minZ{ 0 };
-            int32 _maxX{ -1 }; /**< 기본값은 비어 있는 범위다 (max < min). */
+            int32 _maxX{ -1 }; /**< 기본값은 비어 있는 범위입니다(max < min). */
             int32 _maxY{ -1 };
             int32 _maxZ{ -1 };
 
@@ -151,7 +151,7 @@ namespace sw
             /** @brief 이 범위가 덮는 셀 수입니다. 비어 있으면 0 입니다. */
             int64 getCellCount() const noexcept;
 
-            /** @brief 범위의 모든 셀에 대해 실행합니다. 비어 있으면 한 번도 부르지 않습니다. */
+            /** @brief 범위의 셀마다 콜백을 부릅니다. 비어 있으면 한 번도 부르지 않습니다. */
             template <typename Func>
             void forEachCell( Func&& func ) const
             {
@@ -172,10 +172,10 @@ namespace sw
         void insertBodyToGrid( BodyHandle handle, const AABB& aabb );
         void removeBodyFromGrid( BodyHandle handle, const AABB& aabb );
 
-        /** @brief 이 AABB 는 그리드에 흩뿌리기에 너무 큰가 — 순수하게 AABB 만으로 정해집니다. */
+        /** @brief 이 AABB 가 그리드에 흩뿌리기에 너무 큰지 반환합니다. AABB 만으로 정해집니다. */
         static bool isOversizedForGrid( const AABB& aabb );
 
-        /** @brief 그리드를 훑기보다 전체 바디를 도는 편이 나은가 — 범위가 비었거나 너무 넓으면 그렇습니다. */
+        /** @brief 그리드를 훑기보다 모든 바디를 도는 편이 나은지 반환합니다. 범위가 비었거나 너무 넓으면 true 입니다. */
         bool shouldScanAllBodies( const CellRange& range ) const;
         /** @brief 범위가 덮는 셀들의 바디 핸들을 **중복 없이** 모읍니다. */
         void gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const;
@@ -185,7 +185,7 @@ namespace sw
         SlotHandleTable<PhysicsBody>                                _bodies;
         CollisionLayers                                             _layers;
         unordered_map<CellCoord, vector<BodyHandle>, CellCoordHash> _mapGrid;
-        /** @brief 그리드에 넣기엔 너무 큰 바디들. 그리드로 가는 질의가 **항상 함께** 봅니다. */
+        /** @brief 그리드에 넣기에는 너무 큰 바디들입니다. 그리드로 가는 질의가 **항상 함께** 봅니다. */
         vector<BodyHandle> _listOversizedBody;
     };
 } // namespace sw

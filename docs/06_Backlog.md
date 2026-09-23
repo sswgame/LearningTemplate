@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①②③) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~④) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1647,6 +1647,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ④ — Resource · Localization · Dialogue · Sequencer · Spatial · Physics)
+
+**한 것.** 위 여섯 폴더의 44 개 파일 주석을 1-0g 규칙으로 다시 썼다(영어 주석도 옮겼다). 사실과 달랐던 것:
+- `ResourceManager.h` 가 "App 소유 파사드" 라고 했다 → `EngineLoop` 가 `EngineOwnedServices` 로 소유한다. 포함 목록에서
+  TextureCache · ResourcePackManager 가 빠져 있었다. `initialize()` 가 "VFS 팩 마운트" 를 한다고 했다 → 마운트는
+  `mountContent` 로 갈라져 나갔다. `garbageCollectUnusedAssets` 는 "불필요한 캐시를 정리" 가 아니라 스트리밍 완료 기록만 비운다.
+- `ResourceUtil::readTextResource` 가 "VFS 팩 우선" 이라 했다 → 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면
+  팩만 본다.
+- `StreamingPriority` 가 "TaskManager 에는 우선순위 큐가 없다" 고 했다 → 이제 `TaskPriority`(High 전용 큐)가 있다. 이 값을
+  거기로 옮겨 싣는 일이 남아 있다고 고쳐 적었다(코드는 여전히 우선순위를 무시한다).
+- `PhysicsWorld::step` 이 "한 단계를 진행한다" 고 했다 → 빈 함수이고 부르는 곳도 없다. `SpatialHashGrid2D` 가 없는 상수
+  `kMaxRayStep` 을 지금 것처럼 적었다. `DdsLoader.cpp` 가 `isValid()` 는 포맷을 보지 않는다고 했다(지금은 본다).
+- `AssetDatabase::ensureMeta` 의 반환을 "GUID 문자열" 이라 했다 → `Uuid`. `ResourceManager::unregisterAssetCache` 가 가리키던
+  `docs` 의 "Statics die on hot reload" → CLAUDE.md.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ③ — Object · Scene)
 

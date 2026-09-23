@@ -20,7 +20,7 @@ namespace sw
         constexpr uint32 kDdpfFourCC = 0x00000004;
         constexpr uint32 kDdpfRgb    = 0x00000040;
 
-        // Legacy FourCC codes
+        // 옛 FourCC 코드
         constexpr uint32 kFourCC_DXT1 = 0x31545844;
         constexpr uint32 kFourCC_DXT2 = 0x32545844;
         constexpr uint32 kFourCC_DXT3 = 0x33545844;
@@ -43,7 +43,7 @@ namespace sw
         constexpr uint32 kD3dFmt_G32R32F       = 115;
         constexpr uint32 kD3dFmt_A32B32G32R32F = 116;
 
-        // DXGI formats mapped
+        // 매핑하는 DXGI 포맷
         constexpr uint32 kDxgiFormatBC1Unorm          = 71;
         constexpr uint32 kDxgiFormatBC2Unorm          = 74;
         constexpr uint32 kDxgiFormatBC3Unorm          = 77;
@@ -135,7 +135,7 @@ namespace sw
     {
         // **실패는 출력에 아무것도 남기지 않는다.** 나가는 길이 여섯 군데인데 그중 넷은 크기를
         // 이미 채운 뒤에 있다. 그래서 여기서 비우고, 파싱은 지역 변수에 한 뒤 **성공했을 때만**
-        // 옮긴다 — "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
+        // 옮긴다. "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
         outImage = DdsImageData{};
 
         DdsImageData image;
@@ -247,7 +247,7 @@ namespace sw
                 }
                 default:
                 {
-                    // 포맷을 정하지 않고 빠진다 — 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
+                    // 포맷을 정하지 않고 빠진다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
                     break;
                 }
             }
@@ -281,8 +281,8 @@ namespace sw
             image._bIsBgra = SW_TRUE;
 
         // **못 알아본 포맷은 실패다.** 예전에는 여기까지 흘러와 `_dxgiFormat == 0` 인 채로 true 를
-        // 돌려줬다. `isValid()` 는 포맷을 보지 않으므로(바이트·가로·세로만 본다) 호출부에서도
-        // 걸러지지 않아, 알아보지 못한 이미지가 "성공적으로 로드된 이미지" 로 흘러 나갔다.
+        // 반환했다. 그때는 `isValid()` 도 포맷을 보지 않아서(바이트 · 가로 · 세로만 봤다) 부르는 쪽에서도
+        // 걸러지지 않았고, 알아보지 못한 이미지가 "성공적으로 로드된 이미지" 로 흘러 나갔다.
         if ( image._dxgiFormat == kDxgiFormatUnknown )
         {
             SW_LOG_ERROR(

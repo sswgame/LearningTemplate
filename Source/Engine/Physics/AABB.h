@@ -1,6 +1,6 @@
 /**
  * @file AABB.h
- * @brief 얇은 AABB와 레이어 인식 겹침 질의.
+ * @brief 가벼운 AABB 와 충돌 레이어를 고려한 겹침 질의입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    /** @brief 헤더 전용 POD (인라인 메서드 dllimport 회피 — SW_API 없음). */
+    /** @brief 헤더 전용 POD 입니다(인라인 메서드의 dllimport 를 피하려고 SW_API 를 붙이지 않습니다). */
     struct AABB
     {
         float3 _min{ 0.0f, 0.0f, 0.0f };
@@ -52,7 +52,7 @@ namespace sw
                    _min._z <= point._z && point._z <= _max._z;
         }
 
-        /** @brief 다른 AABB와 겹치는지 반환합니다. */
+        /** @brief 다른 AABB 와 겹치는지 반환합니다. */
         bool intersects( const AABB& other ) const noexcept
         {
             return _min._x <= other._max._x && other._min._x <= _max._x &&
@@ -60,7 +60,7 @@ namespace sw
                    _min._z <= other._max._z && other._min._z <= _max._z;
         }
 
-        /** @brief 다른 AABB를 완전히 포함하는지 반환합니다. */
+        /** @brief 다른 AABB 를 완전히 포함하는지 반환합니다. */
         bool contains( const AABB& other ) const noexcept
         {
             return _min._x <= other._min._x && other._max._x <= _max._x &&
@@ -72,7 +72,7 @@ namespace sw
         float3 getExtents() const noexcept { return isValid() ? ( _max - _min ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
     };
 
-    /** @brief AABB가 겹치고 CollisionLayers가 쌍을 허용하면 true입니다. */
+    /** @brief AABB 가 겹치고 CollisionLayers 가 그 쌍을 허용하면 true 입니다. */
     inline bool queryOverlaps( const AABB& a, uint8 layerA, const AABB& b, uint8 layerB,
                                const CollisionLayers& layers )
     {

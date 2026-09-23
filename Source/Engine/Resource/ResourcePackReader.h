@@ -11,7 +11,7 @@ namespace sw
 {
     /**
      * @class ResourcePackReader
-     * @brief 단일 .pack(SWPK) 바이너리 아카이브를 열고 64비트 해시 기반 O(1) 파일 읽기를 수행하는 VFS 리더
+     * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 해시로 O(1) 파일 읽기를 하는 VFS 리더입니다.
      */
     class SW_API ResourcePackReader
     {
@@ -27,8 +27,8 @@ namespace sw
 
         /**
          * @brief .pack 파일을 열고 헤더와 FAT 인덱스 테이블을 메모리에 로드합니다.
-         * @param packFilePath .pack 파일의 물리 경로
-         * @return 유효한 SWPK 아카이브이고 인덱스 로드 성공 시 true
+         * @param packFilePath .pack 파일의 실제 경로
+         * @return 유효한 SWPK 아카이브이고 인덱스를 읽었으면 true 입니다.
          */
         bool open( string_view packFilePath );
 
@@ -37,51 +37,51 @@ namespace sw
          */
         void close();
 
-        /** @brief 현재 팩 파일이 열려있는지 여부 */
+        /** @brief 팩 파일이 열려 있는지 반환합니다. */
         bool isOpen() const;
 
-        /** @brief 64비트 경로 해시로 파일 존재 여부 확인 (O(1)) */
+        /** @brief 64비트 경로 해시로 파일이 있는지 확인합니다(O(1)). */
         bool hasFile( uint64 pathHash ) const;
 
-        /** @brief 가상 상대 경로로 파일 존재 여부 확인 (O(1)) */
+        /** @brief 가상 상대 경로로 파일이 있는지 확인합니다(O(1)). */
         bool hasFile( string_view relativePath ) const;
 
-        /** @brief 파일 엔트리 메타데이터 조회 */
+        /** @brief 파일 항목의 메타데이터를 찾습니다. */
         bool getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const;
         bool getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const;
 
         /**
-         * @brief 팩 내 파일 데이터를 읽고 CRC32 검증 및 압축을 해제하여 반환합니다.
+         * @brief 팩 안의 파일 데이터를 읽어 CRC32 를 검증하고 압축을 풀어 반환합니다.
          * @param pathHash 64비트 경로 해시
-         * @param outBytes 압축 해제된 원본 데이터 버퍼
-         * @return 파일 읽기 및 CRC32 무결성 검증 성공 시 true
+         * @param outBytes 압축을 푼 원본 데이터 버퍼
+         * @return 파일을 읽고 CRC32 무결성 검증에 성공하면 true 입니다.
          */
         bool readFile( uint64 pathHash, vector<uint8>& outBytes ) const;
 
-        /** @brief 가상 상대 경로로 파일 읽기 */
+        /** @brief 가상 상대 경로로 파일을 읽습니다. */
         bool readFile( string_view relativePath, vector<uint8>& outBytes ) const;
 
-        /** @brief 가상 상대 경로로 텍스트 파일(UTF-8) 읽기 */
+        /** @brief 가상 상대 경로로 텍스트 파일(UTF-8)을 읽습니다. */
         bool readTextFile( string_view relativePath, string& outText ) const;
 
-        /** @brief 팩 헤더 정보 반환 */
+        /** @brief 팩 헤더를 반환합니다. */
         const PackHeader& getHeader() const;
 
-        /** @brief DLC 식별자 (0 = 본편, >0 = DLC AppID) */
+        /** @brief DLC 식별자를 반환합니다(0 = 본편, >0 = DLC AppID). */
         uint32 getDlcAppId() const;
 
-        /** @brief 팩에 포함된 파일 총 개수 */
+        /** @brief 팩에 든 파일 총 개수를 반환합니다. */
         uint32 getFileCount() const;
 
-        /** @brief 마운트된 .pack 파일의 물리 경로 */
+        /** @brief 연 .pack 파일의 실제 경로를 반환합니다. */
         const string& getPackPath() const;
 
     private:
         /**
-         * @brief 헤더가 말하는 인덱스·스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
-         * @details 헤더의 수는 파일에서 온 값이다 — 그것을 그대로 믿고 `resize` 하면 손상된 팩
-         *          하나가 거대한 할당 요청이 된다. `_indexSize` 와 `_fileCount` 가 같은 것을
-         *          두 번 말하는 것도 여기서 맞춰 본다.
+         * @brief 헤더가 말하는 인덱스 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
+         * @details 헤더의 수는 파일에서 온 값입니다. 그것을 그대로 믿고 `resize` 하면 손상된 팩
+         *          하나가 거대한 할당 요청이 됩니다. `_indexSize` 와 `_fileCount` 가 같은 것을
+         *          두 번 말하는 것도 여기서 맞춰 봅니다.
          * @param outFileSize 실제 파일 크기입니다. 항목 검사(`validateFileEntry`)가 같은 값을 씁니다.
          */
         bool validateHeaderGeometry( uint64& outFileSize ) const;

@@ -11,7 +11,7 @@
 namespace sw
 {
     /**
-     * @brief 3D BVH 트리의 내부/리프 노드
+     * @brief 3D BVH 트리의 내부 · 잎 노드입니다.
      */
     struct BVHNode3D
     {
@@ -26,7 +26,7 @@ namespace sw
     };
 
     /**
-     * @brief 3D 씬 가속을 위한 고성능 동적 Bounding Volume Hierarchy (BVH) 트리
+     * @brief 3D 씬의 공간 질의를 빠르게 하는 동적 BVH(Bounding Volume Hierarchy) 트리입니다.
      */
     class SW_API BVHTree3D
     {
@@ -45,16 +45,16 @@ namespace sw
 
         /**
          * @brief 상자에 겹치는 핸들을 찾습니다.
-         * @param outListHandle 결과입니다 — **호출 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
+         * @param outListHandle 결과입니다. **부르기 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
          */
         void queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const;
         /**
          * @brief 광선에 걸리는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다.
-         * @param direction 방향입니다. 단위 길이가 아니어도 됩니다 — 안에서 맞춥니다.
+         * @param direction 방향입니다. 단위 길이가 아니어도 됩니다. 안에서 맞춥니다.
          * @param maxDist 월드 단위 사거리입니다(방향 벡터의 배수가 아닙니다).
          */
         void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<SlotHandle>& outListHandle ) const;
-        /** @brief 구체에 겹치는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다. */
+        /** @brief 구에 겹치는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다. */
         void querySphere( const float3& center, float32 radius, vector<SlotHandle>& outListHandle ) const;
         /** @brief 절두체 안의 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다. */
         void queryFrustum( const float4x4& viewProj, vector<SlotHandle>& outListHandle ) const;

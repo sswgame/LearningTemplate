@@ -19,9 +19,9 @@ namespace sw
         struct ResourcePackManagerInternal
         {
             /**
-             * @brief 팩 파일명이 우선순위 토큰과 일치하는지 대소문자 무시로 판별합니다 (Zero Allocation).
-             * @param stem 팩 파일명 (확장자 제외, 예: "game", "game_patch", "dlc_expansion")
-             * @param token 검색 우선순위 토큰 (예: "game", "dlc", "engine")
+             * @brief 팩 파일 이름이 우선순위 토큰과 맞는지 대소문자를 무시하고 판별합니다(할당 없음).
+             * @param stem 팩 파일 이름(확장자 제외. 예: "game", "game_patch", "dlc_expansion")
+             * @param token 검색 우선순위 토큰(예: "game", "dlc", "engine")
              */
             static bool matchesTokenCaseInsensitive( string_view stem, string_view token )
             {
@@ -31,7 +31,7 @@ namespace sw
                 if ( StringUtil::equals( stem, token, true ) )
                     return true;
 
-                // token + '_' 또는 token + '.' 접두사 매칭
+                // token + '_' 또는 token + '.' 접두사와 맞춰 본다
                 if ( stem.size() > token.size() && StringUtil::startsWith( stem, token, true ) )
                 {
                     const utf8 delimiter = stem[token.size()];
@@ -43,7 +43,7 @@ namespace sw
             }
 
             /**
-             * @brief EngineConfig 리소스 우선순위 목록(listPriority)을 기반으로 팩의 기본 마운트 우선순위를 동적 계산합니다 (Zero Allocation).
+             * @brief EngineConfig 의 리소스 우선순위 목록(listPriority)으로 팩의 기본 마운트 우선순위를 계산합니다(할당 없음).
              */
             static int32 computePackDefaultPriority( string_view packFileName, const vector<string>& listPriority )
             {
@@ -57,7 +57,7 @@ namespace sw
                 const vector<string>& listPriorityEffective = listPriority.empty() ? ResourceUtil::getDefaultSearchPriority() : listPriority;
                 const size_t          priorityCount         = listPriorityEffective.size();
 
-                // 1. listPriorityEffective 순서에 맞춰 일치하는 토큰 검색 (앞쪽 인덱스일수록 높은 우선순위)
+                // 1. listPriorityEffective 순서대로 맞는 토큰을 찾는다(앞쪽 인덱스일수록 우선순위가 높다)
                 for ( size_t index = 0; index < priorityCount; ++index )
                 {
                     const string_view token{ listPriorityEffective[index] };
@@ -65,7 +65,7 @@ namespace sw
                         return static_cast<int32>( ( priorityCount - index ) * 1000 );
                 }
 
-                // 2. 패치 접두사(patch_)가 붙은 경우 대상 모듈 우선순위 + 500 가중치 부여
+                // 2. 패치 접두사(patch_)가 붙으면 대상 모듈 우선순위에 500 을 더한다
                 if ( stem.size() >= 6 && StringUtil::startsWith( stem, "patch_", true ) )
                 {
                     const string_view subStem = stem.substr( 6 );
@@ -75,16 +75,16 @@ namespace sw
                         if ( matchesTokenCaseInsensitive( subStem, token ) )
                             return static_cast<int32>( ( priorityCount - index ) * 1000 ) + 500;
                     }
-                    // 모듈 미지정 전체 단독 핫픽스 팩 (최상위 우선순위)
+                    // 대상 모듈이 없는 단독 핫픽스 팩(가장 높은 우선순위)
                     return static_cast<int32>( ( priorityCount + 1 ) * 1000 );
                 }
 
-                // 3. 일치하는 우선순위 토큰이 없는 일반 팩 기본 우선순위
+                // 3. 맞는 우선순위 토큰이 없는 일반 팩의 기본 우선순위
                 return 0;
             }
 
             /**
-             * @brief "engine/textures/splash.dds" 또는 "game/empty/maps/title.xml" 에서 도메인과 서브패스를 분리합니다.
+             * @brief "engine/textures/splash.dds" 나 "game/empty/maps/title.xml" 을 도메인과 나머지 경로로 나눕니다.
              */
             static bool trySplitDomainPrefix( string_view relativePath, string_view& outDomain, string_view& outSubPath )
             {
@@ -102,26 +102,26 @@ namespace sw
                     const size_t secondSlash = relativePath.find( '/', firstSlash + 1 );
                     if ( secondSlash != string_view::npos )
                     {
-                        outDomain  = relativePath.substr( 0, secondSlash ); // e.g. "game/empty"
+                        outDomain  = relativePath.substr( 0, secondSlash ); // 예: "game/empty"
                         outSubPath = relativePath.substr( secondSlash + 1 );
                         return outSubPath.empty() == false;
                     }
                 }
 
-                outDomain  = firstPart; // e.g. "engine", "common", "editor", "dlc"
+                outDomain  = firstPart; // 예: "engine", "common", "editor", "dlc"
                 outSubPath = relativePath.substr( firstSlash + 1 );
                 return outSubPath.empty() == false;
             }
 
             /**
-             * @brief 마운트된 팩 도메인("engine", "common", "game_empty")과 쿼리 도메인("engine", "game/empty")을 대소문자 무관 매칭합니다.
+             * @brief 마운트된 팩 도메인("engine", "common", "game_empty")과 질의 도메인("engine", "game/empty")을 대소문자를 무시하고 맞춰 봅니다.
              */
             static bool matchPackDomain( string_view packDomain, string_view queryDomain )
             {
                 if ( StringUtil::equals( packDomain, queryDomain, true ) )
                     return true;
 
-                // "game_empty" vs "game/empty" 매칭
+                // "game_empty" 와 "game/empty" 를 같은 것으로 본다
                 if ( queryDomain.find( '/' ) != string_view::npos )
                 {
                     string converted{ queryDomain };
@@ -134,11 +134,11 @@ namespace sw
             }
 
             /**
-             * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다 — 방문자가 true 를 돌려주면 멈춘다.
-             * @details 두 단계다: 전체 경로의 해시로 모든 팩을, 그다음 경로가 도메인으로 시작하면(`engine/…`) 그 도메인 팩에서 나머지
-             *          경로로. `hasFile` · `readFile` · `readTextFile` 이 이 스무 줄을 각자 들었다 — 조회 규칙이 바뀌면 셋을 같이
-             *          고쳐야 했다. 잠금은 호출자가 쥔다.
-             * @return 방문자가 true 를 돌려준 적이 있으면 true.
+             * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다.
+             * @details 두 단계입니다. 전체 경로의 해시로 모든 팩을 보고, 그다음 경로가 도메인으로 시작하면(`engine/…`) 그 도메인 팩에서
+             *          나머지 경로로 봅니다. `hasFile` · `readFile` · `readTextFile` 이 이 스무 줄을 각자 들고 있었습니다. 조회 규칙이
+             *          바뀌면 셋을 같이 고쳐야 했습니다. 잠금은 부르는 쪽이 쥡니다.
+             * @return 방문자가 true 를 반환한 적이 있으면 true 입니다.
              */
             template <typename VisitFn>
             static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
@@ -226,7 +226,7 @@ namespace sw
             return false;
         }
 
-        // DLC 소유권 인증 검사
+        // DLC 소유권을 확인한다
         const uint32 dlcAppId = pReader->getDlcAppId();
         if ( dlcAppId > 0 )
         {
@@ -240,7 +240,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock( _vfsMutex );
 
-            // 이미 마운트되어 있다면 이전 팩 제거
+            // 이미 마운트되어 있으면 이전 팩을 뺀다
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
                 if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), normalizedPath ) )
@@ -262,7 +262,7 @@ namespace sw
 
             _listMountedPack.push_back( std::move( mounted ) );
 
-            // 우선순위 내림차순 정렬 (높은 priority가 앞쪽)
+            // 우선순위 내림차순으로 정렬한다(높은 priority 가 앞)
             std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), []( const MountedPack& left, const MountedPack& right )
             {
                 return left._priority > right._priority;

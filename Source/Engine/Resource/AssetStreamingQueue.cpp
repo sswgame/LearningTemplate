@@ -56,7 +56,7 @@ namespace sw
 
     bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, const OnStreamingCompleteDelegate& onComplete )
     {
-        // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
+        // StreamingPriority 는 아직 순서에 반영되지 않는다(헤더의 enum 주석 참고).
         (void)priority;
         if ( assetPath.empty() )
             return false;
@@ -65,9 +65,9 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _mutex };
 
-        // **성공한 것만** 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다 —
-        // 예전에는 키가 있기만 하면 `true` 를 돌려줬고, 그래서 한 번 실패한 경로는 영영 실패였다.
-        // (아직 굽지 않은 셰이더, 늦게 마운트되는 팩 — 한 번 빗나가면 다시는 보지 않았다.)
+        // **성공한 것만** 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다.
+        // 예전에는 키가 있기만 하면 `true` 를 반환했고, 그래서 한 번 실패한 경로는 영영 실패였다.
+        // (아직 굽지 않은 셰이더, 늦게 마운트되는 팩. 한 번 빗나가면 다시는 보지 않았다.)
         const auto itResult = _mapAssetResult.find( pathStr );
         if ( itResult != _mapAssetResult.end() && itResult->second )
         {
@@ -94,7 +94,7 @@ namespace sw
 
     bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, const OnStreamingDataCompleteDelegate& onComplete )
     {
-        // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
+        // StreamingPriority 는 아직 순서에 반영되지 않는다(헤더의 enum 주석 참고).
         (void)priority;
         if ( assetPath.empty() )
             return false;
@@ -105,7 +105,7 @@ namespace sw
 
         // **바이트를 읽는 태스크에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
         // 않으므로, 거기 붙으면 `bSuccess = true` 에 빈 버퍼를 받는다. 그때는 세대를 올려
-        // 그 태스크의 완료를 버리고 **데이터 태스크를 새로 낸다** — `processAssetTask` 는 세대가
+        // 그 태스크의 완료를 버리고 **데이터 태스크를 새로 낸다.** `processAssetTask` 는 세대가
         // 어긋나면 콜백 표에 손대기 전에 돌아가므로, 먼저 등록된 존재 확인 콜백도 그대로 살아
         // 새 태스크의 완료에 함께 실린다.
         const bool bAlreadyFetchingData = _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end();
@@ -157,7 +157,7 @@ namespace sw
             return;
         }
 
-        // 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝낸다 — 태스크가 끝났을 때와 **같은 완료 절차**다.
+        // 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
         vector<uint8> bytes;
         const bool    bSuccess = bFetchData ? ResourceUtil::readBinaryResource( pathStr, bytes ) : ResourceUtil::hasResource( pathStr );
         completeRequestLocked( pathStr, bSuccess, bytes );

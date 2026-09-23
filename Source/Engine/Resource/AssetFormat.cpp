@@ -13,8 +13,8 @@ namespace sw
         if ( _bBuiltins )
             return;
         _bBuiltins = true;
-        // No built-in migrators: current disk schema is generation 0.
-        // On a breaking change, bump AssetFormatVersions::* and registerXmlMigrator(kind, from, …).
+        // 내장 migrator 는 없다. 지금 디스크 스키마가 세대 0 이다.
+        // 호환이 깨지는 변경이면 AssetFormatVersions::* 를 올리고 registerXmlMigrator(kind, from, …) 로 등록한다.
     }
 
     void AssetFormatRegistry::registerXmlMigrator( AssetKind kind, AssetFormatVersion fromVersion, XmlAssetMigrator migrator )

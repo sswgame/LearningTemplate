@@ -98,8 +98,8 @@ namespace sw
         appendBytes( &count, sizeof( count ) );
 
         // **해시 순으로 적는다.** `_mapTable` 은 `unordered_map` 이라 순회 순서가 삽입 순서와
-        // 할당 상황에 따라 달라진다 — 그대로 적으면 **같은 내용을 두 번 구워도 파일 바이트가
-        // 달라진다.** 미리 구워 두는 산출물에 그것은 diff·캐시·검증을 전부 무의미하게 만든다.
+        // 할당 상황에 따라 달라진다. 그대로 적으면 **같은 내용을 두 번 구워도 파일 바이트가
+        // 달라진다.** 미리 구워 두는 산출물에 그것은 diff · 캐시 · 검증을 모두 무의미하게 만든다.
         vector<uint64> listKeyHash;
         listKeyHash.reserve( _mapTable.size() );
         for ( const auto& [hash, str] : _mapTable )
@@ -153,10 +153,10 @@ namespace sw
         }
 
         // **개수를 버퍼 크기로 먼저 자른다.** `count` 는 파일에서 온 값이라, 망가진 헤더가
-        // 4,294,967,295 를 적어 두면 아래 `reserve` 가 그 자리에서 4G 개의 자리를 요구한다 —
+        // 4,294,967,295 를 적어 두면 아래 `reserve` 가 그 자리에서 4G 개의 자리를 요구한다.
         // 항목을 하나도 읽어 보기 전에 죽는다(루프의 검사는 그 다음에야 돈다). 항목 하나는
         // 아무리 짧아도 키 해시(8) + 길이(4) = 12바이트이므로, **남은 바이트로 담을 수 있는
-        // 최대 개수**가 정확한 상한이다 — 임의로 고른 숫자가 아니다.
+        // 최대 개수**가 정확한 상한이다. 임의로 고른 숫자가 아니다.
         constexpr size_t kMinEntryBytes = sizeof( uint64 ) + sizeof( uint32 );
         const size_t     remainingBytes = static_cast<size_t>( pEnd - pPtr );
         if ( static_cast<size_t>( count ) > remainingBytes / kMinEntryBytes )
@@ -170,7 +170,7 @@ namespace sw
 
         for ( uint32 index = 0; index < count; ++index )
         {
-            // **더하지 말고 뺀다** — 남은 바이트와 필요한 바이트를 비교한다. `pPtr + n` 은 버퍼 끝을
+            // **더하지 말고 뺀다.** 남은 바이트와 필요한 바이트를 비교한다. `pPtr + n` 은 버퍼 끝을
             // 한 칸 넘어서면 그 포인터를 만드는 것 자체가 규약 밖이다.
             if ( static_cast<size_t>( pEnd - pPtr ) < kMinEntryBytes )
             {
