@@ -3,6 +3,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
@@ -24,7 +25,7 @@ namespace sw
         thread_local int32     t_helperScratchSlot   = -1;      ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호 (0..). 아직이면 -1
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
 
-        /// @brief 대기 함수(waitStage/waitAll)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us). 대기 중엔 남의 일을 돕는다.
+        /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us). 대기 중엔 남의 일을 돕는다.
         constexpr uint32 kIdleSpinCount = 64;
         /**
          * @brief 워커가 잠들기 전에 일감을 기다리며 도는 시간(마이크로초). 짧다 — 재 봤다.
@@ -42,25 +43,91 @@ namespace sw
          *          렌더 스레드의 병렬 기록이 밀렸다(170 -> 261 us). 상용 엔진도 전용 스레드 몫을 뺀다.
          */
         constexpr uint32 kReservedThreadCount = 2;
+        /**
+         * @brief 병렬 그룹을 참여 스레드(워커 + 호출 스레드) 하나당 몇 청크로 나누는가.
+         * @details 청크는 노드가 아니라 원자 카운터 한 번이라 잘게 나눠도 비용이 없다시피 하다. 잘게 나누면
+         *          먼저 끝난 스레드가 남은 청크를 이어 집어 꼬리가 짧아진다(청크 하나가 곧 꼬리의 상한이다).
+         *          너무 잘게 나누면 청크마다 캐시 라인 하나(`_nextChunkStart`)가 코어 사이를 오간다 — 넷이 균형이다.
+         */
+        constexpr uint32 kChunksPerThread = 4;
+        /** @brief 같은 스테이지를 둘째로 기다리는 스레드가 방송에 잠들 때의 폴링 간격(밀리초). 드문 경로다. */
+        constexpr uint32 kSecondWaiterPollMilli = 1;
+        /** @brief 큐 항목의 태그 비트 — 켜져 있으면 `ParallelGroup*` 티켓, 아니면 `TaskNode*`. 둘 다 8 정렬이라 하위 비트가 빈다. */
+        constexpr uintptr_t kTicketTagBit = 1;
 #if !defined( SW_SHIPPING )
         constexpr uint32 kTaskNameCapacity = 31;
 #endif
 
         /**
-         * @brief 병렬 태스크 진입/퇴출 시 스레드 로컬 플래그를 관리하는 RAII 스코프 구조체
+         * @brief 병렬 태스크 진입/퇴출 시 스레드 로컬 플래그를 관리하는 RAII 스코프 구조체. 중첩되면 바깥 값을 되돌린다.
          */
         struct ParallelTaskScope
         {
             ParallelTaskScope()
+                : _bPrevious{ t_bInsideParallelTask }
             {
                 t_bInsideParallelTask = true;
             }
             ~ParallelTaskScope()
             {
-                t_bInsideParallelTask = false;
+                t_bInsideParallelTask = _bPrevious;
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
             ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
+
+            bool _bPrevious;
+        };
+
+        /** @brief 큐 항목 하나 — 태스크 노드 포인터이거나 태그 비트가 켜진 병렬 그룹 포인터. */
+        struct TaskQueueItem
+        {
+            static uintptr_t      fromNode( TaskNode* pNode ) { return reinterpret_cast<uintptr_t>( pNode ); }
+            static uintptr_t      fromTicket( ParallelGroup* pGroup ) { return reinterpret_cast<uintptr_t>( pGroup ) | kTicketTagBit; }
+            static bool           isTicket( uintptr_t item ) { return ( item & kTicketTagBit ) != 0; }
+            static TaskNode*      toNode( uintptr_t item ) { return reinterpret_cast<TaskNode*>( item ); }
+            static ParallelGroup* toGroup( uintptr_t item ) { return reinterpret_cast<ParallelGroup*>( item & ~kTicketTagBit ); }
+        };
+
+        /** @brief 0 이 아닌 값의 가장 낮은 켜진 비트 번호. */
+        uint32 countTrailingZeros64( uint64 value )
+        {
+#if defined( __clang__ ) || defined( __GNUC__ )
+            return static_cast<uint32>( __builtin_ctzll( value ) );
+#else
+            // 이 저장소의 컴파일러는 전부 clang 이다 — 다른 컴파일러를 위한 자리라 느려도 된다.
+            uint32 index = 0;
+            while ( ( ( value >> index ) & 1u ) == 0 )
+                ++index;
+            return index;
+#endif
+        }
+
+        /** @brief 병렬 그룹을 어떻게 나눌지 — 청크 크기와 큐에 넣을 티켓 수. */
+        struct ParallelSplit
+        {
+            uint32 _chunkSize{ 1 };
+            uint32 _ticketCount{ 0 };
+
+            /**
+             * @brief @p count 개를 워커 @p workerCount 명 (+ 호출 스레드) 이 나눠 갖도록 자릅니다.
+             * @param bCallerRuns 호출 스레드가 곧바로 같이 도는가 (`runParallel`). 그러면 티켓은 나머지 참여자 몫만 넣는다.
+             */
+            static ParallelSplit compute( uint32 count, uint32 workerCount, bool bCallerRuns )
+            {
+                ParallelSplit split{};
+                if ( count == 0 )
+                    return split;
+                const uint32 participantCount = workerCount + 1;
+                uint32       chunkCount       = MathUtil::min( count, participantCount * kChunksPerThread );
+                split._chunkSize              = ( count + chunkCount - 1 ) / chunkCount;
+                if ( split._chunkSize == 0 )
+                    split._chunkSize = 1;
+                chunkCount = ( count + split._chunkSize - 1 ) / split._chunkSize;
+                // 티켓 하나는 스레드 하나의 몫이다 — 청크가 티켓보다 적으면 남는 티켓은 집자마자 끝난다(빈 깨움).
+                const uint32 wantedTicketCount = bCallerRuns ? ( chunkCount > 0 ? chunkCount - 1 : 0 ) : chunkCount;
+                split._ticketCount             = MathUtil::min( wantedTicketCount, workerCount );
+                return split;
+            }
         };
 
     } // namespace
@@ -75,61 +142,117 @@ namespace sw
     };
 
     /**
-     * @brief 타입 소거(Type Erasure)된 실행 가능한 태스크 호출자 variant
+     * @brief 타입 소거(Type Erasure)된 실행 가능한 태스크 호출자 variant. 병렬 본문은 여기 없다 — 그룹이 든다.
      */
     using TaskCallable = std::variant<
         std::monostate,
         TaskDelegate,
-        TaskArgsPayload,
-        ParallelTaskDelegate,
-        ParallelBlockDelegate>;
-
-    struct SharedTaskCallable;
-    /** @brief 병렬 그룹 하나가 콜러블 하나를 쓴다 — 동시에 살아 있는 그룹 수의 상한이지 청크 수가 아니다. */
-    constexpr uint32 kSharedCallablePoolCapacity = 512;
-    using SharedTaskCallablePool                 = LockFreeObjectPool<SharedTaskCallable, kSharedCallablePoolCapacity>;
+        TaskArgsPayload>;
 
     /**
-     * @brief 병렬 그룹의 서브태스크들이 나눠 쓰는 콜러블. 풀에서 오고, 마지막 서브태스크가 놓으면 풀로 돌아간다.
-     * @details 예전에는 그룹마다 `sw_new` 였다 — 렌더 그래프 웨이브·트랜스폼 플러시·씬 수집이 프레임마다 그룹을 만드니
-     *          그 수만큼 힙을 두드렸다. 풀이 비면(동시에 512 그룹) 힙으로 물러나고, 그 경우만 `_pPool` 이 null 이다.
+     * @struct JoinCounter
+     * @brief 남은 수와 대기자 하나를 **한 워드**에 담은 합류 카운터.
+     * @details 하위 32 비트가 남은 수, 상위 32 비트가 대기자 슬롯 + 1(0 이면 없음). 마지막으로 끝내는 쪽의 CAS 하나가
+     *          "0 이 됐다" 와 "누구를 깨울까" 를 같이 답하고 대기자 칸을 비운다 — 그 뒤로는 이 워드를 **다시 만지지
+     *          않으므로** 스택에 놓인 그룹(`runParallel`)이 안전하다: 대기자가 0 을 본 순간 스택이 사라져도 된다.
+     *          대기자 등록도 같은 워드의 CAS 라 "등록했는데 이미 끝났다" 가 새지 않는다.
      */
-    struct SharedTaskCallable
+    struct JoinCounter
     {
-        TaskCallable            _callable;
-        atomic<int32>           _refCount{ 0 };
-        SharedTaskCallablePool* _pPool{ nullptr }; ///< 돌아갈 풀. 힙에서 왔으면 null.
+        static constexpr uint64 kCountMask   = 0xFFFFFFFFull;
+        static constexpr uint32 kWaiterShift = 32;
 
-        static SharedTaskCallable* create( SharedTaskCallablePool* pPool, TaskCallable callable, int32 refCount )
+        enum class RegisterResult : uint8
         {
-            SharedTaskCallable* pShared = ( pPool != nullptr ) ? pPool->acquire() : nullptr;
-            if ( pShared == nullptr )
-                pShared = sw_new SharedTaskCallable();
-            else
-                pShared->_pPool = pPool;
-            pShared->_callable = std::move( callable );
-            pShared->_refCount.store( refCount, std::memory_order_relaxed );
-            return pShared;
+            Registered,  ///< 이 스레드가 대기자로 올랐다(또는 이미 올라 있었다)
+            AlreadyDone, ///< 남은 것이 없다 — 잠들 필요 없다
+            Busy         ///< 다른 스레드가 대기자 칸을 쥐고 있다 — 방송으로 간다
+        };
+
+        atomic<uint64> _packed{ 0 };
+
+        void   reset() { _packed.store( 0, std::memory_order_relaxed ); }
+        uint32 getPending() const { return static_cast<uint32>( _packed.load( std::memory_order_acquire ) & kCountMask ); }
+
+        /** @brief 남은 수를 @p count 만큼 올리고 이전 남은 수를 돌려줍니다. */
+        uint32 addPending( uint32 count )
+        {
+            return static_cast<uint32>( _packed.fetch_add( count, std::memory_order_acq_rel ) & kCountMask );
         }
 
-        void release()
+        /**
+         * @brief 하나를 끝냅니다. 마지막이면 대기자 칸까지 비우고, **이전** 워드를 돌려줍니다.
+         * @details 돌려준 값의 남은 수가 1 이면 이 호출이 마지막이고, 상위 32 비트가 깨울 대기자(+1)다.
+         */
+        uint64 finishOne()
         {
-            if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
-                return;
-            SharedTaskCallablePool* pPool = _pPool;
-            if ( pPool != nullptr )
+            uint64 current = _packed.load( std::memory_order_relaxed );
+            for ( ;; )
             {
-                SharedTaskCallable* pSelf = this;
-                pPool->release( pSelf ); // ~SharedTaskCallable 뒤 반납
-                return;
+                const uint64 pending = current & kCountMask;
+                SW_ASSERT( pending > 0 );
+                const uint64 next = ( pending == 1 ) ? 0 : ( current - 1 );
+                if ( _packed.compare_exchange_weak( current, next, std::memory_order_acq_rel, std::memory_order_relaxed ) )
+                    return current;
             }
-            sw_delete( this );
+        }
+
+        /** @brief 이 스레드(슬롯 + 1)를 대기자로 올립니다. 남은 것이 없거나 다른 대기자가 있으면 그렇다고 답한다. */
+        RegisterResult tryRegisterWaiter( uint32 slotPlusOne )
+        {
+            uint64 current = _packed.load( std::memory_order_acquire );
+            for ( ;; )
+            {
+                if ( ( current & kCountMask ) == 0 )
+                    return RegisterResult::AlreadyDone;
+                const uint32 waiter = static_cast<uint32>( current >> kWaiterShift );
+                if ( waiter == slotPlusOne )
+                    return RegisterResult::Registered;
+                if ( waiter != 0 )
+                    return RegisterResult::Busy;
+                const uint64 next = current | ( static_cast<uint64>( slotPlusOne ) << kWaiterShift );
+                if ( _packed.compare_exchange_weak( current, next, std::memory_order_acq_rel, std::memory_order_acquire ) )
+                    return RegisterResult::Registered;
+            }
         }
     };
 
+    struct ParallelGroup;
     struct TaskNode;
 
     class TaskNodePool;
+    /** @brief 동시에 살아 있는 병렬 그룹 수의 상한 — 청크 수가 아니다. 넘치면 힙으로 물러난다. */
+    constexpr uint32 kParallelGroupPoolCapacity = 512;
+    using ParallelGroupPool                     = LockFreeObjectPool<ParallelGroup, kParallelGroupPoolCapacity>;
+
+    /**
+     * @struct ParallelGroup
+     * @brief 병렬 for 하나 — 본문 · 범위 · 다음 청크 카운터 · 티켓 합류.
+     * @details 예전에는 청크마다 태스크 노드를 만들어 큐에 넣었다(워커 수 × 2 개): 청크마다 노드 할당 · 상태 CAS ·
+     *          큐 넣기/빼기 · 활성 수 · 후속 목록 잠금 · 노드 반납이 전부 공유 캐시 라인의 원자 연산이었고, 청크 수가
+     *          곧 그 수였다. 지금은 큐에 **티켓** 몇 장(워커 수 이하)만 넣고, 티켓을 집은 스레드는 `_nextChunkStart`
+     *          를 올려 가며 남은 청크를 전부 돈다 — 청크 하나의 비용이 원자 덧셈 하나다. 끝난 스레드가 남은 청크를
+     *          이어 받으므로 균형은 저절로 맞는다(Unreal ParallelFor · TBB 의 모양).
+     *
+     *          `runParallel` 은 이것을 **호출 스레드의 스택에** 둔다. 마지막 티켓이 `_join` 을 0 으로 만든 뒤에는
+     *          아무도 이 메모리를 만지지 않는다 — 그 약속이 `JoinCounter::finishOne` 의 CAS 하나에 있다.
+     *          `emplaceParallel*` 은 풀에서 꺼내고 부모 노드를 쥐며, 마지막 티켓이 부모의 의존성을 풀고 반납한다.
+     */
+    struct ParallelGroup
+    {
+        ParallelBlockDelegate        _blockBody;             ///< `emplaceParallelBlock` — 사본
+        ParallelTaskDelegate         _indexBody;             ///< `emplaceParallel` — 사본
+        const ParallelBlockDelegate* _pBlockBody{ nullptr }; ///< `runParallel` — 호출자의 델리게이트 (호출이 끝날 때까지 산다)
+        uint32                       _rangeStart{ 0 };
+        uint32                       _rangeEnd{ 0 };
+        uint32                       _chunkSize{ 1 };
+        TaskNode*                    _pParent{ nullptr }; ///< 풀 그룹: 티켓이 다 끝나면 의존성을 풀 부모 (참조를 하나 쥔다)
+        ParallelGroupPool*           _pPool{ nullptr };   ///< 돌아갈 풀. 스택이거나 힙이면 null
+        bool                         _bHeap{ false };     ///< 풀이 비어 힙에서 왔다
+        /** @brief 다음에 집을 청크의 시작. 64 비트인 이유: 티켓마다 끝을 지나 한 번 더 더하므로 32 비트는 감길 수 있다. */
+        alignas( 64 ) atomic<uint64> _nextChunkStart{ 0 };
+        alignas( 64 ) JoinCounter _join; ///< 아직 끝나지 않은 티켓 수 + 기다리는 스레드
+    };
 
     /**
      * @brief 스테이지 — 태스크 묶음의 완료를 기다리는 단위. 매니저의 풀에서 오고 침입형 참조 계수로 산다.
@@ -137,14 +260,14 @@ namespace sw
      *          놓는다). 태스크 노드는 참조를 쥐지 않는다 — 노드가 스테이지를 쥐고 스테이지가 노드 목록을 쥐면
      *          고리가 되어 어느 쪽도 못 돌아간다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고,
      *          그 동안은 스테이지가 스스로를 쥐고 있으므로 안전하다.
+     *          대기는 `_join` 에 적힌 대기자 하나를 마지막 태스크가 직접 깨운다 — 뮤텍스도 조건 변수도 없다.
      */
     struct StageNode
     {
         fixed_string<constant::kMaxBuffer64> _name; ///< 이름 있는 스테이지의 조회 키. 힙을 만지지 않는다.
         vector<TaskNode*>                    _listTask;
-        atomic<uint32>                       _remainingTasks{ 0 };
-        mutex                                _mutex;
-        std::condition_variable_any          _cv;
+        mutex                                _listMutex; ///< `_listTask` 만 지킨다
+        JoinCounter                          _join;
         atomic<int32>                        _refCount{ 0 };
         TaskNodePool*                        _pPool{ nullptr };
 
@@ -193,6 +316,12 @@ namespace sw
             unlock();
         }
 
+        /** @brief 비어 있으면 잠금 없이 답합니다 — 완료 경로의 흔한 경우(후속 없음)가 스핀락을 안 잡게. */
+        bool isEmptyRelaxed() const
+        {
+            return _count == 0;
+        }
+
         template <typename Func>
         void forEach( Func&& func ) const
         {
@@ -234,10 +363,6 @@ namespace sw
 
         /**
          * @brief 디버깅·프로파일링용 이름을 설정합니다 (용량 초과는 잘라 담습니다).
-         * @details 예전엔 익명 네임스페이스 안의 자유 헬퍼였다. 하는 일이 전부 이 구조체 자기 필드
-         *          조작인데 **완전한 TaskNode 가 필요해서** 파일 위쪽 익명 블록에 못 들어갔고, 그래서
-         *          블록이 하나 더 있었다. TaskNode 는 위쪽 블록의 `kTaskNameCapacity` 를 쓰므로 순서를
-         *          뒤집을 수도 없었다. 데이터가 있는 자리로 옮기니 그 블록 자체가 필요 없어졌다.
          */
         void setName( [[maybe_unused]] string_view name )
         {
@@ -256,11 +381,8 @@ namespace sw
 #endif
         InlineSuccessorList _successors;
         TaskCallable        _callable;
-        SharedTaskCallable* _pSharedCallable{ nullptr };
         StageNode*          _parentStage{ nullptr }; ///< 남은 태스크가 있는 동안만 유효 — 스테이지가 그 동안 스스로를 쥔다
 
-        uint32        _rangeStart{ 0 };
-        uint32        _rangeEnd{ 0 };
         atomic<int32> _unresolvedDependencies{ 1 }; // 1 = Builder Dependency
 
         TaskThreadAffinity _affinity = TaskThreadAffinity::Any;
@@ -268,9 +390,15 @@ namespace sw
         atomic<TaskState>  _state{ TaskState::Pending };
         atomic<bool>       _bCancelled{ false };
 
-        TaskManager*  _pOwner{ nullptr };
-        TaskNode*     _pParent{ nullptr };
-        atomic<int32> _activeChildren{ 0 };
+        TaskManager* _pOwner{ nullptr };
+        TaskNode*    _pParent{ nullptr };
+        /**
+         * @brief 본문 하나 + 아직 안 끝난 자식 수. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리한다.
+         * @details 예전엔 "자식 수" 와 "상태 = 자식 대기" 를 따로 두고 seq_cst 로 데커 순서를 맞췄는데, 본문이 상태를
+         *          적고 자식 수를 읽는 사이에 마지막 자식이 수를 내리고 상태를 읽으면 **둘 다** 완료를 처리했다.
+         *          본문 자신을 1 로 세어 두면 카운터 하나로 끝나고 seq_cst 도 필요 없다.
+         */
+        atomic<int32> _pendingChildren{ 1 };
         atomic<int32> _refCount{ 1 };
     };
 
@@ -339,20 +467,17 @@ namespace sw
             }
 
             pMem->_unresolvedDependencies.store( 1, std::memory_order_relaxed );
-            pMem->_activeChildren.store( 0, std::memory_order_relaxed );
+            pMem->_pendingChildren.store( 1, std::memory_order_relaxed );
             pMem->_state.store( TaskState::Pending, std::memory_order_relaxed );
             pMem->_bCancelled.store( false, std::memory_order_relaxed );
             pMem->_refCount.store( 1, std::memory_order_relaxed );
-            pMem->_pOwner          = nullptr;
-            pMem->_pParent         = nullptr;
-            pMem->_pSharedCallable = nullptr;
+            pMem->_pOwner  = nullptr;
+            pMem->_pParent = nullptr;
 #if !defined( SW_SHIPPING )
             pMem->_arrName[0] = 0;
 #endif
-            pMem->_rangeStart = 0;
-            pMem->_rangeEnd   = 0;
-            pMem->_affinity   = TaskThreadAffinity::Any;
-            pMem->_priority   = TaskPriority::Normal;
+            pMem->_affinity = TaskThreadAffinity::Any;
+            pMem->_priority = TaskPriority::Normal;
             return pMem;
         }
 
@@ -366,11 +491,6 @@ namespace sw
 #if !defined( SW_SHIPPING )
             pNode->_arrName[0] = 0;
 #endif
-            if ( pNode->_pSharedCallable != nullptr )
-            {
-                pNode->_pSharedCallable->release();
-                pNode->_pSharedCallable = nullptr;
-            }
             pNode->_pOwner = nullptr;
 
             if ( _freeQueue.enqueue( pNode ) == false )
@@ -402,7 +522,7 @@ namespace sw
             }
             pStage->_name.clear();
             pStage->_listTask.clear();
-            pStage->_remainingTasks.store( 0, std::memory_order_relaxed );
+            pStage->_join.reset();
             pStage->_refCount.store( 1, std::memory_order_relaxed );
             pStage->_pPool = this;
             return pStage;
@@ -439,12 +559,39 @@ namespace sw
             for ( StageNode* pStage : listLive )
             {
                 pStage->_refCount.store( 0, std::memory_order_relaxed );
-                pStage->_remainingTasks.store( 0, std::memory_order_relaxed );
+                pStage->_join.reset();
                 deallocateStage( pStage );
             }
         }
 
-        SharedTaskCallablePool& getSharedCallablePool() { return _sharedCallablePool; }
+        /** @brief 병렬 그룹을 꺼냅니다. 풀이 비면 힙에서 — 그 경우 `_bHeap` 이 켜진다. */
+        ParallelGroup* allocateGroup()
+        {
+            ParallelGroup* pGroup = _groupPool.acquire();
+            if ( pGroup != nullptr )
+            {
+                pGroup->_pPool = &_groupPool;
+                return pGroup;
+            }
+            pGroup         = sw_new ParallelGroup();
+            pGroup->_bHeap = true;
+            return pGroup;
+        }
+
+        /** @brief 병렬 그룹을 되돌립니다 — 풀로, 힙에서 왔으면 힙으로. */
+        void deallocateGroup( ParallelGroup* pGroup )
+        {
+            if ( pGroup == nullptr )
+                return;
+            if ( pGroup->_bHeap )
+            {
+                sw_delete( pGroup );
+                return;
+            }
+            ParallelGroupPool* pPool = pGroup->_pPool;
+            if ( pPool != nullptr )
+                pPool->release( pGroup );
+        }
 
     private:
         ConcurrentQueue<TaskNode*, 4096> _freeQueue;
@@ -461,7 +608,7 @@ namespace sw
          */
         vector<unique_ptr<StageNode>> _listStageAll;
         mutex                         _stageMutex;
-        SharedTaskCallablePool        _sharedCallablePool;
+        ParallelGroupPool             _groupPool;
     };
 
     void InlineSuccessorList::clearAndRelease()
@@ -667,12 +814,12 @@ namespace sw
         TaskNode* pTaskNode = task.getNode();
         if ( _pNode != nullptr && pTaskNode != nullptr )
         {
-            std::scoped_lock<mutex> lock{ _pNode->_mutex };
+            std::scoped_lock<mutex> lock{ _pNode->_listMutex };
             pTaskNode->retain();
             _pNode->_listTask.push_back( pTaskNode );
             pTaskNode->_parentStage = _pNode;
             // 남은 태스크가 생기는 순간 스테이지가 스스로를 쥔다 — 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.
-            if ( _pNode->_remainingTasks.fetch_add( 1, std::memory_order_relaxed ) == 0 )
+            if ( _pNode->_join.addPending( 1 ) == 0 )
                 _pNode->retain();
         }
         return *this;
@@ -683,20 +830,19 @@ namespace sw
         , _mainThreadId{}
         , _bStop{ false }
         , _listWorker{}
-        , _listWorkerQueue{}
+        , _listWorkerSlot{}
         , _helperSlotCount{ 0 }
-        , _nextWorkerQueueIndex{ 0 }
-        , _sleepingWorkerCount{ 0 }
+        , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
         , _wakeSignalCount{ 0 }
+        , _completionEpoch{ 0 }
+        , _broadcastWaiterCount{ 0 }
+        , _mainThreadParkedSlot{ -1 }
         , _globalHighQueue{}
         , _globalWorkerQueue{}
         , _globalLowQueue{}
         , _queueMainThread{}
-        , _workerMutex{}
-        , _cvWorker{}
-        , _waitAllMutex{}
-        , _cvWaitAll{}
+        , _arrHelperWaiter{}
         , _listAllStage{}
         , _stageMutex{}
         , _activeTaskCount{ 0 }
@@ -740,15 +886,18 @@ namespace sw
             else
                 threadCount = 1;
         }
+        if ( threadCount > kMaxWorkerCount )
+            threadCount = kMaxWorkerCount;
 
         _mainThreadId = std::this_thread::get_id();
         _bStop        = false;
-        _sleepingWorkerCount.store( 0, std::memory_order_relaxed );
+        _idleWorkerMask.store( 0, std::memory_order_relaxed );
+        _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
         _listWorker.reserve( threadCount );
-        _listWorkerQueue.reserve( threadCount );
+        _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
-            _listWorkerQueue.push_back( make_unique<WorkerQueue>() );
+            _listWorkerSlot.push_back( make_unique<WorkerSlot>() );
         }
 
         for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
@@ -773,11 +922,9 @@ namespace sw
 
         BLOCK( "Stop Worker Threads" )
         {
-            {
-                std::scoped_lock<mutex> lock{ _workerMutex };
-                _bStop = true;
-                _cvWorker.notify_all();
-            }
+            _bStop.store( true, std::memory_order_seq_cst );
+            // 잠든 워커는 자기 워드에서, 스핀 중인 워커는 세대로 알아챈다 — 전부 깨운다.
+            wakeSleepingWorkers();
 
             for ( std::thread& worker : _listWorker )
             {
@@ -785,7 +932,7 @@ namespace sw
                     worker.join();
             }
             _listWorker.clear();
-            _listWorkerQueue.clear();
+            _listWorkerSlot.clear();
         }
 
         BLOCK( "Cleanup Resources" )
@@ -822,6 +969,7 @@ namespace sw
             if ( assigned >= kMaxHelperThreadCount )
             {
                 // 넘치면 마지막 칸을 나눠 쓴다 — 스크래치가 겹칠 수 있으니 알린다. 엔진에서는 닿지 않는 수다.
+                // (대기 워드는 나눠 써도 안전하다 — 허위로 깨어날 뿐이다.)
                 SW_LOG_ERROR( "More than %# non-worker threads execute tasks — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
                 t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
             }
@@ -829,6 +977,22 @@ namespace sw
                 t_helperScratchSlot = static_cast<int32>( assigned );
         }
         return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
+    }
+
+    uint32 TaskManager::getCurrentWaiterSlotIndex()
+    {
+        return getCurrentThreadScratchSlot();
+    }
+
+    atomic<uint32>& TaskManager::getWaiterWord( uint32 slotIndex )
+    {
+        const uint32 workerCount = getWorkerCount();
+        if ( slotIndex < workerCount )
+            return std::as_const( _listWorkerSlot )[slotIndex]->_park._word;
+        uint32 helperIndex = slotIndex - workerCount;
+        if ( helperIndex >= kMaxHelperThreadCount )
+            helperIndex = kMaxHelperThreadCount - 1;
+        return _arrHelperWaiter[helperIndex]._word;
     }
 
     bool TaskManager::isWorkerThread() const
@@ -869,12 +1033,12 @@ namespace sw
         pNode->setName( name );
         pNode->_affinity = affinity;
         pNode->_callable = delegate;
-        pNode->_state    = TaskState::Pending;
+        pNode->_state.store( TaskState::Pending, std::memory_order_relaxed );
 
         if ( t_pCurrentRunningTask != nullptr )
         {
             pNode->_pParent = t_pCurrentRunningTask;
-            t_pCurrentRunningTask->_activeChildren.fetch_add( 1, std::memory_order_relaxed );
+            t_pCurrentRunningTask->_pendingChildren.fetch_add( 1, std::memory_order_relaxed );
             t_pCurrentRunningTask->retain();
         }
 
@@ -900,12 +1064,12 @@ namespace sw
         pNode->setName( name );
         pNode->_affinity = affinity;
         pNode->_callable = TaskArgsPayload{ delegate, args };
-        pNode->_state    = TaskState::Pending;
+        pNode->_state.store( TaskState::Pending, std::memory_order_relaxed );
 
         if ( t_pCurrentRunningTask != nullptr )
         {
             pNode->_pParent = t_pCurrentRunningTask;
-            t_pCurrentRunningTask->_activeChildren.fetch_add( 1, std::memory_order_relaxed );
+            t_pCurrentRunningTask->_pendingChildren.fetch_add( 1, std::memory_order_relaxed );
             t_pCurrentRunningTask->retain();
         }
 
@@ -920,90 +1084,52 @@ namespace sw
 
     TaskHandle TaskManager::emplaceParallel( string_view name, uint32 count, const ParallelTaskDelegate& delegate, TaskThreadAffinity affinity )
     {
-        if ( count == 0 )
-            return emplaceTask( name, TaskDelegate{}, affinity );
-
-        uint32 workerCount = getWorkerCount();
-        if ( workerCount == 0 )
-            workerCount = 1;
-
-        uint32 numChunks = MathUtil::min( count, workerCount * 2 );
-        uint32 chunkSize = ( count + numChunks - 1 ) / numChunks;
-        if ( chunkSize == 0 )
-            chunkSize = 1;
-        numChunks = ( count + chunkSize - 1 ) / chunkSize;
-
-        TaskHandle parentTask = emplaceTask( name, TaskDelegate{}, affinity );
-        if ( parentTask.isValid() == false )
-            return parentTask;
-
-        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( &_nodePool->getSharedCallablePool(), TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
-        for ( uint32 start = 0; start < count; start += chunkSize )
-        {
-            uint32    end      = MathUtil::min( start + chunkSize, count );
-            TaskNode* pSubTask = allocateNode();
-
-            pSubTask->_pOwner          = this;
-            pSubTask->_pSharedCallable = pSharedCallable;
-            pSubTask->setName( name );
-            pSubTask->_rangeStart = start;
-            pSubTask->_rangeEnd   = end;
-            pSubTask->_state      = TaskState::Pending;
-
-            _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-
-            TaskHandle subHandle{ pSubTask };
-            subHandle.precede( parentTask );
-            submitWithoutWake( subHandle );
-        }
-        // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
-        wakeSleepingWorkers( numChunks );
-
-        return parentTask;
+        return emplaceParallelGroup( name, 0, count, nullptr, &delegate, affinity );
     }
 
     TaskHandle TaskManager::emplaceParallelBlock( uint32 start, uint32 end, const ParallelBlockDelegate& delegate, TaskThreadAffinity affinity )
     {
+        return emplaceParallelGroup( "ParallelBlockTask", start, end, &delegate, nullptr, affinity );
+    }
+
+    TaskHandle TaskManager::emplaceParallelGroup( string_view name, uint32 start, uint32 end, const ParallelBlockDelegate* pBlockBody, const ParallelTaskDelegate* pIndexBody, TaskThreadAffinity affinity )
+    {
         if ( end <= start )
-            return emplaceTask( "ParallelBlockTask", TaskDelegate{}, affinity );
+            return emplaceTask( name, TaskDelegate{}, affinity );
 
-        uint32 count       = end - start;
-        uint32 workerCount = getWorkerCount();
-        if ( workerCount == 0 )
-            workerCount = 1;
-
-        uint32 numChunks = MathUtil::min( count, workerCount * 2 );
-        uint32 chunkSize = ( count + numChunks - 1 ) / numChunks;
-        if ( chunkSize == 0 )
-            chunkSize = 1;
-        numChunks = ( count + chunkSize - 1 ) / chunkSize;
-
-        TaskHandle parentTask = emplaceTask( "ParallelBlockTask", TaskDelegate{}, affinity );
+        // 부모 노드가 사용자에게 보이는 태스크다 — 핸들 · 스테이지 · 후속 · 활성 수 전부 이 하나에 걸린다.
+        TaskHandle parentTask = emplaceTask( name, TaskDelegate{}, affinity );
         if ( parentTask.isValid() == false )
             return parentTask;
 
-        SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( &_nodePool->getSharedCallablePool(), TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
-        for ( uint32 offset = 0; offset < count; offset += chunkSize )
-        {
-            uint32    chunkStart = start + offset;
-            uint32    chunkEnd   = MathUtil::min( chunkStart + chunkSize, end );
-            TaskNode* pSubTask   = allocateNode();
+        const uint32        count = end - start;
+        const ParallelSplit split = ParallelSplit::compute( count, MathUtil::max( getWorkerCount(), 1u ), false );
 
-            pSubTask->_pOwner          = this;
-            pSubTask->_pSharedCallable = pSharedCallable;
-            pSubTask->setName( "ParallelBlockTask" );
-            pSubTask->_rangeStart = chunkStart;
-            pSubTask->_rangeEnd   = chunkEnd;
-            pSubTask->_state      = TaskState::Pending;
+        ParallelGroup* pGroup = _nodePool->allocateGroup();
+        if ( pBlockBody != nullptr )
+            pGroup->_blockBody = *pBlockBody;
+        else
+            pGroup->_blockBody = ParallelBlockDelegate{};
+        if ( pIndexBody != nullptr )
+            pGroup->_indexBody = *pIndexBody;
+        else
+            pGroup->_indexBody = ParallelTaskDelegate{};
+        pGroup->_pBlockBody = nullptr;
+        pGroup->_rangeStart = start;
+        pGroup->_rangeEnd   = end;
+        pGroup->_chunkSize  = split._chunkSize;
+        pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
+        pGroup->_join.reset();
 
-            _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
+        // 그룹이 부모를 쥐고, 부모는 그룹이 끝나야 준비된다(빌더 의존성 1 + 그룹 의존성 1).
+        TaskNode* pParent = parentTask.getNode();
+        pParent->retain();
+        pParent->_unresolvedDependencies.fetch_add( 1, std::memory_order_relaxed );
+        pGroup->_pParent = pParent;
 
-            TaskHandle subHandle{ pSubTask };
-            subHandle.precede( parentTask );
-            submitWithoutWake( subHandle );
-        }
-        // 서브태스크를 다 넣은 뒤 **한 번만** 깨운다 — 청크마다 깨우면 그 시그널이 디스패치 비용의 전부였다.
-        wakeSleepingWorkers( numChunks );
+        const uint32 ticketCount = MathUtil::max( split._ticketCount, 1u );
+        pGroup->_join.addPending( ticketCount );
+        pushGroupTickets( pGroup, ticketCount );
 
         return parentTask;
     }
@@ -1013,22 +1139,169 @@ namespace sw
         if ( count == 0 || body.isBound() == false )
             return;
         // 문턱 아래·워커 없음은 이 스레드가 한 번에 돈다 — 나누는 비용이 일보다 크다.
-        if ( _bInitialized == false || getWorkerCount() == 0 || count < serialThreshold )
+        const uint32 workerCount = getWorkerCount();
+        if ( _bInitialized == false || workerCount == 0 || count < serialThreshold )
         {
             body( 0, count );
             return;
         }
 
-        TaskStageHandle stage  = createAnonymousStage( "RunParallel" );
-        TaskHandle      handle = emplaceParallelBlock( 0, count, body );
-        if ( handle.isValid() == false )
+        const ParallelSplit split = ParallelSplit::compute( count, workerCount, true );
+        if ( split._ticketCount == 0 )
         {
             body( 0, count );
             return;
         }
-        stage.addTask( handle );
-        submit( handle );
-        waitStage( stage );
+
+        // 그룹은 이 스택에 산다. 마지막 티켓이 합류를 0 으로 만든 뒤에는 아무도 이 메모리를 만지지 않는다.
+        ParallelGroup group{};
+        group._pBlockBody = &body;
+        group._rangeStart = 0;
+        group._rangeEnd   = count;
+        group._chunkSize  = split._chunkSize;
+        group._nextChunkStart.store( 0, std::memory_order_relaxed );
+        group._join.addPending( split._ticketCount );
+
+        // `waitAll` 에는 그룹 하나가 태스크 하나다 — 티켓마다 활성 수를 오르내리지 않는다.
+        _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
+        pushGroupTickets( &group, split._ticketCount );
+
+        // 워커가 깨기를 기다리지 않는다 — 이 스레드가 첫 청크부터 집는다.
+        runGroupChunks( &group );
+        waitForGroup( group );
+
+        if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            notifyBroadcast();
+    }
+
+    void TaskManager::pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount )
+    {
+        const uintptr_t item     = TaskQueueItem::fromTicket( pGroup );
+        const int32     workerId = getCurrentWorkerIndex();
+        for ( uint32 index = 0; index < ticketCount; ++index )
+        {
+            if ( workerId >= 0 )
+            {
+                WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
+                while ( localSlot._queue.push( item ) == false )
+                {
+                    if ( _globalWorkerQueue.enqueue( item ) )
+                        break;
+                    std::this_thread::yield();
+                }
+            }
+            else
+            {
+                while ( _globalWorkerQueue.enqueue( item ) == false )
+                    std::this_thread::yield();
+            }
+        }
+        // 티켓을 다 넣은 뒤 **한 번** — 세대를 올리고 티켓 수만큼만 깨운다.
+        wakeSleepingWorkers( ticketCount );
+    }
+
+    void TaskManager::runHighLaneBetweenChunks()
+    {
+        // 빈 큐의 size 는 위치 두 개 읽기다 — 청크마다 봐도 비용이 없다시피 하다.
+        if ( _globalHighQueue.empty() )
+            return;
+        const bool bWasInsideParallel = t_bInsideParallelTask;
+        t_bInsideParallelTask         = false;
+        uintptr_t item{ 0 };
+        while ( _globalHighQueue.dequeue( item ) )
+        {
+            executeItem( item );
+        }
+        t_bInsideParallelTask = bWasInsideParallel;
+    }
+
+    void TaskManager::runGroupChunks( ParallelGroup* pGroup )
+    {
+        const ParallelTaskScope parallelScope{};
+        const uint32            end       = pGroup->_rangeEnd;
+        const uint32            chunkSize = pGroup->_chunkSize;
+        for ( ;; )
+        {
+            // **High 레인은 청크 사이에 본다.** 티켓을 쥔 워커가 그룹을 다 돌 때까지 렌더 스레드의 패스 기록을
+            // 세워 두면 그 줄이 그대로 프레임 지연이다 — 예전에는 청크가 노드라 노드 사이에 저절로 봤다.
+            // 지금 청크 하나(참여자당 넷)는 그때의 노드 하나보다 작으므로 기다림의 상한도 더 짧다.
+            runHighLaneBetweenChunks();
+            const uint64 claimed = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
+            if ( claimed >= end )
+                break;
+            const uint32 chunkStart = static_cast<uint32>( claimed );
+            const uint32 chunkEnd   = MathUtil::min( chunkStart + chunkSize, end );
+            if ( pGroup->_pBlockBody != nullptr )
+            {
+                ( *pGroup->_pBlockBody )( chunkStart, chunkEnd );
+            }
+            else if ( pGroup->_blockBody.isBound() )
+            {
+                pGroup->_blockBody( chunkStart, chunkEnd );
+            }
+            else if ( pGroup->_indexBody.isBound() )
+            {
+                for ( uint32 elementIndex = chunkStart; elementIndex < chunkEnd; ++elementIndex )
+                    pGroup->_indexBody( elementIndex );
+            }
+        }
+    }
+
+    void TaskManager::runGroupTicket( ParallelGroup* pGroup )
+    {
+        runGroupChunks( pGroup );
+        // 스택 그룹은 합류가 0 이 되는 순간 사라질 수 있다 — 그 뒤에 필요한 것은 전부 **앞서** 읽는다.
+        const bool   bPooledGroup = pGroup->_pParent != nullptr;
+        const uint64 joinBefore   = pGroup->_join.finishOne();
+        if ( ( joinBefore & JoinCounter::kCountMask ) == 1 )
+            onGroupFinished( pGroup, joinBefore, bPooledGroup );
+    }
+
+    void TaskManager::onGroupFinished( ParallelGroup* pGroup, uint64 joinBeforeFinish, bool bPooledGroup )
+    {
+        const uint32 waiterPlusOne = static_cast<uint32>( joinBeforeFinish >> JoinCounter::kWaiterShift );
+        if ( bPooledGroup )
+        {
+            // 풀 그룹은 우리가 마지막 손이다 — 부모의 그룹 의존성을 풀고(준비되면 큐로) 그룹을 되돌린다.
+            TaskNode* pParent = pGroup->_pParent;
+            pGroup->_pParent  = nullptr;
+            _nodePool->deallocateGroup( pGroup );
+            if ( pParent != nullptr )
+            {
+                if ( pParent->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+                    scheduleReadyTask( pParent );
+                pParent->release();
+            }
+        }
+        if ( waiterPlusOne != 0 )
+            unparkWaiter( waiterPlusOne - 1 );
+    }
+
+    void TaskManager::waitForGroup( ParallelGroup& group )
+    {
+        uint32 spinCount = 0;
+        while ( group._join.getPending() > 0 )
+        {
+            if ( isMainThread() )
+                dispatchMainThreadTasks();
+
+            // 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기 덱 · 전역)에만 있다 — 돕다 보면 스스로 집는다.
+            if ( tryHelpAndExecute() )
+            {
+                spinCount = 0;
+                continue;
+            }
+
+            if ( spinCount < kIdleSpinCount )
+            {
+                sw::cpuPause();
+                ++spinCount;
+                continue;
+            }
+
+            parkOnJoin( group._join );
+            spinCount = 0;
+        }
     }
 
     TaskStageHandle TaskManager::createAnonymousStage( string_view stageName )
@@ -1078,7 +1351,7 @@ namespace sw
             return;
 
         uint32 spinCount = 0;
-        while ( stage._pNode->_remainingTasks.load( std::memory_order_acquire ) > 0 )
+        while ( stage._pNode->_join.getPending() > 0 )
         {
             if ( isMainThread() )
                 dispatchMainThreadTasks();
@@ -1096,13 +1369,12 @@ namespace sw
                 continue;
             }
 
-            std::unique_lock<mutex> lock{ _waitAllMutex };
-            if ( stage._pNode->_remainingTasks.load( std::memory_order_acquire ) > 0 )
-                _cvWaitAll.wait( lock );
+            parkOnJoin( stage._pNode->_join );
+            spinCount = 0;
         }
 
         {
-            std::scoped_lock<mutex> doneLock{ stage._pNode->_mutex };
+            std::scoped_lock<mutex> doneLock{ stage._pNode->_listMutex };
             for ( TaskNode* pTask : stage._pNode->_listTask )
             {
                 if ( pTask == nullptr )
@@ -1118,7 +1390,109 @@ namespace sw
         if ( stage._pNode == nullptr )
             return true;
 
-        return stage._pNode->_remainingTasks.load( std::memory_order_relaxed ) == 0;
+        return stage._pNode->_join.getPending() == 0;
+    }
+
+    void TaskManager::parkOnJoin( JoinCounter& join )
+    {
+        const uint32    slotIndex = getCurrentWaiterSlotIndex();
+        atomic<uint32>& word      = getWaiterWord( slotIndex );
+        // **등록보다 먼저** 읽는다. 등록 뒤에 온 깨움은 워드를 바꾸므로 아래 wait 가 바로 돌아온다.
+        const uint32 seen = word.load( std::memory_order_acquire );
+
+        switch ( join.tryRegisterWaiter( slotIndex + 1 ) )
+        {
+            case JoinCounter::RegisterResult::AlreadyDone:
+                return;
+            case JoinCounter::RegisterResult::Busy:
+            {
+                // 같은 것을 둘째로 기다린다 — 드물다. 방송에 잠들되 짧게 끊어 폴링한다(완료는 방송도 울린다).
+                const uint32 epoch = prepareBroadcastWait();
+                if ( join.getPending() > 0 )
+                    commitBroadcastWait( epoch, kSecondWaiterPollMilli );
+                else
+                    cancelBroadcastWait();
+                return;
+            }
+            case JoinCounter::RegisterResult::Registered:
+                break;
+            default:
+                break;
+        }
+
+        const bool bMainThread = isMainThread();
+        if ( bMainThread )
+        {
+            // 메인 일감을 넣는 쪽이 이 칸을 보고 깨운다. 적은 뒤 큐를 다시 봐야 그 사이 들어온 것을 놓치지 않는다.
+            _mainThreadParkedSlot.store( static_cast<int32>( slotIndex ), std::memory_order_seq_cst );
+            std::atomic_thread_fence( std::memory_order_seq_cst );
+            if ( _queueMainThread.empty() == false )
+            {
+                _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
+                return;
+            }
+        }
+
+        Futex::wait( word, seen );
+
+        if ( bMainThread )
+            _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
+    }
+
+    uint32 TaskManager::prepareBroadcastWait()
+    {
+        const uint32 epoch = _completionEpoch.load( std::memory_order_acquire );
+        _broadcastWaiterCount.fetch_add( 1, std::memory_order_seq_cst );
+        std::atomic_thread_fence( std::memory_order_seq_cst );
+        return epoch;
+    }
+
+    void TaskManager::commitBroadcastWait( uint32 seenEpoch, uint32 timeoutMilli )
+    {
+        if ( timeoutMilli == 0 )
+            Futex::wait( _completionEpoch, seenEpoch );
+        else
+            Futex::waitFor( _completionEpoch, seenEpoch, timeoutMilli );
+        _broadcastWaiterCount.fetch_sub( 1, std::memory_order_seq_cst );
+    }
+
+    void TaskManager::cancelBroadcastWait()
+    {
+        _broadcastWaiterCount.fetch_sub( 1, std::memory_order_seq_cst );
+    }
+
+    void TaskManager::notifyBroadcast()
+    {
+        // 완료를 만든 원자 연산 뒤에 울타리를 치고 대기자 수를 본다 — 대기자 쪽의 "수 올리고 울타리 치고 조건 보기" 와 짝이다.
+        std::atomic_thread_fence( std::memory_order_seq_cst );
+        if ( _broadcastWaiterCount.load( std::memory_order_seq_cst ) == 0 )
+            return;
+        _completionEpoch.fetch_add( 1, std::memory_order_release );
+        Futex::wakeAll( _completionEpoch );
+    }
+
+    void TaskManager::wakeParkedMainThread()
+    {
+        std::atomic_thread_fence( std::memory_order_seq_cst );
+        const int32 parkedSlot = _mainThreadParkedSlot.load( std::memory_order_seq_cst );
+        if ( parkedSlot >= 0 )
+            unparkWaiter( static_cast<uint32>( parkedSlot ) );
+        // 메인이 방송(`waitAll`)에 잠들어 있을 수도 있다.
+        notifyBroadcast();
+    }
+
+    void TaskManager::unparkWaiter( uint32 slotIndex )
+    {
+        atomic<uint32>& word = getWaiterWord( slotIndex );
+        word.fetch_add( 1, std::memory_order_release );
+        Futex::wakeOne( word );
+    }
+
+    void TaskManager::unparkWorker( uint32 workerId )
+    {
+        WorkerSlot& slot = *std::as_const( _listWorkerSlot )[workerId];
+        slot._park._word.fetch_add( 1, std::memory_order_release );
+        Futex::wakeOne( slot._park._word );
     }
 
     void TaskManager::submit( const TaskHandle& handle )
@@ -1147,19 +1521,6 @@ namespace sw
                 continue;
             }
 
-            if ( timeoutMs > 0 )
-            {
-                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - startTime ).count();
-                if ( elapsed >= static_cast<int64>( timeoutMs ) )
-                    return _activeTaskCount.load( std::memory_order_acquire ) == 0;
-
-                const uint32            remainingMs = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
-                std::unique_lock<mutex> lock{ _waitAllMutex };
-                if ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
-                    _cvWaitAll.wait_for( lock, std::chrono::milliseconds( remainingMs ) );
-                continue;
-            }
-
             if ( spinCount < kIdleSpinCount )
             {
                 sw::cpuPause();
@@ -1167,11 +1528,51 @@ namespace sw
                 continue;
             }
 
-            std::unique_lock<mutex> lock{ _waitAllMutex };
-            if ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
-                _cvWaitAll.wait( lock );
+            uint32 waitMilli = 0;
+            if ( timeoutMs > 0 )
+            {
+                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - startTime ).count();
+                if ( elapsed >= static_cast<int64>( timeoutMs ) )
+                    return _activeTaskCount.load( std::memory_order_acquire ) == 0;
+                waitMilli = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
+            }
+
+            const uint32 epoch = prepareBroadcastWait();
+            if ( _activeTaskCount.load( std::memory_order_seq_cst ) > 0 )
+                commitBroadcastWait( epoch, waitMilli );
+            else
+                cancelBroadcastWait();
+            spinCount = 0;
         }
         return true;
+    }
+
+    void TaskManager::drainQueueItem( uintptr_t item )
+    {
+        if ( item == 0 )
+            return;
+        if ( TaskQueueItem::isTicket( item ) == false )
+        {
+            TaskQueueItem::toNode( item )->release();
+            return;
+        }
+        // 티켓은 돌리지 않고 닫는다. 마지막이면 그룹만 되돌린다 — 부모는 준비되지 않은 채 핸들이 놓일 때 돌아간다.
+        ParallelGroup* pGroup       = TaskQueueItem::toGroup( item );
+        const bool     bPooledGroup = pGroup->_pParent != nullptr;
+        const uint64   joinBefore   = pGroup->_join.finishOne();
+        if ( ( joinBefore & JoinCounter::kCountMask ) != 1 )
+            return;
+        const uint32 waiterPlusOne = static_cast<uint32>( joinBefore >> JoinCounter::kWaiterShift );
+        if ( bPooledGroup )
+        {
+            TaskNode* pParent = pGroup->_pParent;
+            pGroup->_pParent  = nullptr;
+            _nodePool->deallocateGroup( pGroup );
+            if ( pParent != nullptr )
+                pParent->release();
+        }
+        if ( waiterPlusOne != 0 )
+            unparkWaiter( waiterPlusOne - 1 );
     }
 
     void TaskManager::clear()
@@ -1185,14 +1586,12 @@ namespace sw
             }
             _listAllStage.clear();
         }
-        for ( auto& wq : _listWorkerQueue )
+        for ( const unique_ptr<WorkerSlot>& slot : _listWorkerSlot )
         {
-            TaskNode* pTemp{ nullptr };
-            while ( wq->_queue.steal( pTemp ) )
+            uintptr_t item{ 0 };
+            while ( slot->_queue.steal( item ) )
             {
-                if ( pTemp == nullptr )
-                    continue;
-                pTemp->release();
+                drainQueueItem( item );
             }
         }
         {
@@ -1205,33 +1604,24 @@ namespace sw
             }
         }
         {
-            TaskNode* pTemp{ nullptr };
-            while ( _globalHighQueue.dequeue( pTemp ) )
+            uintptr_t item{ 0 };
+            while ( _globalHighQueue.dequeue( item ) )
             {
-                if ( pTemp == nullptr )
-                    continue;
-                pTemp->release();
+                drainQueueItem( item );
             }
-            while ( _globalWorkerQueue.dequeue( pTemp ) )
+            while ( _globalWorkerQueue.dequeue( item ) )
             {
-                if ( pTemp == nullptr )
-                    continue;
-                pTemp->release();
+                drainQueueItem( item );
             }
-            while ( _globalLowQueue.dequeue( pTemp ) )
+            while ( _globalLowQueue.dequeue( item ) )
             {
-                if ( pTemp == nullptr )
-                    continue;
-                pTemp->release();
+                drainQueueItem( item );
             }
         }
         _activeTaskCount.store( 0, std::memory_order_release );
         // 큐를 다 비웠으니 아무 태스크도 돌지 않는다 — 살아 있는 스테이지를 전부 되돌린다.
         _nodePool->resetAllStages();
-        {
-            std::scoped_lock<mutex> lock{ _waitAllMutex };
-            _cvWaitAll.notify_all();
-        }
+        notifyBroadcast();
     }
 
     TaskHandle TaskManager::whenAll( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
@@ -1304,9 +1694,6 @@ namespace sw
 
     struct TaskExecutionVisitor
     {
-        uint32 _rangeStart{ 0 };
-        uint32 _rangeEnd{ 0 };
-
         void operator()( std::monostate& ) const {}
 
         void operator()( TaskDelegate& del ) const
@@ -1320,30 +1707,21 @@ namespace sw
             if ( payload._delegate.isBound() )
                 payload._delegate( payload._args );
         }
-
-        void operator()( ParallelTaskDelegate& del ) const
-        {
-            const ParallelTaskScope parallelScope{};
-            if ( del.isBound() )
-            {
-                for ( uint32 elementIndex = _rangeStart; elementIndex < _rangeEnd; ++elementIndex )
-                {
-                    del( elementIndex );
-                }
-            }
-        }
-
-        void operator()( ParallelBlockDelegate& del ) const
-        {
-            const ParallelTaskScope parallelScope{};
-            if ( del.isBound() )
-                del( _rangeStart, _rangeEnd );
-        }
     };
+
+    void TaskManager::executeItem( uintptr_t item )
+    {
+        if ( item == 0 )
+            return;
+        if ( TaskQueueItem::isTicket( item ) )
+            runGroupTicket( TaskQueueItem::toGroup( item ) );
+        else
+            executeTask( TaskQueueItem::toNode( item ) );
+    }
 
     void TaskManager::executeTask( TaskNode* pNode )
     {
-        pNode->_state = TaskState::Running;
+        pNode->_state.store( TaskState::Running, std::memory_order_relaxed );
 
         if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false )
         {
@@ -1352,51 +1730,113 @@ namespace sw
 
             BLOCK( "Execute Task Delegate" )
             {
-                TaskCallable&        callable = pNode->_pSharedCallable != nullptr ? pNode->_pSharedCallable->_callable : pNode->_callable;
-                TaskExecutionVisitor visitor{ pNode->_rangeStart, pNode->_rangeEnd };
-                std::visit( visitor, callable );
+                TaskExecutionVisitor visitor{};
+                std::visit( visitor, pNode->_callable );
             }
 
             t_pCurrentRunningTask = pPrevRunningTask;
         }
 
-        BLOCK( "Finalize Task" )
-        {
-            onTaskFinished( pNode );
-        }
+        // 본문 몫(1)을 내린다. 0 이 되면 자식도 다 끝난 것이고, 아니면 마지막 자식이 완료를 처리한다.
+        if ( pNode->_pendingChildren.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            completeTask( pNode );
+        else
+            pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_relaxed );
 
         pNode->release(); // Release queue reference
     }
 
-    bool TaskManager::tryTakeTask( uint32 workerId, TaskNode*& pNode )
+    void TaskManager::completeTask( TaskNode* pNode )
     {
-        pNode = nullptr;
+        pNode->_state.store( TaskState::Completed, std::memory_order_release );
+
+        // **활성 수는 스테이지·부모보다 먼저 내린다.** 예전에는 맨 끝(후속 트리거 뒤)에서 내렸는데, 그러면
+        // `waitStage` 가 스테이지 완료 통지를 받고 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다.
+        // 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가 0xFFFFFFFF 로 감아 버려 이후의
+        // `waitAll` 이 영원히 기다린다 — CTest 아래에서만 재현되던 EngineTest_NoGPU 180 초 타임아웃이 이것이다.
+        // 후속 태스크는 만들 때 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
+        if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            notifyBroadcast();
+
+        BLOCK( "Update Parent Task" )
+        {
+            TaskNode* pParent = pNode->_pParent;
+            pNode->_pParent   = nullptr;
+            if ( pParent != nullptr )
+            {
+                if ( pParent->_pendingChildren.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+                    completeTask( pParent );
+                pParent->release();
+            }
+        }
+
+        BLOCK( "Update Stage" )
+        {
+            StageNode* pStage   = pNode->_parentStage;
+            pNode->_parentStage = nullptr;
+            if ( pStage != nullptr )
+            {
+                const uint64 joinBefore = pStage->_join.finishOne();
+                if ( ( joinBefore & JoinCounter::kCountMask ) == 1 )
+                {
+                    // 마지막 태스크가 끝났다 — 적혀 있던 대기자만 깨우고(둘째 대기자는 방송), addTask 에서 잡은 자기 참조를 놓는다.
+                    const uint32 waiterPlusOne = static_cast<uint32>( joinBefore >> JoinCounter::kWaiterShift );
+                    if ( waiterPlusOne != 0 )
+                        unparkWaiter( waiterPlusOne - 1 );
+                    notifyBroadcast();
+                    pStage->release();
+                }
+            }
+        }
+
+        BLOCK( "Trigger Successors and Cleanup" )
+        {
+            if ( pNode->_successors.isEmptyRelaxed() == false )
+            {
+                pNode->_successors.forEach( [this]( TaskNode* pSucc )
+                {
+                    if ( pSucc != nullptr )
+                    {
+                        int32 remaining = pSucc->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel );
+                        if ( remaining == 1 )
+                            scheduleReadyTask( pSucc );
+                    }
+                } );
+            }
+
+            pNode->_callable = std::monostate{};
+        }
+    }
+
+    bool TaskManager::tryTakeTask( uint32 workerId, uintptr_t& outItem )
+    {
+        outItem = 0;
 
         // 레인 순서: High -> 내 덱 -> Normal 전역 -> 훔치기 -> Low. 빈 큐의 dequeue 는 시퀀스 한 줄 읽기라
         // High 를 매번 먼저 보는 비용은 없다시피 하다.
-        if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+        if ( _globalHighQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
-        WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[workerId];
-        if ( localQ._queue.pop( pNode ) && pNode != nullptr )
+        WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[workerId];
+        if ( localSlot._queue.pop( outItem ) && outItem != 0 )
             return true;
 
-        if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
+        if ( _globalWorkerQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
-        const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
+        const uint32 numWorkers = static_cast<uint32>( _listWorkerSlot.size() );
         for ( uint32 workerIndex = 1; workerIndex < numWorkers; ++workerIndex )
         {
-            const uint32 targetId = ( workerId + workerIndex ) % numWorkers;
-            WorkerQueue& targetQ  = *std::as_const( _listWorkerQueue )[targetId];
-            if ( targetQ._queue.steal( pNode ) && pNode != nullptr )
+            const uint32 targetId   = ( workerId + workerIndex ) % numWorkers;
+            WorkerSlot&  targetSlot = *std::as_const( _listWorkerSlot )[targetId];
+            if ( targetSlot._queue.steal( outItem ) && outItem != 0 )
                 return true;
         }
 
-        if ( _globalLowQueue.dequeue( pNode ) && pNode != nullptr )
+        if ( _globalLowQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
-        pNode = nullptr;
+        outItem = 0;
         return false;
     }
 
@@ -1405,16 +1845,16 @@ namespace sw
         const int32 workerId = getCurrentWorkerIndex();
         if ( workerId >= 0 )
         {
-            TaskNode* pNode{ nullptr };
-            if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+            uintptr_t item{ 0 };
+            if ( _globalHighQueue.dequeue( item ) && item != 0 )
             {
-                executeTask( pNode );
+                executeItem( item );
                 return true;
             }
-            WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
-            if ( localQ._queue.pop( pNode ) && pNode != nullptr )
+            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
+            if ( localSlot._queue.pop( item ) && item != 0 )
             {
-                executeTask( pNode );
+                executeItem( item );
                 return true;
             }
         }
@@ -1424,20 +1864,20 @@ namespace sw
 
     bool TaskManager::tryStealAndExecute( uint32 excludedWorkerId )
     {
-        const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
+        const uint32 numWorkers = static_cast<uint32>( _listWorkerSlot.size() );
         if ( numWorkers == 0 )
             return false;
 
-        TaskNode* pNode{ nullptr };
-        if ( _globalHighQueue.dequeue( pNode ) && pNode != nullptr )
+        uintptr_t item{ 0 };
+        if ( _globalHighQueue.dequeue( item ) && item != 0 )
         {
-            executeTask( pNode );
+            executeItem( item );
             return true;
         }
 
-        if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
+        if ( _globalWorkerQueue.dequeue( item ) && item != 0 )
         {
-            executeTask( pNode );
+            executeItem( item );
             return true;
         }
 
@@ -1446,17 +1886,17 @@ namespace sw
             if ( workerIndex == excludedWorkerId )
                 continue;
 
-            WorkerQueue& targetQ = *std::as_const( _listWorkerQueue )[workerIndex];
-            if ( targetQ._queue.steal( pNode ) && pNode != nullptr )
+            WorkerSlot& targetSlot = *std::as_const( _listWorkerSlot )[workerIndex];
+            if ( targetSlot._queue.steal( item ) && item != 0 )
             {
-                executeTask( pNode );
+                executeItem( item );
                 return true;
             }
         }
 
-        if ( _globalLowQueue.dequeue( pNode ) && pNode != nullptr )
+        if ( _globalLowQueue.dequeue( item ) && item != 0 )
         {
-            executeTask( pNode );
+            executeItem( item );
             return true;
         }
         return false;
@@ -1467,12 +1907,15 @@ namespace sw
         t_bTaskWorkerThread  = true;
         t_currentWorkerIndex = static_cast<int32>( workerId );
 
+        WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerId];
+        const uint64 idleBit = static_cast<uint64>( 1 ) << workerId;
+
         while ( _bStop.load( std::memory_order_relaxed ) == false )
         {
-            TaskNode* pNode{ nullptr };
-            if ( tryTakeTask( workerId, pNode ) )
+            uintptr_t item{ 0 };
+            if ( tryTakeTask( workerId, item ) )
             {
-                executeTask( pNode );
+                executeItem( item );
                 continue;
             }
 
@@ -1486,12 +1929,14 @@ namespace sw
                 if ( _workEpoch.load( std::memory_order_acquire ) != epochSeen )
                 {
                     epochSeen = _workEpoch.load( std::memory_order_acquire );
-                    if ( tryTakeTask( workerId, pNode ) )
+                    if ( tryTakeTask( workerId, item ) )
                     {
                         bFoundInSpin = true;
                         break;
                     }
                 }
+                if ( _bStop.load( std::memory_order_relaxed ) )
+                    break;
                 // 시계는 32 번에 한 번만 본다 — 매번 보면 그 자체가 스핀 비용이다.
                 for ( uint32 spin = 0; spin < 32; ++spin )
                     sw::cpuPause();
@@ -1500,25 +1945,31 @@ namespace sw
                     break;
             }
 
-            if ( bFoundInSpin && pNode != nullptr )
+            if ( bFoundInSpin && item != 0 )
             {
-                executeTask( pNode );
+                executeItem( item );
                 continue;
             }
 
-            _sleepingWorkerCount.fetch_add( 1, std::memory_order_relaxed );
+            // 잠든다: 워드를 읽고 → 유휴 비트를 올리고 → 큐를 한 번 더 본다. 제출 쪽은 큐에 넣고 → 세대를 올리고 →
+            // 유휴 비트를 본다. 양쪽 다 seq_cst 라 둘 중 하나는 상대를 본다 — 넣은 일감이 잠든 워커 뒤에 남지 않는다.
+            const uint32 parkSeen = slot._park._word.load( std::memory_order_acquire );
+            _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
+            std::atomic_thread_fence( std::memory_order_seq_cst );
+            if ( tryTakeTask( workerId, item ) )
             {
-                std::unique_lock<mutex> lock{ _workerMutex };
-                if ( _bStop.load( std::memory_order_relaxed ) == false && tryTakeTask( workerId, pNode ) == false )
-                    _cvWorker.wait( lock );
-            }
-            _sleepingWorkerCount.fetch_sub( 1, std::memory_order_relaxed );
-
-            if ( pNode != nullptr )
-            {
-                executeTask( pNode );
+                _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
+                executeItem( item );
                 continue;
             }
+            if ( _bStop.load( std::memory_order_seq_cst ) )
+            {
+                _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
+                break;
+            }
+            Futex::wait( slot._park._word, parkSeen );
+            // 깨운 쪽이 비트를 내렸다. 허위로 깨었으면 아직 켜져 있으니 여기서 내린다 — 다음 회차가 다시 잠들지를 정한다.
+            _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
         }
 
         t_bTaskWorkerThread   = false;
@@ -1549,22 +2000,32 @@ namespace sw
 
     void TaskManager::wakeSleepingWorkers( uint32 wantedCount )
     {
-        // 스핀 중인 워커는 세대로 이미 알았다. 잠든 워커만 시그널이 필요하다.
-        _workEpoch.fetch_add( 1, std::memory_order_release );
-        const int32 sleeping = _sleepingWorkerCount.load( std::memory_order_acquire );
-        if ( sleeping <= 0 )
+        // 스핀 중인 워커는 세대로 안다. seq_cst 인 이유는 워커의 "유휴 비트 올리기 → 큐 보기" 와 데커 짝이기 때문이다.
+        _workEpoch.fetch_add( 1, std::memory_order_seq_cst );
+        if ( wantedCount == 0 )
             return;
-        _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
-        // **필요한 수만 깨운다.** `notify_all` 은 워커 열넷이 한꺼번에 깨어 일감 여섯을 다투는 천둥 무리다 —
-        // 렌더 그래프 병렬 기록이 150~192 us 에서 329~380 us 로 두 배 느려졌다(재 봤다).
-        std::scoped_lock<mutex> workerLock{ _workerMutex };
-        if ( wantedCount >= static_cast<uint32>( sleeping ) )
+
+        uint64 mask = _idleWorkerMask.load( std::memory_order_seq_cst );
+        if ( mask == 0 )
+            return;
+
+        // **필요한 수만, 비트를 내린 쪽이** 깨운다. 두 제출자가 같은 워커를 두 번 깨우지 않고, 깨움 하나는 주소 하나다 —
+        // 예전의 `notify_one` × n 은 뮤텍스 아래에서 차례로 나갔고 깨어난 n 명이 그 뮤텍스를 다시 잡느라 줄을 섰다.
+        uint32 wokenCount = 0;
+        while ( mask != 0 && wokenCount < wantedCount )
         {
-            _cvWorker.notify_all();
-            return;
+            const uint32 workerId = countTrailingZeros64( mask );
+            const uint64 bit      = static_cast<uint64>( 1 ) << workerId;
+            const uint64 previous = _idleWorkerMask.fetch_and( ~bit, std::memory_order_seq_cst );
+            if ( ( previous & bit ) != 0 )
+            {
+                unparkWorker( workerId );
+                ++wokenCount;
+            }
+            mask = previous & ~bit;
         }
-        for ( uint32 index = 0; index < wantedCount; ++index )
-            _cvWorker.notify_one();
+        if ( wokenCount > 0 )
+            _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
     }
 
     void TaskManager::scheduleReadyTask( TaskNode* pNode, bool bWakeWorker )
@@ -1573,152 +2034,64 @@ namespace sw
             return;
 
         TaskState expected = TaskState::Pending;
-        if ( pNode->_state.compare_exchange_strong( expected, TaskState::Ready, std::memory_order_acq_rel ) )
-        {
-            pNode->retain(); // Queue holds ownership
-
-            if ( pNode->_affinity == TaskThreadAffinity::MainThread )
-            {
-                while ( _queueMainThread.enqueue( pNode ) == false )
-                {
-                    if ( isMainThread() )
-                        dispatchMainThreadTasks();
-                    else
-                        std::this_thread::yield();
-                }
-                // **`notify_all` 이어야 한다.** 이 일감을 실행할 수 있는 것은 메인 스레드뿐인데
-                // (`dispatchMainThreadTasks`), `_cvWaitAll` 에는 `waitAll` · `waitStage` 로 들어온
-                // 아무 스레드나 잠들어 있다. `notify_one` 이 엉뚱한 스레드를 깨우면 그쪽은 자기
-                // 조건이 그대로임을 보고 다시 잠들고, **메인 스레드는 계속 잔다.**
-                //
-                // 그러면 회복할 길이 없다: 완료 쪽 통지는 `_activeTaskCount` 가 0 이 될 때만
-                // 울리는데(아래 `activeLeft == 1`), 지금 넣은 메인 일감이 남아 있으므로 0 이 되지
-                // 않는다. 서로를 기다리며 둘 다 멈춘다. 이 파일의 다른 다섯 통지는 전부
-                // `notify_all` 이고, 여기만 달랐다.
-                std::scoped_lock<mutex> waitLock{ _waitAllMutex };
-                _cvWaitAll.notify_all();
-            }
-            else
-            {
-                const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
-                if ( numWorkers > 0 )
-                {
-                    // 레인은 우선순위가 정한다. High/Low 는 워커에서 넣어도 자기 덱이 아니라 전역 레인이다 —
-                    // 덱은 LIFO 라 "먼저" 도 "나중" 도 약속하지 못한다.
-                    const int32 workerId = getCurrentWorkerIndex();
-                    if ( pNode->_priority == TaskPriority::High )
-                    {
-                        while ( _globalHighQueue.enqueue( pNode ) == false )
-                            std::this_thread::yield();
-                    }
-                    else if ( pNode->_priority == TaskPriority::Low )
-                    {
-                        while ( _globalLowQueue.enqueue( pNode ) == false )
-                            std::this_thread::yield();
-                    }
-                    else if ( workerId >= 0 )
-                    {
-                        WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
-                        while ( localQ._queue.push( pNode ) == false )
-                        {
-                            if ( _globalWorkerQueue.enqueue( pNode ) )
-                                break;
-                            std::this_thread::yield();
-                        }
-                    }
-                    else
-                    {
-                        while ( _globalWorkerQueue.enqueue( pNode ) == false )
-                        {
-                            std::this_thread::yield();
-                        }
-                    }
-
-                    // 스핀 중인 워커에게 알린다 — 큐를 만진 뒤(release) 세대를 올려야 그쪽이 집을 수 있다.
-                    _workEpoch.fetch_add( 1, std::memory_order_release );
-                    if ( bWakeWorker && _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
-                    {
-                        _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
-                        std::scoped_lock<mutex> workerLock{ _workerMutex };
-                        _cvWorker.notify_one();
-                    }
-                }
-            }
-        }
-    }
-
-    void TaskManager::onTaskFinished( TaskNode* pNode )
-    {
-        pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_seq_cst );
-        if ( pNode->_activeChildren.load( std::memory_order_seq_cst ) > 0 )
+        if ( pNode->_state.compare_exchange_strong( expected, TaskState::Ready, std::memory_order_acq_rel ) == false )
             return;
 
-        pNode->_state.store( TaskState::Completed, std::memory_order_seq_cst );
+        pNode->retain(); // Queue holds ownership
 
-        // **활성 수는 스테이지·부모보다 먼저 내린다.** 예전에는 맨 끝(후속 트리거 뒤)에서 내렸는데, 그러면
-        // `waitStage` 가 스테이지 완료 통지를 받고 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다.
-        // 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가 0xFFFFFFFF 로 감아 버려 이후의
-        // `waitAll` 이 영원히 기다린다 — CTest 아래에서만 재현되던 EngineTest_NoGPU 180 초 타임아웃이 이것이다.
-        // 후속 태스크는 만들 때 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
+        if ( pNode->_affinity == TaskThreadAffinity::MainThread )
         {
-            const uint32 activeLeft = _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
-            if ( activeLeft == 1 )
+            while ( _queueMainThread.enqueue( pNode ) == false )
             {
-                std::scoped_lock<mutex> lock{ _waitAllMutex };
-                _cvWaitAll.notify_all();
+                if ( isMainThread() )
+                    dispatchMainThreadTasks();
+                else
+                    std::this_thread::yield();
+            }
+            // 이 일감을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든
+            // 잠들어 있으면 깨워야 한다 — 예전에 `notify_one` 이 엉뚱한 스레드를 깨워 메인과 태스크가 서로를 기다렸다.
+            wakeParkedMainThread();
+            return;
+        }
+
+        const uint32 numWorkers = static_cast<uint32>( _listWorkerSlot.size() );
+        if ( numWorkers == 0 )
+            return;
+
+        // 레인은 우선순위가 정한다. High/Low 는 워커에서 넣어도 자기 덱이 아니라 전역 레인이다 —
+        // 덱은 LIFO 라 "먼저" 도 "나중" 도 약속하지 못한다.
+        const uintptr_t item     = TaskQueueItem::fromNode( pNode );
+        const int32     workerId = getCurrentWorkerIndex();
+        if ( pNode->_priority == TaskPriority::High )
+        {
+            while ( _globalHighQueue.enqueue( item ) == false )
+                std::this_thread::yield();
+        }
+        else if ( pNode->_priority == TaskPriority::Low )
+        {
+            while ( _globalLowQueue.enqueue( item ) == false )
+                std::this_thread::yield();
+        }
+        else if ( workerId >= 0 )
+        {
+            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
+            while ( localSlot._queue.push( item ) == false )
+            {
+                if ( _globalWorkerQueue.enqueue( item ) )
+                    break;
+                std::this_thread::yield();
+            }
+        }
+        else
+        {
+            while ( _globalWorkerQueue.enqueue( item ) == false )
+            {
+                std::this_thread::yield();
             }
         }
 
-        BLOCK( "Update Parent Task" )
-        {
-            TaskNode* pParent = pNode->_pParent;
-            if ( pParent != nullptr )
-            {
-                int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_seq_cst ) - 1;
-                if ( remaining == 0 && pParent->_state.load( std::memory_order_seq_cst ) == TaskState::WaitingForChildren )
-                    onTaskFinished( pParent );
-                pParent->release();
-            }
-        }
-
-        BLOCK( "Update Stage" )
-        {
-            StageNode* pStage   = pNode->_parentStage;
-            pNode->_parentStage = nullptr;
-            if ( pStage != nullptr )
-            {
-                uint32 prev = pStage->_remainingTasks.fetch_sub( 1, std::memory_order_release );
-                if ( prev == 1 )
-                {
-                    {
-                        std::scoped_lock<mutex> lock{ pStage->_mutex };
-                        pStage->_cv.notify_all();
-                    }
-                    {
-                        std::scoped_lock<mutex> waitLock{ _waitAllMutex };
-                        _cvWaitAll.notify_all();
-                    }
-                    // 마지막 태스크가 끝났다 — addTask 에서 잡은 자기 참조를 놓는다(핸들이 없으면 여기서 풀로).
-                    pStage->release();
-                }
-            }
-        }
-
-        BLOCK( "Trigger Successors and Cleanup" )
-        {
-            pNode->_successors.forEach( [this]( TaskNode* pSucc )
-            {
-                if ( pSucc != nullptr )
-                {
-                    int32 remaining = pSucc->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel );
-                    if ( remaining == 1 )
-                        scheduleReadyTask( pSucc );
-                }
-            } );
-
-            pNode->_callable = std::monostate{};
-            pNode->_pParent  = nullptr;
-        }
+        if ( bWakeWorker )
+            wakeSleepingWorkers( 1 );
     }
 
 } // namespace sw

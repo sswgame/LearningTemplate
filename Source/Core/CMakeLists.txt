@@ -14,6 +14,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/RleCompressionCodec.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DataRaceDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DeadlockDetector.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/Futex.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
@@ -86,7 +87,7 @@ if(NOT SW_SHIPPING_BUILD)
 endif()
 
 if(WIN32)
-	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp)
+	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
 elseif(APPLE)
 	target_link_libraries(Core_objects PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
@@ -110,7 +111,7 @@ target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)
 
 if(WIN32)
-	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp)
+	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
 elseif(APPLE)
 	target_link_libraries(Core PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()

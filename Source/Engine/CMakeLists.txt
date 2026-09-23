@@ -198,6 +198,7 @@ if(WIN32)
         comdlg32.lib
         d3dcompiler.lib
         dbghelp.lib
+        synchronization.lib
         delayimp.lib
         mfplat.lib
         mfreadwrite.lib

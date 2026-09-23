@@ -446,3 +446,143 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
                           " 개 남았다 — 스테이지 " + sw::to_string( kLeakProbeStageCount ) + " 개를 돌려놓지 않았다" )
                             .c_str() );
 }
+
+/**
+ * @brief [TaskManagerTest] 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 일감이 생기면 깨어난다
+ * @details 메인은 자기 워드 하나에 잠든다. 그 스테이지의 워커 태스크가 뒤늦게 `MainThread` 친화도 태스크를 같은
+ *          스테이지에 넣으면, 그 일감은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**
+ *          예전에 조건 변수의 `notify_one` 이 엉뚱한 스레드를 깨워 실제로 멈췄던 자리다 — 지금은 메인이 잠들기 전에
+ *          자기 슬롯을 적어 두고 메인 일감을 넣는 쪽이 그 슬롯을 깨운다. 그 길이 끊기면 이 케이스는 CTest 타임아웃으로 진다.
+ */
+SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<bool>    bMainTaskRan{ false };
+    sw::atomic<bool>    bMainTaskRanOnMain{ false };
+    sw::TaskStageHandle stage = manager.createAnonymousStage( "ParkedMain" );
+
+    sw::TaskHandle worker = manager.emplaceTask( "LateMainSpawner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &stage, &bMainTaskRan, &bMainTaskRanOnMain]()
+    {
+        // 메인이 스핀(수 us)을 지나 잠들 때까지 기다린 뒤에 메인 일감을 만든다.
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+        sw::TaskHandle mainTask = manager.emplaceTask( "LateMain",
+                                                       SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bMainTaskRan, &bMainTaskRanOnMain]()
+        {
+            bMainTaskRanOnMain.store( manager.isMainThread(), std::memory_order_release );
+            bMainTaskRan.store( true, std::memory_order_release );
+        } ),
+                                                       sw::TaskThreadAffinity::MainThread );
+        stage.addTask( mainTask );
+        mainTask.submit();
+    } ) );
+    stage.addTask( worker );
+    worker.submit();
+
+    manager.waitStage( stage );
+
+    SW_EXPECT_TRUE( bMainTaskRan.load( std::memory_order_acquire ) );
+    SW_EXPECT_TRUE( bMainTaskRanOnMain.load( std::memory_order_acquire ) );
+
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 워커 태스크 안의 runParallel 도 구간을 빠짐없이 한 번씩 덮고 돌아온다
+ * @details 워커 안에서 부르면 티켓이 그 워커의 덱에 들어가고, 조인은 그 워커의 슬롯에 잠든다 — 메인에서 부를 때와
+ *          다른 길이다. 워커가 하나뿐이어도(남이 훔쳐 갈 수 없어도) 자기 티켓을 스스로 집어 끝나야 한다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelInsideWorkerTaskCoversEveryIndex )
+{
+    for ( uint32 workerCount = 1; workerCount <= kWorkerCount; workerCount += 3 )
+    {
+        sw::TaskManager manager;
+        SW_ASSERT_TRUE( manager.initialize( workerCount ) );
+
+        constexpr uint32              kCount = 2048;
+        sw::vector<sw::atomic<int32>> listHit( kCount );
+        sw::atomic<int32>*            pHit = listHit.data();
+        sw::atomic<bool>              bReturned{ false };
+
+        sw::TaskHandle outer = manager.emplaceTask( "NestedParallel", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, pHit, &bReturned]()
+        {
+            manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pHit]( uint32 start, uint32 end )
+            {
+                for ( uint32 index = start; index < end; ++index )
+                    pHit[index].fetch_add( 1, std::memory_order_relaxed );
+            } ) );
+            bReturned.store( true, std::memory_order_release );
+        } ) );
+        outer.submit();
+
+        SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+        SW_EXPECT_TRUE( bReturned.load( std::memory_order_acquire ) );
+
+        uint32 wrongCount = 0;
+        for ( uint32 index = 0; index < kCount; ++index )
+        {
+            if ( pHit[index].load() != 1 )
+                ++wrongCount;
+        }
+        SW_EXPECT_EQUAL( 0u, wrongCount );
+
+        manager.shutdown();
+    }
+}
+
+/**
+ * @brief [TaskManagerTest] 메인 친화도의 병렬 부모는 청크가 워커에서 다 돈 뒤 메인에서만 완료된다
+ * @details 청크는 워커가 돌고(티켓), 부모 노드만 `MainThread` 다. 부모는 그룹이 끝나야 준비되고, 준비돼도 워커가
+ *          집어가면 안 된다 — `dispatchMainThreadTasks` 를 부르기 전에는 스테이지가 끝나지 않아야 한다.
+ */
+SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    constexpr uint32              kCount = 512;
+    sw::vector<sw::atomic<int32>> listHit( kCount );
+    sw::atomic<int32>*            pHit = listHit.data();
+
+    sw::TaskStageHandle stage  = manager.createAnonymousStage( "MainParent" );
+    sw::TaskHandle      handle = manager.emplaceParallel( "MainParentGroup", kCount,
+                                                          SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [pHit]( uint32 index )
+         {
+        pHit[index].fetch_add( 1, std::memory_order_relaxed );
+    } ),
+                                                          sw::TaskThreadAffinity::MainThread );
+    stage.addTask( handle );
+    handle.submit();
+
+    // 청크는 워커가 끝내지만 부모는 메인 큐에서 기다린다 — 여기서 스테이지가 끝나 있으면 워커가 부모를 집어간 것이다.
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 200 );
+        bool       bAllHit  = false;
+        while ( bAllHit == false && std::chrono::steady_clock::now() < deadline )
+        {
+            bAllHit = true;
+            for ( uint32 index = 0; index < kCount; ++index )
+            {
+                if ( pHit[index].load( std::memory_order_acquire ) != 1 )
+                {
+                    bAllHit = false;
+                    break;
+                }
+            }
+            if ( bAllHit == false )
+                std::this_thread::yield();
+        }
+        SW_EXPECT_TRUE( bAllHit );
+    }
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    SW_EXPECT_FALSE( manager.isStageComplete( stage ) );
+
+    manager.dispatchMainThreadTasks();
+    SW_EXPECT_TRUE( manager.isStageComplete( stage ) );
+
+    manager.waitStage( stage );
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    manager.shutdown();
+}
