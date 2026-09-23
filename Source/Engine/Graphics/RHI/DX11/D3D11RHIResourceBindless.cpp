@@ -1,8 +1,8 @@
 /**
  * @file D3D11RHIResourceBindless.cpp
- * @brief DirectX 11 의 bindless 등록 — 리소스를 셰이더가 인덱스로 접근할 수 있게 올린다
- * @details `D3D11RHIResource` 의 일부다. DX12/Vulkan 은 디스크립터 힙/배열에 쓰고, DX11/GL 은 슬롯
- *          기반이라 인덱스만 흉내 낸다 — 네 백엔드를 나란히 비교하기 좋은 지점이다.
+ * @brief DirectX 11 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 올립니다.
+ * @details `D3D11RHIResource` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙 · 배열에 쓰고, DX11/GL 은 슬롯
+ *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 지점입니다.
  */
 #include "pch.h"
 
@@ -58,7 +58,7 @@ namespace sw
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다 — 종류 이름만 넘겨 로그를 맞춘다.
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다. 종류 이름만 넘겨 로그를 맞춘다.
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 },
                               "buffer" );
     }
@@ -116,7 +116,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_texture == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 텍스처 UAV — bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
+        // 텍스처 UAV: bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;

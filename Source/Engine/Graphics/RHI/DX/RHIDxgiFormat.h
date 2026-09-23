@@ -1,6 +1,6 @@
 /**
  * @file RHIDxgiFormat.h
- * @brief RHIFormat → DXGI_FORMAT 변환 (DX11/DX12 공유)
+ * @brief RHIFormat → DXGI_FORMAT 변환입니다(DX11 · DX12 공유).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @brief RHIFormat을 DXGI_FORMAT으로 변환합니다. 미지원 포맷이면 어서트 후 DXGI_FORMAT_UNKNOWN. */
+    /** @brief RHIFormat 을 DXGI_FORMAT 으로 변환합니다. 지원하지 않는 포맷이면 assert 뒤 DXGI_FORMAT_UNKNOWN 을 반환합니다. */
     inline DXGI_FORMAT toDxgiFormat( RHIFormat format )
     {
         switch ( format )
@@ -53,11 +53,11 @@ namespace sw
     }
 
     /**
-     * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다 (DX11/DX12 공유).
+     * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11 · DX12 공유).
      * @details 입력 레이아웃은 **공용 표**(`constant::arrVertexAttribute`)에서 만들지만, 그 표의 한 줄을
-     *          DXGI 포맷으로 옮기는 이 판단은 두 백엔드가 **각자** 적고 있었다. 성분 수를 하나 더하면
+     *          DXGI 포맷으로 옮기는 이 판단은 두 백엔드가 **각자** 적고 있었습니다. 성분 수를 하나 더하면
      *          (예: 스칼라 float 속성) 한쪽만 고치기 쉬운 자리이고, 그러면 **그 백엔드만 정점이 어긋난
-     *          채로 그려진다** — 이 저장소가 여러 번 겪은 "백엔드 하나만 다른 그림" 의 전형이다.
+     *          채로 그려집니다.** 이 저장소가 여러 번 겪은 "백엔드 하나만 다른 그림" 의 전형입니다.
      */
     inline DXGI_FORMAT toDxgiVertexFormat( const RHIVertexAttribute& attribute )
     {
@@ -77,11 +77,11 @@ namespace sw
     }
 
     /**
-     * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown.
-     * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부다.
+     * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown 입니다.
+     * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다.
      *          -Wswitch-enum 은 default 가 있어도 모든 값을 적으라고 하는데, 여기서는 그 목록을 유지할 수도
-     *          없고 유지할 이유도 없다 — 새 DXGI 포맷이 생기면 Unknown 이 맞는 답이다. 반대 방향인
-     *          toDxgiFormat 은 경고를 그대로 받는다: RHIFormat 은 **우리 enum** 이라 늘어나면 알려 줘야 한다.
+     *          없고 유지할 이유도 없습니다. 새 DXGI 포맷이 생기면 Unknown 이 맞는 답입니다. 반대 방향인
+     *          toDxgiFormat 은 경고를 그대로 받습니다: RHIFormat 은 **우리 enum** 이라 늘어나면 알려 줘야 합니다.
      */
     #if defined( __clang__ )
         #pragma clang diagnostic push

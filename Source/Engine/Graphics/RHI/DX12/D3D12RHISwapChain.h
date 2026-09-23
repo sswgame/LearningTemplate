@@ -1,6 +1,6 @@
 /**
  * @file D3D12RHISwapChain.h
- * @brief 창 하나에 붙는 D3D12 백버퍼 묶음
+ * @brief 창 하나에 붙는 D3D12 백버퍼 묶음입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,12 +17,12 @@ namespace sw
 {
     /**
      * @class D3D12RHISwapChain
-     * @brief 창 하나의 백버퍼 묶음. **만들고 · 크기를 바꾸고 · 다음 백버퍼를 고르고 · 표시한다.**
-     * @details 예전엔 이 상태가 전부 `D3D12RHIDevice` 의 멤버로 흩어져 있어서, 백버퍼 리소스 상태를
+     * @brief 창 하나의 백버퍼 묶음입니다. **만들고 · 크기를 바꾸고 · 다음 백버퍼를 고르고 · 표시합니다.**
+     * @details 예전에는 이 상태가 모두 `D3D12RHIDevice` 의 멤버로 흩어져 있어서, 백버퍼 리소스 상태를
      *          바꾸는 코드가 세 곳(`beginRenderPass` / `blitTexture` / `endFrame`)에 각자 복사돼
-     *          있었다. 상태와 그 상태를 바꾸는 배리어를 한 객체가 함께 가지면 어긋날 수 없다.
-     * @note RTV 힙은 **디바이스가 소유한다** — 오프스크린 렌더타깃과 같은 힙을 쓰기 때문이다.
-     *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 칸을 차지하고, 오프스크린은 그 뒤부터 쓴다.
+     *          있었습니다. 상태와 그 상태를 바꾸는 배리어를 한 객체가 함께 가지면 어긋날 수 없습니다.
+     * @note RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
+     *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 칸을 차지하고, 오프스크린은 그 뒤부터 씁니다.
      */
     class D3D12RHISwapChain
     {
@@ -34,8 +34,8 @@ namespace sw
 
         /**
          * @brief DXGI 스왑체인을 만듭니다.
-         * @details 창 핸들이 없거나 크기가 0이면 **네이티브 스왑체인 없이 크기만 기억한 상태**로
-         *          성공합니다 — 오프스크린 전용(테스트/헤드리스) 디바이스가 그 경로입니다.
+         * @details 창 핸들이 없거나 크기가 0 이면 **네이티브 스왑체인 없이 크기만 기억한 상태**로
+         *          성공합니다. 오프스크린 전용(테스트 · 헤드리스) 디바이스가 그 경로입니다.
          */
         bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
 
@@ -54,7 +54,7 @@ namespace sw
 
         /**
          * @brief 백버퍼 크기를 바꿉니다.
-         * @warning 호출 전에 GPU 가 이전 프레임을 다 썼음이 보장돼야 하고, 백버퍼도 놓여 있어야 합니다.
+         * @warning 부르기 전에 GPU 가 이전 프레임을 다 썼음이 보장돼야 하고, 백버퍼도 놓여 있어야 합니다.
          * @return ResizeBuffers 성공 여부. 실패하면 백버퍼가 비워진 채로 남습니다.
          */
         bool resize( uint32 width, uint32 height );
@@ -64,8 +64,8 @@ namespace sw
 
         /**
          * @brief 화면에 표시합니다. 네이티브 스왑체인이 없으면 S_OK 로 아무것도 하지 않습니다.
-         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘긴다 — 스왑체인 생성 플래그와 **짝이어야**
-         *          한다(RHIDxgiTearing.h). 짝이 맞지 않으면 DXGI 가 INVALID_CALL 을 돌려준다.
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 **짝이어야**
+         *          합니다(RHIDxgiTearing.h). 짝이 맞지 않으면 DXGI 가 INVALID_CALL 을 반환합니다.
          */
         HRESULT present( bool vsync );
 
@@ -76,31 +76,31 @@ namespace sw
          */
         void transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter );
 
-        /** @brief 표시 직후의 상태(PRESENT)로 되돌려 기록합니다 — Present 후 동기화용. */
+        /** @brief 표시 직후의 상태(PRESENT)로 되돌려 기록합니다. Present 뒤 동기화용입니다. */
         void markPresented();
 
         /**
-         * @brief 병렬 기록 중 배리어 감시자를 붙입니다 (디바이스 자신).
+         * @brief 병렬 기록 중 배리어 감시자를 붙입니다(디바이스 자신).
          * @details 스왑체인은 디바이스를 모르는 편이 낫지만, "기록 중에 상태가 바뀌면 알린다" 는
-         *          감시는 디바이스가 들고 있다 — 그 한 가지만 포인터로 받는다.
+         *          감시는 디바이스가 들고 있습니다. 그 한 가지만 포인터로 받습니다.
          */
         void setBarrierWatcher( const IRHIDevice* pWatcher ) { _pBarrierWatcher = pWatcher; }
 
-        /** @brief 네이티브 스왑체인이 있는지 (오프스크린 전용 디바이스면 false). */
+        /** @brief 네이티브 스왑체인이 있는지 확인합니다(오프스크린 전용 디바이스면 false). */
         bool isValid() const { return _swapChain != nullptr; }
 
-        /** @brief 지금 그릴 수 있는 백버퍼가 준비돼 있는지. */
+        /** @brief 지금 그릴 수 있는 백버퍼가 준비돼 있는지 확인합니다. */
         bool   isBackBufferReady() const { return _backBufferIndex < _listBackBuffer.size(); }
         uint32 getBufferCount() const { return _bufferCount; }
-        /** @brief 백버퍼 포맷 — DXGI 는 요청 포맷을 그대로 만든다(Vulkan 처럼 협상하지 않는다). */
+        /** @brief 백버퍼 포맷입니다. DXGI 는 요청 포맷을 그대로 만듭니다(Vulkan 처럼 협상하지 않습니다). */
         RHIFormat getFormat() const { return _format; }
         uint32    getWidth() const { return _width; }
         uint32    getHeight() const { return _height; }
 
-        /** @brief 현재 백버퍼 리소스. 준비 안 됐으면 nullptr. */
+        /** @brief 현재 백버퍼 리소스를 반환합니다. 준비 안 됐으면 nullptr 입니다. */
         ID3D12Resource* getCurrentBackBuffer() const;
 
-        /** @brief 현재 백버퍼의 RTV. 준비 안 됐으면 `{ 0 }`. */
+        /** @brief 현재 백버퍼의 RTV 를 반환합니다. 준비 안 됐으면 `{ 0 }` 입니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE getCurrentRtv() const;
 
         D3D12_RESOURCE_STATES getState() const;
@@ -110,7 +110,7 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer;
         vector<D3D12_CPU_DESCRIPTOR_HANDLE>            _listBackBufferRtv;
 
-        /// @brief setBarrierWatcher 참고 — 소유하지 않는다.
+        /// @brief 소유하지 않는 감시자입니다(setBarrierWatcher 참고).
         const IRHIDevice* _pBarrierWatcher{ nullptr };
 
         HWND   _pHWnd{ nullptr };
@@ -118,19 +118,19 @@ namespace sw
         uint32 _height{ 0 };
         uint32 _bufferCount{ 2 };
         uint32 _backBufferIndex{ 0 };
-        /// @brief 백버퍼 포맷 (요청값 = 실제값).
+        /// @brief 백버퍼 포맷입니다(요청값 = 실제값).
         RHIFormat _format{ constant::kBackBufferFormat };
-        /// @brief 생성 시 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+        /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
         uint32 _swapChainFlags{ 0 };
-        /// @brief 티어링 허용으로 만들었는가 — Present 플래그와 짝이다.
+        /// @brief 티어링 허용으로 만들었는지입니다. Present 플래그와 짝입니다.
         bool _bAllowTearing{ false };
 
-        /// @brief 현재 백버퍼의 실제 리소스 상태. `transitionTo` 만 이 값을 바꿉니다.
-        /// @details `_stateMutex` 로 보호한다 — RenderGraph::executeParallel 이 같은 웨이브의 패스
+        /// @brief 현재 백버퍼의 실제 리소스 상태입니다. `transitionTo` 만 이 값을 바꿉니다.
+        /// @details `_stateMutex` 로 보호합니다. RenderGraph::executeParallel 이 같은 웨이브의 패스
         ///          콜백을 여러 태스크 스레드에서 동시에 돌리는데, 백버퍼를 타깃으로 하는 패스가
-        ///          둘 이상이면 그 콜백들이 동시에 이 상태를 읽고 바꾼다. 락이 없으면 둘 다
+        ///          둘 이상이면 그 콜백들이 동시에 이 상태를 읽고 바꿉니다. 락이 없으면 둘 다
         ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 쏴서, 두 번째 것이
-        ///          before==after 가 된다(D3D12 검증 오류 → 디바이스 제거).
+        ///          before==after 가 됩니다(D3D12 검증 오류 → 디바이스 제거).
         mutable mutex         _stateMutex;
         D3D12_RESOURCE_STATES _state{ D3D12_RESOURCE_STATE_PRESENT };
     };

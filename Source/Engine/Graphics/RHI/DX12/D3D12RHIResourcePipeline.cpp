@@ -1,8 +1,8 @@
 /**
  * @file D3D12RHIResourcePipeline.cpp
- * @brief DirectX 12 의 파이프라인 상태 객체 — PSO, 셰이더 스테이지, 렌더패스 객체
- * @details `D3D12RHIResource` 의 일부다. 리소스(버퍼/텍스처)를 만드는 것과 파이프라인을 만드는 것은
- *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둔다.
+ * @brief DirectX 12 의 파이프라인 상태 객체(PSO · 셰이더 스테이지 · 렌더 패스 객체)입니다.
+ * @details `D3D12RHIResource` 의 일부입니다. 리소스(버퍼 · 텍스처)를 만드는 것과 파이프라인을 만드는 것은
+ *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둡니다.
  */
 #include "pch.h"
 
@@ -25,8 +25,8 @@ namespace sw
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
 
-        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정·RT 수)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
-        // 예전엔 여기서 직접 읽으면서 뎁스 전용 판정만 빠져, 그림자 패스에 머티리얼 define 을 얹은 변형이 DX12 에서만
+        // 서술체 해석(진입점 기본값 · define · 뎁스 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        // 예전에는 여기서 직접 읽으면서 뎁스 전용 판정만 빠져, 그림자 패스에 머티리얼 define 을 얹은 변형이 DX12 에서만
         // PS 리플렉션을 요구했다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
         const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
@@ -34,7 +34,7 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
-            // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — 예전엔 네 백엔드가
+            // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다. 예전에는 네 백엔드가
             // 각자 손으로 적어, 속성을 하나 더하면 네 곳을 같이 고쳐야 했다.
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
             for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
@@ -55,7 +55,7 @@ namespace sw
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
             if ( bHasPixelShader )
                 psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
-            // DX11·Vulkan·GL 은 desc._fillMode 를 읽는데 여기만 SOLID 로 못박혀 있었다 —
+            // DX11 · Vulkan · GL 은 desc._fillMode 를 읽는데 여기만 SOLID 로 못박혀 있었다.
             // Wireframe 을 요청한 파이프라인이 DX12 에서만 조용히 솔리드로 그려졌다.
             psoDesc.RasterizerState.FillMode = ( desc._fillMode == RHIFillMode::Wireframe )
                                                  ? D3D12_FILL_MODE_WIREFRAME
@@ -65,7 +65,7 @@ namespace sw
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
             psoDesc.SampleMask               = MathUtil::MaxUInt32;
             psoDesc.PrimitiveTopologyType    = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-            // 뎁스 전용은 RT 0 개다 — 예전엔 1 로 올려 R8G8B8A8 을 선언했는데 실제로는 DSV 만 바인딩된다.
+            // 뎁스 전용은 RT 0 개다. 예전에는 1 로 올려 R8G8B8A8 을 선언했는데 실제로는 DSV 만 바인딩된다.
             psoDesc.NumRenderTargets = request._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
@@ -102,7 +102,7 @@ namespace sw
             }
             psoDesc.SampleDesc.Count = 1;
 
-            // 실패를 조용히 삼키지 않는다 — PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다(루트 시그니처와 셰이더 불일치가
+            // 실패를 조용히 삼키지 않는다. PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다(루트 시그니처와 셰이더 불일치가
             // 그렇게 숨어 있었다). 디버그 레이어 메시지를 바로 비워 원인이 같은 줄에 나오게 한다.
             const HRESULT hrPso = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
             if ( FAILED( hrPso ) )

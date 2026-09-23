@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑦) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑧) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ · ⑦ Graphics/Renderer ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ · ⑦ Graphics/Renderer ✅ · ⑧ Graphics/RHI 공통 · D3D ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1477,6 +1477,8 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   `setMaterialInstance` 만 한 메시는 배치의 머티리얼 · 그룹 · 텍스처 · stride 가 기본 머티리얼 것이고, 원소 바이트 ·
   퍼뮤테이션은 인스턴스 것이다. 부모가 기본 머티리얼과 같으면(벤치의 큐브별 인스턴스) 드러나지 않는다. 헤더 주석은
   "인스턴스의 부모가 기준" 이라고 적고 있었다. 고칠 때는 머티리얼이 없고 인스턴스가 있으면 부모를 먼저 쓴다.
+- **`D3D12RHIDevice::_arrFrameCmdAllocator` 는 죽은 멤버다.** 초기화가 얼로케이터 셋을 만들고 이름을 붙이고, 종료가
+  놓기만 한다. `4d99eedb`(리스트마다 전용 얼로케이터 쌍) 뒤로 아무도 쓰지 않는다. 멤버 · 생성 · 해제를 지워도 된다.
 
 **주석 정리 범위 밖이라 남긴 것.** 문자열 · 셰이더 · 파일 위치는 이 작업이 건드리지 않는다.
 - `RenderThread.cpp` 의 `gv_screenshot` · `gv_screenshotAttachment` 도움말 문자열이 아직 "트랜지언트를 PPM 으로 덤프" ·
@@ -1667,6 +1669,34 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ⑧ — Graphics/RHI 공통 · D3D)
+
+**한 것.** `Graphics/RHI` 의 루트 · `Support` · `Modules` · `DX` · `DX11` · `DX12` 61 개 파일 주석을 1-0g 규칙으로 다시 썼다
+(영어 주석도 옮겼다). GL · Vulkan 은 ⑨ 로 나눈다. 사실과 달랐던 것:
+- `IRHIDevice`: 클래스 설명이 없어진 "CommandList Mode · Deferred Context" 를 말하고 있었다. `beginFrame` 의 @note 가
+  "스왑체인을 별도 객체로 만드는 것은 별개 과제" 라 했다 → 이미 `<백엔드>RHISwapChain` 구체 클래스다(Graphics/README).
+  `supportsInstancedSceneDraw` 가 "배치당 drawInstanced" → drawIndirect(멀티 드로우). 섹션 번호가 8 · 10 · 11 · 14 였다.
+- `IRHICommandList::drawInstanced` 가 "GPUScene 경로, `g_SwInstances[g_InstanceBase + id]`, startInstance 0 권장" 이라 했다
+  → 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓰고, 이 함수는 엔진에서 부르지 않는다.
+- `IRHIResource`: `createVertexBuffer` 의 "POSITION+COLOR 레이아웃", `uploadTexture2D` 의 "BC 포맷은 RHIFormat 에 아직 없다"
+  (v10 에서 들어왔고 네 백엔드가 올린다).
+- `RHIModuleAbi.h` 스탬프 이력에 v12 · v13 · v14 가 빠져 있었고(`724f3ddb` · `d9a5ffd7` · `4c7b8d65`), v15 는 Range 가
+  아니라 `updateStructuredBufferRegions` 를 들였다.
+- `RHITypes.h`: `RHIVertex` 가 "직접 그리기 예제용" → 메시 정점. 없는 `depthFormat()` → `selectDepthFormat()`.
+  `RHIViewport` 의 GL 클립 원점은 대상마다 다르다(FBO 는 UPPER_LEFT, 기본 프레임버퍼는 LOWER_LEFT).
+  `kMaxGpuTimestampSlot` 이 "패스 16 개까지" → 뒤쪽 세 칸을 렌더러가 쓰므로 14 개. `B8G8R8A8` 이 "DirectX 기본" 이라 했다.
+- `RHIResidentBuffer` 가 "디바이스 세대로 유효성을 안다" 고 했다 → 세대 번호는 없어졌고 통보가 비운다.
+  `RHIHandleTable::take` 는 값을 반환하지 않는다(bool + outValue).
+- D3D11 · D3D12 디바이스 헤더: 선언을 잃은 문서 셋을 지웠다("soft Deferred Context" 둘, "풀스크린 삼각형 버텍스 버퍼를
+  만듭니다"). 엉뚱한 선언에 붙은 문서 셋(`getResource` 위 "오프스크린 패스를 종료합니다", `beginFrame` 위 "독립 커맨드
+  리스트 제출", `_resourceImpl` 위 "soft Deferred Context")을 고쳤다. DX11 `beginFrame` 은 백버퍼를 클리어하지 않는다.
+- DX12: t · u 를 "루트 디스크립터" 로 적은 다섯 곳 → 슬롯 테이블(루트는 CBV 뿐). `_bindlessMutex` 가 "읽기는 공유 락"
+  이라 했다 → 배타 잠금만 있고 기록 중 읽기는 불변 규칙이 지킨다. CBV 256 정렬 줄에 "텍스처 행 정렬" 이라고 적혀 있었다.
+- 디바이스 .cpp 두 곳의 빈 "SwapChain Implementation" 섹션 머리를 지웠다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ⑦ — Graphics/Renderer)
 

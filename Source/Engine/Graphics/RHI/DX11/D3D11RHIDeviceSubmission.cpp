@@ -1,6 +1,6 @@
 /**
  * @file D3D11RHIDeviceSubmission.cpp
- * @brief 프레임 시작·종료와 커맨드 리스트 제출 (DX12 · Vulkan · GL 의 같은 이름 파일과 같은 자리).
+ * @brief 프레임 시작 · 종료와 커맨드 리스트 제출입니다(DX12 · Vulkan · GL 의 같은 이름 파일과 같은 자리).
  */
 #include "pch.h"
 
@@ -42,7 +42,7 @@ namespace sw
         ID3D11Query* pQuery = _arrTimestampFrame[_timestampFrameIndex]._arrQuery[slotIndex].Get();
         if ( pQuery == nullptr )
             return;
-        // 타임스탬프 쿼리는 Begin 이 없다 — End 하나가 "지금 GPU 시각" 이다.
+        // 타임스탬프 쿼리는 Begin 이 없다. End 하나가 "지금 GPU 시각" 이다.
         pContext->End( pQuery );
         _timestampWrittenMask.fetch_or( 1u << slotIndex, std::memory_order_relaxed );
     }
@@ -80,7 +80,7 @@ namespace sw
             return;
 
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
-        // **GetData 는 즉시 컨텍스트 전용이다** — Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
+        // **GetData 는 즉시 컨텍스트 전용이다.** Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
         // DONOTFLUSH 로 묻는다: 아직이면 S_FALSE 를 받고 그냥 물러난다(재려던 것을 멈추지 않는다).
         D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData{};
         if ( _deviceContext->GetData( frame._disjoint.Get(), &disjointData, sizeof( disjointData ),
@@ -88,7 +88,7 @@ namespace sw
             return;
 
         frame._bPending = SW_FALSE;
-        // 이 구간에서 GPU 클럭이 흔들렸다 — 틱을 초로 바꿀 근거가 없으니 프레임을 통째로 버린다.
+        // 이 구간에서 GPU 클럭이 흔들렸다. 틱을 초로 바꿀 근거가 없으니 프레임을 통째로 버린다.
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
 
@@ -114,7 +114,7 @@ namespace sw
         if ( _deviceContext == nullptr || _swapChain.isValid() == false )
             return;
 
-        // 이 묶음은 곧 다시 쓴다 — 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        // 이 묶음은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampResources();
         collectTimestampsForSlot();
         if ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE )
@@ -123,20 +123,20 @@ namespace sw
             _timestampWrittenMask.store( 0, std::memory_order_relaxed );
 
             std::scoped_lock<mutex> timestampLock{ _immediateContextMutex };
-            // disjoint 는 프레임 전체를 감싼다 — 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
+            // disjoint 는 프레임 전체를 감싼다. 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
             _deviceContext->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
             _bTimestampFrameOpen = SW_TRUE;
         }
 
-        // FLIP_DISCARD 는 백버퍼를 돌려 쓴다 — Present 가 보여줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
+        // FLIP_DISCARD 는 백버퍼를 돌려 쓴다. Present 가 보여 줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
-        // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다 — 프레임마다 다시 건다(값싸다).
+        // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다. 프레임마다 다시 건다(값싸다).
         bindStaticSamplers( _deviceContext.Get() );
         if ( _swapChain.getBackBufferRtv() == nullptr )
             return;
 
-        // 백버퍼 바인딩/클리어는 더 이상 여기서 하지 않는다 — beginFrame 은 프레임 수명주기 전용이고,
-        // 백버퍼를 타깃으로 삼는 건 beginRenderPass(핸들 0) 가 명시적으로 한다
+        // 백버퍼 바인딩 · 클리어는 더 이상 여기서 하지 않는다. beginFrame 은 프레임 수명주기 전용이고,
+        // 백버퍼를 타깃으로 삼는 것은 beginRenderPass(핸들 0) 가 명시적으로 한다
         // (docs/05_RHI_FrameContract.md S2). RTV 재취득은 FLIP_DISCARD 때문에 수명주기에 속한다.
         (void)clearColor;
 
@@ -161,7 +161,7 @@ namespace sw
     #if defined( SW_DEBUG )
         flushDebugMessages( "endFrame" );
     #endif
-        // beginFrame 이 열었으면 반드시 닫는다 — 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.
+        // beginFrame 이 열었으면 반드시 닫는다. 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.
         if ( _bTimestampFrameOpen != SW_FALSE )
         {
             D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
@@ -273,7 +273,7 @@ namespace sw
             return;
         // DX11 은 스트림을 자를 필요가 없다. 기록 대상(Deferred Context)과 제출 대상(Immediate
         // Context)이 처음부터 분리돼 있어서, 이 호출은 Immediate Context 스트림의 '지금 이 지점'에
-        // 그대로 끼워진다 — DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
+        // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
         _deviceContext->ExecuteCommandList( pList, FALSE );
 

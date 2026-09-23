@@ -147,7 +147,7 @@ namespace sw
         else
             _pContext->OMSetRenderTargets( 0, nullptr, pDsv );
 
-        // Prefer active PSO depth/blend (depth-write / alpha); fall back to global depth states.
+        // 활성 PSO 의 깊이 · 블렌드 상태(깊이 쓰기 · 알파)를 먼저 쓰고, 없으면 전역 깊이 상태로 물러난다.
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pRecord != nullptr )
         {
@@ -177,15 +177,15 @@ namespace sw
     }
 
     /**
-     * @brief D3D11 에는 끝낼 렌더 패스가 **없습니다** — 비어 있는 것이 맞습니다.
-     * @details 네 백엔드 중 여기만 본문이 비어 있어서 "빠뜨린 것" 으로 읽히기 쉽다. 아니다:
-     *          - **Vulkan** 은 `vkCmdEndRenderPass` 가 API 의 요구다.
-     *          - **GL** 은 기본 프레임버퍼와 `glClipControl` 을 되돌려야 한다(엔진 패스를 거치지
-     *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문).
-     *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러/깊이 타깃)를 지운다.
-     *          D3D11 은 즉시 모드라 패스 객체가 없고, 해저드는 런타임이 자동으로 추적한다.
+     * @brief D3D11 에는 끝낼 렌더 패스가 **없습니다.** 비어 있는 것이 맞습니다.
+     * @details 네 백엔드 중 여기만 본문이 비어 있어서 "빠뜨린 것" 으로 읽히기 쉽습니다. 아닙니다:
+     *          - **Vulkan** 은 `vkCmdEndRenderPass` 가 API 의 요구입니다.
+     *          - **GL** 은 기본 프레임버퍼와 `glClipControl` 을 되돌려야 합니다(엔진 패스를 거치지
+     *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문입니다).
+     *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러 · 깊이 타깃)를 지웁니다.
+     *          D3D11 은 즉시 모드라 패스 객체가 없고, 해저드는 런타임이 자동으로 추적합니다.
      *          `D3D11RecordingState` 가 들고 있는 것(메시 VB, 루트 상수 그림자)은 **패스 경계를
-     *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀린다.
+     *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀립니다.
      */
     void D3D11RHICommandContext::endRenderPass()
     {
@@ -205,13 +205,13 @@ namespace sw
     void D3D11RHICommandContext::uavBarrier( RHIBufferHandle buffer )
     {
         // D3D11 은 같은 컨텍스트의 디스패치를 순서대로 실행하고 UAV 위험도 드라이버가 처리한다.
-        // 명시적 배리어 개념 자체가 없다 — 의도적으로 아무것도 하지 않는다.
+        // 명시적 배리어 개념 자체가 없다. 의도적으로 아무것도 하지 않는다.
         (void)buffer;
     }
 
     void D3D11RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 no-op 인 것은 아니다 — 같은 리소스를
+        // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 할 일 없는 것은 아니다. 같은 리소스를
         // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
         // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(인스턴스 버퍼 t4 가 그랬다).
         // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
@@ -235,7 +235,7 @@ namespace sw
         {
             ID3D11UnorderedAccessView* pUav = uav.Get();
             _pContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
-            // 어느 버퍼가 어느 슬롯에 걸렸는지 남긴다 — transitionBuffer 가 이걸 보고 뗀다.
+            // 어느 버퍼가 어느 슬롯에 걸렸는지 남긴다. transitionBuffer 가 이것을 보고 뗀다.
             if ( _pState != nullptr && slot < D3D11_PS_CS_UAV_REGISTER_COUNT )
                 _pState->_arrComputeUavBuffer[slot] = _pDevice->uavSourceBufferAt( index );
         }
@@ -253,8 +253,8 @@ namespace sw
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
         if ( _pDevice->_linearSampler )
         {
-            // 샘플러는 **텍스처와 같은 번호**에 건다 — 셰이더가 t#/s# 짝으로 선언하기 때문이다
-            // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 예전엔 s0 만 걸어서 t1 이후 슬롯은
+            // 샘플러는 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
+            // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 예전에는 s0 만 걸어서 t1 이후 슬롯은
             // D3D11 기본 샘플러 상태에 얹혀 있었고, 머티리얼 텍스처(t5..t8)를 넣자 드러났다.
             _pContext->PSSetSamplers( slot, 1, _pDevice->_linearSampler.GetAddressOf() );
             if ( slot != 0 )
@@ -264,7 +264,7 @@ namespace sw
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
         if ( slot == constant::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
@@ -278,7 +278,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindInstanceSlotStream()
     {
-        // 슬롯 1 — 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린·픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
+        // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
         if ( _pState->_boundInstanceSlotVb == 0 )
             return;
         ID3D11Buffer* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
@@ -305,7 +305,7 @@ namespace sw
                 pIl = pPso->_inputLayout.Get();
         }
 
-        // 셰이더가 없으면 그릴 수 없다 — 호출자는 드로우를 건너뛴다.
+        // 셰이더가 없으면 그릴 수 없다. 부르는 쪽은 드로우를 건너뛴다.
         if ( pVs == nullptr || pPs == nullptr )
             return false;
 
@@ -443,9 +443,9 @@ namespace sw
 
         Memory::copy( _pState->_arrRootConstantShadow + destOffsetIn32BitValues, pData, static_cast<size_t>( count ) * sizeof( uint32 ) );
 
-        // DX11 에는 루트 상수가 없다 — 계약 슬롯 b2 의 작은 상수버퍼로 흉내 낸다. WRITE_DISCARD 라 드로우마다
+        // DX11 에는 루트 상수가 없다. 계약 슬롯 b2 의 작은 상수버퍼로 흉내 낸다. WRITE_DISCARD 라 드로우마다
         // 버퍼가 새로 이름 지어져(rename) 앞 드로우가 읽던 내용과 섞이지 않는다. 버퍼와 그림자는
-        // **기록 스트림마다** 따로다 — 전역이면 병렬 기록이 서로의 값을 덮는다(D3D11RecordingState 주석).
+        // **기록 스트림마다** 따로다. 전역이면 병렬 기록이 서로의 값을 덮는다(D3D11RecordingState 주석).
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if ( FAILED( _pContext->Map( _pState->_rootConstantCb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
             return;
@@ -481,7 +481,7 @@ namespace sw
     void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        // D3D11 에는 멀티 드로우도 countBuffer 도 없다 — 커맨드마다 한 번씩 부른다.
+        // D3D11 에는 멀티 드로우도 countBuffer 도 없다. 커맨드마다 한 번씩 부른다.
         // (countBuffer 는 GPU 가 정한 개수라 CPU 가 읽을 수 없으므로 drawCount 를 상한으로 그대로 쓴다.)
         (void)countBuffer;
         (void)countBufferOffset;
@@ -494,8 +494,8 @@ namespace sw
 
         // **파이프라인 상태를 여기서도 걸어야 한다.** DX11 은 setPipelineState 가 핸들만 기록하고
         // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 그런데 이
-        // 경로에만 그 블록이 없어서, GPU 드리븐 경로(엔진 기본값 gpuDriven=1)의 모든 드로우가
-        // 셰이더도 정점버퍼도 없이 나갔다 — 화면과 트랜지언트가 클리어 색만 남던 원인이다.
+        // 경로에만 그 블록이 없어서, GPU 드리븐 경로(엔진의 기본 경로)의 모든 드로우가
+        // 셰이더도 정점 버퍼도 없이 나갔다. 화면과 트랜지언트가 클리어 색만 남던 원인이다.
         if ( bindGraphicsPipelineForDraw() == false )
             return;
 
@@ -514,8 +514,8 @@ namespace sw
         if ( pBuf == nullptr )
             return;
 
-        // 이 진입점에만 파이프라인을 거는 블록이 없었다 — `drawIndirect` 가 같은 이유로 아무것도 그리지
-        // 못했던 적이 있다. 엔진에서 아무도 부르지 않아 드러나지 않았을 뿐이라, 같이 고쳐 둔다.
+        // 이 진입점에만 파이프라인을 거는 블록이 없었다. `drawIndirect` 가 같은 이유로 아무것도 그리지
+        // 못했던 적이 있다. 엔진에서 아무도 부르지 않아 드러나지 않았을 뿐이라 같이 고쳐 둔다.
         if ( bindGraphicsPipelineForDraw() == false )
             return;
 
@@ -566,9 +566,9 @@ namespace sw
         if ( pAnnotation != nullptr )
         {
             // 예전에는 `utf16 wide[256]` 에 `MultiByteToWideChar` 로 직접 옮겼다. 그 API 는 이름이
-            // 버퍼보다 길면 **0 을 돌려주고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에
+            // 버퍼보다 길면 **0 을 반환하고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에
             // 넘기면 널을 찾아 배열 밖까지 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUtf16` 을
-            // 쓰면 그 종류가 통째로 사라진다 — 잘라 담을 일도, 다중바이트 시퀀스가 중간에서
+            // 쓰면 그 종류가 통째로 사라진다. 잘라 담을 일도, 다중바이트 시퀀스가 중간에서
             // 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
             // 널이 아니다) 여기서 한 번 할당하는 비용은 캡처 비용에 묻힌다.
             const wstring wideName = StringUtil::utf8ToUtf16( pName );

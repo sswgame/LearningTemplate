@@ -25,8 +25,8 @@ namespace sw
         pList->SetDescriptorHeaps( 1, heaps );
         if ( _rootSignature == nullptr )
             return;
-        // 유일한 테이블(텍스처 배열)이 힙 시작을 가리킨다 — 리스트가 사는 동안 바뀌지 않는다. 같은 루트 시그니처를
-        // 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 버퍼는 이후 루트 디스크립터로 건다.
+        // 유일한 테이블(텍스처 배열)이 힙 시작을 가리킨다. 리스트가 사는 동안 바뀌지 않는다. 같은 루트 시그니처를
+        // 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 상수버퍼는 이후 루트 CBV 로, t/u 는 슬롯 테이블로 건다.
         const D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
         pList->SetGraphicsRootSignature( _rootSignature.Get() );
         pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
@@ -40,7 +40,7 @@ namespace sw
             return;
 
         // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
-        // (드로우마다 하던 일이다 — updateConstantBuffer 주석 참고.) 기록 시작 전 단일 스레드 구간이라 락이 필요 없다.
+        // (드로우마다 하던 일이다. updateConstantBuffer 주석 참고.) 기록 시작 전 단일 스레드 구간이라 락이 필요 없다.
         const uint32 slot = _frameRing.currentIndex();
         for ( BindlessResourceRecord& rec : _listRegisteredBindless )
         {
@@ -59,14 +59,14 @@ namespace sw
 
     bool D3D12RHIDevice::createGlobalResources()
     {
-        // 루트 시그니처 (bindingslots.hlsli) — 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.
-        //  [0..2]  루트 CBV  b0..b2 (PassCB / MaterialCB·컴퓨트 CB / 예비)
-        //  [3]     테이블: t0..t9 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9 — 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
+        // 루트 시그니처(bindingslots.hlsli). 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.
+        //  [0..2]  루트 CBV  b0..b2 (PassCB / MaterialCB · 컴퓨트 CB / 예비)
+        //  [3]     테이블: t0..t9 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9. 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
         //  [4]     테이블: u0..u3 space0 (컴퓨트 쓰기)
         //  [5]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
-        //  [6]     32비트 루트 상수 b0 space2 (setComputeRootConstants)
+        //  [6]     32비트 루트 상수 b0 space2 (set*RootConstants)
         //  정적 샘플러 s0..s7 (bindingslots.hlsli 4 의 세트), space0.
-        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). 예전엔 t/u 도 루트 디스크립터라 51 이었다.
+        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). 예전에는 t/u 도 루트 디스크립터라 51 이었다.
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
@@ -88,7 +88,7 @@ namespace sw
         for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
             setRootDescriptor( kCbvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
 
-        // t/u 슬롯 테이블 — 범위 하나씩. 테이블 시작은 드로우/디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
+        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
         D3D12_DESCRIPTOR_RANGE srvSlotRange{};
         srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         srvSlotRange.NumDescriptors                                  = shaderslot::kSrvSlotCount;
@@ -111,7 +111,7 @@ namespace sw
         arrParam[kUavTableParam].DescriptorTable.pDescriptorRanges   = &uavSlotRange;
         arrParam[kUavTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
 
-        // 텍스처 테이블 — 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
+        // 텍스처 테이블. 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
         // g_SwBindlessRWTex2D[] (컴퓨트). 인덱스는 등록이 준 힙 슬롯이라 둘 다 offset 0 이다.
         D3D12_DESCRIPTOR_RANGE arrTextureRange[2]{};
         arrTextureRange[0].RangeType                                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -135,7 +135,7 @@ namespace sw
         arrParam[kRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
         arrParam[kRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
 
-        // 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4, 언리얼의 정적 샘플러와 같은 자리) — 셰이더는 g_SwSamplers[SW_SAMPLER_*].
+        // 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4, 언리얼의 정적 샘플러와 같은 자리). 셰이더는 g_SwSamplers[SW_SAMPLER_*].
         D3D12_STATIC_SAMPLER_DESC staticSamplers[shaderslot::kStaticSamplerCount]{};
         struct StaticSamplerSpec
         {
@@ -224,7 +224,7 @@ namespace sw
 
         {
             const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다 — 레이아웃을 채우려고 +Z 를 둔다.
+                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
                 // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
                 {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
                 { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},

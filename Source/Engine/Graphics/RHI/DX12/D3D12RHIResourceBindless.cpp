@@ -1,8 +1,8 @@
 /**
  * @file D3D12RHIResourceBindless.cpp
- * @brief DirectX 12 의 bindless 등록 — 리소스를 셰이더가 인덱스로 접근할 수 있게 올린다
- * @details `D3D12RHIResource` 의 일부다. DX12/Vulkan 은 디스크립터 힙/배열에 쓰고, DX11/GL 은 슬롯
- *          기반이라 인덱스만 흉내 낸다 — 네 백엔드를 나란히 비교하기 좋은 지점이다.
+ * @brief DirectX 12 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 올립니다.
+ * @details `D3D12RHIResource` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙 · 배열에 쓰고, DX11/GL 은 슬롯
+ *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 지점입니다.
  */
 #include "pch.h"
 
@@ -40,11 +40,11 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock )
     {
-        // 잠금은 호출자의 것이다 — 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
+        // 잠금은 부르는 쪽의 것이다. 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
         SW_ASSERT( lock.owns_lock() );
         (void)lock;
 
-        // 돌려받은 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다).
+        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다).
         if ( _pDevice->_listFreeBindless.empty() == false )
         {
             const RHIDescriptorIndex reused = _pDevice->_listFreeBindless.back();
@@ -119,8 +119,8 @@ namespace sw
 
         const BindlessHandleSet handle = bindlessHandlesAt( index );
 
-        // 구조 버퍼면 StructuredBuffer SRV (셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
-        // 그 외(상수 버퍼 ring)면 CBV.
+        // 구조버퍼면 StructuredBuffer SRV 다(셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
+        // 그 밖(상수 버퍼 링)이면 CBV 다.
         const auto strideIt = _pDevice->_mapStructuredStride.find( buffer );
         if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
         {
@@ -133,7 +133,7 @@ namespace sw
             srvDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width ) / stride;
             srvDesc.Buffer.StructureByteStride = stride;
             srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
-            // 온라인 힙과 오프라인 힙에 각각 한 번씩 — 예전에는 오프라인 쪽을 **두 번** 불렀다
+            // 온라인 힙과 오프라인 힙에 각각 한 번씩. 예전에는 오프라인 쪽을 **두 번** 불렀다
             // (복사-붙여넣기). 같은 뷰를 덮어쓰는 것이라 결과는 같았지만, 읽는 사람에게는 "둘이
             // 달라야 하는데 잘못 적은 것" 으로 보인다.
             _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, handle._cpu );
@@ -157,9 +157,10 @@ namespace sw
         }
         else
         {
-            // Non-ring buffers: CBV size must be 256-byte aligned and <= resource width.
+            // 링이 아닌 버퍼: CBV 크기는 256 바이트로 정렬돼야 하고 리소스 폭을 넘으면 안 된다.
             const UINT width = static_cast<UINT>( pRes->GetDesc().Width );
-            // 텍스처 행 정렬(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) — 상수버퍼 정렬과 이름만 같은 별개 값이다.
+            // 256 은 CBV 크기 정렬(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)이다. 텍스처 행 정렬
+            // (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)도 256 이지만 이름만 같은 별개 값이라 그 상수를 쓰지 않는다.
             const UINT aligned  = MathUtil::align( width, 256u );
             cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
             if ( cbvDesc.SizeInBytes == 0 )
@@ -221,7 +222,7 @@ namespace sw
 
     void D3D12RHIResource::deferFreeBindlessIndex( RHIDescriptorIndex index )
     {
-        // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다 (언리얼의 지연 디스크립터 해제와 같다).
+        // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다(언리얼의 지연 디스크립터 해제와 같다).
         // 즉시 프리리스트에 넣으면 같은 프레임에 등록된 새 리소스가 그 자리를 받아, 아직 실행 중인 리스트가 새 리소스를 읽는다.
         D3D12RHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
@@ -242,9 +243,9 @@ namespace sw
         if ( pRes == nullptr || pRes->GetDesc().Width < 4 )
             return kInvalidDescriptorIndex;
 
-        // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간** 을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
+        // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간**을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
         // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다.
-        // 예전엔 UAV 목록의 순번을 돌려줘서 힙 슬롯과 달랐다(테이블을 슬롯마다 따로 걸던 시절엔 상관없었다).
+        // 예전에는 UAV 목록의 순번을 반환해서 힙 슬롯과 달랐다(테이블을 슬롯마다 따로 걸던 시절에는 상관없었다).
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
@@ -252,7 +253,7 @@ namespace sw
 
         const BindlessHandleSet handle = bindlessHandlesAt( index );
 
-        // 구조 버퍼면 StructuredBuffer UAV, 아니면 RAW UAV (RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0).
+        // 구조버퍼면 StructuredBuffer UAV, 아니면 RAW UAV(RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0)다.
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
         uavDesc.Buffer.FirstElement = 0;
@@ -291,7 +292,7 @@ namespace sw
         if ( pRes == nullptr || ( pRes->GetDesc().Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
             return kInvalidDescriptorIndex;
 
-        // 텍스처 UAV 도 같은 힙 인덱스 공간 — 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
+        // 텍스처 UAV 도 같은 힙 인덱스 공간이다. 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )

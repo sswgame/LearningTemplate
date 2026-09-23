@@ -41,7 +41,7 @@ namespace sw
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
 
-        // 크래시 리포트용 어댑터 정보 — 실패해도 디바이스 생성에는 영향이 없다.
+        // 크래시 리포트용 어댑터 정보. 실패해도 디바이스 생성에는 영향이 없다.
         {
             Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
             if ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr )
@@ -95,8 +95,8 @@ namespace sw
         _bBindlessRootSignature = SW_FALSE;
         _frameStreamState       = D3D12RecordingState{};
 
-        // 백버퍼와 오프스크린 렌더타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
-        // 그 뒤가 오프스크린이다 — 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
+        // 백버퍼와 오프스크린 렌더 타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
+        // 그 뒤가 오프스크린이다. 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
         rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRtvs;
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -122,7 +122,7 @@ namespace sw
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 
-        // 오프라인(CPU 전용) 뷰 힙 — 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
+        // 오프라인(CPU 전용) 뷰 힙. 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
         // 등록은 뷰를 두 힙에 같은 인덱스로 만들고, 마지막 두 칸은 안 걸린 슬롯을 채우는 null 뷰다.
         D3D12_DESCRIPTOR_HEAP_DESC offlineHeapDesc{};
         offlineHeapDesc.NumDescriptors = kOfflineDescriptorCount;
@@ -160,7 +160,7 @@ namespace sw
                 return false;
             if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrFrameCmdAllocator[frameIndex].GetAddressOf() ) ) ) )
                 return false;
-            // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다 — 이름이 없으면
+            // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다. 이름이 없으면
             // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
             utf16 arrName[constant::kMaxBuffer64]{};
             swprintf_s( arrName, L"FrameStreamAllocator%u", frameIndex );

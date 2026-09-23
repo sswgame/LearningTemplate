@@ -41,7 +41,7 @@ namespace sw
 
     void D3D12RHICommandList::detachFromDevice()
     {
-        // 디바이스가 내려가는 중이다 — 반납하지 않고 놓는다. 온라인 블록 풀과 리스트 풀은
+        // 디바이스가 내려가는 중이다. 반납하지 않고 놓는다. 온라인 블록 풀과 리스트 풀은
         // 디바이스가 곧 통째로 비운다.
         _state    = D3D12RecordingState{};
         _entry    = D3D12CommandListEntry{};
@@ -60,8 +60,8 @@ namespace sw
         // Reset 을 때리는 계약 위반이 된다("command allocator is being reset before previous executions
         // have completed" → 커맨드 메모리 덮어쓰기 → DEVICE_HUNG). 에디터 경로는 프레임이 느려 GPU 가
         // 늘 따라잡아서 가려져 있었고, 에디터 없이 띄우면 곧바로 터졌다.
-        // 그래서 두 번째 기록부터는 쌍을 통째로 갈아 낀다 — 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음),
-        // 새 쌍은 이미 펜스를 통과한 것만 들어있는 풀에서 빌린다. 풀은 in-flight 깊이만큼만 늘어난다.
+        // 그래서 두 번째 기록부터는 쌍을 통째로 갈아 낀다. 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음),
+        // 새 쌍은 이미 펜스를 통과한 것만 들어 있는 풀에서 빌린다. 풀은 in-flight 깊이만큼만 늘어난다.
         if ( _bEntryDirty != SW_FALSE )
         {
             _pDevice->recycleCommandListEntryDeferred( _entry );
@@ -73,7 +73,7 @@ namespace sw
         if ( _entry._list == nullptr || _entry._allocator == nullptr )
             return;
 
-        // 여기까지 왔으면 이 쌍은 이 리스트 전용이고 GPU 펜스도 통과한 상태다 — 바로 Reset 해도 된다.
+        // 여기까지 왔으면 이 쌍은 이 리스트 전용이고 GPU 펜스도 통과한 상태다. 바로 Reset 해도 된다.
         if ( FAILED( _entry._allocator->Reset() ) )
             return;
         if ( FAILED( _entry._list->Reset( _entry._allocator.Get(), nullptr ) ) )
@@ -81,7 +81,7 @@ namespace sw
 
         _bEntryDirty       = SW_TRUE;
         _state._bRecording = SW_TRUE;
-        // 힙·루트 시그니처·bindless 테이블 — 리스트마다 한 번. 이후는 루트 상수만 쓴다.
+        // 힙 · 루트 시그니처 · bindless 테이블은 리스트마다 한 번 건다. 이후에는 루트 CBV · 슬롯 테이블 · 루트 상수만 바꾼다.
         _pDevice->bindBindlessRootState( _entry._list.Get() );
     }
 
@@ -89,7 +89,7 @@ namespace sw
     {
         if ( _entry._list != nullptr )
             _entry._list->Close();
-        // 이 리스트가 굳힌 슬롯 테이블(온라인 블록)은 제출 뒤 GPU 가 읽는다 — 얼로케이터처럼 펜스 뒤에 돌려준다.
+        // 이 리스트가 굳힌 슬롯 테이블(온라인 블록)은 제출 뒤 GPU 가 읽는다. 얼로케이터처럼 펜스 뒤에 돌려준다.
         if ( _pDevice != nullptr )
             _pDevice->releaseOnlineBlocksDeferred( _state );
     }

@@ -17,7 +17,7 @@ namespace sw
         if ( _bParallelRecording == false )
             return;
 
-        // 진단이지 오류가 아니다. 웨이브 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다** —
+        // 진단이지 오류가 아니다. 웨이브 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다.**
         // 파이프라인 XML 이 선언하지 않은 첨부(뎁스가 대표적)는 프롤로그가 알 수 없다. 그런 것이
         // 남아 있어도 배리어 자체는 락이 보호하므로 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
         // 있는 자원" 이므로, 파이프라인 선언을 채우면 이 줄이 사라진다.
@@ -47,8 +47,8 @@ namespace sw
 
     IRHIDevice::~IRHIDevice()
     {
-        // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점엔 백엔드 자원이
-        // 이미 없으므로 **돌려줄 수 없다** — 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
+        // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점에는 백엔드 자원이
+        // 이미 없으므로 **돌려줄 수 없다.** 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
         RHIRenderResource::forgetAllFor( this );
     }
 
@@ -62,9 +62,9 @@ namespace sw
     {
     }
 
-    // 요청 백버퍼 포맷 — 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리. 0 = R8G8B8A8(계약 기본), 1 = B8G8R8A8.
+    // 요청 백버퍼 포맷. 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리다. 0 = R8G8B8A8(계약 기본), 1 = B8G8R8A8.
     // 백엔드가 실제로 채택한 값은 getBackBufferFormat() 이 답한다(DX 는 요청대로, Vulkan 은 서피스와 협상, GL 은 창 픽셀
-    // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다 — 이 변수는 그 경로를 다른 포맷으로
+    // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다. 이 변수는 그 경로를 다른 포맷으로
     // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=1`).
     SW_GLOBAL_VARIABLE_INT( gv_rhiBackBufferFormat, 0, "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
 
@@ -91,12 +91,12 @@ namespace sw
             if ( engine::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
                 swapChainDesc._bVSync = bCliVSync;
         }
-        // 채택값을 디바이스에 되돌려 적는다 — 프레젠트 경로(`RenderThread`)가 이걸 읽는다.
+        // 채택값을 디바이스에 되돌려 적는다. 프레젠트 경로(`RenderThread`)가 이것을 읽는다.
         _bPreferredVSync = swapChainDesc._bVSync;
 
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
-        // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다 — 어느 쪽인지 로그로 남긴다.
+        // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO( "백버퍼 포맷: 요청 %# → 채택 %# (getBackBufferFormat)",
                      static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
         return true;
@@ -111,7 +111,7 @@ namespace sw
 
     void IRHIDevice::shutdown()
     {
-        // **자원을 내리기 전에** 알린다. 아직 디바이스가 살아 있으므로 든 쪽이 제대로 돌려줄 수 있다 —
+        // **자원을 내리기 전에** 알린다. 아직 디바이스가 살아 있으므로 든 쪽이 제대로 돌려줄 수 있다.
         // 언리얼의 FRenderResource::ReleaseRHI 와 같은 자리다. 죽은 뒤에 "살아 있었나" 를 되묻지 않아도 되는 이유가 이것이다.
         RHIRenderResource::releaseAllFor( this );
 

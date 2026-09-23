@@ -42,7 +42,7 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
-        /** @brief UAV 를 등록부에 넣고 인덱스를 돌려줍니다 — 돌려받은 자리를 먼저 쓴다. 버퍼 · 텍스처 UAV 가 같은 길이다. */
+        /** @brief UAV 를 등록부에 넣고 인덱스를 반환합니다. 반납된 자리를 먼저 씁니다. 버퍼 · 텍스처 UAV 가 같은 길입니다. */
         RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
 
         D3D11RHIDevice* _pDevice;

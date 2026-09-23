@@ -23,7 +23,7 @@ namespace sw
     SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지.
-    // 두 모드 모두 기록 순서 = 실행 순서다 — 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
+    // 두 모드 모두 기록 순서 = 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
     // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
     // 검증 레이어)가 어느 제출에서 났는지 좁히기 쉬워 디버깅에 쓴다.
     SW_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit, false,
@@ -143,8 +143,8 @@ namespace sw
             return true;
         }
 
-        // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전엔 짧은 플래그만 봐서, 전역 변수로
-        // 백엔드를 고르면 EngineConfig 기본값이 **조용히 덮어썼다** — 커맨드라인이 아무 일도 안
+        // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전에는 짧은 플래그만 봐서, 전역 변수로
+        // 백엔드를 고르면 EngineConfig 기본값이 **조용히 덮어썼다.** 커맨드라인이 아무 일도 안
         // 하는 것처럼 보이고, 로그도 남지 않았다. 값 자체는 updateFromCommandLine 이 이미 전역
         // 변수에 넣어 두었으므로 여기서는 그것을 읽는다.
         if ( commandLineManager.isArgumentProvided( "gv_rhiBackend" ) )
@@ -172,10 +172,10 @@ namespace sw
     bool RHI::initialize( IRenderSurface* pSurface )
     {
         _pSurface = pSurface;
-        // Priority: explicit CLI > current GVM value > OS default > first available
+        // 우선순위: 명시한 CLI > 지금 전역 변수 값 > OS 기본값 > 처음으로 쓸 수 있는 것
         RHIBackend currentBackend = gv_rhiBackend;
 
-        // 커맨드라인이 고른 것은 **폴백하지 않는다** — 쓸 수 없으면 아래에서 에러로 선다.
+        // 커맨드라인이 고른 것은 **폴백하지 않는다.** 쓸 수 없으면 아래에서 에러로 선다.
         // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다(실제로 그런 적이 있다).
         RHIBackend commandLineBackend{};
         const bool bCommandLineOverride = RHIBackendUtil::findCommandLineBackend( engine::getCommandLineManager(), commandLineBackend );
@@ -225,7 +225,7 @@ namespace sw
             _device->shutdown();
             _device.reset();
         }
-        // After devices are gone, drop MODULE DLLs (DX11/DX12) so FreeLibrary is safe.
+        // 디바이스가 모두 사라진 뒤에 MODULE DLL 을 내린다. 그래야 FreeLibrary 가 안전하다.
         engine::getRHIBackendRegistry().unloadModules();
     }
 
@@ -241,7 +241,7 @@ namespace sw
 
         if ( _device )
         {
-            // 죽기 직전의 통보(RHIRenderResource::releaseAllFor)는 shutdown 이 스스로 낸다 — 여기서 손으로 훑지 않는다.
+            // 죽기 직전의 통보(RHIRenderResource::releaseAllFor)는 shutdown 이 스스로 낸다. 여기서 손으로 훑지 않는다.
             _device->waitIdle();
             _device->shutdown();
             _device.reset();

@@ -1,6 +1,6 @@
 /**
  * @file D3D11RHIDeviceInit.cpp
- * @brief 디바이스·스왑체인 생성과 해제, 리사이즈 (DX12 · Vulkan · GL 의 같은 이름 파일과 같은 자리).
+ * @brief 디바이스 · 스왑체인의 생성과 해제, 리사이즈입니다(DX12 · Vulkan · GL 의 같은 이름 파일과 같은 자리).
  */
 #include "pch.h"
 
@@ -32,9 +32,9 @@ namespace sw
         _pHWnd            = static_cast<HWND>( desc._pWindowHandle );
         _backBufferFormat = desc._format;
 
-        // Use FLIP_DISCARD to match DX12 (and DXGI HWND rules): after a flip-model
-        // swapchain has been created for an HWND, subsequent DISCARD/blt chains on the
-        // same window can Present without updating what the user sees (frozen frame).
+        // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
+        // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다
+        // (멈춘 프레임).
         DXGI_SWAP_CHAIN_DESC swapChainDesc{};
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
         swapChainDesc.BufferDesc.Width                   = desc._width;
@@ -49,7 +49,7 @@ namespace sw
         swapChainDesc.Windowed                           = TRUE;
         swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-        // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다 — 동기화 간격 0 만으로는 DWM 합성이
+        // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다. 동기화 간격 0 만으로는 DWM 합성이
         // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h).
         const bool bAllowTearing = ( desc._bVSync == false ) && queryDxgiAllowTearing();
         swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
@@ -85,12 +85,12 @@ namespace sw
             return false;
         }
 
-        // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다 — 만들어진 것을 넘겨 소유시킨다.
+        // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
         _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
-        // 지원하는지에 달렸다 — 미지원이면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
-        // 이득보다 오버헤드가 커진다. 그래서 이 값으로 병렬 기록 capability를 런타임에 결정한다.
+        // 지원하는지에 달렸다. 지원하지 않으면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
+        // 이득보다 오버헤드가 커진다. 그래서 이 값으로 병렬 기록 능력을 런타임에 결정한다.
         {
             D3D11_FEATURE_DATA_THREADING threadingCaps{};
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_THREADING, &threadingCaps, sizeof( threadingCaps ) ) ) )
@@ -125,7 +125,7 @@ namespace sw
             sampDesc.MaxLOD         = D3D11_FLOAT32_MAX;
             _device->CreateSamplerState( &sampDesc, _linearSampler.GetAddressOf() );
 
-            // 정적 샘플러 세트 s9..s15 — DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표. 비교 샘플러(7)는
+            // 정적 샘플러 세트 s9..s15. DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표다. 비교 샘플러(7)는
             // 에뮬 경로가 깊이를 직접 비교하므로 없다.
             struct StaticSamplerSpec
             {
@@ -158,14 +158,14 @@ namespace sw
             bindStaticSamplers( _deviceContext.Get() );
         }
 
-        // 풀스크린 삼각형 정점버퍼. **DX11 만 이게 없었다** — 멤버는 선언돼 있고 draw() 가 읽는데
+        // 풀스크린 삼각형 정점 버퍼. **DX11 만 이것이 없었다.** 멤버는 선언돼 있고 draw() 가 읽는데
         // 아무도 만들지 않아 항상 nullptr 이었다. 그래서 메시 VB 없이 그리는 패스(Present/Bloom/
-        // Outline/Tonemap 등 전부)가 정점 없이 그려 아무것도 나오지 않았다. 오래 살아남은 이유는
+        // Outline/Tonemap 등 모두)가 정점 없이 그려 아무것도 나오지 않았다. 오래 살아남은 이유는
         // 오프스크린 스모크가 "크래시 안 났다" 만 봤기 때문이다(RHITest.OffscreenDrawIsReadable 이 그 공백).
-        // 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다 — fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
+        // 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다. fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
         {
             const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다 — 레이아웃을 채우려고 +Z 를 둔다.
+                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
                 // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
                 {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
                 { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -227,7 +227,7 @@ namespace sw
             return;
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
-        // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다 — 백버퍼 RTV, Immediate Context 의
+        // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다: 백버퍼 RTV, Immediate Context 의
         // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨려서 이 백엔드는
         // 창 크기 변경이 매번 조용히 실패하고 있었다.
         _swapChain.releaseBackBufferRtv();
@@ -250,7 +250,7 @@ namespace sw
 
     bool D3D11RHIDevice::bindGraphicsContext()
     {
-        // Immediate context has no MakeCurrent — exclusivity is ownership of this thread.
+        // 즉시 컨텍스트에는 MakeCurrent 가 없다. 배타성은 이 스레드가 소유했다는 표시뿐이다.
         _contextOwnerThread = std::this_thread::get_id();
         return _deviceContext != nullptr;
     }

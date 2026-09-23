@@ -49,7 +49,7 @@ namespace sw
         if ( buffer == 0 || pData == nullptr )
             return;
 
-        // CBV SizeInBytes must be a multiple of 256 (D3D12 requirement).
+        // CBV 의 SizeInBytes 는 256 의 배수여야 한다(D3D12 요구).
         uint32     alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         const auto sizeIt      = _pDevice->_mapCbAlignedSize.find( buffer );
         if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
@@ -62,16 +62,16 @@ namespace sw
             return;
         Memory::copy( static_cast<uint8*>( mapIt->second ) + offset, pData, size );
 
-        // 힙의 CBV 는 여기서 갱신하지 않는다. 예전엔 드로우마다 **레지스트리 전체를 훑어** 이 버퍼를 가리키는
-        // 레코드마다 CreateConstantBufferView 를 다시 불렀다 — 등록 수 N, 프레임당 드로우 D 면 O(N·D) 다.
+        // 힙의 CBV 는 여기서 갱신하지 않는다. 예전에는 드로우마다 **레지스트리 전체를 훑어** 이 버퍼를 가리키는
+        // 레코드마다 CreateConstantBufferView 를 다시 불렀다. 등록 수 N, 프레임당 드로우 D 면 O(N·D) 다.
         // 드로우별 상수버퍼 슬롯이 생기면서 N 이 수백으로 늘자 이 순회가 드로우 경로의 지배적 비용이 됐다.
-        // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다 —
+        // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다.
         // D3D12RHIDevice::refreshConstantBufferViews 가 beginFrame 에서 한 번에 한다.
     }
 
     RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
-        // 64비트로 곱한다 — 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
+        // 64비트로 곱한다. 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
         const uint64                totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
         const D3D12_HEAP_PROPERTIES heapProps  = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
         const D3D12_RESOURCE_DESC   resDesc    = D3D12RHIResourceRecipe::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
@@ -97,13 +97,13 @@ namespace sw
         D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
         const bool                            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
 
-        // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다 — 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
+        // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
         if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
         {
             outSlotIndex = slotIndex;
             return true;
         }
-        // 구간이 바뀌었는데 열려 있다면 flush 를 빠뜨린 것이다 — 얼로케이터를 Reset 하기 전에 지금 내보낸다.
+        // 구간이 바뀌었는데 열려 있다면 flush 를 빠뜨린 것이다. 얼로케이터를 Reset 하기 전에 지금 내보낸다.
         if ( slot._bListOpen != SW_FALSE )
             _pDevice->flushPendingUploads( true );
 
@@ -121,10 +121,10 @@ namespace sw
         else if ( bNewFencePeriod )
         {
             // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
-            // 끝냈다는 뜻이 아니다 — signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
+            // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
             // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 했다
             // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
-            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence — 그 구간의 제출 뒤에
+            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence: 그 구간의 제출 뒤에
             // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
             if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
             {
@@ -167,11 +167,11 @@ namespace sw
         if ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) )
             return false;
 
-        // 열어 둔 복사가 있으면 먼저 내보낸다 — 아래 펜스가 그것까지 덮어야 한다.
+        // 열어 둔 복사가 있으면 먼저 내보낸다. 아래 펜스가 그것까지 덮어야 한다.
         _pDevice->flushPendingUploads( true );
 
-        // waitForPreviousFrame 은 스왑체인 acquire 까지 하므로 프레임 중간에 부를 수 없다 — 펜스만 올리고 기다린다.
-        // _fenceValue 가 올라가므로 다음 openUploadSlot 은 새 구간으로 보고 얼로케이터를 Reset 한다 — 방금
+        // waitForPreviousFrame 은 스왑체인 acquire 까지 하므로 프레임 중간에 부를 수 없다. 펜스만 올리고 기다린다.
+        // _fenceValue 가 올라가므로 다음 openUploadSlot 은 새 구간으로 보고 얼로케이터를 Reset 한다. 방금
         // 기다린 작업이 그 얼로케이터의 마지막 사용이니 안전하다.
         const UINT64 fenceToWait = _pDevice->_fenceValue;
         if ( FAILED( _pDevice->_commandQueue->Signal( _pDevice->_fence.Get(), fenceToWait ) ) )
@@ -190,12 +190,12 @@ namespace sw
         if ( sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
             return false;
 
-        // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙/얼로케이터/리스트를 새로 만들지 않음).
-        // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
-        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다 — **프레임 사이에는**.
+        // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙 · 얼로케이터 · 리스트를 새로 만들지 않는다).
+        // 이 슬롯을 다시 쓸 차례가 됐다는 것은 waitForRingSlot() 이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
+        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
-        // 얼로케이터/리스트를 먼저 연다 — 펜스 구간이 바뀌었으면 여기서 오프셋도 0 으로 되감긴다.
+        // 얼로케이터 · 리스트를 먼저 연다. 펜스 구간이 바뀌었으면 여기서 오프셋도 0 으로 되감긴다.
         uint32 slotIndex{ 0 };
         if ( openUploadSlot( slotIndex ) == false )
             return false;
@@ -206,7 +206,7 @@ namespace sw
         {
             const uint64 newCapacity = MathUtil::align( ( stagingOffset + sizeBytes ) * 2, 65536ull );
 
-            // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다 — 펜스 뒤에 놓아준다.
+            // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아 준다.
             if ( slot._uploadHeap != nullptr )
             {
                 Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap = slot._uploadHeap;
@@ -262,7 +262,7 @@ namespace sw
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
-        // **조각을 전부 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
+        // **조각을 모두 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
         // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(재 보니 호출당 ~3.3 us 였다).
         constexpr uint32 kCopyAlignment = 4;
         uint32           totalSize      = 0;
@@ -327,7 +327,7 @@ namespace sw
         toUav.Transition.StateAfter  = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toUav );
-        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번 — D3D12RHIDevice::flushPendingUploads.
+        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -354,7 +354,7 @@ namespace sw
             return false;
         }
 
-        // 텍스처 복사는 행 피치 256·서브리소스 512 정렬 풋프린트를 요구한다 — 빈틈없는 입력을 풋프린트대로 다시 깐다.
+        // 텍스처 복사는 행 피치 256 · 서브리소스 512 정렬 풋프린트를 요구한다. 빈틈없는 입력을 풋프린트대로 다시 깐다.
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT arrFootprint[constant::kMaxTextureMipCount]{};
         UINT                               arrRowCount[constant::kMaxTextureMipCount]{};
         UINT64                             arrRowSize[constant::kMaxTextureMipCount]{};
@@ -382,7 +382,7 @@ namespace sw
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
         ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
 
-        // 렌더 타깃이면 추적 중인 상태에서, 아니면 COMMON 에서 출발해 같은 상태로 돌아간다 — 그래야 기존 SRV
+        // 렌더 타깃이면 추적 중인 상태에서, 아니면 COMMON 에서 출발해 같은 상태로 돌아간다. 그래야 기존 SRV
         // 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
         D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
         {
@@ -423,7 +423,7 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번 — D3D12RHIDevice::flushPendingUploads.
+        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
         return true;
     }
 
@@ -510,7 +510,7 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 큐 대기가 열어 둔 복사를 먼저 내보낸다(flushPendingUploads) — 이 readback 도 그 안에 있다.
+        // 큐 대기가 열어 둔 복사를 먼저 내보낸다(flushPendingUploads). 이 readback 도 그 안에 있다.
         if ( waitForQueueDrain() == false )
             return false;
 
@@ -625,7 +625,7 @@ namespace sw
             flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
         if ( desc._bIsUnorderedAccess )
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        // Depth+SRV: do not deny shader resource.
+        // 깊이 + SRV: 셰이더 리소스 접근을 막지 않는다(DENY_SHADER_RESOURCE 를 붙이지 않는다).
         resDesc.Flags = flags;
 
         D3D12_CLEAR_VALUE  clearValue{};
@@ -666,7 +666,7 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "createTexture2D" );
 
         // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
-        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다 — 예전엔 읽는 쪽만 잠가서
+        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 예전에는 읽는 쪽만 잠가서
         // 생성/파괴가 맵을 리해시하면 읽는 쪽이 무효한 참조를 잡을 수 있었다.
         std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 
@@ -682,7 +682,7 @@ namespace sw
                 rtvSlot = _pDevice->_nextOffscreenRtvIndex++;
             else
             {
-                // 고갈되면 예전엔 조용히 넘어갔다 — 유효한 핸들이 돌아오는데 RTV 가 없어서,
+                // 고갈되면 예전에는 조용히 넘어갔다. 유효한 핸들이 돌아오는데 RTV 가 없어서,
                 // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보였다.
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
                 SW_LOG_ERROR( "오프스크린 RTV 디스크립터 고갈(최대 %#) — 이 텍스처는 렌더타깃으로 쓸 수 없습니다.",

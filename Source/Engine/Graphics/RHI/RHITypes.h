@@ -1,6 +1,6 @@
 /**
  * @file RHITypes.h
- * @brief RHI 공통 핸들, 열거형, 서술체
+ * @brief RHI 공통 핸들 · 열거형 · 서술체입니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -18,37 +18,37 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 핸들 — 버퍼/텍스처/디스크립터, 무효 인덱스
     // ------------------------------------------------------------------------------
-    /** @brief GPU 버퍼 리소스 64비트 핸들 */
+    /** @brief GPU 버퍼 리소스의 64비트 핸들입니다. */
     using RHIBufferHandle = uint64;
 
-    /** @brief GPU 텍스처 리소스 64비트 핸들 */
+    /** @brief GPU 텍스처 리소스의 64비트 핸들입니다. */
     using RHITextureHandle = uint64;
 
-    /** @brief Bindless 리소스 인덱스 (Descriptor Heap / Set 내 바인딩 인덱스) */
+    /** @brief bindless 리소스 인덱스입니다(디스크립터 힙 · 세트 안의 바인딩 인덱스). */
     using RHIDescriptorIndex = uint32;
 
-    /** @brief 유효하지 않은 Descriptor 인덱스 */
+    /** @brief 유효하지 않은 디스크립터 인덱스입니다. */
     constexpr RHIDescriptorIndex kInvalidDescriptorIndex = invalid_index::kUint32;
 
     /**
      * @struct RHIVertex
-     * @brief 기본 3D 정점 (직접 그리기 예제용)
+     * @brief 메시 정점 하나(위치 · 노멀 · UV · 색)입니다. 정점 버퍼 슬롯 0 의 원소입니다.
      */
     struct RHIVertex
     {
         float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
         /**
-         * @brief 정점 노멀 (X, Y, Z) — 정규화되어 있어야 합니다.
-         * @details 예전에는 없었고, 셰이더가 위치로 **지어내고** 있었다(`DemoCubeNormal`) — 원점 중심
-         *          박스형 도형에만 맞는 함수라 평면·구·원뿔은 조용히 틀린 빛을 받았다. 바닥 평면을
-         *          `y = 0` 에 두면 `|y|` 가 0 이라 ±X/±Z 노멀이 나와 바닥이 옆을 보는 것처럼 칠해졌다.
+         * @brief 정점 노멀 (X, Y, Z)입니다. 정규화되어 있어야 합니다.
+         * @details 예전에는 없었고, 셰이더가 위치로 **지어내고** 있었습니다(`DemoCubeNormal`). 원점 중심
+         *          박스형 도형에만 맞는 함수라 평면 · 구 · 원뿔은 조용히 틀린 빛을 받았습니다. 바닥 평면을
+         *          `y = 0` 에 두면 `|y|` 가 0 이라 ±X/±Z 노멀이 나와 바닥이 옆을 보는 것처럼 칠해졌습니다.
          */
         float32 _arrNormal[3];
         /**
-         * @brief 텍스처 좌표 (U, V).
-         * @details 노멀과 **같은 함정**이었다 — 셰이더가 `localPos.xy * 0.5 + 0.5` 로 지어내고 있어서,
-         *          원점 중심 단위 도형이 아니면 알베도 텍스처가 엉뚱하게 붙었고 도형의 옆면·뚜껑은
-         *          아예 같은 자리를 물고 있었다. 도형 생성기가 면마다 제대로 펼쳐 준다.
+         * @brief 텍스처 좌표 (U, V)입니다.
+         * @details 노멀과 **같은 함정**이었습니다. 셰이더가 `localPos.xy * 0.5 + 0.5` 로 지어내고 있어서,
+         *          원점 중심 단위 도형이 아니면 알베도 텍스처가 엉뚱하게 붙었고 도형의 옆면 · 뚜껑은
+         *          아예 같은 자리를 물고 있었습니다. 지금은 도형 생성기가 면마다 제대로 펼쳐 줍니다.
          */
         float32 _arrUv[2];
         float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
@@ -56,12 +56,12 @@ namespace sw
 
     /**
      * @struct RHIVertexAttribute
-     * @brief 정점 속성 하나의 선언 — 네 백엔드가 **같은 표**를 읽어 각자의 입력 레이아웃을 만듭니다.
-     * @details 예전에는 DX11·DX12·Vulkan·GL 이 이 표를 각자 손으로 적고 있었다. 속성을 하나 더하려면
-     *          네 곳을 같이 고쳐야 하고, 한 곳을 빠뜨리면 그 백엔드만 조용히 다른 그림을 낸다 —
-     *          이 저장소에서 가장 비싼 종류의 버그다. 표를 하나로 두면 그럴 자리가 없다.
-     * @note `_location` 은 HLSL 선언 **순서**와 같아야 한다(Vulkan location · GL 정점 속성 번호).
-     *       DX 는 시맨틱 이름으로 묶으므로 `_pSemanticName` 이 그 역할을 한다.
+     * @brief 정점 속성 하나의 선언입니다. 네 백엔드가 **같은 표**를 읽어 각자의 입력 레이아웃을 만듭니다.
+     * @details 예전에는 DX11 · DX12 · Vulkan · GL 이 이 표를 각자 손으로 적고 있었습니다. 속성을 하나 더하려면
+     *          네 곳을 같이 고쳐야 하고, 한 곳을 빠뜨리면 그 백엔드만 조용히 다른 그림을 냅니다.
+     *          이 저장소에서 가장 비싼 종류의 버그입니다. 표를 하나로 두면 그럴 자리가 없습니다.
+     * @note `_location` 은 HLSL 선언 **순서**와 같아야 합니다(Vulkan location · GL 정점 속성 번호).
+     *       DX 는 시맨틱 이름으로 묶으므로 `_pSemanticName` 이 그 역할을 합니다.
      */
     struct RHIVertexAttribute
     {
@@ -79,21 +79,21 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @enum RHIFormat
-     * @brief 텍스처·렌더 타깃·픽셀 데이터 포맷
+     * @brief 텍스처 · 렌더 타깃 · 픽셀 데이터 포맷입니다.
      */
     ENUM()
     enum class RHIFormat : uint32
     {
         R8G8B8A8_UNORM     = 0, ///< 8비트 RGBA 정규화
-        B8G8R8A8_UNORM     = 1, ///< 8비트 BGRA 정규화 (DirectX 기본)
+        B8G8R8A8_UNORM     = 1, ///< 8비트 BGRA 정규화 (`-gv_rhiBackBufferFormat=1` 로 고르는 백버퍼 포맷)
         R16G16B16A16_FLOAT = 2, ///< 16비트 부동소수점 RGBA (HDR)
         D24_UNORM_S8_UINT  = 3, ///< 24비트 깊이 + 8비트 스텐실
         R32G32B32_FLOAT    = 4, ///< 32비트 부동소수점 RGB (위치/노멀)
         R32G32_FLOAT       = 5, ///< 32비트 부동소수점 RG (UV)
         R32_FLOAT          = 6, ///< 32비트 단일 부동소수점
-        /// @brief 첨부 없음. 뎁스를 쓰지 않는 패스의 PSO 가 "DSV 없음" 을 선언하는 데 쓴다 —
-        ///        DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용한다.
-        ///        기존 값의 번호는 바꾸지 않는다 — 새 포맷은 아래처럼 뒤에 이어 붙인다.
+        /// @brief 첨부 없음입니다. 뎁스를 쓰지 않는 패스의 PSO 가 "DSV 없음" 을 선언하는 데 씁니다.
+        ///        DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용합니다.
+        ///        기존 값의 번호는 바꾸지 않습니다. 새 포맷은 아래처럼 뒤에 이어 붙입니다.
         Unknown = 7,
         // 블록 압축(4x4 블록). 렌더 타깃 불가, 샘플링·업로드·읽기 전용. DDS 의 DXT1/3/5·BC4/5/7 과 1:1.
         BC1_UNORM = 8,  ///< 8 B/블록, RGB + 1비트 알파
@@ -108,62 +108,62 @@ namespace sw
     {
         // ------------------------------------------------------------------------------
         // 백엔드 간 "값이 같아야 하는" 계약 상수.
-        // 지금 값이 우연히 같더라도 바뀔 수 있는 값이면 반드시 여기로 뺀다 — 한쪽 백엔드만
+        // 지금 값이 우연히 같더라도 바뀔 수 있는 값이면 반드시 여기로 뺀다. 한쪽 백엔드만
         // 바뀌면 컴파일은 통과하고 런타임에 조용히 깨진다(아래 kBackBufferFormat 사례).
         // 이 블록이 RHIFormat 바로 뒤에 있는 이유는 RHISwapChainDesc 의 기본값으로 쓰이기 때문이다.
         // ------------------------------------------------------------------------------
 
         /**
-         * @brief 백버퍼 컬러 포맷 — 4개 백엔드 스왑체인과 파이프라인 RTV 기본값이 같아야 한다.
-         * @details 파이프라인은 `RHIPipelineStateDesc::_arrRtvFormat` 으로 렌더패스/PSO 를 만든다.
-         *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 전부 비호환이 된다 —
+         * @brief 백버퍼 컬러 포맷입니다. 네 백엔드의 스왑체인과 파이프라인 RTV 기본값이 같아야 합니다.
+         * @details 파이프라인은 `RHIPipelineStateDesc::_arrRtvFormat` 으로 렌더 패스 · PSO 를 만듭니다.
+         *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 모두 비호환이 됩니다.
          *          실제로 Vulkan 만 `B8G8R8A8_UNORM` 을 고르고 있어서, 에디터 없이 실행하는 경로가
-         *          렌더패스 비호환으로 깨져 있었다(docs/05_RHI_FrameContract.md 실패기록 5차).
-         *          백엔드가 이 포맷을 낼 수 없으면 조용히 다른 걸 고르지 말고
-         *          `IRHIDevice::getBackBufferFormat()` 으로 실제 채택한 값을 보고해야 한다.
+         *          렌더 패스 비호환으로 깨져 있었습니다(docs/05_RHI_FrameContract.md 실패기록 5차).
+         *          백엔드가 이 포맷을 낼 수 없으면 조용히 다른 것을 고르지 말고
+         *          `IRHIDevice::getBackBufferFormat()` 으로 실제 채택한 값을 보고해야 합니다.
          */
         inline constexpr RHIFormat kBackBufferFormat = RHIFormat::R8G8B8A8_UNORM;
 
         /**
-         * @brief 오프스크린 컬러 타깃(에디터 게임뷰 등) 기본 포맷.
-         * @details Vulkan 은 이 포맷일 때만 공용 오프스크린 렌더패스를 재사용하고 나머지는 전용
-         *          렌더패스를 만든다 — 값이 갈라지면 조용히 렌더패스가 늘어나거나 비호환이 된다.
+         * @brief 오프스크린 컬러 타깃(에디터 게임뷰 등)의 기본 포맷입니다.
+         * @details Vulkan 은 이 포맷일 때만 공용 오프스크린 렌더 패스를 재사용하고 나머지는 전용
+         *          렌더 패스를 만듭니다. 값이 갈라지면 조용히 렌더 패스가 늘어나거나 비호환이 됩니다.
          */
         inline constexpr RHIFormat kOffscreenColorFormat = RHIFormat::R8G8B8A8_UNORM;
 
         /**
-         * @brief 깊이/스텐실 기본 포맷.
-         * @details DX11/DX12/GL 은 이 값을 그대로 쓴다. Vulkan 은 물리 디바이스가 미지원이면
-         *          대체 포맷을 고르고(`depthFormat()`), 파이프라인 렌더패스도 그 값으로 맞춘다.
+         * @brief 깊이 · 스텐실 기본 포맷입니다.
+         * @details DX11 · DX12 · GL 은 이 값을 그대로 씁니다. Vulkan 은 물리 디바이스가 지원하지 않으면
+         *          대체 포맷을 고르고(`selectDepthFormat()`), 파이프라인 렌더 패스도 그 값으로 맞춥니다.
          */
         inline constexpr RHIFormat kDepthStencilFormat = RHIFormat::D24_UNORM_S8_UINT;
 
         /**
-         * @brief 상수버퍼 슬롯 정렬(바이트).
-         * @details 4개 백엔드가 같은 값으로 슬롯 크기를 계산해야 프레임 링 오프셋이 어긋나지 않는다.
-         *          D3D12 의 요구치(256)가 가장 크므로 그걸 공통값으로 쓴다. 텍스처 행 정렬
+         * @brief 상수버퍼 슬롯 정렬(바이트)입니다.
+         * @details 네 백엔드가 같은 값으로 슬롯 크기를 계산해야 프레임 링 오프셋이 어긋나지 않습니다.
+         *          D3D12 의 요구치(256)가 가장 크므로 그것을 공통값으로 씁니다. 텍스처 행 정렬
          *          (`D3D12_TEXTURE_DATA_PITCH_ALIGNMENT`)은 이름만 같은 별개 개념이니 섞지 말 것.
          */
         inline constexpr uint32 kConstantBufferAlignment = 256;
 
         /**
-         * @brief 인스턴스 슬롯 스트림이 걸리는 정점 버퍼 슬롯. 원소는 uint 하나 — 그 드로우 인스턴스의 **전역 인스턴스 자리**.
-         * @details 씬 드로우는 인스턴스마다 자기 자리(가시 목록 슬롯)를 알아야 인스턴스 버퍼를 읽는다. 예전엔 배치마다 루트 상수로
+         * @brief 인스턴스 슬롯 스트림이 걸리는 정점 버퍼 슬롯입니다. 원소는 uint 하나이고, 그 드로우 인스턴스의 **전역 인스턴스 자리**입니다.
+         * @details 씬 드로우는 인스턴스마다 자기 자리(가시 목록 슬롯)를 알아야 인스턴스 버퍼를 읽습니다. 예전에는 배치마다 루트 상수로
          *          시작 오프셋을 싣고 SV_InstanceID 를 더했는데, 그러면 배치마다 루트 상수를 바꿔야 해서 같은 PSO 의 배치들을
-         *          멀티 드로우 하나로 낼 수 없었다. 대신 슬롯 1 에 `0,1,2,…` 스트림을 인스턴스 스텝으로 걸고 간접 인자의
-         *          startInstance 를 배치 시작으로 두면, 입력 어셈블러가 네 API 모두에서 `startInstance + i` 번째 원소를 준다 —
-         *          SV_InstanceID 가 startInstance 를 포함하는지(API 마다 다르다)에 기대지 않는다. 언리얼 D3D11 경로의
-         *          인스턴스 ID 스트림과 같은 자리다.
+         *          멀티 드로우 하나로 낼 수 없었습니다. 대신 슬롯 1 에 `0,1,2,…` 스트림을 인스턴스 스텝으로 걸고 간접 인자의
+         *          startInstance 를 배치 시작으로 두면, 입력 어셈블러가 네 API 모두에서 `startInstance + i` 번째 원소를 줍니다.
+         *          SV_InstanceID 가 startInstance 를 포함하는지(API 마다 다르다)에 기대지 않습니다. 언리얼 D3D11 경로의
+         *          인스턴스 ID 스트림과 같은 자리입니다.
          */
         inline constexpr uint32 kInstanceSlotStreamSlot   = 1;
         inline constexpr uint32 kInstanceSlotStreamStride = static_cast<uint32>( sizeof( uint32 ) );
 
         /**
-         * @brief 정점 입력 레이아웃의 **정본** — 네 백엔드가 이 표만 읽는다.
-         * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 이다. 속성을 더하려면 여기 한 줄과
-         *          `RHIVertex` 멤버 하나만 고치면 되고, 백엔드는 손대지 않는다.
-         * @note 오프셋을 손으로 적지 않는다 — `SW_OFFSET_OF` 라 구조체를 바꾸면 자동으로 따라온다.
-         *       예전에 네 백엔드가 각자 `0` 과 `12` 를 적어 두고 있었다.
+         * @brief 정점 입력 레이아웃의 **기준**입니다. 네 백엔드가 이 표만 읽습니다.
+         * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 입니다. 속성을 더하려면 여기 한 줄과
+         *          `RHIVertex` 멤버 하나만 고치면 되고, 백엔드는 손대지 않습니다.
+         * @note 오프셋을 손으로 적지 않습니다. `SW_OFFSET_OF` 라 구조체를 바꾸면 자동으로 따라옵니다.
+         *       예전에는 네 백엔드가 각자 `0` 과 `12` 를 적어 두고 있었습니다.
          */
         inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
             { "POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition ), 0, SW_FALSE, SW_FALSE },
@@ -172,45 +172,46 @@ namespace sw
             { "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex, _arrColor ), 0, SW_FALSE, SW_FALSE },
             { "SW_INSTANCESLOT", 4, 1, 0, kInstanceSlotStreamSlot, SW_TRUE, SW_TRUE },
         };
-        /// @brief 정점 속성 수. 백엔드가 배열 크기를 직접 세지 않도록 함께 둔다.
+        /// @brief 정점 속성 수입니다. 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
         inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );
 
-        /** @brief uploadTexture2D 가 한 번에 받는 밉 수 상한 — 2^16 텍스처의 전체 체인(17단) 을 덮는다. */
+        /** @brief uploadTexture2D 가 한 번에 받는 밉 수 상한입니다. 2^16 텍스처의 전체 체인(17단)을 덮습니다. */
         inline constexpr uint32 kMaxTextureMipCount = 17;
 
         /**
-         * @brief CPU 가 GPU 를 앞서갈 수 있는 최대 프레임 수 (= 프레임별 리소스 링 슬롯 수).
-         * @details **이 개념의 유일한 출처다.** 프레임마다 따로 있어야 하는 자원 — DX12 커맨드
-         *          얼로케이터·업로드 슬롯, Vulkan 커맨드버퍼·펜스·상수버퍼 슬롯·디스크립터 셋,
-         *          에디터 draw 스냅샷 — 이 전부 이 값으로 크기를 잡는다.
-         *          예전엔 이 값과 `FrameResourceRing::kFrameCount` 두 상수가 각각 2/3 으로 따로
-         *          있었고 Vulkan 이 둘을 섞어 썼다(상수버퍼는 3슬롯, 커맨드버퍼는 2개) — 값이 작아서
-         *          우연히 맞았을 뿐이고, 한쪽만 올리면 디스크립터가 버퍼 밖을 가리켰다. 그래서 별칭도
-         *          두지 않는다 — 같은 개념에 이름이 둘이면 같은 사고가 다시 난다.
+         * @brief CPU 가 GPU 를 앞서갈 수 있는 최대 프레임 수(= 프레임별 리소스 링 슬롯 수)입니다.
+         * @details **이 개념의 유일한 출처입니다.** 프레임마다 따로 있어야 하는 자원(DX12 커맨드
+         *          얼로케이터 · 업로드 슬롯, Vulkan 커맨드 버퍼 · 펜스 · 상수버퍼 슬롯 · 디스크립터 셋,
+         *          에디터 draw 스냅샷)이 모두 이 값으로 크기를 잡습니다.
+         *          예전에는 이 값과 `FrameResourceRing::kFrameCount` 두 상수가 각각 2/3 으로 따로
+         *          있었고 Vulkan 이 둘을 섞어 썼습니다(상수버퍼는 3슬롯, 커맨드 버퍼는 2개). 값이 작아서
+         *          우연히 맞았을 뿐이고, 한쪽만 올리면 디스크립터가 버퍼 밖을 가리켰습니다. 그래서 별칭도
+         *          두지 않습니다. 같은 개념에 이름이 둘이면 같은 사고가 다시 납니다.
          */
         inline constexpr uint32 kMaxFrameCountInFlight = 3;
 
         /**
-         * @brief 프레임 하나에 찍을 수 있는 GPU 타임스탬프 칸 수.
-         * @details 패스 인덱스로 칸을 고정해 쓴다(패스당 begin/end 두 칸) — 4개 백엔드가 같은 값으로
-         *          쿼리 힙·풀·쿼리 배열 크기를 잡으므로 한쪽만 바꾸면 다른 쪽이 구간 밖을 읽는다.
-         *          32 칸 = 패스 16 개까지. 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 조용히 빠진다.
+         * @brief 프레임 하나에 찍을 수 있는 GPU 타임스탬프 칸 수입니다.
+         * @details 패스 인덱스로 칸을 고정해 씁니다(패스당 begin/end 두 칸). 네 백엔드가 같은 값으로
+         *          쿼리 힙 · 풀 · 쿼리 배열 크기를 잡으므로 한쪽만 바꾸면 다른 쪽이 구간 밖을 읽습니다.
+         *          32 칸은 begin/end 쌍 16 개인데, 렌더러가 뒤쪽 세 칸을 프레임 전체 · 컴퓨트 프리패스에 쓰므로 패스는
+         *          14 개까지입니다(`FrameRendererUtil`). 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 조용히 빠집니다.
          */
         inline constexpr uint32 kMaxGpuTimestampSlot = 32;
 
         /**
-         * @brief GPU 리소스 지연 해제 프레임 수 (RHIReleaseQueue 기본 frameLatency).
-         * @details 4개 RHI 백엔드(DX11/DX12/Vulkan/OpenGL)가 전부 같은 값을 써야 하는 계약 —
-         *          한쪽만 바꾸면 아직 GPU가 참조 중인 리소스를 조기 해제할 위험이 있다.
+         * @brief GPU 리소스 지연 해제 프레임 수입니다(RHIReleaseQueue 기본 frameLatency).
+         * @details 네 RHI 백엔드(DX11 · DX12 · Vulkan · OpenGL)가 모두 같은 값을 써야 하는 계약입니다.
+         *          한쪽만 바꾸면 아직 GPU 가 참조 중인 리소스를 일찍 해제할 위험이 있습니다.
          */
         inline constexpr uint32 kGpuReleaseFrameLatency = 3;
 
         /**
          * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
-         *        프레임 수 (RenderThread 패킷 링 깊이).
+         *        프레임 수입니다(RenderThread 패킷 링 깊이).
          * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
-         *          해제를 미뤄야 한다 (예: GpuScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
-         *          값인 kMaxFrameCountInFlight 와는 별개 개념 — 혼동하지 말 것.
+         *          해제를 미뤄야 합니다(예: GpuScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
+         *          값인 kMaxFrameCountInFlight 와는 별개 개념이니 혼동하지 말 것.
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;
     } // namespace constant
@@ -220,7 +221,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @struct RHISwapChainDesc
-     * @brief 윈도우 스왑체인 생성 설정
+     * @brief 창 스왑체인 생성 설정입니다.
      */
     REFLECT()
     struct RHISwapChainDesc
@@ -241,7 +242,7 @@ namespace sw
         PROPERTY()
         uint32 _bufferCount{ 2 }; ///< 프레임버퍼 개수 (Double/Triple Buffering)
 
-        /// @brief 백버퍼 컬러 포맷. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 한다.
+        /// @brief 백버퍼 컬러 포맷입니다. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 합니다.
         RHIFormat _format{ constant::kBackBufferFormat };
 
         PROPERTY()
@@ -253,10 +254,10 @@ namespace sw
 
     /**
      * @struct RHIViewport
-     * @brief 렌더링 뷰포트 영역 (DirectX 규약 — 전 백엔드 동일)
-     * @details 원점은 좌상단, 픽셀 +Y는 아래. 클립/NDC +Y는 위(Direct3D).
-     *          Vulkan은 내부에서 negative-height viewport로 변환하고,
-     *          OpenGL은 glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE)로 맞춘다.
+     * @brief 렌더링 뷰포트 영역입니다(DirectX 규약, 모든 백엔드 동일).
+     * @details 원점은 좌상단, 픽셀 +Y 는 아래. 클립 · NDC +Y 는 위(Direct3D)입니다.
+     *          Vulkan 은 안에서 negative-height 뷰포트로 바꾸고, OpenGL 은 glClipControl 로 맞춥니다
+     *          (오프스크린 FBO 는 GL_UPPER_LEFT, 기본 프레임버퍼는 GL_LOWER_LEFT, 둘 다 GL_ZERO_TO_ONE).
      */
     REFLECT()
     struct RHIViewport
@@ -283,7 +284,7 @@ namespace sw
 
     /**
      * @struct RHIDrawIndirectCommand
-     * @brief 간접 드로우 파라미터
+     * @brief 간접 드로우 인자입니다.
      */
     REFLECT()
     struct RHIDrawIndirectCommand
@@ -304,7 +305,7 @@ namespace sw
 
     /**
      * @struct RHIDispatchIndirectCommand
-     * @brief 간접 컴퓨트 디스패치 파라미터
+     * @brief 간접 컴퓨트 디스패치 인자입니다.
      */
     REFLECT()
     struct RHIDispatchIndirectCommand
@@ -320,10 +321,10 @@ namespace sw
         uint32 _threadGroupCountZ{ 1 }; ///< Z축 스레드 그룹 개수
     };
 
-    /** @brief 파이프라인 상태 객체(PSO) 64비트 핸들 */
+    /** @brief 파이프라인 상태 객체(PSO)의 64비트 핸들입니다. */
     using RHIPipelineStateHandle = uint64;
 
-    /** @brief 렌더 패스 객체 64비트 핸들 */
+    /** @brief 렌더 패스 객체의 64비트 핸들입니다. */
     using RHIRenderPassHandle = uint64;
 
     // ------------------------------------------------------------------------------
@@ -331,7 +332,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @enum RHIBufferUsage
-     * @brief 범용 GPU 버퍼 usage 플래그 (createBuffer)
+     * @brief 범용 GPU 버퍼의 용도 플래그입니다(createBuffer).
      */
     ENUM( Flags )
     enum class RHIBufferUsage : uint8
@@ -349,7 +350,7 @@ namespace sw
 
     /**
      * @enum RHIBufferState
-     * @brief transitionBuffer 배리어용 논리 버퍼 상태
+     * @brief transitionBuffer 배리어용 논리 버퍼 상태입니다.
      */
     enum class RHIBufferState : uint32
     {
@@ -364,9 +365,9 @@ namespace sw
 
     /**
      * @struct RHIBufferCopyRegion
-     * @brief 버퍼 부분 갱신의 한 조각 — 원본 블롭 안의 위치와 목적 버퍼 안의 위치, 그리고 크기.
-     * @details 여러 조각을 **한 번의 호출**로 넘기기 위한 것이다. 조각마다 따로 부르면 백엔드가
-     *          스테이징 확보와 큐 제출을 그만큼 되풀이한다 (DX12 에서 호출당 ~3.3 us 였다).
+     * @brief 버퍼 부분 갱신의 한 조각입니다. 원본 블롭 안의 위치, 목적 버퍼 안의 위치, 그리고 크기입니다.
+     * @details 여러 조각을 **한 번의 호출**로 넘기기 위한 것입니다. 조각마다 따로 부르면 백엔드가
+     *          스테이징 확보와 큐 제출을 그만큼 되풀이합니다(DX12 에서 호출당 ~3.3 us 였습니다).
      */
     struct RHIBufferCopyRegion
     {
@@ -377,12 +378,12 @@ namespace sw
 
     /**
      * @struct RHIBufferDesc
-     * @brief 범용 버퍼 생성 서술체
+     * @brief 범용 버퍼 생성 서술체입니다.
      */
     struct RHIBufferDesc
     {
         uint32         _sizeBytes{ 0 };
-        uint32         _elementSize{ 0 }; ///< Structured stride. raw/바이트 버퍼는 0
+        uint32         _elementSize{ 0 }; ///< 구조버퍼 stride. raw · 바이트 버퍼는 0
         uint32         _elementCount{ 0 };
         RHIBufferUsage _usage        = RHIBufferUsage::None;
         const void*    _pInitialData = nullptr;
@@ -390,7 +391,7 @@ namespace sw
 
     /**
      * @struct RHIDrawIndexedIndirectCommand
-     * @brief 인덱스 인디렉트 드로우 인자 (D3D12/Vulkan 레이아웃과 동일)
+     * @brief 인덱스 버퍼를 쓰는 간접 드로우 인자입니다(D3D12 · Vulkan 레이아웃과 같습니다).
      */
     struct RHIDrawIndexedIndirectCommand
     {
@@ -406,7 +407,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @enum RHIBlendMode
-     * @brief 머티리얼/패스 블렌드 분류
+     * @brief 머티리얼 · 패스의 블렌드 분류입니다.
      */
     enum class RHIBlendMode : uint8
     {
@@ -416,7 +417,7 @@ namespace sw
 
     /**
      * @enum RHIPrimitiveTopology
-     * @brief 도형 출력 위상
+     * @brief 도형 위상입니다.
      */
     enum class RHIPrimitiveTopology
     {
@@ -427,7 +428,7 @@ namespace sw
 
     /**
      * @enum RHIFillMode
-     * @brief 래스터라이저 와이어프레임 / 솔리드
+     * @brief 래스터라이저 채우기 방식(솔리드 · 와이어프레임)입니다.
      */
     enum class RHIFillMode
     {
@@ -437,7 +438,7 @@ namespace sw
 
     /**
      * @enum RHICullMode
-     * @brief 페이스 컬링
+     * @brief 면 컬링 방식입니다.
      */
     enum class RHICullMode
     {
@@ -448,7 +449,7 @@ namespace sw
 
     /**
      * @enum RHIRenderPassLoadOp
-     * @brief 렌더 패스 시작 시 프레임버퍼 로드
+     * @brief 렌더 패스를 시작할 때 첨부를 어떻게 읽을지입니다.
      */
     enum class RHIRenderPassLoadOp
     {
@@ -459,7 +460,7 @@ namespace sw
 
     /**
      * @enum RHIRenderPassStoreOp
-     * @brief 렌더 패스 완료 시 프레임버퍼 저장
+     * @brief 렌더 패스를 마칠 때 첨부를 어떻게 저장할지입니다.
      */
     enum class RHIRenderPassStoreOp
     {
@@ -467,22 +468,22 @@ namespace sw
         DontCare ///< 결과 보존 안 함
     };
 
-    /** @brief beginRenderPass / PSO에서 동시 컬러 RT 최대 개수 (MRT). */
+    /** @brief beginRenderPass · PSO 가 동시에 걸 수 있는 컬러 RT 최대 개수입니다(MRT). */
     inline constexpr uint32 kMaxColorAttachments = 4;
 
     namespace constant
     {
         /**
-         * @brief setComputeRootConstants가 4개 백엔드 모두에서 안전하게 쓸 수 있는 최대 dword 수.
-         * @details DX11=64(D3D11RHIDevice.h)/OpenGL=64(OpenGLRHIDevice.h)는 UBO 로 에뮬한다. DX12/Vulkan 은
-         *          루트/푸시 상수 16 dword 다(bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 가장 작은 값을 공통 안전값으로 둔다.
+         * @brief setComputeRootConstants 가 네 백엔드 모두에서 안전하게 쓸 수 있는 최대 dword 수입니다.
+         * @details DX11=64(D3D11RHIDevice.h) · OpenGL=64(OpenGLRHIDevice.h)는 UBO 로 흉내 냅니다. DX12 · Vulkan 은
+         *          루트 · 푸시 상수 16 dword 입니다(bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 가장 작은 값을 공통 안전값으로 둡니다.
          */
         inline constexpr uint32 kMinComputeRootConstantDwords = 16;
     } // namespace constant
 
     /**
      * @struct RHIPipelineStateDesc
-     * @brief Graphics & Compute 파이프라인 상태 생성 서술체
+     * @brief 그래픽스 · 컴퓨트 파이프라인 상태 생성 서술체입니다.
      */
     struct SW_API RHIPipelineStateDesc
     {
@@ -493,7 +494,7 @@ namespace sw
         string _computeShaderPath; ///< 컴퓨트 셰이더 소스 경로
         string _computeEntryPoint; ///< 컴퓨트 셰이더 진입점
 
-        vector<string> _listShaderDefine; ///< 컴파일 매크로 ("NAME" 또는 "NAME=VALUE") — 셰이더 permutation
+        vector<string> _listShaderDefine; ///< 컴파일 매크로("NAME" 또는 "NAME=VALUE"). 셰이더 퍼뮤테이션
 
         RHIPrimitiveTopology   _topology;                           ///< 프리미티브 위상
         RHIFillMode            _fillMode;                           ///< 채우기 모드
@@ -506,16 +507,16 @@ namespace sw
         uint8                  _bEnableBlend      : 1; ///< 알파 블렌딩 (SrcAlpha/InvSrcAlpha)
         [[maybe_unused]] uint8 _reservedFlags     : 5;
 
-        /** @brief 기본 토폴로지/컬링/깊이 플래그. */
+        /** @brief 기본 토폴로지 · 컬링 · 깊이 플래그로 만듭니다. */
         RHIPipelineStateDesc() noexcept;
     };
 
-    /** @brief 기본 렌더 타깃 초기화 색상 (RGBA) */
+    /** @brief 렌더 타깃 기본 클리어 색(RGBA)입니다. */
     inline constexpr float4 kDefaultClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
 
     /**
      * @struct RHIRenderPassAttachment
-     * @brief 렌더 패스 색상/깊이 어태치먼트
+     * @brief 렌더 패스의 컬러 · 깊이 어태치먼트입니다.
      */
     struct RHIRenderPassAttachment
     {
@@ -527,7 +528,7 @@ namespace sw
 
     /**
      * @struct RHIRenderPassDesc
-     * @brief 렌더 패스 생성 정보
+     * @brief 렌더 패스 생성 정보입니다.
      */
     struct SW_API RHIRenderPassDesc
     {
@@ -538,13 +539,13 @@ namespace sw
         [[maybe_unused]] uint8          _reservedFlags    : 7;
         uint8                           _arrReserved[2]; ///< 8바이트 정렬 패딩 (2 bytes)
 
-        /** @brief 깊이 클리어 기본값. */
+        /** @brief 깊이 클리어 기본값으로 만듭니다. */
         RHIRenderPassDesc() noexcept;
     };
 
     /**
      * @struct RHITextureDesc
-     * @brief 텍스처 생성 서술체
+     * @brief 텍스처 생성 서술체입니다.
      */
     struct SW_API RHITextureDesc
     {
@@ -553,13 +554,13 @@ namespace sw
         uint32 _height;     ///< 높이 (4 bytes)
         uint32 _depth;      ///< 깊이 (4 bytes)
         /**
-         * @brief 밉 레벨 수 (4 bytes). **1 이상을 주십시오 — 0 은 백엔드마다 뜻이 다릅니다.**
+         * @brief 밉 레벨 수 (4 bytes)입니다. **1 이상을 주십시오. 0 은 백엔드마다 뜻이 다릅니다.**
          * @details 바로 아래 `RHITextureUploadDesc::_mipLevels` 는 0 을 "텍스처가 가진 밉 전부" 로
-         *          정의하지만 **이쪽은 그런 약속이 없다.** D3D11 은 0 을 "전체 밉 체인을 만들어라"
-         *          로 읽고, GL 은 `mipLevels > 0 ? mipLevels : 1` 로 접어 **1단계만** 만든다 —
-         *          같은 값이 백엔드마다 다른 텍스처를 낳는다. 기본 생성자가 1 을 넣고 호출부도
-         *          전부 1 이상을 주므로 지금은 닿지 않지만, 두 필드의 이름이 같아서 한쪽 규약을
-         *          다른 쪽에 옮겨 적기 쉽다.
+         *          정의하지만 **이쪽은 그런 약속이 없습니다.** D3D11 은 0 을 "전체 밉 체인을 만들어라"
+         *          로 읽고, GL 은 `mipLevels > 0 ? mipLevels : 1` 로 접어 **1단계만** 만듭니다.
+         *          같은 값이 백엔드마다 다른 텍스처를 낳습니다. 기본 생성자가 1 을 넣고 부르는 쪽도
+         *          모두 1 이상을 주므로 지금은 닿지 않지만, 두 필드의 이름이 같아서 한쪽 규약을
+         *          다른 쪽에 옮겨 적기 쉽습니다.
          */
         uint32                 _mipLevels;
         RHIFormat              _format;                 ///< 텍스처 포맷 (4 bytes)
@@ -572,15 +573,15 @@ namespace sw
         [[maybe_unused]] uint8 _reservedFlags      : 4;
         uint8                  _arrReserved[2]; ///< 4바이트 정렬 패딩 (2 bytes)
 
-        /** @brief 기본 크기/포맷/클리어. */
+        /** @brief 기본 크기 · 포맷 · 클리어로 만듭니다. */
         RHITextureDesc() noexcept;
     };
 
     /**
      * @struct RHITextureUploadDesc
-     * @brief IRHIResource::uploadTexture2D 입력 — 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록
-     * @details DDS 파일의 픽셀 배치 그대로다(DdsImageData::_bytes 를 그대로 넘길 수 있다). 행 패딩은
-     *          백엔드가 필요하면 스스로 맞춘다(DX12 는 256 정렬 풋프린트로 다시 배치, GL 은 UNPACK_ALIGNMENT 1).
+     * @brief IRHIResource::uploadTexture2D 입력입니다. 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록입니다.
+     * @details DDS 파일의 픽셀 배치 그대로입니다(DdsImageData::_bytes 를 그대로 넘길 수 있습니다). 행 패딩은
+     *          백엔드가 필요하면 스스로 맞춥니다(DX12 는 256 정렬 풋프린트로 다시 배치, GL 은 UNPACK_ALIGNMENT 1).
      */
     struct SW_API RHITextureUploadDesc
     {
@@ -588,13 +589,13 @@ namespace sw
         uint32      _sizeBytes; ///< _pData 전체 길이 (4 bytes)
         uint32      _mipLevels; ///< 올릴 밉 수. 0 이면 텍스처가 가진 밉 전부 (4 bytes)
 
-        /** @brief 빈 업로드(데이터 없음, 밉 전부). */
+        /** @brief 빈 업로드(데이터 없음, 밉 전부)로 만듭니다. */
         RHITextureUploadDesc() noexcept;
     };
 
     /**
      * @struct RHITextureMipSpan
-     * @brief resolveTextureUploadMips 가 풀어낸 밉 하나의 위치와 크기
+     * @brief resolveTextureUploadMips 가 풀어낸 밉 하나의 위치와 크기입니다.
      */
     struct RHITextureMipSpan
     {
@@ -609,7 +610,7 @@ namespace sw
 
     /**
      * @struct RHIFormatBlockInfo
-     * @brief 포맷의 저장 단위 — 비압축은 1x1 블록에 픽셀 바이트, BC 는 4x4 블록에 8/16 바이트
+     * @brief 포맷의 저장 단위입니다. 비압축은 1x1 블록에 픽셀 바이트, BC 는 4x4 블록에 8 · 16 바이트입니다.
      */
     struct RHIFormatBlockInfo
     {
@@ -618,7 +619,7 @@ namespace sw
         uint32 _blockBytes{ 0 }; ///< 0 = 업로드·읽기 대상이 아님(깊이/Unknown)
     };
 
-    /** @brief 포맷의 블록 정보. 4개 백엔드가 밉 크기·행 바이트를 같은 규칙으로 계산하는 유일한 출처다. */
+    /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기 · 행 바이트를 같은 규칙으로 계산하는 유일한 출처입니다. */
     inline constexpr RHIFormatBlockInfo getRhiFormatBlockInfo( RHIFormat format )
     {
         switch ( format )
@@ -647,13 +648,13 @@ namespace sw
         }
     }
 
-    /** @brief 블록 압축 포맷인가. */
+    /** @brief 블록 압축 포맷인지 확인합니다. */
     inline constexpr bool isRhiFormatBlockCompressed( RHIFormat format )
     {
         return getRhiFormatBlockInfo( format )._blockWidth > 1;
     }
 
-    /** @brief 비압축 컬러 포맷의 픽셀당 바이트. 압축/깊이/Unknown 은 0. */
+    /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축 · 깊이 · Unknown 은 0 입니다. */
     inline constexpr uint32 getRhiFormatBytesPerPixel( RHIFormat format )
     {
         const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
@@ -661,8 +662,8 @@ namespace sw
     }
 
     /**
-     * @brief 텍스처 밉 하나의 크기와 행 바이트를 계산합니다 — 업로드(빈틈없는 행)와 읽기(readback)가 같은 배치를 쓴다.
-     * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지한다.
+     * @brief 텍스처 밉 하나의 크기와 행 바이트를 계산합니다. 업로드(빈틈없는 행)와 읽기(readback)가 같은 배치를 씁니다.
+     * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지합니다.
      * @return 포맷이 대상이 아니거나 크기가 0 이면 false.
      */
     inline bool computeRhiTextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
@@ -685,7 +686,7 @@ namespace sw
     }
 
     /**
-     * @brief 업로드 서술체를 밉 배열로 풉니다. 4개 백엔드가 같은 규칙으로 밉 크기·오프셋을 계산해야 하므로 여기 한 곳에 둔다.
+     * @brief 업로드 서술체를 밉 배열로 풉니다. 네 백엔드가 같은 규칙으로 밉 크기 · 오프셋을 계산해야 하므로 여기 한 곳에 둡니다.
      * @return 채운 밉 수. 포맷이 업로드 불가이거나, 요청 밉이 텍스처 밉보다 많거나, 데이터가 모자라면 0.
      */
     inline uint32 resolveTextureUploadMips( const RHITextureUploadDesc& desc, RHIFormat format, uint32 width, uint32 height,
@@ -716,7 +717,7 @@ namespace sw
 
     /**
      * @struct RHIRenderPassBeginInfo
-     * @brief 렌더 패스 바인딩 및 시작 인자
+     * @brief 렌더 패스를 바인딩하고 시작하는 인자입니다.
      */
     struct SW_API RHIRenderPassBeginInfo
     {
@@ -734,10 +735,10 @@ namespace sw
         [[maybe_unused]] uint8 _reservedFlags : 7;
         uint8                  _arrReserved[3]; ///< 8바이트 정렬 패딩 (3 bytes)
 
-        /** @brief 스왑체인 RT0, Load 클리어 기본값. */
+        /** @brief 기본값(렌더 패스 0, 컬러 타깃 0 개, 로드 동작 Clear, 깊이 클리어 1.0)으로 만듭니다. */
         RHIRenderPassBeginInfo() noexcept;
 
-        /** @brief 단일 RT 설정 헬퍼 */
+        /** @brief 렌더 타깃 하나를 설정하는 도우미입니다. */
         void setColorTarget( RHITextureHandle target, const float4& clearColor = kDefaultClearColor, RHIRenderPassLoadOp loadOp = RHIRenderPassLoadOp::Clear );
     };
 

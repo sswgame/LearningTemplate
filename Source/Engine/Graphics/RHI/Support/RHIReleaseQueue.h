@@ -1,6 +1,6 @@
 /**
  * @file RHIReleaseQueue.h
- * @brief GPU 지연 해제 큐
+ * @brief GPU 지연 해제 큐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
-// 프레임 상수(kGpuReleaseFrameLatency)는 EngineDefines 가 아니라 RHITypes 의 constant 블록에 있다 —
+// 프레임 상수(kGpuReleaseFrameLatency)는 EngineDefines 가 아니라 RHITypes 의 constant 블록에 있다.
 // 백엔드 간 계약 상수와 같은 자리에 모아 두기 때문이다(EngineDefines.h 의 주석 참고).
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class RHIReleaseQueue
-     * @brief frameLatency 프레임 뒤에 GPU 리소스 해제 콜백을 실행합니다
+     * @brief GPU 리소스 해제 콜백을 frameLatency 프레임 뒤, 또는 GPU 펜스가 지난 뒤에 실행합니다.
      */
     class SW_API RHIReleaseQueue
     {
@@ -71,7 +71,7 @@ namespace sw
 
         vector<FrameDeferredEntry> _listFrameEntry;
         vector<GpuDeferredEntry>   _listGpuEntry;
-        /// @brief tick 이 완료된 콜백을 옮겨 담는 자리 — 잠금 밖에서 부르려고 옮긴다. 프레임마다 다시 채워 용량이 남는다.
+        /// @brief tick 이 완료된 콜백을 옮겨 담는 자리입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
         vector<RHIResourceReleaseDelegate> _listReadyScratch;
         mutable SpinLock                   _spinLock;
         uint64                             _currentFrame;

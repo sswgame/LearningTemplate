@@ -1,7 +1,7 @@
 /**
  * @file FrameResourceRing.h
- * @brief N-버퍼 프레임 리소스 / 업로드 오프셋 헬퍼 (DX12는 프레임 리소스로, Vulkan은 상수 버퍼
- *        슬롯 크기 계산에도 constant::kMaxFrameCountInFlight를 씁니다)
+ * @brief N-버퍼 프레임 리소스와 업로드 오프셋 도우미입니다(DX12 는 프레임 리소스로 쓰고, Vulkan 은 상수 버퍼
+ *        슬롯 크기 계산에도 constant::kMaxFrameCountInFlight 를 씁니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,8 +13,8 @@ namespace sw
 {
     /**
      * @class FrameResourceRing
-     * @brief 프레임별 펜스 값과 선형 업로드 bump allocator (N = constant::kMaxFrameCountInFlight)
-     * @details GPU 버퍼는 소유하지 않습니다 — 업로드 힙과 짝을 이루고 매 프레임 오프셋을 진행합니다.
+     * @brief 프레임별 펜스 값과 선형 업로드 bump 할당기입니다(N = constant::kMaxFrameCountInFlight).
+     * @details GPU 버퍼는 소유하지 않습니다. 업로드 힙과 짝을 이루고 매 프레임 오프셋을 진행합니다.
      */
     class SW_API FrameResourceRing
     {
@@ -22,9 +22,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 수명 — 업로드 용량, reset
         // ------------------------------------------------------------------------------
-        /** @brief 용량 0인 링. */
+        /** @brief 용량 0 인 링으로 만듭니다. */
         FrameResourceRing();
-        /** @brief 업로드 용량을 지정한 링. */
+        /** @brief 업로드 용량을 정해 만듭니다. */
         explicit FrameResourceRing( uint64 uploadCapacityBytes );
 
         /** @brief 업로드 용량을 다시 잡고 슬롯을 초기화합니다. */
@@ -34,12 +34,12 @@ namespace sw
         // 2) 프레임 진행 — 펜스가 슬롯을 덮으면 다음 슬롯, 업로드 오프셋 리셋
         // ------------------------------------------------------------------------------
         /**
-         * @brief @p completedFenceValue가 슬롯 펜스를 덮으면 다음 링 슬롯으로 진행합니다.
+         * @brief @p completedFenceValue 가 슬롯 펜스를 덮으면 다음 링 슬롯으로 진행합니다.
          * @return 슬롯이 준비되어 링이 진행되고 업로드 오프셋이 리셋되면 true.
          */
         bool beginFrame( uint64 completedFenceValue );
 
-        /** @brief 강제 진행 (호출자가 GPU 완료를 보장). 업로드 오프셋을 리셋합니다. */
+        /** @brief 강제로 진행합니다(GPU 완료는 부르는 쪽이 보장합니다). 업로드 오프셋을 리셋합니다. */
         void advanceFrame();
 
         // ------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ namespace sw
          */
         bool tryAllocate( uint64 sizeBytes, uint64 alignment, uint64& outOffset );
 
-        /** @brief 현재 슬롯의 업로드 오프셋을 0으로 되돌립니다. */
+        /** @brief 현재 슬롯의 업로드 오프셋을 0 으로 되돌립니다. */
         void resetUploadOffset();
 
     private:

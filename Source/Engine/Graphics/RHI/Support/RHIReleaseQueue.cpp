@@ -42,7 +42,7 @@ namespace sw
 
     void RHIReleaseQueue::tickFrame()
     {
-        // 스크래치를 빌려 쓴다 — 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하게, 잠깐 꺼내 두고 끝나면 돌려놓는다.
+        // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         vector<RHIResourceReleaseDelegate> listReady;
         listReady.swap( _listReadyScratch );
         {
@@ -73,7 +73,7 @@ namespace sw
 
     void RHIReleaseQueue::tickCompleted( uint64 completedFence )
     {
-        // 스크래치를 빌려 쓴다 — 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하게, 잠깐 꺼내 두고 끝나면 돌려놓는다.
+        // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         vector<RHIResourceReleaseDelegate> listReady;
         listReady.swap( _listReadyScratch );
         {

@@ -82,7 +82,7 @@ namespace sw
         if ( pList == nullptr )
             return;
 
-        // 이 리스트가 방금 올린 버퍼를 읽을 수 있다 — 열어 둔 업로드 복사를 먼저 내보낸다.
+        // 이 리스트가 방금 올린 버퍼를 읽을 수 있다. 열어 둔 업로드 복사를 먼저 내보낸다.
         {
             std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
@@ -101,14 +101,14 @@ namespace sw
         if ( pList == nullptr )
             return;
 
-        // 예전엔 여기서 곧바로 ExecuteCommandLists 를 불렀다. 그러면 프레임 스트림(디바이스가
+        // 예전에는 여기서 곧바로 ExecuteCommandLists 를 불렀다. 그러면 프레임 스트림(디바이스가
         // 소유한 리스트)은 endFrame 에서 한 번에 제출되므로, 그래프보다 **먼저** 기록한 것까지
-        // 그래프 뒤에 실행됐다 — 오프스크린 경로의 게임 RT 클리어가 대표적이다.
+        // 그래프 뒤에 실행됐다. 오프스크린 경로의 게임 RT 클리어가 대표적이다.
         // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
         // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
         //
         // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(웨이브 배리어가 패스 리스트로 옮겨간 뒤
-        // 웨이브 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다 — 그 조각은 뒤에 기록될
+        // 웨이브 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다. 그 조각은 뒤에 기록될
         // 것만 담으므로 뒤에 제출돼도 순서가 맞다. 잘라 내보내면 큐에 빈 리스트가 나가고 제출이 리스트당 ~7 us 다.
         const bool bSegmentEmpty = ( _frameStreamState._bRecordedAny == SW_FALSE );
         if ( bSegmentEmpty )
@@ -131,10 +131,10 @@ namespace sw
         _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
 
-        // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다 — 제출 시점만 앞당긴다.
+        // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다. 제출 시점만 앞당긴다.
         if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
         {
-            // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다 — 앞에 끼운다.
+            // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다.
             {
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
@@ -184,7 +184,7 @@ namespace sw
             }
             else
             {
-                // 프레임 리스트 앞에 — 큐 순서가 실행 순서다.
+                // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
                 _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
             }
         }
@@ -294,7 +294,7 @@ namespace sw
 
     D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
     {
-        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
         // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
         D3D12CommandListEntry entry;
         {
@@ -312,7 +312,7 @@ namespace sw
         if ( _device == nullptr )
             return entry;
 
-        // 예전엔 HRESULT 를 버리고 빈 엔트리만 돌려줬다. 호출부는 "생성 실패" 한 줄만 남기므로
+        // 예전에는 HRESULT 를 버리고 빈 엔트리만 반환했다. 부르는 쪽은 "생성 실패" 한 줄만 남기므로
         // 원인(메모리 부족인지 디바이스 제거인지)을 알 방법이 없었다.
         const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
         if ( FAILED( allocHr ) )
@@ -354,7 +354,7 @@ namespace sw
             return;
 
         // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 얼로케이터의 커맨드 메모리를 읽고 있다.
-        // 해제 큐에 실어 현재 펜스가 통과한 뒤에야 재사용 풀로 돌려보낸다 — 그래야 다음 사용자가
+        // 해제 큐에 실어 현재 펜스가 통과한 뒤에야 재사용 풀로 돌려보낸다. 그래야 다음 사용자가
         // Reset 해도 안전하다.
         auto recycleCb = [this, entry]()
         {
@@ -392,7 +392,7 @@ namespace sw
         if ( FAILED( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ) ) )
             return;
 
-        // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다 — 슬롯마다 구간이 겹치지 않는다.
+        // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다. 슬롯마다 구간이 겹치지 않는다.
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_READBACK;
         D3D12_RESOURCE_DESC bufferDesc{};
@@ -415,7 +415,7 @@ namespace sw
 
     void D3D12RHIDevice::collectTimestampsForSlot()
     {
-        // 이 슬롯은 방금 펜스를 통과했다 — 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
+        // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
         _listTimestampMicro.clear();
         const uint32 writtenMask = _arrTimestampMask[_frameRing.currentIndex()];
         if ( _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0 )
@@ -429,10 +429,10 @@ namespace sw
         if ( FAILED( _timestampReadback->Map( 0, &range, &pMapped ) ) || pMapped == nullptr )
             return;
 
-        // DX12 는 쿼리 힙을 리셋하지 않는다 — 안 적은 칸엔 **지난 사이클의 값**이 그대로 남는다.
+        // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
-        // 그래서 writtenMask 가 곧 준비 비트다 — 이 슬롯은 방금 펜스를 통과했다.
+        // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
         RHIGpuTimestamp::resolveMicro( pTicks, writtenMask, 1000000.0 / static_cast<float64>( _timestampFrequency ), _listTimestampMicro );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
@@ -444,26 +444,26 @@ namespace sw
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
-            // **여기가 타임스탬프를 읽는 유일한 안전한 자리다** — 이 슬롯의 펜스를 방금 통과했으므로
+            // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했으므로
             // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
             ensureTimestampResources();
             collectTimestampsForSlot();
             _timestampWrittenMask.store( 0, std::memory_order_relaxed );
-            // 링 슬롯이 정해졌다 — 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
+            // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
             refreshConstantBufferViews();
-            // 프레임 스트림은 세그먼트로 나뉜다 — 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
+            // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
             // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
             _listPendingSubmit.clear();
             ID3D12CommandAllocator* pAllocator = currentAllocator();
             if ( pAllocator == nullptr || _commandList == nullptr )
                 return;
-            // 디바이스가 제거된 상태에서는 Reset()이 실패해 커맨드 리스트가 여전히 closed로 남는다.
-            // 그걸 무시하고 _bRecording=1로 넘어가면 이후의 모든 커맨드리스트 호출이 "closed command
-            // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다 — 실패 시 이번 프레임을 스킵한다.
+            // 디바이스가 제거된 상태에서는 Reset() 이 실패해 커맨드 리스트가 여전히 closed 로 남는다.
+            // 그것을 무시하고 _bRecording=1 로 넘어가면 이후의 모든 커맨드 리스트 호출이 "closed command
+            // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
             if ( FAILED( pAllocator->Reset() ) || FAILED( _commandList->Reset( pAllocator, nullptr ) ) )
                 return;
             _frameStreamState._bRecording      = SW_TRUE;
-            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트 — 슬롯 테이블은 첫 드로우가 다시 굳힌다
+            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
             _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
             _pActiveFrameList                  = _commandList.Get();
             _frameStreamContext->rebindCommandList( _pActiveFrameList );
@@ -471,15 +471,15 @@ namespace sw
         }
         _swapChain.acquireNextImage();
 
-        // resize()가 ResizeBuffers 실패로 조기 반환하면 백버퍼가 비워진 채로 남는다 — 그 상태로
+        // resize() 가 ResizeBuffers 실패로 일찍 반환하면 백버퍼가 비워진 채로 남는다. 그 상태로
         // 계속 진행하면 null 리소스가 배리어에 들어간다. 디바이스가 이미 맛이 간 프레임이므로
         // 이번 프레임은 조용히 건너뛴다.
         if ( _swapChain.isBackBufferReady() == false )
             return;
 
-        // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다 —
+        // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다.
         // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 배리어까지
-        // 포함해 명시적으로 한다 (docs/05_RHI_FrameContract.md S2). 뷰포트/시저는 기본값으로 남긴다.
+        // 포함해 명시적으로 한다(docs/05_RHI_FrameContract.md S2). 뷰포트/시저는 기본값으로 남긴다.
         (void)clearColor;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
@@ -505,15 +505,15 @@ namespace sw
         if ( bPresent )
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
-        // Present 의 300 us 가 어디로 가는지 — 닫기·제출 / DXGI Present / 펜스 신호·다음 이미지 로 나눠 잰다.
+        // Present 의 300 us 가 어디로 가는지 재려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 잰다.
         {
             SW_PROFILE_SCOPE( "RT.Present.submit" );
             static const uint32 s_slotSubmitListCount = engine::getFrameProfiler().registerScope( "RT.Present.submit.listCount" );
             if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
             {
                 SW_PROFILE_SCOPE( "RT.Present.submit.close" );
-                // 구간 전체를 읽기 버퍼로 옮긴다 — 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
-                // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸엔 지난 사이클 값이 남아 있다).
+                // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
+                // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
                 const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
                 _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
@@ -530,7 +530,7 @@ namespace sw
                 releaseOnlineBlocksDeferred( _frameStreamState );
             }
 
-            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼운다 — 프레임에 한 번의 제출.
+            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼운다. 프레임에 한 번의 제출이다.
             {
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
@@ -565,11 +565,11 @@ namespace sw
             if ( FAILED( presentHr ) )
             {
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
-                // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다 —
-                // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 스킵해 로그 폭주를 막는다.
+                // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
+                // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
                 if ( _bDeviceRemovedLogged == 0 )
                 {
-                    // %# 는 10진 출력 — DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
+                    // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
                     SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
                                   static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
                 }

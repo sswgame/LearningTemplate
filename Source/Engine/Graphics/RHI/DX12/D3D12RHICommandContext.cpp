@@ -62,10 +62,10 @@ namespace sw
         pAllocator->Reset();
         commandListForRecord()->Reset( pAllocator, nullptr );
         _pState->_bRecording             = SW_TRUE;
-        _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
-        _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트엔 슬롯 테이블도 없다 — 첫 드로우가 다시 굳힌다.
+        _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트에는 아직 아무 PSO 도 안 걸렸다. 캐시를 무효로 한다.
+        _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트에는 슬롯 테이블도 없다. 첫 드로우가 다시 굳힌다.
         _pState->_arrSlotState[1]        = D3D12SlotTableState{};
-        // 힙·루트 시그니처·텍스처 배열 테이블은 리스트가 열릴 때 한 번 — 이후 bind*() 는 루트 디스크립터(GPU 주소)만 쓴다.
+        // 힙 · 루트 시그니처 · 텍스처 배열 테이블은 리스트가 열릴 때 한 번 건다. 이후 bind*() 는 루트 CBV(상수버퍼)와 슬롯 테이블(t · u)만 바꾼다.
         _pDevice->bindBindlessRootState( _pCmdList );
     }
 
@@ -74,10 +74,10 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return 0;
 
-        // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다** — 등록/해제는 전부 그래프 셋업에서
+        // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다.** 등록/해제는 모두 그래프 셋업에서
         // 끝내고, 그 규칙은 assertRegistryMutableNow 가 디버그에서 감시한다
         // (IRHIDevice::setParallelRecording 참고). 드로우마다 도는 경로라 락을 거는 대신 애초에
-        // 공유하지 않는 쪽을 택했다. const 참조로 받는 것도 중요하다 — 비-const 접근은 "쓰기" 로 취급된다.
+        // 공유하지 않는 쪽을 택했다. const 참조로 받는 것도 중요하다. 비-const 접근은 "쓰기" 로 취급된다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -89,7 +89,7 @@ namespace sw
         D3D12_GPU_VIRTUAL_ADDRESS address = rec._resource->GetGPUVirtualAddress();
         if ( bConstantBuffer )
         {
-            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다 —
+            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다.
             // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
             const auto sizeIt = _pDevice->_mapCbAlignedSize.find( rec._buffer );
             if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
@@ -102,7 +102,7 @@ namespace sw
     {
         if ( index == kInvalidDescriptorIndex )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        // resolveBufferAddress 와 같은 이유로 락이 없다 — 레지스트리는 기록 중 불변이다.
+        // resolveBufferAddress 와 같은 이유로 락이 없다. 레지스트리는 기록 중 불변이다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -138,7 +138,7 @@ namespace sw
         if ( allocateOnlineDescriptors( count, base ) == false )
             return false;
 
-        // 원본은 슬롯마다 흩어져 있고(오프라인 힙 여기저기) 목적지는 연속 구간 하나다 — CopyDescriptors 의 N:1 형태.
+        // 원본은 슬롯마다 흩어져 있고(오프라인 힙 여기저기) 목적지는 연속 구간 하나다. CopyDescriptors 의 N:1 형태다.
         D3D12_CPU_DESCRIPTOR_HANDLE arrSrc[D3D12RHIDevice::kMaxSlotTableSize]{};
         UINT                        arrSrcSize[D3D12RHIDevice::kMaxSlotTableSize]{};
         for ( uint32 slot = 0; slot < count; ++slot )
@@ -171,7 +171,7 @@ namespace sw
                 state._bSrvDirty = SW_FALSE;
             }
         }
-        // u 테이블은 컴퓨트만 쓴다 — 그래픽스 스테이지엔 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
+        // u 테이블은 컴퓨트만 쓴다. 그래픽스 스테이지에는 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
         if ( bCompute && state._bUavDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
@@ -204,7 +204,7 @@ namespace sw
         else
             bindFullscreenVertexBuffer();
 
-        // 슬롯 1 — 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린·픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
+        // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
         if ( _pState->_boundInstanceSlotVb != 0 )
         {
             ID3D12Resource* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
@@ -252,7 +252,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
-        // 상태 확인과 배리어 기록이 한 덩어리여야 한다 — RenderGraph::executeParallel 이 같은 웨이브의
+        // 상태 확인과 배리어 기록이 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 웨이브의
         // 패스 콜백을 여러 스레드에서 돌리는데, 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를
         // 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
         std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -316,9 +316,9 @@ namespace sw
             dstStateBefore = dstIt->second._state;
         }
 
-        // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 예전엔 검증 없이 발행해서, 포맷이나
+        // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 예전에는 검증 없이 발행해서, 포맷이나
         // 해상도가 다른 조합(예: R16G16B16A16_FLOAT 트랜지언트 → R8G8B8A8 백버퍼, 1280 → 320)에서
-        // 그대로 정의되지 않은 동작이 됐다 — 검증 레이어는 오류를 내고 드라이버는
+        // 그대로 정의되지 않은 동작이 됐다. 검증 레이어는 오류를 내고 드라이버는
         // DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
         {
             const D3D12_RESOURCE_DESC srcDesc = pSrcRes->GetDesc();
@@ -338,7 +338,7 @@ namespace sw
             }
         }
 
-        // 스왑체인 백버퍼의 상태는 스왑체인 객체만 바꾼다 — 여기서 배리어를 따로 쏘고 상태를 직접
+        // 스왑체인 백버퍼의 상태는 스왑체인 객체만 바꾼다. 여기서 배리어를 따로 쏘고 상태를 직접
         // 대입하면 그 두 벌이 어긋날 수 있다. 오프스크린만 자기 레코드를 갱신한다.
         auto transitionDst = [&]( D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter )
         {
@@ -410,7 +410,7 @@ namespace sw
     {
         if ( _pCmdList == nullptr || texture == 0 )
             return;
-        // COMMON 은 SRV 로만 암묵 승격된다 — UAV 는 명시 전이가 필요하다 (readback 이 레코드 상태로 되돌린다).
+        // COMMON 은 SRV 로만 암묵 승격된다. UAV 는 명시 전이가 필요하다(readback 이 레코드 상태로 되돌린다).
         _pDevice->noteBarrierDuringRecording( "prepareTextureForUnorderedAccess" );
         transitionTexture( texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
     }
@@ -479,7 +479,7 @@ namespace sw
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
         if ( slot == constant::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
@@ -512,7 +512,7 @@ namespace sw
 
         if ( bindActiveGraphicsPso() == false )
             return;
-        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
+        // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다(루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
         flushSlotTables( false );
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
@@ -534,7 +534,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다 — 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
+        // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다. 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
         {
             SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 루트 시그니처의 CBV 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
@@ -550,7 +550,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …) — 리플렉션이 준 슬롯의 루트 SRV 에 GPU 주소를 건다.
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …)도 텍스처와 같은 슬롯 테이블 경로다(bindShaderResource).
         bindShaderResource( index, slot );
     }
 
@@ -693,15 +693,15 @@ namespace sw
             return;
 
         _pState->_activeGraphicsPso = pso;
-        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다 — 이전 패스의 t 슬롯이 다음 테이블로 새지 않게(Vulkan setPipelineState 와 같다).
+        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스의 t 슬롯이 다음 테이블로 새지 않게 한다(Vulkan setPipelineState 와 같다).
         _pState->_arrSlotState[0]                               = D3D12SlotTableState{};
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
 
-        // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState) — PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
+        // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState). PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
-        // draw()/drawInstanced()가 같은 PSO로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시.
+        // 드로우가 같은 PSO 로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시한다.
         _pState->_boundNativeGraphicsPso = pso;
     }
 

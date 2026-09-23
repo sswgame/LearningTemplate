@@ -1,8 +1,8 @@
 /**
  * @file D3D11RHIResourcePipeline.cpp
- * @brief DirectX 11 의 파이프라인 상태 객체 — PSO, 셰이더 스테이지, 렌더패스 객체
- * @details `D3D11RHIResource` 의 일부다. 리소스(버퍼/텍스처)를 만드는 것과 파이프라인을 만드는 것은
- *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둔다.
+ * @brief DirectX 11 의 파이프라인 상태 객체(PSO · 셰이더 스테이지 · 렌더 패스 객체)입니다.
+ * @details `D3D11RHIResource` 의 일부입니다. 리소스(버퍼 · 텍스처)를 만드는 것과 파이프라인을 만드는 것은
+ *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둡니다.
  */
 #include "pch.h"
 
@@ -29,8 +29,8 @@ namespace sw
                 compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
         };
 
-        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
-        // (컴퓨트 경로는 아래에서 fillDefines 를 그대로 쓴다 — 그래픽스 요청에는 컴퓨트 스테이지가 없다.)
+        // 서술체 해석(진입점 기본값 · define · 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        // (컴퓨트 경로는 아래에서 fillDefines 를 그대로 쓴다. 그래픽스 요청에는 컴퓨트 스테이지가 없다.)
         const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
 
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
@@ -40,7 +40,7 @@ namespace sw
             if ( res._bSuccess )
             {
                 _pDevice->_device->CreateVertexShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._vs.GetAddressOf() );
-                // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — DX12·Vulkan·GL 과 같은 표다.
+                // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX12 · Vulkan · GL 과 같은 표다.
                 D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
                 for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
                 {
@@ -55,7 +55,7 @@ namespace sw
                 _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
             }
         }
-        // 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다 — 다른 세 백엔드와 같은 규칙이다.
+        // 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다. 다른 세 백엔드와 같은 규칙이다.
         if ( request._bHasPixelShader != SW_FALSE )
         {
             ShaderCompileResult res = RHIShaderRequest::compile( request._pixel );

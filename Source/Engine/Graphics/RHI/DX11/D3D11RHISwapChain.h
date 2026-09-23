@@ -1,6 +1,6 @@
 /**
  * @file D3D11RHISwapChain.h
- * @brief 창 하나에 붙는 D3D11 백버퍼
+ * @brief 창 하나에 붙는 D3D11 백버퍼입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -14,13 +14,13 @@ namespace sw
 {
     /**
      * @class D3D11RHISwapChain
-     * @brief 창 하나의 백버퍼. **받아서 갖고 · 크기를 바꾸고 · RTV 를 다시 잡고 · 표시한다.**
+     * @brief 창 하나의 백버퍼입니다. **받아서 갖고 · 크기를 바꾸고 · RTV 를 다시 잡고 · 표시합니다.**
      * @details D3D11 은 디바이스와 스왑체인이 `D3D11CreateDeviceAndSwapChain` 한 호출에서 **함께**
-     *          태어난다. 그래서 이 클래스는 스왑체인을 만들지 않고 `attach` 로 넘겨받아 소유한다 —
-     *          DX12/Vulkan 이 스왑체인을 따로 만드는 것과 다른 점이고, 세대 차이가 드러나는 자리다.
-     * @note 백버퍼 RTV 를 **매 프레임 다시 잡는다.** `DXGI_SWAP_EFFECT_FLIP_DISCARD` 는 백버퍼를
-     *       돌려 쓰기 때문에, 지난 프레임의 RTV 를 그대로 쓰면 Present 가 보여줄 버퍼와 다른 버퍼에
-     *       그리게 된다.
+     *          태어납니다. 그래서 이 클래스는 스왑체인을 만들지 않고 `attach` 로 넘겨받아 소유합니다.
+     *          DX12/Vulkan 이 스왑체인을 따로 만드는 것과 다른 점이고, 세대 차이가 드러나는 자리입니다.
+     * @note 백버퍼 RTV 를 **매 프레임 다시 잡습니다.** `DXGI_SWAP_EFFECT_FLIP_DISCARD` 는 백버퍼를
+     *       돌려 쓰기 때문에, 지난 프레임의 RTV 를 그대로 쓰면 Present 가 보여 줄 버퍼와 다른 버퍼에
+     *       그리게 됩니다.
      */
     class D3D11RHISwapChain
     {
@@ -32,7 +32,7 @@ namespace sw
 
         /**
          * @brief 디바이스와 함께 만들어진 스왑체인을 넘겨받습니다.
-         * @param swapChainFlags 생성에 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+         * @param swapChainFlags 생성에 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
          */
         void attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags );
 
@@ -41,7 +41,7 @@ namespace sw
 
         /**
          * @brief 백버퍼 크기를 바꿉니다.
-         * @warning 호출 전에 RTV 를 놓고 컨텍스트 상태를 비워야 합니다 — 백버퍼 참조가 하나라도
+         * @warning 부르기 전에 RTV 를 놓고 컨텍스트 상태를 비워야 합니다. 백버퍼 참조가 하나라도
          *          남아 있으면 `ResizeBuffers` 가 실패합니다.
          */
         bool resize( uint32 width, uint32 height );
@@ -54,8 +54,8 @@ namespace sw
 
         /**
          * @brief 화면에 표시합니다.
-         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘긴다 — 스왑체인 생성 플래그와 **짝이어야**
-         *          한다(RHIDxgiTearing.h).
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 **짝이어야**
+         *          합니다(RHIDxgiTearing.h).
          */
         HRESULT present( bool vsync );
 
@@ -64,10 +64,10 @@ namespace sw
         uint32 getWidth() const { return _width; }
         uint32 getHeight() const { return _height; }
 
-        /** @brief 현재 백버퍼의 RTV. 아직 잡지 않았으면 nullptr. */
+        /** @brief 현재 백버퍼의 RTV 를 반환합니다. 아직 잡지 않았으면 nullptr 입니다. */
         ID3D11RenderTargetView* getBackBufferRtv() const { return _backBufferRtv.Get(); }
 
-        /** @brief 백버퍼 텍스처를 새로 얻습니다(복사 대상용). 실패하면 nullptr. */
+        /** @brief 백버퍼 텍스처를 새로 얻습니다(복사 대상용). 실패하면 nullptr 입니다. */
         Microsoft::WRL::ComPtr<ID3D11Texture2D> getBackBufferTexture() const;
 
     private:
@@ -77,7 +77,7 @@ namespace sw
         HWND   _pHWnd{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
-        /// @brief 생성 시 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+        /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
         uint32 _swapChainFlags{ 0 };
     };
 } // namespace sw

@@ -94,7 +94,7 @@ namespace sw
                 return reg.tryLoadModule( backend, dllName );
             }
 
-            /** @brief Load requested RHI MODULE on-demand when needed (not all at once). */
+            /** @brief 요청한 RHI MODULE 을 필요할 때 하나씩 로드합니다(한꺼번에 올리지 않습니다). */
             static bool ensureBackendModuleLoaded( RHIBackend backend )
             {
                 RHIBackendRegistry&    reg    = engine::getRHIBackendRegistry();
@@ -262,8 +262,8 @@ namespace sw
         if ( _listLoadedModule.empty() )
             return;
 
-        // Clear factories before FreeLibrary so create() cannot dispatch into unloaded code.
-        // Devices from these factories must already be destroyed (see RHI::shutdown).
+        // FreeLibrary 전에 팩토리를 지운다. 그래야 create() 가 내려간 코드로 들어가지 않는다.
+        // 이 팩토리가 만든 디바이스는 이미 파괴돼 있어야 한다(RHI::shutdown 참고).
         for ( const auto& [backEnd, handle] : _listLoadedModule )
         {
             for ( RHIBackendEntry& entry : _listEntry )

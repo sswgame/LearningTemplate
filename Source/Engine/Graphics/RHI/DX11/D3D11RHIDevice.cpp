@@ -21,7 +21,7 @@ namespace sw
     {
         /**
          * @struct D3D11RecordingToken
-         * @brief 이 스레드가 기록 중인 리스트의 토큰 — 컨텍스트 포인터를 들지 않는다. 디바이스가 슬롯 표로 검증한다
+         * @brief 이 스레드가 기록 중인 리스트의 토큰입니다. 컨텍스트 포인터를 들지 않고, 디바이스가 슬롯 표로 검증합니다
          *        (`D3D11RHIDevice::acquireRecordingSlot` 주석).
          */
         struct D3D11RecordingToken
@@ -32,7 +32,7 @@ namespace sw
         };
         thread_local D3D11RecordingToken s_recordingToken{};
 
-        /// @brief 디바이스 일련번호의 출처 — 같은 주소에 새 디바이스가 서도 옛 토큰이 맞지 않게.
+        /// @brief 디바이스 일련번호의 출처입니다. 같은 주소에 새 디바이스가 서도 옛 토큰이 맞지 않게 합니다.
         atomic<uint64> s_deviceSerialCounter{ 0 };
 
     #if defined( SW_DEBUG )
@@ -40,7 +40,7 @@ namespace sw
         // 본문 전체가 SW_DEBUG 안에 있다. 가드를 맞추지 않으면 Release 빌드에서 "정의했는데 아무도
         // 쓰지 않는다"(-Wunused-function)가 남는다.
 
-        /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록. */
+        /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록입니다. */
         constexpr D3D11_MESSAGE_ID arrHazardMessageId[] = {
             D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD,
             D3D11_MESSAGE_ID_DEVICE_PSSETSHADERRESOURCES_HAZARD,
@@ -56,15 +56,15 @@ namespace sw
 
         /**
          * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
-         * @details D3D11 은 이걸 **WARNING** 으로 낸다. 그런데 결과는 조용한 실패다 — 런타임이 한쪽을
-         *          NULL 로 강제하고 셰이더는 0 을 읽는다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
-         *          남아서 DX11 만 화면에 아무것도 못 그리던 게 이 경고 뒤에 숨어 있었고, 심각도로
-         *          거른 탓에 로그에 한 줄도 안 나왔다. 그래서 해저드만은 ERROR 로 올린다.
+         * @details D3D11 은 이것을 **WARNING** 으로 냅니다. 그런데 결과는 조용한 실패입니다. 런타임이 한쪽을
+         *          NULL 로 강제하고 셰이더는 0 을 읽습니다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
+         *          남아서 DX11 만 화면에 아무것도 못 그리던 것이 이 경고 뒤에 숨어 있었고, 심각도로
+         *          거른 탓에 로그에 한 줄도 안 나왔습니다. 그래서 해저드만은 ERROR 로 올립니다.
          */
         bool isHazardMessage( D3D11_MESSAGE_ID id )
         {
             // switch 로 적으면 -Wswitch-enum 이 나머지 1318개를 다루라고 요구한다. 경고를 끄는
-            // 대신 목록 순회로 바꾼다 — ID 를 더 넣을 때도 한 줄이다.
+            // 대신 목록 순회로 바꾼다. ID 를 더 넣을 때도 한 줄이다.
             for ( const D3D11_MESSAGE_ID hazardId : arrHazardMessageId )
             {
                 if ( id == hazardId )
@@ -123,7 +123,7 @@ namespace sw
             return kNoRecordingSlot;
         for ( uint32 slot = 0; slot < kMaxRecordingSlot; ++slot )
         {
-            // 빈 슬롯(nullptr)을 CAS 로 집는다 — 잠금 없이, 어느 스레드에서 리스트를 만들어도 된다. 세대는 되돌리지 않는다:
+            // 빈 슬롯(nullptr)을 CAS 로 집는다. 잠금 없이, 어느 스레드에서 리스트를 만들어도 된다. 세대는 되돌리지 않는다:
             // 되쓰는 슬롯의 옛 토큰이 새 리스트의 세대와 맞아떨어지면 안 된다.
             ID3D11DeviceContext* pExpected = nullptr;
             if ( _arrRecordingSlot[slot]._pContext.compare_exchange_strong( pExpected, pContext, std::memory_order_acq_rel ) )
@@ -138,7 +138,7 @@ namespace sw
         if ( slot >= kMaxRecordingSlot )
             return;
         D3D11RecordingSlot& entry = _arrRecordingSlot[slot];
-        // 세대를 반드시 바꾼다(다음 짝수) — 리스트가 기록 중에 죽었어도 남은 토큰은 전부 무효가 된다.
+        // 세대를 반드시 바꾼다(다음 짝수). 리스트가 기록 중에 죽었어도 남은 토큰은 모두 무효가 된다.
         const uint64 generation = entry._generation.load( std::memory_order_relaxed );
         entry._generation.store( ( generation | 1 ) + 1, std::memory_order_release );
         entry._pContext.store( nullptr, std::memory_order_release );
@@ -150,7 +150,7 @@ namespace sw
             return;
         D3D11RecordingSlot& entry      = _arrRecordingSlot[slot];
         const uint64        generation = entry._generation.load( std::memory_order_relaxed );
-        // 늘 새 세대다 — 닫지 않고 다시 열어도 앞 세션의 토큰은 무효가 된다.
+        // 늘 새 세대다. 닫지 않고 다시 열어도 앞 세션의 토큰은 무효가 된다.
         const uint64 recordingGeneration = ( ( generation & 1 ) != 0 ) ? generation + 2 : generation + 1;
         entry._generation.store( recordingGeneration, std::memory_order_release );
         s_recordingToken = D3D11RecordingToken{ _serial, recordingGeneration, slot };
@@ -164,7 +164,7 @@ namespace sw
         const uint64        generation = entry._generation.load( std::memory_order_relaxed );
         if ( ( generation & 1 ) != 0 )
             entry._generation.store( generation + 1, std::memory_order_release );
-        // 이 스레드의 토큰이 이 슬롯이면 비운다 — 세대가 바뀌어 어차피 무효지만, 다음 조회를 짧게 끝낸다.
+        // 이 스레드의 토큰이 이 슬롯이면 비운다. 세대가 바뀌어 어차피 무효지만, 다음 조회를 짧게 끝낸다.
         if ( s_recordingToken._deviceSerial == _serial && s_recordingToken._slot == slot )
             s_recordingToken = D3D11RecordingToken{};
     }
@@ -192,7 +192,7 @@ namespace sw
             return nullptr;
         const D3D11RecordingSlot& entry    = _arrRecordingSlot[token._slot];
         ID3D11DeviceContext*      pContext = entry._pContext.load( std::memory_order_acquire );
-        // 컨텍스트를 먼저 읽고 세대를 나중에 본다 — 세대가 아직 토큰과 같으면 그 컨텍스트는 그 세대의 것이다.
+        // 컨텍스트를 먼저 읽고 세대를 나중에 본다. 세대가 아직 토큰과 같으면 그 컨텍스트는 그 세대의 것이다.
         if ( entry._generation.load( std::memory_order_acquire ) != token._generation )
             return nullptr;
         return pContext;
@@ -211,7 +211,7 @@ namespace sw
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
     {
     #if defined( SW_DEBUG )
-        // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 올린다 — WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
+        // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 올린다. WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
         // 나오므로 버린다. DX12 의 flushDebugMessages 와 같은 자리(프레임 끝)에서 부른다.
         Microsoft::WRL::ComPtr<ID3D11InfoQueue> queue;
         if ( _device == nullptr || FAILED( _device.As( &queue ) ) || queue == nullptr )
@@ -253,7 +253,7 @@ namespace sw
         desc.Usage          = D3D11_USAGE_DYNAMIC;
         desc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다 —
+        // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 표를 건드리지 않는다.
         if ( FAILED( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ) ) )
         {
@@ -264,11 +264,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // D3D11RHISwapChain Implementation
-    // ------------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------------
-    // D3D11RHIResource Implementation
+    // 리소스 조회 · 저장 — 핸들 표와 bindless 목록 (D3D11RHIResource 와 컨텍스트가 쓴다)
     // ------------------------------------------------------------------------------
 
     ID3D11Buffer* D3D11RHIDevice::resolveBuffer( RHIBufferHandle handle ) const

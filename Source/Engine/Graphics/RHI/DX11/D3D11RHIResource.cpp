@@ -61,10 +61,10 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return;
-        // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다 —
+        // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다.
         // D3D11 런타임이 커맨드 리스트 단위로 이 버퍼를 버저닝하므로 그 리스트의 드로우가 기록
         // 시점의 값을 보고, 컨텍스트가 스레드마다 따로라 락도 필요 없다. 그것이 D3D11 이 문서화한
-        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::acquireRecordingSlot` 주석). 토큰이 살아 있는 세대를 가리킬 때만 나온다 —
+        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::acquireRecordingSlot` 주석). 토큰이 살아 있는 세대를 가리킬 때만 나온다.
         // 리스트가 닫혔거나 죽었으면 nullptr 이라 즉시 컨텍스트로 간다.
         ID3D11DeviceContext*     pRecording = _pDevice->resolveRecordingContext();
         D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -92,7 +92,7 @@ namespace sw
         if ( elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // 32비트 API 다 — 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
         if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
@@ -128,7 +128,7 @@ namespace sw
     RHIBufferHandle D3D11RHIResource::createBuffer( const RHIBufferDesc& desc )
     {
         // 인다이렉트 인자 버퍼만 따로 만든다. D3D11 은 `DRAWINDIRECT_ARGS` 를 `BUFFER_STRUCTURED` 와
-        // **함께 쓸 수 없다** — 기본 경로(createStructuredBuffer)가 항상 STRUCTURED 로 만들기 때문에
+        // **함께 쓸 수 없다.** 기본 경로(createStructuredBuffer)가 항상 STRUCTURED 로 만들기 때문에
         // GPUScene 의 간접 인자 버퍼가 DrawInstancedIndirect 에 쓸 수 없는 버퍼였고, 드로우가 조용히
         // 아무것도 하지 않았다(디버그 레이어를 켜지 않으면 흔적도 없다).
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
@@ -207,7 +207,7 @@ namespace sw
                 continue;
             }
 
-            // 부분 갱신은 상자로 준다 — 버퍼는 1차원이므로 x 만 쓰고 y·z 는 1 이다.
+            // 부분 갱신은 상자로 준다. 버퍼는 1차원이므로 x 만 쓰고 y · z 는 1 이다.
             D3D11_BOX box{};
             box.left   = region._dstOffset;
             box.right  = region._dstOffset + region._size;
@@ -312,7 +312,7 @@ namespace sw
             return RHIFormat::Unknown;
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
-        // 깊이는 typeless 로 만들어져 DXGI 역변환이 Unknown 을 준다 — 레코드 플래그로 되돌린다.
+        // 깊이는 typeless 로 만들어져 DXGI 역변환이 Unknown 을 준다. 레코드 플래그로 되돌린다.
         if ( pRecord->_bDepth != SW_FALSE )
             return RHIFormat::D24_UNORM_S8_UINT;
         return fromDxgiFormat( texDesc.Format );
@@ -333,7 +333,7 @@ namespace sw
         if ( computeRhiTextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
             return false;
 
-        // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map — Map 이 GPU 를 기다린다.
+        // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map 한다. Map 이 GPU 를 기다린다.
         D3D11_TEXTURE2D_DESC stagingDesc = texDesc;
         stagingDesc.Width                = outLayout._width;
         stagingDesc.Height               = outLayout._height;
@@ -374,7 +374,7 @@ namespace sw
         texDesc.Height    = desc._height;
         texDesc.MipLevels = desc._mipLevels;
         texDesc.ArraySize = 1;
-        // Typeless so we can create both DSV and depth SRV for shadow sampling.
+        // DSV 와 그림자 샘플링용 깊이 SRV 를 둘 다 만들 수 있게 typeless 로 만든다.
         texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
         texDesc.SampleDesc.Count   = 1;
         texDesc.SampleDesc.Quality = 0;

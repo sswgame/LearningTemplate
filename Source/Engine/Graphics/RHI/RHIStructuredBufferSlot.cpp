@@ -14,7 +14,7 @@ namespace sw
         if ( pDevice == nullptr || elementSize == 0 )
             return false;
 
-        // 원소 크기가 달라지면 담을 수 있는 개수와 무관하게 다시 만들어야 한다 — 구조버퍼의 stride 는
+        // 원소 크기가 달라지면 담을 수 있는 개수와 무관하게 다시 만들어야 한다. 구조버퍼의 stride 는
         // 뷰에 박혀 있고, 셰이더 선언과 다르면 DX11 이 드로우마다 거부한다.
         const bool bEnough = ( _buffer != 0 ) && ( _elementSize == elementSize ) && ( _capacityElements >= elementCount );
         if ( bEnough )

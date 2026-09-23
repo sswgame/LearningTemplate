@@ -85,11 +85,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // D3D12RHISwapChain Implementation
-    // ------------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------------
-    // D3D12RHIResource Implementation
+    // 리소스 조회 · 디스크립터 힙 · 온라인 블록 (D3D12RHIResource 와 컨텍스트가 쓴다)
     // ------------------------------------------------------------------------------
 
     ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
@@ -159,7 +155,7 @@ namespace sw
         if ( state._listOnlineBlock.empty() )
             return;
 
-        // GPU 가 이 리스트의 테이블을 아직 읽는 중이다 — 현재 펜스가 지난 뒤에야 블록을 다시 내준다.
+        // GPU 가 이 리스트의 테이블을 아직 읽는 중이다. 현재 펜스가 지난 뒤에야 블록을 다시 내준다.
         // 벡터를 복사하지 않고 통째로 묶음에 옮긴다. 상태는 풀에서 온 빈 벡터를 받아 다음 기록에 그대로 쓴다.
         std::scoped_lock<mutex> lock{ _onlineBlockMutex };
         OnlineBlockRecycleBatch batch{};
@@ -211,7 +207,7 @@ namespace sw
     {
     #if defined( SW_DEBUG )
         // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
-        // 수십 줄 + DRED 덤프를 무한 반복하지 않는다 — 자동 복구가 없어서 그 이후 매 프레임
+        // 수십 줄 + DRED 덤프를 무한 반복하지 않는다. 자동 복구가 없어서 그 이후 매 프레임
         // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
         const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged != 0;
 
