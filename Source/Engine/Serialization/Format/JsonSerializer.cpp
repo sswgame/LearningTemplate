@@ -76,7 +76,7 @@ namespace sw
             }
 
             /**
-             * @brief 컨테이너 원소 하나를 dst 에 씁니다. (중첩 컨테이너 / 구조체 / 소유 포인터 / 값)
+             * @brief 컨테이너 원소 하나를 dst 에 씁니다(중첩 컨테이너 / 구조체 / 소유 포인터 / 값).
              * @details 소유 포인터만 런타임 타입을 알아야 하므로 { "TypeName": {...} } 래핑을 유지합니다.
              */
             static void writeContainerElementJson( JsonValue dst, const void* pElemPtr, const NestedContainerInfo& nested,
@@ -122,7 +122,7 @@ namespace sw
             }
 
             /**
-             * @brief 컨테이너를 자연스러운 JSON 표현으로 씁니다. 시퀀스는 배열, 맵은 오브젝트.
+             * @brief 컨테이너를 자연스러운 JSON 표현으로 씁니다. 시퀀스는 배열, 맵은 오브젝트입니다.
              */
             static void writeContainerValueJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
                                                  const SerializeContext& ctx )
@@ -164,7 +164,7 @@ namespace sw
                 }
             }
 
-            // items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
+            // items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
             static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
                                                bool bOwnedPtr, const SerializeContext& ctx )
             {
@@ -199,7 +199,7 @@ namespace sw
                 pSeq->reserve( pContainerPtr, items.size() );
                 bool bOk{ true };
 
-                // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다.
+                // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다.
                 for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
                 {
                     const JsonValue elem = items.at( elementIndex );
@@ -232,7 +232,7 @@ namespace sw
                 return bOk;
             }
 
-            // entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
+            // entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
             static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
                                             const SerializeContext& ctx )
             {
@@ -277,8 +277,8 @@ namespace sw
             }
 
             /**
-             * @brief 컨테이너를 자연스러운 JSON 표현으로 읽습니다. 시퀀스는 배열, 맵은 오브젝트.
-             * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 임의 중첩이 됩니다.
+             * @brief 컨테이너를 자연스러운 JSON 표현으로 읽습니다. 시퀀스는 배열, 맵은 오브젝트입니다.
+             * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 얼마든지 중첩할 수 있습니다.
              */
             static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
                                                 const SerializeContext& ctx )
@@ -591,7 +591,7 @@ namespace sw
                                                string_view jsonStr, uint32 currentVersion, SchemaMigrateFn migrate,
                                                const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {
-        // 절차는 JSON·XML·Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다 —
+        // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
             outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,

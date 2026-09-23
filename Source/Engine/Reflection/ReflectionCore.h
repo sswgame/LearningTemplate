@@ -1,6 +1,6 @@
 /**
  * @file ReflectionCore.h
- * @brief Umbrella header: re-exports reflection macros, containers, types, registry, and cast helpers
+ * @brief 리플렉션 매크로 · 컨테이너 · 타입 · 레지스트리 · 캐스트 도우미를 한 번에 include 하는 우산 헤더입니다.
  */
 #pragma once
 #include "Engine/Reflection/ReflectionCast.h"

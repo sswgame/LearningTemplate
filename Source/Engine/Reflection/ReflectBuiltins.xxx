@@ -1,15 +1,15 @@
 /**
  * @file Engine/Reflection/ReflectBuiltins.xxx
- * @brief 기본 타입·컨테이너 단일 등록표 (엔진 X-macro include + ReflectionParser 파싱).
+ * @brief 기본 타입 · 컨테이너의 단일 등록표입니다(엔진 X-macro include + ReflectionParser 파싱).
  * @details
- * - 내 타입: REFLECT() / REFLECT_CONTAINER() — 여기 넣지 않음.
- * - 손댈 수 없는 타입(sw::vector, int …): 이 파일에 한 번만.
- * - Serialize/Rpc/TypeRegistry: include 전에 SW_REFLECT_BUILTIN_* 를 정의한 뒤 여러 번 include 가능
- *   (#pragma once 없음 — X-macro 파일).
+ * - 직접 만든 타입: REFLECT() / REFLECT_CONTAINER() 를 쓰고, 여기 넣지 않습니다.
+ * - 손댈 수 없는 타입(sw::vector, int …): 이 파일에 한 번만 적습니다.
+ * - Serialize/Rpc/TypeRegistry: include 하기 전에 SW_REFLECT_BUILTIN_* 를 정의하면 여러 번 include 할 수 있습니다
+ *   (#pragma once 없음. X-macro 파일).
  *
  * SW_REFLECT_BUILTIN_TYPE( Canonical, CppType, TextConvOrNone, NamespaceOr-, aliases... )
  *   TextConv: stoi|stoll|stoul|stoull|stof|stod|none
- *   별칭이 없으면 마지막에 _ 를 둔다 (빈 __VA_ARGS__ 경고 방지; 로더가 무시).
+ *   별칭이 없으면 마지막에 _ 를 둡니다(빈 __VA_ARGS__ 경고 방지. 로더가 무시합니다).
  * SW_REFLECT_BUILTIN_CONTAINER( Match, Kind, WrapperStem )
  */
 

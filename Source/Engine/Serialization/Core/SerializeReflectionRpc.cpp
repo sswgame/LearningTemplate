@@ -1,14 +1,14 @@
 /**
  * @file SerializeReflectionRpc.cpp
- * @brief RPC 인자 마샬링 — `ReflectionRpc` 의 구현.
+ * @brief RPC 인자 마샬링입니다. `ReflectionRpc` 의 구현입니다.
  *
- * @details 이 파일이 **Serialization 에 있는 이유**: 내용 전부가 "인자를 바이트로 싣고 다시
+ * @details 이 파일이 **Serialization 에 있는 이유**: 내용 모두가 "인자를 바이트로 싣고 다시
  *          꺼내는" 일이고, 그 규약은 `SerializeContext` 의 핸들러 표와 `BinarySerializer` 가
- *          정한다. 선언(`Reflection/Rpc/ReflectionRpc.h`)은 리플렉션이 노출하는 API 로 남는다.
+ *          정합니다. 선언(`Reflection/Rpc/ReflectionRpc.h`)은 리플렉션이 노출하는 API 로 남습니다.
  *
- *          같은 규칙이 `SerializeReflectAny.cpp` 에도 적용된다 —
- *          **리플렉션 타입의 인코딩은 Serialization 이 갖는다.** 반대로 두면 Reflection 과
- *          Serialization 이 서로를 참조해 티어 순서를 정할 수 없게 된다.
+ *          같은 규칙이 `SerializeReflectAny.cpp` 에도 적용됩니다.
+ *          **리플렉션 타입의 인코딩은 Serialization 이 갖습니다.** 반대로 두면 Reflection 과
+ *          Serialization 이 서로를 참조해 티어 순서를 정할 수 없게 됩니다.
  */
 #include "pch.h"
 
@@ -122,9 +122,9 @@ namespace sw
 
                 // **보낸 쪽이 적어 둔 타입과 받는 쪽이 기대하는 타입이 같아야 한다.** 그 해시를 실어
                 // 보내면서 읽을 때는 버리고 있었다. 시그니처가 어긋난 채로 주고받으면(빌드가 다르거나
-                // 모듈이 핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 **다른 타입으로 읽어**
-                // 터지지 않고 값만 조용히 달라진다 — `float32 1.5f` 를 `int32` 로 읽으면
-                // `1069547520` 이 되는 식이다. 별칭 때문에 스펠링이 다를 수 있으므로 등록부의
+                // 모듈이 핫 리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 **다른 타입으로 읽어**
+                // 터지지 않고 값만 조용히 달라진다. `float32 1.5f` 를 `int32` 로 읽으면
+                // `1069547520` 이 되는 식이다. 별칭 때문에 표기가 다를 수 있으므로 등록부의
                 // 정규 이름으로 비교하고, 등록부가 그 해시를 모르면 판단하지 않는다(그때는
                 // 아래 타입 분기가 어차피 걸러 낸다).
                 const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( typeNameHash );

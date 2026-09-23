@@ -17,19 +17,19 @@ namespace sw
         struct BinarySerializerInternal
         {
             /**
-             * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계** — `uint64` 의 비트 수다.
-             * @details 이보다 많으면 해시 집합으로 넘어간다. 엄격·소프트 두 역직렬화 경로가 **같은 값을
-             *          써야 한다** — 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
-             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 된다. 예전에는 소프트 쪽이
-             *          리터럴 `64` 를 적고 있었다(값은 같아 증상은 없었다).
+             * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계**입니다. `uint64` 의 비트 수입니다.
+             * @details 이보다 많으면 해시 집합으로 넘어갑니다. 엄격 · 소프트 두 역직렬화 경로가 **같은 값을
+             *          써야 합니다.** 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
+             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 됩니다. 예전에는 소프트 쪽이
+             *          리터럴 `64` 를 적고 있었습니다(값은 같아 증상은 없었습니다).
              */
             static constexpr size_t kFastPropBitmaskThreshold = 64;
 
             /**
-             * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false.
-             * @details 비트필드·컨테이너·그 외 값의 세 갈래를 가른다. 아카이브 경로 둘이 이 스무 줄을
-             *          **각자** 갖고 있었다 — 갈래를 하나 더하면(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
-             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 된다.
+             * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false 입니다.
+             * @details 비트필드 · 컨테이너 · 그 외 값의 세 분기로 나눕니다. 아카이브 경로 둘이 이 스무 줄을
+             *          **각자** 갖고 있었습니다. 분기를 하나 더하면(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
+             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 됩니다.
              */
             static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
                                               size_t payloadStart, size_t payloadSize, const SerializeContext& ctx,
@@ -48,8 +48,8 @@ namespace sw
                     return true;
                 }
 
-                // `bRequireExactConsume` — 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 본다(남으면 스트림이
-                // 이 필드를 다른 모양으로 적은 것이다). 소프트·아카이브 경로는 읽힌 만큼만 믿는다(예전 동작 그대로).
+                // `bRequireExactConsume`: 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 본다(남으면 스트림이
+                // 이 필드를 다른 모양으로 적은 것이다). 소프트 · 아카이브 경로는 읽힌 만큼만 믿는다(예전 동작 그대로).
                 size_t local = payloadStart;
                 bool   bRead = false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -74,16 +74,16 @@ namespace sw
             }
 
             /**
-             * @brief 태그 스트림(개수 · [태그 해시 · 전선 타입 해시 · 크기 · 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프.
+             * @brief 태그 스트림(개수 · [태그 해시 · 기록 타입 해시 · 크기 · 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 이 60여 줄을 **각자** 들고 있었고, 셋째 사본
-             *          (`applyPropertyPayload` 의 세 갈래)까지 있었다. 둘이 다른 것은 정책 셋뿐이다 —
-             *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣는다.
-             *          (2) 못 읽은 프로퍼티: 엄격은 실패, 소프트는 orphan.
-             *          (3) 페이로드를 끝까지 읽었는지: 엄격만 본다.
-             *          전선 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다 — 이관은 제 타입으로 끝까지 읽히는지부터
-             *          보므로 소프트의 예전 순서(제 타입 읽기 → 이관)와 결과가 같다. 소프트는 이관도 안 되면 예전처럼 끝까지
-             *          읽히지 않아도 읽힌 만큼은 받는다(레거시 관용은 남긴다).
-             *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있다 — 사본이 하나라야 그 검사가 한쪽에서만 빠지는 일이 없다.
+             *          (`applyPropertyPayload` 의 세 분기)까지 있었습니다. 둘이 다른 것은 정책 셋뿐입니다.
+             *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣습니다.
+             *          (2) 읽지 못한 프로퍼티: 엄격은 실패, 소프트는 orphan.
+             *          (3) 페이로드를 끝까지 읽었는지: 엄격만 봅니다.
+             *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 이관은 제 타입으로 끝까지 읽히는지부터
+             *          보므로 소프트의 예전 순서(제 타입 읽기 → 이관)와 결과가 같습니다. 소프트는 이관도 안 되면 예전처럼 끝까지
+             *          읽히지 않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다).
+             *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
              */
             static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                            const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
@@ -142,8 +142,8 @@ namespace sw
                     else
                         uniqueSeenPropHashes.insert( prop.getNameHash() );
 
-                    // **전선 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
-                    // 타입을 짐작한다(정수와 실수를 못 가른다).
+                    // **기록 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
+                    // 타입을 짐작한다(정수와 실수를 가르지 못한다).
                     const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
                     bool       bApplied      = false;
                     if ( bWireMismatch )
@@ -175,7 +175,7 @@ namespace sw
                     reader.skip( payloadSize );
                 }
 
-                // 스트림에 없던 프로퍼티는 기본값으로 — 두 경로가 같은 규칙이다.
+                // 스트림에 없던 프로퍼티는 기본값으로 채운다. 두 경로가 같은 규칙이다.
                 for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
                 {
                     bool bSeen = false;
@@ -191,11 +191,11 @@ namespace sw
 
             /**
              * @brief 프로퍼티 하나의 페이로드를 읽어 인스턴스에 쓰고, 스트림을 그 뒤로 넘깁니다.
-             * @details 컴팩트 스트림의 두 모드(비트마스크 · 희소)가 이 열두 줄을 **각자** 갖고 있었다.
-             *          다른 것은 `propIndex` 를 어디서 얻는가 뿐이다(비트 검사 vs varint 읽기).
-             *          그런데 이 안에는 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있다 —
-             *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽는다. 저장소에서 가장
-             *          위험한 파싱 코드를 두 벌로 두지 않는다.
+             * @details 컴팩트 스트림의 두 모드(비트마스크 · 희소)가 이 열두 줄을 **각자** 갖고 있었습니다.
+             *          다른 것은 `propIndex` 를 어디서 얻는가뿐입니다(비트 검사 vs varint 읽기).
+             *          그런데 이 안에는 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있습니다.
+             *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽습니다. 저장소에서 가장
+             *          위험한 파싱 코드를 두 벌로 두지 않습니다.
              */
             static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
                                               BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
@@ -206,11 +206,11 @@ namespace sw
                     return false;
 
                 const size_t payloadStart = reader.getOffset();
-                // 뺄셈으로 비교한다 — 스트림에서 읽은 크기가 크면 덧셈이 넘친다.
+                // 뺄셈으로 비교한다. 스트림에서 읽은 크기가 크면 덧셈이 넘친다.
                 if ( payloadSize > dataSize - payloadStart )
                     return false;
 
-                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다 — 모르는 인덱스는 건너뛴다.
+                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다.
                 if ( propIndex < listProp.size() )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
@@ -332,7 +332,7 @@ namespace sw
         const uint8* pBody    = pData + reader.getOffset();
         const size_t bodySize = dataSize - reader.getOffset();
 
-        // 절차는 JSON·XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지 —
+        // 절차는 JSON · XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
         // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 migrate 없이는
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
         // 바뀌었다는 뜻이기 때문이다.
@@ -617,11 +617,11 @@ namespace sw
             if ( reader.readVarUint( totalProps ) == false )
                 return false;
 
-            // **스트림이 말하는 프로퍼티 수를 그대로 믿지 않는다.** 검사 없이 쓰면 셋이 한꺼번에 깨진다:
+            // **스트림이 말하는 프로퍼티 수를 그대로 믿지 않는다.** 검사 없이 쓰면 세 가지가 한꺼번에 깨진다.
             //  ① `(totalProps + 7) / 8` 이 거대한 할당이 되고, uint64 끝자락에서는 덧셈이 넘쳐
             //     **0 바이트** 마스크가 나온다.
-            //  ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다 — 첫 바퀴에 버퍼 밖이다.
-            //  ③ 순회 변수가 `uint32` 였다 — 4,294,967,295 를 넘으면 되감겨 **끝나지 않았다.**
+            //  ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다. 첫 바퀴에 버퍼 밖이다.
+            //  ③ 순회 변수가 `uint32` 였다. 4,294,967,295 를 넘으면 되감겨 **끝나지 않았다.**
             // 비트마스크는 프로퍼티 여덟 개당 한 바이트이므로, 남은 바이트로 마스크조차 채울 수
             // 없는 수는 어떤 스키마에서도 거짓이다(더 많은 프로퍼티를 가진 새 스키마는 허용된다).
             const uint64 remainingBytes = static_cast<uint64>( dataSize - reader.getOffset() );

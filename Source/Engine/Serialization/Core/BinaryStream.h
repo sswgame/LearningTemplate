@@ -9,7 +9,7 @@ namespace sw
 {
     /**
      * @class BinaryStreamWriter
-     * @brief vector<uint8> 버퍼에 데이터를 직렬화(Append)하는 바이너리 스트림 라이터
+     * @brief vector<uint8> 버퍼 뒤에 값을 이어 쓰는 바이너리 스트림 라이터입니다.
      */
     class BinaryStreamWriter
     {
@@ -86,7 +86,7 @@ namespace sw
 
     /**
      * @class BinaryStreamReader
-     * @brief 메모리 버퍼(const uint8*)로부터 데이터를 역직렬화하는 바이너리 스트림 리더
+     * @brief 메모리 버퍼(const uint8*)에서 값을 읽어 내는 바이너리 스트림 리더입니다.
      */
     class BinaryStreamReader
     {
@@ -101,12 +101,12 @@ namespace sw
         size_t getOffset() const { return _offset; }
 
         /**
-         * @brief @p count 바이트를 건너뜁니다. 남은 것보다 많으면 위치를 그대로 두고 false.
-         * @details 뺄셈으로 비교한다 — `_offset + count > _size` 는 스트림에서 읽은 큰 수에서
-         *          **덧셈이 넘쳐 작은 값이 되어 검사를 통과한다.** 이 클래스의 다른 검사들은
-         *          길이가 `uint32` 라 넘칠 수 없지만, 이 함수만 `size_t` 를 받고 호출부가
-         *          파일에서 읽은 `uint64` 페이로드 크기를 그대로 넘긴다. `_offset <= _size` 는
-         *          항상 참이므로(위치는 검사를 통과한 뒤에만 나아간다) 뺄셈은 안전하다.
+         * @brief @p count 바이트를 건너뜁니다. 남은 것보다 많으면 위치를 그대로 두고 false 를 반환합니다.
+         * @details 뺄셈으로 비교합니다. `_offset + count > _size` 로 비교하면 스트림에서 읽은 큰 수에서
+         *          **덧셈이 넘쳐 작은 값이 되고, 검사를 통과해 버립니다.** 이 클래스의 다른 검사들은
+         *          길이가 `uint32` 라 넘칠 수 없지만, 이 함수만 `size_t` 를 받고 부르는 쪽이
+         *          파일에서 읽은 `uint64` 페이로드 크기를 그대로 넘깁니다. `_offset <= _size` 는
+         *          항상 참이므로(위치는 검사를 통과한 뒤에만 나아갑니다) 뺄셈은 안전합니다.
          */
         bool skip( size_t count )
         {

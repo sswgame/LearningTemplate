@@ -17,7 +17,7 @@ namespace sw
     {
         struct ReflectionCoreInternal
         {
-            /** @brief 조상 표에 적는 이름 — FQN 의 intern 인덱스, 없으면 짧은 이름의. 둘 다 없으면 None. */
+            /** @brief 조상 표에 적는 이름입니다. FQN 의 intern 인덱스, 없으면 짧은 이름의 인덱스입니다. 둘 다 없으면 None 입니다. */
             static uint32 canonicalNameIndex( const TypeInfo& type )
             {
                 constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
@@ -25,14 +25,14 @@ namespace sw
             }
 
             /**
-             * @brief 두 TypeInfo 가 같은 타입을 말하는지 — 포인터가 달라도 이름이 같으면 같은 타입.
-             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있다
-             *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 돌려준다). 포인터 걷기가
-             *          그 사본을 만나면 이름으로 한 번 더 본다 — intern 인덱스 정수 비교 한 번이다.
+             * @brief 두 TypeInfo 가 같은 타입을 말하는지 판단합니다. 포인터가 달라도 이름이 같으면 같은 타입입니다.
+             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있습니다
+             *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 반환합니다). 포인터 걷기가
+             *          그 사본을 만나면 이름으로 한 번 더 봅니다. intern 인덱스 정수 비교 한 번입니다.
              */
             static bool isSameTypeName( const TypeInfo& lhs, const TypeInfo& rhs )
             {
-                // 걸음마다 부르는 자리라 intern 테이블은 만지지 않는다 — `empty()` 는 길이를 보려고 테이블을
+                // 걸음마다 부르는 자리라 intern 테이블은 만지지 않는다. `empty()` 는 길이를 보려고 테이블을
                 // 읽는다(걸음당 캐시 라인 둘). 인덱스가 None 이 아니면 이름이 있는 것으로 보고, 인덱스가
                 // 같을 때(사슬이 끝나는 적중)만 빈 이름을 걸러 낸다.
                 constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
@@ -43,9 +43,9 @@ namespace sw
 
             /**
              * @brief canonical FQN 의 네임스페이스를 alias 앞에 붙입니다.
-             * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN·리프를
+             * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN · 리프를
              *          모두 등록하는 것과 맞추려면 별칭도 FQN 형태를 함께 등록해야 합니다.
-             * @return 네임스페이스가 없거나 alias 가 이미 한정되어 있으면 빈 문자열.
+             * @return 네임스페이스가 없거나 alias 가 이미 한정되어 있으면 빈 문자열입니다.
              */
             static string qualifyAliasWithNamespace( const utf8* pAliasName, const utf8* pCanonicalName )
             {
@@ -429,7 +429,7 @@ namespace sw
             return _listPropertyWithBase;
 
         // **순환에서 멈춘다.** 이 타입에서 이미 짓는 중인데 다시 들어왔다는 것은 부모 체인이
-        // 돌아왔다는 뜻이다 — 더 올라가면 스택이 넘친다. 자기 것만 돌려주고 끊는다.
+        // 돌아왔다는 뜻이다. 더 올라가면 스택이 넘친다. 자기 것만 반환하고 끊는다.
         if ( _bBuildingPropertyWithBase == SW_TRUE )
         {
             SW_LOG_ERROR( "Reflection parent chain loops at '%#' — returning own properties only.",
@@ -464,7 +464,7 @@ namespace sw
                 _listPropertyWithBase.push_back( prop );
         }
 
-        // 이름·별칭 → 항목 맵을 목록과 함께 짓는다 — `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않도록.
+        // 이름 · 별칭 → 항목 맵을 목록과 함께 짓는다. `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않도록.
         // 뒤의 항목(파생)이 앞(기반)을 덮는다.
         _mapNameToPropertyWithBase.clear();
         _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
@@ -501,7 +501,7 @@ namespace sw
     }
     TypeRegistry::~TypeRegistry() = default;
 
-    static atomic<uint32> _s_typeIdCounter{ 0 }; // Local Runtime Index (Not Serialized, 100% Cross-Platform Safe)
+    static atomic<uint32> _s_typeIdCounter{ 0 }; // 실행 중에만 쓰는 로컬 인덱스(직렬화하지 않으므로 플랫폼과 무관하다)
 
     void TypeRegistry::registerClass( const TypeInfo& info )
     {
@@ -528,8 +528,8 @@ namespace sw
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
 
-        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다 — 밖에서 든 포인터
-        // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 전부 그대로 맞는다. 새 타입은 새 객체다.
+        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다. 밖에서 든 포인터
+        // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
         // 캐시는 배치 끝(`buildLookupCaches`)이 단일 스레드에서 만든다.
         if ( existingIt != _mapFqnToClassType.end() )
         {
@@ -541,8 +541,8 @@ namespace sw
             _mapFqnToClassType.emplace( canonicalKey, make_unique<TypeInfo>( std::move( stored ) ) );
         }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
-        // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
-        // 조상 표를 전부 비운다. 배치 끝의 buildLookupCaches 나 첫 상속 검사가 다시 세운다.
+        // 사슬이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
+        // 조상 표를 모두 비운다. 배치 끝의 buildLookupCaches 나 첫 상속 검사가 다시 세운다.
         for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
         {
             (void)storedFqn;
@@ -553,7 +553,7 @@ namespace sw
             _mapAliasToFqn.insert_or_assign( stored._name, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
         }
-        // 표가 커졌으면 원소가 옮겨졌다 — 밖에서 들고 있던 포인터(TypeLookupCache)는 이제 무효다.
+        // 표가 바뀌었으니 세대를 올린다. 적어 둔 빈 답(`TypeLookupCache` 의 미등록 · 풀지 못한 부모)을 다음 조회가 다시 찾는다.
         gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 
@@ -593,7 +593,7 @@ namespace sw
 
         _activeModuleName = hashed_string();
 
-        // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다 — 여기가 아직 단일 스레드다.
+        // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다. 여기는 아직 단일 스레드다.
         buildLookupCaches();
     }
 
@@ -611,18 +611,18 @@ namespace sw
             }
         }
 
-        // **잠금 밖에서** 만든다 — getPropertiesWithBase 가 부모를 찾으려고 레지스트리를 다시
+        // **잠금 밖에서** 만든다. getPropertiesWithBase 가 부모를 찾으려고 레지스트리를 다시
         // 잠그는데, shared_mutex 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType == nullptr )
                 continue;
-            // 부모 포인터부터 — 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스가 이것만 본다.
+            // 부모 포인터부터 푼다. 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
             pType->resolveParentType();
             pType->buildLookupCache();
             (void)pType->getPropertiesWithBase();
         }
-        // 부모 포인터가 **전부** 풀린 뒤에 조상 표를 세운다 — 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
+        // 부모 포인터가 **모두** 풀린 뒤에 조상 표를 세운다. 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType != nullptr )
@@ -636,15 +636,15 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         hashed_string                       hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
-        // 지우지 않고 **묘비**를 세운다 — 밖에서 든 포인터(`TypeLookupCache` 의 정적 칸 · 다른 모듈 타입의 부모 포인터)
-        // 가 매달린 채 남지 않도록 객체는 그 자리에 둔다. `findType` 은 죽은 타입을 nullptr 로 답하고, 같은 FQN 이
+        // 지우지 않고 **묘비**를 세운다. 밖에서 든 포인터(`TypeLookupCache` 의 정적 칸 · 다른 모듈 타입의 부모 포인터)가
+        // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
         // 다시 올라오면 같은 객체를 되살린다.
         for ( auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
             if ( pInfo->_moduleName != hashModule )
                 continue;
-            // 내용은 지금 비운다 — 모듈 코드를 가리키는 델리게이트를 모듈이 내려간 뒤에 파괴하면 안 된다.
+            // 내용은 지금 비운다. 모듈 코드를 가리키는 델리게이트를 모듈이 내려간 뒤에 파괴하면 안 된다.
             pInfo->clearContent();
             pInfo->_bAlive.store( SW_FALSE, std::memory_order_release );
         }
@@ -684,8 +684,8 @@ namespace sw
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
-        // 부모 포인터는 옮겨지지 않지만 **죽은 부모**를 가리킬 수 있다 — 비워서 다음 조회가 이름으로 다시 풀게 한다
-        // (죽은 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도 같이.
+        // 부모 포인터는 옮겨지지 않지만 **해제된 부모**를 가리킬 수 있다. 비워서 다음 조회가 이름으로 다시 풀게 한다
+        // (해제된 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도 같이 비운다.
         for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
@@ -720,7 +720,7 @@ namespace sw
         if ( typeIt == _mapFqnToClassType.end() || typeIt->second->isAlive() == false )
             return;
 
-        // insert_or_assign: 핫리로드 재등록 시 옛 별칭이 남지 않게 함.
+        // insert_or_assign: 핫 리로드로 다시 등록할 때 옛 별칭이 남지 않게 한다.
         const TypeInfo&     stored        = *typeIt->second;
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string aliasHash{ pAliasName };
@@ -763,7 +763,7 @@ namespace sw
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
 
-        // 죽은 타입(모듈 해제 · 묘비)은 없는 것으로 답한다 — 객체는 남아 있어도 이름 조회는 산 것만 낸다.
+        // 해제된 타입(모듈 해제 · 묘비)은 없는 것으로 답한다. 객체는 남아 있어도 이름 조회는 살아 있는 것만 낸다.
         const auto it = _mapFqnToClassType.find( nameOrFqn );
         if ( it != _mapFqnToClassType.end() )
             return it->second->isAlive() ? it->second.get() : nullptr;
@@ -783,7 +783,7 @@ namespace sw
         // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 낸다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
-        // 세대는 찾기 **전에** 읽는다 — 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
+        // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         const uint32    generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         const TypeInfo* pType      = engine::getTypeRegistry().findType( fqn );
         _pType.store( pType, std::memory_order_release );
@@ -892,8 +892,8 @@ namespace sw
         if ( pParent != nullptr || _parentFQN.empty() )
             return pParent;
 
-        // 못 푼 이름은 세대가 같은 동안 다시 찾지 않는다 — 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 전부
-        // 여기로 오는데, 예전엔 그때마다 레지스트리를 잠금 잡고 찾았다. 등록·해제가 세대를 올리면 한 번 더 찾는다.
+        // 풀지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
+        // 여기로 오는데, 예전에는 그때마다 레지스트리를 잠그고 찾았다. 등록 · 해제가 세대를 올리면 한 번 더 찾는다.
         const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
@@ -935,8 +935,8 @@ namespace sw
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
-        // 헤더의 인라인 판이 nullptr · 자기 자신 · 둘 다 표 있음 을 걸렀다. 아직 안 세운 쪽은 여기서 세운다(배치
-        // 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
+        // 헤더의 인라인 버전이 nullptr · 자기 자신 · 양쪽 모두 표가 있는 경우를 걸렀다. 아직 세우지 않은 쪽은 여기서
+        // 세운다(배치 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
         uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth == constants::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
             selfDepth = _ancestorDepth.load( std::memory_order_acquire );
@@ -982,10 +982,10 @@ namespace sw
         constexpr uint32 kDepth = constants::reflection::kAncestorDisplayDepth;
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
 
-        // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **안 풀리는 부모는 사슬의 끝이다** — `Component`
+        // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **풀리지 않는 부모는 사슬의 끝이다.** `Component`
         // 처럼 REFLECT 가 아닌 기반은 이름만 적혀 있고 등록되지 않는데, 예전 걷기는 그 이름을 실패 캐스트마다
-        // 잠금 잡고 레지스트리에서 찾았다(찾을 수 없으니 캐시도 안 됐다). 부모가 나중에 등록되면 registerClass 가
-        // 표를 전부 비우므로 그때 다시 이어진다.
+        // 잠그고 레지스트리에서 찾았다(찾을 수 없으니 캐시도 되지 않았다). 부모가 나중에 등록되면 registerClass 가
+        // 표를 모두 비우므로 그때 다시 이어진다.
         uint32          arrChain[kDepth];
         uint32          chainCount = 0;
         const TypeInfo* pCurrent   = this;
@@ -1003,7 +1003,7 @@ namespace sw
             pCurrent = pCurrent->getParentType();
         }
 
-        // 루트가 0 번 칸이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다 — 깊이를 본 쪽은 칸이 다 채워진 뒤다.
+        // 루트가 0 번 칸이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 칸이 다 채워진 뒤에 보게 된다.
         for ( uint32 index = 0; index < chainCount; ++index )
             _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
         _ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
@@ -1017,7 +1017,7 @@ namespace sw
         if ( &listWithBase == &_listProperty )
             return findProperty( propNameOrAlias );
 
-        // 작으면 선형 — 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 답을 낸다.
+        // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 답을 낸다.
         if ( listWithBase.size() <= constants::reflection::kLinearSearchThreshold )
         {
             for ( size_t index = listWithBase.size(); index > 0; --index )

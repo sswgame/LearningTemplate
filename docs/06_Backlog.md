@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①②) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1457,6 +1457,16 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 
 **검증에서 빠뜨리기 쉬운 것.** 주석만 바뀐 TU 는 전처리 결과가 같아 sccache 가 캐시를 재생하므로 빌드 로그로는
 `-Wdocumentation` 경고를 볼 수 없다. 폴더마다 `RunBuildWarnings.py --preset Ninja-Debug`(캐시를 거치지 않는다)를 돌린다.
+
+**주석을 고치다 찾은 코드 결함.** 이 작업은 주석만 바꾸므로 고치지 않고 여기 적는다. 해당 자리의 주석에는 경고를 달았다.
+- **`SchemaMigrateContext::applyOrphanTo` 가 기록 타입의 값을 프로퍼티 자리에 먼저 쓴다.** 바이너리 orphan 을
+  `deserializeValueBinary( pPtr, 기록 타입 )` 으로 읽은 뒤에야 `tryCoerceBinaryPayload` 로 넘어간다. 타입이 바뀐 이관
+  (int32 → string 등)이면 `pPtr` 자리를 다른 타입으로 덮어써 망가뜨린다. `applyOrphanToPath` 도 `wireTypeHint` 를
+  프로퍼티와 다른 타입으로 주면 같다. `applyOrphanTo` 는 부르는 곳이 없고 테스트는 JSON orphan(텍스트 경로)만 써서
+  드러나지 않았다. 고칠 때는 기록 타입이 프로퍼티 타입과 같을 때만 제자리로 읽고, 아니면 곧바로 `tryCoerceBinaryPayload`
+  로 보낸다(그 함수는 제 타입 읽기부터 한다). 바이너리 orphan 의 타입 변경 테스트를 같이 넣는다.
+- **`kJsonContainerItemKey` · `kJsonContainerEntryKey`(`SchemaMigrate.h`)는 죽은 상수다.** `535181b4`(2026-09-01)에서
+  JSON 래핑 읽기를 지운 뒤 아무도 쓰지 않는다. 지워도 된다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -1637,6 +1647,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ② — Reflection · Serialization)
+
+**한 것.** `Engine/Reflection` 15 개 · `Engine/Serialization` 23 개 파일의 주석을 1-0g 규칙으로 다시 썼다. 사실과 달랐던 것:
+- `ReflectionCore.cpp` 가 세대를 올리는 이유를 "표가 커지면 원소가 옮겨져 `TypeLookupCache` 포인터가 무효가 된다" 고 적었다 →
+  `TypeInfo` 는 `unique_ptr` 로 들어 주소가 고정이다(해제는 묘비). 세대는 적어 둔 **빈 답**(미등록 · 풀지 못한 부모)을 다시
+  찾게 할 뿐이다. `_pParentType` · 조상 표 설명의 "밀집 배열이 원소를 옮긴다" 도 같은 낡은 설명이라 고쳤다.
+- `gv_typeTableGeneration` 을 "적중 경로" 때문에 내보낸다고 했다 → 적중 경로는 `isAlive` 만 본다. 세대는 인라인 **실패** 경로가 읽는다.
+- `ReflectionMacros.h` 가 없는 파일 `ReflectBuiltins.h` 를 가리켰다 → `ReflectBuiltins.xxx`.
+- 중복 · 고아 doc 셋을 지웠다: `ReflectAny.h` 에 연달아 있던 두 줄, `ReflectionCast.h` 의 `ReflectTypeTraits` 이중 설명,
+  `TypeRegistry.h` 끝의 선언 없는 설명.
+- `BinarySerializer::deserialize` 가 "실패하면 호출 전 상태로 되돌린다" 고 했다 → 백업 · 복원은 `3f0c4b7e`(2026-08-30)에서
+  빠졌다. 지금은 실패 전까지 쓴 프로퍼티가 그대로 남는다. 원자성이 필요한 쪽은 스스로 스냅샷을 떠야 한다.
+- `SchemaMigrateContext` 가 "migrate 가 없는데 버전 불일치나 orphan 이 있으면 false" 라고 했다 → orphan 만 있을 때는 포맷마다
+  다르다(Binary 는 false, JSON · XML 은 성공). 2026-09-19 항목의 질문(그것이 의도인가)은 그대로 열려 있고, 문서에는 지금 동작만 적었다.
+- `runSchemaMigrateStep` 을 "Json/Binary 가 공유" 한다고 했다 → 세 포맷 모두 `runVersionedDeserialize` 를 거친다.
+  `createScratchInstance` 가 멤버별로 만드는 타입 목록에서 atomic<bool> · TagID · 중첩 REFLECT 가 빠져 있었다.
+- `serializeCompact` 가 "헤더 용량을 최대 98% 절감 · 비트마스크 8~32B" 라고 했다 → 근거 없는 숫자를 걷고 실제 레이아웃
+  (비트마스크는 프로퍼티 8개당 1바이트, 크기는 VarUInt)과 **이름이 아니라 인덱스로 짝을 맞춘다**는 제약을 적었다.
+- `SerializeReflectAny.cpp` 가 텍스트 표현을 JSON(`{"t":…,"b":…}`)이라 했다 → `타입FQN|16진수`. `resolveHandlerTypeName` 을
+  "세 TU" 가 들고 있었다고 했다 → 둘. `Archive` 의 `<<` · `>>` 34 개 설명이 모두 "스트림/시프트 연산자입니다" 였다 →
+  무엇을 어떻게 쓰고 읽는지(바이트 그대로 · uint32 길이 접두사).
+- 코드 결함 둘(`applyOrphanTo` 의 타입 혼동, 죽은 JSON 키 상수)은 1-0g 에 할 일로 적었다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ① — 루트 · Common · Compression · Config · Module · Utility)
 

@@ -43,8 +43,8 @@ namespace sw
     {
         if ( bReadMode )
         {
-            // saveFile 은 FileUtil 로 경로에 그대로 쓴다. 읽기만 리소스 시스템을 타면 **쓴 곳과
-            // 다른 규칙으로 찾게 된다** — 세이브 파일처럼 리소스 루트 밖에 있는 파일은 Shipping
+            // saveFile 은 FileUtil 로 경로에 그대로 쓴다. 읽기만 리소스 시스템을 거치면 **쓴 곳과
+            // 다른 규칙으로 찾게 된다.** 세이브 파일처럼 리소스 루트 밖에 있는 파일은 Shipping
             // 에서 느슨한 파일 조회가 꺼져 있어 팩에만 물어보고 그대로 실패한다. 그래서 쓴 것과
             // 같은 규칙으로 먼저 찾고, 없을 때 리소스 id 로 해석한다(engine/... 같은 경로).
             bool bLoaded = false;
@@ -124,7 +124,7 @@ namespace sw
             return false;
         }
 
-        // 뺄셈으로 비교한다 — `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서 작아지고**
+        // 뺄셈으로 비교한다. `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서 작아지고**
         // 그대로 검사를 통과한다. `_offset <= _dataSize` 는 항상 참이다(위치는 검사를 통과한
         // 뒤에만 나아간다). 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
         if ( byteSize > _dataSize - _offset )
@@ -140,9 +140,9 @@ namespace sw
 
     const uint8* Archive::readBytesView( uint64 byteSize )
     {
-        // 뺄셈으로 비교한다 — `readBytes` · `readSubArchive` 와 같은 이유다(그 둘은 이미 그렇게
+        // 뺄셈으로 비교한다. `readBytes` · `readSubArchive` 와 같은 이유다(그 둘은 이미 그렇게
         // 하고 이 함수만 남아 있었다). `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서
-        // 작아지고** 그대로 검사를 통과하며, 그러면 호출자가 버퍼 밖을 `byteSize` 만큼 읽는다.
+        // 작아지고** 그대로 검사를 통과하며, 그러면 부르는 쪽이 버퍼 밖을 `byteSize` 만큼 읽는다.
         // 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
         if ( _pData == nullptr || byteSize > _dataSize - _offset )
         {
@@ -798,7 +798,7 @@ namespace sw
     bool Archive::readVarUint( uint32& outValue )
     {
         // 범위 밖을 조용히 자르지 않는다. 자르면 망가진 아카이브가 **거부되는 대신 엉뚱하게
-        // 읽힌다** — readPooledString 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
+        // 읽힌다.** readPooledString 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
         // 잘린 뒤라 통과해 버린다. 되감을 오프셋이 있으므로 읽기 전 자리를 기억해 둔다.
         const uint64 startOffset = _offset;
         uint64       val64       = 0;

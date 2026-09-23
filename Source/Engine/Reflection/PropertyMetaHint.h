@@ -6,7 +6,7 @@ namespace sw
     struct PropertyMetadata;
     /**
      * @enum PropertyWidgetType
-     * @brief 에디터 인스펙터가 프로퍼티를 렌더링할 때 사용하는 UI 위젯 유형
+     * @brief 에디터 인스펙터가 프로퍼티를 그릴 때 쓰는 UI 위젯 유형입니다.
      */
     enum class PropertyWidgetType : uint8
     {
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class PropertyMetaHint
-     * @brief 리플렉션 프로퍼티 메타데이터로부터 UI 힌트 및 서식 정보를 파싱/제공하는 헬퍼
+     * @brief 리플렉션 프로퍼티 메타데이터에서 UI 힌트와 서식 정보를 뽑아 주는 도우미입니다.
      */
     class SW_API PropertyMetaHint
     {

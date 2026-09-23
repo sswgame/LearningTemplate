@@ -78,7 +78,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다 (`to_string` 오버로드가 넷뿐이다). */
+            /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다(`to_string` 오버로드가 넷뿐이기 때문입니다). */
             template <typename ReadType, typename PrintType>
             static bool formatPodAs( const uint8* pPayload, size_t payloadSize, string& out )
             {
@@ -90,15 +90,15 @@ namespace sw
             }
 
             /**
-             * @brief 전선(wire) 타입을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
-             * @details **크기만으로는 타입을 가를 수 없다.** `sizeof(float32) == sizeof(int32)` 이고
-             *          `sizeof(float64) == sizeof(int64)` 다. 그래서 크기로만 고르던 `formatPodToString`
-             *          에서는 `float32` 가지가 **영영 돌지 않았고**(앞의 int32 가지가 먼저 걸린다),
+             * @brief 기록 타입(wire type)을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
+             * @details **크기만으로는 타입을 가를 수 없습니다.** `sizeof(float32) == sizeof(int32)` 이고
+             *          `sizeof(float64) == sizeof(int64)` 입니다. 그래서 크기로만 고르던 `formatPodToString`
+             *          에서는 `float32` 분기가 **한 번도 돌지 않았고**(앞의 int32 분기가 먼저 걸립니다),
              *          `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값
-             *          `"1069547520"` 으로 적었다. 전선 타입은 바이너리 태그(`wireTypeHash`)와
-             *          `SchemaOrphanValue._wireTypeHash` 가 **이미 들고 있었다** — 여기까지
-             *          넘겨 주지 않았을 뿐이다.
-             * @return 전선 타입을 모르거나 그 타입이 스칼라가 아니면 false (호출부가 크기 짐작으로 넘어간다).
+             *          `"1069547520"` 으로 적었습니다. 기록 타입은 바이너리 태그(`wireTypeHash`)와
+             *          `SchemaOrphanValue._wireTypeHash` 가 **이미 들고 있었습니다.** 여기까지
+             *          넘겨 주지 않았을 뿐입니다.
+             * @return 기록 타입을 모르거나 그 타입이 스칼라가 아니면 false 입니다(부르는 쪽이 크기 짐작으로 넘어갑니다).
              */
             static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
             {
@@ -131,10 +131,10 @@ namespace sw
             }
 
             /**
-             * @brief 전선 타입을 모를 때 크기로 짐작합니다.
-             * @warning 정수와 실수를 **가를 수 없다**(같은 크기다). 정수로 읽는다 — 전선 타입을 아는
+             * @brief 기록 타입을 모를 때 크기로 짐작합니다.
+             * @warning 정수와 실수를 **가를 수 없습니다**(크기가 같습니다). 정수로 읽습니다. 기록 타입을 아는
              *          경로는 `formatWirePodToString` 이 먼저 처리하므로, 여기까지 오는 것은
-             *          타입을 잃은 payload 뿐이다.
+             *          타입을 잃은 payload 뿐입니다.
              */
             static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
             {
@@ -291,7 +291,9 @@ namespace sw
                 {
                     if ( hint == pProp->_typeName )
                         return true;
-                    // wire 타입으로 임시 버퍼에 읽은 뒤 텍스트 coerce — 간단 경로: coerce payload
+                    // 기록 타입이 프로퍼티 타입과 다르다. 아래 tryCoerceBinaryPayload 가 payload 를 다시 읽어 덮어쓴다.
+                    // **주의:** 위 읽기가 이미 기록 타입의 값을 프로퍼티 자리(pPtr)에 썼다. 모양이 다른 타입이면
+                    // (int32 → string 등) 그 자리가 망가진다. 원래 의도는 기록 타입의 임시 버퍼에 읽는 것이었다(백로그 1-0g).
                 }
             }
             return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx, hint );
@@ -307,7 +309,7 @@ namespace sw
         if ( listPart.empty() )
             return false;
 
-        // orphan 이름은 보통 leaf 또는 full old key
+        // orphan 이름은 보통 리프 이름이거나 옛 키 전체다
         const hashed_string      leaf( listPart.back().c_str() );
         const SchemaOrphanValue* pOrphan = findOrphan( leaf );
         if ( pOrphan == nullptr )
@@ -387,17 +389,17 @@ namespace sw
              offset == payloadSize )
             return true;
 
-        // POD → string
+        // POD → 문자열
         if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
         {
             string asText;
-            // 전선 타입을 알면 그것으로 적는다 — 크기 짐작은 정수와 실수를 가르지 못한다.
+            // 기록 타입을 알면 그것으로 적는다. 크기 짐작은 정수와 실수를 가르지 못한다.
             if ( SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, asText ) )
                 return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
                 return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
 
-            // length-prefixed string blob already handled above; if len matches, try raw bytes as text
+            // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
             {
                 uint32 len{ 0 };
@@ -410,7 +412,7 @@ namespace sw
             }
         }
 
-        // string blob → numeric
+        // 문자열 blob → 숫자
         if ( SchemaMigrateInternal::isNumericTypeName( targetTypeName ) && payloadSize >= sizeof( uint32 ) )
         {
             uint32 len{ 0 };
@@ -422,7 +424,7 @@ namespace sw
             }
         }
 
-        // same-size POD reinterpret (int32↔float32 등) — 마지막 수단
+        // 크기가 같은 POD 를 그대로 재해석한다(int32↔float32 등). 마지막 수단이다.
         offset                                        = 0;
         const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( targetTypeName );
         if ( pReader != nullptr )
@@ -449,7 +451,7 @@ namespace sw
                 return true;
         }
 
-        // numeric wire → string
+        // 숫자로 기록된 값 → 문자열. 대상이 문자열 타입이면 텍스트를 그대로 담는다.
         if ( SchemaMigrateInternal::isStringType( typeName ) )
         {
             if ( engine::getTypeRegistry().isType( typeName, "hashed_string" ) )

@@ -1,6 +1,6 @@
 /**
  * @file ReflectionCast.h
- * @brief Reflection-aware cast helpers (HasStaticType / castTo)
+ * @brief 리플렉션을 이용한 캐스트 도우미입니다(HasStaticType / castTo).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -10,10 +10,9 @@ namespace sw
 {
 
     /**
-     * @brief Codegen이 REFLECT 타입마다 특수화합니다 (T::StaticType 없이 FQN 조회).
+     * @brief 코드젠이 REFLECT 타입마다 특수화합니다(T::StaticType 없이 FQN 으로 조회).
      */
     template <typename T>
-    /// @brief codegen이 REFLECT 타입마다 특수화 (T::StaticType 없이 FQN 조회)
     struct ReflectTypeTraits
     {
     };
@@ -49,7 +48,7 @@ namespace sw
     inline constexpr bool HasReflectStaticType_v = HasReflectStaticType<T>::value;
 
     template <typename T, typename = void>
-    /// @brief Has Own Reflect Body (checks if T declares its own REFLECT_BODY rather than slicing to a base class)
+    /// @brief T 가 기반 클래스의 것을 물려받지 않고 자기 REFLECT_BODY 를 선언했는지 검사합니다
     struct HasOwnReflectBody : std::false_type
     {
     };
@@ -78,7 +77,7 @@ namespace sw
     inline constexpr bool HasGetTypeInfo_v = HasGetTypeInfo<T>::value;
 
     template <typename T, typename = void>
-    /// @brief findCachedTypeInfo() 멤버 함수 존재 여부 — 가상 getTypeInfo() 앞에 이름 캐시를 먼저 보는 타입(Component)
+    /// @brief findCachedTypeInfo() 멤버 함수가 있는지 여부입니다. 가상 getTypeInfo() 보다 이름 캐시를 먼저 보는 타입(Component)이 가집니다
     struct HasFindCachedTypeInfo : std::false_type
     {
     };
@@ -92,9 +91,9 @@ namespace sw
     inline constexpr bool HasFindCachedTypeInfo_v = HasFindCachedTypeInfo<T>::value;
 
     /**
-     * @brief T 의 정적 TypeInfo — 코드젠의 `StaticType()` 이나 `ReflectTypeTraits` 특수화가 있으면 그것, 없으면 nullptr.
-     * @details `castTo` 가 To 쪽을 이것으로 푼다. 컴포넌트 목록을 도는 조회 루프는 이것을 **루프 밖에서 한 번** 구해
-     *          `castTo( pSrc, pToType )` 에 넘긴다 — 세대 검사 캐시 조회 하나(약 4 ns)를 컴포넌트마다 내지 않는다.
+     * @brief T 의 정적 TypeInfo 입니다. 코드젠의 `StaticType()` 이나 `ReflectTypeTraits` 특수화가 있으면 그것, 없으면 nullptr 입니다.
+     * @details `castTo` 가 To 쪽을 이것으로 풉니다. 컴포넌트 목록을 도는 조회 루프는 이것을 **루프 밖에서 한 번** 구해
+     *          `castTo( pSrc, pToType )` 에 넘깁니다. 세대 검사 캐시 조회 하나(약 4 ns)를 컴포넌트마다 치르지 않습니다.
      */
     template <typename T>
     const TypeInfo* findStaticType()
@@ -108,12 +107,12 @@ namespace sw
     }
 
     /**
-     * @brief To 의 TypeInfo 를 밖에서 받아 To*로 캐스트. 실패 시 nullptr. 조회 루프용.
-     * @details 업캐스트(To 가 From 의 기반)는 컴파일 타임에 끝나 런타임 비용이 0 이다. 다운캐스트는 `getTypeInfo()` 가
-     *          준 동적 타입의 조상 표를 한 번 본다(`TypeInfo::isDerivedFrom`) — 잠금·할당·이름 비교·걷기 없음. To 에
-     *          정적 타입이 없으면 pToType 은 무시되고, To 가 From 의 파생이면 검사 없이 내려간다(리플렉션 밖 타입의
-     *          옛 규칙). 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 한다 — 동적 타입이 To 의 자손이 아니면
-     *          그보다 위인 정적 타입도 자손일 리 없다.
+     * @brief To 의 TypeInfo 를 밖에서 받아 To* 로 캐스트합니다. 실패하면 nullptr 입니다. 조회 루프용입니다.
+     * @details 업캐스트(To 가 From 의 기반)는 컴파일 타임에 끝나 런타임 비용이 0 입니다. 다운캐스트는 `getTypeInfo()` 가
+     *          준 동적 타입의 조상 표를 한 번 봅니다(`TypeInfo::isDerivedFrom`). 잠금 · 할당 · 이름 비교 · 걷기가 없습니다.
+     *          To 에 정적 타입이 없으면 pToType 은 무시되고, To 가 From 의 파생이면 검사 없이 내려갑니다(리플렉션 밖 타입의
+     *          옛 규칙). 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 합니다. 동적 타입이 To 의 자손이 아니면
+     *          그보다 위인 정적 타입도 자손일 리 없기 때문입니다.
      */
     template <typename To, typename From>
     To* castTo( From* pSrc, const TypeInfo* pToType )
@@ -136,7 +135,7 @@ namespace sw
             if ( pSrc == nullptr || pToType == nullptr )
                 return nullptr;
 
-            // 동적 타입 — 이름 캐시가 있으면 가상 호출 없이(Component), 아니면 가상 getTypeInfo().
+            // 동적 타입. 이름 캐시가 있으면 가상 호출 없이(Component), 없으면 가상 getTypeInfo() 로 얻는다.
             const TypeInfo* pSrcType = nullptr;
             if constexpr ( HasFindCachedTypeInfo_v<From> )
                 pSrcType = pSrc->findCachedTypeInfo();
@@ -154,7 +153,7 @@ namespace sw
         }
     }
 
-    /** @brief TypeInfo 상속 체인을 보고 To*로 캐스트. 실패 시 nullptr. 규칙은 위의 판과 같다. */
+    /** @brief TypeInfo 상속 체인을 보고 To* 로 캐스트합니다. 실패하면 nullptr 입니다. 규칙은 위의 버전과 같습니다. */
     template <typename To, typename From>
     To* castTo( From* pSrc )
     {
@@ -164,7 +163,7 @@ namespace sw
             return castTo<To>( pSrc, findStaticType<To>() );
     }
 
-    /** @brief TypeInfo 상속 체인을 보고 const To*로 캐스트. 실패 시 nullptr. */
+    /** @brief TypeInfo 상속 체인을 보고 const To* 로 캐스트합니다. 실패하면 nullptr 입니다. */
     template <typename To, typename From>
     const To* castTo( const From* pSrc )
     {

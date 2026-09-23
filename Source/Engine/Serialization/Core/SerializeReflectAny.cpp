@@ -60,7 +60,7 @@ namespace sw
             static string writeReflectAnyText( const void* pPtr )
             {
                 const ReflectAny& any = *static_cast<const ReflectAny*>( pPtr );
-                // Compact JSON: {"t":"fqn","b":"hex..."} — keep simple: type|base64-ish hex
+                // 텍스트 표현은 `타입FQN|16진수 바이트` 한 줄이다(JSON 오브젝트로 풀지 않는다).
                 string hex;
                 hex.reserve( any._bytes.size() * 2 );
                 static constexpr const utf8* kDigits = "0123456789abcdef";

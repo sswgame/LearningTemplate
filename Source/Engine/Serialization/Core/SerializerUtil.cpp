@@ -31,7 +31,7 @@ namespace sw
         if ( versionSource == SchemaVersionSource::Payload )
             outVersion = 0;
 
-        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다 — migrate 가 옛 필드를 그대로 보게 된다.
+        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다. migrate 가 옛 필드를 그대로 보게 된다.
         if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
         {
             uint32 legacyVersion{ 0 };
@@ -62,14 +62,14 @@ namespace sw
     {
         struct SerializerUtilInternal
         {
-            /** @brief uint32 하나를 리틀엔디언 그대로 덧붙입니다. */
+            /** @brief uint32 하나를 리틀 엔디언 그대로 덧붙입니다. */
             static void appendUint32( vector<uint8>& buffer, uint32 value )
             {
                 const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
                 buffer.insert( buffer.end(), pBytes, pBytes + sizeof( uint32 ) );
             }
 
-            /** @brief uint32 하나를 읽고 오프셋을 밀어 줍니다. */
+            /** @brief uint32 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
             {
                 if ( inoutOffset + sizeof( uint32 ) > dataSize )
@@ -82,10 +82,10 @@ namespace sw
             /**
              * @brief 다형 소유 포인터 원소 하나를 `[이름][본문크기][본문]` 으로 적습니다.
              *
-             * XML·JSON 은 태그·키 이름이 곧 런타임 타입이라 따로 적을 자리가 필요 없지만, 바이너리에는
-             * 그런 자리가 없어 이름을 값으로 싣는다. **본문 크기를 같이 적는 이유는 모르는 타입을
-             * 건너뛰기 위해서다** — 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋낸다.
-             * 빈 이름은 빈 자리를 뜻한다(원소 개수를 앞에서 이미 적었으므로 자리는 남겨야 한다).
+             * XML · JSON 은 태그 · 키 이름이 곧 런타임 타입이라 따로 적을 자리가 필요 없지만, 바이너리에는
+             * 그런 자리가 없어 이름을 값으로 싣습니다. **본문 크기를 같이 적는 이유는 모르는 타입을
+             * 건너뛰기 위해서입니다.** 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋나게 합니다.
+             * 빈 이름은 빈 자리를 뜻합니다(원소 개수를 앞에서 이미 적었으므로 자리는 남겨야 합니다).
              */
             static void writeOwnedPointerBinary( const void* pElemPtr, vector<uint8>& buffer, const SerializeContext& ctx )
             {
@@ -121,8 +121,8 @@ namespace sw
             /**
              * @brief `writeOwnedPointerBinary` 가 적은 원소 하나를 되읽습니다.
              *
-             * 컨테이너에 넣는 것은 **팩토리가** 한다(`createOwnedPointer` 가 소유자에 붙인다) —
-             * XML·JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않는다.
+             * 컨테이너에 넣는 것은 **팩토리가** 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
+             * XML · JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
              */
             static bool readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& ctx )
             {
@@ -132,7 +132,7 @@ namespace sw
                 if ( inoutOffset + nameLen > dataSize )
                     return false;
 
-                // 스트림 위에서 그대로 intern 한다 - 이름 하나 읽자고 string 을 짓지 않는다.
+                // 스트림 위에서 그대로 intern 한다. 이름 하나 읽자고 string 을 만들지 않는다.
                 const string_view typeNameText( reinterpret_cast<const utf8*>( pData + inoutOffset ), nameLen );
                 inoutOffset += nameLen;
 
@@ -152,7 +152,7 @@ namespace sw
                 void*               pObj  = ctx.createOwnedPointer( typeName );
                 const TypeInfo*     pType = engine::getTypeRegistry().findType( typeName );
                 if ( pObj == nullptr || pType == nullptr )
-                    return true; // 모르는 타입은 건너뛴다 — 위에서 이미 그만큼 밀어 놨다.
+                    return true; // 모르는 타입은 건너뛴다. 위에서 이미 그만큼 밀어 두었다.
 
                 return BinarySerializer::deserialize( pObj, *pType, pData + bodyStart, bodySize, ctx );
             }
@@ -180,7 +180,7 @@ namespace sw
         if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
             return typeName;
 
-        // 없으면 리플렉션이 아는 정본 이름(`_name`)으로 한 번 더 물어본다 — Alias·옛 이름으로 들어온 경우다.
+        // 없으면 리플렉션이 아는 정본 이름(`_name`)으로 한 번 더 물어본다. Alias · 옛 이름으로 들어온 경우다.
         TypeRegistry&   registry  = engine::getTypeRegistry();
         const TypeInfo* pTypeInfo = registry.findType( typeName );
         if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
@@ -192,7 +192,7 @@ namespace sw
 
     bool SerializerUtil::isOwnedPointerElementType( hashed_string elementTypeName )
     {
-        // 판정 기준은 이름에 `*` 가 있는가 하나다 — 리플렉션이 포인터 원소를 그렇게 적는다.
+        // 판정 기준은 이름에 `*` 가 있는지 하나다. 리플렉션이 포인터 원소를 그렇게 적는다.
         const utf8* pName = elementTypeName.c_str();
         if ( pName == nullptr )
             return false;
@@ -342,8 +342,8 @@ namespace sw
         if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
             return;
 
-        // 다형 소유 포인터는 값이 아니라 **런타임 타입 + 본문**으로 실린다. XML·JSON 은 진작
-        // 그렇게 하고 있었고 바이너리만 빠져 있었다 — 빠진 쪽은 `serializeValueBinary` 로
+        // 다형 소유 포인터는 값이 아니라 **런타임 타입 + 본문**으로 실린다. XML · JSON 은 진작
+        // 그렇게 하고 있었고 바이너리만 빠져 있었다. 빠진 쪽은 `serializeValueBinary` 로
         // 흘러 들어가 0 바이트 하나만 적고 컴포넌트를 통째로 버렸다.
         const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
 
@@ -394,8 +394,8 @@ namespace sw
         if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
             return false;
 
-        // 소유 포인터 컨테이너는 **비우지 않는다** — 원소를 넣는 것은 팩토리(소유자)의 일이고,
-        // 여기서 비우면 팩토리가 방금 붙인 것까지 날아간다. XML·JSON 도 같은 예외를 둔다.
+        // 소유 포인터 컨테이너는 **비우지 않는다.** 원소를 넣는 것은 팩토리(소유자)의 일이고,
+        // 여기서 비우면 팩토리가 방금 붙인 것까지 날아간다. XML · JSON 도 같은 예외를 둔다.
         const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
         if ( bOwnedPtr == false )
             nested._wrapper->clear( pContainerPtr );
@@ -424,7 +424,7 @@ namespace sw
 
             pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
 
-            // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다
+            // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다
             // (트리에 들어간 원소를 제자리에서 고치면 정렬 불변식이 깨진다).
             for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
             {

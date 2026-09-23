@@ -1,6 +1,6 @@
 /**
  * @file ReflectionConstants.h
- * @brief Reflection 서브시스템 및 PropertyMetaHint 관련 공통 상수 및 데이터 테이블 정의.
+ * @brief Reflection 서브시스템과 PropertyMetaHint 가 함께 쓰는 상수 · 데이터 테이블입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -42,20 +42,20 @@ namespace sw::constants::reflection
     /**
      * @brief 부모 체인을 걸을 때의 걸음 상한입니다.
      * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 공개 API 라 순환(A→B→A)을
-     *          막지 못한다. 방문 목록을 힙에 만들어 막는 대신 걸음 수를 세면, 캐스트 한 번에 할당이
-     *          없고 순환이어도 여기서 멈춘다. 실제 체인은 다섯을 넘지 않는다.
+     *          막지 못합니다. 방문 목록을 힙에 만들어 막는 대신 걸음 수를 세면, 캐스트 한 번에 할당이
+     *          없고 순환이어도 여기서 멈춥니다. 실제 체인은 다섯을 넘지 않습니다.
      */
     inline constexpr uint32 kMaxParentChainDepth = 32;
     /**
-     * @brief 조상 표의 칸 수 — 이 깊이까지의 타입은 상속 검사가 O(1) 이다.
-     * @details HotSpot 의 primary supers display 와 같은 방식이다. 타입마다 루트부터 자기까지의 이름을
-     *          깊이 순서로 적어 두면 "T 가 U 의 자손인가" 는 `표[U 의 깊이] == U 의 이름` 한 번이다. 이보다
-     *          깊은 사슬은 표 없이 부모 포인터를 걷는다 — 실제 사슬은 다섯을 넘지 않는다.
+     * @brief 조상 표의 칸 수입니다. 이 깊이까지의 타입은 상속 검사가 O(1) 입니다.
+     * @details HotSpot 의 primary supers display 와 같은 방식입니다. 타입마다 루트부터 자기까지의 이름을
+     *          깊이 순서로 적어 두면 "T 가 U 의 자손인가" 는 `표[U 의 깊이] == U 의 이름` 한 번입니다. 이보다
+     *          깊은 사슬은 표 없이 부모 포인터를 걷습니다. 실제 사슬은 다섯을 넘지 않습니다.
      */
     inline constexpr uint32 kAncestorDisplayDepth = 8;
-    /** @brief 조상 표를 아직 세우지 않았다는 깊이 표시. 첫 상속 검사가 세운다. */
+    /** @brief 조상 표를 아직 세우지 않았다는 깊이 표시입니다. 첫 상속 검사가 세웁니다. */
     inline constexpr uint8 kAncestorDepthUnknown = 0xFF;
-    /** @brief 조상 표를 세울 수 없다는 깊이 표시(이름 없음·순환·표보다 깊은 사슬). 등록·해제가 다시 비운다. */
+    /** @brief 조상 표를 세울 수 없다는 깊이 표시입니다(이름 없음 · 순환 · 표보다 깊은 사슬). 등록 · 해제가 다시 비웁니다. */
     inline constexpr uint8 kAncestorDepthNone = 0xFE;
 } // namespace sw::constants::reflection
 
@@ -72,9 +72,9 @@ namespace sw::constants::propertyHint
     inline constexpr const utf8* kUint8      = "uint8";
     inline constexpr const utf8* kBoolPrefix = "b";
 
-    // 에셋 타입별 **파일 다이얼로그 필터 표는 여기 두지 않는다.** 확장자는 에디터가 아는 것이고
-    // (`Editor/Common/Workspace/EditorAssetType`), Engine 은 Editor 를 볼 수 없다 — 여기에 두면
-    // 같은 목록이 두 벌이 되어 한쪽만 늙는다. 실제로 그랬다: 이 표는 `*.mat` 와 `*.glsl` 를
-    // 광고하고 있었는데 저장소에 `.mat` 은 없고 엔진은 GLSL 을 컴파일하지 않는다.
-    // 인스펙터의 에셋 필드는 드래그앤드롭 + 텍스트라 이 표를 **한 번도 읽지 않았다**(2026-09-12 삭제).
+    // 에셋 타입별 **파일 대화 상자 필터 표는 여기 두지 않는다.** 확장자는 에디터가 아는 것이고
+    // (`Editor/Common/Workspace/EditorAssetType`), Engine 은 Editor 를 볼 수 없다. 여기에 두면
+    // 같은 목록이 두 벌이 되어 한쪽만 낡는다. 실제로 그랬다. 이 표는 `*.mat` 와 `*.glsl` 를
+    // 내세우고 있었는데 저장소에 `.mat` 은 없고 엔진은 GLSL 을 컴파일하지 않는다.
+    // 인스펙터의 에셋 필드는 드래그 앤 드롭 + 텍스트라 이 표를 **한 번도 읽지 않았다**(2026-09-12 삭제).
 } // namespace sw::constants::propertyHint

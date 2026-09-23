@@ -1,7 +1,7 @@
 /**
  * @file ReflectGenerated.h
- * @brief ReflectionParser .gen.cpp / builtins gen 전용 단일 preamble.
- * @details 생성 코드가 쓰는 헤더는 여기에만 추가·삭제합니다. FileHeader.tpl / BuiltinFileHeader.tpl 은 이 파일을 include 합니다.
+ * @brief ReflectionParser 가 만드는 .gen.cpp 와 builtins 생성 코드가 맨 앞에 include 하는 공통 머리 헤더입니다.
+ * @details 생성 코드가 쓰는 헤더는 여기에서만 더하고 뺍니다. FileHeader.tpl / BuiltinFileHeader.tpl 은 이 파일을 include 합니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

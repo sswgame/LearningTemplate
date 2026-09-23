@@ -209,7 +209,7 @@ namespace sw
 
         SerializeContext derived;
         derived._pHandlerFallback = &defaultCtx;
-        // 표만 빌리고 **설정은 물려받는다** — 예전 `= getDefault()` 와 같은 동작이어야 한다.
+        // 표만 빌리고 **설정은 물려받는다.** 예전 `= getDefault()` 와 같은 동작이어야 한다.
         derived.setIgnoreCaseKeys( defaultCtx.ignoresCaseKeys() );
         derived.setAllowUnknownProperties( defaultCtx.allowsUnknownProperties() );
         derived.setEnableObjectDeduplication( defaultCtx.isObjectDeduplicationEnabled() );

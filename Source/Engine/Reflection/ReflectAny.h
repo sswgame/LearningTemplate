@@ -1,11 +1,11 @@
 /**
  * @file ReflectAny.h
- * @brief 다형 REFLECT 값용 타입 태그 바이너리 블롭 (SerializeReference 스타일).
+ * @brief 다형 REFLECT 값을 담는 타입 태그 바이너리 블롭입니다(SerializeReference 스타일).
  *
- * @note `makeFrom` / `tryGetFrom` 의 **정의는 여기 없다** —
- *       `Engine/Serialization/Core/SerializeReflectAny.cpp` 에 있다. 바이트를 어떻게 채우는지는
+ * @note `makeFrom` / `tryGetFrom` 의 **정의는 여기 없습니다.**
+ *       `Engine/Serialization/Core/SerializeReflectAny.cpp` 에 있습니다. 바이트를 어떻게 채우는지는
  *       BinarySerializer 의 규약이고, Reflection 이 Serialization 을 참조하면 둘이 서로를
- *       참조하는 순환이 된다(그 이유는 해당 파일의 헤더 주석 참고).
+ *       참조하는 순환이 됩니다(이유는 그 파일의 머리말 참고).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -32,8 +32,7 @@ namespace sw
         /** @brief 저장된 값을 대상 TypeInfo로 꺼냅니다. */
         bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
 
-        /** @brief 리플렉트 타입 T에서 ReflectAny를 만듭니다. */
-        /** @brief 만듭니다. */
+        /** @brief 리플렉트 타입 T 의 값으로 ReflectAny 를 만듭니다. */
         template <typename T>
         static ReflectAny make( const T& value )
         {

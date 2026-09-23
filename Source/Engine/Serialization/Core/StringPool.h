@@ -1,6 +1,6 @@
 /**
  * @file StringPool.h
- * @brief PredefinedNameType 사전 정의 표준 타입을 기본 탑재한 양방향 문자열 인터닝 풀
+ * @brief PredefinedNameType 의 사전 정의 표준 타입 이름을 기본으로 싣는 양방향 문자열 intern 풀입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@ namespace sw
 
     /**
      * @class StringPool
-     * @brief PredefinedNameType 사전 정의 타입을 기본 탑재하고, 중복 문자열을 1개의 인덱스로 치환하여 직렬화 용량을 최소화하는 문자열 인터닝 풀
+     * @brief PredefinedNameType 의 사전 정의 타입 이름을 기본으로 싣고, 중복 문자열을 인덱스 하나로 바꿔 직렬화 크기를 줄이는 문자열 intern 풀입니다.
      */
     class SW_API StringPool
     {
@@ -31,34 +31,34 @@ namespace sw
         StringPool( StringPool&& ) noexcept            = default;
         StringPool& operator=( StringPool&& ) noexcept = default;
 
-        /** @brief 문자열을 풀에 등록하고 고유 인덱스를 반환합니다 (Predefined 포함, 기존에 있으면 기존 인덱스 반환). */
+        /** @brief 문자열을 풀에 등록하고 고유 인덱스를 반환합니다(Predefined 포함. 이미 있으면 기존 인덱스를 반환합니다). */
         uint32 internString( string_view str );
 
-        /** @brief 인덱스로부터 문자열을 조회합니다 (범위 초과 시 빈 string_view 반환). */
+        /** @brief 인덱스로 문자열을 찾습니다(범위를 넘으면 빈 string_view). */
         string_view getString( uint32 index ) const;
 
-        /** @brief 풀에 등록된 고유 문자열 총 개수를 반환합니다 (Predefined 포함). */
+        /** @brief 풀에 등록된 고유 문자열의 총 개수를 반환합니다(Predefined 포함). */
         size_t getCount() const { return _listString.size(); }
 
-        /** @brief 동적으로 등록된 고유 문자열 개수를 반환합니다 (Predefined 제외). */
+        /** @brief 동적으로 등록된 고유 문자열 개수를 반환합니다(Predefined 제외). */
         size_t getDynamicCount() const { return _listString.size() > kPredefinedCount ? ( _listString.size() - kPredefinedCount ) : 0; }
 
-        /** @brief 동적 풀이 비어있는지 확인합니다. */
+        /** @brief 동적 풀이 비어 있는지 확인합니다. */
         bool empty() const { return getDynamicCount() == 0; }
 
-        /** @brief 동적 문자열을 비우고 Predefined 상태로 초기화합니다. */
+        /** @brief 동적 문자열을 비우고 Predefined 만 있는 상태로 되돌립니다. */
         void clear();
 
-        /** @brief 동적으로 등록된 문자열 테이블만 Archive에 기록합니다 (Predefined는 0바이트 생략). */
+        /** @brief 동적으로 등록된 문자열 표만 Archive 에 기록합니다(Predefined 는 적지 않습니다). */
         void saveToArchive( Archive& outArchive ) const;
 
-        /** @brief Archive로부터 동적 문자열 테이블을 읽어 풀을 채웁니다. */
+        /** @brief Archive 에서 동적 문자열 표를 읽어 풀을 채웁니다. */
         bool loadFromArchive( Archive& inArchive );
 
-        /** @brief 동적으로 등록된 문자열 테이블만 바이트 벡터에 기록합니다. */
+        /** @brief 동적으로 등록된 문자열 표만 바이트 벡터에 기록합니다. */
         void saveToBinaryBuffer( vector<uint8>& outBytes ) const;
 
-        /** @brief 바이너리 버퍼로부터 동적 문자열 테이블을 로드합니다. */
+        /** @brief 바이너리 버퍼에서 동적 문자열 표를 읽어 옵니다. */
         bool loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset );
 
     private:

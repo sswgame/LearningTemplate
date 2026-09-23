@@ -35,9 +35,9 @@ namespace sw
 
             /**
              * @brief 컨테이너를 현재 노드 "안에" 자연스러운 형태로 씁니다.
-             * @details 시퀀스 원소는 구조체면 타입 이름 태그, 그 외에는 <item>.
-             *          맵 항목은 <entry key="K">. 값은 그 노드 안에 같은 규칙으로 재귀합니다.
-             *          리더는 태그 이름에 의존하지 않으므로(다형 포인터 제외) 임의 중첩이 됩니다.
+             * @details 시퀀스 원소는 구조체면 타입 이름 태그, 그 외에는 <item> 입니다.
+             *          맵 항목은 <entry key="K"> 입니다. 값은 그 노드 안에 같은 규칙으로 재귀합니다.
+             *          리더는 태그 이름에 의존하지 않으므로(다형 포인터 제외) 얼마든지 중첩할 수 있습니다.
              */
             static void writeContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested,
                                            IXmlBackend& backend, const SerializeContext& ctx )
@@ -132,7 +132,7 @@ namespace sw
             /**
              * @brief 현재 노드 "안에" 있는 컨테이너를 읽습니다. writeContainerXml 의 역연산입니다.
              * @details 자식 태그 이름에 의존하지 않고 순서대로 훑습니다(다형 포인터만 이름=타입).
-             *          원소가 또 컨테이너면 그 자식 노드에서 재귀하므로 임의 중첩이 됩니다.
+             *          원소가 또 컨테이너면 그 자식 노드에서 재귀하므로 얼마든지 중첩할 수 있습니다.
              */
             static bool readContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend,
                                           const SerializeContext& ctx, bool& bOutFieldError,
@@ -167,7 +167,7 @@ namespace sw
                             return;
                         }
 
-                        // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다 — `set` 은 다 읽은 뒤 insert 해야 한다.
+                        // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다.
                         ++elemIndex;
                         pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
                                                                                 [&]( void* pElemPtr ) -> bool
@@ -290,7 +290,7 @@ namespace sw
                             StringBuilder<constant::kMaxBuffer8192> ss;
                             SerializerUtil::valueToText( ss, pPropPtr, prop._typeName, ctx );
 
-                            // 기본은 "전부 쓴다" 다 — 그래야 파일에 없음과 명시적으로 비어 있음이
+                            // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
                             if ( prop._metadata._bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
                                 return;
@@ -307,7 +307,7 @@ namespace sw
                     return false;
                 if ( uniqueKnownNames.find( pChildName ) != uniqueKnownNames.end() )
                     return true;
-                // 대소문자만 다른 태그는 orphan 이 아님 (JsonSerializer bCaseVariant 와 동일).
+                // 대소문자만 다른 태그는 orphan 이 아니다(JsonSerializer 의 bCaseVariant 와 같다).
                 for ( const string& known : uniqueKnownNames )
                 {
                     if ( StringUtil::equals( known.c_str(), pChildName, true ) )
@@ -616,7 +616,7 @@ namespace sw
 
     XmlNode XmlDocumentBackend::getDeserializationRoot() const
     {
-        // 스택의 바닥이 `initializeXmlDeserialization` 이 찾은 루트다 — `pushChild` 로 내려가
+        // 스택의 바닥이 `initializeXmlDeserialization` 이 찾은 루트다. `pushChild` 로 내려가
         // 있어도 루트는 그대로 바닥에 있다.
         if ( _impl->_listNodeStack.empty() )
             return XmlNode{};
@@ -899,9 +899,9 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
 
-        // **문서 하나로 셋을 다 한다** — 버전 attribute · 값 읽기 · orphan 자식 훑기.
+        // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기.
         // 예전에는 여기서 자기 `XmlDocument` 를 따로 파싱하고, 아래 백엔드가 **같은 문자열을
-        // 한 번 더** 파싱했다. 씬·프리팹 로드가 엔티티마다 이 길로 간다. 형제인
+        // 한 번 더** 파싱했다. 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다. 형제인
         // `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나만 쓴다.
         const bool         bIgnore = ctx.ignoresCaseKeys();
         XmlDocumentBackend backend;
@@ -955,7 +955,7 @@ namespace sw
                                               string_view xmlStr, uint32 currentVersion, SchemaMigrateFn migrate,
                                               const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {
-        // 절차는 JSON·XML·Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다 —
+        // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
             outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,

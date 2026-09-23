@@ -1,10 +1,10 @@
 /**
  * @file ReflectionRpc.h
- * @brief FUNCTION 호출을 Binary 봉투로 로컬 pack/unpack (네트워크 전송은 별도)
+ * @brief FUNCTION 호출을 Binary 봉투에 담아 로컬에서 pack/unpack 합니다(네트워크 전송은 별도).
  *
- * @note 구현은 `Engine/Serialization/Core/SerializeReflectionRpc.cpp` 에 있다. 인자 마샬링은
+ * @note 구현은 `Engine/Serialization/Core/SerializeReflectionRpc.cpp` 에 있습니다. 인자 마샬링은
  *       BinarySerializer 의 규약이고, Reflection 이 Serialization 을 참조하면 둘이 서로를
- *       참조하는 순환이 된다.
+ *       참조하는 순환이 됩니다.
  */
 #pragma once
 #include "Core/Task/TaskTypes.h"
@@ -27,7 +27,7 @@ namespace sw
         uint8                  _bReliable : 1;
         [[maybe_unused]] uint8 _reserved  : 4;
 
-        /** @brief 빈 봉투 (Reliable 꺼짐). */
+        /** @brief 빈 봉투를 만듭니다(Reliable 꺼짐). */
         RpcEnvelope() noexcept
             : _netRole{ 0 }
             , _bReliable{ SW_FALSE }
@@ -44,7 +44,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) pack · invoke — FunctionInfo 파라미터 타입, TypeRegistry::invokeMethod
         // ------------------------------------------------------------------------------
-        /** @brief typeFqn 메서드 인자를 봉투에 팩합니다 (파라미터 타입은 FunctionInfo). */
+        /** @brief typeFqn 메서드의 인자를 봉투에 담습니다(매개변수 타입은 FunctionInfo 에서 얻습니다). */
         static bool packCall( RpcEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
                               const TaskArgs& args );
 
