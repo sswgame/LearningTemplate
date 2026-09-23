@@ -1,8 +1,8 @@
 /**
  * @file OpenGLRHIResourcePipeline.cpp
- * @brief OpenGL 의 파이프라인 상태 객체 — PSO, 셰이더 스테이지, 렌더패스 객체
- * @details `OpenGLRHIResource` 의 일부다. 리소스(버퍼/텍스처)를 만드는 것과 파이프라인을 만드는 것은
- *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둔다.
+ * @brief OpenGL 의 파이프라인 상태 객체(PSO · 셰이더 스테이지 · 렌더패스 객체)입니다.
+ * @details `OpenGLRHIResource` 의 일부입니다. 리소스(버퍼 · 텍스처)를 만드는 것과 파이프라인을 만드는 것은
+ *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둡니다.
  */
 #include "pch.h"
 
@@ -31,7 +31,7 @@ namespace sw
         ScopedOpenGLContext                        ctxScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
+        // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
         const ShaderCompileDesc&       vsDesc          = request._vertex;
         const ShaderCompileDesc&       psDesc          = request._pixel;

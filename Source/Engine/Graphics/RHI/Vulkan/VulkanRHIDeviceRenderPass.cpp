@@ -1,8 +1,8 @@
 /**
  * @file VulkanRHIDeviceRenderPass.cpp
- * @brief VulkanRHIDevice 의 렌더패스·프레임버퍼 캐시와 이미지 레이아웃 전이
+ * @brief VulkanRHIDevice 의 렌더패스 · 프레임버퍼 캐시와 이미지 레이아웃 전이입니다.
  * @details Vulkan 은 렌더패스와 프레임버퍼를 명시적으로 만들어야 해서, PSO 가 요구하는 조합마다
- *          캐시가 필요하다. 이 캐시들이 파이프라인이 선언한 포맷과 어긋나면 GPU 가 죽는다.
+ *          캐시가 필요합니다. 이 캐시들이 파이프라인이 선언한 포맷과 어긋나면 GPU 가 죽습니다.
  */
 #include "pch.h"
 
@@ -189,8 +189,8 @@ namespace sw
 
     void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
     {
-        // 즉시 파괴하면 안 된다 - 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
-        // 있다(게임뷰 리사이즈가 대표적인 경로다). 예전엔 오프스크린 경로가 매 프레임 블로킹
+        // 즉시 파괴하면 안 된다. 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
+        // 있다(게임뷰 리사이즈가 대표적인 경로다). 예전에는 오프스크린 경로가 매 프레임 블로킹
         // 제출을 해서 우연히 안전했을 뿐이고, 그 스톨을 걷어내자 곧바로 in-use 위반이 드러났다.
         enqueueFramebufferRelease( record._framebuffer,
                                    ( record._renderPass != _offscreenRenderPass ) ? record._renderPass : VK_NULL_HANDLE );
@@ -230,7 +230,7 @@ namespace sw
         }
         if ( desc._bEnableDepthTest != 0 )
         {
-            // FrameRenderer는 RHI D24를 요청하지만 GPU가 미지원일 수 있음 → 디바이스 선택 포맷 사용
+            // FrameRenderer 는 RHI D24 를 요청하지만 GPU 가 지원하지 않을 수 있다 → 디바이스가 고른 포맷을 쓴다.
             VkFormat depthFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._depthStencilFormat );
             if ( desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
                  depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED )
@@ -238,7 +238,7 @@ namespace sw
             key._depthFormat = static_cast<uint32>( depthFmt );
         }
 
-        // PSO 호환용 — 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷·개수·샘플수만 같으면 된다).
+        // PSO 호환용. 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷 · 개수 · 샘플 수만 같으면 된다).
         VulkanRHIRenderPassCache::RenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
@@ -251,7 +251,7 @@ namespace sw
     bool VulkanRHIDevice::ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key,
                                                       VulkanRHIRenderPassCache::CompositeRecord&    outRecord )
     {
-        // 첨부 뷰와 서술은 여기서 풀고, 조회·생성은 캐시가 한 임계구역에서 한다.
+        // 첨부 뷰와 서술은 여기서 풀고, 조회 · 생성은 캐시가 한 임계구역에서 한다.
         VkImageView arrFbAttachment[kMaxColorAttachments + 1]{};
         uint32      width{ 0 };
         uint32      height{ 0 };

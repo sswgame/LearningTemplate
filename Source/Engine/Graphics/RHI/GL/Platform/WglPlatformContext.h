@@ -1,9 +1,9 @@
 /**
  * @file WglPlatformContext.h
- * @brief Windows(WGL) OpenGL 컨텍스트.
+ * @brief Windows(WGL) OpenGL 컨텍스트입니다.
  *
- * @details 구현 `.cpp` 는 파일 전체가 `SW_PLATFORM_WINDOWS` 가드 안에 있다 — 소스 목록은 모든
- *          플랫폼에서 같고, 쓰이지 않는 플랫폼에서는 빈 TU 가 된다(`Window/Windows` 와 같은 형태).
+ * @details 구현 `.cpp` 는 파일 전체가 `SW_PLATFORM_WINDOWS` 가드 안에 있습니다. 소스 목록은 모든
+ *          플랫폼에서 같고, 쓰이지 않는 플랫폼에서는 빈 TU 가 됩니다(`Window/Windows` 와 같은 형태).
  */
 #pragma once
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"

@@ -1,6 +1,6 @@
 /**
  * @file OpenGLRHICommandList.h
- * @brief 소프트웨어 Cmd-vector 기록 없이 즉시 OpenGLRHICommandContext를 호출하는 IRHICommandList
+ * @brief CPU 기록 벡터 없이 OpenGLRHICommandContext 를 곧바로 부르는 IRHICommandList 입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -14,10 +14,10 @@ namespace sw
 {
     /**
      * @class OpenGLRHICommandList
-     * @brief `RHIDeferredCommandList`(CPU `Cmd` 벡터에 기록 후 나중에 replay)를 대체하는 IRHICommandList.
-     * @details OpenGL은 커맨드 버퍼 개념이 없는 스레드 종속 상태 머신이라 `OpenGLRHICommandContext`도
-     *          상태 없이 매 호출을 즉시 GL API로 발행한다. 이 리스트는 그 컨텍스트를 그대로 감싸 호출을
-     *          즉시 전달할 뿐, begin/end에서 별도로 열고 닫을 자원이 없다.
+     * @brief 예전의 `RHIDeferredCommandList`(CPU `Cmd` 벡터에 기록한 뒤 나중에 재생)를 대신하는 IRHICommandList 입니다.
+     * @details OpenGL 은 커맨드 버퍼 개념이 없는 스레드 종속 상태 머신이라 `OpenGLRHICommandContext` 도
+     *          매 호출을 즉시 GL API 로 발행합니다. 이 리스트는 그 컨텍스트를 그대로 감싸 호출을
+     *          넘길 뿐이고, begin · end 에서 따로 열고 닫을 자원이 없습니다.
      */
     class OpenGLRHICommandList : public RHICommandListForwarder<OpenGLRHICommandContext>
     {
@@ -33,8 +33,8 @@ namespace sw
         OpenGLRHICommandList( const OpenGLRHICommandList& )            = delete;
         OpenGLRHICommandList& operator=( const OpenGLRHICommandList& ) = delete;
 
-        /** @brief 기록이 곧바로 GL 호출로 나가므로, 옛 executeCommandList의 방어적 컨텍스트 재바인딩을
-         *         기록 시작 시점으로 옮긴다(RenderThread가 이미 바인딩했더라도 무해한 재확인). */
+        /** @brief 기록이 곧바로 GL 호출로 나가므로, 옛 executeCommandList 의 방어적 컨텍스트 재바인딩을
+         *         기록 시작 시점으로 옮겼습니다(RenderThread 가 이미 바인딩했어도 해가 없는 재확인입니다). */
         void beginCommandList() override
         {
             if ( _pDevice != nullptr )

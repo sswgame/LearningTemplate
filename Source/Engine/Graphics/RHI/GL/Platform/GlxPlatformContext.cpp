@@ -77,7 +77,7 @@ namespace sw
             OpenGLRHIDeviceInternal::GlxXErrorScope trap( pDpy );
             if ( glXCreateContextAttribsARB )
             {
-                // Prefer 4.6, fall back for WSLg/Mesa (often ≤4.1 / 3.3).
+                // 4.6 을 먼저 고르고, WSLg · Mesa 를 위해 낮은 버전으로 물러난다(흔히 4.1 이하 · 3.3).
                 static const int32 kArrVersions[][2] = {
                     {4, 6},
                     {4, 5},
@@ -105,7 +105,7 @@ namespace sw
                         glXDestroyContext( pDpy, ctx );
                         ctx = nullptr;
                     }
-                    trap.failed(); // clear
+                    trap.failed(); // 실패 표시를 비운다
                 }
             }
             if ( ctx == nullptr )
@@ -160,7 +160,7 @@ namespace sw
         if ( _pDisplay == nullptr || _pRenderContext == nullptr )
             return false;
 
-        // 로그를 남기지 않는다 - 경합은 정상이고 알릴 책임은 호출부에 있다(WGL 과 같은 규약).
+        // 로그를 남기지 않는다. 경합은 정상이고 알릴 책임은 부르는 쪽에 있다(WGL 과 같은 규약).
         return glXMakeCurrent( static_cast<Display*>( _pDisplay ),
                                static_cast<Window>( _windowHandle ),
                                static_cast<GLXContext>( _pRenderContext ) ) != 0;
@@ -181,7 +181,7 @@ namespace sw
 
     void GlxPlatformContext::reacquireForFrame()
     {
-        // 예전 코드도 프레임 시작에 GLX 컨텍스트를 다시 바인딩하지 않았다. 동작을 바꾸지 않는다 —
+        // 예전 코드도 프레임 시작에 GLX 컨텍스트를 다시 바인딩하지 않았다. 동작을 바꾸지 않는다.
         // WGL 만 ImGui 멀티 뷰포트 때문에 되찾아야 한다.
     }
 

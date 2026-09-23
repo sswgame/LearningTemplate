@@ -19,17 +19,17 @@ namespace sw
 
     namespace
     {
-        // S3TC 는 확장이라 glad 헤더에 없다 — 값은 EXT_texture_compression_s3tc 그대로다.
+        // S3TC 는 확장이라 glad 헤더에 없다. 값은 EXT_texture_compression_s3tc 그대로다.
         constexpr GLenum kGlCompressedRgbaS3tcDxt1 = 0x83F1;
         constexpr GLenum kGlCompressedRgbaS3tcDxt3 = 0x83F2;
         constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
         constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
 
         /**
-         * @brief RHIFormat 하나의 GL 세 값 — internalFormat · (pixel) format · type.
-         * @details 예전에는 셋이 각자 switch 였다 — 포맷을 하나 더하면 세 자리를 같이 고쳐야 했고, `R16G16B16A16_FLOAT` 의 type 이
-         *          한 자리에서만 틀렸던 적이 있다(아래 주석). 압축 포맷은 internal 만 있다(glCompressedTexImage 경로라 format · type 은
-         *          쓰지 않는다). 표에 없는 포맷(`Unknown` = 첨부 없음)은 셋 다 0 이다.
+         * @brief RHIFormat 하나의 GL 세 값(internalFormat · (pixel) format · type)입니다.
+         * @details 예전에는 셋이 각자 switch 였습니다. 포맷을 하나 더하면 세 자리를 같이 고쳐야 했고, `R16G16B16A16_FLOAT` 의 type 이
+         *          한 자리에서만 틀렸던 적이 있습니다(아래 주석). 압축 포맷은 internal 만 있습니다(glCompressedTexImage 경로라 format · type 은
+         *          쓰지 않습니다). 표에 없는 포맷(`Unknown` = 첨부 없음)은 셋 다 0 입니다.
          */
         struct OpenGLFormatRow
         {
@@ -49,7 +49,7 @@ namespace sw
             {    RHIFormat::R8G8B8A8_UNORM,                      GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
             {    RHIFormat::B8G8R8A8_UNORM,                      GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
-            // 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 정본) — 되읽기가 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를
+            // 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 기준). 되읽기가 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를
             // CPU 로 읽는 경로(스크린샷 · 렌더 타깃 패널)가 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다.
             {RHIFormat::R16G16B16A16_FLOAT,                    GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
             { RHIFormat::D24_UNORM_S8_UINT,           GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
@@ -100,7 +100,7 @@ namespace sw
         // 머티리얼 상수버퍼는 **게임 스레드**(Material::initialize) 에서 만들어진다. GL 컨텍스트는 렌더 스레드가
         // 프레임 동안만 쥐고 executePacket 끝에 놓으므로(RenderThread), 여기서도 createBuffer 처럼 잠깐 빌려야 한다.
         // 가드 없이는 glGenBuffers 가 조용히 아무것도 안 해 초기화 안 된 이름이 그대로 저장됐고(0xFFFFFFFF),
-        // 이후 update 도 무시돼 PS 가 color=0 을 읽어 큐브가 전부 검게 나왔다 — GL 에러도, 로그도 없이.
+        // 이후 update 도 무시돼 PS 가 color=0 을 읽어 큐브가 모두 검게 나왔다. GL 에러도, 로그도 없이.
         ScopedOpenGLContext ctxScope( _pDevice );
         const uint32        alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         GLuint              ubo{ 0 };
@@ -132,7 +132,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // 32비트 API 다 — 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
         if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
@@ -155,7 +155,7 @@ namespace sw
         if ( ssbo == 0 )
             return;
 
-        // GL 은 제출·배리어가 없어 조각마다 부르는 비용이 거의 없다 — 바인딩만 한 번 하고 돈다.
+        // GL 은 제출 · 배리어가 없어 조각마다 부르는 비용이 거의 없다. 바인딩만 한 번 하고 돈다.
         ScopedOpenGLContext ctxScope( _pDevice );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
@@ -199,12 +199,12 @@ namespace sw
 
         const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
 
-        // SSBO allocation; same name can bind as GL_DRAW_INDIRECT_BUFFER / DISPATCH_INDIRECT_BUFFER.
+        // SSBO 할당. 같은 이름을 GL_DRAW_INDIRECT_BUFFER · GL_DISPATCH_INDIRECT_BUFFER 로도 걸 수 있다.
         //
-        // **할당은 정렬 크기로, 채우기는 실제 크기로 나눈다.** 예전엔 `glBufferData` 에 정렬 크기와
-        // 초기 데이터를 함께 넘겼는데, 호출자가 준 버퍼는 `_sizeBytes` 뿐이라 GL 이 그 뒤를 읽었다
+        // **할당은 정렬 크기로, 채우기는 실제 크기로 나눈다.** 예전에는 `glBufferData` 에 정렬 크기와
+        // 초기 데이터를 함께 넘겼는데, 부르는 쪽이 준 버퍼는 `_sizeBytes` 뿐이라 GL 이 그 뒤를 읽었다
         // (정렬이 256 바이트라 최대 255 바이트를 넘겨 읽는다). 읽은 쓰레기가 버퍼 꼬리에 들어갈 뿐
-        // 아니라, 호출자 버퍼가 페이지 끝에 걸리면 그대로 죽는다.
+        // 아니라, 부르는 쪽 버퍼가 페이지 끝에 걸리면 그대로 죽는다.
         GLuint ssbo{ 0 };
         glGenBuffers( 1, &ssbo );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );

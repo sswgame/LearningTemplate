@@ -1,9 +1,9 @@
 /**
  * @file GlxPlatformContext.h
- * @brief Linux(GLX/X11) OpenGL 컨텍스트.
+ * @brief Linux(GLX/X11) OpenGL 컨텍스트입니다.
  *
- * @details 구현 `.cpp` 는 파일 전체가 `SW_PLATFORM_LINUX` 가드 안에 있다 — 소스 목록은 모든
- *          플랫폼에서 같고, 쓰이지 않는 플랫폼에서는 빈 TU 가 된다.
+ * @details 구현 `.cpp` 는 파일 전체가 `SW_PLATFORM_LINUX` 가드 안에 있습니다. 소스 목록은 모든
+ *          플랫폼에서 같고, 쓰이지 않는 플랫폼에서는 빈 TU 가 됩니다.
  */
 #pragma once
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"

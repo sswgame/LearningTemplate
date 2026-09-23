@@ -1,14 +1,14 @@
 /**
  * @file VulkanRHIHandle.h
- * @brief Vulkan C 핸들 타입의 전방 선언 묶음
- * @details Vulkan 백엔드의 **헤더**는 `<vulkan/vulkan.h>` 를 포함하지 않는다. 모듈을 끄고 정적으로
+ * @brief Vulkan C 핸들 타입의 전방 선언 묶음입니다.
+ * @details Vulkan 백엔드의 **헤더**는 `<vulkan/vulkan.h>` 를 포함하지 않습니다. 모듈을 끄고 정적으로
  *          빌드하면 `RHIBackendRegistry.cpp`(Engine) 가 `VulkanRHIDevice.h` 를 포함하는데, 그때
- *          Vulkan SDK 헤더 전체가 Engine 번역 단위로 딸려 들어오기 때문이다. 핸들은 전부
- *          불투명 포인터라, 이렇게 이름만 선언해 두면 헤더에서 멤버로 들고 있을 수 있다.
- * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIDeviceInternal.h` 를 포함한다.
+ *          Vulkan SDK 헤더 전체가 Engine 번역 단위로 딸려 들어오기 때문입니다. 핸들은 모두
+ *          불투명 포인터라, 이렇게 이름만 선언해 두면 헤더에서 멤버로 들고 있을 수 있습니다.
+ * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIDeviceInternal.h` 를 포함합니다.
  */
 #pragma once
-// 인자를 `##` 로 붙이고 선언자 이름으로도 쓴다 — 괄호를 씌우면 둘 다 깨진다.
+// 인자를 `##` 로 붙이고 선언자 이름으로도 쓴다. 괄호를 씌우면 둘 다 깨진다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 
 #define SW_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;

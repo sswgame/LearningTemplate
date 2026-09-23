@@ -94,7 +94,7 @@ namespace sw
         {
             glEnable( GL_CULL_FACE );
             glCullFace( pRecord->_cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
-            glFrontFace( GL_CW ); // match DirectX / clip-control path
+            glFrontFace( GL_CW ); // DirectX · 클립 제어 경로와 같은 앞면 방향
         }
 
         if ( pRecord->_bEnableDepthTest )
@@ -177,15 +177,15 @@ namespace sw
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
         // 클립 원점은 **대상에 따라 달라야 한다.**
-        //  - FBO(오프스크린): GL_UPPER_LEFT — 텍스처 0 행이 화면 위가 되어 DX/Vulkan 과 행 순서가 같다.
+        //  - FBO(오프스크린): GL_UPPER_LEFT. 텍스처 0 행이 화면 위가 되어 DX/Vulkan 과 행 순서가 같다.
         //    이래야 SceneColor 를 읽거나 다시 샘플링할 때 백엔드끼리 그림이 일치한다.
-        //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT — 창에 보여줄 때 GL 은 y=0 을 **아래**로 표시한다.
+        //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT. 창에 보여줄 때 GL 은 y=0 을 **아래**로 표시한다.
         //    여기에도 UPPER_LEFT 를 걸면 NDC 위쪽이 창 아래로 가서 화면만 상하가 뒤집힌다.
-        //    (오프스크린만 재던 스크린샷 검증은 이걸 못 잡았다 — 읽어 온 텍스처는 이미 맞아 있었다.)
+        //    (오프스크린만 재던 스크린샷 검증은 이것을 못 잡았다. 읽어 온 텍스처는 이미 맞아 있었다.)
         // 풀스크린 블릿의 uv 는 DX 규약(NDC 위쪽 = uv.y 0)이라, 위 조합이면 두 경로 모두 바로 선다.
         if ( glad_glClipControl != nullptr )
             glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
-        // bindShaderResource가 실제로 바인딩한 유닛만 언바인드한다(예전엔 0..15 전부 방어적으로 언바인드).
+        // bindShaderResource 가 실제로 바인딩한 유닛만 언바인드한다(예전에는 0..15 모두를 방어적으로 언바인드했다).
         const uint32 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
         for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
         {
@@ -235,11 +235,11 @@ namespace sw
 
             // 첨부마다 **드로우 버퍼 상태를 건드리지 않고** 지운다.
             //
-            // 예전엔 지울 첨부를 고르려고 `glDrawBuffers( 1, &drawBuf )` 로 목록을 하나로 좁혔고,
+            // 예전에는 지울 첨부를 고르려고 `glDrawBuffers( 1, &drawBuf )` 로 목록을 하나로 좁혔고,
             // **되돌리지 않았다.** 그래서 이 루프가 끝나면 드로우 버퍼가 "마지막으로 지운 첨부" 하나만
             // 남고, 이어지는 지오메트리의 `SV_TARGET0` 이 그 첨부로 가고 `SV_TARGET1` 은 버려졌다.
             // G버퍼 패스(둘 다 클리어)에서는 알베도가 노멀 첨부에 써지고 알베도 첨부는 클리어 값
-            // 그대로 남았다 — 디퍼드 조명이 알베도 0 을 읽어 **OpenGL 만 화면이 거의 검게** 나왔다.
+            // 그대로 남았다. 디퍼드 조명이 알베도 0 을 읽어 **OpenGL 만 화면이 거의 검게** 나왔다.
             // MRT 를 쓰는 파이프라인이 디퍼드뿐이라 오래 드러나지 않았다.
             //
             // `glClearBufferfv` 는 드로우 버퍼 **인덱스**로 직접 지우므로 목록을 바꿀 이유가 없다.
@@ -268,7 +268,7 @@ namespace sw
             return;
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
         // 패스 밖에서는 **GL 기본 상태**로 되돌린다. 엔진 패스를 거치지 않고 기본 프레임버퍼에 직접 그리는
-        // 코드(에디터 ImGui 백엔드가 그렇다)는 표준 GL 규약(좌하단 원점)을 가정한다 — 오프스크린 패스가
+        // 코드(에디터 ImGui 백엔드가 그렇다)는 표준 GL 규약(좌하단 원점)을 가정한다. 오프스크린 패스가
         // 걸어 둔 UPPER_LEFT 가 남아 있으면 그쪽 UI 가 상하로 뒤집힌다.
         if ( glad_glClipControl != nullptr )
             glClipControl( GL_LOWER_LEFT, GL_ZERO_TO_ONE );
@@ -276,7 +276,7 @@ namespace sw
 
     void OpenGLRHICommandContext::uavBarrier( RHIBufferHandle buffer )
     {
-        // GL 은 버퍼 단위 배리어가 없다 — 비트로 어떤 접근을 기다릴지 고른다.
+        // GL 에는 버퍼 단위 배리어가 없다. 비트로 어떤 접근을 기다릴지 고른다.
         (void)buffer;
         glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT );
     }
@@ -320,9 +320,9 @@ namespace sw
     void OpenGLRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 등록부의 것**이다. 그 등록부는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
-        // 레코드가 말해 준다 — 다른 등록부를 넘겨짚지 않는다.
+        // 레코드가 말해 준다. 다른 등록부를 넘겨짚지 않는다.
         //
-        // 예전엔 여기도 추측이 있었다: UAV 등록부에서 못 찾으면 **bindless(SRV) 등록부**로 흘러내려
+        // 예전에는 여기도 추측이 있었다: UAV 등록부에서 못 찾으면 **bindless(SRV) 등록부**로 흘러내려
         // 거기 같은 번호의 버퍼를 `slot` 에 걸었다(`kUavBinding0 + slot` 이 아니라!). 세 등록부가 각자
         // 0 부터 번호를 발급하므로 그 넘겨짚기는 언젠가 맞아떨어지고, 그때 **엉뚱한 버퍼가 엉뚱한
         // binding 에** 걸린다. 조용히 틀리는 자리라 지운다.
@@ -339,7 +339,7 @@ namespace sw
 
         if ( record._texture != 0 )
         {
-            // RW 텍스처 — u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
+            // RW 텍스처. u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
             if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
             {
                 SW_LOG_WARNING( "bindComputeUav: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
@@ -370,14 +370,14 @@ namespace sw
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
         //
-        // 예전엔 여기서 텍스처 등록부를 먼저 찍어 보고, 없으면 버퍼 등록부로 흘러내렸다. 그런데
-        // 텍스처·버퍼·UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**다 — 같은 번호가 셋 다 유효할
+        // 예전에는 여기서 텍스처 등록부를 먼저 찍어 보고, 없으면 버퍼 등록부로 흘러내렸다. 그런데
+        // 텍스처 · 버퍼 · UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**다. 같은 번호가 셋 다 유효할
         // 수 있다. 그래서 버퍼 인덱스를 넘겨도 그 번호에 살아 있는 **텍스처**가 있으면 그쪽이 걸리고
-        // 함수가 끝났다. 호출부는 종류를 이미 알고 그에 맞는 함수를 부르는데, 여기서 다시 추측한 것이다.
+        // 함수가 끝났다. 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부르는데, 여기서 다시 추측한 것이다.
         //
         // 실제 피해: 모프 정점 버퍼(t11)가 텍스처로 걸려 정점 셰이더가 SSBO 11 에서 0 을 읽었고,
-        // 삼각형이 퇴화해 **OpenGL 에서만** 기하가 사라졌다. 인스턴스(t4)·가시 목록(t10)은 일찍
-        // 등록돼 번호가 안 겹쳤기에 멀쩡했다 — 그래서 "정점 스테이지 SSBO 가 GL 에서 안 된다" 로
+        // 삼각형이 퇴화해 **OpenGL 에서만** 기하가 사라졌다. 인스턴스(t4) · 가시 목록(t10)은 일찍
+        // 등록돼 번호가 안 겹쳤기에 멀쩡했다. 그래서 "정점 스테이지 SSBO 가 GL 에서 안 된다" 로
         // 오래 오해했다. 다른 세 백엔드는 이 추측을 하지 않는다(DX11 은 텍스처 등록부만 본다).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
@@ -401,7 +401,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        // 그래픽스 bindConstantBuffer 와 같은 근거 — 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
+        // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
         // 않으므로 b# 는 SPIR-V binding # 그대로다(gpucull 의 CullParams b0 = binding 0).
         if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
              constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
@@ -413,7 +413,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 #에 매핑된다 (gpucull 의 g_Instances 등).
+        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpucull 의 g_Instances 등).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
              index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
             return;
@@ -424,7 +424,7 @@ namespace sw
 
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
         if ( slot == constant::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
@@ -448,7 +448,7 @@ namespace sw
         const GLsizei stride = static_cast<GLsizei>( _pState->_boundMeshStride );
         glBindVertexArray( _pDevice->_meshVao );
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
-        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 건다 — DX11·DX12·Vulkan 과 같은 표다.
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
         for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
         {
             const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
@@ -459,7 +459,7 @@ namespace sw
                                    reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + attribute._byteOffset ) ) );
         }
 
-        // 슬롯 1 — 인스턴스 슬롯 스트림(uint, 인스턴스마다 하나). 안 걸린 드로우는 배열을 꺼 둔다 — 켜 둔 채 버퍼가 없으면
+        // 슬롯 1: 인스턴스 슬롯 스트림(uint, 인스턴스마다 하나). 안 걸린 드로우는 배열을 꺼 둔다. 켜 둔 채 버퍼가 없으면
         // 코어 프로파일에서 드로우가 거부된다.
         const GLuint streamVbo = _pDevice->resolveGlBuffer( _pState->_boundInstanceSlotVb );
         for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
@@ -528,7 +528,8 @@ namespace sw
 
     void OpenGLRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
-        // startInstance 는 셰이더 오프셋(g_InstanceBase)으로 넘기므로 여기선 무시한다 (GL 3.1 호환 glDrawArraysInstanced).
+        // startInstance 는 무시한다(GL 3.1 호환 glDrawArraysInstanced 에는 시작 인스턴스 인자가 없다).
+        // 인스턴스 자리가 필요한 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
         (void)startInstance;
         if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0 )
             return;
@@ -578,7 +579,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다 — 위 주석의 사연 참고.
+        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다(위 주석의 사연 참고).
         // t# 는 시프트 없이 그대로 GL SSBO binding # 이다(common.hlsli SW_GL_BINDING).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
@@ -600,16 +601,16 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 예전엔 그래픽스 PSO(또는 디바이스
+        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 예전에는 그래픽스 PSO(또는 디바이스
         // 기본 프로그램)를 다시 걸고 디스패치해서 gpucull 이 매 프레임 GL_INVALID_OPERATION
-        // ("no active compute program") 을 냈다 — 컬링 결과는 CPU 가 채운 인자 그대로라 화면은 멀쩡했다.
+        // ("no active compute program") 을 냈다. 컬링 결과는 CPU 가 채운 인자 그대로라 화면은 멀쩡했다.
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePso );
         if ( pPso == nullptr || pPso->_program == 0 )
             return;
 
         glUseProgram( pPso->_program );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
-        // 이미지 스토어 결과를 이후 샘플링/읽기/업로드가 보도록 — SSBO 는 transitionBuffer 가 따로 막는다.
+        // 이미지 스토어 결과를 이후 샘플링 · 읽기 · 업로드가 보도록 한다. SSBO 는 transitionBuffer 가 따로 막는다.
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
     }
 
@@ -764,7 +765,7 @@ namespace sw
     void OpenGLRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
         // FBO 로 그린 결과를 텍스처로 샘플링하기 전에 필요한 배리어(예전 endOffscreenPass 가 하던 일).
-        // FBO 0 재바인딩은 여기서 하지 않는다 — 다음 beginRenderPass 가 타깃을 명시적으로 정한다.
+        // FBO 0 재바인딩은 여기서 하지 않는다. 다음 beginRenderPass 가 타깃을 명시적으로 정한다.
         (void)texture;
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
@@ -774,7 +775,7 @@ namespace sw
 
     void OpenGLRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
     {
-        // 상태 추적이 없다 — 이전 렌더/샘플 결과가 이미지 스토어 전에 끝나도록 배리어만 친다.
+        // 상태 추적이 없다. 이전 렌더 · 샘플 결과가 이미지 스토어 전에 끝나도록 배리어만 친다.
         (void)texture;
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;

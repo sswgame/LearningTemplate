@@ -22,15 +22,15 @@ namespace sw
     {
         /**
          * @class VulkanOneShotCommands
-         * @brief 일회용 커맨드 버퍼 하나 — 할당·시작은 생성자가, **해제는 소멸자가** 합니다.
+         * @brief 일회용 커맨드 버퍼 하나입니다. 할당 · 시작은 생성자가, **해제는 소멸자가** 합니다.
          *
-         * @details 텍스처 업로드와 리드백이 같은 열다섯 줄을 각자 적고 있었다(할당 → begin → … →
+         * @details 텍스처 업로드와 리드백이 같은 열다섯 줄을 각자 적고 있었습니다(할당 → begin → … →
          *          end → submit → waitIdle → free). 지금은 그 사이에 `return` 이 없어 새는 자리가
-         *          없지만, **누군가 중간에 검사를 하나 더하는 날 커맨드 버퍼가 샌다** — 풀에서 조용히
-         *          자라다가 나중에 할당이 실패한다. 해제를 소멸자에 두면 그 실수가 생길 수 없다.
+         *          없지만, **누군가 중간에 검사를 하나 더하는 날 커맨드 버퍼가 샙니다.** 풀에서 조용히
+         *          자라다가 나중에 할당이 실패합니다. 해제를 소멸자에 두면 그 실수가 생길 수 없습니다.
          *
-         * @note 장치 핸들 셋을 인자로 받는다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
-         *       `VulkanRHIResource` 만 friend 라, 이 클래스가 장치를 직접 알 수는 없다.
+         * @note 장치 핸들 셋을 인자로 받습니다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
+         *       `VulkanRHIResource` 만 friend 라, 이 클래스가 장치를 직접 알 수는 없습니다.
          */
         class VulkanOneShotCommands
         {
@@ -75,7 +75,7 @@ namespace sw
 
             /**
              * @brief 기록을 끝내고 제출한 뒤 큐가 빌 때까지 기다립니다.
-             * @details 로드·리드백 경로라 큐가 비기를 기다리는 값싼 동기 방식을 택했다
+             * @details 로드 · 리드백 경로라 큐가 비기를 기다리는 값싼 동기 방식을 택했습니다
              *          (`executeCommandListImmediate` 와 같은 이유).
              */
             bool endSubmitAndWait()
@@ -105,10 +105,10 @@ namespace sw
 
         /**
          * @brief 2D 색 이미지의 **전체 밉 체인** 배리어 뼈대입니다. 레이아웃과 접근 마스크만 채우면 됩니다.
-         * @details `transitionImageLayout` 은 밉 하나만 다루므로 업로드·리드백은 전체 밉 배리어를
-         *          직접 쓴다. 그 뼈대 열 줄이 두 곳에 복사돼 있었다 — `aspectMask` 나 `layerCount` 를
+         * @details `transitionImageLayout` 은 밉 하나만 다루므로 업로드 · 리드백은 전체 밉 배리어를
+         *          직접 씁니다. 그 뼈대 열 줄이 두 곳에 복사돼 있었습니다. `aspectMask` 나 `layerCount` 를
          *          빠뜨린 새 배리어는 검증 계층이 잡아 주지만, **잡히는 곳이 배리어를 건 자리가 아니라
-         *          그 뒤의 전이**라 읽기 나쁘다. 고정값은 한 곳에 둔다.
+         *          그 뒤의 전이**라 읽기 나쁩니다. 고정값은 한 곳에 둡니다.
          */
         VkImageMemoryBarrier makeWholeImageBarrier( VkImage image, uint32 mipLevels )
         {
@@ -159,7 +159,7 @@ namespace sw
         }
 
         // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 슬롯의 오프셋을
-        // 넣는다 — 세트는 프레임마다 새로 할당되므로 아직 실행 중인 직전 프레임의 세트를 덮어쓸 일이 없다.
+        // 넣는다. 세트는 프레임마다 새로 할당되므로 아직 실행 중인 직전 프레임의 세트를 덮어쓸 일이 없다.
         (void)slotSize;
         (void)offset;
     }
@@ -169,7 +169,7 @@ namespace sw
         if ( elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // 32비트 API 다 — 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
         if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
@@ -184,7 +184,7 @@ namespace sw
         const uint32                           slotIndex = _pDevice->_currentFrame;
         VulkanRHIDevice::StructuredUploadSlot& slot      = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
-        // 슬롯이 다시 내 차례가 됐다는 건 beginFrame 이 그 슬롯의 펜스를 기다렸다는 뜻 — 오프셋을 되감는다.
+        // 슬롯이 다시 내 차례가 됐다는 것은 beginFrame 이 그 슬롯의 펜스를 기다렸다는 뜻이다. 오프셋을 되감는다.
         // 같은 펜스 구간(같은 프레임) 안의 두 번째 호출은 앞선 복사가 아직 스테이징을 읽을 수 있으므로 이어 쓴다.
         if ( slot._resetFence != _pDevice->_frameFenceCounter )
         {
@@ -197,7 +197,7 @@ namespace sw
         {
             const uint64 newCapacity = MathUtil::align( ( offset + sizeBytes ) * 2, 65536ull );
 
-            // 옛 스테이징은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다 — 펜스 뒤에 놓아준다.
+            // 옛 스테이징은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아준다.
             if ( slot._buffer != VK_NULL_HANDLE )
             {
                 VkDevice       dev = _pDevice->_device;
@@ -269,16 +269,16 @@ namespace sw
     void VulkanRHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                            const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        // 예전엔 목적 버퍼를 직접 vkMapMemory 해서 썼다. 링 오프셋 버그(71cd9755)를 걷어낸 뒤에도
+        // 예전에는 목적 버퍼를 직접 vkMapMemory 해서 썼다. 링 오프셋 버그(71cd9755)를 걷어낸 뒤에도
         // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 남아 있었다.
-        // 지금은 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다 — 큐 순서가 곧 해저드 해결이고,
+        // 지금은 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
              pRecord->_buffer == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE )
             return;
 
-        // **조각을 전부 한 스테이징에 모아 배리어 한 쌍·복사 한 번으로 끝낸다.** 조각마다 부르면
+        // **조각을 모두 한 스테이징에 모아 배리어 한 쌍 · 복사 한 번으로 끝낸다.** 조각마다 부르면
         // 스테이징 확보와 제출이 그만큼 되풀이된다(DX12 에서 호출당 ~3.3 us 로 재었다).
         // `vkCmdCopyBuffer` 는 영역 배열을 그대로 받으므로 여기서는 나눌 이유가 아예 없다.
         constexpr uint32     kCopyAlignment = 4;
@@ -309,7 +309,7 @@ namespace sw
             if ( region._size == 0 || region._dstOffset >= pRecord->_size )
                 continue;
 
-            // 클램프는 **오프셋을 포함해서** 해야 한다 — 앞에서부터 쓸 때만 맞던 식이었다.
+            // 클램프는 **오프셋을 포함해서** 해야 한다. 앞에서부터 쓸 때만 맞던 식이었다.
             uint32 copySize = region._size;
             if ( copySize > pRecord->_size - region._dstOffset )
                 copySize = static_cast<uint32>( pRecord->_size - region._dstOffset );
@@ -328,7 +328,7 @@ namespace sw
             return;
 
         // 프레임 안이면 프레임 스트림에 기록한다(제출 순서상 이번 프레임의 패스 리스트보다 앞). 프레임 밖
-        // (초기 업로드·테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
+        // (초기 업로드 · 테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
         VkCommandBuffer cmd      = ( _pDevice->_bFrameStarted == SW_TRUE ) ? _pDevice->_activeFrameBuffer : VK_NULL_HANDLE;
         const bool      bOneShot = ( cmd == VK_NULL_HANDLE );
 
@@ -354,8 +354,8 @@ namespace sw
             _pDevice->_recordingState._bRenderPassActive = SW_FALSE;
         }
 
-        // 앞 프레임의 읽기(셰이더·간접 인자·컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
-        // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다 — 보수적인 마스크로 양쪽을 다 덮는다.
+        // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
+        // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다. 보수적인 마스크로 양쪽을 다 덮는다.
         constexpr VkAccessFlags        kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
         constexpr VkPipelineStageFlags kConsumerStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
@@ -592,8 +592,8 @@ namespace sw
 
         if ( desc._bIsDepthStencil != SW_FALSE )
         {
-            // 샘플용 뷰는 aspect 가 하나여야 한다 (DEPTH|STENCIL 뷰는 디스크립터에 못 쓴다). 그림자맵처럼
-            // 깊이를 읽는 패스가 이 뷰로 bindless 등록된다 — registerBindlessTexture 참고.
+            // 샘플용 뷰는 aspect 가 하나여야 한다(DEPTH|STENCIL 뷰는 디스크립터에 못 쓴다). 그림자맵처럼
+            // 깊이를 읽는 패스가 이 뷰로 bindless 등록된다. registerBindlessTexture 참고.
             viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._sampleView ) != VK_SUCCESS )
             {
@@ -700,9 +700,9 @@ namespace sw
 
     bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        // **여기의 실패는 전부 소리를 낸다.** 예전에는 네 자리가 말없이 false 를 돌려줬는데, 리드백은
+        // **여기의 실패는 모두 소리를 낸다.** 예전에는 네 자리가 말없이 false 를 반환했는데, 리드백은
         // 오프스크린 렌더 문제가 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다
-        // (형제인 uploadTexture2D 는 같은 자리에서 전부 로그를 남기고 있었다).
+        // (형제인 uploadTexture2D 는 같은 자리에서 모두 로그를 남기고 있었다).
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
@@ -759,7 +759,7 @@ namespace sw
         region.imageExtent                     = { outLayout._width, outLayout._height, 1 };
         vkCmdCopyImageToBuffer( cmd, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pStaging->_buffer, 1, &region );
 
-        // 읽기 뒤에는 샘플링 레이아웃으로 둔다 — 한 번도 안 올린 텍스처(UNDEFINED)도 이제부터는 정의된 레이아웃을 갖는다.
+        // 읽기 뒤에는 샘플링 레이아웃으로 둔다. 한 번도 안 올린 텍스처(UNDEFINED)도 이제부터는 정의된 레이아웃을 갖는다.
         barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;

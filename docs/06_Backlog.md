@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑧) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ · ⑦ Graphics/Renderer ✅ · ⑧ Graphics/RHI 공통 · D3D ✅ |
+| `Engine` | 7,865 | ✅ 2026-09-24 (3절 참고). 하위 폴더 단위로 아홉 번 나눠 커밋했다: ① 루트 · Common · Compression · Config · Module · Utility · ② Reflection · Serialization · ③ Object · Scene · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics · ⑤ Input · Window · Audio · Animation · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload · ⑦ Graphics/Renderer · ⑧ Graphics/RHI 공통 · D3D · ⑨ Graphics/RHI GL · Vulkan |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1479,6 +1479,17 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   "인스턴스의 부모가 기준" 이라고 적고 있었다. 고칠 때는 머티리얼이 없고 인스턴스가 있으면 부모를 먼저 쓴다.
 - **`D3D12RHIDevice::_arrFrameCmdAllocator` 는 죽은 멤버다.** 초기화가 얼로케이터 셋을 만들고 이름을 붙이고, 종료가
   놓기만 한다. `4d99eedb`(리스트마다 전용 얼로케이터 쌍) 뒤로 아무도 쓰지 않는다. 멤버 · 생성 · 해제를 지워도 된다.
+- **`VulkanRHIDevice::_bMaterialCbSlotWarned` 도 죽은 멤버다.** 생성자가 초기화만 한다. 유일한 사용처(b1 을 푸시 상수로
+  돌리던 시절의 안내 로그)가 `d502a8b5`(b1 을 실제 상수 버퍼로 지원)에서 사라졌다. 멤버와 초기화를 지워도 된다.
+- **Vulkan `drawIndexedIndirect` 는 정점 바인딩 1 을 걸지 않는다.** 바인딩 0(메시 VB)만 직접 걸고, 파이프라인이 늘 선언하는
+  바인딩 1(인스턴스 슬롯 스트림)은 건너뛴다. 나머지 드로우 셋은 `bindMeshVertexBufferOrFallback` 으로 둘 다 건다. 엔진에서
+  부르는 곳이 없어 드러나지 않았다. 고칠 때는 같은 함수를 부르면 된다.
+- **정리만 남은 것(동작 영향 없음).** `OpenGLRHICommandContext( pDevice, pState )` 두 인자 생성자는 부르는 곳이 없다(GL 은
+  리스트도 디바이스 기록 상태를 쓴다). 빈 네임스페이스가 일곱 곳 남았다: 익명 `namespace { }` 가 `D3D11RHIResource.cpp` ·
+  `D3D11RHIResourceBindless.cpp` · `D3D12RHIResource.cpp` · `D3D12RHIResourceBindless.cpp` · `OpenGLRHIResourceBindless.cpp` ·
+  `OpenGLRHIDeviceSubmission.cpp`(⑨ 에서 선언을 잃은 문서를 지워 비었다)에, 빈 `namespace sw { }` 가 `OpenGLRHIDevice.cpp` 머리에
+  있다. Vulkan 의 `drawInstanced` · `drawIndexedIndirect` · `drawIndirect` 는 `bindActiveGraphicsPipeline` 이 이미 부른
+  `flushSlotSet( false )` 를 한 번 더 부른다(두 번째는 바뀐 것이 없어 할 일이 없다).
 
 **주석 정리 범위 밖이라 남긴 것.** 문자열 · 셰이더 · 파일 위치는 이 작업이 건드리지 않는다.
 - `RenderThread.cpp` 의 `gv_screenshot` · `gv_screenshotAttachment` 도움말 문자열이 아직 "트랜지언트를 PPM 으로 덤프" ·
@@ -1487,6 +1498,9 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다고 한다. 지금은 인스턴스 슬롯 스트림이 준 전역 자리
   (간접 인자의 startInstance + 서수)로 읽는다(`binding.hlsli` 의 `SwResolveInstanceId`). 셰이더 소스를 고치면 구운
   산출물도 다시 만들어야 해서 여기서 뺐다.
+- `Graphics/README.md` 의 메시 드로우 설명(229행 부근)이 아직 "배치당 `drawInstanced` 한 번 · PassCB `g_InstanceBase` = 배치
+  시작 오프셋" 이라고 한다. 지금 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림이고, 셰이더에 `g_InstanceBase` 는 없다
+  (위 `gpucull.hlsl` 항목과 같은 뿌리).
 - `RenderResourceXml` 은 이제 `Serialization` 쪽으로 옮길 수 있다. 쓰는 쪽 옆에 둔 이유(직렬화가 `Resource` 를 못 봄)는
   `Resource/ResourceUtil.h` 가 티어 예외가 되면서 사라졌다.
 
@@ -1669,6 +1683,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ⑨ — Graphics/RHI GL · Vulkan)
+
+**한 것.** `Graphics/RHI` 의 `GL`(`Platform` 포함) · `Vulkan` 37 개 파일 주석을 1-0g 규칙으로 다시 썼다(영어 주석도 옮겼다).
+Engine 의 하위 폴더는 이것으로 모두 끝났다. 사실과 달랐던 것:
+- GL `drawInstanced` 가 "startInstance 는 셰이더 오프셋(`g_InstanceBase`)으로 넘긴다" 고 했다 → 그 상수는 없어졌고, GL 3.1 호환
+  호출이라 시작 인스턴스를 그냥 버린다. 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
+- GL 디바이스의 `_recordingState` 문서가 "리스트는 각자 자기 것을 갖는다" 고 했다 → GL 은 리스트도 디바이스 상태를 함께 쓴다
+  (`OpenGLRecordingState` 문서가 그 이유를 적고 있었다). 두 인자 생성자는 부르는 곳이 없다(아래 결함).
+- `bindMeshVaoAttribs` 가 "position(0)/color(1) 두 속성" 이라 했다 → 공용 정점 속성 표 전체와 인스턴스 슬롯 스트림을 건다.
+- `OpenGLRHIDevice` 의 `@note`(glad 는 `OpenGLRHIDevice.cpp` 에서만) · `initializeInternal`(wglCreateContext / EGL) ·
+  `beginFrame`(glClearColor 및 glClear) · `BindlessTextureRecord`(인덱스 → 텍스처 유닛) · `_boundTextureUnitMask`(다음 패스가
+  쓰지 않는 유닛을 뗀다)가 코드와 달랐다. 제출 쪽 `beginFrame` 의 "뷰포트는 기본 상태로 남긴다" 는 바로 아래 줄이 뷰포트를 창
+  크기로 되돌리고 있었다.
+- GL 초기화: KHR_debug 비트를 "플랫폼 컨텍스트가 켠다" → WGL 만 켠다(GLX 는 아직 켜지 않는다). ARB_gl_spirv 가 없을 때
+  "`RHI::createDevice` 가 null 을 주고 상위가 다른 백엔드로 넘어간다" → `createDevice` 는 초기화하지 않고, `initialize` 가
+  false 를 반환할 뿐 다른 백엔드로 넘어가는 경로는 없다.
+- Vulkan: `flushSlotSet` 이 set 0 을 "두 바인드 포인트에" 건다고 했다 → 부른 쪽 하나에 걸고, 둘 다에 거는 것은 set 1 이다.
+  드로우 두 곳의 "세트 0 은 커맨드버퍼마다 한 번" 도 같은 혼동이었다. `bindMeshVertexBufferOrFallback` 은 바인딩 1(인스턴스
+  슬롯 스트림)도 건다. `getResource` 위에 "오프스크린 패스를 시작합니다" 가 붙어 있었다. `_listTextureUsed` 설명에 2(해제
+  대기)가 빠져 있었다. robustBufferAccess 설명의 "DX12 루트 SRV 는 이 보호가 없다" → DX12 의 t# 는 이제 슬롯 테이블이다.
+  `VulkanRHIDeviceInit.cpp` 머리말이 프레임 코드를 `VulkanRHIDevice.cpp` 에 있다고 했다 → `VulkanRHIDeviceSubmission.cpp`.
+- 선언을 잃은 문서를 지웠다: GL 디바이스 헤더 넷(Deferred Context · 멀티 드로우 조회 · 풀스크린 VAO 생성 ·
+  `OpenGLRecordingState` 로 옮겨 간 `_boundTextureUnitMask`), GL 제출 .cpp 하나(플랫폼 컨텍스트로 옮겨 간 스왑 인터벌),
+  Vulkan 디바이스 헤더 넷(Deferred Context · 파이프라인 생성 · 인다이렉트 · 풀스크린 VB). `createCommandList` 위에 쌓여 있던
+  "디버그 마커 시작" 은 제 문서로 바꿨다. 전방 선언 위에 붙어 있던 `resolveTexture` · `resolveAllocatedBuffer` 문서를 선언
+  바로 위로 옮겼고, `VulkanRHIDevice.cpp` 의 빈 "SwapChain · Resource Implementation" 섹션 머리를 지웠다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ⑧ — Graphics/RHI 공통 · D3D)
 

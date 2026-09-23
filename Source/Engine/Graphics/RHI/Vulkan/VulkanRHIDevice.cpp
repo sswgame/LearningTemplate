@@ -131,7 +131,7 @@ namespace sw
         _width          = desc._width;
         _height         = desc._height;
 
-        // 백버퍼 포맷/개수는 백엔드 간 계약값이다 — 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
+        // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
         _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
 
         BLOCK( "Validation Layer Setup" )
@@ -227,7 +227,7 @@ namespace sw
         BLOCK( "Fullscreen Triangle" )
         {
             const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다 — 레이아웃을 채우려고 +Z 를 둔다.
+                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
                 // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
                 {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
                 { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -260,7 +260,7 @@ namespace sw
             _releaseQueue.flushAll();
             _frameStreamContext.reset();
 
-            // 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임 너머 든다). 여기서 연결을 끊고 쌍을 부순다 —
+            // 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임 너머 든다). 여기서 연결을 끊고 쌍을 부순다.
             // 안 그러면 그쪽 소멸자가 죽은 디바이스에 반납하려 들고, 풀은 새어 검증 레이어가 잡는다.
             {
                 std::scoped_lock<mutex> lock{ _liveCmdListMutex };
@@ -307,7 +307,7 @@ namespace sw
             {
                 destroyOffscreenFramebuffer( record );
                 // 뷰는 이미지보다 **반드시 먼저** 없앤다. 깊이 텍스처의 `_sampleView` 가 여기서 빠져 있어서
-                // 살아 있는 뷰를 두고 vkDestroyImage 를 부르고 있었다 — destroyTexture 경로는 둘 다 지운다.
+                // 살아 있는 뷰를 두고 vkDestroyImage 를 부르고 있었다. destroyTexture 경로는 둘 다 지운다.
                 if ( record._imageView != VK_NULL_HANDLE )
                     vkDestroyImageView( _device, record._imageView, nullptr );
                 if ( record._sampleView != VK_NULL_HANDLE )
@@ -325,7 +325,7 @@ namespace sw
             _listTextureUsed.clear();
             _listTextureFree.clear();
 
-            _textureSet = VK_NULL_HANDLE; // owned by descriptor pool
+            _textureSet = VK_NULL_HANDLE; // 디스크립터 풀이 소유한다
             if ( _textureSetLayout )
             {
                 vkDestroyDescriptorSetLayout( _device, _textureSetLayout, nullptr );
@@ -370,7 +370,7 @@ namespace sw
                 _bindlessDummyMemory = nullptr;
             }
 
-            // 타임스탬프 쿼리 풀 — 계측을 켠 적이 있으면 있다. 안 부수면 검증 레이어가 종료 때 새는 객체로 잡는다.
+            // 타임스탬프 쿼리 풀은 계측을 켠 적이 있으면 있다. 안 부수면 검증 레이어가 종료 때 새는 객체로 잡는다.
             if ( _timestampPool != VK_NULL_HANDLE )
             {
                 vkDestroyQueryPool( _device, _timestampPool, nullptr );
@@ -399,7 +399,7 @@ namespace sw
             } );
             _pipelineStates.clear();
 
-            // _vertexBuffer is owned by _gpuBuffers (Triangle Resources); do not destroy twice.
+            // _vertexBuffer 는 _gpuBuffers 가 소유한다(풀스크린 삼각형 리소스). 두 번 부수지 않는다.
             _vertexBuffer = VK_NULL_HANDLE;
             if ( _pipeline )
                 vkDestroyPipeline( _device, _pipeline, nullptr );
@@ -556,13 +556,5 @@ namespace sw
 
         return _gpuBuffers.insert( record );
     }
-
-    // ------------------------------------------------------------------------------
-    // VulkanRHISwapChain Implementation
-    // ------------------------------------------------------------------------------
-
-    // ------------------------------------------------------------------------------
-    // VulkanRHIResource Implementation
-    // ------------------------------------------------------------------------------
 
 } // namespace sw

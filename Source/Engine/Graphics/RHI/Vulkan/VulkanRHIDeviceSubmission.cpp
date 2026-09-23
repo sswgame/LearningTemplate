@@ -59,11 +59,11 @@ namespace sw
              _arrTimestampSubmitted[_currentFrame] == SW_FALSE )
             return;
 
-        // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다** — 이번 프레임에 안 쓰인
+        // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
         // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
         uint64       arrResult[constant::kMaxGpuTimestampSlot * 2]{};
         const uint32 base = getTimestampBase();
-        // **기다리지 않는다**(WAIT 비트 없음) — 재려던 파이프라인을 멈추면 숫자가 거짓이 된다.
+        // **기다리지 않는다**(WAIT 비트 없음). 재려던 파이프라인을 멈추면 숫자가 거짓이 된다.
         // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
         const VkResult result =
             vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGpuTimestampSlot, sizeof( arrResult ), arrResult,
@@ -71,7 +71,7 @@ namespace sw
         if ( result != VK_SUCCESS && result != VK_NOT_READY )
             return;
 
-        // 가용 비트가 선 칸만 준비된 것이다 — 값과 비트를 갈라 공통 규칙에 넘긴다.
+        // 가용 비트가 선 칸만 준비된 것이다. 값과 비트를 갈라 공통 규칙에 넘긴다.
         uint64 arrTick[constant::kMaxGpuTimestampSlot]{};
         uint32 readyMask{ 0 };
         for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
@@ -96,25 +96,25 @@ namespace sw
             _bSwapChainDirty = 0;
         }
 
-        // 재생성이 실패하면 스왑체인/동기화 객체가 없는 상태이므로 프레임을 건너뜁니다.
+        // 재생성이 실패하면 스왑체인 · 동기화 객체가 없는 상태이므로 프레임을 건너뛴다.
         if ( _swapChain.isValid() == false || _listInFlightFence.empty() )
             return;
 
         vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
-        // **여기가 타임스탬프를 읽는 유일한 안전한 자리다** — 이 슬롯의 펜스를 방금 통과했다.
+        // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
-        // 이 링 슬롯의 펜스가 신호됐다는 건 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
-        // GPU 작업이 실제로 끝났다는 뜻이다 — 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
+        // 이 링 슬롯의 펜스가 신호됐다는 것은 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
+        // GPU 작업이 실제로 끝났다는 뜻이다. 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
-        // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다 — 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
+        // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
         resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
 
         // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 아직 쥐고 있다. Vulkan 에는
         // present 말고 이미지를 돌려주는 길이 없으니, 다시 획득하지 말고 그 이미지에 덮어 그린다.
         // 매 프레임 새로 획득하면 이미지가 하나씩 소진되고, 개수를 넘기는 순간 acquire 가
-        // UINT64_MAX 타임아웃으로 영원히 막힌다 — endFrame(bPresent=false) 로 도는 경로에서 실제로 걸렸다.
+        // UINT64_MAX 타임아웃으로 영원히 막힌다. endFrame(bPresent=false) 로 도는 경로에서 실제로 걸렸다.
         if ( _bSwapChainImageHeld == SW_FALSE )
         {
             VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
@@ -127,7 +127,7 @@ namespace sw
                 status = _swapChain.acquireNextImage( _device, _currentFrame );
             }
 
-            // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" — 위에서 이미 한 번 다시
+            // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" 는 뜻이다. 위에서 이미 한 번 다시
             // 만들어 봤으므로 그대로 진행한다.
             if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
                 return;
@@ -152,7 +152,7 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
-        // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다 — 안 하면 결과가 정의되지 않는다.
+        // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGpuTimestampSlot );
 
@@ -161,7 +161,7 @@ namespace sw
         _frameSegmentCursor = 0;
         _listPendingSubmit.clear();
 
-        // 새 커맨드버퍼엔 아직 아무 세트도 안 걸림 — flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
+        // 새 커맨드버퍼에는 아직 아무 세트도 안 걸렸다. flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
         _recordingState._bTextureSetBound = SW_FALSE;
         _recordingState._arrSlotState[0]  = VulkanSlotState{};
         _recordingState._arrSlotState[1]  = VulkanSlotState{};
@@ -188,9 +188,9 @@ namespace sw
         scissor.extent = { _swapChain.getExtentWidth(), _swapChain.getExtentHeight() };
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
 
-        // 백버퍼 렌더패스는 여기서 열지 않는다 — beginFrame 은 프레임 수명주기 전용이고, 백버퍼
+        // 백버퍼 렌더패스는 여기서 열지 않는다. beginFrame 은 프레임 수명주기 전용이고, 백버퍼
         // 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다(docs/05_RHI_FrameContract.md S2).
-        // 클리어도 그 렌더패스의 loadOp 이 담당한다.
+        // 클리어도 그 렌더패스의 loadOp 이 맡는다.
         (void)clearColor;
     }
 
@@ -211,7 +211,7 @@ namespace sw
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        // acquire 대기는 프레임당 한 번만 — 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
+        // acquire 대기는 프레임당 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
         VkSemaphore          arrWaitSemaphore[] = { _swapChain.getImageAvailableSemaphore( _currentFrame ) };
         VkPipelineStageFlags arrWaitStage[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         if ( _bFrameAcquireWaitPending != SW_FALSE )
@@ -222,7 +222,7 @@ namespace sw
             _bFrameAcquireWaitPending     = SW_FALSE;
         }
 
-        // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다 — 같은 큐에 대한
+        // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다. 같은 큐에 대한
         // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
         submitInfo.commandBufferCount = static_cast<uint32>( _listPendingSubmit.size() );
         submitInfo.pCommandBuffers    = _listPendingSubmit.data();
@@ -236,11 +236,11 @@ namespace sw
             submitInfo.pSignalSemaphores    = arrSignalSemaphore;
         }
 
-        // 이 제출에 새 세대 번호를 매긴다 — 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
-        // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame의 tickCompleted) 보류된다.
+        // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
+        // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
-        // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다 — 그 전에 읽으면 미정의다.
+        // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
 
@@ -249,7 +249,7 @@ namespace sw
             const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue );
             if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
             {
-                // 다음 beginFrame에서 스왑체인을 재생성합니다.
+                // 다음 beginFrame 에서 스왑체인을 다시 만든다.
                 _bSwapChainDirty = 1;
             }
             // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도
@@ -266,8 +266,8 @@ namespace sw
 
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
-        // 스트림은 하나지만 리스트가 제출될 때마다 세그먼트로 잘린다 — 지금 열려 있는 세그먼트를
-        // 돌려준다. 예전엔 오프스크린 전용 버퍼로 갈라졌고 그쪽은 매 프레임 자체 제출 + 펜스
+        // 스트림은 하나지만 리스트가 제출될 때마다 세그먼트로 잘린다. 지금 열려 있는 세그먼트를
+        // 반환한다. 예전에는 오프스크린 전용 버퍼로 갈라졌고 그쪽은 매 프레임 자체 제출 + 펜스
         // 블로킹을 했다(S3 에서 사라졌다).
         if ( _bFrameStarted == SW_TRUE )
             return _activeFrameBuffer;
@@ -276,7 +276,7 @@ namespace sw
 
     VulkanCommandListEntry VulkanRHIDevice::acquireCommandListEntry()
     {
-        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않는다.
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않는다.
         VulkanCommandListEntry entry{};
         {
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
@@ -291,7 +291,7 @@ namespace sw
         if ( _device == nullptr )
             return entry;
 
-        // 풀은 리스트마다 전용이어야 한다 — VkCommandPool 은 외부 동기화 대상이라 두 스레드가 같은
+        // 풀은 리스트마다 전용이어야 한다. VkCommandPool 은 외부 동기화 대상이라 두 스레드가 같은
         // 풀에서 동시에 기록하면 정의되지 않은 동작이다. 슬롯 세트 풀 묶음도 같은 이유로 쌍마다 전용이다.
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -316,7 +316,7 @@ namespace sw
         }
 
         {
-            // 풀 묶음은 디바이스가 소유한다 — 쌍은 값으로 복사돼 다니므로(지연 반환 람다 캡처) 빌려 쓰는 포인터만 든다.
+            // 풀 묶음은 디바이스가 소유한다. 쌍은 값으로 복사돼 다니므로(지연 반환 람다 캡처) 빌려 쓰는 포인터만 든다.
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             _listCmdListDescriptorPoolSet.push_back( make_unique<VulkanDescriptorPoolSet>() );
             entry._pDescriptorPoolSet = _listCmdListDescriptorPoolSet.back().get();
@@ -355,7 +355,7 @@ namespace sw
         if ( entry._pool == VK_NULL_HANDLE || entry._buffer == VK_NULL_HANDLE )
             return;
 
-        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 버퍼를 읽고 있다 — 이번 프레임 세대가
+        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 버퍼를 읽고 있다. 이번 프레임 세대가
         // 끝났다고 확인된 뒤에야 재사용 풀로 돌려보낸다(대기 없음).
         auto recycleCb = [this, entry]()
         {
@@ -410,8 +410,8 @@ namespace sw
         if ( listBuffer == VK_NULL_HANDLE )
             return;
 
-        // 프레임 밖 일회성 제출이라 프레임 펜스에 얹을 수 없다 — 자체 제출 후 큐가 비기를 기다려
-        // 호출자가 결과를 바로 쓸 수 있게 한다(업로드/스모크 용도라 빈도가 낮다).
+        // 프레임 밖 일회성 제출이라 프레임 펜스에 얹을 수 없다. 자체 제출 후 큐가 비기를 기다려
+        // 부르는 쪽이 결과를 바로 쓸 수 있게 한다(업로드 · 스모크 용도라 빈도가 낮다).
         VkSubmitInfo submitInfo{};
         submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;

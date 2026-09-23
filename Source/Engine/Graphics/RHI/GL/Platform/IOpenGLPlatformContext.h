@@ -1,18 +1,18 @@
 /**
  * @file IOpenGLPlatformContext.h
- * @brief OpenGL 컨텍스트의 플랫폼 의존부 — 생성·바인딩·프레젠트·VSync.
+ * @brief OpenGL 컨텍스트의 플랫폼 의존부(생성 · 바인딩 · 프레젠트 · VSync)입니다.
  *
- * @details GL 만 컨텍스트를 OS 가 만들어 준다(DX·Vulkan 은 API 가 직접 만든다). 그래서 WGL / GLX /
+ * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX · Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX /
  *          NSOpenGL 세 갈래가 필요한데, 예전에는 그 분기가 `OpenGLRHIDevice` 의 멤버 함수 **여섯
- *          곳에 `#if` 사다리로** 흩어져 있었다(14개 분기). 플랫폼을 하나 더 지원하려면 그 여섯
- *          곳을 모두 찾아 고쳐야 했다. 지금은 **한 파일을 더하고 팩토리에 한 줄** 추가한다.
+ *          곳에 `#if` 사다리로** 흩어져 있었습니다(14개 분기). 플랫폼을 하나 더 지원하려면 그 여섯
+ *          곳을 모두 찾아 고쳐야 했습니다. 지금은 **한 파일을 더하고 팩토리에 한 줄** 추가합니다.
  *
  *          같은 이유로 `Window/Windows|Linux|Mac` 과 `Core/File/Windows|Linux|Mac` 이 이미 폴더로
- *          갈라져 있다. 이 폴더는 그 형태를 GL 에 적용한 것이다.
+ *          갈라져 있습니다. 이 폴더는 그 형태를 GL 에 적용한 것입니다.
  *
- * @note 디바이스는 핸들을 **불투명 `void*`** 로만 들고 있다(`getNativeDevice` 가 HDC 를 돌려주는
- *       계약 때문). 그래서 이 인터페이스도 `OpenGLContextHandles` 로 값만 넘긴다 — 플랫폼 타입이
- *       디바이스 헤더로 새지 않는다.
+ * @note 디바이스는 핸들을 **불투명 `void*`** 로만 들고 있습니다(`getNativeDevice` 가 HDC 를 반환하는
+ *       계약 때문). 그래서 이 인터페이스도 `OpenGLContextHandles` 로 값만 넘깁니다. 플랫폼 타입이
+ *       디바이스 헤더로 새지 않습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     struct RHISwapChainDesc;
 
-    /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍. */
+    /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍입니다. */
     struct OpenGLContextHandles
     {
         /** @brief HDC(Windows) · Display*(Linux) · NSView(macOS). */
@@ -33,12 +33,12 @@ namespace sw
 
     /**
      * @class IOpenGLPlatformContext
-     * @brief 플랫폼별 GL 컨텍스트 수명·바인딩·프레젠트.
+     * @brief 플랫폼별 GL 컨텍스트의 수명 · 바인딩 · 프레젠트를 맡습니다.
      */
     class IOpenGLPlatformContext
     {
     public:
-        /** @brief 이 플랫폼의 구현을 만듭니다. 지원하지 않는 플랫폼이면 nullptr. */
+        /** @brief 이 플랫폼의 구현을 만듭니다. 지원하지 않는 플랫폼이면 nullptr 입니다. */
         static unique_ptr<IOpenGLPlatformContext> create();
 
         IOpenGLPlatformContext()          = default;
@@ -61,27 +61,27 @@ namespace sw
         /**
          * @brief 이 스레드에 컨텍스트를 바인딩합니다.
          * @note 실패해도 **로그를 남기지 않습니다.** 다른 스레드가 쥐고 있는 것은 정상 경합이고,
-         *       기다릴지 포기할지와 알릴지는 호출부가 정합니다
+         *       기다릴지 포기할지와 알릴지는 부르는 쪽이 정합니다
          *       (`OpenGLRHIDevice::bindGraphicsContext` / `acquireGraphicsContextBlocking`).
          */
         virtual bool makeCurrent() = 0;
-        /** @brief 이 스레드의 current 컨텍스트가 내 것이면 true. 조회 수단이 없으면 false. */
+        /** @brief 이 스레드의 current 컨텍스트가 내 것이면 true 입니다. 조회 수단이 없으면 false 입니다. */
         virtual bool isCurrent() const = 0;
         /** @brief 이 스레드의 바인딩을 풉니다. */
         virtual void clearCurrent() = 0;
 
         /**
          * @brief 프레임 시작에 컨텍스트를 되찾습니다. 필요 없는 플랫폼은 아무것도 하지 않습니다.
-         * @details WGL 은 ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 되찾아야 한다.
-         *          GLX·NSGL 은 예전 코드도 여기서 아무것도 하지 않았으므로 그대로 둔다 — 동작을
-         *          바꾸지 않기 위해 "필요하면 한다" 를 플랫폼이 정하게 했다.
+         * @details WGL 은 ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 되찾아야 합니다.
+         *          GLX · NSGL 은 예전 코드도 여기서 아무것도 하지 않았으므로 그대로 둡니다. 동작을
+         *          바꾸지 않으려고 "필요하면 한다" 를 플랫폼이 정하게 했습니다.
          */
         virtual void reacquireForFrame() = 0;
 
         /** @brief 백버퍼를 화면에 내보냅니다. */
         virtual void present() = 0;
 
-        /** @brief VSync 간격을 바꿉니다. 값이 바뀔 때만 호출됩니다. */
+        /** @brief VSync 간격을 바꿉니다. 값이 바뀔 때만 불립니다. */
         virtual void setSwapInterval( bool bVSync ) = 0;
     };
 } // namespace sw

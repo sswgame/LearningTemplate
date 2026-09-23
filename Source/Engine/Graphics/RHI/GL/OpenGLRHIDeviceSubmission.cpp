@@ -14,13 +14,6 @@ namespace sw
 {
     namespace
     {
-        /**
-         * @brief GL 스왑 인터벌(vsync) 을 플랫폼 API 로 넘깁니다.
-         * @details 예전엔 공유 헤더(OpenGLRHIDeviceInternal.h)에 있었다. 호출자는 여기 하나뿐인데
-         *          헤더에 두면 함수가 외부 링키지를 갖고, 그 안의 proc 주소 static 이 이 헤더를 컴파일한
-         *          바이너리(Engine.dll / RHI_GL.dll)마다 따로 생긴다(-Wunique-object-duplication).
-         *          vsync 가 **바뀔 때만** 부르므로 주소를 캐시해서 얻는 것도 사실상 없다.
-         */
     } // namespace
 } // namespace sw
 
@@ -44,7 +37,7 @@ namespace sw
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGpuTimestampSlot )
             return;
 
-        // glQueryCounter 는 Begin/End 쌍이 아니다 — 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
+        // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
         glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGpuTimestampSlot + slotIndex], GL_TIMESTAMP );
         _arrTimestampMask[_timestampFrameIndex] |= ( 1u << slotIndex );
     }
@@ -53,7 +46,7 @@ namespace sw
     {
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE )
             return;
-        // GL 3.3 코어이지만 로더가 못 채웠을 수 있다 — 없으면 이 백엔드는 조용히 보고하지 않는다.
+        // GL 3.3 코어이지만 로더가 못 채웠을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
         if ( glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
              glGetQueryObjectiv == nullptr )
             return;
@@ -81,7 +74,7 @@ namespace sw
                 continue;
 
             // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
-            // 재려던 파이프라인을 멈춰 세운다 — 그러면 숫자가 거짓이 된다.
+            // 재려던 파이프라인을 멈춰 세운다. 그러면 숫자가 거짓이 된다.
             GLint bAvailable{ 0 };
             glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );
             if ( bAvailable == GL_FALSE )
@@ -104,13 +97,13 @@ namespace sw
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
 
-        // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다 — beginFrame 은 프레임 수명주기(GL 은
-        // 컨텍스트 확보)만 담당하고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다
-        // (docs/05_RHI_FrameContract.md S2). 뷰포트는 기본 상태로 남겨둔다.
+        // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
+        // 컨텍스트 확보)만 맡고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다
+        // (docs/05_RHI_FrameContract.md S2). 뷰포트만 창 크기 전체로 되돌려 둔다.
         (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
 
-        // 이 묶음은 곧 다시 쓴다 — 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        // 이 묶음은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampQueries();
         collectTimestampsForSlot();
         _arrTimestampMask[_timestampFrameIndex] = 0;
@@ -121,7 +114,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // present 여부와 무관하게 이번 프레임의 칸은 다 찍혔다 — 다음 묶음으로 넘긴다.
+        // present 여부와 무관하게 이번 프레임의 칸은 다 찍혔다. 다음 묶음으로 넘긴다.
         _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
 
         if ( bPresent == false )
@@ -138,8 +131,8 @@ namespace sw
             _lastVsync = desired;
         }
 
-        // 스왑 직전 컨텍스트 되찾기는 플랫폼이 필요할 때만 한다 (WGL 은 ImGui 멀티 뷰포트 때문에
-        // 반드시 필요하고, GLX·NSGL 은 예전에도 하지 않았다).
+        // 스왑 직전 컨텍스트 되찾기는 플랫폼이 필요할 때만 한다(WGL 은 ImGui 멀티 뷰포트 때문에
+        // 반드시 필요하고, GLX · NSGL 은 예전에도 하지 않았다).
         if ( _platformContext != nullptr )
             _platformContext->present();
         _releaseQueue.tickFrame();
@@ -162,8 +155,8 @@ namespace sw
 
     void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList에서 컨텍스트 재바인딩까지 마침)
-        // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아뒀다가 보내므로, 즉시 모드에서는
+        // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList 에서 컨텍스트 재바인딩까지 마침)
+        // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아 뒀다가 보내므로, 즉시 모드에서는
         // 리스트 경계마다 밀어내 오류가 어느 리스트에서 났는지 드러나게 한다.
         (void)pCmdList;
         if ( _bImmediateSubmit )

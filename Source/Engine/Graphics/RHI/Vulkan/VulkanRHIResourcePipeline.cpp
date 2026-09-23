@@ -1,8 +1,8 @@
 /**
  * @file VulkanRHIResourcePipeline.cpp
- * @brief Vulkan 의 파이프라인 상태 객체 — PSO, 셰이더 스테이지, 렌더패스 객체
- * @details `VulkanRHIResource` 의 일부다. 리소스(버퍼/텍스처)를 만드는 것과 파이프라인을 만드는 것은
- *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둔다.
+ * @brief Vulkan 의 파이프라인 상태 객체(PSO · 셰이더 스테이지 · 렌더패스 객체)입니다.
+ * @details `VulkanRHIResource` 의 일부입니다. 리소스(버퍼 · 텍스처)를 만드는 것과 파이프라인을 만드는 것은
+ *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둡니다.
  */
 #include "pch.h"
 
@@ -25,9 +25,9 @@ namespace sw
 
     RHIPipelineStateHandle VulkanRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
-        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정·RT 수)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
-        // 예전엔 여기서 직접 읽으면서 define 을 아예 안 옮겨, Vulkan 만 SW_FORWARD·머티리얼 퍼뮤테이션·SW_VIEWMODE_UNLIT 을
-        // 컴파일러에 넘긴 적이 없었다 — 네 곳에 복사된 규칙은 한 곳만 빠져도 그렇게 조용히 어긋난다.
+        // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        // 예전에는 여기서 직접 읽으면서 define 을 아예 안 옮겨, Vulkan 만 SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT 을
+        // 컴파일러에 넘긴 적이 없었다. 네 곳에 복사된 규칙은 한 곳만 빠져도 그렇게 조용히 어긋난다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
         const ShaderCompileDesc&       vsDesc          = request._vertex;
         const ShaderCompileDesc&       psDesc          = request._pixel;
@@ -68,7 +68,7 @@ namespace sw
         vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
         vertShaderStageInfo.module = vertShaderModule;
-        // 컴파일에 쓴 진입점과 같은 이름이어야 한다 — 예전엔 "VSMain" 으로 박혀 있어 파이프라인 XML 이 다른 진입점을
+        // 컴파일에 쓴 진입점과 같은 이름이어야 한다. 예전에는 "VSMain" 으로 박혀 있어 파이프라인 XML 이 다른 진입점을
         // 쓰는 순간 Vulkan 만 파이프라인 생성에 실패할 자리였다(desc 는 이 함수가 끝날 때까지 살아 있다).
         vertShaderStageInfo.pName = vsDesc._entryPoint.c_str();
 
@@ -95,7 +95,7 @@ namespace sw
         arrBindingDescription[1].stride    = constant::kInstanceSlotStreamStride;
         arrBindingDescription[1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — DX11·DX12·GL 과 같은 표다.
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다.
         VkVertexInputAttributeDescription arrAttributeDescription[constant::kVertexAttributeCount]{};
         for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
         {
@@ -128,7 +128,7 @@ namespace sw
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable        = VK_FALSE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 파이프라인 생성 자체가 거절된다 — 화면이 비는 대신
+        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 파이프라인 생성 자체가 거절된다. 화면이 비는 대신
         // 솔리드로 그린다(요청은 "보기 방식" 이고, 그리지 못하는 것보다 다르게 보이는 편이 낫다).
         const bool bWantWireframe = ( desc._fillMode == RHIFillMode::Wireframe ) && ( _pDevice->_bFillModeNonSolid != 0 );
         rasterizer.polygonMode    = bWantWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
@@ -231,7 +231,7 @@ namespace sw
         csInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         csInfo.codeSize = csResult._bytecode.size();
         csInfo.pCode    = reinterpret_cast<const uint32*>( csResult._bytecode.data() );
-        // 예전엔 초기화도 하지 않은 핸들에 결과를 받아 검사 없이 썼다 — 생성이 실패하면 쓰레기
+        // 예전에는 초기화도 하지 않은 핸들에 결과를 받아 검사 없이 썼다. 생성이 실패하면 쓰레기
         // 값을 파이프라인 생성에 넘기고 vkDestroyShaderModule 까지 불렀다.
         VkShaderModule compShaderModule{ VK_NULL_HANDLE };
         if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
@@ -337,7 +337,7 @@ namespace sw
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
         if ( spec._colorCount == 0 && spec._depthFormat == 0 )
-            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭 — 소유하지 않는다
+            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭. 소유하지 않는다
 
         VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
         if ( created == VK_NULL_HANDLE )

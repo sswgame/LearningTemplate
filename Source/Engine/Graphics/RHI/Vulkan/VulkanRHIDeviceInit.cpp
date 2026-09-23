@@ -1,8 +1,8 @@
 /**
  * @file VulkanRHIDeviceInit.cpp
- * @brief VulkanRHIDevice 부트스트랩 — 인스턴스·서피스·물리/논리 디바이스·스왑체인·동기화 객체
- * @details 여기 있는 것들은 전부 "한 번 만들고 창 크기가 바뀔 때 다시 만드는" 자원이다.
- *          프레임마다 도는 코드(VulkanRHIDevice.cpp)와 섞여 있으면 어느 쪽을 고치는지 알기 어렵다.
+ * @brief VulkanRHIDevice 부트스트랩입니다(인스턴스 · 서피스 · 물리/논리 디바이스 · 스왑체인 · 동기화 객체).
+ * @details 여기 있는 것들은 모두 "한 번 만들고 창 크기가 바뀔 때 다시 만드는" 자원입니다.
+ *          프레임마다 도는 코드(VulkanRHIDeviceSubmission.cpp)와 섞여 있으면 어느 쪽을 고치는지 알기 어렵습니다.
  */
 #include "pch.h"
 
@@ -46,9 +46,9 @@ namespace sw
 
     bool VulkanRHIDevice::createRenderPass()
     {
-        // 스왑체인 렌더패스 — CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
-        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷/개수/
-        // 샘플수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
+        // 스왑체인 렌더패스: CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
+        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷 · 개수 ·
+        // 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
         // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
         VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
         clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
@@ -117,7 +117,7 @@ namespace sw
         }
         listExtension.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
 #elif defined( SW_PLATFORM_LINUX )
-        // WSLg/gfxstream often exposes xcb but not xlib.
+        // WSLg · gfxstream 은 흔히 xcb 만 내놓고 xlib 는 없다.
         _linuxWsi = 0;
         if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
         {
@@ -227,7 +227,7 @@ namespace sw
                 break;
         }
 
-        // 크래시 리포트에 어댑터·드라이버를 남긴다. "어느 GPU·어느 드라이버에서만 난다" 는 판단이
+        // 크래시 리포트에 어댑터 · 드라이버를 남긴다. "어느 GPU · 어느 드라이버에서만 난다" 는 판단이
         // 이것 없이는 불가능하고, 그게 범위를 좁히는 첫 질문이다.
         if ( _physicalDevice != nullptr )
         {
@@ -290,19 +290,19 @@ namespace sw
 
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.multiDrawIndirect = availableFeatures.multiDrawIndirect;
-        // 범위 밖 버퍼 읽기가 0 이 되도록 — DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스/머티리얼 인덱스가 GPU 폴트 대신
-        // 검은 픽셀로 드러난다(DX12 루트 SRV 는 이 보호가 없어 셰이더 쪽 클램프가 따로 있다: binding.hlsli SwLoadInstance).
+        // 범위 밖 버퍼 읽기가 0 이 되도록 한다. DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스 · 머티리얼 인덱스가 GPU 폴트 대신
+        // 검은 픽셀로 드러난다(셰이더 쪽 클램프도 따로 있다: binding.hlsli SwLoadInstance. DX12 가 t# 를 루트 SRV 로 걸던 때 둔 것이다).
         deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;
         deviceFeatures.samplerAnisotropy  = availableFeatures.samplerAnisotropy; // 정적 샘플러 세트의 ANISO_WRAP (없으면 createDescriptorResources 가 1.0 으로 만든다)
         // 와이어프레임(VK_POLYGON_MODE_LINE). DX11/DX12/GL 은 별도 기능 플래그가 없어 그냥 되는데
-        // Vulkan 만 디바이스 생성 때 켜야 한다 — 안 켜면 파이프라인 생성이 검증 오류로 거절되고,
+        // Vulkan 만 디바이스 생성 때 켜야 한다. 안 켜면 파이프라인 생성이 검증 오류로 거절되고,
         // 그 PSO 가 0 으로 돌아와 조용히 솔리드로 그려졌다. 뷰 모드를 붙이며 드러난 결함이다.
         deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
-        // RW 텍스처 배열(RWTexture2D<float4>[] — 포맷 미지정 스토리지 이미지)의 읽기/쓰기.
+        // RW 텍스처 배열(RWTexture2D<float4>[], 포맷 미지정 스토리지 이미지)의 읽기 · 쓰기.
         deviceFeatures.shaderStorageImageWriteWithoutFormat   = availableFeatures.shaderStorageImageWriteWithoutFormat;
         deviceFeatures.shaderStorageImageReadWithoutFormat    = availableFeatures.shaderStorageImageReadWithoutFormat;
         deviceFeatures.shaderStorageImageArrayDynamicIndexing = availableFeatures.shaderStorageImageArrayDynamicIndexing;
-        // 네이티브 bindless — 배열을 푸시 상수/CB 값으로 인덱싱한다 (동적 인덱싱 코어 기능).
+        // 네이티브 bindless: 배열을 푸시 상수 · CB 값으로 인덱싱한다(동적 인덱싱 코어 기능).
         deviceFeatures.shaderUniformBufferArrayDynamicIndexing = availableFeatures.shaderUniformBufferArrayDynamicIndexing;
         deviceFeatures.shaderStorageBufferArrayDynamicIndexing = availableFeatures.shaderStorageBufferArrayDynamicIndexing;
         deviceFeatures.shaderSampledImageArrayDynamicIndexing  = availableFeatures.shaderSampledImageArrayDynamicIndexing;
@@ -310,7 +310,7 @@ namespace sw
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
 
-        // 1.3 기능 구조체는 1.3 디바이스에서만 체인에 넣을 수 있다 — 아래 조회·생성 양쪽이 같은 판단을 쓴다.
+        // 1.3 기능 구조체는 1.3 디바이스에서만 체인에 넣을 수 있다. 아래 조회 · 생성 양쪽이 같은 판단을 쓴다.
         VkPhysicalDeviceProperties properties{};
         vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
         const bool bHasVulkan13 = properties.apiVersion >= VK_API_VERSION_1_3;
@@ -339,14 +339,14 @@ namespace sw
         vulkan12Features.shaderSampledImageArrayNonUniformIndexing     = available12.shaderSampledImageArrayNonUniformIndexing;
         vulkan12Features.runtimeDescriptorArray                        = available12.runtimeDescriptorArray;
         vulkan12Features.drawIndirectCount                             = available12.drawIndirectCount;
-        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 굽는다 — relaxed block layout(1.1 코어)으로 대부분 충분하지만
+        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 굽는다. relaxed block layout(1.1 코어)으로 대부분 충분하지만
         // 스칼라 정렬까지 허용해 두면 어떤 구조체든 DX 와 같은 오프셋을 쓸 수 있다.
         vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
         _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
         // 셰이더는 -fspv-target-env=vulkan1.3 으로 굽고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
         // OpDemoteToHelperInvocation 으로 낸다. 이 기능을 켜지 않으면 vkCreateShaderModule 이 검증 오류를 내고
-        // (VUID-VkShaderModuleCreateInfo-pCode-08740) 드라이버가 우연히 돌려 줄 뿐 스펙상 미정의다 —
+        // (VUID-VkShaderModuleCreateInfo-pCode-08740) 드라이버가 우연히 돌려 줄 뿐 스펙상 미정의다.
         // deferredlighting.hlsl · sprite2d.hlsl 의 discard 가 이 경로다.
         VkPhysicalDeviceVulkan13Features vulkan13Features{};
         vulkan13Features.sType                          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
@@ -397,7 +397,7 @@ namespace sw
             return false;
 
         // 씬 텍스처의 기본 샘플러다. 지금 원하는 성질은 "선형 + 가장자리 고정" 이므로 그 조리법을
-        // 쓴다 — 비등방 같은 다른 성질이 필요해지면 여기서 조리법을 바꾸거나 직접 채우면 된다.
+        // 쓴다. 비등방 같은 다른 성질이 필요해지면 여기서 조리법을 바꾸거나 직접 채우면 된다.
         VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
         if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_defaultSampler ) != VK_SUCCESS )
             return false;
@@ -407,7 +407,7 @@ namespace sw
 
     bool VulkanRHIDevice::createFrameFences()
     {
-        // 펜스는 인플라이트 슬롯당 하나 — 스왑체인 이미지 개수와 무관하다.
+        // 펜스는 인플라이트 슬롯마다 하나다. 스왑체인 이미지 개수와 무관하다.
         // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
         _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
         _listRingFrameNumber.resize( constant::kMaxFrameCountInFlight, 0 );
@@ -439,7 +439,7 @@ namespace sw
         _listInFlightFence.clear();
         _listRingFrameNumber.clear();
 
-        // 위 펜스를 가리키는 사본이므로 비우기만 합니다.
+        // 위 펜스를 가리키는 사본이므로 비우기만 한다.
         _listImagesInFlight.clear();
     }
 
@@ -451,7 +451,7 @@ namespace sw
         _width  = width;
         _height = height;
 
-        // 임의의 호출 스레드에서 재생성하지 않고 beginFrame까지 미룹니다.
+        // 아무 스레드에서나 재생성하지 않고 beginFrame 까지 미룬다.
         if ( width != 0 && height != 0 )
             _bSwapChainDirty = 1;
     }
@@ -462,11 +462,11 @@ namespace sw
             return;
         vkDeviceWaitIdle( _device );
 
-        // 아래에서 스왑체인을 통째로 버린다 — 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
+        // 아래에서 스왑체인을 통째로 버린다. 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
         // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
         _bSwapChainImageHeld = SW_FALSE;
 
-        // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 재생성합니다.
+        // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
         _swapChain.destroy( _device );

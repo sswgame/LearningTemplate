@@ -12,10 +12,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief 호출자가 준 슬롯을 레지스터 번호로 정규화합니다.
+         * @brief 부르는 쪽이 준 슬롯을 레지스터 번호로 정규화합니다.
          * @details 엔진 바인더는 리플렉션의 `_registerIndex` 를 그대로 넘기는데, Vulkan 리플렉션에서 그 값은 세트 0 의 **binding**
-         *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)이다. 명시 호출(bindComputeUav( idx, 0 ) 등)은 레지스터를 준다.
-         *          t 밴드(16..31)·u 밴드(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌린다.
+         *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)입니다. 명시 호출(bindComputeUav( idx, 0 ) 등)은 레지스터를 줍니다.
+         *          t 밴드(16..31) · u 밴드(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌립니다.
          */
         uint32 toRegister( uint32 slot, uint32 bandShift )
         {
@@ -140,7 +140,7 @@ namespace sw
             if ( _pDevice->_swapChain.getCurrentImage() == VK_NULL_HANDLE )
                 return;
             dstImage = _pDevice->_swapChain.getCurrentImage();
-            // 이전 레이아웃은 UNDEFINED 로 — 블릿이 백버퍼 전체를 덮어쓰므로 내용을 버려도 되고, 갓 만든 스왑체인 이미지
+            // 이전 레이아웃은 UNDEFINED 로 둔다. 블릿이 백버퍼 전체를 덮어쓰므로 내용을 버려도 되고, 갓 만든 스왑체인 이미지
             // (아직 한 번도 present 되지 않아 실제로 UNDEFINED)에도 맞다. PRESENT_SRC 로 못박으면 첫 프레임에 검증 레이어가
             // "PRESENT_SRC 를 기대했는데 UNDEFINED" 를 찍는다(RenderPassGpuTest.FusedPostChainMatchesStaged).
             _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -187,7 +187,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 슬롯 세트의 t 밴드. 텍스처 슬롯(t0..t3, 에뮬 전용)은 여기로 오지 않는다 —
+        // 그래픽스 t# → 슬롯 세트의 t 밴드. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t5..t8, 에뮬 전용)은 여기로 오지 않는다.
         // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다.
         slot = toRegister( slot, shaderslot::vk::kTShift );
         if ( slot >= shaderslot::kSrvSlotCount )
@@ -269,7 +269,7 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다 — 이전 패스가 건 t/u 슬롯이 다음 세트로 새지 않게(언리얼의 파이프라인별 상태).
+        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스가 건 t/u 슬롯이 다음 세트로 새지 않게 한다(언리얼의 파이프라인별 상태).
         _pState->_arrSlotState[0]                                 = VulkanSlotState{};
         _pState->_activeGraphicsPso                               = pso;
         VkPipeline                                        pipe    = _pDevice->_pipeline;
@@ -312,7 +312,7 @@ namespace sw
         const uint32 colorCount = bBindColor ? ( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u ) : 0u;
         const bool   bHasDepth  = beginInfo._depthTarget != 0;
 
-        // Depth-only still uses composite path when a depth target is provided.
+        // 깊이 타깃이 있으면 깊이 전용 패스도 합성 경로를 쓴다.
         if ( bBindColor == 0 && bHasDepth == false )
             return;
 
@@ -322,7 +322,7 @@ namespace sw
             colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
         }
 
-        // Composite FB for MRT, color+depth, or depth-only. Keep plain single-RT / swapchain path otherwise.
+        // MRT · 컬러+깊이 · 깊이 전용은 합성 프레임버퍼를 쓴다. 그 밖에는 단일 RT · 스왑체인 경로를 그대로 쓴다.
         const bool bUseComposite = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
                                    ( colorCount == 0 && bHasDepth );
 
@@ -389,7 +389,7 @@ namespace sw
         }
         else
         {
-            // Existing single-RT path (swapchain or per-texture offscreen FB).
+            // 단일 RT 경로(스왑체인 또는 텍스처별 오프스크린 프레임버퍼).
             RHITextureHandle colorTarget = ( colorCount > 0 ) ? colorHandles[0] : 0;
             if ( colorTarget != 0 )
             {
@@ -411,7 +411,7 @@ namespace sw
                 framebuffer                  = _pDevice->_swapChain.getCurrentFramebuffer();
                 extent                       = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
                 _pState->_bActiveSwapchainRT = SW_TRUE;
-                // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다 —
+                // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다.
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.
                 if ( beginInfo._arrLoadOp[0] == RHIRenderPassLoadOp::Load && _pDevice->_renderPassLoad != VK_NULL_HANDLE )
@@ -446,7 +446,7 @@ namespace sw
         vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
         _pState->_bRenderPassActive = SW_TRUE;
 
-        // Match DX12 beginRenderPass: viewport = pass extent, DX Y orientation.
+        // DX12 beginRenderPass 와 맞춘다: 뷰포트 = 패스 크기, DX 의 Y 방향.
         RHIViewport viewport{};
         viewport._width    = static_cast<float32>( extent.width );
         viewport._height   = static_cast<float32>( extent.height );
@@ -477,7 +477,7 @@ namespace sw
             _pState->_bRenderPassActive = SW_FALSE;
         }
 
-        // 컴퓨트 쓰기 → 컴퓨트 읽기·쓰기. 상태는 그대로라 레이아웃 전이가 아니라 **가시성**만 맞춘다.
+        // 컴퓨트 쓰기 → 컴퓨트 읽기 · 쓰기. 상태는 그대로라 레이아웃 전이가 아니라 **가시성**만 맞춘다.
         VkBufferMemoryBarrier barrier{};
         barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
@@ -530,7 +530,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 슬롯 세트의 u 밴드. 인덱스는 UAV 레지스트리(registerBindlessUav)의 것.
+        // 컴퓨트 u# → 슬롯 세트의 u 밴드. 인덱스는 UAV 등록부(registerBindlessUav)의 것이다.
         slot = toRegister( slot, shaderslot::vk::kUShift );
         if ( slot >= shaderslot::kComputeUavSlotCount )
             return;
@@ -554,7 +554,7 @@ namespace sw
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
         if ( slot == constant::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
@@ -585,14 +585,14 @@ namespace sw
         VulkanSlotState&   state = _pState->_arrSlotState[bCompute ? 1 : 0];
         VulkanSlotBinding& slot  = state._arrSlot[bindingIndex];
 
-        // 값이 그대로면 세트를 새로 할당하지 않는다 — 바인더는 드로우마다 같은 버퍼를 다시 건다.
+        // 값이 그대로면 세트를 새로 할당하지 않는다. 바인더는 드로우마다 같은 버퍼를 다시 건다.
         VulkanSlotBinding candidate{};
         candidate._buffer = pRecord->_buffer;
         candidate._offset = 0;
         candidate._range  = pRecord->_size;
         if ( bConstantBuffer )
         {
-            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다 — updateConstantBuffer 가
+            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다. updateConstantBuffer 가
             // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다.
             const auto slotIt = _pDevice->_mapCbSlotSize.find( handle );
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
@@ -605,7 +605,7 @@ namespace sw
         const uint64 slotBit     = ( uint64{ 1 } << bindingIndex );
         const bool   bAlreadySet = ( state._slotSetMask & slotBit ) != 0;
         if ( bAlreadySet && slot._buffer == candidate._buffer && slot._offset == candidate._offset && slot._range == candidate._range )
-            return; // 같은 값 — 세트를 새로 할당할 이유가 없다.
+            return; // 같은 값이다. 세트를 새로 할당할 이유가 없다.
 
         slot = candidate;
         state._slotSetMask |= slotBit;
@@ -621,7 +621,7 @@ namespace sw
         namespace vk       = shaderslot::vk;
         namespace bindless = shaderslot::bindless;
 
-        // 텍스처 배열 세트(set 1) — 커맨드버퍼가 사는 동안 안 바뀐다. 두 바인드 포인트에 한 번씩.
+        // 텍스처 배열 세트(set 1)는 커맨드버퍼가 사는 동안 안 바뀐다. 두 바인드 포인트에 한 번씩 건다.
         if ( _pState->_bTextureSetBound == SW_FALSE && _pDevice->_textureSet != VK_NULL_HANDLE )
         {
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
@@ -633,8 +633,8 @@ namespace sw
         if ( state._bDirty == SW_FALSE )
             return;
 
-        // 슬롯 상태가 바뀌었다 — 이 버퍼의 풀 묶음에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
-        // 리스트는 자기 쌍의 묶음, 디바이스 프레임 스트림은 링 슬롯의 묶음 — 어느 쪽도 다른 스레드와 나누지 않으므로 락이 없다.
+        // 슬롯 상태가 바뀌었다. 이 버퍼의 풀 묶음에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
+        // 리스트는 자기 쌍의 묶음, 디바이스 프레임 스트림은 링 슬롯의 묶음을 쓴다. 어느 쪽도 다른 스레드와 나누지 않으므로 락이 없다.
         // b 밴드는 셰이더가 정적으로 참조하므로 안 걸린 자리도 더미 UBO 로 채운다(픽스처의 MaterialCB 등).
         VulkanDescriptorPoolSet& poolSet = ( _pDescriptorPoolSet != nullptr ) ? *_pDescriptorPoolSet : _pDevice->currentFrameDescriptorPoolSet();
         const VkDescriptorSet    set     = _pDevice->allocateSlotSet( poolSet );
@@ -703,7 +703,7 @@ namespace sw
             return;
 
         // 바인딩 1(인스턴스 슬롯 스트림)은 파이프라인이 선언하므로 **늘 유효한 버퍼**가 있어야 한다. 스트림이 안 걸린
-        // 드로우(풀스크린·픽스처)는 그 속성을 읽지 않으므로 슬롯 0 버퍼를 자리만 채우게 건다.
+        // 드로우(풀스크린 · 픽스처)는 그 속성을 읽지 않으므로 슬롯 0 버퍼를 자리만 채우게 건다.
         VkBuffer     slot1Buffer = slot0Buffer;
         VkDeviceSize slot1Offset = 0;
         if ( _pState->_boundInstanceSlotVb != 0 )
@@ -735,8 +735,8 @@ namespace sw
         }
         else if ( _pState->_bActiveSwapchainRT == SW_FALSE && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
         {
-            // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가"여야 한다 —
-            // 예전엔 _activeOffscreenTarget 으로 판단했는데, 깊이 전용 패스처럼 컬러 타깃을 갱신하지
+            // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가" 여야 한다.
+            // 예전에는 _activeOffscreenTarget 으로 판단했는데, 깊이 전용 패스처럼 컬러 타깃을 갱신하지
             // 않는 패스에서는 그 값이 직전 패스의 것이라 엉뚱한 파이프라인을 골랐다.
             pipeline = _pDevice->_offscreenPipeline;
         }
@@ -760,7 +760,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 슬롯 상태에 걸었다 — 위에서 세트로 굳혔다.
+        // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 슬롯 상태에 걸었다. 세트로 굳히는 것은 위의 bindActiveGraphicsPipeline 이 했다.
         bindMeshVertexBufferOrFallback();
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
@@ -778,8 +778,9 @@ namespace sw
             return;
 
         bindMeshVertexBufferOrFallback();
-        // 슬롯 세트는 드로우 직전에 굳힌다 — draw()/drawIndirect() 와 같은 규칙. 여기만 빠져 있어 인스턴스드 씬 드로우(드로우 전부)가
-        // 세트 없이 나갔고, Vulkan 은 화면에 아무것도 그리지 않았다.
+        // 슬롯 세트는 드로우 직전에 굳힌다. draw() · drawIndirect() 와 같은 규칙이다. 예전에는 여기만 빠져 있어 인스턴스드 씬
+        // 드로우(당시에는 씬 드로우 모두)가 세트 없이 나갔고, Vulkan 은 화면에 아무것도 그리지 않았다. 지금은
+        // bindActiveGraphicsPipeline 이 먼저 굳히므로 이 호출은 바뀐 것이 없으면 할 일이 없다.
         flushSlotSet( false );
 
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
@@ -798,7 +799,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …) — 리플렉션이 준 슬롯의 t 밴드에 건다.
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …). 리플렉션이 준 슬롯의 t 밴드에 건다.
         bindShaderResource( index, slot );
     }
 
@@ -824,8 +825,8 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        // RHIViewport is DirectX-style (top-left origin, +Y down in pixel space, +NDC Y = up).
-        // Negative VkViewport.height maps Vulkan NDC to the same orientation as DX/GL_UPPER_LEFT.
+        // RHIViewport 는 DirectX 방식이다(좌상단 원점, 픽셀 공간에서 +Y 가 아래, NDC 에서 +Y 가 위).
+        // VkViewport.height 를 음수로 주면 Vulkan NDC 가 DX · GL_UPPER_LEFT 와 같은 방향이 된다.
         VkViewport vkViewport{};
         vkViewport.x        = viewport._x;
         vkViewport.y        = viewport._y + viewport._height;
@@ -845,7 +846,7 @@ namespace sw
 
     void VulkanRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
-        // 푸시 상수 범위는 전 스테이지(VS/PS/CS)에 걸려 있으므로 컴퓨트 경로와 같은 호출이면 된다.
+        // 푸시 상수 범위는 모든 스테이지(VS/PS/CS)에 걸려 있으므로 컴퓨트 경로와 같은 호출이면 된다.
         setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
     }
 
@@ -878,7 +879,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 세트 0 은 커맨드버퍼마다 한 번 — 인다이렉트 드로우 경로도 같은 세트다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
+        // 슬롯 세트(set 0)는 드로우 직전에 굳힌다. 인다이렉트 드로우 경로도 같은 규칙이다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
         flushSlotSet( false );
 
         const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
@@ -919,9 +920,9 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 세트 0 은 커맨드버퍼마다 한 번(머티리얼은 GPU 인스턴스 데이터에서 인덱싱).
+        // 슬롯 세트(set 0)는 드로우 직전에 굳힌다(머티리얼은 GPU 인스턴스 데이터에서 인덱싱한다).
         flushSlotSet( false );
-        // 정점버퍼를 거는 건 단일 경로에만 있었다 — 합치면서 두 경우 모두 걸린다.
+        // 정점버퍼를 거는 것은 단일 경로에만 있었다. 합치면서 두 경우 모두 건다.
         bindMeshVertexBufferOrFallback();
 
         constexpr uint32 stride = sizeof( RHIDrawIndirectCommand );

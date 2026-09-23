@@ -1,12 +1,12 @@
 /**
  * @file VulkanRHIDeviceInternal.h
- * @brief Vulkan 백엔드 TU 들이 공유하는 내부 헬퍼와 플랫폼 헤더 묶음
- * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화/디스크립터/렌더패스로 나눴는데,
- *          그 조각들이 같은 헬퍼(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 쓴다.
- *          예전엔 익명 네임스페이스에 있어서 TU 를 나누는 순간 보이지 않게 되고,
- *          실제로 `VulkanRHIResource.cpp` 는 같은 변환 함수를 따로 복사해 갖고 있었다 —
- *          포맷을 하나 추가하면 두 곳을 고쳐야 했다는 뜻이다.
- * @note 백엔드 내부 전용이다. RHI 경계 밖으로 나가면 안 된다.
+ * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 묶음입니다.
+ * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화 · 디스크립터 · 렌더패스로 나눴는데,
+ *          그 조각들이 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
+ *          예전에는 익명 네임스페이스에 있어서 TU 를 나누는 순간 보이지 않게 됐고,
+ *          실제로 `VulkanRHIResource.cpp` 는 같은 변환 함수를 따로 복사해 갖고 있었습니다.
+ *          포맷을 하나 추가하면 두 곳을 고쳐야 했다는 뜻입니다.
+ * @note 백엔드 내부 전용입니다. RHI 경계 밖으로 나가면 안 됩니다.
  */
 #pragma once
 #include "Core/File/FileUtil.h"
@@ -34,7 +34,7 @@
 
 namespace sw
 {
-    /** @brief Vulkan 백엔드 조각들이 공유하는 순수 변환/조회 헬퍼. */
+    /** @brief Vulkan 백엔드 조각들이 함께 쓰는 순수 변환 · 조회 도우미입니다. */
     struct VulkanRHIDeviceInternal
     {
         static inline VkFormat toVulkanTextureFormat( RHIFormat format )
@@ -67,7 +67,7 @@ namespace sw
                     return VK_FORMAT_BC5_UNORM_BLOCK;
                 case RHIFormat::BC7_UNORM:
                     return VK_FORMAT_BC7_UNORM_BLOCK;
-                case RHIFormat::Unknown: ///< 첨부 없음 — Vulkan 에는 대응 값이 없다.
+                case RHIFormat::Unknown: ///< 첨부 없음. Vulkan 에는 대응 값이 없다.
                 default:
                     break;
             }
@@ -95,7 +95,7 @@ namespace sw
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
-    /** @brief 디버그 메신저를 파괴합니다. 초기화와 종료가 서로 다른 TU 에 있어 헤더에 둔다. */
+    /** @brief 디버그 메신저를 파괴합니다. 초기화와 종료가 서로 다른 TU 에 있어 헤더에 둡니다. */
     inline void DestroyDebugUtilsMessengerEXT(
         VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator )
     {

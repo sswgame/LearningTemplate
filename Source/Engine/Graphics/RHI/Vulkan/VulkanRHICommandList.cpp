@@ -31,7 +31,7 @@ namespace sw
 
     void VulkanRHICommandList::detachFromDevice()
     {
-        // 디바이스가 내려가는 중이다 — 반납하지 않고 쌍을 지금 부순다. 디스크립터 풀 셋은 디바이스가 통째로 비운다.
+        // 디바이스가 내려가는 중이다. 반납하지 않고 쌍을 지금 부순다. 디스크립터 풀 셋은 디바이스가 통째로 비운다.
         if ( _pDevice != nullptr )
             _pDevice->destroyCommandListEntryImmediate( _entry );
         _state = VulkanRecordingState{};
@@ -46,7 +46,7 @@ namespace sw
         const VkQueryPool pool = ( _pDevice != nullptr ) ? _pDevice->getTimestampPool() : VK_NULL_HANDLE;
         if ( pool == VK_NULL_HANDLE || slotIndex >= constant::kMaxGpuTimestampSlot || _entry._buffer == VK_NULL_HANDLE )
             return;
-        // BOTTOM_OF_PIPE 는 "여기까지 GPU 가 다 끝냈다" 를 뜻한다 — DX12 의 EndQuery 와 같은 의미라
+        // BOTTOM_OF_PIPE 는 "여기까지 GPU 가 다 끝냈다" 를 뜻한다. DX12 의 EndQuery 와 같은 의미라
         // 백엔드끼리 숫자를 그대로 견줄 수 있다.
         vkCmdWriteTimestamp( _entry._buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, pool,
                              _pDevice->getTimestampBase() + slotIndex );
@@ -60,7 +60,7 @@ namespace sw
 
         // 리스트 객체는 프레임을 넘어 재사용된다(FrameRenderer::_frameCmd). 같은 버퍼를 다시 Reset
         // 하면 직전 프레임 커맨드를 GPU 가 아직 읽는 중일 수 있으므로, 두 번째 기록부터는 쌍을 통째로
-        // 갈아 낀다 — 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음) 새 쌍은 이미 통과한 것만 든 풀에서
+        // 갈아 낀다. 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음) 새 쌍은 이미 통과한 것만 든 풀에서
         // 빌린다. DX12 의 커맨드 얼로케이터와 같은 계약이다.
         if ( _bEntryDirty != SW_FALSE )
         {
@@ -74,7 +74,7 @@ namespace sw
             return;
 
         vkResetCommandBuffer( _entry._buffer, 0 );
-        // 이 쌍의 슬롯 세트들은 GPU 가 다 읽었다(재사용 풀은 펜스 통과분만 든다) — 커맨드 버퍼처럼 풀 묶음도 통째로 비운다.
+        // 이 쌍의 슬롯 세트들은 GPU 가 다 읽었다(재사용 풀은 펜스 통과분만 든다). 커맨드 버퍼처럼 풀 묶음도 통째로 비운다.
         if ( _entry._pDescriptorPoolSet != nullptr )
             _pDevice->resetDescriptorPoolSet( *_entry._pDescriptorPoolSet );
 
@@ -86,7 +86,7 @@ namespace sw
 
         _bEntryDirty = SW_TRUE;
 
-        // 새 버퍼라 동적 상태가 비어 있다 — 파이프라인이 뷰포트/시저를 동적으로 쓰므로 기본값을 깐다.
+        // 새 버퍼라 동적 상태가 비어 있다. 파이프라인이 뷰포트 · 시저를 동적으로 쓰므로 기본값을 깐다.
         VkViewport viewport{};
         viewport.x        = 0.0f;
         viewport.y        = static_cast<float32>( _pDevice->_swapChain.getExtentHeight() );

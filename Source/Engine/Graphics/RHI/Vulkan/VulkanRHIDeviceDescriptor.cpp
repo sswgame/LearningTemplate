@@ -1,10 +1,10 @@
 /**
  * @file VulkanRHIDeviceDescriptor.cpp
- * @brief VulkanRHIDevice 의 디스크립터 자원 — 슬롯 세트(set 0) 레이아웃·프레임별 풀, 텍스처 배열 세트(set 1), 파이프라인 레이아웃
- * @details 언리얼 Vulkan RHI 와 같은 방식이다: 셰이더는 register(b#/t#/u#) 로 선언하고(binding = 종류별 시프트 + 번호,
- *          bindingslots.hlsli 6), 드로우/디스패치 직전에 바인딩 상태가 바뀌었으면 프레임 풀에서 세트를 하나 할당해
- *          쓴 뒤 건다(VulkanRHICommandContext::flushSlotSet). 텍스처 배열은 별도 세트(set 1)에 한 번 채워 두고
- *          커맨드버퍼마다 한 번 바인딩한다.
+ * @brief VulkanRHIDevice 의 디스크립터 자원입니다. 슬롯 세트(set 0) 레이아웃 · 풀 묶음, 텍스처 배열 세트(set 1), 파이프라인 레이아웃을 만듭니다.
+ * @details 언리얼 Vulkan RHI 와 같은 방식입니다: 셰이더는 register(b#/t#/u#) 로 선언하고(binding = 종류별 시프트 + 번호,
+ *          bindingslots.hlsli 6), 드로우 · 디스패치 직전에 바인딩 상태가 바뀌었으면 그 커맨드 버퍼의 풀 묶음에서 세트를 하나 할당해
+ *          쓴 뒤 겁니다(VulkanRHICommandContext::flushSlotSet). 텍스처 배열은 별도 세트(set 1)에 한 번 채워 두고
+ *          커맨드버퍼마다 한 번 바인딩합니다.
  */
 #include "pch.h"
 
@@ -42,7 +42,7 @@ namespace sw
         namespace bindless                 = shaderslot::bindless;
         const VkShaderStageFlags allStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 
-        // 1) 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4) — set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6)
+        // 1) 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4). set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6)
         //    + binding SW_VK_SHADOW_SAMPLER_BINDING 의 비교 샘플러(7). DX12 의 정적 샘플러와 같은 표.
         {
             struct SamplerSpec
@@ -72,7 +72,7 @@ namespace sw
                 samplerInfo.addressModeU = arrSpec[samplerIndex]._address;
                 samplerInfo.addressModeV = arrSpec[samplerIndex]._address;
                 samplerInfo.addressModeW = arrSpec[samplerIndex]._address;
-                // 기능이 꺼져 있으면(samplerAnisotropy 미지원) 이방성만 끈다 — 세트 생성 자체가 실패하면 아무것도 못 그린다.
+                // 기능이 꺼져 있으면(samplerAnisotropy 미지원) 이방성만 끈다. 세트 생성 자체가 실패하면 아무것도 못 그린다.
                 const bool bAniso            = arrSpec[samplerIndex]._anisotropy > 1.0f && _bSamplerAnisotropy != 0;
                 samplerInfo.anisotropyEnable = bAniso ? VK_TRUE : VK_FALSE;
                 samplerInfo.maxAnisotropy    = bAniso ? arrSpec[samplerIndex]._anisotropy : 1.0f;
@@ -85,7 +85,7 @@ namespace sw
             }
         }
 
-        // 2) set 0 = 슬롯 세트. binding 0..15 = b# (UBO), 16..31 = t# (SSBO), 32..47 = u# (SSBO). 전부 partially-bound —
+        // 2) set 0 = 슬롯 세트. binding 0..15 = b# (UBO), 16..31 = t# (SSBO), 32..47 = u# (SSBO). 모두 partially-bound 라
         //    드로우마다 실제로 쓰인 슬롯만 쓴다(셰이더가 정적으로 참조하는 슬롯은 반드시 걸려 있어야 한다: b0/b1 은 더미로 채운다).
         {
             VkDescriptorSetLayoutBinding arrBinding[vk::kSlotBindingCount]{};
@@ -160,7 +160,7 @@ namespace sw
             }
         }
 
-        // 4) 파이프라인 레이아웃 — set 0 슬롯, set 1 텍스처 배열, 푸시 상수(setComputeRootConstants, 16 dword).
+        // 4) 파이프라인 레이아웃: set 0 슬롯, set 1 텍스처 배열, 푸시 상수(setComputeRootConstants, 16 dword).
         {
             VkPushConstantRange pushRange{};
             pushRange.stageFlags = allStages;
@@ -179,7 +179,7 @@ namespace sw
                 return false;
         }
 
-        // 5) 풀 — 텍스처 세트용 하나(update-after-bind), 슬롯 세트용은 프레임 링마다 하나(beginFrame 이 통째로 리셋).
+        // 5) 풀: 텍스처 세트용 하나(update-after-bind), 슬롯 세트용은 프레임 링마다 하나(beginFrame 이 통째로 리셋).
         {
             VkDescriptorPoolSize arrPoolSize[] = {
                 {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,           kBindlessTextureCount},
@@ -243,7 +243,7 @@ namespace sw
         if ( _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE || _textureSetLayout == VK_NULL_HANDLE )
             return false;
 
-        // 1x1 더미 이미지 — 안 쓰는 텍스처 원소가 유효하도록.
+        // 1x1 더미 이미지. 안 쓰는 텍스처 원소가 유효하도록 한다.
         VkImageCreateInfo imageInfo{};
         imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -322,8 +322,8 @@ namespace sw
         if ( _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount )
             return;
 
-        // 레이아웃은 샘플 시점에 이미지가 실제로 있을 레이아웃과 같아야 한다 — 컬러는 SHADER_READ_ONLY,
-        // 깊이는 prepareTextureForShaderRead 가 옮기는 DEPTH_STENCIL_READ_ONLY (호출자가 고른다).
+        // 레이아웃은 샘플 시점에 이미지가 실제로 있을 레이아웃과 같아야 한다. 컬러는 SHADER_READ_ONLY,
+        // 깊이는 prepareTextureForShaderRead 가 옮기는 DEPTH_STENCIL_READ_ONLY (부르는 쪽이 고른다).
         VkDescriptorImageInfo imageInfo{};
         imageInfo.sampler     = _defaultSampler;
         imageInfo.imageView   = view;
@@ -347,7 +347,7 @@ namespace sw
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageView   = view;
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // 스토리지 이미지는 GENERAL — prepareTextureForUnorderedAccess 가 맞춘다
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // 스토리지 이미지는 GENERAL. prepareTextureForUnorderedAccess 가 맞춘다
 
         VkWriteDescriptorSet write{};
         write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -362,7 +362,7 @@ namespace sw
 
     VkDescriptorPool VulkanRHIDevice::createSlotPool()
     {
-        // 세트 하나가 b/t/u 슬롯을 전부 걸 수 있게 잡는다 — 예전엔 SSBO 를 세트당 6개로 잡아 컴퓨트 패스가 많으면 maxSets 전에 바닥났다.
+        // 세트 하나가 b/t/u 슬롯을 모두 걸 수 있게 잡는다. 예전에는 SSBO 를 세트당 6개로 잡아 컴퓨트 패스가 많으면 maxSets 전에 바닥났다.
         VkDescriptorPoolSize arrPoolSize[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                             kSlotSetsPerPool * shaderslot::kConstantBufferSlotCount},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSlotSetsPerPool * ( shaderslot::kSrvSlotCount + shaderslot::kComputeUavSlotCount )},
@@ -380,7 +380,7 @@ namespace sw
 
     VkDescriptorSet VulkanRHIDevice::allocateSlotSet( VulkanDescriptorPoolSet& poolSet )
     {
-        // 락이 없다 — 풀 묶음은 커맨드 버퍼 하나의 것이고, 그 버퍼는 한 스레드만 기록한다(VkDescriptorPool 은 외부 동기화 대상).
+        // 락이 없다. 풀 묶음은 커맨드 버퍼 하나의 것이고, 그 버퍼는 한 스레드만 기록한다(VkDescriptorPool 은 외부 동기화 대상).
         if ( _slotSetLayout == VK_NULL_HANDLE )
             return VK_NULL_HANDLE;
 
@@ -417,7 +417,7 @@ namespace sw
                 return set;
             if ( result != VK_ERROR_OUT_OF_POOL_MEMORY && result != VK_ERROR_FRAGMENTED_POOL )
                 return VK_NULL_HANDLE;
-            ++cursor; // 이 풀은 찼다 — 다음 풀로
+            ++cursor; // 이 풀은 찼다. 다음 풀로
         }
     }
 

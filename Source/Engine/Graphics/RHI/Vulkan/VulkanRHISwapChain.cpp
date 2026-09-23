@@ -151,10 +151,10 @@ namespace sw
         vector<VkSurfaceFormatKHR> formats( formatCount );
         vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &formatCount, formats.data() );
 
-        // 백버퍼 포맷은 요청값(constant::kBackBufferFormat)이지 보장이 아니다 — 서피스가 B8G8R8A8 만 줄 수 있다.
-        // 언리얼 FVulkanSwapChain 과 같은 규칙: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 되돌려 준다
+        // 백버퍼 포맷은 요청값(constant::kBackBufferFormat)이지 보장이 아니다. 서피스가 B8G8R8A8 만 줄 수 있다.
+        // 언리얼 FVulkanSwapChain 과 같은 규칙이다: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 반환한다
         // (getActualBackBufferFormat → IRHIDevice::getBackBufferFormat). 백버퍼에 그리는 PSO 는 그 값으로
-        // 만든다(FrameRenderer::ensurePresentPso) — 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
+        // 만든다(FrameRenderer::ensurePresentPso). 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
         const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedFormat );
         const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
 
@@ -180,10 +180,10 @@ namespace sw
                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
-        // present 모드가 Vulkan 의 VSync 스위치다 — DX/GL 처럼 present 호출에 넘길 인자가 없다.
+        // present 모드가 Vulkan 의 VSync 스위치다. DX/GL 처럼 present 호출에 넘길 인자가 없다.
         // FIFO 는 스펙이 항상 지원을 보장하므로 켠 경우엔 그대로 쓰고, 끈 경우에만 서피스가 주는
         // 목록에서 MAILBOX(삼중 버퍼, 티어링 없음) → IMMEDIATE 순으로 고른다. 둘 다 없으면 FIFO 로
-        // 남는다 — 실패가 아니라 "이 서피스는 끌 수 없다" 이므로 로그만 남긴다.
+        // 남는다. 실패가 아니라 "이 서피스는 끌 수 없다" 이므로 로그만 남긴다.
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
         if ( _bRequestedVSync == false )
         {
@@ -208,7 +208,7 @@ namespace sw
                 SW_LOG_INFO( "VSync 끄기를 요청했지만 서피스가 MAILBOX/IMMEDIATE 를 주지 않습니다 — FIFO 로 남습니다." );
         }
 
-        // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 합니다.
+        // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 한다.
         VkExtent2D extent = capabilities.currentExtent;
         if ( capabilities.currentExtent.width == UINT32_MAX || capabilities.currentExtent.height == UINT32_MAX )
         {
@@ -234,7 +234,7 @@ namespace sw
             return false;
         }
 
-        // 백버퍼 개수도 백엔드 간 계약이다 — 예전엔 이 값을 무시하고 minImageCount + 1 을 썼다.
+        // 백버퍼 개수도 백엔드 간 계약이다. 예전에는 이 값을 무시하고 minImageCount + 1 을 썼다.
         // 요청값을 존중하되 서피스 능력으로 클램프한다.
         uint32 imageCount = ( _requestedBufferCount > 0 ) ? _requestedBufferCount : ( capabilities.minImageCount + 1 );
         if ( imageCount < capabilities.minImageCount )
@@ -364,8 +364,8 @@ namespace sw
 
     bool VulkanRHISwapChain::createSemaphores( VkDevice device, uint32 frameCountInFlight )
     {
-        // acquire 세마포어는 프레임 슬롯으로, renderFinished 세마포어는 이미지 인덱스로 센다 —
-        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 예전엔 둘 다 이미지 수로 잡아서,
+        // acquire 세마포어는 프레임 슬롯으로, renderFinished 세마포어는 이미지 인덱스로 센다.
+        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 예전에는 둘 다 이미지 수로 잡아서,
         // 드라이버가 인플라이트 프레임 수보다 적은 이미지를 주면 범위 밖 접근이 될 수 있었다.
         _listImageAvailableSemaphore.resize( frameCountInFlight );
         _listRenderFinishedSemaphore.resize( _listImage.size() );
@@ -430,7 +430,7 @@ namespace sw
             vkDestroySwapchainKHR( device, _swapChain, nullptr );
             _swapChain = nullptr;
         }
-        // 스왑체인이 소유한 이미지이므로 핸들만 버립니다.
+        // 스왑체인이 소유한 이미지이므로 핸들만 버린다.
         _listImage.clear();
         _imageIndex = 0;
     }

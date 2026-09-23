@@ -1,9 +1,9 @@
 /**
  * @file VulkanRHIResourceBindless.cpp
- * @brief Vulkan 의 bindless 등록 — 텍스처는 세트 1 배열의 원소에 쓰고, 버퍼는 인덱스 → 버퍼 핸들 표에 올린다
- * @details `VulkanRHIResource` 의 일부다. 버퍼 인덱스는 드로우/디스패치 직전 슬롯 세트를 쓸 때
- *          (VulkanRHICommandContext::flushSlotSet) VkBuffer 로 풀린다 — 등록 시점에 디스크립터를 쓰지 않는다.
- *          텍스처·버퍼(SRV/CB)·UAV 는 각자의 인덱스 공간이다. DX12 는 힙 하나라 인덱스 공간도 하나다.
+ * @brief Vulkan 의 bindless 등록입니다. 텍스처는 세트 1 배열의 원소에 쓰고, 버퍼는 인덱스 → 버퍼 핸들 표에 올립니다.
+ * @details `VulkanRHIResource` 의 일부입니다. 버퍼 인덱스는 드로우 · 디스패치 직전 슬롯 세트를 쓸 때
+ *          (VulkanRHICommandContext::flushSlotSet) VkBuffer 로 풀립니다. 등록 시점에는 디스크립터를 쓰지 않습니다.
+ *          텍스처 · 버퍼(SRV/CB) · UAV 는 각자의 인덱스 공간입니다. DX12 는 힙 하나라 인덱스 공간도 하나입니다.
  */
 #include "pch.h"
 
@@ -34,10 +34,10 @@ namespace sw
         if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
 
-        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다 — DEPTH 단일 aspect 뷰
+        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다. DEPTH 단일 aspect 뷰
         // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는
-        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 예전엔 여기서 그냥 거부했다 —
-        // 그러면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 돌려줘, Vulkan 만
+        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 예전에는 여기서 그냥 거부했다.
+        // 그러면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 반환해, Vulkan 만
         // 모든 픽셀이 "완전 그림자"(x0.56) 로 어두웠다(검증 에러 없음, 큐브는 다 보인다).
         const bool        bDepth       = pResolved->_bDepthStencil != SW_FALSE;
         const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
@@ -72,8 +72,8 @@ namespace sw
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer/오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다 —
-        // 링 상수버퍼의 프레임 오프셋도 그때 더한다. 예전엔 여기서 프레임 슬롯마다 세트를 만들었다.
+        // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
+        // 링 상수버퍼의 프레임 오프셋도 그때 더한다. 예전에는 여기서 프레임 슬롯마다 세트를 만들었다.
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree, buffer );
     }
@@ -83,8 +83,8 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
-        // 넣으면 다음 registerBindlessResource 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다 — 실제로
-        // 트랜지언트 텍스처 인덱스 0·1·2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
+        // 넣으면 다음 registerBindlessResource 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
+        // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
         {
             SW_LOG_ERROR( "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
@@ -96,8 +96,8 @@ namespace sw
 
     void VulkanRHIResource::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUav )
     {
-        // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다 — 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
-        // 세트가 가리키던 자리를 받지 않도록 (언리얼의 지연 해제와 같다).
+        // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
+        // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
         VulkanRHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUav]()
         {
@@ -134,8 +134,8 @@ namespace sw
         const RHIDescriptorIndex            index = record._bindlessIndex;
         if ( index < _pDevice->_listTextureUsed.size() && _pDevice->_listTextureUsed[index] != 0 )
         {
-            // 원소를 더미로 되돌리는 것도, 인덱스 재사용도 GPU 펜스 뒤에 한다 — update-after-bind 라도 실행 중인
-            // 커맨드버퍼가 쓰는 디스크립터를 덮어쓰는 건 정의되지 않은 동작이고, 같은 프레임에 새 텍스처가
+            // 원소를 더미로 되돌리는 것도, 인덱스 재사용도 GPU 펜스 뒤에 한다. update-after-bind 라도 실행 중인
+            // 커맨드버퍼가 쓰는 디스크립터를 덮어쓰는 것은 정의되지 않은 동작이고, 같은 프레임에 새 텍스처가
             // 이 인덱스를 받으면 이전 프레임이 새 텍스처를 샘플한다. 이미지 자체도 같은 펜스 뒤에 파괴된다(destroyTexture).
             _pDevice->_listTextureUsed[index] = 2; // 2 = 해제 대기 (등록 불가, 프리리스트에도 아직 없음)
             VulkanRHIDevice* pDevice          = _pDevice;
@@ -172,7 +172,7 @@ namespace sw
         if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
             return kInvalidDescriptorIndex;
 
-        // 버퍼 UAV 와 같은 인덱스 공간 — 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
+        // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )

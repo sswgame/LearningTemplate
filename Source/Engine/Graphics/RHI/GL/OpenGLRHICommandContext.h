@@ -12,16 +12,16 @@ namespace sw
     class OpenGLRHICommandContext : public IRHICommandContext
     {
     public:
-        /** @brief 디바이스의 기록 상태를 쓰는 즉시 컨텍스트. */
+        /** @brief 디바이스의 기록 상태를 쓰는 컨텍스트를 만듭니다. 프레임 스트림 컨텍스트와 커맨드 리스트가 모두 이 생성자를 씁니다. */
         explicit OpenGLRHICommandContext( OpenGLRHIDevice* pDevice );
-        /** @brief 리스트가 자기 기록 상태를 넘겨 만드는 컨텍스트. */
+        /** @brief 기록 상태를 따로 받는 생성자입니다. GL 은 실제 상태가 하나라 지금 부르는 곳은 없습니다. */
         OpenGLRHICommandContext( OpenGLRHIDevice* pDevice, OpenGLRecordingState* pState );
         ~OpenGLRHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
-        /** @brief OpenGL 은 리소스 상태를 추적하지 않는다 — 의도적 no-op. */
+        /** @brief OpenGL 은 리소스 상태를 추적하지 않습니다. 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
         void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
@@ -51,17 +51,17 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
-        /** @brief _meshVao를 바인딩하고 position(0)/color(1) 정점 attrib를 vbo 기준으로 세팅한다.
-         *         draw류 5곳에 복붙돼 있던 블록 통합 — 호출자가 draw 후 언바인드는 각자 책임진다. */
+        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 표(constant::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 겁니다.
+         *         드로우 진입점마다 복사돼 있던 블록을 합친 것입니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
         void bindMeshVaoAttribs( uint32 vbo );
         /**
-         * @brief 드로우가 쓸 프로그램과 토폴로지 — PSO 가 정하고, PSO 가 없으면 디바이스 기본 프로그램과 GL_TRIANGLES.
-         * @details 드로우 진입점 넷이 같은 열 줄을 각자 들고 있었다(예전 멀티 드로우 경로는 이걸 빠뜨리고 GL_TRIANGLES 로 굳혔었다).
-         * @return 프로그램이 0 이면 false — 그릴 수 없다.
+         * @brief 드로우가 쓸 프로그램과 토폴로지를 고릅니다. PSO 가 정하고, PSO 가 없으면 디바이스 기본 프로그램과 GL_TRIANGLES 입니다.
+         * @details 드로우 진입점 넷이 같은 열 줄을 각자 들고 있었습니다(예전 멀티 드로우 경로는 이것을 빠뜨리고 GL_TRIANGLES 로 굳혔었습니다).
+         * @return 프로그램이 0 이라 그릴 수 없으면 false.
          */
         bool             resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
         OpenGLRHIDevice* _pDevice;
-        /// @brief 이 컨텍스트가 갱신할 기록 상태.
+        /// @brief 이 컨텍스트가 갱신하는 기록 상태입니다.
         OpenGLRecordingState* _pState;
     };
 } // namespace sw

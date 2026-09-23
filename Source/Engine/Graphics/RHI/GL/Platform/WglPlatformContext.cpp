@@ -38,7 +38,7 @@ namespace sw
         pfd.cDepthBits            = 24;
         pfd.cStencilBits          = 8;
 
-        // SetPixelFormat is once-per-HWND. Verify PFD_SUPPORT_OPENGL if already set.
+        // SetPixelFormat 은 HWND 마다 한 번뿐이다. 이미 설정돼 있으면 PFD_SUPPORT_OPENGL 인지 확인한다.
         int32 pixelFormat = GetPixelFormat( hDC );
         bool  bFormatSet  = false;
         if ( pixelFormat != 0 )
@@ -89,7 +89,7 @@ namespace sw
             };
             for ( const int32( &ver )[2] : kArrVersions )
             {
-                // 디버그 컨텍스트는 비-Shipping 에서만 — KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
+                // 디버그 컨텍스트는 비-Shipping 에서만 켠다. KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
                 // (OpenGLRHIDeviceInit 이 콜백을 건다). Shipping 은 검증 비용을 지지 않는다.
                 int32 arrAttrib[] = {
                     WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
@@ -154,7 +154,7 @@ namespace sw
             return false;
 
         // **로그를 남기지 않는다.** 다른 스레드가 컨텍스트를 쥐고 있는 것(ERROR_BUSY)은 정상
-        // 경합이고, 기다릴지 포기할지는 호출부가 정한다. 실패를 알릴 필요가 있는 호출부는
+        // 경합이고, 기다릴지 포기할지는 부르는 쪽이 정한다. 실패를 알려야 하는 쪽은
         // `OpenGLRHIDevice::bindGraphicsContext` 가, 기다리는 쪽은
         // `acquireGraphicsContextBlocking` 이 각자 로그를 남긴다.
         return wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) ) != FALSE;
