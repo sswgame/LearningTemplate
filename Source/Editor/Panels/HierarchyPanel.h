@@ -1,6 +1,6 @@
 /**
  * @file HierarchyPanel.h
- * @brief 씬 GameObject / Component 계층 윈도우
+ * @brief 씬 GameObject / Component 계층 창입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -27,7 +27,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        /** @brief 윈도우 제목을 반환합니다. */
+        /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Hierarchy"; }
         /** @brief Hierarchy UI를 그립니다. */
         void drawContent() override;
@@ -37,11 +37,10 @@ namespace sw::editor
 
     private:
         /**
-         * @brief 프레임마다 다시 채우는 오브젝트 스냅샷 (용량 재사용).
-         * @details 트리를 그리는 도중 오브젝트가 지워지거나 재부모화될 수 있으므로 스냅샷이
-         *          필요하다 — 매니저를 잠근 채로 그리면 그 변경이 같은 스레드에서 배타 락을
-         *          다시 잡아 교착한다. 다만 값 반환 getAllGameObjects() 는 호출마다 새로
-         *          할당하므로, 버퍼를 들고 out 파라미터 오버로드를 쓴다.
+         * @brief 프레임마다 다시 채우는 오브젝트 스냅샷입니다(용량 재사용).
+         * @details 트리를 그리는 도중 오브젝트가 지워지거나 부모가 바뀔 수 있으므로 스냅샷이 필요합니다. 매니저를 잠근 채로
+         *          그리면 그 변경이 같은 스레드에서 배타 락을 다시 잡아 교착합니다. 다만 값으로 반환하는 getAllGameObjects() 는
+         *          호출마다 새로 할당하므로, 버퍼를 들고 출력 매개변수 오버로드를 씁니다.
          */
         vector<GameObject*>                   _listSceneObject;
         uint64                                _renamingObjectId;

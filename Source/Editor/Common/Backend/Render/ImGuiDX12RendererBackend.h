@@ -68,7 +68,7 @@ namespace sw::editor
         UINT                                         _descriptorSize{ 0 };
         uint32                                       _maxDescriptors = 128;
         uint32                                       _nextDescriptor{ 0 };
-        /// @brief 디바이스 제거를 이미 로그로 남겼으면 true — 복구가 없어 매 프레임 반복되므로 1회만 남긴다.
+        /// @brief 디바이스 제거를 이미 로그로 남겼으면 true 입니다. 복구되지 않아 프레임마다 반복되므로 한 번만 남깁니다.
         bool _bDeviceRemovedLogged{ false };
 #endif
     };

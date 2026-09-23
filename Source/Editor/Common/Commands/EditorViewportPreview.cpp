@@ -88,12 +88,11 @@ namespace sw::editor
         };
 
         /**
-         * @brief 프리뷰가 `MaterialCache` 에서 잡아 둔 머티리얼 경로. 비어 있으면 잡은 것이 없습니다.
-         * @details `acquire` 는 참조를 하나 올린다. 예전에는 `applyMaterial` 이 부를 때마다 올리기만
-         *          하고 내리지 않아서, 머티리얼을 한 번 편집할 때마다 참조가 하나씩 쌓였다 — 그 뒤로
-         *          그 머티리얼은 참조가 0 에 닿지 못해 캐시에서 영영 지워지지 않는다.
-         *          프리뷰가 드는 참조는 **하나뿐**이다: 같은 경로면 다시 잡지 않고, 다른 경로로 갈
-         *          때는 새 것을 메시에 건 **뒤에** 옛 것을 놓는다(놓는 순간 사라질 수 있으므로 순서가 중요하다).
+         * @brief 프리뷰가 `MaterialCache` 에서 잡아 둔 머티리얼 경로입니다. 비어 있으면 잡은 것이 없습니다.
+         * @details `acquire` 는 참조를 하나 올립니다. 예전에는 `applyMaterial` 이 부를 때마다 올리기만 하고 내리지 않아서,
+         *          머티리얼을 한 번 편집할 때마다 참조가 하나씩 쌓였습니다. 그 뒤로 그 머티리얼은 참조가 0 에 닿지 못해 캐시에서
+         *          영영 지워지지 않았습니다. 프리뷰가 드는 참조는 **하나뿐**입니다. 같은 경로면 다시 잡지 않고, 다른 경로로 갈
+         *          때는 새 것을 메시에 건 **뒤에** 옛 것을 놓습니다(놓는 순간 사라질 수 있으므로 순서가 중요합니다).
          */
         string s_acquiredPreviewMaterialPath;
     } // namespace
@@ -181,15 +180,15 @@ namespace sw::editor
             ResourceManager* pResources = editor::getService<ResourceManager>();
             if ( pResources != nullptr )
             {
-                // 같은 경로를 다시 걸 때는 이미 들고 있는 참조를 그대로 쓴다 — 부를 때마다 올리면
-                // 편집 한 번에 참조가 하나씩 쌓이고, 그 머티리얼은 캐시에서 영영 지워지지 않는다.
+                // 같은 경로를 다시 걸 때는 이미 들고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
+                // 그 머티리얼은 캐시에서 영영 지워지지 않는다.
                 const bool bAlreadyHeld = ( s_acquiredPreviewMaterialPath == assetPath );
                 Material*  pCached      = pResources->getMaterialManager().acquire( assetPath, nullptr );
                 if ( pCached != nullptr )
                 {
                     if ( bAlreadyHeld )
                     {
-                        // 방금 올린 몫은 곧바로 되돌린다 — 프리뷰가 드는 참조는 언제나 하나다.
+                        // 방금 올린 참조는 곧바로 되돌린다. 프리뷰가 드는 참조는 언제나 하나다.
                         pResources->getMaterialManager().release( assetPath );
                     }
                     else

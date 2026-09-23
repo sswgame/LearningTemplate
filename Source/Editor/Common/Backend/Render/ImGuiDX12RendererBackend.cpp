@@ -116,7 +116,7 @@ namespace sw::editor
             const HRESULT removed = pDevice->GetDeviceRemovedReason();
             if ( FAILED( removed ) )
             {
-                // 디바이스 제거는 복구되지 않아 이후 모든 프레임이 여기로 들어온다 — 1회만 남긴다.
+                // 디바이스 제거는 복구되지 않아 이후 모든 프레임이 여기로 들어온다. 그래서 한 번만 남긴다.
                 if ( _bDeviceRemovedLogged == false )
                 {
                     _bDeviceRemovedLogged = true;

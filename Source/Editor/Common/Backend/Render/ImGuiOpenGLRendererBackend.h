@@ -31,20 +31,20 @@ namespace sw::editor
 
         // ------------------------------------------------------------------------------
         // 2) IImGuiRendererBackend — 프레임/텍스처
-        //    unregisterTexture는 SRV 소유권이 없어 아무 것도 하지 않음
+        //    unregisterTexture 는 해제할 자원을 소유하지 않아 아무것도 하지 않는다
         // ------------------------------------------------------------------------------
         /** @brief ImGui OpenGL 프레임을 시작합니다. */
         void newFrame() override;
         /** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 렌더 스레드에서 처리합니다. */
         void processTextureUpdates() override;
-        /** @brief WGL 컨텍스트가 렌더 스레드 전용이므로 true. */
+        /** @brief GL 컨텍스트가 렌더 스레드 전용이므로 true 입니다. */
         bool requiresRenderThreadContext() const override { return true; }
         /** @brief ImGui draw data를 OpenGL로 그립니다. */
         void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
 
         /** @brief RHI 텍스처 핸들을 ImGui ImTextureID(GLuint)로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;
-        /** @brief OpenGL은 별도 SRV 소유권이 없어 아무 것도 하지 않습니다. */
+        /** @brief OpenGL 에서는 따로 소유한 자원이 없어 아무것도 하지 않습니다(GL 텍스처 이름은 RHI 가 소유합니다). */
         void unregisterTexture( void* pTextureID ) override;
 
     private:

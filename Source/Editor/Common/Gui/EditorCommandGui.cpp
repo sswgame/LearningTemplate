@@ -1,6 +1,6 @@
 /**
  * @file EditorCommandGui.cpp
- * @brief 기본 커맨드 표와 그 ImGui 표면 (메뉴 항목 · 전역 단축키)
+ * @brief 기본 커맨드 표와, 그것을 ImGui 에 드러내는 곳(메뉴 항목 · 전역 단축키)입니다.
  */
 #include "pch.h"
 
@@ -43,21 +43,20 @@ namespace sw::editor
         struct EditorCommandGuiInternal
         {
             // ------------------------------------------------------------------------------
-            // 1) 커맨드 동작 — 표에서 함수 포인터로 가리킨다
+            // 1) 커맨드 동작. 표가 함수 포인터로 가리킨다
             //
-            // **여기 있는 함수는 전부 "표가 요구하는 모양으로 바꾸는 일" 을 한다.** 대상이 이미
-            // `void()` / `bool()` 이라면 표가 그 함수를 **직접** 가리키면 되고, 감싸는 것은 이름만
-            // 하나 늘리는 것이다(그렇게 감싸고만 있던 여덟 개는 걷어냈다 — `saveFocusedOrScene` ·
-            // `requestExit` · `QuickLauncherPopup::toggle` 등은 지금 표가 직접 가리킨다).
+            // **여기 있는 함수는 모두 "표가 요구하는 모양으로 바꾸는 일" 을 한다.** 대상이 이미 `void()` / `bool()` 이라면 표가
+            // 그 함수를 **직접** 가리키면 되고, 감싸는 것은 이름만 하나 늘리는 일이다(그렇게 감싸기만 하던 여덟 개는 걷어 냈다.
+            // `saveFocusedOrScene` · `requestExit` · `QuickLauncherPopup::toggle` 등은 지금 표가 직접 가리킨다).
             //
-            // 그러니 여기 새로 함수를 만들기 전에 **왜 직접 못 가리키는지**가 있어야 한다. 남아 있는
-            // 것들의 이유는 셋 중 하나다:
+            // 그러니 여기에 새 함수를 만들기 전에 **왜 직접 가리킬 수 없는지** 이유가 있어야 한다. 남아 있는 것들의 이유는 셋 중
+            // 하나다.
             //   - 반환형을 맞춘다   : `commandNewScene` (대상이 `bool` 인데 표는 `void()` 다)
-            //   - 인자를 박는다     : `commandAlign<TAxis>` (대상이 축·정렬 두 인자를 받는다)
+            //   - 인자를 고정한다   : `commandAlign<TAxis>` (대상이 축 · 정렬 두 인자를 받는다)
             //   - 대상을 찾아온다   : `commandUndo` (`getService<CommandStack>()`)
             //
-            // 그리고 인자를 박는 경우에도 **값마다 함수를 하나씩 적지는 않는다** — 축 여섯 벌이
-            // 그렇게 적혀 있었고, 템플릿 인자로 받아 둘로 줄였다.
+            // 그리고 인자를 고정하는 경우에도 **값마다 함수를 하나씩 적지는 않는다.** 축 여섯 벌이 그렇게 적혀 있었는데, 템플릿
+            // 인자로 받아 둘로 줄였다.
             // ------------------------------------------------------------------------------
             static void onOpenSceneDialogResult( const vector<string>& listPath )
             {
@@ -69,7 +68,7 @@ namespace sw::editor
                     pContext->getWorkspace().requestLoadScene( listPath[0] );
             }
 
-            /// @brief 표는 `void()` 를 요구하고 `tryCreateNewScene` 은 `bool` 을 돌려준다 — 그 차이를 메우려고 남긴다.
+            /// @brief 표는 `void()` 를 요구하는데 `tryCreateNewScene` 은 `bool` 을 반환합니다. 그 차이를 메우려고 남겨 둡니다.
             static void commandNewScene()
             {
                 // 실패 사유(플레이 중 · SceneManager 없음)는 tryCreateNewScene 이 자체 처리한다.
@@ -279,10 +278,9 @@ namespace sw::editor
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
             }
 
-            // 축만 다른 여섯 벌을 손으로 적고 있었다. 표가 `void()` 를 요구하므로 인자를 박는
-            // 함수 자체는 있어야 하지만, **축마다 하나씩 적을 이유는 없다** — 축을 템플릿 인자로
-            // 받으면 표는 그대로 `&commandAlign<AlignAxis::X>` 로 가리킨다. 축이 하나 늘어도
-            // 여기 고칠 것은 없다.
+            // 축만 다른 여섯 벌을 손으로 적고 있었다. 표가 `void()` 를 요구하므로 인자를 고정하는 함수 자체는 있어야 하지만,
+            // **축마다 하나씩 적을 이유는 없다.** 축을 템플릿 인자로 받으면 표는 그대로 `&commandAlign<AlignAxis::X>` 로 가리킨다.
+            // 축이 하나 늘어도 여기서 고칠 것은 없다.
             template <AlignAxis TAxis>
             static void commandAlign()
             {
@@ -308,7 +306,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // 2) 활성 조건 — 표에서 함수 포인터로 가리킨다
+            // 2) 활성 조건. 표가 함수 포인터로 가리킨다
             // ------------------------------------------------------------------------------
             static bool isCompilerIdle()
             {
@@ -341,9 +339,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // 3) 기본 커맨드 표 — 커맨드를 더하려면 여기 한 줄
+            // 3) 기본 커맨드 표. 커맨드를 더하려면 여기에 한 줄
             // ------------------------------------------------------------------------------
-            /** @brief 표 한 줄. 문자열은 전부 리터럴이므로 수명 걱정이 없다. */
+            /** @brief 표의 한 줄입니다. 문자열은 모두 리터럴이라 수명 걱정이 없습니다. */
             struct CommandRow
             {
                 const utf8*           _pId;
@@ -360,9 +358,9 @@ namespace sw::editor
             };
 
             /**
-             * @brief 에디터 커맨드 정본.
-             * @details 툴팁에 단축키를 손으로 적지 않는다 — `drawMenuItem` 이 이 표의 조합으로 만들어
-             *          붙이므로 라벨과 실제 처리가 어긋날 수 없다.
+             * @brief 에디터 커맨드의 정본입니다.
+             * @details 툴팁에 단축키를 손으로 적지 않습니다. `drawMenuItem` 이 이 표의 조합으로 만들어 붙이므로 라벨과 실제 처리가
+             *          어긋날 수 없습니다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
                 {                     "scene.new",                     "New Scene",               ICON_FA_FILE,     "Scene",                                     "새로운 빈 씬을 생성합니다",           "Replace the active scene with an empty one",                                                                    {},                                                              {},                               &commandNewScene,                       nullptr,  true},
@@ -408,9 +406,9 @@ namespace sw::editor
 
             /**
              * @brief 자체 키 열거형을 ImGuiKey 로 옮깁니다. 모르는 키는 ImGuiKey_None 입니다.
-             * @details 표가 아니라 **뺄셈**으로 옮긴다 — 그래서 양쪽 열거형이 A..Z · F1..F12 구간에서
-             *          연속이라는 가정 위에 서 있다. ImGui 쪽은 바로 위 단정이, 우리 쪽은
-             *          `EditorCommandKey` 선언 아래의 자리 단정이 지킨다.
+             * @details 표가 아니라 **뺄셈**으로 옮깁니다. 그래서 양쪽 열거형이 A..Z · F1..F12 구간에서 연속이라는 가정에
+             *          기댑니다. ImGui 쪽은 바로 위의 static_assert 가, 우리 쪽은 `EditorCommandKey` 선언 아래의 static_assert 가
+             *          이 가정을 지킵니다.
              */
             static ImGuiKey toImGuiKey( EditorCommandKey key )
             {
@@ -426,9 +424,8 @@ namespace sw::editor
 
             /**
              * @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true입니다.
-             * @details 수정자를 **정확히** 비교합니다. 예전 키 사다리는 필요한 수정자만 확인해서
-             *          Ctrl+Shift+Z 가 undo(Ctrl+Z)까지 함께 발동했다 — Shift 가 눌려 있지 않다는
-             *          것을 아무도 확인하지 않았기 때문이다.
+             * @details 수정자를 **정확히** 비교합니다. 예전의 키 처리 if 사다리는 필요한 수정자만 확인해서 Ctrl+Shift+Z 가
+             *          undo(Ctrl+Z)까지 함께 발동했습니다. Shift 가 눌려 있지 않다는 것을 아무도 확인하지 않았기 때문입니다.
              */
             static bool isShortcutPressed( const EditorCommandShortcut& shortcut )
             {
@@ -464,7 +461,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
         {
-            // 조용히 돌아가면 메뉴가 통째로 비고 단축키가 죽는다. 실기동 검증이 이 줄을 잡는다.
+            // 조용히 돌아가면 메뉴가 통째로 비고 단축키가 먹지 않는다. 실제 기동 검증이 이 줄을 잡는다.
             SW_LOG_ERROR( "커맨드를 등록할 EditorContext 가 없습니다 — 메뉴와 단축키가 비어 있게 됩니다" );
             return;
         }
@@ -513,7 +510,7 @@ namespace sw::editor
             if ( bPressed == false )
                 continue;
 
-            // 조합은 유일하다 (registerDefaults 의 validate 가 지킨다) — 처음 맞은 것만 실행한다.
+            // 조합은 유일하다(registerDefaults 의 validate 가 지킨다). 그래서 처음 맞은 것만 실행한다.
             EditorCommandRegistry::executeDesc( desc );
             return;
         }

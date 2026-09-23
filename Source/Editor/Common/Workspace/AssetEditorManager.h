@@ -1,6 +1,6 @@
 /**
  * @file AssetEditorManager.h
- * @brief 애셋 경로 → 도구 패널 오픈 디스패처 (오버라이드는 선택)
+ * @brief 애셋 경로에 맞는 도구 패널을 여는 디스패처입니다(오버라이드는 선택).
  */
 #pragma once
 #include "Core/Common/Types.h"

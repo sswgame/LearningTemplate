@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    /** @brief imgui-node-editor 기반 비주얼 대화/퀘스트 노드 그래프 에디터 */
+    /** @brief imgui-node-editor 로 만든 대화 · 퀘스트 노드 그래프 편집 패널입니다. */
     class DialogueGraphPanel : public EditorGraphDocumentPanel<DialogueGraphAsset>
     {
     public:
@@ -33,9 +33,9 @@ namespace sw::editor
         void drawGraphCanvas( float32 canvasWidth );
         /** @brief 노드들을 캔버스에 그립니다. */
         void drawGraphNodes();
-        /** @brief 노드 왼쪽의 입력 핀("-> In"). 여섯 종류 중 다섯이 같은 세 줄이었다. */
+        /** @brief 노드 왼쪽의 입력 핀("-> In")을 그립니다. 여섯 종류 중 다섯이 같은 세 줄을 쓰고 있었습니다. */
         void drawInputPin( int32 nodeId );
-        /** @brief 출력 핀 하나 — 핀 번호는 호출자가 인코딩한다(다음 · 선택지 · 분기). */
+        /** @brief 출력 핀 하나를 그립니다. 핀 번호는 부르는 쪽이 인코딩합니다(다음 · 선택지 · 분기). */
         void drawOutputPin( int32 pinId, const utf8* pLabel );
         /** @brief 캔버스의 링크 생성·삭제 상호작용을 처리합니다. */
         void handleCanvasInteractions();
@@ -46,7 +46,7 @@ namespace sw::editor
         using DialogueLink = LinkType;
 
         // ------------------------------------------------------------------------------
-        // 2) 내부 처리 함수 — 공통 뼈대는 EditorGraphDocumentPanel 이 든다.
+        // 2) 내부 처리 함수 (공통 뼈대는 EditorGraphDocumentPanel 에 있다)
         // ------------------------------------------------------------------------------
         /** @brief 기본 샘플 노드들을 구성합니다. */
         void ensureDefaults() override;

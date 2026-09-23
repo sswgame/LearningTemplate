@@ -105,7 +105,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 시각화 정본 — 새 시각화는 여기 한 줄이다. 툴바 체크박스도 이 표에서 나온다. */
+            /** @brief 시각화의 정본입니다. 새 시각화는 여기에 한 줄을 더하면 됩니다. 툴바 체크박스도 이 표에서 나옵니다. */
             inline static const EditorViewportVisualizer::Row _s_arrRow[] = {
                 {"Col",  "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,      &drawColliders},
                 {"Cam", "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다", true, &drawCameraFrustums}

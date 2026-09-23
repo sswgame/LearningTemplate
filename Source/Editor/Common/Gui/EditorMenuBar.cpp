@@ -118,7 +118,7 @@ namespace sw::editor
         {
             EditorAssetTypeRegistry::forEachToolPanelTitle( []( const utf8* pTitle )
             {
-                // 람다는 바깥의 `pContext` 를 캡처하지 않는다 — 여기서 다시 받고 다시 확인한다.
+                // 람다는 바깥의 `pContext` 를 캡처하지 않는다. 여기서 다시 받아 다시 확인한다.
                 EditorContext* pMenuContext = EditorContext::get();
                 if ( pMenuContext != nullptr && ImGui::MenuItem( pTitle ) )
                     pMenuContext->getWorkspace().requestOpenPanel( pTitle );
@@ -169,7 +169,7 @@ namespace sw::editor
         constexpr float32 statusW = 460.0f;
         ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
 
-        // --- Live Coding Compile Button & Status ---
+        // --- 라이브 코딩 컴파일 버튼과 상태 ---
         static BuildState s_lastObservedState = BuildState::Idle;
 
         IModuleCompiler* pCompiler = getService<IModuleCompiler>();
@@ -178,7 +178,7 @@ namespace sw::editor
             const bool       bCompiling = pCompiler->isCompiling();
             const BuildState state      = pCompiler->getBuildState();
 
-            // 컴파일 완료 상태 전이 감지 (Compiling -> Success / Failed)
+            // 컴파일이 끝나는 순간을 잡는다(Compiling -> Success / Failed)
             if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
             {
                 const string   targetName  = pCompiler->getTargetName();

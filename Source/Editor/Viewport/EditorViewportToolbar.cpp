@@ -53,11 +53,11 @@ namespace sw::editor
             }
 
             /**
-             * @brief 호스트가 내준 FrameRenderer (없으면 nullptr).
-             * @details 렌더러는 **호스트 서비스**다(`EngineServiceList.xxx` 의 선택 행). 예전에는 `SceneManager`
-             *          가 렌더러 포인터를 들고 있었고 그 하나 때문에 씬 층이 렌더러를 알았다 — 월드는 그리는
-             *          쪽을 모르는 것이 맞다(Scene::tick 주석). 테스트 하네스처럼 렌더러가 없는 호스트에서는
-             *          nullptr 이고, 그때 콤보는 비활성이다.
+             * @brief 호스트가 내준 FrameRenderer 입니다(없으면 nullptr).
+             * @details 렌더러는 **호스트 서비스**입니다(`EngineServiceList.xxx` 의 선택 행). 예전에는 `SceneManager` 가 렌더러
+             *          포인터를 들고 있었고, 그 하나 때문에 씬 계층이 렌더러를 알았습니다. 월드는 그리는 쪽을 모르는 것이
+             *          맞습니다(Scene::tick 주석). 테스트 하네스처럼 렌더러가 없는 호스트에서는 nullptr 이고, 그때 콤보는
+             *          비활성입니다.
              */
             static FrameRenderer* findFrameRenderer()
             {
@@ -78,8 +78,8 @@ namespace sw::editor
 
         {
             // 렌더러가 뷰 모드를 실제로 읽는다(`FrameRenderer::setViewMode`). 값이 아니라 **렌더러 상태**가
-            // 정본이므로 매 프레임 렌더러에서 읽어 표시한다 — 커맨드라인(`-gv_viewMode`)이나 다른 경로가
-            // 모드를 바꿨을 때 툴바가 거짓을 보이지 않는다.
+            // 정본이므로 프레임마다 렌더러에서 읽어 표시한다. 그래야 커맨드라인(`-gv_viewMode`)이나 다른 경로가
+            // 모드를 바꿨을 때 툴바가 틀린 값을 보이지 않는다.
             FrameRenderer* pRenderer = EditorViewportToolbarInternal::findFrameRenderer();
 
             ImGui::BeginDisabled( pRenderer == nullptr );
@@ -123,7 +123,7 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::Checkbox( "Cube", &settings._bShowOrientationCube );
 
-            // 컴포넌트 시각화 체크박스는 시각화 표에서 만든다 — 시각화를 더해도 여기는 그대로다.
+            // 컴포넌트 시각화 체크박스는 시각화 표에서 만든다. 시각화를 더해도 여기는 그대로다.
             uint32                                     visualizerCount{ 0 };
             const EditorViewportVisualizer::Row* const pVisualizerRow = EditorViewportVisualizer::getRows( visualizerCount );
             for ( uint32 index = 0; index < visualizerCount; ++index )

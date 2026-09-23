@@ -23,19 +23,18 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 핀 번호 계약 — **짓는 것과 푸는 것이 한 자리에 있다.**
-         * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 이다. 예전에는 짓는 쪽만 여기 있고
-         *          푸는 쪽은 링크를 만드는 코드에 `/ 10` · `% 10` 으로 적혀 있었다 — 자릿수 기준을
-         *          바꾸면 한쪽만 따라가서 **링크가 엉뚱한 노드에 붙는다.** `DialogueGraphAsset` 이
-         *          같은 이유로 이미 한 자리에 모았다(그 파일의 "핀 번호 계약" 절).
+         * @brief 핀 번호 계약입니다. **만드는 것과 푸는 것이 한곳에 있습니다.**
+         * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 입니다. 예전에는 만드는 쪽만 여기 있고 푸는 쪽은 링크를 만드는
+         *          코드에 `/ 10` · `% 10` 으로 적혀 있었습니다. 자릿수 기준을 바꾸면 한쪽만 따라가서 **링크가 엉뚱한 노드에
+         *          붙습니다.** `DialogueGraphAsset` 도 같은 이유로 이미 한곳에 모았습니다(그 파일의 "핀 번호 계약" 절).
          */
         struct AnimationGraphPanelInternal
         {
-            /** @brief 핀 번호의 자릿수 기준 — 한 노드가 가질 수 있는 핀 오프셋 개수이기도 하다. */
+            /** @brief 핀 번호의 자릿수 기준입니다. 한 노드가 가질 수 있는 핀 오프셋 개수이기도 합니다. */
             static constexpr int32 kPinScale = 10;
-            /** @brief 입력 핀의 오프셋. */
+            /** @brief 입력 핀의 오프셋입니다. */
             static constexpr int32 kPinOffsetIn = 1;
-            /** @brief 출력 핀의 오프셋. */
+            /** @brief 출력 핀의 오프셋입니다. */
             static constexpr int32 kPinOffsetOut = 2;
 
             static int32 pinIn( int32 nodeId )
@@ -281,10 +280,9 @@ namespace sw::editor
             _nodeGraph.unbind();
             _listNode = data._listNode;
         }
-        // **저장이 실패하면 아무것도 지우지 않는다.** 예전에는 반환값을 버리고 무조건
-        // `clearDocumentDirty()` 를 불렀다 — 실패해도 "저장됨" 으로 표시되고, 되돌리기 기준점까지
-        // 옮겨지고, `saveDocument()` 는 `true` 를 돌려줬다. 그래서 문서를 바꾸거나 에디터를 닫을 때
-        // 종료 확인이 뜨지 않고 편집이 조용히 사라졌다.
+        // **저장이 실패하면 아무것도 지우지 않는다.** 예전에는 반환값을 버리고 무조건 `clearDocumentDirty()` 를 불렀다.
+        // 그래서 실패해도 "저장됨" 으로 표시되고, 되돌리기 기준점까지 옮겨지고, `saveDocument()` 는 `true` 를 반환했다.
+        // 결국 문서를 바꾸거나 에디터를 닫을 때 종료 확인이 뜨지 않고 편집이 조용히 사라졌다.
         if ( EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() ) == false )
             return false;
 

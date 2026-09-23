@@ -76,7 +76,7 @@ namespace sw::editor
         const float32 cx = minPos._x + w * 0.5f;
         const float32 cy = minPos._y + h * 0.5f;
 
-        // Card thumbnail background
+        // 카드 썸네일 배경
         pDrawList->AddRectFilled( minVec, maxVec, IM_COL32( 22, 24, 30, 255 ), 4.0f );
 
         const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
@@ -87,7 +87,7 @@ namespace sw::editor
 
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
         {
-            // 3D Isometric Blue Cube for Prefab
+            // 프리팹: 등각 투영 파란 큐브
             const float32 sz        = w * 0.22f;
             ImVec2        topPts[4] = { ImVec2( cx, cy - sz * 1.1f ), ImVec2( cx + sz * 0.9f, cy - sz * 0.55f ),
                                         ImVec2( cx, cy ), ImVec2( cx - sz * 0.9f, cy - sz * 0.55f ) };
@@ -103,7 +103,7 @@ namespace sw::editor
         }
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pPath ) )
         {
-            // 3D Sphere preview with specular shading
+            // 머티리얼: 스페큘러 음영을 넣은 구
             const float32 r = w * 0.26f;
             pDrawList->AddCircleFilled( ImVec2( cx, cy ), r, IM_COL32( 160, 60, 220, 255 ), 24 );
             pDrawList->AddCircleFilled( ImVec2( cx - r * 0.32f, cy - r * 0.32f ), r * 0.35f,
@@ -113,7 +113,7 @@ namespace sw::editor
         }
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
         {
-            // Checkerboard background
+            // 체크무늬 배경
             // 격자를 **정수 인덱스로** 돈다. 예전에는 float 변수를 루프 카운터로 써서 반복마다
             // 오차가 쌓였고(칸 수가 경계에서 하나 달라질 수 있다) 칸 색을 정하려고 다시 나눗셈을
             // 해야 했다. 인덱스로 돌면 위치는 곱셈 한 번이고 색은 인덱스 합의 홀짝이다.
@@ -140,7 +140,7 @@ namespace sw::editor
                                               bDark ? IM_COL32( 38, 40, 46, 255 ) : IM_COL32( 58, 62, 70, 255 ) );
                 }
             }
-            // Picture frame
+            // 액자 테두리
             pDrawList->AddRect( ImVec2( minPos._x + w * 0.16f, minPos._y + h * 0.16f ),
                                 ImVec2( minPos._x + w * 0.84f, minPos._y + h * 0.84f ),
                                 IM_COL32( 255, 255, 255, 200 ), 2.0f );
@@ -152,7 +152,7 @@ namespace sw::editor
         }
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
         {
-            // 3D Scene Compass / Horizon
+            // 씬: 나침반 / 지평선
             pDrawList->AddCircle( ImVec2( cx, cy ), w * 0.26f, IM_COL32( 70, 200, 140, 200 ), 18, 1.5f );
             pDrawList->AddLine( ImVec2( cx, cy - w * 0.28f ), ImVec2( cx, cy + w * 0.28f ),
                                 IM_COL32( 240, 80, 80, 220 ), 1.5f );
@@ -161,7 +161,7 @@ namespace sw::editor
         }
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, pPath ) )
         {
-            // Shader Diamond / Prism
+            // 셰이더: 다이아몬드 / 프리즘
             const float32 r         = w * 0.24f;
             ImVec2        diaPts[4] = { ImVec2( cx, cy - r ), ImVec2( cx + r * 0.85f, cy ), ImVec2( cx, cy + r ),
                                         ImVec2( cx - r * 0.85f, cy ) };
@@ -170,7 +170,7 @@ namespace sw::editor
         }
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, pPath ) )
         {
-            // Sound wave equalizer bars
+            // 사운드: 이퀄라이저 막대
             constexpr int32   numBars    = 5;
             constexpr float32 heights[5] = { 0.25f, 0.55f, 0.95f, 0.65f, 0.35f };
             constexpr float32 barW       = 3.0f;
@@ -187,7 +187,7 @@ namespace sw::editor
         }
         else
         {
-            // Generic document / data file
+            // 일반 문서 / 데이터 파일
             pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
                                       ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ),
                                       IM_COL32( 65, 70, 82, 255 ), 3.0f );
@@ -197,7 +197,7 @@ namespace sw::editor
                                 IM_COL32( 220, 225, 235, 230 ), pLbl );
         }
 
-        // Sub-border
+        // 안쪽 테두리
         pDrawList->AddRect( minVec, maxVec, IM_COL32( 50, 55, 65, 200 ), 4.0f );
     }
 
@@ -210,23 +210,23 @@ namespace sw::editor
 
         const Color4 folderColor = EditorThemeUtil::getFolderColor();
 
-        // Card subtle border
+        // 카드의 옅은 테두리
         pDrawList->AddRect( minVec, maxVec, IM_COL32( 40, 48, 62, 160 ), 4.0f );
 
-        // UE5 Style Layered Folder:
-        // 1) Back Tab & Back Plate (Deep Slate Accent)
+        // UE5 스타일의 겹친 폴더 아이콘
+        // 1) 뒤쪽 탭과 뒤판(짙은 슬레이트)
         const uint32 colBack = IM_COL32(
             static_cast<int32>( folderColor._r * 110 + 15 ),
             static_cast<int32>( folderColor._g * 125 + 20 ),
             static_cast<int32>( folderColor._b * 165 + 30 ),
             255 );
-        // 2) Front Pocket (Vibrant Theme Accent)
+        // 2) 앞주머니(테마 액센트)
         const uint32 colFront = IM_COL32(
             static_cast<int32>( folderColor._r * 190 + 20 ),
             static_cast<int32>( folderColor._g * 205 + 25 ),
             static_cast<int32>( folderColor._b * 235 + 20 ),
             255 );
-        // 3) Front Top Highlight Lip
+        // 3) 앞주머니 윗면 하이라이트
         const uint32 colLip = IM_COL32(
             static_cast<int32>( folderColor._r * 255 ),
             static_cast<int32>( folderColor._g * 255 ),
@@ -241,16 +241,16 @@ namespace sw::editor
         const float32 fPktTop = minPos._y + h * 0.38f;
         const float32 fBottom = minPos._y + h * 0.78f;
 
-        // Back Tab
+        // 뒤쪽 탭
         pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colBack, 3.0f );
-        // Back Body
+        // 뒤판
         pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colBack, 3.0f );
 
-        // Front Pocket
+        // 앞주머니
         pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
-        // Front Lip Highlight
+        // 앞주머니 윗면 하이라이트
         pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colLip, 1.5f );
-        // Crisp Border
+        // 테두리
         pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
     }
 
@@ -297,7 +297,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawContent()
     {
-        // 마우스 X1/X2 버튼(뒤로가기/앞으로가기) 및 단축키(Alt+Left/Right, Backspace) 폴더 이동 처리
+        // 마우스 X1/X2 버튼(뒤로/앞으로)과 단축키(Alt+Left/Right, Backspace)로 폴더를 이동한다
         if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_MouseX1 ) )
@@ -369,7 +369,7 @@ namespace sw::editor
     {
         _listEntry = std::move( listEntry );
 
-        // 서비스는 루프 **밖에서** 한 번 확인한다 — 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
+        // 서비스는 루프 **밖에서** 한 번 확인한다. 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
         ResourceManager* pResources = editor::getService<ResourceManager>();
         if ( pResources != nullptr )
         {
@@ -589,7 +589,7 @@ namespace sw::editor
 
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
-            // 루트 이름 + 그 아래 상대 경로로 브레드크럼을 만듭니다.
+            // 루트 이름과 그 아래 상대 경로로 브레드크럼을 만든다.
             string crumb( label );
             for ( const ContentRoot& root : _listRoot )
             {
@@ -633,7 +633,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetView()
     {
-        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 예전에는 자산이
+        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 예전에는 애셋이
         // 수백 개면 프레임마다 문자열 수천 개를 복사했다. 보는 쪽 둘은 읽기만 하므로 포인터로
         // 충분하고, 버퍼도 멤버로 올려 두면 첫 프레임 뒤로는 할당이 없다.
         vector<const AssetEntry*>& listVisible = _listVisibleEntry;
@@ -682,7 +682,7 @@ namespace sw::editor
             return;
         }
 
-        // "Game / Shaders"를 클릭 가능한 세그먼트로 파싱합니다.
+        // "Game / Shaders" 를 클릭할 수 있는 조각으로 나눈다.
         vector<string_view> listPart;
         {
             string_view remaining{ _breadcrumb };
@@ -776,7 +776,7 @@ namespace sw::editor
 
         const int32 itemCount = static_cast<int32>( listVisible.size() );
         const int32 rowCount  = ( itemCount + columns - 1 ) / columns;
-        // 버튼 + 줄바꿈된 이름 라인 (셀 + 텍스트 라인)
+        // 버튼과 줄바꿈된 이름 줄(셀 + 텍스트 줄)
         const float32 rowHeight = cell + ImGui::GetTextLineHeightWithSpacing() + paddingY;
 
         ImGuiListClipper clipper;
@@ -932,7 +932,7 @@ namespace sw::editor
             }
         }
 
-        // 탐색/I/O는 실제 FS 대소문자를 쓰고, 저장 경로는 ResourceUtil::makeSavePath로 상대 세그먼트를 소문자화합니다.
+        // 탐색 · I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourceUtil::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
         _breadcrumb        = string{ breadcrumb };
         _selectedAssetAbs.clear();

@@ -19,9 +19,9 @@
 namespace sw::editor
 {
     /**
-     * @brief ImSequencer 가 보는 시퀀스 — 항목은 애셋의 `SequenceTrackItem` 그대로다.
-     * @details 예전에는 같은 아홉 필드를 가진 패널 전용 `Item` 이 따로 있어 저장·복원 때마다 필드를 하나씩 옮겼다 —
-     *          애셋에 필드가 하나 늘면 두 복사 루프도 같이 고쳐야 했고, 빠뜨리면 그 필드만 조용히 저장되지 않았다.
+     * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 애셋의 `SequenceTrackItem` 그대로입니다.
+     * @details 예전에는 같은 아홉 필드를 가진 패널 전용 `Item` 이 따로 있어서 저장 · 복원 때마다 필드를 하나씩 옮겼습니다.
+     *          애셋에 필드가 하나 늘면 두 복사 루프도 같이 고쳐야 했고, 빠뜨리면 그 필드만 조용히 저장되지 않았습니다.
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {

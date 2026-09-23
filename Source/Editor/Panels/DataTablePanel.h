@@ -16,12 +16,12 @@ namespace sw::editor
 {
     /**
      * @class DataTablePanel
-     * @brief 로컬라이제이션 JSON 파일(ko_KR, en_US, ja_JP) 및 데이터 XML 파일을 실시간 검사/편집/저장하는 에디터 윈도우
+     * @brief 로컬라이제이션 JSON 파일(ko_KR, en_US, ja_JP)과 데이터 XML 파일을 실시간으로 살펴보고 편집 · 저장하는 에디터 창입니다.
      */
     class DataTablePanel : public IEditorPanel
     {
     public:
-        /** @brief 데이터 테이블 윈도우를 생성합니다. */
+        /** @brief 데이터 테이블 창을 만듭니다. */
         DataTablePanel();
         /** @brief 소멸자. */
         virtual ~DataTablePanel() override = default;
@@ -29,11 +29,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        /** @brief 윈도우 제목을 반환합니다. */
+        /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Data Table Editor"; }
         /** @brief 패널 UI를 그립니다. */
         void drawContent() override;
-        /** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
+        /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }
         bool saveDocument() override;
         void revertDocument() override;
@@ -55,14 +55,14 @@ namespace sw::editor
         void pollBackgroundJobs();
         void markLocDirty();
         void markGameDataDirty();
-        /** @brief 반쪽 비트 두 개를 기반의 문서 dirty 비트에 반영합니다. */
+        /** @brief 두 문서의 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
         void syncDocumentDirty();
 
     private:
         fixed_string<constant::kMaxBuffer128> _locFilter;
         fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
         vector<LocRecord>                     _listLocRecord;
-        /** @brief 이번 프레임에 보일 행의 인덱스. 매 프레임 지우고 다시 채우는 재사용 버퍼입니다. */
+        /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */
         vector<size_t>            _listVisibleLocIndex;
         vector<GameDataFileEntry> _listGameDataFile;
         string                    _selectedGameDataRawText;

@@ -44,8 +44,8 @@ namespace sw::editor
     {
         struct EditorViewportClientInternal
         {
-            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다 — 예전에는 각자 리터럴을 들고 있었고
-            // 3D 그리드는 X·Z 가 뒤바뀐 채였다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)다.
+            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 예전에는 각자 리터럴을 들고 있었고
+            // 3D 그리드는 X · Z 가 뒤바뀐 채였다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
             static constexpr ImU32 _s_kColorAxisX = IM_COL32( 235, 65, 65, 255 );
             static constexpr ImU32 _s_kColorAxisY = IM_COL32( 65, 220, 95, 255 );
             static constexpr ImU32 _s_kColorAxisZ = IM_COL32( 65, 130, 245, 255 );
@@ -74,9 +74,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 마우스 아래의 월드 레이. 캔버스 밖이거나 퇴화했으면 false.
-             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 쓴다 — 예전에는 셋이 NDC 계산과 근·원 평면 역투영을 각자 들었다.
-             *          ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는 `EditorViewportPick::makeRay` 라 테스트가 있다.
+             * @brief 마우스 아래의 월드 레이를 만듭니다. 캔버스 밖이거나 퇴화했으면 false 입니다.
+             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. 예전에는 셋이 NDC 계산과 근 · 원평면 역투영을 각자 갖고
+             *          있었습니다. ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는 `EditorViewportPick::makeRay` 라 테스트가 있습니다.
              */
             static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize,
                                       EditorPickRay& outRay )
@@ -143,11 +143,11 @@ namespace sw::editor
         const float32     x1       = x0 + overlayW;
         const float32     y1       = y0 + overlayH;
 
-        // Background & Border
+        // 배경과 테두리
         pDrawList->AddRectFilled( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 15, 17, 22, 210 ), 6.0f );
         pDrawList->AddRect( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 50, 60, 80, 180 ), 6.0f );
 
-        // Text lines
+        // 텍스트 줄
         fixed_string<constant::kMaxBuffer32> arrFps;
         formatstring( arrFps.data(), arrFps.capacity(), "FPS: %# (%# ms)", Fmt( static_cast<float64>( fps ), Format().precision( 1 ) ),
                       Fmt( static_cast<float64>( frameTimeMs ), Format().precision( 2 ) ) );
@@ -336,7 +336,7 @@ namespace sw::editor
     {
         ImGuiIO& io = ImGui::GetIO();
 
-        // Alt + LMB: Orbit Rotate
+        // Alt + LMB: 궤도 회전
         if ( io.MouseDown[0] )
         {
             _cameraRot._y += io.MouseDelta.x * 0.3f;
@@ -344,7 +344,7 @@ namespace sw::editor
             _cameraRot._x = MathUtil::clamp( _cameraRot._x, -89.0f, 89.0f );
         }
 
-        // Alt + RMB 또는 휠: Orbit Zoom
+        // Alt + RMB 또는 휠: 궤도 줌
         if ( io.MouseDown[1] )
             _orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, 0.5f );
 
@@ -584,7 +584,7 @@ namespace sw::editor
 
     void EditorViewportClient::manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap )
     {
-        // 헤더가 ImGuizmo 를 알 필요는 없다 — 열거형은 여기서만 되돌린다.
+        // 헤더가 ImGuizmo 를 알 필요는 없다. 열거형은 여기서만 되돌린다.
         const ImGuizmo::OPERATION op   = static_cast<ImGuizmo::OPERATION>( operation );
         const ImGuizmo::MODE      mode = static_cast<ImGuizmo::MODE>( gizmoMode );
 
@@ -701,7 +701,7 @@ namespace sw::editor
         const float32     cubeCenterY = canvasPos._y + ( _toolbarSettings._bShowStats ? 128.0f : 45.0f );
         constexpr float32 cubeRadius  = 26.0f;
 
-        // Circular background disc
+        // 원형 배경
         pDrawList->AddCircleFilled( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f,
                                     IM_COL32( 18, 22, 30, 200 ) );
         pDrawList->AddCircle( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f, IM_COL32( 55, 65, 85, 180 ), 0,
@@ -752,7 +752,7 @@ namespace sw::editor
             ax._screenOffset = float2{ dotR * cubeRadius * 0.78f, -dotU * cubeRadius * 0.78f };
         }
 
-        // Sort by depth ascending so further items are drawn first
+        // 깊이 오름차순으로 정렬해 먼 것부터 그린다
         std::sort( std::begin( arrAxis ), std::end( arrAxis ),
                    []( const AxisItem& a, const AxisItem& b )
         { return a._depth < b._depth; } );
@@ -764,10 +764,10 @@ namespace sw::editor
             const AxisItem& ax = arrAxis[axisIndex];
             const ImVec2    pt( cubeCenterX + ax._screenOffset._x, cubeCenterY + ax._screenOffset._y );
 
-            // Axis line from center
+            // 중심에서 뻗는 축 선
             pDrawList->AddLine( ImVec2( cubeCenterX, cubeCenterY ), pt, ax._col, 1.8f );
 
-            // Disc handle
+            // 원판 손잡이
             const float32 handleRadius = ( ax._depth > 0.0f ) ? 6.5f : 4.5f;
             const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
             const bool    bHovered     = ( distToMouse <= handleRadius + 2.0f );
@@ -804,7 +804,7 @@ namespace sw::editor
 
         if ( _toolbarSettings._bIs2DMode )
         {
-            // XY plane vertical grid for 2D mode
+            // 2D 모드: XY 평면 격자
             const float32 centerX = MathUtil::floor( _cameraPos._x );
             const float32 centerY = MathUtil::floor( _cameraPos._y );
 
@@ -815,20 +815,20 @@ namespace sw::editor
                 const bool    bOriginY = ( MathUtil::abs( centerY + current ) < 0.01f );
                 const bool    bMajor   = ( index % 5 == 0 );
 
-                // x == 0 인 선은 Y 방향으로 뻗는다 — Y 축. y == 0 인 선이 X 축이다.
+                // x == 0 인 선은 Y 방향으로 뻗는다. 그것이 Y 축이고, y == 0 인 선이 X 축이다.
                 const ImU32 colAlongY = bOriginX ? EditorViewportClientInternal::_s_kColorAxisY
                                                  : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
                 const ImU32 colAlongX = bOriginY ? EditorViewportClientInternal::_s_kColorAxisX
                                                  : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
-                // Vertical lines parallel to Y
+                // Y 에 나란한 세로선
                 const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
                     pDrawList->AddLine( sY0, sY1, colAlongY, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
-                // Horizontal lines parallel to X
+                // X 에 나란한 가로선
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
@@ -838,7 +838,7 @@ namespace sw::editor
         }
         else
         {
-            // XZ plane ground grid for 3D mode
+            // 3D 모드: XZ 평면 바닥 격자
             const float32 centerX = MathUtil::floor( _cameraPos._x );
             const float32 centerZ = MathUtil::floor( _cameraPos._z );
 
@@ -849,21 +849,21 @@ namespace sw::editor
                 const bool    bOriginZ = ( MathUtil::abs( centerZ + current ) < 0.01f );
                 const bool    bMajor   = ( index % 5 == 0 );
 
-                // x == 0 인 선은 Z 방향으로 뻗는다 — 그것이 **Z 축**이다. z == 0 인 선이 X 축이다.
-                // 예전에는 이 둘의 색이 바뀌어 있어 그리드의 축 색이 오리엔테이션 큐브·기즈모와 달랐다.
+                // x == 0 인 선은 Z 방향으로 뻗는다. 그것이 **Z 축**이고, z == 0 인 선이 X 축이다.
+                // 예전에는 이 둘의 색이 바뀌어 있어 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달랐다.
                 const ImU32 colAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
                                                  : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
                 const ImU32 colAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX
                                                  : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
-                // Line parallel to Z
+                // Z 에 나란한 선
                 const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
                     pDrawList->AddLine( sZ0, sZ1, colAlongZ, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
-                // Line parallel to X
+                // X 에 나란한 선
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
@@ -912,7 +912,7 @@ namespace sw::editor
             if ( EditorViewportProjectionUtil::projectPoint( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&
                  EditorViewportProjectionUtil::projectPoint( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
             {
-                // Measurement line
+                // 측정선
                 pDrawList->AddLine( sStart, sEnd, IM_COL32( 255, 215, 40, 240 ), 2.5f );
                 pDrawList->AddCircleFilled( sStart, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
                 pDrawList->AddCircleFilled( sEnd, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
@@ -948,7 +948,7 @@ namespace sw::editor
 
         GameObjectManager* pManager = pScene->getObjectManager();
 
-        // 마우스 아래의 바닥에 놓는다 — 2D 는 Z = 0 평면, 3D 는 Y = 0. 캔버스 밖이거나 평면과 나란하면 원점.
+        // 마우스 아래의 바닥에 놓는다(2D 는 Z = 0 평면, 3D 는 Y = 0). 캔버스 밖이거나 평면과 나란하면 원점에 놓는다.
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 

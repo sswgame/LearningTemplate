@@ -66,8 +66,8 @@ namespace sw::editor
         const string          cmdLabel = string( "Edit " ) + string{ label };
         CommandStack::Command cmd;
         cmd._label = cmdLabel;
-        // **람다로 옮긴다.** 예전에는 값 매개변수를 람다가 다시 값으로 캡처해서 편집마다
-        // 바이트를 두 번 복사했다. 부르는 쪽이 임시를 넘기면 이제 복사가 아예 없다.
+        // **람다로 옮긴다.** 예전에는 값 매개변수를 람다가 다시 값으로 캡처해서 편집마다 바이트를 두 번 복사했다.
+        // 부르는 쪽이 임시 객체를 넘기면 이제 복사가 아예 없다.
         cmd._undo = [pData, size, undoBytes = std::move( beforeBytes ), selectedObjectId]()
         {
             if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )

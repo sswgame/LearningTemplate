@@ -1,6 +1,6 @@
 /**
  * @file EditorAssetType.h
- * @brief 에디터 애셋 종류·패널 제목·접미사 SSOT
+ * @brief 에디터 애셋 종류 · 패널 제목 · 접미사의 단일 정의(SSOT)입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -39,11 +39,10 @@ namespace sw::editor
     struct EditorAssetBrowserFilter
     {
         /**
-         * @brief 콤보에 그대로 넘기는 라벨. **널 종단 문자열이다.**
-         * @details 예전에는 `string_view` 였는데 쓰는 쪽이 셋 다 곧바로 `.data()` 를 ImGui 로
-         *          넘겼다 — ImGui 는 널 종단을 요구하지만 `string_view` 는 그것을 보장하지 않는다.
-         *          지금 표가 전부 리터럴이라 우연히 맞을 뿐, 누가 부분 문자열을 넣으면 조용히
-         *          범위를 넘어 읽는다. 타입으로 계약을 적어 둔다.
+         * @brief 콤보에 그대로 넘기는 라벨입니다. **널 종단 문자열입니다.**
+         * @details 예전에는 `string_view` 였는데, 쓰는 쪽 셋이 모두 곧바로 `.data()` 를 ImGui 로 넘겼습니다. ImGui 는 널 종단을
+         *          요구하지만 `string_view` 는 그것을 보장하지 않습니다. 지금 표가 모두 리터럴이라 우연히 맞을 뿐, 누가 부분
+         *          문자열을 넣으면 조용히 범위를 넘어 읽습니다. 그래서 타입으로 계약을 적어 둡니다.
          */
         const utf8*     _pLabel;
         EditorAssetKind _kind;
@@ -52,18 +51,18 @@ namespace sw::editor
 
     /**
      * @class EditorAssetTypeRegistry
-     * @brief 종류 판별, 패널 제목, 브라우저 필터의 단일 정의
+     * @brief 종류 판별, 패널 제목, 브라우저 필터의 단일 정의입니다.
      */
     class EditorAssetTypeRegistry
     {
     public:
         /** @brief 경로가 지정 종류와 맞는지 여부를 반환합니다. */
         static bool matches( EditorAssetKind kind, string_view path );
-        /** @brief nullptr이면 false입니다. */
+        /** @brief 경로가 nullptr 이면 false 입니다. */
         static bool matches( EditorAssetKind kind, const utf8* pPath );
         /** @brief 알려진 애셋 종류 중 하나라도 맞으면 true입니다. */
         static bool matchesAny( string_view path );
-        /** @brief 브라우저 Other 필터 — 전용 종류에 안 걸리면 true입니다. */
+        /** @brief 브라우저의 Other 필터입니다. 전용 종류에 걸리지 않으면 true 입니다. */
         static bool matchesOther( string_view path );
 
         /** @brief 도구 패널 제목입니다. 전용 패널이 없으면 빈 문자열입니다. */
@@ -78,9 +77,8 @@ namespace sw::editor
 
         /**
          * @brief 도구 패널 제목을 하나씩 넘겨 줍니다 (제목이 비어 있는 종류는 건너뜁니다).
-         * @details 호출부가 개수를 받아 인덱스로 돌고 빈 제목을 걸러내는 대여섯 줄을 매번 다시
-         *          쓰고 있었다(도킹 레이아웃·메뉴바). 순회는 레지스트리의 일이고, 쓰는 쪽은
-         *          유효한 제목만 받으면 된다.
+         * @details 호출부가 개수를 받아 인덱스로 돌고 빈 제목을 걸러 내는 대여섯 줄을 매번 다시 쓰고 있었습니다(도킹
+         *          레이아웃 · 메뉴바). 순회는 레지스트리의 일이고, 쓰는 쪽은 유효한 제목만 받으면 됩니다.
          */
         template <typename Func>
         static void forEachToolPanelTitle( Func&& func )
@@ -99,9 +97,9 @@ namespace sw::editor
         static const EditorAssetBrowserFilter* getBrowserFilters( uint32& outCount );
         /**
          * @brief 지정 종류의 접미사를 outListSuffix 에 더합니다(중복은 건너뜁니다).
-         * @details 파일 감시 필터처럼 "이 종류의 파일" 을 골라야 하는 쪽이 확장자 목록을
-         *          따로 적지 않게 한다 — 목록이 둘이면 한쪽만 늘어난다. 실제로 리소스
-         *          감시가 `.mat` 만 보고 있어서, 저장소의 `.material` 은 하나도 안 걸렸다.
+         * @details 파일 감시 필터처럼 "이 종류의 파일" 을 골라야 하는 쪽이 확장자 목록을 따로 적지 않게 합니다. 목록이 둘이면
+         *          한쪽만 늘어납니다. 실제로 리소스 감시가 `.mat` 만 보고 있어서, 저장소의 `.material` 은 하나도 걸리지
+         *          않았습니다.
          */
         static void appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix );
 

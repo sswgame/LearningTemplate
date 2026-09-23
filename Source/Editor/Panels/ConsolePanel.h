@@ -1,6 +1,6 @@
 /**
  * @file ConsolePanel.h
- * @brief Logger를 구독하고 항목을 필터링하는 Output Log 윈도우
+ * @brief Logger 를 구독해 항목을 걸러 보여 주는 Output Log 창입니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -14,22 +14,22 @@
 
 namespace sw::editor
 {
-    /** @brief Logger 출력을 미러링하는 라이브 콘솔 */
+    /** @brief Logger 출력을 그대로 보여 주는 콘솔입니다. */
     class ConsolePanel : public IEditorPanel
     {
     public:
         // ------------------------------------------------------------------------------
         // 1) 생명주기 — 생성 시 Logger 구독, shutdown/소멸 시 해제
         // ------------------------------------------------------------------------------
-        /** @brief Output Log 윈도우를 생성하고 Logger를 구독합니다. */
+        /** @brief Output Log 창을 만들고 Logger 를 구독합니다. */
         ConsolePanel();
-        /** @brief Logger 구독을 해제하고 윈도우를 파괴합니다. */
+        /** @brief Logger 구독을 해제하고 창을 파괴합니다. */
         virtual ~ConsolePanel() override;
 
         // ------------------------------------------------------------------------------
         // 2) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        /** @brief 윈도우 제목을 반환합니다. */
+        /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Output Log"; }
         /** @brief 필터, 레벨 토글, 로그 목록을 그립니다. */
         void drawContent() override;
@@ -41,13 +41,13 @@ namespace sw::editor
         void shutdown( IRHIDevice* pRhiDevice ) override;
 
         // ------------------------------------------------------------------------------
-        // 3) Logger 구독 — 콜백은 드로우 스레드 밖에서 올 수 있음
+        // 3) Logger 구독 (콜백은 그리기 스레드가 아닌 곳에서 올 수 있다)
         // ------------------------------------------------------------------------------
-        /** @brief Logger 콜백: 드로우 스레드에서 안전하게 항목을 추가합니다. */
+        /** @brief Logger 콜백입니다. 어느 스레드에서 불려도 뮤텍스로 보호해 항목을 추가합니다. */
         void onLogWritten( const LogEntry& entry );
         /** @brief Logger 구독을 제거합니다. */
         void unsubscribe();
-        /** @brief 필터링된 로그 포인터 목록을 재구성합니다. */
+        /** @brief 필터를 통과한 로그 포인터 목록을 다시 만듭니다. */
         void updateFilteredEntries( const string& filterStr );
 
     private:

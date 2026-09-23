@@ -28,8 +28,8 @@ namespace sw::editor
         struct GlobalVariablesPanelInternal
         {
             /**
-             * @brief 변수 표의 틀 — 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같다.
-             * @return 표가 열렸으면 true — `EndTable` 은 호출자가 닫는다. 예전에는 세 자리가 열 다섯 줄을 각자 들었다.
+             * @brief 변수 표의 틀을 엽니다. 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같습니다.
+             * @return 표가 열렸으면 true. `EndTable` 은 부르는 쪽이 부릅니다(예전에는 세 곳이 열 설정 다섯 줄을 각자 갖고 있었습니다).
              */
             static bool beginVariableTable( const utf8* pId, ImGuiTableFlags flags, float32 outerHeight )
             {
@@ -156,7 +156,7 @@ namespace sw::editor
         };
     } // namespace
 
-    /** @brief 변수 목록 테이블 공통 플래그. */
+    /** @brief 변수 목록 테이블의 공통 플래그입니다. */
     constexpr ImGuiTableFlags kGlobalVarTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                                                      ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
 
@@ -211,7 +211,7 @@ namespace sw::editor
 
         const EditorListFilter filter{ _searchFilter.c_str() };
 
-        // 멤버 버퍼를 다시 쓴다 — 지역 `vector` 는 그리는 매 프레임 할당이었다.
+        // 멤버 버퍼를 다시 쓴다. 지역 `vector` 였을 때는 프레임마다 할당했다.
         vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
         listFiltered.clear();
         listFiltered.reserve( listAllName.size() );
@@ -343,12 +343,12 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )
     {
-        // 3) ⭐ 핀 고정된 즐겨찾기 변수 섹션
+        // 3) 핀으로 고정한 즐겨찾기 변수 섹션
         if ( _uniquePinnedVar.empty() == false )
         {
             if ( ImGui::CollapsingHeader( "Pinned / Favorites", ImGuiTreeNodeFlags_DefaultOpen ) )
             {
-                // 고정 섹션은 스크롤하지 않는다 — 본문 표 위에 통째로 보인다.
+                // 고정 섹션은 스크롤하지 않는다. 본문 표 위에 통째로 보인다.
                 if ( GlobalVariablesPanelInternal::beginVariableTable(
                          "PinnedGvTable", ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable, 0.0f ) )
                 {
@@ -371,7 +371,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered )
     {
-        // 4) 메인 변수 테이블 (그룹 또는 비그룹)
+        // 4) 메인 변수 테이블 (모듈별 묶음 또는 평면)
         if ( _bGroupByModule == SW_TRUE )
         {
             string currentModule;

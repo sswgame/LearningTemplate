@@ -16,7 +16,7 @@ struct WGL_WindowData
 
 static HGLRC s_MainWindowRC{ nullptr };
 #elif defined( SW_PLATFORM_LINUX )
-    // vcpkg Khronos glxext.h가 X11 Status를 참조해 일부 include 순서에서 깨집니다.
+    // vcpkg 의 Khronos glxext.h 가 X11 Status 를 참조해, include 순서에 따라 깨진다.
     #define GLX_GLXEXT_LEGACY
     #include <GL/glx.h>
     #include "Core/Common/X11MacroUndef.h"
@@ -173,10 +173,10 @@ namespace sw::editor
 
 #if defined( SW_PLATFORM_WINDOWS )
         ImGuiIO& io = ImGui::GetIO();
-        // **검증된 `_pRHIDevice` 를 쓴다.** 예전에는 원시 매개변수 `pRhiDevice` 를 그대로 역참조해서,
-        // `initialize( nullptr )` 이면 널 역참조였다 — 바로 위에서 널·비-OpenGL 을 걸러 멤버를
-        // nullptr 로 만들어 두고도 여기서 그 검사를 건너뛰었다. 아래 Linux 분기는 막고 있었으니
-        // Windows 쪽만 빠진 것이다. 멤버를 쓰면 "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 같이 맞는다.
+        // **검증을 거친 `_pRHIDevice` 를 쓴다.** 예전에는 매개변수 `pRhiDevice` 를 그대로 역참조해서 `initialize( nullptr )` 이면
+        // 널 역참조였다. 바로 위에서 널 · OpenGL 이 아닌 디바이스를 걸러 멤버를 nullptr 로 만들어 두고도 여기서는 그 검사를
+        // 건너뛰었다. 아래 Linux 분기는 막고 있었으니 Windows 쪽만 빠진 것이다. 멤버를 쓰면 "OpenGL 디바이스일 때만 GL 뷰포트
+        // 훅을 건다" 도 함께 맞는다.
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
             s_MainWindowRC                     = static_cast<HGLRC>( _pRHIDevice->getNativeContext() );
@@ -247,13 +247,13 @@ namespace sw::editor
             return nullptr;
         }
 
-        // imgui_impl_opengl3는 ImTextureID를 GLuint로 취급합니다.
+        // imgui_impl_opengl3 는 ImTextureID 를 GLuint 로 취급한다.
         return reinterpret_cast<void*>( static_cast<uintptr_t>( glName ) );
     }
 
     void ImGuiOpenGLRendererBackend::unregisterTexture( void* pTextureID )
     {
-        // GL 텍스처 이름은 RHI가 소유하고, ImGui는 ID만 저장합니다.
+        // GL 텍스처 이름은 RHI 가 소유하고, ImGui 는 ID 만 저장한다.
         (void)pTextureID;
     }
 } // namespace sw::editor

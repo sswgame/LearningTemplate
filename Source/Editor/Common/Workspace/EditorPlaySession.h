@@ -22,17 +22,17 @@ namespace sw::editor
 
     /**
      * @struct PlaySessionData
-     * @brief 플레이 세션이 들고 있는 상태 전부. **소유는 `EditorContext`** 입니다.
-     * @details 예전에는 이것들이 `EditorPlaySession.cpp` 의 파일 정적이었다. 그러면 수명이
-     *          아무에게도 속하지 않아, 컨텍스트가 다시 만들어져도 앞 세션의 스냅샷과 재생
-     *          상태가 그대로 남는다. 컨텍스트가 들면 컨텍스트와 함께 나고 죽는다.
+     * @brief 플레이 세션이 들고 있는 상태 전부입니다. **소유는 `EditorContext`** 입니다.
+     * @details 예전에는 이것들이 `EditorPlaySession.cpp` 의 파일 정적 변수였습니다. 그러면 수명이 아무에게도 속하지 않아,
+     *          컨텍스트가 다시 만들어져도 앞 세션의 스냅샷과 재생 상태가 그대로 남습니다. 컨텍스트가 들면 컨텍스트와
+     *          함께 생기고 사라집니다.
      */
     struct PlaySessionData
     {
         /**
-         * @brief 롤백용 오브젝트 스냅샷 하나.
-         * @details 런타임 id(`_identity`)를 같이 적어 둔다. 정지할 때 상태를 되돌리며 컴포넌트를 다시 만드는데, 원래 id 를
-         *          되살려야 플레이 전에 들고 있던 핸들(선택 · 씬의 활성 카메라)이 그대로 이어진다.
+         * @brief 롤백용 오브젝트 스냅샷 하나입니다.
+         * @details 런타임 id(`_identity`)를 같이 적어 둡니다. 정지할 때 상태를 되돌리며 컴포넌트를 다시 만드는데, 원래 id 를
+         *          되살려야 플레이 전에 들고 있던 핸들(선택 · 씬의 활성 카메라)이 그대로 이어집니다.
          */
         struct ObjectSnapshot
         {
@@ -61,9 +61,9 @@ namespace sw::editor
 
     /**
      * @class EditorPlaySession
-     * @brief 에디터 Play-In-Editor (PIE) 시뮬레이션 수명주기 및 씬 롤백을 관리합니다.
-     * @details 상태는 `EditorContext` 가 들고 있고(`PlaySessionData`), 이 클래스는 그것을 조작하는
-     *          정적 파사드다. 컨텍스트가 없으면 "정지" 로 답한다.
+     * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.
+     * @details 상태는 `EditorContext` 가 들고 있고(`PlaySessionData`), 이 클래스는 그것을 조작하는 정적 파사드입니다.
+     *          컨텍스트가 없으면 "정지" 로 답합니다.
      */
     class EditorPlaySession
     {

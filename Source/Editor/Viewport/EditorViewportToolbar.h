@@ -16,16 +16,16 @@ namespace sw::editor
         float32 _scaleSnapValue{ 0.1f };
         float32 _cameraSpeed{ 5.0f };
         /**
-         * @brief 켜진 컴포넌트 시각화 비트마스크 (`EditorViewportVisualizer` 표의 인덱스).
-         * @details 예전에는 시각화마다 bool 하나(`_bShowColliders`·`_bShowCameras`)가 여기 있었고
-         *          툴바에도 체크박스를 손으로 적었다. 지금은 표가 개수를 정하므로 시각화를 더해도
-         *          이 구조체와 툴바는 그대로다. 초기값은 생성자가 표에서 받아 채운다.
+         * @brief 켜진 컴포넌트 시각화 비트마스크입니다(`EditorViewportVisualizer` 표의 인덱스).
+         * @details 예전에는 시각화마다 bool 하나(`_bShowColliders` · `_bShowCameras`)가 여기 있었고, 툴바에도 체크박스를
+         *          손으로 적었습니다. 지금은 표가 개수를 정하므로 시각화를 더해도 이 구조체와 툴바는 그대로입니다. 초기값은
+         *          EditorViewportClient 생성자가 표에서 받아 채웁니다.
          */
         uint32 _visualizerMask{ 0 };
         int32  _requestedBookmarkSlot{ -1 };
-        // 뷰 모드(Lit/Unlit/Wireframe)는 여기 없다 — 정본은 `FrameRenderer` 다. 같은 값을 두 곳에
-        // 두면 반드시 어긋난다(커맨드라인 `-gv_viewMode` 나 코드가 바꾸면 툴바가 거짓을 보인다).
-        // 툴바는 매 프레임 렌더러에서 읽어 표시하고 고르면 렌더러에 쓴다.
+        // 뷰 모드(Lit/Unlit/Wireframe)는 여기 없다. 정본은 `FrameRenderer` 다. 같은 값을 두 곳에
+        // 두면 반드시 어긋난다(커맨드라인 `-gv_viewMode` 나 코드가 바꾸면 툴바가 틀린 값을 보인다).
+        // 툴바는 프레임마다 렌더러에서 읽어 표시하고, 고르면 렌더러에 쓴다.
         bool _bGridSnap{ false };
         bool _bRotationSnap{ false };
         bool _bScaleSnap{ false };
@@ -39,7 +39,7 @@ namespace sw::editor
 
     /**
      * @class EditorViewportToolbar
-     * @brief 뷰포트 상단 툴바와 기즈모 트랜스폼 바
+     * @brief 뷰포트 상단 툴바와 기즈모 트랜스폼 바입니다.
      */
     class EditorViewportToolbar
     {

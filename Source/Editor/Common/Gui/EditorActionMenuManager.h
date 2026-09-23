@@ -17,7 +17,7 @@ namespace sw::editor
         ContentBrowser,
         Viewport,
         Inspector,
-        Count ///< 위치 수 — 배열 크기와 경계 검사가 이 값을 본다.
+        Count ///< 위치 수입니다. 배열 크기와 경계 검사가 이 값을 봅니다.
     };
 
     /** @brief 개별 액션 메뉴 항목 */
@@ -31,7 +31,7 @@ namespace sw::editor
 
     /**
      * @class EditorActionMenuManager
-     * @brief 에디터 주요 패널(Hierarchy, Content Browser 등)의 우클릭 액션 메뉴를 동적으로 확장/관리하는 클래스 (EditorContext 소유)
+     * @brief 에디터 주요 패널(Hierarchy, Content Browser 등)의 우클릭 액션 메뉴를 실행 중에 확장 · 관리합니다(EditorContext 소유).
      */
     class EditorActionMenuManager
     {

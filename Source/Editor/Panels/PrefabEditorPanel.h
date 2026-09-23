@@ -11,7 +11,7 @@
 namespace sw::editor
 {
     /**
-     * @brief 프리팹 인스턴스 오버라이드 검사, 복원/적용 및 중첩 프리팹 비주얼 관리 도구
+     * @brief 프리팹 인스턴스의 오버라이드를 살펴보고 되돌리거나 적용하며, 중첩 프리팹을 보여 주는 도구입니다.
      */
     class PrefabEditorPanel : public IEditorPanel
     {

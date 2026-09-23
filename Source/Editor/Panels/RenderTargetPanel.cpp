@@ -18,10 +18,10 @@ namespace sw::editor
 {
     namespace
     {
-        /// @brief 목록 칸의 너비. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼.
+        /// @brief 목록 칸의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
         constexpr float32 kListWidth = 220.0f;
 
-        /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr. */
+        /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const RenderTargetInfo* findByName( const vector<RenderTargetInfo>& listTarget, const string& name )
         {
             for ( const RenderTargetInfo& info : listTarget )
@@ -53,7 +53,7 @@ namespace sw::editor
             return;
 
         EditorContext* pContext = EditorContext::get();
-        // 컨텍스트가 이미 내려갔으면 놓아 줄 상대가 없다 — 백엔드가 자기 힙을 통째로 버린 뒤다.
+        // 컨텍스트가 이미 내려갔으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
         if ( pContext != nullptr && pContext->getRendererBackend() != nullptr )
             pContext->getRendererBackend()->unregisterTexture( _pPreviewTextureId );
         _pPreviewTextureId = nullptr;
@@ -62,7 +62,7 @@ namespace sw::editor
 
     void RenderTargetPanel::refreshTargetsIfStale()
     {
-        // 엔진 서비스는 **에디터 로케이터**로 받는다 — `EngineServices.h` 는 Engine/App/Test 전용이다.
+        // 엔진 서비스는 **에디터 로케이터**로 받는다. `EngineServices.h` 는 Engine/App/Test 전용이다.
         RenderTargetRegistry* pRegistry = editor::getService<RenderTargetRegistry>();
         if ( pRegistry == nullptr )
         {
@@ -77,15 +77,15 @@ namespace sw::editor
         _lastGeneration = generation;
         pRegistry->snapshot( _listTarget );
 
-        // 목록이 새로 만들어졌으면 들고 있던 텍스처 id 는 **죽은 핸들**을 가리킬 수 있다.
-        // 창 크기가 바뀌면 트랜지언트가 전부 다시 만들어진다 — 그때 그대로 그리면 백엔드가 죽는다.
+        // 목록이 새로 만들어졌으면 들고 있던 텍스처 id 는 **이미 사라진 핸들**을 가리킬 수 있다.
+        // 창 크기가 바뀌면 트랜지언트가 모두 다시 만들어지는데, 그때 그대로 그리면 백엔드가 죽는다.
         releasePreviewTexture();
     }
 
     void RenderTargetPanel::syncPreviewTexture()
     {
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        // 깊이 첨부는 등록하지 않는다 — 아래 미리보기가 왜 못 그리는지 적어 둔다.
+        // 깊이 첨부는 등록하지 않는다. 아래 미리보기가 왜 그리지 못하는지 화면에 적는다.
         const bool   bPreviewable = ( pSelected != nullptr ) && ( pSelected->_bDepth == SW_FALSE );
         const uint64 texture      = bPreviewable ? pSelected->_texture : 0;
         if ( texture == _previewTexture && _pPreviewTextureId != nullptr )
@@ -122,7 +122,7 @@ namespace sw::editor
         uint32 shownCount = 0;
         for ( const RenderTargetInfo& info : _listTarget )
         {
-            // 포맷 이름으로도 찾을 수 있어야 한다 — "이 파이프라인의 HDR 타깃이 뭐지" 가 실제 질문이다.
+            // 포맷 이름으로도 찾을 수 있어야 한다. "이 파이프라인의 HDR 타깃이 뭐지" 가 실제로 나오는 질문이다.
             const string_view formatName{ FrameRendererUtil::attachmentFormatName( info._format ) };
             if ( filter.matchesAny( { string_view{ info._name }, formatName } ) == false )
                 continue;
@@ -170,7 +170,7 @@ namespace sw::editor
 
         if ( pSelected->_bDepth != SW_FALSE )
         {
-            // 깊이 첨부는 색으로 볼 수 없다 — 백엔드마다 깊이 SRV 를 ImGui 텍스처로 받아 주는 방식이
+            // 깊이 첨부는 색으로 볼 수 없다. 백엔드마다 깊이 SRV 를 ImGui 텍스처로 받아 주는 방식이
             // 다르고, 받아도 D24S8 은 정규화 깊이라 거의 흰 화면이 된다. 있는 척하지 않고 무엇을
             // 못 하는지, 대신 무엇을 쓰면 되는지를 적는다.
             ImGui::Separator();
@@ -197,7 +197,7 @@ namespace sw::editor
         float32 drawHeight = 0.0f;
         if ( _previewZoom <= 0.0f )
         {
-            // 창에 맞춘다 — 가로·세로 중 먼저 걸리는 쪽에 맞춰야 비율이 유지된다.
+            // 창에 맞춘다. 가로 · 세로 중 먼저 걸리는 쪽에 맞춰야 비율이 유지된다.
             drawWidth  = MathUtil::max( avail.x, 1.0f );
             drawHeight = drawWidth / MathUtil::max( aspect, 0.001f );
             if ( drawHeight > avail.y && avail.y > 1.0f )
@@ -220,12 +220,12 @@ namespace sw::editor
     {
         refreshTargetsIfStale();
 
-        // 고른 것이 사라졌으면(파이프라인이 바뀌었다) 선택을 놓는다 — 없는 이름을 들고 있으면
+        // 고른 것이 사라졌으면(파이프라인이 바뀌었다) 선택을 놓는다. 없는 이름을 들고 있으면
         // 미리보기가 영영 빈 채로 남는다.
         if ( _selectedName.empty() == false && findByName( _listTarget, _selectedName ) == nullptr )
             _selectedName.clear();
 
-        // 아무것도 안 골랐으면 **화면에 나가는 것**을 고른다 — 열자마자 지금 보이는 그림이 뜬다.
+        // 아무것도 고르지 않았으면 **화면에 나가는 것**을 고른다. 열자마자 지금 보이는 그림이 뜬다.
         // 이름순 첫 번째로 두면 AOColor 가 잡혀서 "이게 뭐지" 부터 시작하게 된다.
         if ( _selectedName.empty() )
         {

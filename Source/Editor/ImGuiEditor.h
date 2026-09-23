@@ -1,6 +1,6 @@
 /**
  * @file ImGuiEditor.h
- * @brief ImGui 에디터 호스트 (OS/GPU 백엔드 · 프레임 루프)
+ * @brief ImGui 에디터 호스트입니다(OS/GPU 백엔드 · 프레임 루프).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -19,12 +19,12 @@ namespace sw::editor
     class IImGuiPlatformBackend;
     class IImGuiRendererBackend;
 
-    /** @brief ImGui 플랫폼/렌더러 호스트. 메뉴·도크·폰트는 Common으로 위임합니다. */
+    /** @brief ImGui 플랫폼 · 렌더러 호스트입니다. 메뉴 · 도크 · 폰트는 Common 에 맡깁니다. */
     class ImGuiEditor : public IEditor
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 생명주기 — 생성은 플래그만, GPU/ImGui는 initialize / shutdown
+        // 1) 수명 주기 (생성자는 플래그만, GPU · ImGui 는 initialize / shutdown 에서)
         // ------------------------------------------------------------------------------
         /** @brief ImGui 에디터 셸을 생성합니다. */
         ImGuiEditor();
@@ -38,13 +38,13 @@ namespace sw::editor
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) override;
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
-        /** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
+        /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         void updateUi() override;
-        /** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
+        /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
         void preRender( IRHIDevice* pRhiDevice ) override;
-        /** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
+        /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         void render( IRHIDevice* pRhiDevice ) override;
-        /** @brief 메인 스왑체인 Present 이후 멀티 뷰포트를 렌더합니다. */
+        /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
         void postPresent( IRHIDevice* pRhiDevice ) override;
         void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
@@ -55,7 +55,7 @@ namespace sw::editor
         void unregisterTexture( void* pTextureID ) override;
         /** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
         void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
-        /** @brief 이번 프레임 Game View에 쓸 카메라를 반환합니다. */
+        /** @brief 이번 프레임 Game View 에 쓸 카메라를 반환합니다. */
         CameraComponent* getViewportCamera() const override;
         /** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
         bool isPlaying() const override;
@@ -63,7 +63,7 @@ namespace sw::editor
         bool isPaused() const override;
         /** @brief 에디터 시뮬레이션(PIE)을 정지합니다. */
         void stopSimulation() override;
-        /** @brief 월드 틱 이후 Step을 소비합니다. */
+        /** @brief 월드 틱 뒤에 Step 을 소비합니다. */
         void onHostFrameEnd() override;
 
     private:
@@ -76,16 +76,16 @@ namespace sw::editor
         void beginFrame();
         /** @brief ImGui 프레임을 종료합니다. */
         void endFrame();
-        /** @brief ImGui 렌더러 백엔드로 지정 DrawData를 그립니다. */
+        /** @brief ImGui 렌더러 백엔드로 주어진 DrawData 를 그립니다. */
         void renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData );
         /** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame을 미룹니다. */
         void waitForDrawSnapshotIdle();
 
     private:
-        /** @brief 렌더 중인 슬롯이 없음을 뜻하는 센티널. */
+        /** @brief 렌더 중인 슬롯이 없음을 뜻하는 센티널 값입니다. */
         static constexpr uint32 _s_kInvalidDrawSlot = invalid_index::kUint32;
-        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이라 constant::kMaxFrameCountInFlight
-        // 를 직접 쓴다 — 별칭을 두면 같은 개념에 이름이 둘이 되고, 한쪽만 바뀌어도 컴파일은 통과한다.
+        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이라 constant::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을
+        // 두면 같은 개념에 이름이 둘이 되고, 한쪽만 바뀌어도 컴파일은 통과한다.
         static_assert( constant::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
 
         unique_ptr<IImGuiPlatformBackend> _platformBackend;

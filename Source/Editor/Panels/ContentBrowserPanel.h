@@ -1,6 +1,6 @@
 /**
  * @file ContentBrowserPanel.h
- * @brief Engine / Common / Game / Editor 애셋 트리를 탐색하는 콘텐츠 브라우저 윈도우
+ * @brief Engine / Common / Game / Editor 애셋 트리를 탐색하는 콘텐츠 브라우저 창입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,17 +16,17 @@ struct ImDrawList;
 
 namespace sw::editor
 {
-    /** @brief 콘텐츠 루트를 탐색하고 애셋을 선택·엽니다 */
+    /** @brief 콘텐츠 루트를 탐색하고 애셋을 선택하거나 엽니다. */
     class ContentBrowserPanel : public IEditorPanel
     {
     public:
-        /** @brief 콘텐츠 브라우저 윈도우를 생성합니다. */
+        /** @brief 콘텐츠 브라우저 창을 만듭니다. */
         ContentBrowserPanel() noexcept;
 
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        /** @brief 윈도우 제목을 반환합니다. */
+        /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Content Browser"; }
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;
@@ -99,10 +99,9 @@ namespace sw::editor
         };
 
         /**
-         * @brief 뒤로/앞으로가 기억하는 최대 폴더 수입니다.
-         * @details 상한이 없었다. 폴더를 옮길 때마다 문자열 둘이 붙고 **지워지지 않아서**,
-         *          에디터를 오래 켜 두고 폴더를 계속 오갈수록 목록이 단조 증가했다. 브라우저의
-         *          뒤로 가기와 같은 규칙으로 가장 오래된 것부터 버린다.
+         * @brief 뒤로/앞으로 이동이 기억하는 최대 폴더 수입니다.
+         * @details 상한이 없었습니다. 폴더를 옮길 때마다 문자열 둘이 붙고 **지워지지 않아서**, 에디터를 오래 켜 두고 폴더를
+         *          계속 오갈수록 목록이 계속 늘었습니다. 브라우저의 뒤로 가기와 같은 규칙으로 가장 오래된 것부터 버립니다.
          */
         static constexpr size_t kMaxHistoryCount = 64;
 
@@ -110,9 +109,9 @@ namespace sw::editor
         // 5) 선택 · 히스토리 · 임포트
         //    파일 대화상자는 백그라운드, processPendingImports는 메인 스레드
         // ------------------------------------------------------------------------------
-        /** @brief 이전 히스토리 폴더로 이동 가능한지 여부 */
+        /** @brief 이전 폴더로 돌아갈 수 있는지 반환합니다. */
         bool canNavigateBack() const { return _historyIndex > 0; }
-        /** @brief 다음 히스토리 폴더로 이동 가능한지 여부 */
+        /** @brief 다음 폴더로 나아갈 수 있는지 반환합니다. */
         bool canNavigateForward() const { return _historyIndex >= 0 && _historyIndex + 1 < static_cast<int32>( _listHistory.size() ); }
         /** @brief 이전 히스토리 폴더로 이동합니다. */
         void navigateBack();
@@ -135,11 +134,10 @@ namespace sw::editor
         vector<ContentRoot> _listRoot;
         vector<AssetEntry>  _listEntry;
         /**
-         * @brief 이번 프레임에 보일 엔트리 — **`_listEntry` 를 가리키기만** 합니다.
-         * @details 그리는 함수 안의 지역 `vector` 였다. 프레임마다 할당·해제였고, 게다가
-         *          엔트리를 통째로 복사해서 `string` 넷씩을 자산 수만큼 베꼈다. 멤버로 두면
-         *          용량이 남아 첫 프레임 뒤로는 할당이 없다.
-         * @warning `_listEntry` 가 바뀌면 이 포인터들은 죽는다 — 매 프레임 다시 채운다.
+         * @brief 이번 프레임에 보일 엔트리입니다. **`_listEntry` 를 가리키기만** 합니다.
+         * @details 그리는 함수 안의 지역 `vector` 였습니다. 프레임마다 할당하고 해제했고, 게다가 엔트리를 통째로 복사해서
+         *          `string` 넷씩을 애셋 수만큼 베꼈습니다. 멤버로 두면 용량이 남아 첫 프레임 뒤로는 할당이 없습니다.
+         * @warning `_listEntry` 가 바뀌면 이 포인터들은 무효가 됩니다. 그래서 프레임마다 다시 채웁니다.
          */
         vector<const AssetEntry*>             _listVisibleEntry;
         vector<HistoryEntry>                  _listHistory;

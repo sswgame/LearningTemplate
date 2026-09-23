@@ -26,9 +26,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief InputText 가 요구하는 만큼 `string` 버퍼를 늘려 준다.
-             * @details ImGui 는 자신이 아는 크기를 넘겨받으면 이 콜백으로 되묻는다. 늘린 뒤 새 주소를
-             *          돌려주지 않으면 옛 버퍼를 계속 쓰므로 `Buf` 갱신까지가 한 쌍이다.
+             * @brief InputText 가 요구하는 만큼 `string` 버퍼를 늘려 줍니다.
+             * @details ImGui 는 알고 있는 크기를 넘는 입력이 오면 이 콜백으로 되묻습니다. 늘린 뒤 새 주소를 알려 주지 않으면 옛
+             *          버퍼를 계속 쓰므로, `Buf` 갱신까지가 한 쌍입니다.
              */
             static int32 resizeStringCallback( ImGuiInputTextCallbackData* pData )
             {
@@ -172,7 +172,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 라디오 값은 `EditorWorkspace` 의 기즈모 조작 번호다 — 여기 숫자는 그 표현일 뿐이고,
+        // 라디오 값은 `EditorWorkspace` 의 기즈모 조작 번호다. 여기 숫자는 그 표현일 뿐이고,
         // 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
         int32 operation = pContext->getWorkspace().getGizmoOperation();
         ImGui::RadioButton( "Translate", &operation, 0 );
@@ -219,7 +219,7 @@ namespace sw::editor
             return;
         }
 
-        // 필터를 서식 **인자**로 넘긴다 — 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
+        // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
         ImGui::TextDisabled( "No matches for \"%.*s\".", static_cast<int32>( filter.size() ), filter.data() );
     }
 

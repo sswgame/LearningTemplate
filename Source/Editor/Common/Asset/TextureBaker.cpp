@@ -52,29 +52,27 @@ namespace sw::editor
 
         /**
          * @struct SwizzleLayoutInternal
-         * @brief 스위즐 하나가 정하는 것 — **바이트를 어떻게 놓는가와 그것을 무슨 이름으로 부르는가.**
-         * @details 이 둘이 따로 있으면 반드시 어긋난다. 예전에는 섞기가
-         *          `applyChannelManipulations` 의 if 사슬에, 이름이 `bakeTexture` 의
-         *          `_swizzle == BGRA ? BGRA : RGBA` 삼항에 있었다 — 그래서 `ARGB` 는 섞기 쪽만
-         *          알고 이름 쪽은 몰랐다. 바이트는 옮겨졌는데 결과물에는 "RGBA 다" 라고 적혀
-         *          나가서 색이 깨졌다. 스위즐을 하나 더하려면 이제 **이 표에 줄 하나**다.
+         * @brief 스위즐 하나가 정하는 두 가지, **바이트를 어떻게 놓는가와 그것을 무슨 이름으로 부르는가**입니다.
+         * @details 이 둘이 따로 있으면 반드시 어긋납니다. 예전에는 채널 섞기가 `applyChannelManipulations` 의 if 사슬에, 이름이
+         *          `bakeTexture` 의 `_swizzle == BGRA ? BGRA : RGBA` 삼항에 있었습니다. 그래서 `ARGB` 는 섞기 쪽만 알고 이름 쪽은
+         *          몰랐고, 바이트는 옮겨졌는데 결과물에는 "RGBA" 라고 적혀 나가 색이 깨졌습니다. 이제 스위즐을 하나 더하려면
+         *          **이 표에 한 줄**만 더하면 됩니다.
          */
         struct SwizzleLayoutInternal
         {
-            /** @brief 결과의 n 번째 바이트를 원본(언제나 RGBA)의 몇 번째에서 가져오는가. */
+            /** @brief 결과의 n 번째 바이트를 원본(언제나 RGBA)의 몇 번째 바이트에서 가져올지입니다. */
             uint8 _arrSourceChannel[4];
-            /** @brief 알파를 255 로 덮는가 (RGB1). */
+            /** @brief 알파를 255 로 덮을지 여부입니다(RGB1). */
             uint8 _bForceOpaqueAlpha;
-            /** @brief 그렇게 놓인 바이트 배열을 가리키는 DXGI 이름. */
+            /** @brief 그렇게 놓인 바이트 배열의 DXGI 이름입니다. */
             DXGI_FORMAT _format;
         };
 
         const SwizzleLayoutInternal& swizzleLayoutInternal( TextureSwizzle swizzle )
         {
-            // **BGRA 와 ARGB 는 같은 것이다.** D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B,G,R,A 이고
-            // DXGI 는 그것을 `B8G8R8A8` 이라 부른다 — 열거형 주석의 "레거시 ARGB" 가 그 뜻이다.
-            // 예전 코드는 ARGB 를 왼쪽으로 한 칸 돌려 RGBA 를 GBAR 로 만들었는데, 그것은 어떤
-            // 읽기로도 ARGB 가 아니다.
+            // **BGRA 와 ARGB 는 같은 것이다.** D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B,G,R,A 순서이고 DXGI 는 그것을 `B8G8R8A8`
+            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. 예전 코드는 ARGB 를 왼쪽으로 한 칸 돌려 RGBA 를 GBAR 로
+            // 만들었는데, 그것은 어떻게 읽어도 ARGB 가 아니다.
             static constexpr SwizzleLayoutInternal kRgba{
                 { 0, 1, 2, 3 },
                 SW_FALSE,
@@ -117,7 +115,7 @@ namespace sw::editor
             pOutResult->_sourceSizeBytes = FileUtil::getFileSize( sourcePath );
         }
 
-        // 1) Decode source image with ImageUtil
+        // 1) ImageUtil 로 소스 이미지 디코딩
         RawImageData rawImage;
         if ( ImageUtil::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
@@ -129,17 +127,17 @@ namespace sw::editor
 
         applyChannelManipulations( rawImage, rule, totalPixels );
 
-        // 4) Build DirectXTex base Image
+        // 2) DirectXTex 기본 Image 구성
         DirectX::Image baseImage{};
         baseImage.width  = static_cast<size_t>( rawImage._width );
         baseImage.height = static_cast<size_t>( rawImage._height );
-        // 섞기와 같은 표에서 가져온다 — 둘이 어긋날 수 있는 자리를 아예 없앤다.
+        // 채널 섞기와 같은 표에서 가져온다. 둘이 어긋날 여지를 아예 없앤다.
         baseImage.format     = swizzleLayoutInternal( rule._swizzle )._format;
         baseImage.rowPitch   = static_cast<size_t>( rawImage._width ) * 4;
         baseImage.slicePitch = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels     = rawImage._bytes.data();
 
-        // 5) Generate Mipmaps if enabled
+        // 3) 켜져 있으면 밉맵 생성
         DirectX::ScratchImage mipChain;
         if ( rule._bGenerateMips == SW_TRUE )
         {
@@ -168,7 +166,7 @@ namespace sw::editor
 
         const uint32 mipCount = static_cast<uint32>( mipChain.GetMetadata().mipLevels );
 
-        // 6) Compress or Convert Format
+        // 4) 압축 또는 포맷 변환
         const DXGI_FORMAT     targetFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
         DirectX::ScratchImage finalImage;
 
@@ -215,7 +213,7 @@ namespace sw::editor
             finalImage = std::move( mipChain );
         }
 
-        // 7) Save DDS to output file
+        // 5) DDS 파일로 저장
         const string outputDir = FileUtil::getDirectoryPart( outputPath );
         if ( outputDir.empty() == false )
             FileUtil::ensureDirectoryExists( outputDir );
@@ -263,9 +261,8 @@ namespace sw::editor
         uint8*                       pData  = rawImage._bytes.data();
         const SwizzleLayoutInternal& layout = swizzleLayoutInternal( rule._swizzle );
 
-        // **그린 반전이 먼저다.** 입력은 언제나 RGBA 이므로 이 시점의 초록 자리는 1 로 확정이다.
-        // 섞은 뒤에 뒤집으면 "결과의 1번이 초록" 이라는 가정이 필요한데, 그것은 지금 스위즐들에서
-        // 우연히 맞을 뿐 새 스위즐을 더하는 순간 조용히 틀린다.
+        // **그린 반전이 먼저다.** 입력은 언제나 RGBA 이므로 이 시점의 초록 자리는 1번으로 정해져 있다. 섞은 뒤에 뒤집으려면
+        // "결과의 1번이 초록" 이라는 가정이 필요한데, 그것은 지금 스위즐들에서 우연히 맞을 뿐 새 스위즐을 더하는 순간 조용히 틀린다.
         if ( rule._bInvertGreen == SW_TRUE )
         {
             for ( size_t index = 0; index < totalPixels; ++index )

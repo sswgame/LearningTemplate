@@ -64,7 +64,7 @@ namespace sw::editor
 
     string EditorUtil::resolveProjectRelativePath( string_view hostRelativePath )
     {
-        // 반환 지점을 하나로 둔다 — 같은 지역 변수를 여러 곳에서 돌려주면 NRVO 가 적용되지 않는다.
+        // 반환 지점을 하나로 둔다. 어떤 경로는 지역 변수를, 어떤 경로는 다른 식을 반환하면 NRVO 가 적용되지 않는다.
         string path = FileUtil::normalizeSeparators( hostRelativePath );
         if ( FileUtil::isAbsolutePath( path ) == false )
         {
@@ -86,7 +86,7 @@ namespace sw::editor
             return nullptr;
         }
 
-        // `getService<T>()` 는 nullptr 을 돌려줄 수 있다(문서에 그렇게 적혀 있다) — 따라가기 전에 본다.
+        // `getService<T>()` 는 nullptr 을 반환할 수 있다(문서에 그렇게 적혀 있다). 역참조하기 전에 확인한다.
         ResourceManager* pResources = editor::getService<ResourceManager>();
         if ( pResources == nullptr )
         {
@@ -122,7 +122,7 @@ namespace sw::editor
         if ( category.empty() )
             return;
 
-        // 같은 Category 의 컴포넌트가 여럿 붙어 있으면 뱃지도 여럿이 된다 — 한 번만 넣는다.
+        // 같은 Category 의 컴포넌트가 여럿 붙어 있으면 뱃지도 여럿이 된다. 그래서 한 번만 넣는다.
         string token{ "[" };
         token.append( string{ category } );
         token.append( "]" );

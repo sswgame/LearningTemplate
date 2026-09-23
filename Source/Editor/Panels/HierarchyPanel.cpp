@@ -59,27 +59,27 @@ namespace sw::editor
                 if ( pObj == nullptr )
                     return false;
 
-                // 1) Type syntax "t:ComponentName"
+                // 1) 타입 문법 "t:ComponentName"
                 if ( pFilter[0] == 't' && pFilter[1] == ':' )
                 {
                     return typeMatchesFilter( pObj, string_view{ pFilter + 2 } );
                 }
 
-                // 2) Tag syntax "tag:TagName"
+                // 2) 태그 문법 "tag:TagName"
                 if ( StringUtil::startsWith( pFilter, "tag:", true ) )
                 {
-                    // ID 는 `TagID::computeId` 가 정본이다 — 예전에는 여기서 `computeHash64` 를
-                    // 기본 인자로 불러 대소문자를 무시했고, 태그 쪽은 구별했다. 저장소의 태그는 전부
-                    // 대문자로 시작하므로 이 필터는 **하나도 찾지 못했다**.
+                    // ID 의 정본은 `TagID::computeId` 다. 예전에는 여기서 `computeHash64` 를 기본 인자로 불러
+                    // 대소문자를 무시했고, 태그 쪽은 구별했다. 저장소의 태그는 모두 대문자로 시작하므로 이 필터는
+                    // **하나도 찾지 못했다.**
                     //
-                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 그것을 보므로 `tag:Faction` 이
-                    // `Faction.Player` 까지 잡는다 — 리터럴 태그는 역조회 표에 등록되지 않아
-                    // ID 만 든 TagID 로는 계층 비교를 할 수 없었다. 필터 버퍼는 이 호출 동안 살아 있다.
+                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 그것을 보므로 `tag:Faction` 이 `Faction.Player` 까지
+                    // 잡는다. 리터럴 태그는 역조회 표에 등록되지 않아, ID 만 든 TagID 로는 계층 비교를 할 수
+                    // 없었다. 필터 버퍼는 이 호출 동안 살아 있다.
                     const string_view tagFilter{ pFilter + 4 };
                     return pObj->hasTag( TagID{ TagID::computeId( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
                 }
 
-                // 3) General name matching
+                // 3) 일반 이름 매칭
                 return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
             }
 
@@ -395,14 +395,14 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectId ) );
 
-                // 1) Visibility Toggle Icon (Eye)
+                // 1) 가시성 토글 아이콘(눈)
                 bool bActive = pObj->isActiveInHierarchy();
                 if ( ImGui::Button( bActive ? "[V]" : "[.]", ImVec2{ 24.0f, 0.0f } ) )
                     pObj->setActive( bActive == false );
                 ImGui::SameLine();
 
-                // 뱃지는 리플렉션 Category 에서 끌어온다 — 위 컴포넌트 추가 메뉴가 이미 쓰는
-                // 그 데이터다. 타입 이름을 비교하면 게임이 넣은 컴포넌트는 뱃지가 없다.
+                // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
+                // 타입 이름을 비교하면 게임이 넣은 컴포넌트는 뱃지가 없다.
                 string badgeStr;
                 for ( const Component* pComp : pObj->getComponents() )
                 {
@@ -441,7 +441,7 @@ namespace sw::editor
                     pContext->getWorkspace().selectGameObject( pObj, mode );
                 }
 
-                // Inline Rename Input
+                // 제자리 이름 바꾸기 입력
                 if ( renamingObjectId == objectId && EditorUtil::areSceneEditsAllowed() )
                 {
                     ImGui::SameLine();
@@ -485,7 +485,7 @@ namespace sw::editor
                         if ( pComp == nullptr )
                             continue;
 
-                        // 노드마다 프레임마다 묻는 자리 — 리플렉션 캐스트 대신 생성자에서 세운 비트를 본다.
+                        // 노드마다, 프레임마다 묻는 곳이다. 그래서 리플렉션 캐스트 대신 생성자에서 세운 비트를 본다.
                         if ( pComp->isSceneComponent() )
                         {
                             SceneComponent*       pSceneComp    = static_cast<SceneComponent*>( pComp );
@@ -597,7 +597,7 @@ namespace sw::editor
             if ( visibleRootCount == 0 && treeFilter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( treeFilter.getText() );
 
-            // Empty area Drag & Drop Target for SW_ASSET_PATH
+            // 빈 영역을 SW_ASSET_PATH 드래그 앤 드롭 대상으로 만든다
             if ( ImGui::BeginDragDropTarget() )
             {
                 const ImGuiPayload* pGoPayload = ImGui::AcceptDragDropPayload( HierarchyPanelInternal::kHierarchyGoPayload );
@@ -638,12 +638,12 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
+        // 단축키(Ctrl+D 복제, F2 이름 바꾸기, Delete 삭제)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
             const ImGuiIO&    io     = ImGui::GetIO();
             SelectionManager& selMgr = pContext->getSelectionManager();
-            // 사본으로 받는다 — 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
+            // 사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
             vector<GameObject*> listSel;
             selMgr.getSelectedObjects( listSel );
 

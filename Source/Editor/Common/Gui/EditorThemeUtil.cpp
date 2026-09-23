@@ -19,8 +19,8 @@ namespace sw::editor
         struct EditorThemeInternal
         {
             /**
-             * @brief 컨텍스트가 없을 때 돌려줄 기본 테마입니다. **상수라 상태가 아니다.**
-             * @details 색 게터들이 `const Color4&` 를 돌려주므로 임시를 참조로 넘길 수 없다.
+             * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. **상수이므로 상태가 아닙니다.**
+             * @details 색 게터들이 `const Color4&` 를 반환하므로 임시 객체를 참조로 넘길 수 없습니다.
              */
             static const EditorThemeConfig& fallbackTheme()
             {
@@ -28,14 +28,14 @@ namespace sw::editor
                 return kFallback;
             }
 
-            /** @brief 지금 적용된 테마. 소유는 `EditorContext` 이고, 없으면 기본값을 본다. */
+            /** @brief 지금 적용된 테마입니다. `EditorContext` 가 소유하고, 컨텍스트가 없으면 기본값을 봅니다. */
             static const EditorThemeConfig& activeTheme()
             {
                 EditorContext* pContext = EditorContext::get();
                 return pContext != nullptr ? pContext->getThemeConfig() : fallbackTheme();
             }
 
-            /** @brief 테마를 바꿔 씁니다. 컨텍스트가 없으면 조용히 무시한다(적용할 UI 가 없다). */
+            /** @brief 테마를 바꿔 씁니다. 컨텍스트가 없으면 조용히 무시합니다(적용할 UI 가 없습니다). */
             static void setActiveTheme( const EditorThemeConfig& config )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -58,12 +58,11 @@ namespace sw::editor
             }
 
             /**
-             * @brief 프리셋 하나의 정의. 이름과 팔레트가 **여기 한 줄에** 모여 있습니다.
-             * @details 예전에는 프리셋을 하나 더하려면 네 곳을 맞춰 고쳐야 했습니다 —
-             *          `applyPreset` 의 팔레트 switch, `loadFromConfig` 의 문자열→열거형 사다리,
-             *          `saveToConfig` 의 열거형→문자열 switch, 그리고 대화상자의 이름 배열.
-             *          뒤 셋은 같은 사실을 세 번 적은 것이었고, 이름 배열은 **열거형 순서에
-             *          인덱스로 묶여** 있어 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 줬습니다.
+             * @brief 프리셋 하나의 정의입니다. 이름과 팔레트가 **여기 한 줄에** 모여 있습니다.
+             * @details 예전에는 프리셋을 하나 더하려면 네 곳을 맞춰 고쳐야 했습니다. `applyPreset` 의 팔레트 switch,
+             *          `loadFromConfig` 의 문자열→열거형 if 사다리, `saveToConfig` 의 열거형→문자열 switch, 그리고 대화 상자의
+             *          이름 배열입니다. 뒤의 셋은 같은 사실을 세 번 적은 것이었고, 이름 배열은 **열거형 순서에 인덱스로 묶여**
+             *          있어 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 줬습니다.
              */
             struct ThemePresetRow
             {
@@ -165,7 +164,7 @@ namespace sw::editor
                  4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
 
                 // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
-                // (textSuccess/textWarning/...)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다 —
+                // (textSuccess/textWarning/...)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다.
                 // 예전에는 이 프리셋이 s_activeTheme 을 갱신하지 않아 **이전 테마의 색**이 나왔다.
                 { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
                  EditorThemeConfig{ EditorThemePreset::ClassicDark,
@@ -521,9 +520,9 @@ namespace sw::editor
         {
             EditorThemeConfig cfg = EditorThemeInternal::activeTheme();
 
-            // 1) 프리셋 선택 — 이름과 순서는 프리셋 표에서 온다.
+            // 1) 프리셋 선택. 이름과 순서는 프리셋 표에서 온다.
             //    예전에는 이름 배열을 따로 적고 `static_cast<int32>( _preset )` 로 인덱스를 삼았다.
-            //    열거형 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 주는 결합이었다.
+            //    열거형 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 주는 구조였다.
             uint32                                           rowCount{ 0 };
             const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
 
@@ -622,7 +621,7 @@ namespace sw::editor
 
     Color4 EditorThemeUtil::getFolderColor()
     {
-        // 언리얼 엔진 5 / Rider 표준: 테마 액센트(Electric Blue)와 일치하는 세련된 블루/스카이 톤
+        // 폴더 색은 테마 액센트 색을 그대로 쓴다(UE5 · Rider 처럼 액센트와 같은 파란 계열)
         return getAccentColor();
     }
 

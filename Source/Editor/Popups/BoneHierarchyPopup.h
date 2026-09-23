@@ -1,6 +1,6 @@
 /**
  * @file BoneHierarchyPopup.h
- * @brief 플로팅 본 계층 유틸리티 (IEditorPopup 구현체)
+ * @brief 본 계층을 보여 주는 플로팅 팝업입니다(IEditorPopup 구현).
  */
 #pragma once
 #include "Editor/Common/Gui/IEditorPopup.h"
@@ -9,7 +9,7 @@ namespace sw::editor
 {
     /**
      * @class BoneHierarchyPopup
-     * @brief 선택된 오브젝트의 본/계층 구조를 확인하는 플로팅 팝업
+     * @brief 선택한 오브젝트의 본 · 계층 구조를 확인하는 플로팅 팝업입니다.
      */
     class BoneHierarchyPopup : public IEditorPopup
     {
@@ -24,7 +24,7 @@ namespace sw::editor
         virtual const utf8* getPopupTitle() const override { return "Hierarchy / Skeleton View"; }
 
         // ------------------------------------------------------------------------------
-        // 정적(Static) 편의 API
+        // 정적 편의 함수
         // ------------------------------------------------------------------------------
         static void open();
         static void close();

@@ -160,7 +160,7 @@ namespace sw::editor
                 case ButtonPress:
                 case ButtonRelease:
                 {
-                    // X11 마우스 확장 버튼 번호 (X11 표준 X.h는 Button1~5만 정의하므로 XButton8/9 상수화)
+                    // X11 마우스 확장 버튼 번호(표준 X.h 는 Button1~5 만 정의하므로 8/9 를 상수로 둔다)
                     static constexpr uint32 kX11ButtonBack    = 8;
                     static constexpr uint32 kX11ButtonForward = 9;
 

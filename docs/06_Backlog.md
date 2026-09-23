@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor 주석 정리
 
 ---
 
@@ -1435,7 +1435,7 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
-### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App ✅)
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core · App · Editor ✅)
 
 코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
 
@@ -1443,8 +1443,8 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 |------|------:|------|
 | `Core` | 3,242 | ✅ 2026-09-24 (3절 참고 — 동작과 다른 설명이 스무 곳 넘게 나왔다) |
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
-| `Editor` | 1,972 | 다음 |
-| `Tools/ReflectionParser` | 354 | |
+| `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
+| `Tools/ReflectionParser` | 354 | 다음 |
 | `Engine` | 7,865 | 하위 폴더 단위로 나눠 커밋한다 |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
@@ -1637,6 +1637,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Editor 주석 정리 — 1-0g 세 번째 폴더)
+
+**한 것.** `Source/Editor` 178 개 파일 중 152 개와 `CMakeLists.txt` 의 주석을 같은 규칙으로 다시 썼다. 남아 있던 영어 주석
+(ContentBrowser 썸네일 · 뷰포트 그리드 · 오리엔테이션 큐브 · TextureBaker 단계 등)을 한국어로 옮기고, "윈도우" 는 "창",
+"온디맨드" 는 "필요할 때 여는 도구", 애셋 표기는 저장소에서 가장 많이 쓰는 "애셋" 으로 맞췄다. 사실과 달랐던 것:
+- `ImGuiEditor.cpp` — `gv_editorStartupScene` 의 선언이 `Engine/EngineLoop.cpp` 에 있다고 적혀 있었다 → `Common/EditorGlobalVariable.h`.
+- `EditorData.h` — "`XmlSerializer` 가 읽는다" → 실제로는 `JsonSerializer`. `loadFromHostPath` 의 매개변수 설명이 이미 없어진
+  `EditorConfig::_editorData` 를 가리켰다 → `config::kFileRuntimeEditorData`. 절 머리말이 "레이아웃 파일명 · Config 폴더는
+  EditorConfig" 라고 했는데 그 필드들은 EditorData 로 옮겨져 있었다.
+- `EditorUtil.h` 머리말의 "애셋 판별"(지금은 `EditorAssetTypeRegistry` 몫), 절 번호 `1) 3)`, `EditorUtil.cpp` 의 NRVO 설명
+  ("같은 지역 변수를 여러 곳에서 돌려주면 NRVO 가 안 된다" → 경로마다 다른 식을 반환할 때).
+- `RenderTargetPanel.h` — 소멸자가 "ImGui 에 등록한 텍스처를 놓는다" → `= default` 이고, 놓는 것은 `shutdown()`.
+- `EditorViewportClient.h` — 선언 없이 남은 고아 doc 주석("카메라 위치 및 회전 설정") 삭제(이번 커밋의 유일한 주석 삭제).
+- `EditorTransaction.cpp` — "선택 목록이 죽은 오브젝트를 들고 있으면" → 선택은 이제 핸들이다. 선택에서 먼저 빼는 이유는
+  파괴가 지연 큐를 거치는 동안 인스펙터 · 기즈모가 그 오브젝트를 계속 잡기 때문이라고 고쳐 적었다.
+- `IImGuiRendererBackend::createRendererBackend` 에 "그 백엔드용 구현이 없으면 nullptr" 을 적었다(구현이 그렇게 한다).
+- `TextureBaker.cpp` 단계 번호 `1) 4) 5) 6) 7)` → `1)~5)`, `EditorViewportClient` 의 "끄는 동안"(드래그) 같은 중의적 표현.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 ·
+`hostgpu`(Shipping) 2/2 · 주석 외 토큰 변화 0(고아 주석 삭제 한 건만 doxygen 명령 수가 준다).
 
 ### 2026-09-24 (App 주석 정리 — 1-0g 두 번째 폴더)
 

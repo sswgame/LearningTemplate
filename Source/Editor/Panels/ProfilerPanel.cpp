@@ -161,7 +161,7 @@ namespace sw::editor
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
                 // 집계는 ImGui 를 모르는 EditorSceneCommands 가 한다(테스트가 붙어 있다).
-                // 이 패널은 그려 주기만 한다 — 타입 이름을 여기서 알 필요가 없다.
+                // 이 패널은 그려 주기만 한다. 타입 이름을 여기서 알 필요가 없다.
                 const EditorSceneCommands::SceneStatistics stats =
                     EditorSceneCommands::collectSceneStatistics( pScene->getObjectManager() );
 
@@ -284,7 +284,7 @@ namespace sw::editor
 
                         ImGui::TableNextColumn();
 
-                        // CallStack을 펼쳐볼 수 있도록 Tree 구성
+                        // 호출 스택을 펼쳐 볼 수 있도록 트리로 만든다
                         string treeLabel = "Stack Hash: " + to_string( info._stack._hash );
                         if ( ImGui::TreeNode( treeLabel.c_str() ) )
                         {

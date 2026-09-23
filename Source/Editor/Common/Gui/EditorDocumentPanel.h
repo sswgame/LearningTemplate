@@ -45,8 +45,8 @@ namespace sw::editor
 
         /**
          * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다.
-         * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시
-         *          구현해야 하므로 여기서 다시 순수 가상으로 못박습니다 — 잊으면 컴파일이 막힙니다.
+         * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
+         *          가상으로 선언합니다. 구현을 잊으면 컴파일이 막힙니다.
          */
         bool saveDocument() override = 0;
         /** @brief 편집 단위 Undo를 남기고 dirty로 표시합니다. */

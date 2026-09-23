@@ -1,6 +1,6 @@
 /**
  * @file EditorWorkspace.h
- * @brief 에디터 선택 / 애셋 포커스 / 기즈모 / 윈도우 열기 허브 (EditorContext 소유)
+ * @brief 에디터의 선택 · 애셋 포커스 · 기즈모 · 창 열기 요청을 모아 둔 곳입니다(EditorContext 소유).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -50,7 +50,7 @@ namespace sw::editor
         uint8  _bWasActive{ SW_FALSE };
     };
 
-    /** @brief 한 단계의 인플레이스 프리팹 Isolation */
+    /** @brief 제자리(in-place) 프리팹 Isolation 한 단계입니다. */
     struct PrefabIsolationFrame
     {
         string                              _prefabPath;
@@ -61,7 +61,7 @@ namespace sw::editor
 
     /**
      * @class EditorWorkspace
-     * @brief 에디터의 전역 작업 공간 상태(선택, 포커스 애셋, 기즈모, 윈도우 요청)를 총괄하는 클래스 (EditorContext 소유)
+     * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다(EditorContext 소유).
      */
     class EditorWorkspace
     {
@@ -73,7 +73,7 @@ namespace sw::editor
         // 1) 선택 — 오브젝트 / 컴포넌트
         // ------------------------------------------------------------------------------
         uint64 getSelectedObjectId() const;
-        /** @brief 처음 선택한 오브젝트. 선택이 없거나 사라졌으면 nullptr — 이번 호출 안에서만 쓰십시오. */
+        /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. 이번 호출 안에서만 쓰십시오. */
         GameObject* getSelectedObject() const;
         uint64      getSelectedComponentId() const { return _selectedComponentId; }
         void        setSelectedComponentId( uint64 id ) { _selectedComponentId = id; }
@@ -103,13 +103,13 @@ namespace sw::editor
         void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }
 
         // ------------------------------------------------------------------------------
-        // 4) 윈도우 열기 요청 — 메뉴가 쓰고 셸이 consume
+        // 4) 창 열기 요청 (메뉴가 넣고 셸이 소비한다)
         // ------------------------------------------------------------------------------
         void requestOpenPanel( const utf8* pTitle );
         bool consumeOpenPanel( string& outTitle );
 
         // ------------------------------------------------------------------------------
-        // 5) 씬 열기 — FileDialog는 백그라운드, consume은 메인 스레드
+        // 5) 씬 열기 (파일 대화 상자는 백그라운드, 소비는 메인 스레드)
         // ------------------------------------------------------------------------------
         void requestLoadScene( string_view path );
         bool consumeLoadScene( string& outPath );
@@ -168,8 +168,8 @@ namespace sw::editor
         bool          saveComponentPreset( const Component* pComp, string_view presetName );
         bool          loadComponentPreset( Component* pComp, string_view presetFilePath );
 
-        // 정렬·분배·바닥 스냅은 여기 전달자를 두지 않는다 — 뷰포트 툴바가 유일한 호출자였고
-        // 지금은 커맨드 레지스트리(transform.*)를 거친다. 로직은 EditorTransformCommands 다.
+        // 정렬 · 분배 · 바닥 스냅은 여기 전달자를 두지 않는다. 뷰포트 툴바가 유일한 호출자였고
+        // 지금은 커맨드 레지스트리(transform.*)를 거친다. 로직은 EditorTransformCommands 에 있다.
 
         bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
         const string&               getPrefabIsolationPrefabPath() const;

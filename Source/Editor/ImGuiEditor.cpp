@@ -58,8 +58,8 @@ namespace sw::editor
                 shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
                 if ( pPass == nullptr )
                     return;
-                // `getService<T>()` 는 nullptr 을 돌려줄 수 있다 — 이 둘은 **워커 스레드**에서 도는
-                // 스플래시 로드라, 결합이 아직/이미 없는 창에 걸리면 조용히 죽는다.
+                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 **워커 스레드**에서 도는 스플래시 로드라, 서비스 연결이 아직
+                // 없거나 이미 끊긴 틈에 걸리면 조용히 죽는다.
                 const EngineData* pEngineData = editor::getService<const EngineData>();
                 if ( pEngineData == nullptr )
                     return;
@@ -111,9 +111,8 @@ namespace sw::editor
         if ( _bInitialized != SW_FALSE )
             return true;
 
-        // 이 모듈의 전역 변수를 매니저에 올린다. 커맨드라인은 모듈 로드 전에 파싱되므로 값은
-        // 파서의 보류표에 있고, 등록하는 이 순간 적용된다 — 아래에서 gv_editorStartupScene 을
-        // 읽기 전에 반드시 먼저 와야 한다.
+        // 이 모듈의 전역 변수를 매니저에 올린다. 커맨드라인은 모듈을 로드하기 전에 파싱되므로 값은 파서의 보류표에 있고,
+        // 등록하는 이 순간 적용된다. 그래서 아래에서 gv_editorStartupScene 을 읽기 전에 반드시 먼저 불러야 한다.
         registerGlobalVariables();
         if ( pWindow == nullptr || pRhiDevice == nullptr )
         {
@@ -143,8 +142,8 @@ namespace sw::editor
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
             io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있어 늘 켠다 — 없는 백엔드라면 아래
-            // createRendererBackend 가 nullptr 을 돌려주고 초기화가 거기서 멈춘다.
+            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있어 항상 켠다. 렌더러 백엔드가 없는 백엔드라면 아래
+            // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
             _dockLayout.initializePersistencePaths();
@@ -223,8 +222,8 @@ namespace sw::editor
         {
             _editorContext = make_unique<EditorContext>();
             _editorContext->initialize();
-            // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다 — 테마 상태를 컨텍스트가 들고 있으므로,
-            // 앞에서 부르면 적용된 테마가 갈 곳이 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
+            // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다. 테마 상태를 컨텍스트가 들고 있으므로, 앞에서 부르면 적용한 테마가 갈 곳이
+            // 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
             EditorThemeUtil::loadFromConfig();
             _editorContext->setRhiDevice( pRhiDevice );
             _editorContext->setRendererBackend( _rendererBackend.get() );
@@ -233,8 +232,8 @@ namespace sw::editor
             EditorCommandGui::registerDefaults();
             _dockLayout.loadPanelVisibility();
 
-            // `-gv_editorStartupScene=<경로>` — 검증용. 선언은 Engine/EngineLoop.cpp 에 있다.
-            // 빈 씬만 보던 실기동 검증이 오브젝트를 도는 코드까지 덮게 하는 스위치다.
+            // `-gv_editorStartupScene=<경로>`: 검증용이다. 선언은 Common/EditorGlobalVariable.h 에 있다.
+            // 빈 씬만 보던 실제 기동 검증이 오브젝트를 순회하는 코드까지 다루게 하는 스위치다.
             if ( gv_editorStartupScene.empty() == false )
             {
                 SW_LOG_INFO( "시작 씬을 엽니다: %#", gv_editorStartupScene.c_str() );
@@ -252,11 +251,10 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownPartialInitialization()
     {
-        // **전역 변수부터 걷어낸다.** `initialize()` 는 맨 앞에서 `registerGlobalVariables()` 를
-        // 부르고(커맨드라인 보류값을 그때 적용해야 한다), 실패로 나가는 길은 **전부 그 뒤**다.
-        // 매니저가 들고 있는 것은 이 DLL 안의 주소이므로, 초기화가 실패한 뒤 모듈이 내려가면
-        // 그 포인터가 언맵된 이미지를 가리킨다 — `shutdown()` 이 같은 이유로 맨 앞에서 부르는
-        // 것이고(그 주석 참고), 실패 경로만 빠져 있었다. 두 번 불러도 안전하다.
+        // **전역 변수부터 걷어 낸다.** `initialize()` 는 맨 앞에서 `registerGlobalVariables()` 를 부르고(커맨드라인 보류값을
+        // 그때 적용해야 한다), 실패로 나가는 길은 **모두 그 뒤**에 있다. 매니저가 들고 있는 것은 이 DLL 안의 주소이므로,
+        // 초기화가 실패한 뒤 모듈이 내려가면 그 포인터가 언맵된 이미지를 가리킨다. `shutdown()` 이 같은 이유로 맨 앞에서
+        // 부르는데(그 주석 참고), 실패 경로에만 빠져 있었다. 두 번 불러도 안전하다.
         unregisterGlobalVariables();
 
         if ( _editorContext != nullptr )
@@ -294,13 +292,12 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
             return;
 
-        // 매니저가 들고 있는 것은 이 DLL 안의 주소다 — 모듈이 내려가기 전에 반드시 걷어내야 한다.
+        // 매니저가 들고 있는 것은 이 DLL 안의 주소다. 모듈이 내려가기 전에 반드시 걷어 내야 한다.
         // (서비스는 아직 바인딩돼 있다. ModuleHost 는 shutdown 뒤에 bindService(nullptr) 을 부른다.)
         unregisterGlobalVariables();
 
-        // 열려 있는 파일 다이얼로그의 결과 델리게이트도 같은 이유로 끊는다 — 그 델리게이트는 이 DLL 안의
-        // 함수와 `this` 를 잡고 있고, 네이티브 다이얼로그는 사용자가 닫을 때까지 떠 있다. 아래 Undo 스택과
-        // 같은 종류의 함정이다.
+        // 열려 있는 파일 대화 상자의 결과 델리게이트도 같은 이유로 끊는다. 그 델리게이트는 이 DLL 안의 함수와 `this` 를 잡고
+        // 있고, 네이티브 대화 상자는 사용자가 닫을 때까지 떠 있다. 아래 Undo 스택과 같은 종류의 함정이다.
         FileUtil::cancelFileDialogResults();
 
         IWindow* pActiveWindow = IWindow::getActiveWindow();
@@ -308,22 +305,20 @@ namespace sw::editor
             pActiveWindow->setCloseQueryHandler( {} );
 
         /**
-         * Undo 스택은 **엔진이 소유**하고(EngineLoop::_commandStack) 이 모듈보다 오래 산다. 그런데
-         * 거기에 쌓는 것은 전부 에디터다 — `EditorTransaction` 이 넣는 커맨드는 패널의 `this` 를
-         * 잡은 **람다** 델리게이트이고, 그 람다의 코드와 소멸자(`Delegate::_managerFunc`)는
-         * EditorModule.dll 안에 있다. 그래서 비우지 않고 내려가면:
-         *   - 핫 리로드 후 Ctrl+Z 가 이미 언맵된 옛 이미지의 코드를 부른다.
-         *   - 종료 시에는 App 이 모듈을 먼저 내리고(App::shutdown → ModuleHost) 그 다음에
-         *     `_commandStack` 을 파괴하므로, 델리게이트 소멸자가 언맵된 DLL 로 점프한다.
-         * 넣은 쪽이 치운다. 에디터 밖에서 이 스택에 push 하는 코드는 없다(PlaySession 도 전이마다
-         * 같은 이유로 비운다).
+         * Undo 스택은 **엔진이 소유**하고(EngineLoop::_commandStack) 이 모듈보다 오래 산다. 그런데 거기에 쌓는 것은 모두
+         * 에디터다. `EditorTransaction` 이 넣는 커맨드는 패널의 `this` 를 잡은 **람다** 델리게이트이고, 그 람다의 코드와
+         * 소멸자(`Delegate::_managerFunc`)는 EditorModule.dll 안에 있다. 그래서 비우지 않고 내려가면:
+         *   - 핫 리로드 뒤 Ctrl+Z 가 이미 언맵된 옛 이미지의 코드를 부른다.
+         *   - 종료할 때는 App 이 모듈을 먼저 내리고(App::shutdown → ModuleHost) 그다음에 `_commandStack` 을 파괴하므로,
+         *     델리게이트 소멸자가 언맵된 DLL 로 점프한다.
+         * 넣은 쪽이 치운다. 에디터 밖에서 이 스택에 push 하는 코드는 없다(PlaySession 도 상태가 바뀔 때마다 같은 이유로 비운다).
          */
         CommandStack* pCommandStack = editor::getService<CommandStack>();
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
 
-        // 기다리지 않는다. 여기 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로
-        // 렌더 워커를 재운 뒤다 — 기다릴 상대가 없다.
+        // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤라
+        // 기다릴 상대가 없다.
         abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )
             snapshot.clear();
@@ -411,10 +406,8 @@ namespace sw::editor
             ImGuiIO& io = ImGui::GetIO();
             if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
             {
-                // 플랫폼(OS 윈도우) 갱신은 항상 UI 스레드에서 한다.
-                // 보조(플로팅) 뷰포트의 GPU 렌더·present 는 단일 스레드 호출을 전제하는
-                // imgui 1.92 뷰포트 관리 때문에 한 스레드에서만 돌려야 하며,
-                // GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
+                // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로 보조(플로팅)
+                // 뷰포트의 GPU 렌더 · present 는 한 스레드에서만 돌려야 하고, GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
                 ImGui::UpdatePlatformWindows();
                 if ( bRenderThreadCtx == false )
                     ImGui::RenderPlatformWindowsDefault();
@@ -479,10 +472,9 @@ namespace sw::editor
 
     void ImGuiEditor::abandonPendingDraw()
     {
-        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 풀어 준다" 는 약속이다.
-        // 렌더 워커가 재워지면 그 약속을 지킬 주체가 사라지므로, 재운 쪽이 여기로 알려 준다.
-        // 이게 없으면 다음 waitForDrawSnapshotIdle 이 영원히 돌아오지 않는다 — 에디터 모듈
-        // 핫리로드가 실제로 여기서 멈췄다(destroyEditorInstance → shutdown → 무한 대기).
+        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 풀어 준다" 는 약속이다. 렌더 워커를 비워 세우면 그
+        // 약속을 지킬 쪽이 사라지므로, 비운 쪽이 여기로 알려 준다. 이것이 없으면 다음 waitForDrawSnapshotIdle 이 영원히 돌아오지
+        // 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다(destroyEditorInstance → shutdown → 무한 대기).
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 
@@ -494,7 +486,7 @@ namespace sw::editor
         if ( _platformBackend != nullptr )
             _platformBackend->processEvent( event );
 
-        // ImGui가 점유한 입력은 게임으로 넘기지 않습니다. Game View 위에서는 예외.
+        // ImGui 가 차지한 입력은 게임으로 넘기지 않는다. Game View 위에서는 예외다.
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
@@ -583,7 +575,7 @@ namespace sw::editor
 
         ImGui::NewFrame();
         ImGuizmo::BeginFrame();
-        // 기즈모를 호스트하는 패널은 캔버스가 입력을 받을 수 있을 때 다시 켭니다.
+        // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.
         ImGuizmo::Enable( false );
     }
 
@@ -619,6 +611,6 @@ namespace sw::editor
 } // namespace sw::editor
 
 // ==============================================================================
-// EditorModule C-ABI 진입점 매크로 자동 구현
+// EditorModule C-ABI 진입점(매크로가 구현한다)
 // ==============================================================================
 SW_IMPLEMENT_EDITOR_MODULE( sw::editor::ImGuiEditor );

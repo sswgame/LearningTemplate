@@ -35,9 +35,8 @@ namespace sw::editor
             case RHIBackend::Vulkan:
                 return make_unique<ImGuiVulkanRendererBackend>();
             default:
-                // 이 백엔드용 ImGui 렌더러가 없다 — **DX11 것으로 대신 만들지 않는다.** 예전에는 그랬고,
-                // 새 백엔드가 붙으면 엉뚱한 API 로 그리다 조용히 무너진다. "에디터가 이 백엔드를 감당하는가" 의
-                // 정본이 바로 이 답이다.
+                // 이 백엔드용 ImGui 렌더러가 없다. **DX11 것으로 대신 만들지 않는다.** 예전에는 그렇게 했는데, 새 백엔드가 붙으면
+                // 엉뚱한 API 로 그리다 조용히 무너진다. "에디터가 이 백엔드를 지원하는가" 의 정본이 바로 이 답이다.
                 return nullptr;
         }
     }

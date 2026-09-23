@@ -13,13 +13,13 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 컴포넌트 헤더/본문/푸터를 커스텀하는 인스펙터 */
+    /** @brief 컴포넌트의 헤더 · 본문 · 푸터를 바꿔 그리는 인스펙터 확장입니다. */
     class IInspectorComponent
     {
     public:
         virtual ~IInspectorComponent() = default;
 
-        /** @brief 컴포넌트 헤더 추가 UI */
+        /** @brief 컴포넌트 헤더에 UI 를 더합니다. */
         virtual void drawHeader( Component* /*pComponent*/ ) {}
 
         /**
@@ -28,7 +28,7 @@ namespace sw::editor
          */
         virtual bool drawBody( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) { return false; }
 
-        /** @brief 기본 프로퍼티 이후 푸터 UI */
+        /** @brief 기본 프로퍼티 뒤에 푸터 UI 를 그립니다. */
         virtual void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) {}
     };
 } // namespace sw::editor

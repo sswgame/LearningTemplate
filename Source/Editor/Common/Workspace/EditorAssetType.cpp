@@ -17,12 +17,12 @@ namespace sw::editor
         };
 
         // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다. 2026-09-12 에
-        // 죽은 것을 걷어냈다 — `._material`(오타로 보인다) · `.mat`(파일도 코드도 없다) ·
+        // 쓰이지 않는 것을 걷어 냈다. `._material`(오타로 보인다) · `.mat`(파일도 코드도 없다) ·
         // `.pfb`(loadPrefab 이 모르는 이름) · `.glsl` `.vert` `.frag`(엔진은 HLSL 전용) ·
         // `.csv`(참조 0) · `.mp3` `.ogg`(디코더가 없다. XAudio2 는 `.wav` 만 읽는다).
-        // `.spv` 도 뺐다 — 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
-        // 소스로 세면 콘텐츠 브라우저가 빌드 출력 178개를 에셋으로 보여 준다.
-        // 대신 `.hlsli` 를 넣었다 — 공유 헤더는 진짜 셰이더 소스인데 빠져 있었다.
+        // `.spv` 도 뺐다. 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
+        // 소스로 세면 콘텐츠 브라우저가 빌드 출력 178개를 애셋으로 보여 준다.
+        // 대신 `.hlsli` 를 넣었다. 공유 헤더는 진짜 셰이더 소스인데 빠져 있었다.
         constexpr string_view kArrPrefabSuffix[]    = { ".prefab.xml", ".prefab.json", ".prefab.bin", ".prefab" };
         constexpr string_view kArrTextureExt[]      = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
         constexpr string_view kArrMaterialExt[]     = { ".material" };
@@ -38,17 +38,15 @@ namespace sw::editor
 
         /**
          * @struct AssetKindRow
-         * @brief 에셋 종류 하나에 대해 **에디터가 아는 전부**를 한 줄에 담습니다.
+         * @brief 애셋 종류 하나에 대해 **에디터가 아는 전부**를 한 줄에 담습니다.
          *
-         * @details 예전에는 표가 여섯이었다 — 매칭 규칙 · 패널 제목 · 도구 패널 목록 · 패널 접미사
-         *          매핑 · 브라우저 필터 · "Other" 제외 목록. 종류를 하나 고치려면 여섯 군데를
-         *          찾아야 했고, 접미사는 그중 **두 곳에 따로** 적혀 있어서 실제로 어긋났다
-         *          (`._material` · `.mat` 은 양쪽에 있었고 `.hlsli` 는 양쪽에 없었다).
-         *          지금은 이 표 하나가 정본이고 나머지는 전부 여기서 만들어진다.
+         * @details 예전에는 표가 여섯이었습니다. 매칭 규칙 · 패널 제목 · 도구 패널 목록 · 패널 접미사 매핑 · 브라우저 필터 ·
+         *          "Other" 제외 목록입니다. 종류를 하나 고치려면 여섯 군데를 찾아야 했고, 접미사는 그중 **두 곳에 따로**
+         *          적혀 있어서 실제로 어긋났습니다(`._material` · `.mat` 은 양쪽에 있었고 `.hlsli` 는 양쪽에 없었습니다).
+         *          지금은 이 표 하나가 정본이고 나머지는 모두 여기서 만들어집니다.
          *
-         *          한 종류가 줄을 둘 이상 가질 수 있다 — 매칭 방식이 다를 때다(SpriteClip 은
-         *          문서 접미사와 이미지 확장자를 함께 쓴다). 보여 주는 정보(제목·라벨)는
-         *          **그 종류의 첫 줄**에 적는다.
+         *          한 종류가 줄을 둘 이상 가질 수 있습니다. 매칭 방식이 다를 때입니다(SpriteClip 은 문서 접미사와 이미지
+         *          확장자를 함께 씁니다). 보여 주는 정보(제목 · 라벨)는 **그 종류의 첫 줄**에 적습니다.
          */
         struct AssetKindRow
         {
@@ -56,8 +54,8 @@ namespace sw::editor
             MatchMode          _mode;
             const string_view* _pSuffix;
             uint32             _suffixCount;
-            const utf8*        _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없다
-            const utf8*        _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 라벨. nullptr 이면 필터에 없다
+            const utf8*        _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
+            const utf8*        _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 라벨. nullptr 이면 필터에 없습니다
             bool               _bOtherExcluded; ///< "Other" 필터에서 뺄지
         };
 
@@ -159,7 +157,7 @@ namespace sw::editor
                 return listKind;
             }
 
-            /** @brief 라벨이 있는 종류로 브라우저 필터를 만듭니다. 앞뒤의 All/Other 는 종류가 아니다. */
+            /** @brief 라벨이 있는 종류로 브라우저 필터를 만듭니다. 앞뒤의 All/Other 는 종류가 아닙니다. */
             static vector<EditorAssetBrowserFilter> buildBrowserFilters()
             {
                 vector<EditorAssetBrowserFilter> listFilter{};
@@ -174,7 +172,7 @@ namespace sw::editor
                 return listFilter;
             }
 
-            /** @brief 종류의 패널 제목. 없으면 nullptr — `getPanelTitle` 의 빈 문자열과 구분한다. */
+            /** @brief 종류의 패널 제목입니다. 없으면 nullptr 이고, `getPanelTitle` 의 빈 문자열과 구분됩니다. */
             static const utf8* getPanelTitleOf( EditorAssetKind kind )
             {
                 for ( const AssetKindRow& row : kArrAssetKind )
@@ -261,7 +259,7 @@ namespace sw::editor
         if ( assetPath.empty() )
             return {};
 
-        // 가장 긴 접미사가 이긴다 — `.anim.json` 이 `.json` 보다 구체적이다.
+        // 가장 긴 접미사가 이긴다. `.anim.json` 이 `.json` 보다 구체적이다.
         size_t                               bestLen{ 0 };
         EditorAssetKind                      bestKind{ EditorAssetKind::Unknown };
         uint32                               mappingCount{ 0 };
@@ -283,7 +281,7 @@ namespace sw::editor
 
     const EditorAssetPanelMapping* EditorAssetTypeRegistry::getPanelMappings( uint32& outCount )
     {
-        // 전용 패널이 있는 종류의 접미사를 그대로 펼친다 — 접미사를 두 번 적지 않기 위해서다.
+        // 전용 패널이 있는 종류의 접미사를 그대로 펼친다. 접미사를 두 번 적지 않기 위해서다.
         static const vector<EditorAssetPanelMapping> s_listMapping = EditorAssetTypeInternal::buildPanelMappings();
         outCount                                                   = static_cast<uint32>( s_listMapping.size() );
         return s_listMapping.data();

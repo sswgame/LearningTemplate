@@ -28,10 +28,10 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 핀 번호는 **`DialogueGraphAsset` 이 정본**이다 — 여기서는 이름만 짧게 빌린다.
-         * @details 예전에는 이 구조체가 오프셋 상수와 `nodeId * 100 + offset` 인코딩을 자기 사본으로
-         *          들고 있었고, 읽는 쪽(`DialogueGraphAsset`)에도 같은 상수가 따로 있었다. 링크는
-         *          디스크에 저장되므로 한쪽만 바뀌면 대화가 조용히 엉뚱한 분기를 탄다.
+         * @brief 핀 번호의 정본은 **`DialogueGraphAsset`** 입니다. 여기서는 이름만 짧게 빌립니다.
+         * @details 예전에는 이 구조체가 오프셋 상수와 `nodeId * 100 + offset` 인코딩을 자기 사본으로 들고 있었고, 읽는
+         *          쪽(`DialogueGraphAsset`)에도 같은 상수가 따로 있었습니다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
+         *          대화가 조용히 엉뚱한 분기를 탑니다.
          */
         struct DialogueGraphPanelInternal
         {
@@ -321,7 +321,7 @@ namespace sw::editor
                     const int32 pinA = static_cast<int32>( a.Get() );
                     const int32 pinB = static_cast<int32>( b.Get() );
 
-                    // 핀 종류(In vs Out) 분별: In 핀은 끝자리가 1
+                    // 핀 종류(In/Out) 구분: 핀 오프셋이 kPinInputOffset 이면 In 핀이다
                     const bool bIsAInput = DialogueGraphAsset::decodePinOffset( pinA ) == DialogueGraphPanelInternal::kPinInputOffset;
                     const bool bIsBInput = DialogueGraphAsset::decodePinOffset( pinB ) == DialogueGraphPanelInternal::kPinInputOffset;
 
@@ -345,9 +345,9 @@ namespace sw::editor
         }
         ed::EndCreate();
 
-        // 삭제 처리 — 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 것은 `DialogueGraphAsset` 이 정본이다**:
-        // `decodePinNodeId` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 예전에 여기만 `/ 100` 을 손으로 적어,
-        // 간격이 바뀌면 노드를 지워도 그 링크가 남을 자리였다.
+        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
+        // `decodePinNodeId` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 예전에는 여기만 `/ 100` 을 손으로 적어서,
+        // 기준이 바뀌면 노드를 지워도 그 링크가 남을 수 있었다.
         processCanvasDeletions(
             []( const DialogueLink& link, int32 nodeId )
         { return DialogueGraphAsset::decodePinNodeId( link._fromPin ) == nodeId || DialogueGraphAsset::decodePinNodeId( link._toPin ) == nodeId; },
@@ -517,7 +517,7 @@ namespace sw::editor
     bool DialogueGraphPanel::saveGraphData()
     {
         DialogueGraphAsset data = captureGraphData();
-        // 실패하면 아무것도 지우지 않는다 — AnimationGraphPanel 쪽 주석 참고.
+        // 실패하면 아무것도 지우지 않는다. AnimationGraphPanel 쪽 주석 참고.
         if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
             return false;
 

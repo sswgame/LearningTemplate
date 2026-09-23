@@ -1,6 +1,6 @@
 /**
  * @file EditorCommandRegistry.h
- * @brief 에디터 커맨드 SSOT — 메뉴·전역 단축키·커맨드 팔레트가 같은 정의를 읽습니다
+ * @brief 에디터 커맨드의 단일 정의(SSOT)입니다. 메뉴 · 전역 단축키 · 커맨드 팔레트가 같은 정의를 읽습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -14,9 +14,9 @@
 namespace sw::editor
 {
     /**
-     * @brief 단축키 키 코드.
-     * @details ImGui 헤더에 묶이지 않도록 자체 열거형을 씁니다 — 이 파일은 ImGui 없이 컴파일되어야
-     *          단위 테스트가 붙습니다. ImGuiKey 변환은 유일한 소비자(`EditorCommandGui`)가 합니다.
+     * @brief 단축키의 키 코드입니다.
+     * @details ImGui 헤더에 묶이지 않도록 자체 열거형을 씁니다. 이 파일이 ImGui 없이 컴파일되어야 단위 테스트를 붙일 수
+     *          있습니다. ImGuiKey 로의 변환은 이 값을 쓰는 유일한 곳(`EditorCommandGui`)이 합니다.
      */
     enum class EditorCommandKey : uint8
     {
@@ -63,12 +63,12 @@ namespace sw::editor
         Count
     };
 
-    // **이 열거형의 번호는 계약이다.** 두 곳이 값의 순서 위에 서 있다:
-    //   · `EditorCommandRegistry.cpp` 의 이름 표 — 열거형 값을 그대로 첨자로 쓴다.
-    //   · `EditorCommandGui.cpp` 의 `toImGuiKey` — A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
-    // 둘 다 가운데에 값을 하나 끼우면 **조용히 엉뚱한 키**가 된다(단축키가 다른 명령을 실행한다).
-    // 개수 단정만으로는 그 경우를 잡지 못하므로 — 이름을 하나 더하면 개수는 다시 맞는다 —
-    // 자리를 직접 못 박는다. 키를 더하려면 **Space 앞이 아니라 Space 뒤에** 붙이고 여기를 고칠 것.
+    // **이 열거형의 번호는 계약이다.** 두 곳이 값의 순서에 기대고 있다.
+    //   · `EditorCommandRegistry.cpp` 의 이름 표: 열거형 값을 그대로 첨자로 쓴다.
+    //   · `EditorCommandGui.cpp` 의 `toImGuiKey`: A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
+    // 둘 다 가운데에 값을 하나 끼우면 **조용히 엉뚱한 키**가 된다(단축키가 다른 명령을 실행한다). 개수만 보는 static_assert
+    // 로는 그 경우를 잡지 못하므로(이름을 하나 더하면 개수는 다시 맞는다) 자리를 직접 고정한다. 키를 더하려면 **Space 앞이
+    // 아니라 Space 뒤에** 붙이고 여기를 고칠 것.
     static_assert( static_cast<uint8>( EditorCommandKey::A ) == 1, "EditorCommandKey::A 의 자리가 바뀌었습니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::Z ) == 26, "EditorCommandKey 의 A..Z 가 연속이 아닙니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::F1 ) == 27, "EditorCommandKey::F1 의 자리가 바뀌었습니다" );
@@ -84,8 +84,8 @@ namespace sw::editor
         inline constexpr uint8 kAlt   = static_cast<uint8>( SW_BIT( 2 ) );
         /**
          * @brief 라벨에만 보이고 우리가 처리하지 않는 조합입니다.
-         * @details Alt+F4 처럼 OS 가 먼저 가로채는 것을 메뉴에 적어 두기 위한 표시입니다. 이 비트가
-         *          있으면 단축키 처리기가 건너뜁니다 — 처리하는 척하는 라벨이 남지 않게 합니다.
+         * @details Alt+F4 처럼 OS 가 먼저 가로채는 것을 메뉴에 적어 두기 위한 표시입니다. 이 비트가 있으면 단축키 처리기가
+         *          건너뜁니다. 처리하는 척하는 라벨이 남지 않게 합니다.
          */
         inline constexpr uint8 kDisplayOnly = static_cast<uint8>( SW_BIT( 3 ) );
     } // namespace commandmod
@@ -98,9 +98,9 @@ namespace sw::editor
     };
 
     /**
-     * @brief 에디터 커맨드 한 개의 정의.
-     * @details 한 커맨드는 최대 세 표면(메뉴바·전역 단축키·커맨드 팔레트)에 나타납니다. 예전에는
-     *          표면마다 따로 적혀 있어서 서로 어긋났습니다 — 그래서 정의는 여기 한 번만 둡니다.
+     * @brief 에디터 커맨드 하나의 정의입니다.
+     * @details 한 커맨드는 최대 세 곳(메뉴바 · 전역 단축키 · 커맨드 팔레트)에 나타납니다. 예전에는 곳마다 따로 적혀 있어서
+     *          서로 어긋났습니다. 그래서 정의는 여기에 한 번만 둡니다.
      */
     struct EditorCommandDesc
     {
@@ -144,10 +144,10 @@ namespace sw::editor
         const vector<EditorCommandDesc>& getCommands() const { return _listCommand; }
 
         /**
-         * @brief 중복 id·중복 키 조합을 outReport 에 적습니다. 문제가 없으면 true입니다.
-         * @details 표면이 셋으로 갈려 있던 동안 같은 조합을 두 곳이 처리하는 일이 실제로 있었습니다
-         *          (Ctrl+Z 가 전역과 Inspector 에서 각각 undo 를 불러 두 번 되돌렸습니다). 정의를
-         *          한곳으로 모은 다음에는 그런 충돌을 기계가 잡을 수 있습니다.
+         * @brief 중복 id · 중복 키 조합을 outReport 에 적습니다. 문제가 없으면 true입니다.
+         * @details 정의가 세 곳으로 나뉘어 있던 동안 같은 조합을 두 곳이 처리하는 일이 실제로 있었습니다(Ctrl+Z 가 전역과
+         *          Inspector 에서 각각 undo 를 불러 두 번 되돌렸습니다). 정의를 한곳으로 모은 뒤로는 그런 충돌을 기계적으로 잡을
+         *          수 있습니다.
          */
         bool validate( string& outReport ) const;
 

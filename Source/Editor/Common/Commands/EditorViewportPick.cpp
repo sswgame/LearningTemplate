@@ -23,7 +23,7 @@ namespace sw::editor
     {
         struct EditorViewportPickInternal
         {
-            /** @brief NDC 점을 월드로. w 가 0 이면(퇴화 행렬) false. */
+            /** @brief NDC 점을 월드 좌표로 옮깁니다. w 가 0 이면(퇴화 행렬) false 입니다. */
             static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
             {
                 const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
@@ -34,7 +34,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief float3 의 축 성분 — 0·1·2 = X·Y·Z. */
+            /** @brief float3 의 축 성분입니다(0 · 1 · 2 = X · Y · Z). */
             static float32& axisOf( float3& v, uint32 axisIndex )
             {
                 return axisIndex == 0 ? v._x : ( axisIndex == 1 ? v._y : v._z );
@@ -56,7 +56,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // 종류를 아는 제공자 — 각자 고유한 경계 계산을 안다
+            // 종류를 아는 제공자. 각자 고유한 경계 계산을 안다
             // ------------------------------------------------------------------------------
             static void considerMesh( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
             {
@@ -104,9 +104,9 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트의 **모든** SceneComponent를 기본 반지름으로 후보에 넣습니다.
-             * @details 표가 종류를 모르는 컴포넌트 — 즉 게임이 만든 컴포넌트 — 를 집을 수 있게 하는
-             *          유일한 경로입니다. 예전 `considerScenePick` 은 주 컴포넌트 하나만 봤습니다.
-             *          RTTI가 꺼져 있어 `dynamic_cast`를 쓸 수 없으므로 리플렉션 `castTo`로 판별합니다.
+             * @details 표가 종류를 모르는 컴포넌트, 즉 게임이 만든 컴포넌트를 집을 수 있게 하는 유일한 경로입니다. 예전
+             *          `considerScenePick` 은 주 컴포넌트 하나만 봤습니다. RTTI 가 꺼져 있어 `dynamic_cast` 를 쓸 수 없으므로
+             *          리플렉션 `castTo` 로 판별합니다.
              */
             static void considerSceneComponents( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
             {
@@ -125,7 +125,7 @@ namespace sw::editor
             using PickConsiderFunc = void ( * )( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest );
 
             /**
-             * @brief 피킹 제공자 한 줄.
+             * @brief 피킹 제공자 표의 한 줄입니다.
              * @details `_order3D`/`_order2D` 는 **같은 거리일 때 어느 종류가 이기는지**를 정합니다
              *          (낮은 값이 먼저 보이고, 동거리에서는 먼저 본 쪽이 남습니다). 2D 모드에서
              *          스프라이트가 메시보다 앞서는 것이 규약이라 두 순서를 따로 둡니다.
@@ -138,7 +138,7 @@ namespace sw::editor
                 PickConsiderFunc _pConsider;
             };
 
-            /** @brief 종류를 아는 제공자 표 — 새 종류는 여기 한 줄이다. */
+            /** @brief 종류를 아는 제공자 표입니다. 새 종류는 여기에 한 줄을 더하면 됩니다. */
             inline static const PickProviderRow _s_arrProvider[] = {
                 {         "MeshComponent", 0, 2,          &considerMesh},
                 {       "SpriteComponent", 1, 0,        &considerSprite},

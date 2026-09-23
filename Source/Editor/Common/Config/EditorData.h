@@ -1,6 +1,6 @@
 /**
  * @file EditorData.h
- * @brief Config/Editor/editordata.json — 에디터 도구 시드 (배포 Resource data 아님)
+ * @brief Config/Editor/editordata.json 에서 읽는 에디터 도구 시드입니다(배포용 Resource 데이터가 아닙니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,14 +14,14 @@
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) EditorData — 맵/아틀라스/폰트 시드
-    //    레이아웃 파일명·Config 폴더는 EditorConfig (Host JSON)
+    // 1) EditorData: 맵 · 아틀라스 · 폰트 시드와 설정 폴더 · 도구 파일 이름
+    //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig)
     // ------------------------------------------------------------------------------
 
     /**
-     * @brief editordata.json 에디터 도구 시드
-     * @details 로드는 `XmlSerializer` 가 PROPERTY 그래프로 한다 — 필드를 추가하면 읽기가 따라온다.
-     *          예전엔 필드마다 손으로 파싱했고, 폰트 목록과 clearColor 는 전용 파서까지 따로 있었다.
+     * @brief editordata.json 의 에디터 도구 시드입니다.
+     * @details 읽기는 `JsonSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다.
+     *          예전에는 필드마다 손으로 파싱했고, 폰트 목록과 clearColor 는 전용 파서까지 따로 있었습니다.
      */
     REFLECT()
     struct EditorData
@@ -69,11 +69,11 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 설정 폴더와 툴 파일명 — 손으로 정하고, 앱은 다시 쓰지 않는다.
+        // 설정 폴더와 도구 파일 이름. 사람이 정하고, 앱은 다시 쓰지 않는다.
         //
         // 예전에는 EditorConfig 에 있었다. 그 파일은 테마를 바꿀 때마다 `saveToHost()` 가
-        // **통째로 다시 생성**하므로, 손으로 적은 값이 기계가 덮어쓰는 파일 안에 섞여 있었다.
-        // 경계는 "무슨 내용인가" 가 아니라 **"누가 쓰는가"** 다 — 앱이 쓰는 것만 EditorConfig 에 둔다.
+        // **통째로 다시 만들므로**, 손으로 적은 값이 기계가 덮어쓰는 파일 안에 섞여 있었다.
+        // 경계는 "무슨 내용인가" 가 아니라 **"누가 쓰는가"** 다. 앱이 쓰는 것만 EditorConfig 에 둔다.
         // ------------------------------------------------------------------------------
         PROPERTY()
         string _configFolder{ "Config" };
@@ -97,18 +97,17 @@ namespace sw::editor
         string _textureImportConfigFile{ "TextureImportConfig.json" };
 
         /**
-         * @brief 실행 중 다시 읽을 에셋 확장자. **비우면 처리기가 있는 확장자 전부**를 봅니다.
-         * @details 무엇을 감시할지는 설정이 정하고, 다시 읽는 방법이 있는지는 코드가 정한다
-         *          (`AssetHotReload` 의 처리기 표). 처리기가 없는 확장자를 적으면 경고를
-         *          남기고 뺀다 — 감시만 하고 아무 일도 안 하는 자리를 만들지 않는다.
-         *          변경이 쏟아지는 폴더를 잠시 빼고 싶을 때 이 목록을 좁히면 된다.
+         * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.
+         * @details 무엇을 감시할지는 설정이 정하고, 다시 읽는 방법이 있는지는 코드가 정합니다(`AssetHotReload` 의 처리기 표).
+         *          처리기가 없는 확장자를 적으면 경고를 남기고 뺍니다. 감시만 하고 아무 일도 하지 않는 자리를 만들지 않습니다.
+         *          변경이 쏟아지는 폴더를 잠시 빼고 싶을 때 이 목록을 좁히면 됩니다.
          */
         PROPERTY()
         vector<string> _listHotReloadExtension{};
 
         /**
-         * @brief 프로젝트 루트 상대 Host 경로에서 에디터 시드를 로드합니다.
-         * @param hostRelativePath 빈 경로면 EditorConfig::_editorData / Config/Editor/editordata.json
+         * @brief 프로젝트 루트 기준 Host 경로에서 에디터 시드를 로드합니다.
+         * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorData`(Config/Editor/editordata.json)
          */
         bool loadFromHostPath( string_view hostRelativePath = {} );
     };

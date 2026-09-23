@@ -12,7 +12,7 @@ namespace sw::editor
     class EditorMenuBar
     {
     public:
-        /** @brief 테마 설정 대화상자를 메뉴바 및 독스페이스보다 먼저 그려 스타일 변경사항을 프레임 지연 없이 즉시 반영합니다. */
+        /** @brief 테마 설정 대화 상자를 그립니다. 메뉴바와 도크스페이스보다 먼저 그려야 스타일 변경이 한 프레임 늦지 않고 바로 반영됩니다. */
         static void drawThemeDialog();
         /** @brief 다음 프레임부터 테마 설정 대화상자를 엽니다 (editor.themeSettings 커맨드가 부릅니다). */
         static void openThemeDialog();
@@ -25,7 +25,7 @@ namespace sw::editor
 
         /** @brief File 메뉴가 고른 씬 경로를 메인 스레드에서 로드합니다. */
         static void processPendingSceneLoad();
-        /** @brief 씬 세대 동기화와 미저장 확인 모달을 처리합니다. */
+        /** @brief 씬 세대 동기화와 "저장하지 않은 변경" 확인 창을 처리합니다. */
         static void processSceneSession();
 
     private:

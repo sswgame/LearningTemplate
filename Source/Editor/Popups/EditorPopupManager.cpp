@@ -16,7 +16,7 @@ namespace sw::editor
 
         const string popupId = string{ pPopup->getPopupId() };
 
-        // 이미 동일 ID가 등록되어 있으면 교체
+        // 같은 ID 가 이미 등록돼 있으면 교체한다
         for ( EditorPopupEntry& entry : _listPopup )
         {
             if ( entry._id == popupId )

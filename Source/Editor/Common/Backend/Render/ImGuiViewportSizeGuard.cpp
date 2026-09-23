@@ -15,7 +15,7 @@ namespace sw::editor
             inline static void ( *s_pOrigCreateWindow )( ImGuiViewport* )          = nullptr;
             inline static void ( *s_pOrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
 
-            /** @brief DXGI_SCALING_NONE 은 HWND 클라이언트 크기와 스왑체인 크기가 일치해야 한다. */
+            /** @brief 뷰포트 크기를 HWND 클라이언트 크기로 맞춥니다. DXGI_SCALING_NONE 은 두 크기가 같아야 합니다. */
             static void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
             {
                 if ( pViewport == nullptr )

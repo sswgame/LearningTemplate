@@ -21,7 +21,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일. */
+        /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일입니다. */
         enum class AssetFieldAction : uint8
         {
             None,
@@ -69,7 +69,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 비트필드는 포인터를 못 잡으므로 값으로 읽고 쓴다. 정수 계열과 bool 이 같은 체크박스다. */
+            /** @brief 비트필드는 포인터를 잡을 수 없어 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
             bool drawBitFieldCheckbox( void* pInstance, const PropertyInfo& prop )
             {
                 bool bValue = prop.getValue<bool>( pInstance );
@@ -85,9 +85,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 애셋 경로 필드의 틀 — 입력 칸 · 드롭 대상 · 지우기 버튼.
-             * @details 입력 칸만 호출자가 그린다: `string` 은 키 입력마다 반영하고, `hashed_string` 은 Enter 로 확정한다
-             *          (키 입력마다 인턴하면 그 문자열이 전부 표에 남는다). 드롭과 지우기의 처리도 호출자 몫이다.
+             * @brief 애셋 경로 필드의 틀(입력 칸 · 드롭 대상 · 지우기 버튼)을 그립니다.
+             * @details 입력 칸만 부르는 쪽이 그립니다. `string` 은 키 입력마다 반영하고, `hashed_string` 은 Enter 로 확정합니다
+             *          (키 입력마다 인턴하면 그 문자열이 모두 표에 남습니다). 드롭과 지우기의 처리도 부르는 쪽이 합니다.
              */
             template <typename DrawInputFn>
             AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, string& outDroppedPath )
@@ -119,14 +119,14 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 숫자 프로퍼티 — 타입마다 다른 것은 표 한 줄이고, 그리는 길은 하나다
+        // 숫자 프로퍼티. 타입마다 다른 것은 표 한 줄뿐이고, 그리는 경로는 하나다
         // ------------------------------------------------------------------------------
         /**
-         * @brief 숫자 타입 하나의 표 한 줄: 위젯이 다루는 값 타입(ImGui 는 int32 · float32 만 안다) · 읽기 전용 표시용 타입 ·
-         *        서식 · 드래그 속도 · 범위 메타가 없을 때의 한계(0·0 은 무제한).
-         * @details 예전에는 int32 · uint32 · int64 · uint8 · float32 · float64 가 각자 40 줄짜리 `draw` 를 들었고 —
-         *          같은 여섯 걸음(포인터 · 읽기 전용 · 범위 · 슬라이더 · 툴팁 · 되돌리기)에 캐스트만 달랐다. 폭이 다른 타입은
-         *          임시값으로 위젯을 오가고, 바뀌었을 때만 되쓴다.
+         * @brief 숫자 타입 하나의 표 한 줄입니다. 위젯이 다루는 값 타입(ImGui 는 int32 · float32 만 압니다) · 읽기 전용
+         *        표시용 타입 · 서식 · 드래그 속도 · 범위 메타가 없을 때의 한계(0·0 은 무제한)를 담습니다.
+         * @details 예전에는 int32 · uint32 · int64 · uint8 · float32 · float64 가 각자 40줄짜리 `draw` 를 갖고 있었습니다.
+         *          같은 여섯 단계(포인터 · 읽기 전용 · 범위 · 슬라이더 · 툴팁 · 되돌리기)에 캐스트만 달랐습니다. 폭이 다른
+         *          타입은 임시 값으로 위젯을 오가고, 바뀌었을 때만 되씁니다.
          */
         template <typename T>
         struct NumericPropertyTraits;
@@ -203,7 +203,7 @@ namespace sw::editor
             static constexpr bool        kIsInteger = false;
         };
 
-        /** @brief 범위가 있고 슬라이더를 청했으면 슬라이더, 아니면 드래그. 0·0 범위는 무제한이다. */
+        /** @brief 범위가 있고 슬라이더를 요청했으면 슬라이더, 아니면 드래그 위젯을 그립니다. 0·0 범위는 무제한입니다. */
         bool drawNumberWidget( const utf8* pLabel, int32* pValue, float32 dragSpeed, int32 minValue, int32 maxValue,
                                const utf8* pFormat, bool bSlider )
         {
@@ -384,7 +384,7 @@ namespace sw::editor
             }
 
         private:
-            /** @brief Enter 로 확정하는 입력 칸. 키 입력마다 인턴하지 않으려는 것이다. */
+            /** @brief Enter 로 확정하는 입력 칸입니다. 키 입력마다 인턴하지 않으려는 것입니다. */
             static void drawHashedStringInput( const utf8* pId, hashed_string& value )
             {
                 fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };

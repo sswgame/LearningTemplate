@@ -277,7 +277,8 @@ namespace sw::editor
             }
         }
 
-        // 반환값에 const& 를 걸면 복사가 없어 보이지만, 값 반환형이라 방금 벡터 하나를 할당했다.
+        // 반환값을 const& 로 받으면 복사가 없어 보이지만, 값으로 반환하는 함수라 그때마다 벡터를 하나 할당한다. 그래서
+        // 채워 넣는 쪽 오버로드를 쓴다.
         vector<GameObject*> listAll;
         pManager->getAllGameObjects( listAll );
         for ( const GameObject* pOther : listAll )
@@ -348,7 +349,7 @@ namespace sw::editor
                 if ( pTypeInfo == nullptr )
                     return;
 
-                // 인스턴스마다 센다 — 한 오브젝트에 같은 타입이 여럿이면 그 수만큼이다.
+                // 인스턴스마다 센다. 한 오브젝트에 같은 타입이 여럿이면 그 수만큼 센다.
                 ++mapTypeToCount[string{ pTypeInfo->_name.c_str() }];
             } );
         } );

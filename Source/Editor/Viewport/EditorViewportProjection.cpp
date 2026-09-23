@@ -13,7 +13,7 @@ namespace sw::editor
     {
         struct EditorViewportProjectionInternal
         {
-            /** @brief clip 좌표를 캔버스 좌표로 나눕니다. */
+            /** @brief clip 좌표를 w 로 나눠 캔버스 좌표로 옮깁니다. */
             static ImVec2 toScreen( const float4& clip, const float2& canvasPos, const float2& canvasSize )
             {
                 const float32 invW = 1.0f / clip._w;

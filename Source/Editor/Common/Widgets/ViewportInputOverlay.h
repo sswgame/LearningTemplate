@@ -1,6 +1,6 @@
 /**
  * @file ViewportInputOverlay.h
- * @brief 게임 뷰포트 위에 실시간 반응형 가상 컨트롤러 및 커맨드 히스토리 HUD를 렌더링하는 에디터 위젯
+ * @brief 게임 뷰포트 위에 입력에 따라 움직이는 가상 컨트롤러와 커맨드 기록 HUD 를 그리는 에디터 위젯입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -53,7 +53,7 @@ namespace sw::editor
 
     /**
      * @class ViewportInputOverlay
-     * @brief 뷰포트 렌더 타깃 위에 ImDrawList 기반의 실시간 네온 컨트롤러 HUD를 그리는 클래스
+     * @brief 뷰포트 렌더 타깃 위에 ImDrawList 로 컨트롤러 HUD 를 그립니다.
      */
     class ViewportInputOverlay
     {

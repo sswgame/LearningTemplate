@@ -26,7 +26,7 @@ namespace sw::editor
                 outDrawData.DisplayPos       = pSrc->DisplayPos;
                 outDrawData.DisplaySize      = pSrc->DisplaySize;
                 outDrawData.FramebufferScale = pSrc->FramebufferScale;
-                // Textures 는 라이브 컨텍스트의 per-frame 리스트(&GetPlatformIO().Textures)를 가리킨다.
+                // Textures 는 살아 있는 컨텍스트의 프레임별 리스트(&GetPlatformIO().Textures)를 가리킨다.
                 // 스냅샷을 렌더 스레드로 넘기면 다음 프레임의 resize 와 레이스가 나므로 공유하지 않는다.
                 // 텍스처 갱신은 UI 스레드의 IImGuiRendererBackend::processTextureUpdates() 가 이미 끝냈다.
                 outDrawData.Textures = nullptr;
@@ -47,9 +47,9 @@ namespace sw::editor
                     if ( pClone == nullptr )
                         continue;
 
-                    // ImGui 1.92+ 의 ImDrawData::AddDrawList() 는 PrimReserve↔write 정합성을 assert 한다.
-                    // CloneOutput() 은 버퍼만 복사하고 내부 write 커서를 안 맞추므로(초기값 NULL),
-                    // "다 쓴 상태" 로 직접 고정해 준다. (렌더러는 CmdBuffer/버퍼만 읽으므로 이걸로 충분)
+                    // ImGui 1.92+ 의 ImDrawData::AddDrawList() 는 PrimReserve 와 실제 쓰기가 맞는지 assert 한다.
+                    // CloneOutput() 은 버퍼만 복사하고 내부 쓰기 커서는 맞추지 않으므로(초기값 NULL), "다 쓴 상태" 로 직접 맞춰 준다.
+                    // (렌더러는 CmdBuffer 와 버퍼만 읽으므로 이것으로 충분하다)
                     pClone->_VtxWritePtr   = pClone->VtxBuffer.Data + pClone->VtxBuffer.Size;
                     pClone->_IdxWritePtr   = pClone->IdxBuffer.Data + pClone->IdxBuffer.Size;
                     pClone->_VtxCurrentIdx = static_cast<uint32>( pClone->VtxBuffer.Size );

@@ -52,9 +52,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 열린 문서 경로가 비면 에디터 기본 문서 경로로 떨어집니다. **둘 다 없으면 빈
-             *        문자열**이고, 그때 파일 계층까지 내려가면 `File not found: ` 처럼 이름이 빈
-             *        에러가 남습니다 — 부르는 쪽에서 빈 경로를 먼저 걸러야 합니다.
+             * @brief 열린 문서 경로가 비면 에디터 기본 문서 경로를 씁니다. **둘 다 없으면 빈 문자열**이고, 그대로 파일 계층까지
+             *        내려가면 `File not found: ` 처럼 이름이 빈 에러가 남습니다. 부르는 쪽에서 빈 경로를 먼저 걸러야 합니다.
              */
             static string resolveAnimGraphPath( string_view path )
             {
@@ -155,8 +154,8 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
     {
-        // **실패도 성공만큼 크게 말한다.** 예전에는 성공에만 로그가 있고 실패 둘은 조용히
-        // `false` 만 돌려줬다 — 호출부가 그 값을 버리고 있어서 아무 일도 안 일어난 것처럼 보였다.
+        // **실패도 성공만큼 분명하게 알린다.** 예전에는 성공에만 로그가 있고 실패 두 경우는 조용히 `false` 만 반환했다.
+        // 호출부가 그 값을 버리고 있어서 아무 일도 일어나지 않은 것처럼 보였다.
         const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
         if ( resolved.empty() )
         {
@@ -352,9 +351,9 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
     {
-        // 저장 커맨드 다섯이 실패를 알리는 방식이 제각각이었다 — 이것과 `saveTileMap` 은 로그가
-        // 아예 없었고, `saveSpriteClip` 은 성공만 말했다. 호출부는 반환값을 자주 버리므로
-        // **실패가 조용하면 아무 일도 없었던 것처럼 보인다.** 다섯을 같은 모양으로 맞춘다.
+        // 저장 커맨드 다섯이 실패를 알리는 방식이 제각각이었다. 이것과 `saveTileMap` 은 로그가 아예 없었고, `saveSpriteClip` 은
+        // 성공만 알렸다. 호출부는 반환값을 자주 버리므로 **실패가 조용하면 아무 일도 없었던 것처럼 보인다.** 다섯을 같은 모양으로
+        // 맞춘다.
         const string resolved = EditorToolAssetInternal::resolveExistingOrRelativePath( path );
         if ( resolved.empty() )
         {

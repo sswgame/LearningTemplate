@@ -59,8 +59,8 @@ namespace sw::editor
 
                 GameObjectManager* pObjects = pScene->getObjectManager();
                 EditorContext*     pContext = EditorContext::get();
-                // 예전엔 여기서 getAllGameObjects() 를 두 번 불렀다 — 개수를 세려고 한 번,
-                // 순회하려고 한 번. 값 반환형이라 씬 전체를 두 번 할당·복사했다.
+                // 예전에는 여기서 getAllGameObjects() 를 두 번 불렀다. 개수를 세려고 한 번, 순회하려고 한 번이다.
+                // 값으로 반환하는 함수라 씬 전체를 두 번 할당하고 복사했다.
                 vector<GameObject*> listAllObject;
                 pObjects->getAllGameObjects( listAllObject );
                 data._listSnapshot.reserve( listAllObject.size() );
@@ -144,7 +144,7 @@ namespace sw::editor
                     if ( pObj == nullptr && snap._guid.isNull() == false && pContext != nullptr )
                         pObj = pContext->getWorkspace().findGameObjectByGuid( snap._guid );
 
-                    // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다 — 플레이 전에 들고 있던 핸들이 이어지게.
+                    // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다. 플레이 전에 들고 있던 핸들이 이어지게 하기 위해서다.
                     if ( pObj == nullptr )
                     {
                         pObj = pObjects->createGameObjectWithId( hashed_string( snap._name.c_str() ), snap._identity._objectId );
@@ -173,7 +173,7 @@ namespace sw::editor
                     }
                 }
 
-                // 3. 계층 관계 리바인딩 (XML 스냅샷 폴백용)
+                // 3. 계층 관계 다시 연결 (XML 스냅샷 폴백용)
                 for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
                     if ( snap._xml.empty() )
@@ -199,9 +199,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 컨텍스트가 들고 있는 플레이 상태입니다. 컨텍스트가 없으면 nullptr.
-             * @details 에디터 셸이 아직 안 섰거나 이미 내려간 시점에도 이 파사드가 불릴 수 있다
-             *          (패널 정리 경로). 그때는 "정지" 로 답해야 한다.
+             * @brief 컨텍스트가 들고 있는 플레이 상태입니다. 컨텍스트가 없으면 nullptr 입니다.
+             * @details 에디터 셸이 아직 서지 않았거나 이미 내려간 시점에도 이 파사드가 불릴 수 있습니다(패널 정리 경로). 그때는
+             *          "정지" 로 답해야 합니다.
              */
             static PlaySessionData* data()
             {

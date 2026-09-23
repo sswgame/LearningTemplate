@@ -42,13 +42,13 @@ namespace sw::editor
     {
         struct EditorAssetCommandsInternal
         {
-            /// @brief 파일 다이얼로그 결과 — `FileUtil::pumpFileDialogResults` 가 **메인 스레드에서** 부른다.
+            /// @brief 파일 대화 상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 **메인 스레드에서** 부릅니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )
                     return;
 
-                // 같은 함수 안에서 한 번은 검사하고 한 번은 그냥 역참조하고 있었다 — 하나로 맞춘다.
+                // 같은 함수 안에서 한 번은 검사하고 한 번은 그냥 역참조하고 있었다. 하나로 맞춘다.
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
@@ -286,8 +286,8 @@ namespace sw::editor
 
         if ( pSceneManager->requestLoadAsync( loadPath ) == false )
         {
-            // 예전에는 조용히 false 만 돌려줬다 — 사용자가 씬을 골랐는데 아무 일도 일어나지 않고
-            // 로그에도 남지 않았다. 호출부도 이 반환값을 읽지 않는다.
+            // 예전에는 조용히 false 만 반환했다. 사용자가 씬을 골랐는데 아무 일도 일어나지 않고 로그에도 남지 않았다.
+            // 호출부도 이 반환값을 읽지 않는다.
             SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
             EditorContext* pFailContext = EditorContext::get();
             if ( pFailContext != nullptr )
@@ -416,20 +416,19 @@ namespace sw::editor
         ws.clearSelection();
 
         /**
-         * 이전 씬을 가리키던 상태를 버린다. 오브젝트 ID 는 `GameObjectManager` 마다 다시 시작하므로,
-         * 남겨 두면 **새 씬의 엉뚱한 오브젝트에 붙는다.**
+         * 이전 씬을 가리키던 상태를 버린다. 오브젝트 ID 는 `GameObjectManager` 마다 다시 시작하므로, 남겨 두면
+         * **새 씬의 엉뚱한 오브젝트에 붙는다.**
          *
-         * - **Undo 스택**: 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. 비우지 않으면 Edit 메뉴가
-         *   Undo 를 켜 둔 채로 두고, 눌러도 아무 일도 없거나(guid 조회 실패) 재사용된 ID 를 통해
-         *   다른 오브젝트를 덮어쓴다.
-         * - **GUID 맵**: Undo·PIE 복원이 오브젝트를 다시 찾는 신분증이다(`findGameObjectByGuid`).
-         *   낡은 `guid → 옛 오브젝트 ID` 항목이 남으면 새 씬에서 같은 ID 를 쓰는 오브젝트가 잡히고,
-         *   `getOrAssignGuid` 도 새 오브젝트에 옛 guid 를 돌려준다. 씬을 오래 갈아타면 계속 늘기도 한다.
-         * - **프리팹 Isolation**: 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
-         *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라 믿고, `exitPrefabIsolation`
-         *   이 새 씬의 무관한 오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다 — 상태만 버린다.
+         * - **Undo 스택**: 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. 비우지 않으면 Edit 메뉴가 Undo 를 켜 둔 채로 두고,
+         *   눌러도 아무 일도 없거나(guid 조회 실패) 재사용된 ID 를 통해 다른 오브젝트를 덮어쓴다.
+         * - **GUID 맵**: Undo · PIE 복원이 오브젝트를 다시 찾는 열쇠다(`findGameObjectByGuid`). 낡은 `guid → 옛 오브젝트 ID`
+         *   항목이 남으면 새 씬에서 같은 ID 를 쓰는 오브젝트가 잡히고, `getOrAssignGuid` 도 새 오브젝트에 옛 guid 를 준다.
+         *   씬을 여러 번 바꾸면 계속 늘어나기도 한다.
+         * - **프리팹 Isolation**: 격리 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
+         *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라고 믿고, `exitPrefabIsolation` 이 새 씬의 무관한
+         *   오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다. 상태만 버린다.
          *
-         * 프리팹 맵은 버리지 않고 아래에서 **다시 만든다** (새 씬에도 프리팹 인스턴스가 있다).
+         * 프리팹 맵은 버리지 않고 아래에서 **다시 만든다**(새 씬에도 프리팹 인스턴스가 있다).
          */
         CommandStack* pCommandStack = editor::getService<CommandStack>();
         if ( pCommandStack != nullptr )
@@ -619,10 +618,10 @@ namespace sw::editor
                 continue;
             }
 
-            // **이미 있는 자산을 덮지 않는다.** 예전에는 `makeSavePath` 가 준 경로로 그냥 복사해서,
-            // 같은 이름의 파일을 끌어다 놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다** — 에디터의
-            // 임포트에는 되돌리기가 없으므로 그대로 잃는다. "원래 있던 것과 같은 파일인가" 는 바로
-            // 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은** 경우다.
+            // **이미 있는 애셋을 덮어쓰지 않는다.** 예전에는 `makeSavePath` 가 준 경로로 그냥 복사해서, 같은 이름의 파일을 끌어다
+            // 놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다.** 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
+            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은**
+            // 경우다.
             const string destPath = ResourceUtil::makeUniqueSavePath( destFolderAbs, fileName );
 
             FileUtil::createParentDirectory( destPath );
@@ -676,7 +675,7 @@ namespace sw::editor
 #elif defined( SW_PLATFORM_MACOS )
         command = "open -R \"" + path + "\"";
 #else
-        // 리눅스 파일 관리자에는 "선택한 채로 열기" 가 표준이 아니다 — 폴더까지만 연다.
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 가 표준이 아니다. 그래서 폴더까지만 연다.
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
 #endif
 

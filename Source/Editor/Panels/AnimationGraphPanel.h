@@ -11,7 +11,7 @@
 
 namespace sw::editor
 {
-    /** @brief imgui-node-editor 기반 애니메이션 그래프 셸 */
+    /** @brief imgui-node-editor 로 만든 애니메이션 그래프 편집 패널입니다. */
     class AnimationGraphPanel : public EditorGraphDocumentPanel<AnimationGraphAsset>
     {
     public:
@@ -37,7 +37,7 @@ namespace sw::editor
         using GraphLink = LinkType;
 
         // ------------------------------------------------------------------------------
-        // 2) 그래프 조작 · JSON 로드/저장 — 공통 뼈대는 EditorGraphDocumentPanel 이 든다.
+        // 2) 그래프 조작 · JSON 로드/저장 (공통 뼈대는 EditorGraphDocumentPanel 에 있다)
         // ------------------------------------------------------------------------------
         /** @brief 기본 노드가 없으면 넣습니다. */
         void ensureDefaults() override;
@@ -45,7 +45,7 @@ namespace sw::editor
         void loadGraphData();
         /** @brief 그래프 데이터를 저장합니다. */
         bool saveGraphData();
-        /** @brief 지정 이름의 노드를 추가합니다. */
+        /** @brief 주어진 이름의 노드를 추가합니다. */
         void addNamedNode( const utf8* pName );
         /** @brief 미리보기 플레이어에 현재 그래프를 넣습니다. */
         void syncPreviewGraph();

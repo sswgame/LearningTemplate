@@ -23,8 +23,8 @@ namespace sw::editor
     public:
         /**
          * @brief 전역 변수 타입을 표시용 문자열로 바꿉니다 (Enum 은 열거형 이름).
-         * @details 패널과 프리셋 저장이 같은 이름을 써야 해서 여기 한 곳에만 둔다 —
-         *          예전엔 두 벌이라 GlobalVariableType 이 늘면 한쪽을 빠뜨리게 돼 있었다.
+         * @details 패널과 프리셋 저장이 같은 이름을 써야 해서 여기 한 곳에만 둡니다. 예전에는 두 벌이라 GlobalVariableType 이
+         *          늘면 한쪽을 빠뜨리기 쉬웠습니다.
          */
         static string getTypeString( const GlobalVariableInfo& info );
 

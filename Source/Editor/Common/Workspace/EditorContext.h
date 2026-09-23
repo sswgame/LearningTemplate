@@ -25,7 +25,7 @@ namespace sw::editor
     class InspectorPropertyManager;
     class SelectionManager;
 
-    /** @brief 에디터가 소유하는 Game View RT. App은 매 프레임 핸들만 조회합니다. */
+    /** @brief 에디터가 소유하는 Game View RT 입니다. App 은 프레임마다 핸들만 조회합니다. */
     struct EditorGameView
     {
         uint64 _renderTarget{ 0 };
@@ -36,7 +36,7 @@ namespace sw::editor
 
     /**
      * @class EditorContext
-     * @brief 에디터 셸(ImGuiEditor)이 생명주기를 직접 생성/소멸 관리하는 에디터 중앙 컨텍스트
+     * @brief 에디터의 중앙 컨텍스트입니다. 에디터 셸(ImGuiEditor)이 직접 만들고 없앱니다.
      */
     class EditorContext
     {
@@ -69,7 +69,7 @@ namespace sw::editor
         void        setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
         IRHIDevice* getRhiDevice() const { return _pRhiDevice; }
         void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-        /** @brief ImGui 렌더러 백엔드입니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr. */
+        /** @brief ImGui 렌더러 백엔드입니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
         IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
         void                   setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
         void                   setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }

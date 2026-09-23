@@ -37,8 +37,8 @@ namespace sw::editor
         if ( pObjectManager == nullptr )
             return nullptr;
 
-        // 값 반환 getAllGameObjects() 는 호출마다 씬 전체를 새로 할당·복사한다. 여기는 프레임마다
-        // 두 번 불리는 자리(뷰포트 update/draw)이고 읽기만 하므로, 복사조차 하지 않는 순회를 쓴다.
+        // 값으로 반환하는 getAllGameObjects() 는 호출마다 씬 전체를 새로 할당하고 복사한다. 여기는 프레임마다
+        // 두 번 불리는 곳(뷰포트 update/draw)이고 읽기만 하므로, 복사하지 않는 순회를 쓴다.
         int32            bestPriority = MathUtil::MinInt32;
         CameraComponent* pBest{ nullptr };
         pObjectManager->forEachGameObject( [&bestPriority, &pBest]( GameObject* pObj )

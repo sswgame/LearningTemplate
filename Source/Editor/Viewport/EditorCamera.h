@@ -1,6 +1,6 @@
 /**
  * @file EditorCamera.h
- * @brief 에디터 뷰포트 카메라 탐색·생성. Scene은 게임 카메라만 관리합니다.
+ * @brief 에디터 뷰포트 카메라를 찾거나 만듭니다. Scene 은 게임 카메라만 관리합니다.
  */
 #pragma once
 

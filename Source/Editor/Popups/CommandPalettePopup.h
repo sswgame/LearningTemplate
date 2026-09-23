@@ -1,6 +1,6 @@
 /**
  * @file CommandPalettePopup.h
- * @brief 글로벌 커맨드 팔레트 팝업 (IEditorPopup 구현체)
+ * @brief 전역 커맨드 팔레트 팝업입니다(IEditorPopup 구현).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -25,11 +25,10 @@ namespace sw::editor
 
     /**
      * @class CommandPalettePopup
-     * @brief Ctrl+Shift+P / Ctrl+Space 로 열리는 글로벌 액션 & 오브젝트 & 윈도우 퍼지 검색기
-     * @details 커맨드를 **가지고 있지 않습니다** — 매번 열릴 때 `EditorCommandRegistry` 와 패널
-     *          목록과 활성 씬을 읽어 목록을 만듭니다. 팔레트에 커맨드를 더하려면
-     *          `EditorCommandGui::registerDefaults` 의 표에 한 줄을 넣으십시오. 그러면 메뉴와
-     *          단축키에도 같이 나타납니다 (예전에는 여기에 따로 적어야 해서 서로 어긋났습니다).
+     * @brief Ctrl+Shift+P / Ctrl+Space 로 여는 퍼지 검색기입니다(커맨드 · 오브젝트 · 창).
+     * @details 커맨드를 **직접 들고 있지 않습니다.** 열릴 때마다 `EditorCommandRegistry` 와 패널 목록과 활성 씬을 읽어
+     *          목록을 만듭니다. 팔레트에 커맨드를 더하려면 `EditorCommandGui::registerDefaults` 의 표에 한 줄을
+     *          넣으십시오. 그러면 메뉴와 단축키에도 같이 나타납니다(예전에는 여기에 따로 적어야 해서 서로 어긋났습니다).
      */
     class CommandPalettePopup : public IEditorPopup
     {
@@ -44,7 +43,7 @@ namespace sw::editor
         virtual const utf8* getPopupTitle() const override { return "Command Palette"; }
 
         // ------------------------------------------------------------------------------
-        // 정적(Static) 편의 API
+        // 정적 편의 함수
         // ------------------------------------------------------------------------------
         static void open();
         static void close();

@@ -81,9 +81,8 @@ namespace sw::editor
         if ( pRhiDevice == nullptr )
             return false;
 
-        // 이 백엔드는 Vulkan 전용이다. 타입을 확인하고 그 디바이스에게 직접 묻는다 — RHI 공통
-        // 인터페이스에 Vulkan 전용 함수를 만들지 않기 위해서다. 호출은 가상이라 vtable 을 타므로
-        // MODULE 인 RHI_Vulkan 을 링크하지 않는다.
+        // 이 백엔드는 Vulkan 전용이다. 타입을 확인하고 그 디바이스에 직접 묻는다. RHI 공통 인터페이스에 Vulkan 전용 함수를
+        // 만들지 않기 위해서다. 호출은 가상 함수라 vtable 을 거치므로 MODULE 인 RHI_Vulkan 을 링크하지 않아도 된다.
         if ( pRhiDevice->getBackendType() != RHIBackend::Vulkan )
             return false;
 
@@ -119,8 +118,8 @@ namespace sw::editor
             return false;
         }
 
-        // ImGui 폰트·아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 조리법**을 쓰지만 같은 객체는
-        // 아니다 — 저쪽이 씬 텍스처를 위해 비등방으로 바뀌어도 UI 는 따라가면 안 된다.
+        // ImGui 폰트 · 아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 레시피**(`VulkanRHISamplerRecipe`)를 쓰지만 같은 객체는
+        // 아니다. 저쪽이 씬 텍스처를 위해 비등방 필터로 바뀌어도 UI 는 따라가면 안 된다.
         VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
         if ( vkCreateSampler( _pDevice, &samplerInfo, nullptr, &_pSampler ) != VK_SUCCESS )
         {
@@ -265,8 +264,8 @@ namespace sw::editor
             return nullptr;
 
         void* pImageViewPtr{ nullptr };
-        // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다 — 전용 조회 함수가 따로 있었는데
-        // 이 범용 함수와 **같은 값을 같은 방법으로** 돌려주고 있었다. 중복을 지우고 범용 쪽으로 모았다.
+        // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다. 전용 조회 함수가 따로 있었는데, 이 범용 함수와 **같은 값을
+        // 같은 방법으로** 반환하고 있었다. 중복을 지우고 범용 쪽으로 모았다.
         pImageViewPtr = _pRHIDevice->getNativeTexturePointer( texture );
         if ( pImageViewPtr == nullptr )
         {

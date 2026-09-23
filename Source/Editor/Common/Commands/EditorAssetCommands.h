@@ -64,7 +64,7 @@ namespace sw::editor
         static bool tryCreateNewScene();
         /** @brief 포커스된 더티 도구 문서를 저장하거나 활성 씬을 저장합니다. */
         static void saveFocusedOrScene();
-        /** @brief 미저장 모달 선택을 적용합니다. */
+        /** @brief "저장하지 않은 변경" 확인 창에서 고른 것을 적용합니다. */
         static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
         /** @brief dirty면 확인을 띄우고, 아니면 종료를 허용합니다. */
         static bool tryBeginQuit();
@@ -79,7 +79,7 @@ namespace sw::editor
                                         const utf8* pUndoLabel = "Spawn Prefab" );
         /** @brief 텍스처 경로로 스프라이트 오브젝트를 만듭니다. */
         static GameObject* spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos );
-        /** @brief 뷰포트 드롭: 히트 위치는 호출 측, 스폰/로드만 수행합니다. */
+        /** @brief 뷰포트에 드롭한 것을 스폰하거나 로드합니다. 히트 위치는 부르는 쪽이 구합니다. */
         static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
         /** @brief 활성 씬을 XML로 저장합니다. path가 비면 씬 소스 경로를 씁니다. */
         static bool saveActiveScene( string_view path = {} );
@@ -92,9 +92,9 @@ namespace sw::editor
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
-         * @details 예전에는 `system( "explorer.exe /select,\"...\"" )` 이었다. 셸을 거치면
-         *          경로 안의 `&`·`"` 가 명령으로 해석되고, 콘솔 창이 한 번 깜빡이며, Windows
-         *          말고는 아무것도 하지 않았다. 셸 없이 프로세스를 직접 띄운다.
+         * @details 예전에는 `system( "explorer.exe /select,\"...\"" )` 이었습니다. 셸을 거치면 경로 안의 `&` · `"` 가 명령으로
+         *          해석되고, 콘솔 창이 한 번 깜빡이며, Windows 가 아니면 아무것도 하지 않았습니다. 지금은 셸 없이 프로세스를
+         *          직접 띄웁니다.
          */
         static bool showInFileExplorer( string_view absolutePath );
         /** @brief Resource 트리에서 씬/프리팹/텍스처/셰이더/데이터를 분류해 채웁니다. */

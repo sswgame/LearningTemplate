@@ -1,6 +1,6 @@
 /**
  * @file EditorCommandRegistry.cpp
- * @brief 에디터 커맨드 등록·조회·단축키 라벨 (ImGui 없음 — 단위 테스트가 붙습니다)
+ * @brief 에디터 커맨드 등록 · 조회 · 단축키 라벨입니다(ImGui 를 쓰지 않아 단위 테스트를 붙일 수 있습니다).
  */
 #include "pch.h"
 
@@ -28,8 +28,8 @@ namespace sw::editor
             static_assert( sizeof( _s_arrKeyName ) / sizeof( _s_arrKeyName[0] ) == static_cast<size_t>( EditorCommandKey::Count ),
                            "EditorCommandKey 와 표시 이름 표의 개수가 다릅니다" );
 
-            // 개수만 보는 단정은 **가운데 삽입**을 잡지 못한다(이름을 하나 더하면 개수가 다시 맞는다).
-            // 그 경우는 열거형 자리를 못 박은 헤더의 단정이 잡는다 — `EditorCommandKey` 선언 바로 아래.
+            // 개수만 보는 static_assert 는 **가운데 삽입**을 잡지 못한다(이름을 하나 더하면 개수가 다시 맞는다).
+            // 그 경우는 열거형 값의 자리를 고정한 헤더의 static_assert 가 잡는다. `EditorCommandKey` 선언 바로 아래에 있다.
 
             /** @brief 수정자와 키 이름을 outLabel 뒤에 붙입니다. 키가 없으면 아무것도 하지 않습니다. */
             static void appendShortcut( const EditorCommandShortcut& shortcut, fixed_string<constant::kMaxBuffer64>& outLabel )

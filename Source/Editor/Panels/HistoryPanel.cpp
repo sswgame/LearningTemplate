@@ -18,7 +18,7 @@
 namespace sw::editor
 {
     HistoryPanel::HistoryPanel()
-        : IEditorPanel( false ) // 온디맨드 도구로 기본 닫힘
+        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
     {
     }
 

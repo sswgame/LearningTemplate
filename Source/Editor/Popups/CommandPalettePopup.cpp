@@ -54,7 +54,7 @@ namespace sw::editor
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // Constructor
+    // 생성자
     // ------------------------------------------------------------------------------
     CommandPalettePopup::CommandPalettePopup()
         : IEditorPopup{ false }
@@ -65,7 +65,7 @@ namespace sw::editor
     }
 
     // ------------------------------------------------------------------------------
-    // Static Methods
+    // 정적 함수
     // ------------------------------------------------------------------------------
     void CommandPalettePopup::open()
     {
@@ -104,7 +104,7 @@ namespace sw::editor
     }
 
     // ------------------------------------------------------------------------------
-    // Instance Implementations
+    // 인스턴스 함수
     // ------------------------------------------------------------------------------
     void CommandPalettePopup::onOpen()
     {
@@ -122,7 +122,7 @@ namespace sw::editor
 
         _listAllCommand.clear();
 
-        // 1) 커맨드 레지스트리에 등록된 커맨드 — 메뉴·단축키와 같은 정의다
+        // 1) 커맨드 레지스트리에 등록된 커맨드. 메뉴 · 단축키와 같은 정의다
         for ( const EditorCommandDesc& desc : pContext->getCommandRegistry().getCommands() )
         {
             if ( desc._bPaletteVisible == false )
@@ -133,7 +133,7 @@ namespace sw::editor
             entry._category = desc._category;
             entry._label    = desc._label;
             entry._detail   = desc._detail;
-            // 이 델리게이트는 나중에 불린다 — 그때 컨텍스트가 있는지 그 자리에서 본다.
+            // 이 델리게이트는 나중에 불린다. 그때 컨텍스트가 있는지 그 자리에서 확인한다.
             entry._action = [commandId]()
             {
                 EditorContext* pRunContext = EditorContext::get();
@@ -168,7 +168,7 @@ namespace sw::editor
             Scene* pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                // 값 반환 `getAllGameObjects()` 는 씬 전체를 복사한다 — 순회만 하므로 복사 없는 쪽을 쓴다.
+                // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
                 pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
                 {
                     const uint64 objId   = pObj->getObjectId();

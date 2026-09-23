@@ -19,17 +19,17 @@ namespace sw::editor
 
     bool EditorData::loadFromHostPath( string_view hostRelativePath )
     {
-        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 예전에는 `EditorConfig._editorData`
-        // 로 한 번 더 갈 수 있었는데, 그 필드를 기본값 아닌 값으로 둔 곳이 없었고 **테마를 저장할
-        // 때마다 기계가 다시 쓰는 파일**에 손으로 적는 경로를 두는 셈이었다.
+        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 예전에는 `EditorConfig._editorData` 로 경로를 한 번 더 바꿀 수
+        // 있었는데, 그 필드를 기본값이 아닌 값으로 둔 곳이 없었고, **테마를 저장할 때마다 기계가 다시 쓰는 파일**에 손으로
+        // 적는 경로를 두는 셈이었다.
         string rel = string( hostRelativePath );
         if ( rel.empty() )
             rel = string( config::kFileRuntimeEditorData );
 
         const string absPath = EditorUtil::resolveProjectRelativePath( rel );
 
-        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다 — 레지스트리를 이름으로 뒤질
-        // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
+        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질 필요가 없고, Engine 내부
+        // 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
         const TypeInfo* pTypeInfo = EditorData::StaticType();
         if ( pTypeInfo == nullptr )
         {
@@ -37,8 +37,8 @@ namespace sw::editor
             return false;
         }
 
-        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. 다만 loadFile 이 false 를 돌려줘도 그 앞까지
-        // 읽은 값은 **이미 들어가 있다** — "기본값" 은 파일이 없을 때만 참이라 두 경우를 갈라 말한다.
+        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. 다만 loadFile 이 false 를 반환해도 그 앞까지 읽은 값은 **이미
+        // 들어가 있다.** "기본값" 은 파일이 없을 때만 맞는 말이라 두 경우를 나눠 로그에 남긴다.
         if ( JsonSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
         {
             if ( FileUtil::fileExists( absPath ) == false )

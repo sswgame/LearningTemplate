@@ -1,6 +1,6 @@
 /**
  * @file EditorDockLayout.h
- * @brief 에디터 도크스페이스 · 기본 레이아웃 · imgui.ini / windows.ini 지속성
+ * @brief 에디터 도크스페이스 · 기본 레이아웃 · imgui.ini / windows.ini 저장과 복원입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

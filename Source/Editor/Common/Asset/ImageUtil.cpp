@@ -29,7 +29,7 @@ namespace sw::editor
 
     bool ImageUtil::loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage )
     {
-        // 실패는 출력에 아무것도 남기지 않는다 — `DdsLoader::loadFromMemory` 와 같은 약속이다.
+        // 실패하면 출력에 아무것도 남기지 않는다. `DdsLoader::loadFromMemory` 와 같은 약속이다.
         outImage = RawImageData{};
 
         if ( pBuffer == nullptr || bufferSize == 0 )
@@ -38,8 +38,8 @@ namespace sw::editor
             return false;
         }
 
-        // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 **뒷부분이 없는 것처럼** 읽혀 디코딩이
-        // 엉뚱하게 성공하거나 실패한다 — 넘기기 전에 거절한다.
+        // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 **뒷부분이 없는 것처럼** 읽혀 디코딩이 엉뚱하게 성공하거나 실패하므로,
+        // 넘기기 전에 거절한다.
         if ( bufferSize > static_cast<size_t>( MathUtil::MaxInt32 ) )
         {
             SW_LOG_ERROR( "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );

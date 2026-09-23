@@ -116,7 +116,7 @@ namespace sw::editor
 
         const string filterStr{ StringUtil::trim( _filterBuffer.c_str() ) };
 
-        // 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
+        // 필터나 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 다시 계산한다
         bool bLevelChanged{ false };
         for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
         {
@@ -251,7 +251,7 @@ namespace sw::editor
                          editor::EditorSectionFlags::HorizontalScrollbar;
         EditorChrome::beginSection( logDesc );
 
-        // 0건의 이유를 구분해서 말해 준다 — 로그가 아직 없는 것, 검색어가 걸러낸 것, 레벨을 전부
+        // 0건의 이유를 나눠서 알려 준다. 로그가 아직 없는 것, 검색어가 걸러 낸 것, 레벨을 모두
         // 끈 것은 서로 다른 상황이고 고치는 방법도 다르다. 예전에는 셋 다 빈 상자였다.
         if ( _listVisible.empty() )
         {

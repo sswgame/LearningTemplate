@@ -1,6 +1,6 @@
 /**
  * @file EditorThemeUtil.h
- * @brief 에디터 Look & Feel 테마 설정 및 실시간 스타일링 유틸리티
+ * @brief 에디터의 Look & Feel 테마 설정과 실시간 스타일 적용 유틸리티입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -28,7 +28,7 @@ namespace sw::editor
         Color4            _panelBg{ 0.13f, 0.15f, 0.19f, 1.0f };    ///< 자식 패널/캔버스 배경색
         Color4            _headerBg{ 0.18f, 0.21f, 0.28f, 1.0f };   ///< 헤더/타이틀바 배경색
         Color4            _frameBg{ 0.15f, 0.17f, 0.22f, 1.0f };    ///< 입력 필드 프레임 배경색
-        Color4            _border{ 0.22f, 0.26f, 0.33f, 1.0f };     ///< 경계선 테두리 색
+        Color4            _border{ 0.22f, 0.26f, 0.33f, 1.0f };     ///< 테두리 색
 
         Color4 _successColor{ 0.20f, 0.75f, 0.35f, 1.0f }; ///< 성공/정상 상태 (Green)
         Color4 _warningColor{ 0.95f, 0.70f, 0.15f, 1.0f }; ///< 경고 상태 (Amber)
@@ -51,25 +51,25 @@ namespace sw::editor
     class EditorThemeUtil
     {
     public:
-        /** @brief 현재 활성화된 테마 설정 반환 */
+        /** @brief 현재 적용된 테마 설정을 반환합니다. */
         static const EditorThemeConfig& getActiveTheme();
 
-        /** @brief 지정한 테마 설정을 ImGui 스타일에 일괄 적용 */
+        /** @brief 주어진 테마 설정을 ImGui 스타일에 한 번에 적용합니다. */
         static void applyTheme( const EditorThemeConfig& config );
 
-        /** @brief 프리셋 기반으로 테마 즉시 적용 */
+        /** @brief 프리셋으로 테마를 바로 적용합니다. */
         static void applyPreset( EditorThemePreset preset );
 
-        /** @brief EditorConfig(JSON)에서 저장된 테마 설정을 읽어 적용 */
+        /** @brief EditorConfig(JSON)에 저장된 테마 설정을 읽어 적용합니다. */
         static void loadFromConfig();
 
-        /** @brief 현재 활성 테마 설정을 EditorConfig(JSON)에 저장 */
+        /** @brief 현재 테마 설정을 EditorConfig(JSON)에 저장합니다. */
         static void saveToConfig();
 
-        /** @brief 테마 설정 실시간 튜닝 모달 다이얼로그 렌더링 */
+        /** @brief 테마를 실시간으로 조정하는 모달 대화 상자를 그립니다. */
         static void drawThemeSettingsDialog( bool* pOpen );
 
-        /** @brief 액센트 컬러를 지정하여 테마 재적용 */
+        /** @brief 액센트 색을 바꾸고 테마를 다시 적용합니다. */
         static void setAccentColor( const Color4& accentColor );
 
         // ----------------------------------------------------------------------
@@ -100,9 +100,8 @@ namespace sw::editor
 
         /**
          * @brief 다음에 그릴 텍스트에 테마 색을 씌웁니다. `popTextColor()` 와 짝입니다.
-         * @details `textSuccess` 류는 서식이 없는 문자열만 받는다. `"Frame #%u"` 처럼 서식이 필요한
-         *          자리는 이 짝으로 감싸고 평소처럼 `ImGui::Text` 를 부른다 — 색을 고르는 곳은
-         *          여전히 테마 하나다.
+         * @details `textSuccess` 류는 서식이 없는 문자열만 받습니다. `"Frame #%u"` 처럼 서식이 필요한 곳은 이 짝으로 감싸고
+         *          평소처럼 `ImGui::Text` 를 부릅니다. 색을 고르는 곳은 여전히 테마 하나입니다.
          */
         static void pushTextColor( const Color4& color );
         /** @brief pushTextColor() 와 짝을 이룹니다. */
@@ -117,16 +116,16 @@ namespace sw::editor
         // ----------------------------------------------------------------------
         // 3) 리소스 & 애셋 아이콘 및 테마 색상 헬퍼
         // ----------------------------------------------------------------------
-        /** @brief 폴더/디렉터리용 테마 색상 반환 */
+        /** @brief 폴더용 테마 색을 반환합니다. */
         static Color4 getFolderColor();
 
-        /** @brief 열림/닫힘 상태에 따른 폴더 아이콘 문자열 반환 (ICON_FA_FOLDER_OPEN / ICON_FA_FOLDER) */
+        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(ICON_FA_FOLDER_OPEN / ICON_FA_FOLDER). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
-        /** @brief 확장자 및 파일 경로 기반 Font Awesome 애셋 아이콘 반환 */
+        /** @brief 경로(확장자)에 맞는 Font Awesome 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );
 
-        /** @brief 확장자 및 파일 경로 기반 테마 색상 반환 */
+        /** @brief 경로(확장자)에 맞는 테마 색을 반환합니다. */
         static Color4 getAssetColorForPath( string_view path, bool bIsDirectory = false );
     };
 } // namespace sw::editor

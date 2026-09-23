@@ -37,7 +37,7 @@ namespace sw::editor
 
     /**
      * @class EditorTransaction
-     * @brief 스냅샷 기반의 안전하고 완전한 GameObject Undo/Redo 트랜잭션 관리자
+     * @brief 스냅샷으로 GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
      */
     class EditorTransaction
     {
@@ -49,11 +49,11 @@ namespace sw::editor
         /** @brief 복합 트랜잭션을 취소하고 버립니다. */
         static void cancelTransaction();
 
-        /** @brief 단일 오브젝트의 상태 변경(수정) 전/후를 기록하여 Undo/Redo에 등록합니다. 전후 XML 이 같으면 기록하지 않습니다. */
+        /** @brief 오브젝트 하나의 수정 전후 상태를 Undo/Redo 에 기록합니다. 전후 XML 이 같으면 기록하지 않습니다. */
         static void recordModify( GameObject* pObj, const EditorObjectSnapshot& before, const EditorObjectSnapshot& after,
                                   string_view label = "Modify GameObject" );
 
-        /** @brief 단일 오브젝트의 바이너리 상태 변경(수정) 전/후를 기록하여 Undo/Redo에 등록합니다. 전후 바이트가 같으면 기록하지 않습니다. */
+        /** @brief 오브젝트 하나의 수정 전후 바이너리 상태를 Undo/Redo 에 기록합니다. 전후 바이트가 같으면 기록하지 않습니다. */
         static void recordBinaryModify( GameObject* pObj, const EditorObjectBinarySnapshot& before, const EditorObjectBinarySnapshot& after,
                                         string_view label = "Modify GameObject" );
 
@@ -70,16 +70,16 @@ namespace sw::editor
         static bool captureBinarySnapshot( const GameObject* pObj, EditorObjectBinarySnapshot& outSnapshot );
 
         /**
-         * @brief 오브젝트 수명 편집의 방향 — 어느 쪽이 "되살리기" 인지를 정합니다.
-         * @details 생성과 삭제는 **같은 두 절차를 반대로 이은 것**이다. 예전에는 그 두 절차가
-         *          `recordCreation` 과 `recordDestruction` 에 **네 벌로 복사**돼 있었다(없애기 두 벌 ·
-         *          되살리기 두 벌, 바이트까지 같았다). 되살리기 쪽을 한 번 고치면 나머지 방향이 조용히
-         *          뒤처지고, 증상은 "Undo 는 되는데 Redo 는 안 된다" 로 나타난다 — 가장 찾기 나쁜 종류다.
+         * @brief 오브젝트 수명 편집의 방향입니다. 어느 쪽이 "되살리기" 인지를 정합니다.
+         * @details 생성과 삭제는 **같은 두 절차를 반대 순서로 이은 것**입니다. 예전에는 그 두 절차가 `recordCreation` 과
+         *          `recordDestruction` 에 **네 벌로 복사**돼 있었습니다(없애기 두 벌 · 되살리기 두 벌, 바이트까지 같았습니다).
+         *          되살리기 쪽을 한 번 고치면 반대 방향이 조용히 뒤처지고, 증상은 "Undo 는 되는데 Redo 는 안 된다" 로
+         *          나타납니다. 가장 찾기 어려운 종류입니다.
          */
         enum class ObjectLifetimeEdit : uint8
         {
-            Created = 0, /**< 방금 만들었다 — Undo 가 없애고 Redo 가 되살린다. */
-            Destroyed    /**< 방금 지웠다 — Undo 가 되살리고 Redo 가 없앤다. */
+            Created = 0, /**< 방금 만들었습니다. Undo 가 없애고 Redo 가 되살립니다. */
+            Destroyed    /**< 방금 지웠습니다. Undo 가 되살리고 Redo 가 없앱니다. */
         };
 
         /** @brief 생성·삭제를 한 절차로 기록합니다. 두 절차를 만들고 @p edit 이 순서를 정합니다. */

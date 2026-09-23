@@ -28,21 +28,20 @@ namespace sw::editor
         float2           _canvasSize{};
         CameraComponent* _pActiveCamera{ nullptr }; ///< 자기 자신은 프러스텀을 그리지 않습니다
         /**
-         * @brief 이 프레임의 오브젝트 스냅샷. 호출부가 재사용 버퍼로 채워 넘깁니다.
+         * @brief 이 프레임의 오브젝트 스냅샷입니다. 부르는 쪽이 재사용 버퍼로 채워 넘깁니다.
          * @details 시각화마다 씬 목록을 따로 받으면 프레임마다 시각화 수만큼 씬 전체를 힙에
-         *          복사한다(값 반환 getAllGameObjects()). 한 번 채워 함께 본다.
+         *          복사합니다(값으로 반환하는 getAllGameObjects()). 한 번 채워 함께 봅니다.
          */
         const vector<GameObject*>* _pListObject{ nullptr };
     };
 
     /**
      * @class EditorViewportVisualizer
-     * @brief 뷰포트 디버그 시각화 표. 시각화를 하나 더하려면 표에 한 줄이면 됩니다.
-     * @details 예전에는 `EditorViewportClient.cpp` 의 `drawDebugVisualizers` 안에 BoxCollider2D 와
-     *          CameraComponent 가 손으로 나열되어 있었고, 각자 `ViewportToolbarSettings` 의 bool
-     *          하나와 툴바 체크박스 하나에 짝지어 있었습니다 — 시각화를 하나 더하려면 세 파일 네 곳을
-     *          고쳐야 했습니다. 지금은 표 한 줄이 라벨·툴팁·기본값·그리기 함수를 모두 들고 있고,
-     *          툴바 체크박스는 그 표에서 만들어집니다.
+     * @brief 뷰포트 디버그 시각화 표입니다. 시각화를 하나 더하려면 표에 한 줄을 더하면 됩니다.
+     * @details 예전에는 `EditorViewportClient.cpp` 의 `drawDebugVisualizers` 안에 BoxCollider2D 와 CameraComponent 가
+     *          손으로 나열되어 있었고, 각자 `ViewportToolbarSettings` 의 bool 하나와 툴바 체크박스 하나에 짝지어
+     *          있었습니다. 시각화를 하나 더하려면 세 파일 네 곳을 고쳐야 했습니다. 지금은 표 한 줄이 라벨 · 툴팁 ·
+     *          기본값 · 그리기 함수를 모두 들고 있고, 툴바 체크박스는 그 표에서 만들어집니다.
      */
     class EditorViewportVisualizer
     {

@@ -28,9 +28,8 @@ namespace sw::editor
         {
             /**
              * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록돼 있는지 확인합니다.
-             * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받는다** — 패널 제목이
-             *          바뀌면 기본 배치만 말없이 깨진다. `EditorCommandRegistry::validate` 가
-             *          커맨드 표에 대해 하는 일을 여기서도 한다.
+             * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받습니다.** 그래서 패널 제목이 바뀌면 기본 배치만 말없이
+             *          깨집니다. `EditorCommandRegistry::validate` 가 커맨드 표에 하는 일을 여기서도 합니다.
              */
             static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockId )
             {
@@ -89,10 +88,10 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
 
         // 진단 스위치가 켜져 있으면 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹된 패널은 같은 노드에
-        // 탭으로 쌓여 **앞의 하나만 그려지므로**, 전부 열어도 뒤의 것은 여전히 확인되지 않는다.
+        // 탭으로 쌓여 **앞의 하나만 그려지므로**, 모두 열어도 뒤의 것은 여전히 확인되지 않는다.
         // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
-        // `-gv_editorOpenPanel` 도 같은 이유로 레이아웃을 비운다 — 저장된 도킹으로 복원되면 그 패널이
-        // 탭 뒤에 숨어 결국 안 보인다.
+        // `-gv_editorOpenPanel` 도 같은 이유로 레이아웃을 비운다. 저장된 도킹으로 복원되면 그 패널이
+        // 탭 뒤에 숨어 결국 보이지 않는다.
         if ( _imguiIniPath.empty() == false && gv_editorOpenAllPanels == 0 && gv_editorOpenPanel.empty() )
             io.IniFilename = _imguiIniPath.c_str();
         else
@@ -118,7 +117,7 @@ namespace sw::editor
             return;
         }
 
-        // 하나만 연다 — 전부 열면 서로를 가려서 원하는 패널이 화면 캡처에 나오지 않는다.
+        // 하나만 연다. 모두 열면 서로를 가려서 원하는 패널이 화면 캡처에 나오지 않는다.
         if ( gv_editorOpenPanel.empty() == false )
         {
             bool bFound = false;
@@ -164,8 +163,8 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 전부 열어 둔 상태를 사용자의 레이아웃으로 굳히지 않는다 — 진단용으로 한 번 켠 스위치가
-        // 다음 실행부터 항상 모든 패널을 여는 일이 없어야 한다.
+        // 모두 열어 둔 상태를 사용자의 레이아웃으로 굳히지 않는다. 진단용으로 한 번 켠 스위치 때문에
+        // 다음 실행부터 항상 모든 패널이 열리는 일이 없어야 한다.
         if ( _windowsIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
         {
             KeyValueMap visibilityKv;
@@ -202,7 +201,7 @@ namespace sw::editor
 
         if ( _bApplied == SW_FALSE && gv_editorOpenAllPanels != 0 )
         {
-            // 기본 도킹 배치를 적용하지 않는다(위 applyIniFilename 참고) — 전부 떠 있는 창으로 둔다.
+            // 기본 도킹 배치를 적용하지 않는다(위 applyIniFilename 참고). 모두 떠 있는 창으로 둔다.
             _bApplied = SW_TRUE;
         }
         else if ( _bApplied == SW_FALSE )
@@ -241,10 +240,9 @@ namespace sw::editor
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
         (void)dockTop;
 
-        // 기본 배치는 패널 **제목 문자열**로 붙인다(ImGui 의 API 가 그렇다). 그래서 제목이
-        // 패널 쪽에서 바뀌면 여기 적힌 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다
-        // — `DockBuilderDockWindow` 는 모르는 이름도 조용히 받는다. 등록된 패널 제목과 대조해
-        // 어긋나면 알리게 했다(도구 패널은 이미 레지스트리에서 이름을 받아 오고 있었다).
+        // 기본 배치는 패널 **제목 문자열**로 붙인다(ImGui 의 API 가 그렇다). 그래서 제목이 패널 쪽에서 바뀌면 여기 적힌
+        // 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다. `DockBuilderDockWindow` 는 모르는 이름도 조용히 받기
+        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알리게 했다(도구 패널은 이미 레지스트리에서 이름을 받아 오고 있었다).
         EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
         EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 

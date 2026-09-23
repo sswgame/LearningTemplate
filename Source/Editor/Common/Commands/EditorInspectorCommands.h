@@ -16,7 +16,7 @@ namespace sw::editor
 {
     /**
      * @class EditorInspectorCommands
-     * @brief ImGui 활성화 스냅샷이 끝난 뒤 Undo 스택에 올리고, 프리팹을 적용/복원합니다.
+     * @brief ImGui 항목 편집이 끝나면 전후 스냅샷을 Undo 스택에 올리고, 프리팹을 적용 · 복원합니다.
      */
     class EditorInspectorCommands
     {

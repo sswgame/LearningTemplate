@@ -94,7 +94,7 @@ namespace sw::editor
 
         /** @brief 인스턴스와 프리팹 기본값(CDO)의 컴포넌트 프로퍼티 차이를 모읍니다. */
         static void collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride );
-        /** @brief 한 오버라이드를 인스턴스에 템플릿 기본값으로 되돌립니다. */
+        /** @brief 오버라이드 하나를 템플릿 기본값으로 되돌립니다. */
         static void revertPrefabOverride( sw::GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath );
         /** @brief 인스턴스 상태를 프리팹 템플릿에 저장합니다. */
         static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, string_view prefabPath );

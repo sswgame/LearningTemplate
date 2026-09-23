@@ -130,7 +130,7 @@ namespace sw
     {
         vector<FileChangeEvent> listEvent;
 
-        // 잃은 알림은 "직전 드레인 이후" 에 일어났다 — 그 시각을 지금 이 드레인의 시각으로 갈아 끼우기 전에 붙잡는다.
+        // 잃은 알림은 "직전 비우기 이후" 에 일어났다. 그 시각을 이번 비우기의 시각으로 바꾸기 전에 붙잡아 둔다.
         const uint64 sinceTimestamp = _lastDrainTimestamp;
         _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
 
@@ -155,9 +155,9 @@ namespace sw
     {
         WatchEntry entry{};
         entry._handle = FileWatchHandle{ _nextWatchId++ };
-        // Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
+        // mtime 폴링 · 네이티브 감시자에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
         entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
-        // 맞춰 볼 때 쓰는 꼴로 **여기서 한 번** 만들어 둔다.
+        // 맞춰 볼 때 쓰는 형태로 **여기서 한 번** 만들어 둔다.
         entry._normalizedPrefix = FileUtil::normalizePath( entry._pathPrefix );
         entry._listExtension    = listExtension;
         entry._onMatch          = onMatch;
@@ -181,7 +181,7 @@ namespace sw
     bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
                                           string_view normalizedFullPath ) const
     {
-        // 정규화는 둘 다 **이미 끝나 있다** — 접두사는 등록할 때, 전체 경로는 이벤트마다 한 번.
+        // 정규화는 둘 다 **이미 끝나 있다.** 접두사는 등록할 때, 전체 경로는 이벤트마다 한 번 한다.
         if ( FileUtil::startsWithPathComponent( normalizedFullPath, entry._normalizedPrefix ) == false )
             return false;
 
@@ -197,13 +197,13 @@ namespace sw
                 FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
 
             bool bAnyMatch{ false };
-            // **콜백이 감시를 등록·해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
-            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 들고 있던 참조가 뜬 메모리를
-            // 가리킨다. 인덱스로 돌면서 델리게이트를 **부르기 전에 복사**한다 —
-            // `MulticastDelegate::broadcast` 가 같은 이유로 같은 모양을 쓴다.
+            // **콜백이 감시를 등록 · 해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
+            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 들고 있던 참조가 해제된 메모리를
+            // 가리킨다. 인덱스로 돌면서 델리게이트를 **부르기 전에 복사**한다.
+            // `MulticastDelegate::broadcast` 도 같은 이유로 같은 모양을 쓴다.
             //
-            // 순회 도중 앞쪽 감시가 빠지면 뒤의 하나가 밀려 건너뛰어질 수 있는데, 그것은
-            // 이 방식이 원래 받아들이는 값이다(부르는 도중 목록을 바꾼 쪽의 몫이다).
+            // 순회 도중 앞쪽 감시가 빠지면 뒤의 하나가 당겨져 건너뛰어질 수 있는데, 이 방식이
+            // 원래 감수하는 부분이다(부르는 도중 목록을 바꾼 쪽의 책임이다).
             for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
             {
                 if ( matchesWatch( _listWatch[watchIndex], changeEvent, normalizedFullPath ) == false )
@@ -217,8 +217,8 @@ namespace sw
 
             if ( bAnyMatch )
             {
-// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. 예전엔 "Shipping 아님" 이었는데,
-// Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다 — 문자열만 만들고 아무도 안 쓰게 됐다.
+// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. 예전에는 "Shipping 아님" 이었는데,
+// Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다. 그래서 문자열만 만들고 아무도 쓰지 않게 됐다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
                 // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
                 // 보이지만, 열거자가 늘면 이 값이 로그에 남아야 한다.
@@ -262,11 +262,11 @@ namespace sw
 
     void ReloadFileManager::expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp )
     {
-        // 파일 이름이 빈 Modified 는 워처의 **리스캔 신호**다 — 큐 상한이나 버퍼 오버플로로 개별 알림을
-        // 잃었다는 뜻이다(브랜치 전환·쿠킹·대량 임포트). OS 는 잃은 알림을 돌려주지 않으므로 무엇이
-        // 바뀌었는지는 상태를 대조해서만 안다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
-        // 직전 드레인 이후 mtime 인 파일만, stat 으로 끝낸다 — 평소에는 폴링이 없다.
-        // 소비자는 평소와 같은 파일 단위 이벤트만 받고 리스캔이 있었는지 알 필요가 없다.
+        // 파일 이름이 빈 Modified 는 감시자의 **리스캔 신호**다. 큐 상한이나 버퍼 오버플로로 개별 알림을
+        // 잃었다는 뜻이다(브랜치 전환 · 쿠킹 · 대량 임포트). OS 는 잃은 알림을 돌려주지 않으므로, 무엇이
+        // 바뀌었는지는 상태를 대조해서만 알 수 있다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
+        // 직전 비우기 이후 mtime 인 파일만 stat 으로 확인하고 끝낸다. 평소에는 폴링이 없다.
+        // 받는 쪽은 평소와 같은 파일 단위 이벤트만 받고, 리스캔이 있었는지 알 필요가 없다.
         bool bRescan{ false };
         for ( size_t index = 0; index < outListEvent.size(); )
         {
@@ -281,13 +281,13 @@ namespace sw
         if ( bRescan == false )
             return;
 
-        // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다 — 리로드는 멱등이지만 두 번 할 이유는 없다.
+        // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다. 리로드는 멱등이지만 두 번 할 이유는 없다.
         vector<string> listSeen;
         listSeen.reserve( outListEvent.size() );
         for ( const FileChangeEvent& changeEvent : outListEvent )
             listSeen.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
 
-        // 되찾은 개수는 아래 로그가 유일한 소비자다 — SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
+        // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
         // 그 구성에서는 쓰이지 않는 변수가 된다.
         [[maybe_unused]] uint32 found{ 0 };
         for ( const WatchEntry& entry : _listWatch )
@@ -350,7 +350,7 @@ namespace sw
             return true;
 
         // **접미사**로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
-        // 접미사가 영영 걸리지 않았다 — 프리팹 핫리로드가 등록은 되는데 이벤트를 못 받았다.
+        // 접미사가 영영 걸리지 않았다. 프리팹 핫 리로드가 등록은 되는데 이벤트를 받지 못했다.
         for ( const string& allowed : entry._listExtension )
         {
             if ( StringUtil::endsWith( filename, allowed, true ) )

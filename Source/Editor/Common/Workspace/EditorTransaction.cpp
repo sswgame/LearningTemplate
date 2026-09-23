@@ -23,13 +23,12 @@ namespace sw::editor
         struct EditorTransactionInternal
         {
             /**
-             * @brief Undo 스택. 없으면 nullptr — **부르는 쪽은 반드시 확인한다.**
-             * @details `editor::getService<T>()` 는 문서대로 **nullptr 을 돌려줄 수 있다**
-             *          (지역 등록도 없고 모듈 서비스 표에도 없을 때). 그런데 이 파일의 일곱
-             *          자리가 그 값을 그대로 `->` 로 따라가고 있었다. 커맨드 스택은 `EngineLoop`
-             *          소유라 EditorModule 보다 오래 살고, 종료할 때 서비스 결합이 먼저 풀린다 —
-             *          그 창에서 트랜잭션이 하나라도 돌면 널 역참조다. 바로 아래 씬 접근이
-             *          `getActiveScene()` 로 같은 검사를 한 자리에 모아 둔 것과 같은 모양이다.
+             * @brief Undo 스택입니다. 없으면 nullptr 이므로 **부르는 쪽이 반드시 확인해야 합니다.**
+             * @details `editor::getService<T>()` 는 문서대로 **nullptr 을 반환할 수 있습니다**(로컬 등록도 없고 모듈 서비스 표에도
+             *          없을 때). 그런데 이 파일의 일곱 곳이 그 값을 그대로 `->` 로 따라가고 있었습니다. 커맨드 스택은 `EngineLoop`
+             *          소유라 EditorModule 보다 오래 살고, 종료할 때는 서비스 연결이 먼저 풀립니다. 그 틈에 트랜잭션이 하나라도
+             *          돌면 널 역참조입니다. 바로 아래의 씬 접근이 `getActiveScene()` 로 같은 검사를 한곳에 모아 둔 것과 같은
+             *          모양입니다.
              */
             static CommandStack* getCommandStack()
             {
@@ -137,7 +136,7 @@ namespace sw::editor
         // **람다가 직접 캡처한다.** 예전에는 여기서 `beforeBuf`/`afterBuf` 지역 사본을 하나씩
         // 만들고 그것을 다시 람다가 값으로 캡처해서, 스냅샷마다 **바이트를 두 번** 복사했다.
         // 오브젝트 하나의 바이너리 스냅샷은 수 KB 가 될 수 있고 편집마다 기록된다.
-        // 되돌릴 때는 찍을 때의 컴포넌트 id 도 함께 되살린다 — 그래야 그 컴포넌트를 가리키던 핸들이 끊기지 않는다.
+        // 되돌릴 때는 찍을 때의 컴포넌트 id 도 함께 되살린다. 그래야 그 컴포넌트를 가리키던 핸들이 끊기지 않는다.
         CommandStack::Command cmd{};
         cmd._label = string{ label };
         cmd._undo  = [guid, objId, objName, beforeSnapshot = before]()
@@ -170,7 +169,7 @@ namespace sw::editor
             }
         };
 
-        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        // 스택이 없어도 **씬은 이미 바뀌었다.** 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시한다.
         CommandStack* pStack = EditorTransactionInternal::getCommandStack();
         if ( pStack != nullptr )
             pStack->push( std::move( cmd ) );
@@ -218,7 +217,7 @@ namespace sw::editor
             }
         };
 
-        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        // 스택이 없어도 **씬은 이미 바뀌었다.** 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시한다.
         CommandStack* pStack = EditorTransactionInternal::getCommandStack();
         if ( pStack != nullptr )
             pStack->push( std::move( cmd ) );
@@ -237,8 +236,8 @@ namespace sw::editor
         const EditorObjectSnapshot snapshot   = captureSnapshot( pObj );
         const string               prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( objId ) : string{};
 
-        // 오브젝트를 없애는 절차. 선택에서 먼저 빼는 것이 중요하다 — 선택 목록이 죽은 오브젝트를
-        // 들고 있으면 다음 프레임의 인스펙터·기즈모가 그것을 따라간다.
+        // 오브젝트를 없애는 절차. 선택에서 먼저 빼는 것이 중요하다. 파괴는 지연 큐를 거치므로, 선택에
+        // 남겨 두면 실제로 사라질 때까지 인스펙터 · 기즈모가 그 오브젝트를 계속 대상으로 삼는다.
         Delegate<void()> destroyStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [guid, objId, objName]()
         {
             GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
@@ -255,7 +254,7 @@ namespace sw::editor
             }
         } );
 
-        // 저장해 둔 XML 로 오브젝트를 되살리는 절차. **원래 id 로** 되살린다 — 그래야 이 오브젝트와 그 컴포넌트를
+        // 저장해 둔 XML 로 오브젝트를 되살리는 절차. **원래 id 로** 되살린다. 그래야 이 오브젝트와 그 컴포넌트를
         // 가리키던 핸들(선택 · 다른 기록 · 씬의 활성 카메라)이 그대로 이어진다. guid 도 되돌려 놓아 다음 되돌리기가
         // 같은 오브젝트를 다시 찾게 한다.
         Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [guid, objName, snapshot, prefabPath]()
@@ -280,14 +279,14 @@ namespace sw::editor
             }
         } );
 
-        // **여기가 이 함수의 전부다** — 생성과 삭제는 같은 두 절차를 반대로 잇는 것이다.
+        // **여기가 이 함수의 전부다.** 생성과 삭제는 같은 두 절차를 반대 순서로 잇는 것이다.
         CommandStack::Command cmd{};
         cmd._label                         = string{ label };
         const bool bUndoRecreatesTheObject = ( edit == ObjectLifetimeEdit::Destroyed );
         cmd._undo                          = bUndoRecreatesTheObject ? recreateStep : destroyStep;
         cmd._redo                          = bUndoRecreatesTheObject ? destroyStep : recreateStep;
 
-        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        // 스택이 없어도 **씬은 이미 바뀌었다.** 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시한다.
         CommandStack* pStack = EditorTransactionInternal::getCommandStack();
         if ( pStack != nullptr )
             pStack->push( std::move( cmd ) );

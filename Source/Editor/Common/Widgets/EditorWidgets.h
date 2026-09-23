@@ -1,6 +1,6 @@
 /**
  * @file EditorWidgets.h
- * @brief 에디터 윈도우용 공유 ImGui 위젯
+ * @brief 에디터 창들이 함께 쓰는 ImGui 위젯입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -59,12 +59,12 @@ namespace sw::editor
                                      float32 speed = 0.1f );
 
         /**
-         * @brief 컴포넌트 전용 접이식 카드 UI를 렌더링합니다. (패널 형태)
+         * @brief 컴포넌트용 접이식 카드 UI 를 그립니다(패널 형태).
          */
         static bool beginComponentCard( const utf8* pName, uint64 id, bool* pBActive, bool* pBRemoveRequested, bool bAccent = false );
 
         /**
-         * @brief beginComponentCard()가 true를 반환했을 때, 내용 렌더링 후 호출하여 카드를 닫습니다.
+         * @brief beginComponentCard() 가 true 를 반환했으면, 내용을 그린 뒤 불러 카드를 닫습니다.
          */
         static void endComponentCard();
 
@@ -73,51 +73,50 @@ namespace sw::editor
          */
         static void drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle = nullptr );
 
-        /** @brief 툴바 컨트롤 사이 `|` 구분. SameLine 뒤에 이어서 그립니다. */
+        /** @brief 툴바 컨트롤 사이의 `|` 구분선입니다. SameLine 뒤에 이어서 그립니다. */
         static void drawToolbarSeparator();
 
         /**
-         * @brief 기즈모 조작 모드(이동·회전·크기)와 로컬 공간 토글을 한 줄로 그립니다.
-         * @details 뷰포트 툴바와 인스펙터 **둘이 같은 다섯 줄을 각자** 그리고 있었다. 라디오 값
-         *          `0`·`1`·`2` 가 양쪽에 숫자 그대로 박혀 있어서, 모드를 하나 더하려면 두 곳을 고쳐야
-         *          했고 **한쪽만 고치면 두 화면이 서로 다른 모드를 가리킨다.** 값은 워크스페이스가
-         *          들고 있으므로(`getGizmoOperation`), 그리는 방법만 여기로 모은다.
+         * @brief 기즈모 조작 모드(이동 · 회전 · 크기)와 로컬 공간 토글을 한 줄로 그립니다.
+         * @details 뷰포트 툴바와 인스펙터 **둘이 같은 다섯 줄을 각자** 그리고 있었습니다. 라디오 값 `0` · `1` · `2` 가 양쪽에
+         *          숫자 그대로 박혀 있어서, 모드를 하나 더하려면 두 곳을 고쳐야 했고 **한쪽만 고치면 두 화면이 서로 다른 모드를
+         *          가리킵니다.** 값은 워크스페이스가 들고 있으므로(`getGizmoOperation`), 그리는 방법만 여기로 모읍니다.
          */
         static void drawGizmoOperationControls();
 
         /**
-         * @brief 활성/비활성 색이 바뀌는 토글·필터 칩 버튼. 클릭되면 true.
+         * @brief 활성 · 비활성 색이 바뀌는 토글 · 필터 칩 버튼입니다. 클릭되면 true 입니다.
          */
         static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive );
 
-        /** @brief 비활성 안내 문구. */
+        /** @brief 흐린 글씨의 안내 문구를 그립니다. */
         static void drawEmptyHint( const utf8* pText );
 
         /**
-         * @brief 검색 결과가 0건일 때의 안내.
-         * @details **데이터가 없는 것과 필터가 걸러낸 것은 다르다.** 기존 안내 문구 20곳은 전부
-         *          앞쪽(데이터·서비스 없음)이어서, 아무것도 맞지 않는 검색어를 치면 설명 없는 빈
-         *          상자만 남았다 — 고장처럼 보인다. 필터를 되짚어 주면 지울 것이 무엇인지 바로 안다.
+         * @brief 검색 결과가 0건일 때의 안내를 그립니다.
+         * @details **데이터가 없는 것과 필터가 걸러낸 것은 다릅니다.** 기존 안내 문구 20곳은 모두 앞의 경우(데이터 · 서비스
+         *          없음)여서, 아무것도 맞지 않는 검색어를 치면 설명 없는 빈 상자만 남아 고장처럼 보였습니다. 필터를 되짚어 주면
+         *          무엇을 지워야 하는지 바로 압니다.
          * @param filter 현재 걸린 검색 문자열. 비어 있으면 필터 언급 없이 안내합니다.
          */
         static void drawNoSearchResultHint( string_view filter );
 
         /**
-         * @brief 건수 라벨. total이 0이면 "12 items", 아니면 "12 / 40 lines".
+         * @brief 건수 라벨을 그립니다. total 이 0 이면 "12 items", 아니면 "12 / 40 lines" 형태입니다.
          */
         static void drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit = nullptr );
 
-        /** @brief 비어 있지 않으면 Separator + 비활성 상태 문구. */
+        /** @brief 문구가 비어 있지 않으면 구분선과 흐린 상태 문구를 그립니다. */
         static void drawPanelStatus( const utf8* pText );
 
         /**
-         * @brief C 버퍼 검색 필드. width 0이면 가용 너비, 음수면 한 줄 전체.
+         * @brief C 버퍼를 쓰는 검색 필드입니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
          */
         static bool drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...",
                                      float32 width = 0.0f, bool bShowClear = true );
 
         /**
-         * @brief fixed_string 검색 필드 오버로드
+         * @brief fixed_string 검색 필드 오버로드입니다.
          */
         template <uint32 N>
         static bool drawSearchField( const utf8* pId, fixed_string<N>& str, const utf8* pHint = "Search...",
@@ -127,7 +126,7 @@ namespace sw::editor
         }
 
         /**
-         * @brief 작은 형태의 색상이 들어간 태그(칩) 버튼을 그립니다.
+         * @brief 색이 들어간 작은 태그(칩) 버튼을 그립니다.
          */
         static void drawChip( const utf8* pLabel, const Color4& color );
 
@@ -137,21 +136,20 @@ namespace sw::editor
         static bool drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth = 120.0f );
 
         /**
-         * @brief drawPropertyRowBegin() 이후에 호출하여 프로퍼티 행 그리기를 종료합니다.
+         * @brief drawPropertyRowBegin() 뒤에 불러 프로퍼티 행을 마칩니다.
          */
         static void drawPropertyRowEnd();
 
         /**
-         * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력. 값이 바뀌면 true.
-         * @note **`string&` 을 받는 입력은 이것 하나다.** 예전에 `drawSearchFilter` 가 하나 더
-         *       있었는데, 그쪽은 `string` 을 256바이트 스택 버퍼에 베껴 편집하고 되쓰는 방식이라
-         *       **그보다 긴 필터를 조용히 잘랐다.** 부르는 곳이 하나도 없었고(죽은 API), 남겨 두면
-         *       "문자열 검색 위젯" 을 찾는 사람이 그 함정으로 간다 — 그래서 지웠다. 검색창이
-         *       필요하면 `drawSearchField`(호출부가 버퍼를 소유한다)나 이 함수를 쓴다.
-         * @details 패널들이 `fixed_string<N> buf{ text.c_str() }` 로 임시 버퍼를 만들어 넣었다 빼는 일을
-         *          16곳에서 각자 하고 있었다. 버퍼 크기(64·128·256·512)를 자리마다 골랐고, **그 크기를
-         *          넘는 문자열은 잘려서 되돌아갔다** — 긴 대사 한 줄을 편집하면 꼬리가 사라진다.
-         *          여기서는 ImGui 의 리사이즈 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없다.
+         * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력입니다. 값이 바뀌면 true 입니다.
+         * @note **`string&` 을 받는 입력은 이것 하나입니다.** 예전에 `drawSearchFilter` 가 하나 더 있었는데, 그쪽은 `string` 을
+         *       256바이트 스택 버퍼에 베껴 편집하고 되쓰는 방식이라 **그보다 긴 필터를 조용히 잘랐습니다.** 부르는 곳이 하나도
+         *       없었고(죽은 API), 남겨 두면 "문자열 검색 위젯" 을 찾는 사람이 그 함정으로 가게 됩니다. 그래서 지웠습니다.
+         *       검색창이 필요하면 `drawSearchField`(호출부가 버퍼를 소유합니다)나 이 함수를 쓰십시오.
+         * @details 패널들이 `fixed_string<N> buf{ text.c_str() }` 로 임시 버퍼를 만들어 넣었다 빼는 일을 16곳에서 각자 하고
+         *          있었습니다. 버퍼 크기(64 · 128 · 256 · 512)를 자리마다 골랐고, **그 크기를 넘는 문자열은 잘려서
+         *          되돌아갔습니다.** 긴 대사 한 줄을 편집하면 뒷부분이 사라졌습니다. 여기서는 ImGui 의 크기 변경 콜백으로
+         *          `string` 자체를 버퍼로 쓰므로 길이 제한이 없습니다.
          * @param pLabel ImGui 라벨(`##` 접두면 라벨을 감춥니다)
          * @param text   편집 대상. 바뀔 때만 갱신됩니다.
          * @param width  0 이면 ImGui 기본, 음수면 남는 자리 전부, 양수면 그 폭
@@ -201,17 +199,17 @@ namespace sw::editor
         static bool acceptAssetDrop( string& outPath );
 
         /**
-         * @brief 검색 결과 목록에서 Up/Down으로 선택을 움직이고 Enter면 true.
+         * @brief 검색 결과 목록에서 Up/Down 으로 선택을 움직입니다. Enter 면 true 입니다.
          */
         static bool updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat = true );
 
         /**
-         * @brief Save / Don't Save / Cancel 모달. 버튼이 눌리기 전에는 None입니다.
+         * @brief Save / Don't Save / Cancel 모달을 그립니다. 버튼이 눌리기 전에는 None 입니다.
          */
         static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage );
 
         /**
-         * @brief 직전 렌더링된 UI 아이템에 마우스 호버 시 표시할 한글 툴팁을 그립니다.
+         * @brief 직전에 그린 UI 항목 위에 마우스를 올리면 보일 툴팁을 그립니다.
          */
         static void drawTooltip( const utf8* pText );
 

@@ -1,22 +1,22 @@
 /**
  * @file EditorGraphDocumentPanel.h
- * @brief 노드 그래프를 문서로 여닫는 패널의 공통 뼈대.
+ * @brief 노드 그래프를 문서로 여닫는 패널의 공통 뼈대입니다.
  *
  * [왜 있는가]
- * `AnimationGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**이었다 — 노드·링크 목록을 들고,
- * 캔버스를 하나 소유하고, JSON 으로 오가고, 노드를 옮기면 dirty 를 찍는다. 그런데 그 뼈대가
- * 두 벌로 복사돼 있었고, 복사본이 **조용히 갈라졌다**:
+ * `AnimationGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**이었습니다. 노드 · 링크 목록을 들고, 캔버스를 하나
+ * 소유하고, JSON 으로 읽고 쓰고, 노드를 옮기면 dirty 로 표시합니다. 그런데 그 뼈대가 두 벌로 복사돼 있었고,
+ * 복사본이 **조용히 갈라졌습니다.**
  *
- *   - `cacheNodeLayout` 의 "움직였는가" 판단이 한쪽은 `||`, 다른 쪽은 `&&` 였다. `&&` 쪽에서는
- *     노드를 수평으로만 옮기면 dirty 가 찍히지 않아 **레이아웃이 저장되지 않았다.**
- *     (판단 자체는 `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킨다.)
+ *   - `cacheNodeLayout` 의 "움직였는가" 판단이 한쪽은 `||`, 다른 쪽은 `&&` 였습니다. `&&` 쪽에서는 노드를 수평으로만
+ *     옮기면 dirty 가 표시되지 않아 **레이아웃이 저장되지 않았습니다.**
+ *     (판단 자체는 `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다.)
  *
- * 그래프 패널이 하나 더 생기면 또 한 벌이 늘어날 자리였다 — `EditorNodeGraphId.h` 가 id 변환을
- * 모은 것과 같은 이유로, 뼈대도 여기 모은다.
+ * 그래프 패널이 하나 더 생기면 또 한 벌이 늘어날 구조였습니다. `EditorNodeGraphId.h` 가 id 변환을 모은 것과 같은
+ * 이유로 뼈대도 여기에 모읍니다.
  *
- * [자산에 요구하는 것]
- * `AssetType` 은 `_listNode` · `_listLink` 를 갖고 `toJson()` · `parseJson()` 을 답할 수 있어야 한다.
- * 노드·링크 타입은 그 목록에서 **추론**하므로 자산이 따로 별칭을 노출할 필요는 없다.
+ * [애셋에 요구하는 것]
+ * `AssetType` 은 `_listNode` · `_listLink` 를 갖고 `toJson()` · `parseJson()` 을 제공해야 합니다. 노드 · 링크 타입은
+ * 그 목록에서 **추론**하므로 애셋이 따로 별칭을 노출할 필요는 없습니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -34,7 +34,7 @@ namespace sw::editor
     /**
      * @class EditorGraphDocumentPanel
      * @brief 노드 그래프 문서 패널의 공통 상태와 절차입니다.
-     * @tparam AssetType 이 패널이 읽고 쓰는 그래프 자산 (`AnimationGraphAsset` 등).
+     * @tparam AssetType 이 패널이 읽고 쓰는 그래프 애셋 (`AnimationGraphAsset` 등).
      */
     template <typename AssetType>
     class EditorGraphDocumentPanel : public EditorDocumentPanel
@@ -49,7 +49,7 @@ namespace sw::editor
          * @param kind 이 패널이 다루는 애셋 종류.
          * @param pNodeMoveEditLabel 노드를 옮겼을 때 Undo 에 남길 이름 ("Move Dialogue Nodes" 등).
          * @param pNodeMoveCoalesceKey 연속 이동을 한 편집으로 합칠 키.
-         * @details 두 문자열만 패널마다 다르다 — 절차는 같다.
+         * @details 패널마다 다른 것은 이 두 문자열뿐이고, 절차는 같습니다.
          */
         EditorGraphDocumentPanel( EditorAssetKind kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey )
             : EditorDocumentPanel{ kind, true }
@@ -82,13 +82,13 @@ namespace sw::editor
             return data;
         }
 
-        /** @brief 문서 텍스트 = 자산 JSON. */
+        /** @brief 문서 텍스트는 애셋 JSON 입니다. */
         string captureDocumentText() const override { return captureGraphData().toJson(); }
 
         /**
          * @brief 텍스트 스냅샷을 그래프로 되돌립니다 (Undo·문서 전환).
-         * @details 빈 텍스트는 "빈 그래프" 가 아니라 **기본 노드로 시작** 이다 — 되돌린 결과가 비면
-         *          `ensureDefaults()` 가 채운다. 레이아웃 동기 깃발을 내려 캔버스가 다시 맞추게 한다.
+         * @details 빈 텍스트는 "빈 그래프" 가 아니라 **기본 노드로 시작** 한다는 뜻입니다. 되돌린 결과가 비면
+         *          `ensureDefaults()` 가 채웁니다. 레이아웃 동기화 플래그를 내려 캔버스가 위치를 다시 맞추게 합니다.
          */
         void applyDocumentText( string_view text ) override
         {
@@ -106,10 +106,9 @@ namespace sw::editor
         }
 
         /**
-         * @brief 캔버스의 노드 위치를 목록에 담고, 옮겨졌으면 dirty 로 찍습니다.
-         * @details 캔버스가 진실이고 목록이 사본이다 — 사용자가 노드를 끌면 캔버스만 안다.
-         *          첫 프레임의 "위치가 처음 정해지는 것" 은 편집이 아니므로 `_bGraphLayoutReady`
-         *          가 서기 전에는 dirty 로 치지 않는다.
+         * @brief 캔버스의 노드 위치를 목록에 담고, 옮겨졌으면 dirty 로 표시합니다.
+         * @details 정본은 캔버스이고 목록은 사본입니다. 사용자가 노드를 끌면 캔버스만 압니다. 첫 프레임에 "위치가 처음
+         *          정해지는 것" 은 편집이 아니므로 `_bGraphLayoutReady` 가 켜지기 전에는 dirty 로 치지 않습니다.
          */
         void cacheNodeLayout()
         {
@@ -131,12 +130,12 @@ namespace sw::editor
         }
 
         /**
-         * @brief 캔버스의 삭제 요청(링크 · 노드)을 목록에 반영합니다 — `ed::BeginDelete` 구간 전체.
-         * @details 두 그래프 패널이 이 서른 줄을 각자 들었다. 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"(애니메이션은 노드 id,
-         *          대화는 핀 번호를 풀어 본다)와 Undo 이름뿐이다. 노드를 지우면 그 노드에 닿은 링크도 함께 지운다 — 남기면 저장된
-         *          그래프가 없는 노드를 가리킨다.
+         * @brief 캔버스의 삭제 요청(링크 · 노드)을 목록에 반영합니다(`ed::BeginDelete` 구간 전체).
+         * @details 두 그래프 패널이 이 서른 줄을 각자 갖고 있었습니다. 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"
+         *          (애니메이션은 노드 id, 대화는 핀 번호를 풀어 봅니다)와 Undo 이름뿐입니다. 노드를 지우면 그 노드에 닿은 링크도
+         *          함께 지웁니다. 남기면 저장된 그래프가 없는 노드를 가리킵니다.
          * @param linkTouchesNode `( const LinkType&, int32 nodeId ) -> bool`
-         * @param onNodeDeleted `( int32 nodeId ) -> void` — 선택 해제 같은 패널의 뒷정리.
+         * @param onNodeDeleted `( int32 nodeId ) -> void`. 선택 해제 같은 패널별 뒷정리
          */
         template <typename LinkTouchesNodeFn, typename OnNodeDeletedFn>
         void processCanvasDeletions( LinkTouchesNodeFn&& linkTouchesNode, OnNodeDeletedFn&& onNodeDeleted, const utf8* pDeleteLinkLabel,
@@ -177,13 +176,13 @@ namespace sw::editor
         }
 
     protected:
-        EditorNodeGraph        _nodeGraph;             /**< 캔버스 컨텍스트. 패널 하나가 하나를 소유한다. */
-        NodeList               _listNode;              /**< 편집 중인 노드. 캔버스 위치는 cacheNodeLayout 이 담는다. */
+        EditorNodeGraph        _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유합니다. */
+        NodeList               _listNode;              /**< 편집 중인 노드. 캔버스 위치는 cacheNodeLayout 이 담습니다. */
         LinkList               _listLink;              /**< 편집 중인 링크. */
         const utf8*            _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */
         const utf8*            _pNodeMoveCoalesceKey;  /**< 노드 이동 합치기 키. */
         float32                _previewHoldSeconds;    /**< 미리보기 재생이 현재 노드에 머문 시간. */
-        uint8                  _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤 선다. */
+        uint8                  _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤에 켜집니다. */
         uint8                  _bPreviewPlaying   : 1; /**< 미리보기 재생 중. */
         [[maybe_unused]] uint8 _reservedGraph     : 6;
     };

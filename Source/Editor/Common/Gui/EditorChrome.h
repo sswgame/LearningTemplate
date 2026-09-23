@@ -1,6 +1,6 @@
 /**
  * @file EditorChrome.h
- * @brief 에디터 셸 크롬 — Panel / Section / Toolbar / FloatingBar / Overlay / SearchOverlay (ImGui 헤더 비포함)
+ * @brief 에디터 셸의 틀(크롬)입니다. Panel / Section / Toolbar / FloatingBar / Overlay / SearchOverlay (ImGui 헤더를 포함하지 않습니다)
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -46,7 +46,7 @@ namespace sw::editor
         FillRemaining       = SW_BIT( 5 ) ///< Child 높이를 하단 한 줄 남기고 채움
     };
 
-    /** @brief 섹션 열기 서술 */
+    /** @brief 섹션을 여는 설정입니다. */
     struct EditorSectionDesc
     {
         const utf8*        _pId{ "##Section" };
@@ -67,7 +67,7 @@ namespace sw::editor
         PassThroughWhenDisabled = SW_BIT( 2 )
     };
 
-    /** @brief 플로팅 바 열기 서술 */
+    /** @brief 플로팅 바를 여는 설정입니다. */
     struct EditorFloatingBarDesc
     {
         const utf8*            _pId;
@@ -98,7 +98,7 @@ namespace sw::editor
         NoDecoration       = SW_BIT( 8 )
     };
 
-    /** @brief 오버레이 열기 서술 */
+    /** @brief 오버레이를 여는 설정입니다. */
     struct EditorOverlayDesc
     {
         const utf8*        _pId{ "##Overlay" };
@@ -115,7 +115,7 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 5) Search Overlay — 뷰포트 중앙 검색 팝업 (커맨드 팔레트 / 퀵 런처)
     // ------------------------------------------------------------------------------
-    /** @brief 검색 오버레이 열기 서술 */
+    /** @brief 검색 오버레이를 여는 설정입니다. */
     struct EditorSearchOverlayDesc
     {
         const utf8* _pId{ "##SearchOverlay" };
@@ -135,7 +135,7 @@ namespace sw::editor
     class EditorChrome
     {
     public:
-        /** @brief 도킹 패널을 엽니다. false면 접힘/탭 숨김. 항상 endPanel()을 호출합니다. */
+        /** @brief 도킹 패널을 엽니다. false 면 접혔거나 탭이 가려진 상태입니다. 반환값과 관계없이 endPanel() 을 불러야 합니다. */
         static bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None );
         /** @brief beginPanel()과 짝을 이룹니다. */
         static void endPanel();
@@ -144,27 +144,27 @@ namespace sw::editor
         /** @brief 메인 뷰포트 위치/크기를 얻습니다. */
         static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
 
-        /** @brief 섹션을 엽니다. beginSection 이후에는 반환값과 관계없이 endSection()을 호출합니다. */
+        /** @brief 섹션을 엽니다. 반환값과 관계없이 endSection() 을 불러야 합니다. */
         static bool beginSection( const EditorSectionDesc& desc );
         /** @brief beginSection()과 짝을 이룹니다. */
         static void endSection();
 
-        /** @brief 가로 툴바 섹션을 엽니다. 항상 endToolbar()를 호출합니다. */
+        /** @brief 가로 툴바 섹션을 엽니다. 반환값과 관계없이 endToolbar() 를 불러야 합니다. */
         static bool beginToolbar( const utf8* pId = "##Toolbar" );
         /** @brief beginToolbar()와 짝을 이룹니다. */
         static void endToolbar();
 
-        /** @brief 플로팅 바를 엽니다. 항상 endFloatingBar()를 호출합니다. */
+        /** @brief 플로팅 바를 엽니다. 반환값과 관계없이 endFloatingBar() 를 불러야 합니다. */
         static bool beginFloatingBar( const EditorFloatingBarDesc& desc );
         /** @brief beginFloatingBar()와 짝을 이룹니다. */
         static void endFloatingBar();
 
-        /** @brief 오버레이를 엽니다. 항상 endOverlay()를 호출합니다. */
+        /** @brief 오버레이를 엽니다. 반환값과 관계없이 endOverlay() 를 불러야 합니다. */
         static bool beginOverlay( const EditorOverlayDesc& desc );
         /** @brief beginOverlay()와 짝을 이룹니다. */
         static void endOverlay();
 
-        /** @brief 뷰포트 중앙 검색 오버레이를 엽니다. 항상 endSearchOverlay()를 호출합니다. */
+        /** @brief 뷰포트 중앙 검색 오버레이를 엽니다. 반환값과 관계없이 endSearchOverlay() 를 불러야 합니다. */
         static bool beginSearchOverlay( const EditorSearchOverlayDesc& desc );
         /** @brief beginSearchOverlay()와 짝을 이룹니다. */
         static void endSearchOverlay();

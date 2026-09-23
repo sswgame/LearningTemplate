@@ -105,7 +105,7 @@ namespace sw::editor
             Scene* pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                // 값 반환 `getAllGameObjects()` 는 씬 전체를 복사한다 — 순회만 하므로 복사 없는 쪽을 쓴다.
+                // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
                 pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
                 {
                     const uint64      objId = pObj->getObjectId();

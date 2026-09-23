@@ -15,7 +15,7 @@ namespace sw::editor
 {
     /**
      * @class EditorNodeGraph
-     * @brief 노드 그래프 캔버스 호스트. 패널·팝업·섹션이 멤버로 소유합니다.
+     * @brief 노드 그래프 캔버스 호스트입니다. 패널 · 팝업 · 섹션이 멤버로 소유합니다.
      */
     class EditorNodeGraph
     {
@@ -26,12 +26,12 @@ namespace sw::editor
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */
         void shutdown();
 
-        /** @brief 컨텍스트를 준비하고 캔버스를 엽니다. false면 endCanvas를 호출하지 않습니다. */
+        /** @brief 컨텍스트를 준비하고 캔버스를 엽니다. false 면 endCanvas 를 부르지 마십시오. */
         bool beginCanvas( const utf8* pCanvasId, const utf8* pSettingsFileName );
         /** @brief beginCanvas()와 짝을 이룹니다. */
         void endCanvas();
 
-        /** @brief Begin 없이 현재 에디터만 바인딩합니다. 위치 조회용. */
+        /** @brief Begin 없이 현재 에디터만 바인딩합니다(위치 조회용). */
         bool bind() const;
         /** @brief bind()와 짝을 이룹니다. */
         void unbind() const;

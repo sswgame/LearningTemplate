@@ -1,6 +1,6 @@
 /**
  * @file EditorPopupManager.h
- * @brief 에디터 팝업 및 모달 다이얼로그 등록 및 관리 (EditorContext 소유)
+ * @brief 에디터 팝업 · 모달 대화 상자를 등록하고 관리합니다(EditorContext 소유).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,7 +22,7 @@ namespace sw::editor
 
     /**
      * @class EditorPopupManager
-     * @brief 에디터 팝업 인스턴스를 중앙에서 등록 및 관리하는 클래스 (EditorContext 소유)
+     * @brief 에디터 팝업 인스턴스를 한곳에서 등록하고 관리합니다(EditorContext 소유).
      */
     class EditorPopupManager
     {

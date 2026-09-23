@@ -1,13 +1,13 @@
 /**
  * @file EditorNodeGraphId.h
- * @brief 노드 그래프 패널이 쓰는 정수 id ↔ imgui-node-editor id 변환
+ * @brief 노드 그래프 패널이 쓰는 정수 id ↔ imgui-node-editor id 변환입니다.
  *
- * @details 그래프 패널은 노드·핀·링크를 자기 자료구조에서 int32 로 들고, 캔버스에 넘길 때만
- *          ed::NodeId 류로 감싼다. 그 변환이 패널마다 한 벌씩 복사돼 있었다(다이얼로그·애니메이션).
- *          그래프 패널이 하나 더 생기면 또 한 벌이 늘어날 자리라 여기 모은다.
+ * @details 그래프 패널은 노드 · 핀 · 링크를 자기 자료 구조에서 int32 로 들고, 캔버스에 넘길 때만 ed::NodeId 류로
+ *          감쌉니다. 그 변환이 패널마다 한 벌씩 복사돼 있었습니다(대화 · 애니메이션). 그래프 패널이 하나 더 생기면 또
+ *          한 벌이 늘어날 구조라 여기에 모읍니다.
  *
- * @note EditorNodeGraph.h 는 imgui-node-editor 헤더를 포함하지 않는다(전방 선언만 쓴다).
- *       그 성질을 깨지 않으려고 변환만 이 헤더로 갈라 둔다 — 캔버스를 직접 그리는 쪽만 포함한다.
+ * @note EditorNodeGraph.h 는 imgui-node-editor 헤더를 포함하지 않습니다(전방 선언만 씁니다). 그 성질을 깨지 않으려고
+ *       변환만 이 헤더로 떼어 두었습니다. 캔버스를 직접 그리는 쪽만 포함합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

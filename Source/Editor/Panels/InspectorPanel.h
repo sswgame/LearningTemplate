@@ -1,6 +1,6 @@
 /**
  * @file InspectorPanel.h
- * @brief GameObject / Component 프로퍼티를 편집하는 선택 인스펙터
+ * @brief 선택한 GameObject / Component 의 프로퍼티를 편집하는 인스펙터입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -30,7 +30,7 @@ namespace sw::editor
 {
     class EditorWorkspace;
 
-    /** @brief 현재 아웃라이너 선택을 검사하고 편집합니다 */
+    /** @brief 아웃라이너에서 지금 선택한 것을 살펴보고 편집합니다. */
     class InspectorPanel : public IEditorPanel
     {
     public:
@@ -79,21 +79,20 @@ namespace sw::editor
         void drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType );
         /**
          * @brief 인스펙터가 값을 바꿨음을 편집 대상에 알립니다.
-         * @details 이게 없으면 인스펙터 편집은 아무에게도 보이지 않는 변경이 된다. 위젯 대부분이
-         *          `getValuePtr<T>()` 로 멤버 생 포인터를 뽑아 ImGui 에 넘기기 때문에, 리플렉션
-         *          `setValue<T>()` 안의 통지 분기를 타지 않는다. 렌더 상태처럼 "바뀌면 누가 반응해야
-         *          하는" 값들이 조용히 어긋나던 구멍이다.
+         * @details 이것이 없으면 인스펙터 편집은 아무에게도 보이지 않는 변경이 됩니다. 위젯 대부분이 `getValuePtr<T>()` 로
+         *          멤버의 생 포인터를 뽑아 ImGui 에 넘기기 때문에, 리플렉션 `setValue<T>()` 안의 통지 분기를 타지 않습니다.
+         *          렌더 상태처럼 "바뀌면 누군가 반응해야 하는" 값들이 조용히 어긋나던 구멍입니다.
          */
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 줄에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 길이다. */
+        /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 줄에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
     private:
         /** @brief 프로퍼티 검색 필터 버퍼 */
         fixed_string<constant::kMaxBuffer64> _propertyFilter;
-        /** @brief FUNCTION() 인자 편집용 스크래치 버퍼 (윈도우 로컬). */
+        /** @brief FUNCTION() 인자 편집용 임시 버퍼입니다(창마다 따로). */
         int32                                 _arrArgInt[8];
         float32                               _arrArgFloat[8];
         bool                                  _arrArgBool[8];
@@ -101,11 +100,11 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer256> _lastInvokeResult;
         EditorFileCollectJob                  _componentPresetJob;
         vector<string>                        _listComponentPresetFile;
-        /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트. 편집 통지를 받는다. */
+        /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트입니다. 편집 통지를 받습니다. */
         Component* _pEditTargetComponent;
-        /** @brief 지금 프로퍼티를 그리는 중인 GameObject. 컴포넌트가 없을 때만 쓴다. */
+        /** @brief 지금 프로퍼티를 그리는 중인 GameObject 입니다. 컴포넌트가 없을 때만 씁니다. */
         GameObject* _pEditTargetObject;
-        /** @brief 중첩/컨테이너 재귀 깊이. 통지는 가장 바깥에서 한 번만 한다. */
+        /** @brief 중첩 · 컨테이너 재귀 깊이입니다. 통지는 가장 바깥에서 한 번만 합니다. */
         uint32                 _propertyDrawDepth;
         uint8                  _bComponentPresetDirty : 1;
         [[maybe_unused]] uint8 _reserved              : 7;

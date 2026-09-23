@@ -26,10 +26,10 @@ namespace sw::editor
     {
         struct AssetHotReloadInternal
         {
-            /** @brief 소스 이미지를 두는 폴더. 구운 DDS 는 옆 `textures/` 로 간다. */
+            /** @brief 소스 이미지를 두는 폴더입니다. 구운 DDS 는 옆의 `textures/` 로 갑니다. */
             inline static constexpr const utf8* _s_pRawTextureFolder = "textures_raw";
 
-            /** @brief 에셋 종류 하나를 어떻게 다시 읽을지. */
+            /** @brief 애셋 종류 하나를 다시 읽는 방법입니다. */
             struct ReloadRule
             {
                 EditorAssetKind _kind;
@@ -38,13 +38,13 @@ namespace sw::editor
 
             static void reloadMaterial( string_view relativePath )
             {
-                // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 꽂아 준 서비스로 간다.
+                // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
                 ResourceManager* pResources = getService<ResourceManager>();
                 EditorContext*   pContext   = EditorContext::get();
                 if ( pResources == nullptr || pContext == nullptr )
                     return;
-                // 디바이스는 **지금 것을** 넘긴다 - 캐시가 마지막으로 본 것을 들고 있으면 백엔드를
-                // 바꾼 뒤 죽은 디바이스를 가리킨다(그래서 `IAssetCache::reload` 가 인자로 받는다).
+                // 디바이스는 **지금 것을** 넘긴다. 캐시가 마지막으로 본 것을 들고 있으면 백엔드를
+                // 바꾼 뒤 사라진 디바이스를 가리킨다(그래서 `IAssetCache::reload` 가 인자로 받는다).
                 pResources->getMaterialManager().reload( relativePath, pContext->getRhiDevice() );
             }
 
@@ -54,7 +54,7 @@ namespace sw::editor
                 if ( pResources == nullptr )
                     return;
 
-                // 캐시만 버린다 — 이미 스폰된 오브젝트는 그대로다(그건 오버라이드 전파라는 다른 기능이다).
+                // 캐시만 버린다. 이미 스폰된 오브젝트는 그대로다(그것은 오버라이드 전파라는 다른 기능이다).
                 pResources->getPrefabManager().reload( relativePath, nullptr );
             }
 
@@ -70,7 +70,7 @@ namespace sw::editor
                 const string outputPath = FileUtil::replaceExtension(
                     normalized.substr( 0, rawPos ) + "textures" + normalized.substr( rawPos + strlen( _s_pRawTextureFolder ) ), ".dds" );
 
-                // 설정은 매번 읽는다 — 작은 JSON 이고, 사람이 이미지를 저장했을 때만 온다.
+                // 설정은 매번 읽는다. 작은 JSON 이고, 사람이 이미지를 저장했을 때만 온다.
                 // 한 번 읽어 캐시하면 임포트 규칙을 고쳐도 재시작 전까지 반영되지 않는다.
                 TextureImportConfig config{};
                 config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
@@ -88,7 +88,7 @@ namespace sw::editor
             static void reloadTexture( string_view relativePath )
             {
                 // 런타임이 읽는 것은 DDS 뿐이다(`Texture2D::loadFromResource` -> `DdsLoader`).
-                // 소스 이미지는 **굽는 것**이 리로드다 — 구운 결과가 다음 이벤트로 돌아온다.
+                // 소스 이미지는 **굽는 것**이 리로드다. 구운 결과가 다음 이벤트로 돌아온다.
                 if ( FileUtil::hasExtension( relativePath, ".dds" ) )
                 {
                     ResourceManager* pResources = getService<ResourceManager>();
@@ -102,7 +102,7 @@ namespace sw::editor
                 if ( FileUtil::hasExtension( relativePath, ".hdr" ) )
                 {
                     // 굽지 않는다. 디코더가 stb_image 의 8비트 경로라(`ImageUtil::loadImageFromMemory`)
-                    // HDR 을 구우면 값이 잘려 나간다 — 조용히 망가뜨리느니 하지 않는다고 말한다.
+                    // HDR 을 구우면 값이 잘려 나간다. 조용히 망가뜨리느니 하지 않는다고 알린다.
                     SW_LOG_WARNING( "HDR 은 자동 베이크 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
                     return;
                 }
@@ -114,10 +114,10 @@ namespace sw::editor
                 }
             }
 
-            // **다시 읽는 방법이 있는 종류만** 여기 있다. 확장자는 여기 적지 않는다 —
+            // **다시 읽는 방법이 있는 종류만** 여기 있다. 확장자는 여기 적지 않는다.
             // 그것은 `EditorAssetTypeRegistry` 의 일이고, 목록이 둘이면 한쪽만 늘어난다.
-            // (실제로 예전 감시는 `.mat` 만 보고 있었고, 저장소의 에셋은 전부 `.material` 이라
-            //  머티리얼 핫리로드가 한 번도 걸린 적이 없다.)
+            // (실제로 예전 감시는 `.mat` 만 보고 있었고 저장소의 애셋은 모두 `.material` 이라,
+            //  머티리얼 핫 리로드가 한 번도 걸린 적이 없다.)
             inline static constexpr ReloadRule _s_arrReloadRule[] = {
                 {EditorAssetKind::Material, &reloadMaterial},
                 { EditorAssetKind::Texture,  &reloadTexture},
@@ -133,7 +133,7 @@ namespace sw::editor
                 return listExtension;
             }
 
-            /** @brief 확장자가 목록에 있으면 true (대소문자 무시). */
+            /** @brief 확장자가 목록에 있으면 true 입니다(대소문자 무시). */
             static bool contains( const vector<string>& listExtension, string_view extension )
             {
                 for ( const string& candidate : listExtension )
@@ -146,16 +146,15 @@ namespace sw::editor
 
             /**
              * @brief 실제로 감시할 확장자 목록을 정합니다.
-             * @details `editordata.json` 의 `_listHotReloadExtension` 이 정책이고, 처리기 표가 한계다.
-             *          설정이 비어 있으면 처리기가 있는 확장자 전부를 본다. 설정에 처리기 없는
-             *          확장자가 적혀 있으면 **경고를 남기고 뺀다** — 예전처럼 이벤트만 받아
-             *          조용히 버리면, 감시 비용을 내면서 "리로드가 안 된다" 만 남는다.
+             * @details `editordata.json` 의 `_listHotReloadExtension` 이 정책이고, 처리기 표가 한계입니다. 설정이 비어 있으면
+             *          처리기가 있는 확장자 전부를 봅니다. 설정에 처리기가 없는 확장자가 적혀 있으면 **경고를 남기고 뺍니다.**
+             *          예전처럼 이벤트만 받아 조용히 버리면, 감시 비용을 치르면서 "리로드가 안 된다" 만 남습니다.
              */
             static vector<string> resolveWatchExtensions()
             {
-                // **돌려주는 객체는 하나다.** 이름이 다른 지역 변수 둘을 각각 return 하면 NRVO 가 죽어
-                // 한쪽이 반드시 복사된다(clang 이 `-Wnrvo` 로 짚는다). 두 갈래 모두 listExtension 을
-                // 채워서 돌려준다.
+                // **반환하는 객체는 하나다.** 이름이 다른 지역 변수 둘을 각각 return 하면 NRVO 가 적용되지 않아
+                // 한쪽은 반드시 복사된다(clang 이 `-Wnrvo` 로 짚는다). 두 분기 모두 listExtension 을
+                // 채워 반환한다.
                 vector<string>        listExtension{};
                 const vector<string>& listConfigured = getEditorData()._listHotReloadExtension;
                 if ( listConfigured.empty() )
@@ -212,10 +211,10 @@ namespace sw::editor
         }
 
         FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
-        // 감시 접두어는 **절대 경로**여야 한다. 워처가 올리는 이벤트의 `_directory` 는 워처가
+        // 감시 접두어는 **절대 경로**여야 한다. 감시자가 올리는 이벤트의 `_directory` 는 감시자가
         // 열어 둔 절대 경로(= 리소스 루트)이고, 접두어 비교는 그 둘을 그대로 맞춰 본다.
-        // 예전에는 `"Resource/"` 라는 상대 접두어를 줘서 비교가 **항상** 실패했다 —
-        // 확장자가 `.mat` 이었던 것과 겹쳐, 에셋 핫리로드는 한 번도 걸린 적이 없다.
+        // 예전에는 `"Resource/"` 라는 상대 접두어를 줘서 비교가 **항상** 실패했다.
+        // 확장자가 `.mat` 이었던 것과 겹쳐 애셋 핫 리로드는 한 번도 걸린 적이 없다.
         _resourceWatchHandle = _pReloadFileManager->registerWatch( ResourceUtil::getRootFolderPath(), listExtension, fileWatchDelegate );
         return _resourceWatchHandle.isValid();
     }
@@ -251,8 +250,8 @@ namespace sw::editor
         if ( relPath.empty() )
             return;
 
-        // 종류 판별도 `EditorAssetTypeRegistry` 가 한다 — 감시 필터와 같은 정본을 쓰므로
-        // "필터는 통과했는데 처리기가 없다" 가 생길 수 없다.
+        // 종류 판별도 `EditorAssetTypeRegistry` 가 한다. 감시 필터와 같은 정본을 쓰므로
+        // "필터는 통과했는데 처리기가 없다" 는 경우가 생길 수 없다.
         for ( const AssetHotReloadInternal::ReloadRule& rule : AssetHotReloadInternal::_s_arrReloadRule )
         {
             if ( EditorAssetTypeRegistry::matches( rule._kind, relPath ) == false )

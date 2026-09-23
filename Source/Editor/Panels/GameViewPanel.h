@@ -1,6 +1,6 @@
 /**
  * @file GameViewPanel.h
- * @brief 씬 프레임버퍼 미리보기와 ImGuizmo 조작을 제공하는 Game View 윈도우
+ * @brief 씬 프레임버퍼 미리보기와 ImGuizmo 조작을 제공하는 Game View 창입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -14,13 +14,13 @@ namespace sw::editor
     class GameViewPanel : public IEditorPanel
     {
     public:
-        /** @brief Game View 윈도우를 생성합니다. */
+        /** @brief Game View 창을 만듭니다. */
         GameViewPanel();
 
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        /** @brief 윈도우 제목을 반환합니다. */
+        /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Game View"; }
         /** @brief 게임 캔버스와 선택된 오브젝트의 기즈모를 그립니다. */
         void drawContent() override;

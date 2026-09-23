@@ -39,8 +39,8 @@ namespace sw::editor
     }
 
     /**
-     * @brief 두 문서(로컬라이즈·게임 데이터)를 한 패널이 들기 때문에 dirty 한 쪽만 저장합니다.
-     * @details 기반의 dirty 비트는 "무언가 바뀌었다"만 말하므로, 어느 쪽인지는 여기 두 비트가 안다.
+     * @brief 두 문서(로컬라이즈 · 게임 데이터)를 한 패널이 들기 때문에 dirty 한 쪽만 저장합니다.
+     * @details 기반 클래스의 dirty 비트는 "무언가 바뀌었다" 만 알려 주므로, 어느 쪽인지는 여기 두 비트가 압니다.
      */
     bool DataTablePanel::saveDocument()
     {
@@ -203,10 +203,10 @@ namespace sw::editor
                                           ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 
         // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
-        // 화면 밖으로 밀린다 — 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
+        // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _locFilter.c_str() };
 
-        // **멤버 버퍼를 다시 쓴다.** 지역 `vector` 였을 때는 그리는 매 프레임 할당 + 해제였다.
+        // **멤버 버퍼를 다시 쓴다.** 지역 `vector` 였을 때는 프레임마다 할당하고 해제했다.
         vector<size_t>& listVisibleIndex = _listVisibleLocIndex;
         listVisibleIndex.clear();
         listVisibleIndex.reserve( _listLocRecord.size() );
@@ -324,7 +324,7 @@ namespace sw::editor
 
         ImGui::SameLine();
 
-        // Right: File Content Viewer & Editor
+        // 오른쪽: 파일 내용 보기 · 편집
         ImGui::BeginGroup();
         if ( 0 <= _selectedGameDataIndex && static_cast<size_t>( _selectedGameDataIndex ) < _listGameDataFile.size() )
         {
@@ -339,7 +339,7 @@ namespace sw::editor
 
             ImGui::Separator();
 
-            // Editor / Raw XML text box
+            // 편집기 / XML 원문 텍스트 상자
             vector<utf8> arrEditBuffer;
             arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
             if ( _selectedGameDataRawText.empty() == false )

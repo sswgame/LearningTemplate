@@ -20,7 +20,7 @@ namespace sw::editor
     class EditorViewportPreview
     {
     public:
-        /** @brief 스프라이트 애니메이터와 그래프 클립에 노드 이름을 재생합니다. */
+        /** @brief 선택한 오브젝트와 이 그래프를 쓰는 오브젝트들의 스프라이트 애니메이터에서 노드 이름의 클립을 재생합니다. */
         static void applyAnimationNode( string_view nodeName, string_view graphPath = {} );
         /** @brief 시퀀스 프레임의 활성 클립을 대상 오브젝트 활성/트랜스폼에 적용합니다. */
         static void applySequenceFrame( const sw::SequenceAsset& asset, int32 frame );

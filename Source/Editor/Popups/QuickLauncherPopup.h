@@ -1,6 +1,6 @@
 /**
  * @file QuickLauncherPopup.h
- * @brief 글로벌 퀵 애셋/오브젝트 검색 및 런처 팝업 (Ctrl+P)
+ * @brief 애셋 · 오브젝트를 빠르게 찾아 여는 런처 팝업입니다(Ctrl+P).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -26,7 +26,7 @@ namespace sw::editor
 
     /**
      * @class QuickLauncherPopup
-     * @brief Ctrl+P 단축키로 열리는 글로벌 스마트 애셋 & 게임 오브젝트 퍼지 런처
+     * @brief Ctrl+P 로 여는 애셋 · 게임 오브젝트 퍼지 검색 런처입니다.
      */
     class QuickLauncherPopup : public IEditorPopup
     {

@@ -18,7 +18,7 @@ namespace sw::editor
 {
     struct ClipSequence;
 
-    /** @brief 클립/이벤트 트랙 시퀀서. SequenceAsset JSON과 로드/저장합니다. */
+    /** @brief 클립 · 이벤트 트랙 시퀀서입니다. SequenceAsset JSON 을 읽고 씁니다. */
     class SequencerPanel : public EditorDocumentPanel
     {
     public:

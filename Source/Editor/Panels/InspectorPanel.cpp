@@ -135,7 +135,7 @@ namespace sw::editor
         drawSelectionSection();
 
         // Undo/Redo 단축키는 여기서 처리하지 않는다. 예전에는 이 패널이 Ctrl+Z 를 따로 받았는데
-        // 전역 처리기(EditorCommandGui)도 같은 프레임에 받아 **두 번 되돌렸다** — ImGui 의
+        // 전역 처리기(EditorCommandGui)도 같은 프레임에 받아 **두 번 되돌렸다.** ImGui 의
         // IsKeyPressed 는 소비되지 않으므로 두 호출자가 모두 true 를 본다. 게다가 이쪽 경로는
         // 플레이 중 가드도, 텍스트 입력 중 가드도 없어서 값을 타이핑하다 Ctrl+Z 를 누르면 씬 편집이
         // 되돌아갔다. 지금은 edit.undo / edit.redo 커맨드가 유일한 처리자다.
@@ -250,7 +250,7 @@ namespace sw::editor
         ImGui::SeparatorText( "Components" );
         EditorContext* pSelEditorContext = EditorContext::get();
         IRHIDevice*    pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
-        // 복사한다 — 아래 루프가 컴포넌트를 뗄 수 있어 원본을 돌 수 없다.
+        // 복사한다. 아래 루프가 컴포넌트를 뗄 수 있어 원본을 돌 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
         {
@@ -487,7 +487,7 @@ namespace sw::editor
             grouped[category].push_back( &prop );
         } );
 
-        // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 말한다 — 예전에는 빈 공간이었다.
+        // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다. 예전에는 빈 공간이었다.
         if ( grouped.empty() && filter.isActive() )
         {
             EditorWidgets::drawNoSearchResultHint( filter.getText() );
@@ -552,8 +552,8 @@ namespace sw::editor
     void InspectorPanel::drawPropertyWidget( void* pInstance, const PropertyInfo& prop )
     {
         // ImGui 는 이번 프레임에 활성 아이템이 편집됐는지를 컨텍스트에 전역으로 기록한다. 위젯을
-        // 그리기 전후로 그 플래그의 **전이**를 보면 "사이에 그린 이 프로퍼티가 편집됐다"를 정확히
-        // 가려낼 수 있다 — 위젯이 아이템 하나든 여럿이든, 값이 float 이든 string 이든 상관없다.
+        // 그리기 전후로 그 플래그의 **변화**를 보면 "그 사이에 그린 이 프로퍼티가 편집됐다" 를 정확히
+        // 가려낼 수 있다. 위젯이 아이템 하나든 여럿이든, 값이 float 이든 string 이든 상관없다.
         // 위젯마다 판정을 심으면 새 위젯을 추가할 때 빠뜨리는데, 여기 한 곳이면 빠뜨릴 수 없다.
         ImGuiContext& g             = *ImGui::GetCurrentContext();
         const bool    bEditedBefore = g.ActiveIdHasBeenEditedThisFrame;
@@ -717,9 +717,9 @@ namespace sw::editor
     {
         const utf8* pLabel = "##value";
 
-        // 이 함수의 **모든 갈래는 무언가를 그리고 끝난다.** 예전에는 시퀀스가 아니면 아무것도 그리지
-        // 않고 돌아갔고, 인스펙터에는 **빈 칸 하나**만 남았다 — 값이 비었는지, 그리지 못하는 것인지,
-        // 버그인지 화면만 보고는 구분할 수 없었다. 모르는 타입조차 "No inspector for ..." 라고 말하는데
+        // 이 함수의 **모든 분기는 무언가를 그리고 끝난다.** 예전에는 시퀀스가 아니면 아무것도 그리지
+        // 않고 돌아갔고, 인스펙터에는 **빈 칸 하나**만 남았다. 값이 비었는지, 그리지 못하는 것인지,
+        // 버그인지 화면만 보고는 구분할 수 없었다. 모르는 타입조차 "No inspector for ..." 라고 알려 주는데
         // 컨테이너만 조용했다. 맵 프로퍼티는 실제로 있다(`GameData::_mapCustomProperty` 등).
         void* pContainer = prop.getRawPtr( pInstance );
         if ( pContainer == nullptr )
@@ -738,9 +738,9 @@ namespace sw::editor
                 return;
             }
 
-            // 맵을 편집하려면 래퍼에 **쓸 수 있는 값 접근자**가 있어야 한다 — `forEach` 는 키·값을
+            // 맵을 편집하려면 래퍼에 **쓸 수 있는 값 접근자**가 있어야 한다. `forEach` 는 키 · 값을
             // 모두 const 로만 준다. (키는 어차피 정렬 키라 제자리 편집이 불가능하다. `set` 과 같다.)
-            // 그때까지는 적어도 **몇 개 들어 있는지는 말한다.**
+            // 그때까지는 적어도 **몇 개 들어 있는지는 보여 준다.**
             size_t entryCount = 0;
             pMap->forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void*, const void* )
             { ++entryCount; } ) );
@@ -752,8 +752,8 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
 
-        // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다** — 고치는 순간
-        // 트리가 정렬을 잃고 이후의 삽입·조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
+        // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다.** 고치는 순간
+        // 트리가 정렬을 잃고 이후의 삽입 · 조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
         // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
         const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
         const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, bInPlaceEditable );
@@ -848,7 +848,7 @@ namespace sw::editor
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
-            // 생성자 인보커는 raw 스토리지(placement-new)를 기대합니다 — 살아있는 인스펙터 인스턴스에는 안전하지 않습니다.
+            // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 부르면 안전하지 않다.
             if ( method._metadata._bConstructor != SW_FALSE )
                 continue;
 
@@ -957,7 +957,7 @@ namespace sw::editor
     void InspectorPanel::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
                                            const TaskArgs& args )
     {
-        // `getService<T>()` 는 nullptr 을 돌려줄 수 있다 — 따라가기 전에 본다.
+        // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
         TypeRegistry* pTypeRegistry = editor::getService<TypeRegistry>();
         if ( pTypeRegistry == nullptr )
             return;

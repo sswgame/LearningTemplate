@@ -27,13 +27,13 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 이 TU 로컬 헬퍼 (유니티 빌드 이름 충돌을 피하려 TU 이름을 붙인다). */
+        /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct InputMapEditorPanelInternal
         {
             /**
-             * @brief 활성 입력 장치 종류의 표시 이름.
-             * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 죽은 저장이 된다(분석기가
-             *          열거자를 전부 알기 때문에 default 도 죽는다). 돌려주는 함수면 그런 자리가 없다.
+             * @brief 활성 입력 장치 종류의 표시 이름입니다.
+             * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 쓰이지 않는 저장이 됩니다(분석기가 열거자를 모두 알기
+             *          때문에 default 도 쓰이지 않습니다). 값을 반환하는 함수로 두면 그런 곳이 생기지 않습니다.
              */
             static const utf8* deviceTypeName( InputDeviceType type )
             {
@@ -52,7 +52,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 게임패드 배터리 잔량의 표시 이름. */
+            /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
             static const utf8* batteryLevelName( GamepadBatteryLevel level )
             {
                 switch ( level )
@@ -116,8 +116,8 @@ namespace sw::editor
         if ( pInput != nullptr && _actionMap.getInputManager() != pInput )
             _actionMap.setInputManager( pInput );
 
-        // ActionPhase 상태 머신·커맨드 히스토리·버퍼 만료 타이머 등은 update() 안에서만 갱신되므로
-        // 매 프레임 호출해야 액션 테이블/콤보 테스터/버퍼링 데모가 실제로 동작합니다.
+        // ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
+        // 프레임마다 불러야 액션 테이블 · 콤보 테스터 · 버퍼링 데모가 실제로 동작한다.
         if ( pInput != nullptr )
             _actionMap.update( ImGui::GetIO().DeltaTime );
 
@@ -955,7 +955,7 @@ namespace sw::editor
                     ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", previewGlyph.c_str() );
 
                 ImGui::TableNextColumn();
-                // 위의 미리보기 장치 선택과 **같은 자르기**를 쓴다 — 한쪽만 자르면 그 차이가
+                // 위의 미리보기 장치 선택과 **같은 범위 제한(clamp)**을 쓴다. 한쪽만 제한하면 그 차이가
                 // 언젠가 배열 밖 읽기가 된다.
                 ImGui::TextDisabled( "%s", arrPlatforms[MathUtil::clamp( _selectedGlyphPlatform, 0, 3 )] );
             }

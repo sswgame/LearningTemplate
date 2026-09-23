@@ -91,7 +91,7 @@ namespace sw::editor
                         return candidate;
                 }
 
-                // 프로젝트 내부에 없으면 OS 시스템 폰트 폴더 직접 검색 (재귀 스캔 제외하여 I/O 지연 방지)
+                // 프로젝트 안에 없으면 OS 시스템 폰트 폴더를 직접 찾는다(I/O 지연을 막으려고 재귀 스캔은 하지 않는다)
                 for ( const string& fontsDir : getSystemFontsDirectories() )
                 {
                     string direct = FileUtil::joinPath( fontsDir, pFileName );
@@ -130,7 +130,7 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->Clear();
 
-        // FreeType 폰트 로더 연동 (고속 래스터라이징 및 서브픽셀 앤티에일리어싱/힌팅)
+        // FreeType 폰트 로더를 연결한다(앤티에일리어싱 · 힌팅 품질)
         io.Fonts->SetFontLoader( ImGuiFreeType::GetFontLoader() );
         io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
 
@@ -144,8 +144,8 @@ namespace sw::editor
             ImFontConfig baseConfig{};
             baseConfig.OversampleH = 1;
             baseConfig.OversampleV = 1;
-            // 명시적 크기가 필요합니다: MergeMode가 명시 크기를 쓰는데
-            // 대상 폰트가 암시적 참조 크기(AddFontDefault)이면 ImGui가 assert합니다.
+            // 명시적 크기가 필요하다. MergeMode 는 명시 크기를 쓰는데,
+            // 대상 폰트가 암시적 참조 크기(AddFontDefault)이면 ImGui 가 assert 한다.
             baseConfig.SizePixels = data._fontSize;
 
             if ( basePath.empty() == false )

@@ -7,7 +7,7 @@ namespace sw::editor
 {
     /**
      * @struct RawImageData
-     * @brief 소스 이미지 파일(PNG/JPG/TGA/BMP 등)에서 디코딩된 4채널(RGBA) 픽셀 버퍼 정보
+     * @brief 소스 이미지 파일(PNG/JPG/TGA/BMP 등)에서 디코딩한 4채널(RGBA) 픽셀 버퍼입니다.
      */
     struct RawImageData
     {
@@ -30,17 +30,17 @@ namespace sw::editor
 
     /**
      * @struct ImageUtil
-     * @brief 에디터 환경에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티 (stb_image 캡슐화)
+     * @brief 에디터에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티입니다(stb_image 를 감쌉니다).
      */
     struct ImageUtil
     {
         /**
-         * @brief 디스크 파일 경로에서 이미지를 로드하여 4채널(RGBA) 버퍼로 변환합니다.
+         * @brief 파일 경로의 이미지를 읽어 4채널(RGBA) 버퍼로 디코딩합니다.
          */
         static bool loadImage( string_view filePath, RawImageData& outImage );
 
         /**
-         * @brief 메모리 버퍼에서 이미지를 로드하여 4채널(RGBA) 버퍼로 변환합니다.
+         * @brief 메모리 버퍼의 이미지를 4채널(RGBA) 버퍼로 디코딩합니다.
          */
         static bool loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage );
     };

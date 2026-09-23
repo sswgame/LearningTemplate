@@ -241,7 +241,7 @@ namespace sw::editor
 
     void TileMapPanel::resize( int32 width, int32 height )
     {
-        // 크기는 Width/Height 칸에서 그대로 온다 — int32 아무 값이나 들어올 수 있고, 아래에서
+        // 크기는 Width/Height 칸에서 그대로 온다. int32 아무 값이나 들어올 수 있고, 아래에서
         // 그만큼의 칸을 잡는다. 상한과 그 이유는 `TileMapXmlData::kMaxTileCount` 에 있다.
         if ( TileMapXmlData::isSizeSupported( width, height ) == false )
         {

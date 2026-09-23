@@ -297,7 +297,7 @@ namespace sw::editor
         vector<GameObject*> listSel;
         pContext->getSelectionManager().getSelectedObjects( listSel );
 
-        // primary scene component가 없는 오브젝트는 분배 대상에서 제외합니다(front/back 역참조 보호).
+        // 주 SceneComponent 가 없는 오브젝트는 분배 대상에서 뺀다(front/back 역참조 보호).
         listSel.erase( std::remove_if( listSel.begin(), listSel.end(),
                                        []( const GameObject* pGo )
         {

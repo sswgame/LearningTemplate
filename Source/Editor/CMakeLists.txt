@@ -4,9 +4,9 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) EditorModule — Dev MODULE, imgui 계열만 직접 링크
-#    Unity ON: TU 내부 헬퍼는 전부 익명 네임스페이스의 *Internal 구조체로 묶여 있음
-#    Vulkan 백엔드 TU: Types.h 별칭이 PCH와 union 멤버 충돌 → 해당 파일만 PCH 제외
+# 1) EditorModule: Dev 용 MODULE 이고, imgui 계열만 직접 링크한다
+#    유니티 빌드: TU 내부 도우미는 모두 익명 네임스페이스의 *Internal 구조체로 묶여 있다
+#    Vulkan 백엔드 TU: Types.h 별칭이 PCH 와 union 멤버에서 충돌하므로 그 파일만 PCH 에서 뺀다
 # ------------------------------------------------------------------------------
 if(NOT SW_SHIPPING_BUILD)
 	file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
