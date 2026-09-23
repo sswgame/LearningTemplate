@@ -58,8 +58,8 @@ namespace sw
         if ( waveCtx._pListBarrier == nullptr )
             return;
 
-        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다 — 여기서는 이름을 텍스처로 풀어 그대로 건다.
-        // 예전엔 이 웨이브가 읽고 쓰는 이름을 전부 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
+        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름을 텍스처로 풀어 그대로 건다.
+        // 예전에는 이 웨이브가 읽고 쓰는 이름을 모두 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
         // 반복해서 걸고 이미 맞는 상태도 다시 걸었다.
         for ( const RenderGraphBarrier& barrier : *waveCtx._pListBarrier )
         {
@@ -89,18 +89,18 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 패스 로컬 상태를 새로 만든다. 예전에는 멤버 _pCmd 를 저장/복원했는데, 그건
+        // 패스 로컬 상태를 새로 만든다. 예전에는 멤버 _pCmd 를 저장 · 복원했는데, 그건
         // "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어썼다.
-        // 프레임 시드에서 복사해 뷰/조명 등 프레임 공통값을 물려받는다.
-        // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다 — 복사본을 새로 만들면 값 목록·레지스트리가 프레임마다 다시
-        // 자란다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 못 찾으면 마지막 칸(직렬 경로에서만 온다).
+        // 프레임 시드에서 복사해 뷰 · 조명 등 프레임 공통값을 물려받는다.
+        // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록 · 레지스트리가 프레임마다 다시
+        // 자란다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 못 찾으면 마지막 칸이다(직렬 경로에서만 온다).
         const size_t passCount    = _pipelineResource.getGraphPass().size();
         const auto   passSlotIter = _mapPassNameToIndex.find( graphCtx._passName );
         const size_t passSlot     = ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount;
         if ( _listPassContext.size() <= passSlot )
             _listPassContext.resize( passCount + 1 );
-        // 벡터 **자체**는 병렬 기록 중 읽기만 한다(칸은 패스마다 다르다). 비-const 인덱싱·data() 는 컨테이너 레이스
-        // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다 — const 로 읽고 칸만 고쳐 쓴다.
+        // 벡터 **자체**는 병렬 기록 중 읽기만 한다(칸은 패스마다 다르다). 비-const 인덱싱 · data() 는 컨테이너 레이스
+        // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 칸만 고쳐 쓴다.
         FramePassContext& passCtx = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
         passCtx                   = _frameCtx;
         if ( graphCtx._pCmdList != nullptr )
@@ -110,8 +110,8 @@ namespace sw
         acquirePassCb( passCtx );
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-        // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다 — 여기서 문자열을 다시 비교하면 디스패치와
-        // PSO 생성이 서로 다른 표기를 받아줄 여지가 생긴다(그게 `ae7fb078` 의 원인이었다).
+        // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
+        // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다(그것이 `ae7fb078` 의 원인이었다).
         RenderPassType             passType  = RenderPassType::Invalid;
         const utf8*                pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
         hashed_string              depthAttachment;
@@ -130,7 +130,7 @@ namespace sw
 
 #if SW_PROFILE_COMPILED
         // **GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 적는다.** 패스는 병렬로 기록될 수 있어
-        // 흐르는 카운터를 쓰면 경쟁이 된다 — 인덱스로 고정하면 각 패스가 자기 두 칸만 건드린다.
+        // 흐르는 카운터를 쓰면 경쟁이 된다. 인덱스로 고정하면 각 패스가 자기 두 칸만 건드린다.
         //
         // **계측이 공짜는 아니다.** 타임스탬프 하나가 GPU 파이프라인에 표식을 박고 프레임 끝에
         // resolve 와 읽기가 붙는다. 그래서 (1) Shipping 에서는 이 블록이 통째로 사라지고,
@@ -216,12 +216,12 @@ namespace sw
             ctx._pCmd->beginEventMarker( arrPassName );
         }
         ctx._resourceRegistry.reset();
-        // 라이트는 **패스 종류를 가리지 않는다** — 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
+        // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 건다.
         registerLightBuffer( ctx );
 
-        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받던 시절엔 패스마다 여기서
-        // 다시 intern 했다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 전부 코드 리터럴이라
+        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받던 시절에는 패스마다 여기서
+        // 다시 intern 했다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라
         // attachmentNames() 캐시로 충분하다.
         auto colorLoadFor = [this]( const hashed_string& name, bool bForceLoad ) -> RHIRenderPassLoadOp
         {
@@ -230,8 +230,8 @@ namespace sw
             return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
         };
 
-        // b0 에 들어갈 패스 상수. 머티리얼 CB 로 폴백하면 안 된다 — 레이아웃이 다르다.
-        // 머티리얼 상수는 드로우마다 메시/배치에서 직접 넘긴다.
+        // b0 에 들어갈 패스 상수. 머티리얼 CB 로 폴백하면 안 된다. 레이아웃이 다르다.
+        // 머티리얼 상수는 드로우마다 메시 · 배치에서 직접 넘긴다.
         const RHIDescriptorIndex passCb = ctx._passCbIndex;
 
         auto executeFullscreenPass = [&]( RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
@@ -241,8 +241,8 @@ namespace sw
             ctx._pCmd->endRenderPass();
         };
 
-        // 이 패스가 바인딩할 뎁스. 파이프라인 XML 의 `_depthAttachment` 가 정본이고, 비어 있으면
-        // 뎁스 없이 연다 — "이 패스는 일부러 뎁스를 안 쓴다" 를 선언으로 표현할 수 있어야 한다.
+        // 이 패스가 바인딩할 뎁스. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
+        // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 안 쓴다" 를 선언으로 표현할 수 있어야 한다.
         // 선언한 이름이 이번 프레임에 실제로 없으면(트랜지언트 미할당) 뎁스 없이 진행한다.
         const hashed_string passDepth = ( depthAttachment.empty() == false && findTransient( depthAttachment.view() ) != 0 )
                                           ? depthAttachment
@@ -252,7 +252,7 @@ namespace sw
         {
             const float4 clearVal = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kShadowMap, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
             beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-            // 그림자는 라이트 절두체로 거른 목록을 쓴다 (언리얼의 뷰별 인스턴스 컬링과 같은 자리).
+            // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리).
             ctx._cullView = RenderViewType::Shadow;
             drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, false );
             ctx._cullView = RenderViewType::Main;
@@ -349,10 +349,10 @@ namespace sw
         else if ( pPassDesc != nullptr && passType != RenderPassType::TAA && passType != RenderPassType::Present &&
                   findRenderPassInputContract( passType ) != nullptr )
         {
-            // 풀스크린 패스 공통 — Lighting · SSAO · Bloom · Outline · Tonemap. 예전엔 다섯 분기가 각자
+            // 풀스크린 패스 공통: Lighting · SSAO · Bloom · Outline · Tonemap. 예전에는 다섯 분기가 각자
             // "어느 첨부를 걸고 어디에 그릴지" 를 후보 목록으로 짐작했고 XML 선언은 그래프 순서에만 쓰였다.
-            // 지금은 **선언이 곧 바인딩**이다: 입력은 역할 이름으로 전부 걸고, 타깃은 선언한 출력 중 첫
-            // 번째로 존재하는 것이다. 계약(RenderPassInputContract)이 로드 시점에 같은 목록을 검사했다.
+            // 지금은 **선언이 곧 바인딩**이다: 입력은 역할 이름으로 모두 걸고, 타깃은 선언한 출력 중 첫
+            // 번째로 있는 것이다. 계약(RenderPassInputContract)이 로드 시점에 같은 목록을 검사했다.
             registerDeclaredInputs( ctx, *pPassDesc );
 
             const AttachmentNames& names   = attachmentNames();
@@ -366,13 +366,13 @@ namespace sw
                 }
             }
 
-            // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다 — 폴백을 짐작해서 넣지 않는다.
+            // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 폴백을 짐작해서 넣지 않는다.
             // Tonemap 만 Present(단순 블릿)로 대신한다: 톤매핑이 없어도 그림은 나가야 한다.
             RHIPipelineStateHandle pso = getEnginePso( passType );
             if ( pso == 0 && passType == RenderPassType::Tonemap )
                 pso = getEnginePso( RenderPassType::Present );
 
-            // SSAO 의 기본 클리어는 흰색(가림 없음) — 첨부가 클리어 색을 선언했으면 그것이 우선이다.
+            // SSAO 의 기본 클리어는 흰색(가림 없음)이다. 첨부가 클리어 색을 선언했으면 그것이 우선이다.
             const float4 defaultClear = ( passType == RenderPassType::SSAO ) ? float4{ 1.0f, 1.0f, 1.0f, 1.0f } : _clearColor;
             executeFullscreenPass( pso, *pTarget, getAttachmentClearColorOrDefault( pTarget->view(), defaultClear ) );
         }
@@ -390,7 +390,7 @@ namespace sw
                         pSrcName = input._attachment.c_str();
                 }
             }
-            // 히스토리 생성·bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다 — 이 콜백은
+            // 히스토리 생성 · bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
             // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다.
             if ( _taaHistory != 0 )
                 ctx._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, _taaHistory, _taaHistorySrv );
@@ -410,19 +410,19 @@ namespace sw
         {
             const string           srcName = resolvePresentSource();
             const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
-            // 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고 끝에 복사한다 — 백버퍼는 핸들이 없어
+            // 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고 끝에 복사한다. 백버퍼는 핸들이 없어
             // 읽을 수 없고, 후처리가 Present 안에서 끝나면 그 결과를 볼 길이 그것뿐이다.
             const bool             bCapture  = ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
             const RHITextureHandle dstTarget = bCapture ? _presentCapture : _outputRenderTarget;
-            // PSO 는 대상의 실제 포맷으로 고른다 — 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
-            // GameView RT 는 텍스처가 기록한 포맷. 렌더타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
+            // PSO 는 대상의 실제 포맷으로 고른다. 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
+            // GameView RT 는 텍스처가 기록한 포맷이다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
             const RHIFormat              targetFormat = ( dstTarget == 0 ) ? _pDevice->getBackBufferFormat()
                                                                            : _pDevice->getResource()->getTextureFormat( dstTarget );
             const RHIPipelineStateHandle psoBlit      = ensurePresentPso( targetFormat );
             if ( src != 0 && psoBlit != 0 )
             {
                 registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
-                // 선언한 입력을 **전부** 건다. Present 가 후처리 체인을 겸하면 깊이(외곽선)·AO 가 필요하고,
+                // 선언한 입력을 **모두** 건다. Present 가 후처리 체인을 겸하면 깊이(외곽선) · AO 가 필요하고,
                 // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
                 if ( pPassDesc != nullptr )
                     registerDeclaredInputs( ctx, *pPassDesc );
@@ -522,20 +522,20 @@ namespace sw
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
 
-        // 예전엔 여기서 updatePassConstants 를 불렀다. 이 함수는 드로우 루프 안에서 호출되므로
-        // 드로우마다 라이트/뷰 행렬을 다시 만들고(정규화·외적·4x4 곱 두 번) 카메라를 다시 찾고
-        // hashed_string 을 여덟 개씩 intern 했다. 그 값들은 전부 프레임 상수라 execute/executePacket
+        // 예전에는 여기서 updatePassConstants 를 불렀다. 이 함수는 드로우 루프 안에서 불리므로
+        // 드로우마다 라이트 · 뷰 행렬을 다시 만들고(정규화 · 외적 · 4x4 곱 두 번) 카메라를 다시 찾고
+        // hashed_string 을 여덟 개씩 intern 했다. 그 값들은 모두 프레임 상수라 execute/executePacket
         // 이 프레임 시드(_frameCtx)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
-        // 드로우마다 바뀌는 건 g_World 하나뿐이고 그건 bindForDraw 가 넣는다.
+        // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.
 
-        // DX11/GL: bind PassCB indices into t0..t3 (emulated bindless).
-        // DX12/VK: shaders index the heap/array directly — 리플렉션 바인더가 g_<Name>Index 를 채운다.
+        // DX11 · GL: PassCB 인덱스를 t0..t3 에 건다(bindless 에뮬레이션).
+        // DX12 · VK: 셰이더가 힙 · 배열을 직접 인덱싱한다. 리플렉션 바인더가 g_<Name>Index 를 채운다.
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        // 이 함수는 드로우 루프 안에서 불린다. 예전엔 여기서 이름 네 개를 **드로우마다** intern 했다
+        // 이 함수는 드로우 루프 안에서 불린다. 예전에는 여기서 이름 네 개를 **드로우마다** intern 했다
         // (FNV 해시 + 32-way 샤드 뮤텍스 x 4). 바로 위 주석이 같은 문제를 한 번 고쳤다고 적어 두었는데,
-        // 정작 이 람다가 남아 있었다 — 이름을 문자열로 들고 다니는 한 계속 재발한다.
+        // 정작 이 람다가 남아 있었다. 이름을 문자열로 들고 다니는 한 계속 재발한다.
         auto srvOf = [&ctx]( const hashed_string& name ) -> RHIDescriptorIndex
         {
             const RegisteredTexture* pTex = ctx._resourceRegistry.findTexture( name );
@@ -579,8 +579,8 @@ namespace sw
 
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const
     {
-        // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다 — 여기서는 값만 비교하면 된다.
-        // 예전엔 문자열을 비교하느라 별칭(`Shading` vs `Lighting`)을 놓쳤다.
+        // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.
+        // 예전에는 문자열을 비교하느라 별칭(`Shading` vs `Lighting`)을 놓쳤다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             if ( pass._resolvedType == passType )

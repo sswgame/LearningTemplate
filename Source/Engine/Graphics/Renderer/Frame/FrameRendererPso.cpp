@@ -17,8 +17,8 @@ namespace sw
     namespace
     {
         /**
-         * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true.
-         * @details Lit 는 아무것도 하지 않는다 — 그것이 패스가 이미 만들어 둔 상태다.
+         * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true 입니다.
+         * @details Lit 는 아무것도 하지 않습니다. 그것이 패스가 이미 만들어 둔 상태입니다.
          */
         bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
         {
@@ -26,14 +26,14 @@ namespace sw
             {
                 desc._fillMode = RHIFillMode::Wireframe;
                 // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
-                // 상자가 열린 것처럼 보인다 — 에디터의 와이어프레임은 관례적으로 양면이다.
+                // 상자가 열린 것처럼 보인다. 에디터의 와이어프레임은 관례적으로 양면이다.
                 desc._cullMode = RHICullMode::None;
                 return true;
             }
             if ( viewMode == RenderViewMode::Unlit )
             {
                 // 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라
-                // 그림자 샘플링·림 라이트까지 같이 빠진다.
+                // 그림자 샘플링 · 림 라이트까지 같이 빠진다.
                 for ( const string& existing : desc._listShaderDefine )
                 {
                     if ( existing == kViewModeUnlitDefine )
@@ -88,13 +88,13 @@ namespace sw
         desc._pixelEntryPoint  = ( pPassDesc != nullptr && pPassDesc->_pixelEntryPoint.empty() == false )
                                    ? pPassDesc->_pixelEntryPoint
                                    : FrameRendererUtil::Entry::kPSMain;
-        // 예전엔 pPassDesc 가 있으면 XML 값으로 **덮어썼다**. 그런데 RenderGraphPassDesc 의
+        // 예전에는 pPassDesc 가 있으면 XML 값으로 **덮어썼다**. 그런데 RenderGraphPassDesc 의
         // _bEnableDepthTest/_bEnableDepthWrite 기본값이 true 이고 파이프라인 XML 은 이 항목을
-        // 아예 적지 않는다 — 그래서 registerPso 가 풀스크린 패스에 명시적으로 넘긴 bDepthTest=false 가
+        // 아예 적지 않는다. 그래서 registerPso 가 풀스크린 패스에 명시적으로 넘긴 bDepthTest=false 가
         // 통째로 무시되고 뎁스 테스트가 켜졌다. 그 PSO 는 뎁스 포맷을 선언하는데 풀스크린 패스는
         // DSV 를 바인딩하지 않으므로 드로우마다 검증 오류가 났다.
-        // 호출부의 bDepthTest 는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은
-        // 그 안에서의 조정이다. 그래서 덮어쓰기가 아니라 AND 다 — XML 로 끌 수는 있어도 켤 수는 없다.
+        // 부르는 쪽의 bDepthTest 는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은
+        // 그 안에서의 조정이다. 그래서 덮어쓰기가 아니라 AND 다. XML 로 끌 수는 있어도 켤 수는 없다.
         const bool bPassDepthTest  = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthTest != 0 );
         const bool bPassDepthWrite = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthWrite != 0 );
         desc._bEnableDepthTest     = ( bDepthTest && bPassDepthTest ) ? 1 : 0;
@@ -109,15 +109,15 @@ namespace sw
         if ( desc._bEnableDepthTest == 0 )
             desc._bEnableDepthWrite = 0;
 
-        // 컬 모드도 뎁스와 같은 구조다 — **패스가 무엇을 그리는가**가 먼저고 XML 은 그 안의 조정이다.
+        // 컬 모드도 뎁스와 같은 구조다. **패스가 무엇을 그리는가**가 먼저고 XML 은 그 안의 조정이다.
         // 풀스크린 패스는 SV_VertexID 로 삼각형 하나를 만들어 화면을 덮는다. 그 삼각형의 와인딩은
         // 셰이더가 정한 것이고 "앞/뒤" 라는 뜻이 없으므로, 컬링을 걸면 화면이 통째로 비거나 그대로
-        // 나오거나 둘 중 하나다 — 고를 값이 아니다.
+        // 나오거나 둘 중 하나다. 고를 값이 아니다.
         //
-        // 예전엔 이 기본값이 `pPassDesc == nullptr` 일 때만 적용됐다. 그래서 **XML 에 패스를 적어 둔
-        // 파이프라인은 컬 모드를 반드시 `None` 이라고 써야** 했고, 디퍼드 XML 은 열 패스 전부
-        // `Back` 이라고 적고 있었다. 그 결과 Shading·SSAO·Bloom·Outline·TAA·Tonemap·Present 일곱
-        // 패스가 아무것도 그리지 않아 화면이 배경색뿐이었다 — 오류도 경고도 없이.
+        // 예전에는 이 기본값이 `pPassDesc == nullptr` 일 때만 적용됐다. 그래서 **XML 에 패스를 적어 둔
+        // 파이프라인은 컬 모드를 반드시 `None` 이라고 써야** 했고, 디퍼드 XML 은 열 패스 모두
+        // `Back` 이라고 적고 있었다. 그 결과 Shading · SSAO · Bloom · Outline · TAA · Tonemap · Present 일곱
+        // 패스가 아무것도 그리지 않아 화면이 배경색뿐이었다. 오류도 경고도 없이.
         const bool bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
         desc._cullMode             = bFullscreenPass ? RHICullMode::None : RHICullMode::Back;
         if ( pPassDesc != nullptr )
@@ -164,8 +164,8 @@ namespace sw
         }
         else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
         {
-            // 출력 선언에서 컬러 RT 를 센다 — 베이커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
-            // 컬러를 못 찾으면 호출자가 넘긴 수로 물러난다(못 찾은 자리의 포맷은 desc 기본값 그대로).
+            // 출력 선언에서 컬러 RT 를 센다. 베이커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
+            // 컬러를 못 찾으면 부르는 쪽이 넘긴 수로 물러난다(못 찾은 자리의 포맷은 desc 기본값 그대로).
             desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats(
                 *pPassDesc, _pipelineResource.getDesc()._listAttachment, desc._arrRtvFormat, kMaxColorAttachments, numRenderTargets );
         }
@@ -177,8 +177,8 @@ namespace sw
             }
         }
 
-        // 컬러 출력이 없는 패스(그림자·뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
-        // 않는다 — 여기서 정하지 않으면 백엔드마다 달랐다: GL·Vulkan 은 자기 판단으로 뗐고 DX12 는 PS 를 컴파일·
+        // 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
+        // 않는다. 여기서 정하지 않으면 백엔드마다 달랐다: GL · Vulkan 은 자기 판단으로 뗐고 DX12 는 PS 를 컴파일 ·
         // 리플렉션까지 했다. 그 위에 머티리얼 define 을 얹은 변형(createMaterialPsoVariant 는 이 desc 를 그대로
         // 물려받는다)은 베이커가 굽지 않아 Shipping 에서 매니페스트 미스로 떨어졌다. 베이커 쪽 같은 규칙은
         // FrameRendererUtil::hasPixelStage 다.
@@ -200,15 +200,15 @@ namespace sw
         if ( passPso == 0 || _pDevice == nullptr )
             return entry;
 
-        // 패스가 정한 렌더 상태를 통째로 물려받는다 — 블렌드·뎁스·RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
+        // 패스가 정한 렌더 상태를 통째로 물려받는다. 블렌드 · 뎁스 · RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
         RHIPipelineStateDesc desc{};
         if ( _psoCache.findDesc( passPso, desc ) == false )
-            return entry; // desc 를 모르는 PSO — 변형을 만들 근거가 없다.
+            return entry; // desc 를 모르는 PSO 다. 변형을 만들 근거가 없다.
 
         bool bChanged{ false };
         if ( pPermutation != nullptr )
         {
-            // 머티리얼 셰이더를 쓰는 패스만 경로를 갈아탄다(그림자·뎁스는 자기 지오메트리 셰이더가 정본이다).
+            // 머티리얼 셰이더를 쓰는 패스만 경로를 갈아탄다(그림자 · 뎁스는 자기 지오메트리 셰이더가 기준이다).
             if ( FrameRendererUtil::usesMaterialShader( passType ) && pPermutation->_shaderPath.empty() == false &&
                  pPermutation->_shaderPath != desc._vertexShaderPath )
             {
@@ -235,18 +235,18 @@ namespace sw
             }
         }
 
-        // 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 얹는다 — 순서가 반대면 머티리얼이 셰이더 경로를
+        // 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 얹는다. 순서가 반대면 머티리얼이 셰이더 경로를
         // 갈아탈 때 방금 넣은 define 이 다른 셰이더로 넘어가 의미가 달라진다.
         if ( FrameRendererUtil::appliesViewMode( passType ) && applyViewModeToDesc( desc, viewMode ) )
             bChanged = true;
 
-        // 얹을 게 없다 = 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
+        // 얹을 것이 없다 = 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
         if ( bChanged == false )
             return entry;
 
         const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
         if ( handle == 0 )
-            return entry; // 컴파일 실패 — 패스 PSO 로 그린다(화면이 비는 것보다 낫다).
+            return entry; // 컴파일 실패다. 패스 PSO 로 그린다(화면이 비는 것보다 낫다).
         registerPsoLayout( handle, desc );
         entry._pso    = handle;
         entry._bOwned = 1;
@@ -259,13 +259,13 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드) 로 정해진다. 모드는 프레임 시작에 한 번만
-        // 읽는다 — 기록 중에 바뀌어도 이 프레임이 고르는 PSO 는 여기서 준비한 집합 안에 있어야 한다.
+        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 모드는 프레임 시작에 한 번만
+        // 읽는다. 기록 중에 바뀌어도 이 프레임이 고르는 PSO 는 여기서 준비한 집합 안에 있어야 한다.
         const RenderViewMode viewMode = getViewMode();
 
         // 이번 프레임 배치가 실제로 쓰는 퍼뮤테이션만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
-        // 퍼뮤테이션이 없는 배치(머티리얼을 안 붙인 메시)도 세어 둔다 — Lit 이 아니면 그 배치에도
+        // 퍼뮤테이션이 없는 배치(머티리얼을 안 붙인 메시)도 세어 둔다. Lit 이 아니면 그 배치에도
         // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드가 안 걸려 화면이 섞인다.
         auto collect = []( const vector<GpuMeshBatch>& listBatch, vector<uint32>& outList, bool& outHasPlain )
         {
@@ -303,7 +303,7 @@ namespace sw
              bTransparentHasPlain == false )
             return;
 
-        // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다 — 셰이더 컴파일이 낄 수 있어 드로우 경로의
+        // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의
         // 조회를 붙잡으면 안 된다. 세 자리가 같은 절차를 반복하던 것을 여기 하나로 모았다.
         auto ensureVariant = [this, viewMode, &bCreatedVariant]( RHIPipelineStateHandle passPso, RenderPassType passType,
                                                                  const GpuShaderPermutation* pPermutation, uint64 permutationHash )
@@ -324,7 +324,7 @@ namespace sw
             const vector<uint32>& listPermutation  = bTransparentPass ? listTransparentPermutation : listOpaquePermutation;
             const bool            bHasPlain        = bTransparentPass ? bTransparentHasPlain : bOpaqueHasPlain;
 
-            // 퍼뮤테이션이 없는 배치를 위한 변형 — 얹는 것이 뷰 모드뿐이다. Lit 에서는 만들 것이 없다
+            // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드뿐이다. Lit 에서는 만들 것이 없다
             // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
             if ( bHasPlain && viewMode != RenderViewMode::Lit && FrameRendererUtil::appliesViewMode( passType ) )
                 ensureVariant( passPso, passType, nullptr, 0 );
@@ -340,7 +340,7 @@ namespace sw
 
         // 방금 만든 변형의 레이아웃은 셋업 때 폴백 stride 를 모으던 시점에는 없었다. 그 셰이더가
         // 다른 크기의 SwMaterialData_t 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
-        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t9 를 **비운 채** 드로우를 낸다 —
+        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t9 를 **비운 채** 드로우를 낸다.
         // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
         // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.
         if ( bCreatedVariant )
@@ -367,13 +367,13 @@ namespace sw
                 permutationHash = pPermutation->_hash;
         }
 
-        // 얹을 것이 하나도 없는 조합이다 — ensureMaterialPsos 도 이 키를 만들지 않는다.
+        // 얹을 것이 하나도 없는 조합이다. ensureMaterialPsos 도 이 키를 만들지 않는다.
         // (해시 0 은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0 이 되더라도 같은 자리로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
         if ( permutationHash == 0 && viewMode == RenderViewMode::Lit )
             return passPso;
 
-        // 못 찾으면 패스 PSO 로 그린다 — ensureMaterialPsos 가 기록 전에 채우므로 정상 경로에선 늘 있다.
+        // 못 찾으면 패스 PSO 로 그린다. ensureMaterialPsos 가 기록 전에 채우므로 정상 경로에서는 늘 있다.
         const RHIPipelineStateHandle variant = _psoCache.findMaterialPso( RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode ) );
         return ( variant != 0 ) ? variant : passPso;
     }
@@ -386,7 +386,7 @@ namespace sw
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
 
-        // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태인데 바꾼 주체가 셋이다(툴바·커맨드라인·코드) —
+        // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태인데 바꾸는 주체가 셋이다(툴바 · 커맨드라인 · 코드).
         // 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
         // 배포본에서는 SW_LOG_INFO 가 사라지므로 이름표까지 함께 컴파일 아웃한다(안 그러면 미사용 경고).
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )

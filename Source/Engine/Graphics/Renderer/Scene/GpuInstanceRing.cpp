@@ -11,7 +11,7 @@ namespace sw
         if ( _pWrite != nullptr )
             return *_pWrite;
 
-        // 아무도 안 읽는 슬롯 — 링만 들고 있는 것. 발행본과 패킷이 든 슬롯은 use_count 가 2 이상이라 걸러진다.
+        // 아무도 안 읽는 슬롯, 곧 링만 들고 있는 것을 고른다. 발행본과 패킷이 든 슬롯은 use_count 가 2 이상이라 걸러진다.
         for ( uint32 slotIndex = 0; slotIndex < _listSlot.size(); ++slotIndex )
         {
             if ( _listSlot[slotIndex] != nullptr && _listSlot[slotIndex].use_count() == 1 )
@@ -21,7 +21,7 @@ namespace sw
                 return *_pWrite;
             }
         }
-        // 모자라면 하나 더 — 렌더 큐가 깊은 만큼만 자란다(패킷이 슬롯을 놓으면 그 슬롯이 다시 골라진다).
+        // 모자라면 하나 더 만든다. 렌더 큐가 깊은 만큼만 자란다(패킷이 슬롯을 놓으면 그 슬롯이 다시 골라진다).
         _listSlot.push_back( make_shared<vector<GpuInstance>>() );
         _listSlotBuild.push_back( 0 );
         _writeSlotIndex = static_cast<uint32>( _listSlot.size() - 1 );
@@ -58,7 +58,7 @@ namespace sw
         const vector<GpuInstance>& prev = *_pPublished;
         vector<GpuInstance>&       work = acquireWrite();
 
-        // 슬롯이 발행된 뒤 무엇이 바뀌었나 — 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
+        // 슬롯이 발행된 뒤 무엇이 바뀌었나. 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
         const uint64 slotBuild = ( _writeSlotIndex < _listSlotBuild.size() ) ? _listSlotBuild[_writeSlotIndex] : 0;
         bool         bWhole    = ( slotBuild == 0 ) || ( work.size() != prev.size() );
         uint64       expected  = slotBuild + 1;

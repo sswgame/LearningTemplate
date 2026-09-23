@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑥) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑦) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ · ④ Resource · Localization · Dialogue · Sequencer · Spatial · Physics ✅ · ⑤ Input · Window · Audio · Animation ✅ · ⑥ Graphics 의 Material · Mesh · Shader · Texture · Upload ✅ · ⑦ Graphics/Renderer ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1472,6 +1472,21 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   `bLeftTrigger / 255` 를 곧바로 쓴다. 그래서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없고, `Input/README.md` 의
   "트리거 아날로그 값 자체의 노이즈만 걸러낸다" 는 설명도 Windows 에서는 틀리다. 고칠 때는 poll 도 `setAxis( 4, … )` ·
   `setAxis( 5, … )` 로 쓰게 한다.
+- **머티리얼 인스턴스만 붙은 메시는 씬 기본 머티리얼로 묶인다.** `GpuSceneBuilder::fillCandidateMaterial` 은 메시의
+  머티리얼이 없으면 먼저 씬 기본 머티리얼을 쓰고, 인스턴스의 부모는 그것마저 없을 때만 본다. 그래서 `setMaterial` 없이
+  `setMaterialInstance` 만 한 메시는 배치의 머티리얼 · 그룹 · 텍스처 · stride 가 기본 머티리얼 것이고, 원소 바이트 ·
+  퍼뮤테이션은 인스턴스 것이다. 부모가 기본 머티리얼과 같으면(벤치의 큐브별 인스턴스) 드러나지 않는다. 헤더 주석은
+  "인스턴스의 부모가 기준" 이라고 적고 있었다. 고칠 때는 머티리얼이 없고 인스턴스가 있으면 부모를 먼저 쓴다.
+
+**주석 정리 범위 밖이라 남긴 것.** 문자열 · 셰이더 · 파일 위치는 이 작업이 건드리지 않는다.
+- `RenderThread.cpp` 의 `gv_screenshot` · `gv_screenshotAttachment` 도움말 문자열이 아직 "트랜지언트를 PPM 으로 덤프" ·
+  "(비면 SceneColor)" 라고 한다. 지금 기본은 Present 결과 캡처이고, 캡처가 없으면 Present 가 읽는 첨부다.
+- `gpucull.hlsl` 머리말과 `bindingslots.hlsli` 의 `SW_SLOT_VISIBLE_INSTANCE_SRV` 설명이 아직 가시 목록을
+  `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다고 한다. 지금은 인스턴스 슬롯 스트림이 준 전역 자리
+  (간접 인자의 startInstance + 서수)로 읽는다(`binding.hlsli` 의 `SwResolveInstanceId`). 셰이더 소스를 고치면 구운
+  산출물도 다시 만들어야 해서 여기서 뺐다.
+- `RenderResourceXml` 은 이제 `Serialization` 쪽으로 옮길 수 있다. 쓰는 쪽 옆에 둔 이유(직렬화가 `Resource` 를 못 봄)는
+  `Resource/ResourceUtil.h` 가 티어 예외가 되면서 사라졌다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -1652,6 +1667,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ⑦ — Graphics/Renderer)
+
+**한 것.** `Graphics/Renderer` 의 56 개 파일 주석을 1-0g 규칙으로 다시 썼다(영어 주석도 옮겼다). 사실과 달랐던 것:
+- `RenderGraph.cpp` 의 함수 머리 주석이 **한 칸씩 밀려** 있었다(`addPass` 위에 "모든 노드 초기화", `compile` 위에 "새 패스
+  등록" … Mermaid 내보내기 위에 "컬링 여부"). 제자리 설명으로 고쳤다.
+- 웨이브 배리어를 "프레임 스트림에 기록한다" 고 적은 두 곳 → 웨이브 첫 패스 리스트의 앞머리(직렬 경로는 그 패스의 리스트).
+- `FrameRenderer.h` 에 선언 없이 떠 있던 문서(`ef6e7773` 에서 게터를 지우며 남은 RenderPassManager 설명)를
+  `_renderPassManager` 위로 옮겼다. `RenderPassManager.h` · `ResourceManager.h` 의 "디바이스가 소유" → `FrameRenderer`.
+- `GpuLight::_params` 가 "x 그림자, yzw 예약" 이라 했지만 y · z 는 스폿 원뿔 cos 다. 위치 · 방향은 스폿광도 쓴다.
+  파일 머리의 `_arrParams[0]` 은 없는 이름이다(`_params.x`).
+- `-gv_screenshot` 이 "SceneColor 를 덤프" 한다고 했다 → Present 결과 캡처(없으면 Present 가 읽는 첨부).
+  `RT.Frame` 대기 분석에 `RT.PresentHook` 스코프가 빠져 있었다.
+- 가시 목록을 `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다고 했다(`GpuScene.h`) → 인스턴스 슬롯
+  스트림의 전역 자리. `GpuBatchInfo` 의 "간접 인자의 startInstance 는 0 이어야 한다" → 지금은 배치의 인스턴스 시작이
+  들어가고, 표는 컬링과 정점 셰이더가 함께 읽는다. 모프 시작 오프셋을 "루트 상수로 싣는다"(두 곳) → 배치 표(t13).
+  `g_SwMaterialCount` 는 PassCB 가 아니라 드로우 루트 상수다.
+- 없는 `GpuScene::getShaderPermutations()` · `_snapshot._listShaderPermutation` → `findShaderPermutation` ·
+  `_pListShaderPermutation`. `_materialInstance` 는 "draw 직전" 이 아니라 `upload()` 에서 `updateRhi` 된다.
+- `GpuSceneBuilder`: `buildFromScene` 이 "전부 이 스레드에서" 한다고 했다 → 채우기만 직렬이고 수집 · 전체 제자리 갱신은
+  문턱을 넘으면 병렬이다. `refreshInstancesInPlace` 의 "투명 순서도 그대로일 때만" → 바뀌면 꼬리만 다시 짓는다.
+  `hasSameBatchKey` 는 네 가지가 아니라 퍼뮤테이션 해시까지 다섯을 본다. 배치 키 판정이 "후보 배열 둘을 통째로
+  훑는다" → 이제 수집이 남긴 표시의 합만 읽는다. 클래스 문서가 전방 선언 위에 붙어 있어 클래스 위로 옮겼다(포매터가
+  그 전방 선언을 선언 묶음 맨 앞으로 정렬했다. 코드 변화는 이 한 줄의 위치뿐이다).
+- `RenderPipelineResource::validate` 의 검사 목록에 실제로 하는 뎁스 첨부 · 입력 계약 검사를 더했다.
+  `RenderResourceXml.h` 의 "직렬화(티어 2)는 `Resource`(티어 4)를 참조할 수 없다" → `ResourceUtil.h` 가 티어 예외라
+  지금은 성립하지 않는다고 적었다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화는 위 전방 선언 한 줄의 위치뿐.
 
 ### 2026-09-24 (Engine 주석 정리 ⑥ — Graphics 의 Material · Mesh · Shader · Texture · Upload)
 

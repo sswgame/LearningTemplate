@@ -1,9 +1,9 @@
 /**
  * @file ShaderBakeDriver.cpp
- * @brief 오프라인 베이크의 **정책** — 레시피 전부를 네 RHI 포맷으로 굽고 리플렉션 매니페스트를 쓴다.
- * @details 한 장을 굽는 법(`ShaderBaker::bakeShader`)과 이름 짓기·최신 판정은 `Shader/Compile` 의 메커니즘이고,
- *          "무엇을 굽는가" 는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식이다. 그래서 이 파일은
- *          `Renderer/Bake` 에 있고 `Shader/` 는 `Renderer/` 를 include 하지 않는다.
+ * @brief 오프라인 베이크의 **정책**입니다. 레시피 모두를 네 RHI 포맷으로 굽고 리플렉션 매니페스트를 씁니다.
+ * @details 한 장을 굽는 법(`ShaderBaker::bakeShader`)과 이름 짓기 · 최신 판정은 `Shader/Compile` 의 메커니즘이고,
+ *          "무엇을 굽는가" 는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식입니다. 그래서 이 파일은
+ *          `Renderer/Bake` 에 있고 `Shader/` 는 `Renderer/` 를 include 하지 않습니다.
  */
 #include "pch.h"
 
@@ -44,7 +44,7 @@ namespace sw
 
         SW_LOG_INFO( "Starting batch shader bake across all domains in '%#'...", rootDir.c_str() );
 
-        // 1) 컴파일 대상 타깃 포맷 목록 구성
+        // 1) 컴파일 대상 타깃 포맷 목록을 만든다
         vector<ShaderTargetFormat> listTargetFormat;
         if ( targetFormat == ShaderTargetFormat::Count )
         {
@@ -58,18 +58,18 @@ namespace sw
             listTargetFormat.push_back( targetFormat );
         }
 
-        // 2) 렌더 파이프라인 에셋 및 엔진 데이터 기반 레시피 일괄 수집
+        // 2) 렌더 파이프라인 에셋과 엔진 데이터로 레시피를 한꺼번에 모은다
         vector<ShaderBakeRecipe> listRecipe;
         collectAllRecipes( rootDir, listRecipe );
 
         uint32 totalBaked = 0;
 
-        // 리플렉션은 RHI 폴더마다 파일 하나로 모은다 — 셰이더마다 사이드카를 두면 팩 엔트리와
+        // 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
         // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
         unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
         uint32                                                   contractViolationCount{ 0 };
 
-        // 3) 각 레시피 및 타깃 포맷별로 베이킹
+        // 3) 레시피 · 타깃 포맷마다 굽는다
         for ( const ShaderBakeRecipe& recipe : listRecipe )
         {
             string absPath;
@@ -98,7 +98,7 @@ namespace sw
                 const string      outPath   = FileUtil::joinPath( outDir, fileName );
 
                 // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 구운 바이너리까지 커밋하므로
-                // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다 — 소스가 바뀌었는데도
+                // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
                 // "산출물이 더 새것" 이 되어 그대로 넘어간다. 실제로 `forwardlit` 이 라이트 버퍼 이전
                 // 바이너리로 커밋됐고, Vulkan 만 다른 그림을 내는 것을 백엔드 버그로 오인했다.
                 const bool bUpToDate = ( bForceAll == false ) && FileUtil::fileExists( outPath ) &&
@@ -111,7 +111,7 @@ namespace sw
                         ++totalBaked;
                 }
 
-                // 새로 구웠든 이미 최신이든 매니페스트에는 항상 넣는다 — 바이너리만 최신이고
+                // 새로 구웠든 이미 최신이든 매니페스트에는 항상 넣는다. 바이너리만 최신이고
                 // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
                 if ( mapManifest[outDir].find( fileName ) == mapManifest[outDir].end() )
                 {
@@ -119,7 +119,7 @@ namespace sw
                     if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
                     {
                         ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
-                        // 구운 바이너리를 계약과 대조한다 — 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름·숫자로 드러난다.
+                        // 구운 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름 · 숫자로 드러난다.
                         contractViolationCount += ShaderBindingContract::validate( reflection, fmt, outPath );
                         mapManifest[outDir].emplace( fileName, std::move( reflection ) );
                     }
@@ -127,7 +127,7 @@ namespace sw
             }
         }
 
-        // 4) RHI 폴더별 리플렉션 매니페스트 기록
+        // 4) RHI 폴더별 리플렉션 매니페스트를 쓴다
         for ( const auto& manifestPair : mapManifest )
         {
             ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first );

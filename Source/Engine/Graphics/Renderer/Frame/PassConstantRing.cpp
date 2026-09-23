@@ -81,9 +81,9 @@ namespace sw
 
         if ( ticket >= static_cast<uint32>( _listSlot.size() ) )
         {
-            // 슬롯이 모자라면 마지막 슬롯을 공유한다 — 그 프레임은 배치 상수가 섞인다. 예전엔 0번으로
+            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 그 프레임은 배치 상수가 섞인다. 예전에는 0번으로
             // 되돌렸는데 0번은 프레임 시드 전용이라(beginFrame 참고) 시드까지 덮어써 더 크게 망가졌다.
-            // 경고는 프레임당 한 번만 — 드로우마다 찍으면 로그가 잠긴다.
+            // 경고는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
             if ( _bExhaustedLogged.exchange( SW_TRUE ) == SW_FALSE )
             {
                 SW_LOG_WARNING( "상수버퍼 슬롯이 부족합니다 (%#개) — 이 프레임의 남은 드로우는 마지막 슬롯을 공유해 배치 상수가 섞입니다.",
@@ -92,7 +92,7 @@ namespace sw
             ticket = static_cast<uint32>( _listSlot.size() ) - 1;
         }
 
-        // 분배는 위의 atomic 커서가 하므로 락이 필요 없다 — 다만 **const 로 읽어야** 한다. 비-const 접근은
+        // 분배는 위의 atomic 커서가 하므로 락이 필요 없다. 다만 **const 로 읽어야** 한다. 비-const 접근은
         // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 드로우 둘도 레이스로 잡힌다.
         const vector<RHIConstantBufferSlot>& listSlot = _listSlot;
         outBuffer                                     = listSlot[ticket]._buffer;

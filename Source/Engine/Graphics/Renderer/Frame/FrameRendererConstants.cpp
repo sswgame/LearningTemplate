@@ -16,12 +16,12 @@ namespace sw
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
 
-        /// @brief 그림자용 라이트 카메라를 원점에서 얼마나 떨어뜨릴지. 직교 깊이 범위도 이 값을 쓴다.
+        /// @brief 그림자용 라이트 카메라를 원점에서 얼마나 떨어뜨릴지입니다. 직교 깊이 범위도 이 값을 씁니다.
         constexpr float32 kLightDistance = 2.0f;
-        /// @brief 라이트 직교 투영이 담는 가로/세로 범위 (기존 스케일 0.9 = 2/2.222 와 같다).
+        /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(기존 스케일 0.9 = 2/2.222 와 같습니다).
         constexpr float32 kLightOrthoExtent = 2.0f / 0.9f;
 
-        /// @brief 폴백 궤도 카메라 파라미터 — 약 40도 수직 화각.
+        /// @brief 폴백 궤도 카메라 파라미터입니다. 약 40도 수직 화각입니다.
         constexpr float32 kFallbackFovY  = 0.70f;
         constexpr float32 kFallbackNearZ = 0.1f;
         constexpr float32 kFallbackFarZ  = 100.0f;
@@ -31,9 +31,9 @@ namespace sw
     {
         // **프레임당 한 번** 프레임 시드(_frameCtx)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
-        // 예전엔 commitBindlessTextureBindings 가 드로우마다 이걸 불렀다.
+        // 예전에는 commitBindlessTextureBindings 가 드로우마다 이것을 불렀다.
         //
-        // 뷰/라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다 — 패킷이 자기
+        // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
         float4x4 lightViewProj{};
         if ( _frameLight._bHasShadowViewProj != SW_FALSE )
@@ -86,14 +86,14 @@ namespace sw
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고 그 증상은 "빛이 한 프레임 늦게 따라온다" 다.
         ctx._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
-        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다 — 뷰에 같은 값을 남긴다.
+        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 뷰에 같은 값을 남긴다.
         view( RenderViewType::Main ).setViewProjection( viewProj );
     }
 
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
     {
         (void)ctx;
-        // **이번 프레임의 라이트**를 쓴다. 예전엔 여기만 .cpp 안 constexpr 을 봤다 — 패킷이 다른 방향을
+        // **이번 프레임의 라이트**를 쓴다. 예전에는 여기만 .cpp 안 constexpr 을 봤다. 패킷이 다른 방향을
         // 실어 주면 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
         // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
         const float4& dirIntensity = _frameLight._dirIntensity;
@@ -106,10 +106,10 @@ namespace sw
         const float3 up  = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
         const float3 eye = lightDir * -kLightDistance;
 
-        // 예전엔 view/ortho 성분을 직접 써 넣었다. createLookAt/createOrthographic 과 같은 행렬이지만
+        // 예전에는 view · ortho 성분을 직접 써 넣었다. createLookAt · createOrthographic 과 같은 행렬이지만
         // 손으로 쓰면 어떤 규약(좌수, 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과
         // 어긋나도 드러나지 않는다.
-        // 깊이 범위는 **눈을 기준으로** 잡는다 — 자세한 사연은 DirectionalLightComponent::buildShadowViewProj.
+        // 깊이 범위는 **눈을 기준으로** 잡는다. 자세한 사연은 DirectionalLightComponent::buildShadowViewProj.
         // 여기도 같은 실수를 하고 있었다(값을 두 군데 두면 갈라진다는 위 주석의 실례다).
         constexpr float32 kLightOrthoHalf = kLightOrthoExtent * 0.5f;
         outMat                            = float4x4::createLookAt( eye, float3::Zero, up ) *
@@ -119,8 +119,8 @@ namespace sw
 
     void FrameRenderer::buildViewProj( float4x4& outMat ) const
     {
-        // CameraComponent 가 없을 때만 쓰는 폴백 궤도 카메라 — 원점을 바라본다.
-        // 예전엔 view 행렬을 직접 채웠는데 z축을 eye.normalize() 로 잡고 있었다. 그건 원점에서
+        // CameraComponent 가 없을 때만 쓰는 폴백 궤도 카메라다. 원점을 바라본다.
+        // 예전에는 view 행렬을 직접 채웠는데 z축을 eye.normalize() 로 잡고 있었다. 그건 원점에서
         // eye 로 향하는 방향이라 원점을 등지고 보는 셈이고, 이 엔진이 쓰는 좌수 투영
         // (createPerspectiveFieldOfView, w' = z_view)에서는 원점이 뷰 z = -|eye| 로 카메라 뒤에
         // 떨어져 아무것도 그려지지 않는다. CameraComponent::getViewMatrix 와 같은 createLookAt 으로

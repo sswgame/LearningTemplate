@@ -6,7 +6,7 @@
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
- *   - RenderPassManager: GPU 디바이스가 소유
+ *   - RenderPassManager: FrameRenderer 가 소유
  *   - ConfigManager: Config/ 호스트 JSON(Resource/ 아님)
  *   - StringTable · SceneManager
  *   - 파일 감시 · 에셋 핫 리로드: **개발 기능이라 에디터가 소유**합니다(Editor/Common/Workspace).

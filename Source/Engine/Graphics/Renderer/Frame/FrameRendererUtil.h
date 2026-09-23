@@ -1,6 +1,6 @@
 /**
  * @file FrameRendererUtil.h
- * @brief FrameRenderer 번역 단위 공유 상수·헬퍼
+ * @brief FrameRenderer 번역 단위들이 함께 쓰는 상수 · 도우미입니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,42 +17,42 @@ namespace sw
 {
     /**
      * @enum RenderViewMode
-     * @brief 씬 지오메트리를 어떻게 보여줄지 — 에디터 뷰포트의 Lit/Unlit/Wireframe.
+     * @brief 씬 지오메트리를 어떻게 보여 줄지입니다. 에디터 뷰포트의 Lit/Unlit/Wireframe 입니다.
      * @details 렌더 상태(채우기 모드)와 셰이더 퍼뮤테이션(조명 항)을 함께 가르는 값이라 어느 한쪽에만
-     *          둘 수 없다. `FrameRenderer` 가 PSO 변형 키의 한 축으로 들고 있고, 배치 PSO 를 고를 때
-     *          머티리얼 퍼뮤테이션과 **같은 자리**에서 적용된다 — 그래서 와이어프레임이 머티리얼 변형을
-     *          잃지 않는다(반투명 유리가 와이어프레임에서도 반투명 퍼뮤테이션으로 그려진다).
-     * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<0|1|2>` 로 고를 수 있어 스크린샷
-     *       비교로 검증된다 — 뷰 모드가 픽셀을 바꾸는지를 에디터를 띄우지 않고 확인할 수 있다.
+     *          둘 수 없습니다. `FrameRenderer` 가 PSO 변형 키의 한 축으로 들고 있고, 배치 PSO 를 고를 때
+     *          머티리얼 퍼뮤테이션과 **같은 자리**에서 적용됩니다. 그래서 와이어프레임이 머티리얼 변형을
+     *          잃지 않습니다(반투명 유리가 와이어프레임에서도 반투명 퍼뮤테이션으로 그려집니다).
+     * @note 에디터 전용이 아닙니다. 헤드리스에서도 `-gv_viewMode=<0|1|2>` 로 고를 수 있어 스크린샷
+     *       비교로 검증됩니다. 뷰 모드가 픽셀을 바꾸는지를 에디터를 띄우지 않고 확인할 수 있습니다.
      */
     enum class RenderViewMode : uint8
     {
-        Lit = 0,   ///< 조명·그림자를 다 계산한 기본 화면
-        Unlit,     ///< 알베도만 — 조명 항이 셰이더에서 컴파일 아웃된다
-        Wireframe, ///< 삼각형 외곽선만 (RHIFillMode::Wireframe)
+        Lit = 0,   ///< 조명 · 그림자를 모두 계산한 기본 화면
+        Unlit,     ///< 알베도만. 조명 항이 셰이더에서 컴파일 아웃됨
+        Wireframe, ///< 삼각형 외곽선만(RHIFillMode::Wireframe)
 
         Count
     };
 
     /**
-     * @brief Unlit 뷰 모드가 셰이더에 넘기는 define.
-     * @details 여기가 유일한 정본이다 — 이 문자열과 `.hlsl` 의 `#if defined(...)` 가 어긋나면
-     *          컴파일은 되고 화면만 안 바뀐다(조용한 실패). 셰이더를 더할 때 이 이름을 보라.
+     * @brief Unlit 뷰 모드가 셰이더에 넘기는 define 입니다.
+     * @details 여기가 유일한 기준입니다. 이 문자열과 `.hlsl` 의 `#if defined(...)` 가 어긋나면
+     *          컴파일은 되고 화면만 안 바뀝니다(조용한 실패). 셰이더를 더할 때 이 이름을 보십시오.
      */
     inline constexpr const utf8* kViewModeUnlitDefine = "SW_VIEWMODE_UNLIT=1";
 
     /**
-     * @brief G버퍼 패스가 머티리얼 셰이더에 얹는 define — 픽셀 출력 서명을 MRT 로 바꾼다.
+     * @brief G버퍼 패스가 머티리얼 셰이더에 얹는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
      * @details 머티리얼이 셰이더 경로를 정하므로(`usesMaterialShader`) 디퍼드의 G버퍼 패스도 머티리얼의
-     *          `.hlsl` 로 그린다. 그 셰이더가 `SV_TARGET` 하나만 내면 **노멀 타깃이 클리어 값 그대로**
-     *          남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산한다 — 오류도 경고도 없이. 언리얼이
-     *          같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리를 이 엔진에서는 define 이 맡는다.
+     *          `.hlsl` 로 그립니다. 그 셰이더가 `SV_TARGET` 하나만 내면 **노멀 타깃이 클리어 값 그대로**
+     *          남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산합니다. 오류도 경고도 없이 말입니다. 언리얼이
+     *          같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리를 이 엔진에서는 define 이 맡습니다.
      * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고
-     *       화면만 틀린다 — `kViewModeUnlitDefine` 과 같은 종류의 정본이다.
+     *       화면만 틀립니다. `kViewModeUnlitDefine` 과 같은 종류의 기준입니다.
      */
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
-    /** @brief FrameRenderer TU 공유 패스/어태치먼트 이름과 헬퍼 */
+    /** @brief FrameRenderer TU 들이 함께 쓰는 패스 · 어태치먼트 이름과 도우미입니다. */
     struct FrameRendererUtil
     {
         struct Attachment
@@ -81,15 +81,15 @@ namespace sw
         static constexpr uint32 kDefaultTransientSize = 1280;
 
         /**
-         * @brief GPU 타임스탬프 칸 배치. 칸은 `constant::kMaxGpuTimestampSlot`(32) 개다.
+         * @brief GPU 타임스탬프 칸 배치입니다. 칸은 `constant::kMaxGpuTimestampSlot`(32) 개입니다.
          * @details 패스는 앞에서부터 인덱스 x 2 쌍을 쓰고(병렬 기록이라 흐르는 카운터가 아니라 고정 칸),
-         *          프레임 전체·컴퓨트 프리패스는 **뒤쪽 세 칸**을 쓴다. 그래서 패스는 14 개까지다.
-         *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 칸이 먼저 적혀도 값이 잘리지 않는다.
+         *          프레임 전체 · 컴퓨트 프리패스는 **뒤쪽 세 칸**을 씁니다. 그래서 패스는 14 개까지입니다.
+         *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 칸이 먼저 적혀도 값이 잘리지 않습니다.
          */
         static constexpr uint32 kGpuTimestampSlotComputeBegin = 29;
         static constexpr uint32 kGpuTimestampSlotComputeEnd   = 30;
         static constexpr uint32 kGpuTimestampSlotFrameBegin   = 31;
-        /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함) — 위 예약 칸과 겹치지 않게.
+        /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함)입니다. 위 예약 칸과 겹치지 않게 합니다.
         static constexpr uint32 kGpuTimestampPassSlotEnd = kGpuTimestampSlotComputeBegin;
         static_assert( kGpuTimestampSlotFrameBegin < constant::kMaxGpuTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         static constexpr auto    kDefaultMainPassName = "DefaultMainPass";
@@ -101,19 +101,19 @@ namespace sw
         static constexpr float32 kDefaultCameraPos[3] = { 0.0f, 1.2f, 3.2f };
 
         /**
-         * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭 (라디안/초).
-         * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
-         *          속도 차이가 눈에 안 띄어 결국 "다 같은 속도"로 보인다 — 그게 이 패스를 만든 이유다.
-         *          instanceanim.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 가른다.
+         * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭(라디안/초)입니다.
+         * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈립니다. 폭이 기준보다 작으면
+         *          속도 차이가 눈에 안 띄어 결국 "다 같은 속도" 로 보입니다. 그것이 이 패스를 만든 이유입니다.
+         *          instanceanim.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 가릅니다.
          */
         static constexpr float32 kGpuSpinBaseSpeed  = 0.35f;
         static constexpr float32 kGpuSpinSpeedRange = 1.75f;
 
         /**
-         * @brief GPU 메시 모프의 변형 크기(로컬 단위)와 공간 주파수.
-         * @details 도형이 전부 단위 크기(반지름 0.5)라 진폭이 0.5 에 가까우면 원점을 지나 뒤집힌다.
-         *          주파수는 정점마다 위상을 어긋나게 하는 값이다 — 0 이면 도형이 통째로 커졌다 작아질 뿐
-         *          모양이 변하지 않아, 모프가 실제로 걸렸는지 그림으로 구분할 수 없다.
+         * @brief GPU 메시 모프의 변형 크기(로컬 단위)와 공간 주파수입니다.
+         * @details 도형이 모두 단위 크기(반지름 0.5)라 진폭이 0.5 에 가까우면 원점을 지나 뒤집힙니다.
+         *          주파수는 정점마다 위상을 어긋나게 하는 값입니다. 0 이면 도형이 통째로 커졌다 작아질 뿐
+         *          모양이 변하지 않아, 모프가 실제로 걸렸는지 그림으로 구분할 수 없습니다.
          */
         static constexpr float32 kMeshMorphAmplitude = 0.12f;
         static constexpr float32 kMeshMorphFrequency = 6.0f;
@@ -122,8 +122,8 @@ namespace sw
 
         /**
          * @brief IEEE half(16비트) 한 채널을 [0,1] 로 자른 8비트 값으로 바꿉니다.
-         * @details HDR 첨부를 PPM 으로 덤프할 때만 쓴다. 톤매핑하지 않고 그냥 자른다 — 이 덤프는
-         *          그림을 예쁘게 보려는 게 아니라 그 단계에 **무엇이 들어 있나** 를 보려는 것이다.
+         * @details HDR 첨부를 PPM 으로 덤프할 때만 씁니다. 톤매핑하지 않고 그냥 자릅니다. 이 덤프는
+         *          그림을 예쁘게 보려는 것이 아니라 그 단계에 **무엇이 들어 있나** 를 보려는 것입니다.
          */
         static uint8 halfToUnorm8( uint16 half )
         {
@@ -133,7 +133,7 @@ namespace sw
             if ( sign != 0 )
                 return 0; // 음수는 0 으로 자른다
             if ( exponent == 0x1F )
-                return 255; // Inf / NaN — 눈에 띄게 흰색
+                return 255; // Inf / NaN. 눈에 띄게 흰색
             float32 value = 0.0f;
             if ( exponent == 0 )
                 value = static_cast<float32>( mantissa ) * ( 1.0f / 16777216.0f ); // 서브노멀: 2^-24 단위
@@ -146,7 +146,7 @@ namespace sw
             return static_cast<uint8>( value * 255.0f + 0.5f );
         }
 
-        /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM. */
+        /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM 입니다. */
         static RHIFormat parseAttachmentFormat( string_view formatName )
         {
             const string formatNt( formatName );
@@ -161,12 +161,12 @@ namespace sw
         }
 
         /**
-         * @brief `parseAttachmentFormat` 의 역 — 포맷을 파이프라인 XML 이 쓰는 이름으로 돌려줍니다.
-         * @details **파서 바로 옆에 둔다.** 이름과 값의 짝을 두 파일에 나눠 두면 한쪽만 늘어난다.
+         * @brief `parseAttachmentFormat` 의 역입니다. 포맷을 파이프라인 XML 이 쓰는 이름으로 반환합니다.
+         * @details **파서 바로 옆에 둡니다.** 이름과 값의 짝을 두 파일에 나눠 두면 한쪽만 늘어납니다.
          */
         static const utf8* attachmentFormatName( RHIFormat format )
         {
-            // 파서와 **같은 모양**의 if 체인이다 — 짝을 눈으로 맞출 수 있도록.
+            // 파서와 **같은 모양**의 if 사슬이다. 짝을 눈으로 맞출 수 있도록.
             if ( format == RHIFormat::D24_UNORM_S8_UINT )
                 return "D24_UNORM_S8_UINT";
             if ( format == RHIFormat::R16G16B16A16_FLOAT )
@@ -178,20 +178,20 @@ namespace sw
             return "(unknown)";
         }
 
-        /** @brief 뎁스만 쓰는 패스 타입인가 — 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거다. */
+        /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
         static bool isDepthOnlyPassType( RenderPassType passType )
         {
             return passType == RenderPassType::Shadow || passType == RenderPassType::DepthPrepass;
         }
 
         /**
-         * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 돌려주는 값은 컬러 RT 수.
-         * @details PSO 생성(createPsoForPassType)과 셰이더 베이커가 **같은 답**을 내야 하는 규칙이다 — 컬러
-         *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
-         *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 돌려준다(호출자가 패스 타입으로 정한 값).
-         *          선언은 있는데 어태치먼트를 하나도 못 찾으면 같은 값이다.
-         * @param pOutFormat 컬러 포맷을 받을 배열(nullptr 이면 세기만 한다)
-         * @param capacity   pOutFormat 의 크기 — 그보다 많은 컬러 출력은 버린다
+         * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
+         * @details PSO 생성(createPsoForPassType)과 셰이더 베이커가 **같은 답**을 내야 하는 규칙입니다. 컬러
+         *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없습니다. 출력 선언이
+         *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환합니다(부르는 쪽이 패스 타입으로 정한 값).
+         *          선언은 있는데 어태치먼트를 하나도 못 찾아도 같은 값입니다.
+         * @param pOutFormat 컬러 포맷을 받을 배열(nullptr 이면 세기만 합니다)
+         * @param capacity   pOutFormat 의 크기. 그보다 많은 컬러 출력은 버립니다
          */
         static uint32 collectColorOutputFormats( const RenderGraphPassDesc&          pass,
                                                  const vector<RenderPassAttachment>& listAttachment,
@@ -232,15 +232,15 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스에 픽셀 스테이지가 있는가 — 컬러 출력이 하나라도 있어야 한다.
-         * @details 셰이더 베이커가 "이 패스의 PS 를 굽는가" 를 정할 때 쓴다. 런타임은 같은 규칙을
-         *          createPsoForPassType 이 RT 수로 적용한다(RT 0 개 → PS 경로를 비운다). 예전엔 베이커가
+         * @brief 이 패스에 픽셀 스테이지가 있는지 반환합니다. 컬러 출력이 하나라도 있어야 합니다.
+         * @details 셰이더 베이커가 "이 패스의 PS 를 굽는가" 를 정할 때 씁니다. 런타임은 같은 규칙을
+         *          createPsoForPassType 이 RT 수로 적용합니다(RT 0 개 → PS 경로를 비웁니다). 예전에는 베이커가
          *          타입 **문자열**로 "그림자엔 PS 없음" 을 정하고 런타임은 PS 경로를 늘 채워서, 그림자 패스에
          *          머티리얼 define 을 얹은 변형이 DX12 에서 PS 리플렉션을 요구했고 매니페스트엔 그 조합이
-         *          없었다 — Shipping 실기동의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 가 그것이다.
-         * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙인다(clip 을 위해). 알파 마스크가
-         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 한다 — 베이커도 이 함수를
-         *       보므로 그때도 고칠 자리는 여기 하나다.
+         *          없었습니다. Shipping 실기동의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 가 그것입니다.
+         * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙입니다(clip 을 위해). 알파 마스크가
+         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 합니다. 베이커도 이 함수를
+         *       보므로 그때도 고칠 자리는 여기 하나입니다.
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
         {
@@ -249,8 +249,8 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스가 씬 메시(GpuScene 배치)를 그리는가.
-         * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들이다. 풀스크린 패스는 배치를 안 쓴다.
+         * @brief 이 패스가 씬 메시(GpuScene 배치)를 그리는지 반환합니다.
+         * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들입니다. 풀스크린 패스는 배치를 안 씁니다.
          */
         static bool drawsSceneMeshes( RenderPassType passType )
         {
@@ -261,11 +261,11 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는가 (아니면 패스 자신의 셰이더인가).
+         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
          * @details 언리얼로 치면 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
-         *          퍼뮤테이션을 준다. 그림자·뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 정본이고, 머티리얼은
-         *          define 만 얹는다(알파 마스크 같은 것이 나중에 여기로 들어온다). 여기서 true 인 패스만
-         *          머티리얼이 선언한 .hlsl 로 갈아탄다.
+         *          퍼뮤테이션을 줍니다. 그림자 · 뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 기준이고, 머티리얼은
+         *          define 만 얹습니다(알파 마스크 같은 것이 나중에 여기로 들어옵니다). 여기서 true 인 패스만
+         *          머티리얼이 선언한 .hlsl 로 갈아탑니다.
          */
         static bool usesMaterialShader( RenderPassType passType )
         {
@@ -273,16 +273,16 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스 타입이 셰이더에 **얹는 define** — 파이프라인 XML 의 `_listPermutation` 위에 더해진다.
-         * @details 패스가 더하는 define 은 XML 에만 있는 것이 아니다. G버퍼 패스는 픽셀 출력 서명을 MRT 로
-         *          바꾸려고 `SW_PASS_GBUFFER=1` 을 **C++ 에서** 얹는다. 그래서 "이 패스의 define 집합" 을
-         *          XML 만 보고 답하면 런타임과 어긋난다 — 실제로 어긋나 있었다: 베이커는 XML 의 빈
+         * @brief 이 패스 타입이 셰이더에 **얹는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
+         * @details 패스가 더하는 define 은 XML 에만 있는 것이 아닙니다. G버퍼 패스는 픽셀 출력 서명을 MRT 로
+         *          바꾸려고 `SW_PASS_GBUFFER=1` 을 **C++ 에서** 얹습니다. 그래서 "이 패스의 define 집합" 을
+         *          XML 만 보고 답하면 런타임과 어긋납니다. 실제로 어긋나 있었습니다: 베이커는 XML 의 빈
          *          `<_listPermutation />` 만 보고 G버퍼를 define 없이 구웠고, 런타임은
-         *          `SW_PASS_GBUFFER=1` 이 든 해시를 찾았다. Shipping 은 런타임 컴파일이 없으므로 G버퍼
-         *          드로우가 통째로 사라졌고, 디퍼드 화면이 한 색으로 남았다
+         *          `SW_PASS_GBUFFER=1` 이 든 해시를 찾았습니다. Shipping 은 런타임 컴파일이 없으므로 G버퍼
+         *          드로우가 통째로 사라졌고, 디퍼드 화면이 한 색으로 남았습니다
          *          (`RenderPassGpuTest.DeferredPipelineDrawsGeometry` · `AmbientOcclusionReachesBloom`).
-         * @note `hasPixelStage` · `usesMaterialShader` 와 같은 종류의 정본이다 — 런타임과 베이커가 **같은
-         *       이 함수**를 보므로, 패스에 define 을 더할 자리는 앞으로도 여기 하나다.
+         * @note `hasPixelStage` · `usesMaterialShader` 와 같은 종류의 기준입니다. 런타임과 베이커가 **같은
+         *       이 함수**를 보므로, 패스에 define 을 더할 자리는 앞으로도 여기 하나입니다.
          */
         static vector<string> getPassDefine( RenderPassType passType )
         {
@@ -293,13 +293,13 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스에 뷰 모드(Unlit/Wireframe)를 적용하는가.
-         * @details 화면 색을 만드는 지오메트리 패스만이다. 그림자·뎁스 프리패스는 **제외한다** —
+         * @brief 이 패스에 뷰 모드(Unlit/Wireframe)를 적용하는지 반환합니다.
+         * @details 화면 색을 만드는 지오메트리 패스만입니다. 그림자 · 뎁스 프리패스는 **제외합니다**.
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
-         *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 전부 버려 화면이 빈다.
-         *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 늘 Solid·Lit 로 둔다.
-         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 따로 둔다 —
-         *       한쪽이 바뀔 때 다른 쪽이 조용히 따라가면 안 된다.
+         *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빕니다.
+         *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 늘 Solid · Lit 로 둡니다.
+         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 따로 둡니다.
+         *       한쪽이 바뀔 때 다른 쪽이 조용히 따라가면 안 됩니다.
          */
         static bool appliesViewMode( RenderPassType passType )
         {
@@ -307,8 +307,8 @@ namespace sw
         }
 
         /**
-         * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 돌려줍니다 (없으면 nullptr).
-         * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받는다.
+         * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 반환합니다(없으면 nullptr).
+         * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받습니다.
          */
         template <typename TAttachmentMap>
         static const utf8* pickFirstExisting( const TAttachmentMap&              mapAttachment,
@@ -325,13 +325,13 @@ namespace sw
 
     /**
      * @struct AttachmentNames
-     * @brief 어태치먼트·패스 리소스 이름의 hashed_string 캐시.
-     * @details PassConstantNames 와 같은 이유다 — hashed_string 생성은 전역 레지스트리 intern
-     *          (FNV 해시 → 32-way 샤드 뮤텍스 → 조회)이다. 이 이름들은 전부 코드 리터럴이라
-     *          값이 고정인데, 예전엔 패스마다·드로우마다 새로 intern 했다.
-     *          특히 `commitBindlessTextureBindings` 는 DX11/GL 경로에서 **드로우 호출마다**
-     *          네 개를 만들고 있었다.
-     * @note 문자열이 필요한 자리에는 `view()` 를 쓴다 — 락 없는 O(1) 포인터 역참조다.
+     * @brief 어태치먼트 · 패스 리소스 이름의 hashed_string 캐시입니다.
+     * @details PassConstantNames 와 같은 이유입니다. hashed_string 생성은 전역 레지스트리 intern
+     *          (FNV 해시 → 32-way 샤드 뮤텍스 → 조회)입니다. 이 이름들은 모두 코드 리터럴이라
+     *          값이 고정인데, 예전에는 패스마다 · 드로우마다 새로 intern 했습니다.
+     *          특히 `commitBindlessTextureBindings` 는 DX11 · GL 경로에서 **드로우 호출마다**
+     *          네 개를 만들고 있었습니다.
+     * @note 문자열이 필요한 자리에는 `view()` 를 씁니다. 락 없는 O(1) 포인터 역참조입니다.
      */
     struct AttachmentNames
     {
@@ -349,15 +349,15 @@ namespace sw
         hashed_string _aoColor{ "AOColor" };
         hashed_string _tonemapColor{ "TonemapColor" };
 
-        /// 셰이더가 보는 이름(어태치먼트 이름과 다를 수 있다 — registerPassTexture 의 canonical 인자).
-        /// 값은 RenderPassInputRole 의 이름과 같다 — 역할로 걸고 셰이더가 `g_<Role>Index` 로 읽는다.
+        /// 셰이더가 보는 이름입니다(어태치먼트 이름과 다를 수 있습니다. registerPassTexture 의 canonical 인자).
+        /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 걸고 셰이더가 `g_<Role>Index` 로 읽습니다.
         hashed_string _sourceColor{ "SourceColor" };
         hashed_string _ambientOcclusion{ "AmbientOcclusion" };
     };
 
     /**
-     * @brief 프로세스 전역 AttachmentNames 를 돌려줍니다.
-     * @details 함수 지역 static — 문자열 레지스트리보다 먼저 초기화될 위험이 없다.
+     * @brief 프로세스 전역 AttachmentNames 를 반환합니다.
+     * @details 함수 지역 static 이라 문자열 레지스트리보다 먼저 초기화될 위험이 없습니다.
      */
     inline const AttachmentNames& attachmentNames()
     {
@@ -367,16 +367,16 @@ namespace sw
 
     /**
      * @struct PassConstantNames
-     * @brief PassCB/리소스 이름의 hashed_string 캐시.
-     * @details hashed_string 생성은 전역 문자열 레지스트리에 intern 하는 작업이다(FNV 해시 →
-     *          샤드 공유락 → 조회). 리터럴은 값이 고정이므로 매번 만들 이유가 없는데, 예전엔
-     *          `g_World` 를 드로우 호출마다 새로 만들고 있었다. 한 번만 만들어 재사용한다.
+     * @brief PassCB · 리소스 이름의 hashed_string 캐시입니다.
+     * @details hashed_string 생성은 전역 문자열 레지스트리에 intern 하는 작업입니다(FNV 해시 →
+     *          샤드 공유락 → 조회). 리터럴은 값이 고정이므로 매번 만들 이유가 없는데, 예전에는
+     *          `g_World` 를 드로우 호출마다 새로 만들고 있었습니다. 한 번만 만들어 다시 씁니다.
      */
     struct PassConstantNames
     {
         hashed_string _lightViewProj{ "g_LightViewProj" };
         hashed_string _viewProj{ "g_ViewProj" };
-        /// @brief 뷰-투영의 역행렬 — 디퍼드 조명이 깊이에서 월드 위치를 복원한다.
+        /// @brief 뷰-투영의 역행렬입니다. 디퍼드 조명이 깊이에서 월드 위치를 복원합니다.
         hashed_string _invViewProj{ "g_InvViewProj" };
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
@@ -387,33 +387,33 @@ namespace sw
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _flags{ "g_Flags" };
         hashed_string _instanceBase{ "g_InstanceBase" };
-        /// @brief 인스턴스 버퍼 원소 수 — 셰이더 SwLoadInstance 가 범위를 막는다.
+        /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 SwLoadInstance 가 범위를 막습니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };
-        /// @brief 배치의 머티리얼 데이터 버퍼 원소 수 — 셰이더 SW_MATERIAL 이 클램프한다.
+        /// @brief 배치의 머티리얼 데이터 버퍼 원소 수입니다. 셰이더 SW_MATERIAL 이 클램프합니다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };
-        /// @brief GPU 가 변형한 정점 풀 ↔ binding.hlsli 의 g_SwMorphVertices(t11) / PassCB g_SwMorphVerticesIndex.
+        /// @brief GPU 가 변형한 정점 풀 ↔ binding.hlsli 의 g_SwMorphVertices(t11) / PassCB g_SwMorphVerticesIndex 입니다.
         hashed_string _swMorphVertices{ "SwMorphVertices" };
-        /// @brief 그 풀의 원소 수 ↔ PassCB g_SwMorphVertexCount.
+        /// @brief 그 풀의 원소 수 ↔ PassCB g_SwMorphVertexCount 입니다.
         hashed_string _swMorphVertexCount{ "g_SwMorphVertexCount" };
-        /// @brief 컬링이 만든 가시 인스턴스 ID 목록 (binding.hlsli g_SwVisibleInstanceIds ↔ "SwVisibleInstanceIds").
+        /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다(binding.hlsli g_SwVisibleInstanceIds ↔ "SwVisibleInstanceIds").
         hashed_string _swVisibleInstanceIds{ "SwVisibleInstanceIds" };
-        /// @brief 배치의 머티리얼 데이터 구조버퍼 (binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록한다.
+        /// @brief 배치의 머티리얼 데이터 구조버퍼입니다(binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록합니다.
         hashed_string _swMaterials{ "SwMaterials" };
-        /// @brief 씬 라이트 구조버퍼 (lighting.hlsli g_SwLights ↔ "SwLights"). 패스당 한 번 건다.
+        /// @brief 씬 라이트 구조버퍼입니다(lighting.hlsli g_SwLights ↔ "SwLights"). 패스당 한 번 겁니다.
         hashed_string _swLights{ "SwLights" };
-        /// @brief 씬 배치 표 (binding.hlsli g_SwBatches ↔ "SwBatches"). 패스당 한 번 건다 — 드로우는 배치 번호만 나른다.
+        /// @brief 씬 배치 표입니다(binding.hlsli g_SwBatches ↔ "SwBatches"). 패스당 한 번 겁니다. 드로우는 배치 번호만 나릅니다.
         hashed_string _swBatches{ "SwBatches" };
-        /// @brief 그 표의 원소 수 ↔ PassCB g_SwBatchCount.
+        /// @brief 그 표의 원소 수 ↔ PassCB g_SwBatchCount 입니다.
         hashed_string _swBatchCount{ "g_SwBatchCount" };
-        /// @brief 그 버퍼의 원소 수 ↔ PassCB g_SwLightCount. 0 이면 셰이더가 키라이트로 폴백한다.
+        /// @brief 씬 라이트 버퍼의 원소 수 ↔ PassCB g_SwLightCount 입니다. 0 이면 셰이더가 키라이트로 폴백합니다.
         hashed_string _swLightCount{ "g_SwLightCount" };
     };
 
     /**
-     * @brief 프로세스 전역 PassConstantNames 를 돌려줍니다.
-     * @details 함수 지역 static 이라 첫 호출 때 한 번만, 스레드 안전하게 만들어진다 — 전역 정적
-     *          객체로 두면 문자열 레지스트리보다 먼저 초기화될 수 있다.
+     * @brief 프로세스 전역 PassConstantNames 를 반환합니다.
+     * @details 함수 지역 static 이라 첫 호출 때 한 번만, 스레드 안전하게 만들어집니다. 전역 정적
+     *          객체로 두면 문자열 레지스트리보다 먼저 초기화될 수 있습니다.
      */
     inline const PassConstantNames& passConstantNames()
     {

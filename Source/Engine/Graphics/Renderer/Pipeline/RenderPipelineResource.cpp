@@ -115,8 +115,8 @@ namespace sw
             }
 
             // 뎁스 첨부: 비어 있는 것은 "일부러 뎁스를 안 쓴다" 는 뜻이라 정상이다. 다만 이름을
-            // 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다 — 컬러 첨부를 뎁스로 바인딩하면
-            // 렌더패스가 통째로 비호환이 된다.
+            // 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다. 컬러 첨부를 뎁스로 바인딩하면
+            // 렌더 패스가 통째로 비호환이 된다.
             if ( pass._depthAttachment.empty() == false )
             {
                 const RenderPassAttachment* pDepthAtt = findAttachment( pass._depthAttachment );
@@ -149,7 +149,7 @@ namespace sw
             }
         }
 
-        // 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다 — 포맷이 서로 달라도 되지만 개수 한계는 있다.
+        // 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다. 포맷은 서로 달라도 되지만 개수에는 한계가 있다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             uint32 colorCount{ 0 };
@@ -170,9 +170,9 @@ namespace sw
             }
         }
 
-        // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가 — "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
+        // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
         //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두었지만 Bloom 코드가 그것을 걸지 않아 SSAO 가 매 프레임
-        //    돌고 버려졌던 것(백로그 1-6)이 이 검사가 없어서였다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
+        //    돌고 버려졌다(백로그 1-6). 이 검사가 없어서였다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             const RenderPassInputContract* pContract = findRenderPassInputContract( pass._resolvedType );

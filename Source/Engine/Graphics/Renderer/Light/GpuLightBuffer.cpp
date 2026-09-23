@@ -20,7 +20,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 컴포넌트와 그 소유 오브젝트가 모두 활성인가. */
+        /** @brief 컴포넌트와 그 소유 오브젝트가 모두 활성인지 확인합니다. */
         bool isLightActive( const SceneComponent* pLight )
         {
             if ( pLight == nullptr || pLight->isActive() == false )
@@ -38,7 +38,7 @@ namespace sw
 
         const LightRegistry& registry = pScene->getObjectManager()->getLightRegistry();
 
-        // 방향광 먼저 — 그림자를 드리우는 **첫** 빛만 그림자 플래그를 받는다(그림자 맵이 하나다).
+        // 방향광 먼저. 그림자를 드리우는 **첫** 빛만 그림자 플래그를 받는다(그림자 맵이 하나다).
         bool bShadowTaken = false;
         for ( DirectionalLightComponent* pLight : registry.getAllDirectional() )
         {
@@ -89,7 +89,7 @@ namespace sw
             light._colorIntensity = float4{ color._x, color._y, color._z, pLight->getIntensity() };
             light._directionType  = float4{ direction._x, direction._y, direction._z,
                                            static_cast<float32>( shaderslot::kLightTypeSpot ) };
-            // 원뿔은 **코사인으로** 보낸다 — 셰이더가 매 픽셀 acos 를 하지 않도록.
+            // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
             light._params._y = MathUtil::cos( pLight->getOuterConeAngle() );
             light._params._z = MathUtil::cos( pLight->getInnerConeAngle() );
             outList.push_back( light );
@@ -115,7 +115,7 @@ namespace sw
         _count = count;
         if ( count == 0 )
         {
-            // 버퍼는 그대로 둔다 — 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그게 비용이다.
+            // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
             // 셰이더는 g_SwLightCount 가 0 이면 PassCB 키라이트로 폴백한다.
             return;
         }

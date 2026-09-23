@@ -1,10 +1,10 @@
 /**
  * @file ShaderBakeRecipe.cpp
- * @brief **무엇을 구울지** 정한다 — 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만든다.
- * @details 굽는 일(`Shader/Compile/ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문이다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
- *          저쪽 입력은 레시피 하나다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 에서
+ * @brief **무엇을 구울지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
+ * @details 굽는 일(`Shader/Compile/ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
+ *          저쪽 입력은 레시피 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 에서
  *          매니페스트 미스로 떨어지므로, define 을 합치는 규칙(`mergeDefines`)과 패스 기본 셰이더를 고르는 규칙이
- *          런타임과 같은 자리를 봐야 한다 — 그 대조가 이 파일의 일이다.
+ *          런타임과 같은 자리를 봐야 합니다. 그 대조가 이 파일의 일입니다.
  */
 #include "pch.h"
 
@@ -86,7 +86,7 @@ namespace sw
                 outListRecipe.push_back( std::move( recipe ) );
             }
 
-            /** @brief 씬 메시를 그리는 패스 하나 — 머티리얼과 곱해 변형을 만들 대상이다. */
+            /** @brief 씬 메시를 그리는 패스 하나입니다. 머티리얼과 곱해 변형을 만들 대상입니다. */
             struct MeshPassInfo
             {
                 string         _shaderPath;
@@ -97,7 +97,7 @@ namespace sw
                 bool           _bHasPixelStage{ false };
             };
 
-            /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 동일한** define 목록. */
+            /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
             struct MaterialVariantInfo
             {
                 string         _shaderPath;
@@ -135,7 +135,7 @@ namespace sw
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;
 
-                // 1) RenderPipeline XMLs (pipeline/*.xml)
+                // 1) 렌더 파이프라인 XML(pipeline/*.xml)
                 vector<string> listXmlFile;
                 FileUtil::collectFiles( rootDir, ".xml", listXmlFile, true );
 
@@ -157,14 +157,14 @@ namespace sw
                         if ( shaderPath.empty() )
                             continue;
 
-                        // 패스가 더하는 define 은 XML 에만 있지 않다 — G버퍼는 `SW_PASS_GBUFFER=1` 을 C++ 에서
-                        // 얹는다. 런타임과 **같은 함수**에 물어 합친다. 예전엔 여기서 XML 의 `_listPermutation`
+                        // 패스가 더하는 define 은 XML 에만 있지 않다. G버퍼는 `SW_PASS_GBUFFER=1` 을 C++ 에서
+                        // 얹는다. 런타임과 **같은 함수**에 물어 합친다. 예전에는 여기서 XML 의 `_listPermutation`
                         // 만 봐서, 런타임이 찾는 해시를 하나도 굽지 않았다(Shipping 에서 G버퍼 드로우가 통째로
                         // 사라졌고 디퍼드 화면이 한 색으로 남았다).
                         const vector<string> listPassDefine =
                             mergeDefines( pass._listPermutation, FrameRendererUtil::getPassDefine( pass._resolvedType ) );
 
-                        // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다 (아래 4단계).
+                        // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다(아래 4단계).
                         if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
                         {
                             MeshPassInfo passInfo;
@@ -177,7 +177,7 @@ namespace sw
                             listMeshPass.push_back( std::move( passInfo ) );
                         }
 
-                        // Compute Shader
+                        // 컴퓨트 셰이더
                         if ( pass._computeEntryPoint.empty() == false || pass._type == "Compute" )
                         {
                             const string csEntry = pass._computeEntryPoint.empty() ? "CSMain" : pass._computeEntryPoint;
@@ -185,11 +185,11 @@ namespace sw
                         }
                         else
                         {
-                            // Vertex Shader
+                            // 정점 셰이더
                             const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
                             appendRecipeUnique( outListRecipe, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
-                            // 픽셀 셰이더 — 컬러 출력이 없는 패스(그림자·뎁스 프리패스)엔 없다. 예전엔 여기서 타입
+                            // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 예전에는 여기서 타입
                             // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
                             if ( FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment ) )
                             {
@@ -197,30 +197,30 @@ namespace sw
                                 appendRecipeUnique( outListRecipe, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                             }
 
-                            // Geometry Shader
+                            // 지오메트리 셰이더
                             if ( pass._geometryEntryPoint.empty() == false )
                                 appendRecipeUnique( outListRecipe, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
 
-                            // Hull Shader
+                            // 헐 셰이더
                             if ( pass._hullEntryPoint.empty() == false )
                                 appendRecipeUnique( outListRecipe, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
 
-                            // Domain Shader
+                            // 도메인 셰이더
                             if ( pass._domainEntryPoint.empty() == false )
                                 appendRecipeUnique( outListRecipe, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
 
-                            // Mesh Shader
+                            // 메시 셰이더
                             if ( pass._meshEntryPoint.empty() == false )
                                 appendRecipeUnique( outListRecipe, shaderPath, pass._meshEntryPoint, ShaderStage::Mesh, listPassDefine );
 
-                            // Amplification Shader
+                            // 앰플리피케이션 셰이더
                             if ( pass._amplificationEntryPoint.empty() == false )
                                 appendRecipeUnique( outListRecipe, shaderPath, pass._amplificationEntryPoint, ShaderStage::Amplification, listPassDefine );
                         }
                     }
                 }
 
-                // 2) Bootstrap / EngineData default shaders
+                // 2) 부트스트랩 · EngineData 기본 셰이더
                 const vector<string> listEngineShader = {
                     engineData._shaderShadowDepth,
                     engineData._shaderForwardLit,
@@ -248,7 +248,7 @@ namespace sw
                     appendRecipeUnique( outListRecipe, path, "PSMain", ShaderStage::Pixel, {} );
                 }
 
-                // Bootstrap Compute Shaders
+                // 부트스트랩 컴퓨트 셰이더
                 const vector<string> listEngineComputeShader = {
                     engineData._shaderGpuCull,
                     engineData._shaderInstanceAnim,
@@ -265,14 +265,14 @@ namespace sw
                     appendRecipeUnique( outListRecipe, path, "CSMain", ShaderStage::Compute, {} );
                 }
 
-                // 3) Material assets (.material)
+                // 3) 머티리얼 에셋(.material)
                 vector<string> listMaterialFile;
                 FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
                 for ( const string& matPath : listMaterialFile )
                 {
-                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 예전엔 여기서 XML 의
-                    // `_alwaysDefines` 만 손으로 긁었다 — 런타임은 거기에 품질·SHADER_LOD·usage·정적
-                    // 스위치·멀티컴파일까지 얹으므로, 구운 변형은 런타임이 **한 번도 요청하지 않는**
+                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 예전에는 여기서 XML 의
+                    // `_alwaysDefines` 만 손으로 긁었다. 런타임은 거기에 품질 · SHADER_LOD · usage · 정적
+                    // 스위치 · 멀티 컴파일까지 얹으므로, 구운 변형은 런타임이 **한 번도 요청하지 않는**
                     // 해시였다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromFile( matPath ) == false )
@@ -289,17 +289,17 @@ namespace sw
                     appendRecipeUnique( outListRecipe, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
                 }
 
-                // 4) 패스 x 머티리얼 — 런타임이 실제로 요구하는 조합
+                // 4) 패스 x 머티리얼: 런타임이 실제로 요구하는 조합
                 //
                 // FrameRenderer::createMaterialPsoVariant 는 패스 PSO 의 define 위에 머티리얼 define 을
                 // 얹어 변형 PSO 를 만든다. 즉 런타임이 찾는 것은 패스 단독도 머티리얼 단독도 아닌
-                // **둘의 합집합**이다. 위의 1)/3) 만 구워두면 그림자·불투명 패스가 머티리얼 메시를
+                // **둘의 합집합**이다. 위의 1)/3) 만 구워 두면 그림자 · 불투명 패스가 머티리얼 메시를
                 // 그릴 때마다 미스가 나고, Shipping 은 런타임 컴파일이 없어 드로우가 통째로 사라진다.
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
-                        // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다 — 그림자·뎁스는 자기 셰이더에
+                        // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에
                         // define 만 얹는다(usesMaterialShader 와 같은 규칙).
                         const string& shaderPath = passInfo._bUsesMaterialShader ? variant._shaderPath : passInfo._shaderPath;
                         if ( shaderPath.empty() )
@@ -310,14 +310,14 @@ namespace sw
                         if ( passInfo._bHasPixelStage )
                             appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
 
-                        // 5) 그 위의 **뷰 모드** 축 — 런타임이 요구하는 조합은 (패스 x 머티리얼 x 뷰 모드) 다.
+                        // 5) 그 위의 **뷰 모드** 축: 런타임이 요구하는 조합은 (패스 x 머티리얼 x 뷰 모드)다.
                         //
                         // Wireframe 은 래스터라이저 상태만 바꾸므로 새 바이트코드가 필요 없지만 Unlit 은
                         // 퍼뮤테이션이다. 굽지 않으면 Shipping 에서 그 PSO 생성이 실패하고 패스 PSO 로
-                        // 물러나 **조용히 Lit 으로 그려진다** — 값은 바뀌는데 화면은 그대로인, 이 기능을
+                        // 물러나 **조용히 Lit 으로 그려진다.** 값은 바뀌는데 화면은 그대로인, 이 기능을
                         // 처음 막아 두게 만든 바로 그 증상이다.
-                        // 뷰 모드를 받는 패스만이다(FrameRendererUtil::appliesViewMode 와 같은 규칙 —
-                        // 그림자·뎁스는 머티리얼 셰이더를 안 쓰므로 _bUsesMaterialShader 로 갈린다).
+                        // 뷰 모드를 받는 패스만이다(FrameRendererUtil::appliesViewMode 와 같은 규칙.
+                        // 그림자 · 뎁스는 머티리얼 셰이더를 안 쓰므로 _bUsesMaterialShader 로 갈린다).
                         if ( passInfo._bUsesMaterialShader )
                         {
                             const vector<string> listUnlit = mergeDefines( listCombined, { string( kViewModeUnlitDefine ) } );
@@ -327,7 +327,7 @@ namespace sw
                         }
                     }
 
-                    // 머티리얼이 **없는** 배치의 뷰 모드 변형 — 런타임은 퍼뮤테이션 없는 배치에도 (패스 define + Unlit) 을
+                    // 머티리얼이 **없는** 배치의 뷰 모드 변형. 런타임은 퍼뮤테이션 없는 배치에도 (패스 define + Unlit)을
                     // 만든다(ensureMaterialPsos 의 bHasPlain). 언리얼은 모든 메시에 머티리얼(기본 머티리얼)이 있어 이 축이
                     // 없지만, 여기는 머티리얼 없는 메시가 패스 PSO 로 그려지므로 그 변형도 굽는다. 위의 머티리얼 루프
                     // 안에만 두면 이 조합이 빠져 Shipping 에서 그 메시만 Lit 으로 물러난다.

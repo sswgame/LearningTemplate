@@ -28,7 +28,7 @@ namespace sw
         if ( pDevice == nullptr )
             return;
 
-        // 목록이 그대로면 다시 만들지 않는다. 레스트 포즈는 변하지 않으므로 **한 번만** 올린다 —
+        // 목록이 그대로면 다시 만들지 않는다. 레스트 포즈는 변하지 않으므로 **한 번만** 올린다.
         // 매 프레임 올리면 이 클래스가 없애려던 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
         const bool bSameSet = ( _listBuilt.size() == listMesh.size() ) &&
                               std::equal( _listBuilt.begin(), _listBuilt.end(), listMesh.begin() );
@@ -52,7 +52,7 @@ namespace sw
             const uint32 count = static_cast<uint32>( listVertex.size() );
             if ( _vertexCount + count > kMaxPoolVertices )
             {
-                // 예산 초과 — 이 메시는 풀에 넣지 않는다. `baseOf` 가 kInvalidBase 를 돌려주고 셰이더는
+                // 예산 초과. 이 메시는 풀에 넣지 않는다. `baseOf` 가 kInvalidBase 를 반환하고 셰이더는
                 // 레스트 포즈로 그린다. 언리얼 스킨 캐시가 가득 차면 일반 경로로 되돌리는 것과 같다.
                 SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 메시는 레스트 포즈로 그립니다.", kMaxPoolVertices );
                 break;
@@ -63,7 +63,7 @@ namespace sw
             {
                 GpuMorphVertex morphVertex{};
                 morphVertex._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
-                // 레스트 노멀도 함께 올린다 — 컴퓨트가 변형된 노멀을 만들려면 원래 노멀이 있어야 한다.
+                // 레스트 노멀도 함께 올린다. 컴퓨트가 변형된 노멀을 만들려면 원래 노멀이 있어야 한다.
                 morphVertex._normal = float4{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2], 0.0f };
                 listRest.push_back( morphVertex );
             }
@@ -80,7 +80,7 @@ namespace sw
         constexpr RHIBufferUsage kRestUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         constexpr RHIBufferUsage kMorphUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource |
                                                RHIBufferUsage::UnorderedAccess;
-        // 버퍼 원소는 **float4** 이고 정점 하나가 원소 둘이다 — 셰이더 선언(`StructuredBuffer<float4>`)과
+        // 버퍼 원소는 **float4** 이고 정점 하나가 원소 둘이다. 셰이더 선언(`StructuredBuffer<float4>`)과
         // stride 가 같아야 DX11 이 SRV 를 받는다. 바이트 수는 정점 × sizeof(GpuMorphVertex) 그대로다.
         const uint32 stride       = static_cast<uint32>( sizeof( float4 ) );
         const uint32 elementCount = _vertexCount * kMorphFloat4PerVertex;
@@ -90,7 +90,7 @@ namespace sw
             _rest.upload( pDevice, listRest.data(), elementCount * stride );
         _morph.ensureCapacity( pDevice, stride, elementCount, kMorphUsage, true, true, nullptr );
 
-        // UAV 를 못 받으면(백엔드·드라이버가 거절) 모프는 조용히 꺼진다 — 그리기는 레스트로 살아 있다.
+        // UAV 를 못 받으면(백엔드 · 드라이버가 거절) 모프는 조용히 꺼진다. 그리기는 레스트 포즈로 살아 있다.
         if ( _morph._uav == kInvalidDescriptorIndex )
             SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
     }

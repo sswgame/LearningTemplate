@@ -23,7 +23,7 @@ namespace sw
         if ( pDevice == nullptr || pDevice->getResource() == nullptr )
             return false;
 
-        // 집합 비교 — 포인터를 정렬해 지난번과 같은지 본다. 배치 순서는 프레임마다 바뀔 수 있지만 메시 집합은 드물게 바뀐다.
+        // 집합 비교: 포인터를 정렬해 지난번과 같은지 본다. 배치 순서는 프레임마다 바뀔 수 있지만 메시 집합은 드물게 바뀐다.
         _listScratchSorted.clear();
         _listScratchSorted.reserve( listMesh.size() );
         for ( Mesh* pMesh : listMesh )

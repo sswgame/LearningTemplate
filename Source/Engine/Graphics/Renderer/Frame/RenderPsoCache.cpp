@@ -147,7 +147,7 @@ namespace sw
         }
         _mapPresentPso.clear();
 
-        // 두 맵은 방금 파괴한 PSO 핸들로 키를 잡고 있다. 핸들이 generation 팩드라 되살아난
+        // 두 맵은 방금 파괴한 PSO 핸들로 키를 잡고 있다. 핸들에 generation 이 들어 있어 되살아난
         // 핸들이 옛 항목을 집는 일은 없지만, 셰이더 리로드마다 재생성을 도는 지금은 그대로 두면
         // 죽은 항목(RHIPipelineStateDesc 통째)이 계속 쌓인다.
         {

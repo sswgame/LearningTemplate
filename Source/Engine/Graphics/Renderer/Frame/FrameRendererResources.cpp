@@ -1,9 +1,9 @@
 /**
  * @file FrameRendererResources.cpp
- * @brief 패스 자원의 수명 — 엔진 PSO 등록, 상수버퍼 링, 머티리얼 폴백 버퍼, Present 변종.
- * @details 여기 있는 것은 전부 **기록 시작 전에** 만들어져야 하는 것들이다. 기록 중에는 버퍼 생성도 bindless 등록도
- *          PSO 생성도 할 수 없고(패스가 병렬로 기록된다), 그래서 "프레임이 쓸 것을 미리 다 만들어 둔다" 가 한 파일의
- *          주제가 된다. 첨부(렌더타깃)는 크기를 따라 다시 만들어지는 다른 수명이라 `FrameRendererTransients.cpp` 에 있다.
+ * @brief 패스 자원의 수명입니다: 엔진 PSO 등록, 상수버퍼 링, 머티리얼 폴백 버퍼, Present 변종.
+ * @details 여기 있는 것은 모두 **기록 시작 전에** 만들어져야 하는 것들입니다. 기록 중에는 버퍼 생성도 bindless 등록도
+ *          PSO 생성도 할 수 없고(패스가 병렬로 기록됩니다), 그래서 "프레임이 쓸 것을 미리 다 만들어 둔다" 가 한 파일의
+ *          주제가 됩니다. 첨부(렌더 타깃)는 크기를 따라 다시 만들어지는 다른 수명이라 `FrameRendererTransients.cpp` 에 있습니다.
  */
 #include "pch.h"
 
@@ -25,7 +25,7 @@ namespace sw
 
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
         _passCbRing.initialize( _pDevice );
-        // 직렬 경로 시드는 0번 슬롯을 쓴다. (패스별 경로는 acquirePassCb 로 덮어쓴다)
+        // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
         _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
 
         struct GpuCullParams
@@ -35,7 +35,7 @@ namespace sw
             uint32  _batchCount{ 0 };
             uint32  _pad[2]{};
         };
-        // 뷰마다 하나씩 — 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
+        // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
             RenderView& renderView = _arrView[viewIndex];
@@ -71,7 +71,7 @@ namespace sw
 
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
-        // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
+        // 셰이더 경로는 파이프라인 XML 패스 레시피가 먼저다. EngineData 경로는 마지막 폴백일 뿐이다.
 
         auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
                                    const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true,
@@ -89,11 +89,11 @@ namespace sw
         registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
         registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
         // 반투명 패스는 블렌드를 켜고 뎁스 쓰기를 끄는 것까지가 **패스의 몫**이다. 어떤 셰이더 퍼뮤테이션으로
-        // 그릴지는 머티리얼이 정한다 — glassmaterial 이 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로 들고
-        // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전엔 이 define 을 여기에 박아 두어
-        // "반투명 패스에 들어온 것은 무조건 반투명" 이었다 — 머티리얼이 뭘 선언했든 상관이 없었다.
+        // 그릴지는 머티리얼이 정한다. glassmaterial 이 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로 들고
+        // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전에는 이 define 을 여기에 박아 두어
+        // "반투명 패스에 들어온 것은 무조건 반투명" 이었다. 머티리얼이 무엇을 선언했든 상관이 없었다.
         registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
-        // G버퍼 패스의 PSO 에는 define 을 얹는다 — 이 desc 를 물려받는 **머티리얼 변형**까지 같이
+        // G버퍼 패스의 PSO 에는 define 을 얹는다. 이 desc 를 물려받는 **머티리얼 변형**까지 같이
         // MRT 서명으로 컴파일된다(createMaterialPsoVariant 가 패스 desc 를 통째로 복사한다).
         const vector<string> listGbufferDefine = FrameRendererUtil::getPassDefine( RenderPassType::GBuffer );
         registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat, false, true,
@@ -120,7 +120,7 @@ namespace sw
         registerPso( RenderPassType::TAA, engineData._shaderTaa.c_str(), false );
         registerPso( RenderPassType::Tonemap, engineData._shaderTonemap.c_str(), false );
 
-        // Compute PSO: GpuCull — capabilities + 실제 PSO 생성 성공 시에만 GPU-driven.
+        // 컴퓨트 PSO: GpuCull. capabilities 가 허락하고 PSO 생성이 실제로 성공했을 때만 GPU 드리븐으로 간다.
         const RHICapabilities caps = _pDevice->getCapabilities();
         if ( caps._bGpuCulling != SW_FALSE )
         {
@@ -129,16 +129,16 @@ namespace sw
             if ( psoGpuCull != 0 )
                 _psoCache.setEnginePso( RenderPassType::GpuCull, psoGpuCull );
 
-            // 압축한 가시 목록을 깊이순으로 되돌리는 패스 — 컬링과 같은 바인딩 자리를 쓴다.
+            // 압축한 가시 목록을 깊이순으로 되돌리는 패스. 컬링과 같은 바인딩 자리를 쓴다.
             const RHIPipelineStateHandle psoSort =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceSort.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoSort != 0 )
                 _psoCache.setEnginePso( RenderPassType::InstanceSort, psoSort );
         }
 
-        // 인스턴스 애니메이션은 **컬링 능력과 무관하다** — 구조버퍼 UAV 하나만 있으면 된다.
-        // 예전엔 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
-        // 같이 못 건다"는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
+        // 인스턴스 애니메이션은 **컬링 능력과 무관하다.** 구조버퍼 UAV 하나만 있으면 된다.
+        // 예전에는 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
+        // 같이 못 건다" 는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
         // 버퍼만 쓰므로 그 제약과 상관이 없는데 같이 꺼져서, DX11 에서만 큐브가 아예 돌지 않았다.
         if ( caps._bCompute != SW_FALSE )
         {
@@ -147,24 +147,24 @@ namespace sw
             if ( psoAnim != 0 )
                 _psoCache.setEnginePso( RenderPassType::InstanceAnim, psoAnim );
 
-            // 메시 모프도 같은 조건이다 — 구조버퍼 SRV 하나와 UAV 하나뿐이라 컬링 능력과 무관하다.
+            // 메시 모프도 같은 조건이다. 구조버퍼 SRV 하나와 UAV 하나뿐이라 컬링 능력과 무관하다.
             const RHIPipelineStateHandle psoMorph =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderMeshMorph.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoMorph != 0 )
                 _psoCache.setEnginePso( RenderPassType::MeshMorph, psoMorph );
         }
 
-        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다 — 예전엔 진단용 전역변수로 끌 수 있는 두 번째
-        // 드로우 루프가 있었지만, 컬링·정렬·인스턴스 애니메이션이 전부 인다이렉트 경로에만 붙어 있어
-        // 그걸 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
+        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다. 예전에는 진단용 전역 변수로 끌 수 있는 두 번째
+        // 드로우 루프가 있었지만, 컬링 · 정렬 · 인스턴스 애니메이션이 모두 인다이렉트 경로에만 붙어 있어
+        // 그것을 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
         // 여기서 크게 알린다.
         if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
-        // Present 변종도 PSO 등록 단계에서 만든다 — 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
+        // Present 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
         buildPresentPsoVariants();
 
-        // 폴백 원소는 PSO 를 다 등록한 뒤에 만든다 — 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
+        // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
 
         _bPassResourcesReady = SW_TRUE;
@@ -176,8 +176,8 @@ namespace sw
 
     void FrameRenderer::releasePassResources()
     {
-        // PSO·레이아웃·패스 CB 가 여기서 사라진다 — 그것을 가리키던 드로우 캐시도 같이 잊는다.
-        // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다 — 백엔드 교체 뒤 빈 화면의 원인.)
+        // PSO · 레이아웃 · 패스 CB 가 여기서 사라진다. 그것을 가리키던 드로우 캐시도 같이 잊는다.
+        // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다. 백엔드 교체 뒤 빈 화면의 원인이다.)
         _frameCtx.resetBindingCache();
 
         if ( _pDevice == nullptr )
@@ -200,10 +200,10 @@ namespace sw
             return;
         }
 
-        // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다 — 디바이스가 살아 있을 때 놓는다.
+        // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다. 디바이스가 살아 있을 때 놓는다.
         _graph.releaseCommandLists();
 
-        // PSO 는 캐시가 순서대로 놓는다 — 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
+        // PSO 는 캐시가 순서대로 놓는다: 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
         _psoCache.releaseAll( _pDevice );
 
         _gpuScene.releaseGpu( _pDevice );
@@ -215,7 +215,7 @@ namespace sw
             _arrView[viewIndex]._cullCb.release( _pDevice );
         _instanceAnimCb.release( _pDevice );
         _instanceSortCb.release( _pDevice );
-        // 모프 상수버퍼와 모프 풀은 여태 **한 번도 놓지 않고 있었다** — 형제(anim·sort)만 적혀 있었다.
+        // 모프 상수버퍼와 모프 풀은 여태 **한 번도 놓지 않고 있었다.** 형제(anim · sort)만 적혀 있었다.
         // 디바이스가 바뀌면 옛 디바이스의 버퍼와 bindless 항목이 그대로 남는다.
         _meshMorphCb.release( _pDevice );
         _meshMorphPool.release( _pDevice );
@@ -223,7 +223,7 @@ namespace sw
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
             fallbackSlot.release( _pDevice );
         _mapMaterialFallback.clear();
-        // TAA 히스토리만 **텍스처**다 — bindless 인덱스 공간이 버퍼와 달라 텍스처용 해제를 불러야 한다.
+        // TAA 히스토리만 **텍스처**다. bindless 인덱스 공간이 버퍼와 달라 텍스처용 해제를 불러야 한다.
         if ( _taaHistorySrv != kInvalidDescriptorIndex )
             _pDevice->getResource()->unregisterBindlessTexture( _taaHistorySrv );
         if ( _taaHistory != 0 )
@@ -244,7 +244,7 @@ namespace sw
         // 패스 진입 시의 기본 슬롯. 실제 드로우는 bindForDraw 가 드로우마다 새 슬롯을 잡는다.
         _passCbRing.acquire( ctx._passCb, ctx._passCbIndex );
         // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
-        // (ctx._passValues 에 이미 프레임 시드가 들어있으므로 별도 선-업로드가 필요 없다).
+        // (ctx._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
     }
 
     void FrameRenderer::ensurePassCbCapacityForFrame()
@@ -264,8 +264,8 @@ namespace sw
         if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
             return;
 
-        // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 같은 셰이더라도
-        // 백엔드마다 다르다(DX 자연 패킹 / SPIR-V std430) — 레이아웃은 이 디바이스의 백엔드로 빌드된 것이다.
+        // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 레이아웃은
+        // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다).
         vector<uint32>                           listStride;
         vector<RenderPsoCache::RegisteredLayout> listLayout;
         _psoCache.collectLayouts( listLayout );
@@ -278,7 +278,7 @@ namespace sw
                     continue;
                 const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
                 if ( pSlot == nullptr )
-                    continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등) — 걸 것이 없다.
+                    continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등). 걸 것이 없다.
                 if ( pSlot->_elementStride == 0 )
                 {
                     // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
@@ -314,8 +314,8 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // Present 가 그릴 수 있는 대상은 둘뿐이다 — 백버퍼(디바이스가 실제 채택한 포맷)와 오프스크린
-        // 렌더타깃(에디터 GameView 등, 계약값 kOffscreenColorFormat). 둘 다 **셋업에서** 만들어 둔다.
+        // Present 가 그리는 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 GameView 등,
+        // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
         const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
         for ( const RHIFormat format : arrTargetFormat )
         {
@@ -325,15 +325,15 @@ namespace sw
             const RHIFormat              arrRtvFormat[] = { format };
             const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
                                                                                 false, 1, arrRtvFormat );
-            // 실패해도 기록한다 — 0 이면 호출부가 blit 폴백으로 간다.
+            // 실패해도 기록한다. 0 이면 부르는 쪽이 blit 폴백으로 간다.
             _psoCache.setPresentPso( format, pso );
         }
     }
 
     RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
     {
-        // **조회만 한다.** 예전엔 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
-        // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더패스 캐시(락 없음)를 건드리므로, 같은
+        // **조회만 한다.** 예전에는 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
+        // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )

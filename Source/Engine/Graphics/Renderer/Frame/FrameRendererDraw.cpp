@@ -26,8 +26,8 @@ namespace sw
     {
         if ( pso == 0 || _pDevice == nullptr )
             return;
-        // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다 —
-        // 한 프로세스에 여러 IRHIDevice 가 동시에 존재하면 전역값이 어긋날 수 있다.
+        // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
+        // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
         _psoCache.registerLayout( pso, desc, _pDevice->getBackendType() );
     }
 
@@ -38,9 +38,9 @@ namespace sw
 
         _psoCache.invalidateLayoutsByShaderPath( shaderPath );
 
-        // **PSO 를 실제로 다시 만든다.** 예전엔 여기서 바인딩 레이아웃만 새로 만들었는데, PSO 는
-        // 바이트코드를 구워 넣은 객체라 그것만으로는 화면이 시작 시 컴파일된 셰이더 그대로였다.
-        // 주석은 "전부 다시 만든다" 였지만 실제로 재생성하는 releasePassResources/ensurePassResources
+        // **PSO 를 실제로 다시 만든다.** 예전에는 여기서 바인딩 레이아웃만 새로 만들었는데, PSO 는
+        // 바이트코드를 구워 넣은 객체라 그것만으로는 화면이 시작 때 컴파일된 셰이더 그대로였다.
+        // 주석은 "모두 다시 만든다" 였지만 실제로 재생성하는 releasePassResources/ensurePassResources
         // 는 loadPipeline 과 shutdown 에서만 불렀다.
         //
         // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고(수동 리로드)
@@ -66,7 +66,7 @@ namespace sw
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
         ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
 
-        // 배치 표 — **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)이 전부 여기 있어
+        // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
         if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
         {
@@ -74,7 +74,7 @@ namespace sw
             ctx._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
         }
 
-        // 모프 결과 풀 — **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
+        // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
         const RHIStructuredBufferSlot& morphBuffer = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getRestBuffer()
@@ -85,9 +85,9 @@ namespace sw
             ctx._passValues.setUint( passConstantNames()._swMorphVertexCount, _meshMorphPool.getVertexCount() );
         }
 
-        // 컬링이 실제로 목록을 만들었을 때만 건다 — 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
+        // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
         // 예전처럼 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
-        // 목록**을 읽어 전부 0 번 인스턴스를 그린다 — 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
+        // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullView );
         if ( _bGpuCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
              cullView._visibleInstances._srv != kInvalidDescriptorIndex )
@@ -99,7 +99,7 @@ namespace sw
 
     void FrameRenderer::registerLightBuffer( FramePassContext& ctx )
     {
-        // 개수는 버퍼가 없어도 채운다 — 셰이더는 0 이면 PassCB 키라이트로 폴백한다.
+        // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 PassCB 키라이트로 폴백한다.
         ctx._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
         if ( _lightBuffer.isBindable() == false )
             return;
@@ -109,17 +109,17 @@ namespace sw
 
     void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso )
     {
-        // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼 — 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
-        // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다 (드로우별 CB 바인딩 없음).
+        // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
+        // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
         if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
         {
-            // 머티리얼 없는 배치 — 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
-            // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다 — 공용 256 바이트를 걸면 DX11 이 드로우마다
+            // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
+            // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
             const ShaderBindingLayout* pLayout = ( ctx._lastLayoutPso == pso ) ? ctx._pLastLayout : layoutForPso( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
-                return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다 — 걸 것도 없다.
+                return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
             const auto it = _mapMaterialFallback.find( pSlot->_elementStride );
             if ( it != _mapMaterialFallback.end() && it->second.isValid() && it->second._srv != kInvalidDescriptorIndex )
             {
@@ -147,8 +147,8 @@ namespace sw
 
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
-        // 같은 PSO로 연속 드로우하는 게 흔한 패턴이라, 패스-로컬 1-entry 캐시로
-        // layoutForPso()의 뮤텍스+해시맵 조회를 매 드로우 반복하지 않게 한다.
+        // 같은 PSO 로 연속 드로우하는 것이 흔한 패턴이라, 패스 로컬 1칸 캐시로
+        // layoutForPso() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
         if ( ctx._lastLayoutPso != pso )
         {
             ctx._pLastLayout   = layoutForPso( pso );
@@ -156,10 +156,10 @@ namespace sw
         }
         const ShaderBindingLayout* pLayout = ctx._pLastLayout;
         if ( pLayout == nullptr || pLayout->isEmpty() )
-            return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
+            return; // 레이아웃을 못 얻었다(컴파일 실패 등). 조용히 건너뛴다
 
-        // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다 — 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
-        // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전엔 이 둘을 PassCB 에 넣어 드로우마다
+        // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
+        // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전에는 이 둘을 PassCB 에 넣어 드로우마다
         // 버퍼를 새로 잡아야 했다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
         const uint32 arrDrawRootConstant[] = { ctx._drawMaterialCount };
         ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
@@ -167,9 +167,9 @@ namespace sw
 
         const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
 
-        // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나 — 값·레지스트리 버전과 버퍼가 모두 그대로면 없다.
+        // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
-        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다 (FramePassContext::_lastBindPso 참고).
+        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPso 참고).
         const uint32 valuesVersion   = ctx._passValues.getVersion();
         const uint32 registryVersion = ctx._resourceRegistry.getVersion();
         const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
@@ -197,12 +197,12 @@ namespace sw
 
         // 그릴 메시가 하나도 없다. 상태만 맞춰 두고 나간다.
         //
-        // 예전엔 여기에 경로가 둘 더 있었다. (1) 씬을 다시 순회해 드로우 목록을 만드는 폴백과
-        // (2) 인다이렉트 대신 배치마다 drawInstanced 를 부르는 경로다. 둘 다 지웠다 —
-        // (1)은 수집 조건이 GpuScene::buildFromScene 과 같아 애초에 도달 불가였고(런타임 경로는
+        // 예전에는 여기에 경로가 둘 더 있었다. (1) 씬을 다시 순회해 드로우 목록을 만드는 폴백과
+        // (2) 인다이렉트 대신 배치마다 drawInstanced 를 부르는 경로다. 둘 다 지웠다.
+        // (1)은 수집 조건이 GpuSceneBuilder::buildFromScene 과 같아 애초에 도달할 수 없었고(런타임 경로는
         // _pScene 이 null 이라 더더욱), (2)는 네 백엔드가 모두 인다이렉트 드로우를 지원하는데
-        // 진단용 전역변수로만 닿는 두 번째 드로우 루프였다. 경로가 둘이면 새 기능이 한쪽에만 들어간다 —
-        // 실제로 컬링·정렬·인스턴스 애니메이션이 전부 인다이렉트 경로에만 붙어 있어서, 그 변수를 끄면
+        // 진단용 전역 변수로만 닿는 두 번째 드로우 루프였다. 경로가 둘이면 새 기능이 한쪽에만 들어간다.
+        // 실제로 컬링 · 정렬 · 인스턴스 애니메이션이 모두 인다이렉트 경로에만 붙어 있어서, 그 변수를 끄면
         // 조용히 다른 그림이 나왔다.
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
@@ -235,25 +235,25 @@ namespace sw
 
         const vector<GpuMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
-        // 시간만 보면 무엇이 비싼지 알 수 없다 — 배치가 몇 개로 묶였는지가 해석의 전제다.
+        // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
 
-        // Indirect slots are laid out opaque then transparent in upload order.
+        // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
         uint32 batchOffset{ 0 };
         if ( bTransparentPass )
             batchOffset = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() );
 
-        // **같은 PSO·정점 버퍼·머티리얼(버퍼·CB·텍스처·원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
-        // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다 — 간접 인자의 startInstance 가 배치 시작이라 입력
+        // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
+        // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
-        // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려졌다 — 실측). 멀티 드로우가 없는
+        // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려졌다. 실측이다). 멀티 드로우가 없는
         // 백엔드(DX11)는 하나씩 부른다. 2026-09-13 벤치: 871 배치의 드로우 루프가 RT 프레임의 41% 였고 비용은 호출 수였다.
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
 
         // **머티리얼 CB 를 실제로 거는 셰이더에서만** 그 값을 병합 키에 넣는다.
         //
         // GPUScene 경로의 머티리얼은 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로
-        // 읽는다 — 그런 셰이더에는 머티리얼 CB 슬롯이 아예 없어서 `bindForDraw` 가 그 값을 걸지도
+        // 읽는다. 그런 셰이더에는 머티리얼 CB 슬롯이 아예 없어서 `bindForDraw` 가 그 값을 걸지도
         // 않는다. 그런데도 `_materialCb` 가 병합 키에 있어서, 깊이순으로 섞인 투명 배치들이
         // **그리기에 아무 영향 없는 값 때문에** 하나씩 따로 그려지고 있었다
         // (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회. 이 값을 빼면 3 회이고 화면은 같다).
@@ -291,7 +291,7 @@ namespace sw
         };
 
         const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer;
-        // 인스턴스 슬롯 스트림(슬롯 1) — 패스당 한 번. 씬 드로우는 전부 이 스트림에서 자기 자리를 읽는다.
+        // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
         if ( _gpuScene.getInstanceSlotStream() != 0 )
             ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, _gpuScene.getInstanceSlotStream(), constant::kInstanceSlotStreamStride, 0 );
         RHIBufferHandle boundVertexBuffer{ 0 };
@@ -320,9 +320,9 @@ namespace sw
                 boundVertexBuffer = head._vertexBuffer;
             }
 
-            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 예전엔 패스 PSO 하나로 전부 그려서, 머티리얼이 선언한
+            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 예전에는 패스 PSO 하나로 모두 그려서, 머티리얼이 선언한
             // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않았다.
-            // 캐시는 ensureMaterialPsos 가 기록 전에 채운다 — 여기서는 조회만 한다.
+            // 캐시는 ensureMaterialPsos 가 기록 전에 채운다. 여기서는 조회만 한다.
             const RHIPipelineStateHandle batchPso = psoForBatch( pso, head );
             if ( batchPso != boundPso && batchPso != 0 )
             {
@@ -330,10 +330,10 @@ namespace sw
                 boundPso = batchPso;
             }
 
-            // 루트 상수 = { 머티리얼 원소 수 } — 그룹 안에서 같다.
+            // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
             registerMaterialBuffer( ctx, head, batchPso );
             bindForDraw( ctx, batchPso, head._materialCb, head._arrMaterialTexSrv );
-            // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
+            // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
             ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ),
                                      groupEnd - batchIndex );

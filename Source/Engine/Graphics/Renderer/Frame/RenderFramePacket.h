@@ -1,6 +1,6 @@
 /**
  * @file RenderFramePacket.h
- * @brief Game Thread → Render Thread frame submission data.
+ * @brief 게임 스레드 → 렌더 스레드로 넘기는 프레임 제출 데이터입니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -11,32 +11,32 @@
 
 namespace sw
 {
-    /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷
+    /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷입니다.
     struct RenderFramePacket
     {
-        GpuSceneSnapshot _gpuScene; ///< GT 가 만든 것 전부 — 소유를 함께 싣는다(GpuSceneSnapshot 참고)
+        GpuSceneSnapshot _gpuScene; ///< GT 가 만든 것 모두. 소유를 함께 실음(GpuSceneSnapshot 참고)
         float4           _clearColor;
         float3           _cameraPos;
         float4x4         _viewProj;
         float4x4         _lightViewProj;
-        /** @brief xyz = 빛이 나아가는 방향, w = 세기. */
+        /** @brief xyz = 빛이 나아가는 방향, w = 세기입니다. */
         float4 _lightDirIntensity;
-        /** @brief rgb = 빛 색, a = 환경광. */
+        /** @brief rgb = 빛 색, a = 환경광입니다. */
         float4 _lightColorAmbient;
         /**
-         * @brief 이 프레임의 **모든** 라이트 (방향광 + 점광). 값으로 싣는다.
-         * @details 렌더 스레드는 씬을 볼 수 없으므로(`_pScene` 은 늘 null) 라이트도 패킷으로만 온다.
-         *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나온다 —
-         *          라이트 목록이 비어도 예전과 같은 그림이 나오는 폴백 경로이기도 하다.
+         * @brief 이 프레임의 **모든** 라이트(방향광 + 점광)입니다. 값으로 싣습니다.
+         * @details 렌더 스레드는 씬을 볼 수 없으므로(`_pScene` 은 늘 null) 라이트도 패킷으로만 옵니다.
+         *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나옵니다.
+         *          라이트 목록이 비어도 예전과 같은 그림이 나오는 폴백 경로이기도 합니다.
          */
         vector<GpuLight> _listLight;
-        RHITextureHandle _gameRenderTarget; ///< 0 = backbuffer path
+        RHITextureHandle _gameRenderTarget; ///< 0 = 백버퍼 경로
         uint32           _viewportWidth;
         uint32           _viewportHeight;
         uint64           _frameIndex;
         uint8            _bHasViewProj : 1;
         uint8            _bValid       : 1;
-        /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1. */
+        /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
         uint8                  _bHasLight : 1;
         [[maybe_unused]] uint8 _reserved  : 5;
 
@@ -60,10 +60,10 @@ namespace sw
         }
 
         /**
-         * @brief 새 프레임을 채우기 전에 값 필드를 기본값으로 되돌립니다 — **저장소는 남긴다.**
-         * @details 패킷은 GT 의 스크래치 하나가 링 자리와 바꿔 가며 돈다(`RenderThread::submit`). 그래서 이 객체에는 몇 프레임
-         *          전의 값이 남아 있고, 조건부로만 쓰는 필드(빛·뷰프로젝션)는 여기서 지워야 한다. 벡터·스냅샷은 비우기만 해
-         *          용량이 남는다.
+         * @brief 새 프레임을 채우기 전에 값 필드를 기본값으로 되돌립니다. **저장소는 남깁니다.**
+         * @details 패킷은 GT 의 스크래치 하나가 링 자리와 바꿔 가며 돕니다(`RenderThread::submit`). 그래서 이 객체에는 몇 프레임
+         *          전의 값이 남아 있고, 조건부로만 쓰는 필드(빛 · 뷰-투영)는 여기서 지워야 합니다. 벡터 · 스냅샷은 비우기만 해
+         *          용량이 남습니다.
          */
         void resetForFrame()
         {

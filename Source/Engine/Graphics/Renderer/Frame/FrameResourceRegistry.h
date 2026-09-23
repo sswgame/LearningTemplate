@@ -1,7 +1,7 @@
 /**
  * @file FrameResourceRegistry.h
- * @brief 패스 스코프 이름 → {텍스처/버퍼, bindless 인덱스} 레지스트리.
- * @details ShaderBindingBinder 가 `g_<Name>Index` 패턴의 CB 멤버를 자동으로 채울 때 사용한다.
+ * @brief 패스 스코프 이름 → {텍스처 · 버퍼, bindless 인덱스} 레지스트리입니다.
+ * @details ShaderBindingBinder 가 `g_<Name>Index` 패턴의 CB 멤버를 자동으로 채울 때 씁니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -11,21 +11,21 @@
 
 namespace sw
 {
-    /// @brief 등록된 텍스처 (핸들 + SRV bindless 인덱스).
+    /// @brief 등록된 텍스처입니다(핸들 + SRV bindless 인덱스).
     struct RegisteredTexture
     {
         RHITextureHandle   _handle{ 0 };
         RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
     };
 
-    /// @brief 등록된 버퍼 (핸들 + bindless 인덱스).
+    /// @brief 등록된 버퍼입니다(핸들 + bindless 인덱스).
     struct RegisteredBuffer
     {
         RHIBufferHandle    _handle{ 0 };
         RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
     };
 
-    /// @brief 엔진이 예약한 프레임 리소스 이름 (registerPassTexture 호출용 상수).
+    /// @brief 엔진이 예약한 프레임 리소스 이름입니다(registerPassTexture 호출용 상수).
     namespace framres
     {
         inline constexpr const utf8* kSceneColor       = "SceneColor";
@@ -40,29 +40,29 @@ namespace sw
 
     /**
      * @class FrameResourceRegistry
-     * @brief 패스 실행 동안만 유효한 이름→리소스 매핑. 패스 시작마다 reset() 한다.
+     * @brief 패스 실행 동안만 유효한 이름 → 리소스 매핑입니다. 패스 시작마다 reset() 합니다.
      */
     class SW_API FrameResourceRegistry
     {
     public:
-        /** @brief 등록된 텍스처/버퍼를 모두 비운다. */
+        /** @brief 등록된 텍스처 · 버퍼를 모두 비웁니다. */
         void reset();
 
-        /** @brief 텍스처를 이름으로 등록한다. */
+        /** @brief 텍스처를 이름으로 등록합니다. */
         void registerTexture( hashed_string name, RHITextureHandle handle, RHIDescriptorIndex srv );
-        /** @brief 버퍼를 이름으로 등록한다. */
+        /** @brief 버퍼를 이름으로 등록합니다. */
         void registerBuffer( hashed_string name, RHIBufferHandle handle, RHIDescriptorIndex index );
 
         /**
-         * @brief 등록 내용이 바뀔 때마다 오르는 번호 (PassConstantValues::getVersion 과 같은 용도).
+         * @brief 등록 내용이 바뀔 때마다 오르는 번호입니다(PassConstantValues::getVersion 과 같은 용도).
          * @details 엔진 상수버퍼의 `g_<Name>Index` 멤버가 이 레지스트리에서 채워지므로, 등록이 그대로면
-         *          상수버퍼도 그대로다.
+         *          상수버퍼도 그대로입니다.
          */
         uint32 getVersion() const { return _version; }
 
-        /** @brief 이름으로 텍스처를 찾는다 (없으면 nullptr). */
+        /** @brief 이름으로 텍스처를 찾습니다(없으면 nullptr). */
         const RegisteredTexture* findTexture( hashed_string name ) const;
-        /** @brief 이름으로 버퍼를 찾는다 (없으면 nullptr). */
+        /** @brief 이름으로 버퍼를 찾습니다(없으면 nullptr). */
         const RegisteredBuffer* findBuffer( hashed_string name ) const;
 
     private:
