@@ -91,6 +91,11 @@ RHI/
   메모리를 가리킬 길이 없습니다. 기록하는 스레드는 패스 시작(`setPipelineState` · `beginRenderPass` · `dispatch*`)에서
   자기 토큰을 묶습니다. 예전에 스레드 로컬이 포인터 자체를 들던 동안, 연 스레드의 포인터가 리스트보다 오래 살아
   죽은 컨텍스트에 `Map` 했습니다(간헐 세그폴트).
+  **이 장치는 DX11 에만 있고, 다른 셋에는 필요 없습니다** — DX12 · Vulkan 의 `updateConstantBuffer` 는 컨텍스트가
+  아니라 버퍼의 프레임 링 슬롯 메모리에 쓰고(리스트 단위 버저닝이 필요 없다), 리스트는 자기 얼로케이터(DX12) ·
+  커맨드 풀(Vulkan)을 들어 begin 과 end 가 스레드를 넘어도 됩니다. GL 은 병렬 기록이 없어 리스트가 스레드를
+  넘지 않습니다. `RHIDeviceTest.CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext` 가 세 백엔드에서
+  이 전제를 못박습니다.
 
 ## 스왑체인 — 같은 개념, 다른 무게
 

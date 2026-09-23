@@ -1048,40 +1048,51 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
 }
 
 /**
- * @brief [RHIDeviceTest] 리스트를 연 스레드와 닫은 스레드가 달라도, 리스트가 사라진 뒤의 상수버퍼 갱신은 살아 있는 컨텍스트로 간다
+ * @brief [RHIDeviceTest] 리스트를 연 스레드와 닫은 스레드가 달라도, 리스트가 사라진 뒤의 상수버퍼 갱신은 살아 있는 곳으로 간다 — 병렬 기록을 하는 세 백엔드
  * @details RenderGraph 의 병렬 웨이브가 하는 일이다 — 렌더 스레드가 첫 패스 리스트를 열어 배리어를 적고 워커가 닫는다. DX11 은
- *          "이 스레드가 기록 중인 Deferred Context" 를 스레드 로컬로 들므로, 닫는 스레드가 풀어도 연 스레드의 묶임은 남았다.
- *          리스트가 파괴된 뒤 그 스레드의 `updateConstantBuffer` 가 죽은 컨텍스트에 Map 해 간헐 세그폴트가 났다(세 번 보고 잡았다).
- *          제출 · 파괴가 연 스레드의 묶임을 되짚어 푸는지 본다 — 풀리지 않으면 아래 갱신이 해제된 메모리를 밟는다.
+ *          "이 스레드가 기록 중인 Deferred Context" 를 스레드 로컬로 알았는데, 닫는 스레드가 풀어도 연 스레드의 것은 남아 리스트가
+ *          파괴된 뒤 죽은 컨텍스트에 Map 했다(간헐 세그폴트, 세 번 보고 잡았다 — 지금은 세대 토큰이라 닫는 순간 무효다).
+ *          DX12 · Vulkan 은 갱신이 컨텍스트가 아니라 버퍼 메모리(프레임 링 슬롯)로 가고 리스트가 자기 얼로케이터 · 풀을 들므로
+ *          begin 과 end 가 스레드를 넘어도 되는 구조인데, 그 전제를 여기서 같이 못박는다. GL 은 병렬 기록이 없어(리스트가 스레드를
+ *          넘지 않는다) 대상이 아니다.
  */
 SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX11, window, device ) == false )
-        SW_TEST_SKIP( "DirectX11 unavailable" );
-
-    for ( uint32 round = 0; round < 4; ++round )
+    const sw::RHIBackend arrBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan };
+    uint32               testedCount{ 0 };
+    for ( sw::RHIBackend backend : arrBackend )
     {
-        sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
-        SW_ASSERT_TRUE( cmdList != nullptr );
-        cmdList->beginCommandList(); // 이 스레드가 연다 — 렌더 스레드의 자리
-        std::thread worker( [&cmdList]()
-        { cmdList->endCommandList(); } ); // 워커가 닫는다
-        worker.join();
-        device->executeCommandList( cmdList.get() );
-        cmdList.reset(); // 리스트가 사라진다 — 연 스레드의 묶임이 남아 있으면 죽은 컨텍스트를 가리킨다
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        ++testedCount;
 
-        // 기록 밖의 갱신 — 즉시 컨텍스트로 가야 한다.
-        const sw::RHIBufferHandle cb = device->getResource()->createConstantBuffer( 64 );
-        SW_ASSERT_TRUE( cb != 0 );
-        float32 arrValue[16]{};
-        arrValue[0] = static_cast<float32>( round );
-        device->getResource()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
-        device->getResource()->destroyBuffer( cb );
+        for ( uint32 round = 0; round < 4; ++round )
+        {
+            sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
+            SW_ASSERT_TRUE( cmdList != nullptr );
+            cmdList->beginCommandList(); // 이 스레드가 연다 — 렌더 스레드의 자리
+            std::thread worker( [&cmdList]()
+            { cmdList->endCommandList(); } ); // 워커가 닫는다
+            worker.join();
+            // 프레임 밖이다 — DX12 · Vulkan 은 executeCommandList 가 프레임 스트림을 요구하므로 즉시 제출로.
+            device->executeCommandListImmediate( cmdList.get() );
+            cmdList.reset(); // 리스트가 사라진다 — 연 스레드가 리스트를 기억하고 있으면 죽은 것을 가리킨다
+
+            // 기록 밖의 갱신 — 살아 있는 곳(즉시 컨텍스트 · 버퍼 메모리)으로 가야 한다.
+            const sw::RHIBufferHandle cb = device->getResource()->createConstantBuffer( 64 );
+            SW_ASSERT_TRUE( cb != 0 );
+            float32 arrValue[16]{};
+            arrValue[0] = static_cast<float32>( round );
+            device->getResource()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
+            device->getResource()->destroyBuffer( cb );
+        }
+        device->waitIdle();
+        shutdownDeviceWithWindow( device, window );
     }
-    device->waitIdle();
-    shutdownDeviceWithWindow( device, window );
+    if ( testedCount == 0 )
+        SW_TEST_SKIP( "No parallel-recording backend (DX11/DX12/Vulkan) available" );
 }
 
 /**
