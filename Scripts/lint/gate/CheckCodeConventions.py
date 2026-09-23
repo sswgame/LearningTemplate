@@ -1523,9 +1523,10 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
             relPath = normalizePath(headerPath)
 
         # 헤더에서 = default 기본 생성자나 인라인 생성자를 가진 클래스는 헤더 기본값이 유일한 초기화다.
+        # `constexpr TaskHandle() = default;` 처럼 지정자가 앞에 붙어도 같은 기본 생성자다 — explicit 만 보다가 놓쳤다.
         exempt: set[str] = set()
         for className in ctorClasses:
-            pattern = re.compile(r"^\s*(?:explicit\s+)?" + re.escape(className) + r"\s*\(\s*\)\s*(.*)$", re.M)
+            pattern = re.compile(r"^\s*(?:(?:constexpr|explicit|inline)\s+)*" + re.escape(className) + r"\s*\(\s*\)\s*(.*)$", re.M)
             for m in pattern.finditer(headerContent):
                 tail = m.group(1).strip()
                 if "=default" in tail.replace(" ", "") or tail.startswith("{") or tail.startswith(":"):

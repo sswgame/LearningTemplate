@@ -238,51 +238,49 @@ namespace sw
         void ensureInsideParallelTask() const;
 
     private:
+        // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프 — 큐 소비 · 스틸 · 세대 스핀 · 자기 워드에 잠들기. */
         void workerLoop( uint32 workerId );
+        /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 돌리지 않고 놓습니다 (노드는 참조 해제, 티켓은 그룹 닫기). */
+        void drainQueueItem( uintptr_t item );
+
+        // --- 태스크 만들기 · 의존성 ---
+        /** @brief 노드를 꺼내 이름·친화도를 적고, 태스크 안이면 그 태스크의 자식으로 걸고, 활성 수를 올립니다. 못 만들면 null. */
+        TaskNode* createTaskNode( string_view name, TaskThreadAffinity affinity );
+        /** @brief 의존성 하나를 풉니다 — 마지막이었으면 큐에 넣는다 (`submit` · 선행 완료 · 병렬 그룹 완료가 전부 이것). */
+        void resolveDependency( TaskNode* pNode, bool bWakeWorker );
         /** @brief 의존성이 충족된 태스크 노드를 레인(High · 로컬 덱 · Normal 전역 · Low · 메인)에 넣습니다. */
         void scheduleReadyTask( TaskNode* pNode );
         /** @brief 준비된 태스크를 큐에 넣되, @p bWakeWorker 가 false 면 잠든 워커를 깨우지 않습니다 (`submitWithoutWake`). */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
-        /** @brief 큐 항목 하나를 실행합니다 — 태스크 노드이거나 병렬 그룹의 티켓이다. */
-        void executeItem( uintptr_t item );
-        /** @brief 단일 태스크 노드의 본문을 실행하고 자식 합류 뒤 완료를 처리합니다. */
-        void executeTask( TaskNode* pNode );
-        /** @brief 본문과 자식이 모두 끝난 태스크의 완료 — 활성 수 · 스테이지 · 부모 · 후속. */
-        void completeTask( TaskNode* pNode );
+        /** @brief 내부 노드 할당 및 해제 (TaskNode 내부용) */
+        TaskNode* allocateNode();
+        void      deallocateNode( TaskNode* pNode );
+
+        // --- 병렬 그룹 ---
         /** @brief `emplaceParallel` · `emplaceParallelBlock` 의 공통 본체 — 부모 노드 하나 + 풀 그룹 하나 + 티켓. */
         TaskHandle emplaceParallelGroup( string_view name, uint32 start, uint32 end, const ParallelBlockDelegate* pBlockBody, const ParallelTaskDelegate* pIndexBody, TaskThreadAffinity affinity );
-        /** @brief 병렬 그룹의 티켓 하나 — 청크가 남아 있는 동안 집어 돌리고 마지막이면 그룹을 닫습니다. */
-        void runGroupTicket( ParallelGroup* pGroup );
+        /** @brief 티켓 @p ticketCount 장을 이 스레드의 레인에 넣고 그만큼 워커를 깨웁니다. */
+        void pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount );
         /** @brief 그룹의 청크를 남은 것이 없을 때까지 집어 돌립니다 (티켓 워커와 호출 스레드가 같이 쓴다). */
         void runGroupChunks( ParallelGroup* pGroup );
         /** @brief 청크 사이에 High 레인을 비웁니다 — 그룹을 도는 동안에도 렌더 패스 기록이 줄을 서지 않게. */
         void runHighLaneBetweenChunks();
-        /** @brief 티켓 @p ticketCount 장을 이 스레드의 레인에 넣고 그만큼 워커를 깨웁니다. */
-        void pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount );
+        /** @brief 병렬 그룹의 티켓 하나 — 청크가 남아 있는 동안 집어 돌리고 티켓을 닫습니다. */
+        void runGroupTicket( ParallelGroup* pGroup );
         /**
-         * @brief 병렬 그룹의 마지막 티켓이 닫힐 때 — 대기자를 깨우고, 풀 그룹이면 부모의 의존성을 풀고 되돌립니다.
-         * @param bPooledGroup 풀에서 온 그룹인가. 스택 그룹(`runParallel`)이면 @p pGroup 을 **역참조하지 않는다** — 이미 사라졌을 수 있다.
+         * @brief 티켓 하나를 닫습니다. 마지막이면 대기자를 깨우고, 풀 그룹이면 그룹을 되돌리고 (@p bResolveParent 면) 부모의 의존성을 풉니다.
+         * @details 스택 그룹(`runParallel`)은 합류가 0 이 되는 순간 사라질 수 있다 — 그 뒤에 @p pGroup 을 역참조하지 않는다.
          */
-        void onGroupFinished( ParallelGroup* pGroup, uint64 joinBeforeFinish, bool bPooledGroup );
-        /** @brief `runParallel` 의 조인 — 남은 티켓을 돕다가 자기 슬롯에 잠듭니다. */
-        void waitForGroup( ParallelGroup& group );
-        /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 돌리지 않고 놓습니다 (노드는 참조 해제, 티켓은 그룹 닫기). */
-        void drainQueueItem( uintptr_t item );
-        /** @brief 워커 로컬/글로벌 큐와 스틸로 실행할 항목을 가져옵니다. */
-        bool tryTakeTask( uint32 workerId, uintptr_t& outItem );
-        /** @brief 현재 스레드의 로컬 큐를 비운 뒤, 다른 워커 작업을 도와 실행합니다. */
-        bool tryHelpAndExecute();
-        /** @brief 다른 워커의 큐에서 작업을 훔쳐와(Work Stealing) 즉시 실행합니다. */
-        bool tryStealAndExecute( uint32 excludedWorkerId = invalid_index::kUint32 );
-        /** @brief 워커 @p workerId 를 자기 워드로 깨웁니다 (유휴 비트는 부르는 쪽이 이미 내렸다). */
-        void unparkWorker( uint32 workerId );
-        /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. */
-        void unparkWaiter( uint32 slotIndex );
-        /** @brief 이 스레드의 대기자 슬롯 번호 — 워커면 자기 번호, 아니면 도우미 칸 (`getCurrentThreadScratchSlot` 과 같다). */
-        uint32 getCurrentWaiterSlotIndex();
-        /** @brief 대기자 슬롯 @p slotIndex 의 워드. */
-        atomic<uint32>& getWaiterWord( uint32 slotIndex );
+        void closeGroupTicket( ParallelGroup* pGroup, bool bResolveParent );
+
+        // --- 스테이지 ---
+        /** @brief 이름 있는 스테이지 목록에서 찾습니다. `_stageMutex` 를 잡은 채 부른다. */
+        StageNode* findNamedStageLocked( string_view stageName ) const;
+
+        // --- 기다리기 ---
+        /** @brief @p join 이 0 이 될 때까지 — 메인 일감을 돌리고, 남의 일을 돕고, 짧게 돌다가 자기 슬롯에 잠듭니다. */
+        void waitForJoin( JoinCounter& join );
         /** @brief 이 스레드를 @p join 의 대기자로 올리고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 본다. */
         void parkOnJoin( JoinCounter& join );
         /**
@@ -299,9 +297,26 @@ namespace sw
         void notifyBroadcast();
         /** @brief 메인 스레드가 잠들어 있으면(어느 대기에서든) 깨웁니다 — 메인 전용 일감이 들어왔다. */
         void wakeParkedMainThread();
-        /** @brief 내부 노드 할당 및 해제 (TaskNode 내부용) */
-        TaskNode* allocateNode();
-        void      deallocateNode( TaskNode* pNode );
+        /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다 — 유휴 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 하나다. */
+        void unparkSlot( uint32 slotIndex );
+        /** @brief 대기자 슬롯 @p slotIndex 의 워드. 번호는 `getCurrentThreadScratchSlot` 과 같다. */
+        atomic<uint32>& getWaiterWord( uint32 slotIndex );
+
+        // --- 실행 ---
+        /** @brief 큐 항목 하나를 실행합니다 — 태스크 노드이거나 병렬 그룹의 티켓이다. */
+        void executeItem( uintptr_t item );
+        /** @brief 단일 태스크 노드의 본문을 실행하고 자식 합류 뒤 완료를 처리합니다. */
+        void executeTask( TaskNode* pNode );
+        /** @brief 본문과 자식이 모두 끝난 태스크의 완료 — 활성 수 · 스테이지 · 부모 · 후속. */
+        void completeTask( TaskNode* pNode );
+
+        // --- 큐 ---
+        /** @brief Normal 레인에 넣습니다 — 워커면 자기 덱(차면 전역), 아니면 전역 큐. */
+        void pushToNormalLane( uintptr_t item );
+        /** @brief 레인 순서(High → 내 덱 → Normal 전역 → 훔치기 → Low)로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아니다. */
+        bool tryTakeItem( int32 workerId, uintptr_t& outItem );
+        /** @brief 이 스레드가 닿을 수 있는 항목 하나를 가져와 실행합니다 — 기다리는 동안 남의 일을 돕는 자리. */
+        bool tryHelpAndExecute();
 
     private:
         /**
@@ -340,7 +355,7 @@ namespace sw
         alignas( 64 ) atomic<uint64> _idleWorkerMask;
         /**
          * @brief 일감이 들어올 때마다 오르는 세대. 스핀 중인 워커는 **이것만 읽는다.**
-         * @details 예전 스핀은 매 회 `tryTakeTask` 를 불렀다 — 전역 MPMC 큐의 CAS 와 열네 개 덱의 steal 을
+         * @details 예전 스핀은 매 회 큐를 뒤졌다(지금의 `tryTakeItem`) — 전역 MPMC 큐의 CAS 와 열네 개 덱의 steal 을
          *          워커 열다섯이 동시에 두드려, 스핀을 늘리자 게임·렌더 스레드의 코어까지 빼앗았다.
          *          읽기 전용 한 줄만 보면 경합이 없고, 세대가 바뀌었을 때만 큐를 만진다.
          *          `submitWithoutWake` 는 올리지 않는다 — 묶음 끝의 `wakeSleepingWorkers` 가 한 번 올린다.

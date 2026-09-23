@@ -71,13 +71,13 @@ namespace
         return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now() - start ).count();
     }
 
-    /** @brief 표본 하나를 [min · p50 · p90 · max] 로 찍습니다. */
-    void logSamples( const utf8* pLabel, sw::vector<int64>& listSample )
+    /** @brief 표본 하나를 [min · p50 · p90 · max] 로 찍습니다. Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. */
+    void logSamples( [[maybe_unused]] const utf8* pLabel, sw::vector<int64>& listSample )
     {
-        const int64 minValue = percentile( listSample, 0 );
-        const int64 p50      = percentile( listSample, 50 );
-        const int64 p90      = percentile( listSample, 90 );
-        const int64 maxValue = percentile( listSample, 100 );
+        [[maybe_unused]] const int64 minValue = percentile( listSample, 0 );
+        [[maybe_unused]] const int64 p50      = percentile( listSample, 50 );
+        [[maybe_unused]] const int64 p90      = percentile( listSample, 90 );
+        [[maybe_unused]] const int64 maxValue = percentile( listSample, 100 );
         SW_LOG_INFO( "[Bench] %#  min %# us  p50 %# us  p90 %# us  max %# us  (%# samples)", pLabel, minValue, p50, p90, maxValue, listSample.size() );
     }
 
@@ -269,7 +269,7 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
         listRound.push_back( elapsedMicro( start ) );
         SW_EXPECT_EQUAL( kTaskCount, s_ranCount.load() );
     }
-    const int64 p50 = percentile( listRound, 50 );
+    [[maybe_unused]] const int64 p50 = percentile( listRound, 50 );
     SW_LOG_INFO( "[Bench] 4096 tiny tasks: p50 %# us per round = %# ns per task", p50, ( p50 * 1000 ) / kTaskCount );
 
     manager.shutdown();
@@ -306,9 +306,9 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
         listParallel.push_back( elapsedMicro( start ) );
     }
 
-    const int64 serialP50   = percentile( listSerial, 50 );
-    const int64 parallelP50 = percentile( listParallel, 50 );
-    const int64 speedupX100 = parallelP50 > 0 ? ( serialP50 * 100 ) / parallelP50 : 0;
+    const int64                  serialP50   = percentile( listSerial, 50 );
+    const int64                  parallelP50 = percentile( listParallel, 50 );
+    [[maybe_unused]] const int64 speedupX100 = parallelP50 > 0 ? ( serialP50 * 100 ) / parallelP50 : 0;
     SW_LOG_INFO( "[Bench] cpu-bound 2048 x ~1us: serial p50 %# us, parallel p50 %# us, speedup %#.%#x (threads %#)",
                  serialP50, parallelP50, speedupX100 / 100, speedupX100 % 100, manager.getWorkerCount() + 1 );
 

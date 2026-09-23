@@ -39,6 +39,9 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/TagID.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/hashed_string.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskManager.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskNode.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskNodePool.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Time/CpuTimer.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Uuid/Uuid.cpp"
 )

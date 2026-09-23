@@ -802,6 +802,14 @@ Release · 워커 4 · 이전 / 이후 (p50 us, 2회):
 | 작은 독립 태스크 4096 개 (태스크당 ns) | 198 / 200 | 157 / 200 |
 | CPU 바운드 2048 × ~1 us 의 배속 (스레드 5) | 3.75 / 3.79 배 | **4.30 / 4.34 배** |
 
+**오후에 번갈아 다시 쟀다 — 마이크로벤치도 번갈아야 한다.** 위 표의 이전(오전 기준선)과 이후(재작성 직후)는 번갈아 잰 것이
+아니다. 오후에 세 바이너리(최적화 전 `882ba3f0` · 최적화 `e90c3e45` · 구조 정리)를 같은 시각에 3회 번갈아 재니 기계가 오전보다
+훨씬 시끄러웠고(웨이브 p90 ~500 us · max 1 ms 넘는 히치가 **셋 모두에**), 그 안에서 p50 은: 잠든 풀 포크-조인 **86~119 → 39~86 →
+34~46 us**(최적화 전 → 최적화 → 정리), 렌더 그래프 웨이브 콜드 109~248 → 111~165 → 117~291(히치 안이라 판정 불가), 연달아 부르는
+것은 셋 다 같다(7~8 us · 51~81 us). min 은 셋 다 비슷하다(포크-조인 19~27, 웨이브 60~64 — 이상값 45 + 깨움 ~17) — 이득은 최선값이
+아니라 꼬리(호송)에서 온다. 그러니 위 표의 306 → 80 은 그 시각의 값이고, **방향은 맞되 크기는 기계 상태에 따라 2~3 배 흔들린다.**
+다음에 이 수를 인용하려면 그 자리에서 번갈아 다시 잰다. 구조 정리는 최적화 커밋과 같다(회귀 없음).
+
 바꾼 것 — 잠금과 조건 변수가 전부 사라졌고, 청크가 노드가 아니다:
 
 - **`Core/Concurrency/Futex`** — 32비트 워드 하나에 잠들고 그 주소로 깨운다(Windows `WaitOnAddress` · Linux `futex` · 그 외 버킷 뮤텍스
@@ -861,6 +869,18 @@ App 벤치는 **번갈아** 잰다 (Release · DX12 · 큐브 8000 · 1000 프�
 - 리눅스 `futex` 경로는 이 PC 에서 못 돌린다(WSL 없음) — CI 가 본다. 컴파일 오류가 나면 `Futex.cpp` 의 `SW_PLATFORM_LINUX` 분기다.
 
 검증: Debug 경고 0 · 린트 게이트 전부 OK · nogpu 7/7 · hostgpu 2/2, Shipping nogpu 7/7 · hostgpu 2/2, ASan nogpu 7/7. CoreTest 는 `TaskManagerTest` 14 + `TaskManagerBenchTest` 4 다.
+
+**같은 날 둘째 — 구조 정리 (동작 그대로, 공개 API 그대로).** 2,097 줄이던 `TaskManager.cpp` 에 내부 노드 타입 · 풀 · 핸들 구현 ·
+스케줄러가 한 파일에 섞여 있었고, 같은 코드를 각자 드는 자리가 여덟이었다. 역할대로 넷으로 나눴다: `TaskNode.h/.cpp`(내부 노드 ·
+스테이지 · 병렬 그룹 · `JoinCounter` · 후속 목록 — **공개 API 가 아니다**, `Core/Task` 안만 포함한다) · `TaskNodePool.h/.cpp`(슬랩 ·
+스테이지 · 그룹 풀) · `TaskTypes.cpp`(핸들 구현, `TaskTypes.h` 의 짝) · `TaskManager.cpp`(스케줄러, 여덟 절: 수명 · 스레드 정체 ·
+태스크 만들기 · 병렬 그룹 · 스테이지 · 기다리기 · 실행 · 큐와 워커). 중복을 하나로: 노드 생성 둘 → `createTaskNode`, "의존성 하나
+풀기" 다섯 → `resolveDependency`, 대기 루프 둘 → `waitForJoin`, 레인 탐색 셋(`tryTakeTask` · `tryHelpAndExecute` ·
+`tryStealAndExecute`) → `tryTakeItem` 하나(워커는 자기 다음부터 한 바퀴, 밖의 스레드는 전부), Normal 레인 넣기 둘 →
+`pushToNormalLane`, 티켓 닫기 둘(실행 · `clear` 의 배수) → `closeGroupTicket`, 깨우기 둘 → `unparkSlot`, 이름 스테이지 찾기 둘 →
+`findNamedStageLocked`. 린트 하나 고쳤다: `Style/HeaderMemberInitializer` 가 `constexpr X() = default;` 를 기본 생성자로 못 봤다
+(`explicit` 만 허용) — 핸들 구현이 `TaskTypes.cpp` 로 오면서 헤더와 처음 짝이 맞아 드러났다. 새 헤더 둘은 `RunHeaderSelfContained`
+로 혼자 서는 것을 확인했다. Release 마이크로벤치는 정리 전 커밋과 번갈아 3회 재서 같다(위 "오후에 번갈아" 문단).
 
 **남긴 후보.** ① 스핀 정책 — 지금 2 us 그대로다(16 스레드 PC 에서 잰 값). 티켓 구조에서는 늦게 깬 워커가 그냥 청크를 덜 집을 뿐이라
 스핀을 늘릴 이유가 줄었지만, "스핀 워커 수를 둘로 제한 + 적응 예산" 은 그 PC 에서 재 볼 만하다. ② 작은 독립 태스크 157~200 ns —
