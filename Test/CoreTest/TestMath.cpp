@@ -560,3 +560,47 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
     SW_EXPECT_NEAR_EQUAL( byExpected._y, byActual._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( byExpected._z, byActual._z, 1e-4f );
 }
+
+/**
+ * @brief [MathTest] 회전이 없는 `createTrs` 지름길은 단위 사원수를 거친 값과 **같다**
+ * @details 오일러 오버로드는 세 각이 모두 0 이면 사원수를 만들지 않고 대각선에 스케일만 놓는다(움직이는 컴포넌트마다 지나는
+ *          자리라 삼각 함수 여섯 번이 아깝다). 지름길이 틀리면 회전 없는 물체만 조용히 틀어지므로, 원래 경로(단위 사원수 오버로드)와
+ *          성분마다 정확히 견준다. 음수 스케일과 -0 각도도 섞는다 — 둘 다 "0 인가" 판정과 부호가 엇갈리기 쉬운 자리다.
+ */
+SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
+{
+    const sw::float3 position{ -4.0f, 12.5f, 0.75f };
+    const sw::float3 arrScale[] = {
+        sw::float3{ 1.0f, 1.0f,   1.0f},
+        sw::float3{ 2.0f, 0.5f,  3.25f},
+        sw::float3{-1.5f, 2.0f, -0.25f}
+    };
+    const sw::float3 arrRotation[] = {
+        sw::float3{ 0.0f, 0.0f,  0.0f},
+        sw::float3{-0.0f, 0.0f, -0.0f}
+    };
+
+    for ( const sw::float3& scale : arrScale )
+    {
+        const sw::float4x4 expected  = sw::float4x4::createTrs( position, sw::quaternion{ 0.0f, 0.0f, 0.0f, 1.0f }, scale );
+        const float32*     pExpected = &expected._11;
+        for ( const sw::float3& rotation : arrRotation )
+        {
+            const sw::float4x4 actual  = sw::float4x4::createTrs( position, rotation, scale );
+            const float32*     pActual = &actual._11;
+            for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+                SW_EXPECT_EQUAL( pExpected[elementIndex], pActual[elementIndex] );
+        }
+    }
+
+    // 한 축이라도 돌면 지름길을 타지 않는다 — 요만 준 회전이 곱 셋과 같은 값인지로 본다.
+    const sw::float3   yawOnly{ 0.0f, 0.8f, 0.0f };
+    const sw::float3   scale{ 2.0f, 0.5f, 3.25f };
+    const sw::float4x4 expectedYaw = sw::float4x4::createScale( scale ) * sw::float4x4::createFromYawPitchRoll( yawOnly._y, yawOnly._x, yawOnly._z ) *
+                                     sw::float4x4::createTranslation( position );
+    const sw::float4x4 actualYaw  = sw::float4x4::createTrs( position, yawOnly, scale );
+    const float32*     pExpected  = &expectedYaw._11;
+    const float32*     pActualYaw = &actualYaw._11;
+    for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+        SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pActualYaw[elementIndex], 1e-5f );
+}

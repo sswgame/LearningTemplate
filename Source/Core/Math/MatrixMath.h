@@ -404,6 +404,7 @@ namespace sw
          * @brief 스케일·오일러 회전(요/피치/롤)·이동을 한 번에 합성합니다.
          * @param rotation 라디안 오일러 각. `_x` 가 피치, `_y` 가 요, `_z` 가 롤입니다
          *                 (`createFromYawPitchRoll( angles )` 와 같은 해석입니다).
+         * @details 세 각이 모두 0 이면 사원수를 거치지 않고 스케일 대각선과 위치만 적습니다 — 회전 없는 물체의 흔한 경우.
          */
         static float4x4 createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept;
 

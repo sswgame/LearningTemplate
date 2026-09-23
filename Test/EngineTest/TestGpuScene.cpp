@@ -1523,3 +1523,152 @@ SW_TEST_CASE( GpuSceneTest, ParallelCollectMatchesSerial )
     runScene( 64 );
     runScene( sw::GpuSceneBuilder::kParallelCollectPrimitiveCount + 29 );
 }
+
+/**
+ * @brief [GpuSceneTest] 투명 순서가 매 프레임 바뀌는 씬에서 **이어 지은 결과가 처음 보는 빌더가 지은 결과와 같다**.
+ * @details 투명 순서만 바뀐 프레임은 불투명 접두부를 제자리 갱신하고 투명 꼬리만 다시 짓는다. 그 꼬리는 접두부 청크와 **같은
+ *          병렬 구간**(블록 0)에서 돌고, 투명 정렬은 지난 순서에서 삽입 정렬로 출발하며(옮김이 예산을 넘으면 std::sort), 투명
+ *          배치 키의 머티리얼은 대표 맵 없이 가른다. 셋 다 "빠른데 값이 다르다" 가 가장 무서운 실패라 칸마다 견준다.
+ *          - 불투명은 갱신 청크(512 칸)가 여럿이 되도록 넉넉히 — 꼬리와 청크가 실제로 나란히 돈다.
+ *          - 투명은 머티리얼 인스턴스 셋을 번갈아 끼운다 — 합치기가 꺼져 있으면 원소마다 배치 키가 갈린다.
+ *          - 한 프레임은 투명의 깊이 순서를 통째로 뒤집는다 — 뒤집힌 쌍이 N^2/2 라 삽입 정렬 예산을 넘긴다.
+ *          - 합치기를 끈 판과 켠 판을 모두 본다(투명 키의 머티리얼 판정이 둘로 갈린다).
+ *          움직이기만 한 프레임이 실제로 제자리 갱신을 탔는지도 본다 — 전체 재구축이면 전부 더티로 실린다.
+ */
+SW_TEST_CASE( GpuSceneTest, IncrementalTransparentTailMatchesFreshBuild )
+{
+    auto runScene = [&]( bool bMerge )
+    {
+        sw::Scene scene( "GpuSceneTailEquivalence" );
+        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        sw::GameObjectManager* pObjects = scene.getObjectManager();
+        SW_ASSERT_NOT_NULL( pObjects );
+        sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( cube.get() );
+
+        sw::shared_ptr<sw::Material> glass = sw::Material::create();
+        SW_ASSERT_TRUE( glass->loadFromFile( "engine/materials/glassmaterial.material" ) );
+        constexpr uint32                     kInstanceCount = 3;
+        sw::shared_ptr<sw::MaterialInstance> arrInstance[kInstanceCount];
+        for ( uint32 instanceIndex = 0; instanceIndex < kInstanceCount; ++instanceIndex )
+            arrInstance[instanceIndex] = sw::MaterialInstance::create( glass.get() );
+
+        constexpr uint32               kOpaqueCount      = 1500;
+        constexpr uint32               kTransparentCount = 300;
+        sw::vector<sw::MeshComponent*> listMesh;
+        for ( uint32 index = 0; index < kOpaqueCount + kTransparentCount; ++index )
+        {
+            sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( ( sw::string( "Tail" ) + sw::to_string( index ) ).c_str() ) );
+            SW_ASSERT_NOT_NULL( pObject );
+            sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( cube );
+            pMesh->setVisible( true );
+            if ( index >= kOpaqueCount )
+            {
+                pMesh->setMaterial( glass.get() );
+                pMesh->setMaterialInstance( arrInstance[index % kInstanceCount] );
+            }
+            listMesh.push_back( pMesh );
+        }
+
+        // 프레임마다 전부 움직인다(벤치의 사인파와 같은 모양) — 투명은 카메라 거리가 바뀌어 순서가 섞인다.
+        auto placeAll = [&]( uint32 frame, bool bReverseTransparent )
+        {
+            for ( uint32 index = 0; index < static_cast<uint32>( listMesh.size() ); ++index )
+            {
+                const float32 wave = sw::MathUtil::sin( static_cast<float32>( frame ) * 0.9f + static_cast<float32>( index ) * 0.37f );
+                if ( index < kOpaqueCount )
+                {
+                    listMesh[index]->setLocalPosition( sw::float3( static_cast<float32>( index % 40 ), wave, -static_cast<float32>( index / 40 ) - 1.0f ) );
+                    continue;
+                }
+                const uint32  order = bReverseTransparent ? ( kOpaqueCount + kTransparentCount - 1 - index ) : ( index - kOpaqueCount );
+                const float32 depth = -5.0f - static_cast<float32>( order ) * 0.05f;
+                listMesh[index]->setLocalPosition( sw::float3( static_cast<float32>( index % 7 ) * 0.1f, wave * 0.75f, depth ) );
+            }
+        };
+
+        struct ElementIdentity
+        {
+            const sw::Material*         _pMaterial{ nullptr };
+            const sw::MaterialInstance* _pInstance{ nullptr };
+        };
+        // 원소 인덱스는 빌더마다 처음 본 순서로 매겨지므로(영속 ID) 숫자가 아니라 **가리키는 (머티리얼, 인스턴스)** 로 견준다.
+        auto resolveElement = []( const sw::GpuSceneBuilder& builder, const sw::GpuInstance& instance ) -> ElementIdentity
+        {
+            const uint32            opaqueBatchCount = static_cast<uint32>( builder.getOpaqueBatches().size() );
+            const sw::GpuMeshBatch& batch            = ( instance._meshBatchIndex < opaqueBatchCount )
+                                                         ? builder.getOpaqueBatches()[instance._meshBatchIndex]
+                                                         : builder.getTransparentBatches()[instance._meshBatchIndex - opaqueBatchCount];
+            if ( batch._materialGroup >= builder.getMaterialGroups().size() )
+                return ElementIdentity{};
+            const sw::GpuMaterialGroup& group = builder.getMaterialGroups()[batch._materialGroup];
+            if ( instance._materialIndex >= group._listEntry.size() )
+                return ElementIdentity{};
+            return ElementIdentity{ group._listEntry[instance._materialIndex]._material.get(), group._listEntry[instance._materialIndex]._instance.get() };
+        };
+        auto expectSameBatches = []( const sw::vector<sw::GpuMeshBatch>& listExpected, const sw::vector<sw::GpuMeshBatch>& listActual )
+        {
+            SW_ASSERT_EQUAL( static_cast<uint32>( listExpected.size() ), static_cast<uint32>( listActual.size() ) );
+            for ( size_t batchIndex = 0; batchIndex < listExpected.size(); ++batchIndex )
+            {
+                SW_EXPECT_EQUAL( listExpected[batchIndex]._instanceBase, listActual[batchIndex]._instanceBase );
+                SW_EXPECT_EQUAL( listExpected[batchIndex]._instanceCount, listActual[batchIndex]._instanceCount );
+                SW_EXPECT_TRUE( listExpected[batchIndex]._mesh.get() == listActual[batchIndex]._mesh.get() );
+                SW_EXPECT_TRUE( listExpected[batchIndex]._material.get() == listActual[batchIndex]._material.get() );
+                SW_EXPECT_TRUE( listExpected[batchIndex]._materialInstance.get() == listActual[batchIndex]._materialInstance.get() );
+            }
+        };
+
+        sw::GpuSceneBuilder persistent;
+        persistent.setMergeBatchesAcrossMaterials( bMerge );
+        sw::GpuSceneSnapshot snapshot;
+        const sw::float3     camPos{ 0.0f, 0.0f, 0.0f };
+        constexpr uint32     kFrameCount   = 6;
+        constexpr uint32     kReverseFrame = 3;
+        for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+        {
+            placeAll( frame, frame >= kReverseFrame );
+            // 이어 짓는 쪽이 먼저다 — 등록부의 더티 표시는 먼저 지은 빌더가 가져간다(처음 보는 빌더는 어차피 전부 모은다).
+            persistent.buildFromScene( &scene, camPos );
+            persistent.exportCpuSnapshot( snapshot );
+            if ( frame > 0 )
+            {
+                // 배치 키는 그대로다 — 제자리 갱신(+ 꼬리 다시 짓기)이어야 하고, 그러면 전부 더티가 아니라 구간으로 실린다.
+                SW_EXPECT_TRUE( snapshot._bAllInstancesDirty == SW_FALSE );
+                SW_EXPECT_TRUE( snapshot._listDirtyInstanceRun.empty() == false );
+            }
+
+            sw::GpuSceneBuilder fresh;
+            fresh.setMergeBatchesAcrossMaterials( bMerge );
+            fresh.buildFromScene( &scene, camPos );
+
+            const sw::vector<sw::GpuInstance>& listExpected = fresh.getInstances();
+            const sw::vector<sw::GpuInstance>& listActual   = persistent.getInstances();
+            SW_ASSERT_EQUAL( kOpaqueCount + kTransparentCount, static_cast<uint32>( listExpected.size() ) );
+            SW_ASSERT_EQUAL( static_cast<uint32>( listExpected.size() ), static_cast<uint32>( listActual.size() ) );
+            uint32 mismatchCount = 0;
+            for ( size_t slot = 0; slot < listExpected.size(); ++slot )
+            {
+                const sw::GpuInstance& expected   = listExpected[slot];
+                const sw::GpuInstance& actual     = listActual[slot];
+                const bool             bSameValue = sw::Memory::compare( &expected._world, &actual._world, sizeof( expected._world ) ) == 0 &&
+                                        sw::Memory::compare( &expected._boundsCenter, &actual._boundsCenter, sizeof( expected._boundsCenter ) ) == 0 &&
+                                        expected._boundsRadius == actual._boundsRadius && expected._meshBatchIndex == actual._meshBatchIndex &&
+                                        expected._blendMode == actual._blendMode && expected._spinSeed == actual._spinSeed;
+                const ElementIdentity expectedElement = resolveElement( fresh, expected );
+                const ElementIdentity actualElement   = resolveElement( persistent, actual );
+                const bool            bSameElement    = expectedElement._pMaterial == actualElement._pMaterial && expectedElement._pInstance == actualElement._pInstance;
+                if ( bSameValue == false || bSameElement == false )
+                    ++mismatchCount;
+            }
+            SW_EXPECT_EQUAL( 0u, mismatchCount );
+            expectSameBatches( fresh.getOpaqueBatches(), persistent.getOpaqueBatches() );
+            expectSameBatches( fresh.getTransparentBatches(), persistent.getTransparentBatches() );
+        }
+    };
+
+    runScene( false );
+    runScene( true );
+}

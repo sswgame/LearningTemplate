@@ -695,12 +695,36 @@ namespace sw
             _listTransparentSortKey[sortIndex]._candidateIndex  = candidateIndex;
         }
         // 먼 것부터. 거리가 같으면 후보 인덱스로 — 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
-        std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), []( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
+        const auto isFartherFirst = []( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
         {
             if ( keyA._distanceSquared != keyB._distanceSquared )
                 return keyA._distanceSquared > keyB._distanceSquared;
             return keyA._candidateIndex < keyB._candidateIndex;
-        } );
+        };
+
+        // **지난 프레임 순서에서 출발한다.** 나누기를 다시 하지 않은 프레임이면 `_listScratchTransparentIdx` 가 지난 정렬 결과
+        // 그대로라, 한 프레임에 조금씩 움직인 물체들은 거의 정렬돼 있다. 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수) 에 비례한다 —
+        // 예전의 std::sort 는 입력이 거의 정렬돼 있어도 N log N 을 다 치렀다. 옮긴 칸이 예산을 넘으면(카메라가 크게 돌았다 ·
+        // 나누기를 다시 해 후보 순서로 돌아갔다) std::sort 로 넘긴다. 순서는 전순서(거리 -> 후보 인덱스)라 **어느 쪽으로
+        // 정렬해도 결과가 같다** — 반쯤 삽입 정렬된 배열을 넘겨받아도 std::sort 의 결과는 그대로다.
+        const size_t moveBudget = transparentCount * kTransparentInsertionMovesPerElement;
+        size_t       moveCount  = 0;
+        for ( size_t sortIndex = 1; sortIndex < transparentCount && moveCount <= moveBudget; ++sortIndex )
+        {
+            if ( isFartherFirst( _listTransparentSortKey[sortIndex], _listTransparentSortKey[sortIndex - 1] ) == false )
+                continue;
+            const TransparentSortKey key         = _listTransparentSortKey[sortIndex];
+            size_t                   insertIndex = sortIndex;
+            do
+            {
+                _listTransparentSortKey[insertIndex] = _listTransparentSortKey[insertIndex - 1];
+                --insertIndex;
+            } while ( insertIndex > 0 && isFartherFirst( key, _listTransparentSortKey[insertIndex - 1] ) );
+            _listTransparentSortKey[insertIndex] = key;
+            moveCount += sortIndex - insertIndex;
+        }
+        if ( moveCount > moveBudget )
+            std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), isFartherFirst );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
             _listScratchTransparentIdx[sortIndex] = _listTransparentSortKey[sortIndex]._candidateIndex;
     }
@@ -758,9 +782,16 @@ namespace sw
 
         // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
         // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 예전 직렬 루프 그대로다.
+        //
+        // **투명 꼬리도 같은 병렬 구간에서 다시 짓는다** — 블록 0 이 꼬리다. 꼬리는 직렬(배치 방출)이고 접두부 갱신과
+        // 만지는 메모리가 겹치지 않는다: 접두부는 쓰기 슬롯의 [0, 불투명 수) 를 포인터로 쓰고, 꼬리는 그 뒤에 붙인다.
+        // 예전에는 접두부 청크를 다 기다린 뒤에 꼬리를 시작해 두 시간이 더해졌다. 호출 스레드가 첫 블록을 집으므로
+        // 꼬리는 대개 이 스레드가 돌고 워커들이 접두부를 나눠 갖는다 — 워커가 먼저 집어도 결과는 같다.
         if ( bPartialRefresh == false )
         {
-            constexpr uint32 kRefreshChunkSize = 2048;
+            // 청크는 참여 스레드보다 넉넉히 많아야 한다. 예전의 2048 은 불투명 6000 개에 청크 셋이라 여섯 스레드 중
+            // 셋이 놀았다(갱신 구간 81~86 us 가 청크 하나의 길이였다).
+            constexpr uint32 kRefreshChunkSize = 512;
             const uint32     chunkCount        = static_cast<uint32>( ( slotCount + kRefreshChunkSize - 1 ) / kRefreshChunkSize );
             _listRefreshChunk.resize( chunkCount );
             for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
@@ -774,31 +805,52 @@ namespace sw
                 chunk._bTooManyRun          = SW_FALSE;
             }
 
+            // 꼬리가 병렬 구간 안에서 붙으므로 **붙일 자리를 먼저 잡는다** — 워커가 쥔 `data()` 가 재할당으로 옮겨지면 안 된다.
+            // 꼬리는 투명 원소마다 인스턴스 하나다.
+            if ( bTransparentOrderChanged )
+            {
+                const size_t tailCapacity = static_cast<size_t>( _opaqueInstanceCount ) + _listScratchTransparentIdx.size();
+                work.reserve( tailCapacity );
+                _listInstanceSrcIndex.reserve( tailCapacity );
+            }
+
             struct RefreshJob
             {
+                GpuSceneBuilder*      _pBuilder{ nullptr };
                 GpuInstance*          _pInstance{ nullptr };
                 const GpuInstance*    _pPrevious{ nullptr };
                 const GpuInstance*    _pRaw{ nullptr };
                 const uint32*         _pSrcIndex{ nullptr };
                 uint32                _rawCount{ 0 };
                 InstanceRefreshChunk* _pChunk{ nullptr };
+                /// @brief 청크가 시작하는 블록 번호 — 1 이면 블록 0 이 투명 꼬리다.
+                uint32 _firstChunkBlock{ 0 };
 
                 void refreshRange( uint32 start, uint32 end )
                 {
-                    for ( uint32 chunkIndex = start; chunkIndex < end; ++chunkIndex )
-                        refreshInstanceChunk( _pInstance, _pPrevious, _pRaw, _pSrcIndex, _rawCount, _pChunk[chunkIndex] );
+                    for ( uint32 blockIndex = start; blockIndex < end; ++blockIndex )
+                    {
+                        if ( blockIndex < _firstChunkBlock )
+                        {
+                            _pBuilder->rebuildTransparentTail();
+                            continue;
+                        }
+                        refreshInstanceChunk( _pInstance, _pPrevious, _pRaw, _pSrcIndex, _rawCount, _pChunk[blockIndex - _firstChunkBlock] );
+                    }
                 }
             };
             RefreshJob job{};
-            job._pInstance = work.data();
-            job._pPrevious = pPrevious->data();
-            job._pRaw      = _listScratchRaw.data();
-            job._pSrcIndex = _listInstanceSrcIndex.data();
-            job._rawCount  = rawCount;
-            job._pChunk    = _listRefreshChunk.data();
+            job._pBuilder        = this;
+            job._pInstance       = work.data();
+            job._pPrevious       = pPrevious->data();
+            job._pRaw            = _listScratchRaw.data();
+            job._pSrcIndex       = _listInstanceSrcIndex.data();
+            job._rawCount        = rawCount;
+            job._pChunk          = _listRefreshChunk.data();
+            job._firstChunkBlock = bTransparentOrderChanged ? 1u : 0u;
 
-            // 청크 하나면 나눌 것이 없다 — 문턱 2.
-            engine::runParallel( chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
+            // 블록 하나면 나눌 것이 없다 — 문턱 2.
+            engine::runParallel( chunkCount + job._firstChunkBlock, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
 
             // 합친다 — 실패 하나면 전체 실패, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
             size_t totalRunCount = 0;
@@ -832,8 +884,7 @@ namespace sw
 
         if ( bTransparentOrderChanged )
         {
-            rebuildTransparentTail();
-            // 꼬리는 통째로 새 값이다 — 접두부 구간 뒤에 한 구간으로 잇는다.
+            // 꼬리는 위 병렬 구간에서 이미 다시 지었다. 통째로 새 값이다 — 접두부 구간 뒤에 한 구간으로 잇는다.
             const uint32 tailCount = static_cast<uint32>( work.size() ) - _opaqueInstanceCount;
             if ( bTooManyRuns == false && tailCount > 0 )
             {
@@ -1044,10 +1095,12 @@ namespace sw
         {
             uint32 batchStart{ 0 };
 
-            // 배치 헤드의 키는 배치가 닫힐 때만 바뀐다. 예전엔 반복마다 헤드와 현재 것을 **둘 다**
-            // batchKeyMaterial 로 다시 구했다 — 배치 하나가 N 개면 헤드 키를 N 번 다시 만든 셈이다.
-            const DrawCandidate* pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[0]];
-            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_permutationHash );
+            // 배치 키의 머티리얼(`batchKeyMaterial`)은 **대표 맵을 보지 않고** 가른다. 아래 비교는 퍼뮤테이션 해시가 같을 때만
+            // 머티리얼까지 온다 — 합치기가 켜져 있으면 대표는 해시로만 정해지므로 두 쪽 다 머티리얼이 있으면 키가 같고(없는
+            // 쪽의 키는 nullptr), 꺼져 있으면 키가 머티리얼 자신이다. 예전에는 투명 원소마다 대표 맵을 찾았다 — 투명 2000
+            // 개면 해시 조회 2000 번이 직렬로 돌았다. 이 판정은 맵의 내용과 무관하므로 맵에 넣을 것도 없다(맵은 불투명
+            // 나누기가 비우고 다시 채운다).
+            const DrawCandidate* pBatchHead = &_listScratchCandidate[_listScratchTransparentIdx[0]];
 
             for ( uint32 entryIndex = 1; entryIndex <= _listScratchTransparentIdx.size(); ++entryIndex )
             {
@@ -1055,11 +1108,12 @@ namespace sw
                 bool       bKeyChange{ false };
                 if ( bEnd == false )
                 {
-                    const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange                   = ( pBatchHead->_mesh != current._mesh ) ||
-                                 ( pBatchHead->_permutationHash != current._permutationHash ) ||
-                                 ( pBatchHeadKey != batchKeyMaterial( current._material.get(), current._permutationHash ) ) ||
-                                 ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
+                    const DrawCandidate& current            = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
+                    const bool           bKeyMaterialChange = ( _bMergeAcrossMaterials == SW_FALSE )
+                                                                ? ( pBatchHead->_material != current._material )
+                                                                : ( ( pBatchHead->_material == nullptr ) != ( current._material == nullptr ) );
+                    bKeyChange                              = ( pBatchHead->_mesh != current._mesh ) || ( pBatchHead->_permutationHash != current._permutationHash ) ||
+                                 bKeyMaterialChange || ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -1068,10 +1122,7 @@ namespace sw
                                pBatchHead->_instance );
                     batchStart = entryIndex;
                     if ( bEnd == false )
-                    {
-                        pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_permutationHash );
-                    }
+                        pBatchHead = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
                 }
             }
         }

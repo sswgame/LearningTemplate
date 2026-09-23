@@ -113,6 +113,10 @@ namespace sw
          *          바뀌면 `refreshInstancesInPlace` 가 실패해 **불투명 8000 개까지** 통째로 다시 지었다 —
          *          투명 큐브가 위아래로 흔들리는 벤치에서 거의 매 프레임 그랬다(배치 단계 최소 139 · p50 327 us).
          *          접두부는 제자리 갱신이 이미 끝났고, 여기서는 꼬리를 잘라 내고 새 순서로 다시 붙인다.
+         * @note **접두부 갱신과 같은 병렬 구간에서 돈다**(`refreshInstancesInPlace` 의 블록 0) — 워커에서 돌 수도 있다.
+         *       쓰기 슬롯의 [0, `_opaqueInstanceCount`) 는 워커들이 포인터로 쓰는 중이라 건드리지 않는다: 자르고 뒤에 붙일 뿐이고,
+         *       붙일 자리는 부르는 쪽이 미리 잡아 둔다(재할당이 없다). 접두부 청크가 읽는 것(발행본 · raw · 원천 인덱스의 접두부)도
+         *       쓰지 않는다. 여기에 접두부를 만지는 일을 더하면 레이스다.
          */
         void rebuildTransparentTail();
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
@@ -136,11 +140,22 @@ namespace sw
         /**
          * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼, 아니면 그 머티리얼 자신.
          * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
+         *          불투명 나누기만 부른다 — 투명 방출은 해시가 같다는 것까지 본 뒤라 맵 없이 같은 답을 낸다(`emitTransparentBatches`).
          *          대표는 **퍼뮤테이션 단위**다 — 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
          */
         Material* batchKeyMaterial( Material* pMaterial, uint64 permutationHash );
-        /** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */
+        /**
+         * @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다.
+         * @details 지난 프레임 순서에서 삽입 정렬로 출발하고, 옮김이 원소당 `kTransparentInsertionMovesPerElement` 를 넘으면
+         *          std::sort 로 넘긴다. 순서는 전순서라 어느 쪽이든 결과가 같다.
+         */
         void sortTransparent( const float3& cameraPos );
+        /**
+         * @brief 투명 정렬이 삽입 정렬로 버틸 옮김 예산 — 원소당 칸 수.
+         * @details 한 프레임에 조금씩 움직이는 씬은 뒤집힌 쌍이 원소 수보다 훨씬 적다. 이 예산을 넘는 프레임(카메라가 크게
+         *          돌았다 · 나누기를 다시 했다)은 삽입 정렬을 멈추고 std::sort 가 마저 한다 — 최악이 N log N 에 예산만큼 더한 값이다.
+         */
+        static constexpr size_t kTransparentInsertionMovesPerElement = 8;
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
         /**
