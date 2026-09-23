@@ -243,17 +243,27 @@ namespace sw
             markTransformDirty();
     }
 
+    bool SceneComponent::isInParallelTick() const
+    {
+        return _pManager != nullptr && _pManager->isParallelTransformReadOnly();
+    }
+
+    void SceneComponent::queueTickWrite( SceneTransformWrite& write )
+    {
+        // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
+        write._handle  = getHandle();
+        write._pTarget = this;
+        _pManager->queueTransformWrite( write );
+    }
+
     void SceneComponent::setLocalPosition( const float3& pos )
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
-            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
             SceneTransformWrite write{};
-            write._handle        = getHandle();
-            write._pTarget       = this;
             write._localPosition = pos;
             write._bSetPosition  = SW_TRUE;
-            _pManager->queueTransformWrite( write );
+            queueTickWrite( write );
             return;
         }
         // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
@@ -272,15 +282,12 @@ namespace sw
 
     void SceneComponent::setLocalRotation( const float3& rot )
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
-            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
             SceneTransformWrite write{};
-            write._handle        = getHandle();
-            write._pTarget       = this;
             write._localRotation = rot;
             write._bSetRotation  = SW_TRUE;
-            _pManager->queueTransformWrite( write );
+            queueTickWrite( write );
             return;
         }
         if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::EpsilonSquared )
@@ -296,14 +303,12 @@ namespace sw
 
     void SceneComponent::setLocalScale( const float3& scale )
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
-            // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
             SceneTransformWrite write{};
-            write._handle     = getHandle();
             write._localScale = scale;
             write._bSetScale  = SW_TRUE;
-            _pManager->queueTransformWrite( write );
+            queueTickWrite( write );
             return;
         }
         if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::EpsilonSquared )
@@ -319,21 +324,21 @@ namespace sw
 
     float3 SceneComponent::getWorldPosition() const
     {
-        if ( _pManager == nullptr || _pManager->isParallelTransformReadOnly() == false )
+        if ( isInParallelTick() == false )
             getWorldMatrix();
         return _cachedWorldPosition;
     }
 
     double3 SceneComponent::getWorldPositionLwc() const
     {
-        if ( _pManager == nullptr || _pManager->isParallelTransformReadOnly() == false )
+        if ( isInParallelTick() == false )
             getWorldMatrix();
         return _cachedWorldPositionLWC;
     }
 
     float4x4 SceneComponent::getWorldMatrix() const
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
             return _cachedWorldMatrix;
 
         if ( _bIsTransformDirty == SW_TRUE )

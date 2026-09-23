@@ -24,12 +24,13 @@ namespace sw
     public:
         ComponentPtr();
         ComponentPtr( Component* pTarget );
-        ComponentPtr( const ComponentPtr& other );
+        /** @brief 필드 전부 값이라 복사는 기본이다. 이동은 원본을 비운다(옮긴 뒤 원본이 같은 대상을 가리키면 안 된다). */
+        ComponentPtr( const ComponentPtr& other ) = default;
         ComponentPtr( ComponentPtr&& other ) noexcept;
         ~ComponentPtr() = default;
 
         ComponentPtr& operator=( Component* pTarget );
-        ComponentPtr& operator=( const ComponentPtr& other );
+        ComponentPtr& operator=( const ComponentPtr& other ) = default;
         ComponentPtr& operator=( ComponentPtr&& other ) noexcept;
 
         /** @brief 캐싱된 빠른 메모리 주소를 반환합니다. */

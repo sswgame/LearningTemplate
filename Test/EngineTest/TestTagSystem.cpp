@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "TestFramework/TestFramework.h"
 

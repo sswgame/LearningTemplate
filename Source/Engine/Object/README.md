@@ -35,8 +35,12 @@ Scene
 ```text
 Object/
 ├─ GameObject/          # GO, Manager, Soft 포인터, 직렬화
-│  ├─ GameObject.h
+│  ├─ GameObject.*              # 액터 — 컴포넌트 목록 · 태그 · 활성 · 계층. 매니저 헤더를 포함하지 **않는다**
 │  ├─ GameObjectManager.h
+│  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리
+│  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐
+│  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 웨이브
+│  ├─ PrimitiveRegistry.* · LightRegistry.*
 │  ├─ GameObjectPtr.h
 │  └─ ObjectStateSerializer.*
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
@@ -48,6 +52,10 @@ Object/
 ```
 
 게임 코드(`Source/Games`)는 항상 **`GameObject` / `GameObjectManager` API**를 통해 컴포넌트를 부착하고 수명을 관리합니다.
+
+**`GameObject.h` 는 `GameObjectManager.h` 를 포함하지 않는다.** `addComponent<T>` 는 `T` 만 다루고, 매니저가 필요한 걸음
+(동결 확인 · 저장소 · 붙이기 · 미루기)은 템플릿이 아닌 `GameObject` 의 멤버다. 매니저 API 가 필요한 파일은 매니저 헤더를
+직접 포함한다 — 예전에는 `GameObject.h` 가 끝에서 매니저 헤더를 끌어와 GameObject 를 아는 모든 TU 가 물리 월드 · 등록부까지 알았다.
 
 ---
 

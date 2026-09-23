@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-23 · 기준 커밋 `882ba3f0` + (B) 열여섯째(TaskManager — 주소 대기 · 티켓 병렬 그룹)
+> 마지막 갱신: 2026-09-23 · 기준 커밋 `ded70f19` + (B) 열일곱째(GameObject · Component 구조 정리)
 
 ---
 
@@ -886,6 +886,57 @@ App 벤치는 **번갈아** 잰다 (Release · DX12 · 큐브 8000 · 1000 프�
 스핀을 늘릴 이유가 줄었지만, "스핀 워커 수를 둘로 제한 + 적응 예산" 은 그 PC 에서 재 볼 만하다. ② 작은 독립 태스크 157~200 ns —
 노드 풀의 MPMC 큐(할당·반납)가 남은 비용이고 워커별 자유 목록이면 준다. 엔진의 프레임 경로에는 없다. ③ 워커 지정 태스크(캐시가
 그 코어에 있는 슬롯 적용) — 여전히 없다.
+
+**(B) 열일곱째 — 2026-09-23 · GameObject · Component 구조 정리: 헤더 순환 제거 · 매니저를 수명/프레임으로 분할 · DAG 웨이브는 등록부가 · 활성 토글 한 번 · 인라인 틱 항목은 재서 기각.**
+
+열다섯 커밋을 거친 층이라 남은 것은 대개 구조였다. 먼저 `GameObjectBenchTest`(새 파일, EngineTest, 목 컴포넌트)로 기준선을 잡았다 —
+스폰 · 첫 틱 · 정상 틱 · 파괴 · 무버 8000 틱 · 1000 단 활성 토글 · `getComponent`.
+
+- **`GameObject.h` 가 `GameObjectManager.h` 를 포함하지 않는다.** 예전에는 `addComponent<T>` 가 매니저의 `createComponent<T>` 를 불러
+  헤더 **끝에서** 매니저 헤더를 끌어왔고(순환을 그렇게 풀었다), 그래서 GameObject 를 아는 모든 TU 가 물리 월드 · 등록부 셋 · 풀까지
+  알았다. 지금은 매니저가 필요한 걸음 넷이 템플릿이 아닌 멤버다 — `isComponentMutationFrozen` · `allocateComponentStorage` ·
+  `attachCreatedComponent` · `deferOnSelfPostTick`(틱 중의 `addComponent` · `addTag` · `removeTag` 가 같은 것을 쓴다). 템플릿은 `T` 만
+  다룬다. `createComponent<T>` 는 지웠다(호출처가 그 하나였다). 빠진 전이 포함은 둘이었다: `GpuSceneBuilder.h` 의 `MeshComponent`
+  전방 선언, `TestTagSystem.cpp` 의 매니저 포함.
+- **매니저를 둘로.** `GameObjectManager.cpp`(수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리, 889 줄) · `GameObjectManagerTick.cpp`
+  (프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐). 1,610 줄 하나가 둘이다.
+- **선행 종속성 DAG 웨이브는 등록부가 짓는다** (`TickRegistry::buildPrerequisiteWaves`). 매니저가 씬 전체를 **다시 훑어** 같은 후보
+  (`TickCandidate`)를 두 번째로 모으고 정렬하던 250 줄이 등록부의 자기 항목으로 짓는 것으로 바뀌었다 — 항목은 이미 (그룹, 순서 키)
+  순으로 있고, 선행 목록만 서브틱 정보에서 찾는다. 웨이브 항목이 `TickExecutionItem`(핸들 재해석) 에서 `TickItem`(생포인터)이 됐다 —
+  등록부 세대가 바뀌면 웨이브를 다시 짓고, 파괴는 메모리를 놓기 전에 세대를 올리므로 그룹 경로와 같은 근거로 안전하다. 두 경로의
+  디스패치가 `runParallel` 하나로 같아졌고(예전 DAG 경로는 스테이지 + `emplaceParallel`), "항목 하나 돌리기" 도 `runTickItem` 하나다.
+- **`setActive` 가 계층을 한 번만 건다.** `refreshActiveInHierarchy` 를 직접 한 번, `onPropertyChanged` 안에서 또 한 번 — 자손 전체를
+  두 번 걸었다. 1000 단 사슬의 토글이 70~76 → 36~37 us.
+- **세터 셋의 틱 큐 블록을 하나로** (`SceneComponent::queueTickWrite`). 스케일만 `_pTarget` 을 빠뜨리고 있었다 — (A) 에서 가장 잦았던
+  "한 곳에 넣은 고침이 형제에게 안 갔다" 의 자리(셋째 커밋이 위치·회전에만 넣었다).
+- **핸들 둘의 복사 연산은 `= default`** (`ComponentPtr` · `GameObjectPtr` — 필드가 전부 값이다). 이동은 원본을 비우므로 그대로.
+- **`Style/HeaderMemberInitializer` 린트 구멍 하나** — 이 커밋이 아니라 앞 커밋(TaskManager 구조 정리)에서 고쳤다.
+
+**재서 기각 — 인라인 틱 항목.** `TickItemList` 를 `InlineAllocator<TickItem, 2>` 로 두면 첫 틱의 등록부 구축이 절반(1.8~2.9 → 0.9~1.1 ms,
+8000 개 힙 할당이 사라진다), 파괴 −15 %, 무버 틱 디스패치 −32 us 였다. 그런데 `GameObject` 가 **192 → 232 바이트(3 → 4 라인)** 가
+되어 오브젝트를 만지는 다른 프레임 경로가 그만큼 느려졌다 — 기본 벤치(틱 없음)의 `GT.Game.update` 393 → 425 · `GpuScene.build` avg
+657 → 708, 무버의 `queuedTransforms` 180 → 196~245 (번갈아 2회). 되돌렸다(별칭은 `vector<TickItem>`). 오브젝트가 세 라인에 남는
+것이 더 값지다 — 다시 넣으려면 오브젝트의 틱 부기(그룹 시작 uint32[5] · 자리 uint32[4] · 세대 · 인덱스, 49 바이트)를 먼저 줄여야 한다.
+
+Release · 이 PC · 정리 전 / 후 3회 번갈아 (마이크로벤치, 목 컴포넌트):
+
+| 항목 | 이전 | 이후 |
+|---|---|---|
+| `createGameObject` + `addComponent` ×8000 (개당 ns) | 1326~1408 | **1118~1205** (`StaticType()` 호출이 둘에서 하나로 — 목은 그 호출이 비싸 과장됐다, 실제 타입은 ~2 ns) |
+| 1000 단 사슬 `setActive` false+true (us) | 70~76 | **36~37** |
+| 무버 8000 `tick()` p50 (us) | 364~454 | 406~448 (잡음 안) |
+| 첫 틱 · 정상 틱 · 파괴 · `getComponent` 17 ns | 같다 | 같다 |
+
+App 벤치(큐브 8000 · 번갈아 2회): 기본은 전 스코프 같고(p50 동일, avg ±2 %), 무버는 `components` avg 493/481 → 472/471, GT.Frame avg
+1418/1368 → 1354/1352 — 잡음 안이거나 조금 낫다. 구조 변경이 프레임에 비용을 더하지 않았다는 것이 이 표의 의미다.
+
+검증: Debug 경고 0 · 린트 프리셋 20/20 · nogpu 7/7 · hostgpu 2/2, Shipping nogpu 7/7 · hostgpu 2/2, ASan nogpu 7/7, 바뀐 헤더 7개 단독 컴파일 OK.
+**한 번 본 것 — 재현 안 됨 (셋째).** 첫 검증에서 Shipping `CoreTest` 가 한 번 졌다 — 출력은 `Failed to deserialize config from: shipping_host_baked`
+한 줄(내는 곳: (찾지 못함)). 같은 바이너리로 3회 연속 통과. 이 커밋은 Core 를 만지지 않는다. 다음에 또 보이면 그 케이스의 전체 출력을 파일로 남길 것.
+
+**남긴 것.** 스폰 1.1 us 의 대부분은 이름 유일화(`BenchObject_N` 인턴)와 풀·표·맵 잠금 여섯이다 — 총알 수백 개/프레임에도 0.1 ms 미만이라
+그대로. 틱 무버 350~450 us 는 메모리 이동(기록 코어 ≠ 적용 코어)이라 오브젝트 층에서 더 깎을 자리가 없고, 답은 "같은 워커가 적용" 인데
+태스크 매니저에 워커 지정이 없다(TaskManager 열여섯째 "남긴 후보" ③).
 
 **분석해서 두는 것 — 다시 제안하기 전에 읽을 것.**
 

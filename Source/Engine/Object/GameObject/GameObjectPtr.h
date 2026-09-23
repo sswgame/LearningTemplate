@@ -24,12 +24,13 @@ namespace sw
     public:
         GameObjectPtr();
         GameObjectPtr( GameObject* pTarget );
-        GameObjectPtr( const GameObjectPtr& other );
+        /** @brief 필드 전부 값이라 복사는 기본이다. 이동은 원본을 비운다(옮긴 뒤 원본이 같은 대상을 가리키면 안 된다). */
+        GameObjectPtr( const GameObjectPtr& other ) = default;
         GameObjectPtr( GameObjectPtr&& other ) noexcept;
         ~GameObjectPtr() = default;
 
         GameObjectPtr& operator=( GameObject* pTarget );
-        GameObjectPtr& operator=( const GameObjectPtr& other );
+        GameObjectPtr& operator=( const GameObjectPtr& other ) = default;
         GameObjectPtr& operator=( GameObjectPtr&& other ) noexcept;
 
         /** @brief 캐싱된 빠른 메모리 주소를 반환합니다. */

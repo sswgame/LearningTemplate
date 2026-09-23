@@ -1,14 +1,156 @@
 /**
  * @file TickRegistry.cpp
- * @brief 틱 등록부 구현 — 오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시.
+ * @brief 틱 등록부 구현 — 오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시 · 선행 종속성 웨이브.
  */
 #include "pch.h"
 
 #include "Engine/Object/GameObject/TickRegistry.h"
 
+#include "Core/Container/unordered_map.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct TickRegistryInternal
+        {
+            /** @brief 선행 종속성 웨이브를 지을 때의 후보 하나 — 등록부 항목 + 그 항목의 선행 목록. */
+            struct WaveCandidate
+            {
+                TickItem                     _item;
+                uint64                       _objectId{ 0 };
+                uint64                       _componentId{ 0 };
+                uint32                       _originalIndex{ 0 };
+                const vector<SubTickHandle>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록. 주 틱은 없다
+            };
+
+            /** @brief 순서 키, 같으면 등록 순서. 후보 목록을 정렬할 때의 유일한 규칙이다. */
+            static bool isBefore( const WaveCandidate& left, const WaveCandidate& right )
+            {
+                if ( left._item._orderKey != right._item._orderKey )
+                    return left._item._orderKey < right._item._orderKey;
+                return left._originalIndex < right._originalIndex;
+            }
+
+            /** @brief 항목의 서브틱 정보에서 선행 목록을 찾습니다. 주 틱이거나 없으면 nullptr. */
+            static const vector<SubTickHandle>* findPrerequisiteList( const TickItem& item )
+            {
+                if ( item._subTickId == 0 || item._pComponent == nullptr )
+                    return nullptr;
+                for ( const SubTickInfo& subTick : item._pComponent->getAllSubTicks() )
+                {
+                    if ( subTick._subTickId == item._subTickId )
+                        return &subTick._listPrerequisite;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 한 웨이브(같은 레벨)를 오브젝트별 서브웨이브로 가릅니다 — 같은 오브젝트의 항목은 0 번부터 차례로 찬다.
+             * @details 오브젝트마다 "이미 든 서브웨이브 수" 하나면 된다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
+             *          이어지는 동안 하나씩 오르고 오브젝트가 바뀌면 0 이다 — 맵 없이 한 번에 된다.
+             */
+            static void splitByObject( const vector<size_t>& listLevel, const vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
+            {
+                unordered_map<uint64, uint32> mapNextSlot;
+                mapNextSlot.reserve( listLevel.size() );
+                const size_t firstWave = outListWave.size();
+                for ( const size_t candidateIndex : listLevel )
+                {
+                    const WaveCandidate& candidate = listCandidate[candidateIndex];
+                    uint32&              slot      = mapNextSlot[candidate._objectId];
+                    if ( firstWave + slot == outListWave.size() )
+                        outListWave.emplace_back();
+                    outListWave[firstWave + slot].push_back( candidate._item );
+                    ++slot;
+                }
+            }
+
+            /** @brief 한 그룹의 후보를 선행 종속성 순서로 갈라 웨이브를 붙입니다 (Kahn 레벨 + 오브젝트별 서브웨이브). */
+            static void appendGroupWaves( vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
+            {
+                const size_t count = listCandidate.size();
+                if ( count == 0 )
+                    return;
+
+                // SubTickHandle -> 후보 인덱스. 선행이 가리키는 상대를 찾는다.
+                unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
+                mapLookup.reserve( count );
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    mapLookup[{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId }] = index;
+                }
+
+                vector<vector<size_t>> listAdjacent( count );
+                vector<uint32>         listInDegree( count, 0 );
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    const vector<SubTickHandle>* pListPrerequisite = listCandidate[index]._pListPrerequisite;
+                    if ( pListPrerequisite == nullptr )
+                        continue;
+                    for ( const SubTickHandle& prerequisite : *pListPrerequisite )
+                    {
+                        const auto found = mapLookup.find( prerequisite );
+                        if ( found == mapLookup.end() || found->second == index )
+                            continue; // 없는 상대(적혀는 있지만 아무도 못 찾는 종속성)와 자기 자신은 순서를 만들지 않는다
+                        listAdjacent[found->second].push_back( index );
+                        ++listInDegree[index];
+                    }
+                }
+
+                auto sortLevel = [&listCandidate]( vector<size_t>& listLevel )
+                {
+                    std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( size_t left, size_t right )
+                    { return isBefore( listCandidate[left], listCandidate[right] ); } );
+                };
+
+                vector<size_t> listCurrentLevel;
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    if ( listInDegree[index] == 0 )
+                        listCurrentLevel.push_back( index );
+                }
+
+                vector<bool> listVisited( count, false );
+                size_t       processedCount = 0;
+                while ( listCurrentLevel.empty() == false )
+                {
+                    sortLevel( listCurrentLevel );
+                    vector<size_t> listNextLevel;
+                    for ( const size_t current : listCurrentLevel )
+                    {
+                        listVisited[current] = true;
+                        ++processedCount;
+                        for ( const size_t next : listAdjacent[current] )
+                        {
+                            if ( --listInDegree[next] == 0 )
+                                listNextLevel.push_back( next );
+                        }
+                    }
+                    splitByObject( listCurrentLevel, listCandidate, outListWave );
+                    listCurrentLevel = std::move( listNextLevel );
+                }
+
+                // 순환 방어: 못 온 것은 순서 키 순으로 마지막에 붙인다 — 틱이 조용히 빠지는 것보다 낫다.
+                if ( processedCount < count )
+                {
+                    vector<size_t> listRemaining;
+                    for ( size_t index = 0; index < count; ++index )
+                    {
+                        if ( listVisited[index] == false )
+                            listRemaining.push_back( index );
+                    }
+                    sortLevel( listRemaining );
+                    splitByObject( listRemaining, listCandidate, outListWave );
+                }
+            }
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -75,7 +217,7 @@ namespace sw
 
     void TickRegistry::refreshObject( GameObject* pObj )
     {
-        vector<TickItem>& listItem = pObj->_listTickItem;
+        TickItemList& listItem = pObj->_listTickItem;
         listItem.clear();
 
         uint32 prerequisiteCount = 0;
@@ -174,5 +316,37 @@ namespace sw
         _prerequisiteCount = 0;
         ++_generation;
         _bAllDirty.store( SW_TRUE, std::memory_order_release );
+    }
+
+    void TickRegistry::buildPrerequisiteWaves( vector<TickWave>& outListWave ) const
+    {
+        outListWave.clear();
+        vector<TickRegistryInternal::WaveCandidate> listCandidate;
+        uint32                                      originalIndex = 0;
+        for ( uint32 group = 0; group < kGroupCount; ++group )
+        {
+            listCandidate.clear();
+            for ( GameObject* pObj : _arrListObject[group] )
+            {
+                if ( pObj == nullptr || pObj->isPendingKill() )
+                    continue;
+                const TickItemList& listItem = pObj->getTickItems();
+                const uint32        end      = pObj->getTickGroupBegin( group + 1 );
+                for ( uint32 index = pObj->getTickGroupBegin( group ); index < end; ++index )
+                {
+                    const TickItem& item = listItem[index];
+                    if ( item._pComponent == nullptr || item._pComponent->isPendingKill() )
+                        continue;
+                    TickRegistryInternal::WaveCandidate candidate{};
+                    candidate._item              = item;
+                    candidate._objectId          = pObj->getObjectId();
+                    candidate._componentId       = item._pComponent->getComponentId();
+                    candidate._originalIndex     = originalIndex++;
+                    candidate._pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
+                    listCandidate.push_back( candidate );
+                }
+            }
+            TickRegistryInternal::appendGroupWaves( listCandidate, outListWave );
+        }
     }
 } // namespace sw

@@ -348,40 +348,6 @@ namespace sw
         /** @brief 등록된 이름으로 컴포넌트를 추가합니다. 에디터·직렬화 전용. 게임은 addComponent<T>를 씁니다. */
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
-        /** @brief 타입 T의 컴포넌트를 전용 풀 또는 힙에서 할당하고 생성합니다. */
-        template <typename T, typename... Args>
-        T* createComponent( GameObject* pOwner, Args&&... args )
-        {
-            const TypeInfo* pTypeInfo = nullptr;
-            if constexpr ( HasStaticType_v<T> )
-                pTypeInfo = T::StaticType();
-            else if constexpr ( HasReflectStaticType_v<T> )
-                pTypeInfo = ReflectTypeTraits<T>::StaticType();
-
-            void*          pMem  = nullptr;
-            PoolAllocator* pPool = nullptr;
-            if ( pTypeInfo != nullptr )
-            {
-                pPool = getOrCreateComponentPool( pTypeInfo, sizeof( T ) );
-                if ( pPool != nullptr )
-                    pMem = pPool->allocate();
-            }
-
-            if ( pMem == nullptr )
-            {
-                pPool = nullptr;
-                pMem  = Memory::allocate( sizeof( T ) );
-                if ( pMem == nullptr )
-                    return nullptr;
-            }
-
-            T* pComp = sw_placement_new( pMem ) T( std::forward<Args>( args )... );
-            pComp->setOwner( pOwner );
-            // 파괴가 이것으로 돌아간다 — 이름·타입 표를 다시 묻지 않는다(둘 다 그새 바뀔 수 있다).
-            pComp->_pPool = pPool;
-            return pComp;
-        }
-
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다 (타입 재바인딩 · 씬 초기화). */
         void markTickWavesDirty() { _tickRegistry.markAllDirty(); }
         /**
@@ -403,16 +369,12 @@ namespace sw
         /** @brief 이미 생성된 GameObject를 매니저에 등록하고 소유권을 가져갑니다. */
         void registerGameObject( GameObject* pObj );
 
-        /** @brief 틱 디스패치 웨이브의 개별 틱 실행 항목 */
-        struct TickExecutionItem
-        {
-            Component*      _pComponent{ nullptr };
-            ComponentHandle _handle;
-            uint32          _subTickId{ 0 };
-        };
-
     private:
-        /** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
+        /**
+         * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
+         * @details 보통은 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다(한 오브젝트의 항목은 한 워커가 순서대로).
+         *          서브틱 선행 종속성이 하나라도 있으면 등록부가 지은 DAG 웨이브를 차례로 돈다 — 그 캐시는 등록부 세대로 무효화된다.
+         */
         void tickComponents( float32 deltaTime );
         /**
          * @brief 틱 중 슬롯 큐에 쌓인 트랜스폼 쓰기를 슬롯 단위로 나눠 적용하고 큐를 비웁니다 (틱 뒤, 게임 스레드).
@@ -534,18 +496,18 @@ namespace sw
 
         PhysicsWorld _physicsWorld;
 
-        atomic<bool>                      _bParallelTransformReadOnly;
-        atomic<bool>                      _bTicking;
-        uint64                            _lastWaveGeneration;  ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
-        atomic<uint32>                    _tickWaveBuildCount;  ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<vector<TickExecutionItem>> _listCachedTickWave;  ///< 선행 종속성이 있을 때만 쓰는 DAG 웨이브
-        vector<uint32>                    _listActiveWriteSlot; ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯 (할당 재사용)
-        mutex                             _deferredTransformMutex;
-        vector<TransformUpdateDelegate>   _listDeferredTransformUpdate;
-        vector<TransformUpdateDelegate>   _listProcessingTransform;
-        mutex                             _deferredPostTickMutex;
-        vector<PostTickDelegate>          _listDeferredPostTickUpdate;
-        vector<PostTickDelegate>          _listProcessingPostTick;
+        atomic<bool>                    _bParallelTransformReadOnly;
+        atomic<bool>                    _bTicking;
+        uint64                          _lastWaveGeneration;  ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
+        atomic<uint32>                  _tickWaveBuildCount;  ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<TickWave>                _listCachedTickWave;  ///< 선행 종속성이 있을 때만 쓰는 DAG 웨이브 (등록부가 짓는다)
+        vector<uint32>                  _listActiveWriteSlot; ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯 (할당 재사용)
+        mutex                           _deferredTransformMutex;
+        vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
+        vector<TransformUpdateDelegate> _listProcessingTransform;
+        mutex                           _deferredPostTickMutex;
+        vector<PostTickDelegate>        _listDeferredPostTickUpdate;
+        vector<PostTickDelegate>        _listProcessingPostTick;
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;

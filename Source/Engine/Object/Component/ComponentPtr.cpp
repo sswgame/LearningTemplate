@@ -37,16 +37,6 @@ namespace sw
         }
     }
 
-    ComponentPtr::ComponentPtr( const ComponentPtr& other )
-        : _targetObjectName{ other._targetObjectName }
-        , _targetComponentType{ other._targetComponentType }
-        , _pCachedPtr{ other._pCachedPtr }
-        , _cachedObjectId{ other._cachedObjectId }
-        , _cachedComponentGeneration{ other._cachedComponentGeneration }
-        , _pManager{ other._pManager }
-    {
-    }
-
     ComponentPtr::ComponentPtr( ComponentPtr&& other ) noexcept
         : _targetObjectName{ other._targetObjectName }
         , _targetComponentType{ other._targetComponentType }
@@ -81,20 +71,6 @@ namespace sw
             _cachedObjectId            = 0;
             _cachedComponentGeneration = 0;
             _pManager                  = nullptr;
-        }
-        return *this;
-    }
-
-    ComponentPtr& ComponentPtr::operator=( const ComponentPtr& other )
-    {
-        if ( this != &other )
-        {
-            _targetObjectName          = other._targetObjectName;
-            _targetComponentType       = other._targetComponentType;
-            _pCachedPtr                = other._pCachedPtr;
-            _cachedObjectId            = other._cachedObjectId;
-            _cachedComponentGeneration = other._cachedComponentGeneration;
-            _pManager                  = other._pManager;
         }
         return *this;
     }

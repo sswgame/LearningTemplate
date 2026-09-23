@@ -12,8 +12,9 @@
  * 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다 — 한 오브젝트의 항목은 한 워커가 순서대로 돈다(같은 오브젝트의
  * 컴포넌트 둘이 동시에 돌지 않는다는 규칙은 그대로다).
  *
- * 선행 종속성(`addSubTickPrerequisite`)이 하나라도 등록되어 있으면 매니저가 예전의 DAG 웨이브 경로로 간다 — 오브젝트 단위로는
- * 계층을 넘는 순서를 표현할 수 없다. 그 경로의 캐시는 이 등록부의 세대로 무효화된다.
+ * 선행 종속성(`addSubTickPrerequisite`)이 하나라도 등록되어 있으면 매니저가 DAG 웨이브 경로로 간다 — 오브젝트 단위로는
+ * 계층을 넘는 순서를 표현할 수 없다. 그 웨이브도 **이 등록부가 자기 항목으로 짓는다**(`buildPrerequisiteWaves`) — 예전에는
+ * 매니저가 씬 전체를 다시 훑어 같은 후보를 두 번째로 모았다. 그 캐시는 이 등록부의 세대로 무효화된다.
  *
  * `PhysicsWorld` · `PrimitiveRegistry` · `SceneTransformHierarchy` 와 같은 자리다: 능력은 별도 타입, 매니저는 순서.
  */
@@ -43,8 +44,20 @@ namespace sw
     };
 
     /**
+     * @brief 오브젝트 하나의 틱 항목. **인라인이 아니다 — 재서 기각했다.**
+     * @details 인라인 두 칸(`InlineAllocator`)으로 두면 첫 틱의 등록부 구축이 절반(8000 개 힙 할당이 사라진다)이고 틱 디스패치도
+     *          오브젝트당 라인 하나가 준다. 그런데 `GameObject` 가 192 → 232 바이트(3 → 4 라인)가 되어 오브젝트를 만지는 다른
+     *          프레임 경로(씬 수집의 활성 검사 · 배치 쓰기의 핸들 해석)가 그만큼 느려졌다 — 틱 −32 us 에 수집·배치 +30~60 us
+     *          (Release · 큐브 8000 · 번갈아 2회). 오브젝트가 세 라인에 남는 것이 더 값지다.
+     */
+    using TickItemList = vector<TickItem>;
+
+    /** @brief 선행 종속성 경로의 웨이브 — 같은 오브젝트의 항목이 한 웨이브에 둘 이상 오지 않는다(웨이브 안은 병렬). */
+    using TickWave = vector<TickItem>;
+
+    /**
      * @class TickRegistry
-     * @brief 그룹마다 "틱할 것이 있는 오브젝트" 목록 · 멤버십 더티 표시 · 오브젝트 항목 재구축.
+     * @brief 그룹마다 "틱할 것이 있는 오브젝트" 목록 · 멤버십 더티 표시 · 오브젝트 항목 재구축 · 선행 종속성 웨이브.
      * @note 락 순서 — 이 클래스의 락(`_dirtyMutex`)은 가장 안쪽이다. `markObjectDirty` 는 워커에서 불려도 된다(원자 플래그 + 짧은 잠금).
      */
     class SW_API TickRegistry
@@ -88,6 +101,15 @@ namespace sw
         bool hasPrerequisites() const { return _prerequisiteCount > 0; }
         /** @brief 항목이 바뀔 때마다 오르는 세대. DAG 웨이브 캐시가 이것으로 무효화된다. */
         uint64 getGeneration() const { return _generation; }
+
+        /**
+         * @brief 선행 종속성을 존중하는 웨이브 목록을 등록된 항목으로 짓습니다 — 그룹 순서대로, 웨이브 안은 병렬.
+         * @details 그룹마다: 선행 종속성 DAG 를 Kahn 으로 레벨별 웨이브로 가르고(같은 레벨은 순서 키 · 등록 순서로 안정 정렬),
+         *          레벨 하나를 다시 **오브젝트별 서브웨이브**로 가른다 — 같은 오브젝트의 항목이 한 웨이브에서 나란히 돌지 않게.
+         *          순환은 남은 것을 순서 키 순으로 마지막 웨이브에 붙여 방어한다. `hasPrerequisites()` 일 때만 부를 값이 있다 —
+         *          아니면 그룹 경로가 더 싸다. 세대가 바뀌지 않았으면 부르는 쪽이 캐시를 그대로 쓴다.
+         */
+        void buildPrerequisiteWaves( vector<TickWave>& outListWave ) const;
 
     private:
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 짓고 그룹 멤버십을 맞춥니다. */

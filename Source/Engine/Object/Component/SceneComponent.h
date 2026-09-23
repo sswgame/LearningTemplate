@@ -147,6 +147,15 @@ namespace sw
         void applyAttachSerializeFields();
 
     private:
+        /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)인가 — 세터가 이때는 쓰지 않고 큐에 올린다. */
+        bool isInParallelTick() const;
+        /**
+         * @brief 틱 중의 세터 한 건을 자기 스레드 슬롯의 큐에 올립니다 — 핸들과 대상 포인터는 여기서 채운다.
+         * @details 세 세터가 같은 열 줄을 각자 들고 있었고, 스케일만 `_pTarget` 을 빠뜨려 적용 쪽이 핸들을 다시 풀었다
+         *          ("한 곳에 넣은 고침이 형제에게 안 갔다" 의 자리). 큐에 쌓인 건은 같은 `tick()` 안에서 적용되므로
+         *          대상 포인터를 믿어도 된다(파괴는 틱 밖에서만 메모리를 놓는다).
+         */
+        void queueTickWrite( SceneTransformWrite& write );
         /**
          * @brief 부모에서 **지금 당장** 뗍니다(미루지 않습니다).
          * @details `detachFromComponent` 는 틱 중이면 일을 미루고 그냥 돌아온다. 소멸자가 그

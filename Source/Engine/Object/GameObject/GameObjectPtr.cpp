@@ -24,14 +24,6 @@ namespace sw
     {
     }
 
-    GameObjectPtr::GameObjectPtr( const GameObjectPtr& other )
-        : _targetName{ other._targetName }
-        , _pCachedPtr{ other._pCachedPtr }
-        , _cachedObjectId{ other._cachedObjectId }
-        , _pManager{ other._pManager }
-    {
-    }
-
     GameObjectPtr::GameObjectPtr( GameObjectPtr&& other ) noexcept
         : _targetName{ other._targetName }
         , _pCachedPtr{ other._pCachedPtr }
@@ -50,18 +42,6 @@ namespace sw
         _pCachedPtr     = pTarget;
         _cachedObjectId = pTarget != nullptr ? pTarget->getObjectId() : 0;
         _pManager       = pTarget != nullptr ? pTarget->getManager() : nullptr;
-        return *this;
-    }
-
-    GameObjectPtr& GameObjectPtr::operator=( const GameObjectPtr& other )
-    {
-        if ( this != &other )
-        {
-            _targetName     = other._targetName;
-            _pCachedPtr     = other._pCachedPtr;
-            _cachedObjectId = other._cachedObjectId;
-            _pManager       = other._pManager;
-        }
         return *this;
     }
 

@@ -66,7 +66,6 @@ namespace sw
      */
     GameObject::~GameObject()
     {
-
         // 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
         detachFromParent();
 
@@ -170,12 +169,11 @@ namespace sw
     }
 
     /**
-     * @brief 로컬 활성 상태를 변경하고 부모 계층 상태를 반영하여 자식들에게 활성화 이벤트를 전파합니다.
+     * @brief 로컬 활성 상태를 변경하고 소유 컴포넌트에 전파한 뒤, 계층 활성을 자손까지 한 번 재계산합니다.
      */
     void GameObject::setActive( bool bActive )
     {
         _bActive.store( bActive, std::memory_order_relaxed );
-        refreshActiveInHierarchy();
 
         for ( Component* pComp : _listComponent )
         {
@@ -183,6 +181,7 @@ namespace sw
                 continue;
             pComp->setActive( bActive );
         }
+        // 계층 재계산은 이 안에서 한 번 — 예전에는 위에서 한 번 더 돌아 자손 전체를 두 번 걸었다.
         onPropertyChanged( hashed_string( "_bActive" ) );
     }
 
@@ -359,17 +358,11 @@ namespace sw
 
     void GameObject::addTag( TagID tag )
     {
-        if ( _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen() )
+        if ( isComponentMutationFrozen() )
         {
-            const uint64       objectId = _objectId;
-            GameObjectManager* pMgr     = _pOwnerManager;
-            const TagID        tagCopy  = tag;
-            pMgr->deferPostTick( [pMgr, objectId, tagCopy]()
-            {
-                GameObject* pObj = pMgr->findGameObjectById( objectId );
-                if ( pObj != nullptr )
-                    pObj->addTag( tagCopy );
-            } );
+            const TagID tagCopy = tag;
+            deferOnSelfPostTick( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
+            { self.addTag( tagCopy ); } ) );
             return;
         }
 
@@ -382,17 +375,11 @@ namespace sw
 
     void GameObject::removeTag( TagID tag )
     {
-        if ( _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen() )
+        if ( isComponentMutationFrozen() )
         {
-            const uint64       objectId = _objectId;
-            GameObjectManager* pMgr     = _pOwnerManager;
-            const TagID        tagCopy  = tag;
-            pMgr->deferPostTick( [pMgr, objectId, tagCopy]()
-            {
-                GameObject* pObj = pMgr->findGameObjectById( objectId );
-                if ( pObj != nullptr )
-                    pObj->removeTag( tagCopy );
-            } );
+            const TagID tagCopy = tag;
+            deferOnSelfPostTick( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
+            { self.removeTag( tagCopy ); } ) );
             return;
         }
 
@@ -479,6 +466,66 @@ namespace sw
         return nullptr;
     }
 
+    bool GameObject::isComponentMutationFrozen() const
+    {
+        return _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen();
+    }
+
+    GameObject::ComponentStorage GameObject::allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize )
+    {
+        ComponentStorage storage{};
+        if ( _pOwnerManager == nullptr )
+            return storage;
+
+        // 타입마다 풀 하나 — 파괴가 그 풀로 돌아간다(`Component::_pPool`). 풀을 못 만드는 타입(리플렉션 없음)은 힙.
+        if ( pTypeInfo != nullptr )
+        {
+            storage._pPool = _pOwnerManager->getOrCreateComponentPool( pTypeInfo, typeSize );
+            if ( storage._pPool != nullptr )
+                storage._pMemory = storage._pPool->allocate();
+        }
+        if ( storage._pMemory == nullptr )
+        {
+            storage._pPool   = nullptr;
+            storage._pMemory = Memory::allocate( typeSize );
+        }
+        return storage;
+    }
+
+    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool )
+    {
+        pComp->setOwner( this );
+        pComp->_pPool = pPool;
+
+        const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
+        pComp->setComponentName( typeKey );
+        pComp->applyTypeDefaults( pTypeInfo );
+
+        _listComponent.push_back( pComp );
+        ++_componentGeneration;
+        if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
+            _pPrimaryScene.store( pComp, std::memory_order_relaxed );
+        // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
+        pComp->onRegister( *_pOwnerManager );
+        // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.
+        if ( pComp->hasTickWork() )
+            markTickOrderDirty();
+    }
+
+    void GameObject::deferOnSelfPostTick( Delegate<void( GameObject& )> func )
+    {
+        if ( _pOwnerManager == nullptr || func.isBound() == false )
+            return;
+        const uint64       objectId = _objectId;
+        GameObjectManager* pMgr     = _pOwnerManager;
+        pMgr->deferPostTick( [pMgr, objectId, deferred = std::move( func )]()
+        {
+            GameObject* pObj = pMgr->findGameObjectById( objectId );
+            if ( pObj != nullptr )
+                deferred( *pObj );
+        } );
+    }
+
     void GameObject::clearComponents()
     {
         // 인라인 네 칸을 그대로 복사한다 — 힙을 만지지 않는다(다섯 개 이상일 때만).
@@ -527,7 +574,7 @@ namespace sw
         // 파괴 뒤에는 물을 수 없으니 지금 본다.
         const bool bTickWork = pComp->hasTickWork();
 
-        if ( _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen() )
+        if ( isComponentMutationFrozen() )
         {
             _pOwnerManager->destroyComponent( pComp );
             return true;

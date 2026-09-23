@@ -10,6 +10,7 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -22,6 +23,7 @@ namespace sw
 {
     class GameObjectManager;
     class ObjectStateSerializer;
+    class PoolAllocator;
     class SceneComponent;
 
     /**
@@ -33,6 +35,10 @@ namespace sw
     /**
      * @class GameObject
      * @brief 라이프사이클(beginPlay), 태그, 컴포넌트 목록을 가진 월드 액터
+     * @details **이 헤더는 `GameObjectManager` 를 포함하지 않는다.** 예전에는 `addComponent<T>` 가 매니저의 템플릿을 불러
+     *          헤더 끝에서 매니저 헤더를 끌어왔고, 그래서 GameObject 를 아는 모든 TU 가 매니저(물리 월드 · 등록부 셋 · 풀)
+     *          까지 알았다. 지금은 매니저가 필요한 걸음(동결 확인 · 저장소 · 붙이기 · 미루기)이 템플릿이 아닌 멤버 넷이고
+     *          템플릿은 `T` 만 다룬다.
      */
     REFLECT()
     class SW_API GameObject
@@ -79,7 +85,7 @@ namespace sw
         uint64 getObjectId() const { return _objectId; }
 
         /** @brief 매니저 인스턴스 반환 */
-        class GameObjectManager* getManager() const { return _pOwnerManager; }
+        GameObjectManager* getManager() const { return _pOwnerManager; }
 
         /** @brief 지연 삭제 (Tombstone) 플래그 마킹 */
         void markPendingKill();
@@ -99,8 +105,8 @@ namespace sw
 
         /**
          * @brief 활성화/비활성화 설정
-         * @details 자체 활성 플래그를 갱신하고 `isActiveInHierarchy`를 부모 계층에 맞게 재계산합니다.
-         *          소유 컴포넌트에는 자체 활성 값을 전파합니다 (SceneComponent 계층과 별개).
+         * @details 자체 활성 플래그를 갱신하고 소유 컴포넌트에 자체 활성 값을 전파한 뒤, `isActiveInHierarchy` 를 부모 계층에
+         *          맞게 재계산합니다(자손까지 한 번). 예전에는 재계산이 두 번 돌았다 — 여기서 한 번, `onPropertyChanged` 에서 또.
          */
         void setActive( bool bActive );
 
@@ -147,7 +153,7 @@ namespace sw
          *          목록을 캐스트로 훑었다(호출처 35 곳). 캐시는 첫 씬 컴포넌트가 붙을 때 적히고, 그것이 빠지거나 죽으면
          *          다음 호출이 목록에서 다시 찾는다.
          */
-        class SceneComponent* getPrimarySceneComponent() const;
+        SceneComponent* getPrimarySceneComponent() const;
 
         /** @brief 태그를 추가합니다. TagComponent가 없으면 만듭니다. */
         void addTag( TagID tag );
@@ -276,7 +282,7 @@ namespace sw
         void markTickOrderDirty();
 
         /** @brief 틱 등록부의 항목 — (그룹, 순서 키) 순. `TickRegistry` 가 짓고 매니저의 디스패치가 읽는다. */
-        const vector<TickItem>& getTickItems() const { return _listTickItem; }
+        const TickItemList& getTickItems() const { return _listTickItem; }
         /** @brief 그룹 `group` 의 항목이 시작하는 자리. `group + 1` 의 시작이 그 끝이다(`TickRegistry::kGroupCount` 까지 물을 수 있다). */
         uint32 getTickGroupBegin( uint32 group ) const { return _arrTickGroupBegin[group]; }
 
@@ -289,6 +295,21 @@ namespace sw
         virtual ~GameObject();
 
     private:
+        /** @brief `addComponent` 가 받는 저장소 한 칸 — 타입 풀의 블록이거나(풀 포인터 있음) 힙. */
+        struct ComponentStorage
+        {
+            void*          _pMemory{ nullptr };
+            PoolAllocator* _pPool{ nullptr };
+        };
+
+        /** @brief 매니저가 구조 변경을 얼려 두었는가(병렬 틱 중). 매니저가 없으면 false. */
+        bool isComponentMutationFrozen() const;
+        /** @brief 타입 `pTypeInfo` 의 풀(없으면 만든다)에서 한 칸, 풀을 못 만들면 힙에서 `typeSize` 바이트. 실패면 빈 칸. */
+        ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
+        /** @brief 막 지은 컴포넌트를 이 오브젝트에 붙입니다 — 소유자 · 풀 · 이름 · 기본값 · 목록 · primary 캐시 · 등록 · 틱 표시. */
+        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool );
+        /** @brief 틱이 끝난 뒤 이 오브젝트(그때까지 살아 있으면)에 @p func 를 돌립니다 — id 로 다시 찾는다. */
+        void deferOnSelfPostTick( Delegate<void( GameObject& )> func );
         /** @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy`를 재계산하고 자식에 전파 */
         void refreshActiveInHierarchy();
         /** @brief 프리미티브 집합이 통째로 바뀌었음을 매니저에 알립니다. */
@@ -316,7 +337,7 @@ namespace sw
          */
         mutable atomic<Component*> _pPrimaryScene;
         /** @brief 틱 등록부의 항목 — (그룹, 순서 키) 순. `TickRegistry` 만 짓는다. 틱할 것이 없는 오브젝트는 비어 있다. */
-        vector<TickItem> _listTickItem;
+        TickItemList _listTickItem;
         /** @brief 그룹별 항목 시작 자리 (`kGroupCount` + 1 칸, 마지막은 전체 수). */
         uint32 _arrTickGroupBegin[TickRegistry::kGroupCount + 1];
         /** @brief 등록부의 그룹 목록에서 자기 자리. 없으면 `TickRegistry::kNotInList`. */
@@ -328,12 +349,6 @@ namespace sw
         uint32        _managerIndex; ///< Manager의 _gameObjects 내 인덱스
     };
 
-} // namespace sw
-
-#include "Engine/Object/GameObject/GameObjectManager.h"
-
-namespace sw
-{
     template <typename T, typename... Args>
     T* GameObject::addComponent( Args&&... args )
     {
@@ -347,27 +362,18 @@ namespace sw
             return nullptr;
         }
 
-        if ( _pOwnerManager->isStructuralMutationFrozen() )
+        if ( isComponentMutationFrozen() )
         {
-            const uint64       objectId = _objectId;
-            GameObjectManager* pMgr     = _pOwnerManager;
-            auto               packedArgs =
-                std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
-            pMgr->deferPostTick( [pMgr, objectId, packedArgs = std::move( packedArgs )]() mutable
+            // 틱 중이다 — 인자를 값으로 싸 두었다가 틱 뒤에 자기 자신에게 다시 부른다. 그 사이 죽었으면 아무 일도 없다.
+            auto packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
+            deferOnSelfPostTick( Delegate<void( GameObject& )>( [packedArgs = std::move( packedArgs )]( GameObject& self ) mutable
             {
-                GameObject* pObj = pMgr->findGameObjectById( objectId );
-                if ( pObj == nullptr )
-                    return;
-                std::apply( [pObj]( auto&&... forwarded )
-                { pObj->addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },
+                std::apply( [&self]( auto&&... forwarded )
+                { self.addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },
                             std::move( packedArgs ) );
-            } );
+            } ) );
             return nullptr;
         }
-
-        T* pComp = _pOwnerManager->createComponent<T>( this, std::forward<Args>( args )... );
-        if ( pComp == nullptr )
-            return nullptr;
 
         const TypeInfo* pTypeInfo = nullptr;
         if constexpr ( HasStaticType_v<T> )
@@ -375,19 +381,12 @@ namespace sw
         else if constexpr ( HasReflectStaticType_v<T> )
             pTypeInfo = ReflectTypeTraits<T>::StaticType();
 
-        const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
-        pComp->setComponentName( typeKey );
-        pComp->applyTypeDefaults( pTypeInfo );
+        const ComponentStorage storage = allocateComponentStorage( pTypeInfo, sizeof( T ) );
+        if ( storage._pMemory == nullptr )
+            return nullptr;
 
-        _listComponent.push_back( pComp );
-        ++_componentGeneration;
-        if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
-            _pPrimaryScene.store( pComp, std::memory_order_relaxed );
-        // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
-        pComp->onRegister( *_pOwnerManager );
-        // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.
-        if ( pComp->hasTickWork() )
-            markTickOrderDirty();
+        T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
+        attachCreatedComponent( pComp, pTypeInfo, storage._pPool );
         return pComp;
     }
 } // namespace sw

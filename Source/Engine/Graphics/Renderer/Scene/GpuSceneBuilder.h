@@ -20,6 +20,7 @@ namespace sw
     class Material;
     class MaterialInstance;
     class Mesh;
+    class MeshComponent;
     class Scene;
 
     /**
