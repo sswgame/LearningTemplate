@@ -88,6 +88,14 @@ namespace sw
 
         /** @brief TaskArgs: path string, generation, bFetchData. 워커에서 파일 존재 확인 및 바이너리 데이터를 읽습니다. */
         void processAssetTask( const TaskArgs& args );
+        /**
+         * @brief 요청을 태스크로 내거나, 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝냅니다. `_mutex` 를 쥔 채 부른다.
+         * @details `requestAsset` · `requestAssetData` 가 태스크 내기와 동기 폴백을 각자 들었고, 두 폴백이 완료를 절반씩만 했다
+         *          (하나는 존재 콜백만, 하나는 데이터 콜백만 비웠다).
+         */
+        void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData );
+        /** @brief 결과를 적고 진행 표를 지우고 두 콜백 목록을 완료 큐로 옮깁니다 — 태스크 완료와 동기 폴백이 같은 길이다. `_mutex` 를 쥔 채. */
+        void completeRequestLocked( const string& pathStr, bool bSuccess, const vector<uint8>& bytes );
 
     private:
         mutable mutex _mutex;

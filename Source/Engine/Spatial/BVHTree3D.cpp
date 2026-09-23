@@ -3,13 +3,76 @@
 #include "Engine/Spatial/BVHTree3D.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Math/Frustum.h"
 #include "Core/Math/Math.h"
 
 namespace sw
 {
     namespace
     {
-        static constexpr float32 kSurfaceAreaFactor = 2.0f;
+        struct BVHTree3DInternal
+        {
+            static constexpr float32 kSurfaceAreaFactor = 2.0f;
+            /**
+             * @brief 순회 스택의 칸 수. 트리는 삽입 · 삭제마다 회전으로 균형을 잡으므로 높이는 원소 수의 로그로 자라고,
+             *        깊이 우선 스택은 높이 + 1 을 넘지 않는다 — 256 이면 원소 수와 무관하게 남는다.
+             */
+            static constexpr int32 kTraversalStackCapacity = static_cast<int32>( constant::kMaxBuffer256 );
+
+            /**
+             * @brief 경계가 `overlaps` 를 만족하는 잎의 핸들을 모읍니다 — 네 질의(상자 · 광선 · 구 · 절두체)의 공통 순회.
+             * @details 예전에는 네 질의가 이 스무 줄을 각자 들고 판정식만 달랐다. 스택이 차면 자식을 **조용히 버렸다** — 균형
+             *          트리에서는 닿지 않는 자리지만, 닿으면 질의 결과가 빠지므로 이제는 단언이 알린다.
+             */
+            template <typename OverlapFn>
+            static void collectOverlapping( const vector<BVHNode3D>& listNode, int32 rootIndex, OverlapFn&& overlaps,
+                                            vector<ObjectHandle>& outListHandle )
+            {
+                if ( rootIndex == invalid_index::kInt32 )
+                    return;
+
+                int32 arrStack[kTraversalStackCapacity];
+                int32 stackCount       = 0;
+                arrStack[stackCount++] = rootIndex;
+                while ( stackCount > 0 )
+                {
+                    const BVHNode3D& node = listNode[static_cast<size_t>( arrStack[--stackCount] )];
+                    if ( overlaps( node._bounds ) == false )
+                        continue;
+                    if ( node.isLeaf() )
+                    {
+                        outListHandle.push_back( node._handle );
+                        continue;
+                    }
+                    SW_ASSERT( stackCount + 2 <= kTraversalStackCapacity );
+                    if ( node._leftChild != invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
+                        arrStack[stackCount++] = node._leftChild;
+                    if ( node._rightChild != invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
+                        arrStack[stackCount++] = node._rightChild;
+                }
+            }
+
+            /**
+             * @brief 광선을 축 하나의 슬랩으로 잘라 [inoutNear, inoutFar] 를 좁힙니다. 이 축에서 빗나가면 false.
+             * @details 슬랩 검사는 축마다 똑같다 — 예전에는 이 열다섯 줄이 축마다 한 벌씩 세 벌이었다(`Physics/CCD.cpp` 가
+             *          같은 이유로 `clipSlab` 하나로 모은 모양이다). 이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 본다.
+             */
+            static bool clipRaySlab( float32 origin, float32 direction, float32 slabMin, float32 slabMax, float32& inoutNear,
+                                     float32& inoutFar )
+            {
+                if ( MathUtil::abs( direction ) < MathUtil::Epsilon )
+                    return slabMin <= origin && origin <= slabMax;
+
+                const float32 invDirection = 1.0f / direction;
+                float32       tEnter       = ( slabMin - origin ) * invDirection;
+                float32       tExit        = ( slabMax - origin ) * invDirection;
+                if ( tEnter > tExit )
+                    std::swap( tEnter, tExit );
+                inoutNear = MathUtil::max( inoutNear, tEnter );
+                inoutFar  = MathUtil::min( inoutFar, tExit );
+                return inoutNear <= inoutFar;
+            }
+        };
     } // namespace
 
     BVHTree3D::BVHTree3D()
@@ -30,7 +93,7 @@ namespace sw
     float32 BVHTree3D::getSurfaceArea( const AABB& box )
     {
         const float3 extents = box._max - box._min;
-        return kSurfaceAreaFactor * ( extents._x * extents._y + extents._y * extents._z + extents._z * extents._x );
+        return BVHTree3DInternal::kSurfaceAreaFactor * ( extents._x * extents._y + extents._y * extents._z + extents._z * extents._x );
     }
 
     int32 BVHTree3D::allocateNode()
@@ -126,8 +189,8 @@ namespace sw
             const AABB    combinedAABB = combineAabb( _listNode[static_cast<size_t>( index )]._bounds, leafAABB );
             const float32 combinedArea = getSurfaceArea( combinedAABB );
 
-            const float32 cost            = kSurfaceAreaFactor * combinedArea;
-            const float32 inheritanceCost = kSurfaceAreaFactor * ( combinedArea - area );
+            const float32 cost            = BVHTree3DInternal::kSurfaceAreaFactor * combinedArea;
+            const float32 inheritanceCost = BVHTree3DInternal::kSurfaceAreaFactor * ( combinedArea - area );
 
             // Cost of descending into left child
             float32 costLeft = 0.0f;
@@ -385,46 +448,21 @@ namespace sw
         // 않고 돌아갔다 — 호출부가 벡터 하나를 돌려 쓰면 지난 질의의 답이 이번 답인 척 남는다.
         // 형제들(`SpatialHashGrid2D` · `PhysicsWorld`)은 이미 비우고 시작한다.
         outListHandle.clear();
-        if ( _rootIndex == invalid_index::kInt32 )
-            return;
-
-        int32 arrStack[constant::kMaxBuffer256];
-        int32 stackCount       = 0;
-        arrStack[stackCount++] = _rootIndex;
-
-        while ( stackCount > 0 )
-        {
-            const int32      nodeIndex = arrStack[--stackCount];
-            const BVHNode3D& node      = _listNode[static_cast<size_t>( nodeIndex )];
-
-            if ( node._bounds.intersects( queryBox ) )
-            {
-                if ( node.isLeaf() )
-                {
-                    outListHandle.push_back( node._handle );
-                }
-                else
-                {
-                    if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._leftChild;
-                    if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._rightChild;
-                }
-            }
-        }
+        BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&queryBox]( const AABB& box )
+        { return box.intersects( queryBox ); },
+                                               outListHandle );
     }
 
     void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
     {
         outListHandle.clear();
-        if ( _rootIndex == invalid_index::kInt32 || maxDist <= 0.0f )
+        if ( maxDist <= 0.0f )
             return;
 
-        // **방향을 단위 길이로 맞춘다.** `maxDist` 는 이름 그대로 거리인데, 아래의 슬랩 판정은
-        // `tMax = maxDist` 를 방향 벡터 배수로 쓴다 — 정규화하지 않으면 같은 인자가 방향 길이에
-        // 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가 두 배가 된다). 형제
-        // `SpatialHashGrid2D::queryRay` 는 이미 정규화하고 있었고, 두 자료구조의 같은 인자가
-        // 서로 다른 뜻이었다.
+        // **방향을 단위 길이로 맞춘다.** `maxDist` 는 이름 그대로 거리인데, 슬랩 판정은 `tMax = maxDist` 를 방향 벡터
+        // 배수로 쓴다 — 정규화하지 않으면 같은 인자가 방향 길이에 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가
+        // 두 배가 된다). 형제 `SpatialHashGrid2D::queryRay` 는 이미 정규화하고 있었고, 두 자료구조의 같은 인자가 서로
+        // 다른 뜻이었다.
         float3 unitDirection = direction;
         if ( unitDirection.getLengthSquared() <= MathUtil::Epsilon )
             return;
@@ -432,213 +470,38 @@ namespace sw
 
         auto rayIntersects = [&]( const AABB& box ) -> bool
         {
-            float32 tMin = 0.0f;
-            float32 tMax = maxDist;
-
-            // X-axis slab
-            if ( MathUtil::abs( unitDirection._x ) < MathUtil::Epsilon )
-            {
-                if ( origin._x < box._min._x || origin._x > box._max._x )
-                    return false;
-            }
-            else
-            {
-                const float32 invDx = 1.0f / unitDirection._x;
-                float32       t1    = ( box._min._x - origin._x ) * invDx;
-                float32       t2    = ( box._max._x - origin._x ) * invDx;
-                if ( t1 > t2 )
-                    std::swap( t1, t2 );
-                tMin = MathUtil::max( tMin, t1 );
-                tMax = MathUtil::min( tMax, t2 );
-                if ( tMin > tMax )
-                    return false;
-            }
-
-            // Y-axis slab
-            if ( MathUtil::abs( unitDirection._y ) < MathUtil::Epsilon )
-            {
-                if ( origin._y < box._min._y || origin._y > box._max._y )
-                    return false;
-            }
-            else
-            {
-                const float32 invDy = 1.0f / unitDirection._y;
-                float32       t1    = ( box._min._y - origin._y ) * invDy;
-                float32       t2    = ( box._max._y - origin._y ) * invDy;
-                if ( t1 > t2 )
-                    std::swap( t1, t2 );
-                tMin = MathUtil::max( tMin, t1 );
-                tMax = MathUtil::min( tMax, t2 );
-                if ( tMin > tMax )
-                    return false;
-            }
-
-            // Z-axis slab
-            if ( MathUtil::abs( unitDirection._z ) < MathUtil::Epsilon )
-            {
-                if ( origin._z < box._min._z || origin._z > box._max._z )
-                    return false;
-            }
-            else
-            {
-                const float32 invDz = 1.0f / unitDirection._z;
-                float32       t1    = ( box._min._z - origin._z ) * invDz;
-                float32       t2    = ( box._max._z - origin._z ) * invDz;
-                if ( t1 > t2 )
-                    std::swap( t1, t2 );
-                tMin = MathUtil::max( tMin, t1 );
-                tMax = MathUtil::min( tMax, t2 );
-                if ( tMin > tMax )
-                    return false;
-            }
-
-            return true;
+            float32 tNear = 0.0f;
+            float32 tFar  = maxDist;
+            return BVHTree3DInternal::clipRaySlab( origin._x, unitDirection._x, box._min._x, box._max._x, tNear, tFar ) &&
+                   BVHTree3DInternal::clipRaySlab( origin._y, unitDirection._y, box._min._y, box._max._y, tNear, tFar ) &&
+                   BVHTree3DInternal::clipRaySlab( origin._z, unitDirection._z, box._min._z, box._max._z, tNear, tFar );
         };
-
-        int32 arrStack[constant::kMaxBuffer256];
-        int32 stackCount       = 0;
-        arrStack[stackCount++] = _rootIndex;
-
-        while ( stackCount > 0 )
-        {
-            const int32      nodeIndex = arrStack[--stackCount];
-            const BVHNode3D& node      = _listNode[static_cast<size_t>( nodeIndex )];
-
-            if ( rayIntersects( node._bounds ) )
-            {
-                if ( node.isLeaf() )
-                {
-                    outListHandle.push_back( node._handle );
-                }
-                else
-                {
-                    if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._leftChild;
-                    if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._rightChild;
-                }
-            }
-        }
+        BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, rayIntersects, outListHandle );
     }
 
     void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const
     {
         outListHandle.clear();
-        if ( _rootIndex == invalid_index::kInt32 || radius <= 0.0f )
+        if ( radius <= 0.0f )
             return;
 
-        const float32 r2               = radius * radius;
+        const float32 radiusSquared    = radius * radius;
         auto          sphereIntersects = [&]( const AABB& box ) -> bool
         {
             const float3 closestPoint = center.clamped( box._min, box._max );
-            return float3::getDistanceSquared( center, closestPoint ) <= r2;
+            return float3::getDistanceSquared( center, closestPoint ) <= radiusSquared;
         };
-
-        int32 arrStack[constant::kMaxBuffer256];
-        int32 stackCount       = 0;
-        arrStack[stackCount++] = _rootIndex;
-
-        while ( stackCount > 0 )
-        {
-            const int32      nodeIndex = arrStack[--stackCount];
-            const BVHNode3D& node      = _listNode[static_cast<size_t>( nodeIndex )];
-
-            if ( sphereIntersects( node._bounds ) )
-            {
-                if ( node.isLeaf() )
-                {
-                    outListHandle.push_back( node._handle );
-                }
-                else
-                {
-                    if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._leftChild;
-                    if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._rightChild;
-                }
-            }
-        }
+        BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, sphereIntersects, outListHandle );
     }
 
     void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const
     {
         outListHandle.clear();
-
-        const float32* pArr = viewProj.data();
-        // Extract 6 frustum planes from column-major viewProj matrix
-        // Left, Right, Bottom, Top, Near, Far
-        //
-        // 분석기는 `data()` 를 따라가 `&_11` 하나짜리 필드를 [0..15] 로 읽는다고 본다. 행렬이 16개
-        // float 이 연속이라는 것은 `float4x4` 의 static_assert( sizeof == 16 * sizeof(float32) ) 가
-        // 컴파일 타임에 지킨다(MatrixMath.h) — 그 가정을 한 곳에 모으려고 만든 것이 data() 다.
-        // NOLINTBEGIN(clang-analyzer-security.ArrayBound)
-        float4 arrPlane[6] = {
-            float4{pArr[3] + pArr[0], pArr[7] + pArr[4],  pArr[11] + pArr[8], pArr[15] + pArr[12]},
-            float4{pArr[3] - pArr[0], pArr[7] - pArr[4],  pArr[11] - pArr[8], pArr[15] - pArr[12]},
-            float4{pArr[3] + pArr[1], pArr[7] + pArr[5],  pArr[11] + pArr[9], pArr[15] + pArr[13]},
-            float4{pArr[3] - pArr[1], pArr[7] - pArr[5],  pArr[11] - pArr[9], pArr[15] - pArr[13]},
-            float4{          pArr[2],           pArr[6],            pArr[10],            pArr[14]},
-            float4{pArr[3] - pArr[2], pArr[7] - pArr[6], pArr[11] - pArr[10], pArr[15] - pArr[14]}
-        };
-        // NOLINTEND(clang-analyzer-security.ArrayBound)
-
-        for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
-        {
-            const float3  normal{ arrPlane[planeIndex]._x, arrPlane[planeIndex]._y, arrPlane[planeIndex]._z };
-            const float32 length = normal.getLength();
-            if ( length > MathUtil::Epsilon )
-            {
-                const float32 invLength = 1.0f / length;
-                arrPlane[planeIndex]._x *= invLength;
-                arrPlane[planeIndex]._y *= invLength;
-                arrPlane[planeIndex]._z *= invLength;
-                arrPlane[planeIndex]._w *= invLength;
-            }
-        }
-
-        auto frustumIntersects = [&]( const AABB& box ) -> bool
-        {
-            for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
-            {
-                const float4& plane = arrPlane[planeIndex];
-                const float3  p{
-                    plane._x > 0.0f ? box._max._x : box._min._x,
-                    plane._y > 0.0f ? box._max._y : box._min._y,
-                    plane._z > 0.0f ? box._max._z : box._min._z };
-
-                if ( ( float3{ plane._x, plane._y, plane._z }.dot( p ) + plane._w ) < 0.0f )
-                    return false;
-            }
-            return true;
-        };
-
-        if ( _rootIndex == invalid_index::kInt32 )
-            return;
-
-        int32 arrStack[constant::kMaxBuffer256];
-        int32 stackCount       = 0;
-        arrStack[stackCount++] = _rootIndex;
-
-        while ( stackCount > 0 )
-        {
-            const int32      nodeIndex = arrStack[--stackCount];
-            const BVHNode3D& node      = _listNode[static_cast<size_t>( nodeIndex )];
-
-            if ( frustumIntersects( node._bounds ) )
-            {
-                if ( node.isLeaf() )
-                {
-                    outListHandle.push_back( node._handle );
-                }
-                else
-                {
-                    if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._leftChild;
-                    if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
-                        arrStack[stackCount++] = node._rightChild;
-                }
-            }
-        }
+        // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다 — 예전에는 여기에 같은 식의 사본이 있었다.
+        const Frustum frustum = Frustum::fromViewProjection( viewProj );
+        BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&frustum]( const AABB& box )
+        { return frustum.overlapsBox( box._min, box._max ); },
+                                               outListHandle );
     }
 
     size_t BVHTree3D::getHandleCount() const

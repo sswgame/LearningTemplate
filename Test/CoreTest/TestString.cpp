@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -1415,4 +1416,54 @@ SW_TEST_CASE( StringTest, ContainsFollowsTheSameRulesAsItsTwoSiblings )
 
     // 끝자리에 걸친 것도 찾는다 — 마지막 시작 위치를 빠뜨리기 쉬운 자리다.
     SW_EXPECT_TRUE( StringUtil::contains( "abcXYZ", "xyz", true ) );
+}
+
+/**
+ * @brief [StringTest] 정수 파서 셋(int32 · int64 · uint64)의 경계 — 부호 · 기수 접두사 · 최솟값 · 넘침 · 꼬리 글자
+ * @details 셋이 같은 앞머리 처리(`splitIntegerToken`)를 쓰게 합치면서 그 규칙을 여기 못박는다. 최솟값은 절댓값이 최댓값 + 1 이라
+ *          부호 없는 쪽으로 읽은 뒤 따로 다룬다 — 그 한 칸이 가장 틀리기 쉽다.
+ */
+SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
+{
+    int32 value32{ 0 };
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( " 42 ", value32 ) && value32 == 42 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "+7", value32 ) && value32 == 7 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-2147483648", value32 ) && value32 == sw::MathUtil::MinInt32 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "2147483647", value32 ) && value32 == sw::MathUtil::MaxInt32 );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "2147483648", value32 ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "-2147483649", value32 ) );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "0x1F", value32, 0 ) && value32 == 31 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "1F", value32, 16 ) && value32 == 31 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-0x10", value32, 16 ) && value32 == -16 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "017", value32, 0 ) && value32 == 17 ); // 기수 0 은 0x 만 본다 — 8 진 접두사는 없다
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "12a", value32 ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "-", value32 ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "", value32 ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "0x", value32, 16 ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt( "5", value32, 1 ) );
+
+    int64 value64{ 0 };
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "-9223372036854775808", value64 ) && value64 == sw::MathUtil::MinInt64 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "9223372036854775807", value64 ) && value64 == sw::MathUtil::MaxInt64 );
+    SW_EXPECT_FALSE( sw::StringUtil::parseInt64( "9223372036854775808", value64 ) );
+
+    uint64 valueU64{ 0 };
+    SW_EXPECT_TRUE( sw::StringUtil::parseUint64( "18446744073709551615", valueU64 ) && valueU64 == ~uint64{ 0 } );
+    SW_EXPECT_TRUE( sw::StringUtil::parseUint64( "+0xff", valueU64, 0 ) && valueU64 == 255 );
+    SW_EXPECT_FALSE( sw::StringUtil::parseUint64( "-1", valueU64 ) ); // 부호 없는 쪽은 `-` 를 받지 않는다
+    SW_EXPECT_FALSE( sw::StringUtil::parseUint64( "18446744073709551616", valueU64 ) );
+}
+
+/**
+ * @brief [StringTest] 대소문자 변환과 비교의 utf16 판 — utf8 판과 같은 뼈대(`mapEachChar` · `equalsView`)를 쓴다
+ */
+SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
+{
+    SW_EXPECT_TRUE( sw::StringUtil::toUpper( L"abcXyz09" ) == sw::wstring( L"ABCXYZ09" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::toLower( L"ABCxYZ09" ) == sw::wstring( L"abcxyz09" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::toUpper( static_cast<const utf16*>( nullptr ) ).empty() );
+    SW_EXPECT_TRUE( sw::StringUtil::toLower( "" ).empty() );
+    SW_EXPECT_TRUE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"SCENE" ), true ) );
+    SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"SCENE" ), false ) );
+    SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"Scenes" ), true ) );
 }

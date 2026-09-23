@@ -22,6 +22,26 @@ namespace sw
 {
     namespace
     {
+        struct GameInstanceBaseInternal
+        {
+            /**
+             * @brief 활성 씬의 오브젝트 매니저. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr.
+             * @details 씬 저장과 복원이 이 열다섯 줄을 각자 들었다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
+             *          보므로 아래 널 검사는 사실상 닿지 않지만, `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수라
+             *          `CheckNullableServiceUse` 린트가 요구하는 모양을 예외 없이 지킨다.
+             */
+            static GameObjectManager* findActiveObjectManager()
+            {
+                if ( game::areGameServicesBound() == false )
+                    return nullptr;
+                SceneManager* pSceneManager = game::getService<SceneManager>();
+                if ( pSceneManager == nullptr )
+                    return nullptr;
+                Scene* pActiveScene = pSceneManager->getActiveScene();
+                return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
+            }
+        };
+
         struct StateEnvelopeInternal
         {
             static constexpr uint32 kMagic   = 0x53575354u; // 'SWST' (SW State Snapshot)
@@ -63,33 +83,14 @@ namespace sw
 
     bool GameInstanceBase::serializeSceneObjects( vector<uint8>& outBytes )
     {
-        if ( game::areGameServicesBound() == false )
+        GameObjectManager* pObjectManager = GameInstanceBaseInternal::findActiveObjectManager();
+        if ( pObjectManager == nullptr )
             return false;
 
-        // 위 `areGameServicesBound()` 가 **바로 이 서비스**를 본다(그 함수는 SceneManager 슬롯
-        // 하나를 검사한다) — 그래서 여기서 다시 널일 수 없다. 그래도 포인터로 받는 이유는
-        // `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수이고, 그것을 그대로 `->` 로
-        // 따라가는 모양을 `CheckNullableServiceUse` 린트가 막기 때문이다 — 규칙을 예외 없이
-        // 같은 모양으로 지킨다.
-        SceneManager* pSceneManager = game::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-
-        Scene* pActiveScene = pSceneManager->getActiveScene();
-        if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
-            return false;
-
-        vector<GameObject*> listGameObject = pActiveScene->getObjectManager()->getAllGameObjects();
-
+        // 살아 있는 것만 — `forEachGameObject` 는 파괴 대기 오브젝트를 이미 건너뛴다(값 반환 목록을 받아 다시 거를 일이 없다).
         vector<GameObject*> listValidObject;
-        listValidObject.reserve( listGameObject.size() );
-        for ( GameObject* pObj : listGameObject )
-        {
-            if ( pObj == nullptr || pObj->isPendingKill() == true )
-                continue;
-
-            listValidObject.push_back( pObj );
-        }
+        pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
+        { listValidObject.push_back( pObj ); } );
 
         outBytes.clear();
 
@@ -112,24 +113,12 @@ namespace sw
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
-        if ( game::areGameServicesBound() == false )
-            return false;
-
-        // 위 `areGameServicesBound()` 가 **바로 이 서비스**를 본다(그 함수는 SceneManager 슬롯
-        // 하나를 검사한다) — 그래서 여기서 다시 널일 수 없다. 그래도 포인터로 받는 이유는
-        // `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수이고, 그것을 그대로 `->` 로
-        // 따라가는 모양을 `CheckNullableServiceUse` 린트가 막기 때문이다 — 규칙을 예외 없이
-        // 같은 모양으로 지킨다.
-        SceneManager* pSceneManager = game::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-
-        Scene* pActiveScene = pSceneManager->getActiveScene();
-        if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
+        GameObjectManager* pObjectManager = GameInstanceBaseInternal::findActiveObjectManager();
+        if ( pObjectManager == nullptr )
             return false;
 
         // 기존 엔티티들 정리
-        pActiveScene->getObjectManager()->clear();
+        pObjectManager->clear();
 
         size_t offset = 0;
         uint32 count  = 0;
@@ -155,7 +144,7 @@ namespace sw
         // 1차: 모든 게임오브젝트 생성 및 직렬화 복구
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
-            GameObject* pObj = pActiveScene->getObjectManager()->createGameObject();
+            GameObject* pObj = pObjectManager->createGameObject();
             string      parentName;
             size_t      readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, parentName );
             if ( readBytes == 0 )
@@ -173,7 +162,7 @@ namespace sw
             if ( restoredObj._parentName.empty() )
                 continue;
 
-            GameObject* pParent = pActiveScene->getObjectManager()->findGameObjectByName( hashed_string( restoredObj._parentName.c_str() ) );
+            GameObject* pParent = pObjectManager->findGameObjectByName( hashed_string( restoredObj._parentName.c_str() ) );
             if ( pParent == nullptr )
             {
                 SW_LOG_WARNING( "State Restore ParentGO not found: %s", restoredObj._parentName.c_str() );
@@ -183,7 +172,7 @@ namespace sw
         }
 
         // 복원된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
-        pActiveScene->getObjectManager()->flushSceneTransforms();
+        pObjectManager->flushSceneTransforms();
 
         return true;
     }

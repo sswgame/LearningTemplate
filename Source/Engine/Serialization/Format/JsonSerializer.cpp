@@ -17,18 +17,6 @@ namespace sw
     {
         struct JsonSerializerInternal
         {
-            static const TypeInfo* findNestedJsonObjectType( hashed_string typeName, const SerializeContext& ctx )
-            {
-                if ( ctx.findTextWriter( typeName ) != nullptr )
-                    return nullptr;
-                if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
-                    return nullptr;
-                const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
-                if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
-                    return nullptr;
-                return pTypeInfo;
-            }
-
             static void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx )
             {
                 if ( dst.isValid() == false )
@@ -122,7 +110,7 @@ namespace sw
                     return;
                 }
 
-                const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
+                const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                 if ( pElemType != nullptr )
                 {
                     // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더가 양쪽 다 받는다).
@@ -222,7 +210,7 @@ namespace sw
                         if ( nested._elementNested != nullptr )
                             return readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx );
 
-                        const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
+                        const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                         if ( pElemType == nullptr )
                             return readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx );
 

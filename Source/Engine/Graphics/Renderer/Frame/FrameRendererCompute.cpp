@@ -246,7 +246,7 @@ namespace sw
                     } cullParams{};
                     // 절두체는 **뷰가 이미 들고 있다** — setViewProjection 이 행렬과 함께 갱신한다.
                     // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 안 바뀌는 상태가 생길 수 있다.
-                    Memory::copy( cullParams._planes, renderView._arrFrustumPlane, sizeof( cullParams._planes ) );
+                    Memory::copy( cullParams._planes, renderView._frustum._arrPlane, sizeof( cullParams._planes ) );
                     cullParams._instanceCount = instanceCount;
                     cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
                     renderView._cullCb.update( _pDevice, &cullParams, sizeof( cullParams ) );

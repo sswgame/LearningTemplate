@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Math/Frustum.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
@@ -44,8 +45,8 @@ namespace sw
         float4x4 _viewProj{};
         /// @brief 이 뷰의 눈 위치. 투명 정렬 키(카메라까지의 거리)가 이 값을 쓴다.
         float3 _position{};
-        /// @brief `_viewProj` 에서 뽑은 절두체 여섯 평면 (왼/오/아래/위/근/원, 정규화됨).
-        float32 _arrFrustumPlane[6][4]{};
+        /// @brief `_viewProj` 에서 뽑은 절두체 여섯 평면 (왼/오/아래/위/근/원, 정규화됨). 식은 `Frustum` 하나다 — CPU 공간 질의(`BVHTree3D`)와 같다.
+        Frustum _frustum{};
         /**
          * @brief 이 뷰 전용 컬링 상수버퍼.
          * @details **뷰마다 하나여야 한다.** 하나를 나눠 쓰면 두 번째 업로드가 첫 번째 디스패치가 읽을

@@ -88,37 +88,7 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightCallback[pathStr].push_back( onComplete );
 
-        if ( engine::areEngineServicesBound() )
-        {
-            TaskManager& taskManager = engine::getTaskManager();
-            TaskHandle   handle      = taskManager.emplaceTask(
-                "AssetStreamingTask",
-                SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-                MakeTaskArgs( pathStr, generation, false ),
-                TaskThreadAffinity::Any );
-            handle.submit();
-        }
-        else
-        {
-            const bool bExists       = ResourceUtil::hasResource( pathStr );
-            _mapAssetResult[pathStr] = bExists;
-            _uniqueActiveRequest.erase( pathStr );
-
-            auto itCallbacks = _mapInFlightCallback.find( pathStr );
-            if ( itCallbacks != _mapInFlightCallback.end() )
-            {
-                for ( const auto& cb : itCallbacks->second )
-                {
-                    CompletedItem item{};
-                    item._path     = pathStr;
-                    item._callback = cb;
-                    item._bSuccess = bExists;
-                    _queueCompleted.enqueue( std::move( item ) );
-                }
-                _mapInFlightCallback.erase( itCallbacks );
-            }
-        }
-
+        startRequestLocked( pathStr, generation, false );
         return true;
     }
 
@@ -152,40 +122,7 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightDataCallback[pathStr].push_back( onComplete );
 
-        if ( engine::areEngineServicesBound() )
-        {
-            TaskManager& taskManager = engine::getTaskManager();
-            TaskHandle   handle      = taskManager.emplaceTask(
-                "AssetStreamingTask",
-                SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-                MakeTaskArgs( pathStr, generation, true ),
-                TaskThreadAffinity::Any );
-            handle.submit();
-        }
-        else
-        {
-            vector<uint8> bytes;
-            const bool    bSuccess   = ResourceUtil::readBinaryResource( pathStr, bytes );
-            _mapAssetResult[pathStr] = bSuccess;
-            _uniqueActiveRequest.erase( pathStr );
-            _uniqueActiveDataRequest.erase( pathStr );
-
-            auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
-            if ( itDataCallbacks != _mapInFlightDataCallback.end() )
-            {
-                for ( const auto& cb : itDataCallbacks->second )
-                {
-                    CompletedItem item{};
-                    item._path         = pathStr;
-                    item._dataCallback = cb;
-                    item._bSuccess     = bSuccess;
-                    item._bytes        = bytes;
-                    _queueCompleted.enqueue( std::move( item ) );
-                }
-                _mapInFlightDataCallback.erase( itDataCallbacks );
-            }
-        }
-
+        startRequestLocked( pathStr, generation, true );
         return true;
     }
 
@@ -207,25 +144,27 @@ namespace sw
         return pPromise->getFuture();
     }
 
-    void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
+    void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData )
     {
-        const string pathStr    = args.get<string>( 0 );
-        const uint64 generation = args.get<uint64>( 1 );
-        const bool   bFetchData = args.getCount() > 2 ? args.get<bool>( 2 ) : false;
-
-        vector<uint8> bytes;
-        bool          bSuccess = false;
-        if ( bFetchData )
-            bSuccess = ResourceUtil::readBinaryResource( pathStr, bytes );
-        else
-            bSuccess = ResourceUtil::hasResource( pathStr );
-
-        std::scoped_lock<mutex> innerLock{ _mutex };
-
-        const auto itGeneration = _mapRequestGeneration.find( pathStr );
-        if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
+        if ( engine::areEngineServicesBound() )
+        {
+            TaskHandle handle = engine::getTaskManager().emplaceTask(
+                "AssetStreamingTask",
+                SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+                MakeTaskArgs( pathStr, generation, bFetchData ),
+                TaskThreadAffinity::Any );
+            handle.submit();
             return;
+        }
 
+        // 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝낸다 — 태스크가 끝났을 때와 **같은 완료 절차**다.
+        vector<uint8> bytes;
+        const bool    bSuccess = bFetchData ? ResourceUtil::readBinaryResource( pathStr, bytes ) : ResourceUtil::hasResource( pathStr );
+        completeRequestLocked( pathStr, bSuccess, bytes );
+    }
+
+    void AssetStreamingQueue::completeRequestLocked( const string& pathStr, bool bSuccess, const vector<uint8>& bytes )
+    {
         _mapAssetResult[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
         _uniqueActiveDataRequest.erase( pathStr );
@@ -258,6 +197,28 @@ namespace sw
             }
             _mapInFlightDataCallback.erase( itDataCallbacks );
         }
+    }
+
+    void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
+    {
+        const string pathStr    = args.get<string>( 0 );
+        const uint64 generation = args.get<uint64>( 1 );
+        const bool   bFetchData = args.getCount() > 2 ? args.get<bool>( 2 ) : false;
+
+        vector<uint8> bytes;
+        bool          bSuccess = false;
+        if ( bFetchData )
+            bSuccess = ResourceUtil::readBinaryResource( pathStr, bytes );
+        else
+            bSuccess = ResourceUtil::hasResource( pathStr );
+
+        std::scoped_lock<mutex> innerLock{ _mutex };
+
+        const auto itGeneration = _mapRequestGeneration.find( pathStr );
+        if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
+            return;
+
+        completeRequestLocked( pathStr, bSuccess, bytes );
     }
 
     void AssetStreamingQueue::cancelRequest( string_view assetPath )

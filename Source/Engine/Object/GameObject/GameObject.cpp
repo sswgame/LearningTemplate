@@ -24,21 +24,7 @@ namespace sw
     SW_LOG_CALLER( "GameObject" );
 
     GameObject::GameObject()
-        : _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
-        , _name{ "GameObject" }
-        , _pOwnerManager{ nullptr }
-        , _bActive{ true }
-        , _bIsActiveInHierarchy{ true }
-        , _bIsPendingKill{ false }
-        , _listComponent{}
-        , _componentGeneration{ 0 }
-        , _pPrimaryScene{ nullptr }
-        , _listTickItem{}
-        , _arrTickGroupBegin{}
-        , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
-        , _tickPrerequisiteCount{ 0 }
-        , _bTickDirty{ SW_FALSE }
-        , _managerIndex{ invalid_index::kUint32 }
+        : GameObject( hashed_string( "GameObject" ) )
     {
     }
 

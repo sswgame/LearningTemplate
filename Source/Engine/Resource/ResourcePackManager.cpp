@@ -132,6 +132,39 @@ namespace sw
 
                 return false;
             }
+
+            /**
+             * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다 — 방문자가 true 를 돌려주면 멈춘다.
+             * @details 두 단계다: 전체 경로의 해시로 모든 팩을, 그다음 경로가 도메인으로 시작하면(`engine/…`) 그 도메인 팩에서 나머지
+             *          경로로. `hasFile` · `readFile` · `readTextFile` 이 이 스무 줄을 각자 들었다 — 조회 규칙이 바뀌면 셋을 같이
+             *          고쳐야 했다. 잠금은 호출자가 쥔다.
+             * @return 방문자가 true 를 돌려준 적이 있으면 true.
+             */
+            template <typename VisitFn>
+            static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
+            {
+                const uint64 pathHash = StringUtil::computeHash64( relativePath );
+                for ( const MountedPack& mounted : listMountedPack )
+                {
+                    if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath ) )
+                        return true;
+                }
+
+                string_view queryDomain;
+                string_view subPath;
+                if ( trySplitDomainPrefix( relativePath, queryDomain, subPath ) == false )
+                    return false;
+
+                const uint64 subHash = StringUtil::computeHash64( subPath );
+                for ( const MountedPack& mounted : listMountedPack )
+                {
+                    if ( mounted._pReader == nullptr || matchPackDomain( mounted._domainName, queryDomain ) == false )
+                        continue;
+                    if ( mounted._pReader->hasFile( subHash ) && visit( mounted, subHash, subPath ) )
+                        return true;
+                }
+                return false;
+            }
         };
     } // namespace
 } // namespace sw
@@ -275,33 +308,10 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const uint64 pathHash = StringUtil::computeHash64( relativePath );
-
         std::scoped_lock<mutex> lock( _vfsMutex );
-        for ( const auto& mounted : _listMountedPack )
-        {
-            if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
-                return true;
-        }
-
-        // 도메인 한정 경로 확인 (예: "engine/textures/splash.dds" -> packDomain "engine", subPath "textures/splash.dds")
-        string_view queryDomain;
-        string_view subPath;
-        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
-        {
-            const uint64 subHash = StringUtil::computeHash64( subPath );
-            for ( const auto& mounted : _listMountedPack )
-            {
-                if ( mounted._pReader != nullptr &&
-                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
-                {
-                    if ( mounted._pReader->hasFile( subHash ) )
-                        return true;
-                }
-            }
-        }
-
-        return false;
+        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                                []( const MountedPack&, uint64, string_view )
+        { return true; } );
     }
 
     bool ResourcePackManager::readFile( string_view relativePath, vector<uint8>& outBytes ) const
@@ -309,39 +319,10 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const uint64 pathHash = StringUtil::computeHash64( relativePath );
-
         std::scoped_lock<mutex> lock( _vfsMutex );
-        for ( const auto& mounted : _listMountedPack )
-        {
-            if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
-            {
-                if ( mounted._pReader->readFile( pathHash, outBytes ) )
-                    return true;
-            }
-        }
-
-        // 도메인 한정 팩 직접 읽기 (예: "engine/textures/splash.dds" -> "textures/splash.dds" from "engine.pack")
-        string_view queryDomain;
-        string_view subPath;
-        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
-        {
-            const uint64 subHash = StringUtil::computeHash64( subPath );
-            for ( const auto& mounted : _listMountedPack )
-            {
-                if ( mounted._pReader != nullptr &&
-                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
-                {
-                    if ( mounted._pReader->hasFile( subHash ) )
-                    {
-                        if ( mounted._pReader->readFile( subHash, outBytes ) )
-                            return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                                [&outBytes]( const MountedPack& mounted, uint64 pathHash, string_view )
+        { return mounted._pReader->readFile( pathHash, outBytes ); } );
     }
 
     bool ResourcePackManager::readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath ) const
@@ -349,47 +330,16 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const uint64 pathHash = StringUtil::computeHash64( relativePath );
-
         std::scoped_lock<mutex> lock( _vfsMutex );
-        for ( const auto& mounted : _listMountedPack )
+        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                                [&outText, pOutMountedPackPath]( const MountedPack& mounted, uint64, string_view pathInPack )
         {
-            if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
-            {
-                if ( mounted._pReader->readTextFile( relativePath, outText ) )
-                {
-                    if ( pOutMountedPackPath != nullptr )
-                        *pOutMountedPackPath = mounted._pReader->getPackPath();
-                    return true;
-                }
-            }
-        }
-
-        // 도메인 한정 팩 직접 읽기
-        string_view queryDomain;
-        string_view subPath;
-        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
-        {
-            const uint64 subHash = StringUtil::computeHash64( subPath );
-            for ( const auto& mounted : _listMountedPack )
-            {
-                if ( mounted._pReader != nullptr &&
-                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
-                {
-                    if ( mounted._pReader->hasFile( subHash ) )
-                    {
-                        if ( mounted._pReader->readTextFile( subPath, outText ) )
-                        {
-                            if ( pOutMountedPackPath != nullptr )
-                                *pOutMountedPackPath = mounted._pReader->getPackPath();
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
+            if ( mounted._pReader->readTextFile( pathInPack, outText ) == false )
+                return false;
+            if ( pOutMountedPackPath != nullptr )
+                *pOutMountedPackPath = mounted._pReader->getPackPath();
+            return true;
+        } );
     }
 
     void ResourcePackManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )

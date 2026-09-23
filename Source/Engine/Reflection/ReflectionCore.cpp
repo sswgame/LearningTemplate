@@ -311,6 +311,21 @@ namespace sw
         other._bIsCacheBuilt   = SW_FALSE;
     }
 
+    void TypeInfo::invalidateDerivedCaches()
+    {
+        _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
+        _mapNameToProperty.clear();
+        _mapNameToMethod.clear();
+        clearParentType();
+        clearAncestorDisplay();
+        _bIsCacheBuilt              = SW_FALSE;
+        _bIsPODFastPath             = SW_FALSE;
+        _bIsPODCalculated           = SW_FALSE;
+        _bListPropertyWithBaseBuilt = SW_FALSE;
+        _bBuildingPropertyWithBase  = SW_FALSE;
+    }
+
     TypeInfo& TypeInfo::operator=( const TypeInfo& other )
     {
         if ( this == &other )
@@ -330,17 +345,7 @@ namespace sw
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
 
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        clearParentType();
-        clearAncestorDisplay();
-        _bIsCacheBuilt              = SW_FALSE;
-        _bIsPODFastPath             = SW_FALSE;
-        _bIsPODCalculated           = SW_FALSE;
-        _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bBuildingPropertyWithBase  = SW_FALSE;
+        invalidateDerivedCaches();
 
         return *this;
     }
@@ -364,17 +369,7 @@ namespace sw
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
 
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        clearParentType();
-        clearAncestorDisplay();
-        _bIsCacheBuilt              = SW_FALSE;
-        _bIsPODFastPath             = SW_FALSE;
-        _bIsPODCalculated           = SW_FALSE;
-        _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bBuildingPropertyWithBase  = SW_FALSE;
+        invalidateDerivedCaches();
 
         other._typeId          = 0;
         other._size            = 0;

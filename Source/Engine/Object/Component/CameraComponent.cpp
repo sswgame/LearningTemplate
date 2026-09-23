@@ -5,6 +5,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
 namespace sw
 {
     CameraComponent::CameraComponent()
@@ -16,6 +19,33 @@ namespace sw
         , _role{ CameraRole::Game }
         , _bOrthographic{ false }
     {
+    }
+
+    CameraComponent* CameraComponent::findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
+                                                         const float3& position, const float3& lookTarget )
+    {
+        if ( pObjectManager == nullptr )
+            return nullptr;
+
+        GameObject* pObj = pObjectManager->findGameObjectByName( objectName );
+        if ( pObj == nullptr )
+            pObj = pObjectManager->createGameObject( objectName );
+        if ( pObj == nullptr )
+            return nullptr;
+
+        CameraComponent* pCam = pObj->getComponent<CameraComponent>();
+        if ( pCam == nullptr )
+            pCam = pObj->addComponent<CameraComponent>();
+        if ( pCam == nullptr )
+            return nullptr;
+
+        pCam->setRole( role );
+        pCam->setLocalPosition( position );
+        pCam->lookAt( lookTarget );
+        pCam->setFieldOfViewY( kDefaultFovY );
+        pCam->setNearPlane( kDefaultNearZ );
+        pCam->setFarPlane( kDefaultFarZ );
+        return pCam;
     }
 
     void CameraComponent::onBeginPlay()

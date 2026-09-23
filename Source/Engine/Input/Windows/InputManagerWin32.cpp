@@ -36,6 +36,27 @@ namespace sw
             return mask;
         }
 
+        /**
+         * @brief 마우스 버튼 메시지의 커서 위치 — lParam 에 좌표가 있으면 그것을 장치에 적고, 없으면 장치의 마지막 위치.
+         * @details 버튼 누름 · 더블클릭 · 뗌 세 메시지가 이 열네 줄을 각자 들었다. 좌표는 부호 있는 16 비트다 — 창 밖 캡처 중에는
+         *          음수가 온다.
+         */
+        void readMouseEventPositionInternal( MouseDevice* pMouse, LPARAM lParam, int32& outX, int32& outY )
+        {
+            if ( pMouse != nullptr )
+            {
+                const int2 position = pMouse->getPosition();
+                outX                = position._x;
+                outY                = position._y;
+            }
+            if ( lParam == 0 )
+                return;
+            outX = static_cast<int32>( static_cast<int16>( LOWORD( lParam ) ) );
+            outY = static_cast<int32>( static_cast<int16>( HIWORD( lParam ) ) );
+            if ( pMouse != nullptr )
+                pMouse->setPosition( outX, outY );
+        }
+
         /** @brief SPI_xxxKEYS 접근성 단축키(고정 키/토글 키/필터 키) 이전 상태 보관 (disable/restoreAccessibilityShortcuts용). */
         struct AccessibilityInternal
         {
@@ -109,19 +130,7 @@ namespace sw
                 {
                     int32 mouseX = 0;
                     int32 mouseY = 0;
-                    if ( _pMouse != nullptr )
-                    {
-                        const int2 vecMousePos1 = _pMouse->getPosition();
-                        mouseX                  = vecMousePos1._x;
-                        mouseY                  = vecMousePos1._y;
-                    }
-                    if ( event._lParam != 0 )
-                    {
-                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
-                        if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mouseX, mouseY );
-                    }
+                    readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, true );
@@ -148,19 +157,7 @@ namespace sw
                 {
                     int32 mouseX = 0;
                     int32 mouseY = 0;
-                    if ( _pMouse != nullptr )
-                    {
-                        const int2 vecMousePos2 = _pMouse->getPosition();
-                        mouseX                  = vecMousePos2._x;
-                        mouseY                  = vecMousePos2._y;
-                    }
-                    if ( event._lParam != 0 )
-                    {
-                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
-                        if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mouseX, mouseY );
-                    }
+                    readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, true );
@@ -178,19 +175,7 @@ namespace sw
                 {
                     int32 mouseX = 0;
                     int32 mouseY = 0;
-                    if ( _pMouse != nullptr )
-                    {
-                        const int2 vecMousePos3 = _pMouse->getPosition();
-                        mouseX                  = vecMousePos3._x;
-                        mouseY                  = vecMousePos3._y;
-                    }
-                    if ( event._lParam != 0 )
-                    {
-                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
-                        if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mouseX, mouseY );
-                    }
+                    readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, false );

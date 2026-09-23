@@ -6,6 +6,39 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct MatrixMathInternal
+        {
+            /**
+             * @brief 앞 · 위 방향에서 직교 기저(오른쪽 · 위 · 앞)를 만듭니다 — 뷰 행렬(`createLookAt`)과 월드 행렬(`createWorld`)이 같은 기저다.
+             * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둔다. 앞과 위가 나란하면(바로 위 · 아래를 볼 때) 외적이 0 이 되므로 다른 위
+             *          방향으로 다시 잡는다. 예전에는 두 함수가 이 열다섯 줄을 각자 들었다 — 한쪽의 폴백만 고치면 카메라와 오브젝트가
+             *          같은 방향에서 서로 다르게 돈다.
+             */
+            static void buildBasis( const float3& forward, const float3& up, float3& outRight, float3& outUp, float3& outForward ) noexcept
+            {
+                float3 zAxis = forward.normalize();
+                if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
+                    zAxis = float3::Forward;
+
+                float3 upVec = up.normalize();
+                if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+                    upVec = float3::Up;
+
+                float3 xAxis = upVec.cross( zAxis ).normalize();
+                if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
+                {
+                    const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
+                    xAxis              = altUp.cross( zAxis ).normalize();
+                }
+
+                outRight   = xAxis;
+                outUp      = zAxis.cross( xAxis );
+                outForward = zAxis;
+            }
+        };
+    } // namespace
 
     const quaternion quaternion::Identity{ 0.f, 0.f, 0.f, 1.f };
 
@@ -450,44 +483,20 @@ namespace sw
 
     float4x4 float4x4::createLookAt( const float3& position, const float3& target, const float3& up ) noexcept
     {
-        float3 zAxis = ( target - position ).normalize();
-        if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
-            zAxis = float3::Forward;
-
-        float3 upVec = up.normalize();
-        if ( upVec.getLengthSquared() < MathUtil::Epsilon )
-            upVec = float3::Up;
-
-        float3 xAxis = upVec.cross( zAxis ).normalize();
-        if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
-        {
-            const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
-            xAxis              = altUp.cross( zAxis ).normalize();
-        }
-
-        const float3 yAxis = zAxis.cross( xAxis );
+        float3 xAxis{};
+        float3 yAxis{};
+        float3 zAxis{};
+        MatrixMathInternal::buildBasis( target - position, up, xAxis, yAxis, zAxis );
 
         return float4x4{ xAxis._x, yAxis._x, zAxis._x, 0.f, xAxis._y, yAxis._y, zAxis._y, 0.f, xAxis._z, yAxis._z, zAxis._z, 0.f, -xAxis.dot( position ), -yAxis.dot( position ), -zAxis.dot( position ), 1.f };
     }
 
     float4x4 float4x4::createWorld( const float3& position, const float3& forward, const float3& up ) noexcept
     {
-        float3 zAxis = forward.normalize();
-        if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
-            zAxis = float3::Forward;
-
-        float3 upVec = up.normalize();
-        if ( upVec.getLengthSquared() < MathUtil::Epsilon )
-            upVec = float3::Up;
-
-        float3 xAxis = upVec.cross( zAxis ).normalize();
-        if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
-        {
-            const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
-            xAxis              = altUp.cross( zAxis ).normalize();
-        }
-
-        const float3 yAxis = zAxis.cross( xAxis );
+        float3 xAxis{};
+        float3 yAxis{};
+        float3 zAxis{};
+        MatrixMathInternal::buildBasis( forward, up, xAxis, yAxis, zAxis );
 
         return float4x4{ xAxis._x, xAxis._y, xAxis._z, 0.f, yAxis._x, yAxis._y, yAxis._z, 0.f, zAxis._x, zAxis._y, zAxis._z, 0.f, position._x, position._y, position._z, 1.f };
     }

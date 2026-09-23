@@ -24,6 +24,20 @@ namespace sw
     {
         struct ObjectStateSerializerInternal
         {
+            /**
+             * @brief 상태를 읽은 오브젝트를 세상에 다시 맞춥니다 — 이름이 바뀌었으면 매니저의 이름 표, 활성 계층, 읽은 부모 연결.
+             * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들었다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
+             *          이름으로 찾을 수 없게 된다.
+             */
+            static void finishLoad( GameObject* pGameObject, hashed_string oldName )
+            {
+                if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
+                    pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
+
+                pGameObject->setActive( pGameObject->isActive() );
+                pGameObject->applyLoadedHierarchy();
+            }
+
             /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다 (역직렬화 팩토리). */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
@@ -148,11 +162,7 @@ namespace sw
                                                      kObjectReflectedSchemaVersion, nullptr, nullptr, ctx ) == false )
             return 0;
 
-        if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
-            pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
-
-        pGameObject->setActive( pGameObject->isActive() );
-        pGameObject->applyLoadedHierarchy();
+        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
 
         return bodyStart + bodySize;
     }
@@ -175,11 +185,7 @@ namespace sw
                                                   nullptr, nullptr, ctx ) == false )
             return false;
 
-        if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
-            pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
-
-        pGameObject->setActive( pGameObject->isActive() );
-        pGameObject->applyLoadedHierarchy();
+        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
         return true;
     }
 
@@ -201,11 +207,7 @@ namespace sw
                                                    nullptr, nullptr, ctx ) == false )
             return false;
 
-        if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
-            pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
-
-        pGameObject->setActive( pGameObject->isActive() );
-        pGameObject->applyLoadedHierarchy();
+        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
         return true;
     }
 

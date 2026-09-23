@@ -184,26 +184,36 @@ namespace sw
         getOrCreateAction( hashed_string( action ), valueType );
     }
 
+    ActionBinding ActionMap::beginBinding( const hashed_string& action, BindingKind kind, ActionTrigger trigger, const hashed_string& layer )
+    {
+        const hashed_string layerName = layer.empty() ? _defaultLayerName : layer;
+        ensureLayer( layerName );
+        ensureActionListed( action );
+
+        ActionBinding binding{};
+        binding._layer            = layerName;
+        binding._kind             = kind;
+        binding._trigger          = trigger;
+        binding._cachedLayerIndex = _mapLayer.find( layerName )->second;
+        return binding;
+    }
+
+    void ActionMap::commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding )
+    {
+        ActionEntry& entry = getOrCreateAction( action, valueType );
+        entry._listBinding.push_back( binding );
+        entry._listDefaultBinding.push_back( binding );
+        entry._listBindingState.push_back( ActionBindingState{} );
+    }
+
     void ActionMap::bind( const hashed_string& action, InputSlot slot, ActionTrigger trigger, const hashed_string& layer )
     {
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::SingleSlot;
-        binding._trigger          = trigger;
-        binding._arrSlot[0]       = slot;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::SingleSlot, trigger, layer );
+        binding._arrSlot[0]   = slot;
+        commitBinding( action, InputActionValueType::Boolean, binding );
     }
 
     void ActionMap::bind( const hashed_string& action, Key key, ActionTrigger trigger, const hashed_string& layer )
@@ -232,22 +242,10 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis1D );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::Axis1DComposite;
-        binding._trigger          = ActionTrigger::Down;
-        binding._arrSlot[0]       = InputSlot::fromKey( negativeKey );
-        binding._arrSlot[1]       = InputSlot::fromKey( positiveKey );
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::Axis1DComposite, ActionTrigger::Down, layer );
+        binding._arrSlot[0]   = InputSlot::fromKey( negativeKey );
+        binding._arrSlot[1]   = InputSlot::fromKey( positiveKey );
+        commitBinding( action, InputActionValueType::Axis1D, binding );
     }
 
     float32 ActionMap::getAxis1D( const hashed_string& action ) const
@@ -272,25 +270,13 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::Vector2DComposite;
-        binding._trigger          = ActionTrigger::Down;
-        binding._arrSlot[0]       = InputSlot::fromKey( up );
-        binding._arrSlot[1]       = InputSlot::fromKey( down );
-        binding._arrSlot[2]       = InputSlot::fromKey( left );
-        binding._arrSlot[3]       = InputSlot::fromKey( right );
-        binding._deadzone         = deadzone;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::Vector2DComposite, ActionTrigger::Down, layer );
+        binding._arrSlot[0]   = InputSlot::fromKey( up );
+        binding._arrSlot[1]   = InputSlot::fromKey( down );
+        binding._arrSlot[2]   = InputSlot::fromKey( left );
+        binding._arrSlot[3]   = InputSlot::fromKey( right );
+        binding._deadzone     = deadzone;
+        commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
     void ActionMap::bindGamepadStick2D( const hashed_string& action, GamepadStick stick, float32 deadzone, const hashed_string& layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent )
@@ -298,25 +284,13 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::GamepadStick2D;
-        binding._trigger          = ActionTrigger::Down;
+        ActionBinding binding     = beginBinding( action, BindingKind::GamepadStick2D, ActionTrigger::Down, layer );
         binding._deviceIndex      = padIndex;
         binding._stick            = stick;
         binding._deadzone         = deadzone;
         binding._outerDeadzone    = outerDeadzone;
         binding._responseExponent = responseExponent;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
     float2 ActionMap::getVector2D( const hashed_string& action ) const
@@ -349,20 +323,9 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
-        ensureLayer( layerStr );
-        ensureActionListed( action );
-
-        ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis2D );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::MouseDelta2D;
-        binding._trigger          = ActionTrigger::Down;
-        binding._scale            = sensitivity;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::MouseDelta2D, ActionTrigger::Down, layer );
+        binding._scale        = sensitivity;
+        commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
     void ActionMap::bindVirtualJoystick2D( const hashed_string& action, MouseButton activationButton, float32 radius, float32 deadzone, const hashed_string& layer, float32 outerDeadzone )
@@ -370,24 +333,12 @@ namespace sw
         if ( action.empty() || activationButton == MouseButton::Count )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::VirtualJoystick2D;
-        binding._trigger          = ActionTrigger::Down;
-        binding._arrSlot[0]       = InputSlot::fromMouseButton( activationButton );
-        binding._deadzone         = deadzone;
-        binding._outerDeadzone    = outerDeadzone;
-        binding._scale            = radius;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding  = beginBinding( action, BindingKind::VirtualJoystick2D, ActionTrigger::Down, layer );
+        binding._arrSlot[0]    = InputSlot::fromMouseButton( activationButton );
+        binding._deadzone      = deadzone;
+        binding._outerDeadzone = outerDeadzone;
+        binding._scale         = radius;
+        commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
     void ActionMap::bindShortcut( const hashed_string& action, Key key, uint8 modifierMask, ActionTrigger trigger, const hashed_string& layer )
@@ -395,21 +346,10 @@ namespace sw
         if ( action.empty() || key == Key::Unknown )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
-        ensureLayer( layerStr );
-        ensureActionListed( action );
-
-        ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::Shortcut;
-        binding._trigger          = trigger;
-        binding._modifierMask     = modifierMask;
-        binding._arrSlot[0]       = InputSlot::fromKey( key );
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::Shortcut, trigger, layer );
+        binding._modifierMask = modifierMask;
+        binding._arrSlot[0]   = InputSlot::fromKey( key );
+        commitBinding( action, InputActionValueType::Boolean, binding );
     }
 
     void ActionMap::bindAnyKey( const hashed_string& action, const hashed_string& layer )
@@ -417,19 +357,8 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
-        ensureLayer( layerStr );
-        ensureActionListed( action );
-
-        ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::AnyKey;
-        binding._trigger          = ActionTrigger::Pressed;
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::AnyKey, ActionTrigger::Pressed, layer );
+        commitBinding( action, InputActionValueType::Boolean, binding );
     }
 
     void ActionMap::bindChord( const hashed_string& action, Key modifierKey, Key triggerKey, ActionTrigger trigger, const hashed_string& layer )
@@ -437,22 +366,10 @@ namespace sw
         if ( action.empty() || modifierKey == Key::Unknown || triggerKey == Key::Unknown )
             return;
 
-        const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
-        ensureLayer( layerStr );
-        const hashed_string actionHS( action );
-        ensureActionListed( actionHS );
-
-        ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
-        ActionBinding binding{};
-        binding._layer            = layerStr;
-        binding._kind             = BindingKind::Chord;
-        binding._trigger          = trigger;
-        binding._arrSlot[0]       = InputSlot::fromKey( modifierKey );
-        binding._arrSlot[1]       = InputSlot::fromKey( triggerKey );
-        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        ActionBinding binding = beginBinding( action, BindingKind::Chord, trigger, layer );
+        binding._arrSlot[0]   = InputSlot::fromKey( modifierKey );
+        binding._arrSlot[1]   = InputSlot::fromKey( triggerKey );
+        commitBinding( action, InputActionValueType::Boolean, binding );
     }
 
     bool ActionMap::isChordDown( const hashed_string& action ) const

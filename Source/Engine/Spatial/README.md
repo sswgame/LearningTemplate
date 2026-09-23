@@ -11,3 +11,11 @@ call has nothing to do. Callers reuse one vector across frames, so "the tree is 
 alone" reads back as last frame's answer. `SpatialHashGrid2D` and `PhysicsWorld` already cleared;
 `BVHTree3D` and `SpatialTree` appended, and `BVHTree3D` returned early without touching the vector at
 all — the three families disagreed and no test noticed, because each test passes a fresh vector.
+
+## BVH queries share one traversal; the frustum is `Core/Math/Frustum`
+
+`BVHTree3D`'s four queries (box · ray · sphere · frustum) walk the tree through one
+`collectOverlapping( predicate )` and differ only in the overlap test — adding a query shape is one predicate,
+not another twenty-line stack walk. The frustum planes come from `Frustum::fromViewProjection`, the same
+extraction the renderer uploads for GPU culling (`RenderView::_frustum`), so a CPU pick and a GPU cull cannot
+disagree about what the camera sees.

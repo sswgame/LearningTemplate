@@ -161,6 +161,7 @@ actionMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0
 | `ActionMap`을 직접 만들어 쓸 때 | `update(dt)`를 매 프레임 호출하지 않으면 조회 함수들이 전부 "안 눌림"으로 고정됩니다. |
 | `GamepadDevice::_triggerDeadzone` | 디지털 "눌림" 판정 임계값(0.5, 고정)과는 별개입니다 — 트리거 아날로그 값 자체의 노이즈만 걸러냅니다. |
 | `ActionBinding::_scale` | 바인딩 종류에 따라 뜻이 다릅니다: `MouseDelta2D`는 감도 배율, `VirtualJoystick2D`는 드래그 반경(px). |
+| 바인딩 종류를 하나 더할 때 | `bind*` 는 `beginBinding`(레이어 · 액션 등록 · 레이어 인덱스 캐시)으로 시작해 종류별 필드만 채우고 `commitBinding`(현재 · 기본값 · 상태 세 목록에 함께)으로 끝냅니다. 세 목록은 같은 인덱스로 짝지어지므로 직접 `push_back` 하지 마세요. |
 | PlayStation/Switch 글리프 | 실제 하드웨어 자동 감지는 없습니다 — `getGlyphForAction(action, previewDevice)`로 원하는 플랫폼을 강제 지정해야 그 표기가 나옵니다. |
 | `InputReplay::seek()` | 인덱스만 옮길 뿐 실제 장치 상태를 재현하지 않습니다. 상태까지 되돌리려면 `stepBackward()`/`stepForward()`를 쓰세요. |
 | 병렬 tick 중 입력 조회 | `ActionMap`/`InputManager` 자체는 스레드 세이프하지 않습니다. 게임 오브젝트 틱(병렬 구간)에서 직접 읽지 말고, 메인 스레드에서 한 번 평가한 결과를 넘겨주는 방식을 권장합니다. |

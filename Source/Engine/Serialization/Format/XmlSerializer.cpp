@@ -19,18 +19,6 @@ namespace sw
     {
         struct XmlSerializerInternal
         {
-            static const TypeInfo* findNestedXmlObjectType( hashed_string typeName, const SerializeContext& ctx )
-            {
-                if ( ctx.findTextWriter( typeName ) != nullptr )
-                    return nullptr;
-                if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
-                    return nullptr;
-                const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
-                if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
-                    return nullptr;
-                return pTypeInfo;
-            }
-
             static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
             {
                 bFieldError = true;
@@ -89,7 +77,7 @@ namespace sw
                         }
                         else
                         {
-                            const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
                                 backend.beginMap( pElemType->_name.c_str() );
@@ -122,7 +110,7 @@ namespace sw
                         }
                         else
                         {
-                            const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
                                 backend.beginMap( pElemType->_name.c_str() );
@@ -190,7 +178,7 @@ namespace sw
                                 return true;
                             }
 
-                            const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
                                 readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan );
@@ -231,7 +219,7 @@ namespace sw
                         }
                         else
                         {
-                            const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
                                 // 구조체 값은 <entry> 안의 <TypeName> 자식에 들어 있다.
@@ -290,7 +278,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = findNestedXmlObjectType( prop._typeName, ctx );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, ctx );
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
@@ -368,7 +356,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = findNestedXmlObjectType( prop._typeName, ctx );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, ctx );
                         if ( pNestedType != nullptr )
                         {
                             bool entered = backend.pushChild( prop._name.c_str() );

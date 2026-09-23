@@ -25,6 +25,33 @@ namespace sw
 
     namespace
     {
+        struct FileUtilInternal
+        {
+            /**
+             * @brief 읽으려고 열고 크기를 잽니다(맨 앞으로 되감긴 채). 실패하면 로그를 남기고 nullptr — 연 파일은 호출자가 닫는다.
+             * @details `readFile` · `readTextFile` 이 이 열두 줄을 각자 들었고, 크기를 못 잴 때 한쪽만 로그를 남겼다.
+             */
+            static FILE* openForReading( string_view fileName, int64& outFileSize )
+            {
+                const string filePath = FileUtil::normalizeSeparators( fileName );
+                FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
+                if ( pFile == nullptr )
+                {
+                    SW_LOG_ERROR( "File not found: %#", fileName );
+                    return nullptr;
+                }
+
+                outFileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
+                if ( outFileSize < 0 )
+                {
+                    std::fclose( pFile );
+                    SW_LOG_ERROR( "Failed to query size of: %#", fileName );
+                    return nullptr;
+                }
+                return pFile;
+            }
+        };
+
         /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 한 건. */
         struct FileDialogResult
         {
@@ -593,21 +620,10 @@ namespace sw
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint32 offset, const uint32 maxReadCount )
     {
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
+        int64 fileSize{ 0 };
+        FILE* pFile = FileUtilInternal::openForReading( fileName, fileSize );
         if ( pFile == nullptr )
-        {
-            SW_LOG_ERROR( "File not found: %#", fileName );
             return false;
-        }
-
-        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
-        if ( fileSize < 0 )
-        {
-            std::fclose( pFile );
-            SW_LOG_ERROR( "Failed to query size of: %#", fileName );
-            return false;
-        }
 
         const uint64 uFileSize = static_cast<uint64>( fileSize );
         if ( offset > uFileSize )
@@ -632,20 +648,10 @@ namespace sw
 
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
+        int64 fileSize{ 0 };
+        FILE* pFile = FileUtilInternal::openForReading( fileName, fileSize );
         if ( pFile == nullptr )
-        {
-            SW_LOG_ERROR( "File not found: %#", fileName );
             return false;
-        }
-
-        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
-        if ( fileSize < 0 )
-        {
-            std::fclose( pFile );
-            return false;
-        }
 
         const size_t dataSize = static_cast<size_t>( fileSize );
         outText.resize( dataSize );

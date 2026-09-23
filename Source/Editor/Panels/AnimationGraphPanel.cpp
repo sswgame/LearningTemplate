@@ -228,40 +228,9 @@ namespace sw::editor
         }
         ed::EndCreate();
 
-        if ( ed::BeginDelete() )
-        {
-            ed::LinkId linkId;
-            while ( ed::QueryDeletedLink( &linkId ) )
-            {
-                if ( ed::AcceptDeletedItem() )
-                {
-                    const int32 id = static_cast<int32>( linkId.Get() );
-                    _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
-                                                     [id]( const GraphLink& link )
-                    { return link._id == id; } ),
-                                     _listLink.end() );
-                    notifyDocumentEdited( "Delete Animation Graph Link" );
-                }
-            }
-            ed::NodeId nodeId;
-            while ( ed::QueryDeletedNode( &nodeId ) )
-            {
-                if ( ed::AcceptDeletedItem() )
-                {
-                    const int32 id = static_cast<int32>( nodeId.Get() );
-                    _listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(),
-                                                     [id]( const GraphNode& node )
-                    { return node._id == id; } ),
-                                     _listNode.end() );
-                    _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
-                                                     [id]( const GraphLink& link )
-                    { return link._fromNode == id || link._toNode == id; } ),
-                                     _listLink.end() );
-                    notifyDocumentEdited( "Delete Animation Graph Node" );
-                }
-            }
-            ed::EndDelete();
-        }
+        processCanvasDeletions( []( const auto& link, int32 nodeId )
+        { return link._fromNode == nodeId || link._toNode == nodeId; },
+                                []( int32 ) {}, "Delete Animation Graph Link", "Delete Animation Graph Node" );
 
         _nodeGraph.applyContentFitIfNeeded();
         cacheNodeLayout();

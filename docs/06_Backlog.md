@@ -1073,6 +1073,56 @@ Shipping · ASan 셋 다 · Shipping `hostgpu` 2/2 · 린트 프리셋 20/20. `B
 **남긴 것.** 남은 24 건은 6 줄짜리가 스물이고, 백엔드 API 호출 모양(디스크립터 뷰 만들기 · 배리어 한 줄)이라 합치면 읽기가 나빠진다.
 볼 만한 것은 `ShaderReflectionDx` 의 두 채우기 함수 하나 — 바인드 포인트 규칙이 같아도 되는지 확인되면 템플릿 하나로 줄 수 있다.
 
+**(B) 스무째 — 2026-09-23 · 전 트리 구조 정리: Graphics 밖의 되풀이 스무 자리를 하나씩으로 — 절두체는 Core 하나 · BVH 순회 하나 · 정수 파서 하나 · 바인딩 머리 하나 · 팩 조회 하나 · 카메라 생성 하나.**
+
+Object · Editor · Graphics 를 차례로 본 뒤 나머지 전체(`Core` · `Engine` · `Editor` · `GameFramework`, 약 17만 줄)를 같은 도구로 쟀다.
+레이어 그래프(`RunEngineLayerGraph.py`)는 DAG 이고 강결합 묶음이 없다 — 구조 부채는 층 사이가 아니라 **파일 안의 되풀이**에 있었다.
+`RunDuplicateCode.py --filter Source/ --no-headers --min-lines 7` 이 Graphics 밖에서 47 건을 냈고, 원인별로 걷어 14 건이 됐다.
+판정 기준은 늘 같다 — "하나 더하려면 몇 곳인가", 그리고 "정말로 다른 일을 하는가".
+
+- **절두체 평면은 `Core/Math/Frustum` 하나.** Gribb-Hartmann 추출이 렌더러(`RenderView::setViewProjection`, GPU 컬링 상수)와
+  `BVHTree3D::queryFrustum` 에 두 벌이었고, 법선 길이 0 인 퇴화 평면을 서로 다르게 다뤘다(한쪽은 0 으로, 다른 쪽은 정규화 없이).
+  이제 `RenderView::_frustum` 이 `Frustum` 이고(float4 여섯 개 — GPU 로 그대로 복사, `static_assert` 로 크기를 지킨다) BVH 가 같은
+  `overlapsBox` 로 판정한다. 헤더 전용이다(Core 의 cpp 는 CMake 목록에 손으로 적어야 한다).
+- **BVH 질의 넷은 순회 하나** (`BVHTree3DInternal::collectOverlapping( predicate )`). 상자 · 광선 · 구 · 절두체가 스무 줄 스택 순회를
+  각자 들고 판정식만 달랐다. 스택이 차면 자식을 **조용히 버리던** 자리는 단언으로 바꿨다(균형 트리에서는 닿지 않는다). 광선의 슬랩
+  판정도 축마다 한 벌씩 세 벌 → `clipRaySlab` 하나(`Physics/CCD.cpp` 가 같은 이유로 한 모양). 익명 네임스페이스의 벌거벗은 상수
+  (`kSurfaceAreaFactor` — 유니티 빌드에서 충돌할 모양)도 구조체 안으로. `SpatialTest.BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes` +1
+  (절두체 질의는 테스트가 없었다).
+- **정수 파서 셋 · 대소문자 넷 · 비교 둘** (`StringUtil.cpp`). `parseInt` · `parseInt64` · `parseUint64` 가 공백 · 부호 · `0x` · 기수 처리
+  마흔 줄을 각자 들었다 → `splitIntegerToken` + `parseSignedInteger<Signed, Unsigned>`. utf8 · utf16 의 `toUpper` · `toLower` 넷은
+  `mapEachChar`, `equals( string_view )` · `equals( wstring_view )` 는 `equalsView`. 파서는 **테스트가 없었다** — 최솟값(절댓값이
+  최댓값 + 1) · 넘침 · 접두사 · 기수 16 · 부호 없는 쪽의 `-` 를 옛 구현과 하나씩 대조해 `StringTest` 두 케이스로 못박았다.
+- **행렬 직교 기저** — `createLookAt` · `createWorld` 가 기저 만들기 열다섯 줄(0 벡터 폴백 · 나란한 위 방향 폴백)을 각자 들었다 →
+  `MatrixMathInternal::buildBasis`. **파일 읽기** — `readFile` · `readTextFile` 이 열기 · 크기 재기를 각자 들고 한쪽만 실패를 로그했다 →
+  `FileUtilInternal::openForReading`.
+- **입력 바인딩 아홉** (`ActionMap`). `bind*` 아홉이 레이어 해석 · 액션 등록 · 레이어 인덱스 캐시(머리 12 줄)와 세 목록(현재 · 기본값 ·
+  상태) 추가(꼬리 4 줄)를 각자 들었다. 세 목록은 같은 인덱스로 짝지어지므로 하나만 빠져도 바인딩과 상태가 어긋난다 →
+  `beginBinding` · `commitBinding`. 바인딩 종류를 더하면 종류별 필드만 적는다(`Input/README.md` 에 적었다).
+- **팩 조회 셋** (`ResourcePackManager`). `hasFile` · `readFile` · `readTextFile` 이 "전체 경로 해시로 모든 팩, 그다음 도메인 접두사로
+  그 팩" 두 단계 스무 줄을 각자 들었다 → `visitPacksWithFile( visitor )`.
+- **스트리밍 완료 셋** (`AssetStreamingQueue`). 태스크 완료와 동기 폴백 둘이 완료 처리(결과 · 진행 표 · 두 콜백 목록)를 각자 들었고,
+  **두 폴백이 절반씩만 했다**(하나는 존재 콜백만, 하나는 데이터 콜백만). 지금 흐름(동기 폴백에서는 대기 콜백이 쌓이지 않는다)에서는
+  새지 않았지만 형제에게 안 간 고침의 모양 그대로다 → `startRequestLocked` · `completeRequestLocked`.
+- **그 밖의 둘씩 · 셋씩.** `TypeInfo` 대입 둘의 파생 캐시 비우기 → `invalidateDerivedCaches` · 오브젝트 상태 로드 셋(XML · JSON ·
+  바이너리)의 마무리 → `finishLoad` · Win32 마우스 버튼 메시지 셋의 좌표 → `readMouseEventPositionInternal` · 프리팹 로드 · 스폰의
+  GUID 해석 → `resolvePrefabPath` · JSON · XML 직렬화기의 중첩 타입 판정 → `SerializerUtil::findNestedObjectType` · `GameObject`
+  기본 생성자 → 위임 생성자 · 엔진 기본 게임 카메라와 에디터 카메라의 생성(기본 렌즈 값을 리터럴로 다시 적고 있었다 — 상수가
+  이미 있었다) → `CameraComponent::findOrCreateNamed` · 두 그래프 패널의 캔버스 삭제 처리 → `EditorGraphDocumentPanel::processCanvasDeletions`
+  (Editor 라운드가 남긴 첫 후보) · `GameInstanceBase` 의 씬 저장 · 복원의 매니저 조회 → `findActiveObjectManager`(값 반환 목록을
+  받아 다시 거르던 것도 `forEachGameObject` 로).
+
+**두었다 — 이유와 함께.** 콜스택 캡처의 잠금 관문(Windows · POSIX 파일마다 7 줄) — 공통 파일로 올리면 리눅스 경로를 여기서 검증할 수
+없다. RLE 압축/해제의 머리, 바이너리 역직렬화의 아카이브 머리(3 줄) — 합쳐도 줄지 않는다. `TypeInfo` 복사 · 이동 생성자의 초기화
+목록 — 규약이 모든 멤버를 목록에 적게 한다. Win32 마우스 케이스에 남은 6 줄(수정자 · 버튼 상태 · 이벤트)은 케이스마다 다르게 끝난다.
+
+**검증.** Debug · Shipping · ASan 빌드 경고 0. Debug 전 테스트 실행 파일을 필터 없이 — CoreTest 265 · EngineTest 647(GPU 스위트 포함) · EditorTest 73 ·
+EditorUiTest 2 · ReflectionTest 118, 실패 0. `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트
+프리셋 20/20. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 오류 0(평균 RGB 가 백엔드끼리 ±0.3 안 — `RenderView` 의 절두체가 바뀐 자리다).
+에디터 ON dx12 · dx11 · vk · gl 창 15 / 빈 0, 모든 패널을 연 채 창 33 / 빈 0(그래프 패널 둘 포함), 오브젝트 테스트 씬(`editortest.scene.xml`)
+창 15 / 빈 0 — 전부 종료 0 · `[Error]` 0. 바뀐 헤더 여덟 단독 컴파일 OK · include 순서 · 어휘 · 레이어 게이트 OK. 7 줄 이상 중복(Graphics 밖)
+47 → 14 건 — BVHTree3D(6 줄 창 24) · StringUtil(18) · ResourcePackManager(12) · ActionMap(12) 이 목록에서 빠졌다.
+
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

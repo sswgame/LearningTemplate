@@ -19,6 +19,7 @@
  * 노드·링크 타입은 그 목록에서 **추론**하므로 자산이 따로 별칭을 노출할 필요는 없다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -127,6 +128,52 @@ namespace sw::editor
             if ( bMoved )
                 notifyDocumentEdited( _pNodeMoveEditLabel, _pNodeMoveCoalesceKey );
             _bGraphLayoutReady = SW_TRUE;
+        }
+
+        /**
+         * @brief 캔버스의 삭제 요청(링크 · 노드)을 목록에 반영합니다 — `ed::BeginDelete` 구간 전체.
+         * @details 두 그래프 패널이 이 서른 줄을 각자 들었다. 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"(애니메이션은 노드 id,
+         *          대화는 핀 번호를 풀어 본다)와 Undo 이름뿐이다. 노드를 지우면 그 노드에 닿은 링크도 함께 지운다 — 남기면 저장된
+         *          그래프가 없는 노드를 가리킨다.
+         * @param linkTouchesNode `( const LinkType&, int32 nodeId ) -> bool`
+         * @param onNodeDeleted `( int32 nodeId ) -> void` — 선택 해제 같은 패널의 뒷정리.
+         */
+        template <typename LinkTouchesNodeFn, typename OnNodeDeletedFn>
+        void processCanvasDeletions( LinkTouchesNodeFn&& linkTouchesNode, OnNodeDeletedFn&& onNodeDeleted, const utf8* pDeleteLinkLabel,
+                                     const utf8* pDeleteNodeLabel )
+        {
+            if ( ax::NodeEditor::BeginDelete() == false )
+                return;
+
+            ax::NodeEditor::LinkId linkId;
+            while ( ax::NodeEditor::QueryDeletedLink( &linkId ) )
+            {
+                if ( ax::NodeEditor::AcceptDeletedItem() == false )
+                    continue;
+                const int32 id = static_cast<int32>( linkId.Get() );
+                _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(), [id]( const LinkType& link )
+                { return link._id == id; } ),
+                                 _listLink.end() );
+                notifyDocumentEdited( pDeleteLinkLabel );
+            }
+
+            ax::NodeEditor::NodeId nodeId;
+            while ( ax::NodeEditor::QueryDeletedNode( &nodeId ) )
+            {
+                if ( ax::NodeEditor::AcceptDeletedItem() == false )
+                    continue;
+                const int32 id = static_cast<int32>( nodeId.Get() );
+                _listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(), [id]( const NodeType& node )
+                { return node._id == id; } ),
+                                 _listNode.end() );
+                _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
+                                                 [id, &linkTouchesNode]( const LinkType& link )
+                { return linkTouchesNode( link, id ); } ),
+                                 _listLink.end() );
+                onNodeDeleted( id );
+                notifyDocumentEdited( pDeleteNodeLabel );
+            }
+            ax::NodeEditor::EndDelete();
         }
 
     protected:

@@ -787,6 +787,12 @@ namespace sw
         {
             _ancestorDepth.store( constants::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
+        /**
+         * @brief 선언에서 **파생된** 캐시(이름 맵 · 상속 포함 목록 · 부모 포인터 · 조상 표 · POD 판정)를 전부 비웁니다.
+         * @details 복사 · 이동 대입이 이 열한 줄을 각자 들었다. 캐시가 하나 늘면 두 곳을 같이 고쳐야 했고, 빠뜨리면 대입된
+         *          타입이 **옛 타입의 캐시**로 답한다(이름 조회가 다른 오프셋을 준다).
+         */
+        void invalidateDerivedCaches();
         /** @brief 레지스트리에 살아 있으면 true. 모듈 해제가 내리고 재등록이 올린다. 사본은 늘 true. */
         bool isAlive() const { return _bAlive.load( std::memory_order_acquire ) != SW_FALSE; }
         /**

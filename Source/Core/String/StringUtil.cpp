@@ -307,6 +307,113 @@ namespace sw
                 formatstring( arrBuf, sizeof( arrBuf ), "%#", value );
                 return string{ arrBuf };
             }
+
+            /**
+             * @brief 문자 하나씩 바꾼 사본 — `toUpper` · `toLower` 의 utf8 · utf16 네 벌이 같은 뼈대다(길이 재기 · 크기 잡기 · 한 글자씩).
+             * @details 바꾸는 규칙만 호출자가 준다. utf8 은 ASCII 만, utf16 은 ASCII 밖을 C 런타임(`towupper` · `towlower`)에 맡긴다.
+             */
+            template <typename StringType, typename CharType, typename MapFn>
+            static StringType mapEachChar( const CharType* pInput, MapFn&& mapChar )
+            {
+                if ( StringUtil::isNullOrEmpty( pInput ) )
+                    return {};
+
+                const size_t length = StringUtil::strlen( pInput );
+                StringType   result;
+                result.resize( length );
+                for ( size_t charIndex = 0; charIndex < length; ++charIndex )
+                    result[charIndex] = mapChar( pInput[charIndex] );
+                return result;
+            }
+
+            /** @brief 길이가 같고 글자마다 같으면 true — 대소문자 무시는 ASCII 만 접는다. `string_view` · `wstring_view` 공용. */
+            template <typename ViewType>
+            static bool equalsView( ViewType lhs, ViewType rhs, bool bIgnoreCase ) noexcept
+            {
+                if ( lhs.size() != rhs.size() )
+                    return false;
+                if ( bIgnoreCase == false )
+                    return lhs == rhs;
+                for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
+                {
+                    if ( lhs[charIndex] != rhs[charIndex] && StringUtil::toLowerChar( lhs[charIndex] ) != StringUtil::toLowerChar( rhs[charIndex] ) )
+                        return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 정수 토큰의 앞머리를 벗깁니다 — 공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`).
+             * @details `parseInt` · `parseInt64` · `parseUint64` 가 이 스무 줄을 각자 들었다. 기수 0 은 접두사로 정하고(없으면 10),
+             *          기수 16 은 `0x` 가 있어도 되고 없어도 된다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
+             *          `from_chars` 가 거부하게 한다.
+             * @return 숫자 부분이 남고 기수가 [2, 36] 이면 true.
+             */
+            static bool splitIntegerToken( string_view token, bool bAllowNegative, int32& inoutBase, string_view& outDigits, bool& outNegative )
+            {
+                string_view trimmed = StringUtil::trim( token );
+                outNegative         = false;
+                if ( trimmed.empty() )
+                    return false;
+
+                if ( trimmed.front() == '+' )
+                {
+                    trimmed.remove_prefix( 1 );
+                }
+                else if ( bAllowNegative && trimmed.front() == '-' )
+                {
+                    outNegative = true;
+                    trimmed.remove_prefix( 1 );
+                }
+                if ( trimmed.empty() )
+                    return false;
+
+                const bool bHexPrefix = trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' );
+                if ( inoutBase == 0 )
+                    inoutBase = bHexPrefix ? 16 : 10;
+                if ( inoutBase == 16 && bHexPrefix )
+                    trimmed.remove_prefix( 2 );
+
+                if ( inoutBase < 2 || inoutBase > 36 || trimmed.empty() )
+                    return false;
+                outDigits = trimmed;
+                return true;
+            }
+
+            /** @brief 남은 글자 전부가 숫자여야 true — 뒤에 무엇이 붙어 있으면 실패다. */
+            template <typename UnsignedType>
+            static bool parseDigitsExact( string_view digits, int32 base, UnsignedType& outValue )
+            {
+                const auto [ptr, ec] = std::from_chars( digits.data(), digits.data() + digits.size(), outValue, base );
+                return ec == std::errc{} && ptr == digits.data() + digits.size();
+            }
+
+            /** @brief 부호 있는 정수 — 절댓값을 부호 없는 타입으로 읽고 범위를 본다(최솟값은 절댓값이 최댓값 + 1 이다). */
+            template <typename SignedType, typename UnsignedType>
+            static bool parseSignedInteger( string_view token, int32 base, SignedType kMinValue, SignedType kMaxValue, SignedType& outValue )
+            {
+                string_view digits;
+                bool        bNegative{ false };
+                if ( splitIntegerToken( token, true, base, digits, bNegative ) == false )
+                    return false;
+
+                UnsignedType magnitude{ 0 };
+                if ( parseDigitsExact( digits, base, magnitude ) == false )
+                    return false;
+
+                const UnsignedType maxMagnitude = static_cast<UnsignedType>( kMaxValue );
+                if ( bNegative )
+                {
+                    if ( magnitude > maxMagnitude + 1 )
+                        return false;
+                    outValue = ( magnitude == maxMagnitude + 1 ) ? kMinValue : -static_cast<SignedType>( magnitude );
+                    return true;
+                }
+                if ( magnitude > maxMagnitude )
+                    return false;
+                outValue = static_cast<SignedType>( magnitude );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -491,74 +598,26 @@ namespace sw
 
     string StringUtil::toUpper( const utf8* pInput )
     {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-
-        const size_t length = strlen( pInput );
-        string       result;
-        result.resize( length );
-
-        for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-        {
-            const uint8 uCh   = static_cast<uint8>( pInput[charIndex] );
-            result[charIndex] = ( uCh >= 'a' && uCh <= 'z' ) ? static_cast<utf8>( uCh - 32 ) : pInput[charIndex];
-        }
-
-        return result;
+        return StringUtilInternal::mapEachChar<string>( pInput, []( utf8 ch )
+        { return toUpperChar( ch ); } );
     }
 
     wstring StringUtil::toUpper( const utf16* pInput )
     {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-
-        const size_t length = strlen( pInput );
-        wstring      result;
-        result.resize( length );
-
-        for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-        {
-            const utf16 ch    = pInput[charIndex];
-            result[charIndex] = ( ch >= L'a' && ch <= L'z' ) ? static_cast<utf16>( ch - 32 ) : static_cast<utf16>( std::towupper( static_cast<wint_t>( ch ) ) );
-        }
-
-        return result;
+        return StringUtilInternal::mapEachChar<wstring>( pInput, []( utf16 ch )
+        { return ( ch < 0x80 ) ? toUpperChar( ch ) : static_cast<utf16>( std::towupper( static_cast<wint_t>( ch ) ) ); } );
     }
 
     string StringUtil::toLower( const utf8* pInput )
     {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-
-        const size_t length = strlen( pInput );
-        string       result;
-        result.resize( length );
-
-        for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-        {
-            const uint8 uCh   = static_cast<uint8>( pInput[charIndex] );
-            result[charIndex] = ( uCh >= 'A' && uCh <= 'Z' ) ? static_cast<utf8>( uCh + 32 ) : pInput[charIndex];
-        }
-
-        return result;
+        return StringUtilInternal::mapEachChar<string>( pInput, []( utf8 ch )
+        { return toLowerChar( ch ); } );
     }
 
     wstring StringUtil::toLower( const utf16* pInput )
     {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-
-        const size_t length = strlen( pInput );
-        wstring      result;
-        result.resize( length );
-
-        for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-        {
-            const utf16 ch    = pInput[charIndex];
-            result[charIndex] = ( ch >= L'A' && ch <= L'Z' ) ? static_cast<utf16>( ch + 32 ) : static_cast<utf16>( std::towlower( static_cast<wint_t>( ch ) ) );
-        }
-
-        return result;
+        return StringUtilInternal::mapEachChar<wstring>( pInput, []( utf16 ch )
+        { return ( ch < 0x80 ) ? toLowerChar( ch ) : static_cast<utf16>( std::towlower( static_cast<wint_t>( ch ) ) ); } );
     }
 
     void StringUtil::replaceChar( string& inoutStr, const utf8 fromChar, const utf8 toChar )
@@ -603,34 +662,12 @@ namespace sw
 
     bool StringUtil::equals( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
     {
-        if ( lhs.size() != rhs.size() )
-            return false;
-        if ( bIgnoreCase )
-        {
-            for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
-            {
-                if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
-                    return false;
-            }
-            return true;
-        }
-        return lhs == rhs;
+        return StringUtilInternal::equalsView( lhs, rhs, bIgnoreCase );
     }
 
     bool StringUtil::equals( wstring_view lhs, wstring_view rhs, bool bIgnoreCase ) noexcept
     {
-        if ( lhs.size() != rhs.size() )
-            return false;
-        if ( bIgnoreCase )
-        {
-            for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
-            {
-                if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
-                    return false;
-            }
-            return true;
-        }
-        return lhs == rhs;
+        return StringUtilInternal::equalsView( lhs, rhs, bIgnoreCase );
     }
 
     bool StringUtil::equals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase ) noexcept
@@ -1019,173 +1056,21 @@ namespace sw
 
     bool StringUtil::parseInt( string_view token, int32& outValue, int32 base )
     {
-        string_view trimmed = trim( token );
-        if ( trimmed.empty() )
-            return false;
-
-        bool bNegative = false;
-        if ( trimmed.front() == '+' )
-            trimmed.remove_prefix( 1 );
-        else if ( trimmed.front() == '-' )
-        {
-            bNegative = true;
-            trimmed.remove_prefix( 1 );
-        }
-
-        if ( trimmed.empty() )
-            return false;
-
-        if ( base == 0 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
-                base = 16;
-                trimmed.remove_prefix( 2 );
-            }
-            else
-            {
-                base = 10;
-            }
-        }
-        else if ( base == 16 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-                trimmed.remove_prefix( 2 );
-        }
-
-        if ( base < 2 || base > 36 || trimmed.empty() )
-            return false;
-
-        uint32 uval{ 0 };
-        const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), uval, base );
-        if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
-        {
-            if ( bNegative )
-            {
-                constexpr uint32 kMaxAbsInt32 = static_cast<uint32>( MathUtil::MaxInt32 ) + 1u;
-                if ( uval > kMaxAbsInt32 )
-                    return false;
-                if ( uval == kMaxAbsInt32 )
-                    outValue = MathUtil::MinInt32;
-                else
-                    outValue = -static_cast<int32>( uval );
-            }
-            else
-            {
-                if ( uval > static_cast<uint32>( MathUtil::MaxInt32 ) )
-                    return false;
-                outValue = static_cast<int32>( uval );
-            }
-            return true;
-        }
-        return false;
+        return StringUtilInternal::parseSignedInteger<int32, uint32>( token, base, MathUtil::MinInt32, MathUtil::MaxInt32, outValue );
     }
 
     bool StringUtil::parseInt64( string_view token, int64& outValue, int32 base )
     {
-        string_view trimmed = trim( token );
-        if ( trimmed.empty() )
-            return false;
-
-        bool bNegative = false;
-        if ( trimmed.front() == '+' )
-            trimmed.remove_prefix( 1 );
-        else if ( trimmed.front() == '-' )
-        {
-            bNegative = true;
-            trimmed.remove_prefix( 1 );
-        }
-
-        if ( trimmed.empty() )
-            return false;
-
-        if ( base == 0 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
-                base = 16;
-                trimmed.remove_prefix( 2 );
-            }
-            else
-            {
-                base = 10;
-            }
-        }
-        else if ( base == 16 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-                trimmed.remove_prefix( 2 );
-        }
-
-        if ( base < 2 || base > 36 || trimmed.empty() )
-            return false;
-
-        uint64 uval{ 0 };
-        const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), uval, base );
-        if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
-        {
-            if ( bNegative )
-            {
-                constexpr uint64 kMaxAbsInt64 = static_cast<uint64>( MathUtil::MaxInt64 ) + 1ull;
-                if ( uval > kMaxAbsInt64 )
-                    return false;
-                if ( uval == kMaxAbsInt64 )
-                    outValue = MathUtil::MinInt64;
-                else
-                    outValue = -static_cast<int64>( uval );
-            }
-            else
-            {
-                if ( uval > static_cast<uint64>( MathUtil::MaxInt64 ) )
-                    return false;
-                outValue = static_cast<int64>( uval );
-            }
-            return true;
-        }
-        return false;
+        return StringUtilInternal::parseSignedInteger<int64, uint64>( token, base, MathUtil::MinInt64, MathUtil::MaxInt64, outValue );
     }
 
     bool StringUtil::parseUint64( string_view token, uint64& outValue, int32 base )
     {
-        string_view trimmed = trim( token );
-        if ( trimmed.empty() )
+        string_view digits;
+        bool        bNegative{ false };
+        if ( StringUtilInternal::splitIntegerToken( token, false, base, digits, bNegative ) == false )
             return false;
-
-        if ( trimmed.front() == '+' )
-            trimmed.remove_prefix( 1 );
-
-        if ( trimmed.empty() )
-            return false;
-
-        if ( base == 0 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
-                base = 16;
-                trimmed.remove_prefix( 2 );
-            }
-            else
-            {
-                base = 10;
-            }
-        }
-        else if ( base == 16 )
-        {
-            if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-                trimmed.remove_prefix( 2 );
-        }
-
-        if ( base < 2 || base > 36 || trimmed.empty() )
-            return false;
-
-        uint64 val{ 0 };
-        const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val, base );
-        if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
-        {
-            outValue = val;
-            return true;
-        }
-        return false;
+        return StringUtilInternal::parseDigitsExact( digits, base, outValue );
     }
 
     bool StringUtil::isValidUtf8( const utf8* pInput )

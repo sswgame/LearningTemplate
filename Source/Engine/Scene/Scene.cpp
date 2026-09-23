@@ -66,29 +66,6 @@ namespace sw
                 } );
                 pObjectManager->flushSceneTransforms();
             }
-
-            static CameraComponent* findOrCreateCamera( GameObjectManager* pObjectManager, hashed_string name, CameraRole role, const float3& pos, const float3& lookTarget )
-            {
-                GameObject* pObj = pObjectManager->findGameObjectByName( name );
-                if ( pObj == nullptr )
-                    pObj = pObjectManager->createGameObject( name );
-                if ( pObj == nullptr )
-                    return nullptr;
-
-                CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-                if ( pCam == nullptr )
-                    pCam = pObj->addComponent<CameraComponent>();
-                if ( pCam == nullptr )
-                    return nullptr;
-
-                pCam->setRole( role );
-                pCam->setLocalPosition( pos );
-                pCam->lookAt( lookTarget );
-                pCam->setFieldOfViewY( 0.70f );
-                pCam->setNearPlane( 0.1f );
-                pCam->setFarPlane( 100.0f );
-                return pCam;
-            }
         };
     } // namespace
 } // namespace sw
@@ -277,7 +254,7 @@ namespace sw
 
         _objectManager->flushSceneTransforms();
 
-        SceneInternal::findOrCreateCamera( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
+        CameraComponent::findOrCreateNamed( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
 
         _objectManager->flushSceneTransforms();
 

@@ -20,29 +20,8 @@ namespace sw::editor
 
             static CameraComponent* createEditorCamera( GameObjectManager* pObjectManager )
             {
-                if ( pObjectManager == nullptr )
-                    return nullptr;
-
-                const hashed_string cameraName{ kEditorCameraObjectName };
-                GameObject*         pObj = pObjectManager->findGameObjectByName( cameraName );
-                if ( pObj == nullptr )
-                    pObj = pObjectManager->createGameObject( cameraName );
-                if ( pObj == nullptr )
-                    return nullptr;
-
-                CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-                if ( pCam == nullptr )
-                    pCam = pObj->addComponent<CameraComponent>();
-                if ( pCam == nullptr )
-                    return nullptr;
-
-                pCam->setRole( CameraRole::Editor );
-                pCam->setLocalPosition( float3( 2.15f, 1.55f, 2.65f ) );
-                pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
-                pCam->setFieldOfViewY( 0.70f );
-                pCam->setNearPlane( 0.1f );
-                pCam->setFarPlane( 100.0f );
-                return pCam;
+                return CameraComponent::findOrCreateNamed( pObjectManager, hashed_string{ kEditorCameraObjectName }, CameraRole::Editor,
+                                                           float3( 2.15f, 1.55f, 2.65f ), float3( 0.0f, 0.0f, 0.0f ) );
             }
         };
     } // namespace

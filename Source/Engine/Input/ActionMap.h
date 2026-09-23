@@ -547,14 +547,23 @@ namespace sw
 
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
-        string             getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const;
-        bool               evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
-        bool               evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
-        bool               isBindingLayerActive( const ActionBinding& binding ) const;
-        bool               isLayerActiveInternal( const hashed_string& layer ) const;
-        void               ensureActionListed( const hashed_string& action );
-        LayerDef&          ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
-        ActionEntry&       getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
+        string       getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const;
+        bool         evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
+        bool         evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
+        bool         isBindingLayerActive( const ActionBinding& binding ) const;
+        bool         isLayerActiveInternal( const hashed_string& layer ) const;
+        void         ensureActionListed( const hashed_string& action );
+        LayerDef&    ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
+        ActionEntry& getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
+        /**
+         * @brief 바인딩 하나의 공통 머리 — 레이어를 보장하고 액션을 목록에 올리고, 레이어 인덱스를 캐시한 빈 바인딩을 돌려준다.
+         * @details 예전에는 `bind*` 아홉이 이 열두 줄(과 아래 `commitBinding` 의 넷)을 각자 들었다. 바인딩 종류를 하나 더하면
+         *          그것을 복사해야 했고, 세 목록(현재 · 기본값 · 상태) 중 하나만 빠져도 바인딩과 상태의 인덱스가 어긋난다.
+         *          종류별 필드(슬롯 · 데드존 · 배율 …)만 호출자가 채운다.
+         */
+        ActionBinding beginBinding( const hashed_string& action, BindingKind kind, ActionTrigger trigger, const hashed_string& layer );
+        /** @brief 바인딩을 액션의 세 목록(현재 · 기본값 · 상태)에 **함께** 넣습니다 — 셋의 인덱스가 늘 같다. */
+        void               commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding );
         LayerDef*          findLayer( const hashed_string& name );
         const LayerDef*    findLayer( const hashed_string& name ) const;
         ActionEntry*       findAction( const hashed_string& action );

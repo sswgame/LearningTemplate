@@ -162,6 +162,18 @@ namespace sw
 
 namespace sw
 {
+    const TypeInfo* SerializerUtil::findNestedObjectType( hashed_string typeName, const SerializeContext& ctx )
+    {
+        if ( ctx.findTextWriter( typeName ) != nullptr )
+            return nullptr;
+        if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
+            return nullptr;
+        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
+        if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
+            return nullptr;
+        return pTypeInfo;
+    }
+
     hashed_string SerializerUtil::resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
     {
         // 등록된 이름 그대로 핸들러가 있으면 그것이 정본이다.

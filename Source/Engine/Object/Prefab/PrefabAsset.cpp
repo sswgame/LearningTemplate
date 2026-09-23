@@ -23,6 +23,26 @@ namespace sw
     {
         struct PrefabAssetInternal
         {
+            /**
+             * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로.
+             * @details 로드와 스폰이 이 열두 줄을 각자 들었다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 된다.
+             */
+            static string resolvePrefabPath( string_view assetReference )
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return string{ assetReference };
+
+                Uuid   guid{};
+                string resolvedPath{ assetReference };
+                if ( Uuid::tryParse( assetReference, guid ) == false || guid.isNull() )
+                    return resolvedPath;
+
+                string mappedPath;
+                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
+                    resolvedPath = std::move( mappedPath );
+                return resolvedPath;
+            }
+
             static constexpr const utf8* kRoot             = "Prefab";
             static constexpr const utf8* kName             = "name";
             static constexpr const utf8* kGameObject       = "GameObject";
@@ -459,17 +479,7 @@ namespace sw
     }
     PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
     {
-        string resolvedPath{ assetRelativePath };
-        if ( engine::areEngineServicesBound() )
-        {
-            Uuid guid{};
-            if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
-            {
-                string mappedPath;
-                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
-                    resolvedPath = std::move( mappedPath );
-            }
-        }
+        const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
 
         const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
         {
@@ -532,17 +542,7 @@ namespace sw
             return nullptr;
         }
 
-        string resolvedPath{ assetRelativePath };
-        if ( engine::areEngineServicesBound() )
-        {
-            Uuid guid{};
-            if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
-            {
-                string mappedPath;
-                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
-                    resolvedPath = std::move( mappedPath );
-            }
-        }
+        const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
 
         const string                       cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
         const hashed_string                pathKey( cacheKey.data(), static_cast<uint32>( cacheKey.size() ) );

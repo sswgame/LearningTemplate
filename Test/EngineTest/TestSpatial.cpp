@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/ObjectHandle.h"
+#include "Core/Math/MatrixMath.h"
 
 #include "Engine/Physics/AABB.h"
 #include "Engine/Spatial/BVHTree3D.h"
@@ -687,4 +688,29 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
         octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
         SW_EXPECT_TRUE( listElement.empty() );
     }
+}
+
+/**
+ * @brief [SpatialTest] BVH 의 절두체 질의 — 카메라 앞의 상자만 나오고 뒤 · 옆은 빠진다(렌더러의 GPU 컬링과 같은 `Frustum` 이다)
+ */
+SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
+{
+    sw::BVHTree3D tree;
+    const auto    makeBox = []( float32 x, float32 y, float32 z )
+    { return sw::AABB{
+          sw::float3{x - 0.5f, y - 0.5f, z - 0.5f},
+          sw::float3{x + 0.5f, y + 0.5f, z + 0.5f}
+ }; };
+    tree.insert( sw::ObjectHandle::make( 1, 1 ), makeBox( 0.0f, 0.0f, 0.0f ) );    // 정면
+    tree.insert( sw::ObjectHandle::make( 2, 1 ), makeBox( 0.0f, 0.0f, 20.0f ) );   // 카메라 뒤
+    tree.insert( sw::ObjectHandle::make( 3, 1 ), makeBox( 60.0f, 0.0f, 0.0f ) );   // 옆으로 멀리
+    tree.insert( sw::ObjectHandle::make( 4, 1 ), makeBox( 0.0f, 0.0f, -500.0f ) ); // 원평면 너머
+
+    const sw::float4x4 view = sw::float4x4::createLookAt( sw::float3{ 0.0f, 0.0f, 5.0f }, sw::float3::Zero, sw::float3::Up );
+    const sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
+
+    sw::vector<sw::ObjectHandle> listVisible;
+    tree.queryFrustum( view * proj, listVisible );
+    SW_ASSERT_TRUE( listVisible.size() == 1 );
+    SW_EXPECT_TRUE( listVisible[0] == sw::ObjectHandle::make( 1, 1 ) );
 }

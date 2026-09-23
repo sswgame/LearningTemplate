@@ -918,14 +918,14 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
     // **실제 코드가 쓰는 경로**를 그대로 검증한다 — 뷰가 행렬과 절두체를 함께 갱신한다.
     sw::RenderView renderView{};
     renderView.setViewProjection( viewProj );
-    const float32( &arrPlane )[6][4] = renderView._arrFrustumPlane;
+    const sw::float4( &arrPlane )[6] = renderView._frustum._arrPlane;
 
     // 평면은 정규화돼 있어야 한다 — 그래야 셰이더가 반지름을 그대로 비교할 수 있다.
     for ( uint32 planeIndex = 0; planeIndex < 6; ++planeIndex )
     {
-        const float32 length = sw::MathUtil::sqrt( arrPlane[planeIndex][0] * arrPlane[planeIndex][0] +
-                                                   arrPlane[planeIndex][1] * arrPlane[planeIndex][1] +
-                                                   arrPlane[planeIndex][2] * arrPlane[planeIndex][2] );
+        const float32 length = sw::MathUtil::sqrt( arrPlane[planeIndex]._x * arrPlane[planeIndex]._x +
+                                                   arrPlane[planeIndex]._y * arrPlane[planeIndex]._y +
+                                                   arrPlane[planeIndex]._z * arrPlane[planeIndex]._z );
         SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( length - 1.0f ) < 0.001f,
                             ( sw::string( "평면 " ) + sw::to_string( planeIndex ) + " 가 정규화되지 않았다 (길이 " +
                               sw::to_string( length ) + ")" )
@@ -937,8 +937,8 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
     {
         for ( uint32 planeIndex = 0; planeIndex < 6; ++planeIndex )
         {
-            const float32 distance = arrPlane[planeIndex][0] * center._x + arrPlane[planeIndex][1] * center._y +
-                                     arrPlane[planeIndex][2] * center._z + arrPlane[planeIndex][3];
+            const float32 distance = arrPlane[planeIndex]._x * center._x + arrPlane[planeIndex]._y * center._y +
+                                     arrPlane[planeIndex]._z * center._z + arrPlane[planeIndex]._w;
             if ( distance < -radius )
                 return false;
         }

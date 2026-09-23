@@ -8,6 +8,8 @@
 
 namespace sw
 {
+    class GameObjectManager;
+
     /// @brief 카메라 Role 종류를 정의하는 열거형입니다.
     ENUM()
     enum class CameraRole : uint8
@@ -34,6 +36,15 @@ namespace sw
 
         /** @brief 기본 카메라를 만듭니다. */
         CameraComponent();
+
+        /**
+         * @brief 이름의 오브젝트에 카메라를 보장하고(없으면 오브젝트 · 컴포넌트를 만든다) 역할 · 자리 · 시선 · 기본 렌즈로 맞춥니다.
+         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 이 스무 줄을 각자 들고, 기본 렌즈
+         *          값(`kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ`)을 리터럴로 다시 적고 있었다.
+         * @return 매니저가 없거나 만들 수 없으면(틱 중 — `addComponent` 가 지연된다) nullptr.
+         */
+        static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
+                                                   const float3& position, const float3& lookTarget );
         /** @brief 카메라를 해제합니다. */
         virtual ~CameraComponent() override = default;
 
