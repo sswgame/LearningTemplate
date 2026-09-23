@@ -151,7 +151,7 @@ namespace sw::editor
                 }
 
                 if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-                    pContext->getWorkspace().selectGameObject( GameObjectPtr{ pObj } );
+                    pContext->getWorkspace().selectGameObject( pObj );
 
                 const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
@@ -357,7 +357,7 @@ namespace sw::editor
 
                 const bool bOpen = ImGui::TreeNodeEx( arrLabel.c_str(), flags );
                 if ( ImGui::IsItemClicked() )
-                    ws.selectComponent( GameObjectPtr{ pObj }, ComponentPtr{ pSceneComp } );
+                    ws.selectComponent( pObj, pSceneComp );
                 drawComponentContextMenu( pObj, pSceneComp, pManager );
 
                 if ( bOpen )
@@ -390,9 +390,8 @@ namespace sw::editor
                         return;
                 }
 
-                const uint64  objectId = pObj->getObjectId();
-                GameObjectPtr ptrObj{ pObj };
-                const bool    bSelected = pContext->getSelectionManager().hasObject( ptrObj );
+                const uint64 objectId  = pObj->getObjectId();
+                const bool   bSelected = pContext->getSelectionManager().hasObject( pObj );
 
                 ImGui::PushID( static_cast<int32>( objectId ) );
 
@@ -439,7 +438,7 @@ namespace sw::editor
                     else if ( io.KeyShift )
                         mode = SelectionMode::Add;
 
-                    pContext->getWorkspace().selectGameObject( ptrObj, mode );
+                    pContext->getWorkspace().selectGameObject( pObj, mode );
                 }
 
                 // Inline Rename Input
@@ -511,7 +510,7 @@ namespace sw::editor
                         formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentId() );
 
                         if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
-                            ws.selectComponent( ptrObj, ComponentPtr{ pComp } );
+                            ws.selectComponent( pObj, pComp );
                         drawComponentContextMenu( pObj, pComp, pManager );
 
                         ImGui::PopID();
@@ -642,35 +641,33 @@ namespace sw::editor
         // Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
-            const ImGuiIO&               io      = ImGui::GetIO();
-            SelectionManager&            selMgr  = pContext->getSelectionManager();
-            const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+            const ImGuiIO&    io     = ImGui::GetIO();
+            SelectionManager& selMgr = pContext->getSelectionManager();
+            // 사본으로 받는다 — 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
+            vector<GameObject*> listSel;
+            selMgr.getSelectedObjects( listSel );
 
             if ( listSel.empty() == false )
             {
                 if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
                 {
                     vector<GameObject*> listNewCreated;
-                    for ( const GameObjectPtr& pGoPtr : listSel )
+                    for ( GameObject* pSrc : listSel )
                     {
-                        GameObject* pSrc = pGoPtr.get();
-                        if ( pSrc != nullptr )
-                        {
-                            GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
-                            if ( pNewGo != nullptr )
-                                listNewCreated.push_back( pNewGo );
-                        }
+                        GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
+                        if ( pNewGo != nullptr )
+                            listNewCreated.push_back( pNewGo );
                     }
                     if ( listNewCreated.empty() == false )
                     {
                         selMgr.clearObjectSelection();
                         for ( GameObject* pNewGo : listNewCreated )
-                            selMgr.selectObject( GameObjectPtr{ pNewGo }, SelectionMode::Add );
+                            selMgr.selectObject( pNewGo, SelectionMode::Add );
                     }
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
                 {
-                    GameObject* pSelected = listSel.back().get();
+                    GameObject* pSelected = listSel.back();
                     if ( pSelected != nullptr )
                     {
                         _renamingObjectId = pSelected->getObjectId();
@@ -680,11 +677,9 @@ namespace sw::editor
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
                 {
-                    for ( const GameObjectPtr& pGoPtr : listSel )
+                    for ( GameObject* pGo : listSel )
                     {
-                        GameObject* pGo = pGoPtr.get();
-                        if ( pGo != nullptr )
-                            EditorSceneCommands::destroy( pManager, pGo );
+                        EditorSceneCommands::destroy( pManager, pGo );
                     }
                     selMgr.clearObjectSelection();
                 }

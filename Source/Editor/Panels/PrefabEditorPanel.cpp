@@ -27,7 +27,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getSelectionManager().getPrimaryObject().get();
+                return pContext->getSelectionManager().getPrimaryObject();
             }
         };
     } // namespace
@@ -62,7 +62,7 @@ namespace sw::editor
         uint64         objectId{ 0 };
         if ( pContext != nullptr )
         {
-            GameObject* pPrimary       = pContext->getSelectionManager().getPrimaryObject().get();
+            GameObject* pPrimary       = pContext->getSelectionManager().getPrimaryObject();
             objectId                   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
             const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind::Prefab );
             if ( matching.empty() == false )

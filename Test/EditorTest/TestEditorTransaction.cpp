@@ -5,6 +5,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -27,28 +29,6 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief 스코프 동안 커맨드 스택을 지역 서비스로 걸어 둡니다. */
-    class ScopedCommandStackService
-    {
-    public:
-        explicit ScopedCommandStackService( CommandStack& stack ) { bindLocalService<CommandStack>( &stack ); }
-        ~ScopedCommandStackService() { unbindLocalService<CommandStack>(); }
-
-        ScopedCommandStackService( const ScopedCommandStackService& )            = delete;
-        ScopedCommandStackService& operator=( const ScopedCommandStackService& ) = delete;
-    };
-
-    /** @brief 스코프 동안 씬 매니저를 지역 서비스로 걸어 둡니다 — `editor::getActiveScene()` 이 답하게 됩니다. */
-    class ScopedSceneManagerService
-    {
-    public:
-        explicit ScopedSceneManagerService( SceneManager& sceneManager ) { bindLocalService<SceneManager>( &sceneManager ); }
-        ~ScopedSceneManagerService() { unbindLocalService<SceneManager>(); }
-
-        ScopedSceneManagerService( const ScopedSceneManagerService& )            = delete;
-        ScopedSceneManagerService& operator=( const ScopedSceneManagerService& ) = delete;
-    };
-
     /** @brief 살아 있는(pendingKill 이 아닌) 같은 이름의 오브젝트 수입니다. */
     size_t countLiveObjectsNamed( GameObjectManager& manager, const utf8* pName )
     {
@@ -63,15 +43,15 @@ namespace
     }
 
     /** @brief 트랜잭션 API 를 한 바퀴 다 불러 봅니다. 스택이 없어도 터지지 않아야 합니다. */
-    void callEveryTransactionEntryPoint( GameObjectPtr target )
+    void callEveryTransactionEntryPoint( GameObject* pTarget )
     {
         EditorTransaction::beginTransaction( "Probe" );
         EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} ),
                                  SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} ),
                                  "Probe push" );
-        EditorTransaction::recordModify( target, "<before/>", "<after/>", "Probe modify" );
-        EditorTransaction::recordCreation( target, "Probe create" );
-        EditorTransaction::recordDestruction( target, "Probe destroy" );
+        EditorTransaction::recordModify( pTarget, EditorObjectSnapshot{ "<before/>", {} }, EditorObjectSnapshot{ "<after/>", {} }, "Probe modify" );
+        EditorTransaction::recordCreation( pTarget, "Probe create" );
+        EditorTransaction::recordDestruction( pTarget, "Probe destroy" );
         EditorTransaction::endTransaction();
         EditorTransaction::cancelTransaction();
     }
@@ -95,7 +75,7 @@ SW_TEST_CASE( EditorTransactionTest, NoCommandStackServiceIsSafe )
     SW_ASSERT_NOT_NULL( pObject );
     manager.mergePendingAdds();
 
-    callEveryTransactionEntryPoint( GameObjectPtr{ pObject } );
+    callEveryTransactionEntryPoint( pObject );
 
     // 여기까지 왔다는 것이 결과다. 스택이 없으므로 아무것도 쌓이지 않았어야 한다.
     SW_EXPECT_EQUAL( nullptr, getService<CommandStack>() );
@@ -148,8 +128,9 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
     manager.mergePendingAdds();
 
     // 앞뒤가 같으면 애초에 기록하지 않는 계약이므로 일부러 다르게 준다.
-    EditorTransaction::recordModify( GameObjectPtr{ pObject }, "<a/>", "<b/>", "Probe" );
-    EditorTransaction::recordBinaryModify( GameObjectPtr{ pObject }, vector<uint8>{ 1 }, vector<uint8>{ 2 }, "Probe binary" );
+    EditorTransaction::recordModify( pObject, EditorObjectSnapshot{ "<a/>", {} }, EditorObjectSnapshot{ "<b/>", {} }, "Probe" );
+    EditorTransaction::recordBinaryModify( pObject, EditorObjectBinarySnapshot{ vector<uint8>{ 1 }, {} }, EditorObjectBinarySnapshot{ vector<uint8>{ 2 }, {} },
+                                           "Probe binary" );
 }
 
 /**
@@ -186,7 +167,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
         pManager->mergePendingAdds();
         SW_ASSERT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "Born" ) );
 
-        EditorTransaction::recordCreation( GameObjectPtr{ pBorn }, "Create Born" );
+        EditorTransaction::recordCreation( pBorn, "Create Born" );
         SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
 
         stack.undo();
@@ -205,7 +186,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
         pManager->mergePendingAdds();
 
         // 기록은 **삭제 전** 스냅샷만 남긴다 — 실제로 지우는 것은 호출부의 몫이다.
-        EditorTransaction::recordDestruction( GameObjectPtr{ pDoomed }, "Delete Doomed" );
+        EditorTransaction::recordDestruction( pDoomed, "Delete Doomed" );
         pManager->destroyObject( pDoomed );
         SW_ASSERT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
 
@@ -216,5 +197,97 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
         stack.redo();
         pManager->mergePendingAdds();
         SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
+    }
+}
+
+/**
+ * @brief [EditorTransactionTest] 지운 오브젝트를 되돌리면 그 오브젝트와 컴포넌트의 핸들이 다시 풀린다
+ * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithId`, 컴포넌트는 `ObjectIdentity`). 예전에는
+ *          새 id 를 받아 핸들이 끊겼고, 이름으로 찾던 `GameObjectPtr` 가 그 자리를 메웠다 — 이름을 바꾸면 끊기는 방식으로.
+ */
+SW_TEST_CASE( EditorTransactionTest, HandlesSurviveUndoOfDestruction )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "HandleProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+
+    GameObject* pVictim = pManager->createGameObject( hashed_string( "Victim" ) );
+    SW_ASSERT_NOT_NULL( pVictim );
+    SceneComponent* pSceneComp = pVictim->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSceneComp );
+    pManager->mergePendingAdds();
+
+    const GameObjectHandle objectHandle    = pVictim->getHandle();
+    const ComponentHandle  componentHandle = pSceneComp->getHandle();
+
+    EditorTransaction::recordDestruction( pVictim, "Delete Victim" );
+    pManager->destroyObject( pVictim );
+    // 옛 오브젝트의 지연 파괴가 끝나야 그 id 를 다시 쓸 수 있다(아직 등록돼 있으면 새 id 로 물러선다).
+    pManager->processDeferredDestruction();
+    SW_EXPECT_TRUE( pManager->resolveGameObject( objectHandle ) == nullptr );
+    SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+
+    GameObject* pRestored = pManager->resolveGameObject( objectHandle );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_TRUE( pRestored->getName() == hashed_string( "Victim" ) );
+
+    Component* pRestoredComp = pManager->resolveComponent( componentHandle );
+    SW_ASSERT_NOT_NULL( pRestoredComp );
+    SW_EXPECT_TRUE( pRestoredComp->getOwner() == pRestored );
+}
+
+/**
+ * @brief [EditorTransactionTest] 수정을 되돌려 컴포넌트가 다시 만들어져도 컴포넌트 핸들은 이어진다
+ * @details 되돌리기는 상태를 다시 읽으며 컴포넌트를 **전부 지우고 새로 만든다**(`clearComponents`). 속성 하나만 바꾼 것을
+ *          되돌려도 그렇다. 스냅샷에 적어 둔 id 를 되살리지 않으면 컴포넌트마다 새 id 가 나가 핸들이 끊긴다 — 마지막 블록이
+ *          그 대조군이다(씬 · 프리팹 로드와 복제가 가는 길).
+ */
+SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "ModifyProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+
+    GameObject* pObj = pManager->createGameObject( hashed_string( "Before" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    SceneComponent* pSceneComp = pObj->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSceneComp );
+    pManager->mergePendingAdds();
+    const ComponentHandle componentHandle = pSceneComp->getHandle();
+
+    const EditorObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
+    pObj->setName( hashed_string( "After" ) );
+    const EditorObjectSnapshot after = EditorTransaction::captureSnapshot( pObj );
+    EditorTransaction::recordModify( pObj, before, after, "Rename" );
+
+    stack.undo();
+    SW_EXPECT_TRUE( pObj->getName() == hashed_string( "Before" ) );
+    SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) != nullptr );
+
+    stack.redo();
+    SW_EXPECT_TRUE( pObj->getName() == hashed_string( "After" ) );
+    SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) != nullptr );
+
+    BLOCK( "대조군 — id 없이 읽으면 컴포넌트가 새 id 를 받아 핸들이 끊긴다" )
+    {
+        ObjectStateSerializer::loadFromXmlString( pObj, before._xml );
+        SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
     }
 }

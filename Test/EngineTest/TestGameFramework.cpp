@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/Base/GameInstanceBase.h"
@@ -725,6 +727,71 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
     vector<uint8>    emptySnapshot;
     SW_EXPECT_TRUE( defaultGameInstance.captureSnapshot( emptySnapshot ) );
     SW_EXPECT_TRUE( defaultGameInstance.restoreSnapshot( emptySnapshot ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 같은 프로세스에서 찍은 스냅샷은 오브젝트 · 컴포넌트 id 를 되살리고, 다른 실행의 스냅샷은 새 id 를 받는다
+ * @details 핫 리로드가 이 길이다. 게임 모듈을 다시 올리면 씬 오브젝트를 스냅샷으로 되살리는데, 같은 id 를 받아야 게임 · 엔진이
+ *          들고 있던 핸들(씬의 활성 카메라 등)이 이어진다. 세이브 파일처럼 다른 실행에서 찍은 것은 그 실행에서 나간 id 와 겹칠 수
+ *          있어 되살리지 않는다. 봉투 머리의 프로세스 토큰(v2: magic 4 · version 4 · token 8 바이트)이 둘을 가른다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "ReloadProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    // 게임 서비스에 씬 매니저만 건다 — `GameInstanceBase` 가 활성 씬을 여기서 찾는다. 어서션이 중간에 빠져나가도 풀리게 RAII 로.
+    // (`TestFramework/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
+    struct ScopedSceneGameService
+    {
+        explicit ScopedSceneGameService( SceneManager& manager )
+        {
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            game::bindGameService( service );
+        }
+        ~ScopedSceneGameService() { game::unbindGameService(); }
+
+        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
+        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+    };
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+    GameObject* pObj = pManager->createGameObject( hashed_string( "Survivor" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    SceneComponent* pSceneComp = pObj->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSceneComp );
+    pManager->mergePendingAdds();
+    const GameObjectHandle objectHandle    = pObj->getHandle();
+    const ComponentHandle  componentHandle = pSceneComp->getHandle();
+
+    GameInstanceBase instance;
+    vector<uint8>    snapshot;
+    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+
+    BLOCK( "같은 프로세스 — 원래 id 를 되살린다" )
+    {
+        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        pManager->mergePendingAdds();
+        GameObject* pRestored = pManager->resolveGameObject( objectHandle );
+        SW_ASSERT_NOT_NULL( pRestored );
+        SW_EXPECT_TRUE( pRestored->getName() == hashed_string( "Survivor" ) );
+        SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) != nullptr );
+    }
+
+    BLOCK( "다른 실행에서 찍은 스냅샷(토큰이 다르다) — 새 id 를 받는다" )
+    {
+        SW_ASSERT_TRUE( snapshot.size() > 16 );
+        vector<uint8> foreign = snapshot;
+        foreign[8] ^= 0xFF; // 토큰의 첫 바이트
+        SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+        pManager->mergePendingAdds();
+        SW_EXPECT_TRUE( pManager->resolveGameObject( objectHandle ) == nullptr );
+        SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
+        SW_EXPECT_TRUE( pManager->findGameObjectByName( hashed_string( "Survivor" ) ) != nullptr );
+    }
 }
 
 /**

@@ -62,7 +62,7 @@
             "sw::Component",
             "sw::GameObject"
         ],
-        "value_forbidden_message": "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead."
+        "value_forbidden_message": "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, or a GameObjectHandle / ComponentHandle for a reference kept across frames."
     },
     "parsing": {
         "component_base_types": [

@@ -4,11 +4,10 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
@@ -16,6 +15,41 @@ namespace sw
     namespace
     {
         const TagContainer s_emptyTags{};
+
+        /** @brief 이 스레드에서 진행 중인 컴포넌트 ID 복원입니다. `GameObject::ComponentIdRestoreScope` 가 채우고 되돌립니다. */
+        struct ComponentIdRestoreState
+        {
+            const GameObject*     _pTarget{ nullptr };
+            const ObjectIdentity* _pIdentity{ nullptr };
+            size_t                _cursor{ 0 }; ///< 목록에서 다음에 볼 자리
+        };
+        thread_local ComponentIdRestoreState t_componentIdRestore{};
+
+        struct GameObjectInternal
+        {
+            /**
+             * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 되살릴 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false.
+             * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져갑니다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
+             *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않습니다.
+             */
+            static bool takeRestoredComponentId( const GameObject* pOwner, hashed_string typeName, uint64& outComponentId )
+            {
+                ComponentIdRestoreState& state = t_componentIdRestore;
+                if ( state._pIdentity == nullptr || state._pTarget != pOwner )
+                    return false;
+
+                const vector<ObjectIdentity::ComponentEntry>& listEntry = state._pIdentity->_listComponent;
+                for ( size_t entryIndex = state._cursor; entryIndex < listEntry.size(); ++entryIndex )
+                {
+                    if ( listEntry[entryIndex]._typeName != typeName )
+                        continue;
+                    state._cursor  = entryIndex + 1;
+                    outComponentId = listEntry[entryIndex]._componentId;
+                    return outComponentId != 0;
+                }
+                return false;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -36,7 +70,6 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingKill{ false }
         , _listComponent{}
-        , _componentGeneration{ 0 }
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
         , _arrTickGroupBegin{}
@@ -487,8 +520,16 @@ namespace sw
         pComp->setComponentName( typeKey );
         pComp->applyTypeDefaults( pTypeInfo );
 
+        // 상태를 되돌리는 로드 중이면 원래 ID 를 되살린다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
+        // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
+        uint64 restoredComponentId = 0;
+        if ( GameObjectInternal::takeRestoredComponentId( this, typeKey, restoredComponentId ) )
+        {
+            pComp->_componentId = restoredComponentId;
+            Component::_s_nextComponentId.fetch_max( restoredComponentId + 1, std::memory_order_relaxed );
+        }
+
         _listComponent.push_back( pComp );
-        ++_componentGeneration;
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
@@ -496,6 +537,23 @@ namespace sw
         // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.
         if ( pComp->hasTickWork() )
             markTickOrderDirty();
+    }
+
+    GameObject::ComponentIdRestoreScope::ComponentIdRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity )
+        : _pPreviousTarget{ t_componentIdRestore._pTarget }
+        , _pPreviousIdentity{ t_componentIdRestore._pIdentity }
+        , _previousCursor{ t_componentIdRestore._cursor }
+    {
+        t_componentIdRestore._pTarget   = ( pIdentity != nullptr ) ? pTarget : nullptr;
+        t_componentIdRestore._pIdentity = pIdentity;
+        t_componentIdRestore._cursor    = 0;
+    }
+
+    GameObject::ComponentIdRestoreScope::~ComponentIdRestoreScope()
+    {
+        t_componentIdRestore._pTarget   = _pPreviousTarget;
+        t_componentIdRestore._pIdentity = _pPreviousIdentity;
+        t_componentIdRestore._cursor    = _previousCursor;
     }
 
     void GameObject::deferOnSelfPostTick( Delegate<void( GameObject& )> func )
@@ -517,7 +575,6 @@ namespace sw
         // 인라인 네 칸을 그대로 복사한다 — 힙을 만지지 않는다(다섯 개 이상일 때만).
         ComponentList listOwned( _listComponent.begin(), _listComponent.end() );
         _listComponent.clear();
-        ++_componentGeneration;
         _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         // 파괴 뒤에는 물을 수 없으니 지금 본다 — 틱에 참여하던 것이 하나라도 있었을 때만 웨이브를 다시 만든다.
         bool bTickWork = false;
@@ -582,8 +639,6 @@ namespace sw
                 break;
             }
         }
-        if ( bRemoved )
-            ++_componentGeneration;
         if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         if ( bRemoved == false )
@@ -619,8 +674,6 @@ namespace sw
 
     void GameObject::applyLoadedHierarchy()
     {
-        // 로드는 목록을 리플렉션으로 채운다(세터를 지나지 않는다) — 로드가 끝나는 이 자리에서 세대를 올린다.
-        ++_componentGeneration;
         for ( Component* pComp : _listComponent )
         {
             SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );

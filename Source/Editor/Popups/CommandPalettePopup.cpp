@@ -186,7 +186,7 @@ namespace sw::editor
                             GameObject*    pFound      = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
                             EditorContext* pRunContext = EditorContext::get();
                             if ( pFound != nullptr && pRunContext != nullptr )
-                                pRunContext->getSelectionManager().selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
+                                pRunContext->getSelectionManager().selectObject( pFound, SelectionMode::Replace );
                         }
                     };
                     _listAllCommand.push_back( std::move( entry ) );

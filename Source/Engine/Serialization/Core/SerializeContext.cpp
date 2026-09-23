@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
@@ -425,6 +426,19 @@ namespace sw
                     return false;
                 *static_cast<ComponentHandle*>( pPtr ) =
                     ComponentHandle::makeOwned( objectId, componentId );
+                return true;
+            } );
+
+            ctx.registerTextHandler(
+                hashed_string( "GameObjectHandle" ),
+                []( const void* pPtr )
+            { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectId() ); },
+                []( void* pPtr, string_view strView )
+            {
+                uint64 objectId{ 0 };
+                if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectId, 10 ) == false )
+                    return false;
+                *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectId );
                 return true;
             } );
 

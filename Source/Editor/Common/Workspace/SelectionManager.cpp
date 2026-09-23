@@ -5,47 +5,49 @@
 #include "Core/Common/StdHeaders.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw::editor
 {
-    void SelectionManager::selectObject( const GameObjectPtr& pObj, SelectionMode mode )
+    void SelectionManager::selectObject( GameObject* pObj, SelectionMode mode )
     {
         pruneInvalid();
 
+        const GameObjectHandle handle = ( pObj != nullptr ) ? pObj->getHandle() : GameObjectHandle{};
         switch ( mode )
         {
             case SelectionMode::Replace:
             {
-                if ( _listSelectedObject.size() == 1 && _listSelectedObject.front() == pObj )
+                if ( _listSelectedObject.size() == 1 && _listSelectedObject.front() == handle )
                     return;
                 _listSelectedObject.clear();
-                if ( pObj.isValid() )
-                    _listSelectedObject.push_back( pObj );
+                if ( handle.isValid() )
+                    _listSelectedObject.push_back( handle );
                 break;
             }
             case SelectionMode::Add:
             {
-                if ( pObj.isValid() && hasObject( pObj ) == false )
-                    _listSelectedObject.push_back( pObj );
+                if ( handle.isValid() && hasObject( pObj ) == false )
+                    _listSelectedObject.push_back( handle );
                 break;
             }
             case SelectionMode::Remove:
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
                 if ( it != _listSelectedObject.end() )
                     _listSelectedObject.erase( it );
                 break;
             }
             case SelectionMode::Toggle:
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
                 if ( it != _listSelectedObject.end() )
                     _listSelectedObject.erase( it );
-                else if ( pObj.isValid() )
-                    _listSelectedObject.push_back( pObj );
+                else if ( handle.isValid() )
+                    _listSelectedObject.push_back( handle );
                 break;
             }
             default:
@@ -55,60 +57,72 @@ namespace sw::editor
         notifyChanged();
     }
 
-    void SelectionManager::selectObjects( const vector<GameObjectPtr>& listObj, SelectionMode mode )
+    void SelectionManager::selectObjects( const vector<GameObject*>& listObj, SelectionMode mode )
     {
         pruneInvalid();
 
         if ( mode == SelectionMode::Replace )
             _listSelectedObject.clear();
 
-        for ( const GameObjectPtr& pObj : listObj )
+        for ( GameObject* pObj : listObj )
         {
-            if ( pObj.isValid() == false )
+            if ( pObj == nullptr )
                 continue;
 
+            const GameObjectHandle handle = pObj->getHandle();
             if ( mode == SelectionMode::Remove )
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
                 if ( it != _listSelectedObject.end() )
                     _listSelectedObject.erase( it );
             }
             else if ( mode == SelectionMode::Toggle )
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
                 if ( it != _listSelectedObject.end() )
                     _listSelectedObject.erase( it );
                 else
-                    _listSelectedObject.push_back( pObj );
+                    _listSelectedObject.push_back( handle );
             }
             else if ( hasObject( pObj ) == false )
             {
-                _listSelectedObject.push_back( pObj );
+                _listSelectedObject.push_back( handle );
             }
         }
 
         notifyChanged();
     }
 
-    bool SelectionManager::hasObject( const GameObjectPtr& pObj ) const
+    bool SelectionManager::hasObject( const GameObject* pObj ) const
     {
-        return std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj ) !=
-               _listSelectedObject.end();
+        if ( pObj == nullptr )
+            return false;
+        return std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj->getHandle() ) != _listSelectedObject.end();
     }
 
-    GameObjectPtr SelectionManager::getPrimaryObject() const
+    GameObject* SelectionManager::getPrimaryObject() const
     {
         if ( _listSelectedObject.empty() )
-            return GameObjectPtr{};
-        return _listSelectedObject.front();
+            return nullptr;
+        return editor::findGameObject( _listSelectedObject.front() );
     }
 
     uint64 SelectionManager::getPrimaryObjectId() const
     {
-        if ( _listSelectedObject.empty() )
-            return 0;
-        GameObject* pRaw = _listSelectedObject.front().get();
-        return pRaw != nullptr ? pRaw->getObjectId() : 0;
+        const GameObject* pPrimary = getPrimaryObject();
+        return pPrimary != nullptr ? pPrimary->getObjectId() : 0;
+    }
+
+    void SelectionManager::getSelectedObjects( vector<GameObject*>& outListObject ) const
+    {
+        outListObject.clear();
+        outListObject.reserve( _listSelectedObject.size() );
+        for ( const GameObjectHandle handle : _listSelectedObject )
+        {
+            GameObject* pObj = editor::findGameObject( handle );
+            if ( pObj != nullptr )
+                outListObject.push_back( pObj );
+        }
     }
 
     void SelectionManager::selectAsset( string_view assetPath, SelectionMode mode )
@@ -234,8 +248,8 @@ namespace sw::editor
         const size_t countBefore = _listSelectedObject.size();
         _listSelectedObject.erase(
             std::remove_if( _listSelectedObject.begin(), _listSelectedObject.end(),
-                            []( const GameObjectPtr& pObj )
-        { return pObj.isValid() == false; } ),
+                            []( GameObjectHandle handle )
+        { return editor::findGameObject( handle ) == nullptr; } ),
             _listSelectedObject.end() );
 
         if ( _listSelectedObject.size() != countBefore )

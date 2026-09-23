@@ -5,10 +5,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -447,30 +445,52 @@ SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
     SW_EXPECT_EQUAL( 1, audio->_playCount );
 }
 
-SW_TEST_CASE( SoftPointerTest, SafeDestruction )
+/**
+ * @brief [GameObjectHandleTest] 대상이 파괴되면 핸들은 nullptr 로 풀린다 — 컴포넌트만 지우면 오브젝트 핸들은 살아 있다
+ */
+SW_TEST_CASE( GameObjectHandleTest, SafeDestruction )
 {
     sw::GameObjectManager  manager;
     sw::GameObject*        obj  = manager.createGameObject( sw::hashed_string( "TargetObj" ) );
     sw::MockMeshComponent* mesh = obj->addComponent<sw::MockMeshComponent>();
 
-    sw::GameObjectPtr objPtr( obj );
-    sw::ComponentPtr  compPtr( mesh );
+    const sw::GameObjectHandle objHandle  = obj->getHandle();
+    const sw::ComponentHandle  compHandle = mesh->getHandle();
 
-    SW_EXPECT_TRUE( objPtr.isValid() );
-    SW_EXPECT_TRUE( compPtr.isValid() );
+    SW_EXPECT_TRUE( manager.resolveGameObject( objHandle ) == obj );
+    SW_EXPECT_TRUE( manager.resolveComponent( compHandle ) == mesh );
 
     // Destroy component only
     manager.destroyComponent( mesh );
     manager.tick( 0.016f );
 
-    SW_EXPECT_TRUE( objPtr.isValid() );   // Object is still alive
-    SW_EXPECT_FALSE( compPtr.isValid() ); // Component pointer should be safely nullified!
+    SW_EXPECT_TRUE( manager.resolveGameObject( objHandle ) == obj );     // Object is still alive
+    SW_EXPECT_TRUE( manager.resolveComponent( compHandle ) == nullptr ); // Component handle no longer resolves
 
     // Destroy object
     manager.destroyObject( obj );
     manager.tick( 0.016f );
 
-    SW_EXPECT_FALSE( objPtr.isValid() ); // Object pointer should be safely nullified!
+    SW_EXPECT_TRUE( manager.resolveGameObject( objHandle ) == nullptr ); // Object handle no longer resolves
+}
+
+/**
+ * @brief [GameObjectHandleTest] 이름을 바꿔도 핸들은 같은 오브젝트로 풀리고, 옛 이름의 새 오브젝트로 옮겨 가지 않는다
+ * @details 이름으로 찾던 `GameObjectPtr` 가 틀리던 두 경우다. 핸들은 objectId 로 찾고, id 는 다시 쓰지 않는다.
+ */
+SW_TEST_CASE( GameObjectHandleTest, SurvivesRename )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "Original" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    const sw::GameObjectHandle handle = pObj->getHandle();
+
+    pObj->setName( sw::hashed_string( "Renamed" ) );
+    sw::GameObject* pImpostor = manager.createGameObject( sw::hashed_string( "Original" ) );
+    SW_ASSERT_NOT_NULL( pImpostor );
+
+    SW_EXPECT_TRUE( manager.resolveGameObject( handle ) == pObj );
+    SW_EXPECT_TRUE( pImpostor->getHandle() != handle );
 }
 
 /**
@@ -519,13 +539,13 @@ SW_TEST_CASE( GameObjectTest, CascadingChildDestruction )
     SW_EXPECT_TRUE( pChild1->attachToParent( pParent ) );
     SW_EXPECT_TRUE( pChild2->attachToParent( pChild1 ) );
 
-    const sw::GameObjectPtr parentPtr( pParent );
-    const sw::GameObjectPtr child1Ptr( pChild1 );
-    const sw::GameObjectPtr child2Ptr( pChild2 );
+    const sw::GameObjectHandle parentHandle = pParent->getHandle();
+    const sw::GameObjectHandle child1Handle = pChild1->getHandle();
+    const sw::GameObjectHandle child2Handle = pChild2->getHandle();
 
-    SW_EXPECT_TRUE( parentPtr.isValid() );
-    SW_EXPECT_TRUE( child1Ptr.isValid() );
-    SW_EXPECT_TRUE( child2Ptr.isValid() );
+    SW_EXPECT_TRUE( manager.resolveGameObject( parentHandle ) != nullptr );
+    SW_EXPECT_TRUE( manager.resolveGameObject( child1Handle ) != nullptr );
+    SW_EXPECT_TRUE( manager.resolveGameObject( child2Handle ) != nullptr );
 
     // Destroy parent with bDestroyChildren = true
     manager.destroyObject( pParent, true );
@@ -537,10 +557,10 @@ SW_TEST_CASE( GameObjectTest, CascadingChildDestruction )
 
     manager.tick( 0.016f );
 
-    // After tick, all pointers should be safely nullified/invalid
-    SW_EXPECT_FALSE( parentPtr.isValid() );
-    SW_EXPECT_FALSE( child1Ptr.isValid() );
-    SW_EXPECT_FALSE( child2Ptr.isValid() );
+    // After tick, no handle resolves any more
+    SW_EXPECT_TRUE( manager.resolveGameObject( parentHandle ) == nullptr );
+    SW_EXPECT_TRUE( manager.resolveGameObject( child1Handle ) == nullptr );
+    SW_EXPECT_TRUE( manager.resolveGameObject( child2Handle ) == nullptr );
 }
 
 /**

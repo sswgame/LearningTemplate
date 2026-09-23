@@ -16,9 +16,7 @@
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Window/IWindow.h"
 
 #include "RuntimeAPI/ABI/ModuleAbi.h"

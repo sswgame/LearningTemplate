@@ -23,7 +23,6 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -506,10 +505,10 @@ namespace sw::editor
             const PropertyInfo* pProp = pInstComp->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
             if ( pProp != nullptr )
             {
-                const string            beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pInstance } );
-                void*                   pDest     = pProp->getRawPtr( pInstComp );
-                const void*             pSrc      = pProp->getRawPtr( pCdoComp );
-                const SerializeContext& ctx       = SerializeContext::getDefault();
+                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
+                void*                      pDest          = pProp->getRawPtr( pInstComp );
+                const void*                pSrc           = pProp->getRawPtr( pCdoComp );
+                const SerializeContext&    ctx            = SerializeContext::getDefault();
                 if ( pDest != nullptr && pSrc != nullptr )
                 {
                     vector<uint8> bytes;
@@ -517,8 +516,8 @@ namespace sw::editor
                     size_t local{ 0 };
                     SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, bytes.data(), bytes.size(), local, ctx );
                 }
-                const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pInstance } );
-                EditorTransaction::recordModify( GameObjectPtr{ pInstance }, beforeXml, afterXml, "Revert Prefab Override" );
+                const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
+                EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
                 item._overriddenValue = item._defaultValue;
                 item._bModified       = false;
             }

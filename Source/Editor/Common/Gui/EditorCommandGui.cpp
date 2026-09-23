@@ -156,7 +156,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getSelectionManager().getPrimaryObject().get();
+                return pContext->getSelectionManager().getPrimaryObject();
             }
 
             static Component* selectedComponent()
@@ -300,7 +300,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
-                GameObject* pObj = pContext->getSelectionManager().getPrimaryObject().get();
+                GameObject* pObj = pContext->getSelectionManager().getPrimaryObject();
                 string      path = pContext->getWorkspace().getFocusedAssetPath();
                 if ( path.empty() && pObj != nullptr )
                     path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );

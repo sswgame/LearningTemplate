@@ -3,6 +3,8 @@
  * @brief 에디터 모듈 내부에서 사용하는 C++ 서비스 로케이터 및 작업공간 상태 관리.
  */
 #pragma once
+#include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/String/StringUtil.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
@@ -11,6 +13,8 @@
 
 namespace sw
 {
+    class Component;
+    class GameObject;
     class GameObjectManager;
     class Scene;
 } // namespace sw
@@ -96,4 +100,11 @@ namespace sw::editor
     Scene* getActiveScene();
     /** @brief 지금 편집 중인 씬의 GameObjectManager. 씬이 없으면 nullptr. */
     GameObjectManager* getActiveObjectManager();
+    /**
+     * @brief 지금 편집 중인 씬에서 핸들이 가리키는 오브젝트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr.
+     * @details 에디터가 프레임을 넘겨 드는 참조(선택 · 기즈모 대상 · 인스펙터 되돌리기)는 전부 핸들이고, 쓸 때마다 이것으로 푼다.
+     */
+    GameObject* findGameObject( GameObjectHandle handle );
+    /** @brief 지금 편집 중인 씬에서 핸들이 가리키는 컴포넌트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr. */
+    Component* findComponent( ComponentHandle handle );
 } // namespace sw::editor

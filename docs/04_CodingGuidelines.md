@@ -120,6 +120,14 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러냅니다. T 가 포인터 타입이면(`vector<char*>` 등) `char**` → `void*` 같은 변환이 조용히 일어나기 때문입니다. 또 표기가 하나뿐이어야 매크로 한 곳만 고쳐도 전체에 반영됩니다.
 - `CheckCodeConventions.py` 가 `Style/PlacementNew` 로 검사합니다. 예전에는 강제하지 않아서 `Delegate` · `TaskTypes` · `TaskFuture` 등 18곳이 맨 `new ( p )` 로 남아 있었습니다.
 
+### 오브젝트 · 컴포넌트 참조 — 빌리기는 포인터, 보관은 핸들
+- 내가 소유하지 않은 `GameObject` / `Component` 를 가리키는 `T*` 는 **지금 부른 함수 안에서만**(길어야 이번 프레임) 씁니다.
+- 프레임을 넘겨 드는 참조(멤버 · 선택 목록 · 되돌리기 기록)는 `GameObjectHandle` / `ComponentHandle`(`Core/Container`)로 들고, 쓸 때마다 소유 매니저의 `resolveGameObject` / `resolveComponent` 로 풉니다. 대상이 사라졌으면 nullptr 입니다.
+- 핸들은 다시 쓰지 않는 id 라 이름을 바꿔도 끊기지 않습니다. 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드는 오브젝트를 원래 id 로 되살립니다.
+- objectId 는 `GameObjectManager`(씬)마다 따로 세므로, 핸들은 자기 씬 안에서만 뜻이 있습니다.
+- 오브젝트 모델이 스스로 관리하는 구조 링크(소유자 · 씬 계층 · 등록부)는 생포인터 그대로 둡니다.
+- 예전의 이름 기반 `GameObjectPtr` · `ComponentPtr` 은 2026-09-24 에 지웠습니다. 이름을 바꾸면 끊기고, 옛 이름으로 새 오브젝트가 생기면 조용히 그쪽을 가리켰습니다.
+
 ### 헬퍼 Util vs Internal
 1. 여러 번역 단위가 공유하는 헬퍼는 `XxxUtil` 정적 구조체 헤더로 선언합니다 (`Internal` 이름을 붙이지 않음).
 2. 단일 `.cpp` 내에서만 사용하는 헬퍼는 클래스 구현과 분리된 별도 `namespace sw { namespace { struct FooInternal; } }` 블록에 배치합니다.

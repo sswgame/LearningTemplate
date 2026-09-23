@@ -33,7 +33,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 >
 > - `Object → Scene`: 핸들의 지연 해석이 활성 씬을 `SceneManager` 에게 물었다 → 슬롯은 Object 가 갖고 Scene 이
 >   채운다(`GameObjectManager::setActiveManager`, 언리얼 `GWorld` · Godot `SceneTree` 의 자리). 나머지 셋은 쓰지도
->   않는 include 였다.
+>   않는 include 였다. (2026-09-24: 이름으로 찾던 `GameObjectPtr` · `ComponentPtr` 를 핸들로 통일하면서 그 슬롯을 읽는
+>   쪽이 없어져 슬롯도 지웠다. 핸들은 자기를 만든 매니저에게 직접 푼다.)
 > - `RHI → Renderer`: `IRHIDevice` 가 `RenderPassManager`(패스 **에셋** 캐시)를 소유했다 → `FrameRenderer` 가 소유한다.
 > - `Graphics → Window`: RHI 와 렌더러가 `IWindow::getActiveWindow()` 전역을 읽었다 → `Common/IRenderSurface` 를
 >   `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다(`RHI::initialize( surface )`). 렌더러의 첨부 크기는 창이 아니라

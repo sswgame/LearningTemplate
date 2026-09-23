@@ -143,7 +143,7 @@ def parseDefinitions(path: Path) -> HeaderDefinitions:
 
 
 _kPointerAfter = re.compile(r"^\s*(?:const\s+)?[\*&]")
-_kSmartBefore = re.compile(r"(?:unique_ptr|shared_ptr|weak_ptr|ComponentPtr)\s*<\s*(?:const\s+)?$")
+_kSmartBefore = re.compile(r"(?:unique_ptr|shared_ptr|weak_ptr)\s*<\s*(?:const\s+)?$")
 _kVectorPtrBefore = re.compile(r"(?:vector|list|span|unordered_set|unordered_map\s*<[^,]+,)\s*<?\s*(?:const\s+)?$")
 _kFriendBefore = re.compile(r"friend\s+(?:class|struct)\s+$")
 _kForwardBefore = re.compile(r"(?:^|\n)[ \t]*(?:class|struct)\s+$")

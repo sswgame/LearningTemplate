@@ -19,7 +19,6 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -39,7 +38,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getWorkspace().getSelectedObject().get();
+                return pContext->getWorkspace().getSelectedObject();
             }
 
             static GameObjectManager* getActiveObjectManager()
@@ -150,7 +149,7 @@ namespace sw::editor
                 {
                     EditorContext* pContext = EditorContext::get();
                     if ( pContext != nullptr )
-                        pContext->getWorkspace().selectGameObject( GameObjectPtr{ pSpeaker } );
+                        pContext->getWorkspace().selectGameObject( pSpeaker );
                 }
             }
 

@@ -71,10 +71,10 @@ namespace sw::editor
                         continue;
 
                     PlaySessionData::ObjectSnapshot entry;
-                    entry._objectId = pObj->getObjectId();
+                    entry._identity = ObjectStateSerializer::captureIdentity( pObj );
                     entry._name     = pObj->getName().c_str();
                     if ( pContext != nullptr )
-                        entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._objectId );
+                        entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._identity._objectId );
 
                     if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) == false )
                         entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
@@ -118,7 +118,7 @@ namespace sw::editor
                     uniqueSnapIds.reserve( data._listSnapshot.size() );
                     for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                     {
-                        uniqueSnapIds.insert( snap._objectId );
+                        uniqueSnapIds.insert( snap._identity._objectId );
                     }
 
                     vector<GameObject*> listAllObject;
@@ -140,13 +140,14 @@ namespace sw::editor
                 unordered_map<uint64, GameObject*> mapRestored;
                 for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
-                    GameObject* pObj = pObjects->findGameObjectById( snap._objectId );
+                    GameObject* pObj = pObjects->findGameObjectById( snap._identity._objectId );
                     if ( pObj == nullptr && snap._guid.isNull() == false && pContext != nullptr )
                         pObj = pContext->getWorkspace().findGameObjectByGuid( snap._guid );
 
+                    // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다 — 플레이 전에 들고 있던 핸들이 이어지게.
                     if ( pObj == nullptr )
                     {
-                        pObj = pObjects->createGameObject( hashed_string( snap._name.c_str() ) );
+                        pObj = pObjects->createGameObjectWithId( hashed_string( snap._name.c_str() ), snap._identity._objectId );
                         if ( pObj == nullptr )
                         {
                             SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
@@ -157,17 +158,17 @@ namespace sw::editor
                     if ( snap._guid.isNull() == false && pContext != nullptr )
                         pContext->getWorkspace().setGuid( pObj->getObjectId(), snap._guid );
 
-                    mapRestored[snap._objectId] = pObj;
+                    mapRestored[snap._identity._objectId] = pObj;
 
                     if ( snap._bytes.empty() == false )
                     {
                         string parentName;
-                        if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName ) == 0 )
+                        if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName, &snap._identity ) == 0 )
                             SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
                     }
                     else if ( snap._xml.empty() == false )
                     {
-                        if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml ) == false )
+                        if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml, &snap._identity ) == false )
                             SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
                     }
                 }
@@ -179,7 +180,7 @@ namespace sw::editor
                         continue;
 
                     GameObject* pObj = nullptr;
-                    auto        it   = mapRestored.find( snap._objectId );
+                    auto        it   = mapRestored.find( snap._identity._objectId );
                     if ( it != mapRestored.end() )
                         pObj = it->second;
 

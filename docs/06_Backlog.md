@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 표기 통일(`Style/PlacementNew`)
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일
 
 ---
 
@@ -1444,7 +1444,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   필요하고(MaterialCache 는 있지만 Mesh 는 없다), 렌더 스레드가 그 표를 프레임이 도는 동안 읽어야 하므로 표가 RT 안전해야 하며,
   "핸들이 죽었다" 는 것을 아는 것과 "이 프레임이 끝날 때까지 살아 있어야 한다" 는 것은 다른 문제다 — 후자를 핸들로 풀면
   방금 지운 retire 큐가 다시 생긴다. `shared_ptr` 은 그 둘을 한 번에 준다. 핸들이 맞는 자리는 해석기가 이미 있고 nullptr 로
-  끝나도 되는 씬 오브젝트(`ComponentHandle` · `GameObjectPtr`)다. Mesh/Material 레지스트리를 따로 세우는 날 다시 본다.
+  끝나도 되는 씬 오브젝트(`GameObjectHandle` · `ComponentHandle`)다. Mesh/Material 레지스트리를 따로 세우는 날 다시 본다.
 - ~~`MaterialInstance::applyToGpu` 의 세대 검사가 Engine 에 있어도 되나~~ → **닫았다.** 결론은 "있어야 한다" 였다. 그 판단은
   교체만의 것이 아니라 종료 순서와 디바이스 유실 복구도 쓰고, 소유자를 모르는 객체(캐시 밖 머티리얼)가 있는 한 열거 방식보다
   지연 검사가 튼튼하다. 다만 두 클래스가 같은 검사를 각자 적던 것은 `RHIResidentBuffer` 하나로 모았다(아래 "소유 정리 셋").
@@ -1614,6 +1614,55 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (오브젝트 · 컴포넌트 참조를 핸들로 통일 — `GameObjectPtr` · `ComponentPtr` 삭제, 되살릴 때 id 를 보존)
+
+**왜.** 오브젝트 · 컴포넌트를 가리키는 방법이 여섯이었다: `GameObject*`/`Component*` · 날 `uint64 objectId` · `ComponentHandle`(id) ·
+`GameObjectPtr`(이름) · `ComponentPtr`(이름 + 타입 이름) · 에디터 GUID. 이름 기반 둘은 다시 만들어진 오브젝트(핫 리로드 · 되돌리기)를
+찾으려고 생겼지만, 이름을 바꾸면 끊기고, 옛 이름으로 새 오브젝트가 생기면 **조용히 그쪽을 가리켰으며**, `ComponentPtr` 은 같은 타입
+컴포넌트가 둘이면 첫 번째를 잡았다. 씬 · 에셋에 이 참조를 저장한 곳은 없었다(`PROPERTY` 0 개) — 표현을 바꿔도 옮길 데이터가 없다.
+
+**규칙 — 빌리기는 포인터, 보관은 핸들.** `T*` 는 이번 호출(길어야 이번 프레임) 안에서만. 프레임을 넘겨 드는 것은
+`GameObjectHandle`(신설, `Core/Container`) · `ComponentHandle` 이고, 쓸 때마다 소유 매니저의 `resolveGameObject` · `resolveComponent`
+로 푼다. 오브젝트 모델이 스스로 관리하는 구조 링크(소유자 · 계층 · 등록부)는 생포인터 그대로. `AGENTS.md` · `04_CodingGuidelines.md` ·
+`Engine/Object/README.md` 에 적었다.
+
+**핵심은 id 보존이었다.** `ObjectStateSerializer::load*` 는 `clearComponents()` 뒤 팩토리로 다시 만들어서, **속성 하나만 되돌려도
+컴포넌트 id 가 전부 바뀌고 있었다** — 그 전부터 `ComponentHandle` 로 드는 씬의 활성 카메라는 카메라 오브젝트를 되돌리기만 해도 끊겼다.
+- `GameObjectManager::createGameObjectWithId( name, id )` — 그 id 가 아직 등록돼 있으면(삭제 대기 포함) 새 id 로 물러서고 경고한다.
+  옛 것의 지연 파괴가 id 로 정리하는 항목(슬롯 표 · 에디터 GUID 맵)을 새 것 몫까지 지우지 않게. 발급 카운터는 그 id 뒤로
+  민다(`sw::atomic::fetch_max` 신설, C++26 과 같은 이름 · 뜻).
+- `ObjectIdentity { objectId, [(타입 이름, componentId)] }` 와 `captureIdentity` · `writeIdentity` · `readIdentity`. 로드 셋(XML · JSON ·
+  바이너리)이 선택 인자로 받는다. 복원은 `GameObject::ComponentIdRestoreScope`(스레드 로컬 · 대상 오브젝트만 · 타입이 맞는 항목을
+  앞으로 찾아 가져감)가 `attachCreatedComponent` 에서 **`onRegister` 전에** 넣는다 — 서브틱도 원래 id 로 등록된다. 씬 · 프리팹 로드와
+  복제는 id 없이 읽어 새 id 를 받는다.
+- 에디터 되돌리기: 스냅샷이 `EditorObjectSnapshot { xml, identity }` · `EditorObjectBinarySnapshot` 이고, 지운 것을 되살릴 때 원래 id.
+- 플레이 세션 정지: 스냅샷에 identity, 플레이 중 사라진 오브젝트는 원래 id 로.
+- 핫 리로드: `GameInstanceBase` 봉투 **v2** — 머리에 프로세스 토큰(`ObjectStateSerializer::getProcessToken`, Engine 에 있어 게임 ·
+  게임프레임워크 DLL 을 다시 올려도 같다), 씬 섹션의 오브젝트마다 identity. 토큰이 같으면(핫 리로드) 되살리고, 다르면(다른 실행의
+  세이브 파일) 읽고 버린다 — 다른 실행의 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있다. v1 과 그 이전은 그대로 읽는다.
+
+**지운 것.** `GameObjectPtr` · `ComponentPtr`(파일 넷), `GameObject::getComponentGeneration`(읽는 쪽이 ComponentPtr 뿐이었다),
+`GameObjectManager::resolveOwningManager` · `setActiveManager` · `getActiveManager`(활성 매니저 슬롯 — 읽는 쪽이 Ptr 의 지연 해석뿐이었다),
+`ModuleHost` · `GameInstanceBase` 에 남아 있던 include. 파서의 PROPERTY 오류 문구와 전방 선언 도구의 정규식에서도 뺐다.
+
+**에디터.** 선택(`SelectionManager`)은 `vector<GameObjectHandle>` 을 들고, 받는 것 · 돌려주는 것은 빌린 포인터, 푸는 것은
+`editor::findGameObject`(편집 중인 씬). 그룹 기즈모 대상 · 인스펙터 되돌리기도 핸들. 트랜잭션 API 는 `GameObject*` 를 받는다.
+곁다리로 고친 것: 계층 패널의 Delete 가 선택 목록의 **내부 벡터를 참조로 순회하면서** 같은 목록에서 항목을 지우고 있었다(이제 사본을
+받는다). `Object/README.md` 의 "찾기" 예시가 있지도 않은 API(`getComponent<T>().get()`)를 쓰고 있었다.
+
+**테스트.** `ObjectIdentityTest` 넷 · `GameObjectHandleTest` 둘(`SoftPointerTest` 대체, 이름 변경 케이스 추가) · `EditorTransactionTest` 둘
+(지운 것을 되돌린 뒤 핸들, 수정을 되돌린 뒤 컴포넌트 핸들 + id 없이 읽는 대조군) · `SelectionManagerTest.SelectionSurvivesRename` ·
+`GameFrameworkTest.SnapshotRestoresIdsOnlyWithinTheSameProcess`(게임 서비스에 씬을 걸고 스냅샷 → 복원, 토큰 바이트를 바꾸면 새 id).
+에디터 테스트의 지역 서비스 가드는 `EditorTest/EditorTestServices.h` 로 모았다 — 파일마다 익명 네임스페이스에 두면 유니티 빌드에서
+재정의가 된다. **돌연변이 셋**(컴포넌트 id 복원 끄기 · 요청 id 무시 · 토큰 판정 무시)을 각각 한 개 이상의 케이스가 잡는다.
+
+**남긴 것.** 씬 · 프리팹 파일을 넘어 오브젝트끼리 가리키는 참조는 없다 — 파일에 id 가 없고, 이름 기반 Ptr 이 유일한 길이었지만 쓰는
+곳이 없었다. 필요해지면 오브젝트마다 영속 GUID 를 씬 파일에 싣는 쪽으로 간다(언리얼 · 유니티의 자리). 핸들은 매니저(씬) 상대라
+씬이 바뀌면 에디터가 선택을 비운다(원래 그랬다).
+
+**검증.** Debug · Shipping 빌드 경고 0 · `nogpu` + 린트 27/27 · `hostgpu` 2/2 Debug(에디터를 띄우는 스모크 포함) · Shipping 둘 다 ·
+Shipping `nogpu`.
 
 ### 2026-09-24 (`PagedArray` 하나로 — `SlotHandleTable` 과 `GameObjectManager::ObjectSlotTable` 이 같은 청크 배열을 쓴다)
 

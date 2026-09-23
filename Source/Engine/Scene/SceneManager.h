@@ -77,11 +77,7 @@ namespace sw
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
-        /**
-         * @brief 활성 씬을 바꾸고 그 사실을 Object 층에 알립니다 — `_pActiveScene` 대입은 전부 여기로 온다.
-         * @details 핸들의 지연 해석은 Object 층의 활성 매니저 슬롯(`GameObjectManager::setActiveManager`)을
-         *          읽는다. 대입 자리가 다섯이라 한 곳이라도 슬롯을 빠뜨리면 그 씬의 핸들이 풀리지 않는다.
-         */
+        /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 전부 여기로 옵니다(대입 자리가 다섯이라 한곳으로 모았다). */
         void activateScene( Scene* pScene );
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.

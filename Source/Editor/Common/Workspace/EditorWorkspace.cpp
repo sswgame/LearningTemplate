@@ -9,11 +9,9 @@
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -64,18 +62,18 @@ namespace sw::editor
         return 0;
     }
 
-    GameObjectPtr EditorWorkspace::getSelectedObject() const
+    GameObject* EditorWorkspace::getSelectedObject() const
     {
         if ( _pSelectionManager != nullptr )
             return _pSelectionManager->getPrimaryObject();
-        return GameObjectPtr{};
+        return nullptr;
     }
 
     string EditorWorkspace::getSelectedObjectName() const
     {
-        GameObjectPtr pObj = getSelectedObject();
-        if ( pObj.isValid() )
-            return string{ pObj.get()->getName().c_str() };
+        const GameObject* pObj = getSelectedObject();
+        if ( pObj != nullptr )
+            return string{ pObj->getName().c_str() };
         return {};
     }
 
@@ -87,7 +85,7 @@ namespace sw::editor
         _selectedComponentKey.clear();
     }
 
-    void EditorWorkspace::selectGameObject( const GameObjectPtr& pObj, SelectionMode mode )
+    void EditorWorkspace::selectGameObject( GameObject* pObj, SelectionMode mode )
     {
         if ( _pSelectionManager != nullptr )
             _pSelectionManager->selectObject( pObj, mode );
@@ -96,21 +94,19 @@ namespace sw::editor
         _inspectMode = InspectMode::GameObject;
     }
 
-    void EditorWorkspace::selectComponent( const GameObjectPtr& pObj, const ComponentPtr& pComp )
+    void EditorWorkspace::selectComponent( GameObject* pObj, Component* pComp )
     {
         if ( _pSelectionManager != nullptr )
             _pSelectionManager->selectObject( pObj, SelectionMode::Replace );
 
-        Component* pRawComp = pComp.get();
-        if ( pRawComp != nullptr )
-            _selectedComponentId = pRawComp->getComponentId();
+        if ( pComp != nullptr )
+            _selectedComponentId = pComp->getComponentId();
         else
             _selectedComponentId = 0;
 
-        GameObject* pRawObj = pObj.get();
         // 씬 파일의 부착 대상과 같은 키(`ComponentStableKey`)다. 소유자가 다른 컴포넌트는 되찾을 수 없으니 비운다.
-        if ( pRawObj != nullptr && pRawComp != nullptr && pRawComp->getOwner() == pRawObj )
-            _selectedComponentKey = ComponentStableKey::makeKey( pRawComp );
+        if ( pObj != nullptr && pComp != nullptr && pComp->getOwner() == pObj )
+            _selectedComponentKey = ComponentStableKey::makeKey( pComp );
         else
             _selectedComponentKey.clear();
 
@@ -139,7 +135,7 @@ namespace sw::editor
         }
 
         if ( _pSelectionManager != nullptr )
-            _pSelectionManager->selectObject( GameObjectPtr{ pObj }, SelectionMode::Replace );
+            _pSelectionManager->selectObject( pObj, SelectionMode::Replace );
 
         if ( _selectedComponentKey.empty() )
         {

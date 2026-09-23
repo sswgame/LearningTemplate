@@ -1,13 +1,13 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
-
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 
 namespace sw
 {
@@ -91,20 +91,20 @@ namespace sw::editor
         float32                 _farZ;
         CameraControlMode       _cameraMode;
         ViewportToolbarSettings _toolbarSettings;
-        string                  _gizmoUndoBeforeXml;
+        EditorObjectSnapshot    _gizmoUndoBefore;
         /**
          * @brief 이 프레임의 오브젝트 스냅샷 (용량 재사용). 시각화와 통계 오버레이가 함께 봅니다.
          * @details 값 반환 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당·복사합니다.
          *          예전에는 통계 오버레이가 **개수만 알려고** 한 번, 디버그 시각화가 한 번 그렇게
          *          불러서 프레임마다 씬을 두 번 복사했습니다.
          */
-        vector<GameObject*>    _listSceneObject;
-        vector<GameObjectPtr>  _listGizmoObject;
-        vector<string>         _listGizmoUndoXml;
-        vector<float4x4>       _listGizmoRelativeWorld;
-        float32                _arrGizmoGroupMatrix[16];
-        uint8                  _bRulerActive   : 1;
-        uint8                  _bGizmoTracking : 1;
-        [[maybe_unused]] uint8 _reservedGizmo  : 6;
+        vector<GameObject*>          _listSceneObject;
+        vector<GameObjectHandle>     _listGizmoObject; ///< 그룹 기즈모 대상 — 끄는 동안 여러 프레임을 넘기므로 핸들로 든다
+        vector<EditorObjectSnapshot> _listGizmoUndo;
+        vector<float4x4>             _listGizmoRelativeWorld;
+        float32                      _arrGizmoGroupMatrix[16];
+        uint8                        _bRulerActive   : 1;
+        uint8                        _bGizmoTracking : 1;
+        [[maybe_unused]] uint8       _reservedGizmo  : 6;
     };
 } // namespace sw::editor

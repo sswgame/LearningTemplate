@@ -18,7 +18,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CCD.h"
@@ -56,7 +55,7 @@ namespace sw::editor
         if ( pParent != nullptr )
             pCreated->attachToParent( pParent );
 
-        EditorTransaction::recordCreation( GameObjectPtr{ pCreated }, "Create GameObject" );
+        EditorTransaction::recordCreation( pCreated, "Create GameObject" );
         select( pCreated, SelectionMode::Replace );
         return pCreated;
     }
@@ -98,7 +97,7 @@ namespace sw::editor
         const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( pSrc->getObjectId() ) : string{};
         if ( prefabPath.empty() == false && pContext != nullptr )
             pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
-        EditorTransaction::recordCreation( GameObjectPtr{ pNewObj }, "Duplicate GameObject" );
+        EditorTransaction::recordCreation( pNewObj, "Duplicate GameObject" );
         select( pNewObj, SelectionMode::Replace );
         return pNewObj;
     }
@@ -112,12 +111,12 @@ namespace sw::editor
         if ( wouldCreateParentCycle( pChild, pNewParent ) )
             return false;
 
-        const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pChild } );
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pChild );
         if ( pChild->attachToParent( pNewParent ) == false )
             return false;
 
-        const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pChild } );
-        EditorTransaction::recordModify( GameObjectPtr{ pChild }, beforeXml, afterXml, undoLabel );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pChild );
+        EditorTransaction::recordModify( pChild, beforeSnapshot, afterSnapshot, undoLabel );
         select( pChild, SelectionMode::Replace );
         return true;
     }
@@ -129,10 +128,10 @@ namespace sw::editor
         if ( pObj == nullptr || pObj->getParent() == nullptr )
             return false;
 
-        const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->detachFromParent();
-        const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-        EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, undoLabel );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, undoLabel );
         select( pObj, SelectionMode::Replace );
         return true;
     }
@@ -148,12 +147,11 @@ namespace sw::editor
         if ( pContext != nullptr )
         {
             SelectionManager& sel = pContext->getSelectionManager();
-            GameObjectPtr     ptrObj{ pObj };
-            if ( sel.hasObject( ptrObj ) )
-                sel.selectObject( ptrObj, SelectionMode::Remove );
+            if ( sel.hasObject( pObj ) )
+                sel.selectObject( pObj, SelectionMode::Remove );
         }
 
-        EditorTransaction::recordDestruction( GameObjectPtr{ pObj }, "Destroy GameObject" );
+        EditorTransaction::recordDestruction( pObj, "Destroy GameObject" );
         pManager->destroyObject( pObj );
         return true;
     }
@@ -165,10 +163,10 @@ namespace sw::editor
         if ( pObj == nullptr || StringUtil::isNullOrEmpty( pNewName ) )
             return false;
 
-        const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->setName( hashed_string( pNewName ) );
-        const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-        EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, "Rename GameObject" );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Rename GameObject" );
         return true;
     }
 
@@ -204,7 +202,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getWorkspace().selectGameObject( GameObjectPtr{ pObj }, mode );
+        pContext->getWorkspace().selectGameObject( pObj, mode );
     }
 
     bool EditorSceneCommands::wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent )
@@ -214,11 +212,9 @@ namespace sw::editor
         return pNewParent->isDescendantOf( pChild );
     }
 
-    string EditorSceneCommands::captureSnapshot( GameObject* pObj )
+    EditorObjectSnapshot EditorSceneCommands::captureSnapshot( GameObject* pObj )
     {
-        if ( pObj == nullptr )
-            return {};
-        return EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+        return EditorTransaction::captureSnapshot( pObj );
     }
 
     void EditorSceneCommands::applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
@@ -312,15 +308,15 @@ namespace sw::editor
         translation._y = ( bHit ? hitY : 0.0f ) + bottomOffset;
     }
 
-    void EditorSceneCommands::commitModify( GameObject* pObj, string_view beforeXml, string_view undoLabel )
+    void EditorSceneCommands::commitModify( GameObject* pObj, const EditorObjectSnapshot& before, string_view undoLabel )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return;
-        if ( pObj == nullptr || beforeXml.empty() )
+        if ( pObj == nullptr || before._xml.empty() )
             return;
 
-        const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-        EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, undoLabel );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        EditorTransaction::recordModify( pObj, before, afterSnapshot, undoLabel );
     }
 
     EditorSceneCommands::SceneStatistics EditorSceneCommands::collectSceneStatistics( GameObjectManager* pManager )

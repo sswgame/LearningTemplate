@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Config/EditorData.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -93,5 +94,17 @@ namespace sw::editor
     {
         Scene* pScene = getActiveScene();
         return pScene != nullptr ? pScene->getObjectManager() : nullptr;
+    }
+
+    GameObject* findGameObject( GameObjectHandle handle )
+    {
+        GameObjectManager* pManager = getActiveObjectManager();
+        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveGameObject( handle ) : nullptr;
+    }
+
+    Component* findComponent( ComponentHandle handle )
+    {
+        GameObjectManager* pManager = getActiveObjectManager();
+        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
     }
 } // namespace sw::editor

@@ -29,7 +29,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -176,9 +175,9 @@ namespace sw::editor
         , _farZ{ 1000.0f }
         , _cameraMode{ CameraControlMode::Fly }
         , _toolbarSettings{}
-        , _gizmoUndoBeforeXml{}
+        , _gizmoUndoBefore{}
         , _listGizmoObject{}
-        , _listGizmoUndoXml{}
+        , _listGizmoUndo{}
         , _listGizmoRelativeWorld{}
         , _arrGizmoGroupMatrix{}
         , _bRulerActive{ SW_FALSE }
@@ -472,8 +471,8 @@ namespace sw::editor
         EditorPickResult pickResult{};
         if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) )
         {
-            pContext->getWorkspace().selectComponent( GameObjectPtr{ pickResult._pObject },
-                                                      ComponentPtr{ pickResult._pComponent } );
+            pContext->getWorkspace().selectComponent( pickResult._pObject,
+                                                      pickResult._pComponent );
         }
         else
         {
@@ -490,13 +489,13 @@ namespace sw::editor
         if ( EditorUtil::areSceneEditsAllowed() == false )
             return;
 
-        const vector<GameObjectPtr>& listSelected = pContext->getSelectionManager().getSelectedObjects();
-        vector<GameObject*>          listGizmo;
+        vector<GameObject*> listSelected;
+        pContext->getSelectionManager().getSelectedObjects( listSelected );
+        vector<GameObject*> listGizmo;
         listGizmo.reserve( listSelected.size() );
-        for ( const GameObjectPtr& pGo : listSelected )
+        for ( GameObject* pRaw : listSelected )
         {
-            GameObject* pRaw = pGo.get();
-            if ( pRaw == nullptr || pRaw->getPrimarySceneComponent() == nullptr )
+            if ( pRaw->getPrimarySceneComponent() == nullptr )
                 continue;
             listGizmo.push_back( pRaw );
         }
@@ -541,7 +540,7 @@ namespace sw::editor
         EditorViewportClientInternal::storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
 
         if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-            _gizmoUndoBeforeXml = EditorSceneCommands::captureSnapshot( pRaw );
+            _gizmoUndoBefore = EditorSceneCommands::captureSnapshot( pRaw );
 
         if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
         {
@@ -577,9 +576,9 @@ namespace sw::editor
         }
         else if ( _bGizmoTracking == SW_TRUE )
         {
-            EditorSceneCommands::commitModify( pRaw, _gizmoUndoBeforeXml, "Gizmo Transform" );
-            _gizmoUndoBeforeXml.clear();
-            _bGizmoTracking = SW_FALSE;
+            EditorSceneCommands::commitModify( pRaw, _gizmoUndoBefore, "Gizmo Transform" );
+            _gizmoUndoBefore = EditorObjectSnapshot{};
+            _bGizmoTracking  = SW_FALSE;
         }
     }
 
@@ -605,13 +604,13 @@ namespace sw::editor
             if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
             {
                 _listGizmoObject.clear();
-                _listGizmoUndoXml.clear();
+                _listGizmoUndo.clear();
                 _listGizmoRelativeWorld.clear();
                 const float4x4 invGroup = groupWorld.invert();
                 for ( GameObject* pObj : listGizmo )
                 {
-                    _listGizmoObject.push_back( GameObjectPtr{ pObj } );
-                    _listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
+                    _listGizmoObject.push_back( pObj->getHandle() );
+                    _listGizmoUndo.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
                     _listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
                 }
             }
@@ -624,7 +623,7 @@ namespace sw::editor
             const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
             {
-                GameObject* pObj = _listGizmoObject[objectIndex].get();
+                GameObject* pObj = editor::findGameObject( _listGizmoObject[objectIndex] );
                 if ( pObj == nullptr )
                     continue;
                 SceneComponent* pSc = pObj->getPrimarySceneComponent();
@@ -642,10 +641,10 @@ namespace sw::editor
         {
             const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-                EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
+                EditorSceneCommands::commitModify( editor::findGameObject( _listGizmoObject[objectIndex] ), _listGizmoUndo[objectIndex],
                                                    "Gizmo Transform" );
             _listGizmoObject.clear();
-            _listGizmoUndoXml.clear();
+            _listGizmoUndo.clear();
             _listGizmoRelativeWorld.clear();
             _bGizmoTracking = SW_FALSE;
         }
@@ -657,11 +656,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        GameObjectPtr pPrimary = pContext->getSelectionManager().getPrimaryObject();
-        if ( pPrimary.isValid() == false )
-            return;
-
-        GameObject* pRaw = pPrimary.get();
+        GameObject* pRaw = pContext->getSelectionManager().getPrimaryObject();
         if ( pRaw == nullptr )
             return;
 

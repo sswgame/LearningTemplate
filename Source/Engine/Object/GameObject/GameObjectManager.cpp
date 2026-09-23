@@ -135,21 +135,6 @@ namespace sw
     GameObjectManager::~GameObjectManager()
     {
         clear();
-        // 활성 슬롯이 나를 가리키고 있었다면 비운다 — 씬 층이 잊어도 죽은 포인터는 남지 않는다.
-        if ( _s_pActive == this )
-            _s_pActive = nullptr;
-    }
-
-    GameObjectManager* GameObjectManager::_s_pActive = nullptr;
-
-    void GameObjectManager::setActiveManager( GameObjectManager* pManager )
-    {
-        _s_pActive = pManager;
-    }
-
-    GameObjectManager* GameObjectManager::getActiveManager()
-    {
-        return _s_pActive;
     }
 
     /**
@@ -157,22 +142,40 @@ namespace sw
      */
     GameObject* GameObjectManager::createGameObject( hashed_string name )
     {
-        GameObject* pObj = nullptr;
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        return createGameObjectUnlocked( name, generateNewId() );
+    }
+
+    GameObject* GameObjectManager::createGameObjectWithId( hashed_string name, uint64 objectId )
+    {
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        if ( objectId == 0 )
+            return createGameObjectUnlocked( name, generateNewId() );
+
+        // 그 id 로 등록된 것이 아직 있으면(삭제 대기 포함) 쓰지 않는다. 옛 것의 지연 파괴가 id 로 정리하는 항목을 새 것 몫까지 지운다.
+        if ( findRegisteredUnlocked( objectId ) != nullptr )
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            const hashed_string                 uniqueName = makeUniqueNameUnlocked( name );
-            pObj                                           = _poolGameObject.create( uniqueName );
-
-            const uint64 newObjectId = generateNewId();
-            pObj->_objectId          = newObjectId;
-            pObj->_pOwnerManager     = this;
-
-            _mapNameToObject.insert_or_assign( uniqueName, pObj );
-            if ( _objectSlotTable.store( newObjectId, pObj ) == false )
-                _mapIdToObject.insert_or_assign( newObjectId, pObj );
-
-            _listPendingAdd.push_back( pObj );
+            SW_LOG_WARNING( "createGameObjectWithId: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.",
+                            objectId, name.c_str() );
+            return createGameObjectUnlocked( name, generateNewId() );
         }
+
+        _nextId.fetch_max( objectId + 1, std::memory_order_relaxed );
+        return createGameObjectUnlocked( name, objectId );
+    }
+
+    GameObject* GameObjectManager::createGameObjectUnlocked( hashed_string name, uint64 objectId )
+    {
+        const hashed_string uniqueName = makeUniqueNameUnlocked( name );
+        GameObject*         pObj       = _poolGameObject.create( uniqueName );
+        pObj->_objectId                = objectId;
+        pObj->_pOwnerManager           = this;
+
+        _mapNameToObject.insert_or_assign( uniqueName, pObj );
+        if ( _objectSlotTable.store( objectId, pObj ) == false )
+            _mapIdToObject.insert_or_assign( objectId, pObj );
+
+        _listPendingAdd.push_back( pObj );
         return pObj;
     }
 
@@ -196,16 +199,6 @@ namespace sw
         if ( uniqueName != newName )
             pObj->_name = uniqueName;
         _mapNameToObject.insert_or_assign( uniqueName, pObj );
-    }
-
-    GameObjectManager* GameObjectManager::resolveOwningManager( GameObjectManager* pPreferred )
-    {
-        if ( pPreferred != nullptr )
-            return pPreferred;
-
-        // 붙잡아 둔 매니저가 없으면 활성 씬의 것을 쓴다. 씬 층이 슬롯을 채우기 전(테스트·초기화 중)에는
-        // nullptr 이다 — 호출부는 그때 해석을 그냥 미룬다. 씬 층에 직접 묻지 않는다(setActiveManager 참고).
-        return _s_pActive;
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
@@ -408,8 +401,8 @@ namespace sw
         if ( pComp == nullptr )
             return;
 
-        // 등록부는 raw 포인터를 들고 있다. ComponentPtr/ComponentHandle 은 접근할 때마다 이름·타입으로
-        // 다시 찾기 때문에, 프레임마다 전부 훑는 렌더 경로에 쓰면 지금 걷어내려는 순회보다 비싸진다.
+        // 등록부는 raw 포인터를 들고 있다. ComponentHandle 은 접근할 때마다 id 로 오브젝트와 컴포넌트를
+        // 다시 찾아야 해서, 프레임마다 전부 훑는 렌더 경로에 쓰면 지금 걷어내려는 순회보다 비싸진다.
         // 대신 **메모리를 실제로 반납하는 이 한 지점**에서 등록을 해제해, 등록된 채로 해제되는 경우가
         // 구조적으로 없게 만든다. 목록에서 빼는 쪽(removeComponent, clearComponents)에만 걸어두면
         // 지연 파괴 경로가 그걸 우회한다. onUnregister 는 멱등이라 두 번 불려도 된다.

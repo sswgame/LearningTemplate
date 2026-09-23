@@ -6,9 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
@@ -44,8 +42,15 @@ namespace sw
 
         struct StateEnvelopeInternal
         {
-            static constexpr uint32 kMagic   = 0x53575354u; // 'SWST' (SW State Snapshot)
-            static constexpr uint32 kVersion = 1;
+            static constexpr uint32 kMagic = 0x53575354u; // 'SWST' (SW State Snapshot)
+            /**
+             * @brief 봉투 버전. 2 부터 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
+             * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 되살리고, 다르면(다른 실행의 세이브 파일) 읽고 버린다.
+             *          다른 실행에서 나간 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
+             */
+            static constexpr uint32 kVersion = 2;
+            /** @brief 오브젝트마다 id 가 실리기 시작한 버전. */
+            static constexpr uint32 kFirstVersionWithIdentity = 2;
         };
     } // namespace
 } // namespace sw
@@ -102,13 +107,14 @@ namespace sw
 
         for ( GameObject* pObj : listValidObject )
         {
+            ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
             ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes );
         }
 
         return true;
     }
 
-    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size )
+    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format )
     {
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
@@ -141,12 +147,27 @@ namespace sw
         const size_t     maxPossibleObject  = ( size - offset ) / kMinBytesPerObject;
         listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
-        // 1차: 모든 게임오브젝트 생성 및 직렬화 복구
+        // 1차: 모든 게임오브젝트 생성 및 직렬화 복구. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도 되살린다.
+        const bool bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
-            GameObject* pObj = pObjectManager->createGameObject();
+            ObjectIdentity identity;
+            if ( format != SceneObjectFormat::StateOnly )
+            {
+                const size_t identityBytes = ObjectStateSerializer::readIdentity( pData + offset, size - offset, identity );
+                if ( identityBytes == 0 )
+                {
+                    SW_LOG_ERROR( "Failed to read object identity at index %u", objectIndex );
+                    break;
+                }
+                offset += identityBytes;
+            }
+
+            GameObject* pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( "GameObject" ), identity._objectId )
+                                                : pObjectManager->createGameObject();
             string      parentName;
-            size_t      readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, parentName );
+            size_t      readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, parentName,
+                                                                            bRestoreIdentity ? &identity : nullptr );
             if ( readBytes == 0 )
             {
                 SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
@@ -187,6 +208,7 @@ namespace sw
         Archive arch;
         arch << StateEnvelopeInternal::kMagic;
         arch << StateEnvelopeInternal::kVersion;
+        arch << ObjectStateSerializer::getProcessToken();
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
@@ -247,7 +269,7 @@ namespace sw
         // 구버전/레거시 포맷 폴백
         if ( magic != StateEnvelopeInternal::kMagic )
         {
-            const bool bOk = deserializeSceneObjects( static_cast<const uint8*>( pInBuffer ), size );
+            const bool bOk = deserializeSceneObjects( static_cast<const uint8*>( pInBuffer ), size, SceneObjectFormat::StateOnly );
             onAfterStateDeserialize();
             return bOk;
         }
@@ -261,12 +283,21 @@ namespace sw
         uint32 version = 0;
         arch >> version;
 
+        SceneObjectFormat format = SceneObjectFormat::StateOnly;
+        if ( version >= StateEnvelopeInternal::kFirstVersionWithIdentity )
+        {
+            uint64 processToken = 0;
+            arch >> processToken;
+            const bool bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
+            format                  = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
+        }
+
         // 1) 씬 오브젝트 복원
         vector<uint8> bytesScene;
         if ( arch.readSection( bytesScene ) == false )
             return false;
 
-        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size() ) == false )
+        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size(), format ) == false )
             return false;
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 복원

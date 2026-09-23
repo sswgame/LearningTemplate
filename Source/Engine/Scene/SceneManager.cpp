@@ -9,7 +9,6 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -441,7 +440,6 @@ namespace sw
     void SceneManager::activateScene( Scene* pScene )
     {
         _pActiveScene = pScene;
-        GameObjectManager::setActiveManager( ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr );
     }
 
     /**

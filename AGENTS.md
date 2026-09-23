@@ -153,6 +153,14 @@ able to guess the rest; that is the whole point.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).
+- **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid
+  only inside the current call (at most the current frame). Anything kept across frames — members,
+  selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and
+  resolves it on each use through the owning manager (`resolveGameObject` / `resolveComponent`, `nullptr`
+  once the target is gone). Handles are ids that are never reused, so they survive renames; editor undo,
+  play-session restore and hot reload recreate objects with their original ids. Ids are counted per
+  `GameObjectManager`, so a handle means nothing in another scene. Structural links the object model
+  maintains itself (owner, scene hierarchy, registries) stay raw pointers.
 - Do not spell out buffer/path-size magic numbers (e.g. `char buf[64]`,
   `fixed_string<256>`, `StringBuilder<32>`). Use the sentinels in the
   `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`

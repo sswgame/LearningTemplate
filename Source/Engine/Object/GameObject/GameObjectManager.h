@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -67,32 +68,20 @@ namespace sw
         GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) );
 
         /**
+         * @brief 예전에 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
+         * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectId 로 대상을 찾으므로, 되살린 오브젝트가 같은 id 를 받아야
+         *          그 너머로도 핸들이 이어집니다. 그 id 로 등록된 오브젝트가 아직 있으면(삭제 대기 포함) 새 id 를 쓰고 경고를 남깁니다.
+         *          옛 오브젝트의 지연 파괴가 나중에 id 로 정리하는 항목(슬롯 표 · 에디터 GUID 맵 등)이 새 오브젝트 몫까지 지우지
+         *          않게 하기 위해서입니다. 발급 카운터는 그 id 뒤로 밀어 앞으로의 발급과 겹치지 않게 합니다.
+         * @return 만든 오브젝트. 실제로 받은 id 는 `getObjectId()` 로 확인합니다.
+         */
+        GameObject* createGameObjectWithId( hashed_string name, uint64 objectId );
+
+        /**
          * @brief 등록된 GameObject의 이름을 바꾸고 이름 맵을 갱신합니다.
          * @details GameObject::setName이 내부적으로 호출합니다.
          */
         void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
-
-        /**
-         * @brief 핸들이 쓸 매니저를 정합니다 — 붙잡아 둔 것이 있으면 그것, 없으면 **활성 씬**의 것.
-         * @param pPreferred 핸들이 들고 있는 매니저. nullptr 이면 활성 씬에게 묻는다.
-         * @return 쓸 매니저. 엔진 서비스가 묶여 있지 않거나 활성 씬이 없으면 nullptr.
-         * @details `ComponentPtr` 와 `GameObjectPtr` 가 **같은 여덟 줄을 각자** 들고 있었다. 지연 해석은
-         *          "씬이 통째로 바뀌어도 이름으로 다시 찾는다" 는 계약의 핵심이라, 한쪽만 규칙이 바뀌면
-         *          두 핸들이 서로 다른 씬을 보게 된다.
-         */
-        static GameObjectManager* resolveOwningManager( GameObjectManager* pPreferred );
-
-        /**
-         * @brief 활성 씬의 매니저를 **Object 층에** 알립니다. 씬 층(`SceneManager`)이 활성 씬을 바꿀 때 부릅니다.
-         * @details `resolveOwningManager` 의 폴백("붙잡아 둔 매니저가 없으면 활성 씬의 것")이 읽는 슬롯이다.
-         *          예전에는 그 질문을 `SceneManager` 에게 직접 했고, 그래서 Object 가 Scene 을 include 했다 —
-         *          월드가 액터를 아는 것은 맞지만 액터 층이 월드 관리자를 아는 것은 방향이 거꾸로다. 언리얼의
-         *          `GWorld` · Godot 의 `SceneTree` 처럼 **슬롯은 아래층이 갖고 위층이 채운다.** nullptr 을 주면
-         *          비운다. 매니저가 사라질 때는 스스로 슬롯에서 빠지므로 죽은 포인터가 남지 않는다.
-         */
-        static void setActiveManager( GameObjectManager* pManager );
-        /** @brief 활성 씬의 매니저. 씬 층이 채우기 전이거나 활성 씬이 없으면 nullptr. */
-        static GameObjectManager* getActiveManager();
 
         /** @brief 이름으로 GameObject를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
@@ -264,6 +253,9 @@ namespace sw
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. pending-kill이면 nullptr. */
         Component* resolveComponent( ComponentHandle handle );
 
+        /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr. 락이 없습니다(`findGameObjectById`). */
+        GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectById( handle.objectId() ); }
+
         /** @brief 이 씬의 AABB 질의 월드입니다. */
         PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
         /** @brief 이 씬의 AABB 질의 월드입니다. */
@@ -386,6 +378,8 @@ namespace sw
         uint32 applyQueuedTransformWrites();
         /** @brief 새 ObjectId를 발급합니다. */
         uint64 generateNewId();
+        /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
+        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectId );
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
         hashed_string makeUniqueNameUnlocked( hashed_string requested );
         /**
@@ -518,8 +512,5 @@ namespace sw
         LightRegistry _lightRegistry;
         /** @brief 틱에 참여하는 오브젝트의 등록부. 같은 규칙으로 소유만 합니다. */
         TickRegistry _tickRegistry;
-
-        /** @brief 활성 씬의 매니저 슬롯 — `setActiveManager` 참고. 메인 스레드가 씬 전환 때만 쓴다. */
-        static GameObjectManager* _s_pActive;
     };
 } // namespace sw

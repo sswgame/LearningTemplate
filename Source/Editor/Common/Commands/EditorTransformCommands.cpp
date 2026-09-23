@@ -18,7 +18,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
@@ -52,12 +51,12 @@ namespace sw::editor
             {
                 AlignAxis _axis{ AlignAxis::X };
 
-                bool operator()( const GameObjectPtr& lhs, const GameObjectPtr& rhs ) const
+                bool operator()( const GameObject* pLeft, const GameObject* pRight ) const
                 {
-                    if ( lhs.isValid() == false || rhs.isValid() == false )
+                    if ( pLeft == nullptr || pRight == nullptr )
                         return false;
-                    const SceneComponent* pLeftSc  = lhs->getPrimarySceneComponent();
-                    const SceneComponent* pRightSc = rhs->getPrimarySceneComponent();
+                    const SceneComponent* pLeftSc  = pLeft->getPrimarySceneComponent();
+                    const SceneComponent* pRightSc = pRight->getPrimarySceneComponent();
                     const float3          posA     = pLeftSc != nullptr ? pLeftSc->getWorldPosition() : float3{};
                     const float3          posB     = pRightSc != nullptr ? pRightSc->getWorldPosition() : float3{};
                     return worldAxisValue( posA, _axis ) < worldAxisValue( posB, _axis );
@@ -74,9 +73,8 @@ namespace sw::editor
         if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr )
             return false;
 
-        GameObject* const pOwner    = pTargetComp->getOwner();
-        const string      beforeXml = ( pOwner != nullptr ) ? EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } )
-                                                            : string{};
+        GameObject* const          pOwner         = pTargetComp->getOwner();
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
 
         bool bSuccess = false;
         if ( bytes.empty() == false )
@@ -87,8 +85,8 @@ namespace sw::editor
 
         if ( bSuccess && pOwner != nullptr )
         {
-            const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } );
-            EditorTransaction::recordModify( GameObjectPtr{ pOwner }, beforeXml, afterXml, "Paste Component Values" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
+            EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Paste Component Values" );
         }
         return bSuccess;
     }
@@ -107,7 +105,7 @@ namespace sw::editor
         if ( pManager == nullptr )
             return nullptr;
 
-        const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
 
         Component* pNewComp = pManager->addComponentByName( pTargetObj, hashed_string{ typeName } );
         if ( pNewComp != nullptr && pNewComp->getTypeInfo() != nullptr )
@@ -128,8 +126,8 @@ namespace sw::editor
                                 string{ typeName }.c_str() );
             }
 
-            const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
-            EditorTransaction::recordModify( GameObjectPtr{ pTargetObj }, beforeXml, afterXml, "Paste Component as New" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
+            EditorTransaction::recordModify( pTargetObj, beforeSnapshot, afterSnapshot, "Paste Component as New" );
             return pNewComp;
         }
         return nullptr;
@@ -167,15 +165,14 @@ namespace sw::editor
         if ( FileUtil::readTextFile( presetFilePath, xmlData ) == false )
             return false;
 
-        GameObject* const pOwner    = pComp->getOwner();
-        const string      beforeXml = ( pOwner != nullptr ) ? EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } )
-                                                            : string{};
+        GameObject* const          pOwner         = pComp->getOwner();
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
 
         const bool bSuccess = XmlSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
         if ( bSuccess && pOwner != nullptr )
         {
-            const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } );
-            EditorTransaction::recordModify( GameObjectPtr{ pOwner }, beforeXml, afterXml, "Apply Component Preset" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
+            EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Apply Component Preset" );
         }
         return bSuccess;
     }
@@ -186,23 +183,20 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        SelectionManager&            selMgr  = pContext->getSelectionManager();
-        const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+        vector<GameObject*> listSel;
+        pContext->getSelectionManager().getSelectedObjects( listSel );
         if ( listSel.empty() )
             return;
 
         EditorTransaction::beginTransaction( "Snap to Ground" );
 
-        for ( const GameObjectPtr& pGoPtr : listSel )
+        for ( GameObject* pGo : listSel )
         {
-            GameObject* pGo = pGoPtr.get();
-            if ( pGo == nullptr )
-                continue;
             SceneComponent* pSc = pGo->getPrimarySceneComponent();
             if ( pSc == nullptr )
                 continue;
 
-            const string beforeXml = EditorTransaction::captureSnapshot( pGoPtr );
+            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
             float3       pos          = pSc->getWorldPosition();
             const float3 scl          = pSc->getLocalScale();
@@ -221,8 +215,8 @@ namespace sw::editor
             pos._y = bottomOffset;
             pSc->setLocalPosition( pos );
 
-            const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
-            EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Snap to Ground" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Snap to Ground" );
         }
 
         EditorTransaction::endTransaction();
@@ -234,8 +228,8 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        SelectionManager&            selMgr  = pContext->getSelectionManager();
-        const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+        vector<GameObject*> listSel;
+        pContext->getSelectionManager().getSelectedObjects( listSel );
         if ( listSel.size() < 2 )
             return;
 
@@ -248,10 +242,9 @@ namespace sw::editor
         float32 sumVal     = 0.0f;
         uint32  validCount = 0;
 
-        for ( const GameObjectPtr& pGoPtr : listSel )
+        for ( GameObject* pGo : listSel )
         {
-            GameObject* pGo = pGoPtr.get();
-            if ( pGo == nullptr || pGo->getPrimarySceneComponent() == nullptr )
+            if ( pGo->getPrimarySceneComponent() == nullptr )
                 continue;
 
             const float32 val = EditorTransformCommandsInternal::worldAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
@@ -273,24 +266,23 @@ namespace sw::editor
 
         EditorTransaction::beginTransaction( "Align Objects" );
 
-        for ( const GameObjectPtr& pGoPtr : listSel )
+        for ( GameObject* pGo : listSel )
         {
-            GameObject* pGo = pGoPtr.get();
-            if ( pGo == nullptr || pGo->getPrimarySceneComponent() == nullptr )
+            if ( pGo->getPrimarySceneComponent() == nullptr )
                 continue;
 
-            const string    beforeXml    = EditorTransaction::captureSnapshot( pGoPtr );
-            SceneComponent* pSc          = pGo->getPrimarySceneComponent();
-            const float3    localPos     = pSc->getLocalPosition();
-            const float3    worldPos     = pSc->getWorldPosition();
-            const float32   curWorldAxis = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
-            const float32   delta        = targetVal - curWorldAxis;
-            float3          newLocal     = localPos;
+            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
+            SceneComponent*            pSc            = pGo->getPrimarySceneComponent();
+            const float3               localPos       = pSc->getLocalPosition();
+            const float3               worldPos       = pSc->getWorldPosition();
+            const float32              curWorldAxis   = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
+            const float32              delta          = targetVal - curWorldAxis;
+            float3                     newLocal       = localPos;
             EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
             pSc->setLocalPosition( newLocal );
 
-            const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
-            EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Align Objects" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Align Objects" );
         }
 
         EditorTransaction::endTransaction();
@@ -302,14 +294,14 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        SelectionManager&     selMgr  = pContext->getSelectionManager();
-        vector<GameObjectPtr> listSel = selMgr.getSelectedObjects();
+        vector<GameObject*> listSel;
+        pContext->getSelectionManager().getSelectedObjects( listSel );
 
         // primary scene component가 없는 오브젝트는 분배 대상에서 제외합니다(front/back 역참조 보호).
         listSel.erase( std::remove_if( listSel.begin(), listSel.end(),
-                                       []( const GameObjectPtr& pGoPtr )
+                                       []( const GameObject* pGo )
         {
-            return pGoPtr.isValid() == false || pGoPtr->getPrimarySceneComponent() == nullptr;
+            return pGo->getPrimarySceneComponent() == nullptr;
         } ),
                        listSel.end() );
         if ( listSel.size() < 3 )
@@ -330,23 +322,23 @@ namespace sw::editor
 
         for ( size_t idx = 0; idx < listSel.size(); ++idx )
         {
-            const GameObjectPtr& pGoPtr = listSel[idx];
-            if ( pGoPtr.isValid() == false || pGoPtr->getPrimarySceneComponent() == nullptr )
+            GameObject* pGo = listSel[idx];
+            if ( pGo->getPrimarySceneComponent() == nullptr )
                 continue;
 
-            const string    beforeXml     = EditorTransaction::captureSnapshot( pGoPtr );
-            SceneComponent* pSc           = pGoPtr->getPrimarySceneComponent();
-            const float3    localPos      = pSc->getLocalPosition();
-            const float3    worldPos      = pSc->getWorldPosition();
-            const float32   curWorldAxis  = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
-            const float32   targetDistVal = minVal + step * static_cast<float32>( idx );
-            const float32   delta         = targetDistVal - curWorldAxis;
-            float3          newLocal      = localPos;
+            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
+            SceneComponent*            pSc            = pGo->getPrimarySceneComponent();
+            const float3               localPos       = pSc->getLocalPosition();
+            const float3               worldPos       = pSc->getWorldPosition();
+            const float32              curWorldAxis   = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
+            const float32              targetDistVal  = minVal + step * static_cast<float32>( idx );
+            const float32              delta          = targetDistVal - curWorldAxis;
+            float3                     newLocal       = localPos;
             EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
             pSc->setLocalPosition( newLocal );
 
-            const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
-            EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Distribute Objects" );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Distribute Objects" );
         }
 
         EditorTransaction::endTransaction();

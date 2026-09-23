@@ -16,9 +16,6 @@
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Object/Component/ComponentPtr.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
-
 namespace sw
 {
     class Component;
@@ -75,16 +72,17 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) 선택 — 오브젝트 / 컴포넌트
         // ------------------------------------------------------------------------------
-        uint64        getSelectedObjectId() const;
-        GameObjectPtr getSelectedObject() const;
-        uint64        getSelectedComponentId() const { return _selectedComponentId; }
-        void          setSelectedComponentId( uint64 id ) { _selectedComponentId = id; }
-        string        getSelectedObjectName() const;
-        void          setSelectedComponentKey( string_view key ) { _selectedComponentKey = key; }
-        void          clearSelection();
+        uint64 getSelectedObjectId() const;
+        /** @brief 처음 선택한 오브젝트. 선택이 없거나 사라졌으면 nullptr — 이번 호출 안에서만 쓰십시오. */
+        GameObject* getSelectedObject() const;
+        uint64      getSelectedComponentId() const { return _selectedComponentId; }
+        void        setSelectedComponentId( uint64 id ) { _selectedComponentId = id; }
+        string      getSelectedObjectName() const;
+        void        setSelectedComponentKey( string_view key ) { _selectedComponentKey = key; }
+        void        clearSelection();
 
-        void selectGameObject( const GameObjectPtr& pObj, SelectionMode mode = SelectionMode::Replace );
-        void selectComponent( const GameObjectPtr& pObj, const ComponentPtr& pComp );
+        void selectGameObject( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
+        void selectComponent( GameObject* pObj, Component* pComp );
         void remapSelectionByObjectName( GameObjectManager* pGameObjectManager );
 
         // ------------------------------------------------------------------------------

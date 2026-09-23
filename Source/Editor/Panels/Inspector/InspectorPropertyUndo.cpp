@@ -3,10 +3,11 @@
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 #include <imgui.h>
 
@@ -14,12 +15,12 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 편집이 시작된 위젯 하나의 "편집 전" 스냅샷. */
+        /** @brief 편집이 시작된 위젯 하나의 "편집 전" 스냅샷. 대상은 위젯이 풀릴 때까지 여러 프레임을 넘기므로 핸들로 든다. */
         struct PendingEdit
         {
-            string        _beforeXml;
-            GameObjectPtr _pObj;
-            string        _label;
+            EditorObjectSnapshot _before;
+            GameObjectHandle     _target;
+            string               _label;
         };
 
         /**
@@ -39,11 +40,12 @@ namespace sw::editor
             const ImGuiID id = ImGui::GetItemID();
             if ( ImGui::IsItemActivated() )
             {
+                GameObject* pSelected = pContext->getWorkspace().getSelectedObject();
                 PendingEdit pending;
-                pending._pObj      = pContext->getWorkspace().getSelectedObject();
-                pending._beforeXml = EditorTransaction::captureSnapshot( pending._pObj );
-                pending._label     = ( pLabel != nullptr ) ? pLabel : "Property";
-                s_mapPending[id]   = std::move( pending );
+                pending._target  = ( pSelected != nullptr ) ? pSelected->getHandle() : GameObjectHandle{};
+                pending._before  = EditorTransaction::captureSnapshot( pSelected );
+                pending._label   = ( pLabel != nullptr ) ? pLabel : "Property";
+                s_mapPending[id] = std::move( pending );
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() == false )
@@ -53,9 +55,10 @@ namespace sw::editor
             if ( iter == s_mapPending.end() )
                 return;
 
-            const string afterXml = EditorTransaction::captureSnapshot( iter->second._pObj );
-            const string label    = string( "Edit " ) + iter->second._label;
-            EditorTransaction::recordModify( iter->second._pObj, iter->second._beforeXml, afterXml, label );
+            GameObject*                pTarget       = editor::findGameObject( iter->second._target );
+            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
+            const string               label         = string( "Edit " ) + iter->second._label;
+            EditorTransaction::recordModify( pTarget, iter->second._before, afterSnapshot, label );
             s_mapPending.erase( iter );
         }
     } // namespace

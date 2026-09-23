@@ -13,7 +13,6 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -145,11 +144,11 @@ namespace sw::editor
         if ( pLoaded == nullptr || pLoaded->isValid() == false )
             return false;
 
-        const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         ObjectStateSerializer::loadFromXmlString( pObj, pLoaded->getStateData() );
         pObj->applyLoadedHierarchy();
-        const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-        EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, "Revert to Prefab" );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Revert to Prefab" );
         return true;
     }
 

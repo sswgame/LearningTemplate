@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -21,6 +22,8 @@
 
 namespace sw
 {
+    struct ObjectIdentity;
+
     class GameObjectManager;
     class ObjectStateSerializer;
     class PoolAllocator;
@@ -83,6 +86,9 @@ namespace sw
 
         /** @brief 고유 오브젝트 ID (UID) 반환 */
         uint64 getObjectId() const { return _objectId; }
+
+        /** @brief 이 오브젝트를 가리키는 핸들을 반환합니다. 프레임을 넘겨 들고 있을 때는 포인터 대신 이것을 보관합니다. */
+        GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectId ); }
 
         /** @brief 매니저 인스턴스 반환 */
         GameObjectManager* getManager() const { return _pOwnerManager; }
@@ -194,13 +200,6 @@ namespace sw
          *          호출처 열둘이 전부 스스로 null 을 다시 걸렀다.
          */
         const ComponentList& getComponents() const { return _listComponent; }
-
-        /**
-         * @brief 컴포넌트 목록이 바뀔 때마다 오르는 세대 — 붙이기 · 떼기 · 비우기 · 로드.
-         * @details `ComponentPtr` 가 캐시를 검증하는 근거다: 세대가 같으면 캐시된 포인터는 아직 이 목록에 있다(떼는 길은 전부 세대를
-         *          올린다). 예전에는 접근마다 목록을 훑어 포인터를 찾았다.
-         */
-        uint32 getComponentGeneration() const { return _componentGeneration; }
 
         /** @brief 힙 할당 없이 유효한 모든 컴포넌트를 방문합니다. */
         template <typename Func>
@@ -315,6 +314,32 @@ namespace sw
         /** @brief 프리미티브 집합이 통째로 바뀌었음을 매니저에 알립니다. */
         void markPrimitiveSetDirtyOnManager();
 
+        /**
+         * @class ComponentIdRestoreScope
+         * @brief 이 구간 동안 대상 오브젝트에 새로 붙는 컴포넌트가 `ObjectIdentity` 에 적힌 원래 ID 를 받게 합니다.
+         * @details `ObjectStateSerializer` 가 상태를 되돌리는 로드를 이것으로 감쌉니다. 로드는 컴포넌트를 전부 지우고 팩토리로
+         *          다시 만들기 때문에, 감싸지 않으면 속성 하나를 되돌려도 컴포넌트마다 새 ID 가 나가 `ComponentHandle` 이 끊깁니다.
+         *          ID 는 등록(`onRegister`)보다 먼저 들어가므로 서브틱 등록도 원래 ID 로 이뤄집니다. 스레드 로컬이라 다른
+         *          스레드의 생성과 섞이지 않고, 대상이 아닌 오브젝트에 붙는 컴포넌트는 건드리지 않습니다.
+         *          ID 목록과 타입이 맞는 것만 차례로 가져갑니다 — 목록에 없는 컴포넌트는 새 ID 를 받습니다.
+         */
+        class ComponentIdRestoreScope
+        {
+        public:
+            /** @brief @p pIdentity 가 nullptr 이면 아무것도 하지 않습니다(새 ID). */
+            ComponentIdRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity );
+            /** @brief 들어오기 전 상태로 되돌립니다. */
+            ~ComponentIdRestoreScope();
+
+            ComponentIdRestoreScope( const ComponentIdRestoreScope& )            = delete;
+            ComponentIdRestoreScope& operator=( const ComponentIdRestoreScope& ) = delete;
+
+        private:
+            const GameObject*     _pPreviousTarget;   ///< 바깥 구간의 대상 (보통 nullptr)
+            const ObjectIdentity* _pPreviousIdentity; ///< 바깥 구간의 ID 목록
+            size_t                _previousCursor;    ///< 바깥 구간이 어디까지 가져갔는지
+        };
+
         static atomic<uint64> _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 
     private:
@@ -329,7 +354,6 @@ namespace sw
         /// @brief 이 액터가 소유한 컴포넌트 (= `ComponentList`, 인라인 네 칸). 별칭으로 적으면 리플렉션 파서가 컨테이너로 보지 못한다.
         PROPERTY()
         vector<Component*, InlineAllocator<Component*, 4>> _listComponent;
-        uint32                                             _componentGeneration; ///< 목록이 바뀔 때마다 오른다 (`getComponentGeneration`)
         /**
          * @brief primary SceneComponent 캐시 (`getPrimarySceneComponent`). 없거나 모르면 nullptr — 다음 호출이 목록에서 찾아 적는다.
          * @details 원자인 이유: 틱 중 워커들이 읽고, 죽은 것을 발견한 워커가 다시 찾아 적는다(같은 답을 겹쳐 쓴다).

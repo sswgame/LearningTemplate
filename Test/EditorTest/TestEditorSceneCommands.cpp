@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -83,7 +84,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, ApplyTransformAndSnapshotSafety )
 
     // nullptr 안전성
     EditorSceneCommands::applyLocalTransform( nullptr, targetPos, targetRot, targetScale );
-    SW_EXPECT_TRUE( EditorSceneCommands::captureSnapshot( nullptr ).empty() );
+    SW_EXPECT_TRUE( EditorSceneCommands::captureSnapshot( nullptr )._xml.empty() );
 }
 
 /**

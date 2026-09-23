@@ -28,7 +28,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -179,7 +178,7 @@ namespace sw::editor
                 if ( pManager == nullptr )
                     return nullptr;
 
-                GameObject* pPrimary = ws.getSelectedObject().get();
+                GameObject* pPrimary = ws.getSelectedObject();
                 if ( pPrimary != nullptr && matchesPrefabPath( ws, pPrimary, prefabPath ) )
                 {
                     if ( pUnderRoot == nullptr || pPrimary->isDescendantOf( pUnderRoot ) )
@@ -485,7 +484,7 @@ namespace sw::editor
             return nullptr;
 
         const utf8* pLabel = ( pUndoLabel != nullptr ) ? pUndoLabel : "Spawn Prefab";
-        EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, pLabel );
+        EditorTransaction::recordCreation( pSpawned, pLabel );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }
@@ -518,7 +517,7 @@ namespace sw::editor
             pSprite->setTextureName( relPath );
         }
 
-        EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Sprite in Viewport" );
+        EditorTransaction::recordCreation( pSpawned, "Spawn Sprite in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }
@@ -808,7 +807,7 @@ namespace sw::editor
         frame._bSpawnedRoot = bSpawnedRoot;
         EditorAssetCommandsInternal::hideObjectsOutsideIsolation( pManager, pRoot, frame._listHidden );
         ws.pushPrefabIsolation( std::move( frame ) );
-        ws.selectGameObject( GameObjectPtr{ pRoot } );
+        ws.selectGameObject( pRoot );
         ws.setFocusedAssetPath( pathStr.c_str() );
         ws.requestOpenPanel( "Prefab Editor" );
         pContext->getNotificationManager().push( "Prefab", "Isolated prefab in the current scene", NotificationType::Info );
@@ -845,8 +844,8 @@ namespace sw::editor
         const bool bFullyExit = ws.popPrefabIsolation();
         if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
         {
-            if ( pContext->getSelectionManager().hasObject( GameObjectPtr{ pRoot } ) )
-                pContext->getSelectionManager().selectObject( GameObjectPtr{ pRoot }, SelectionMode::Remove );
+            if ( pContext->getSelectionManager().hasObject( pRoot ) )
+                pContext->getSelectionManager().selectObject( pRoot, SelectionMode::Remove );
             pManager->destroyObject( pRoot );
             pRoot = nullptr;
         }
@@ -863,7 +862,7 @@ namespace sw::editor
         if ( pManager != nullptr )
             pParentRoot = pManager->findGameObjectById( ws.getPrefabIsolationRootId() );
         if ( pParentRoot != nullptr )
-            ws.selectGameObject( GameObjectPtr{ pParentRoot } );
+            ws.selectGameObject( pParentRoot );
         ws.setFocusedAssetPath( ws.getPrefabIsolationPrefabPath().c_str() );
         return true;
     }

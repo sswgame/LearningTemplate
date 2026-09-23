@@ -34,14 +34,13 @@ Scene
 
 ```text
 Object/
-├─ GameObject/          # GO, Manager, Soft 포인터, 직렬화
+├─ GameObject/          # GO, Manager, 직렬화 (참조 핸들 타입은 Core/Container 의 GameObjectHandle · ComponentHandle)
 │  ├─ GameObject.*              # 액터 — 컴포넌트 목록 · 태그 · 활성 · 계층. 매니저 헤더를 포함하지 **않는다**
 │  ├─ GameObjectManager.h
 │  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리
 │  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 웨이브
 │  ├─ PrimitiveRegistry.* · LightRegistry.*
-│  ├─ GameObjectPtr.h
 │  └─ ObjectStateSerializer.*
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
@@ -223,9 +222,9 @@ GameObject* byName = mgr->findGameObjectByName( hashed_string( "Boss" ) );
 vector<GameObject*> monsters;
 mgr->findGameObjectsByTag( "Monster"_tag, monsters );
 
-auto stats = player->getComponent<UnitStatsComponent>(); // Soft 핸들
-if ( UnitStatsComponent* p = stats.get() )
-    p->takeDamage( 10 );
+UnitStatsComponent* pStats = player->getComponent<UnitStatsComponent>(); // 빌린 포인터 — 이번 호출 안에서만
+if ( pStats != nullptr )
+    pStats->takeDamage( 10 );
 ```
 
 ### 5) 태그
@@ -255,16 +254,31 @@ GameObject* go = game::getResourceManager().getPrefabManager().spawn(
 
 ---
 
-## Soft 포인터 (파괴 후에도 안전하게)
+## 오브젝트 · 컴포넌트를 가리키는 방법 — 빌리기는 포인터, 보관은 핸들
 
-날것 `GameObject*` / `Component*` 를 오래 들고 있으면, 상대가 죽은 뒤 댕글링이 됩니다.
+방법은 두 가지뿐입니다.
 
-| 타입 | 용도 |
-|------|------|
-| `GameObjectPtr` | GO를 약하게 참조. 파괴되면 `get()` → `nullptr`. |
-| `ComponentPtr` / `TComponentHandle<T>` | 컴포넌트 약참조. |
+| 타입 | 언제 | 대상이 사라지면 |
+|------|------|------|
+| `GameObject*` / `Component*` | **빌리기.** 지금 부른 함수 안에서, 길어야 이번 프레임 안에서만 씁니다. | 댕글링 — 들고 있으면 안 됩니다. |
+| `GameObjectHandle` / `ComponentHandle` | **보관.** 프레임을 넘겨 들고 있을 때(멤버 · 선택 목록 · 되돌리기 기록). | 풀면 `nullptr`. |
 
-핫리로드 후에는 엔진이 활성 Soft 포인터를 다시 붙입니다 (`rebindAllActivePointers`).
+```cpp
+_target = pEnemy->getHandle();                                 // 보관
+...
+GameObject* pTarget = pManager->resolveGameObject( _target );  // 쓸 때마다 풀기 (락 없음)
+if ( pTarget != nullptr ) { ... }
+```
+
+- 핸들은 id 로 찾습니다(`objectId`, 컴포넌트는 `objectId + componentId`). id 는 다시 쓰지 않으므로 파괴된 대상의 핸들이
+  다른 오브젝트로 풀리지 않고, **이름을 바꿔도 끊기지 않습니다.**
+- 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드는 오브젝트를 다시 만들 때 **같은 id 를 되살립니다**
+  (`GameObjectManager::createGameObjectWithId`, `ObjectStateSerializer` 의 `ObjectIdentity`). 그래서 그 너머로도 핸들이 이어집니다.
+- objectId 는 매니저마다 따로 셉니다. 핸들은 자기를 만든 매니저(씬)에게 풉니다.
+- 씬 · 프리팹 파일에는 id 가 저장되지 않습니다. 파일을 넘어 오브젝트끼리 가리키는 참조는 아직 없습니다(백로그).
+
+예전에는 이름으로 찾는 `GameObjectPtr` · `ComponentPtr` 도 있었습니다. 이름을 바꾸면 끊겼고, 옛 이름으로 새 오브젝트가
+생기면 조용히 그쪽을 가리켰으며, `ComponentPtr` 은 같은 타입 컴포넌트가 둘이면 첫 번째를 잡았습니다. 2026-09-24 에 지웠습니다.
 
 ---
 

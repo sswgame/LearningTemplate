@@ -92,6 +92,19 @@ namespace sw
             return _value.fetch_add( arg, order );
         }
 
+        /**
+         * @brief 값이 @p value 보다 작으면 @p value 로 올리고, 바꾸기 전 값을 돌려줍니다(C++26 `std::atomic::fetch_max` 와 같은 뜻).
+         * @details CAS 로 돕니다. 되살린 ID 뒤로 발급 카운터를 미는 자리처럼 드물게 쓰는 용도입니다.
+         */
+        T fetch_max( T value, std::memory_order order = std::memory_order_seq_cst ) noexcept
+        {
+            T current = _value.load( std::memory_order_relaxed );
+            while ( current < value && _value.compare_exchange_weak( current, value, order, std::memory_order_relaxed ) == false )
+            {
+            }
+            return current;
+        }
+
         T fetch_sub( T arg, std::memory_order order = std::memory_order_seq_cst ) noexcept
         {
             return _value.fetch_sub( arg, order );

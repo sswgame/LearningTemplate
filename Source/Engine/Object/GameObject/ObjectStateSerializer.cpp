@@ -3,6 +3,8 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -53,6 +55,15 @@ namespace sw
                 if ( pComp == nullptr || pComp->isPendingKill() )
                     return nullptr;
                 return pComp->getTypeInfo();
+            }
+
+            /** @brief 프로세스 토큰을 새로 정합니다 — `Uuid` 의 무작위 바이트 8 개. 0 은 "토큰 없음" 과 구분되지 않아 피한다. */
+            static uint64 makeProcessToken()
+            {
+                const Uuid uuid  = Uuid::generate();
+                uint64     token = 0;
+                Memory::copy( &token, uuid._arrBytes, sizeof( token ) );
+                return ( token != 0 ) ? token : 1;
             }
 
             static SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
@@ -132,7 +143,8 @@ namespace sw
         return true;
     }
 
-    size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, string& outParentName )
+    size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, string& outParentName,
+                                                        const ObjectIdentity* pIdentity )
     {
         if ( pGameObject == nullptr || pData == nullptr || size == 0 )
             return 0;
@@ -156,8 +168,9 @@ namespace sw
         const hashed_string oldName = pGameObject->getName();
         pGameObject->clearComponents();
 
-        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32           ver{ 0 };
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32                                    ver{ 0 };
         if ( BinarySerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
                                                      kObjectReflectedSchemaVersion, nullptr, nullptr, ctx ) == false )
             return 0;
@@ -167,7 +180,7 @@ namespace sw
         return bodyStart + bodySize;
     }
 
-    bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString )
+    bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectIdentity* pIdentity )
     {
         if ( pGameObject == nullptr || xmlString.empty() )
             return false;
@@ -179,8 +192,9 @@ namespace sw
         const hashed_string oldName = pGameObject->getName();
         pGameObject->clearComponents();
 
-        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32           ver{ 0 };
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32                                    ver{ 0 };
         if ( XmlSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, xmlString, kObjectReflectedSchemaVersion,
                                                   nullptr, nullptr, ctx ) == false )
             return false;
@@ -189,7 +203,7 @@ namespace sw
         return true;
     }
 
-    bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString )
+    bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectIdentity* pIdentity )
     {
         if ( pGameObject == nullptr || jsonString.empty() )
             return false;
@@ -201,8 +215,9 @@ namespace sw
         const hashed_string oldName = pGameObject->getName();
         pGameObject->clearComponents();
 
-        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32           ver{ 0 };
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32                                    ver{ 0 };
         if ( JsonSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, jsonString, kObjectReflectedSchemaVersion,
                                                    nullptr, nullptr, ctx ) == false )
             return false;
@@ -250,6 +265,71 @@ namespace sw
 
         string_view xmlStr( reinterpret_cast<const utf8*>( listData.data() ), listData.size() );
         return loadFromXmlString( pGameObject, xmlStr );
+    }
+
+    ObjectIdentity ObjectStateSerializer::captureIdentity( const GameObject* pGameObject )
+    {
+        ObjectIdentity identity;
+        if ( pGameObject == nullptr )
+            return identity;
+
+        identity._objectId = pGameObject->getObjectId();
+        identity._listComponent.reserve( pGameObject->getComponents().size() );
+        for ( const Component* pComp : pGameObject->getComponents() )
+        {
+            if ( pComp == nullptr || pComp->isPendingKill() )
+                continue;
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getComponentName(), pComp->getComponentId() } );
+        }
+        return identity;
+    }
+
+    void ObjectStateSerializer::writeIdentity( const ObjectIdentity& identity, vector<uint8>& outBuffer )
+    {
+        BinaryStreamWriter writer( outBuffer );
+        writer.write( identity._objectId );
+        writer.write( static_cast<uint32>( identity._listComponent.size() ) );
+        for ( const ObjectIdentity::ComponentEntry& entry : identity._listComponent )
+        {
+            writer.writeString( entry._typeName.c_str() );
+            writer.write( entry._componentId );
+        }
+    }
+
+    size_t ObjectStateSerializer::readIdentity( const uint8* pData, size_t size, ObjectIdentity& outIdentity )
+    {
+        outIdentity = ObjectIdentity{};
+        if ( pData == nullptr || size == 0 )
+            return 0;
+
+        BinaryStreamReader reader( pData, size );
+        uint32             componentCount{ 0 };
+        if ( reader.read( outIdentity._objectId ) == false || reader.read( componentCount ) == false )
+            return 0;
+
+        // 항목 하나는 적어도 이름 길이(4) + ID(8) 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다 —
+        // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstanceBase::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
+        constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 );
+        if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )
+            return 0;
+
+        outIdentity._listComponent.reserve( componentCount );
+        for ( uint32 entryIndex = 0; entryIndex < componentCount; ++entryIndex )
+        {
+            string                         typeName;
+            ObjectIdentity::ComponentEntry entry;
+            if ( reader.readString( typeName ) == false || reader.read( entry._componentId ) == false )
+                return 0;
+            entry._typeName = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
+            outIdentity._listComponent.push_back( entry );
+        }
+        return reader.getOffset();
+    }
+
+    uint64 ObjectStateSerializer::getProcessToken()
+    {
+        static const uint64 s_processToken = ObjectStateSerializerInternal::makeProcessToken();
+        return s_processToken;
     }
 
 } // namespace sw
