@@ -1,6 +1,6 @@
 /**
  * @file unordered_set.h
- * @brief 해시셋. SW_USE_DOD_HASHMAP 이면 밀집 버킷, 아니면 std::unordered_set 래퍼.
+ * @brief 해시 집합입니다. SW_USE_DOD_HASHMAP 이면 밀집 배열 구현, 아니면 std::unordered_set 래퍼입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -17,7 +17,7 @@ namespace sw
     template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<Key>>
     using unordered_set = std::unordered_set<Key, Hash, KeyEqual, Allocator>;
 #else
-    /** @brief 밀집 해시셋. erase 시 이터레이터가 무효화될 수 있습니다. */
+    /** @brief 밀집 배열 기반 해시 집합입니다. erase 하면 이터레이터가 무효화될 수 있습니다. */
     template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<Key>>
     class unordered_set
     {
@@ -37,7 +37,7 @@ namespace sw
         using const_pointer   = const value_type*;
 
     private:
-        /** @brief 키와 버킷 체인 next 인덱스입니다. */
+        /** @brief 키와, 버킷 체인에서 다음 노드의 인덱스입니다. */
         struct Node
         {
             Key    _key;
@@ -51,19 +51,19 @@ namespace sw
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
         const key_equal& get_equal() const noexcept { return _traits.second(); }
 
-        /** @brief 빈 버킷 슬롯 표시 (전비트 1). */
+        /** @brief 빈 버킷 슬롯 표시(모든 비트 1)입니다. */
         static constexpr size_t kEmptySlot = invalid_index::kUint64;
 
-        /** @brief 버킷 수의 최솟값. 버킷 수는 늘 2 의 거듭제곱이다 — `bucketIndexOf` 가 마스크로 자른다. */
+        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
         static constexpr size_t kMinBucketCount = 16;
 
         /**
-         * @brief 해시를 버킷 번호로 — 곱 한 번 · 접기 한 번 · 마스크 한 번. 버킷 수는 늘 2 의 거듭제곱이다(`rehash_internal`).
-         * @details 예전엔 `hash % 버킷 수` 였다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹는다
-         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 윗 절반을 아랫 절반에 접어 넣으므로 아랫 비트가 고르지 않은
-         *          해시도 고르게 퍼진다 — libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 항등이라, 2 의 거듭제곱 크기에
-         *          `%` 만 쓰면 아랫 비트만 남아 8 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸다(기본 성장 경로가 그 크기였다).
-         *          순회는 밀집 배열을 도므로 버킷 배치가 바뀌어도 순서는 그대로다.
+         * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
+         * @details 예전에는 `hash % 버킷 수` 였습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
+         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
+         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸습니다(기본 증가 경로가 그 크기였습니다).
+         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
          */
         static size_t bucketIndexOf( size_t hash, size_t bucketCount ) noexcept
         {
@@ -71,7 +71,7 @@ namespace sw
             return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
         }
 
-        /** @brief 검사합니다. */
+        /** @brief 원소 수가 버킷 수에 닿으면(부하율 1) 버킷을 두 배로 늘립니다. 버킷이 없으면 최소 개수로 만듭니다. */
         void check_expand()
         {
             if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
@@ -89,12 +89,12 @@ namespace sw
             using pointer           = const value_type*;
             using reference         = const value_type&;
 
-            /** @brief 생성합니다. */
+            /** @brief 집합과 밀집 배열 인덱스로 만듭니다. */
             iterator( const unordered_set* pSet, size_t index )
                 : _pSet{ pSet }
                 , _index{ index } {}
 
-            /** @brief 증가시킵니다. */
+            /** @brief 다음 원소로 넘어갑니다. */
             iterator& operator++()
             {
                 ++_index;
@@ -114,10 +114,10 @@ namespace sw
             size_t               _index;
         };
 
-        using const_iterator = iterator; // For set, iterator is always const
+        using const_iterator = iterator; // 집합의 이터레이터는 언제나 const 다
 
         // ------------------------------------------------------------------------------
-        // 1) 생성 · 대입 — 버킷+밀집 배열. 레이스 컨텍스트는 공유하지 않음
+        // 1) 생성 · 대입 — 버킷 + 밀집 배열. 레이스 컨텍스트는 공유하지 않는다
         // ------------------------------------------------------------------------------
         /** @brief 빈 집합으로 둡니다. */
         unordered_set()
@@ -125,7 +125,7 @@ namespace sw
             , _listDenseData{}
             , _traits{} {}
 
-        /** @brief 초기화 리스트를 삽입합니다. */
+        /** @brief 초기화 리스트의 원소로 채웁니다. */
         unordered_set( std::initializer_list<value_type> init )
             : _listBucket{}
             , _listDenseData{}
@@ -227,7 +227,7 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 3) 변경 — insert/erase. erase 후 이터레이터 무효화에 주의
+        // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
         // ------------------------------------------------------------------------------
         /** @brief 모든 원소를 제거합니다. */
         void clear() noexcept
@@ -261,11 +261,10 @@ namespace sw
         }
 
         /**
-         * @brief 이종 키(Heterogeneous Key, 예: string_view)로 키를 찾습니다.
-         * @details `unordered_map` 에는 있고 여기엔 없었다. 그래서 `unordered_set<string>` 을
-         *          `string_view` 로 찾으면 **키를 하나 만들어서** 찾았다 — 0-Alloc 이라고 적어 둔
-         *          계약이 집합에서만 깨져 있었다. 비교자 기본값이 이미 `std::equal_to<>` 인 것이
-         *          원래 의도를 말해 준다.
+         * @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다.
+         * @details `unordered_map` 에는 있었는데 여기엔 없었습니다. 그래서 `unordered_set<string>` 을 `string_view` 로 찾으면
+         *          키를 하나 새로 만들어서 찾았고, 할당 없이 조회한다는 계약이 집합에서만 깨져 있었습니다. 비교자의 기본값이 이미
+         *          `std::equal_to<>` 라는 점이 원래 의도를 보여 줍니다.
          */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         iterator find( const K& key ) const
@@ -295,7 +294,7 @@ namespace sw
             return end();
         }
 
-        /** @brief 키와 일치하는 원소 개수를 반환합니다. */
+        /** @brief 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
         size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
 
         /** @brief 이종 키로 원소 개수를 반환합니다. */
@@ -330,7 +329,7 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 원소를 제자리 생성합니다. */
+        /** @brief 원소를 제자리에서 생성해 삽입합니다. */
         template <typename... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
@@ -358,7 +357,7 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             if ( pos == end() )
@@ -367,7 +366,7 @@ namespace sw
             return iterator( this, pos._index );
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief 키와 같은 원소를 제거하고, 제거한 개수를 반환합니다. */
         size_type erase( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -421,19 +420,19 @@ namespace sw
             return 0;
         }
 
-        /** @brief 버킷 수를 재해시합니다. */
+        /** @brief 버킷 수를 count 이상인 2의 거듭제곱으로 늘리고 재해시합니다. 지금보다 작으면 아무것도 하지 않습니다. */
         void rehash( size_type count )
         {
             SW_SCOPED_RACE_WRITE();
             rehash_internal( count );
         }
 
-        /** @brief 내부 버킷을 재해시합니다. */
+        /** @brief rehash 와 같지만 레이스 가드를 잡지 않습니다(내부용). */
         void rehash_internal( size_type count )
         {
             if ( count <= _listBucket.size() )
                 return;
-            // 2 의 거듭제곱으로 올린다 — `reserve( 3000 )` 이면 4096. `bucketIndexOf` 가 마스크로 자르는 전제다.
+            // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `bucketIndexOf` 가 마스크로 자르는 전제다.
             size_t bucketCount = _listBucket.empty() ? kMinBucketCount : _listBucket.size();
             while ( bucketCount < count )
                 bucketCount *= 2;
@@ -447,7 +446,7 @@ namespace sw
             }
         }
 
-        /** @brief 용량을 예약합니다. */
+        /** @brief rehash( count ) 와 같습니다(버킷을 미리 잡습니다). */
         void reserve( size_type count ) { rehash( count ); }
     };
 #endif

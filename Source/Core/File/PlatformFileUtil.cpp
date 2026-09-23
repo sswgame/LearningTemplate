@@ -49,7 +49,7 @@ namespace sw
 
         const int64 size = tellPosition( pFile );
 
-        // 크기를 읽었어도 되돌리지 못하면 호출부는 엉뚱한 위치에서 읽는다 — 실패로 본다.
+        // 크기를 읽었어도 처음으로 되돌리지 못하면 호출하는 쪽이 엉뚱한 위치에서 읽는다. 그래서 실패로 본다.
         if ( seekTo( pFile, 0, SEEK_SET ) == false )
             return kInvalidOffset;
 

@@ -20,15 +20,15 @@ namespace sw
 {
     namespace
     {
-        // `WaitOnAddress` · `futex` 는 주소와 4 바이트만 본다 — 래퍼가 값 하나만 들고 있어야 그 주소가 곧 값의 주소다.
+        // `WaitOnAddress` · `futex` 는 주소와 4바이트만 본다. 래퍼가 값 하나만 들고 있어야 래퍼의 주소가 곧 값의 주소가 된다.
         static_assert( sizeof( atomic<uint32> ) == sizeof( uint32 ), "atomic<uint32> must be exactly the 32-bit word" );
         static_assert( std::is_standard_layout_v<atomic<uint32>>, "atomic<uint32> must be standard layout for address waits" );
 
 #if !defined( SW_PLATFORM_WINDOWS ) && !defined( SW_PLATFORM_LINUX )
         /**
-         * @brief 주소 대기가 없는 플랫폼의 폴백 — 주소 해시로 고른 버킷의 뮤텍스 + 조건 변수.
-         * @details 깨우는 쪽도 같은 버킷 뮤텍스를 잡고 알리므로, 잠드는 쪽이 뮤텍스 안에서 값을 다시 본 뒤
-         *          잠드는 사이에 깨움이 새지 않는다. 버킷이 겹치면 허위로 깨어날 뿐이다 — 약속 안이다.
+         * @brief 주소 대기 기능이 없는 플랫폼의 폴백입니다. 주소 해시로 고른 버킷의 뮤텍스와 조건 변수를 씁니다.
+         * @details 깨우는 쪽도 같은 버킷의 뮤텍스를 잡고 알리므로, 잠드는 쪽이 뮤텍스 안에서 값을 다시 확인하고 잠드는 사이에
+         *          깨움이 새지 않습니다. 버킷이 겹치면 이유 없이 깨어날 뿐인데, 이는 약속한 동작 안에 있습니다.
          */
         struct FutexFallbackInternal
         {
@@ -97,7 +97,7 @@ namespace sw
         {
             std::scoped_lock<std::mutex> lock{ bucket._mutex };
         }
-        bucket._cv.notify_all(); // 버킷을 나눠 쓰므로 하나만 깨우면 엉뚱한 주소의 대기자가 받을 수 있다
+        bucket._cv.notify_all(); // 버킷을 나눠 쓰므로 하나만 깨우면 엉뚱한 주소의 대기자가 깨어날 수 있다
 #endif
     }
 

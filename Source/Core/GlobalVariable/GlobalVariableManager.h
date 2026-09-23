@@ -1,6 +1,6 @@
 /**
  * @file GlobalVariableManager.h
- * @brief 인게임 치트, 디버그 변수, 환경 설정 등을 관리하는 전역 변수 매니저 시스템
+ * @brief 인게임 치트 · 디버그 변수 · 환경 설정 같은 전역 변수를 관리합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,9 +20,9 @@ namespace sw
     SW_DECLARE_DELEGATE( void, GlobalVariableChangedDelegate, GlobalVariableInfo* );
 
     // ------------------------------------------------------------------------------
-    // 1) GlobalVariableType / GlobalVariableInfo — 이름·타입·기본값·콜백
+    // 1) GlobalVariableType / GlobalVariableInfo — 이름 · 타입 · 기본값 · 콜백
     // ------------------------------------------------------------------------------
-    /** @brief 전역 변수 저장 타입입니다. Enum 은 int32 로 둡니다. */
+    /** @brief 전역 변수의 저장 타입입니다. Enum 은 int32 로 저장합니다. */
     enum class GlobalVariableType : uint8
     {
         Boolean,
@@ -32,7 +32,7 @@ namespace sw
         Enum
     };
 
-    /** @brief 한 전역 변수의 메타와 현재 값 포인터입니다. */
+    /** @brief 전역 변수 하나의 메타데이터와 현재 값 포인터입니다. */
     struct SW_API GlobalVariableInfo
     {
         string                                     _name;
@@ -46,25 +46,25 @@ namespace sw
 
         GlobalVariableChangedDelegate _onValueChanged;
 
-        /** @brief Boolean 이면 *_pData, 아니면 false 입니다. */
+        /** @brief Boolean 이면 *_pData 를, 아니면 false 를 반환합니다. */
         bool getValueAsBool() const;
-        /** @brief Int32/Enum 이면 *_pData, 아니면 0 입니다. */
+        /** @brief Int32 · Enum 이면 *_pData 를, 아니면 0 을 반환합니다. */
         int32 getValueAsInt() const;
-        /** @brief Float 이면 *_pData, 아니면 0 입니다. */
+        /** @brief Float 이면 *_pData 를, 아니면 0 을 반환합니다. */
         float32 getValueAsFloat() const;
         /** @brief 타입에 맞게 문자열로 바꿉니다. */
         string getValueAsString() const;
 
-        /** @brief *_pData 에 Boolean 값을 설정하고 콜백을 호출합니다. */
+        /** @brief *_pData 에 Boolean 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsBool( bool val );
-        /** @brief *_pData 에 Int32 또는 Enum 값을 설정하고 콜백을 호출합니다. */
+        /** @brief *_pData 에 Int32 · Enum 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsInt( int32 val );
-        /** @brief *_pData 에 Float 값을 설정하고 콜백을 호출합니다. */
+        /** @brief *_pData 에 Float 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsFloat( float32 val );
-        /** @brief *_pData 에 String 값을 설정하고 콜백을 호출합니다. */
+        /** @brief *_pData 에 String 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsString( string_view val );
 
-        /** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 호출합니다. */
+        /** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 부릅니다. */
         bool setValueFromString( string_view strValue );
         /** @brief *_pData 를 _defaultValue 로 되돌립니다. */
         void resetToDefault();
@@ -73,13 +73,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) GlobalVariableManager — 등록 · 커맨드라인 동기화 · 모듈 단위 해제
     // ------------------------------------------------------------------------------
-    /** @brief 이름→Info 맵을 소유하고 모듈 핫리로드 때 떼어 냅니다. */
+    /** @brief 이름 → Info 맵을 소유하고, 모듈을 핫 리로드할 때 그 모듈의 변수를 떼어 냅니다. */
     class SW_API GlobalVariableManager
     {
     public:
         /** @brief 빈 맵으로 둡니다. */
         GlobalVariableManager() = default;
-        /** @brief 맵만 버리며 사용자 데이터는 해제하지 않습니다. */
+        /** @brief 맵만 해제합니다. 변수가 가리키는 사용자 데이터는 건드리지 않습니다. */
         virtual ~GlobalVariableManager() = default;
         /** @brief 복사를 금지합니다. */
         GlobalVariableManager( const GlobalVariableManager& ) = delete;
@@ -93,66 +93,64 @@ namespace sw
             _pCmdLineManager = nullptr;
         }
 
-        /** @brief 커맨드라인 매니저에 변수들을 등록합니다. */
+        /** @brief 커맨드라인 매니저에 변수들을 인자로 등록합니다. */
         void registerToCommandLine( class CommandLineManager* pCmdLineManager );
 
-        /** @brief 커맨드라인 인자 값으로 전역 변수들을 업데이트합니다. */
+        /** @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다. */
         void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
 
-        /** @brief 새로운 전역 변수를 등록합니다. */
+        /** @brief 새 전역 변수를 등록합니다. */
         bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4 );
 
-        /** @brief pHead로 시작하는 연결 리스트(특정 모듈의 변수들)를 등록합니다. */
+        /** @brief pHead 로 시작하는 연결 리스트(한 모듈의 변수들)를 등록합니다. */
         void registerPendingVariables( string_view moduleName, const struct GlobalVariableRegistrar* pHead );
 
         /** @brief 특정 모듈 이름으로 등록된 변수들을 해제합니다. */
         void unregisterVariablesByModule( string_view moduleName );
 
-        /** @brief 문자열을 파싱하여 변수 값을 설정합니다. */
+        /** @brief 문자열을 파싱해 변수 값을 설정합니다. */
         bool setValueFromString( string_view name, string_view strValue );
 
-        /** @brief 특정 변수를 기본값으로 초기화합니다. */
+        /** @brief 특정 변수를 기본값으로 되돌립니다. */
         bool resetToDefault( string_view name );
 
-        /** @brief 모든 변수를 기본값으로 초기화합니다. */
+        /** @brief 모든 변수를 기본값으로 되돌립니다. */
         void resetAllToDefault();
 
         /**
          * @brief 이름으로 전역 변수 정보를 찾습니다.
-         * @details **돌려준 포인터는 그 변수가 등록 해제될 때까지 살아 있다.** 다른 변수를 등록하거나
-         *          해제해도 옮겨 다니지 않는다 — 그래서 패널처럼 "이름을 훑고 포인터를 모아 두었다가
-         *          한 번에 그리는" 방식이 안전하다.
-         * @note 그 보장이 맵에서 오지 않는다는 점이 중요하다. `sw::unordered_map` 은 밀집 배열이라
-         *       삽입하면 재할당으로 **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨
-         *       간다. 그래서 값을 `unique_ptr` 로 든다 — 맵이 흔들려도 가리키는 객체는 제자리다.
-         *       예전에는 `GlobalVariableInfo` 를 맵에 값으로 담고 그 주소를 그대로 내줬다.
+         * @details **반환한 포인터는 그 변수가 등록 해제될 때까지 유효합니다.** 다른 변수를 등록하거나 해제해도 옮겨지지
+         *          않습니다. 그래서 패널처럼 "이름을 훑으며 포인터를 모아 두었다가 한 번에 그리는" 방식이 안전합니다.
+         * @note 이 보장이 맵에서 나오지 않는다는 점이 중요합니다. `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로
+         *       **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 들고
+         *       있습니다. 맵이 흔들려도 가리키는 객체는 제자리에 있습니다. 예전에는 `GlobalVariableInfo` 를 맵에 값으로 담고
+         *       그 주소를 그대로 내줬습니다.
          */
         GlobalVariableInfo* findVariable( string_view name );
 
-        /** @brief 등록된 변수 이름 목록을 스냅샷으로 반환합니다. (thread-safe) */
+        /** @brief 등록된 변수 이름 목록의 스냅샷을 반환합니다(스레드 안전). */
         vector<string> collectVariableNames() const;
 
-        /** @brief 등록된 변수 수를 반환합니다. (thread-safe) */
+        /** @brief 등록된 변수 수를 반환합니다(스레드 안전). */
         uint32 getVariableCount() const;
 
     private:
         mutable std::shared_mutex _mutex;
         /**
-         * @brief 이름 → 변수. **값이 `unique_ptr` 인 이유는 주소 안정성**이다(`findVariable` 참고).
+         * @brief 이름 → 변수 맵입니다. **값이 `unique_ptr` 인 이유는 주소 안정성**입니다(`findVariable` 참고).
          */
         unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable;
         /**
-         * @brief `registerToCommandLine` 이 물려 준 파서. 늦게 등록되는 변수의 보류값을 여기서 꺼낸다.
-         * @details 소유하지 않는다 — 둘 다 `EngineLoop` 이 들고 있고, 선언 순서상 이 매니저가 먼저
-         *          파괴된다. 모듈은 `CommandLineManager` 를 서비스로 못 받으므로(gameAllowed=0)
-         *          보류값을 꺼내는 경로는 이 포인터뿐이다.
+         * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
+         * @details 소유하지 않습니다. 둘 다 `EngineLoop` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
+         *          `CommandLineManager` 를 서비스로 받을 수 없으므로(gameAllowed=0) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
          */
         class CommandLineManager* _pCmdLineManager{ nullptr };
     };
 
     // ------------------------------------------------------------------------------
-    // 3) GlobalVariableRegistrar — 정적 초기화로 모듈 로컬 리스트에 연결
-    //    Core 는 getHead(), 다른 모듈은 SW_GVM_MODULE_HEAD
+    // 3) GlobalVariableRegistrar — 정적 초기화 때 모듈 로컬 리스트에 연결된다
+    //    Core 는 getHead(), 다른 모듈은 SW_GVM_MODULE_HEAD 를 쓴다
     // ------------------------------------------------------------------------------
     /** @brief 정적 객체가 모듈 리스트에 자신을 붙입니다. */
     struct SW_API GlobalVariableRegistrar
@@ -168,12 +166,12 @@ namespace sw
         GlobalVariableRegistrar*                   _pNext;
 
         /**
-         * @brief Core::getHead() 리스트에 연결합니다. Core 번역 단위 전용입니다.
+         * @brief `getHead()` 리스트에 연결합니다. Core 번역 단위 전용입니다.
          */
         GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4 );
 
         /**
-         * @brief 모듈 로컬 리스트 헤드에 연결합니다. 핫 리로드에 안전합니다.
+         * @brief 모듈 로컬 리스트 헤드에 연결합니다. 핫 리로드에도 안전합니다.
          */
         GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4 );
 
@@ -184,17 +182,15 @@ namespace sw
         /** @brief 모듈 로컬 리스트에 연결합니다. */
         void linkTo( GlobalVariableRegistrar*& pModuleHead );
     };
-
-    /** @brief Engine.dll GVM 심볼을 모듈 이름 "Engine"으로 등록합니다. */
 } // namespace sw
 
-/** @brief App/Editor/Game/Test 헤드 헤더에서 SW_GLOBAL_VARIABLE_* 앞에 재정의하세요. */
+/** @brief App · Editor · Game · Test 의 헤드 헤더에서 SW_GLOBAL_VARIABLE_* 보다 먼저 재정의하십시오. */
 #ifndef SW_GVM_MODULE_HEAD
     #define SW_GVM_MODULE_HEAD() ( ::sw::GlobalVariableRegistrar::getHead() )
 #endif
 
-// 아래 정의들에서 `name` 은 **선언자 이름**이자 `#name`(문자열화), `sw_reg_##name`(붙여쓰기)로
-// 쓰인다 — 셋 다 괄호를 씌우면 깨진다. 값 인자(`defaultVal`)는 괄호·static_cast 로 이미 막아 두었다.
+// 아래 정의들에서 `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰인다.
+// 셋 다 괄호를 씌우면 깨진다. 값 인자(`defaultVal`)는 괄호와 static_cast 로 이미 감싸 두었다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 /** @brief bool 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
 #define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )       \
@@ -240,16 +236,14 @@ namespace sw
 #define SW_EXTERN_GLOBAL_VARIABLE_ENUM( name, enumType ) extern enumType name
 
 // ------------------------------------------------------------------------------
-// 5) 모듈 로컬 등록 — 로드된 DLL(EditorModule·SWGame)이 자기 변수를 스스로 올리고 내린다
+// 4) 모듈 로컬 등록 — 로드된 DLL(EditorModule · SWGame)이 자기 변수를 직접 올리고 내린다
 // ------------------------------------------------------------------------------
 /**
- * @brief 모듈 전용 등록 리스트와 등록/해제 함수를 **선언**합니다 (모듈의 전역 변수 헤더에서).
- * @param ns `sw` 하위 네임스페이스 이름 (예: `editor`, `game`). 그 안에 `getService` 가 있어야 합니다.
- * @details 모듈의 전역 변수는 Engine.dll 헤드가 아니라 **모듈 로컬 헤드**에 붙어야 한다. 그래야
- *          언로드될 때 `unregisterVariablesByModule` 이 통째로 걷어내고, 매니저가 사라진 DLL 안의
- *          주소를 계속 가리키지 않는다.
- * @note 헤드 매크로를 갈아 끼우는 두 줄은 각 모듈 헤더에 직접 쓴다 — 전처리기 지시자는 매크로 안에
- *       넣을 수 없다.
+ * @brief 모듈 전용 등록 리스트와 등록 · 해제 함수를 **선언**합니다(모듈의 전역 변수 헤더에서 씁니다).
+ * @param ns `sw` 아래의 네임스페이스 이름(예: `editor`, `game`). 그 안에 `getService` 가 있어야 합니다.
+ * @details 모듈의 전역 변수는 Engine.dll 의 헤드가 아니라 **모듈 로컬 헤드**에 붙어야 합니다. 그래야 모듈이 언로드될 때
+ *          `unregisterVariablesByModule` 이 통째로 걷어 내고, 매니저가 사라진 DLL 안의 주소를 계속 가리키지 않습니다.
+ * @note 헤드 매크로를 바꾸는 두 줄은 각 모듈 헤더에 직접 씁니다. 전처리기 지시자는 매크로 안에 넣을 수 없기 때문입니다.
  *       @code
  *       #undef SW_GVM_MODULE_HEAD
  *       #define SW_GVM_MODULE_HEAD() ( ::sw::game::getGlobalVariableHead() )
@@ -269,12 +263,12 @@ namespace sw
     static_assert( true, "뒤따르는 세미콜론을 삼킨다" )
 
 /**
- * @brief `SW_DECLARE_MODULE_GLOBAL_VARIABLES` 로 선언한 것을 **구현**합니다 (모듈의 전역 변수 .cpp 에서).
- * @param ns 선언 때와 같은 네임스페이스 이름.
- * @param moduleName 매니저에 기록할 모듈 이름 (예: `config::kTargetGameModule`).
- * @details 등록 시점이 중요하다 — 커맨드라인은 모듈이 로드되기 **전에** 파싱되므로 `-gv_...` 값은
- *          파서의 보류표에 남아 있고, `registerPendingVariables` 가 도는 그 순간 적용된다. 그래서
- *          모듈은 자기 변수를 읽기 **전에** `registerGlobalVariables()` 를 불러야 한다.
+ * @brief `SW_DECLARE_MODULE_GLOBAL_VARIABLES` 로 선언한 것을 **구현**합니다(모듈의 전역 변수 .cpp 에서 씁니다).
+ * @param ns 선언할 때와 같은 네임스페이스 이름
+ * @param moduleName 매니저에 기록할 모듈 이름(예: `config::kTargetGameModule`)
+ * @details 등록 시점이 중요합니다. 커맨드라인은 모듈이 로드되기 **전에** 파싱되므로 `-gv_...` 값은 파서의 보류표에
+ *          남아 있다가, `registerPendingVariables` 가 도는 순간 적용됩니다. 그래서 모듈은 자기 변수를 읽기 **전에**
+ *          `registerGlobalVariables()` 를 불러야 합니다.
  */
 #define SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES( ns, moduleName )                                 \
     namespace sw::ns                                                                           \

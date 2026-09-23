@@ -1,6 +1,6 @@
 ﻿/**
  * @file TaskFuture.h
- * @brief C++17 호환 Fluent 비동기 TaskFuture<T> 및 TaskPromise<T> 파이프라인
+ * @brief C++17 에서 쓰는 체이닝 가능한 비동기 TaskFuture<T> · TaskPromise<T> 입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -20,16 +20,15 @@ namespace sw
     {
         /**
          * @struct SharedFutureSignal
-         * @brief future 의 **완료 신호** — 값 타입과 무관한 부분 전부입니다.
+         * @brief future 의 **완료 신호**입니다. 값 타입과 상관없는 부분을 모두 담습니다.
          *
-         * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 는 서로 다른 특수화라
-         *          **같은 코드를 두 벌 갖고 있었다** — 뮤텍스·조건 변수·`_bReady`·`wait`·`waitFor`,
-         *          그리고 "락 안에서 표시하고, 알림과 이어받기 호출은 락 밖에서" 라는 **순서 규약**까지.
-         *          그 규약은 틀리기 쉬운 쪽이다: 이어받기가 다시 이 future 를 건드릴 수 있어 락 밖에서
-         *          불러야 하고, 옮긴 델리게이트를 되살려 읽어서도 안 된다. 실제로 그 자리에서
-         *          use-after-move 를 한 번 고쳤고, 그때 **두 벌을 따로 고쳐야 했다.**
+         * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 는 서로 다른 특수화라 **같은 코드를 두 벌 갖고 있었습니다.**
+         *          뮤텍스 · 조건 변수 · `_bReady` · `wait` · `waitFor`, 그리고 "락 안에서 표시하고, 알림과 후속 작업(continuation)
+         *          호출은 락 밖에서" 라는 **순서 규칙**까지입니다. 그 규칙은 틀리기 쉽습니다. 후속 작업이 다시 이 future 를 건드릴 수
+         *          있어 락 밖에서 불러야 하고, 이동시킨 델리게이트를 다시 읽어서도 안 됩니다. 실제로 그 자리에서 use-after-move 를
+         *          한 번 고쳤고, 그때 **두 벌을 따로 고쳐야 했습니다.**
          *
-         *          여기 한 벌만 둔다. 값을 어디에 어떻게 저장할지는 특수화가 람다로 준다.
+         *          그래서 여기 한 벌만 둡니다. 값을 어디에 어떻게 저장할지는 특수화가 람다로 넘깁니다.
          */
         struct SharedFutureSignal
         {
@@ -71,16 +70,16 @@ namespace sw
             }
 
             /**
-             * @brief 완료로 표시하고 **보관된 이어받기를 돌려줍니다.** 이미 끝났으면 빈 것을 돌려줍니다.
-             * @param storage    보관 중인 이어받기 델리게이트.
-             * @param storeValue 값을 저장하는 일 — **락 안에서** 부릅니다(타입마다 하는 일이 다릅니다).
-             * @details 돌려받은 이어받기는 **호출부가 락 밖에서** 부른다. 락 안에서 부르면 그 콜백이
-             *          다시 이 future 를 건드릴 때 잠긴다. 알림은 값이 보이게 된 뒤에 한 번만 보낸다.
+             * @brief 완료로 표시하고 **보관해 둔 후속 작업을 반환합니다.** 이미 끝났으면 빈 것을 반환합니다.
+             * @param storage    보관 중인 후속 작업 델리게이트
+             * @param storeValue 값을 저장하는 일. **락 안에서** 부릅니다(타입마다 하는 일이 다릅니다).
+             * @details 반환받은 후속 작업은 **호출하는 쪽이 락 밖에서** 부릅니다. 락 안에서 부르면 그 콜백이 다시 이 future 를
+             *          건드릴 때 교착합니다. 알림은 값이 보이게 된 뒤에 한 번만 보냅니다.
              */
             template <typename TDelegate, typename FStoreValue>
             TDelegate markReadyAndTakeContinuation( TDelegate& storage, FStoreValue&& storeValue )
             {
-                // 반환은 이 변수 하나로만 한다 — 갈래마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
+                // 반환은 이 변수 하나로만 한다. 분기마다 다른 객체를 반환하면 NRVO 가 막힌다(-Wnrvo).
                 TDelegate continuation;
                 bool      bMarkedNow = false;
                 {
@@ -99,10 +98,10 @@ namespace sw
             }
 
             /**
-             * @brief 이어받기를 **보관하거나**, 이미 끝났으면 그대로 돌려줍니다.
-             * @details 돌려받았으면 호출부가 **락 밖에서** 부른다. 갈 곳을 하나씩만 정하므로 옮긴 값을
-             *          되살려 읽는 자리가 없다 — 예전에는 bool 플래그와 `std::move` 가 서로를 배제한다는
-             *          사실에 기대고 있어서, 읽는 사람도 분석기도 use-after-move 로 볼 수밖에 없었다.
+             * @brief 후속 작업을 **보관하거나**, 이미 끝났으면 그대로 반환합니다.
+             * @details 반환받았으면 호출하는 쪽이 **락 밖에서** 부릅니다. 갈 곳을 하나만 정하므로 이동시킨 값을 다시 읽는 곳이
+             *          없습니다. 예전에는 bool 플래그와 `std::move` 가 서로 배타적이라는 사실에 기대고 있어서, 읽는 사람도 분석기도
+             *          use-after-move 로 볼 수밖에 없었습니다.
              */
             template <typename TDelegate>
             TDelegate takeImmediateOrStore( TDelegate continuation, TDelegate& outStorage )
@@ -171,14 +170,14 @@ namespace sw
                     continuation( *reinterpret_cast<const T*>( &_storage ) );
             }
 
-            /** @brief 완료를 기다린 뒤 값을 돌려줍니다. */
+            /** @brief 완료를 기다린 뒤 값을 반환합니다. */
             const T& get() const
             {
                 wait();
                 return *reinterpret_cast<const T*>( &_storage );
             }
 
-            /** @brief 완료 뒤에 부를 이어받기를 겁니다. 이미 끝났으면 지금 부릅니다. */
+            /** @brief 완료 뒤에 부를 후속 작업을 겁니다. 이미 끝났으면 바로 부릅니다. */
             void setContinuation( Delegate<void( const T& )> continuation )
             {
                 Delegate<void( const T& )> immediate = takeImmediateOrStore( std::move( continuation ), _continuation );
@@ -206,13 +205,13 @@ namespace sw
                     continuation();
             }
 
-            /** @brief 완료를 기다립니다 (돌려줄 값이 없습니다). */
+            /** @brief 완료를 기다립니다(반환할 값이 없습니다). */
             void get() const
             {
                 wait();
             }
 
-            /** @brief 완료 뒤에 부를 이어받기를 겁니다. 이미 끝났으면 지금 부릅니다. */
+            /** @brief 완료 뒤에 부를 후속 작업을 겁니다. 이미 끝났으면 바로 부릅니다. */
             void setContinuation( Delegate<void()> continuation )
             {
                 Delegate<void()> immediate = takeImmediateOrStore( std::move( continuation ), _continuation );
@@ -224,7 +223,7 @@ namespace sw
 
     /**
      * @class TaskFuture
-     * @brief C++17 기반의 비동기 결과 수신 및 Fluent 후속 작업(.then) 체이닝 래퍼
+     * @brief C++17 기반의 비동기 결과 수신과 후속 작업(.then) 체이닝을 맡는 래퍼입니다.
      */
     template <typename T>
     class TaskFuture
@@ -265,13 +264,12 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F, const T&>;
 
-            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지
-            // 않는) future 를 돌려줬고, 그것을 `wait()` 하면 **영원히 멈췄다**. 그리고 그 함정을
-            // `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다 — 유효한 것만 세고, 후보가
-            // 하나도 없으면 무효한 future 를 돌려주도록. 우회가 두 벌이면 세 번째 호출부가 같은 함정에
-            // 빠진다. 뿌리를 여기서 막는다: 무효한 future 는 `wait()` 가 곧장 돌아오고 `waitFor` 가
-            // false 이며 `isValid()` 로 물어볼 수 있다 — "무효가 들어오면 무효가 나간다" 가 사슬 전체에
-            // 전해진다. (`fallback()` 은 처음부터 이 자리를 바르게 다뤘다 — 값을 채워 끝낸다.)
+            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환했고,
+            // 그것을 `wait()` 하면 **영원히 멈췄다.** 그리고 그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다.
+            // 유효한 것만 세고, 후보가 하나도 없으면 무효한 future 를 반환하는 식이었다. 우회가 두 벌이면 세 번째 호출부가 같은
+            // 함정에 빠진다. 그래서 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고, `waitFor` 는 false 이며,
+            // `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다. (`fallback()` 은 처음부터
+            // 이 경우를 올바르게 다뤘다. 값을 채워 완료시킨다.)
             if ( _pState == nullptr )
                 return TaskFuture<ReturnType>{};
 
@@ -356,13 +354,12 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F>;
 
-            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지
-            // 않는) future 를 돌려줬고, 그것을 `wait()` 하면 **영원히 멈췄다**. 그리고 그 함정을
-            // `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다 — 유효한 것만 세고, 후보가
-            // 하나도 없으면 무효한 future 를 돌려주도록. 우회가 두 벌이면 세 번째 호출부가 같은 함정에
-            // 빠진다. 뿌리를 여기서 막는다: 무효한 future 는 `wait()` 가 곧장 돌아오고 `waitFor` 가
-            // false 이며 `isValid()` 로 물어볼 수 있다 — "무효가 들어오면 무효가 나간다" 가 사슬 전체에
-            // 전해진다. (`fallback()` 은 처음부터 이 자리를 바르게 다뤘다 — 값을 채워 끝낸다.)
+            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환했고,
+            // 그것을 `wait()` 하면 **영원히 멈췄다.** 그리고 그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다.
+            // 유효한 것만 세고, 후보가 하나도 없으면 무효한 future 를 반환하는 식이었다. 우회가 두 벌이면 세 번째 호출부가 같은
+            // 함정에 빠진다. 그래서 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고, `waitFor` 는 false 이며,
+            // `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다. (`fallback()` 은 처음부터
+            // 이 경우를 올바르게 다뤘다. 값을 채워 완료시킨다.)
             if ( _pState == nullptr )
                 return TaskFuture<ReturnType>{};
 
@@ -391,7 +388,7 @@ namespace sw
 
     /**
      * @class TaskPromise
-     * @brief 비동기 연산의 생산자(Producer) 측면에서 값을 설정하는 프라미스 클래스
+     * @brief 비동기 연산의 생산자 쪽에서 값을 설정하는 프라미스입니다.
      */
     template <typename T>
     class TaskPromise
@@ -448,17 +445,17 @@ namespace sw
     };
 
     /**
-     * @brief 여러 TaskFuture가 모두 완료될 때까지 비동기 대기하여 결과 벡터를 모아 반환합니다 (Promise.all / WhenAll).
-     * @details 결과 벡터는 입력과 **같은 길이**이고 자리도 그대로다. 유효하지 않은 future 자리는
-     *          기본값으로 남는다 — 그런 future 는 `then` 이 콜백을 걸어 주지 않으므로 기다릴 수가 없다.
-     *          목록이 비었거나 전부 유효하지 않으면 **곧바로 끝난 future** 를 돌려준다.
+     * @brief 여러 TaskFuture 가 모두 완료되면 결과를 벡터로 모아 주는 future 를 반환합니다(Promise.all / WhenAll).
+     * @details 결과 벡터는 입력과 **길이가 같고** 순서도 그대로입니다. 유효하지 않은 future 자리는 기본값으로 남습니다. 그런
+     *          future 는 `then` 이 콜백을 걸어 주지 않으므로 기다릴 수 없기 때문입니다. 목록이 비었거나 모두 유효하지 않으면
+     *          **이미 완료된 future** 를 반환합니다.
      */
     template <typename T>
     inline TaskFuture<vector<T>> whenAllFutures( const vector<TaskFuture<T>>& listFuture )
     {
-        // **유효하지 않은 future 는 세지 않는다.** `then` 은 상태가 없으면 콜백을 걸지 않고 그냥
-        // 돌아간다 — 그런 것을 카운트다운에 넣으면 0 에 닿지 못해 결과 future 가 **영원히 끝나지
-        // 않는다**. 기본 생성된 future 하나가 섞이는 것만으로 대기가 멈춘다.
+        // **유효하지 않은 future 는 세지 않는다.** `then` 은 상태가 없으면 콜백을 걸지 않고 그냥 돌아간다. 그런 것을
+        // 카운트다운에 넣으면 0 에 닿지 못해 결과 future 가 **영원히 끝나지 않는다.** 기본 생성된 future 하나가 섞이는 것만으로
+        // 대기가 멈춘다.
         size_t validCount = 0;
         for ( const TaskFuture<T>& future : listFuture )
         {
@@ -466,7 +463,7 @@ namespace sw
                 ++validCount;
         }
 
-        // 빈 목록도, 전부 유효하지 않은 목록도 여기로 온다. 자리는 남기고 기본값으로 채운다.
+        // 빈 목록도, 모두 유효하지 않은 목록도 여기로 온다. 자리는 남기고 기본값으로 채운다.
         if ( validCount == 0 )
         {
             TaskPromise<vector<T>> promise;
@@ -510,17 +507,16 @@ namespace sw
     }
 
     /**
-     * @brief 여러 TaskFuture 중 가장 먼저 완료된 Future의 결과를 즉시 반환합니다 (Promise.race / WhenAny).
-     * @details 유효하지 않은 future 는 후보에서 뺀다. 후보가 하나도 없으면 **유효하지 않은 future**
-     *          (`isValid() == false`)를 돌려준다 — 값을 만들 길이 없으므로 기다리게 두면 안 된다.
+     * @brief 여러 TaskFuture 중 가장 먼저 완료된 것의 결과를 받는 future 를 반환합니다(Promise.race / WhenAny).
+     * @details 유효하지 않은 future 는 후보에서 뺍니다. 후보가 하나도 없으면 **유효하지 않은 future**(`isValid() == false`)를
+     *          반환합니다. 값을 만들 방법이 없으므로 기다리게 두면 안 되기 때문입니다.
      */
     template <typename T>
     inline TaskFuture<T> whenAnyFuture( const vector<TaskFuture<T>>& listFuture )
     {
-        // 이길 후보가 하나도 없으면 값을 만들 길이 없다. 예전에는 **유효한** future 를 돌려줬는데
-        // 아무도 값을 넣어 주지 않아 `wait()` 가 영원히 멈췄다(형제인 `whenAllFutures` 는 빈 목록을
-        // 제대로 끝냈다). `isValid()` 가 false 인 future 를 돌려주면 `wait()` 는 곧장 돌아오고
-        // 호출부가 "결과가 없다" 를 물어볼 수 있다.
+        // 이길 후보가 하나도 없으면 값을 만들 방법이 없다. 예전에는 **유효한** future 를 반환했는데 아무도 값을 넣어 주지 않아
+        // `wait()` 가 영원히 멈췄다(형제 함수인 `whenAllFutures` 는 빈 목록을 올바르게 끝냈다). `isValid()` 가 false 인 future 를
+        // 반환하면 `wait()` 는 바로 돌아오고, 호출하는 쪽이 "결과가 없다" 를 확인할 수 있다.
         bool bHasValid = false;
         for ( const TaskFuture<T>& future : listFuture )
         {
@@ -560,7 +556,7 @@ namespace sw
 
     /**
      * @class ITaskStateMachine
-     * @brief C++17 환경에서 코루틴 대체용으로 단계별(Step-by-Step) 비동기 실행을 지원하는 상태 머신 인터페이스
+     * @brief C++17 에서 코루틴 대신 단계별(step-by-step) 비동기 실행을 지원하는 상태 머신 인터페이스입니다.
      */
     class SW_API ITaskStateMachine
     {
@@ -569,7 +565,7 @@ namespace sw
 
         /**
          * @brief 상태 머신의 다음 단계를 실행합니다.
-         * @return 모든 단계 완료 시 true, 다음 프레임/비동기 대기 후 계속해야 하면 false
+         * @return 모든 단계가 끝났으면 true, 다음 프레임이나 비동기 대기 뒤에 계속해야 하면 false
          */
         virtual bool step() = 0;
     };

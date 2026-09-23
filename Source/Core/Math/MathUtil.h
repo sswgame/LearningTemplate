@@ -1,6 +1,6 @@
 /**
  * @file MathUtil.h
- * @brief 각도·보간·클램프·난수 등 스칼라 수학 유틸 (전부 static).
+ * @brief 각도 · 보간 · 클램프 · 난수 같은 스칼라 수학 도우미입니다(전부 static).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -13,11 +13,11 @@ namespace sw
 
     // ------------------------------------------------------------------------------
     // 1) MathUtil — 상수 · 각도 · 비교 · min/max/clamp
-    //    벡터/행렬은 VectorMath / MatrixMath
+    //    벡터 · 행렬은 VectorMath · MatrixMath 에 있다
     // ------------------------------------------------------------------------------
     /**
      * @struct MathUtil
-     * @brief 전역적으로 사용되는 순수 수학 계산 및 편의 기능을 제공하는 static 구조체
+     * @brief 엔진 곳곳에서 쓰는 스칼라 수학 계산을 모은 static 구조체입니다.
      */
     struct MathUtil
     {
@@ -25,18 +25,18 @@ namespace sw
         static constexpr float32 HalfPi         = Pi * 0.5f;
         static constexpr float32 DegreeToRadian = Pi / 180.f;
         static constexpr float32 RadianToDegree = 180.f / Pi;
-        /** @brief float32 비교용 머신 엡실론입니다. */
+        /** @brief float32 를 "거의 같다" 고 볼 때 쓰는 허용치(1e-6)입니다. 머신 엡실론(FLT_EPSILON)보다 넉넉합니다. */
         static constexpr float32 Epsilon = 1e-6f;
         /**
-         * @brief **제곱 거리·제곱 길이**를 `Epsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
-         * @details `getDistanceSquared(...) <= Epsilon` 은 실제 거리로는 `1e-3` 까지를 같다고 본다
-         *          — 제곱된 값을 제곱하지 않은 허용치와 재기 때문이다. 같은 허용치를 뜻하려면
-         *          `Epsilon` 도 제곱해야 한다. 이름을 따로 둔 것은 그 한 걸음을 잊기 쉬워서다.
-         * @note 정규화 직전의 **퇴화 벡터 검사**에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라
-         *       "0 으로 나눌 만큼 짧은가" 를 묻는 것이라 넉넉한 `Epsilon` 이 오히려 맞습니다.
+         * @brief **제곱 거리 · 제곱 길이**를 `Epsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
+         * @details `getDistanceSquared(...) <= Epsilon` 은 실제 거리로 `1e-3` 까지를 같다고 봅니다. 제곱한 값을 제곱하지 않은
+         *          허용치와 비교했기 때문입니다. 같은 허용치를 뜻하려면 `Epsilon` 도 제곱해야 하고, 그 한 걸음을 잊기 쉬워서
+         *          이름을 따로 두었습니다.
+         * @note 정규화하기 직전의 **퇴화 벡터 검사**에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라 "0 으로 나눌 만큼 짧은가" 를
+         *       묻는 것이라 넉넉한 `Epsilon` 이 오히려 맞습니다.
          */
         static constexpr float32 EpsilonSquared = Epsilon * Epsilon;
-        /** @brief float64 비교용 머신 엡실론입니다. */
+        /** @brief float64 비교용 머신 엡실론(DBL_EPSILON)입니다. */
         static constexpr float64 Epsilon64 = std::numeric_limits<float64>::epsilon();
 
         static constexpr float32 MaxFloat   = std::numeric_limits<float32>::max();
@@ -68,7 +68,7 @@ namespace sw
         template <typename T>
         [[nodiscard]] static SW_INLINE constexpr T abs( T a ) noexcept { return ( a < T( 0 ) ) ? -a : a; }
 
-        /** @brief 지정된 범위를 벗어나지 않도록 값을 제한(clamp)합니다. */
+        /** @brief 값을 [minValue, maxValue] 범위로 자릅니다(clamp). */
         template <typename T>
         [[nodiscard]] static SW_INLINE constexpr T clamp( const T value, const T minValue, const T maxValue ) noexcept
         {
@@ -77,9 +77,9 @@ namespace sw
         }
 
         /**
-         * @brief 0 이 아닌 값에서 가장 낮은 켜진 비트의 번호(0 ~ 63)를 구합니다. @p value 가 0 이면 정의되지 않는다.
-         * @details 비트셋을 켜진 비트만 골라 도는 자리(`TaskManager` 의 유휴 워커 마스크 · `PrimitiveRegistry` 의 더티 워드)가 쓴다.
-         *          C++17 이라 `std::countr_zero` 가 없어 컴파일러 내장을 쓴다(이 저장소의 컴파일러는 전부 clang).
+         * @brief 0 이 아닌 값에서 켜진 비트 중 가장 낮은 비트의 번호(0 ~ 63)를 구합니다. @p value 가 0 이면 결과가 정의되지 않습니다.
+         * @details 비트셋에서 켜진 비트만 골라 도는 자리(`TaskManager` 의 유휴 워커 마스크 · `PrimitiveRegistry` 의 더티 워드)가 씁니다.
+         *          C++17 이라 `std::countr_zero` 가 없어 컴파일러 내장 함수를 씁니다(이 저장소의 컴파일러는 전부 clang).
          */
         [[nodiscard]] static SW_INLINE uint32 countTrailingZeros( uint64 value ) noexcept
         {
@@ -117,13 +117,13 @@ namespace sw
             return x * x * x * x;
         }
 
-        /** @brief degree 단위의 각도를 radian 으로 변환 */
+        /** @brief 도(degree) 단위 각도를 라디안으로 바꿉니다. */
         [[nodiscard]] static SW_INLINE constexpr float32 toRadian( const float32 degree ) noexcept { return degree * DegreeToRadian; }
 
-        /** @brief radian 단위의 각도를 degree 로 변환 */
+        /** @brief 라디안 단위 각도를 도(degree)로 바꿉니다. */
         [[nodiscard]] static SW_INLINE constexpr float32 toDegree( const float32 radian ) noexcept { return radian * RadianToDegree; }
 
-        /** @brief 입력값을 0.0과 1.0 사이로 강제 고정 */
+        /** @brief 값을 0.0 ~ 1.0 범위로 자릅니다. */
         [[nodiscard]] static SW_INLINE constexpr float32 saturate( const float32 value ) noexcept { return clamp( value, 0.f, 1.f ); }
 
         /** @brief 거의 같은지 비교합니다. */
@@ -206,7 +206,7 @@ namespace sw
             return x * ( T( 1 ) - a ) + y * a;
         }
 
-        /** @brief 두 값 사이의 위치를 통해 t 값(0.0~1.0)을 역으로 구합니다. */
+        /** @brief `pos` 가 두 값 사이의 어디쯤인지(t, 0.0 ~ 1.0)를 거꾸로 구합니다. 두 값이 거의 같으면 0 입니다. */
         template <typename T>
         static SW_INLINE constexpr T inverseLerp( T value1, T value2, T pos, const float32 epsilon = Epsilon )
         {
@@ -247,7 +247,7 @@ namespace sw
             return h1 * p1 + h2 * p2 + h3 * s1 + h4 * s2;
         }
 
-        /** @brief 지정된 alignment 배수에 맞춰 올림(align) 처리합니다. */
+        /** @brief `alignment` 의 배수로 올림합니다. 정수이고 2 의 거듭제곱이면 비트 연산으로 합니다. */
         template <typename T, typename U = T>
         static SW_INLINE constexpr T align( T value, U alignment )
         {
@@ -303,7 +303,7 @@ namespace sw
             return static_cast<T>( dist( t_generator ) );
         }
 
-        /** @brief 소수점 이하의 분수(fraction) 부분만 반환합니다. */
+        /** @brief 소수 부분만 반환합니다(x - floor(x)). 정수 타입이면 0 입니다. */
         template <typename T>
         static SW_INLINE constexpr T frac( T x )
         {

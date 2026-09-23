@@ -29,8 +29,8 @@ namespace sw
         {
 #if !defined( SW_PLATFORM_WINDOWS )
             /**
-             * @brief 읽으려고 열고 크기를 잽니다(맨 앞으로 되감긴 채). 실패하면 로그를 남기고 nullptr — 연 파일은 호출자가 닫는다.
-             * @details `readFile` · `readTextFile` 이 이 열두 줄을 각자 들었고, 크기를 못 잴 때 한쪽만 로그를 남겼다.
+             * @brief 읽기용으로 열고 크기를 잽니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
+             * @details `readFile` · `readTextFile` 이 이 열두 줄을 각자 들고 있었고, 크기를 재지 못했을 때 한쪽만 로그를 남겼습니다.
              */
             static FILE* openForReading( string_view fileName, int64& outFileSize )
             {
@@ -54,13 +54,14 @@ namespace sw
 #endif
 
             /**
-             * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼). 실패하면 로그 + false.
-             * @details `readFile` · `readTextFile` 의 몸통이다. **Windows 는 Win32 로 곧장 읽는다** — 열기 · 크기 · 읽기 · 닫기 네 번의
-             *          시스템 호출. stdio 경로(`fopen_s` → 끝으로 옮기기 → 위치 묻기 → 처음으로 되감기 → `fread`)는 크기를 재려고
-             *          파일 위치를 세 번 옮겼고 UCRT 의 잠금 · 버퍼 준비를 지났다. 게다가 `fopen_s` 는 좁은 경로를 **ANSI 코드 페이지**로
-             *          풀어서 UTF-8 경로의 한글이 깨졌다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않는다) — 여기서는 UTF-16 으로 바꿔 연다.
-             *          2026-09-23 시작 시간 프로파일에서 `readFile` 이 게임 스레드 초기화의 12.6 % 였다(셰이더 굽기 도장이 소스를 읽어 해시한다).
-             *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허락한다 — 에디터가 쓰는 중인 파일도 전처럼 열린다.
+             * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼입니다). 실패하면 로그를 남기고 false 입니다.
+             * @details `readFile` · `readTextFile` 의 본체입니다. **Windows 에서는 Win32 API 로 바로 읽습니다.** 열기 · 크기 · 읽기 · 닫기의
+             *          시스템 호출 네 번입니다. stdio 경로(`fopen_s` → 끝으로 이동 → 위치 질의 → 처음으로 되감기 → `fread`)는 크기를
+             *          재려고 파일 위치를 세 번 옮겼고, UCRT 의 잠금과 버퍼 준비를 거쳤습니다. 게다가 `fopen_s` 는 좁은 문자 경로를
+             *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨졌습니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
+             *          여기서는 UTF-16 으로 바꿔 엽니다. 2026-09-23 시작 시간 프로파일에서 `readFile` 이 게임 스레드 초기화의 12.6 %
+             *          였습니다(셰이더 굽기 도장이 소스를 읽어 해시합니다). 공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를
+             *          허용하므로, 에디터가 쓰고 있는 파일도 전처럼 열립니다.
              */
             template <typename BufferType>
             static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
@@ -93,7 +94,7 @@ namespace sw
 
                 const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
                 outBuffer.resize( static_cast<size_t>( dataSize ) );
-                // 읽을 자리는 OVERLAPPED 의 오프셋으로 준다(동기 핸들이면 위치 옮기기 호출이 따로 필요 없다). ReadFile 은 한 번에 4 GB 미만.
+                // 읽을 위치는 OVERLAPPED 의 오프셋으로 준다(동기 핸들이면 위치를 옮기는 호출이 따로 필요 없다). ReadFile 은 한 번에 4 GB 미만만 읽는다.
                 uint64 readTotal = 0;
                 while ( readTotal < dataSize )
                 {
@@ -141,35 +142,34 @@ namespace sw
             }
         };
 
-        /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 한 건. */
+        /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 하나입니다. */
         struct FileDialogResult
         {
             FileDialogDelegate _delegate{};
             vector<string>     _listPath{};
         };
 
-        /** @brief 파일 다이얼로그 결과 큐 — 담는 쪽은 분리 스레드, 꺼내는 쪽은 메인 스레드다. */
+        /** @brief 파일 다이얼로그 결과 큐입니다. 담는 쪽은 분리된 스레드, 꺼내는 쪽은 메인 스레드입니다. */
         struct FileDialogQueueInternal
         {
             inline static mutex                    _s_mutex{};
             inline static vector<FileDialogResult> _s_listResult{};
-            /// @brief cancelFileDialogResults 가 올린다. 이미 열려 있는 다이얼로그의 결과를 버리는 표식이다.
+            /// @brief cancelFileDialogResults 가 올립니다. 이미 열려 있는 다이얼로그의 결과를 버리는 표시입니다.
             inline static uint32 _s_generation{ 0 };
         };
 
-        /** @brief 윈도우 경로의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
+        /** @brief 윈도우 경로 길이의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
         constexpr size_t kMaxWindowsPathSize = 32768;
 
         /**
-         * @brief 디렉터리를 훑으며 항목마다 실행합니다. **던지지 않습니다.**
-         * @details `std::filesystem` 의 순회자는 `error_code` 를 받지 않으면 **예외를 던진다** —
-         *          권한이 없는 폴더, 순회 도중 지워진 폴더, 윈도우의 보호된 정션이 그 경우다.
-         *          `collectFiles` · `collectFolders` 는 `bool` 로 실패를 알리는 약속인데 그 예외가
-         *          호출부를 뚫고 나갔다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
-         *          처음부터 `error_code` 를 받고 있었다 — 그 형태가 여기로 옮겨지지 않았다.
+         * @brief 디렉터리를 훑으며 항목마다 함수를 실행합니다. **예외를 던지지 않습니다.**
+         * @details `std::filesystem` 의 순회자는 `error_code` 를 받지 않으면 **예외를 던집니다.** 권한이 없는 폴더, 순회 도중
+         *          지워진 폴더, 윈도우의 보호된 정션이 그런 경우입니다. `collectFiles` · `collectFolders` 는 `bool` 로 실패를
+         *          알리기로 약속했는데, 그 예외가 호출부까지 뚫고 나갔습니다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
+         *          처음부터 `error_code` 를 받고 있었는데, 그 방식이 여기에는 옮겨지지 않았던 것입니다.
          *
-         *          같은 네 벌(파일/폴더 × 재귀/비재귀)이 따로 적혀 있던 것도 여기서 하나로 모은다.
-         *          갈라질 자리를 줄이는 것이 이 저장소가 되풀이해 겪은 문제의 답이다.
+         *          따로 적혀 있던 같은 코드 네 벌(파일/폴더 × 재귀/비재귀)도 여기서 하나로 모읍니다. 코드가 갈라질 곳을 줄이는
+         *          것이 이 저장소가 되풀이해 겪은 문제의 해법입니다.
          */
         template <typename Func>
         void forEachDirectoryEntry( const std::filesystem::path& directoryPath, const bool bRecursive, Func&& func )
@@ -178,7 +178,7 @@ namespace sw
 
             if ( bRecursive )
             {
-                // `skip_permission_denied` 는 하위 폴더에 못 들어갈 때 멈추지 않고 건너뛰게 한다.
+                // `skip_permission_denied` 는 하위 폴더에 들어갈 수 없을 때 멈추지 않고 건너뛰게 한다.
                 std::filesystem::recursive_directory_iterator iter{ directoryPath, std::filesystem::directory_options::skip_permission_denied, ec };
                 if ( ec )
                     return;
@@ -208,7 +208,7 @@ namespace sw
             }
         }
 
-        /** @brief 항목이 디렉터리인지 — 물어보다 던지지 않습니다. */
+        /** @brief 항목이 디렉터리인지 확인합니다. 확인하다 예외를 던지지 않습니다. */
         bool isDirectoryEntry( const std::filesystem::directory_entry& entry )
         {
             std::error_code ec;
@@ -535,7 +535,7 @@ namespace sw
     {
         if ( path.size() <= component.size() )
             return {};
-        // skip "component/"
+        // "component/" 를 건너뛴다
         return string{ path.substr( component.size() + 1 ) };
     }
 
@@ -577,10 +577,10 @@ namespace sw
     string FileUtil::getExecutablePath()
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)
-        // 으로만 알린다. 그것을 안 보면 260자를 넘는 경로에 설치된 순간 exe 위치가 조용히 틀려지고,
-        // 그 자리를 기준으로 찾는 모듈 DLL·RHI 백엔드·셰이더·리소스가 **전부** "없다" 가 된다 —
-        // 어디에도 원인이 남지 않는다. 그래서 다 담길 때까지 버퍼를 키운다.
+        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 이를
+        // 확인하지 않으면 260자를 넘는 경로에 설치된 순간 exe 위치가 조용히 틀어지고, 그 위치를 기준으로 찾는 모듈 DLL ·
+        // RHI 백엔드 · 셰이더 · 리소스가 **모두** "없다" 가 된다. 원인은 어디에도 남지 않는다. 그래서 다 담길 때까지
+        // 버퍼를 키운다.
         vector<utf16> listPathBuffer( constant::kMaxPathSize );
         for ( ;; )
         {
@@ -640,8 +640,8 @@ namespace sw
         if ( fileName.empty() )
             return 0;
 
-        // 크기만 알면 되는데 파일을 열고 끝까지 탐색하고 있었다. 바로 위 getFileTimestamp 와
-        // 같은 방식으로 묻는다 — 핸들도, 플랫폼 분기도 필요 없다.
+        // 크기만 알면 되는데 예전에는 파일을 열고 끝까지 이동하고 있었다. 바로 위 getFileTimestamp 와 같은 방식으로
+        // 묻는다. 핸들도 플랫폼 분기도 필요 없다.
         const string    filePath = normalizeSeparators( fileName );
         std::error_code errorCode;
         const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
@@ -657,7 +657,7 @@ namespace sw
             return false;
         const string filePath = normalizeSeparators( fileName );
 #if defined( SW_PLATFORM_WINDOWS )
-        // 크기와 시각을 한 번에 — `std::filesystem` 으로는 두 번 묻게 된다(`file_size` · `last_write_time`).
+        // 크기와 시각을 한 번에 얻는다. `std::filesystem` 으로는 두 번 물어야 한다(`file_size` · `last_write_time`).
         const wstring             widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
         WIN32_FILE_ATTRIBUTE_DATA attribute{};
         if ( GetFileAttributesExW( widePath.c_str(), GetFileExInfoStandard, &attribute ) == FALSE )
@@ -747,8 +747,8 @@ namespace sw
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
 
-        // BOM 판정은 아래 skipUtf8Bom 이 정본이다. 여기서 바이트를 또 세고 있었다 — 한쪽만
-        // 고치면 읽기 경로와 질의 경로가 서로 다른 답을 준다.
+        // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 예전에는 여기서 바이트를 따로 세고 있었다. 한쪽만 고치면 읽기 경로와
+        // 질의 경로가 서로 다른 답을 준다.
         const string_view withoutBom = skipUtf8Bom( outText );
         if ( withoutBom.size() != outText.size() )
             outText.erase( 0, outText.size() - withoutBom.size() );
@@ -822,10 +822,10 @@ namespace sw
             if ( bSuccess == false || listResult.empty() )
                 return;
 
-            // **여기서 델리게이트를 부르지 않는다.** 이 스레드는 메인 스레드와 아무 약속이 없다.
+            // **여기서 델리게이트를 부르지 않는다.** 이 스레드는 메인 스레드와 아무런 동기화 약속이 없다.
             std::scoped_lock<mutex> lock( FileDialogQueueInternal::_s_mutex );
             if ( FileDialogQueueInternal::_s_generation != openGeneration )
-                return; // 여는 사이에 취소됐다 — 델리게이트가 가리키던 모듈이 이미 없을 수 있다.
+                return; // 여는 사이에 취소됐다. 델리게이트가 가리키던 모듈이 이미 없을 수 있다.
             FileDialogResult result;
             result._delegate = delegateCallback;
             result._listPath = std::move( listResult );
@@ -844,7 +844,7 @@ namespace sw
             listReady.swap( FileDialogQueueInternal::_s_listResult );
         }
 
-        // 델리게이트는 **락 밖에서** 부른다 — 콜백이 다시 다이얼로그를 열면 같은 뮤텍스를 재진입한다.
+        // 델리게이트는 **락 밖에서** 부른다. 콜백이 다시 다이얼로그를 열면 같은 뮤텍스에 재진입하기 때문이다.
         for ( FileDialogResult& result : listReady )
         {
             if ( result._delegate.isBound() )
@@ -957,9 +957,9 @@ namespace sw
         string absPath;
         if ( makeAbsolutePath( libraryName, absPath ) && fileExists( absPath ) )
         {
-            // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 분리하여
-            // DLL 검색 경로 1순위로 추가합니다. '/' 슬래시 경로 전달 시 디렉터리 파싱 실패로 종속 DLL(Engine.dll 등)을
-            // 찾지 못하는 ERROR_MOD_NOT_FOUND(126) 오류가 발생하므로 네이티브 구분자('\')로 변환합니다.
+            // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 잘라 DLL 검색 경로의
+            // 첫 순위로 넣는다. '/' 경로를 넘기면 디렉터리 해석에 실패해 의존 DLL(Engine.dll 등)을 찾지 못하고
+            // ERROR_MOD_NOT_FOUND(126) 오류가 나므로, 네이티브 구분자('\')로 바꾼다.
             const string nativePath = toNativeSeparators( absPath );
 
             const string dir = getDirectoryPart( nativePath );
@@ -968,9 +968,9 @@ namespace sw
             if ( dir.empty() == false )
                 SetDllDirectoryA( dir.c_str() );
 
-            // 1) LOAD_WITH_ALTERED_SEARCH_PATH로 대상 DLL 위치를 최우선 검색하여 로드
+            // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
             HMODULE hMod = LoadLibraryExA( nativePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
-            // 2) LOAD_WITH_ALTERED_SEARCH_PATH 사용 시 SetDllDirectory가 무시되는 Win32 제약에 대비하여 LoadLibraryA 폴백 수행
+            // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryA 로 다시 시도한다
             if ( hMod == nullptr )
                 hMod = LoadLibraryA( nativePath.c_str() );
 

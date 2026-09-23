@@ -1,10 +1,10 @@
 # ==============================================================================
 # @file Source/Core/CMakeLists.txt
-# @brief 호스트/런타임 기초(Common, Log, FileUtil, String 등) STATIC 타겟
+# @brief 호스트 · 런타임의 기반(Common, Log, FileUtil, String 등)을 담는 STATIC 타깃
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) 소스 목록 — 플랫폼 파일 대화상자/워처만 OS별 추가
+# 1) 소스 목록 — 파일 다이얼로그 · 워처만 OS 별로 추가한다
 # ------------------------------------------------------------------------------
 set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/CommandLineManager.cpp"
@@ -67,10 +67,10 @@ elseif(UNIX)
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) Core_objects — 한 번만 컴파일
-# ReflectionParser: Core STATIC 링크
-# Engine: 동일 OBJECT를 넣어 Dev에서 Engine.dll로 export
-# SW_EXPORTS: App/Editor(SW_IMPORTS)가 dllimport 할 수 있게
+# 2) Core_objects — 한 번만 컴파일한다
+#    ReflectionParser: Core STATIC 을 링크한다
+#    Engine: 같은 OBJECT 를 넣어 Dev 에서 Engine.dll 로 export 한다
+#    SW_EXPORTS: App · Editor(SW_IMPORTS)가 dllimport 할 수 있게 한다
 # ------------------------------------------------------------------------------
 add_library(Core_objects OBJECT ${cfSources})
 set_target_properties(Core_objects PROPERTIES
@@ -100,7 +100,7 @@ sw_configurePch(Core_objects "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 target_link_libraries(Core_objects PRIVATE sw_global_options)
 
 # ------------------------------------------------------------------------------
-# 3) Core STATIC — 파서가 링크하는 껍데기. Engine은 Core_objects를 직접 가져감
+# 3) Core STATIC — 파서가 링크하는 껍데기. Engine 은 Core_objects 를 직접 가져간다
 # ------------------------------------------------------------------------------
 add_library(Core STATIC $<TARGET_OBJECTS:Core_objects>)
 set_target_properties(Core PROPERTIES
@@ -119,7 +119,7 @@ elseif(APPLE)
 	target_link_libraries(Core PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
 
-# Engine이 $<TARGET_OBJECTS:Core_objects>를 가져갈 수 있게 의존성 노출
+# Engine 이 $<TARGET_OBJECTS:Core_objects> 를 가져갈 수 있도록 의존성을 드러낸다
 add_dependencies(Core Core_objects)
 set_property(TARGET Core PROPERTY SW_CORE_OBJECTS Core_objects)
 

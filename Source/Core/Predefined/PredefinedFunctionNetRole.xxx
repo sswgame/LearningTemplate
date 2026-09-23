@@ -1,7 +1,7 @@
 /**
  * @file PredefinedFunctionNetRole.xxx
- * @brief FunctionNetRole 열거자 목록 (엔진 enum + FUNCTION 어노테이션 파싱 공유).
- * @details include 전에 REGISTER_FUNCTION_NET_ROLE(Name) 정의.
+ * @brief FunctionNetRole 열거자 목록입니다(엔진 enum 과 FUNCTION 애노테이션 파싱이 함께 씁니다).
+ * @details include 하기 전에 REGISTER_FUNCTION_NET_ROLE(Name) 을 정의하십시오.
  */
 
 REGISTER_FUNCTION_NET_ROLE( Local )

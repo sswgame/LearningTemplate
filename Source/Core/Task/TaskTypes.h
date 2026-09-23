@@ -1,6 +1,6 @@
 /**
  * @file TaskTypes.h
- * @brief 비동기 태스크 시스템에서 사용하는 핸들, 인자, 델리게이트 및 열거형 타입들을 정의합니다.
+ * @brief 비동기 태스크 시스템이 쓰는 핸들 · 인자 · 델리게이트 · 열거형 타입입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,31 +15,32 @@ namespace sw
 {
     /**
      * @class TaskValue
-     * @brief 이종(Heterogeneous) 데이터 타입을 런타임에 안전하게 보관하는 타입 소거(Type Erasure) 컨테이너입니다.
+     * @brief 여러 타입의 값을 런타임에 안전하게 보관하는 타입 소거 컨테이너입니다.
      * @details
-     * - **SBO (Small Buffer Optimization, 32바이트)**:
-     *   기본형(int32, float32, 포인터 등) 및 32바이트 이하의 소형 구조체는 별도의 힙 메모리 할당(new/delete) 없이
-     *   인라인 스택 버퍼(`_storage`)에 즉시 저장하여 고성능 0-Alloc을 보장합니다.
-     * - **큰 객체 자동 힙 할당**:
-     *   32바이트를 초과하는 대형 객체는 자동으로 힙에 할당하고 포인터로 관리합니다.
-     * - **소멸/복사/이동 VTable**:
-     *   C++ 가상 함수 테이블 오버헤드 대신 함수 포인터 4개로 구성된 정적 VTable을 통해 가볍게 수명주기를 관리합니다.
+     * - **SBO(Small Buffer Optimization, 32바이트)**:
+     *   기본형(int32, float32, 포인터 등)과 32바이트 이하의 작은 구조체는 힙 할당(new/delete) 없이 인라인 버퍼(`_arrStorage`)에
+     *   바로 저장합니다.
+     * - **큰 객체는 힙에 할당**:
+     *   32바이트를 넘는 객체는 자동으로 힙에 할당하고 포인터로 관리합니다.
+     * - **소멸 · 복사 · 이동 VTable**:
+     *   C++ 가상 함수 대신 함수 포인터 3개로 된 정적 VTable 로 수명을 가볍게 관리합니다.
      * - **타입 안전성**:
-     *   `getPtr<T>()`로 값을 읽어오며, Debug 모드에서는 `typeid`를 비교하여 잘못된 타입 접근 시 즉시 어설션을 발생시킵니다.
+     *   값은 `getPtr<T>()` 로 읽으며, Debug 빌드에서는 저장 방식(인라인 여부)과 타입 크기를 비교해 잘못된 타입으로 읽으면 바로
+     *   assert 합니다.
      */
     class TaskValue
     {
-        /** @brief 인라인으로 보관 가능한 최대 바이트 크기 (32바이트) */
+        /** @brief 인라인으로 보관할 수 있는 최대 크기(32바이트)입니다. */
         static constexpr size_t kInlineStorageSize = 32;
 
-        /** @brief 해당 타입 T가 32바이트 인라인 버퍼에 들어갈 수 있는지 컴파일 타임에 판별합니다. */
+        /** @brief 타입 T 가 32바이트 인라인 버퍼에 들어가는지 컴파일 타임에 판별합니다. */
         template <typename T>
         static constexpr bool kIsInline = ( sizeof( T ) <= kInlineStorageSize && alignof( T ) <= alignof( std::max_align_t ) );
 
-        /** @brief 타입별 소멸, 복사 생성, 이동 생성을 관리하는 가상 함수 테이블 구조체 */
+        /** @brief 타입별 소멸 · 복사 생성 · 이동 생성을 담당하는 함수 테이블입니다. */
         struct VTable
         {
-            void ( *_pDestroy )( void* pStorage );             ///< 객체 소멸자 호출 함수
+            void ( *_pDestroy )( void* pStorage );             ///< 소멸자를 부르는 함수
             void ( *_pClone )( const void* pSrc, void* pDst ); ///< 복사 생성 함수
             void ( *_pMove )( void* pSrc, void* pDst );        ///< 이동 생성 함수
             size_t _typeSize{ 0 };
@@ -93,7 +94,7 @@ namespace sw
         }
 
     public:
-        /** @brief 빈 값 (저장소 없음). */
+        /** @brief 빈 값입니다(저장소 없음). */
         TaskValue() = default;
 
         ~TaskValue()
@@ -177,7 +178,7 @@ namespace sw
 
         bool hasValue() const { return _pVtable != nullptr; }
 
-        /** @brief 저장 값 포인터. 타입 불일치는 Debug assert. */
+        /** @brief 저장된 값의 포인터를 반환합니다. 타입이 맞지 않으면 Debug 에서 assert 합니다. */
         template <typename T>
         const T* getPtr() const
         {
@@ -196,7 +197,7 @@ namespace sw
         }
 
         template <typename T>
-        /** @brief 값을 복사해 반환합니다. 없으면 defaultValue. */
+        /** @brief 값을 복사해 반환합니다. 값이 없으면 defaultValue 입니다. */
         T getValue( const T& defaultValue = T{} ) const
         {
             const T* pVal = getPtr<T>();
@@ -212,16 +213,16 @@ namespace sw
 
     /**
      * @class TaskArgs
-     * @brief 위치 기반 태스크 인자 가방.
-     * @details MakeTaskArgs<T0,T1,...>(...) → get<T0>(0), get<T1>(1), ...
+     * @brief 위치 기반 태스크 인자 묶음입니다.
+     * @details MakeTaskArgs<T0,T1,...>(...) 로 만들고 get<T0>(0), get<T1>(1), ... 로 읽습니다.
      */
     class TaskArgs
     {
     public:
-        /** @brief 빈 인자 가방. */
+        /** @brief 빈 인자 묶음입니다. */
         TaskArgs() = default;
 
-        /** @brief 가변 인자로 값 가방을 채웁니다. */
+        /** @brief 가변 인자로 값을 채웁니다. */
         template <typename... Args, typename = std::enable_if_t<( sizeof...( Args ) > 0 )>>
         explicit TaskArgs( Args&&... args )
         {
@@ -233,16 +234,16 @@ namespace sw
             : _listValue{ listValue.begin(), listValue.end() } {}
 
         template <typename T>
-        /** @brief 추가합니다. */
+        /** @brief 값을 하나 추가합니다. */
         void add( T&& val )
         {
             _listValue.emplace_back( std::forward<T>( val ) );
         }
 
-        /** @brief 크기를 반환합니다. */
+        /** @brief 인자 개수를 반환합니다. */
         uint32 getCount() const { return static_cast<uint32>( _listValue.size() ); }
 
-        /** @brief 인덱스 인자를 반환합니다. */
+        /** @brief index 번째 인자를 반환합니다. */
         const TaskValue& get( uint32 index ) const { return _listValue[index]; }
 
         template <typename T>
@@ -254,7 +255,7 @@ namespace sw
         }
 
         template <typename T>
-        /** @brief 반환합니다. */
+        /** @brief index 번째 인자를 T 로 꺼내 반환합니다. 없으면 defaultVal 입니다. */
         T get( uint32 index, const T& defaultVal = T{} ) const
         {
             const T* pVal = getPtr<T>( index );
@@ -267,7 +268,7 @@ namespace sw
         vector<TaskValue> _listValue;
     };
 
-    /** @brief 명시 타입 목록으로 TaskArgs 생성. */
+    /** @brief 타입 목록을 명시해 TaskArgs 를 만듭니다. */
     template <typename... Ts>
     TaskArgs MakeTaskArgs( Ts... values )
     {
@@ -276,61 +277,61 @@ namespace sw
         return args;
     }
 
-    /** @brief 매개변수가 없는 기본 태스크 델리게이트 */
+    /** @brief 매개변수가 없는 기본 태스크 델리게이트입니다. */
     using TaskDelegate = Delegate<void()>;
 
-    /** @brief 위치 기반 TaskArgs 인자를 전달받는 태스크 델리게이트 */
+    /** @brief 위치 기반 TaskArgs 를 받는 태스크 델리게이트입니다. */
     using TaskArgsDelegate = Delegate<void( const TaskArgs& args )>;
 
-    /** @brief 인덱스(0 ~ count-1)를 전달받는 단일 병렬 태스크 델리게이트 */
+    /** @brief 인덱스(0 ~ count-1) 하나를 받는 병렬 태스크 델리게이트입니다. */
     using ParallelTaskDelegate = Delegate<void( uint32 index )>;
 
-    /** @brief 범위 블록([start, end))을 전달받는 청크 분할 병렬 태스크 델리게이트 */
+    /** @brief 범위 블록([start, end))을 받는 청크 단위 병렬 태스크 델리게이트입니다. */
     using ParallelBlockDelegate = Delegate<void( uint32 start, uint32 end )>;
 
     /**
      * @enum TaskPriority
-     * @brief 태스크의 실행 우선순위를 나타냅니다.
+     * @brief 태스크의 실행 우선순위입니다.
      */
     enum class TaskPriority : uint8
     {
-        High   = 0, ///< 프레임 크리티컬/렌더링/물리 태스크 (최우선 처리)
-        Normal = 1, ///< 일반 게임플레이/계산 태스크 (기본값)
-        Low    = 2  ///< 백그라운드 I/O, 에셋 파싱, 통계 태스크
+        High   = 0, ///< 프레임에 결정적인 렌더링 · 물리 태스크(가장 먼저 처리)
+        Normal = 1, ///< 일반 게임플레이 · 계산 태스크(기본값)
+        Low    = 2  ///< 백그라운드 I/O · 에셋 파싱 · 통계 태스크
     };
 
     /**
      * @enum TaskThreadAffinity
-     * @brief 태스크가 실행될 스레드 선호도(지정 대상)를 결정합니다.
+     * @brief 태스크를 실행할 스레드를 정합니다.
      */
     enum class TaskThreadAffinity : uint8
     {
-        Any,       ///< 워커 풀의 유휴 스레드 아무 곳에서나 실행 가능
-        MainThread ///< 오직 메인 스레드(렌더/UI/엔진 메인 루프)에서만 실행 (dispatchMainThreadTasks 호출 시)
+        Any,       ///< 워커 풀의 아무 유휴 스레드에서나 실행한다
+        MainThread ///< 메인 스레드(렌더 · UI · 엔진 메인 루프)에서만 실행한다(dispatchMainThreadTasks 를 부를 때)
     };
 
     /**
      * @enum TaskType
-     * @brief 태스크의 실행 유형을 나타냅니다.
+     * @brief 태스크의 실행 유형입니다.
      */
     enum class TaskType : uint8
     {
-        General,  ///< 일반 단일 함수/인자 태스크
-        Parallel, ///< 여러 워커에 분산 실행되는 N개 병렬 하위 태스크
-        Staged    ///< 특정 스테이지에 소속된 그룹 태스크
+        General,  ///< 일반 단일 함수 · 인자 태스크
+        Parallel, ///< 여러 워커에 나눠 실행하는 N개의 병렬 하위 태스크
+        Staged    ///< 특정 스테이지에 속한 그룹 태스크
     };
 
     /**
      * @enum TaskState
-     * @brief 태스크 노드의 현재 수명주기 상태를 나타냅니다.
+     * @brief 태스크 노드의 현재 수명 주기 상태입니다.
      */
     enum class TaskState : uint8
     {
-        Pending,            ///< 생성되었으나 아직 부모/빌더 의존성이 남아있어 준비되지 않은 상태
-        Ready,              ///< 모든 선행 조건이 충족되어 큐에 진입 대기 중인 상태
-        Running,            ///< 워커 스레드에서 본문이 실행 중인 상태
-        WaitingForChildren, ///< 자식 병렬 태스크들이 모두 완료되기를 기다리는 상태
-        Completed           ///< 실행 및 후속 트리거 처리가 완전히 완료된 상태
+        Pending,            ///< 만들어졌지만 부모 · 빌더 의존성이 남아 아직 준비되지 않은 상태
+        Ready,              ///< 모든 선행 조건을 만족해 큐에 들어가기를 기다리는 상태
+        Running,            ///< 워커 스레드에서 본문을 실행 중인 상태
+        WaitingForChildren, ///< 자식 병렬 태스크가 모두 끝나기를 기다리는 상태
+        Completed           ///< 실행과 후속 태스크 처리까지 모두 끝난 상태
     };
 
     struct StageNode;
@@ -340,19 +341,19 @@ namespace sw
 
     /**
      * @struct TaskHandle
-     * @brief 생성된 태스크를 가리키는 고유 핸들이며, DAG 의존성 연결 및 플루언트(Fluent) 체이닝을 지원합니다.
+     * @brief 만든 태스크를 가리키는 핸들입니다. DAG 의존성 연결과 체이닝을 지원합니다.
      * @details
-     * - 침입형 참조 카운팅(Intrusive Reference Counting)을 사용하여 복사/이동 시 스마트 포인터 할당 오버헤드가 없습니다.
-     * - `then()`, `precede()`, `succeed()` 메서드를 통해 작업 간의 선후 관계를 선언적으로 조립할 수 있습니다.
+     * - 침입형 참조 계수를 써서, 복사 · 이동할 때 스마트 포인터 같은 별도 할당이 없습니다.
+     * - `then()`, `precede()`, `succeed()` 로 작업 사이의 선후 관계를 선언적으로 조립할 수 있습니다.
      */
     struct SW_API TaskHandle
     {
         friend class TaskManager;
 
-        /** @brief 빈 핸들 (노드 없음). */
+        /** @brief 빈 핸들입니다(노드 없음). */
         constexpr TaskHandle() = default;
 
-        /** @brief TaskNode 포인터로부터 핸들을 생성하며 참조 카운트를 증가시킵니다. */
+        /** @brief TaskNode 포인터로 핸들을 만들고 참조 카운트를 올립니다. */
         explicit TaskHandle( TaskNode* pNode );
         TaskHandle( const TaskHandle& other );
         TaskHandle( TaskHandle&& other ) noexcept;
@@ -361,45 +362,45 @@ namespace sw
         TaskHandle& operator=( const TaskHandle& other );
         TaskHandle& operator=( TaskHandle&& other ) noexcept;
 
-        /** @brief 유효한 태스크 노드를 가리키고 있는지 여부를 반환합니다. */
+        /** @brief 유효한 태스크 노드를 가리키는지 반환합니다. */
         bool isValid() const { return _pNode != nullptr; }
 
-        /** @brief 내부 TaskNode 원시 포인터를 반환합니다. */
+        /** @brief 내부 TaskNode 포인터를 반환합니다. */
         TaskNode* getNode() const { return _pNode; }
 
-        /** @brief 태스크의 우선순위를 설정합니다. */
+        /** @brief 태스크의 우선순위를 정합니다. */
         TaskHandle& setPriority( TaskPriority priority );
 
         /** @brief 태스크의 우선순위를 반환합니다. */
         TaskPriority getPriority() const;
 
         /**
-         * @brief 이 태스크가 targetTask보다 반드시 '먼저' 실행 완료되도록 DAG 선후 의존성을 겁니다.
-         * @param targetTask 이 태스크 완료 후 실행될 후속 태스크
+         * @brief 이 태스크가 targetTask 보다 반드시 **먼저** 끝나도록 DAG 선후 의존성을 겁니다.
+         * @param targetTask 이 태스크가 끝난 뒤 실행될 후속 태스크
          */
         TaskHandle& precede( const TaskHandle& targetTask );
 
         /**
-         * @brief dependencyTask가 반드시 '먼저' 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
-         * @param dependencyTask 이 태스크 전에 먼저 완료되어야 하는 선행 태스크
+         * @brief dependencyTask 가 반드시 **먼저** 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
+         * @param dependencyTask 이 태스크보다 먼저 끝나야 하는 선행 태스크
          */
         TaskHandle& succeed( TaskHandle dependencyTask );
 
         /**
-         * @brief 이 태스크가 완료된 후 자동으로 실행될 후속 연속(Continuation) 태스크를 생성하여 체이닝합니다.
-         * @param nextTaskDelegate 후속 실행될 델리게이트
-         * @param affinity 후속 태스크가 실행될 스레드 친화도
-         * @return 새롭게 생성된 후속 태스크 핸들
+         * @brief 이 태스크가 끝나면 자동으로 실행될 후속 태스크(continuation)를 만들어 연결합니다.
+         * @param nextTaskDelegate 이어서 실행할 델리게이트
+         * @param affinity 후속 태스크를 실행할 스레드
+         * @return 새로 만든 후속 태스크의 핸들
          */
         TaskHandle then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
-        /** @brief 태스크를 취소합니다. 이미 실행 중이지 않은 경우 본문 실행이 생략됩니다. */
+        /** @brief 태스크를 취소합니다. 아직 실행 중이 아니면 본문을 건너뜁니다. */
         bool cancel();
 
-        /** @brief 태스크가 취소되었는지 여부를 반환합니다. */
+        /** @brief 태스크가 취소됐는지 반환합니다. */
         bool isCancelled() const;
 
-        /** @brief 태스크의 빌더 의존성을 해제하고 스케줄러에 즉시 제출하여 선행 조건 충족 시 실행되도록 합니다. */
+        /** @brief 빌더 의존성을 풀고 스케줄러에 제출합니다. 선행 조건이 모두 만족되면 실행됩니다. */
         void submit();
 
     private:
@@ -408,7 +409,7 @@ namespace sw
 
     /**
      * @struct CancellationToken
-     * @brief 비동기 태스크에 전달하여 외부에서 취소 신호를 보내거나 확인할 수 있는 토큰
+     * @brief 비동기 태스크에 넘겨, 밖에서 취소 신호를 보내거나 확인할 수 있게 하는 토큰입니다.
      */
     struct SW_API CancellationToken
     {
@@ -431,8 +432,8 @@ namespace sw
 
     /**
      * @struct TaskStageHandle
-     * @brief 여러 태스크를 하나의 논리적 단계(Stage)로 묶어 관리하고 동기화할 수 있는 스테이지 핸들입니다.
-     * @details 스테이지 내의 모든 태스크가 완료될 때까지 `waitStage()`로 블로킹 대기할 수 있습니다.
+     * @brief 여러 태스크를 하나의 논리적 단계(stage)로 묶어 관리하고 동기화하는 스테이지 핸들입니다.
+     * @details 스테이지 안의 모든 태스크가 끝날 때까지 `waitStage()` 로 블로킹 대기할 수 있습니다.
      */
     struct SW_API TaskStageHandle
     {
@@ -440,10 +441,10 @@ namespace sw
 
         constexpr TaskStageHandle() = default;
         /**
-         * @brief 노드의 참조 하나를 **넘겨받아** 핸들을 만듭니다 (매니저 전용).
-         * @details 예전에는 `shared_ptr<StageNode>` 였다 — 스테이지마다 제어 블록 하나가 힙에 잡혔고, 렌더 그래프는
-         *          프레임마다 웨이브 수만큼 스테이지를 만든다. 지금은 `TaskHandle` 처럼 침입형 참조 계수이고
-         *          노드는 매니저의 풀에서 온다 — 프레임 정상 상태에서 스테이지 디스패치는 힙을 만지지 않는다.
+         * @brief 노드의 참조 하나를 **넘겨받아** 핸들을 만듭니다(매니저 전용).
+         * @details 예전에는 `shared_ptr<StageNode>` 여서 스테이지마다 제어 블록 하나가 힙에 잡혔고, 렌더 그래프는 프레임마다 웨이브
+         *          수만큼 스테이지를 만듭니다. 지금은 `TaskHandle` 처럼 침입형 참조 계수이고 노드는 매니저의 풀에서 옵니다. 그래서
+         *          프레임이 안정된 상태에서는 스테이지를 디스패치해도 힙을 건드리지 않습니다.
          */
         explicit TaskStageHandle( StageNode* pNode ) noexcept
             : _pNode{ pNode } {}

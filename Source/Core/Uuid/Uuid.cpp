@@ -36,7 +36,7 @@ namespace sw
 
         // 버전 4
         uuid._arrBytes[6] = static_cast<uint8>( ( uuid._arrBytes[6] & 0x0f ) | 0x40 );
-        // RFC 4122 변형 비트
+        // RFC 4122 변형(variant) 비트
         uuid._arrBytes[8] = static_cast<uint8>( ( uuid._arrBytes[8] & 0x3f ) | 0x80 );
         return uuid;
     }

@@ -1,7 +1,7 @@
 /**
  * @file PredefinedContainerKind.xxx
- * @brief ContainerKind 열거자 목록 (엔진 enum + 파서 문자열 파싱 공유).
- * @details include 전에 REGISTER_CONTAINER_KIND(Name) 정의.
+ * @brief ContainerKind 열거자 목록입니다(엔진 enum 과 파서의 문자열 파싱이 함께 씁니다).
+ * @details include 하기 전에 REGISTER_CONTAINER_KIND(Name) 을 정의하십시오.
  */
 
 REGISTER_CONTAINER_KIND( None )

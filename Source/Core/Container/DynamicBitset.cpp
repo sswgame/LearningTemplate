@@ -211,8 +211,8 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator&=( const DynamicBitset& other )
     {
-        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
-        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는 아래 루프가 짧은 쪽
+        // `_listBlock` 의 범위 밖을 읽었다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
             SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );
@@ -228,8 +228,8 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator|=( const DynamicBitset& other )
     {
-        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
-        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는 아래 루프가 짧은 쪽
+        // `_listBlock` 의 범위 밖을 읽었다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
             SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );
@@ -245,8 +245,8 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator^=( const DynamicBitset& other )
     {
-        // 크기가 다르면 **아무것도 하지 않는다.** assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는
-        // 아래 루프가 짧은 쪽의 `_listBlock` 범위 밖을 읽었다 — 계약 위반이 메모리 오류가 된다.
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추고, 그 밖의 빌드에서는 아래 루프가 짧은 쪽
+        // `_listBlock` 의 범위 밖을 읽었다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
             SW_LOG_ASSERT( false, "Bitset sizes must match (%# vs %#)", _bitCount, other._bitCount );

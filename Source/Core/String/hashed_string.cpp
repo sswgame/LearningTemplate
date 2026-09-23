@@ -29,11 +29,10 @@ namespace sw
         static hashed_string::AllocationInfo  s_instance;
         static hashed_wstring::AllocationInfo s_instanceWide;
 
-        // 함수 지역 static 은 **한 번만** 생성된다. shutdown 이 `clear()` 로 0번 청크와 사전 정의
-        // 이름까지 돌려주므로, 두 번째 initialize 에서는 생성자가 돌지 않아 **빈 테이블**을 가리키게
-        // 된다 — `hashed_string( NameType_float3 )` 의 `c_str()` 이 nullptr 이고, 새로 intern 되는
-        // 첫 문자열이 0번(`NameType_None`)을 받아 기본 생성자와 같아진다. 둘 다 조용한 오답이다.
-        // 위 단정은 Debug 전용이라 Shipping 에서는 막아 주지도 못한다. 그래서 저장소를 다시 세운다.
+        // 함수 지역 static 은 **한 번만** 생성된다. shutdown 이 `clear()` 로 0번 청크와 미리 정의된 이름까지 돌려주므로, 두 번째
+        // initialize 에서는 생성자가 돌지 않아 **빈 테이블**을 가리키게 된다. 그러면 `hashed_string( NameType_float3 )` 의
+        // `c_str()` 이 nullptr 이 되고, 새로 intern 되는 첫 문자열이 0번(`NameType_None`)을 받아 기본 생성자와 같아진다. 둘 다
+        // 조용히 틀린 답이다. 위의 단언은 Debug 전용이라 Shipping 에서는 막아 주지도 못한다. 그래서 저장소를 다시 세운다.
         if ( s_instance._arrChunk[0].load( std::memory_order_acquire ) == nullptr )
             s_instance.initializeStorage();
         if ( s_instanceWide._arrChunk[0].load( std::memory_order_acquire ) == nullptr )
@@ -45,8 +44,8 @@ namespace sw
 
     void HashedStringPool::shutdown() noexcept
     {
-        // 단정만으로는 부족하다 — Shipping 에서 SW_ASSERT 는 사라지므로 initialize 전에 또는 두 번
-        // 불리면 널을 역참조한다. shutdown 은 여러 번 불려도 안전해야 한다.
+        // 단언만으로는 부족하다. Shipping 에서는 SW_ASSERT 가 사라지므로, initialize 전에 불리거나 두 번 불리면 nullptr 을
+        // 역참조한다. shutdown 은 여러 번 불려도 안전해야 한다.
         if ( s_pInstance == nullptr || s_pInstanceWide == nullptr )
             return;
 

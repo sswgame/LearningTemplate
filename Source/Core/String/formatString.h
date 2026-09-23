@@ -1,6 +1,6 @@
 /**
- * @file FormatString.h
- * @brief printf 스타일 포맷 헬퍼
+ * @file formatString.h
+ * @brief printf 스타일 포맷 도우미입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -16,22 +16,22 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 1) Format — 정밀도·너비·기수·정렬. Fmt(value, Format) 로 인자별 지정
+    // 1) Format — 정밀도 · 너비 · 기수 · 정렬. Fmt(value, Format) 으로 인자마다 지정한다
     // ------------------------------------------------------------------------------
-    /** @brief %# 플레이스홀더에 붙는 출력 옵션입니다. */
+    /** @brief %# 자리표에 붙는 출력 옵션입니다. */
     class Format
     {
         friend class FormatString;
 
     public:
-        /** @brief 너비 안에서의 정렬입니다. */
+        /** @brief 너비 안에서의 정렬 방식입니다. */
         enum class Alignment : uint8
         {
             Right,
             Left
         };
 
-        /** @brief 정수 기수입니다. HexUpper 는 대문자 A-F. */
+        /** @brief 정수의 기수입니다. HexUpper 는 대문자 A-F 입니다. */
         enum class Base : uint8
         {
             Binary   = 2,
@@ -69,7 +69,7 @@ namespace sw
             Flags _flags = Flags::None;
             Base  _base  = Base::Decimal;
 
-            /** @brief 플래그 설정 여부를 반환합니다. */
+            /** @brief 플래그가 켜져 있는지 반환합니다. */
             constexpr bool hasFlag( Flags flag ) const noexcept { return ( static_cast<uint8>( _flags ) & static_cast<uint8>( flag ) ) != 0; }
             /** @brief 플래그를 켭니다. */
             constexpr void setFlag( Flags flag ) noexcept { _flags = static_cast<Flags>( static_cast<uint8>( _flags ) | static_cast<uint8>( flag ) ); }
@@ -78,10 +78,10 @@ namespace sw
         };
 
     public:
-        /** @brief 기본 정밀도 6, 십진, 오른쪽 정렬입니다. */
+        /** @brief 기본값은 정밀도 6, 10진수, 오른쪽 정렬입니다. */
         constexpr Format() noexcept = default;
 
-        /** @brief 소수 자릿수를 지정합니다. */
+        /** @brief 소수점 아래 자릿수를 지정합니다. */
         constexpr explicit Format( const int32 precision ) noexcept
         {
             _data._precision = static_cast<uint8>( MathUtil::clamp( precision, 0, 255 ) );
@@ -109,7 +109,7 @@ namespace sw
                 _data.setFlag( FormatData::Flags::ZeroPad );
         }
 
-        /** @brief 정밀도를 설정합니다. */
+        /** @brief 정밀도를 정합니다. */
         constexpr Format& precision( const int32 precision ) noexcept
         {
             _data._precision = static_cast<uint8>( MathUtil::clamp( precision, 0, 255 ) );
@@ -117,7 +117,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 너비(width)를 설정합니다. */
+        /** @brief 너비를 정합니다. */
         constexpr Format& width( const int32 width ) noexcept
         {
             _data._width = static_cast<uint8>( MathUtil::clamp( width, 0, 255 ) );
@@ -125,56 +125,56 @@ namespace sw
             return *this;
         }
 
-        /** @brief 왼쪽 정렬을 설정합니다. */
+        /** @brief 왼쪽 정렬로 정합니다. */
         constexpr Format& leftAlign() noexcept
         {
             _data.setFlag( FormatData::Flags::LeftAlign );
             return *this;
         }
 
-        /** @brief 오른쪽 정렬을 설정합니다. */
+        /** @brief 오른쪽 정렬로 정합니다. */
         constexpr Format& rightAlign() noexcept
         {
             _data.clearFlag( FormatData::Flags::LeftAlign );
             return *this;
         }
 
-        /** @brief 0으로 채우기를 설정합니다. */
+        /** @brief 0 으로 채우도록 정합니다. */
         constexpr Format& zeroPad() noexcept
         {
             _data.setFlag( FormatData::Flags::ZeroPad );
             return *this;
         }
 
-        /** @brief 공백으로 채우기를 설정합니다. */
+        /** @brief 공백으로 채우도록 정합니다. */
         constexpr Format& spacePad() noexcept
         {
             _data.clearFlag( FormatData::Flags::ZeroPad );
             return *this;
         }
 
-        /** @brief 부호를 표시하도록 설정합니다. */
+        /** @brief 부호를 표시하도록 정합니다. */
         constexpr Format& showSign() noexcept
         {
             _data.setFlag( FormatData::Flags::ShowSign );
             return *this;
         }
 
-        /** @brief 부호를 숨기도록 설정합니다. */
+        /** @brief 부호를 숨기도록 정합니다. */
         constexpr Format& hideSign() noexcept
         {
             _data.clearFlag( FormatData::Flags::ShowSign );
             return *this;
         }
 
-        /** @brief Boolean 값을 문자열로 표시하도록 설정합니다. */
+        /** @brief bool 값을 문자열(true/false)로 표시하도록 정합니다. */
         constexpr Format& showBoolAsString() noexcept
         {
             _data.setFlag( FormatData::Flags::ShowBoolAsString );
             return *this;
         }
 
-        /** @brief Boolean 값을 숫자로 표시하도록 설정합니다. */
+        /** @brief bool 값을 숫자(1/0)로 표시하도록 정합니다. */
         constexpr Format& showBoolAsNumber() noexcept
         {
             _data.clearFlag( FormatData::Flags::ShowBoolAsString );
@@ -216,17 +216,17 @@ namespace sw
             return *this;
         }
 
-        /** @brief 정밀도 지정 여부를 반환합니다. */
+        /** @brief 정밀도를 지정했는지 반환합니다. */
         constexpr bool hasPrecision() const noexcept { return _data.hasFlag( FormatData::Flags::Precision ); }
-        /** @brief 너비 지정 여부를 반환합니다. */
+        /** @brief 너비를 지정했는지 반환합니다. */
         constexpr bool hasWidth() const noexcept { return _data.hasFlag( FormatData::Flags::Width ); }
-        /** @brief 부호 표시 여부를 반환합니다. */
+        /** @brief 부호를 표시하는지 반환합니다. */
         constexpr bool isShowSign() const noexcept { return _data.hasFlag( FormatData::Flags::ShowSign ); }
-        /** @brief 왼쪽 정렬 여부를 반환합니다. */
+        /** @brief 왼쪽 정렬인지 반환합니다. */
         constexpr bool isLeftAlign() const noexcept { return _data.hasFlag( FormatData::Flags::LeftAlign ); }
-        /** @brief 0 채움 여부를 반환합니다. */
+        /** @brief 0 으로 채우는지 반환합니다. */
         constexpr bool isZeroPad() const noexcept { return _data.hasFlag( FormatData::Flags::ZeroPad ); }
-        /** @brief 불리언 문자열 표시 여부를 반환합니다. */
+        /** @brief bool 을 문자열로 표시하는지 반환합니다. */
         constexpr bool isShowBoolAsString() const noexcept { return _data.hasFlag( FormatData::Flags::ShowBoolAsString ); }
         /** @brief 정밀도를 반환합니다. */
         constexpr int32 getPrecision() const noexcept { return _data._precision; }
@@ -240,14 +240,14 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) FormattedValue / Fmt — 값과 Format 을 한 인자로 묶음
+    // 2) FormattedValue / Fmt — 값과 Format 을 인자 하나로 묶는다
     // ------------------------------------------------------------------------------
     template <typename T>
     /** @brief 값과 Format 을 같이 넘길 때 씁니다. */
     class FormattedValue
     {
     public:
-        /** @brief 이동 생성합니다. */
+        /** @brief 값을 옮겨 받아 만듭니다. */
         constexpr FormattedValue( T&& value, const Format& format ) noexcept
             : _value{ std::forward<T>( value ) }
             , _format{ format } {}
@@ -262,24 +262,25 @@ namespace sw
         Format _format;
     };
 
-    /** @brief 주어진 값과 포맷 설정을 래핑하여 생성하는 헬퍼 함수입니다. */
+    /** @brief 값과 포맷 설정을 묶어 FormattedValue 를 만드는 도우미 함수입니다. */
     template <typename T>
     constexpr FormattedValue<T> Fmt( T&& value, const Format& format ) noexcept { return FormattedValue<T>( std::forward<T>( value ), format ); }
 
     // ------------------------------------------------------------------------------
-    // 3) FormatString — %# 를 인자로 치환해 버퍼에 씀
-    //    자유 함수 formatstring 이 이 static 을 호출
+    // 3) FormatString — %# 를 인자로 바꿔 버퍼에 쓴다
+    //    자유 함수 formatstring 이 이 static 을 부른다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류다.
-     * @details - `%#` — 옵션이 붙지 않는 순수 자리표. 두 글자만 소비하고 뒤 글자는 리터럴이다(`%#dB`, `%#x%#`, `%#.txt`).
-     *          - printf 형 — 서식이 필요하면 이쪽: `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그·너비·정밀도·길이 수식어·
-     *            변환 문자를 printf 대로 읽되 타입은 인자가 정한다(`%d` 에 문자열을 줘도 문자열). 공백 플래그(`% d`)는 없다.
-     *          - `%%` 는 퍼센트. 알아볼 수 없는 `%…` 는 리터럴이고 인자를 소비하지 않는다.
-     *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 준다.
-     * @note 인자 수는 Debug 에서 실행 시점에 대조한다 — 자리표를 소비하는 자리에서, 따로 세는 패스 없이. 컴파일 시점 검사는
-     *       C++17 에서 함수인 채로는 불가능하다(C++20 `consteval` 포맷 타입으로 갈 때 옮긴다). 실행 시점 검사는 데이터에서
-     *       오는 포맷(현지화)까지 본다. Release/Shipping 에선 아무것도 하지 않는다.
+     * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류입니다.
+     * @details - `%#`: 옵션이 없는 순수 자리표입니다. 두 글자만 소비하고, 뒤의 글자는 리터럴입니다(`%#dB`, `%#x%#`, `%#.txt`).
+     *          - printf 형식: 서식이 필요하면 이쪽을 씁니다. `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그 · 너비 · 정밀도 · 길이
+     *            수식어 · 변환 문자를 printf 대로 읽지만, 타입은 인자가 정합니다(`%d` 에 문자열을 주면 문자열로 씁니다).
+     *            공백 플래그(`% d`)는 없습니다.
+     *          - `%%` 는 퍼센트 문자입니다. 알아볼 수 없는 `%…` 는 리터럴로 두고 인자를 소비하지 않습니다.
+     *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 줄 수 있습니다.
+     * @note 인자 수는 Debug 빌드에서 실행 시점에 대조합니다. 자리표를 소비하는 그 자리에서 확인하므로 따로 세는 단계가 없습니다.
+     *       컴파일 시점 검사는 C++17 에서 함수 형태로는 불가능합니다(C++20 `consteval` 포맷 타입으로 갈 때 옮깁니다). 실행 시점
+     *       검사는 데이터에서 오는 포맷(현지화)까지 확인합니다. Release · Shipping 에서는 아무것도 하지 않습니다.
      */
     class FormatString
     {
@@ -289,11 +290,10 @@ namespace sw
         static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
         {
             SW_ASSERT( pBuffer != nullptr && capacity > 0 );
-            // **단언은 Debug 밖에서 통째로 사라진다.** 그 뒤로 `capacity` 는 어디서나 `capacity - 1`
-            // 로 쓰이는데(`write` 의 남은 자리 계산, 아래 종결자 위치), 0 이면 그 뺄셈이 뒤집혀
-            // 4,294,967,295 가 된다 — `write` 가 **길이 제한 없이** 복사하고 종결자도 버퍼 밖에
-            // 찍힌다. 지금 호출부들은 0 을 주지 않지만(`StringBuilder` 는 2 미만이면 늘리고
-            // `CrashContext` 는 남은 자리를 먼저 본다) 이것은 공개 API 다.
+            // **단언은 Debug 가 아니면 통째로 사라진다.** 그 뒤로 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰이는데(`write` 의
+            // 남은 자리 계산, 아래 종료 문자 위치), 0 이면 그 뺄셈이 언더플로해 4,294,967,295 가 된다. 그러면 `write` 가 **길이
+            // 제한 없이** 복사하고 종료 문자도 버퍼 밖에 쓴다. 지금 호출하는 곳들은 0 을 넘기지 않지만(`StringBuilder` 는 2 미만이면
+            // 버퍼를 늘리고 `CrashContext` 는 남은 자리를 먼저 확인한다) 이것은 공개 API 다.
             if ( pBuffer == nullptr || capacity == 0 )
                 return;
 
@@ -304,7 +304,7 @@ namespace sw
             }
             else
             {
-                // 인자가 없으니 자리표도 없어야 한다 — 있으면 호출부가 인자를 빠뜨린 것이다.
+                // 인자가 없으니 자리표도 없어야 한다. 있으면 호출하는 쪽이 인자를 빠뜨린 것이다.
 #if defined( SW_DEBUG )
                 if ( findNextPlaceholder( format )._pos != string_view::npos )
                     reportArgumentMismatch( format, "placeholders but no arguments" );
@@ -315,7 +315,7 @@ namespace sw
             pBuffer[MathUtil::min( pos, capacity - 1 )] = '\0';
         }
 
-        /** @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 세웁니다 — 어느 포맷인지 stderr 에 찍고(로거는 재귀라 못 쓴다) 디버그 브레이크. */
+        /** @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 멈춰 세웁니다. 어느 포맷인지 stderr 에 출력하고(로거는 재귀가 되므로 쓸 수 없습니다) 디버그 브레이크를 겁니다. */
         static void reportArgumentMismatch( string_view format, const utf8* pReason ) noexcept
         {
             std::fputs( "[formatstring] argument/placeholder mismatch (", stderr );
@@ -327,7 +327,7 @@ namespace sw
             SW_ASSERT( false && "formatstring: argument/placeholder mismatch" );
         }
 
-        /** @brief 포맷이 소비할 인자 수 — `%#` 과 유효한 printf 서식이 각 1개, `%%`·모르는 `%…` 는 0. 실행 경로는 안 쓰고 테스트의 static_assert 용이다. */
+        /** @brief 포맷이 소비할 인자 수입니다. `%#` 과 유효한 printf 서식은 각각 1개, `%%` 와 알 수 없는 `%…` 는 0개입니다. 실행 경로에서는 쓰지 않고 테스트의 static_assert 용입니다. */
         static constexpr uint32 countPlaceholders( string_view format ) noexcept
         {
             uint32 count{ 0 };
@@ -345,7 +345,7 @@ namespace sw
         static constexpr string_view kDigitLower        = "0123456789abcdefghijklmnopqrstuvwxyz";
         static constexpr string_view kDigitUpper        = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         static constexpr size_t      kIntegerBufferSize = 64;
-        /** @brief 실수 고정소수점의 최대 길이 — 부호 1 + 정수부 309 (DBL_MAX) + '.' + 정밀도 최대 255 + NUL = 567. to_chars 가 실패할 수 없다. */
+        /** @brief 실수 고정소수점 표현의 최대 길이입니다. 부호 1 + 정수부 309(DBL_MAX) + '.' + 최대 정밀도 255 + NUL = 567 이라 to_chars 가 실패할 수 없습니다. */
         static constexpr size_t kFloatBufferSize = 640;
         static constexpr size_t kTempBufferSize  = kFloatBufferSize;
 
@@ -374,20 +374,20 @@ namespace sw
         };
 
         /**
-         * @brief `%` 뒤의 printf 서식(플래그·너비·정밀도·길이·변환)을 읽어 Format 으로 옮깁니다.
-         * @details 문법은 printf 와 같다: `% [flags] [width] [.precision] [length] conversion`. 문자를 읽어 Format 의
-         *          스위치를 켜 주기만 한다 — 값을 찍는 코드는 손대지 않는다.
-         * @param format     `%` 바로 다음부터의 남은 문자열.
-         * @param outFormat  읽어 낸 옵션을 켤 Format.
-         * @param outHasSpec 하나라도 옵션을 읽었으면 true.
-         * @return 소비한 길이(`%` 포함). 서식이 아니면 0.
+         * @brief `%` 뒤의 printf 서식(플래그 · 너비 · 정밀도 · 길이 · 변환 문자)을 읽어 Format 으로 옮깁니다.
+         * @details 문법은 printf 와 같습니다: `% [flags] [width] [.precision] [length] conversion`. 문자를 읽어 Format 의 스위치를
+         *          켜기만 하고, 값을 출력하는 코드는 건드리지 않습니다.
+         * @param format     `%` 바로 다음부터 남은 문자열
+         * @param outFormat  읽어 낸 옵션을 켤 Format
+         * @param outHasSpec 옵션을 하나라도 읽었으면 true
+         * @return 소비한 길이(`%` 포함). 서식이 아니면 0
          */
         static constexpr size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
         {
             size_t cursor{ 0 };
             outHasSpec = false;
 
-            // 1) 플래그 — 순서는 상관없고 여러 개가 올 수 있다.
+            // 1) 플래그. 순서는 상관없고 여러 개가 올 수 있다.
             bool bDone{ false };
             while ( cursor < format.size() && bDone == false )
             {
@@ -414,8 +414,8 @@ namespace sw
                         ++cursor;
                         break;
                     }
-                    // `#` 은 플래그가 아니다 — `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 여기 오지 않는다.
-                    // 공백도 플래그로 받지 않는다 — 받으면 `%# Failed` 의 'F' 가 변환 문자로 읽힌다. 서식이 아니면 return 0.
+                    // `#` 은 플래그가 아니다. `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 여기로 오지 않는다.
+                    // 공백도 플래그로 받지 않는다. 받으면 `%# Failed` 의 'F' 가 변환 문자로 읽힌다. 서식이 아니면 0 을 반환한다.
                     default:
                     {
                         bDone = true;
@@ -439,7 +439,7 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 3) 정밀도 — printf 규약 그대로다(`%.f` 는 정밀도 0).
+            // 3) 정밀도. printf 규약 그대로다(`%.f` 는 정밀도 0).
             if ( cursor < format.size() && format[cursor] == '.' )
             {
                 ++cursor;
@@ -453,7 +453,7 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 4) 길이 수식어 — 값의 타입은 인자가 정하므로 읽고 버린다.
+            // 4) 길이 수식어. 값의 타입은 인자가 정하므로 읽고 버린다.
             if ( cursor + 1 < format.size() && format.substr( cursor, 2 ) == "ll" )
                 cursor += 2;
             else if ( cursor < format.size() &&
@@ -467,7 +467,7 @@ namespace sw
 
             switch ( format[cursor] )
             {
-                // 진수 지시자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버린다.
+                // 진법 지정자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버린다.
                 case 'x':
                 {
                     outFormat.hex();
@@ -510,13 +510,13 @@ namespace sw
             return cursor + 2; // `%` + 여기까지
         }
 
-        /** @brief 다음 플레이스홀더를 찾습니다. */
+        /** @brief 다음 자리표를 찾습니다. */
         static constexpr PlaceholderMatch findNextPlaceholder( string_view format ) noexcept
         {
             PlaceholderMatch match;
             size_t           charIndex{ 0 };
-            // 한 글자씩 훑지 않고 '%' 를 곧장 찾는다 — find 는 memchr 로 내려간다. 포맷 문자열은
-            // 대개 리터럴이 길고 플레이스홀더가 드물어서, 훑는 쪽이 이 함수의 대부분이었다.
+            // 한 글자씩 훑지 않고 '%' 를 바로 찾는다. find 는 memchr 로 처리된다. 포맷 문자열은 대개 리터럴이 길고 자리표가
+            // 드물어서, 한 글자씩 훑는 부분이 이 함수 시간의 대부분이었다.
             while ( ( charIndex = format.find( '%', charIndex ) ) != string_view::npos )
             {
                 {
@@ -529,7 +529,7 @@ namespace sw
                             continue;
                         }
 
-                        // `%#` 은 순수 자리표 — 두 글자만 소비하고 뒤는 리터럴이다. 서식이 필요하면 printf 형을 쓴다.
+                        // `%#` 은 순수 자리표다. 두 글자만 소비하고 뒤는 리터럴이다. 서식이 필요하면 printf 형식을 쓴다.
                         if ( format[charIndex + 1] == '#' )
                         {
                             match._pos = charIndex;
@@ -549,17 +549,17 @@ namespace sw
                             return match;
                         }
 
-                        // 알아볼 수 없는 `%…` 는 서식이 아니다 — `%` 를 리터럴로 두고 인자를 소비하지 않는다(소비하면 뒤 인자가 밀린다).
+                        // 알아볼 수 없는 `%…` 는 서식이 아니다. `%` 를 리터럴로 두고 인자를 소비하지 않는다(소비하면 뒤의 인자가 밀린다).
                         ++charIndex;
                         continue;
                     }
                 }
-                ++charIndex; // 문자열 끝의 '%' — 더 볼 것이 없다
+                ++charIndex; // 문자열 끝의 '%'. 더 볼 것이 없다
             }
             return match;
         }
 
-        /** @brief 자리표 사이의 리터럴 구간을 씁니다 — `%%` 는 `%` 하나로. */
+        /** @brief 자리표 사이의 리터럴 구간을 씁니다. `%%` 는 `%` 하나로 씁니다. */
         static uint32 writeFormatPrefix( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view prefix ) noexcept
         {
             size_t prefixIndex{ 0 };
@@ -593,7 +593,7 @@ namespace sw
                 }
                 else
                 {
-                    // 마지막 인자를 썼다 — 나머지에 자리표가 남아 있으면 호출부가 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
+                    // 마지막 인자를 썼다. 나머지에 자리표가 남아 있으면 호출하는 쪽이 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
 #if defined( SW_DEBUG )
                     if ( findNextPlaceholder( nextFormat )._pos != string_view::npos )
                         reportArgumentMismatch( nextFormat, "more placeholders than arguments" );
@@ -602,14 +602,14 @@ namespace sw
                 }
             }
 
-            // 자리표는 없는데 인자가 남았다 — 호출부가 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
+            // 자리표는 없는데 인자가 남았다. 호출하는 쪽이 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
 #if defined( SW_DEBUG )
             reportArgumentMismatch( format, "more arguments than placeholders" );
 #endif
             return writeFormatPrefix( pBuffer, pos, capacity, format );
         }
 
-        /** @brief 문자열을 용량 안에서 복사합니다 — 잘리면 앞부분만 남는다. */
+        /** @brief 문자열을 용량 안에서 복사합니다. 잘리면 앞부분만 남습니다. */
         SW_INLINE static uint32 write( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, string_view str ) noexcept
         {
             if ( pos >= capacity - 1 )
@@ -622,10 +622,11 @@ namespace sw
         }
 
         /**
-         * @brief 값 하나를 버퍼에 붙입니다. pSpec 은 서식 문자열(`%5d` 등)이 준 서식이고, 없으면 nullptr.
-         * @details 값 변환(기수·정밀도)은 Fmt 가 있으면 Fmt 의 서식, 없으면 pSpec; 너비·정렬은 pSpec 이 있으면 pSpec, 없으면 Fmt.
-         *          문자열류는 임시 버퍼를 거치지 않는다(거치면 긴 문자열이 거기서 잘린다). 널 포인터는 지름길을 타면 안 된다 —
-         *          `string_view{ nullptr }` 는 strlen(nullptr) 이다(`nullptr` 리터럴도 C++17 에선 string_view 로 변환 "가능").
+         * @brief 값 하나를 버퍼에 붙입니다. pSpec 은 서식 문자열(`%5d` 등)이 준 서식이고, 없으면 nullptr 입니다.
+         * @details 값 변환(기수 · 정밀도)에는 Fmt 가 있으면 Fmt 의 서식을, 없으면 pSpec 을 씁니다. 너비 · 정렬에는 pSpec 이 있으면
+         *          pSpec 을, 없으면 Fmt 를 씁니다. 문자열 종류는 임시 버퍼를 거치지 않습니다(거치면 긴 문자열이 거기서 잘립니다).
+         *          널 포인터는 빠른 경로를 타면 안 됩니다. `string_view{ nullptr }` 는 strlen(nullptr) 이기 때문입니다(`nullptr`
+         *          리터럴도 C++17 에서는 string_view 로 변환 "가능" 합니다).
          */
         template <typename T>
         static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format* pSpec ) noexcept
@@ -657,8 +658,9 @@ namespace sw
         }
 
         /**
-         * @brief 문자열이 아닌 값을 변환해 붙입니다 — 너비 맞춤이 없고 목적지에 자리가 있으면 바로 그 자리에 변환한다.
-         * @details 그 밖(패딩이 필요하거나 버퍼 끝에 가까울 때)에만 임시를 거친다. 잘림 규칙(앞부분만 남는다)은 write 가 지킨다.
+         * @brief 문자열이 아닌 값을 변환해 붙입니다. 너비 맞춤이 없고 목적지에 자리가 있으면 바로 그 자리에 변환합니다.
+         * @details 그 밖의 경우(패딩이 필요하거나 버퍼 끝에 가까울 때)에만 임시 버퍼를 거칩니다. 잘림 규칙(앞부분만 남는다)은
+         *          write 가 지킵니다.
          */
         template <typename T>
         static uint32 appendConverted( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value,
@@ -673,7 +675,7 @@ namespace sw
             return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, padFormat );
         }
 
-        /** @brief 값을 문자열로 변환합니다. */
+        /** @brief 값을 문자열로 바꿉니다. */
         template <typename T>
         static uint32 valueToString( utf8* pBuf, T&& value, const Format& format ) noexcept
         {
@@ -713,7 +715,7 @@ namespace sw
                 }
                 else
                 {
-                    // 널은 종류와 무관하게 (null).
+                    // 널은 종류와 상관없이 (null) 로 쓴다.
                     if ( value == nullptr )
                     {
                         Memory::copy( pBuf, "(null)", 7 );
@@ -740,7 +742,7 @@ namespace sw
             }
         }
 
-        /** @brief UTF-8 문자열로 변환합니다. */
+        /** @brief UTF-8 문자열로 바꿉니다. */
         template <typename StringType>
         static string toUtf8String( const StringType& str )
         {
@@ -760,13 +762,13 @@ namespace sw
             }
             else
             {
-                // 문자열로 변환할 수 없는 타입은 컴파일 오류다 — 호출부에서 toString() 을 거친다. sizeof(T)==0 은 T 에 의존하는 항상-거짓.
+                // 문자열로 바꿀 수 없는 타입은 컴파일 오류다. 호출하는 쪽에서 toString() 을 거친다. sizeof(T)==0 은 T 에 의존하는 항상 거짓인 조건이다.
                 static_assert( sizeof( T ) == 0, "formatstring: string 으로 변환할 수 없는 타입입니다 - toString() 을 거치십시오" );
                 return {};
             }
         }
 
-        /** @brief 정수를 문자열로 변환합니다. */
+        /** @brief 정수를 문자열로 바꿉니다. */
         template <typename IntType>
         static uint32 integerToString( utf8* pBuf, IntType value, const Format& format ) noexcept
         {
@@ -801,7 +803,7 @@ namespace sw
             return static_cast<uint32>( pPtr - pBuf ) + fallbackIntegerToString( pPtr, absoluteValue, format.getBase() );
         }
 
-        /** @brief 2진수를 만듭니다 — tryFastIntConversion 이 맡지 않는 기수. */
+        /** @brief 2진수 문자열을 만듭니다. tryFastIntConversion 이 맡지 않는 기수입니다. */
         static uint32 fallbackIntegerToString( utf8* pBuf, uint64 value, Format::Base base ) noexcept
         {
             if ( value == 0 )
@@ -826,7 +828,7 @@ namespace sw
             return static_cast<uint32>( pBuf - pStart );
         }
 
-        /** @brief to_chars 로 변환합니다(2진수 제외). 실패하면 invalid_index. */
+        /** @brief to_chars 로 변환합니다(2진수 제외). 실패하면 invalid_index 입니다. */
         template <typename IntType>
         static uint32 tryFastIntConversion( utf8* pBuf, IntType value, Format::Base base )
         {
@@ -852,7 +854,7 @@ namespace sw
             return invalid_index::kUint32;
         }
 
-        /** @brief 실수를 문자열로 변환합니다. */
+        /** @brief 실수를 문자열로 바꿉니다. */
         static size_t floatToString( utf8* pBuf, float64 value, const Format& format ) noexcept
         {
             if ( MathUtil::isNan( value ) )
@@ -883,7 +885,7 @@ namespace sw
             const int32 precision = format.hasPrecision() ? format.getPrecision() : 6;
             auto [pPtr, ec]       = std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
 
-            // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 실패할 수 없다 — 그래도 나면 조용한 쓰레기 대신 표식을 남긴다.
+            // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 실패할 수 없다. 그래도 실패하면 조용한 쓰레기 값 대신 표시를 남긴다.
             if ( static_cast<int32>( ec ) != 0 )
             {
                 SW_ASSERT( false && "floatToString: to_chars failed" );
@@ -894,7 +896,7 @@ namespace sw
             return static_cast<size_t>( pPtr - pBuf );
         }
 
-        /** @brief 너비·정렬·0채움을 적용해 씁니다. 너비가 없으면 write 와 같다. */
+        /** @brief 너비 · 정렬 · 0 채움을 적용해 씁니다. 너비가 없으면 write 와 같습니다. */
         static uint32 addPadding( utf8* SW_RESTRICT pBuffer, uint32 pos, const uint32 capacity, string_view str, const Format& fmt ) noexcept
         {
             const int32 padding = fmt.hasWidth() ? ( fmt.getWidth() - static_cast<int32>( str.size() ) ) : 0;
@@ -925,13 +927,13 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) formatstring — FormatString::formatstring 자유 함수 진입점
+    // 4) formatstring — FormatString::formatstring 의 자유 함수 진입점
     // ------------------------------------------------------------------------------
     /**
-     * @brief 형식화된 문자열을 버퍼에 작성합니다.
-     * @param pBuffer 결과를 저장할 버퍼
+     * @brief 서식에 맞춘 문자열을 버퍼에 씁니다.
+     * @param pBuffer 결과를 담을 버퍼
      * @param capacity 버퍼의 최대 크기
-     * @param format 서식 문자열 (예: "Value = %d")
+     * @param format 서식 문자열(예: "Value = %d")
      * @param args 가변 인자
      */
     template <typename... Args>

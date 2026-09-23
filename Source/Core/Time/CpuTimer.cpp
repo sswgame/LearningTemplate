@@ -15,7 +15,7 @@ namespace sw
         struct CpuTimerInternal
         {
             /**
-             * @brief OS 고해상도 카운터 1틱당 경과 초(Second) 계수를 반환합니다.
+             * @brief OS 고해상도 카운터의 한 틱이 몇 초인지 반환합니다.
              */
             static float64 getPerformanceSecondsPerCount() noexcept
             {
@@ -39,7 +39,7 @@ namespace sw
             }
 
             /**
-             * @brief 현재 OS 고해상도 하드웨어 카운터 값을 반환합니다.
+             * @brief 현재 OS 고해상도 카운터 값을 반환합니다.
              */
             static int64 getCurrentPerformanceCount() noexcept
             {
@@ -74,20 +74,19 @@ namespace sw
         , _stopTime{ 0 }
         , _prevTime{ 0 }
         , _currentTime{ 0 }
-        // **중지 상태로 둔다.** 헤더도, `FrameRenderer::initialize` 의 주석도 그렇게 적고 있었는데
-        // 실제로는 돌고 있었다. 그래서 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지
-        // 않았고, `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후 전체
-        // 시간**(부팅 이후 몇 시간)이 됐다. 호출부 다섯 곳이 전부 `resetTimer()` 를 먼저 불러서
-        // 가려져 있었을 뿐이다 — 그 의식을 잊는 순간 터진다.
+        // **중지 상태로 둔다.** 헤더도, `FrameRenderer::initialize` 의 주석도 그렇게 적고 있었지만 실제로는 돌고 있었다.
+        // 그래서 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않았고, `_prevTime` 이 0 인 채로 첫
+        // `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후의 전체 시간**(부팅 이후 몇 시간)이 됐다. 호출부 다섯 곳이 모두
+        // `resetTimer()` 를 먼저 불러서 드러나지 않았을 뿐이다. 그 순서를 잊는 순간 터진다.
         //
-        // 중지로 두면 `startTimer()` 가 제 일을 한다: `_pausedTime += ( 시작시각 - _stopTime(0) )`
-        // 이 기준을 시작 시각으로 옮겨 주므로, reset 없이 만들어 바로 start 해도 누적과 델타가 맞는다.
+        // 중지 상태로 두면 `startTimer()` 가 제 역할을 한다. `_pausedTime += ( 시작 시각 - _stopTime(0) )` 이 기준을
+        // 시작 시각으로 옮겨 주므로, reset 없이 만들어 바로 start 해도 누적과 델타가 맞는다.
         , _bStopped{ true }
     {
     }
 
     /**
-     * @brief 타이머 시작(BaseTime) 이후 일시 정지 시간을 제외한 총 경과 시간(초)을 반환합니다.
+     * @brief 기준 시각(_baseTime) 이후 일시정지 시간을 뺀 총 경과 시간(초)을 반환합니다.
      */
     float32 CpuTimer::getTotalTime() const noexcept
     {
@@ -103,7 +102,7 @@ namespace sw
     }
 
     /**
-     * @brief 이전 프레임(Tick) 대비 경과된 델타 타임(Delta Time, 초)을 반환합니다.
+     * @brief 직전 프레임(updateTimer) 이후 경과한 델타 시간(초)을 반환합니다.
      */
     float32 CpuTimer::getDeltaTime() const noexcept
     {
@@ -111,7 +110,7 @@ namespace sw
     }
 
     /**
-     * @brief 타이머를 리셋하고 현재 시점을 새로운 기준 시점(_baseTime)으로 설정합니다.
+     * @brief 타이머를 리셋하고 현재 시각을 새 기준 시각(_baseTime)으로 둡니다.
      */
     void CpuTimer::resetTimer() noexcept
     {

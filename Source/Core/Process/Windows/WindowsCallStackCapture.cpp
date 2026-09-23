@@ -12,31 +12,31 @@ namespace sw
 {
     namespace
     {
-        // DeadlockDetector / MemoryProfiler / CrashHandler 가 각자 initialize·shutdown 한다.
-        // bool 래치로 두면 먼저 shutdown 한 쪽이 SymCleanup 을 불러 나머지의 심볼화가 죽는다
-        // (특히 종료 중 크래시에서 스택을 못 남긴다). 참조 카운트로 마지막 소유자만 정리한다.
+        // DeadlockDetector / MemoryProfiler / CrashHandler 가 각자 initialize · shutdown 한다. bool 플래그로 두면 먼저
+        // shutdown 한 쪽이 SymCleanup 을 불러 나머지의 심볼 변환이 멈춘다(특히 종료 중 크래시에서 스택을 남기지 못한다).
+        // 참조 카운트로 마지막 소유자만 정리한다.
         atomic<int32> s_initRefCount{ 0 };
         mutex         s_symbolMutex{};
 
-        /** @brief CallStack / DeepCallStack 공용 심볼화 본체입니다. */
+        /** @brief CallStack / DeepCallStack 이 함께 쓰는 심볼 변환 본체입니다. */
         string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
         {
             if ( ppFrame == nullptr || frameCount == 0 )
                 return kEmptyCallStackText;
 
-            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면 교착 대신
-            // 주소만 출력한다(맵 파일로 후처리할 수 있다). **이 관문은 플랫폼 공통**이고,
-            // 그 아래 본체만 플랫폼마다 완전히 다르다(DbgHelp vs backtrace_symbols).
+            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
+            // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
+            // (DbgHelp 와 backtrace_symbols).
             std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
             if ( lock.owns_lock() == false )
                 return formatRawCallStackFrames( ppFrame, frameCount );
 
-            // 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
+            // 32프레임 × (심볼 + 전체 파일 경로 + 줄 번호)는 2KB 를 쉽게 넘긴다.
             StringBuilder<constant::kMaxBuffer8192> sb;
 
             HANDLE process = GetCurrentProcess();
-            // 나중에 실린 모듈(RHI_*.dll 같은 MODULE)도 심볼화되게 목록을 새로 읽는다 — 초기화 때 한 번만 읽으면
-            // 그 뒤에 실린 DLL 의 프레임이 주소로만 남는다(크래시 지점 [0] 이 그렇게 비어 있었다).
+            // 나중에 로드된 모듈(RHI_*.dll 같은 MODULE)도 심볼 변환되도록 모듈 목록을 새로 읽는다. 초기화 때 한 번만 읽으면
+            // 그 뒤에 로드된 DLL 의 프레임은 주소로만 남는다(크래시 지점인 [0] 이 그렇게 비어 있었다).
             SymRefreshModuleList( process );
             alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
             SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
@@ -88,7 +88,7 @@ namespace sw
         const int32 previous = s_initRefCount.fetch_sub( 1, std::memory_order_acq_rel );
         if ( previous <= 0 )
         {
-            // 짝이 안 맞는 shutdown. 카운트를 음수로 두지 않는다.
+            // 짝이 맞지 않는 shutdown 이다. 카운트를 음수로 두지 않는다.
             s_initRefCount.store( 0, std::memory_order_release );
             return;
         }
@@ -105,10 +105,10 @@ namespace sw
         outStack._frameCount = 0;
         outStack._hash       = 0;
 
-        // 이 capture 함수 자신을 건너뛰기 위해 +1
+        // 이 capture 함수 자신을 건너뛰도록 +1
         outStack._frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack._arrFrame, nullptr );
 
-        // 프레임 주소로 해시를 계산합니다.
+        // 프레임 주소로 해시를 계산한다.
         uint64 hash{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
         {
@@ -124,7 +124,7 @@ namespace sw
         if ( pPlatformContext == nullptr )
             return;
 
-        // StackWalk64 는 넘겨준 CONTEXT 를 진행하며 수정하므로 복사본으로 걷는다.
+        // StackWalk64 는 넘겨준 CONTEXT 를 진행하면서 수정하므로 복사본으로 따라간다.
         CONTEXT walkContext = *static_cast<const CONTEXT*>( pPlatformContext );
 
         STACKFRAME64 frame{};
@@ -148,7 +148,7 @@ namespace sw
 
         HANDLE                  process = GetCurrentProcess();
         HANDLE                  thread  = GetCurrentThread();
-        std::scoped_lock<mutex> lock{ s_symbolMutex }; // StackWalk64 도 dbghelp 전역 상태를 쓴다.
+        std::scoped_lock<mutex> lock{ s_symbolMutex }; // StackWalk64 도 dbghelp 의 전역 상태를 쓴다.
         while ( outStack._frameCount < DeepCallStack::kMaxFrames )
         {
             if ( StackWalk64( machineType, process, thread, &frame, &walkContext,

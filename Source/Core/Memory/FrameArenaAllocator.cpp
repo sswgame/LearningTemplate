@@ -49,14 +49,13 @@ namespace sw
             _currentChunkIndex++;
         }
 
-        // `size + alignment` 가 뒤집히면 **더 작은** 청크를 잡게 되고, 그 청크로도 안 들어가니
-        // 다시 여기로 와서 청크를 끝없이 늘린다. 담을 수 없는 크기는 여기서 끝낸다.
+        // `size + alignment` 가 오버플로하면 **더 작은** 청크를 잡게 되고, 그 청크에도 들어가지 않으니 다시 여기로 와서 청크를
+        // 끝없이 늘린다. 담을 수 없는 크기는 여기서 거른다.
         if ( size > SIZE_MAX - alignment )
             return nullptr;
 
-        // 새 청크를 못 잡으면 **여기서 끝난다.** 예전에는 실패를 보지 않고 `_pBuffer` 가 nullptr 인
-        // 청크를 표에 넣었고, 그 다음 줄의 `allocate` 가 널에서 만든 주소를 정상 할당인 척 돌려줬다
-        // (`nullptr + offset` 자체가 UB 이기도 하다).
+        // 새 청크를 잡지 못하면 **여기서 끝낸다.** 예전에는 실패를 확인하지 않고 `_pBuffer` 가 nullptr 인 청크를 표에 넣었고,
+        // 그다음 줄의 `allocate` 가 nullptr 에서 만든 주소를 정상 할당인 것처럼 돌려줬다(`nullptr + offset` 자체도 UB 다).
         if ( allocateNewChunk( size + alignment ) == false )
             return nullptr;
 

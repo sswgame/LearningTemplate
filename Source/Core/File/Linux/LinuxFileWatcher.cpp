@@ -87,8 +87,8 @@ namespace sw
         const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
         if ( bAdded == false )
         {
-            // 하위 디렉터리 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기 오는 건
-            // **루트조차** 못 건 경우뿐이라 감시 자체가 성립하지 않는다.
+            // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 **루트조차** 걸지 못한
+            // 경우뿐이라, 감시 자체가 성립하지 않는다.
             SW_LOG_ERROR( "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
             stopWatching();
             return false;
@@ -259,8 +259,8 @@ namespace sw
                 ++failedCount;
         }
 
-        // 실패는 대개 디렉터리마다 나는 게 아니라 한도(max_user_watches)를 넘긴 순간부터 전부 난다 —
-        // 디렉터리별로 찍으면 로그가 묻히므로 한 줄로 모으고, 흔한 원인을 같이 적는다.
+        // 실패는 보통 디렉터리마다 따로 나는 것이 아니라 한도(max_user_watches)를 넘긴 순간부터 전부 난다.
+        // 디렉터리마다 로그를 찍으면 묻히므로 한 줄로 모으고, 흔한 원인을 함께 적는다.
         if ( failedCount > 0 )
         {
             SW_LOG_WARNING( "%# 개 하위 디렉터리를 감시하지 못했습니다 — 그 아래 변경은 감지되지 않습니다. "
@@ -297,12 +297,12 @@ namespace sw
 
     void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name )
     {
-        // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을
-        // 이어 붙여 쓰므로(감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
+        // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을 이어 붙여 쓰므로
+        // (감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
         const string absoluteFile = FileUtil::joinPath( absoluteDirectory, name );
         const string relative     = LinuxFileWatcherInternal::makeRelativePath( _directoryPath, absoluteFile );
 
-        // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다.
+        // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
         pushChange( action, _directoryPath, relative.empty() ? name : string_view{ relative } );
     }
 } // namespace sw

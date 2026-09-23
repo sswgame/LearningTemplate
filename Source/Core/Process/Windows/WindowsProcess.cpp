@@ -105,7 +105,7 @@ namespace sw
         if ( _pStdOutRead == nullptr )
             return false;
 
-        // 1) 버퍼에 이미 개행 문자가 남아 있는지 확인
+        // 1) 버퍼에 이미 개행 문자가 남아 있는지 확인한다
         size_t newlinePos = _bufferedOutput.find_first_of( "\r\n" );
         if ( newlinePos != string::npos )
         {
@@ -117,7 +117,7 @@ namespace sw
             return true;
         }
 
-        // 2) 파이프에서 추가 데이터 읽기
+        // 2) 파이프에서 데이터를 더 읽는다
         utf8  arrReadBuffer[constant::kMaxBuffer4096];
         DWORD bytesRead = 0;
 
@@ -138,7 +138,7 @@ namespace sw
             }
         }
 
-        // 3) EOF에 도달했을 때 버퍼에 남은 잔여 문자열 반환
+        // 3) EOF 에 도달했으면 버퍼에 남은 문자열을 반환한다
         if ( _bufferedOutput.empty() == false )
         {
             outLine = std::move( _bufferedOutput );
@@ -182,8 +182,8 @@ namespace sw
         if ( _pNativeHandle == nullptr )
             return false;
 
-        // 종료 코드로 묻지 않는다. `STILL_ACTIVE` 는 값이 **259** 라, 259 로 끝난 자식은 영원히 실행
-        // 중으로 보인다(`cmd /c exit 259` 로 재현된다). 핸들 자체가 신호 상태인지 묻는 것이 정본이다.
+        // 종료 코드로 묻지 않는다. `STILL_ACTIVE` 의 값이 **259** 라서, 259 로 끝난 자식은 영원히 실행 중으로 보인다
+        // (`cmd /c exit 259` 로 재현된다). 핸들 자체가 신호 상태인지 묻는 것이 올바른 방법이다.
         return WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT;
     }
 } // namespace sw

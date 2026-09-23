@@ -9,12 +9,11 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
-// ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag`
-// 류가 전부 무효가 되고, 검사가 **도는 척만 하면서 아무것도 잡지 않는다.** 증상은 조용했다 —
-// `_CrtSetDbgFlag( flags )` 와 `_CrtMemDumpStatistics( &diff )` 가 인자를 쓰지 않게 되어
-// "set but not used" 경고 두 개로만 드러났다(Windows ASan 빌드를 처음 돌리고 나서야 보였다).
-// Linux/macOS 쪽은 아래에서 이미 ASan 이면 LSAN 으로 가도록 갈라 두었는데 Windows 만 빠져 있었다.
-// Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사를 **없는 것으로** 둔다.
+// ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag` 류가 모두 효과가 없고,
+// 검사가 **도는 척만 하고 아무것도 잡지 못한다.** 증상도 조용했다. `_CrtSetDbgFlag( flags )` 와
+// `_CrtMemDumpStatistics( &diff )` 가 인자를 쓰지 않게 되어 "set but not used" 경고 두 개로만 드러났다(Windows ASan
+// 빌드를 처음 돌려 보고서야 보였다). Linux/macOS 쪽은 아래에서 이미 ASan 이면 LSAN 을 쓰도록 나눠 두었는데 Windows 만
+// 빠져 있었다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 **없는 것으로** 둔다.
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING ) && !defined( SW_SANITIZER_ADDRESS )
     #define SW_HAS_CRT_LEAK_CHECK 1
@@ -41,10 +40,9 @@ namespace sw
         {
             /**
              * @brief 원자 카운터에서 빼되 **0 아래로 내려가지 않게** 합니다.
-             * @details 카운터가 `uint64` 라 그냥 `fetch_sub` 하면 0 아래가 1.8e19 로 접힌다.
-             *          할당은 세지 않았는데 해제만 세는 경우가 실제로 있다 — 에디터의 프로파일러
-             *          패널이 **추적을 런타임에 켤 수 있어서**, 켜기 전에 잡힌 블록들이 켠 뒤에
-             *          풀리면 그렇게 된다.
+             * @details 카운터가 `uint64` 라 그냥 `fetch_sub` 하면 0 아래가 1.8e19 로 돌아갑니다. 할당은 세지 않았는데 해제만 세는 경우가
+             *          실제로 있습니다. 에디터의 프로파일러 패널에서 **추적을 런타임에 켤 수 있어서**, 켜기 전에 할당된 블록이 켠 뒤에
+             *          해제되면 그렇게 됩니다.
              */
             static void subtractSaturating( atomic<uint64>& counter, uint64 amount )
             {
@@ -231,7 +229,7 @@ namespace sw
         if ( _bInitialized.exchange( false ) == false )
             return;
 
-        // 훅이 더 이상 이 인스턴스를 보지 않게 먼저 해제합니다.
+        // 훅이 더 이상 이 인스턴스를 보지 않도록 먼저 등록을 해제한다.
         auto pExpected = this;
         MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
 
@@ -261,7 +259,7 @@ namespace sw
             return 0;
 
         if ( MemoryProfilerInternal::t_bIsInsideProfiler )
-            return 0; // 방어 로직: 프로파일러 내부에서 해시 맵 할당 시 재귀 방지
+            return 0; // 방어: 프로파일러 안에서 해시 맵이 할당할 때의 재귀를 막는다
 
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
@@ -277,7 +275,7 @@ namespace sw
         if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
         {
             CallStack stack;
-            // skipFrames: capture(0), recordAllocation(1), operator new(2) — 상위 2프레임을 건너뜁니다.
+            // skipFrames: capture(0), recordAllocation(1), operator new(2). 위쪽 2프레임을 건너뛴다.
             CallStackCapture::capture( stack, 2 );
             outHash = stack._hash;
 
@@ -306,7 +304,7 @@ namespace sw
             return;
 
         if ( MemoryProfilerInternal::t_bIsInsideProfiler )
-            return; // 방어 로직: 프로파일러 내부에서 해시 맵 노드 해제 시 재귀 방지
+            return; // 방어: 프로파일러 안에서 해시 맵 노드를 해제할 때의 재귀를 막는다
 
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
@@ -314,11 +312,9 @@ namespace sw
 
         _arrStat[tagIdx]._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
 
-        // **세지 않은 것을 빼면 안 된다.** 두 카운터는 `uint64` 라 0 아래로 내려가면 1.8e19 로
-        // 접힌다. 에디터의 프로파일러 패널에 **추적 켜기 체크박스**가 있어서, 켜기 전에 잡힌
-        // 블록들이 켠 뒤에 풀리면 정확히 그 일이 난다(할당은 세지 않았는데 해제만 센다).
-        // 바로 아래 콜스택 표는 처음부터 `>= size` 로 막고 있었다 — 같은 함수 안에서 위쪽만
-        // 빠져 있었다.
+        // **세지 않은 것을 빼면 안 된다.** 두 카운터는 `uint64` 라 0 아래로 내려가면 1.8e19 로 돌아간다. 에디터의 프로파일러
+        // 패널에 **추적 켜기 체크박스**가 있어서, 켜기 전에 할당된 블록이 켠 뒤에 해제되면 바로 그 일이 생긴다(할당은 세지 않았는데
+        // 해제만 센다). 바로 아래 콜 스택 표는 처음부터 `>= size` 로 막고 있었다. 같은 함수 안에서 위쪽만 빠져 있었던 것이다.
         MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocatedBytes, size );
         MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocationCount, 1 );
 

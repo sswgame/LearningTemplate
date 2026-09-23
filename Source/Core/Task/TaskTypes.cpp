@@ -178,7 +178,7 @@ namespace sw
             pTaskNode->retain();
             _pNode->_listTask.push_back( pTaskNode );
             pTaskNode->_parentStage = _pNode;
-            // 남은 태스크가 생기는 순간 스테이지가 스스로를 쥔다 — 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.
+            // 남은 태스크가 생기는 순간 스테이지가 스스로를 잡는다. 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.
             if ( _pNode->_join.addPending( 1 ) == 0 )
                 _pNode->retain();
         }

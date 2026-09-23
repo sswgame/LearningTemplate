@@ -37,7 +37,7 @@ namespace sw
 
         _logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
         FileUtil::ensureDirectoryExists( _logFolderPath );
-        // 크래시 덤프·리포트도 같은 폴더에 둔다 — 고객이 한 폴더만 보내면 되도록.
+        // 크래시 덤프와 리포트도 같은 폴더에 둔다. 사용자가 폴더 하나만 보내면 되도록.
         setCrashReportFolder( _logFolderPath );
 
         _bOpened = true;

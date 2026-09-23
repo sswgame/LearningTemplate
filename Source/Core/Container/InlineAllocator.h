@@ -1,6 +1,6 @@
 /**
  * @file InlineAllocator.h
- * @brief SBO(Small Buffer Optimization)를 위한 인라인 스택 버퍼 할당자
+ * @brief SBO(Small Buffer Optimization)용 인라인 버퍼 할당자입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -10,13 +10,14 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    // STL 컨테이너 모드에서는 std::vector의 이동(Move) 버그를 막기 위해 일반 할당자로 강등(Fallback)합니다.
+    // STL 컨테이너 모드에서는 일반 할당자로 대신한다. std::vector 는 이동할 때 버퍼 포인터를 그대로 넘겨받으므로,
+    // 인라인 버퍼를 쓰면 이동한 뒤에도 원래 객체 안의 버퍼를 가리키게 된다.
     template <typename T, size_t N>
     using InlineAllocator = std::allocator<T>;
 #else
     /**
-     * @brief 내부 스택 버퍼를 가지는 할당자
-     * @details sw::vector 내부에서 감지하여 SBO를 활성화하는 데 사용됩니다.
+     * @brief 내부 버퍼를 가진 할당자입니다.
+     * @details sw::vector 가 이 할당자를 알아보고 SBO 를 켭니다.
      */
     template <typename T, size_t N>
     struct InlineAllocator
@@ -56,7 +57,7 @@ namespace sw
                 sw::Allocator<T>().deallocate( p, n );
         }
 
-        // sw::vector 가 SBO 여부를 감지할 수 있도록 버퍼 포인터 제공
+        // sw::vector 가 SBO 여부를 알아볼 수 있도록 버퍼 포인터를 내준다
         T*     get_inline_buffer() { return reinterpret_cast<T*>( _buffer ); }
         size_t get_inline_capacity() const { return N; }
     };

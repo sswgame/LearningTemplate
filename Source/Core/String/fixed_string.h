@@ -1,6 +1,6 @@
 /**
  * @file fixed_string.h
- * @brief 고정 용량 스택 할당 문자열 (basic_fixed_string)
+ * @brief 고정 용량 문자열(basic_fixed_string)입니다. 힙을 쓰지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -15,25 +15,26 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) basic_fixed_string — 스택 N 문자. 넘치면 잘라내고 경고, 힙 동적 할당 0건
+    // 1) basic_fixed_string — 최대 N 문자. 넘치면 잘라 내고 경고, 힙 할당 없음
     // ------------------------------------------------------------------------------
     /**
      * @class basic_fixed_string
-     * @brief 힙 동적 할당(new/delete) 없이 N개의 문자를 스택 내부 고정 배열(`_data[N+1]`)에 직접 저장하는 고성능 널 종료 문자열 클래스입니다.
-     * @tparam T 문자 타입 (`utf8` 또는 `utf16`)
-     * @tparam N 저장 가능한 최대 문자 개수 (널 종료 문자 `\0` 공간 1바이트는 내부에 자동 확보됨)
+     * @brief 힙 할당 없이 최대 N 개의 문자를 내부 고정 배열(`_arrData[N + 1]`)에 저장하는 널 종료 문자열입니다.
+     * @tparam T 문자 타입(`utf8` 또는 `utf16`)
+     * @tparam N 담을 수 있는 최대 문자 수(널 종료 문자 `\0` 자리 하나는 안에서 따로 잡습니다)
      * @details
-     * - **용량을 넘으면 자른다**:
-     *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 만큼은 **버려지고**, 버퍼 밖은 절대
-     *   건드리지 않습니다. 길이를 잃으면 안 되는 문자열에는 `sw::string` 을 씁니다.
-     * - **0-Allocation & Cache Locality**:
-     *   문자열 데이터를 스택에 즉시 인라인으로 보관하여 힙 파편화를 100% 방지하고 CPU L1/L2 캐시 적중률을 극대화합니다.
-     * - **std::basic_string_view 완벽 호환**:
-     *   `view()` 멤버 함수 및 `operator std::basic_string_view<T>()`를 지원하여 복사 비용 없이 표준 문자열 뷰로 즉시 전달 가능합니다.
+     * - **용량을 넘으면 자릅니다**:
+     *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 부분은 **버려지고**, 버퍼 밖은 절대 건드리지 않습니다.
+     *   길이를 잃으면 안 되는 문자열에는 `sw::string` 을 쓰십시오.
+     * - **할당 없음과 캐시 지역성**:
+     *   문자열 데이터를 객체 안에 바로 들고 있어 힙 단편화가 생기지 않고 캐시 적중률이 높습니다.
+     * - **std::basic_string_view 호환**:
+     *   `view()` 와 `operator std::basic_string_view<T>()` 로 복사 없이 표준 문자열 뷰로 넘길 수 있습니다.
      * - **std::hash 지원**:
-     *   `StringUtil::computeHash64/32` 기반의 `std::hash` 특수화가 기본 내장되어 있어 `std::unordered_map`이나 `std::unordered_set`의 키로 직접 사용 가능합니다.
-     * - **동등성 및 사전순 비교 (`equals`, `compare`)**:
-     *   `StringUtil::equals` 및 `StringUtil::compare`와 직결 연동되어 식별자 및 파일 경로 비교를 빠르게 수행합니다.
+     *   `StringUtil::computeHash64/32` 기반의 `std::hash` 특수화가 있어 `std::unordered_map` 이나 `std::unordered_set` 의 키로
+     *   바로 쓸 수 있습니다.
+     * - **같음 · 사전순 비교(`equals`, `compare`)**:
+     *   `StringUtil::equals` 와 `StringUtil::compare` 를 그대로 써서 식별자와 파일 경로를 빠르게 비교합니다.
      */
     template <typename T, uint32 N>
     class basic_fixed_string
@@ -42,7 +43,7 @@ namespace sw
         static_assert( std::is_same_v<T, utf8> || std::is_same_v<T, utf16>, "basic_fixed_string only supports utf8 or utf16" );
 
     public:
-        /** @brief 검색 실패 등을 나타내는 무효 인덱스 상수 (-1) */
+        /** @brief 검색 실패 등을 나타내는 무효 인덱스(-1)입니다. */
         static constexpr uint32 npos = invalid_index::kUint32;
 
         using value_type      = T;
@@ -55,32 +56,32 @@ namespace sw
         using const_iterator  = const T*;
 
         // ------------------------------------------------------------------------------
-        // 2) 생성자 및 대입 연산자
+        // 2) 생성 · 대입
         // ------------------------------------------------------------------------------
-        /** @brief 빈 문자열로 초기화하는 기본 constexpr 생성자 */
+        /** @brief 빈 문자열로 초기화합니다. */
         constexpr basic_fixed_string() noexcept
             : _arrData{ T{ 0 } }
             , _size{ 0 } {}
 
-        /** @brief 소멸자 */
+        /** @brief 소멸자입니다. */
         ~basic_fixed_string() = default;
 
-        /** @brief 널 종료 C 문자열을 복사하여 생성합니다. */
+        /** @brief 널 종료 C 문자열을 복사해 만듭니다. */
         basic_fixed_string( const T* pStr );
 
-        /** @brief std::basic_string 내용을 복사하여 생성합니다. */
+        /** @brief std::basic_string 의 내용을 복사해 만듭니다. */
         basic_fixed_string( const std::basic_string<T>& str );
 
-        /** @brief std::basic_string_view 내용을 복사하여 생성합니다. */
+        /** @brief std::basic_string_view 의 내용을 복사해 만듭니다. */
         basic_fixed_string( const std::basic_string_view<T>& str );
 
-        /** @brief count개의 ch 문자로 채워 생성합니다. */
+        /** @brief 문자 ch 를 count 개 채워 만듭니다. */
         basic_fixed_string( uint32 count, T ch );
 
-        /** @brief 복사 생성자 */
+        /** @brief 복사 생성자입니다. */
         basic_fixed_string( const basic_fixed_string& rhs );
 
-        /** @brief 다른 용량의 고정 문자열을 복사하여 생성합니다. */
+        /** @brief 용량이 다른 고정 문자열을 복사해 만듭니다. */
         template <uint32 M>
         basic_fixed_string( const basic_fixed_string<T, M>& rhs )
             : _arrData{}
@@ -92,13 +93,13 @@ namespace sw
             _arrData[_size] = T{ 0 };
         }
 
-        /** @brief 이동 생성자 */
+        /** @brief 이동 생성자입니다. */
         basic_fixed_string( basic_fixed_string&& rhs ) noexcept = default;
 
         /** @brief 다른 고정 문자열을 복사 대입합니다. */
         basic_fixed_string& operator=( const basic_fixed_string& rhs );
 
-        /** @brief 다른 용량의 고정 문자열을 복사 대입합니다. */
+        /** @brief 용량이 다른 고정 문자열을 복사 대입합니다. */
         template <uint32 M>
         basic_fixed_string& operator=( const basic_fixed_string<T, M>& rhs )
         {
@@ -112,27 +113,27 @@ namespace sw
         /** @brief 널 종료 C 문자열을 복사 대입합니다. */
         basic_fixed_string& operator=( const T* pStr );
 
-        /** @brief std::basic_string을 복사 대입합니다. */
+        /** @brief std::basic_string 을 복사 대입합니다. */
         basic_fixed_string& operator=( const std::basic_string<T>& str );
 
-        /** @brief std::basic_string_view를 복사 대입합니다. */
+        /** @brief std::basic_string_view 를 복사 대입합니다. */
         basic_fixed_string& operator=( const std::basic_string_view<T>& str );
 
-        /** @brief 이동 대입 연산자 */
+        /** @brief 이동 대입 연산자입니다. */
         basic_fixed_string& operator=( basic_fixed_string&& rhs ) noexcept = default;
 
         // ------------------------------------------------------------------------------
-        // 3) 원소 접근 및 이터레이터
+        // 3) 원소 접근 · 이터레이터
         // ------------------------------------------------------------------------------
-        /** @brief 인덱스의 문자를 참조합니다 (디버그 범위 검사). */
+        /** @brief pos 위치의 문자를 참조합니다(디버그 빌드에서 범위 검사). */
         reference       operator[]( uint32 pos );
         const_reference operator[]( uint32 pos ) const;
 
-        /** @brief 인덱스의 문자를 반환합니다. */
+        /** @brief pos 위치의 문자를 반환합니다. */
         reference       at( uint32 pos );
         const_reference at( uint32 pos ) const;
 
-        /** @brief 첫 번째 문자를 반환합니다. */
+        /** @brief 첫 문자를 반환합니다. */
         reference       front();
         const_reference front() const;
 
@@ -147,23 +148,23 @@ namespace sw
         /** @brief 널 종료 C 문자열 포인터를 반환합니다. */
         const_pointer c_str() const noexcept { return _arrData; }
 
-        /** @brief 힙 할당 없는 가벼운 string_view를 반환합니다. */
+        /** @brief 힙 할당 없는 string_view 를 반환합니다. */
         std::basic_string_view<T> view() const noexcept { return { _arrData, size() }; }
 
-        /** @brief 첫 문자 이터레이터 */
+        /** @brief 첫 문자를 가리키는 이터레이터입니다. */
         iterator       begin() noexcept { return _arrData; }
         const_iterator begin() const noexcept { return _arrData; }
         const_iterator cbegin() const noexcept { return _arrData; }
 
-        /** @brief 끝 문자 이터레이터 */
+        /** @brief 끝(마지막 문자 다음)을 가리키는 이터레이터입니다. */
         iterator       end() noexcept { return _arrData + size(); }
         const_iterator end() const noexcept { return _arrData + size(); }
         const_iterator cend() const noexcept { return _arrData + size(); }
 
         // ------------------------------------------------------------------------------
-        // 4) 용량 및 상태 조회
+        // 4) 용량 · 상태 조회
         // ------------------------------------------------------------------------------
-        /** @brief 문자열이 비어 있는지 여부를 반환합니다 (O(1)). */
+        /** @brief 비어 있는지 반환합니다(O(1)). */
         bool empty() const noexcept { return _arrData[0] == T{ 0 }; }
 
         /** @brief 현재 문자 수(널 제외)를 반환합니다. */
@@ -174,15 +175,15 @@ namespace sw
         }
         uint32 length() const noexcept { return size(); }
 
-        /** @brief 최대 수용 가능한 문자 수(N)를 반환합니다. */
+        /** @brief 담을 수 있는 최대 문자 수(N)를 반환합니다. */
         static constexpr uint32 max_size() noexcept { return N; }
         static constexpr uint32 capacity() noexcept { return N; }
 
-        /** @brief 내부 상태를 빈 문자열로 초기화합니다. */
+        /** @brief 빈 문자열로 되돌립니다. */
         void clear() noexcept;
 
         // ------------------------------------------------------------------------------
-        // 5) 문자열 조작 (insert / erase / append / substr)
+        // 5) 문자열 조작(insert / erase / append / substr)
         // ------------------------------------------------------------------------------
         /** @brief pos 위치 앞에 C 문자열을 삽입합니다. */
         basic_fixed_string& insert( uint32 pos, const T* pStr );
@@ -190,10 +191,10 @@ namespace sw
         template <uint32 M>
         basic_fixed_string& insert( const uint32 pos, const basic_fixed_string<T, M>& str ) { return insert( pos, str.c_str() ); }
 
-        /** @brief pos 위치부터 length개의 문자를 제거합니다. */
+        /** @brief pos 부터 length 개의 문자를 지웁니다. */
         basic_fixed_string& erase( uint32 pos = 0, uint32 length = npos );
 
-        /** @brief 끝에 단일 문자를 추가합니다. */
+        /** @brief 끝에 문자 하나를 붙입니다. */
         void push_back( T ch );
 
         /** @brief 마지막 문자를 제거합니다. */
@@ -207,7 +208,7 @@ namespace sw
         basic_fixed_string& assign( const std::basic_string<T>& str ) { return *this = str; }
         basic_fixed_string& assign( const std::basic_string_view<T>& str ) { return *this = str; }
 
-        /** @brief 끝에 C 문자열을 추가합니다. */
+        /** @brief 끝에 C 문자열을 붙입니다. */
         basic_fixed_string& append( const T* pStr );
         basic_fixed_string& append( const basic_fixed_string& str ) { return append( str.c_str() ); }
         template <uint32 M>
@@ -215,26 +216,26 @@ namespace sw
         basic_fixed_string& append( uint32 count, T c );
         basic_fixed_string& append( const std::basic_string_view<T>& str );
 
-        /** @brief pos 위치부터 C 부분 문자열을 검색합니다. */
+        /** @brief pos 부터 C 문자열이 처음 나오는 위치를 찾습니다. */
         uint32 find( const T* pStr, uint32 pos = 0 ) const;
         uint32 find( T c, uint32 pos = 0 ) const;
         uint32 find( const basic_fixed_string& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
         template <uint32 M>
         uint32 find( const basic_fixed_string<T, M>& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
 
-        /** @brief pos 위치부터 length 길이의 부분 문자열을 추출하여 반환합니다. */
+        /** @brief pos 부터 length 길이의 부분 문자열을 반환합니다. */
         basic_fixed_string substr( uint32 pos = 0, uint32 length = npos ) const;
 
         // ------------------------------------------------------------------------------
-        // 6) 비교 및 연산자
+        // 6) 비교 · 연산자
         // ------------------------------------------------------------------------------
-        /** @brief 사전순 비교 (같으면 0) */
+        /** @brief 사전순으로 비교합니다(같으면 0). */
         int32 compare( const basic_fixed_string& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other._arrData, bIgnoreCase ); }
         template <uint32 M>
         int32 compare( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other.c_str(), bIgnoreCase ); }
         int32 compare( const T* pStr, bool bIgnoreCase = false ) const { return ( pStr != nullptr ) ? StringUtil::compare( _arrData, pStr, bIgnoreCase ) : 1; }
 
-        /** @brief 동등성 비교 (대소문자 무시 옵션) */
+        /** @brief 같은지 비교합니다(대소문자 무시 옵션). */
         bool equals( const basic_fixed_string& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other._arrData, bIgnoreCase ); }
         template <uint32 M>
         bool equals( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other.c_str(), bIgnoreCase ); }
@@ -273,20 +274,19 @@ namespace sw
         bool operator==( const T* pStr ) const { return compare( pStr ) == 0; }
         bool operator!=( const T* pStr ) const { return compare( pStr ) != 0; }
 
-        /** @brief 동적 std::basic_string으로의 명시적/암시적 변환 */
+        /** @brief std::basic_string 으로 변환합니다(동적 할당이 생깁니다). */
         operator std::basic_string<T>() const { return std::basic_string<T>{ _arrData, size() }; }
 
-        /** @brief 힙 할당 없는 std::basic_string_view로의 암시적 변환 */
+        /** @brief 힙 할당 없는 std::basic_string_view 로 암시적 변환합니다. */
         operator std::basic_string_view<T>() const noexcept { return { _arrData, size() }; }
 
     private:
         /**
-         * @brief 용량 N 을 넘는 길이를 N 으로 잘라 돌려줍니다.
-         * @details 예전에는 `SW_LOG_ASSERT` 로 알리기만 하고 **원래 길이 그대로 복사**했습니다. 단정은
-         *          실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 용량을 넘는 문자열이
-         *          들어오면 스택의 `_arrData` 뒤를 그대로 덮어썼습니다 — 버퍼 오버플로입니다.
-         * @details 넘치는 길이는 **데이터에서 온다**(긴 대사·긴 경로). 프로그래밍 계약 위반이 아니므로
-         *          단정으로 멈추지 않고 잘라낸 뒤 경고로 남깁니다. 경고는 Shipping 에도 남습니다.
+         * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
+         * @details 예전에는 `SW_LOG_ASSERT` 로 알리기만 하고 **원래 길이 그대로 복사**했습니다. 단언은 실행을 멈추지 않으므로
+         *          (Debug 는 브레이크, 그 밖은 로그만) 용량을 넘는 문자열이 들어오면 `_arrData` 뒤를 그대로 덮어썼습니다. 버퍼
+         *          오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로 단언으로
+         *          멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다.
          */
         static uint32 clampToCapacity( size_t length )
         {
@@ -297,7 +297,7 @@ namespace sw
             return N;
         }
 
-        /** @brief 남은 자리(N - currentSize)에 맞게 추가 길이를 잘라 돌려줍니다. */
+        /** @brief 남은 자리(N - currentSize)에 맞게 추가할 길이를 잘라 반환합니다. */
         static uint32 clampToRemaining( uint32 currentSize, size_t length )
         {
             const size_t remaining = static_cast<size_t>( N ) - static_cast<size_t>( currentSize );
@@ -370,8 +370,8 @@ namespace sw
         Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
     }
 
-    // 자기대입은 아래 `this != &rhs` 로 막는다. copy-and-swap 이 아니어서 검사기가 짚지만,
-    // 고정 버퍼라 교환할 동적 자원이 없다 — 가드가 필요충분하다.
+    // 자기 대입은 아래의 `this != &rhs` 로 막는다. copy-and-swap 이 아니라서 검사기가 짚지만, 고정 버퍼라 교환할 동적
+    // 자원이 없으므로 가드로 충분하다.
     template <typename T, uint32 N>
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment) — 위 주석 참고. template 줄 위에 두면 적용되지 않는다.
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const basic_fixed_string& rhs )
@@ -384,9 +384,8 @@ namespace sw
         return *this;
     }
 
-    // 자기 대입은 `fs = fs.c_str()` 로 들어온다 — 자기 버퍼를 자기에게 memcpy 하는 것은 UB 라
-    // 아래에서 주소를 비교해 막는다. 검사기는 copy-and-swap 이 아니라고 짚지만 고정 버퍼에는
-    // 교환할 동적 자원이 없다.
+    // 자기 대입은 `fs = fs.c_str()` 처럼 들어온다. 자기 버퍼를 자기에게 memcpy 하는 것은 UB 라 아래에서 주소를 비교해
+    // 막는다. 검사기는 copy-and-swap 이 아니라고 짚지만, 고정 버퍼에는 교환할 동적 자원이 없다.
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const T* pStr )
@@ -524,10 +523,10 @@ namespace sw
         if ( pos >= currentSize )
             return *this;
 
-        // **뺄셈으로 잰다.** `pos + length` 는 `uint32` 안에서 넘칠 수 있다 — `npos` 가 아닌 큰
-        // 길이가 들어오면(끝-시작 이 뒤집힌 계산 같은 것) 합이 작은 수로 접혀 아래 `else` 로
-        // 빠지고, 거기서 `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. `pos < currentSize`
-        // 는 위에서 걸렀으므로 이 뺄셈은 안전하다. 형제인 `substr` 은 처음부터 이 형태였다.
+        // **뺄셈으로 비교한다.** `pos + length` 는 `uint32` 범위에서 오버플로할 수 있다. `npos` 가 아닌 큰 길이가 들어오면
+        // (끝과 시작을 거꾸로 뺀 계산 등) 합이 작은 수로 돌아와 아래 `else` 로 빠지고, 거기서 `_arrData + pos + length` 라는
+        // 엉뚱한 주소를 읽는다. `pos < currentSize` 는 위에서 걸렀으므로 이 뺄셈은 안전하다. 형제 함수인 `substr` 은
+        // 처음부터 이 형태였다.
         if ( length == npos || length >= currentSize - pos )
         {
             _size           = pos;
@@ -690,7 +689,7 @@ namespace sw
 namespace std
 {
     template <typename T, uint32 N>
-    /** @brief basic_fixed_string을 std::unordered_map/set 키로 쓸 수 있도록 지원하는 FNV 해시 특수화 */
+    /** @brief basic_fixed_string 을 std::unordered_map · set 키로 쓸 수 있게 하는 FNV 해시 특수화입니다. */
     struct hash<sw::basic_fixed_string<T, N>>
     {
         size_t operator()( const sw::basic_fixed_string<T, N>& key ) const noexcept

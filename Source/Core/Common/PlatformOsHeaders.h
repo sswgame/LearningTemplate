@@ -1,11 +1,11 @@
 /**
  * @file PlatformOsHeaders.h
- * @brief OS 시스템 헤더만 포함합니다. DirectX/Vulkan/DXC는 넣지 않습니다.
- * @note 그래픽 API 헤더는 Engine/Common/EnginePlatformHeaders.h에 있습니다.
+ * @brief OS 시스템 헤더만 포함합니다. DirectX · Vulkan · DXC 는 넣지 않습니다.
+ * @note 그래픽 API 헤더는 Engine/Common/EnginePlatformHeaders.h 에 있습니다.
  */
 #pragma once
 // ------------------------------------------------------------------------------
-// 1) Windows — NOMINMAX / WIN32_LEAN_AND_MEAN 후 SDK 헤더
+// 1) Windows — NOMINMAX · WIN32_LEAN_AND_MEAN 을 정의한 뒤 SDK 헤더
 // ------------------------------------------------------------------------------
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( _WIN32 ) || defined( _WIN64 )

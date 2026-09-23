@@ -12,26 +12,25 @@ namespace sw
 {
     namespace
     {
-        /** @brief 레지스트리가 없을 때 쓰는 내장 코덱 — Core 만 링크하는 도구 경로용. */
+        /** @brief 레지스트리가 없을 때 쓰는 내장 코덱입니다(Core 만 링크하는 도구 경로용). */
         NullCompressionCodec s_nullCodec;
         RleCompressionCodec  s_rleCodec;
 
         struct CompressionStreamInternal
         {
             /**
-             * @brief 코덱을 고릅니다 — 넘겨받은 레지스트리, 없으면 **바인딩된 활성 레지스트리**.
-             * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩 코덱으로 갔다. 그런데 넘기는 호출부가
-             *          하나도 없어서(레지스트리를 엔진이 들고 있었고 Core 는 거기 닿지 못한다) **항상**
-             *          하드코딩으로 갔고, 등록한 코덱은 쓰이지 않았다. 이제 활성 레지스트리를 본다.
+             * @brief 코덱을 고릅니다. 넘겨받은 레지스트리를 먼저 보고, 없으면 연결된 활성 레지스트리를 봅니다.
+             * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩된 코덱을 썼습니다. 그런데 넘기는 호출부가 하나도 없어서(레지스트리는
+             *          엔진이 들고 있고 Core 는 거기 닿지 못합니다) **항상** 하드코딩된 코덱이 쓰였고, 등록한 코덱은 쓰이지 않았습니다.
+             *          이제는 활성 레지스트리를 봅니다.
              *
-             *          **못 찾으면 nullptr 이다.** 예전에는 마지막에 무조건 Null 코덱을 돌려줬는데, 그
-             *          한 줄이 호출부의 오류 처리를 전부 죽은 코드로 만들었다. 결과가 둘이었다:
-             *          (1) `compressBuffer( …, Zstd )` 를 Zstd 없이 부르면 헤더에는 `Zstd` 라고 적고
-             *              페이로드는 **무압축**으로 썼다 — Zstd 가 등록된 다른 기계가 그 스트림을 읽으면
-             *              쓰레기가 나온다.
-             *          (2) 모르는 `_codecType` 이 든 스트림을 "해제" 해 버렸다. 체크섬 플래그가 꺼진
-             *              스트림이면 그 쓰레기가 **성공으로** 돌아갔다.
-             *          내장 코덱은 자기가 실제로 구현하는 둘(None · RLE)에만 물러난다.
+             *          **찾지 못하면 nullptr 을 반환합니다.** 예전에는 마지막에 무조건 Null 코덱을 돌려줬는데, 그 한 줄 때문에 호출부의
+             *          오류 처리가 모두 죽은 코드가 됐습니다. 그 결과 두 가지 문제가 있었습니다.
+             *          (1) Zstd 가 없는 상태에서 `compressBuffer( …, Zstd )` 를 부르면 헤더에는 `Zstd` 라고 적고 페이로드는 **압축하지 않은 채**
+             *              썼습니다. Zstd 가 등록된 다른 기계에서 그 스트림을 읽으면 쓰레기가 나옵니다.
+             *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 했습니다. 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 **성공으로**
+             *              반환됐습니다.
+             *          내장 코덱으로 대신하는 것은 실제로 구현된 두 가지(None · RLE)뿐입니다.
              */
             static ICompressionCodec* findCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
             {
@@ -86,15 +85,14 @@ namespace sw
         if ( outHeader._version != CompressionHeader::kVersion )
             return false;
 
-        // **뺄셈으로 비교한다.** 덧셈으로 쓰면 스트림이 적어 낸 크기가 넘칠 때 뒤집힌다 —
-        // `_compressedSize` 가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 **통과했다.** 그 뒤
-        // `decompress` 에 srcSize 로 SIZE_MAX 가 그대로 들어가 코덱이 버퍼 밖을 읽었다.
-        // 위에서 `dataSize >= sizeof( CompressionHeader )` 를 이미 확인했으므로 이 뺄셈은 안전하다.
+        // 덧셈이 아니라 뺄셈으로 비교한다. 덧셈으로 쓰면 스트림에 적힌 크기가 클 때 오버플로가 난다.
+        // `_compressedSize` 가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 통과했고, 그 뒤 `decompress` 에 srcSize 로 SIZE_MAX 가
+        // 그대로 들어가 코덱이 버퍼 밖을 읽었다. 위에서 `dataSize >= sizeof( CompressionHeader )` 를 이미 확인했으므로 이 뺄셈은 안전하다.
         if ( outHeader._compressedSize > dataSize - sizeof( CompressionHeader ) )
             return false;
 
-        // 압축 해제 뒤 크기도 여기서 한 번 본다. 이 값은 **곧바로 할당 크기가 된다**(vector 오버로드의
-        // resize) — 망가진 헤더가 2^60 을 적어 두면 코덱이 한 바이트도 읽기 전에 메모리가 터진다.
+        // 해제 후 크기도 여기서 확인한다. 이 값은 그대로 할당 크기가 되므로(vector 오버로드의 resize), 망가진 헤더가 2^60 을
+        // 적어 두면 코덱이 한 바이트도 읽기 전에 메모리가 바닥난다.
         if ( outHeader._uncompressedSize > kMaxUncompressedSize )
             return false;
 

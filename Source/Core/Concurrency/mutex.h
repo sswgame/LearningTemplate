@@ -1,6 +1,6 @@
 /**
  * @file mutex.h
- * @brief Deadlock 탐지가 내장된 커스텀 뮤텍스 래퍼
+ * @brief 데드락 탐지를 내장한 뮤텍스 래퍼입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,18 +12,18 @@ namespace sw
     class DeadlockDetector;
 
     // ------------------------------------------------------------------------------
-    // 1) mutex — std::mutex 래퍼, 디버그에서 데드락 사이클 탐지
-    //    조건 변수용 getStdMutex 는 가급적 쓰지 말 것
+    // 1) mutex — std::mutex 래퍼. 디버그 빌드에서 데드락 사이클을 탐지한다
+    //    조건 변수용 getStdMutex 는 되도록 쓰지 말 것
     // ------------------------------------------------------------------------------
     /**
-     * @brief std::mutex를 래핑하여 디버그 모드에서 데드락 사이클을 탐지합니다.
+     * @brief std::mutex 를 감싸 디버그 빌드에서 데드락 사이클을 탐지합니다.
      */
     class SW_API mutex
     {
     public:
         /** @brief 내부 std::mutex 만 준비합니다. */
         mutex() = default;
-        /** @brief 잠금이 풀린 뒤 파괴되어야 합니다. */
+        /** @brief 잠금이 풀린 상태에서 파괴해야 합니다. */
         ~mutex() = default;
 
         /** @brief 복사를 금지합니다. */
@@ -31,13 +31,13 @@ namespace sw
         /** @brief 복사 대입을 금지합니다. */
         mutex& operator=( const mutex& ) = delete;
 
-        /** @brief 락을 획득할 때까지 대기합니다. */
+        /** @brief 락을 얻을 때까지 기다립니다. */
         void lock();
 
-        /** @brief 락을 즉시 시도합니다. 성공하면 true 입니다. */
+        /** @brief 락을 한 번만 시도합니다. 얻으면 true 입니다. */
         bool try_lock();
 
-        /** @brief 보유한 락을 해제합니다. */
+        /** @brief 잡고 있는 락을 풉니다. */
         void unlock();
 
     private:

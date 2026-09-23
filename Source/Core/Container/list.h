@@ -1,6 +1,6 @@
 /**
  * @file list.h
- * @brief std::list 래퍼. 디버그에서 RaceDetectContext 로 동시 접근을 잡습니다.
+ * @brief std::list 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -13,7 +13,7 @@ namespace sw
     template <typename T, typename Allocator = std::allocator<T>>
     using list = std::list<T, Allocator>;
 #else
-    /** @brief std::list + 디버그 레이스 탐지. API 는 STL 과 같습니다. */
+    /** @brief std::list 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
     template <typename T, typename Allocator = Allocator<T>>
     class list : public std::list<T, Allocator>
     {
@@ -35,13 +35,13 @@ namespace sw
         using const_reverse_iterator = typename Base::const_reverse_iterator;
 
         // ------------------------------------------------------------------------------
-        // 1) 생성 · 대입 — 내용은 Base 에 두고, 레이스 컨텍스트는 이 인스턴스 것
+        // 1) 생성 · 대입 — 내용은 Base 에 두고, 레이스 컨텍스트는 인스턴스마다 따로 둔다
         // ------------------------------------------------------------------------------
         /** @brief 빈 리스트로 둡니다. */
         list() noexcept( noexcept( Allocator() ) )
             : Base() {}
 
-        /** @brief 지정 할당자로 빈 리스트를 둡니다. */
+        /** @brief 지정한 할당자로 빈 리스트를 만듭니다. */
         explicit list( const Allocator& alloc ) noexcept
             : Base( alloc ) {}
 
@@ -49,7 +49,7 @@ namespace sw
         list( size_type count, const T& value, const Allocator& alloc = Allocator() )
             : Base( count, value, alloc ) {}
 
-        /** @brief count 개의 기본 원소를 둡니다. */
+        /** @brief 기본값 원소 count 개로 채웁니다. */
         explicit list( size_type count, const Allocator& alloc = Allocator() )
             : Base( count, alloc ) {}
 
@@ -58,11 +58,11 @@ namespace sw
         list( InputIt first, InputIt last, const Allocator& alloc = Allocator() )
             : Base( first, last, alloc ) {}
 
-        /** @brief std::list 내용을 복사합니다. */
+        /** @brief std::list 의 내용을 복사해 만듭니다. */
         list( const Base& other )
             : Base( other ) {}
 
-        /** @brief 이동 생성합니다. */
+        /** @brief std::list 의 내용을 옮겨 와 만듭니다. */
         list( Base&& other ) noexcept
             : Base( std::move( other ) ) {}
 
@@ -70,7 +70,7 @@ namespace sw
         list( const list& other )
             : Base( static_cast<const Base&>( other ) ) {}
 
-        /** @brief 복사 생성합니다. */
+        /** @brief 지정한 할당자로 복사 생성합니다. */
         list( const list& other, const Allocator& alloc )
             : Base( static_cast<const Base&>( other ), alloc ) {}
 
@@ -78,7 +78,7 @@ namespace sw
         list( list&& other ) noexcept
             : Base( std::move( static_cast<Base&>( other ) ) ) {}
 
-        /** @brief 이동 생성합니다. */
+        /** @brief 지정한 할당자로 이동 생성합니다. */
         list( list&& other, const Allocator& alloc )
             : Base( std::move( static_cast<Base&>( other ) ), alloc ) {}
 
@@ -86,7 +86,7 @@ namespace sw
         list( std::initializer_list<T> init, const Allocator& alloc = Allocator() )
             : Base( init, alloc ) {}
 
-        /** @brief 복사 대입합니다. */
+        /** @brief std::list 의 내용을 복사해 대입합니다. */
         list& operator=( const Base& other )
         {
             SW_SCOPED_RACE_WRITE();
@@ -94,7 +94,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 이동 대입합니다. */
+        /** @brief std::list 의 내용을 옮겨 와 대입합니다. */
         list& operator=( Base&& other ) noexcept
         {
             SW_SCOPED_RACE_WRITE();
@@ -134,14 +134,14 @@ namespace sw
             return *this;
         }
 
-        /** @brief 내용을 새로 할당합니다. */
+        /** @brief 내용을 value 원소 count 개로 바꿉니다. */
         void assign( size_type count, const T& value )
         {
             SW_SCOPED_RACE_WRITE();
             Base::assign( count, value );
         }
 
-        /** @brief 내용을 새로 할당합니다. */
+        /** @brief 내용을 [first, last) 로 바꿉니다. */
         template <class InputIt>
         void assign( InputIt first, InputIt last )
         {
@@ -149,7 +149,7 @@ namespace sw
             Base::assign( first, last );
         }
 
-        /** @brief 내용을 새로 할당합니다. */
+        /** @brief 내용을 초기화 리스트로 바꿉니다. */
         void assign( std::initializer_list<T> ilist )
         {
             SW_SCOPED_RACE_WRITE();
@@ -157,16 +157,16 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 2) 조회 — 원소·이터레이터·크기. 비const 접근도 쓰기 락 (참조 유출)
+        // 2) 조회 — 원소 · 이터레이터 · 크기. const 가 아닌 접근은 참조가 밖으로 나가므로 쓰기 가드를 잡는다
         // ------------------------------------------------------------------------------
-        /** @brief 사용 중인 할당자입니다. */
+        /** @brief 쓰고 있는 할당자를 반환합니다. */
         allocator_type get_allocator() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return Base::get_allocator();
         }
 
-        // Element access
+        // 원소 접근
         /** @brief 첫 원소를 반환합니다. */
         reference front()
         {
@@ -195,7 +195,7 @@ namespace sw
             return Base::back();
         }
 
-        // Iterators
+        // 이터레이터
         /** @brief 시작 이터레이터를 반환합니다. */
         iterator begin() noexcept
         {
@@ -280,7 +280,7 @@ namespace sw
             return Base::crend();
         }
 
-        // Capacity
+        // 크기
         /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept
         {
@@ -302,9 +302,8 @@ namespace sw
             return Base::max_size();
         }
 
-        // Modifiers
         // ------------------------------------------------------------------------------
-        // 3) 변경 — insert/erase/splice. 쓰기 락
+        // 3) 변경 — insert/erase/splice. 쓰기 가드를 잡는다
         // ------------------------------------------------------------------------------
         /** @brief 모든 원소를 제거합니다. */
         void clear() noexcept
@@ -313,28 +312,28 @@ namespace sw
             Base::clear();
         }
 
-        /** @brief 원소를 삽입합니다. */
+        /** @brief pos 앞에 원소를 삽입합니다. */
         iterator insert( const_iterator pos, const T& value )
         {
             SW_SCOPED_RACE_WRITE();
             return Base::insert( pos, value );
         }
 
-        /** @brief 원소를 삽입합니다. */
+        /** @brief pos 앞에 원소를 삽입합니다. */
         iterator insert( const_iterator pos, T&& value )
         {
             SW_SCOPED_RACE_WRITE();
             return Base::insert( pos, std::move( value ) );
         }
 
-        /** @brief 원소를 삽입합니다. */
+        /** @brief pos 앞에 value 를 count 개 삽입합니다. */
         iterator insert( const_iterator pos, size_type count, const T& value )
         {
             SW_SCOPED_RACE_WRITE();
             return Base::insert( pos, count, value );
         }
 
-        /** @brief 원소를 삽입합니다. */
+        /** @brief pos 앞에 [first, last) 를 삽입합니다. */
         template <class InputIt>
         iterator insert( const_iterator pos, InputIt first, InputIt last )
         {
@@ -342,14 +341,14 @@ namespace sw
             return Base::insert( pos, first, last );
         }
 
-        /** @brief 원소를 삽입합니다. */
+        /** @brief pos 앞에 초기화 리스트의 원소를 삽입합니다. */
         iterator insert( const_iterator pos, std::initializer_list<T> ilist )
         {
             SW_SCOPED_RACE_WRITE();
             return Base::insert( pos, ilist );
         }
 
-        /** @brief 원소를 제자리 생성합니다. */
+        /** @brief pos 앞에 원소를 제자리에서 생성합니다. */
         template <class... Args>
         iterator emplace( const_iterator pos, Args&&... args )
         {
@@ -357,14 +356,14 @@ namespace sw
             return Base::emplace( pos, std::forward<Args>( args )... );
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
             return Base::erase( pos );
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief [first, last) 범위의 원소를 제거합니다. */
         iterator erase( const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
@@ -385,7 +384,7 @@ namespace sw
             Base::push_back( std::move( value ) );
         }
 
-        /** @brief 뒤에 원소를 제자리 생성합니다. */
+        /** @brief 뒤에 원소를 제자리에서 생성합니다. */
         template <class... Args>
         reference emplace_back( Args&&... args )
         {
@@ -414,7 +413,7 @@ namespace sw
             Base::push_front( std::move( value ) );
         }
 
-        /** @brief 앞에 원소를 제자리 생성합니다. */
+        /** @brief 앞에 원소를 제자리에서 생성합니다. */
         template <class... Args>
         reference emplace_front( Args&&... args )
         {
@@ -429,14 +428,14 @@ namespace sw
             Base::pop_front();
         }
 
-        /** @brief 크기를 변경합니다. */
+        /** @brief 크기를 바꿉니다. 늘어난 자리는 기본값으로 채웁니다. */
         void resize( size_type count )
         {
             SW_SCOPED_RACE_WRITE();
             Base::resize( count );
         }
 
-        /** @brief 크기를 변경합니다. */
+        /** @brief 크기를 바꿉니다. 늘어난 자리는 value 로 채웁니다. */
         void resize( size_type count, const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();
@@ -451,8 +450,8 @@ namespace sw
             Base::swap( static_cast<Base&>( other ) );
         }
 
-        // Operations
-        /** @brief 다른 컨테이너의 원소를 병합합니다. */
+        // 리스트 연산
+        /** @brief 정렬된 other 를 이 리스트에 병합합니다. other 는 비게 됩니다. */
         void merge( list& other )
         {
             SW_SCOPED_RACE_WRITE();
@@ -460,7 +459,7 @@ namespace sw
             Base::merge( static_cast<Base&>( other ) );
         }
 
-        /** @brief 다른 컨테이너의 원소를 병합합니다. */
+        /** @brief 정렬된 other 를 이 리스트에 병합합니다. other 는 비게 됩니다. */
         void merge( list&& other )
         {
             SW_SCOPED_RACE_WRITE();
@@ -468,7 +467,7 @@ namespace sw
             Base::merge( std::move( static_cast<Base&>( other ) ) );
         }
 
-        /** @brief 다른 컨테이너의 원소를 병합합니다. */
+        /** @brief 비교자로 정렬된 other 를 이 리스트에 병합합니다. other 는 비게 됩니다. */
         template <class Compare>
         void merge( list& other, Compare comp )
         {
@@ -477,7 +476,7 @@ namespace sw
             Base::merge( static_cast<Base&>( other ), comp );
         }
 
-        /** @brief 다른 컨테이너의 원소를 병합합니다. */
+        /** @brief 비교자로 정렬된 other 를 이 리스트에 병합합니다. other 는 비게 됩니다. */
         template <class Compare>
         void merge( list&& other, Compare comp )
         {
@@ -486,7 +485,7 @@ namespace sw
             Base::merge( std::move( static_cast<Base&>( other ) ), comp );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 모든 원소를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list& other )
         {
             SW_SCOPED_RACE_WRITE();
@@ -494,7 +493,7 @@ namespace sw
             Base::splice( pos, static_cast<Base&>( other ) );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 모든 원소를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list&& other )
         {
             SW_SCOPED_RACE_WRITE();
@@ -502,7 +501,7 @@ namespace sw
             Base::splice( pos, std::move( static_cast<Base&>( other ) ) );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 원소 it 하나를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list& other, const_iterator it )
         {
             SW_SCOPED_RACE_WRITE();
@@ -510,7 +509,7 @@ namespace sw
             Base::splice( pos, static_cast<Base&>( other ), it );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 원소 it 하나를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list&& other, const_iterator it )
         {
             SW_SCOPED_RACE_WRITE();
@@ -518,7 +517,7 @@ namespace sw
             Base::splice( pos, std::move( static_cast<Base&>( other ) ), it );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 [first, last) 원소를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list& other, const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
@@ -526,7 +525,7 @@ namespace sw
             Base::splice( pos, static_cast<Base&>( other ), first, last );
         }
 
-        /** @brief 다른 리스트의 원소를 이어 붙입니다. */
+        /** @brief other 의 [first, last) 원소를 pos 앞으로 옮깁니다. */
         void splice( const_iterator pos, list&& other, const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
@@ -534,14 +533,14 @@ namespace sw
             Base::splice( pos, std::move( static_cast<Base&>( other ) ), first, last );
         }
 
-        /** @brief 값과 일치하는 원소를 제거합니다. */
+        /** @brief value 와 같은 원소를 모두 제거합니다. */
         void remove( const T& value )
         {
             SW_SCOPED_RACE_WRITE();
             Base::remove( value );
         }
 
-        /** @brief 조건에 맞는 원소를 제거합니다. */
+        /** @brief 조건을 만족하는 원소를 모두 제거합니다. */
         template <class UnaryPredicate>
         void remove_if( UnaryPredicate p )
         {
@@ -556,14 +555,14 @@ namespace sw
             Base::reverse();
         }
 
-        /** @brief 연속 중복 원소를 제거합니다. */
+        /** @brief 연속으로 중복된 원소를 하나만 남기고 제거합니다. */
         void unique()
         {
             SW_SCOPED_RACE_WRITE();
             Base::unique();
         }
 
-        /** @brief 연속 중복 원소를 제거합니다. */
+        /** @brief 연속으로 중복된 원소(판정은 조건자로 합니다)를 하나만 남기고 제거합니다. */
         template <class BinaryPredicate>
         void unique( BinaryPredicate p )
         {
@@ -571,14 +570,14 @@ namespace sw
             Base::unique( p );
         }
 
-        /** @brief 정렬합니다. */
+        /** @brief operator< 로 정렬합니다. */
         void sort()
         {
             SW_SCOPED_RACE_WRITE();
             Base::sort();
         }
 
-        /** @brief 정렬합니다. */
+        /** @brief 비교자로 정렬합니다. */
         template <class Compare>
         void sort( Compare comp )
         {

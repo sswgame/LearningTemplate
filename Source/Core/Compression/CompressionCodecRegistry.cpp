@@ -1,6 +1,6 @@
 /**
  * @file CompressionCodecRegistry.cpp
- * @brief 압축 코덱 레지스트리 구현.
+ * @brief 압축 코덱 레지스트리 구현입니다.
  */
 #include "pch.h"
 
@@ -18,8 +18,8 @@ namespace sw
     namespace
     {
         /**
-         * @brief 활성 레지스트리 슬롯 — 인스턴스가 아니라 **포인터**다. 소유는 EngineLoop/테스트 호스트.
-         * @details 렌더 스레드·잡 스레드가 압축 경로를 동시에 타므로 원자로 읽고 쓴다.
+         * @brief 활성 레지스트리 슬롯입니다. 인스턴스가 아니라 포인터이며, 소유자는 EngineLoop 또는 테스트 호스트입니다.
+         * @details 렌더 스레드와 잡 스레드가 압축 경로를 동시에 지나가므로 원자적으로 읽고 씁니다.
          */
         atomic<CompressionCodecRegistry*> s_pActiveRegistry{ nullptr };
     } // namespace

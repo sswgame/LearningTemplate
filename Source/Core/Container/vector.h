@@ -1,7 +1,7 @@
 /**
  * @file vector.h
- * @brief 독자적인 sw::vector 구현체 (std::vector 인터페이스 호환).
- * @details 디버그에서 RaceDetectContext 로 동시 접근을 잡으며, InlineAllocator 와 함께 사용 시 SBO 를 지원합니다.
+ * @brief 자체 구현한 sw::vector 입니다(std::vector 와 인터페이스 호환).
+ * @details 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아내고, InlineAllocator 와 함께 쓰면 SBO 를 지원합니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -28,18 +28,17 @@ namespace sw
     };
 
     /**
-     * @brief 원소를 바이트 단위로 통째로 옮겨도 되는 타입인가.
-     * @details 복사에도 소멸에도 사용자 코드가 없다는 뜻이다. 둘 다일 때만 "원소마다 placement new"
-     *          루프를 `Memory::copy` 한 번으로 바꿀 수 있다 — 하나라도 아니면 생성자·소멸자가
-     *          돌아야 하므로 루프가 정본이다.
-     * @note 실측: `GpuInstance`(96바이트) 20,000 개를 옮기는 데 원소 루프 329us, 바이트 복사 ~130us.
-     *       게임 스레드가 매 프레임 렌더 패킷에 스냅샷을 싣는 자리라 그대로 프레임 시간이었다.
+     * @brief 원소를 바이트 단위로 통째로 옮겨도 되는 타입인지 판정합니다.
+     * @details 복사와 소멸 어느 쪽에도 사용자 코드가 없어야 합니다. 둘 다일 때만 "원소마다 placement new" 루프를 `Memory::copy`
+     *          한 번으로 바꿀 수 있습니다. 하나라도 아니면 생성자나 소멸자가 돌아야 하므로 루프가 맞습니다.
+     * @note 실측: `GpuInstance`(96바이트) 20,000개를 옮기는 데 원소 루프는 329us, 바이트 복사는 ~130us 였습니다. 게임 스레드가
+     *       매 프레임 렌더 패킷에 스냅샷을 싣는 곳이라 그 차이가 그대로 프레임 시간이었습니다.
      */
     template <typename T>
     inline constexpr bool is_bitwise_copyable_v = std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 
     template <typename T, typename Allocator = sw::Allocator<T>>
-    /** @brief 커스텀 vector. API 는 STL 과 같으며 SBO 및 레이스 탐지를 지원합니다. */
+    /** @brief 커스텀 vector 입니다. API 는 STL 과 같고, SBO 와 레이스 탐지를 지원합니다. */
     class vector : private Allocator
     {
     public:
@@ -149,14 +148,14 @@ namespace sw
         T*             do_allocate( size_t n );
         void           do_deallocate( T* p, size_t n );
         /**
-         * @brief 용량을 @p new_cap 으로 늘립니다 (옮기기 · 옛 버퍼 해제까지). **인라인하지 않는다.**
-         * @details `push_back` · `emplace_back` 의 느린 갈래가 이것 하나다. 이 몸통(할당 · 원소 옮기기 루프)이 인라인되면
-         *          `push_back` 이 커져서 **부르는 쪽에 인라인되지 않는다** — 빠른 갈래(비교 · 놓기 · 크기 올리기)가
-         *          호출 한 번이 된다. 2026-09-23 프로파일에서 한 프레임에 8000 번 부르는 자리(`PrimitiveRegistry::consumeDirty`,
-         *          `SceneTransformHierarchy::queueWriteParallel`)의 `push_back` 이 따로 된 함수로 잡혔다.
+         * @brief 용량을 @p new_cap 으로 늘립니다(원소 옮기기와 옛 버퍼 해제까지 합니다). **인라인하지 않습니다.**
+         * @details `push_back` · `emplace_back` 의 느린 경로는 이 함수 하나입니다. 이 본문(할당 · 원소 옮기기 루프)이 인라인되면
+         *          `push_back` 이 커져서 호출하는 쪽에 인라인되지 않고, 빠른 경로(비교 · 저장 · 크기 증가)마저 함수 호출 한 번이
+         *          됩니다. 2026-09-23 프로파일에서 한 프레임에 8000번 부르는 곳(`PrimitiveRegistry::consumeDirty`,
+         *          `SceneTransformHierarchy::queueWriteParallel`)의 `push_back` 이 별도 함수로 잡혔습니다.
          */
         SW_NOINLINE void reserveInternal( size_t new_cap );
-        /** @brief 비어 있는(size=0, 용량 확보된) 버퍼 앞에서부터 count 개를 복사해 넣습니다. */
+        /** @brief 비어 있는 버퍼(size = 0, 용량은 확보됨)의 앞에서부터 count 개를 복사해 넣습니다. */
         void copyFromInternal( const T* pSource, size_t count );
         void clearInternal() noexcept;
 
@@ -169,7 +168,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 구현부 (Implementation)
+    // 구현
     // ------------------------------------------------------------------------------
 
     template <typename T, typename Allocator>
@@ -229,16 +228,16 @@ namespace sw
         T* pNewData = do_allocate( new_cap );
         if constexpr ( is_bitwise_copyable_v<T> )
         {
-            // 생성자도 소멸자도 할 일이 없는 타입이면 옛 버퍼는 그냥 바이트다. 새 버퍼와 겹치지
-            // 않으므로(방금 할당했다) copy 로 충분하다.
+            // 생성자도 소멸자도 할 일이 없는 타입이면 옛 버퍼는 그냥 바이트다. 방금 할당한 새 버퍼와 겹치지 않으므로
+            // copy 로 충분하다.
             if ( _size > 0 )
                 Memory::copy( pNewData, _pData, _size * sizeof( T ) );
         }
         else
         {
-            // 1·3번 분기의 본문이 같다 — 중복이 아니라 **순서가 규약이다.** 이동이 던질 수 있으면
-            // 복사를 먼저 고른다(복사는 실패해도 원본이 남아 되돌릴 수 있다). 복사조차 안 되면 그때
-            // 던지는 이동을 쓴다. 셋을 합치면 이 우선순위가 사라진다.
+            // 1 · 3번 분기의 본문이 같지만 중복이 아니다. **순서가 규칙이다.** 이동이 예외를 던질 수 있으면 복사를 먼저 고른다
+            // (복사는 실패해도 원본이 남아 있어 되돌릴 수 있다). 복사조차 안 될 때만 예외를 던지는 이동을 쓴다. 셋을 합치면 이
+            // 우선순위가 사라진다.
             for ( size_t index = 0; index < _size; ++index )
             {
                 if constexpr ( std::is_nothrow_move_constructible_v<T> )
@@ -416,9 +415,9 @@ namespace sw
         {
             SW_SCOPED_RACE_WRITE();
             SW_SCOPED_RACE_READ_OTHER( other );
-            // 용량이 넉넉하면 겹치는 앞부분은 **대입**한다 — 원소 안의 힙(문자열·벡터·맵)이 제 용량을 남긴다.
-            // 예전에는 전부 부수고 새로 만들었다: 프레임마다 링 자리와 바꿔 가며 다시 채우는 스냅샷의 그룹 목록이
-            // 겉 벡터는 용량을 남기면서도 안의 문자열은 매번 새로 할당했다(std::vector 의 대입과 같은 규칙으로 맞춘다).
+            // 용량이 넉넉하면 겹치는 앞부분은 **대입**한다. 그래야 원소 안의 힙(문자열 · 벡터 · 맵)이 자기 용량을 유지한다.
+            // 예전에는 모두 부수고 새로 만들었다. 그래서 프레임마다 링 슬롯을 바꿔 가며 다시 채우는 스냅샷의 그룹 목록이, 바깥
+            // 벡터는 용량을 유지하면서도 안쪽 문자열은 매번 새로 할당했다(std::vector 의 대입과 같은 규칙으로 맞춘다).
             if constexpr ( std::is_copy_assignable_v<T> && is_bitwise_copyable_v<T> == false )
             {
                 if ( other._size <= _capacity )
@@ -801,15 +800,14 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         const size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset <= _size );
-        // `SW_ASSERT` 는 Release 에서 통째로 사라진다 — `erase` 가 같은 이유로 진짜 가드를 들고 있다.
+        // `SW_ASSERT` 는 Release 에서 통째로 사라진다. `erase` 가 같은 이유로 실제 가드를 따로 두고 있다.
         if ( offset > _size )
             return _pData + _size;
 
-        // **`value` 가 이 벡터 안의 원소일 수 있다.** 형제들(`push_back` 둘 · `emplace_back` ·
-        // `insert( pos, count, value )`)은 전부 손대기 전에 떠 두는데 이 오버로드만 빠져 있었다.
-        // 여기서는 재할당이 없어도 위험하다: 아래 밀기 루프가 `value` 가 가리키는 칸을 **먼저**
-        // 덮으므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다. 재할당까지
-        // 겹치면 옛 버퍼가 해제된 뒤라 죽은 자리를 읽는다.
+        // `value` 가 이 벡터 안의 원소일 수 있다. 형제 함수들(`push_back` 두 개 · `emplace_back` · `insert( pos, count, value )`)은
+        // 모두 손대기 전에 값을 떠 두는데 이 오버로드만 빠져 있었다. 여기서는 재할당이 없어도 위험하다. 아래 밀기 루프가
+        // `value` 가 가리키는 칸을 **먼저** 덮어쓰므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다.
+        // 재할당까지 겹치면 옛 버퍼가 해제된 뒤라 이미 해제된 메모리를 읽는다.
         T movedValue( std::move( value ) );
 
         if ( _size >= _capacity )
@@ -838,35 +836,32 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         const size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset <= _size );
-        // `erase` 와 같은 이유 — Release 에서는 위 단언이 없으므로 아래 `_size - offset` 이 뒤집힌다.
+        // `erase` 와 같은 이유다. Release 에서는 위 단언이 없으므로 아래 `_size - offset` 이 언더플로한다.
         if ( offset > _size )
             return _pData + _size;
 
-        // 0개 끼워 넣기는 아무 일도 하지 않는다. 예전엔 여기서 빠져나가지 않아 아래 "뒤로 밀기"
-        // 루프의 종료 조건이 `itemIndex >= offset + 0` 이 되었고, offset 이 0 이면 그것이 **언제나
-        // 참**이라 인덱스가 0 에서 한 번 더 줄어 size_t 로 뒤집혔다 — 범위 밖에 계속 쓰면서 끝나지
-        // 않았다(ASan: heap-buffer-overflow).
+        // 0개를 끼워 넣으면 아무 일도 하지 않는다. 예전에는 여기서 빠져나가지 않아서 아래 "뒤로 밀기" 루프의 종료 조건이
+        // `itemIndex >= offset + 0` 이 됐고, offset 이 0 이면 그 조건이 **언제나 참**이라 인덱스가 0 에서 한 번 더 줄어 size_t
+        // 언더플로가 났다. 범위 밖에 계속 쓰면서 끝나지 않았다(ASan: heap-buffer-overflow).
         if ( count == 0 )
             return _pData + offset;
 
-        // `value` 가 **이 벡터 안의 원소**일 수 있다(`v.insert( v.begin(), 3, v[0] )` 는 적법하다).
-        // 아래에서 그 자리를 덮어쓰고, 그 전에 reserveInternal 이 버퍼를 통째로 옮길 수도 있다.
-        // 그래서 손대기 전에 값으로 떠 둔다.
+        // `value` 가 이 벡터 안의 원소일 수 있다(`v.insert( v.begin(), 3, v[0] )` 는 적법하다). 아래에서 그 자리를 덮어쓰고,
+        // 그 전에 reserveInternal 이 버퍼를 통째로 옮길 수도 있다. 그래서 손대기 전에 값으로 복사해 둔다.
         const T valueCopy = value;
 
-        // `_size + count` 가 넘치면 **더 작은** 값이 되어 확보를 건너뛰고, 아래 밀기 루프가
-        // `fromIndex + count` 라는 범위 밖 주소에 쓴다. 담을 수 없는 개수는 여기서 끝낸다.
+        // `_size + count` 가 오버플로하면 **더 작은** 값이 되어 용량 확보를 건너뛰고, 아래 밀기 루프가 `fromIndex + count`
+        // 라는 범위 밖 주소에 쓴다. 담을 수 없는 개수는 여기서 거른다.
         if ( count > ( ~size_t{ 0 } ) - _size )
             return _pData + offset;
 
         if ( _size + count > _capacity )
             reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
-        // 1) 뒤쪽 원소들을 count 칸 뒤로 민다. **뒤에서부터** 가야 아직 안 읽은 원소를 덮지 않는다.
-        //    목적지가 아직 살아 있는 칸이면 이동 대입, 미초기화 칸이면 placement new 다.
-        //    예전에는 이 구분을 `itemIndex - count >= offset` 으로 했는데, `count > _size` 면 그
-        //    뺄셈이 뒤집혀 조건이 언제나 참이 되고 **없는 원소에서 move 해 왔다**
-        //    (`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
+        // 1) 뒤쪽 원소들을 count 칸 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
+        //    목적지가 이미 살아 있는 칸이면 이동 대입, 초기화되지 않은 칸이면 placement new 다.
+        //    예전에는 이 구분을 `itemIndex - count >= offset` 으로 했는데, `count > _size` 면 그 뺄셈이 언더플로해 조건이
+        //    언제나 참이 되고, **존재하지 않는 원소에서 이동해 왔다**(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
         const size_t tailCount = _size - offset;
         for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
         {
@@ -878,7 +873,7 @@ namespace sw
                 _pData[toIndex] = std::move( _pData[fromIndex] );
         }
 
-        // 2) 빈 자리 [offset, offset + count) 를 채운다. 원래 살아 있던 칸은 대입, 그 뒤는 생성.
+        // 2) 빈 자리 [offset, offset + count) 를 채운다. 원래 살아 있던 칸은 대입하고, 그 뒤 칸은 생성한다.
         for ( size_t index = 0; index < count; ++index )
         {
             const size_t targetIndex = offset + index;
@@ -924,8 +919,8 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset < _size );
-        // `SW_ASSERT` 는 Release 에서 **통째로 사라진다.** 그 뒤의 `_size - 1` 은 빈 벡터에서
-        // 뒤집히므로, 배포본에서만 범위 밖을 훑게 된다.
+        // `SW_ASSERT` 는 Release 에서 통째로 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로하므로,
+        // 배포본에서만 범위 밖을 훑게 된다.
         if ( offset >= _size )
             return _pData + _size;
         for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
@@ -944,10 +939,9 @@ namespace sw
         size_t offset = static_cast<size_t>( first - _pData );
         size_t count  = static_cast<size_t>( last - first );
         SW_ASSERT( offset + count <= _size );
-        // **뺄셈으로 잰다.** `offset + count` 는 `size_t` 안에서 넘칠 수 있다 — `last < first` 인
-        // 이터레이터 쌍이면 `last - first` 가 음수라 `count` 가 거대한 값이 되고, 그 합이 작은
-        // 수로 접혀 이 가드를 그냥 지나간다. 그러면 아래 `_size - count` 도 뒤집혀 루프가 범위
-        // 밖을 쓴다. 같은 모양을 `fixed_string::erase` 에서도 고쳤다.
+        // 뺄셈으로 비교한다. `offset + count` 는 `size_t` 범위에서 오버플로할 수 있다. `last < first` 인 반복자 쌍이면
+        // `last - first` 가 음수라 `count` 가 거대한 값이 되고, 그 합이 작은 수로 돌아와 이 가드를 그냥 통과한다. 그러면
+        // 아래 `_size - count` 도 언더플로해 루프가 범위 밖에 쓴다. 같은 문제를 `fixed_string::erase` 에서도 고쳤다.
         if ( offset > _size || count > _size - offset )
             return _pData + _size;
         if ( count > 0 )
@@ -1023,8 +1017,8 @@ namespace sw
     {
         SW_SCOPED_RACE_WRITE();
         SW_ASSERT( _size > 0 );
-        // 단언은 Release 에서 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 뒤집혀
-        // `_pData[SIZE_MAX]` 의 소멸자를 부른다 — `erase` 가 막아 둔 것과 같은 모양이다.
+        // 단언은 Release 에서 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로해 `_pData[SIZE_MAX]` 의 소멸자를
+        // 부른다. `erase` 가 막아 둔 것과 같은 문제다.
         if ( _size == 0 )
             return;
         _pData[_size - 1].~T();
@@ -1042,8 +1036,8 @@ namespace sw
         }
         else if ( count > _size )
         {
-            // 용량을 넘으면 **두 배 이상**으로 — `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 번이다. 딱 `count` 만 잡으면
-            // 한 칸 늘릴 때마다 통째로 옮겨 N 번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
+            // 용량을 넘으면 **두 배 이상**으로 늘린다. 그래야 `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 횟수로 끝난다.
+            // 딱 `count` 만큼만 잡으면 한 칸 늘릴 때마다 통째로 옮겨서 N번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
@@ -1063,7 +1057,7 @@ namespace sw
         }
         else if ( count > _size )
         {
-            // 위 오버로드와 같은 이유로 두 배 이상.
+            // 위 오버로드와 같은 이유로 두 배 이상 늘린다.
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )

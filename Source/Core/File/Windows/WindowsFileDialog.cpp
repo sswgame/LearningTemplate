@@ -91,7 +91,7 @@ namespace sw
         if ( pCurrent == nullptr || *pCurrent == L'\0' )
             return false;
 
-        // Multi-select: "dir\0file1\0file2\0\0" / Single: "full\path\file\0"
+        // 다중 선택: "dir\0file1\0file2\0\0" / 단일 선택: "full\path\file\0"
         const wstring first( pCurrent );
         pCurrent += first.size() + 1;
         if ( *pCurrent == L'\0' )

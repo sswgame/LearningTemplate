@@ -11,25 +11,25 @@ namespace sw
 #if !defined( SW_SHIPPING )
     /**
      * @struct AllocHeader
-     * @brief 할당에 사용된 메모리 블록 직전에 위치하는 메타데이터 헤더
+     * @brief 사용자 데이터 바로 앞에 놓이는 할당 메타데이터 헤더입니다.
      */
     struct alignas( 16 ) AllocHeader
     {
-        size_t    _size;      ///< 요청된 사용자 데이터 바이트 크기
-        MemoryTag _tag;       ///< 메모리 서브시스템 분류 태그 (Graphics, Audio, Physics 등)
-        uint32    _pad;       ///< 16바이트 경계 정렬 패딩
-        uint64    _hash;      ///< 할당 시점 콜스택 추적 해시
+        size_t    _size;      ///< 요청한 사용자 데이터 크기(바이트)
+        MemoryTag _tag;       ///< 메모리 서브시스템 분류 태그(Graphics, Audio, Physics 등)
+        uint32    _pad;       ///< 16바이트 경계 정렬용 패딩
+        uint64    _hash;      ///< 할당 시점 콜 스택의 해시
         uint64    _magic;     ///< 유효성 검증용 매직 넘버
-        void*     _pRawPtr;   ///< OS 원시 할당 시작 주소 (정렬 패딩 이전)
-        void*     _pReserved; ///< 48바이트 (16바이트 배수) 정렬용 패딩
+        void*     _pRawPtr;   ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
+        void*     _pReserved; ///< 헤더를 48바이트(16의 배수)로 맞추는 패딩
     };
 
-    /** @brief 유효한 엔진 할당 블록임을 식별하기 위한 64비트 매직 상수 */
+    /** @brief 엔진이 할당한 블록인지 식별하는 64비트 매직 상수입니다. */
     static constexpr uint64 kAllocMagic = 0x5C09B10CDA7A0000;
 #endif
 
     /**
-     * @brief 지정한 바이트 경계(Alignment)로 정렬된 메모리 블록을 할당합니다.
+     * @brief 지정한 바이트 경계로 정렬된 메모리 블록을 할당합니다.
      */
     void* Memory::allocateAligned( size_t size, size_t alignment )
     {
@@ -46,8 +46,8 @@ namespace sw
     #endif
 #else // SW_SHIPPING
 
-        // 헤더와 정렬 여유를 더하다 뒤집히면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가
-        // 곧바로 범위를 넘는다. 넘칠 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
+        // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
+        // 오버플로할 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) - align )
             return nullptr;
 
@@ -83,7 +83,7 @@ namespace sw
     }
 
     /**
-     * @brief 정렬 할당된 메모리 블록을 해제합니다.
+     * @brief 정렬 할당한 메모리 블록을 해제합니다.
      */
     void Memory::freeAligned( void* pPtr )
     {
@@ -100,7 +100,7 @@ namespace sw
         AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
         if ( pHeader->_magic != kAllocMagic )
         {
-            // 헤더가 손상되었거나 엔진 할당 블록이 아님
+            // 헤더가 손상됐거나 엔진이 할당한 블록이 아니다
             return;
         }
 
@@ -126,7 +126,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         return ::malloc( size );
 #else  // SW_SHIPPING
-       // allocateAligned 와 같은 이유로 넘치는 크기를 먼저 거절한다.
+       // allocateAligned 와 같은 이유로 오버플로할 크기를 먼저 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) )
             return nullptr;
 
@@ -166,7 +166,7 @@ namespace sw
         AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
         if ( pHeader->_magic != kAllocMagic )
         {
-            // 헤더가 손상되었거나 엔진 할당 블록이 아님
+            // 헤더가 손상됐거나 엔진이 할당한 블록이 아니다
             return;
         }
 

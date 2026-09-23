@@ -11,10 +11,10 @@ namespace sw
         struct MatrixMathInternal
         {
             /**
-             * @brief 앞 · 위 방향에서 직교 기저(오른쪽 · 위 · 앞)를 만듭니다 — 뷰 행렬(`createLookAt`)과 월드 행렬(`createWorld`)이 같은 기저다.
-             * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둔다. 앞과 위가 나란하면(바로 위 · 아래를 볼 때) 외적이 0 이 되므로 다른 위
-             *          방향으로 다시 잡는다. 예전에는 두 함수가 이 열다섯 줄을 각자 들었다 — 한쪽의 폴백만 고치면 카메라와 오브젝트가
-             *          같은 방향에서 서로 다르게 돈다.
+             * @brief 앞 · 위 방향으로 직교 기저(오른쪽 · 위 · 앞)를 만듭니다. 뷰 행렬(`createLookAt`)과 월드 행렬(`createWorld`)이 같은 기저를 씁니다.
+             * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둡니다. 앞과 위가 나란하면(바로 위나 아래를 볼 때) 외적이 0 이 되므로 다른 위 방향으로
+             *          다시 잡습니다. 예전에는 두 함수가 이 열다섯 줄을 각자 들고 있었는데, 한쪽의 폴백만 고치면 카메라와 오브젝트가 같은
+             *          방향에서 서로 다르게 돌게 됩니다.
              */
             static void buildBasis( const float3& forward, const float3& up, float3& outRight, float3& outUp, float3& outForward ) noexcept
             {
@@ -530,7 +530,7 @@ namespace sw
     float4x4 float4x4::createTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept
     {
         // 회전만 행렬로 만든 뒤 각 행에 스케일을 곱하고 마지막 행에 위치를 놓는다.
-        // S * R * T 를 곱으로 구한 것과 **같은 값**이다 (헤더의 설명 참고).
+        // S * R * T 를 곱해서 구한 것과 같은 값이다(헤더 설명 참고).
         const float4x4 rotationMatrix = createFromQuaternion( rotation );
         return float4x4{ rotationMatrix._11 * scale._x, rotationMatrix._12 * scale._x, rotationMatrix._13 * scale._x, 0.f,
                          rotationMatrix._21 * scale._y, rotationMatrix._22 * scale._y, rotationMatrix._23 * scale._y, 0.f,
@@ -540,10 +540,10 @@ namespace sw
 
     float4x4 float4x4::createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept
     {
-        // 회전이 없으면 회전 행렬은 단위 행렬이다 — 삼각 함수 여섯 번과 사원수 -> 행렬 변환을 건너뛰고 대각선에 스케일만 놓는다.
-        // 움직이는 컴포넌트가 월드를 다시 만들 때마다 지나는 자리이고, 회전 없는 물체(격자 배치 · 파티클 · 떠다니는 소품)가 흔하다.
-        // 값은 아래 경로와 같다 — 단위 사원수의 행렬은 대각선 1 · 나머지 0 이다(음수 스케일에서 0 의 부호만 +0 으로 다를 수 있다).
-        // 2026-09-23 측정: 합성 하나에 23.6 -> 8.5 ns, 회전이 있는 경우는 비교 세 번만큼(~2 ns) 늘어난다.
+        // 회전이 없으면 회전 행렬은 단위 행렬이다. 삼각 함수 여섯 번과 쿼터니언 -> 행렬 변환을 건너뛰고 대각선에 스케일만 놓는다.
+        // 움직이는 컴포넌트가 월드 행렬을 다시 만들 때마다 지나는 자리이고, 회전 없는 물체(격자 배치 · 파티클 · 떠다니는 소품)가 흔하다.
+        // 결과는 아래 경로와 같다. 단위 쿼터니언의 행렬은 대각선이 1, 나머지가 0 이기 때문이다(음수 스케일이면 0 의 부호만 +0 으로 다를 수 있다).
+        // 2026-09-23 측정: 합성 한 번에 23.6 -> 8.5 ns. 회전이 있는 경우는 비교 세 번만큼(~2 ns) 늘어난다.
         if ( rotation._x == 0.f && rotation._y == 0.f && rotation._z == 0.f )
         {
             return float4x4{ scale._x, 0.f, 0.f, 0.f, 0.f, scale._y, 0.f, 0.f, 0.f, 0.f, scale._z, 0.f, position._x, position._y, position._z, 1.f };

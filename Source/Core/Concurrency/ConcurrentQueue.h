@@ -1,9 +1,9 @@
 ﻿/**
  * @file ConcurrentQueue.h
- * @brief 고정 용량 MPMC 락프리 큐 (Vyukov 시퀀스 넘버 링).
- * @note 파일 주석이 오래 **"뮤텍스 기반"** 이라고 되어 있었는데 이 파일에는 뮤텍스가 한 줄도 없다.
- *       둘 중 무엇을 쓸지 고르는 사람이 정반대로 읽는다 — 이 큐는 막히지 않고, 대신 **가득 차면
- *       `enqueue` 가 false 를 돌려준다**(그 처리는 호출부 몫이다).
+ * @brief 고정 용량 MPMC lock-free 큐입니다(Vyukov 방식의 시퀀스 번호 링).
+ * @note 이 파일의 주석에는 오랫동안 "뮤텍스 기반" 이라고 적혀 있었지만, 실제로는 뮤텍스를 한 줄도 쓰지 않습니다. 어느 큐를
+ *       쓸지 고르는 사람이 정반대로 읽게 되는 차이입니다. 이 큐는 막히지 않는 대신, **가득 차면 `enqueue` 가 false 를
+ *       반환합니다**(그 처리는 호출하는 쪽의 몫입니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,27 +12,27 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 
-// `drain( vector<T>& )` 가 쓴다. 본문의 `sw::array` 언급은 주석뿐이라 array.h 만 뺐다 —
-// 토큰만 세고 지웠다가 이 헤더가 자립하지 못하게 만든 적이 있다(단독 컴파일로 확인할 것).
+// `drain( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 뺐다.
+// 예전에 토큰만 세고 include 를 지웠다가 이 헤더가 혼자서는 컴파일되지 않게 된 적이 있다(단독 컴파일로 확인할 것).
 
 namespace sw
 {
 
     /**
-     * @brief 고정 용량 다중 생산자/다중 소비자 큐 (시퀀스 넘버 기반)
+     * @brief 고정 용량 다중 생산자 · 다중 소비자 큐입니다(시퀀스 번호 기반).
      * @tparam T 요소 타입
-     * @tparam Capacity 용량 (2의 거듭제곱)
+     * @tparam Capacity 용량(2의 거듭제곱)
      */
     // ------------------------------------------------------------------------------
-    // 1) ConcurrentQueue — MPMC 시퀀스 넘버 링. enqueue/dequeue 가 가득/빈 면 false
+    // 1) ConcurrentQueue — MPMC 시퀀스 번호 링. 가득 차거나 비었으면 enqueue/dequeue 가 false
     // ------------------------------------------------------------------------------
-    /** @brief 고정 용량 다중 생산자/다중 소비자 큐입니다. */
+    /** @brief 고정 용량 다중 생산자 · 다중 소비자 큐입니다. */
     template <typename T, uint32 Capacity = 1024>
     class ConcurrentQueue
     {
         static_assert( ( Capacity & ( Capacity - 1 ) ) == 0, "Capacity must be a power of 2!" );
 
-        /** @brief 캐시라인 정렬된 슬롯. 시퀀스로 소유권을 넘깁니다. */
+        /** @brief 캐시 라인에 정렬된 슬롯입니다. 시퀀스 번호로 소유권을 넘깁니다. */
         struct alignas( 64 ) Cell
         {
             atomic<uint32> _sequence{ 0 };
@@ -40,7 +40,7 @@ namespace sw
         };
 
     public:
-        /** @brief 각 슬롯 시퀀스를 인덱스로 두고 위치를 0으로 맞춥니다. */
+        /** @brief 슬롯마다 시퀀스를 자기 인덱스로 두고, 위치를 0 으로 맞춥니다. */
         ConcurrentQueue()
         {
             for ( uint32 slotIndex = 0; slotIndex < Capacity; ++slotIndex )
@@ -51,10 +51,10 @@ namespace sw
             _dequeuePos.store( 0, std::memory_order_relaxed );
         }
 
-        /** @brief 버퍼만 버리며 락은 없습니다. */
+        /** @brief 버퍼를 그대로 버립니다(잠금 없음). */
         ~ConcurrentQueue() = default;
 
-        /** @brief 복사로 요소를 넣습니다. 가득 차면 false. */
+        /** @brief 복사해서 넣습니다. 가득 차 있으면 false 입니다. */
         SW_INLINE bool enqueue( const T& item )
         {
             Cell*  pCell{ nullptr };
@@ -82,7 +82,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 이동으로 요소를 넣습니다. 가득 차면 false. */
+        /** @brief 이동해서 넣습니다. 가득 차 있으면 false 입니다. */
         SW_INLINE bool enqueue( T&& item )
         {
             Cell*  pCell{ nullptr };
@@ -110,7 +110,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 앞에서 요소를 꺼냅니다. 비어 있으면 false. */
+        /** @brief 맨 앞 요소를 꺼냅니다. 비어 있으면 false 입니다. */
         SW_INLINE bool dequeue( T& outItem )
         {
             Cell*  pCell{ nullptr };
@@ -138,15 +138,15 @@ namespace sw
             return true;
         }
 
-        /** @brief push 별칭입니다 (enqueue 호출). */
+        /** @brief enqueue 의 별칭입니다. */
         SW_INLINE bool push( const T& item ) { return enqueue( item ); }
-        /** @brief push 별칭입니다 (enqueue 이동 호출). */
+        /** @brief enqueue( T&& ) 의 별칭입니다. */
         SW_INLINE bool push( T&& item ) { return enqueue( std::move( item ) ); }
 
-        /** @brief pop 별칭입니다 (dequeue 호출). */
+        /** @brief dequeue 의 별칭입니다. */
         SW_INLINE bool pop( T& outItem ) { return dequeue( outItem ); }
 
-        /** @brief 큐에 대기 중인 모든 항목을 vector에 드레인합니다. */
+        /** @brief 대기 중인 항목을 모두 꺼내 outList 뒤에 붙이고, 꺼낸 개수를 반환합니다. */
         uint32 drain( vector<T>& outList )
         {
             uint32 drainCount = 0;
@@ -159,7 +159,7 @@ namespace sw
             return drainCount;
         }
 
-        /** @brief 큐에 대기 중인 항목을 버퍼에 일괄 드레인합니다. */
+        /** @brief 대기 중인 항목을 최대 maxCount 개까지 꺼내 버퍼에 담고, 꺼낸 개수를 반환합니다. */
         uint32 drain( T* pOutBuffer, uint32 maxCount )
         {
             if ( pOutBuffer == nullptr || maxCount == 0 )
@@ -175,14 +175,14 @@ namespace sw
             return drainCount;
         }
 
-        /** @brief 큐에 남아 있는 모든 요소를 비웁니다. */
+        /** @brief 남은 요소를 모두 꺼내 버립니다. */
         void clear()
         {
             T dummy{};
             while ( dequeue( dummy ) ) {}
         }
 
-        /** @brief 대략적인 현재 요소 수를 반환합니다. */
+        /** @brief 현재 요소 수의 근삿값을 반환합니다. 다른 스레드가 동시에 넣고 빼므로 정확하지 않습니다. */
         SW_INLINE uint32 size() const
         {
             const uint32 head = _dequeuePos.load( std::memory_order_relaxed );
@@ -192,17 +192,17 @@ namespace sw
 
         /** @brief 비어 있는지 반환합니다. */
         SW_INLINE bool empty() const { return size() == 0; }
-        /** @brief isEmpty 별칭입니다 (empty 호출). */
+        /** @brief empty 의 별칭입니다. */
         SW_INLINE bool isEmpty() const { return empty(); }
 
-        /** @brief 현재 용량을 반환합니다. */
+        /** @brief 용량을 반환합니다. */
         constexpr uint32 capacity() const { return Capacity; }
 
     private:
         static constexpr uint32 kMask = Capacity - 1;
 
-        // 여러 스레드가 이 버퍼를 **일부러 동시에** 만진다(슬롯마다의 원자적 sequence 로 동기화한다).
-        // 그래서 레이스 탐지기가 붙은 sw::array 를 쓰지 않는다 — 이유는 Core/Container/array.h 머리말.
+        // 여러 스레드가 이 버퍼를 일부러 동시에 만진다(슬롯마다 원자적 sequence 로 동기화한다).
+        // 그래서 레이스 탐지기가 붙은 sw::array 를 쓰지 않는다. 이유는 Core/Container/array.h 머리말에 있다.
         std::array<Cell, Capacity> _arrBuffer{};
         alignas( 64 ) atomic<uint32> _enqueuePos{ 0 };
         alignas( 64 ) atomic<uint32> _dequeuePos{ 0 };

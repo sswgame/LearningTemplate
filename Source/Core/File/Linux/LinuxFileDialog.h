@@ -1,6 +1,6 @@
 /**
  * @file LinuxFileDialog.h
- * @brief Linux 네이티브 파일 열기/저장 다이얼로그 (zenity / kdialog / yad)
+ * @brief Linux 네이티브 파일 열기 · 저장 다이얼로그입니다(zenity / kdialog / yad).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,22 +12,22 @@ namespace sw
 {
     struct FileDialogParams;
     // ------------------------------------------------------------------------------
-    // 1) LinuxFileDialog — 데스크톱 도구를 동기 호출. 경로는 대소문자 유지
+    // 1) LinuxFileDialog — 데스크톱 도구를 동기로 호출한다. 경로의 대소문자는 그대로 둔다
     // ------------------------------------------------------------------------------
     /**
      * @class LinuxFileDialog
-     * @brief 외부 데스크톱 다이얼로그 도구를 호출하는 Linux 파일 선택기
-     * @note 반환 경로는 I/O용으로 대소문자를 유지한다 (normalizeSeparators).
+     * @brief 외부 데스크톱 다이얼로그 도구를 호출하는 Linux 파일 선택기입니다.
+     * @note 반환하는 경로는 I/O 용이라 대소문자를 그대로 둡니다(normalizeSeparators).
      */
     class SW_API LinuxFileDialog final
     {
     public:
-        /** @brief 인스턴스를 두지 않습니다. open 만 호출하세요. */
+        /** @brief 인스턴스를 만들지 않습니다. open 만 부르십시오. */
         LinuxFileDialog() = delete;
 
         /**
-         * @brief 파일 다이얼로그를 동기적으로 엽니다.
-         * @return 사용자가 선택하면 true (outPaths 채움). 취소/실패면 false.
+         * @brief 파일 다이얼로그를 동기로 엽니다.
+         * @return 사용자가 고르면 true(outListPath 를 채웁니다). 취소하거나 실패하면 false.
          */
         static bool open( const FileDialogParams& params, vector<string>& outListPath );
     };

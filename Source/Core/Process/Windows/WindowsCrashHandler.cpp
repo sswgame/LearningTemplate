@@ -17,17 +17,17 @@ namespace sw
     namespace
     {
         atomic<bool> s_bInstalled{ false };
-        /** @brief 핸들러 안에서 또 크래시가 나도 무한 재진입하지 않게 막습니다. */
+        /** @brief 핸들러 안에서 또 크래시가 나도 끝없이 재진입하지 않게 막습니다. */
         atomic<bool> s_bReporting{ false };
 
         LPTOP_LEVEL_EXCEPTION_FILTER s_pPreviousFilter{ nullptr };
 
         /**
          * @brief 미니덤프를 씁니다.
-         * @details 최적화된 배포 빌드는 인라인·꼬리호출로 프레임이 접히고 지역 변수도 남지 않는다 —
-         *          텍스트 콜 스택만으로는 원인을 좁히기 어렵다. 덤프가 있어야 디버거로 그 순간을 연다.
-         *          타입은 언리얼의 기본과 같은 정도로 고른다: 스택 + 간접 참조 메모리 + 스레드 정보.
-         *          Full 덤프는 수백 MB 가 되어 고객이 보내주지 못한다.
+         * @details 최적화된 배포 빌드는 인라인과 꼬리 호출로 프레임이 합쳐지고 지역 변수도 남지 않습니다. 텍스트 콜 스택만으로는
+         *          원인을 좁히기 어렵습니다. 덤프가 있어야 디버거로 그 순간을 열어 볼 수 있습니다. 덤프 종류는 언리얼의 기본값과
+         *          비슷한 수준(스택 + 간접 참조 메모리 + 스레드 정보)으로 고릅니다. Full 덤프는 수백 MB 가 되어 사용자가 보내 주지
+         *          못합니다.
          */
         bool writeMiniDump( EXCEPTION_POINTERS* pInfo )
         {
@@ -53,8 +53,8 @@ namespace sw
 
         /**
          * @brief 폴트 종류와 콜 스택을 로그로 남깁니다.
-         * @param pPlatformContext 있으면 그 지점부터 스택을 걷습니다(Windows 는 CONTEXT*).
-         *                         nullptr 이면 현재 스레드 스택을 캡처합니다.
+         * @param pPlatformContext 있으면 그 지점부터 스택을 따라갑니다(Windows 는 CONTEXT*). nullptr 이면 현재 스레드의 스택을
+         *                         캡처합니다.
          */
         void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, EXCEPTION_POINTERS* pExceptionInfo )
         {
@@ -63,25 +63,25 @@ namespace sw
 
             // 덤프와 컨텍스트를 **먼저** 쓴다. 이 순서는 취향이 아니라 안전장치다.
             //
-            // 크래시 지점에서 안전한 것과 아닌 것이 갈린다:
-            //  - formatstring : 호출자 버퍼에 쓰고 할당하지 않는다 (noexcept). 안전.
-            //  - fixed_string : 크기가 고정이라 안전. 컨텍스트 값을 여기에 미리 담아 둔 이유다.
-            //  - StringBuilder: 스택 버퍼로 시작하지만 **넘치면 힙으로 확장**한다. 스택이 깊으면 넘친다.
-            //  - symbolize()  : sw::string 을 값으로 돌려주므로 **반드시 할당**한다. 가장 위험하다.
+            // 크래시 지점에서 안전한 것과 그렇지 않은 것:
+            //  - formatstring : 호출하는 쪽의 버퍼에 쓰고 할당하지 않는다(noexcept). 안전하다.
+            //  - fixed_string : 크기가 고정이라 안전하다. 컨텍스트 값을 여기에 미리 담아 두는 이유다.
+            //  - StringBuilder: 스택 버퍼로 시작하지만 **넘치면 힙으로 늘어난다.** 스택이 깊으면 넘친다.
+            //  - symbolize()  : sw::string 을 값으로 반환하므로 **반드시 할당**한다. 가장 위험하다.
             //
-            // 힙이 이미 깨져서 죽은 경우 아래 심볼화가 다시 죽을 수 있다. 그래서 할당이 없는 덤프·컨텍스트를
-            // 먼저 확보한다 — 심볼화가 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
+            // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
+            // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
             // **이 두 줄을 아래로 옮기지 말 것.**
             const bool bMiniDumpWritten = writeMiniDump( pExceptionInfo );
             writeCrashContextFile( pReason, pFaultAddress, GetCurrentProcessId(), GetCurrentThreadId() );
 
-            // 본문은 세 플랫폼이 함께 쓴다 (CrashContext.cpp).
+            // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp).
             writeCrashReport( pReason, pFaultAddress, pPlatformContext, bMiniDumpWritten );
 
             s_bReporting.store( false );
         }
 
-        /** @brief 예외 코드를 사람이 읽는 이름으로 바꿉니다. */
+        /** @brief 예외 코드를 사람이 읽을 수 있는 이름으로 바꿉니다. */
         const utf8* exceptionCodeName( DWORD code )
         {
             switch ( code )
@@ -143,7 +143,7 @@ namespace sw
         SetUnhandledExceptionFilter( s_pPreviousFilter );
         s_pPreviousFilter = nullptr;
 
-        // initialize 에서 잡은 심볼 참조를 돌려준다(참조 카운트 짝 맞추기).
+        // initialize 에서 잡은 심볼 참조를 돌려준다(참조 카운트의 짝 맞추기).
         CallStackCapture::shutdown();
     }
 } // namespace sw

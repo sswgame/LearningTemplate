@@ -41,8 +41,8 @@ namespace sw
     // ============================================================================
 
     /**
-     * @brief 전역 변수의 현재 값을 Boolean 타입으로 안전하게 반환합니다.
-     * @return 변수 타입이 Boolean인 경우 실제 값, 그 외에는 false
+     * @brief 현재 값을 Boolean 으로 반환합니다.
+     * @return 타입이 Boolean 이면 실제 값, 아니면 false
      */
     bool GlobalVariableInfo::getValueAsBool() const
     {
@@ -52,8 +52,8 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 현재 값을 32비트 정수형(Int32 또는 Enum)으로 반환합니다.
-     * @return 변수 타입이 Int32 또는 Enum인 경우 실제 값, 그 외에는 0
+     * @brief 현재 값을 32비트 정수(Int32 또는 Enum)로 반환합니다.
+     * @return 타입이 Int32 또는 Enum 이면 실제 값, 아니면 0
      */
     int32 GlobalVariableInfo::getValueAsInt() const
     {
@@ -77,8 +77,8 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 현재 값을 32비트 부동소수점(Float)으로 반환합니다.
-     * @return 변수 타입이 Float인 경우 실제 값, 그 외에는 0.0f
+     * @brief 현재 값을 32비트 부동소수점(Float)으로 반환합니다.
+     * @return 타입이 Float 이면 실제 값, 아니면 0.0f
      */
     float32 GlobalVariableInfo::getValueAsFloat() const
     {
@@ -88,11 +88,10 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 현재 값을 문자열 형태로 직렬화하여 반환합니다.
+     * @brief 현재 값을 문자열로 바꿔 반환합니다.
      *
-     * [초심자 가이드 / 성능 최적화]:
-     * std::to_string()은 힙 메모리를 동적으로 할당하므로, 스택 기반의 StringBuilder<constant::kMaxBuffer32>를
-     * 사용하여 임시 힙 메모리 할당(Zero-Allocation) 없이 고속으로 포맷팅합니다.
+     * std::to_string() 은 힙 메모리를 할당하므로, 스택 기반 StringBuilder<constant::kMaxBuffer32> 로 임시 힙 할당 없이
+     * 포맷합니다.
      */
     string GlobalVariableInfo::getValueAsString() const
     {
@@ -106,14 +105,14 @@ namespace sw
             case GlobalVariableType::Int32:
             case GlobalVariableType::Enum:
             {
-                // 스택 버퍼를 활용한 정수 문자열 직결 변환
+                // 스택 버퍼로 정수를 바로 문자열로 바꾼다
                 StringBuilder<constant::kMaxBuffer32> sb;
                 sb.append( getValueAsInt() );
                 return string( sb.view() );
             }
             case GlobalVariableType::Float:
             {
-                // 스택 버퍼를 활용한 실수 문자열 직결 변환
+                // 스택 버퍼로 실수를 바로 문자열로 바꾼다
                 StringBuilder<constant::kMaxBuffer32> sb;
                 sb.append( *static_cast<float32*>( _pData ) );
                 return string( sb.view() );
@@ -130,7 +129,7 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 원시 메모리(*_pData)에 Boolean 값을 설정합니다.
+     * @brief *_pData 에 Boolean 값을 씁니다.
      */
     bool GlobalVariableInfo::setValueAsBool( bool val )
     {
@@ -144,7 +143,7 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 원시 메모리(*_pData)에 Int32 또는 Enum 값을 설정합니다.
+     * @brief *_pData 에 Int32 또는 Enum 값을 씁니다.
      */
     bool GlobalVariableInfo::setValueAsInt( int32 val )
     {
@@ -164,7 +163,7 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 원시 메모리(*_pData)에 Float 값을 설정합니다.
+     * @brief *_pData 에 Float 값을 씁니다.
      */
     bool GlobalVariableInfo::setValueAsFloat( float32 val )
     {
@@ -178,7 +177,7 @@ namespace sw
     }
 
     /**
-     * @brief 전역 변수의 원시 메모리(*_pData)에 String 값을 설정합니다.
+     * @brief *_pData 에 String 값을 씁니다.
      */
     bool GlobalVariableInfo::setValueAsString( string_view val )
     {
@@ -195,10 +194,9 @@ namespace sw
     }
 
     /**
-     * @brief 문자열 입력을 파싱하여 전역 변수의 원시 메모리(*_pData)에 값을 설정합니다.
+     * @brief 문자열을 파싱해 *_pData 에 값을 씁니다.
      *
-     * 값이 성공적으로 변경되면 등록된 변경 감지 콜백(_onValueChanged)을 호출합니다.
-     * [성능 최적화]: StringUtil::parse*를 사용하여 0-Allocation으로 고속 파싱합니다.
+     * 값이 바뀌면 등록된 변경 콜백(_onValueChanged)을 부릅니다. StringUtil::parse* 로 할당 없이 파싱합니다.
      */
     bool GlobalVariableInfo::setValueFromString( string_view strValue )
     {
@@ -238,7 +236,7 @@ namespace sw
     }
 
     /**
-     * @brief 변수 값을 등록 시 지정했던 기본값(_defaultValue)으로 되돌립니다.
+     * @brief 등록할 때 지정한 기본값(_defaultValue)으로 되돌립니다.
      */
     void GlobalVariableInfo::resetToDefault()
     {
@@ -291,16 +289,16 @@ namespace sw
     // ============================================================================
 
     /**
-     * @brief 등록된 모든 전역 변수를 CommandLineManager의 허용 인자 목록에 등록합니다.
+     * @brief 등록된 모든 전역 변수를 CommandLineManager 의 허용 인자로 등록합니다.
      *
-     * 이를 통해 콘솔 명령줄에서 -g_MyVar=123 형태로 CLI 옵션을 전달받을 수 있게 됩니다.
+     * 그래서 커맨드라인에서 -gv_myVar=123 처럼 값을 넘길 수 있습니다.
      */
     void GlobalVariableManager::registerToCommandLine( CommandLineManager* pCmdLineManager )
     {
         if ( pCmdLineManager == nullptr )
             return;
 
-        // 파싱이 끝난 뒤 등록되는 변수(= 모듈이 선언한 것)가 보류값을 꺼낼 수 있도록 잡아 둔다.
+        // 파싱이 끝난 뒤 등록되는 변수(모듈이 선언한 것)가 보류값을 꺼낼 수 있도록 파서를 잡아 둔다.
         _pCmdLineManager = pCmdLineManager;
 
         for ( const auto& [name, info] : _mapVariable )
@@ -317,11 +315,9 @@ namespace sw
     }
 
     /**
-     * @brief 파싱된 커맨드라인 인자 값들을 조회하여 등록된 전역 변수들의 실제 값에 직접 동기화합니다.
+     * @brief 파싱된 커맨드라인 인자 값을 읽어 등록된 전역 변수에 바로 반영합니다.
      *
-     * [초심자 가이드 / 성능 최적화]:
-     * 문자열로 재직렬화 후 재파싱하는 오버헤드를 배제하고, 원시 포인터(*_pData)에 직접 타입별 값을
-     * 대입한 뒤 값 변경 알림 콜백을 디스패치합니다.
+     * 문자열로 다시 바꿨다가 파싱하는 과정 없이, 원시 포인터(*_pData)에 타입별로 값을 넣은 뒤 변경 알림 콜백을 부릅니다.
      */
     void GlobalVariableManager::updateFromCommandLine( const CommandLineManager* pCmdLineManager )
     {
@@ -380,10 +376,9 @@ namespace sw
     }
 
     /**
-     * @brief 새로운 전역 변수를 매니저에 등록합니다.
+     * @brief 새 전역 변수를 매니저에 등록합니다.
      *
-     * [스레드 안전성]: std::unique_lock을 획득하여 동시 등록 레이스 컨디션을 방지합니다.
-     * [0-Alloc 검색]: std::string_view를 통해 불필요한 string 생성 없이 사전 존재 여부를 검사합니다.
+     * std::unique_lock 을 잡아 동시 등록 경쟁을 막고, string_view 로 조회해 불필요한 string 을 만들지 않고 이미 있는지 확인합니다.
      */
     bool GlobalVariableManager::registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType, string_view moduleName, uint32 typeSize )
     {
@@ -399,8 +394,8 @@ namespace sw
 
         string strName{ name };
 
-        // 맵이 아니라 **이 객체**가 주소의 주인이다 — 맵이 재할당돼도 findVariable 이 내준 포인터가
-        // 그대로 유효하려면 값이 밀집 배열 안에 있으면 안 된다.
+        // 맵이 아니라 **이 객체**가 주소의 주인이다. 맵이 재할당돼도 findVariable 이 내준 포인터가 유효하려면, 값이 밀집
+        // 배열 안에 있으면 안 된다.
         unique_ptr<GlobalVariableInfo> pInfo = make_unique<GlobalVariableInfo>();
         pInfo->_name                         = strName;
         pInfo->_type                         = type;
@@ -413,23 +408,20 @@ namespace sw
 
         const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
 
-        // 모듈(EditorModule·SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기 온다.
-        // 그 값은 CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다 — 이것이
-        // 없으면 `-gv_editorPanelDump=25` 같은 모듈 스위치가 조용히 무시된다. 엔진 자신의 변수는
-        // registerToCommandLine 이전에 등록되므로 여기 걸리지 않고 updateFromCommandLine 이 맡는다.
-        // 잠금 안이므로 매니저의 setValueFromString(재잠금)이 아니라 info 쪽을 직접 부른다.
+        // 모듈(EditorModule · SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기로 온다. 그 값은
+        // CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다. 이것이 없으면 `-gv_editorPanelDump=25` 같은
+        // 모듈 스위치가 조용히 무시된다. 엔진 자체의 변수는 registerToCommandLine 전에 등록되므로 여기에 걸리지 않고
+        // updateFromCommandLine 이 맡는다. 잠금 안이므로 매니저의 setValueFromString(다시 잠근다)이 아니라 info 쪽을 직접 부른다.
         if ( _pCmdLineManager != nullptr && bInserted )
         {
             string pendingValue;
             if ( _pCmdLineManager->findPendingGlobalValue( strName, pendingValue ) )
             {
-                // 값이 타입에 맞지 않으면 여기서 말해 준다. 그러지 않으면 값을 빠뜨린
-                // `-gv_editorPanelDump`(보류표에 "true" 로 남는다)가 int 변수에 닿아 조용히 실패하고,
-                // 사용자 눈에는 "스위치가 아무 일도 안 한다" 로만 보인다.
+                // 값이 타입에 맞지 않으면 여기서 알려 준다. 그러지 않으면 값을 빠뜨린 `-gv_editorPanelDump`(보류표에 "true" 로
+                // 남는다)가 int 변수에 닿아 조용히 실패하고, 사용자에게는 "스위치가 아무 일도 하지 않는다" 로만 보인다.
                 //
-                // 변경 알림은 여기서 따로 부르지 않는다 — setValueFromString 이 타고 가는
-                // setValueAs* 넷이 모두 이미 _onValueChanged 를 쏜다. 예전엔 여기서 한 번 더 불러
-                // 모듈 변수만 콜백이 **두 번** 왔다.
+                // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
+                // _onValueChanged 를 부른다. 예전에는 여기서 한 번 더 불러서 모듈 변수만 콜백이 **두 번** 왔다.
                 if ( iter->second->setValueFromString( pendingValue ) == false )
                 {
                     SW_LOG_WARNING( "-%#=%# : 값이 변수 타입과 맞지 않습니다. 무시됩니다",
@@ -442,7 +434,7 @@ namespace sw
     }
 
     /**
-     * @brief 특정 DLL/모듈 로드 시 정적 초기화로 연결된 체인(pHead)의 변수들을 일괄 등록합니다.
+     * @brief DLL · 모듈이 로드될 때 정적 초기화로 연결된 체인(pHead)의 변수들을 한꺼번에 등록합니다.
      */
     void GlobalVariableManager::registerPendingVariables( string_view moduleName, const GlobalVariableRegistrar* pHead )
     {
@@ -462,9 +454,9 @@ namespace sw
     }
 
     /**
-     * @brief 특정 모듈(예: 언로드되는 SWGame.dll, EditorModule.dll)에 속한 전역 변수들을 일괄 해제합니다.
+     * @brief 특정 모듈(예: 언로드되는 SWGame.dll, EditorModule.dll)에 속한 전역 변수들을 한꺼번에 해제합니다.
      *
-     * [핫 리로드 안전성]: 모듈 언로드 시 댕글링 포인터 접근을 방지하기 위해 필수적으로 호출됩니다.
+     * 모듈을 언로드할 때 댕글링 포인터에 접근하지 않도록 반드시 불러야 합니다(핫 리로드 안전성).
      */
     void GlobalVariableManager::unregisterVariablesByModule( string_view moduleName )
     {
@@ -480,7 +472,7 @@ namespace sw
     }
 
     /**
-     * @brief 문자열 키로 변수를 찾아 문자열 값을 파싱/설정합니다.
+     * @brief 이름으로 변수를 찾아 문자열 값을 파싱해 설정합니다.
      */
     bool GlobalVariableManager::setValueFromString( string_view name, string_view strValue )
     {
@@ -491,7 +483,7 @@ namespace sw
     }
 
     /**
-     * @brief 특정 변수를 기본값으로 리셋합니다.
+     * @brief 특정 변수를 기본값으로 되돌립니다.
      */
     bool GlobalVariableManager::resetToDefault( string_view name )
     {
@@ -505,11 +497,11 @@ namespace sw
     }
 
     /**
-     * @brief 등록된 모든 변수를 기본값으로 리셋합니다.
+     * @brief 등록된 모든 변수를 기본값으로 되돌립니다.
      */
     void GlobalVariableManager::resetAllToDefault()
     {
-        // Step 1: unique_lock 안에서 값만 직접 리셋, 콜백 목록을 추출
+        // 1단계: unique_lock 안에서 값만 직접 되돌리고, 부를 콜백 목록을 모은다
         vector<pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallback;
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -560,17 +552,15 @@ namespace sw
             }
         } // unique_lock 해제
 
-        // Step 2: 락 밖에서 콜백 호출 (재진입 안전)
+        // 2단계: 락 밖에서 콜백을 부른다(재진입 안전)
         for ( auto& [delegate, pInfo] : listPendingCallback )
             delegate( pInfo );
     }
 
     /**
-     * @brief 이름(string_view)으로 전역 변수 정보를 고속 검색합니다.
+     * @brief 이름(string_view)으로 전역 변수 정보를 찾습니다.
      *
-     * [동시성 및 성능]:
-     * std::shared_lock을 통한 다중 스레드 동시 읽기를 지원하며, Heterogeneous Lookup을 통해
-     * string 임시 객체 생성 없이 0-Alloc으로 즉시 검색합니다.
+     * std::shared_lock 이라 여러 스레드가 동시에 읽을 수 있고, 이종 조회라 임시 string 을 만들지 않습니다.
      */
     GlobalVariableInfo* GlobalVariableManager::findVariable( string_view name )
     {
@@ -582,9 +572,9 @@ namespace sw
     }
 
     /**
-     * @brief 등록된 변수 이름 목록을 스냅샷으로 반환합니다. (thread-safe)
+     * @brief 등록된 변수 이름 목록의 스냅샷을 반환합니다(스레드 안전).
      *
-     * 패널 등에서 반복 후 findVariable 로 편집 가능한 포인터를 얻으려는 용도로 설계되었습니다.
+     * 패널 등에서 이 목록을 훑으며 findVariable 로 편집할 포인터를 얻는 용도입니다.
      */
     vector<string> GlobalVariableManager::collectVariableNames() const
     {
@@ -597,7 +587,7 @@ namespace sw
     }
 
     /**
-     * @brief 등록된 변수 수를 반환합니다. (thread-safe)
+     * @brief 등록된 변수 수를 반환합니다(스레드 안전).
      */
     uint32 GlobalVariableManager::getVariableCount() const
     {
@@ -610,7 +600,7 @@ namespace sw
     // ============================================================================
 
     /**
-     * @brief Core 모듈 내부 번역 단위 전용 정적 등록자 생성자 (Core::getHead()에 연결)
+     * @brief Core 번역 단위 전용 정적 등록자 생성자입니다(getHead() 에 연결합니다).
      */
     GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
         : _name{ pName }
@@ -624,7 +614,7 @@ namespace sw
         , _pNext{ nullptr } { linkTo( getHead() ); }
 
     /**
-     * @brief DLL 동적 모듈 전용 정적 등록자 생성자 (모듈별 로컬 체인 헤드에 연결)
+     * @brief DLL 모듈 전용 정적 등록자 생성자입니다(모듈별 로컬 체인 헤드에 연결합니다).
      */
     GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
         : _name{ pName }

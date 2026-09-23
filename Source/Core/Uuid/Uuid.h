@@ -1,6 +1,6 @@
 /**
  * @file Uuid.h
- * @brief 128비트 UUID v4 생성 및 문자열 변환.
+ * @brief 128비트 UUID v4 생성과 문자열 변환입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,35 +16,35 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @struct Uuid
-     * @brief 16바이트로 저장하는 RFC 4122 UUID입니다.
+     * @brief 16바이트로 저장하는 RFC 4122 UUID 입니다.
      */
     struct SW_API Uuid
     {
         uint8 _arrBytes[16]{};
 
-        /** @brief 난수 UUID v4를 채운 값을 만듭니다. */
+        /** @brief 무작위 UUID v4 를 만듭니다. */
         static Uuid generate();
 
-        /** @brief 하이픈 UUID 문자열을 파싱합니다. 실패 시 false입니다. */
+        /** @brief 하이픈이 들어간 UUID 문자열을 파싱합니다. 실패하면 false 입니다. */
         static bool tryParse( string_view text, Uuid& outUuid );
 
-        /** @brief 하이픈이 있는 소문자 16진수 정규 문자열입니다. */
+        /** @brief 하이픈이 들어간 소문자 16진수 표준 형식 문자열을 반환합니다. */
         string toString() const;
 
-        /** @brief 16바이트가 모두 0(nil UUID)이면 true입니다. */
+        /** @brief 16바이트가 모두 0(nil UUID)이면 true 입니다. */
         bool isNull() const;
-        /** @brief 16바이트가 모두 같으면 true입니다. */
+        /** @brief 16바이트가 모두 같으면 true 입니다. */
         bool operator==( const Uuid& other ) const;
-        /** @brief 한 바이트라도 다르면 true입니다. */
+        /** @brief 한 바이트라도 다르면 true 입니다. */
         bool operator!=( const Uuid& other ) const { return ( *this == other ) == false; }
-        /** @brief 바이트 사전순으로 작으면 true입니다. */
+        /** @brief 바이트 사전순으로 작으면 true 입니다. */
         bool operator<( const Uuid& other ) const;
     };
 } // namespace sw
 
 namespace std
 {
-    /** @brief Uuid 를 unordered_map 키로 쓸 때 바이트를 섞은 해시입니다. */
+    /** @brief Uuid 를 unordered_map 키로 쓸 때의 해시입니다. 바이트를 섞습니다. */
     template <>
     struct hash<sw::Uuid>
     {

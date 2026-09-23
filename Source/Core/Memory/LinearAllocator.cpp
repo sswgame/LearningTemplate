@@ -43,8 +43,8 @@ namespace sw
         if ( alignment == 0 || MathUtil::isPowerOfTwo( alignment ) == false )
             alignment = alignof( std::max_align_t );
 
-        // 아래에서 `size + alignment` 로 새 블록 크기를 정한다 — 뒤집히면 **더 작은** 블록을 잡고,
-        // 그 블록으로도 안 들어가니 블록을 끝없이 늘리게 된다. 담을 수 없는 크기는 여기서 끝낸다.
+        // 아래에서 `size + alignment` 로 새 블록 크기를 정한다. 오버플로하면 **더 작은** 블록을 잡고, 그 블록에도 들어가지
+        // 않으니 블록을 끝없이 늘리게 된다. 담을 수 없는 크기는 여기서 거른다.
         if ( size > SIZE_MAX - alignment )
             return nullptr;
 
@@ -71,9 +71,8 @@ namespace sw
                 const uintptr_t basePtr       = reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) + oldOffset;
                 const uintptr_t alignedPtr    = MathUtil::align( basePtr, static_cast<uintptr_t>( alignment ) );
                 const size_t    alignedOffset = static_cast<size_t>( alignedPtr - reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) );
-                // **뺄셈으로 비교한다.** `alignedOffset + size` 로 쓰면 큰 size 에서 합이 뒤집혀
-                // 검사를 통과하고, 블록 밖을 가리키는 주소가 정상 할당인 척 돌아간다.
-                // 정렬 때문에 alignedOffset 이 capacity 를 넘어설 수 있으므로 그것도 함께 본다.
+                // **뺄셈으로 비교한다.** `alignedOffset + size` 로 쓰면 큰 size 에서 합이 오버플로해 검사를 통과하고, 블록 밖을
+                // 가리키는 주소가 정상 할당인 것처럼 반환된다. 정렬 때문에 alignedOffset 이 capacity 를 넘을 수도 있어서 그것도 함께 본다.
                 if ( alignedOffset > pCurrentBlock->_capacity || size > pCurrentBlock->_capacity - alignedOffset )
                     break;
 
@@ -83,10 +82,9 @@ namespace sw
                     return reinterpret_cast<void*>( alignedPtr );
             }
 
-            // 블록이 가득 찼다. **이미 들고 있는 다음 블록부터 본다** — reset() 은 오프셋만 되돌리므로
-            // 그 뒤의 블록들은 비어 있는 채로 남아 있다. 여기서 곧장 새 블록을 잡으면 그 빈 블록들은
-            // 다음 clear() 까지 놀고, reset 마다 표가 한 칸씩 늘면서 블록 용량은 배로 커진다
-            // (EventDispatcher 는 프레임마다 reset 한다 — 그 자리에서 프레임당 메모리가 자란다).
+            // 블록이 가득 찼다. **이미 가지고 있는 다음 블록부터 본다.** reset() 은 오프셋만 되돌리므로 그 뒤의 블록들은 빈
+            // 채로 남아 있다. 여기서 곧바로 새 블록을 잡으면 그 빈 블록들은 다음 clear() 까지 놀고, reset 할 때마다 표가 한 칸씩
+            // 늘면서 블록 용량은 두 배로 커진다(EventDispatcher 는 프레임마다 reset 하므로, 거기서 프레임마다 메모리가 불어난다).
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _currentBlockIndex.load( std::memory_order_acquire ) == blockIndex )
             {
@@ -141,9 +139,8 @@ namespace sw
             if ( pBlock == nullptr || pBlock->_capacity < requiredCapacity )
                 continue;
 
-            // 현재 블록보다 뒤에 있는 블록은 아직 아무도 쓰지 않았다(오프셋은 한 방향으로만 자라고
-            // reset 이 전부 0 으로 되돌린다). 그래도 확인하고 넘어간다 — 틀렸다면 이미 내준 메모리를
-            // 다시 내주는 것이라 조용히 깨진다.
+            // 현재 블록보다 뒤에 있는 블록은 아직 아무도 쓰지 않았다(오프셋은 한 방향으로만 늘고 reset 이 모두 0 으로 되돌린다).
+            // 그래도 확인하고 넘어간다. 틀렸다면 이미 내준 메모리를 다시 내주는 것이라 조용히 깨진다.
             if ( pBlock->_offset.load( std::memory_order_acquire ) != 0 )
                 continue;
 
@@ -165,7 +162,7 @@ namespace sw
         size_t capacity = MathUtil::max( _defaultCapacity, minCapacity );
         if ( blockCount > 0 )
         {
-            // 슬롯이 고갈되지 않도록 블록 용량을 배로 키웁니다.
+            // 슬롯이 바닥나지 않도록 블록 용량을 두 배로 키운다.
             const Block* pPrevious = _arrBlock[blockCount - 1].load( std::memory_order_relaxed );
             capacity               = MathUtil::max( capacity, pPrevious->_capacity * 2 );
         }

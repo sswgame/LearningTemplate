@@ -1,6 +1,6 @@
 /**
  * @file VarIntUtil.h
- * @brief LEB128 가변 길이 정수 인코딩 및 ZigZag 부호 있는 정수 압축 유틸리티
+ * @brief LEB128 가변 길이 정수 인코딩과 ZigZag(부호 있는 정수를 작은 부호 없는 정수로 바꾸기) 도우미입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -11,25 +11,22 @@ namespace sw
 {
     /**
      * @struct VarIntUtil
-     * @brief LEB128 가변 길이 정수 인코딩 및 ZigZag 인코딩/디코딩 정적 유틸리티
+     * @brief LEB128 · ZigZag 인코딩과 디코딩을 하는 정적 도우미입니다.
      */
     struct VarIntUtil
     {
-        // **인코딩에는 32비트 오버로드가 없다 (의도된 비대칭이다).**
-        // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다 — 오버로드는
-        // `static_cast` 한 줄을 감싸는 것 말고 하는 일이 없었고, 실제로 아무도 쓰지 않았다
-        // (`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
-        // 반대로 **디코딩에는 있다** — 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을
-        // 거르는 실제 검사를 하기 때문이다.
+        // **인코딩에는 32비트 오버로드가 없다(일부러 비대칭이다).**
+        // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다. 오버로드는 `static_cast` 한 줄을 감쌀 뿐
+        // 하는 일이 없었고, 실제로 쓰는 곳도 없었다(`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
+        // 반대로 **디코딩에는 있다.** 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을 걸러 내는 진짜 검사를 한다.
         //
-        // 오래도록 그 설명만 맞고 코드는 틀렸다 — 32비트 디코더 둘 다 `static_cast` 한 줄이라
-        // 범위 밖 값을 **조용히 잘라** 냈다. 그래서 망가진 아카이브가 거부되는 대신 엉뚱하게
-        // 읽혔다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이
-        // n 으로 잘린 뒤라 통과한다). 이제 `narrowToUint32`·`narrowToInt32` 가 실제로 거른다.
+        // 오랫동안 이 설명만 맞고 코드는 틀렸다. 32비트 디코더 둘 다 `static_cast` 한 줄이라 범위 밖 값을 **조용히 잘라** 냈고,
+        // 그래서 망가진 아카이브가 거부되지 않고 엉뚱하게 읽혔다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는
+        // 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다). 지금은 `narrowToUint32` · `narrowToInt32` 가 실제로 거른다.
 
         /**
          * @brief 64비트 값이 uint32 에 **손실 없이** 들어갈 때만 옮깁니다.
-         * @return 범위를 벗어나면 false — 그때 outValue 는 건드리지 않는다.
+         * @return 범위를 벗어나면 false 이고, 그때 outValue 는 그대로 둡니다.
          */
         static bool narrowToUint32( uint64 value, uint32& outValue )
         {
@@ -41,7 +38,7 @@ namespace sw
 
         /**
          * @brief 64비트 값이 int32 에 **손실 없이** 들어갈 때만 옮깁니다.
-         * @return 범위를 벗어나면 false — 그때 outValue 는 건드리지 않는다.
+         * @return 범위를 벗어나면 false 이고, 그때 outValue 는 그대로 둡니다.
          */
         static bool narrowToInt32( int64 value, int32& outValue )
         {
@@ -102,9 +99,9 @@ namespace sw
             while ( curOffset < dataSize && shift < 64 )
             {
                 const uint8 byte = pData[curOffset++];
-                // 10번째 바이트(shift == 63)에 남는 자리는 1비트뿐이다. 나머지가 켜져 있으면
-                // 64비트를 넘는 값이거나 장황한 인코딩이다 — 조용히 버리지 말고 거절한다.
-                // 정상 인코더는 여기서 0 이나 1 만 낸다(encodeVarUint64 의 마지막 바이트).
+                // 10번째 바이트(shift == 63)에 남은 자리는 1비트뿐이다. 나머지 비트가 켜져 있으면 64비트를 넘는 값이거나
+                // 불필요하게 긴 인코딩이다 — 조용히 버리지 말고 거절한다. 정상 인코더는 여기서 0 이나 1 만 낸다
+                // (encodeVarUint64 의 마지막 바이트).
                 if ( shift == 63 && ( byte & 0x7E ) != 0 )
                     return false;
                 result |= static_cast<uint64>( byte & 0x7FULL ) << shift;

@@ -16,10 +16,10 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 전역 활성 로그 싱크 포인터 */
+        /** @brief 프로세스 전역 활성 로그 싱크 포인터입니다. */
         atomic<ILogSink*> s_globalSink{ nullptr };
 
-        /** @brief 파일명 해시별 로그 Caller 이름 엔트리 (동적 힙 메모리 할당 0건) */
+        /** @brief 파일 이름 해시별 로그 Caller 이름 항목입니다(힙 할당 없음). */
         struct CallerEntry
         {
             uint64 _fileHash{ 0 };
@@ -31,7 +31,7 @@ namespace sw
         size_t                  s_callerEntryCount{ 0 };
         mutex                   s_callerMutex{};
 
-        /// @brief 런타임 상세도. 기본 Info — 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘린다.
+        /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
 
     } // namespace
@@ -55,7 +55,7 @@ namespace sw
         , _bInitialized{ false }
         , _arrCachedDateStr{}
     {
-        // 기본 장치 둘. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
+        // 기본 장치 두 개. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
         auto fileOutput = make_unique<FileLogOutput>();
         _pFileOutput    = fileOutput.get();
         _listOutput.push_back( make_unique<ConsoleLogOutput>() );
@@ -72,7 +72,7 @@ namespace sw
     }
 
     /**
-     * @brief 로거를 초기화하고 로그 저장 폴더 생성 및 비동기 작업 스레드를 시작합니다.
+     * @brief 출력 장치를 열고(로그 폴더 생성 포함) 비동기 작업 스레드를 시작합니다.
      */
     void Logger::initialize()
     {
@@ -94,7 +94,7 @@ namespace sw
     }
 
     /**
-     * @brief 큐에 남은 로그를 플러시하고 열려 있는 로그 파일 스트림을 닫습니다.
+     * @brief 큐에 남은 로그를 모두 쓰고, 작업 스레드를 멈춘 뒤 출력 장치를 닫습니다.
      */
     void Logger::shutdown()
     {
@@ -120,7 +120,7 @@ namespace sw
     }
 
     /**
-     * @brief 포맷팅된 로그 메시지를 파일 및 콘솔에 기록합니다.
+     * @brief 로그 한 줄을 기록합니다(writeLogInternal 로 넘깁니다).
      */
     void Logger::writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
     {
@@ -128,7 +128,7 @@ namespace sw
     }
 
     /**
-     * @brief 로그 작성 이벤트를 수신할 델리게이트 리스너를 등록합니다. (예: ImGui 에디터 콘솔 창)
+     * @brief 로그가 쓰일 때 알림을 받을 리스너를 등록합니다(예: ImGui 에디터 콘솔 창).
      */
     DelegateHandle Logger::addLogWrittenListener( const LogWrittenDelegate& listener )
     {
@@ -195,8 +195,8 @@ namespace sw
             return false;
 
         {
-            // 상한을 **여기서** 본다. 디스패치는 고정 배열로 떠 가므로, 넘겨받아 두면 열어 놓고도
-            // 한 줄도 못 받는 장치가 생긴다 — 그 실패는 붙인 자리에서 보이지 않는다.
+            // 상한을 **여기서** 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
+            // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _listOutput.size() >= _s_kMaxOutput )
             {
@@ -301,8 +301,8 @@ namespace sw
 
     void Logger::dispatchToOutputs( const LogRecord& record )
     {
-        // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다 — 장치가 저마다 제 락을 갖고 있고,
-        // 느린 파일 I/O 가 콘솔을 막지 않게 하는 것이 이 분리의 목적이다.
+        // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다. 장치마다 자기 락이 있고, 느린 파일 I/O 가 콘솔을 막지 않게 하는
+        // 것이 이렇게 나눈 목적이다.
         ILogOutput* arrDevice[_s_kMaxOutput]{};
         uint32      deviceCount{ 0 };
         {
@@ -320,7 +320,7 @@ namespace sw
 
     void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
     {
-        // 1단계: 타임스탬프 계산 및 포맷팅 (동일 초 내에서는 캐시된 문자열 재사용)
+        // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         int32 year{ 0 }, month{ 0 }, day{ 0 }, hour{ 0 };
 
         fixed_string<constant::kMaxBuffer32> dateStr{};
@@ -373,7 +373,7 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
             pEffectiveCaller = getCaller( pFile );
 
-        // 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
+        // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) == false )
         {
@@ -388,7 +388,7 @@ namespace sw
                           dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
         }
 
-        // 3단계: 64비트 SWAR 기반 고속 UTF-8 검증 및 Non-UTF8(ANSI/CP949) 한글 안전 자동 변환
+        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, UTF-8 이 아니면(ANSI/CP949 한글 등) 안전하게 변환한다
         string      fallbackUtf8;
         const utf8* pFormattedBuffer = formattedBuffer.c_str();
         if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
@@ -397,7 +397,7 @@ namespace sw
             pFormattedBuffer = fallbackUtf8.c_str();
         }
 
-        // 4단계: 인메모리 리스너(에디터 콘솔 UI/테스트 캡처) 스냅샷 복사 후 락 밖에서 안전하게 전파
+        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)를 스냅샷으로 복사한 뒤 락 밖에서 알린다
         LogWrittenMulticast listenersCopy;
         bool                bHasListeners{ false };
         {
@@ -422,7 +422,7 @@ namespace sw
             listenersCopy.broadcast( entry );
         }
 
-        // 5단계: 비동기 I/O 큐 인큐 (초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다)
+        // 5단계: 비동기 I/O 큐에 넣는다(초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다)
         LogRecord record;
         record._level     = level;
         record._formatted = pFormattedBuffer;
@@ -439,7 +439,7 @@ namespace sw
 
         if ( _queue.enqueue( std::move( record ) ) == false )
         {
-            // enqueue 가 실패했으면 record 는 옮겨지지 않았다 — 그대로 동기로 쓴다.
+            // enqueue 가 실패했으면 record 는 옮겨지지 않았다. 그대로 동기로 쓴다.
             dispatchToOutputs( record );
             return;
         }

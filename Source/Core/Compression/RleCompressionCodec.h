@@ -5,8 +5,8 @@ namespace sw
 {
     /**
      * @class RleCompressionCodec
-     * @brief 엔진 내장 고속 Run-Length Encoding(RLE) 압축 코덱
-     * @details 외부 라이브러리 없이 독립적으로 동작하는 경량 패킷 바이트 런 압축 알고리즘입니다.
+     * @brief 엔진에 내장된 빠른 RLE(Run-Length Encoding) 코덱입니다.
+     * @details 외부 라이브러리 없이 동작하는 가벼운 바이트 단위 RLE 입니다. 제어 바이트의 최상위 비트로 반복 런과 리터럴 런을 구분합니다.
      */
     class SW_API RleCompressionCodec final : public ICompressionCodec
     {

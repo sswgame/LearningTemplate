@@ -1,6 +1,6 @@
 /**
  * @file Delegate.h
- * @brief 타입 안전 델리게이트·멀티캐스트·핸들
+ * @brief 타입 안전 델리게이트 · 멀티캐스트 델리게이트 · 핸들입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,24 +13,24 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) 전방 선언 — 아래 두 템플릿의 시그니처별 특수화가 본체다
+    // 1) 전방 선언 — 실제 구현은 아래 두 템플릿의 시그니처별 특수화에 있다
     // ------------------------------------------------------------------------------
-    /** @brief 단일 바인딩 콜백 (함수·멤버·람다). */
+    /** @brief 대상 하나를 붙이는 콜백입니다(함수 · 멤버 함수 · 람다). */
     template <typename T>
     class Delegate;
-    /** @brief 여러 Delegate 를 모아 broadcast 합니다. */
+    /** @brief 여러 Delegate 를 모아 한꺼번에 호출(broadcast)합니다. */
     template <typename T>
     class MulticastDelegate;
 
     // ------------------------------------------------------------------------------
-    // 2) Delegate — create / operator() / isBound. 람다는 SBO 또는 힙
+    // 2) Delegate — create / operator() / isBound. 람다는 SBO 또는 힙에 둔다
     // ------------------------------------------------------------------------------
-    /** @brief 호출 가능한 대상을 하나 붙입니다. */
+    /** @brief 호출할 대상을 하나 붙입니다. */
     template <typename R, typename... Args>
     class Delegate<R( Args... )>
     {
     public:
-        /** @brief 람다 저장소 복사·이동·파괴 연산입니다. */
+        /** @brief 람다 저장소의 복사 · 이동 · 파괴 연산 종류입니다. */
         enum class DelegateManagerOp
         {
             Copy,
@@ -41,10 +41,10 @@ namespace sw
         using manager_function                    = void* (*)( DelegateManagerOp, void*, const void* );
         static constexpr size_t kInlineBufferSize = 24;
 
-        /** @brief 빈 델리게이트를 생성합니다. */
+        /** @brief 빈 델리게이트를 만듭니다. */
         Delegate() = default;
 
-        /** @brief nullptr로 빈 델리게이트를 생성합니다. */
+        /** @brief nullptr 로 빈 델리게이트를 만듭니다. */
         Delegate( std::nullptr_t ) {}
 
         /** @brief 바인딩과 람다 저장소를 해제합니다. */
@@ -53,12 +53,12 @@ namespace sw
         /** @brief 대상과 람다 저장소를 복제합니다. */
         Delegate( const Delegate& other ) { copyFrom( other ); }
 
-        /** @brief 대상과 람다 저장소를 가져옵니다. */
+        /** @brief 대상과 람다 저장소를 넘겨받습니다. */
         Delegate( Delegate&& other ) noexcept { moveFrom( std::move( other ) ); }
 
         /** @brief 복사 대입합니다. */
-        // 자기대입은 `this != &other` 로 막는다 — release() 가 먼저 돌기 때문에 이 가드가 없으면
-        // 자기 저장소를 해제한 뒤 읽는다. copy-and-swap 이 아니라 검사기가 짚지만 가드가 정답이다.
+        // 자기 대입은 `this != &other` 로 막는다. release() 가 먼저 돌기 때문에 이 가드가 없으면 자기 저장소를 해제한 뒤
+        // 읽게 된다. copy-and-swap 이 아니라서 검사기가 짚지만, 이 경우엔 가드가 맞다.
         // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
         Delegate& operator=( const Delegate& other )
         {
@@ -81,21 +81,20 @@ namespace sw
             return *this;
         }
 
-        /** @brief 정적 함수 포인터로 델리게이트를 생성합니다. */
+        /** @brief 정적 함수 포인터로 델리게이트를 만듭니다. */
         Delegate( R ( *func )( Args... ) ) { *this = create( func ); }
 
         /**
-         * @brief 람다 함수로 델리게이트를 생성합니다.
-         * @note 빈번하게 호출되는 이벤트(예: 매 프레임 발생하는 Tick)에서는
-         *       람다 대신 가급적 멤버 함수 바인딩(create<Method>)을 사용하시기 바랍니다.
+         * @brief 람다로 델리게이트를 만듭니다.
+         * @note 자주 불리는 이벤트(예: 매 프레임 발생하는 Tick)에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
          */
         template <typename Lambda, typename = std::enable_if_t<std::is_same_v<std::decay_t<Lambda>, Delegate> == false && std::is_invocable_r_v<R, Lambda, Args...>>>
         Delegate( const Lambda& lambdaFunc ) { *this = create( lambdaFunc ); }
 
         /**
-         * @brief 델리게이트가 동일한 대상을 가리키는지 비교합니다.
-         * @note 람다로 생성된 Delegate는 복사 시 서로 다른 인스턴스로 취급되어 항상 false를 반환합니다.
-         *       따라서 MulticastDelegate에서 람다를 제거할 때는 반드시 DelegateHandle을 사용해야 합니다.
+         * @brief 두 델리게이트가 같은 대상을 가리키는지 비교합니다.
+         * @note 람다로 만든 Delegate 는 복사하면 서로 다른 인스턴스로 취급되어 항상 false 입니다. 그래서 MulticastDelegate 에서
+         *       람다를 제거할 때는 반드시 DelegateHandle 을 써야 합니다.
          */
         bool operator==( const Delegate& other ) const
         {
@@ -108,15 +107,15 @@ namespace sw
 
         /** @brief 다른지 비교합니다. */
         bool operator!=( const Delegate& other ) const { return ( *this == other ) == false; }
-        /** @brief 바인딩이 없으면 true입니다. */
+        /** @brief 바인딩이 없으면 true 입니다. */
         bool operator==( std::nullptr_t ) const { return _stubFunc == nullptr; }
-        /** @brief 바인딩이 있으면 true입니다. */
+        /** @brief 바인딩이 있으면 true 입니다. */
         bool operator!=( std::nullptr_t ) const { return _stubFunc != nullptr; }
 
-        /** @brief 델리게이트가 호출 가능한 상태(바인딩됨)인지 확인합니다. */
+        /** @brief 호출할 수 있는 상태(바인딩됨)인지 확인합니다. */
         bool isBound() const { return _stubFunc != nullptr; }
 
-        /** @brief 바인딩된 대상을 호출합니다. 비어 있으면 assert. */
+        /** @brief 바인딩된 대상을 호출합니다. 비어 있으면 assert 합니다. */
         template <typename... UArgs, typename = std::enable_if_t<std::is_invocable_v<R( Args... ), UArgs...>>>
         R operator()( UArgs&&... args ) const
         {
@@ -124,7 +123,7 @@ namespace sw
             return std::invoke( _stubFunc, _pInstance, std::forward<UArgs>( args )... );
         }
 
-        /** @brief 컴파일타임 함수 포인터로 바인딩합니다. */
+        /** @brief 컴파일 타임 함수 포인터로 바인딩합니다. */
         template <auto Function, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( Function ), Args...>>>
         static Delegate create()
         {
@@ -136,7 +135,7 @@ namespace sw
             return newDelegate;
         }
 
-        /** @brief 런타임 함수 포인터로 델리게이트를 생성합니다. */
+        /** @brief 런타임 함수 포인터로 델리게이트를 만듭니다. */
         static Delegate create( R ( *pFunc )( Args... ) )
         {
             Delegate newDelegate{};
@@ -181,9 +180,8 @@ namespace sw
         }
 
         /**
-         * @brief 람다 함수나 Functor 객체로 델리게이트를 생성합니다.
-         * @note [가이드라인] 매 프레임 호출되는 Tick이나 빈도가 매우 높은 콜백에서는
-         *       람다 바인딩 대신 멤버 함수 바인딩(create<Method>) 사용을 강력히 권장합니다.
+         * @brief 람다나 함수 객체로 델리게이트를 만듭니다.
+         * @note 매 프레임 불리는 Tick 처럼 아주 자주 불리는 콜백에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
          */
         template <typename Lambda>
         static Delegate create( const Lambda& lambdaFunc )
@@ -225,7 +223,7 @@ namespace sw
             _managerFunc = nullptr;
         }
 
-        /** @brief 다른 델리게이트를 복사합니다. */
+        /** @brief 다른 델리게이트를 복사해 옵니다. */
         void copyFrom( const Delegate& other )
         {
             _stubFunc    = other._stubFunc;
@@ -236,7 +234,7 @@ namespace sw
                 _pInstance = other._pInstance;
         }
 
-        /** @brief 다른 델리게이트를 이동합니다. */
+        /** @brief 다른 델리게이트를 옮겨 옵니다. */
         void moveFrom( Delegate&& other )
         {
             _stubFunc    = other._stubFunc;
@@ -250,7 +248,7 @@ namespace sw
             other._managerFunc = nullptr;
         }
 
-        /** @brief 람다 저장소를 관리합니다. */
+        /** @brief 람다 저장소를 복사 · 이동 · 파괴합니다. */
         template <typename Lambda>
         static void* lambdaManager( DelegateManagerOp managerOp, void* pDest, const void* pSrc )
         {
@@ -311,11 +309,11 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 3) DelegateHandle — add() 가 발급, remove(handle) 로 해제.
-    //    발급기(`allocate`)의 실체는 Engine.dll(Core OBJECT) 에 하나뿐이다 — 로드되는 모듈들도
-    //    같은 카운터를 보므로 모듈이 건 구독의 핸들이 엔진 쪽 것과 겹치지 않는다.
+    // 3) DelegateHandle — add() 가 발급하고 remove(handle) 로 해제한다.
+    //    발급기(`allocate`)의 실체는 Engine.dll(Core OBJECT)에 하나뿐이다. 로드되는 모듈들도 같은 카운터를 보므로,
+    //    모듈이 건 구독의 핸들이 엔진 쪽 핸들과 겹치지 않는다.
     // ------------------------------------------------------------------------------
-    /** @brief 멀티캐스트 항목을 가리키는 발급 ID입니다. 0 은 무효. */
+    /** @brief 멀티캐스트 항목을 가리키는 발급 ID 입니다. 0 은 무효입니다. */
     struct DelegateHandle
     {
         uint64 _id{ 0 };
@@ -323,7 +321,7 @@ namespace sw
         /** @brief 다음 멀티캐스트 델리게이트 핸들을 발급합니다. */
         SW_API static DelegateHandle allocate();
 
-        /** @brief 발급된 ID가 있으면 true입니다. */
+        /** @brief 발급된 ID 가 있으면 true 입니다. */
         bool isValid() const { return _id != 0; }
         /** @brief 같은지 비교합니다. */
         bool operator==( const DelegateHandle& rhs ) const { return _id == rhs._id; }
@@ -331,39 +329,39 @@ namespace sw
         bool operator!=( const DelegateHandle& rhs ) const { return _id != rhs._id; }
     };
 
-    /** @brief 타입 소거된 멀티캐스트. 핸들로만 제거합니다. */
+    /** @brief 타입을 지운 멀티캐스트 인터페이스입니다. 항목은 핸들로만 제거합니다. */
     class SW_API IMulticastDelegateBase
     {
     public:
         IMulticastDelegateBase() = default;
-        /** @brief 파생 리스트를 비웁니다. */
+        /** @brief 가상 소멸자입니다(리스트 정리는 파생 클래스가 합니다). */
         virtual ~IMulticastDelegateBase()                                      = default;
         IMulticastDelegateBase( const IMulticastDelegateBase& )                = default;
         IMulticastDelegateBase& operator=( const IMulticastDelegateBase& )     = default;
         IMulticastDelegateBase( IMulticastDelegateBase&& ) noexcept            = default;
         IMulticastDelegateBase& operator=( IMulticastDelegateBase&& ) noexcept = default;
 
-        /** @brief 핸들과 일치하는 항목을 제거합니다. */
+        /** @brief 핸들과 같은 항목을 제거합니다. */
         virtual void remove( const DelegateHandle& handle ) = 0;
     };
 
-    /** @brief 시그니처별 멀티캐스트 특수화입니다. */
+    /** @brief 시그니처별로 특수화하는 멀티캐스트 델리게이트입니다. */
     template <typename Signature>
     class MulticastDelegate;
 
     // ------------------------------------------------------------------------------
-    // 4) MulticastDelegate — add / remove / broadcast. 방송 중 remove 는 지연
+    // 4) MulticastDelegate — add / remove / broadcast. broadcast 중의 remove 는 끝난 뒤로 미룬다
     // ------------------------------------------------------------------------------
     /**
      * @class MulticastDelegate
-     * @brief 다수의 델리게이트를 관리하고 브로드캐스트할 수 있는 컨테이너
+     * @brief 여러 델리게이트를 모아 두고 한꺼번에 호출하는 컨테이너입니다.
      */
     template <typename R, typename... Args>
     class MulticastDelegate<R( Args... )> : public IMulticastDelegateBase
     {
         using delegate_type = Delegate<R( Args... )>;
 
-        /** @brief 핸들과 바인딩 한 쌍입니다. */
+        /** @brief 핸들과 델리게이트 한 쌍입니다. */
         struct DelegateEntry
         {
             DelegateHandle _handle;
@@ -380,22 +378,21 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 복사·이동 — **방송 상태는 값의 일부가 아니다**
+        // 복사 · 이동 — broadcast 상태는 값의 일부가 아니다
         //
-        // 이 넷을 직접 적는 이유가 둘이다.
+        // 이 넷을 직접 정의하는 이유는 두 가지다.
         //
-        // 1) **이동이 복사로 떨어지고 있었다.** 복사 생성자를 `= default` 로 *선언* 하는 순간 암시적
-        //    이동 생성자·이동 대입이 생기지 않는다(C++ 규칙). 그래서 `MulticastDelegate` 를 옮길 때마다
-        //    구독자 벡터가 통째로 깊은 복사됐다 — `is_nothrow_move_constructible` 이 false 였고,
-        //    `std::move` 뒤에도 원본이 그대로 남아 있었다.
-        // 2) **`_broadcastDepth` 와 지연 제거 큐까지 같이 복사됐다.** 이 둘은 값이 아니라 *그 인스턴스의
-        //    호출 스택 상태*다. broadcast 중에 복사하면 사본의 깊이가 0 이 아닌 채로 태어나, 그 사본은
-        //    지연된 제거를 **영영 반영하지 않는다**(자기 broadcast 는 1→2→1 로만 오가므로 0 이 안 된다).
+        // 1) **이동이 복사로 대체되고 있었다.** 복사 생성자를 `= default` 로 *선언*하는 순간 암시적 이동 생성자와 이동
+        //    대입이 만들어지지 않는다(C++ 규칙). 그래서 `MulticastDelegate` 를 옮길 때마다 구독자 벡터가 통째로 깊은
+        //    복사됐다. `is_nothrow_move_constructible` 이 false 였고, `std::move` 한 뒤에도 원본이 그대로 남아 있었다.
+        // 2) **`_broadcastDepth` 와 지연 제거 큐까지 함께 복사됐다.** 이 둘은 값이 아니라 *그 인스턴스의 호출 스택
+        //    상태*다. broadcast 중에 복사하면 사본의 깊이가 0 이 아닌 채로 만들어지고, 그 사본은 지연된 제거를 **영영
+        //    반영하지 않는다**(자기 broadcast 는 깊이가 1→2→1 로만 오가므로 0 이 되지 않는다).
         //
-        // 그래서 생성은 깊이 0 · 빈 큐로 시작하고, 대입은 받는 쪽의 깊이를 건드리지 않는다(그 깊이는
-        // 지금 이 객체를 방송 중인 호출 스택의 것이다). 큐는 비운다 — 교체돼 사라질 리스트의 핸들이다.
+        // 그래서 생성은 깊이 0 · 빈 큐로 시작하고, 대입은 받는 쪽의 깊이를 건드리지 않는다(그 깊이는 지금 이 객체를
+        // broadcast 중인 호출 스택의 것이다). 큐는 비운다. 교체되어 사라질 리스트의 핸들이기 때문이다.
         // ------------------------------------------------------------------------------
-        /** @brief 구독 리스트만 복제합니다. 방송 상태는 가져오지 않습니다. */
+        /** @brief 구독 리스트만 복제합니다. broadcast 상태는 가져오지 않습니다. */
         MulticastDelegate( const MulticastDelegate& other )
             : IMulticastDelegateBase( other )
             , _listDelegate{ other._listDelegate }
@@ -404,7 +401,7 @@ namespace sw
         {
         }
 
-        /** @brief 구독 리스트를 가져옵니다. 원본은 비어 있는 상태로 남습니다. */
+        /** @brief 구독 리스트를 넘겨받습니다. 원본은 빈 상태로 남습니다. */
         MulticastDelegate( MulticastDelegate&& other ) noexcept
             : IMulticastDelegateBase( std::move( other ) )
             , _listDelegate{ std::move( other._listDelegate ) }
@@ -416,7 +413,7 @@ namespace sw
             other._broadcastDepth = 0;
         }
 
-        /** @brief 구독 리스트만 대입합니다. 이 객체의 방송 깊이는 그대로 둡니다. */
+        /** @brief 구독 리스트만 대입합니다. 이 객체의 broadcast 깊이는 그대로 둡니다. */
         MulticastDelegate& operator=( const MulticastDelegate& other )
         {
             if ( this != &other )
@@ -428,7 +425,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 구독 리스트를 가져옵니다. 이 객체의 방송 깊이는 그대로 둡니다. */
+        /** @brief 구독 리스트를 넘겨받습니다. 이 객체의 broadcast 깊이는 그대로 둡니다. */
         MulticastDelegate& operator=( MulticastDelegate&& other ) noexcept
         {
             if ( this != &other )
@@ -443,7 +440,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 두 멀티캐스트 델리게이트가 동일한 대상 리스트를 가지고 있는지 비교합니다. */
+        /** @brief 두 멀티캐스트 델리게이트가 같은 대상 목록을 가졌는지 비교합니다. */
         bool operator==( const MulticastDelegate& other ) const
         {
             if ( _listDelegate.size() != other._listDelegate.size() )
@@ -461,22 +458,22 @@ namespace sw
         /** @brief 다른지 비교합니다. */
         bool operator!=( const MulticastDelegate& other ) const { return ( *this == other ) == false; }
 
-        /** @brief 하나라도 등록된 델리게이트가 있는지 확인합니다. */
+        /** @brief 등록된 델리게이트가 하나라도 있는지 확인합니다. */
         bool isBound() const { return _listDelegate.empty() == false; }
 
         /**
-         * @brief 등록된 모든 델리게이트에게 이벤트를 브로드캐스트(발송)합니다.
-         * @details broadcast 중 remove()가 호출되면 완료 후 일괄 처리합니다.
-         *          매 호출마다 벡터 전체를 복사하지 않으므로 고빈도 이벤트에 적합합니다.
+         * @brief 등록된 모든 델리게이트를 호출합니다.
+         * @details broadcast 중에 remove() 가 불리면 끝난 뒤 한꺼번에 처리합니다. 호출할 때마다 벡터 전체를 복사하지 않으므로
+         *          자주 발생하는 이벤트에도 알맞습니다.
          */
         void broadcast( Args... args )
         {
-            // 콜백이 다시 broadcast 를 부를 수 있으므로 깊이로 셉니다. 가장 바깥 호출만 지연 제거를 처리합니다.
+            // 콜백이 다시 broadcast 를 부를 수 있으므로 깊이로 센다. 가장 바깥 호출만 지연된 제거를 처리한다.
             ++_broadcastDepth;
             const size_t numDelegates = _listDelegate.size();
             for ( size_t entryIndex = 0; entryIndex < numDelegates; ++entryIndex )
             {
-                // 콜백이 add() 를 부르면 벡터가 재할당되므로 원소 참조를 들고 호출하지 않습니다.
+                // 콜백이 add() 를 부르면 벡터가 재할당되므로 원소 참조를 들고 호출하지 않는다.
                 delegate_type callee = _listDelegate[entryIndex]._delegate;
                 if ( callee.isBound() )
                     callee( args... );
@@ -486,7 +483,7 @@ namespace sw
             if ( _broadcastDepth > 0 )
                 return;
 
-            // broadcast 중 요청된 remove를 일괄 처리
+            // broadcast 중에 요청된 remove 를 한꺼번에 처리한다
             for ( const DelegateHandle& removeHandle : _listPendingRemove )
             {
                 removeNow( removeHandle );
@@ -494,7 +491,7 @@ namespace sw
             _listPendingRemove.clear();
         }
 
-        /** @brief 새로운 델리게이트를 등록하고 핸들을 반환합니다. */
+        /** @brief 새 델리게이트를 등록하고 핸들을 반환합니다. */
         DelegateHandle add( const delegate_type& newDelegate )
         {
             DelegateHandle handle = DelegateHandle::allocate();
@@ -502,7 +499,7 @@ namespace sw
             return handle;
         }
 
-        /** @brief 발급받았던 핸들을 사용하여 델리게이트를 등록 해제합니다. */
+        /** @brief 발급받은 핸들로 델리게이트 등록을 해제합니다. */
         void remove( const DelegateHandle& handle ) override
         {
             if ( handle.isValid() == false )
@@ -510,7 +507,7 @@ namespace sw
 
             if ( _broadcastDepth > 0 )
             {
-                // broadcast 중 삭제 시 남은 순회에서 이미 파괴된 객체에 대한 UAF 호출을 방지하기 위해 즉시 무효화
+                // broadcast 중에 삭제되면, 남은 순회에서 이미 파괴된 객체를 호출(UAF)하지 않도록 즉시 무효화한다
                 for ( DelegateEntry& entry : _listDelegate )
                 {
                     if ( entry._handle == handle )
@@ -525,7 +522,7 @@ namespace sw
             removeNow( handle );
         }
 
-        /** @brief 등록된 대상 델리게이트와 일치하는 항목을 찾아 삭제합니다. */
+        /** @brief 등록된 델리게이트 중 target 과 같은 항목을 찾아 삭제합니다. */
         void remove( const delegate_type& target )
         {
             const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
@@ -534,11 +531,11 @@ namespace sw
             if ( iter == _listDelegate.end() )
                 return;
 
-            // 핸들 경로와 같은 지연 제거를 타야 broadcast 중 이터레이터가 깨지지 않습니다.
+            // 핸들 경로와 같은 지연 제거를 거쳐야 broadcast 중에 이터레이터가 깨지지 않는다.
             remove( iter->_handle );
         }
 
-        /** @brief 등록된 모든 델리게이트를 해제(제거)합니다. */
+        /** @brief 등록된 델리게이트를 모두 해제합니다. */
         void removeAll()
         {
             if ( _broadcastDepth > 0 )
@@ -553,11 +550,11 @@ namespace sw
             _listDelegate.clear();
         }
 
-        /** @brief 등록된 모든 델리게이트를 해제합니다 (removeAll 별칭). */
+        /** @brief 등록된 델리게이트를 모두 해제합니다(removeAll 의 별칭). */
         void clear() { removeAll(); }
 
     private:
-        /** @brief 핸들로 즉시 항목을 제거합니다. broadcast 외부에서만 호출하세요. */
+        /** @brief 핸들에 해당하는 항목을 즉시 제거합니다. broadcast 밖에서만 부르십시오. */
         void removeNow( const DelegateHandle& handle )
         {
             const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
@@ -567,8 +564,8 @@ namespace sw
         }
 
         vector<DelegateEntry>  _listDelegate;
-        vector<DelegateHandle> _listPendingRemove; ///< broadcast 중 지연된 remove 목록
-        uint32                 _broadcastDepth;    ///< 중첩 broadcast 깊이. 0 이 될 때만 지연 제거를 반영
+        vector<DelegateHandle> _listPendingRemove; ///< broadcast 중에 미뤄 둔 remove 목록
+        uint32                 _broadcastDepth;    ///< 중첩된 broadcast 깊이. 0 이 될 때만 지연된 제거를 반영한다
     };
 } // namespace sw
 
@@ -580,5 +577,5 @@ namespace sw
 #define SW_DELEGATE_FUNCTION( DelegateName, Func ) DelegateName::create<Func>()
 /** @brief 멤버 함수를 델리게이트에 붙입니다. */
 #define SW_DELEGATE_METHOD( DelegateName, Method, Instance ) DelegateName::create<Method>( Instance )
-/** @brief 람다/펑터를 델리게이트에 붙입니다. */
+/** @brief 람다 · 함수 객체를 델리게이트에 붙입니다. */
 #define SW_DELEGATE_LAMBDA( DelegateName, ... ) DelegateName::create( __VA_ARGS__ )

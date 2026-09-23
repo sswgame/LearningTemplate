@@ -1,6 +1,6 @@
 /**
  * @file string_splitter.h
- * @brief 구분자 기반 고속 문자열 분할기 및 순방향 반복자(Forward Iterator)
+ * @brief 구분자 기반의 빠른 문자열 분할기와 순방향 반복자입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -11,7 +11,7 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 1) basic_string_split_iterator — Zero-Allocation 지연 평가 순방향 반복자
+    // 1) basic_string_split_iterator — 할당 없이 지연 평가하는 순방향 반복자
     // ------------------------------------------------------------------------------
     template <typename T>
     class basic_string_split_iterator
@@ -44,10 +44,10 @@ namespace sw
         value_type        operator*() const noexcept { return _current; }
         const value_type* operator->() const noexcept { return &_current; }
 
-        /** @brief 현재 토큰의 순번 인덱스 (0, 1, 2, ...) */
+        /** @brief 현재 토큰의 순번(0, 1, 2, ...)입니다. */
         size_t getIndex() const noexcept { return _index; }
 
-        /** @brief 원본 문자열 내에서 현재 토큰의 시작 오프셋 */
+        /** @brief 원본 문자열 안에서 현재 토큰이 시작하는 오프셋입니다. */
         size_t getOffset() const noexcept { return _tokenOffset; }
 
         basic_string_split_iterator& operator++();
@@ -96,10 +96,10 @@ namespace sw
     using wstring_split_iterator = basic_string_split_iterator<utf16>;
 
     // ------------------------------------------------------------------------------
-    // 2) basic_string_splitter — 생성 시 분할 및 반복자/인덱스 접근 제공
+    // 2) basic_string_splitter — 생성할 때 분할하고, 반복자 · 인덱스로 접근한다
     // ------------------------------------------------------------------------------
     template <typename T>
-    /** @brief 구분자가 나타날 때마다 원본 뷰를 잘라 목록에 넣습니다. */
+    /** @brief 구분자가 나올 때마다 원본 뷰를 잘라 목록에 넣습니다. */
     class basic_string_splitter
     {
     public:
@@ -108,28 +108,28 @@ namespace sw
         using iterator         = basic_string_split_iterator<value_type>;
         using const_iterator   = iterator;
 
-        /** @brief str 을 단일 문자 delim 기준으로 분할합니다 (가장 빠른 SIMD memchr 경로). */
+        /** @brief str 을 문자 하나인 delim 으로 분할합니다(가장 빠른 SIMD memchr 경로). */
         explicit basic_string_splitter( string_view_type str, value_type delim );
 
-        /** @brief str 을 단일 문자열 뷰 delim 기준으로 분할합니다. */
+        /** @brief str 을 문자열 delim 으로 분할합니다. */
         explicit basic_string_splitter( string_view_type str, string_view_type delim );
 
-        /** @brief str 을 listDelim 기준으로 분할합니다. */
+        /** @brief str 을 listDelim 의 구분자들로 분할합니다. */
         explicit basic_string_splitter( string_view_type str, std::initializer_list<string_view_type> listDelim );
 
-        /** @brief 잘린 조각 개수입니다. */
+        /** @brief 잘린 조각 수입니다. */
         uint32 getCount() const noexcept { return static_cast<uint32>( _listSplit.size() ); }
 
         /** @brief 비어 있는지 확인합니다. */
         bool empty() const noexcept { return _listSplit.empty(); }
 
-        /** @brief 인덱싱 연산자 (배열 접근) */
+        /** @brief index 번째 조각을 반환합니다. */
         string_view_type operator[]( size_t index ) const { return _listSplit[index]; }
 
         /** @brief 원본을 가리키는 부분 뷰 목록입니다. */
         const vector<string_view_type>& getSplitList() const noexcept { return _listSplit; }
 
-        /** @brief 이터레이터 순회 지원 */
+        /** @brief 순회를 시작하는 이터레이터를 반환합니다. */
         iterator       begin() const { return _beginIt; }
         iterator       end() const noexcept { return iterator{}; }
         const_iterator cbegin() const { return _beginIt; }

@@ -1,22 +1,22 @@
 /**
  * @file array.h
- * @brief std::array 래퍼. 디버그에서 RaceDetectContext 로 동시 접근을 잡습니다.
+ * @brief std::array 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
  *
- * [언제 쓰면 안 되는가 — 여러 스레드가 **일부러** 동시에 만지는 버퍼]
- * 이 래퍼의 탐지기는 **한 스레드만 만지는 컨테이너**를 전제한다. 락-프리 자료구조처럼 여러 스레드가
- * 같은 버퍼를 동시에 만지는 것이 설계인 자리에 쓰면 그 접근이 레이스로 보고되고, 보고는 Fatal 이라
- * **프로세스가 죽는다.** 그런 자리에는 `std::array` 를 쓴다 — `ConcurrentQueue` · `LockFreeQueue` ·
- * `RenderThread` 의 링 버퍼가 그래서 `std::array` 다.
+ * [쓰면 안 되는 곳: 여러 스레드가 **일부러** 동시에 만지는 버퍼]
+ * 이 래퍼의 탐지기는 한 번에 한 스레드만 만지는 컨테이너를 전제로 합니다. lock-free 자료구조처럼 여러 스레드가 같은
+ * 버퍼를 동시에 만지도록 설계된 곳에 쓰면 그 접근이 레이스로 보고되고, 보고는 Fatal 이라 **프로세스가 죽습니다.**
+ * 그런 곳에는 `std::array` 를 씁니다. `ConcurrentQueue` · `LockFreeQueue` · `RenderThread` 의 링 버퍼가 `std::array` 인
+ * 이유입니다.
  *
- * **드물게 난다는 것이 더 나쁘다.** 가드가 걸리는 구간은 `operator[]` · `at()` **호출 그 자체뿐**이고
- * (참조를 돌려준 뒤의 원소 접근은 가드 밖이다), 두 스레드가 정확히 그 몇 개의 명령 안에서 겹쳐야
- * 보고된다. 실제로 재 봤다(2026-09-19): `ConcurrentQueue` 의 버퍼를 `sw::array` 로 바꿔 10만 건
- * MPMC 스트레스를 **8회** 돌렸는데 한 번도 나지 않았다. 안전하다는 뜻이 아니라 **남의 기계에서
- * 언젠가 한 번 죽는다**는 뜻이다 — "테스트가 초록이니 괜찮다" 로 판단하지 말 것.
+ * 드물게 터진다는 점이 오히려 더 나쁩니다. 가드가 걸리는 구간은 `operator[]` · `at()` 호출 그 자체뿐이고(참조를 반환한
+ * 뒤의 원소 접근은 가드 밖입니다), 두 스레드가 정확히 그 몇 개의 명령 안에서 겹쳐야 보고됩니다. 실제로 재 봤습니다
+ * (2026-09-19). `ConcurrentQueue` 의 버퍼를 `sw::array` 로 바꾸고 10만 건 MPMC 스트레스를 8번 돌렸는데 한 번도 보고되지
+ * 않았습니다. 안전하다는 뜻이 아니라, **언젠가 다른 사람의 기계에서 한 번 죽는다**는 뜻입니다. "테스트가 초록이니
+ * 괜찮다" 로 판단하지 마십시오.
  *
- * @note 같은 스레드가 겹쳐 들어가는 오탐(가드를 쥔 채 가드 메서드를 부르는 것)은 2026-09-19 에
- *       탐지기가 주인 스레드를 기억하도록 고쳐 닫혔다. **그 수정은 이 규칙과 무관하다** — 여기서
- *       말하는 것은 진짜로 여러 스레드가 동시에 들어오는 경우다.
+ * @note 같은 스레드가 겹쳐 들어가는 오탐(가드를 잡은 채 가드 메서드를 부르는 경우)은 2026-09-19 에 탐지기가 주인 스레드를
+ *       기억하도록 고쳐서 해결했습니다. 그 수정은 이 규칙과 관계가 없습니다. 여기서 말하는 것은 정말로 여러 스레드가
+ *       동시에 들어오는 경우입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -28,7 +28,7 @@ namespace sw
     template <typename T, size_t N>
     using array = std::array<T, N>;
 #else
-    /** @brief std::array + 디버그 레이스 탐지. API는 STL과 같습니다. */
+    /** @brief std::array 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
     template <typename T, size_t N>
     class array
     {
@@ -47,11 +47,11 @@ namespace sw
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-        // Underlying C array storage
+        // 실제 저장소인 C 배열
         T _elems[N > 0 ? N : 1]{};
 
         // ------------------------------------------------------------------------------
-        // 1) 생성자 및 대입
+        // 1) 생성 · 대입
         // ------------------------------------------------------------------------------
         constexpr array() = default;
 
@@ -188,7 +188,7 @@ namespace sw
         [[nodiscard]] constexpr size_type max_size() const noexcept { return N; }
 
         // ------------------------------------------------------------------------------
-        // 5) 작업
+        // 5) 연산
         // ------------------------------------------------------------------------------
         void fill( const T& value )
         {
@@ -281,11 +281,11 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// std::tuple_size and std::tuple_element specialization for structured binding
+// 구조적 바인딩용 std::tuple_size · std::tuple_element 특수화
 //
-// **커스텀 array 일 때만 필요하다.** `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::array` 는 `std::array`
-// 의 별칭이라, 아래 특수화는 표준 라이브러리가 이미 준 것을 다시 정의하는 꼴이 된다.
-// `pair.h` 가 같은 이유로 같은 모양이다 — 둘 다 그 옵션에서 컴파일을 막고 있었다.
+// 커스텀 array 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::array` 는 `std::array` 의 별칭이라,
+// 아래 특수화는 표준 라이브러리가 이미 제공하는 것을 다시 정의하게 된다. `pair.h` 도 같은 이유로 같은 모양이다.
+// 둘 다 예전에는 그 옵션을 켜면 컴파일되지 않았다.
 // ------------------------------------------------------------------------------
 #if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std

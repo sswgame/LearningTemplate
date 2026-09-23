@@ -1,6 +1,6 @@
 /**
  * @file WindowsFileWatcher.h
- * @brief ReadDirectoryChangesW + IOCP 워커로 디렉터리 변경을 모읍니다.
+ * @brief ReadDirectoryChangesW 와 IOCP 워커로 디렉터리 변경을 모읍니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -12,38 +12,38 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 
-// Windows.h 전체를 헤더에 넣지 않도록 HANDLE만 전방 선언합니다.
+// Windows.h 전체를 헤더에 넣지 않도록 HANDLE 만 전방 선언한다.
 using HANDLE = void*;
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) WindowsFileWatcher — IOCP 완료를 워커가 큐에 넣고 pollEvents 가 꺼냄
+    // 1) WindowsFileWatcher — 워커가 IOCP 완료를 큐에 넣고, pollEvents 가 꺼낸다
     // ------------------------------------------------------------------------------
     /**
      * @class WindowsFileWatcher
-     * @brief Windows 플랫폼 특화 FileWatcher (ReadDirectoryChangesW 사용)
+     * @brief Windows 전용 FileWatcher 입니다(ReadDirectoryChangesW 사용).
      */
     class SW_API WindowsFileWatcher final : public IFileWatcher
     {
     public:
-        /** @brief 핸들과 큐를 비운 상태로 둡니다. */
+        /** @brief 핸들과 큐가 빈 상태로 만듭니다. */
         WindowsFileWatcher();
-        /** @brief 감시를 멈추고 워커를 합류시킵니다. */
+        /** @brief 감시를 멈추고 워커 스레드를 조인합니다. */
         virtual ~WindowsFileWatcher() override;
 
-        /** @brief 디렉터리 핸들·IOCP를 열고 워커를 띄웁니다. */
+        /** @brief 디렉터리 핸들과 IOCP 를 열고 워커를 띄웁니다. */
         bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-        /** @brief IOCP를 깨우고 워커를 멈춘 뒤 핸들을 닫습니다. */
+        /** @brief IOCP 로 워커를 깨워 멈춘 뒤 핸들을 닫습니다. */
         void stopWatching() override;
-        /** @brief 워커가 돌고 있으면 true입니다. */
+        /** @brief 워커가 돌고 있으면 true 입니다. */
         bool isWatching() const override { return _bIsWatching; }
 
     private:
-        /** @brief ReadDirectoryChangesW 완료를 이벤트 큐에 넣습니다. */
+        /** @brief ReadDirectoryChangesW 의 완료 결과를 이벤트 큐에 넣습니다. */
         void workerThreadMain();
 
-        // 큐·뮤텍스·감시 경로·오버플로 표시는 IFileWatcher 가 든다 — 셋이 같아야 하는 것들이다.
+        // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         HANDLE       _hDirectory;
         HANDLE       _hCompletionPort;
         std::thread  _workerThread;

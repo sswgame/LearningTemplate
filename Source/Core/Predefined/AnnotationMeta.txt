@@ -11,13 +11,12 @@
 #   float    key=value → float (Min/Max 범위)
 #   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
 #
-# flag 한 줄이 두 형태를 함께 책임진다. 예전에는 `flag.X` 와 `bool.X` 를 따로 적었고, 그 둘이
-# 어긋나 있었다 — 플래그 열셋 중 여섯(Abstract·Static·AssetPath·Polymorphic·Reliable·Validate)에
-# bool 줄이 없어 `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌고, 별칭도 한쪽만
-# 늘어나 `xmlAttribute` 는 단독 토큰으로만 먹혔다. 어느 쪽이 빠졌는지 보이지 않는 종류의 구멍이라
-# 줄을 합쳤다.
+# flag 한 줄이 두 형태를 함께 맡는다. 예전에는 `flag.X` 와 `bool.X` 를 따로 적었고, 둘이 어긋나 있었다.
+# 플래그 열셋 중 여섯(Abstract · Static · AssetPath · Polymorphic · Reliable · Validate)에 bool 줄이 없어서
+# `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌고, 별칭도 한쪽만 늘어나 `xmlAttribute` 는 단독
+# 토큰으로만 인식됐다. 어느 쪽이 빠졌는지 눈에 보이지 않는 종류의 구멍이라 줄을 합쳤다.
 #
-# 별칭만 추가할 때는 여기만 수정.
+# 별칭만 추가할 때는 여기만 고치면 된다.
 # 새 *필드*를 만들면 PredefinedAnnotationField.xxx 에도 한 줄이 필요하다.
 # =============================================================================
 
@@ -25,7 +24,7 @@
 flag.Abstract = Abstract, abstract
 flag.Static = Static, static
 flag.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
-# 직렬화/핫리로드용 옛 타입명. 복수: Alias="OldA, OldB"
+# 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB"
 string.Alias = Alias, PreviousName, PreviousNames
 string.Category = Category
 string.DisplayName = DisplayName
@@ -34,12 +33,12 @@ string.Meta = Meta, meta, CustomMeta
 
 [ENUM]
 string.Alias = Alias, PreviousName, PreviousNames
-# enumerator 개명: ValueAlias="OldIdle:Idle, OldMoving:Moving"
+# 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving"
 string.ValueAlias = ValueAlias, EnumeratorAlias
 string.Meta = Meta, meta, CustomMeta
-# 비트플래그 연산자(|,&,^,~) 생성. 직렬화 EnumInfo::_bIsBitFlag 도 켠다.
+# 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다.
 flag.Flags = Flags, BitFlag, FLAG, Bitwise
-# TypeRegistry::enumToString / enumFromString 용 Invalid / exclusive Count 센티널
+# TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널
 string.Invalid = Invalid, InvalidValue
 string.Count = Count, CountValue
 
@@ -49,10 +48,10 @@ flag.XmlAttribute = XmlAttribute, xmlAttribute
 flag.AssetPath = AssetPath, assetPath
 flag.Polymorphic = Polymorphic, polymorphic
 flag.Transient = Transient, transient, NonSerialized, nonSerialized
-# 값이 비었으면 쓸 때 생략 (읽기에는 영향 없음)
+# 값이 비어 있으면 쓸 때 생략한다(읽기에는 영향 없음)
 flag.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 flag.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
-# 복수: Alias="hp, HitPoints" (따옴표 필수 — 콤마가 토큰 분리에 안 먹히게)
+# 여러 개면 Alias="hp, HitPoints" (따옴표가 필요하다. 그래야 콤마가 토큰 구분자로 읽히지 않는다)
 string.Alias = Alias, PreviousName, PreviousNames
 string.Category = Category
 string.DisplayName = DisplayName

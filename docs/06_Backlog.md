@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core 주석 정리
 
 ---
 
@@ -1435,6 +1435,29 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 (2026-09-24 시작, Core ✅)
+
+코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
+
+| 폴더 | 주석 수 | 상태 |
+|------|------:|------|
+| `Core` | 3,242 | ✅ 2026-09-24 (3절 참고 — 동작과 다른 설명이 스무 곳 넘게 나왔다) |
+| `App` | 265 | 다음 |
+| `Editor` | 1,972 | |
+| `Tools/ReflectionParser` | 354 | |
+| `Engine` | 7,865 | 하위 폴더 단위로 나눠 커밋한다 |
+| `GameFramework` | 668 | |
+| `RuntimeAPI` | 94 | |
+
+**규칙.** 문서 주석(`/** */` · `///<`)은 "~합니다" 체, 함수 본문 `//` 주석은 "~다" 체로 한 블록 안에서 통일한다.
+직역어는 표준 용어로 바꾼다(천둥 무리 → thundering herd, 호송 → 락 컨보이, 방송 → 브로드캐스트, 합류 → 조인,
+이어받기 → 후속 작업(continuation), 뒤집힌다 → 오버플로 · 언더플로, 갈래 → 분기, 정본 → 기준). 수치 · 이력 · 이유와
+식별자, 로그 · assert 문자열, `NOLINT` 줄은 그대로 둔다. **고치기 전에 구현을 읽는다** — 복사해 붙인 설명이 실제
+동작과 다른 곳이 많다(Core 에서 "역참조합니다" 라고 적힌 스칼라 곱, "왼쪽 시프트" 라고 적힌 스트림 출력 등).
+
+**검증에서 빠뜨리기 쉬운 것.** 주석만 바뀐 TU 는 전처리 결과가 같아 sccache 가 캐시를 재생하므로 빌드 로그로는
+`-Wdocumentation` 경고를 볼 수 없다. 폴더마다 `RunBuildWarnings.py --preset Ninja-Debug`(캐시를 거치지 않는다)를 돌린다.
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -1614,6 +1637,37 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Core 주석을 읽히는 한국어로 — 직역투를 걷고, 동작과 다른 설명을 고쳤다)
+
+**왜.** Core 주석의 상당수가 영어를 옮긴 듯한 직역투였고(천둥 무리 · 호송 · 방송 · 합류 · 이어받기 · "뒤집힌다" 로 쓴 오버플로),
+한 블록 안에서 "~합니다" 와 "~다" 가 섞였으며, em dash 로 절을 줄줄이 이었다. 읽다 보니 **복사해 붙인 설명이 실제
+동작과 다른 곳**이 적지 않았다.
+
+**한 것.** `Source/Core` 140 개 파일의 주석(약 3,200 개) 중 필요한 것을 다시 썼다(1-0g 의 규칙). 동작과 달랐던 설명:
+- `VectorMath` · `MatrixMath` — 스칼라 곱이 "역참조합니다", 단항 +/- 가 "덧셈/뺄셈", `float3` 생성자 셋이 "복사 생성",
+  `float4::reflect` 가 "바이트코드에서 리플렉션 데이터를 추출", 쿼터니언 `createFromYawPitchRoll` 이 "행렬을 생성", 행렬
+  `createFromAxisAngle` 이 "쿼터니언을 생성". `quaternion::operator*`(rhs 먼저) 와 `concatenate`(q1 먼저)의 적용 순서가
+  서로 반대라는 것, `float3::transform` 이 원근 나눗셈을 하지 않는다는 것을 적었다.
+- `DynamicBitset` — 스트림 `operator<<` 가 "왼쪽 시프트", `reset( bit )` 이 "초기 상태로 되돌린다".
+- `string.h` — `find` 넷이 "키를 찾습니다". 널 종료 C 문자열 생성자의 설명이 끼어든 `string_view` 생성자 위에 붙어 있어
+  생성자 순서를 바로잡았다(이번 커밋의 유일한 코드 순서 변경). `map::at` 이 `std::out_of_range` 를 던진다는 것을 적었다.
+- `EventDispatcher` — 없는 함수 `dispatchAll` 을 가리키던 설명 둘 → `processEvents`.
+- `Delegate.cpp` — 핸들 카운터가 "마지막으로 발급한 ID" 라고 적혀 있었다 → 다음에 발급할 ID(`fetch_add` 가 이전 값을 준다).
+- `Logger` — 소멸자가 "로그 파일을 닫는다" → 실제로는 전역 싱크 등록만 푼다(닫는 것은 `shutdown`). 생성자는 기본 장치 둘을 단다.
+- `StringBuilder` · `hashed_string` · `fixed_string` · `TaskValue` — 옛 멤버 이름(`_staticBuffer` · `_chunks` · `_shards` · `_data` ·
+  `_storage`), "함수 포인터 4개"(셋이다), "Debug 에서 typeid 비교"(인라인 여부 · 크기 비교다).
+- `GlobalVariableManager` — 사라진 함수를 설명하던 고아 doc 주석 삭제, 커맨드라인 예시 `-g_MyVar` → `-gv_myVar`, 절 번호 5) → 4).
+- `PagedArray` 의 옛 이름 `HandleTable`, `formatString.h` 의 `@file` 이름, `LockFreeObjectPool.h` 의 `@file` 경로, `LinuxFileDialog`
+  의 없는 매개변수 `outPaths`, `CallStackCapture` 의 "일부러 인라인 함수"(export 되는 보통 함수다), `IFileWatcher` 소멸자 설명.
+- `CommandLineManager` · `GlobalVariableManager` 의 `// @function` · "[초심자 가이드]" 머리말과 "초고속 · 고성능" 같은 수식어를 평범한 문장으로.
+
+**도구.** 코드 토큰이 하나라도 바뀌면 적용을 거부하는 주석 전용 편집기로 바꿨고, 파일마다 doxygen 명령 수를 원래와 대조했다
+(달라진 것은 `@details` 합치기 · `@note` 추가처럼 의도한 일곱 파일뿐). `CMakeLists.txt` · `AnnotationMeta.txt` 의 `#` 주석도 다듬었다
+(파서는 `#` 으로 시작하는 줄을 건너뛴다).
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0(캐시를 거치지 않는다 — 1-0g 참고) ·
+`nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 · 규약 · include 순서 · 중괄호 게이트 OK.
 
 ### 2026-09-24 (오브젝트 · 컴포넌트 참조를 핸들로 통일 — `GameObjectPtr` · `ComponentPtr` 삭제, 되살릴 때 id 를 보존)
 

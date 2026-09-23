@@ -1,7 +1,7 @@
 /**
  * @file Defines.h
- * @brief 버퍼·경로 길이·무효 인덱스 등 공통 상수입니다.
- * @note 렌더/리소스 폴더 상수는 Engine/Common/EngineDefines.h
+ * @brief 버퍼 크기 · 경로 길이 · 무효 인덱스 같은 공통 상수입니다.
+ * @note 렌더 · 리소스 폴더 상수는 Engine/Common/EngineDefines.h 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -44,14 +44,14 @@ namespace sw
 
         /** @brief 1초당 나노초 수입니다. */
         inline constexpr int64 kNanosecondsPerSecond = 1'000'000'000LL;
-        /** @brief 1나노초당 초 환산 계수입니다. */
+        /** @brief 나노초를 초로 바꾸는 계수입니다. */
         inline constexpr float64 kSecondsPerNanosecond = 1e-9;
 
         /** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
         inline constexpr size_t kDefaultLinearCapacity = size_t{ 64 } * 1024;
         /** @brief 프레임 아레나 기본 청크 크기 (1MB)입니다. */
         inline constexpr size_t kDefaultFrameArenaCapacity = size_t{ 1024 } * 1024;
-        /** @brief 작업 훔치기 덱 기본 용량 (1024)입니다. */
+        /** @brief 작업 훔치기(work stealing) 덱의 기본 용량(1024)입니다. */
         inline constexpr size_t kDefaultDequeCapacity = 1024;
     } // namespace constant
 
@@ -67,7 +67,7 @@ namespace sw
     } // namespace path
 
     // ------------------------------------------------------------------------------
-    // 3) 무효 인덱스 — 부호 없는 형은 전비트 1, 부호 있는 형은 -1
+    // 3) 무효 인덱스 — 부호 없는 형은 모든 비트가 1, 부호 있는 형은 -1
     // ------------------------------------------------------------------------------
     namespace invalid_index
     {
@@ -77,7 +77,7 @@ namespace sw
         inline constexpr uint16 kUint16 = static_cast<uint16>( -1 );
         /** @brief uint32 무효값 (0xFFFFFFFF) 입니다. */
         inline constexpr uint32 kUint32 = static_cast<uint32>( -1 );
-        /** @brief uint64 무효값 (전비트 1) 입니다. */
+        /** @brief uint64 무효값(모든 비트가 1)입니다. */
         inline constexpr uint64 kUint64 = static_cast<uint64>( -1 );
 
         /** @brief int8 무효값 (-1) 입니다. */

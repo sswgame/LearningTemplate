@@ -1,7 +1,7 @@
 /**
  * @file PredefinedAnnotationKind.xxx
- * @brief AnnotationMeta.txt 의 kind 토큰 ↔ AnnotationBinding::Kind.
- * @details include 전에 REGISTER_ANNOTATION_KIND(EnumName, TokenSpelling) 정의.
+ * @brief AnnotationMeta.txt 의 kind 토큰과 AnnotationBinding::Kind 의 대응표입니다.
+ * @details include 하기 전에 REGISTER_ANNOTATION_KIND(EnumName, TokenSpelling) 을 정의하십시오.
  */
 
 REGISTER_ANNOTATION_KIND( Flag, flag )

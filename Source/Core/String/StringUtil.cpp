@@ -11,9 +11,9 @@ namespace sw
         struct StringUtilInternal
         {
             /**
-             * @brief 목적지 버퍼에 원본을 채우고 **반드시** NUL 로 끝맺습니다. 들어가지 않으면 자릅니다.
-             * @details 두 오버로드(utf8 · utf16)가 같은 규약을 갖게 하려고 한 곳에 둔다. 예전에는
-             *          각자 플랫폼 함수를 불렀고, 그래서 **플랫폼마다 답이 달랐다.**
+             * @brief 목적지 버퍼에 원본을 채우고 **반드시** NUL 로 끝냅니다. 들어가지 않으면 자릅니다.
+             * @details 두 오버로드(utf8 · utf16)가 같은 규칙을 따르도록 한 곳에 둡니다. 예전에는 각자 플랫폼 함수를 불러서
+             *          **플랫폼마다 결과가 달랐습니다.**
              */
             template <typename CharType>
             static void copyTerminated( CharType* pOutDest, const CharType* pSource, uint32 length )
@@ -58,7 +58,7 @@ namespace sw
             };
 
             /**
-             * @brief UTF-8 선행 바이트로부터 멀티바이트 시퀀스 길이(1~4 바이트) 및 초기 비트를 분류합니다.
+             * @brief UTF-8 선행 바이트로 멀티바이트 시퀀스의 길이(1 ~ 4바이트)와 초기 비트를 분류합니다.
              */
             static constexpr Utf8LeadInfo classifyUtf8LeadByte( const uint8 leadByte ) noexcept
             {
@@ -75,19 +75,20 @@ namespace sw
             }
 
             /**
-             * @brief 바이트 배열이 표준 UTF-8 인코딩 규칙을 준수하는지 검증합니다.
+             * @brief 바이트 배열이 UTF-8 인코딩 규칙을 지키는지 검증합니다.
              * @details
-             * - **64비트 SWAR (SIMD Within A Register) Fast-Scan**:
-             *   대부분의 텍스트(로그 포맷, 태그, 영문 등)가 7비트 ASCII(0x00~0x7F)라는 점에 착안하여,
-             *   `uint64` 8바이트씩 한 번에 읽어 최상위 비트 마스크(`0x8080808080808080ULL`)로 1클럭에 8바이트를 초고속 검사합니다.
-             * - **멀티바이트 시퀀스 정밀 검증**:
-             *   비-ASCII 바이트를 만났을 때만 2~4바이트 UTF-8 리드 바이트를 분류하고 후속 바이트(0x80~0xBF), Overlong, Surrogate(0xD800~0xDFFF), 최대 유니코드 범위를 철저히 검증합니다.
+             * - **64비트 SWAR(SIMD Within A Register) 빠른 검사**:
+             *   대부분의 텍스트(로그 포맷, 태그, 영문 등)가 7비트 ASCII(0x00 ~ 0x7F)라는 점을 이용해, `uint64` 로 8바이트씩 읽어
+             *   최상위 비트 마스크(`0x8080808080808080ULL`)로 한 번에 8바이트를 검사합니다.
+             * - **멀티바이트 시퀀스 검증**:
+             *   ASCII 가 아닌 바이트를 만났을 때만 2 ~ 4바이트 UTF-8 선행 바이트를 분류하고, 후속 바이트(0x80 ~ 0xBF) · overlong ·
+             *   서로게이트(0xD800 ~ 0xDFFF) · 유니코드 최대 범위를 검사합니다.
              */
             static bool isValidUtf8( const uint8* pData, const size_t length ) noexcept
             {
                 size_t pos{ 0 };
 
-                // 8바이트 단위 SWAR 빠른 ASCII 검사 (1클럭에 8글자 일괄 검사)
+                // 8바이트 단위 SWAR 로 ASCII 인지 빠르게 검사한다(한 번에 8글자)
                 while ( pos + 8 <= length )
                 {
                     uint64 chunk{ 0 };
@@ -103,11 +104,11 @@ namespace sw
                 while ( pos < length )
                 {
                     const uint8 byte0 = pData[pos];
-                    // 1바이트 ASCII 문자 (0x00 ~ 0x7F)
+                    // 1바이트 ASCII 문자(0x00 ~ 0x7F)
                     if ( ( byte0 & 0x80 ) == 0 )
                     {
                         ++pos;
-                        // 다시 8바이트 SWAR 가속 스캔 시도
+                        // 다시 8바이트 SWAR 빠른 검사를 시도한다
                         while ( pos + 8 <= length )
                         {
                             uint64 chunk{ 0 };
@@ -122,7 +123,7 @@ namespace sw
                         continue;
                     }
 
-                    // 2~4바이트 멀티바이트 UTF-8 시퀀스 검증
+                    // 2 ~ 4바이트 멀티바이트 UTF-8 시퀀스를 검증한다
                     const Utf8LeadInfo lead = classifyUtf8LeadByte( byte0 );
                     if ( lead._sequenceLength == 0 || pos + lead._sequenceLength > length )
                         return false;
@@ -136,7 +137,7 @@ namespace sw
                         codepoint = ( codepoint << 6 ) | ( continuationByte & 0x3F );
                     }
 
-                    // Overlong 인코딩, UTF-16 서로게이트(Surrogate), 유니코드 최대치 초과 여부 검사
+                    // overlong 인코딩, UTF-16 서로게이트, 유니코드 최댓값 초과를 검사한다
                     const bool bIsOverlong   = codepoint < lead._minCodepoint;
                     const bool bIsSurrogate  = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
                     const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
@@ -209,16 +210,15 @@ namespace sw
                 }
             }
 
-            /** @brief 로케일 변환이 실패했음을 나타내는 값 (C 런타임 규약). */
+            /** @brief 로케일 변환이 실패했음을 나타내는 값입니다(C 런타임 규약). */
             static constexpr size_t kConversionFailed = static_cast<size_t>( -1 );
 
             /**
-             * @brief wide → 로케일 멀티바이트 변환 원시 연산.
-             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 크기만 돌려줍니다.
-             * @return 널 종료를 포함한 바이트 수. 실패하면 kConversionFailed.
-             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둔다. 예전에는 "크기 질의 → 버퍼
-             *          준비 → 변환" 전체를 두 방향(utf16→locale, locale→utf16)이 각자 적어서
-             *          같은 #if 가 네 벌이었다.
+             * @brief wide → 로케일 멀티바이트 변환 원시 연산입니다.
+             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 크기만 반환합니다.
+             * @return 널 종료를 포함한 바이트 수. 실패하면 kConversionFailed
+             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둡니다. 예전에는 "크기 질의 → 버퍼 준비 → 변환" 전체를 두 방향(utf16 →
+             *          locale, locale → utf16)이 각자 적어서 같은 #if 가 네 벌이었습니다.
              */
             static size_t wideToMultiByteInternal( utf8* pOutBuffer, size_t bufferSize, const utf16* pInput )
             {
@@ -231,7 +231,7 @@ namespace sw
                 const size_t writtenSize = wcstombs( pOutBuffer, pInput, bufferSize );
                 if ( writtenSize == kConversionFailed )
                     return kConversionFailed;
-                // POSIX 는 널 종료를 세지 않는다. Windows 쪽과 같은 규약으로 맞춘다.
+                // POSIX 는 널 종료를 세지 않는다. Windows 쪽과 같은 규칙으로 맞춘다.
                 return writtenSize + 1;
 #else
     #error "Unsupported platform"
@@ -239,9 +239,9 @@ namespace sw
             }
 
             /**
-             * @brief 로케일 멀티바이트 → wide 변환 원시 연산.
-             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 문자 수만 돌려줍니다.
-             * @return 널 종료를 포함한 문자 수. 실패하면 kConversionFailed.
+             * @brief 로케일 멀티바이트 → wide 변환 원시 연산입니다.
+             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 문자 수만 반환합니다.
+             * @return 널 종료를 포함한 문자 수. 실패하면 kConversionFailed
              */
             static size_t multiByteToWideInternal( utf16* pOutBuffer, size_t bufferSize, const utf8* pInput )
             {
@@ -309,8 +309,8 @@ namespace sw
             }
 
             /**
-             * @brief 문자 하나씩 바꾼 사본 — `toUpper` · `toLower` 의 utf8 · utf16 네 벌이 같은 뼈대다(길이 재기 · 크기 잡기 · 한 글자씩).
-             * @details 바꾸는 규칙만 호출자가 준다. utf8 은 ASCII 만, utf16 은 ASCII 밖을 C 런타임(`towupper` · `towlower`)에 맡긴다.
+             * @brief 문자를 하나씩 바꾼 사본을 만듭니다. `toUpper` · `toLower` 의 utf8 · utf16 네 벌이 같은 뼈대(길이 재기 · 크기 잡기 · 한 글자씩 변환)를 씁니다.
+             * @details 바꾸는 규칙만 호출하는 쪽이 넘깁니다. utf8 은 ASCII 만, utf16 은 ASCII 밖을 C 런타임(`towupper` · `towlower`)에 맡깁니다.
              */
             template <typename StringType, typename CharType, typename MapFn>
             static StringType mapEachChar( const CharType* pInput, MapFn&& mapChar )
@@ -326,7 +326,7 @@ namespace sw
                 return result;
             }
 
-            /** @brief 길이가 같고 글자마다 같으면 true — 대소문자 무시는 ASCII 만 접는다. `string_view` · `wstring_view` 공용. */
+            /** @brief 길이가 같고 글자마다 같으면 true 입니다. 대소문자 무시는 ASCII 만 합니다. `string_view` · `wstring_view` 가 함께 씁니다. */
             template <typename ViewType>
             static bool equalsView( ViewType lhs, ViewType rhs, bool bIgnoreCase ) noexcept
             {
@@ -343,11 +343,11 @@ namespace sw
             }
 
             /**
-             * @brief 정수 토큰의 앞머리를 벗깁니다 — 공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`).
-             * @details `parseInt` · `parseInt64` · `parseUint64` 가 이 스무 줄을 각자 들었다. 기수 0 은 접두사로 정하고(없으면 10),
-             *          기수 16 은 `0x` 가 있어도 되고 없어도 된다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
-             *          `from_chars` 가 거부하게 한다.
-             * @return 숫자 부분이 남고 기수가 [2, 36] 이면 true.
+             * @brief 정수 토큰의 앞부분(공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`))을 떼어 냅니다.
+             * @details `parseInt` · `parseInt64` · `parseUint64` 가 이 스무 줄을 각자 들고 있었습니다. 기수가 0 이면 접두사로 정하고
+             *          (없으면 10), 기수 16 은 `0x` 가 있어도 되고 없어도 됩니다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
+             *          `from_chars` 가 거부하게 합니다.
+             * @return 숫자 부분이 남고 기수가 [2, 36] 이면 true
              */
             static bool splitIntegerToken( string_view token, bool bAllowNegative, int32& inoutBase, string_view& outDigits, bool& outNegative )
             {
@@ -380,7 +380,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 남은 글자 전부가 숫자여야 true — 뒤에 무엇이 붙어 있으면 실패다. */
+            /** @brief 남은 글자가 모두 숫자여야 true 입니다. 뒤에 다른 것이 붙어 있으면 실패입니다. */
             template <typename UnsignedType>
             static bool parseDigitsExact( string_view digits, int32 base, UnsignedType& outValue )
             {
@@ -388,7 +388,7 @@ namespace sw
                 return ec == std::errc{} && ptr == digits.data() + digits.size();
             }
 
-            /** @brief 부호 있는 정수 — 절댓값을 부호 없는 타입으로 읽고 범위를 본다(최솟값은 절댓값이 최댓값 + 1 이다). */
+            /** @brief 부호 있는 정수를 읽습니다. 절댓값을 부호 없는 타입으로 읽고 범위를 확인합니다(최솟값의 절댓값은 최댓값 + 1 입니다). */
             template <typename SignedType, typename UnsignedType>
             static bool parseSignedInteger( string_view token, int32 base, SignedType kMinValue, SignedType kMaxValue, SignedType& outValue )
             {
@@ -423,7 +423,7 @@ namespace sw
     SW_LOG_CALLER( "StringUtil" );
 
     /**
-     * @brief 32비트 부호 있는 정수를 0-Alloc 스택 버퍼를 통해 문자열로 변환합니다.
+     * @brief 32비트 부호 있는 정수를 문자열로 바꿉니다(포맷은 스택 버퍼에서 합니다).
      */
     string to_string( int32 value )
     {
@@ -710,9 +710,9 @@ namespace sw
         return std::wcscmp( pLhs, pRhs ) == 0;
     }
 
-    // 바이트를 **부호 없이** 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가
-    // 음수가 되어, 한글처럼 비-ASCII 가 섞인 문자열이 ASCII 보다 **작다고** 나왔다(strcmp 규약의
-    // 반대다). 정렬·이진 검색에 이 함수를 쓰는 쪽이 일관되지 않게 동작한다.
+    // 바이트를 **부호 없이** 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가 음수가 되어, 한글처럼
+    // ASCII 가 아닌 문자가 섞인 문자열이 ASCII 보다 **작다고** 나왔다(strcmp 규약과 반대다). 그러면 정렬 · 이진 검색에
+    // 이 함수를 쓰는 쪽이 일관되지 않게 동작한다.
     int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
     {
         const size_t minLen = ( lhs.size() < rhs.size() ) ? lhs.size() : rhs.size();
@@ -858,7 +858,7 @@ namespace sw
         if ( bIgnoreCase == false )
             return str.find( sub ) != string_view::npos;
 
-        // 대소문자를 무시할 때는 시작 위치마다 `equals` 로 본다 — 사본을 만들지 않는다.
+        // 대소문자를 무시할 때는 시작 위치마다 `equals` 로 확인한다. 사본을 만들지 않는다.
         const size_t lastStart = str.size() - sub.size();
         for ( size_t start = 0; start <= lastStart; ++start )
         {
@@ -1110,8 +1110,8 @@ namespace sw
             return string{ afterText };
         string result;
         result.reserve( prefixLength + span._removed.size() + suffixLength );
-        // `data()` 를 넘기지만 **길이도 함께** 넘긴다 — 널 종단을 기대하는 호출이 아니다.
-        // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 인식하지 못한다.
+        // `data()` 를 넘기지만 **길이도 함께** 넘기므로, 널 종료를 기대하는 호출이 아니다.
+        // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 알아보지 못한다.
         // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         result.append( afterText.data(), prefixLength );
         result.append( span._removed );
@@ -1128,7 +1128,7 @@ namespace sw
             return string{ beforeText };
         string result;
         result.reserve( prefixLength + span._added.size() + suffixLength );
-        // 위와 같다 — 길이를 함께 넘긴다.
+        // 위와 같다. 길이를 함께 넘긴다.
         // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         result.append( beforeText.data(), prefixLength );
         result.append( span._added );

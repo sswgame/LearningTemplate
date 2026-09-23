@@ -38,8 +38,8 @@ namespace sw
 
     EventDispatcher::~EventDispatcher()
     {
-        // 큐에 남은 이벤트도 파괴해야 한다 — 아레나를 그냥 놓으면 멤버가 든 힙이 샌다.
-        // 죽는 객체라 잠글 상대가 없다 — 여기가 `_queueSpinLock` 없이 부르는 유일한 자리다.
+        // 큐에 남은 이벤트도 파괴해야 한다. 아레나를 그냥 놓으면 멤버가 가진 힙 메모리가 샌다.
+        // 파괴되는 객체라 잠금을 다툴 상대가 없다. `_queueSpinLock` 없이 부르는 유일한 곳이다.
         destroyQueuedEvents();
     }
 
@@ -52,7 +52,7 @@ namespace sw
 
     void EventDispatcher::assertBusThread() const
     {
-        // 아직 아무도 퍼내지 않았으면 주인이 없다 — 시작할 때 구독부터 하는 것은 정상이다.
+        // 아직 아무도 큐를 비우지 않았으면 주인이 없다. 시작할 때 구독부터 하는 것은 정상이다.
         if ( _busThreadId == std::thread::id{} )
             return;
 
@@ -68,10 +68,9 @@ namespace sw
 
     void EventDispatcher::destroyQueuedEvents()
     {
-        // 이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감는 것은 **메모리만**
-        // 돌려줄 뿐 소멸자를 부르지 않으므로, `sw::string` 같은 멤버가 든 힙은 그대로 남는다
-        // (게임플레이 이벤트는 대부분 문자열을 든다). `processEvents` 는 방송 뒤에 이 일을 하는데
-        // `clear()` 와 소멸자에는 빠져 있었다.
+        // 이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감으면 **메모리만** 돌아올 뿐 소멸자는 불리지
+        // 않으므로, `sw::string` 같은 멤버가 가진 힙 메모리는 그대로 남는다(게임플레이 이벤트는 대부분 문자열을 가진다).
+        // `processEvents` 는 브로드캐스트 뒤에 이 일을 하는데, `clear()` 와 소멸자에는 빠져 있었다.
         for ( auto& [channel, list] : _mapChannelQueue )
         {
             IEvent* pCurrent = list->_pHead.exchange( nullptr, std::memory_order_relaxed );

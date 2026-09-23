@@ -46,8 +46,8 @@ namespace sw
 
     TagID TagID::request( string_view str )
     {
-        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다.
-        // ID 도 같은 규칙이라(`computeId`) 둘이 같은 태그가 된다.
+        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다. ID 도 같은 규칙이라(`computeId`)
+        // 둘은 같은 태그가 된다.
         const hashed_string hashedName{ str };
         const uint64        tagId = computeId( str.data(), str.size() );
 

@@ -528,7 +528,7 @@ namespace sw
 
     bool float4::isInBounds( const float4& bound ) const noexcept
     {
-        // 범위 비교는 값을 가운데 둔다 — float2 · float3 · double3 이 그렇고 AGENTS 도 그 규칙이다.
+        // 범위 비교는 값을 가운데에 둔다(-bound <= v <= bound). float2 · float3 · double3 도 같고, AGENTS.md 의 규칙이기도 하다.
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z ) && ( -bound._w <= _w && _w <= bound._w );
     }
 

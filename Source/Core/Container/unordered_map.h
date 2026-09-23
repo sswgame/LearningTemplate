@@ -1,16 +1,17 @@
 /**
  * @file unordered_map.h
- * @brief DoD(Data-Oriented Design) 기반 고성능 밀집 해시맵 (sw::unordered_map)
+ * @brief DoD(Data-Oriented Design) 기반의 밀집 배열 해시맵(sw::unordered_map)입니다.
  *
- * [아키텍처 및 메모리 구조 가이드]:
- * 1. Dense Storage (밀집 저장소): 모든 키-값 쌍(Node)이 연속된 `vector<Node>`에 저장되어 순회(Iteration) 시 L1/L2 캐시 적중률이 극대화됩니다.
- * 2. Bucket Index Table: 해시 충돌 체이닝을 노드 포인터 대신 8바이트 정수 인덱스(`size_t`)로 관리하여 포인터 간접 참조 오버헤드와 메모리 단편화를 제거합니다.
- * 3. Race Condition Detector: 디버그 모드에서 ScopedRaceRead / ScopedRaceWrite를 통해 동시 다중 쓰기 및 읽기/쓰기 충돌을 실시간 감지합니다.
- * 4. Heterogeneous Lookup: `string_view` 등 이종 키로 검색할 때 키를 만들지 않습니다(Zero-Allocation).
- *    성립 조건은 **해시가 transparent** 인 것 하나다 — `std::hash<sw::string>` 이 `string_view` 오버로드를 갖고 있어
- *    같은 바이트에서 같은 해시가 나온다. 비교자 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있다.
- *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너에 붙었을 때만 이종 검색이 컴파일되지 않아,
- *    같은 코드가 빌드 옵션에 따라 갈렸을 것이다.
+ * [구조와 메모리 배치]
+ * 1. 밀집 저장소: 모든 키-값 쌍(Node)이 연속된 `vector<Node>` 에 들어 있어, 순회할 때 L1/L2 캐시 적중률이 높습니다.
+ * 2. 버킷 인덱스 표: 해시 충돌 체인을 노드 포인터 대신 8바이트 정수 인덱스(`size_t`)로 이어, 포인터를 따라가는 비용과
+ *    메모리 단편화를 없앱니다.
+ * 3. 레이스 탐지: 디버그 빌드에서 ScopedRaceRead / ScopedRaceWrite 로 동시 쓰기와 읽기/쓰기 충돌을 바로 잡아냅니다.
+ * 4. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
+ *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. `std::hash<sw::string>` 에 `string_view` 오버로드가 있어서
+ *    같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
+ *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
+ *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -29,9 +30,9 @@ namespace sw
 #else
     /**
      * @class unordered_map
-     * @brief 데이터 지향(DoD) 밀집 배열 기반의 고성능 해시맵 컨테이너
+     * @brief 데이터 지향(DoD) 밀집 배열 기반의 해시맵입니다.
      *
-     * 주의: 요소를 삭제(`erase`)할 때 순서 보존 또는 Swap-and-Pop 방식에 따라 기존 반복자가 무효화될 수 있습니다.
+     * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다.
      */
     template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
@@ -54,7 +55,7 @@ namespace sw
 
     private:
         /**
-         * @brief 밀집 배열에 저장되는 단일 노드 (키-값 데이터 및 충돌 체인의 다음 노드 인덱스)
+         * @brief 밀집 배열에 저장되는 노드 하나입니다(키-값과, 충돌 체인에서 다음 노드의 인덱스).
          */
         struct Node
         {
@@ -62,26 +63,26 @@ namespace sw
             size_t       _next;
         };
 
-        vector<size_t>          _listBucket;    ///< 버킷 헤드 인덱스 테이블
-        vector<Node>            _listDenseData; ///< 연속 메모리에 정렬된 밀집 데이터 배열
-        pair<hasher, key_equal> _traits;        ///< 해시 및 키 비교 함수 객체 (EBO 압축 보관)
+        vector<size_t>          _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
+        vector<Node>            _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
+        pair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
 
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
         const key_equal& get_equal() const noexcept { return _traits.second(); }
 
-        /** @brief 빈 버킷 슬롯을 나타내는 센티넬 값 (-1) */
+        /** @brief 빈 버킷 슬롯을 나타내는 센티넬 값(-1, 모든 비트 1)입니다. */
         static constexpr size_t kEmptySlot = invalid_index::kUint64;
 
-        /** @brief 버킷 수의 최솟값. 버킷 수는 늘 2 의 거듭제곱이다 — `bucketIndexOf` 가 마스크로 자른다. */
+        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
         static constexpr size_t kMinBucketCount = 16;
 
         /**
-         * @brief 해시를 버킷 번호로 — 곱 한 번 · 접기 한 번 · 마스크 한 번. 버킷 수는 늘 2 의 거듭제곱이다(`rehash_internal`).
-         * @details 예전엔 `hash % 버킷 수` 였다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹는다
-         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 윗 절반을 아랫 절반에 접어 넣으므로 아랫 비트가 고르지 않은
-         *          해시도 고르게 퍼진다 — libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 항등이라, 2 의 거듭제곱 크기에
-         *          `%` 만 쓰면 아랫 비트만 남아 8 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸다(기본 성장 경로가 그 크기였다).
-         *          순회는 밀집 배열을 도므로 버킷 배치가 바뀌어도 순서는 그대로다.
+         * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
+         * @details 예전에는 `hash % 버킷 수` 였습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
+         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
+         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸습니다(기본 증가 경로가 그 크기였습니다).
+         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
          */
         static size_t bucketIndexOf( size_t hash, size_t bucketCount ) noexcept
         {
@@ -90,7 +91,7 @@ namespace sw
         }
 
         /**
-         * @brief 적재율(Load Factor)이 1.0에 도달하면 버킷 크기를 2배로 확장하고 재해시합니다.
+         * @brief 부하율(load factor)이 1 에 닿으면 버킷 수를 두 배로 늘리고 재해시합니다.
          */
         void check_expand()
         {
@@ -100,7 +101,7 @@ namespace sw
 
     public:
         /**
-         * @brief 밀집 데이터 배열(_listDenseData)을 연속적으로 순회하는 고속 반복자
+         * @brief 밀집 데이터 배열(_listDenseData)을 차례로 순회하는 이터레이터입니다.
          */
         class iterator
         {
@@ -111,12 +112,12 @@ namespace sw
             using pointer           = value_type*;
             using reference         = value_type&;
 
-            /** @brief 생성합니다. */
+            /** @brief 맵과 밀집 배열 인덱스로 만듭니다. */
             iterator( unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
                 , _index{ index } {}
 
-            /** @brief 증가시킵니다. */
+            /** @brief 다음 원소로 넘어갑니다. */
             iterator& operator++()
             {
                 ++_index;
@@ -146,7 +147,7 @@ namespace sw
             using pointer           = const value_type*;
             using reference         = const value_type&;
 
-            /** @brief 생성합니다. */
+            /** @brief 맵과 밀집 배열 인덱스로 만듭니다. */
             const_iterator( const unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
                 , _index{ index } {}
@@ -175,7 +176,7 @@ namespace sw
         };
 
         // ------------------------------------------------------------------------------
-        // 1) 생성 · 대입 — 버킷+밀집 배열. 레이스 컨텍스트는 공유하지 않음
+        // 1) 생성 · 대입 — 버킷 + 밀집 배열. 레이스 컨텍스트는 공유하지 않는다
         // ------------------------------------------------------------------------------
         /** @brief 빈 맵으로 둡니다. */
         unordered_map()
@@ -183,7 +184,7 @@ namespace sw
             , _listDenseData{}
             , _traits{} {}
 
-        /** @brief 초기화 리스트를 삽입합니다. */
+        /** @brief 초기화 리스트의 원소로 채웁니다. */
         unordered_map( std::initializer_list<value_type> init )
             : _listBucket{}
             , _listDenseData{}
@@ -297,7 +298,7 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 3) 변경 — insert/erase. erase 후 이터레이터 무효화에 주의
+        // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
         // ------------------------------------------------------------------------------
         /** @brief 모든 원소를 제거합니다. */
         void clear() noexcept
@@ -350,7 +351,7 @@ namespace sw
             return end();
         }
 
-        /** @brief 이종 키(Heterogeneous Key, 예: string_view)로 키를 찾습니다. */
+        /** @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         iterator find( const K& key )
         {
@@ -379,7 +380,7 @@ namespace sw
             return end();
         }
 
-        /** @brief 이종 키(Heterogeneous Key, 예: string_view)로 키를 찾습니다. */
+        /** @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         const_iterator find( const K& key ) const
         {
@@ -408,21 +409,21 @@ namespace sw
             return end();
         }
 
-        /** @brief 키와 일치하는 원소 개수를 반환합니다. */
+        /** @brief 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
         size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
 
-        /** @brief 이종 키와 일치하는 원소 개수를 반환합니다. */
+        /** @brief 이종 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         size_type count( const K& key ) const { return find( key ) != end() ? 1 : 0; }
 
-        /** @brief 키 존재 여부를 반환합니다. */
+        /** @brief 키가 있는지 반환합니다. */
         bool contains( const Key& key ) const { return find( key ) != end(); }
 
-        /** @brief 이종 키 존재 여부를 반환합니다. */
+        /** @brief 이종 키가 있는지 반환합니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         bool contains( const K& key ) const { return find( key ) != end(); }
 
-        /** @brief 지정 위치의 원소를 반환합니다. */
+        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -443,7 +444,7 @@ namespace sw
             return _listDenseData[newIndex]._keyValuePair.second;
         }
 
-        /** @brief 지정 위치의 원소를 반환합니다. */
+        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( Key&& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -485,22 +486,22 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 키가 없을 때만 제자리 생성합니다. */
+        /** @brief 키가 없을 때만 값을 제자리에서 생성해 넣습니다. */
         template <typename... Args>
         pair<iterator, bool> try_emplace( const Key& k, Args&&... args ) { return emplace( k, T{ std::forward<Args>( args )... } ); }
 
-        /** @brief 키가 없을 때만 제자리 생성합니다. */
+        /** @brief 키가 없을 때만 값을 제자리에서 생성해 넣습니다. */
         template <typename... Args>
         pair<iterator, bool> try_emplace( Key&& k, Args&&... args ) { return emplace( std::move( k ), T{ std::forward<Args>( args )... } ); }
 
-        /** @brief 원소를 제자리 생성합니다. */
+        /** @brief 원소를 제자리에서 생성해 넣습니다. */
         template <typename... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
             SW_SCOPED_RACE_WRITE();
             check_expand();
-            // 키를 알려면 일단 만들어야 함. 표준 emplace 는 제자리 생성.
-            // 밀집 배열은 끝에 만든 뒤 키가 이미 있으면 pop 합니다.
+            // 키를 알려면 일단 만들어야 한다(표준 emplace 도 제자리에서 생성한다).
+            // 밀집 배열 끝에 만든 뒤, 키가 이미 있으면 pop 한다.
             _listDenseData.push_back( { pair<Key, T>( std::forward<Args>( args )... ), kEmptySlot } );
             const Key& key = _listDenseData.back()._keyValuePair.first;
 
@@ -523,7 +524,7 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( iterator pos )
         {
             if ( pos == end() )
@@ -532,7 +533,7 @@ namespace sw
             return iterator( this, pos._index );
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             if ( pos == end() )
@@ -541,7 +542,7 @@ namespace sw
             return iterator( this, pos._index );
         }
 
-        /** @brief 삽입하거나 기존 값을 대입합니다. */
+        /** @brief 키가 없으면 삽입하고, 있으면 값을 대입합니다. */
         template <typename M>
         pair<iterator, bool> insert_or_assign( const Key& key, M&& mappedValue )
         {
@@ -566,7 +567,7 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 삽입하거나 기존 값을 대입합니다. */
+        /** @brief 키가 없으면 삽입하고, 있으면 값을 대입합니다. */
         template <typename M>
         pair<iterator, bool> insert_or_assign( Key&& key, M&& mappedValue )
         {
@@ -591,7 +592,7 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 원소를 제거합니다. */
+        /** @brief 키와 같은 원소를 제거하고, 제거한 개수를 반환합니다. */
         size_type erase( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -607,7 +608,7 @@ namespace sw
             {
                 if ( get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
                 {
-                    // Remove from linked list
+                    // 버킷 체인에서 뗀다
                     if ( previousIndex == kEmptySlot )
                         _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
                     else
@@ -616,10 +617,10 @@ namespace sw
                     const size_t lastIndex = _listDenseData.size() - 1;
                     if ( currentIndex != lastIndex )
                     {
-                        // 마지막 원소를 currentIndex 자리로 옮깁니다.
+                        // 마지막 원소를 currentIndex 자리로 옮긴다.
                         _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
 
-                        // lastIndex 를 가리키던 버킷 체인을 currentIndex 로 바꿉니다.
+                        // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다.
                         size_t       lastHash          = get_hasher()( _listDenseData[currentIndex]._keyValuePair.first );
                         const size_t lastBucketIndex   = bucketIndexOf( lastHash, _listBucket.size() );
                         size_t       lastCurrentIndex  = _listBucket[lastBucketIndex];
@@ -648,19 +649,19 @@ namespace sw
             return 0;
         }
 
-        /** @brief 버킷 수를 재해시합니다. */
+        /** @brief 버킷 수를 count 이상인 2의 거듭제곱으로 늘리고 재해시합니다. 지금보다 작으면 아무것도 하지 않습니다. */
         void rehash( size_type count )
         {
             SW_SCOPED_RACE_WRITE();
             rehash_internal( count );
         }
 
-        /** @brief 내부 버킷을 재해시합니다. */
+        /** @brief rehash 와 같지만 레이스 가드를 잡지 않습니다(내부용). */
         void rehash_internal( size_type count )
         {
             if ( count <= _listBucket.size() )
                 return;
-            // 2 의 거듭제곱으로 올린다 — `reserve( 3000 )` 이면 4096. `bucketIndexOf` 가 마스크로 자르는 전제다.
+            // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `bucketIndexOf` 가 마스크로 자르는 전제다.
             size_t bucketCount = _listBucket.empty() ? kMinBucketCount : _listBucket.size();
             while ( bucketCount < count )
                 bucketCount *= 2;
@@ -674,7 +675,7 @@ namespace sw
             }
         }
 
-        /** @brief 용량을 예약합니다. */
+        /** @brief rehash( count ) 와 같습니다(버킷을 미리 잡습니다). */
         void reserve( size_type count ) { rehash( count ); }
     };
 #endif

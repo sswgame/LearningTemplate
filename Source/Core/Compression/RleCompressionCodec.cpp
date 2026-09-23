@@ -51,7 +51,7 @@ namespace sw
 
         while ( readPos < srcSize )
         {
-            // 1) 연속된 동일 바이트 런 검출
+            // 1) 같은 바이트가 이어지는 런을 찾는다
             size_t runLength = 1;
             while ( readPos + runLength < srcSize && runLength < kMaxRunLength && pInput[readPos + runLength] == pInput[readPos] )
             {
@@ -70,11 +70,11 @@ namespace sw
             }
             else
             {
-                // 2) 리터럴 런 검출 (반복되지 않는 바이트 열)
+                // 2) 리터럴 런(반복되지 않는 바이트 열)을 찾는다
                 size_t literalLength = 0;
                 while ( readPos + literalLength < srcSize && literalLength < kMaxLiteralLength )
                 {
-                    // 남은 부분에서 3개 이상 반복되는 런이 시작되는지 확인
+                    // 여기서부터 같은 바이트가 3개 이상 이어지면 리터럴을 끊고 반복 런으로 넘긴다
                     if ( readPos + literalLength + 2 < srcSize &&
                          pInput[readPos + literalLength] == pInput[readPos + literalLength + 1] &&
                          pInput[readPos + literalLength] == pInput[readPos + literalLength + 2] )

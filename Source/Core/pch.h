@@ -1,6 +1,6 @@
 /**
  * @file pch.h
- * @brief Core / ReflectionParser용 프리컴파일 헤더
+ * @brief Core · ReflectionParser 용 프리컴파일 헤더입니다.
  */
 #pragma once
 #include "Core/CoreMinimal.h"

@@ -148,8 +148,8 @@ namespace sw
             {
                 if ( bytesTransferred == 0 )
                 {
-                    // 버퍼 오버플로우 발생 시: 누락 방지를 위해 감시 디렉터리에 대한 Modified 이벤트를
-                    // 발생시켜 리스캔 유도. 파일 이름이 비면 "전부 다시 봐라" 라는 약속이다.
+                    // 버퍼가 넘치면 놓친 변경이 생기므로, 감시 디렉터리에 대한 Modified 이벤트를 만들어 다시 훑게 한다.
+                    // 파일 이름이 비어 있으면 "전부 다시 확인하라" 는 약속이다.
                     pushChange( FileWatcherAction::Modified, _directoryPath, {} );
                     continue;
                 }
@@ -192,9 +192,9 @@ namespace sw
                         }
                     }
 
-                    // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다.
-                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 접히므로,
-                    // 그 중복을 걸러 주는 것도 거기다(세 플랫폼이 같은 규칙을 쓴다).
+                    // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
+                    // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).
                     pushChange( action, _directoryPath, fileName );
 
                     if ( pNotify->NextEntryOffset == 0 )

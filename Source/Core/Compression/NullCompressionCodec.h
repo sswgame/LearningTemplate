@@ -5,8 +5,8 @@ namespace sw
 {
     /**
      * @class NullCompressionCodec
-     * @brief 무압축(Pass-through) 코덱 구현체
-     * @details 데이터를 변형하지 않고 원본 그대로 복사합니다. 디버깅 및 압축 미적용 폴백용입니다.
+     * @brief 무압축 코덱입니다.
+     * @details 데이터를 바꾸지 않고 그대로 복사합니다. 디버깅용이나, 압축을 쓰지 않을 때의 폴백으로 씁니다.
      */
     class SW_API NullCompressionCodec final : public ICompressionCodec
     {

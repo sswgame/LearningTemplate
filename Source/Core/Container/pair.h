@@ -1,12 +1,12 @@
 /**
  * @file pair.h
- * @brief 값 쌍(sw::pair) 컨테이너 및 EBO(Empty Base Optimization) 압축 지원.
+ * @brief 값 쌍(sw::pair)과 EBO(Empty Base Optimization) 압축입니다.
  *
- * - SW_ENABLE_STL_CONTAINER 정의 시 std::pair 및 std::make_pair로 전환됩니다.
+ * - SW_ENABLE_STL_CONTAINER 를 정의하면 std::pair 와 std::make_pair 로 바뀝니다.
  * - sw::pair:
- *   1) 상태가 있는 일반 타입 쌍: std::pair와 100% 동일하게 first, second 데이터 멤버를 제공합니다.
- *   2) 상태 없는(Stateless) 빈 클래스 포함 시: 상속(EBO)을 적용하여 0바이트로 압축 보관합니다.
- * - sw::make_pair: 인자의 타입을 decay하여 적절한 sw::pair를 생성하는 팩토리 함수.
+ *   1) 상태가 있는 일반 타입의 쌍: std::pair 와 똑같이 first, second 데이터 멤버를 둡니다.
+ *   2) 상태가 없는 빈 클래스가 들어가면: 상속(EBO)으로 그쪽을 0바이트로 압축해 보관합니다.
+ * - sw::make_pair: 인자 타입을 decay 해서 알맞은 sw::pair 를 만드는 팩토리 함수입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -69,7 +69,7 @@ namespace sw
     } // namespace internal
 
     // ------------------------------------------------------------------------------
-    // 1) Case 1: T1, T2 모두 일반 타입 (비어있지 않음) -> first, second 직접 멤버
+    // 1) Case 1: T1, T2 모두 일반 타입(비어 있지 않음) -> first, second 를 직접 멤버로 둔다
     // ------------------------------------------------------------------------------
     template <typename T1, typename T2,
               bool T1Empty = ( std::is_empty_v<T1> && std::is_final_v<T1> == false ),
@@ -179,7 +179,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) Case 2: T1 빈 클래스 (EBO 압축), T2 일반 타입
+    // 2) Case 2: T1 은 빈 클래스(EBO 압축), T2 는 일반 타입
     // ------------------------------------------------------------------------------
     template <typename T1, typename T2>
     struct pair<T1, T2, true, false> : private internal::EmptyElementTag<T1, 0>
@@ -226,7 +226,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 3) Case 3: T1 일반 타입, T2 빈 클래스 (EBO 압축)
+    // 3) Case 3: T1 은 일반 타입, T2 는 빈 클래스(EBO 압축)
     // ------------------------------------------------------------------------------
     template <typename T1, typename T2>
     struct pair<T1, T2, false, true> : private internal::EmptyElementTag<T2, 1>
@@ -273,7 +273,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) Case 4: T1, T2 모두 빈 클래스 (둘 다 EBO 압축 -> 1바이트)
+    // 4) Case 4: T1, T2 모두 빈 클래스(둘 다 EBO 압축 -> 1바이트)
     // ------------------------------------------------------------------------------
     template <typename T1, typename T2>
     struct pair<T1, T2, true, true> : private internal::EmptyElementTag<T1, 0>, private internal::EmptyElementTag<T2, 1>
@@ -435,11 +435,11 @@ namespace sw
 #endif
 } // namespace sw
 
-// Structured Binding & Tuple interface
+// 구조적 바인딩 · tuple 인터페이스
 //
-// **커스텀 pair 일 때만 필요하다.** `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::pair` 는 `std::pair` 의
-// 별칭이므로, 아래 특수화는 표준 라이브러리가 이미 준 `tuple_size<std::pair<…>>` 를 다시 정의하는 꼴이
-// 된다. 예전에는 이 블록이 `#if` 밖에 있어서 그 옵션을 켜면 **컴파일 자체가 안 됐다**
+// 커스텀 pair 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::pair` 는 `std::pair` 의 별칭이므로, 아래
+// 특수화는 표준 라이브러리가 이미 제공하는 `tuple_size<std::pair<…>>` 를 다시 정의하게 된다. 예전에는 이 블록이
+// `#if` 밖에 있어서 그 옵션을 켜면 컴파일 자체가 되지 않았다
 // (`pair.h:442: redefinition of 'tuple_size<sw::pair<T1, T2>>'`).
 #if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std

@@ -1,20 +1,18 @@
 /**
  * @file PredefinedNameType.xxx
- * @brief 엔진이 늘 쓰는 이름을 intern 테이블 앞쪽에 고정 적재하는 목록.
- * @details include 전에 REGISTER_NAME( index, name ) 정의.
+ * @brief 엔진이 늘 쓰는 이름을 intern 테이블 앞쪽에 고정으로 적재하는 목록입니다.
+ * @details include 하기 전에 REGISTER_NAME( index, name ) 을 정의하십시오.
  *
- *          **번호는 줄 순서(0부터)와 같아야 한다.** 이 목록은 빈 intern 테이블에 줄 순서대로
- *          적재되므로 여기 적은 번호가 곧 그 이름의 intern 인덱스이고, basic_hashed_string 은
- *          `PredefinedNameType` 을 인덱스로 그대로 캐스팅한다(getPredefinedType 은 그 역이다).
- *          번호가 줄 순서와 어긋나면 hashed_string( NameType_float3 ) 이 조용히 다른 문자열을
- *          가리킨다 — hashed_string.h 의 static_assert 가 그것을 막는다.
+ *          **번호는 줄 순서(0부터)와 같아야 합니다.** 이 목록은 빈 intern 테이블에 줄 순서대로 적재되므로, 여기 적은
+ *          번호가 곧 그 이름의 intern 인덱스입니다. basic_hashed_string 은 `PredefinedNameType` 을 인덱스로 그대로
+ *          캐스팅합니다(getPredefinedType 은 그 반대입니다). 번호가 줄 순서와 어긋나면 hashed_string( NameType_float3 ) 이
+ *          조용히 다른 문자열을 가리킵니다. hashed_string.h 의 static_assert 가 이를 막습니다.
  *
- *          **이름은 대소문자만 다르게 짓지 않는다.** intern 테이블의 비교·해시는 대소문자를
- *          무시하므로 `TagID` 와 `TAGID` 는 한 항목으로 합쳐지고, 그 뒤 줄의 인덱스가 전부
- *          한 칸씩 밀린다. AllocationInfo 생성자의 개수 단정이 그것을 잡는다.
+ *          **대소문자만 다른 이름을 짓지 마십시오.** intern 테이블의 비교와 해시는 대소문자를 무시하므로 `TagID` 와
+ *          `TAGID` 는 한 항목으로 합쳐지고, 그 뒤 줄의 인덱스가 모두 한 칸씩 밀립니다. AllocationInfo 생성자의 개수 확인이
+ *          이를 잡습니다.
  *
- *          그러므로 새 이름은 **끝에 덧붙인다**. 중간에 끼워 넣거나 순서를 바꾸면 번호가 전부
- *          바뀐다.
+ *          그러므로 새 이름은 **끝에 덧붙이십시오.** 중간에 끼워 넣거나 순서를 바꾸면 번호가 모두 바뀝니다.
  */
 
 REGISTER_NAME( 0, None )

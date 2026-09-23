@@ -60,8 +60,8 @@ namespace sw
             else if ( flag & kFSEventStreamEventFlagItemRenamed )
                 action = FileWatcherAction::RenamedNewName;
 
-            // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다 —
-            // 예전에는 macOS 만 중복 접기가 빠져 있었다.
+            // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+            // 예전에는 macOS 만 중복 합치기가 빠져 있었다.
             pushChange( action, dir, name );
         }
     }

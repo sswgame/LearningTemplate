@@ -44,7 +44,7 @@ namespace sw
             _bHasConsole          = false;
         }
 #endif
-        // 콘솔이 없어도 표준 출력은 언제나 쓸 수 있다 — 색만 포기한다.
+        // 콘솔이 없어도 표준 출력에는 언제나 쓸 수 있다. 색만 포기한다.
         return true;
     }
 
@@ -89,13 +89,13 @@ namespace sw
             OutputDebugStringA( pMessage );
         }
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-        // Linux/POSIX ANSI Escape Sequences: Bold Red (Error), Bold Yellow (Warning), Bold Green (Info), Gray (Trace)
+        // Linux · POSIX ANSI 이스케이프: 굵은 빨강(Error), 굵은 노랑(Warning), 굵은 초록(Info), 회색(Trace)
         static constexpr const utf8* arrAnsiColor[] =
             {
-                "\033[1;31m", // Error: Bold Red
-                "\033[1;33m", // Warning: Bold Yellow
-                "\033[1;32m", // Info: Bold Green
-                "\033[0;90m", // Trace: Gray
+                "\033[1;31m", // Error: 굵은 빨강
+                "\033[1;33m", // Warning: 굵은 노랑
+                "\033[1;32m", // Info: 굵은 초록
+                "\033[0;90m", // Trace: 회색
             };
         static constexpr const utf8* kAnsiReset = "\033[0m";
 

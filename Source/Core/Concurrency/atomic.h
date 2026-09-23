@@ -1,8 +1,8 @@
 /**
  * @file atomic.h
- * @brief PROPERTY/직렬화가 가능한 원자 값 래퍼
- * @details std::atomic은 복사·memcpy가 불가해서 리플렉션 프로퍼티로 쓸 수 없습니다.
- *          이 래퍼는 load/store로 값을 옮기므로 텍스트·바이너리 핸들러와 PROPERTY()가 가능합니다.
+ * @brief PROPERTY 로 노출하고 직렬화할 수 있는 원자 값 래퍼입니다.
+ * @details std::atomic 은 복사도 memcpy 도 할 수 없어서 리플렉션 프로퍼티로 쓸 수 없습니다. 이 래퍼는 load/store 로 값을
+ *          옮기므로 텍스트 · 바이너리 핸들러와 PROPERTY() 를 쓸 수 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,7 +12,7 @@
 namespace sw
 {
     /**
-     * @brief std::atomic<T>를 감싼 값입니다. 복사·직렬화는 저장된 값만 옮깁니다.
+     * @brief std::atomic<T> 를 감싼 값입니다. 복사와 직렬화는 저장된 값만 옮깁니다.
      */
     template <typename T>
     class atomic
@@ -93,8 +93,8 @@ namespace sw
         }
 
         /**
-         * @brief 값이 @p value 보다 작으면 @p value 로 올리고, 바꾸기 전 값을 돌려줍니다(C++26 `std::atomic::fetch_max` 와 같은 뜻).
-         * @details CAS 로 돕니다. 되살린 ID 뒤로 발급 카운터를 미는 자리처럼 드물게 쓰는 용도입니다.
+         * @brief 값이 @p value 보다 작으면 @p value 로 올리고, 바꾸기 전의 값을 반환합니다(C++26 `std::atomic::fetch_max` 와 같습니다).
+         * @details CAS 루프로 구현합니다. 되살린 ID 뒤로 발급 카운터를 밀어 두는 곳처럼 드물게 쓰는 용도입니다.
          */
         T fetch_max( T value, std::memory_order order = std::memory_order_seq_cst ) noexcept
         {

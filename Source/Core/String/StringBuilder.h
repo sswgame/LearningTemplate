@@ -1,12 +1,12 @@
 /**
  * @file StringBuilder.h
- * @brief 고정 크기 스택 버퍼(Small String Optimization)로 시작해 용량 초과 시 힙으로 확장하는 고성능 문자열 빌더(sw::StringBuilder)
+ * @brief 고정 크기 스택 버퍼로 시작해 용량을 넘으면 힙으로 늘어나는 문자열 빌더(sw::StringBuilder)입니다.
  *
- * [주요 아키텍처 및 최적화 기법]:
- * 1. Hybrid Stack/Heap Storage: 템플릿 인자 `Capacity` 크기의 스택 정적 배열(`_staticBuffer`)에서 0-Alloc으로 시작.
- * 2. Dynamic Capacity Growth (`ensureCapacity`): 스택 용량을 초과할 때만 힙(`_dynamicBuffer`)을 2배씩 동적 할당하여 포인터 전환.
- * 3. In-Place Formatting (`appendFormat`): 타입 세이프 포맷터를 통해 스택/힙 버퍼에 직결 포맷팅하여 임시 std::string 생성을 배제.
- * 4. Move Semantics: 힙 버퍼 소유 시 0-Copy 포인터 이전 지원.
+ * [구조와 최적화]
+ * 1. 스택 · 힙 혼합 저장: 템플릿 인자 `Capacity` 크기의 스택 배열(`_arrStaticBuffer`)에서 할당 없이 시작합니다.
+ * 2. 용량 증가(`ensureCapacity`): 스택 용량을 넘을 때만 힙 버퍼(`_pDynamicBuffer`)를 두 배씩 늘려 할당하고 포인터를 바꿉니다.
+ * 3. 제자리 포맷(`appendFormat`): 타입 안전 포맷터로 스택 · 힙 버퍼에 바로 포맷해 임시 std::string 을 만들지 않습니다.
+ * 4. 이동: 힙 버퍼를 가지고 있으면 복사 없이 포인터만 넘깁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -21,17 +21,16 @@ namespace sw
     template <uint32 Capacity = 256>
     /**
      * @class StringBuilder
-     * @brief 초기 고정 용량 스택 버퍼로 할당 없이 동작하며, 필요 시 힙 버퍼로 자동 확장하는 문자열 빌더
+     * @brief 처음에는 고정 용량 스택 버퍼로 할당 없이 동작하고, 필요하면 힙 버퍼로 자동으로 늘어나는 문자열 빌더입니다.
      */
     class StringBuilder
     {
     public:
         /**
-         * @brief 스택 버퍼(_arrStaticBuffer)를 초기 버퍼로 지정하고 널 종단 문자로 초기화합니다.
-         * @note `_arrStaticBuffer` 는 **일부러 값 초기화하지 않는다.** 아래에서 `[0] = '\0'` 로 널 종단을
-         *       세우고 이후 모든 쓰기가 `_length` 와 종단을 함께 유지하므로, `Capacity` 바이트를 0으로
-         *       채우는 것은 그대로 낭비다. 직렬화는 스칼라 값 하나마다 StringBuilder<8192> 를 만든다 —
-         *       값 하나 쓸 때마다 8KB memset 을 내고 있었다.
+         * @brief 스택 버퍼(_arrStaticBuffer)를 처음 버퍼로 두고 널 문자로 끝냅니다.
+         * @note `_arrStaticBuffer` 는 **일부러 값 초기화하지 않습니다.** 아래에서 `[0] = '\0'` 으로 널 종료를 세우고, 이후 모든
+         *       쓰기가 `_length` 와 종료 문자를 함께 유지하므로 `Capacity` 바이트를 0 으로 채우는 것은 낭비입니다. 직렬화는
+         *       스칼라 값 하나마다 StringBuilder<8192> 를 만들기 때문에, 값 하나를 쓸 때마다 8KB memset 을 하고 있었습니다.
          */
         StringBuilder() noexcept
             : _pDynamicBuffer{ nullptr }
@@ -43,7 +42,7 @@ namespace sw
         }
 
         /**
-         * @brief 소멸자: 힙 동적 버퍼가 할당되어 있다면 안전하게 해제합니다.
+         * @brief 힙 버퍼를 할당했으면 해제합니다.
          */
         ~StringBuilder()
         {
@@ -54,13 +53,13 @@ namespace sw
             }
         }
 
-        /** @brief 복사 생성 금지 */
+        /** @brief 복사를 금지합니다. */
         StringBuilder( const StringBuilder& ) = delete;
-        /** @brief 복사 대입 금지 */
+        /** @brief 복사 대입을 금지합니다. */
         StringBuilder& operator=( const StringBuilder& ) = delete;
 
         /**
-         * @brief 이동 생성자: 힙 버퍼가 있는 경우 포인터를 이전하고, 스택 버퍼인 경우 스택 버퍼를 복사합니다.
+         * @brief 힙 버퍼를 가지고 있으면 포인터를 넘겨받고, 스택 버퍼면 내용을 복사합니다.
          */
         StringBuilder( StringBuilder&& other ) noexcept
             : _pDynamicBuffer{ other._pDynamicBuffer }
@@ -88,7 +87,7 @@ namespace sw
         }
 
         /**
-         * @brief 이동 대입 연산자: 기존 힙 버퍼를 정리하고 우측 객체의 버퍼 상태를 소유권 이전합니다.
+         * @brief 가지고 있던 힙 버퍼를 정리한 뒤, 상대의 버퍼를 넘겨받습니다.
          */
         StringBuilder& operator=( StringBuilder&& other ) noexcept
         {
@@ -122,15 +121,15 @@ namespace sw
         }
 
         /**
-         * @brief 동적 버퍼 할당 및 용량 확장 (2배 지수 확장 전략)
-         * @return 요청한 만큼 담을 수 있으면 true. **false 면 버퍼는 손대지 않은 그대로다.**
-         * @details 예전에는 `Memory::allocate` 의 결과를 보지 않고 곧장 `Memory::copy` 의 목적지로
-         *          넘겼다. 할당이 지면(널) 널에 복사하고, 이어서 `_pBuffer` 가 널이 된 채 `_capacity`
-         *          만 커져서 **그 뒤의 모든 append 가 널에 쓴다.** 실패하면 아무것도 바꾸지 않는 쪽이
-         *          맞다 — 지금까지 쌓은 내용이 그대로 살아 있고, 호출부는 잘린 문자열을 본다.
+         * @brief 힙 버퍼를 할당하거나 용량을 늘립니다(두 배씩 늘립니다).
+         * @return 요청한 만큼 담을 수 있으면 true. **false 면 버퍼는 손대지 않은 그대로입니다.**
+         * @details 예전에는 `Memory::allocate` 의 결과를 확인하지 않고 곧바로 `Memory::copy` 의 목적지로 넘겼습니다. 할당이
+         *          실패하면(nullptr) nullptr 에 복사하고, 이어서 `_pBuffer` 가 nullptr 인 채로 `_capacity` 만 커져서 **그 뒤의 모든
+         *          append 가 nullptr 에 씁니다.** 실패하면 아무것도 바꾸지 않는 쪽이 맞습니다. 지금까지 쌓은 내용이 그대로 남고,
+         *          호출하는 쪽은 잘린 문자열을 보게 됩니다.
          *
-         *          여기서 로그를 남기지 않는 이유는 **로거 자신이 이 클래스를 쓰기 때문이다**
-         *          (`formatString.h` 가 stderr 로 직접 찍는 것과 같은 이유다).
+         *          여기서 로그를 남기지 않는 이유는 **로거 자신이 이 클래스를 쓰기 때문입니다**(`formatString.h` 가 stderr 로 직접
+         *          출력하는 것과 같은 이유입니다).
          */
         SW_NOINLINE bool ensureCapacity( uint32 additionalSize )
         {
@@ -185,7 +184,7 @@ namespace sw
             return append( pStr, strLen );
         }
 
-        /** @brief 길이 지정 C 문자열을 뒤에 이어 붙입니다 (strlen 오버헤드 생략). */
+        /** @brief 길이가 정해진 C 문자열을 뒤에 이어 붙입니다(strlen 비용을 아낍니다). */
         SW_INLINE StringBuilder& append( const utf8* pStr, const uint32 strLen )
         {
             if ( pStr == nullptr || strLen == 0 )
@@ -200,7 +199,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 단일 문자를 뒤에 이어 붙입니다. */
+        /** @brief 문자 하나를 뒤에 붙입니다. */
         SW_INLINE StringBuilder& append( const utf8 c )
         {
             if ( ensureCapacity( 1 ) == false )
@@ -212,7 +211,7 @@ namespace sw
         }
 
         /**
-         * @brief 32비트 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
+         * @brief 32비트 정수를 버퍼에 할당 없이 포맷해 이어 붙입니다.
          */
         SW_INLINE StringBuilder& append( const int32 val )
         {
@@ -224,7 +223,7 @@ namespace sw
         }
 
         /**
-         * @brief 32비트 부호없는 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
+         * @brief 32비트 부호 없는 정수를 버퍼에 할당 없이 포맷해 이어 붙입니다.
          */
         SW_INLINE StringBuilder& append( const uint32 val )
         {
@@ -236,7 +235,7 @@ namespace sw
         }
 
         /**
-         * @brief 64비트 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
+         * @brief 64비트 정수를 버퍼에 할당 없이 포맷해 이어 붙입니다.
          */
         SW_INLINE StringBuilder& append( const int64 val )
         {
@@ -248,7 +247,7 @@ namespace sw
         }
 
         /**
-         * @brief 64비트 부호없는 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
+         * @brief 64비트 부호 없는 정수를 버퍼에 할당 없이 포맷해 이어 붙입니다.
          */
         SW_INLINE StringBuilder& append( const uint64 val )
         {
@@ -259,7 +258,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 32비트 실수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다. */
+        /** @brief 32비트 실수를 버퍼에 할당 없이 포맷해 이어 붙입니다. */
         SW_INLINE StringBuilder& append( const float32 val )
         {
             if ( ensureCapacity( constant::kMaxBuffer32 ) == false )
@@ -269,7 +268,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 64비트 실수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다. */
+        /** @brief 64비트 실수를 버퍼에 할당 없이 포맷해 이어 붙입니다. */
         SW_INLINE StringBuilder& append( const float64 val )
         {
             if ( ensureCapacity( constant::kMaxBuffer64 ) == false )
@@ -279,7 +278,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 포맷 문자열과 가변 인자를 이어 붙입니다. */
+        /** @brief 포맷 문자열과 가변 인자를 포맷해 이어 붙입니다. */
         template <typename... Args>
         SW_INLINE StringBuilder& appendFormat( string_view format, Args&&... args )
         {
@@ -297,13 +296,13 @@ namespace sw
 
             for ( ;; )
             {
-                // 재시도 루프라 **forward 하지 않는다.** std::forward 는 한 번 쓰는 계약인데 여기서
-                // 버퍼가 모자라면 같은 팩을 다시 넘긴다 — 지금은 formatstring 이 인자를 읽기만 해서
-                // 문제가 안 나지만, 옮길 여지가 생기는 순간 두 번째 시도가 빈 값을 찍는다.
+                // 재시도 루프라서 **forward 하지 않는다.** std::forward 는 한 번만 쓰기로 한 약속인데, 여기서는 버퍼가 모자라면
+                // 같은 인자 팩을 다시 넘긴다. 지금은 formatstring 이 인자를 읽기만 해서 문제가 없지만, 인자를 옮길 여지가 생기는
+                // 순간 두 번째 시도가 빈 값을 출력한다.
                 formatstring( _pBuffer + _length, available, format, args... );
                 const uint32 written = StringUtil::strlen( _pBuffer + _length );
 
-                // formatstring이 available-1까지 꽉 채워졌다면 버퍼가 부족했을 수 있으므로 확장 후 재시도
+                // formatstring 이 available - 1 까지 꽉 채웠다면 버퍼가 모자랐을 수 있으므로, 늘린 뒤 다시 시도한다
 
                 if ( written < available - 1 )
                 {
@@ -313,8 +312,8 @@ namespace sw
 
                 _pBuffer[_length] = '\0';
 
-                // 못 키우면 **여기서 끝낸다.** 예전에는 실패를 보지 않아 `available` 이 그대로였고,
-                // 같은 크기로 다시 찍고 다시 늘리려는 루프가 영영 돌았다.
+                // 늘리지 못하면 **여기서 끝낸다.** 예전에는 실패를 확인하지 않아 `available` 이 그대로였고, 같은 크기로 다시 포맷하고
+                // 다시 늘리려는 루프가 끝없이 돌았다.
                 if ( ensureCapacity( available ) == false )
                     return *this;
 
@@ -325,16 +324,16 @@ namespace sw
         /** @brief 널 종료 C 문자열 포인터를 반환합니다. */
         SW_INLINE const utf8* c_str() const noexcept { return _pBuffer; }
 
-        /** @brief 현재 내용을 가벼운 string_view로 반환합니다. */
+        /** @brief 현재 내용을 string_view 로 반환합니다. */
         SW_INLINE string_view view() const noexcept { return string_view( _pBuffer, _length ); }
 
-        /** @brief 현재 문자열 길이를 반환합니다 (널 제외). */
+        /** @brief 현재 문자열 길이를 반환합니다(널 문자 제외). */
         SW_INLINE uint32 size() const noexcept { return _length; }
 
         /** @brief 현재 버퍼 용량을 반환합니다. */
         SW_INLINE uint32 capacity() const noexcept { return _capacity; }
 
-        /** @brief 내용을 비웁니다 (버퍼 메모리는 유지). */
+        /** @brief 내용을 비웁니다(버퍼 메모리는 그대로 둡니다). */
         SW_INLINE void clear() noexcept
         {
             _length     = 0;

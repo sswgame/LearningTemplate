@@ -1,6 +1,6 @@
 /**
  * @file CoreMinimal.h
- * @brief Core TU 프리루드 — 기본 타입·컨테이너·문자열·로그·메모리·수학·파일.
+ * @brief Core 를 쓰는 TU 가 먼저 포함하는 묶음입니다 — 기본 타입 · 컨테이너 · 문자열 · 로그 · 메모리 · 수학 · 파일.
  */
 #pragma once
 #include "Core/Common/Defines.h"

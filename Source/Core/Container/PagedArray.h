@@ -20,7 +20,7 @@ namespace sw
      *          청크 포인터를 release 로 발행합니다. 그래서 읽는 쪽(`find`)은 청크 포인터 하나만 acquire 로 읽으면 되고,
      *          아직 없는 청크면 nullptr 을 받습니다.
      *
-     *          쓰는 곳은 둘입니다. `HandleTable` 은 슬롯을 여기에 두고 RHI 가 드로우마다 락 없이 찾습니다.
+     *          쓰는 곳은 둘입니다. `SlotHandleTable` 은 슬롯을 여기에 두고 RHI 가 드로우마다 락 없이 찾습니다.
      *          `GameObjectManager` 는 objectId → GameObject* 표를 여기에 두고 핸들을 풀 때마다 락 없이 읽습니다.
      *          예전에는 둘이 청크 표를 각자 구현했습니다.
      *
@@ -60,13 +60,13 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         PagedArray& operator=( const PagedArray& ) = delete;
 
-        /** @brief @p index 가 이 배열이 다룰 수 있는 범위인지 돌려줍니다. */
+        /** @brief @p index 가 이 배열이 다룰 수 있는 범위인지 반환합니다. */
         static constexpr bool isInRange( uint64 index ) { return index < kCapacity; }
 
-        /** @brief 원소 주소를 돌려줍니다. 범위 밖이거나 청크가 아직 없으면 nullptr 입니다. 락이 없습니다. */
+        /** @brief 원소 주소를 반환합니다. 범위 밖이거나 청크가 아직 없으면 nullptr 입니다. 락을 잡지 않습니다. */
         SW_INLINE T* find( uint64 index ) { return const_cast<T*>( static_cast<const PagedArray*>( this )->find( index ) ); }
 
-        /** @brief 원소 주소를 돌려줍니다. 범위 밖이거나 청크가 아직 없으면 nullptr 입니다. 락이 없습니다. */
+        /** @brief 원소 주소를 반환합니다. 범위 밖이거나 청크가 아직 없으면 nullptr 입니다. 락을 잡지 않습니다. */
         SW_INLINE const T* find( uint64 index ) const
         {
             if ( isInRange( index ) == false )
@@ -78,7 +78,7 @@ namespace sw
         }
 
         /**
-         * @brief 원소 주소를 돌려주고, 청크가 없으면 만들어 발행합니다. 범위 밖이면 nullptr 입니다.
+         * @brief 원소 주소를 반환하고, 청크가 없으면 만들어 발행합니다. 범위 밖이면 nullptr 입니다.
          * @details 새 청크는 원소를 전부 값 초기화한 뒤에 release 로 발행합니다. 그래서 `find` 로 청크를 본 스레드는
          *          초기화가 끝난 원소만 봅니다. 쓰는 쪽끼리는 직렬화하지 않습니다.
          */

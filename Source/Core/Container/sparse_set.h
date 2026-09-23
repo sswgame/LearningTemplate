@@ -1,8 +1,8 @@
 /**
  * @file sparse_set.h
- * @brief uint32 키 → T. 삽입·삭제·조회 O(1).
- * @details packed 레이아웃입니다. dense 키와 T를 나란히 두고, 삭제는 둘 다 swap-remove 합니다.
- *          T의 주소는 같은 셋의 삽입·삭제 이후 유효하지 않습니다. 저장은 키/핸들만 하십시오.
+ * @brief uint32 키 → T 매핑입니다. 삽입 · 삭제 · 조회가 모두 O(1) 입니다.
+ * @details packed 배치입니다. dense 키 배열과 T 배열을 나란히 두고, 삭제할 때는 둘 다 swap-remove 합니다.
+ *          그래서 같은 셋에서 삽입 · 삭제가 일어나면 T 의 주소가 바뀝니다. 오래 들고 있을 때는 키나 핸들만 저장하십시오.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -14,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief 키와 값을 dense 배열에 붙이는 sparse set입니다.
+     * @brief 키와 값을 dense 배열에 촘촘히 붙여 두는 sparse set 입니다.
      */
     template <typename T>
     class sparse_set
@@ -172,10 +172,10 @@ namespace sw
 
         if ( contains( key ) )
         {
-            // **먼저 만들고 대입한다.** 예전에는 제자리에서 지운 뒤 다시 지었는데, 그러면 두 가지가
-            // 깨진다: (1) 생성자가 던지면 이미 지워진 칸이 남아 나중에 **두 번 지워진다**,
-            // (2) 인자가 그 칸 자신을 가리키면(`set.emplace( k, set[k] )`) **지워진 것에서**
-            // 만들게 된다. 임시를 먼저 짓고 옮겨 넣으면 둘 다 없다.
+            // 먼저 만들고 대입한다. 예전에는 제자리에서 소멸시킨 뒤 다시 생성했는데, 그러면 두 가지가 깨진다.
+            // (1) 생성자가 예외를 던지면 이미 소멸된 칸이 남아 나중에 두 번 소멸된다.
+            // (2) 인자가 그 칸 자신을 가리키면(`set.emplace( k, set[k] )`) 이미 소멸된 객체로 새 값을 만들게 된다.
+            // 임시 객체를 먼저 만들고 옮겨 넣으면 둘 다 생기지 않는다.
             _listDenseValue[_listSparse[key]] = T( std::forward<Args>( args )... );
             return;
         }

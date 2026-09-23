@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 전역 활성 데드락 감지기 인스턴스 포인터 */
+        /** @brief 프로세스 전역 활성 데드락 탐지기를 가리키는 포인터입니다. */
         atomic<DeadlockDetector*> s_activeDetector{ nullptr };
 
     } // namespace
@@ -29,7 +29,7 @@ namespace sw
     }
 
     /**
-     * @brief 데드락 감지기를 초기화하고 활성 감지기로 등록합니다.
+     * @brief 데드락 탐지기를 초기화하고 활성 탐지기로 등록합니다.
      */
     void DeadlockDetector::initialize()
     {
@@ -43,7 +43,7 @@ namespace sw
     }
 
     /**
-     * @brief 데드락 감지기를 종료하고 전역 등록을 해제합니다.
+     * @brief 데드락 탐지기를 끄고 전역 등록을 해제합니다.
      */
     void DeadlockDetector::shutdown()
     {
@@ -62,7 +62,7 @@ namespace sw
     }
 
     /**
-     * @brief 스레드가 특정 락을 획득하기 직전 호출되어 대기 상태를 기록하고 사이클을 검사합니다.
+     * @brief 락을 얻기 직전에 불려 대기 상태를 기록하고 사이클을 검사합니다.
      */
     void DeadlockDetector::recordLockIntended( void* pLock )
     {
@@ -80,15 +80,15 @@ namespace sw
         state._pWaitingLock     = pLock;
         state._waitingCallStack = currentStack;
 
-        // 순환 대기 체인 발생 여부 실시간 검사
+        // 순환 대기가 생겼는지 바로 검사한다
         if ( hasCycle( tid, pLock ) )
         {
-            // hasCycle 내부에서 dumpDeadlock()이 호출되고 중단됩니다.
+            // hasCycle 안에서 dumpDeadlock() 을 부르고 멈춘다.
         }
     }
 
     /**
-     * @brief 스레드가 락 획득에 성공했을 때 호출되어 소유권을 기록합니다.
+     * @brief 락을 얻었을 때 불려 소유권을 기록합니다.
      */
     void DeadlockDetector::recordLockAcquired( void* pLock )
     {
@@ -100,13 +100,12 @@ namespace sw
         std::scoped_lock<sw::mutex> lock{ _mutex };
         ThreadState&                state = _mapThreadState[tid];
 
-        // `lock()` 은 바로 앞에서 recordLockIntended 로 이 락을 기다린다고 적어 두므로, 그때 뜬 스택이
-        // 곧 획득 지점의 스택이다 — 한 번 더 뜨지 않는다. 하지만 **`try_lock()` 은 그 단계가 없다**
-        // (기다리지 않으니 사이클 검사를 돌릴 이유도 없다). 그 경로에서 예전 스택을 그대로 쓰면
-        // 데드락 덤프의 "Acquired at" 이 **전혀 다른 락을 잡던 자리**를 가리킨다 — 탐지기의 유일한
-        // 쓸모가 "어디서 잡았나" 인데 거기서 거짓말을 하게 된다. 그래서 기다린 락이 이 락일 때만
-        // 재사용하고, 아니면 여기서 뜬다. (판단에 쓰는 `_mapThreadState` 는 이 락 안에서만 만진다 —
-        // 밖에서 `operator[]` 로 들여다보면 그 자체가 공유 맵에 대한 쓰기다.)
+        // `lock()` 은 바로 앞에서 recordLockIntended 로 이 락을 기다린다고 적어 두므로, 그때 캡처한 스택이 곧 획득 지점의
+        // 스택이다. 그래서 다시 캡처하지 않는다. 하지만 `try_lock()` 에는 그 단계가 없다(기다리지 않으니 사이클 검사를 할
+        // 이유도 없다). 그 경로에서 예전 스택을 그대로 쓰면 데드락 덤프의 "Acquired at" 이 전혀 다른 락을 잡던 곳을 가리킨다.
+        // 탐지기의 유일한 쓸모가 "어디서 잡았는가" 인데 바로 거기서 틀린 정보를 주게 된다. 그래서 기다린 락이 이 락일 때만
+        // 재사용하고, 아니면 여기서 캡처한다. (판단에 쓰는 `_mapThreadState` 는 이 락 안에서만 만진다. 밖에서 `operator[]` 로
+        // 들여다보는 것 자체가 공유 맵에 대한 쓰기다.)
         if ( state._pWaitingLock == pLock )
         {
             state._mapAcquiredCallStack[pLock] = state._waitingCallStack;
@@ -126,7 +125,7 @@ namespace sw
     }
 
     /**
-     * @brief 스레드가 락을 해제했을 때 호출되어 소유권을 반환합니다.
+     * @brief 락을 풀었을 때 불려 소유권을 반납합니다.
      */
     void DeadlockDetector::recordLockReleased( void* pLock )
     {
@@ -147,7 +146,7 @@ namespace sw
     }
 
     /**
-     * @brief Wait-For Graph에서 시작 스레드부터 대기 체인을 따라가며 순환(Cycle) 여부를 판정합니다.
+     * @brief 대기 그래프(wait-for graph)에서 시작 스레드부터 대기 체인을 따라가며 순환이 있는지 판정합니다.
      */
     bool DeadlockDetector::hasCycle( std::thread::id startThreadId, void* pLockRequested )
     {
@@ -162,14 +161,14 @@ namespace sw
             auto ownerIt = _mapLockOwner.find( pCurrentLock );
             if ( ownerIt == _mapLockOwner.end() )
             {
-                // 현재 락의 소유자가 없으면 데드락이 아님
+                // 이 락을 가진 스레드가 없으면 데드락이 아니다
                 return false;
             }
 
             std::thread::id ownerThread = ownerIt->second;
             if ( ownerThread == startThreadId || std::find( listPath.begin(), listPath.end(), ownerThread ) != listPath.end() )
             {
-                // 대기 체인이 시작 스레드로 되돌아왔거나 체인 내 순환이 발생했으므로 교착상태 확정!
+                // 대기 체인이 시작 스레드로 돌아왔거나 체인 안에서 순환이 생겼다. 교착 상태가 확정됐다.
                 listPath.push_back( ownerThread );
                 dumpDeadlock( listPath );
                 return true;
@@ -178,18 +177,18 @@ namespace sw
             auto stateIt = _mapThreadState.find( ownerThread );
             if ( stateIt == _mapThreadState.end() || stateIt->second._pWaitingLock == nullptr )
             {
-                // 소유자 스레드가 다른 락을 기다리고 있지 않으므로 체인 종료
+                // 락을 가진 스레드가 다른 락을 기다리지 않으므로 체인이 끝난다
                 return false;
             }
 
-            // 소유자 스레드가 대기 중인 다음 락으로 추적 진행
+            // 락을 가진 스레드가 기다리는 다음 락으로 따라간다
             currentThread = ownerThread;
             pCurrentLock  = stateIt->second._pWaitingLock;
         }
     }
 
     /**
-     * @brief 교착상태에 연루된 모든 스레드와 락의 호출 스택을 상세히 출력하고 디버거를 중단합니다.
+     * @brief 교착 상태에 걸린 모든 스레드와 락의 콜 스택을 자세히 출력하고 디버거에서 멈춥니다.
      */
     void DeadlockDetector::dumpDeadlock( const vector<std::thread::id>& listCycle )
     {

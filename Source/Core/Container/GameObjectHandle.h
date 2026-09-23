@@ -1,8 +1,8 @@
 /**
  * @file GameObjectHandle.h
- * @brief 게임 오브젝트 핸들. 프레임을 넘겨 들고 있을 때는 핸들을, 지금 당장 쓸 때만 `GameObject*` 를 씁니다.
+ * @brief 게임 오브젝트 핸들입니다. 프레임을 넘겨 들고 있을 때는 핸들을, 지금 바로 쓸 때만 `GameObject*` 를 씁니다.
  *
- * @note `ComponentHandle` 과 같은 자리(`Core/Container`)에 둡니다. objectId 정수 하나뿐인 값 타입이라 Core 밖을 모릅니다.
+ * @note `ComponentHandle` 과 같은 곳(`Core/Container`)에 둡니다. objectId 정수 하나뿐인 값 타입이라 Core 밖을 모릅니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"

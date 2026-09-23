@@ -1,6 +1,8 @@
 /**
  * @file X11MacroUndef.h
- * @brief X11 매크로를 해제하고 C++ 호환 타입 정의(Bool, Status)를 유지합니다. include guard가 없습니다 — Xlib/GLX 포함 직후마다 다시 include 합니다.
+ * @brief X11 이 흔한 이름으로 정의한 매크로(None · Bool · Status · True · False 등)를 지웁니다.
+ * @details `Bool` · `Status` 는 X11 API 가 타입으로도 쓰므로 같은 이름의 typedef 로 다시 정의해 둡니다.
+ *          include guard 가 없습니다 — Xlib · GLX 를 포함할 때마다 바로 뒤에 다시 include 합니다.
  */
 
 #if defined( SW_PLATFORM_LINUX )
