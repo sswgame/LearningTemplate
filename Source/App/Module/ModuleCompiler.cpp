@@ -101,7 +101,7 @@ namespace sw
     string ModuleCompiler::findBuildDirectory() const
     {
         string       resultDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        const string parentDir = FileUtil::getDirectoryPart( resultDir ); // parent of Bin
+        const string parentDir = FileUtil::getDirectoryPart( resultDir ); // Bin 의 상위 폴더
 
         if ( FileUtil::fileExists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
              FileUtil::fileExists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
@@ -154,9 +154,8 @@ namespace sw
             if ( outputLine.empty() )
                 continue;
 
-            // 이미 로드된 DLL 을 다시 링크하려다 막힌 경우다. 링커 메시지만 보면 원인이 안 보이므로
-            // 따로 표시해 두고 아래에서 사람이 읽을 수 있는 설명을 남긴다 — 핫리로드로 고칠 수 없는
-            // 상황(엔진 자체가 바뀜)이라 재시작이 필요하다는 것이 요점이다.
+            // 이미 로드된 DLL 을 다시 링크하려다 막힌 경우다. 링커 메시지만으로는 원인이 보이지 않으므로 따로 표시해 두고, 아래에서
+            // 사람이 읽을 수 있는 설명을 남긴다. 핫 리로드로 고칠 수 없는 상황(엔진 자체가 바뀜)이라 다시 시작해야 한다는 것이 요점이다.
             if ( outputLine.find( "failed to write output" ) != string::npos && outputLine.find( "permission denied" ) != string::npos )
                 _bBlockedByLoadedBinary.store( 1, std::memory_order_relaxed );
 

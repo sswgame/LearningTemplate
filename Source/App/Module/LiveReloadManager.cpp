@@ -105,7 +105,7 @@ namespace sw
     {
         LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
-        // 지연 로드 훅은 모듈 DLL 안에 있어 App 심볼을 못 본다 — Engine.dll 의 창구에 자기를 꽂는다.
+        // 지연 로드 훅은 모듈 DLL 안에 있어 App 의 심볼을 볼 수 없다. 그래서 이 매니저를 Engine.dll 의 창구에 등록해 둔다.
         if ( engine::getModuleHandleProvider() == nullptr )
             engine::setModuleHandleProvider( this );
     }
@@ -160,7 +160,7 @@ namespace sw
             return;
         }
 
-        // 역순 언로드: 종속된 모듈 먼저 언로드, 그 후 기반 모듈 언로드
+        // 역순으로 언로드한다. 의존하는 모듈을 먼저 내리고, 그다음 기반 모듈을 내린다.
         for ( auto it = listOrder.rbegin(); it != listOrder.rend(); ++it )
         {
             auto mapIt = _mapModule.find( *it );
@@ -397,10 +397,9 @@ namespace sw
 
         BLOCK( "Load Dynamic Library" )
         {
-            // 불변식: engine::registerModuleTypes 가 매 로드 후 전역 헤드를 nullptr 로 drain 하므로,
-            // 여기 진입 시 세 헤드는 항상 nullptr 이다(캐스케이드 2번째 모듈 이후도 마찬가지).
-            // abort 는 이 스냅샷을 복원한다 → 정상 상태에서 nullptr 복원 = 올바른 결과.
-            // (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
+            // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 세 헤드는
+            // 항상 nullptr 이다(연쇄 교체의 두 번째 모듈 이후도 마찬가지다). abort 는 이 스냅샷을 되돌리므로, 정상 상태에서는
+            // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
             out._pPreviousTypeHead    = TypeRegistrar::getHead();
             out._pPreviousEnumHead    = EnumRegistrar::getHead();
             out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
@@ -439,7 +438,7 @@ namespace sw
 
         BLOCK( "Swap Module Handles" )
         {
-            // onBeforeReload 가 모듈 리소스를 만지기 전에 워커가 옛 이미지에서 빠져나와 있어야 한다.
+            // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 이미지에서 빠져나와 있어야 한다.
             if ( pPreviousHandle != nullptr && drainTasksBeforeUnload() == false )
                 return false;
 
@@ -454,7 +453,7 @@ namespace sw
                 }
                 ctx._listEventSubscription.clear();
 
-                // onBefore 이후 남은 작업. 이미 모듈을 내렸으면 스왑을 계속하고, 타임아웃은 poison만 한다.
+                // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( ctx._moduleName );
             }
@@ -545,17 +544,16 @@ namespace sw
 
     bool LiveReloadManager::drainTasksBeforeUnload()
     {
-        // App 경로에서는 _drainWorkers(= ModuleHost::drainRenderWorkers)가 실제 배수를 담당하고,
-        // 아래 폴백은 헤드리스/테스트에서만 실행됩니다. 타임아웃 상수는 양쪽이 공유합니다.
+        // App 경로에서는 _drainWorkers(= ModuleHost::drainRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
+        // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.
         constexpr uint32 kDrainTimeoutMs = LiveReloadManager::kModuleDrainTimeoutMs;
 
-        // onBeforeReload must stop module-originated work. Drain in-flight tasks so
-        // callbacks cannot enter the old image. Do not clear() — that drops unrelated
-        // GpuScene / scene-load work and skips onTaskFinished bookkeeping.
+        // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 이미지에 들어가지 못하게 한다.
+        // clear() 는 부르지 않는다. 그러면 관계없는 GpuScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         if ( engine::areEngineServicesBound() )
             engine::getSceneManager().cancelPendingAsyncLoads();
 
-        // 렌더 스레드는 TaskManager 밖에서 돈다. present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 배수한다.
+        // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
         if ( _drainWorkers.isBound() )
         {
             _drainWorkers();

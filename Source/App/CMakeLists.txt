@@ -5,8 +5,8 @@
 
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
-# 핫리로드는 Dev 전용이다 — Shipping 은 모듈을 정적 링크하므로 갈아 끼울 것이 없다.
-# 코드가 실행되지 않는 것으로는 부족하다: 바이너리에서 빠져야 한다.
+# 핫 리로드는 Dev 전용이다. Shipping 은 모듈을 정적으로 링크하므로 갈아 끼울 것이 없다.
+# 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 if(SW_SHIPPING_BUILD)
 	list(FILTER APP_SOURCES EXCLUDE REGEX "Module/LiveReloadManager\\.(cpp|h)$")
 endif()
@@ -31,21 +31,21 @@ sw_addReflectionStep(App
 )
 
 # ------------------------------------------------------------------------------
-# 2) 런타임 DLL 복사 — DXC, Vulkan validation(+mimalloc)
-#    구성별로 실제 쓰이는 것만 배포한다. 예전엔 무조건 복사해서 Shipping 산출물에
+# 1) 런타임 DLL 복사: DXC, Vulkan 검증 레이어(+mimalloc)
+#    구성마다 실제로 쓰는 것만 배포한다. 예전에는 무조건 복사해서 Shipping 산출물에
 #    셰이더 컴파일러와 검증 레이어가 그대로 따라 들어갔다.
 # ------------------------------------------------------------------------------
 
 # DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일과 DXIL 리플렉션에 쓰이는데, 배포 빌드는 둘 다
-# 하지 않는다 — 셰이더는 미리 굽고(ShaderCache), 바인딩 리플렉션도 쿠킹 시점에 구운
+# 하지 않는다. 셰이더는 미리 굽고(ShaderCache), 바인딩 리플렉션도 쿠킹할 때 구워 둔
 # 매니페스트를 읽는다(ShaderReflectionLibrary). 상용 엔진이 셰이더 컴파일러를 배포하지 않는
 # 것과 같은 구조다.
 if(NOT SW_SHIPPING_BUILD)
 	sw_copyDxcDlls(App)
 endif()
 
-# Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — Debug 구성에만 배포한다.
-# (딸려오는 mimalloc 도 검증 레이어 의존성일 뿐이다.)
+# Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켜므로 Debug 구성에만 배포한다.
+# (함께 딸려 오는 mimalloc 도 검증 레이어의 의존성일 뿐이다.)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	sw_copyVulkanValidationRuntime(App)
 endif()
@@ -53,17 +53,17 @@ endif()
 sw_emitRuntimeCopies(App)
 
 # ------------------------------------------------------------------------------
-# 3) Shipping 정적 링크 시 리플렉션 등록기 보존
+# 2) Shipping 정적 링크에서 리플렉션 등록기 살리기
 # ------------------------------------------------------------------------------
-# 생성된 *.gen.cpp 의 등록기는 파일 스코프 static 객체이고(생성자가 전역 링크드 리스트에
-# 자신을 매단다) 외부에서 참조되는 심볼이 없다. Dev 는 Engine 이 DLL 이라 전부 로드되지만,
-# Shipping 은 정적 라이브러리라 링커가 "아무도 참조 안 하는 오브젝트 파일"을 통째로 버린다.
+# 생성된 *.gen.cpp 의 등록기는 파일 범위 static 객체이고(생성자가 전역 연결 리스트에
+# 자신을 매단다) 밖에서 참조하는 심볼이 없다. Dev 는 Engine 이 DLL 이라 전부 로드되지만,
+# Shipping 은 정적 라이브러리라 링커가 "아무도 참조하지 않는 오브젝트 파일"을 통째로 버린다.
 # 실제로 RHITypes.gen.cpp 가 빠져 RHIBackend 열거형이 등록되지 않았고, EngineConfig 의
-# _window._defaultRHI 역직렬화가 실패해 엔진 설정이 통째로 기본값으로 떨어졌다
-# (→ 리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
-# 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다 — 플랫폼별 링커 플래그는
-# `sw_linkWholeArchive`(cmake/Engine/TargetRules.cmake) 가 고른다. 한때 이 블록이 `WIN32`
-# 가드 안에 있어 리눅스 Shipping 만 조용히 깨졌다(docs/06_Backlog.md 2026-09-21).
+# _window._defaultRHI 역직렬화가 실패해 엔진 설정 전체가 기본값으로 떨어졌다
+# (리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
+# 그래서 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다. 플랫폼별 링커
+# 플래그는 `sw_linkWholeArchive`(cmake/Engine/TargetRules.cmake)가 고른다. 한때 이 블록이
+# `WIN32` 가드 안에 있어서 리눅스 Shipping 만 조용히 깨졌다(docs/06_Backlog.md 2026-09-21).
 if(SW_SHIPPING_BUILD)
 	set(swReflectionStaticLibs Engine)
 	sw_getDynamicModules(swDynamicModules)

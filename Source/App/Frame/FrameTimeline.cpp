@@ -42,8 +42,8 @@ namespace sw
         uint32 stepCount = static_cast<uint32>( _accumulator / _fixedDeltaTime );
         if ( stepCount > _maxFixedStepPerFrame )
         {
-            // 상한을 넘긴 잔액은 버린다. 남겨 두면 다음 프레임이 더 많은 스텝을 요구하고
-            // 그래서 더 길어지는 되먹임이 된다 — 시뮬레이션이 실시간보다 느려지는 쪽을 택한다.
+            // 상한을 넘긴 남은 시간은 버린다. 남겨 두면 다음 프레임이 더 많은 스텝을 요구하고, 그래서 더 길어지는 악순환이 된다.
+            // 시뮬레이션이 실시간보다 느려지는 쪽을 택한다.
             stepCount    = _maxFixedStepPerFrame;
             _accumulator = 0.0f;
         }

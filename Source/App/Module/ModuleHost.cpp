@@ -28,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 이 TU 로컬 헬퍼 모음 (유니티 빌드 이름 충돌을 피하려 TU 이름을 붙인다). */
+        /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct ModuleHostInternal
         {
             enum class Target : uint8
@@ -38,14 +38,12 @@ namespace sw
             };
 
             /**
-             * @brief 모듈이 호스트와 **같은 표 모양**으로 빌드됐는지 대조합니다.
-             * @details `GameAPI`/`EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체다. 모듈이
-             *          자기가 아는 자리에 채우고 호스트가 자기가 아는 자리에서 읽으므로, 서로 다른
-             *          헤더로 빌드되면 **호스트가 엉뚱한 함수를 부른다.** 예전에는 그것을 막는 것이
-             *          아래 `create != nullptr && destroy != nullptr` 뿐이었는데 — 그 둘은 **맨 앞**
-             *          이라 가운데 삽입에서도 채워진다. 가장 위험한 어긋남을 정확히 통과시켰다.
-             *          핫 리로드는 모듈만 다시 굽는 기능이라 이 어긋남이 생기는 바로 그 상황이다.
-             *          RHI 경계가 `RHIModuleAbi.h` 로 하는 대조를 여기 그대로 옮겼다.
+             * @brief 모듈이 호스트와 **같은 테이블 구조**로 빌드됐는지 대조합니다.
+             * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
+             *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** 예전에 이것을 막는
+             *          것은 아래의 `create != nullptr && destroy != nullptr` 뿐이었는데, 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도
+             *          채워집니다. 가장 위험한 어긋남을 정확히 통과시킨 셈입니다. 핫 리로드는 모듈만 다시 굽는 기능이라 이런 어긋남이
+             *          생기는 바로 그 상황입니다. RHI 경계가 `RHIModuleAbi.h` 로 하는 대조를 여기에 그대로 옮겼습니다.
              */
             static bool matchesModuleAbi( void* pLibraryModule, const utf8* pVersionSymbol, const utf8* pStampSymbol,
                                           const utf8* pModuleName )
@@ -70,7 +68,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 호스트가 제공하는 서비스 표를 만듭니다. 게임 모듈에는 gameAllowed=1 만 노출됩니다. */
+            /** @brief 호스트가 제공하는 서비스 테이블을 만듭니다. 게임 모듈에는 gameAllowed=1 인 것만 노출합니다. */
             template <Target TargetModule>
             static void buildModuleService( const ModuleHost* pHost, ModuleService& outService )
             {
@@ -214,19 +212,18 @@ namespace sw
             _moduleCompiler.reset();
         }
 
-        // 에디터·게임을 한 번의 드레인으로 내린다. 예전엔 onBefore*Reload 를 그대로 불러서
-        // drainRenderWorkers 가 두 번 돌았다 — 종료 경로에서 태스크 펜싱 타임아웃을 두 번 기다린다.
+        // 에디터 · 게임을 한 번의 비우기로 내린다. 예전에는 onBefore*Reload 를 그대로 불러서 drainRenderWorkers 가 두 번 돌았고,
+        // 그래서 종료 경로에서 태스크 대기 제한 시간을 두 번까지 기다릴 수 있었다.
         suspendModules( ModuleScope::Both, true );
 
 #if !defined( SW_SHIPPING )
-        // 콜백은 ModuleHost 의 메서드를 가리킨다 — 이 객체가 사라지기 전에 떼어 낸다.
+        // 콜백은 ModuleHost 의 메서드를 가리킨다. 이 객체가 사라지기 전에 떼어 낸다.
         //
-        // **모듈마다 건 것까지 뗀다.** 예전에는 이 둘만 떼고 `setOnBeforeReload`/`setOnAfterReload` 로
-        // 모듈마다 건 델리게이트는 그대로 두었다 — 그것도 이 객체의 메서드를 가리킨다. `App` 은
-        // ModuleHost 를 먼저 지우고 나중에 LiveReloadManager 를 내리므로, 그 사이에 리로드가 한 번
-        // 돌면 죽은 객체로 뛰어든다. 지금은 안 도는 순서지만, "뗀다" 고 적어 두고 절반만 떼면
-        // 다음 사람은 뗀 줄 안다. 이름을 여기 다시 적지 않으려고 등록부 쪽에 창구를 뒀다
-        // (키트 모듈은 설정에서 오므로 이 자리에서는 이름을 알 수도 없다).
+        // **모듈마다 건 것까지 뗀다.** 예전에는 이 둘만 떼고 `setOnBeforeReload`/`setOnAfterReload` 로 모듈마다 건 델리게이트는
+        // 그대로 두었다. 그것도 이 객체의 메서드를 가리킨다. `App` 은 ModuleHost 를 먼저 지우고 나중에 LiveReloadManager 를
+        // 내리므로, 그 사이에 리로드가 한 번 돌면 이미 사라진 객체를 부른다. 지금은 그런 순서로 돌지 않지만, "뗀다" 고 적어 두고
+        // 절반만 떼면 다음 사람은 모두 뗀 줄 안다. 이름을 여기에 다시 적지 않으려고 등록부 쪽에 창구를 두었다(키트 모듈은
+        // 설정에서 오므로 이 자리에서는 이름을 알 수도 없다).
         if ( _pLiveReloadManager != nullptr )
         {
             _pLiveReloadManager->setDrainWorkers( {} );
@@ -299,9 +296,8 @@ namespace sw
         if ( _editorApi.updateUi != nullptr )
             _editorApi.updateUi( _editor );
 
-        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고,
-        // 씬을 한 칸 틱한 다음 endEditorFrame 에서 소비된다 — 이 질의를 프레임 앞으로 옮기면
-        // Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
+        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
+        // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         _frameState._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleGameViewport();
     }
@@ -318,7 +314,7 @@ namespace sw
         if ( hasEditor() == false || _editorApi.processEvent == nullptr )
             return false;
 
-        // 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
+        // 에디터 내부 상태 갱신과 입력 필터링은 에디터 모듈 안에서 처리한다
         return _editorApi.processEvent( _editor, &event );
     }
 
@@ -396,7 +392,7 @@ namespace sw
     }
 
     // ======================================================================
-    // LiveReload 콜백 — GameFramework/Kit DLL 캐스케이드
+    // LiveReload 콜백 — GameFramework · 키트 DLL 연쇄 교체
     // ======================================================================
 
     void ModuleHost::onBeforeGameplayDllReload()
@@ -432,27 +428,26 @@ namespace sw
     }
 
     // ======================================================================
-    // 보조 — drain / poison
+    // 보조 — 비우기 · 그래프 깨짐 표시
     // ======================================================================
 
     void ModuleHost::drainRenderWorkers()
     {
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle();
-        // **디바이스가 없는 RHI 가 있다.** 백엔드 교체가 실패하면 RHI 객체는 남고 디바이스만 사라지는데,
-        // `getDevice()` 는 널 참조를 돌려주므로 그 상태로 물으면 죽는다 — 종료 경로가 그 자리를 반드시
-        // 지나간다(`EngineLoop::shutdown` 이 같은 이유로 `hasDevice()` 를 먼저 묻는다).
+        // **디바이스가 없는 RHI 가 있다.** 백엔드 교체가 실패하면 RHI 객체는 남고 디바이스만 사라지는데, `getDevice()` 는 널
+        // 참조를 반환하므로 그 상태로 물으면 죽는다. 종료 경로가 반드시 이곳을 지난다(`EngineLoop::shutdown` 도 같은 이유로
+        // `hasDevice()` 를 먼저 확인한다).
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
             _pRHI->getDevice().waitIdle();
 
-        // 렌더 워커를 재웠으면 에디터의 "렌더 대기" 표시도 같이 버려야 한다.
-        // 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 방금 그 스레드를 재웠다.
-        // 알려 주지 않으면 다음 updateUi 나 shutdown 이 waitForDrawSnapshotIdle 에서
-        // 영원히 돌아오지 않는다 — 에디터 모듈 핫리로드가 실제로 여기서 멈췄다.
+        // 렌더 워커가 일을 끝내고 쉬게 됐으면 에디터의 "렌더 대기" 표시도 함께 버려야 한다. 그 표시는 렌더 스레드의
+        // postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUi 나 shutdown 이
+        // waitForDrawSnapshotIdle 에서 영원히 돌아오지 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다.
         if ( _editor != nullptr && _editorApi.abandonPendingDraw != nullptr )
             _editorApi.abandonPendingDraw( _editor );
 
-        // 비동기 태스크 펜싱 (Module Unload 전 안전 보장). 타임아웃은 LiveReloadManager 폴백과 공유합니다.
+        // 모듈을 내리기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
         if ( engine::areEngineServicesBound() )
         {
             if ( engine::getTaskManager().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
@@ -512,7 +507,7 @@ namespace sw
 #else
         if ( pLibraryModule == nullptr )
             return false;
-        // Shipping 은 게임이 정적으로 링크되므로(위 분기) 표가 어긋날 수가 없다 — 대조는 동적 경로만.
+        // Shipping 은 게임을 정적으로 링크하므로(위 분기) 테이블이 어긋날 수 없다. 대조는 동적 경로에서만 한다.
         if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getGameModuleAbiVersion", "getGameModuleAbiStamp", "Game" ) == false )
             return false;
         PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
@@ -536,9 +531,8 @@ namespace sw
         const bool bSuspendEditor = scope != ModuleScope::Game;
         const bool bSuspendGame   = scope != ModuleScope::Editor;
 
-        // 게임만 내릴 때는 에디터가 남아 Play 상태를 유지한다 — 인스턴스가 없는 동안 죽은 게임을
-        // 계속 돌리려 하므로 먼저 시뮬레이션을 멈춘다. 에디터도 같이 내릴 때는 아래에서 인스턴스
-        // 자체가 사라지므로 멈출 대상이 없다.
+        // 게임만 내릴 때는 에디터가 남아 Play 상태를 유지한다. 인스턴스가 없는 동안 사라진 게임을 계속 돌리려 하므로 먼저
+        // 시뮬레이션을 멈춘다. 에디터도 함께 내릴 때는 아래에서 인스턴스 자체가 사라지므로 멈출 대상이 없다.
         const bool bStopSimulation = bSuspendGame && bSuspendEditor == false && hasEditor() && _editorApi.stopSimulation != nullptr;
         if ( bStopSimulation )
         {
@@ -570,7 +564,7 @@ namespace sw
     void* ModuleHost::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
     {
 #if defined( SW_SHIPPING )
-        // 정적 링크라 "로드된 모듈" 이라는 것이 없다 — 부르는 쪽이 nullptr 을 처리한다.
+        // 정적 링크라 "로드된 모듈" 이라는 것이 없다. 부르는 쪽이 nullptr 을 처리한다.
         return nullptr;
 #else
         if ( _pLiveReloadManager == nullptr )
@@ -647,7 +641,7 @@ namespace sw
     }
 
     // ======================================================================
-    // 인스턴스 생성·파괴 — 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다
+    // 인스턴스 생성 · 파괴 — 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다
     // ======================================================================
 
     void ModuleHost::rebindEditorService()
@@ -683,7 +677,7 @@ namespace sw
         if ( bReleaseApiTable )
         {
             _editorApi = {};
-            // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 코드가 없다).
+            // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 그 코드가 없다).
 #if !defined( SW_SHIPPING )
             engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
 #endif
@@ -712,8 +706,8 @@ namespace sw
 
     bool ModuleHost::createEditorInstance()
     {
-        // 디바이스를 인자로 넘기는 자리다 — 없으면 만들지 않는다. `getDevice()` 가 널 참조라
-        // 물어보는 것 자체가 죽는 길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있다.
+        // 디바이스를 인자로 넘기는 곳이다. 없으면 만들지 않는다. `getDevice()` 가 널 참조라 묻는 것 자체가 죽는 길이고, 만들어
+        // 봐야 초기화가 실패할 것이 정해져 있다.
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "RHI 디바이스가 없어 Editor 인스턴스를 만들지 않습니다." );
@@ -741,7 +735,7 @@ namespace sw
 
     bool ModuleHost::createGameInstance()
     {
-        // 위 `createEditorInstance` 와 같은 이유 — 디바이스 없이 부르면 널 참조다.
+        // 위 `createEditorInstance` 와 같은 이유다. 디바이스 없이 부르면 널 참조다.
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "RHI 디바이스가 없어 Game 인스턴스를 만들지 않습니다." );

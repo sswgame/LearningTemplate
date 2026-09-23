@@ -1,12 +1,12 @@
 /**
  * @file LiveReloadManager.h
+ * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
- * @note **여기는 App 이다 — Engine 이 아니다.** 모듈을 로드하고 교체하는 것은 런처(App)의 일이고, Engine 은 모듈이라는
- *       개념 자체를 몰라야 한다(Engine 레이어 규칙: Engine 은 Editor·GameFramework·Games 를 모른다). 예전에는 이 클래스가
- *       `Source/Engine/Module/` 에 있어 EngineLoop 이 소유했는데, 쓰는 쪽은 App(ModuleHost · ModuleCompiler · 단축키)뿐이었고
- *       Shipping 에서는 만들지도 않으면서 864 줄이 바이너리에 그대로 실렸다. 지금은 Shipping 빌드에서 **파일째 빠진다**
+ * @note **여기는 Engine 이 아니라 App 입니다.** 모듈을 로드하고 교체하는 것은 런처(App)의 일이고, Engine 은 모듈이라는 개념
+ *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor · GameFramework · Games 를 모릅니다). 예전에는 이 클래스가
+ *       `Source/Engine/Module/` 에 있어 EngineLoop 가 소유했는데, 쓰는 쪽은 App(ModuleHost · ModuleCompiler · 단축키)뿐이었고
+ *       Shipping 에서는 만들지도 않으면서 864줄이 바이너리에 그대로 실렸습니다. 지금은 Shipping 빌드에서 **파일째 빠집니다**
  *       (`Source/App/CMakeLists.txt` 의 제외 목록).
- * @brief 모듈 공유 라이브러리 섀도 복사 기반 핫 리로드 (+ 의존 캐스케이드)
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -30,11 +30,10 @@ namespace sw
 {
     class IFileWatcher;
     /**
-     * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저
-     * @note 캐스케이드는 의존 모듈을 먼저 교체(위상 정렬). 전부 prepare 성공 후에만 commit.
-     *       언로드는 위상 역순(dependent 먼저). keep-old: prepare 실패 시 새 이미지는 버리고 기존 핸들 유지.
-     *       commit 중 실패하거나 onAfter가 그래프를 poison하면 나머지 commit을 중단한다.
-     *       이미 교체된 DLL은 되돌릴 수 없음.
+     * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
+     * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
+     *       (의존하는 쪽 먼저)입니다. prepare 가 실패하면 새 이미지를 버리고 기존 핸들을 유지합니다(keep-old). commit 중에 실패하거나
+     *       onAfter 가 그래프를 깨진 상태(poison)로 표시하면 남은 commit 을 멈춥니다. 이미 교체된 DLL 은 되돌릴 수 없습니다.
      */
     class LiveReloadManager final : public IModuleHandleProvider
     {
@@ -45,12 +44,12 @@ namespace sw
         using DrainWorkersDelegate        = Delegate<void()>;
 
         /**
-         * @brief 모듈 언로드 전 in-flight 태스크 배수 타임아웃(ms). 초과 시 리로드 그래프를 poison 합니다.
-         * @details ModuleHost::drainRenderWorkers(App 경로)와 drainTasksBeforeUnload(헤드리스 폴백)가 공유합니다.
+         * @brief 모듈을 언로드하기 전에 실행 중인 태스크를 비우는 제한 시간(ms)입니다. 넘으면 리로드 그래프를 깨진 상태로 표시합니다.
+         * @details ModuleHost::drainRenderWorkers(App 경로)와 drainTasksBeforeUnload(헤드리스 폴백)가 함께 씁니다.
          */
         static constexpr uint32 kModuleDrainTimeoutMs = 5000;
 
-        /** @brief 모듈 맵과 워처를 비운 채 시작합니다. */
+        /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
         LiveReloadManager();
         /** @brief 로드된 모듈을 언로드합니다. */
         ~LiveReloadManager() override;
@@ -64,16 +63,16 @@ namespace sw
         void shutdown();
 
         /**
-         * @brief 모듈을 등록하고 섀도 로드합니다.
-         * @param moduleName DLL/SO basename (확장자 없음)
-         * @param listDependsOn 이 모듈이 의존하는 모듈 이름 (먼저 로드됨)
+         * @brief 모듈을 등록하고 섀도 복사로 로드합니다.
+         * @param moduleName DLL/SO 기본 이름(확장자 없음)
+         * @param listDependsOn 이 모듈이 의존하는 모듈 이름(먼저 로드됩니다)
          */
         bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} );
 
-        /** @brief 해당 모듈(+종속) 리로드를 예약합니다. */
+        /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. */
         void triggerReload( string_view moduleName );
 
-        /** @brief 파일 변경 사항을 모니터링하고 예약된 리로드를 수행합니다. */
+        /** @brief 파일 변경을 확인하고 예약된 리로드를 실행합니다. */
         void update();
 
         /** @brief 모듈이 리로드되기 직전에 호출될 델리게이트를 설정합니다. */
@@ -83,45 +82,43 @@ namespace sw
         void setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate );
 
         /**
-         * @brief 캐스케이드가 전부 prepare된 뒤, 첫 commit 직전에 한 번 호출됩니다.
-         * @details 키트 DLL unload 전에 SWGame을 내릴 때 사용합니다.
+         * @brief 연쇄 교체 대상이 모두 prepare 된 뒤, 첫 commit 직전에 한 번 불립니다.
+         * @details 키트 DLL 을 언로드하기 전에 SWGame 을 먼저 내릴 때 씁니다.
          */
         void setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
 
         /**
-         * @brief 모듈 언로드 직전에 호출되어 워커 스레드를 배수합니다.
-         * @details TaskManager 만으로는 부족합니다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로,
-         *          App 이 renderThread->waitIdle() / device.waitIdle() 을 여기에 연결해야
-         *          present 훅이 실행 중인 이미지를 FreeLibrary 하지 않습니다.
+         * @brief 모듈을 언로드하기 직전에 불려 워커 스레드를 비웁니다.
+         * @details TaskManager 만으로는 부족합니다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, App 이
+         *          renderThread->waitIdle() / device.waitIdle() 을 여기에 연결해야 Present 훅이 실행 중인 이미지를 FreeLibrary 하지 않습니다.
          */
         void setDrainWorkers( DrainWorkersDelegate delegate );
 
         /**
-         * @brief 모듈마다 걸어 둔 리로드 델리게이트를 **전부** 뗍니다.
-         * @details 콜백은 보통 `ModuleHost` 의 메서드를 가리킨다. 그 객체가 이 등록부보다 먼저
-         *          사라지므로, 사라지기 전에 자기 것을 떼어야 한다 — 그런데 **어떤 모듈에 걸었는지는
-         *          거는 쪽이 다 알지 못한다**(게임플레이 키트는 설정 파일에서 온다). 이름을 두 곳에
-         *          적는 대신, 아는 쪽(등록부)이 한 번에 떼어 준다.
-         * @note 배치·배수 델리게이트는 각자의 setter 로 떼십시오 — 여기서 건드리지 않는다.
+         * @brief 모듈마다 걸어 둔 리로드 델리게이트를 **모두** 뗍니다.
+         * @details 콜백은 보통 `ModuleHost` 의 메서드를 가리킵니다. 그 객체가 이 등록부보다 먼저 사라지므로 사라지기 전에 자기 것을
+         *          떼야 하는데, **어떤 모듈에 걸었는지를 거는 쪽이 모두 알지는 못합니다**(게임플레이 키트는 설정 파일에서 옵니다).
+         *          이름을 두 곳에 적는 대신, 아는 쪽(등록부)이 한 번에 떼어 줍니다.
+         * @note 배치 · 비우기 델리게이트는 각자의 setter 로 떼십시오. 여기서는 건드리지 않습니다.
          */
         void clearReloadCallbacks();
 
-        /** @brief 혼합 DLL 그래프로 간주하고 이후 리로드를 막습니다. 프로세스 재시작이 필요합니다. */
+        /** @brief DLL 그래프가 섞인 상태로 보고 이후 리로드를 막습니다. 프로세스를 다시 시작해야 합니다. */
         void markGraphBroken( string_view reason );
-        /** @brief commit 실패·사이클·바인딩 실패로 그래프가 깨졌으면 true. */
+        /** @brief commit 실패 · 순환 · 바인딩 실패로 그래프가 깨졌으면 true 입니다. */
         bool isGraphBroken() const { return _bReloadGraphBroken == SW_TRUE; }
 
-        /** @brief 현재 핫리로드 Batch 처리 중인지 여부를 반환합니다. */
+        /** @brief 지금 핫 리로드 배치를 처리 중인지 반환합니다. */
         bool isReloadingBatch() const { return _bReloadingBatch == SW_TRUE; }
 
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
         void* getModuleHandle( string_view moduleName ) const;
 
-        /** @brief 리로드 시 자동 해제를 위해 EventSubscription을 등록합니다. */
+        /** @brief 리로드할 때 자동으로 해제하도록 EventSubscription 을 등록합니다. */
         void addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token );
 
-        // --- IModuleHandleProvider — 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
-        /** @brief 리로드 그래프가 깨져 있으면 true. */
+        // --- IModuleHandleProvider: 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
+        /** @brief 리로드 그래프가 깨져 있으면 true 입니다. */
         bool isModuleGraphBroken() const override { return isGraphBroken(); }
         /** @brief 이름으로 이미 로드된 모듈 핸들을 찾습니다. */
         void* findLoadedModuleHandle( string_view moduleName ) const override { return getModuleHandle( moduleName ); }
@@ -144,27 +141,27 @@ namespace sw
 
         /** @brief 섀도 복사본을 LoadLibrary 합니다. */
         bool loadShadowCopyModule( ModuleContext& ctx );
-        /** @brief 섀도 복사본을 만들고 로드만 합니다 (아직 교체 안 함). */
+        /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
         bool prepareShadowCopy( ModuleContext& ctx, PreparedShadow& out );
-        /** @brief 섀도 핸들로 교체하고 콜백을 호출합니다. */
+        /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */
         bool commitShadowCopy( ModuleContext& ctx, PreparedShadow& prepared );
-        /** @brief prepare 실패 시 새 이미지를 버립니다. */
+        /** @brief prepare 가 실패하면 새 이미지를 버립니다. */
         void abortShadowCopy( PreparedShadow& prepared );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
         /**
-         * @brief 언로드 전 워커·태스크를 배수합니다.
-         * @return 타임아웃 없이 배수되면 true. 실패 시 그래프를 poison하고 false.
+         * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
+         * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
          */
         bool drainTasksBeforeUnload();
-        /** @brief root와 종속 모듈 이름을 중복 없이 모읍니다. */
+        /** @brief root 와 그것에 의존하는 모듈 이름을 중복 없이 모읍니다. */
         void collectDependentClosure( string_view root, vector<string>& outListUnique ) const;
-        /** @brief 의존 순으로 위상 정렬합니다. 사이클이면 false. */
+        /** @brief 의존 순서대로 위상 정렬합니다. 순환이 있으면 false 입니다. */
         bool topoSortSubgraph( const vector<string>& listName, vector<string>& outListOrdered ) const;
-        /** @brief 부분 그래프를 prepare 전부 성공한 뒤에만 commit합니다. */
+        /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
 
-        /// @brief 등록된 모듈: 경로, 핸들, 의존, 리로드 예약
+        /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).
         struct ModuleContext
         {
             OnBeforeReloadDelegate                     _onBeforeReload;
@@ -182,9 +179,9 @@ namespace sw
             atomic<bool>                               _bMtimeDebouncing;
             atomic<bool>                               _bForceReload;
 
-            /** @brief 원자 플래그 끈 기본값. */
+            /** @brief 원자 플래그를 끈 기본값으로 만듭니다. */
             ModuleContext() noexcept;
-            /** @brief 핸들과 경로를 이동합니다. */
+            /** @brief 핸들과 경로를 옮겨 받습니다. */
             ModuleContext( ModuleContext&& other ) noexcept;
             /** @brief 이동 대입입니다. */
             ModuleContext& operator=( ModuleContext&& other ) noexcept;
