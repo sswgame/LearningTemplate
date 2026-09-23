@@ -61,6 +61,44 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 }
 
 /**
+ * @brief [FileTest] 파일 도장(크기 · 쓰기 시각)은 파일을 열지 않고 바뀜을 알린다
+ * @details 내용에서 뽑은 값(셰이더 소스 해시)을 캐시하고 "그 뒤로 바뀌었나" 만 볼 때 쓴다. 크기가 달라지면 도장이 달라야 하고,
+ *          없는 파일 · 폴더는 도장이 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
+ *          여기서는 크기가 다른 재쓰기로 본다.
+ */
+SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
+{
+    const sw::string dir = test::makeTempPath( "SwFileStampTestDir" );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string path = sw::FileUtil::joinPath( dir, "Stamp.txt" );
+
+    const sw::string shortText = "0123456789";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( shortText.data() ), shortText.size() ) );
+    sw::FileStamp first{};
+    SW_ASSERT_TRUE( sw::FileUtil::getFileStamp( path, first ) );
+    SW_EXPECT_EQUAL( uint64( 10 ), first._size );
+    SW_EXPECT_TRUE( first._writeTime != 0u );
+
+    sw::FileStamp again{};
+    SW_ASSERT_TRUE( sw::FileUtil::getFileStamp( path, again ) );
+    SW_EXPECT_TRUE( first == again );
+
+    const sw::string longText = "0123456789abcdefghij";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( longText.data() ), longText.size() ) );
+    sw::FileStamp second{};
+    SW_ASSERT_TRUE( sw::FileUtil::getFileStamp( path, second ) );
+    SW_EXPECT_EQUAL( uint64( 20 ), second._size );
+    SW_EXPECT_TRUE( first != second );
+
+    sw::FileStamp none{};
+    SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( sw::FileUtil::joinPath( dir, "Missing.txt" ), none ) );
+    SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( dir, none ) );
+    SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( "", none ) );
+
+    sw::FileUtil::removeFile( path );
+}
+
+/**
  * @brief [FileTest] 디렉터리 수집이 경로 대소문자 유지
  * @details collectFiles/collectFolders 는 **실제 파일시스템을 훑어** 경로를 만든다. 그래서 돌려준 경로는
  *          그대로 열 수 있어야 한다. 예전엔 결과를 normalizePath 로 통째 소문자화해서, 대소문자를 가리는

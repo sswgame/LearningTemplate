@@ -1470,6 +1470,69 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
 }
 
 /**
+ * @brief [GpuSceneTest] 더티 표시는 64 칸 워드의 경계에서도 칸마다 정확하고, 지우기의 자리 옮김을 따라간다
+ * @details 더티 표시는 칸마다 바이트가 아니라 **워드 하나에 64 칸**이다(`PrimitiveRegistry::_arrDirtyWord`). 경계의 칸(63 · 64 ·
+ *          127 · 128)과 마지막 칸이 섞여도 소비는 선 칸만, 오름차순으로 한 번씩 내놓아야 한다. 지우기는 마지막 칸을 빈자리로 옮기며
+ *          **더티 비트도 같이 옮긴다** — 옮긴 칸이 빠지면 움직인 물체가 한 프레임 멈춰 보이고, 옛 칸에 남으면 없는 번호가 나온다.
+ */
+SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
+{
+    sw::Scene scene( "GpuSceneDirtyWords" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    constexpr uint32               kMeshCount = 200;
+    sw::vector<sw::MeshComponent*> listMesh;
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
+        sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( ( sw::string( "Word" ) + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( cube );
+        listMesh.push_back( pMesh );
+    }
+    sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    SW_ASSERT_EQUAL( size_t( kMeshCount ), registry.getAll().size() );
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+        SW_ASSERT_TRUE( registry.getAll()[index] == listMesh[index] );
+    registry.clearDirty();
+    SW_ASSERT_FALSE( registry.hasDirty() );
+
+    // 1) 경계 칸 — 뒤섞은 순서로 찍어도 오름차순으로 한 번씩.
+    const uint32 arrMarked[] = { 128, 0, 199, 63, 127, 64 };
+    for ( const uint32 slot : arrMarked )
+        registry.markDirty( listMesh[slot] );
+    registry.markDirty( listMesh[64] ); // 두 번 찍어도 하나
+    sw::vector<uint32> listSlot;
+    registry.consumeDirty( listSlot );
+    const uint32 arrExpected[] = { 0, 63, 64, 127, 128, 199 };
+    SW_ASSERT_EQUAL( size_t( 6 ), listSlot.size() );
+    for ( size_t index = 0; index < listSlot.size(); ++index )
+        SW_EXPECT_EQUAL( arrExpected[index], listSlot[index] );
+    SW_EXPECT_FALSE( registry.hasDirty() );
+
+    // 2) 지우기의 자리 옮김 — 마지막 칸(199, 더티)이 지운 칸(5)으로 오면 비트도 5 로 온다.
+    registry.markDirty( listMesh[199] );
+    registry.remove( listMesh[5] );
+    SW_EXPECT_TRUE( registry.getAll()[5] == listMesh[199] );
+    registry.consumeDirty( listSlot );
+    SW_ASSERT_EQUAL( size_t( 1 ), listSlot.size() );
+    SW_EXPECT_EQUAL( uint32( 5 ), listSlot[0] );
+
+    // 3) 옮겨 온 칸이 깨끗하면 빈자리도 깨끗해진다 — 지운 칸에 서 있던 비트가 남지 않는다.
+    registry.markDirty( listMesh[6] );
+    registry.markDirty( listMesh[7] );
+    registry.remove( listMesh[6] ); // 마지막(198, 깨끗)이 6 으로 온다
+    registry.consumeDirty( listSlot );
+    SW_ASSERT_EQUAL( size_t( 1 ), listSlot.size() );
+    SW_EXPECT_EQUAL( uint32( 7 ), listSlot[0] );
+}
+
+/**
  * @brief [GpuSceneTest] 프리미티브가 문턱을 넘으면 수집 채우기가 잡으로 나뉘어도 결과는 직렬과 같다
  * @details 워커는 프리미티브 번호 자리에만 쓰고, 앞으로 당기기와 해시는 직렬이다. 인스턴스 수와 위치의 합이
  *          직렬 씬과 같은 규칙으로 맞아야 하고, 전부 움직인 뒤(부분 수집 불가 → 다시 전체 수집) 도 그래야 한다.

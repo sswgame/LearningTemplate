@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-23 · 기준 커밋 `ae2ea357` + (B) 스물둘째(Core 최적화)
+> 마지막 갱신: 2026-09-23 · 기준 커밋 `4dfa22ea` + (B) 스물셋째(Engine 후속 넷 · 시작 시간 · 실제 프레임 시간 계측)
 
 ---
 
@@ -1247,10 +1247,8 @@ mover 1260~1329 → 1240~1299(약 −1.8 %). mover 의 렌더 스레드 `RT.Exec
   그랬다(옵션은 꺼져 있다). 고치려면 그 특수화를 `#if !defined( SW_ENABLE_STL_CONTAINER )` 로 감싼다.
 - 프리페치 · SIMD(요청 조건) · mimalloc(사용자 결정, 09-21).
 
-**Engine 쪽에서 보인 것 — 다음 후보.** (1) `PrimitiveRegistry::consumeDirty` 가 8000 개 바이트 플래그마다 원자 교환 — 64 칸짜리 워드 비트셋이면
-교환 125 번이다. (2) `FrameRenderer::gpuScopeNameFor` 가 매 프레임 이름을 intern 한다(렌더 스레드). (3) 시작 시간의 13 % 가 스플래시 창 다시
-그리기(`Win32SplashWindow::updateStatus` → `UpdateWindow`). (4) 셰이더 굽기 도장이 시작할 때마다 소스를 다시 읽어 해시한다(열기 한 번 ~200 us).
-(5) DX12 병렬 기록 중 `D3D12RHIDevice::releaseOnlineBlocksDeferred` 의 뮤텍스 경합(렌더 스레드 `mutex::lock` 의 79 %).
+**Engine 쪽에서 보인 것 — 다음 후보.** (1) ~ (4) 는 (B) 스물셋째에서 했다. (5) DX12 병렬 기록 중
+`D3D12RHIDevice::releaseOnlineBlocksDeferred` 의 뮤텍스 경합(렌더 스레드 `mutex::lock` 의 79 %)은 남았다.
 
 **함정 둘.** 컨테이너의 인라인 코드는 **모듈마다 복사된다** — 버킷 함수를 바꾼 `Engine.dll` 과 옛 `App.exe` 가 섞이면 `Engine.dll` 이 넣은 설정을
 `App.exe` 가 못 찾아 로그 없이 -1 로 끝난다(실제로 밟았다 — 백그라운드 빌드 중에 헤더를 고쳐 PCH 가 깨지고 빌드가 반쯤 멈췄다). 컨테이너
@@ -1262,6 +1260,50 @@ Engine 에 흡수된다) — 돌연변이 확인 뒤에는 전체를 다시 빌�
 자투리 · 길이만 다른 키) · `VectorResizeByOneGrowsGeometrically`(용량 변경 4096 번 → 14 번 이하). 숫자는 `ContainerBenchTest` 넷이 찍는다.
 
 **검증.** Debug · Release · Shipping · ASan 빌드 경고 0. Release 전 테스트(CoreTest 264 + 건너뜀 8 · EngineTest 648, GPU 스위트 포함) 실패 0. `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트 프리셋 20/20, 바뀐 파일의 규약 · 중괄호 · 어휘 · include 순서 · 테스트 스위트 게이트 OK. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0(평균 RGB 가 백엔드끼리 ±0.3 안). 에디터 ON(`-EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60`) dx12 · dx11 · vk · gl 창 15 / 빈 0 · 오류 0 · 종료 0. **에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙일 것** — `-gv_editorPanelDump` 는 덤프만 하고 스스로 끝나지 않는다(사용자가 창을 닫고 있었다).
+
+
+**(B) 스물셋째 — 2026-09-23 · 스물둘째가 남긴 Engine 후보 넷: 더티 표시는 64 칸 워드 · GPU 스코프는 패스마다 슬롯 캐시 · 스플래시는 늘린 배경을 한 번만 · 셰이더 소스 해시는 파일 도장으로 캐시. 그리고 시작 시간 · 실제 프레임 시간을 엔진이 직접 찍는다.**
+
+- **`PrimitiveRegistry` 더티 표시 = 워드 하나에 64 칸** (`_arrDirtyWord`). 칸마다 원자 바이트였고 `consumeDirty` 가 선 칸마다 exchange 를 했다 —
+  큐브 8000 개가 전부 움직이면 게임 스레드에서 잠긴 명령 8000 번, 그것도 방금 워커가 쓴 캐시 라인 위였다. 이제 워드마다 exchange 한 번(125
+  번)이고 켜진 비트만 `MathUtil::countTrailingZeros` 로 골라 돈다. 찍는 쪽은 그대로 "읽어 보고 없으면 `fetch_or`". 지우기의 자리 옮김은
+  `takeSlotDirty` · `storeSlotDirty` 로 비트를 옮긴다. `countTrailingZeros` 는 `TaskManager.cpp` 에만 있던 것을 `MathUtil` 로 올렸다(C++17 이라
+  `std::countr_zero` 가 없다).
+- **GPU 패스 스코프는 패스마다 프로파일러 슬롯을 캐시** (`FrameRenderer::gpuScopeSlotFor`). 렌더 스레드가 매 프레임 패스마다 이름을 intern(해시 ·
+  샤드 락 · 맵)하고 맵을 찾은 뒤 `registerScope` 가 등록된 스코프 전부(~80)를 문자열 비교로 훑었다. `GPU.Compute` · `GPU.Frame` 도 매 프레임
+  같은 선형 탐색이었다. **숨은 버그도 하나** — 이름을 `unordered_map<hashed_string, string>` 의 값으로 들고 그 포인터를 프로파일러에 넘겼는데,
+  밀집 배열이 자라며 `string` 을 옮기므로 짧은 이름(`GPU.Shadow` — 문자열 객체 안에 든다)은 프로파일러가 쥔 포인터가 빈자리를 가리킬 수
+  있었다. 이름은 이제 intern 아레나(프로세스 끝까지 제자리)에 둔다.
+- **스플래시는 늘린 배경을 한 번만** (`Win32SplashWindow::paintWindow`). 상태 줄이 바뀔 때마다 창 전체를 무효로 해 HALFTONE `StretchDIBits`
+  로 그림을 다시 늘리고 글꼴을 새로 만들었다 — 시작 시간 게임 스레드의 13 %. 이제 창 크기로 늘린 그림을 메모리 DC 에 한 번 그려 두고
+  무효 영역만 `BitBlt` 하며, 상태가 바뀌면 아래 띠(54 px)만 무효로 한다. 글꼴도 한 번 만든다.
+- **셰이더 소스 내용 해시를 파일 도장으로 캐시** (`ShaderBakeStampInternal::computeContentHash`). 셰이더 요청 하나가 같은 소스를 **세 번**
+  읽었다(`ShaderCache::getOrCompile` 의 메모리 캐시 확인 · 로컬 캐시 경로 · 굽기 신선도) — 퍼뮤테이션 · 단계마다. 이 PC 에서 파일 하나 여는
+  데 ~200 us, 크기 · 시각만 묻는 데 ~75 us 라, 해시를 크기 · 쓰기 시각과 함께 두고 두 번째부터는 파일을 열지 않는다. 고친 파일은 시각이
+  달라져 다시 읽는다(편집을 알아채는 것은 예전과 같다 — 같은 크기로 시스템 시계 한 눈금(~1 ~ 16 ms) 안에 두 번 저장하는 경우만 못 본다).
+  수동 리로드(`invalidateSharedHeaderCache`)는 이 캐시도 비운다. 크기 · 시각을 한 번에 얻는 **`FileUtil::getFileStamp`** 를 Core 에 더했다
+  (Windows 는 `GetFileAttributesExW` 하나, 그 밖은 `std::filesystem`). 기존 `getFileTimestamp` 는 초 단위라 이 용도에 못 쓴다.
+- **시작 시간 · 실제 프레임 시간을 엔진이 찍는다.** 메인 루프 진입 로그가 `startup N ms`(`App::initialize` 첫 줄부터), `-gv_profileFrames`
+  보고가 `[Profile] wall N frames in X ms = Y us/frame` 를 낸다. 구간 표는 스레드마다 **일한 시간**이라 "렌더 스레드 구간이 늘었는데 프레임은
+  빨라졌나" 를 답하지 못했다(스물하나째 · 스물둘째에서 두 번 걸렸다). 밖에서 로그 시각으로 재려던 것은 **틀린다** — 표준 출력은 에러가
+  아니면 버퍼에 머물러 끝날 때 한꺼번에 나온다.
+
+| Release · dx12 · 큐브 8000, 중앙값 (옛 = `4dfa22ea` + 계측 두 줄만, 번갈아 순서를 바꿔 여섯 번씩) | 옛 | 새 |
+|---|---|---|
+| 시작 시간 (`startup`, 메인 루프 진입까지) | 518 ~ 523 ms | 473 ~ 479 ms (약 −45 ms, −8.6 %) |
+| 실제 프레임 시간 std (`wall`) | 1079 us | 1061 us (−1.7 %) |
+| 실제 프레임 시간 mover | 1287 us | 1253 us (−2.6 %) |
+| `GT.GpuScene.build` mover | 584 ~ 607 | 543 ~ 565 |
+
+std 의 `RT.ExecutePacket` 은 539 → 581 us 로 **올랐는데 프레임은 빨라졌다** — 스물하나째 · 스물둘째에서 "경합으로 본다" 고 적은 것을 이번
+`wall` 이 확인했다: 게임 스레드가 병목이고, 렌더 스레드의 업로드(메모리 복사)가 게임 스레드의 병렬 구간과 더 자주 겹쳐 늘어 보일 뿐이다.
+GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(프로파일의 intern · 선형 탐색이 사라진 것으로 본다).
+
+**테스트.** `GpuSceneTest.PrimitiveRegistryDirtyBitsCrossWordBoundaries`(경계 칸 0 · 63 · 64 · 127 · 128 · 199 · 두 번 찍기 · 지우기가 옮기는 비트,
+옮김을 끄는 돌연변이에 실패) · `ShaderBakerTest.CachedSourceHashNoticesEditedFile`(고치면 해시가 바뀌고 되돌리면 처음 값, 도장 비교를 끄는
+돌연변이에 실패) · `FileTest.FileStampReportsSizeAndNoticesChanges`.
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0. Release 전 테스트(CoreTest 267 + 건너뜀 8 · EngineTest 648 에 새 케이스 셋) 실패 0. `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트 프리셋 20/20, 바뀐 파일의 규약 · 중괄호 · 어휘 · include 순서 · 테스트 스위트 게이트 OK. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0(평균 RGB ±0.3 안). 에디터 ON(`-EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60`) dx12 · dx11 · vk · gl 창 15 / 빈 0 · 오류 0 · 종료 0 · 로그에 `startup` 이 찍힌다.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

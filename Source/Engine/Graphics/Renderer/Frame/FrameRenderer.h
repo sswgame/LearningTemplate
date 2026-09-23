@@ -577,8 +577,23 @@ namespace sw
         atomic<uint32> _indirectDrawCallCount;
         /** @brief 지난 프레임의 타임스탬프(마이크로초, 프레임 시작 기준 누적). */
         vector<float32> _listGpuTimestampMicro;
-        /** @brief 패스 이름 -> `GPU.<패스>` 문자열. 프로파일러가 이름 포인터를 들고 있어 수명이 필요하다. */
-        unordered_map<hashed_string, string> _mapGpuScopeName;
+        /** @brief 패스 하나의 GPU 스코프 — 그 칸을 만든 패스 이름과 프로파일러 슬롯. */
+        struct GpuPassScope
+        {
+            string _passName;
+            uint32 _profilerSlot{ 0xFFFFFFFFu };
+        };
+        /**
+         * @brief 패스 번호 -> GPU 스코프 슬롯. 패스 이름이 그대로면 매 프레임 슬롯만 꺼낸다.
+         * @details 예전엔 패스마다 매 프레임 이름을 intern 하고(해시 · 샤드 락 · 맵) 맵을 찾은 뒤 `registerScope` 가 등록된
+         *          스코프 전부(~80)를 문자열 비교로 훑었다 — 렌더 스레드가 프레임마다 패스 수만큼. 그리고 그 맵은 `string` 을
+         *          밀집 배열에 담아 자랄 때 옮겼으므로, 짧은 이름(`GPU.Shadow` — 문자열 객체 안에 든다)은 프로파일러가 쥔
+         *          포인터가 옮겨진 뒤의 빈자리를 가리킬 수 있었다. 이름은 이제 intern 아레나(프로세스 끝까지 제자리)에 둔다.
+         */
+        vector<GpuPassScope> _listGpuPassScope;
+        /// @brief `GPU.Compute` · `GPU.Frame` 의 프로파일러 슬롯 — 처음 한 번 등록한다(프레임마다 선형 탐색을 하지 않는다).
+        uint32 _gpuComputeScopeSlot;
+        uint32 _gpuFrameScopeSlot;
         /// @brief 마지막 프레임의 값 (getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트 — 그 역할의 입력은 걸지 않는다.
@@ -613,8 +628,11 @@ namespace sw
          *          를 두 번 틀렸다(클리어·포맷). 상용 엔진이 전부 갖춘 이유가 그것이다.
          */
         void reportGpuPassTimes( IRHIDevice* pDevice );
-        /** @brief 패스 이름으로 `GPU.<패스>` 스코프 이름을 만들어 캐시합니다(포인터 수명이 필요하다). */
-        const utf8* gpuScopeNameFor( const string& passName );
+        /**
+         * @brief 패스 @p passIndex 의 `GPU.<패스>` 프로파일러 슬롯. 그 칸의 패스 이름이 바뀌었을 때만 다시 등록한다.
+         * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교가 알아챈다(칸마다 문자열 비교 한 번).
+         */
+        uint32 gpuScopeSlotFor( size_t passIndex, const string& passName );
         /**
          * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다 (instanceanim.hlsl).
          * @details **컬링보다 먼저** 돌아야 한다 — 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의

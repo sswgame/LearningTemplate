@@ -101,20 +101,6 @@ namespace sw
             }
         };
 
-        /** @brief 0 이 아닌 값의 가장 낮은 켜진 비트 번호. */
-        uint32 countTrailingZeros64( uint64 value )
-        {
-#if defined( __clang__ ) || defined( __GNUC__ )
-            return static_cast<uint32>( __builtin_ctzll( value ) );
-#else
-            // 이 저장소의 컴파일러는 전부 clang 이다 — 다른 컴파일러를 위한 자리라 느려도 된다.
-            uint32 index = 0;
-            while ( ( ( value >> index ) & 1u ) == 0 )
-                ++index;
-            return index;
-#endif
-        }
-
         /** @brief 병렬 그룹을 어떻게 나눌지 — 청크 크기와 큐에 넣을 티켓 수. */
         struct ParallelSplit
         {
@@ -1189,7 +1175,7 @@ namespace sw
         uint32 wokenCount = 0;
         while ( mask != 0 && wokenCount < wantedCount )
         {
-            const uint32 workerId = countTrailingZeros64( mask );
+            const uint32 workerId = MathUtil::countTrailingZeros( mask );
             const uint64 bit      = static_cast<uint64>( 1 ) << workerId;
             const uint64 previous = _idleWorkerMask.fetch_and( ~bit, std::memory_order_seq_cst );
             if ( ( previous & bit ) != 0 )

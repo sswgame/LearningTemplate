@@ -17,6 +17,8 @@ namespace sw
         struct Win32SplashWindowInternal
         {
             static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
+            /// @brief 아래 상태 띠(그라디언트 · 글자 · 진행 막대)의 높이. 상태가 바뀌면 이 띠만 다시 그린다.
+            static constexpr int32 kStatusBandHeight = 54;
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             {
@@ -27,80 +29,11 @@ namespace sw
 
                     case WM_PAINT:
                     {
-                        PAINTSTRUCT ps;
-                        HDC         hDC = BeginPaint( hWnd, &ps );
-
+                        PAINTSTRUCT        ps;
+                        HDC                hDC     = BeginPaint( hWnd, &ps );
                         Win32SplashWindow* pSplash = reinterpret_cast<Win32SplashWindow*>( GetWindowLongPtrW( hWnd, GWLP_USERDATA ) );
-                        RECT               rc;
-                        GetClientRect( hWnd, &rc );
-
-                        if ( pSplash != nullptr && pSplash->getSplashImage().isValid() )
-                        {
-                            const auto& splashData = pSplash->getSplashImage();
-
-                            BITMAPINFO bmi{};
-                            bmi.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
-                            bmi.bmiHeader.biWidth       = static_cast<LONG>( splashData._width );
-                            bmi.bmiHeader.biHeight      = -static_cast<LONG>( splashData._height ); // Top-down
-                            bmi.bmiHeader.biPlanes      = 1;
-                            bmi.bmiHeader.biBitCount    = 32;
-                            bmi.bmiHeader.biCompression = BI_RGB;
-
-                            SetStretchBltMode( hDC, HALFTONE );
-                            StretchDIBits(
-                                hDC,
-                                0, 0, rc.right - rc.left, rc.bottom - rc.top,
-                                0, 0, static_cast<int32>( splashData._width ), static_cast<int32>( splashData._height ),
-                                splashData.getPixels(),
-                                &bmi,
-                                DIB_RGB_COLORS,
-                                SRCCOPY );
-
-                            // 하단 상태 텍스트 영역 그라디언트 오버레이
-                            Gdiplus::Graphics            graphics( hDC );
-                            Gdiplus::Rect                gradientRect( 0, rc.bottom - 54, rc.right, 54 );
-                            Gdiplus::LinearGradientBrush gradientBrush(
-                                gradientRect,
-                                Gdiplus::Color( 0, 16, 20, 26 ),
-                                Gdiplus::Color( 230, 16, 20, 26 ),
-                                Gdiplus::LinearGradientModeVertical );
-                            graphics.FillRectangle( &gradientBrush, gradientRect );
-
-                            // 상태 진행 텍스트 (Segoe UI, 11pt)
-                            SetBkMode( hDC, TRANSPARENT );
-                            HFONT hSubFont = CreateFontW(
-                                -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI" );
-                            HGDIOBJ hPrevFont = SelectObject( hDC, hSubFont );
-                            SetTextColor( hDC, RGB( 190, 215, 245 ) );
-
-                            wstring wsStatus = StringUtil::utf8ToUtf16( pSplash->getStatus().c_str() );
-                            RECT    rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
-                            DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
-
-                            // 하단 프로그레스 바 배경 (어두운 반투명/차콜)
-                            RECT   rcProgBg     = { 0, rc.bottom - 4, rc.right, rc.bottom };
-                            HBRUSH hProgBgBrush = CreateSolidBrush( RGB( 20, 24, 30 ) );
-                            FillRect( hDC, &rcProgBg, hProgBgBrush );
-                            DeleteObject( hProgBgBrush );
-
-                            // 실제 진행률에 따른 프로그레스 라인
-                            const float32 progress        = ( pSplash != nullptr ) ? pSplash->getProgress() : 0.0f;
-                            const float32 clampedProgress = ( progress < 0.0f ) ? 0.0f : ( ( progress > 1.0f ) ? 1.0f : progress );
-                            const int32   fillWidth       = static_cast<int32>( static_cast<float32>( rc.right ) * clampedProgress );
-                            if ( fillWidth > 0 )
-                            {
-                                RECT   rcProgFill     = { 0, rc.bottom - 4, fillWidth, rc.bottom };
-                                HBRUSH hProgFillBrush = CreateSolidBrush( RGB( 70, 145, 255 ) );
-                                FillRect( hDC, &rcProgFill, hProgFillBrush );
-                                DeleteObject( hProgFillBrush );
-                            }
-
-                            SelectObject( hDC, hPrevFont );
-                            DeleteObject( hSubFont );
-                        }
-
+                        if ( pSplash != nullptr )
+                            pSplash->paintWindow( hDC, ps.rcPaint );
                         EndPaint( hWnd, &ps );
                         return 0;
                     }
@@ -124,6 +57,12 @@ namespace sw
         : ISplashWindow{}
         , _hWnd{ nullptr }
         , _gdiplusToken{ 0 }
+        , _hBackgroundDC{ nullptr }
+        , _hBackgroundBitmap{ nullptr }
+        , _hBackgroundPreviousBitmap{ nullptr }
+        , _hStatusFont{ nullptr }
+        , _backgroundWidth{ 0 }
+        , _backgroundHeight{ 0 }
     {
     }
 
@@ -217,7 +156,11 @@ namespace sw
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
-            InvalidateRect( _hWnd, nullptr, TRUE );
+            // 바뀌는 것은 아래 상태 띠(글자 · 진행 막대)뿐이다 — 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
+            RECT rcClient{};
+            GetClientRect( _hWnd, &rcClient );
+            const RECT rcBand = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBandHeight, rcClient.right, rcClient.bottom };
+            InvalidateRect( _hWnd, &rcBand, FALSE );
             UpdateWindow( _hWnd );
 
             MSG msg;
@@ -234,8 +177,109 @@ namespace sw
         updateStatus( nullptr, progress );
     }
 
+    void Win32SplashWindow::paintWindow( HDC hDC, const RECT& rcPaint )
+    {
+        const DdsImageData& splashData = getSplashImage();
+        if ( splashData.isValid() == false || _hWnd == nullptr )
+            return;
+
+        RECT rc{};
+        GetClientRect( _hWnd, &rc );
+        const int32 width  = rc.right - rc.left;
+        const int32 height = rc.bottom - rc.top;
+
+        // 1) 배경 — 창 크기로 늘린 그림을 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
+        if ( _hBackgroundDC == nullptr || _backgroundWidth != width || _backgroundHeight != height )
+        {
+            releasePaintCache();
+            _hBackgroundDC             = CreateCompatibleDC( hDC );
+            _hBackgroundBitmap         = CreateCompatibleBitmap( hDC, width, height );
+            _hBackgroundPreviousBitmap = SelectObject( _hBackgroundDC, _hBackgroundBitmap );
+            _backgroundWidth           = width;
+            _backgroundHeight          = height;
+
+            BITMAPINFO bmi{};
+            bmi.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
+            bmi.bmiHeader.biWidth       = static_cast<LONG>( splashData._width );
+            bmi.bmiHeader.biHeight      = -static_cast<LONG>( splashData._height ); // Top-down
+            bmi.bmiHeader.biPlanes      = 1;
+            bmi.bmiHeader.biBitCount    = 32;
+            bmi.bmiHeader.biCompression = BI_RGB;
+
+            SetStretchBltMode( _hBackgroundDC, HALFTONE );
+            SetBrushOrgEx( _hBackgroundDC, 0, 0, nullptr ); // HALFTONE 로 바꾼 뒤에는 브러시 원점을 다시 맞추라는 것이 GDI 의 규칙이다
+            StretchDIBits( _hBackgroundDC, 0, 0, width, height, 0, 0, static_cast<int32>( splashData._width ),
+                           static_cast<int32>( splashData._height ), splashData.getPixels(), &bmi, DIB_RGB_COLORS, SRCCOPY );
+        }
+        BitBlt( hDC, rcPaint.left, rcPaint.top, rcPaint.right - rcPaint.left, rcPaint.bottom - rcPaint.top, _hBackgroundDC, rcPaint.left,
+                rcPaint.top, SRCCOPY );
+
+        // 2) 하단 상태 띠 그라디언트 오버레이 — 배경을 다시 깐 위에 그리므로 겹쳐 짙어지지 않는다.
+        const int32                  bandHeight = Win32SplashWindowInternal::kStatusBandHeight;
+        Gdiplus::Graphics            graphics( hDC );
+        Gdiplus::Rect                gradientRect( 0, rc.bottom - bandHeight, rc.right, bandHeight );
+        Gdiplus::LinearGradientBrush gradientBrush( gradientRect, Gdiplus::Color( 0, 16, 20, 26 ), Gdiplus::Color( 230, 16, 20, 26 ),
+                                                    Gdiplus::LinearGradientModeVertical );
+        graphics.FillRectangle( &gradientBrush, gradientRect );
+
+        // 3) 상태 진행 텍스트 (Segoe UI) — 글꼴은 한 번 만들어 둔다.
+        if ( _hStatusFont == nullptr )
+        {
+            _hStatusFont = CreateFontW( -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI" );
+        }
+        SetBkMode( hDC, TRANSPARENT );
+        HGDIOBJ hPrevFont = SelectObject( hDC, _hStatusFont );
+        SetTextColor( hDC, RGB( 190, 215, 245 ) );
+
+        const wstring wsStatus = StringUtil::utf8ToUtf16( getStatus().c_str() );
+        RECT          rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
+        DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
+
+        // 4) 하단 프로그레스 바 배경 (어두운 차콜)
+        RECT   rcProgBg     = { 0, rc.bottom - 4, rc.right, rc.bottom };
+        HBRUSH hProgBgBrush = CreateSolidBrush( RGB( 20, 24, 30 ) );
+        FillRect( hDC, &rcProgBg, hProgBgBrush );
+        DeleteObject( hProgBgBrush );
+
+        // 5) 실제 진행률에 따른 프로그레스 라인
+        const float32 progress        = getProgress();
+        const float32 clampedProgress = ( progress < 0.0f ) ? 0.0f : ( ( progress > 1.0f ) ? 1.0f : progress );
+        const int32   fillWidth       = static_cast<int32>( static_cast<float32>( rc.right ) * clampedProgress );
+        if ( fillWidth > 0 )
+        {
+            RECT   rcProgFill     = { 0, rc.bottom - 4, fillWidth, rc.bottom };
+            HBRUSH hProgFillBrush = CreateSolidBrush( RGB( 70, 145, 255 ) );
+            FillRect( hDC, &rcProgFill, hProgFillBrush );
+            DeleteObject( hProgFillBrush );
+        }
+
+        SelectObject( hDC, hPrevFont );
+    }
+
+    void Win32SplashWindow::releasePaintCache()
+    {
+        if ( _hBackgroundDC != nullptr )
+        {
+            if ( _hBackgroundPreviousBitmap != nullptr )
+                SelectObject( _hBackgroundDC, _hBackgroundPreviousBitmap );
+            DeleteDC( _hBackgroundDC );
+        }
+        if ( _hBackgroundBitmap != nullptr )
+            DeleteObject( _hBackgroundBitmap );
+        if ( _hStatusFont != nullptr )
+            DeleteObject( _hStatusFont );
+        _hBackgroundDC             = nullptr;
+        _hBackgroundBitmap         = nullptr;
+        _hBackgroundPreviousBitmap = nullptr;
+        _hStatusFont               = nullptr;
+        _backgroundWidth           = 0;
+        _backgroundHeight          = 0;
+    }
+
     void Win32SplashWindow::dismiss()
     {
+        releasePaintCache();
         if ( _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0 )
             return;
 

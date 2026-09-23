@@ -651,6 +651,36 @@ namespace sw
         return static_cast<uint64>( size );
     }
 
+    bool FileUtil::getFileStamp( string_view fileName, FileStamp& outStamp )
+    {
+        if ( fileName.empty() )
+            return false;
+        const string filePath = normalizeSeparators( fileName );
+#if defined( SW_PLATFORM_WINDOWS )
+        // 크기와 시각을 한 번에 — `std::filesystem` 으로는 두 번 묻게 된다(`file_size` · `last_write_time`).
+        const wstring             widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
+        WIN32_FILE_ATTRIBUTE_DATA attribute{};
+        if ( GetFileAttributesExW( widePath.c_str(), GetFileExInfoStandard, &attribute ) == FALSE )
+            return false;
+        if ( ( attribute.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
+            return false;
+        outStamp._size      = ( static_cast<uint64>( attribute.nFileSizeHigh ) << 32 ) | attribute.nFileSizeLow;
+        outStamp._writeTime = ( static_cast<uint64>( attribute.ftLastWriteTime.dwHighDateTime ) << 32 ) | attribute.ftLastWriteTime.dwLowDateTime;
+        return true;
+#else
+        std::error_code errorCode;
+        const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
+        if ( errorCode.value() != 0 )
+            return false;
+        const std::filesystem::file_time_type writeTime = std::filesystem::last_write_time( filePath.c_str(), errorCode );
+        if ( errorCode.value() != 0 )
+            return false;
+        outStamp._size      = static_cast<uint64>( size );
+        outStamp._writeTime = static_cast<uint64>( writeTime.time_since_epoch().count() );
+        return true;
+#endif
+    }
+
     bool FileUtil::copyFile( string_view source, string_view destination )
     {
         std::error_code ec;

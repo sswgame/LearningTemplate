@@ -73,6 +73,8 @@ namespace sw
         , _drawMergeOverride{ -1 }
         , _vertexPoolOverride{ -1 }
         , _indirectDrawCallCount{ 0 }
+        , _gpuComputeScopeSlot{ FrameProfiler::kInvalidSlot }
+        , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _instanceSortCb{}
@@ -179,14 +181,21 @@ namespace sw
         _pTaskManager = pTaskManager;
     }
 
-    const utf8* FrameRenderer::gpuScopeNameFor( const string& passName )
+    uint32 FrameRenderer::gpuScopeSlotFor( size_t passIndex, const string& passName )
     {
-        // 프로파일러는 이름 포인터를 들고 있으므로 **수명이 프레임을 넘겨야 한다** — 맵에 담아 둔다.
-        const hashed_string key{ passName.c_str() };
-        const auto          iter = _mapGpuScopeName.find( key );
-        if ( iter != _mapGpuScopeName.end() )
-            return iter->second.c_str();
-        return _mapGpuScopeName.emplace( key, string( "GPU." ) + passName ).first->second.c_str();
+        if ( passIndex >= _listGpuPassScope.size() )
+            _listGpuPassScope.resize( passIndex + 1 );
+        GpuPassScope& scope = _listGpuPassScope[passIndex];
+        if ( scope._profilerSlot != FrameProfiler::kInvalidSlot && scope._passName == passName )
+            return scope._profilerSlot;
+
+        // 프로파일러는 이름 **포인터**를 들고 있으므로 제자리에 머무는 곳에 둔다 — intern 아레나는 프로세스 끝까지 그대로다.
+        // 패스 이름은 유한한 집합이라 intern 이 늘어나지 않는다.
+        const string        scopeText = string( "GPU." ) + passName;
+        const hashed_string scopeName{ string_view( scopeText ) };
+        scope._passName     = passName;
+        scope._profilerSlot = engine::getFrameProfiler().registerScope( scopeName.c_str() );
+        return scope._profilerSlot;
     }
 
     void FrameRenderer::reportGpuPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
@@ -207,7 +216,7 @@ namespace sw
 
         // 한 구간을 프로파일러에 넣는다. 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를
         // 건너뛰었거나 첫 사이클) — 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
-        auto reportSpan = [&]( const utf8* pScopeName, size_t beginSlot, size_t endSlot ) -> float32
+        auto reportSpan = [&]( uint32 profilerSlot, size_t beginSlot, size_t endSlot ) -> float32
         {
             if ( endSlot >= _listGpuTimestampMicro.size() )
                 return -1.0f;
@@ -216,8 +225,7 @@ namespace sw
             if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
                 return -1.0f;
             const float32 micro = endMicro - beginMicro;
-            const uint32  slot  = engine::getFrameProfiler().registerScope( pScopeName );
-            engine::getFrameProfiler().addSample( slot, static_cast<uint64>( micro * 1000.0f ) );
+            engine::getFrameProfiler().addSample( profilerSlot, static_cast<uint64>( micro * 1000.0f ) );
             return endMicro;
         };
 
@@ -228,7 +236,7 @@ namespace sw
             const size_t beginSlot = passIndex * 2;
             if ( beginSlot + 1 >= FrameRendererUtil::kGpuTimestampPassSlotEnd )
                 break;
-            const float32 endMicro = reportSpan( gpuScopeNameFor( listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
+            const float32 endMicro = reportSpan( gpuScopeSlotFor( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
             if ( endMicro > lastEndMicro )
                 lastEndMicro = endMicro;
         }
@@ -236,15 +244,16 @@ namespace sw
         // 패스 밖의 GPU 시간. `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지 — 패스 합과의
         // 차이가 컴퓨트 프리패스·업로드·배리어다. 이것이 없으면 "패스는 270 us 인데 펜스는 왜 400 us 를
         // 기다리나" 에 답할 수 없다(프레임 사이 유휴는 여기 안 잡힌다 — 그건 CPU 쪽 RT.Frame 과의 차이다).
-        reportSpan( "GPU.Compute", FrameRendererUtil::kGpuTimestampSlotComputeBegin, FrameRendererUtil::kGpuTimestampSlotComputeEnd );
+        if ( _gpuComputeScopeSlot == FrameProfiler::kInvalidSlot )
+            _gpuComputeScopeSlot = engine::getFrameProfiler().registerScope( "GPU.Compute" );
+        if ( _gpuFrameScopeSlot == FrameProfiler::kInvalidSlot )
+            _gpuFrameScopeSlot = engine::getFrameProfiler().registerScope( "GPU.Frame" );
+        reportSpan( _gpuComputeScopeSlot, FrameRendererUtil::kGpuTimestampSlotComputeBegin, FrameRendererUtil::kGpuTimestampSlotComputeEnd );
         if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGpuTimestampSlotFrameBegin < _listGpuTimestampMicro.size() )
         {
             const float32 frameBegin = _listGpuTimestampMicro[FrameRendererUtil::kGpuTimestampSlotFrameBegin];
             if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
-            {
-                const uint32 slot = engine::getFrameProfiler().registerScope( "GPU.Frame" );
-                engine::getFrameProfiler().addSample( slot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
-            }
+                engine::getFrameProfiler().addSample( _gpuFrameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
         }
 #endif
     }

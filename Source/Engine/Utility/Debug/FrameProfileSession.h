@@ -54,5 +54,11 @@ namespace sw
         uint8 _bAllocationTrackingStarted{ SW_FALSE };
         /** @brief 측정 구간이 시작될 때의 할당 횟수 누계 — 프레임당 할당 수는 보고 시점과의 차다. */
         uint64 _allocationCountAtStart{ 0 };
+        /**
+         * @brief 측정 구간이 시작된 벽시계 시각(마이크로초, steady_clock).
+         * @details 구간 표는 스레드마다의 **일한 시간**이라 "프레임이 실제로 몇 us 마다 나오나" 를 답하지 못한다 — 게임 스레드가
+         *          빨라져 렌더 스레드의 구간이 늘어 보일 때(경합인지 회귀인지) 가를 숫자가 없었다. 측정 창 전체의 벽시계로 답한다.
+         */
+        int64 _measureStartMicro{ 0 };
     };
 } // namespace sw

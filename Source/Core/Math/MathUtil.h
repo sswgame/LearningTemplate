@@ -76,6 +76,23 @@ namespace sw
             return ( value < minValue ) ? minValue : ( ( value > maxValue ) ? maxValue : value );
         }
 
+        /**
+         * @brief 0 이 아닌 값에서 가장 낮은 켜진 비트의 번호(0 ~ 63)를 구합니다. @p value 가 0 이면 정의되지 않는다.
+         * @details 비트셋을 켜진 비트만 골라 도는 자리(`TaskManager` 의 유휴 워커 마스크 · `PrimitiveRegistry` 의 더티 워드)가 쓴다.
+         *          C++17 이라 `std::countr_zero` 가 없어 컴파일러 내장을 쓴다(이 저장소의 컴파일러는 전부 clang).
+         */
+        [[nodiscard]] static SW_INLINE uint32 countTrailingZeros( uint64 value ) noexcept
+        {
+#if defined( __clang__ ) || defined( __GNUC__ )
+            return static_cast<uint32>( __builtin_ctzll( value ) );
+#else
+            uint32 index = 0;
+            while ( ( ( value >> index ) & 1u ) == 0 )
+                ++index;
+            return index;
+#endif
+        }
+
         /** @brief 2의 거듭제곱인지 확인합니다. */
         template <typename T>
         [[nodiscard]] static SW_INLINE constexpr bool isPowerOfTwo( T value ) noexcept

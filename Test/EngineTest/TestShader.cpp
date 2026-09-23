@@ -272,6 +272,37 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
 }
 
 /**
+ * @brief [ShaderBakerTest] 소스 해시 캐시는 파일이 바뀌면 다시 읽는다
+ * @details 셰이더 요청 하나가 같은 소스를 여러 번 해시한다(메모리 캐시 확인 · 로컬 캐시 경로 · 굽기 신선도). 그래서 내용 해시는
+ *          파일의 크기 · 쓰기 시각과 함께 캐시되고, 두 번째부터는 파일을 열지 않는다. 캐시가 편집을 놓치면 **바뀐 셰이더가 옛
+ *          바이너리로 그려진다** — 로그는 성공을 찍는 가장 조용한 어긋남이다. 되돌린 내용은 처음과 같은 해시로 돌아와야 한다(내용 해시).
+ */
+SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
+{
+    const sw::string dir = test::makeTempPath( "SwShaderSourceHashDir" );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string path = sw::FileUtil::joinPath( dir, "edit.hlsl" );
+
+    const sw::string original = "float4 main() : SV_Target { return 1; }\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
+    const uint64 firstHash = sw::ShaderBaker::computeEffectiveSourceHash( path );
+    SW_ASSERT_TRUE( firstHash != 0u );
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderBaker::computeEffectiveSourceHash( path ) ); // 캐시 적중
+
+    const sw::string edited = "float4 main() : SV_Target { return float4( 0.25, 0.5, 0.75, 1.0 ); }\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( edited.data() ), edited.size() ) );
+    const uint64 editedHash = sw::ShaderBaker::computeEffectiveSourceHash( path );
+    SW_EXPECT_TRUE( editedHash != 0u );
+    SW_EXPECT_TRUE( editedHash != firstHash );
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderBaker::computeEffectiveSourceHash( path ) );
+
+    sw::FileUtil::removeFile( path );
+    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderBaker::computeEffectiveSourceHash( path ) );
+}
+
+/**
  * @brief [ShaderBakerTest] 잘못된 파일 경로 및 디렉터리에 대한 방어적 실패 처리 검증
  */
 SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )

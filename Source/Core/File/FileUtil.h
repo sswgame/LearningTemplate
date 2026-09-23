@@ -38,6 +38,22 @@ namespace sw
 
     SW_DECLARE_DELEGATE( void, FileDialogDelegate, const vector<string>& fileName );
 
+    /**
+     * @brief 파일 하나의 크기와 마지막 쓰기 시각 — "지난번에 본 그 파일 그대로인가" 를 파일을 열지 않고 묻는 값.
+     * @details 시각은 플랫폼의 원래 눈금 그대로다(Windows 는 100 ns, 그 밖은 `std::filesystem` 파일 시계) — 같은 기계 ·
+     *          같은 실행 안에서 **같은지만** 견준다. `getFileTimestamp` 는 초 단위라 1 초 안의 편집을 놓친다.
+     */
+    struct FileStamp
+    {
+        uint64 _size{ 0 };      ///< 바이트 수
+        uint64 _writeTime{ 0 }; ///< 마지막 쓰기 시각(플랫폼 눈금)
+
+        /** @brief 크기와 시각이 모두 같은지 봅니다. */
+        bool operator==( const FileStamp& other ) const { return _size == other._size && _writeTime == other._writeTime; }
+        /** @brief 크기나 시각이 다른지 봅니다. */
+        bool operator!=( const FileStamp& other ) const { return ( *this == other ) == false; }
+    };
+
     // ------------------------------------------------------------------------------
     // 2) FileUtil — 경로 분해·정규화 · 존재/I/O · 다이얼로그 · DLL
     //    전부 static. 맵 키는 normalizePath, open 은 normalizeSeparators
@@ -133,6 +149,12 @@ namespace sw
         static uint64 getCurrentFileTimestamp();
         /** @brief 파일 크기를 반환합니다. */
         static uint64 getFileSize( string_view fileName );
+        /**
+         * @brief 파일의 크기와 마지막 쓰기 시각을 **한 번의 조회**로 얻습니다. 없거나 못 읽으면 false.
+         * @details 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 볼 때 쓴다 — 파일을 여는 것보다 싸다
+         *          (이 PC 에서 열기 ~200 us, 이 조회 ~75 us — 둘 다 필터 드라이버가 끼어든다).
+         */
+        static bool getFileStamp( string_view fileName, FileStamp& outStamp );
         /** @brief 파일을 복사합니다. */
         static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없거나 삭제되면 true. */

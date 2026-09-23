@@ -34,17 +34,19 @@ namespace sw
     {
         if ( count <= _dirtyFlagCapacity )
             return;
-        // 두 배씩 — 프리미티브가 하나씩 늘 때마다 배열을 다시 만들지 않는다.
+        // 두 배씩 — 프리미티브가 하나씩 늘 때마다 배열을 다시 만들지 않는다. 용량은 워드 단위(64 칸)다.
         uint32 capacity = ( _dirtyFlagCapacity == 0 ) ? 64u : _dirtyFlagCapacity;
         while ( capacity < count )
             capacity *= 2u;
-        std::unique_ptr<atomic<uint8>[]> arrNew{ new atomic<uint8>[capacity] };
-        for ( uint32 index = 0; index < capacity; ++index )
+        const uint32                      oldWordCount = _dirtyFlagCapacity / 64u;
+        const uint32                      wordCount    = capacity / 64u;
+        std::unique_ptr<atomic<uint64>[]> arrNew{ new atomic<uint64>[wordCount] };
+        for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
-            const uint8 previous = ( index < _dirtyFlagCapacity ) ? _arrDirtyFlag[index].load( std::memory_order_relaxed ) : 0u;
-            arrNew[index].store( previous, std::memory_order_relaxed );
+            const uint64 previous = ( wordIndex < oldWordCount ) ? _arrDirtyWord[wordIndex].load( std::memory_order_relaxed ) : 0u;
+            arrNew[wordIndex].store( previous, std::memory_order_relaxed );
         }
-        _arrDirtyFlag      = std::move( arrNew );
+        _arrDirtyWord      = std::move( arrNew );
         _dirtyFlagCapacity = capacity;
     }
 
@@ -73,9 +75,9 @@ namespace sw
             pMoved->setPrimitiveIndex( slot );
         if ( lastSlot < _dirtyFlagCapacity )
         {
-            const uint8 movedFlag = _arrDirtyFlag[lastSlot].exchange( 0u, std::memory_order_acq_rel );
+            const bool bMovedDirty = takeSlotDirty( lastSlot );
             if ( slot != lastSlot )
-                _arrDirtyFlag[slot].store( movedFlag, std::memory_order_release );
+                storeSlotDirty( slot, bMovedDirty );
         }
         pComp->setPrimitiveIndex( MeshComponent::kInvalidPrimitiveIndex );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
@@ -96,13 +98,34 @@ namespace sw
     {
         if ( slot >= _dirtyFlagCapacity )
             return;
-        atomic<uint8>& flag = _arrDirtyFlag[slot];
-        if ( flag.load( std::memory_order_relaxed ) != 0u )
+        atomic<uint64>& word = _arrDirtyWord[slot >> 6];
+        const uint64    bit  = static_cast<uint64>( 1 ) << ( slot & 63u );
+        // 이미 서 있으면 읽기만 한다 — 같은 워드의 이웃 칸을 찍는 워커와 라인을 다투지 않는다.
+        if ( ( word.load( std::memory_order_relaxed ) & bit ) != 0u )
             return;
-        if ( flag.exchange( 1u, std::memory_order_acq_rel ) != 0u )
+        if ( ( word.fetch_or( bit, std::memory_order_acq_rel ) & bit ) != 0u )
             return;
         if ( _bAnyDirty.load( std::memory_order_relaxed ) == 0u )
             _bAnyDirty.store( 1u, std::memory_order_release );
+    }
+
+    bool PrimitiveRegistry::takeSlotDirty( uint32 slot )
+    {
+        if ( slot >= _dirtyFlagCapacity )
+            return false;
+        const uint64 bit = static_cast<uint64>( 1 ) << ( slot & 63u );
+        return ( _arrDirtyWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel ) & bit ) != 0u;
+    }
+
+    void PrimitiveRegistry::storeSlotDirty( uint32 slot, bool bDirty )
+    {
+        if ( slot >= _dirtyFlagCapacity )
+            return;
+        const uint64 bit = static_cast<uint64>( 1 ) << ( slot & 63u );
+        if ( bDirty )
+            _arrDirtyWord[slot >> 6].fetch_or( bit, std::memory_order_acq_rel );
+        else
+            _arrDirtyWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel );
     }
 
     PrimitiveRegistry::~PrimitiveRegistry()
@@ -194,26 +217,34 @@ namespace sw
         // "하나라도" 를 훑기 **전에** 내린다 — 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.
         // (이미 지난 칸이면 그 프레임엔 헛훑기 한 번, 아직 안 지난 칸이면 이번에 잡힌다 — 어느 쪽도 잃지 않는다.)
         _bAnyDirty.store( 0u, std::memory_order_release );
-        // 플래그 배열을 훑는다 — 프리미티브 수만큼의 바이트 읽기라 8000 개에 몇 us 다. 선 칸만 exchange 한다.
-        const uint32 count = MathUtil::min( getSlotCount(), _dirtyFlagCapacity );
-        for ( uint32 slot = 0; slot < count; ++slot )
+        // 워드를 훑는다 — 8000 칸이 워드 125 개다. 빈 워드는 읽기만, 선 워드만 exchange 한 번 하고 켜진 비트를 골라 돈다.
+        // 번호 공간 밖의 비트(지워진 칸)는 여기서 같이 내려 버린다 — 그 칸을 다시 쓰는 추가는 집합 세대를 올려 전체 수집이 된다.
+        const uint32 count     = MathUtil::min( getSlotCount(), _dirtyFlagCapacity );
+        const uint32 wordCount = ( count + 63u ) / 64u;
+        for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
-            if ( _arrDirtyFlag[slot].load( std::memory_order_relaxed ) == 0u )
+            atomic<uint64>& word = _arrDirtyWord[wordIndex];
+            if ( word.load( std::memory_order_relaxed ) == 0u )
                 continue;
-            if ( _arrDirtyFlag[slot].exchange( 0u, std::memory_order_acq_rel ) == 0u )
-                continue;
-            outListSlot.push_back( slot );
+            uint64 bits = word.exchange( 0u, std::memory_order_acq_rel );
+            while ( bits != 0u )
+            {
+                const uint32 slot = wordIndex * 64u + MathUtil::countTrailingZeros( bits );
+                bits &= bits - 1u;
+                if ( slot < count )
+                    outListSlot.push_back( slot );
+            }
         }
     }
 
     void PrimitiveRegistry::clearDirtyLocked()
     {
         _bAnyDirty.store( 0u, std::memory_order_release );
-        const uint32 count = getSlotCount();
-        for ( uint32 slot = 0; slot < count && slot < _dirtyFlagCapacity; ++slot )
+        const uint32 wordCount = _dirtyFlagCapacity / 64u;
+        for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
-            if ( _arrDirtyFlag[slot].load( std::memory_order_relaxed ) != 0u )
-                _arrDirtyFlag[slot].store( 0u, std::memory_order_release );
+            if ( _arrDirtyWord[wordIndex].load( std::memory_order_relaxed ) != 0u )
+                _arrDirtyWord[wordIndex].store( 0u, std::memory_order_release );
         }
     }
 } // namespace sw

@@ -54,6 +54,23 @@ namespace sw
                 return value;
             }
 
+            /** @brief 내용 해시 캐시 한 칸 — 그 해시를 뽑았을 때의 파일 크기 · 쓰기 시각. */
+            struct ContentHashEntry
+            {
+                FileStamp _stamp{};
+                uint64    _hash{ 0 };
+            };
+            /**
+             * @brief 경로 -> 내용 해시. 파일의 크기 · 쓰기 시각이 그대로일 때만 쓴다.
+             * @details 셰이더 요청 하나가 같은 소스를 세 번 읽었다(`ShaderCache::getOrCompile` 의 메모리 캐시 확인 · 로컬 캐시
+             *          경로 · 굽기 신선도) — 퍼뮤테이션 · 단계마다. 이 PC 에서 파일 하나 여는 데 ~200 us 라 시작 시간 게임
+             *          스레드의 12.6 % 가 이 읽기였다. 이제 두 번째부터는 파일을 열지 않고 크기 · 시각만 본다(~75 us). 실행 중에
+             *          고친 파일은 시각이 달라져 다시 읽는다 — 편집을 알아채는 것은 예전과 같다.
+             */
+            inline static unordered_map<string, ContentHashEntry> _s_mapContentHash{};
+            /// @brief `_s_mapContentHash` 의 잠금. 셰이더 컴파일은 워커에서도 돈다. `_s_sharedHeaderMutex` 안에서 잡힐 수 있다(그 반대는 없다).
+            inline static mutex _s_contentHashMutex{};
+
             /**
              * @brief 소스 한 파일의 **내용 해시** — CR 을 뺀 바이트의 FNV-1a 64.
              * @details 베이크 스탬프·베이크 판정·컴파일 캐시 키가 **같은 값**을 써야 한다. 예전에는
@@ -64,6 +81,29 @@ namespace sw
              *          Vulkan 만 다른 그림을 내는 것을 **백엔드 버그로 오인**해 오래 쫓았다.
              */
             static uint64 computeContentHash( string_view absPath )
+            {
+                FileStamp  stamp{};
+                const bool bStamped = FileUtil::getFileStamp( absPath, stamp );
+                if ( bStamped )
+                {
+                    std::scoped_lock<mutex> lock{ _s_contentHashMutex };
+                    const auto              iter = _s_mapContentHash.find( absPath );
+                    if ( iter != _s_mapContentHash.end() && iter->second._stamp == stamp )
+                        return iter->second._hash;
+                }
+
+                const uint64 hash = readContentHash( absPath );
+                // 읽는 사이에 파일이 바뀌었으면 옛 시각에 새 해시가 붙는다 — 다음 조회는 시각이 달라 다시 읽으므로 틀린 값이 남지 않는다.
+                if ( bStamped && hash != 0 )
+                {
+                    std::scoped_lock<mutex> lock{ _s_contentHashMutex };
+                    _s_mapContentHash[string( absPath )] = ContentHashEntry{ stamp, hash };
+                }
+                return hash;
+            }
+
+            /** @brief 파일을 읽어 CR 을 뺀 바이트의 FNV-1a 64 를 구합니다 (`computeContentHash` 의 캐시 밖 몸통). */
+            static uint64 readContentHash( string_view absPath )
             {
                 vector<uint8> bytes;
                 if ( FileUtil::readFile( absPath, bytes ) == false )
@@ -236,6 +276,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ ShaderBakeStampInternal::_s_sharedHeaderMutex };
         ShaderBakeStampInternal::_s_bSharedHeaderHashCached = false;
         ShaderBakeStampInternal::_s_mapStamp.clear();
+        // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
+        std::scoped_lock<mutex> contentLock{ ShaderBakeStampInternal::_s_contentHashMutex };
+        ShaderBakeStampInternal::_s_mapContentHash.clear();
     }
 
     uint64 ShaderBaker::getSharedHeaderContentHash()

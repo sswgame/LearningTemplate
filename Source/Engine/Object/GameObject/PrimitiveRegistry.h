@@ -66,7 +66,7 @@ namespace sw
          * @brief 이 프리미티브의 렌더 상태가 바뀌었다고 표시합니다. **락이 없다** — 워커 스레드에서 불러도 된다.
          * @details 트랜스폼 플러시가 루트 서브트리마다 병렬로 돌면서 여기를 부른다. 예전에는 뮤텍스를 쥐고
          *          목록에 push 했는데, 큐브 8000 개가 전부 움직이는 프레임에는 워커들이 그 락을 8000 번
-         *          다투게 된다. 지금은 칸마다 원자 플래그 하나다 — 0→1 로 바꾼 쪽만 개수를 올린다. 컴포넌트
+         *          다투게 된다. 지금은 칸마다 원자 비트 하나다(워드 하나가 64 칸, `_arrDirtyWord`) — 0→1 로 바꾼 쪽만 "하나라도" 를 세운다. 컴포넌트
          *          쪽에는 더티 표시가 없다(비트필드라 워커의 쓰기가 이웃 비트와 같은 바이트를 고쳤다) — 이 플래그가
          *          유일한 정본이고, 같은 프리미티브를 몇 번 찍든 exchange 한 번씩이다.
          *          `_listPrimitive` 는 락 없이 읽는다: add/remove 는 게임 스레드가 병렬 구간 밖에서만 부른다
@@ -116,14 +116,25 @@ namespace sw
         void growDirtyFlags( uint32 count );
         /** @brief 번호 하나에 깃발을 세운다 — 메시 컴포넌트와 인스턴스 항목이 같은 길을 쓴다. */
         void markSlotDirty( uint32 slot );
+        /** @brief 번호 하나의 깃발을 내리고, 서 있었는지 돌려줍니다 (`_mutex` 를 쥔 채). */
+        bool takeSlotDirty( uint32 slot );
+        /** @brief 번호 하나의 깃발을 @p bDirty 로 둡니다 (`_mutex` 를 쥔 채). */
+        void storeSlotDirty( uint32 slot, bool bDirty );
 
         /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
         vector<MeshComponent*>         _listPrimitive;
         vector<PrimitiveInstanceEntry> _listInstanceEntry; ///< 배치 순서대로 이어 붙은 항목들
         vector<MeshInstanceBatch*>     _listInstanceBatch; ///< 등록된 배치 — 빼기와 자리 당기기에 쓴다
-        /// @brief 칸마다 "바뀌었다" 표시. 원자라 워커 여럿이 동시에 찍어도 된다. 용량은 `_listPrimitive` 이상이다.
-        std::unique_ptr<atomic<uint8>[]> _arrDirtyFlag;
-        uint32                           _dirtyFlagCapacity{ 0 };
+        /**
+         * @brief 칸마다 "바뀌었다" 비트 — **워드 하나가 칸 64 개**다. 원자라 워커 여럿이 동시에 찍어도 된다.
+         * @details 예전엔 칸마다 원자 바이트였고 `consumeDirty` 가 선 칸마다 exchange 를 했다 — 큐브 8000 개가 전부 움직이는
+         *          프레임에 잠긴 명령 8000 번이 게임 스레드에서 줄을 섰고, 그 줄들은 방금 워커가 쓴 캐시 라인이었다(2026-09-23
+         *          프로파일에서 게임 스레드 바쁜 시간의 3.5 %). 이제 워드마다 exchange 한 번(125 번)이고 선 비트만 골라 돈다.
+         *          찍는 쪽은 그대로 "읽어 보고 없으면 fetch_or" 라 이미 선 칸은 쓰지 않는다.
+         */
+        std::unique_ptr<atomic<uint64>[]> _arrDirtyWord;
+        /// @brief 더티 비트가 덮는 칸 수 — 늘 64 의 배수이고 번호 공간(`getSlotCount`) 이상이다.
+        uint32 _dirtyFlagCapacity{ 0 };
         /**
          * @brief "서 있는 플래그가 하나라도 있다". `hasDirty` 가 배열을 훑지 않고 답하는 근거.
          * @details 개수가 아니라 플래그인 이유: 개수는 워커 열넷이 같은 캐시 라인을 8000 번 fetch_add 하는 것이라

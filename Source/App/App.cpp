@@ -42,6 +42,7 @@ namespace sw
         , _frameTimeline{}
         , _backendSwap{}
         , _viewCameraProvider{}
+        , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -51,6 +52,7 @@ namespace sw
 
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
+        _initializeStartMicro = std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
         // 리소스 루트 탐색은 EngineLoop 이 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때의
         // 진단이 로거가 없어 사라지고, 반환값도 여기서는 볼 것이 없었다.
 
@@ -273,7 +275,10 @@ namespace sw
         if ( _window == nullptr )
             return;
 
-        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)..." );
+        // 시작 시간 — `initialize` 첫 줄부터 여기까지의 벽시계. 로그 표준 출력은 에러가 아니면 버퍼에 머물러 밖에서 시각을 잴 수 없다.
+        [[maybe_unused]] const int64 startupMicro =
+            std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() - _initializeStartMicro;
+        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
         _frameTimeline.start();
 

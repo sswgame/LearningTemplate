@@ -58,7 +58,8 @@ namespace sw
 
             // reset() 은 프레임 카운터도 0 으로 되돌린다 — 플래그가 없으면 이 조건이 매 60
             // 프레임마다 다시 참이 되어 영원히 워밍업만 한다.
-            _bWarmedUp = SW_TRUE;
+            _bWarmedUp         = SW_TRUE;
+            _measureStartMicro = std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
             profiler.reset();
             SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.", kWarmupFrames,
                          _frameTarget );
@@ -79,6 +80,10 @@ namespace sw
 
         _bReported = SW_TRUE;
         profiler.report( "frame breakdown" );
+        // 측정 창의 벽시계 — 프레임이 실제로 몇 us 마다 나왔나(처리량). 구간 표만으로는 병목이 어디서 기다리는지 모른다.
+        [[maybe_unused]] const int64 nowMicro     = std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
+        [[maybe_unused]] const int64 elapsedMicro = nowMicro - _measureStartMicro;
+        SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / 1000, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportAllocations( frames );
         profiler.setEnabled( false );
         _bWantsQuit = SW_TRUE;
