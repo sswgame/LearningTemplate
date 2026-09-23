@@ -33,7 +33,7 @@ namespace sw
             if ( _listDirectional[slot] != pComp )
                 continue;
 
-            // swap-and-pop. 순서는 의미가 없다 — 부르는 쪽이 "활성인 첫 빛"을 고르고, 빛이 둘 이상일
+            // swap-and-pop. 순서는 의미가 없다. 부르는 쪽이 "활성인 첫 빛"을 고르고, 빛이 둘 이상일
             // 때 어느 쪽이 뽑히는지는 예전(오브젝트 순회 순서)에도 정해져 있지 않았다.
             _listDirectional[slot] = _listDirectional.back();
             _listDirectional.pop_back();
@@ -66,7 +66,7 @@ namespace sw
             if ( _listPoint[slot] != pComp )
                 continue;
 
-            // swap-and-pop. 순서는 의미가 없다 — 셰이더가 라이트 목록을 통째로 도는 구조라
+            // swap-and-pop. 순서는 의미가 없다. 셰이더가 라이트 목록을 통째로 도는 구조라
             // 어느 자리에 들어가든 결과가 같다.
             _listPoint[slot] = _listPoint.back();
             _listPoint.pop_back();

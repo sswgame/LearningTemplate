@@ -1,6 +1,6 @@
 /**
  * @file SpriteAnimatorComponent.h
- * @brief 2D Sprite Animator Component
+ * @brief 2D 스프라이트 애니메이터 컴포넌트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

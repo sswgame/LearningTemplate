@@ -148,7 +148,7 @@ namespace sw
                 if ( pPrefab != nullptr )
                     node._prefab = pPrefab;
 
-                // GUID 기반 경로 해석 (파일 이동/이름 변경에 대한 자동 복구)
+                // GUID 로 경로를 다시 푼다(파일 이동 · 이름 변경을 자동으로 따라간다)
                 if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
                 {
                     Uuid guid{};
@@ -288,7 +288,7 @@ namespace sw
 
         // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 엔티티 하나는 길이 앞머리(4바이트)를 쓰는
         // 필드 넷(v1 부터는 다섯)이므로, 남은 바이트를 그 최소치로 나눈 것보다 많은 엔티티는 있을 수
-        // 없다. 손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다 — 읽기는 어차피
+        // 없다. 손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다. 읽기는 어차피
         // 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
         const uint64 kMinBytesPerEntity = ( version >= 1 ? 5u : 4u ) * sizeof( uint32 );
         const uint64 maxPossibleEntity  = arch.getRemainingBytes() / kMinBytesPerEntity;

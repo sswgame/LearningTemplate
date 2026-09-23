@@ -1,6 +1,6 @@
 /**
  * @file CameraComponent.h
- * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent입니다.
+ * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent 입니다.
  */
 #pragma once
 #include "Engine/Object/Component/SceneComponent.h"
@@ -10,18 +10,18 @@ namespace sw
 {
     class GameObjectManager;
 
-    /// @brief 카메라 Role 종류를 정의하는 열거형입니다.
+    /// @brief 카메라 역할입니다.
     ENUM()
     enum class CameraRole : uint8
     {
-        Game   = 0, ///< Playing 중 활성
-        Editor = 1, ///< Editor 뷰포트에서 활성
-        Custom = 2, ///< 수동 선택만
+        Game   = 0, ///< 플레이 중에 활성
+        Editor = 1, ///< 에디터 뷰포트에서 활성
+        Custom = 2, ///< 직접 골라야만 쓰임
     };
 
     /**
      * @class CameraComponent
-     * @brief GameObject에 붙는 카메라. 트랜스폼은 SceneComponent에서 옵니다.
+     * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 옵니다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera" )
     class SW_API CameraComponent : public SceneComponent
@@ -38,14 +38,14 @@ namespace sw
         CameraComponent();
 
         /**
-         * @brief 이름의 오브젝트에 카메라를 보장하고(없으면 오브젝트 · 컴포넌트를 만든다) 역할 · 자리 · 시선 · 기본 렌즈로 맞춥니다.
+         * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트 · 컴포넌트를 만듭니다) 역할 · 위치 · 시선 · 기본 렌즈를 맞춥니다.
          * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 이 스무 줄을 각자 들고, 기본 렌즈
-         *          값(`kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ`)을 리터럴로 다시 적고 있었다.
-         * @return 매니저가 없거나 만들 수 없으면(틱 중 — `addComponent` 가 지연된다) nullptr.
+         *          값(`kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ`)을 리터럴로 다시 적고 있었습니다.
+         * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연됩니다) nullptr 입니다.
          */
         static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
                                                    const float3& position, const float3& lookTarget );
-        /** @brief 카메라를 해제합니다. */
+        /** @brief 기본 소멸자입니다. */
         virtual ~CameraComponent() override = default;
 
         void onBeginPlay() override;
@@ -85,7 +85,7 @@ namespace sw
         /** @brief 우선순위를 반환합니다. */
         int32 getPriority() const { return _priority; }
 
-        /** @brief 월드 공간 타깃을 바라봅니다 (로컬 회전 갱신). */
+        /** @brief 월드 공간 타깃을 바라봅니다(로컬 회전을 갱신합니다). */
         void lookAt( const float3& target, const float3& up = float3( 0.0f, 1.0f, 0.0f ) );
 
         /** @brief 뷰 행렬을 반환합니다. */

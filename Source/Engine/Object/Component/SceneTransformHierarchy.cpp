@@ -1,6 +1,6 @@
 /**
  * @file SceneTransformHierarchy.cpp
- * @brief 트랜스폼 계층 플러시 구현 — 더티 루트만, 루트 단위 병렬, 슬롯별 DFS 스택.
+ * @brief 트랜스폼 계층 플러시 구현입니다. 더티 루트만 돌고, 루트 단위로 병렬이며, DFS 스택은 슬롯별로 씁니다.
  */
 #include "pch.h"
 
@@ -35,14 +35,14 @@ namespace sw
             return;
         {
             std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-            // 자기 자리를 들고 있으면 이미 루트다 — 목록을 훑지 않는다(8000 개면 등록마다 8000 번 비교였다).
+            // 자기 자리를 들고 있으면 이미 루트다. 목록을 훑지 않는다(8000 개면 등록마다 8000 번 비교였다).
             if ( pComp->_rootIndex == SceneComponent::kNotInList )
             {
                 pComp->_rootIndex = static_cast<uint32>( _listRoot.size() );
                 _listRoot.push_back( pComp );
             }
         }
-        // 컴포넌트는 더티로 태어난다 — 루트가 되는 순간 플러시 목록에도 올라야 첫 플러시가 월드 캐시를 만든다.
+        // 컴포넌트는 더티로 태어난다. 루트가 되는 순간 플러시 목록에도 올라야 첫 플러시가 월드 캐시를 만든다.
         if ( pComp->isTransformDirty() || pComp->hasDirtyDescendant() )
             queueDirtyRoot( pComp );
     }
@@ -53,7 +53,7 @@ namespace sw
             return;
         std::unique_lock<std::shared_mutex> lock{ _rootMutex };
 
-        // 자기 자리로 O(1) swap-remove — 선형으로 찾던 때는 8000 개를 지우면 3200만 번 비교였다(개당 2 µs).
+        // 자기 자리로 O(1) swap-remove 한다. 선형으로 찾던 때는 8000 개를 지우면 3200만 번 비교였다(개당 2 µs).
         const uint32 rootIndex = pComp->_rootIndex;
         if ( rootIndex != SceneComponent::kNotInList && rootIndex < _listRoot.size() && _listRoot[rootIndex] == pComp )
         {
@@ -64,7 +64,7 @@ namespace sw
         }
         pComp->_rootIndex = SceneComponent::kNotInList;
 
-        // 더 이상 루트가 아니다 — 플러시 목록에서도 뺀다(부모 아래로 들어갔으면 그 루트가 대신 오른다). 자리를 알면 O(1),
+        // 더 이상 루트가 아니다. 플러시 목록에서도 뺀다(부모 아래로 들어갔으면 그 루트가 대신 오른다). 자리를 알면 O(1),
         // 병렬 스크래치에 있어 모르면(배치 도중의 재부모는 금지라 실제로는 없다) 훑는다.
         if ( pComp->_bQueuedDirtyRoot.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE )
         {
@@ -120,13 +120,13 @@ namespace sw
     {
         if ( pRoot == nullptr || tryMarkQueued( pRoot ) == false )
             return;
-        // 스크래치는 배치가 시작하기 전(mergeQueuedDirtyRoots 의 짝)에 슬롯 수만큼 잡혀 있다 — 여기서는 자기 칸만 만진다.
+        // 스크래치는 배치가 시작하기 전(mergeQueuedDirtyRoots 의 짝)에 슬롯 수만큼 잡혀 있다. 여기서는 자기 칸만 만진다.
         const uint32 slot = engine::getParallelScratchSlot();
         if ( slot < _dirtyRootScratchCount )
             _pDirtyRootScratch[slot].push_back( pRoot );
         else
         {
-            // 서비스가 안 묶인 곳(테스트·도구)은 직렬이라 본 목록에 바로.
+            // 서비스가 묶이지 않은 곳(테스트 · 도구)은 직렬이라 본 목록에 바로 올린다.
             pRoot->_dirtyRootIndex = static_cast<uint32>( _listDirtyRoot.size() );
             _listDirtyRoot.push_back( pRoot );
         }
@@ -146,7 +146,7 @@ namespace sw
             const size_t firstIndex = _listDirtyRoot.size();
             _listDirtyRoot.insert( _listDirtyRoot.end(), listScratch.begin(), listScratch.end() );
             listScratch.clear();
-            // 스크래치에 있던 동안은 자리를 몰랐다 — 본 목록에 들어온 지금 적는다.
+            // 스크래치에 있던 동안은 자리를 몰랐다. 본 목록에 들어온 지금 적는다.
             for ( size_t index = firstIndex; index < _listDirtyRoot.size(); ++index )
             {
                 if ( _listDirtyRoot[index] != nullptr )
@@ -171,7 +171,7 @@ namespace sw
             return false;
 
         vector<SceneTransformWrite>& listSlot = _pWriteScratch[slot];
-        // 같은 컴포넌트에 잇따라 쓰면 한 건으로 — 마지막 값이 이긴다(세터를 차례로 부른 것과 같다).
+        // 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다).
         if ( listSlot.empty() == false && listSlot.back()._handle == write._handle )
         {
             SceneTransformWrite& last = listSlot.back();
@@ -223,13 +223,13 @@ namespace sw
 
         std::shared_lock<std::shared_mutex> lock{ _rootMutex };
 
-        // 스크래치는 스레드 슬롯마다 하나 — 워커 수는 서비스가 묶인 뒤에야 알 수 있으므로 여기서 맞춘다(한 번만 자란다).
+        // 스크래치는 스레드 슬롯마다 하나다. 워커 수는 서비스가 묶인 뒤에야 알 수 있으므로 여기서 맞춘다(한 번만 자란다).
         const uint32 slotCount = engine::getParallelScratchSlotCount();
         if ( _listScratchStack.size() < slotCount )
             _listScratchStack.resize( slotCount );
 
         // **루트 서브트리 단위로 병렬이다.** 서브트리끼리는 트리라 겹치지 않고, 부모의 월드 행렬을 읽는 것은 같은
-        // 잡 안에서 순서대로 일어난다. 워커는 컨테이너를 만지지 않는다 — 포인터만 넘긴다(컨테이너 레이스 탐지기가
+        // 잡 안에서 순서대로 일어난다. 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다(컨테이너 레이스 탐지기가
         // 워커의 인덱싱을 잡는다). 스택은 자기 슬롯의 것을 쓴다. 도는 것은 **더티 루트 목록**뿐이다.
         struct RootFlushJob
         {
@@ -253,7 +253,7 @@ namespace sw
         engine::runParallel( static_cast<uint32>( _listDirtyRoot.size() ), kParallelFlushRootCount,
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &RootFlushJob::flushRange, &job ) );
 
-        // 목록을 비우며 대기 플래그를 내린다 — 다음 더티가 다시 올릴 수 있게.
+        // 목록을 비우며 대기 플래그를 내린다. 다음 더티가 다시 올릴 수 있게 한다.
         for ( SceneComponent* pRoot : _listDirtyRoot )
         {
             if ( pRoot == nullptr )

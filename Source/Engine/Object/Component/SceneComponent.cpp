@@ -20,7 +20,7 @@ namespace sw
             static float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
             {
                 // DirectX 행-벡터 규격: Scale * Rotation * Translation.
-                // 행렬 셋을 곱하지 않고 결과를 바로 적는다 — 값은 같고 곱 두 번이 사라진다
+                // 행렬 셋을 곱하지 않고 결과를 바로 적는다. 값은 같고 곱 두 번이 사라진다
                 // (`float4x4::createTrs` 주석). 움직이는 컴포넌트마다 매 프레임 지나는 자리다.
                 return float4x4::createTrs( position, rotation, scale );
             }
@@ -87,20 +87,20 @@ namespace sw
         _bIsSceneComponent = SW_TRUE;
     }
 
-    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터·자식 목록·매니저의 루트
+    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터 · 자식 목록 · 매니저의 루트
     // 등록부에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
-    // `_listChild` 항목, `registerRootSceneComponent` 가 들고 있는 포인터를 전부 새 주소로
+    // `_listChild` 항목, `registerRootSceneComponent` 가 들고 있는 포인터를 모두 새 주소로
     // 고쳐야 하는데, 예전 이동 연산은 그중 하나도 하지 않았다(이동 대입은 심지어 방금 옮겨
-    // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀에서 제자리 생성·소멸하므로 실제로
-    // 옮겨지는 일이 없었고 — 삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지
-    // 않았다 — 그래서 고치는 대신 **막는다.** 파생 7종의 `= default` 선언도 같이 걷었다.
+    // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로
+    // 옮겨지는 일이 없었고(삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지
+    // 않았다), 그래서 고치는 대신 **막는다.** 파생 7종의 `= default` 선언도 같이 걷었다.
 
     SceneComponent::~SceneComponent()
     {
-        // 소멸 시 자식 컴포넌트들을 부모로부터 분리 (힙 복사 없이 역순 분리)
+        // 소멸할 때 자식 컴포넌트들을 떼어 낸다(힙 복사 없이 뒤에서부터).
         //
         // **미루는 쪽(`detachFromComponent`)을 쓰면 안 된다.** 그쪽은 틱 중이면 일을 큐에 넣고
-        // 그냥 돌아오므로 `_listChild` 가 줄지 않는다 — 아래 루프가 끝나지 않고 미룬 일만 무한히
+        // 그냥 돌아오므로 `_listChild` 가 줄지 않는다. 아래 루프가 끝나지 않고 미룬 일만 무한히
         // 쌓인다. 게다가 그 일이 나중에 실행될 때 핸들로 되찾을 자기 자신은 이미 없다. 파괴는
         // 지금 틱 창 밖에서만 일어나므로 실제로 닿지는 않지만, 닿았을 때의 모습이 "멈춘다" 인
         // 것을 남겨 둘 이유가 없다.
@@ -157,7 +157,7 @@ namespace sw
 
     void SceneComponent::queueTickWrite( SceneTransformWrite& write )
     {
-        // 병렬 틱 중이다 — 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
+        // 병렬 틱 중이다. 자기 스레드 슬롯의 쓰기 큐에 올리고, 틱이 끝나면 배치로 적용된다(잠금도 할당도 없다).
         write._handle  = getHandle();
         write._pTarget = this;
         _pManager->queueTransformWrite( write );
@@ -175,7 +175,7 @@ namespace sw
         }
         // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
         // "안 움직였다" 가 되는데, 비교 기준이 매번 **현재 값**이라 그 아래 움직임은 쌓이지도
-        // 않는다 — 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에 있었다.
+        // 않는다. 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에 있었다.
         if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::EpsilonSquared )
             return;
         _localPosition = pos;
@@ -394,8 +394,8 @@ namespace sw
         if ( bChanged == false )
             return false;
 
-        // 잎 루트(부모도 자식도 없다)는 **여기서 곧장** 월드를 만든다 — 방금 쓴 라인이 뜨거운 채로, 같은 워커가. 자손이 없으니
-        // 순서를 기다릴 것이 없고 플러시 패스가 이 루트를 만질 일도 없다(더티 목록에 오르지 않는다). 큐브 8000 개가 전부 움직이는
+        // 잎 루트(부모도 자식도 없다)는 **여기서 곧장** 월드를 만든다. 방금 쓴 캐시 라인이 뜨거운 채로, 같은 워커가 만든다. 자손이 없으니
+        // 순서를 기다릴 것이 없고 플러시 패스가 이 루트를 만질 일도 없다(더티 목록에 오르지 않는다). 큐브 8000 개가 모두 움직이는
         // 프레임에서 사후 플러시 114 us 가 통째로 사라진 자리다. 계층이 있는 것은 예전처럼 루트를 올리고 플러시가 내려간다.
         if ( _pParent == nullptr && _listChild.empty() )
         {
@@ -404,8 +404,8 @@ namespace sw
             return true;
         }
 
-        // markTransformDirty 와 같은 표시 — 세대 올리기와 지연 경로만 뺐다. 전부 바이트 저장이라 워커에서 안전하다.
-        // 루트는 워커 스크래치에 올린다 — 같은 루트를 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
+        // markTransformDirty 와 같은 표시다. 세대 올리기와 지연 경로만 뺐다. 모두 바이트 저장이라 워커에서 안전하다.
+        // 루트는 워커 스크래치에 올린다. 같은 루트를 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
         _bIsTransformDirty    = SW_TRUE;
         SceneComponent* pRoot = ( _pParent == nullptr ) ? this : nullptr;
         for ( SceneComponent* pParentComp = _pParent; pParentComp != nullptr; pParentComp = pParentComp->_pParent )
@@ -457,7 +457,7 @@ namespace sw
             _pManager->notifyTransformDirtied();
 
         // 부모 사슬을 올라가며 "자손 더티" 를 세우고, 루트에 닿으면 플러시 목록에 올린다. 이미 서 있는 조상을 만나면
-        // 그 루트는 이미 올라 있다(불변식) — 거기서 멈춘다. 내가 루트면 나를 올린다.
+        // 그 루트는 이미 올라 있다(불변식). 거기서 멈춘다. 내가 루트면 나를 올린다.
         SceneComponent* pParentComp = _pParent;
         SceneComponent* pRoot       = ( pParentComp == nullptr ) ? this : nullptr;
         while ( pParentComp != nullptr )

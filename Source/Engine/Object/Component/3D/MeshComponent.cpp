@@ -35,7 +35,7 @@ namespace sw
     {
         if ( _mesh != nullptr )
             return;
-        // **공유되는** 프리미티브를 받는다 — 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        // **공유되는** 프리미티브를 받는다. 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
         _mesh = MeshUtil::acquirePrimitive( _meshId );
         markRenderStateDirty();
     }
@@ -63,8 +63,8 @@ namespace sw
     void MeshComponent::onPropertyChanged( hashed_string propertyName )
     {
         // 트랜스폼 PROPERTY 는 여기서 markTransformDirty 로 이어지고, 그 결과 월드 행렬이 다시
-        // 계산될 때 onWorldTransformUpdated 가 렌더 더티를 찍는다. 그래서 여기선 렌더 관련
-        // PROPERTY 만 보면 된다 — 어느 쪽이든 빠지는 경로가 없다.
+        // 계산될 때 onWorldTransformUpdated 가 렌더 더티를 찍는다. 그래서 여기서는 렌더 관련
+        // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
         SceneComponent::onPropertyChanged( propertyName );
         markRenderStateDirty();
     }

@@ -1,6 +1,6 @@
 /**
  * @file DirectionalLightComponent.h
- * @brief 씬의 주광(directional key light) — 방향·색·그림자 볼륨을 선언으로 다룹니다.
+ * @brief 씬의 주광(directional key light)입니다. 방향 · 색 · 그림자 볼륨을 선언으로 다룹니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,13 +13,13 @@ namespace sw
 {
     /**
      * @class DirectionalLightComponent
-     * @brief 방향광 하나. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
-     * @details 예전에는 주광의 방향·색·세기와 그림자 직교 볼륨이 전부 FrameRendererConstants.cpp
-     *          안의 `constexpr` 상수였다. 그래서 씬이 커져도 그림자 볼륨은 2 유닛짜리 그대로였고
-     *          (큐브 5000 개 격자는 142 유닛이다), 빛을 돌려보려면 엔진을 다시 빌드해야 했다.
-     *          카메라가 CameraComponent 로 선언되듯 빛도 컴포넌트로 선언한다.
-     * @note 방향은 이 컴포넌트의 전방 벡터다 — 회전을 주면 빛이 돈다. 언리얼의
-     *       `UDirectionalLightComponent` 와 같은 규약이다.
+     * @brief 방향광 하나입니다. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
+     * @details 예전에는 주광의 방향 · 색 · 세기와 그림자 직교 볼륨이 모두 FrameRendererConstants.cpp
+     *          안의 `constexpr` 상수였습니다. 그래서 씬이 커져도 그림자 볼륨은 2 유닛짜리 그대로였고
+     *          (큐브 5000 개 격자는 142 유닛입니다), 빛을 돌려 보려면 엔진을 다시 빌드해야 했습니다.
+     *          카메라가 CameraComponent 로 선언되듯 빛도 컴포넌트로 선언합니다.
+     * @note 방향은 이 컴포넌트의 전방 벡터입니다. 회전을 주면 빛이 돕니다(회전이 없으면 기본 방향).
+     *       언리얼의 `UDirectionalLightComponent` 와 같은 규약입니다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Directional Light", Tooltip = "Scene key light and shadow volume" )
     class SW_API DirectionalLightComponent : public SceneComponent
@@ -29,12 +29,10 @@ namespace sw
 
         /** @brief 기본 주광 값으로 만듭니다. */
         DirectionalLightComponent();
-        /** @brief 기본 소멸. */
+        /** @brief 기본 소멸자입니다. */
         virtual ~DirectionalLightComponent() override = default;
 
-        /** @brief 라이트를 이동합니다. */
-
-        /** @brief 빛이 나아가는 방향(정규화). 컴포넌트 전방 벡터입니다. */
+        /** @brief 빛이 나아가는 방향(정규화)입니다. 회전이 있으면 컴포넌트 전방 벡터, 없으면 기본 방향(위에서 비스듬히)입니다. */
         float3 getLightDirection() const;
 
         /** @brief 빛 색입니다. */
@@ -62,7 +60,7 @@ namespace sw
         /** @brief 그림자 카메라 거리를 설정합니다. */
         void setShadowDistance( float32 distance );
 
-        /** @brief 그림자를 드리우면 true. */
+        /** @brief 그림자를 드리우면 true 입니다. */
         bool castsShadow() const { return _bCastShadow == SW_TRUE; }
         /** @brief 그림자 사용 여부를 설정합니다. */
         void setCastShadow( bool bCastShadow );

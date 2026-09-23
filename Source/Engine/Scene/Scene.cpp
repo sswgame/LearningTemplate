@@ -22,9 +22,9 @@
 namespace sw
 {
     /**
-     * @brief `-gv_defaultMaterial=<path>` — 씬 기본 머티리얼을 EngineData 대신 이 경로로.
-     * @details 벤치·시각 검증용(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 본다).
-     *          비어 있으면 EngineData._defaultMaterial.
+     * @brief `-gv_defaultMaterial=<path>`: 씬 기본 머티리얼을 EngineData 대신 이 경로로 정합니다.
+     * @details 벤치 · 시각 검증용입니다(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 봅니다).
+     *          비어 있으면 EngineData._defaultMaterial 을 씁니다.
      */
     SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
 
@@ -33,7 +33,7 @@ namespace sw
         struct SceneInternal
         {
             /**
-             * @brief 엔진 데이터 설정으로부터 기본 머티리얼 경로를 반환합니다.
+             * @brief 기본 머티리얼 경로를 반환합니다(-gv_defaultMaterial 이 있으면 그것, 없으면 엔진 데이터 설정).
              */
             static string resolveDefaultMaterialPath()
             {
@@ -43,7 +43,7 @@ namespace sw
                 return engine::getEngineData()._defaultMaterial;
             }
 
-            /** @brief MeshComponent의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
+            /** @brief MeshComponent 의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
             static void bindSceneMeshDefaults( Scene* pScene )
             {
                 if ( pScene == nullptr )
@@ -91,7 +91,7 @@ namespace sw
     }
 
     /**
-     * @brief 씬을 초기화하고 기본 머티리얼 리소스를 획득하며 기본 카메라를 설정합니다.
+     * @brief 씬을 초기화합니다. 기본 머티리얼을 얻고 기본 카메라를 설정합니다.
      */
     bool Scene::initialize( IRHIDevice* pRhiDevice )
     {
@@ -121,7 +121,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
-        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 그래서 두 번째 판이 있다.
+        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다. 그래서 두 번째 단계가 있다.
         vector<pair<GameObject*, string_view>> listRebindTarget;
         listRebindTarget.reserve( doc._listEntityNode.size() );
 
@@ -145,7 +145,7 @@ namespace sw
                 if ( ent._prefab.empty() == false )
                     _mapPrefabSource[pGo->getObjectId()] = ent._prefab;
 
-                // **구워진 바이너리 상태가 있으면 그것이 정본이다.** 쿠커가 왕복 검증에 성공한
+                // **구워진 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
                 // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
                 if ( ent._embeddedStateBytes.empty() == false )
                 {
@@ -233,7 +233,7 @@ namespace sw
     }
 
     /**
-     * @brief 씬 내부의 모든 게임 오브젝트 및 컴포넌트를 매 프레임 업데이트합니다.
+     * @brief 씬 안의 게임 오브젝트와 컴포넌트를 매 프레임 갱신합니다.
      */
     void Scene::tick( float32 deltaTime )
     {
@@ -242,7 +242,7 @@ namespace sw
     }
 
     /**
-     * @brief 게임 카메라가 씬에 존재하는지 검사하고 없으면 기본 위치에 자동 생성합니다.
+     * @brief 씬에 게임 카메라가 있는지 보고, 없으면 기본 위치에 만듭니다.
      */
     bool Scene::ensureDefaultCameras()
     {
@@ -275,18 +275,18 @@ namespace sw
     }
 
     /**
-     * @brief 지금 켜져 있는 방향광 하나를 돌려줍니다. 없으면 nullptr.
-     * @details 등록부만 본다 — 빛의 수에 비례하고 씬 크기와 무관하다. 예전에는 **모든 GameObject**
+     * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
+     * @details 등록부만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다. 예전에는 **모든 GameObject**
      *          를 돌며 `getComponent<DirectionalLightComponent>()` 를 물었고, 찾은 뒤에도
-     *          `forEachGameObject` 에 중단이 없어 끝까지 돌았다. EngineLoop 이 매 프레임 부르므로
-     *          큐브 20,000 개 벤치에서 이 한 줄이 게임 스레드 프레임의 38%(7.6ms 중 2.9ms)였다.
+     *          `forEachGameObject` 에 중단이 없어 끝까지 돌았습니다. EngineLoop 이 매 프레임 부르므로
+     *          큐브 20,000 개 벤치에서 이 한 줄이 게임 스레드 프레임의 38%(7.6ms 중 2.9ms)였습니다.
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const
     {
         if ( _objectManager == nullptr )
             return nullptr;
 
-        // 활성 판정은 여기가 한다 — 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약).
+        // 활성 판정은 여기서 한다. 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약).
         for ( DirectionalLightComponent* pLight : _objectManager->getLightRegistry().getAllDirectional() )
         {
             if ( pLight == nullptr || pLight->isActive() == false )

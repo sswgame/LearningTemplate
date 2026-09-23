@@ -59,7 +59,7 @@ namespace sw
     }
 
     /**
-     * @brief 로드 중인 비동기 작업을 안전하게 완료 대기하고 모든 활성 씬을 해제합니다.
+     * @brief 진행 중인 비동기 로드가 끝나기를 기다린 뒤 로드된 씬을 모두 해제합니다.
      */
     void SceneManager::shutdown()
     {
@@ -108,7 +108,7 @@ namespace sw
     }
 
     /**
-     * @brief 새로운 빈 씬을 생성하여 등록하고 활성 씬이 없으면 활성 씬으로 지정합니다.
+     * @brief 새 빈 씬을 만들어 등록하고, 활성 씬이 없으면 활성 씬으로 정합니다.
      */
     Scene* SceneManager::createScene( string_view name )
     {
@@ -154,7 +154,7 @@ namespace sw
     }
 
     /**
-     * @brief XML 씬 파일 경로로부터 백그라운드 워커 스레드 비동기 로드를 요청하고 TaskFuture<Scene*>를 반환합니다.
+     * @brief 씬 파일을 워커 스레드에서 비동기로 로드하도록 요청하고 TaskFuture<Scene*> 를 반환합니다.
      */
     TaskFuture<Scene*> SceneManager::requestLoadFuture( string_view path )
     {
@@ -173,8 +173,8 @@ namespace sw
         if ( _bLoadInFlight.compare_exchange_strong( expected, true ) == false )
         {
             // 대기열은 **한 자리**다. 앞에 있던 요청은 여기서 밀려나므로 그 요청자에게
-            // 실패를 알린다 — 예전에는 `_queuedPath` 만 덮어써서, 밀려난 쪽이 쥔 future 는
-            // 아무도 채우지 않는 채로 남았다(영원히 끝나지 않는다).
+            // 실패를 알린다. 예전에는 `_queuedPath` 만 덮어써서, 밀려난 쪽이 쥔 future 는
+            // 아무도 채우지 않은 채로 남았다(영원히 끝나지 않는다).
             if ( _queuedPath.empty() == false )
                 _queuedPromise.setValue( nullptr );
 
@@ -184,7 +184,7 @@ namespace sw
             return _queuedPromise.getFuture();
         }
 
-        // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다 — 여기서
+        // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다. 여기서
         // 복사해 넘기고 원본으로 future 를 뽑는다(양쪽 return 이 prvalue 라야 복사가 안 생긴다).
         TaskPromise<Scene*> promise{};
         if ( dispatchLoad( path, promise ) == false )
@@ -227,12 +227,12 @@ namespace sw
         if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
             return;
 
-        // **로드는 프레임 밖에서 한 번 일어난다** — `SW_PROFILE_SCOPE` 의 프레임 집계에는 안
-        // 잡힌다. 여기 계측이 하나도 없어서 씬 로드가 얼마나 걸리는지 아무도 알 수 없었고,
-        // 실제로 로드 시간의 81% 를 먹는 결함이 그동안 안 보였다(`ComponentDefaults` 가 없는
+        // **로드는 프레임 밖에서 한 번 일어난다.** 그래서 `SW_PROFILE_SCOPE` 의 프레임 집계에는
+        // 잡히지 않는다. 여기 계측이 하나도 없어서 씬 로드가 얼마나 걸리는지 아무도 알 수 없었고,
+        // 실제로 로드 시간의 81% 를 먹는 결함이 그동안 보이지 않았다(`ComponentDefaults` 가 없는
         // 파일을 컴포넌트마다 다시 열고 있었다).
         //
-        // 재는 것은 `ScopeCpuTimer` 가 한다 — 스코프 동안 재고 소멸할 때 남긴다. 로그가
+        // 재는 것은 `ScopeCpuTimer` 가 한다. 스코프 동안 재고 소멸할 때 남긴다. 로그가
         // 사라지는 빌드에서는 경과 계산도 함께 사라지므로 따로 가려 줄 것이 없다.
         SceneDocument doc{};
         bool          ok = false;
@@ -300,7 +300,7 @@ namespace sw
     }
 
     /**
-     * @brief 현재 활성화된 씬의 최상위 계층 오브젝트 상태들을 XML 씬 서술자 파일로 직렬화 저장합니다.
+     * @brief 활성 씬의 루트 오브젝트 상태를 XML 씬 파일로 저장합니다.
      */
     bool SceneManager::saveActiveScene( string_view path )
     {
@@ -329,7 +329,7 @@ namespace sw
     }
 
     /**
-     * @brief 백그라운드에서 완료된 비동기 로드 결과를 메인 스레드 안전 시점에 활성 씬으로 교체(Swap) 적용합니다.
+     * @brief 백그라운드에서 끝난 비동기 로드 결과를 메인 스레드의 안전한 시점에 활성 씬으로 바꿔 넣습니다.
      */
     void SceneManager::tickTransitions()
     {
@@ -345,7 +345,7 @@ namespace sw
         _bLoadInFlight.store( false, std::memory_order_release );
         _loadHandle = {};
 
-        // 연속된 씬 전환 요청이 큐잉되어 있는 경우 이전 로드 결과를 버리고 다음 요청 즉시 디스패치
+        // 씬 전환 요청이 대기열에 있으면 이번 로드 결과를 버리고 다음 요청을 바로 띄운다
         bool bQueuedSatisfiedByThisLoad{ false };
         if ( _queuedPath.empty() == false )
         {
@@ -353,7 +353,7 @@ namespace sw
             _queuedPath.clear();
             if ( pendingScene != nullptr && FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), nextPath ) )
             {
-                // 이미 동일한 경로가 로드 완료됨 (대소문자 무관) — 아래 스왑에서 대기열 요청자도 같이 채운다.
+                // 같은 경로가 이미 로드됐다(대소문자 무관). 아래 스왑에서 대기열 요청자도 같이 채운다.
                 bQueuedSatisfiedByThisLoad = true;
             }
             else
@@ -368,7 +368,7 @@ namespace sw
                 }
                 // 대기열 요청자의 약속을 **그대로 들고 간다.** 예전에는 `requestLoadFuture` 를
                 // 다시 불러 약속을 새로 만들었고, 그래서 대기열에 넣은 쪽이 쥔 future 는 바로
-                // 위에서 nullptr 로 닫힌 것이었다 — 자기 씬이 활성이 되는데도 실패를 받았다.
+                // 위에서 nullptr 로 닫힌 것이었다. 자기 씬이 활성이 되는데도 실패를 받았다.
                 dispatchLoad( nextPath, std::move( _queuedPromise ) );
                 return;
             }
@@ -406,17 +406,17 @@ namespace sw
         engine::getCommandStack().clear();
 #endif
 
-        // 이전 활성 씬 자동 언로드
+        // 이전 활성 씬을 언로드한다
         if ( pPreviousActive != nullptr && pPreviousActive != _pActiveScene )
             unloadScene( pPreviousActive );
 
-        // 씬 스왑 직후 더 이상 참조되지 않는 이전 씬의 에셋들을 정리합니다.
+        // 씬을 바꾼 직후, 더 이상 참조되지 않는 이전 씬의 에셋을 정리한다.
         if ( engine::areEngineServicesBound() )
             engine::getResourceManager().garbageCollectUnusedAssets();
     }
 
     /**
-     * @brief 활성 씬을 매 프레임 업데이트합니다.
+     * @brief 활성 씬을 매 프레임 갱신합니다.
      */
     void SceneManager::tick( float32 deltaTime )
     {
@@ -427,7 +427,7 @@ namespace sw
     }
 
     /**
-     * @brief 현재 비동기 씬 로드 또는 전환이 진행 중인지 여부를 반환합니다.
+     * @brief 비동기 씬 로드나 전환이 진행 중인지 반환합니다.
      */
     bool SceneManager::isTransitioning() const
     {
@@ -443,7 +443,7 @@ namespace sw
     }
 
     /**
-     * @brief 지정된 씬을 메모리에서 해제하고 로드된 씬 목록에서 제거합니다.
+     * @brief 지정한 씬을 해제하고 로드된 씬 목록에서 뺍니다.
      */
     void SceneManager::unloadScene( Scene* pScene )
     {

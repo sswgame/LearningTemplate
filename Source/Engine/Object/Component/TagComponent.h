@@ -1,6 +1,6 @@
 /**
  * @file TagComponent.h
- * @brief GameObject에 태그 집합을 붙이는 컴포넌트
+ * @brief GameObject 에 태그 집합을 붙이는 컴포넌트입니다.
  */
 #pragma once
 #include "Engine/Object/Component/Component.h"
@@ -10,7 +10,7 @@
 namespace sw
 {
     /**
-     * @brief GameObject의 태그를 담는 컴포넌트입니다.
+     * @brief GameObject 의 태그를 담는 컴포넌트입니다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Tag Component", Tooltip = "GameObject Tag Container Component" )
     class SW_API TagComponent : public Component

@@ -1,6 +1,6 @@
 /**
  * @file MeshComponent.h
- * @brief SceneComponent that references a Mesh for FrameRenderer submission (3D Rendering)
+ * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 등록부를 거쳐 GpuScene 으로 들어갑니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,23 +22,21 @@ namespace sw
 
     /**
      * @class MeshComponent
-     * @brief Drawable mesh attached to a GameObject (world transform from SceneComponent)
+     * @brief GameObject 에 붙어 그려지는 메시입니다(월드 트랜스폼은 SceneComponent 에서 얻습니다).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer" )
     class SW_API MeshComponent : public SceneComponent
     {
-        /// 등록부 슬롯과 더티 플래그를 관리하는 유일한 주체.
+        /// 등록부 슬롯과 더티 플래그를 관리하는 유일한 주체입니다.
         friend class PrimitiveRegistry;
 
     public:
         REFLECT_BODY();
 
-        /** @brief 메시/머티리얼 없는 기본값. */
+        /** @brief 메시 · 머티리얼 없이 만듭니다. */
         MeshComponent();
-        /** @brief 메시/머티리얼 참조를 끊습니다. */
+        /** @brief 기본 소멸자입니다(메시 · 머티리얼 인스턴스의 shared_ptr 을 놓습니다). */
         virtual ~MeshComponent() override = default;
-
-        /** @brief 메시 참조를 이동합니다. */
 
         /** @brief 수명주기 초기화 */
         void onBeginPlay() override;
@@ -74,13 +72,13 @@ namespace sw
         RHIBlendMode getBlendMode() const { return _blendMode; }
 
         /**
-         * @brief GPU 회전 애니메이션 시드를 설정합니다 (0 = 애니메이션 없음).
+         * @brief GPU 회전 애니메이션 시드를 설정합니다(0 이면 애니메이션 없음).
          * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instanceanim.hlsl` 이 이 값을 해시해
-         *          **인스턴스마다 다른 각속도**로 회전을 얹는다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
-         *          되고, 회전은 전적으로 컴퓨트가 만든다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 준다.
+         *          **인스턴스마다 다른 각속도**로 회전을 얹습니다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
+         *          되고, 회전은 전적으로 컴퓨트가 만듭니다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 줍니다.
          */
         void setGpuSpinSeed( uint32 seed );
-        /** @brief setGpuSpinSeed 로 정한 값 (0 이면 GPU 회전 없음). */
+        /** @brief setGpuSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
         uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
 
         /** @brief 바운드 반지름을 설정합니다. */
@@ -98,11 +96,11 @@ namespace sw
 
         /**
          * @brief 렌더 스냅샷이 다시 읽어야 할 상태로 표시합니다.
-         * @details 세터·PROPERTY 편집·월드 트랜스폼 갱신이 전부 여기로 모인다. 렌더러가 매 프레임
-         *          전부 훑어 "뭐가 바뀌었나" 되묻는 대신, 바꾼 쪽이 알린다.
+         * @details 세터 · PROPERTY 편집 · 월드 트랜스폼 갱신이 모두 여기로 모입니다. 렌더러가 매 프레임
+         *          전부 훑어 "뭐가 바뀌었나" 되묻는 대신, 바꾼 쪽이 알립니다.
          */
         void markRenderStateDirty();
-        /** @brief 프리미티브 등록부에 자기를 넣습니다. 여기서 타입이 한 번 확정된다. */
+        /** @brief 프리미티브 등록부에 자기를 넣습니다. 여기서 타입이 한 번 확정됩니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 프리미티브 등록부에서 자기를 뺍니다. 멱등입니다. */
         void onUnregister( GameObjectManager& manager ) override;
@@ -112,7 +110,7 @@ namespace sw
         void onWorldTransformUpdated() override;
 
     private:
-        /** @brief 등록부 슬롯. 등록부를 소유한 매니저만 만집니다. */
+        /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
         /** @brief 등록부 슬롯을 설정합니다. */
         void                         setPrimitiveIndex( uint32 index ) { _primitiveIndex = index; }
@@ -127,11 +125,11 @@ namespace sw
         RHIBlendMode _blendMode;
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
         uint32 _gpuSpinSeed;
-        /** @brief 등록 시점에 받은 등록부. 더티 표시는 여기로 바로 간다 — 소유자를 거치지 않는다. */
+        /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
-        /** @brief 등록부 슬롯. 미등록이면 kInvalidPrimitiveIndex. */
+        /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
         uint32 _primitiveIndex;
-        // "더티" 비트는 여기 없다 — 등록부의 원자 플래그 하나가 정본이다. 비트필드였을 때는 워커의 더티 쓰기가
+        // "더티" 비트는 여기 없다. 등록부의 원자 플래그 하나가 기준이다. 비트필드였을 때는 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 형식상 레이스였다.
         uint8 _bVisible : 1;
         uint8 _reserved : 7;

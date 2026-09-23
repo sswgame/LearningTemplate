@@ -15,8 +15,8 @@ namespace sw
             return;
 
         std::scoped_lock<mutex> lock{ _mutex };
-        // 슬롯이 정말 이 등록부에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 컴포넌트가 이동된
-        // 사본이면 인덱스만 따라오고 목록은 원본을 가리키고 있어, 그대로 믿으면 조용히 미등록으로 남는다.
+        // 슬롯이 정말 이 등록부에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
+        // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동이 있던 때 실제로 그랬다. 지금은 이동이 막혀 있다).
         const uint32 existing = pComp->getPrimitiveIndex();
         if ( existing != MeshComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
              _listPrimitive[existing] == pComp )
@@ -34,7 +34,7 @@ namespace sw
     {
         if ( count <= _dirtyFlagCapacity )
             return;
-        // 두 배씩 — 프리미티브가 하나씩 늘 때마다 배열을 다시 만들지 않는다. 용량은 워드 단위(64 칸)다.
+        // 두 배씩 늘린다. 프리미티브가 하나씩 늘 때마다 배열을 다시 만들지 않는다. 용량은 워드 단위(64 칸)다.
         uint32 capacity = ( _dirtyFlagCapacity == 0 ) ? 64u : _dirtyFlagCapacity;
         while ( capacity < count )
             capacity *= 2u;
@@ -64,8 +64,8 @@ namespace sw
             return;
 
         // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스와 **깃발**을 같이 옮긴다. 예전에는 지울 때마다 깃발
-        // 전부(번호 공간만큼)를 훑어 내렸다 — 프레임에 100 개를 지우는 씬에서 8000 칸 × 100 이라 지우기 하나가 4 us 였다.
-        // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다; 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
+        // 전부(번호 공간만큼)를 훑어 내렸다. 프레임에 100 개를 지우는 씬에서 8000 칸 × 100 이라 지우기 하나가 4 us 였다.
+        // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다. 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
         // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
         MeshComponent* pMoved   = _listPrimitive.back();
         const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
@@ -100,7 +100,7 @@ namespace sw
             return;
         atomic<uint64>& word = _arrDirtyWord[slot >> 6];
         const uint64    bit  = static_cast<uint64>( 1 ) << ( slot & 63u );
-        // 이미 서 있으면 읽기만 한다 — 같은 워드의 이웃 칸을 찍는 워커와 라인을 다투지 않는다.
+        // 이미 서 있으면 읽기만 한다. 같은 워드의 이웃 칸을 찍는 워커와 캐시 라인을 다투지 않는다.
         if ( ( word.load( std::memory_order_relaxed ) & bit ) != 0u )
             return;
         if ( ( word.fetch_or( bit, std::memory_order_acq_rel ) & bit ) != 0u )
@@ -191,7 +191,7 @@ namespace sw
     {
         if ( pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount() )
             return;
-        // 잠금 없이 메시 컴포넌트 수를 읽는다 — 그 수가 그 사이 바뀌면 번호가 어긋나지만, 그 변경은 집합 세대를 올려
+        // 잠금 없이 메시 컴포넌트 수를 읽는다. 그 수가 그 사이 바뀌면 번호가 어긋나지만, 그 변경은 집합 세대를 올려
         // 다음 빌드가 전체 수집으로 가므로 깃발 하나가 엉뚱한 자리에 서도 답은 틀리지 않는다.
         const uint32 slot = static_cast<uint32>( std::as_const( _listPrimitive ).size() ) + pBatch->_firstEntry + index;
         markSlotDirty( slot );
@@ -214,11 +214,11 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         if ( hasDirty() == false )
             return;
-        // "하나라도" 를 훑기 **전에** 내린다 — 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.
-        // (이미 지난 칸이면 그 프레임엔 헛훑기 한 번, 아직 안 지난 칸이면 이번에 잡힌다 — 어느 쪽도 잃지 않는다.)
+        // "하나라도" 를 훑기 **전에** 내린다. 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.
+        // (이미 지난 칸이면 그 프레임에는 헛훑기 한 번, 아직 안 지난 칸이면 이번에 잡힌다. 어느 쪽도 잃지 않는다.)
         _bAnyDirty.store( 0u, std::memory_order_release );
-        // 워드를 훑는다 — 8000 칸이 워드 125 개다. 빈 워드는 읽기만, 선 워드만 exchange 한 번 하고 켜진 비트를 골라 돈다.
-        // 번호 공간 밖의 비트(지워진 칸)는 여기서 같이 내려 버린다 — 그 칸을 다시 쓰는 추가는 집합 세대를 올려 전체 수집이 된다.
+        // 워드를 훑는다. 8000 칸이 워드 125 개다. 빈 워드는 읽기만, 선 워드만 exchange 한 번 하고 켜진 비트를 골라 돈다.
+        // 번호 공간 밖의 비트(지워진 칸)는 여기서 같이 내려 버린다. 그 칸을 다시 쓰는 추가는 집합 세대를 올려 전체 수집이 된다.
         const uint32 count     = MathUtil::min( getSlotCount(), _dirtyFlagCapacity );
         const uint32 wordCount = ( count + 63u ) / 64u;
         for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )

@@ -1,6 +1,6 @@
 /**
  * @file PrefabAsset.h
- * @brief 프리팹 에셋 로드/저장/스폰 (GameObject 템플릿 - XML, JSON, SCN/PFB 바이너리)
+ * @brief 프리팹 에셋의 로드 · 저장 · 스폰입니다(GameObject 템플릿: XML · JSON · PFB2 바이너리).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,24 +17,24 @@ namespace sw
     class GameObject;
     class GameObjectManager;
 
-    /// @brief 프리팹 에셋 (루트 GameObject 상태 템플릿)
+    /// @brief 프리팹 에셋입니다(루트 GameObject 상태 템플릿).
     class SW_API PrefabAsset
     {
     public:
-        /** @brief 빈 프리팹 (미로드). */
+        /** @brief 로드하지 않은 빈 프리팹으로 만듭니다. */
         PrefabAsset();
 
-        /** @brief XML에서 프리팹을 로드합니다 (<Prefab formatVersion="0" name="...">). */
+        /** @brief XML 에서 프리팹을 로드합니다(<Prefab formatVersion="0" name="...">). */
         bool loadFromXmlFile( string_view assetRelativePath );
-        /** @brief JSON에서 프리팹을 로드합니다 (표준 JSON 또는 래퍼 JSON). */
+        /** @brief JSON 에서 프리팹을 로드합니다(표준 JSON 또는 래퍼 JSON). */
         bool loadFromJsonFile( string_view assetRelativePath );
-        /** @brief 바이너리에서 프리팹을 로드합니다. PFB2(쿠킹). */
+        /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). */
         bool loadFromBinaryFile( string_view assetRelativePath );
-        /** @brief XML로 저장합니다 (<Prefab formatVersion="0" name="...">). */
+        /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). */
         bool saveToXmlFile( string_view assetRelativePath ) const;
-        /** @brief JSON으로 저장합니다 ({ "formatVersion": 0, "name": "...", "GameObject": { ... } }). */
+        /** @brief JSON 으로 저장합니다({ "formatVersion": 0, "name": "...", "GameObject": { ... } }). */
         bool saveToJsonFile( string_view assetRelativePath ) const;
-        /** @brief Shipping cook: PFB2 (magic + version + name + state data). */
+        /** @brief Shipping 쿠킹용 PFB2 바이너리로 저장합니다(magic + version + name + 상태 데이터). */
         bool saveToBinaryFile( string_view assetRelativePath ) const;
         /** @brief GameObject 상태에서 프리팹을 채웁니다. */
         void setFromGameObject( const GameObject* pGameObject );
@@ -43,7 +43,7 @@ namespace sw
         const string& getName() const { return _name; }
         /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON)를 반환합니다. */
         const string& getStateData() const { return _stateData; }
-        /** @brief 로드에 성공했으면 true. */
+        /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
         void collectReferencedPrefabPaths( vector<string>& outListPath ) const;
@@ -59,11 +59,11 @@ namespace sw
         [[maybe_unused]] uint8 _reserved : 7;
     };
 
-    /// @brief 프리팹 로드/스폰 캐시
+    /// @brief 프리팹을 로드하고 스폰하는 캐시입니다.
     class SW_API PrefabManager final : public IAssetCache
     {
     public:
-        /** @brief 빈 프리팹 캐시. */
+        /** @brief 빈 프리팹 캐시로 만듭니다. */
         PrefabManager() = default;
         /** @brief 캐시된 프리팹을 정리합니다. */
         ~PrefabManager() override = default;
@@ -73,20 +73,20 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         PrefabManager& operator=( const PrefabManager& ) = delete;
 
-        /** @brief Dev: XML/JSON 저작본 로드. Shipping: 쿠킹된 .prefab.bin만 로드. 캐시 키는 확장자 없는 정규화 경로. */
+        /** @brief 프리팹을 로드합니다. Dev 는 XML/JSON 저작본을, Shipping 은 쿠킹된 .prefab.bin 만 읽습니다. 캐시 키는 확장자를 뺀 정규화 경로입니다. */
         PrefabAsset* loadPrefab( string_view assetRelativePath );
         /**
-         * @brief 프리팹을 스폰합니다. instanceDiff가 있으면 루트 GO TypeInfo에 적용합니다.
+         * @brief 프리팹을 스폰합니다. instanceDiff 가 있으면 루트 GameObject 에 적용합니다.
          */
         GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath,
                            const utf8* pInstanceName = nullptr, const uint8* pInstanceDiff = nullptr,
                            size_t instanceDiffSize = 0 );
         /**
-         * @brief 캐시에서 프리팹 하나를 버립니다 — 다음 `loadPrefab` 이 디스크를 다시 읽는다 (에디터 핫리로드).
-         * @details **이미 스폰된 오브젝트는 바뀌지 않는다.** 프리팹은 스폰 시점에 복사되는 틀이라,
-         *          살아 있는 인스턴스를 거슬러 고치려면 그것은 다른 기능이다(프리팹 오버라이드 전파).
-         *          여기서 보장하는 것은 "다음에 스폰하면 고친 내용이 나온다" 하나다.
-         * @param pDevice 쓰지 않는다 — 프리팹은 GPU 자원을 들지 않는다(`IAssetCache` 계약).
+         * @brief 캐시에서 프리팹 하나를 버립니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다(에디터 핫 리로드).
+         * @details **이미 스폰된 오브젝트는 바뀌지 않습니다.** 프리팹은 스폰 시점에 복사되는 틀이라,
+         *          살아 있는 인스턴스를 거슬러 고치려면 그것은 다른 기능입니다(프리팹 오버라이드 전파).
+         *          여기서 보장하는 것은 "다음에 스폰하면 고친 내용이 나온다" 하나입니다.
+         * @param pDevice 쓰지 않습니다. 프리팹은 GPU 자원을 들지 않습니다(`IAssetCache` 계약).
          */
         void reload( string_view assetRelativePath, IRHIDevice* pDevice = nullptr ) override;
 
@@ -96,10 +96,10 @@ namespace sw
         bool isCached( string_view assetRelativePath ) const override;
         /** @brief 지금 들고 있는 항목 수입니다. */
         size_t getCachedCount() const override;
-        /** @brief 캐시를 통째로 비웁니다 — 다음 `loadPrefab` 이 디스크를 다시 읽는다. */
+        /** @brief 캐시를 통째로 비웁니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다. */
         void clear() override;
 
-        /** @brief 저작본을 PFB2 binary로 쿠킹합니다. */
+        /** @brief 저작본을 PFB2 바이너리로 쿠킹합니다. */
         bool cookPrefabToBinary( string_view sourceRelativePath, string_view binRelativePath );
 
     private:

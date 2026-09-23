@@ -24,8 +24,8 @@ namespace sw
         struct PrefabAssetInternal
         {
             /**
-             * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로.
-             * @details 로드와 스폰이 이 열두 줄을 각자 들었다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 된다.
+             * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로 반환합니다.
+             * @details 로드와 스폰이 이 열두 줄을 각자 들고 있었습니다. 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
              */
             static string resolvePrefabPath( string_view assetReference )
             {
@@ -55,7 +55,7 @@ namespace sw
                 string key = FileUtil::normalizePath( assetRelativePath );
 
                 // 확장자 길이를 손으로 쓰지 않는다. 예전에는 `.bin`/`.xml` 은 -4, `.json` 은 -5 로
-                // 따로 적어서, 확장자를 하나 더 넣을 때 길이를 같이 고쳐야 했다 — 숫자와 문자열이
+                // 따로 적어서, 확장자를 하나 더 넣을 때 길이를 같이 고쳐야 했다. 숫자와 문자열이
                 // 떨어져 있으면 어긋난다.
                 for ( const string_view extension : { ".bin", ".xml", ".json" } )
                 {
@@ -120,7 +120,7 @@ namespace sw
 
                 string bodyTrimmed{ StringUtil::trim( xmlBody ) };
                 if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
-                    return true; // JSON 본문은 XML 업그레이드 대상이 아님
+                    return true; // JSON 본문은 XML 업그레이드 대상이 아니다
 
                 string wrapped = "<Prefab>";
                 wrapped += xmlBody;
@@ -196,7 +196,7 @@ namespace sw
         }
         else
         {
-            // 루트가 <GameObject> 등 직접적인 XML인 경우 지원
+            // 루트가 <GameObject> 처럼 바로 오브젝트인 XML 도 받는다
             XmlNode goNode = doc.getRoot( PrefabAssetInternal::kGameObject );
             if ( goNode.isValid() )
             {
@@ -241,7 +241,7 @@ namespace sw
         }
         else
         {
-            // 직접 GameObject JSON인 경우
+            // 바로 GameObject 인 JSON 인 경우
             _name = root.get( "_name" ).asString();
             if ( _name.empty() )
                 _name = root.get( "Name" ).asString();
@@ -310,7 +310,7 @@ namespace sw
         string xmlBody = _stateData;
         string trimmed{ StringUtil::trim( xmlBody ) };
 
-        // JSON인 경우 GameObject를 통해 XML로 변환
+        // JSON 이면 GameObject 를 거쳐 XML 로 바꾼다
         if ( trimmed.empty() == false && trimmed.front() == '{' )
         {
             GameObject tempObj( hashed_string( _name.c_str() ) );
@@ -334,7 +334,7 @@ namespace sw
         }
 
         // 상위 폴더가 없으면 쓰기가 실패한다. 로더는 실패를 모두 로그하는데 세이버는 조용히 false 만
-        // 돌려주고 있었다 — 새 폴더에 프리팹을 저장하면 아무 메시지도 없이 아무 일도 일어나지 않았다.
+        // 반환하고 있었다. 새 폴더에 프리팹을 저장하면 아무 메시지도 없이 아무 일도 일어나지 않았다.
         // SceneDocument::saveXml 과 같은 형태로 맞춘다.
         FileUtil::createParentDirectory( absPath );
 
@@ -363,7 +363,7 @@ namespace sw
         }
         else
         {
-            // XML인 경우 GameObject를 통해 JSON으로 직렬화
+            // XML 이면 GameObject 를 거쳐 JSON 으로 직렬화한다
             GameObject tempObj( hashed_string( _name.c_str() ) );
             if ( ObjectStateSerializer::loadFromXmlString( &tempObj, _stateData ) )
                 jsonStr = ObjectStateSerializer::saveToJsonString( &tempObj );
@@ -513,9 +513,9 @@ namespace sw
         {
             if ( asset->loadFromBinaryFile( binPath ) == false )
                 return nullptr;
-            // Dev 는 소스(XML/JSON)가 정본이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
-            // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다 — 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
-            // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼·유니티의 에디터는 쿠킹 데이터를 아예 안 본다;
+            // Dev 는 소스(XML/JSON)가 기준이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
+            // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다. 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
+            // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼 · 유니티의 에디터는 쿠킹 데이터를 아예 보지 않는다.
             // 여기는 폴백을 남기되 두 경로를 다 적어 왜 그 내용이 나왔는지 바로 보이게 한다.
             SW_LOG_WARNING( "Source prefab missing - loaded stale cooked binary instead: %# (source %#)", binPath, resolvedPath );
         }
@@ -534,8 +534,8 @@ namespace sw
     GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName,
                                       const uint8* pInstanceDiff, size_t instanceDiffSize )
     {
-        // 이 함수는 나머지 포인터를 전부 검사한다(`pAsset`·`pGameObject`·`pTypeInfo`·`pInstanceName`).
-        // 매니저만 빠져 있었다 — 활성 씬이 없을 때 `getObjectManager()` 는 널을 준다.
+        // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pTypeInfo` · `pInstanceName`).
+        // 매니저만 빠져 있었다. 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )
         {
             SW_LOG_WARNING( "Cannot spawn prefab '%#' without a GameObjectManager.", assetRelativePath );

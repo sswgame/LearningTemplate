@@ -85,10 +85,10 @@ namespace sw
      */
     GameObject::~GameObject()
     {
-        // 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
+        // 컴포넌트를 파괴하기 전에 부모-자식 계층 연결을 끊는다(자식 오브젝트들은 루트가 되어 살아남는다).
         detachFromParent();
 
-        // 자식 목록을 복사하지 않는다 — 떼면 그 자리가 swap-remove 되므로 뒤에서 앞으로 돈다(뒤에서 온 원소는 이미 본 것).
+        // 자식 목록을 복사하지 않는다. 떼면 그 자리가 swap-remove 되므로 뒤에서 앞으로 돈다(뒤에서 온 원소는 이미 본 것).
         if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
         {
             const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
@@ -112,7 +112,7 @@ namespace sw
     }
 
     /**
-     * @brief 게임플레이 시작(Play Mode) 시 소유한 모든 활성 컴포넌트의 onBeginPlay를 호출합니다.
+     * @brief 게임플레이가 시작될 때(Play Mode) 소유한 모든 활성 컴포넌트의 onBeginPlay 를 부릅니다.
      */
     void GameObject::beginPlay()
     {
@@ -125,7 +125,7 @@ namespace sw
     }
 
     /**
-     * @brief 게임플레이 종료 시 소유한 모든 컴포넌트의 onEndPlay를 호출합니다.
+     * @brief 게임플레이가 끝날 때 소유한 모든 컴포넌트의 onEndPlay 를 부릅니다.
      */
     void GameObject::endPlay()
     {
@@ -140,8 +140,8 @@ namespace sw
     void GameObject::onPropertyChanged( hashed_string propertyName )
     {
         (void)propertyName;
-        // 인스펙터는 `_bActive` 를 세터가 아니라 멤버에 직접 쓴다. setActive 가 해주던 계층 전파를
-        // 여기서 해줘야 자식들의 isActiveInHierarchy 가 따라온다 — 프리미티브 집합 무효화도
+        // 인스펙터는 `_bActive` 를 세터가 아니라 멤버에 직접 쓴다. setActive 가 해 주던 계층 전파를
+        // 여기서 해 줘야 자식들의 isActiveInHierarchy 가 따라온다. 프리미티브 집합 무효화도
         // 그 안에서 함께 일어난다.
         refreshActiveInHierarchy();
     }
@@ -154,7 +154,7 @@ namespace sw
     }
 
     /**
-     * @brief 프레임 종료 시점에 게임 오브젝트를 안전하게 파괴하도록 지연 등록합니다.
+     * @brief 프레임이 끝날 때 안전하게 파괴되도록 이 게임 오브젝트를 파괴 대기에 올립니다.
      */
     void GameObject::destroy()
     {
@@ -174,7 +174,7 @@ namespace sw
     }
 
     /**
-     * @brief 게임 오브젝트 이름을 변경하고 GameObjectManager의 이름 검색 인덱스를 갱신합니다.
+     * @brief 게임 오브젝트 이름을 바꾸고 GameObjectManager 의 이름 검색 인덱스를 갱신합니다.
      */
     void GameObject::setName( hashed_string name )
     {
@@ -200,7 +200,7 @@ namespace sw
                 continue;
             pComp->setActive( bActive );
         }
-        // 계층 재계산은 이 안에서 한 번 — 예전에는 위에서 한 번 더 돌아 자손 전체를 두 번 걸었다.
+        // 계층 재계산은 이 안에서 한 번만 한다. 예전에는 위에서 한 번 더 돌아 자손 전체를 두 번 걸었다.
         onPropertyChanged( hashed_string( "_bActive" ) );
     }
 
@@ -289,7 +289,7 @@ namespace sw
         if ( bWasActive != bActiveInHierarchy )
             markPrimitiveSetDirtyOnManager();
 
-        // 자식 목록을 만들지 않는다 — 재귀는 계층을 바꾸지 않으므로 그대로 돈다. 병합되는 오브젝트마다 불리는 자리다.
+        // 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다. 병합되는 오브젝트마다 불리는 자리다.
         if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
         {
             for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
@@ -361,7 +361,7 @@ namespace sw
         if ( pCached != nullptr && pCached->isPendingKill() == false )
             return static_cast<SceneComponent*>( pCached );
 
-        // 캐시가 비었거나 죽었다 — 살아 있는 첫 씬 컴포넌트를 목록에서 찾아 적는다(리플렉션 캐스트 없이 플래그 비트).
+        // 캐시가 비었거나 죽었다. 살아 있는 첫 씬 컴포넌트를 목록에서 찾아 적는다(리플렉션 캐스트 없이 플래그 비트로).
         Component* pFound = nullptr;
         for ( Component* pComp : _listComponent )
         {
@@ -446,8 +446,8 @@ namespace sw
         if ( pTagComp != nullptr )
             return pTagComp->getTags();
 
-        // 틱 중이라 `addComponent` 가 미뤄져 nullptr 을 준 경우다. 서명은 참조를 요구하는데
-        // 돌려줄 컨테이너가 없다 — 예전에는 **공용 상수** `s_emptyTags` 를 `const_cast` 해서
+        // 틱 중이라 `addComponent` 가 미뤄져 nullptr 을 준 경우다. 시그니처는 참조를 요구하는데
+        // 반환할 컨테이너가 없다. 예전에는 **공용 상수** `s_emptyTags` 를 `const_cast` 해서
         // 줬다. 그쪽에 한 번이라도 쓰면 태그가 없는 **모든** 오브젝트의 `getTags() const` ·
         // `hasTag` · `matchesTagQuery` 가 그 값을 보게 된다. 버리는 통을 따로 둬서 쓰기가
         // 아무에게도 새지 않게 한다.
@@ -496,7 +496,7 @@ namespace sw
         if ( _pOwnerManager == nullptr )
             return storage;
 
-        // 타입마다 풀 하나 — 파괴가 그 풀로 돌아간다(`Component::_pPool`). 풀을 못 만드는 타입(리플렉션 없음)은 힙.
+        // 타입마다 풀 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPool`). 풀을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
         if ( pTypeInfo != nullptr )
         {
             storage._pPool = _pOwnerManager->getOrCreateComponentPool( pTypeInfo, typeSize );
@@ -532,9 +532,9 @@ namespace sw
         _listComponent.push_back( pComp );
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
-        // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
+        // 어느 등록부에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
-        // 틱에 참여하는 컴포넌트만 웨이브를 다시 만들게 한다 — 메시·태그 같은 것은 웨이브와 무관하다.
+        // 틱에 참여하는 컴포넌트만 이 오브젝트의 틱 항목을 다시 짓게 한다. 메시 · 태그 같은 것은 틱과 무관하다.
         if ( pComp->hasTickWork() )
             markTickOrderDirty();
     }
@@ -572,11 +572,11 @@ namespace sw
 
     void GameObject::clearComponents()
     {
-        // 인라인 네 칸을 그대로 복사한다 — 힙을 만지지 않는다(다섯 개 이상일 때만).
+        // 인라인 네 칸을 그대로 복사한다. 힙을 만지지 않는다(다섯 개 이상일 때만 만진다).
         ComponentList listOwned( _listComponent.begin(), _listComponent.end() );
         _listComponent.clear();
         _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
-        // 파괴 뒤에는 물을 수 없으니 지금 본다 — 틱에 참여하던 것이 하나라도 있었을 때만 웨이브를 다시 만든다.
+        // 파괴 뒤에는 물을 수 없으니 지금 본다. 틱에 참여하던 것이 하나라도 있었을 때만 틱 항목을 다시 짓는다.
         bool bTickWork = false;
         for ( Component* pComp : listOwned )
             bTickWork = bTickWork || ( pComp != nullptr && pComp->hasTickWork() );
@@ -657,7 +657,7 @@ namespace sw
 
     void GameObject::markTickOrderDirty()
     {
-        // 죽어 가는 오브젝트는 파괴 때 등록부에서 빠진다 — 표시할 것이 없다.
+        // 죽어 가는 오브젝트는 파괴 때 등록부에서 빠진다. 표시할 것이 없다.
         if ( _pOwnerManager != nullptr && isPendingKill() == false )
             _pOwnerManager->getTickRegistry().markObjectDirty( this );
     }

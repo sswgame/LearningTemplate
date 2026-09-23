@@ -1,7 +1,7 @@
 /**
  * @file GameObjectManagerTick.cpp
- * @brief GameObjectManager 의 프레임 경로 — tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 적용 · 지연 큐.
- * @details 수명(생성 · 이름 · 파괴 · 팩토리)은 `GameObjectManager.cpp` 에 있다. 이 파일은 매 프레임 도는 것만 든다.
+ * @brief GameObjectManager 의 프레임 경로입니다(tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 적용 · 지연 큐).
+ * @details 수명(생성 · 이름 · 파괴 · 팩토리)은 `GameObjectManager.cpp` 에 있습니다. 이 파일은 매 프레임 도는 것만 담습니다.
  */
 #include "pch.h"
 
@@ -21,10 +21,10 @@ namespace sw
     {
         struct GameObjectManagerTickInternal
         {
-            /** @brief 이 수 미만의 항목(오브젝트)은 나누지 않고 이 스레드가 돈다 — 디스패치 바닥보다 작은 일이다. */
+            /** @brief 항목(오브젝트)이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다. 디스패치 바닥보다 작은 일입니다. */
             static constexpr uint32 kParallelTickThreshold = 16;
 
-            /** @brief 핸들을 씬 컴포넌트로 풉니다 — 리플렉션 캐스트 없이(플래그 비트). 아니거나 죽었으면 nullptr. */
+            /** @brief 핸들을 씬 컴포넌트로 풉니다(리플렉션 캐스트 없이 플래그 비트로). 씬 컴포넌트가 아니거나 죽었으면 nullptr 입니다. */
             static SceneComponent* resolveSceneComponent( GameObjectManager* pManager, ComponentHandle handle )
             {
                 Component* pComp = pManager->resolveComponent( handle );
@@ -34,8 +34,8 @@ namespace sw
             }
 
             /**
-             * @brief 쓰기 [start, end) 를 순서대로 적용합니다 — 워커에서 불린다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뛴다.
-             * @param bTrustTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않는다 — 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만.
+             * @brief 쓰기 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뜁니다.
+             * @param bTrustTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않을지 여부. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
              */
             static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bTrustTarget )
             {
@@ -57,7 +57,7 @@ namespace sw
                 return changedCount;
             }
 
-            /** @brief 항목 하나를 돌립니다 — 주 틱이면 `onTick`, 서브틱이면 `onSubTick`. 살아 있고 켜져 있는지는 부르는 쪽이 봤다. */
+            /** @brief 항목 하나를 돌립니다. 주 틱이면 `onTick`, 서브틱이면 `onSubTick` 입니다. 살아 있고 켜져 있는지는 부르는 쪽이 이미 봤습니다. */
             static void runTickItem( float32 deltaTime, const TickItem& item )
             {
                 Component* pComp = item._pComponent;
@@ -74,9 +74,9 @@ namespace sw
             }
 
             /**
-             * @brief 오브젝트 하나의 그룹 `group` 항목을 순서대로 틱합니다 — 워커에서 불린다.
-             * @details 항목은 등록부가 지은 것이라 살아 있는 컴포넌트만 가리킨다(지워진 컴포넌트는 소유 오브젝트가 표시되어 틱 전에
-             *          다시 지어진다). 삭제 대기 · 비활성은 여기서 건너뛴다.
+             * @brief 오브젝트 하나의 그룹 `group` 항목을 순서대로 틱합니다. 워커에서 불립니다.
+             * @details 항목은 등록부가 지은 것이라 살아 있는 컴포넌트만 가리킵니다(지워진 컴포넌트는 소유 오브젝트가 표시되어 틱 전에
+             *          다시 지어집니다). 삭제 대기 · 비활성은 여기서 건너뜁니다.
              */
             static void tickObjectGroup( float32 deltaTime, GameObject* pObj, uint32 group )
             {
@@ -88,14 +88,14 @@ namespace sw
                 {
                     const TickItem& item  = listItem[index];
                     Component*      pComp = item._pComponent;
-                    // 소유자의 활성은 위에서 봤다 — 컴포넌트 자체 비트만.
+                    // 소유자의 활성은 위에서 봤다. 여기서는 컴포넌트 자기 비트만 본다.
                     if ( pComp == nullptr || pComp->isPendingKill() || pComp->isSelfActive() == false )
                         continue;
                     runTickItem( deltaTime, item );
                 }
             }
 
-            /** @brief 한 그룹의 오브젝트 목록을 [start, end) 로 나눠 도는 잡 본문. 워커는 포인터 배열만 받는다. */
+            /** @brief 한 그룹의 오브젝트 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터 배열만 받습니다. */
             struct ObjectGroupTick
             {
                 GameObject* const* _ppObject{ nullptr };
@@ -110,7 +110,7 @@ namespace sw
             };
 
             /**
-             * @brief 선행 종속성 웨이브 하나의 항목 [start, end) 를 도는 잡 본문 — 항목마다 오브젝트가 다르므로 소유자도 본다.
+             * @brief 선행 조건 웨이브 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다.
              */
             struct WaveTick
             {
@@ -161,7 +161,7 @@ namespace sw
             flushSceneTransforms();
         }
 
-        // 틱 중의 세터가 쌓을 쓰기 큐 — 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
+        // 틱 중의 세터가 쌓을 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
         _transformHierarchy.beginQueuedWrites();
         _bParallelTransformReadOnly.store( true, std::memory_order_relaxed );
         _bTicking.store( true, std::memory_order_release );
@@ -177,7 +177,7 @@ namespace sw
         _bParallelTransformReadOnly.store( false, std::memory_order_relaxed );
         _bTicking.store( false, std::memory_order_release );
 
-        // 지연된 계층 변경(attach·detach)을 인스턴스가 살아 있는 동안 먼저 — 지연 큐·파괴보다 앞.
+        // 지연된 계층 변경(attach · detach)을 인스턴스가 살아 있는 동안 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
             {
@@ -193,7 +193,7 @@ namespace sw
             _listProcessingTransform.clear();
         }
 
-        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기 — 구조 변경(위의 지연 attach·detach)이 끝난 뒤라 부모 사슬이 안정됐다.
+        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기를 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
             applyQueuedTransformWrites();
@@ -225,7 +225,7 @@ namespace sw
     void GameObjectManager::tickComponents( float32 deltaTime )
     {
         {
-            // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다 — 씬 전체를 훑지 않는다.
+            // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다. 씬 전체를 훑지 않는다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.registry" );
             if ( _tickRegistry.refresh( *this ) )
                 _tickWaveBuildCount.fetch_add( 1, std::memory_order_relaxed );
@@ -233,7 +233,7 @@ namespace sw
 
         if ( _tickRegistry.hasPrerequisites() == false )
         {
-            // 보통 경로 — 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다. 한 오브젝트의 항목은 한 워커가 (순서 키 순으로)
+            // 보통 경로다. 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다. 한 오브젝트의 항목은 한 워커가 (순서 키 순으로)
             // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다.
             for ( uint32 group = 0; group < TickRegistry::kGroupCount; ++group )
             {
@@ -250,7 +250,7 @@ namespace sw
             return;
         }
 
-        // 선행 종속성이 있다 — 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 등록부가 지은 DAG 웨이브로 간다(드물다).
+        // 선행 조건이 있다. 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 등록부가 지은 DAG 웨이브로 간다(드물다).
         // 웨이브 캐시는 등록부 세대로 무효화한다. 항목은 등록부의 것이라 세대가 같은 동안 살아 있다.
         if ( _lastWaveGeneration != _tickRegistry.getGeneration() )
         {
@@ -276,7 +276,7 @@ namespace sw
         if ( pWrite == nullptr || count == 0 )
             return 0;
 
-        // 틱 중이면 세터로 — 세터가 지연 경로를 탄다. 배치의 병렬 쓰기는 틱 밖에서만 안전하다.
+        // 틱 중이면 세터로 돌린다. 세터가 지연 경로를 탄다. 배치의 병렬 쓰기는 틱 밖에서만 안전하다.
         if ( isStructuralMutationFrozen() )
         {
             uint32 deferredCount = 0;
@@ -296,8 +296,8 @@ namespace sw
             return deferredCount;
         }
 
-        // 워커는 컨테이너를 만지지 않는다 — 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 건의
-        // 컴포넌트(와 부모·자식의 더티 바이트)뿐이다.
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 건의
+        // 컴포넌트(와 부모 · 자식의 더티 바이트)뿐이다.
         struct WriteJob
         {
             GameObjectManager*         _pManager{ nullptr };
@@ -314,7 +314,7 @@ namespace sw
         WriteJob job{};
         job._pManager = this;
         job._pWrite   = pWrite;
-        // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다 — 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
+        // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
         _transformHierarchy.mergeQueuedDirtyRoots();
         engine::runParallel( count, SceneTransformHierarchy::kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
         _transformHierarchy.mergeQueuedDirtyRoots();
@@ -330,7 +330,7 @@ namespace sw
         if ( _transformHierarchy.queueWriteParallel( write ) )
             return;
 
-        // 슬롯이 준비되지 않았다 — 틱 밖에서 읽기 전용 구간을 흉내 내는 곳(테스트·도구)뿐이다. 예전 지연 경로로.
+        // 슬롯이 준비되지 않았다. 틱 밖에서 읽기 전용 구간을 흉내 내는 곳(테스트 · 도구)뿐이다. 예전 지연 경로로 간다.
         deferTransformUpdate( [this, write]()
         {
             if ( GameObjectManagerTickInternal::applyTransformWriteRange( this, &write, 0, 1, false ) > 0 )
@@ -343,7 +343,7 @@ namespace sw
         const uint32                 slotCount  = _transformHierarchy.getQueuedWriteSlotCount();
         vector<SceneTransformWrite>* pSlot      = _transformHierarchy.getQueuedWriteSlots();
         uint32                       totalCount = 0;
-        // 비어 있지 않은 슬롯만 잡을 낸다 — 도우미 슬롯(렌더·로더 스레드 몫)은 대개 비어 있다.
+        // 비어 있지 않은 슬롯만 잡을 낸다. 도우미 슬롯(렌더 · 로더 스레드 몫)은 대개 비어 있다.
         _listActiveWriteSlot.clear();
         for ( uint32 slot = 0; slot < slotCount; ++slot )
         {
@@ -355,7 +355,7 @@ namespace sw
         if ( totalCount == 0 )
             return 0;
 
-        // 슬롯 하나가 잡 하나 — 같은 슬롯의 건은 쌓인 순서대로 한 워커가 적용한다(마지막 값이 이긴다).
+        // 슬롯 하나가 잡 하나다. 같은 슬롯의 건은 쌓인 순서대로 한 워커가 적용한다(마지막 값이 이긴다).
         struct SlotWriteJob
         {
             GameObjectManager*           _pManager{ nullptr };

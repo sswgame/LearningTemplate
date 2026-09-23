@@ -47,12 +47,12 @@ namespace sw
 
             /**
              * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 **뿌리 → 파생** 순서로 모읍니다.
-             * @details 기본값은 `<Component>` 처럼 기반 이름으로도 적을 수 있어야 한다(모든 컴포넌트에
+             * @details 기본값은 `<Component>` 처럼 기반 이름으로도 적을 수 있어야 합니다(모든 컴포넌트에
              *          공통으로 거는 값). 예전에는 그 적용이 `Component` 생성자에서 일어났는데, 기반
              *          생성자 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지 않아 **언제나
-             *          `Component` 노드 하나만** 적용됐다(중간 기반은 한 번도 적용된 적이 없다).
-             *          생성자에서 그 호출을 걷어냈으므로, 체인 적용은 여기서 제대로 한다 — 뿌리부터
-             *          적용해 파생이 마지막에 덮어쓴다.
+             *          `Component` 노드 하나만** 적용됐습니다(중간 기반은 한 번도 적용된 적이 없습니다).
+             *          생성자에서 그 호출을 걷어냈으므로, 체인 적용은 여기서 제대로 합니다. 뿌리부터
+             *          적용해 파생이 마지막에 덮어씁니다.
              */
             static void collectTypeChain( const TypeInfo& typeInfo, vector<const TypeInfo*>& outListType )
             {
@@ -71,7 +71,7 @@ namespace sw
                     if ( pParent == nullptr || pParent == pCursor )
                         break;
 
-                    // 순환 방지 — 이미 담은 타입이면 멈춘다.
+                    // 순환 방지. 이미 담은 타입이면 멈춘다.
                     bool bAlready = false;
                     for ( const TypeInfo* pSeen : outListType )
                     {
@@ -97,9 +97,9 @@ namespace sw
             }
 
             /**
-             * @brief 이 프로퍼티의 기본값을 바이트로 들고 memcpy 로 넣어도 되는가.
-             * @details 컨테이너 · 비트필드 · 문자열(intern 인덱스) 은 아니다. 필드 타입이 등록되어 있고(프리미티브 또는
-             *          POD 구조체) 크기를 알아야 한다. enum 은 TypeInfo 가 없어 텍스트 경로로 간다.
+             * @brief 이 프로퍼티의 기본값을 바이트로 들고 memcpy 로 넣어도 되는지 판단합니다.
+             * @details 컨테이너 · 비트필드 · 문자열(intern 인덱스)은 안 됩니다. 필드 타입이 등록되어 있고(프리미티브 또는
+             *          POD 구조체) 크기를 알아야 합니다. enum 은 TypeInfo 가 없어 텍스트 경로로 갑니다.
              */
             static bool isMemcpyProperty( const TypeRegistry& registry, const PropertyInfo& prop, size_t& outSize )
             {
@@ -152,8 +152,8 @@ namespace sw
 
     void ComponentDefaults::ensureDefaultsLoaded()
     {
-        // 이중 검사 잠금이다 — 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
-        // 스레드가 그 앞에서 지어진 `_defaultsDoc` 도 함께 본다.
+        // 이중 검사 잠금이다. 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
+        // 스레드가 그 앞에서 만들어진 `_defaultsDoc` 도 함께 본다.
         //
         // **보는 깃발은 "시도했는가" 다.** 예전에는 "성공했는가" 만 봐서, 파일이 없으면 실패한
         // 채로 깃발이 false 로 남고 **다음 컴포넌트가 또 열었다.** 기본값 파일은 없어도 되는
@@ -167,7 +167,7 @@ namespace sw
 
         if ( _customDefaultsPath.empty() )
         {
-            // 경로조차 없으면 읽을 것이 없다 — 이것도 "시도했다" 로 친다.
+            // 경로조차 없으면 읽을 것이 없다. 이것도 "시도했다" 로 친다.
             _bLoadAttempted.store( true, std::memory_order_release );
             return;
         }
@@ -206,7 +206,7 @@ namespace sw
         if ( defaultsNode.isValid() == false )
             return;
 
-        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다 — 인스턴스마다는 memcpy 몇 번이다.
+        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다. 인스턴스마다는 memcpy 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo, pAliasTypeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
             applyPatch( pInstance, patch );
@@ -215,7 +215,7 @@ namespace sw
     const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo,
                                                                               const TypeInfo* pAliasTypeInfo )
     {
-        // 세대가 같은 동안만 쓴다 — 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
+        // 세대가 같은 동안만 쓴다. 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
         const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         {
             std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
@@ -251,7 +251,7 @@ namespace sw
         }
 
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
-        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다 — 어차피 같은 값이다. 세대가 지난 것은 갈아 끼운다.
+        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼운다.
         auto it = _mapResolved.find( &typeInfo );
         if ( it == _mapResolved.end() )
             it = _mapResolved.emplace( &typeInfo, std::move( resolved ) ).first;
@@ -329,7 +329,7 @@ namespace sw
 
     string ComponentDefaults::getPath() const
     {
-        // **값으로 돌려준다.** `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
+        // **값으로 반환한다.** `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
         // `setPath` 가 문자열을 갈아 끼우면 사라진 버퍼를 가리킨다.
         std::scoped_lock<mutex> lock{ _defaultsMutex };
         return _customDefaultsPath;

@@ -93,7 +93,7 @@ namespace sw
     /**
      * @brief T 의 정적 TypeInfo 입니다. 코드젠의 `StaticType()` 이나 `ReflectTypeTraits` 특수화가 있으면 그것, 없으면 nullptr 입니다.
      * @details `castTo` 가 To 쪽을 이것으로 풉니다. 컴포넌트 목록을 도는 조회 루프는 이것을 **루프 밖에서 한 번** 구해
-     *          `castTo( pSrc, pToType )` 에 넘깁니다. 세대 검사 캐시 조회 하나(약 4 ns)를 컴포넌트마다 치르지 않습니다.
+     *          `castTo( pSrc, pToType )` 에 넘깁니다. 캐시 조회 하나(약 4 ns)를 컴포넌트마다 치르지 않습니다.
      */
     template <typename T>
     const TypeInfo* findStaticType()

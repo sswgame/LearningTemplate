@@ -29,7 +29,7 @@ namespace sw
         // 기반 타입의 TypeInfo** 가 나온다. 즉 MeshComponent 를 만들어도 "Component" 이름으로
         // 기본값을 찾았다.
         //
-        // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다 —
+        // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다.
         // `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
         // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 생성자 호출은 중복이면서 틀린 조회였다.
         //
@@ -125,7 +125,7 @@ namespace sw
         if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
             return false;
 
-        // 자기 자신을 종속성으로 추가하는 것 방지
+        // 자기 자신을 선행 조건으로 추가하지 못하게 한다
         if ( prerequisiteHandle._componentId == _componentId && prerequisiteHandle._subTickId == subTickId )
             return false;
 
@@ -229,7 +229,7 @@ namespace sw
 
     const TypeInfo* Component::getTypeInfo() const
     {
-        // 캐스트마다 부르는 자리다. 적중은 캐시 조회 하나(원자 로드 셋)로 끝난다 — 바인딩 검사는 빗나갔을 때만,
+        // 캐스트마다 부르는 자리다. 적중은 캐시 조회 하나(원자 로드 둘)로 끝난다. 바인딩 검사는 빗나갔을 때만 하고,
         // 이름이 비었는지는 묻지 않는다(`empty()` 는 intern 테이블을 읽는다. 빈 이름은 캐시가 세대당 한 번 헛조회하고
         // nullptr 를 내어 아래 폴백으로 간다).
         const TypeInfo* pType = _typeInfoCache.find( _componentName );

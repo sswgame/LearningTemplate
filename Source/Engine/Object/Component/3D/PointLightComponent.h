@@ -1,6 +1,6 @@
 /**
  * @file PointLightComponent.h
- * @brief 점광 하나 — 위치·색·세기·반경을 선언으로 다룹니다.
+ * @brief 점광 하나입니다. 위치 · 색 · 세기 · 반경을 선언으로 다룹니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,13 +13,13 @@ namespace sw
 {
     /**
      * @class PointLightComponent
-     * @brief 한 점에서 사방으로 퍼지는 빛. 위치는 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
-     * @details 방향광과 달리 **여러 개가 동시에 화면에 영향을 준다** — 그래서 프레임마다 등록부에서
-     *          모아 구조버퍼 하나로 올리고, 포워드·디퍼드가 같은 버퍼를 같은 루프로 읽는다
+     * @brief 한 점에서 사방으로 퍼지는 빛입니다. 위치는 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
+     * @details 방향광과 달리 **여러 개가 동시에 화면에 영향을 줍니다.** 그래서 프레임마다 등록부에서
+     *          모아 구조 버퍼 하나로 올리고, 포워드 · 디퍼드가 같은 버퍼를 같은 루프로 읽습니다
      *          (`GpuLightBuffer` · `lighting.hlsli`).
-     * @note **그림자를 드리우지 않는다.** 점광 그림자는 큐브맵이 필요한데 이 엔진에는 큐브맵 자원이
-     *       없다 — 없는 것을 있는 척하면 "왜 저 빛만 그림자가 없지" 를 나중에 렌더러 버그로 오인한다.
-     *       그림자를 드리우는 빛은 `DirectionalLightComponent` 하나뿐이다(그림자 맵도 하나다).
+     * @note **그림자를 드리우지 않습니다.** 점광 그림자는 큐브맵이 필요한데 이 엔진에는 큐브맵 자원이
+     *       없습니다. 없는 것을 있는 척하면 "왜 저 빛만 그림자가 없지" 를 나중에 렌더러 버그로 오인합니다.
+     *       그림자를 드리우는 빛은 `DirectionalLightComponent` 하나뿐입니다(그림자 맵도 하나입니다).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Point Light", Tooltip = "Omnidirectional light with a finite radius" )
     class SW_API PointLightComponent : public SceneComponent
@@ -29,10 +29,8 @@ namespace sw
 
         /** @brief 기본 점광 값으로 만듭니다. */
         PointLightComponent();
-        /** @brief 기본 소멸. */
+        /** @brief 기본 소멸자입니다. */
         virtual ~PointLightComponent() override = default;
-
-        /** @brief 라이트를 이동합니다. */
 
         /** @brief 빛 색입니다. */
         const float3& getColor() const { return _color; }

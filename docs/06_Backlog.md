@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①②) 주석 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①②③) 주석 정리
 
 ---
 
@@ -1445,7 +1445,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 | `App` | 265 | ✅ 2026-09-24 (3절 참고) |
 | `Editor` | 1,972 | ✅ 2026-09-24 (3절 참고) |
 | `Tools/ReflectionParser` | 354 | ✅ 2026-09-24 (3절 참고. `Templates/*.tpl` 의 주석은 생성물에 그대로 찍히므로 손대지 않았다) |
-| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ |
+| `Engine` | 7,865 | 진행 중. 하위 폴더 단위로 나눠 커밋한다 — ① 루트 · Common · Compression · Config · Module · Utility ✅ · ② Reflection · Serialization ✅ · ③ Object · Scene ✅ |
 | `GameFramework` | 668 | |
 | `RuntimeAPI` | 94 | |
 
@@ -1647,6 +1647,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Engine 주석 정리 ③ — Object · Scene)
+
+**한 것.** `Engine/Object` 40 개 · `Engine/Scene` 8 개 파일의 주석을 1-0g 규칙으로 다시 썼다. 사실과 달랐던 것:
+- 이동 생성자를 지울 때 파생 컴포넌트 네 곳(`DirectionalLight` · `PointLight` · `SpotLight` · `Mesh`)에 선언 없는
+  "이동합니다" 설명이 남아 있었다 → 지웠다.
+- `TickGroup` 이 "엔진에 물리 시스템이 없어도" 라고 했다 → `PhysicsWorld` 는 있지만 그룹 사이에 물리 스텝이 끼지 않는다
+  (`PhysicsWorld::step` 은 부르는 곳이 없다).
+- 틱 설명의 "웨이브를 다시 만든다" → 지금은 오브젝트의 틱 항목을 다시 짓는다(`TickRegistry`). 웨이브는 선행 조건이 있을 때의
+  DAG 경로에만 남았다.
+- `Component::findCachedTypeInfo` 적중이 "원자 로드 셋" → 둘(포인터 + `isAlive`). `_typeInfoCache` 가 "레지스트리 세대로 무효화"
+  → 빈 답만 세대가 바뀌면 다시 찾는다(Engine ② 에서 고친 것과 같은 낡은 설명). `ReflectionCast.h` 의 "세대 검사 캐시 조회" 도 같이 고쳤다.
+- `Component` 소멸자 설명 "GameObject 가 sw_delete 로 해제" → `GameObjectManager::destroyComponentInstance` 가 풀로 돌려준다.
+- `ObjectSlotTable` 이 "빠른 길일 뿐 유일한 진실이 아니다" 라고 했다 → 범위 안 id 는 맵에 넣지 않으므로 표가 유일한 기준이다.
+  풀 키 설명의 "`rebindAllCachedTypeInfo` 가 TypeInfo 를 새 인스턴스로 갈아 끼운다" → 지금은 기본값을 다시 주입할 뿐이고,
+  재등록은 같은 객체에 덮어쓴다.
+- `GameObjectManager` 생성자 설명 "이름 맵을 비운 채 시작" → 엔진 · 모듈 팩토리를 등록한다. `deferPostTick` ·
+  `isStructuralMutationFrozen` 설명의 `finishTick` · `beginTick` 은 없는 이름이다. `tick` 의 단계 목록을 실제 순서(지연 파괴 ·
+  병합 → 플러시 → 병렬 틱 → 지연 attach · 쓰기 큐 · 지연 큐 · 병합 · 재플러시 · 지연 파괴)로 고쳤다.
+- `GameObjectManager.cpp` 가 `~SceneComponent` 는 `detachFromComponent` 를 탄다고 했다 → `detachFromParentImmediate`.
+  `updateWorldTransformFromParent` 를 부르는 쪽 → `SceneTransformHierarchy::flushSubtree` 와 잎 루트의 `applyTransformWrite`.
+- `ComponentDefaults::_bDefaultsLoaded` 를 이중 검사의 깃발이라 했다 → 이중 검사는 `_bLoadAttempted` 를 보고, 이것은 `apply` 가
+  락 없이 문서를 읽기 전에 본다.
+- `PrimitiveRegistry` 의 락 설명(매니저 `_mutex` 를 쥔 채 markDirty) → markDirty 는 락이 없다. `getAll` 이 "스냅샷 수집의
+  유일한 입력" → 인스턴스 배치 항목도 입력이다.
+- `ObjectStateSerializer` 가 "파일 다이얼로그를 연다" → 그런 함수는 없다. `GameObject::destroy` 가 "플레이 종료 시" →
+  프레임 끝의 지연 파괴다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Shipping) 2/2 ·
+주석 외 토큰 변화 0.
 
 ### 2026-09-24 (Engine 주석 정리 ② — Reflection · Serialization)
 

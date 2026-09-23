@@ -53,7 +53,7 @@ namespace sw
                     return false;
 
                 // **구운 것을 그 자리에서 되읽어 본다.** 모르는 컴포넌트 타입이 섞이면 여기서 구성이
-                // 어긋나고, 그 엔티티는 XML 로 남는다 — 쿠킹이 조용히 컴포넌트를 떨어뜨리지 않는다.
+                // 어긋나고, 그 엔티티는 XML 로 남는다. 쿠킹이 조용히 컴포넌트를 떨어뜨리지 않는다.
                 GameObject* pVerify = manager.createGameObject( hashed_string( "SceneCooker.Verify" ) );
                 if ( pVerify == nullptr )
                     return false;
@@ -80,7 +80,7 @@ namespace sw
     {
         uint32 cookedCount{ 0 };
 
-        // 쿠킹 전용 매니저다 — 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
+        // 쿠킹 전용 매니저다. 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
         GameObjectManager manager;
 
         for ( SceneDocument::EntityNode& entity : inoutDoc._listEntityNode )
@@ -96,7 +96,7 @@ namespace sw
             }
 
             entity._embeddedStateBytes = std::move( stateBytes );
-            // 둘 다 실으면 파일만 커진다. 바이너리가 정본이 된 순간 XML 은 뺀다.
+            // 둘 다 실으면 파일만 커진다. 바이너리가 기준이 된 순간 XML 은 뺀다.
             entity._embeddedXml.clear();
             ++cookedCount;
         }
@@ -139,7 +139,7 @@ namespace sw
                 continue;
             }
 
-            // 굽기 전에 "상태가 있는 엔티티" 수를 세 둔다 — 굽고 나면 XML 이 비워져 셀 수 없다.
+            // 굽기 전에 "상태가 있는 엔티티" 수를 세 둔다. 굽고 나면 XML 이 비워져 셀 수 없다.
             uint32 statefulCount{ 0 };
             for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
             {

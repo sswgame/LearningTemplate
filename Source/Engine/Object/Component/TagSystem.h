@@ -1,10 +1,10 @@
 /**
  * @file TagSystem.h
- * @brief 태그 집합·질의 API (`TagID` 자체는 `Core/String/TagID.h`).
+ * @brief 태그 집합 · 질의 API 입니다(`TagID` 자체는 `Core/String/TagID.h`).
  *
- * @details 여기 남은 것은 **리플렉션이 필요한 것들**이다 — `PROPERTY` 로 직렬화되는 태그 집합
- *          (`TagContainer`)과 질의(`TagQuery`). `TagID` 는 Core 기능만 쓰는 값 타입이라
- *          `Core/String/TagID.h` 로 내렸다(이유는 그 파일의 @note 참고).
+ * @details 여기 남은 것은 **리플렉션이 필요한 것들**입니다. `PROPERTY` 로 직렬화되는 태그 집합
+ *          (`TagContainer`)과 질의(`TagQuery`)입니다. `TagID` 는 Core 기능만 쓰는 값 타입이라
+ *          `Core/String/TagID.h` 로 내렸습니다(이유는 그 파일의 @note 참고).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,14 +18,14 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) TagContainer — GameObject에 붙는 태그 집합
+    // 1) TagContainer: GameObject 에 붙는 태그 집합
     // ------------------------------------------------------------------------------
     REFLECT()
     class SW_API TagContainer
     {
     public:
         REFLECT_BODY();
-        /** @brief 빈 컨테이너입니다. */
+        /** @brief 빈 컨테이너로 만듭니다. */
         TagContainer() = default;
         /** @brief 초기 태그 목록으로 만듭니다. */
         TagContainer( std::initializer_list<TagID> tags );
@@ -39,16 +39,16 @@ namespace sw
         /** @brief 태그를 제거합니다. */
         void removeTag( TagID tag );
 
-        /** @brief 태그 포함 여부를 반환합니다. bExactMatch면 동일 ID만, 아니면 서브태그 허용. */
+        /** @brief 태그를 포함하는지 반환합니다. bExactMatch 면 같은 ID 만, 아니면 하위 태그도 인정합니다. */
         bool hasTag( TagID tag, bool bExactMatch = false ) const;
 
-        /** @brief required의 모든 태그를 포함하는지 검사합니다. */
+        /** @brief required 의 태그를 모두 포함하는지 검사합니다. */
         bool hasAllTags( const TagContainer& required ) const;
 
-        /** @brief other의 태그 중 하나라도 포함하는지 검사합니다. */
+        /** @brief other 의 태그 중 하나라도 포함하는지 검사합니다. */
         bool hasAnyTag( const TagContainer& other ) const;
 
-        /** @brief required는 모두 포함하고 forbidden은 하나도 없는지 검사합니다. */
+        /** @brief required 는 모두 포함하고 forbidden 은 하나도 없는지 검사합니다. */
         bool matchesTags( const TagContainer& required, const TagContainer& forbidden ) const;
 
         /** @brief 태그 개수를 반환합니다. */
@@ -66,7 +66,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) TagQuery & TagQueryExpr — 복합 불리언 AST 질의 표현식 시스템
+    // 2) TagQuery · TagQueryExpr: 불리언 식 트리로 만드는 복합 질의
     // ------------------------------------------------------------------------------
     enum class TagQueryExprType : uint8
     {
@@ -74,9 +74,9 @@ namespace sw
         AnyTagsMatch,
         AllTagsMatch,
         NoTagsMatch,
-        AnyExprMatch, // Logical OR
-        AllExprMatch, // Logical AND
-        NotExprMatch  // Logical NOT
+        AnyExprMatch, // 논리합(OR)
+        AllExprMatch, // 논리곱(AND)
+        NotExprMatch  // 논리 부정(NOT)
     };
 
     struct TagQueryExpr

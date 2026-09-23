@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.cpp
- * @brief GameObjectManager 의 수명 — 생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리. 프레임 경로(tick · 트랜스폼 배치)는 `GameObjectManagerTick.cpp`.
+ * @brief GameObjectManager 의 수명 관리입니다(생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리). 프레임 경로(tick · 트랜스폼 배치)는 `GameObjectManagerTick.cpp` 에 있습니다.
  */
 #include "pch.h"
 
@@ -69,7 +69,7 @@ namespace sw
     }
 
     /**
-     * @brief GameObjectManager 생성자: 기본 엔진 및 모듈 컴포넌트 팩토리들을 등록합니다.
+     * @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다.
      */
     GameObjectManager::GameObjectManager()
         : _poolGameObject{ 256, true }
@@ -138,7 +138,7 @@ namespace sw
     }
 
     /**
-     * @brief 새로운 게임 오브젝트를 생성하고 고유 이름을 부여하며 인덱스 사전에 등록합니다.
+     * @brief 새 게임 오브젝트를 만들고 고유 이름을 붙여 인덱스에 등록합니다.
      */
     GameObject* GameObjectManager::createGameObject( hashed_string name )
     {
@@ -180,7 +180,7 @@ namespace sw
     }
 
     /**
-     * @brief 게임 오브젝트 이름 변경 시 이름 검색 맵을 갱신합니다.
+     * @brief 게임 오브젝트 이름이 바뀌면 이름 검색 맵을 갱신합니다.
      */
     void GameObjectManager::notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName )
     {
@@ -212,7 +212,7 @@ namespace sw
     }
 
     // ======================================================================
-    // ObjectSlotTable — id → GameObject* 를 락 없이 읽는 밀집 표
+    // ObjectSlotTable: id → GameObject* 를 락 없이 읽는 밀집 표
     // ======================================================================
 
     bool GameObjectManager::ObjectSlotTable::store( uint64 objectId, GameObject* pObject )
@@ -220,7 +220,7 @@ namespace sw
         if ( isInRange( objectId ) == false )
             return false;
 
-        // 지우는 길이라면 청크를 새로 만들 이유가 없다. 쓰기는 전부 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
+        // 지우는 길이라면 청크를 새로 만들 이유가 없다. 쓰기는 모두 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
         atomic<GameObject*>* pSlot = ( pObject != nullptr ) ? _listSlot.ensure( objectId ) : _listSlot.find( objectId );
         if ( pSlot != nullptr )
             pSlot->store( pObject, std::memory_order_release );
@@ -259,7 +259,7 @@ namespace sw
             return ( pSlotObject != nullptr && pSlotObject->isPendingKill() == false ) ? pSlotObject : nullptr;
         }
 
-        // id 가 표의 범위를 넘어선 경우에만 맵으로 간다 — 표는 빠른 길이지 유일한 진실이 아니다.
+        // id 가 표의 범위를 넘어선 경우에만 맵으로 간다. 범위 안의 id 는 표가 유일한 기준이다(맵에는 넣지 않는다).
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         auto                                it = _mapIdToObject.find( objectId );
         if ( it == _mapIdToObject.end() )
@@ -351,7 +351,7 @@ namespace sw
             return;
 
         // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingKill()` 로 보고 나서
-        // `markPendingKill()` 을 했다 — 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
+        // `markPendingKill()` 을 했다. 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
         // 없애는 두 스레드가 나란히 통과하면 파괴 목록에 같은 포인터가 두 번 들어가고
         // `_poolGameObject.destroy` 가 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 돌고
         // (총알 둘이 같은 적을 맞히는) 그 경우는 흔하다. 자리를 잡은 스레드만 진행한다.
@@ -379,19 +379,19 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listPendingDestroyObject.push_back( pObj );
         }
-        // 틱 등록부에는 아무것도 알리지 않는다 — 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 등록부에서 뺀다.
+        // 틱 등록부에는 아무것도 알리지 않는다. 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 등록부에서 뺀다.
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )
     {
-        // destroyObject 와 같은 이유로 자리부터 잡는다 — 여기 목록에 두 번 들어가면
+        // destroyObject 와 같은 이유로 자리부터 잡는다. 여기 목록에 두 번 들어가면
         // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
         if ( pComp == nullptr || pComp->tryMarkPendingKill() == false )
             return;
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp );
-        // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다 — 나머지는 등록부와 무관하다.
+        // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 등록부와 무관하다.
         if ( pComp->hasTickWork() )
             _tickRegistry.markObjectDirty( pComp->getOwner() );
     }
@@ -409,10 +409,10 @@ namespace sw
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다.
         pComp->onUnregister( *this );
 
-        // 풀은 컴포넌트가 든다(`_pPool`, 생성이 적는다). 이름·타입 표로 **다시 찾지 않는다** — 이름은 바뀔 수 있고
-        // 타입은 그새 해제될 수 있어, 못 찾으면 풀 블록을 힙으로 반납해 힙이 깨졌다(Shipping 0xc0000374). 풀은 한 번
-        // 만들어지면 매니저가 죽을 때까지 그 자리에 있고 자체 잠금을 들고 있으므로 _mutex 없이 반납한다 — ~SceneComponent
-        // 는 detachFromComponent 를 타고 (un)registerRootSceneComponent 로 다시 들어와 같은 _mutex 를 잡는다.
+        // 풀은 컴포넌트가 든다(`_pPool`, 생성이 적는다). 이름 · 타입 표로 **다시 찾지 않는다.** 이름은 바뀔 수 있고
+        // 타입은 그새 해제될 수 있어, 찾지 못하면 풀 블록을 힙으로 반납해 힙이 깨졌다(Shipping 0xc0000374). 풀은 한 번
+        // 만들어지면 매니저가 죽을 때까지 그 자리에 있고 자체 잠금을 들고 있으므로 _mutex 없이 반납한다. ~SceneComponent
+        // 는 detachFromParentImmediate 를 타고 (un)registerRootSceneComponent 로 다시 들어와 같은 _mutex 를 잡는다.
         PoolAllocator* pPool = pComp->_pPool;
         if ( pPool != nullptr )
         {
@@ -461,8 +461,8 @@ namespace sw
                     }
                     else
                     {
-                        // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다 — 그때만 대기 목록을 훑는다.
-                        // (예전엔 무조건 훑어, 프레임에 100 개를 만들고 100 개를 지우면 만 번 비교였다.)
+                        // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다. 그때만 대기 목록을 훑는다.
+                        // (예전에는 무조건 훑어, 프레임에 100 개를 만들고 100 개를 지우면 만 번 비교였다.)
                         auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
                         if ( pendingIt != _listPendingAdd.end() )
                         {
@@ -496,7 +496,7 @@ namespace sw
         {
             if ( pObj == nullptr )
                 continue;
-            // 등록부의 그룹 목록에서 뺀다 — 메모리를 놓기 전에. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
+            // 메모리를 놓기 전에 등록부의 그룹 목록에서 뺀다. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
             _tickRegistry.unregisterObject( pObj );
             _poolGameObject.destroy( pObj );
         }
@@ -592,7 +592,7 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listGameObject.reserve( _listGameObject.size() + listLocalPending.size() );
-            // 이름 맵·id 표는 만들 때(createGameObject · registerGameObject) 이미 넣었다 — 여기서 다시 넣지 않는다.
+            // 이름 맵 · id 표는 만들 때(createGameObject · registerGameObject) 이미 넣었다. 여기서 다시 넣지 않는다.
             for ( GameObject* pObj : listLocalPending )
             {
                 if ( pObj != nullptr )
@@ -608,7 +608,7 @@ namespace sw
             if ( pObj != nullptr )
                 pObj->refreshActiveInHierarchy();
         }
-        // 웨이브는 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 더럽혔다 — 병합 자체는 멤버십을 바꾸지 않는다.
+        // 틱 항목은 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 이미 더럽혔다. 병합 자체는 멤버십을 바꾸지 않는다.
     }
 
     void GameObjectManager::registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
@@ -652,7 +652,7 @@ namespace sw
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         SW_ASSERT( isStructuralMutationFrozen() == false );
-        // 지연 파괴 목록부터 — 거기 남은 컴포넌트의 소멸자도 모듈 코드다.
+        // 지연 파괴 목록부터 비운다. 거기 남은 컴포넌트의 소멸자도 모듈 코드다.
         processDeferredDestruction();
 
         const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
@@ -669,7 +669,7 @@ namespace sw
             if ( pOwner != nullptr )
                 pOwner->removeComponent( pComp );
         }
-        // removeComponent 는 얼려 있으면 미룬다 — 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
+        // removeComponent 는 얼려 있으면 미룬다. 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
         processDeferredDestruction();
 
         const uint32 count = static_cast<uint32>( listDoomed.size() );
@@ -789,8 +789,8 @@ namespace sw
         if ( baseView.size() > 96 )
             baseView = baseView.substr( 0, 96 );
 
-        // 이름마다 **다음 번호를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전엔 매번 _2 부터 다시 물어, 같은
-        // 이름 N 개면 생성 하나가 N 번 조회였다 — 8000 개에 2.6 초(개당 326 µs). 지운 이름의 번호는 되쓰지 않는다(오르기만 한다).
+        // 이름마다 **다음 번호를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전에는 매번 _2 부터 다시 물어, 같은
+        // 이름 N 개면 생성 하나가 N 번 조회였다. 8000 개에 2.6 초(개당 326 µs). 지운 이름의 번호는 되쓰지 않는다(오르기만 한다).
         StringBuilder<constant::kMaxBuffer128> sb;
         const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
         uint32&                                nextSuffix      = _mapNameNextSuffix[baseKey];
@@ -805,7 +805,7 @@ namespace sw
             const hashed_string candidate( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( candidate ) == false )
             {
-                // 이름당 첫 중복만 경고한다 — 총알처럼 같은 이름으로 수천 개를 스폰하는 게임에서 줄마다 경고는 로그 스팸이고,
+                // 이름당 첫 중복만 경고한다. 총알처럼 같은 이름으로 수천 개를 스폰하는 게임에서 줄마다 경고는 로그 스팸이고,
                 // 그 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비쌌다. 그 뒤로는 조용히 번호를 붙인다.
                 if ( bFirstDuplicate )
                     SW_LOG_WARNING( "Duplicate name '%#' — using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );

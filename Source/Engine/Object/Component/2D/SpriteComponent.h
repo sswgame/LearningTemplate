@@ -1,6 +1,6 @@
 /**
  * @file SpriteComponent.h
- * @brief Sprite Mesh Rendering Component for 2D objects
+ * @brief 2D 오브젝트의 스프라이트 메시를 그리는 컴포넌트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

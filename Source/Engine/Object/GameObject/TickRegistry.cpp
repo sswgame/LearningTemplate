@@ -1,6 +1,6 @@
 /**
  * @file TickRegistry.cpp
- * @brief 틱 등록부 구현 — 오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시 · 선행 종속성 웨이브.
+ * @brief 틱 등록부 구현입니다(오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시 · 선행 조건 웨이브).
  */
 #include "pch.h"
 
@@ -18,17 +18,17 @@ namespace sw
     {
         struct TickRegistryInternal
         {
-            /** @brief 선행 종속성 웨이브를 지을 때의 후보 하나 — 등록부 항목 + 그 항목의 선행 목록. */
+            /** @brief 선행 조건 웨이브를 지을 때의 후보 하나입니다(등록부 항목 + 그 항목의 선행 목록). */
             struct WaveCandidate
             {
                 TickItem                     _item;
                 uint64                       _objectId{ 0 };
                 uint64                       _componentId{ 0 };
                 uint32                       _originalIndex{ 0 };
-                const vector<SubTickHandle>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록. 주 틱은 없다
+                const vector<SubTickHandle>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록. 주 틱은 없습니다
             };
 
-            /** @brief 순서 키, 같으면 등록 순서. 후보 목록을 정렬할 때의 유일한 규칙이다. */
+            /** @brief 순서 키로, 같으면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 유일한 규칙입니다. */
             static bool isBefore( const WaveCandidate& left, const WaveCandidate& right )
             {
                 if ( left._item._orderKey != right._item._orderKey )
@@ -50,9 +50,9 @@ namespace sw
             }
 
             /**
-             * @brief 한 웨이브(같은 레벨)를 오브젝트별 서브웨이브로 가릅니다 — 같은 오브젝트의 항목은 0 번부터 차례로 찬다.
-             * @details 오브젝트마다 "이미 든 서브웨이브 수" 하나면 된다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
-             *          이어지는 동안 하나씩 오르고 오브젝트가 바뀌면 0 이다 — 맵 없이 한 번에 된다.
+             * @brief 한 웨이브(같은 레벨)를 오브젝트별 서브웨이브로 가릅니다. 같은 오브젝트의 항목은 0 번부터 차례로 찹니다.
+             * @details 오브젝트마다 "이미 든 서브웨이브 수" 하나면 됩니다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
+             *          이어지는 동안 하나씩 오르고 오브젝트가 바뀌면 0 입니다. 맵 없이 한 번에 됩니다.
              */
             static void splitByObject( const vector<size_t>& listLevel, const vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
             {
@@ -70,7 +70,7 @@ namespace sw
                 }
             }
 
-            /** @brief 한 그룹의 후보를 선행 종속성 순서로 갈라 웨이브를 붙입니다 (Kahn 레벨 + 오브젝트별 서브웨이브). */
+            /** @brief 한 그룹의 후보를 선행 조건 순서로 갈라 웨이브를 붙입니다(Kahn 레벨 + 오브젝트별 서브웨이브). */
             static void appendGroupWaves( vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
             {
                 const size_t count = listCandidate.size();
@@ -96,7 +96,7 @@ namespace sw
                     {
                         const auto found = mapLookup.find( prerequisite );
                         if ( found == mapLookup.end() || found->second == index )
-                            continue; // 없는 상대(적혀는 있지만 아무도 못 찾는 종속성)와 자기 자신은 순서를 만들지 않는다
+                            continue; // 없는 상대(적혀는 있지만 찾을 수 없는 선행 조건)와 자기 자신은 순서를 만들지 않는다
                         listAdjacent[found->second].push_back( index );
                         ++listInDegree[index];
                     }
@@ -135,7 +135,7 @@ namespace sw
                     listCurrentLevel = std::move( listNextLevel );
                 }
 
-                // 순환 방어: 못 온 것은 순서 키 순으로 마지막에 붙인다 — 틱이 조용히 빠지는 것보다 낫다.
+                // 순환 방어: 닿지 못한 것은 순서 키 순으로 마지막에 붙인다. 틱이 조용히 빠지는 것보다 낫다.
                 if ( processedCount < count )
                 {
                     vector<size_t> listRemaining;
@@ -195,7 +195,7 @@ namespace sw
                 pObj->_bTickDirty.store( SW_FALSE, std::memory_order_relaxed );
                 refreshObject( pObj );
             } );
-            // 전부 훑었으니 개별 표시는 지운다 — 죽어 가는 오브젝트의 id 는 어차피 해석이 비었을 것이다.
+            // 모두 훑었으니 개별 표시는 지운다. 죽어 가는 오브젝트의 id 는 어차피 해석이 비었을 것이다.
             _listProcessingObjectId.clear();
             return true;
         }
@@ -203,7 +203,7 @@ namespace sw
         bool bRefreshedAny = false;
         for ( const uint64 objectId : _listProcessingObjectId )
         {
-            // 삭제 대기면 비어 있다 — 그 오브젝트는 파괴 때 `unregisterObject` 로 빠진다.
+            // 삭제 대기면 비어 있다. 그 오브젝트는 파괴 때 `unregisterObject` 로 빠진다.
             GameObject* pObj = manager.findGameObjectById( objectId );
             if ( pObj == nullptr )
                 continue;
@@ -243,7 +243,7 @@ namespace sw
             }
         }
 
-        // (그룹, 순서 키) 순 — 같은 키끼리는 컴포넌트 순서 그대로(안정 정렬). 오브젝트 하나의 항목은 몇 개뿐이다.
+        // (그룹, 순서 키) 순으로 정렬한다. 같은 키끼리는 컴포넌트 순서 그대로다(안정 정렬). 오브젝트 하나의 항목은 몇 개뿐이다.
         std::stable_sort( listItem.begin(), listItem.end(), []( const TickItem& left, const TickItem& right )
         {
             if ( left._group != right._group )

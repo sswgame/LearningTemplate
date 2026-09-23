@@ -27,9 +27,9 @@ namespace sw
         struct ObjectStateSerializerInternal
         {
             /**
-             * @brief 상태를 읽은 오브젝트를 세상에 다시 맞춥니다 — 이름이 바뀌었으면 매니저의 이름 표, 활성 계층, 읽은 부모 연결.
-             * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들었다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
-             *          이름으로 찾을 수 없게 된다.
+             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층과 읽은 부모 연결을 맞춥니다.
+             * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들고 있었습니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
+             *          이름으로 찾을 수 없게 됩니다.
              */
             static void finishLoad( GameObject* pGameObject, hashed_string oldName )
             {
@@ -40,7 +40,7 @@ namespace sw
                 pGameObject->applyLoadedHierarchy();
             }
 
-            /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다 (역직렬화 팩토리). */
+            /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리). */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
@@ -57,7 +57,7 @@ namespace sw
                 return pComp->getTypeInfo();
             }
 
-            /** @brief 프로세스 토큰을 새로 정합니다 — `Uuid` 의 무작위 바이트 8 개. 0 은 "토큰 없음" 과 구분되지 않아 피한다. */
+            /** @brief 프로세스 토큰을 새로 정합니다(`Uuid` 의 무작위 바이트 8 개). 0 은 "토큰 없음" 과 구분되지 않아 피합니다. */
             static uint64 makeProcessToken()
             {
                 const Uuid uuid  = Uuid::generate();
@@ -124,14 +124,14 @@ namespace sw
         BinaryStreamWriter writer( outBuffer );
 
         // **바깥에 남는 것은 부모 이름 하나뿐이다.** 오브젝트 사이의 부모 관계만 리플렉션 상태에
-        // 없고(씬이 나중에 rebind 한다), 이름·활성·태그·컴포넌트·컴포넌트 간 부착은 전부
-        // `_name` / `_bActive` / `_listComponent` 로 실린다 — XML·JSON 과 같은 상태다.
+        // 없고(씬이 나중에 rebind 한다), 이름 · 활성 · 태그 · 컴포넌트 · 컴포넌트 간 부착은 모두
+        // `_name` / `_bActive` / `_listComponent` 로 실린다. XML · JSON 과 같은 상태다.
         string parentName;
         if ( pGameObject->getParent() != nullptr )
             parentName = pGameObject->getParent()->getName().c_str();
         writer.writeString( parentName );
 
-        // 본문 크기를 앞에 둔다 — 세이브게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
+        // 본문 크기를 앞에 둔다. 세이브 게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
 
@@ -307,7 +307,7 @@ namespace sw
         if ( reader.read( outIdentity._objectId ) == false || reader.read( componentCount ) == false )
             return 0;
 
-        // 항목 하나는 적어도 이름 길이(4) + ID(8) 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다 —
+        // 항목 하나는 적어도 이름 길이(4) + ID(8) 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
         // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstanceBase::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
         constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 );
         if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )

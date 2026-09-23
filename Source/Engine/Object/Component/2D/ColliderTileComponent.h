@@ -1,6 +1,6 @@
 /**
  * @file ColliderTileComponent.h
- * @brief 2D Tile Collider Component
+ * @brief 2D 타일 콜라이더 컴포넌트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
