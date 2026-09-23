@@ -10,6 +10,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentPtr.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
@@ -18,88 +19,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        struct EditorWorkspaceInternal
-        {
-            static string componentTypeBaseName( const Component* pComp )
-            {
-                if ( pComp == nullptr )
-                    return "Component";
-
-                const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-                if ( pTypeInfo != nullptr )
-                {
-                    if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-                        return pTypeInfo->_fullyQualifiedName.c_str();
-                }
-
-                if ( pComp->getComponentName().empty() == false )
-                    return pComp->getComponentName().c_str();
-
-                return "Component";
-            }
-
-            static string componentBaseKey( const Component* pComp )
-            {
-                if ( pComp != nullptr && pComp->getComponentName().empty() == false )
-                    return pComp->getComponentName().c_str();
-
-                return componentTypeBaseName( pComp );
-            }
-
-            static string makeStableComponentKey( const Component* pComp, int32 occurrence )
-            {
-                if ( occurrence <= 0 )
-                    return componentBaseKey( pComp );
-
-                return componentBaseKey( pComp ) + "#" + to_string( occurrence );
-            }
-
-            static string computeStableComponentKey( const GameObject* pGameObject, const Component* pTarget )
-            {
-                if ( pGameObject == nullptr || pTarget == nullptr )
-                    return {};
-
-                unordered_map<string, int32> mapOccurrence;
-                for ( Component* pComp : pGameObject->getComponents() )
-                {
-                    if ( pComp == nullptr )
-                        continue;
-
-                    const string base = componentBaseKey( pComp );
-                    const int32  occ  = mapOccurrence[base]++;
-                    if ( pComp == pTarget )
-                        return makeStableComponentKey( pComp, occ );
-                }
-                return {};
-            }
-
-            static Component* findComponentByStableKey( GameObject* pGameObject, string_view key )
-            {
-                if ( pGameObject == nullptr || key.empty() )
-                    return nullptr;
-
-                unordered_map<string, int32> mapOccurrence;
-                for ( Component* pComp : pGameObject->getComponents() )
-                {
-                    if ( pComp == nullptr )
-                        continue;
-
-                    const string base      = componentBaseKey( pComp );
-                    const int32  occ       = mapOccurrence[base]++;
-                    const string stableKey = makeStableComponentKey( pComp, occ );
-                    if ( stableKey == key )
-                        return pComp;
-                }
-                return nullptr;
-            }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -189,8 +108,9 @@ namespace sw::editor
             _selectedComponentId = 0;
 
         GameObject* pRawObj = pObj.get();
-        if ( pRawObj != nullptr && pRawComp != nullptr )
-            _selectedComponentKey = EditorWorkspaceInternal::computeStableComponentKey( pRawObj, pRawComp );
+        // 씬 파일의 부착 대상과 같은 키(`ComponentStableKey`)다. 소유자가 다른 컴포넌트는 되찾을 수 없으니 비운다.
+        if ( pRawObj != nullptr && pRawComp != nullptr && pRawComp->getOwner() == pRawObj )
+            _selectedComponentKey = ComponentStableKey::makeKey( pRawComp );
         else
             _selectedComponentKey.clear();
 
@@ -227,7 +147,7 @@ namespace sw::editor
             return;
         }
 
-        Component* pRematerialized = EditorWorkspaceInternal::findComponentByStableKey( pObj, _selectedComponentKey );
+        Component* pRematerialized = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
         if ( pRematerialized != nullptr )
             _selectedComponentId = pRematerialized->getComponentId();
         else

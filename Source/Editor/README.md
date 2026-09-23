@@ -102,6 +102,11 @@ comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp 
 월드 → 화면 변환은 `Viewport/EditorViewportProjection` 을 씁니다. 선분은 반드시
 `projectSegment` 로 — 점 단위로 투영하면 카메라를 가로지르는 선이 통째로 사라집니다.
 
+화면 → 월드는 반대쪽 하나입니다: 마우스 아래의 레이는 `EditorViewportPick::makeRay`
+(캔버스 정규 좌표 → 레이), 바닥·2D 평면과의 교점은 `rayHitsAxisPlane` 입니다. 피킹 · 자 ·
+애셋 드롭이 같은 둘을 쓰고, ImGui 에 닿는 것은 `EditorViewportClient` 의 마우스 위치 한 줄뿐이라
+나머지는 `EditorTest` 가 검증합니다. 뷰포트 도구를 하나 더할 때 NDC 계산을 다시 쓰지 마십시오.
+
 ## 저장되지 않은 편집을 다루는 법
 
 패널이 편집을 들고 있으면 **`IEditorPanel` 의 문서 계약**을 씁니다. 파생이 할 일은 둘뿐입니다:

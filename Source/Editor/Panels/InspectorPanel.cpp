@@ -869,16 +869,7 @@ namespace sw::editor
                 formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
                 if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
                 {
-                    // `getService<T>()` 는 nullptr 을 돌려줄 수 있다 — 따라가기 전에 본다.
-                    TaskArgs      args;
-                    TypeRegistry* pTypeRegistry = editor::getService<TypeRegistry>();
-                    if ( pTypeRegistry != nullptr )
-                    {
-                        const TaskValue result = pTypeRegistry->invokeMethod(
-                            pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-                        InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
-                                                                 _lastInvokeResult.capacity() );
-                    }
+                    invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
                 }
                 ImGui::PopStyleColor( 3 );
                 EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
@@ -956,17 +947,23 @@ namespace sw::editor
                         args.add( string( _arrArgString[paramIndex].c_str() ) );
                 }
 
-                TypeRegistry* pTypeRegistry = editor::getService<TypeRegistry>();
-                if ( pTypeRegistry != nullptr )
-                {
-                    const TaskValue result = pTypeRegistry->invokeMethod(
-                        pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-                    InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
-                                                             _lastInvokeResult.capacity() );
-                }
+                invokeTypeMethod( pInstance, pTypeInfo, method, args );
             }
 
             ImGui::PopID();
         }
+    }
+
+    void InspectorPanel::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
+                                           const TaskArgs& args )
+    {
+        // `getService<T>()` 는 nullptr 을 돌려줄 수 있다 — 따라가기 전에 본다.
+        TypeRegistry* pTypeRegistry = editor::getService<TypeRegistry>();
+        if ( pTypeRegistry == nullptr )
+            return;
+
+        const TaskValue result = pTypeRegistry->invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
+        InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
+                                                 _lastInvokeResult.capacity() );
     }
 } // namespace sw::editor

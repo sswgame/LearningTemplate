@@ -105,11 +105,9 @@ namespace sw::editor
             Scene* pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                for ( GameObject* pObj : pScene->getObjectManager()->getAllGameObjects() )
+                // 값 반환 `getAllGameObjects()` 는 씬 전체를 복사한다 — 순회만 하므로 복사 없는 쪽을 쓴다.
+                pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
                 {
-                    if ( pObj == nullptr )
-                        continue;
-
                     const uint64      objId = pObj->getObjectId();
                     QuickLauncherItem item{};
                     item._category = "GameObject";
@@ -120,7 +118,7 @@ namespace sw::editor
                     item._detail         = string{ detailSb.view() };
                     item._targetObjectId = objId;
                     _listAllItem.push_back( std::move( item ) );
-                }
+                } );
             }
         }
 

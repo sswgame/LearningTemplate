@@ -16,12 +16,14 @@
 namespace sw
 {
     struct EnumInfo;
+    struct FunctionInfo;
     struct PropertyInfo;
     struct TypeInfo;
 
     class Component;
     class GameObject;
     class IRHIDevice;
+    class TaskArgs;
 } // namespace sw
 
 namespace sw::editor
@@ -85,6 +87,8 @@ namespace sw::editor
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
+        /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 줄에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 길이다. */
+        void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
     private:
         /** @brief 프로퍼티 검색 필터 버퍼 */

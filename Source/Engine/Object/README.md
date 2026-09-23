@@ -46,6 +46,7 @@ Object/
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식
+│  ├─ ComponentStableKey.*  # `이름(없으면 타입)#n` 키 — 씬 파일의 부착 대상과 에디터 선택 복원이 같은 키
 │  ├─ TagSystem.*       # TagID / TagContainer
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider 등
 └─ Resource/Prefab/     # 프리팹 로드·스폰

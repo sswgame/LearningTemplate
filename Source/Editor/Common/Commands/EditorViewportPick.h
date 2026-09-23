@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
@@ -58,6 +59,21 @@ namespace sw::editor
         /** @brief 레이-구 교차. 맞으면 outHitT에 원점으로부터의 거리(0 이상)를 씁니다. */
         static bool rayHitsSphere( const float3& origin, const float3& dir, const float3& center, float32 radius,
                                    float32& outHitT );
+
+        /**
+         * @brief 캔버스 정규 좌표(u·v ∈ [0,1], 왼쪽 위가 0·0)에서 월드 레이를 만듭니다.
+         * @details 근평면(NDC z 0)과 원평면(z 1)을 역투영해 잇는다. 원점은 근평면 위의 점, 방향은 단위 벡터다.
+         *          피킹 · 자 · 애셋 드롭이 같은 레이를 쓴다 — 예전에는 셋이 이 계산을 각자 들었다.
+         * @return 역행렬이 퇴화했으면 false.
+         */
+        static bool makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay );
+
+        /**
+         * @brief 레이와 축 평면(axisIndex 0·1·2 = X·Y·Z = 0)의 교점. 나란하면 false.
+         * @details 자는 바닥(Y = 0), 애셋 드롭은 2D 에서 Z = 0 · 3D 에서 Y = 0 을 쓴다. 평면이 레이 뒤에 있어도
+         *          교점을 낸다(카메라가 바닥 아래일 때 드롭이 원점으로 튀지 않게). 교점의 축 성분은 정확히 0 이다.
+         */
+        static bool rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint );
 
         /** @brief 종류를 아는 피킹 제공자 개수입니다 (표가 비어 있지 않은지 보는 데 씁니다). */
         static uint32 getTypedProviderCount();

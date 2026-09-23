@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -57,100 +58,6 @@ namespace sw
                 outWorldPos = float3( static_cast<float32>( outWorldLWC._x ),
                                       static_cast<float32>( outWorldLWC._y ),
                                       static_cast<float32>( outWorldLWC._z ) );
-            }
-
-            static string_view sceneComponentTypeBaseName( const Component* pComp )
-            {
-                if ( pComp == nullptr )
-                    return "Component";
-                if ( pComp->getComponentName().empty() == false )
-                    return pComp->getComponentName().c_str();
-                const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-                if ( pTypeInfo != nullptr )
-                {
-                    if ( pTypeInfo->_name.empty() == false )
-                        return pTypeInfo->_name.c_str();
-                    if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-                        return pTypeInfo->_fullyQualifiedName.c_str();
-                }
-                return "Component";
-            }
-
-            static string makeStableSceneComponentKey( const Component* pComp, int32 occurrenceIndex )
-            {
-                const string_view base = sceneComponentTypeBaseName( pComp );
-                string            key;
-                key.reserve( base.size() + 12 );
-                key.append( base.data(), base.size() );
-                key += '#';
-                key += to_string( occurrenceIndex );
-                return key;
-            }
-
-            static string findStableSceneComponentKey( const Component* pComp )
-            {
-                if ( pComp == nullptr || pComp->getOwner() == nullptr )
-                    return {};
-
-                const string_view targetBase = sceneComponentTypeBaseName( pComp );
-                int32             occ        = 0;
-                string            resultKey;
-
-                pComp->getOwner()->forEachComponent( [&]( const Component* pOther )
-                {
-                    if ( resultKey.empty() == false || pOther == nullptr )
-                        return;
-
-                    const string_view otherBase = sceneComponentTypeBaseName( pOther );
-                    if ( otherBase == targetBase )
-                    {
-                        if ( pOther == pComp )
-                            resultKey = makeStableSceneComponentKey( pComp, occ );
-                        else
-                            ++occ;
-                    }
-                } );
-
-                return resultKey;
-            }
-
-            static SceneComponent* findSceneComponentByAttachKey( GameObject* pOwner, string_view attachKey )
-            {
-                if ( pOwner == nullptr || attachKey.empty() )
-                    return nullptr;
-
-                const size_t hashPos = attachKey.rfind( '#' );
-                if ( hashPos == string_view::npos )
-                    return nullptr;
-
-                const string_view reqBase = attachKey.substr( 0, hashPos );
-                int32             reqOcc  = 0;
-                for ( size_t index = hashPos + 1; index < attachKey.size(); ++index )
-                {
-                    if ( attachKey[index] < '0' || attachKey[index] > '9' )
-                        return nullptr;
-                    reqOcc = reqOcc * 10 + ( attachKey[index] - '0' );
-                }
-
-                int32           occ    = 0;
-                SceneComponent* pFound = nullptr;
-
-                pOwner->forEachComponent( [&]( Component* pComp )
-                {
-                    if ( pFound != nullptr || pComp == nullptr )
-                        return;
-
-                    const string_view base = sceneComponentTypeBaseName( pComp );
-                    if ( base == reqBase )
-                    {
-                        if ( occ == reqOcc )
-                            pFound = castTo<SceneComponent>( pComp );
-                        else
-                            ++occ;
-                    }
-                } );
-
-                return pFound;
             }
         };
     } // namespace
@@ -583,7 +490,7 @@ namespace sw
         if ( pParentOwner == nullptr )
             return;
 
-        const string parentKey = SceneComponentInternal::findStableSceneComponentKey( _pParent );
+        const string parentKey = ComponentStableKey::makeKey( _pParent );
         if ( parentKey.empty() )
             return;
         _attachOwner     = pParentOwner->getName();
@@ -609,7 +516,8 @@ namespace sw
                 return;
         }
 
-        SceneComponent* pParent = SceneComponentInternal::findSceneComponentByAttachKey( pParentOwner, _attachComponent.c_str() );
+        Component*      pParentComp = ComponentStableKey::findComponent( pParentOwner, _attachComponent.c_str() );
+        SceneComponent* pParent     = pParentComp != nullptr ? castTo<SceneComponent>( pParentComp ) : nullptr;
         if ( pParent == nullptr || pParent == this )
             return;
         attachToComponent( pParent );

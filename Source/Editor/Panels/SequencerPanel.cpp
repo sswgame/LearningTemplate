@@ -18,25 +18,17 @@
 
 namespace sw::editor
 {
-    struct Item
-    {
-        string _name;
-        string _targetObject;
-        float3 _translation{};
-        float3 _rotation{};
-        float3 _scale{ 1.0f, 1.0f, 1.0f };
-        int32  _start{ 0 };
-        int32  _end{ 10 };
-        int32  _type{ 0 };
-        uint32 _color{ 0xFFAA8080 };
-    };
-
+    /**
+     * @brief ImSequencer 가 보는 시퀀스 — 항목은 애셋의 `SequenceTrackItem` 그대로다.
+     * @details 예전에는 같은 아홉 필드를 가진 패널 전용 `Item` 이 따로 있어 저장·복원 때마다 필드를 하나씩 옮겼다 —
+     *          애셋에 필드가 하나 늘면 두 복사 루프도 같이 고쳐야 했고, 빠뜨리면 그 필드만 조용히 저장되지 않았다.
+     */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
-        int32          _frameMin{ 0 };
-        int32          _frameMax{ 100 };
-        vector<Item>   _listItem;
-        mutable string _labelScratch;
+        int32                     _frameMin{ 0 };
+        int32                     _frameMax{ 100 };
+        vector<SequenceTrackItem> _listItem;
+        mutable string            _labelScratch;
 
         int32 GetFrameMin() const override
         {
@@ -69,7 +61,7 @@ namespace sw::editor
 
         void Get( int32 itemIndex, int32** ppStart, int32** ppEnd, int32* pType, uint32* pColor ) override
         {
-            Item& item = _listItem[static_cast<size_t>( itemIndex )];
+            SequenceTrackItem& item = _listItem[static_cast<size_t>( itemIndex )];
             if ( ppStart != nullptr )
                 *ppStart = &item._start;
             if ( ppEnd != nullptr )
@@ -82,7 +74,7 @@ namespace sw::editor
 
         void Add( int32 type ) override
         {
-            Item item{};
+            SequenceTrackItem item{};
             item._type  = type;
             item._start = _frameMin;
             item._end   = _frameMin + 10;
@@ -103,7 +95,7 @@ namespace sw::editor
         {
             if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) )
             {
-                Item copy = _listItem[static_cast<size_t>( itemIndex )];
+                SequenceTrackItem copy = _listItem[static_cast<size_t>( itemIndex )];
                 copy._name += " Copy";
                 _listItem.push_back( std::move( copy ) );
             }
@@ -183,7 +175,7 @@ namespace sw::editor
 
         if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
         {
-            Item& item = _sequence->_listItem[static_cast<size_t>( _selected )];
+            SequenceTrackItem& item = _sequence->_listItem[static_cast<size_t>( _selected )];
             EditorWidgets::drawTextField( "Clip Name", item._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
@@ -272,20 +264,7 @@ namespace sw::editor
         asset._frameMin = _sequence->_frameMin;
         asset._frameMax = _sequence->_frameMax;
         asset._note     = _cinematicNote.c_str();
-        for ( const Item& src : _sequence->_listItem )
-        {
-            SequenceTrackItem item{};
-            item._name         = src._name;
-            item._targetObject = src._targetObject;
-            item._translation  = src._translation;
-            item._rotation     = src._rotation;
-            item._scale        = src._scale;
-            item._start        = src._start;
-            item._end          = src._end;
-            item._type         = src._type;
-            item._color        = src._color;
-            asset._listItem.push_back( std::move( item ) );
-        }
+        asset._listItem = _sequence->_listItem;
         return asset;
     }
 
@@ -296,21 +275,7 @@ namespace sw::editor
         _sequence->_frameMin = asset._frameMin;
         _sequence->_frameMax = asset._frameMax;
         _cinematicNote       = asset._note.c_str();
-        _sequence->_listItem.clear();
-        for ( const SequenceTrackItem& src : asset._listItem )
-        {
-            Item item{};
-            item._name         = src._name;
-            item._targetObject = src._targetObject;
-            item._translation  = src._translation;
-            item._rotation     = src._rotation;
-            item._scale        = src._scale;
-            item._start        = src._start;
-            item._end          = src._end;
-            item._type         = src._type;
-            item._color        = src._color;
-            _sequence->_listItem.push_back( std::move( item ) );
-        }
+        _sequence->_listItem = asset._listItem;
     }
 
     string SequencerPanel::captureDocumentText() const

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 
 #include "Editor/Common/Commands/EditorViewportPick.h"
 
@@ -173,4 +174,70 @@ SW_TEST_CASE( EditorViewportPickTest, EmptySceneAndNullManagerAreSafe )
     GameObjectManager emptyManager;
     SW_EXPECT_FALSE( EditorViewportPick::pick( &emptyManager, makeForwardRay( 0.0f, 0.0f ), false, result ) );
     SW_EXPECT_NULL( result._pObject );
+}
+
+/**
+ * @brief [EditorViewportPickTest] 캔버스 가운데의 레이는 카메라가 보는 곳을 보고, 위쪽 모서리는 위로 벌어진다
+ */
+SW_TEST_CASE( EditorViewportPickTest, RayFromCanvasCenterLooksAlongCameraForward )
+{
+    const float4x4 view        = float4x4::createLookAt( float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } );
+    const float4x4 proj        = float4x4::createPerspectiveFieldOfView( 60.0f * MathUtil::DegreeToRadian, 16.0f / 9.0f, 0.1f, 100.0f );
+    const float4x4 invViewProj = ( view * proj ).invert();
+
+    EditorPickRay center{};
+    SW_ASSERT_TRUE( EditorViewportPick::makeRay( invViewProj, 0.5f, 0.5f, center ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, center._direction._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, center._direction._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, center._direction._z, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, center._direction.getLength(), 1e-4f );
+    SW_EXPECT_TRUE( center._origin._z < -9.0f ); // 원점은 근평면 — 카메라 바로 앞이다
+
+    // v 는 아래로 자란다 — 위 모서리(v 0)는 위(+Y)를 본다. 좌우는 서로 반대다.
+    EditorPickRay topLeft{};
+    EditorPickRay topRight{};
+    SW_ASSERT_TRUE( EditorViewportPick::makeRay( invViewProj, 0.0f, 0.0f, topLeft ) );
+    SW_ASSERT_TRUE( EditorViewportPick::makeRay( invViewProj, 1.0f, 0.0f, topRight ) );
+    SW_EXPECT_TRUE( topLeft._direction._y > 0.0f );
+    SW_EXPECT_TRUE( topRight._direction._y > 0.0f );
+    SW_EXPECT_TRUE( topLeft._direction._x * topRight._direction._x < 0.0f );
+
+    // 퇴화한 행렬(w 가 늘 0)은 레이를 내지 않는다 — 기본 생성은 항등이라 넷째 열을 지운다
+    EditorPickRay none{};
+    float4x4      degenerate = float4x4::createScale( 1.0f );
+    degenerate._14 = degenerate._24 = degenerate._34 = degenerate._44 = 0.0f;
+    SW_EXPECT_TRUE( EditorViewportPick::makeRay( degenerate, 0.5f, 0.5f, none ) == false );
+}
+
+/**
+ * @brief [EditorViewportPickTest] 축 평면 교점 — 바닥(Y)·2D(Z) 의 축 성분은 정확히 0 이고, 나란하면 없다
+ */
+SW_TEST_CASE( EditorViewportPickTest, RayHitsAxisPlaneAtExactZero )
+{
+    EditorPickRay ray{};
+    ray._origin    = float3{ 1.0f, 5.0f, 2.0f };
+    ray._direction = float3{ 0.0f, -1.0f, 0.0f };
+
+    float3 hit{};
+    SW_ASSERT_TRUE( EditorViewportPick::rayHitsAxisPlane( ray, 1, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._x, 1e-5f );
+    SW_EXPECT_TRUE( hit._y == 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, hit._z, 1e-5f );
+
+    // 비스듬한 레이도 같은 평면에 닿는다
+    ray._direction = float3{ 0.6f, -0.8f, 0.0f };
+    SW_ASSERT_TRUE( EditorViewportPick::rayHitsAxisPlane( ray, 1, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f + 0.6f * ( 5.0f / 0.8f ), hit._x, 1e-4f );
+    SW_EXPECT_TRUE( hit._y == 0.0f );
+
+    // 2D 의 Z = 0 평면
+    ray._origin    = float3{ 0.0f, 0.0f, -3.0f };
+    ray._direction = float3{ 0.0f, 0.0f, 1.0f };
+    SW_ASSERT_TRUE( EditorViewportPick::rayHitsAxisPlane( ray, 2, hit ) );
+    SW_EXPECT_TRUE( hit._z == 0.0f );
+
+    // 평면과 나란하면 없고, 축 번호가 틀려도 없다
+    ray._direction = float3{ 1.0f, 0.0f, 0.0f };
+    SW_EXPECT_TRUE( EditorViewportPick::rayHitsAxisPlane( ray, 2, hit ) == false );
+    SW_EXPECT_TRUE( EditorViewportPick::rayHitsAxisPlane( ray, 3, hit ) == false );
 }

@@ -64,14 +64,33 @@ namespace sw::editor
                 outMatrix = columnMajor.transpose();
             }
 
-            static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
+            /** @brief 열 우선 view · proj 배열(ImGuizmo 형식)에서 뷰-투영 행렬을 만듭니다. */
+            static void loadViewProj( const float32* pView, const float32* pProj, float4x4& outViewProj )
             {
-                const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
-                const float4 world = float4::transform( clip, invViewProj );
-                if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
+                float4x4 viewMat{};
+                float4x4 projMat{};
+                loadColumnMajor( viewMat, pView );
+                loadColumnMajor( projMat, pProj );
+                outViewProj = viewMat * projMat;
+            }
+
+            /**
+             * @brief 마우스 아래의 월드 레이. 캔버스 밖이거나 퇴화했으면 false.
+             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 쓴다 — 예전에는 셋이 NDC 계산과 근·원 평면 역투영을 각자 들었다.
+             *          ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는 `EditorViewportPick::makeRay` 라 테스트가 있다.
+             */
+            static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize,
+                                      EditorPickRay& outRay )
+            {
+                if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
                     return false;
-                outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
-                return true;
+
+                const ImVec2  mouse = ImGui::GetMousePos();
+                const float32 u     = ( mouse.x - canvasPos._x ) / canvasSize._x;
+                const float32 v     = ( mouse.y - canvasPos._y ) / canvasSize._y;
+                if ( u < 0.0f || 1.0f < u || v < 0.0f || 1.0f < v )
+                    return false;
+                return EditorViewportPick::makeRay( invViewProj, u, v, outRay );
             }
 
             static void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
@@ -437,15 +456,10 @@ namespace sw::editor
             return;
         if ( ImGui::GetIO().KeyAlt )
             return;
-        if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
-            return;
-
-        const ImVec2  mouse = ImGui::GetIO().MousePos;
-        const float32 u     = ( mouse.x - canvasPos._x ) / canvasSize._x;
-        const float32 v     = ( mouse.y - canvasPos._y ) / canvasSize._y;
-        const bool    bInside =
-            ( 0.0f <= u && u <= 1.0f && 0.0f <= v && v <= 1.0f );
-        if ( bInside == false )
+        const float32  aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+        const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
+        EditorPickRay  pickRay{};
+        if ( EditorViewportClientInternal::makeMouseRay( invViewProj, canvasPos, canvasSize, pickRay ) == false )
             return;
 
         Scene* pScene = editor::getActiveScene();
@@ -453,28 +467,6 @@ namespace sw::editor
             return;
         GameObjectManager* pManager = pScene->getObjectManager();
         pManager->flushSceneTransforms();
-
-        const float32  aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-        const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
-        const float32  ndcX        = u * 2.0f - 1.0f;
-        const float32  ndcY        = 1.0f - v * 2.0f;
-
-        float3 nearPt{};
-        float3 farPt{};
-        if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
-            return;
-        if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
-            return;
-
-        float3        dir    = farPt - nearPt;
-        const float32 dirLen = dir.getLength();
-        if ( dirLen < 1e-8f )
-            return;
-        dir = dir * ( 1.0f / dirLen );
-
-        EditorPickRay pickRay{};
-        pickRay._origin    = nearPt;
-        pickRay._direction = dir;
 
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
         EditorPickResult pickResult{};
@@ -809,11 +801,8 @@ namespace sw::editor
         if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
             return;
 
-        float4x4 viewMat{};
-        float4x4 projMat{};
-        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-        const float4x4 viewProj = viewMat * projMat;
+        float4x4 viewProj{};
+        EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
         constexpr int32   kGridExtent = 20;
         constexpr float32 kGridStep   = 1.0f;
@@ -901,44 +890,24 @@ namespace sw::editor
             return;
         }
 
-        float4x4 viewMat{};
-        float4x4 projMat{};
-        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-        const float4x4 viewProj    = viewMat * projMat;
-        const float4x4 invViewProj = viewProj.invert();
+        float4x4 viewProj{};
+        EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        const ImVec2  mousePos     = ImGui::GetMousePos();
-        const float32 mouseCanvasX = mousePos.x - canvasPos._x;
-        const float32 mouseCanvasY = mousePos.y - canvasPos._y;
-
-        if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
-             0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
+        // 마우스 아래 바닥(Y = 0)의 점이 자의 끝점이다.
+        EditorPickRay mouseRay{};
+        float3        groundPt{};
+        if ( EditorViewportClientInternal::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&
+             EditorViewportPick::rayHitsAxisPlane( mouseRay, 1, groundPt ) )
         {
-            const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
-            const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
-
-            float3 nearPt{}, farPt{};
-            if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
-                 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
+            if ( ImGui::IsMouseClicked( 0 ) )
             {
-                const float3 dir = farPt - nearPt;
-                if ( MathUtil::abs( dir._y ) > 1e-4f )
-                {
-                    const float32 t        = -nearPt._y / dir._y;
-                    const float3  groundPt = nearPt + dir * t;
-
-                    if ( ImGui::IsMouseClicked( 0 ) )
-                    {
-                        _rulerStartWorld = groundPt;
-                        _rulerEndWorld   = groundPt;
-                        _bRulerActive    = SW_TRUE;
-                    }
-                    else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
-                    {
-                        _rulerEndWorld = groundPt;
-                    }
-                }
+                _rulerStartWorld = groundPt;
+                _rulerEndWorld   = groundPt;
+                _bRulerActive    = SW_TRUE;
+            }
+            else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
+            {
+                _rulerEndWorld = groundPt;
             }
         }
 
@@ -984,51 +953,18 @@ namespace sw::editor
 
         GameObjectManager* pManager = pScene->getObjectManager();
 
-        // Calculate 3D spawn world position from mouse cursor
-        float4x4 viewMat{};
-        float4x4 projMat{};
-        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-        const float4x4 viewProj    = viewMat * projMat;
-        const float4x4 invViewProj = viewProj.invert();
+        // 마우스 아래의 바닥에 놓는다 — 2D 는 Z = 0 평면, 3D 는 Y = 0. 캔버스 밖이거나 평면과 나란하면 원점.
+        float4x4 viewProj{};
+        EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        const ImVec2  mousePos     = ImGui::GetMousePos();
-        const float32 mouseCanvasX = mousePos.x - canvasPos._x;
-        const float32 mouseCanvasY = mousePos.y - canvasPos._y;
-
-        float3 spawnPos{ 0.0f, 0.0f, 0.0f };
-        if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
-             0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
+        float3        spawnPos{ 0.0f, 0.0f, 0.0f };
+        EditorPickRay mouseRay{};
+        if ( EditorViewportClientInternal::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) )
         {
-            const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
-            const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
-
-            float3 nearPt{}, farPt{};
-            if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
-                 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
-            {
-                const float3 dir = farPt - nearPt;
-                if ( _toolbarSettings._bIs2DMode )
-                {
-                    // Intersect with Z = 0 plane
-                    if ( MathUtil::abs( dir._z ) > 1e-4f )
-                    {
-                        const float32 t = -nearPt._z / dir._z;
-                        spawnPos        = nearPt + dir * t;
-                        spawnPos._z     = 0.0f;
-                    }
-                }
-                else
-                {
-                    // Intersect with Y = 0 ground plane
-                    if ( MathUtil::abs( dir._y ) > 1e-4f )
-                    {
-                        const float32 t = -nearPt._y / dir._y;
-                        spawnPos        = nearPt + dir * t;
-                        spawnPos._y     = 0.0f;
-                    }
-                }
-            }
+            const uint32 planeAxis = _toolbarSettings._bIs2DMode ? 2u : 1u;
+            float3       hitPt{};
+            if ( EditorViewportPick::rayHitsAxisPlane( mouseRay, planeAxis, hitPt ) )
+                spawnPos = hitPt;
         }
 
         EditorAssetCommands::dropAt( pManager, pAssetPath, spawnPos );

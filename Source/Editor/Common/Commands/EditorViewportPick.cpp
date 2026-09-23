@@ -22,6 +22,23 @@ namespace sw::editor
     {
         struct EditorViewportPickInternal
         {
+            /** @brief NDC 점을 월드로. w 가 0 이면(퇴화 행렬) false. */
+            static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
+            {
+                const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
+                const float4 world = float4::transform( clip, invViewProj );
+                if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
+                    return false;
+                outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
+                return true;
+            }
+
+            /** @brief float3 의 축 성분 — 0·1·2 = X·Y·Z. */
+            static float32& axisOf( float3& v, uint32 axisIndex )
+            {
+                return axisIndex == 0 ? v._x : ( axisIndex == 1 ? v._y : v._z );
+            }
+
             /** @brief 구 하나를 후보로 넣습니다. 더 가까우면 ioBest를 갱신합니다. */
             static void considerSphere( GameObject* pObj, Component* pComp, const float3& center, float32 radius,
                                         const EditorPickRay& ray, EditorPickResult& ioBest )
@@ -208,6 +225,45 @@ namespace sw::editor
             return false;
 
         outHitT = hitT;
+        return true;
+    }
+
+    bool EditorViewportPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay )
+    {
+        const float32 ndcX = u * 2.0f - 1.0f;
+        const float32 ndcY = 1.0f - v * 2.0f;
+
+        float3 nearPt{};
+        float3 farPt{};
+        if ( EditorViewportPickInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
+            return false;
+        if ( EditorViewportPickInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
+            return false;
+
+        const float3  dir    = farPt - nearPt;
+        const float32 dirLen = dir.getLength();
+        if ( dirLen < 1e-8f )
+            return false;
+
+        outRay._origin    = nearPt;
+        outRay._direction = dir * ( 1.0f / dirLen );
+        return true;
+    }
+
+    bool EditorViewportPick::rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint )
+    {
+        if ( axisIndex > 2 )
+            return false;
+
+        float3        direction = ray._direction;
+        float3        origin    = ray._origin;
+        const float32 dirAxis   = EditorViewportPickInternal::axisOf( direction, axisIndex );
+        if ( MathUtil::abs( dirAxis ) <= 1e-4f )
+            return false;
+
+        const float32 t                                           = -EditorViewportPickInternal::axisOf( origin, axisIndex ) / dirAxis;
+        outPoint                                                  = origin + direction * t;
+        EditorViewportPickInternal::axisOf( outPoint, axisIndex ) = 0.0f;
         return true;
     }
 

@@ -987,6 +987,45 @@ App 벤치(큐브 8000 · 번갈아 2회): 기본은 전 스코프 같고(p50 �
   Engine 코드젠 한 번이 **3.27초**인데 그 거의 전부가 libclang 의 번역 단위 파싱이다
   (29개 입력 · 워커 16). 규칙 11개짜리 부분 문자열 탐색은 이 안에서 보이지 않는다.
 
+**(B) 열여덟째 — 2026-09-23 · Editor 구조 정리: 같은 모양을 각자 들던 자리 여덟을 하나로 — 숫자 프로퍼티는 표 한 줄 · 뷰포트 레이 하나 · 컴포넌트 안정 키는 엔진과 공유 · 시퀀서 항목 미러 제거.**
+
+Editor 는 2026-09-10 에 "하나 더하려면 N 곳" 패턴을 걷어낸 뒤라(커맨드 SSOT · 문서 계약 · 테마 표 · 피킹 표), 남은 것은
+**한 파일 안에서 같은 모양을 되풀이하는 자리**였다. `RunDuplicateCode.py --filter Source/Editor --no-headers --min-lines 6` 이
+22 건을 냈고 원인별로 걷었다 — 정리 뒤 6 건이고, 그 여섯은 표의 줄(`NumericPropertyTraits` 특수화)과 다른 파일끼리의 7 줄 둘이다.
+
+- **숫자 프로퍼티 여섯이 표 한 줄씩** (`InspectorPropertyManager.cpp`, 575 → 502 줄). int32 · uint32 · int64 · uint8 · float32 ·
+  float64 가 각자 40 줄짜리 `draw` 를 들었고 같은 여섯 걸음(포인터 · 읽기 전용 · 범위 · 슬라이더 · 툴팁 · 되돌리기)에 캐스트만
+  달랐다. 지금은 `NumericProperty<T>` 하나와 `NumericPropertyTraits<T>` 의 줄(위젯 값 타입 · 표시 타입 · 서식 · 드래그 속도 ·
+  기본 한계)이다. 같이 나온 것 셋: 비트필드 체크박스는 uint8 · bool 만 알았는데 정수 전부가 같은 길을 탄다 · 애셋 경로 필드
+  (입력 · 드롭 · 지우기)는 `string` 과 `hashed_string` 이 같은 틀을 쓴다 · `hashed_string` 에 되돌리기가 없었다(인턴 인덱스
+  하나라 POD 되돌리기로 붙였다).
+- **뷰포트 레이는 하나** (`EditorViewportClient.cpp`, 1,036 → 972 줄). 피킹 · 자 · 애셋 드롭이 NDC 계산과 근·원 평면 역투영을
+  각자 들었다. `EditorViewportPick::makeRay`(캔버스 정규 좌표 → 레이) · `rayHitsAxisPlane`(바닥 Y = 0 · 2D 의 Z = 0)로 옮겨
+  ImGui 없이 `EditorTest` 가 검증하고(+2 케이스), 클라이언트에 남은 것은 마우스 위치 한 줄(`makeMouseRay`)이다. 열 우선
+  view · proj 배열에서 뷰-투영을 만드는 것도 그리드 · 자 · 드롭 세 자리에서 `loadViewProj` 하나로.
+- **컴포넌트 안정 키는 엔진이 정본** (`Engine/Object/Component/ComponentStableKey`). 씬 파일의 부착 대상
+  (`SceneComponent::_attachComponent`, `이름(없으면 타입)#n`)과 에디터의 선택 복원(`EditorWorkspace::_selectedComponentKey`)이
+  같은 규칙을 각자 들었고 형식이 달랐다(에디터는 첫 번째에 `#0` 을 붙이지 않았고, 이름이 없을 때 타입의 정규화 이름을 썼다).
+  씬에 저장되는 엔진 쪽을 정본으로 모았다 — 에디터 키는 메모리에만 있어 형식이 바뀌어도 잃는 것이 없다.
+  `ComponentStableKeyTest` 3 케이스(왕복 · 이름 붙은 것은 따로 세기 · 형식 아닌 키는 nullptr).
+- **시퀀서의 항목 미러 제거** (`SequencerPanel.cpp`, 350 → 315 줄). 애셋의 `SequenceTrackItem` 과 같은 아홉 필드를 가진 패널
+  전용 `Item` 이 있어 저장 · 복원 때 필드를 하나씩 옮겼다 — 애셋에 필드가 늘면 두 루프도 같이 고쳐야 했고, 빠뜨리면 그 필드만
+  조용히 저장되지 않았다. `ClipSequence` 가 애셋 항목을 그대로 들고, 저장 · 복원은 대입 한 줄이다.
+- 작은 것 넷: 전역 변수 표의 열 다섯 줄 세 자리 → `beginVariableTable` · 인스펙터 FUNCTION 호출 블록 둘 → `invokeTypeMethod` ·
+  대화 그래프의 핀 세 줄 아홉 자리 → `drawInputPin` / `drawOutputPin` · 커맨드 팔레트 · 퀵 런처가 열릴 때 씬 전체를 **복사**하던
+  값 반환 `getAllGameObjects()` → `forEachGameObject`.
+
+**검증.** Debug · Shipping · ASan 빌드 경고 0. `nogpu` 7/7 · `hostgpu` 2/2 를 Debug 와 Shipping 둘 다, ASan `nogpu` 7/7, 린트 프리셋 20/20.
+실기동(Debug · DX12 · `-EnableEditor`): 기본 레이아웃 창 15 / 빈 패널 0, `-gv_editorOpenAllPanels=1` 창 33 / 빈 패널 0 — 둘 다 종료 0 ·
+`[Error]` 0. `EditorViewportPickTest` 9 · `ComponentStableKeyTest` 3 · `SceneComponentTest` 5 · `SceneTest` 14 · `GameObjectTest` 40 통과.
+바뀐 헤더 넷(`ComponentStableKey.h` · `EditorViewportPick.h` · `InspectorPanel.h` · `DialogueGraphPanel.h`)은 단독 컴파일 OK.
+`float4x4{}` 는 항등이라 "퇴화 행렬" 테스트는 넷째 열을 직접 지워 만들었다.
+
+**남긴 것.** `AnimationGraphPanel` · `DialogueGraphPanel` 의 7 줄과 `InputMapEditorPanel` 안의 6 줄은 노드 편집기의 삭제 질의 루프(`ed::BeginDelete` → `QueryDeletedLink`/`QueryDeletedNode` → `AcceptDeletedItem`)와 액션 표의 머리 · 행이다 —
+  그래프 문서 기반(`EditorGraphDocumentPanel`)이 삭제 질의를 들면 두 그래프 패널이 같이 줄어드니 다음 라운드의 첫 후보다. `EditorViewportClient.cpp` 는
+972 줄로 여전히 Editor 에서 가장 긴 파일이지만, 남은 것은 기즈모 · 그리드 · 오버레이 그리기라 쪼개도 총량이 줄지 않는다
+(정해진 방향: 쪼개기보다 공통 빼기).
+
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

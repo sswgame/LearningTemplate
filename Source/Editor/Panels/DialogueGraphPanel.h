@@ -33,6 +33,10 @@ namespace sw::editor
         void drawGraphCanvas( float32 canvasWidth );
         /** @brief 노드들을 캔버스에 그립니다. */
         void drawGraphNodes();
+        /** @brief 노드 왼쪽의 입력 핀("-> In"). 여섯 종류 중 다섯이 같은 세 줄이었다. */
+        void drawInputPin( int32 nodeId );
+        /** @brief 출력 핀 하나 — 핀 번호는 호출자가 인코딩한다(다음 · 선택지 · 분기). */
+        void drawOutputPin( int32 pinId, const utf8* pLabel );
         /** @brief 캔버스의 링크 생성·삭제 상호작용을 처리합니다. */
         void handleCanvasInteractions();
         /** @brief 선택된 노드의 상세 인스펙터를 그립니다. */

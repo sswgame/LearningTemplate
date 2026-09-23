@@ -168,11 +168,9 @@ namespace sw::editor
             Scene* pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                for ( GameObject* pObj : pScene->getObjectManager()->getAllGameObjects() )
+                // 값 반환 `getAllGameObjects()` 는 씬 전체를 복사한다 — 순회만 하므로 복사 없는 쪽을 쓴다.
+                pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
                 {
-                    if ( pObj == nullptr )
-                        continue;
-
                     const uint64 objId   = pObj->getObjectId();
                     const string objName = string{ pObj->getName().c_str() };
 
@@ -192,7 +190,7 @@ namespace sw::editor
                         }
                     };
                     _listAllCommand.push_back( std::move( entry ) );
-                }
+                } );
             }
         }
     }

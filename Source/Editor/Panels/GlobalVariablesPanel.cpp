@@ -27,6 +27,23 @@ namespace sw::editor
     {
         struct GlobalVariablesPanelInternal
         {
+            /**
+             * @brief 변수 표의 틀 — 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같다.
+             * @return 표가 열렸으면 true — `EndTable` 은 호출자가 닫는다. 예전에는 세 자리가 열 다섯 줄을 각자 들었다.
+             */
+            static bool beginVariableTable( const utf8* pId, ImGuiTableFlags flags, float32 outerHeight )
+            {
+                if ( ImGui::BeginTable( pId, 5, flags, ImVec2( 0.0f, outerHeight ) ) == false )
+                    return false;
+                ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
+                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );
+                ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f );
+                ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
+                ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f );
+                ImGui::TableHeadersRow();
+                return true;
+            }
+
             static bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )
             {
                 if ( pA->_moduleName != pB->_moduleName )
@@ -331,17 +348,10 @@ namespace sw::editor
         {
             if ( ImGui::CollapsingHeader( "Pinned / Favorites", ImGuiTreeNodeFlags_DefaultOpen ) )
             {
-                if ( ImGui::BeginTable( "PinnedGvTable", 5,
-                                        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable,
-                                        ImVec2( 0.0f, 0.0f ) ) )
+                // 고정 섹션은 스크롤하지 않는다 — 본문 표 위에 통째로 보인다.
+                if ( GlobalVariablesPanelInternal::beginVariableTable(
+                         "PinnedGvTable", ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable, 0.0f ) )
                 {
-                    ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
-                    ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );
-                    ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-                    ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
-                    ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f );
-                    ImGui::TableHeadersRow();
-
                     for ( const string& pinnedName : _uniquePinnedVar )
                     {
                         GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
@@ -391,15 +401,8 @@ namespace sw::editor
                 if ( bModuleHeaderOpen )
                 {
                     const string tableId = "GvTable_" + currentModule;
-                    if ( ImGui::BeginTable( tableId.c_str(), 5, kGlobalVarTableFlags, ImVec2( 0.0f, 0.0f ) ) )
+                    if ( GlobalVariablesPanelInternal::beginVariableTable( tableId.c_str(), kGlobalVarTableFlags, 0.0f ) )
                     {
-                        ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
-                        ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );
-                        ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-                        ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
-                        ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f );
-                        ImGui::TableHeadersRow();
-
                         for ( size_t rowIndex = varIndex; rowIndex < rangeEnd; ++rowIndex )
                         {
                             ImGui::PushID( listFiltered[rowIndex]->_name.c_str() );
@@ -415,15 +418,8 @@ namespace sw::editor
         }
         else
         {
-            if ( ImGui::BeginTable( "GlobalVarsTable", 5, kGlobalVarTableFlags, ImVec2( 0.0f, -1.0f ) ) )
+            if ( GlobalVariablesPanelInternal::beginVariableTable( "GlobalVarsTable", kGlobalVarTableFlags, -1.0f ) )
             {
-                ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
-                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );
-                ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-                ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
-                ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f );
-                ImGui::TableHeadersRow();
-
                 for ( GlobalVariableInfo* pInfo : listFiltered )
                 {
                     ImGui::PushID( pInfo->_name.c_str() );
