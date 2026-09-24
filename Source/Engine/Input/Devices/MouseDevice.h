@@ -151,12 +151,11 @@ namespace sw
         uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크(MouseButton 인덱스로 비트 조회). */
         uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지). onFrameBegin/onFrameEnd 에서 초기화. */
         uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지). */
-        uint8                  _bCursorVisible    : 1;
-        uint8                  _bPointerInside    : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 여부. */
-        uint8                  _bPointerEntered   : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 여부(엣지). */
-        uint8                  _bPointerLeft      : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 여부(엣지). */
-        uint8                  _bAnyButtonPressed : 1; /**< 이번 프레임에 어떤 버튼이든 새로 눌렸는지 여부. wasAnyButtonPressed() 가 참조. */
-        uint8                  _bHasSubRect       : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 여부. */
-        [[maybe_unused]] uint8 _reserved          : 2;
+        uint8                  _bCursorVisible  : 1;
+        uint8                  _bPointerInside  : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 여부. */
+        uint8                  _bPointerEntered : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 여부(엣지). */
+        uint8                  _bPointerLeft    : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 여부(엣지). */
+        uint8                  _bHasSubRect     : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 여부. */
+        [[maybe_unused]] uint8 _reserved        : 3;
     };
 } // namespace sw

@@ -99,6 +99,20 @@ namespace sw
         pollUser( _deviceIndex, deltaTime );
     }
 
+    void GamepadXInput::markDisconnected( uint32 userIndex, bool bWasConnected )
+    {
+        _bConnected    = SW_FALSE;
+        _buttonMask    = 0;
+        _leftStick._x  = 0.0f;
+        _leftStick._y  = 0.0f;
+        _rightStick._x = 0.0f;
+        _rightStick._y = 0.0f;
+        _leftTrigger   = 0.0f;
+        _rightTrigger  = 0.0f;
+        if ( bWasConnected && _onConnectionChanged.isBound() )
+            _onConnectionChanged( userIndex, false );
+    }
+
 #if defined( _WIN32 )
     void GamepadXInput::pollUser( uint32 userIndex, float32 deltaTime )
     {
@@ -116,16 +130,7 @@ namespace sw
         GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
         if ( pfnGetState == nullptr )
         {
-            _bConnected    = SW_FALSE;
-            _buttonMask    = SW_FALSE;
-            _leftStick._x  = 0.0f;
-            _leftStick._y  = 0.0f;
-            _rightStick._x = 0.0f;
-            _rightStick._y = 0.0f;
-            _leftTrigger   = 0.0f;
-            _rightTrigger  = 0.0f;
-            if ( bWasConnected && _onConnectionChanged.isBound() )
-                _onConnectionChanged( userIndex, false );
+            markDisconnected( userIndex, bWasConnected );
             return;
         }
 
@@ -133,16 +138,7 @@ namespace sw
         const DWORD  result = pfnGetState( userIndex, &state );
         if ( result != ERROR_SUCCESS )
         {
-            _bConnected    = SW_FALSE;
-            _buttonMask    = SW_FALSE;
-            _leftStick._x  = 0.0f;
-            _leftStick._y  = 0.0f;
-            _rightStick._x = 0.0f;
-            _rightStick._y = 0.0f;
-            _leftTrigger   = 0.0f;
-            _rightTrigger  = 0.0f;
-            if ( bWasConnected && _onConnectionChanged.isBound() )
-                _onConnectionChanged( userIndex, false );
+            markDisconnected( userIndex, bWasConnected );
             return;
         }
 
@@ -297,17 +293,10 @@ namespace sw
         return info;
     }
 #else
-    void GamepadXInput::pollUser( uint32, float32 )
+    void GamepadXInput::pollUser( uint32 userIndex, float32 )
     {
         _prevButtonMask = _buttonMask;
-        _bConnected     = SW_FALSE;
-        _buttonMask     = SW_FALSE;
-        _leftStick._x   = 0.0f;
-        _leftStick._y   = 0.0f;
-        _rightStick._x  = 0.0f;
-        _rightStick._y  = 0.0f;
-        _leftTrigger    = 0.0f;
-        _rightTrigger   = 0.0f;
+        markDisconnected( userIndex, false );
     }
 
     bool GamepadXInput::setVibration( float32, float32 )

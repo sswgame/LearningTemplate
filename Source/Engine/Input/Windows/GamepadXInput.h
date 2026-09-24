@@ -34,6 +34,12 @@ namespace sw
         void stopVibration() override;
 
     private:
+        /**
+         * @brief 연결이 끊긴 상태로 비웁니다(버튼 · 스틱 · 트리거). 이번에 끊겼으면(@p bWasConnected) 연결 콜백에 알립니다.
+         * @details `XInputGetState` 를 못 찾았을 때 · 호출이 실패했을 때 · 비 Windows 스텁이 같은 여덟 줄을 각자 들고 있었습니다.
+         */
+        void markDisconnected( uint32 userIndex, bool bWasConnected );
+
         [[maybe_unused]] float32 _reconnectTimer;
         uint8                    _bConnected  : 1;
         [[maybe_unused]] uint8   _reservedPad : 7;

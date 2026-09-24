@@ -375,24 +375,15 @@ namespace sw
 
     bool ActionMap::isChordDown( const hashed_string& action ) const
     {
-        const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || _pInput == nullptr )
-            return false;
-
-        for ( const ActionBinding& binding : pEntry->_listBinding )
-        {
-            if ( binding._kind == BindingKind::Chord && isBindingLayerActive( binding ) )
-            {
-                const Key modKey  = static_cast<Key>( binding._arrSlot[0]._controlIndex );
-                const Key trigKey = static_cast<Key>( binding._arrSlot[1]._controlIndex );
-                if ( _pInput->isKeyDown( modKey ) && _pInput->isKeyDown( trigKey ) )
-                    return true;
-            }
-        }
-        return false;
+        return hasActiveChord( action, false );
     }
 
     bool ActionMap::wasChordTriggered( const hashed_string& action ) const
+    {
+        return hasActiveChord( action, true );
+    }
+
+    bool ActionMap::hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const
     {
         const ActionEntry* pEntry = findAction( action );
         if ( pEntry == nullptr || _pInput == nullptr )
@@ -402,9 +393,10 @@ namespace sw
         {
             if ( binding._kind == BindingKind::Chord && isBindingLayerActive( binding ) )
             {
-                const Key modKey  = static_cast<Key>( binding._arrSlot[0]._controlIndex );
-                const Key trigKey = static_cast<Key>( binding._arrSlot[1]._controlIndex );
-                if ( _pInput->isKeyDown( modKey ) && _pInput->wasKeyPressed( trigKey ) )
+                const Key  modKey     = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+                const Key  trigKey    = static_cast<Key>( binding._arrSlot[1]._controlIndex );
+                const bool bTriggerOk = bTriggerJustPressed ? _pInput->wasKeyPressed( trigKey ) : _pInput->isKeyDown( trigKey );
+                if ( _pInput->isKeyDown( modKey ) && bTriggerOk )
                     return true;
             }
         }

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource · Scene 정리(Reflection 은 걷을 것 없음)
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource · Scene · Input 정리(Reflection · Compression · Module 은 걷을 것 없음)
 
 ---
 
@@ -1664,6 +1664,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Input 정리 — 겹친 상태 칸 하나 · 두 벌 셋 · Compression · Module 은 걷을 것이 없었다)
+
+**Input.** 사용처 0 인 공개 함수가 55 개였는데 **전부 남겼다** — 감도 · 축 반전 · 데드존 모양 · 더블클릭/더블탭/홀드 문턱 · 토글 ·
+코드 억제 · 내비 반복 · 텍스트 입력 · 진동 · 커서/포인터 진입 · 리플레이 속도/반복처럼 UE Enhanced Input · Unity Input System 에 있는
+기능이다. `RawInputEvent::_timestampUs` 도 쓰기만 하지만 입력 이벤트의 시각은 상용 입력 계층의 기본 칸이라 남겼다. 고친 것:
+- **`MouseDevice::_bAnyButtonPressed`** — 주석은 "`wasAnyButtonPressed()` 가 참조" 라 했지만 그 게터는 `_pressedMask != 0` 을 읽는다.
+  같은 상태를 한 번 더 들던 쓰기 전용 칸이라 지웠다(누를 때마다 · 프레임마다 저장 셋).
+- **XInput 의 "연결 끊김으로 비우기"** 여덟 줄이 세 벌(`XInputGetState` 를 못 찾음 · 호출 실패 · 비 Windows 스텁) → `markDisconnected`.
+- **`ActionMap::isChordDown` · `wasChordTriggered`** 는 방아쇠 키를 "눌려 있나" / "방금 눌렸나" 로 묻는 한 줄만 달랐다 → `hasActiveChord`.
+- 비트마스크에 `SW_FALSE` 를 넣던 네 곳(`MouseDevice` 둘 · `GamepadDevice` 둘)을 `0` 으로 — 값은 같지만 마스크를 참/거짓으로 읽게 한다.
+- 09-23 에 "일부러 둔다" 로 판정한 Win32 마우스 케이스 꼬리는 그대로 두었다. 프레임당 몇 번 부르는 질의 · 장치 폴링이라 성능 측정은 하지 않았다
+  (지운 것은 저장뿐이고 더한 것은 갈래 하나다). 기존 테스트가 코드 질의 둘(`TestInput.cpp` 293~311) · 마우스 · 게임패드를 모두 지난다.
+
+**Compression — 걷을 것이 없었다.** 사용처 0 인 `CompressionCodecRegistry::getDefaultCodecType` · `setDefaultCodecType` 은 설정 API 라 남겼고,
+RLE 의 압축 · 해제 머리 중복은 09-23 판정대로 둔다.
+
+**Module — 걷을 것이 없었다(대신 핫 리로드 개선 후보를 찾았다).** `Source/Engine/Module` · `Source/App/Module` 의 사용처 0 인 것은 게터와
+`LiveReloadManager::addEventSubscription` 이다. 지연 로드 훅(`DelayLoadNotifyHook.cpp`)은 **필요하다** — 섀도 복사본은 이름이
+`GameFramework_temp_N_<시각>.dll` 이라 킷 · SWGame 의 `GameFramework.dll` import 가 이름으로 이미 올라온 모듈을 못 찾고 원본을 한 벌 더
+올린다(정적 상태 두 벌 + 원본 잠김). 훅이 그 import 를 지금 올라와 있는 복사본으로 돌린다. Dev 의 킷 · SWGame 에만 링크되고 Shipping 에는 없다.
+
+**다음 후보 — 핫 리로드 안정성(라이선스 없이).** 상용의 Live Coding 은 Live++(유료 · Windows 전용)라, 지금의 섀도 복사본 방식을 굳히는 쪽이다:
+1. **Dev 에서는 옛 이미지를 바로 내리지 않는다**(`LiveReloadManager.cpp` commit 끝의 `unloadDynamicLibrary`). 상한 N 개로 오래된 것부터.
+   옛 코드를 가리키는 무엇이든 크래시 대신 옛 동작이 되고, commit 실패를 "그래프 깨짐" 대신 되돌리기로 바꿀 수 있다.
+2. **옛 이미지를 가리키는 포인터 탐지기** — 퇴역 직전 등록부(이벤트 구독 · 입력 콜백 · 지연 큐 · 프로파일러 스코프 이름 · 서비스)를 훑어
+   `[base, base+size)` 안을 가리키는 것을 이름과 함께 로그. `addEventSubscription` 을 부르는 곳이 0 이라 모듈이 스스로 떼지 않은 구독은 지금
+   옛 코드로 뛴다 — 탐지기가 이런 것을 잡는다. SmokeTest 가 "리로드 뒤 0 개" 를 단정할 수 있게 된다.
+3. **엔진 ABI 자동 도장** — 지금 `ModuleAbi` 스탬프는 손으로 올리고 함수 표 모양만 지킨다. 파일 감시는 빌드 성공 여부를 보지 않고 mtime 으로
+   리로드하므로, 엔진 헤더를 고친 빌드에서 `Engine.dll` 링크는 잠겨 실패해도 `SWGame.dll` 이 먼저 써지면 **다른 헤더로 빌드된 모듈**이 올라갈
+   수 있다(코드로 본 경로 · 재현 안 함). Engine 공개 헤더 해시를 양쪽에 굽고 prepare 에서 대조 + 리로드를 "빌드 성공 뒤" 로 좁힌다.
+4. **새 모듈 초기화를 크래시로부터 감싼다**(SEH · 리눅스 시그널) — 죽으면 새 이미지를 버리고 1 로 살아 있는 옛 이미지 + 스냅샷으로 되돌린다(cr.h 방식).
+5. 지연 로드 훅을 빼는 돌연변이로 `LiveReloadGenreKitsIndividuallyAndCascaded` · `MultiModuleFullStackLiveReload` 가 지는지 확인하고, 안 진다면
+   "리로드 뒤 킷이 보는 GameFramework 가 복사본인가" 를 보는 테스트를 더한다.
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7.
 
 ### 2026-09-24 (Scene 정리 — 두 로더가 각자 들던 GUID 풀이 · Reflection 은 걷을 것이 없었다)
 

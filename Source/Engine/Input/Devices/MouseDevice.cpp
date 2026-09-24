@@ -22,14 +22,13 @@ namespace sw
         , _clipSubRectRight{ 0 }
         , _clipSubRectBottom{ 0 }
         , _lockMode{ MouseLockMode::None }
-        , _buttonMask{ SW_FALSE }
+        , _buttonMask{ 0 }
         , _pressedMask{ 0 }
         , _releasedMask{ 0 }
         , _bCursorVisible{ SW_TRUE }
         , _bPointerInside{ SW_FALSE }
         , _bPointerEntered{ SW_FALSE }
         , _bPointerLeft{ SW_FALSE }
-        , _bAnyButtonPressed{ SW_FALSE }
         , _bHasSubRect{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -55,9 +54,8 @@ namespace sw
 
     void MouseDevice::onFrameBegin( [[maybe_unused]] float32 deltaTime )
     {
-        _pressedMask       = 0;
-        _releasedMask      = 0;
-        _bAnyButtonPressed = SW_FALSE;
+        _pressedMask  = 0;
+        _releasedMask = 0;
 
         _delta._x                  = _mouse._x - _prevMouse._x;
         _delta._y                  = _mouse._y - _prevMouse._y;
@@ -78,7 +76,6 @@ namespace sw
         _prevMouse._y              = _mouse._y;
         _pressedMask               = 0;
         _releasedMask              = 0;
-        _bAnyButtonPressed         = SW_FALSE;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
         _mouseWheelDelta           = 0.0f;
@@ -87,10 +84,9 @@ namespace sw
 
     void MouseDevice::resetState()
     {
-        _buttonMask                = SW_FALSE;
+        _buttonMask                = 0;
         _pressedMask               = 0;
         _releasedMask              = 0;
-        _bAnyButtonPressed         = SW_FALSE;
         _delta._x                  = 0;
         _delta._y                  = 0;
         _rawDelta._x               = 0.0f;
@@ -166,10 +162,7 @@ namespace sw
         {
             _buttonMask |= bit;
             if ( bWasDown == false )
-            {
                 _pressedMask |= bit;
-                _bAnyButtonPressed = SW_TRUE;
-            }
         }
         else
         {
