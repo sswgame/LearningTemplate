@@ -80,7 +80,8 @@ namespace sw
 
 namespace sw
 {
-    string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject )
+    template <typename TSerializer>
+    string ObjectStateSerializer::saveToText( const GameObject* pGameObject )
     {
         if ( pGameObject == nullptr )
             return {};
@@ -92,22 +93,41 @@ namespace sw
             return {};
 
         SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
-        return XmlSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
+        return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
+    }
+
+    template <typename TSerializer>
+    bool ObjectStateSerializer::loadFromText( GameObject* pGameObject, string_view text, const ObjectIdentity* pIdentity )
+    {
+        if ( pGameObject == nullptr || text.empty() )
+            return false;
+
+        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
+        if ( pTypeInfo == nullptr )
+            return false;
+
+        const hashed_string oldName = pGameObject->getName();
+        pGameObject->clearComponents();
+
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32                                    ver{ 0 };
+        if ( TSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion,
+                                                nullptr, nullptr, ctx ) == false )
+            return false;
+
+        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
+        return true;
+    }
+
+    string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject )
+    {
+        return saveToText<XmlSerializer>( pGameObject );
     }
 
     string ObjectStateSerializer::saveToJsonString( const GameObject* pGameObject )
     {
-        if ( pGameObject == nullptr )
-            return {};
-
-        pGameObject->prepareSerialize();
-
-        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
-        if ( pTypeInfo == nullptr )
-            return {};
-
-        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
-        return JsonSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
+        return saveToText<JsonSerializer>( pGameObject );
     }
 
     bool ObjectStateSerializer::saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer )
@@ -182,52 +202,17 @@ namespace sw
 
     bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectIdentity* pIdentity )
     {
-        if ( pGameObject == nullptr || xmlString.empty() )
-            return false;
-
-        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
-        if ( pTypeInfo == nullptr )
-            return false;
-
-        const hashed_string oldName = pGameObject->getName();
-        pGameObject->clearComponents();
-
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
-        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32                                    ver{ 0 };
-        if ( XmlSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, xmlString, kObjectReflectedSchemaVersion,
-                                                  nullptr, nullptr, ctx ) == false )
-            return false;
-
-        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
-        return true;
+        return loadFromText<XmlSerializer>( pGameObject, xmlString, pIdentity );
     }
 
     bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectIdentity* pIdentity )
     {
-        if ( pGameObject == nullptr || jsonString.empty() )
-            return false;
-
-        const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
-        if ( pTypeInfo == nullptr )
-            return false;
-
-        const hashed_string oldName = pGameObject->getName();
-        pGameObject->clearComponents();
-
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
-        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32                                    ver{ 0 };
-        if ( JsonSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, jsonString, kObjectReflectedSchemaVersion,
-                                                   nullptr, nullptr, ctx ) == false )
-            return false;
-
-        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
-        return true;
+        return loadFromText<JsonSerializer>( pGameObject, jsonString, pIdentity );
     }
 
     bool ObjectStateSerializer::rebindSceneHierarchy( GameObject* pGameObject, string_view xmlString )
     {
+        // 계층은 로드가 SceneComponent 의 Attach 필드에 이미 읽어 두었다. 문자열을 다시 읽지 않는다(포맷과 무관하다).
         (void)xmlString;
         if ( pGameObject == nullptr )
             return false;
@@ -238,12 +223,7 @@ namespace sw
 
     bool ObjectStateSerializer::rebindSceneHierarchyFromJson( GameObject* pGameObject, string_view jsonString )
     {
-        (void)jsonString;
-        if ( pGameObject == nullptr )
-            return false;
-
-        pGameObject->applyLoadedHierarchy();
-        return true;
+        return rebindSceneHierarchy( pGameObject, jsonString );
     }
 
     bool ObjectStateSerializer::saveToXmlFile( const GameObject* pGameObject, string_view filePath )

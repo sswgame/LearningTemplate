@@ -31,8 +31,6 @@ namespace sw
         , _offsetScale{ 0.0f, 0.0f }
         , _pPhysics{ nullptr }
         , _physicsBody{}
-        , _cachedMin{ 0.0f, 0.0f }
-        , _cachedMax{ 0.0f, 0.0f }
         , _colliderType{ 0 }
     {
         setCanEverTick( true );
@@ -140,8 +138,6 @@ namespace sw
         float2 minB{};
         float2 maxB{};
         getBounds( minB, maxB );
-        _cachedMin = minB;
-        _cachedMax = maxB;
 
         const AABB  box   = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
         const uint8 layer = static_cast<uint8>( _colliderType );

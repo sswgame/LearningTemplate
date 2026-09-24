@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object 정리
 
 ---
 
@@ -1664,6 +1664,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Object 정리 — 쓰기만 하던 칸 셋 · 글자 그대로 같던 블록 넷, 공개 API 는 그대로)
+
+TaskManager 와 같은 방법으로 봤다(헤더 함수마다 저장소 전체의 사용처 · 멤버마다 읽기 수 · 중복 보고서). 사용처 0 인 공개 함수는
+**전부 상용 엔진에 대응이 있어 남겼다** — 컴포넌트 속성 접근자(Unity `BoxCollider2D.offset` 류) · `TagSystem` 의 식 조합기(UE
+`FGameplayTagQuery` 의 `AllExprMatch` · `AnyExprMatch` · `NoExprMatch`) · `findGameObjectsByTag`(Unity `FindGameObjectsWithTag`) ·
+CLAUDE.md 가 쓰라고 적은 `executeOrDeferPostTick` · 쿠킹(`cookPrefabToBinary`) · JSON 경로. 09-23 에 파일 구조(헤더 순환 · 매니저 분할)는
+이미 정리했으므로, 남은 것은 내부 배관이었다:
+- **`BoxCollider2DComponent::_cachedMin` · `_cachedMax`** — 매 틱 `syncPhysicsBody` 가 쓰고 아무도 읽지 않았다(콜라이더당 16 바이트).
+- **`SceneTransformHierarchy::_lastFlushedGeneration`** — 쓰기만 했다. "플러시할 게 있나" 는 더티 루트 목록이 답한다. 세대 카운터
+  자체(`getTransformGeneration`)는 바깥이 읽는 변경 감지라 남겼다. `flush()` · `clear()` 가 각자 들던 "더티 루트 목록 비우며 대기 플래그 내리기"
+  는 `releaseDirtyRoots` 하나로.
+- **`SceneComponent`** — 있던 `isInParallelTick()` 을 두고 같은 조건을 세 곳이 다시 풀어 썼다. `detachFromComponent` ·
+  `markTransformDirty` 의 "병렬 틱이면 핸들로 나를 다시 부르게 미루기" 여덟 줄이 글자 그대로 같아 `deferSelfCall( &SceneComponent::x )` 로
+  (인자가 있는 `attachToComponent` 는 부모 핸들도 되찾아야 해서 그대로).
+- **`ObjectStateSerializer`** — XML · JSON 저장 · 로드 네 함수가 직렬화기 이름만 달랐다 → private 템플릿 `saveToText` · `loadFromText`
+  (정의는 .cpp 에만, 헤더는 직렬화기를 모른다. `GameObject::ComponentIdRestoreScope` 가 private 이라 익명 헬퍼가 아니라 friend 인 클래스의 멤버다).
+  `rebindSceneHierarchyFromJson` 은 XML 판과 몸통이 같았다(둘 다 문자열을 버리고 `applyLoadedHierarchy` 만) → XML 판을 부른다.
+
+**테스트 둘.** 바꾼 경로 중 테스트가 지나지 않던 곳이 둘이었다. `SceneComponentTest.DetachInsideTickIsDeferredUntilAfterTheTick` —
+틱 안에서 떼면 뗀 직후엔 부모가 그대로고 `tick()` 뒤엔 떨어져 있다(`MockTickSceneComponent` 에 스위치 두 비트). `deferSelfCall` 이 미룬
+호출을 버리는 돌연변이에 진다. `ObjectStateXmlSerializerTest.SaveAndLoadXmlString` 에 JSON **로드**(와 JSON rebind)를 더했다 — 저장만 돌고 있었다.
+
+**측정 (Release · 옛 바이너리 `BinObjOld` 와 번갈아).** `GameObjectBenchTest` 는 스폰 · 첫 틱 · 정상 틱 · 파괴 · 활성 토글 · 조회가
+3판 모두 잡음 안에서 같고, 무버 틱만 따로 12판: p50 중앙값 옛 290 / 새 289 us, 최솟값 중앙값 278 / 268. `sizeof` 는 그대로(GameObject 184 ·
+SceneComponent 296). App(dx12 · 큐브 8000 · 1000 프레임) `wall` 기본 옛 1082~1102 / 새 1049~1132 us, 무버 옛 1326~1449 / 새 1231~1284 —
+무버는 세 쌍 모두 새 쪽이 빨랐지만 그 폭은 이날 기계 드리프트 안이라 이득으로 적지 않는다(회귀 없음).
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · 바뀐 파일 규약 · 중괄호 · include 순서 · 어휘 게이트 OK.
+`nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7(돌연변이 확인 뒤 다시 빌드해서 잰 것).
 
 ### 2026-09-24 (TaskManager 구조 단순화 — 읽는 곳 없는 상태 · 목록 · 레지스트리를 걷었다, 성능은 같다)
 

@@ -146,7 +146,9 @@ namespace sw
         uint8                  _bWriteLocalOnTick : 1;
         uint8                  _bWriteScaleOnTick : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
         uint8                  _bWriteTwiceOnTick : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
-        [[maybe_unused]] uint8 _reserved          : 5;
+        uint8                  _bDetachOnTick     : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
+        uint8                  _bParentKeptInTick : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
+        [[maybe_unused]] uint8 _reserved          : 3;
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
@@ -155,6 +157,8 @@ namespace sw
             , _bWriteLocalOnTick{ SW_FALSE }
             , _bWriteScaleOnTick{ SW_FALSE }
             , _bWriteTwiceOnTick{ SW_FALSE }
+            , _bDetachOnTick{ SW_FALSE }
+            , _bParentKeptInTick{ SW_FALSE }
             , _reserved{ 0 }
         {
             setCanEverTick( true );
@@ -177,6 +181,11 @@ namespace sw
                 setLocalPosition( _tickLocalPos );
             if ( _bWriteScaleOnTick == SW_TRUE )
                 setLocalScale( _tickLocalScale );
+            if ( _bDetachOnTick == SW_TRUE )
+            {
+                detachFromComponent();
+                _bParentKeptInTick = ( getParent() != nullptr ) ? SW_TRUE : SW_FALSE;
+            }
         }
     };
 

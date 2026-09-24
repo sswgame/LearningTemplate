@@ -25,7 +25,6 @@ namespace sw
         , _rootMutex{}
         , _listScratchStack{}
         , _dirtyGeneration{ 1 }
-        , _lastFlushedGeneration{ 0 }
     {
     }
 
@@ -214,12 +213,8 @@ namespace sw
 
     void SceneTransformHierarchy::flush()
     {
-        const uint64 currentGeneration = _dirtyGeneration.load( std::memory_order_relaxed );
         if ( _listDirtyRoot.empty() )
-        {
-            _lastFlushedGeneration = currentGeneration;
             return;
-        }
 
         std::shared_lock<std::shared_mutex> lock{ _rootMutex };
 
@@ -253,6 +248,11 @@ namespace sw
         engine::runParallel( static_cast<uint32>( _listDirtyRoot.size() ), kParallelFlushRootCount,
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &RootFlushJob::flushRange, &job ) );
 
+        releaseDirtyRoots();
+    }
+
+    void SceneTransformHierarchy::releaseDirtyRoots()
+    {
         // 목록을 비우며 대기 플래그를 내린다. 다음 더티가 다시 올릴 수 있게 한다.
         for ( SceneComponent* pRoot : _listDirtyRoot )
         {
@@ -262,20 +262,12 @@ namespace sw
             pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
         }
         _listDirtyRoot.clear();
-        _lastFlushedGeneration = currentGeneration;
     }
 
     void SceneTransformHierarchy::clear()
     {
         std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-        for ( SceneComponent* pRoot : _listDirtyRoot )
-        {
-            if ( pRoot == nullptr )
-                continue;
-            pRoot->_dirtyRootIndex = SceneComponent::kNotInList;
-            pRoot->_bQueuedDirtyRoot.store( SW_FALSE, std::memory_order_release );
-        }
-        _listDirtyRoot.clear();
+        releaseDirtyRoots();
         for ( vector<SceneComponent*>& listScratch : _listDirtyRootScratch )
             listScratch.clear();
         for ( SceneComponent* pRoot : _listRoot )

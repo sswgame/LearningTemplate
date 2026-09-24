@@ -135,6 +135,20 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( nullptr, xml ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( &target, "" ) );
     SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXmlString( nullptr ) );
+
+    // JSON 도 로드까지 돌려 본다 — 두 포맷은 몸통 하나(직렬화기만 다르다)를 쓰고, 예전엔 JSON 로드를 지나는 테스트가 없었다.
+    manager.clear();
+    sw::GameObject* jsonTargetPtr = manager.createGameObject( sw::hashed_string( "TempJson" ) );
+    SW_ASSERT_NOT_NULL( jsonTargetPtr );
+    jsonTargetPtr->setActive( true );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, json ) );
+    SW_EXPECT_STREQ( "SerializedHero", jsonTargetPtr->getName().c_str() );
+    SW_EXPECT_FALSE( jsonTargetPtr->isActive() );
+    SW_EXPECT_TRUE( ObjectStateSerializer::rebindSceneHierarchyFromJson( jsonTargetPtr, json ) );
+
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( nullptr, json ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, "" ) );
+    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToJsonString( nullptr ) );
 }
 
 /**

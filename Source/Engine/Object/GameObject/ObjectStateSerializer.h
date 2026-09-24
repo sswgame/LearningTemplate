@@ -115,5 +115,16 @@ namespace sw
          *          게임 · 게임프레임워크 DLL 을 다시 올려도 바뀌지 않습니다.
          */
         static uint64 getProcessToken();
+
+    private:
+        /**
+         * @brief 리플렉션 문자열 포맷(XML · JSON) 하나로 저장합니다. 두 포맷은 직렬화기만 다르고 걸음이 같습니다.
+         * @details 정의는 .cpp 에만 있습니다(그곳에서만 실체화합니다). 헤더가 직렬화기를 알 필요가 없습니다.
+         */
+        template <typename TSerializer>
+        static string saveToText( const GameObject* pGameObject );
+        /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXmlString` · `loadFromJsonString` 의 몸통입니다. */
+        template <typename TSerializer>
+        static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectIdentity* pIdentity );
     };
 } // namespace sw

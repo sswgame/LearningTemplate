@@ -68,8 +68,6 @@ namespace sw
         /** @brief 등록 시점에 받은 물리 월드입니다. 소유자를 거슬러 올라가 매니저를 찾지 않습니다. */
         PhysicsWorld* _pPhysics;
         SlotHandle    _physicsBody;
-        float2        _cachedMin;
-        float2        _cachedMax;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
         int32 _colliderType;
     };

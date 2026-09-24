@@ -259,3 +259,31 @@ SW_TEST_CASE( SceneComponentTest, SlowMotionIsNotSwallowedByTheChangeThreshold )
     // 200 프레임(약 1.2초) 이면 0.1 만큼 가 있어야 한다.
     SW_EXPECT_NEAR_EQUAL( 0.1f, pSceneComp->getLocalPosition()._x, 0.005f );
 }
+
+/**
+ * @brief [SceneComponentTest] 틱 안에서 부모에서 떼면 그 자리에서 떼지 않고 틱이 끝난 뒤에 뗀다
+ * @details 틱 중에는 트랜스폼이 읽기 전용이라(다른 워커가 부모 사슬을 읽는다) `detachFromComponent` 는 자기 핸들로
+ *          나중에 다시 불리도록 미룬다(`deferSelfCall`). 뗀 직후에는 부모가 그대로여야 하고, `tick()` 이 돌아오면
+ *          떨어져 있어야 한다. `markTransformDirty` 도 같은 미루기를 쓴다.
+ */
+SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    sw::GameObject*     pParent     = manager.createGameObject( sw::hashed_string( "DeferParent" ) );
+    sw::SceneComponent* pParentComp = pParent->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pParentComp );
+
+    sw::GameObject*             pChild     = manager.createGameObject( sw::hashed_string( "DeferChild" ) );
+    sw::MockTickSceneComponent* pChildComp = pChild->addComponent<sw::MockTickSceneComponent>();
+    SW_ASSERT_NOT_NULL( pChildComp );
+    SW_ASSERT_TRUE( pChildComp->attachToComponent( pParentComp ) );
+    SW_ASSERT_TRUE( pChildComp->getParent() == pParentComp );
+
+    pChildComp->_bDetachOnTick = SW_TRUE;
+    manager.tick( 0.016f );
+
+    SW_EXPECT_TRUE( pChildComp->_bParentKeptInTick == SW_TRUE );
+    SW_EXPECT_TRUE( pChildComp->getParent() == nullptr );
+}

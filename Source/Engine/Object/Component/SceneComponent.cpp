@@ -286,9 +286,21 @@ namespace sw
         onWorldTransformUpdated();
     }
 
+    void SceneComponent::deferSelfCall( void ( SceneComponent::*pMethod )() )
+    {
+        GameObjectManager*        pMgr   = _pManager;
+        const sw::ComponentHandle handle = getHandle();
+        pMgr->deferTransformUpdate( [pMgr, handle, pMethod]()
+        {
+            SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
+            if ( pSelf != nullptr )
+                ( pSelf->*pMethod )();
+        } );
+    }
+
     bool SceneComponent::attachToComponent( SceneComponent* pParent )
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
             GameObjectManager*        pMgr         = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
@@ -334,16 +346,9 @@ namespace sw
 
     void SceneComponent::detachFromComponent()
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
-            GameObjectManager*        pMgr   = _pManager;
-            const sw::ComponentHandle handle = getHandle();
-            pMgr->deferTransformUpdate( [pMgr, handle]()
-            {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-                if ( pSelf != nullptr )
-                    pSelf->detachFromComponent();
-            } );
+            deferSelfCall( &SceneComponent::detachFromComponent );
             return;
         }
 
@@ -438,16 +443,9 @@ namespace sw
 
     void SceneComponent::markTransformDirty()
     {
-        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
+        if ( isInParallelTick() )
         {
-            GameObjectManager*        pMgr   = _pManager;
-            const sw::ComponentHandle handle = getHandle();
-            pMgr->deferTransformUpdate( [pMgr, handle]()
-            {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-                if ( pSelf != nullptr )
-                    pSelf->markTransformDirty();
-            } );
+            deferSelfCall( &SceneComponent::markTransformDirty );
             return;
         }
 

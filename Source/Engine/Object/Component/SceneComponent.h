@@ -158,6 +158,12 @@ namespace sw
          */
         void queueTickWrite( SceneTransformWrite& write );
         /**
+         * @brief 병렬 틱이 끝난 뒤 이 컴포넌트의 @p pMethod 를 다시 부르도록 미룹니다. 핸들로 되찾으므로 그 사이에 파괴돼도 안전합니다.
+         * @details `detachFromComponent` · `markTransformDirty` 가 같은 여덟 줄을 각자 들고 있었습니다. 인자가 있는
+         *          `attachToComponent` 는 부모 핸들도 되찾아야 해서 따로 둡니다.
+         */
+        void deferSelfCall( void ( SceneComponent::*pMethod )() );
+        /**
          * @brief 부모에서 **지금 당장** 뗍니다(미루지 않습니다).
          * @details `detachFromComponent` 는 틱 중이면 일을 미루고 그냥 돌아옵니다. 소멸자가 그
          *          경로를 타면 `_listChild` 가 줄지 않아 루프가 끝나지 않고, 미룬 일이 큐에

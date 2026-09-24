@@ -157,6 +157,8 @@ namespace sw
     private:
         /** @brief 루트의 대기 플래그를 잡아 본 목록에 올립니다. 이미 잡혀 있으면 false. */
         static bool tryMarkQueued( SceneComponent* pRoot );
+        /** @brief 더티 루트 목록을 비우며 각 루트의 대기 플래그를 내립니다. `_rootMutex` 를 잡은 채로 부릅니다(플러시 · clear). */
+        void releaseDirtyRoots();
 
         /** @brief 루트 씬 컴포넌트 목록입니다. 소유하지 않습니다. */
         vector<SceneComponent*> _listRoot;
@@ -176,9 +178,11 @@ namespace sw
         mutable std::shared_mutex _rootMutex;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택입니다(`engine::getParallelScratchSlotCount()` 크기). */
         vector<FlushStack> _listScratchStack;
-        /** @brief 트랜스폼이 바뀔 때마다 오르는 세대입니다. */
+        /**
+         * @brief 트랜스폼이 바뀔 때마다 오르는 세대입니다(바깥이 "무엇이 바뀌었나" 를 싸게 묻는 변경 카운터).
+         * @details 플러시가 할 일이 있는지는 이 값이 아니라 더티 루트 목록이 답합니다. 예전의 `_lastFlushedGeneration`
+         *          (플러시가 따라잡은 세대)은 적기만 하고 읽는 곳이 없었습니다.
+         */
         atomic<uint64> _dirtyGeneration;
-        /** @brief 마지막 플러시가 따라잡은 세대입니다. */
-        uint64 _lastFlushedGeneration;
     };
 } // namespace sw
