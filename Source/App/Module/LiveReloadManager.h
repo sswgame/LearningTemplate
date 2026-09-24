@@ -49,6 +49,14 @@ namespace sw
          */
         static constexpr uint32 kModuleDrainTimeoutMs = 5000;
 
+        /**
+         * @brief 교체된 옛 이미지를 몇 번의 연쇄 리로드(배치)만큼 올려 둘지입니다.
+         * @details 옛 코드를 가리키는 것(델리게이트 · 함수 포인터 · vtable · 문자열 리터럴)이 어딘가 남아 있어도, 이미지가 올라와 있는
+         *          동안은 크래시가 아니라 옛 동작이 한 번 더 돕니다. 섀도 복사본이라 올려 두어도 원본 파일은 잠기지 않습니다. 이보다
+         *          오래된 배치는 의존하는 쪽부터 내립니다(Windows 지연 로드는 참조 수를 올리지 않으므로 순서를 손으로 지킵니다).
+         */
+        static constexpr uint32 kMaxRetiredBatchCount = 4;
+
         /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
         LiveReloadManager();
         /** @brief 로드된 모듈을 언로드합니다. */
@@ -126,6 +134,9 @@ namespace sw
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
         void* getModuleHandle( string_view moduleName ) const;
 
+        /** @brief 교체된 뒤 아직 올려 둔 옛 이미지 수입니다(`kMaxRetiredBatchCount` 배치까지). */
+        uint32 getRetiredImageCount() const { return static_cast<uint32>( _listRetiredImage.size() ); }
+
         /** @brief 리로드할 때 자동으로 해제하도록 EventSubscription 을 등록합니다. */
         void addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token );
 
@@ -169,6 +180,14 @@ namespace sw
         bool rewriteShadowSonames( ModuleContext& ctx, string_view shadowPath );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
+        /** @brief 교체된 옛 이미지를 퇴역 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
+        void retireImage( string_view moduleName, void* pHandle, string_view tempPath );
+        /**
+         * @brief 가장 오래된 퇴역 배치 하나를 내립니다. 배치 안에서는 나중에 퇴역한 것(의존하는 쪽)부터 내립니다.
+         * @details 퇴역한 이미지는 **같은 배치의 퇴역 이미지나 지금 살아 있는 이미지에만** 묶여 있습니다(의존이 바뀌면 의존하는 모듈도 같은
+         *          연쇄로 바뀐다). 그래서 오래된 배치부터 내려도 아직 쓰이는 이미지를 먼저 내리는 일이 없습니다.
+         */
+        void unloadOldestRetiredBatch();
         /**
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
@@ -192,6 +211,15 @@ namespace sw
             string _original;
             string _current;
             string _loaded;
+        };
+
+        /** @brief 교체되어 내려갈 차례를 기다리는 옛 이미지입니다. */
+        struct RetiredImage
+        {
+            string _moduleName;
+            string _tempPath;
+            void*  _pHandle{ nullptr };
+            uint32 _batchId{ 0 };
         };
 
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).
@@ -227,6 +255,8 @@ namespace sw
         unique_ptr<IFileWatcher>             _fileWatcher;
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;
+        vector<RetiredImage>                 _listRetiredImage; ///< 교체된 옛 이미지. 오래된 것부터
+        uint32                               _retireBatchId;    ///< 연쇄 리로드마다 오르는 배치 번호
         uint8                                _bReloadGraphBroken : 1;
         uint8                                _bReloadingBatch    : 1;
         [[maybe_unused]] uint8               _reserved           : 6;

@@ -191,6 +191,8 @@ namespace sw
           }
         , _onBeforeCommitBatch{}
         , _drainWorkers{}
+        , _listRetiredImage{}
+        , _retireBatchId{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bReloadingBatch{ SW_FALSE }
         , _reserved{ 0 }
@@ -221,6 +223,13 @@ namespace sw
         {
             _fileWatcher->stopWatching();
             _fileWatcher.reset();
+        }
+
+        // 퇴역한 옛 이미지를 먼저 내린다. 그것들은 같은 배치의 퇴역 이미지나 **지금 살아 있는** 이미지에 묶여 있으므로, 살아 있는
+        // 모듈을 먼저 내리면 옛 이미지의 정적 소멸자가 내려간 코드로 뛸 수 있다.
+        while ( _listRetiredImage.empty() == false )
+        {
+            unloadOldestRetiredBatch();
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -647,11 +656,9 @@ namespace sw
             if ( ctx._onAfterReload.isBound() )
                 ctx._onAfterReload( ctx._pLibraryModule );
 
-            if ( pPreviousHandle != nullptr && _bReloadGraphBroken == SW_FALSE )
-            {
-                FileUtil::unloadDynamicLibrary( pPreviousHandle );
-                LiveReloadManagerInternal::tryDeleteShadowArtifacts( previousTempModule );
-            }
+            // 옛 이미지는 바로 내리지 않고 퇴역시킨다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
+            if ( pPreviousHandle != nullptr )
+                retireImage( ctx._moduleName, pPreviousHandle, previousTempModule );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -712,6 +719,57 @@ namespace sw
 
         LiveReloadManagerInternal::tryDeleteShadowArtifacts( ctx._tempModulePath );
         ctx._tempModulePath.clear();
+    }
+
+    void LiveReloadManager::retireImage( string_view moduleName, void* pHandle, string_view tempPath )
+    {
+        if ( pHandle == nullptr )
+            return;
+
+        RetiredImage retired{};
+        retired._moduleName = string{ moduleName };
+        retired._tempPath   = string{ tempPath };
+        retired._pHandle    = pHandle;
+        retired._batchId    = _retireBatchId;
+        _listRetiredImage.push_back( std::move( retired ) );
+
+        for ( ;; )
+        {
+            // 목록은 배치 순서라 번호가 바뀌는 자리만 세면 된다.
+            uint32 batchCount{ 0 };
+            uint32 previousBatchId{ 0 };
+            for ( const RetiredImage& image : _listRetiredImage )
+            {
+                if ( batchCount == 0 || image._batchId != previousBatchId )
+                    ++batchCount;
+                previousBatchId = image._batchId;
+            }
+            if ( batchCount <= kMaxRetiredBatchCount )
+                break;
+            unloadOldestRetiredBatch();
+        }
+    }
+
+    void LiveReloadManager::unloadOldestRetiredBatch()
+    {
+        if ( _listRetiredImage.empty() )
+            return;
+
+        const uint32 oldestBatchId = _listRetiredImage.front()._batchId;
+        size_t       batchEnd{ 0 };
+        while ( batchEnd < _listRetiredImage.size() && _listRetiredImage[batchEnd]._batchId == oldestBatchId )
+        {
+            ++batchEnd;
+        }
+
+        for ( size_t imageIndex = batchEnd; imageIndex > 0; --imageIndex )
+        {
+            const RetiredImage& retired = _listRetiredImage[imageIndex - 1];
+            SW_LOG_INFO( "Unloading retired module image %# (batch %#, handle=%#)", retired._moduleName, retired._batchId, retired._pHandle );
+            FileUtil::unloadDynamicLibrary( retired._pHandle );
+            LiveReloadManagerInternal::tryDeleteShadowArtifacts( retired._tempPath );
+        }
+        _listRetiredImage.erase( _listRetiredImage.begin(), _listRetiredImage.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );
     }
 
     bool LiveReloadManager::drainTasksBeforeUnload()
@@ -915,6 +973,7 @@ namespace sw
             _onBeforeCommitBatch( listOrder );
 
         _bReloadingBatch = SW_TRUE;
+        ++_retireBatchId;
 
         size_t committed{ 0 };
         for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )

@@ -79,6 +79,26 @@ namespace sw
             return bCreated;
         }
 
+        /** @brief 모듈 하나를 강제로 리로드하고 onAfter 가 불릴 때까지 기다립니다. 기다리다 넘치면 false 입니다. */
+        bool reloadAndWait( sw::LiveReloadManager& manager, const utf8* pModuleName )
+        {
+            bool bReloaded{ false };
+            manager.setOnAfterReload(
+                pModuleName,
+                SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bReloaded]( void* )
+            {
+                bReloaded = true;
+            } ) );
+            manager.triggerReload( pModuleName );
+            for ( int32 stepIndex = 0; stepIndex < 100 && bReloaded == false; ++stepIndex )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+                manager.update();
+            }
+            manager.setOnAfterReload( pModuleName, sw::LiveReloadManager::OnAfterReloadDelegate{} );
+            return bReloaded;
+        }
+
     } // namespace
 } // namespace sw
 
@@ -652,6 +672,49 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [ArchitectureTest] 교체된 옛 이미지는 바로 내려가지 않고, 배치가 상한을 넘을 때 오래된 것부터 내려간다
+ * @details 옛 코드를 가리키는 것이 남아 있어도 이미지가 올라와 있는 동안은 크래시가 아니라 옛 동작이 한 번 더 돈다. 그래서 첫 이미지에서
+ *          얻은 함수 포인터를 리로드 **뒤에** 불러 본다 — 예전(바로 `FreeLibrary`)에는 이 호출이 내려간 코드로 뛰었다. 상한보다 많이
+ *          리로드하면 퇴역 수는 상한에서 멈추고, 종료하면 모두 내려간다.
+ */
+SW_TEST_CASE( ArchitectureTest, RetiredImagesStayMappedUntilTheirBatchIsEvicted )
+{
+    const sw::string gfPath = sw::modulePath( "GameFramework" );
+    if ( sw::FileUtil::fileExists( gfPath ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "GameFramework" ) == false )
+        SW_TEST_SKIP( "GameFramework registration failed" );
+    if ( manager.registerModule( "SWGame", { "GameFramework" } ) == false )
+        SW_TEST_SKIP( "SWGame registration failed" );
+    SW_EXPECT_EQUAL( 0u, manager.getRetiredImageCount() );
+
+    void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
+    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
+    SW_ASSERT_TRUE( pfnFirstExport != nullptr );
+
+    SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
+    SW_EXPECT_TRUE( manager.getModuleHandle( "SWGame" ) != pFirstGame );
+    SW_EXPECT_EQUAL( 1u, manager.getRetiredImageCount() );
+
+    // 첫 이미지는 아직 올라와 있다 — 그 코드를 불러도 된다.
+    sw::GameAPI firstApi{};
+    SW_EXPECT_TRUE( pfnFirstExport( &firstApi ) );
+
+    for ( uint32 reloadIndex = 0; reloadIndex < sw::LiveReloadManager::kMaxRetiredBatchCount + 2; ++reloadIndex )
+    {
+        SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
+    }
+    // SWGame 만 바뀌는 연쇄는 배치 하나에 이미지 하나다. 상한에서 멈춘다.
+    SW_EXPECT_EQUAL( sw::LiveReloadManager::kMaxRetiredBatchCount, manager.getRetiredImageCount() );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+
+    manager.shutdown();
+    SW_EXPECT_EQUAL( 0u, manager.getRetiredImageCount() );
 }
 
 /**

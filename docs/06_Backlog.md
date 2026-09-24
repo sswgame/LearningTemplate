@@ -1665,6 +1665,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ③ — 교체된 옛 이미지를 배치 단위로 올려 둔다)
+
+**왜.** commit 은 새 이미지로 갈아 끼운 뒤 옛 이미지를 **바로** 내렸다. 옛 코드를 가리키는 것(떼지 못한 델리게이트 · 함수 포인터 ·
+vtable · 문자열 리터럴 · 막 돌아오는 워커 스택) 이 하나라도 남으면 그 순간 언맵된 주소로 뛴다. 상용 핫 리로드(Live++ · UE Live Coding)
+가 옛 이미지를 프로세스 끝까지 올려 두는 이유가 이것이다.
+
+**한 것.**
+- **`LiveReloadManager::retireImage`** — commit 이 옛 핸들을 `FreeLibrary`/`dlclose` 하지 않고 퇴역 목록에 올린다. 연쇄 리로드 한 번이
+  배치 하나(`_retireBatchId` 가 commit 단계 시작마다 오른다)이고, 배치가 `kMaxRetiredBatchCount`(4) 를 넘으면 **가장 오래된 배치**를
+  내린다. 배치 안에서는 나중에 퇴역한 것(의존하는 쪽)부터 내리고 섀도 복사본 파일도 그때 지운다 — 퇴역 이미지는 같은 배치의 퇴역 이미지나
+  지금 살아 있는 이미지에만 묶여 있으므로(의존이 바뀌면 의존하는 쪽도 같은 연쇄로 바뀐다) 오래된 배치부터 내려도 쓰이는 이미지를 먼저
+  내리는 일이 없다. Windows 지연 로드는 참조 수를 올리지 않아서 순서를 손으로 지킨다.
+- **종료** 는 퇴역 배치를 전부 내린 뒤 살아 있는 모듈을 내린다. 섀도 복사본이라 원본 파일은 잠기지 않는다(다음 빌드를 막지 않는다).
+- **`ArchitectureTest.RetiredImagesStayMappedUntilTheirBatchIsEvicted`** — 리로드 뒤 **옛** 이미지의 `exportGameApi` 를 불러 여전히 돈다는 것,
+  퇴역 수가 상한에서 멈춘다는 것, 종료 뒤 0 이라는 것을 본다.
+
+**이것은 안전망이지 해법이 아니다.** 남은 참조가 크래시가 아니라 옛 동작 한 번으로 바뀔 뿐이고, 배치 네 번 뒤에는 결국 내려간다. 남은
+참조를 **떼는** 일은 다음 ④ 다 — 에디터는 Undo 스택 · 로그 리스너 · 파일 대화 상자 결과 · 창 닫기 처리기를 `ImGuiEditor::shutdown`
+· `~ConsolePanel` 에서 손으로 떼고, 떼었는지 보는 곳은 없다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest 26/26.
+
 ### 2026-09-24 (핫 리로드 ② — 리눅스: 섀도 복사본의 SONAME 을 세대마다 고유하게)
 
 **왜.** 리눅스 동적 링커는 `DT_NEEDED` 를 풀 때 이미 올라온 라이브러리 중 SONAME 이 같은 **먼저 올라온 것**을 쓴다. 섀도 복사본은 파일만
