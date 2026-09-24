@@ -274,7 +274,18 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     if ( sw::engine::areEngineServicesBound() )
         SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
 
+    // 바이너리(SCN1)도 같은 풀이를 지난다 — 두 로더가 GUID 풀이를 각자 들고 있었고, Dev 에서는 바이너리 쪽을 지나는 테스트가 없었다.
+    const sw::string tempSceneBin = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() ), "temp_guid_scene.scene.bin" );
+    SW_ASSERT_TRUE( doc.saveBinary( tempSceneBin ) );
+    sw::SceneDocument loadedBinaryDoc{};
+    SW_ASSERT_TRUE( loadedBinaryDoc.loadBinary( tempSceneBin ) );
+    SW_ASSERT_FALSE( loadedBinaryDoc._listEntityNode.empty() );
+    SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedBinaryDoc._listEntityNode[0]._prefabGuid.c_str() );
+    if ( sw::engine::areEngineServicesBound() )
+        SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedBinaryDoc._listEntityNode[0]._prefab.c_str() );
+
     sw::FileUtil::removeFile( tempSceneXml );
+    sw::FileUtil::removeFile( tempSceneBin );
 }
 
 /**

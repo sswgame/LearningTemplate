@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource · Scene 정리(Reflection 은 걷을 것 없음)
 
 ---
 
@@ -1664,6 +1664,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Scene 정리 — 두 로더가 각자 들던 GUID 풀이 · Reflection 은 걷을 것이 없었다)
+
+**Scene.** 사용처 0 인 공개 함수 · 쓰기만 하는 칸은 없었고, 중복이 둘이었다(`SceneDocument.cpp`).
+- **프리팹 GUID 로 경로 다시 풀기** 아홉 줄을 XML 로더와 바이너리(SCN1) 로더가 각자 들고 있었다 → `resolvePrefabPathByGuid`.
+  한쪽만 고치면 그 포맷으로 읽은 씬만 옮긴 프리팹을 못 찾는다(배포본은 SCN1 이다).
+- XML 로더의 "속성으로 찾고 없으면 같은 이름의 자식 텍스트" 네 줄 × 3 → `findAttributeOrChildText`.
+- 바이너리 쪽 풀이는 Shipping 의 `EditorTestSceneResolvesMovedPrefabByGuid` 만 지나고 있었다. `SceneTest.PrefabGuidRoundtripAndResolve` 에
+  SCN1 왕복을 더했다 — 풀이를 끄는 돌연변이에 XML(275) · 바이너리(285) 둘 다 진다. 씬 로드 때 한 번 지나는 경로라 성능 측정은 하지 않았다.
+
+**Reflection — 걷을 것이 없었다.** 사용처 0 인 `forEachMethod` · `IContainerWrapper::getKind` 는 UE `TFieldIterator<UFunction>` · 프로퍼티
+종류 질의 자리라 남겼다. RPC 봉투(`RpcEnvelope`)의 `_typeFqnHash` · `_methodHash` 는 쓰기만 하지만, 상용 엔진은 RPC 를 문자열이 아니라
+해시 · 인덱스로 식별하므로(대역폭) 그 자리로 남겼다 — 해시 분배를 붙일 때 쓴다. 중복 둘은 `TypeInfo` 생성자 셋의 초기화 목록(09-23 에
+"규약상 둔다" 로 판정)과 복사 대입 · 이동 대입(컨테이너를 복사하느냐 옮기느냐가 다르다, 공통 꼬리는 이미 `invalidateDerivedCaches`)이다.
+(`_bIsPODFastPath` 는 스캐너가 `return _x == ...;` 줄을 선언으로 읽은 오탐이었다 — 읽힌다.)
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7.
 
 ### 2026-09-24 (Resource 정리 — 걷을 것은 이동 두 벌 하나뿐이었다)
 

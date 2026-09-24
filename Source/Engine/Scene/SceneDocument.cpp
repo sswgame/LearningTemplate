@@ -32,6 +32,32 @@ namespace sw
             // XML 문자열만 실려 있었고, 그 파일도 계속 읽는다 — 아래 읽기가 버전으로 갈린다.
             static constexpr uint32 kSceneBinVersion = 1;
 
+            /** @brief 속성으로 먼저 찾고, 없으면 같은 이름의 자식 텍스트를 봅니다(저작본의 두 모양을 다 읽습니다). 없으면 nullptr 입니다. */
+            static const utf8* findAttributeOrChildText( const XmlNode& node, const utf8* pKey )
+            {
+                const utf8* pValue = node.findAttribute( pKey );
+                return ( pValue != nullptr ) ? pValue : node.findChildText( pKey );
+            }
+
+            /**
+             * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
+             * @details XML 로더와 바이너리 로더가 같은 아홉 줄을 각자 들고 있었습니다. 한쪽만 고치면 그 포맷으로 읽은 씬만
+             *          옮긴 프리팹을 못 찾습니다.
+             */
+            static void resolvePrefabPathByGuid( SceneDocument::EntityNode& node )
+            {
+                if ( node._prefabGuid.empty() || engine::areEngineServicesBound() == false )
+                    return;
+
+                Uuid guid{};
+                if ( Uuid::tryParse( node._prefabGuid, guid ) == false || guid.isNull() )
+                    return;
+
+                string resolved;
+                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
+                    node._prefab = std::move( resolved );
+            }
+
             static void appendNodeXml( StringBuilder<constant::kMaxBuffer8192>& out, XmlNode node )
             {
                 if ( node.isValid() == false )
@@ -130,35 +156,19 @@ namespace sw
                   entityNode         = entityNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
                 EntityNode  node{};
-                const utf8* pName = entityNode.findAttribute( SceneDocumentInternal::kName );
-                if ( pName == nullptr )
-                    pName = entityNode.findChildText( SceneDocumentInternal::kName );
+                const utf8* pName = SceneDocumentInternal::findAttributeOrChildText( entityNode, SceneDocumentInternal::kName );
                 if ( pName != nullptr )
                     node._name = pName;
 
-                const utf8* pPrefabGuid = entityNode.findAttribute( "prefabGuid" );
-                if ( pPrefabGuid == nullptr )
-                    pPrefabGuid = entityNode.findChildText( "prefabGuid" );
+                const utf8* pPrefabGuid = SceneDocumentInternal::findAttributeOrChildText( entityNode, "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
 
-                const utf8* pPrefab = entityNode.findAttribute( SceneDocumentInternal::kPrefab );
-                if ( pPrefab == nullptr )
-                    pPrefab = entityNode.findChildText( SceneDocumentInternal::kPrefab );
+                const utf8* pPrefab = SceneDocumentInternal::findAttributeOrChildText( entityNode, SceneDocumentInternal::kPrefab );
                 if ( pPrefab != nullptr )
                     node._prefab = pPrefab;
 
-                // GUID 로 경로를 다시 푼다(파일 이동 · 이름 변경을 자동으로 따라간다)
-                if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
-                {
-                    Uuid guid{};
-                    if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
-                    {
-                        string resolved;
-                        if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
-                            node._prefab = std::move( resolved );
-                    }
-                }
+                SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
                 XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
                 if ( stateNode.isValid() )
@@ -310,16 +320,7 @@ namespace sw
             if ( arch.isError() )
                 break;
 
-            if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
-            {
-                Uuid guid{};
-                if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
-                {
-                    string resolved;
-                    if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
-                        node._prefab = std::move( resolved );
-                }
-            }
+            SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
             _listEntityNode.push_back( std::move( node ) );
         }
