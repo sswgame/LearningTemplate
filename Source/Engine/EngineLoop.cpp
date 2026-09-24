@@ -366,21 +366,10 @@ namespace sw
             }
 
             _renderThread = make_unique<RenderThread>();
-            if ( gv_useRenderThread )
+            if ( _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() ) == false )
             {
-                if ( _renderThread->start( &_rhi->getDevice(), _frameRenderer.get() ) == false )
-                {
-                    SW_LOG_ERROR( "Failed to start RenderThread!" );
-                    return false;
-                }
-            }
-            else
-            {
-                if ( _renderThread->bind( &_rhi->getDevice(), _frameRenderer.get() ) == false )
-                {
-                    SW_LOG_ERROR( "Failed to bind RenderThread!" );
-                    return false;
-                }
+                SW_LOG_ERROR( "Failed to attach RenderThread!" );
+                return false;
             }
 
             if ( _owned._pSceneManager != nullptr )
@@ -727,12 +716,7 @@ namespace sw
             _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() );
 
         if ( _renderThread != nullptr )
-        {
-            if ( gv_useRenderThread )
-                _renderThread->start( &_rhi->getDevice(), _frameRenderer.get() );
-            else
-                _renderThread->bind( &_rhi->getDevice(), _frameRenderer.get() );
-        }
+            _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() );
 
         if ( _owned._pSceneManager != nullptr )
             _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );

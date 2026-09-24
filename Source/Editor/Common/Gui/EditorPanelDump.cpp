@@ -5,8 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/EditorGlobalVariable.h"
-
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -95,6 +93,13 @@ namespace sw
 namespace sw::editor
 {
     SW_LOG_CALLER( "PanelDump" );
+
+    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    /**
+     * @brief `-gv_editorPanelDump=<N>`: N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
+     * @details 0 이면 아무것도 하지 않습니다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_editorPanelDump, 0, "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
 
     void EditorPanelDump::dumpIfRequested()
     {

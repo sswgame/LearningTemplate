@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
@@ -12,7 +13,6 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/EditorGlobalVariable.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
@@ -85,6 +85,17 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiEditor" );
+
+    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    /**
+     * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
+     * @details 실제 기동 검증이 오랫동안 **빈 씬만** 보고 있었습니다. 활성 게임이 `Empty` 라 맵이 없어서 `SceneManager` 가
+     *          씬 없이 떴다가 내려갑니다. 그래서 오브젝트를 순회하는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
+     *          Profiler 분포표 · 씬 세대 변경 훅)가 검증에서 한 번도 실행되지 않았습니다. 이 스위치로 테스트 씬을 열면 그
+     *          경로가 모두 켜집니다.
+     *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
 
     ImGuiEditor::ImGuiEditor()
         : _platformBackend{ nullptr }
@@ -229,7 +240,7 @@ namespace sw::editor
             EditorCommandGui::registerDefaults();
             _dockLayout.loadPanelVisibility();
 
-            // `-gv_editorStartupScene=<경로>`: 검증용이다. 선언은 Common/EditorGlobalVariable.h 에 있다.
+            // `-gv_editorStartupScene=<경로>`: 검증용이다. 정의는 이 파일 위에 있다.
             // 빈 씬만 보던 실제 기동 검증이 오브젝트를 순회하는 코드까지 다루게 하는 스위치다.
             if ( gv_editorStartupScene.empty() == false )
             {

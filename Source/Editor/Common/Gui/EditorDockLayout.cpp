@@ -56,6 +56,15 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorDockLayout" );
 
+    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    /**
+     * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다.
+     * @details `-gv_editorOpenAllPanels` 는 모두 띄워 서로를 가립니다. 마지막에 등록된 것이 위로 와서 **원하는 패널이 화면
+     *          캡처에 나오지 않습니다**(실제로 새 패널을 확인하려다 막혔습니다). 하나만 띄우면 그 패널이 반드시 보입니다.
+     *          id 는 `registerDefaultPanels` 가 준 것입니다(예: `render_targets` · `profiler` · `material`).
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "이 id 의 패널 하나만 연다 (비우면 사용 안 함)" );
+
     EditorDockLayout::EditorDockLayout()
         : _imguiIniPath{}
         , _windowsIniPath{}

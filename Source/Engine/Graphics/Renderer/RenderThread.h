@@ -8,16 +8,12 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 
 namespace sw
 {
-    /** @brief `-gv_useRenderThread`: 전용 렌더 스레드를 쓸지입니다(false 면 게임 스레드가 바로 제출한다). Engine 안에서만 읽습니다. */
-    SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_useRenderThread );
-
     class FrameRenderer;
     class IRHIDevice;
     class Scene;
@@ -51,6 +47,11 @@ namespace sw
         bool start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
         /** @brief 워커를 멈춥니다. */
         void stop();
+        /**
+         * @brief 디바이스 · 렌더러를 붙입니다. 전용 워커를 띄울지(`start`) 부르는 스레드에 붙일지(`bind`)는 `-gv_useRenderThread` 를 보고 정합니다.
+         * @details 실행 중에 그 값이 바뀌면 `submit()` 이 모드를 그 자리에서 바꿉니다. 그래서 그 변수를 읽는 곳은 이 클래스뿐입니다.
+         */
+        bool attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
 
         /**
          * @brief 워커가 있으면 링에 넣고, 없으면 executeInline 합니다.

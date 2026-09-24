@@ -1,20 +1,13 @@
 /**
  * @file EditorGlobalVariable.h
- * @brief EditorModule 전용 전역 변수(진단 스위치들)입니다.
+ * @brief 여러 파일이 함께 읽는 EditorModule 전역 변수의 선언입니다. 한 파일만 읽는 스위치는 그 파일에서 정의합니다.
  * @note 등록 · 해제는 모듈을 올리고 내리는 쪽(`LiveReloadManager`)이 모듈 이름으로 합니다. 여기서는 선언만 합니다.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 namespace sw
 {
-    /**
-     * @brief `-gv_editorPanelDump=<N>`: N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
-     * @details 읽는 쪽은 `Editor/Common/Gui/EditorPanelDump.cpp` 입니다. 0 이면 아무것도 하지 않습니다.
-     */
-    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_editorPanelDump );
-
     /**
      * @brief `-gv_editorOpenAllPanels=1`: 시작할 때 도구 패널까지 모두 엽니다.
      * @details 도구 패널(Sequencer · Material · InputMap · DataTable…)은 기본이 닫힘이라 `-gv_editorPanelDump` 가 늘 기본
@@ -23,22 +16,4 @@ namespace sw
      *          패널 전부를 다룹니다.
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_editorOpenAllPanels );
-
-    /**
-     * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다.
-     * @details `-gv_editorOpenAllPanels` 는 모두 띄워 서로를 가립니다. 마지막에 등록된 것이 위로 와서 **원하는 패널이 화면
-     *          캡처에 나오지 않습니다**(실제로 새 패널을 확인하려다 막혔습니다). 하나만 띄우면 그 패널이 반드시 보입니다.
-     *          id 는 `registerDefaultPanels` 가 준 것입니다(예: `render_targets` · `profiler` · `material`).
-     */
-    SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel );
-
-    /**
-     * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
-     * @details 실제 기동 검증이 오랫동안 **빈 씬만** 보고 있었습니다. 활성 게임이 `Empty` 라 맵이 없어서 `SceneManager` 가
-     *          씬 없이 떴다가 내려갑니다. 그래서 오브젝트를 순회하는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
-     *          Profiler 분포표 · 씬 세대 변경 훅)가 검증에서 한 번도 실행되지 않았습니다. 이 스위치로 테스트 씬을 열면 그
-     *          경로가 모두 켜집니다.
-     *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
-     */
-    SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_editorStartupScene );
 } // namespace sw

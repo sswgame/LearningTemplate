@@ -37,10 +37,14 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
 
-    // 커맨드 리스트를 프레임 끝에 모아 제출할지(기본), 잘릴 때마다 바로 제출할지.
-    // 정의는 RHI.cpp 에 있다. 여기서는 프레임마다 디바이스로 밀어 넣기만 한다.
-    SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit );
+    // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지. 이 파일이 프레임마다 디바이스로 밀어 넣는다.
+    // 두 모드 모두 기록 순서 = 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
+    // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
+    // 검증 레이어)가 어느 제출에서 났는지 좁히기 쉬워 디버깅에 쓴다.
+    SW_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit, false,
+                             "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
 
+    // 전용 렌더 스레드를 쓸지(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` · `submit`).
     SW_GLOBAL_VARIABLE_BOOL( gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
     RenderThread::RenderThread()
@@ -81,6 +85,11 @@ namespace sw
         _bContextBound  = false;
         SW_LOG_INFO( "Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
         return true;
+    }
+
+    bool RenderThread::attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer )
+    {
+        return gv_useRenderThread ? start( pDevice, pFrameRenderer ) : bind( pDevice, pFrameRenderer );
     }
 
     bool RenderThread::start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer )

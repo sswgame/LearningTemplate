@@ -1665,6 +1665,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (전역 변수 — 한 파일만 읽는 것은 그 파일에서 정의하고 extern 을 걷었다)
+
+**규칙.** 전역 변수의 선언(`SW_EXTERN_GLOBAL_VARIABLE_*`)은 정의한 파일 **밖**에서 읽는 곳이 있을 때만 쓴다. 한 파일만 읽으면 그 파일에서 정의한다
+(Engine 은 원래 이렇게 하고 있었다 — `RenderThread.cpp` · `RHI.cpp`). 헤더의 선언마다 정의 말고 식별자로 쓰는 파일을 세어(주석 · 문자열 제외) 판정했다.
+
+**한 것.**
+- Editor — `gv_editorPanelDump` → `EditorPanelDump.cpp`, `gv_editorOpenPanel` → `EditorDockLayout.cpp`, `gv_editorStartupScene` → `ImGuiEditor.cpp` 로 정의를
+  옮기고 헤더 선언을 걷었다. `EditorGlobalVariable.h/.cpp` 에는 두 파일(`EditorChrome` · `EditorDockLayout`)이 읽는 `gv_editorOpenAllPanels` 하나만 남는다.
+- Game — 벤치 스위치 17 개는 모두 `BenchScene.cpp` 만 읽는다. 정의를 거기로 옮기고 `EmptyGlobalVariable.h/.cpp` 를 지웠다.
+- `gv_useRenderThread` — `EngineLoop` 이 두 곳에서 "워커를 띄울지(`start`) 부르는 스레드에 붙일지(`bind`)" 를 고르려고 읽었는데, 같은 판단을
+  `RenderThread::submit` 이 실행 중에도 한다. `RenderThread::attach()` 가 그 값을 보고 고르게 하자 읽는 곳이 `RenderThread.cpp` 하나가 되어 헤더 선언이
+  필요 없어졌다(`EngineLoop` 의 if/else 두 벌도 없어졌다).
+- `gv_rhiImmediateSubmit` — RHI.cpp 가 정의만 하고 읽는 곳은 `RenderThread.cpp` 뿐이라 정의를 옮기고 .cpp 안의 extern 선언을 없앴다.
+- 옮기면서 헤더에 있던 긴 설명 주석을 정의 쪽으로 옮겼다.
+- 남은 헤더 선언은 둘이다 — `gv_rhiBackend`(RHI.cpp · EngineLoop.cpp 가 읽고 쓴다) · `gv_editorOpenAllPanels`(두 파일).
+
+**확인.** 옮긴 스위치가 커맨드라인으로 그대로 먹는다 — `-gv_editorPanelDump=25` 덤프, `-gv_editorStartupScene=…` 씬 열기, `-gv_benchLights=4` 라이트 4 개.
+`-gv_useRenderThread=1/0` 로 띄운 앱의 실행 중 스레드 수가 23/22 — 워커 모드에서만 렌더 스레드가 하나 더 뜬다(`attach` 가 맞게 고른다).
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · 검증 중 메시지 상자 0.
+
 ### 2026-09-24 (App 정리 — 분류별로 합쳐 19 → 13 파일, 클래스 하나뿐인 폴더 둘을 걷었다)
 
 **어떻게 나눴나.** App 의 파일을 쓰임(누가 include 하는가 · 테스트가 따로 컴파일하는가 · Shipping 에서 함께 빠지는가)으로 네 분류로 봤다.

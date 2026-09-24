@@ -8,7 +8,6 @@
 #include "GameFramework/Base/GameService.h"
 
 #include "Games/Empty/BenchScene.h"
-#include "Games/Empty/EmptyGlobalVariable.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
 
