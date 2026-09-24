@@ -24,10 +24,10 @@ namespace sw
      * @note 셋 모두 이 파일이 유일한 소비자입니다. 예전에는 선언이 `EngineLoop.cpp` 에 있고 여기서 `extern` 으로
      *       끌어 썼습니다. 타입이 어긋나도 링커까지 가야 걸리는 형태라 쓰는 자리로 내렸습니다.
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "트랜지언트를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 찍습니다. */
-    SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "덤프할 트랜지언트 이름 (비면 SceneColor)" );
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
 
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10, 10 보다 작으면 10).

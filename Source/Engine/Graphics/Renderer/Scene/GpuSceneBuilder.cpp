@@ -267,6 +267,11 @@ namespace sw
 
     void GpuSceneBuilder::fillCandidateMaterial( DrawCandidate& cand, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
     {
+        // 머티리얼이 없으면 인스턴스의 부모가 먼저고, 씬 기본 머티리얼은 그다음이다. 예전에는 씬 기본이 먼저여서
+        // 인스턴스만 붙은 메시의 배치가 머티리얼 · 그룹 · 텍스처 · stride 는 기본 머티리얼 것, 원소 바이트 · 퍼뮤테이션은
+        // 인스턴스 것인 섞인 상태가 됐다(부모가 기본 머티리얼과 같은 벤치에서는 드러나지 않았다).
+        if ( pMaterial == nullptr && cand._instance != nullptr )
+            pMaterial = cand._instance->getParent();
         if ( pMaterial == nullptr )
             pMaterial = pScene->getMaterial();
         // 날 포인터로 먼저 견주고, 다르면 소유를 싣는다. 같으면 참조 카운트를 건드리지 않는다.
@@ -274,9 +279,7 @@ namespace sw
             cand._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
 
         const Material* pBlendSource = cand._material.get();
-        if ( pBlendSource == nullptr && cand._instance != nullptr )
-            pBlendSource = cand._instance->getParent();
-        cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
+        cand._blendMode              = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
     }
 
     void GpuSceneBuilder::stampPermutationHash( DrawCandidate& cand )

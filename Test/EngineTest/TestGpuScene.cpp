@@ -1313,6 +1313,44 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
 }
 
 /**
+ * @brief [GpuSceneTest] 머티리얼 없이 인스턴스만 붙은 메시는 **인스턴스의 부모**로 묶인다
+ * @details 후보의 머티리얼을 고를 때 씬 기본 머티리얼이 인스턴스의 부모보다 먼저였다. 그래서 인스턴스만 붙은 메시의
+ *          배치는 머티리얼 · 그룹 · 텍스처가 기본 머티리얼 것이고 원소 바이트 · 퍼뮤테이션은 인스턴스 것이었다. 이 씬은
+ *          initialize 를 부르지 않아 기본 머티리얼이 없으므로, 예전 규칙이면 배치의 머티리얼이 비어 있다.
+ */
+SW_TEST_CASE( GpuSceneTest, InstanceOnlyMeshUsesInstanceParent )
+{
+    sw::shared_ptr<sw::Material> parent = sw::Material::create();
+    SW_ASSERT_TRUE( parent->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+
+    sw::Scene scene( "InstanceOnlyMeshScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.getMaterial() == nullptr ); // 이 케이스는 씬 기본 머티리얼이 없는 씬을 전제로 한다
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_TRUE( mesh != nullptr );
+
+    sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "InstanceOnlyCube" ) );
+    SW_ASSERT_TRUE( pObj != nullptr );
+    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_TRUE( pMeshComp != nullptr );
+    pMeshComp->setMesh( mesh );
+
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
+    SW_ASSERT_TRUE( instance != nullptr );
+    pMeshComp->setMaterialInstance( instance ); // setMaterial 은 부르지 않는다
+
+    sw::GpuSceneBuilder gpuScene;
+    gpuScene.buildFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f } );
+
+    const sw::vector<sw::GpuMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    SW_EXPECT_TRUE_MSG( batches.size() == 1, "인스턴스만 붙은 메시가 배치로 나오지 않았다" );
+    SW_ASSERT_TRUE( batches.size() == 1 );
+    SW_EXPECT_TRUE_MSG( batches[0]._material.get() == parent.get(),
+                        "배치의 머티리얼이 인스턴스의 부모가 아니다 — 그룹 · 텍스처와 원소 바이트가 서로 다른 머티리얼에서 온다" );
+}
+
+/**
  * @brief [GpuSceneTest] 걸러진 프리미티브 때문에 슬롯이 밀려도 **지난 프레임 값이 남지 않는다**
  * @details 수집은 후보 배열을 비우지 않고 제자리에 덮어쓴다(참조 카운트를 매 프레임 내렸다 올리지
  *          않으려고). 그래서 앞의 것이 걸러지면 **뒤의 것이 앞 슬롯으로 내려오고**, 그 슬롯에는

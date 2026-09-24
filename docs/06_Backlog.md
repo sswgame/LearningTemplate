@@ -1463,11 +1463,6 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   읽은 뒤 `static_cast` 로 좁힌다("300" → uint8 44, "4000000000" → int32 음수). JSON · XML 과 바이너리 스칼라 이관(텍스트를
   거친다)이 같이 쓰는 규칙이다. 범위 밖을 실패로 바꾸면 기존 에셋이 읽히는 방식이 달라지므로, 에셋을 훑어 본 뒤에 정한다
   (1-0g 결함을 고치다 찾았다).
-- **머티리얼 인스턴스만 붙은 메시는 씬 기본 머티리얼로 묶인다.** `GpuSceneBuilder::fillCandidateMaterial` 은 메시의
-  머티리얼이 없으면 먼저 씬 기본 머티리얼을 쓰고, 인스턴스의 부모는 그것마저 없을 때만 본다. 그래서 `setMaterial` 없이
-  `setMaterialInstance` 만 한 메시는 배치의 머티리얼 · 그룹 · 텍스처 · stride 가 기본 머티리얼 것이고, 원소 바이트 ·
-  퍼뮤테이션은 인스턴스 것이다. 부모가 기본 머티리얼과 같으면(벤치의 큐브별 인스턴스) 드러나지 않는다. 헤더 주석은
-  "인스턴스의 부모가 기준" 이라고 적고 있었다. 고칠 때는 머티리얼이 없고 인스턴스가 있으면 부모를 먼저 쓴다.
 - **`D3D12RHIDevice::_arrFrameCmdAllocator` 는 죽은 멤버다.** 초기화가 얼로케이터 셋을 만들고 이름을 붙이고, 종료가
   놓기만 한다. `4d99eedb`(리스트마다 전용 얼로케이터 쌍) 뒤로 아무도 쓰지 않는다. 멤버 · 생성 · 해제를 지워도 된다.
 - **`VulkanRHIDevice::_bMaterialCbSlotWarned` 도 죽은 멤버다.** 생성자가 초기화만 한다. 유일한 사용처(b1 을 푸시 상수로
@@ -1483,8 +1478,6 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   `flushSlotSet( false )` 를 한 번 더 부른다(두 번째는 바뀐 것이 없어 할 일이 없다).
 
 **주석 정리 범위 밖이라 남긴 것.** 문자열 · 셰이더 · 파일 위치는 이 작업이 건드리지 않는다.
-- `RenderThread.cpp` 의 `gv_screenshot` · `gv_screenshotAttachment` 도움말 문자열이 아직 "트랜지언트를 PPM 으로 덤프" ·
-  "(비면 SceneColor)" 라고 한다. 지금 기본은 Present 결과 캡처이고, 캡처가 없으면 Present 가 읽는 첨부다.
 - `gpucull.hlsl` 머리말과 `bindingslots.hlsli` 의 `SW_SLOT_VISIBLE_INSTANCE_SRV` 설명이 아직 가시 목록을
   `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다고 한다. 지금은 인스턴스 슬롯 스트림이 준 전역 자리
   (간접 인자의 startInstance + 서수)로 읽는다(`binding.hlsli` 의 `SwResolveInstanceId`). 셰이더 소스를 고치면 구운
@@ -1674,6 +1667,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (1-0g 결함 수정 ③ — 인스턴스만 붙은 메시 · 스크린샷 도움말)
+
+**한 것.**
+- 머티리얼 없이 인스턴스만 붙은 메시의 배치가 두 머티리얼로 섞였다(그룹 · 텍스처 · stride 는 씬 기본, 원소 바이트 ·
+  퍼뮤테이션은 인스턴스). 원인이 둘이었다. `GpuSceneBuilder::fillCandidateMaterial` 이 씬 기본을 인스턴스의 부모보다
+  먼저 골랐고, **고치다 찾은 것으로** `Scene::initialize` 의 `bindSceneMeshDefaults` 가 머티리얼이 없는 메시에 인스턴스가
+  있어도 씬 기본을 `setMaterial` 로 넣었다. 빌더만 고치면 초기화된 씬에서는 그대로였다. 이제 빌더는 인스턴스의 부모를
+  먼저 보고, 씬 초기화는 인스턴스가 붙은 메시를 건너뛴다. 테스트: `GpuSceneTest.InstanceOnlyMeshUsesInstanceParent`
+  (옛 규칙에서 실패하는 것을 확인했다).
+- `gv_screenshot` · `gv_screenshotAttachment` 도움말 문자열이 옛 동작(트랜지언트 덤프 · 비면 SceneColor)을 말하고 있었다.
+  지금 동작(Present 결과 캡처, 이름을 주면 그 트랜지언트)으로 고쳤다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (1-0g 결함 수정 ② — XInput 트리거 데드존)
 

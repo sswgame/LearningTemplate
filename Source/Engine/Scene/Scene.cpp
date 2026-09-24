@@ -61,7 +61,9 @@ namespace sw
                     if ( pMeshComp == nullptr )
                         return;
                     pMeshComp->resolveRuntimeMesh();
-                    if ( pMeshComp->getMaterial() == nullptr && pDefaultMaterial != nullptr )
+                    // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GpuSceneBuilder 가 그렇게 고른다.
+                    // 여기서 씬 기본을 넣으면 배치가 기본 머티리얼(그룹 · 텍스처)과 인스턴스(원소 바이트 · 퍼뮤테이션)로 섞였다.
+                    if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
                 pObjectManager->flushSceneTransforms();
