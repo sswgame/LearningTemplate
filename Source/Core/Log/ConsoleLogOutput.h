@@ -33,9 +33,9 @@ namespace sw
         void write( const LogRecord& record ) override;
 
     private:
-        mutex  _mutex;                   ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다
-        void*  _pCachedConsoleHandle;    ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시(Windows)
-        uint16 _defaultConsoleAttribute; ///< 처음 콘솔 텍스트 색상 속성(Windows)
-        bool   _bHasConsole;             ///< 표준 출력 콘솔이 유효한지 여부
+        mutex                   _mutex;                   ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다
+        void*                   _pCachedConsoleHandle;    ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시(Windows)
+        [[maybe_unused]] uint16 _defaultConsoleAttribute; ///< 처음 콘솔 텍스트 색상 속성(Windows. 다른 플랫폼은 읽지 않는다)
+        bool                    _bHasConsole;             ///< 표준 출력 콘솔이 유효한지 여부
     };
 } // namespace sw

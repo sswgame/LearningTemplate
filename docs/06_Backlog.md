@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘
 
 ---
 
@@ -1654,6 +1654,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (리눅스에서만 나던 Core 경고 둘)
+
+**한 것.** 결함 수정을 WSL 에서 검증하다 빌드 로그에서 봤다. Windows 의 `RunBuildWarnings` 는 두 자리의 리눅스 갈래를
+컴파일하지 않아서 보이지 않는다.
+- `ConsoleLogOutput::_defaultConsoleAttribute` 는 Windows 에서만 읽어서 리눅스에서 `-Wunused-private-field` 였다. 헤더에
+  플랫폼 갈래를 늘리지 않으려고 필드는 두고 `[[maybe_unused]]` 를 붙였다(Shipping 의 `ModuleCompiler::_pLiveReloadManager` 와
+  같은 처리).
+- `FileUtil.cpp` 의 `kMaxWindowsPathSize` 는 Windows 갈래에서만 써서 리눅스에서 `-Wunused-const-variable` 였다. 선언을 같은
+  플랫폼 가드 안에 넣었다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (1-0g 결함 수정 ④ — RHI 인덱스 드로우 · 죽은 코드)
 

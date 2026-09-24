@@ -158,8 +158,10 @@ namespace sw
             inline static uint32 _s_generation{ 0 };
         };
 
+#if defined( SW_PLATFORM_WINDOWS )
         /** @brief 윈도우 경로 길이의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
         constexpr size_t kMaxWindowsPathSize = 32768;
+#endif
 
         /**
          * @brief 디렉터리를 훑으며 항목마다 함수를 실행합니다. **예외를 던지지 않습니다.**
