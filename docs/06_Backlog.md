@@ -1665,6 +1665,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ② — 리눅스: 섀도 복사본의 SONAME 을 세대마다 고유하게)
+
+**왜.** 리눅스 동적 링커는 `DT_NEEDED` 를 풀 때 이미 올라온 라이브러리 중 SONAME 이 같은 **먼저 올라온 것**을 쓴다. 섀도 복사본은 파일만
+복사하므로 SONAME 이 원본과 같고, 연쇄 리로드는 "전부 prepare(새 이미지 로드) → commit(옛 이미지 내림)" 이라 prepare 중인 새 킷이 아직
+내려가지 않은 **옛** GameFramework 에 묶인다(Windows 에서는 지연 로드 훅이 막는 자리). 옛 이미지를 `dlclose` 해도 새 킷이 참조를 쥐어
+실제로는 내려가지 않고, 새 킷 + 옛 GameFramework 코드로 돈다.
+
+**한 것.**
+- **`App/Module/ModuleImagePatch`** — ELF64 LE 파일 바이트에서 동적 섹션을 찾아(PT_DYNAMIC → DT_STRTAB 을 PT_LOAD 로 파일 위치로)
+  DT_SONAME · DT_NEEDED 문자열을 **같은 길이로 제자리에서** 바꾼다. 문자열 표를 늘리지 않으므로 배치가 그대로다. 세대 이름은 `.so` 앞 끝
+  네 글자를 36진 세대로(`libGameFramework.so` → `libGameFrame0003.so`), 세대는 모듈과 무관하게 프로세스에서 하나씩 오른다.
+- **`LiveReloadManager::rewriteShadowSonames`**(리눅스에서만 부른다) — 복사본을 올리기 직전에 자기 SONAME 을 세대 이름으로, 의존 모듈의
+  NEEDED 를 그 의존의 **지금** 이름으로 바꾼다. 연쇄는 의존 순서로 prepare 하므로 같은 연쇄에서 바뀌는 의존은 이미 새 이름을 들고 있다.
+  모듈마다 원본 · 지금 · commit 된 이름 셋(`SonameState`)을 들고, prepare 가 실패하면(로드 실패 · 연쇄 중단) 지금 이름을 commit 된 것으로
+  되돌린다(`abortShadowCopy` 가 컨텍스트를 받게 됐다).
+- **`ModuleImagePatchTest` 셋**(SmokeTest, Windows 에서도 돈다) — 최소 ELF64 이미지(헤더 · PT_LOAD · PT_DYNAMIC · 동적 항목 · 문자열 표)를
+  테스트 안에서 만들어, SONAME 과 맞는 NEEDED 만 바뀌고 다른 NEEDED · 길이가 다른 요청 · ELF 가 아닌 바이트 · 잘린 파일은 그대로인지 본다.
+  태그를 무시하는 돌연변이에 진다.
+
+**리눅스 확인은 CI 몫이다.** 실제 `.so` 에서 이것이 ① 의 결속 확인을 통과시키는지는 리눅스 CI 의 `ReloadedDependentsBindToTheCurrentImages`
+· `LiveReloadCascadeSuccessPath` 가 판정한다(이 PC 에는 WSL 이 없다). Windows 경로는 바뀌지 않았다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest `ArchitectureTest` 15/15 · `ModuleImagePatchTest` 3/3.
+
 ### 2026-09-24 (핫 리로드 ① — 의존 모듈이 **지금의** 복사본에 묶였는지 확인한다)
 
 **왜.** 섀도 복사본은 파일 이름이 원본과 달라서(`GameFramework_temp_N_<시각>.dll`) 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다.

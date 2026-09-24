@@ -2,6 +2,8 @@
 
 #include "App/Module/LiveReloadManager.h"
 
+#include "App/Module/ModuleImagePatch.h"
+
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
@@ -30,6 +32,8 @@ namespace sw
         struct LiveReloadManagerInternal
         {
             inline static uint32 s_reloadCount{ 0 };
+            /** @brief (리눅스) SONAME 세대입니다. 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다. */
+            inline static uint32 s_sonameGeneration{ 0 };
 
             static void tryDeleteFile( string_view path )
             {
@@ -470,6 +474,48 @@ namespace sw
             iter->second._listEventSubscription.push_back( token );
     }
 
+    bool LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, string_view shadowPath )
+    {
+        vector<uint8> bytes;
+        if ( FileUtil::readFile( shadowPath, bytes ) == false )
+            return false;
+
+        // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
+        if ( ctx._soname._original.empty() )
+            ModuleImagePatch::readSoname( bytes, ctx._soname._original );
+
+        bool bChanged = false;
+        if ( ctx._soname._original.empty() == false )
+        {
+            const string generationName = ModuleImagePatch::makeGenerationName( ctx._soname._original, ++LiveReloadManagerInternal::s_sonameGeneration );
+            const bool   bRenamed       = generationName.empty() == false &&
+                                  ModuleImagePatch::replaceDynamicString( bytes, ModuleImagePatch::kTagSoname, ctx._soname._original, generationName ) > 0;
+            if ( bRenamed )
+            {
+                ctx._soname._current = generationName;
+                bChanged             = true;
+            }
+        }
+
+        // 의존 모듈의 NEEDED 를 그 의존의 지금 이름으로. 연쇄 리로드는 의존 순서로 prepare 하므로, 같은 연쇄에서 바뀌는 의존은 이미
+        // 새 이름을 들고 있다(`_current`). 이 매니저가 올리지 않은 의존(Engine 등)은 원래 이름 그대로 둔다.
+        for ( const string& dependencyName : ctx._listDependsOn )
+        {
+            const auto dependencyIt = _mapModule.find( dependencyName );
+            if ( dependencyIt == _mapModule.end() )
+                continue;
+            const SonameState& dependency = dependencyIt->second._soname;
+            if ( dependency._original.empty() || dependency._current.empty() )
+                continue;
+            if ( ModuleImagePatch::replaceDynamicString( bytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current ) > 0 )
+                bChanged = true;
+        }
+
+        if ( bChanged == false )
+            return true;
+        return FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+    }
+
     bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
     {
         PreparedShadow prepared;
@@ -477,7 +523,7 @@ namespace sw
             return false;
         if ( commitShadowCopy( ctx, prepared ) )
             return true;
-        abortShadowCopy( prepared );
+        abortShadowCopy( ctx, prepared );
         return false;
     }
 
@@ -522,9 +568,15 @@ namespace sw
             out._pPreviousEnumHead    = EnumRegistrar::getHead();
             out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
 
+#if defined( SW_PLATFORM_LINUX )
+            if ( rewriteShadowSonames( ctx, out._tempPath ) == false )
+                SW_LOG_WARNING( "Failed to rewrite shadow SONAME / NEEDED (loading as is): %#", out._tempPath.c_str() );
+#endif
+
             out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
             if ( out._pHandle == nullptr )
             {
+                ctx._soname._current = ctx._soname._loaded;
                 SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
                 LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
                 out._tempPath.clear();
@@ -579,6 +631,7 @@ namespace sw
             ctx._pLibraryModule    = prepared._pHandle;
             ctx._tempModulePath    = prepared._tempPath;
             ctx._loadedSourceMtime = prepared._sourceMtime;
+            ctx._soname._loaded    = ctx._soname._current;
             prepared._pHandle      = nullptr;
             prepared._tempPath.clear();
 
@@ -612,8 +665,9 @@ namespace sw
         return true;
     }
 
-    void LiveReloadManager::abortShadowCopy( PreparedShadow& prepared )
+    void LiveReloadManager::abortShadowCopy( ModuleContext& ctx, PreparedShadow& prepared )
     {
+        ctx._soname._current = ctx._soname._loaded;
         if ( prepared._pHandle != nullptr )
         {
             TypeRegistrar::getHead()                 = prepared._pPreviousTypeHead;
@@ -852,7 +906,7 @@ namespace sw
         {
             for ( PreparedEntry& entry : listPrepared )
             {
-                abortShadowCopy( entry._shadow );
+                abortShadowCopy( *entry._pCtx, entry._shadow );
             }
             return;
         }
@@ -870,10 +924,10 @@ namespace sw
             {
                 SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken",
                               entry._pCtx->_moduleName );
-                abortShadowCopy( entry._shadow );
+                abortShadowCopy( *entry._pCtx, entry._shadow );
                 for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
                 {
-                    abortShadowCopy( listPrepared[otherModuleIndex]._shadow );
+                    abortShadowCopy( *listPrepared[otherModuleIndex]._pCtx, listPrepared[otherModuleIndex]._shadow );
                 }
                 if ( committed > 0 )
                     markGraphBroken( "partial cascade commit" );
@@ -889,10 +943,10 @@ namespace sw
 
             SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits",
                           entry._pCtx->_moduleName );
-            abortShadowCopy( entry._shadow );
+            abortShadowCopy( *entry._pCtx, entry._shadow );
             for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
             {
-                abortShadowCopy( listPrepared[otherModuleIndex]._shadow );
+                abortShadowCopy( *listPrepared[otherModuleIndex]._pCtx, listPrepared[otherModuleIndex]._shadow );
             }
 
             if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
@@ -916,6 +970,7 @@ namespace sw
         , _tempModulePath{}
         , _listDependsOn{}
         , _listEventSubscription{}
+        , _soname{}
         , _pLibraryModule{ nullptr }
         , _loadedSourceMtime{ 0 }
         , _debounceMtime{ 0 }
@@ -934,6 +989,7 @@ namespace sw
         , _tempModulePath{ std::move( other._tempModulePath ) }
         , _listDependsOn{ std::move( other._listDependsOn ) }
         , _listEventSubscription{ std::move( other._listEventSubscription ) }
+        , _soname{ std::move( other._soname ) }
         , _pLibraryModule{ other._pLibraryModule }
         , _loadedSourceMtime{ other._loadedSourceMtime }
         , _debounceMtime{ other._debounceMtime }
@@ -959,6 +1015,7 @@ namespace sw
             _tempModulePath        = std::move( other._tempModulePath );
             _listDependsOn         = std::move( other._listDependsOn );
             _listEventSubscription = std::move( other._listEventSubscription );
+            _soname                = std::move( other._soname );
             _pLibraryModule        = other._pLibraryModule;
             _loadedSourceMtime     = other._loadedSourceMtime;
             _debounceMtime         = other._debounceMtime;
