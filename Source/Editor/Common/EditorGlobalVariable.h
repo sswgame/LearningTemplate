@@ -1,18 +1,11 @@
 /**
  * @file EditorGlobalVariable.h
- * @brief EditorModule 전용 전역 변수입니다(모듈 로컬 등록 리스트와 진단 스위치들).
- *
- * @note **이 헤더를 include 하면 `SW_GVM_MODULE_HEAD` 가 바뀝니다.** 기본값은 Engine.dll 의 등록 리스트라, 그대로 쓰면
- *       모듈이 언로드된 뒤에도 매니저가 사라진 DLL 안의 변수를 계속 가리킵니다.
+ * @brief EditorModule 전용 전역 변수(진단 스위치들)입니다.
+ * @note 등록 · 해제는 모듈을 올리고 내리는 쪽(`LiveReloadManager`)이 모듈 이름으로 합니다. 여기서는 선언만 합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-
-#undef SW_GVM_MODULE_HEAD
-#define SW_GVM_MODULE_HEAD() ( ::sw::editor::getGlobalVariableHead() )
-
-SW_DECLARE_MODULE_GLOBAL_VARIABLES( editor );
 
 namespace sw
 {

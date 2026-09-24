@@ -1665,6 +1665,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (전역 변수 등록 — 레이어마다 `#undef` · `#define` 하던 것을 걷고 타입 등록자와 같은 길로)
+
+**왜.** 모듈(EditorModule · SWGame)의 전역 변수는 모듈이 내려갈 때 통째로 걷혀야 한다. 그래서 모듈마다 전역 변수 헤더에서
+`#undef SW_GVM_MODULE_HEAD` / `#define SW_GVM_MODULE_HEAD() ( ::sw::<ns>::getGlobalVariableHead() )` 로 헤드를 바꿔 끼우고,
+`SW_DECLARE_MODULE_GLOBAL_VARIABLES` · `SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES` 로 헤드와 등록 · 해제 함수를 만들어, 모듈 초기화 · 종료에서 손으로
+불렀다. 이 헤더를 include 하지 않은 .cpp 에서 정의한 변수는 **조용히 Engine 헤드**에 붙어 모듈이 내려간 뒤 매니저가 언맵된 주소를
+가리켰다. 한편 같은 모듈의 **리플렉션 타입**은 매크로 없이 이미 자동이었다 — 등록자가 전역 헤드에 매달리고 `LiveReloadManager` 가 로드
+직후 떼어 모듈 이름으로 등록한다.
+
+**한 것 — 전역 변수를 타입 등록자와 같은 길로.**
+- 등록자는 어디서 정의하든 전역 헤드(`GlobalVariableRegistrar::getHead()`)에 매달린다. `SW_GVM_MODULE_HEAD` · 모듈 헤드 생성자 · `linkTo` ·
+  `SW_DECLARE/IMPLEMENT_MODULE_GLOBAL_VARIABLES` 가 없어졌다.
+- `LiveReloadManager` 가 prepare 에서 타입 헤드와 함께 전역 변수 헤드를 떼고(abort 는 되돌린다) commit 에서
+  `engine::registerModuleTypes( …, pVariableHead )` 로 **모듈 이름으로** 올린다. 커맨드라인 보류값(`-gv_…`)은 이때 적용되고, 이 자리는
+  onAfterReload(모듈이 변수를 읽는 초기화) 전이다. 해제는 원래대로 `unregisterModuleTypes` 가 그 이름으로 한다.
+- 전역 변수는 타입처럼 캐시해 두었다 다시 쓰지 **않는다** — 같은 이름을 두 번 올리면 매니저가 경고하고 무시하므로 새로 뗀 헤드가 있을 때만 올린다
+  (`ModuleHost::bindGameApi` 의 한 인자 `registerModuleTypes` 는 이미 비워진 헤드를 보고 아무것도 하지 않는다).
+- Editor · Game 의 전역 변수 헤더는 선언만, .cpp 는 정의만 남았다. `ImGuiEditor` 의 등록 · 해제 호출 셋과 `EmptyGame::onShutdown`(해제 호출만
+  하던 재정의)을 걷었다 — 덤으로 RHI 교체처럼 **인스턴스만** 다시 만드는 경로에서 변수를 내렸다 올리던 일도 없어졌다.
+- 배포본은 모듈이 정적 링크라 변수가 기동 때 `EngineLoop` 의 "Engine" 등록에 함께 들어간다(예전과 같다).
+- **테스트** — `ArchitectureTest.ModuleGlobalVariablesFollowTheModuleLifetime`: EditorModule 을 올리면 `gv_editorPanelDump` 가 모듈 이름으로
+  있고 전역 헤드가 비워져 있으며, 리로드 뒤에도 있고, 내리면 사라진다. 등록 한 줄을 빼는 돌연변이에 진다. 실제 기동에서
+  `-EnableEditor -gv_editorPanelDump=25` 가 덤프를 내고 `-gv_benchMeshes=64` 가 벤치를 세운다(보류값이 모듈 변수에 적용된다).
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · 에디터 · 게임 기동 종료 0 · 에러 0.
+**함정(이번에 밟음).** Release 빌드가 링크 뒤 vcpkg DLL 복사에서 파일 잠김(`RHI_GL.dll` — 백신 · 색인으로 보인다)으로 멈췄는데 검증 스크립트가
+그대로 테스트를 돌려, 새 Engine.dll · 옛 exe 조합에 Windows 로더가 **"시작 지점 없음" 메시지 상자**를 여덟 번 띄웠다(시스템 이벤트 로그의
+Application Popup 에 남는다). 코드 문제가 아니고 다시 빌드하면 9/9 다. 빌드가 진 프리셋은 테스트를 돌리지 말 것.
+
 ### 2026-09-24 (레이어 점검 — Core · Engine · Editor 의 내용물이 제 층에 있는가, 옮긴 것은 창 이벤트 하나)
 
 **어떻게 쟀나.** include 그래프(Source · Test 의 `#include "…"`)로 다섯 가지를 셌다.

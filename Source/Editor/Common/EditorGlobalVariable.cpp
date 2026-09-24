@@ -1,16 +1,10 @@
 /**
  * @file EditorGlobalVariable.cpp
- * @brief EditorModule 전역 변수 정의와 모듈 로컬 등록/해제
+ * @brief EditorModule 전역 변수 정의
  */
 #include "pch.h"
 
 #include "Editor/Common/EditorGlobalVariable.h"
-
-#include "Editor/Common/Workspace/EditorService.h"
-
-#include "sw/config/ConfigConstants.h"
-
-SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES( editor, config::kTargetEditorModule );
 
 namespace sw
 {

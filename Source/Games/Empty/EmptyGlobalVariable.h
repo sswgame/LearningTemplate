@@ -1,18 +1,10 @@
 /**
  * @file EmptyGlobalVariable.h
- * @brief SWGame 전용 전역 변수 — 모듈 로컬 등록 리스트와 벤치 스위치들
- *
- * @note **이 헤더를 include 하면 `SW_GVM_MODULE_HEAD` 가 바뀐다.** 기본값은 Engine.dll 의 등록
- *       리스트라, 그대로 쓰면 모듈이 언로드돼도 매니저가 사라진 DLL 안의 변수를 계속 가리킨다.
- *       모듈 로컬 헤드에 붙여야 `unregisterVariablesByModule` 이 통째로 걷어낼 수 있다.
+ * @brief SWGame 전용 전역 변수 — 벤치 스위치들
+ * @note 등록 · 해제는 모듈을 올리고 내리는 쪽(`LiveReloadManager`, 배포본은 `EngineLoop`)이 합니다. 여기서는 선언만 합니다.
  */
 #pragma once
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-
-#undef SW_GVM_MODULE_HEAD
-#define SW_GVM_MODULE_HEAD() ( ::sw::game::getGlobalVariableHead() )
-
-SW_DECLARE_MODULE_GLOBAL_VARIABLES( game );
 
 namespace sw
 {

@@ -111,9 +111,6 @@ namespace sw::editor
         if ( _bInitialized != SW_FALSE )
             return true;
 
-        // 이 모듈의 전역 변수를 매니저에 올린다. 커맨드라인은 모듈을 로드하기 전에 파싱되므로 값은 파서의 보류표에 있고,
-        // 등록하는 이 순간 적용된다. 그래서 아래에서 gv_editorStartupScene 을 읽기 전에 반드시 먼저 불러야 한다.
-        registerGlobalVariables();
         if ( pWindow == nullptr || pRhiDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
@@ -251,12 +248,6 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownPartialInitialization()
     {
-        // **전역 변수부터 걷어 낸다.** `initialize()` 는 맨 앞에서 `registerGlobalVariables()` 를 부르고(커맨드라인 보류값을
-        // 그때 적용해야 한다), 실패로 나가는 길은 **모두 그 뒤**에 있다. 매니저가 들고 있는 것은 이 DLL 안의 주소이므로,
-        // 초기화가 실패한 뒤 모듈이 내려가면 그 포인터가 언맵된 이미지를 가리킨다. `shutdown()` 이 같은 이유로 맨 앞에서
-        // 부르는데(그 주석 참고), 실패 경로에만 빠져 있었다. 두 번 불러도 안전하다.
-        unregisterGlobalVariables();
-
         if ( _editorContext != nullptr )
         {
             _editorContext->destroyGameView();
@@ -292,11 +283,8 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
             return;
 
-        // 매니저가 들고 있는 것은 이 DLL 안의 주소다. 모듈이 내려가기 전에 반드시 걷어 내야 한다.
-        // (서비스는 아직 바인딩돼 있다. ModuleHost 는 shutdown 뒤에 bindService(nullptr) 을 부른다.)
-        unregisterGlobalVariables();
-
-        // 열려 있는 파일 대화 상자의 결과 델리게이트도 같은 이유로 끊는다. 그 델리게이트는 이 DLL 안의 함수와 `this` 를 잡고
+        // 열려 있는 파일 대화 상자의 결과 델리게이트를 끊는다. 모듈이 내려가기 전에 걷어 내야 하는 이 DLL 안의 주소다(전역 변수는
+        // 모듈을 내리는 쪽이 모듈 이름으로 걷는다). 그 델리게이트는 이 DLL 안의 함수와 `this` 를 잡고
         // 있고, 네이티브 대화 상자는 사용자가 닫을 때까지 떠 있다. 아래 Undo 스택과 같은 종류의 함정이다.
         FileUtil::cancelFileDialogResults();
 

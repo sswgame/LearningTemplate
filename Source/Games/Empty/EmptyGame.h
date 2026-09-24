@@ -26,7 +26,6 @@ namespace sw
     protected:
         void configureBootstrap( BootstrapConfig& outConfig ) override;
         bool onInitialize() override;
-        void onShutdown() override;
         void onUpdate( float32 deltaTime ) override;
         /** @brief 상태 스냅샷 직전 — 벤치는 절차 생성물이라 걷어서 스냅샷에 싣지 않는다. */
         void onBeforeStateSerialize() override;

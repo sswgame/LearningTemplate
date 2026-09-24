@@ -598,12 +598,13 @@ namespace sw
 
         BLOCK( "Load Dynamic Library" )
         {
-            // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 세 헤드는
+            // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 네 헤드는
             // 항상 nullptr 이다(연쇄 교체의 두 번째 모듈 이후도 마찬가지다). abort 는 이 스냅샷을 되돌리므로, 정상 상태에서는
             // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
-            out._pPreviousTypeHead    = TypeRegistrar::getHead();
-            out._pPreviousEnumHead    = EnumRegistrar::getHead();
-            out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
+            out._pPreviousTypeHead     = TypeRegistrar::getHead();
+            out._pPreviousEnumHead     = EnumRegistrar::getHead();
+            out._pPreviousFactoryHead  = sw::ComponentFactoryRegistrar::getHead();
+            out._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
 
             out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
             if ( out._pHandle == nullptr )
@@ -615,13 +616,15 @@ namespace sw
                 return false;
             }
 
-            out._pTypeHead    = TypeRegistrar::getHead();
-            out._pEnumHead    = EnumRegistrar::getHead();
-            out._pFactoryHead = sw::ComponentFactoryRegistrar::getHead();
+            out._pTypeHead     = TypeRegistrar::getHead();
+            out._pEnumHead     = EnumRegistrar::getHead();
+            out._pFactoryHead  = sw::ComponentFactoryRegistrar::getHead();
+            out._pVariableHead = GlobalVariableRegistrar::getHead();
 
             TypeRegistrar::getHead()                 = nullptr;
             EnumRegistrar::getHead()                 = nullptr;
             sw::ComponentFactoryRegistrar::getHead() = nullptr;
+            GlobalVariableRegistrar::getHead()       = nullptr;
         }
 
         return true;
@@ -663,10 +666,12 @@ namespace sw
                 ctx._moduleName,
                 prepared._pTypeHead,
                 prepared._pEnumHead,
-                prepared._pFactoryHead );
-            prepared._pTypeHead    = nullptr;
-            prepared._pEnumHead    = nullptr;
-            prepared._pFactoryHead = nullptr;
+                prepared._pFactoryHead,
+                prepared._pVariableHead );
+            prepared._pTypeHead     = nullptr;
+            prepared._pEnumHead     = nullptr;
+            prepared._pFactoryHead  = nullptr;
+            prepared._pVariableHead = nullptr;
 
             // 새 이미지의 코드가 처음 도는 자리다. 여기서 죽으면 에디터째 내려가 저장하지 않은 작업을 잃으므로 지킨다.
             if ( ctx._onAfterReload.isBound() )
@@ -712,17 +717,20 @@ namespace sw
             TypeRegistrar::getHead()                 = prepared._pPreviousTypeHead;
             EnumRegistrar::getHead()                 = prepared._pPreviousEnumHead;
             sw::ComponentFactoryRegistrar::getHead() = prepared._pPreviousFactoryHead;
+            GlobalVariableRegistrar::getHead()       = prepared._pPreviousVariableHead;
             LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle );
             FileUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
-        prepared._pTypeHead            = nullptr;
-        prepared._pEnumHead            = nullptr;
-        prepared._pFactoryHead         = nullptr;
-        prepared._pPreviousTypeHead    = nullptr;
-        prepared._pPreviousEnumHead    = nullptr;
-        prepared._pPreviousFactoryHead = nullptr;
+        prepared._pTypeHead             = nullptr;
+        prepared._pEnumHead             = nullptr;
+        prepared._pFactoryHead          = nullptr;
+        prepared._pVariableHead         = nullptr;
+        prepared._pPreviousTypeHead     = nullptr;
+        prepared._pPreviousEnumHead     = nullptr;
+        prepared._pPreviousFactoryHead  = nullptr;
+        prepared._pPreviousVariableHead = nullptr;
         LiveReloadManagerInternal::tryDeleteShadowArtifacts( prepared._tempPath );
         prepared._tempPath.clear();
         prepared._sourceMtime = 0;

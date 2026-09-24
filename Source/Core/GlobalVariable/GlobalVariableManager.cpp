@@ -599,9 +599,6 @@ namespace sw
     // GlobalVariableRegistrar 구현부
     // ============================================================================
 
-    /**
-     * @brief Core 번역 단위 전용 정적 등록자 생성자입니다(getHead() 에 연결합니다).
-     */
     GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
         : _name{ pName }
         , _type{ type }
@@ -611,31 +608,14 @@ namespace sw
         , _enumType{ pEnumType }
         , _moduleName{ pModuleName }
         , _typeSize{ typeSize }
-        , _pNext{ nullptr } { linkTo( getHead() ); }
-
-    /**
-     * @brief DLL 모듈 전용 정적 등록자 생성자입니다(모듈별 로컬 체인 헤드에 연결합니다).
-     */
-    GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
-        : _name{ pName }
-        , _type{ type }
-        , _pData{ pData }
-        , _defaultValue{ defaultValue }
-        , _description{ pDescription }
-        , _enumType{ pEnumType }
-        , _moduleName{ pModuleName }
-        , _typeSize{ typeSize }
-        , _pNext{ nullptr } { linkTo( pModuleHead ); }
+        , _pNext{ getHead() }
+    {
+        getHead() = this;
+    }
 
     GlobalVariableRegistrar*& GlobalVariableRegistrar::getHead()
     {
         static GlobalVariableRegistrar* s_pHead{ nullptr };
         return s_pHead;
-    }
-
-    void GlobalVariableRegistrar::linkTo( GlobalVariableRegistrar*& pModuleHead )
-    {
-        _pNext      = pModuleHead;
-        pModuleHead = this;
     }
 } // namespace sw

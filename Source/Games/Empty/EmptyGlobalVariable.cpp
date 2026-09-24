@@ -1,16 +1,10 @@
 /**
  * @file EmptyGlobalVariable.cpp
- * @brief SWGame 전역 변수 정의와 모듈 로컬 등록/해제
+ * @brief SWGame 전역 변수 정의
  */
 #include "pch.h"
 
 #include "Games/Empty/EmptyGlobalVariable.h"
-
-#include "GameFramework/Base/GameService.h"
-
-#include "sw/config/ConfigConstants.h"
-
-SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES( game, config::kTargetGameModule );
 
 namespace sw
 {

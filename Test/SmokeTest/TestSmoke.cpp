@@ -620,6 +620,37 @@ SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess 
 }
 
 /**
+ * @brief [ArchitectureTest] 모듈의 전역 변수는 모듈을 올리는 쪽이 모듈 이름으로 등록하고, 내리는 쪽이 걷는다
+ * @details 모듈 코드는 등록 · 해제를 부르지 않는다. 등록자는 타입 등록자처럼 정적 초기화 때 전역 헤드에 매달리고, `LiveReloadManager` 가
+ *          로드 직후 떼어 모듈 이름으로 올린다(커맨드라인 보류값도 이때 적용된다). 헤드는 다시 비워져야 한다 — 남으면 다음에 떼는 쪽이
+ *          내려간 이미지의 등록자를 따라간다. 리로드 뒤에도 그대로 있고, 내리면 사라진다.
+ */
+SW_TEST_CASE( ArchitectureTest, ModuleGlobalVariablesFollowTheModuleLifetime )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "EditorModule" ) ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
+    if ( sw::engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "engine services not bound" );
+
+    sw::GlobalVariableManager& variableManager = sw::engine::getGlobalVariableManager();
+    SW_ASSERT_TRUE( variableManager.findVariable( "gv_editorPanelDump" ) == nullptr );
+
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.registerModule( "EditorModule" ) );
+    const sw::GlobalVariableInfo* pRegistered = variableManager.findVariable( "gv_editorPanelDump" );
+    SW_ASSERT_TRUE( pRegistered != nullptr );
+    SW_EXPECT_STREQ( "EditorModule", pRegistered->_moduleName.c_str() );
+    SW_EXPECT_TRUE( sw::GlobalVariableRegistrar::getHead() == nullptr );
+
+    SW_ASSERT_TRUE( sw::reloadAndWait( manager, "EditorModule" ) );
+    SW_EXPECT_TRUE( variableManager.findVariable( "gv_editorPanelDump" ) != nullptr );
+    SW_EXPECT_TRUE( sw::GlobalVariableRegistrar::getHead() == nullptr );
+
+    manager.shutdown();
+    SW_EXPECT_TRUE( variableManager.findVariable( "gv_editorPanelDump" ) == nullptr );
+}
+
+/**
  * @brief [ArchitectureTest] EditorModule DLL 독립 LiveReload 및 C-ABI 테이블 재바인딩 검증
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
