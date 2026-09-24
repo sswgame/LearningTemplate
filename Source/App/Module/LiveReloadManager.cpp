@@ -50,11 +50,12 @@ namespace sw
                 tryDeleteFile( FileUtil::getDebugSymbolPath( modulePath ) );
             }
 
-            static bool copyFileWithRetry( string_view source, string_view destination )
+            /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
+            static bool readFileWithRetry( string_view path, vector<uint8>& outBytes )
             {
                 for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
                 {
-                    if ( FileUtil::copyFile( source, destination ) )
+                    if ( FileUtil::readFile( path, outBytes ) )
                         return true;
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                 }
@@ -130,7 +131,7 @@ namespace sw
              * @param pOutSeen     모듈이 실제로 본 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
-             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 구운 표식 심볼을 모듈의 검색 범위(자기 + 자기 의존)에서
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 구운 도장 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
              *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, void* pExpected, const void*& pOutSeen, const void*& pOutExpected )
@@ -140,10 +141,10 @@ namespace sw
                 pOutSeen     = findBoundImportModule( pModule, FileUtil::formatSharedLibraryName( dependencyName ) );
                 return pOutSeen == nullptr || pOutSeen == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
-                const string anchorName = string{ "sw_moduleAnchor_" } + string{ dependencyName };
+                const string anchorName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
                 pOutExpected            = FileUtil::getDynamicSymbol( pExpected, anchorName );
                 pOutSeen                = nullptr;
-                // 표식이 없는 모듈(정적 링크 · 표식을 굽기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                // 도장이 없는 모듈(정적 링크 · 도장을 굽기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
                 pOutSeen = FileUtil::getDynamicSymbol( pModule, anchorName );
@@ -494,30 +495,19 @@ namespace sw
         return it != _mapModule.end() ? it->second._pLibraryModule : nullptr;
     }
 
-    void LiveReloadManager::addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token )
-    {
-        auto iter = _mapModule.find( string( moduleName ) );
-        if ( iter != _mapModule.end() )
-            iter->second._listEventSubscription.push_back( token );
-    }
-
-    bool LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes )
+    void LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes )
     {
         // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
         if ( ctx._soname._original.empty() )
             ModuleImagePatch::readSoname( inoutBytes, ctx._soname._original );
 
-        bool bChanged = false;
         if ( ctx._soname._original.empty() == false )
         {
             const string generationName = ModuleImagePatch::makeGenerationName( ctx._soname._original, ++LiveReloadManagerInternal::s_sonameGeneration );
             const bool   bRenamed       = generationName.empty() == false &&
                                   ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagSoname, ctx._soname._original, generationName ) > 0;
             if ( bRenamed )
-            {
                 ctx._soname._current = generationName;
-                bChanged             = true;
-            }
         }
 
         // 의존 모듈의 NEEDED 를 그 의존의 지금 이름으로. 연쇄 리로드는 의존 순서로 prepare 하므로, 같은 연쇄에서 바뀌는 의존은 이미
@@ -530,11 +520,8 @@ namespace sw
             const SonameState& dependency = dependencyIt->second._soname;
             if ( dependency._original.empty() || dependency._current.empty() )
                 continue;
-            if ( ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current ) > 0 )
-                bChanged = true;
+            ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current );
         }
-
-        return bChanged;
     }
 
     bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
@@ -563,17 +550,42 @@ namespace sw
         out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 
         ++LiveReloadManagerInternal::s_reloadCount;
-        const uint64 timestamp = FileUtil::getFileTimestamp( ctx._originalModulePath );
-        const string tempName  = ctx._moduleName + "_temp_" + to_string( LiveReloadManagerInternal::s_reloadCount ) + "_" + to_string( timestamp );
-        const string execDir   = FileUtil::getDirectoryPart( ctx._originalModulePath );
-        out._tempPath          = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+        const string tempName = ctx._moduleName + "_temp_" + to_string( LiveReloadManagerInternal::s_reloadCount ) + "_" + to_string( out._sourceMtime );
+        const string execDir  = FileUtil::getDirectoryPart( ctx._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
         {
-            if ( LiveReloadManagerInternal::copyFileWithRetry( ctx._originalModulePath, out._tempPath ) == false )
+            // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
+            vector<uint8> bytes;
+            if ( LiveReloadManagerInternal::readFileWithRetry( ctx._originalModulePath, bytes ) == false )
             {
-                SW_LOG_ERROR( "Failed to create shadow copy (locked): %#", out._tempPath.c_str() );
-                out._tempPath.clear();
+                SW_LOG_ERROR( "Failed to read the module for a shadow copy (locked): %#", ctx._originalModulePath.c_str() );
+                return false;
+            }
+
+            // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+            string     moduleStamp;
+            const bool bForeignEngine = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
+            if ( bForeignEngine )
+            {
+                // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
+                const utf8* pRemedy = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
+                                                                     : "rebuild the engine and its modules together";
+                SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
+                              ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pRemedy );
+                return false;
+            }
+#if defined( SW_PLATFORM_LINUX )
+            rewriteShadowSonames( ctx, bytes );
+#endif
+
+            out._tempPath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+            if ( FileUtil::writeFile( out._tempPath, bytes.data(), bytes.size() ) == false )
+            {
+                ctx._soname._current = ctx._soname._loaded;
+                SW_LOG_ERROR( "Failed to write the shadow copy: %#", out._tempPath.c_str() );
+                LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
+                out = {};
                 return false;
             }
 
@@ -589,43 +601,13 @@ namespace sw
             out._pPreviousEnumHead    = EnumRegistrar::getHead();
             out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
 
-            // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
-            vector<uint8> bytes;
-            if ( FileUtil::readFile( out._tempPath, bytes ) )
-            {
-                string     moduleStamp;
-                const bool bForeignEngine = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
-                if ( bForeignEngine )
-                {
-                    // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
-                    const utf8* pRemedy = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
-                                                                         : "rebuild the engine and its modules together";
-                    SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                                  ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pRemedy );
-                    LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
-                    out._tempPath.clear();
-                    out._pPreviousTypeHead    = nullptr;
-                    out._pPreviousEnumHead    = nullptr;
-                    out._pPreviousFactoryHead = nullptr;
-                    return false;
-                }
-#if defined( SW_PLATFORM_LINUX )
-                const bool bRewritten = rewriteShadowSonames( ctx, bytes );
-                if ( bRewritten && FileUtil::writeFile( out._tempPath, bytes.data(), bytes.size() ) == false )
-                    SW_LOG_WARNING( "Failed to write the rewritten shadow SONAME / NEEDED (loading as is): %#", out._tempPath.c_str() );
-#endif
-            }
-
             out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
             if ( out._pHandle == nullptr )
             {
                 ctx._soname._current = ctx._soname._loaded;
                 SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
                 LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
-                out._tempPath.clear();
-                out._pPreviousTypeHead    = nullptr;
-                out._pPreviousEnumHead    = nullptr;
-                out._pPreviousFactoryHead = nullptr;
+                out = {};
                 return false;
             }
 
@@ -660,12 +642,6 @@ namespace sw
 
             if ( pPreviousHandle != nullptr )
             {
-                for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscription )
-                {
-                    engine::getEventDispatcher().unsubscribe( token );
-                }
-                ctx._listEventSubscription.clear();
-
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( ctx._moduleName );
@@ -756,12 +732,6 @@ namespace sw
         if ( ctx._pLibraryModule != nullptr )
         {
             SW_LOG_INFO( "Unloading module %# (handle=%#)", ctx._moduleName.c_str(), ctx._pLibraryModule );
-            for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscription )
-            {
-                engine::getEventDispatcher().unsubscribe( token );
-            }
-            ctx._listEventSubscription.clear();
-
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( ctx._moduleName );
@@ -787,19 +757,9 @@ namespace sw
         retired._batchId    = _retireBatchId;
         _listRetiredImage.push_back( std::move( retired ) );
 
-        for ( ;; )
+        // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
+        while ( _listRetiredImage.back()._batchId - _listRetiredImage.front()._batchId >= kMaxRetiredBatchCount )
         {
-            // 목록은 배치 순서라 번호가 바뀌는 자리만 세면 된다.
-            uint32 batchCount{ 0 };
-            uint32 previousBatchId{ 0 };
-            for ( const RetiredImage& image : _listRetiredImage )
-            {
-                if ( batchCount == 0 || image._batchId != previousBatchId )
-                    ++batchCount;
-                previousBatchId = image._batchId;
-            }
-            if ( batchCount <= kMaxRetiredBatchCount )
-                break;
             unloadOldestRetiredBatch();
         }
     }
@@ -1083,7 +1043,6 @@ namespace sw
         , _originalModulePath{}
         , _tempModulePath{}
         , _listDependsOn{}
-        , _listEventSubscription{}
         , _soname{}
         , _pLibraryModule{ nullptr }
         , _loadedSourceMtime{ 0 }
@@ -1103,7 +1062,6 @@ namespace sw
         , _originalModulePath{ std::move( other._originalModulePath ) }
         , _tempModulePath{ std::move( other._tempModulePath ) }
         , _listDependsOn{ std::move( other._listDependsOn ) }
-        , _listEventSubscription{ std::move( other._listEventSubscription ) }
         , _soname{ std::move( other._soname ) }
         , _pLibraryModule{ other._pLibraryModule }
         , _loadedSourceMtime{ other._loadedSourceMtime }
@@ -1123,19 +1081,18 @@ namespace sw
     {
         if ( this != &other )
         {
-            _onBeforeReload        = std::move( other._onBeforeReload );
-            _onAfterReload         = std::move( other._onAfterReload );
-            _onReloadFault         = std::move( other._onReloadFault );
-            _moduleName            = std::move( other._moduleName );
-            _originalModulePath    = std::move( other._originalModulePath );
-            _tempModulePath        = std::move( other._tempModulePath );
-            _listDependsOn         = std::move( other._listDependsOn );
-            _listEventSubscription = std::move( other._listEventSubscription );
-            _soname                = std::move( other._soname );
-            _pLibraryModule        = other._pLibraryModule;
-            _loadedSourceMtime     = other._loadedSourceMtime;
-            _debounceMtime         = other._debounceMtime;
-            _debounceTimer         = other._debounceTimer;
+            _onBeforeReload     = std::move( other._onBeforeReload );
+            _onAfterReload      = std::move( other._onAfterReload );
+            _onReloadFault      = std::move( other._onReloadFault );
+            _moduleName         = std::move( other._moduleName );
+            _originalModulePath = std::move( other._originalModulePath );
+            _tempModulePath     = std::move( other._tempModulePath );
+            _listDependsOn      = std::move( other._listDependsOn );
+            _soname             = std::move( other._soname );
+            _pLibraryModule     = other._pLibraryModule;
+            _loadedSourceMtime  = other._loadedSourceMtime;
+            _debounceMtime      = other._debounceMtime;
+            _debounceTimer      = other._debounceTimer;
             _bPendingReload.store( other._bPendingReload.load() );
             _bMtimeDebouncing.store( other._bMtimeDebouncing.load() );
             _bForceReload.store( other._bForceReload.load() );

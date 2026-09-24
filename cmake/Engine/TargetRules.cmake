@@ -106,7 +106,6 @@ endfunction()
 function(sw_registerDynamicModule TARGET_NAME KIND)
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
-	sw_addModuleAnchor(${TARGET_NAME})
 	sw_addModuleEngineStamp(${TARGET_NAME})
 endfunction()
 
@@ -145,8 +144,13 @@ function(sw_defineEngineAbiStamp)
 	set_target_properties(SwEngineAbiStamp PROPERTIES FOLDER "CMakePredefinedTargets")
 endfunction()
 
-# 모듈이 자기가 빌드된 엔진 헤더의 지문을 굽는다(Dev 의 공유 라이브러리만). 내보내는 이유는 링커가 참조 없는 자료를
-# 지우지 못하게 하려는 것이다 — 핫 리로드는 심볼이 아니라 파일 바이트에서 표식 문자열을 찾는다(모듈 코드가 돌기 전에).
+# 모듈이 자기가 빌드된 엔진 헤더의 지문을 굽는다(Dev 의 공유 라이브러리만). 상수 하나가 두 가지 일을 한다.
+#   - **도장** — 핫 리로드는 심볼이 아니라 파일 바이트에서 표식 문자열을 찾는다(모듈 코드가 돌기 전에).
+#     내보내는 이유는 링커가 참조 없는 자료를 지우지 못하게 하려는 것이다.
+#   - **결속 표식(리눅스)** — `LiveReloadManager::verifyModuleBindings` 는 "이 모듈이 의존을 어느 이미지에 묶었나" 를
+#     묻는다. Windows 는 import 표에서 읽지만 리눅스는 그 정보를 밖에 내주지 않는다. 그래서 이름에 타겟 이름을 붙여
+#     모듈마다 고유하게 두고, `dlsym( 모듈, "sw_moduleEngineAbiStamp_<의존>" )` 이 돌려주는 주소로 가린다 — dlsym 은
+#     그 모듈의 검색 범위(자기 + 자기 의존)에서 찾으므로 그 주소가 곧 모듈이 실제로 묶인 의존 이미지의 것이다.
 function(sw_addModuleEngineStamp TARGET_NAME)
 	if(SW_SHIPPING_BUILD OR NOT TARGET ${TARGET_NAME})
 		return()
@@ -158,10 +162,11 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 	endif()
 
 	sw_defineEngineAbiStamp()
-	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleanchor/${TARGET_NAME}EngineStamp.cpp")
+	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}EngineStamp.cpp")
 	file(CONFIGURE OUTPUT "${swStampSource}" CONTENT
 "// 생성 파일 - sw_addModuleEngineStamp (cmake/Engine/TargetRules.cmake). 고치지 마십시오.
-// 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조합니다.
+// 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조하고,
+// 리눅스에서는 이 상수의 주소로 의존 모듈이 어느 이미지에 묶였는지 가립니다.
 #include \"@SW_ENGINE_ABI_STAMP_HEADER@\"
 
 #if defined( _WIN32 )
@@ -170,8 +175,8 @@ function(sw_addModuleEngineStamp TARGET_NAME)
     #define SW_MODULE_ENGINE_STAMP_EXPORT __attribute__( ( visibility( \"default\" ) ) )
 #endif
 
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp[];
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp[] = SW_ENGINE_ABI_STAMP;
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@TARGET_NAME@[];
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@TARGET_NAME@[] = SW_ENGINE_ABI_STAMP;
 " @ONLY)
 
 	target_sources(${TARGET_NAME} PRIVATE "${swStampSource}")
@@ -181,44 +186,6 @@ extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp[] 
 		OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
 	)
 	add_dependencies(${TARGET_NAME} SwEngineAbiStamp)
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 핫 리로드 결속 확인용 표식 심볼 (리눅스 · Dev 의 공유 라이브러리만)
-#
-# `LiveReloadManager::verifyModuleBindings` 는 "이 모듈이 의존을 **어느 이미지에** 묶었나" 를 묻는다.
-# Windows 는 import 표(지연 로드 서술자의 핸들 칸)에서 읽지만, 리눅스는 그 정보를 밖에 내주지 않는다.
-# 그래서 모듈마다 이름이 고유한 C 심볼 `sw_moduleAnchor_<타겟>` 을 하나 굽는다. `dlsym( 모듈, 의존의 표식 )`
-# 은 그 모듈의 검색 범위(자기 + 자기 의존)에서 찾으므로, 돌려준 주소가 곧 그 모듈이 묶인 의존 이미지의 것이다.
-# 섀도 복사본은 SONAME 이 원본과 같아서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지를 고른다 —
-# 연쇄 리로드에서 새 킷이 옛 GameFramework 에 묶이는 것을 이 표식으로 가린다.
-# ------------------------------------------------------------------------------
-function(sw_addModuleAnchor TARGET_NAME)
-	if(WIN32 OR SW_SHIPPING_BUILD OR NOT TARGET ${TARGET_NAME})
-		return()
-	endif()
-
-	get_target_property(swTargetType ${TARGET_NAME} TYPE)
-	if(NOT swTargetType STREQUAL "SHARED_LIBRARY" AND NOT swTargetType STREQUAL "MODULE_LIBRARY")
-		return()
-	endif()
-
-	set(swAnchorSource "${CMAKE_BINARY_DIR}/generated/moduleanchor/${TARGET_NAME}ModuleAnchor.cpp")
-	file(CONFIGURE OUTPUT "${swAnchorSource}" CONTENT
-"// 생성 파일 - sw_addModuleAnchor (cmake/Engine/TargetRules.cmake). 고치지 마십시오.
-// 핫 리로드가 이 모듈의 이미지를 가리는 표식입니다. 주소 말고는 뜻이 없습니다.
-extern \"C\" __attribute__( ( visibility( \"default\" ) ) ) void sw_moduleAnchor_@TARGET_NAME@();
-
-extern \"C\" __attribute__( ( visibility( \"default\" ) ) ) void sw_moduleAnchor_@TARGET_NAME@()
-{
-}
-" @ONLY)
-
-	target_sources(${TARGET_NAME} PRIVATE "${swAnchorSource}")
-	set_source_files_properties("${swAnchorSource}" PROPERTIES
-		SKIP_PRECOMPILE_HEADERS ON
-		SKIP_UNITY_BUILD_INCLUSION ON
-	)
 endfunction()
 
 # 등록된 동적 모듈 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.

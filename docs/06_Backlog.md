@@ -1665,6 +1665,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 정리 — ①–⑥ 을 다시 읽고 겹친 것 · 쓰지 않는 것을 걷었다)
+
+**리눅스 CI 판정.** 41b80bff 에서 Linux Debug · ASan · Shipping 통과(SmokeTest 8.7 초 — 리로드 케이스가 실제로 돈 시간). ① 표식 · ② SONAME ·
+④ `dl_iterate_phdr` 범위 · ⑤ 도장 · ⑥ `sigsetjmp` 가드의 리눅스 경로가 처음으로 돌았다. macOS Debug 는 그 전부터 Configure 에서 진다.
+
+**한 것.**
+- **섀도 복사본을 한 번에 만든다.** 예전: 복사 → 다시 읽어 도장 대조 → (리눅스) 고쳐 다시 쓰기, 거절되면 복사본을 지우고 레지스트라 헤드를
+  비웠다. 지금: 원본을 한 번 읽어(잠겨 있으면 재시도) 대조하고 · 고치고 · 한 번 쓴다. 거절은 파일을 만들기 **전**이라 치울 것이 없다.
+  `copyFileWithRetry` → `readFileWithRetry`, `rewriteShadowSonames` 는 반환값이 필요 없어졌다(늘 쓴다). 같은 원본의 시각을 두 번 묻던 것도 하나로.
+- **`addEventSubscription` · `_listEventSubscription` 을 걷었다.** 모듈이 이벤트 구독을 등록해 두면 리로드 때 떼 주던 수동 목록인데 호출이 0 이고,
+  App 안에 있어 모듈은 C-ABI 경계 때문에 애초에 부를 수 없었다. 그 일은 ④ 의 `releaseModuleCode` 가 코드 범위로 자동으로 한다.
+- **퇴역 상한** — 배치 수를 매번 세던 루프를 "가장 오래된 배치가 마지막 N 번의 연쇄 밖인가"(번호 차이) 한 줄로. 배치 번호는 연쇄마다 오른다.
+- **EventDispatcher** — ④ 가 채널 항목에 더한 타입별 함수 포인터 둘(떼기 · 남았나)을, 이미 있던 `_pfnBroadcast` 와 같은 방식의 하나
+  (`releaseTypedCodeWithin<T>` — 떼고 남았는지를 함께 답한다)로 합쳤다.
+- **리눅스 결속 표식 = 도장 상수.** ① 은 모듈마다 빈 함수 `sw_moduleAnchor_<타겟>` 을 따로 굽는 생성 소스(리눅스 전용)를 만들었고 ⑤ 는 도장
+  상수를 굽는 생성 소스를 따로 만들었다. 도장 상수 이름에 타겟을 붙이고(`sw_moduleEngineAbiStamp_<타겟>`) 그 주소를 표식으로 쓴다 —
+  `sw_addModuleAnchor` 와 그 생성 파일이 없어졌다. **리눅스 판정은 다음 CI 몫이다.**
+- `ModuleCallGuard`(리눅스) 의 시그널 수 `4` 를 표에서 센다.
+
+**하지 않은 것(검토 뒤 기각).**
+- `IMulticastDelegateBase` 에 가상 `removeCodeWithin` · `isBound` 를 두어 EventDispatcher 의 함수 포인터를 없애는 안 — 가상 함수는 쓰지 않아도 **모든**
+  멀티캐스트 시그니처마다 인스턴스화되어 핫 리로드 전용 코드가 엔진 전체로 퍼지고, 가장 밑의 헤더(Delegate.h)를 핫 리로드 때문에 고치게 된다.
+- `ModuleImagePatch` 의 동적 항목 · 프로그램 헤더 순회를 구조체 둘 · 템플릿 하나로 모으는 안 — 줄이는 것보다 더하는 개념이 많다. `<elf.h>`
+  구조체는 Windows 에 없어(합성 ELF 테스트가 Windows 에서 돈다) 쓸 수 없고, `BinaryStreamReader` 는 앞으로만 읽어 임의 위치 읽기가 결국 남는다.
+- 도장 대조를 위해 모듈 파일 전체를 읽는 비용 — 가장 큰 모듈이 13 MB(Debug EditorModule)라 수 ms 다. 컴파일 · 링크 앞에서 잴 만한 값이 아니다.
+
+**발견(다음 작업).** 첫 등록의 onAfterReload 가 그래프를 막으면 commit 이 이미 새 핸들을 넣은 컨텍스트를 `registerModule` 이 내리지 않고 맵에서
+지운다 — 이미지와 섀도 파일이 프로세스 끝까지 남는다(`ArchitectureTest.LiveReloadOnAfterPoisonFailsRegister` 가 `SWGame_temp_*` 를 남긴다).
+이 정리 전 커밋에서도 같다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest 33/33 · 에디터 스모크(`-EnableEditor -gv_profileFrames=60`) 종료 0 · 에러 0 · 남은 섀도 파일 0.
+
 ### 2026-09-24 (핫 리로드 ⑥ — 새 모듈이 리로드 직후 초기화에서 죽어도 에디터는 산다)
 
 **왜.** onAfterReload 는 새 이미지의 코드가 처음 도는 자리다(ModuleHost 가 API 를 바인딩하고 게임 · 에디터 인스턴스를 만들고 상태를

@@ -256,13 +256,11 @@ namespace sw
         /** @brief 타입을 지운 채널 브로드캐스트 엔트리입니다. 람다 없이 함수 포인터와 멀티캐스트만 둡니다. */
         struct ChannelDispatchEntry
         {
-            using BroadcastFn  = void ( * )( void* pMulticast, const IEvent& eventRef );
-            using RemoveCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd );
-            using IsBoundFn    = bool ( * )( const void* pMulticast );
+            using BroadcastFn   = void ( * )( void* pMulticast, const IEvent& eventRef );
+            using ReleaseCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber );
 
             BroadcastFn      _pfnBroadcast{ nullptr };
-            RemoveCodeFn     _pfnRemoveCodeWithin{ nullptr }; ///< `releaseCodeWithin` 이 타입을 모르는 채 구독을 떼는 길
-            IsBoundFn        _pfnIsBound{ nullptr };          ///< 뗀 뒤 남은 구독이 있는지 묻는 길
+            ReleaseCodeFn    _pfnReleaseCodeWithin{ nullptr }; ///< `releaseCodeWithin` 이 타입을 모르는 채 구독을 떼고 남았는지 묻는 길
             shared_ptr<void> _pMulticast;
 
             /** @brief 호출할 수 있는 엔트리면 true 입니다. */
@@ -282,18 +280,14 @@ namespace sw
             static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->broadcast( static_cast<const T&>( eventRef ) );
         }
 
-        /** @brief 타입별 멀티캐스트에서 [@p pBegin, @p pEnd) 가 만든 구독을 뗍니다. */
+        /** @brief 타입별 멀티캐스트에서 [@p pBegin, @p pEnd) 가 만든 구독을 떼고 뗀 수를 반환합니다. @p outHasSubscriber 는 뗀 뒤 남은 구독이 있는지입니다. */
         template <typename T>
-        static uint32 removeTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd )
+        static uint32 releaseTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber )
         {
-            return static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->removeCodeWithin( pBegin, pEnd );
-        }
-
-        /** @brief 타입별 멀티캐스트에 구독이 남았는지 봅니다. */
-        template <typename T>
-        static bool isTypedChannelBound( const void* pMulticast )
-        {
-            return static_cast<const MulticastDelegate<void( const T& )>*>( pMulticast )->isBound();
+            MulticastDelegate<void( const T& )>* pTyped        = static_cast<MulticastDelegate<void( const T& )>*>( pMulticast );
+            const uint32                         releasedCount = pTyped->removeCodeWithin( pBegin, pEnd );
+            outHasSubscriber                                   = pTyped->isBound();
+            return releasedCount;
         }
 
         /**
@@ -311,7 +305,7 @@ namespace sw
                 return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second._pMulticast );
 
             shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &removeTypedCodeWithin<T>, &isTypedChannelBound<T>, mcast };
+            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &releaseTypedCodeWithin<T>, mcast };
             return mcast;
         }
 

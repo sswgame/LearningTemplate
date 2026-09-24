@@ -56,10 +56,11 @@ namespace sw
                 return true;
             }
 #elif defined( SW_PLATFORM_LINUX )
-            static constexpr int32 kArrFaultSignal[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL };
+            static constexpr int32  kArrFaultSignal[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL };
+            static constexpr uint32 kFaultSignalCount = static_cast<uint32>( std::size( kArrFaultSignal ) );
 
-            static inline struct sigaction                   _s_arrPreviousAction[4]{}; ///< 설치 전의 처리기(크래시 처리기). 바깥 호출이 채운다
-            static inline int32                              _s_installDepth{ 0 };      ///< 겹친 호출 깊이. 0 → 1 에서 설치, 1 → 0 에서 해제
+            static inline struct sigaction                   _s_arrPreviousAction[kFaultSignalCount]{}; ///< 설치 전의 처리기(크래시 처리기). 바깥 호출이 채운다
+            static inline int32                              _s_installDepth{ 0 };                      ///< 겹친 호출 깊이. 0 → 1 에서 설치, 1 → 0 에서 해제
             static inline thread_local sigjmp_buf*           t_pJump{ nullptr };
             static inline thread_local volatile sig_atomic_t t_faultSignal{ 0 };
 
@@ -69,7 +70,7 @@ namespace sw
                 if ( t_pJump == nullptr )
                 {
                     // 지키는 호출 밖(다른 스레드)의 결함이다. 원래 처리기로 돌려놓고 돌아가면 같은 명령이 다시 결함을 내 그쪽이 받는다.
-                    for ( uint32 signalIndex = 0; signalIndex < 4; ++signalIndex )
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
                     {
                         if ( kArrFaultSignal[signalIndex] == signalNumber )
                             sigaction( signalNumber, &_s_arrPreviousAction[signalIndex], nullptr );
@@ -89,7 +90,7 @@ namespace sw
                     action.sa_sigaction = &onFaultSignal;
                     action.sa_flags     = SA_SIGINFO;
                     sigemptyset( &action.sa_mask );
-                    for ( uint32 signalIndex = 0; signalIndex < 4; ++signalIndex )
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
                     {
                         sigaction( kArrFaultSignal[signalIndex], &action, &_s_arrPreviousAction[signalIndex] );
                     }
@@ -113,7 +114,7 @@ namespace sw
 
                 if ( --_s_installDepth == 0 )
                 {
-                    for ( uint32 signalIndex = 0; signalIndex < 4; ++signalIndex )
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
                     {
                         sigaction( kArrFaultSignal[signalIndex], &_s_arrPreviousAction[signalIndex], nullptr );
                     }

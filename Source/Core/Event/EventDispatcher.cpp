@@ -175,16 +175,17 @@ namespace sw
         std::scoped_lock<SpinLock>               lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
-            if ( entry.isBound() == false || entry._pfnRemoveCodeWithin == nullptr )
+            if ( entry.isBound() == false || entry._pfnReleaseCodeWithin == nullptr )
                 continue;
-            releasedCount += entry._pfnRemoveCodeWithin( entry._pMulticast.get(), pBegin, pEnd );
+            bool bHasSubscriber{ false };
+            releasedCount += entry._pfnReleaseCodeWithin( entry._pMulticast.get(), pBegin, pEnd, bHasSubscriber );
 
             // 항목의 함수들은 그 타입을 처음 만진 쪽에서 인스턴스화된다. 그것이 이 범위면 범위가 내려간 뒤 이 항목은 내려간 코드로 뛴다.
             const uintptr_t broadcastCode   = reinterpret_cast<uintptr_t>( entry._pfnBroadcast );
             const bool      bCreatedByRange = begin <= broadcastCode && broadcastCode < end;
             if ( bCreatedByRange == false )
                 continue;
-            if ( entry._pfnIsBound( entry._pMulticast.get() ) )
+            if ( bHasSubscriber )
             {
                 ++outStuckEntryCount;
                 continue;

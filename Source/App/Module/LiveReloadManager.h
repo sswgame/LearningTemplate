@@ -13,7 +13,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/EventDispatcher.h"
 #include "Core/Time/CpuTimer.h"
 
 #include "Engine/Common/Common.h"
@@ -133,7 +132,8 @@ namespace sw
          *          어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태 · 타입 등록이 갈린다), 옛 이미지를 내리는 순간 그리로 뛰는
          *          코드가 죽습니다. 등록과 연쇄 리로드 끝에 부르고, 어긋나면 그래프를 막습니다 — 섞인 채 조용히 도는 것보다 낫습니다.
          *          Windows 에서 아직 풀리지 않은 지연 로드는 어긋남이 아닙니다(풀릴 때 훅이 그때의 복사본을 돌려줍니다).
-         *          리눅스는 모듈마다 구운 표식 심볼(`sw_moduleAnchor_<이름>`, `sw_registerDynamicModule` 이 넣는다)로 가립니다.
+         *          리눅스는 모듈마다 구운 도장 상수(`sw_moduleEngineAbiStamp_<이름>`, `sw_registerDynamicModule` 이 넣는다)의 주소로
+         *          가립니다.
          */
         bool verifyModuleBindings() const;
 
@@ -145,9 +145,6 @@ namespace sw
 
         /** @brief 교체된 뒤 아직 올려 둔 옛 이미지 수입니다(`kMaxRetiredBatchCount` 배치까지). */
         uint32 getRetiredImageCount() const { return static_cast<uint32>( _listRetiredImage.size() ); }
-
-        /** @brief 리로드할 때 자동으로 해제하도록 EventSubscription 을 등록합니다. */
-        void addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token );
 
         // --- IModuleHandleProvider: 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
         /** @brief 리로드 그래프가 깨져 있으면 true 입니다. */
@@ -184,9 +181,8 @@ namespace sw
          * @details 복사본은 원본의 SONAME 을 그대로 들고 있어서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지에 새 모듈을 묶습니다
          *          (연쇄 리로드의 prepare 에서는 그것이 아직 내려가지 않은 옛 이미지입니다). 이름을 세대마다 고유하게 하면 NEEDED 가
          *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(`ModuleImagePatch.h`).
-         * @return 바이트를 바꿨으면 true 입니다(부르는 쪽이 파일에 씁니다).
          */
-        bool rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
+        void rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
         /** @brief 교체된 옛 이미지를 퇴역 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
@@ -234,22 +230,21 @@ namespace sw
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).
         struct ModuleContext
         {
-            OnBeforeReloadDelegate                     _onBeforeReload;
-            OnAfterReloadDelegate                      _onAfterReload;
-            OnReloadFaultDelegate                      _onReloadFault;
-            string                                     _moduleName;
-            string                                     _originalModulePath;
-            string                                     _tempModulePath;
-            vector<string>                             _listDependsOn;
-            vector<EventDispatcher::EventSubscription> _listEventSubscription;
-            SonameState                                _soname;
-            void*                                      _pLibraryModule;
-            uint64                                     _loadedSourceMtime;
-            uint64                                     _debounceMtime;
-            CpuTimer                                   _debounceTimer;
-            atomic<bool>                               _bPendingReload;
-            atomic<bool>                               _bMtimeDebouncing;
-            atomic<bool>                               _bForceReload;
+            OnBeforeReloadDelegate _onBeforeReload;
+            OnAfterReloadDelegate  _onAfterReload;
+            OnReloadFaultDelegate  _onReloadFault;
+            string                 _moduleName;
+            string                 _originalModulePath;
+            string                 _tempModulePath;
+            vector<string>         _listDependsOn;
+            SonameState            _soname;
+            void*                  _pLibraryModule;
+            uint64                 _loadedSourceMtime;
+            uint64                 _debounceMtime;
+            CpuTimer               _debounceTimer;
+            atomic<bool>           _bPendingReload;
+            atomic<bool>           _bMtimeDebouncing;
+            atomic<bool>           _bForceReload;
 
             /** @brief 원자 플래그를 끈 기본값으로 만듭니다. */
             ModuleContext() noexcept;
