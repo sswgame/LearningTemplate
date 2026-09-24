@@ -1665,6 +1665,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ① — 의존 모듈이 **지금의** 복사본에 묶였는지 확인한다)
+
+**왜.** 섀도 복사본은 파일 이름이 원본과 달라서(`GameFramework_temp_N_<시각>.dll`) 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다.
+Windows 는 지연 로드 훅이 `LiveReloadManager` 에게 물어 지금의 복사본을 받고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다.
+어긋나면 GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 그런데 어긋났는지를 보는 곳이
+없었다 — **지연 로드 훅을 무력화하는 돌연변이(제공자를 건너뛰고 원본을 올림)에 기존 `ArchitectureTest` 14 개가 전부 통과했다.**
+
+**한 것.**
+- **`LiveReloadManager::verifyModuleBindings()`** — 등록된 모듈마다 의존이 매니저가 들고 있는 이미지에 묶였는지 본다. Windows 는 PE import
+  표(지연 로드 서술자의 모듈 핸들 칸 · 일반 import 의 IAT 가 가리키는 모듈), 리눅스는 모듈마다 구운 표식 심볼 `sw_moduleAnchor_<타겟>`
+  (`sw_registerDynamicModule` 이 생성 소스로 넣는다, 리눅스 · Dev 의 공유 라이브러리만)을 `dlsym( 모듈, 의존의 표식 )` 으로 찾는다 — 그
+  주소가 그 모듈이 실제로 묶인 의존의 것이다. 아직 풀리지 않은 지연 로드는 어긋남이 아니다(풀릴 때 훅이 그때의 복사본을 준다).
+- 등록과 연쇄 리로드 끝에 부르고, 어긋나면 이유를 적어 그래프를 막는다(섞인 채 조용히 도는 것보다 낫다).
+- **`ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`** — App 과 같은 사슬(GameFramework → GF_Overworld → SWGame)을 등록하고
+  GameFramework 를 연쇄 리로드한다. SWGame 이 게임 인스턴스를 한 번 만들어야 GameFramework 지연 로드가 풀리므로 앞뒤로 만들고 부순 뒤 확인한다.
+  위 돌연변이에서 **이 테스트만** 진다(`Module SWGame is bound to a stale GameFramework image`). 이전의 `LiveReloadCascadeSuccessPath` 는
+  GameFramework → SWGame 연쇄를 돌지만 결속은 보지 않았고, 킷을 사이에 둔 사슬은 없었다.
+
+**리눅스는 아직 모른다.** 이 PC 에는 WSL 이 없다. glibc 규칙대로라면 연쇄 리로드의 prepare 에서 새 킷이 옛 GameFramework(SONAME 이 같고
+먼저 올라온 것)에 묶이므로, 이 커밋만 올리면 리눅스 CI 에서 새 테스트와 `LiveReloadCascadeSuccessPath` 가 "stale image" 로 **질 것으로 본다**.
+그 수정(SONAME 을 세대마다 고유하게)이 다음 커밋 ② 다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · 훅 돌연변이에서 새 테스트만 짐(되돌린 뒤 15/15).
+
 ### 2026-09-24 (Input 정리 — 겹친 상태 칸 하나 · 두 벌 셋 · Compression · Module 은 걷을 것이 없었다)
 
 **Input.** 사용처 0 인 공개 함수가 55 개였는데 **전부 남겼다** — 감도 · 축 반전 · 데드존 모양 · 더블클릭/더블탭/홀드 문턱 · 토글 ·
@@ -1696,8 +1721,7 @@ RLE 의 압축 · 해제 머리 중복은 09-23 판정대로 둔다.
    리로드하므로, 엔진 헤더를 고친 빌드에서 `Engine.dll` 링크는 잠겨 실패해도 `SWGame.dll` 이 먼저 써지면 **다른 헤더로 빌드된 모듈**이 올라갈
    수 있다(코드로 본 경로 · 재현 안 함). Engine 공개 헤더 해시를 양쪽에 굽고 prepare 에서 대조 + 리로드를 "빌드 성공 뒤" 로 좁힌다.
 4. **새 모듈 초기화를 크래시로부터 감싼다**(SEH · 리눅스 시그널) — 죽으면 새 이미지를 버리고 1 로 살아 있는 옛 이미지 + 스냅샷으로 되돌린다(cr.h 방식).
-5. 지연 로드 훅을 빼는 돌연변이로 `LiveReloadGenreKitsIndividuallyAndCascaded` · `MultiModuleFullStackLiveReload` 가 지는지 확인하고, 안 진다면
-   "리로드 뒤 킷이 보는 GameFramework 가 복사본인가" 를 보는 테스트를 더한다.
+5. ~~지연 로드 훅을 빼는 돌연변이로 기존 테스트가 지는지 확인~~ — **안 졌다**. 결속 확인 + 테스트를 더했다(위 "핫 리로드 ①").
 
 **검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7.
 

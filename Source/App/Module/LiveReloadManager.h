@@ -108,6 +108,18 @@ namespace sw
         /** @brief commit 실패 · 순환 · 바인딩 실패로 그래프가 깨졌으면 true 입니다. */
         bool isGraphBroken() const { return _bReloadGraphBroken == SW_TRUE; }
 
+        /**
+         * @brief 등록된 모듈마다, 의존 모듈이 **지금 이 매니저가 들고 있는 이미지**에 묶였는지 확인합니다.
+         * @return 어긋난 결속이 하나도 없으면 true. 어긋나면 모듈 · 의존 이름과 양쪽 주소를 로그로 남기고 false 입니다.
+         * @details 섀도 복사본은 원본과 파일 이름이 달라서, 의존 모듈이 어느 이미지에 묶일지는 로더가 정합니다. Windows 는 지연 로드
+         *          훅(`DelayLoadNotifyHook.cpp`)이 지금의 복사본을 돌려주고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이깁니다.
+         *          어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태 · 타입 등록이 갈린다), 옛 이미지를 내리는 순간 그리로 뛰는
+         *          코드가 죽습니다. 등록과 연쇄 리로드 끝에 부르고, 어긋나면 그래프를 막습니다 — 섞인 채 조용히 도는 것보다 낫습니다.
+         *          Windows 에서 아직 풀리지 않은 지연 로드는 어긋남이 아닙니다(풀릴 때 훅이 그때의 복사본을 돌려줍니다).
+         *          리눅스는 모듈마다 구운 표식 심볼(`sw_moduleAnchor_<이름>`, `sw_registerDynamicModule` 이 넣는다)로 가립니다.
+         */
+        bool verifyModuleBindings() const;
+
         /** @brief 지금 핫 리로드 배치를 처리 중인지 반환합니다. */
         bool isReloadingBatch() const { return _bReloadingBatch == SW_TRUE; }
 

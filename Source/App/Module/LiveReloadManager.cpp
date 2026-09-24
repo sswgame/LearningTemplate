@@ -2,9 +2,11 @@
 
 #include "App/Module/LiveReloadManager.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -62,6 +64,92 @@ namespace sw
 
                 if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
                     SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
+            }
+
+#if defined( SW_PLATFORM_WINDOWS )
+            /**
+             * @brief 모듈 @p pModule 이 DLL @p dependencyFileName 을 **어느 이미지에 묶었는지** import 표에서 읽습니다.
+             * @return 묶인 이미지의 핸들입니다. 아직 풀리지 않은 지연 로드이거나 그 DLL 을 import 하지 않으면 nullptr 입니다.
+             * @details 지연 로드는 서술자의 모듈 핸들 칸에 훅이 돌려준 핸들이 적힙니다(풀리기 전에는 0). 일반 import 는 로드할 때 이미
+             *          풀리므로 IAT 첫 칸이 가리키는 주소의 모듈이 묶인 이미지입니다.
+             */
+            static void* findBoundImportModule( void* pModule, string_view dependencyFileName )
+            {
+                const uint8*            pBase = static_cast<const uint8*>( pModule );
+                const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
+                if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
+                    return nullptr;
+                const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
+                if ( pNt->Signature != IMAGE_NT_SIGNATURE )
+                    return nullptr;
+
+                const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+                if ( delayDir.VirtualAddress != 0 )
+                {
+                    const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress );
+                    for ( ; pDesc->DllNameRVA != 0; ++pDesc )
+                    {
+                        if ( pDesc->Attributes.RvaBased == 0 )
+                            continue;
+                        const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA );
+                        if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) )
+                            return *reinterpret_cast<void* const*>( pBase + pDesc->ModuleHandleRVA );
+                    }
+                }
+
+                const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+                if ( importDir.VirtualAddress != 0 )
+                {
+                    const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress );
+                    for ( ; pDesc->Name != 0; ++pDesc )
+                    {
+                        const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->Name );
+                        if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) == false )
+                            continue;
+                        const IMAGE_THUNK_DATA* pThunk = reinterpret_cast<const IMAGE_THUNK_DATA*>( pBase + pDesc->FirstThunk );
+                        if ( pThunk->u1.Function == 0 )
+                            return nullptr;
+                        HMODULE hBound = nullptr;
+                        GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                            reinterpret_cast<LPCWSTR>( pThunk->u1.Function ), &hBound );
+                        return hBound;
+                    }
+                }
+                return nullptr;
+            }
+#endif
+
+            /**
+             * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
+             * @param pOutSeen     모듈이 실제로 본 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
+             * @param pOutExpected 비교한 기준입니다(로그용).
+             * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 구운 표식 심볼을 모듈의 검색 범위(자기 + 자기 의존)에서
+             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
+             */
+            static bool isBoundTo( void* pModule, string_view dependencyName, void* pExpected, const void*& pOutSeen, const void*& pOutExpected )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                pOutExpected = pExpected;
+                pOutSeen     = findBoundImportModule( pModule, FileUtil::formatSharedLibraryName( dependencyName ) );
+                return pOutSeen == nullptr || pOutSeen == pOutExpected;
+#elif defined( SW_PLATFORM_LINUX )
+                const string anchorName = string{ "sw_moduleAnchor_" } + string{ dependencyName };
+                pOutExpected            = FileUtil::getDynamicSymbol( pExpected, anchorName );
+                pOutSeen                = nullptr;
+                // 표식이 없는 모듈(정적 링크 · 표식을 굽기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                if ( pOutExpected == nullptr )
+                    return true;
+                pOutSeen = FileUtil::getDynamicSymbol( pModule, anchorName );
+                return pOutSeen == nullptr || pOutSeen == pOutExpected;
+#else
+                (void)pModule;
+                (void)dependencyName;
+                (void)pExpected;
+                pOutSeen     = nullptr;
+                pOutExpected = nullptr;
+                return true;
+#endif
             }
 
             static void cleanStaleShadowArtifacts( string_view directoryPath )
@@ -185,7 +273,11 @@ namespace sw
         moduleContext._tempModulePath     = "";
         moduleContext._originalModulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
         if ( loadShadowCopyModule( moduleContext ) )
+        {
+            if ( verifyModuleBindings() == false )
+                markGraphBroken( "a module is bound to a stale dependency image after registration" );
             return true;
+        }
 
         _mapModule.erase( string( moduleName ) );
         return false;
@@ -337,6 +429,32 @@ namespace sw
         (void)reason;
         SW_LOG_ERROR( "Reload graph broken (%#) — restart the process; further live reloads are disabled",
                       reason );
+    }
+
+    bool LiveReloadManager::verifyModuleBindings() const
+    {
+        bool bAllBound = true;
+        for ( const auto& [moduleName, moduleContext] : _mapModule )
+        {
+            if ( moduleContext._pLibraryModule == nullptr )
+                continue;
+            for ( const string& dependencyName : moduleContext._listDependsOn )
+            {
+                // 이 매니저가 올리지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 가릴 것이 없다.
+                const auto dependencyIt = _mapModule.find( dependencyName );
+                if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
+                    continue;
+
+                const void* pSeen{ nullptr };
+                const void* pExpected{ nullptr };
+                if ( LiveReloadManagerInternal::isBoundTo( moduleContext._pLibraryModule, dependencyName, dependencyIt->second._pLibraryModule, pSeen, pExpected ) )
+                    continue;
+
+                SW_LOG_ERROR( "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pSeen, pExpected );
+                bAllBound = false;
+            }
+        }
+        return bAllBound;
     }
 
     void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
@@ -784,6 +902,10 @@ namespace sw
         }
 
         _bReloadingBatch = SW_FALSE;
+
+        // 새 이미지가 모두 올라왔다. 의존 모듈이 옛 이미지에 묶였으면, 옛 이미지를 내린 지금 그리로 뛰는 코드가 죽는다 — 여기서 막는다.
+        if ( verifyModuleBindings() == false )
+            markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
     }
 
     LiveReloadManager::ModuleContext::ModuleContext() noexcept

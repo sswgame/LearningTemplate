@@ -48,6 +48,37 @@ namespace sw
             return sw::FileUtil::loadDynamicLibrary( path );
         }
 
+        /**
+         * @brief SWGame 의 게임 인스턴스를 한 번 만들고 부숩니다.
+         * @details 만들 때 GameFramework 의 코드(게임 인스턴스 바탕 클래스)가 돌아서, Windows 에서는 SWGame 의 GameFramework
+         *          지연 로드가 이 자리에서 풀립니다. 결속 확인이 "아직 안 풀림" 이 아니라 실제로 묶인 이미지를 보게 하려는 것입니다.
+         */
+        bool createAndDestroyGame( void* pGameModule )
+        {
+            if ( pGameModule == nullptr )
+                return false;
+            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
+            if ( pfnExport == nullptr )
+                return false;
+            sw::GameAPI api{};
+            if ( pfnExport( &api ) == false || api.create == nullptr || api.destroy == nullptr )
+                return false;
+
+            sw::ModuleService gameService{};
+            if ( api.bindService != nullptr )
+            {
+                sw::engine::fillModuleServices( gameService, true );
+                api.bindService( &gameService );
+            }
+            sw::GameHandle game     = api.create();
+            const bool     bCreated = game != nullptr;
+            if ( bCreated )
+                api.destroy( game );
+            if ( api.bindService != nullptr )
+                api.bindService( nullptr );
+            return bCreated;
+        }
+
     } // namespace
 } // namespace sw
 
@@ -564,6 +595,61 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 
     SW_EXPECT_FALSE( manager.isGraphBroken() );
     SW_EXPECT_TRUE( editorReloaded );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [ArchitectureTest] App 과 같은 사슬(GameFramework → 킷 → SWGame)을 연쇄 리로드해도, 의존 모듈은 **지금의** 복사본에 묶인다
+ * @details 섀도 복사본은 파일 이름이 원본과 달라서 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다. Windows 는 지연 로드 훅이
+ *          `LiveReloadManager` 에게 물어 지금의 복사본을 받고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다. 어긋나면
+ *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 예전 테스트들은 리로드가
+ *          "끝났다" 만 봤지 누가 누구에게 묶였는지는 보지 않았다.
+ *
+ *          Windows 에서는 SWGame 이 GameFramework 를 실제로 불러야 지연 로드가 풀리므로, 리로드 앞뒤로 게임 인스턴스를 한 번씩
+ *          만들고 부순 뒤에 확인한다. (킷의 GameFramework 지연 로드는 킷 코드가 돌기 전까지 풀리지 않을 수 있다 — 그 경우 확인은
+ *          "아직 안 묶임" 으로 지나간다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.)
+ */
+SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
+{
+    const sw::string gfPath = sw::modulePath( "GameFramework" );
+    if ( sw::FileUtil::fileExists( gfPath ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "GameFramework" ) == false )
+        SW_TEST_SKIP( "GameFramework registration failed" );
+    if ( manager.registerModule( "GF_Overworld", { "GameFramework" } ) == false )
+        SW_TEST_SKIP( "GF_Overworld registration failed" );
+    if ( manager.registerModule( "SWGame", { "GameFramework", "GF_Overworld" } ) == false )
+        SW_TEST_SKIP( "SWGame registration failed" );
+
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
+    SW_EXPECT_TRUE( manager.verifyModuleBindings() );
+
+    bool bGameReloaded{ false };
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bGameReloaded]( void* )
+    {
+        bGameReloaded = true;
+    } ) );
+
+    // GameFramework 를 바꾸면 킷과 SWGame 까지 연쇄로 바뀐다(App 에서 GameFramework 를 고치고 빌드한 경우).
+    manager.triggerReload( "GameFramework" );
+    for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( bGameReloaded )
+            break;
+    }
+
+    SW_EXPECT_TRUE( bGameReloaded );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
+    SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
     manager.shutdown();
 }
