@@ -158,6 +158,34 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerEdgeDetection )
 }
 
 /**
+ * @brief [InputEdgeCaseTest] 트리거 값은 `setAxis` 에서 데드존을 거친다
+ * @details 모든 입력 경로(XInput · 리눅스 조이스틱 · 원시 이벤트 · 에디터 시뮬레이터)가 트리거를 `setAxis( 4 · 5 )` 로 넣는다.
+ *          예전에는 XInput 만 `_leftTrigger` 에 곧바로 대입해서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없었다.
+ *          XInput 폴링은 장치 없이 돌릴 수 없으므로, 그 길이 기대는 `setAxis` 의 계약을 여기서 붙잡아 둔다.
+ */
+SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerDeadzoneAppliesInSetAxis )
+{
+    struct TestGamepadDevice : public sw::GamepadDevice
+    {
+        using sw::GamepadDevice::GamepadDevice;
+        void poll( [[maybe_unused]] float32 deltaTime ) override {}
+    };
+
+    TestGamepadDevice pad( 0 );
+    pad.setTriggerDeadzone( 0.1f );
+
+    pad.setAxis( 4, 0.05f );
+    pad.setAxis( 5, 0.05f );
+    SW_EXPECT_TRUE_MSG( pad.getLeftTrigger() == 0.0f, "데드존 아래의 왼쪽 트리거 값이 걸러지지 않았습니다" );
+    SW_EXPECT_TRUE_MSG( pad.getRightTrigger() == 0.0f, "데드존 아래의 오른쪽 트리거 값이 걸러지지 않았습니다" );
+
+    pad.setAxis( 4, 0.3f );
+    pad.setAxis( 5, 0.6f );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, pad.getLeftTrigger(), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, pad.getRightTrigger(), 0.0001f );
+}
+
+/**
  * @brief [InputEdgeCaseTest] 리플레이 경계 조건(범위 초과 시킹, 0프레임 후진, 끝 프레임 전진, 손상된 헤더) 검증
  */
 SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndCorruptedData )

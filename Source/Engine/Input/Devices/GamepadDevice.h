@@ -127,14 +127,14 @@ namespace sw
         uint32                    _prevButtonMask;            /**< 직전 프레임의 버튼 비트마스크. wasButtonPressed/Released 의 엣지 판정에 씀. */
         float2                    _leftStick;                 /**< 왼쪽 스틱 [-1.0, 1.0](데드존 미적용 원시값). */
         float2                    _rightStick;                /**< 오른쪽 스틱 [-1.0, 1.0]. */
-        float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0]. `setAxis` 로 들어온 값만 _triggerDeadzone 을 거침(XInput 의 poll() 은 직접 씀). */
+        float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0]. 모든 입력 경로가 `setAxis` 로 넣어 _triggerDeadzone 을 거침. */
         float32                   _rightTrigger;              /**< 오른쪽 트리거 압력 [0.0, 1.0]. */
         float32                   _prevLeftTrigger;           /**< 직전 프레임의 왼쪽 트리거 값. wasControlPressed/Released 의 임계값(0.5) 판정에 씀. */
         float32                   _prevRightTrigger;          /**< 직전 프레임의 오른쪽 트리거 값. */
         float32                   _leftMotorSpeed;            /**< 마지막으로 설정한 왼쪽(저주파) 진동 모터 세기 [0.0, 1.0]. */
         float32                   _rightMotorSpeed;           /**< 마지막으로 설정한 오른쪽(고주파) 진동 모터 세기 [0.0, 1.0]. */
         float32                   _vibrationDurationTimer;    /**< playVibration() 으로 시작한 타이머 진동의 남은 시간(초). 0 이하가 되면 저절로 멈춤. */
-        float32                   _triggerDeadzone;           /**< 트리거 축 노이즈를 거르는 데드존. 이 값 미만이면 0 으로 취급(디지털 눌림 판정용 0.5 임계값과는 별개). `setAxis` 에서만 적용됨. */
+        float32                   _triggerDeadzone;           /**< 트리거 축 노이즈를 거르는 데드존. 이 값 미만이면 0 으로 취급(디지털 눌림 판정용 0.5 임계값과는 별개). `setAxis` 가 적용함. */
         uint8                     _bTimedVibrationActive : 1; /**< playVibration() 으로 시작한 타이머 진동이 진행 중인지 여부. */
         [[maybe_unused]] uint8    _reserved              : 7;
     };

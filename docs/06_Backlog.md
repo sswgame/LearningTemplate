@@ -1463,11 +1463,6 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   읽은 뒤 `static_cast` 로 좁힌다("300" → uint8 44, "4000000000" → int32 음수). JSON · XML 과 바이너리 스칼라 이관(텍스트를
   거친다)이 같이 쓰는 규칙이다. 범위 밖을 실패로 바꾸면 기존 에셋이 읽히는 방식이 달라지므로, 에셋을 훑어 본 뒤에 정한다
   (1-0g 결함을 고치다 찾았다).
-- **XInput 게임패드는 트리거 데드존을 거치지 않는다.** `_triggerDeadzone` 은 `GamepadDevice::setAxis`(리눅스 조이스틱 ·
-  원시 이벤트 · 에디터 시뮬레이터 경로)에서만 적용되는데, `GamepadXInput::poll` 은 `_leftTrigger` · `_rightTrigger` 에
-  `bLeftTrigger / 255` 를 곧바로 쓴다. 그래서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없고, `Input/README.md` 의
-  "트리거 아날로그 값 자체의 노이즈만 걸러낸다" 는 설명도 Windows 에서는 틀리다. 고칠 때는 poll 도 `setAxis( 4, … )` ·
-  `setAxis( 5, … )` 로 쓰게 한다.
 - **머티리얼 인스턴스만 붙은 메시는 씬 기본 머티리얼로 묶인다.** `GpuSceneBuilder::fillCandidateMaterial` 은 메시의
   머티리얼이 없으면 먼저 씬 기본 머티리얼을 쓰고, 인스턴스의 부모는 그것마저 없을 때만 본다. 그래서 `setMaterial` 없이
   `setMaterialInstance` 만 한 메시는 배치의 머티리얼 · 그룹 · 텍스처 · stride 가 기본 머티리얼 것이고, 원소 바이트 ·
@@ -1679,6 +1674,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (1-0g 결함 수정 ② — XInput 트리거 데드존)
+
+**한 것.** `GamepadXInput::pollUser` 가 트리거를 `_leftTrigger` · `_rightTrigger` 에 곧바로 대입해서 Windows 에서만
+`setTriggerDeadzone` 이 아무 효과가 없었다. 다른 입력 경로(리눅스 조이스틱 · 원시 이벤트 · 에디터 시뮬레이터)처럼
+`setAxis( 4 · 5 )` 로 넣는다. XInput 폴링은 장치 없이 돌릴 수 없어서, 그 길이 기대는 `setAxis` 의 데드존 계약을
+`InputEdgeCaseTest.GamepadTriggerDeadzoneAppliesInSetAxis` 로 붙잡았다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (1-0g 결함 수정 ① — 직렬화 이관)
 
