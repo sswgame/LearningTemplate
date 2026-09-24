@@ -48,12 +48,7 @@ namespace sw
     ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
     {
         std::scoped_lock<mutex> lock( other._fileMutex );
-        _pFileHandle       = other._pFileHandle;
-        _packFilePath      = std::move( other._packFilePath );
-        _header            = other._header;
-        _mapEntry          = std::move( other._mapEntry );
-        _stringPoolBytes   = std::move( other._stringPoolBytes );
-        other._pFileHandle = nullptr;
+        takeFromLocked( other );
     }
 
     ResourcePackReader& ResourcePackReader::operator=( ResourcePackReader&& other ) noexcept
@@ -62,14 +57,19 @@ namespace sw
         {
             std::scoped_lock<mutex, mutex> lock( _fileMutex, other._fileMutex );
             close();
-            _pFileHandle       = other._pFileHandle;
-            _packFilePath      = std::move( other._packFilePath );
-            _header            = other._header;
-            _mapEntry          = std::move( other._mapEntry );
-            _stringPoolBytes   = std::move( other._stringPoolBytes );
-            other._pFileHandle = nullptr;
+            takeFromLocked( other );
         }
         return *this;
+    }
+
+    void ResourcePackReader::takeFromLocked( ResourcePackReader& other )
+    {
+        _pFileHandle       = other._pFileHandle;
+        _packFilePath      = std::move( other._packFilePath );
+        _header            = other._header;
+        _mapEntry          = std::move( other._mapEntry );
+        _stringPoolBytes   = std::move( other._stringPoolBytes );
+        other._pFileHandle = nullptr;
     }
 
     bool ResourcePackReader::open( string_view packFilePath )

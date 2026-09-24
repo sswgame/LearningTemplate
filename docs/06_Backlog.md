@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object 정리
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource 정리
 
 ---
 
@@ -1664,6 +1664,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (Resource 정리 — 걷을 것은 이동 두 벌 하나뿐이었다)
+
+Object 와 같은 방법으로 봤다. 사용처 0 인 공개 함수(`AssetDatabase::refreshFolder` · `registerXmlMigrator` · `usesCookedBinaryAtRuntime` ·
+`ResourcePackManager::getMountedPackCount` · `ResourcePackReader::getHeader`)는 Unity `AssetDatabase.Refresh` · UE 리다이렉트 ·
+`FPlatformProperties::RequiresCookedData()` · Pak 마운트 조회 자리라 남겼다. 쓰기만 하는 칸으로 잡힌 `DdsImageData::_bitsPerPixel` 은 공개 결과
+구조체가 이미지를 설명하는 값이라 남겼다.
+- **`ResourcePackReader` 의 이동 생성자 · 이동 대입** 이 같은 여섯 줄(파일 · 경로 · 헤더 · 인덱스 · 문자열 풀 넘겨받기)을 각자 들고 있었다 →
+  `takeFromLocked`. 멤버 하나를 더하면 두 곳을 다 고쳐야 했다. 엔진은 리더를 `unique_ptr` 로 들어 이동을 지나는 코드도 테스트도 없었으므로
+  `ResourcePackTest.MovedReaderKeepsTheOpenPack` 을 더했다(옮긴 쪽은 팩을 그대로 읽고, 원래 쪽은 닫히고, 이동 대입은 받는 쪽의 팩을 먼저 닫는다 —
+  몸통에서 인덱스 넘기기를 빼는 돌연변이에 진다).
+- 팩 마운트 때 한 번 지나는 경로라 성능 측정은 하지 않았다.
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7.
 
 ### 2026-09-24 (Object 정리 — 쓰기만 하던 칸 셋 · 글자 그대로 같던 블록 넷, 공개 API 는 그대로)
 

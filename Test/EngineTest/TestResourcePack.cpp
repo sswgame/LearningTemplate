@@ -997,3 +997,52 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
     sw::ResourcePackReader reader;
     SW_EXPECT_TRUE( reader.open( packPath ) );
 }
+
+/**
+ * @brief [ResourcePackTest] 리더를 옮기면(이동 생성 · 이동 대입) 연 팩이 통째로 따라가고, 원래 리더는 닫힌다
+ * @details 엔진은 리더를 `unique_ptr` 로 들어서 이동 연산을 지나는 코드가 없다. 이동 생성과 이동 대입은 같은 몸통
+ *          (`takeFromLocked`)을 쓰는데, 예전엔 여섯 줄을 각자 들고 있어 멤버 하나를 더하면 두 곳을 다 고쳐야 했다.
+ *          이동 대입은 받는 쪽이 열어 둔 팩을 먼저 닫아야 한다.
+ */
+SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
+{
+    const sw::string packPathA = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_move_a.pack" );
+    const sw::string packPathB = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_move_b.pack" );
+
+    const sw::vector<sw::pair<sw::string, sw::string>> listFileA = {
+        { "data/a.txt", "pack-a" }
+    };
+    const sw::vector<sw::pair<sw::string, sw::string>> listFileB = {
+        {"data/b.txt", "pack-b"},
+        {"data/c.txt", "pack-c"}
+    };
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPathA, 0, sw::PackCompressionType::None, listFileA, false ) );
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPathB, 0, sw::PackCompressionType::None, listFileB, false ) );
+
+    sw::ResourcePackReader source;
+    SW_ASSERT_TRUE( source.open( packPathA ) );
+
+    // 이동 생성 — 팩 A 가 옮겨 가고 원래 리더는 닫힌다.
+    sw::ResourcePackReader moved( std::move( source ) );
+    SW_EXPECT_FALSE( source.isOpen() );
+    SW_EXPECT_TRUE( moved.isOpen() );
+    SW_EXPECT_EQUAL( 1u, moved.getFileCount() );
+    sw::string text;
+    SW_ASSERT_TRUE( moved.readTextFile( "data/a.txt", text ) );
+    SW_EXPECT_EQUAL( text, "pack-a" );
+
+    // 이동 대입 — 받는 쪽이 열어 둔 팩 B 는 닫히고 팩 A 로 바뀐다.
+    sw::ResourcePackReader target;
+    SW_ASSERT_TRUE( target.open( packPathB ) );
+    target = std::move( moved );
+    SW_EXPECT_FALSE( moved.isOpen() );
+    SW_EXPECT_TRUE( target.isOpen() );
+    SW_EXPECT_EQUAL( 1u, target.getFileCount() );
+    SW_EXPECT_TRUE( target.hasFile( "data/a.txt" ) );
+    SW_EXPECT_FALSE( target.hasFile( "data/b.txt" ) );
+    SW_EXPECT_EQUAL( packPathA, target.getPackPath() );
+
+    target.close();
+    sw::FileUtil::removeFile( packPathA );
+    sw::FileUtil::removeFile( packPathB );
+}
