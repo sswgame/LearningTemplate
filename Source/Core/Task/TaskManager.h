@@ -155,7 +155,10 @@ namespace sw
          *          몇 us 였습니다. 모두 넣은 뒤 `wakeSleepingWorkers` 를 한 번만 부르십시오. 그것이 세대를 올리고 잠든 워커를 깨웁니다.
          */
         void submitWithoutWake( const TaskHandle& handle );
-        /** @brief 잠든 워커를 모두 깨웁니다. 태스크 수를 아는 쪽은 아래 오버로드로 **필요한 수만큼만** 깨우십시오. */
+        /**
+         * @brief 부른 순간 잠들어 있던 워커를 모두 깨웁니다. 태스크 수를 아는 쪽은 아래 오버로드로 **필요한 수만큼만** 깨우십시오.
+         * @details 부른 뒤에 잠드는 워커는 깨우지 않습니다. 그 워커는 잠들기 전에 큐를 한 번 더 보므로 넣은 일감을 놓치지 않습니다.
+         */
         void wakeSleepingWorkers();
         /**
          * @brief 잠든 워커 중 @p wantedCount 개만 깨웁니다. `submitWithoutWake` 로 모두 넣은 뒤 부릅니다.

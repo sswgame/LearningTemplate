@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함
 
 ---
 
@@ -867,6 +867,7 @@ App 벤치는 **번갈아** 잰다 (Release · DX12 · 큐브 8000 · 1000 프�
 - **병렬 본문 안에서 만든 태스크의 부모는 청크가 아니라 바깥 태스크(없으면 없음)다.** 예전엔 청크 노드가 부모라 그룹이 그 자식까지
   기다렸다. 지금 청크는 노드가 아니다 — 파이어-앤-포겟이 그룹을 붙들지 않는다. 엔진에는 그런 자리가 없다.
 - 리눅스 `futex` 경로는 이 PC 에서 못 돌린다(WSL 없음) — CI 가 본다. 컴파일 오류가 나면 `Futex.cpp` 의 `SW_PLATFORM_LINUX` 분기다.
+  (2026-09-24: WSL 이 있는 PC 에서 돌려 모두 깨우기가 다시 잠든 워커를 쫓는 결함을 찾았다. 3절 2026-09-24 참고.)
 
 검증: Debug 경고 0 · 린트 게이트 전부 OK · nogpu 7/7 · hostgpu 2/2, Shipping nogpu 7/7 · hostgpu 2/2, ASan nogpu 7/7. CoreTest 는 `TaskManagerTest` 14 + `TaskManagerBenchTest` 4 다.
 
@@ -1612,6 +1613,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 - **GPU 는 없다.** `/dev/dxg` 와 WSLg 가 있어도 Vulkan 은 `llvmpipe`(type=CPU) 하나만 잡히고,
   GL 은 `ARB_gl_spirv` 가 없어 백엔드가 스스로 빠진다. 즉 WSL 에서 도는 렌더링 테스트는
   소프트웨어 래스터라이저 위의 것이다 — API 오용은 잡지만 드라이버 거동은 검증하지 못한다.
+- **sccache 서버 포트(4226)를 Windows 와 나눠 쓴다.** WSL 빌드가 띄운 서버가 살아 있는 동안(유휴 10분) Windows 빌드를
+  돌리면, Windows 클라이언트가 localhost 로 그 리눅스 서버에 붙어 모든 컴파일이 `failed to fill whole buffer` 로 깨진다
+  (코드 오류처럼 보인다). WSL 쪽에서 `export SCCACHE_SERVER_PORT=4227` 로 포트를 가르거나, 번갈아 쓸 때 상대 서버를
+  `sccache --stop-server` 로 내린다(2026-09-24).
+- **gdb 가 없다**(설치에 sudo 가 든다). 멈춘 프로세스를 들여다본 방법은 3절 2026-09-24 의 "모두 깨우기" 항목에 적었다.
+- **Vulkan(lavapipe)의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`(-1000000000)로 진다.** 앱 스모크
+  (`AppTest_HostOnly`)가 첫 프레임에서 죽는다. 2026-09-24 에 43번 중 3번이었고 셋 다 30분 안에 몰렸다(그 뒤 33번은 0).
+  패치 없는 HEAD 는 24번 중 0 이었지만, 그날 바꾼 코드는 창 · 스왑체인 · 획득 경로를 건드리지 않아 환경 탓으로 판단했다
+  (확정은 못 했다). 다시 보이면 기준선과 번갈아 돌려 가를 것. App 로그는 `build/WSL-Debug/Bin/Saved/Logs` 에 실행마다 남는다.
 - 곁가지: `SetupVcpkg.py --install` 은 `scripts/buildsystems/vcpkg.cmake` 만 보고 "찾았다" 고
   끝낸다. 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg.exe` 만 있고 `vcpkg` 바이너리가
   없는데도 성공을 보고한다(툴체인이 알아서 부트스트랩하므로 치명적이진 않다).
@@ -1654,6 +1664,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (모두 깨우기가 다시 잠든 워커를 쫓았다 — WSL 에서 호출 한 번이 1~90 초)
+
+**증상.** WSL-Debug 의 `CoreTest` 가 CTest 타임아웃(30초)에 걸렸다. `TaskManagerBenchTest.SmallTaskThroughput` 이 1~90 초로
+들쭉날쭉했다. 라운드 시간(제출 → 깨우기 → `waitAll( 5000 )`)이 5초를 넘기고도 성공으로 끝나서(4096 개는 모두 돌았다)
+처음에는 `waitAll` 의 시간 상한을 의심했다.
+
+**원인.** 대기가 아니라 그 앞의 `wakeSleepingWorkers()`(모두 깨우기)였다. 루프가 워커 하나를 깨울 때마다
+`mask = previous & ~bit` 로 유휴 마스크를 새로 채워, 부른 뒤에 다시 잠든 워커까지 쫓았다. 할 일 없이 깨어난 워커는
+2 us 스핀 뒤 곧바로 다시 잠드는데, WSL 에서는 futex 깨우기 한 번이 그보다 길어서 마스크가 비는 순간이 좀처럼 오지
+않았다. 태스크는 2 ms 만에 끝났고, 제출한 스레드만 그동안 깨우기 시스템 호출을 돌았다(멈춘 동안 그 스레드의 CPU 시간은
+93% 가 커널이었고, 스택은 `wakeSleepingWorkers → unparkSlot → Futex::wakeOne` 이었다).
+
+**고친 것.** 처음 읽은 마스크 안에서만 고른다(`mask &= previous & ~bit`). 부른 뒤에 잠드는 워커는 잠들기 전에 큐를 한 번
+더 보므로(Dekker 짝) 깨울 필요가 없다. 개수를 정해 깨우는 `wakeSleepingWorkers( n )` 은 원래도 n 번에서 끝났지만, 다시
+잠든 낮은 번호 워커를 거듭 깨워 서로 다른 워커를 덜 깨울 수 있었다. 이제 한 워커는 한 번만 깨운다. 엔진 런타임에서 모두
+깨우기를 부르는 곳은 `shutdown` 뿐이라(워커가 `_bStop` 을 보고 나가므로 쫓을 것이 없다) 게임에는 드러나지 않았다.
+
+**테스트.** `TaskManagerTest.WakeAllDoesNotChaseWorkersThatSleepAgain` 은 워커 12 개로 일감 없이 모두 깨우기를 2000 번
+부르고 5초 안인지 본다. WSL 에서 옛 코드는 세 번 중 두 번 첫 호출 하나에 14 · 35 초가 걸려 졌고, 고친 뒤에는 여섯 번 모두
+49~330 ms 였다. 벤치는 여덟 번 모두 약 50 ms 다(옛 코드는 1~90 초).
+
+**찾은 방법(다음에도 쓸 것).** WSL 에는 gdb 가 없다(설치에 sudo 가 든다). 먼저 `/proc/<pid>/task/*/stat` 의 utime · stime 을
+두 번 떠서 어느 스레드가 사용자 공간과 커널 중 어디서 도는지 갈랐다. 그다음 테스트에 SIGUSR1 처리기
+(`backtrace_symbols_fd`)를 임시로 넣고, 도는 스레드마다 `tgkill` 로 신호를 보내 스택을 떴다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (리눅스에서만 나던 Core 경고 둘)
 

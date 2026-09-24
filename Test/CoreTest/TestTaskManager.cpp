@@ -34,6 +34,15 @@ namespace
     /** @brief 누수 탐침이 한 번에 붙드는 스테이지 수. 풀이 재사용하지 못하게 전부 동시에 쥔다. */
     constexpr uint32 kLeakProbeStageCount = 32;
 
+    /** @brief 모두 깨우기 탐침의 워커 수. 워커가 많을수록 다시 잠든 워커를 쫓던 예전 결함이 잘 드러난다. */
+    constexpr uint32 kWakeProbeWorkerCount = 12;
+
+    /** @brief 모두 깨우기 탐침이 부르는 횟수. */
+    constexpr uint32 kWakeProbeCallCount = 2000;
+
+    /** @brief 모두 깨우기 탐침의 전체 시간 상한(밀리초). 정상 동작은 WSL 에서도 수백 밀리초 안에 끝난다. */
+    constexpr int64 kWakeProbeLimitMilli = 5000;
+
     /**
      * @brief 매니저를 하나 세워 스테이지를 @p stageCount 개 동시에 쥐었다 놓고 부숩니다.
      * @details 동시에 쥐는 것이 핵심이다 — 하나씩 쥐었다 놓으면 풀이 같은 노드를 돌려써서 한 개만 난다.
@@ -584,5 +593,33 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
 
     manager.waitStage( stage );
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 모두 깨우기는 부른 순간 잠들어 있던 워커만 깨우고 돌아온다
+ * @details 할 일 없이 깨어난 워커는 스핀(2 us) 뒤 곧바로 다시 잠든다. 예전 루프는 워커 하나를 깨울 때마다 유휴 마스크를
+ *          새로 읽어, 그렇게 다시 잠든 워커를 또 깨웠다. 깨우기 시스템 호출이 그 스핀보다 느린 곳(WSL)에서는 마스크가 비는
+ *          순간이 좀처럼 오지 않아 호출 한 번이 1~90 초를 돌았다(`TaskManagerBenchTest.SmallTaskThroughput` 이 CTest
+ *          타임아웃에 걸린 이유다). 일감 없이 여러 번 불러 전체 시간이 상한 안인지 본다. 상한을 넘으면 그 자리에서 멈춘다.
+ */
+SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWakeProbeWorkerCount ) );
+
+    const auto start        = std::chrono::steady_clock::now();
+    int64      elapsedMilli = 0;
+    uint32     callCount    = 0;
+    for ( ; callCount < kWakeProbeCallCount && elapsedMilli < kWakeProbeLimitMilli; ++callCount )
+    {
+        manager.wakeSleepingWorkers();
+        elapsedMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+    }
+    SW_EXPECT_TRUE_MSG( elapsedMilli < kWakeProbeLimitMilli,
+                        ( sw::string( "모두 깨우기 " ) + sw::to_string( callCount ) + " 번에 " + sw::to_string( elapsedMilli ) +
+                          " ms 가 걸렸다 — 부른 뒤에 다시 잠든 워커를 쫓고 있다" )
+                            .c_str() );
+
     manager.shutdown();
 }

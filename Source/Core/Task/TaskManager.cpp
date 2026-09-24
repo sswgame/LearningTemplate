@@ -1183,7 +1183,10 @@ namespace sw
                 unparkSlot( workerId ); // 워커의 대기자 슬롯 번호는 곧 워커 번호다
                 ++wokenCount;
             }
-            mask = previous & ~bit;
+            // 처음 읽은 마스크 안에서만 고른다(남이 먼저 내린 비트는 뺀다). 부른 뒤에 잠든 워커는 잠들기 전에 큐를 한 번 더 보므로
+            // 깨울 필요가 없다. 예전에는 `previous` 로 마스크를 새로 채워 그 워커까지 쫓았다. 할 일 없이 깨어난 워커는 스핀(2 us)
+            // 뒤 곧바로 다시 잠들어서, 깨우기 시스템 호출이 그보다 느린 곳(WSL)에서는 모두 깨우기 한 번이 1~90 초를 돌았다.
+            mask &= previous & ~bit;
         }
         if ( wokenCount > 0 )
             _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
