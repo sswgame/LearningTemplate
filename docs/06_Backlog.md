@@ -1665,6 +1665,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (CI — macOS 잡을 뺐다, 지금은 지원하지 않는다)
+
+**왜.** macOS 는 지금 지원 대상이 아니다. `Build macOS Debug (Clang)` 은 빌드만 하는(`skipTests`) 잡이었는데 그 전부터 Configure 에서 지고 있어
+실행마다 CI 를 빨갛게 만들었고, 러너 준비(brew)로 시간만 들었다.
+
+**한 것.** `.github/workflows/ci.yml` 에서 macOS 매트릭스 항목 · `Setup macOS toolchain & dependencies` 단계 · macOS 만 쓰던 `skipTests`
+장치를 걷고, 워크플로 이름을 `CI (Windows · Linux | clang-cl & Clang)` 로. **소스는 그대로다** — `Source/**/Mac/**` · `Platform/MacOS.cmake` ·
+`APPLE` 분기 · `arm64-osx` 트리플릿은 남긴다(다시 지원할 때의 출발점). 대신 그 코드를 컴파일하는 곳이 다시 없어졌으므로, 지원을 되살릴 때는
+이 잡부터 되돌리고 Configure 실패부터 본다.
+
 ### 2026-09-24 (핫 리로드 — 실패한 첫 등록이 올린 이미지를 내리지 않고 흘리던 것)
 
 **왜.** `registerModule` 은 prepare → commit 을 지난 뒤 onAfterReload 가 그래프를 막으면(onAfter 가 poison 하거나 ⑥ 의 가드가 결함을 잡으면)
