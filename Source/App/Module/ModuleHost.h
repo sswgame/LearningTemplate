@@ -170,6 +170,13 @@ namespace sw
          * @param listModuleName 이번 배치에서 교체될 모듈 이름들
          */
         void onBeforeCommitBatch( const vector<string>& listModuleName );
+        /**
+         * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 표를 **모듈을 부르지 않고** 버립니다.
+         * @param faultCode 예외 코드(Windows) · 시그널 번호(리눅스)
+         */
+        void onEditorReloadFault( uint32 faultCode );
+        /** @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 표를 모듈을 부르지 않고 버립니다. */
+        void onGameReloadFault( uint32 faultCode );
 
         /**
          * @brief 모듈 인스턴스를 안전하게 내립니다(워커 비우기 → 상태 보존 → 파괴).

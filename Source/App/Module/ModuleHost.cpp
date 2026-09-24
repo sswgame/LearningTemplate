@@ -143,6 +143,8 @@ namespace sw
                                                         SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeEditorReload, this ) );
                 _pLiveReloadManager->setOnAfterReload( config::kTargetEditorModule,
                                                        SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterEditorReload, this ) );
+                _pLiveReloadManager->setOnReloadFault( config::kTargetEditorModule,
+                                                       SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onEditorReloadFault, this ) );
                 if ( _pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
                     SW_LOG_ERROR( "Editor Module 로드에 실패했습니다." );
@@ -182,6 +184,7 @@ namespace sw
 
                 _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
                 _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
+                _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
 
                 if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
                 {
@@ -456,6 +459,24 @@ namespace sw
                 poisonLiveReload( "task fencing timeout before unload" );
             }
         }
+    }
+
+    void ModuleHost::onEditorReloadFault( uint32 faultCode )
+    {
+        // 반쯤 만든 인스턴스를 부수는 코드도 결함을 낸 그 모듈이다. 부르지 않고 잊는다(새는 것은 재시작이 치운다).
+        SW_LOG_ERROR( "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
+                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+        _editor    = nullptr;
+        _editorApi = {};
+    }
+
+    void ModuleHost::onGameReloadFault( uint32 faultCode )
+    {
+        SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off until restart",
+                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+        _game    = nullptr;
+        _gameApi = {};
+        _listGameSavedState.clear();
     }
 
     void ModuleHost::poisonLiveReload( const utf8* pReason )

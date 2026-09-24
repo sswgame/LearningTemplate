@@ -149,6 +149,9 @@ namespace sw
             return false;
         }
 
+        // 컴파일러가 널임을 증명하지 못하게 전역에 둔다(증명하면 쓰기를 트랩 명령으로 바꾼다).
+        uintptr_t s_reloadFaultAddress{ 0 };
+
         /** @brief 델리게이트의 스텁 하나만 담는 범위로 `engine::releaseModuleCode` 를 부릅니다. */
         template <typename TDelegate>
         uint32 releaseStubOf( const TDelegate& delegate )
@@ -547,6 +550,47 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 
     // 뗀 뒤에 불린 것은 없다 — 닫기 처리기가 떼기 전에 한 번 불렸을 뿐이다.
     SW_EXPECT_EQUAL( 4000, sw::s_sweepProbeValue );
+}
+
+/**
+ * @brief [ArchitectureTest] 새 모듈이 onAfterReload 안에서 결함을 내면 프로세스가 아니라 그 모듈이 멈춘다
+ * @details onAfterReload 는 새 이미지의 코드가 처음 도는 자리다(ModuleHost 는 여기서 API 를 바인딩하고 인스턴스를 만든다). 거기서
+ *          접근 위반이 나면 예전에는 에디터째 내려갔다. 이제는 그래프를 막고 결함 콜백을 부른다 — ModuleHost 는 그 콜백에서 받은 것을
+ *          모듈을 부르지 않고 버린다. 여기서는 콜백 자리에 일부러 널 쓰기를 둔다.
+ */
+SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess )
+{
+    const sw::string gamePath = sw::modulePath( "SWGame" );
+    if ( sw::FileUtil::fileExists( gamePath ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+    SW_TEST_DEFENSIVE_SCOPE( "a fault in onAfterReload is contained" );
+
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.registerModule( "SWGame" ) );
+
+    bool   bFaultReported{ false };
+    uint32 reportedFaultCode{ 0 };
+    manager.setOnReloadFault( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnReloadFaultDelegate, [&bFaultReported, &reportedFaultCode]( uint32 faultCode )
+    {
+        bFaultReported    = true;
+        reportedFaultCode = faultCode;
+    } ) );
+    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, []( void* )
+    {
+        *reinterpret_cast<volatile int32*>( sw::s_reloadFaultAddress ) = 7;
+    } ) );
+
+    manager.triggerReload( "SWGame" );
+    for ( int32 stepIndex = 0; stepIndex < 100 && bFaultReported == false; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+    }
+
+    SW_EXPECT_TRUE( bFaultReported );
+    SW_EXPECT_TRUE( reportedFaultCode != 0 );
+    SW_EXPECT_TRUE( manager.isGraphBroken() );
+    manager.shutdown();
 }
 
 /**

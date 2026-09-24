@@ -1665,6 +1665,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ⑥ — 새 모듈이 리로드 직후 초기화에서 죽어도 에디터는 산다)
+
+**왜.** onAfterReload 는 새 이미지의 코드가 처음 도는 자리다(ModuleHost 가 API 를 바인딩하고 게임 · 에디터 인스턴스를 만들고 상태를
+되돌린다). 방금 고친 코드가 거기서 접근 위반을 내면 에디터 프로세스째 내려가 저장하지 않은 씬을 잃었다.
+
+**한 것.**
+- **`App/Module/ModuleCallGuard`**(Dev 전용) — 한 호출을 하드웨어 예외로부터 지킨다. Windows 는 SEH(`__try/__except`. 거르개는 접근 위반 ·
+  잘못된 명령 · 0 나누기 같은 결함만 받고 중단점(assert) · 스택 넘침 · C++ 예외는 흘려 보낸다), 리눅스는 결함 시그널 넷 + `sigsetjmp`
+  (겹친 호출은 바깥만 설치 · 해제하고, 지키는 호출 밖의 결함은 원래 처리기 — 크래시 처리기 — 로 돌려보낸다). Windows 크래시 처리기는
+  `SetUnhandledExceptionFilter` 라 `__except` 가 먼저 받는다.
+- **`LiveReloadManager`** 가 commit 의 onAfterReload 를 이것으로 부른다. 결함이 나면 그래프를 막고 새 콜백 `setOnReloadFault` 를 부른다.
+- **`ModuleHost::onEditorReloadFault` · `onGameReloadFault`** — 인스턴스와 API 표를 **모듈을 부르지 않고** 버린다(반쯤 만든 인스턴스를
+  부수는 코드도 그 모듈이다). 그래서 종료 경로의 onBeforeReload 도 그 모듈을 부르지 않는다.
+- **테스트** — `ModuleCallGuardTest` 둘(결함을 가두고 다음 호출은 정상 · 겹친 가드가 각자 제 결함을 받는다),
+  `ArchitectureTest.FaultInOnAfterReloadStopsTheModuleNotTheProcess`(onAfterReload 자리에 널 쓰기 → 결함 콜백 · 그래프 막힘 · 프로세스 생존).
+  가드를 거치지 않는 돌연변이에서 SmokeTest 가 세그폴트로 죽는다. ASan 에서도 돈다.
+
+**한계(헤더에도 적었다).** 잡은 뒤는 온전하지 않다 — 안쪽 프레임의 소멸자가 돌지 않고(쥔 락 · 할당이 남는다) 모듈 자료가 반쯤이다.
+**저장하고 재시작할 시간을 버는 장치**다. 모듈 로드(정적 초기화)는 지키지 않는다 — 로더 락을 쥔 채 빠져나오면 다음 로드가 멈춘다. 리로드
+뒤 매 프레임의 틱도 지키지 않는다(망가진 상태 위에서 계속 돌게 된다).
+
+**리눅스는 CI 몫이다.** 시그널 경로는 이 PC 에서 돌려 보지 못했다(WSL 없음). ①②④⑤ 의 리눅스 경로(표식 심볼 · SONAME · `dl_iterate_phdr`
+범위 · 도장)와 함께 푸시 뒤 리눅스 CI 의 SmokeTest 가 판정한다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest `ArchitectureTest` 20/20 · `ModuleCallGuardTest` 2/2.
+
+**핫 리로드에 남은 후보.**
+- 큐에 쌓인 이벤트가 모듈 vtable 을 들고 있는 경우(`EventDispatcher` 큐 — 리로드 전에 비우는지 확인).
+- 다른 엔진 등록부의 모듈 콜백(InputManager · ActionMap 의 델리게이트) — ④ 의 `releaseModuleCode` 에 더할 자리.
+- 파일 대화 상자 결과의 범위 떼기(④ 에서 뺀 이유 참고).
+
 ### 2026-09-24 (핫 리로드 ⑤ — 모듈이 돌고 있는 엔진과 같은 헤더로 빌드됐는지 올리기 전에 본다)
 
 **왜.** 핫 리로드는 모듈만 갈아 끼우고 Engine 은 그대로다. 앱이 도는 중에 Core · Engine 헤더를 고치고 빌드하면 `Engine.dll` 은 잠겨 다시

@@ -38,8 +38,10 @@ namespace sw
     class LiveReloadManager final : public IModuleHandleProvider
     {
     public:
-        using OnBeforeReloadDelegate      = Delegate<void()>;
-        using OnAfterReloadDelegate       = Delegate<void( void* pLibraryModule )>;
+        using OnBeforeReloadDelegate = Delegate<void()>;
+        using OnAfterReloadDelegate  = Delegate<void( void* pLibraryModule )>;
+        /** @brief onAfterReload 안에서 하드웨어 예외가 났을 때 불립니다. 인자는 예외 코드(Windows) · 시그널 번호(리눅스)입니다. */
+        using OnReloadFaultDelegate       = Delegate<void( uint32 faultCode )>;
         using OnBeforeCommitBatchDelegate = Delegate<void( const vector<string>& listModuleName )>;
         using DrainWorkersDelegate        = Delegate<void()>;
 
@@ -88,6 +90,13 @@ namespace sw
 
         /** @brief 모듈이 리로드된 직후에 호출될 델리게이트를 설정합니다. */
         void setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate );
+        /**
+         * @brief 새 모듈 코드가 onAfterReload 안에서 결함(접근 위반 등)을 냈을 때 부를 콜백을 등록합니다.
+         * @details onAfterReload 는 새 이미지의 코드가 처음 도는 자리(API 바인딩 · 인스턴스 생성 · 상태 복원)라 `ModuleCallGuard` 로
+         *          지킵니다. 결함이 나면 그래프를 막고 이 콜백을 부릅니다 — 부르는 쪽은 그 모듈에서 받은 것(인스턴스 · API 표)을 **그 모듈을
+         *          부르지 않고** 버려야 합니다. 반쯤 만들어진 인스턴스를 부수는 코드도 같은 모듈이기 때문입니다.
+         */
+        void setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate );
 
         /**
          * @brief 연쇄 교체 대상이 모두 prepare 된 뒤, 첫 commit 직전에 한 번 불립니다.
@@ -227,6 +236,7 @@ namespace sw
         {
             OnBeforeReloadDelegate                     _onBeforeReload;
             OnAfterReloadDelegate                      _onAfterReload;
+            OnReloadFaultDelegate                      _onReloadFault;
             string                                     _moduleName;
             string                                     _originalModulePath;
             string                                     _tempModulePath;
