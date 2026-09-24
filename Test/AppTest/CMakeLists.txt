@@ -16,7 +16,7 @@ sw_addTestExecutable(AppTest
 	SOURCES
 		TestAppSmoke.cpp
 		TestFrameTimeline.cpp
-		${CMAKE_SOURCE_DIR}/Source/App/Frame/FrameTimeline.cpp
+		${CMAKE_SOURCE_DIR}/Source/App/FrameTimeline.cpp
 	LIBS
 		Engine
 	LABELS

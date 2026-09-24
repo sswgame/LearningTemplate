@@ -2,13 +2,11 @@
 
 #include "App/Module/LiveReloadManager.h"
 
-#include "App/Module/ModuleCallGuard.h"
-#include "App/Module/ModuleImagePatch.h"
-
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -25,6 +23,11 @@
     #include "Core/File/Linux/LinuxFileWatcher.h"
 #elif defined( SW_PLATFORM_MACOS )
     #include "Core/File/Mac/MacFileWatcher.h"
+#endif
+
+#if defined( SW_PLATFORM_LINUX )
+    #include <csetjmp>
+    #include <csignal>
 #endif
 
 namespace sw
@@ -181,6 +184,257 @@ namespace sw
                         FileUtil::removeFile( filePath );
                 }
             }
+        };
+
+        struct ModuleImagePatchInternal
+        {
+            static constexpr uint64 kElfHeaderSize     = 64;
+            static constexpr uint64 kProgramHeaderSize = 56;
+            static constexpr uint64 kDynamicEntrySize  = 16;
+            static constexpr uint32 kSegmentLoad       = 1;  ///< PT_LOAD
+            static constexpr uint32 kSegmentDynamic    = 2;  ///< PT_DYNAMIC
+            static constexpr int64  kTagNull           = 0;  ///< DT_NULL
+            static constexpr int64  kTagStringTable    = 5;  ///< DT_STRTAB
+            static constexpr int64  kTagStringSize     = 10; ///< DT_STRSZ
+            static constexpr uint32 kGenerationDigits  = 4;
+            static constexpr uint32 kLibPrefixLength   = 3; ///< "lib"
+            // 헤더 안 필드 위치(ELF64). 이름을 붙여 두면 "왜 0x38 인가" 를 표준 문서와 대조할 수 있다.
+            static constexpr uint64 kHeaderProgramOffset = 0x20; ///< e_phoff
+            static constexpr uint64 kHeaderProgramSize   = 0x36; ///< e_phentsize
+            static constexpr uint64 kHeaderProgramCount  = 0x38; ///< e_phnum
+            static constexpr uint64 kProgramFileOffset   = 8;    ///< p_offset
+            static constexpr uint64 kProgramAddress      = 16;   ///< p_vaddr
+            static constexpr uint64 kProgramFileSize     = 32;   ///< p_filesz
+            static constexpr uint64 kDynamicValue        = 8;    ///< d_val
+
+            /** @brief 동적 섹션과 문자열 표의 **파일 안** 위치입니다. */
+            struct DynamicView
+            {
+                uint64 _dynamicOffset{ 0 };
+                uint64 _dynamicSize{ 0 };
+                uint64 _stringOffset{ 0 };
+                uint64 _stringSize{ 0 };
+            };
+
+            template <typename T>
+            static bool readAt( const vector<uint8>& bytes, uint64 offset, T& outValue )
+            {
+                if ( offset > bytes.size() || bytes.size() - offset < sizeof( T ) )
+                    return false;
+                Memory::copy( &outValue, bytes.data() + offset, sizeof( T ) );
+                return true;
+            }
+
+            /** @brief 가상 주소를 PT_LOAD 세그먼트로 파일 위치로 바꿉니다. 어느 세그먼트에도 없으면 false 입니다. */
+            static bool mapAddressToOffset( const vector<uint8>& bytes, uint64 programHeaderOffset, uint16 programHeaderCount,
+                                            uint16 programHeaderSize, uint64 address, uint64& outOffset )
+            {
+                for ( uint16 headerIndex = 0; headerIndex < programHeaderCount; ++headerIndex )
+                {
+                    const uint64 base = programHeaderOffset + static_cast<uint64>( headerIndex ) * programHeaderSize;
+                    uint32       type{ 0 };
+                    uint64       fileOffset{ 0 };
+                    uint64       virtualAddress{ 0 };
+                    uint64       fileSize{ 0 };
+                    const bool   bRead = readAt( bytes, base, type ) && readAt( bytes, base + kProgramFileOffset, fileOffset ) &&
+                                       readAt( bytes, base + kProgramAddress, virtualAddress ) && readAt( bytes, base + kProgramFileSize, fileSize );
+                    if ( bRead == false || type != kSegmentLoad )
+                        continue;
+                    if ( virtualAddress <= address && address < virtualAddress + fileSize )
+                    {
+                        outOffset = address - virtualAddress + fileOffset;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            /** @brief ELF64 LE 인지 보고, 동적 섹션과 문자열 표의 파일 위치를 찾습니다. */
+            static bool findDynamic( const vector<uint8>& bytes, DynamicView& outView )
+            {
+                if ( bytes.size() < kElfHeaderSize )
+                    return false;
+                const bool bElfMagic = bytes[0] == 0x7F && bytes[1] == 'E' && bytes[2] == 'L' && bytes[3] == 'F';
+                const bool b64Little = bytes[4] == 2 && bytes[5] == 1; // ELFCLASS64 · ELFDATA2LSB
+                if ( bElfMagic == false || b64Little == false )
+                    return false;
+
+                uint64     programHeaderOffset{ 0 };
+                uint16     programHeaderSize{ 0 };
+                uint16     programHeaderCount{ 0 };
+                const bool bHeaderRead = readAt( bytes, kHeaderProgramOffset, programHeaderOffset ) &&
+                                         readAt( bytes, kHeaderProgramSize, programHeaderSize ) &&
+                                         readAt( bytes, kHeaderProgramCount, programHeaderCount );
+                if ( bHeaderRead == false || programHeaderSize < kProgramHeaderSize )
+                    return false;
+
+                bool bFoundDynamic = false;
+                for ( uint16 headerIndex = 0; headerIndex < programHeaderCount; ++headerIndex )
+                {
+                    const uint64 base = programHeaderOffset + static_cast<uint64>( headerIndex ) * programHeaderSize;
+                    uint32       type{ 0 };
+                    if ( readAt( bytes, base, type ) == false || type != kSegmentDynamic )
+                        continue;
+                    bFoundDynamic = readAt( bytes, base + kProgramFileOffset, outView._dynamicOffset ) && readAt( bytes, base + kProgramFileSize, outView._dynamicSize );
+                    break;
+                }
+                if ( bFoundDynamic == false )
+                    return false;
+
+                uint64 stringAddress{ 0 };
+                bool   bHasStringTable = false;
+                for ( uint64 entryOffset = 0; entryOffset + kDynamicEntrySize <= outView._dynamicSize; entryOffset += kDynamicEntrySize )
+                {
+                    int64  tag{ 0 };
+                    uint64 value{ 0 };
+                    if ( readAt( bytes, outView._dynamicOffset + entryOffset, tag ) == false || readAt( bytes, outView._dynamicOffset + entryOffset + kDynamicValue, value ) == false )
+                        return false;
+                    if ( tag == kTagNull )
+                        break;
+                    if ( tag == kTagStringTable )
+                    {
+                        stringAddress   = value;
+                        bHasStringTable = true;
+                    }
+                    else if ( tag == kTagStringSize )
+                    {
+                        outView._stringSize = value;
+                    }
+                }
+                if ( bHasStringTable == false || outView._stringSize == 0 )
+                    return false;
+                if ( mapAddressToOffset( bytes, programHeaderOffset, programHeaderCount, programHeaderSize, stringAddress, outView._stringOffset ) == false )
+                    return false;
+                return outView._stringOffset <= bytes.size() && bytes.size() - outView._stringOffset >= outView._stringSize;
+            }
+
+            /** @brief 문자열 표 안의 @p index 에서 시작하는 NUL 로 끝나는 문자열입니다. 표를 벗어나면 빈 뷰입니다. */
+            static string_view stringAt( const vector<uint8>& bytes, const DynamicView& view, uint64 index )
+            {
+                if ( index >= view._stringSize )
+                    return {};
+                const utf8*  pBegin = reinterpret_cast<const utf8*>( bytes.data() + view._stringOffset + index );
+                const uint64 limit  = view._stringSize - index;
+                uint64       length{ 0 };
+                while ( length < limit && pBegin[length] != '\0' )
+                {
+                    ++length;
+                }
+                if ( length == limit )
+                    return {};
+                return string_view{ pBegin, static_cast<size_t>( length ) };
+            }
+        };
+
+        struct ModuleCallGuardInternal
+        {
+#if defined( SW_PLATFORM_WINDOWS )
+            /** @brief 잡는 예외 코드입니다. 코드가 **어긋나서** 나는 것만 고른다 — 중단점(assert) · 스택 넘침 · C++ 예외는 여기 없다. */
+            static constexpr uint32 kArrFaultCode[] = {
+                EXCEPTION_ACCESS_VIOLATION,
+                EXCEPTION_ILLEGAL_INSTRUCTION,
+                EXCEPTION_PRIV_INSTRUCTION,
+                EXCEPTION_INT_DIVIDE_BY_ZERO,
+                EXCEPTION_INT_OVERFLOW,
+                EXCEPTION_IN_PAGE_ERROR,
+                EXCEPTION_ARRAY_BOUNDS_EXCEEDED,
+                EXCEPTION_DATATYPE_MISALIGNMENT,
+            };
+
+            /** @brief `__except` 거르개입니다. 잡을 코드면 @p pOutFaultCode 에 적고 처리기로 들어갑니다. */
+            static int32 filterFault( uint32 exceptionCode, uint32* pOutFaultCode )
+            {
+                for ( const uint32 faultCode : kArrFaultCode )
+                {
+                    if ( faultCode == exceptionCode )
+                    {
+                        *pOutFaultCode = exceptionCode;
+                        return EXCEPTION_EXECUTE_HANDLER;
+                    }
+                }
+                return EXCEPTION_CONTINUE_SEARCH;
+            }
+
+            /** @brief `__try` 가 든 함수에는 해제가 필요한 객체를 둘 수 없다(`/EHsc`). 그래서 부르기만 한다. */
+            static bool invokeGuarded( const Delegate<void()>& call, uint32* pOutFaultCode )
+            {
+                __try
+                {
+                    call();
+                }
+                __except ( filterFault( GetExceptionCode(), pOutFaultCode ) )
+                {
+                    return false;
+                }
+                return true;
+            }
+#elif defined( SW_PLATFORM_LINUX )
+            static constexpr int32  kArrFaultSignal[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL };
+            static constexpr uint32 kFaultSignalCount = static_cast<uint32>( std::size( kArrFaultSignal ) );
+
+            static inline struct sigaction                   _s_arrPreviousAction[kFaultSignalCount]{}; ///< 설치 전의 처리기(크래시 처리기). 바깥 호출이 채운다
+            static inline int32                              _s_installDepth{ 0 };                      ///< 겹친 호출 깊이. 0 → 1 에서 설치, 1 → 0 에서 해제
+            static inline thread_local sigjmp_buf*           t_pJump{ nullptr };
+            static inline thread_local volatile sig_atomic_t t_faultSignal{ 0 };
+
+            /** @brief 결함 시그널 처리기입니다. 지키는 호출 안이면 그 자리로 뛰어 돌아가고, 아니면 원래 처리기로 돌려놓습니다. */
+            static void onFaultSignal( int32 signalNumber, siginfo_t*, void* )
+            {
+                if ( t_pJump == nullptr )
+                {
+                    // 지키는 호출 밖(다른 스레드)의 결함이다. 원래 처리기로 돌려놓고 돌아가면 같은 명령이 다시 결함을 내 그쪽이 받는다.
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
+                    {
+                        if ( kArrFaultSignal[signalIndex] == signalNumber )
+                            sigaction( signalNumber, &_s_arrPreviousAction[signalIndex], nullptr );
+                    }
+                    return;
+                }
+                t_faultSignal = signalNumber;
+                siglongjmp( *t_pJump, 1 );
+            }
+
+            /** @brief 처리기를 걸고 부른 뒤 되돌립니다. `sigsetjmp` 뒤에 바뀌어 `siglongjmp` 뒤에 읽히는 지역은 두지 않는다. */
+            static bool invokeGuarded( const Delegate<void()>& call, uint32* pOutFaultCode )
+            {
+                if ( _s_installDepth++ == 0 )
+                {
+                    struct sigaction action{};
+                    action.sa_sigaction = &onFaultSignal;
+                    action.sa_flags     = SA_SIGINFO;
+                    sigemptyset( &action.sa_mask );
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
+                    {
+                        sigaction( kArrFaultSignal[signalIndex], &action, &_s_arrPreviousAction[signalIndex] );
+                    }
+                }
+
+                sigjmp_buf        jump;
+                sigjmp_buf* const pOuterJump = t_pJump;
+                bool              bCompleted{ false };
+                t_pJump = &jump;
+                // 두 번째 인자가 1 이면 시그널 마스크도 저장해, 처리기에서 뛰어 나올 때 막힌 시그널이 풀린다.
+                if ( sigsetjmp( jump, 1 ) == 0 )
+                {
+                    call();
+                    bCompleted = true;
+                }
+                else
+                {
+                    *pOutFaultCode = static_cast<uint32>( t_faultSignal );
+                }
+                t_pJump = pOuterJump;
+
+                if ( --_s_installDepth == 0 )
+                {
+                    for ( uint32 signalIndex = 0; signalIndex < kFaultSignalCount; ++signalIndex )
+                    {
+                        sigaction( kArrFaultSignal[signalIndex], &_s_arrPreviousAction[signalIndex], nullptr );
+                    }
+                }
+                return bCompleted;
+            }
+#endif
         };
     } // namespace
 } // namespace sw
@@ -1117,4 +1371,121 @@ namespace sw
         return *this;
     }
 
+    // ------------------------------------------------------------------------------
+    // ModuleImagePatch
+    // ------------------------------------------------------------------------------
+    bool ModuleImagePatch::readSoname( const vector<uint8>& bytes, string& outSoname )
+    {
+        ModuleImagePatchInternal::DynamicView view{};
+        if ( ModuleImagePatchInternal::findDynamic( bytes, view ) == false )
+            return false;
+
+        for ( uint64 entryOffset = 0; entryOffset + ModuleImagePatchInternal::kDynamicEntrySize <= view._dynamicSize;
+              entryOffset += ModuleImagePatchInternal::kDynamicEntrySize )
+        {
+            int64  tag{ 0 };
+            uint64 value{ 0 };
+            ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset, tag );
+            ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
+            if ( tag == ModuleImagePatchInternal::kTagNull )
+                break;
+            if ( tag != kTagSoname )
+                continue;
+            const string_view soname = ModuleImagePatchInternal::stringAt( bytes, view, value );
+            if ( soname.empty() )
+                return false;
+            outSoname = string{ soname };
+            return true;
+        }
+        return false;
+    }
+
+    uint32 ModuleImagePatch::replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to )
+    {
+        if ( from.empty() || from.size() != to.size() )
+            return 0;
+
+        ModuleImagePatchInternal::DynamicView view{};
+        if ( ModuleImagePatchInternal::findDynamic( inoutBytes, view ) == false )
+            return 0;
+
+        uint32 replacedCount{ 0 };
+        for ( uint64 entryOffset = 0; entryOffset + ModuleImagePatchInternal::kDynamicEntrySize <= view._dynamicSize;
+              entryOffset += ModuleImagePatchInternal::kDynamicEntrySize )
+        {
+            int64  entryTag{ 0 };
+            uint64 value{ 0 };
+            ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset, entryTag );
+            ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
+            if ( entryTag == ModuleImagePatchInternal::kTagNull )
+                break;
+            if ( entryTag != tag || ModuleImagePatchInternal::stringAt( inoutBytes, view, value ) != from )
+                continue;
+            Memory::copy( inoutBytes.data() + view._stringOffset + value, to.data(), to.size() );
+            ++replacedCount;
+        }
+        return replacedCount;
+    }
+
+    bool ModuleImagePatch::findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp )
+    {
+        const string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
+        const string_view marker{ kEngineAbiStampMarker };
+        // 표식 문자열 자체가 다른 자리(예: 이 함수가 든 모듈의 상수)에도 있을 수 있다. 뒤에 16진 40 글자가 온전히 붙은 것을 찾을 때까지 넘긴다.
+        for ( size_t markerPos = view.find( marker ); markerPos != string_view::npos; markerPos = view.find( marker, markerPos + 1 ) )
+        {
+            if ( view.size() - markerPos < marker.size() + kEngineAbiStampDigits )
+                return false;
+            const string_view digits = view.substr( markerPos + marker.size(), kEngineAbiStampDigits );
+            bool              bAllHex{ true };
+            for ( const utf8 digit : digits )
+            {
+                const bool bHexDigit = ( '0' <= digit && digit <= '9' ) || ( 'a' <= digit && digit <= 'f' );
+                if ( bHexDigit == false )
+                {
+                    bAllHex = false;
+                    break;
+                }
+            }
+            if ( bAllHex == false )
+                continue;
+            outStamp = string{ view.substr( markerPos, marker.size() + kEngineAbiStampDigits ) };
+            return true;
+        }
+        return false;
+    }
+
+    string ModuleImagePatch::makeGenerationName( string_view soname, uint32 generation )
+    {
+        const size_t extensionPos = soname.find( ".so" );
+        if ( extensionPos == string_view::npos )
+            return {};
+        const size_t minimumStem = ModuleImagePatchInternal::kLibPrefixLength + ModuleImagePatchInternal::kGenerationDigits;
+        if ( extensionPos < minimumStem )
+            return {};
+
+        constexpr const utf8* kDigits = "0123456789abcdefghijklmnopqrstuvwxyz";
+        string                name{ soname };
+        uint32                remaining = generation;
+        for ( uint32 digitIndex = 0; digitIndex < ModuleImagePatchInternal::kGenerationDigits; ++digitIndex )
+        {
+            name[extensionPos - 1 - digitIndex] = kDigits[remaining % 36];
+            remaining /= 36;
+        }
+        return name;
+    }
+
+    // ------------------------------------------------------------------------------
+    // ModuleCallGuard
+    // ------------------------------------------------------------------------------
+    bool ModuleCallGuard::run( const Delegate<void()>& call, uint32& outFaultCode )
+    {
+        outFaultCode = 0;
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
+        return ModuleCallGuardInternal::invokeGuarded( call, &outFaultCode );
+#else
+        call();
+        return true;
+#endif
+    }
 } // namespace sw

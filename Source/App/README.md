@@ -13,11 +13,18 @@ App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_mapDe
 
 ## 디렉터리 구조
 - **App.cpp / App.h**: 앱 생명주기 및 윈도우/엔진 부트스트랩. App 이 직접 아는 것은 **부팅 순서·창·프레임 순서·콜백 배선** 네 가지뿐입니다.
-- **Frame/**: `FrameTimeline` — 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다.
-- **Module/**: 동적 모듈 로드, 라이프사이클 핫리로드 관리, 직렬화를 통한 상태 보존 및 태스크 펜싱을 수행하는 `ModuleHost`
-- **Rhi/**: `BackendSwapController` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다.
+  같은 파일에 `BackendSwapController` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다(App 만 쓴다).
+- **AppConfig.h**: 부팅 때 읽는 설정(올릴 게임플레이 키트). 리플렉션 대상이라 따로 둡니다.
+- **FrameTimeline.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
+- **Module/**: 모듈의 수명과 빌드.
+  - `ModuleHost` — 동적 모듈 로드, 라이프사이클, 직렬화를 통한 상태 보존 및 태스크 펜싱.
+  - `ModuleCompiler` — 에디터가 부르는 백그라운드 CMake 빌드(RuntimeAPI `IModuleCompiler`).
+  - `LiveReloadManager` — 핫 리로드(Dev 전용, Shipping 에서 파일째 빠진다). 그것만 쓰는 도우미 `ModuleImagePatch`(섀도 복사본 바이트) ·
+    `ModuleCallGuard`(새 모듈 코드 호출 가드)도 같은 파일에 있습니다.
 
 기존에 존재하던 `AppBootstrap.cpp`, `AppModuleBinding.cpp`, `AppRhiHotSwap.cpp` 등의 파편화된 로직은 런처의 경량화(Thin Launcher) 원칙에 따라 모두 `App.cpp` 내부와 `EngineLoop`, `ModuleHost` 로 통폐합되었습니다.
+2026-09-24 에 한 번 더 분류별로 합쳤습니다 — 쓰는 곳이 하나뿐인 도우미는 그 사용처와 한 파일에(핫 리로드 도우미 → `LiveReloadManager`,
+`BackendSwapController` → `App`), 클래스 하나뿐인 폴더(`Frame/` · `Rhi/`)는 걷었습니다.
 
 ## 프레임 순서와 그 이유
 

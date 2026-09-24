@@ -7,12 +7,17 @@
  *       `Source/Engine/Module/` 에 있어 EngineLoop 가 소유했는데, 쓰는 쪽은 App(ModuleHost · ModuleCompiler · 단축키)뿐이었고
  *       Shipping 에서는 만들지도 않으면서 864줄이 바이너리에 그대로 실렸습니다. 지금은 Shipping 빌드에서 **파일째 빠집니다**
  *       (`Source/App/CMakeLists.txt` 의 제외 목록).
+ *
+ *       핫 리로드만 쓰는 도우미 둘도 여기 있습니다 — 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleImagePatch` 와, 새 모듈 코드를
+ *       처음 부르는 자리를 지키는 `ModuleCallGuard`. 쓰는 곳이 이 매니저(와 그 테스트)뿐이고 Shipping 에서 함께 빠지므로 한 단위로 둡니다.
  */
 #pragma once
+#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Time/CpuTimer.h"
 
 #include "Engine/Common/Common.h"
@@ -28,6 +33,86 @@ namespace sw
 
 namespace sw
 {
+    // ------------------------------------------------------------------------------
+    // 1) ModuleImagePatch — 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고친다(엔진 ABI 도장 · 리눅스 SONAME)
+    // ------------------------------------------------------------------------------
+    /**
+     * @struct ModuleImagePatch
+     * @brief ELF64(리틀 엔디언) 공유 라이브러리의 동적 섹션 문자열을 **같은 길이로** 바꿉니다.
+     * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 Windows 에서도 합성 ELF 로 돈다). 쓰는 곳은 리눅스의
+     *          `LiveReloadManager` 뿐입니다. 문자열 표를 늘리지 않으므로 섹션 · 세그먼트 배치가 그대로입니다.
+     * @note 왜 고치는가: 리눅스 동적 링커는 `DT_NEEDED` 를 풀 때 이미 올라온 라이브러리 중 SONAME 이 같은 **먼저 올라온 것**을 씁니다.
+     *       섀도 복사본은 파일만 복사하므로 SONAME 이 원본과 같고, 연쇄 리로드는 "전부 prepare(새 이미지 로드) → commit(옛 이미지 내림)"
+     *       순서라서 prepare 중인 새 킷이 아직 올라와 있는 **옛** GameFramework 에 묶입니다. 그래서 복사본을 올리기 전에 SONAME 을
+     *       세대마다 고유한 이름으로 바꾸고, 의존 모듈 복사본의 NEEDED 를 그 이름으로 바꿉니다 — UE 가 빌드마다 번호 붙은 이름으로 다시
+     *       링크하는 것을 복사 시점에 하는 셈입니다. Windows 에서 지연 로드 훅(`DelayLoadNotifyHook.cpp`)이 하는 일의 리눅스 짝입니다.
+     */
+    struct ModuleImagePatch
+    {
+        static constexpr int64 kTagNeeded = 1;  ///< DT_NEEDED
+        static constexpr int64 kTagSoname = 14; ///< DT_SONAME
+        /** @brief 엔진 ABI 도장 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`GenerateEngineAbiStamp.py` 와 같아야 한다). */
+        static constexpr const utf8* kEngineAbiStampMarker = "swEngineAbiStamp:";
+        static constexpr uint32      kEngineAbiStampDigits = 40;
+
+        /** @brief 동적 섹션의 DT_SONAME 을 읽습니다. ELF64 LE 가 아니거나 SONAME 이 없으면 false 입니다. */
+        static bool readSoname( const vector<uint8>& bytes, string& outSoname );
+
+        /**
+         * @brief 동적 섹션에서 태그가 @p tag 인 항목 중 문자열이 @p from 인 것을 @p to 로 바꾸고, 바꾼 항목 수를 반환합니다.
+         * @details @p to 는 @p from 과 길이가 같아야 합니다(문자열 표 안에서 제자리로 덮습니다). 다르거나 ELF64 LE 가 아니면 0 입니다.
+         */
+        static uint32 replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to );
+
+        /**
+         * @brief 세대 @p generation 을 담은, @p soname 과 **길이가 같은** 이름을 만듭니다(예: `libGameFramework.so` → `libGameFrame0003.so`).
+         * @details 확장자(`.so` 부터) 앞의 끝 네 글자를 36진 세대로 바꿉니다. 세대는 프로세스 안에서 모듈과 무관하게 하나씩 오르므로
+         *          앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다.
+         * @return 만들 수 없으면(`.so` 가 없거나 그 앞이 `lib` + 네 글자보다 짧다) 빈 문자열입니다.
+         */
+        static string makeGenerationName( string_view soname, uint32 generation );
+
+        /**
+         * @brief 모듈 파일 바이트에서 엔진 ABI 도장(`swEngineAbiStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
+         * @details 핫 리로드는 **모듈 코드가 한 줄도 돌기 전에**(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
+         *          찾지 않고 파일에서 표식 문자열을 찾습니다.
+         * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).
+         */
+        static bool findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp );
+    };
+
+    // ------------------------------------------------------------------------------
+    // 2) ModuleCallGuard — 새 모듈 코드를 처음 부르는 자리를 하드웨어 예외로부터 지킨다
+    // ------------------------------------------------------------------------------
+    /**
+     * @struct ModuleCallGuard
+     * @brief 한 호출 안에서 난 하드웨어 예외를 잡아, 프로세스 대신 그 호출만 실패시킵니다.
+     * @details 새로 빌드한 게임 · 에디터 코드가 리로드 직후 초기화에서 죽으면, 지키지 않을 때는 에디터 프로세스째 내려가 저장하지 않은
+     *          작업을 잃습니다. 지키면 그 모듈만 버리고(무엇을 버릴지는 부르는 쪽이 정한다) 에디터는 살아 저장할 기회가 남습니다.
+     *          - Windows 는 SEH(`__try` / `__except`), 리눅스는 결함 시그널(SIGSEGV · SIGBUS · SIGFPE · SIGILL) + `sigsetjmp`.
+     *          - **중단점(assert) · 스택 넘침 · 그 밖의 예외는 잡지 않습니다.** assert 는 디버거와 크래시 처리기로 가야 합니다.
+     *          - 잡은 뒤의 상태는 온전하지 않습니다. 결함 난 호출 안쪽 프레임의 소멸자는 돌지 않고(쥔 락 · 할당이 남는다), 그 모듈의
+     *            자료도 반쯤 만들어진 채입니다. 이것은 **저장하고 재시작할 시간**을 버는 장치이지 계속 돌리는 장치가 아닙니다.
+     *          - 모듈 로드(정적 초기화) 자체는 지키지 않습니다. 로더 락을 쥔 채 빠져나오면 다음 로드가 멈춥니다.
+     *          - 메인 스레드에서만 부릅니다. 리눅스의 시그널 처리기는 프로세스 전체에 걸리므로 겹쳐 부르면 바깥 것만 설치 · 해제하고, 지키는
+     *            호출 밖(다른 스레드)의 결함은 원래 처리기(크래시 처리기)로 돌려보냅니다.
+     */
+    struct ModuleCallGuard
+    {
+        /**
+         * @brief @p call 을 지키며 부릅니다.
+         * @param outFaultCode 결함이 났으면 그 코드(Windows 예외 코드 · 리눅스 시그널 번호), 아니면 0 입니다.
+         * @return 결함 없이 끝났으면 true 입니다.
+         */
+        static bool run( const Delegate<void()>& call, uint32& outFaultCode );
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 3) LiveReloadManager
+    // ------------------------------------------------------------------------------
     class IFileWatcher;
     /**
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
@@ -183,7 +268,7 @@ namespace sw
          * @brief (리눅스) 섀도 복사본의 SONAME 을 세대 이름으로, 의존 모듈의 NEEDED 를 그 의존의 **지금** 이름으로 바꿉니다.
          * @details 복사본은 원본의 SONAME 을 그대로 들고 있어서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지에 새 모듈을 묶습니다
          *          (연쇄 리로드의 prepare 에서는 그것이 아직 내려가지 않은 옛 이미지입니다). 이름을 세대마다 고유하게 하면 NEEDED 가
-         *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(`ModuleImagePatch.h`).
+         *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(위의 `ModuleImagePatch`).
          */
         void rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */

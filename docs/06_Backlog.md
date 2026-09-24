@@ -1665,6 +1665,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (App 정리 — 분류별로 합쳐 19 → 13 파일, 클래스 하나뿐인 폴더 둘을 걷었다)
+
+**어떻게 나눴나.** App 의 파일을 쓰임(누가 include 하는가 · 테스트가 따로 컴파일하는가 · Shipping 에서 함께 빠지는가)으로 네 분류로 봤다.
+- **핫 리로드** — `ModuleImagePatch`(섀도 복사본 바이트: 엔진 ABI 도장 · 리눅스 SONAME) · `ModuleCallGuard`(새 모듈 코드 호출 가드)를
+  `Module/LiveReloadManager.h/.cpp` 로 합쳤다. 둘 다 이 매니저(와 그 테스트)만 쓰고 Shipping 에서 함께 빠진다 — 제외 목록이
+  `LiveReloadManager` 하나가 됐다. 헤더는 절 셋(1 ModuleImagePatch · 2 ModuleCallGuard · 3 LiveReloadManager), .cpp 는 익명 네임스페이스 하나에
+  `…Internal` 셋. 테스트 파일(`TestModuleImagePatch` · `TestModuleCallGuard`)은 그대로 두고 include 만 바꿨다.
+- **앱 셸** — `Rhi/BackendSwapController` 를 `App.h/.cpp` 로 합쳤다(App 만 쓰고 README 의 프레임 순서표에서도 App 의 한 단계다). 로그 호출자
+  태그는 `BackendSwap` → `App` 이 된다. `Frame/FrameTimeline` 은 AppTest 가 이 .cpp 만 따로 컴파일하므로 파일은 두고 폴더만 걷어 App 루트로 옮겼다.
+- **모듈 수명 · 빌드** — `ModuleHost` · `ModuleCompiler` 는 둔다. 올리고 내리는 일과 CMake 빌드는 다른 책임이고 `ModuleCompiler` 는 에디터가
+  RuntimeAPI `IModuleCompiler` 로 쓴다.
+- **설정** — `AppConfig.h` 는 둔다. 리플렉션 대상이고 `ModuleHost.h` 가 include 해 `App.h` 에 넣으면 순환한다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest 34/34 · `FrameTimelineTest` 4/4 · 에디터를 켠 채 백엔드 교체(`-gv_rhiSwapAtFrame=30`) 에러 0.
+
 ### 2026-09-24 (전역 변수 선언 — 매크로 없이 `extern` 으로 적던 둘을 매크로로)
 
 **한 것.** `SW_GLOBAL_VARIABLE_*` 로 정의한 전역 변수 45 개 중 선언을 매크로 없이 적던 것이 둘 있었다 — `RHI.h` 의 `extern SW_API RHIBackend gv_rhiBackend;` ·
