@@ -55,6 +55,25 @@ namespace sw
                 return engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
             }
 
+            /**
+             * @brief 스칼라(정수 · 실수 · bool) 타입 이름인지 묻습니다. `formatWirePodToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
+             * @details 미리 정의된 이름만 봅니다. 타입 레지스트리에 기대지 않으므로 원시 타입 등록 전에도 같은 답을 냅니다.
+             */
+            static bool isScalarTypeName( hashed_string typeName )
+            {
+                static constexpr PredefinedNameType kArrScalarType[] = {
+                    PredefinedNameType::NameType_float32, PredefinedNameType::NameType_float64, PredefinedNameType::NameType_bool,
+                    PredefinedNameType::NameType_int8, PredefinedNameType::NameType_int16, PredefinedNameType::NameType_int32,
+                    PredefinedNameType::NameType_int64, PredefinedNameType::NameType_uint8, PredefinedNameType::NameType_uint16,
+                    PredefinedNameType::NameType_uint32, PredefinedNameType::NameType_uint64 };
+                for ( const PredefinedNameType scalarType : kArrScalarType )
+                {
+                    if ( typeName.isPredefinedType( scalarType ) )
+                        return true;
+                }
+                return false;
+            }
+
             static bool isNumericTypeName( hashed_string typeName )
             {
                 const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeName );
@@ -98,7 +117,7 @@ namespace sw
              *          `"1069547520"` 으로 적었습니다. 기록 타입은 바이너리 태그(`wireTypeHash`)와
              *          `SchemaOrphanValue._wireTypeHash` 가 **이미 들고 있었습니다.** 여기까지
              *          넘겨 주지 않았을 뿐입니다.
-             * @return 기록 타입을 모르거나 그 타입이 스칼라가 아니면 false 입니다(부르는 쪽이 크기 짐작으로 넘어갑니다).
+             * @return 기록 타입을 모르거나, 스칼라가 아니거나, payload 크기가 그 타입과 다르면 false 입니다.
              */
             static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
             {
@@ -133,8 +152,8 @@ namespace sw
             /**
              * @brief 기록 타입을 모를 때 크기로 짐작합니다.
              * @warning 정수와 실수를 **가를 수 없습니다**(크기가 같습니다). 정수로 읽습니다. 기록 타입을 아는
-             *          경로는 `formatWirePodToString` 이 먼저 처리하므로, 여기까지 오는 것은
-             *          타입을 잃은 payload 뿐입니다.
+             *          스칼라는 `formatWirePodToString` 이 먼저 처리하므로, 여기까지 오는 것은 기록 타입을 모르거나
+             *          스칼라가 아닌(열거형 등) payload 뿐입니다.
              */
             static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
             {
@@ -158,6 +177,27 @@ namespace sw
                         listPart.push_back( string{ trimmedToken } );
                 }
                 return listPart;
+            }
+
+            /**
+             * @brief orphan 의 바이너리 값을 프로퍼티 자리에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 가 함께 씁니다.
+             * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽습니다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
+             *          보냅니다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙입니다. 예전에는 기록 타입으로 프로퍼티
+             *          자리에 먼저 읽었습니다. 모양이 다른 타입(int32 → int16 · string 등)이면 그 자리와 이웃 필드를 덮어썼습니다.
+             * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
+             */
+            static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
+                                           hashed_string wireTypeName, const SerializeContext& ctx )
+            {
+                const uint8* pPayload    = orphan._listBinary.data();
+                const size_t payloadSize = orphan._listBinary.size();
+                if ( wireTypeName == propTypeName )
+                {
+                    size_t offset{ 0 };
+                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, ctx ) )
+                        return true;
+                }
+                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, ctx, wireTypeName );
             }
         };
     } // namespace
@@ -283,20 +323,7 @@ namespace sw
             hashed_string hint = wireTypeHint;
             if ( hint.empty() )
                 hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
-            if ( hint.empty() == false )
-            {
-                size_t off{ 0 };
-                if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(),
-                                                             off, ctx ) )
-                {
-                    if ( hint == pProp->_typeName )
-                        return true;
-                    // 기록 타입이 프로퍼티 타입과 다르다. 아래 tryCoerceBinaryPayload 가 payload 를 다시 읽어 덮어쓴다.
-                    // **주의:** 위 읽기가 이미 기록 타입의 값을 프로퍼티 자리(pPtr)에 썼다. 모양이 다른 타입이면
-                    // (int32 → string 등) 그 자리가 망가진다. 원래 의도는 기록 타입의 임시 버퍼에 읽는 것이었다(백로그 1-0g).
-                }
-            }
-            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx, hint );
+            return SchemaMigrateInternal::applyOrphanBinary( pPtr, pProp->_typeName, *pOrphan, hint, ctx );
         }
         return false;
     }
@@ -327,12 +354,12 @@ namespace sw
             return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
         if ( pOrphan->_listBinary.empty() == false )
         {
-            const hashed_string hint = wireTypeHint.empty() == false ? wireTypeHint : pProp->_typeName;
-            size_t              off{ 0 };
-            if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), off,
-                                                         ctx ) )
-                return true;
-            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx, hint );
+            // 기록 타입은 `applyOrphanTo` 와 같게 정한다. 예전에는 힌트가 없으면 프로퍼티 타입을 기록 타입으로 가정해,
+            // 타입이 바뀐 orphan(int32 → float32 등)을 그 비트 그대로 제자리에 읽었다.
+            hashed_string hint = wireTypeHint;
+            if ( hint.empty() )
+                hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
+            return SchemaMigrateInternal::applyOrphanBinary( pPtr, pProp->_typeName, *pOrphan, hint, ctx );
         }
         return false;
     }
@@ -378,24 +405,40 @@ namespace sw
         return parseTextValueCoerced( pPtr, pProp->_typeName, text, ctx );
     }
 
+    bool isScalarValueCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
+    {
+        if ( wireTypeName.empty() || wireTypeName == targetTypeName || SchemaMigrateInternal::isScalarTypeName( wireTypeName ) == false )
+            return false;
+        return SchemaMigrateInternal::isScalarTypeName( targetTypeName ) || SchemaMigrateInternal::isStringType( targetTypeName );
+    }
+
     bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
                                  const SerializeContext& ctx, hashed_string wireTypeName )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
 
+        // 기록 타입을 아는 스칼라가 다른 스칼라 · 문자열로 바뀌었으면 **값으로** 옮긴다. 기록 타입의 텍스트를 대상 타입으로 다시
+        // 읽는다(JSON · XML 과 같은 규칙이다). 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
+        // (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 값으로 못 옮기면(float32 1.5 → int32)
+        // 실패다. payload 크기가 기록 타입과 안 맞아도(손상) 재해석하지 않고 실패로 끝낸다.
+        if ( isScalarValueCoercion( targetTypeName, wireTypeName ) )
+        {
+            string wireText;
+            if ( SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText ) == false )
+                return false;
+            return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, ctx );
+        }
+
         size_t offset{ 0 };
         if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx ) &&
              offset == payloadSize )
             return true;
 
-        // POD → 문자열
+        // POD → 문자열. 기록 타입을 아는 스칼라는 위에서 끝났으므로 여기서는 크기로 짐작한다(정수와 실수를 가르지 못한다).
         if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
         {
             string asText;
-            // 기록 타입을 알면 그것으로 적는다. 크기 짐작은 정수와 실수를 가르지 못한다.
-            if ( SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, asText ) )
-                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
                 return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
 

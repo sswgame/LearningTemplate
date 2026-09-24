@@ -1272,6 +1272,159 @@ SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumbe
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 스칼라 필드의 타입이 바뀌면 **값으로** 옮긴다(비트를 재해석하지 않는다)
+ * @details 이관은 제 타입으로 끝까지 읽히는지부터 봤다. 크기가 같은 스칼라는 그 읽기가 늘 성공해서 int32 100 이
+ *          float32 1.4e-43 이 됐고, 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 이제 기록 타입을 아는 스칼라는
+ *          JSON · XML 처럼 기록 타입의 텍스트를 대상 타입으로 다시 읽는다. 텍스트가 맞지 않는 쌍(float32 1.5 → int32)은
+ *          옮기지 않고 orphan 으로 남긴다. 소프트 읽기가 예전처럼 제 타입으로 다시 읽으면 1069547520 이 들어간다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
+{
+    struct IntValue
+    {
+        int32 _value{ 0 };
+    };
+    struct FloatValue
+    {
+        float32 _value{ 0.0f };
+    };
+    struct StrValue
+    {
+        sw::string _value;
+    };
+
+    sw::TypeInfo intInfo;
+    intInfo._name               = sw::hashed_string( "ProbeIntValue" );
+    intInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeIntValue" );
+    intInfo._size               = sizeof( IntValue );
+    intInfo._listProperty       = {
+        { sw::hashed_string( "_value" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntValue, _value ) }
+    };
+
+    sw::TypeInfo floatInfo;
+    floatInfo._name               = sw::hashed_string( "ProbeFloatValue" );
+    floatInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeFloatValue" );
+    floatInfo._size               = sizeof( FloatValue );
+    floatInfo._listProperty       = {
+        { sw::hashed_string( "_value" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( FloatValue, _value ) }
+    };
+
+    sw::TypeInfo strInfo;
+    strInfo._name               = sw::hashed_string( "ProbeStrValue" );
+    strInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeStrValue" );
+    strInfo._size               = sizeof( StrValue );
+    strInfo._listProperty       = {
+        { sw::hashed_string( "_value" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrValue, _value ) }
+    };
+
+    // int32 100 → float32 100
+    const IntValue    intSrc{ 100 };
+    sw::vector<uint8> intBin;
+    sw::BinarySerializer::serializeVersioned( 1, &intSrc, intInfo, intBin );
+    FloatValue floatDst{};
+    uint32     ver{ 0 };
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &floatDst, floatInfo, intBin.data(), intBin.size(), 1u ) );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, floatDst._value, 0.0001f );
+
+    // int32 0 → string "0"
+    const IntValue    zeroSrc{ 0 };
+    sw::vector<uint8> zeroBin;
+    sw::BinarySerializer::serializeVersioned( 1, &zeroSrc, intInfo, zeroBin );
+    StrValue strDst;
+    ver = 0;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &strDst, strInfo, zeroBin.data(), zeroBin.size(), 1u ) );
+    SW_EXPECT_TRUE_MSG( strDst._value == "0", "int32 0 이 길이 0 인 문자열로 읽혔습니다" );
+
+    // float32 1.5 → int32 는 옮기지 않는다. migrate 가 orphan 을 받아 주면 읽기는 성공하지만 값은 그대로다.
+    const FloatValue  floatSrc{ 1.5f };
+    sw::vector<uint8> floatBin;
+    sw::BinarySerializer::serializeVersioned( 1, &floatSrc, floatInfo, floatBin );
+    IntValue intDst{ -1 };
+    ver                = 0;
+    auto acceptOrphans = []( const sw::SchemaMigrateContext& ) -> bool
+    {
+        return true;
+    };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &intDst, intInfo, floatBin.data(), floatBin.size(), 1u, +acceptOrphans ) );
+    SW_EXPECT_TRUE_MSG( intDst._value == -1, "float32 1.5 의 비트가 int32 로 재해석됐습니다" );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 기록 타입이 다른 바이너리 orphan 을 적용해도 **이웃 필드를 덮지 않는다**
+ * @details `applyOrphanTo` 는 기록 타입으로 프로퍼티 자리에 먼저 읽었다. int16 자리에 int32 를 읽으면 바로 뒤 필드의
+ *          두 바이트까지 덮어썼고, string 자리였다면 객체를 부쉈다. `applyOrphanToPath` 는 힌트가 없으면 프로퍼티 타입을
+ *          기록 타입으로 가정해 같은 일을 했다. 이제 둘 다 본 역직렬화 경로처럼 타입이 다르면 이관으로 옮긴다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ApplyOrphanWithOtherWireTypeKeepsNeighbors )
+{
+    struct NarrowPair
+    {
+        int16 _small{ 0 };
+        int16 _neighbor{ 99 };
+    };
+    struct TextHolder
+    {
+        sw::string _label;
+    };
+
+    sw::TypeInfo pairInfo;
+    pairInfo._name               = sw::hashed_string( "ProbeNarrowPair" );
+    pairInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeNarrowPair" );
+    pairInfo._size               = sizeof( NarrowPair );
+    pairInfo._listProperty       = {
+        {   sw::hashed_string( "_small" ), sw::hashed_string( "int16" ), SW_OFFSET_OF( NarrowPair,    _small )},
+        {sw::hashed_string( "_neighbor" ), sw::hashed_string( "int16" ), SW_OFFSET_OF( NarrowPair, _neighbor )}
+    };
+
+    sw::TypeInfo textInfo;
+    textInfo._name               = sw::hashed_string( "ProbeTextHolder" );
+    textInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeTextHolder" );
+    textInfo._size               = sizeof( TextHolder );
+    textInfo._listProperty       = {
+        { sw::hashed_string( "_label" ), sw::hashed_string( "string" ), SW_OFFSET_OF( TextHolder, _label ) }
+    };
+
+    auto makeInt32Orphan = []( const utf8* pName, int32 value ) -> sw::SchemaOrphanValue
+    {
+        sw::SchemaOrphanValue orphan;
+        orphan._name         = sw::hashed_string( pName );
+        orphan._nameHash     = orphan._name.getHash();
+        orphan._wireTypeHash = sw::hashed_string( "int32" ).getHash();
+        orphan._listBinary.resize( sizeof( value ) );
+        sw::Memory::copy( orphan._listBinary.data(), &value, sizeof( value ) );
+        return orphan;
+    };
+
+    // int32 5 로 기록된 `_small` 을 int16 자리에 적용한다. 뒤의 `_neighbor` 는 그대로여야 한다.
+    const sw::vector<sw::SchemaOrphanValue> listPairOrphan{ makeInt32Orphan( "_small", 5 ) };
+    NarrowPair                              target;
+    sw::SchemaMigrateContext                ctx;
+    ctx._pInstance = &target;
+    ctx._pTypeInfo = &pairInfo;
+    ctx._pOrphans  = &listPairOrphan;
+    const bool bTo = ctx.applyOrphanTo( sw::hashed_string( "_small" ) );
+    SW_EXPECT_TRUE( bTo );
+    SW_EXPECT_TRUE_MSG( target._small == 5, "int32 5 가 int16 으로 옮겨지지 않았습니다" );
+    SW_EXPECT_TRUE_MSG( target._neighbor == 99, "applyOrphanTo 가 기록 타입(int32)으로 제자리에 써서 이웃 필드를 덮었습니다" );
+
+    target           = NarrowPair{};
+    const bool bPath = ctx.applyOrphanToPath( "_small" );
+    SW_EXPECT_TRUE( bPath );
+    SW_EXPECT_TRUE_MSG( target._small == 5, "점 경로 판이 int32 5 를 옮기지 않았습니다" );
+    SW_EXPECT_TRUE_MSG( target._neighbor == 99, "applyOrphanToPath 가 프로퍼티 타입으로 가정해 제자리에 읽었습니다" );
+
+    // string 자리. 힙에 사는 긴 문자열이어야 제자리 쓰기가 객체를 부순다(짧으면 SSO 라 티가 안 난다).
+    const sw::vector<sw::SchemaOrphanValue> listTextOrphan{ makeInt32Orphan( "_label", 42 ) };
+    TextHolder                              holder;
+    holder._label  = "a label long enough to live on the heap";
+    ctx._pInstance = &holder;
+    ctx._pTypeInfo = &textInfo;
+    ctx._pOrphans  = &listTextOrphan;
+    SW_EXPECT_TRUE( ctx.applyOrphanTo( sw::hashed_string( "_label" ) ) );
+    SW_EXPECT_TRUE_MSG( holder._label == "42", "int32 42 가 문자열 \"42\" 로 옮겨지지 않았습니다" );
+}
+
+/**
  * @brief [ReflectionSerializationTest] migrate 없이 스키마 버전이 다르면 실패
  */
 SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigrate )

@@ -67,14 +67,12 @@ namespace sw
 
         /**
          * @brief orphan 의 값(텍스트 또는 바이너리)을 현재 인스턴스의 프로퍼티에 적용합니다.
-         *        바이너리는 wireTypeHint(비우면 orphan 에 적힌 기록 타입)로 해석합니다.
-         * @warning 기록 타입이 프로퍼티 타입과 다르면 지금 구현은 그 타입의 값을 프로퍼티 자리에 **먼저 씁니다.**
-         *          모양이 다른 타입(int32 → string 등)이면 그 자리를 망가뜨립니다. `applyOrphanToPath` 도
-         *          wireTypeHint 를 프로퍼티와 다른 타입으로 주면 같습니다(백로그 1-0g).
+         * @details 바이너리는 wireTypeHint(비우면 orphan 에 적힌 기록 타입)로 해석합니다. 그 타입이 프로퍼티 타입과 같으면
+         *          제자리로 읽고, 다르면 `tryCoerceBinaryPayload` 로 옮깁니다(본 역직렬화 경로와 같은 규칙입니다).
          */
         bool applyOrphanTo( hashed_string propName, hashed_string wireTypeHint = {} ) const;
 
-        /** @brief 점으로 이은 경로(`_stats._hp`)로 orphan 을 적용합니다. */
+        /** @brief 점으로 이은 경로(`_stats._hp`)로 orphan 을 적용합니다. 바이너리 규칙은 `applyOrphanTo` 와 같습니다. */
         bool applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint = {} ) const;
 
         // ------------------------------------------------------------------------------
@@ -109,10 +107,6 @@ namespace sw
     /** @brief 요소가 PROPERTY 이름을 속성으로 들 때의 속성 이름입니다. XML orphan 수집은 루트의 자식 요소가 이 속성으로 아는 PROPERTY 를 가리키면 orphan 으로 보지 않습니다. */
     inline constexpr auto kPropertyNameKey     = "_name";
     inline constexpr auto kXmlPropertyNameAttr = kPropertyNameKey;
-    /** @brief 옛 JSON 래핑 표기의 시퀀스 키(`"item": [...]`)입니다. **지금은 아무도 쓰지 않습니다**(래핑 읽기는 `535181b4` 에서 지웠습니다). */
-    inline constexpr auto kJsonContainerItemKey = "item";
-    /** @brief 옛 JSON 래핑 표기의 맵 키(`"entry": { ... }`)입니다. **지금은 아무도 쓰지 않습니다**(래핑 읽기는 `535181b4` 에서 지웠습니다). */
-    inline constexpr auto kJsonContainerEntryKey = "entry";
 
     /** @brief XML 시퀀스 원소 태그입니다. 구조체 원소는 대신 타입 이름을 태그로 씁니다. */
     inline constexpr auto kXmlItemTag = "item";
@@ -124,10 +118,21 @@ namespace sw
     // 5) 강제 변환 · 경로 해석: 바이너리/텍스트 강제 변환, 점 경로
     // ------------------------------------------------------------------------------
     /**
+     * @brief 기록 타입과 대상 타입이 **값으로만** 옮기는 쌍인지 묻습니다(기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열).
+     * @details 이 쌍은 `tryCoerceBinaryPayload` 가 기록 타입의 텍스트를 대상 타입으로 다시 읽어 옮기고, 못 옮기면 실패입니다.
+     *          부르는 쪽은 그 실패 뒤에 제 타입으로 다시 읽으면 안 됩니다. 크기가 같은 스칼라는 비트가 그대로 재해석됩니다.
+     * @param wireTypeName 기록 타입. 비어 있으면(모름) false 입니다.
+     */
+    SW_API bool isScalarValueCoercion( hashed_string targetTypeName, hashed_string wireTypeName );
+
+    /**
      * @brief 바이너리 페이로드를 대상 타입으로 강제 변환해 봅니다(int32↔string 등).
-     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오. POD 를 문자열로 바꿀 때
-     *                     크기만으로는 정수와 실수를 가를 수 없어서(`sizeof(float32) == sizeof(int32)`)
-     *                     `1.5f` 가 비트값 `"1069547520"` 이 됩니다. 비워 두면 크기로 짐작합니다.
+     * @details 기록 타입을 아는 스칼라(정수 · 실수 · bool)를 다른 스칼라나 문자열로 바꿀 때는 **값으로** 옮깁니다
+     *          (`isScalarValueCoercion`). 기록 타입의 텍스트를 대상 타입으로 다시 읽으므로 JSON · XML 과 같은 규칙이고,
+     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패합니다. 그 밖에는 제 타입으로 끝까지 읽히는지부터 보고,
+     *          숫자 ↔ 문자열, 마지막으로 크기가 같은 POD 재해석을 시도합니다.
+     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오. 비워 두면 크기로 짐작하는데, 크기만으로는
+     *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @return 적용에 성공하면 true 입니다.
      */
     SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,

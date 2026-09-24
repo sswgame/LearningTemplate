@@ -1459,14 +1459,10 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 `-Wdocumentation` 경고를 볼 수 없다. 폴더마다 `RunBuildWarnings.py --preset Ninja-Debug`(캐시를 거치지 않는다)를 돌린다.
 
 **주석을 고치다 찾은 코드 결함.** 이 작업은 주석만 바꾸므로 고치지 않고 여기 적는다. 해당 자리의 주석에는 경고를 달았다.
-- **`SchemaMigrateContext::applyOrphanTo` 가 기록 타입의 값을 프로퍼티 자리에 먼저 쓴다.** 바이너리 orphan 을
-  `deserializeValueBinary( pPtr, 기록 타입 )` 으로 읽은 뒤에야 `tryCoerceBinaryPayload` 로 넘어간다. 타입이 바뀐 이관
-  (int32 → string 등)이면 `pPtr` 자리를 다른 타입으로 덮어써 망가뜨린다. `applyOrphanToPath` 도 `wireTypeHint` 를
-  프로퍼티와 다른 타입으로 주면 같다. `applyOrphanTo` 는 부르는 곳이 없고 테스트는 JSON orphan(텍스트 경로)만 써서
-  드러나지 않았다. 고칠 때는 기록 타입이 프로퍼티 타입과 같을 때만 제자리로 읽고, 아니면 곧바로 `tryCoerceBinaryPayload`
-  로 보낸다(그 함수는 제 타입 읽기부터 한다). 바이너리 orphan 의 타입 변경 테스트를 같이 넣는다.
-- **`kJsonContainerItemKey` · `kJsonContainerEntryKey`(`SchemaMigrate.h`)는 죽은 상수다.** `535181b4`(2026-09-01)에서
-  JSON 래핑 읽기를 지운 뒤 아무도 쓰지 않는다. 지워도 된다.
+- **텍스트 스칼라 파서가 좁은 정수로 범위 검사 없이 자른다.** `SerializeContext` 의 `parseScalarValue` 는 int64 · uint64 로
+  읽은 뒤 `static_cast` 로 좁힌다("300" → uint8 44, "4000000000" → int32 음수). JSON · XML 과 바이너리 스칼라 이관(텍스트를
+  거친다)이 같이 쓰는 규칙이다. 범위 밖을 실패로 바꾸면 기존 에셋이 읽히는 방식이 달라지므로, 에셋을 훑어 본 뒤에 정한다
+  (1-0g 결함을 고치다 찾았다).
 - **XInput 게임패드는 트리거 데드존을 거치지 않는다.** `_triggerDeadzone` 은 `GamepadDevice::setAxis`(리눅스 조이스틱 ·
   원시 이벤트 · 에디터 시뮬레이터 경로)에서만 적용되는데, `GamepadXInput::poll` 은 `_leftTrigger` · `_rightTrigger` 에
   `bLeftTrigger / 255` 를 곧바로 쓴다. 그래서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없고, `Input/README.md` 의
@@ -1683,6 +1679,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (1-0g 결함 수정 ① — 직렬화 이관)
+
+**한 것.** 1-0g 에서 적어 둔 직렬화 결함을 고쳤다.
+- `SchemaMigrateContext::applyOrphanTo` 는 기록 타입으로 프로퍼티 자리에 먼저 읽었다. int16 자리에 int32 를 읽으면 뒤 필드
+  두 바이트를 덮고, string 자리면 객체를 부쉈다(옛 코드로 새 테스트를 돌리면 이웃 필드를 덮은 뒤 프로세스가 죽는다).
+  `applyOrphanToPath` 는 힌트가 없으면 프로퍼티 타입을 기록 타입으로 가정해 같은 일을 했다. 이제 둘 다 본 역직렬화
+  경로처럼 기록 타입이 같을 때만 제자리로 읽고, 다르면 이관한다.
+- **고치다 찾은 것.** 이관(`tryCoerceBinaryPayload`)이 첫 단계에서 제 타입으로 읽어, 크기가 같은 스칼라는 비트를 그대로
+  재해석했다(int32 100 → float32 1.4e-43). 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 소프트 읽기는 이관이
+  실패하면 다시 제 타입으로 읽어 float32 1.5 → int32 1069547520 을 넣었다. 이제 기록 타입을 아는 스칼라 → 스칼라 ·
+  문자열은 JSON · XML 처럼 텍스트를 거쳐 값으로 옮기고, 못 옮기면 orphan 으로 남긴다(`isScalarValueCoercion`).
+- 죽은 상수 `kJsonContainerItemKey` · `kJsonContainerEntryKey` 를 지웠다.
+- 테스트: `ReflectionSerializationTest.ScalarFieldTypeChangeMovesTheValue` · `ApplyOrphanWithOtherWireTypeKeepsNeighbors`.
+  둘 다 옛 코드에서 실패하는 것을 확인했다.
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (RuntimeAPI 주석 정리 — 1-0g 끝)
 

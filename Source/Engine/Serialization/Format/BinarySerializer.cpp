@@ -80,9 +80,10 @@ namespace sw
              *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣습니다.
              *          (2) 읽지 못한 프로퍼티: 엄격은 실패, 소프트는 orphan.
              *          (3) 페이로드를 끝까지 읽었는지: 엄격만 봅니다.
-             *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 이관은 제 타입으로 끝까지 읽히는지부터
-             *          보므로 소프트의 예전 순서(제 타입 읽기 → 이관)와 결과가 같습니다. 소프트는 이관도 안 되면 예전처럼 끝까지
-             *          읽히지 않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다).
+             *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 기록 타입을 아는 스칼라는 이관이 값으로
+             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 봅니다. 소프트는 이관도 안 되면 예전처럼 끝까지 읽히지
+             *          않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다). 다만 값으로만 옮기는 스칼라 쌍(`isScalarValueCoercion`)은
+             *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520) orphan 으로 남깁니다.
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
              */
             static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -151,7 +152,7 @@ namespace sw
                         void*               pPropPtr     = prop.getRawPtr( pInstance );
                         const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
                         bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName );
-                        if ( bApplied == false && bStrict == false )
+                        if ( bApplied == false && bStrict == false && isScalarValueCoercion( prop._typeName, wireTypeName ) == false )
                             bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false );
                     }
                     else
