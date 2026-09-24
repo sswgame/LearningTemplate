@@ -2,6 +2,7 @@
 
 #include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleCompiler.h"
+#include "App/Module/ModuleImagePatch.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Event/EventDispatcher.h"
@@ -12,6 +13,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
+#include "Engine/Module/EngineAbiStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -827,6 +829,65 @@ SW_TEST_CASE( ArchitectureTest, RetiredImagesStayMappedUntilTheirBatchIsEvicted 
 
     manager.shutdown();
     SW_EXPECT_EQUAL( 0u, manager.getRetiredImageCount() );
+}
+
+/**
+ * @brief [ArchitectureTest] 빌드된 모듈은 돌고 있는 엔진과 같은 ABI 도장을 들고 있다
+ * @details 도장은 Core · Engine 헤더 내용의 지문이고 Engine 과 모듈이 같은 생성 헤더로 굽는다. 이 테스트는 빌드 연결(생성 소스가 모듈마다
+ *          들어가고, 링커가 지우지 않는다)을 실제 파일로 확인한다.
+ */
+SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )
+{
+    // 에디터도 같은 매니저로 리로드된다 — 도장이 빠지면 에디터만 헤더가 어긋난 채 올라간다.
+    const utf8* arrModuleName[] = { "GameFramework", "SWGame", "EditorModule" };
+    for ( const utf8* pModuleName : arrModuleName )
+    {
+        const sw::string path = sw::modulePath( pModuleName );
+        if ( sw::FileUtil::fileExists( path ) == false )
+            SW_TEST_SKIP( "module not built in this config" );
+
+        sw::vector<uint8> bytes;
+        SW_ASSERT_TRUE( sw::FileUtil::readFile( path, bytes ) );
+        sw::string stamp;
+        SW_ASSERT_TRUE( sw::ModuleImagePatch::findEngineAbiStamp( bytes, stamp ) );
+        SW_EXPECT_STREQ( sw::engine::getEngineAbiStamp(), stamp.c_str() );
+    }
+}
+
+/**
+ * @brief [ArchitectureTest] 다른 엔진 헤더로 빌드된 모듈은 올리기 전에 거절되고, 그래프는 막히지 않는다
+ * @details SWGame 을 다른 이름으로 복사해 도장 한 글자를 바꾼다(엔진 헤더를 고친 빌드에서 Engine.dll 은 잠겨 못 바뀌고 모듈만 새로 써진
+ *          경우). 등록은 실패해야 하고 — 모듈 코드는 한 줄도 돌지 않았다 — 옛 모듈을 유지하는 실패라 그래프는 멀쩡해야 한다.
+ */
+SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
+{
+    const sw::string gamePath = sw::modulePath( "SWGame" );
+    if ( sw::FileUtil::fileExists( gamePath ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+    SW_TEST_DEFENSIVE_SCOPE( "a module built against other engine headers is rejected before it loads" );
+
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( gamePath, bytes ) );
+    sw::string stamp;
+    SW_ASSERT_TRUE( sw::ModuleImagePatch::findEngineAbiStamp( bytes, stamp ) );
+
+    // 도장의 마지막 16진 글자를 바꾼다. 같은 길이라 파일 배치는 그대로다.
+    const sw::string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
+    const size_t          stampPos = view.find( stamp );
+    SW_ASSERT_TRUE( stampPos != sw::string_view::npos );
+    uint8& lastDigit = bytes[stampPos + stamp.size() - 1];
+    lastDigit        = ( lastDigit == '0' ) ? '1' : '0';
+
+    const sw::string probePath = sw::modulePath( "SWGameAbiProbe" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( probePath, bytes.data(), bytes.size() ) );
+
+    sw::LiveReloadManager manager;
+    SW_EXPECT_FALSE( manager.registerModule( "SWGameAbiProbe" ) );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( manager.getModuleHandle( "SWGameAbiProbe" ) == nullptr );
+    manager.shutdown();
+
+    sw::FileUtil::removeFile( probePath );
 }
 
 /**

@@ -99,6 +99,14 @@ endif()
 
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
+# 핫 리로드 ABI 도장 — Engine 이 자기 헤더 지문을 굽는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 굽는다.
+sw_defineEngineAbiStamp()
+add_dependencies(Engine SwEngineAbiStamp)
+target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineAbiStamp.cpp" PROPERTIES
+    OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
+)
+
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 # 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")

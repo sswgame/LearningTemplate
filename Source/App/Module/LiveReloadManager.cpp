@@ -12,6 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Module/EngineAbiStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -493,22 +494,18 @@ namespace sw
             iter->second._listEventSubscription.push_back( token );
     }
 
-    bool LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, string_view shadowPath )
+    bool LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes )
     {
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( shadowPath, bytes ) == false )
-            return false;
-
         // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
         if ( ctx._soname._original.empty() )
-            ModuleImagePatch::readSoname( bytes, ctx._soname._original );
+            ModuleImagePatch::readSoname( inoutBytes, ctx._soname._original );
 
         bool bChanged = false;
         if ( ctx._soname._original.empty() == false )
         {
             const string generationName = ModuleImagePatch::makeGenerationName( ctx._soname._original, ++LiveReloadManagerInternal::s_sonameGeneration );
             const bool   bRenamed       = generationName.empty() == false &&
-                                  ModuleImagePatch::replaceDynamicString( bytes, ModuleImagePatch::kTagSoname, ctx._soname._original, generationName ) > 0;
+                                  ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagSoname, ctx._soname._original, generationName ) > 0;
             if ( bRenamed )
             {
                 ctx._soname._current = generationName;
@@ -526,13 +523,11 @@ namespace sw
             const SonameState& dependency = dependencyIt->second._soname;
             if ( dependency._original.empty() || dependency._current.empty() )
                 continue;
-            if ( ModuleImagePatch::replaceDynamicString( bytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current ) > 0 )
+            if ( ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current ) > 0 )
                 bChanged = true;
         }
 
-        if ( bChanged == false )
-            return true;
-        return FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        return bChanged;
     }
 
     bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
@@ -587,10 +582,32 @@ namespace sw
             out._pPreviousEnumHead    = EnumRegistrar::getHead();
             out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
 
+            // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( out._tempPath, bytes ) )
+            {
+                string     moduleStamp;
+                const bool bForeignEngine = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
+                if ( bForeignEngine )
+                {
+                    // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
+                    const utf8* pRemedy = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
+                                                                         : "rebuild the engine and its modules together";
+                    SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
+                                  ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pRemedy );
+                    LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
+                    out._tempPath.clear();
+                    out._pPreviousTypeHead    = nullptr;
+                    out._pPreviousEnumHead    = nullptr;
+                    out._pPreviousFactoryHead = nullptr;
+                    return false;
+                }
 #if defined( SW_PLATFORM_LINUX )
-            if ( rewriteShadowSonames( ctx, out._tempPath ) == false )
-                SW_LOG_WARNING( "Failed to rewrite shadow SONAME / NEEDED (loading as is): %#", out._tempPath.c_str() );
+                const bool bRewritten = rewriteShadowSonames( ctx, bytes );
+                if ( bRewritten && FileUtil::writeFile( out._tempPath, bytes.data(), bytes.size() ) == false )
+                    SW_LOG_WARNING( "Failed to write the rewritten shadow SONAME / NEEDED (loading as is): %#", out._tempPath.c_str() );
 #endif
+            }
 
             out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
             if ( out._pHandle == nullptr )

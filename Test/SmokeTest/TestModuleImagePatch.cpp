@@ -153,3 +153,28 @@ SW_TEST_CASE( ModuleImagePatchTest, MismatchedLengthOrForeignBytesAreLeftAlone )
     sw::vector<uint8> truncated( original.begin(), original.begin() + 100 );
     SW_EXPECT_FALSE( sw::ModuleImagePatch::readSoname( truncated, soname ) );
 }
+
+/**
+ * @brief [ModuleImagePatchTest] 엔진 ABI 도장은 표식 뒤에 16진 40 글자가 온전할 때만 찾는다
+ * @details 핫 리로드는 모듈 코드가 돌기 전에 파일 바이트에서 이 도장을 찾는다. 앞쪽의 불완전한 표식(표식 문자열 자체만 든 상수)은
+ *          건너뛰고, 모자란 글자 · 16진이 아닌 글자는 도장으로 치지 않는다.
+ */
+SW_TEST_CASE( ModuleImagePatchTest, EngineAbiStampIsFoundOnlyWithAFullDigest )
+{
+    const sw::string digest = "0123456789abcdef0123456789abcdef01234567";
+    const sw::string stamp  = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + digest;
+    const sw::string text   = sw::string{ "junk" } + sw::ModuleImagePatch::kEngineAbiStampMarker + " more junk " + stamp + " tail";
+
+    sw::vector<uint8> bytes( text.begin(), text.end() );
+    sw::string        found;
+    SW_ASSERT_TRUE( sw::ModuleImagePatch::findEngineAbiStamp( bytes, found ) );
+    SW_EXPECT_STREQ( stamp.c_str(), found.c_str() );
+
+    const sw::string  shortText = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + "0123";
+    sw::vector<uint8> shortBytes( shortText.begin(), shortText.end() );
+    SW_EXPECT_FALSE( sw::ModuleImagePatch::findEngineAbiStamp( shortBytes, found ) );
+
+    const sw::string  upperText = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + "0123456789ABCDEF0123456789ABCDEF01234567";
+    sw::vector<uint8> upperBytes( upperText.begin(), upperText.end() );
+    SW_EXPECT_FALSE( sw::ModuleImagePatch::findEngineAbiStamp( upperBytes, found ) );
+}

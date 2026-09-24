@@ -1665,6 +1665,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ⑤ — 모듈이 돌고 있는 엔진과 같은 헤더로 빌드됐는지 올리기 전에 본다)
+
+**왜.** 핫 리로드는 모듈만 갈아 끼우고 Engine 은 그대로다. 앱이 도는 중에 Core · Engine 헤더를 고치고 빌드하면 `Engine.dll` 은 잠겨 다시
+링크되지 못해도 모듈은 **새 헤더로** 써진다. 그 모듈을 올리면 구조체 배치 · vtable 이 돌고 있는 엔진과 어긋나 조용히 망가진다. 기존
+`kModuleAbiVersion` · 스탬프는 RuntimeAPI C-ABI 표만 보고 엔진 헤더는 보지 않는다.
+
+**한 것.**
+- **`Scripts/setup/GenerateEngineAbiStamp.py`** — `Source/Core` · `Source/Engine` 의 `.h/.hpp/.inl` 경로와 내용(CRLF → LF)을 차례로 넣은 SHA-1 을
+  `build/<preset>/generated/engineabi/EngineAbiStamp.gen.h` 에 `swEngineAbiStamp:<40 hex>` 로 쓴다. 내용이 같으면 파일을 다시 쓰지 않아
+  Ninja restat 이 뒤를 멈춘다(변경 없는 빌드는 `no work to do`). 주석만 바꿔도 도장이 바뀌는 것은 일부러다 — 그 빌드는 Engine 도 다시
+  링크해야 맞으므로 재시작 전까지 모듈을 받지 않는 쪽이 안전하다.
+- **굽기** — Engine 은 `engine::getEngineAbiStamp()`(`Engine/Module/EngineAbiStamp`), 모듈은 `sw_registerDynamicModule` 이 넣는 생성 소스의
+  내보낸 상수 `sw_moduleEngineAbiStamp`(내보내야 링커가 참조 없는 자료를 지우지 않는다). Dev 의 공유 라이브러리만 — EditorModule ·
+  GameFramework · 킷 · SWGame · RHI 백엔드 모두.
+- **대조** — `LiveReloadManager` 가 섀도 복사본을 **올리기 전에**(정적 초기화가 돌기 전) 파일 바이트에서
+  `ModuleImagePatch::findEngineAbiStamp` 로 찾는다(표식 문자열만 든 상수는 건너뛰고 16진 40 글자가 온전한 것을 찾는다). 다르면 복사본을
+  지우고 옛 모듈을 유지한다 — 리로드면 "restart to pick up the engine change", 첫 로드면 "rebuild the engine and its modules together".
+  리눅스는 같은 바이트를 SONAME 고쳐 쓰기(②)에 넘겨 파일을 한 번만 읽는다.
+- **테스트** — `ModuleImagePatchTest.EngineAbiStampIsFoundOnlyWithAFullDigest`, `ArchitectureTest.ModulesCarryTheRunningEngineAbiStamp`
+  (GameFramework · SWGame · **EditorModule** 의 파일에 도는 엔진의 도장이 있다 — 생성 소스가 모듈마다 들어가고 링커가 지우지 않는다),
+  `ArchitectureTest.ModuleBuiltAgainstOtherEngineHeadersIsRejected`(SWGame 을 복사해 도장 끝 한 글자를 바꾸면 등록이 거절되고 그래프는
+  멀쩡하다). 대조를 끄는 돌연변이에 진다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest `ArchitectureTest` 19/19 · `ModuleImagePatchTest` 4/4.
+
 ### 2026-09-24 (핫 리로드 ④ — 내리려는 이미지의 코드를 들고 있는 엔진 쪽 등록을 뗀다, 에디터가 다는 넷 포함)
 
 **왜.** ③ 은 남은 참조를 크래시 대신 옛 동작 한 번으로 미룰 뿐이다. 떼는 일은 모듈 몫인데, 특히 **에디터**가 엔진 소유(모듈보다 오래

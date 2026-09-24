@@ -175,9 +175,9 @@ namespace sw
          * @details 복사본은 원본의 SONAME 을 그대로 들고 있어서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지에 새 모듈을 묶습니다
          *          (연쇄 리로드의 prepare 에서는 그것이 아직 내려가지 않은 옛 이미지입니다). 이름을 세대마다 고유하게 하면 NEEDED 가
          *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(`ModuleImagePatch.h`).
-         * @return 파일을 읽고 쓰는 데 실패하면 false 입니다(그대로 올리고, 결속 확인이 어긋남을 잡습니다).
+         * @return 바이트를 바꿨으면 true 입니다(부르는 쪽이 파일에 씁니다).
          */
-        bool rewriteShadowSonames( ModuleContext& ctx, string_view shadowPath );
+        bool rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
         /** @brief 교체된 옛 이미지를 퇴역 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
