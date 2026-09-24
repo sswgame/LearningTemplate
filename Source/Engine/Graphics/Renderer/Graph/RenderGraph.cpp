@@ -393,7 +393,7 @@ namespace sw
             // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
             pDevice->setParallelRecording( true );
 
-            TaskStageHandle stage = pTaskManager->createAnonymousStage( "RenderPassStage" );
+            TaskStageHandle stage = pTaskManager->createStage();
 
             for ( ParallelPassEntry& entry : listPassEntry )
             {

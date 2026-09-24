@@ -217,7 +217,7 @@ SW_TEST_CASE( TaskTest, StagedTask )
         }
     };
 
-    sw::TaskStageHandle stage = taskMgr.getOrCreateStage( "GameUpdateStage" );
+    sw::TaskStageHandle stage = taskMgr.createStage();
 
     sw::TaskHandle t1 = taskMgr.emplaceTask( "StageTask1", SW_DELEGATE_FUNCTION( sw::TaskDelegate, StageContext::runStageTask1 ) );
     sw::TaskHandle t2 = taskMgr.emplaceTask( "StageTask2", SW_DELEGATE_FUNCTION( sw::TaskDelegate, StageContext::runStageTask2 ) );
@@ -877,7 +877,7 @@ SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
     };
 
     constexpr uint32    kItemCount = 64;
-    sw::TaskStageHandle stage      = taskMgr.createAnonymousStage( "WakeOnce" );
+    sw::TaskStageHandle stage      = taskMgr.createStage();
     sw::TaskHandle      handle     = taskMgr.emplaceParallelBlock( 0, kItemCount, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, WakeOnceContext::processRange ) );
     stage.addTask( handle );
     handle.submit();
@@ -991,7 +991,7 @@ SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
     uint32           staleRounds = 0;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        sw::TaskStageHandle stage  = taskMgr.createAnonymousStage( "NoLeftover" );
+        sw::TaskStageHandle stage  = taskMgr.createStage();
         sw::TaskHandle      handle = taskMgr.emplaceParallelBlock( 0, kItemCount, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, TouchContext::touchRange ) );
         stage.addTask( handle );
         handle.submit();
@@ -1026,7 +1026,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
     };
     auto dispatchOnce = [&]()
     {
-        sw::TaskStageHandle stage  = taskMgr.createAnonymousStage( "NoAllocStage" );
+        sw::TaskStageHandle stage  = taskMgr.createStage();
         sw::TaskHandle      handle = taskMgr.emplaceParallelBlock( 0, 64, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, DispatchContext::touchRange ) );
         stage.addTask( handle );
         handle.submit();
@@ -1048,7 +1048,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
         listSpareStage.reserve( kSpareStageCount );
         for ( uint32 index = 0; index < kSpareStageCount; ++index )
         {
-            listSpareStage.push_back( taskMgr.createAnonymousStage( "NoAllocWarmup" ) );
+            listSpareStage.push_back( taskMgr.createStage() );
         }
     }
 

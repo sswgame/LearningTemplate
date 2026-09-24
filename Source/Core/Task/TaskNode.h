@@ -6,17 +6,14 @@
  *          같은 노드를 다루므로, 셋이 공유하는 정의를 여기 둡니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/fixed_string.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -130,19 +127,22 @@ namespace sw
      *
      *          `runParallel` 은 이것을 **호출 스레드의 스택에** 둡니다. 마지막 티켓이 `_join` 을 0 으로 만든 뒤에는 아무도 이
      *          메모리를 건드리지 않습니다. 그 약속이 `JoinCounter::finishOne` 의 CAS 하나에 담겨 있습니다. `emplaceParallel*` 은
-     *          풀에서 꺼내고 부모 노드를 잡으며, 마지막 티켓이 부모의 의존성을 풀고 그룹을 반납합니다.
+     *          풀(바닥나면 힙)에서 꺼내고 부모 노드를 잡으며, 마지막 티켓이 부모의 의존성을 풀고 그룹을 반납합니다. 어디로
+     *          돌려줄지는 풀이 주소로 가립니다(`LockFreeObjectPool::owns`).
      */
     struct ParallelGroup
     {
-        ParallelBlockDelegate        _blockBody;             ///< `emplaceParallelBlock` 용 사본
-        ParallelTaskDelegate         _indexBody;             ///< `emplaceParallel` 용 사본
-        const ParallelBlockDelegate* _pBlockBody{ nullptr }; ///< `runParallel` 용. 호출하는 쪽의 델리게이트(호출이 끝날 때까지 살아 있다)
-        uint32                       _rangeStart{ 0 };
+        ParallelBlockDelegate _blockBody; ///< `emplaceParallelBlock` 용 사본
+        ParallelTaskDelegate  _indexBody; ///< `emplaceParallel` 용 사본
+        /**
+         * @brief 청크마다 부를 블록 본문입니다. null 이면 `_indexBody` 를 인덱스마다 부릅니다.
+         * @details `runParallel` 은 호출하는 쪽의 델리게이트(호출이 끝날 때까지 살아 있다)를, `emplaceParallelBlock` 은 자기
+         *          사본(`_blockBody`)을 가리킵니다. 그래서 청크 실행의 갈래가 블록 · 인덱스 둘뿐입니다.
+         */
+        const ParallelBlockDelegate* _pBlockBody{ nullptr };
         uint32                       _rangeEnd{ 0 };
         uint32                       _chunkSize{ 1 };
         TaskNode*                    _pParent{ nullptr }; ///< 풀 그룹: 티켓이 모두 끝나면 의존성을 풀 부모(참조를 하나 잡는다). 스택 그룹은 null
-        ParallelGroupPool*           _pPool{ nullptr };   ///< 돌아갈 풀. 스택이나 힙에서 왔으면 null
-        bool                         _bHeap{ false };     ///< 풀이 비어 힙에서 만들었다
         /** @brief 다음에 가져갈 청크의 시작입니다. 64비트인 이유: 티켓마다 끝을 지나서 한 번 더 더하므로 32비트는 넘칠 수 있습니다. */
         alignas( 64 ) atomic<uint64> _nextChunkStart{ 0 };
         alignas( 64 ) JoinCounter _join; ///< 아직 끝나지 않은 티켓 수 + 기다리는 스레드
@@ -153,23 +153,24 @@ namespace sw
 
     /**
      * @brief 스테이지입니다. 태스크 묶음의 완료를 기다리는 단위로, 매니저의 풀에서 오고 침입형 참조 계수로 수명을 관리합니다.
-     * @details 참조는 두 쪽이 잡습니다. 핸들 사본과, **남은 태스크가 있는 동안의 스테이지 자신**입니다(0→1 에서 잡고 1→0 에서
-     *          놓습니다). 태스크 노드는 참조를 잡지 않습니다. 노드가 스테이지를 잡고 스테이지가 노드 목록을 잡으면 순환이 생겨
-     *          어느 쪽도 풀로 돌아가지 못합니다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고, 그동안은 스테이지가
-     *          스스로를 잡고 있으므로 안전합니다. 대기는 `_join` 에 적힌 대기자 하나를 마지막 태스크가 직접 깨웁니다. 뮤텍스도
-     *          조건 변수도 없습니다.
+     * @details 스테이지는 **남은 수만 셉니다.** 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
+     *          스테이지는 완료 통지가 올 곳일 뿐입니다. (예전에는 태스크 목록을 뮤텍스 아래에 들고 태스크마다 참조를 하나씩
+     *          잡았다가 `waitStage` 에서 놓았습니다. 그 목록을 읽는 곳이 없었고, `addTask` 마다 잠금 한 번과 참조 계수 왕복이
+     *          들었습니다.)
+     *
+     *          참조는 두 쪽이 잡습니다. 핸들 사본과, **남은 태스크가 있는 동안의 스테이지 자신**입니다(0→1 에서 잡고 1→0 에서
+     *          놓습니다). 태스크 노드는 참조를 잡지 않습니다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고,
+     *          그동안은 스테이지가 스스로를 잡고 있으므로 안전합니다. 대기는 `_join` 에 적힌 대기자 하나를 마지막 태스크가 직접
+     *          깨웁니다. 뮤텍스도 조건 변수도 없습니다.
      */
     struct StageNode
     {
-        fixed_string<constant::kMaxBuffer64> _name; ///< 이름 있는 스테이지의 조회 키. 힙을 쓰지 않는다
-        vector<TaskNode*>                    _listTask;
-        mutex                                _listMutex; ///< `_listTask` 만 보호한다
-        JoinCounter                          _join;
-        atomic<int32>                        _refCount{ 0 };
-        TaskNodePool*                        _pPool{ nullptr };
+        JoinCounter   _join;
+        atomic<int32> _refCount{ 0 };
+        TaskNodePool* _pPool{ nullptr };
 
         void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
-        /** @brief 마지막 참조가 놓이면 남은 태스크 참조를 놓고 풀로 돌아갑니다. */
+        /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다. */
         void release();
     };
 
@@ -279,8 +280,14 @@ namespace sw
 
         TaskThreadAffinity _affinity = TaskThreadAffinity::Any;
         TaskPriority       _priority{ TaskPriority::Normal };
-        atomic<TaskState>  _state{ TaskState::Pending };
-        atomic<bool>       _bCancelled{ false };
+        /**
+         * @brief 큐에 한 번 넣었는지입니다. 두 번 넣지 않게 막는 문 하나입니다.
+         * @details 의존성 수는 0 을 한 번만 지나지만, 이미 제출한 태스크에 `precede` 로 선행을 더 걸면 수가 다시 올랐다가
+         *          내려와 한 번 더 0 을 봅니다. 예전의 5단 상태(`TaskState`)는 이 문 말고는 읽는 곳이 없었습니다(밖에서 물을 수
+         *          있는 "끝났나" 는 `TaskHandle::isCompleted` 가 `_pendingChildren` 으로 답합니다).
+         */
+        atomic<bool> _bScheduled{ false };
+        atomic<bool> _bCancelled{ false };
 
         TaskManager* _pOwner{ nullptr };
         TaskNode*    _pParent{ nullptr }; ///< 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다
@@ -288,7 +295,7 @@ namespace sw
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
          * @details 예전에는 "자식 수" 와 "상태 = 자식 대기" 를 따로 두고 seq_cst 로 Dekker 식 순서를 맞췄는데, 본문이 상태를 적고
          *          자식 수를 읽는 사이에 마지막 자식이 수를 내리고 상태를 읽으면 **둘 다** 완료를 처리했습니다. 본문 자신을 1 로 세어
-         *          두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다.
+         *          두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다. `TaskHandle::isCompleted` 도 이 값이 0 인지를 봅니다.
          */
         atomic<int32> _pendingChildren{ 1 };
         atomic<int32> _refCount{ 1 };

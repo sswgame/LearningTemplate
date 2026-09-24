@@ -310,30 +310,6 @@ namespace sw
         MainThread ///< 메인 스레드(렌더 · UI · 엔진 메인 루프)에서만 실행한다(dispatchMainThreadTasks 를 부를 때)
     };
 
-    /**
-     * @enum TaskType
-     * @brief 태스크의 실행 유형입니다.
-     */
-    enum class TaskType : uint8
-    {
-        General,  ///< 일반 단일 함수 · 인자 태스크
-        Parallel, ///< 여러 워커에 나눠 실행하는 N개의 병렬 하위 태스크
-        Staged    ///< 특정 스테이지에 속한 그룹 태스크
-    };
-
-    /**
-     * @enum TaskState
-     * @brief 태스크 노드의 현재 수명 주기 상태입니다.
-     */
-    enum class TaskState : uint8
-    {
-        Pending,            ///< 만들어졌지만 부모 · 빌더 의존성이 남아 아직 준비되지 않은 상태
-        Ready,              ///< 모든 선행 조건을 만족해 큐에 들어가기를 기다리는 상태
-        Running,            ///< 워커 스레드에서 본문을 실행 중인 상태
-        WaitingForChildren, ///< 자식 병렬 태스크가 모두 끝나기를 기다리는 상태
-        Completed           ///< 실행과 후속 태스크 처리까지 모두 끝난 상태
-    };
-
     struct StageNode;
     struct TaskNode;
 
@@ -400,6 +376,14 @@ namespace sw
         /** @brief 태스크가 취소됐는지 반환합니다. */
         bool isCancelled() const;
 
+        /**
+         * @brief 태스크의 본문과, 본문 안에서 만든 자식 태스크가 모두 끝났는지 반환합니다. 기다리지 않고 묻기만 합니다.
+         * @details UE 의 `FGraphEvent::IsComplete()` · Unity 의 `JobHandle.IsCompleted` 자리입니다. 취소된 태스크도 실행 차례가
+         *          지나면 끝난 것으로 봅니다. true 를 본 스레드에는 그 태스크(와 자식)가 쓴 것이 보입니다. 빈 핸들은 기다릴
+         *          것이 없으므로 true 입니다(`isStageComplete` 와 같습니다).
+         */
+        bool isCompleted() const;
+
         /** @brief 빌더 의존성을 풀고 스케줄러에 제출합니다. 선행 조건이 모두 만족되면 실행됩니다. */
         void submit();
 
@@ -433,7 +417,8 @@ namespace sw
     /**
      * @struct TaskStageHandle
      * @brief 여러 태스크를 하나의 논리적 단계(stage)로 묶어 관리하고 동기화하는 스테이지 핸들입니다.
-     * @details 스테이지 안의 모든 태스크가 끝날 때까지 `waitStage()` 로 블로킹 대기할 수 있습니다.
+     * @details 스테이지 안의 모든 태스크가 끝날 때까지 `waitStage()` 로 블로킹 대기할 수 있습니다. 스테이지는 남은 수만
+     *          세고 태스크를 붙들지 않습니다. `addTask` 는 태스크를 **제출하기 전에** 부르십시오.
      */
     struct SW_API TaskStageHandle
     {

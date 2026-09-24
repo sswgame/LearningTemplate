@@ -204,7 +204,7 @@ SW_TEST_CASE( TaskManagerBenchTest, StageWaveLikeRenderGraph )
     const sw::TaskDelegate record   = SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::recordPass );
     auto                   waveOnce = [&manager, &record]()
     {
-        sw::TaskStageHandle stage = manager.createAnonymousStage( "BenchWave" );
+        sw::TaskStageHandle stage = manager.createStage();
         for ( uint32 pass = 0; pass < kPassCount; ++pass )
         {
             sw::TaskHandle handle = manager.emplaceTask( "BenchPass", record );

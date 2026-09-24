@@ -38,14 +38,14 @@ namespace sw
 
         /** @brief 스테이지 노드를 꺼냅니다. 풀에 남은 것이 없을 때만 새로 만듭니다(늘어난 용량은 그 뒤로도 남습니다). */
         StageNode* allocateStage();
-        /** @brief 마지막 참조가 놓인 스테이지를 돌려줍니다. 기다리지 않고 버린 스테이지가 들고 있던 태스크 참조도 여기서 놓습니다. */
+        /** @brief 마지막 참조가 놓인 스테이지를 돌려줍니다. */
         void deallocateStage( StageNode* pStage );
         /** @brief 강제 정리(`clear`)용입니다. 살아 있는 스테이지를 모두 돌려줍니다. 아무것도 돌고 있지 않을 때만 부르십시오. */
         void resetAllStages();
 
-        /** @brief 병렬 그룹을 꺼냅니다. 풀이 비어 있으면 힙에서 만들고, 그때는 `_bHeap` 이 켜집니다. */
+        /** @brief 병렬 그룹을 꺼냅니다. 풀이 비어 있으면 힙에서 만듭니다. */
         ParallelGroup* allocateGroup();
-        /** @brief 병렬 그룹을 돌려줍니다. 풀에서 왔으면 풀로, 힙에서 왔으면 힙으로 돌려줍니다. */
+        /** @brief 병렬 그룹을 돌려줍니다. 풀의 주소면 풀로, 아니면 힙으로 돌려줍니다. */
         void deallocateGroup( ParallelGroup* pGroup );
 
     private:
@@ -55,7 +55,7 @@ namespace sw
         vector<TaskNode*>                _listOverflowFree;
         vector<TaskNode*>                _listSlab;
         mutex                            _slabMutex;
-        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지. 다음 createAnonymousStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
+        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
         /**
          * @brief 지금까지 만든 스테이지 전부입니다. **소유합니다.**
          * @details 처음에는 raw 포인터 목록이었는데, 풀 소멸자에서 지우는 것을 빠뜨려 스테이지가 프로세스가 끝날 때까지

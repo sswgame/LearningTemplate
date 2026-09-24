@@ -82,7 +82,7 @@ namespace sw
         if ( _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr )
         {
             // 워커가 나눠 만들고 여기서 기다린다. 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다.
-            TaskStageHandle stage  = _pTaskManager->createAnonymousStage( "GpuUploadStage" );
+            TaskStageHandle stage  = _pTaskManager->createStage();
             TaskHandle      handle = _pTaskManager->emplaceParallel( "GpuUploadMesh", count,
                                                                      SW_DELEGATE_LAMBDA( ParallelTaskDelegate, uploadOne ) );
             if ( handle.isValid() )

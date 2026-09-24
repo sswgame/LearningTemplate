@@ -38,7 +38,9 @@ waitAll / waitStage   ◄────►  Work Helping 으로 같이 진행
 | 파일 | 내용 |
 |------|------|
 | `TaskManager.h` / `.cpp` | 스레드 풀, 스케줄, wait, 메인 큐 |
-| `TaskTypes.h` | `TaskHandle`, `TaskArgs`, 델리게이트, Affinity |
+| `TaskTypes.h` / `.cpp` | `TaskHandle`, `TaskStageHandle`, `TaskArgs`, 델리게이트, Affinity |
+| `TaskNode.h` / `.cpp` | 내부 노드(태스크 · 스테이지 · 병렬 그룹 · 조인 카운터) — **공개 API 아님** |
+| `TaskNodePool.h` / `.cpp` | 노드 슬랩 · 스테이지 · 병렬 그룹 풀 — **공개 API 아님** |
 | `TaskFuture.h` | `TaskFuture<T>` / `TaskPromise<T>` — **결과를 돌려받는** 쪽. `.then` 체이닝, `whenAll` / `whenAny` |
 
 ---
@@ -168,8 +170,7 @@ flowchart LR
 ### 5) 스테이지로 묶어서 기다리기
 
 ```cpp
-TaskStageHandle stage = tm.createAnonymousStage( "ComponentWave" );
-// 또는 tm.getOrCreateStage( "MyStage" );
+TaskStageHandle stage = tm.createStage();
 
 TaskHandle a = tm.emplaceTask( [](){} );
 TaskHandle b = tm.emplaceTask( [](){} );
@@ -181,7 +182,9 @@ b.submit();
 tm.waitStage( stage ); // 스테이지에 넣은 일이 모두 끝날 때까지
 ```
 
-Object 쪽 컴포넌트 병렬 tick도 비슷한 패턴으로 웨이브를 기다립니다.
+- `addTask` 는 **제출 전에** 부릅니다. 스테이지는 남은 수만 세고 태스크를 붙들지 않습니다.
+- 이름으로 찾는 스테이지는 없습니다. 여러 곳이 같은 스테이지를 봐야 하면 핸들을 복사해 건넵니다.
+- 끝날 때까지 기다리기만 할 병렬 for 라면 스테이지 대신 `runParallel` 이 더 쌉니다(노드 · 스테이지 · 힙 없이 호출 스레드가 함께 돕니다).
 
 ### 6) 메인 스레드 전용 작업
 
@@ -251,12 +254,19 @@ TaskFuture<int32>         any = whenAnyFuture( listFuture );  // 가장 먼저 �
 ```cpp
 tm.isMainThread();
 tm.isWorkerThread();
-tm.isInsideParallelTask();   // emplaceParallel 본문 안인지
+tm.isInsideParallelTask();          // emplaceParallel* · runParallel 본문 안인지 (문턱 아래로 한 번에 돌아도 true)
+tm.getCurrentThreadScratchSlot();   // 스레드마다 하나씩 쓰는 스크래치 칸(워커 번호, 아니면 도우미 번호)
 
-tm.ensureMainThread();       // Debug에서 아니면 assert
+tm.ensureMainThread();              // Debug에서 아니면 assert
 tm.ensureWorkerThread();
 tm.ensureInsideParallelTask();
+
+// 병렬 본문에서 부르면 안 되는 함수는 스스로를 지킨다 (UE 의 IsInParallelRenderingThread 같은 검사)
+SW_ASSERT( tm.isInsideParallelTask() == false );
 ```
+
+끝났는지 **묻기만** 하려면 `TaskHandle::isCompleted()` — 본문과 그 안에서 만든 자식이 모두 끝나면 true
+(Unity `JobHandle.IsCompleted` · UE `FGraphEvent::IsComplete()` 자리). 빈 핸들은 true 입니다.
 
 ---
 
@@ -277,9 +287,10 @@ flowchart TB
 ```
 
 - **Work-Stealing**: 내 큐가 비면 다른 워커 큐에서 일을 가져옵니다.  
-- **DAG**: 선행이 끝나면 후속 `_unfinishedPredecessors` 가 줄어들고, 0이 되면 자동 스케줄.  
+- **DAG**: 선행이 끝나면 후속의 `_unresolvedDependencies` 가 줄어들고, 0이 되면 자동 스케줄.  
 - **Work Helping**: `wait` 중 슬립만 하지 않고 대기열 작업을 직접 돕습니다 → 데드락·코어 낭비 완화.  
-- **Adaptive Spin**: 일이 자주 오면 `cpuPause` 스핀 후 잠자기 → 컨텍스트 스위치 비용 감소.
+- **짧은 스핀 뒤 주소 대기**: 잠깐 `cpuPause` 로 돌다가 자기 워드 하나에서 잠들고(`Futex`), 깨우는 쪽은 그 주소만 깨웁니다.
+- **병렬 그룹 = 티켓**: `emplaceParallel*` · `runParallel` 은 청크마다 노드를 만들지 않고, 티켓 몇 장을 받은 스레드가 원자 카운터로 청크를 이어 가져갑니다.
 
 ---
 

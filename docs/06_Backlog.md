@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화
 
 ---
 
@@ -1664,6 +1664,70 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (TaskManager 구조 단순화 — 읽는 곳 없는 상태 · 목록 · 레지스트리를 걷었다, 성능은 같다)
+
+**한 것.** 09-23 재작성 · 분할 뒤에도 "적기만 하고 아무도 읽지 않는" 구조가 남아 있었다. 저장소 전체에서 읽는 곳을 세고,
+**상용 엔진에 대응 기능이 있는 공개 API 는 쓰는 곳이 0 이어도 남겼다**(사용자 방침 — 앞으로 쓴다). 지운 것은 내부 배관과
+대응 기능 없는 것뿐이다. 동작 · 스케줄링 순서 · 대기 규약은 그대로다.
+- **스테이지는 남은 수만 센다.** `StageNode` 가 태스크 목록(`_listTask`)을 뮤텍스 아래에 들고 태스크마다 참조를 잡았다가
+  `waitStage` 에서 놓았는데, 그 목록을 읽는 곳이 없었다. 렌더 그래프는 패스마다 `addTask` 에서 잠금 한 번 + 참조 왕복,
+  `waitStage` 에서 잠금 한 번 + 참조 해제 루프를 치르고 있었다. 이제 `addTask` 는 `_parentStage` 를 적고 카운터를 올릴 뿐이다.
+- **이름 있는 스테이지 레지스트리를 지웠다** (`getOrCreateStage` · `getStage` · `_listAllStage` · `_stageMutex` · 이름 탐색 ·
+  `StageNode::_name` 64 바이트). `getStage` 는 부르는 곳이 0 이었고, `getOrCreateStage` 는 에디터 스플래시 한 곳(한 번 만들고 한 번
+  기다림)뿐이었다. `createAnonymousStage( name )` 은 이름이 쓰이지 않았으므로 **`createStage()`** 가 됐다(호출처 13 곳).
+- **`TaskState` 5단 → `_bScheduled` 하나 + `TaskHandle::isCompleted()`.** 읽는 곳은 `Pending → Ready` CAS(두 번 큐에 넣지 않는 문)
+  하나였고, `Running` · `WaitingForChildren` · `Completed` 저장은 아무도 읽지 않았다 — 핸들로 물어볼 길도 없었다. 상용 엔진에 있는 것은
+  "끝났나?" 조회(UE `FGraphEvent::IsComplete()` · UE5 `FTask::IsCompleted()` · Unity `JobHandle.IsCompleted`)라 그 모양으로 살렸다.
+  노드의 `_pendingChildren`(본문 1 + 남은 자식)이 0 인지 읽을 뿐이라 완료 경로에 저장이 늘지 않는다. 빈 핸들은 true(`isStageComplete` 와 같다).
+  공개 헤더의 `TaskType` 열거형은 선언만 있었다(값을 적는 곳도 없었다 — 상용 엔진도 이런 열거형이 아니라 타입으로 가른다).
+- **병렬 그룹**: `_pBlockBody` 가 블록 본문을 늘 가리킨다(`runParallel` 은 호출자의 것, `emplaceParallelBlock` 은 자기 사본) —
+  청크 실행 갈래가 셋에서 둘. 출처 표시 `_pPool` · `_bHeap` 은 `LockFreeObjectPool::owns` 로 대신했고 읽히지 않던 `_rangeStart` 를 뺐다.
+- **스레드 확인**: `isInsideParallelTask` · `ensureInsideParallelTask` · `ensureWorkerThread` · `ensureMainThread` 는 부르는 곳이 0 이지만
+  **남겼다** — UE 의 `FTaskTagScope` · `IsInParallelRenderingThread()` · `check( IsInGameThread() )` 자리다(병렬 본문에서 부르면 안 되는
+  함수가 스스로를 지킨다. "틱 중 부모 바꾸기 금지" 가 그 자리다). 하나 고쳤다: `runParallel` 이 문턱 아래라 호출 스레드가 한 번에 돌 때도
+  병렬 본문으로 표시한다 — 예전엔 그 갈래만 표시가 없어서, 그 단정이 개수 · 워커 수에 따라 켜졌다 꺼졌다 했다. 공개 `getCurrentWorkerIndex` 는
+  지웠다 — Unity `[NativeSetThreadIndex]` 자리는 이미 `getCurrentThreadScratchSlot` 이고, 이쪽은 워커 아닌 스레드도 덮는다(워커 번호만
+  주는 쪽이 옛 "도우미들이 마지막 칸을 나눠 써 벡터가 깨졌다" 결함의 모양이다). `isWorkerThread` 는 `t_currentWorkerIndex >= 0` 이다
+  (같은 뜻의 TLS 가 둘이었다).
+- 워커 스레드 핸들을 `WorkerSlot` 에 합쳤다(평행 목록 둘 → 하나). `waitForJoin` · `waitAll` 이 각자 들던 "메인 일감 → 돕기 → 스핀"
+  앞부분을 `helpOrSpin` 하나로. 부르는 곳 없는 `scheduleReadyTask` 한 인자판 · `allocateNode` 를 지웠다.
+
+`Core/Task` 코드는 순감 약 200 줄(+118 / −316, 스케줄러 파일만 +48 / −194 — 늘어난 쪽은 대개 "왜 없앴나" 주석이다). 공개 API 에서 빠진 것: `getOrCreateStage` · `getStage` ·
+`createAnonymousStage`(→ `createStage`) · `getCurrentWorkerIndex` · `TaskType` · `TaskState`. 더한 것: `TaskHandle::isCompleted()`.
+빠진 것마다 상용 대응을 따졌다 — 이름 레지스트리는 상용 엔진도 핸들로 건넨다(이름 붙은 단계는 틱 스케줄러 층, 여기선 `TickRegistry`),
+스테이지의 태스크 목록은 카운터만 두는 쪽이 상용 방식(Naughty Dog 의 파이버 카운터)이다. 스테이지의 디버그 이름(UE5 `FTaskEvent` 가 받는다)은
+읽는 도구가 생길 때 — 프로파일러에 연결할 때 — 다시 넣는다.
+
+**측정 (Release · 워커 4 · 옛 바이너리 `BinTaskOld` 와 번갈아, 순서도 바꿔서).** 마이크로벤치 p50 은 전부 잡음 안에서 같다:
+포크-조인 콜드 옛 29~37 / 새 28~34 us · 핫 7 / 7~8 · 스테이지 웨이브 콜드 101~114 / 92~117 · 핫 49~50 / 48~49 ·
+작은 태스크(그 케이스만 6판) 193~226 / 178~225 ns · CPU 바운드 배속 4.44~4.50 / 4.24~4.8. App(dx12 · 큐브 8000 · 1000 프레임)
+`wall` 은 기본 11쌍의 차(새 − 옛)가 −131 ~ +179 us(중앙값 +13, ~1 %)로 부호가 섞이고, 같은 세션 안에서 옛 바이너리 자체가
+1106 ~ 1506 us 로 흔들렸다 — 판정 불가 = 차이 없음. 무버 3쌍은 옛 1739~1796 / 새 1721~1731.
+
+**테스트.** `TaskManagerTest.PrecedeAfterSubmitDoesNotRunTheTaskTwice` — `_bScheduled` 가 남은 유일한 이유(이미 제출한
+태스크에 `precede` 를 더 걸면 의존성 수가 0 을 **다시** 지난다)를 지킨다. **첫 판은 문을 빼는 돌연변이에도 통과했다** —
+완료 처리(`completeTask`)가 호출 대상을 비우므로, 본문이 끝난 뒤의 두 번째 실행은 빈 본문을 돌 뿐 보이지 않는다. 본문이
+도는 동안(20 ms 잠) 선행을 걸게 고치니 돌연변이에서 3/3 `Expected [1], Actual [2]` 로 진다.
+`IsCompletedWaitsForTheBodyAndItsChildren`(본문은 끝났는데 자식이 남은 동안 false — 본문만 보는 돌연변이에 진다) ·
+`InsideParallelTaskIsTrueOnlyInParallelBodies`(나눠 돌든 문턱 아래로 한 번에 돌든 true, 보통 태스크는 false — 문턱 아래 갈래의 표시를
+빼는 돌연변이에 `Expected [0], Actual [8]` 로 진다). 살린 기능에 테스트가 없으면 다음 정리 때 또 "죽은 코드" 로 보인다.
+
+**함정 · 바뀐 약속.**
+- `addTask` 는 **제출 전에**. 예전에도 그랬지만(제출 뒤면 `_parentStage` 쓰기가 완료와 경합한다) 이제 스테이지가 태스크를 붙들지
+  않으므로 "스테이지가 살려 두겠지" 도 없다.
+- 스테이지를 여러 곳이 봐야 하면 핸들을 복사해 건넨다 — 이름으로 찾는 길은 없다.
+- `clear()` 의 `resetAllStages` 는 그대로다(핸들이 쥔 스테이지까지 풀로 돌려놓는다 — 쥔 채로 `clear` 를 넘긴 핸들이 재할당 뒤에
+  놓이면 남의 참조 수를 내린다). `clear` 는 테스트 하네스 전용이라 두었다. 손대려면 "남은 수 > 0 인 스테이지만 자기 참조를 놓고 0 으로"
+  가 맞다.
+
+**남긴 것.** `TaskFuture.h` 의 `ITaskStateMachine` 은 구현 · 사용처가 0 인 빈 인터페이스다(루트 `README.md` 가 기능으로 소개한다) —
+TaskManager 밖이라 두었다. 09-23 열여섯째의 "남긴 후보"(스핀 정책 · 워커별 노드 자유 목록 · 워커 지정 태스크)는 그대로다.
+
+**검증.** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · 바뀐 파일 규약 · 중괄호 · include 순서 · 어휘 ·
+테스트 스위트 게이트 OK · 바뀐 헤더 5 개 단독 컴파일 OK. `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9, ASan `nogpu` 7/7
+(돌연변이 확인 뒤 네 프리셋을 모두 다시 빌드해서 잰 것). `TaskManagerTest` 18/18 을 5번 연속. 되살린 표시(TLS 쓰기 한 쌍)는
+티켓 하나 · 문턱 아래 호출 하나마다라 청크당 비용이 없다 — 앞의 측정 기준(`BinTaskOld`)이 이미 그 코드였다. 리눅스 futex 갈래는 손대지 않았다(CI 가 본다).
 
 ### 2026-09-24 (모두 깨우기가 다시 잠든 워커를 쫓았다 — WSL 에서 호출 한 번이 1~90 초)
 

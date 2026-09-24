@@ -58,7 +58,7 @@ namespace sw
 
         pMem->_unresolvedDependencies.store( 1, std::memory_order_relaxed );
         pMem->_pendingChildren.store( 1, std::memory_order_relaxed );
-        pMem->_state.store( TaskState::Pending, std::memory_order_relaxed );
+        pMem->_bScheduled.store( false, std::memory_order_relaxed );
         pMem->_bCancelled.store( false, std::memory_order_relaxed );
         pMem->_refCount.store( 1, std::memory_order_relaxed );
         pMem->_pOwner  = nullptr;
@@ -105,12 +105,9 @@ namespace sw
         {
             unique_ptr<StageNode> uniqueStage = make_unique<StageNode>();
             pStage                            = uniqueStage.get();
-            pStage->_listTask.reserve( 16 );
             std::scoped_lock<mutex> lock{ _stageMutex };
             _listStageAll.push_back( std::move( uniqueStage ) );
         }
-        pStage->_name.clear();
-        pStage->_listTask.clear();
         pStage->_join.reset();
         pStage->_refCount.store( 1, std::memory_order_relaxed );
         pStage->_pPool = this;
@@ -121,13 +118,6 @@ namespace sw
     {
         if ( pStage == nullptr )
             return;
-        for ( TaskNode* pTask : pStage->_listTask )
-        {
-            if ( pTask != nullptr )
-                pTask->release();
-        }
-        pStage->_listTask.clear();
-        pStage->_name.clear();
         std::scoped_lock<mutex> lock{ _stageMutex };
         _listStageFree.push_back( pStage );
     }
@@ -155,26 +145,17 @@ namespace sw
     {
         ParallelGroup* pGroup = _groupPool.acquire();
         if ( pGroup != nullptr )
-        {
-            pGroup->_pPool = &_groupPool;
             return pGroup;
-        }
-        pGroup         = sw_new ParallelGroup();
-        pGroup->_bHeap = true;
-        return pGroup;
+        return sw_new ParallelGroup();
     }
 
     void TaskNodePool::deallocateGroup( ParallelGroup* pGroup )
     {
         if ( pGroup == nullptr )
             return;
-        if ( pGroup->_bHeap )
-        {
+        if ( _groupPool.owns( pGroup ) )
+            _groupPool.release( pGroup );
+        else
             sw_delete( pGroup );
-            return;
-        }
-        ParallelGroupPool* pPool = pGroup->_pPool;
-        if ( pPool != nullptr )
-            pPool->release( pGroup );
     }
 } // namespace sw

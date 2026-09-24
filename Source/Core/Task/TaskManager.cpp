@@ -5,7 +5,6 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskNode.h"
@@ -17,10 +16,9 @@ namespace sw
 
     namespace
     {
-        thread_local bool      t_bTaskWorkerThread   = false;   ///< 현재 스레드가 TaskManager 워커 스레드인지 여부
-        thread_local bool      t_bInsideParallelTask = false;   ///< 지금 병렬 태스크 본문을 실행 중인지 여부
-        thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스
+        thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
         thread_local int32     t_helperScratchSlot   = -1;      ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+        thread_local bool      t_bInsideParallelTask = false;   ///< 지금 병렬 그룹의 본문을 실행 중인지 여부
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
@@ -54,14 +52,15 @@ namespace sw
         constexpr uintptr_t kTicketTagBit = 1;
 
         /**
-         * @brief 병렬 태스크에 들어가고 나올 때 스레드 로컬 플래그를 관리하는 RAII 스코프입니다. 중첩되면 바깥 값을 되돌립니다.
+         * @brief 병렬 그룹의 본문을 도는 동안 `t_bInsideParallelTask` 를 세우는 RAII 스코프입니다. 중첩되면 바깥 값을 되돌립니다.
+         * @details 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
          */
         struct ParallelTaskScope
         {
-            ParallelTaskScope()
+            explicit ParallelTaskScope( bool bInside )
                 : _bPrevious{ t_bInsideParallelTask }
             {
-                t_bInsideParallelTask = true;
+                t_bInsideParallelTask = bInside;
             }
             ~ParallelTaskScope()
             {
@@ -140,7 +139,6 @@ namespace sw
         : _bInitialized{ false }
         , _mainThreadId{}
         , _bStop{ false }
-        , _listWorker{}
         , _listWorkerSlot{}
         , _helperSlotCount{ 0 }
         , _idleWorkerMask{ 0 }
@@ -154,8 +152,6 @@ namespace sw
         , _globalLowQueue{}
         , _queueMainThread{}
         , _arrHelperWaiter{}
-        , _listAllStage{}
-        , _stageMutex{}
         , _activeTaskCount{ 0 }
         , _nodePool{ sw::make_unique<TaskNodePool>() }
     {
@@ -192,16 +188,16 @@ namespace sw
         _bStop        = false;
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
-        _listWorker.reserve( threadCount );
+        // 자리를 모두 만든 **뒤에** 스레드를 띄운다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
         _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
             _listWorkerSlot.push_back( make_unique<WorkerSlot>() );
         }
-
-        for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
+        for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
-            _listWorker.emplace_back( &TaskManager::workerLoop, this, threadIndex );
+            // 워커가 이미 목록을 읽고 있으므로 const 로 꺼낸다(비 const 첨자는 레이스 탐지기에 쓰기로 잡힌다).
+            std::as_const( _listWorkerSlot )[workerIndex]->_thread = std::thread( &TaskManager::workerLoop, this, workerIndex );
         }
 
         _bInitialized = true;
@@ -225,12 +221,11 @@ namespace sw
             // 잠든 워커는 자기 워드로, 스핀 중인 워커는 세대로 알아챈다. 모두 깨운다.
             wakeSleepingWorkers();
 
-            for ( std::thread& worker : _listWorker )
+            for ( const unique_ptr<WorkerSlot>& slot : std::as_const( _listWorkerSlot ) )
             {
-                if ( worker.joinable() )
-                    worker.join();
+                if ( slot->_thread.joinable() )
+                    slot->_thread.join();
             }
-            _listWorker.clear();
             _listWorkerSlot.clear();
         }
 
@@ -245,15 +240,6 @@ namespace sw
 
     void TaskManager::clear()
     {
-        {
-            std::scoped_lock<mutex> lock{ _stageMutex };
-            for ( StageNode* pStage : _listAllStage )
-            {
-                if ( pStage != nullptr )
-                    pStage->release();
-            }
-            _listAllStage.clear();
-        }
         for ( const unique_ptr<WorkerSlot>& slot : _listWorkerSlot )
         {
             uintptr_t item{ 0 };
@@ -314,14 +300,9 @@ namespace sw
         SW_ASSERT( isMainThread() );
     }
 
-    int32 TaskManager::getCurrentWorkerIndex() const
-    {
-        return t_currentWorkerIndex;
-    }
-
     bool TaskManager::isWorkerThread() const
     {
-        return t_bTaskWorkerThread;
+        return t_currentWorkerIndex >= 0;
     }
 
     void TaskManager::ensureWorkerThread() const
@@ -373,13 +354,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 태스크 만들기 · 의존성 · 제출
     // ------------------------------------------------------------------------------
-    TaskNode* TaskManager::allocateNode()
-    {
-        TaskNode* pNode = _nodePool->allocate();
-        pNode->_pOwner  = this;
-        return pNode;
-    }
-
     void TaskManager::deallocateNode( TaskNode* pNode )
     {
         _nodePool->deallocate( pNode );
@@ -393,7 +367,8 @@ namespace sw
             return nullptr;
         }
 
-        TaskNode* pNode = allocateNode();
+        TaskNode* pNode = _nodePool->allocate();
+        pNode->_pOwner  = this;
         pNode->setName( name );
         pNode->_affinity = affinity;
 
@@ -534,10 +509,10 @@ namespace sw
         ParallelGroup* pGroup = _nodePool->allocateGroup();
         pGroup->_blockBody    = pBlockBody != nullptr ? *pBlockBody : ParallelBlockDelegate{};
         pGroup->_indexBody    = pIndexBody != nullptr ? *pIndexBody : ParallelTaskDelegate{};
-        pGroup->_pBlockBody   = nullptr;
-        pGroup->_rangeStart   = start;
-        pGroup->_rangeEnd     = end;
-        pGroup->_chunkSize    = split._chunkSize;
+        // 블록 본문은 자기 사본을 가리킨다. 묶이지 않은 본문이면 null 로 두어, 청크 실행이 묶였는지를 청크마다 묻지 않게 한다.
+        pGroup->_pBlockBody = pGroup->_blockBody.isBound() ? &pGroup->_blockBody : nullptr;
+        pGroup->_rangeEnd   = end;
+        pGroup->_chunkSize  = split._chunkSize;
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
         pGroup->_join.reset();
 
@@ -559,9 +534,11 @@ namespace sw
         if ( count == 0 || body.isBound() == false )
             return;
         // 문턱값 아래이거나 워커가 없으면 이 스레드가 한 번에 실행한다. 나누는 비용이 일보다 크다.
+        // 그래도 병렬 본문으로 표시한다. 표시가 개수 · 워커 수에 따라 달라지면 "병렬 본문에서 부르지 말 것" 단정이 큰 입력에서만 문다.
         const uint32 workerCount = getWorkerCount();
         if ( _bInitialized == false || workerCount == 0 || count < serialThreshold )
         {
+            const ParallelTaskScope insideScope{ true };
             body( 0, count );
             return;
         }
@@ -569,6 +546,7 @@ namespace sw
         const ParallelSplit split = ParallelSplit::compute( count, workerCount, true );
         if ( split._ticketCount == 0 )
         {
+            const ParallelTaskScope insideScope{ true };
             body( 0, count );
             return;
         }
@@ -576,7 +554,6 @@ namespace sw
         // 그룹은 이 스택에 있다. 마지막 티켓이 조인 카운터를 0 으로 만든 뒤에는 아무도 이 메모리를 건드리지 않는다.
         ParallelGroup group{};
         group._pBlockBody = &body;
-        group._rangeStart = 0;
         group._rangeEnd   = count;
         group._chunkSize  = split._chunkSize;
         group._nextChunkStart.store( 0, std::memory_order_relaxed );
@@ -611,19 +588,18 @@ namespace sw
         // 빈 큐의 size 는 위치 두 개를 읽는 것이라 청크마다 확인해도 비용이 거의 없다.
         if ( _globalHighQueue.empty() )
             return;
-        const bool bWasInsideParallel = t_bInsideParallelTask;
-        t_bInsideParallelTask         = false;
-        uintptr_t item{ 0 };
+        // High 태스크는 병렬 본문이 아니다. 도는 동안만 표시를 내리고 끝나면 되돌린다.
+        const ParallelTaskScope outsideScope{ false };
+        uintptr_t               item{ 0 };
         while ( _globalHighQueue.dequeue( item ) )
         {
             executeItem( item );
         }
-        t_bInsideParallelTask = bWasInsideParallel;
     }
 
     void TaskManager::runGroupChunks( ParallelGroup* pGroup )
     {
-        const ParallelTaskScope parallelScope{};
+        const ParallelTaskScope insideScope{ true };
         const uint32            end       = pGroup->_rangeEnd;
         const uint32            chunkSize = pGroup->_chunkSize;
         for ( ;; )
@@ -640,10 +616,6 @@ namespace sw
             if ( pGroup->_pBlockBody != nullptr )
             {
                 ( *pGroup->_pBlockBody )( chunkStart, chunkEnd );
-            }
-            else if ( pGroup->_blockBody.isBound() )
-            {
-                pGroup->_blockBody( chunkStart, chunkEnd );
             }
             else if ( pGroup->_indexBody.isBound() )
             {
@@ -686,63 +658,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 5) 스테이지
     // ------------------------------------------------------------------------------
-    TaskStageHandle TaskManager::createAnonymousStage( string_view stageName )
+    TaskStageHandle TaskManager::createStage()
     {
         // 풀에서 가져온다. 프레임마다 웨이브 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
-        StageNode* pStage = _nodePool->allocateStage();
-        pStage->_name     = stageName;
-        return TaskStageHandle{ pStage };
-    }
-
-    TaskStageHandle TaskManager::getStage( string_view stageName )
-    {
-        std::scoped_lock<mutex> lock{ _stageMutex };
-        StageNode*              pStage = findNamedStageLocked( stageName );
-        if ( pStage == nullptr )
-            return TaskStageHandle{};
-        pStage->retain();
-        return TaskStageHandle{ pStage };
-    }
-
-    TaskStageHandle TaskManager::getOrCreateStage( string_view stageName )
-    {
-        std::scoped_lock<mutex> lock{ _stageMutex };
-        StageNode*              pStage = findNamedStageLocked( stageName );
-        if ( pStage == nullptr )
-        {
-            pStage        = _nodePool->allocateStage();
-            pStage->_name = stageName;
-            _listAllStage.push_back( pStage ); // 목록이 핸들 하나 몫(풀이 준 첫 참조)을 잡는다. clear 가 놓는다
-        }
-        pStage->retain();
-        return TaskStageHandle{ pStage };
-    }
-
-    StageNode* TaskManager::findNamedStageLocked( string_view stageName ) const
-    {
-        for ( StageNode* pStage : _listAllStage )
-        {
-            if ( pStage != nullptr && string_view{ pStage->_name.c_str(), pStage->_name.size() } == stageName )
-                return pStage;
-        }
-        return nullptr;
+        return TaskStageHandle{ _nodePool->allocateStage() };
     }
 
     void TaskManager::waitStage( const TaskStageHandle& stage )
     {
-        StageNode* pStage = stage._pNode;
-        if ( pStage == nullptr )
-            return;
-
-        waitForJoin( pStage->_join );
-
-        std::scoped_lock<mutex> doneLock{ pStage->_listMutex };
-        for ( TaskNode* pTask : pStage->_listTask )
-        {
-            if ( pTask != nullptr )
-                pTask->release();
-        }
-        pStage->_listTask.clear();
+        if ( stage._pNode != nullptr )
+            waitForJoin( stage._pNode->_join );
     }
 
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
@@ -753,29 +678,35 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 6) 기다리기 — 다른 일을 돕다가 자기 워드에서 잠들기, 브로드캐스트, 메인 스레드 깨우기
     // ------------------------------------------------------------------------------
+    bool TaskManager::helpOrSpin( uint32& inoutSpinCount )
+    {
+        if ( isMainThread() )
+            dispatchMainThreadTasks();
+
+        if ( tryHelpAndExecute() )
+        {
+            inoutSpinCount = 0;
+            return true;
+        }
+
+        if ( inoutSpinCount < kIdleSpinCount )
+        {
+            sw::cpuPause();
+            ++inoutSpinCount;
+            return true;
+        }
+
+        inoutSpinCount = 0;
+        return false;
+    }
+
     void TaskManager::waitForJoin( JoinCounter& join )
     {
         uint32 spinCount = 0;
         while ( join.getPending() > 0 )
         {
-            if ( isMainThread() )
-                dispatchMainThreadTasks();
-
-            if ( tryHelpAndExecute() )
-            {
-                spinCount = 0;
-                continue;
-            }
-
-            if ( spinCount < kIdleSpinCount )
-            {
-                sw::cpuPause();
-                ++spinCount;
-                continue;
-            }
-
-            parkOnJoin( join );
-            spinCount = 0;
+            if ( helpOrSpin( spinCount ) == false )
+                parkOnJoin( join );
         }
     }
 
@@ -785,21 +716,8 @@ namespace sw
         uint32     spinCount = 0;
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
-            if ( isMainThread() )
-                dispatchMainThreadTasks();
-
-            if ( tryHelpAndExecute() )
-            {
-                spinCount = 0;
+            if ( helpOrSpin( spinCount ) )
                 continue;
-            }
-
-            if ( spinCount < kIdleSpinCount )
-            {
-                sw::cpuPause();
-                ++spinCount;
-                continue;
-            }
 
             uint32 waitMilli = 0;
             if ( timeoutMs > 0 )
@@ -816,7 +734,6 @@ namespace sw
                 commitBroadcastWait( epoch, waitMilli );
             else
                 cancelBroadcastWait();
-            spinCount = 0;
         }
         return true;
     }
@@ -943,8 +860,6 @@ namespace sw
 
     void TaskManager::executeTask( TaskNode* pNode )
     {
-        pNode->_state.store( TaskState::Running, std::memory_order_relaxed );
-
         if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false )
         {
             TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
@@ -962,16 +877,12 @@ namespace sw
         // 본문 몫(1)을 내린다. 0 이 되면 자식도 모두 끝난 것이고, 아니면 마지막 자식이 완료를 처리한다.
         if ( pNode->_pendingChildren.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             completeTask( pNode );
-        else
-            pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_relaxed );
 
         pNode->release(); // 큐가 잡고 있던 참조를 놓는다
     }
 
     void TaskManager::completeTask( TaskNode* pNode )
     {
-        pNode->_state.store( TaskState::Completed, std::memory_order_release );
-
         // **활성 수는 스테이지 · 부모보다 먼저 내린다.** 예전에는 맨 끝(후속 트리거 뒤)에서 내렸는데, 그러면 `waitStage` 가 스테이지
         // 완료 통지를 받고 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다. 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은
         // fetch_sub 가 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다. CTest 아래에서만 재현되던 EngineTest_NoGPU 180초
@@ -1031,7 +942,7 @@ namespace sw
     {
         // 워커는 자기 데크(LIFO 라 방금 만든 것이 캐시에 남아 있다)에, 바깥 스레드(게임 · 렌더)는 전역 큐에 넣는다.
         // 데크가 가득 차면 전역 큐로 넘긴다.
-        const int32 workerId = getCurrentWorkerIndex();
+        const int32 workerId = t_currentWorkerIndex;
         if ( workerId >= 0 )
         {
             WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
@@ -1092,15 +1003,10 @@ namespace sw
     bool TaskManager::tryHelpAndExecute()
     {
         uintptr_t item{ 0 };
-        if ( tryTakeItem( getCurrentWorkerIndex(), item ) == false )
+        if ( tryTakeItem( t_currentWorkerIndex, item ) == false )
             return false;
         executeItem( item );
         return true;
-    }
-
-    void TaskManager::scheduleReadyTask( TaskNode* pNode )
-    {
-        scheduleReadyTask( pNode, true );
     }
 
     void TaskManager::scheduleReadyTask( TaskNode* pNode, bool bWakeWorker )
@@ -1108,8 +1014,7 @@ namespace sw
         if ( pNode == nullptr )
             return;
 
-        TaskState expected = TaskState::Pending;
-        if ( pNode->_state.compare_exchange_strong( expected, TaskState::Ready, std::memory_order_acq_rel ) == false )
+        if ( pNode->_bScheduled.exchange( true, std::memory_order_acq_rel ) )
             return;
 
         pNode->retain(); // 큐가 참조를 하나 잡는다
@@ -1194,7 +1099,6 @@ namespace sw
 
     void TaskManager::workerLoop( uint32 workerId )
     {
-        t_bTaskWorkerThread  = true;
         t_currentWorkerIndex = static_cast<int32>( workerId );
 
         WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerId];
@@ -1262,7 +1166,6 @@ namespace sw
             _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
         }
 
-        t_bTaskWorkerThread   = false;
         t_currentWorkerIndex  = -1;
         t_bInsideParallelTask = false;
     }

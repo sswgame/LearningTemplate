@@ -6,17 +6,16 @@
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/WorkStealingDeque.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
 {
     struct JoinCounter;
     struct ParallelGroup;
-    struct StageNode;
     struct TaskNode;
 
     class TaskNodePool;
@@ -129,14 +128,13 @@ namespace sw
          */
         void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
 
-        /** @brief 전역 맵에 등록하지 않는 익명 스테이지를 만듭니다(임시 동기화용이며, 맵에 쌓여 새는 일을 막습니다). */
-        TaskStageHandle createAnonymousStage( string_view stageName );
-
-        /** @brief 이름으로 기존 스테이지를 찾습니다(없으면 유효하지 않은 핸들을 반환합니다). */
-        TaskStageHandle getStage( string_view stageName );
-
-        /** @brief 이름으로 스테이지를 찾고, 없으면 새로 만들어 반환합니다. */
-        TaskStageHandle getOrCreateStage( string_view stageName );
+        /**
+         * @brief 스테이지를 만듭니다. 풀에서 꺼내므로 프레임이 안정된 상태에서는 힙을 건드리지 않습니다.
+         * @details 예전에는 이름으로 찾는 스테이지(`getOrCreateStage` · `getStage`)가 따로 있었습니다. 이름으로 다시 찾는 곳이
+         *          하나도 없어서(부르는 곳마다 한 번 만들고 한 번 기다렸다) 목록 · 뮤텍스 · 선형 탐색 · 이름 칸을 들고 있을 이유가
+         *          없었습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.
+         */
+        TaskStageHandle createStage();
 
         /** @brief 스테이지에 속한 모든 태스크가 끝날 때까지 호출 스레드를 막고 기다립니다(기다리는 동안 다른 일을 돕습니다). */
         void waitStage( const TaskStageHandle& stage );
@@ -178,7 +176,7 @@ namespace sw
          */
         bool waitAll( uint32 timeoutMs = 0 );
 
-        /** @brief 내부 큐와 스테이지 상태를 강제로 정리합니다. */
+        /** @brief 내부 큐와 스테이지 상태를 강제로 정리합니다. 아무것도 돌고 있지 않을 때만 부르십시오. */
         void clear();
 
         /**
@@ -210,16 +208,28 @@ namespace sw
 
         /** @brief 현재 스레드가 TaskManager 를 초기화한 메인 스레드인지 확인합니다. */
         bool isMainThread() const;
-        /** @brief Debug: 메인 스레드가 아니면 assert 합니다. */
+        /** @brief Debug: 메인 스레드가 아니면 assert 합니다(UE 의 `check( IsInGameThread() )` 자리). */
         void ensureMainThread() const;
-
-        /** @brief 현재 워커 스레드의 인덱스를 반환합니다(워커가 아니면 -1). */
-        int32 getCurrentWorkerIndex() const;
+        /** @brief 현재 스레드가 이 풀의 워커인지 확인합니다. */
+        bool isWorkerThread() const;
+        /** @brief Debug: 워커 스레드가 아니면 assert 합니다. */
+        void ensureWorkerThread() const;
+        /**
+         * @brief 현재 스레드가 병렬 그룹(`emplaceParallel*` · `runParallel`)의 본문을 실행 중인지 반환합니다.
+         * @details 병렬 본문에서 부르면 안 되는 함수(부모 바꾸기 · 컴포넌트 추가 같은 구조 변경)가
+         *          `SW_ASSERT( isInsideParallelTask() == false )` 로 스스로를 지키는 데 씁니다. UE 가 `FTaskTagScope` 로 병렬
+         *          작업 구간을 표시하고 `IsInParallelRenderingThread()` 같은 검사를 두는 것과 같은 자리입니다. `runParallel` 이
+         *          문턱 아래라 호출 스레드가 한 번에 돌 때도 병렬 본문으로 봅니다(검사가 개수 · 워커 수에 따라 달라지지 않게).
+         *          청크 사이에 High 레인 태스크를 돌리는 동안은 병렬 본문 밖으로 봅니다(그 태스크는 병렬 본문이 아닙니다).
+         */
+        bool isInsideParallelTask() const;
+        /** @brief Debug: 병렬 태스크 본문 안이 아니면 assert 합니다. */
+        void ensureInsideParallelTask() const;
 
         /**
          * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 몫(`kMaxHelperThreadCount`).
          * @details 스레드마다 하나씩 쓰는 스크래치(플러시 DFS 스택 · 더티 루트 · 트랜스폼 쓰기 큐) 배열의 크기입니다. **워커가 아닌
-         *          스레드도 태스크를 실행합니다.** `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안 `tryHelpAndExecute` 로 준비된
+         *          스레드도 태스크를 실행합니다.** `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안 `helpOrSpin` 으로 준비된
          *          잡을 아무거나 돕는데, 메인 스레드뿐 아니라 렌더 스레드(패스 기록 대기) · 로더 스레드(스트리밍 대기)도 그 경로를
          *          지납니다. 예전에는 그 스레드들이 모두 "마지막 칸" 하나를 나눠 써서, 메인과 렌더가 같은 프레임에 같은 슬롯 벡터에
          *          push 해 벡터가 깨졌습니다(틱 중 트랜스폼 쓰기 큐에서 세그폴트로 드러났습니다).
@@ -235,15 +245,6 @@ namespace sw
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
-        bool isWorkerThread() const;
-        /** @brief Debug: 워커 스레드가 아니면 assert 합니다. */
-        void ensureWorkerThread() const;
-
-        /** @brief 현재 스레드가 병렬 태스크의 본문을 실행 중인지 반환합니다. */
-        bool isInsideParallelTask() const;
-        /** @brief Debug: 병렬 태스크 안이 아니면 assert 합니다. */
-        void ensureInsideParallelTask() const;
-
     private:
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
@@ -256,13 +257,13 @@ namespace sw
         TaskNode* createTaskNode( string_view name, TaskThreadAffinity affinity );
         /** @brief 의존성 하나를 풉니다. 마지막이었으면 큐에 넣습니다(`submit` · 선행 태스크 완료 · 병렬 그룹 완료가 모두 이 함수를 거칩니다). */
         void resolveDependency( TaskNode* pNode, bool bWakeWorker );
-        /** @brief 의존성이 모두 풀린 태스크 노드를 레인(High · 로컬 데크 · Normal 전역 · Low · 메인)에 넣습니다. */
-        void scheduleReadyTask( TaskNode* pNode );
-        /** @brief 준비된 태스크를 큐에 넣되, @p bWakeWorker 가 false 면 잠든 워커를 깨우지 않습니다(`submitWithoutWake`). */
+        /**
+         * @brief 의존성이 모두 풀린 태스크 노드를 레인(High · 로컬 데크 · Normal 전역 · Low · 메인)에 넣습니다.
+         * @param bWakeWorker false 면 잠든 워커를 깨우지 않습니다(`submitWithoutWake`).
+         */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
-        /** @brief 내부 노드를 할당합니다(TaskNode 내부용). */
-        TaskNode* allocateNode();
-        void      deallocateNode( TaskNode* pNode );
+        /** @brief 마지막 참조가 놓인 노드를 풀로 돌려줍니다(`TaskNode::release` 가 부릅니다). */
+        void deallocateNode( TaskNode* pNode );
 
         // --- 병렬 그룹 ---
         /** @brief `emplaceParallel` · `emplaceParallelBlock` 의 공통 본체입니다. 부모 노드 하나 + 풀 그룹 하나 + 티켓으로 이루어집니다. */
@@ -281,11 +282,13 @@ namespace sw
          */
         void closeGroupTicket( ParallelGroup* pGroup, bool bResolveParent );
 
-        // --- 스테이지 ---
-        /** @brief 이름 있는 스테이지 목록에서 찾습니다. `_stageMutex` 를 잡은 채로 부릅니다. */
-        StageNode* findNamedStageLocked( string_view stageName ) const;
-
         // --- 기다리기 ---
+        /**
+         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 일감을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
+         * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
+         * @details `waitForJoin` 과 `waitAll` 이 같은 앞부분을 각자 들고 있었습니다. 둘이 다른 것은 잠드는 방법뿐입니다.
+         */
+        bool helpOrSpin( uint32& inoutSpinCount );
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고, 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
@@ -337,11 +340,12 @@ namespace sw
             atomic<uint32> _word; ///< 0 에서 시작한다(래퍼의 기본 생성). 값 자체에는 의미가 없고 바뀌었는지만 본다
         };
 
-        /** @brief 워커 하나의 자리입니다. 고정 크기 lock-free 데크와 잠드는 워드를 가집니다. */
+        /** @brief 워커 하나의 자리입니다. 고정 크기 lock-free 데크 · 잠드는 워드 · 스레드 핸들을 가집니다. */
         struct WorkerSlot
         {
             WorkStealingDeque<uintptr_t> _queue{ 4096 }; ///< 항목은 태스크 노드(짝수)이거나 병렬 그룹의 티켓(홀수)이다
             WaiterSlot                   _park;          ///< 유휴 워커가 잠드는 워드이자, 이 워커가 태스크 안에서 기다릴 때 쓰는 대기 워드
+            std::thread                  _thread;        ///< 이 자리를 도는 워커 스레드. `shutdown` 이 합류한다
         };
 
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
@@ -350,8 +354,7 @@ namespace sw
         bool                           _bInitialized;    ///< 매니저를 초기화했는지 여부
         std::thread::id                _mainThreadId;    ///< 메인 스레드의 ID
         atomic<bool>                   _bStop;           ///< 워커 스레드 종료 플래그
-        vector<std::thread>            _listWorker;      ///< 워커 스레드 핸들 목록
-        vector<unique_ptr<WorkerSlot>> _listWorkerSlot;  ///< 워커별 데크 + 잠드는 워드
+        vector<unique_ptr<WorkerSlot>> _listWorkerSlot;  ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         atomic<uint32>                 _helperSlotCount; ///< 지금까지 도우미 슬롯을 받은 비워커 스레드 수
         /**
          * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
@@ -402,9 +405,7 @@ namespace sw
         /** @brief 워커가 아닌 스레드(메인 · 렌더 · 로더 …)의 대기자 슬롯입니다. 번호는 `getCurrentThreadScratchSlot` 의 도우미 칸과 같습니다. */
         WaiterSlot _arrHelperWaiter[kMaxHelperThreadCount];
 
-        vector<StageNode*> _listAllStage;              ///< 이름 있는 스테이지 목록. 참조를 하나씩 잡고 있다(clear 가 놓는다)
-        mutable mutex      _stageMutex;                ///< 스테이지 목록을 보호하는 뮤텍스
         alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 지금 실행 중이거나 대기 중인 활성 태스크의 총 수
-        unique_ptr<TaskNodePool> _nodePool;            ///< 태스크 노드 슬랩 풀
+        unique_ptr<TaskNodePool> _nodePool;            ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
     };
 } // namespace sw

@@ -209,7 +209,7 @@ namespace sw::editor
                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
                 MakeTaskArgs( forwardPipeline ) );
 
-            TaskStageHandle stage = pTaskManager->getOrCreateStage( "EditorSplash" );
+            TaskStageHandle stage = pTaskManager->createStage();
             stage.addTask( hDefault ).addTask( hForward );
 
             hDefault.submit();

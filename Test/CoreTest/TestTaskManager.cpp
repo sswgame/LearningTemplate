@@ -57,7 +57,7 @@ namespace
             listStage.reserve( stageCount );
             for ( uint32 index = 0; index < stageCount; ++index )
             {
-                listStage.push_back( manager.createAnonymousStage( "LeakProbe" ) );
+                listStage.push_back( manager.createStage() );
             }
         }
         manager.shutdown();
@@ -121,6 +121,150 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
     SW_EXPECT_TRUE( bSecondRan.load() );
     SW_EXPECT_TRUE( bSecondSawFirst.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 이미 제출한 태스크에 선행을 더 걸어도 그 태스크는 한 번만 돈다
+ * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `precede` 가 수를 1 로 올린 뒤 선행이 끝나며 **다시** 0 을
+ *          지난다. 노드의 "큐에 넣었다" 문(`_bScheduled`)이 그 두 번째를 막는다. 예전의 5단 상태(`TaskState`)가
+ *          남아 있던 이유가 이 문 하나였다 — 상태를 걷어낸 뒤에도 문은 지켜야 한다.
+ *
+ *          선행은 **본문이 도는 동안** 건다. 본문이 끝난 뒤라면 완료 처리가 호출 대상을 이미 비워서, 문이 없어도 두 번째
+ *          실행은 빈 본문을 돌 뿐이라 보이지 않는다(문을 빼는 돌연변이로 확인했다). 본문이 도는 동안이면 두 번째 실행이
+ *          다른 워커에서 같은 본문을 동시에 돈다.
+ */
+SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> lateRunCount{ 0 };
+    sw::atomic<bool>  bLateStarted{ false };
+
+    sw::TaskHandle late = manager.emplaceTask( "Late", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&lateRunCount, &bLateStarted]()
+    {
+        lateRunCount.fetch_add( 1, std::memory_order_relaxed );
+        bLateStarted.store( true, std::memory_order_release );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    } ) );
+    late.submit();
+
+    const auto startTime = std::chrono::steady_clock::now();
+    while ( bLateStarted.load( std::memory_order_acquire ) == false )
+    {
+        const bool bTimedOut = std::chrono::steady_clock::now() - startTime > std::chrono::milliseconds( kWaitTimeoutMs );
+        SW_ASSERT_FALSE( bTimedOut );
+        std::this_thread::yield();
+    }
+
+    sw::TaskHandle early = manager.emplaceTask( "Early", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+    early.precede( late );
+    early.submit();
+
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( 1, lateRunCount.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] isCompleted 는 본문과 그 안에서 만든 자식이 모두 끝난 뒤에만 true 다
+ * @details 제출 전 · 본문은 끝났지만 자식이 남은 동안 · 모두 끝난 뒤를 차례로 본다. 두 번째가 핵심이다 — 본문만 보고
+ *          "끝났다" 고 하면 자식이 쓰는 중인 것을 호출자가 읽는다. 빈 핸들은 기다릴 것이 없으니 true 다.
+ */
+SW_TEST_CASE( TaskManagerTest, IsCompletedWaitsForTheBodyAndItsChildren )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    SW_EXPECT_TRUE( sw::TaskHandle{}.isCompleted() );
+
+    sw::atomic<bool> bParentBodyDone{ false };
+    sw::atomic<bool> bReleaseChild{ false };
+
+    sw::TaskHandle parent = manager.emplaceTask( "Parent", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bParentBodyDone, &bReleaseChild]()
+    {
+        sw::TaskHandle child = manager.emplaceTask( "Child", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bReleaseChild]()
+        {
+            while ( bReleaseChild.load( std::memory_order_acquire ) == false )
+            {
+                std::this_thread::yield();
+            }
+        } ) );
+        child.submit();
+        bParentBodyDone.store( true, std::memory_order_release );
+    } ) );
+    SW_EXPECT_FALSE( parent.isCompleted() );
+    parent.submit();
+
+    const auto startTime = std::chrono::steady_clock::now();
+    while ( bParentBodyDone.load( std::memory_order_acquire ) == false )
+    {
+        const bool bTimedOut = std::chrono::steady_clock::now() - startTime > std::chrono::milliseconds( kWaitTimeoutMs );
+        if ( bTimedOut )
+            break;
+        std::this_thread::yield();
+    }
+    SW_EXPECT_TRUE( bParentBodyDone.load() );
+    SW_EXPECT_FALSE( parent.isCompleted() );
+
+    bReleaseChild.store( true, std::memory_order_release );
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_TRUE( parent.isCompleted() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] isInsideParallelTask 는 병렬 본문 안에서만 true 다
+ * @details 병렬 본문에서 부르면 안 되는 함수의 단정이 기대는 값이다. 그래서 **나눠 돌든 한 번에 돌든** 같아야 한다 —
+ *          문턱 아래의 `runParallel` 도 병렬 본문이다. 보통 태스크 본문과 호출 스레드의 전후는 밖이다.
+ */
+SW_TEST_CASE( TaskManagerTest, InsideParallelTaskIsTrueOnlyInParallelBodies )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    SW_EXPECT_FALSE( manager.isInsideParallelTask() );
+
+    sw::atomic<uint32> insideCount{ 0 };
+    sw::atomic<uint32> outsideCount{ 0 };
+
+    const sw::ParallelBlockDelegate blockBody = SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&manager, &insideCount, &outsideCount]( uint32 start, uint32 end )
+    {
+        if ( manager.isInsideParallelTask() )
+            insideCount.fetch_add( end - start, std::memory_order_relaxed );
+        else
+            outsideCount.fetch_add( end - start, std::memory_order_relaxed );
+    } );
+
+    manager.runParallel( 4096, 16, blockBody ); // 나눠 돈다(호출 스레드도 청크를 집는다)
+    manager.runParallel( 8, 16, blockBody );    // 문턱 아래 — 호출 스레드가 한 번에 돈다
+    SW_EXPECT_FALSE( manager.isInsideParallelTask() );
+
+    sw::TaskHandle indexed = manager.emplaceParallel( "InsideIndex", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&manager, &insideCount, &outsideCount]( uint32 )
+    {
+        if ( manager.isInsideParallelTask() )
+            insideCount.fetch_add( 1, std::memory_order_relaxed );
+        else
+            outsideCount.fetch_add( 1, std::memory_order_relaxed );
+    } ) );
+    indexed.submit();
+
+    sw::atomic<int32> plainInside{ -1 };
+
+    sw::TaskHandle plain = manager.emplaceTask( "Plain", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &plainInside]()
+    {
+        plainInside.store( manager.isInsideParallelTask() ? 1 : 0, std::memory_order_relaxed );
+    } ) );
+    plain.submit();
+
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( 4096u + 8u + 256u, insideCount.load() );
+    SW_EXPECT_EQUAL( 0u, outsideCount.load() );
+    SW_EXPECT_EQUAL( 0, plainInside.load() );
 
     manager.shutdown();
 }
@@ -217,7 +361,7 @@ SW_TEST_CASE( TaskManagerTest, WaitStageReturnsOnlyAfterEveryStageTaskIsDone )
     constexpr int32   kTaskCount = 24;
     sw::atomic<int32> doneCount{ 0 };
 
-    sw::TaskStageHandle stage = manager.createAnonymousStage( "UnitStage" );
+    sw::TaskStageHandle stage = manager.createStage();
     for ( int32 index = 0; index < kTaskCount; ++index )
     {
         sw::TaskHandle handle = manager.emplaceTask( "StageWork", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&doneCount]()
@@ -356,12 +500,12 @@ SW_TEST_CASE( TaskManagerTest, NestedWaitInsideATaskDoesNotStall )
     constexpr int32   kOuterCount = 4;
     sw::atomic<int32> innerDoneCount{ 0 };
 
-    sw::TaskStageHandle outerStage = manager.createAnonymousStage( "Outer" );
+    sw::TaskStageHandle outerStage = manager.createStage();
     for ( int32 outerIndex = 0; outerIndex < kOuterCount; ++outerIndex )
     {
         sw::TaskHandle outer = manager.emplaceTask( "Outer", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &innerDoneCount]()
         {
-            sw::TaskStageHandle innerStage = manager.createAnonymousStage( "Inner" );
+            sw::TaskStageHandle innerStage = manager.createStage();
             for ( int32 innerIndex = 0; innerIndex < 3; ++innerIndex )
             {
                 sw::TaskHandle inner = manager.emplaceTask( "Inner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&innerDoneCount]()
@@ -470,7 +614,7 @@ SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
 
     sw::atomic<bool>    bMainTaskRan{ false };
     sw::atomic<bool>    bMainTaskRanOnMain{ false };
-    sw::TaskStageHandle stage = manager.createAnonymousStage( "ParkedMain" );
+    sw::TaskStageHandle stage = manager.createStage();
 
     sw::TaskHandle worker = manager.emplaceTask( "LateMainSpawner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &stage, &bMainTaskRan, &bMainTaskRanOnMain]()
     {
@@ -555,7 +699,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
     sw::vector<sw::atomic<int32>> listHit( kCount );
     sw::atomic<int32>*            pHit = listHit.data();
 
-    sw::TaskStageHandle stage  = manager.createAnonymousStage( "MainParent" );
+    sw::TaskStageHandle stage  = manager.createStage();
     sw::TaskHandle      handle = manager.emplaceParallel( "MainParentGroup", kCount,
                                                           SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [pHit]( uint32 index )
          {
