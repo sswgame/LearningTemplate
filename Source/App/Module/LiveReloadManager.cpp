@@ -305,6 +305,10 @@ namespace sw
             return true;
         }
 
+        // commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfterReload 가 그래프를 막아도 실패를 돌려준다. 그대로 지우면 이미지 · 등록한 타입 ·
+        // 섀도 파일이 프로세스 끝까지 남으므로, 등록을 거두기 전에 평소처럼 내린다.
+        if ( moduleContext._pLibraryModule != nullptr )
+            unloadModule( moduleContext );
         _mapModule.erase( string( moduleName ) );
         return false;
     }

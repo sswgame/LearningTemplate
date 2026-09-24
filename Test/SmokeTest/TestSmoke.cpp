@@ -47,6 +47,23 @@ namespace sw
             return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
         }
 
+        /** @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 수를 셉니다. */
+        uint32 countShadowCopies( const utf8* pModuleName )
+        {
+            const sw::string       directory = sw::FileUtil::getDirectoryPart( modulePath( pModuleName ) );
+            sw::vector<sw::string> listFile;
+            if ( sw::FileUtil::collectFiles( directory, "", listFile, false ) == false )
+                return 0;
+            const sw::string prefix = sw::string{ pModuleName } + "_temp_";
+            uint32           count{ 0 };
+            for ( const sw::string& filePath : listFile )
+            {
+                if ( filePath.find( prefix ) != sw::string::npos )
+                    ++count;
+            }
+            return count;
+        }
+
         /** @brief 테스트 모듈을 동적 로드합니다. */
         void* loadModule( const utf8* pName )
         {
@@ -239,11 +256,17 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadPoisonIgnoresTrigger )
 }
 
 /**
- * @brief onAfter poison 시 registerModule 은 실패해야 한다
+ * @brief onAfter poison 시 registerModule 은 실패해야 하고, 올렸던 이미지와 섀도 복사본은 그 자리에서 치운다
+ * @details commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfter 가 그래프를 막아도 실패를 돌려준다. 예전에는 등록이 그 컨텍스트를 내리지
+ *          않고 지워서 이미지 · 섀도 파일이 프로세스 끝까지 남았다(이 테스트가 `SWGame_temp_*` 를 남기고 있었다).
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterPoisonFailsRegister )
 {
+    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
     SW_TEST_DEFENSIVE_SCOPE( "Testing onAfter poison registration failure" );
+    const uint32 shadowCountBefore = sw::countShadowCopies( "SWGame" );
+
     sw::LiveReloadManager manager;
     manager.setOnAfterReload(
         "SWGame",
@@ -253,6 +276,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterPoisonFailsRegister )
     } ) );
     SW_EXPECT_FALSE( manager.registerModule( "SWGame" ) );
     SW_EXPECT_TRUE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( manager.getModuleHandle( "SWGame" ) == nullptr );
+    SW_EXPECT_EQUAL( shadowCountBefore, sw::countShadowCopies( "SWGame" ) );
     manager.shutdown();
 }
 

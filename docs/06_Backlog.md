@@ -1665,6 +1665,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 — 실패한 첫 등록이 올린 이미지를 내리지 않고 흘리던 것)
+
+**왜.** `registerModule` 은 prepare → commit 을 지난 뒤 onAfterReload 가 그래프를 막으면(onAfter 가 poison 하거나 ⑥ 의 가드가 결함을 잡으면)
+실패를 돌려받는다. 그런데 commit 은 이미 새 핸들 · 섀도 경로를 컨텍스트에 넣고 타입을 등록한 뒤라, 등록이 그 컨텍스트를 **맵에서 지우기만**
+하면 이미지 · 등록된 타입 · 섀도 파일이 프로세스 끝까지 남았다(종료 경로는 맵에 남은 모듈만 내린다). 핫 리로드 정리 중에 찾았다 —
+`ArchitectureTest.LiveReloadOnAfterPoisonFailsRegister` 가 돌 때마다 `SWGame_temp_*` 를 남기고 있었다.
+
+**한 것.** 컨텍스트에 핸들이 있으면 지우기 전에 `unloadModule` 로 평소처럼 내린다(onBefore → 워커 비우기 → 타입 해제 → ④ 의 코드 떼기 →
+언로드 → 섀도 파일 삭제). 그 테스트가 이제 핸들이 없고 섀도 복사본 수가 등록 전과 같은지도 본다 — 고친 두 줄을 빼는 돌연변이에 진다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7.
+
 ### 2026-09-24 (핫 리로드 정리 — ①–⑥ 을 다시 읽고 겹친 것 · 쓰지 않는 것을 걷었다)
 
 **리눅스 CI 판정.** 41b80bff 에서 Linux Debug · ASan · Shipping 통과(SmokeTest 8.7 초 — 리로드 케이스가 실제로 돈 시간). ① 표식 · ② SONAME ·
