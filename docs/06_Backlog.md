@@ -1665,6 +1665,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (레이어 점검 — Core · Engine · Editor 의 내용물이 제 층에 있는가, 옮긴 것은 창 이벤트 하나)
+
+**어떻게 쟀나.** include 그래프(Source · Test 의 `#include "…"`)로 다섯 가지를 셌다.
+① Engine 헤더 중 Editor 만 쓰는 것 ② Engine 파일 중 Engine 헤더를 하나도 안 쓰는 것(Core 후보) ③ Core 헤더 중 Core 안에서 아무도 안
+쓰는 것 ④ Editor 파일 중 에디터 것(Editor 헤더 · ImGui)을 하나도 안 쓰는 것 ⑤ Engine 안에서 다른 한 폴더만 쓰는 헤더. 그리고 Core 의
+타입 이름에 상위 개념(Window · Render · Scene · Editor · Input …)이, Engine 의 타입 이름에 에디터 개념(Editor · Inspector · Panel …)이
+섞였는지 훑었다. 스크립트는 scratch 에 두고 버렸다(같은 질문을 다시 하면 이 기준으로 다시 짜면 된다).
+
+**옮긴 것 — 창 이벤트(`WindowResizeEvent` · `WindowCloseEvent` · `WindowActivateEvent`)를 Core 에서 `Engine/Window/WindowEvents.h` 로.** 창은
+Engine 의 Window 층 개념인데 `Core/Event/EventType.h` 에 있었다. 게다가 엔진의 창은 이것을 발행하지 않는다(크기 · 닫기는 `IWindow` 의
+델리게이트로 알린다) — 쓰는 곳이 CoreTest 뿐이었다. 상용 엔진에 있는 기능이라 지우지 않고 제 층으로 옮겼다. 엔진 예약 ID
+(`kEventWindow*`)는 번호가 겹치지 않도록 한곳에서 보게 Core 의 표에 남긴다. 옮기면서 생성자를 주석에 맞췄다(크기 0 · 비활성 — 예전에는
+크기를 초기화하지 않았고 활성으로 두어 주석과 달랐다. 기본값에 기대는 곳은 없었다).
+
+**제자리라 둔 것.**
+- `Core/Container/ComponentHandle.h` · `GameObjectHandle.h` · `Core/String/TagID.h` — Object 개념이지만 **일부러** Core 로 내린 것이다(각 헤더
+  주석 참고: 직렬화기가 이 타입들의 핸들러를 등록하려고 Object 를 include 하던 고리를 끊었다).
+- Engine 헤더 중 Editor 만 쓰는 넷(`AnimationGraphPlayer` · `InputReplay` · `BoxCollider2DComponent` · `SpriteAnimatorComponent`) — 씬 ·
+  리플렉션이 런타임에 쓰는 엔진 기능이다. `CommandStack` 은 Undo 라 에디터 것이지만 `EngineLoop` 이 소유해 에디터 핫 리로드를 넘어 산다
+  (모듈 안에 두면 리로드 때 스택이 사라진다).
+- `Engine/Utility/Xml/TileMapXml.h` — Editor(타일맵 패널)와 GameFramework(Overworld 킷)가 함께 쓰는 문서 스키마라 둘 다 볼 수 있는 Engine 이 맞다.
+- `Core/Predefined/*.xxx` — Core 만 링크하는 리플렉션 파서가 읽는 X-매크로 목록이다.
+- Editor 의 에셋 굽기 · 임포트 설정(`TextureBaker` · `TextureImportConfig`) — 상용 엔진에서도 에디터 쪽 기능이다.
+- ②(Core 만 보는 Engine 파일)는 대부분 전방 선언만 하는 엔진 개념(`Scene` · `SceneManager` …)이라 개념으로 판정했다. 옮길 범용 부품은 없었다.
+- Engine 안 폴더 사이는 `CheckEngineLayers` 가 이미 방향을 막고 있다(⑤ 는 모두 아래 층을 위 층이 쓰는 정상 방향).
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7.
+
 ### 2026-09-24 (CI — macOS 잡을 뺐다, 지금은 지원하지 않는다)
 
 **왜.** macOS 는 지금 지원 대상이 아니다. `Build macOS Debug (Clang)` 은 빌드만 하는(`skipTests`) 잡이었는데 그 전부터 Configure 에서 지고 있어

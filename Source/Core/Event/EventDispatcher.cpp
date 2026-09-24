@@ -15,16 +15,6 @@ namespace sw
     {
     }
 
-    WindowResizeEvent::WindowResizeEvent() noexcept
-        : _bIsResizing{ SW_FALSE }
-        , _bIsMaximized{ SW_FALSE }
-        , _bIsMinimized{ SW_FALSE }
-        , _reservedFlags{ 0 } {}
-
-    WindowActivateEvent::WindowActivateEvent() noexcept
-        : _bIsActivate{ SW_TRUE }
-        , _reservedFlags{ 0 } {}
-
     EventDispatcher::EventDispatcher()
         : _busSpinLock{}
         , _queueSpinLock{}

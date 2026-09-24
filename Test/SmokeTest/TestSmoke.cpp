@@ -21,6 +21,7 @@
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/WindowEvents.h"
 
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"

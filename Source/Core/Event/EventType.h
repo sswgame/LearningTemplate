@@ -19,7 +19,11 @@ namespace sw
     /** @brief EventDispatcher 의 키로 쓰는 이벤트 타입 식별자입니다. */
     using EventTypeId = uint32;
 
-    /** @brief 엔진 예약 이벤트 ID(1..255)입니다. 0 은 무효입니다. */
+    /**
+     * @brief 엔진 예약 이벤트 ID(1..255)입니다. 0 은 무효입니다.
+     * @details 번호가 겹치지 않도록 여기 한곳에 적습니다. 이벤트 **타입**은 그 개념이 사는 층에 둡니다 — 창 이벤트는
+     *          `Engine/Window/WindowEvents.h` 입니다.
+     */
     inline constexpr EventTypeId kEventInvalid        = 0;
     inline constexpr EventTypeId kEventWindowActivate = 1;
     inline constexpr EventTypeId kEventWindowClose    = 2;
@@ -91,42 +95,5 @@ private:                                                            \
         virtual EventTypeId getEventType() const = 0;
 
         mutable atomic<IEvent*> _next;
-    };
-
-    // ------------------------------------------------------------------------------
-    // 3) 윈도우 이벤트 — Resize / Close / Activate
-    // ------------------------------------------------------------------------------
-    /** @brief 클라이언트 영역 크기와 리사이즈 · 최대화 · 최소화 플래그입니다. */
-    struct SW_API WindowResizeEvent final : IEvent
-    {
-        int32                  _width;
-        int32                  _height;
-        uint8                  _bIsResizing   : 1;
-        uint8                  _bIsMaximized  : 1;
-        uint8                  _bIsMinimized  : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 5;
-
-        /** @brief 크기는 0, 플래그는 모두 꺼진 상태로 둡니다. */
-        WindowResizeEvent() noexcept;
-
-        SW_REGISTER_ENGINE_EVENT( WindowResize );
-    };
-
-    /** @brief 창 닫기 요청입니다. 페이로드는 없습니다. */
-    struct SW_API WindowCloseEvent final : IEvent
-    {
-        SW_REGISTER_ENGINE_EVENT( WindowClose );
-    };
-
-    /** @brief 활성 · 비활성 전환입니다. */
-    struct SW_API WindowActivateEvent final : IEvent
-    {
-        uint8                  _bIsActivate   : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 7;
-
-        /** @brief 비활성으로 둡니다. */
-        WindowActivateEvent() noexcept;
-
-        SW_REGISTER_ENGINE_EVENT( WindowActivate );
     };
 } // namespace sw

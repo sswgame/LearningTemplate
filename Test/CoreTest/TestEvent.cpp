@@ -3,6 +3,8 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Window/WindowEvents.h"
+
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
