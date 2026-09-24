@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/FileUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -53,6 +54,14 @@ namespace
     };
 
     int32 DestructorCountingEvent::s_liveCount = 0;
+
+    int32 s_releaseProbeCount{ 0 };
+
+    /** @brief 이미지 범위 풀기 테스트가 받은 리사이즈 이벤트 수를 셉니다. */
+    void onReleaseProbeResize( const sw::WindowResizeEvent& )
+    {
+        ++s_releaseProbeCount;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -315,6 +324,45 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
     SW_EXPECT_EQUAL( kThreadCount * kEventsPerThread, receivedCount );
     SW_EXPECT_EQUAL( kThreadCount * kEventsPerThread, widthSum );
     SW_EXPECT_EQUAL( size_t{ 0 }, dispatcher.getPendingEventCount() );
+
+    dispatcher.clear();
+}
+
+/**
+ * @brief [EventTest] releaseCodeWithin 은 그 이미지가 만든 구독과 채널 항목을 치우고, 다시 구독하면 새 항목으로 돈다
+ * @details 핫 리로드가 모듈 이미지를 내리기 전에 부르는 길이다. 여기서는 **테스트 실행 파일 자신의 이미지**를 범위로 준다 — 구독의
+ *          스텁도, 이 이벤트 타입의 채널 항목 함수도 이 번역 단위에서 인스턴스화되었으니 모두 그 범위 안이다. 항목이 남으면 이미지가
+ *          내려간 뒤의 발행이 내려간 코드로 뛴다.
+ */
+SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImageCreated )
+{
+    using ResizeDelegate = sw::Delegate<void( const sw::WindowResizeEvent& )>;
+
+    sw::EventDispatcher dispatcher;
+    s_releaseProbeCount = 0;
+    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+
+    sw::WindowResizeEvent event;
+    event._width  = 10;
+    event._height = 20;
+    dispatcher.publish( event );
+    SW_EXPECT_EQUAL( 1, s_releaseProbeCount );
+
+    const void* pBegin{ nullptr };
+    const void* pEnd{ nullptr };
+    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onReleaseProbeResize ), pBegin, pEnd ) );
+
+    uint32 stuckEntryCount{ 99 };
+    SW_EXPECT_EQUAL( 1u, dispatcher.releaseCodeWithin( pBegin, pEnd, stuckEntryCount ) );
+    SW_EXPECT_EQUAL( 0u, stuckEntryCount );
+
+    dispatcher.publish( event );
+    SW_EXPECT_EQUAL( 1, s_releaseProbeCount );
+
+    // 항목이 지워졌어도 다시 구독하면 이쪽에서 새 항목을 만든다.
+    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+    dispatcher.publish( event );
+    SW_EXPECT_EQUAL( 2, s_releaseProbeCount );
 
     dispatcher.clear();
 }

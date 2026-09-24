@@ -494,3 +494,34 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
     SW_EXPECT_TRUE_MSG( silentCount == 0,
                         "받아 놓고 한 줄도 주지 않은 출력 장치가 있다 — 상한을 넘겼으면 거절했어야 한다" );
 }
+
+/**
+ * @brief [LogTest] releaseListenerCodeWithin 은 호출 스텁이 그 범위 안인 리스너만 뗀다
+ * @details 핫 리로드가 모듈 이미지를 내리기 전에 부르는 길이다(`engine::releaseModuleCode`) — 에디터 콘솔 패널이 다는 리스너가 여기 든다.
+ *          범위를 한 리스너의 스텁 하나로 좁혀, 다른 리스너는 남아 계속 받는지 본다. 두 람다의 몸통을 일부러 다르게 둔다(같으면 링커가
+ *          하나로 접어 두 스텁의 주소가 같아질 수 있다).
+ */
+SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
+{
+    sw::Logger logger;
+    logger.initialize();
+
+    int32                        releasedValue{ 0 };
+    int32                        keptValue{ 0 };
+    const sw::LogWrittenDelegate released = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&releasedValue]( const sw::LogEntry& )
+    { releasedValue += 1; } );
+    const sw::LogWrittenDelegate kept     = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&keptValue]( const sw::LogEntry& )
+        { keptValue += 10; } );
+    logger.addLogWrittenListener( released );
+    logger.addLogWrittenListener( kept );
+
+    const uint8* pReleasedCode = static_cast<const uint8*>( released.getCodeAddress() );
+    SW_EXPECT_EQUAL( 1u, logger.releaseListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );
+    SW_EXPECT_EQUAL( 0u, logger.releaseListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );
+
+    logger.writeLog( sw::LogLevel::Error, "Test", "Release", "한 줄", __FILE__, __LINE__ );
+    logger.shutdown();
+
+    SW_EXPECT_EQUAL( 0, releasedValue );
+    SW_EXPECT_EQUAL( 10, keptValue );
+}

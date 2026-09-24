@@ -8,6 +8,7 @@ namespace sw
     {
         if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
             return;
+        recordCodeAddress( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -117,6 +118,7 @@ namespace sw
         // 여기서 막고 나면 아래 `push` 가 거절될 이유가 남지 않으므로, 키를 적는 것도 안전해진다.
         if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
             return;
+        recordCodeAddress( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -181,10 +183,43 @@ namespace sw
         }
     }
 
+    uint32 CommandStack::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        const uintptr_t begin = reinterpret_cast<uintptr_t>( pBegin );
+        const uintptr_t end   = reinterpret_cast<uintptr_t>( pEnd );
+        bool            bHoldsCode{ false };
+        for ( const void* pCode : _listCodeAddress )
+        {
+            const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );
+            if ( begin <= code && code < end )
+            {
+                bHoldsCode = true;
+                break;
+            }
+        }
+        if ( bHoldsCode == false )
+            return 0;
+
+        const uint32 droppedCount = static_cast<uint32>( _listCommand.size() + _listPendingTransactionCommand.size() );
+        clear();
+        return droppedCount;
+    }
+
+    void CommandStack::recordCodeAddress( const Command& cmd )
+    {
+        const void* arrCode[] = { cmd._undo.getCodeAddress(), cmd._redo.getCodeAddress() };
+        for ( const void* pCode : arrCode )
+        {
+            if ( std::find( _listCodeAddress.begin(), _listCodeAddress.end(), pCode ) == _listCodeAddress.end() )
+                _listCodeAddress.push_back( pCode );
+        }
+    }
+
     void CommandStack::clear()
     {
         _listCommand.clear();
         _listPendingTransactionCommand.clear();
+        _listCodeAddress.clear();
         _transactionLabel.clear();
         _lastCoalesceKey.clear();
         _index            = 0;

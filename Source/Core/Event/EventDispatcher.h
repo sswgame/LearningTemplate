@@ -179,6 +179,15 @@ namespace sw
         /** @brief 모든 구독과 큐를 비웁니다. */
         void clear();
 
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 떼고, 그 범위가 만든 채널 항목을 치웁니다. 뗀 구독 수를 반환합니다.
+         * @param outStuckEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
+         * @details 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다(`engine::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트 ·
+         *          떼기)는 그 이벤트 타입을 **처음** 구독 · 발행한 쪽에서 인스턴스화되므로, 모듈이 만든 항목은 모듈이 내려간 뒤 발행하면
+         *          내려간 코드로 뜁니다. 그런 항목은 비었으면 지웁니다(다음 구독 · 발행이 자기 쪽에서 새로 만든다).
+         */
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outStuckEntryCount );
+
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
         {
@@ -247,9 +256,13 @@ namespace sw
         /** @brief 타입을 지운 채널 브로드캐스트 엔트리입니다. 람다 없이 함수 포인터와 멀티캐스트만 둡니다. */
         struct ChannelDispatchEntry
         {
-            using BroadcastFn = void ( * )( void* pMulticast, const IEvent& eventRef );
+            using BroadcastFn  = void ( * )( void* pMulticast, const IEvent& eventRef );
+            using RemoveCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd );
+            using IsBoundFn    = bool ( * )( const void* pMulticast );
 
             BroadcastFn      _pfnBroadcast{ nullptr };
+            RemoveCodeFn     _pfnRemoveCodeWithin{ nullptr }; ///< `releaseCodeWithin` 이 타입을 모르는 채 구독을 떼는 길
+            IsBoundFn        _pfnIsBound{ nullptr };          ///< 뗀 뒤 남은 구독이 있는지 묻는 길
             shared_ptr<void> _pMulticast;
 
             /** @brief 호출할 수 있는 엔트리면 true 입니다. */
@@ -269,6 +282,20 @@ namespace sw
             static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->broadcast( static_cast<const T&>( eventRef ) );
         }
 
+        /** @brief 타입별 멀티캐스트에서 [@p pBegin, @p pEnd) 가 만든 구독을 뗍니다. */
+        template <typename T>
+        static uint32 removeTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd )
+        {
+            return static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->removeCodeWithin( pBegin, pEnd );
+        }
+
+        /** @brief 타입별 멀티캐스트에 구독이 남았는지 봅니다. */
+        template <typename T>
+        static bool isTypedChannelBound( const void* pMulticast )
+        {
+            return static_cast<const MulticastDelegate<void( const T& )>*>( pMulticast )->isBound();
+        }
+
         /**
          * @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오.
          * @details 예전에는 이 함수가 잠금을 스스로 잡았다가 곧바로 놓아서, 호출부의 `add` / `remove` / `broadcast` 가 모두
@@ -284,7 +311,7 @@ namespace sw
                 return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second._pMulticast );
 
             shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, mcast };
+            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &removeTypedCodeWithin<T>, &isTypedChannelBound<T>, mcast };
             return mcast;
         }
 

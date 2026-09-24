@@ -164,6 +164,41 @@ namespace sw
         }
     }
 
+    uint32 EventDispatcher::releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outStuckEntryCount )
+    {
+        outStuckEntryCount    = 0;
+        const uintptr_t begin = reinterpret_cast<uintptr_t>( pBegin );
+        const uintptr_t end   = reinterpret_cast<uintptr_t>( pEnd );
+
+        uint32                                   releasedCount{ 0 };
+        vector<pair<hashed_string, EventTypeId>> listErase;
+        std::scoped_lock<SpinLock>               lock{ _busSpinLock };
+        for ( const auto& [key, entry] : _mapChannelDispatchTable )
+        {
+            if ( entry.isBound() == false || entry._pfnRemoveCodeWithin == nullptr )
+                continue;
+            releasedCount += entry._pfnRemoveCodeWithin( entry._pMulticast.get(), pBegin, pEnd );
+
+            // 항목의 함수들은 그 타입을 처음 만진 쪽에서 인스턴스화된다. 그것이 이 범위면 범위가 내려간 뒤 이 항목은 내려간 코드로 뛴다.
+            const uintptr_t broadcastCode   = reinterpret_cast<uintptr_t>( entry._pfnBroadcast );
+            const bool      bCreatedByRange = begin <= broadcastCode && broadcastCode < end;
+            if ( bCreatedByRange == false )
+                continue;
+            if ( entry._pfnIsBound( entry._pMulticast.get() ) )
+            {
+                ++outStuckEntryCount;
+                continue;
+            }
+            listErase.push_back( key );
+        }
+        // 멀티캐스트의 해제자도 그 범위의 코드다. 범위가 아직 올라와 있는 지금 지운다.
+        for ( const pair<hashed_string, EventTypeId>& key : listErase )
+        {
+            _mapChannelDispatchTable.erase( key );
+        }
+        return releasedCount;
+    }
+
     void EventDispatcher::clear()
     {
         assertBusThread();

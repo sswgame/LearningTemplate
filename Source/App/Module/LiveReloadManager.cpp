@@ -156,6 +156,16 @@ namespace sw
 #endif
             }
 
+            /** @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`engine::releaseModuleCode`). 이미지를 내리기 전에 부릅니다. */
+            static void releaseImageCode( string_view moduleName, void* pHandle )
+            {
+                const void* pBegin{ nullptr };
+                const void* pEnd{ nullptr };
+                if ( pHandle == nullptr || FileUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
+                    return;
+                engine::releaseModuleCode( moduleName, pBegin, pEnd );
+            }
+
             static void cleanStaleShadowArtifacts( string_view directoryPath )
             {
                 vector<string> listFile;
@@ -635,6 +645,7 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( ctx._moduleName );
+                LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, pPreviousHandle );
             }
 
             ctx._pLibraryModule    = prepared._pHandle;
@@ -680,6 +691,7 @@ namespace sw
             TypeRegistrar::getHead()                 = prepared._pPreviousTypeHead;
             EnumRegistrar::getHead()                 = prepared._pPreviousEnumHead;
             sw::ComponentFactoryRegistrar::getHead() = prepared._pPreviousFactoryHead;
+            LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle );
             FileUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
@@ -712,6 +724,7 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( ctx._moduleName );
+            LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, ctx._pLibraryModule );
 
             FileUtil::unloadDynamicLibrary( ctx._pLibraryModule );
             ctx._pLibraryModule = nullptr;

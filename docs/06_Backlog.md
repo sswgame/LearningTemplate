@@ -1665,6 +1665,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (핫 리로드 ④ — 내리려는 이미지의 코드를 들고 있는 엔진 쪽 등록을 뗀다, 에디터가 다는 넷 포함)
+
+**왜.** ③ 은 남은 참조를 크래시 대신 옛 동작 한 번으로 미룰 뿐이다. 떼는 일은 모듈 몫인데, 특히 **에디터**가 엔진 소유(모듈보다 오래
+사는) 등록부에 자기 코드를 단다 — Undo 스택(트랜잭션 람다) · 전역 로그 리스너(콘솔 패널) · 창 닫기 처리기 · 이벤트 구독. 지금은
+`ImGuiEditor::shutdown` · `~ConsolePanel` 이 하나씩 손으로 떼고, 뗐는지 보는 곳은 없었다. 새 패널이 하나라도 빠뜨리면 에디터 핫 리로드
+뒤 Ctrl+Z · 로그 한 줄 · 창 닫기가 내려간 이미지로 뛴다.
+
+**한 것.**
+- **코드 주소로 가린다.** 델리게이트의 호출 스텁은 그것을 **만든** 번역 단위에서 인스턴스화되므로 스텁 주소가 곧 만든 모듈이다
+  (`Delegate::getCodeAddress` · `isCodeWithin`). 이미지 범위는 `FileUtil::findLoadedImageRange` / `findDynamicLibraryRange`(Windows 는
+  `SizeOfImage`, 리눅스는 PT_LOAD 전체 — `dl_iterate_phdr` · `dlinfo`).
+- **`engine::releaseModuleCode`** — `LiveReloadManager` 가 이미지를 내리기(퇴역 · 언로드 · prepare 취소) 전에 부른다. 넷을 본다:
+  - 이벤트 버스 — 그 범위가 만든 구독(`MulticastDelegate::removeCodeWithin`)과 그 범위가 처음 만든 채널 항목(항목의 타입별 함수가 그
+    모듈 코드다 — 비었으면 지우고, 다른 구독이 남아 못 지우면 에러로 남긴다).
+  - 전역 로그 리스너 — `ILogSink::releaseListenerCodeWithin`(테스트 프록시 싱크도 넘긴다).
+  - Undo 스택 — `CommandStack::releaseCodeWithin`. 기록은 중간을 뺄 수 없어 들어 있으면 **통째로** 비운다. 트랜잭션은 안쪽 명령을 엔진
+    람다 하나로 싸서 안쪽이 보이지 않으므로, 들어올 때의 코드 주소를 따로 적어 둔다(`_listCodeAddress`, `clear` 가 비운다).
+  - 활성 창의 처리기 셋 — `IWindow::releaseCodeWithin`.
+  뗀 것이 있으면 모듈 이름과 함께 경고한다. 모듈이 제대로 정리했으면 늘 0 이다 — 손 정리는 그대로 두고, 이것은 빠뜨린 것을 알리는 안전망이다.
+- **테스트** — `DelegateTest` · `EventTest` · `FileTest` · `LogTest` · `EditorCommandStackTest`(트랜잭션 안쪽) 에 하나씩, 그리고
+  `ArchitectureTest.ReleaseModuleCodeSweepsEveryRegistryTheEditorUses`(등록부마다 하나씩 달고 범위를 그 스텁 하나로 좁혀 부른다 — 실행
+  파일의 다른 등록을 건드리지 않는다). 등록부 하나를 빼는 돌연변이 · 코드 주소를 적지 않는 돌연변이에 진다. 몸통이 같은 람다는 ICF 가
+  접어 스텁 주소가 겹칠 수 있어 시험 함수마다 몸통을 다르게 둔다.
+
+**에디터에서 확인.** `App.exe -EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60` 의 종료 경로(EditorModule 언로드)에서 경고 0 —
+지금의 손 정리는 빠진 것이 없다. `ImGuiEditor::shutdown` 의 닫기 처리기 떼기를 지우는 돌연변이에서
+`Module EditorModule left 1 window handler(s) behind` 가 뜬다(안전망이 에디터 경로에서 실제로 돈다).
+
+**일부러 뺀 것.**
+- **파일 대화 상자 결과** — 열린 대화 상자는 분리된 스레드가 델리게이트 복사본을 들고 있어, 범위로 떼려면 열린 것마다 번호를 들고 다녀야
+  한다. 대화 상자를 띄우지 않고 그 길을 시험할 방법이 없고, 에디터의 `cancelFileDialogResults`(세대 번호로 열린 것까지 버린다)가 이미 막는다.
+- **`Logger::addOutput`** 으로 단 출력 장치(모듈 vtable) — 모듈 쪽에서 다는 곳이 지금 없다.
+- 큐의 태스크 — 리로드 전 `ModuleHost::drainRenderWorkers` 가 `TaskManager::waitAll` 로 비운다(넘치면 그래프를 막는다).
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · SmokeTest `ArchitectureTest` 17/17.
+
 ### 2026-09-24 (핫 리로드 ③ — 교체된 옛 이미지를 배치 단위로 올려 둔다)
 
 **왜.** commit 은 새 이미지로 갈아 끼운 뒤 옛 이미지를 **바로** 내렸다. 옛 코드를 가리키는 것(떼지 못한 델리게이트 · 함수 포인터 ·

@@ -4,7 +4,9 @@
 #include "App/Module/ModuleCompiler.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -15,6 +17,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Utility/CommandStack.h"
+#include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -99,6 +103,57 @@ namespace sw
             return bReloaded;
         }
 
+        /** @brief 처리기만 들고 아무것도 띄우지 않는 창입니다. 모듈 코드 정리 테스트가 활성 창으로 씁니다. */
+        class HandlerOnlyWindow final : public sw::IWindow
+        {
+        public:
+            bool  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
+            void  destroy() override {}
+            bool  processMessages() override { return true; }
+            void* getNativeHandle() const override { return nullptr; }
+        };
+
+        // 모듈 코드 정리 테스트가 등록부마다 하나씩 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
+        int32 s_sweepProbeValue{ 0 };
+
+        /** @brief 이벤트 버스에 구독하는 처리기입니다. */
+        void onSweepProbeResize( const sw::WindowResizeEvent& )
+        {
+            s_sweepProbeValue += 1;
+        }
+
+        /** @brief 전역 로그 리스너입니다. */
+        void onSweepProbeLog( const sw::LogEntry& )
+        {
+            s_sweepProbeValue += 20;
+        }
+
+        /** @brief Undo 명령의 redo 입니다. */
+        void redoSweepProbe()
+        {
+            s_sweepProbeValue += 300;
+        }
+
+        /** @brief Undo 명령의 undo 입니다. */
+        void undoSweepProbe()
+        {
+            s_sweepProbeValue -= 300;
+        }
+
+        /** @brief 창 닫기 처리기입니다. 닫기를 보류합니다. */
+        bool refuseSweepProbeClose()
+        {
+            s_sweepProbeValue += 4000;
+            return false;
+        }
+
+        /** @brief 델리게이트의 스텁 하나만 담는 범위로 `engine::releaseModuleCode` 를 부릅니다. */
+        template <typename TDelegate>
+        uint32 releaseStubOf( const TDelegate& delegate )
+        {
+            const uint8* pCode = static_cast<const uint8*>( delegate.getCodeAddress() );
+            return sw::engine::releaseModuleCode( "SweepProbe", pCode, pCode + 1 );
+        }
     } // namespace
 } // namespace sw
 
@@ -433,6 +488,63 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
     SW_EXPECT_TRUE( reloadLog.size() >= 4u );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [ArchitectureTest] 모듈 이미지를 내리기 전의 정리는 에디터가 다는 엔진 쪽 등록부 넷을 모두 본다
+ * @details `engine::releaseModuleCode` 는 모듈이 스스로 떼지 않은 것을 떼는 안전망이다. 에디터는 이벤트 구독 · 로그 리스너(콘솔 패널) ·
+ *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, 지금은 `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 등록부마다
+ *          하나씩 달고 범위를 그 하나의 스텁으로 좁혀 부른다 — 이 실행 파일의 다른 등록은 건드리지 않고, 등록부 하나를 빠뜨리면 진다.
+ */
+SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUses )
+{
+    if ( sw::engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "engine services not bound" );
+    SW_TEST_DEFENSIVE_SCOPE( "releaseModuleCode warns about what a module left behind" );
+    sw::s_sweepProbeValue = 0;
+
+    // 이벤트 버스
+    using ResizeDelegate          = sw::Delegate<void( const sw::WindowResizeEvent& )>;
+    const ResizeDelegate onResize = SW_DELEGATE_FUNCTION( ResizeDelegate, sw::onSweepProbeResize );
+    sw::engine::getEventDispatcher().subscribe<sw::WindowResizeEvent>( onResize );
+    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onResize ) );
+    sw::WindowResizeEvent resize;
+    resize._width  = 1;
+    resize._height = 1;
+    sw::engine::getEventDispatcher().publish( resize );
+
+    // 전역 로그 리스너
+    const sw::LogWrittenDelegate onLog = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );
+    SW_ASSERT_TRUE( sw::Logger::addGlobalListener( onLog ).isValid() );
+    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onLog ) );
+    SW_EXPECT_EQUAL( 0u, sw::releaseStubOf( onLog ) );
+
+    // Undo 스택
+    sw::CommandStack* pCommandStack = sw::engine::getBoundEngineServices()._pCommandStack;
+    SW_ASSERT_TRUE( pCommandStack != nullptr );
+    pCommandStack->clear();
+    sw::CommandStack::Command command;
+    command._label                       = "sweep probe";
+    command._redo                        = SW_DELEGATE_FUNCTION( sw::Delegate<void()>, sw::redoSweepProbe );
+    command._undo                        = SW_DELEGATE_FUNCTION( sw::Delegate<void()>, sw::undoSweepProbe );
+    const sw::Delegate<void()> undoProbe = command._undo;
+    pCommandStack->push( std::move( command ) );
+    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( undoProbe ) );
+    SW_EXPECT_FALSE( pCommandStack->canUndo() );
+
+    // 활성 창의 닫기 처리기
+    sw::HandlerOnlyWindow window;
+    sw::IWindow* const    pPreviousWindow = sw::IWindow::getActiveWindow();
+    sw::IWindow::setActiveWindow( &window );
+    const sw::WindowCloseQueryDelegate onClose = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
+    window.setCloseQueryHandler( onClose );
+    SW_EXPECT_FALSE( window.tryBeginClose() );
+    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onClose ) );
+    SW_EXPECT_TRUE( window.tryBeginClose() );
+    sw::IWindow::setActiveWindow( pPreviousWindow );
+
+    // 뗀 뒤에 불린 것은 없다 — 닫기 처리기가 떼기 전에 한 번 불렸을 뿐이다.
+    SW_EXPECT_EQUAL( 4000, sw::s_sweepProbeValue );
 }
 
 /**

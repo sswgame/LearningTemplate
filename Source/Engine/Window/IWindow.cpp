@@ -47,6 +47,27 @@ namespace sw
         return true;
     }
 
+    uint32 IWindow::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32 releasedCount{ 0 };
+        if ( _customHandler.isCodeWithin( pBegin, pEnd ) )
+        {
+            _customHandler = {};
+            ++releasedCount;
+        }
+        if ( _onResize.isCodeWithin( pBegin, pEnd ) )
+        {
+            _onResize = {};
+            ++releasedCount;
+        }
+        if ( _closeQuery.isCodeWithin( pBegin, pEnd ) )
+        {
+            _closeQuery = {};
+            ++releasedCount;
+        }
+        return releasedCount;
+    }
+
     IWindow::~IWindow()
     {
         // **활성 창이 죽으면 전역 포인터도 같이 끊는다.** 그러지 않으면 뒤에

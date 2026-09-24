@@ -323,3 +323,33 @@ SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState
     pCopy->broadcast();
     SW_EXPECT_EQUAL( beforeBroadcast, sourceCount );
 }
+
+/**
+ * @brief [DelegateTest] removeCodeWithin 은 호출 스텁이 그 범위 안에 있는 구독만 뗀다
+ * @details 스텁은 델리게이트를 만든 번역 단위(= 모듈)의 코드다. 핫 리로드는 내리려는 모듈이 만든 구독을 이것으로 뗀다. 범위를 스텁
+ *          하나로 좁혀, 다른 스텁(여기서는 멤버 함수 스텁)의 구독은 남는지 본다.
+ */
+SW_TEST_CASE( DelegateTest, RemoveCodeWithinDropsOnlyTheDelegatesBuiltInThatRange )
+{
+    SW_DECLARE_MULTI_CAST_DELEGATE( void, IntMulticast, int32 );
+    SW_DECLARE_DELEGATE( void, IntDelegate, int32 );
+
+    IntMulticast  multicast;
+    DummyListener listener;
+    s_TestValue = 0;
+
+    const IntDelegate freeDelegate   = SW_DELEGATE_FUNCTION( IntDelegate, freeFunctionTest );
+    const IntDelegate memberDelegate = SW_DELEGATE_METHOD( IntDelegate, &DummyListener::memberFunc, &listener );
+    SW_ASSERT_TRUE( freeDelegate.getCodeAddress() != nullptr );
+    SW_EXPECT_TRUE( freeDelegate.getCodeAddress() != memberDelegate.getCodeAddress() );
+    multicast.add( freeDelegate );
+    multicast.add( memberDelegate );
+
+    const uint8* pFreeCode = static_cast<const uint8*>( freeDelegate.getCodeAddress() );
+    SW_EXPECT_EQUAL( 1u, multicast.removeCodeWithin( pFreeCode, pFreeCode + 1 ) );
+
+    multicast.broadcast( 5 );
+    SW_EXPECT_EQUAL( 0, s_TestValue );
+    SW_EXPECT_EQUAL( 5, listener._value );
+    SW_EXPECT_EQUAL( 0u, multicast.removeCodeWithin( pFreeCode, pFreeCode + 1 ) );
+}

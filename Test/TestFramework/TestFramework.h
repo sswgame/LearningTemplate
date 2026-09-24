@@ -142,6 +142,11 @@ namespace test
                 _pWrappedSink->removeLogWrittenListener( handle );
         }
 
+        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override
+        {
+            return _pWrappedSink != nullptr ? _pWrappedSink->releaseListenerCodeWithin( pBegin, pEnd ) : 0;
+        }
+
         const sw::string& getLogFolderPath() override
         {
             static const sw::string s_emptyPath{};

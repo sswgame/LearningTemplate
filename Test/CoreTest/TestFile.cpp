@@ -4,6 +4,15 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace
+{
+    /** @brief 이미지 범위 테스트가 주소를 쓰는 함수입니다. */
+    int32 imageRangeProbe()
+    {
+        return 7;
+    }
+} // namespace
+
 // ------------------------------------------------------------------------------
 // 1) Core_File — 경로·읽기쓰기·바이너리블롭
 // ------------------------------------------------------------------------------
@@ -261,4 +270,23 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
         SW_EXPECT_FALSE( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( rootDir, "nope" ), "", listFile, true ) );
         SW_EXPECT_TRUE( listFile.empty() );
     }
+}
+
+/**
+ * @brief [FileTest] findLoadedImageRange 는 주소를 담은 실행 이미지의 범위를 준다
+ * @details 핫 리로드가 "이 코드가 내리려는 모듈의 것인가" 를 가리는 기준이다. 범위가 주소를 담고, 잘못된 주소는 거절한다.
+ */
+SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
+{
+    const void* pProbe = reinterpret_cast<const void*>( &imageRangeProbe );
+    const void* pBegin{ nullptr };
+    const void* pEnd{ nullptr };
+    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( pProbe, pBegin, pEnd ) );
+
+    const uintptr_t probe       = reinterpret_cast<uintptr_t>( pProbe );
+    const bool      bContainsIt = reinterpret_cast<uintptr_t>( pBegin ) <= probe && probe < reinterpret_cast<uintptr_t>( pEnd );
+    SW_EXPECT_TRUE( bContainsIt );
+    SW_EXPECT_EQUAL( 7, imageRangeProbe() );
+
+    SW_EXPECT_FALSE( sw::FileUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
 }

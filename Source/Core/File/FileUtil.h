@@ -229,5 +229,14 @@ namespace sw
         static void* getDynamicSymbol( void* pHandle, string_view symbolName );
         /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
         static void unloadDynamicLibrary( void* pHandle );
+        /**
+         * @brief 주소 @p pAddressInside 를 담은 실행 이미지(exe · DLL · SO)가 메모리에서 차지하는 범위를 찾습니다.
+         * @details Windows 는 이미지 기준 주소 + `SizeOfImage`, 리눅스는 그 이미지의 적재 세그먼트(PT_LOAD) 전체입니다. 핫 리로드가
+         *          "이 델리게이트 · 함수 포인터가 내리려는 모듈의 코드인가" 를 가리는 데 씁니다.
+         * @return 찾지 못하면 false 입니다(그 외 플랫폼 포함).
+         */
+        static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
+        /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같다). */
+        static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
     };
 } // namespace sw

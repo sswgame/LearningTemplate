@@ -11,6 +11,10 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
+#if defined( SW_PLATFORM_LINUX )
+    #include <link.h>
+#endif
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileDialog.h"
 #elif defined( SW_PLATFORM_LINUX )
@@ -27,6 +31,43 @@ namespace sw
     {
         struct FileUtilInternal
         {
+#if defined( SW_PLATFORM_LINUX )
+            /** @brief `dl_iterate_phdr` 가 이미지마다 부르는 곳에 넘기는 문맥입니다. */
+            struct ImageRangeQuery
+            {
+                uintptr_t _address{ 0 };
+                uintptr_t _begin{ 0 };
+                uintptr_t _end{ 0 };
+                bool      _bFound{ false };
+            };
+
+            /** @brief 이미지 하나의 PT_LOAD 범위를 모아 @p pContext 의 주소를 담는지 봅니다. 담으면 1 을 반환해 순회를 멈춥니다. */
+            static int32 collectImageRange( struct dl_phdr_info* pInfo, size_t, void* pContext )
+            {
+                ImageRangeQuery* pQuery = static_cast<ImageRangeQuery*>( pContext );
+                uintptr_t        begin  = UINTPTR_MAX;
+                uintptr_t        end    = 0;
+                for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )
+                {
+                    const ElfW( Phdr ) & header = pInfo->dlpi_phdr[headerIndex];
+                    if ( header.p_type != PT_LOAD )
+                        continue;
+                    const uintptr_t segmentBegin = pInfo->dlpi_addr + header.p_vaddr;
+                    const uintptr_t segmentEnd   = segmentBegin + header.p_memsz;
+                    begin                        = MathUtil::min( begin, segmentBegin );
+                    end                          = MathUtil::max( end, segmentEnd );
+                }
+                if ( begin <= pQuery->_address && pQuery->_address < end )
+                {
+                    pQuery->_begin  = begin;
+                    pQuery->_end    = end;
+                    pQuery->_bFound = true;
+                    return 1;
+                }
+                return 0;
+            }
+#endif
+
 #if !defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief 읽기용으로 열고 크기를 잽니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
@@ -1009,6 +1050,61 @@ namespace sw
         return reinterpret_cast<void*>( GetProcAddress( static_cast<HMODULE>( pHandle ), symbolNameNt.c_str() ) );
 #else
         return dlsym( pHandle, symbolNameNt.c_str() );
+#endif
+    }
+
+    bool FileUtil::findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd )
+    {
+        pOutBegin = nullptr;
+        pOutEnd   = nullptr;
+        if ( pAddressInside == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        HMODULE hModule = nullptr;
+        if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                 static_cast<LPCWSTR>( pAddressInside ), &hModule ) == FALSE )
+            return false;
+        const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
+        const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
+        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
+            return false;
+        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
+        if ( pNt->Signature != IMAGE_NT_SIGNATURE )
+            return false;
+        pOutBegin = pBase;
+        pOutEnd   = pBase + pNt->OptionalHeader.SizeOfImage;
+        return true;
+#elif defined( SW_PLATFORM_LINUX )
+        FileUtilInternal::ImageRangeQuery query{};
+        query._address = reinterpret_cast<uintptr_t>( pAddressInside );
+        dl_iterate_phdr( &FileUtilInternal::collectImageRange, &query );
+        if ( query._bFound == false )
+            return false;
+        pOutBegin = reinterpret_cast<const void*>( query._begin );
+        pOutEnd   = reinterpret_cast<const void*>( query._end );
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool FileUtil::findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd )
+    {
+        pOutBegin = nullptr;
+        pOutEnd   = nullptr;
+        if ( pHandle == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        // Windows 의 모듈 핸들은 이미지의 기준 주소다.
+        return findLoadedImageRange( pHandle, pOutBegin, pOutEnd );
+#elif defined( SW_PLATFORM_LINUX )
+        // 리눅스 핸들은 주소가 아니다. 링크 맵이 가리키는 동적 섹션은 이미지 안에 있다.
+        struct link_map* pLinkMap = nullptr;
+        if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr )
+            return false;
+        return findLoadedImageRange( pLinkMap->l_ld, pOutBegin, pOutEnd );
+#else
+        return false;
 #endif
     }
 

@@ -4,13 +4,17 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
+#include "Engine/Window/IWindow.h"
 
 SW_LOG_CALLER( "ModuleTypeRegistry" );
 namespace sw
@@ -111,6 +115,39 @@ namespace sw
             }
             getTypeRegistry().unregisterTypesByModule( moduleName );
             getGlobalVariableManager().unregisterVariablesByModule( moduleName );
+        }
+
+        uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd )
+        {
+            if ( areEngineServicesBound() == false || pBegin == nullptr || pEnd == nullptr )
+                return 0;
+
+            // 모듈은 자기가 단 것을 스스로 떼야 한다(에디터는 ImGuiEditor::shutdown · ~ConsolePanel 에서 뗀다). 여기서 뗀 것이 있으면
+            // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다.
+            uint32       stuckEntryCount{ 0 };
+            const uint32 eventCount = getEventDispatcher().releaseCodeWithin( pBegin, pEnd, stuckEntryCount );
+            if ( eventCount > 0 )
+                SW_LOG_WARNING( "Module %# left %# event subscription(s) behind — released them before unloading its image", moduleName, eventCount );
+            if ( stuckEntryCount > 0 )
+                SW_LOG_ERROR( "Module %# created %# event channel(s) that other code still subscribes to — publishing them after the unload would jump into the unloaded image",
+                              moduleName, stuckEntryCount );
+
+            const uint32 listenerCount = Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
+            if ( listenerCount > 0 )
+                SW_LOG_WARNING( "Module %# left %# log listener(s) behind — released them before unloading its image", moduleName, listenerCount );
+
+            // Undo 스택은 선택 서비스다(Shipping · 일부 호스트에는 없다).
+            CommandStack* pCommandStack = getBoundEngineServices()._pCommandStack;
+            const uint32  commandCount  = pCommandStack != nullptr ? pCommandStack->releaseCodeWithin( pBegin, pEnd ) : 0;
+            if ( commandCount > 0 )
+                SW_LOG_WARNING( "Module %# left %# undo command(s) behind — cleared the undo stack before unloading its image", moduleName, commandCount );
+
+            IWindow*     pWindow     = IWindow::getActiveWindow();
+            const uint32 windowCount = pWindow != nullptr ? pWindow->releaseCodeWithin( pBegin, pEnd ) : 0;
+            if ( windowCount > 0 )
+                SW_LOG_WARNING( "Module %# left %# window handler(s) behind — released them before unloading its image", moduleName, windowCount );
+
+            return eventCount + listenerCount + commandCount + windowCount;
         }
 #endif
     } // namespace engine

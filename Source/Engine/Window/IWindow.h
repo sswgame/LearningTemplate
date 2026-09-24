@@ -125,6 +125,11 @@ namespace sw
         void requestClose();
         /** @brief 닫기 쿼리를 거쳐 종료를 시도합니다. 허용되면 true 입니다. */
         bool tryBeginClose();
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 처리기(메시지 · 크기 · 닫기)를 떼고, 뗀 수를 반환합니다.
+         * @details 창은 App 소유라 모듈보다 오래 삽니다. 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다 — 에디터는 닫기 처리기를 답니다.
+         */
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();

@@ -59,6 +59,8 @@ namespace sw
         virtual DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
         /** @brief 핸들로 리스너를 뗍니다. */
         virtual void removeLogWrittenListener( const DelegateHandle& handle ) = 0;
+        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 떼고, 뗀 수를 반환합니다(핫 리로드가 모듈을 내리기 전에 부른다). */
+        virtual uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로입니다. */
         virtual const string& getLogFolderPath() = 0;
     };
@@ -95,6 +97,8 @@ namespace sw
         DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) override;
         /** @brief 핸들로 리스너를 뗍니다. */
         void removeLogWrittenListener( const DelegateHandle& handle ) override;
+        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 뗍니다. */
+        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
         /**
          * @brief 소스 파일 경로별 Caller 이름을 등록합니다. **예외를 던지지 않습니다.**
          * @details `SW_LOG_CALLER` 가 정적 초기화 중에 부르므로 여기서 예외가 나면 잡을 곳이 없습니다(std::terminate). 내부는
@@ -125,6 +129,8 @@ namespace sw
         static DelegateHandle addGlobalListener( const LogWrittenDelegate& listener );
         /** @brief 전역 싱크에서 리스너를 뗍니다. */
         static void removeGlobalListener( const DelegateHandle& handle );
+        /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 떼고, 뗀 수를 반환합니다. 싱크가 없으면 0 입니다. */
+        static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
         /** @brief 현재 전역 싱크입니다. 없으면 nullptr 입니다. */
         static ILogSink* getGlobalSink();
 

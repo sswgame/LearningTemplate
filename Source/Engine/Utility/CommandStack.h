@@ -63,13 +63,26 @@ namespace sw
         /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. */
         void jumpTo( size_t targetIndex );
 
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 명령이 들어왔으면 스택을 **통째로** 비우고, 버린 명령 수를 반환합니다.
+         * @details 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다. 기록은 중간을 뺄 수 없어서(뒤 명령이 앞 명령의 결과를 전제한다) 일부만 떼지
+         *          않습니다. 트랜잭션으로 묶인 명령은 엔진 쪽 람다에 싸여 안쪽이 보이지 않으므로, 들어올 때 본 코드 주소를 따로 적어 둡니다
+         *          (`_listCodeAddress`). 그래서 이미 잘려 나간 명령 때문에 비우는 일은 있어도, 남은 명령을 못 보고 지나치는 일은 없습니다.
+         */
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
+
     private:
-        vector<Command> _listCommand;
-        vector<Command> _listPendingTransactionCommand;
-        string          _transactionLabel;
-        string          _lastCoalesceKey;
-        string          _empty;
-        size_t          _index{ 0 };
+        /** @brief 들어온 명령의 undo · redo 코드 주소를 `_listCodeAddress` 에 (중복 없이) 적습니다. */
+        void recordCodeAddress( const Command& cmd );
+
+    private:
+        vector<Command>     _listCommand;
+        vector<Command>     _listPendingTransactionCommand;
+        vector<const void*> _listCodeAddress; ///< 들어온 명령의 코드 주소(중복 없이). 트랜잭션 안쪽 명령도 남는다. `clear` 가 비운다
+        string              _transactionLabel;
+        string              _lastCoalesceKey;
+        string              _empty;
+        size_t              _index{ 0 };
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth{ 0 };
         bool   _bIsExecuting{ false };

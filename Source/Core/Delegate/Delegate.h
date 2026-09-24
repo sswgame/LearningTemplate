@@ -115,6 +115,20 @@ namespace sw
         /** @brief 호출할 수 있는 상태(바인딩됨)인지 확인합니다. */
         bool isBound() const { return _stubFunc != nullptr; }
 
+        /**
+         * @brief 호출 스텁의 코드 주소입니다. 바인딩이 없으면 nullptr 입니다.
+         * @details 스텁은 델리게이트를 **만든** 번역 단위에서 인스턴스화되므로, 이 주소는 그 델리게이트를 만든 모듈(DLL · SO) 안에 있습니다.
+         *          핫 리로드가 내리려는 모듈이 만든 구독을 가리는 데 씁니다(`MulticastDelegate::removeCodeWithin`).
+         */
+        const void* getCodeAddress() const { return reinterpret_cast<const void*>( _stubFunc ); }
+
+        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는지 봅니다. 바인딩이 없으면 false 입니다. */
+        bool isCodeWithin( const void* pBegin, const void* pEnd ) const
+        {
+            const uintptr_t code = reinterpret_cast<uintptr_t>( _stubFunc );
+            return code != 0 && reinterpret_cast<uintptr_t>( pBegin ) <= code && code < reinterpret_cast<uintptr_t>( pEnd );
+        }
+
         /** @brief 바인딩된 대상을 호출합니다. 비어 있으면 assert 합니다. */
         template <typename... UArgs, typename = std::enable_if_t<std::is_invocable_v<R( Args... ), UArgs...>>>
         R operator()( UArgs&&... args ) const
@@ -552,6 +566,26 @@ namespace sw
 
         /** @brief 등록된 델리게이트를 모두 해제합니다(removeAll 의 별칭). */
         void clear() { removeAll(); }
+
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 델리게이트를 모두 떼고, 뗀 수를 반환합니다.
+         * @details 그 범위의 모듈(DLL · SO)이 만든 구독을 모듈을 내리기 **전에** 떼는 데 씁니다. broadcast 중이면 `remove` 와 같이 그 자리에서
+         *          무효화하고 끝난 뒤 지웁니다.
+         */
+        uint32 removeCodeWithin( const void* pBegin, const void* pEnd )
+        {
+            vector<DelegateHandle> listHandle;
+            for ( const DelegateEntry& entry : _listDelegate )
+            {
+                if ( entry._delegate.isCodeWithin( pBegin, pEnd ) )
+                    listHandle.push_back( entry._handle );
+            }
+            for ( const DelegateHandle& handle : listHandle )
+            {
+                remove( handle );
+            }
+            return static_cast<uint32>( listHandle.size() );
+        }
 
     private:
         /** @brief 핸들에 해당하는 항목을 즉시 제거합니다. broadcast 밖에서만 부르십시오. */

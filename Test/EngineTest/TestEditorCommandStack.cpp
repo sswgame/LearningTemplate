@@ -738,3 +738,46 @@ SW_TEST_CASE( EditorCommandStackTest, SingleCommandTransactionKeepsTheTransactio
     SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
     SW_EXPECT_STREQ( "Move 3 objects", stack.peekUndoLabel().c_str() );
 }
+
+/**
+ * @brief [EditorCommandStackTest] releaseCodeWithin 은 트랜잭션에 싸인 명령의 코드도 보고, 들어 있으면 스택을 통째로 비운다
+ * @details 트랜잭션은 안쪽 명령을 엔진 쪽 람다 하나로 싸서, 쌓인 명령의 undo · redo 만 보면 안쪽이 보이지 않는다. 에디터 Undo 는 거의
+ *          전부 트랜잭션이라, 들어올 때 코드 주소를 적어 두지 않으면 핫 리로드 뒤 Ctrl+Z 가 내려간 이미지로 뛴다. 코드가 없는 범위는
+ *          스택을 건드리지 않는다.
+ */
+SW_TEST_CASE( EditorCommandStackTest, ReleaseCodeWithinSeesCommandsInsideATransaction )
+{
+    CommandStack stack;
+    int32        value{ 0 };
+
+    CommandStack::Command first;
+    first._label = "first";
+    first._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+     { value += 1; } );
+    first._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+     { value -= 1; } );
+    CommandStack::Command second;
+    second._label            = "second";
+    second._redo             = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+                { value += 10; } );
+    second._undo             = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+                { value -= 10; } );
+    const uint8* pSecondUndo = static_cast<const uint8*>( second._undo.getCodeAddress() );
+
+    stack.beginTransaction( "pair" );
+    stack.push( std::move( first ) );
+    stack.push( std::move( second ) );
+    stack.endTransaction();
+    SW_ASSERT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+    // 쌓인 것은 묶은 명령 하나이고, 그 undo 는 엔진 람다다 — 안쪽 스텁이 거기 보이지 않는다는 것이 이 테스트의 전제다.
+    SW_EXPECT_FALSE( stack.getCommand( 0 )._undo.isCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+
+    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( &value, &value + 1 ) );
+    SW_EXPECT_TRUE( stack.canUndo() );
+
+    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+    SW_EXPECT_FALSE( stack.canUndo() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCommandCount() );
+    // 비운 뒤에는 적어 둔 주소도 없다.
+    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+}

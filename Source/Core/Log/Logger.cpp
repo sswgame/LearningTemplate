@@ -145,6 +145,12 @@ namespace sw
         _onLogWritten.remove( handle );
     }
 
+    uint32 Logger::releaseListenerCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _onLogWritten.removeCodeWithin( pBegin, pEnd );
+    }
+
     void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
     {
         string_view fileName;
@@ -265,6 +271,15 @@ namespace sw
             return;
 
         pSink->removeLogWrittenListener( handle );
+    }
+
+    uint32 Logger::releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
+        if ( pSink == nullptr )
+            return 0;
+
+        return pSink->releaseListenerCodeWithin( pBegin, pEnd );
     }
 
     void Logger::workerLoop()
