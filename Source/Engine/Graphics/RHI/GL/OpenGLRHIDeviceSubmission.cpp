@@ -12,13 +12,6 @@
 
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "OpenGL" );
 
     uint32 OpenGLRHIDevice::getTimestampSlotCount() const

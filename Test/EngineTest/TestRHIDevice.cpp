@@ -954,6 +954,156 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 }
 
 /**
+ * @brief [RHIDeviceTest] 인덱스 간접 드로우가 네 백엔드에서 그려지고, 인스턴스 슬롯 스트림(정점 슬롯 1)을 읽는다
+ * @details 엔진은 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` · `setIndexBuffer` · `drawIndexedIndirect` 가 한 번도
+ *          검증되지 않았다. 그 사이에 두 가지가 썩어 있었다. (1) DX11 · DX12 · Vulkan 은 인덱스 버퍼를 구조버퍼로 만들었다.
+ *          인덱스 버퍼 용도가 아니어서 Vulkan 은 검증 레이어가 용도 위반으로 잡았다(DX11 · DX12 는 드라이버가 받아 줬다).
+ *          (2) Vulkan · DX12 의 `drawIndexedIndirect` 만 정점 슬롯 0 을 직접 걸고 슬롯 1 을 빠뜨렸다. 새 커맨드 리스트에서
+ *          이 진입점으로 그리면 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이었고, Vulkan 은 검증 레이어가 잡았다.
+ *          instanceslotprobe.hlsl 은 슬롯 1 의 값이 7 이면 초록, 아니면 빨강을 낸다. 다른 드로우는 먼저 부르지 않는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "common/shaders/instanceslotprobe.hlsl";
+        psoDesc._pixelShaderPath             = "common/shaders/instanceslotprobe.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
+
+        // 정점 셋(위치는 셰이더가 SV_VertexID 로 만든다) · 인덱스 0 1 2 · 슬롯 스트림(값 7 하나) · 간접 인자 하나.
+        const sw::RHIVertex               arrVertex[3]{};
+        const uint32                      arrIndex[3] = { 0, 1, 2 };
+        const uint32                      slotValue   = 7;
+        sw::RHIDrawIndexedIndirectCommand record{};
+        record._indexCountPerInstance        = 3;
+        record._instanceCount                = 1;
+        const sw::RHIBufferHandle vertexBuf  = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
+        const sw::RHIBufferHandle indexBuf   = pResource->createIndexBuffer( arrIndex, static_cast<uint32>( sizeof( arrIndex ) ), 4 );
+        const sw::RHIBufferHandle slotStream = pResource->createVertexBuffer( &slotValue, static_cast<uint32>( sizeof( slotValue ) ) );
+        sw::RHIBufferDesc         argDesc{};
+        argDesc._sizeBytes                 = sizeof( record );
+        argDesc._elementSize               = sizeof( record );
+        argDesc._elementCount              = 1;
+        argDesc._usage                     = sw::RHIBufferUsage::IndirectArgs | sw::RHIBufferUsage::UnorderedAccess | sw::RHIBufferUsage::Raw | sw::RHIBufferUsage::ShaderResource;
+        argDesc._pInitialData              = &record;
+        const sw::RHIBufferHandle argBuf   = pResource->createBuffer( argDesc );
+        const bool                bBuffers = vertexBuf != 0 && indexBuf != 0 && slotStream != 0 && argBuf != 0;
+        SW_EXPECT_TRUE_MSG( bBuffers, ( sw::string( device->getBackendName() ) + ": 버퍼를 만들지 못했습니다" ).c_str() );
+
+        if ( pso != 0 && bBuffers )
+        {
+            sw::RHITextureDesc desc{};
+            desc._width                   = 64;
+            desc._height                  = 64;
+            desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
+            desc._bIsRenderTarget         = SW_TRUE;
+            desc._bIsShaderResource       = SW_TRUE;
+            desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+            const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+            SW_EXPECT_TRUE( rt != 0 );
+
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            if ( rt != 0 && cmd != nullptr )
+            {
+                sw::RHIRenderPassBeginInfo beginInfo{};
+                beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+                beginInfo._bBindColor = SW_TRUE;
+                beginInfo._width      = desc._width;
+                beginInfo._height     = desc._height;
+                sw::RHIViewport viewport{};
+                viewport._width  = static_cast<float32>( desc._width );
+                viewport._height = static_cast<float32>( desc._height );
+
+                cmd->beginCommandList();
+                cmd->setViewport( viewport );
+                cmd->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
+                cmd->beginRenderPass( beginInfo );
+                cmd->setPipelineState( pso );
+                cmd->setVertexBuffer( 0, vertexBuf, static_cast<uint32>( sizeof( sw::RHIVertex ) ), 0 );
+                cmd->setVertexBuffer( sw::constant::kInstanceSlotStreamSlot, slotStream, sw::constant::kInstanceSlotStreamStride, 0 );
+                cmd->setIndexBuffer( indexBuf, 4, 0 );
+                cmd->drawIndexedIndirect( argBuf, 0 );
+                cmd->endRenderPass();
+                cmd->endCommandList();
+                device->executeCommandListImmediate( cmd.get() );
+                device->waitIdle();
+
+                sw::vector<uint8>     pixels;
+                sw::RHITextureMipSpan layout{};
+                if ( pResource->readbackTexture2D( rt, 0, pixels, layout ) )
+                {
+                    uint32 greenCount{ 0 };
+                    uint32 redCount{ 0 };
+                    for ( uint32 row = 0; row < layout._height; ++row )
+                    {
+                        const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                        for ( uint32 col = 0; col < layout._width; ++col )
+                        {
+                            const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
+                            if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
+                                ++greenCount;
+                            else if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
+                                ++redCount;
+                        }
+                    }
+                    const uint32 total = layout._width * layout._height;
+                    // 초록이 아니면: 빨강은 슬롯 1 을 못 읽은 것이고, 둘 다 0 이면 인덱스 드로우 자체가 안 그려진 것이다.
+                    SW_EXPECT_TRUE_MSG( greenCount == total,
+                                        ( sw::string( device->getBackendName() ) + ": 인덱스 간접 드로우가 슬롯 스트림을 읽지 못했습니다 (green " +
+                                          sw::to_string( greenCount ) + " red " + sw::to_string( redCount ) + " / " + sw::to_string( total ) + ")" )
+                                            .c_str() );
+                }
+                else
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+            }
+            if ( rt != 0 )
+                pResource->destroyTexture( rt );
+        }
+
+        if ( argBuf != 0 )
+            pResource->destroyBuffer( argBuf );
+        if ( slotStream != 0 )
+            pResource->destroyBuffer( slotStream );
+        if ( indexBuf != 0 )
+            pResource->destroyBuffer( indexBuf );
+        if ( vertexBuf != 0 )
+            pResource->destroyBuffer( vertexBuf );
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the indexed indirect draw test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.

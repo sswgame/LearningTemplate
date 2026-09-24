@@ -222,6 +222,14 @@ namespace sw
         return _pDevice->storeGlBuffer( ssbo );
     }
 
+    RHIBufferHandle OpenGLRHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return 0;
+        ScopedOpenGLContext ctxScope( _pDevice );
+        return _pDevice->createIndexBuffer( pData, sizeBytes, ( indexStride == 2 ) ? 2u : 4u );
+    }
+
     RHIBufferHandle OpenGLRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0 )

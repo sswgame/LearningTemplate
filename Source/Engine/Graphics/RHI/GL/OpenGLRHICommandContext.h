@@ -14,8 +14,6 @@ namespace sw
     public:
         /** @brief 디바이스의 기록 상태를 쓰는 컨텍스트를 만듭니다. 프레임 스트림 컨텍스트와 커맨드 리스트가 모두 이 생성자를 씁니다. */
         explicit OpenGLRHICommandContext( OpenGLRHIDevice* pDevice );
-        /** @brief 기록 상태를 따로 받는 생성자입니다. GL 은 실제 상태가 하나라 지금 부르는 곳은 없습니다. */
-        OpenGLRHICommandContext( OpenGLRHIDevice* pDevice, OpenGLRecordingState* pState );
         ~OpenGLRHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;

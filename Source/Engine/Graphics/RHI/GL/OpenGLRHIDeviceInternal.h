@@ -29,6 +29,8 @@ using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShar
     #define GLX_CONTEXT_MINOR_VERSION_ARB    0x2092
     #define GLX_CONTEXT_PROFILE_MASK_ARB     0x9126
     #define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
+    #define GLX_CONTEXT_FLAGS_ARB            0x2094
+    #define GLX_CONTEXT_DEBUG_BIT_ARB        0x00000001 // KHR_debug 메시지를 드라이버가 만들 의무가 생기는 비트 (비-Shipping 전용)
 typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, int32, const int32* );
 #endif
 

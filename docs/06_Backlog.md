@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝)
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정
 
 ---
 
@@ -1435,7 +1435,7 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다. CI 실패를 재현할 때는 **실패한 잡과 같은 프리셋**을
 쓴다 — Debug 로 Shipping 을 대신할 수 없다. 자세한 것은 3절 2026-09-21 항목.
 
-### 1-0g. 주석 정리 — 직역투와 틀린 설명 — ✅ **주석은 모두 끝났다** (2026-09-24, 15커밋. 아래 결함 · 범위 밖 항목은 남았다)
+### 1-0g. 주석 정리 — 직역투와 틀린 설명 — ✅ **주석은 모두 끝났다** (2026-09-24, 15커밋. 찾은 결함도 고쳤고, 새로 찾은 하나와 범위 밖 항목이 남았다)
 
 코드는 그대로 두고 **주석만** 읽히는 한국어로 다시 쓴다. 폴더 하나 = 커밋 하나이고, 순서는 사용자가 정했다.
 
@@ -1458,24 +1458,11 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 **검증에서 빠뜨리기 쉬운 것.** 주석만 바뀐 TU 는 전처리 결과가 같아 sccache 가 캐시를 재생하므로 빌드 로그로는
 `-Wdocumentation` 경고를 볼 수 없다. 폴더마다 `RunBuildWarnings.py --preset Ninja-Debug`(캐시를 거치지 않는다)를 돌린다.
 
-**주석을 고치다 찾은 코드 결함.** 이 작업은 주석만 바꾸므로 고치지 않고 여기 적는다. 해당 자리의 주석에는 경고를 달았다.
+**주석을 고치다 찾은 코드 결함**은 모두 고쳤다(3절 2026-09-24 의 "1-0g 결함 수정" ①~④). 고치다 새로 찾아 남긴 것:
 - **텍스트 스칼라 파서가 좁은 정수로 범위 검사 없이 자른다.** `SerializeContext` 의 `parseScalarValue` 는 int64 · uint64 로
   읽은 뒤 `static_cast` 로 좁힌다("300" → uint8 44, "4000000000" → int32 음수). JSON · XML 과 바이너리 스칼라 이관(텍스트를
   거친다)이 같이 쓰는 규칙이다. 범위 밖을 실패로 바꾸면 기존 에셋이 읽히는 방식이 달라지므로, 에셋을 훑어 본 뒤에 정한다
   (1-0g 결함을 고치다 찾았다).
-- **`D3D12RHIDevice::_arrFrameCmdAllocator` 는 죽은 멤버다.** 초기화가 얼로케이터 셋을 만들고 이름을 붙이고, 종료가
-  놓기만 한다. `4d99eedb`(리스트마다 전용 얼로케이터 쌍) 뒤로 아무도 쓰지 않는다. 멤버 · 생성 · 해제를 지워도 된다.
-- **`VulkanRHIDevice::_bMaterialCbSlotWarned` 도 죽은 멤버다.** 생성자가 초기화만 한다. 유일한 사용처(b1 을 푸시 상수로
-  돌리던 시절의 안내 로그)가 `d502a8b5`(b1 을 실제 상수 버퍼로 지원)에서 사라졌다. 멤버와 초기화를 지워도 된다.
-- **Vulkan `drawIndexedIndirect` 는 정점 바인딩 1 을 걸지 않는다.** 바인딩 0(메시 VB)만 직접 걸고, 파이프라인이 늘 선언하는
-  바인딩 1(인스턴스 슬롯 스트림)은 건너뛴다. 나머지 드로우 셋은 `bindMeshVertexBufferOrFallback` 으로 둘 다 건다. 엔진에서
-  부르는 곳이 없어 드러나지 않았다. 고칠 때는 같은 함수를 부르면 된다.
-- **정리만 남은 것(동작 영향 없음).** `OpenGLRHICommandContext( pDevice, pState )` 두 인자 생성자는 부르는 곳이 없다(GL 은
-  리스트도 디바이스 기록 상태를 쓴다). 빈 네임스페이스가 일곱 곳 남았다: 익명 `namespace { }` 가 `D3D11RHIResource.cpp` ·
-  `D3D11RHIResourceBindless.cpp` · `D3D12RHIResource.cpp` · `D3D12RHIResourceBindless.cpp` · `OpenGLRHIResourceBindless.cpp` ·
-  `OpenGLRHIDeviceSubmission.cpp`(⑨ 에서 선언을 잃은 문서를 지워 비었다)에, 빈 `namespace sw { }` 가 `OpenGLRHIDevice.cpp` 머리에
-  있다. Vulkan 의 `drawInstanced` · `drawIndexedIndirect` · `drawIndirect` 는 `bindActiveGraphicsPipeline` 이 이미 부른
-  `flushSlotSet( false )` 를 한 번 더 부른다(두 번째는 바뀐 것이 없어 할 일이 없다).
 
 **주석 정리 범위 밖이라 남긴 것.** 문자열 · 셰이더 · 파일 위치는 이 작업이 건드리지 않는다.
 - `gpucull.hlsl` 머리말과 `bindingslots.hlsli` 의 `SW_SLOT_VISIBLE_INSTANCE_SRV` 설명이 아직 가시 목록을
@@ -1667,6 +1654,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-24 (1-0g 결함 수정 ④ — RHI 인덱스 드로우 · 죽은 코드)
+
+**한 것.**
+- **인덱스 드로우가 한 번도 검증된 적이 없었다.** 엔진이 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` ·
+  `setIndexBuffer` · `drawIndexedIndirect` 를 부르는 곳이 없다(상용 엔진에 필요해 남겨 둔 기능이다). 새 테스트
+  `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`(hostgpu)로 네 백엔드를 돌려 보니 두 가지가 썩어 있었다.
+  - `IRHIResource::createIndexBuffer` 의 기본 구현이 구조버퍼를 만들었고 DX11 · DX12 · Vulkan 이 그것을 썼다. 인덱스 버퍼
+    용도가 아니어서 Vulkan 은 검증 레이어가 `VUID-vkCmdBindIndexBuffer-buffer-08784` 로 잡았다(DX11 · DX12 는 드라이버가
+    받아 줬다). 이제 순수 가상이고 네 백엔드가 인덱스 용도로 만든다(DX11 BIND_INDEX_BUFFER, DX12 업로드 힙 GENERIC_READ,
+    Vulkan INDEX_BUFFER_BIT, GL 은 원래대로). `createBuffer` 의 `Index` 용도도 여기로 넘긴다. 가상 함수 표의 모양은
+    그대로라 RHI ABI 스탬프는 올리지 않았다.
+  - Vulkan · DX12 의 `drawIndexedIndirect` 만 정점 슬롯 0 을 직접 걸고 슬롯 1(인스턴스 슬롯 스트림)을 빠뜨렸다(백로그에는
+    Vulkan 만 적혀 있었다). 새 리스트에서 이 진입점으로만 그리면 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이었고
+    Vulkan 은 `VUID-vkCmdDrawIndexedIndirect-None-04007` 이었다. 다른 드로우와 같은 `bindMeshVertexBufferOrFallback` 을 부른다.
+  - 테스트 셰이더 `common/shaders/instanceslotprobe.hlsl`(슬롯 1 의 값이 7 이면 초록)을 굽기 레시피에 넣고 네 백엔드
+    바이너리를 함께 커밋했다. 옛 코드로 돌리면 DX12 · Vulkan 이 실패하는 것을 확인했다.
+- 죽은 코드를 지웠다: `D3D12RHIDevice::_arrFrameCmdAllocator`(만들고 놓기만 하던 얼로케이터 셋),
+  `VulkanRHIDevice::_bMaterialCbSlotWarned`, 부르는 곳 없는 `OpenGLRHICommandContext( pDevice, pState )`, 빈 네임스페이스
+  아홉 곳(RHI 일곱 + `EditorGlobalVariableCommands.cpp` · `TestResourcePack.cpp`), Vulkan 드로우 셋의 중복
+  `flushSlotSet( false )`(`bindActiveGraphicsPipeline` 이 이미 부른다).
+- GLX 도 비-Shipping 에서 디버그 컨텍스트 비트(`GLX_CONTEXT_DEBUG_BIT_ARB`)를 켠다. WGL 만 켜고 있어서 리눅스에서는
+  KHR_debug 콜백을 걸어도 드라이버가 메시지를 만들 의무가 없었다. WSL(Mesa)에서 그 컨텍스트가 만들어지는 것까지
+  확인했다(그 뒤에는 `GL_ARB_gl_spirv` 가 없어 백엔드가 스스로 물러난다).
+
+**검증.** Debug · Shipping 빌드 경고 0 · `RunBuildWarnings --preset Ninja-Debug` 0 · `nogpu` + 린트 27/27 · `hostgpu`(Debug · Shipping) 2/2 · WSL-Debug 빌드 경고 0 · `ctest` 31/31(여섯 커밋을 함께 올린 상태로 돌렸다. WSL 의 `AppTest_HostOnly` 는 Vulkan 첫 획득이 가끔 `SURFACE_LOST` 로 진다 — 1-2b 참고).
 
 ### 2026-09-24 (1-0g 결함 수정 ③ — 인스턴스만 붙은 메시 · 스크린샷 도움말)
 

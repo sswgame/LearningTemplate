@@ -158,15 +158,11 @@ namespace sw
         {
             if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
                 return false;
-            if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrFrameCmdAllocator[frameIndex].GetAddressOf() ) ) ) )
-                return false;
             // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다. 이름이 없으면
             // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
             utf16 arrName[constant::kMaxBuffer64]{};
             swprintf_s( arrName, L"FrameStreamAllocator%u", frameIndex );
             _arrCommandAllocator[frameIndex]->SetName( arrName );
-            swprintf_s( arrName, L"FrameCmdAllocator%u", frameIndex );
-            _arrFrameCmdAllocator[frameIndex]->SetName( arrName );
         }
 
         if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
@@ -245,10 +241,6 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.clear();
-        }
-        for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrFrameCmdAllocator )
-        {
-            allocator.Reset();
         }
         _frameStreamState._bRecording = SW_FALSE;
         _frameStreamContext.reset();

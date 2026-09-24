@@ -12,10 +12,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "OpenGL" );
 
     OpenGLRHIDevice::OpenGLRHIDevice()

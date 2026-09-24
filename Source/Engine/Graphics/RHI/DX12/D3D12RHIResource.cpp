@@ -14,13 +14,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "D3D12RHIResource" );
 
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
@@ -528,6 +521,19 @@ namespace sw
     }
 
     RHIBufferHandle D3D12RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    {
+        return createUploadBuffer( pData, sizeBytes );
+    }
+
+    RHIBufferHandle D3D12RHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    {
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼(기본 힙)를 만들었다. 인덱스 버퍼는 정점 버퍼처럼
+        // 업로드 힙의 GENERIC_READ 로 둔다. 그 상태가 INDEX_BUFFER 읽기를 포함하므로 전이 없이 걸 수 있다.
+        (void)indexStride;
+        return createUploadBuffer( pData, sizeBytes );
+    }
+
+    RHIBufferHandle D3D12RHIResource::createUploadBuffer( const void* pData, uint32 sizeBytes )
     {
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;

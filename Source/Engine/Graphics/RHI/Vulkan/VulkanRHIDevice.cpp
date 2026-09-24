@@ -46,7 +46,6 @@ namespace sw
         , _listLiveCmd{}
         , _frameSegmentCursor{ 0 }
         , _bFrameAcquireWaitPending{ SW_FALSE }
-        , _bMaterialCbSlotWarned{ SW_FALSE }
         , _activeFrameBuffer{ nullptr }
         , _timestampPool{ nullptr }
         , _timestampPeriod{ 0.0f }

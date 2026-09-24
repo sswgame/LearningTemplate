@@ -26,6 +26,7 @@ namespace sw
         void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                               const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride ) override;
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
@@ -41,6 +42,8 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
+        /** @brief 내용을 실어 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 · 인덱스 버퍼가 같은 길입니다. */
+        RHIBufferHandle createUploadBuffer( const void* pData, uint32 sizeBytes );
         /**
          * @brief bindless 힙에서 디스크립터 인덱스를 하나 집습니다.
          * @param lock 부르는 쪽이 **이미 쥔** `_bindlessMutex` 잠금.

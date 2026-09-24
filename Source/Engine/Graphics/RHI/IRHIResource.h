@@ -86,11 +86,17 @@ namespace sw
         /** @brief 내용을 실어 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::arrVertexAttribute`)이 정합니다. */
         virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
-        /** @brief 범용 버퍼(구조 · UAV · 인다이렉트 인자 · 인덱스)를 만듭니다. 내용이 있는 `Vertex` 용도면 createVertexBuffer 로 넘깁니다. */
+        /**
+         * @brief 범용 버퍼(구조 · UAV · 인다이렉트 인자 · 인덱스)를 만듭니다.
+         * @details 내용이 있는 `Vertex` 용도는 createVertexBuffer 로, `Index` 용도는 createIndexBuffer 로 넘깁니다
+         *          (`_elementSize` 가 2 면 uint16 인덱스).
+         */
         virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
         {
             if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
                 return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
+            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+                return createIndexBuffer( desc._pInitialData, desc._sizeBytes, ( desc._elementSize == 2 ) ? 2u : 4u );
             if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
                 return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
             const uint32    elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
@@ -103,16 +109,15 @@ namespace sw
             return buffer;
         }
 
-        /** @brief 인덱스 버퍼(uint16 · uint32)를 만듭니다. */
-        virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride = 4 )
-        {
-            (void)indexStride;
-            RHIBufferDesc desc{};
-            desc._sizeBytes    = sizeBytes;
-            desc._usage        = RHIBufferUsage::Index | RHIBufferUsage::ShaderResource;
-            desc._pInitialData = pData;
-            return createBuffer( desc );
-        }
+        /**
+         * @brief 내용을 실어 인덱스 버퍼(uint16 · uint32)를 만듭니다. 인덱스 크기는 걸 때(`setIndexBuffer`) 다시 알려 줍니다.
+         * @details 백엔드마다 **인덱스 버퍼 용도**로 만들어야 합니다(D3D11_BIND_INDEX_BUFFER · VK_BUFFER_USAGE_INDEX_BUFFER_BIT 등).
+         *          예전의 기본 구현은 구조버퍼를 만들었고 DX11 · DX12 · Vulkan 이 그것을 그대로 썼습니다. 구조버퍼는 인덱스 버퍼
+         *          용도가 아닙니다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은 검증 레이어가 용도
+         *          위반으로 잡습니다). 드라이버가 받아 줘서 그려진 백엔드도 있었지만 규칙 밖이었습니다. 엔진이 아직 인덱스 메시를
+         *          쓰지 않아 드러나지 않았습니다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream).
+         */
+        virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride = 4 ) = 0;
 
         /** @brief GPU 버퍼 리소스를 삭제합니다. */
         virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;

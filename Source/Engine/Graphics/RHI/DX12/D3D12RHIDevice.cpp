@@ -33,7 +33,6 @@ namespace sw
         , _cmdListEntryCreated{ 0 }
         , _bBlitMismatchLogged{ SW_FALSE }
         , _pActiveFrameList{ nullptr }
-        , _arrFrameCmdAllocator{}
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
         , _onlineBlockMutex{}

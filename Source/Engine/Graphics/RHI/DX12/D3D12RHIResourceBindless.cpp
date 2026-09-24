@@ -18,13 +18,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "D3D12RHIResource" );
 
     D3D12RHIResource::BindlessHandleSet D3D12RHIResource::bindlessHandlesAt( RHIDescriptorIndex index ) const

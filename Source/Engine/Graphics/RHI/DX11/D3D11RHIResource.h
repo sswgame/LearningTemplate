@@ -27,6 +27,7 @@ namespace sw
         void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                               const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride ) override;
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
@@ -42,6 +43,8 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
+        /** @brief 내용을 실어 바인드 용도 하나(정점 · 인덱스)의 기본 버퍼를 만듭니다. 정점 · 인덱스 버퍼가 같은 길입니다. */
+        RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
         /** @brief UAV 를 등록부에 넣고 인덱스를 반환합니다. 반납된 자리를 먼저 씁니다. 버퍼 · 텍스처 UAV 가 같은 길입니다. */
         RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
 

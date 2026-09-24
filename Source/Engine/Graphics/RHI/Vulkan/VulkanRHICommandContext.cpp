@@ -745,6 +745,8 @@ namespace sw
             return false;
 
         vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+        // 슬롯 세트(set 0)는 여기서 굳힌다. 드로우 진입점 모두가 이 함수를 거치므로 각자 다시 부를 일이 없다.
+        // (예전에는 drawInstanced 만 세트를 굳히지 않아 씬 드로우가 세트 없이 나갔고, Vulkan 은 아무것도 그리지 않았다.)
         flushSlotSet( false );
         return true;
     }
@@ -778,10 +780,6 @@ namespace sw
             return;
 
         bindMeshVertexBufferOrFallback();
-        // 슬롯 세트는 드로우 직전에 굳힌다. draw() · drawIndirect() 와 같은 규칙이다. 예전에는 여기만 빠져 있어 인스턴스드 씬
-        // 드로우(당시에는 씬 드로우 모두)가 세트 없이 나갔고, Vulkan 은 화면에 아무것도 그리지 않았다. 지금은
-        // bindActiveGraphicsPipeline 이 먼저 굳히므로 이 호출은 바뀐 것이 없으면 할 일이 없다.
-        flushSlotSet( false );
 
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
@@ -879,16 +877,10 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 슬롯 세트(set 0)는 드로우 직전에 굳힌다. 인다이렉트 드로우 경로도 같은 규칙이다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
-        flushSlotSet( false );
-
-        const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
-        if ( pVb != nullptr )
-        {
-            VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-            VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pState->_boundMeshOffset ) };
-            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-        }
+        // 바인딩 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 예전에는 여기만 바인딩 0 을
+        // 직접 걸어, 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸으면 정의되지 않은 값을 읽었다
+        // (엔진에서 부르는 곳이 없어 드러나지 않았다. RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
+        bindMeshVertexBufferOrFallback();
 
         const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
         vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
@@ -920,8 +912,6 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 슬롯 세트(set 0)는 드로우 직전에 굳힌다(머티리얼은 GPU 인스턴스 데이터에서 인덱싱한다).
-        flushSlotSet( false );
         // 정점버퍼를 거는 것은 단일 경로에만 있었다. 합치면서 두 경우 모두 건다.
         bindMeshVertexBufferOrFallback();
 

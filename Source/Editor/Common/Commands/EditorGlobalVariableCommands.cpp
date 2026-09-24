@@ -14,10 +14,6 @@
 
 namespace sw::editor
 {
-} // namespace sw::editor
-
-namespace sw::editor
-{
     string EditorGlobalVariableCommands::getTypeString( const GlobalVariableInfo& info )
     {
         switch ( info._type )

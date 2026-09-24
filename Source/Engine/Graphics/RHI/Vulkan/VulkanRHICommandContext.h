@@ -81,7 +81,7 @@ namespace sw
          */
         bool bindActiveGraphicsPipeline();
 
-        /** @brief 메시 VB(없으면 풀스크린 정점버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 겁니다. 드로우 세 곳에 복사돼 있던 블록을 합친 것입니다. */
+        /** @brief 메시 VB(없으면 풀스크린 정점버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 겁니다. 드로우 진입점마다 복사돼 있던 블록을 합친 것입니다. */
         void bindMeshVertexBufferOrFallback();
 
         VulkanRHIDevice* _pDevice;

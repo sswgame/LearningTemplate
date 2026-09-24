@@ -824,11 +824,6 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 // ------------------------------------------------------------------------------
 // 손상된 팩: 헤더가 말하는 구역이 파일 밖일 때
 // ------------------------------------------------------------------------------
-namespace sw
-{
-
-} // namespace sw
-
 /**
  * @brief [ResourcePackTest] 헤더의 수를 그대로 믿지 않는다 — 인덱스가 파일 밖이면 거부한다
  * @details 헤더의 `_fileCount` · `_indexOffset` · `_stringPoolSize` 는 **파일에서 온 값**이다.

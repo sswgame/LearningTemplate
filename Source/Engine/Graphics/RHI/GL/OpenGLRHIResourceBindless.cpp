@@ -19,9 +19,6 @@
 
 namespace sw
 {
-    namespace
-    {
-    } // namespace
 
     SW_LOG_CALLER( "OpenGLRHIResource" );
 

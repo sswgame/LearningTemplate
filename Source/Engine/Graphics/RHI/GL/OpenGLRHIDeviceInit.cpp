@@ -104,7 +104,7 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
             // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
-            // 그 비트는 WGL 컨텍스트만 비-Shipping 빌드에서 켠다(GLX 는 아직 켜지 않는다). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
+            // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 비-Shipping 빌드에서 켠다. SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
             if ( glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr )
             {
                 glEnable( GL_DEBUG_OUTPUT );

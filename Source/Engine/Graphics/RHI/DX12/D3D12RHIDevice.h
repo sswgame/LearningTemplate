@@ -460,9 +460,6 @@ namespace sw
         uint8 _bBlitMismatchLogged;
         /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 _commandList 로 시작합니다.
         ID3D12GraphicsCommandList* _pActiveFrameList;
-        /// @brief 만들고 이름을 붙이고 놓기만 하는, **아무도 쓰지 않는** 얼로케이터 링입니다. 예전에 `D3D12RHICommandList` 가
-        ///        빌려 쓰던 것인데(`4d99eedb` 전), 지금 리스트는 풀에서 전용 쌍을 빌립니다(acquireCommandListEntry). 백로그 참고.
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[constant::kMaxFrameCountInFlight];
         /// @brief 병렬 기록용 리스트 · 얼로케이터 재사용 풀입니다. 태스크 스레드에서 동시에 빌려 가므로 잠급니다.
         mutex                         _cmdListPoolMutex;
         vector<D3D12CommandListEntry> _listFreeCmdListEntry;

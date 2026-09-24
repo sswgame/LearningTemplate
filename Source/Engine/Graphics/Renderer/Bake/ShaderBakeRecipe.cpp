@@ -238,7 +238,8 @@ namespace sw
                     engineData._shaderTonemap,
                     "engine/shaders/sprite2d.hlsl",
                     "common/shaders/computetestgeometry.hlsl",
-                    "common/shaders/provokingvertex.hlsl" };
+                    "common/shaders/provokingvertex.hlsl",
+                    "common/shaders/instanceslotprobe.hlsl" };
 
                 for ( const string& path : listEngineShader )
                 {

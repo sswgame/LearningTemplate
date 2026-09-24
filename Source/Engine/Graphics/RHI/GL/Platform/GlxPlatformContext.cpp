@@ -93,6 +93,11 @@ namespace sw
                         GLX_CONTEXT_MAJOR_VERSION_ARB, ver[0],
                         GLX_CONTEXT_MINOR_VERSION_ARB, ver[1],
                         GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+    #if !defined( SW_SHIPPING )
+                        // 디버그 컨텍스트는 비-Shipping 에서만 켠다(WGL 과 같다). KHR_debug 메시지는 이 비트가 있어야
+                        // 드라이버가 만들 의무가 있다(OpenGLRHIDeviceInit 이 콜백을 건다). 예전에는 WGL 만 켰다.
+                        GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+    #endif
                         0 };
                     ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
                     if ( ctx != nullptr && trap.failed() == false )

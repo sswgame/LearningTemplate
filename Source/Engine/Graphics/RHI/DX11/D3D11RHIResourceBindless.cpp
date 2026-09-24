@@ -18,13 +18,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "D3D11" );
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessTexture( RHITextureHandle texture )

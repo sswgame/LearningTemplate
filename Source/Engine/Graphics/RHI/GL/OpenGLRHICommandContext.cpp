@@ -33,12 +33,6 @@ namespace sw
     {
     }
 
-    OpenGLRHICommandContext::OpenGLRHICommandContext( OpenGLRHIDevice* pDevice, OpenGLRecordingState* pState )
-        : _pDevice{ pDevice }
-        , _pState{ pState }
-    {
-    }
-
     void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || src == 0 )

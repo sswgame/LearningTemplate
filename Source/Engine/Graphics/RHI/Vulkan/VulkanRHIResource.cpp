@@ -382,6 +382,16 @@ namespace sw
             SW_LOG_ERROR( "updateStructuredBuffer: vkQueueSubmit failed" );
     }
 
+    RHIBufferHandle VulkanRHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    {
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼를 만들었는데, 그 버퍼에는
+        // VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어 vkCmdBindIndexBuffer 에 거는 것이 용도 위반이었다.
+        (void)indexStride;
+        if ( pData == nullptr )
+            return 0;
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData );
+    }
+
     RHIBufferHandle VulkanRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )

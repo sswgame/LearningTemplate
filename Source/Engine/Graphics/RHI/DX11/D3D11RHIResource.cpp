@@ -14,13 +14,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "D3D11" );
 
     RHIBufferHandle D3D11RHIResource::createConstantBuffer( uint32 size )
@@ -221,13 +214,26 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
+        return createFilledBuffer( pData, sizeBytes, D3D11_BIND_VERTEX_BUFFER );
+    }
+
+    RHIBufferHandle D3D11RHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    {
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼를 만들었다. D3D11 규칙상 인덱스 버퍼는
+        // BIND_INDEX_BUFFER 로 만들어야 하고 구조버퍼(BUFFER_STRUCTURED)에는 그 플래그를 붙일 수 없다(드라이버가 받아 줘 그려지기는 했다).
+        (void)indexStride;
+        return createFilledBuffer( pData, sizeBytes, D3D11_BIND_INDEX_BUFFER );
+    }
+
+    RHIBufferHandle D3D11RHIResource::createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags )
+    {
         if ( _pDevice == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage          = D3D11_USAGE_DEFAULT;
         bufferDesc.ByteWidth      = sizeBytes;
-        bufferDesc.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
+        bufferDesc.BindFlags      = bindFlags;
         bufferDesc.CPUAccessFlags = 0;
 
         D3D11_SUBRESOURCE_DATA init{};

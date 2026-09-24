@@ -529,8 +529,6 @@ namespace sw
         uint32               _frameSegmentCursor;
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).
         uint8 _bFrameAcquireWaitPending;
-        /// @brief 아무도 읽지 않는 래치입니다(생성자가 초기화만 합니다). 백로그 참고.
-        uint8 _bMaterialCbSlotWarned;
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
         VkCommandBuffer _activeFrameBuffer;
 
