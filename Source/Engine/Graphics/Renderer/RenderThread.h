@@ -8,13 +8,15 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 
 namespace sw
 {
-    extern SW_API bool gv_useRenderThread;
+    /** @brief `-gv_useRenderThread`: 전용 렌더 스레드를 쓸지입니다(false 면 게임 스레드가 바로 제출한다). Engine 안에서만 읽습니다. */
+    SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_useRenderThread );
 
     class FrameRenderer;
     class IRHIDevice;

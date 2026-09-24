@@ -78,9 +78,12 @@ namespace sw
         if ( applyPendingChange() == false )
         {
             SW_LOG_ERROR( "Backend soft-recreate failed." );
-            // C++ 대입은 값만 바꾼다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
-            // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다.
-            gv_rhiBackend = pRHI->getCommittedBackend();
+            // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
+            // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
+            // 쓰므로 App 이 Engine.dll 의 변수를 import 할 필요가 없다.
+            GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
+            if ( pBackendVariable != nullptr )
+                *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
         }
     }
 

@@ -84,8 +84,6 @@ namespace sw
 {
     SW_LOG_CALLER( "EngineLoop" );
 
-    SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_useRenderThread );
-
     EngineLoop::EngineLoop()
         : _logger{ nullptr }
         , _deadlockDetector{ nullptr }

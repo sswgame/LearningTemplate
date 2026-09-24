@@ -1665,6 +1665,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-24 (전역 변수 선언 — 매크로 없이 `extern` 으로 적던 둘을 매크로로)
+
+**한 것.** `SW_GLOBAL_VARIABLE_*` 로 정의한 전역 변수 45 개 중 선언을 매크로 없이 적던 것이 둘 있었다 — `RHI.h` 의 `extern SW_API RHIBackend gv_rhiBackend;` ·
+`RenderThread.h` 의 `extern SW_API bool gv_useRenderThread;`. `SW_API` 를 붙여야 해서 매크로를 못 쓰던 것인데, 실제로 Engine.dll 밖에서 심볼을 쓰는 곳은
+하나뿐이었다.
+- `gv_useRenderThread` — App 은 주석에서만 말한다. 읽는 곳은 Engine 안뿐이라 export 가 필요 없었다 → `SW_EXTERN_GLOBAL_VARIABLE_BOOL`.
+- `gv_rhiBackend` — App 의 `BackendSwapController` 가 교체 실패 때 값을 되돌리려고 심볼에 직접 대입했다. 그 컨트롤러는 이미 매니저에서 같은 변수의
+  `GlobalVariableInfo` 를 찾아 들고 있으므로 그 `_pData`(등록 때 넘긴 `&gv_rhiBackend`)로 쓰게 했다 — 콜백을 부르지 않는 것은 같고 App 이 Engine.dll 의
+  변수를 import 하지 않는다 → `SW_EXTERN_GLOBAL_VARIABLE_ENUM`.
+- `EngineLoop.cpp` 가 헤더와 겹쳐 한 번 더 적던 `gv_useRenderThread` 선언을 걷었다.
+- `gv_typeTableGeneration` 은 이름만 `gv_` 인 원자 카운터(전역 변수 규칙 이름)이고 GV 로 등록되지 않아 그대로 둔다.
+
+**기각.** 선언 매크로 다섯을 `SW_EXTERN_GLOBAL_VARIABLE( name, type )` 하나로 합치는 안 — 한 번 해 봤다가 되돌렸다. 선언만 보고 GV 의 종류가
+보이지 않고, 정의 매크로(`SW_GLOBAL_VARIABLE_BOOL` …)와 짝이 맞지 않는다. export 판 매크로(`SW_EXTERN_ENGINE_GLOBAL_VARIABLE_*`)를 따로 두는 안도
+`gv_rhiBackend` 의 import 가 없어지면서 필요가 없어졌다. Engine 을 Dev 에서도 정적으로 붙이는 안은 모듈(에디터 · 게임 · 킷 · RHI)이 Engine 상태를 한 벌
+함께 써야 해서 안 된다 — Windows 는 import 를 이미지 이름으로 묶으므로 App.exe 에서 내보내면 테스트 호스트가 모듈을 못 올린다(Shipping 은 이미 정적이다).
+
+**함정(이번에 밟음).** 백그라운드 검증을 멈춘 뒤 새 빌드를 시작했더니 멈췄다고 여긴 검증 셸이 살아 테스트를 계속 띄워 **0xc0000142(DLL 초기화 실패)
+메시지 상자**가 사용자 화면에 떴다. 검증은 한 번에 하나만, 멈출 때는 셸을 트리째(`taskkill /T`) 내린다.
+
+**검증(Windows).** Debug · Release · Shipping · ASan 빌드 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Release · Shipping 각 9/9,
+ASan `nogpu` 7/7 · 검증 중 메시지 상자 0 · 백엔드 교체 스모크(`-gv_rhiSwapAtFrame=10`) 에러 0.
+
 ### 2026-09-24 (전역 변수 등록 — 레이어마다 `#undef` · `#define` 하던 것을 걷고 타입 등록자와 같은 길로)
 
 **왜.** 모듈(EditorModule · SWGame)의 전역 변수는 모듈이 내려갈 때 통째로 걷혀야 한다. 그래서 모듈마다 전역 변수 헤더에서

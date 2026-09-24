@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -21,7 +22,8 @@ namespace sw
 {
     class IRenderSurface;
 
-    extern SW_API RHIBackend gv_rhiBackend;
+    /** @brief `-gv_rhiBackend`: 쓸 RHI 백엔드입니다. App 의 백엔드 교체(`BackendSwapController`)는 심볼이 아니라 매니저로 읽고 씁니다. */
+    SW_EXTERN_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend );
 
     /**
      * @struct RHIBackendUtil
