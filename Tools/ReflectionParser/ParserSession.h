@@ -15,6 +15,7 @@
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/ContainerTypeMap.h"
 #include "ReflectionParser/EmitTemplateStore.h"
+#include "ReflectionParser/ParserConfig.h"
 #include "ReflectionParser/TypeNameMap.h"
 
 namespace sw
@@ -25,6 +26,7 @@ namespace sw
      */
     struct ParserSession
     {
+        ParserConfig      _config;            ///< parser_config · toolchain_config 에서 읽은 설정(clang 인자 · 코드젠 표식 · 규칙)
         TypeNameMap       _typeNameMap;       ///< clang 표기 → canonical
         ContainerTypeMap  _containerTypeMap;  ///< 컨테이너 판별 규칙
         AnnotationMeta    _annotationMeta;    ///< 어노테이션 별칭 → 정규 필드명

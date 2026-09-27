@@ -5,9 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "ReflectionParser/ParserContext.h"
-#include "ReflectionParser/ParserDefines.h"
-
 SW_LOG_CALLER( "EmitTemplateStore" );
 namespace sw
 {
@@ -27,11 +24,15 @@ namespace sw
                 return isIdentStart( character ) || ( '0' <= character && character <= '9' );
             }
 
-            /** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열 뷰를 반환합니다. */
-            static string_view lookupVar( const unordered_map<string, string>& mapVar, const string_view key )
+            /** @brief 변수 목록에서 키를 찾습니다. 없으면 빈 뷰입니다. */
+            static string_view findVar( const EmitTemplateStore::TemplateVars vars, const string_view key )
             {
-                const auto it = mapVar.find( string( key ) );
-                return ( it != mapVar.end() ) ? string_view( it->second ) : string_view{};
+                for ( const auto& [name, value] : vars )
+                {
+                    if ( name == key )
+                        return value;
+                }
+                return {};
             }
         };
     } // namespace
@@ -52,7 +53,7 @@ namespace sw
         _bLoaded = SW_FALSE;
     }
 
-    bool EmitTemplateStore::loadDirectory( const string_view absDir )
+    bool EmitTemplateStore::loadDirectory( const string_view absDir, const string_view extension )
     {
         clear();
 
@@ -63,7 +64,7 @@ namespace sw
         }
 
         vector<string> listFile;
-        FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, listFile, false );
+        FileUtil::collectFiles( absDir, extension, listFile, false );
 
         uint32 count = 0;
         for ( const string& filePath : listFile )
@@ -72,15 +73,13 @@ namespace sw
             if ( FileUtil::readTextFile( filePath, content ) == false )
                 continue;
 
-            string name = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) );
-
-            _mapTemplate[name] = content;
+            _mapTemplate[FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) )] = std::move( content );
             ++count;
         }
 
         if ( count == 0 )
         {
-            SW_LOG_WARNING( "No .tpl files in %#", absDir );
+            SW_LOG_WARNING( "No %# files in %#", extension, absDir );
             return false;
         }
 
@@ -94,8 +93,7 @@ namespace sw
         return _mapTemplate.find( string( name ) ) != _mapTemplate.end();
     }
 
-    string EmitTemplateStore::render( const string_view                    name,
-                                      const unordered_map<string, string>& vars ) const
+    string EmitTemplateStore::render( const string_view name, const TemplateVars vars ) const
     {
         const auto it = _mapTemplate.find( string( name ) );
         if ( it == _mapTemplate.end() )
@@ -106,24 +104,11 @@ namespace sw
         return expand( it->second, vars );
     }
 
-    string EmitTemplateStore::render( const string_view                                     name,
-                                      std::initializer_list<pair<string_view, string_view>> vars ) const
-    {
-        const auto it = _mapTemplate.find( string( name ) );
-        if ( it == _mapTemplate.end() )
-        {
-            SW_LOG_WARNING( "Missing template: %#", name );
-            return {};
-        }
-        return expand( it->second, vars );
-    }
-
-    string EmitTemplateStore::expand( const string_view                    tpl,
-                                      const unordered_map<string, string>& vars )
+    string EmitTemplateStore::expand( const string_view tpl, const TemplateVars vars )
     {
         size_t extraEstimated = 0;
-        for ( const auto& [k, v] : vars )
-            extraEstimated += v.size();
+        for ( const auto& [name, value] : vars )
+            extraEstimated += value.size();
 
         string out;
         out.reserve( tpl.size() + extraEstimated + 64 );
@@ -172,77 +157,9 @@ namespace sw
                 continue;
             }
 
-            const string_view val = EmitTemplateStoreInternal::lookupVar( vars, key );
-            if ( val.empty() == false )
-                out.append( val.data(), val.size() );
-            charIndex = keyEnd;
-        }
-
-        return out;
-    }
-
-    string EmitTemplateStore::expand( const string_view                                     tpl,
-                                      std::initializer_list<pair<string_view, string_view>> vars )
-    {
-        size_t extraEstimated = 0;
-        for ( const auto& [k, v] : vars )
-            extraEstimated += v.size();
-
-        string out;
-        out.reserve( tpl.size() + extraEstimated + 64 );
-
-        for ( size_t charIndex = 0; charIndex < tpl.size(); )
-        {
-            if ( tpl[charIndex] != '$' )
-            {
-                out.push_back( tpl[charIndex++] );
-                continue;
-            }
-
-            // 이스케이프: $$ → $
-            if ( charIndex + 1 < tpl.size() && tpl[charIndex + 1] == '$' )
-            {
-                out.push_back( '$' );
-                charIndex += 2;
-                continue;
-            }
-
-            string_view key;
-            size_t      keyEnd = charIndex + 1;
-            if ( keyEnd < tpl.size() && tpl[keyEnd] == '{' )
-            {
-                ++keyEnd;
-                const size_t close = tpl.find( '}', keyEnd );
-                if ( close == string_view::npos )
-                {
-                    out.push_back( tpl[charIndex++] );
-                    continue;
-                }
-                key    = tpl.substr( keyEnd, close - keyEnd );
-                keyEnd = close + 1;
-            }
-            else if ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentStart( tpl[keyEnd] ) )
-            {
-                const size_t start = keyEnd;
-                ++keyEnd;
-                while ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentChar( tpl[keyEnd] ) )
-                    ++keyEnd;
-                key = tpl.substr( start, keyEnd - start );
-            }
-            else
-            {
-                out.push_back( tpl[charIndex++] );
-                continue;
-            }
-
-            for ( const auto& [k, v] : vars )
-            {
-                if ( k == key )
-                {
-                    out.append( v.data(), v.size() );
-                    break;
-                }
-            }
+            const string_view value = EmitTemplateStoreInternal::findVar( vars, key );
+            if ( value.empty() == false )
+                out.append( value.data(), value.size() );
             charIndex = keyEnd;
         }
 

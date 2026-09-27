@@ -3,7 +3,6 @@
 #include "ReflectionParser/CodeGenerator.h"
 
 #include "Core/Common/Types.h"
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -12,7 +11,7 @@
 
 #include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/EmitTemplateStore.h"
-#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserConfig.h"
 #include "ReflectionParser/ParserDefines.h"
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
@@ -25,25 +24,6 @@ namespace sw
         struct CodeGeneratorInternal
         {
             static constexpr int32 kMaxNestedContainerDepth = 3;
-
-            /**
-             * @brief 생성 파일 머리에 적어 둔 소스 경로(`// Source: ...`)를 되읽습니다. 없으면 빈 뷰입니다.
-             * @note 표식 문자열의 정본은 **설정**입니다(`_emitSourcePathMarker`). 쓰는 쪽(FileHeader.tpl)과 읽는 쪽(여기 ·
-             *       `ReflectionParser::hasMatchingSourcePath`)이 같은 값을 봐야 합니다.
-             */
-            static string_view readRecordedSourcePath( string_view generatedContent )
-            {
-                const string& kSourceMarker = ParserContext::getSharedConfig()._emitSourcePathMarker;
-                const size_t  markerPos     = generatedContent.find( kSourceMarker );
-                if ( markerPos == string_view::npos )
-                    return {};
-
-                const size_t valueStart = markerPos + kSourceMarker.size();
-                size_t       lineEnd    = generatedContent.find( '\n', valueStart );
-                if ( lineEnd == string_view::npos )
-                    lineEnd = generatedContent.size();
-                return StringUtil::trim( generatedContent.substr( valueStart, lineEnd - valueStart ) );
-            }
 
             /**
              * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
@@ -175,155 +155,51 @@ namespace sw
 
 namespace sw
 {
-    CodeGenerator::CodeGenerator(
-        const vector<ParsedTypeInfo>& types,
-        const vector<ParsedEnumInfo>& enums,
-        const string&                 sourceFilePath,
-        const string&                 outputDir,
-        const ParserSession&          session,
-        const string&                 sourceRoot )
-        : _listType{ types }
+    CodeGenerator::CodeGenerator( const ParsedHeader& header, const string& sourceFilePath, const ParserSession& session,
+                                  const string& sourceRoot )
+        : _header{ header }
         , _session{ session }
-        , _listEnum{ enums }
         , _sourceFilePath{ sourceFilePath }
-        , _sourceRoot{ sourceRoot }
-        , _outputDir{ outputDir }
-        , _outputFilePath{}
-        , _outputHeaderPath{}
+        , _moduleName{}
     {
+        _moduleName = makeModuleName( sourceRoot );
     }
 
-    void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                        const unordered_map<string, string>& vars ) const
+    void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name, const EmitTemplateStore::TemplateVars vars ) const
     {
         out.append( _session._emitTemplateStore.render( name, vars ) );
     }
 
-    void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                        std::initializer_list<pair<string_view, string_view>> vars ) const
+    string CodeGenerator::makeSourceText() const
     {
-        out.append( _session._emitTemplateStore.render( name, vars ) );
-    }
-
-    const utf8* CodeGenerator::containerKindExpr( const ContainerKind kind )
-    {
-        return toCppExpr( kind );
-    }
-
-    const utf8* CodeGenerator::peelMember( const ContainerKind kind )
-    {
-        return containerPeelMember( kind );
-    }
-
-    bool CodeGenerator::generate()
-    {
-        if ( _session._emitTemplateStore.isLoaded() == false )
-        {
-            SW_LOG_ERROR( "Emit templates not loaded (pass --emit-templates <dir>)." );
-            return false;
-        }
-
-        BLOCK( "Prepare Output Path" )
-        {
-            FileUtil::ensureDirectoryExists( _outputDir );
-            _outputFilePath   = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitCppExtension );
-            _outputHeaderPath = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitHeaderExtension );
-        }
-
         CodeEmitBuffer buffer;
-
-        if ( _listType.empty() && _listEnum.empty() )
+        if ( _header._listType.empty() && _header._listEnum.empty() )
+        {
             buffer.appendFormat( "// No reflected types found in %#\n", _sourceFilePath );
-
-        if ( _listType.empty() == false || _listEnum.empty() == false )
-        {
-            BLOCK( "Emit File Header" )
-            {
-                emitFileHeader( buffer );
-                buffer.append( ParserContext::getSharedConfig()._emitGeneratedNsOpen );
-            }
-
-            BLOCK( "Emit Registrars" )
-            {
-                for ( const ParsedTypeInfo& typeInfo : _listType )
-                    emitTypeRegistrar( buffer, typeInfo );
-                for ( const ParsedEnumInfo& enumInfo : _listEnum )
-                    emitEnumRegistrar( buffer, enumInfo );
-            }
-
-            buffer.append( ParserContext::getSharedConfig()._emitGeneratedNsClose );
-
-            BLOCK( "Emit Component Factory Registrars" )
-            {
-                for ( const ParsedTypeInfo& typeInfo : _listType )
-                {
-                    if ( typeInfo.wantsComponentFactory() )
-                        emitComponentFactoryRegistrar( buffer, typeInfo );
-                }
-            }
-
-            BLOCK( "Emit Type Traits & Accessors" )
-            {
-                for ( const ParsedTypeInfo& typeInfo : _listType )
-                {
-                    emitReflectTypeTraits( buffer, typeInfo );
-                    if ( typeInfo.wantsTypeApi() )
-                        emitTypeInfoAccessors( buffer, typeInfo );
-                }
-            }
+            return string( buffer.view() );
         }
 
-        const string newContent( buffer.view() );
+        emitFileHeader( buffer );
+        buffer.append( _session._config._emitGeneratedNsOpen );
+        for ( const ParsedTypeInfo& typeInfo : _header._listType )
+            emitTypeRegistrar( buffer, typeInfo );
+        for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
+            emitEnumRegistrar( buffer, enumInfo );
+        buffer.append( _session._config._emitGeneratedNsClose );
 
-        BLOCK( "Incremental Write" )
+        for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            bool bCppUnchanged = false;
-            if ( FileUtil::fileExists( _outputFilePath ) )
-            {
-                string existingContent;
-                FileUtil::readTextFile( _outputFilePath, existingContent );
-
-                // **다른 헤더가 이미 이 이름으로 썼는가.** 생성 파일 이름은 소스의 **파일 이름만**
-                // 으로 짓는다(`ParserUtil::makeGeneratedPath`). 그래서 한 모듈 안에 같은 이름의
-                // 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을 덮고, **앞 헤더의 타입들은 아무 말
-                // 없이 등록되지 않는다.** 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로 나타나서
-                // 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
-                //
-                // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지
-                // 않으면 파일을 옮길 때마다 빌드가 막힌다.
-                const string_view recordedSource = CodeGeneratorInternal::readRecordedSourcePath( existingContent );
-                if ( recordedSource.empty() == false &&
-                     FileUtil::normalizeSeparators( recordedSource ) != FileUtil::normalizeSeparators( _sourceFilePath ) &&
-                     FileUtil::fileExists( recordedSource ) )
-                {
-                    SW_LOG_ERROR( "Generated file name collision: '%#' and '%#' both generate '%#'. "
-                                  "Two reflected headers in the same module cannot share a file name.",
-                                  recordedSource, _sourceFilePath, _outputFilePath );
-                    return false;
-                }
-
-                if ( existingContent.empty() == false && existingContent == newContent )
-                {
-                    SW_LOG_TRACE( "Incremental check: %# is up-to-date, skipping write.", _outputFilePath );
-                    bCppUnchanged = true;
-                }
-            }
-
-            if ( bCppUnchanged == false )
-            {
-                if ( FileUtil::writeTextFile( _outputFilePath, newContent ) == false )
-                {
-                    SW_LOG_ERROR( "Failed to open output: %#", _outputFilePath );
-                    return false;
-                }
-            }
+            if ( typeInfo.wantsComponentFactory() )
+                emitComponentFactoryRegistrar( buffer, typeInfo );
         }
 
-        if ( emitGeneratedHeader() == false )
-            return false;
-
-        SW_LOG_TRACE( "Generated: %#", _outputFilePath );
-        return true;
+        for ( const ParsedTypeInfo& typeInfo : _header._listType )
+        {
+            emitReflectTypeTraits( buffer, typeInfo );
+            if ( typeInfo.wantsTypeApi() )
+                emitTypeInfoAccessors( buffer, typeInfo );
+        }
+        return string( buffer.view() );
     }
 
     void CodeGenerator::emitFileHeader( CodeEmitBuffer& out ) const
@@ -353,7 +229,7 @@ namespace sw
                                                                            {        templateKeyConstants::kId, sanitizeIdentifier( typeInfo._fullyQualifiedName )},
                                                                            {       templateKeyConstants::kFqn,                       typeInfo._fullyQualifiedName},
                                                                            {      templateKeyConstants::kName,                                     typeInfo._name},
-                                                                           {templateKeyConstants::kModuleName,                                    getModuleName()},
+                                                                           {templateKeyConstants::kModuleName,                                        _moduleName},
         } );
     }
 
@@ -378,7 +254,7 @@ namespace sw
         if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
             return;
 
-        const utf8*  outerKind    = containerKindExpr( prop._containerKind );
+        const utf8*  outerKind    = toCppExpr( prop._containerKind );
         const string outerWrapper = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
         emit.line( "{" );
@@ -399,8 +275,8 @@ namespace sw
             emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
             while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
             {
-                const utf8* kind = containerKindExpr( node->_containerKind );
-                const utf8* peel = peelMember( prevKind );
+                const utf8* kind = toCppExpr( node->_containerKind );
+                const utf8* peel = containerPeelMember( prevKind );
                 emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
 
                 const string wrapperType = CodeGeneratorInternal::makeNestedWrapperType( node->_containerType, depth );
@@ -436,7 +312,7 @@ namespace sw
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입을 컴파일 타임에 막는다.
         // 목록은 parser_config 의 emit.value_forbidden_base_types 에서 온다(비면 생략).
         emit.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
-        const ParserClangConfig& cfg = ParserContext::getSharedConfig();
+        const ParserConfig& cfg = _session._config;
         if ( cfg._listValueForbiddenBaseType.empty() == false )
         {
             string condition;
@@ -463,7 +339,7 @@ namespace sw
 
         if ( prop._bIsContainer )
         {
-            const utf8*  kindStr     = containerKindExpr( prop._containerKind );
+            const utf8*  kindStr     = toCppExpr( prop._containerKind );
             const string wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
             emit.line( "true," );
@@ -580,21 +456,21 @@ namespace sw
         }
     }
 
-    string CodeGenerator::getModuleName() const
+    string CodeGenerator::makeModuleName( const string& sourceRoot ) const
     {
-        const ParserClangConfig& config = ParserContext::getSharedConfig();
+        const ParserConfig& config = _session._config;
 
         // 절대 경로로 매칭하면 리포지토리를 담은 상위 폴더 이름(예: .../AppData/..., D:/Games/...)이
         // 규칙에 걸려 모든 타입이 엉뚱한 모듈로 등록된다. 소스 루트 기준 상대 경로로만 본다.
         string relativePath = _sourceFilePath;
-        if ( _sourceRoot.empty() == false )
+        if ( sourceRoot.empty() == false )
         {
-            const size_t rootPos = _sourceFilePath.find( _sourceRoot );
+            const size_t rootPos = _sourceFilePath.find( sourceRoot );
             if ( rootPos != string::npos )
-                relativePath = _sourceFilePath.substr( rootPos + _sourceRoot.size() );
+                relativePath = _sourceFilePath.substr( rootPos + sourceRoot.size() );
         }
 
-        for ( const ParserClangConfig::ModuleRule& rule : config._listModuleRule )
+        for ( const ParserConfig::ModuleRule& rule : config._listModuleRule )
         {
             if ( rule._pathContains.empty() == false && relativePath.find( rule._pathContains ) != string::npos )
                 return rule._module;
@@ -619,7 +495,7 @@ namespace sw
                                                                     {       templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
                                                                     {      templateKeyConstants::kName,               typeInfo._name},
                                                                     { templateKeyConstants::kParentFqn,          typeInfo._parentFQN},
-                                                                    {templateKeyConstants::kModuleName,              getModuleName()},
+                                                                    {templateKeyConstants::kModuleName,                  _moduleName},
                                                                     {     templateKeyConstants::kFlags,    string( flagsBuf.view() )},
         } );
 
@@ -662,7 +538,7 @@ namespace sw
                                                                     {          templateKeyConstants::kId,                                                         registrarName},
                                                                     {         templateKeyConstants::kFqn,                                          enumInfo._fullyQualifiedName},
                                                                     {        templateKeyConstants::kName,                                                        enumInfo._name},
-                                                                    {  templateKeyConstants::kModuleName,                                                       getModuleName()},
+                                                                    {  templateKeyConstants::kModuleName,                                                           _moduleName},
                                                                     {   templateKeyConstants::kIsBitFlag,                               enumInfo._bIsBitFlag ? "true" : "false"},
                                                                     {  templateKeyConstants::kHasInvalid,                               invalidEn != nullptr ? "true" : "false"},
                                                                     {templateKeyConstants::kInvalidValue, invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
@@ -730,16 +606,16 @@ namespace sw
         return nullptr;
     }
 
-    bool CodeGenerator::emitGeneratedHeader() const
+    bool CodeGenerator::makeHeaderText( string& outText ) const
     {
         CodeEmitBuffer buffer;
         CodeEmit       emit( buffer );
-        emit.line( ParserContext::getSharedConfig()._emitAutoGeneratedBanner );
+        emit.line( _session._config._emitAutoGeneratedBanner );
         emit.line( "#pragma once" );
         emit.blank();
 
         bool bNeedFlags = false;
-        for ( const ParsedEnumInfo& enumInfo : _listEnum )
+        for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
             if ( enumInfo._bIsBitFlag == SW_TRUE )
                 bNeedFlags = true;
@@ -765,7 +641,7 @@ namespace sw
             // 있었다). 불투명 열거형 선언은 완전한 타입이라 특수화에 이것으로 충분하다.
             emit.line( "#include \"Core/Common/EnumUtil.h\"" );
             emit.blank();
-            for ( const ParsedEnumInfo& enumInfo : _listEnum )
+            for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
             {
                 if ( enumInfo._bIsBitFlag == SW_FALSE )
                     continue;
@@ -798,20 +674,7 @@ namespace sw
             }
         }
 
-        const string newContent( buffer.view() );
-        if ( FileUtil::fileExists( _outputHeaderPath ) )
-        {
-            string existingContent;
-            FileUtil::readTextFile( _outputHeaderPath, existingContent );
-            if ( existingContent.empty() == false && existingContent == newContent )
-                return true;
-        }
-        if ( FileUtil::writeTextFile( _outputHeaderPath, newContent ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write %#", _outputHeaderPath );
-            return false;
-        }
-        SW_LOG_TRACE( "Generated: %#", _outputHeaderPath );
+        outText = string( buffer.view() );
         return true;
     }
 

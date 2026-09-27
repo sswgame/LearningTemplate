@@ -14,7 +14,7 @@
 #include "ReflectionParser/AnnotationApply.h"
 #include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/ContainerTypeMap.h"
-#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserConfig.h"
 #include "ReflectionParser/ParserDefines.h"
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
@@ -152,7 +152,7 @@ namespace sw
                 bool isValid() const noexcept { return _pContent != nullptr; }
             };
 
-            static SourceWindow makeSourceWindow( const CXCursor cursor )
+            static SourceWindow makeSourceWindow( const CXCursor cursor, const ParserConfig& config )
             {
                 SourceWindow result;
                 CXFile       file   = nullptr;
@@ -165,7 +165,7 @@ namespace sw
                 if ( content.empty() || offset > content.size() )
                     return result;
 
-                const size_t lookback = ParserContext::getSharedConfig()._sourceLookbackBytes;
+                const size_t lookback = config._sourceLookbackBytes;
                 result._pContent      = &content;
                 result._windowStart   = ( offset > lookback ) ? ( offset - lookback ) : 0;
                 result._window        = string_view( content.data() + result._windowStart, offset - result._windowStart );
@@ -235,9 +235,9 @@ namespace sw
              * @brief AST 에서 속성 커서가 빠졌을 때, 커서 앞 소스 창에 그 애노테이션(매크로 또는 `annotate("…`)이 있는지 봅니다.
              * @details 기본 매크로만 봅니다. `ENUM;BitFlag` 같은 세부 태그에는 폴백하지 않습니다.
              */
-            static bool hasSourceAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc )
+            static bool hasSourceAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc, const ParserConfig& config )
             {
-                const SourceWindow source = makeSourceWindow( cursor );
+                const SourceWindow source = makeSourceWindow( cursor, config );
                 if ( source.isValid() == false )
                     return false;
 
@@ -255,9 +255,9 @@ namespace sw
              * @brief 커서 앞의 소스에서 매크로 괄호 `(...)` 안을 읽어 `PREFIX;args` 꼴의 애노테이션 철자를 다시 만듭니다.
              * @return 매크로가 없거나 앞 선언의 것이면 빈 문자열
              */
-            static string extractSourceAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc )
+            static string extractSourceAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc, const ParserConfig& config )
             {
-                const SourceWindow source = makeSourceWindow( cursor );
+                const SourceWindow source = makeSourceWindow( cursor, config );
                 if ( source.isValid() == false )
                     return {};
 
@@ -303,17 +303,17 @@ namespace sw
             }
 
             /** @brief 그 애노테이션이 붙어 있는지 — 자식 속성, 없으면 소스 창. */
-            static bool hasAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc )
+            static bool hasAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc, const ParserConfig& config )
             {
-                return findAnnotateAttr( cursor, desc._pPrefix ).empty() == false || hasSourceAnnotation( cursor, desc );
+                return findAnnotateAttr( cursor, desc._pPrefix ).empty() == false || hasSourceAnnotation( cursor, desc, config );
             }
 
             /** @brief 애노테이션 철자 — 자식 속성, 없으면 소스에서 다시 만든다. 없으면 빈 문자열입니다. */
-            static string readAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc )
+            static string readAnnotation( const CXCursor cursor, const ReflectAnnotationDesc& desc, const ParserConfig& config )
             {
                 string spelling = findAnnotateAttr( cursor, desc._pPrefix );
                 if ( spelling.empty() )
-                    spelling = extractSourceAnnotation( cursor, desc );
+                    spelling = extractSourceAnnotation( cursor, desc, config );
                 return spelling;
             }
 
@@ -372,14 +372,14 @@ namespace sw
              * @brief 타입 선언의 REFLECT_CONTAINER(Kind [, WrapperStem]) 를 조회합니다.
              * @return 어노테이션된 컨테이너 메타를 찾으면 true
              */
-            static bool findReflectContainer( const CXType type, ContainerKind& outKind, string& outWrapperStem )
+            static bool findReflectContainer( const CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem )
             {
                 const CXCursor declaration = findContainerDeclaration( type );
                 if ( clang_Cursor_isNull( declaration ) )
                     return false;
 
                 const ReflectAnnotationDesc& desc     = annotationConstants::kReflectContainer;
-                const string                 spelling = readAnnotation( declaration, desc );
+                const string                 spelling = readAnnotation( declaration, desc, config );
                 if ( spelling.empty() )
                     return false;
 
@@ -473,7 +473,7 @@ namespace sw
 
                 ContainerKind kind = ContainerKind::None;
                 string        wrapperStem;
-                if ( findReflectContainer( type, kind, wrapperStem ) )
+                if ( findReflectContainer( type, session._config, kind, wrapperStem ) )
                     markContainer( *node, kind, wrapperStem );
                 else if ( rule != nullptr )
                     markContainer( *node, rule->_kind, rule->_type );
@@ -559,7 +559,7 @@ namespace sw
                     return;
                 const CXCursor baseDef      = clang_getCursorDefinition( baseDecl );
                 const CXCursor searchCursor = clang_Cursor_isNull( baseDef ) == 0 ? baseDef : baseDecl;
-                if ( hasAnnotation( searchCursor, annotationConstants::kReflect ) == false )
+                if ( hasAnnotation( searchCursor, annotationConstants::kReflect, collector._pSession->_config ) == false )
                     return;
 
                 SW_LOG_ERROR( "ERROR: %# has multiple base classes; '%#' has REFLECT() but is not the first base. "
@@ -573,7 +573,7 @@ namespace sw
             static void collectField( const CXCursor cursor, MemberCollector& collector )
             {
                 const string spelling = findAnnotateAttr( cursor, annotationConstants::kPropertyPrefix );
-                if ( spelling.empty() && hasSourceAnnotation( cursor, annotationConstants::kProperty ) == false )
+                if ( spelling.empty() && hasSourceAnnotation( cursor, annotationConstants::kProperty, collector._pSession->_config ) == false )
                     return;
 
                 const ParserSession& session   = *collector._pSession;
@@ -702,7 +702,7 @@ namespace sw
                 {
                     if ( clang_CXXMethod_isPureVirtual( cursor ) )
                         return;
-                    if ( hasSourceAnnotation( cursor, annotationConstants::kFunction ) == false )
+                    if ( hasSourceAnnotation( cursor, annotationConstants::kFunction, collector._pSession->_config ) == false )
                         return;
                 }
 
@@ -784,27 +784,33 @@ namespace sw
             // ------------------------------------------------------------------------------
             // E) 컴포넌트 판별 · 열거자
             // ------------------------------------------------------------------------------
+            struct ComponentSearch
+            {
+                const ParserConfig* _pConfig;
+                bool                _bDerives;
+            };
+
             /** @brief Component / SceneComponent 파생인지 베이스 체인을 검사합니다. */
             static CXChildVisitResult componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData )
             {
                 if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
                     return CXChildVisit_Continue;
 
-                const CXCursor baseDecl = clang_getTypeDeclaration( clang_getCursorType( cursor ) );
-                if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromComponent( baseDecl ) == false )
+                ComponentSearch* pSearch  = static_cast<ComponentSearch*>( clientData );
+                const CXCursor   baseDecl = clang_getTypeDeclaration( clang_getCursorType( cursor ) );
+                if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromComponent( baseDecl, *pSearch->_pConfig ) == false )
                     return CXChildVisit_Continue;
 
-                *static_cast<bool*>( clientData ) = true;
+                pSearch->_bDerives = true;
                 return CXChildVisit_Break;
             }
 
-            static bool isDerivedFromComponent( const CXCursor cursor )
+            static bool isDerivedFromComponent( const CXCursor cursor, const ParserConfig& config )
             {
                 // 같은 중간 베이스 클래스를 거듭 재귀 탐색하지 않게 한다(스레드마다 한 벌).
                 thread_local unordered_map<string, bool> s_mapFqnToDerives;
 
-                const string             fqn    = makeFullyQualifiedName( cursor );
-                const ParserClangConfig& config = ParserContext::getSharedConfig();
+                const string fqn = makeFullyQualifiedName( cursor );
                 for ( const string& baseType : config._listComponentBaseType )
                 {
                     if ( fqn == baseType )
@@ -818,10 +824,10 @@ namespace sw
                 // 캐시 미스. 순환 참조를 막으려고 먼저 false 로 넣는다
                 s_mapFqnToDerives[fqn] = false;
 
-                bool bDerives = false;
-                clang_visitChildren( cursor, componentBaseVisitor, &bDerives );
-                s_mapFqnToDerives[fqn] = bDerives;
-                return bDerives;
+                ComponentSearch search{ &config, false };
+                clang_visitChildren( cursor, componentBaseVisitor, &search );
+                s_mapFqnToDerives[fqn] = search._bDerives;
+                return search._bDerives;
             }
 
             /** @brief enumerator 이름·값을 수집합니다. */
@@ -844,10 +850,10 @@ namespace sw
              * @brief 멤버에 붙은 애노테이션이 REFLECT 타입 안에 있는지 봅니다. 아니면 알리고 false 입니다.
              * @param pMacroName 멤버 쪽 매크로 이름(오류 메시지용)
              */
-            static bool isInsideReflectType( const CXCursor member, const utf8* pMacroName )
+            static bool isInsideReflectType( const CXCursor member, const utf8* pMacroName, const ParserConfig& config )
             {
                 const CXCursor parent = clang_getCursorSemanticParent( member );
-                if ( hasAnnotation( parent, annotationConstants::kReflect ) )
+                if ( hasAnnotation( parent, annotationConstants::kReflect, config ) )
                     return true;
 
                 SW_LOG_ERROR( "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", pMacroName,
@@ -942,12 +948,13 @@ namespace sw
         if ( targetIndex == kNoTarget )
             return CXChildVisit_Continue;
 
-        ParsedHeader& header = self->_listHeader[static_cast<size_t>( targetIndex )];
+        ParsedHeader&       header = self->_listHeader[static_cast<size_t>( targetIndex )];
+        const ParserConfig& config = self->_pSession->_config;
 
         if ( kind == CXCursor_FieldDecl )
         {
-            const bool bOrphanProperty = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kProperty ) &&
-                                         AstVisitorInternal::isInsideReflectType( cursor, annotationConstants::kPropertyMacro ) == false;
+            const bool bOrphanProperty = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kProperty, config ) &&
+                                         AstVisitorInternal::isInsideReflectType( cursor, annotationConstants::kPropertyMacro, config ) == false;
             if ( bOrphanProperty )
             {
                 self->_bHasError = SW_TRUE;
@@ -958,12 +965,12 @@ namespace sw
 
         if ( kind == CXCursor_CXXMethod )
         {
-            const bool bHasFunction = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kFunction );
+            const bool bHasFunction = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kFunction, config );
             const bool bHasBody =
                 AstVisitorInternal::findAnnotateAttr( cursor, annotationConstants::kReflectBodyPrefix ).empty() == false ||
                 AstVisitorInternal::isStringEqual( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn );
             const utf8* pMacroName   = bHasFunction ? annotationConstants::kFunctionMacro : annotationConstants::kReflectBodyPrefix;
-            const bool  bOrphanMacro = ( bHasFunction || bHasBody ) && AstVisitorInternal::isInsideReflectType( cursor, pMacroName ) == false;
+            const bool  bOrphanMacro = ( bHasFunction || bHasBody ) && AstVisitorInternal::isInsideReflectType( cursor, pMacroName, config ) == false;
             if ( bOrphanMacro )
             {
                 self->_bHasError = SW_TRUE;
@@ -976,7 +983,7 @@ namespace sw
         // 조용히 빠지면 원인을 찾기 어려우므로 경고만 남기고 건너뛴다.
         if ( kind == CXCursor_ClassTemplate || kind == CXCursor_ClassTemplatePartialSpecialization )
         {
-            if ( AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kReflect ) )
+            if ( AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kReflect, config ) )
             {
                 SW_LOG_WARNING( "REFLECT on class template is not supported, skipping: %#",
                                 AstVisitorInternal::makeFullyQualifiedName( cursor ) );
@@ -986,12 +993,12 @@ namespace sw
 
         if ( kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl )
         {
-            if ( AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kReflect ) )
+            if ( AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kReflect, config ) )
                 self->onStructDeclaration( cursor, header );
             return CXChildVisit_Recurse;
         }
 
-        if ( kind == CXCursor_EnumDecl && AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kEnum ) )
+        if ( kind == CXCursor_EnumDecl && AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kEnum, config ) )
             self->onEnumDeclaration( cursor, header );
         return CXChildVisit_Continue;
     }
@@ -1014,7 +1021,7 @@ namespace sw
 
         BLOCK( "Parse REFLECT Annotation" )
         {
-            const string spelling = AstVisitorInternal::readAnnotation( cursor, annotationConstants::kReflect );
+            const string spelling = AstVisitorInternal::readAnnotation( cursor, annotationConstants::kReflect, _pSession->_config );
             if ( spelling.empty() == false &&
                  AstVisitorInternal::applyAnnotation( spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
             {
@@ -1035,7 +1042,7 @@ namespace sw
                 _bHasError = SW_TRUE;
                 return;
             }
-            const bool bFactory         = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor );
+            const bool bFactory         = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
             typeInfo._bReflectBody      = collector._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
             typeInfo._bComponentFactory = bFactory ? SW_TRUE : SW_FALSE;
         }
@@ -1097,7 +1104,7 @@ namespace sw
         BLOCK( "Parse ENUM annotation (Alias / …)" )
         {
             // 소스의 ENUM(...) 을 우선해 Alias= 가 BitFlag annotate 에 가려지지 않게 한다.
-            string spelling = AstVisitorInternal::extractSourceAnnotation( cursor, annotationConstants::kEnum );
+            string spelling = AstVisitorInternal::extractSourceAnnotation( cursor, annotationConstants::kEnum, _pSession->_config );
             if ( spelling.empty() )
                 spelling = AstVisitorInternal::findAnnotateAttr( cursor, annotationConstants::kEnumPrefix );
             if ( spelling.empty() == false &&

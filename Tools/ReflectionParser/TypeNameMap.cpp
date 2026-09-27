@@ -5,53 +5,15 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
 #include "ReflectionParser/ParserUtil.h"
 
 SW_LOG_CALLER( "TypeNameMap" );
 namespace sw
 {
-    namespace
-    {
-        struct TypeNameMapInternal
-        {
-            /** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
-            static string stripClangDecorations( string_view tView )
-            {
-                tView                        = StringUtil::trim( tView );
-                const ParserClangConfig& cfg = ParserContext::getSharedConfig();
-
-                bool bStripped{ true };
-                while ( bStripped && tView.empty() == false )
-                {
-                    bStripped = false;
-                    for ( const string& prefix : cfg._listTypeStripPrefix )
-                    {
-                        if ( StringUtil::startsWith( tView, prefix ) )
-                        {
-                            tView.remove_prefix( prefix.size() );
-                            tView     = StringUtil::trim( tView );
-                            bStripped = true;
-                        }
-                    }
-                }
-
-                while ( tView.empty() == false && tView.back() == '&' )
-                {
-                    tView.remove_suffix( 1 );
-                    tView = StringUtil::trim( tView );
-                }
-                return string( tView );
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     TypeNameMap::TypeNameMap()
         : _mapAliasToCanonical{}
+        , _listStripPrefix{}
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -96,11 +58,38 @@ namespace sw
         }
     }
 
+    string_view TypeNameMap::stripDecorations( string_view spelling ) const
+    {
+        spelling = StringUtil::trim( spelling );
+
+        bool bStripped{ true };
+        while ( bStripped && spelling.empty() == false )
+        {
+            bStripped = false;
+            for ( const string& prefix : _listStripPrefix )
+            {
+                if ( StringUtil::startsWith( spelling, prefix ) )
+                {
+                    spelling.remove_prefix( prefix.size() );
+                    spelling  = StringUtil::trim( spelling );
+                    bStripped = true;
+                }
+            }
+        }
+
+        while ( spelling.empty() == false && spelling.back() == '&' )
+        {
+            spelling.remove_suffix( 1 );
+            spelling = StringUtil::trim( spelling );
+        }
+        return spelling;
+    }
+
     string TypeNameMap::normalize( const string& clangSpelling ) const
     {
         // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
         // 재귀 호출마다 string 이 복사된다(이 함수는 템플릿 인자마다 자기를 다시 부른다).
-        string result = TypeNameMapInternal::stripClangDecorations( clangSpelling );
+        string result( stripDecorations( clangSpelling ) );
         if ( result.empty() )
             return result;
 

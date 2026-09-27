@@ -32,22 +32,29 @@ CMake는 `ReflectionParser` 타겟이 준비된 뒤에야 `sw_addReflectionStep`
 한 헤더가 `.gen.cpp` 가 되기까지 **파일 역할**만 먼저 잡으면 됩니다.
 
 ```text
-ReflectionParser.cpp   ← main 단계 1~5 (진입점)
+ReflectionParser.cpp   ← main: 옵션 → 설정 · 표 · 템플릿 → 파이프라인
+ParserOptions.*        ← CLI (플래그 하나 = 표 한 줄, 사용법도 그 표에서)
+ParserConfig.*         ← parser_config / toolchain_config (clang 인자 · 코드젠 표식 · 규칙)
+ParserSession.h        ← 실행 한 번의 설정 + 표 넷. main 이 소유하고 아래로 내려 준다
+ReflectionPipeline.*   ← 입력 목록 → 산출물: 증분 판정 → 키워드 거르기 → 파싱 → 코드젠 → FlagOps 우산
+GeneratedFiles.*       ← 산출물 경로 · 내용이 다를 때만 쓰기 · 스탬프 · 증분 판정
+ParserContext.*        ← libclang TranslationUnit 수명
+AstVisitor.*           ← libclang 커서 순회 → 헤더 단위 DTO (섹션 A~G)
 ParsedReflection.h     ← “무엇을 수집했는지” DTO만
-AstVisitor.*           ← libclang 커서 순회 (핫패스, 섹션 A~D)
 AnnotationApply.*      ← REFLECT/PROPERTY 문자열 → DTO 필드 (필드 표를 도는 루프 하나)
 AnnotationFields.*     ← 필드 표: PredefinedAnnotationField.xxx 한 줄 = 적용 · 코드젠 · 검증
-CodeGenerator.*        ← DTO + Templates/*.tpl → .gen.cpp
-ParserContext.*        ← clang 인자·TranslationUnit 수명
+CodeGenerator.*        ← DTO + Templates/*.tpl → .gen.cpp / .gen.h **텍스트** (파일은 파이프라인이 쓴다)
 ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
 ```
 
 | 궁금한 것 | 열 파일 |
 |-----------|---------|
-| CLI / 병렬 / up-to-date | `ReflectionParser.cpp` |
+| CLI 플래그 | `ParserOptions.cpp` 의 `kArrOptionRow` |
+| 최신 판정 · 무엇을 다시 만드나 | `GeneratedFiles.cpp` (`IncrementalCheck`) |
+| 흐름 · 병렬 | `ReflectionPipeline.cpp` |
 | 수집 구조체 멤버 | `ParsedReflection.h` |
 | `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx`(필드 표) + `AnnotationMeta.txt`(철자) |
-| AST에서 클래스·필드를 어떻게 찾나 | `AstVisitor.cpp` (A~D) |
+| AST에서 클래스·필드를 어떻게 찾나 | `AstVisitor.cpp` (A~G) |
 | 생성 코드 모양 | `CodeGenerator.cpp` + `Templates/` |
 | clang `-DREFLECT...` 인자 | `Config/Environment/parser_config.defaults.json` |
 
@@ -74,32 +81,33 @@ REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, R
 
 | 단계 | 담당 | 하는 일 |
 |------|------|---------|
-| 1. 키워드 스캔 | `ReflectionParser.cpp` | `REFLECT`/`PROPERTY` 없으면 빈 gen만 emit |
+| 0. 최신 판정 | `IncrementalCheck` | 스탬프가 입력 · 도구보다 새롭고 원본 경로가 같으면 건너뜀 |
+| 1. 키워드 스캔 | `ReflectionPipeline` | `REFLECT`/`PROPERTY`/`FUNCTION`/`ENUM` 없으면 빈 gen만 emit |
 | 2. clang TU | `ParserContext` | libclang TranslationUnit 생성 |
-| 3. AST 순회 | `AstVisitor` | 타입·멤버 커서 수집 |
+| 3. AST 순회 | `AstVisitor` | 타입·멤버 커서 수집 (헤더 단위 `ParsedHeader`) |
 | 4. 어노테이션 적용 | `AnnotationMeta` → `AnnotationApply` | 별칭 토큰 → `Parsed*` 필드 |
-| 5. 코드 생성 | `CodeGenerator` + `Templates/` | `.gen.cpp` / `.gen.h` |
-| 6. 빌드 포함 | CMake `ReflectionCodeGen.cmake` | gen을 타겟에 넣어 컴파일 |
+| 5. 코드 생성 | `CodeGenerator` + `Templates/` | `.gen.cpp` / `.gen.h` 텍스트 |
+| 6. 쓰기 | `ReflectionPipeline` + `GeneratedFiles` | 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프 |
+| 7. 빌드 포함 | CMake `ReflectionCodeGen.cmake` | gen을 타겟에 넣어 컴파일 |
 
 ```mermaid
 flowchart TD
-  CLI["ReflectionParser main<br/>CLI · builtins · templates"] --> Scan[키워드 사전 필터]
+  CLI["main<br/>ParserOptions · ParserConfig · 표 · 템플릿"] --> Fresh{IncrementalCheck<br/>최신?}
+  Fresh -->|예| Skip[건너뜀]
+  Fresh -->|아니오| Scan[키워드 사전 필터]
   Scan -->|있음| Clang[ParserContext<br/>clang TU]
   Scan -->|없음| Empty[빈 .gen.cpp]
-  Clang --> Visit[AstVisitor A~D]
-  Visit --> Apply[AnnotationApply<br/>+ AnnotationMeta]
-  Apply --> DTO[ParsedReflection DTO]
+  Clang --> Visit[AstVisitor]
+  Visit --> Apply[AnnotationApply<br/>+ AnnotationFields]
+  Apply --> DTO[ParsedHeader]
   DTO --> Emit[CodeGenerator + Templates]
-  Emit --> Out["*.gen.cpp / *.gen.h"]
+  Emit --> Write["writeIfChanged · 스탬프<br/>*.gen.cpp / *.gen.h / *.gen.cpp.stamp"]
 ```
 
-`main` 내부 단계 (`ReflectionParser.cpp`):
-
-1. CLI 파싱  
-2. builtins-gen 전용 모드면 여기서 종료  
-3. builtins / AnnotationMeta / Templates 로드  
-4. `ParserContext::ensureSharedConfig` (clang 인자 1회 캐시)  
-5. 타임스탬프 캐시 후 `TaskManager` 워커 풀에서 `processInputFile`
+**최신 판정은 스탬프로 한다** (`<이름>.gen.cpp.stamp` — CMake 의 `ReflectBuiltins.gen.cpp.stamp` 와 같은 규칙). 산출물은 내용이
+같으면 다시 쓰지 않으므로(쓰면 include 하는 TU 가 다시 컴파일된다) 산출물의 시각은 "마지막 생성" 이 아니다. 스탬프는 성공한
+생성마다 원본 경로를 적어 새로 쓰고, 판정은 **스탬프 시각 > 입력 · 파서 실행 파일 · builtins · 철자 표 · 템플릿 · 설정 파일**,
+그리고 **스탬프에 적힌 원본 = 지금 입력**(헤더를 옮긴 경우)이다.
 
 ---
 
@@ -107,15 +115,20 @@ flowchart TD
 
 ```text
 ReflectionParser/
-├─ ReflectionParser.cpp          # CLI · 병렬 진입 · up-to-date
-├─ ParsedReflection.h            # ParsedTypeInfo / Property / Enum …
-├─ AstVisitor.h / .cpp           # AST 순회 (A~D)
+├─ ReflectionParser.cpp          # main
+├─ ParserOptions.h / .cpp        # CLI 표
+├─ ParserConfig.h / .cpp         # parser_config · toolchain_config 로더
+├─ ParserSession.h               # 설정 + 표 넷 (실행 한 번)
+├─ ReflectionPipeline.h / .cpp   # 입력 목록 → 산출물 흐름
+├─ GeneratedFiles.h / .cpp       # 산출물 경로 · 쓰기 · 스탬프 · 최신 판정
+├─ ParsedReflection.h            # ParsedTypeInfo / Property / Enum / ParsedHeader
+├─ AstVisitor.h / .cpp           # AST 순회 (A~G)
 ├─ AnnotationApply.h / .cpp      # 어노테이션 문자열 → DTO (표를 도는 루프)
 ├─ AnnotationFields.h / .cpp     # 필드 표 전개 · 메타데이터 코드젠 · 철자 표 대조
 ├─ AnnotationMeta.h / .cpp       # AnnotationMeta.txt 로더
-├─ CodeGenerator.h / .cpp        # emit 오케스트레이션
+├─ CodeGenerator.h / .cpp        # DTO → .gen.cpp / .gen.h 텍스트
 ├─ CodeEmit.h                    # 생성 텍스트 버퍼 헬퍼
-├─ ParserContext.h / .cpp        # clang 설정 · TU
+├─ ParserContext.h / .cpp        # libclang TU 수명
 ├─ ParserDefines.h               # 매크로/CLI/tpl/JSON 키 계약
 ├─ ParserUtil.h                  # 경로·토큰 유틸
 ├─ EmitTemplateStore.h / .cpp    # Templates/*.tpl 캐시
@@ -197,19 +210,21 @@ clang 인자·SDK 상대경로·emit 확장자·튜닝의 **단일 소스**입�
 | `tuning` | `source_lookback_bytes` 등 |
 
 **C++에 남는 계약** (`ParserDefines.h`): 매크로 이름, CLI 플래그, tpl stem, `RegisterType` 마커.  
-옛 flat 키(`default_parser_args`)도 로더가 읽습니다.
 
 ### CLI (CMake가 보통 넘김)
+
+정본은 `ParserOptions.cpp` 의 `kArrOptionRow` 다 — 플래그 하나가 한 줄이고, 인자를 잘못 주면 그 표에서 만든 사용법이 찍힌다.
 
 | 인자 | 의미 |
 |------|------|
 | `--input <file>` | 파싱할 헤더 (여러 번 가능) |
-| `--output <dir>` | `.gen.cpp` 출력 디렉터리 |
-| `--include <path>` | clang include path |
-| `--builtins <ReflectBuiltins.h>` | 빌트인 타입 표 |
-| `--annotation-meta <AnnotationMeta.txt>` | 어노테이션 별칭 |
-| `--emit-templates <Templates dir>` | tpl 폴더 |
-| `--emit-builtins-gen <path>` | builtins 전용 gen 모드 |
+| `--output <dir>` | `.gen.cpp` · `.gen.h` · 스탬프 출력 디렉터리 (필수) |
+| `--include <path>` | clang include path (여러 번 가능) |
+| `--builtins <ReflectBuiltins.xxx>` | 빌트인 타입 표 (없으면 경고만) |
+| `--annotation-meta <AnnotationMeta.txt>` | 어노테이션 철자 표 (필수 — 없으면 모든 토큰이 "모르는 토큰" 이 된다) |
+| `--emit-templates <Templates dir>` | tpl 폴더 (필수) |
+| `--source-root <dir>` | 모듈 판별을 이 경로 기준 상대 경로로 |
+| `--emit-builtins-gen <path>` | builtins 전용 gen 모드 (`--builtins` · `--emit-templates` 와 함께) |
 
 로컬에서 직접 돌릴 일은 드물고, 보통:
 

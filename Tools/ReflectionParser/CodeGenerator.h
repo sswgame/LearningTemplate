@@ -1,6 +1,8 @@
 /**
  * @file CodeGenerator.h
- * @brief 파싱한 타입 · 열거형 메타데이터로 .gen.cpp 를 만듭니다(골격은 .tpl, 분기는 CodeEmit).
+ * @brief 헤더 하나에서 모은 타입 · 열거형으로 .gen.cpp / .gen.h 의 **내용**을 만듭니다(골격은 .tpl, 분기는 CodeEmit).
+ * @details 파일에 쓰는 일(내용이 같으면 건너뛰기 · 이름 충돌 검사 · 스탬프)은 `ReflectionPipeline` 이 합니다. 여기는 DTO 를
+ *          텍스트로 바꾸기만 하므로 파일 없이 불러 볼 수 있습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -12,24 +14,22 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) generate — 파싱 메타 → .gen.cpp / .gen.h
+    // 1) generate — 파싱 메타 → .gen.cpp / .gen.h 텍스트
     // ------------------------------------------------------------------------------
     class CodeGenerator
     {
     public:
-        /** @brief 파싱된 타입·열거형과 입출력 경로로 생성기를 구성합니다. */
-        CodeGenerator(
-            const vector<ParsedTypeInfo>& types,
-            const vector<ParsedEnumInfo>& enums,
-            const string&                 sourceFilePath,
-            const string&                 outputDir,
-            const ParserSession&          session,
-            const string&                 sourceRoot = string{} );
+        /**
+         * @param sourceRoot 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다.
+         */
+        CodeGenerator( const ParsedHeader& header, const string& sourceFilePath, const ParserSession& session,
+                       const string& sourceRoot = string{} );
 
-        /** @brief .gen.cpp / .gen.h 를 생성합니다. */
-        bool generate();
-        /** @brief 생성된 .gen.cpp 경로를 반환합니다. */
-        const string& getOutputFilePath() const { return _outputFilePath; }
+        /** @brief .gen.cpp 의 내용을 만듭니다. 리플렉트된 것이 없으면 한 줄짜리 빈 산출물입니다. */
+        string makeSourceText() const;
+
+        /** @brief .gen.h 의 내용(ENUM(Flags) 트레이트)을 만듭니다. 기반 정수 타입을 모르는 ENUM(Flags) 가 있으면 false 입니다. */
+        bool makeHeaderText( string& outText ) const;
 
     private:
         // ------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ namespace sw
         void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */
         void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
-        /** @brief 프로퍼티 메타데이터(카테고리·별칭 등)를 출력합니다. */
+        /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. */
         void emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const;
         /** @brief 중첩 컨테이너 트리를 출력합니다. */
         void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
@@ -59,42 +59,28 @@ namespace sw
         /** @brief EnumRegistrar 본문을 출력합니다. */
         void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
         /**
-         * @brief 소스 파일 경로로부터 모듈 이름을 판별합니다.
-         * @details parser_config 의 parsing.module_rules 를 위에서부터 적용합니다. 매칭은
-         *          sourceRoot 기준 상대 경로로 하므로, 리포지토리를 어디에 두든 결과가 같습니다.
+         * @brief 소스 파일 경로로부터 모듈 이름을 판별합니다(생성자에서 한 번).
+         * @details parser_config 의 parsing.module_rules 를 위에서부터 적용합니다. 매칭은 sourceRoot 기준 상대 경로로
+         *          하므로, 리포지토리를 어디에 두든 결과가 같습니다.
          */
-        string getModuleName() const;
-        /** @brief 동반 .gen.h 를 씁니다. */
-        bool emitGeneratedHeader() const;
+        string makeModuleName( const string& sourceRoot ) const;
 
         // ------------------------------------------------------------------------------
-        // 3) maps — enumerator·식별자·ContainerKind 표기
+        // 3) maps — enumerator·식별자 표기
         // ------------------------------------------------------------------------------
         /** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
         static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
         /** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
         static string sanitizeIdentifier( string_view fqn );
-        /** @brief ContainerKind 의 C++ 표현식을 반환합니다. */
-        static const utf8* containerKindExpr( ContainerKind kind );
-        /** @brief 컨테이너 peel 멤버 이름을 반환합니다. */
-        static const utf8* peelMember( ContainerKind kind );
 
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
-        void appendTemplate( CodeEmitBuffer& out, const string_view name,
-                             const unordered_map<string, string>& vars ) const;
-        void appendTemplate( CodeEmitBuffer& out, const string_view name,
-                             std::initializer_list<pair<string_view, string_view>> vars ) const;
+        void appendTemplate( CodeEmitBuffer& out, const string_view name, const EmitTemplateStore::TemplateVars vars ) const;
 
     private:
-        const vector<ParsedTypeInfo>& _listType;
-        const ParserSession&          _session;
-        const vector<ParsedEnumInfo>& _listEnum;
-        string                        _sourceFilePath;
-        /** @brief 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다. */
-        string _sourceRoot;
-        string _outputDir;
-        string _outputFilePath;
-        string _outputHeaderPath;
+        const ParsedHeader&  _header;
+        const ParserSession& _session;
+        string               _sourceFilePath;
+        string               _moduleName; ///< 타입 · 열거형 · 팩토리 등록마다 쓰던 것을 한 번만 판별한다
     };
 } // namespace sw

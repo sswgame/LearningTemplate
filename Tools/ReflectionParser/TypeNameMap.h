@@ -29,6 +29,9 @@ namespace sw
         void registerEntry( const string& canonical, const string& nameSpace,
                             const vector<string>& aliases );
 
+        /** @brief 정규화 전에 떼어 낼 clang 수식어(`const ` · `class ` …)를 정합니다. parser_config 의 `type_strip_prefixes` 입니다. */
+        void setStripPrefixes( const vector<string>& listPrefix ) { _listStripPrefix = listPrefix; }
+
         /** @brief 등록 항목을 비웁니다. */
         void clear();
         /** @brief 로드 완료 플래그를 설정합니다. */
@@ -38,7 +41,11 @@ namespace sw
         /** @brief alias 키를 canonical 에 연결합니다. */
         void addKey( const string& key, const string& canonical );
 
+        /** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
+        string_view stripDecorations( string_view spelling ) const;
+
         unordered_map<string, string> _mapAliasToCanonical;
+        vector<string>                _listStripPrefix;
         uint8                         _bLoaded  : 1;
         [[maybe_unused]] uint8        _reserved : 7;
     };

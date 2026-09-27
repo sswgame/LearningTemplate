@@ -114,6 +114,7 @@ namespace
         sw::FileUtil::removeFile( headerPath );
         sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.cpp" ) );
         sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.h" ) );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.cpp.stamp" ) );
         return result;
     }
 } // namespace
@@ -562,6 +563,10 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     const sw::string genHeaderPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.h" );
     if ( sw::FileUtil::fileExists( genHeaderPath ) )
         std::filesystem::last_write_time( genHeaderPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+    // 최신 판정의 기준은 산출물이 아니라 스탬프(마지막으로 성공한 생성)다 — 같이 과거로 보낸다.
+    const sw::string stampPath = genPath + ".stamp";
+    SW_ASSERT_TRUE( sw::FileUtil::fileExists( stampPath ) );
+    std::filesystem::last_write_time( stampPath.c_str(), parserTime - std::chrono::hours( 1 ) );
 
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
 
@@ -573,6 +578,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     sw::FileUtil::removeFile( headerPath );
     sw::FileUtil::removeFile( genPath );
     sw::FileUtil::removeFile( genHeaderPath );
+    sw::FileUtil::removeFile( stampPath );
 }
 
 /**

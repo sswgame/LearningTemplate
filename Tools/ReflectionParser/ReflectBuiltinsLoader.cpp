@@ -11,6 +11,7 @@
 
 #include "ReflectionParser/ContainerTypeMap.h"
 #include "ReflectionParser/EmitTemplateStore.h"
+#include "ReflectionParser/GeneratedFiles.h"
 #include "ReflectionParser/ParserDefines.h"
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
@@ -22,97 +23,114 @@ namespace sw
     {
         struct ReflectBuiltinsLoaderInternal
         {
-            /** @brief builtins TYPE 매크로 한 줄: canonical, C++ 타입, 별칭. */
-            struct BuiltinTypeRow
+            /** @brief builtins 표의 매크로 한 줄입니다. */
+            struct BuiltinRow
             {
-                string         _canonical;
-                string         _cppType;
-                vector<string> _listAlias;
+                vector<string>         _listArgument;
+                uint8                  _bContainer : 1; ///< SW_REFLECT_BUILTIN_CONTAINER 이면 1, TYPE 이면 0
+                [[maybe_unused]] uint8 _reserved   : 7;
+
+                BuiltinRow()
+                    : _listArgument{}
+                    , _bContainer{ SW_FALSE }
+                    , _reserved{ 0 }
+                {
+                }
             };
 
             /** @brief 매크로 호출 한 줄에서 인자 목록을 추출합니다. */
-            static bool parseMacroLine( const string& line, const utf8* pMacroName, vector<string>& outListMacroArgument )
+            static bool parseMacroLine( const string_view line, const utf8* pMacroName, vector<string>& outListMacroArgument )
             {
                 const size_t pos = line.find( pMacroName );
-                if ( pos == string::npos )
+                if ( pos == string_view::npos )
                     return false;
                 const size_t open  = line.find( '(', pos );
                 const size_t close = line.rfind( ')' );
-                if ( open == string::npos || close == string::npos || close <= open )
+                if ( open == string_view::npos || close == string_view::npos || close <= open )
                     return false;
                 outListMacroArgument = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
                 return outListMacroArgument.empty() == false;
             }
 
-            /** @brief 주석/전처리기를 건너뛰고 매크로 줄을 수집합니다. */
-            static void collectMacroLines( const string_view text, vector<string>& outListLine )
+            /**
+             * @brief builtins 표를 읽어 TYPE · CONTAINER 줄을 적힌 순서대로 돌려줍니다. 주석 · 전처리 줄은 건너뜁니다.
+             * @details 예전에는 맵 채우기와 `ReflectBuiltins.gen.cpp` 쓰기가 파일 읽기 · 줄 모으기 · 매크로 풀기를 각자 했습니다.
+             */
+            static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
             {
+                string text;
+                if ( FileUtil::readTextFile( absPath, text ) == false )
+                {
+                    SW_LOG_WARNING( "Failed to read builtins: %#", absPath );
+                    return false;
+                }
+
                 const string_splitter lines( text, { "\r\n", "\n" } );
                 for ( const string_view rawLine : lines.getSplitList() )
                 {
                     const string_view line = StringUtil::trim( rawLine );
                     if ( line.empty() || line.front() == '#' || line.front() == '/' )
                         continue;
-                    outListLine.emplace_back( line );
-                }
-            }
 
-            static void registerBuiltinTypeLine( const vector<string>& listMacroArgument, uint32& typeCount, TypeNameMap& outMap )
-            {
-                if ( listMacroArgument.size() < 4 )
-                    return;
-
-                string         ns;
-                vector<string> listAlias;
-                if ( listMacroArgument[3] != builtinMacroConstants::kSkipNamespace )
-                    ns = listMacroArgument[3];
-                for ( size_t argIndex = 4; argIndex < listMacroArgument.size(); ++argIndex )
-                {
-                    if ( listMacroArgument[argIndex] == builtinMacroConstants::kSkipAlias )
-                        continue;
-                    listAlias.push_back( listMacroArgument[argIndex] );
-                }
-                outMap.registerEntry( listMacroArgument[0], ns, listAlias );
-                ++typeCount;
-            }
-
-            static void registerBuiltinContainerLine( const vector<string>& listMacroArgument, uint32& containerCount,
-                                                      ContainerTypeMap& outMap )
-            {
-                if ( listMacroArgument.size() < 3 )
-                    return;
-                outMap.registerRule( listMacroArgument[0], listMacroArgument[1], listMacroArgument[2] );
-                ++containerCount;
-            }
-
-            static void appendBuiltinTypeRow( const vector<string>& listMacroArgument, vector<BuiltinTypeRow>& outListRow )
-            {
-                if ( listMacroArgument.size() < 4 )
-                    return;
-
-                BuiltinTypeRow row;
-                row._canonical = listMacroArgument[0];
-                row._cppType   = listMacroArgument[1];
-                if ( listMacroArgument[3] != builtinMacroConstants::kSkipNamespace )
-                {
-                    StringBuilder<constant::kMaxBuffer128> qualified;
-                    qualified.appendFormat( "%#::%#", listMacroArgument[3], listMacroArgument[0] );
-                    row._listAlias.push_back( string( qualified.view() ) );
-                }
-                for ( size_t argIndex = 4; argIndex < listMacroArgument.size(); ++argIndex )
-                {
-                    if ( listMacroArgument[argIndex] == builtinMacroConstants::kSkipAlias )
-                        continue;
-                    row._listAlias.push_back( listMacroArgument[argIndex] );
-                    if ( listMacroArgument[3] != builtinMacroConstants::kSkipNamespace && listMacroArgument[argIndex].find( "::" ) == string::npos &&
-                         listMacroArgument[argIndex].find( ' ' ) == string::npos )
+                    BuiltinRow row;
+                    if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) )
                     {
-                        StringBuilder<constant::kMaxBuffer128> qualified;
-                        qualified.appendFormat( "%#::%#", listMacroArgument[3], listMacroArgument[argIndex] );
-                        row._listAlias.push_back( string( qualified.view() ) );
+                        if ( parseMacroLine( line, builtinMacroConstants::kType, row._listArgument ) )
+                            outListRow.push_back( std::move( row ) );
+                    }
+                    else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) )
+                    {
+                        row._bContainer = SW_TRUE;
+                        if ( parseMacroLine( line, builtinMacroConstants::kContainer, row._listArgument ) )
+                            outListRow.push_back( std::move( row ) );
                     }
                 }
-                outListRow.push_back( std::move( row ) );
+                return true;
+            }
+
+            /** @brief TYPE 줄의 네임스페이스 칸입니다. `-` 면 비어 있습니다. */
+            static string_view getNamespace( const vector<string>& listArgument )
+            {
+                return listArgument[3] == builtinMacroConstants::kSkipNamespace ? string_view{} : string_view( listArgument[3] );
+            }
+
+            /** @brief TYPE 줄의 별칭들입니다(5번째 칸부터). `_` 는 빈 자리 표시라 뺍니다. */
+            static vector<string> getAliases( const vector<string>& listArgument )
+            {
+                vector<string> listAlias;
+                for ( size_t argIndex = 4; argIndex < listArgument.size(); ++argIndex )
+                {
+                    if ( listArgument[argIndex] != builtinMacroConstants::kSkipAlias )
+                        listAlias.push_back( listArgument[argIndex] );
+                }
+                return listAlias;
+            }
+
+            static string makeQualifiedName( const string_view nameSpace, const string_view name )
+            {
+                StringBuilder<constant::kMaxBuffer128> qualified;
+                qualified.appendFormat( "%#::%#", nameSpace, name );
+                return string( qualified.view() );
+            }
+
+            /**
+             * @brief 런타임 등록부에 올릴 별칭 목록입니다. 네임스페이스가 있으면 한정 이름도 함께 올립니다.
+             * @details 공백이 든 별칭(`unsigned int`)이나 이미 한정된 별칭(`sw::string`)은 한정하지 않습니다.
+             */
+            static vector<string> makeRegistryAliases( const vector<string>& listArgument )
+            {
+                const string_view nameSpace = getNamespace( listArgument );
+                vector<string>    listAlias;
+                if ( nameSpace.empty() == false )
+                    listAlias.push_back( makeQualifiedName( nameSpace, listArgument[0] ) );
+                for ( const string& alias : getAliases( listArgument ) )
+                {
+                    listAlias.push_back( alias );
+                    const bool bQualifiable = nameSpace.empty() == false && alias.find( "::" ) == string::npos && alias.find( ' ' ) == string::npos;
+                    if ( bQualifiable )
+                        listAlias.push_back( makeQualifiedName( nameSpace, alias ) );
+                }
+                return listAlias;
             }
         };
     } // namespace
@@ -122,31 +140,33 @@ namespace sw
 {
     bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession )
     {
-        string text;
-        if ( FileUtil::readTextFile( absPath, text ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read builtins: %#", absPath );
+        vector<ReflectBuiltinsLoaderInternal::BuiltinRow> listRow;
+        if ( ReflectBuiltinsLoaderInternal::readRows( absPath, listRow ) == false )
             return false;
-        }
 
         outSession._typeNameMap.clear();
         outSession._containerTypeMap.clear();
 
-        uint32         typeCount      = 0;
-        uint32         containerCount = 0;
-        vector<string> listLine;
-        ReflectBuiltinsLoaderInternal::collectMacroLines( text, listLine );
-
-        for ( const string& line : listLine )
+        uint32 typeCount      = 0;
+        uint32 containerCount = 0;
+        for ( const ReflectBuiltinsLoaderInternal::BuiltinRow& row : listRow )
         {
-            vector<string> listMacroArgument;
-            if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
-                 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, listMacroArgument ) )
-                ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( listMacroArgument, typeCount, outSession._typeNameMap );
-            else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) &&
-                      ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, listMacroArgument ) )
-                ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( listMacroArgument, containerCount,
-                                                                             outSession._containerTypeMap );
+            const vector<string>& listArgument = row._listArgument;
+            if ( row._bContainer == SW_TRUE )
+            {
+                if ( listArgument.size() < 3 )
+                    continue;
+                outSession._containerTypeMap.registerRule( listArgument[0], listArgument[1], listArgument[2] );
+                ++containerCount;
+            }
+            else
+            {
+                if ( listArgument.size() < 4 )
+                    continue;
+                outSession._typeNameMap.registerEntry( listArgument[0], string( ReflectBuiltinsLoaderInternal::getNamespace( listArgument ) ),
+                                                       ReflectBuiltinsLoaderInternal::getAliases( listArgument ) );
+                ++typeCount;
+            }
         }
 
         outSession._typeNameMap.setLoaded( true );
@@ -155,77 +175,61 @@ namespace sw
         return typeCount > 0 || containerCount > 0;
     }
 
-    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath,
-                                 const ParserSession& session )
+    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath, const ParserSession& session )
     {
-        string text;
-        if ( FileUtil::readTextFile( builtinsAbsPath, text ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read: %#", builtinsAbsPath );
+        vector<ReflectBuiltinsLoaderInternal::BuiltinRow> listRow;
+        if ( ReflectBuiltinsLoaderInternal::readRows( builtinsAbsPath, listRow ) == false )
             return false;
-        }
-
-        vector<string>                                        listLine;
-        vector<ReflectBuiltinsLoaderInternal::BuiltinTypeRow> listRow;
-        ReflectBuiltinsLoaderInternal::collectMacroLines( text, listLine );
-        for ( const string& line : listLine )
-        {
-            vector<string> listMacroArgument;
-            if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
-                 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, listMacroArgument ) )
-                ReflectBuiltinsLoaderInternal::appendBuiltinTypeRow( listMacroArgument, listRow );
-        }
-
-        if ( listRow.empty() )
-        {
-            SW_LOG_WARNING( "emit: no TYPE rows in %#", builtinsAbsPath );
-            return false;
-        }
 
         const EmitTemplateStore& tpls = session._emitTemplateStore;
         if ( tpls.isLoaded() == false || tpls.has( tplConstants::kBuiltinFileHeader ) == false ||
              tpls.has( tplConstants::kBuiltinTypeRegistrar ) == false || tpls.has( tplConstants::kBuiltinFileFooter ) == false )
         {
-            SW_LOG_ERROR( "emit requires %# "
-                          "(%# / %# / %#).",
-                          cliConstants::kEmitTemplates, tplConstants::kBuiltinFileHeader, tplConstants::kBuiltinTypeRegistrar,
-                          tplConstants::kBuiltinFileFooter );
+            SW_LOG_ERROR( "emit requires %# (%# / %# / %#).", cliConstants::kEmitTemplates, tplConstants::kBuiltinFileHeader,
+                          tplConstants::kBuiltinTypeRegistrar, tplConstants::kBuiltinFileFooter );
             return false;
         }
 
-        string out = tpls.render( tplConstants::kBuiltinFileHeader, {
+        string out       = tpls.render( tplConstants::kBuiltinFileHeader, {
                                                                         { templateKeyConstants::kSourcePath, builtinsAbsPath }
         } );
-        for ( const ReflectBuiltinsLoaderInternal::BuiltinTypeRow& row : listRow )
+        uint32 typeCount = 0;
+        for ( const ReflectBuiltinsLoaderInternal::BuiltinRow& row : listRow )
         {
+            if ( row._bContainer == SW_TRUE || row._listArgument.size() < 4 )
+                continue;
+
+            const string&                           canonical = row._listArgument[0];
             StringBuilder<constant::kMaxBuffer1024> aliasRegs;
-            for ( const string& alias : row._listAlias )
+            for ( const string& alias : ReflectBuiltinsLoaderInternal::makeRegistryAliases( row._listArgument ) )
             {
-                if ( alias.empty() || alias == row._canonical )
+                if ( alias.empty() || alias == canonical )
                     continue;
-                aliasRegs.appendFormat( "\t\t\tregistry.registerTypeAlias( \"%#\", \"%#\" );\n", alias, row._canonical );
+                aliasRegs.appendFormat( "\t\t\tregistry.registerTypeAlias( \"%#\", \"%#\" );\n", alias, canonical );
             }
 
             StringBuilder<constant::kMaxBuffer128> id;
-            id.appendFormat( "Builtin_%#", row._canonical );
+            id.appendFormat( "Builtin_%#", canonical );
             out += tpls.render( tplConstants::kBuiltinTypeRegistrar,
                                 {
-                                    {       templateKeyConstants::kId,        id.view()},
-                                    {     templateKeyConstants::kName,   row._canonical},
-                                    {  templateKeyConstants::kCppType,     row._cppType},
-                                    {templateKeyConstants::kAliasRegs, aliasRegs.view()}
+                                    {       templateKeyConstants::kId,            id.view()},
+                                    {     templateKeyConstants::kName,            canonical},
+                                    {  templateKeyConstants::kCppType, row._listArgument[1]},
+                                    {templateKeyConstants::kAliasRegs,     aliasRegs.view()}
             } );
+            ++typeCount;
+        }
+
+        if ( typeCount == 0 )
+        {
+            SW_LOG_WARNING( "emit: no TYPE rows in %#", builtinsAbsPath );
+            return false;
         }
         out += tpls.render( tplConstants::kBuiltinFileFooter, {} );
 
-        if ( FileUtil::writeTextFile( outCppAbsPath, out ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write %#", outCppAbsPath );
+        if ( GeneratedFileUtil::writeIfChanged( string( outCppAbsPath ), out ) == false )
             return false;
-        }
-
-        SW_LOG_TRACE( "Emitted %# TYPE registrars → %#", static_cast<uint32>( listRow.size() ),
-                      outCppAbsPath );
+        SW_LOG_TRACE( "Emitted %# TYPE registrars → %#", typeCount, outCppAbsPath );
         return true;
     }
 } // namespace sw
