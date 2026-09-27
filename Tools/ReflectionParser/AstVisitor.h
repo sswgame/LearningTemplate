@@ -32,6 +32,7 @@ namespace sw
         /** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. 에러가 없으면 true를 반환합니다. */
         bool visit();
 
+        /** @brief 대상 헤더 가운데 하나라도 오류가 났거나, 대상을 번역 단위에서 찾지 못했으면 true 입니다. */
         bool hasError() const noexcept { return _bHasError == SW_TRUE; }
 
         /** @brief 대상 헤더마다 모은 것입니다(생성자에 준 순서, 주 파일 하나면 원소 하나). */
@@ -41,8 +42,10 @@ namespace sw
         static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
         /** @brief 커서가 적힌 파일이 몇 번째 대상인지 찾습니다. 대상이 아니면 kNoTarget 입니다. */
         int32 findTargetIndex( CXCursor cursor ) const;
-        void  onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
-        void  onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        /** @brief 그 헤더를 실패로 표시합니다(산출물을 쓰지 않는다). 순회는 계속합니다. */
+        void markHeaderError( ParsedHeader& header );
+        void onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        void onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
 
     private:
         static constexpr int32 kNoTarget = -1;

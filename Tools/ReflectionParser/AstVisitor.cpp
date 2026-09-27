@@ -908,6 +908,16 @@ namespace sw
     }
 
     /**
+     * @details 오류는 헤더 단위로 남긴다. 예전에는 검증 오류가 순회 전체를 멈췄는데(`CXChildVisit_Break`), 헤더 여럿을 한 TU 로
+     *          묶으면 한 헤더의 오타가 나머지 헤더의 수집까지 막는다. 이제 그 헤더만 실패로 두고 계속 돌아, 오류도 헤더마다 다 나온다.
+     */
+    void AstVisitor::markHeaderError( ParsedHeader& header )
+    {
+        header._bHasError = SW_TRUE;
+        _bHasError        = SW_TRUE;
+    }
+
+    /**
      * @details 매크로가 만든 선언은 매크로를 **쓴** 자리(전개 위치)의 파일로 셉니다. 예전에는 `clang_Location_isFromMainFile`
      *          로 물어 매크로 위치를 통째로 밖으로 쳤는데, 그러면 `REFLECT_BODY()` 가 만드는 마커 함수가 한 번도 검사되지 않아
      *          "REFLECT_BODY() 인데 REFLECT() 가 없다" 는 검사가 죽어 있었습니다. 여러 헤더를 한 TU 로 묶을 때도 같은 질문이면 됩니다.
@@ -956,10 +966,7 @@ namespace sw
             const bool bOrphanProperty = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kProperty, config ) &&
                                          AstVisitorInternal::isInsideReflectType( cursor, annotationConstants::kPropertyMacro, config ) == false;
             if ( bOrphanProperty )
-            {
-                self->_bHasError = SW_TRUE;
-                return CXChildVisit_Break;
-            }
+                self->markHeaderError( header );
             return CXChildVisit_Continue;
         }
 
@@ -972,10 +979,7 @@ namespace sw
             const utf8* pMacroName   = bHasFunction ? annotationConstants::kFunctionMacro : annotationConstants::kReflectBodyPrefix;
             const bool  bOrphanMacro = ( bHasFunction || bHasBody ) && AstVisitorInternal::isInsideReflectType( cursor, pMacroName, config ) == false;
             if ( bOrphanMacro )
-            {
-                self->_bHasError = SW_TRUE;
-                return CXChildVisit_Break;
-            }
+                self->markHeaderError( header );
             return CXChildVisit_Continue;
         }
 
@@ -1025,7 +1029,7 @@ namespace sw
             if ( spelling.empty() == false &&
                  AstVisitorInternal::applyAnnotation( spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
             {
-                _bHasError = SW_TRUE;
+                markHeaderError( outHeader );
                 return;
             }
             // 순수 가상 함수가 있는 추상 클래스이면 UCLASS(Abstract) 처럼 Abstract 플래그를 켠다
@@ -1039,7 +1043,7 @@ namespace sw
             clang_visitChildren( cursor, AstVisitorInternal::memberCollectVisitor, &collector );
             if ( collector._bHasError == SW_TRUE )
             {
-                _bHasError = SW_TRUE;
+                markHeaderError( outHeader );
                 return;
             }
             const bool bFactory         = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
@@ -1057,7 +1061,7 @@ namespace sw
                           "Add REFLECT_BODY(); as the first line of the type body "
                           "(and include \"Engine/Reflection/ReflectionMacros.h\").",
                           typeInfo._fullyQualifiedName.c_str() );
-            _bHasError = SW_TRUE;
+            markHeaderError( outHeader );
             return;
         }
 
@@ -1110,7 +1114,7 @@ namespace sw
             if ( spelling.empty() == false &&
                  AstVisitorInternal::applyAnnotation( spelling, enumInfo, *_pSession, enumInfo._fullyQualifiedName ) == false )
             {
-                _bHasError = SW_TRUE;
+                markHeaderError( outHeader );
                 return;
             }
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )

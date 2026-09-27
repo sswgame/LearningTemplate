@@ -35,6 +35,14 @@ namespace sw
             GeneratedPaths _paths;
         };
 
+        /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
+        int32 parsePending( const vector<PendingInput>& listPending ) const;
+        /**
+         * @brief 헤더 여럿을 **한 번역 단위**로 파싱해 헤더마다 코드젠합니다.
+         * @param outErrorCount 수집 · 코드젠에 실패한 헤더 수
+         * @return clang 이 묶음을 파싱하지 못했으면 false(헤더마다 다시 해 본다)
+         */
+        bool parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const;
         /** @brief 헤더 하나를 파싱 · 수집 · 코드젠합니다. */
         bool parseAndGenerate( const PendingInput& pending ) const;
         /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */

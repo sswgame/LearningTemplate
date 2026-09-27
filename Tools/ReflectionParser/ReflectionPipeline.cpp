@@ -23,6 +23,9 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
+            /** @brief 묶음 TU 의 주 파일 이름입니다. 디스크에는 없고 내용으로만 넘깁니다. */
+            static constexpr const utf8* kBatchSourceName = "ReflectionParser.batch.cpp";
+
             /**
              * @brief 소스 텍스트에 리플렉션 매크로 키워드(`kSourceKeywordScan`)가 있는지 봅니다.
              * @details 없으면 무거운 libclang 파싱을 통째로 건너뛰고 빈 산출물을 씁니다. 예전에는 키워드 표가 따로 있는데도
@@ -58,14 +61,20 @@ namespace sw
 
     int32 ReflectionPipeline::run()
     {
-        const ParserConfig& config     = _pSession->_config;
-        int32               errorCount = 0;
-        uint32              upToDate   = 0;
-        uint32              noReflect  = 0;
+        const ParserConfig&     config     = _pSession->_config;
+        int32                   errorCount = 0;
+        [[maybe_unused]] uint32 upToDate   = 0;
+        [[maybe_unused]] uint32 noReflect  = 0;
 
         vector<PendingInput> listPending;
+        vector<string>       listSeenInput;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
+            // 같은 헤더가 두 번 오면 한 번만 처리한다. 묶음 TU 에서는 둘째 대상이 선언을 하나도 못 받아 빈 산출물로 첫째를 덮는다.
+            if ( std::find( listSeenInput.begin(), listSeenInput.end(), inputFile ) != listSeenInput.end() )
+                continue;
+            listSeenInput.push_back( inputFile );
+
             GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
             if ( _incrementalCheck.isUpToDate( inputFile, paths ) )
             {
@@ -97,11 +106,75 @@ namespace sw
 
         SW_LOG_INFO( "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size(),
                      _pOptions->_listInputFile.size(), upToDate, noReflect );
-        errorCount += parseEachInParallel( listPending );
+        errorCount += parsePending( listPending );
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
         return errorCount;
+    }
+
+    /**
+     * @details **파싱 비용의 거의 전부는 헤더 자신이 아니라 공통 include 다.** 강제 include(`Core/CoreMinimal.h`) 하나만 파싱하는 데
+     *          0.52 초, 엔진 공통 헤더(Windows · D3D)까지 가면 1.0 초인데, Engine 의 입력 27 개를 한 TU 로 묶어도 1.04 초였다
+     *          (Release, 실측). 헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱하고, 워커 16 개가 한꺼번에 파싱하면
+     *          메모리 대역을 다퉈 한 개가 1.0 → 2.1 초로 늘어난다.
+     */
+    int32 ReflectionPipeline::parsePending( const vector<PendingInput>& listPending ) const
+    {
+        if ( listPending.empty() )
+            return 0;
+        if ( listPending.size() == 1 )
+            return parseAndGenerate( listPending.front() ) ? 0 : 1;
+
+        int32 errorCount = 0;
+        if ( parseBatch( listPending, errorCount ) )
+            return errorCount;
+
+        // 묶음이 clang 오류로 실패했다. 어느 헤더가 깨졌는지 헤더마다 파싱해 그 헤더의 오류로 알리고, 나머지는 그대로 만든다.
+        SW_LOG_WARNING( "One translation unit for %# input(s) did not parse; parsing them one by one.", listPending.size() );
+        return parseEachInParallel( listPending );
+    }
+
+    bool ReflectionPipeline::parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const
+    {
+        // 묶음 TU 의 원본 — 입력 헤더를 차례로 include 한다. 디스크에 쓰지 않고 내용으로 넘긴다(입력 헤더들도 이미 읽은 내용으로).
+        const string              batchPath = FileUtil::joinPath( _pOptions->_outputDir, ReflectionPipelineInternal::kBatchSourceName );
+        string                    batchSource;
+        vector<string>            listTargetFile;
+        vector<ParserUnsavedFile> listUnsaved;
+        listTargetFile.reserve( listPending.size() );
+        listUnsaved.reserve( listPending.size() + 1 );
+        listUnsaved.push_back( ParserUnsavedFile{ &batchPath, &batchSource } );
+        for ( const PendingInput& pending : listPending )
+        {
+            batchSource += "#include \"";
+            batchSource += *pending._pInputFile;
+            batchSource += "\"\n";
+            listTargetFile.push_back( *pending._pInputFile );
+            listUnsaved.push_back( ParserUnsavedFile{ pending._pInputFile, &pending._content } );
+        }
+
+        // clang 오류는 여기서 알리지 않는다 — 헤더마다 다시 파싱할 때 그 헤더의 오류로 나온다.
+        ParserContext context( _pSession->_config );
+        if ( context.parse( batchPath, _listIncludePath, listUnsaved, false ) == false )
+            return false;
+
+        AstVisitor visitor( context.getTranslationUnit(), *_pSession, listTargetFile );
+        visitor.visit();
+        const vector<ParsedHeader>& listHeader = visitor.getParsedHeaders();
+        for ( size_t index = 0; index < listPending.size(); ++index )
+        {
+            const string& inputFile = *listPending[index]._pInputFile;
+            if ( index >= listHeader.size() || listHeader[index]._bHasError == SW_TRUE )
+            {
+                SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
+                ++outErrorCount;
+                continue;
+            }
+            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index] ) == false )
+                ++outErrorCount;
+        }
+        return true;
     }
 
     bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const

@@ -102,7 +102,7 @@ namespace sw
     {
         SW_LOG_INFO( "Usage: ReflectionParser --input <header.h> ... --output <dir> --annotation-meta <file> --emit-templates <dir> [...]" );
         SW_LOG_INFO( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>" );
-        for ( const OptionRow& row : kArrOptionRow )
+        for ( [[maybe_unused]] const OptionRow& row : kArrOptionRow )
             SW_LOG_INFO( "  %# %#  %#", row._pFlag, row._pValueName, row._pHelp );
     }
 } // namespace sw

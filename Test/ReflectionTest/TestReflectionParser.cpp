@@ -72,31 +72,48 @@ namespace
                "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
     }
 
-    /** @brief 파서를 임시 헤더 하나에 돌린 결과입니다. */
+    /** @brief 파서에 넣을 임시 헤더 하나입니다. */
+    struct TempHeader
+    {
+        sw::string _fileStem;
+        sw::string _content;
+    };
+
+    /** @brief 파서를 임시 헤더들에 돌린 결과입니다. */
     struct ParserRunResult
     {
-        int32      _exitCode = -1;
-        sw::string _log;
+        int32                  _exitCode = -1;
+        sw::string             _log;
+        sw::vector<sw::string> _listGeneratedCpp; ///< 헤더 순서대로 .gen.cpp 내용(지우기 전에 읽는다). 안 만들어졌으면 빈 문자열
     };
 
     /**
-     * @brief 임시 헤더 하나를 파서에 넣고 종료 코드와 로그를 돌려줍니다. 헤더와 산출물은 돌린 뒤 지웁니다.
-     * @details 진단 메시지를 보는 케이스들이 헤더 쓰기 · 명령줄 · 출력 수집 · 정리 스무 줄을 각자 들고 있었습니다.
-     *          `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다(프로젝트 루트를 거기서 얻습니다).
+     * @brief 임시 헤더들을 **한 번의 파서 실행**에 넣고 종료 코드 · 로그 · 산출물을 돌려줍니다. 헤더와 산출물은 돌린 뒤 지웁니다.
+     * @details 진단 메시지를 보는 케이스들이 헤더 쓰기 · 명령줄 · 출력 수집 · 정리 스무 줄을 각자 들고 있었습니다. 헤더가 둘
+     *          이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다.
      */
-    ParserRunResult runParserOnTempHeader( const sw::string& parserExe, const sw::string& fileStem, const sw::string& headerContent )
+    [[maybe_unused]] ParserRunResult runParserOnTempHeaders( const sw::string& parserExe, const sw::vector<TempHeader>& listHeader )
     {
         const sw::string binDir      = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
         const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
-        const sw::string headerPath  = sw::FileUtil::joinPath( binDir, fileStem + ".h" );
         const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_diagnostics" );
         sw::FileUtil::ensureDirectoryExists( outGenDir );
 
         ParserRunResult result;
-        if ( sw::FileUtil::writeTextFile( headerPath, headerContent ) == false )
+        sw::string      command;
+        for ( const TempHeader& header : listHeader )
         {
-            result._log = "failed to write " + headerPath;
-            return result;
+            const sw::string headerPath = sw::FileUtil::joinPath( binDir, header._fileStem + ".h" );
+            if ( sw::FileUtil::writeTextFile( headerPath, header._content ) == false )
+            {
+                result._log = "failed to write " + headerPath;
+                return result;
+            }
+            // 첫 헤더로 명령줄 한 벌을 만들고, 나머지는 --input 을 덧붙인다.
+            if ( command.empty() )
+                command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+            else
+                command += " --input \"" + headerPath + "\"";
         }
 
         sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
@@ -109,13 +126,50 @@ namespace
 
         sw::ProcessOptions options;
         options._workingDirectory = projectRoot;
-        result._exitCode          = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options, outputCb );
+        result._exitCode          = sw::Process::execute( command, options, outputCb );
 
-        sw::FileUtil::removeFile( headerPath );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.cpp" ) );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.h" ) );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.cpp.stamp" ) );
+        for ( const TempHeader& header : listHeader )
+        {
+            const sw::string genCpp = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.cpp" );
+            sw::string       generated;
+            if ( sw::FileUtil::fileExists( genCpp ) )
+                sw::FileUtil::readTextFile( genCpp, generated );
+            result._listGeneratedCpp.push_back( generated );
+
+            sw::FileUtil::removeFile( sw::FileUtil::joinPath( binDir, header._fileStem + ".h" ) );
+            sw::FileUtil::removeFile( genCpp );
+            sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.h" ) );
+            sw::FileUtil::removeFile( genCpp + ".stamp" );
+        }
         return result;
+    }
+
+    /** @brief 임시 헤더 하나짜리 `runParserOnTempHeaders` 입니다. */
+    [[maybe_unused]] ParserRunResult runParserOnTempHeader( const sw::string& parserExe, const sw::string& fileStem, const sw::string& headerContent )
+    {
+        sw::vector<TempHeader> listHeader;
+        listHeader.push_back( TempHeader{ fileStem, headerContent } );
+        return runParserOnTempHeaders( parserExe, listHeader );
+    }
+
+    /** @brief 멤버 하나에 PROPERTY 를 단 REFLECT 타입 헤더입니다. propertyArgs 가 PROPERTY( … ) 안에, memberType 이 멤버 타입 자리에 들어갑니다. */
+    [[maybe_unused]] sw::string makeReflectedHeader( const sw::string& typeName, const sw::string& propertyArgs, const sw::string& memberType )
+    {
+        return "#pragma once\n"
+               "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+               "namespace sw\n"
+               "{\n"
+               "\tREFLECT()\n"
+               "\tstruct " +
+               typeName + "\n"
+                          "\t{\n"
+                          "\t\tREFLECT_BODY();\n"
+                          "\t\tPROPERTY( " +
+               propertyArgs + " )\n"
+                              "\t\t" +
+               memberType + " _value;\n"
+                            "\t};\n"
+                            "}\n";
     }
 } // namespace
 
@@ -494,6 +548,46 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     const bool bNamesTheType = run._log.find( "REFLECT_BODY() is used in class/struct 'sw::OrphanBodySampleActor'" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesTheType, run._log.c_str() );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 헤더 여럿을 한 번역 단위로 묶어도, 깨진 헤더 하나가 나머지를 막지 않는다
+ * @details 파서는 파싱할 헤더가 둘 이상이면 한 TU 로 묶는다 — 공통 include(CoreMinimal · Windows · D3D)가 비용의 거의 전부라,
+ *          헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱한다(Engine 27 개: 3.37 → 1.04 초, CPU 39 → 1 초).
+ *          묶으면 새 실패 경로가 둘 생긴다. (1) 한 헤더의 애노테이션 오류 — 예전 순회는 오류에서 멈췄으므로 그대로 두면 다른 헤더의
+ *          수집까지 끊긴다 → 오류는 헤더 단위로 남기고 계속 돈다. (2) 한 헤더의 C++ 오류 — 묶음 전체가 파싱되지 않는다 →
+ *          헤더마다 다시 파싱해 그 헤더의 오류로 알린다. 두 경우 모두 성한 헤더의 산출물은 만들어져야 한다.
+ */
+SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
+{
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    // (1) 애노테이션 오류 — 묶음은 파싱되고, 그 헤더만 실패한다. 깨진 헤더를 **앞에** 둔다 — 오류에서 순회가 멈추면 뒤 헤더가 빈다.
+    sw::vector<TempHeader> listAnnotationCase;
+    listAnnotationCase.push_back( TempHeader{ "BatchTypoSample", makeReflectedHeader( "BatchTypoSampleActor", "Colr", "int32" ) } );
+    listAnnotationCase.push_back( TempHeader{ "BatchGoodSample", makeReflectedHeader( "BatchGoodSampleActor", "Category = \"A\"", "int32" ) } );
+    const ParserRunResult annotationRun = runParserOnTempHeaders( parserExe, listAnnotationCase );
+    SW_EXPECT_TRUE_MSG( annotationRun._exitCode != 0, annotationRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( annotationRun._listGeneratedCpp[1].find( "BatchGoodSampleActor" ) != sw::string::npos, annotationRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( annotationRun._log.find( "unknown token 'Colr'" ) != sw::string::npos, annotationRun._log.c_str() );
+
+    // (2) C++ 오류 — 묶음이 파싱되지 않아 헤더마다 다시 한다. 깨진 헤더가 오류로 나오고, 성한 헤더는 만들어진다.
+    sw::vector<TempHeader> listSyntaxCase;
+    listSyntaxCase.push_back( TempHeader{ "BatchGoodSample", makeReflectedHeader( "BatchGoodSampleActor", "Category = \"A\"", "int32" ) } );
+    listSyntaxCase.push_back( TempHeader{ "BatchBrokenSample", makeReflectedHeader( "BatchBrokenSampleActor", "", "NoSuchTypeAnywhere" ) } );
+    const ParserRunResult syntaxRun = runParserOnTempHeaders( parserExe, listSyntaxCase );
+    SW_EXPECT_TRUE_MSG( syntaxRun._exitCode != 0, syntaxRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( syntaxRun._listGeneratedCpp[0].find( "BatchGoodSampleActor" ) != sw::string::npos, syntaxRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( syntaxRun._log.find( "Parse failed:" ) != sw::string::npos &&
+                            syntaxRun._log.find( "BatchBrokenSample.h" ) != sw::string::npos,
+                        syntaxRun._log.c_str() );
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif

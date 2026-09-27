@@ -250,5 +250,16 @@ namespace sw
     {
         vector<ParsedTypeInfo> _listType;
         vector<ParsedEnumInfo> _listEnum;
+        /** @brief 이 헤더에서 리플렉션 오류가 났습니다. 산출물을 쓰지 않습니다(같은 TU 의 다른 헤더는 계속 모읍니다). */
+        uint8                  _bHasError : 1;
+        [[maybe_unused]] uint8 _reserved  : 7;
+
+        ParsedHeader() noexcept
+            : _listType{}
+            , _listEnum{}
+            , _bHasError{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
     };
 } // namespace sw
