@@ -316,9 +316,10 @@ namespace sw
                     return;
                 }
 
-                sw::CodeGenerator generator(
-                    visitor.getCollectedTypes(),
-                    visitor.getCollectedEnums(),
+                const sw::ParsedHeader& parsed = visitor.getParsedHeaders().front();
+                sw::CodeGenerator       generator(
+                    parsed._listType,
+                    parsed._listEnum,
                     inputFile,
                     commandLineArgs._outputDir,
                     session,

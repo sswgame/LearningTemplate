@@ -1328,6 +1328,19 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 걷고 비교하면 **다른 것은 조명 셋의 `_mapCustomMeta = { "Color" }` 추가뿐**이다. 회귀 테스트 `ReflectionParserTest.UnknownAnnotationTokenStopsTheBuild`
 (옛 파서는 같은 헤더에 exit 0 — 실제로 진다). 철자 표를 일부러 어긋나게 한 사본(없는 필드 철자 · 철자 없는 필드)으로 두 방향 오류를 확인했다.
 
+- **AstVisitor — 애노테이션을 묻는 길 다섯 벌 → 한 벌** (`hasAnnotation` · `readAnnotation`). 자식 속성 검색 두 종류(하나 · 여럿), 소스 폴백
+  두 종류(있나 · 읽기), 그 조합을 호출부마다 손으로 적고 있었다. 접두사와 매크로 철자도 따로 들고 다녀서 소스 폴백은 접두사로 표를 다시
+  뒤져 매크로 철자를 찾았다 — 이제 애노테이션 설명자 한 벌(`annotationConstants::kReflect` 등)을 넘긴다. 멤버 수집(베이스 · 필드 · 생성자 ·
+  메서드 · 마커)은 한 번의 순회 안의 함수 다섯으로 나눴다. 멤버 함수 템플릿의 `FUNCTION` 은 조용히 빠지던 것을 경고로(클래스 템플릿과 같게).
+- **선언의 소속을 "적힌(매크로면 전개된) 파일" 로 센다** (`AstVisitor::findTargetIndex`). 예전에는 `clang_Location_isFromMainFile` 로 물었는데
+  그 함수는 **매크로 위치를 늘 "주 파일 아님"** 으로 답한다. 그래서 `REFLECT_BODY()` 가 만드는 마커 함수가 검사에 닿지 않아
+  "REFLECT_BODY() 인데 REFLECT() 가 없다" 는 오류가 **처음부터 한 번도 나지 않았다**(옛 파서는 그런 헤더에 exit 0). 회귀 테스트
+  `ReflectionParserTest.ReflectBodyWithoutReflectStopsTheBuild`. 결과는 헤더 단위(`ParsedHeader`)로 나와, 헤더 여럿을 한 TU 로 묶을 자리가 됐다.
+- 테스트 쪽: 파서를 프로세스로 부르는 케이스 넷이 같은 명령줄 여덟 줄을, 진단을 보는 셋이 같은 스무 줄을 각자 들고 있던 것을
+  `makeParserCommand` · `runParserOnTempHeader` 로.
+
+검증 — 커밋 1 파서의 산출물과 **133 파일 바이트 동일**, 트리의 경고 · 오류 집합도 같다(클래스 안 `ENUM(Flags)` 경고 하나).
+
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
 

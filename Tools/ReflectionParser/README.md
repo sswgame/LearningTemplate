@@ -143,16 +143,21 @@ ReflectionParser/
 
 ## AstVisitor.cpp 섹션 (초심자용)
 
-핫패스이므로 **알고리즘을 함부로 바꾸지 말고**, 위치만 익히면 됩니다.
+순회 시간은 파일당 수 ms 이고(파싱은 수백 ms), 위치만 익히면 됩니다.
 
 | 섹션 | 내용 |
 |------|------|
-| **A** | CXString, AnnotateAttr 검색, 소스 lookback 폴백 |
-| **B** | 컨테이너 타입 트리 (Vector/Map 중첩) |
-| **C** | PROPERTY / FUNCTION / BODY / FACTORY / enumerator visitor |
-| **D** | `visit` / `onStructDecl` / `onEnumDecl` 오케스트레이션 |
+| **A** | CXString · FQN |
+| **B** | 애노테이션 찾기 — `hasAnnotation` / `readAnnotation` 한 벌. 자식 속성(AnnotateAttr)이 정본, 소스 창(lookback)은 폴백 |
+| **C** | 컨테이너 타입 트리 (Vector/Map 중첩) |
+| **D** | REFLECT 타입의 멤버 — 베이스 · PROPERTY · 생성자 · FUNCTION · BODY/FACTORY 마커를 한 번의 순회로 |
+| **E** | 컴포넌트 판별 · 열거자 |
+| **F** | 선언 검증 — REFLECT 밖의 PROPERTY · FUNCTION · REFLECT_BODY |
+| **G** | `visit` / `onStructDeclaration` / `onEnumDeclaration` |
 
-어노테이션 **문자열 해석·필드 대입**은 더 이상 여기 있지 않고 `AnnotationApply.*` 입니다.
+**선언은 적힌(매크로면 전개된) 파일의 것으로 센다** (`findTargetIndex`). 대상은 TU 의 주 파일 하나이거나, 여러
+헤더를 한 TU 로 묶었을 때의 그 헤더들이다. 결과는 헤더 단위(`ParsedHeader`)로 나온다.
+애노테이션 **문자열 해석·필드 대입**은 여기 있지 않고 `AnnotationApply` · `AnnotationFields` 입니다.
 
 ---
 

@@ -71,6 +71,51 @@ namespace
                "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
                "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
     }
+
+    /** @brief 파서를 임시 헤더 하나에 돌린 결과입니다. */
+    struct ParserRunResult
+    {
+        int32      _exitCode = -1;
+        sw::string _log;
+    };
+
+    /**
+     * @brief 임시 헤더 하나를 파서에 넣고 종료 코드와 로그를 돌려줍니다. 헤더와 산출물은 돌린 뒤 지웁니다.
+     * @details 진단 메시지를 보는 케이스들이 헤더 쓰기 · 명령줄 · 출력 수집 · 정리 스무 줄을 각자 들고 있었습니다.
+     *          `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다(프로젝트 루트를 거기서 얻습니다).
+     */
+    ParserRunResult runParserOnTempHeader( const sw::string& parserExe, const sw::string& fileStem, const sw::string& headerContent )
+    {
+        const sw::string binDir      = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+        const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+        const sw::string headerPath  = sw::FileUtil::joinPath( binDir, fileStem + ".h" );
+        const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_diagnostics" );
+        sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+        ParserRunResult result;
+        if ( sw::FileUtil::writeTextFile( headerPath, headerContent ) == false )
+        {
+            result._log = "failed to write " + headerPath;
+            return result;
+        }
+
+        sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
+            sw::ProcessOutputDelegate,
+            [&result]( sw::string_view line )
+        {
+            result._log.append( line.data(), line.size() );
+            result._log.push_back( '\n' );
+        } );
+
+        sw::ProcessOptions options;
+        options._workingDirectory = projectRoot;
+        result._exitCode          = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options, outputCb );
+
+        sw::FileUtil::removeFile( headerPath );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.cpp" ) );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, fileStem + ".gen.h" ) );
+        return result;
+    }
 } // namespace
 
 /**
@@ -353,55 +398,29 @@ SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
 SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 {
 #if defined( SW_DEBUG )
-    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
-    const sw::string tempHeaderPath = sw::FileUtil::joinPath( binDir, "InvalidBitfieldSample.h" );
-    const sw::string outGenDir      = sw::FileUtil::joinPath( binDir, "temp_gen" );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
 
-    const sw::string headerContent = "#pragma once\n"
-                                     "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
-                                     "namespace sw\n"
-                                     "{\n"
-                                     "\tREFLECT()\n"
-                                     "\tstruct InvalidBitfieldSampleActor\n"
-                                     "\t{\n"
-                                     "\t\tPROPERTY()\n"
-                                     "\t\tuint8 _invalidMultiBit : 2;\n"
-                                     "\t};\n"
-                                     "}\n";
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "InvalidBitfieldSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct InvalidBitfieldSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tuint8 _invalidMultiBit : 2;\n"
+                                                       "\t};\n"
+                                                       "}\n" );
 
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeaderPath, headerContent ) );
-
-    sw::string                capturedLog;
-    sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
-        sw::ProcessOutputDelegate,
-        [&capturedLog]( sw::string_view line )
-    {
-        capturedLog.append( line.data(), line.size() );
-        capturedLog.push_back( '\n' );
-    } );
-
-    sw::ProcessOptions options;
-    options._workingDirectory = projectRoot;
-
-    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, tempHeaderPath, outGenDir, projectRoot ), options, outputCb );
-
-    // 에러 코드로 종료되어야 함 (exitCode != 0)
-    SW_EXPECT_TRUE( exitCode != 0 );
-
-    // 1비트 불리언 플래그만 지원한다는 정확한 진단 메시지 출력 확인
-    const bool bFoundErrorDiagnosis = ( capturedLog.find( "bit width 2" ) != sw::string::npos ||
-                                        capturedLog.find( "Only 1-bit bitfield boolean flags" ) != sw::string::npos );
-    SW_EXPECT_TRUE( bFoundErrorDiagnosis );
-
-    // 임시 파일 정리
-    sw::FileUtil::removeFile( tempHeaderPath );
+    // 에러 코드로 끝나고, 1비트 불리언 플래그만 받는다는 진단이 나와야 한다.
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    const bool bFoundErrorDiagnosis = ( run._log.find( "bit width 2" ) != sw::string::npos ||
+                                        run._log.find( "Only 1-bit bitfield boolean flags" ) != sw::string::npos );
+    SW_EXPECT_TRUE_MSG( bFoundErrorDiagnosis, run._log.c_str() );
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
@@ -417,57 +436,63 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 {
 #if defined( SW_DEBUG )
-    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
-    const sw::string headerPath  = sw::FileUtil::joinPath( binDir, "UnknownTokenSample.h" );
-    const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_unknown_token" );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
 
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [headerPath, outGenDir]()
-    {
-        sw::FileUtil::removeFile( headerPath );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "UnknownTokenSample.gen.cpp" ) );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "UnknownTokenSample.gen.h" ) );
-    } ) );
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "UnknownTokenSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct UnknownTokenSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Category = \"Light\", Colr )\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
 
-    const sw::string headerContent = "#pragma once\n"
-                                     "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
-                                     "namespace sw\n"
-                                     "{\n"
-                                     "\tREFLECT()\n"
-                                     "\tstruct UnknownTokenSampleActor\n"
-                                     "\t{\n"
-                                     "\t\tREFLECT_BODY();\n"
-                                     "\t\tPROPERTY( Category = \"Light\", Colr )\n"
-                                     "\t\tint32 _value{ 0 };\n"
-                                     "\t};\n"
-                                     "}\n";
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, headerContent ) );
+    // 무엇을 고쳐야 하는지가 메시지에 다 있어야 한다: 토큰 · 멤버.
+    const bool bNamesTheToken  = run._log.find( "unknown token 'Colr'" ) != sw::string::npos;
+    const bool bNamesTheMember = run._log.find( "sw::UnknownTokenSampleActor::_value" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheToken && bNamesTheMember, run._log.c_str() );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
 
-    sw::string                capturedLog;
-    sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
-        sw::ProcessOutputDelegate,
-        [&capturedLog]( sw::string_view line )
-    {
-        capturedLog.append( line.data(), line.size() );
-        capturedLog.push_back( '\n' );
-    } );
+/**
+ * @brief [ReflectionParserTest] REFLECT() 없는 타입의 REFLECT_BODY() 는 빌드를 세운다
+ * @details 이 검사는 처음부터 있었지만 **한 번도 돈 적이 없었다.** `REFLECT_BODY()` 가 만드는 마커 함수는 매크로
+ *          전개 위치에 있고, 파서는 "주 파일에 있나" 를 `clang_Location_isFromMainFile` 로 물었는데 그 함수는 매크로
+ *          위치를 늘 "아니다" 로 답한다 — 마커가 검사에 닿지 않았다. 지금은 선언을 매크로를 **쓴** 자리의 파일로 센다.
+ */
+SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
+{
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    sw::ProcessOptions options;
-    options._workingDirectory = projectRoot;
-
-    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options, outputCb );
-    SW_EXPECT_TRUE_MSG( exitCode != 0, capturedLog.c_str() );
-
-    // 무엇을 고쳐야 하는지가 메시지에 다 있어야 한다: 토큰 · 멤버 · 표의 섹션.
-    const bool bNamesTheToken  = capturedLog.find( "unknown token 'Colr'" ) != sw::string::npos;
-    const bool bNamesTheMember = capturedLog.find( "sw::UnknownTokenSampleActor::_value" ) != sw::string::npos;
-    SW_EXPECT_TRUE_MSG( bNamesTheToken && bNamesTheMember, capturedLog.c_str() );
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "OrphanBodySample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tstruct OrphanBodySampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    const bool bNamesTheType = run._log.find( "REFLECT_BODY() is used in class/struct 'sw::OrphanBodySampleActor'" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheType, run._log.c_str() );
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif

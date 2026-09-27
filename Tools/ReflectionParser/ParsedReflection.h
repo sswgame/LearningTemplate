@@ -241,4 +241,14 @@ namespace sw
         {
         }
     };
+
+    /**
+     * @brief 입력 헤더 하나에서 모은 것입니다. `.gen.cpp` / `.gen.h` 한 벌이 이것 하나에서 나옵니다.
+     * @details 번역 단위 하나가 헤더 여럿을 담을 수 있으므로(한 TU 로 묶어 파싱) 결과는 헤더 단위로 나눠 둡니다.
+     */
+    struct ParsedHeader
+    {
+        vector<ParsedTypeInfo> _listType;
+        vector<ParsedEnumInfo> _listEnum;
+    };
 } // namespace sw
