@@ -219,11 +219,11 @@ namespace sw
         string                       _countEnumerator;
         /** @brief 기반 정수 타입의 정본 철자입니다(`uint8` 이 아니라 `unsigned char`). 전방 선언을 코드젠하는 데 씁니다. */
         string _underlyingType;
-        uint8  _bIsBitFlag   : 1;
-        uint8  _bEmitFlagOps : 1;
+        /** @brief `ENUM( Flags )` 입니다. 등록부의 비트플래그 표시와 비트 연산자 트레이트 코드젠을 함께 켭니다. */
+        uint8 _bIsBitFlag : 1;
         /** @brief 클래스 · 구조체 **안에** 선언된 열거형이면 1 입니다. 그러면 밖에서 전방 선언할 수 없습니다. */
         uint8                  _bNestedInType : 1;
-        [[maybe_unused]] uint8 _reserved      : 5;
+        [[maybe_unused]] uint8 _reserved      : 6;
 
         ParsedEnumInfo() noexcept
             : _name{}
@@ -236,7 +236,6 @@ namespace sw
             , _countEnumerator{}
             , _underlyingType{}
             , _bIsBitFlag{ SW_FALSE }
-            , _bEmitFlagOps{ SW_FALSE }
             , _bNestedInType{ SW_FALSE }
             , _reserved{ 0 }
         {

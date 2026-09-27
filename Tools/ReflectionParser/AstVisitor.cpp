@@ -13,6 +13,7 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "ReflectionParser/AnnotationApply.h"
+#include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/ContainerTypeMap.h"
 #include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
@@ -382,6 +383,30 @@ namespace sw
                 return string( b.view() );
             }
 
+            /**
+             * @brief 애노테이션 토큰을 DTO 에 넣고, AnnotationMeta.txt 에 없는 토큰이 있으면 알립니다.
+             * @details 예전에는 모르는 토큰을 **조용히 버렸습니다.** 조명 컴포넌트 셋의 `PROPERTY( …, Color, … )` 가 그렇게
+             *          사라져 있었습니다 — 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 이고, 멤버 이름에 color 가 들어 있어
+             *          인스펙터의 이름 휴리스틱이 증상을 가리고 있었습니다.
+             * @return 모르는 토큰이 없으면 true
+             */
+            template <typename TParsed>
+            static bool applyAnnotation( const string_view spelling, TParsed& target, const ParserSession& session,
+                                         const string_view owner )
+            {
+                vector<string> listUnknownToken;
+                sw::AnnotationApply::apply( spelling, target, session._annotationMeta, listUnknownToken );
+
+                const ReflectAnnotationDesc& desc = *getAnnotationScope<TParsed>()._pDesc;
+                for ( const string& token : listUnknownToken )
+                {
+                    SW_LOG_ERROR( "ERROR: %#() on '%#' has an unknown token '%#'. Spellings are listed in AnnotationMeta.txt [%#]; "
+                                  "a free-form editor hint is written Meta = \"Key\" or Meta = \"Key=Value\".",
+                                  desc._pMacroName, owner, token, desc._pScope );
+                }
+                return listUnknownToken.empty();
+            }
+
             // ------------------------------------------------------------------------------
             // B) 컨테이너 타입 트리 (Vector/Map 중첩)
             // ------------------------------------------------------------------------------
@@ -389,12 +414,14 @@ namespace sw
             {
                 vector<ParsedPropertyInfo>* _pProperties = nullptr;
                 const ParserSession*        _pSession    = nullptr;
+                string_view                 _ownerFQN;
                 uint8                       _bHasError : 1;
                 [[maybe_unused]] uint8      _reserved  : 7;
 
                 FieldCollector()
                     : _pProperties{ nullptr }
                     , _pSession{ nullptr }
+                    , _ownerFQN{}
                     , _bHasError{ SW_FALSE }
                     , _reserved{ 0 }
                 {
@@ -406,18 +433,30 @@ namespace sw
                 vector<ParsedFunctionInfo>*         _pMethods;
                 const MultiAnnotationSearch::Entry* _pFuncEntry;
                 const ParserSession*                _pSession;
+                string_view                         _ownerFQN;
                 uint8                               _bSkipConstructors : 1; ///< Abstract / Static 타입
-                [[maybe_unused]] uint8              _reserved          : 7;
+                uint8                               _bHasError         : 1;
+                [[maybe_unused]] uint8              _reserved          : 6;
 
                 MethodCollector()
                     : _pMethods{ nullptr }
                     , _pFuncEntry{ nullptr }
                     , _pSession{ nullptr }
+                    , _ownerFQN{}
                     , _bSkipConstructors{ SW_FALSE }
+                    , _bHasError{ SW_FALSE }
                     , _reserved{ 0 }
                 {
                 }
             };
+
+            /** @brief 오류 메시지에 쓸 `타입::멤버` 이름입니다. */
+            static string makeMemberOwnerName( const string_view ownerFQN, const string_view memberName )
+            {
+                StringBuilder<constant::kMaxBuffer1024> b;
+                b.appendFormat( "%#::%#", ownerFQN, memberName );
+                return string( b.view() );
+            }
 
             /** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
             static vector<string> extractTemplateArgs( string_view typeStr )
@@ -642,7 +681,11 @@ namespace sw
                         prop._bitMask    = static_cast<uint8>( 1u << ( bitOffset % 8 ) );
                     }
                 }
-                sw::AnnotationApply::parsePropertyAnnotation( search._spelling, prop, collector->_pSession->_annotationMeta );
+                if ( applyAnnotation( search._spelling, prop, *collector->_pSession, makeMemberOwnerName( collector->_ownerFQN, prop._name ) ) == false )
+                {
+                    collector->_bHasError = SW_TRUE;
+                    return CXChildVisit_Break;
+                }
                 parseContainerDetails( prop, fieldType, *collector->_pSession );
                 collector->_pProperties->push_back( std::move( prop ) );
                 return CXChildVisit_Continue;
@@ -689,17 +732,23 @@ namespace sw
                             cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
                     }
 
+                    string ctorSpelling;
                     if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound == SW_TRUE )
                     {
-                        sw::AnnotationApply::parseFunctionAnnotation( collector->_pFuncEntry->_spelling, method,
-                                                                      collector->_pSession->_annotationMeta );
+                        ctorSpelling = collector->_pFuncEntry->_spelling;
                     }
                     else
                     {
                         AnnotationSearch search{ annotationConstants::kFunctionPrefix };
                         clang_visitChildren( cursor, annotationSearchVisitor, &search );
-                        if ( search._bFound == SW_TRUE )
-                            sw::AnnotationApply::parseFunctionAnnotation( search._spelling, method, collector->_pSession->_annotationMeta );
+                        ctorSpelling = search._spelling;
+                    }
+                    if ( ctorSpelling.empty() == false &&
+                         applyAnnotation( ctorSpelling, method, *collector->_pSession,
+                                          makeMemberOwnerName( collector->_ownerFQN, annotationConstants::kCtorLookupName ) ) == false )
+                    {
+                        collector->_bHasError = SW_TRUE;
+                        return CXChildVisit_Break;
                     }
 
                     collector->_pMethods->push_back( std::move( method ) );
@@ -752,8 +801,12 @@ namespace sw
                         cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
                 }
 
-                if ( bHasFuncAnn )
-                    sw::AnnotationApply::parseFunctionAnnotation( funcSpelling, method, collector->_pSession->_annotationMeta );
+                if ( bHasFuncAnn && applyAnnotation( funcSpelling, method, *collector->_pSession,
+                                                     makeMemberOwnerName( collector->_ownerFQN, method._name ) ) == false )
+                {
+                    collector->_bHasError = SW_TRUE;
+                    return CXChildVisit_Break;
+                }
 
                 collector->_pMethods->push_back( std::move( method ) );
                 return CXChildVisit_Continue;
@@ -905,8 +958,11 @@ namespace sw
                     if ( factoryEntry != nullptr && factoryEntry->_bFound == SW_TRUE )
                         ctx->_bFactoryFound = SW_TRUE;
 
-                    ctx->_methods._pFuncEntry = funcEntry;
-                    return methodCollectorVisitor( cursor, parent, &ctx->_methods );
+                    ctx->_methods._pFuncEntry    = funcEntry;
+                    const CXChildVisitResult res = methodCollectorVisitor( cursor, parent, &ctx->_methods );
+                    if ( ctx->_methods._bHasError == SW_TRUE )
+                        return CXChildVisit_Break;
+                    return res;
                 }
 
                 return CXChildVisit_Continue;
@@ -1140,8 +1196,12 @@ namespace sw
                 reflectSearch._spelling = AstVisitorInternal::sourceExtractMacroAnnotation( cursor, annotationConstants::kReflectMacroOpen, annotationConstants::kReflectPrefix );
                 reflectSearch._bFound   = reflectSearch._spelling.empty() == false ? SW_TRUE : SW_FALSE;
             }
-            if ( reflectSearch._bFound == SW_TRUE )
-                sw::AnnotationApply::parseReflectAnnotation( reflectSearch._spelling, typeInfo, _pSession->_annotationMeta );
+            if ( reflectSearch._bFound == SW_TRUE &&
+                 AstVisitorInternal::applyAnnotation( reflectSearch._spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
+            {
+                _bHasError = SW_TRUE;
+                return;
+            }
             // 순수 가상 함수가 있는 추상 클래스이면 UCLASS(Abstract) 처럼 Abstract 플래그를 켠다
             if ( clang_CXXRecord_isAbstract( cursor ) != 0 )
                 typeInfo._bAbstract = SW_TRUE;
@@ -1154,10 +1214,14 @@ namespace sw
             collect._methods._bSkipConstructors = ( typeInfo._bAbstract == SW_TRUE || typeInfo._bStatic == SW_TRUE ) ? SW_TRUE : SW_FALSE;
             collect._fields._pProperties        = &typeInfo._listProperty;
             collect._fields._pSession           = _pSession;
+            collect._fields._ownerFQN           = typeInfo._fullyQualifiedName;
             collect._methods._pMethods          = &typeInfo._listMethod;
             collect._methods._pSession          = _pSession;
+            collect._methods._ownerFQN          = typeInfo._fullyQualifiedName;
             clang_visitChildren( cursor, AstVisitorInternal::structMemberCollectVisitor, &collect );
-            if ( collect._fields._bHasError == SW_TRUE || collect._bases._bHasError == SW_TRUE )
+            const bool bMemberError = collect._fields._bHasError == SW_TRUE || collect._bases._bHasError == SW_TRUE ||
+                                      collect._methods._bHasError == SW_TRUE;
+            if ( bMemberError )
             {
                 _bHasError = SW_TRUE;
                 return;
@@ -1236,8 +1300,12 @@ namespace sw
                 clang_visitChildren( cursor, AstVisitorInternal::annotationSearchVisitor, &enumSearch );
                 enumSpelling = enumSearch._spelling;
             }
-            if ( enumSpelling.empty() == false )
-                sw::AnnotationApply::parseEnumAnnotation( enumSpelling, enumInfo, _pSession->_annotationMeta );
+            if ( enumSpelling.empty() == false &&
+                 AstVisitorInternal::applyAnnotation( enumSpelling, enumInfo, *_pSession, enumInfo._fullyQualifiedName ) == false )
+            {
+                _bHasError = SW_TRUE;
+                return;
+            }
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
         }

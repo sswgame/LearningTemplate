@@ -1,66 +1,74 @@
 /**
  * @file PredefinedAnnotationField.xxx
- * @brief REFLECT / ENUM / PROPERTY / FUNCTION 애노테이션 필드를 한 곳에 정의합니다.
- * @details include 하기 전에 REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) 를 정의하십시오.
- *          Scope  : Reflect | Enum | Property | Function  (PredefinedReflectAnnotation.xxx 의 Id)
- *          Kind   : Flag | Bool | String            (단순 대입. 적용 함수를 생성합니다)
- *                   FlagFn | StringFn | FloatFn      (손으로 쓴 함수를 부릅니다)
- *                   Flag     단독 토큰   -> 멤버에 SW_TRUE
- *                   Bool     key=value   -> 멤버에 파싱된 bool
- *                   String   key=value   -> 멤버에 문자열
- *                   *Fn 접미사는 그 인자 형태를 그대로 받는 커스텀 함수라는 뜻입니다.
- *                   (테이블 원소 타입이 시그니처로 갈리므로 Kind 에 형태를 드러냅니다)
- *          Id     : 애노테이션 토큰 철자. 그대로 문자열 키로도 쓰입니다.
- *          Member : *Fn 이 아니면 대상 멤버 이름, *Fn 이면 적용 함수 이름.
+ * @brief REFLECT / ENUM / PROPERTY / FUNCTION 애노테이션 필드 하나가 파싱에서 코드젠까지 가는 길을 한 줄로 정합니다.
+ * @details include 하기 전에 두 매크로를 정의하십시오(`AnnotationFields.cpp` 가 전개합니다).
  *
- *          플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터를 만들 수 없습니다. 그래서
- *          바인딩 테이블을 만들 수 없고, 여기서 대입 코드를 생성합니다.
+ *          REGISTER_ANNOTATION_FIELD( Scope, Id, Member, Emit )         값을 멤버에 그대로 넣는다
+ *          REGISTER_ANNOTATION_FIELD_FN( Scope, Id, Member, Fn, Emit )  값을 `Fn( 대상, 값 )` 이 넣는다
  *
- *          행 순서 = CodeGenerator 의 메타데이터 출력 순서. (적용은 이름 조회라 순서와 무관합니다)
- *          별칭만 늘릴 때는 AnnotationMeta.txt 만 고치면 됩니다.
+ *          Scope  : Reflect | Enum | Property | Function   (PredefinedReflectAnnotation.xxx 의 Id)
+ *          Id     : AnnotationMeta.txt 의 정규 필드명(`flag.ReadOnly` 의 ReadOnly). 철자(별칭)는 거기서 늘립니다.
+ *          Member : 값이 들어가는 ParsedReflection.h 의 멤버입니다. **멤버 타입이 곧 값의 종류입니다.**
+ *                     uint8 비트필드   → bool    (단독 토큰 `X` 와 `X = true/false`)
+ *                     string · 목록    → 문자열  (`X = "..."`)
+ *                     float32          → 실수    (`X = 1.5`)
+ *                     FunctionNetRole  → 넷 역할 (단독 토큰 `Server` 등. 토큰 자체가 값입니다)
+ *                   그대로 넣는 줄(`REGISTER_ANNOTATION_FIELD`)은 uint8 과 string 만 받습니다. 나머지는 `_FN` 입니다.
+ *          Fn     : `void Fn( 대상&, string_view 값 )`. `AnnotationFields.cpp` 에 있습니다.
+ *          Emit   : Editor  — 생성 코드의 `#if !defined( SW_SHIPPING )` 블록 안에 `<접두>_metadata.<Member>` 로 씁니다
+ *                   Runtime — 같은 꼴로 블록 밖에 씁니다
+ *                   Manual  — CodeGenerator 가 손으로 씁니다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
+ *                   Editor · Runtime 은 **엔진 쪽 메타데이터 멤버 이름이 DTO 멤버와 같다**는 약속입니다. 커스텀 메타
+ *                   (`_listCustomMeta`) 만 엔진에서 `_mapCustomMeta` 로 씁니다 — 목록 → 맵이라 이름이 다릅니다.
+ *
+ *          **행 순서 = 같은 Emit 묶음 안의 출력 순서입니다.** 적용은 이름으로 찾으므로 순서와 무관합니다.
+ *
+ *          새 필드 = 이 파일 한 줄 + ParsedReflection.h 멤버 + (Editor · Runtime 이면) 엔진 메타데이터 멤버
+ *          + AnnotationMeta.txt 의 철자. 넷이 어긋나면 파서가 시작할 때 멈춥니다(`AnnotationFields::validateBindings`).
  */
 
 // ── REFLECT (타입) ────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Reflect, String, Category, _category )
-REGISTER_ANNOTATION_FIELD( Reflect, String, DisplayName, _displayName )
-REGISTER_ANNOTATION_FIELD( Reflect, String, Tooltip, _tooltip )
-REGISTER_ANNOTATION_FIELD( Reflect, Flag, HideInMenu, _bHideInMenu )
-REGISTER_ANNOTATION_FIELD( Reflect, Flag, Abstract, _bAbstract )
-REGISTER_ANNOTATION_FIELD( Reflect, Flag, Static, _bStatic )
-REGISTER_ANNOTATION_FIELD( Reflect, StringFn, Alias, applyReflectAlias )
-REGISTER_ANNOTATION_FIELD( Reflect, StringFn, Meta, applyReflectMeta )
+REGISTER_ANNOTATION_FIELD( Reflect, Category, _category, Editor )
+REGISTER_ANNOTATION_FIELD( Reflect, DisplayName, _displayName, Editor )
+REGISTER_ANNOTATION_FIELD( Reflect, Tooltip, _tooltip, Editor )
+REGISTER_ANNOTATION_FIELD( Reflect, HideInMenu, _bHideInMenu, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
+REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
 
 // ── ENUM ─────────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Enum, String, Invalid, _invalidEnumerator )
-REGISTER_ANNOTATION_FIELD( Enum, String, Count, _countEnumerator )
-REGISTER_ANNOTATION_FIELD( Enum, FlagFn, Flags, applyEnumFlags )
-REGISTER_ANNOTATION_FIELD( Enum, StringFn, Alias, applyEnumAlias )
-REGISTER_ANNOTATION_FIELD( Enum, StringFn, ValueAlias, applyEnumValueAlias )
-REGISTER_ANNOTATION_FIELD( Enum, StringFn, Meta, applyEnumMeta )
+REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD( Enum, Invalid, _invalidEnumerator, Manual )
+REGISTER_ANNOTATION_FIELD( Enum, Count, _countEnumerator, Manual )
+REGISTER_ANNOTATION_FIELD( Enum, Flags, _bIsBitFlag, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Enum, Alias, _listAlias, appendAlias, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Enum, ValueAlias, _listValueAlias, appendValueAlias, Manual )
 
 // ── PROPERTY ─────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Property, String, Category, _category )
-REGISTER_ANNOTATION_FIELD( Property, String, DisplayName, _displayName )
-REGISTER_ANNOTATION_FIELD( Property, String, Tooltip, _tooltip )
-REGISTER_ANNOTATION_FIELD( Property, Bool, HideInInspector, _bHideInInspector )
-REGISTER_ANNOTATION_FIELD( Property, String, DefaultValue, _defaultValue )
-REGISTER_ANNOTATION_FIELD( Property, Bool, ReadOnly, _bReadOnly )
-REGISTER_ANNOTATION_FIELD( Property, Bool, XmlAttribute, _bXmlAttribute )
-REGISTER_ANNOTATION_FIELD( Property, Bool, AssetPath, _bAssetPath )
-REGISTER_ANNOTATION_FIELD( Property, Bool, Polymorphic, _bPolymorphic )
-REGISTER_ANNOTATION_FIELD( Property, Bool, Transient, _bTransient )
-REGISTER_ANNOTATION_FIELD( Property, Bool, SkipIfEmpty, _bSkipIfEmpty )
-REGISTER_ANNOTATION_FIELD( Property, StringFn, AssetType, applyPropAssetType )
-REGISTER_ANNOTATION_FIELD( Property, FloatFn, MinRange, applyPropMinRange )
-REGISTER_ANNOTATION_FIELD( Property, FloatFn, MaxRange, applyPropMaxRange )
-REGISTER_ANNOTATION_FIELD( Property, StringFn, Alias, applyPropAlias )
-REGISTER_ANNOTATION_FIELD( Property, StringFn, Meta, applyPropMeta )
+REGISTER_ANNOTATION_FIELD( Property, Category, _category, Editor )
+REGISTER_ANNOTATION_FIELD( Property, DisplayName, _displayName, Editor )
+REGISTER_ANNOTATION_FIELD( Property, Tooltip, _tooltip, Editor )
+REGISTER_ANNOTATION_FIELD( Property, HideInInspector, _bHideInInspector, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Property, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD( Property, DefaultValue, _defaultValue, Runtime )
+REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, ReadOnly, _bReadOnly, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, XmlAttribute, _bXmlAttribute, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, AssetPath, _bAssetPath, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, Polymorphic, _bPolymorphic, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, Transient, _bTransient, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, SkipIfEmpty, _bSkipIfEmpty, Runtime )
+REGISTER_ANNOTATION_FIELD_FN( Property, MinRange, _minRange, applyMinRange, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Property, MaxRange, _maxRange, applyMaxRange, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Property, Alias, _listAlias, appendAlias, Manual )
 
 // ── FUNCTION ─────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Function, String, Category, _category )
-REGISTER_ANNOTATION_FIELD( Function, String, DisplayName, _displayName )
-REGISTER_ANNOTATION_FIELD( Function, String, Tooltip, _tooltip )
-REGISTER_ANNOTATION_FIELD( Function, Flag, CallInEditor, _bCallInEditor )
-REGISTER_ANNOTATION_FIELD( Function, Flag, Reliable, _bReliable )
-REGISTER_ANNOTATION_FIELD( Function, Flag, Validate, _bValidate )
-REGISTER_ANNOTATION_FIELD( Function, StringFn, Meta, applyFuncMeta )
+REGISTER_ANNOTATION_FIELD( Function, Category, _category, Editor )
+REGISTER_ANNOTATION_FIELD( Function, DisplayName, _displayName, Editor )
+REGISTER_ANNOTATION_FIELD( Function, Tooltip, _tooltip, Editor )
+REGISTER_ANNOTATION_FIELD( Function, CallInEditor, _bCallInEditor, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Function, NetRole, _netRole, applyNetRole, Runtime )
+REGISTER_ANNOTATION_FIELD( Function, Reliable, _bReliable, Runtime )
+REGISTER_ANNOTATION_FIELD( Function, Validate, _bValidate, Runtime )

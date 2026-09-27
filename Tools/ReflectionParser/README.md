@@ -35,7 +35,8 @@ CMake는 `ReflectionParser` 타겟이 준비된 뒤에야 `sw_addReflectionStep`
 ReflectionParser.cpp   ← main 단계 1~5 (진입점)
 ParsedReflection.h     ← “무엇을 수집했는지” DTO만
 AstVisitor.*           ← libclang 커서 순회 (핫패스, 섹션 A~D)
-AnnotationApply.*      ← REFLECT/PROPERTY 문자열 → DTO 필드
+AnnotationApply.*      ← REFLECT/PROPERTY 문자열 → DTO 필드 (필드 표를 도는 루프 하나)
+AnnotationFields.*     ← 필드 표: PredefinedAnnotationField.xxx 한 줄 = 적용 · 코드젠 · 검증
 CodeGenerator.*        ← DTO + Templates/*.tpl → .gen.cpp
 ParserContext.*        ← clang 인자·TranslationUnit 수명
 ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
@@ -45,19 +46,27 @@ ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
 |-----------|---------|
 | CLI / 병렬 / up-to-date | `ReflectionParser.cpp` |
 | 수집 구조체 멤버 | `ParsedReflection.h` |
-| `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx` + `AnnotationMeta.txt`(별칭) |
+| `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx`(필드 표) + `AnnotationMeta.txt`(철자) |
 | AST에서 클래스·필드를 어떻게 찾나 | `AstVisitor.cpp` (A~D) |
 | 생성 코드 모양 | `CodeGenerator.cpp` + `Templates/` |
 | clang `-DREFLECT...` 인자 | `Config/Environment/parser_config.defaults.json` |
 
-**새 PROPERTY 필드 추가 — 목록은 `PredefinedAnnotationField.xxx` **한 곳**이다.**
-`REGISTER_ANNOTATION_FIELD( Property, <Kind>, <Id>, <Member> )` 한 줄을 더하고, DTO 멤버를
-`ParsedReflection.h` 에 만든다. `AnnotationApply.cpp` 의 적용 표와 `CodeGenerator` 의 emit 순서는
-그 줄에서 전개된다 — **손으로 표를 고치지 않는다.**
-- `Kind` 가 `Flag`·`Bool`·`String` 이면 대입 코드까지 생성된다(추가 코드 없음).
-- `*Fn`(`FlagFn`·`StringFn`·`FloatFn`)이면 같은 이름의 적용 함수를 `AnnotationApply.cpp` 에 쓴다 —
-  그 접미사가 "손으로 쓴 함수를 부른다"는 표시다.
-- 철자를 더 받아 주기만 할 때는 `Source/Core/Predefined/AnnotationMeta.txt` 의 별칭만 고친다.
+**새 애노테이션 필드 추가 — 필드 하나는 `PredefinedAnnotationField.xxx` 의 **한 줄**이다.**
+그 줄이 적용(토큰 → DTO) · 코드젠(DTO → `.gen.cpp`) · 검증을 모두 정한다. 적용 루프(`AnnotationApply`)와
+출력(`CodeGenerator` → `AnnotationFields::emitMetadata`)이 같은 표를 돈다 — **손으로 나열한 필드 목록은 없다.**
+
+```text
+REGISTER_ANNOTATION_FIELD( Property, ReadOnly, _bReadOnly, Runtime )                 값을 멤버에 그대로
+REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, Runtime )  값을 Fn 이 넣는다
+```
+
+1. `.xxx` 한 줄 — `Emit` 이 `Editor`(`#if !defined( SW_SHIPPING )` 안) · `Runtime`(밖) · `Manual`(손으로 쓴다) 중 하나.
+2. `ParsedReflection.h` 에 DTO 멤버 — **멤버 타입이 값의 종류다**(uint8 비트필드 = bool, string, float32, FunctionNetRole).
+3. `Editor` · `Runtime` 이면 엔진 메타데이터에 **같은 이름**의 멤버(`ReflectionTypes.h`).
+4. `Source/Core/Predefined/AnnotationMeta.txt` 에 철자(`flag.ReadOnly = ReadOnly, readOnly`).
+
+2 와 4 가 1 과 어긋나면(철자는 있는데 줄이 없다 · 줄은 있는데 철자가 없다 · kind 와 멤버 타입이 다르다)
+**파서가 시작할 때 멈춘다**(`AnnotationFields::validateBindings`). 철자를 더 받아 주기만 할 때는 4 만 고친다.
 
 ---
 
@@ -101,7 +110,8 @@ ReflectionParser/
 ├─ ReflectionParser.cpp          # CLI · 병렬 진입 · up-to-date
 ├─ ParsedReflection.h            # ParsedTypeInfo / Property / Enum …
 ├─ AstVisitor.h / .cpp           # AST 순회 (A~D)
-├─ AnnotationApply.h / .cpp      # 어노테이션 문자열 → DTO
+├─ AnnotationApply.h / .cpp      # 어노테이션 문자열 → DTO (표를 도는 루프)
+├─ AnnotationFields.h / .cpp     # 필드 표 전개 · 메타데이터 코드젠 · 철자 표 대조
 ├─ AnnotationMeta.h / .cpp       # AnnotationMeta.txt 로더
 ├─ CodeGenerator.h / .cpp        # emit 오케스트레이션
 ├─ CodeEmit.h                    # 생성 텍스트 버퍼 헬퍼
@@ -113,7 +123,7 @@ ReflectionParser/
 ├─ TypeNameMap.*                 # 스칼라 타입 별칭
 ├─ ContainerTypeMap.*            # Vector/Map 등 규칙
 ├─ PredefinedReflectAnnotation.xxx  # clang annotate 매크로 목록
-├─ PredefinedAnnotationField.xxx    # 애노테이션 필드 → 멤버 대입 표
+├─ PredefinedAnnotationField.xxx    # 애노테이션 필드 표 (필드 하나 = 한 줄)
 ├─ Templates/                    # emit 골격 (.tpl)
 ├─ CMakeLists.txt
 └─ README.md
@@ -161,7 +171,7 @@ ReflectionParser/
 ```
 
 **손으로 gen을 고치지 마세요.** 다음 파서 실행에 덮어씁니다.  
-고칠 곳: 헤더 매크로 / `Templates/` / `AnnotationMeta.txt` / `AnnotationApply`.
+고칠 곳: 헤더 매크로 / `Templates/` / `AnnotationMeta.txt` / `PredefinedAnnotationField.xxx`.
 
 ---
 
@@ -266,11 +276,12 @@ struct MyComponent : public Component
 
 | 실수 | 결과 | 올바른 방법 |
 |------|------|-------------|
-| gen 수동 편집 | 다음 빌드에 소실 | 헤더 / tpl / AnnotationMeta / AnnotationApply |
+| gen 수동 편집 | 다음 빌드에 소실 | 헤더 / tpl / AnnotationMeta / PredefinedAnnotationField.xxx |
 | REFLECT 없는 헤더만 기대 | gen 안 생김 | 매크로 추가 또는 CMake HEADERS 포함 |
 | include path 부족 | clang 파싱 실패 | CMake `--include` / preset 확인 |
 | `REFLECT_BODY()` 안에 주석 | 전처리 깨짐 | BODY 본문에 주석 금지 |
-| AnnotationMeta만 추가 | 토큰 무시 | `AnnotationApply` apply 테이블도 수정 |
+| AnnotationMeta.txt 에만 철자 추가 | 파서가 시작할 때 멈춤 | `PredefinedAnnotationField.xxx` 에 필드 줄 |
+| 표에 없는 토큰(`PROPERTY( Color )`) | 그 헤더의 코드젠이 멈춤 | 에디터 힌트는 `Meta = "Color"` · `Meta = "Units=m"` |
 
 ---
 

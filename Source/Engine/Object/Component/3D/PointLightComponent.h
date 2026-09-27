@@ -56,7 +56,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Color", Color, Tooltip = "Point light color" )
+        PROPERTY( Category = "Light", DisplayName = "Color", Meta = "Color", Tooltip = "Point light color" )
         float3 _color;
         PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Point light intensity" )
         float32 _intensity;

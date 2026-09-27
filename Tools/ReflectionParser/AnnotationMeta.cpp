@@ -13,6 +13,7 @@ namespace sw
     AnnotationMeta::AnnotationMeta()
         : _mapBare{}
         , _mapKey{}
+        , _listEntry{}
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -22,6 +23,7 @@ namespace sw
     {
         _mapBare.clear();
         _mapKey.clear();
+        _listEntry.clear();
         _bLoaded = SW_FALSE;
     }
 
@@ -107,14 +109,18 @@ namespace sw
 
             binding._field = left.substr( dot + 1 );
             const string_splitter aliases( right, { "," } );
+            bool                  bAnyAlias = false;
             for ( const string_view aliasView : aliases.getSplitList() )
             {
                 const string_view alias = StringUtil::trim( aliasView );
                 if ( alias.empty() )
                     continue;
                 addAlias( currentScope, alias, binding );
+                bAnyAlias = true;
                 ++bindingCount;
             }
+            if ( bAnyAlias )
+                _listEntry.push_back( AnnotationMetaEntry{ currentScope, std::move( binding ) } );
         }
 
         _bLoaded = SW_TRUE;

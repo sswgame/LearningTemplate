@@ -55,6 +55,22 @@ namespace
         }
         return {};
     }
+
+    /**
+     * @brief 헤더 하나를 파서에 넣는 명령줄입니다. 파서를 프로세스로 부르는 케이스들이 같은 인자 한 벌을 씁니다.
+     * @details 예전에는 케이스마다 이 여덟 줄을 따로 적었습니다 — 파서에 인자가 하나 늘면 네 곳을 고쳐야 했습니다.
+     */
+    sw::string makeParserCommand( const sw::string& parserExe, const sw::string& headerPath, const sw::string& outGenDir,
+                                  const sw::string& projectRoot )
+    {
+        return "\"" + parserExe + "\" " +
+               "--input \"" + headerPath + "\" " +
+               "--output \"" + outGenDir + "\" " +
+               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
+               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
+               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
+               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+    }
 } // namespace
 
 /**
@@ -371,18 +387,10 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
         capturedLog.push_back( '\n' );
     } );
 
-    const sw::string cmd = "\"" + parserExe + "\" " +
-                           "--input \"" + tempHeaderPath + "\" " +
-                           "--output \"" + outGenDir + "\" " +
-                           "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
-                           "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
-                           "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
-                           "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
-
     sw::ProcessOptions options;
     options._workingDirectory = projectRoot;
 
-    const int32 exitCode = sw::Process::execute( cmd, options, outputCb );
+    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, tempHeaderPath, outGenDir, projectRoot ), options, outputCb );
 
     // 에러 코드로 종료되어야 함 (exitCode != 0)
     SW_EXPECT_TRUE( exitCode != 0 );
@@ -394,6 +402,72 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 
     // 임시 파일 정리
     sw::FileUtil::removeFile( tempHeaderPath );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] AnnotationMeta.txt 에 없는 토큰은 조용히 버리지 않고 빌드를 세운다
+ * @details 예전에는 모르는 토큰을 아무 말 없이 버렸다. 조명 컴포넌트 셋이 `PROPERTY( …, Color, … )` 로 색 선택기를
+ *          요청하고 있었는데 그 토큰은 한 번도 생성 코드에 닿지 않았다(올바른 철자는 `Meta = "Color"` 다). 멤버 이름에
+ *          color 가 들어 있어 인스펙터의 이름 휴리스틱이 증상을 가리고 있었다. 오타 하나가 기능 하나를 소리 없이 끄는
+ *          구조라, 이제는 어느 타입 · 멤버의 어느 토큰인지 적고 멈춘다.
+ */
+SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
+{
+#if defined( SW_DEBUG )
+    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string headerPath  = sw::FileUtil::joinPath( binDir, "UnknownTokenSample.h" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_unknown_token" );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [headerPath, outGenDir]()
+    {
+        sw::FileUtil::removeFile( headerPath );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "UnknownTokenSample.gen.cpp" ) );
+        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "UnknownTokenSample.gen.h" ) );
+    } ) );
+
+    const sw::string headerContent = "#pragma once\n"
+                                     "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                     "namespace sw\n"
+                                     "{\n"
+                                     "\tREFLECT()\n"
+                                     "\tstruct UnknownTokenSampleActor\n"
+                                     "\t{\n"
+                                     "\t\tREFLECT_BODY();\n"
+                                     "\t\tPROPERTY( Category = \"Light\", Colr )\n"
+                                     "\t\tint32 _value{ 0 };\n"
+                                     "\t};\n"
+                                     "}\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, headerContent ) );
+
+    sw::string                capturedLog;
+    sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
+        sw::ProcessOutputDelegate,
+        [&capturedLog]( sw::string_view line )
+    {
+        capturedLog.append( line.data(), line.size() );
+        capturedLog.push_back( '\n' );
+    } );
+
+    sw::ProcessOptions options;
+    options._workingDirectory = projectRoot;
+
+    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options, outputCb );
+    SW_EXPECT_TRUE_MSG( exitCode != 0, capturedLog.c_str() );
+
+    // 무엇을 고쳐야 하는지가 메시지에 다 있어야 한다: 토큰 · 멤버 · 표의 섹션.
+    const bool bNamesTheToken  = capturedLog.find( "unknown token 'Colr'" ) != sw::string::npos;
+    const bool bNamesTheMember = capturedLog.find( "sw::UnknownTokenSampleActor::_value" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheToken && bNamesTheMember, capturedLog.c_str() );
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
@@ -438,13 +512,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
                                      "}\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, headerContent ) );
 
-    const sw::string command = "\"" + parserExe + "\" " +
-                               "--input \"" + headerPath + "\" " +
-                               "--output \"" + outGenDir + "\" " +
-                               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
-                               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
-                               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
-                               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+    const sw::string command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
 
     sw::ProcessOptions options;
     options._workingDirectory = projectRoot;
@@ -546,13 +614,7 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     sw::string outLog;
     const auto runParser = [&]( const sw::string& headerPath ) -> int32
     {
-        const sw::string cmd = "\"" + parserExe + "\" " +
-                               "--input \"" + headerPath + "\" " +
-                               "--output \"" + outGenDir + "\" " +
-                               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
-                               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
-                               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
-                               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+        const sw::string cmd = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
 
         sw::ProcessOptions options;
         options._workingDirectory = projectRoot;

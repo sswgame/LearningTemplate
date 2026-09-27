@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource · Scene · Input 정리(Reflection · Compression · Module 은 걷을 것 없음)
+> 마지막 갱신: 2026-09-24 · 기준 커밋 `f8f5004e` + placement new 통일 · `SlotHandle` 이름 · `PagedArray` 통합 · 오브젝트/컴포넌트 참조를 핸들로 통일 · Core · App · Editor · ReflectionParser · Engine(①~⑨) · GameFramework · RuntimeAPI 주석 정리(1-0g 끝) · 1-0g 결함 수정 · 리눅스 전용 경고 둘 · 모두 깨우기 결함 · TaskManager 구조 단순화 · Object · Resource · Scene · Input 정리(Reflection · Compression · Module 은 걷을 것 없음) · ReflectionParser 필드 표(적용 · 코드젠 · 검증 한 줄)
 
 ---
 
@@ -1305,6 +1305,28 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 돌연변이에 실패) · `FileTest.FileStampReportsSizeAndNoticesChanges`.
 
 **검증.** Debug · Release · Shipping · ASan 빌드 경고 0. Release 전 테스트(CoreTest 267 + 건너뜀 8 · EngineTest 648 에 새 케이스 셋) 실패 0. `nogpu` 7/7 을 Debug · Shipping · ASan 셋 다, `hostgpu` 2/2 를 Debug · Shipping 둘 다, 린트 프리셋 20/20, 바뀐 파일의 규약 · 중괄호 · 어휘 · include 순서 · 테스트 스위트 게이트 OK. `BackendSmoke.py` 네 백엔드 불투명/반투명 8 회 종료 0 · 오류 0(평균 RGB ±0.3 안). 에디터 ON(`-EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60`) dx12 · dx11 · vk · gl 창 15 / 빈 0 · 오류 0 · 종료 0 · 로그에 `startup` 이 찍힌다.
+
+**(B) 스물넷째 — 2026-09-28 · ReflectionParser 구조와 속도: 애노테이션 필드는 표 한 줄이 적용 · 코드젠 · 검증을 모두 정한다.**
+
+- **필드 하나 = `PredefinedAnnotationField.xxx` 한 줄** (`AnnotationFields.h/.cpp`). 예전 표는 **적용에만** 쓰였고 코드젠은 플래그 열몇 개를
+  `emit.flagIf( prop._bReadOnly … )` 로 손으로 나열했다. README 는 "emit 순서도 그 줄에서 전개된다" 고 적었지만 사실이 아니어서, 문서대로
+  `.xxx` 한 줄과 DTO 멤버만 더하면 **파서는 값을 읽고 코드젠은 아무 말 없이 버렸다.** 이제 줄마다 `Emit` 열(Editor · Runtime · Manual)이 있고
+  `AnnotationFields::emitMetadata` 가 표를 돌며 쓴다. 값의 종류는 **DTO 멤버 타입**이 정한다(uint8 비트필드 = bool · string · float32 ·
+  FunctionNetRole) — 표에 따로 적던 `Flag/Bool/String/*Fn` 종류 열이 없어졌다.
+- **적용 함수 넷(스코프마다 한 벌) → 표를 도는 루프 하나** (`AnnotationApply::apply<T>`). 넷이 조금씩 달랐다 — `X = false` 를 PROPERTY 만
+  받고 REFLECT · ENUM · FUNCTION 은 버렸다. 이제 모든 스코프가 "나중에 적은 것이 이긴다".
+- **모르는 토큰은 빌드를 세운다.** 예전에는 조용히 버렸고, 그렇게 사라진 것이 셋 있었다: 조명 컴포넌트(`Directional` · `Point` · `Spot`)의
+  `PROPERTY( …, Color, … )` — 색 선택기 요청의 철자는 `Meta = "Color"` 다(`InspectorPropertyManager::isColorRequested`). 멤버 이름에 color 가
+  들어 있어 이름 휴리스틱이 증상을 가리고 있었다. 세 헤더를 고쳤다.
+- **철자 표(AnnotationMeta.txt)와 필드 표가 어긋나면 파서가 시작할 때 멈춘다** (`AnnotationFields::validateBindings`) — 철자는 있는데 줄이
+  없다(토큰이 사라진다) · 줄은 있는데 철자가 없다(아무도 켤 수 없다) · kind 와 멤버 타입이 다르다. README 의 "자주 하는 실수" 에 있던
+  "AnnotationMeta 만 추가 → 토큰 무시" 가 이제 실수로 남을 수 없다.
+- 같이 걷은 것: `ParsedEnumInfo::_bEmitFlagOps`(자동 감지를 없앤 뒤로 늘 `_bIsBitFlag` 와 같았다) · CodeGenerator 의 편집기 메타 도우미 둘.
+  **생성 코드의 빈 `#if !defined( SW_SHIPPING ) / #endif` 쌍을 더는 쓰지 않는다**(Editor 묶음에 쓸 것이 있을 때만 감싼다).
+
+검증 — **생성물 비교**(이 저장소의 파서 변경 정본): 새 · 옛 파서로 열 타깃 + `ReflectBuiltins.gen.cpp` 133 파일을 만들어, 빈 `#if/#endif` 쌍을
+걷고 비교하면 **다른 것은 조명 셋의 `_mapCustomMeta = { "Color" }` 추가뿐**이다. 회귀 테스트 `ReflectionParserTest.UnknownAnnotationTokenStopsTheBuild`
+(옛 파서는 같은 헤더에 exit 0 — 실제로 진다). 철자 표를 일부러 어긋나게 한 사본(없는 필드 철자 · 철자 없는 필드)으로 두 방향 오류를 확인했다.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

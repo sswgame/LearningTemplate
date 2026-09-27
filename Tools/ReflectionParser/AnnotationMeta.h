@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -26,6 +27,13 @@ namespace sw
         Kind   _kind{ Kind::Flag };
     };
 
+    /** @brief AnnotationMeta.txt 의 `kind.Field = 별칭…` 한 줄입니다. 필드 표와 대조할 때 씁니다. */
+    struct AnnotationMetaEntry
+    {
+        string            _scope; ///< 섹션 이름: REFLECT | ENUM | PROPERTY | FUNCTION
+        AnnotationBinding _binding;
+    };
+
     /** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
     inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
     {
@@ -38,6 +46,22 @@ namespace sw
 #include "Core/Predefined/PredefinedAnnotationKind.xxx"
 #undef REGISTER_ANNOTATION_KIND
         return false;
+    }
+
+    /** @brief AnnotationBinding::Kind 의 철자(AnnotationMeta.txt 의 kind 토큰)입니다. */
+    inline const utf8* toString( const AnnotationBinding::Kind kind ) noexcept
+    {
+        switch ( kind )
+        {
+#define REGISTER_ANNOTATION_KIND( Name, Token ) \
+    case AnnotationBinding::Kind::Name:         \
+        return #Token;
+#include "Core/Predefined/PredefinedAnnotationKind.xxx"
+#undef REGISTER_ANNOTATION_KIND
+            default:
+                break;
+        }
+        return "?";
     }
 
     // ------------------------------------------------------------------------------
@@ -60,6 +84,9 @@ namespace sw
         /** @brief key= 쪽 바인딩을 조회합니다. */
         const AnnotationBinding* findKey( const string_view scope, const string_view key ) const;
 
+        /** @brief 읽은 `kind.Field` 줄 전부입니다(별칭이 하나라도 있는 줄만). */
+        const vector<AnnotationMetaEntry>& getEntries() const noexcept { return _listEntry; }
+
     private:
         /** @brief 로드된 바인딩을 비웁니다. */
         void clear();
@@ -70,6 +97,7 @@ namespace sw
 
         unordered_map<uint64, AnnotationBinding> _mapBare; ///< (scope, alias) 해시 → 바인딩
         unordered_map<uint64, AnnotationBinding> _mapKey;
+        vector<AnnotationMetaEntry>              _listEntry;
         uint8                                    _bLoaded  : 1;
         [[maybe_unused]] uint8                   _reserved : 7;
     };

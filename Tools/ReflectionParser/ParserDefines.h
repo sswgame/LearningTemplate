@@ -36,13 +36,22 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct annotationConstants
     {
-#define REGISTER_REFLECT_ANNOTATION( Id, MacroName, AnnotatePrefix, ScopeName ) \
-    inline static constexpr const utf8* k##Id##Macro     = MacroName;           \
-    inline static constexpr const utf8* k##Id##Prefix    = AnnotatePrefix;      \
-    inline static constexpr const utf8* k##Id##MacroOpen = MacroName "(";       \
-    inline static constexpr const utf8* k##Id##Scope     = ScopeName;
+        /** @brief `k<Id>` 는 그 애노테이션의 설명자 한 벌입니다. 접두사와 매크로 철자를 따로 들고 다니지 않게 합니다. */
+#define REGISTER_REFLECT_ANNOTATION( Id, MacroName, AnnotatePrefix, ScopeName )                                 \
+    inline static constexpr ReflectAnnotationDesc k##Id{ MacroName, AnnotatePrefix, MacroName "(", ScopeName }; \
+    inline static constexpr const utf8*           k##Id##Macro     = MacroName;                                 \
+    inline static constexpr const utf8*           k##Id##Prefix    = AnnotatePrefix;                            \
+    inline static constexpr const utf8*           k##Id##MacroOpen = MacroName "(";                             \
+    inline static constexpr const utf8*           k##Id##Scope     = ScopeName;
 #include "PredefinedReflectAnnotation.xxx"
 #undef REGISTER_REFLECT_ANNOTATION
+
+        /**
+         * @brief 넷 역할 필드의 정규 이름입니다.
+         * @details AnnotationMeta.txt 의 `netrole.Server = Server` 는 필드 이름 자리에 **역할**을 적습니다(토큰 자체가 값).
+         *          그래서 적용할 때는 이 이름의 필드에 역할 이름을 값으로 넘깁니다.
+         */
+        inline static constexpr const utf8* kNetRoleField = "NetRole";
 
         inline static constexpr const utf8* kReflectBodyPrefix        = "REFLECT_BODY";
         inline static constexpr const utf8* kComponentFactoryPrefix   = "COMPONENT_FACTORY";

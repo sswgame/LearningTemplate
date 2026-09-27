@@ -3,17 +3,13 @@
 #include "ReflectionParser/AnnotationApply.h"
 
 #include "Core/Common/Types.h"
-#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/string_splitter.h"
 
-#include "Engine/Reflection/ReflectionEnumNames.h"
-
+#include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/ParsedReflection.h"
 #include "ReflectionParser/ParserDefines.h"
 
-SW_LOG_CALLER( "AnnotationApply" );
 namespace sw
 {
     namespace
@@ -49,274 +45,6 @@ namespace sw
                     ++valueEnd;
                 }
                 return token.substr( valueStart, valueEnd - valueStart );
-            }
-
-            /** @brief 빈 값·true·1·True 를 참으로 봅니다. */
-            static bool parseAnnotationBool( string_view val )
-            {
-                return StringUtil::parseBool( val, true );
-            }
-
-            /** @brief 필드 이름에 맞는 테이블 항목을 찾습니다. */
-            template <typename Entry, size_t N>
-            static const Entry* findFieldEntry( const Entry ( &table )[N], const string_view field )
-            {
-                for ( const Entry& entry : table )
-                {
-                    if ( entry._field == field )
-                        return &entry;
-                }
-                return nullptr;
-            }
-
-            /**
-             * @brief 쉼표 · 세미콜론으로 나눈 타입 별칭을 붙입니다.
-             * @note `StringUtil::trim` 에는 **`string_view` 오버로드가 있습니다**(할당 없이 `string_view` 를 반환). 예전에는
-             *       `trim( string( token ).c_str() )` 으로 불러서 토큰마다 임시 `string` 을 하나 만들고 `trim` 이 또 하나를
-             *       반환했습니다. 필요 없는 할당 두 개입니다. 파서는 빌드 타임에만 돌아 **속도로 잰 이득은 없습니다**(코드젠
-             *       3.27초는 거의 전부 libclang 파싱입니다). 있는 도구를 쓰는 쪽으로만 고쳤습니다.
-             */
-            static void appendTypeAliases( vector<string>& outListAlias, const string& raw )
-            {
-                const string_splitter parts( raw, { ",", ";" } );
-                for ( const string_view token : parts.getSplitList() )
-                {
-                    const string_view trimmed = StringUtil::trim( token );
-                    if ( trimmed.empty() == false )
-                        outListAlias.emplace_back( trimmed );
-                }
-            }
-
-            /** @brief `Key=Value, Key2=Value2` 목록을 커스텀 메타데이터 페어로 파싱합니다. */
-            static void parseCustomMetaPairs( string_view raw, vector<pair<string, string>>& outList )
-            {
-                const string_splitter parts( raw, { ",", ";" } );
-                for ( const string_view tokenView : parts.getSplitList() )
-                {
-                    const string_view token = StringUtil::trim( tokenView );
-                    if ( token.empty() )
-                        continue;
-                    const size_t eqPos = token.find( '=' );
-                    if ( eqPos != string_view::npos )
-                    {
-                        const string_view key = StringUtil::trim( token.substr( 0, eqPos ) );
-                        const string_view val = StringUtil::trim( token.substr( eqPos + 1 ) );
-                        if ( key.empty() == false )
-                            outList.emplace_back( string( key ), string( val ) );
-                    }
-                    else
-                    {
-                        outList.emplace_back( string( token ), "1" );
-                    }
-                }
-            }
-
-            static void applyReflectAlias( ParsedTypeInfo& typeInfo, const string& value )
-            {
-                appendTypeAliases( typeInfo._listAlias, value );
-            }
-
-            static void applyReflectMeta( ParsedTypeInfo& typeInfo, const string& value )
-            {
-                parseCustomMetaPairs( value, typeInfo._listCustomMeta );
-            }
-
-            static void applyEnumAlias( ParsedEnumInfo& enumInfo, const string& value )
-            {
-                appendTypeAliases( enumInfo._listAlias, value );
-            }
-
-            /** @brief `Old:Current` 목록을 enumerator ValueAlias 로 넣습니다. */
-            static void appendEnumValueAliases( ParsedEnumInfo& enumInfo, const string& raw )
-            {
-                const string_splitter parts( raw, { ",", ";" } );
-                for ( const string_view tokenView : parts.getSplitList() )
-                {
-                    const string_view token = StringUtil::trim( tokenView );
-                    if ( token.empty() )
-                        continue;
-                    const size_t colon = token.find( ':' );
-                    if ( colon == string_view::npos || colon == 0 || colon + 1 >= token.size() )
-                    {
-                        SW_LOG_WARNING( "ENUM ValueAlias expected Old:Current, got '%#'", token );
-                        continue;
-                    }
-                    const string_view alias     = StringUtil::trim( token.substr( 0, colon ) );
-                    const string_view canonical = StringUtil::trim( token.substr( colon + 1 ) );
-                    if ( alias.empty() == false && canonical.empty() == false )
-                        enumInfo._listValueAlias.emplace_back( string( alias ), string( canonical ) );
-                }
-            }
-
-            static void applyEnumValueAlias( ParsedEnumInfo& enumInfo, const string& value )
-            {
-                appendEnumValueAliases( enumInfo, value );
-            }
-
-            static void applyEnumMeta( ParsedEnumInfo& enumInfo, const string& value )
-            {
-                parseCustomMetaPairs( value, enumInfo._listCustomMeta );
-            }
-
-            static void applyEnumFlags( ParsedEnumInfo& enumInfo )
-            {
-                enumInfo._bIsBitFlag   = SW_TRUE;
-                enumInfo._bEmitFlagOps = SW_TRUE;
-            }
-
-            static void applyPropAlias( ParsedPropertyInfo& prop, const string& value )
-            {
-                appendTypeAliases( prop._listAlias, value );
-            }
-
-            static void applyPropAssetType( ParsedPropertyInfo& prop, const string& value )
-            {
-                prop._assetType  = value;
-                prop._bAssetPath = SW_TRUE;
-            }
-
-            static void applyPropMeta( ParsedPropertyInfo& prop, const string& value )
-            {
-                parseCustomMetaPairs( value, prop._listCustomMeta );
-            }
-
-            static void applyPropMinRange( ParsedPropertyInfo& prop, float32 value )
-            {
-                prop._minRange  = value;
-                prop._bHasRange = SW_TRUE;
-            }
-
-            static void applyPropMaxRange( ParsedPropertyInfo& prop, float32 value )
-            {
-                prop._maxRange  = value;
-                prop._bHasRange = SW_TRUE;
-            }
-
-            static void applyFuncMeta( ParsedFunctionInfo& method, const string& value )
-            {
-                parseCustomMetaPairs( value, method._listCustomMeta );
-            }
-
-// ------------------------------------------------------------------------------
-// 애노테이션 필드 테이블. PredefinedAnnotationField.xxx 한 곳에서 전개한다.
-// 플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터로 바인딩할 수 없어 대입 람다를 쓴다.
-// Scope 마다 #include 를 한 번 전개해 모든 Kind 항목을 한 테이블에 등록한다.
-// ------------------------------------------------------------------------------
-#define REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) SW_ANN_##Scope( Kind, Id, Member )
-
-            // ── REFLECT ──────────────────────────────────────────────────
-            struct ReflectEntry
-            {
-                string_view _field;
-                void ( *_pApply )( ParsedTypeInfo&, const AnnotationBinding&, string_view );
-            };
-
-#define SW_ANN_Enum( ... )
-#define SW_ANN_Property( ... )
-#define SW_ANN_Function( ... )
-#define SW_ANN_Reflect( Kind, Id, Member ) SW_ANN_Reflect_##Kind( Id, Member )
-
-#define SW_ANN_Reflect_Flag( Id, Member )     { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view ) { target.Member = SW_TRUE; } },
-#define SW_ANN_Reflect_String( Id, Member )   { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view val ) { target.Member = string( val ); } },
-#define SW_ANN_Reflect_StringFn( Id, Member ) { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view val ) { Member( target, string( val ) ); } },
-
-            static constexpr ReflectEntry kReflectEntries[] = {
-#include "PredefinedAnnotationField.xxx"
-            };
-
-#undef SW_ANN_Reflect_Flag
-#undef SW_ANN_Reflect_String
-#undef SW_ANN_Reflect_StringFn
-#undef SW_ANN_Reflect
-
-            // ── ENUM ─────────────────────────────────────────────────────
-            struct EnumEntry
-            {
-                string_view _field;
-                void ( *_pApply )( ParsedEnumInfo&, string_view );
-            };
-
-#undef SW_ANN_Enum
-#define SW_ANN_Reflect( ... )
-#define SW_ANN_Enum( Kind, Id, Member ) SW_ANN_Enum_##Kind( Id, Member )
-
-#define SW_ANN_Enum_FlagFn( Id, Member )   { #Id, []( ParsedEnumInfo& target, string_view ) { Member( target ); } },
-#define SW_ANN_Enum_String( Id, Member )   { #Id, []( ParsedEnumInfo& target, string_view val ) { target.Member = string( val ); } },
-#define SW_ANN_Enum_StringFn( Id, Member ) { #Id, []( ParsedEnumInfo& target, string_view val ) { Member( target, string( val ) ); } },
-
-            static constexpr EnumEntry kEnumEntries[] = {
-#include "PredefinedAnnotationField.xxx"
-            };
-
-#undef SW_ANN_Enum_FlagFn
-#undef SW_ANN_Enum_String
-#undef SW_ANN_Enum_StringFn
-#undef SW_ANN_Enum
-
-            // ── PROPERTY ─────────────────────────────────────────────────
-            struct PropEntry
-            {
-                string_view _field;
-                void ( *_pApply )( ParsedPropertyInfo&, const AnnotationBinding&, string_view );
-            };
-
-#undef SW_ANN_Property
-#define SW_ANN_Enum( ... )
-#define SW_ANN_Property( Kind, Id, Member ) SW_ANN_Property_##Kind( Id, Member )
-
-#define SW_ANN_Property_Bool( Id, Member )     { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding& b, string_view val ) { target.Member = ( b._kind == AnnotationBinding::Kind::Flag ? true : parseAnnotationBool( val ) ); } },
-#define SW_ANN_Property_String( Id, Member )   { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) { target.Member = string( val ); } },
-#define SW_ANN_Property_StringFn( Id, Member ) { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) { Member( target, string( val ) ); } },
-#define SW_ANN_Property_FloatFn( Id, Member ) \
-    { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) {   \
-		 float32 fVal{ 0.0f };                                                             \
-		 StringUtil::parseFloat( val, fVal );                                              \
-		 Member( target, fVal ); } },
-
-            static constexpr PropEntry kPropEntries[] = {
-#include "PredefinedAnnotationField.xxx"
-            };
-
-#undef SW_ANN_Property_Bool
-#undef SW_ANN_Property_String
-#undef SW_ANN_Property_StringFn
-#undef SW_ANN_Property_FloatFn
-#undef SW_ANN_Property
-
-            // ── FUNCTION ─────────────────────────────────────────────────
-            struct FuncEntry
-            {
-                string_view _field;
-                void ( *_pApply )( ParsedFunctionInfo&, string_view );
-            };
-
-#undef SW_ANN_Function
-#define SW_ANN_Property( ... )
-#define SW_ANN_Function( Kind, Id, Member ) SW_ANN_Function_##Kind( Id, Member )
-
-#define SW_ANN_Function_Flag( Id, Member )     { #Id, []( ParsedFunctionInfo& target, string_view ) { target.Member = SW_TRUE; } },
-#define SW_ANN_Function_String( Id, Member )   { #Id, []( ParsedFunctionInfo& target, string_view val ) { target.Member = string( val ); } },
-#define SW_ANN_Function_StringFn( Id, Member ) { #Id, []( ParsedFunctionInfo& target, string_view val ) { Member( target, string( val ) ); } },
-
-            static constexpr FuncEntry kFuncEntries[] = {
-#include "PredefinedAnnotationField.xxx"
-            };
-
-#undef SW_ANN_Function_Flag
-#undef SW_ANN_Function_String
-#undef SW_ANN_Function_StringFn
-#undef SW_ANN_Function
-
-#undef SW_ANN_Reflect
-#undef SW_ANN_Enum
-#undef SW_ANN_Property
-#undef REGISTER_ANNOTATION_FIELD
-
-            /** @brief PROPERTY 바인딩에 따라 프로퍼티 필드를 채웁니다. */
-            static void applyPropertyBinding( ParsedPropertyInfo& prop, const AnnotationBinding& binding, string_view val )
-            {
-                if ( const PropEntry* entry = findFieldEntry( kPropEntries, binding._field ) )
-                    entry->_pApply( prop, binding, val );
             }
         };
     } // namespace
@@ -371,182 +99,60 @@ namespace sw
         return listToken;
     }
 
-    /** @brief REFLECT(...) 토큰을 ParsedTypeInfo 플래그·별칭에 적용합니다. */
-    void AnnotationApply::parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo, const AnnotationMeta& meta )
+    /**
+     * @details 토큰 하나는 두 꼴입니다 — 단독 토큰 `X`(플래그 · 넷 역할)와 `key = value`. 철자는 AnnotationMeta.txt 가 정규
+     *          필드명으로 바꾸고, 그 이름의 줄이 값을 넣습니다. 예전에는 스코프마다 이 루프가 한 벌씩 있었고 서로 조금씩
+     *          달랐습니다(`X = false` 를 PROPERTY 만 받고 나머지는 버렸다).
+     */
+    template <typename TParsed>
+    void AnnotationApply::apply( const string_view annotationSpelling, TParsed& target, const AnnotationMeta& meta,
+                                 vector<string>& outListUnknownToken )
     {
-        string_view prefix    = annotationConstants::kReflectPrefix;
-        size_t      prefixPos = annotationSpelling.find( prefix );
-        if ( prefixPos == string_view::npos )
+        const AnnotationScope<TParsed>& scope  = getAnnotationScope<TParsed>();
+        const string_view               prefix = scope._pDesc->_pPrefix;
+        const size_t                    begin  = annotationSpelling.find( prefix );
+        if ( begin == string_view::npos )
             return;
 
-        for ( const string& token :
-              splitAnnotationArgs( annotationSpelling.substr( prefixPos + prefix.size() ) ) )
+        for ( const string& token : splitAnnotationArgs( annotationSpelling.substr( begin + prefix.size() ) ) )
         {
-            if ( token.empty() )
-                continue;
-
-            const size_t eqPos = token.find( '=' );
-            if ( eqPos == string::npos )
+            const size_t             eqPos    = token.find( '=' );
+            const bool               bBare    = ( eqPos == string::npos );
+            const AnnotationBinding* pBinding = nullptr;
+            string_view              value;
+            if ( bBare )
             {
-                const AnnotationBinding* binding = meta.findBare( annotationConstants::kReflectScope, token );
-                if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::Flag )
-                    continue;
-                if ( const AnnotationApplyInternal::ReflectEntry* entry =
-                         AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
-                    entry->_pApply( typeInfo, *binding, {} );
-                continue;
+                pBinding = meta.findBare( scope._pDesc->_pScope, token );
+            }
+            else
+            {
+                pBinding = meta.findKey( scope._pDesc->_pScope, StringUtil::trim( string_view( token.data(), eqPos ) ) );
+                value    = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
             }
 
-            const string_view        key     = StringUtil::trim( string_view( token.data(), eqPos ) );
-            const string_view        val     = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
-            const AnnotationBinding* binding = meta.findKey( annotationConstants::kReflectScope, key );
-            if ( binding == nullptr )
+            if ( pBinding == nullptr )
+            {
+                outListUnknownToken.push_back( token );
                 continue;
-            if ( binding->_kind == AnnotationBinding::Kind::Bool )
-            {
-                if ( AnnotationApplyInternal::parseAnnotationBool( val ) )
-                {
-                    if ( const AnnotationApplyInternal::ReflectEntry* entry =
-                             AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
-                        entry->_pApply( typeInfo, *binding, val );
-                }
             }
-            else if ( binding->_kind == AnnotationBinding::Kind::String )
+
+            // 넷 역할은 토큰 자체가 값이다 — `FUNCTION( Server )` 는 NetRole 필드에 "Server" 를 넣는다.
+            string_view fieldId = pBinding->_field;
+            if ( pBinding->_kind == AnnotationBinding::Kind::NetRole )
             {
-                if ( const AnnotationApplyInternal::ReflectEntry* entry =
-                         AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
-                    entry->_pApply( typeInfo, *binding, val );
+                fieldId = annotationConstants::kNetRoleField;
+                value   = pBinding->_field;
             }
+
+            // 바인딩이 가리키는 줄은 파서가 시작할 때 `AnnotationFields::validateBindings` 가 보장한다.
+            const AnnotationField<TParsed>* pField = scope.findField( fieldId );
+            if ( pField != nullptr )
+                pField->_pApply( target, value );
         }
     }
 
-    /** @brief ENUM(...) 토큰을 ParsedEnumInfo 에 적용합니다. */
-    void AnnotationApply::parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo, const AnnotationMeta& meta )
-    {
-        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kEnumPrefix );
-        if ( annotationSpelling.find( annotationConstants::kEnumPrefix ) == string_view::npos )
-            return;
-
-        for ( const string& token : splitAnnotationArgs( args ) )
-        {
-            if ( token.empty() )
-                continue;
-            const size_t eqPos = token.find( '=' );
-            if ( eqPos == string::npos )
-            {
-                if ( const AnnotationBinding* binding = meta.findBare( annotationConstants::kEnumScope, token ) )
-                {
-                    if ( binding->_kind == AnnotationBinding::Kind::Flag )
-                    {
-                        if ( const AnnotationApplyInternal::EnumEntry* entry =
-                                 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumEntries, binding->_field ) )
-                            entry->_pApply( enumInfo, {} );
-                    }
-                }
-                continue;
-            }
-
-            const string_view        key     = StringUtil::trim( string_view( token.data(), eqPos ) );
-            const string_view        val     = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
-            const AnnotationBinding* binding = meta.findKey( annotationConstants::kEnumScope, key );
-            if ( binding == nullptr )
-                continue;
-
-            // `Flags = true` 도 단독 토큰 `Flags` 와 같게 받는다. 나머지 세 스코프가 이미 그렇게 한다.
-            if ( binding->_kind == AnnotationBinding::Kind::Bool )
-            {
-                if ( AnnotationApplyInternal::parseAnnotationBool( val ) == false )
-                    continue;
-            }
-            else if ( binding->_kind != AnnotationBinding::Kind::String )
-            {
-                continue;
-            }
-
-            if ( const AnnotationApplyInternal::EnumEntry* entry =
-                     AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumEntries, binding->_field ) )
-                entry->_pApply( enumInfo, val );
-        }
-    }
-
-    /** @brief PROPERTY(...) 토큰을 ParsedPropertyInfo 에 적용합니다. */
-    void AnnotationApply::parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop, const AnnotationMeta& meta )
-    {
-        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kPropertyPrefix );
-        if ( annotationSpelling.find( annotationConstants::kPropertyPrefix ) == string_view::npos )
-            return;
-
-        for ( const string& token : splitAnnotationArgs( args ) )
-        {
-            if ( token.empty() )
-                continue;
-
-            const size_t eqPos = token.find( '=' );
-            if ( eqPos == string::npos )
-            {
-                if ( const AnnotationBinding* binding = meta.findBare( annotationConstants::kPropertyScope, token ) )
-                    AnnotationApplyInternal::applyPropertyBinding( prop, *binding, {} );
-                continue;
-            }
-
-            const string_view key = StringUtil::trim( string_view( token.data(), eqPos ) );
-            const string_view val = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
-            if ( const AnnotationBinding* binding = meta.findKey( annotationConstants::kPropertyScope, key ) )
-                AnnotationApplyInternal::applyPropertyBinding( prop, *binding, val );
-        }
-    }
-
-    /** @brief FUNCTION(...) 토큰을 ParsedFunctionInfo 에 적용합니다. */
-    void AnnotationApply::parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method, const AnnotationMeta& meta )
-    {
-        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kFunctionPrefix );
-        if ( annotationSpelling.find( annotationConstants::kFunctionPrefix ) == string_view::npos )
-            return;
-
-        for ( const string& token : splitAnnotationArgs( args ) )
-        {
-            if ( token.empty() )
-                continue;
-            const size_t eqPos = token.find( '=' );
-            if ( eqPos == string::npos )
-            {
-                if ( const AnnotationBinding* binding = meta.findBare( annotationConstants::kFunctionScope, token ) )
-                {
-                    if ( binding->_kind == AnnotationBinding::Kind::NetRole )
-                    {
-                        FunctionNetRole role = FunctionNetRole::Local;
-                        if ( tryParseFunctionNetRole( binding->_field, role ) )
-                            method._netRole = role;
-                    }
-                    else if ( binding->_kind == AnnotationBinding::Kind::Flag )
-                    {
-                        if ( const AnnotationApplyInternal::FuncEntry* entry =
-                                 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
-                            entry->_pApply( method, {} );
-                    }
-                }
-                continue;
-            }
-            const string_view key = StringUtil::trim( string_view( token.data(), eqPos ) );
-            const string_view val = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
-            if ( const AnnotationBinding* binding = meta.findKey( annotationConstants::kFunctionScope, key ) )
-            {
-                if ( binding->_kind == AnnotationBinding::Kind::Bool )
-                {
-                    if ( AnnotationApplyInternal::parseAnnotationBool( val ) )
-                    {
-                        if ( const AnnotationApplyInternal::FuncEntry* entry =
-                                 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
-                            entry->_pApply( method, val );
-                    }
-                }
-                else if ( binding->_kind == AnnotationBinding::Kind::String )
-                {
-                    if ( const AnnotationApplyInternal::FuncEntry* entry =
-                             AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
-                        entry->_pApply( method, val );
-                }
-            }
-        }
-    }
+    template void AnnotationApply::apply<ParsedTypeInfo>( string_view, ParsedTypeInfo&, const AnnotationMeta&, vector<string>& );
+    template void AnnotationApply::apply<ParsedEnumInfo>( string_view, ParsedEnumInfo&, const AnnotationMeta&, vector<string>& );
+    template void AnnotationApply::apply<ParsedPropertyInfo>( string_view, ParsedPropertyInfo&, const AnnotationMeta&, vector<string>& );
+    template void AnnotationApply::apply<ParsedFunctionInfo>( string_view, ParsedFunctionInfo&, const AnnotationMeta&, vector<string>& );
 } // namespace sw

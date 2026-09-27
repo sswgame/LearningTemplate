@@ -10,6 +10,7 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
+#include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/EmitTemplateStore.h"
 #include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
@@ -147,36 +148,6 @@ namespace sw
                 return string( buf.view() );
             }
         };
-
-        /**
-         * @brief 세 scope(REFLECT/PROPERTY/FUNCTION)가 공통으로 쓰는 편집기 메타를 출력합니다.
-         * @param prefix 대상 접두사. 예: "p._metadata." / "info._metadata."
-         * @details Category/DisplayName/Tooltip 은 스코프마다 대상만 다르고 형태가 같아 여기 모읍니다.
-         *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
-         */
-        template <typename TParsed>
-        void emitCommonEditorMeta( CodeEmit& emit, const TParsed& parsed, const string& prefix )
-        {
-            emit.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
-            emit.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
-            emit.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
-        }
-
-        /**
-         * @brief 커스텀 메타 페어 맵을 출력합니다. 세 scope 가 동일한 형태를 씁니다.
-         */
-        template <typename TParsed>
-        void emitCustomMetaMap( CodeEmit& emit, const TParsed& parsed, const string& prefix )
-        {
-            if ( parsed._listCustomMeta.empty() )
-                return;
-            emit.linef( "%#_mapCustomMeta = {", prefix );
-            emit.push();
-            for ( const auto& [key, val] : parsed._listCustomMeta )
-                emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-            emit.pop();
-            emit.line( "};" );
-        }
 
         /**
          * @brief 열거형 하나를 불투명(opaque) 선언으로 앞세웁니다.
@@ -388,20 +359,9 @@ namespace sw
 
     void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const
     {
-        emit.line( "#if !defined( SW_SHIPPING )" );
-        emitCommonEditorMeta( emit, prop, "p._metadata." );
-        emit.flagIf( prop._bHideInInspector != SW_FALSE, "p._metadata._bHideInInspector", "SW_TRUE" );
-        emitCustomMetaMap( emit, prop, "p._metadata." );
-        emit.line( "#endif" );
+        AnnotationFields::emitMetadata( emit, prop, "p._metadata." );
 
-        emit.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
-        emit.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
-        emit.flagIf( prop._bReadOnly != SW_FALSE, "p._metadata._bReadOnly", "SW_TRUE" );
-        emit.flagIf( prop._bXmlAttribute != SW_FALSE, "p._metadata._bXmlAttribute", "SW_TRUE" );
-        emit.flagIf( prop._bAssetPath != SW_FALSE, "p._metadata._bAssetPath", "SW_TRUE" );
-        emit.flagIf( prop._bPolymorphic != SW_FALSE, "p._metadata._bPolymorphic", "SW_TRUE" );
-        emit.flagIf( prop._bTransient != SW_FALSE, "p._metadata._bTransient", "SW_TRUE" );
-        emit.flagIf( prop._bSkipIfEmpty != SW_FALSE, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
+        // 범위는 값 둘과 "있음" 표시 하나가 함께 가는 Manual 필드다.
         if ( prop._bHasRange != SW_FALSE )
         {
             // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가
@@ -605,17 +565,9 @@ namespace sw
             emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
             emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName, _session ) );
 
-            emit.line( "#if !defined( SW_SHIPPING )" );
-            emitCommonEditorMeta( emit, method, "funcInfo._metadata." );
-            emit.flagIf( method._bCallInEditor != SW_FALSE, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
-            emitCustomMetaMap( emit, method, "funcInfo._metadata." );
-            emit.line( "#endif" );
+            AnnotationFields::emitMetadata( emit, method, "funcInfo._metadata." );
 
-            if ( method._netRole != FunctionNetRole::Local )
-                emit.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
-
-            emit.flagIf( method._bReliable != SW_FALSE, "funcInfo._metadata._bReliable", "SW_TRUE" );
-            emit.flagIf( method._bValidate != SW_FALSE, "funcInfo._metadata._bValidate", "SW_TRUE" );
+            // 애노테이션이 아니라 선언에서 온 사실들이다.
             emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata._bConstructor", "SW_TRUE" );
             emit.flagIf( method._bStatic != SW_FALSE, "funcInfo._metadata._bStatic", "SW_TRUE" );
             emit.flagIf( method._bConst != SW_FALSE, "funcInfo._metadata._bConst", "SW_TRUE" );
@@ -674,11 +626,7 @@ namespace sw
         CodeEmit emit( out );
         emit.push( 3 );
 
-        emit.line( "#if !defined( SW_SHIPPING )" );
-        emitCommonEditorMeta( emit, typeInfo, "info._metadata." );
-        emit.flagIf( typeInfo._bHideInMenu != SW_FALSE, "info._metadata._bHideInMenu", "SW_TRUE" );
-        emitCustomMetaMap( emit, typeInfo, "info._metadata." );
-        emit.line( "#endif" );
+        AnnotationFields::emitMetadata( emit, typeInfo, "info._metadata." );
 
         if ( typeInfo._listProperty.empty() == false )
         {
@@ -725,17 +673,8 @@ namespace sw
         CodeEmit emit( out );
         emit.push( 3 );
 
-        if ( enumInfo._listCustomMeta.empty() == false )
-        {
-            emit.line( "#if !defined( SW_SHIPPING )" );
-            emit.line( "info._mapCustomMeta = {" );
-            emit.push();
-            for ( const auto& [key, val] : enumInfo._listCustomMeta )
-                emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-            emit.pop();
-            emit.line( "};" );
-            emit.line( "#endif" );
-        }
+        // EnumInfo 는 메타데이터 블록 없이 `_mapCustomMeta` 를 직접 든다.
+        AnnotationFields::emitMetadata( emit, enumInfo, "info." );
 
         if ( enumInfo._listEnumerator.empty() == false )
         {
@@ -802,7 +741,7 @@ namespace sw
         bool bNeedFlags = false;
         for ( const ParsedEnumInfo& enumInfo : _listEnum )
         {
-            if ( enumInfo._bEmitFlagOps )
+            if ( enumInfo._bIsBitFlag == SW_TRUE )
                 bNeedFlags = true;
             if ( enumInfo._invalidEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
                 SW_LOG_WARNING( "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
@@ -828,7 +767,7 @@ namespace sw
             emit.blank();
             for ( const ParsedEnumInfo& enumInfo : _listEnum )
             {
-                if ( enumInfo._bEmitFlagOps == SW_FALSE )
+                if ( enumInfo._bIsBitFlag == SW_FALSE )
                     continue;
 
                 if ( enumInfo._bNestedInType != SW_FALSE )

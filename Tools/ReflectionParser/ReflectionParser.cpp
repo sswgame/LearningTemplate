@@ -10,6 +10,7 @@
 #include "Core/Time/CpuTimer.h"
 
 #include "ReflectionParser/AnnotationApply.h"
+#include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/AstVisitor.h"
 #include "ReflectionParser/CodeEmit.h"
@@ -489,6 +490,12 @@ int32 main( int32 argc, utf8* argv[] )
         if ( session._annotationMeta.loadFile( commandLineArgs._annotationMetaPath ) == false )
         {
             SW_LOG_ERROR( "Failed to load --annotation-meta: %#", commandLineArgs._annotationMetaPath );
+            return 1;
+        }
+        // 철자 표와 필드 표가 어긋나면 그 토큰은 애노테이션을 적는 자리에서 보이지 않게 사라진다. 시작할 때 막는다.
+        if ( sw::AnnotationFields::validateBindings( session._annotationMeta ) == false )
+        {
+            SW_LOG_ERROR( "%# and PredefinedAnnotationField.xxx disagree (see above).", commandLineArgs._annotationMetaPath );
             return 1;
         }
     }
