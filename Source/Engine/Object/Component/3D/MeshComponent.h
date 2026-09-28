@@ -108,6 +108,8 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 월드 행렬이 다시 계산되면 렌더 상태를 더티로 표시합니다. */
         void onWorldTransformUpdated() override;
+        /** @brief 소유 오브젝트가 켜지거나 꺼지면 렌더 상태를 더티로 표시합니다(스냅샷 포함 여부가 바뀐다). */
+        void onOwnerActiveInHierarchyChanged() override;
 
     private:
         /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */

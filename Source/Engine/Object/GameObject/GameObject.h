@@ -48,7 +48,8 @@ namespace sw
     {
         friend class GameObjectManager;
         friend class ObjectStateSerializer;
-        friend class TickRegistry; ///< 틱 항목 · 그룹 자리를 짓고 지웁니다
+        friend class SceneComponent; ///< 붙이고 떼는 그 자리에서 소유 오브젝트의 계층 활성을 다시 맞춥니다
+        friend class TickRegistry;   ///< 틱 항목 · 그룹 자리를 짓고 지웁니다
 
     public:
         REFLECT_BODY();
@@ -316,10 +317,12 @@ namespace sw
         void destroyOwnedComponent( Component* pComp );
         /** @brief 틱이 끝난 뒤 이 오브젝트에 @p func 를 돌립니다(그때까지 살아 있으면). id 로 다시 찾습니다. */
         void deferOnSelfPostTick( Delegate<void( GameObject& )> func );
-        /** @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고 자식에 전파합니다. */
+        /**
+         * @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고, **바뀌었을 때만** 자기 컴포넌트에 알리고 자식에 전파합니다.
+         * @details 자식의 값은 부모의 값과 자기 비트로만 정해지므로, 값이 그대로면 자손도 그대로입니다(부모가 바뀌는 모든 자리 —
+         *          `SceneComponent` 의 붙이기 · 떼기 · primary 교체 — 가 그 자리에서 이것을 부르는 것이 전제입니다).
+         */
         void refreshActiveInHierarchy();
-        /** @brief 프리미티브 집합이 통째로 바뀌었음을 매니저에 알립니다. */
-        void markPrimitiveSetDirtyOnManager();
 
         /**
          * @class ComponentIdRestoreScope

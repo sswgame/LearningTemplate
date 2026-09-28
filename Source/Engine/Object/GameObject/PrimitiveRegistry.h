@@ -74,7 +74,8 @@ namespace sw
          */
         void markDirty( MeshComponent* pComp );
         /**
-         * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록/해제/활성 토글).
+         * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록/해제). 오브젝트 활성 토글은 여기가 아니라 그 오브젝트의 메시가 제 칸을
+         *        더티로 찍습니다(`Component::onOwnerActiveInHierarchyChanged`).
          * @details 드물게 일어나므로 무엇이 바뀌었는지 따지지 않고 전부 다시 만들게 합니다.
          */
         void markSetDirty() { _setGeneration.fetch_add( 1, std::memory_order_relaxed ); }

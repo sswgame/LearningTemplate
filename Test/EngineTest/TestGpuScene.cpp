@@ -510,6 +510,57 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryTracksChanges )
 }
 
 /**
+ * @brief 메시 없는 조상을 끄고 켜면 손자 메시가 빠졌다 돌아온다. 메시 없는 오브젝트만 토글하면 집합 세대도 더티도 그대로다.
+ * @details 예전에는 계층 활성이 바뀐 오브젝트마다 프리미티브 **집합 세대**를 올려, 무엇을 가졌든 GpuScene 이 전체를 다시 모았다(빛 ·
+ *          트리거를 켜고 끄는 프레임). 지금은 활성이 바뀐 오브젝트의 컴포넌트에 알리고 메시가 제 칸을 더티로 찍는다 — 부분 수집이 포함
+ *          여부가 바뀐 것을 보고 전체 수집으로 넘어간다. 그 알림이 빠지면 조상을 꺼도 손자가 그대로 그려진다.
+ */
+SW_TEST_CASE( GpuSceneTest, AncestorToggleReachesGrandchildMeshOnly )
+{
+    sw::Scene scene( "GpuSceneAncestorToggle" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+
+    sw::GameObject* pRoot   = objects->createGameObject( sw::hashed_string( "MeshlessRoot" ) );
+    sw::GameObject* pMiddle = objects->createGameObject( sw::hashed_string( "MeshlessMiddle" ) );
+    sw::GameObject* pLeaf   = objects->createGameObject( sw::hashed_string( "MeshLeaf" ) );
+    sw::GameObject* pLamp   = objects->createGameObject( sw::hashed_string( "MeshlessLamp" ) );
+    pRoot->addComponent<sw::SceneComponent>();
+    pMiddle->addComponent<sw::SceneComponent>();
+    pLamp->addComponent<sw::SceneComponent>();
+    sw::MeshComponent* pMesh = pLeaf->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( cube );
+    pMesh->setLocalPosition( sw::float3( 0.0f, 0.0f, -1.0f ) );
+    pMesh->setVisible( true );
+    SW_ASSERT_TRUE( pMiddle->attachToParent( pRoot ) );
+    SW_ASSERT_TRUE( pLeaf->attachToParent( pMiddle ) );
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    pRoot->setActive( false );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    pRoot->setActive( true );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 메시 없는 오브젝트만 토글 — 등록부가 움직이지 않는다(수집을 건너뛰는 빠른 길이 산다).
+    sw::PrimitiveRegistry& registry          = objects->getPrimitiveRegistry();
+    const uint64           setGenerationBase = registry.getSetGeneration();
+    SW_EXPECT_FALSE( registry.hasDirty() );
+    pLamp->setActive( false );
+    pLamp->setActive( true );
+    SW_EXPECT_EQUAL( setGenerationBase, registry.getSetGeneration() );
+    SW_EXPECT_FALSE( registry.hasDirty() );
+}
+
+/**
  * @brief 트랜스폼만 바뀌면 배치를 다시 나누지 않지만, 결과는 다시 나눈 것과 같아야 한다.
  * @details 정렬을 건너뛰는 경로라 조용히 틀리기 쉽다. 키가 바뀐 경우와 나란히 확인한다.
  */

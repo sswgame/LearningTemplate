@@ -151,6 +151,12 @@ namespace sw
          *          멱등이어야 했습니다.
          */
         virtual void onUnregister( GameObjectManager& manager ) { (void)manager; }
+        /**
+         * @brief 소유 GameObject 의 계층 활성(`isActiveInHierarchy`)이 바뀐 직후 불립니다. 값이 그대로면 불리지 않습니다.
+         * @details 계층 활성을 따라 무엇을 켜고 끄는 컴포넌트(렌더 프리미티브는 제 칸을 더티로)가 씁니다. 예전에는 오브젝트가 토글될
+         *          때마다 프리미티브 집합 세대를 올려, 무엇을 가졌든 GpuScene 이 전체를 다시 모았습니다.
+         */
+        virtual void onOwnerActiveInHierarchyChanged() {}
         /** @brief 컴포넌트가 파괴될 때 불리는 콜백입니다. */
         virtual void onDestroy();
         /** @brief 프로퍼티가 바뀌었을 때 불리는 콜백입니다. */

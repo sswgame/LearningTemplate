@@ -370,9 +370,9 @@ namespace sw
         if ( bDestroyChildren )
             pObj->getChildren( listChildren );
 
+        // 계층 활성은 다시 맞추지 않는다 — 삭제 대기는 그 값의 입력이 아니다(예전에는 여기서 서브트리 전체를 걸었다).
         pObj->forEachComponent( []( Component* pComp )
         { pComp->markPendingKill(); } );
-        pObj->refreshActiveInHierarchy();
 
         if ( bDestroyChildren )
         {

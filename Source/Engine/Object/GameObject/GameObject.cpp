@@ -141,16 +141,8 @@ namespace sw
     {
         (void)propertyName;
         // 인스펙터는 `_bActive` 를 세터가 아니라 멤버에 직접 쓴다. setActive 가 해 주던 계층 전파를
-        // 여기서 해 줘야 자식들의 isActiveInHierarchy 가 따라온다. 프리미티브 집합 무효화도
-        // 그 안에서 함께 일어난다.
+        // 여기서 해 줘야 자식들의 isActiveInHierarchy 가 따라온다. 렌더 더티도 그 안에서 찍힌다.
         refreshActiveInHierarchy();
-    }
-
-    void GameObject::markPrimitiveSetDirtyOnManager()
-    {
-        GameObjectManager* pManager = getManager();
-        if ( pManager != nullptr )
-            pManager->getPrimitiveRegistry().markSetDirty();
     }
 
     /**
@@ -234,11 +226,8 @@ namespace sw
         if ( pParentSc == nullptr )
             return false;
 
-        bool bAttached = pChildSc->attachToComponent( pParentSc );
-        if ( bAttached )
-            refreshActiveInHierarchy();
-
-        return bAttached;
+        // 계층 활성은 `attachToComponent` 가 그 자리에서 맞춘다.
+        return pChildSc->attachToComponent( pParentSc );
     }
 
     void GameObject::detachFromParent()
@@ -256,12 +245,10 @@ namespace sw
             return;
         }
 
+        // 계층 활성은 떼는 자리(`detachFromParentImmediate`)가 맞춘다.
         SceneComponent* pChildSc = getPrimarySceneComponent();
         if ( pChildSc != nullptr )
-        {
             pChildSc->detachFromComponent();
-            refreshActiveInHierarchy();
-        }
     }
 
     GameObject* GameObject::getParent() const
@@ -285,11 +272,21 @@ namespace sw
         const bool bActiveInHierarchy = bParentActive && isActive();
         const bool bWasActive         = _bIsActiveInHierarchy.exchange( bActiveInHierarchy, std::memory_order_relaxed );
 
-        // 이 값이 곧 렌더 스냅샷의 포함 여부다. 바뀌면 프리미티브 집합이 통째로 달라진다.
-        if ( bWasActive != bActiveInHierarchy )
-            markPrimitiveSetDirtyOnManager();
+        // **값이 그대로면 여기서 멈춘다.** 자식의 값은 부모의 값과 자기 비트로만 정해지므로 자손도 그대로다. 예전에는 늘 서브트리
+        // 전체를 걸어, 병합 · 파괴 · 해체처럼 오브젝트마다 부르는 자리에서 깊은 계층이 O(N · 깊이)였다(1000 단 사슬의 첫 틱 5 ms,
+        // 매니저 해체 10 ms). 부모가 바뀌는 자리는 모두 그 자리에서 이것을 부른다(`SceneComponent` 의 붙이기 · 떼기 · primary 교체).
+        if ( bWasActive == bActiveInHierarchy )
+            return;
 
-        // 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다. 병합되는 오브젝트마다 불리는 자리다.
+        // 이 값이 곧 렌더 스냅샷의 포함 여부다. 자기 컴포넌트에만 알린다 — 메시가 제 칸을 더티로 찍는다. 예전에는 프리미티브 집합
+        // 세대를 올려, 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GpuScene 이 전체를 다시 모았다.
+        for ( Component* pComp : _listComponent )
+        {
+            if ( pComp != nullptr )
+                pComp->onOwnerActiveInHierarchyChanged();
+        }
+
+        // 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
         if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
         {
             for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
@@ -587,6 +584,9 @@ namespace sw
         }
         if ( bTickWork )
             markTickOrderDirty();
+        // primary 가 없어졌으니 부모도 없다(자식들은 부모 컴포넌트의 소멸자가 떼며 스스로 맞췄다).
+        if ( isPendingKill() == false )
+            refreshActiveInHierarchy();
     }
 
     void GameObject::destroyOwnedComponent( Component* pComp )
@@ -638,12 +638,16 @@ namespace sw
             return false;
         }
         _listComponent.erase( it );
-        if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
+        const bool bWasPrimary = _pPrimaryScene.load( std::memory_order_relaxed ) == pComp;
+        if ( bWasPrimary )
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
 
         destroyOwnedComponent( pComp );
         if ( bTickWork )
             markTickOrderDirty();
+        // primary 가 바뀌면 부모(= primary 의 부모)도 바뀐다.
+        if ( bWasPrimary )
+            refreshActiveInHierarchy();
         return true;
     }
 

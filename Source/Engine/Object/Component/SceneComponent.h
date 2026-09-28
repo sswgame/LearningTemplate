@@ -172,6 +172,8 @@ namespace sw
          *          없으므로 소멸자는 반드시 이쪽을 씁니다.
          */
         void detachFromParentImmediate();
+        /** @brief 부모가 바뀐 직후 소유 오브젝트의 계층 활성을 다시 맞춥니다(소유자가 없거나 삭제 대기면 건너뜁니다). */
+        void refreshOwnerActiveInHierarchy();
         /**
          * @brief 월드 캐시가 더티면 더티인 조상 사슬부터 위에서 아래로 합성합니다. 병렬 틱 중이면 아무것도 하지 않습니다.
          * @details 합성은 `updateWorldTransformFromParent` 를 지나므로 `onWorldTransformUpdated` 가 여기서도 불립니다.

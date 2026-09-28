@@ -814,6 +814,51 @@ SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 }
 
 /**
+ * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
+ * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
+ *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진
+ *          채로 남았다(그 메시는 화면에 그려졌다). 이제 붙이는 자리가 맞춘다.
+ */
+SW_TEST_CASE( GameObjectTest, ReloadedChildOfInactiveParentStaysInactive )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParent = manager.createGameObject( sw::hashed_string( "InactiveParent" ) );
+    sw::GameObject*       pChild  = manager.createGameObject( sw::hashed_string( "ReloadedChild" ) );
+    pParent->addComponent<sw::SceneComponent>();
+    pChild->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    pParent->setActive( false );
+    SW_ASSERT_FALSE( pChild->isActiveInHierarchy() );
+
+    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pChild );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pChild, state ) );
+    SW_EXPECT_TRUE( pChild->getParent() == pParent );
+    SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
+}
+
+/**
+ * @brief 비활성 부모를 지우면 자식은 루트가 되고 다시 활성이다.
+ * @details 파괴는 부모의 컴포넌트를 먼저 삭제 대기로 표시해, 소멸자가 primary 를 찾지 못하고 자식 떼기를 건너뛴다. 자식은 부모 씬
+ *          컴포넌트의 소멸자가 뗐는데 그 길은 계층 활성을 맞추지 않아, 부모 없는 자식이 영영 꺼진 채였다.
+ */
+SW_TEST_CASE( GameObjectTest, OrphanOfDestroyedInactiveParentBecomesActive )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParent = manager.createGameObject( sw::hashed_string( "DoomedParent" ) );
+    sw::GameObject*       pChild  = manager.createGameObject( sw::hashed_string( "Orphan" ) );
+    pParent->addComponent<sw::SceneComponent>();
+    pChild->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    pParent->setActive( false );
+    SW_ASSERT_FALSE( pChild->isActiveInHierarchy() );
+
+    manager.destroyObject( pParent, false );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( pChild->getParent() == nullptr );
+    SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
+}
+
+/**
  * @brief 더티 루트 목록은 자리(인덱스)로 지우고 되돌린다 — 플러시 전에 가운데를 지워도, 붙였다 떼도 남은 루트가 그대로 플러시된다.
  * @details 해제의 선형 탐색을 O(1) 로 바꿨다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나(움직여도 월드가 갱신되지 않는다) 지운
  *          루트가 남는다(플러시가 풀린 메모리를 읽는다). 월드 값은 **더티가 풀렸는지 먼저** 본다 — 지연 합성이 읽는 순간 채워 주면

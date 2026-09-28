@@ -74,6 +74,12 @@ namespace sw
         markRenderStateDirty();
     }
 
+    void MeshComponent::onOwnerActiveInHierarchyChanged()
+    {
+        // 부분 수집은 더티 칸의 포함 여부가 바뀐 것을 보고 전체 수집으로 넘어간다(`setVisible` 과 같은 길).
+        markRenderStateDirty();
+    }
+
     void MeshComponent::setMesh( shared_ptr<Mesh> mesh )
     {
         _mesh = std::move( mesh );
