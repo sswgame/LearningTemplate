@@ -167,11 +167,12 @@ namespace sw
         _bTicking.store( true, std::memory_order_release );
 
         {
+            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지 기다린다. 예전에는 여기서
+            // `TaskManager::waitAll()` 을 불러 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드,
+            // 오디오 재생 — 가 빌 때까지 게임 스레드를 세웠고, 그 시간이 이 스코프(components)로 잡혔다. onTick 이 낸 태스크가
+            // 틱 뒤 단계 전에 끝나야 하는 날이 오면, 매니저가 자기 스테이지를 만들어 `waitStage` 로 기다린다 — `waitAll` 은 쓰지 않는다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
             tickComponents( deltaTime );
-
-            if ( engine::areEngineServicesBound() )
-                engine::getTaskManager().waitAll();
         }
 
         _bParallelTransformReadOnly.store( false, std::memory_order_relaxed );

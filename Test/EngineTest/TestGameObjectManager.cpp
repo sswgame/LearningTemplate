@@ -4,6 +4,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -251,6 +252,59 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredAttachDuringTickApplies )
 
     manager.tick( 0.016f );
     SW_EXPECT_EQUAL( parentSc, childSc->getParent() );
+}
+
+namespace
+{
+    /** @brief 워커 하나를 붙잡아 두는 태스크 — 풀려날 때까지(최대 2 초) 돈다. */
+    struct BlockingForeignTask
+    {
+        atomic<bool> _bStarted{ false };
+        atomic<bool> _bRelease{ false };
+
+        void run()
+        {
+            _bStarted.store( true, std::memory_order_release );
+            const auto start = std::chrono::steady_clock::now();
+            while ( _bRelease.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() - start < std::chrono::seconds( 2 ) )
+                std::this_thread::yield();
+        }
+    };
+} // namespace
+
+/**
+ * @brief [GameObjectManagerTest] 씬 틱은 자기가 낸 일만 기다린다 — 다른 시스템의 태스크가 돌고 있어도 곧바로 돌아온다.
+ * @details 예전 `tick()` 은 컴포넌트 틱 뒤 `TaskManager::waitAll()` 을 불러 **엔진 전체의** 태스크를 기다렸다 — 렌더 스레드의 패스 기록,
+ *          에셋 스트리밍, 비동기 씬 로드, 오디오 재생까지. 그 시간은 `GT.Scene.tick.components` 로 잡혔다. 틱이 낸 병렬 일은
+ *          `runParallel` 이 이미 합류를 기다린다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
+{
+    if ( sw::engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "engine services are not bound" );
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    for ( uint32 index = 0; index < 4; ++index )
+        manager.createGameObject( hashed_string( "ForeignWaitTicker" ) )->addComponent<MockMeshComponent>();
+    manager.tick( 0.016f );
+
+    BlockingForeignTask task;
+    TaskManager&        taskManager = sw::engine::getTaskManager();
+    TaskHandle          handle      = taskManager.emplaceTask( "BlockingForeignTask", SW_DELEGATE_METHOD( TaskDelegate, &BlockingForeignTask::run, &task ) );
+    handle.submit();
+    // 워커가 집어 갔을 때부터 잰다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
+    const auto waitStart = std::chrono::steady_clock::now();
+    while ( task._bStarted.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 2 ) )
+        std::this_thread::yield();
+    SW_ASSERT_TRUE( task._bStarted.load( std::memory_order_acquire ) );
+
+    const auto tickStart = std::chrono::steady_clock::now();
+    manager.tick( 0.016f );
+    const int64 tickMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - tickStart ).count();
+    task._bRelease.store( true, std::memory_order_release );
+    taskManager.waitAll();
+
+    SW_EXPECT_TRUE( tickMilli < 100 );
 }
 
 /**

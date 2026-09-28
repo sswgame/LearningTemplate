@@ -1450,6 +1450,22 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
 - 회귀 테스트 — `SameNameChurnKeepsInternPoolBounded`(100 개 유지 · 2 만 번 교체 뒤 인턴 증가 ≤ 2, 옛 코드 약 2 만) ·
   `RenamingToOwnBaseNameKeepsTheNumber` · `StandaloneObjectHasInvalidId`, 그리고 `DuplicateNamesUniquifyWithoutRescan` 을 되쓰기로 고쳤다
   (지운 `Dup_2` 를 되씀 · 직접 받은 `Dup_5` 는 건너뜀). 옛 코드에서 넷 다 진다.
+- **씬 틱이 엔진 전체의 태스크를 기다렸다.** `tick()` 이 컴포넌트 틱 뒤 `TaskManager::waitAll()` 을 불러, 렌더 스레드의 패스 기록 ·
+  에셋 스트리밍 · 비동기 씬 로드 · 오디오 재생이 빌 때까지 게임 스레드를 세웠고 그 시간이 `GT.Scene.tick.components` 로 잡혔다. 틱의
+  병렬 일은 `runParallel` 이 이미 합류를 기다린다. 지웠고, 규칙을 주석으로 남겼다: onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면
+  매니저가 자기 스테이지를 `waitStage` 로 기다린다 — `waitAll` 은 쓰지 않는다(지금 onTick 에서 태스크를 내는 곳은 없다). 남은 것:
+  `runParallel` 의 합류 대기가 큐에 있는(아직 시작 안 한) 남의 태스크를 도와 실행할 수는 있다 — 그게 보이면 IO 레인을 따로 둔다.
+  회귀 테스트 `GameObjectManagerTest.TickDoesNotWaitForForeignTasks`(워커 하나를 붙잡은 채 틱 < 100 ms; 옛 코드는 붙잡은 2 초를 다 기다린다).
+  `EngineParallel.h` 의 "디스패치 최소 비용 ~50 us" 도 (B) 열여섯째 숫자(잠든 풀 ~34 us · 깨어 있으면 ~7 us)로 고쳤다.
+
+  | Release App · DX12 · `-gv_benchMeshes=8000 -gv_benchTickMovers=1 -gv_profileFrames=1000` · 4 쌍 교대(순서도 바꿈) | 전 | 후 |
+  |---|---|---|
+  | `GT.Scene.tick.components` avg · p99 (us) | 188 · 393 | **173 · 327** |
+  | `GT.Scene.tick` avg | 279 | 260 |
+  | `RT.Frame` avg (VSync 꺼짐 — 1/RT.Frame ≈ 1.2 kHz) | 839 | 816 |
+  | wall (us/frame) | 843 | 821 |
+
+  비동기 로드 도중의 최악 프레임은 재지 않았다(이 벤치에는 로드가 없다 — 기다리던 태스크는 렌더 기록 · 오디오였다).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
