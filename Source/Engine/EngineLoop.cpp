@@ -582,14 +582,16 @@ namespace sw
             {
                 // 주광은 씬이 갖고, 렌더 스레드는 패킷으로만 받는다. executePacket 은 _pScene 을
                 // null 로 두므로 렌더 스레드에서 씬을 조회할 수 없다.
-                DirectionalLightComponent* pLight = pActiveScene->findActiveDirectionalLight();
+                // 그림자 행렬은 그림자 맵을 가져가는 빛(`findShadowCastingDirectionalLight`)에서 — 라이트 목록의 그림자 플래그와 같은 빛이다.
+                DirectionalLightComponent* pLight       = pActiveScene->findActiveDirectionalLight();
+                DirectionalLightComponent* pShadowLight = pActiveScene->findShadowCastingDirectionalLight();
                 if ( pLight != nullptr )
                 {
                     const float3 dir          = pLight->getLightDirection();
                     const float3 color        = pLight->getColor();
                     packet._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
                     packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
-                    packet._lightViewProj     = pLight->castsShadow() ? pLight->buildShadowViewProj() : float4x4{};
+                    packet._lightViewProj     = ( pShadowLight != nullptr ) ? pShadowLight->buildShadowViewProj() : float4x4{};
                     packet._bHasLight         = SW_TRUE;
                 }
 

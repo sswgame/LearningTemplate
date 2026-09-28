@@ -45,6 +45,36 @@ namespace
         }
         return count;
     }
+
+    /** @brief 두 방향 사이의 각(도)입니다. */
+    float32 angleBetweenDegrees( const sw::float3& lhs, const sw::float3& rhs )
+    {
+        const float32 cosine = sw::MathUtil::clamp( lhs._x * rhs._x + lhs._y * rhs._y + lhs._z * rhs._z, -1.0f, 1.0f );
+        return sw::MathUtil::acos( cosine ) * ( 180.0f / 3.14159265f );
+    }
+
+    /** @brief 부모(요 @p parentYaw 라디안) 아래에 로컬 회전 0 인 빛을 붙이고, 빛 방향을 돌려줍니다. 부모 회전이 0 이면 루트와 같습니다. */
+    template <typename TLight>
+    sw::float3 lightDirectionUnderYawedParent( float32 parentYaw )
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pParent = manager.createGameObject( sw::hashed_string( "LightParent" ) );
+        sw::SceneComponent*   pRoot   = pParent->addComponent<sw::SceneComponent>();
+        TLight*               pLight  = addLightObject<TLight>( &manager, "RotatedLight" );
+        pLight->attachToComponent( pRoot );
+        pRoot->setLocalRotation( sw::float3{ 0.0f, parentYaw, 0.0f } );
+        return pLight->getLightDirection();
+    }
+
+    /** @brief 루트 빛에 로컬 회전(요 @p yaw 라디안)을 주고 빛 방향을 돌려줍니다. */
+    template <typename TLight>
+    sw::float3 lightDirectionWithLocalYaw( float32 yaw )
+    {
+        sw::GameObjectManager manager;
+        TLight*               pLight = addLightObject<TLight>( &manager, "YawedLight" );
+        pLight->setLocalRotation( sw::float3{ 0.0f, yaw, 0.0f } );
+        return pLight->getLightDirection();
+    }
 } // namespace
 
 /**
@@ -67,26 +97,26 @@ SW_TEST_CASE( SceneLightTest, LightsJoinTheRegistryOnAttachAndLeaveWhenRemoved )
     SW_ASSERT_NOT_NULL( pSpot );
 
     const sw::LightRegistry& registry = pObjects->getLightRegistry();
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllDirectional().size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllPoint().size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllSpot().size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeDirectional ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeSpot ).size() );
 
     // 1) 컴포넌트를 떼면 그 자리에서 빠진다.
     sw::GameObject* pSunOwner = pSun->getOwner();
     SW_ASSERT_NOT_NULL( pSunOwner );
     SW_EXPECT_TRUE( pSunOwner->removeComponent( pSun ) );
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAllDirectional().size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypeDirectional ).size() );
 
     // 2) 오브젝트 파괴는 지연된다 — 예약만으로는 빠지지 않는다(그 프레임까지는 살아 있다).
     sw::GameObject* pLampOwner = pLamp->getOwner();
     SW_ASSERT_NOT_NULL( pLampOwner );
     pObjects->destroyObject( pLampOwner );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllPoint().size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
 
     // 3) 플러시하면 빠진다. 여기서 안 빠지면 등록부가 죽은 포인터를 든다.
     pObjects->processDeferredDestruction();
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAllPoint().size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllSpot().size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeSpot ).size() );
 }
 
 /**
@@ -104,18 +134,18 @@ SW_TEST_CASE( SceneLightTest, RegistryIsIdempotentForAddAndRemove )
     SW_ASSERT_NOT_NULL( pLamp );
 
     sw::LightRegistry& registry = pObjects->getLightRegistry();
-    SW_ASSERT_EQUAL( size_t( 1 ), registry.getAllPoint().size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.addPoint( pLamp );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllPoint().size() );
+    registry.add( pLamp );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.addPoint( nullptr );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAllPoint().size() );
+    registry.add( nullptr );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.removePoint( pLamp );
-    registry.removePoint( pLamp );
-    registry.removePoint( nullptr );
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAllPoint().size() );
+    registry.remove( pLamp );
+    registry.remove( pLamp );
+    registry.remove( nullptr );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
 }
 
 /**
@@ -175,9 +205,11 @@ SW_TEST_CASE( SceneLightTest, CollectSkipsInactiveComponentsAndInactiveOwners )
 }
 
 /**
- * @brief [SceneLightTest] 그림자 슬롯은 그림자를 드리우는 **첫 방향광** 하나만 가져간다
+ * @brief [SceneLightTest] 그림자 슬롯은 그림자를 드리우는 **첫 방향광** 하나만 가져가고, 그림자 행렬도 그 빛에서 나온다
  * @details 그림자 맵이 하나라서 생긴 규칙이다. 둘 다 플래그를 받으면 렌더러는 마지막 것의
  *          행렬로 첫 것을 그린다 — 화면에는 "그림자가 엉뚱한 방향으로 진다" 로 보인다.
+ *          행렬(`EngineLoop` · `FrameRenderer`)과 플래그(`collectSceneLights`)가 **같은 선택자**를 쓰는지도 본다. 예전에는 행렬을
+ *          "켜진 첫 방향광"(그림자 여부를 안 봄)에서 골라, 첫 빛이 그림자를 끄면 행렬은 비고 플래그는 뒤의 빛에 붙었다.
  */
 SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadowSlot )
 {
@@ -213,12 +245,56 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
     SW_EXPECT_TRUE( listLight[1]._params._x > 0.5f );
     SW_EXPECT_TRUE( listLight[2]._params._x < 0.5f );
 
+    // 그림자 행렬을 만드는 쪽이 고르는 빛도 그것이다. 주광(방향 · 색 · 앰비언트)은 여전히 켜진 첫 방향광이다.
+    SW_EXPECT_TRUE( scene.findShadowCastingDirectionalLight() == pFirstShadow );
+    SW_EXPECT_TRUE( scene.findActiveDirectionalLight() == pNoShadow );
+
     // 그 빛을 끄면 그림자는 다음 빛으로 넘어간다 — 꺼진 빛이 슬롯을 들고 있으면 안 된다.
     pFirstShadow->setActive( false );
     collectSceneLights( &scene, listLight );
     SW_ASSERT_EQUAL( size_t( 2 ), listLight.size() );
     SW_EXPECT_TRUE( listLight[0]._params._x < 0.5f );
     SW_EXPECT_TRUE( listLight[1]._params._x > 0.5f );
+    SW_EXPECT_TRUE( scene.findShadowCastingDirectionalLight() == pLateShadow );
+
+    // 그림자를 드리우는 빛이 없으면 선택자는 nullptr — 행렬은 비고 플래그도 없다.
+    pLateShadow->setCastShadow( false );
+    SW_EXPECT_NULL( scene.findShadowCastingDirectionalLight() );
+    collectSceneLights( &scene, listLight );
+    for ( const sw::GpuLight& light : listLight )
+        SW_EXPECT_TRUE( light._params._x < 0.5f );
+}
+
+/**
+ * @brief [SceneLightTest] 빛 방향은 부모의 회전을 따르고, 회전에 대해 연속이다(방향광 · 스포트)
+ * @details 예전 방향 함수(두 벌)는 **로컬** 회전이 0 이면 기본 방향을 돌려줬다 — 회전한 부모 아래의 빛은 부모를 무시했다. 그리고 회전이
+ *          1e-3 라디안을 넘는 순간 기본 방향에서 전방(+Z)으로 튀었다(방향광이면 비스듬히 내리쬐던 빛이 수평이 된다). 지금은 기본
+ *          방향이 로컬 방향이고 월드 회전이 그것을 돌린다. 회전이 없는 루트 빛은 예전과 같은 방향이다(지금의 씬 · 벤치 빛이 모두 그렇다).
+ */
+SW_TEST_CASE( SceneLightTest, LightDirectionFollowsParentAndIsContinuous )
+{
+    // 방향광
+    const sw::float3 sunRest      = lightDirectionUnderYawedParent<sw::DirectionalLightComponent>( 0.0f );
+    const sw::float3 sunTurned    = lightDirectionUnderYawedParent<sw::DirectionalLightComponent>( 1.5707963f );
+    const sw::float3 sunNudged    = lightDirectionWithLocalYaw<sw::DirectionalLightComponent>( 0.002f );
+    const sw::float3 sunUnrotated = lightDirectionWithLocalYaw<sw::DirectionalLightComponent>( 0.0f );
+    SW_EXPECT_TRUE_MSG( angleBetweenDegrees( sunRest, sunTurned ) > 10.0f, "부모를 돌렸는데 빛 방향이 그대로다 — 부모 회전을 무시한다" );
+    SW_EXPECT_NEAR_EQUAL( sunRest._y, sunTurned._y, 1e-3f ); // 요는 수직 성분을 바꾸지 않는다
+    SW_EXPECT_TRUE_MSG( angleBetweenDegrees( sunUnrotated, sunNudged ) < 1.0f, "회전 0.002 에서 방향이 튀었다" );
+
+    // 스포트 — 기본이 아래(0,-1,0)라 요로는 돌지 않는다. 피치로 본다.
+    sw::GameObjectManager   manager;
+    sw::SpotLightComponent* pSpot   = addLightObject<sw::SpotLightComponent>( &manager, "SpotUnderParent" );
+    sw::GameObject*         pParent = manager.createGameObject( sw::hashed_string( "SpotParent" ) );
+    sw::SceneComponent*     pRoot   = pParent->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pSpot->attachToComponent( pRoot ) );
+    const sw::float3 spotRest = pSpot->getLightDirection();
+    SW_EXPECT_NEAR_EQUAL( -1.0f, spotRest._y, 1e-4f );
+    pRoot->setLocalRotation( sw::float3{ 1.5707963f, 0.0f, 0.0f } );
+    const sw::float3 spotTurned = pSpot->getLightDirection();
+    SW_EXPECT_TRUE_MSG( angleBetweenDegrees( spotRest, spotTurned ) > 80.0f, "부모를 90도 숙였는데 스포트 방향이 그대로다" );
+    pRoot->setLocalRotation( sw::float3{ 0.002f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE_MSG( angleBetweenDegrees( spotRest, pSpot->getLightDirection() ) < 1.0f, "회전 0.002 에서 스포트 방향이 튀었다" );
 }
 
 /**

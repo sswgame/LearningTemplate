@@ -78,6 +78,14 @@ namespace sw
          *          (RenderFramePacket 을 채울 때) 라이트는 보통 한두 개입니다.
          */
         class DirectionalLightComponent* findActiveDirectionalLight() const;
+        /**
+         * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 첫 방향광(등록 순서). 없으면 nullptr 입니다.
+         * @details 그림자 행렬을 만드는 쪽(`EngineLoop` · `FrameRenderer`)과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이
+         *          **둘 다 이것을 부릅니다.** 예전에는 행렬을 `findActiveDirectionalLight`(그림자 여부를 안 봄)에서, 플래그를
+         *          "그림자를 드리우는 첫 빛" 에서 따로 골라, 첫 방향광이 그림자를 끄고 뒤의 빛이 켜면 행렬은 비고 플래그는 뒤의
+         *          빛에 붙었습니다 — 그림자를 드리우는 빛에 그림자가 지지 않았습니다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
+         */
+        class DirectionalLightComponent* findShadowCastingDirectionalLight() const;
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
         const string& getEntityPrefabPath( uint64 objectId ) const;
 

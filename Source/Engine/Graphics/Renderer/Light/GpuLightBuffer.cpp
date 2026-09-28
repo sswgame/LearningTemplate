@@ -9,7 +9,6 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Scene/Scene.h"
@@ -18,18 +17,6 @@ namespace sw
 {
     SW_LOG_CALLER( "GpuLightBuffer" );
 
-    namespace
-    {
-        /** @brief 컴포넌트와 그 소유 오브젝트가 모두 활성인지 확인합니다. */
-        bool isLightActive( const SceneComponent* pLight )
-        {
-            if ( pLight == nullptr || pLight->isActive() == false )
-                return false;
-            const GameObject* pOwner = pLight->getOwner();
-            return pOwner != nullptr && pOwner->isActiveInHierarchy();
-        }
-    } // namespace
-
     void collectSceneLights( const Scene* pScene, vector<GpuLight>& outList )
     {
         outList.clear();
@@ -37,62 +24,50 @@ namespace sw
             return;
 
         const LightRegistry& registry = pScene->getObjectManager()->getLightRegistry();
+        // 그림자 플래그는 그림자 행렬을 만드는 쪽(EngineLoop · FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
+        const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
 
-        // 방향광 먼저. 그림자를 드리우는 **첫** 빛만 그림자 플래그를 받는다(그림자 맵이 하나다).
-        bool bShadowTaken = false;
-        for ( DirectionalLightComponent* pLight : registry.getAllDirectional() )
+        // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 공통 필드(색 · 세기 · 종류)는 한 번 채우고,
+        // 종류마다 다른 것만 분기한다 — 새 종류는 여기 분기 하나다.
+        for ( uint32 lightType = 0; lightType < shaderslot::kLightTypeCount; ++lightType )
         {
-            if ( isLightActive( pLight ) == false )
-                continue;
-
-            const float3 direction = pLight->getLightDirection();
-            const float3 color     = pLight->getColor();
-
-            GpuLight light{};
-            light._colorIntensity = float4{ color._x, color._y, color._z, pLight->getIntensity() };
-            light._directionType  = float4{ direction._x, direction._y, direction._z,
-                                           static_cast<float32>( shaderslot::kLightTypeDirectional ) };
-            if ( bShadowTaken == false && pLight->castsShadow() )
+            for ( const LightComponent* pLight : registry.getAll( lightType ) )
             {
-                light._params._x = 1.0f;
-                bShadowTaken     = true;
+                if ( pLight == nullptr || pLight->isActive() == false )
+                    continue;
+
+                const float3 color = pLight->getColor();
+                GpuLight     light{};
+                light._colorIntensity   = float4{ color._x, color._y, color._z, pLight->getIntensity() };
+                light._directionType._w = static_cast<float32>( lightType );
+
+                if ( lightType == shaderslot::kLightTypeDirectional )
+                {
+                    const DirectionalLightComponent* pDirectional = static_cast<const DirectionalLightComponent*>( pLight );
+                    const float3                     direction    = pDirectional->getLightDirection();
+                    light._directionType                          = float4{ direction._x, direction._y, direction._z, light._directionType._w };
+                    if ( pDirectional == pShadowLight )
+                        light._params._x = 1.0f;
+                }
+                else if ( lightType == shaderslot::kLightTypePoint )
+                {
+                    const PointLightComponent* pPoint   = static_cast<const PointLightComponent*>( pLight );
+                    const float3               position = pPoint->getLightPosition();
+                    light._positionRadius               = float4{ position._x, position._y, position._z, pPoint->getRadius() };
+                }
+                else if ( lightType == shaderslot::kLightTypeSpot )
+                {
+                    const SpotLightComponent* pSpot     = static_cast<const SpotLightComponent*>( pLight );
+                    const float3              position  = pSpot->getLightPosition();
+                    const float3              direction = pSpot->getLightDirection();
+                    light._positionRadius               = float4{ position._x, position._y, position._z, pSpot->getRadius() };
+                    light._directionType                = float4{ direction._x, direction._y, direction._z, light._directionType._w };
+                    // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
+                    light._params._y = MathUtil::cos( pSpot->getOuterConeAngle() );
+                    light._params._z = MathUtil::cos( pSpot->getInnerConeAngle() );
+                }
+                outList.push_back( light );
             }
-            outList.push_back( light );
-        }
-
-        for ( PointLightComponent* pLight : registry.getAllPoint() )
-        {
-            if ( isLightActive( pLight ) == false )
-                continue;
-
-            const float3 position = pLight->getLightPosition();
-            const float3 color    = pLight->getColor();
-
-            GpuLight light{};
-            light._positionRadius   = float4{ position._x, position._y, position._z, pLight->getRadius() };
-            light._colorIntensity   = float4{ color._x, color._y, color._z, pLight->getIntensity() };
-            light._directionType._w = static_cast<float32>( shaderslot::kLightTypePoint );
-            outList.push_back( light );
-        }
-
-        for ( SpotLightComponent* pLight : registry.getAllSpot() )
-        {
-            if ( isLightActive( pLight ) == false )
-                continue;
-
-            const float3 position  = pLight->getLightPosition();
-            const float3 direction = pLight->getLightDirection();
-            const float3 color     = pLight->getColor();
-
-            GpuLight light{};
-            light._positionRadius = float4{ position._x, position._y, position._z, pLight->getRadius() };
-            light._colorIntensity = float4{ color._x, color._y, color._z, pLight->getIntensity() };
-            light._directionType  = float4{ direction._x, direction._y, direction._z,
-                                           static_cast<float32>( shaderslot::kLightTypeSpot ) };
-            // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
-            light._params._y = MathUtil::cos( pLight->getOuterConeAngle() );
-            light._params._z = MathUtil::cos( pLight->getInnerConeAngle() );
-            outList.push_back( light );
         }
     }
 

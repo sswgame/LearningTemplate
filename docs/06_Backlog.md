@@ -1511,6 +1511,23 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
 - **ReflectionParser: 추상 컴포넌트는 컴포넌트 팩토리를 내지 않는다.** 팩토리는 `addComponent<T>()` 로 T 를 만드는데, 컴포넌트에서 파생했으면
   무조건 냈기 때문에 공통 기반 컴포넌트(`REFLECT( Abstract )` · 보호된 생성자)를 둘 수 없었다(생성된 코드가 컴파일되지 않는다). 지금 트리에는
   추상 컴포넌트가 없어 생성물은 그대로다. 회귀 테스트 `ReflectionParserTest.AbstractComponentGetsNoFactory`(옛 파서에서 진다).
+- **빛 — 공통 기반 `LightComponent` 하나, 등록부는 종류별 칸 하나, 그림자 조명 선택자 하나, 방향은 연속.** 세 빛이 색 · 세기 세터 · 등록/해제 ·
+  위치 · 방향 함수를 각자 들었고 등록부도 종류마다 add · remove · getAll 세 벌, 수집도 종류마다 루프 하나였다(빛 종류 하나를 더하면 여덟
+  자리). 이제 `LightComponent`(`REFLECT( Abstract )`, 색 · 세기 PROPERTY 이름은 그대로라 씬 · 바이너리 · 기본값이 이름으로 묶인다)가
+  공통을 들고, 등록부는 `add` · `remove` · `getAll( 종류 )`(종류 번호는 `shaderslot::kLightType*` — 새 enum 없음), 수집은 루프 하나에 종류별
+  분기다. 새 종류는 파생 하나 + 수집 분기 하나 + 셰이더 분기 하나.
+  같이 고친 결함 둘: **(1) 그림자 행렬과 그림자 플래그가 다른 빛에서 왔다** — 행렬은 "켜진 첫 방향광"(그림자 여부를 안 봄), 플래그는
+  "그림자를 드리우는 첫 방향광" 이라, 첫 방향광이 그림자를 끄고 뒤의 빛이 켜면 행렬은 비고 플래그는 뒤의 빛에 붙어 그림자를 드리우는
+  빛에 그림자가 지지 않았다. 이제 셋(`EngineLoop` · `FrameRenderer` · `collectSceneLights`)이 `Scene::findShadowCastingDirectionalLight`
+  하나를 쓴다(방향 · 색 · 앰비언트는 그대로 주광). 활성 판정도 `Component::isActive` 하나로(수집 · 씬이 각자 손으로 적던 것).
+  **(2) 방향이 부모 회전을 무시했고 회전 1e-3 에서 튀었다** — "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 이었다. 이제 기본 방향이 로컬
+  방향이고 월드 회전(부모 포함)이 돌린다(`computeLightDirection`). 회전 없는 루트 빛은 예전과 비트까지 같다 — 지금의 씬 · 벤치 빛이 모두
+  그렇다. 회전을 준 빛의 뜻은 바뀌었다(의도한 계약 변경, 저장소에 그런 에셋은 없다).
+  회귀 테스트 — `SceneLightTest.OnlyTheFirstShadowCastingDirectionalTakesTheShadowSlot` 확장(선택자 · 플래그가 같은 빛 · 꺼지면 넘어감 ·
+  없으면 nullptr, 선택자가 그림자 여부를 무시하는 변이에 진다) · `LightDirectionFollowsParentAndIsContinuous`(방향광 · 스포트, 옛 방향
+  규칙을 되살린 변이에 진다). 동작 보존: Release 벤치(`-gv_benchMeshes=2000 -gv_benchLights=8 -gv_benchGround=1 -gv_benchAnimate=0`)
+  스크린샷을 옛 · 새 바이너리로 4 백엔드 비교 — 0 · 2 · 3 번은 0 바이트 차이, 1 번은 **같은 바이너리끼리도** 13 바이트가 갈리는 두 결과를
+  오가며 옛 · 새가 같은 두 묶음에 든다(하니스 잡음). 성능 주장은 없다.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

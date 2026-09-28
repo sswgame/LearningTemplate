@@ -1,0 +1,62 @@
+/**
+ * @file LightComponent.cpp
+ * @brief 빛 공통 기반 구현입니다(색 · 세기 · 위치 · 방향 · 등록부 등록).
+ */
+#include "pch.h"
+
+#include "Engine/Object/Component/3D/LightComponent.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/LightRegistry.h"
+
+namespace sw
+{
+    LightComponent::LightComponent( uint32 lightType, const float3& defaultColor, float32 defaultIntensity )
+        : _color{ defaultColor }
+        , _intensity{ defaultIntensity }
+        , _lightType{ lightType }
+    {
+    }
+
+    void LightComponent::setColor( const float3& color )
+    {
+        _color = color;
+        onPropertyChanged( hashed_string( "_color" ) );
+    }
+
+    void LightComponent::setIntensity( float32 intensity )
+    {
+        _intensity = MathUtil::max( intensity, 0.0f );
+        onPropertyChanged( hashed_string( "_intensity" ) );
+    }
+
+    float3 LightComponent::getLightPosition() const
+    {
+        const float4x4 world = getWorldMatrix();
+        return float3{ world._41, world._42, world._43 };
+    }
+
+    float3 LightComponent::computeLightDirection( const float3& defaultLocalDirection ) const
+    {
+        // 기본 방향을 월드 행렬의 3x3 으로 돌린다(행 벡터 규약). 회전이 없으면 그대로, 부모가 돌면 따라 돈다.
+        const float3 localDirection = float3{ defaultLocalDirection }.normalize();
+        float3       worldDirection = float3::transformNormal( localDirection, getWorldMatrix() );
+        if ( worldDirection.getLengthSquared() <= MathUtil::Epsilon )
+            return localDirection;
+        return worldDirection.normalize();
+    }
+
+    void LightComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        manager.getLightRegistry().add( this );
+    }
+
+    void LightComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getLightRegistry().remove( this );
+        SceneComponent::onUnregister( manager );
+    }
+} // namespace sw

@@ -15,6 +15,9 @@
  * 저장소 · 컴포넌트 풀 · 팩토리 · 틱 등록부를 들고 있어서, 능력을 따로 떼어 두면 컴포넌트가 자기가
  * 쓰는 것만 들고 있으면 됩니다.
  *
+ * 종류(방향광 · 점광 · 스포트)마다 칸 하나입니다. 예전에는 종류마다 add · remove · getAll 이 한 벌씩(세 벌) 손으로 복사돼 있어 빛 종류
+ * 하나를 더하면 여기만 세 자리였습니다. 지금은 `LightComponent` 가 자기 종류(`getLightType`)로 한 쌍의 함수를 부릅니다.
+ *
  * @note 더티 표시는 없습니다. 렌더러가 매 프레임 값을 새로 읽어 GPU 버퍼를 다시 채우므로 "무엇이
  *       바뀌었나" 를 알 필요가 없습니다. 프리미티브와 달리 라이트는 원소가 64 바이트뿐입니다.
  *       제거는 선형 탐색입니다. 점광이 수백 개인 벤치에서도 제거는 씬을 내릴 때만 일어납니다.
@@ -23,17 +26,18 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/array.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
-    class DirectionalLightComponent;
-    class PointLightComponent;
-    class SpotLightComponent;
+    class LightComponent;
 
     /**
      * @class LightRegistry
-     * @brief 등록된 빛 목록을 관리합니다.
+     * @brief 등록된 빛 목록을 종류별로 관리합니다.
      * @note 락 순서에 주의하십시오. `PrimitiveRegistry` 와 같이 이 클래스의 락은 항상 **가장 안쪽**입니다.
      *       `GameObjectManager` 가 자기 락을 쥔 채 등록/해제를 부를 수 있으므로, 반대로 이 락을
      *       쥔 채 매니저 락을 잡으면 교착이 됩니다. 그래서 등록/해제는 여기서만 끝냅니다.
@@ -49,47 +53,22 @@ namespace sw
         LightRegistry( const LightRegistry& )            = delete;
         LightRegistry& operator=( const LightRegistry& ) = delete;
 
-        /** @brief 방향광을 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐으면 무시합니다. */
-        void addDirectional( DirectionalLightComponent* pComp );
-        /** @brief 방향광을 등록 해제합니다. 멱등입니다. */
-        void removeDirectional( DirectionalLightComponent* pComp );
+        /** @brief 빛을 그 종류의 칸에 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐거나 nullptr 이면 무시합니다. */
+        void add( LightComponent* pLight );
+        /** @brief 빛을 등록 해제합니다. 멱등입니다. */
+        void remove( LightComponent* pLight );
 
         /**
-         * @brief 등록된 방향광 목록입니다. 소유하지 않습니다.
-         * @details 활성 여부 판정(컴포넌트 활성 · 소유 오브젝트의 계층 활성)은 **부르는 쪽**이 합니다.
-         *          `PrimitiveRegistry::getAll` 과 같은 규약입니다. 등록부는 "무엇이 있나"만 압니다.
+         * @brief 종류 @p lightType(`shaderslot::kLightType*`)의 등록된 빛 목록입니다. 소유하지 않습니다.
+         * @details 활성 여부 판정은 **부르는 쪽**이 합니다(`Component::isActive` 가 소유 오브젝트의 계층 활성까지 봅니다).
+         *          `PrimitiveRegistry::getAll` 과 같은 규약입니다. 등록부는 "무엇이 있나"만 압니다. 종류 번호가 방향광부터라(0)
+         *          종류 순서로 돌면 방향광이 앞에 옵니다 — "그림자를 드리우는 첫 방향광" 과 수집 상한에서의 앞쪽 자르기가 거기 기댑니다.
          */
-        const vector<DirectionalLightComponent*>& getAllDirectional() const { return _listDirectional; }
-
-        /** @brief 점광을 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐으면 무시합니다. */
-        void addPoint( PointLightComponent* pComp );
-        /** @brief 점광을 등록 해제합니다. 멱등입니다. */
-        void removePoint( PointLightComponent* pComp );
-
-        /**
-         * @brief 등록된 점광 목록입니다. 소유하지 않습니다.
-         * @details 방향광과 같은 규약입니다. 활성 판정은 부르는 쪽이 합니다.
-         */
-        const vector<PointLightComponent*>& getAllPoint() const { return _listPoint; }
-
-        /** @brief 스포트라이트를 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐으면 무시합니다. */
-        void addSpot( SpotLightComponent* pComp );
-        /** @brief 스포트라이트를 등록 해제합니다. 멱등입니다. */
-        void removeSpot( SpotLightComponent* pComp );
-
-        /**
-         * @brief 등록된 스포트라이트 목록입니다. 소유하지 않습니다.
-         * @details 방향광 · 점광과 같은 규약입니다. 활성 판정은 부르는 쪽이 합니다.
-         */
-        const vector<SpotLightComponent*>& getAllSpot() const { return _listSpot; }
+        const vector<LightComponent*>& getAll( uint32 lightType ) const;
 
     private:
-        /** @brief 등록된 방향광입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
-        vector<DirectionalLightComponent*> _listDirectional;
-        /** @brief 등록된 점광입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
-        vector<PointLightComponent*> _listPoint;
-        /** @brief 등록된 스포트라이트입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
-        vector<SpotLightComponent*> _listSpot;
+        /** @brief 종류마다 등록된 빛입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
+        array<vector<LightComponent*>, shaderslot::kLightTypeCount> _arrListLight;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고, 조회는 게임 스레드 한 곳입니다. */
         mutable mutex _mutex;
     };

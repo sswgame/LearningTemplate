@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
      *       그림자를 드리우는 빛은 `DirectionalLightComponent` 하나뿐입니다(그림자 맵도 하나입니다).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Point Light", Tooltip = "Omnidirectional light with a finite radius" )
-    class SW_API PointLightComponent : public SceneComponent
+    class SW_API PointLightComponent : public LightComponent
     {
     public:
         REFLECT_BODY();
@@ -32,34 +32,12 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~PointLightComponent() override = default;
 
-        /** @brief 빛 색입니다. */
-        const float3& getColor() const { return _color; }
-        /** @brief 빛 색을 설정합니다. */
-        void setColor( const float3& color );
-
-        /** @brief 빛 세기입니다. */
-        float32 getIntensity() const { return _intensity; }
-        /** @brief 빛 세기를 설정합니다. */
-        void setIntensity( float32 intensity );
-
         /** @brief 빛이 닿는 반경입니다. 이 밖은 0 이 되어 계산에서 빠집니다. */
         float32 getRadius() const { return _radius; }
         /** @brief 반경을 설정합니다. */
         void setRadius( float32 radius );
 
-        /** @brief 이 빛의 월드 위치입니다. */
-        float3 getLightPosition() const;
-
-        /** @brief 씬에 붙을 때 빛 등록부에 자기를 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
-        void onUnregister( GameObjectManager& manager ) override;
-
     private:
-        PROPERTY( Category = "Light", DisplayName = "Color", Meta = "Color", Tooltip = "Point light color" )
-        float3 _color;
-        PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Point light intensity" )
-        float32 _intensity;
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
         float32 _radius;
     };

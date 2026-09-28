@@ -4,8 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -24,14 +23,14 @@ namespace sw
             static constexpr float32 kDefaultAmbient{ 0.28f };
             static constexpr float32 kDefaultShadowExtent{ 2.0f / 0.9f };
             static constexpr float32 kDefaultShadowDistance{ 2.0f };
-            /// @brief 회전이 없을 때의 기본 빛 방향입니다(위에서 비스듬히).
+            /// @brief 로컬 기본 빛 방향입니다(위에서 비스듬히). 월드 회전이 이것을 돌립니다.
             static constexpr float3 kDefaultDirection{ -0.35f, -0.85f, -0.25f };
         };
     } // namespace
 
     DirectionalLightComponent::DirectionalLightComponent()
-        : _color{ DirectionalLightComponentInternal::kDefaultColor }
-        , _intensity{ DirectionalLightComponentInternal::kDefaultIntensity }
+        : LightComponent( shaderslot::kLightTypeDirectional, DirectionalLightComponentInternal::kDefaultColor,
+                          DirectionalLightComponentInternal::kDefaultIntensity )
         , _ambient{ DirectionalLightComponentInternal::kDefaultAmbient }
         , _shadowExtent{ DirectionalLightComponentInternal::kDefaultShadowExtent }
         , _shadowDistance{ DirectionalLightComponentInternal::kDefaultShadowDistance }
@@ -42,29 +41,7 @@ namespace sw
 
     float3 DirectionalLightComponent::getLightDirection() const
     {
-        // 회전을 주지 않았으면(항등) 전방은 +Z 라 위에서 내리쬐는 그림이 안 된다.
-        // 기본 방향을 쓰고, 회전이 있으면 그 회전을 적용한다.
-        const float3 localRotation = getLocalRotation();
-        if ( localRotation.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ DirectionalLightComponentInternal::kDefaultDirection }.normalize();
-
-        const float4x4 world   = getWorldMatrix();
-        float3         forward = float3{ world._31, world._32, world._33 };
-        if ( forward.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ DirectionalLightComponentInternal::kDefaultDirection }.normalize();
-        return forward.normalize();
-    }
-
-    void DirectionalLightComponent::setColor( const float3& color )
-    {
-        _color = color;
-        onPropertyChanged( hashed_string( "_color" ) );
-    }
-
-    void DirectionalLightComponent::setIntensity( float32 intensity )
-    {
-        _intensity = MathUtil::max( intensity, 0.0f );
-        onPropertyChanged( hashed_string( "_intensity" ) );
+        return computeLightDirection( DirectionalLightComponentInternal::kDefaultDirection );
     }
 
     void DirectionalLightComponent::setAmbient( float32 ambient )
@@ -111,17 +88,5 @@ namespace sw
         const float32 farPlane  = _shadowDistance + _shadowExtent;
         return float4x4::createLookAt( eye, float3::Zero, up ) *
                float4x4::createOrthographic( extent, extent, nearPlane, farPlane );
-    }
-
-    void DirectionalLightComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getLightRegistry().addDirectional( this );
-    }
-
-    void DirectionalLightComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getLightRegistry().removeDirectional( this );
-        SceneComponent::onUnregister( manager );
     }
 } // namespace sw

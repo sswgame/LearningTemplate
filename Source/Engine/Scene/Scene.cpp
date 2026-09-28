@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -67,6 +68,27 @@ namespace sw
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
                 pObjectManager->flushSceneTransforms();
+            }
+
+            /**
+             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
+             * @details 활성 판정은 여기서 한다. 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가
+             *          소유 오브젝트의 계층 활성까지 본다.
+             */
+            static DirectionalLightComponent* findDirectionalLight( const GameObjectManager* pObjectManager, bool bRequireShadow )
+            {
+                if ( pObjectManager == nullptr )
+                    return nullptr;
+                for ( LightComponent* pLight : pObjectManager->getLightRegistry().getAll( shaderslot::kLightTypeDirectional ) )
+                {
+                    if ( pLight == nullptr || pLight->isActive() == false )
+                        continue;
+                    DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
+                    if ( bRequireShadow && pDirectional->castsShadow() == false )
+                        continue;
+                    return pDirectional;
+                }
+                return nullptr;
             }
         };
     } // namespace
@@ -285,20 +307,12 @@ namespace sw
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const
     {
-        if ( _objectManager == nullptr )
-            return nullptr;
+        return SceneInternal::findDirectionalLight( _objectManager.get(), false );
+    }
 
-        // 활성 판정은 여기서 한다. 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약).
-        for ( DirectionalLightComponent* pLight : _objectManager->getLightRegistry().getAllDirectional() )
-        {
-            if ( pLight == nullptr || pLight->isActive() == false )
-                continue;
-            const GameObject* pOwner = pLight->getOwner();
-            if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false )
-                continue;
-            return pLight;
-        }
-        return nullptr;
+    DirectionalLightComponent* Scene::findShadowCastingDirectionalLight() const
+    {
+        return SceneInternal::findDirectionalLight( _objectManager.get(), true );
     }
 
     void Scene::refreshCameraCache()

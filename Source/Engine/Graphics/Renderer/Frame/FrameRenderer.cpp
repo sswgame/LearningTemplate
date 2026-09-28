@@ -459,14 +459,15 @@ namespace sw
         // 주광(그림자 행렬 · 앰비언트 · 목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
         // 씬에서 읽는다. 예전에는 이 경로가 주광을 채우지 않아, 테스트가 씬에 방향광을 아무리 세게 두어도
         // 그림이 어두웠다. 조명이 필요한 픽셀 검증(블룸이 1 을 넘는 자리)이 그래서 불가능했다.
-        DirectionalLightComponent* pKeyLight = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
+        DirectionalLightComponent* pKeyLight    = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
+        DirectionalLightComponent* pShadowLight = ( pScene != nullptr ) ? pScene->findShadowCastingDirectionalLight() : nullptr;
         if ( pKeyLight != nullptr )
         {
             const float3 lightDir           = pKeyLight->getLightDirection();
             const float3 lightColor         = pKeyLight->getColor();
             _frameLight._dirIntensity       = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
             _frameLight._colorAmbient       = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
-            _frameLight._shadowViewProj     = pKeyLight->castsShadow() ? pKeyLight->buildShadowViewProj() : float4x4{};
+            _frameLight._shadowViewProj     = ( pShadowLight != nullptr ) ? pShadowLight->buildShadowViewProj() : float4x4{};
             _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else

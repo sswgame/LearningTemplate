@@ -51,7 +51,8 @@ namespace sw
      * @details 등록부(`LightRegistry`)만 봅니다. 예전 `findActiveDirectionalLight` 처럼 모든
      *          GameObject 를 도는 경로를 다시 만들지 않습니다(큐브 20,000 개에서 그 한 줄이 2.9ms 였습니다).
      *          활성 판정은 여기서 합니다(등록부는 "무엇이 있나" 만 압니다).
-     * @note 방향광 중 **그림자를 드리우는 첫 빛**만 그림자 플래그를 받습니다. 그림자 맵이 하나라서입니다.
+     * @note 그림자 플래그는 `Scene::findShadowCastingDirectionalLight` 가 고른 빛 하나만 받습니다 — 그림자 행렬도 같은 함수에서
+     *       나옵니다. 그림자 맵이 하나라서입니다.
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GpuLight>& outList );

@@ -4,8 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -25,7 +24,7 @@ namespace sw
             /// @brief 기본 원뿔 각도입니다. 안쪽 15도, 바깥 30도(라디안).
             static constexpr float32 kDefaultInnerCone{ 0.262f };
             static constexpr float32 kDefaultOuterCone{ 0.524f };
-            /// @brief 회전이 없을 때의 기본 방향입니다. 아래를 비춥니다.
+            /// @brief 로컬 기본 방향입니다. 아래를 비춥니다. 월드 회전이 이것을 돌립니다.
             static constexpr float3 kDefaultDirection{ 0.0f, -1.0f, 0.0f };
             /// @brief 원뿔 반각의 상한입니다. 90도를 넘으면 원뿔이 뒤집혀 "빛이 뒤로도 나갑니다".
             static constexpr float32 kMaxConeAngle{ 1.5533f }; // 89도
@@ -33,24 +32,11 @@ namespace sw
     } // namespace
 
     SpotLightComponent::SpotLightComponent()
-        : _color{ SpotLightComponentInternal::kDefaultColor }
-        , _intensity{ SpotLightComponentInternal::kDefaultIntensity }
+        : LightComponent( shaderslot::kLightTypeSpot, SpotLightComponentInternal::kDefaultColor, SpotLightComponentInternal::kDefaultIntensity )
         , _radius{ SpotLightComponentInternal::kDefaultRadius }
         , _innerConeAngle{ SpotLightComponentInternal::kDefaultInnerCone }
         , _outerConeAngle{ SpotLightComponentInternal::kDefaultOuterCone }
     {
-    }
-
-    void SpotLightComponent::setColor( const float3& color )
-    {
-        _color = color;
-        onPropertyChanged( hashed_string( "_color" ) );
-    }
-
-    void SpotLightComponent::setIntensity( float32 intensity )
-    {
-        _intensity = MathUtil::max( intensity, 0.0f );
-        onPropertyChanged( hashed_string( "_intensity" ) );
     }
 
     void SpotLightComponent::setRadius( float32 radius )
@@ -75,36 +61,8 @@ namespace sw
         onPropertyChanged( hashed_string( "_outerConeAngle" ) );
     }
 
-    float3 SpotLightComponent::getLightPosition() const
-    {
-        const float4x4 world = getWorldMatrix();
-        return float3{ world._41, world._42, world._43 };
-    }
-
     float3 SpotLightComponent::getLightDirection() const
     {
-        // 회전을 주지 않았으면(항등) 전방은 +Z 라 카메라 쪽으로 쏘게 된다. 기본은 아래를 비춘다.
-        // 규약은 DirectionalLightComponent 와 같다(전방 벡터가 곧 빛이 나아가는 방향).
-        const float3 localRotation = getLocalRotation();
-        if ( localRotation.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ SpotLightComponentInternal::kDefaultDirection }.normalize();
-
-        const float4x4 world   = getWorldMatrix();
-        float3         forward = float3{ world._31, world._32, world._33 };
-        if ( forward.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ SpotLightComponentInternal::kDefaultDirection }.normalize();
-        return forward.normalize();
-    }
-
-    void SpotLightComponent::onRegister( GameObjectManager& manager )
-    {
-        SceneComponent::onRegister( manager );
-        manager.getLightRegistry().addSpot( this );
-    }
-
-    void SpotLightComponent::onUnregister( GameObjectManager& manager )
-    {
-        manager.getLightRegistry().removeSpot( this );
-        SceneComponent::onUnregister( manager );
+        return computeLightDirection( SpotLightComponentInternal::kDefaultDirection );
     }
 } // namespace sw

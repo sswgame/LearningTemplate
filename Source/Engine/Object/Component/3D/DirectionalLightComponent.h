@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -18,11 +18,11 @@ namespace sw
      *          안의 `constexpr` 상수였습니다. 그래서 씬이 커져도 그림자 볼륨은 2 유닛짜리 그대로였고
      *          (큐브 5000 개 격자는 142 유닛입니다), 빛을 돌려 보려면 엔진을 다시 빌드해야 했습니다.
      *          카메라가 CameraComponent 로 선언되듯 빛도 컴포넌트로 선언합니다.
-     * @note 방향은 이 컴포넌트의 전방 벡터입니다. 회전을 주면 빛이 돕니다(회전이 없으면 기본 방향).
-     *       언리얼의 `UDirectionalLightComponent` 와 같은 규약입니다.
+     * @note 방향은 기본 방향(위에서 비스듬히)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약).
+     *       회전이 없는 루트면 기본 방향 그대로이고, 부모가 돌면 따라 돕니다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Directional Light", Tooltip = "Scene key light and shadow volume" )
-    class SW_API DirectionalLightComponent : public SceneComponent
+    class SW_API DirectionalLightComponent : public LightComponent
     {
     public:
         REFLECT_BODY();
@@ -32,18 +32,8 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~DirectionalLightComponent() override = default;
 
-        /** @brief 빛이 나아가는 방향(정규화)입니다. 회전이 있으면 컴포넌트 전방 벡터, 없으면 기본 방향(위에서 비스듬히)입니다. */
+        /** @brief 빛이 나아가는 방향(정규화)입니다. 기본 방향(위에서 비스듬히)을 월드 회전으로 돌린 것입니다. */
         float3 getLightDirection() const;
-
-        /** @brief 빛 색입니다. */
-        const float3& getColor() const { return _color; }
-        /** @brief 빛 색을 설정합니다. */
-        void setColor( const float3& color );
-
-        /** @brief 빛 세기입니다. */
-        float32 getIntensity() const { return _intensity; }
-        /** @brief 빛 세기를 설정합니다. */
-        void setIntensity( float32 intensity );
 
         /** @brief 환경광 세기입니다. */
         float32 getAmbient() const { return _ambient; }
@@ -68,16 +58,7 @@ namespace sw
         /** @brief 이 라이트의 그림자 view-projection 행렬을 만듭니다. */
         float4x4 buildShadowViewProj() const;
 
-        /** @brief 씬에 붙을 때 빛 등록부에 자기를 등록합니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
-        void onUnregister( GameObjectManager& manager ) override;
-
     private:
-        PROPERTY( Category = "Light", DisplayName = "Color", Meta = "Color", Tooltip = "Key light color" )
-        float3 _color;
-        PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Key light intensity" )
-        float32 _intensity;
         PROPERTY( Category = "Light", DisplayName = "Ambient", Min = 0.0, Tooltip = "Ambient term" )
         float32 _ambient;
         PROPERTY( Category = "Shadow", DisplayName = "Shadow Extent", Min = 0.0, Tooltip = "Half size of the shadow ortho volume", Meta = "Units=m" )
