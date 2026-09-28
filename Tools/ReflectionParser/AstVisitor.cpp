@@ -1046,7 +1046,10 @@ namespace sw
                 markHeaderError( outHeader );
                 return;
             }
-            const bool bFactory         = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
+            // 추상 타입(REFLECT(Abstract) · C++ 추상)은 팩토리를 내지 않는다 — 팩토리는 `addComponent<T>()` 로 T 를 만든다. 공통 기반
+            // 컴포넌트(`LightComponent`)가 첫 예다. 예전에는 컴포넌트에서 파생했으면 무조건 내 그런 기반을 둘 수 없었다.
+            const bool bWantsFactory    = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
+            const bool bFactory         = bWantsFactory && typeInfo._bAbstract == SW_FALSE;
             typeInfo._bReflectBody      = collector._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
             typeInfo._bComponentFactory = bFactory ? SW_TRUE : SW_FALSE;
         }

@@ -521,6 +521,50 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 추상 컴포넌트는 컴포넌트 팩토리를 내지 않고, 그 파생은 낸다
+ * @details 팩토리는 `addComponent<T>()` 로 T 를 만든다. 예전에는 컴포넌트에서 파생했으면 무조건 냈기 때문에, 공통 기반 컴포넌트
+ *          (`REFLECT( Abstract )` · 보호된 생성자)를 두면 생성된 코드가 컴파일되지 않았다. `LightComponent` 가 첫 예다.
+ */
+SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "AbstractFactorySample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Object/Component/Component.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT( Abstract )\n"
+                                                       "\tclass AbstractFactorySampleBase : public Component\n"
+                                                       "\t{\n"
+                                                       "\tpublic:\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\tprotected:\n"
+                                                       "\t\texplicit AbstractFactorySampleBase( int32 kind ) : _kind{ kind } {}\n"
+                                                       "\tprivate:\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _kind;\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tclass AbstractFactorySampleConcrete : public AbstractFactorySampleBase\n"
+                                                       "\t{\n"
+                                                       "\tpublic:\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tAbstractFactorySampleConcrete() : AbstractFactorySampleBase( 1 ) {}\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( size_t( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AbstractFactorySampleConcrete>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AbstractFactorySampleBase>" ) == sw::string::npos, generated.c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] REFLECT() 없는 타입의 REFLECT_BODY() 는 빌드를 세운다
  * @details 이 검사는 처음부터 있었지만 **한 번도 돈 적이 없었다.** `REFLECT_BODY()` 가 만드는 마커 함수는 매크로
  *          전개 위치에 있고, 파서는 "주 파일에 있나" 를 `clang_Location_isFromMainFile` 로 물었는데 그 함수는 매크로
