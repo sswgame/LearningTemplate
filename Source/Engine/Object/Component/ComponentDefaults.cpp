@@ -184,7 +184,7 @@ namespace sw
         _bLoadAttempted.store( true, std::memory_order_release );
     }
 
-    void ComponentDefaults::apply( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
+    void ComponentDefaults::apply( void* pInstance, const TypeInfo& typeInfo )
     {
         if ( pInstance == nullptr )
             return;
@@ -193,40 +193,32 @@ namespace sw
         if ( _bDefaultsLoaded.load( std::memory_order_acquire ) == false )
             return;
 
-        // **`reloadDefaults()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서를
+        // **`reloadDefaults()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서와 해석 결과를
         // 락 없이 읽는다(컴포넌트 생성마다 도는 자리라 잠그면 직렬화된다). 다시 읽는 일은
         // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
         // 쪽의 몫이다.
 
-        XmlNode root = _defaultsDoc.getRoot( "GameData" );
-        if ( root.isValid() == false )
-            return;
-
-        XmlNode defaultsNode = root.findChild( "Defaults" );
-        if ( defaultsNode.isValid() == false )
-            return;
-
-        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다. 인스턴스마다는 memcpy 몇 번이다.
-        const ResolvedDefaults& resolved = resolveFor( typeInfo, pAliasTypeInfo );
+        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다(문서의 GameData · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
+        // 몇 번이다. 예전에는 인스턴스마다 문서 뿌리 · Defaults 노드를 문자열로 다시 찾았다.
+        const ResolvedDefaults& resolved = resolveFor( typeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
             applyPatch( pInstance, patch );
     }
 
-    const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo,
-                                                                              const TypeInfo* pAliasTypeInfo )
+    const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo )
     {
         // 세대가 같은 동안만 쓴다. 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
         const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         {
             std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
             const auto                          it = _mapResolved.find( &typeInfo );
-            if ( it != _mapResolved.end() && it->second._generation == generation )
-                return it->second;
+            if ( it != _mapResolved.end() && it->second->_generation == generation )
+                return *it->second;
         }
 
-        // 뿌리 기반 타입부터 풀어 파생이 마지막에 덮어쓴다. 별칭 타입은 파생과 같은 단계로 본다.
-        ResolvedDefaults resolved;
-        resolved._generation = generation;
+        // 뿌리 기반 타입부터 풀어 파생이 마지막에 덮어쓴다.
+        unique_ptr<ResolvedDefaults> pResolved = make_unique<ResolvedDefaults>();
+        pResolved->_generation                 = generation;
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
@@ -240,24 +232,33 @@ namespace sw
 
             vector<string> listName;
             ComponentDefaultsInternal::collectLookupNames( *pLevelType, listName );
-            if ( pAliasTypeInfo != nullptr && pLevelType == &typeInfo )
-                ComponentDefaultsInternal::collectLookupNames( *pAliasTypeInfo, listName );
 
             const XmlNode levelNode = ComponentDefaultsInternal::findDefaultsNode( defaultsNode, listName );
             if ( levelNode.isValid() == false )
                 continue;
 
-            resolveNodeToPatches( *pLevelType, levelNode, resolved._listPatch );
+            resolveNodeToPatches( *pLevelType, levelNode, pResolved->_listPatch );
         }
 
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
-        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼운다.
+        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼우되 **버리지 않는다** —
+        // 다른 스레드가 잠금 밖에서 아직 그 패치를 돌고 있을 수 있다. 예전에는 제자리에 이동 대입해 그 순회가 풀린 목록을 읽었다.
         auto it = _mapResolved.find( &typeInfo );
         if ( it == _mapResolved.end() )
-            it = _mapResolved.emplace( &typeInfo, std::move( resolved ) ).first;
-        else if ( it->second._generation != generation )
-            it->second = std::move( resolved );
-        return it->second;
+            it = _mapResolved.emplace( &typeInfo, std::move( pResolved ) ).first;
+        else if ( it->second->_generation != generation )
+        {
+            _listRetiredResolved.push_back( std::move( it->second ) );
+            it->second = std::move( pResolved );
+        }
+        return *it->second;
+    }
+
+    const void* ComponentDefaults::findResolvedAddress( const TypeInfo& typeInfo ) const
+    {
+        std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
+        const auto                          it = _mapResolved.find( &typeInfo );
+        return ( it != _mapResolved.end() ) ? it->second.get() : nullptr;
     }
 
     void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XmlNode& compNode, vector<DefaultPatch>& inoutListPatch )
@@ -313,11 +314,6 @@ namespace sw
         parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault() );
     }
 
-    void ComponentDefaults::apply( Component* pComp, const TypeInfo& typeInfo )
-    {
-        apply( pComp, typeInfo, nullptr );
-    }
-
     void ComponentDefaults::setPath( string_view path )
     {
         std::scoped_lock<mutex> lock{ _defaultsMutex };
@@ -348,12 +344,7 @@ namespace sw
         // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
-    }
-
-    void ComponentDefaults::applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
-    {
-        if ( engine::areEngineServicesBound() )
-            engine::getComponentDefaults().apply( pInstance, typeInfo, pAliasTypeInfo );
+        _listRetiredResolved.clear();
     }
 
     void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )

@@ -414,7 +414,7 @@ namespace sw
         for ( const unique_ptr<Scene>& scene : engine::getSceneManager().getLoadedScenes() )
         {
             if ( scene != nullptr )
-                scene->getObjectManager()->rebindAllCachedTypeInfo();
+                scene->getObjectManager()->markTickWavesDirty(); // 기본값은 다시 찍지 않는다(ModuleTypeRegistry 의 같은 자리 참고)
         }
     }
 

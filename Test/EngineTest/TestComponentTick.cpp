@@ -3,10 +3,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -748,6 +752,88 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 7.5f ) );
     }
 
+    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::ComponentDefaults::reloadDefaults();
+    sw::FileUtil::removeFile( defaultsPath );
+}
+
+/**
+ * @brief [ComponentDefaultsTest] 한 타입의 해석 결과는 다른 타입들이 캐시에 들어와도 제자리에 있다
+ * @details `apply` 는 해석 결과(`resolveFor` 가 돌려준 참조)를 **잠금 밖에서** 돈다. 예전에는 결과가 해시 맵의 밀집 벡터 안에 살아,
+ *          다른 타입이 처음 들어오며 벡터가 다시 잡히면 그 참조가 풀린 메모리를 가리켰다 — 비동기 씬 로드의 워커와 게임 스레드가
+ *          처음 보는 타입을 함께 만들 때의 해제 후 사용이다. 등록된 모든 타입을 한 번씩 풀게 해 벡터를 여러 번 자라게 한다.
+ */
+SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResolve )
+{
+    if ( sw::engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
+
+    const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_stable.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameData><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameData>\n" ) );
+    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+    sw::Component::setDefaultGamedataPath( defaultsPath );
+
+    sw::ComponentDefaults& defaults  = sw::engine::getComponentDefaults();
+    const sw::TypeInfo*    pMeshType = sw::MeshComponent::StaticType();
+    SW_ASSERT_NOT_NULL( pMeshType );
+    sw::vector<uint8> meshScratch( pMeshType->_size, 0 );
+    defaults.apply( meshScratch.data(), *pMeshType );
+    const void* pAddress = defaults.findResolvedAddress( *pMeshType );
+    SW_ASSERT_NOT_NULL( pAddress );
+
+    // 레지스트리 잠금을 쥔 채 풀지 않는다(해석이 레지스트리를 다시 찾는다) — 목록을 먼저 받는다.
+    sw::vector<const sw::TypeInfo*> listType;
+    sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+    { listType.push_back( &typeInfo ); } );
+    SW_ASSERT_TRUE( listType.size() >= 32 );
+    for ( const sw::TypeInfo* pType : listType )
+    {
+        // 기본값은 메시(와 그 파생)의 float 하나뿐이다 — 크기만큼의 빈 버퍼에 써도 안전하다.
+        sw::vector<uint8> scratch( pType->_size > 0 ? pType->_size : 1, 0 );
+        defaults.apply( scratch.data(), *pType );
+    }
+    SW_EXPECT_TRUE( defaults.findResolvedAddress( *pMeshType ) == pAddress );
+
+    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::ComponentDefaults::reloadDefaults();
+    sw::FileUtil::removeFile( defaultsPath );
+}
+
+/**
+ * @brief [ComponentDefaultsTest] 모듈이 타입을 등록해도 살아 있는 컴포넌트의 값은 기본값으로 돌아가지 않는다
+ * @details 기본값은 만들 때 한 번이다. 예전에는 모듈 등록(`registerModuleTypes`)과 게임 DLL 리로드가 씬의 모든 컴포넌트에 기본값을
+ *          다시 찍어(`rebindAllCachedTypeInfo`), 게임이 바꾼 값이 모듈 로드 · 핫 리로드마다 기본값으로 돌아갔다.
+ */
+SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
+{
+    if ( sw::engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
+
+    const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_restamp.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameData><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameData>\n" ) );
+    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+    sw::Component::setDefaultGamedataPath( defaultsPath );
+
+    // 모듈 등록은 엔진 씬 매니저의 씬들을 돈다 — 그 씬에 둔다.
+    sw::Scene* pScene = sw::engine::getSceneManager().getActiveScene();
+    if ( pScene == nullptr )
+        pScene = sw::engine::getSceneManager().createScene( "DefaultsRestampScene" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    sw::GameObject*        pObject  = pObjects->createGameObject( sw::hashed_string( "DefaultsRestampProbe" ) );
+    sw::MeshComponent*     pMesh    = pObject->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 7.5f ) );
+
+    pMesh->setBoundsRadius( 2.0f );
+    sw::engine::registerModuleTypes( "DefaultsRestampProbeModule" );
+    SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 2.0f ) );
+#if !defined( SW_SHIPPING )
+    sw::engine::unregisterModuleTypes( "DefaultsRestampProbeModule" );
+#endif
+
+    pObjects->destroyObject( pObject );
+    pObjects->processDeferredDestruction();
     sw::Component::setDefaultGamedataPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
     sw::FileUtil::removeFile( defaultsPath );

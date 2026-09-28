@@ -1567,6 +1567,15 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   시작한다(투사체 수명 같은 플레이 중 상태가 처음부터) · 스폰마다 소유 태그가 태그 컴포넌트를 만든다.
   회귀 테스트 — `GameObjectTest.PlayLifecycleIsPairedAndExactlyOnce`(비트 검사 제거 · 붙이는 자리에서 시작 · 해체 지점의 끝 제거, 세 변이에
   모두 진다) · `SceneTest.WorldPlayingFollowsTheActiveScene`(활성 씬 교체 · 플레이 중 shutdown).
+- **컴포넌트 기본값 — 해석 결과의 해제 후 사용, 모듈 등록마다 살아 있는 값을 기본값으로 되돌리던 것.** (1) `ComponentDefaults::resolveFor` 가
+  돌려준 참조를 `apply` 가 잠금 밖에서 돌았는데, 그 결과가 해시 맵의 밀집 벡터 안에 살아 다른 타입이 처음 들어오며 벡터가 다시 잡히면 풀린
+  메모리를 읽었다(비동기 씬 로드의 워커와 게임 스레드가 처음 보는 타입을 함께 만들 때). 세대가 바뀌면 제자리에 이동 대입해 도는 중인 목록도
+  풀렸다. 이제 결과는 힙에 따로 살고(`unique_ptr`), 세대가 지난 것은 버리지 않고 물려 둔다(문서를 다시 읽을 때 버린다). 문서의 GameData ·
+  Defaults 찾기는 인스턴스마다가 아니라 해석할 때 한 번. 넘기는 곳이 없던 별칭 인자와 정적 창구 하나를 걷었다. (2) 모듈이 타입을 등록할
+  때마다 · 게임 DLL 리로드 뒤마다 `rebindAllCachedTypeInfo` 가 씬의 **모든** 컴포넌트에 기본값을 다시 덮어써, 게임이 바꾼 값이 모듈 로드 ·
+  핫 리로드에서 기본값으로 돌아갔다(원래 일이던 TypeInfo 바꿔 끼우기는 주소 고정으로 사라진 뒤였다). 삭제 — 기본값은 만들 때 한 번(CDO).
+  그 자리는 틱 항목만 다시 짓게 한다. 회귀 테스트 `ComponentDefaultsTest.ResolvedDefaultsStayPutWhileOtherTypesResolve` ·
+  `ModuleRegistrationKeepsLiveValues`(모듈 등록 자리에 다시 찍기를 되살리는 변이에 진다).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

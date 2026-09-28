@@ -100,7 +100,10 @@ namespace sw
                 if ( scene && scene->getObjectManager() )
                 {
                     scene->getObjectManager()->registerPendingFactories( moduleName, pFactoryHead );
-                    scene->getObjectManager()->rebindAllCachedTypeInfo();
+                    // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 예전에는 여기서
+                    // (`rebindAllCachedTypeInfo`) 씬의 모든 컴포넌트에 덮어써 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아갔다.
+                    // TypeInfo 주소는 고정이라(`TypeRegistry`) 다시 묶을 것도 없다. 틱 항목만 다시 짓게 한다.
+                    scene->getObjectManager()->markTickWavesDirty();
                 }
             }
         }

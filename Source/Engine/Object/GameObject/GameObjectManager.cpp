@@ -638,26 +638,6 @@ namespace sw
         markTickWavesDirty();
     }
 
-    void GameObjectManager::rebindAllCachedTypeInfo()
-    {
-        TypeRegistry& typeRegistry = engine::getTypeRegistry();
-        forEachGameObject( [&typeRegistry]( GameObject* pObj )
-        {
-            if ( pObj == nullptr )
-                return;
-            pObj->forEachComponent( [&typeRegistry]( Component* pComp )
-            {
-                if ( pComp == nullptr )
-                    return;
-                const hashed_string typeKey = pComp->getComponentName();
-                if ( typeKey.empty() )
-                    return;
-                pComp->applyTypeDefaults( typeRegistry.findType( typeKey ) );
-            } );
-        } );
-        markTickWavesDirty();
-    }
-
     void GameObjectManager::mergePendingAdds()
     {
         // 잠금 한 번에 옮긴다. 예전에는 대기 목록을 지역 벡터로 **옮겨 가며**(그래서 대기 목록이 매번 용량을 잃고 다음 스폰이 다시 할당했다)

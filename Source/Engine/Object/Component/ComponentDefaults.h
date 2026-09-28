@@ -1,6 +1,10 @@
 /**
  * @file ComponentDefaults.h
  * @brief 게임 gamedata.xml 의 `<Defaults>` 를 Component PROPERTY 에 주입합니다.
+ *
+ * 기본값은 **만들 때 한 번** 들어갑니다(언리얼 CDO 의 자리). 살아 있는 인스턴스에 다시 찍지 않습니다 — 예전에는 모듈이 타입을
+ * 등록할 때마다(`rebindAllCachedTypeInfo`) 씬의 모든 컴포넌트에 기본값을 다시 덮어써, 게임이 바꾼 값이 모듈 로드 · 핫 리로드에서
+ * 기본값으로 돌아갔습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -10,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -35,10 +40,8 @@ namespace sw
         ComponentDefaults( const ComponentDefaults& )            = delete;
         ComponentDefaults& operator=( const ComponentDefaults& ) = delete;
 
-        /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다. */
-        void apply( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo = nullptr );
-        /** @brief 컴포넌트 인스턴스에 XML 기본값을 리플렉션으로 주입합니다. */
-        void apply( Component* pComp, const TypeInfo& typeInfo );
+        /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다(뿌리 타입부터 파생 순). 여러 스레드가 함께 불러도 됩니다. */
+        void apply( void* pInstance, const TypeInfo& typeInfo );
 
         /** @brief 게임 gamedata.xml 리소스 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
         void setPath( string_view path );
@@ -58,10 +61,17 @@ namespace sw
          */
         uint32 getLoadAttemptCount() const { return _loadAttemptCount.load( std::memory_order_relaxed ); }
 
+        /**
+         * @brief 타입 @p typeInfo 의 해석 결과가 캐시에서 사는 주소입니다(없으면 nullptr). 진단 · 회귀 테스트용입니다.
+         * @details 이 주소는 **다른 타입이 캐시에 들어와도 바뀌지 않아야 합니다.** 예전에는 값이 해시 맵의 밀집 벡터 안에 살아, 다른
+         *          타입이 들어오며 벡터가 다시 잡히면 잠금을 놓은 뒤 순회하던 참조가 풀린 메모리를 읽었습니다(비동기 씬 로드의
+         *          워커와 게임 스레드가 처음 보는 타입을 함께 만들 때).
+         */
+        const void* findResolvedAddress( const TypeInfo& typeInfo ) const;
+
         // ----------------------------------------------------------------------
         // 정적 창구 (EngineServices 바인딩을 거쳐 인스턴스로 넘긴다)
         // ----------------------------------------------------------------------
-        static void   applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo = nullptr );
         static void   applyDefaults( Component* pComp, const TypeInfo& typeInfo );
         static void   setDefaultsPath( string_view path );
         static string getDefaultsPath();
@@ -104,16 +114,21 @@ namespace sw
             uint32               _generation = 0; ///< 풀 때의 타입 표 세대. 재등록으로 프로퍼티 목록이 갈리면 다시 풉니다
         };
 
-        /** @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다. */
-        const ResolvedDefaults& resolveFor( const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo );
+        /**
+         * @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다.
+         * @details 돌려주는 참조는 잠금 밖에서 순회됩니다. 그래서 결과는 **힙에 따로** 살고(다른 타입이 들어와도 주소가 그대로),
+         *          세대가 바뀌어 갈아 끼울 때 옛 것은 버리지 않고 물려 둡니다(`_listRetiredResolved`) — 다른 스레드가 아직 돌고 있을 수 있다.
+         */
+        const ResolvedDefaults& resolveFor( const TypeInfo& typeInfo );
         /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다. 패치는 그 문서에서 푼 값입니다. */
         void clearResolvedCache();
 
         XmlDocument _defaultsDoc;
         string      _customDefaultsPath;
 
-        mutable std::shared_mutex                        _resolvedMutex;
-        unordered_map<const TypeInfo*, ResolvedDefaults> _mapResolved;
+        mutable std::shared_mutex                                    _resolvedMutex;
+        unordered_map<const TypeInfo*, unique_ptr<ResolvedDefaults>> _mapResolved;
+        vector<unique_ptr<ResolvedDefaults>>                         _listRetiredResolved; ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
 
         mutable mutex _defaultsMutex;
         /**

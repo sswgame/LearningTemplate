@@ -323,12 +323,6 @@ namespace sw
         /** @brief 등록·대기 목록을 모두 비웁니다. */
         void clear();
 
-        /**
-         * @brief 컴포넌트 이름으로 TypeRegistry 에서 타입을 다시 찾아 기본값을 다시 주입하고, 틱 항목을 다시 짓게 합니다.
-         * @details registerPendingTypes 직후에 부릅니다.
-         */
-        void rebindAllCachedTypeInfo();
-
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
         void mergePendingAdds();
 
