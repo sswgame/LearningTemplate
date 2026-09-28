@@ -45,18 +45,20 @@ namespace sw
          */
         virtual void tick( float32 deltaTime );
         /**
-         * @brief GameCamera GameObject 가 없으면 만듭니다.
-         * @details CameraComponent(역할 Game)를 가집니다. 초기화할 때마다 불러도 안전합니다.
+         * @brief 활성 게임 카메라를 (다시) 고르고, 쓸 만한 게임 카메라가 하나도 없으면 GameCamera 를 만듭니다.
+         * @details 게임 스레드가 프레임마다 부릅니다(카메라 등록부의 몇 개를 도는 값입니다). 직접 고른 카메라(`setActiveGameCamera`)가
+         *          살아 있고 켜져 있으면 그것이, 아니면 등록부의 규칙(`CameraRegistry::selectCamera`, 역할 Game · 우선순위)이 고릅니다.
+         *          예전에는 처음 한 번만 골라 캐시해, 나중에 생긴 더 높은 우선순위의 카메라 · 꺼진 카메라 · 역할이 바뀐 카메라를 따라가지
+         *          않았고, 고를 때마다 씬 전체를 훑었습니다. 첫 호출에서 이미 있는 "GameCamera" 의 위치 · 렌즈를 기본값으로 되돌리던 것도
+         *          없어졌습니다(만들 때만 기본값을 씁니다).
          */
         bool ensureDefaultCameras();
-        /** @brief 씬에서 Game 역할 중 우선순위가 가장 높은 카메라를 다시 찾습니다. */
-        void refreshCameraCache();
 
         /** @brief 씬 이름을 설정합니다. */
         void setName( string_view name ) { _name = name; }
         /** @brief 마지막 로드/저장 경로를 설정합니다. */
         void setSourcePath( string_view path ) { _sourcePath = path; }
-        /** @brief 활성 게임 카메라를 설정합니다. */
+        /** @brief 활성 게임 카메라를 직접 고릅니다. 그 카메라가 살아 있고 켜져 있는 동안 등록부의 선택보다 먼저입니다(nullptr 이면 해제). */
         void setActiveGameCamera( CameraComponent* pCamera );
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
         void setEntityPrefabPath( uint64 objectId, string_view prefabPath );
@@ -104,7 +106,7 @@ namespace sw
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
         unordered_map<uint64, string> _mapPrefabSource;
-        sw::ComponentHandle           _activeGameCamera;
-        bool                          _bCamerasEnsured;
+        sw::ComponentHandle           _activeGameCamera;   ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        sw::ComponentHandle           _gameCameraOverride; ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

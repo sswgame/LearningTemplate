@@ -33,6 +33,8 @@ namespace sw::editor
          *          복사합니다(값으로 반환하는 getAllGameObjects()). 한 번 채워 함께 봅니다.
          */
         const vector<GameObject*>* _pListObject{ nullptr };
+        /** @brief 씬의 카메라 등록부 목록입니다(프러스텀 시각화가 씬 전체를 훑지 않게). 매니저가 없으면 nullptr 입니다. */
+        const vector<CameraComponent*>* _pListCamera{ nullptr };
     };
 
     /**

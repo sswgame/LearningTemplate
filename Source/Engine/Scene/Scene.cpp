@@ -105,7 +105,7 @@ namespace sw
         , _objectManager{ make_unique<GameObjectManager>() }
         , _pMaterial{ nullptr }
         , _activeGameCamera{}
-        , _bCamerasEnsured{ false }
+        , _gameCameraOverride{}
     {
     }
 
@@ -273,29 +273,31 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
-        if ( _bCamerasEnsured && getActiveGameCamera() != nullptr && getActiveGameCamera()->isPendingKill() == false )
-            return true;
-
-        _objectManager->flushSceneTransforms();
-
-        CameraComponent::findOrCreateNamed( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
-
-        _objectManager->flushSceneTransforms();
-
-        GameObject* pGameObj = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
-        if ( pGameObj != nullptr )
+        // 직접 고른 카메라가 먼저, 다음은 등록부의 규칙. 둘 다 없으면 지난번 카메라를 그대로 둔다 — 하나뿐인 게임 카메라를 끈 경우다.
+        // 그때 새로 만들거나 기본값으로 되돌리면 꺼 둔 카메라를 프레임마다 옮기게 된다. 아무것도 없을 때만 만든다.
+        CameraComponent* pCamera = resolveCamera( _gameCameraOverride );
+        if ( CameraRegistry::isUsableCamera( pCamera ) == false )
+            pCamera = _objectManager->getCameraRegistry().selectCamera( CameraRole::Game );
+        if ( pCamera == nullptr )
+            pCamera = resolveCamera( _activeGameCamera );
+        if ( pCamera == nullptr || pCamera->isPendingKill() )
         {
-            CameraComponent* pCam = pGameObj->getComponent<CameraComponent>();
-            if ( pCam != nullptr )
-                pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
+            // 기본 GameCamera. 이미 있으면 **그대로** 쓴다 — `findOrCreateNamed` 는 있는 것의 자리 · 렌즈를 기본값으로 되돌린다.
+            GameObject*      pNamed       = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
+            CameraComponent* pNamedCamera = ( pNamed != nullptr ) ? pNamed->getComponent<CameraComponent>() : nullptr;
+            if ( pNamedCamera != nullptr && pNamedCamera->isPendingKill() == false )
+                pCamera = pNamedCamera;
+            else
+            {
+                _objectManager->flushSceneTransforms();
+                pCamera = CameraComponent::findOrCreateNamed( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game,
+                                                              float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
+                _objectManager->flushSceneTransforms();
+            }
         }
 
-        refreshCameraCache();
-        if ( getActiveGameCamera() == nullptr && pGameObj != nullptr )
-            setActiveGameCamera( pGameObj->getComponent<CameraComponent>() );
-
-        _bCamerasEnsured = true;
-        return true;
+        storeCameraHandle( pCamera, _activeGameCamera );
+        return pCamera != nullptr;
     }
 
     /**
@@ -315,35 +317,9 @@ namespace sw
         return SceneInternal::findDirectionalLight( _objectManager.get(), true );
     }
 
-    void Scene::refreshCameraCache()
-    {
-        _activeGameCamera = {};
-        if ( _objectManager == nullptr )
-            return;
-
-        int32            bestGamePri = MathUtil::MinInt32;
-        CameraComponent* pBestGame{ nullptr };
-
-        _objectManager->forEachGameObject( [&]( GameObject* pObj )
-        {
-            if ( pObj == nullptr || pObj->isActive() == false )
-                return;
-            CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-            if ( pCam == nullptr || pCam->isActive() == false )
-                return;
-            if ( pCam->getRole() != CameraRole::Game )
-                return;
-            if ( pCam->getPriority() < bestGamePri )
-                return;
-            bestGamePri = pCam->getPriority();
-            pBestGame   = pCam;
-        } );
-
-        storeCameraHandle( pBestGame, _activeGameCamera );
-    }
-
     void Scene::setActiveGameCamera( CameraComponent* pCamera )
     {
+        storeCameraHandle( pCamera, _gameCameraOverride );
         storeCameraHandle( pCamera, _activeGameCamera );
     }
 

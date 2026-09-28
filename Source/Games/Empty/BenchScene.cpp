@@ -692,13 +692,8 @@ namespace sw
         // 씬의 **모든** 카메라를 맞춘다. 에디터 GameView 는 게임 카메라가 아니라 자기 뷰포트
         // 카메라로 그리므로(App::getEditorViewCamera), 게임 카메라만 옮기면 에디터에서는
         // 아무것도 안 보인다 — 실제로 그 이유로 한참 헤맸다.
-        pObjects->forEachGameObject( [&]( GameObject* pObj )
-        {
-            if ( pObj == nullptr )
-                return;
-            if ( CameraComponent* pCam = pObj->getComponent<CameraComponent>() )
-                frameOneCamera( pCam, side, spacing );
-        } );
+        for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
+            frameOneCamera( pCam, side, spacing );
     }
 
     void BenchScene::frameOneCamera( CameraComponent* pCamera, uint32 side, float32 spacing )

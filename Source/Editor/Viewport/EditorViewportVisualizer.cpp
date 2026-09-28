@@ -13,6 +13,7 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include <imgui.h>
@@ -66,12 +67,12 @@ namespace sw::editor
             {
                 constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
 
-                for ( GameObject* pObj : *args._pListObject )
+                if ( args._pListCamera == nullptr )
+                    return;
+                // 카메라 등록부만 본다. 예전에는 오브젝트 스냅샷 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 물었다.
+                for ( CameraComponent* pCam : *args._pListCamera )
                 {
-                    if ( pObj == nullptr || pObj->isActive() == false )
-                        continue;
-                    CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-                    if ( pCam == nullptr || pCam == args._pActiveCamera || pCam->isActive() == false )
+                    if ( pCam == args._pActiveCamera || CameraRegistry::isUsableCamera( pCam ) == false )
                         continue;
 
                     const float4x4 camWorld = pCam->getWorldMatrix();

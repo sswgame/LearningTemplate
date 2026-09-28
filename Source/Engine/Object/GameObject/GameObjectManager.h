@@ -20,6 +20,7 @@
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/DeferredDelegateQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
@@ -243,6 +244,14 @@ namespace sw
         LightRegistry& getLightRegistry() { return _lightRegistry; }
         /** @brief 빛 컴포넌트의 등록부입니다. */
         const LightRegistry& getLightRegistry() const { return _lightRegistry; }
+
+        /**
+         * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
+         * @details 빛과 같은 이유로 있습니다 — 게임 · 에디터 카메라 선택이 씬 전체를 훑지 않습니다. 자세한 사연은 CameraRegistry.h 에 있습니다.
+         */
+        CameraRegistry& getCameraRegistry() { return _cameraRegistry; }
+        /** @brief 카메라 컴포넌트의 등록부입니다. */
+        const CameraRegistry& getCameraRegistry() const { return _cameraRegistry; }
 
         /**
          * @brief 틱에 참여하는 오브젝트의 등록부입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
@@ -541,6 +550,8 @@ namespace sw
         PrimitiveRegistry _primitiveRegistry;
         /** @brief 빛 컴포넌트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
         LightRegistry _lightRegistry;
+        /** @brief 카메라 컴포넌트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
+        CameraRegistry _cameraRegistry;
         /** @brief 틱에 참여하는 오브젝트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
         TickRegistry _tickRegistry;
     };

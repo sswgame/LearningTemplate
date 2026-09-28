@@ -412,6 +412,7 @@ namespace sw::editor
             visualizerArgs._canvasSize    = canvasSize;
             visualizerArgs._pActiveCamera = pCamera;
             visualizerArgs._pListObject   = &_listSceneObject;
+            visualizerArgs._pListCamera   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );

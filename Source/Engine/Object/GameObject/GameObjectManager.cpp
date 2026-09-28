@@ -100,6 +100,7 @@ namespace sw
         , _transformHierarchy{}
         , _primitiveRegistry{}
         , _lightRegistry{}
+        , _cameraRegistry{}
         , _tickRegistry{}
     {
         ComponentFactoryRegistrar* pEngineHead = ComponentFactoryRegistrar::getHead();

@@ -1528,6 +1528,22 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   규칙을 되살린 변이에 진다). 동작 보존: Release 벤치(`-gv_benchMeshes=2000 -gv_benchLights=8 -gv_benchGround=1 -gv_benchAnimate=0`)
   스크린샷을 옛 · 새 바이너리로 4 백엔드 비교 — 0 · 2 · 3 번은 0 바이트 차이, 1 번은 **같은 바이너리끼리도** 13 바이트가 갈리는 두 결과를
   오가며 옛 · 새가 같은 두 묶음에 든다(하니스 잡음). 성능 주장은 없다.
+- **카메라 등록부 — 찾지 말고 등록받는다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)를 고르는 규칙이 두 벌이었고 둘 다
+  **모든 GameObject** 를 돌며 `getComponent<CameraComponent>()` 를 물었다. 에디터가 켜져 있으면 에디터 카메라 조회가 프레임마다 세 번
+  (뷰포트 update · draw, 게임 스레드의 뷰 카메라 제공자), 프러스텀 시각화가 한 번 더 씬을 훑었다. 이제 `CameraComponent` 가 붙을 때
+  `CameraRegistry` 에 등록하고, 선택 규칙(역할 · 우선순위, 같으면 뒤에 등록된 것 — 예전 두 벌과 같은 `>=`)은 `selectCamera` 하나다.
+  같이 고친 게임 쪽 결함 셋: **처음 한 번만 골라 캐시해** 나중에 생긴 더 높은 우선순위의 카메라 · 꺼진 카메라 · 역할이 바뀐 카메라를
+  따라가지 않았다(이제 `ensureDefaultCameras` 가 프레임마다 등록부로 다시 고른다, 카메라 몇 개를 도는 값) · **첫 호출이 이미 있는
+  "GameCamera" 의 자리 · 렌즈를 기본값으로 되돌렸다**(씬 파일에 둔 카메라가 첫 프레임에 옮겨졌다 — 이제 만들 때만 기본값) ·
+  `setActiveGameCamera` 는 다음 호출에 덮였다(이제 그 카메라가 살아 있고 켜져 있는 동안 먼저다). `refreshCameraCache` 삭제.
+  회귀 테스트 `SceneTest.GameCameraSelectionFollowsTheRegistry`(파괴 대기 필터를 빼는 변이에 진다 — 처음 쓴 판은 생성 경로가 그 변이를
+  가려 통과했고, 그 경로가 기존 GameCamera 를 기본값으로 되돌리는 것이 거기서 드러나 함께 고쳤다).
+
+  | Release App · DX12 · `-EnableEditor -gv_benchMeshes=8000 -gv_profileFrames=600` · 4 쌍 교대 | 전 | 후 |
+  |---|---|---|
+  | `GT.Frame` avg (에디터 모드 — 뷰 카메라 제공자의 씬 훑기) | 101 us | **16 us** |
+  | `GT.Editor.updateUi` avg (뷰포트 update · draw 의 두 번) | 5,080 us | 4,946 us |
+  | wall (us/frame) | 5,192 | 4,977 |
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

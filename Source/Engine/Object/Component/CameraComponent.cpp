@@ -53,6 +53,18 @@ namespace sw
         SceneComponent::onBeginPlay();
     }
 
+    void CameraComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        manager.getCameraRegistry().add( this );
+    }
+
+    void CameraComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getCameraRegistry().remove( this );
+        SceneComponent::onUnregister( manager );
+    }
+
     void CameraComponent::lookAt( const float3& target, const float3& up )
     {
         const float3  eye     = getWorldPosition();

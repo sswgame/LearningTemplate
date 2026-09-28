@@ -37,24 +37,9 @@ namespace sw::editor
         if ( pObjectManager == nullptr )
             return nullptr;
 
-        // 값으로 반환하는 getAllGameObjects() 는 호출마다 씬 전체를 새로 할당하고 복사한다. 여기는 프레임마다
-        // 두 번 불리는 곳(뷰포트 update/draw)이고 읽기만 하므로, 복사하지 않는 순회를 쓴다.
-        int32            bestPriority = MathUtil::MinInt32;
-        CameraComponent* pBest{ nullptr };
-        pObjectManager->forEachGameObject( [&bestPriority, &pBest]( GameObject* pObj )
-        {
-            if ( pObj == nullptr || pObj->isActive() == false )
-                return;
-            CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-            if ( pCam == nullptr || pCam->isActive() == false || pCam->isPendingKill() )
-                return;
-            if ( pCam->getRole() != CameraRole::Editor )
-                return;
-            if ( pCam->getPriority() < bestPriority )
-                return;
-            bestPriority = pCam->getPriority();
-            pBest        = pCam;
-        } );
+        // 등록부의 규칙(역할 · 우선순위) 하나로 고른다. 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 불리는 자리다 —
+        // 예전에는 부를 때마다 씬 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 물었다.
+        CameraComponent* pBest = pObjectManager->getCameraRegistry().selectCamera( CameraRole::Editor );
         if ( pBest != nullptr )
             return pBest;
 

@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -352,6 +353,77 @@ SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
     scene.getObjectManager()->destroyObject( pSun, true );
     scene.getObjectManager()->tick( 0.016f );
     SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+}
+
+/**
+ * @brief [SceneTest] 게임 카메라는 프레임마다 등록부의 규칙으로 다시 골라진다 — 늦게 생긴 높은 우선순위, 끄기, 역할 변경, 파괴 대기, 동률, 직접 지정
+ * @details 예전에는 처음 한 번만 씬 전체를 훑어 골라 캐시했다. 나중에 생긴 더 높은 우선순위의 카메라는 선택되지 않았고, 꺼 둔 카메라가
+ *          계속 선택됐다. 그리고 첫 호출이 이미 있는 "GameCamera" 의 위치 · 렌즈를 기본값으로 되돌렸다(씬 파일에 둔 카메라가 첫 프레임에 옮겨졌다).
+ *          에디터 카메라도 같은 규칙(`CameraRegistry::selectCamera`)을 쓴다.
+ */
+SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
+{
+    sw::Scene              scene{ "CameraSelection" };
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+
+    // 씬 파일에 있던 것처럼 "GameCamera" 를 먼저 둔다 — 첫 선택이 그 자리 · 렌즈를 되돌리면 안 된다.
+    sw::GameObject*      pDefaultObj = pObjects->createGameObject( sw::hashed_string( "GameCamera" ) );
+    sw::CameraComponent* pDefault    = pDefaultObj->addComponent<sw::CameraComponent>();
+    SW_ASSERT_NOT_NULL( pDefault );
+    pDefault->setRole( sw::CameraRole::Game );
+    pDefault->setLocalPosition( sw::float3( 5.0f, 6.0f, 7.0f ) );
+    pDefault->setFieldOfViewY( 1.1f );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pDefault->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.1f, pDefault->getFieldOfViewY(), 1e-4f );
+
+    // 늦게 생긴 높은 우선순위의 게임 카메라가 다음 선택에서 이긴다.
+    sw::GameObject*      pHighObj = pObjects->createGameObject( sw::hashed_string( "HighCamera" ) );
+    sw::CameraComponent* pHigh    = pHighObj->addComponent<sw::CameraComponent>();
+    SW_ASSERT_NOT_NULL( pHigh );
+    pHigh->setRole( sw::CameraRole::Game );
+    pHigh->setPriority( 10 );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
+
+    // 끄면 다음 것으로, 켜면 돌아온다. 역할을 바꿔도 따라간다.
+    pHigh->setActive( false );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
+    pHigh->setActive( true );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
+    pHigh->setRole( sw::CameraRole::Editor );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
+    SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Editor ) == pHigh );
+    pHigh->setRole( sw::CameraRole::Game );
+
+    // 직접 고른 카메라가 살아 있고 켜져 있는 동안은 그것이 먼저다.
+    scene.setActiveGameCamera( pDefault );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
+    scene.setActiveGameCamera( nullptr );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
+
+    // 파괴 대기가 되면 그 프레임부터 빠진다(메모리는 아직 살아 있다). 규칙 자체가 거르는지 등록부 선택으로 본다.
+    pObjects->destroyObject( pHighObj );
+    SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Game ) == pDefault );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pDefault->getLocalPosition()._x, 1e-4f );
+    pObjects->processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t( 1 ), pObjects->getCameraRegistry().getAll().size() );
+
+    // 우선순위가 같으면 뒤에 등록된 것이 이긴다.
+    sw::GameObject*      pTieObj = pObjects->createGameObject( sw::hashed_string( "TieCamera" ) );
+    sw::CameraComponent* pTie    = pTieObj->addComponent<sw::CameraComponent>();
+    pTie->setRole( sw::CameraRole::Game );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 }
 
 /**

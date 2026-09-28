@@ -49,6 +49,10 @@ namespace sw
         virtual ~CameraComponent() override = default;
 
         void onBeginPlay() override;
+        /** @brief 씬에 붙을 때 카메라 등록부에 자기를 등록합니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
+        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 카메라 역할을 설정합니다. */
         void setRole( CameraRole role ) { _role = role; }
