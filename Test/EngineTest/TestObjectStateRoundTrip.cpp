@@ -94,6 +94,54 @@ SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurviv
 // 7) ObjectStateXmlSerializerTest — XML 저장·계층 라운드트립
 // ------------------------------------------------------------------------------
 /**
+ * @brief [ObjectStateRoundTripTest] 부모를 제자리에서 다시 읽어도(되돌리기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 다른 오브젝트의 자식이 붙어 있다
+ * @details 제자리 로드는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가
+ *          됐다.** 로드는 이 오브젝트 안의 부착만 되붙였다. 에디터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튀었다.
+ *          XML · JSON · 바이너리 세 로더가 같은 길이다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
+{
+    for ( uint32 format = 0; format < 3; ++format )
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pParent     = manager.createGameObject( sw::hashed_string( "ReloadParent" ) );
+        sw::GameObject*       pChild      = manager.createGameObject( sw::hashed_string( "ReloadChild" ) );
+        sw::SceneComponent*   pRoot       = pParent->addComponent<sw::SceneComponent>();
+        sw::SceneComponent*   pChildScene = pChild->addComponent<sw::SceneComponent>();
+        SW_ASSERT_NOT_NULL( pRoot );
+        SW_ASSERT_NOT_NULL( pChildScene );
+        pRoot->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
+        pRoot->setLocalRotation( sw::float3( 0.0f, 0.5f, 0.0f ) );
+        pChildScene->setLocalPosition( sw::float3( 0.0f, 2.0f, 1.0f ) );
+        SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+        manager.flushSceneTransforms();
+        const sw::float3 worldBefore = pChildScene->getWorldPosition();
+
+        const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pParent );
+        bool                     bLoaded  = false;
+        if ( format == 0 )
+            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pParent, sw::ObjectStateSerializer::saveToXmlString( pParent ), &identity );
+        else if ( format == 1 )
+            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pParent, sw::ObjectStateSerializer::saveToJsonString( pParent ), &identity );
+        else
+        {
+            sw::vector<uint8> buffer;
+            SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pParent, buffer ) );
+            sw::string parentName;
+            bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pParent, buffer.data(), buffer.size(), parentName, &identity ) != 0;
+        }
+        SW_ASSERT_TRUE( bLoaded );
+        manager.flushSceneTransforms();
+
+        SW_EXPECT_TRUE( pChild->getParent() == pParent );
+        const sw::float3 worldAfter = pChildScene->getWorldPosition();
+        SW_EXPECT_NEAR_EQUAL( worldBefore._x, worldAfter._x, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( worldBefore._y, worldAfter._y, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( worldBefore._z, worldAfter._z, 1e-3f );
+    }
+}
+
+/**
  * @brief [ObjectStateXmlSerializerTest] XML 문자열 저장·로드
  */
 SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )

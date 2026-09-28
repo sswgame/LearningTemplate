@@ -1596,6 +1596,13 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   `GameObject::setActive` 는 틱 중이면 틱 뒤로 미룬다(`addTag` 와 같다). 알림 이름은 함수 안 정적으로(`SceneComponent` 는 알림마다 셋을 intern 했다).
   회귀 테스트 — `GameObjectTest.ComponentActiveBitIsIndependentOfOwner` · `GpuSceneTest.DisabledMeshComponentIsNotDrawn` ·
   `SequencerTest.MultiClipTargetDoesNotFlicker`(셋 다 이전 코드에서 진다).
+- **부모를 제자리에서 다시 읽으면 다른 오브젝트의 자식이 떨어졌다.** 제자리 로드(되돌리기 · 다시 하기 · 프리팹으로 되돌리기 · 플레이 종료
+  복원)는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 다른 오브젝트의 자식들이 루트가 됐다(로드가 되붙이는
+  것은 이 오브젝트 안의 부착뿐이었다). 인스펙터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튀었다. 이제 세 로더가
+  같은 두 걸음을 쓴다: 지우기 전에 다른 오브젝트의 자식을 (자식 핸들, 부모 컴포넌트의 안정 키)로 적고, 읽은 뒤 같은 자리의 부모(없으면
+  primary)에 되붙인다 — 부모는 핸들이 아니라 안정 키다(식별 목록 없이 읽으면 id 가 바뀌고, 이름 기반 부착 필드는 이름을 되돌리는 되돌리기에서
+  틀린다). 회귀 테스트 `ObjectStateRoundTripTest.InPlaceReloadKeepsOtherObjectsChildren`(XML · JSON · 바이너리, 월드 그대로 — 이전 코드에서 진다).
+  프리팹으로 되돌리기가 그 오브젝트 **자신의** 부모를 잃는지는 따로 확인하지 않았다(남은 것).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

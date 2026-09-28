@@ -7,6 +7,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -26,6 +27,68 @@ namespace sw
     {
         struct ObjectStateSerializerInternal
         {
+            /**
+             * @brief 이 오브젝트의 씬 컴포넌트에 붙어 있던 **다른 오브젝트의** 자식 하나입니다 — 제자리에 다시 읽는 동안 떨어졌다가 되붙습니다.
+             * @details 부모는 핸들이 아니라 안정 키(`타입#n`)로 적습니다. 식별 목록 없이 다시 읽으면 컴포넌트 id 가 바뀌고, 이름 기반
+             *          부착 필드는 이름을 되돌리는 되돌리기에서 틀립니다. 자식은 핸들입니다(그쪽 오브젝트는 그대로 산다).
+             */
+            struct ChildLink
+            {
+                ComponentHandle _child;
+                string          _parentKey;
+            };
+
+            /**
+             * @brief 다시 읽기 전에 다른 오브젝트의 자식 연결을 적습니다.
+             * @details 제자리에서 다시 읽으면(되돌리기 · 다시 하기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 컴포넌트를 모두 지우고 새로
+             *          만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가 됐습니다.** 로드가 되붙이는 것은
+             *          이 오브젝트 **안의** 부착(`applyLoadedHierarchy`)뿐이었습니다. 부모 속성 하나를 고치고 되돌리면 자식이 떨어졌습니다.
+             */
+            static void captureChildLinks( const GameObject* pGameObject, vector<ChildLink>& outListLink )
+            {
+                outListLink.clear();
+                for ( Component* pComp : pGameObject->getComponents() )
+                {
+                    SceneComponent* pScene = ( pComp != nullptr && pComp->isPendingKill() == false ) ? castTo<SceneComponent>( pComp ) : nullptr;
+                    if ( pScene == nullptr )
+                        continue;
+                    for ( SceneComponent* pChild : pScene->getChildren() )
+                    {
+                        if ( pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject )
+                            continue;
+                        outListLink.push_back( ChildLink{ pChild->getHandle(), ComponentStableKey::makeKey( pScene ) } );
+                    }
+                }
+            }
+
+            /**
+             * @brief 적어 둔 자식을 새로 만든 같은 자리의 부모(안정 키)에 되붙입니다. 그 자리가 없으면 primary 에, 그것도 없으면 루트로 둡니다.
+             * @details 자식의 로컬 트랜스폼은 그대로라 부모가 같은 값으로 돌아오면 월드도 그대로입니다. 붙이는 자리가 계층 활성도 맞춥니다.
+             */
+            static void restoreChildLinks( GameObject* pGameObject, const vector<ChildLink>& listLink )
+            {
+                GameObjectManager* pManager = pGameObject->getManager();
+                if ( pManager == nullptr )
+                    return;
+                for ( const ChildLink& link : listLink )
+                {
+                    SceneComponent* pChild = castTo<SceneComponent>( pManager->resolveComponent( link._child ) );
+                    if ( pChild == nullptr )
+                        continue;
+                    SceneComponent* pParent = castTo<SceneComponent>( ComponentStableKey::findComponent( pGameObject, link._parentKey ) );
+                    if ( pParent == nullptr )
+                        pParent = pGameObject->getPrimarySceneComponent();
+                    if ( pParent == nullptr )
+                    {
+                        SW_LOG_WARNING( "In-place load of '%#' left child '%#' as a root (no scene component to attach to)",
+                                        pGameObject->getName().c_str(), pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
+                        continue;
+                    }
+                    if ( pChild->getParent() != pParent )
+                        pChild->attachToComponent( pParent );
+                }
+            }
+
             /**
              * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층과 읽은 부모 연결을 맞춥니다.
              * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들고 있었습니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
@@ -106,7 +169,9 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return false;
 
-        const hashed_string oldName = pGameObject->getName();
+        const hashed_string                              oldName = pGameObject->getName();
+        vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
+        ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
         pGameObject->clearComponents();
 
         const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
@@ -114,9 +179,13 @@ namespace sw
         uint32                                    ver{ 0 };
         if ( TSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion,
                                                 nullptr, nullptr, ctx ) == false )
+        {
+            ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
             return false;
+        }
 
         ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
+        ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
         return true;
     }
 
@@ -185,7 +254,9 @@ namespace sw
         if ( bodyStart + bodySize > size )
             return 0;
 
-        const hashed_string oldName = pGameObject->getName();
+        const hashed_string                              oldName = pGameObject->getName();
+        vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
+        ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
         pGameObject->clearComponents();
 
         const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
@@ -193,9 +264,13 @@ namespace sw
         uint32                                    ver{ 0 };
         if ( BinarySerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
                                                      kObjectReflectedSchemaVersion, nullptr, nullptr, ctx ) == false )
+        {
+            ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
             return 0;
+        }
 
         ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
+        ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
 
         return bodyStart + bodySize;
     }
