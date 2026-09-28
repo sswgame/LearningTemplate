@@ -257,11 +257,14 @@ namespace sw::editor
             if ( pComp == nullptr )
                 continue;
 
-            const utf8* pName   = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
-            bool        bActive = pComp->isActive();
-            bool        bRemove{ false };
-            const bool  bAccent   = isA<SceneComponent>( pComp );
-            const bool  bScrollTo = ( workspace.getScrollToComponentId() != 0 &&
+            const utf8* pName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
+            // 체크박스는 컴포넌트 **자기** 비트다. 예전에는 실효값(isActive — 소유 오브젝트의 계층 활성까지)을 읽어 그대로 다시 써서,
+            // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼졌다. 쓰는 것도 바뀐 때 한 번이다(아래).
+            const bool bWasActive = pComp->isSelfActive();
+            bool       bActive    = bWasActive;
+            bool       bRemove{ false };
+            const bool bAccent   = isA<SceneComponent>( pComp );
+            const bool bScrollTo = ( workspace.getScrollToComponentId() != 0 &&
                                      workspace.getScrollToComponentId() == pComp->getComponentId() );
 
             if ( bScrollTo )
@@ -274,14 +277,13 @@ namespace sw::editor
             {
                 if ( bScrollTo )
                     ImGui::SetScrollHereY( 0.25f );
-                pComp->setActive( bActive );
 
                 drawComponentContextMenu( pObj, pComp, workspace, bRemove );
 
                 drawComponentSection( pComp, pRhiDevice );
                 EditorWidgets::endComponentCard();
             }
-            else
+            if ( bActive != bWasActive )
                 pComp->setActive( bActive );
 
             if ( bRemove )

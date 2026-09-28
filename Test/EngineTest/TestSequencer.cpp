@@ -2,6 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -127,6 +128,51 @@ SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndAppliesTransform )
     // 클립 밖(프레임 25) — 꺼진다.
     sw::SequenceTimelineUtil::applyFrame( &manager, player.getAsset(), 25 );
     SW_EXPECT_FALSE( pTarget->isActive() );
+}
+
+/**
+ * @brief [SequencerTest] 클립이 둘인 대상은 프레임마다 꺼졌다 켜지지 않고, 대상의 컴포넌트를 꺼 두면 그대로다
+ * @details 예전 applyFrame 은 클립마다 대상을 끄고(덮지 않는 클립) 켰다(덮는 클립) — 클립이 둘인 대상은 매 프레임 꺼졌다 켜져 렌더
+ *          집합이 두 번 흔들렸다. 그리고 오브젝트 토글이 컴포넌트의 자기 비트를 덮어써, 꺼 둔 컴포넌트가 다음 프레임에 켜졌다.
+ */
+SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
+{
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 40;
+    for ( int32 clipIndex = 0; clipIndex < 2; ++clipIndex )
+    {
+        sw::SequenceTrackItem clip{};
+        clip._name         = clipIndex == 0 ? "Early" : "Late";
+        clip._targetObject = "Flicker";
+        clip._start        = clipIndex == 0 ? 0 : 20;
+        clip._end          = clipIndex == 0 ? 10 : 30;
+        clip._type         = 0;
+        asset._listItem.push_back( std::move( clip ) );
+    }
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string{ "Flicker" } );
+    sw::MeshComponent*    pMesh   = pTarget->addComponent<sw::MeshComponent>();
+    sw::SceneComponent*   pOff    = pTarget->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    manager.mergePendingAdds();
+    pOff->setActive( false );
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 5 );
+    SW_EXPECT_TRUE( pTarget->isActive() );
+    // 켜진 채 머무는 프레임에서는 아무것도 흔들리지 않는다 — 한 호출 안에서 꺼졌다 켜지면 메시가 렌더 더티를 찍는다.
+    manager.getPrimitiveRegistry().clearDirty();
+    for ( int32 frame = 6; frame < 10; ++frame )
+        sw::SequenceTimelineUtil::applyFrame( &manager, asset, frame );
+    SW_EXPECT_FALSE( manager.getPrimitiveRegistry().hasDirty() );
+    SW_EXPECT_FALSE( pOff->isSelfActive() ); // 꺼 둔 컴포넌트는 그대로
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 15 );
+    SW_EXPECT_FALSE( pTarget->isActive() );
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 25 );
+    SW_EXPECT_TRUE( pTarget->isActive() );
+    SW_EXPECT_FALSE( pOff->isSelfActive() );
 }
 
 /**

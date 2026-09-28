@@ -143,9 +143,11 @@ namespace sw
     void SceneComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        if ( propertyName == hashed_string( "_localPosition" ) ||
-             propertyName == hashed_string( "_localRotation" ) ||
-             propertyName == hashed_string( "_localScale" ) )
+        // 이름은 한 번만 만든다(알림마다 셋을 intern 하던 것).
+        static const hashed_string s_positionName( "_localPosition" );
+        static const hashed_string s_rotationName( "_localRotation" );
+        static const hashed_string s_scaleName( "_localScale" );
+        if ( propertyName == s_positionName || propertyName == s_rotationName || propertyName == s_scaleName )
             markTransformDirty();
     }
 

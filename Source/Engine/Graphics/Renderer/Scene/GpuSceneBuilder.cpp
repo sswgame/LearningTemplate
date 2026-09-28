@@ -217,8 +217,9 @@ namespace sw
     {
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
             return false;
-        GameObject* pObj = pMeshComp->getOwner();
-        if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
+        // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다). 예전에는 소유 오브젝트만 봐서,
+        // 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려졌다.
+        if ( pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false )
             return false;
         Mesh* pMesh = pMeshComp->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )

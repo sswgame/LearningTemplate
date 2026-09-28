@@ -951,6 +951,51 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 }
 
 /**
+ * @brief 컴포넌트의 자기 활성 비트는 소유 오브젝트 · 조상의 토글과 무관하다. 같은 값을 세팅하면 알림도 없다.
+ * @details 예전 `GameObject::setActive` 는 자기 비트를 소유 컴포넌트마다 **복사**했다. 꺼 둔 컴포넌트가 오브젝트를 껐다 켜면 다시 켜졌다
+ *          (로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 소유 오브젝트의 계층 활성을 이미 함께 본다.
+ */
+SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject*        pParent = manager.createGameObject( sw::hashed_string( "ActiveParent" ) );
+    sw::GameObject*        pChild  = manager.createGameObject( sw::hashed_string( "ActiveChild" ) );
+    sw::MockMeshComponent* pTicker = pChild->addComponent<sw::MockMeshComponent>();
+    pParent->addComponent<sw::SceneComponent>();
+    pChild->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    manager.tick( 0.016f );
+    const int32 tickBaseline = pTicker->_tickCount;
+
+    pTicker->setActive( false );
+    pChild->setActive( false );
+    pChild->setActive( true );
+    SW_EXPECT_FALSE( pTicker->isSelfActive() );
+    pParent->setActive( false );
+    pParent->setActive( true );
+    SW_EXPECT_FALSE( pTicker->isSelfActive() );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( tickBaseline, pTicker->_tickCount ); // 꺼 둔 것은 여전히 틱하지 않는다
+
+    // 오브젝트를 끄면 실효값은 꺼지지만 자기 비트는 그대로다 — 다시 켜면 돌아온다.
+    pTicker->setActive( true );
+    pParent->setActive( false );
+    SW_EXPECT_TRUE( pTicker->isSelfActive() );
+    SW_EXPECT_FALSE( pTicker->isActive() );
+    pParent->setActive( true );
+    SW_EXPECT_TRUE( pTicker->isActive() );
+
+    // 같은 값은 알리지 않는다.
+    sw::MockCallbackComponent* pCallback = pChild->addComponent<sw::MockCallbackComponent>();
+    pCallback->_lastChangedProperty      = sw::hashed_string{};
+    pCallback->setActive( true );
+    SW_EXPECT_TRUE( pCallback->_lastChangedProperty.empty() );
+    pCallback->setActive( false );
+    SW_EXPECT_STREQ( "_bActive", pCallback->_lastChangedProperty.c_str() );
+}
+
+/**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
  *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진

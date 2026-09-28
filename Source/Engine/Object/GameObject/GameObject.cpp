@@ -182,20 +182,24 @@ namespace sw
     }
 
     /**
-     * @brief 로컬 활성 상태를 변경하고 소유 컴포넌트에 전파한 뒤, 계층 활성을 자손까지 한 번 재계산합니다.
+     * @brief 로컬 활성 상태를 바꾸고 계층 활성을 자손까지 다시 맞춥니다. 틱 중이면 틱 뒤로 미룹니다.
      */
     void GameObject::setActive( bool bActive )
     {
-        _bActive.store( bActive, std::memory_order_relaxed );
-
-        for ( Component* pComp : _listComponent )
+        // 틱 중(병렬 onTick — 시퀀서가 대상을 켜고 끈다)이면 다른 오브젝트의 계층 상태를 워커가 쓰지 않게 틱 뒤로 미룬다. addTag 와 같다.
+        if ( isComponentMutationFrozen() )
         {
-            if ( pComp == nullptr || pComp->isPendingKill() )
-                continue;
-            pComp->setActive( bActive );
+            deferOnSelfPostTick( Delegate<void( GameObject& )>( [bActive]( GameObject& self )
+            { self.setActive( bActive ); } ) );
+            return;
         }
-        // 계층 재계산은 이 안에서 한 번만 한다. 예전에는 위에서 한 번 더 돌아 자손 전체를 두 번 걸었다.
-        onPropertyChanged( hashed_string( "_bActive" ) );
+
+        // **컴포넌트의 자기 비트는 건드리지 않는다.** 예전에는 이 비트를 소유 컴포넌트마다 복사해, 꺼 둔 컴포넌트가 오브젝트를 껐다 켜면
+        // 다시 켜졌다(로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 이미 소유 오브젝트의 계층 활성을
+        // 함께 본다 — 유니티의 SetActive / enabled 와 같은 나눔이다. 같은 값이어도 계층은 다시 맞춘다(로드가 그것에 기댄다).
+        static const hashed_string s_activeName( "_bActive" );
+        _bActive.store( bActive, std::memory_order_relaxed );
+        onPropertyChanged( s_activeName );
     }
 
     bool GameObject::attachToParent( GameObject* pParent )

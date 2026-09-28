@@ -27,11 +27,12 @@ namespace sw
                 return MathUtil::clamp( t, 0.0f, 1.0f );
             }
 
-            static bool isClipActive( const vector<const SequenceTrackItem*>& listActive, const SequenceTrackItem& item )
+            /** @brief 그 대상을 덮는 활성 클립(종류 0)이 하나라도 있으면 true 입니다. */
+            static bool isTargetCovered( const vector<const SequenceTrackItem*>& listActive, const string& targetObject )
             {
                 for ( const SequenceTrackItem* pActive : listActive )
                 {
-                    if ( pActive == &item )
+                    if ( pActive != nullptr && pActive->_type == 0 && pActive->_targetObject == targetObject )
                         return true;
                 }
                 return false;
@@ -90,29 +91,27 @@ namespace sw
         vector<const SequenceTrackItem*> listActive;
         asset.collectActiveItems( frame, listActive );
 
+        // 대상마다 원하는 상태는 하나다 — 그 대상을 덮는 활성 클립이 있으면 켜짐. **바뀔 때만** 세팅한다. 예전에는 클립마다 끄고 켜서,
+        // 클립이 둘인 대상은 매 프레임 꺼졌다 켜졌고(렌더 집합이 두 번 흔들렸다) 모든 대상을 매 프레임 다시 썼다.
         for ( const SequenceTrackItem& item : asset._listItem )
         {
             if ( item._type != 0 || item._targetObject.empty() )
                 continue;
-            if ( SequenceTimelineUtilInternal::isClipActive( listActive, item ) )
-                continue;
             GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, item._targetObject );
-            if ( pTarget != nullptr )
-                pTarget->setActive( false );
+            if ( pTarget == nullptr )
+                continue;
+            const bool bCovered = SequenceTimelineUtilInternal::isTargetCovered( listActive, item._targetObject );
+            if ( pTarget->isActive() != bCovered )
+                pTarget->setActive( bCovered );
         }
 
         for ( const SequenceTrackItem* pItem : listActive )
         {
-            if ( pItem == nullptr || pItem->_targetObject.empty() )
+            if ( pItem == nullptr || pItem->_targetObject.empty() || pItem->_type != 0 )
                 continue;
             GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, pItem->_targetObject );
-            if ( pTarget == nullptr )
-                continue;
-            if ( pItem->_type == 0 )
-            {
-                pTarget->setActive( true );
+            if ( pTarget != nullptr )
                 SequenceTimelineUtilInternal::applyClipTransform( pTarget, *pItem, frame );
-            }
         }
 
         if ( previousFrame == kNoPreviousFrame )

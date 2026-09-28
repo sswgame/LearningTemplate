@@ -561,6 +561,41 @@ SW_TEST_CASE( GpuSceneTest, AncestorToggleReachesGrandchildMeshOnly )
 }
 
 /**
+ * @brief 메시 컴포넌트를 끄면 그려지지 않고, 켜면 돌아온다(소유 오브젝트는 켜진 채).
+ * @details 예전 수집은 소유 오브젝트의 계층 활성만 봐서, 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려졌다.
+ */
+SW_TEST_CASE( GpuSceneTest, DisabledMeshComponentIsNotDrawn )
+{
+    sw::Scene scene( "GpuSceneDisabledMesh" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager*   objects = scene.getObjectManager();
+    sw::shared_ptr<sw::Mesh> cube    = sw::MeshUtil::createUnitCube();
+
+    sw::MeshComponent* arrMesh[2] = {};
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        sw::GameObject* pObj = objects->createGameObject( sw::hashed_string( index == 0 ? "DrawnMesh" : "ToggledMesh" ) );
+        arrMesh[index]       = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( arrMesh[index] );
+        arrMesh[index]->setMesh( cube );
+        arrMesh[index]->setLocalPosition( sw::float3( static_cast<float32>( index ) * 2.0f, 0.0f, -1.0f ) );
+        arrMesh[index]->setVisible( true );
+    }
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    arrMesh[1]->setActive( false );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    arrMesh[1]->setActive( true );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+}
+
+/**
  * @brief 트랜스폼만 바뀌면 배치를 다시 나누지 않지만, 결과는 다시 나눈 것과 같아야 한다.
  * @details 정렬을 건너뛰는 경로라 조용히 틀리기 쉽다. 키가 바뀐 경우와 나란히 확인한다.
  */

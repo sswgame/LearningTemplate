@@ -1585,6 +1585,17 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   않아 이름표로 만든 키는 씬을 다시 읽으면 가리킬 곳이 없었다(`NamedComponentCountsApart` → `LabelDoesNotChangeTheKey`).
   회귀 테스트 `GameObjectTest.ComponentLabelIsNotItsType`(이름표 뒤 캐스트 · 타입 · 되살린 id, 다른 타입 이름으로 캐스트되지 않음) ·
   `ModuleComponentsPurgedBeforeUnload` 에 이름표 단계 — 이름으로 찾는 변이에 둘 다 진다. Release: `getComponent` 15 / 15 ns(10 회).
+- **활성의 뜻을 하나로.** (1) `GameObject::setActive` 가 자기 비트를 소유 컴포넌트마다 **복사**해, 꺼 둔 컴포넌트가 오브젝트를 껐다 켜면
+  다시 켜졌다(로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 이미 소유 오브젝트의 계층 활성을 함께 본다 —
+  복사를 걷었다(유니티의 SetActive / enabled 나눔). (2) 메시만 컴포넌트 비트를 무시했다 — 수집이 소유 오브젝트의 계층 활성만 봐서 빛은
+  컴포넌트를 끄면 꺼지는데 메시는 그려졌다. 이제 `isActive` 하나(빛 · 주광 · 카메라와 같다). (3) 인스펙터가 체크박스를 **실효값**으로 읽어
+  프레임마다 되써서, 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼졌고 선택된 메시는 매 프레임 렌더 더티였다 —
+  자기 비트를 읽고 바뀐 때 한 번 쓴다. (4) `Component::setActive` · `setTickGroup` 에 같은 값이면 아무것도 안 하는 가드(기본 그룹을
+  onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿). (5) 시퀀서가 클립마다 대상을 끄고 켜서 클립이 둘인 대상은 **매 프레임** 꺼졌다 켜졌고,
+  그 쓰기가 병렬 틱의 워커에서 다른 오브젝트의 계층 상태를 건드렸다 — 대상마다 원하는 상태를 하나로 정해 바뀔 때만 세팅하고,
+  `GameObject::setActive` 는 틱 중이면 틱 뒤로 미룬다(`addTag` 와 같다). 알림 이름은 함수 안 정적으로(`SceneComponent` 는 알림마다 셋을 intern 했다).
+  회귀 테스트 — `GameObjectTest.ComponentActiveBitIsIndependentOfOwner` · `GpuSceneTest.DisabledMeshComponentIsNotDrawn` ·
+  `SequencerTest.MultiClipTargetDoesNotFlicker`(셋 다 이전 코드에서 진다).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

@@ -216,12 +216,19 @@ namespace sw
 
     void Component::setActive( bool bActive )
     {
+        // 같은 값이면 아무것도 하지 않는다 — 메시는 알림마다 렌더 더티를 찍는다(예전 인스펙터가 프레임마다 불렀다).
+        if ( _bActive.load( std::memory_order_relaxed ) == bActive )
+            return;
+        static const hashed_string s_activeName( "_bActive" );
         _bActive.store( bActive, std::memory_order_relaxed );
-        onPropertyChanged( hashed_string( "_bActive" ) );
+        onPropertyChanged( s_activeName );
     }
 
     void Component::setTickGroup( TickGroup group )
     {
+        // 같은 그룹이면 틱 항목을 다시 짓게 하지 않는다(기본 그룹을 onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿이다).
+        if ( _tickGroup == group )
+            return;
         _tickGroup = group;
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
