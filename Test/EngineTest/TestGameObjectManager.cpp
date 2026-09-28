@@ -611,7 +611,9 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( "NotThisModule" ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<sw::MeshComponent>() );
 
-    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다).
+    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다). 이름표를 바꿔도 걷힌다 — 예전에는
+    //    이름이 타입 조회 키라 이름표를 바꾼 컴포넌트는 타입(과 모듈)을 잃고 남아, DLL 이 내려간 뒤 vtable 없는 객체가 됐다.
+    pMesh->setComponentName( sw::hashed_string( "RenamedMesh" ) );
     SW_EXPECT_EQUAL( 1u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
     SW_EXPECT_NULL( pObject->getComponent<sw::MeshComponent>() );
     SW_EXPECT_NOT_NULL( manager.findGameObjectByName( sw::hashed_string( "ModulePurgeTarget" ) ) );

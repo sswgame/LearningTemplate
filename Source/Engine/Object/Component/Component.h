@@ -209,35 +209,35 @@ namespace sw
         /** @brief 주 틱에 들어갈지 설정합니다. 비주얼 컴포넌트는 false 가 기본입니다. */
         void setCanEverTick( bool bCanEverTick );
         /**
-         * @brief 컴포넌트 이름(해시)을 설정합니다. 이름이 곧 TypeInfo 조회 키라 캐시도 같이 버립니다.
-         * @note 풀 키는 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다. 이름을 바꿔도 메모리는 제 풀로 갑니다.
+         * @brief 컴포넌트의 런타임 이름표를 설정합니다(기본은 타입 이름). **타입이 아니고 저장되지도 않습니다.**
+         * @details 예전에는 이 이름이 곧 동적 타입의 조회 키였습니다. 이름을 바꾸면 `getTypeInfo` · `castTo` 가 그 이름의 타입으로
+         *          답해 — 없는 이름이면 타입을 잃어 저장에서 빠지고 모듈 정리에서 빠졌고, 다른 타입의 이름이면 **엉뚱한 타입으로 캐스트**
+         *          됐습니다. 지금 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름은 그와 무관합니다. 타입 이름이 필요하면 `getTypeName`.
+         * @note 풀 키도 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다.
          */
-        void setComponentName( hashed_string name )
-        {
-            _componentName = name;
-            _typeInfoCache.reset();
-        }
+        void setComponentName( hashed_string name ) { _componentName = name; }
 
         /** @brief 이 인스턴스의 컴포넌트 핸들을 반환합니다. */
         sw::ComponentHandle getHandle() const;
 
         /**
-         * @brief 런타임 타입 리플렉션 정보(TypeInfo)를 반환합니다.
-         * @details 예전에는 `_componentName` 으로 레지스트리를 매번 찾았습니다(잠금 + 해시맵, 짧은 이름이면 별칭 표까지
-         *          두 번). 캐스트 한 번의 비용 절반이 여기였습니다. 이제는 한 번 찾은 답을 적어 두고 그대로
-         *          반환합니다(`TypeLookupCache`).
+         * @brief 런타임 타입 리플렉션 정보(TypeInfo)입니다 — 만들 때 받은 타입이고, 그 타입이 해제됐으면 nullptr 입니다.
+         * @details 예전에는 `_componentName` 으로 찾았습니다(이름을 바꾸면 타입이 바뀌었습니다 — `setComponentName`). TypeInfo 의 주소는
+         *          고정이라(`TypeRegistry`) 포인터 하나를 들면 됩니다.
          */
         virtual const TypeInfo* getTypeInfo() const;
+        /** @brief 타입 이름입니다(타입이 없으면 이름표). 복사 · 붙여넣기 · 프리셋 · 타입 필터처럼 "무슨 타입인가" 를 묻는 자리가 씁니다. */
+        hashed_string getTypeName() const;
         /**
-         * @brief 이름 캐시가 답을 들고 있으면 그 TypeInfo 를, 아니면 가상 `getTypeInfo()` 의 답을 반환합니다.
-         * @details `castTo` 의 핫패스입니다. 캐시 적중이면 가상 호출 없이 원자 로드 둘로 끝납니다. 테스트 목처럼
-         *          `getTypeInfo()` 를 오버라이드해 자기 사본을 반환하는 타입도 이름은 같으므로, 이름으로 답하는
-         *          상속 검사에는 같은 결과입니다. 캐시가 비었을 때만(이름 없음 · 미등록) 가상 호출로 갑니다.
+         * @brief 만들 때 받은 TypeInfo 를(살아 있으면), 아니면 가상 `getTypeInfo()` 의 답을 반환합니다.
+         * @details `castTo` 의 핫패스입니다. 적중이면 가상 호출 없이 포인터 하나와 원자 로드 하나로 끝납니다. 테스트 목처럼
+         *          `getTypeInfo()` 를 오버라이드하는 타입도 `addComponent<T>` 가 같은 `T::StaticType()` 을 넘겨 같은 답입니다.
          */
         const TypeInfo* findCachedTypeInfo() const
         {
-            const TypeInfo* pType = _typeInfoCache.find( _componentName );
-            return pType != nullptr ? pType : getTypeInfo();
+            if ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() )
+                return _pTypeInfo;
+            return getTypeInfo();
         }
         /** @brief 소유자 GameObject 를 반환합니다. */
         GameObject* getOwner() const { return _pOwner; }
@@ -285,10 +285,10 @@ namespace sw
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
     protected:
-        GameObject*             _pOwner;        ///< 소유자 GameObject
-        uint64                  _componentId;   ///< 컴포넌트 고유 일련번호
-        hashed_string           _componentName; ///< 컴포넌트 식별 이름
-        mutable TypeLookupCache _typeInfoCache; ///< `_componentName` 의 TypeInfo 를 적어 두는 칸(빈 답만 세대가 바뀌면 다시 찾습니다)
+        GameObject*     _pOwner;        ///< 소유자 GameObject
+        uint64          _componentId;   ///< 컴포넌트 고유 일련번호
+        hashed_string   _componentName; ///< 런타임 이름표(기본은 타입 이름). 타입이 아니다 — `setComponentName`
+        const TypeInfo* _pTypeInfo;     ///< 만들 때 받은 타입. `GameObject::attachCreatedComponent` 가 한 번 적는다(공개 전이라 원자가 아니다)
         /**
          * @brief 이 인스턴스를 내준 풀입니다. 힙에서 왔으면 nullptr 입니다. 생성이 한 번 적고 파괴가 읽습니다.
          * @details 예전에는 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 **다시 찾았습니다.** 이름이 바뀌었거나(공개

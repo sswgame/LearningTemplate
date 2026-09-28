@@ -11,9 +11,8 @@ namespace sw
     {
         if ( pComp == nullptr )
             return "Component";
-        if ( pComp->getComponentName().empty() == false )
-            return pComp->getComponentName().c_str();
 
+        // 타입 이름이다. 이름표(`setComponentName`)는 저장되지 않으므로, 이름표로 만든 키는 다시 읽으면 가리킬 곳이 없다.
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {

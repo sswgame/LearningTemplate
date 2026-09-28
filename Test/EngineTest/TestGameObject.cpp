@@ -7,9 +7,11 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -911,6 +913,41 @@ SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
     manager.processDeferredDestruction();
     SW_EXPECT_EQUAL( 3, endCount );
     manager.endPlay();
+}
+
+/**
+ * @brief 이름표는 타입이 아니다 — 이름표를 바꿔도 캐스트 · 타입 조회 · 되살린 id 가 그대로이고, 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
+ * @details 예전에는 컴포넌트 이름이 곧 동적 타입의 조회 키였다. `setComponentName( "Muzzle" )` 이면 타입을 잃어(저장에서 빠지고 캐스트가
+ *          nullptr), `setComponentName( "CameraComponent" )` 면 SceneComponent 가 CameraComponent 로 **캐스트됐다**(정의되지 않은 동작).
+ */
+SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj   = manager.createGameObject( sw::hashed_string( "LabelOwner" ) );
+    sw::SceneComponent*   pScene = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pScene );
+    const uint64 componentId = pScene->getComponentId();
+
+    pScene->setComponentName( sw::hashed_string( "Muzzle" ) );
+    SW_EXPECT_STREQ( "Muzzle", pScene->getComponentName().c_str() );
+    SW_EXPECT_STREQ( "SceneComponent", pScene->getTypeName().c_str() );
+    SW_ASSERT_NOT_NULL( pScene->getTypeInfo() );
+    sw::Component* pAsComponent = pScene;
+    SW_EXPECT_TRUE( sw::castTo<sw::SceneComponent>( pAsComponent ) == pScene );
+    SW_EXPECT_TRUE( pObj->getComponent<sw::SceneComponent>() == pScene );
+
+    // 상태를 되돌려도 같은 id 를 되찾는다(식별 목록이 타입 이름으로 적힌다).
+    const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pObj );
+    const sw::string         state    = sw::ObjectStateSerializer::saveToJsonString( pObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, &identity ) );
+    sw::SceneComponent* pRestored = pObj->getComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_EQUAL( componentId, pRestored->getComponentId() );
+
+    // 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
+    pRestored->setComponentName( sw::hashed_string( "CameraComponent" ) );
+    sw::Component* pRestoredAsComponent = pRestored;
+    SW_EXPECT_TRUE( sw::castTo<sw::CameraComponent>( pRestoredAsComponent ) == nullptr );
 }
 
 /**

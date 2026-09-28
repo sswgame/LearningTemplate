@@ -17,7 +17,9 @@ namespace sw
 
     /**
      * @class ComponentStableKey
-     * @brief 컴포넌트 안정 키를 만들고 해석합니다. 같은 앞부분끼리만 셉니다. 이름이 붙은 컴포넌트는 타입이 같아도 따로 셉니다.
+     * @brief 컴포넌트 안정 키(`타입이름#n`)를 만들고 해석합니다. 같은 타입끼리만 셉니다.
+     * @details 이름표(`Component::setComponentName`)는 키에 들어가지 않습니다 — 저장되지 않으므로, 이름표로 만든 키는 씬을 다시 읽으면
+     *          가리킬 곳이 없습니다. 예전에는 이름표를 단 컴포넌트를 그 이름으로 따로 셌습니다.
      */
     class SW_API ComponentStableKey
     {

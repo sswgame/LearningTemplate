@@ -42,11 +42,7 @@ namespace sw::editor
                     if ( pComp == nullptr )
                         continue;
 
-                    if ( StringUtil::startsWith( pComp->getComponentName().view(), typeFilter, true ) )
-                        return true;
-
-                    const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-                    if ( pTypeInfo != nullptr && StringUtil::startsWith( pTypeInfo->_name.view(), typeFilter, true ) )
+                    if ( StringUtil::startsWith( pComp->getTypeName().view(), typeFilter, true ) )
                         return true;
                 }
                 return false;

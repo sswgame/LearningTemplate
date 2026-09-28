@@ -475,10 +475,14 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingKill() )
                 continue;
-            if ( pComp->getComponentName() == typeName )
-                return pComp;
+            // 타입이 먼저다. 이름표는 타입이 아니다 — 같은 이름표가 없을 때만 보조로 본다(아래).
             const TypeInfo* pTypeInfo = pComp->getTypeInfo();
             if ( pTypeInfo != nullptr && pTypeInfo->_name == typeName )
+                return pComp;
+        }
+        for ( Component* pComp : _listComponent )
+        {
+            if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->getComponentName() == typeName )
                 return pComp;
         }
         return nullptr;
@@ -513,7 +517,8 @@ namespace sw
     void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool )
     {
         pComp->setOwner( this );
-        pComp->_pPool = pPool;
+        pComp->_pPool     = pPool;
+        pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름표(아래)는 타입과 무관하다
 
         const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
         pComp->setComponentName( typeKey );

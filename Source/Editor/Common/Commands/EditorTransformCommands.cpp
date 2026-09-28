@@ -147,8 +147,7 @@ namespace sw::editor
             GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
         FileUtil::ensureDirectoryExists( presetDir );
 
-        const string compName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str()
-                                                                           : pComp->getTypeInfo()->_name.c_str();
+        const string compName = pComp->getTypeName().c_str();
         const string fileName = compName + "_" + string{ presetName } + ".preset.xml";
         const string fullPath = FileUtil::joinPath( presetDir, fileName );
 

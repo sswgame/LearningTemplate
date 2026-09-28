@@ -294,8 +294,7 @@ namespace sw::editor
         if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
             return;
 
-        _copiedComponentTypeName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str()
-                                                                              : pComp->getTypeInfo()->_name.c_str();
+        _copiedComponentTypeName = pComp->getTypeName().c_str();
         _copiedComponentBytes.clear();
         BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes );
         _copiedComponentXml = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );

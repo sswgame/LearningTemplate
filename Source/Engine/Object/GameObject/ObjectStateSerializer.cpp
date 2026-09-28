@@ -259,7 +259,9 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingKill() )
                 continue;
-            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getComponentName(), pComp->getComponentId() } );
+            // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentId`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
+            // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊겼다.
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentId() } );
         }
         return identity;
     }

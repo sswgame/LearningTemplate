@@ -1576,6 +1576,15 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   핫 리로드에서 기본값으로 돌아갔다(원래 일이던 TypeInfo 바꿔 끼우기는 주소 고정으로 사라진 뒤였다). 삭제 — 기본값은 만들 때 한 번(CDO).
   그 자리는 틱 항목만 다시 짓게 한다. 회귀 테스트 `ComponentDefaultsTest.ResolvedDefaultsStayPutWhileOtherTypesResolve` ·
   `ModuleRegistrationKeepsLiveValues`(모듈 등록 자리에 다시 찍기를 되살리는 변이에 진다).
+- **컴포넌트 이름표가 동적 타입의 조회 키를 겸했다.** `getTypeInfo` · `castTo` 가 `_componentName` 으로 타입을 찾아, 공개 `setComponentName`
+  으로 이름을 바꾸면 — 없는 이름이면 타입을 잃어(저장에서 빠지고, 캐스트가 nullptr, **모듈 정리에서 빠져 DLL 이 내려간 뒤 vtable 없는
+  객체**), 다른 타입의 이름이면 그 타입으로 **캐스트됐다**(정의되지 않은 동작). 만들 때 이미 쥔 `TypeInfo` 를 버리고 이름만 적던 것이다.
+  이제 컴포넌트가 만들 때 받은 `TypeInfo` 를 직접 든다(`_pTypeInfo`, 주소 고정이라 포인터 하나 + 살아 있나) — 이름 캐시(`TypeLookupCache`)
+  를 대신해 `Component` 88 · `SceneComponent` 280 바이트(각 −8). 이름표는 런타임 전용이고, 타입 이름이 필요한 자리(되살릴 식별 목록 ·
+  안정 키 · 에디터 복사/붙여넣기 · 프리셋 · 타입 필터)는 `getTypeName()` 을 쓴다. 안정 키는 이름표를 빼고 타입으로 센다 — 이름표는 저장되지
+  않아 이름표로 만든 키는 씬을 다시 읽으면 가리킬 곳이 없었다(`NamedComponentCountsApart` → `LabelDoesNotChangeTheKey`).
+  회귀 테스트 `GameObjectTest.ComponentLabelIsNotItsType`(이름표 뒤 캐스트 · 타입 · 되살린 id, 다른 타입 이름으로 캐스트되지 않음) ·
+  `ModuleComponentsPurgedBeforeUnload` 에 이름표 단계 — 이름으로 찾는 변이에 둘 다 진다. Release: `getComponent` 15 / 15 ns(10 회).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

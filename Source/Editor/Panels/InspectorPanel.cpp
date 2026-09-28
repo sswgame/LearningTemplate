@@ -305,9 +305,7 @@ namespace sw::editor
             {
                 if ( ImGui::MenuItem( "Copy Component" ) )
                     workspace.copyComponent( pComp );
-                const string compTypeName = pComp->getComponentName().empty() == false
-                                              ? pComp->getComponentName().c_str()
-                                              : pTInfo->_name.c_str();
+                const string compTypeName = pComp->getTypeName().c_str();
                 const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
                                          workspace.getCopiedComponentTypeName() == compTypeName );
                 if ( bCanPaste )

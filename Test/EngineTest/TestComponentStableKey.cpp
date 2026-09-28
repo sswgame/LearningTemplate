@@ -36,9 +36,11 @@ SW_TEST_CASE( ComponentStableKeyTest, KeyRoundTripsThroughFind )
 }
 
 /**
- * @brief [ComponentStableKeyTest] 이름이 붙은 컴포넌트는 타입 대신 이름으로 세고, 무명 형제의 번호에 끼지 않는다
+ * @brief [ComponentStableKeyTest] 이름표는 키를 바꾸지 않는다 — 타입 이름으로 센다
+ * @details 예전에는 이름표를 단 컴포넌트를 그 이름으로 따로 셌다. 그런데 이름표는 저장되지 않아, 그 키(씬 파일의 부착 대상 · 에디터 선택
+ *          복원)는 씬을 다시 읽으면 가리킬 곳이 없었다.
  */
-SW_TEST_CASE( ComponentStableKeyTest, NamedComponentCountsApart )
+SW_TEST_CASE( ComponentStableKeyTest, LabelDoesNotChangeTheKey )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "KeyOwner" ) );
@@ -49,9 +51,9 @@ SW_TEST_CASE( ComponentStableKeyTest, NamedComponentCountsApart )
     SW_ASSERT_TRUE( pNamed != nullptr && pPlain != nullptr );
     pNamed->setComponentName( sw::hashed_string( "Muzzle" ) );
 
-    SW_EXPECT_EQUAL( sw::string{ "Muzzle#0" }, sw::ComponentStableKey::makeKey( pNamed ) );
-    SW_EXPECT_TRUE( sw::ComponentStableKey::makeKey( pPlain ).find( "#0" ) != sw::string::npos );
-    SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "Muzzle#0" ) == pNamed );
+    SW_EXPECT_EQUAL( sw::string{ "SceneComponent#0" }, sw::ComponentStableKey::makeKey( pNamed ) );
+    SW_EXPECT_EQUAL( sw::string{ "SceneComponent#1" }, sw::ComponentStableKey::makeKey( pPlain ) );
+    SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "SceneComponent#0" ) == pNamed );
 }
 
 /**

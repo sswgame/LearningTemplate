@@ -13,7 +13,7 @@ namespace sw
         : _pOwner{ nullptr }
         , _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
         , _componentName{}
-        , _typeInfoCache{}
+        , _pTypeInfo{ nullptr }
         , _pPool{ nullptr }
         , _subTickActiveMask{ 0 }
         , _bActive{ true }
@@ -246,15 +246,15 @@ namespace sw
 
     const TypeInfo* Component::getTypeInfo() const
     {
-        // 캐스트마다 부르는 자리다. 적중은 캐시 조회 하나(원자 로드 둘)로 끝난다. 바인딩 검사는 빗나갔을 때만 하고,
-        // 이름이 비었는지는 묻지 않는다(`empty()` 는 intern 테이블을 읽는다. 빈 이름은 캐시가 세대당 한 번 헛조회하고
-        // nullptr 를 내어 아래 폴백으로 간다).
-        const TypeInfo* pType = _typeInfoCache.find( _componentName );
-        if ( pType != nullptr )
-            return pType;
-        if ( engine::areEngineServicesBound() == false )
-            return nullptr;
-        return engine::getTypeRegistry().findType<Component>();
+        // 만들 때 받은 타입이다. 모듈이 내려가 타입이 묘비가 됐으면 없는 것으로 답한다. 예전의 폴백(`findType<Component>()`)은
+        // Component 가 등록 타입이 아니라 늘 nullptr 이었고, 그 답을 얻으려고 캐스트가 빗나갈 때마다 레지스트리를 잠갔다.
+        return ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() ) ? _pTypeInfo : nullptr;
+    }
+
+    hashed_string Component::getTypeName() const
+    {
+        const TypeInfo* pTypeInfo = findCachedTypeInfo();
+        return ( pTypeInfo != nullptr ) ? pTypeInfo->_name : _componentName;
     }
 
     bool Component::isActive() const
