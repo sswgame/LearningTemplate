@@ -270,10 +270,13 @@ namespace sw
          */
         void destroyObject( GameObject* pObj, bool bDestroyChildren = true );
 
-        /** @brief Component 를 지연 삭제 큐에 넣습니다. */
+        /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp );
 
-        /** @brief 풀 또는 힙에서 할당된 컴포넌트 인스턴스를 파괴하고 메모리를 반환합니다. */
+        /**
+         * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다: `onUnregister`(정확히 한 번) → `onDestroy` → 소유자 끊기 → 소멸 → 풀 · 힙 반납.
+         * @details 컴포넌트 해체는 이 함수 하나를 지납니다. 목록에서 빼는 일은 `GameObject::removeComponent` · `clearComponents` 가 합니다.
+         */
         void destroyComponentInstance( Component* pComp );
 
         /** @brief 지연 삭제 큐의 오브젝트 · 컴포넌트를 실제로 해제합니다. */
@@ -475,13 +478,13 @@ namespace sw
          */
         unordered_map<uint64, GameObject*> _mapIdToObject;
         /** @brief id → 오브젝트의 **빠른 읽기 길**이자 기준입니다. 범위 밖 id 만 위 맵으로 갑니다. */
-        ObjectSlotTable     _objectSlotTable;
-        vector<GameObject*> _listPendingAdd;
-        vector<GameObject*> _listPendingDestroyObject;
-        vector<Component*>  _listPendingDestroyComponent;
+        ObjectSlotTable         _objectSlotTable;
+        vector<GameObject*>     _listPendingAdd;
+        vector<GameObject*>     _listPendingDestroyObject;
+        vector<ComponentHandle> _listPendingDestroyComponent; ///< 핸들로 든다(`destroyComponent` 설명 참고)
 
-        vector<GameObject*> _listProcessingDestroyObject;
-        vector<Component*>  _listProcessingDestroyComponent;
+        vector<GameObject*>     _listProcessingDestroyObject;
+        vector<ComponentHandle> _listProcessingDestroyComponent;
 
         mutable std::shared_mutex _mutex;
         atomic<uint64>            _nextId;

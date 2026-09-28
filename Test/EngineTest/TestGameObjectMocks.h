@@ -118,12 +118,28 @@ namespace sw
         }
 
         hashed_string _lastChangedProperty;
+        int32*        _pUnregisterCount{ nullptr }; ///< 해제 콜백 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
+        int32*        _pDestroyCount{ nullptr };
 
         /** @brief 변경된 프로퍼티 이름을 기록합니다. */
         virtual void onPropertyChanged( hashed_string propertyName ) override
         {
             Component::onPropertyChanged( propertyName );
             _lastChangedProperty = propertyName;
+        }
+
+        void onUnregister( GameObjectManager& manager ) override
+        {
+            if ( _pUnregisterCount != nullptr )
+                ++( *_pUnregisterCount );
+            Component::onUnregister( manager );
+        }
+
+        void onDestroy() override
+        {
+            if ( _pDestroyCount != nullptr )
+                ++( *_pDestroyCount );
+            Component::onDestroy();
         }
     };
 

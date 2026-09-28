@@ -119,7 +119,7 @@ namespace sw
         Component( Component&& other )            = delete;
         Component& operator=( Component&& other ) = delete;
 
-        /** @brief 가상 소멸자입니다. 파괴는 GameObjectManager::destroyComponentInstance 가 맡습니다(풀에서 왔으면 풀로 돌려줍니다). */
+        /** @brief 가상 소멸자입니다. 해체는 GameObjectManager::destroyComponentInstance 가 맡습니다(해제 콜백 · 소멸 · 풀 반납). */
         virtual ~Component() = default;
 
         /** @brief 게임 컴포넌트 기본값 XML(gamedata.xml) 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
@@ -146,8 +146,9 @@ namespace sw
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
         /**
-         * @brief 소유 GameObject 에서 떨어지기 직전 불립니다.
-         * @note 파괴 경로가 여러 갈래라 **두 번 이상 불릴 수 있습니다.** 구현은 멱등이어야 합니다.
+         * @brief 소유 GameObject 에서 떨어지기 직전, 등록(`onRegister`) 한 번마다 **정확히 한 번** 불립니다.
+         * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 지납니다. 예전에는 파괴 경로마다 두 번 불려 구현이
+         *          멱등이어야 했습니다.
          */
         virtual void onUnregister( GameObjectManager& manager ) { (void)manager; }
         /** @brief 컴포넌트가 파괴될 때 불리는 콜백입니다. */

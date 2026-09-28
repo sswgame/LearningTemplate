@@ -307,6 +307,13 @@ namespace sw
         ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
         /** @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다(소유자 · 풀 · 이름 · 기본값 · 목록 · primary 캐시 · 등록 · 틱 표시). */
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool );
+        /**
+         * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다 — 매니저가 있으면 `GameObjectManager::destroyComponentInstance` 가 전부 합니다.
+         * @details 예전에는 `removeComponent` · `clearComponents` 가 해제 콜백 셋을 각자 부른 뒤 매니저에 넘겼고, 매니저가
+         *          `onUnregister` 를 **한 번 더** 불렀습니다. 등록하는 컴포넌트는 모두 두 번 불려도 되게 짜야 했고, 파괴마다 등록부
+         *          잠금을 두 번 잡았습니다.
+         */
+        void destroyOwnedComponent( Component* pComp );
         /** @brief 틱이 끝난 뒤 이 오브젝트에 @p func 를 돌립니다(그때까지 살아 있으면). id 로 다시 찾습니다. */
         void deferOnSelfPostTick( Delegate<void( GameObject& )> func );
         /** @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고 자식에 전파합니다. */

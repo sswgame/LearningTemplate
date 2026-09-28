@@ -389,8 +389,11 @@ namespace sw
         if ( pComp == nullptr || pComp->tryMarkPendingKill() == false )
             return;
 
+        // **포인터가 아니라 핸들로 적는다.** 줄을 선 뒤에도 즉시 경로(틱 밖의 `removeComponent` · 상태를 되돌리는 로드의
+        // `clearComponents`)가 먼저 해제할 수 있다. 날 포인터로 들면 처리할 때 풀려난 블록을 — 그새 같은 자리에 새
+        // 컴포넌트가 들었으면 **엉뚱한 컴포넌트를** — 지웠다. 핸들은 처리 때 다시 풀어, 이미 없으면 건너뛴다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        _listPendingDestroyComponent.push_back( pComp );
+        _listPendingDestroyComponent.push_back( pComp->getHandle() );
         // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 등록부와 무관하다.
         if ( pComp->hasTickWork() )
             _tickRegistry.markObjectDirty( pComp->getOwner() );
@@ -401,13 +404,14 @@ namespace sw
         if ( pComp == nullptr )
             return;
 
-        // 등록부는 raw 포인터를 들고 있다. ComponentHandle 은 접근할 때마다 id 로 오브젝트와 컴포넌트를
-        // 다시 찾아야 해서, 프레임마다 전부 훑는 렌더 경로에 쓰면 지금 걷어내려는 순회보다 비싸진다.
-        // 대신 **메모리를 실제로 반납하는 이 한 지점**에서 등록을 해제해, 등록된 채로 해제되는 경우가
-        // 구조적으로 없게 만든다. 목록에서 빼는 쪽(removeComponent, clearComponents)에만 걸어두면
-        // 지연 파괴 경로가 그걸 우회한다. onUnregister 는 멱등이라 두 번 불려도 된다.
+        // **컴포넌트 해체는 여기 하나다** — 등록 해제 → 파괴 콜백 → 소유자 끊기 → 소멸 → 반납.
+        // 등록부는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
+        // 이 지점에서 등록을 해제해 "등록된 채로 해제" 가 구조적으로 없게 한다. 예전에는 목록에서 빼는 쪽이 한 번, 여기가
+        // 또 한 번 `onUnregister` 를 불러 구현마다 멱등이어야 했고 파괴마다 등록부 잠금을 두 번 잡았다. 이제 정확히 한 번이다.
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다.
         pComp->onUnregister( *this );
+        pComp->onDestroy();
+        pComp->setOwner( nullptr );
 
         // 풀은 컴포넌트가 든다(`_pPool`, 생성이 적는다). 이름 · 타입 표로 **다시 찾지 않는다.** 이름은 바뀔 수 있고
         // 타입은 그새 해제될 수 있어, 찾지 못하면 풀 블록을 힙으로 반납해 힙이 깨졌다(Shipping 0xc0000374). 풀은 한 번
@@ -435,12 +439,13 @@ namespace sw
             _listProcessingDestroyComponent.swap( _listPendingDestroyComponent );
         }
 
-        for ( Component* pComp : _listProcessingDestroyComponent )
+        for ( const ComponentHandle handle : _listProcessingDestroyComponent )
         {
-            if ( pComp == nullptr )
-                continue;
-            GameObject* pOwner = pComp->getOwner();
-            if ( pOwner != nullptr )
+            // 소유 오브젝트가 삭제 대기면 건너뛴다 — 오브젝트를 없앨 때 컴포넌트도 함께 없앤다(아래). 즉시 경로가 이미 해제했으면
+            // 목록에 없다. 둘 다 아니고 여전히 삭제 표시된 것만 뺀다.
+            GameObject* pOwner = findGameObjectById( handle.objectId() );
+            Component*  pComp  = ( pOwner != nullptr ) ? pOwner->findComponentById( handle.componentId(), true ) : nullptr;
+            if ( pComp != nullptr && pComp->isPendingKill() )
                 pOwner->removeComponent( pComp );
         }
 

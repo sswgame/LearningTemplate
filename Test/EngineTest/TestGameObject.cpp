@@ -88,7 +88,103 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
     SW_EXPECT_TRUE( mesh->isPendingKill() );
     SW_EXPECT_TRUE( actor->getComponent<sw::MockMeshComponent>() == nullptr );
     SW_EXPECT_EQUAL( 0u, actor->getComponentCount() );
-    SW_EXPECT_EQUAL( 0u, actor->getComponentCount() );
+}
+
+/**
+ * @brief 컴포넌트를 없애는 길 넷 모두 해제 콜백(`onUnregister` · `onDestroy`)을 정확히 한 번씩 부른다.
+ * @details 예전에는 목록에서 빼는 쪽이 한 번, 메모리를 놓는 `destroyComponentInstance` 가 또 한 번 `onUnregister` 를 불렀다.
+ *          그래서 등록하는 컴포넌트는 모두 두 번 불려도 되게 짜야 했고, 파괴마다 등록부 잠금을 두 번 잡았다.
+ */
+SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "TeardownOnce" ) );
+
+    int32 unregisterCount = 0;
+    int32 destroyCount    = 0;
+    auto  attachCounted   = [&]()
+    {
+        sw::MockCallbackComponent* pComp = pObj->addComponent<sw::MockCallbackComponent>();
+        pComp->_pUnregisterCount         = &unregisterCount;
+        pComp->_pDestroyCount            = &destroyCount;
+        return pComp;
+    };
+
+    // 1) 즉시 제거
+    pObj->removeComponent( attachCounted() );
+    SW_EXPECT_EQUAL( 1, unregisterCount );
+    SW_EXPECT_EQUAL( 1, destroyCount );
+
+    // 2) 전부 비우기(상태를 되돌리는 로드가 쓰는 길)
+    attachCounted();
+    pObj->clearComponents();
+    SW_EXPECT_EQUAL( 2, unregisterCount );
+    SW_EXPECT_EQUAL( 2, destroyCount );
+
+    // 3) 지연 파괴
+    manager.destroyComponent( attachCounted() );
+    SW_EXPECT_EQUAL( 2, unregisterCount );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( 3, unregisterCount );
+    SW_EXPECT_EQUAL( 3, destroyCount );
+
+    // 4) 오브젝트째 파괴
+    attachCounted();
+    manager.destroyObject( pObj, false );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( 4, unregisterCount );
+    SW_EXPECT_EQUAL( 4, destroyCount );
+}
+
+/**
+ * @brief 줄 선 파괴가 처리되기 전에 즉시 경로가 먼저 해제하고, 같은 블록에 새 컴포넌트가 들어도 새 것은 무사하다.
+ * @details 대기열이 날 포인터를 들던 때는 처리할 때 풀려난 블록을 — 같은 풀에서 새로 받은 컴포넌트를 — 지웠다.
+ *          대기열은 이제 핸들을 들고 처리 때 다시 푼다. 옛 id 는 더 없으니 건너뛴다.
+ */
+SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "ReusedBlock" ) );
+
+    sw::MockMeshComponent* pOld = pObj->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pOld );
+    manager.destroyComponent( pOld );
+    pObj->clearComponents();
+
+    sw::MockMeshComponent* pNew = pObj->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pNew );
+    manager.processDeferredDestruction();
+
+    SW_EXPECT_EQUAL( 1u, pObj->getComponentCount() );
+    SW_EXPECT_TRUE( pObj->getComponent<sw::MockMeshComponent>() == pNew );
+    SW_EXPECT_FALSE( pNew->isPendingKill() );
+}
+
+/**
+ * @brief 컴포넌트를 빼도 남은 것들의 순서는 그대로다.
+ * @details 예전에는 맨 뒤 원소를 빈자리로 옮겼다(swap-remove). 순서는 첫 일치(`getComponent<T>`) · primary · 같은 타입 안의
+ *          순번(안정 키)을 정한다 — 저장했다 다시 읽으면 바뀐 순서가 그대로 굳었다.
+ */
+SW_TEST_CASE( GameObjectTest, RemoveComponentKeepsOrder )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "KeepOrder" ) );
+
+    sw::Component* pFirst  = pObj->addComponent<sw::MockMeshComponent>();
+    sw::Component* pSecond = pObj->addComponent<sw::MockAudioComponent>();
+    sw::Component* pThird  = pObj->addComponent<sw::MockCallbackComponent>();
+    sw::Component* pFourth = pObj->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_TRUE( pObj->removeComponent( pFirst ) );
+
+    const sw::ComponentList& listComponent = pObj->getComponents();
+    SW_ASSERT_EQUAL( size_t( 3 ), listComponent.size() );
+    SW_EXPECT_TRUE( listComponent[0] == pSecond );
+    SW_EXPECT_TRUE( listComponent[1] == pThird );
+    SW_EXPECT_TRUE( listComponent[2] == pFourth );
+    SW_EXPECT_TRUE( pObj->getComponent<sw::MockMeshComponent>() == pFourth );
 }
 
 /**

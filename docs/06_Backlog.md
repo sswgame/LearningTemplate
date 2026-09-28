@@ -1399,6 +1399,23 @@ GPU 스코프 캐시는 렌더 스레드 몫이 작아 따로 재지 못했다(�
 검증 — 커밋 3 산출물과 133 파일 바이트 동일, Debug · Release · Shipping 빌드 경고 0, 파서 테스트 15/15, `nogpu` 7/7 · `hostgpu` 2/2 를
 Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가 섞인 묶음을 손으로도 돌려 성한 헤더가 만들어지는 것을 봤다.
 
+**(B) 스물다섯째 — 2026-09-28 · GameObject · Component 구조와 속도.** 같은 방법(인벤토리 → 감사 → 적대 검증 → 계획)으로 `Object/` ·
+`Scene/SceneTransformHierarchy` · 등록부 셋 · 에디터와 게임 쪽 사용처를 훑어 61 건이 검증을 살아남았다(9 건은 반박돼 버렸다). 커밋마다 한 묶음.
+
+- **컴포넌트 해체는 한 곳** (`GameObjectManager::destroyComponentInstance`). 예전에는 목록에서 빼는 쪽(`removeComponent` · `clearComponents`)이
+  `onUnregister` · `onDestroy` 를 부르고, 메모리를 놓는 쪽이 `onUnregister` 를 **또** 불렀다 — 등록하는 컴포넌트는 모두 두 번 불려도 되게
+  짜야 했고, 파괴마다 등록부 잠금을 두 번 잡았다. 이제 정확히 한 번이다(`GameObject::destroyOwnedComponent` 가 매니저 유무만 가른다).
+- **지연 파괴 대기열이 날 포인터를 들었다 — 해제된 블록, 심하면 엉뚱한 컴포넌트를 지웠다.** `destroyComponent` 로 줄을 선 뒤 처리 전에 즉시 경로
+  (틱 밖 `removeComponent`, 되돌리기 · 프리팹 복원이 쓰는 `clearComponents`)가 먼저 해제하면, 처리 때 풀려난 블록을 건드렸고 같은 풀에서 새로
+  받은 컴포넌트가 그 자리에 있으면 **그것을** 뺐다. 이제 핸들로 적고 처리 때 다시 푼다(없으면 건너뛴다). 소유 오브젝트가 삭제 대기면 오브젝트
+  파괴가 함께 치운다.
+- **빼면 순서가 바뀌었다** — `removeComponent` 가 맨 뒤 원소를 빈자리로 옮겼다(swap-remove). 순서는 첫 일치(`getComponent<T>`) · primary ·
+  같은 타입 안의 순번(안정 키)을 정해, 저장했다 다시 읽으면 바뀐 순서가 굳었다. 이제 순서를 지키며 뺀다(목록은 대개 네 칸 이하).
+  목록에 없는 컴포넌트를 빼라고 하면 예전에는 해제 콜백만 부르고 메모리는 두었다 — 이제 아무것도 하지 않고 false.
+- 회귀 테스트 셋 — `GameObjectTest.ComponentTeardownCallbacksRunExactlyOnce`(길 넷: 즉시 · 비우기 · 지연 · 오브젝트째) ·
+  `QueuedComponentDestroySparesReusedBlock` · `RemoveComponentKeepsOrder`. 엔진 변경만 되돌린 빌드에서 셋 다 진다(콜백 2 배 · 새 컴포넌트가
+  지워져 0 개 · 순서 뒤집힘).
+
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
 

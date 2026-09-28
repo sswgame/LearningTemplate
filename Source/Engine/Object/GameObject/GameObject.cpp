@@ -582,19 +582,24 @@ namespace sw
             bTickWork = bTickWork || ( pComp != nullptr && pComp->hasTickWork() );
         for ( Component* pComp : listOwned )
         {
-            if ( pComp == nullptr )
-                continue;
-            if ( _pOwnerManager != nullptr )
-                pComp->onUnregister( *_pOwnerManager );
-            pComp->onDestroy();
-            pComp->setOwner( nullptr );
-            if ( _pOwnerManager != nullptr )
-                _pOwnerManager->destroyComponentInstance( pComp );
-            else
-                sw_delete( pComp );
+            if ( pComp != nullptr )
+                destroyOwnedComponent( pComp );
         }
         if ( bTickWork )
             markTickOrderDirty();
+    }
+
+    void GameObject::destroyOwnedComponent( Component* pComp )
+    {
+        if ( _pOwnerManager != nullptr )
+        {
+            _pOwnerManager->destroyComponentInstance( pComp );
+            return;
+        }
+        // 매니저 없이 만든 오브젝트다(등록부에 들어간 적이 없다). 해제 콜백만 부르고 힙으로 돌려준다.
+        pComp->onDestroy();
+        pComp->setOwner( nullptr );
+        sw_delete( pComp );
     }
 
     Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingKill ) const
@@ -623,36 +628,23 @@ namespace sw
             return true;
         }
 
-        if ( _pOwnerManager != nullptr )
-            pComp->onUnregister( *_pOwnerManager );
-        pComp->onDestroy();
-        pComp->setOwner( nullptr );
-
-        bool bRemoved = false;
-        for ( size_t compIndex = 0; compIndex < _listComponent.size(); ++compIndex )
+        // **순서를 지키며 뺀다.** 예전에는 맨 뒤 원소를 그 자리에 옮겨 왔다(swap-remove). 목록 순서는 뜻이 있다 — primary 는
+        // "살아 있는 첫 SceneComponent", `getComponent<T>` 는 첫 일치, 안정 키(`ComponentStableKey`)는 같은 타입 안의 순번이다.
+        // 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면 바뀐 순서가 그대로 굳었다. 목록은 대개 네 칸 이하다.
+        const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
+        if ( it == _listComponent.end() )
         {
-            if ( _listComponent[compIndex] == pComp )
-            {
-                _listComponent[compIndex] = _listComponent.back();
-                _listComponent.pop_back();
-                bRemoved = true;
-                break;
-            }
+            SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
+            return false;
         }
+        _listComponent.erase( it );
         if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
-        if ( bRemoved == false )
-            SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
-        else
-        {
-            if ( _pOwnerManager != nullptr )
-                _pOwnerManager->destroyComponentInstance( pComp );
-            else
-                sw_delete( pComp );
-        }
-        if ( bRemoved && bTickWork )
+
+        destroyOwnedComponent( pComp );
+        if ( bTickWork )
             markTickOrderDirty();
-        return bRemoved;
+        return true;
     }
 
     void GameObject::markTickOrderDirty()
