@@ -1553,6 +1553,20 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   풀 생성이 그 안에서 불리면 Debug 에서 단언한다(멈추는 대신 알린다). 깊이는 엔진 쪽 한 칸이라 모듈이 순회를 인스턴스화해도 같은 칸이다.
   nogpu 전체에서 걸리는 기존 경로는 없었다. 회귀 테스트 `GameObjectTest.BeginPlayMayAddComponentsAndSpawn`(옛 코드는 멈춘다 — 30 초 제한에서
   시간 초과).
+- **플레이 수명주기를 엔진 상태로 — onBeginPlay 가 에디터 Play 버튼에서만 불렸다.** App(에디터 없음) · Shipping · 런타임 스폰에서는
+  onBeginPlay 가 **한 번도** 불리지 않았다(시퀀스 자동 재생 · 대화 그래프 로드 · HP 바/이펙트 초기화 · 충돌체의 물리 동기화가 에디터 밖에서
+  죽어 있었다). 떼거나 지운 컴포넌트는 onEndPlay 를 받지 못했고, 꺼진 컴포넌트는 Play 에서 빠졌다가 Stop 에서도 빠졌다. 이제:
+  컴포넌트의 "시작됨" 비트(`dispatchBeginPlay` · `dispatchEndPlay`)가 시작과 끝을 정확히 한 번씩 짝짓고(활성 여부와 무관 — 언리얼과 같다),
+  매니저는 플레이 중에 붙은 컴포넌트를 핸들로 줄 세워 **다음 틱 단계**(틱 전 · 틱 뒤 병합 뒤, `GT.Scene.tick.beginPlay`)에서 시작한다 —
+  붙이는 자리에서 부르지 않는 이유는 `addComponent` 뒤의 세팅 · 이름으로 붙이는 역직렬화의 PROPERTY 채우기가 아직 끝나지 않았기
+  때문이다. 해체 한 곳(`destroyComponentInstance`)이 끝을 부른다. `SceneManager` 가 "월드 플레이 중" 을 들고(`setWorldPlaying`) 활성 씬
+  교체 때 나가는 씬을 끝내고 들어오는 씬을 시작한다 — 에디터 없는 App 은 `ModuleHost::beginFrame` 이 켜고, 에디터 Play · Stop 은 이것을
+  켜고 끈다(예전에는 매니저에 직접 불러 플레이 중에 연 씬이 시작하지 않았다).
+  **드러난 결함 하나:** `SceneManager::shutdown` 이 씬을 다 지운 뒤에 활성을 비워, 이제 그 자리의 onEndPlay 가 풀린 씬을 만졌다(App 종료
+  크래시 — hostgpu `AppTest_HostOnly` 가 잡았다). 활성을 씬을 내리기 전에 비운다. 알려진 뒤따름: 핫 리로드로 다시 만든 인스턴스는 다시
+  시작한다(투사체 수명 같은 플레이 중 상태가 처음부터) · 스폰마다 소유 태그가 태그 컴포넌트를 만든다.
+  회귀 테스트 — `GameObjectTest.PlayLifecycleIsPairedAndExactlyOnce`(비트 검사 제거 · 붙이는 자리에서 시작 · 해체 지점의 끝 제거, 세 변이에
+  모두 진다) · `SceneTest.WorldPlayingFollowsTheActiveScene`(활성 씬 교체 · 플레이 중 shutdown).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

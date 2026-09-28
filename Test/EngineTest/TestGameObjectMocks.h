@@ -55,14 +55,24 @@ namespace sw
         float3             _tickMovePos{};
         GameObjectManager* _pBeginPlaySpawnManager{ nullptr }; ///< 설정되면 onBeginPlay 가 이 매니저에 오브젝트 하나를 만든다
         int32              _beginPlayCount{ 0 };
+        string             _meshNameAtBeginPlay;      ///< onBeginPlay 가 본 `_meshName`(붙인 뒤 세팅한 값을 보는지)
+        int32*             _pEndPlayCount{ nullptr }; ///< onEndPlay 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
 
         /** @brief 부른 횟수를 세고, 설정된 매니저가 있으면 오브젝트 하나를 만듭니다(onBeginPlay 안의 스폰). */
         void onBeginPlay() override
         {
             Component::onBeginPlay();
             ++_beginPlayCount;
+            _meshNameAtBeginPlay = _meshName;
             if ( _pBeginPlaySpawnManager != nullptr )
                 _pBeginPlaySpawnManager->createGameObject( hashed_string( "SpawnedInBeginPlay" ) );
+        }
+
+        void onEndPlay() override
+        {
+            if ( _pEndPlayCount != nullptr )
+                ++( *_pEndPlayCount );
+            Component::onEndPlay();
         }
 
         /** @brief 틱마다 _tickCount 를 증가시키고, 설정된 틱 액션을 실행합니다. */

@@ -277,6 +277,10 @@ namespace sw
     {
         _frameState                  = ModuleFrameState{};
         _frameState._bGameplayActive = queryGameplayActive() ? SW_TRUE : SW_FALSE;
+        // 에디터가 없으면 월드는 처음부터 플레이 중이다(에디터가 있으면 Play · Stop 이 정한다). 예전에는 이 길에서 onBeginPlay 가 한 번도
+        // 불리지 않았다. 이미 켜져 있으면 아무 일도 없다.
+        if ( hasEditor() == false && engine::getSceneManager().isWorldPlaying() == false )
+            engine::getSceneManager().setWorldPlaying( true );
     }
 
     void ModuleHost::updateGame( float32 deltaTime )

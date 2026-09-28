@@ -855,6 +855,65 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
 }
 
 /**
+ * @brief 플레이 수명주기 — onBeginPlay 는 인스턴스마다 한 번, onEndPlay 는 시작한 인스턴스에만 한 번, 붙이는 시점과 해체 경로와 무관하게.
+ * @details 예전에는 에디터 Play 버튼만 `beginPlay` 를 불렀다. 플레이 중에 붙은 컴포넌트(스폰)는 onBeginPlay 를 영영 받지 못했고, 떼거나
+ *          지운 컴포넌트는 onEndPlay 를 받지 못했고, 꺼진 컴포넌트는 Play 에서 빠졌다가 Stop 에서도 빠졌다. 이제 컴포넌트의 "시작됨" 비트가
+ *          짝을 맞추고, 플레이 중에 붙은 것은 다음 틱 단계에서 — 붙인 뒤 세팅한 필드를 본 채로 — 시작한다.
+ */
+SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    int32 endCount = 0;
+
+    sw::GameObject*        pActor = manager.createGameObject( sw::hashed_string( "PlayActor" ) );
+    sw::MockMeshComponent* pFirst = pActor->addComponent<sw::MockMeshComponent>();
+    pFirst->_pEndPlayCount        = &endCount;
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 0, pFirst->_beginPlayCount ); // 플레이 전에는 부르지 않는다
+
+    manager.beginPlay();
+    SW_EXPECT_EQUAL( 1, pFirst->_beginPlayCount );
+    manager.beginPlay();
+    SW_EXPECT_EQUAL( 1, pFirst->_beginPlayCount ); // 두 번 불러도 한 번
+
+    // 플레이 중에 붙은 것은 붙는 자리에서가 아니라 다음 틱 단계에서, 붙인 뒤 세팅한 값을 본 채로 시작한다.
+    sw::MockMeshComponent* pLate = pActor->addComponent<sw::MockMeshComponent>();
+    pLate->_meshName             = "SetAfterAdd";
+    pLate->_pEndPlayCount        = &endCount;
+    SW_EXPECT_EQUAL( 0, pLate->_beginPlayCount );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 1, pLate->_beginPlayCount );
+    SW_EXPECT_STREQ( "SetAfterAdd", pLate->_meshNameAtBeginPlay.c_str() );
+
+    // 떼면 끝난다.
+    SW_ASSERT_TRUE( pActor->removeComponent( pLate ) );
+    SW_EXPECT_EQUAL( 1, endCount );
+
+    // 꺼 둔 것도 끝난다(시작했으므로). 두 번 끝내도 한 번.
+    pFirst->setActive( false );
+    manager.endPlay();
+    SW_EXPECT_EQUAL( 2, endCount );
+    manager.endPlay();
+    SW_EXPECT_EQUAL( 2, endCount );
+
+    // 플레이 밖에서 붙였다 지운 것은 끝나지 않는다(시작한 적이 없다).
+    sw::MockMeshComponent* pIdle = pActor->addComponent<sw::MockMeshComponent>();
+    pIdle->_pEndPlayCount        = &endCount;
+    manager.destroyComponent( pIdle );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( 2, endCount );
+
+    // 다시 플레이하면 다시 시작하고(꺼져 있어도), 오브젝트째 지우면 끝난다.
+    manager.beginPlay();
+    SW_EXPECT_EQUAL( 2, pFirst->_beginPlayCount );
+    manager.destroyObject( pActor );
+    manager.processDeferredDestruction();
+    SW_EXPECT_EQUAL( 3, endCount );
+    manager.endPlay();
+}
+
+/**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
  *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진

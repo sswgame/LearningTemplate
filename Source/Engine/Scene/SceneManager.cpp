@@ -9,6 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -21,6 +22,7 @@ namespace sw
     SceneManager::SceneManager()
         : _listLoadedScene{}
         , _pActiveScene{ nullptr }
+        , _bWorldPlaying{ false }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
@@ -92,6 +94,10 @@ namespace sw
             _asyncLoad->_bReady.store( false, std::memory_order_release );
         }
         _bLoadInFlight = false;
+        // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
+        // 예전에는 씬을 다 지운 뒤에 비웠는데, 그때는 포인터만 지우는 일이라 순서가 드러나지 않았다.
+        activateScene( nullptr );
+        _bWorldPlaying = false;
         for ( auto& scene : _listLoadedScene )
         {
             if ( scene == nullptr )
@@ -99,7 +105,6 @@ namespace sw
             scene->shutdown();
         }
         _listLoadedScene.clear();
-        activateScene( nullptr );
 #if !defined( SW_SHIPPING )
         if ( engine::areEngineServicesBound() )
             engine::getCommandStack().clear();
@@ -439,7 +444,28 @@ namespace sw
 
     void SceneManager::activateScene( Scene* pScene )
     {
+        if ( _pActiveScene == pScene )
+            return;
+        // 플레이 중이면 나가는 씬을 끝내고 들어오는 씬을 시작한다(씬을 내리기 전 — 언로드는 활성을 먼저 비운다).
+        if ( _bWorldPlaying && _pActiveScene != nullptr && _pActiveScene->getObjectManager() != nullptr )
+            _pActiveScene->getObjectManager()->endPlay();
         _pActiveScene = pScene;
+        if ( _bWorldPlaying && pScene != nullptr && pScene->getObjectManager() != nullptr )
+            pScene->getObjectManager()->beginPlay();
+    }
+
+    void SceneManager::setWorldPlaying( bool bPlaying )
+    {
+        if ( _bWorldPlaying == bPlaying )
+            return;
+        _bWorldPlaying              = bPlaying;
+        GameObjectManager* pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
+        if ( pObjects == nullptr )
+            return;
+        if ( bPlaying )
+            pObjects->beginPlay();
+        else
+            pObjects->endPlay();
     }
 
     /**

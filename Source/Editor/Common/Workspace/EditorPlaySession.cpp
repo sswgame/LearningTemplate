@@ -22,30 +22,15 @@ namespace sw::editor
     {
         struct EditorPlaySessionInternal
         {
-            static void beginPlayActiveScene()
+            /**
+             * @brief 월드의 플레이 상태를 바꿉니다. 활성 씬의 시작 · 끝은 `SceneManager` 가 합니다 — 플레이 중에 씬을 바꾸면 새 씬도 시작합니다.
+             * @details 예전에는 여기서 활성 씬의 매니저에 직접 `beginPlay` · `endPlay` 를 불렀고, 플레이 중에 연 씬은 시작하지 않았습니다.
+             */
+            static void setWorldPlaying( bool bPlaying )
             {
-                Scene* pScene = editor::getActiveScene();
-                if ( pScene == nullptr )
-                    return;
-
-                GameObjectManager* pObjects = pScene->getObjectManager();
-                if ( pObjects == nullptr )
-                    return;
-
-                pObjects->beginPlay();
-            }
-
-            static void endPlayActiveScene()
-            {
-                Scene* pScene = editor::getActiveScene();
-                if ( pScene == nullptr )
-                    return;
-
-                GameObjectManager* pObjects = pScene->getObjectManager();
-                if ( pObjects == nullptr )
-                    return;
-
-                pObjects->endPlay();
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager != nullptr )
+                    pSceneManager->setWorldPlaying( bPlaying );
             }
 
             static void capturePlaySnapshot( PlaySessionData& data )
@@ -286,13 +271,13 @@ namespace sw::editor
         if ( previous == PlaySessionState::Stopped && state == PlaySessionState::Playing )
         {
             EditorPlaySessionInternal::capturePlaySnapshot( *pData );
-            EditorPlaySessionInternal::beginPlayActiveScene();
+            EditorPlaySessionInternal::setWorldPlaying( true );
         }
 
         // Playing/Paused → Stopped: endPlay 호출 후 스냅샷 복구
         if ( ( previous == PlaySessionState::Playing || previous == PlaySessionState::Paused ) && state == PlaySessionState::Stopped )
         {
-            EditorPlaySessionInternal::endPlayActiveScene();
+            EditorPlaySessionInternal::setWorldPlaying( false );
             EditorPlaySessionInternal::restorePlaySnapshot( *pData );
         }
     }

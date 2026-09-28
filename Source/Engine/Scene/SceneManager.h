@@ -65,6 +65,15 @@ namespace sw
         void setRhiDevice( IRHIDevice* pRhiDevice ) { _pRHIDevice = pRhiDevice; }
         /** @brief 현재 활성 씬을 반환합니다. */
         Scene* getActiveScene() const { return _pActiveScene; }
+        /**
+         * @brief 월드가 플레이 중인지 정합니다. 바뀌면 활성 씬의 오브젝트 매니저에 `beginPlay` · `endPlay` 를 부릅니다.
+         * @details 플레이 중에 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작합니다. 에디터가 없으면 App 이 켜고(`ModuleHost`),
+         *          에디터가 있으면 Play · Stop 이 켜고 끕니다. 예전에는 에디터 Play 버튼만 `beginPlay` 를 불러, App · Shipping 에서는
+         *          onBeginPlay 가 한 번도 불리지 않았습니다(시퀀스 자동 재생 · 대화 그래프 로드 · 물리 동기화가 에디터 밖에서 죽어 있었다).
+         */
+        void setWorldPlaying( bool bPlaying );
+        /** @brief 월드가 플레이 중이면 true 입니다. */
+        bool isWorldPlaying() const { return _bWorldPlaying; }
         /** @brief 활성 씬이 바뀐 횟수입니다. 에디터가 씬 로드 · 새 씬 동기화에 씁니다. */
         uint64 getSceneGeneration() const { return _sceneGeneration; }
         /** @brief 비동기 로드가 진행 중이거나 교체 대기면 true 입니다. */
@@ -101,6 +110,7 @@ namespace sw
 
         vector<unique_ptr<Scene>> _listLoadedScene;
         Scene*                    _pActiveScene;
+        bool                      _bWorldPlaying; ///< `setWorldPlaying`
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
 

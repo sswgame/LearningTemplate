@@ -18,6 +18,9 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneManager.h"
+
+#include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -110,6 +113,51 @@ SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 월드가 플레이 중이면 활성 씬이 시작하고, 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작한다
+ * @details 예전에는 에디터 Play 버튼이 활성 씬의 매니저에 직접 `beginPlay` 를 불렀다 — App · Shipping 에서는 아무도 부르지 않았고,
+ *          플레이 중에 연 씬은 시작하지 않았다. 이제 `SceneManager` 가 "월드 플레이 중" 을 들고 활성 씬 교체 때 넘긴다.
+ */
+SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
+{
+    sw::SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    sw::Scene* pFirst = sceneManager.createScene( "PlayFirst" );
+    SW_ASSERT_NOT_NULL( pFirst );
+    sw::RegisterMockComponents( *pFirst->getObjectManager() );
+
+    int32                  endCount = 0;
+    sw::GameObject*        pActor   = pFirst->getObjectManager()->createGameObject( sw::hashed_string( "Actor" ) );
+    sw::MockMeshComponent* pMesh    = pActor->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->_pEndPlayCount = &endCount;
+    SW_EXPECT_EQUAL( 0, pMesh->_beginPlayCount );
+
+    sceneManager.setWorldPlaying( true );
+    SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
+    SW_EXPECT_EQUAL( 1, pMesh->_beginPlayCount );
+
+    // 새 씬을 활성으로 — 나가는 씬은 끝나고(한 번, 이어진 언로드의 해체가 두 번 끝내지 않는다) 들어오는 씬은 시작한다.
+    sw::Scene* pSecond = sceneManager.createEmptyActiveScene( "PlaySecond" );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_EQUAL( 1, endCount );
+    SW_EXPECT_TRUE( pSecond->getObjectManager()->hasBegunPlay() );
+
+    sceneManager.setWorldPlaying( false );
+    SW_EXPECT_FALSE( pSecond->getObjectManager()->hasBegunPlay() );
+
+    // 플레이 중에 내리면 활성 씬이 **살아 있는 동안** 끝난다. 예전 순서(씬을 지운 뒤 활성을 비움)면 풀린 씬을 만진다.
+    sw::RegisterMockComponents( *pSecond->getObjectManager() );
+    int32                  shutdownEndCount = 0;
+    sw::MockMeshComponent* pLast            = pSecond->getObjectManager()->createGameObject( sw::hashed_string( "Last" ) )->addComponent<sw::MockMeshComponent>();
+    pLast->_pEndPlayCount                   = &shutdownEndCount;
+    sceneManager.setWorldPlaying( true );
+    SW_EXPECT_EQUAL( 1, pLast->_beginPlayCount );
+    sceneManager.shutdown();
+    SW_EXPECT_EQUAL( 1, shutdownEndCount );
+    SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
 }
 
 /**

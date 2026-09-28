@@ -127,10 +127,26 @@ namespace sw
         /** @brief 현재 게임 컴포넌트 기본값 XML 경로를 반환합니다. */
         static string getDefaultGamedataPath();
 
-        /** @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. */
+        /**
+         * @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. 인스턴스마다 **정확히 한 번**, `onEndPlay` 와 짝을 이룹니다.
+         * @details 월드가 플레이 중이면(에디터 Play · 에디터 없는 App · Shipping — `SceneManager::setWorldPlaying`) 활성 씬의 컴포넌트는
+         *          플레이가 시작될 때, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**에서 불립니다 — 붙인 직후 세팅한 필드 · 상태 로드가 채운
+         *          PROPERTY 를 봅니다. 활성 여부와 무관하게 불립니다(언리얼과 같다). 되돌리기 · 핫 리로드로 다시 만든 인스턴스는 새 인스턴스라
+         *          다시 불립니다 — 런타임에만 있는 상태를 짓는 곳입니다. 예전에는 에디터 Play 버튼만 불러 App · Shipping · 런타임 스폰에서는
+         *          한 번도 불리지 않았습니다. 직접 부르지 말고 `dispatchBeginPlay` 를 쓰십시오.
+         */
         virtual void onBeginPlay();
-        /** @brief 게임플레이가 끝날 때 불리는 정리 콜백입니다(onBeginPlay 의 짝). */
+        /** @brief 게임플레이가 끝날 때(플레이 종료 · 컴포넌트 해체) 불리는 정리 콜백입니다. `onBeginPlay` 가 불린 인스턴스에만 한 번 불립니다. */
         virtual void onEndPlay();
+        /**
+         * @brief 아직 시작하지 않았으면 `onBeginPlay` 를 부르고 "시작됨" 으로 적습니다. 삭제 대기면 부르지 않습니다.
+         * @details 게임 스레드에서 병렬 틱 밖에서만 부릅니다 — "시작됨" 비트가 틱 워커가 읽는 비트(`_bCanEverTick`)와 한 바이트입니다.
+         */
+        void dispatchBeginPlay();
+        /** @brief 시작했으면 `onEndPlay` 를 부르고 "시작됨" 을 지웁니다. 시작한 적 없으면 아무것도 하지 않습니다. */
+        void dispatchEndPlay();
+        /** @brief `onBeginPlay` 가 불렸고 아직 `onEndPlay` 가 불리지 않았으면 true 입니다. */
+        bool hasBegunPlay() const { return _bHasBegunPlay == SW_TRUE; }
         /** @brief 프레임마다 불리는 주 업데이트 콜백입니다. */
         virtual void onTick( float32 deltaTime );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
@@ -287,7 +303,8 @@ namespace sw
         TickGroup           _tickGroup;         ///< TickGroup 슬롯
         uint8               _bCanEverTick      : 1;
         uint8               _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세웁니다
-        uint8               _reservedFlags     : 6;
+        uint8               _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직(`dispatchBeginPlay` · `dispatchEndPlay` 만 만집니다)
+        uint8               _reservedFlags     : 5;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
     };
 } // namespace sw

@@ -96,6 +96,10 @@ namespace sw
         , _listCachedTickWave{}
         , _listActiveWriteSlot{}
         , _listPlayWalk{}
+        , _bHasBegunPlay{ false }
+        , _beginPlayMutex{}
+        , _listPendingBeginPlay{}
+        , _listProcessingBeginPlay{}
         , _deferredTransformQueue{}
         , _deferredPostTickQueue{}
         , _mapFactory{}
@@ -349,29 +353,61 @@ namespace sw
 
     void GameObjectManager::beginPlay()
     {
+        // 표시를 먼저 세운다 — 도는 동안 onBeginPlay 가 붙이는 컴포넌트도 줄을 선다(이미 시작했으면 비트가 거른다).
+        _bHasBegunPlay.store( true, std::memory_order_release );
         mergePendingAdds();
         // **잠금을 쥔 채 컴포넌트 코드를 부르지 않는다.** 예전에는 `forEachGameObject` 의 공유 잠금 안에서 onBeginPlay 를 불렀다.
         // onBeginPlay 가 태그를 붙이면(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금) 같은 스레드가 제 공유 잠금을 기다려
-        // 에디터 Play 가 멈췄다 — 트리의 열두 컴포넌트가 onBeginPlay 에서 태그를 붙인다. 목록을 받아 잠금 없이 돈다. 도는 동안 생긴
-        // 오브젝트는 이번에 돌지 않는다(예전과 같다).
+        // 에디터 Play 가 멈췄다 — 트리의 열두 컴포넌트가 onBeginPlay 에서 태그를 붙인다. 목록을 받아 잠금 없이 돈다. 활성 여부와 무관하게
+        // 시작한다(언리얼과 같다. 짝은 컴포넌트의 "시작됨" 비트가 맞춘다). 도는 동안 생긴 오브젝트는 아래 줄 처리가 시작한다.
         getAllGameObjects( _listPlayWalk );
         for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->isActiveInHierarchy() )
+            if ( pObj != nullptr && pObj->isPendingKill() == false )
                 pObj->beginPlay();
         }
         _listPlayWalk.clear();
+        dispatchPendingBeginPlay();
     }
 
     void GameObjectManager::endPlay()
     {
+        _bHasBegunPlay.store( false, std::memory_order_release );
+        {
+            std::scoped_lock<mutex> lock{ _beginPlayMutex };
+            _listPendingBeginPlay.clear();
+        }
         getAllGameObjects( _listPlayWalk );
         for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->isActiveInHierarchy() )
+            if ( pObj != nullptr && pObj->isPendingKill() == false )
                 pObj->endPlay();
         }
         _listPlayWalk.clear();
+    }
+
+    void GameObjectManager::queueBeginPlay( ComponentHandle handle )
+    {
+        std::scoped_lock<mutex> lock{ _beginPlayMutex };
+        _listPendingBeginPlay.push_back( handle );
+    }
+
+    void GameObjectManager::dispatchPendingBeginPlay()
+    {
+        {
+            std::scoped_lock<mutex> lock{ _beginPlayMutex };
+            if ( _listPendingBeginPlay.empty() )
+                return;
+            _listProcessingBeginPlay.swap( _listPendingBeginPlay );
+        }
+        // 핸들로 다시 푼다 — 줄을 선 뒤 떼였거나 오브젝트째 지워졌으면 건너뛴다. 삭제 대기면 dispatchBeginPlay 가 거른다.
+        for ( const ComponentHandle handle : _listProcessingBeginPlay )
+        {
+            Component* pComp = resolveComponent( handle );
+            if ( pComp != nullptr )
+                pComp->dispatchBeginPlay();
+        }
+        _listProcessingBeginPlay.clear();
     }
 
     Component* GameObjectManager::resolveComponent( sw::ComponentHandle handle )
@@ -449,7 +485,9 @@ namespace sw
         // 등록부는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
         // 이 지점에서 등록을 해제해 "등록된 채로 해제" 가 구조적으로 없게 한다. 예전에는 목록에서 빼는 쪽이 한 번, 여기가
         // 또 한 번 `onUnregister` 를 불러 구현마다 멱등이어야 했고 파괴마다 등록부 잠금을 두 번 잡았다. 이제 정확히 한 번이다.
-        // 소멸자 호출 전이어야 가상 디스패치가 유효하다.
+        // 소멸자 호출 전이어야 가상 디스패치가 유효하다. 시작했던 컴포넌트는 여기서 끝낸다 — 떼기 · 비우기 · 지연 파괴 · 모듈 내리기가
+        // 모두 이 한 곳을 지나므로 onEndPlay 가 빠지는 길이 없다(모듈 코드가 아직 올라와 있는 시점이다).
+        pComp->dispatchEndPlay();
         pComp->onUnregister( *this );
         pComp->onDestroy();
         pComp->setOwner( nullptr );
@@ -561,6 +599,10 @@ namespace sw
             _listPendingDestroyComponent.clear();
             _listProcessingDestroyObject.clear();
             _listProcessingDestroyComponent.clear();
+            {
+                std::scoped_lock<mutex> lockBeginPlay{ _beginPlayMutex };
+                _listPendingBeginPlay.clear();
+            }
 
             _deferredTransformQueue.clear();
             _deferredPostTickQueue.clear();

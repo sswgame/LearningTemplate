@@ -152,6 +152,11 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.Scene.tick.merge" );
             mergePendingAdds();
         }
+        // 플레이 중에 붙은 컴포넌트를 틱 **전에** 시작한다 — onBeginPlay 가 틱 그룹을 바꾸거나 구조를 바꾸면 이번 틱에 반영된다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.beginPlay" );
+            dispatchPendingBeginPlay();
+        }
 
         // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 예전에는 여기서 통째로
         // 돌아가, 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않았다.
@@ -175,6 +180,8 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.Scene.tick.postTick" );
             _deferredPostTickQueue.drain();
             mergePendingAdds();
+            // 틱이 만든 것(스폰)은 같은 프레임 안에 시작한다.
+            dispatchPendingBeginPlay();
         }
 
         if ( hasDirtySceneTransforms() )

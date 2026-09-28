@@ -168,11 +168,17 @@ namespace sw
         /** @brief 태그를 가진 GameObject 를 outListGameObject 에 넣습니다. */
         void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const;
 
-        /** @brief 등록된 GameObject 의 beginPlay 를 부릅니다. */
+        /**
+         * @brief 플레이를 시작합니다 — 살아 있는 오브젝트의 컴포넌트마다 onBeginPlay 를 한 번 부르고, 이후 붙는 컴포넌트는 다음 틱 단계에서 시작합니다.
+         * @details 보통은 직접 부르지 않고 `SceneManager::setWorldPlaying` · 활성 씬 교체가 부릅니다. 두 번 불러도 컴포넌트마다 한 번입니다.
+         */
         void beginPlay();
 
-        /** @brief 등록된 GameObject 의 endPlay 를 부릅니다. */
+        /** @brief 플레이를 끝냅니다 — 시작했던 컴포넌트마다 onEndPlay 를 한 번 부르고, 시작을 기다리던 줄을 비웁니다. */
         void endPlay();
+
+        /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
+        bool hasBegunPlay() const { return _bHasBegunPlay.load( std::memory_order_acquire ); }
 
         /**
          * @brief 계층을 지키는 병렬 틱입니다.
@@ -428,6 +434,10 @@ namespace sw
          *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 웨이브를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
          */
         void tickComponents( float32 deltaTime );
+        /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
+        void dispatchPendingBeginPlay();
+        /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
+        void queueBeginPlay( ComponentHandle handle );
         /** @brief `tick` 의 컴포넌트 단계입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents` → 표시 해제. 오브젝트가 있을 때만 돕니다. */
         void tickComponentsPhase( float32 deltaTime );
         /**
@@ -554,15 +564,19 @@ namespace sw
 
         PhysicsWorld _physicsWorld;
 
-        atomic<bool>          _bTicking;               ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
-        bool                  _bProcessingDestruction; ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        uint64                _lastWaveGeneration;     ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
-        atomic<uint32>        _tickWaveBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<TickWave>      _listCachedTickWave;     ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
-        vector<uint32>        _listActiveWriteSlot;    ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
-        vector<GameObject*>   _listPlayWalk;           ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
-        DeferredDelegateQueue _deferredTransformQueue; ///< 틱이 미룬 계층 변경(attach · detach). 틱 직후 가장 먼저 돈다
-        DeferredDelegateQueue _deferredPostTickQueue;  ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
+        atomic<bool>            _bTicking;                ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
+        bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
+        uint64                  _lastWaveGeneration;      ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
+        atomic<uint32>          _tickWaveBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<TickWave>        _listCachedTickWave;      ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
+        vector<uint32>          _listActiveWriteSlot;     ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
+        vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
+        atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)
+        mutex                   _beginPlayMutex;          ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
+        vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
+        vector<ComponentHandle> _listProcessingBeginPlay; ///< 도는 중인 시작 줄(할당 재사용)
+        DeferredDelegateQueue   _deferredTransformQueue;  ///< 틱이 미룬 계층 변경(attach · detach). 틱 직후 가장 먼저 돈다
+        DeferredDelegateQueue   _deferredPostTickQueue;   ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;

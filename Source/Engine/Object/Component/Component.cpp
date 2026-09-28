@@ -21,6 +21,7 @@ namespace sw
         , _tickGroup{ TickGroup::DuringPhysics }
         , _bCanEverTick{ SW_TRUE }
         , _bIsSceneComponent{ SW_FALSE }
+        , _bHasBegunPlay{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {
@@ -53,6 +54,22 @@ namespace sw
 
     void Component::onEndPlay()
     {
+    }
+
+    void Component::dispatchBeginPlay()
+    {
+        if ( _bHasBegunPlay == SW_TRUE || isPendingKill() )
+            return;
+        _bHasBegunPlay = SW_TRUE;
+        onBeginPlay();
+    }
+
+    void Component::dispatchEndPlay()
+    {
+        if ( _bHasBegunPlay == SW_FALSE )
+            return;
+        _bHasBegunPlay = SW_FALSE;
+        onEndPlay();
     }
 
     void Component::onTick( float32 deltaTime )

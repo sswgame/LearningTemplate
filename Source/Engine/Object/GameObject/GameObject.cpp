@@ -112,32 +112,30 @@ namespace sw
     }
 
     /**
-     * @brief 게임플레이가 시작될 때(Play Mode) 소유한 모든 활성 컴포넌트의 onBeginPlay 를 부릅니다.
+     * @brief 게임플레이가 시작될 때 소유한 컴포넌트마다 onBeginPlay 를 한 번 부릅니다(이미 시작한 것 · 삭제 대기는 건너뜁니다).
      */
     void GameObject::beginPlay()
     {
         // **자리로 돈다.** onBeginPlay 가 컴포넌트를 붙이면(`addTag` 가 TagComponent 를) 목록이 자라고, 인라인 네 칸을 넘으면 힙으로
-        // 옮겨 가 범위 for 의 반복자가 풀린 칸을 읽었다. 크기는 매번 다시 읽는다 — 새로 붙은 것도 돈다.
+        // 옮겨 가 범위 for 의 반복자가 풀린 칸을 읽었다. 크기는 매번 다시 읽는다 — 새로 붙은 것도 돈다. 활성 여부와 무관하다(짝은 비트가 맞춘다).
         for ( size_t compIndex = 0; compIndex < _listComponent.size(); ++compIndex )
         {
             Component* pComp = _listComponent[compIndex];
-            if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
-                continue;
-            pComp->onBeginPlay();
+            if ( pComp != nullptr )
+                pComp->dispatchBeginPlay();
         }
     }
 
     /**
-     * @brief 게임플레이가 끝날 때 소유한 모든 컴포넌트의 onEndPlay 를 부릅니다.
+     * @brief 게임플레이가 끝날 때 시작했던 컴포넌트마다 onEndPlay 를 한 번 부릅니다.
      */
     void GameObject::endPlay()
     {
         for ( size_t compIndex = 0; compIndex < _listComponent.size(); ++compIndex )
         {
             Component* pComp = _listComponent[compIndex];
-            if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
-                continue;
-            pComp->onEndPlay();
+            if ( pComp != nullptr )
+                pComp->dispatchEndPlay();
         }
     }
 
@@ -535,6 +533,10 @@ namespace sw
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
+        // 월드가 플레이 중이면 다음 틱 단계에서 onBeginPlay 를 부른다. **여기서 부르지 않는다** — 부르는 쪽(`addComponent` 뒤의 세팅,
+        // 이름으로 붙이는 역직렬화의 PROPERTY 채우기)이 아직 끝나지 않았다.
+        if ( _pOwnerManager->hasBegunPlay() )
+            _pOwnerManager->queueBeginPlay( pComp->getHandle() );
         // 틱에 참여하는 컴포넌트만 이 오브젝트의 틱 항목을 다시 짓게 한다. 메시 · 태그 같은 것은 틱과 무관하다.
         if ( pComp->hasTickWork() )
             markTickOrderDirty();

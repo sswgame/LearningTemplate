@@ -215,6 +215,12 @@ public:
 
 `TickGroup` 순서(대략): `PrePhysics` → `DuringPhysics`(기본) → `PostPhysics` → `PostUpdate`.
 
+**언제 불리나.** 월드가 플레이 중일 때(`SceneManager::setWorldPlaying` — 에디터 없는 App · Shipping 은 처음부터, 에디터는 Play · Stop 이
+켜고 끈다) 활성 씬의 컴포넌트마다 `onBeginPlay` 가 **한 번**, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**(틱 전 · 틱 뒤 병합 뒤)에서 한 번
+불린다 — 붙인 직후 세팅한 필드와 상태 로드가 채운 값을 본다. `onEndPlay` 는 시작한 컴포넌트에만, 플레이가 끝날 때나 컴포넌트가 해체될 때
+(떼기 · 오브젝트 파괴 · 씬 내리기) 한 번 불린다. 활성 여부와 무관하다. 되돌리기 · 핫 리로드로 다시 만든 인스턴스는 새 인스턴스라 다시
+불린다 — `onBeginPlay` 는 런타임에만 있는 상태를 짓는 곳이다.
+
 ### 4) 찾기
 
 ```cpp
