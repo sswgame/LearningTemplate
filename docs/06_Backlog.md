@@ -1544,6 +1544,15 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   | `GT.Frame` avg (에디터 모드 — 뷰 카메라 제공자의 씬 훑기) | 101 us | **16 us** |
   | `GT.Editor.updateUi` avg (뷰포트 update · draw 의 두 번) | 5,080 us | 4,946 us |
   | wall (us/frame) | 5,192 | 4,977 |
+- **에디터 Play 가 스스로 멈췄다(교착).** `GameObjectManager::beginPlay` · `endPlay` 가 `forEachGameObject` 의 공유 잠금을 쥔 채 컴포넌트 코드를
+  불렀다. onBeginPlay 가 태그를 붙이면(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금 — `BoxCollider2DComponent` 등 트리의 열두
+  컴포넌트) 같은 스레드가 제 공유 잠금을 기다렸다(`shared_mutex` 는 재진입하지 않는다). onBeginPlay 안의 스폰도 같다. 이제 목록을 받아
+  (`getAllGameObjects( out )`, 멤버 버퍼 재사용) 잠금 없이 돈다. 그리고 `GameObject::beginPlay` · `endPlay` 가 범위 for 로 돌아, 컴포넌트가
+  이미 네 개인 오브젝트에 태그 컴포넌트가 붙으면 인라인 칸이 힙으로 옮겨 가 반복자가 풀린 칸을 읽었다 — 자리로 돈다.
+  재발 방지: `GameObjectManager::WalkScope` 가 `forEachGameObject` 안을 스레드별로 세고, 오브젝트 생성 · 파괴 · 컴포넌트 파괴 · 이름 변경 ·
+  풀 생성이 그 안에서 불리면 Debug 에서 단언한다(멈추는 대신 알린다). 깊이는 엔진 쪽 한 칸이라 모듈이 순회를 인스턴스화해도 같은 칸이다.
+  nogpu 전체에서 걸리는 기존 경로는 없었다. 회귀 테스트 `GameObjectTest.BeginPlayMayAddComponentsAndSpawn`(옛 코드는 멈춘다 — 30 초 제한에서
+  시간 초과).
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

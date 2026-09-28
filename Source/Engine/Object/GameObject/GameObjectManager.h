@@ -102,11 +102,33 @@ namespace sw
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
         vector<GameObject*> getAllGameObjects() const;
 
-        /** @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다. */
+        /**
+         * @struct WalkScope
+         * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
+         * @details `_mutex` 는 재진입하지 않습니다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
+         *          스레드가 제 공유 잠금을 기다리며 **멈춥니다** — 에디터 Play 가 그렇게 멈췄습니다(beginPlay → onBeginPlay → addTag →
+         *          addComponent). 멈추는 대신 단언으로 알립니다. 깊이는 엔진 쪽 한 칸이라 모듈이 순회를 인스턴스화해도 같은 칸을 셉니다.
+         */
+        struct SW_API WalkScope
+        {
+            WalkScope();
+            ~WalkScope();
+            WalkScope( const WalkScope& )            = delete;
+            WalkScope& operator=( const WalkScope& ) = delete;
+            /** @brief 지금 스레드가 `forEachGameObject` 안에 있으면 true 입니다. */
+            static bool isInsideWalk();
+        };
+
+        /**
+         * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`) —
+         *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
+         */
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock{ _mutex };
+            const WalkScope                     walkScope{};
             for ( GameObject* pObj : _listGameObject )
             {
                 if ( pObj != nullptr && pObj->isPendingKill() == false )
@@ -455,6 +477,7 @@ namespace sw
             if ( pTypeInfo == nullptr || pTypeInfo->_fullyQualifiedName.empty() )
                 return nullptr;
 
+            SW_ASSERT( WalkScope::isInsideWalk() == false );
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             auto                                iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
             if ( iter != _mapComponentPool.end() )
@@ -537,6 +560,7 @@ namespace sw
         atomic<uint32>        _tickWaveBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
         vector<TickWave>      _listCachedTickWave;     ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
         vector<uint32>        _listActiveWriteSlot;    ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
+        vector<GameObject*>   _listPlayWalk;           ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
         DeferredDelegateQueue _deferredTransformQueue; ///< 틱이 미룬 계층 변경(attach · detach). 틱 직후 가장 먼저 돈다
         DeferredDelegateQueue _deferredPostTickQueue;  ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
 

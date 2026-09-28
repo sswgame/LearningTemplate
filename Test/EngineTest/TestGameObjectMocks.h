@@ -53,6 +53,17 @@ namespace sw
         SceneComponent*    _pTickAttachParent{ nullptr };
         SceneComponent*    _pTickMoveComp{ nullptr };
         float3             _tickMovePos{};
+        GameObjectManager* _pBeginPlaySpawnManager{ nullptr }; ///< 설정되면 onBeginPlay 가 이 매니저에 오브젝트 하나를 만든다
+        int32              _beginPlayCount{ 0 };
+
+        /** @brief 부른 횟수를 세고, 설정된 매니저가 있으면 오브젝트 하나를 만듭니다(onBeginPlay 안의 스폰). */
+        void onBeginPlay() override
+        {
+            Component::onBeginPlay();
+            ++_beginPlayCount;
+            if ( _pBeginPlaySpawnManager != nullptr )
+                _pBeginPlaySpawnManager->createGameObject( hashed_string( "SpawnedInBeginPlay" ) );
+        }
 
         /** @brief 틱마다 _tickCount 를 증가시키고, 설정된 틱 액션을 실행합니다. */
         virtual void onTick( float32 deltaTime ) override

@@ -22,6 +22,9 @@ namespace sw
     {
         struct GameObjectManagerInternal
         {
+            /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`WalkScope`). */
+            inline static thread_local uint32 s_walkDepth = 0;
+
             static mutex& getModuleFactoryHeadsMutex()
             {
                 static mutex s_mutex;
@@ -92,6 +95,7 @@ namespace sw
         , _tickWaveBuildCount{ 0 }
         , _listCachedTickWave{}
         , _listActiveWriteSlot{}
+        , _listPlayWalk{}
         , _deferredTransformQueue{}
         , _deferredPostTickQueue{}
         , _mapFactory{}
@@ -132,14 +136,31 @@ namespace sw
     /**
      * @brief 새 게임 오브젝트를 만들고 고유 이름을 붙여 인덱스에 등록합니다.
      */
+    GameObjectManager::WalkScope::WalkScope()
+    {
+        ++GameObjectManagerInternal::s_walkDepth;
+    }
+
+    GameObjectManager::WalkScope::~WalkScope()
+    {
+        --GameObjectManagerInternal::s_walkDepth;
+    }
+
+    bool GameObjectManager::WalkScope::isInsideWalk()
+    {
+        return GameObjectManagerInternal::s_walkDepth != 0;
+    }
+
     GameObject* GameObjectManager::createGameObject( hashed_string name )
     {
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         return createGameObjectUnlocked( name, generateNewId() );
     }
 
     GameObject* GameObjectManager::createGameObjectWithId( hashed_string name, uint64 objectId )
     {
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         if ( objectId == 0 )
             return createGameObjectUnlocked( name, generateNewId() );
@@ -180,6 +201,7 @@ namespace sw
     {
         if ( pObj == nullptr )
             return;
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         if ( findRegisteredUnlocked( pObj->getObjectId() ) != pObj )
@@ -328,20 +350,28 @@ namespace sw
     void GameObjectManager::beginPlay()
     {
         mergePendingAdds();
-        forEachGameObject( []( GameObject* pObj )
+        // **잠금을 쥔 채 컴포넌트 코드를 부르지 않는다.** 예전에는 `forEachGameObject` 의 공유 잠금 안에서 onBeginPlay 를 불렀다.
+        // onBeginPlay 가 태그를 붙이면(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금) 같은 스레드가 제 공유 잠금을 기다려
+        // 에디터 Play 가 멈췄다 — 트리의 열두 컴포넌트가 onBeginPlay 에서 태그를 붙인다. 목록을 받아 잠금 없이 돈다. 도는 동안 생긴
+        // 오브젝트는 이번에 돌지 않는다(예전과 같다).
+        getAllGameObjects( _listPlayWalk );
+        for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isActiveInHierarchy() )
+            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->isActiveInHierarchy() )
                 pObj->beginPlay();
-        } );
+        }
+        _listPlayWalk.clear();
     }
 
     void GameObjectManager::endPlay()
     {
-        forEachGameObject( []( GameObject* pObj )
+        getAllGameObjects( _listPlayWalk );
+        for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isActiveInHierarchy() )
+            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->isActiveInHierarchy() )
                 pObj->endPlay();
-        } );
+        }
+        _listPlayWalk.clear();
     }
 
     Component* GameObjectManager::resolveComponent( sw::ComponentHandle handle )
@@ -358,6 +388,7 @@ namespace sw
     {
         if ( pObj == nullptr )
             return;
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
 
         // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingKill()` 로 보고 나서
         // `markPendingKill()` 을 했다. 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
@@ -393,6 +424,7 @@ namespace sw
 
     void GameObjectManager::destroyComponent( Component* pComp )
     {
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
         // destroyObject 와 같은 이유로 자리부터 잡는다. 여기 목록에 두 번 들어가면
         // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
         if ( pComp == nullptr || pComp->tryMarkPendingKill() == false )
