@@ -63,7 +63,7 @@ namespace sw
     }
 
     GameObject::GameObject( hashed_string name )
-        : _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
+        : _objectId{ 0 }
         , _name{ name }
         , _pOwnerManager{ nullptr }
         , _bActive{ true }
@@ -673,6 +673,4 @@ namespace sw
                 pSceneComp->applyAttachSerializeFields();
         }
     }
-
-    atomic<uint64> GameObject::_s_nextObjectId{ 1 };
 } // namespace sw

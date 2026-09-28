@@ -696,8 +696,8 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
 
 /**
  * @brief 같은 이름의 오브젝트 N 개는 다시 훑지 않고 유일해진다 — 첫 것은 원래 이름, 나머지는 번호, 전부 찾을 수 있다.
- * @details 예전엔 중복마다 `_2` 부터 다시 물어 N 개면 생성 하나가 N 번 조회였다(8000 개 2.6 초). 이제 이름마다 다음 번호를
- *          기억한다. 번호는 오르기만 하므로 지웠다 다시 만들어도 옛 번호를 되쓰지 않는다 — 그것이 O(1) 의 조건이다.
+ * @details 예전엔 중복마다 `_2` 부터 다시 물어 N 개면 생성 하나가 N 번 조회였다(8000 개 2.6 초). 이제 이름마다 번호 상태를
+ *          기억한다. 지운 오브젝트의 번호는 되쓴다(빈 번호 목록의 맨 뒤에서 꺼낸다 — 되써도 O(1) 이다).
  */
 SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
 {
@@ -714,12 +714,103 @@ SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
     for ( uint32 index = 0; index < kCount; index += 997 )
         SW_EXPECT_TRUE( manager.findGameObjectByName( listObj[index]->getName() ) == listObj[index] );
 
-    // 지우고 다시 만들어도 번호는 이어진다(되쓰지 않는다).
+    // 지우고 다시 만들면 지운 번호를 되쓴다. 빈 번호가 없으면 다음 새 번호다.
     manager.destroyObject( listObj[1], false );
     manager.processDeferredDestruction();
     sw::GameObject* pAgain = manager.createGameObject( sw::hashed_string( "Dup" ) );
     SW_ASSERT_NOT_NULL( pAgain );
-    SW_EXPECT_STREQ( "Dup_3001", pAgain->getName().c_str() );
+    SW_EXPECT_STREQ( "Dup_2", pAgain->getName().c_str() );
+    sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "Dup" ) );
+    SW_ASSERT_NOT_NULL( pFresh );
+    SW_EXPECT_STREQ( "Dup_3001", pFresh->getName().c_str() );
+
+    // 지운 번호의 이름을 누가 직접 받아 쓰고 있으면 그 번호는 건너뛴다.
+    manager.destroyObject( listObj[4], false );
+    manager.processDeferredDestruction();
+    sw::GameObject* pExplicit = manager.createGameObject( sw::hashed_string( "Dup_5" ) );
+    SW_EXPECT_STREQ( "Dup_5", pExplicit->getName().c_str() );
+    sw::GameObject* pAfterExplicit = manager.createGameObject( sw::hashed_string( "Dup" ) );
+    SW_EXPECT_STREQ( "Dup_3002", pAfterExplicit->getName().c_str() );
+}
+
+/**
+ * @brief 같은 이름으로 스폰 · 파괴를 거듭해도 인턴되는 이름 수는 동시에 살아 있던 수를 넘지 않는다.
+ * @details 번호마다 `hashed_string` 을 인턴하고 인턴 풀은 전역 65,536 칸이다(한번 들어가면 나가지 않는다). 예전에는 번호가
+ *          오르기만 해서 총알 100 개를 유지하며 2 만 번 갈아 끼우면 이름 2 만 개가 풀에 쌓였고, 풀이 차면 그 뒤로 엔진의 **모든**
+ *          새 `hashed_string` 이 None 이 됐다. 풀의 다음 칸 번호(새 문자열의 인덱스)로 증가량을 잰다.
+ */
+SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
+{
+    SW_TEST_SUPPRESS_LOGS();
+    sw::GameObjectManager       manager;
+    constexpr uint32            kLiveCount  = 100;
+    constexpr uint32            kChurnCount = 20000;
+    sw::vector<sw::GameObject*> listLive;
+    for ( uint32 index = 0; index < kLiveCount; ++index )
+        listLive.push_back( manager.createGameObject( sw::hashed_string( "ChurnBullet" ) ) );
+
+    const uint32 indexBefore = sw::hashed_string( "SameNameChurn.ProbeBefore" ).getIndex();
+    for ( uint32 cycle = 0; cycle < kChurnCount; ++cycle )
+    {
+        sw::GameObject*& pSlot = listLive[cycle % kLiveCount];
+        manager.destroyObject( pSlot, false );
+        manager.processDeferredDestruction();
+        pSlot = manager.createGameObject( sw::hashed_string( "ChurnBullet" ) );
+    }
+    const uint32 indexAfter = sw::hashed_string( "SameNameChurn.ProbeAfter" ).getIndex();
+
+    // 프로브 문자열 하나 + 여유 하나. 옛 코드는 약 2 만.
+    SW_EXPECT_TRUE( indexAfter - indexBefore <= 2 );
+    for ( sw::GameObject* pObj : listLive )
+        SW_EXPECT_TRUE( manager.findGameObjectByName( pObj->getName() ) == pObj );
+}
+
+/**
+ * @brief 번호를 받은 오브젝트에 밑 이름을 다시 세팅해도(프리팹 스폰 · 상태 읽기) 이름은 그대로고 번호를 새로 쓰지 않는다.
+ * @details 프리팹 스폰은 만들 때(`Bullet_2`), 저장된 상태를 읽으며(저장된 이름 `Bullet`), 인스턴스 이름을 세팅하며(`Bullet`)
+ *          세 번 유일화해 예전에는 `Bullet_4` 가 됐다 — 스폰 하나에 번호(인턴) 셋.
+ */
+SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
+{
+    SW_TEST_SUPPRESS_LOGS();
+    sw::GameObjectManager manager;
+    sw::GameObject*       pFirst  = manager.createGameObject( sw::hashed_string( "Bullet" ) );
+    sw::GameObject*       pSecond = manager.createGameObject( sw::hashed_string( "Bullet" ) );
+    SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
+
+    // 상태를 읽는다 — 저장된 이름은 `Bullet` 이다.
+    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pFirst );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pSecond, state ) );
+    SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
+    pSecond->setName( sw::hashed_string( "Bullet" ) );
+    SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
+    SW_EXPECT_TRUE( manager.findGameObjectByName( sw::hashed_string( "Bullet_2" ) ) == pSecond );
+
+    sw::GameObject* pThird = manager.createGameObject( sw::hashed_string( "Bullet" ) );
+    SW_EXPECT_STREQ( "Bullet_3", pThird->getName().c_str() );
+
+    // 밑 이름이 비었으면 그 이름을 그대로 받는다(번호는 돌려준다).
+    manager.destroyObject( pFirst, false );
+    manager.processDeferredDestruction();
+    pSecond->setName( sw::hashed_string( "Bullet" ) );
+    SW_EXPECT_STREQ( "Bullet", pSecond->getName().c_str() );
+    sw::GameObject* pFourth = manager.createGameObject( sw::hashed_string( "Bullet" ) );
+    SW_EXPECT_STREQ( "Bullet_2", pFourth->getName().c_str() );
+}
+
+/**
+ * @brief 매니저 없이 만든 임시 오브젝트는 무효 id(0)를 든다 — id 는 매니저 하나가 발급한다.
+ * @details 예전에는 GameObject 가 자기 카운터를 따로 들어, 매니저가 곧바로 덮어쓸 id 를 매번 하나씩 썼고 임시 오브젝트는
+ *          어느 매니저에도 없는 "유효해 보이는" id 를 들었다.
+ */
+SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
+{
+    sw::GameObject standalone( sw::hashed_string( "Standalone" ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), standalone.getObjectId() );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pManaged = manager.createGameObject( sw::hashed_string( "Managed" ) );
+    SW_EXPECT_TRUE( pManaged->getObjectId() != 0 );
 }
 
 /**

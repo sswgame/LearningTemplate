@@ -347,13 +347,11 @@ namespace sw
             size_t                _previousCursor;    ///< 바깥 구간이 어디까지 가져갔는지
         };
 
-        static atomic<uint64> _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
-
     private:
-        uint64 _objectId; ///< 오브젝트 고유 일련번호
+        uint64 _objectId; ///< 오브젝트 고유 일련번호. 매니저가 만들 때 발급합니다 — 매니저 없이 만든 임시 오브젝트는 0(무효 핸들)입니다
         PROPERTY()
         hashed_string      _name;          ///< 오브젝트 이름
-        GameObjectManager* _pOwnerManager; ///< registerGameObject 가 설정하는 소유 매니저
+        GameObjectManager* _pOwnerManager; ///< 소유 매니저(`GameObjectManager::createGameObject` 가 설정합니다)
         PROPERTY()
         atomic<bool> _bActive;              ///< 자기 활성 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트

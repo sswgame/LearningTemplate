@@ -76,7 +76,7 @@ namespace sw
         , _mapComponentPool{}
         , _listGameObject{}
         , _mapNameToObject{}
-        , _mapNameNextSuffix{}
+        , _mapNameSuffix{}
         , _mapIdToObject{}
         , _listPendingAdd{}
         , _listPendingDestroyObject{}
@@ -166,12 +166,14 @@ namespace sw
 
     GameObject* GameObjectManager::createGameObjectUnlocked( hashed_string name, uint64 objectId )
     {
-        const hashed_string uniqueName = makeUniqueNameUnlocked( name );
+        NameEntry           nameEntry{};
+        const hashed_string uniqueName = makeUniqueNameUnlocked( name, nameEntry );
         GameObject*         pObj       = _poolGameObject.create( uniqueName );
         pObj->_objectId                = objectId;
         pObj->_pOwnerManager           = this;
 
-        _mapNameToObject.insert_or_assign( uniqueName, pObj );
+        nameEntry._pObject = pObj;
+        _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
         if ( _objectSlotTable.store( objectId, pObj ) == false )
             _mapIdToObject.insert_or_assign( objectId, pObj );
 
@@ -191,14 +193,29 @@ namespace sw
         if ( findRegisteredUnlocked( pObj->getObjectId() ) != pObj )
             return;
 
-        const auto oldIt = _mapNameToObject.find( oldName );
-        if ( oldIt != _mapNameToObject.end() && oldIt->second == pObj )
-            _mapNameToObject.erase( oldIt );
+        const auto oldIt         = _mapNameToObject.find( oldName );
+        const bool bOwnsOldEntry = oldIt != _mapNameToObject.end() && oldIt->second._pObject == pObj;
 
-        const hashed_string uniqueName = makeUniqueNameUnlocked( newName );
+        // 번호를 붙여 받은 이름(`Bullet_3`)을 그 밑 이름(`Bullet`)으로 되돌리는데 밑 이름을 다른 오브젝트가 쓰고 있으면, 다시 유일화해도
+        // 번호만 바뀐다. 그대로 둔다. 프리팹 스폰이 그 길이다 — 만들 때 `Bullet_3`, 상태를 읽으며 저장된 이름 `Bullet` 으로 한 번,
+        // 인스턴스 이름을 다시 세팅하며 또 한 번. 예전에는 스폰 하나가 이름을 세 번 유일화해 번호 셋(인턴 셋)을 썼다.
+        if ( bOwnsOldEntry && oldIt->second._suffix != 0 && oldIt->second._baseName == newName && isNameTakenUnlocked( newName ) )
+        {
+            pObj->_name = oldName;
+            return;
+        }
+        if ( bOwnsOldEntry )
+        {
+            releaseNameSuffixUnlocked( oldIt->second );
+            _mapNameToObject.erase( oldIt );
+        }
+
+        NameEntry           nameEntry{};
+        const hashed_string uniqueName = makeUniqueNameUnlocked( newName, nameEntry );
         if ( uniqueName != newName )
             pObj->_name = uniqueName;
-        _mapNameToObject.insert_or_assign( uniqueName, pObj );
+        nameEntry._pObject = pObj;
+        _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
@@ -207,7 +224,7 @@ namespace sw
         auto                                it = _mapNameToObject.find( name );
         if ( it == _mapNameToObject.end() )
             return nullptr;
-        GameObject* pObj = it->second;
+        GameObject* pObj = it->second._pObject;
         return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
     }
 
@@ -476,8 +493,11 @@ namespace sw
                         }
                     }
                     const auto nameIt = _mapNameToObject.find( pObj->getName() );
-                    if ( nameIt != _mapNameToObject.end() && nameIt->second == pObj )
+                    if ( nameIt != _mapNameToObject.end() && nameIt->second._pObject == pObj )
+                    {
+                        releaseNameSuffixUnlocked( nameIt->second );
                         _mapNameToObject.erase( nameIt );
+                    }
                     if ( _objectSlotTable.store( pObj->getObjectId(), nullptr ) == false )
                         _mapIdToObject.erase( pObj->getObjectId() );
                 }
@@ -536,6 +556,7 @@ namespace sw
             _listGameObject.clear();
             _listPendingAdd.clear();
             _mapNameToObject.clear();
+            _mapNameSuffix.clear();
             _mapIdToObject.clear();
             _objectSlotTable.clear();
             _transformHierarchy.clear();
@@ -597,7 +618,7 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listGameObject.reserve( _listGameObject.size() + listLocalPending.size() );
-            // 이름 맵 · id 표는 만들 때(createGameObject · registerGameObject) 이미 넣었다. 여기서 다시 넣지 않는다.
+            // 이름 맵 · id 표는 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
             for ( GameObject* pObj : listLocalPending )
             {
                 if ( pObj != nullptr )
@@ -750,26 +771,6 @@ namespace sw
         return listName;
     }
 
-    void GameObjectManager::registerGameObject( GameObject* pObj )
-    {
-        if ( pObj == nullptr )
-            return;
-
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        const uint64                        newObjectId = generateNewId();
-        pObj->_objectId                                 = newObjectId;
-        pObj->_pOwnerManager                            = this;
-
-        if ( isNameTakenUnlocked( pObj->getName() ) )
-            pObj->_name = makeUniqueNameUnlocked( pObj->getName() );
-
-        _mapNameToObject.insert_or_assign( pObj->getName(), pObj );
-        if ( _objectSlotTable.store( newObjectId, pObj ) == false )
-            _mapIdToObject.insert_or_assign( newObjectId, pObj );
-
-        _listPendingAdd.push_back( pObj );
-    }
-
     uint64 GameObjectManager::generateNewId()
     {
         return _nextId.fetch_add( 1, std::memory_order_relaxed );
@@ -778,10 +779,19 @@ namespace sw
     bool GameObjectManager::isNameTakenUnlocked( hashed_string name ) const
     {
         const auto it = _mapNameToObject.find( name );
-        return it != _mapNameToObject.end() && it->second != nullptr && it->second->isPendingKill() == false;
+        return it != _mapNameToObject.end() && it->second._pObject != nullptr && it->second._pObject->isPendingKill() == false;
     }
 
-    hashed_string GameObjectManager::makeUniqueNameUnlocked( hashed_string requested )
+    void GameObjectManager::releaseNameSuffixUnlocked( const NameEntry& nameEntry )
+    {
+        if ( nameEntry._suffix == 0 )
+            return;
+        const auto stateIt = _mapNameSuffix.find( nameEntry._baseName );
+        if ( stateIt != _mapNameSuffix.end() )
+            stateIt->second._listFreeSuffix.push_back( nameEntry._suffix );
+    }
+
+    hashed_string GameObjectManager::makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry )
     {
         if ( isNameTakenUnlocked( requested ) == false )
             return requested;
@@ -794,17 +804,23 @@ namespace sw
         if ( baseView.size() > 96 )
             baseView = baseView.substr( 0, 96 );
 
-        // 이름마다 **다음 번호를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전에는 매번 _2 부터 다시 물어, 같은
-        // 이름 N 개면 생성 하나가 N 번 조회였다. 8000 개에 2.6 초(개당 326 µs). 지운 이름의 번호는 되쓰지 않는다(오르기만 한다).
+        // 이름마다 **번호 상태를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전에는 매번 _2 부터 다시 물어, 같은
+        // 이름 N 개면 생성 하나가 N 번 조회였다. 8000 개에 2.6 초(개당 326 µs). **지운 오브젝트의 번호부터 되쓴다** — 번호마다
+        // 이름을 인턴하므로, 오르기만 하면 스폰 · 파괴를 거듭하는 이름이 전역 인턴 풀을 채운다(`NameSuffixState` 설명).
         StringBuilder<constant::kMaxBuffer128> sb;
         const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
-        uint32&                                nextSuffix      = _mapNameNextSuffix[baseKey];
-        const bool                             bFirstDuplicate = nextSuffix < 2;
-        if ( bFirstDuplicate )
-            nextSuffix = 2;
+        NameSuffixState&                       suffixState     = _mapNameSuffix[baseKey];
+        const bool                             bFirstDuplicate = suffixState._nextSuffix == 2 && suffixState._listFreeSuffix.empty();
         for ( uint32 probeCount = 0; probeCount < 10000; ++probeCount )
         {
-            const uint32 nameSuffix = nextSuffix++;
+            uint32 nameSuffix = 0;
+            if ( suffixState._listFreeSuffix.empty() == false )
+            {
+                nameSuffix = suffixState._listFreeSuffix.back();
+                suffixState._listFreeSuffix.pop_back();
+            }
+            else
+                nameSuffix = suffixState._nextSuffix++;
             sb.clear();
             sb.append( baseView ).append( '_' ).append( nameSuffix );
             const hashed_string candidate( sb.c_str(), sb.size() );
@@ -814,8 +830,12 @@ namespace sw
                 // 그 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비쌌다. 그 뒤로는 조용히 번호를 붙인다.
                 if ( bFirstDuplicate )
                     SW_LOG_WARNING( "Duplicate name '%#' — using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );
+                outEntry._baseName = baseKey;
+                outEntry._suffix   = nameSuffix;
                 return candidate;
             }
+            // 그 번호의 이름을 다른 오브젝트가 직접 받아 쓰고 있다(누가 `Bullet_7` 로 만들었다). 번호를 버린다 — 그 오브젝트는
+            // 번호를 붙여 만든 이름이 아니라 사라져도 번호로 돌아오지 않는다.
         }
 
         static atomic<uint32> s_fallback{ 0 };

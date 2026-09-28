@@ -364,10 +364,32 @@ namespace sw
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
         uint64 getTransformGeneration() const { return _transformHierarchy.getGeneration(); }
 
-        /** @brief 이미 만든 GameObject 를 매니저에 등록하고 소유권을 가져갑니다. */
-        void registerGameObject( GameObject* pObj );
-
     private:
+        /**
+         * @struct NameEntry
+         * @brief 이름 표의 값 — 오브젝트와, 번호를 붙여 만든 이름이면 그 밑 이름과 번호입니다.
+         */
+        struct NameEntry
+        {
+            GameObject*   _pObject{ nullptr };
+            hashed_string _baseName{};  ///< 번호를 붙인 밑 이름(`Bullet_7` 이면 `Bullet`). 번호를 붙이지 않았으면 비어 있습니다
+            uint32        _suffix{ 0 }; ///< 붙인 번호입니다. 0 이면 번호를 붙이지 않은 이름입니다
+        };
+
+        /**
+         * @struct NameSuffixState
+         * @brief 밑 이름 하나의 번호 상태 — 다음 새 번호와, 지운 오브젝트가 돌려준 번호들입니다.
+         * @details 예전에는 번호가 오르기만 했습니다. 번호마다 `hashed_string` 을 **새로 인턴**하는데 인턴 풀은 전역 65,536 칸이고
+         *          한번 들어간 문자열은 나가지 않아, 같은 이름으로 스폰 · 파괴를 거듭하는 게임(총알)은 결국 풀을 채웠고 그 뒤로 엔진의
+         *          **모든** 새 `hashed_string`(리소스 경로 · 태그 · 프로퍼티 이름)이 None 이 됐습니다. 되쓰면 번호 수는 같은 이름으로
+         *          동시에 살아 있던 오브젝트 수를 넘지 않습니다. 되쓰기도 O(1) 입니다(맨 뒤에서 꺼낸다).
+         */
+        struct NameSuffixState
+        {
+            uint32         _nextSuffix{ 2 };  ///< 빈 번호가 없을 때 쓸 다음 새 번호입니다. 첫 중복이 `_2` 입니다
+            vector<uint32> _listFreeSuffix{}; ///< 지운 오브젝트가 돌려준 번호들입니다
+        };
+
         /**
          * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
          * @details 보통은 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눕니다(한 오브젝트의 항목은 한 워커가 순서대로).
@@ -385,8 +407,14 @@ namespace sw
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
         GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectId );
-        /** @brief 잠금 없이 고유 이름을 만듭니다. */
-        hashed_string makeUniqueNameUnlocked( hashed_string requested );
+        /**
+         * @brief 잠금 없이 고유 이름을 만듭니다. 번호를 붙였으면 그 밑 이름과 번호를 @p outEntry 에 적습니다(`_pObject` 는 건드리지 않습니다).
+         * @details 번호는 밑 이름마다 **지운 것부터 되씁니다**(`NameSuffixState`). 그래서 인턴되는 이름 수는 같은 이름으로 동시에 살아 있던
+         *          오브젝트 수의 최댓값으로 묶입니다.
+         */
+        hashed_string makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry );
+        /** @brief 잠금 없이, 지울 이름 표 항목이 번호를 붙여 만든 이름이면 그 번호를 밑 이름의 빈 번호로 돌려줍니다. 항목은 부르는 쪽이 지웁니다. */
+        void releaseNameSuffixUnlocked( const NameEntry& nameEntry );
         /**
          * @brief 잠금 없이 id 로 등록된 오브젝트(삭제 대기 포함)를 찾습니다. 슬롯 표를 보고, 범위 밖이면 맵을 봅니다.
          * @details `findGameObjectById` 와 달리 삭제 대기 오브젝트도 반환하고 잠그지 않습니다. 이미 `_mutex` 를 쥔 자리에서 씁니다.
@@ -468,9 +496,9 @@ namespace sw
         TypedPoolAllocator<GameObject>                          _poolGameObject;
         unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN(`getOrCreateComponentPool` 설명 참고)
 
-        vector<GameObject*>                       _listGameObject;
-        unordered_map<hashed_string, GameObject*> _mapNameToObject;
-        unordered_map<hashed_string, uint32>      _mapNameNextSuffix; ///< 이름마다 다음 번호. 중복 이름 만들기가 O(1) 입니다(언리얼 MakeUniqueObjectName 의 자리)
+        vector<GameObject*>                           _listGameObject;
+        unordered_map<hashed_string, NameEntry>       _mapNameToObject;
+        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix; ///< 밑 이름마다 번호 상태. 중복 이름 만들기가 O(1) 입니다(언리얼 MakeUniqueObjectName 의 자리)
         /**
          * @brief id → 오브젝트 맵입니다. **슬롯 표가 다루지 못하는 id(범위 밖)만** 듭니다.
          * @details 예전에는 모든 오브젝트를 여기에도 넣었습니다. 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다
