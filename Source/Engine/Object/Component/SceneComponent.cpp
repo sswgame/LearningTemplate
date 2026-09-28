@@ -80,16 +80,15 @@ namespace sw
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
-        , _rootIndex{ kNotInList }
         , _dirtyRootIndex{ kNotInList }
     {
         _bCanEverTick      = SW_FALSE;
         _bIsSceneComponent = SW_TRUE;
     }
 
-    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터 · 자식 목록 · 매니저의 루트
-    // 등록부에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
-    // `_listChild` 항목, `registerRootSceneComponent` 가 들고 있는 포인터를 모두 새 주소로
+    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터 · 자식 목록 · 계층의 더티
+    // 루트 목록에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
+    // `_listChild` 항목, 더티 루트 목록이 들고 있는 포인터를 모두 새 주소로
     // 고쳐야 하는데, 예전 이동 연산은 그중 하나도 하지 않았다(이동 대입은 심지어 방금 옮겨
     // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로
     // 옮겨지는 일이 없었고(삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지

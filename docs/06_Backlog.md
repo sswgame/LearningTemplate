@@ -1477,6 +1477,13 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   회귀 테스트 `GameObjectManagerTest.PostTickWorkRunsOnAnEmptyScene`(옛 코드에서 진다) · `SpawnAndDestroyInOneFrame`(병합 전 파괴 길 지킴).
   Debug App `-gv_benchMeshes=8000 -gv_benchSpawnChurn=100 -gv_benchTickMovers=1 -gv_profileAllocSites=20`: 프레임당 할당 **220.1 → 208.1**
   (병합 · 파괴의 `vector<GameObject*>` 두 자리가 상위 목록에서 빠졌다). Release 벤치 5 ~ 10 회 교대: 무버 틱 p50 132 / 132 us, 나머지 잡음 안.
+- **트랜스폼 계층의 루트 전부 목록(`_listRoot` · `_rootMutex` · `getRootCount`)과 컴포넌트의 그 자리(`_rootIndex`)를 걷었다.** 플러시가
+  더티 루트만 돌게 된 뒤로 읽는 곳이 테스트 하나뿐이었는데, 스폰 · 파괴마다 배타 잠금 한 쌍과 파괴마다 맨 뒤 루트(엉뚱한 컴포넌트)의 자리
+  쓰기를 치렀다. 등록은 이제 "더티면 플러시 목록에 올린다", 해제는 "플러시 목록에서 뺀다" 뿐이고 잠금이 없다 — 계층의 스레드 계약을
+  "인스턴스 하나는 그 씬의 스레드 하나"로 적었다(게임 스레드, 또는 넘겨받기 전이면 `SceneLoadAsync` 워커). `SceneComponent` 296 → 288 바이트.
+  테스트를 더티 루트 목록으로 다시 썼다(`DirtyRootListSurvivesIndexedRemoval` — 플러시 전 가운데 삭제 · 붙였다 떼기, 월드는 더티가 풀렸는지
+  먼저 본다). 등록이 더티 루트를 올리지 않는 변이에 진다. Release 12 회 교대: 스폰 8000 6.57 / 6.69 ms · 파괴 1.42 / 1.42 ms — 잡음 안이고
+  이득도 재지 못했다(잠금은 경합이 없어 쌌다). 값은 구조 쪽이다.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

@@ -814,11 +814,12 @@ SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 }
 
 /**
- * @brief 루트 목록은 자리(인덱스)로 지우고 되돌린다 — 가운데를 지워도, 붙였다 떼도 남은 루트가 그대로 플러시된다.
- * @details 등록의 중복 검사와 해제의 선형 탐색을 O(1) 로 바꿨다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나 두 번 들어간다 —
- *          그러면 어떤 루트는 움직여도 월드 위치가 갱신되지 않는다. 그것을 본다.
+ * @brief 더티 루트 목록은 자리(인덱스)로 지우고 되돌린다 — 플러시 전에 가운데를 지워도, 붙였다 떼도 남은 루트가 그대로 플러시된다.
+ * @details 해제의 선형 탐색을 O(1) 로 바꿨다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나(움직여도 월드가 갱신되지 않는다) 지운
+ *          루트가 남는다(플러시가 풀린 메모리를 읽는다). 월드 값은 **더티가 풀렸는지 먼저** 본다 — 지연 합성이 읽는 순간 채워 주면
+ *          플러시가 돌았는지 가려진다. 예전에는 루트 전부의 목록도 따로 들었다(읽는 곳이 이 테스트뿐이라 걷었다).
  */
-SW_TEST_CASE( GameObjectTest, RootListSurvivesIndexedRemoval )
+SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
 {
     sw::GameObjectManager           manager;
     sw::vector<sw::SceneComponent*> listRoot;
@@ -829,34 +830,42 @@ SW_TEST_CASE( GameObjectTest, RootListSurvivesIndexedRemoval )
         sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( name.c_str() ) );
         listRoot.push_back( pObj->addComponent<sw::SceneComponent>() );
     }
-    manager.flushSceneTransforms();
-    SW_EXPECT_EQUAL( size_t( 6 ), manager.getTransformHierarchy().getRootCount() );
+    // 컴포넌트는 더티로 태어나 루트가 되는 순간 플러시 목록에 오른다.
+    SW_EXPECT_EQUAL( size_t( 6 ), manager.getTransformHierarchy().getDirtyRootCount() );
 
-    // 가운데 둘을 지운다 — swap-remove 가 뒤의 루트를 앞자리로 옮긴다. 그 옮겨진 루트(5 번)도 이어서 지운다 — 옮겨진 것의
-    // 자리가 갱신되지 않았다면 여기서 못 찾아 목록에 남는다.
+    // 플러시 전에 가운데 둘을 지운다 — swap-remove 가 뒤의 루트를 앞자리로 옮긴다. 그 옮겨진 루트(5 번)도 이어서 지운다 — 옮겨진
+    // 것의 자리가 갱신되지 않았다면 여기서 못 찾아 목록에 남는다.
     manager.destroyObject( listRoot[1]->getOwner(), false );
     manager.destroyObject( listRoot[4]->getOwner(), false );
     manager.processDeferredDestruction();
-    SW_EXPECT_EQUAL( size_t( 4 ), manager.getTransformHierarchy().getRootCount() );
+    SW_EXPECT_EQUAL( size_t( 4 ), manager.getTransformHierarchy().getDirtyRootCount() );
     manager.destroyObject( listRoot[5]->getOwner(), false );
     manager.processDeferredDestruction();
-    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getRootCount() );
+    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.flushSceneTransforms();
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getTransformHierarchy().getDirtyRootCount() );
 
     // 남은 루트는 전부 움직이고 플러시되어야 한다.
     const uint32 arrRemaining[3] = { 0, 2, 3 };
     for ( uint32 index : arrRemaining )
         listRoot[index]->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 10.0f, 1.0f, 0.0f } );
+    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getDirtyRootCount() );
     manager.flushSceneTransforms();
     for ( uint32 index : arrRemaining )
+    {
+        SW_EXPECT_FALSE( listRoot[index]->isTransformDirty() );
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( listRoot[index]->getWorldPosition()._x, static_cast<float32>( index ) * 10.0f ) );
+    }
 
-    // 붙이면 루트에서 빠지고, 떼면 다시 루트다 — 되돌아온 뒤에도 플러시된다.
+    // 붙이면 제 루트(0 번)가 대신 오르고 자기는 빠진다. 떼면 다시 루트로 오른다 — 되돌아온 뒤에도 플러시된다.
     listRoot[3]->attachToComponent( listRoot[0] );
-    SW_EXPECT_EQUAL( size_t( 2 ), manager.getTransformHierarchy().getRootCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
     listRoot[3]->detachFromComponent();
-    SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getRootCount() );
+    SW_EXPECT_EQUAL( size_t( 2 ), manager.getTransformHierarchy().getDirtyRootCount() );
+    manager.flushSceneTransforms();
     listRoot[3]->setLocalPosition( sw::float3{ 77.0f, 0.0f, 0.0f } );
     manager.flushSceneTransforms();
+    SW_EXPECT_FALSE( listRoot[3]->isTransformDirty() );
     SW_EXPECT_TRUE( sw::MathUtil::nearEqual( listRoot[3]->getWorldPosition()._x, 77.0f ) );
 }
 

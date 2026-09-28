@@ -216,12 +216,11 @@ namespace sw
          */
         atomic<uint8> _bQueuedDirtyRoot;
         /**
-         * @brief 계층의 루트 목록 · 더티 루트 목록에서의 자기 자리입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 만집니다.
-         * @details 등록이 중복 검사로 목록 전체를 훑고 해제가 선형으로 찾던 것을 O(1) swap-remove 로 바꿨습니다. 8000 개를 만들고 지우면
-         *          각각 3200만 번 비교였습니다(파괴 개당 2 µs). 더티 목록 자리는 플러시가 비웁니다.
+         * @brief 계층의 더티 루트 목록에서의 자기 자리입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 만집니다.
+         * @details 해제가 선형으로 찾던 것을 O(1) swap-remove 로 바꿨습니다(8000 개를 지우면 3200만 번 비교, 파괴 개당 2 µs 였다).
+         *          자리는 플러시가 비웁니다. 루트 전부의 목록과 그 자리(`_rootIndex`)는 읽는 곳이 없어 걷었습니다.
          */
         static constexpr uint32 kNotInList = 0xFFFFFFFFu;
-        uint32                  _rootIndex;
         uint32                  _dirtyRootIndex;
     };
 } // namespace sw

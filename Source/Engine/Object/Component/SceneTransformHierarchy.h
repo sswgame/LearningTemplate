@@ -1,6 +1,6 @@
 /**
  * @file SceneTransformHierarchy.h
- * @brief 씬 컴포넌트 트랜스폼 계층입니다. 루트 목록 · 더티 루트 목록 · 더티 세대 · 월드 캐시 플러시(직렬/병렬)를 맡습니다.
+ * @brief 씬 컴포넌트 트랜스폼 계층입니다. 더티 루트 목록 · 더티 세대 · 월드 캐시 플러시(직렬/병렬)를 맡습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -62,19 +62,25 @@ namespace sw
      *          포인터만 받습니다. DFS 스택은 스레드 슬롯마다 하나씩 재사용합니다. 잡마다 만들면 프레임당 청크 수만큼
      *          할당이었습니다(큐브 8000 에서 프레임당 할당 1위). 배치 쓰기의 워커는 더티 루트를 슬롯별 스크래치에 모으고
      *          배치가 끝난 뒤 `mergeQueuedDirtyRoots` 가 한 목록으로 합칩니다.
+     *
+     *          **루트 전부의 목록은 들지 않습니다.** 예전에는 들었지만 플러시가 더티 루트만 돌게 된 뒤로 읽는 곳이 테스트뿐이었고,
+     *          스폰 · 파괴마다 그 목록의 배타 잠금 한 쌍과 파괴마다 엉뚱한 컴포넌트(맨 뒤 루트)의 자리 쓰기를 치르고 있었습니다.
+     *
+     *          스레드 계약: 한 인스턴스는 한 스레드가 만집니다 — 그 씬의 스레드(게임 스레드, 또는 아직 넘겨받지 않은 씬이면
+     *          `SceneLoadAsync` 워커). 병렬 구간(플러시 잡 · 배치 쓰기 워커)은 위의 규칙대로 자기 칸만 씁니다.
      */
     class SW_API SceneTransformHierarchy
     {
     public:
         /**
          * @brief 더티 루트가 이 수 이상이면 플러시를 루트 서브트리 단위로 잡에 나눕니다.
-         * @details 잡 디스패치 바닥이 ~50 us(잠든 워커 깨우기)라 그보다 작은 일은 직렬이 빠릅니다. 루트 2000 은
+         * @details 잡 디스패치 바닥(잠든 풀 ~34 us)보다 작은 일은 직렬이 빠릅니다. 루트 2000 은
          *          직렬 ~60 us 라 나눠도 같고, 8000 은 직렬 200 us 가 병렬 110 us 입니다(Release · 큐브 모두 이동).
          */
         static constexpr uint32 kParallelFlushRootCount = 2048;
         /**
          * @brief 배치 쓰기가 이 건수 이상이면 워커에 나눕니다.
-         * @details 한 건이 핸들 해석 + 필드 셋 + 더티 표시라 ~60 ns 입니다. 잡 디스패치 바닥 ~50 us 를 넘기려면 천 건은 돼야 합니다.
+         * @details 한 건이 핸들 해석 + 필드 셋 + 더티 표시라 ~60 ns 입니다. 잡 디스패치 바닥(~34 us)을 넘기려면 천 건은 돼야 합니다.
          */
         static constexpr uint32 kParallelWriteCount = 1024;
 
@@ -83,15 +89,15 @@ namespace sw
 
         /** @brief 빈 계층을 만듭니다. */
         SceneTransformHierarchy();
-        /** @brief 루트 목록을 놓습니다. 컴포넌트 수명은 GameObject 가 쥡니다. */
+        /** @brief 목록들을 놓습니다. 컴포넌트 수명은 GameObject 가 쥡니다. */
         ~SceneTransformHierarchy() = default;
 
         SceneTransformHierarchy( const SceneTransformHierarchy& )            = delete;
         SceneTransformHierarchy& operator=( const SceneTransformHierarchy& ) = delete;
 
-        /** @brief 루트가 된 씬 컴포넌트를 등록합니다. 이미 있으면 무시합니다. 더티로 태어난 루트는 더티 목록에도 오릅니다. */
+        /** @brief 씬 컴포넌트가 루트가 됐습니다(등록 · 부모에서 떨어짐). 더티면 플러시 목록에 올립니다 — 컴포넌트는 더티로 태어납니다. */
         void registerRoot( SceneComponent* pComp );
-        /** @brief 부모가 생기거나 파괴된 씬 컴포넌트를 루트에서 뺍니다(더티 목록에서도). 멱등입니다. */
+        /** @brief 씬 컴포넌트가 더는 루트가 아닙니다(부모가 생김 · 파괴). 플러시 목록에 올라 있으면 뺍니다. 멱등입니다. */
         void unregisterRoot( SceneComponent* pComp );
 
         /**
@@ -142,10 +148,8 @@ namespace sw
 
         /** @brief 더티 루트의 월드 캐시를 계층 순으로 갱신하고 목록을 비웁니다. 루트 수가 문턱을 넘으면 병렬로 돕니다. */
         void flush();
-        /** @brief 루트 목록과 더티 목록을 비웁니다(매니저 clear). */
+        /** @brief 더티 목록을 비웁니다(매니저 clear). */
         void clear();
-        /** @brief 등록된 루트 수입니다. */
-        size_t getRootCount() const;
 
         /**
          * @brief 한 루트 아래의 월드 트랜스폼을 갱신합니다(명시적 스택 DFS).
@@ -157,11 +161,9 @@ namespace sw
     private:
         /** @brief 루트의 대기 플래그를 잡아 본 목록에 올립니다. 이미 잡혀 있으면 false. */
         static bool tryMarkQueued( SceneComponent* pRoot );
-        /** @brief 더티 루트 목록을 비우며 각 루트의 대기 플래그를 내립니다. `_rootMutex` 를 잡은 채로 부릅니다(플러시 · clear). */
+        /** @brief 더티 루트 목록을 비우며 각 루트의 대기 플래그를 내립니다(플러시 · clear). */
         void releaseDirtyRoots();
 
-        /** @brief 루트 씬 컴포넌트 목록입니다. 소유하지 않습니다. */
-        vector<SceneComponent*> _listRoot;
         /** @brief 이번 플러시가 돌 루트입니다. 더러워진 노드가 자기 루트를 한 번씩 올립니다. */
         vector<SceneComponent*> _listDirtyRoot;
         /** @brief 워커가 올린 더티 루트입니다(스레드 슬롯마다 하나, `engine::getParallelScratchSlotCount()` 크기). */
@@ -174,8 +176,6 @@ namespace sw
         /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pDirtyRootScratch` 와 같은 이유입니다. `beginQueuedWrites` 가 맞춥니다.
         vector<SceneTransformWrite>* _pWriteScratch;
         uint32                       _writeScratchCount;
-        /** @brief 루트 목록의 락입니다. 등록/해제는 배타, 플러시는 공유로 잡습니다. 이 타입의 락은 가장 안쪽입니다. */
-        mutable std::shared_mutex _rootMutex;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택입니다(`engine::getParallelScratchSlotCount()` 크기). */
         vector<FlushStack> _listScratchStack;
         /**

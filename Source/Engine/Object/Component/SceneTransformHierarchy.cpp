@@ -14,15 +14,13 @@
 namespace sw
 {
     SceneTransformHierarchy::SceneTransformHierarchy()
-        : _listRoot{}
-        , _listDirtyRoot{}
+        : _listDirtyRoot{}
         , _listDirtyRootScratch{}
         , _pDirtyRootScratch{ nullptr }
         , _dirtyRootScratchCount{ 0 }
         , _listWriteScratch{}
         , _pWriteScratch{ nullptr }
         , _writeScratchCount{ 0 }
-        , _rootMutex{}
         , _listScratchStack{}
         , _dirtyGeneration{ 1 }
     {
@@ -30,19 +28,8 @@ namespace sw
 
     void SceneTransformHierarchy::registerRoot( SceneComponent* pComp )
     {
-        if ( pComp == nullptr )
-            return;
-        {
-            std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-            // 자기 자리를 들고 있으면 이미 루트다. 목록을 훑지 않는다(8000 개면 등록마다 8000 번 비교였다).
-            if ( pComp->_rootIndex == SceneComponent::kNotInList )
-            {
-                pComp->_rootIndex = static_cast<uint32>( _listRoot.size() );
-                _listRoot.push_back( pComp );
-            }
-        }
-        // 컴포넌트는 더티로 태어난다. 루트가 되는 순간 플러시 목록에도 올라야 첫 플러시가 월드 캐시를 만든다.
-        if ( pComp->isTransformDirty() || pComp->hasDirtyDescendant() )
+        // 컴포넌트는 더티로 태어난다. 루트가 되는 순간 플러시 목록에 올라야 첫 플러시가 월드 캐시를 만든다.
+        if ( pComp != nullptr && ( pComp->isTransformDirty() || pComp->hasDirtyDescendant() ) )
             queueDirtyRoot( pComp );
     }
 
@@ -50,18 +37,6 @@ namespace sw
     {
         if ( pComp == nullptr )
             return;
-        std::unique_lock<std::shared_mutex> lock{ _rootMutex };
-
-        // 자기 자리로 O(1) swap-remove 한다. 선형으로 찾던 때는 8000 개를 지우면 3200만 번 비교였다(개당 2 µs).
-        const uint32 rootIndex = pComp->_rootIndex;
-        if ( rootIndex != SceneComponent::kNotInList && rootIndex < _listRoot.size() && _listRoot[rootIndex] == pComp )
-        {
-            SceneComponent* pMoved = _listRoot.back();
-            _listRoot[rootIndex]   = pMoved;
-            pMoved->_rootIndex     = rootIndex;
-            _listRoot.pop_back();
-        }
-        pComp->_rootIndex = SceneComponent::kNotInList;
 
         // 더 이상 루트가 아니다. 플러시 목록에서도 뺀다(부모 아래로 들어갔으면 그 루트가 대신 오른다). 자리를 알면 O(1),
         // 병렬 스크래치에 있어 모르면(배치 도중의 재부모는 금지라 실제로는 없다) 훑는다.
@@ -216,8 +191,6 @@ namespace sw
         if ( _listDirtyRoot.empty() )
             return;
 
-        std::shared_lock<std::shared_mutex> lock{ _rootMutex };
-
         // 스크래치는 스레드 슬롯마다 하나다. 워커 수는 서비스가 묶인 뒤에야 알 수 있으므로 여기서 맞춘다(한 번만 자란다).
         const uint32 slotCount = engine::getParallelScratchSlotCount();
         if ( _listScratchStack.size() < slotCount )
@@ -266,22 +239,9 @@ namespace sw
 
     void SceneTransformHierarchy::clear()
     {
-        std::unique_lock<std::shared_mutex> lock{ _rootMutex };
         releaseDirtyRoots();
         for ( vector<SceneComponent*>& listScratch : _listDirtyRootScratch )
             listScratch.clear();
-        for ( SceneComponent* pRoot : _listRoot )
-        {
-            if ( pRoot != nullptr )
-                pRoot->_rootIndex = SceneComponent::kNotInList;
-        }
-        _listRoot.clear();
-    }
-
-    size_t SceneTransformHierarchy::getRootCount() const
-    {
-        std::shared_lock<std::shared_mutex> lock{ _rootMutex };
-        return _listRoot.size();
     }
 
     void SceneTransformHierarchy::flushSubtree( SceneComponent* pRoot, bool bParentChanged, FlushStack& stack )

@@ -220,10 +220,10 @@ namespace sw
          */
         void executeOrDeferPostTick( PostTickDelegate func );
 
-        /** @brief 루트가 된 SceneComponent 를 트랜스폼 계층에 등록합니다. */
+        /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
         void registerRootSceneComponent( SceneComponent* pComp );
 
-        /** @brief 부모가 생기거나 파괴된 SceneComponent 를 트랜스폼 계층의 루트 목록에서 뺍니다. */
+        /** @brief 부모가 생기거나 파괴된 SceneComponent 를 트랜스폼 계층의 플러시 목록에서 뺍니다. */
         void unregisterRootSceneComponent( SceneComponent* pComp );
 
         /**
