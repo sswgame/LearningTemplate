@@ -63,7 +63,8 @@ namespace sw
          * @brief 월드 행렬이 실제로 다시 계산된 직후 불립니다.
          * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 짚어 주는 유일한 지점입니다.
          *          렌더 프리미티브는 여기서 자기를 더티로 표시합니다. 그래서 프레임마다 전부 훑어
-         *          "행렬이 바뀌었나" 되묻지 않아도 됩니다.
+         *          "행렬이 바뀌었나" 되묻지 않아도 됩니다. 플러시가 부르기도 하고, 플러시 전에 월드 값을
+         *          읽어 캐시를 채울 때(`getWorldMatrix` 등)도 불립니다 — 어느 쪽이든 합성은 한 곳입니다.
          */
         virtual void onWorldTransformUpdated() {}
 
@@ -171,8 +172,18 @@ namespace sw
          *          없으므로 소멸자는 반드시 이쪽을 씁니다.
          */
         void detachFromParentImmediate();
-        /** @brief 이 노드와 자손의 더티를 바이트 저장으로 세웁니다(`applyTransformWrite` 의 자식 쪽). 세대는 건드리지 않습니다. */
-        void markDirtySubtree();
+        /**
+         * @brief 월드 캐시가 더티면 더티인 조상 사슬부터 위에서 아래로 합성합니다. 병렬 틱 중이면 아무것도 하지 않습니다.
+         * @details 합성은 `updateWorldTransformFromParent` 를 지나므로 `onWorldTransformUpdated` 가 여기서도 불립니다.
+         */
+        void ensureWorldCache() const;
+        /**
+         * @brief 자기를 더티로, 조상에 "자손 더티" 를 세웁니다. 더티 루트 목록에 올려야 할 루트를 돌려줍니다(이미 올라 있으면 nullptr).
+         * @details 바이트 저장뿐이라 워커(`applyTransformWrite`)와 직렬(`markTransformDirty`)이 같이 씁니다. 목록에 올리는 쪽만 다릅니다.
+         */
+        SceneComponent* markSelfAndAncestorsDirty();
+        /** @brief 자손 전부를 더티로, 자식이 있는 노드에 "자손 더티" 를 세웁니다. 반복문이고 세대는 건드리지 않습니다. */
+        void markDescendantsDirty();
 
         PROPERTY( Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
         float3 _localPosition;

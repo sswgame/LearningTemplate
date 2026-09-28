@@ -2,7 +2,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -286,4 +288,98 @@ SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
 
     SW_EXPECT_TRUE( pChildComp->_bParentKeptInTick == SW_TRUE );
     SW_EXPECT_TRUE( pChildComp->getParent() == nullptr );
+}
+
+/**
+ * @brief [SceneComponentTest] 플러시 전에 월드 값을 읽어도 렌더 프리미티브는 더티로 남는다.
+ * @details 지연 합성(`getWorldPosition` 등)이 월드 캐시를 채우며 더티를 지웠지만 갱신 훅은 부르지 않았다. 그 노드는 이제 더티가
+ *          아니라 플러시가 건너뛰고, 렌더 더티는 훅에서만 찍히므로 **아무도 찍지 않았다** — 인스펙터가 메시 위치를 세팅하고 곧장
+ *          월드 위치를 읽는 경로에서, 화면의 메시가 옛 자리에 멈춰 있었다. 부모를 움직이고 자식을 읽는 경우도 같다.
+ */
+SW_TEST_CASE( SceneComponentTest, LazyWorldReadKeepsRenderDirty )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParentObj  = manager.createGameObject( sw::hashed_string( "LazyParent" ) );
+    sw::MeshComponent*    pParentMesh = pParentObj->addComponent<sw::MeshComponent>();
+    sw::GameObject*       pChildObj   = manager.createGameObject( sw::hashed_string( "LazyChild" ) );
+    sw::MeshComponent*    pChildMesh  = pChildObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pParentMesh );
+    SW_ASSERT_NOT_NULL( pChildMesh );
+    manager.flushSceneTransforms();
+
+    // 잎 루트 하나 — 세팅 → 읽기 → 플러시.
+    sw::GameObject*    pLeafObj  = manager.createGameObject( sw::hashed_string( "LazyLeaf" ) );
+    sw::MeshComponent* pLeafMesh = pLeafObj->addComponent<sw::MeshComponent>();
+    manager.flushSceneTransforms();
+    manager.getPrimitiveRegistry().clearDirty();
+    pLeafMesh->setLocalPosition( sw::float3( 5.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pLeafMesh->getWorldPosition()._x, 1e-4f );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
+
+    // 부모 · 자식 — 부모를 움직이고 자식을 읽는다.
+    SW_ASSERT_TRUE( pChildMesh->attachToComponent( pParentMesh ) );
+    manager.flushSceneTransforms();
+    manager.getPrimitiveRegistry().clearDirty();
+    pParentMesh->setLocalPosition( sw::float3( 0.0f, 9.0f, 0.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, pChildMesh->getWorldPosition()._y, 1e-4f );
+    manager.flushSceneTransforms();
+    SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
+}
+
+/**
+ * @brief [SceneComponentTest] 부모를 움직이고 자식 하나를 먼저 읽어도, 플러시는 그 형제까지 갱신하고 훅은 노드마다 한 번이다.
+ * @details R → N → {C1, C2}. N 을 움직이고 C1 의 월드 위치를 읽으면 N · C1 사슬은 깨끗해진다. 플러시는 깨끗한 노드 아래로
+ *          "자손 더티" 가 있을 때만 내려가므로 N 에 그것이 서 있어야 C2 에 닿는다. 직렬 표시는 세웠지만 배치(워커) 쪽 복사본은
+ *          자손에게 더티만 세워, 배치로 N 을 옮기면 C2 가 옛 자리에 남았다. 두 경로를 다 본다.
+ */
+SW_TEST_CASE( SceneComponentTest, LazyReadDoesNotStrandDirtySiblings )
+{
+    for ( uint32 pass = 0; pass < 2; ++pass )
+    {
+        const bool            bBatch = ( pass == 0 );
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents( manager );
+        sw::MockTickSceneComponent* arrNode[4] = {};
+        const utf8*                 arrName[4] = { "R", "N", "C1", "C2" };
+        for ( uint32 index = 0; index < 4; ++index )
+        {
+            sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( arrName[index] ) );
+            arrNode[index]       = pObj->addComponent<sw::MockTickSceneComponent>();
+            SW_ASSERT_NOT_NULL( arrNode[index] );
+        }
+        sw::MockTickSceneComponent* pRoot   = arrNode[0];
+        sw::MockTickSceneComponent* pMiddle = arrNode[1];
+        sw::MockTickSceneComponent* pFirst  = arrNode[2];
+        sw::MockTickSceneComponent* pSecond = arrNode[3];
+        SW_ASSERT_TRUE( pMiddle->attachToComponent( pRoot ) );
+        SW_ASSERT_TRUE( pFirst->attachToComponent( pMiddle ) );
+        SW_ASSERT_TRUE( pSecond->attachToComponent( pMiddle ) );
+        pSecond->setLocalPosition( sw::float3( 0.0f, 0.0f, 1.0f ) );
+        manager.flushSceneTransforms();
+        for ( sw::MockTickSceneComponent* pNode : arrNode )
+            pNode->_worldUpdateCount = 0;
+
+        const sw::float3 movedPos( 4.0f, 0.0f, 0.0f );
+        if ( bBatch )
+        {
+            sw::SceneTransformWrite write{};
+            write._handle        = pMiddle->getHandle();
+            write._localPosition = movedPos;
+            write._bSetPosition  = SW_TRUE;
+            SW_EXPECT_EQUAL( 1u, manager.applyTransformBatch( &write, 1 ) );
+        }
+        else
+            pMiddle->setLocalPosition( movedPos );
+
+        SW_EXPECT_NEAR_EQUAL( 4.0f, pFirst->getWorldPosition()._x, 1e-4f );
+        manager.flushSceneTransforms();
+
+        SW_EXPECT_FALSE( pSecond->isTransformDirty() );
+        SW_EXPECT_NEAR_EQUAL( 4.0f, pSecond->getWorldPosition()._x, 1e-4f );
+        SW_EXPECT_EQUAL( 0, pRoot->_worldUpdateCount );
+        SW_EXPECT_EQUAL( 1, pMiddle->_worldUpdateCount );
+        SW_EXPECT_EQUAL( 1, pFirst->_worldUpdateCount );
+        SW_EXPECT_EQUAL( 1, pSecond->_worldUpdateCount );
+    }
 }

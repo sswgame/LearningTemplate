@@ -71,6 +71,27 @@ namespace
         }
         return pObj;
     }
+
+    constexpr uint32 kChainDepth = 1000;
+
+    /** @brief 씬 컴포넌트 하나씩 든 오브젝트 @p depth 개를 한 줄로 잇습니다. 루트를 돌려주고, 맨 끝은 @p pOutLeaf 에 적습니다. */
+    sw::GameObject* buildDeepChain( sw::GameObjectManager& manager, uint32 depth, sw::GameObject*& pOutLeaf )
+    {
+        sw::GameObject* pRoot = nullptr;
+        sw::GameObject* pPrev = nullptr;
+        for ( uint32 level = 0; level < depth; ++level )
+        {
+            sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "Chain" ) );
+            pObj->addComponent<sw::SceneComponent>();
+            if ( pPrev != nullptr )
+                pObj->attachToParent( pPrev );
+            else
+                pRoot = pObj;
+            pPrev = pObj;
+        }
+        pOutLeaf = pPrev;
+        return pRoot;
+    }
 } // namespace
 
 /**
@@ -273,4 +294,78 @@ SW_TEST_CASE( GameObjectBenchTest, FindById )
     [[maybe_unused]] const int64 deciNanos = ( bestNanos * 10 ) / kProbeCount;
     SW_LOG_INFO( "[Bench] findGameObjectById (8000 objects, scattered): %#.%# ns per call", deciNanos / 10, deciNanos % 10 );
     SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 1000 단 계층의 루트 이동 — 더티 표시(세터)와 플러시를 따로 잽니다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pLeaf = nullptr;
+    sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
+    manager.tick( 0.016f );
+    sw::SceneComponent* pRootScene = pRoot->getComponent<sw::SceneComponent>();
+    sw::SceneComponent* pLeafScene = pLeaf->getComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRootScene );
+    SW_ASSERT_NOT_NULL( pLeafScene );
+
+    sw::vector<int64> listMark;
+    sw::vector<int64> listFlush;
+    for ( uint32 round = 0; round < 40; ++round )
+    {
+        const auto markStart = std::chrono::steady_clock::now();
+        pRootScene->setLocalPosition( sw::float3{ static_cast<float32>( round + 1 ), 0.0f, 0.0f } );
+        listMark.push_back( elapsedMicro( markStart ) );
+        const auto flushStart = std::chrono::steady_clock::now();
+        manager.flushSceneTransforms();
+        listFlush.push_back( elapsedMicro( flushStart ) );
+    }
+    logSamples( "mark dirty: setLocalPosition on a 1000-deep chain root", listMark );
+    logSamples( "flush: flushSceneTransforms after that move", listFlush );
+    SW_EXPECT_NEAR_EQUAL( 40.0f, pLeafScene->getWorldPosition()._x, 1e-3f );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 1000 단 계층의 첫 틱(병합) · 파괴 · 매니저 해체 — 판마다 새 매니저.
+ */
+SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
+{
+    sw::vector<int64> listFirstTick;
+    sw::vector<int64> listDestroy;
+    sw::vector<int64> listTeardown;
+    for ( uint32 round = 0; round < 5; ++round )
+    {
+        // 판마다 새 매니저다 — 하나를 돌려 쓰면 앞 판이 남긴 상태(풀 · 이름 번호)가 뒤 판을 잰다.
+        {
+            sw::GameObjectManager manager;
+            sw::RegisterMockComponents( manager );
+            sw::GameObject* pLeaf = nullptr;
+            sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
+
+            const auto tickStart = std::chrono::steady_clock::now();
+            manager.tick( 0.016f );
+            listFirstTick.push_back( elapsedMicro( tickStart ) );
+
+            const auto destroyStart = std::chrono::steady_clock::now();
+            manager.destroyObject( pRoot, true );
+            manager.processDeferredDestruction();
+            listDestroy.push_back( elapsedMicro( destroyStart ) );
+            SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+        }
+        {
+            sw::GameObjectManager* pManager = sw_new sw::GameObjectManager();
+            sw::RegisterMockComponents( *pManager );
+            sw::GameObject* pLeaf = nullptr;
+            buildDeepChain( *pManager, kChainDepth, pLeaf );
+            pManager->tick( 0.016f );
+            const auto teardownStart = std::chrono::steady_clock::now();
+            sw_delete( pManager );
+            listTeardown.push_back( elapsedMicro( teardownStart ) );
+        }
+    }
+    logSamples( "first tick (merge) of a 1000-deep chain", listFirstTick );
+    logSamples( "destroyObject(root) + process on a 1000-deep chain", listDestroy );
+    logSamples( "manager teardown with a 1000-deep chain", listTeardown );
 }

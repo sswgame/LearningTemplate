@@ -165,6 +165,7 @@ namespace sw
         uint8                  _bDetachOnTick     : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
         uint8                  _bParentKeptInTick : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
         [[maybe_unused]] uint8 _reserved          : 3;
+        int32                  _worldUpdateCount; ///< `onWorldTransformUpdated` 가 불린 횟수 — 합성 경로가 훅을 빠뜨리지 않는지 본다
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
@@ -176,6 +177,7 @@ namespace sw
             , _bDetachOnTick{ SW_FALSE }
             , _bParentKeptInTick{ SW_FALSE }
             , _reserved{ 0 }
+            , _worldUpdateCount{ 0 }
         {
             setCanEverTick( true );
         }
@@ -184,6 +186,12 @@ namespace sw
         const TypeInfo* getTypeInfo() const override
         {
             return StaticType();
+        }
+
+        void onWorldTransformUpdated() override
+        {
+            SceneComponent::onWorldTransformUpdated();
+            ++_worldUpdateCount;
         }
 
         void onTick( float32 deltaTime ) override

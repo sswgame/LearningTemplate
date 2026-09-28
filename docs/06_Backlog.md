@@ -1415,6 +1415,20 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
 - 회귀 테스트 셋 — `GameObjectTest.ComponentTeardownCallbacksRunExactlyOnce`(길 넷: 즉시 · 비우기 · 지연 · 오브젝트째) ·
   `QueuedComponentDestroySparesReusedBlock` · `RemoveComponentKeepsOrder`. 엔진 변경만 되돌린 빌드에서 셋 다 진다(콜백 2 배 · 새 컴포넌트가
   지워져 0 개 · 순서 뒤집힘).
+- **플러시 전에 월드 값을 읽으면 메시가 화면에서 얼어붙었다.** `getWorldMatrix` · `getWorldPosition` 의 지연 합성이 월드 캐시를 채우며 더티를
+  지웠는데, 갱신 훅(`onWorldTransformUpdated` — 렌더 더티를 찍는 유일한 곳)은 플러시 쪽 복사본만 불렀다. 지연 쪽에서 깨끗해진 노드는 플러시가
+  건너뛰니 아무도 찍지 않았다. 인스펙터의 위치 드래그가 세터 직후 월드 위치를 읽어(`InspectorComponentManager`) 바로 이 길이었다. 합성은 이제
+  `updateWorldTransformFromParent` 한 곳이고, 지연 쪽(`ensureWorldCache`)은 더티인 조상 사슬을 위에서부터 그것으로 부른다(재귀 없음).
+  위 "더티 커버리지가 이미 완전하다" 문단에 정정을 달았다.
+- **더티 표시가 두 벌이었고 이미 갈라져 있었다.** 직렬(`markTransformDirty`)은 자손마다 자기를 다시 불러 지연 검사 · 세대 올리기(공유 원자) ·
+  부모 걷기를 자손 수만큼 했고, 워커(`applyTransformWrite`)는 자손에 더티만 세웠다. 뒤쪽은 자식 있는 노드에 "자손 더티" 를 안 세워, 배치로
+  N 을 옮긴 뒤 N 의 자식 하나를 먼저 읽으면(사슬이 깨끗해진다) 플러시가 N 아래로 내려가지 않아 **형제가 옛 자리에 남았다.** 틱 뒤 지연
+  람다가 바로 그 창(배치 적용 ~ 플러시)에서 돈다. 이제 `markSelfAndAncestorsDirty`(위로) · `markDescendantsDirty`(아래로, 반복문 · 직렬
+  의미) 두 함수를 두 경로가 같이 쓰고, 다른 것은 루트를 올리는 함수(직렬 · 워커)뿐이다. 세대는 세터 호출마다 한 번(테스트 계약 그대로).
+- 회귀 테스트 둘 — `SceneComponentTest.LazyWorldReadKeepsRenderDirty`(잎 루트 · 부모를 옮기고 자식 읽기) ·
+  `LazyReadDoesNotStrandDirtySiblings`(R → N → {C1, C2}, 배치 · 세터 두 경로, 훅이 노드마다 정확히 한 번). 옛 코드에서 둘 다 지고, 새
+  `markDescendantsDirty` 에서 "자손 더티" 저장을 빼는 변이에도 진다. 벤치 `GameObjectBenchTest.DeepChainMove`(1000 단 사슬 루트 이동: 표시 ·
+  플러시) · `DeepChainLifecycle`(첫 틱 · 파괴 · 매니저 해체)을 더했다 — 뒤 커밋들이 같은 코드로 A/B 한다.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
@@ -3727,6 +3741,8 @@ Outline 95 + Present 87 = **235 us 가 GPU 프레임의 62%** 이고, 그중 백
 조건과 정확히 대응한다. 하나라도 빠지면 증상은 **물체가 화면에서 얼어붙는 것**이라,
 `PartialCollectUpdatesOnlyTheMovedPrimitive` 가 "움직인 것은 갱신됐고 나머지는 그대로" 를 둘 다
 단언한다(더티를 무시하는 변이로 물리는 것을 확인했다).
+**(2026-09-28 정정) 완전하지 않았다** — 플러시 전에 월드 값을 읽는 지연 합성이 훅 없이 더티를 지워, 세팅 직후 읽는
+경로(인스펙터 위치 드래그)의 메시가 얼어붙었다. (B) 스물다섯째에서 합성을 한 곳으로 모아 닫았다.
 
 **남은 것.** 10 개만 움직여도 `batches` 는 여전히 148 us 다 — `refreshInstancesInPlace` 가 인스턴스
 8000 자리를 전부 훑는다. 같은 더티 목록으로 거기도 줄일 수 있다(구간은 이미 만들고 있다).

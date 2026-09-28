@@ -231,45 +231,50 @@ namespace sw
 
     float3 SceneComponent::getWorldPosition() const
     {
-        if ( isInParallelTick() == false )
-            getWorldMatrix();
+        ensureWorldCache();
         return _cachedWorldPosition;
     }
 
     double3 SceneComponent::getWorldPositionLwc() const
     {
-        if ( isInParallelTick() == false )
-            getWorldMatrix();
+        ensureWorldCache();
         return _cachedWorldPositionLWC;
     }
 
     float4x4 SceneComponent::getWorldMatrix() const
     {
-        if ( isInParallelTick() )
-            return _cachedWorldMatrix;
-
-        if ( _bIsTransformDirty == SW_TRUE )
-        {
-            SceneComponent* pParent = _pParent;
-            if ( pParent != nullptr )
-                pParent->getWorldMatrix();
-            const float4x4* pParentWorld = pParent != nullptr ? &pParent->_cachedWorldMatrix : nullptr;
-            const double3*  pParentLwc   = pParent != nullptr ? &pParent->_cachedWorldPositionLWC : nullptr;
-            SceneComponent* pMutable     = const_cast<SceneComponent*>( this );
-            SceneComponentInternal::composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
-                                                            pMutable->_cachedWorldMatrix, pMutable->_cachedWorldPositionLWC, pMutable->_cachedWorldPosition );
-            pMutable->_bIsTransformDirty = SW_FALSE;
-        }
+        ensureWorldCache();
         return _cachedWorldMatrix;
+    }
+
+    void SceneComponent::ensureWorldCache() const
+    {
+        // 병렬 틱 중에는 캐시만 읽는다(워커가 계층을 고쳐 쓰면 안 된다).
+        if ( _bIsTransformDirty == SW_FALSE || isInParallelTick() )
+            return;
+
+        // **합성은 `updateWorldTransformFromParent` 한 곳에서만 한다.** 예전에는 여기에 같은 합성 · 해제가 한 벌 더 있었고, 그쪽만
+        // 갱신 훅(`onWorldTransformUpdated`)을 부르지 않았다. 여기서 깨끗해진 노드는 플러시가 건너뛰므로(더티가 아니다) 훅이 영영
+        // 안 불렸다 — 인스펙터에서 메시 위치를 끌면 세터 직후 월드 위치를 읽어, 화면의 메시가 제자리에 멈춰 있었다.
+        //
+        // 더티인 조상 사슬을 위에서부터 합성한다. 깨끗한 노드의 조상은 모두 깨끗하다(더티는 자손 전부에 세우고, 해제는 위에서 아래로).
+        // 재귀하지 않는다 — 깊은 계층에서도 스택이 자라지 않는다.
+        vector<SceneComponent*, InlineAllocator<SceneComponent*, 16>> listChain;
+        for ( SceneComponent* pNode = const_cast<SceneComponent*>( this ); pNode != nullptr && pNode->_bIsTransformDirty == SW_TRUE;
+              pNode                 = pNode->_pParent )
+            listChain.push_back( pNode );
+        for ( auto it = listChain.rbegin(); it != listChain.rend(); ++it )
+            ( *it )->updateWorldTransformFromParent();
     }
 
     float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const
     {
-        const float4x4 worldMat      = getWorldMatrix();
-        const double3  relativePos64 = getWorldPositionLwc() - cameraWorldPos;
-        const float3   relativePos32( static_cast<float32>( relativePos64._x ),
-                                      static_cast<float32>( relativePos64._y ),
-                                      static_cast<float32>( relativePos64._z ) );
+        ensureWorldCache();
+        const float4x4& worldMat      = _cachedWorldMatrix;
+        const double3   relativePos64 = _cachedWorldPositionLWC - cameraWorldPos;
+        const float3    relativePos32( static_cast<float32>( relativePos64._x ),
+                                       static_cast<float32>( relativePos64._y ),
+                                       static_cast<float32>( relativePos64._z ) );
 
         float4x4 cameraRel = worldMat;
         cameraRel.setTranslation( relativePos32 );
@@ -409,9 +414,22 @@ namespace sw
             return true;
         }
 
-        // markTransformDirty 와 같은 표시다. 세대 올리기와 지연 경로만 뺐다. 모두 바이트 저장이라 워커에서 안전하다.
-        // 루트는 워커 스크래치에 올린다. 같은 루트를 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
-        _bIsTransformDirty    = SW_TRUE;
+        // 계층이 있는 것은 루트를 올리고 플러시가 내려간다. 표시는 `markTransformDirty` 와 같은 두 함수다(세대 올리기와 지연 경로만
+        // 없다). 모두 같은 값을 쓰는 바이트 저장이라 워커 여럿이 겹쳐 써도 무해하다. 루트는 워커 스크래치에 올린다 — 같은 루트를
+        // 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
+        SceneComponent* pRoot = markSelfAndAncestorsDirty();
+        if ( pRoot != nullptr && _pManager != nullptr )
+            _pManager->getTransformHierarchy().queueDirtyRootParallel( pRoot );
+        markDescendantsDirty();
+        return true;
+    }
+
+    SceneComponent* SceneComponent::markSelfAndAncestorsDirty()
+    {
+        _bIsTransformDirty = SW_TRUE;
+
+        // 부모 사슬을 올라가며 "자손 더티" 를 세우고, 루트에 닿으면 그것을 돌려준다. 이미 서 있는 조상을 만나면 그 루트는 이미 올라
+        // 있다(불변식) — 거기서 멈추고 nullptr. 내가 루트면 나다.
         SceneComponent* pRoot = ( _pParent == nullptr ) ? this : nullptr;
         for ( SceneComponent* pParentComp = _pParent; pParentComp != nullptr; pParentComp = pParentComp->_pParent )
         {
@@ -421,23 +439,34 @@ namespace sw
             if ( pParentComp->_pParent == nullptr )
                 pRoot = pParentComp;
         }
-        if ( pRoot != nullptr && _pManager != nullptr )
-            _pManager->getTransformHierarchy().queueDirtyRootParallel( pRoot );
-        for ( SceneComponent* pChild : _listChild )
-        {
-            if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
-                pChild->markDirtySubtree();
-        }
-        return true;
+        return pRoot;
     }
 
-    void SceneComponent::markDirtySubtree()
+    void SceneComponent::markDescendantsDirty()
     {
-        _bIsTransformDirty = SW_TRUE;
-        for ( SceneComponent* pChild : _listChild )
+        // 자손 전부를 더티로, 자식이 있는 노드는 "자손 더티" 도 세운다. 둘째가 필요한 이유: 플러시 전에 누가 자손 하나의 월드 위치를
+        // 읽으면(`ensureWorldCache`) 그 사슬은 깨끗해진다. 플러시는 깨끗한 노드 아래로 "자손 더티" 가 있을 때만 내려가므로, 그게 없으면
+        // 사슬 옆의 형제가 갱신되지 않는다. 예전 워커 쪽 복사본(`markDirtySubtree`)은 더티만 세워 바로 그 형제를 놓쳤다.
+        //
+        // 이미 더티인 자식은 그 아래도 이미 더티다 — 건너뛴다(부모와 자식을 같이 움직이면 제곱으로 느는 것을 막는다).
+        // 재귀하지 않는다. 예전 직렬 쪽은 자손마다 `markTransformDirty` 를 다시 불러 지연 검사 · 세대 올리기(공유 원자) · 부모 걷기를
+        // 자손 수만큼 했다.
+        vector<SceneComponent*, InlineAllocator<SceneComponent*, 32>> listStack;
+        listStack.push_back( this );
+        while ( listStack.empty() == false )
         {
-            if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
-                pChild->markDirtySubtree();
+            SceneComponent* pNode = listStack.back();
+            listStack.pop_back();
+            if ( pNode->_listChild.empty() )
+                continue;
+            pNode->_bHasDirtyDescendant = SW_TRUE;
+            for ( SceneComponent* pChild : pNode->_listChild )
+            {
+                if ( pChild == nullptr || pChild->_bIsTransformDirty == SW_TRUE )
+                    continue;
+                pChild->_bIsTransformDirty = SW_TRUE;
+                listStack.push_back( pChild );
+            }
         }
     }
 
@@ -449,32 +478,13 @@ namespace sw
             return;
         }
 
-        _bIsTransformDirty = SW_TRUE;
-
         if ( _pManager != nullptr )
             _pManager->notifyTransformDirtied();
 
-        // 부모 사슬을 올라가며 "자손 더티" 를 세우고, 루트에 닿으면 플러시 목록에 올린다. 이미 서 있는 조상을 만나면
-        // 그 루트는 이미 올라 있다(불변식). 거기서 멈춘다. 내가 루트면 나를 올린다.
-        SceneComponent* pParentComp = _pParent;
-        SceneComponent* pRoot       = ( pParentComp == nullptr ) ? this : nullptr;
-        while ( pParentComp != nullptr )
-        {
-            if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
-                break;
-            pParentComp->_bHasDirtyDescendant = SW_TRUE;
-            if ( pParentComp->_pParent == nullptr )
-                pRoot = pParentComp;
-            pParentComp = pParentComp->_pParent;
-        }
+        SceneComponent* pRoot = markSelfAndAncestorsDirty();
         if ( pRoot != nullptr && _pManager != nullptr )
             _pManager->getTransformHierarchy().queueDirtyRoot( pRoot );
-
-        for ( SceneComponent* pChild : _listChild )
-        {
-            if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
-                pChild->markTransformDirty();
-        }
+        markDescendantsDirty();
     }
 
     void SceneComponent::syncAttachSerializeFields() const
