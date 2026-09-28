@@ -996,6 +996,52 @@ SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
 }
 
 /**
+ * @brief 지연 제거된 primary 가 캐시에서 먼저 밀려나도 계층 활성은 다시 맞는다.
+ * @details 틱 중 `removeComponent( primary )` 는 삭제 대기로 줄만 세우고, 그 사이 `getParent` 같은 호출이 primary 캐시를 다음 씬 컴포넌트로
+ *          옮긴다. 처리 때 "캐시가 이 컴포넌트였나" 로 primary 였는지 판단하면 거짓이 나와 재계산을 건너뛰었다 — 부모가 사라졌는데 꺼진 채였다.
+ */
+SW_TEST_CASE( GameObjectTest, DeferredPrimaryRemovalRefreshesActive )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParent   = manager.createGameObject( sw::hashed_string( "InactiveHolder" ) );
+    sw::SceneComponent*   pParentSc = pParent->addComponent<sw::SceneComponent>();
+    sw::GameObject*       pObj      = manager.createGameObject( sw::hashed_string( "TwoSceneComps" ) );
+    sw::SceneComponent*   pPrimary  = pObj->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pSecond   = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pPrimary->attachToComponent( pParentSc ) );
+    pParent->setActive( false );
+    SW_ASSERT_FALSE( pObj->isActiveInHierarchy() );
+
+    manager.destroyComponent( pPrimary );           // 틱 중의 제거와 같은 길 — 줄만 선다
+    SW_EXPECT_TRUE( pObj->getParent() == nullptr ); // 캐시가 두 번째 씬 컴포넌트로 옮겨 간다
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( pObj->getPrimarySceneComponent() == pSecond );
+    SW_EXPECT_TRUE( pObj->isActiveInHierarchy() );
+}
+
+/**
+ * @brief 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 자식 오브젝트도 부모 오브젝트의 활성을 따른다.
+ * @details 계층 활성 전파가 primary 의 자식만 봐서, 캐릭터의 소켓에 붙은 무기는 캐릭터를 꺼도 켜진 채 틱하고 그려졌다.
+ */
+SW_TEST_CASE( GameObjectTest, SocketChildFollowsOwnerActive )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCharacter = manager.createGameObject( sw::hashed_string( "Character" ) );
+    sw::SceneComponent*   pRoot      = pCharacter->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pSocket    = pCharacter->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pSocket->attachToComponent( pRoot ) );
+    sw::GameObject*     pWeapon   = manager.createGameObject( sw::hashed_string( "Weapon" ) );
+    sw::SceneComponent* pWeaponSc = pWeapon->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pWeaponSc->attachToComponent( pSocket ) );
+    SW_ASSERT_TRUE( pWeapon->getParent() == pCharacter );
+
+    pCharacter->setActive( false );
+    SW_EXPECT_FALSE( pWeapon->isActiveInHierarchy() );
+    pCharacter->setActive( true );
+    SW_EXPECT_TRUE( pWeapon->isActiveInHierarchy() );
+}
+
+/**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
  *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진

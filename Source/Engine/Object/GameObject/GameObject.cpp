@@ -292,10 +292,14 @@ namespace sw
                 pComp->onOwnerActiveInHierarchyChanged();
         }
 
-        // 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
-        if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
+        // 자식 오브젝트는 primary 가 아닌 씬 컴포넌트(소켓)에도 붙는다 — 자식의 부모는 "제 primary 가 붙은 컴포넌트의 소유자" 다. 그래서
+        // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다. 예전에는 primary 의 자식만 봐서, 소켓에 붙은 무기는 캐릭터를 꺼도
+        // 켜진 채였다(틱하고 그려졌다). 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
+        for ( Component* pOwnComp : _listComponent )
         {
-            for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
+            if ( pOwnComp == nullptr || pOwnComp->isPendingKill() || pOwnComp->isSceneComponent() == false )
+                continue;
+            for ( SceneComponent* pChildComp : static_cast<SceneComponent*>( pOwnComp )->getChildren() )
             {
                 GameObject* pChildObj = ( pChildComp != nullptr ) ? pChildComp->getOwner() : nullptr;
                 if ( pChildObj != nullptr && pChildObj != this )
@@ -653,15 +657,17 @@ namespace sw
             return false;
         }
         _listComponent.erase( it );
-        const bool bWasPrimary = _pPrimaryScene.load( std::memory_order_relaxed ) == pComp;
-        if ( bWasPrimary )
+        // 씬 컴포넌트면 primary 였을 수 있다 — 캐시로 가리지 않는다. 지연 제거(틱 중)는 컴포넌트를 삭제 대기로 남기고, 그 사이
+        // `getPrimarySceneComponent` 가 캐시를 다음 씬 컴포넌트로 옮겨 둘 수 있다(그러면 캐시로는 primary 였는지 알 수 없다).
+        const bool bWasScene = pComp->isSceneComponent();
+        if ( _pPrimaryScene.load( std::memory_order_relaxed ) == pComp )
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
 
         destroyOwnedComponent( pComp );
         if ( bTickWork )
             markTickOrderDirty();
-        // primary 가 바뀌면 부모(= primary 의 부모)도 바뀐다.
-        if ( bWasPrimary )
+        // primary 가 바뀌면 부모(= primary 의 부모)도 바뀐다. 값이 그대로면 재계산은 O(1) 로 끝난다.
+        if ( bWasScene && isPendingKill() == false )
             refreshActiveInHierarchy();
         return true;
     }

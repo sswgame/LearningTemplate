@@ -466,10 +466,17 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     pObjects->processDeferredDestruction();
     SW_EXPECT_EQUAL( size_t( 1 ), pObjects->getCameraRegistry().getAll().size() );
 
-    // 우선순위가 같으면 뒤에 등록된 것이 이긴다.
+    // 우선순위가 같으면 나중에 만든 것(컴포넌트 id 가 큰 것)이 이긴다.
     sw::GameObject*      pTieObj = pObjects->createGameObject( sw::hashed_string( "TieCamera" ) );
     sw::CameraComponent* pTie    = pTieObj->addComponent<sw::CameraComponent>();
     pTie->setRole( sw::CameraRole::Game );
+    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
+
+    // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르던
+    // 때는 여기서 뒤집혔다.
+    const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pDefaultObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pDefaultObj, sw::ObjectStateSerializer::saveToXmlString( pDefaultObj ), &identity ) );
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 }

@@ -267,15 +267,15 @@ namespace sw::editor
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
 
-        // Stopped → Playing: 스냅샷 캡처 후 beginPlay
-        if ( previous == PlaySessionState::Stopped && state == PlaySessionState::Playing )
+        // **멈춤을 떠날 때 · 멈춤으로 돌아올 때로 가른다(목표 상태가 무엇이든).** 예전에는 Stopped → Playing 만 월드를 켜서, 멈춤에서
+        // 일시정지를 누른 뒤 Play 하면 스냅샷도 onBeginPlay 도 없이 플레이가 돌았고 Stop 이 편집 씬을 되돌리지 못했다.
+        // 멈춤 → 일시정지는 일시정지 상태로 플레이를 시작한다(스냅샷 · 시작은 하고 씬은 틱하지 않는다).
+        if ( previous == PlaySessionState::Stopped )
         {
             EditorPlaySessionInternal::capturePlaySnapshot( *pData );
             EditorPlaySessionInternal::setWorldPlaying( true );
         }
-
-        // Playing/Paused → Stopped: endPlay 호출 후 스냅샷 복구
-        if ( ( previous == PlaySessionState::Playing || previous == PlaySessionState::Paused ) && state == PlaySessionState::Stopped )
+        else if ( state == PlaySessionState::Stopped )
         {
             EditorPlaySessionInternal::setWorldPlaying( false );
             EditorPlaySessionInternal::restorePlaySnapshot( *pData );

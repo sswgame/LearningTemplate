@@ -1604,6 +1604,17 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   틀린다). 회귀 테스트 `ObjectStateRoundTripTest.InPlaceReloadKeepsOtherObjectsChildren`(XML · JSON · 바이너리, 월드 그대로 — 이전 코드에서 진다).
   프리팹으로 되돌리기가 그 오브젝트 **자신의** 부모를 잃는지는 따로 확인하지 않았다(남은 것).
 
+- **푸시 전 적대 리뷰(묶음 다섯 · 찾은 것마다 반박 검증)가 확인한 다섯 건을 고쳤다.** (1) 틱 중 지연 제거된 primary 는 처리 전에 캐시가 다음
+  씬 컴포넌트로 옮겨질 수 있어 "캐시가 이 컴포넌트였나" 로는 primary 였는지 모른다 — 씬 컴포넌트를 빼면 늘 계층 활성을 다시 맞춘다(값이
+  그대로면 O(1)). (2) 계층 활성 전파가 primary 의 자식만 봐서 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 자식 오브젝트는 부모를 꺼도 켜진 채였다
+  — 자기 씬 컴포넌트 전부의 자식을 본다(값이 그대로면 멈추는 규칙이 이것에 기댄다). (3) 카메라 동률을 등록 순서로 갈라, 되돌리기 · 플레이
+  종료 복원이 다시 등록할 때마다 활성 게임 카메라가 뒤집혔다 — 컴포넌트 id(나중에 만든 것)로 가른다. (4) 에디터 핫 리로드 · 백엔드 교체가
+  에디터를 내릴 때 시뮬레이션을 멈추지 않아, 새 에디터는 멈춤인데 월드는 플레이 중으로 남았다 — 무엇을 내리든 먼저 멈추고, 안전망으로 월드
+  플레이를 끈다. (5) 멈춤 → 일시정지 → 플레이가 월드를 켜지 않았다(스냅샷도 onBeginPlay 도 없이 플레이, Stop 이 편집 씬을 못 되돌림) — 멈춤을
+  떠날 때 · 돌아올 때로 가른다. 회귀 테스트 `GameObjectTest.DeferredPrimaryRemovalRefreshesActive` · `SocketChildFollowsOwnerActive` ·
+  `SceneTest.GameCameraSelectionFollowsTheRegistry` 확장(셋 다 수정 전 코드에서 진다). (4)(5) 는 EditorContext 를 세우는 테스트 틀이 없어 단위 테스트가 없다.
+  반박된 한 건: FrameRenderer 의 씬 직접 경로가 카메라를 고르기 전에 뷰 행렬을 만든다 — 그 순서는 맞지만 도달하는 호출자가 없다.
+
 **(B) 스물다섯째 전체 — GameObject 작업 전(2b64da86 의 Source, 같은 벤치 코드) 대 끝, Release 7 ~ 12 회 교대:**
 
 | GameObjectBenchTest | 전 | 후 |

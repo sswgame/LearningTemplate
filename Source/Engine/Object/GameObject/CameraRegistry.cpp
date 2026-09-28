@@ -30,7 +30,7 @@ namespace sw
         if ( pCamera == nullptr )
             return;
 
-        // 순서를 지키며 뺀다 — 우선순위가 같을 때 "뒤에 등록된 것" 이 이기는 규칙이 이 순서에 기댄다. 카메라는 몇 개뿐이다.
+        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              it = std::find( _listCamera.begin(), _listCamera.end(), pCamera );
         if ( it != _listCamera.end() )
@@ -53,10 +53,17 @@ namespace sw
         {
             if ( isUsableCamera( pCamera ) == false || pCamera->getRole() != role )
                 continue;
-            // `>=` — 우선순위가 같으면 뒤의 것이 이긴다(예전 두 벌의 씬 훑기와 같은 규칙).
-            if ( pCamera->getPriority() < bestPriority )
-                continue;
-            bestPriority = pCamera->getPriority();
+            const int32 priority = pCamera->getPriority();
+            if ( pBest != nullptr )
+            {
+                if ( priority < bestPriority )
+                    continue;
+                // 우선순위가 같으면 **컴포넌트 id 가 큰 쪽**(나중에 만든 쪽)이 이긴다. 등록 순서로 가르면 되돌리기 · 플레이 종료 복원이
+                // 카메라를 다시 등록할 때마다 순서가 바뀌어 활성 카메라가 편집 이력에 따라 뒤집혔다. id 는 그 복원이 되살린다.
+                if ( priority == bestPriority && pCamera->getComponentId() < pBest->getComponentId() )
+                    continue;
+            }
+            bestPriority = priority;
             pBest        = pCamera;
         }
         return pBest;

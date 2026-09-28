@@ -556,19 +556,26 @@ namespace sw
         const bool bSuspendEditor = scope != ModuleScope::Game;
         const bool bSuspendGame   = scope != ModuleScope::Editor;
 
-        // 게임만 내릴 때는 에디터가 남아 Play 상태를 유지한다. 인스턴스가 없는 동안 사라진 게임을 계속 돌리려 하므로 먼저
-        // 시뮬레이션을 멈춘다. 에디터도 함께 내릴 때는 아래에서 인스턴스 자체가 사라지므로 멈출 대상이 없다.
-        const bool bStopSimulation = bSuspendGame && bSuspendEditor == false && hasEditor() && _editorApi.stopSimulation != nullptr;
+        // 무엇을 내리든 에디터 시뮬레이션부터 멈춘다. 게임만 내리면 에디터가 사라진 게임을 계속 돌리려 하고, 에디터를 내리면 —
+        // 월드 플레이 상태는 에디터보다 오래 사는 `SceneManager` · 오브젝트 매니저에 있으므로 — 새로 만든 에디터는 멈춤으로 시작하는데
+        // 월드는 계속 플레이 중이다(편집한 컴포넌트가 onBeginPlay 를 받고, 플레이 스냅샷은 복원되지 않는다). 멈춤이 플레이를 끝내고
+        // 스냅샷을 되돌린다 — 에디터 컨텍스트가 아직 있는 동안이어야 한다.
+        const bool bStopSimulation = hasEditor() && _editorApi.stopSimulation != nullptr;
         if ( bStopSimulation )
         {
-            SW_LOG_INFO( "Stopping editor simulation before game module reload." );
+            SW_LOG_INFO( "Stopping editor simulation before module suspend." );
             _editorApi.stopSimulation( _editor );
         }
 
         if ( bSuspendGame )
             captureGameState();
         if ( bSuspendEditor )
+        {
             destroyEditorInstance( bReleaseApiTable );
+            // 멈춤 창구가 없던 에디터라도 월드가 플레이 중으로 남지 않게 한다. 에디터 없이 다시 돌면 beginFrame 이 다시 켠다.
+            if ( engine::areEngineServicesBound() && engine::getSceneManager().isWorldPlaying() )
+                engine::getSceneManager().setWorldPlaying( false );
+        }
         if ( bSuspendGame )
             destroyGameInstance( bReleaseApiTable );
     }

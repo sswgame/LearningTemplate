@@ -23,8 +23,8 @@ namespace sw
     /**
      * @class CameraRegistry
      * @brief 등록된 카메라 목록과 선택 규칙입니다.
-     * @note 락은 `LightRegistry` 와 같이 가장 안쪽입니다. 목록은 **등록 순서를 지킵니다**(순서를 지키며 뺍니다) — 우선순위가 같으면
-     *       뒤에 등록된 카메라가 이기는 규칙이 그 순서에 기댑니다.
+     * @note 락은 `LightRegistry` 와 같이 가장 안쪽입니다. 목록은 등록 순서를 지킵니다(순서를 지키며 뺍니다). 선택 규칙은 그 순서에
+     *       기대지 않습니다 — 우선순위가 같으면 컴포넌트 id 가 큰(나중에 만든) 카메라입니다.
      */
     class SW_API CameraRegistry
     {
@@ -46,7 +46,8 @@ namespace sw
         const vector<CameraComponent*>& getAll() const { return _listCamera; }
 
         /**
-         * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 뒤에 등록된 것이 이깁니다. 없으면 nullptr 입니다.
+         * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·
+         *        플레이 종료 복원이 id 를 되살리므로 편집 이력과 무관합니다. 없으면 nullptr 입니다.
          * @details 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라(`EditorCamera::find`)가 함께 쓰는 **하나의** 규칙입니다.
          *          켜짐은 `isUsableCamera` 입니다.
          */
