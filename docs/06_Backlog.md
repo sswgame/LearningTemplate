@@ -1466,6 +1466,17 @@ Debug · Shipping 둘 다, 린트 20/20. 애노테이션 오류 · C++ 오류가
   | wall (us/frame) | 843 | 821 |
 
   비동기 로드 도중의 최악 프레임은 재지 않았다(이 벤치에는 로드가 없다 — 기다리던 태스크는 렌더 기록 · 오디오였다).
+- **틱 단계 정리.** (1) 지연 큐 둘(계층 변경 · 틱 뒤 작업)이 뮤텍스 · 목록 둘 · 예약 두 줄 · 비우기 블록 · `clear` 블록을 글자까지 같게 각자
+  들고 있던 것을 `DeferredDelegateQueue` 하나로 — 큐를 하나 더하려면 여섯 자리를 베껴야 했다. (2) **빈 씬에 넣은 `deferPostTick` 이 돌지
+  않았다** — `tick()` 이 오브젝트가 없으면 병합 직후 돌아가 지연 큐 · 두 번째 병합 · 마지막 파괴를 건너뛰었다. 빈 씬에서 첫 오브젝트를
+  미뤄 만드는 코드(레벨 스크립트 · 스포너)는 영영 돌지 않았다. 이제 컴포넌트 단계(`tickComponentsPhase`)만 건너뛴다. (3) 이름 없던 두 단계에
+  스코프: `GT.Scene.tick.postTick`(지연 큐 + 병합) · `GT.Scene.tick.destroyPost`(틱이 지운 것을 놓는 곳). (4) 늘 같은 자리에서 함께 켜고
+  끄던 플래그 둘(`_bParallelTransformReadOnly` · `_bTicking`)과 술어 둘을 `isStructuralMutationFrozen` 하나로. (5) 병합 · 파괴가 잠금을
+  두세 번 잡고 지역 벡터로 옮기던 것(대기 목록이 매번 용량을 잃었다)을 잠금 한 번과 멤버 목록 재사용으로. 파괴 처리 중 다시 들어오는
+  것(소멸자에서)은 단언한다.
+  회귀 테스트 `GameObjectManagerTest.PostTickWorkRunsOnAnEmptyScene`(옛 코드에서 진다) · `SpawnAndDestroyInOneFrame`(병합 전 파괴 길 지킴).
+  Debug App `-gv_benchMeshes=8000 -gv_benchSpawnChurn=100 -gv_benchTickMovers=1 -gv_profileAllocSites=20`: 프레임당 할당 **220.1 → 208.1**
+  (병합 · 파괴의 `vector<GameObject*>` 두 자리가 상위 목록에서 빠졌다). Release 벤치 5 ~ 10 회 교대: 무버 틱 p50 132 / 132 us, 나머지 잡음 안.
 
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)

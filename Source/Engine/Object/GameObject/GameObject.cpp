@@ -212,7 +212,7 @@ namespace sw
             return true;
 
         GameObjectManager* pMgr = getManager();
-        if ( pMgr != nullptr && pMgr->isParallelTransformReadOnly() )
+        if ( pMgr != nullptr && pMgr->isStructuralMutationFrozen() )
         {
             const uint64 childId  = _objectId;
             const uint64 parentId = pParent->getObjectId();
@@ -244,7 +244,7 @@ namespace sw
     void GameObject::detachFromParent()
     {
         GameObjectManager* pMgr = getManager();
-        if ( pMgr != nullptr && pMgr->isParallelTransformReadOnly() )
+        if ( pMgr != nullptr && pMgr->isStructuralMutationFrozen() )
         {
             const uint64 childId = _objectId;
             pMgr->deferTransformUpdate( [pMgr, childId]()

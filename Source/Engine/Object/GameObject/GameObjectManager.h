@@ -20,6 +20,7 @@
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/DeferredDelegateQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
@@ -157,6 +158,7 @@ namespace sw
          *          2) 병렬 Component 틱(트랜스폼 캐시는 읽기 전용, 구조 변경은 지연)
          *          3) 지연된 attach · detach → 틱 중 쌓인 트랜스폼 쓰기 → 지연 큐(deferPostTick) 실행 → 병합,
          *             더티면 다시 플러시, 마지막으로 지연 파괴 처리
+         *          1) · 2) 는 오브젝트가 있을 때만 돌고, 3) 은 늘 돕니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
          */
         void tick( float32 deltaTime );
 
@@ -185,25 +187,24 @@ namespace sw
          */
         uint32 applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count );
 
-        /** @brief 현재 매니저가 병렬 틱(읽기 전용 트랜스폼) 구간인지 확인합니다. */
-        bool isParallelTransformReadOnly() const { return _bParallelTransformReadOnly.load( std::memory_order_relaxed ); }
+        /**
+         * @brief 컴포넌트 틱 중이면 true 입니다. 이때 구조 변경(GameObject 생성 · addComponent · attach · detach)은 미뤄지고,
+         *        트랜스폼은 읽기 전용이라 세터가 쓰기 큐로 갑니다.
+         * @details 예전에는 늘 같은 자리에서 함께 켜고 끄는 플래그 둘(`_bParallelTransformReadOnly` · `_bTicking`)과 술어 둘이 있었고,
+         *          호출부가 어느 쪽을 물을지 골라야 했습니다. 뜻이 같아 하나로 합쳤습니다.
+         */
+        bool isStructuralMutationFrozen() const { return _bTicking.load( std::memory_order_acquire ); }
 
-        /** @brief 틱 중이거나 병렬 트랜스폼 읽기 구간이라 GameObject 생성 · addComponent 같은 구조 변경을 미뤄야 하면 true 입니다. */
-        bool isStructuralMutationFrozen() const
-        {
-            return isParallelTransformReadOnly() || _bTicking.load( std::memory_order_acquire );
-        }
-
-        using TransformUpdateDelegate = Delegate<void()>;
-        using PostTickDelegate        = Delegate<void()>;
+        using TransformUpdateDelegate = DeferredDelegateQueue::Callback;
+        using PostTickDelegate        = DeferredDelegateQueue::Callback;
 
         /** @brief 트랜스폼/계층 구조 변경을 지연 큐에 넣습니다. */
         void deferTransformUpdate( TransformUpdateDelegate func );
 
         /**
-         * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isParallelTransformReadOnly()` 일 때 부릅니다.
+         * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
          * @details 큐는 `SceneTransformHierarchy` 의 것이고, 틱 뒤 `applyQueuedTransformWrites` 가 `applyTransformBatch` 와 같은
-         *          병렬 적용을 돕니다. 슬롯이 준비되지 않은 드문 경우(틱 밖에서 읽기 전용 구간을 흉내 낼 때)만 지연 델리게이트로 갑니다.
+         *          병렬 적용을 돕니다. 스크래치 슬롯을 받지 못한 스레드(도우미 칸이 다 찬 드문 경우)만 지연 델리게이트로 갑니다.
          */
         void queueTransformWrite( const SceneTransformWrite& write );
 
@@ -396,6 +397,8 @@ namespace sw
          *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 웨이브를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
          */
         void tickComponents( float32 deltaTime );
+        /** @brief `tick` 의 컴포넌트 단계입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents` → 표시 해제. 오브젝트가 있을 때만 돕니다. */
+        void tickComponentsPhase( float32 deltaTime );
         /**
          * @brief 틱 중 슬롯 큐에 쌓인 트랜스폼 쓰기를 슬롯 단위로 나눠 적용하고 큐를 비웁니다(틱 뒤, 게임 스레드).
          * @details 같은 슬롯의 건은 한 워커가 순서대로 적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이깁니다. 다른 슬롯이
@@ -519,18 +522,14 @@ namespace sw
 
         PhysicsWorld _physicsWorld;
 
-        atomic<bool>                    _bParallelTransformReadOnly;
-        atomic<bool>                    _bTicking;
-        uint64                          _lastWaveGeneration;  ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
-        atomic<uint32>                  _tickWaveBuildCount;  ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<TickWave>                _listCachedTickWave;  ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
-        vector<uint32>                  _listActiveWriteSlot; ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
-        mutex                           _deferredTransformMutex;
-        vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
-        vector<TransformUpdateDelegate> _listProcessingTransform;
-        mutex                           _deferredPostTickMutex;
-        vector<PostTickDelegate>        _listDeferredPostTickUpdate;
-        vector<PostTickDelegate>        _listProcessingPostTick;
+        atomic<bool>          _bTicking;               ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
+        bool                  _bProcessingDestruction; ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
+        uint64                _lastWaveGeneration;     ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
+        atomic<uint32>        _tickWaveBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<TickWave>      _listCachedTickWave;     ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
+        vector<uint32>        _listActiveWriteSlot;    ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
+        DeferredDelegateQueue _deferredTransformQueue; ///< 틱이 미룬 계층 변경(attach · detach). 틱 직후 가장 먼저 돈다
+        DeferredDelegateQueue _deferredPostTickQueue;  ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
         unordered_map<hashed_string, hashed_string>            _mapFactoryModule;

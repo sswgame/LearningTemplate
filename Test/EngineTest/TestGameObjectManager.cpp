@@ -308,6 +308,50 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
 }
 
 /**
+ * @brief [GameObjectManagerTest] 빈 씬에 넣은 틱 뒤 작업도 다음 틱에 돈다.
+ * @details 예전 `tick()` 은 오브젝트가 없으면 병합 직후 돌아가 지연 큐 · 두 번째 병합 · 마지막 파괴를 건너뛰었다. 빈 씬에서 첫 오브젝트를
+ *          `deferPostTick` 으로 만드는 코드(레벨 스크립트 · 스포너)는 영영 돌지 않았다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, PostTickWorkRunsOnAnEmptyScene )
+{
+    sw::GameObjectManager manager;
+    bool                  bRan = false;
+    manager.deferPostTick( [&manager, &bRan]()
+    {
+        bRan = true;
+        manager.createGameObject( hashed_string( "SpawnedFromEmpty" ) );
+    } );
+    manager.tick( 0.016f );
+    SW_EXPECT_TRUE( bRan );
+    SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "SpawnedFromEmpty" ) ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
+}
+
+/**
+ * @brief [GameObjectManagerTest] 한 프레임 안에 만들고 지운 오브젝트는 병합되지 않고 사라진다 — 이름 · id 로도 찾을 수 없다.
+ * @details 병합 전 파괴는 대기 목록을 훑어 빼는 길이다(본 목록에 없다). 병합과 파괴가 잠금을 한 번씩만 잡게 바꾼 뒤에도 그 길이 산다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, SpawnAndDestroyInOneFrame )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pKeep = manager.createGameObject( hashed_string( "Keep" ) );
+    manager.tick( 0.016f );
+
+    sw::GameObject* pBrief  = manager.createGameObject( hashed_string( "Brief" ) );
+    const uint64    briefId = pBrief->getObjectId();
+    sw::GameObject* pAlso   = manager.createGameObject( hashed_string( "AlsoNew" ) );
+    manager.destroyObject( pBrief );
+    manager.tick( 0.016f );
+
+    SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "Brief" ) ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectById( briefId ) == nullptr );
+    const sw::vector<sw::GameObject*> listAll = manager.getAllGameObjects();
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listAll.size() );
+    SW_EXPECT_TRUE( std::find( listAll.begin(), listAll.end(), pKeep ) != listAll.end() );
+    SW_EXPECT_TRUE( std::find( listAll.begin(), listAll.end(), pAlso ) != listAll.end() );
+}
+
+/**
  * @brief [GameObjectPoolTest] GameObject 파괴 후 재생성 시 TypedPoolAllocator 메모리 주소 재활용 및 내부 상태 초기화 검증
  */
 SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )

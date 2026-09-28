@@ -152,7 +152,7 @@ namespace sw
 
     bool SceneComponent::isInParallelTick() const
     {
-        return _pManager != nullptr && _pManager->isParallelTransformReadOnly();
+        return _pManager != nullptr && _pManager->isStructuralMutationFrozen();
     }
 
     void SceneComponent::queueTickWrite( SceneTransformWrite& write )

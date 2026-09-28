@@ -153,9 +153,45 @@ namespace sw
             mergePendingAdds();
         }
 
-        if ( _listGameObject.empty() )
-            return;
+        // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 예전에는 여기서 통째로
+        // 돌아가, 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않았다.
+        if ( _listGameObject.empty() == false )
+            tickComponentsPhase( deltaTime );
 
+        // 지연된 계층 변경(attach · detach)을 인스턴스가 살아 있는 동안 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
+            _deferredTransformQueue.drain();
+        }
+
+        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기를 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
+            applyQueuedTransformWrites();
+        }
+
+        // 병렬 onTick 이 미룬 스폰 · 데미지 · 태그, 그리고 그것이 만든 오브젝트의 병합.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.postTick" );
+            _deferredPostTickQueue.drain();
+            mergePendingAdds();
+        }
+
+        if ( hasDirtySceneTransforms() )
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );
+            flushSceneTransforms();
+        }
+
+        // 틱이 지운 것(맞은 투사체 등)을 여기서 놓는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
+            processDeferredDestruction();
+        }
+    }
+
+    void GameObjectManager::tickComponentsPhase( float32 deltaTime )
+    {
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransforms" );
             flushSceneTransforms();
@@ -163,7 +199,6 @@ namespace sw
 
         // 틱 중의 세터가 쌓을 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
         _transformHierarchy.beginQueuedWrites();
-        _bParallelTransformReadOnly.store( true, std::memory_order_relaxed );
         _bTicking.store( true, std::memory_order_release );
 
         {
@@ -175,52 +210,7 @@ namespace sw
             tickComponents( deltaTime );
         }
 
-        _bParallelTransformReadOnly.store( false, std::memory_order_relaxed );
         _bTicking.store( false, std::memory_order_release );
-
-        // 지연된 계층 변경(attach · detach)을 인스턴스가 살아 있는 동안 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
-            {
-                std::scoped_lock<mutex> lock{ _deferredTransformMutex };
-                if ( _listDeferredTransformUpdate.empty() == false )
-                    _listProcessingTransform.swap( _listDeferredTransformUpdate );
-            }
-            for ( TransformUpdateDelegate& func : _listProcessingTransform )
-            {
-                if ( func.isBound() )
-                    func();
-            }
-            _listProcessingTransform.clear();
-        }
-
-        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기를 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
-            applyQueuedTransformWrites();
-        }
-
-        // 병렬 onTick 이 미룬 스폰 · 데미지 · 태그.
-        {
-            std::scoped_lock<mutex> lock{ _deferredPostTickMutex };
-            if ( _listDeferredPostTickUpdate.empty() == false )
-                _listProcessingPostTick.swap( _listDeferredPostTickUpdate );
-        }
-        for ( PostTickDelegate& func : _listProcessingPostTick )
-        {
-            if ( func.isBound() )
-                func();
-        }
-        _listProcessingPostTick.clear();
-        mergePendingAdds();
-
-        if ( hasDirtySceneTransforms() )
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );
-            flushSceneTransforms();
-        }
-
-        processDeferredDestruction();
     }
 
     void GameObjectManager::tickComponents( float32 deltaTime )
@@ -331,7 +321,7 @@ namespace sw
         if ( _transformHierarchy.queueWriteParallel( write ) )
             return;
 
-        // 슬롯이 준비되지 않았다. 틱 밖에서 읽기 전용 구간을 흉내 내는 곳(테스트 · 도구)뿐이다. 예전 지연 경로로 간다.
+        // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 간다.
         deferTransformUpdate( [this, write]()
         {
             if ( GameObjectManagerTickInternal::applyTransformWriteRange( this, &write, 0, 1, false ) > 0 )
@@ -397,18 +387,12 @@ namespace sw
 
     void GameObjectManager::deferTransformUpdate( TransformUpdateDelegate func )
     {
-        if ( func.isBound() == false )
-            return;
-        std::scoped_lock<mutex> lock{ _deferredTransformMutex };
-        _listDeferredTransformUpdate.push_back( std::move( func ) );
+        _deferredTransformQueue.push( std::move( func ) );
     }
 
     void GameObjectManager::deferPostTick( PostTickDelegate func )
     {
-        if ( func.isBound() == false )
-            return;
-        std::scoped_lock<mutex> lock{ _deferredPostTickMutex };
-        _listDeferredPostTickUpdate.push_back( std::move( func ) );
+        _deferredPostTickQueue.push( std::move( func ) );
     }
 
     void GameObjectManager::executeOrDeferPostTick( PostTickDelegate func )

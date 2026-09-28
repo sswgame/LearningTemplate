@@ -86,18 +86,14 @@ namespace sw
         , _mutex{}
         , _nextId{ 1 }
         , _physicsWorld{}
-        , _bParallelTransformReadOnly{ false }
         , _bTicking{ false }
+        , _bProcessingDestruction{ false }
         , _lastWaveGeneration{ 0 }
         , _tickWaveBuildCount{ 0 }
         , _listCachedTickWave{}
         , _listActiveWriteSlot{}
-        , _deferredTransformMutex{}
-        , _listDeferredTransformUpdate{}
-        , _listProcessingTransform{}
-        , _deferredPostTickMutex{}
-        , _listDeferredPostTickUpdate{}
-        , _listProcessingPostTick{}
+        , _deferredTransformQueue{}
+        , _deferredPostTickQueue{}
         , _mapFactory{}
         , _mapFactoryModule{}
         , _activeModuleName{}
@@ -106,11 +102,6 @@ namespace sw
         , _lightRegistry{}
         , _tickRegistry{}
     {
-        _listDeferredTransformUpdate.reserve( 128 );
-        _listProcessingTransform.reserve( 128 );
-        _listDeferredPostTickUpdate.reserve( 128 );
-        _listProcessingPostTick.reserve( 128 );
-
         ComponentFactoryRegistrar* pEngineHead = ComponentFactoryRegistrar::getHead();
         if ( pEngineHead == nullptr )
             pEngineHead = _s_engineHead;
@@ -447,6 +438,8 @@ namespace sw
 
     void GameObjectManager::processDeferredDestruction()
     {
+        // 처리 목록을 돌며 컴포넌트 · 오브젝트 소멸자를 부른다. 그 안에서 다시 들어오면 도는 목록을 맞바꿔 버린다.
+        SW_ASSERT( _bProcessingDestruction == false );
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             if ( _listPendingDestroyObject.empty() && _listPendingDestroyComponent.empty() )
@@ -455,6 +448,7 @@ namespace sw
             _listProcessingDestroyObject.swap( _listPendingDestroyObject );
             _listProcessingDestroyComponent.swap( _listPendingDestroyComponent );
         }
+        _bProcessingDestruction = true;
 
         for ( const ComponentHandle handle : _listProcessingDestroyComponent )
         {
@@ -504,20 +498,9 @@ namespace sw
             }
         }
 
-        vector<GameObject*> listDying;
-        {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            for ( GameObject* pObj : _listProcessingDestroyObject )
-            {
-                if ( pObj == nullptr )
-                    continue;
-                listDying.push_back( pObj );
-            }
-            _listProcessingDestroyObject.clear();
-            _listProcessingDestroyComponent.clear();
-        }
-
-        for ( GameObject* pObj : listDying )
+        // 처리 목록은 이 함수만 만진다(대기 목록과 맞바꾼 것이다). 예전에는 그것을 다시 잠금 아래 지역 벡터로 베껴 돌았다 — 잠금 한 번과
+        // 파괴가 있는 프레임마다 할당 하나. 목록은 용량을 들고 있다.
+        for ( GameObject* pObj : _listProcessingDestroyObject )
         {
             if ( pObj == nullptr )
                 continue;
@@ -525,10 +508,15 @@ namespace sw
             _tickRegistry.unregisterObject( pObj );
             _poolGameObject.destroy( pObj );
         }
+        _listProcessingDestroyObject.clear();
+        _listProcessingDestroyComponent.clear();
+        _bProcessingDestruction = false;
     }
 
     void GameObjectManager::clear()
     {
+        // 지연 파괴가 도는 목록을 여기서 비우면 그 루프가 풀린 메모리를 읽는다.
+        SW_ASSERT( _bProcessingDestruction == false );
         vector<GameObject*> listDying;
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -542,16 +530,8 @@ namespace sw
             _listProcessingDestroyObject.clear();
             _listProcessingDestroyComponent.clear();
 
-            {
-                std::scoped_lock<mutex> lockT{ _deferredTransformMutex };
-                _listDeferredTransformUpdate.clear();
-                _listProcessingTransform.clear();
-            }
-            {
-                std::scoped_lock<mutex> lockP{ _deferredPostTickMutex };
-                _listDeferredPostTickUpdate.clear();
-                _listProcessingPostTick.clear();
-            }
+            _deferredTransformQueue.clear();
+            _deferredPostTickQueue.clear();
 
             _listGameObject.clear();
             _listPendingAdd.clear();
@@ -606,20 +586,16 @@ namespace sw
 
     void GameObjectManager::mergePendingAdds()
     {
-        vector<GameObject*> listLocalPending;
+        // 잠금 한 번에 옮긴다. 예전에는 대기 목록을 지역 벡터로 **옮겨 가며**(그래서 대기 목록이 매번 용량을 잃고 다음 스폰이 다시 할당했다)
+        // 잠금을 두 번 잡았다. 이름 맵 · id 표는 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
+        size_t firstNewIndex = 0;
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             if ( _listPendingAdd.empty() )
                 return;
-            listLocalPending = std::move( _listPendingAdd );
-            _listPendingAdd.clear();
-        }
-
-        {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            _listGameObject.reserve( _listGameObject.size() + listLocalPending.size() );
-            // 이름 맵 · id 표는 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
-            for ( GameObject* pObj : listLocalPending )
+            firstNewIndex = _listGameObject.size();
+            _listGameObject.reserve( firstNewIndex + _listPendingAdd.size() );
+            for ( GameObject* pObj : _listPendingAdd )
             {
                 if ( pObj != nullptr )
                 {
@@ -627,13 +603,12 @@ namespace sw
                     _listGameObject.push_back( pObj );
                 }
             }
+            _listPendingAdd.clear();
         }
 
-        for ( GameObject* pObj : listLocalPending )
-        {
-            if ( pObj != nullptr )
-                pObj->refreshActiveInHierarchy();
-        }
+        // 계층 활성은 잠금 밖에서 맞춘다(컴포넌트 콜백이 돈다). 본 목록을 바꾸는 것은 게임 스레드의 병합 · 파괴뿐이라 자리로 읽어도 된다.
+        for ( size_t objectIndex = firstNewIndex; objectIndex < _listGameObject.size(); ++objectIndex )
+            _listGameObject[objectIndex]->refreshActiveInHierarchy();
         // 틱 항목은 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 이미 더럽혔다. 병합 자체는 멤버십을 바꾸지 않는다.
     }
 
