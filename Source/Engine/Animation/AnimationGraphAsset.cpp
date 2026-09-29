@@ -28,9 +28,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        const string dir = FileUtil::getDirectoryPart( path );
-        if ( dir.empty() == false )
-            FileUtil::ensureDirectoryExists( dir );
+        FileUtil::createParentDirectory( path );
         return FileUtil::writeTextFile( path, toJson() );
     }
 

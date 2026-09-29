@@ -2021,6 +2021,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — 저장 전 상위 폴더 만들기는 `FileUtil::createParentDirectory` 하나로)
+
+6 줄 창에서 에셋 셋(`AnimationGraphAsset` · `DialogueGraphAsset` · `SequenceAsset`)의 `saveToFile` 이 "폴더 부분 떼기 → 비어 있지 않으면 만들기 → 쓰기" 여섯 줄을
+똑같이 들고 있었다. `FileUtil::createParentDirectory( filePath )` 가 이미 그 일을 하는데 아무도 쓰지 않았다(테스트 두 곳만 썼다). 같은 두 줄을 들던 전역 변수 프리셋
+저장(`EditorGlobalVariableCommands`)과 셰이더 디스크 캐시(`ShaderCompiler`)까지 다섯 곳이 그것을 부른다.
+
+**고친 것.** `createParentDirectory` 만 구분자 정규화 없이 폴더를 만들었다(`ensureDirectoryExists` 는 `\` → `/` 로 바꾼다). 이제 `ensureDirectoryExists( getDirectoryPart( path ) )` 한 줄이라
+둘이 같다. **테스트** `FileTest.CreateParentDirectoryMakesNestedFolders` — 섞인 구분자로 여러 단을 만들고, 폴더 부분이 없는 이름에는 아무것도 하지 않는다.
+
+폴더 여럿을 건드리지만 "있던 함수를 쓰게 한다" 한 가지라 한 커밋이다.
+
 ### 2026-09-29 (리팩터 — Serialization 2차: 길이 머리 블록 · XML 이름/별칭 루프)
 
 6 줄 창의 Serialization 몫이다.

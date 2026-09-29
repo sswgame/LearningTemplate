@@ -72,8 +72,7 @@ namespace sw::editor
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
-        const string dir = FileUtil::getDirectoryPart( filePath );
-        FileUtil::ensureDirectoryExists( dir );
+        FileUtil::createParentDirectory( filePath );
         return doc.saveFile( filePath );
     }
 

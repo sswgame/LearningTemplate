@@ -70,6 +70,23 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 }
 
 /**
+ * @brief [FileTest] createParentDirectory 는 없는 상위 폴더를 여러 단 만들고, 폴더가 없는 파일 이름에는 아무것도 하지 않는다
+ * @details 에셋 셋(애니메이션 그래프 · 대화 그래프 · 시퀀스) · 전역 변수 프리셋 · 셰이더 디스크 캐시가 저장 전에 이것을 부른다.
+ *          구분자가 섞여 있어도(`\\` · `/`) 만든다 — `ensureDirectoryExists` 와 같은 정규화를 거친다.
+ */
+SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
+{
+    const sw::string root     = test::makeTempPath( "SwParentDirTest" );
+    const sw::string filePath = root + "/a\\b/c/leaf.txt";
+    sw::FileUtil::createParentDirectory( filePath );
+    SW_EXPECT_TRUE( sw::FileUtil::directoryExists( root + "/a/b/c" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "leaf" ) );
+
+    sw::FileUtil::createParentDirectory( "LeafWithoutFolder.txt" ); // 폴더 부분이 없다 — 아무것도 만들지 않는다
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/**
  * @brief [FileTest] 파일 도장(크기 · 쓰기 시각)은 파일을 열지 않고 바뀜을 알린다
  * @details 내용에서 뽑은 값(셰이더 소스 해시)을 캐시하고 "그 뒤로 바뀌었나" 만 볼 때 쓴다. 크기가 달라지면 도장이 달라야 하고,
  *          없는 파일 · 폴더는 도장이 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라

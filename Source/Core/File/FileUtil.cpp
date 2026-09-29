@@ -584,12 +584,8 @@ namespace sw
 
     void FileUtil::createParentDirectory( string_view filePath )
     {
-        const string directoryPart = getDirectoryPart( filePath );
-        if ( directoryPart.empty() || directoryExists( directoryPart ) )
-            return;
-
-        std::error_code ec;
-        std::filesystem::create_directories( directoryPart.c_str(), ec );
+        // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다. 예전에는 이 함수만 정규화 없이 만들었다.
+        ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
     void FileUtil::ensureDirectoryExists( string_view directoryPath )

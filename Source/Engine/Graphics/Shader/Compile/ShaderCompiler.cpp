@@ -300,7 +300,7 @@ namespace sw
         {
             if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
             {
-                FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( cachePath ) );
+                FileUtil::createParentDirectory( cachePath );
                 FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() );
             }
         };
