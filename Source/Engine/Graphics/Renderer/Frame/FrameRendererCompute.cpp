@@ -41,7 +41,7 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE_INT( gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
 
-    bool FrameRenderer::wantsGpuGeneratedCommands() const
+    bool FrameRenderer::usesGpuGeneratedCommands() const
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.

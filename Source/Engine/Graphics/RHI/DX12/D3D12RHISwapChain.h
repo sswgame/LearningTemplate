@@ -126,7 +126,7 @@ namespace sw
         bool _bAllowTearing{ false };
 
         /// @brief 현재 백버퍼의 실제 리소스 상태입니다. `transitionTo` 만 이 값을 바꿉니다.
-        /// @details `_stateMutex` 로 보호합니다. RenderGraph::executeParallel 이 같은 웨이브의 패스
+        /// @details `_stateMutex` 로 보호합니다. RenderGraph::executeParallel 이 같은 레벨의 패스
         ///          콜백을 여러 태스크 스레드에서 동시에 돌리는데, 백버퍼를 타깃으로 하는 패스가
         ///          둘 이상이면 그 콜백들이 동시에 이 상태를 읽고 바꿉니다. 락이 없으면 둘 다
         ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 쏴서, 두 번째 것이

@@ -130,11 +130,11 @@ namespace sw
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         // 기능을 못 켠 디바이스에서 LINE 을 요청하면 파이프라인 생성 자체가 거절된다. 화면이 비는 대신
         // 솔리드로 그린다(요청은 "보기 방식" 이고, 그리지 못하는 것보다 다르게 보이는 편이 낫다).
-        const bool bWantWireframe = ( desc._fillMode == RHIFillMode::Wireframe ) && ( _pDevice->_bFillModeNonSolid != 0 );
-        rasterizer.polygonMode    = bWantWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth      = 1.0f;
-        rasterizer.cullMode       = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
-        rasterizer.frontFace      = VK_FRONT_FACE_CLOCKWISE;
+        const bool bUseWireframe = ( desc._fillMode == RHIFillMode::Wireframe ) && ( _pDevice->_bFillModeNonSolid != 0 );
+        rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth     = 1.0f;
+        rasterizer.cullMode      = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace     = VK_FRONT_FACE_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;

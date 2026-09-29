@@ -131,12 +131,12 @@ namespace sw
             const WalkScope                     walkScope{};
             for ( GameObject* pObj : _listGameObject )
             {
-                if ( pObj != nullptr && pObj->isPendingKill() == false )
+                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                     func( pObj );
             }
             for ( GameObject* pObj : _listPendingAdd )
             {
-                if ( pObj != nullptr && pObj->isPendingKill() == false )
+                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                     func( pObj );
             }
         }
@@ -284,7 +284,7 @@ namespace sw
         /**
          * @brief 틱에 참여하는 오브젝트의 등록부입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
          * @details 같은 규칙으로 소유만 합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, `tick` 이 디스패치 전에
-         *          표시된 오브젝트만 다시 훑습니다. 씬 전체를 훑어 웨이브를 다시 짓던 0.5~1 ms 가 사라진 자리입니다.
+         *          표시된 오브젝트만 다시 훑습니다. 씬 전체를 훑어 스테이지를 다시 짓던 0.5~1 ms 가 사라진 자리입니다.
          */
         TickRegistry& getTickRegistry() { return _tickRegistry; }
         /** @brief 틱에 참여하는 오브젝트의 등록부입니다. */
@@ -379,14 +379,14 @@ namespace sw
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
-        void markTickWavesDirty() { _tickRegistry.markAllDirty(); }
+        void markTickStagesDirty() { _tickRegistry.markAllDirty(); }
         /**
          * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
-         *          예전에는 아무 구조 변경에나 씬 전체 웨이브를 다시 만들었습니다. 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이
+         *          예전에는 아무 구조 변경에나 씬 전체 스테이지를 다시 만들었습니다. 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이
          *          8000 컴포넌트를 모두 훑었습니다(2 ms). 지금은 바뀐 오브젝트의 컴포넌트 몇 개를 훑는 값입니다.
          */
-        uint32 getTickWaveBuildCount() const { return _tickWaveBuildCount.load( std::memory_order_relaxed ); }
+        uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
 
         /** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
         vector<hashed_string> getRegisteredComponentTypeNames() const;
@@ -425,7 +425,7 @@ namespace sw
         /**
          * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
          * @details 보통은 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눕니다(한 오브젝트의 항목은 한 워커가 순서대로).
-         *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 웨이브를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
+         *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 스테이지를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
          */
         void tickComponents( float32 deltaTime );
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
@@ -460,7 +460,7 @@ namespace sw
         GameObject* findRegisteredUnlocked( uint64 objectId ) const;
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
-         * @details 지연 파괴 대기(pending kill) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없습니다. 그 이름은 비어 있는
+         * @details 지연 파괴 대기(pending destroy) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없습니다. 그 이름은 비어 있는
          *          것으로 봅니다. 모듈 리로드 · RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들며
          *          `Duplicate name` 경고를 내던 원인입니다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지웁니다.
          */
@@ -560,9 +560,9 @@ namespace sw
 
         atomic<bool>            _bTicking;                ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
         bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        uint64                  _lastWaveGeneration;      ///< DAG 웨이브 캐시(`_listCachedTickWave`)를 지은 등록부 세대
-        atomic<uint32>          _tickWaveBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<TickWave>        _listCachedTickWave;      ///< 선행 조건이 있을 때만 쓰는 DAG 웨이브(등록부가 짓습니다)
+        uint64                  _lastStageGeneration;     ///< DAG 스테이지 캐시(`_listCachedTickStage`)를 지은 등록부 세대
+        atomic<uint32>          _tickStageBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<TickStage>       _listCachedTickStage;     ///< 선행 조건이 있을 때만 쓰는 DAG 스테이지(등록부가 짓습니다)
         vector<uint32>          _listActiveWriteSlot;     ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
         vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
         atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)

@@ -93,13 +93,13 @@ namespace sw
          */
         void showWindow( bool bShow )
         {
-            _bVisibleIntent = bShow ? SW_TRUE : SW_FALSE;
+            _bVisibleRequested = bShow ? SW_TRUE : SW_FALSE;
             applyWindowVisibility( bShow );
         }
 
         /**
          * @brief **지금 화면에 보이는지** 플랫폼에 직접 묻습니다.
-         * @warning 이것은 `isVisibleIntended()` 와 **다른 질문**입니다. X11 에서는 `XMapWindow` 가
+         * @warning 이것은 `isVisibleRequested()` 와 **다른 질문**입니다. X11 에서는 `XMapWindow` 가
          *          요청일 뿐이고 창 관리자가 실제로 매핑하기 전까지 `IsViewable` 이 아닙니다.
          *          즉 방금 보이라고 한 창도 여기서는 **false** 입니다. 최소화 · 다른 워크스페이스도 같습니다.
          *          "다시 만든 뒤 되살릴까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
@@ -111,7 +111,7 @@ namespace sw
          * @details 창 관리자의 사정과 상관없이 바로 답합니다. 창을 다시 만들 때 되살릴지를 정하는
          *          것은 이 값입니다. 화면 상태가 아니라 **우리가 원한 상태**가 기준이어야 합니다.
          */
-        bool isVisibleIntended() const { return _bVisibleIntent == SW_TRUE; }
+        bool isVisibleRequested() const { return _bVisibleRequested == SW_TRUE; }
 
         /** @brief 외부 이벤트 처리기(예: ImGui)를 연결합니다. */
         void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = std::move( handler ); }
@@ -169,9 +169,9 @@ namespace sw
          *          다시 만드는 과정의 `destroy()` 가 앱 종료로 오해되면 안 되기 때문입니다.
          *          절차가 이 클래스로 올라왔으므로 깃발도 같이 올라왔습니다.
          */
-        uint8                  _bRecreating    : 1;
-        uint8                  _bVisibleIntent : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
-        [[maybe_unused]] uint8 _reserved       : 5;
+        uint8                  _bRecreating       : 1;
+        uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
+        [[maybe_unused]] uint8 _reserved          : 5;
         uint8                  _arrReserved[7];
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
         int32 _restoreX;

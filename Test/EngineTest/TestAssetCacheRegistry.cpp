@@ -153,11 +153,11 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
     } ) );
 
     // 내장 셋만 있을 때는 조용하다 — "성공은 조용한가" 를 같이 본다.
-    resources.warnAboutLeftoverModuleCaches();
+    resources.warnAboutRemainingModuleCaches();
     SW_EXPECT_TRUE_MSG( warningText.empty(), "내장 캐시를 두고 간 것으로 잘못 보고했습니다" );
 
     resources.registerAssetCache( &probe );
-    resources.warnAboutLeftoverModuleCaches();
+    resources.warnAboutRemainingModuleCaches();
     sw::Logger::removeGlobalListener( handle );
 
     SW_EXPECT_TRUE_MSG( warningText.find( "ProbeKind" ) != sw::string::npos,

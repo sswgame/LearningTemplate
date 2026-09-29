@@ -252,7 +252,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
-        // 상태 확인과 배리어 기록이 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 웨이브의
+        // 상태 확인과 배리어 기록이 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의
         // 패스 콜백을 여러 스레드에서 돌리는데, 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를
         // 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
         std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -287,7 +287,7 @@ namespace sw
         if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != SW_FALSE )
             return;
 
-        _pDevice->noteBarrierDuringRecording( "blitTexture(src)" );
+        _pDevice->reportBarrierDuringRecording( "blitTexture(src)" );
         transitionTexture( src, D3D12_RESOURCE_STATE_COPY_SOURCE );
 
         ID3D12Resource*       pDstRes        = nullptr;
@@ -402,7 +402,7 @@ namespace sw
         if ( it->second._bHasRtv == SW_FALSE && it->second._bHasDsv == SW_FALSE )
             return;
 
-        _pDevice->noteBarrierDuringRecording( "prepareTextureForShaderRead" );
+        _pDevice->reportBarrierDuringRecording( "prepareTextureForShaderRead" );
         transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
     }
 
@@ -411,7 +411,7 @@ namespace sw
         if ( _pCmdList == nullptr || texture == 0 )
             return;
         // COMMON 은 SRV 로만 암묵 승격된다. UAV 는 명시 전이가 필요하다(readback 이 레코드 상태로 되돌린다).
-        _pDevice->noteBarrierDuringRecording( "prepareTextureForUnorderedAccess" );
+        _pDevice->reportBarrierDuringRecording( "prepareTextureForUnorderedAccess" );
         transitionTexture( texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
     }
 
@@ -737,8 +737,8 @@ namespace sw
         _pState->_activeColorTargetCount = 0;
         _pState->_bActiveSwapchainRT     = SW_FALSE;
 
-        const uint32 wantCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
-        for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
+        const uint32 colorBindCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
+        for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {
             const RHITextureHandle      colorHandle = beginInfo._arrColorTarget[attachmentIndex];
             D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
@@ -763,7 +763,7 @@ namespace sw
                         break;
                     return;
                 }
-                _pDevice->noteBarrierDuringRecording( "beginRenderPass(color)" );
+                _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = it->second._rtvHandle;
                 bValid                                  = true;
@@ -789,7 +789,7 @@ namespace sw
             auto depthIt = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
             if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != SW_FALSE )
             {
-                _pDevice->noteBarrierDuringRecording( "beginRenderPass(depth)" );
+                _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
                 dsvHandle                   = depthIt->second._dsvHandle;
                 pDsv                        = &dsvHandle;

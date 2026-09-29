@@ -122,7 +122,7 @@ namespace sw
             /**
              * @brief 저장 대상 폴더가 지정한 루트 아래인지 보고, 더 긴(구체적인) 일치를 남깁니다.
              */
-            static void considerSaveRoot( string_view folderNorm, string_view candidateRoot, string& outPhysicalRoot, string& outRootNorm )
+            static void updateLongestSaveRoot( string_view folderNorm, string_view candidateRoot, string& outPhysicalRoot, string& outRootNorm )
             {
                 if ( candidateRoot.empty() )
                     return;
@@ -540,12 +540,12 @@ namespace sw
 
         for ( const string& root : _s_listResourceFolder )
         {
-            ResourceUtilInternal::considerSaveRoot( folderNorm, root, physicalRoot, rootNorm );
+            ResourceUtilInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
-        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
 
         if ( physicalRoot.empty() )
             return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ absoluteFolder } ) );

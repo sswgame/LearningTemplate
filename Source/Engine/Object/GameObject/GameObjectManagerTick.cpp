@@ -28,25 +28,25 @@ namespace sw
             static SceneComponent* resolveSceneComponent( GameObjectManager* pManager, ComponentHandle handle )
             {
                 Component* pComp = pManager->resolveComponent( handle );
-                if ( pComp == nullptr || pComp->isSceneComponent() == false || pComp->isPendingKill() )
+                if ( pComp == nullptr || pComp->isSceneComponent() == false || pComp->isPendingDestroy() )
                     return nullptr;
                 return static_cast<SceneComponent*>( pComp );
             }
 
             /**
              * @brief 쓰기 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뜁니다.
-             * @param bTrustTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않을지 여부. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
+             * @param bUseCachedTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않을지 여부. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
              */
-            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bTrustTarget )
+            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget )
             {
                 uint32 changedCount = 0;
                 for ( uint32 index = start; index < end; ++index )
                 {
                     SceneComponent* pScene = nullptr;
-                    if ( bTrustTarget && pWrite[index]._pTarget != nullptr )
+                    if ( bUseCachedTarget && pWrite[index]._pTarget != nullptr )
                     {
                         pScene = pWrite[index]._pTarget;
-                        if ( pScene->isPendingKill() )
+                        if ( pScene->isPendingDestroy() )
                             continue;
                     }
                     else
@@ -80,7 +80,7 @@ namespace sw
              */
             static void tickObjectGroup( float32 deltaTime, GameObject* pObj, uint32 group )
             {
-                if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
+                if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
                     return;
                 const TickItemList& listItem = pObj->getTickItems();
                 const uint32        end      = pObj->getTickGroupBegin( group + 1 );
@@ -89,7 +89,7 @@ namespace sw
                     const TickItem& item  = listItem[index];
                     Component*      pComp = item._pComponent;
                     // 소유자의 활성은 위에서 봤다. 여기서는 컴포넌트 자기 비트만 본다.
-                    if ( pComp == nullptr || pComp->isPendingKill() || pComp->isSelfActive() == false )
+                    if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
                         continue;
                     runTickItem( deltaTime, item );
                 }
@@ -110,9 +110,9 @@ namespace sw
             };
 
             /**
-             * @brief 선행 조건 웨이브 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다.
+             * @brief 선행 조건 스테이지 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다.
              */
-            struct WaveTick
+            struct StageTick
             {
                 const TickItem* _pItem{ nullptr };
                 float32         _deltaTime{ 0.0f };
@@ -123,10 +123,10 @@ namespace sw
                     {
                         const TickItem& item  = _pItem[index];
                         Component*      pComp = item._pComponent;
-                        if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
+                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isActive() == false )
                             continue;
                         GameObject* pOwner = pComp->getOwner();
-                        if ( pOwner == nullptr || pOwner->isPendingKill() )
+                        if ( pOwner == nullptr || pOwner->isPendingDestroy() )
                             continue;
                         runTickItem( _deltaTime, item );
                     }
@@ -226,7 +226,7 @@ namespace sw
             // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다. 씬 전체를 훑지 않는다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.registry" );
             if ( _tickRegistry.refresh( *this ) )
-                _tickWaveBuildCount.fetch_add( 1, std::memory_order_relaxed );
+                _tickStageBuildCount.fetch_add( 1, std::memory_order_relaxed );
         }
 
         if ( _tickRegistry.hasPrerequisites() == false )
@@ -248,24 +248,24 @@ namespace sw
             return;
         }
 
-        // 선행 조건이 있다. 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 등록부가 지은 DAG 웨이브로 간다(드물다).
-        // 웨이브 캐시는 등록부 세대로 무효화한다. 항목은 등록부의 것이라 세대가 같은 동안 살아 있다.
-        if ( _lastWaveGeneration != _tickRegistry.getGeneration() )
+        // 선행 조건이 있다. 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 등록부가 지은 DAG 스테이지로 간다(드물다).
+        // 스테이지 캐시는 등록부 세대로 무효화한다. 항목은 등록부의 것이라 세대가 같은 동안 살아 있다.
+        if ( _lastStageGeneration != _tickRegistry.getGeneration() )
         {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.waves" );
-            _lastWaveGeneration = _tickRegistry.getGeneration();
-            _tickRegistry.buildPrerequisiteWaves( _listCachedTickWave );
+            SW_PROFILE_SCOPE( "GT.Scene.tick.stages" );
+            _lastStageGeneration = _tickRegistry.getGeneration();
+            _tickRegistry.computePrerequisiteStages( _listCachedTickStage );
         }
 
-        for ( const TickWave& wave : _listCachedTickWave )
+        for ( const TickStage& stage : _listCachedTickStage )
         {
-            if ( wave.empty() )
+            if ( stage.empty() )
                 continue;
-            GameObjectManagerTickInternal::WaveTick job{};
-            job._pItem     = wave.data();
+            GameObjectManagerTickInternal::StageTick job{};
+            job._pItem     = stage.data();
             job._deltaTime = deltaTime;
-            engine::runParallel( static_cast<uint32>( wave.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
-                                 SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::WaveTick::tickRange, &job ) );
+            engine::runParallel( static_cast<uint32>( stage.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
+                                 SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::StageTick::tickRange, &job ) );
         }
     }
 

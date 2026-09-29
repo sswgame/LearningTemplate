@@ -84,12 +84,12 @@ namespace sw
 #if defined( SW_RHI_AS_MODULES )
             static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
-                RHIBackendRegistry& reg       = engine::getRHIBackendRegistry();
-                const string        dllName   = FileUtil::formatSharedLibraryName( pModuleBaseName );
-                const string        execDir   = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                const string        besideExe = execDir.empty() ? dllName.c_str() : FileUtil::joinPath( execDir, dllName );
+                RHIBackendRegistry& reg           = engine::getRHIBackendRegistry();
+                const string        dllName       = FileUtil::formatSharedLibraryName( pModuleBaseName );
+                const string        execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+                const string        exeDirDllPath = execDir.empty() ? dllName.c_str() : FileUtil::joinPath( execDir, dllName );
 
-                if ( reg.tryLoadModule( backend, besideExe ) )
+                if ( reg.tryLoadModule( backend, exeDirDllPath ) )
                     return true;
                 return reg.tryLoadModule( backend, dllName );
             }

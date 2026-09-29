@@ -498,7 +498,7 @@ namespace sw
 
         const bool                  bIgnoreCaseKeys = ctx.ignoresCaseKeys();
         const vector<PropertyInfo>& listProp        = typeInfo.getPropertiesWithBase();
-        unordered_set<uint32>       uniqueSeen;
+        unordered_set<uint32>       uniqueMatched;
         bool                        bFieldError{ false };
 
         if ( pOutVersion != nullptr )
@@ -534,7 +534,7 @@ namespace sw
                 continue;
             }
 
-            uniqueSeen.insert( pMatched->getNameHash() );
+            uniqueMatched.insert( pMatched->getNameHash() );
             if ( JsonSerializerInternal::readProperty( field, *pMatched, pInstance, ctx ) == false )
             {
                 if ( pOutListOrphan != nullptr )
@@ -552,7 +552,7 @@ namespace sw
 
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( uniqueSeen.find( prop.getNameHash() ) != uniqueSeen.end() )
+            if ( uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() )
                 continue;
             SerializerUtil::applyPropertyDefault( prop.getRawPtr( pInstance ), prop, ctx );
         }

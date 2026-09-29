@@ -240,9 +240,9 @@ namespace sw
 
         // 컴퓨트가 개수를 만들려면 **가시 목록과 배치 구간이 둘 다** 있어야 한다. 하나라도 없으면 개수를
         // 0 으로 올리면 안 된다. 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
-        // 그래서 "원한다"(_bWantGpuIndirectCounts)와 "실제로 된다"(_bGpuFillsIndirectCounts)를 나눠 둔다.
+        // 그래서 "요청했다"(_bGpuIndirectCountsRequested)와 "실제로 된다"(_bGpuFillsIndirectCounts)를 나눠 둔다.
         _bGpuFillsIndirectCounts =
-            ( _bWantGpuIndirectCounts != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
+            ( _bGpuIndirectCountsRequested != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
 
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
@@ -350,9 +350,9 @@ namespace sw
     void GpuScene::setIndirectCountsFilledByGpu( bool bByGpu )
     {
         const uint8 value = bByGpu ? 1u : 0u;
-        if ( _bWantGpuIndirectCounts == value )
+        if ( _bGpuIndirectCountsRequested == value )
             return;
-        _bWantGpuIndirectCounts = value;
+        _bGpuIndirectCountsRequested = value;
         // 간접 인자의 내용이 달라지므로 다음 upload 가 반드시 다시 올려야 한다.
         _snapshot._bCpuDirty = SW_TRUE;
     }

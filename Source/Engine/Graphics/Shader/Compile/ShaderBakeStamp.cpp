@@ -129,7 +129,7 @@ namespace sw
                 bool _bHeadersCurrent{ false };
             };
 
-            /// @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시입니다. 베이크 루프가 레시피마다 부릅니다.
+            /// @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시입니다. 베이크 루프가 요청마다 부릅니다.
             inline static unordered_map<string, StampInfo> _s_mapStamp{};
 
             /**

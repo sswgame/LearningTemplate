@@ -121,7 +121,7 @@ namespace sw
          */
         void rebuildTransparentTail();
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다(인덱스는 옮기지 않습니다). */
-        void retireUnusedMaterialElements();
+        void freeUnusedMaterialElements();
         /** @brief 머티리얼 원소 등록부를 통째로 비웁니다(그룹 기준이 바뀌었을 때). */
         void resetMaterialRegistry();
         /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
@@ -183,7 +183,7 @@ namespace sw
         {
             unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
             /// @brief 원소별로 마지막으로 쓰인 빌드 번호입니다. 오래 안 쓰인 원소를 회수하는 기준입니다.
-            vector<uint64> _listEntryLastSeenBuild;
+            vector<uint64> _listEntryLastUsedBuild;
             /// @brief 회수된 원소 자리입니다. **인덱스를 옮기지 않고** 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
             vector<uint32> _listFreeEntry;
             /// @brief 직전 조회 결과입니다. 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻습니다.

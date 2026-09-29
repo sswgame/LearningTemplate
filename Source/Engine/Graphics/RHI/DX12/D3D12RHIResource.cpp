@@ -8,7 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHIResourceRecipe.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -19,8 +19,8 @@ namespace sw
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
     {
         const UINT                  alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
-        const D3D12_HEAP_PROPERTIES heapProps   = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resDesc     = D3D12RHIResourceRecipe::bufferDesc(
+        const D3D12_HEAP_PROPERTIES heapProps   = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resDesc     = D3D12RHIResourcePreset::bufferDesc(
             static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
@@ -66,8 +66,8 @@ namespace sw
     {
         // 64비트로 곱한다. 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
         const uint64                totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
-        const D3D12_HEAP_PROPERTIES heapProps  = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
-        const D3D12_RESOURCE_DESC   resDesc    = D3D12RHIResourceRecipe::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
+        const D3D12_HEAP_PROPERTIES heapProps  = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
+        const D3D12_RESOURCE_DESC   resDesc    = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
@@ -212,8 +212,8 @@ namespace sw
                 stagingOffset      = 0;
             }
 
-            const D3D12_HEAP_PROPERTIES uploadHeap = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-            const D3D12_RESOURCE_DESC   uploadDesc = D3D12RHIResourceRecipe::bufferDesc( newCapacity );
+            const D3D12_HEAP_PROPERTIES uploadHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+            const D3D12_RESOURCE_DESC   uploadDesc = D3D12RHIResourcePreset::bufferDesc( newCapacity );
 
             Microsoft::WRL::ComPtr<ID3D12Resource> newHeap;
             if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
@@ -456,8 +456,8 @@ namespace sw
         UINT64                             totalBytes{ 0 };
         _pDevice->_device->GetCopyableFootprints( &resDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
 
-        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourceRecipe::bufferDesc( totalBytes );
+        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
                                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
@@ -538,8 +538,8 @@ namespace sw
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourceRecipe::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourceRecipe::bufferDesc( sizeBytes );
+        const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )

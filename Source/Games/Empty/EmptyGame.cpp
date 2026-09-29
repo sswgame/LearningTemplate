@@ -58,7 +58,7 @@ namespace sw
     void EmptyGame::onBeforeStateSerialize()
     {
         // 벤치는 절차 생성물이다 — 스냅샷에 실으면 복원된 것은 핸들과 다른 오브젝트고 메시도 없다.
-        // 걷어 두면(pending kill 은 스냅샷이 건너뛴다) 복원 뒤 onAfterStateDeserialize 가 다시 만든다.
+        // 걷어 두면(pending destroy 은 스냅샷이 건너뛴다) 복원 뒤 onAfterStateDeserialize 가 다시 만든다.
         if ( _benchScene != nullptr )
             _benchScene->despawn();
     }

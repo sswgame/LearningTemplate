@@ -64,7 +64,7 @@
    → 월드는 그리는 쪽을 모른다. → `EngineServiceList.xxx` 에 `SW_ENGINE_SERVICE_OPT( _pFrameRenderer … 0, 0 )`.
    호스트(`EngineLoop`)가 꽂고, 에디터는 `editor::getService<FrameRenderer>()` 로 받는다. 테스트 하네스에는 없다(선택 행).
 5. **Object ↔ Sequencer, Shader → Renderer.** `SequencePlayerComponent` 두 파일을 `Sequencer/` 로. 베이크의
-   "무엇을 구울지"(`collectAllRecipes`, 파이프라인 XML · `FrameRendererUtil::getPassDefine`)와 "전부 굽기"
+   "무엇을 구울지"(`collectAllRequests`, 파이프라인 XML · `FrameRendererUtil::getPassDefine`)와 "전부 굽기"
    (`bakeAllShaders`)를 `Renderer/Bake/ShaderBakeDriver` 로. `Shader/Compile/ShaderBaker` 에는 한 장 굽기 · 이름 짓기 ·
    최신 판정만 남는다. → 언리얼의 ShaderCore(한 장 컴파일) 와 Renderer/Engine(무엇을 컴파일할지) 의 선.
 

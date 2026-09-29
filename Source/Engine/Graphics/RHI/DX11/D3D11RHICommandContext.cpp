@@ -107,8 +107,8 @@ namespace sw
         uint32                  rtCount{ 0 };
         if ( beginInfo._bBindColor != SW_FALSE )
         {
-            const uint32 wantCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u;
-            for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
+            const uint32 colorBindCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u;
+            for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
             {
                 const RHITextureHandle  colorHandle = beginInfo._arrColorTarget[attachmentIndex];
                 ID3D11RenderTargetView* pRtv{ nullptr };

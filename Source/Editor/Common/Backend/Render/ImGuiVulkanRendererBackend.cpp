@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerRecipe.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
@@ -118,9 +118,9 @@ namespace sw::editor
             return false;
         }
 
-        // ImGui 폰트 · 아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 레시피**(`VulkanRHISamplerRecipe`)를 쓰지만 같은 객체는
+        // ImGui 폰트 · 아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 레시피**(`VulkanRHISamplerPreset`)를 쓰지만 같은 객체는
         // 아니다. 저쪽이 씬 텍스처를 위해 비등방 필터로 바뀌어도 UI 는 따라가면 안 된다.
-        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
+        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerPreset::linearClamp();
         if ( vkCreateSampler( _pDevice, &samplerInfo, nullptr, &_pSampler ) != VK_SUCCESS )
         {
             SW_LOG_ERROR( "Failed to create Vulkan sampler for ImGui textures" );

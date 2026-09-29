@@ -36,7 +36,7 @@ namespace sw
         if ( pHeap == nullptr || slotIndex >= constant::kMaxGpuTimestampSlot || _entry._list == nullptr )
             return;
         _entry._list->EndQuery( pHeap, D3D12_QUERY_TYPE_TIMESTAMP, _pDevice->getTimestampBase() + slotIndex );
-        _pDevice->noteTimestampWritten( slotIndex );
+        _pDevice->markTimestampWritten( slotIndex );
     }
 
     void D3D12RHICommandList::detachFromDevice()

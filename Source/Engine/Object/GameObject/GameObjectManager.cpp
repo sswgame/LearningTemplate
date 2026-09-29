@@ -91,9 +91,9 @@ namespace sw
         , _physicsWorld{}
         , _bTicking{ false }
         , _bProcessingDestruction{ false }
-        , _lastWaveGeneration{ 0 }
-        , _tickWaveBuildCount{ 0 }
-        , _listCachedTickWave{}
+        , _lastStageGeneration{ 0 }
+        , _tickStageBuildCount{ 0 }
+        , _listCachedTickStage{}
         , _listActiveWriteSlot{}
         , _listPlayWalk{}
         , _bHasBegunPlay{ false }
@@ -243,7 +243,7 @@ namespace sw
         if ( it == _mapNameToObject.end() )
             return nullptr;
         GameObject* pObj = it->second._pObject;
-        return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
+        return ( pObj != nullptr && pObj->isPendingDestroy() == false ) ? pObj : nullptr;
     }
 
     // ======================================================================
@@ -291,7 +291,7 @@ namespace sw
         if ( ObjectSlotTable::isInRange( objectId ) )
         {
             GameObject* pSlotObject = _objectSlotTable.load( objectId );
-            return ( pSlotObject != nullptr && pSlotObject->isPendingKill() == false ) ? pSlotObject : nullptr;
+            return ( pSlotObject != nullptr && pSlotObject->isPendingDestroy() == false ) ? pSlotObject : nullptr;
         }
 
         // id 가 표의 범위를 넘어선 경우에만 맵으로 간다. 범위 안의 id 는 표가 유일한 기준이다(맵에는 넣지 않는다).
@@ -300,7 +300,7 @@ namespace sw
         if ( it == _mapIdToObject.end() )
             return nullptr;
         GameObject* pObj = it->second;
-        return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
+        return ( pObj != nullptr && pObj->isPendingDestroy() == false ) ? pObj : nullptr;
     }
 
     void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
@@ -324,12 +324,12 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         for ( GameObject* pObj : _listGameObject )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
                 return pObj;
         }
         for ( GameObject* pObj : _listPendingAdd )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
                 return pObj;
         }
         return nullptr;
@@ -341,12 +341,12 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         for ( GameObject* pObj : _listGameObject )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
                 outListGameObject.push_back( pObj );
         }
         for ( GameObject* pObj : _listPendingAdd )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
                 outListGameObject.push_back( pObj );
         }
     }
@@ -363,7 +363,7 @@ namespace sw
         getAllGameObjects( _listPlayWalk );
         for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                 pObj->beginPlay();
         }
         _listPlayWalk.clear();
@@ -380,7 +380,7 @@ namespace sw
         getAllGameObjects( _listPlayWalk );
         for ( GameObject* pObj : _listPlayWalk )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                 pObj->endPlay();
         }
         _listPlayWalk.clear();
@@ -426,12 +426,12 @@ namespace sw
             return;
         SW_ASSERT( WalkScope::isInsideWalk() == false );
 
-        // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingKill()` 로 보고 나서
-        // `markPendingKill()` 을 했다. 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
+        // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingDestroy()` 로 보고 나서
+        // `markPendingDestroy()` 을 했다. 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
         // 없애는 두 스레드가 나란히 통과하면 파괴 목록에 같은 포인터가 두 번 들어가고
         // `_poolGameObject.destroy` 가 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 돌고
         // (총알 둘이 같은 적을 맞히는) 그 경우는 흔하다. 자리를 잡은 스레드만 진행한다.
-        if ( pObj->tryMarkPendingKill() == false )
+        if ( pObj->tryMarkPendingDestroy() == false )
             return;
 
         vector<GameObject*> listChildren;
@@ -440,7 +440,7 @@ namespace sw
 
         // 계층 활성은 다시 맞추지 않는다 — 삭제 대기는 그 값의 입력이 아니다(예전에는 여기서 서브트리 전체를 걸었다).
         pObj->forEachComponent( []( Component* pComp )
-        { pComp->markPendingKill(); } );
+        { pComp->markPendingDestroy(); } );
 
         if ( bDestroyChildren )
         {
@@ -463,7 +463,7 @@ namespace sw
         SW_ASSERT( WalkScope::isInsideWalk() == false );
         // destroyObject 와 같은 이유로 자리부터 잡는다. 여기 목록에 두 번 들어가면
         // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
-        if ( pComp == nullptr || pComp->tryMarkPendingKill() == false )
+        if ( pComp == nullptr || pComp->tryMarkPendingDestroy() == false )
             return;
 
         // **포인터가 아니라 핸들로 적는다.** 줄을 선 뒤에도 즉시 경로(틱 밖의 `removeComponent` · 상태를 되돌리는 로드의
@@ -526,7 +526,7 @@ namespace sw
             // 목록에 없다. 둘 다 아니고 여전히 삭제 표시된 것만 뺀다.
             GameObject* pOwner = findGameObjectById( handle.objectId() );
             Component*  pComp  = ( pOwner != nullptr ) ? pOwner->findComponentById( handle.componentId(), true ) : nullptr;
-            if ( pComp != nullptr && pComp->isPendingKill() )
+            if ( pComp != nullptr && pComp->isPendingDestroy() )
                 pOwner->removeComponent( pComp );
         }
 
@@ -587,13 +587,13 @@ namespace sw
     {
         // 지연 파괴가 도는 목록을 여기서 비우면 그 루프가 풀린 메모리를 읽는다.
         SW_ASSERT( _bProcessingDestruction == false );
-        vector<GameObject*> listDying;
+        vector<GameObject*> listToDestroy;
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
 
-            listDying.reserve( _listGameObject.size() + _listPendingAdd.size() );
-            listDying.insert( listDying.end(), _listGameObject.begin(), _listGameObject.end() );
-            listDying.insert( listDying.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+            listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() );
+            listToDestroy.insert( listToDestroy.end(), _listGameObject.begin(), _listGameObject.end() );
+            listToDestroy.insert( listToDestroy.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
 
             _listPendingDestroyObject.clear();
             _listPendingDestroyComponent.clear();
@@ -614,10 +614,10 @@ namespace sw
             _mapIdToObject.clear();
             _objectSlotTable.clear();
             _transformHierarchy.clear();
-            _listCachedTickWave.clear();
+            _listCachedTickStage.clear();
         }
 
-        for ( GameObject* pObj : listDying )
+        for ( GameObject* pObj : listToDestroy )
         {
             if ( pObj != nullptr )
                 _poolGameObject.destroy( pObj );
@@ -633,9 +633,9 @@ namespace sw
             }
         }
 
-        _listCachedTickWave.clear();
+        _listCachedTickStage.clear();
         _tickRegistry.clear();
-        markTickWavesDirty();
+        markTickStagesDirty();
     }
 
     void GameObjectManager::mergePendingAdds()
@@ -711,14 +711,14 @@ namespace sw
         processDeferredDestruction();
 
         const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
-        vector<Component*>  listDoomed;
+        vector<Component*>  listToDestroy;
         forEachComponent( [&]( Component* pComp )
         {
             const TypeInfo* pTypeInfo = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
             if ( pTypeInfo != nullptr && pTypeInfo->_moduleName == hashModule )
-                listDoomed.push_back( pComp );
+                listToDestroy.push_back( pComp );
         } );
-        for ( Component* pComp : listDoomed )
+        for ( Component* pComp : listToDestroy )
         {
             GameObject* pOwner = pComp->getOwner();
             if ( pOwner != nullptr )
@@ -727,7 +727,7 @@ namespace sw
         // removeComponent 는 얼려 있으면 미룬다. 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
         processDeferredDestruction();
 
-        const uint32 count = static_cast<uint32>( listDoomed.size() );
+        const uint32 count = static_cast<uint32>( listToDestroy.size() );
         if ( count > 0 )
             SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
         return count;
@@ -808,7 +808,7 @@ namespace sw
     bool GameObjectManager::isNameTakenUnlocked( hashed_string name ) const
     {
         const auto it = _mapNameToObject.find( name );
-        return it != _mapNameToObject.end() && it->second._pObject != nullptr && it->second._pObject->isPendingKill() == false;
+        return it != _mapNameToObject.end() && it->second._pObject != nullptr && it->second._pObject->isPendingDestroy() == false;
     }
 
     void GameObjectManager::releaseNameSuffixUnlocked( const NameEntry& nameEntry )

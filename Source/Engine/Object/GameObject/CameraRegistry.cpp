@@ -39,10 +39,10 @@ namespace sw
 
     bool CameraRegistry::isUsableCamera( const CameraComponent* pCamera )
     {
-        if ( pCamera == nullptr || pCamera->isPendingKill() || pCamera->isActive() == false )
+        if ( pCamera == nullptr || pCamera->isPendingDestroy() || pCamera->isActive() == false )
             return false;
         const GameObject* pOwner = pCamera->getOwner();
-        return pOwner != nullptr && pOwner->isPendingKill() == false;
+        return pOwner != nullptr && pOwner->isPendingDestroy() == false;
     }
 
     CameraComponent* CameraRegistry::selectCamera( CameraRole role ) const

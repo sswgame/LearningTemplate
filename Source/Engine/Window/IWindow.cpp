@@ -24,7 +24,7 @@ namespace sw
         , _height{ 720 }
         , _bShouldClose{ SW_FALSE }
         , _bRecreating{ SW_FALSE }
-        , _bVisibleIntent{ SW_FALSE }
+        , _bVisibleRequested{ SW_FALSE }
         , _reserved{ 0 }
         , _arrReserved{}
         , _restoreX{ 0 }
@@ -93,7 +93,7 @@ namespace sw
         // 최소화됐거나 다른 워크스페이스에 있어도 아니다. 그 상태로 다시 만들면 **창이 사라진다.**
         // (윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 우연히 같았고, 그래서
         // 리눅스에서만 깨졌다. WSL 에서 `WindowTest.RecreateKeepsVisibilityAndSize` 가 3회 모두 졌다.)
-        const bool bWasVisible = isVisibleIntended();
+        const bool bWasVisible = isVisibleRequested();
         captureRestorePosition();
 
         const uint32 width  = _width;

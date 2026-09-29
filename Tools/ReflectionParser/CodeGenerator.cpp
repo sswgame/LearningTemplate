@@ -275,9 +275,9 @@ namespace sw
             emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
             while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
             {
-                const utf8* kind = toCppExpr( node->_containerKind );
-                const utf8* peel = containerPeelMember( prevKind );
-                emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
+                const utf8* kind              = toCppExpr( node->_containerKind );
+                const utf8* elementTypeMember = containerElementTypeMember( prevKind );
+                emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, elementTypeMember );
 
                 const string wrapperType = CodeGeneratorInternal::makeNestedWrapperType( node->_containerType, depth );
                 emit.line( "{" );

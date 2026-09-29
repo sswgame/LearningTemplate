@@ -280,12 +280,12 @@ namespace sw
             pCamera = _objectManager->getCameraRegistry().selectCamera( CameraRole::Game );
         if ( pCamera == nullptr )
             pCamera = resolveCamera( _activeGameCamera );
-        if ( pCamera == nullptr || pCamera->isPendingKill() )
+        if ( pCamera == nullptr || pCamera->isPendingDestroy() )
         {
             // 기본 GameCamera. 이미 있으면 **그대로** 쓴다 — `findOrCreateNamed` 는 있는 것의 자리 · 렌즈를 기본값으로 되돌린다.
             GameObject*      pNamed       = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
             CameraComponent* pNamedCamera = ( pNamed != nullptr ) ? pNamed->getComponent<CameraComponent>() : nullptr;
-            if ( pNamedCamera != nullptr && pNamedCamera->isPendingKill() == false )
+            if ( pNamedCamera != nullptr && pNamedCamera->isPendingDestroy() == false )
                 pCamera = pNamedCamera;
             else
             {

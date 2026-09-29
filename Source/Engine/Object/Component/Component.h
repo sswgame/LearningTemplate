@@ -263,20 +263,20 @@ namespace sw
         uint64 getComponentId() const { return _componentId; }
 
         /** @brief 삭제 예정(묘비) 표시를 세웁니다. */
-        void markPendingKill() { tryMarkPendingKill(); }
+        void markPendingDestroy() { tryMarkPendingDestroy(); }
 
         /**
          * @brief 삭제 예정 표시를 **이 호출이 처음으로 세웠는지** 반환합니다.
-         * @details `isPendingKill()` 로 보고 나서 `markPendingKill()` 하는 두 걸음은 원자적이지
+         * @details `isPendingDestroy()` 로 보고 나서 `markPendingDestroy()` 하는 두 걸음은 원자적이지
          *          않습니다. 두 스레드가 그 사이를 나란히 통과하면 파괴 목록에 같은 포인터가 **두 번**
          *          들어가고, 풀이 같은 블록을 두 번 반납합니다. `onTick` 은 병렬로 돌기 때문에
          *          (총알 둘이 같은 적을 같은 프레임에 맞히는) 흔한 경우입니다. 없애는 쪽은 반드시
          *          이 함수가 `true` 를 준 스레드 **하나만** 진행해야 합니다.
          */
-        bool tryMarkPendingKill() { return _bIsPendingKill.exchange( true, std::memory_order_acq_rel ) == false; }
+        bool tryMarkPendingDestroy() { return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false; }
 
         /** @brief 삭제 예정인지 확인합니다. */
-        bool isPendingKill() const { return _bIsPendingKill.load( std::memory_order_acquire ); }
+        bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
         /** @brief 컴포넌트 이름(해시)을 반환합니다. */
         hashed_string getComponentName() const { return _componentName; }
 
@@ -299,7 +299,7 @@ namespace sw
 
         atomic<uint64>      _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
         atomic<bool>        _bActive;           ///< 컴포넌트 자기 활성 비트
-        atomic<bool>        _bIsPendingKill;    ///< 삭제 예정 표시
+        atomic<bool>        _bIsPendingDestroy; ///< 삭제 예정 표시
         TickGroup           _tickGroup;         ///< TickGroup 슬롯
         uint8               _bCanEverTick      : 1;
         uint8               _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세웁니다

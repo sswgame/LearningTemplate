@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
             /// @brief 아래 상태 띠(그라디언트 · 글자 · 진행 막대)의 높이입니다. 상태가 바뀌면 이 띠만 다시 그립니다.
-            static constexpr int32 kStatusBandHeight = 54;
+            static constexpr int32 kStatusBarHeight = 54;
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             {
@@ -159,8 +159,8 @@ namespace sw
             // 바뀌는 것은 아래 상태 띠(글자 · 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
             RECT rcClient{};
             GetClientRect( _hWnd, &rcClient );
-            const RECT rcBand = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBandHeight, rcClient.right, rcClient.bottom };
-            InvalidateRect( _hWnd, &rcBand, FALSE );
+            const RECT rcStatusBar = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBarHeight, rcClient.right, rcClient.bottom };
+            InvalidateRect( _hWnd, &rcStatusBar, FALSE );
             UpdateWindow( _hWnd );
 
             MSG msg;
@@ -215,9 +215,9 @@ namespace sw
                 rcPaint.top, SRCCOPY );
 
         // 2) 아래 상태 띠 그라디언트 오버레이. 배경을 다시 깐 위에 그리므로 겹쳐 짙어지지 않는다.
-        const int32                  bandHeight = Win32SplashWindowInternal::kStatusBandHeight;
+        const int32                  statusBarHeight = Win32SplashWindowInternal::kStatusBarHeight;
         Gdiplus::Graphics            graphics( hDC );
-        Gdiplus::Rect                gradientRect( 0, rc.bottom - bandHeight, rc.right, bandHeight );
+        Gdiplus::Rect                gradientRect( 0, rc.bottom - statusBarHeight, rc.right, statusBarHeight );
         Gdiplus::LinearGradientBrush gradientBrush( gradientRect, Gdiplus::Color( 0, 16, 20, 26 ), Gdiplus::Color( 230, 16, 20, 26 ),
                                                     Gdiplus::LinearGradientModeVertical );
         graphics.FillRectangle( &gradientBrush, gradientRect );

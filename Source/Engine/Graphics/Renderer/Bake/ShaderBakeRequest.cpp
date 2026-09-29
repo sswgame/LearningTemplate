@@ -1,8 +1,8 @@
 /**
- * @file ShaderBakeRecipe.cpp
+ * @file ShaderBakeRequest.cpp
  * @brief **무엇을 구울지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
  * @details 굽는 일(`Shader/Compile/ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
- *          저쪽 입력은 레시피 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 에서
+ *          저쪽 입력은 요청 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 에서
  *          매니페스트 미스로 떨어지므로, define 을 합치는 규칙(`mergeDefines`)과 패스 기본 셰이더를 고르는 규칙이
  *          런타임과 같은 자리를 봐야 합니다. 그 대조가 이 파일의 일입니다.
  */
@@ -25,7 +25,7 @@ namespace sw
 {
     namespace
     {
-        struct ShaderBakeRecipeInternal
+        struct ShaderBakeRequestInternal
         {
             static string findDefaultShaderForPassType( string_view passType, const EngineData& engineData )
             {
@@ -56,11 +56,11 @@ namespace sw
                 return "";
             }
 
-            static void appendRecipeUnique( vector<ShaderBakeRecipe>& outListRecipe,
-                                            string_view               shaderPath,
-                                            string_view               entryPoint,
-                                            ShaderStage               stage,
-                                            const vector<string>&     listPermutation )
+            static void appendRequestUnique( vector<ShaderBakeRequest>& outListRequest,
+                                             string_view                shaderPath,
+                                             string_view                entryPoint,
+                                             ShaderStage                stage,
+                                             const vector<string>&      listPermutation )
             {
                 if ( shaderPath.empty() || entryPoint.empty() )
                     return;
@@ -68,7 +68,7 @@ namespace sw
                 const uint64 permHash = ShaderBaker::computePermutationHash( listPermutation );
                 const string normPath = FileUtil::normalizeSeparators( shaderPath );
 
-                for ( const ShaderBakeRecipe& existing : outListRecipe )
+                for ( const ShaderBakeRequest& existing : outListRequest )
                 {
                     if ( existing._stage == stage &&
                          existing._permHash == permHash &&
@@ -77,13 +77,13 @@ namespace sw
                         return;
                 }
 
-                ShaderBakeRecipe recipe;
-                recipe._shaderPath      = normPath;
-                recipe._entryPoint      = string( entryPoint );
-                recipe._stage           = stage;
-                recipe._listPermutation = listPermutation;
-                recipe._permHash        = permHash;
-                outListRecipe.push_back( std::move( recipe ) );
+                ShaderBakeRequest request;
+                request._shaderPath      = normPath;
+                request._entryPoint      = string( entryPoint );
+                request._stage           = stage;
+                request._listPermutation = listPermutation;
+                request._permHash        = permHash;
+                outListRequest.push_back( std::move( request ) );
             }
 
             /** @brief 씬 메시를 그리는 패스 하나입니다. 머티리얼과 곱해 변형을 만들 대상입니다. */
@@ -127,7 +127,7 @@ namespace sw
                 return listMerged;
             }
 
-            static void collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe )
+            static void collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest )
             {
                 EngineData engineData;
                 engineData.loadFromResource();
@@ -181,41 +181,41 @@ namespace sw
                         if ( pass._computeEntryPoint.empty() == false || pass._type == "Compute" )
                         {
                             const string csEntry = pass._computeEntryPoint.empty() ? "CSMain" : pass._computeEntryPoint;
-                            appendRecipeUnique( outListRecipe, shaderPath, csEntry, ShaderStage::Compute, listPassDefine );
+                            appendRequestUnique( outListRequest, shaderPath, csEntry, ShaderStage::Compute, listPassDefine );
                         }
                         else
                         {
                             // 정점 셰이더
                             const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
-                            appendRecipeUnique( outListRecipe, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
+                            appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
                             // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 예전에는 여기서 타입
                             // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
                             if ( FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment ) )
                             {
                                 const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
-                                appendRecipeUnique( outListRecipe, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                             }
 
                             // 지오메트리 셰이더
                             if ( pass._geometryEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
 
                             // 헐 셰이더
                             if ( pass._hullEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
 
                             // 도메인 셰이더
                             if ( pass._domainEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
 
                             // 메시 셰이더
                             if ( pass._meshEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._meshEntryPoint, ShaderStage::Mesh, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, pass._meshEntryPoint, ShaderStage::Mesh, listPassDefine );
 
                             // 앰플리피케이션 셰이더
                             if ( pass._amplificationEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._amplificationEntryPoint, ShaderStage::Amplification, listPassDefine );
+                                appendRequestUnique( outListRequest, shaderPath, pass._amplificationEntryPoint, ShaderStage::Amplification, listPassDefine );
                         }
                     }
                 }
@@ -245,8 +245,8 @@ namespace sw
                 {
                     if ( path.empty() )
                         continue;
-                    appendRecipeUnique( outListRecipe, path, "VSMain", ShaderStage::Vertex, {} );
-                    appendRecipeUnique( outListRecipe, path, "PSMain", ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, path, "VSMain", ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, path, "PSMain", ShaderStage::Pixel, {} );
                 }
 
                 // 부트스트랩 컴퓨트 셰이더
@@ -263,7 +263,7 @@ namespace sw
                 {
                     if ( path.empty() )
                         continue;
-                    appendRecipeUnique( outListRecipe, path, "CSMain", ShaderStage::Compute, {} );
+                    appendRequestUnique( outListRequest, path, "CSMain", ShaderStage::Compute, {} );
                 }
 
                 // 3) 머티리얼 에셋(.material)
@@ -286,8 +286,8 @@ namespace sw
                     variant._listDefine = material->getCachedShaderDefines();
                     listMaterialVariant.push_back( variant );
 
-                    appendRecipeUnique( outListRecipe, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
-                    appendRecipeUnique( outListRecipe, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                    appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
+                    appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
                 }
 
                 // 4) 패스 x 머티리얼: 런타임이 실제로 요구하는 조합
@@ -307,9 +307,9 @@ namespace sw
                             continue;
 
                         const vector<string> listCombined = mergeDefines( passInfo._listPermutation, variant._listDefine );
-                        appendRecipeUnique( outListRecipe, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listCombined );
+                        appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listCombined );
                         if ( passInfo._bHasPixelStage )
-                            appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
+                            appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
 
                         // 5) 그 위의 **뷰 모드** 축: 런타임이 요구하는 조합은 (패스 x 머티리얼 x 뷰 모드)다.
                         //
@@ -322,9 +322,9 @@ namespace sw
                         if ( passInfo._bUsesMaterialShader )
                         {
                             const vector<string> listUnlit = mergeDefines( listCombined, { string( kViewModeUnlitDefine ) } );
-                            appendRecipeUnique( outListRecipe, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listUnlit );
+                            appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listUnlit );
                             if ( passInfo._bHasPixelStage )
-                                appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listUnlit );
+                                appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listUnlit );
                         }
                     }
 
@@ -335,9 +335,9 @@ namespace sw
                     if ( passInfo._bUsesMaterialShader )
                     {
                         const vector<string> listPlainUnlit = mergeDefines( passInfo._listPermutation, { string( kViewModeUnlitDefine ) } );
-                        appendRecipeUnique( outListRecipe, passInfo._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listPlainUnlit );
+                        appendRequestUnique( outListRequest, passInfo._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listPlainUnlit );
                         if ( passInfo._bHasPixelStage )
-                            appendRecipeUnique( outListRecipe, passInfo._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listPlainUnlit );
+                            appendRequestUnique( outListRequest, passInfo._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listPlainUnlit );
                     }
                 }
             }
@@ -349,8 +349,8 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderBaker" );
 
-    void ShaderBakeDriver::collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe )
+    void ShaderBakeDriver::collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest )
     {
-        ShaderBakeRecipeInternal::collectAllRecipes( rootDir, outListRecipe );
+        ShaderBakeRequestInternal::collectAllRequests( rootDir, outListRequest );
     }
 } // namespace sw

@@ -89,7 +89,7 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
     SW_EXPECT_EQUAL( 1u, actor->getComponentCount() );
 
     manager.destroyComponent( mesh );
-    SW_EXPECT_TRUE( mesh->isPendingKill() );
+    SW_EXPECT_TRUE( mesh->isPendingDestroy() );
     SW_EXPECT_TRUE( actor->getComponent<sw::MockMeshComponent>() == nullptr );
     SW_EXPECT_EQUAL( 0u, actor->getComponentCount() );
 }
@@ -163,7 +163,7 @@ SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
 
     SW_EXPECT_EQUAL( 1u, pObj->getComponentCount() );
     SW_EXPECT_TRUE( pObj->getComponent<sw::MockMeshComponent>() == pNew );
-    SW_EXPECT_FALSE( pNew->isPendingKill() );
+    SW_EXPECT_FALSE( pNew->isPendingDestroy() );
 }
 
 /**
@@ -650,10 +650,10 @@ SW_TEST_CASE( GameObjectTest, CascadingChildDestruction )
     // Destroy parent with bDestroyChildren = true
     manager.destroyObject( pParent, true );
 
-    // Before tick, all are marked pending kill
-    SW_EXPECT_TRUE( pParent->isPendingKill() );
-    SW_EXPECT_TRUE( pChild1->isPendingKill() );
-    SW_EXPECT_TRUE( pChild2->isPendingKill() );
+    // Before tick, all are marked pending destroy
+    SW_EXPECT_TRUE( pParent->isPendingDestroy() );
+    SW_EXPECT_TRUE( pChild1->isPendingDestroy() );
+    SW_EXPECT_TRUE( pChild2->isPendingDestroy() );
 
     manager.tick( 0.016f );
 
@@ -1143,46 +1143,46 @@ SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
 }
 
 /**
- * @brief 틱 웨이브는 틱 멤버십이 바뀔 때만 다시 만든다 — 틱하지 않는 컴포넌트를 붙였다 떼는 것은 세지 않는다.
+ * @brief 틱 스테이지는 틱 멤버십이 바뀔 때만 다시 만든다 — 틱하지 않는 컴포넌트를 붙였다 떼는 것은 세지 않는다.
  * @details 예전엔 아무 구조 변경에나(병합 · 지연 파괴 처리 · 메시 추가) 다시 만들었다. 8000 틱 컴포넌트에 재구성 하나가 2 ms 라,
- *          총알이 매 프레임 생기는 게임은 그것을 매 프레임 냈다. 횟수(`getTickWaveBuildCount`)로 본다.
+ *          총알이 매 프레임 생기는 게임은 그것을 매 프레임 냈다. 횟수(`getTickStageBuildCount`)로 본다.
  */
-SW_TEST_CASE( GameObjectTest, TickWavesRebuildOnlyWhenTickWorkChanges )
+SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 {
     sw::GameObjectManager manager;
     sw::RegisterMockComponents( manager );
-    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "WaveGate" ) );
+    sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "StageGate" ) );
     manager.tick( 0.016f );
-    const uint32 baseCount = manager.getTickWaveBuildCount();
+    const uint32 baseCount = manager.getTickStageBuildCount();
     SW_EXPECT_TRUE( baseCount >= 1 );
 
     // 틱하지 않는 컴포넌트 — 붙이고, 틱하고, 지우고, 틱해도 그대로.
     sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pMesh );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount, manager.getTickStageBuildCount() );
     manager.destroyComponent( pMesh );
     manager.processDeferredDestruction();
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount, manager.getTickStageBuildCount() );
 
     // 틱하는 컴포넌트 — 붙이면 한 번, 틱을 끄면 한 번, 지우면 한 번.
     sw::MockTickSceneComponent* pTick = pObj->addComponent<sw::MockTickSceneComponent>();
     SW_ASSERT_NOT_NULL( pTick );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickStageBuildCount() );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 1, manager.getTickStageBuildCount() );
     pTick->setCanEverTick( false );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 2, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 2, manager.getTickStageBuildCount() );
     pTick->setCanEverTick( true );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 3, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 3, manager.getTickStageBuildCount() );
     manager.destroyComponent( pTick );
     manager.processDeferredDestruction();
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickStageBuildCount() );
 
     // 오브젝트를 지우는 것도 틱하는 컴포넌트가 있을 때만.
     sw::GameObject* pQuiet = manager.createGameObject( sw::hashed_string( "QuietObj" ) );
@@ -1191,12 +1191,12 @@ SW_TEST_CASE( GameObjectTest, TickWavesRebuildOnlyWhenTickWorkChanges )
     manager.destroyObject( pQuiet, false );
     manager.processDeferredDestruction();
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( baseCount + 4, manager.getTickStageBuildCount() );
 }
 
 /**
  * @brief [GameObjectTest] 틱 등록부는 멤버십이 바뀐 오브젝트만 다시 짓고, 파괴된 오브젝트는 목록에서 빠진다.
- * @details 예전에는 틱 멤버십이 하나라도 바뀌면 씬 전체를 훑어 웨이브를 다시 만들었다. 지금은 오브젝트가 자기 항목을 들고
+ * @details 예전에는 틱 멤버십이 하나라도 바뀌면 씬 전체를 훑어 스테이지를 다시 만들었다. 지금은 오브젝트가 자기 항목을 들고
  *          등록부는 그룹마다 오브젝트 목록을 든다. 지켜야 할 것: (1) 틱하는 컴포넌트가 붙은 오브젝트만 그 그룹 목록에 오르고
  *          항목은 (그룹, 순서 키) 순이다 (2) 서브틱을 켜고 끄면 그 오브젝트의 항목만 바뀐다 (3) 선행 종속성이 있으면
  *          `hasPrerequisites` 가 서고, 떼면 내려간다 (4) 오브젝트를 파괴하면 목록에서 빠지고 옮겨진 오브젝트의 자리가 맞는다
@@ -1244,10 +1244,10 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     SW_EXPECT_EQUAL( 7u, pSub->getTickItems()[1]._subTickId );
 
     // (2) 서브틱을 끄면 그 오브젝트의 항목만 줄고, 다른 오브젝트는 다시 짓지 않는다(세대는 오른다).
-    const uint32 buildBefore = manager.getTickWaveBuildCount();
+    const uint32 buildBefore = manager.getTickStageBuildCount();
     pRoot->setSubTickActive( 7, false );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( buildBefore + 1, manager.getTickWaveBuildCount() );
+    SW_EXPECT_EQUAL( buildBefore + 1, manager.getTickStageBuildCount() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pSub->getTickItems().size() ) );
     SW_EXPECT_EQUAL( 2, pMeshA->_tickCount );
     pRoot->unregisterSubTick( 8 );
@@ -2141,7 +2141,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                 manager.destroyObject( pObjA, true );
                 listAliveObject.erase(
                     std::remove_if( listAliveObject.begin(), listAliveObject.end(), []( sw::GameObject* pObj )
-                { return pObj == nullptr || pObj->isPendingKill(); } ),
+                { return pObj == nullptr || pObj->isPendingDestroy(); } ),
                     listAliveObject.end() );
             }
             else

@@ -10,7 +10,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerRecipe.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
 namespace sw
 {
@@ -398,7 +398,7 @@ namespace sw
 
         // 씬 텍스처의 기본 샘플러다. 지금 원하는 성질은 "선형 + 가장자리 고정" 이므로 그 조리법을
         // 쓴다. 비등방 같은 다른 성질이 필요해지면 여기서 조리법을 바꾸거나 직접 채우면 된다.
-        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerRecipe::linearClamp();
+        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerPreset::linearClamp();
         if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_defaultSampler ) != VK_SUCCESS )
             return false;
 

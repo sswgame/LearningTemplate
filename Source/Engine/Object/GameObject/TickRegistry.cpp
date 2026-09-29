@@ -1,6 +1,6 @@
 /**
  * @file TickRegistry.cpp
- * @brief 틱 등록부 구현입니다(오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시 · 선행 조건 웨이브).
+ * @brief 틱 등록부 구현입니다(오브젝트 항목 재구축 · 그룹 멤버십 · 더티 표시 · 선행 조건 스테이지).
  */
 #include "pch.h"
 
@@ -18,8 +18,8 @@ namespace sw
     {
         struct TickRegistryInternal
         {
-            /** @brief 선행 조건 웨이브를 지을 때의 후보 하나입니다(등록부 항목 + 그 항목의 선행 목록). */
-            struct WaveCandidate
+            /** @brief 선행 조건 스테이지를 지을 때의 후보 하나입니다(등록부 항목 + 그 항목의 선행 목록). */
+            struct StageCandidate
             {
                 TickItem                     _item;
                 uint64                       _objectId{ 0 };
@@ -29,7 +29,7 @@ namespace sw
             };
 
             /** @brief 순서 키로, 같으면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 유일한 규칙입니다. */
-            static bool isBefore( const WaveCandidate& left, const WaveCandidate& right )
+            static bool isBefore( const StageCandidate& left, const StageCandidate& right )
             {
                 if ( left._item._orderKey != right._item._orderKey )
                     return left._item._orderKey < right._item._orderKey;
@@ -50,28 +50,28 @@ namespace sw
             }
 
             /**
-             * @brief 한 웨이브(같은 레벨)를 오브젝트별 서브웨이브로 가릅니다. 같은 오브젝트의 항목은 0 번부터 차례로 찹니다.
-             * @details 오브젝트마다 "이미 든 서브웨이브 수" 하나면 됩니다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
+             * @brief 한 레벨을 오브젝트별 스테이지로 가릅니다. 같은 오브젝트의 항목은 0 번부터 차례로 찹니다.
+             * @details 오브젝트마다 "이미 든 스테이지 수" 하나면 됩니다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
              *          이어지는 동안 하나씩 오르고 오브젝트가 바뀌면 0 입니다. 맵 없이 한 번에 됩니다.
              */
-            static void splitByObject( const vector<size_t>& listLevel, const vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
+            static void splitByObject( const vector<size_t>& listLevel, const vector<StageCandidate>& listCandidate, vector<TickStage>& outListStage )
             {
                 unordered_map<uint64, uint32> mapNextSlot;
                 mapNextSlot.reserve( listLevel.size() );
-                const size_t firstWave = outListWave.size();
+                const size_t firstStage = outListStage.size();
                 for ( const size_t candidateIndex : listLevel )
                 {
-                    const WaveCandidate& candidate = listCandidate[candidateIndex];
-                    uint32&              slot      = mapNextSlot[candidate._objectId];
-                    if ( firstWave + slot == outListWave.size() )
-                        outListWave.emplace_back();
-                    outListWave[firstWave + slot].push_back( candidate._item );
+                    const StageCandidate& candidate = listCandidate[candidateIndex];
+                    uint32&               slot      = mapNextSlot[candidate._objectId];
+                    if ( firstStage + slot == outListStage.size() )
+                        outListStage.emplace_back();
+                    outListStage[firstStage + slot].push_back( candidate._item );
                     ++slot;
                 }
             }
 
-            /** @brief 한 그룹의 후보를 선행 조건 순서로 갈라 웨이브를 붙입니다(Kahn 레벨 + 오브젝트별 서브웨이브). */
-            static void appendGroupWaves( vector<WaveCandidate>& listCandidate, vector<TickWave>& outListWave )
+            /** @brief 한 그룹의 후보를 선행 조건 순서로 갈라 스테이지를 붙입니다(Kahn 레벨 + 오브젝트별 스테이지). */
+            static void appendGroupStages( vector<StageCandidate>& listCandidate, vector<TickStage>& outListStage )
             {
                 const size_t count = listCandidate.size();
                 if ( count == 0 )
@@ -131,7 +131,7 @@ namespace sw
                                 listNextLevel.push_back( next );
                         }
                     }
-                    splitByObject( listCurrentLevel, listCandidate, outListWave );
+                    splitByObject( listCurrentLevel, listCandidate, outListStage );
                     listCurrentLevel = std::move( listNextLevel );
                 }
 
@@ -145,7 +145,7 @@ namespace sw
                             listRemaining.push_back( index );
                     }
                     sortLevel( listRemaining );
-                    splitByObject( listRemaining, listCandidate, outListWave );
+                    splitByObject( listRemaining, listCandidate, outListStage );
                 }
             }
         };
@@ -223,7 +223,7 @@ namespace sw
         uint32 prerequisiteCount = 0;
         for ( Component* pComp : pObj->_listComponent )
         {
-            if ( pComp == nullptr || pComp->isPendingKill() )
+            if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
             if ( pComp->canEverTick() )
             {
@@ -318,26 +318,26 @@ namespace sw
         _bAllDirty.store( SW_TRUE, std::memory_order_release );
     }
 
-    void TickRegistry::buildPrerequisiteWaves( vector<TickWave>& outListWave ) const
+    void TickRegistry::computePrerequisiteStages( vector<TickStage>& outListStage ) const
     {
-        outListWave.clear();
-        vector<TickRegistryInternal::WaveCandidate> listCandidate;
-        uint32                                      originalIndex = 0;
+        outListStage.clear();
+        vector<TickRegistryInternal::StageCandidate> listCandidate;
+        uint32                                       originalIndex = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
             listCandidate.clear();
             for ( GameObject* pObj : _arrListObject[group] )
             {
-                if ( pObj == nullptr || pObj->isPendingKill() )
+                if ( pObj == nullptr || pObj->isPendingDestroy() )
                     continue;
                 const TickItemList& listItem = pObj->getTickItems();
                 const uint32        end      = pObj->getTickGroupBegin( group + 1 );
                 for ( uint32 index = pObj->getTickGroupBegin( group ); index < end; ++index )
                 {
                     const TickItem& item = listItem[index];
-                    if ( item._pComponent == nullptr || item._pComponent->isPendingKill() )
+                    if ( item._pComponent == nullptr || item._pComponent->isPendingDestroy() )
                         continue;
-                    TickRegistryInternal::WaveCandidate candidate{};
+                    TickRegistryInternal::StageCandidate candidate{};
                     candidate._item              = item;
                     candidate._objectId          = pObj->getObjectId();
                     candidate._componentId       = item._pComponent->getComponentId();
@@ -346,7 +346,7 @@ namespace sw
                     listCandidate.push_back( candidate );
                 }
             }
-            TickRegistryInternal::appendGroupWaves( listCandidate, outListWave );
+            TickRegistryInternal::appendGroupStages( listCandidate, outListStage );
         }
     }
 } // namespace sw

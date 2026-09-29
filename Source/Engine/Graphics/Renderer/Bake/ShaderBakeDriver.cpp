@@ -1,6 +1,6 @@
 /**
  * @file ShaderBakeDriver.cpp
- * @brief 오프라인 베이크의 **정책**입니다. 레시피 모두를 네 RHI 포맷으로 굽고 리플렉션 매니페스트를 씁니다.
+ * @brief 오프라인 베이크의 **정책**입니다. 요청 모두를 네 RHI 포맷으로 굽고 리플렉션 매니페스트를 씁니다.
  * @details 한 장을 굽는 법(`ShaderBaker::bakeShader`)과 이름 짓기 · 최신 판정은 `Shader/Compile` 의 메커니즘이고,
  *          "무엇을 굽는가" 는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식입니다. 그래서 이 파일은
  *          `Renderer/Bake` 에 있고 `Shader/` 는 `Renderer/` 를 include 하지 않습니다.
@@ -58,9 +58,9 @@ namespace sw
             listTargetFormat.push_back( targetFormat );
         }
 
-        // 2) 렌더 파이프라인 에셋과 엔진 데이터로 레시피를 한꺼번에 모은다
-        vector<ShaderBakeRecipe> listRecipe;
-        collectAllRecipes( rootDir, listRecipe );
+        // 2) 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
+        vector<ShaderBakeRequest> listRequest;
+        collectAllRequests( rootDir, listRequest );
 
         uint32 totalBaked = 0;
 
@@ -69,14 +69,14 @@ namespace sw
         unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
         uint32                                                   contractViolationCount{ 0 };
 
-        // 3) 레시피 · 타깃 포맷마다 굽는다
-        for ( const ShaderBakeRecipe& recipe : listRecipe )
+        // 3) 요청 · 타깃 포맷마다 굽는다
+        for ( const ShaderBakeRequest& request : listRequest )
         {
             string absPath;
-            if ( FileUtil::fileExists( recipe._shaderPath ) )
-                absPath = recipe._shaderPath;
+            if ( FileUtil::fileExists( request._shaderPath ) )
+                absPath = request._shaderPath;
             else
-                absPath = ResourceUtil::getResourcePath( recipe._shaderPath );
+                absPath = ResourceUtil::getResourcePath( request._shaderPath );
 
             if ( FileUtil::fileExists( absPath ) == false )
                 continue;
@@ -94,7 +94,7 @@ namespace sw
                 const string_view subfolder = ShaderBaker::getSubfolderForFormat( fmt );
                 const string_view ext       = ShaderBaker::getExtensionForFormat( fmt );
                 const string      outDir    = FileUtil::joinPath( FileUtil::joinPath( shaderDir, "bin" ), subfolder );
-                const string      fileName  = ShaderBaker::computeBinaryFileName( stemLower, recipe._stage, recipe._entryPoint, recipe._permHash, ext );
+                const string      fileName  = ShaderBaker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permHash, ext );
                 const string      outPath   = FileUtil::joinPath( outDir, fileName );
 
                 // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 구운 바이너리까지 커밋하므로
@@ -107,7 +107,7 @@ namespace sw
                 if ( bUpToDate == false )
                 {
                     ShaderBakeResult result{};
-                    if ( ShaderBaker::bakeShader( absPath, outPath, recipe._entryPoint, recipe._stage, fmt, &recipe._listPermutation, &result ) )
+                    if ( ShaderBaker::bakeShader( absPath, outPath, request._entryPoint, request._stage, fmt, &request._listPermutation, &result ) )
                         ++totalBaked;
                 }
 

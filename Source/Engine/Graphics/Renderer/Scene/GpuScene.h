@@ -267,7 +267,7 @@ namespace sw
          */
         uint8 _bBatchTablesDirty{ SW_TRUE };
         /// @brief 부르는 쪽이 원한 값입니다(setIndirectCountsFilledByGpu).
-        uint8 _bWantGpuIndirectCounts{ SW_FALSE };
+        uint8 _bGpuIndirectCountsRequested{ SW_FALSE };
         /// @brief 마지막 upload 가 실제로 그렇게 했는지입니다(버퍼가 다 있어야 1).
         uint8 _bGpuFillsIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload() 가 올린 간접 인자 개수입니다. 스냅샷에 없으므로 GT 가 덮어쓸 수 없습니다.

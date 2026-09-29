@@ -15,12 +15,12 @@ namespace sw
          * @brief 부르는 쪽이 준 슬롯을 레지스터 번호로 정규화합니다.
          * @details 엔진 바인더는 리플렉션의 `_registerIndex` 를 그대로 넘기는데, Vulkan 리플렉션에서 그 값은 세트 0 의 **binding**
          *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)입니다. 명시 호출(bindComputeUav( idx, 0 ) 등)은 레지스터를 줍니다.
-         *          t 밴드(16..31) · u 밴드(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌립니다.
+         *          t 범위(16..31) · u 범위(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌립니다.
          */
-        uint32 toRegister( uint32 slot, uint32 bandShift )
+        uint32 toRegister( uint32 slot, uint32 rangeShift )
         {
-            if ( bandShift > 0 && slot >= bandShift && slot < bandShift + shaderslot::vk::kBandWidth )
-                return slot - bandShift;
+            if ( rangeShift > 0 && slot >= rangeShift && slot < rangeShift + shaderslot::vk::kRangeSize )
+                return slot - rangeShift;
             return slot;
         }
 
@@ -187,7 +187,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 슬롯 세트의 t 밴드. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t5..t8, 에뮬 전용)은 여기로 오지 않는다.
+        // 그래픽스 t# → 슬롯 세트의 t 범위. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t5..t8, 에뮬 전용)은 여기로 오지 않는다.
         // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다.
         slot = toRegister( slot, shaderslot::vk::kTShift );
         if ( slot >= shaderslot::kSrvSlotCount )
@@ -530,7 +530,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 슬롯 세트의 u 밴드. 인덱스는 UAV 등록부(registerBindlessUav)의 것이다.
+        // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 등록부(registerBindlessUav)의 것이다.
         slot = toRegister( slot, shaderslot::vk::kUShift );
         if ( slot >= shaderslot::kComputeUavSlotCount )
             return;
@@ -635,7 +635,7 @@ namespace sw
 
         // 슬롯 상태가 바뀌었다. 이 버퍼의 풀 묶음에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
         // 리스트는 자기 쌍의 묶음, 디바이스 프레임 스트림은 링 슬롯의 묶음을 쓴다. 어느 쪽도 다른 스레드와 나누지 않으므로 락이 없다.
-        // b 밴드는 셰이더가 정적으로 참조하므로 안 걸린 자리도 더미 UBO 로 채운다(픽스처의 MaterialCB 등).
+        // b 범위는 셰이더가 정적으로 참조하므로 안 걸린 자리도 더미 UBO 로 채운다(픽스처의 MaterialCB 등).
         VulkanDescriptorPoolSet& poolSet = ( _pDescriptorPoolSet != nullptr ) ? *_pDescriptorPoolSet : _pDevice->currentFrameDescriptorPoolSet();
         const VkDescriptorSet    set     = _pDevice->allocateSlotSet( poolSet );
         if ( set == VK_NULL_HANDLE )
@@ -786,7 +786,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        // b# → 슬롯 세트의 b 밴드. 링 상수버퍼는 이번 프레임 슬롯 구간을 건다. 세트는 드로우 직전 flushSlotSet 이 굳힌다.
+        // b# → 슬롯 세트의 b 범위. 링 상수버퍼는 이번 프레임 슬롯 구간을 건다. 세트는 드로우 직전 flushSlotSet 이 굳힌다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
         {
             SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 슬롯 세트의 b 자리 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
@@ -797,7 +797,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …). 리플렉션이 준 슬롯의 t 밴드에 건다.
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …). 리플렉션이 준 슬롯의 t 범위에 건다.
         bindShaderResource( index, slot );
     }
 

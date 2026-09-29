@@ -122,7 +122,7 @@ namespace sw
         clearAssetCaches();
         // 비운 **뒤에** 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
         // 다음 실행에서 같은 일이 반복되지 않게 이름을 남겨야 한다.
-        warnAboutLeftoverModuleCaches();
+        warnAboutRemainingModuleCaches();
         _assetDatabase.clear();
     }
 
@@ -199,7 +199,7 @@ namespace sw
         }
     }
 
-    void ResourceManager::warnAboutLeftoverModuleCaches() const
+    void ResourceManager::warnAboutRemainingModuleCaches() const
     {
         for ( const RegisteredAssetCache& entry : _listAssetCache )
         {

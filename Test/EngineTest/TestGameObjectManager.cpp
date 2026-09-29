@@ -171,7 +171,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickLeavesTransformsCleanWhenUnchan
 }
 
 /**
- * @brief [GameObjectManagerTest] 틱 중 destroy는 같은 프레임에 pending-kill 후 제거된다
+ * @brief [GameObjectManagerTest] 틱 중 destroy는 같은 프레임에 pending-destroy 후 제거된다
  */
 SW_TEST_CASE( GameObjectManagerTest, DestroyDuringTickIsDeferredThenApplied )
 {
@@ -413,7 +413,7 @@ SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )
     // 이름 및 기본 상태가 깨끗하게 초기화되었는지 확인
     SW_EXPECT_STREQ( "NewActor_0", pNewObj0->getName().c_str() );
     SW_EXPECT_TRUE( pNewObj0->isActive() );
-    SW_EXPECT_FALSE( pNewObj0->isPendingKill() );
+    SW_EXPECT_FALSE( pNewObj0->isPendingDestroy() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), pNewObj0->getComponentCount() );
 }
 
@@ -624,12 +624,12 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
 #endif
 
 /**
- * @brief 파괴 대기(pending kill) 오브젝트의 이름은 비어 있는 것으로 본다.
+ * @brief 파괴 대기(pending destroy) 오브젝트의 이름은 비어 있는 것으로 본다.
  * @details 모듈 리로드 · RHI 교체는 새 인스턴스를 만든 뒤 상태를 복원하는데, 그 사이 옛 오브젝트가 아직 지연 파괴
  *          대기열에 있다. 이름 맵만 보고 판단하면 새 오브젝트가 `BenchMesh_0_2` 같은 이름을 받고 `Duplicate name`
  *          경고가 뜬다 — 실제로 교체 로그에 매번 둘씩 찍혔다. 이름은 **살아 있는** 오브젝트만 차지한다.
  */
-SW_TEST_CASE( GameObjectManagerPoolTest, PendingKillNameIsFreeForReuse )
+SW_TEST_CASE( GameObjectManagerPoolTest, PendingDestroyNameIsFreeForReuse )
 {
     sw::GameObjectManager manager;
 
@@ -653,8 +653,8 @@ SW_TEST_CASE( GameObjectManagerPoolTest, PendingKillNameIsFreeForReuse )
 /**
  * @brief [GameObjectManagerPoolTest] 같은 오브젝트를 여러 스레드가 동시에 없애도 한 번만 파괴되는지 검증
  * @details `onTick` 은 병렬로 돈다. 총알 둘이 같은 프레임에 같은 적을 맞히면 두 스레드가 같은
- *          `destroyObject` 를 부른다 — 흔한 경우다. 예전 코드는 `isPendingKill()` 로 보고 나서
- *          `markPendingKill()` 을 했고, 그 사이가 벌어져 있어 둘 다 통과하면 파괴 목록에 같은
+ *          `destroyObject` 를 부른다 — 흔한 경우다. 예전 코드는 `isPendingDestroy()` 로 보고 나서
+ *          `markPendingDestroy()` 을 했고, 그 사이가 벌어져 있어 둘 다 통과하면 파괴 목록에 같은
  *          포인터가 두 번 들어갔다. 그러면 풀이 같은 블록을 두 번 받아 자유 목록이 망가지고,
  *          **다음에 만드는 두 오브젝트가 같은 주소를 받는다.**
  *

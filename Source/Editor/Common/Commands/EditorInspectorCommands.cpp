@@ -34,7 +34,7 @@ namespace sw::editor
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return nullptr;
                 GameObject* pObj = pScene->getObjectManager()->findGameObjectById( objectId );
-                if ( pObj == nullptr || pObj->isPendingKill() )
+                if ( pObj == nullptr || pObj->isPendingDestroy() )
                     return nullptr;
                 return pObj;
             }

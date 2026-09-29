@@ -644,8 +644,8 @@ namespace sw
                 buildBatches();
             }
             {
-                SW_PROFILE_SCOPE( "GT.GpuScene.build.retire" );
-                retireUnusedMaterialElements();
+                SW_PROFILE_SCOPE( "GT.GpuScene.build.free" );
+                freeUnusedMaterialElements();
             }
         }
 
@@ -995,8 +995,8 @@ namespace sw
             for ( uint32 entry = range._start; entry < range._start + range._count && entry < _listBatchElementIndex.size(); ++entry )
             {
                 const uint32 elementIndex = _listBatchElementIndex[entry];
-                if ( elementIndex < state._listEntryLastSeenBuild.size() )
-                    state._listEntryLastSeenBuild[elementIndex] = _buildCounter;
+                if ( elementIndex < state._listEntryLastUsedBuild.size() )
+                    state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
             }
         }
         return true;
@@ -1058,7 +1058,7 @@ namespace sw
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
         // 예전에는 여기서 그룹을 통째로 지우고 인스턴스마다 다시 부여했다. 인스턴스 N 개와 머티리얼 M 종에
         // O(N·M) 이었고, 무엇보다 같은 머티리얼의 인덱스가 프레임마다 달라져 "바뀐 것만 올린다" 를 할 수 없었다.
-        // 이제 처음 본 (머티리얼, 인스턴스) 쌍에만 자리를 주고, 안 쓰이면 아래 retireUnusedMaterialElements 가
+        // 이제 처음 본 (머티리얼, 인스턴스) 쌍에만 자리를 주고, 안 쓰이면 아래 freeUnusedMaterialElements 가
         // 지연 회수한다. 자리를 옮기지 않으므로 인덱스는 안정적이다.
         ++_buildCounter;
         for ( MaterialGroupState& state : _listMaterialGroupState )
@@ -1216,7 +1216,7 @@ namespace sw
         _snapshot._listAllBatch.push_back( std::move( batch ) );
     }
 
-    void GpuSceneBuilder::retireUnusedMaterialElements()
+    void GpuSceneBuilder::freeUnusedMaterialElements()
     {
         // 이번 빌드에서 안 쓰인 원소는 바로 지우지 않는다. 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
         // 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다. 큐잉된 패킷이 아직 원소를 읽을 수 있다.
@@ -1233,7 +1233,7 @@ namespace sw
             {
                 if ( group._listEntry[index]._material == nullptr )
                     continue;
-                if ( index < state._listEntryLastSeenBuild.size() && state._listEntryLastSeenBuild[index] >= staleBefore )
+                if ( index < state._listEntryLastUsedBuild.size() && state._listEntryLastUsedBuild[index] >= staleBefore )
                     continue;
 
                 const GpuMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
@@ -1303,11 +1303,11 @@ namespace sw
         else
         {
             group._listEntry.push_back( GpuMaterialElement{ material, instance } );
-            state._listEntryLastSeenBuild.push_back( 0 );
+            state._listEntryLastUsedBuild.push_back( 0 );
             elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
             state._mapEntryToIndex.emplace( key, elementIndex );
         }
-        state._listEntryLastSeenBuild[elementIndex] = _buildCounter;
+        state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
         state._lastKey                              = key;
         state._lastIndex                            = elementIndex;
         state._bHasLast                             = SW_TRUE;

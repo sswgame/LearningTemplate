@@ -2021,6 +2021,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (Engine 이름 — 비유로 쓴 단어를 걷었다, wave 포함 · 파일 이름 넷)
+
+**어떻게 찾았나.** Core 와 같은 방식(식별자 단어 2,493 개 · 파일 이름 단어)에 Core 에서 걸렀던 단어를 다시 물었다. 그래픽스 · 입력 · 오디오 · OS API 의
+이름(`WaveGetLaneIndex` · `WaveLaneCountMin` · `wavefrontSize` · `SineWave` · `WAVE_FORMAT_PCM` · `D3D_SIT_*`)과 엔진 표준 용어(bake · cook · in flight ·
+orphan · high water · chord · pin · octave · Pulse 트리거)는 둔다.
+
+**wave — 뜻이 둘이라 둘로 갈랐다.**
+- 렌더 그래프의 wave 는 Kahn 위상 정렬의 한 레벨 그대로라 **level**: `RenderGraphWaveContext` → `RenderGraphLevelContext`, `setWavePrologue` →
+  `setLevelPrologue`, `getExecutionWaves` → `getExecutionLevels`, `_listCompiledWave` · `_listWaveBarrier` → `_listCompiledLevel` · `_listLevelBarrier`,
+  `FrameRenderer::onGraphWavePrologue` → `onGraphLevelPrologue`. 주석의 "웨이브" 는 "레벨" (받침이 생겨 조사도 맞췄다 — 웨이브를 → 레벨을).
+- 틱의 wave 는 레벨 하나를 오브젝트별로 다시 쪼갠 "함께 병렬로 돌고 끝을 기다리는 묶음" 이라 TaskManager 와 같은 말 **stage**: `TickWave` → `TickStage`,
+  `buildPrerequisiteWaves` → `computePrerequisiteStages`(금지 동사 build 도 함께), `markTickWavesDirty` → `markTickStagesDirty`, `getTickWaveBuildCount` →
+  `getTickStageBuildCount`, 프로파일 스코프 `GT.Scene.tick.waves` → `GT.Scene.tick.stages`.
+- 테스트: `RenderGraphLinearChainProducesSinglePassWaves` → `…Levels`, `FrameRendererDeferredPipelineParallelWaves` → `…Levels`,
+  `TickWavesRebuildOnlyWhenTickWorkChanges` → `TickStages…`, CoreTest 벤치 `StageWaveLikeRenderGraph` → `StageLikeRenderGraphLevel`.
+
+**그 밖에 바꾼 것** (옛 이름 → 새 이름).
+- `PendingKill` → `PendingDestroy`(`isPendingKill` · `markPendingKill` · `tryMarkPendingKill` · `_bIsPendingKill` · `bIncludePendingKill`, 수명 동사가
+  destroy 다). Editor · GameFramework · Games 호출부와 테스트 `PendingKillNameIsFreeForReuse` 도.
+- 파일 · 타입의 Recipe: `D3D12RHIResourceRecipe.h` → `D3D12RHIResourcePreset.h`, `VulkanRHISamplerRecipe.h` → `VulkanRHISamplerPreset.h`(자주 쓰는 설정을
+  이름으로 돌려주는 정적 모음), `ShaderBakeRecipe`(+ `.cpp` · 테스트 파일 · 스위트) → `ShaderBakeRequest`(구울 것 하나). 주석의 "레시피" 는 굽기 쪽은
+  "요청", PSO 쪽은 "설정".
+- Vulkan 슬롯 band → range: `SW_VK_SLOT_BAND_WIDTH`(hlsli) → `SW_VK_SLOT_RANGE_SIZE`, `kBandWidth` → `kRangeSize`, `vulkanBandOf` → `vulkanRangeClassOf`,
+  `inBand` → `isInRange`, 계약 오류 문구 "밴드" → "범위"(테스트가 검사하는 문구도). 스플래시 창 `kStatusBandHeight` → `kStatusBarHeight`.
+- `wantsQuit` → `isQuitRequested`(App 도), `wantsGpuGeneratedCommands` → `usesGpuGeneratedCommands`, `_bWantGpuIndirectCounts` → `_bGpuIndirectCountsRequested`,
+  `IWindow::isVisibleIntended` → `isVisibleRequested`, `noteBarrierDuringRecording` → `reportBarrierDuringRecording`, `noteTimestampWritten` →
+  `markTimestampWritten`, `noteCoerceFailVal` → `recordCoerceFailure`.
+- seen: 바인딩 계약의 `Seen` → `ReflectedBinding`, 직렬화기의 `seenBitmask` · `uniqueSeenPropHashes` · `bSeen` → `matched…`, GpuScene 의
+  `_listEntryLastSeenBuild` → `_listEntryLastUsedBuild`.
+- `retireUnusedMaterialElements` → `freeUnusedMaterialElements`(스코프 `GT.GpuScene.build.retire` → `.free`), `ComponentDefaults::_listRetiredResolved` →
+  `_listReplacedResolved`, `warnAboutLeftoverModuleCaches` → `warnAboutRemainingModuleCaches`, `containerPeelMember` → `containerElementTypeMember`
+  (ReflectionParser 호출부 포함), `considerSaveRoot` → `updateLongestSaveRoot`, `bTrustTarget` → `bUseCachedTarget`, 지역 `listDying` · `listDoomed` →
+  `listToDestroy`, `besideExe` → `exeDirDllPath`, `pfnGetBat` · `bat` → `pfnGetBatteryInformation` · `batteryInfo`, `stuckEntryCount` → `remainingEntryCount`.
+
+**고친 결함.** 바인딩 계약의 오류 문구 `"(seenB 0.., t 16.., u 32..)"` 는 원래 `"(b 0.., …)"` 였다 — 예전 일괄 이름 변경이 문자열 안의 `b` 까지 바꿨다.
+
+**검증(Windows).** Debug · Shipping 빌드(새 경고 0) · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 · 이름을 바꾼 케이스를 따로 돌려 스킵 0
+(바인딩 계약 6/6 은 바뀐 문구와 테스트가 맞는다는 뜻). 셰이더 헤더가 바뀌어 `bake.stamp` 가 다시 쓰였다.
+
 ### 2026-09-29 (Core 이름 — 프로그래밍 용어가 아닌 단어를 걷었다, App 과 같은 방식)
 
 **어떻게 찾았나.** 주석 · 문자열을 뺀 식별자를 camelCase 단어로 쪼개 겹치지 않는 단어 1,496 개를 뽑고, 비유로 쓰인 것만 골랐다. 수학 · OS ·

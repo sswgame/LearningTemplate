@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------------
 /**
  * @brief [RenderGraphTest] 그래프가 상태를 들고 있다가 **바뀌는 전이만** 내는지 (GPU 불필요).
- * @details 예전엔 웨이브가 읽고 쓰는 자원 **이름을 전부** 넘겼다. 그래서 같은 자원을 세 패스가 읽으면
+ * @details 예전엔 레벨이 읽고 쓰는 자원 **이름을 전부** 넘겼다. 그래서 같은 자원을 세 패스가 읽으면
  *          읽기 전이를 세 번 걸었고, 이미 그 상태인 것도 다시 걸었다. 전이 자체는 백엔드가 걸러 주지만
  *          (DX12 는 상태가 같으면 배리어를 안 쏜다) 그건 백엔드마다 사정이 다른 이야기고, 무엇보다
  *          "누가 상태를 아는가" 가 흐려진다 — 배리어를 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다.
@@ -30,21 +30,21 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
     graph.addPass( sw::hashed_string( "PassC_ReadSame" ), { colorBuffer }, { uiBuffer } );
     SW_ASSERT_TRUE( graph.compile() );
 
-    sw::vector<sw::RenderGraphBarrier> listSeen;
-    graph.setWavePrologue( sw::RenderGraphWavePrologueFn( [&listSeen]( const sw::RenderGraphWaveContext& waveCtx )
+    sw::vector<sw::RenderGraphBarrier> listIssuedBarrier;
+    graph.setLevelPrologue( sw::RenderGraphLevelPrologueFn( [&listIssuedBarrier]( const sw::RenderGraphLevelContext& levelCtx )
     {
-        if ( waveCtx._pListBarrier == nullptr )
+        if ( levelCtx._pListBarrier == nullptr )
             return;
-        for ( const sw::RenderGraphBarrier& barrier : *waveCtx._pListBarrier )
+        for ( const sw::RenderGraphBarrier& barrier : *levelCtx._pListBarrier )
         {
-            listSeen.push_back( barrier );
+            listIssuedBarrier.push_back( barrier );
         }
     } ) );
 
-    auto countFor = [&listSeen]( sw::hashed_string resource ) -> uint32
+    auto countFor = [&listIssuedBarrier]( sw::hashed_string resource ) -> uint32
     {
         uint32 count{ 0 };
-        for ( const sw::RenderGraphBarrier& barrier : listSeen )
+        for ( const sw::RenderGraphBarrier& barrier : listIssuedBarrier )
         {
             if ( barrier._resource == resource )
                 ++count;
@@ -63,23 +63,23 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
     SW_EXPECT_EQUAL( uint32( 1 ), countFor( uiBuffer ) );
 
     // 첫 전이는 Undefined 에서 시작하고, 그다음이 쓰기 → 읽기다.
-    SW_ASSERT_TRUE( listSeen.size() >= 2 );
-    SW_EXPECT_TRUE( listSeen[0]._resource == colorBuffer );
-    SW_EXPECT_TRUE( listSeen[0]._before == sw::RenderGraphResourceState::Undefined );
-    SW_EXPECT_TRUE( listSeen[0]._after == sw::RenderGraphResourceState::Write );
+    SW_ASSERT_TRUE( listIssuedBarrier.size() >= 2 );
+    SW_EXPECT_TRUE( listIssuedBarrier[0]._resource == colorBuffer );
+    SW_EXPECT_TRUE( listIssuedBarrier[0]._before == sw::RenderGraphResourceState::Undefined );
+    SW_EXPECT_TRUE( listIssuedBarrier[0]._after == sw::RenderGraphResourceState::Write );
 
     // --- 두 번째 프레임: **똑같이 나와야 한다.** 그래프는 프레임 시작에 일부러 잊는다.
     // 전이는 그래프 밖에서도 일어나므로(선언 안 한 텍스처를 registerPassTexture 로 걸거나 리드백이
     // 상태를 되돌린다) 지난 프레임의 믿음을 이어 가면 필요한 배리어를 건너뛴다. 여기서 버는 것은
     // 프레임 사이가 아니라 **한 프레임 안의 중복**이다 — 그게 위의 PassC 가 아무것도 안 내는 이유다.
-    const size_t firstFrameCount = listSeen.size();
-    listSeen.clear();
+    const size_t firstFrameCount = listIssuedBarrier.size();
+    listIssuedBarrier.clear();
     SW_ASSERT_TRUE( graph.execute( context ) );
 
     SW_EXPECT_EQUAL( uint32( 2 ), countFor( colorBuffer ) );
     SW_EXPECT_EQUAL( uint32( 1 ), countFor( blurBuffer ) );
     SW_EXPECT_EQUAL( uint32( 1 ), countFor( uiBuffer ) );
-    SW_EXPECT_TRUE_MSG( listSeen.size() == firstFrameCount,
+    SW_EXPECT_TRUE_MSG( listIssuedBarrier.size() == firstFrameCount,
                         "프레임마다 결과가 달라진다 — 그래프가 프레임 사이의 상태를 이어서 보고 있다" );
 
     // 수명도 컴파일 산출물이다 — ColorBuffer 는 0 번 패스에서 나서 2 번 패스까지 산다.

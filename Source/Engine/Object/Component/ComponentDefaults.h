@@ -117,7 +117,7 @@ namespace sw
         /**
          * @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다.
          * @details 돌려주는 참조는 잠금 밖에서 순회됩니다. 그래서 결과는 **힙에 따로** 살고(다른 타입이 들어와도 주소가 그대로),
-         *          세대가 바뀌어 갈아 끼울 때 옛 것은 버리지 않고 물려 둡니다(`_listRetiredResolved`) — 다른 스레드가 아직 돌고 있을 수 있다.
+         *          세대가 바뀌어 갈아 끼울 때 옛 것은 버리지 않고 물려 둡니다(`_listReplacedResolved`) — 다른 스레드가 아직 돌고 있을 수 있다.
          */
         const ResolvedDefaults& resolveFor( const TypeInfo& typeInfo );
         /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다. 패치는 그 문서에서 푼 값입니다. */
@@ -128,7 +128,7 @@ namespace sw
 
         mutable std::shared_mutex                                    _resolvedMutex;
         unordered_map<const TypeInfo*, unique_ptr<ResolvedDefaults>> _mapResolved;
-        vector<unique_ptr<ResolvedDefaults>>                         _listRetiredResolved; ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
+        vector<unique_ptr<ResolvedDefaults>>                         _listReplacedResolved; ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
 
         mutable mutex _defaultsMutex;
         /**

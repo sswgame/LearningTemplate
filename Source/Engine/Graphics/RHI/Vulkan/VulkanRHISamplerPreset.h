@@ -1,5 +1,5 @@
 /**
- * @file VulkanRHISamplerRecipe.h
+ * @file VulkanRHISamplerPreset.h
  * @brief 이름 붙인 Vulkan 샘플러 조리법입니다. "어떤 샘플러인가" 를 한 곳에서 정합니다.
  *
  * [왜 조리법인가]
@@ -23,10 +23,10 @@
 namespace sw
 {
     /**
-     * @struct VulkanRHISamplerRecipe
+     * @struct VulkanRHISamplerPreset
      * @brief 자주 쓰는 샘플러 설정을 이름으로 반환합니다.
      */
-    struct VulkanRHISamplerRecipe
+    struct VulkanRHISamplerPreset
     {
         /**
          * @brief 선형 보간 + 가장자리 고정 샘플러 설정입니다.

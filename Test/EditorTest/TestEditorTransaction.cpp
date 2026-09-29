@@ -36,7 +36,7 @@ namespace
         size_t              count = 0;
         manager.forEachGameObject( [&count, wanted]( GameObject* pObj )
         {
-            if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->getName() == wanted )
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->getName() == wanted )
                 ++count;
         } );
         return count;

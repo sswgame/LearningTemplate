@@ -17,7 +17,7 @@ namespace sw
         , _pPool{ nullptr }
         , _subTickActiveMask{ 0 }
         , _bActive{ true }
-        , _bIsPendingKill{ false }
+        , _bIsPendingDestroy{ false }
         , _tickGroup{ TickGroup::DuringPhysics }
         , _bCanEverTick{ SW_TRUE }
         , _bIsSceneComponent{ SW_FALSE }
@@ -58,7 +58,7 @@ namespace sw
 
     void Component::dispatchBeginPlay()
     {
-        if ( _bHasBegunPlay == SW_TRUE || isPendingKill() )
+        if ( _bHasBegunPlay == SW_TRUE || isPendingDestroy() )
             return;
         _bHasBegunPlay = SW_TRUE;
         onBeginPlay();

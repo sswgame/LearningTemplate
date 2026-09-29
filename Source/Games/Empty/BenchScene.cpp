@@ -96,7 +96,7 @@ namespace sw
     /**
      * @brief `-gv_benchMaterialChurnAdd=N` — 매 프레임 인스턴스 N 개를 새로 붙이거나 떼어냅니다.
      * @details 값이 아니라 **집합**을 흔든다. 붙이면 배치 키가 갈리고 머티리얼 원소 표에 자리가 하나
-     *          늘며, 떼면 참조가 사라져 `retireUnusedMaterialElements` 가 그 자리를 회수하고 다음 번에
+     *          늘며, 떼면 참조가 사라져 `freeUnusedMaterialElements` 가 그 자리를 회수하고 다음 번에
      *          재사용한다(자리를 **옮기지는 않는다** — 인스턴스에 적힌 materialIndex 가 그대로여야 한다).
      *          떼어낸 인스턴스는 렌더 패킷이 아직 들고 있을 수 있으므로, 소유가 실제로 마지막 참조를
      *          따라 사라지는지(상수버퍼 해제 포함)도 같이 검사된다.

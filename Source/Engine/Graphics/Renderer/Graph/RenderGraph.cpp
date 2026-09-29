@@ -21,7 +21,7 @@ namespace sw
                 if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
                     return;
 
-                // 웨이브의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
+                // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
                 if ( bAlreadyBegun == false )
                     pCmdList->beginCommandList();
                 RenderGraphPassContext ctx;
@@ -41,7 +41,7 @@ namespace sw
     SW_LOG_CALLER( "RenderGraph" );
 
     /**
-     * @brief 병렬 기록 한 웨이브의 패스와 그것을 기록할 리스트입니다. 리스트는 노드가 들고 있는 것을 빌립니다(소유하지 않습니다).
+     * @brief 병렬 기록 한 레벨의 패스와 그것을 기록할 리스트입니다. 리스트는 노드가 들고 있는 것을 빌립니다(소유하지 않습니다).
      * @details 태스크는 이 엔트리의 메서드에 묶입니다(`record`). 예전에는 `MakeTaskArgs( pNode, pCmdList )` 로 인자를 실었습니다.
      *          인자 벡터가 패스마다 프레임마다 힙이었고, 인자를 노드 안에 인라인으로 넣어 봤더니 노드가 두 배로 부풀어
      *          렌더 그래프 기록이 122 → 196 us 로 느려졌습니다(재 봤습니다). 메서드 델리게이트는 포인터 둘이라 어느 쪽도 아닙니다.
@@ -51,7 +51,7 @@ namespace sw
     {
         RenderGraphNode* _pNode{ nullptr };
         IRHICommandList* _pPassCmdList{ nullptr };
-        /// @brief 렌더 스레드가 이미 열고 웨이브 배리어를 기록한 리스트인지 여부입니다(웨이브의 첫 엔트리).
+        /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 여부입니다(레벨의 첫 엔트리).
         bool _bAlreadyBegun{ false };
 
         void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
@@ -105,7 +105,7 @@ namespace sw
     bool RenderGraph::compile()
     {
         _listCompiledExecutionOrder.clear();
-        _listCompiledWave.clear();
+        _listCompiledLevel.clear();
 
         if ( _listNode.empty() )
             return false;
@@ -196,20 +196,20 @@ namespace sw
         }
 
         _listCompiledExecutionOrder.reserve( listActiveIndex.size() );
-        // Kahn 위상 정렬을 BFS 레벨(웨이브) 단위로 묶어 처리한다. 같은 웨이브에 들어온 노드들은
+        // Kahn 위상 정렬을 BFS 레벨 단위로 묶어 처리한다. 같은 레벨에 들어온 노드들은
         // 서로 입출력 의존이 없어(동시에 in-degree 0 이 됨) 안전하게 병렬 기록할 수 있다.
         while ( queueReady.empty() == false )
         {
-            const size_t           waveSize = queueReady.size();
-            vector<hashed_string>& wave     = _listCompiledWave.emplace_back();
-            wave.reserve( waveSize );
+            const size_t           levelSize = queueReady.size();
+            vector<hashed_string>& level     = _listCompiledLevel.emplace_back();
+            level.reserve( levelSize );
 
-            for ( size_t waveSlot = 0; waveSlot < waveSize; ++waveSlot )
+            for ( size_t levelSlot = 0; levelSlot < levelSize; ++levelSlot )
             {
                 const size_t nodeIndex = queueReady.front();
                 queueReady.pop();
                 _listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
-                wave.push_back( _listNode[nodeIndex]._name );
+                level.push_back( _listNode[nodeIndex]._name );
 
                 unordered_map<size_t, vector<size_t>>::iterator adjIt = adjacency.find( nodeIndex );
                 if ( adjIt == adjacency.end() )
@@ -232,7 +232,7 @@ namespace sw
                             static_cast<uint32>( _listCompiledExecutionOrder.size() ),
                             static_cast<uint32>( listActiveIndex.size() ) );
             _listCompiledExecutionOrder.clear();
-            _listCompiledWave.clear();
+            _listCompiledLevel.clear();
             return false;
         }
 
@@ -277,9 +277,9 @@ namespace sw
 
             // 직렬 경로도 **같은 추론**을 쓴다. 예전에는 여기서 상태만 적어 두고 배리어는 내지 않았고,
             // 그래서 전이가 패스 콜백 안 여기저기에서 즉흥적으로 일어났다. 경로가 둘이면 한쪽에만 고쳐진다.
-            // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(웨이브처럼 앞으로 몰 수 없다).
-            _listWaveBarrier.clear();
-            _mapWaveBarrierIndex.clear();
+            // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
+            _listLevelBarrier.clear();
+            _mapLevelBarrierIndex.clear();
             appendPassBarriers( context, node );
             issueBarriers( pCmdList );
 
@@ -323,27 +323,27 @@ namespace sw
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
             scratch._listNodeCmdList.resize( _listNode.size() );
 
-        // 웨이브(의존성 레벨) 단위로 처리한다. 같은 웨이브의 패스들만 동시에 병렬 기록하고,
-        // 웨이브 경계마다 태스크를 기다린 뒤 그 웨이브의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
-        // 그래야 웨이브 N+1 이 참조할 수도 있는 웨이브 N 의 출력(예: DepthPrepass → ForwardOpaque)이
+        // 의존성 레벨 단위로 처리한다. 같은 레벨의 패스들만 동시에 병렬 기록하고,
+        // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
+        // 그래야 레벨 N+1 이 참조할 수도 있는 레벨 N 의 출력(예: DepthPrepass → ForwardOpaque)이
         // 커맨드 기록 순서와 무관하게 GPU 타임라인에서도 먼저 끝난다(같은 큐에 대한
         // ExecuteCommandLists 호출 순서 = 실행 순서). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
         // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다.
         // 같은 자원을 놓고 경합하는 두 패스는 compile() 의 Write-after-Write/Read-after-Write 엣지로
-        // 이미 서로 다른 웨이브에 배치되어 있다.
-        for ( const vector<hashed_string>& wave : _listCompiledWave )
+        // 이미 서로 다른 레벨에 배치되어 있다.
+        for ( const vector<hashed_string>& level : _listCompiledLevel )
         {
             listPassEntry.clear();
-            listPassEntry.reserve( wave.size() );
-            _listWaveBarrier.clear();
-            _mapWaveBarrierIndex.clear();
+            listPassEntry.reserve( level.size() );
+            _listLevelBarrier.clear();
+            _mapLevelBarrierIndex.clear();
 
-            for ( const hashed_string& passName : wave )
+            for ( const hashed_string& passName : level )
             {
                 const auto indexIt = _mapNameToIndex.find( passName );
                 if ( indexIt == _mapNameToIndex.end() )
                 {
-                    SW_LOG_ERROR( "executeParallel: unknown pass in wave: %#", passName.c_str() );
+                    SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
                     return false;
                 }
 
@@ -376,13 +376,13 @@ namespace sw
             if ( listPassEntry.empty() )
                 continue;
 
-            // 이 웨이브가 만질 자원의 배리어를 **여기서 미리**, 웨이브 **첫 패스 리스트의 앞머리**에 발행한다
+            // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
             // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 자리). 판단과 기록 모두 렌더 스레드가 병렬 기록
             // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다. 배리어를
-            // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 웨이브의 다른 리스트는 큐 순서상 첫
+            // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 레벨의 다른 리스트는 큐 순서상 첫
             // 리스트 뒤에 실행되므로 배리어가 앞선다.
             //
-            // 예전에는 프레임 스트림에 기록했다. 그러면 웨이브마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트
+            // 예전에는 프레임 스트림에 기록했다. 그러면 레벨마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트
             // 하나로 나갔다(DX12 · 큐브 8000: 프레임당 리스트 12 개, 제출 81~90 us 가 리스트당 ~7 us 였다).
             ParallelPassEntry& firstEntry = listPassEntry[0];
             firstEntry._pPassCmdList->beginCommandList();
@@ -405,7 +405,7 @@ namespace sw
                     // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
                     handle.setPriority( TaskPriority::High );
                     stage.addTask( handle );
-                    // 웨이브의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
+                    // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
                     pTaskManager->submitWithoutWake( handle );
                 }
             }
@@ -540,20 +540,20 @@ namespace sw
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
         // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다. 예전에는 이름을 그대로 밀어 넣어서 SceneDepth
-        // 처럼 여러 패스가 읽는 자원이 웨이브마다 읽기 전이를 다섯 번씩 받았다.
+        // 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를 다섯 번씩 받았다.
         auto request = [this, &context]( hashed_string resource, RenderGraphResourceState desired )
         {
             const RenderGraphResourceState before = context.transitionTo( resource, desired );
             if ( before == desired )
                 return; // 이미 그 상태다. 낼 배리어가 없다.
 
-            const auto it = _mapWaveBarrierIndex.find( resource );
-            if ( it != _mapWaveBarrierIndex.end() )
+            const auto it = _mapLevelBarrierIndex.find( resource );
+            if ( it != _mapLevelBarrierIndex.end() )
             {
-                // 같은 웨이브에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
+                // 같은 레벨에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
                 // 그래도 들어오면 더 강한 쪽(쓰기)을 남긴다.
                 if ( desired == RenderGraphResourceState::Write )
-                    _listWaveBarrier[it->second]._after = desired;
+                    _listLevelBarrier[it->second]._after = desired;
                 return;
             }
 
@@ -561,8 +561,8 @@ namespace sw
             barrier._resource = resource;
             barrier._before   = before;
             barrier._after    = desired;
-            _mapWaveBarrierIndex.emplace( resource, _listWaveBarrier.size() );
-            _listWaveBarrier.push_back( barrier );
+            _mapLevelBarrierIndex.emplace( resource, _listLevelBarrier.size() );
+            _listLevelBarrier.push_back( barrier );
         };
 
         for ( const hashed_string& input : node._listInput )
@@ -579,13 +579,13 @@ namespace sw
     {
         // 커맨드 리스트가 없어도 콜백은 부른다. 기록할 수 있는지는 받는 쪽의 사정이고, 그래프의 일은
         // "무엇을 바꿔야 하는가" 를 내는 데까지다. GPU 없는 테스트가 추론만 따로 볼 수 있는 자리이기도 하다.
-        if ( _listWaveBarrier.empty() || _wavePrologue.isBound() == false )
+        if ( _listLevelBarrier.empty() || _levelPrologue.isBound() == false )
             return;
 
-        RenderGraphWaveContext waveCtx;
-        waveCtx._pListBarrier = &_listWaveBarrier;
-        waveCtx._pCmdList     = pCmdList;
-        _wavePrologue( waveCtx );
+        RenderGraphLevelContext levelCtx;
+        levelCtx._pListBarrier = &_listLevelBarrier;
+        levelCtx._pCmdList     = pCmdList;
+        _levelPrologue( levelCtx );
     }
 
     void RenderGraph::buildResourceLifetimes()
@@ -659,7 +659,7 @@ namespace sw
         releaseCommandLists();
         _listNode.clear();
         _listCompiledExecutionOrder.clear();
-        _listCompiledWave.clear();
+        _listCompiledLevel.clear();
         _mapNameToIndex.clear();
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();

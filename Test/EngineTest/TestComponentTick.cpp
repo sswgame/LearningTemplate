@@ -126,7 +126,7 @@ SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroup
 }
 
 /**
- * @brief [ComponentTickGroupTest] 런타임에 TickGroup이 동적으로 변경(Migration)되었을 때 틱 웨이브 재구성 및 순서 역전 검증
+ * @brief [ComponentTickGroupTest] 런타임에 TickGroup이 동적으로 변경(Migration)되었을 때 틱 스테이지 재구성 및 순서 역전 검증
  */
 SW_TEST_CASE( ComponentTickGroupTest, DynamicTickGroupRuntimeMigration )
 {

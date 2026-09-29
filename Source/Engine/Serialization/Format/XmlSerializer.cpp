@@ -19,7 +19,7 @@ namespace sw
     {
         struct XmlSerializerInternal
         {
-            static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
+            static void recordCoerceFailure( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
             {
                 bFieldError = true;
                 if ( pOutListOrphan != nullptr )
@@ -188,7 +188,7 @@ namespace sw
                             string itemText;
                             backend.readText( itemText );
                             if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
-                                noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
+                                recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
                             return true;
                         } ) );
                     } ) );
@@ -235,7 +235,7 @@ namespace sw
                                 backend.readText( valText );
                                 vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, valText, ctx );
                                 if ( vOk == false )
-                                    noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, valText );
+                                    recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, valText );
                             }
                         }
 
@@ -404,7 +404,7 @@ namespace sw
                                 prop.setValue<bool>( pInstance, bVal );
                             }
                             else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
-                                noteCoerceFailVal( pOutListOrphan, bFieldError, prop, strValue );
+                                recordCoerceFailure( pOutListOrphan, bFieldError, prop, strValue );
                         }
                         else
                             SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );

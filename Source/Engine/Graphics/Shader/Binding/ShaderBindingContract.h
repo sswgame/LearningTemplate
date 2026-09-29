@@ -58,7 +58,7 @@ namespace sw
      *              Vulkan: (set, binding), GL: (UBO/텍스처 유닛/SSBO, binding). GL 은 set 을 버리므로 여기서
      *              MaterialCB(set 10, binding 0) 가 PassCB(binding 0) 와 겹치던 사고가 잡힙니다.
      *           3. DX12: space0 레지스터가 루트 시그니처의 슬롯 수 안인가, space1 은 텍스처 배열뿐인가, space2 는 루트 상수뿐인가.
-     *              Vulkan: set 0 binding 이 종류별 밴드(b 0..15 / t 16..31 / u 32..47) 안인가, set 1 은 텍스처 배열 · 샘플러뿐인가.
+     *              Vulkan: set 0 binding 이 종류별 범위(b 0..15 / t 16..31 / u 32..47) 안인가, set 1 은 텍스처 배열 · 샘플러뿐인가.
      *           4. OpenGL: 모든 리소스가 set 0 인가(0 이 아니면 작성자가 세트 의미를 가정한 것입니다).
      *           5. 정점 입력: 시맨틱이 정점 레이아웃 표에 있는가. Vulkan · GL 은 location 까지 같은가.
      */

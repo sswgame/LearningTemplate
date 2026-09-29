@@ -183,7 +183,7 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
 /**
  * @brief [TaskManagerBenchTest] 렌더 그래프 모양 — 스테이지에 High 태스크 넷을 넣고 한 번 깨워 기다린다
  */
-SW_TEST_CASE( TaskManagerBenchTest, StageWaveLikeRenderGraph )
+SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
 {
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -191,7 +191,7 @@ SW_TEST_CASE( TaskManagerBenchTest, StageWaveLikeRenderGraph )
     constexpr uint32 kPassCount = 4;
     constexpr uint32 kRound     = 200;
 
-    // 패스 하나의 본문 시간 — 병렬 웨이브의 이상적인 값이다.
+    // 패스 하나의 본문 시간 — 병렬 레벨의 이상적인 값이다.
     sw::vector<int64> listSerialPass;
     for ( uint32 round = 0; round < 20; ++round )
     {
@@ -199,10 +199,10 @@ SW_TEST_CASE( TaskManagerBenchTest, StageWaveLikeRenderGraph )
         BenchBody::recordPass();
         listSerialPass.push_back( elapsedMicro( start ) );
     }
-    logSamples( "one pass body (ideal wave time)", listSerialPass );
+    logSamples( "one pass body (ideal level time)", listSerialPass );
 
-    const sw::TaskDelegate record   = SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::recordPass );
-    auto                   waveOnce = [&manager, &record]()
+    const sw::TaskDelegate record    = SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::recordPass );
+    auto                   levelOnce = [&manager, &record]()
     {
         sw::TaskStageHandle stage = manager.createStage();
         for ( uint32 pass = 0; pass < kPassCount; ++pass )
@@ -217,26 +217,26 @@ SW_TEST_CASE( TaskManagerBenchTest, StageWaveLikeRenderGraph )
     };
 
     for ( uint32 round = 0; round < 16; ++round )
-        waveOnce();
+        levelOnce();
 
     sw::vector<int64> listCold;
     for ( uint32 round = 0; round < kRound; ++round )
     {
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
         const auto start = std::chrono::steady_clock::now();
-        waveOnce();
+        levelOnce();
         listCold.push_back( elapsedMicro( start ) );
     }
-    logSamples( "stage wave cold, 4 x High pass", listCold );
+    logSamples( "stage level cold, 4 x High pass", listCold );
 
     sw::vector<int64> listHot;
     for ( uint32 round = 0; round < kRound; ++round )
     {
         const auto start = std::chrono::steady_clock::now();
-        waveOnce();
+        levelOnce();
         listHot.push_back( elapsedMicro( start ) );
     }
-    logSamples( "stage wave hot, 4 x High pass", listHot );
+    logSamples( "stage level hot, 4 x High pass", listHot );
 
     SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
     manager.shutdown();

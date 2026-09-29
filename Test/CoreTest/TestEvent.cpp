@@ -354,9 +354,9 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
     const void* pEnd{ nullptr };
     SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onReleaseProbeResize ), pBegin, pEnd ) );
 
-    uint32 stuckEntryCount{ 99 };
-    SW_EXPECT_EQUAL( 1u, dispatcher.releaseCodeWithin( pBegin, pEnd, stuckEntryCount ) );
-    SW_EXPECT_EQUAL( 0u, stuckEntryCount );
+    uint32 remainingEntryCount{ 99 };
+    SW_EXPECT_EQUAL( 1u, dispatcher.releaseCodeWithin( pBegin, pEnd, remainingEntryCount ) );
+    SW_EXPECT_EQUAL( 0u, remainingEntryCount );
 
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 1, s_releaseProbeCount );

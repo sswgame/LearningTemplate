@@ -68,7 +68,7 @@ namespace sw
         , _pOwnerManager{ nullptr }
         , _bActive{ true }
         , _bIsActiveInHierarchy{ true }
-        , _bIsPendingKill{ false }
+        , _bIsPendingDestroy{ false }
         , _listComponent{}
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
@@ -157,14 +157,14 @@ namespace sw
         _pOwnerManager->destroyObject( this );
     }
 
-    void GameObject::markPendingKill()
+    void GameObject::markPendingDestroy()
     {
-        tryMarkPendingKill();
+        tryMarkPendingDestroy();
     }
 
-    bool GameObject::tryMarkPendingKill()
+    bool GameObject::tryMarkPendingDestroy()
     {
-        return _bIsPendingKill.exchange( true, std::memory_order_acq_rel ) == false;
+        return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false;
     }
 
     /**
@@ -297,7 +297,7 @@ namespace sw
         // 켜진 채였다(틱하고 그려졌다). 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
         for ( Component* pOwnComp : _listComponent )
         {
-            if ( pOwnComp == nullptr || pOwnComp->isPendingKill() || pOwnComp->isSceneComponent() == false )
+            if ( pOwnComp == nullptr || pOwnComp->isPendingDestroy() || pOwnComp->isSceneComponent() == false )
                 continue;
             for ( SceneComponent* pChildComp : static_cast<SceneComponent*>( pOwnComp )->getChildren() )
             {
@@ -365,14 +365,14 @@ namespace sw
     SceneComponent* GameObject::getPrimarySceneComponent() const
     {
         Component* pCached = _pPrimaryScene.load( std::memory_order_relaxed );
-        if ( pCached != nullptr && pCached->isPendingKill() == false )
+        if ( pCached != nullptr && pCached->isPendingDestroy() == false )
             return static_cast<SceneComponent*>( pCached );
 
         // 캐시가 비었거나 죽었다. 살아 있는 첫 씬 컴포넌트를 목록에서 찾아 적는다(리플렉션 캐스트 없이 플래그 비트로).
         Component* pFound = nullptr;
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->isSceneComponent() )
+            if ( pComp != nullptr && pComp->isPendingDestroy() == false && pComp->isSceneComponent() )
             {
                 pFound = pComp;
                 break;
@@ -469,7 +469,7 @@ namespace sw
         size_t count = 0;
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp != nullptr && pComp->isPendingKill() == false )
+            if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                 ++count;
         }
         return count;
@@ -481,7 +481,7 @@ namespace sw
             return nullptr;
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp == nullptr || pComp->isPendingKill() )
+            if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
             // 타입이 먼저다. 이름표는 타입이 아니다 — 같은 이름표가 없을 때만 보조로 본다(아래).
             const TypeInfo* pTypeInfo = pComp->getTypeInfo();
@@ -490,7 +490,7 @@ namespace sw
         }
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp != nullptr && pComp->isPendingKill() == false && pComp->getComponentName() == typeName )
+            if ( pComp != nullptr && pComp->isPendingDestroy() == false && pComp->getComponentName() == typeName )
                 return pComp;
         }
         return nullptr;
@@ -604,7 +604,7 @@ namespace sw
         if ( bTickWork )
             markTickOrderDirty();
         // primary 가 없어졌으니 부모도 없다(자식들은 부모 컴포넌트의 소멸자가 떼며 스스로 맞췄다).
-        if ( isPendingKill() == false )
+        if ( isPendingDestroy() == false )
             refreshActiveInHierarchy();
     }
 
@@ -621,13 +621,13 @@ namespace sw
         sw_delete( pComp );
     }
 
-    Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingKill ) const
+    Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingDestroy ) const
     {
         for ( Component* pComp : _listComponent )
         {
             if ( pComp == nullptr || pComp->getComponentId() != componentId )
                 continue;
-            if ( bIncludePendingKill == false && pComp->isPendingKill() )
+            if ( bIncludePendingDestroy == false && pComp->isPendingDestroy() )
                 return nullptr;
             return pComp;
         }
@@ -667,7 +667,7 @@ namespace sw
         if ( bTickWork )
             markTickOrderDirty();
         // primary 가 바뀌면 부모(= primary 의 부모)도 바뀐다. 값이 그대로면 재계산은 O(1) 로 끝난다.
-        if ( bWasScene && isPendingKill() == false )
+        if ( bWasScene && isPendingDestroy() == false )
             refreshActiveInHierarchy();
         return true;
     }
@@ -675,7 +675,7 @@ namespace sw
     void GameObject::markTickOrderDirty()
     {
         // 죽어 가는 오브젝트는 파괴 때 등록부에서 빠진다. 표시할 것이 없다.
-        if ( _pOwnerManager != nullptr && isPendingKill() == false )
+        if ( _pOwnerManager != nullptr && isPendingDestroy() == false )
             _pOwnerManager->getTickRegistry().markObjectDirty( this );
     }
 

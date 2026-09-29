@@ -49,7 +49,7 @@ namespace sw
                 outListLink.clear();
                 for ( Component* pComp : pGameObject->getComponents() )
                 {
-                    SceneComponent* pScene = ( pComp != nullptr && pComp->isPendingKill() == false ) ? castTo<SceneComponent>( pComp ) : nullptr;
+                    SceneComponent* pScene = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? castTo<SceneComponent>( pComp ) : nullptr;
                     if ( pScene == nullptr )
                         continue;
                     for ( SceneComponent* pChild : pScene->getChildren() )
@@ -115,7 +115,7 @@ namespace sw
             static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
             {
                 const Component* pComp = static_cast<const Component*>( pInstance );
-                if ( pComp == nullptr || pComp->isPendingKill() )
+                if ( pComp == nullptr || pComp->isPendingDestroy() )
                     return nullptr;
                 return pComp->getTypeInfo();
             }
@@ -332,7 +332,7 @@ namespace sw
         identity._listComponent.reserve( pGameObject->getComponents().size() );
         for ( const Component* pComp : pGameObject->getComponents() )
         {
-            if ( pComp == nullptr || pComp->isPendingKill() )
+            if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
             // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentId`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊겼다.

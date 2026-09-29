@@ -86,7 +86,7 @@ namespace sw
         SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / 1000, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportAllocations( frames );
         profiler.setEnabled( false );
-        _bWantsQuit = SW_TRUE;
+        _bQuitRequested = SW_TRUE;
     }
 
     void FrameProfileSession::reportAllocations( [[maybe_unused]] uint64 frames )

@@ -103,7 +103,7 @@ namespace sw
                     // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 예전에는 여기서
                     // (`rebindAllCachedTypeInfo`) 씬의 모든 컴포넌트에 덮어써 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아갔다.
                     // TypeInfo 주소는 고정이라(`TypeRegistry`) 다시 묶을 것도 없다. 틱 항목만 다시 짓게 한다.
-                    scene->getObjectManager()->markTickWavesDirty();
+                    scene->getObjectManager()->markTickStagesDirty();
                 }
             }
         }
@@ -134,13 +134,13 @@ namespace sw
 
             // 모듈은 자기가 단 것을 스스로 떼야 한다(에디터는 ImGuiEditor::shutdown · ~ConsolePanel 에서 뗀다). 여기서 뗀 것이 있으면
             // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다.
-            uint32       stuckEntryCount{ 0 };
-            const uint32 eventCount = getEventDispatcher().releaseCodeWithin( pBegin, pEnd, stuckEntryCount );
+            uint32       remainingEntryCount{ 0 };
+            const uint32 eventCount = getEventDispatcher().releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
             if ( eventCount > 0 )
                 SW_LOG_WARNING( "Module %# left %# event subscription(s) behind — released them before unloading its image", moduleName, eventCount );
-            if ( stuckEntryCount > 0 )
+            if ( remainingEntryCount > 0 )
                 SW_LOG_ERROR( "Module %# created %# event channel(s) that other code still subscribes to — publishing them after the unload would jump into the unloaded image",
-                              moduleName, stuckEntryCount );
+                              moduleName, remainingEntryCount );
 
             const uint32 listenerCount = Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             if ( listenerCount > 0 )

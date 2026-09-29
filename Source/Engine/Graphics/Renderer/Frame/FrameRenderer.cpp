@@ -25,7 +25,7 @@ namespace sw
     /**
      * @brief `-gv_deferred=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
      * @details 예전에는 고를 길이 자체가 없었습니다. `initialize` 의 인자를 주는 곳이 없어 늘 포워드였습니다.
-     *          디퍼드는 웨이브가 갈려(웨이브0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 합니다.
+     *          디퍼드는 레벨이 갈려(레벨 0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 합니다.
      */
     SW_GLOBAL_VARIABLE_BOOL( gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
 
@@ -333,7 +333,7 @@ namespace sw
         if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
             _clearColor = sceneColorClear;
 
-        // 파이프라인 패스 레시피(셰이더 · 진입점 · 블렌드 · 퍼뮤테이션)로 PSO 를 다시 만든다.
+        // 파이프라인 패스 설정(셰이더 · 진입점 · 블렌드 · 퍼뮤테이션)로 PSO 를 다시 만든다.
         releasePassResources();
         ensurePassResources();
         ensureTransientResources();
@@ -415,7 +415,7 @@ namespace sw
             _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeEnd );
 #endif
 
-        // 병렬 기록이 가능하면(백엔드 capability + TaskManager + 웨이브가 나올 만큼 컴파일된 그래프)
+        // 병렬 기록이 가능하면(백엔드 capability + TaskManager + 레벨이 나올 만큼 컴파일된 그래프)
         // 컬링 디스패치(위에서 _pCmd 에 이미 기록됨)를 먼저 닫아 GPU 큐에 제출해서, 각 패스의 독립
         // 커맨드 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나도록 순서를 보장한다
         // (같은 큐에 대한 ExecuteCommandLists 호출 순서 = 실행 순서). 첫 프레임처럼 그래프가 아직
@@ -433,7 +433,7 @@ namespace sw
         }
 
         // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-        // 병렬 경로처럼 웨이브 앞머리로 몰 수 없다(직렬은 순서가 곧 리스트 안의 위치다).
+        // 병렬 경로처럼 레벨 앞머리로 몰 수 없다(직렬은 순서가 곧 리스트 안의 위치다).
         const bool bOk = _graph.execute( _graphContext, _pCmd );
         _pCmd->endCommandList();
         pDevice->executeCommandList( _pCmd );
@@ -555,7 +555,7 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
-        _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
+        _gpuScene.setIndirectCountsFilledByGpu( usesGpuGeneratedCommands() );
         // 모프 풀 오프셋은 배치 표에 실려 업로드 시점에 완성돼야 한다.
         prepareMeshMorphPool();
         _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );

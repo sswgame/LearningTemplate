@@ -42,7 +42,7 @@ namespace sw
             _graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
         }
 
-        _graph.setWavePrologue( SW_DELEGATE_METHOD( RenderGraphWavePrologueFn, &FrameRenderer::onGraphWavePrologue, this ) );
+        _graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
 
         if ( _graph.compile() == false )
             SW_LOG_ERROR( "Callback bind compile failed" );
@@ -50,36 +50,36 @@ namespace sw
             _bCallbacksBound = SW_TRUE;
     }
 
-    void FrameRenderer::onGraphWavePrologue( const RenderGraphWaveContext& waveCtx )
+    void FrameRenderer::onGraphLevelPrologue( const RenderGraphLevelContext& levelCtx )
     {
-        if ( _pDevice == nullptr || waveCtx._pCmdList == nullptr )
+        if ( _pDevice == nullptr || levelCtx._pCmdList == nullptr )
             return;
 
-        if ( waveCtx._pListBarrier == nullptr )
+        if ( levelCtx._pListBarrier == nullptr )
             return;
 
         // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름을 텍스처로 풀어 그대로 건다.
-        // 예전에는 이 웨이브가 읽고 쓰는 이름을 모두 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
+        // 예전에는 이 레벨이 읽고 쓰는 이름을 모두 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
         // 반복해서 걸고 이미 맞는 상태도 다시 걸었다.
-        for ( const RenderGraphBarrier& barrier : *waveCtx._pListBarrier )
+        for ( const RenderGraphBarrier& barrier : *levelCtx._pListBarrier )
         {
             if ( barrier._after == RenderGraphResourceState::Write )
             {
                 // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에 없다.
                 if ( barrier._resource == attachmentNames()._swapchain )
                 {
-                    waveCtx._pCmdList->prepareTextureForRenderTarget( 0 );
+                    levelCtx._pCmdList->prepareTextureForRenderTarget( 0 );
                     continue;
                 }
                 const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
                 if ( texture != 0 )
-                    waveCtx._pCmdList->prepareTextureForRenderTarget( texture );
+                    levelCtx._pCmdList->prepareTextureForRenderTarget( texture );
             }
             else if ( barrier._after == RenderGraphResourceState::Read )
             {
                 const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
                 if ( texture != 0 )
-                    waveCtx._pCmdList->prepareTextureForShaderRead( texture );
+                    levelCtx._pCmdList->prepareTextureForShaderRead( texture );
             }
         }
     }

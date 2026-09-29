@@ -83,8 +83,8 @@ namespace sw
         /**
          * @brief **이 리스트만의** 기록 상태입니다. `_context` 보다 먼저 선언해야 합니다(생성자가 주소를 넘깁니다).
          * @details 예전에는 컨텍스트가 디바이스의 `_recordingState` 를 가리켰습니다. 리스트는 각자 Deferred
-         *          Context 를 갖는데 캐시가 하나뿐이라, 웨이브를 병렬로 기록하면 한 패스의 드로우가
-         *          **다른 패스의 PSO · 정점 버퍼**로 나갔습니다. Shadow 와 GBuffer 가 같은 웨이브에 있는
+         *          Context 를 갖는데 캐시가 하나뿐이라, 레벨을 병렬로 기록하면 한 패스의 드로우가
+         *          **다른 패스의 PSO · 정점 버퍼**로 나갔습니다. Shadow 와 GBuffer 가 같은 레벨에 있는
          *          디퍼드 파이프라인에서 그림자 맵이 세 번에 한 번꼴로 엉뚱하게 그려졌고, 디퍼드
          *          조명 결과(LitColor)가 두 값 사이를 오갔습니다
          *          (`RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 그것을 잡습니다).

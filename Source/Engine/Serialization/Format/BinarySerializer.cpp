@@ -96,10 +96,10 @@ namespace sw
 
                 const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
                 const size_t                numProps = listProp.size();
-                uint64                      seenBitmask{ 0 };
-                unordered_set<uint32>       uniqueSeenPropHashes;
+                uint64                      matchedBitmask{ 0 };
+                unordered_set<uint32>       uniqueMatchedPropHashes;
                 if ( numProps > kFastPropBitmaskThreshold )
-                    uniqueSeenPropHashes.reserve( numProps );
+                    uniqueMatchedPropHashes.reserve( numProps );
 
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
@@ -139,9 +139,9 @@ namespace sw
 
                     const PropertyInfo& prop = *pTargetProp;
                     if ( numProps <= kFastPropBitmaskThreshold )
-                        seenBitmask |= ( 1ULL << matchedIndex );
+                        matchedBitmask |= ( 1ULL << matchedIndex );
                     else
-                        uniqueSeenPropHashes.insert( prop.getNameHash() );
+                        uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
                     // **기록 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
@@ -179,12 +179,12 @@ namespace sw
                 // 스트림에 없던 프로퍼티는 기본값으로 채운다. 두 경로가 같은 규칙이다.
                 for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
                 {
-                    bool bSeen = false;
+                    bool bMatched = false;
                     if ( numProps <= kFastPropBitmaskThreshold )
-                        bSeen = ( seenBitmask & ( 1ULL << propIdx ) ) != 0;
+                        bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
                     else
-                        bSeen = uniqueSeenPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueSeenPropHashes.end();
-                    if ( bSeen == false )
+                        bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
+                    if ( bMatched == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx].getRawPtr( pInstance ), listProp[propIdx], ctx );
                 }
                 return true;

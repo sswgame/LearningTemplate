@@ -95,20 +95,20 @@ namespace sw
         GameObjectManager* getManager() const { return _pOwnerManager; }
 
         /** @brief 삭제 예정(묘비) 표시를 세웁니다. */
-        void markPendingKill();
+        void markPendingDestroy();
 
         /**
          * @brief 삭제 예정 표시를 **이 호출이 처음으로 세웠는지** 반환합니다.
-         * @details `isPendingKill()` 로 보고 나서 `markPendingKill()` 하는 두 걸음은 원자적이지
+         * @details `isPendingDestroy()` 로 보고 나서 `markPendingDestroy()` 하는 두 걸음은 원자적이지
          *          않습니다. 두 스레드가 그 사이를 나란히 통과하면 파괴 목록에 같은 포인터가 **두 번**
          *          들어가고, 풀이 같은 블록을 두 번 반납합니다. `onTick` 은 병렬로 돌기 때문에
          *          (총알 둘이 같은 적을 같은 프레임에 맞히는) 흔한 경우입니다. 없애는 쪽은 반드시
          *          이 함수가 `true` 를 준 스레드 **하나만** 진행해야 합니다.
          */
-        bool tryMarkPendingKill();
+        bool tryMarkPendingDestroy();
 
         /** @brief 삭제 예정인지 확인합니다. */
-        bool isPendingKill() const { return _bIsPendingKill.load( std::memory_order_acquire ); }
+        bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
 
         /**
          * @brief 켜거나 끕니다.
@@ -191,7 +191,7 @@ namespace sw
         template <typename T, typename... Args>
         T* addComponent( Args&&... args );
 
-        /** @brief 소유한 Component 개수입니다. 삭제 예정(pending-kill)은 뺍니다. */
+        /** @brief 소유한 Component 개수입니다. 삭제 예정(pending-destroy)은 뺍니다. */
         size_t getComponentCount() const;
 
         /**
@@ -208,7 +208,7 @@ namespace sw
         {
             for ( Component* pComp : _listComponent )
             {
-                if ( pComp != nullptr && pComp->isPendingKill() == false )
+                if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                     func( pComp );
             }
         }
@@ -230,7 +230,7 @@ namespace sw
         {
             for ( Component* pComp : _listComponent )
             {
-                if ( pComp != nullptr && pComp->isPendingKill() == false )
+                if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                 {
                     TComponent* pTyped = castTo<TComponent>( pComp, pToType );
                     if ( pTyped != nullptr )
@@ -257,7 +257,7 @@ namespace sw
             const TypeInfo* pToType = findStaticType<T>();
             for ( Component* pComp : _listComponent )
             {
-                if ( pComp == nullptr || pComp->isPendingKill() )
+                if ( pComp == nullptr || pComp->isPendingDestroy() )
                     continue;
                 T* pCast = castTo<T>( pComp, pToType );
                 if ( pCast != nullptr )
@@ -276,7 +276,7 @@ namespace sw
         bool removeComponent( Component* pComp );
 
         /** @brief componentId 로 소유 컴포넌트를 찾습니다. */
-        Component* findComponentById( uint64 componentId, bool bIncludePendingKill = false ) const;
+        Component* findComponentById( uint64 componentId, bool bIncludePendingDestroy = false ) const;
 
         /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 등록부에 알립니다. 다음 틱 전에 항목을 다시 짓습니다. */
         void markTickOrderDirty();
@@ -358,7 +358,7 @@ namespace sw
         PROPERTY()
         atomic<bool> _bActive;              ///< 자기 활성 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
-        atomic<bool> _bIsPendingKill;       ///< 삭제 예정(묘비) 표시
+        atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 네 칸). 별칭으로 적으면 리플렉션 파서가 컨테이너로 보지 못합니다.
         PROPERTY()
         vector<Component*, InlineAllocator<Component*, 4>> _listComponent;

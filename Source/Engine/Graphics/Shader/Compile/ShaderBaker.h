@@ -41,13 +41,13 @@ namespace sw
     };
 
     /**
-     * @struct ShaderBakeRecipe
+     * @struct ShaderBakeRequest
      * @brief 구울 것 하나입니다(셰이더 · 진입점 · 스테이지 · define).
-     * @details "무엇을 구울지" 는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderBakeRecipe.cpp`), "어떻게 굽는지" 는
+     * @details "무엇을 구울지" 는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderBakeRequest.cpp`), "어떻게 굽는지" 는
      *          그것을 받아 컴파일합니다(`ShaderBaker.cpp`). 그 둘 사이를 넘는 값이라 여기 있습니다. 예전에는 TU 로컬이라
      *          "이 빌드가 무엇을 구웠나" 를 밖에서 볼 길이 없었습니다.
      */
-    struct ShaderBakeRecipe
+    struct ShaderBakeRequest
     {
         string         _shaderPath;
         string         _entryPoint;

@@ -286,7 +286,7 @@ namespace sw
         RHIFormat attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const;
         /**
          * @brief 이 첨부를 이번 프레임에 처음 건드리는 것이면 표시하고 true 를 반환합니다.
-         * @details 반환값이 곧 "Clear 로 열어도 되는가" 입니다. 같은 웨이브의 패스들이 동시에 부르므로
+         * @details 반환값이 곧 "Clear 로 열어도 되는가" 입니다. 같은 레벨의 패스들이 동시에 부르므로
          *          조회와 표시가 한 임계 구역이어야 합니다. 나눠 놓으면 두 패스가 같은 첨부를 둘 다
          *          Clear 로 열어 앞 패스의 결과를 지웁니다.
          */
@@ -322,16 +322,16 @@ namespace sw
         void onGraphPassExecute( const RenderGraphPassContext& ctx );
 
         /**
-         * @brief 웨이브를 기록하기 **직전에**(직렬 경로에서는 패스마다) 그 웨이브가 만질 자원의 배리어를 미리 발행합니다.
+         * @brief 레벨을 기록하기 **직전에**(직렬 경로에서는 패스마다) 그 레벨이 만질 자원의 배리어를 미리 발행합니다.
          * @details 자원 이름을 실제 텍스처로 풀어 `prepareTextureForShaderRead` /
-         *          `prepareTextureForRenderTarget` 을 웨이브 첫 패스 리스트의 앞머리에 기록합니다(직렬 경로에서는
-         *          그 패스의 리스트). 같은 웨이브의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞섭니다.
+         *          `prepareTextureForRenderTarget` 을 레벨 첫 패스 리스트의 앞머리에 기록합니다(직렬 경로에서는
+         *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞섭니다.
          *
          *          이렇게 하면 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를 바꾸지
          *          않습니다. 배리어를 병렬 기록 스레드가 정하던 구조는 이 프로젝트에서 실제로 여러 번
          *          깨졌습니다(중복 배리어, 레이아웃 불일치).
          */
-        void onGraphWavePrologue( const RenderGraphWaveContext& ctx );
+        void onGraphLevelPrologue( const RenderGraphLevelContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 합니다. */
         void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                           const RenderGraphPassDesc* pPassDesc );
@@ -464,7 +464,7 @@ namespace sw
         RHIPipelineStateHandle createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets = 1,
                                                 const RHIFormat* pRtvFormats = nullptr, bool bBlend = false,
                                                 bool bDepthWrite = true );
-        /** @brief 파이프라인 XML 패스 레시피로 PSO 를 만들고, 없으면 타입 기본값을 씁니다. */
+        /** @brief 파이프라인 XML 패스 설정으로 PSO 를 만들고, 없으면 타입 기본값을 씁니다. */
         RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, string_view defaultShader,
                                                      bool bDepthTest, uint32 numRenderTargets = 1,
                                                      const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
@@ -619,7 +619,7 @@ namespace sw
         const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
 
         /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 반환합니다(업로드 전에 GpuScene 에 알립니다). */
-        bool wantsGpuGeneratedCommands() const;
+        bool usesGpuGeneratedCommands() const;
 
         /**
          * @brief 지난 프레임의 패스별 GPU 시간을 프로파일러에 `GPU.<패스>` 로 넣습니다.
@@ -711,7 +711,7 @@ namespace sw
         uint8                  _bPassResourcesReady : 1;
         [[maybe_unused]] uint8 _reservedFlags       : 5;
 
-        // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
+        // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 레벨끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
         // 같은 바이트를 read-modify-write 해서 서로의 값을 날린다. 독립 원자 변수로 뺀다.
         /// @brief 이번 프레임에 DepthPrepass 가 실행됐는지 여부입니다(ForwardOpaque 의 PSO 선택에 씁니다).

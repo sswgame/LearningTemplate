@@ -225,14 +225,14 @@ namespace sw
     GamepadBatteryInfo GamepadXInput::getBatteryInfo() const
     {
         GamepadBatteryInfo                                     info{};
-        GamepadXInputInternal::PFN_XInputGetBatteryInformation pfnGetBat = GamepadXInputInternal::resolveXInputGetBatteryInformation();
-        if ( pfnGetBat == nullptr || _bConnected == SW_FALSE )
+        GamepadXInputInternal::PFN_XInputGetBatteryInformation pfnGetBatteryInformation = GamepadXInputInternal::resolveXInputGetBatteryInformation();
+        if ( pfnGetBatteryInformation == nullptr || _bConnected == SW_FALSE )
             return info;
 
-        XINPUT_BATTERY_INFORMATION bat{};
-        if ( pfnGetBat( _deviceIndex, BATTERY_DEVTYPE_GAMEPAD, &bat ) == ERROR_SUCCESS )
+        XINPUT_BATTERY_INFORMATION batteryInfo{};
+        if ( pfnGetBatteryInformation( _deviceIndex, BATTERY_DEVTYPE_GAMEPAD, &batteryInfo ) == ERROR_SUCCESS )
         {
-            switch ( bat.BatteryType )
+            switch ( batteryInfo.BatteryType )
             {
                 case BATTERY_TYPE_WIRED:
                 {
@@ -261,7 +261,7 @@ namespace sw
                 }
             }
 
-            switch ( bat.BatteryLevel )
+            switch ( batteryInfo.BatteryLevel )
             {
                 case BATTERY_LEVEL_EMPTY:
                 {

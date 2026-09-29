@@ -81,7 +81,7 @@ namespace sw
         ID3DUserDefinedAnnotation* getAnnotation();
         /**
          * @brief 이 컨텍스트가 기록 중인 Deferred Context 면 이 스레드에 그 토큰을 묶습니다. 패스가 시작되는 자리마다 부릅니다.
-         * @details 리스트를 연 스레드와 기록하는 스레드가 다를 수 있습니다(RenderGraph 병렬 웨이브의 첫 리스트). `beginCommandList` 는
+         * @details 리스트를 연 스레드와 기록하는 스레드가 다를 수 있습니다(RenderGraph 병렬 레벨의 첫 리스트). `beginCommandList` 는
          *          연 스레드만 묶으므로, 기록하는 스레드는 여기서 자기 것을 묶습니다. 그래야 그 스레드의 드로우별 상수버퍼 갱신이
          *          즉시 컨텍스트가 아니라 **이 리스트**로 갑니다(D3D11 의 리스트 단위 버저닝). 즉시 컨텍스트는 슬롯이 없어 묶이지
          *          않습니다. 그쪽은 `_immediateContextMutex` 로 지키는 공유 자원이라 묶으면 그 잠금을 건너뛰게 됩니다.

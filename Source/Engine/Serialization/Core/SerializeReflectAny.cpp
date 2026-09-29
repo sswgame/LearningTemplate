@@ -126,9 +126,9 @@ namespace sw
     {
         if ( pOut == nullptr || empty() )
             return false;
-        const hashed_string& want =
+        const hashed_string& expectedFqn =
             info._fullyQualifiedName.empty() == false ? info._fullyQualifiedName : info._name;
-        if ( _typeFqn != want )
+        if ( _typeFqn != expectedFqn )
             return false;
         return BinarySerializer::deserialize( pOut, info, _bytes.data(), _bytes.size() );
     }

@@ -78,7 +78,7 @@ namespace sw
     }
 
     /** @brief 바깥 컨테이너에서 한 겹 벗길 멤버 이름 (mapped_type / value_type). */
-    inline const utf8* containerPeelMember( const ContainerKind outerKind ) noexcept
+    inline const utf8* containerElementTypeMember( const ContainerKind outerKind ) noexcept
     {
         return ( outerKind == ContainerKind::Map ) ? constants::reflection::kMappedType : constants::reflection::kValueType;
     }

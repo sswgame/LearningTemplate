@@ -73,9 +73,9 @@ namespace sw
 
                     // 순환 방지. 이미 담은 타입이면 멈춘다.
                     bool bAlready = false;
-                    for ( const TypeInfo* pSeen : outListType )
+                    for ( const TypeInfo* pCollected : outListType )
                     {
-                        if ( pSeen == pParent )
+                        if ( pCollected == pParent )
                         {
                             bAlready = true;
                             break;
@@ -248,7 +248,7 @@ namespace sw
             it = _mapResolved.emplace( &typeInfo, std::move( pResolved ) ).first;
         else if ( it->second->_generation != generation )
         {
-            _listRetiredResolved.push_back( std::move( it->second ) );
+            _listReplacedResolved.push_back( std::move( it->second ) );
             it->second = std::move( pResolved );
         }
         return *it->second;
@@ -344,7 +344,7 @@ namespace sw
         // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
-        _listRetiredResolved.clear();
+        _listReplacedResolved.clear();
     }
 
     void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )

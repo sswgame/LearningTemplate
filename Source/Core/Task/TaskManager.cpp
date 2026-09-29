@@ -660,7 +660,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     TaskStageHandle TaskManager::createStage()
     {
-        // 풀에서 가져온다. 프레임마다 웨이브 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
+        // 풀에서 가져온다. 프레임마다 레벨 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
         return TaskStageHandle{ _nodePool->allocateStage() };
     }
 

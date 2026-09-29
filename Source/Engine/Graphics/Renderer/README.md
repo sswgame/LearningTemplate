@@ -13,7 +13,7 @@ Renderer/
   Frame/      실제로 그리는 것
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(라인/스피어 큐)
-  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(레시피) · 전부 굽기(드라이버). Shader/ 는 한 장을 굽는 법만 안다
+  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(요청) · 전부 굽기(드라이버). Shader/ 는 한 장을 굽는 법만 안다
   RenderThread.cpp/h   위를 구동하는 스레드
 ```
 
@@ -34,11 +34,11 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 
 ### Graph/ — 실행 순서를 푼다
 
-`RenderGraph` 가 패스들의 입출력 의존성으로 위상 정렬하고, **웨이브**(같이 돌 수 있는 패스 묶음)
-단위로 나눕니다. 백엔드가 병렬 기록을 지원하면 한 웨이브의 패스들을 여러 스레드가 동시에
+`RenderGraph` 가 패스들의 입출력 의존성으로 위상 정렬하고, **레벨**(같이 돌 수 있는 패스 묶음)
+단위로 나눕니다. 백엔드가 병렬 기록을 지원하면 한 레벨의 패스들을 여러 스레드가 동시에
 기록합니다.
 
-> 주의: 같은 웨이브의 패스 콜백은 **동시에** 돕니다. 콜백이 만지는 FrameRenderer 공유 상태는
+> 주의: 같은 레벨의 패스 콜백은 **동시에** 돕니다. 콜백이 만지는 FrameRenderer 공유 상태는
 > 반드시 보호해야 합니다. 실제로 여기서 데이터 레이스가 있었습니다.
 
 ### Scene/ — 씬을 GPU 데이터로
@@ -97,5 +97,5 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 - **기본 씬에는 메시가 없습니다.** `SW_ACTIVE_GAME` 이 `Empty` 라서, 앱을 그냥 띄우면 드로우
   경로는 거의 실행되지 않습니다. 드로우 경로를 확인하려면 `EngineTest --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*`
   를 보세요 — 큐브를 넣고 실제로 그립니다.
-- **`forwardpipeline` 은 완전한 체인**이라 웨이브가 전부 1개입니다. 병렬 기록을 실제로 돌려
-  보려면 `deferredpipeline` 을 써야 합니다(웨이브0 = Shadow + GBuffer).
+- **`forwardpipeline` 은 완전한 체인**이라 레벨이 전부 1개입니다. 병렬 기록을 실제로 돌려
+  보려면 `deferredpipeline` 을 써야 합니다(레벨 0 = Shadow + GBuffer).

@@ -444,9 +444,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
 }
 
 /**
- * @brief 실제 RHI 디바이스로 RenderGraph::executeParallel을 웨이브 단위로 끝까지 실행해 본다.
- * @details 독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 웨이브 경계를 넘나드는
- *          제출 순서(웨이브마다 먼저 제출 후 다음 웨이브)까지 실제로 동작하는지 확인한다.
+ * @brief 실제 RHI 디바이스로 RenderGraph::executeParallel을 레벨 단위로 끝까지 실행해 본다.
+ * @details 독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 레벨 경계를 넘나드는
+ *          제출 순서(레벨마다 먼저 제출 후 다음 레벨)까지 실제로 동작하는지 확인한다.
  * @note **병렬 기록 여부는 디바이스에 묻는다 — 백엔드 이름으로 고르지 않는다.** 예전엔 이 테스트가
  *       "DX12만 _bParallelCommandRecording=1"이라고 적고 DX12 를 하드코딩했는데, 그 전제는 틀렸다:
  *       `D3D11RHIDevice::getCapabilities` 가 드라이버 조회 결과(`D3D11_FEATURE_THREADING`)로 이 항목을
@@ -515,11 +515,11 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 }
 
 /**
- * @brief Deferred 파이프라인을 실제 디바이스에서 돌린다 — 같은 웨이브의 패스가 병렬로 기록되는 유일한 구성.
- * @details forwardpipeline 은 Shadow→ForwardOpaque→…→Present 완전 체인이라 웨이브가 전부 1개다.
+ * @brief Deferred 파이프라인을 실제 디바이스에서 돌린다 — 같은 레벨의 패스가 병렬로 기록되는 유일한 구성.
+ * @details forwardpipeline 은 Shadow→ForwardOpaque→…→Present 완전 체인이라 레벨이 전부 1개다.
  *          즉 병렬 기록 경로가 있어도 실제로 동시에 도는 패스가 없었고, 그래서 패스 콜백이 만지는
  *          FrameRenderer 공유 상태(_listClearedThisFrame, 프레임 래치 플래그)의 레이스가 드러나지
- *          않았다. deferredpipeline 은 웨이브0 = {Shadow, GBuffer}, 이후 {Transparent, SSAO} 가
+ *          않았다. deferredpipeline 은 레벨 0 = {Shadow, GBuffer}, 이후 {Transparent, SSAO} 가
  *          동시에 기록된다. 메시가 있어야 드로우 경로까지 들어가므로 큐브를 넣고 여러 프레임 돌린다.
  *
  *          이 테스트를 처음 넣었을 때 곧바로 DX12 GPU 행(3번째 프레임에서 fence wait timeout →
@@ -527,7 +527,7 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
  *          텍스처가 어긋난 것이었다(Shading 별칭 미해석, 풀스크린 PSO 의 뎁스 포맷, TAA 히스토리
  *          포맷 하드코딩). 검증 레이어 오류가 0 인지도 같이 봐야 의미가 있다.
  */
-SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
+SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };

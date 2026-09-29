@@ -71,7 +71,7 @@ namespace sw
 
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
-        // 셰이더 경로는 파이프라인 XML 패스 레시피가 먼저다. EngineData 경로는 마지막 폴백일 뿐이다.
+        // 셰이더 경로는 파이프라인 XML 패스 설정이 먼저다. EngineData 경로는 마지막 폴백일 뿐이다.
 
         auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
                                    const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true,
@@ -334,7 +334,7 @@ namespace sw
     {
         // **조회만 한다.** 예전에는 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
-        // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
+        // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
             return getEnginePso( RenderPassType::Present );

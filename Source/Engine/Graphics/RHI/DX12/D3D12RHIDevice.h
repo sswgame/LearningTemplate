@@ -79,8 +79,8 @@ namespace sw
         uint8                  _bRecording         : 1;
         /**
          * @brief 이 리스트에 명령이 하나라도 기록됐는지입니다(컨텍스트의 `commandListForRecord` 가 세웁니다).
-         * @details 프레임 스트림 조각이 비어 있으면 `executeCommandList` 가 자르지 않습니다. 웨이브 배리어를 패스 리스트로
-         *          옮긴 뒤 웨이브 사이의 조각은 늘 비어 있는데, 잘라 내보내면 큐에 빈 리스트가 나가고 그 제출이 리스트당 ~7 us 입니다.
+         * @details 프레임 스트림 조각이 비어 있으면 `executeCommandList` 가 자르지 않습니다. 레벨 배리어를 패스 리스트로
+         *          옮긴 뒤 레벨 사이의 조각은 늘 비어 있는데, 잘라 내보내면 큐에 빈 리스트가 나가고 그 제출이 리스트당 ~7 us 입니다.
          */
         uint8                  _bRecordedAny : 1;
         [[maybe_unused]] uint8 _reserved     : 5;
@@ -239,7 +239,7 @@ namespace sw
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스를 반환합니다. */
         uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::kMaxGpuTimestampSlot; }
         /** @brief 슬롯 하나를 적었다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
-        void noteTimestampWritten( uint32 slotIndex )
+        void markTimestampWritten( uint32 slotIndex )
         {
             _timestampWrittenMask.fetch_or( 1u << slotIndex, std::memory_order_relaxed );
         }

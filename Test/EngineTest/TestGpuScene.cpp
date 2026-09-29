@@ -727,7 +727,7 @@ SW_TEST_CASE( GpuSceneTest, TransparentDifferentKeysStaySeparate )
  *          (2) 쓰이지 않게 된 원소는 지연 회수돼 자리가 재사용된다(자리를 **옮기지 않고**).
  *          기본 생성한 Material 은 셰이더 경로가 비어 있어 한 그룹에 모인다 — 리소스 없이 원소 로직만 본다.
  */
-SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
+SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndAreFreed )
 {
     sw::Scene scene( "MaterialElementIdScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
@@ -1581,12 +1581,12 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
     SW_EXPECT_TRUE( registry.hasDirty() );
     registry.consumeDirty( listSlot );
     SW_EXPECT_EQUAL( size_t( kMeshCount ), listSlot.size() );
-    sw::vector<uint8> listSeen( kMeshCount, 0 );
+    sw::vector<uint8> listVisited( kMeshCount, 0 );
     for ( uint32 slot : listSlot )
     {
         SW_ASSERT_TRUE( slot < kMeshCount );
-        SW_EXPECT_EQUAL( uint8( 0 ), listSeen[slot] );
-        listSeen[slot] = 1;
+        SW_EXPECT_EQUAL( uint8( 0 ), listVisited[slot] );
+        listVisited[slot] = 1;
     }
     SW_EXPECT_FALSE( registry.hasDirty() );
     registry.consumeDirty( listSlot );

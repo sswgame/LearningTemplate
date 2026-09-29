@@ -427,7 +427,7 @@ namespace sw
         constexpr TaskStageHandle() = default;
         /**
          * @brief 노드의 참조 하나를 **넘겨받아** 핸들을 만듭니다(매니저 전용).
-         * @details 예전에는 `shared_ptr<StageNode>` 여서 스테이지마다 제어 블록 하나가 힙에 잡혔고, 렌더 그래프는 프레임마다 웨이브
+         * @details 예전에는 `shared_ptr<StageNode>` 여서 스테이지마다 제어 블록 하나가 힙에 잡혔고, 렌더 그래프는 프레임마다 레벨
          *          수만큼 스테이지를 만듭니다. 지금은 `TaskHandle` 처럼 침입형 참조 계수이고 노드는 매니저의 풀에서 옵니다. 그래서
          *          프레임이 안정된 상태에서는 스테이지를 디스패치해도 힙을 건드리지 않습니다.
          */

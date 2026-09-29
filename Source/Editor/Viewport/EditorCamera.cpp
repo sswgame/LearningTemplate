@@ -55,7 +55,7 @@ namespace sw::editor
     CameraComponent* EditorCamera::ensure( Scene* pScene )
     {
         CameraComponent* pExisting = find( pScene );
-        if ( pExisting != nullptr && pExisting->isPendingKill() == false )
+        if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
             return pExisting;
         if ( pScene == nullptr )
             return nullptr;

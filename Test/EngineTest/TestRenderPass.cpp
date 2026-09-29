@@ -307,22 +307,22 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
     SW_EXPECT_EQUAL( 3u, executeCount.load() );
     SW_EXPECT_EQUAL( 3u, graph.getNodeCount() );
 
-    // DepthPass/ShadowPass는 서로 입출력이 없어 같은 웨이브(레벨 0)에 묶이고, 둘 다에 의존하는
-    // ForwardPass는 다음 웨이브(레벨 1)로 분리돼야 한다 — executeParallel이 이 구조로 안전하게
+    // DepthPass/ShadowPass는 서로 입출력이 없어 같은 레벨(0)에 묶이고, 둘 다에 의존하는
+    // ForwardPass는 다음 레벨(1)로 분리돼야 한다 — executeParallel이 이 구조로 안전하게
     // 병렬 기록할 수 있는지의 근거.
-    const sw::vector<sw::vector<sw::hashed_string>>& waves = graph.getExecutionWaves();
-    SW_ASSERT_EQUAL( size_t( 2 ), waves.size() );
-    SW_EXPECT_EQUAL( size_t( 2 ), waves[0].size() );
-    SW_ASSERT_EQUAL( size_t( 1 ), waves[1].size() );
-    SW_EXPECT_TRUE( waves[1][0] == sw::hashed_string( "ForwardPass" ) );
+    const sw::vector<sw::vector<sw::hashed_string>>& levels = graph.getExecutionLevels();
+    SW_ASSERT_EQUAL( size_t( 2 ), levels.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), levels[0].size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), levels[1].size() );
+    SW_EXPECT_TRUE( levels[1][0] == sw::hashed_string( "ForwardPass" ) );
 
     taskManager.shutdown();
 }
 
 /**
- * @brief [RenderPassTest] 완전 직렬 체인은 패스마다 자기 웨이브를 받는다(현재 기본 파이프라인 형태).
+ * @brief [RenderPassTest] 완전 직렬 체인은 패스마다 자기 레벨을 받는다(현재 기본 파이프라인 형태).
  */
-SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassWaves )
+SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassLevels )
 {
     sw::RenderGraph graph;
     graph.addPass( sw::hashed_string( "Shadow" ), {}, { sw::hashed_string( "ShadowMap" ) } );
@@ -330,10 +330,10 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassWaves )
     graph.addPass( sw::hashed_string( "Present" ), { sw::hashed_string( "SceneColor" ) }, {} );
 
     SW_ASSERT_TRUE( graph.compile() );
-    const sw::vector<sw::vector<sw::hashed_string>>& waves = graph.getExecutionWaves();
-    SW_ASSERT_EQUAL( size_t( 3 ), waves.size() );
-    for ( const sw::vector<sw::hashed_string>& wave : waves )
-        SW_EXPECT_EQUAL( size_t( 1 ), wave.size() );
+    const sw::vector<sw::vector<sw::hashed_string>>& levels = graph.getExecutionLevels();
+    SW_ASSERT_EQUAL( size_t( 3 ), levels.size() );
+    for ( const sw::vector<sw::hashed_string>& level : levels )
+        SW_EXPECT_EQUAL( size_t( 1 ), level.size() );
 }
 
 /**
@@ -457,23 +457,23 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     // 5) 이름은 정본 하나로 통일돼 있다 — 예전 표기(`Shading`, `PostBloom`)는 이제 오류로 잡힌다.
     //    다시 이름을 바꿔야 하면 ENUM( ValueAlias = "Old:New" ) 로 호환을 열어 주면 된다.
     {
-        auto retiredIsRejected = []( const utf8* pRetired ) -> bool
+        auto removedTypeIsRejected = []( const utf8* pRemovedType ) -> bool
         {
             sw::RenderPipelineResource res;
             sw::RenderPipelineDesc&    desc = res.getDesc();
             sw::RenderGraphPassDesc    pass{};
-            pass._name = "Retired";
-            pass._type = pRetired;
+            pass._name = "Removed";
+            pass._type = pRemovedType;
             desc._listPass.push_back( pass );
             res.validate( "unit-test" );
             // 여기서 보는 것은 **이름 해석**뿐이다 — 입력 계약 위반(입력 없는 Tonemap)은 다른 케이스가 본다.
             return desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid;
         };
-        SW_EXPECT_TRUE( retiredIsRejected( "Shading" ) );
-        SW_EXPECT_TRUE( retiredIsRejected( "PostBloom" ) );
-        SW_EXPECT_TRUE( retiredIsRejected( "HBAO" ) );
+        SW_EXPECT_TRUE( removedTypeIsRejected( "Shading" ) );
+        SW_EXPECT_TRUE( removedTypeIsRejected( "PostBloom" ) );
+        SW_EXPECT_TRUE( removedTypeIsRejected( "HBAO" ) );
         // 철자 대소문자는 리플렉션이 무시하므로 "ToneMap" 은 "Tonemap" 으로 읽힌다 — 의도된 관용이다.
-        SW_EXPECT_TRUE( retiredIsRejected( "ToneMap" ) == false );
+        SW_EXPECT_TRUE( removedTypeIsRejected( "ToneMap" ) == false );
     }
 
     // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다.

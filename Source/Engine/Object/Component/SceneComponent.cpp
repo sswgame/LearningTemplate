@@ -392,7 +392,7 @@ namespace sw
         // `GameObject::attachToParent` 만 맞췄고, 컴포넌트를 직접 붙이거나 상태를 되돌리는 로드(`applyLoadedHierarchy`)나 부모
         // 컴포넌트의 소멸자가 자식을 뗀 경우는 옛 값이 남았다. primary 가 아닌 컴포넌트면 오브젝트의 부모가 그대로라 O(1) 로 끝난다.
         GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->isPendingKill() == false )
+        if ( pOwner != nullptr && pOwner->isPendingDestroy() == false )
             pOwner->refreshActiveInHierarchy();
     }
 

@@ -1590,13 +1590,13 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
 
 /**
  * @brief [GameFrameworkTest] 수명이 다한 이펙트 오브젝트가 실제로 풀로 돌아오는지 검증
- * @details 만료 경로가 `markPendingKill()` 만 부르고 있었다. 그것은 **무덤 표시일 뿐**이라
+ * @details 만료 경로가 `markPendingDestroy()` 만 부르고 있었다. 그것은 **무덤 표시일 뿐**이라
  *          파괴 목록에 들어가지 않는다 — 오브젝트는 틱과 조회에서 빠지지만 `_listGameObject`
  *          에 영원히 남아 풀로 돌아오지 않는다. 같은 모양이 `ProjectileComponent`(총알 수명)
  *          와 `DamageUIComponent`(데미지 숫자 페이드)에도 있었고, 그 셋은 게임에서 가장 자주
  *          났다 사라지는 것들이라 플레이할수록 프레임마다 훑는 양이 단조 증가했다.
  *
- *          컴포넌트의 `onTick` 을 직접 불러 만료만 떼어 본다 — 틱 웨이브 배선이 아니라
+ *          컴포넌트의 `onTick` 을 직접 불러 만료만 떼어 본다 — 틱 스테이지 배선이 아니라
  *          "만료가 무엇을 하는가" 가 검사 대상이다.
  */
 SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
@@ -1620,7 +1620,7 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
     pEffect->onBeginPlay();
     pEffect->onTick( 1.0f );
 
-    SW_EXPECT_TRUE( pObj->isPendingKill() );
+    SW_EXPECT_TRUE( pObj->isPendingDestroy() );
 
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( manager.getAllGameObjects().empty() );

@@ -116,7 +116,7 @@ namespace sw
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
-        bool wantsQuit() const { return _profileSession.wantsQuit(); }
+        bool isQuitRequested() const { return _profileSession.isQuitRequested(); }
 
         /**
          * @brief 셸 디버그 ActionMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.

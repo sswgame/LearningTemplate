@@ -189,7 +189,7 @@ namespace sw::editor
                 const vector<GameObject*> listObject = pManager->getAllGameObjects();
                 for ( GameObject* pObject : listObject )
                 {
-                    if ( pObject == nullptr || pObject->isPendingKill() )
+                    if ( pObject == nullptr || pObject->isPendingDestroy() )
                         continue;
                     if ( matchesPrefabPath( ws, pObject, prefabPath ) == false )
                         continue;
@@ -213,7 +213,7 @@ namespace sw::editor
                 const vector<GameObject*> listObject = pManager->getAllGameObjects();
                 for ( GameObject* pObject : listObject )
                 {
-                    if ( pObject == nullptr || pObject->isPendingKill() )
+                    if ( pObject == nullptr || pObject->isPendingDestroy() )
                         continue;
                     if ( pObject->isDescendantOf( pRoot ) )
                         continue;

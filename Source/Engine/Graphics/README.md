@@ -73,7 +73,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
 | `ShaderCompiler` · `ShaderCache` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
 | `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크의 **메커니즘** — 이미 최신인지(내용 해시) · 한 장 굽고 이름 짓기 |
-| `ShaderBakeDriver` (+ `ShaderBakeRecipe.cpp`) | Renderer/Bake/ | 오프라인 베이크의 **정책** — 무엇을 구울지(파이프라인 XML·머티리얼 → 레시피) · 전부 굽기. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
+| `ShaderBakeDriver` (+ `ShaderBakeRequest.cpp`) | Renderer/Bake/ | 오프라인 베이크의 **정책** — 무엇을 구울지(파이프라인 XML·머티리얼 → 요청) · 전부 굽기. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
@@ -417,7 +417,7 @@ Graphics 감사 후 고친 것 (2026-09-08):
 - **머티리얼 원소를 언리얼 GPUScene 식 영속 ID 로.** 예전엔 빌드마다 그룹을 지우고 인스턴스마다 선형 탐색으로
   인덱스를 다시 부여했다(O(인스턴스 x 머티리얼)). 이제 처음 본 쌍에만 자리를 주고, 안 쓰이면 지연 회수하되
   **자리를 옮기지 않는다**(옮기면 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다).
-  `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndRetire` 가 영속·회수·자리 재사용을 고정한다.
+  `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed` 가 영속·회수·자리 재사용을 고정한다.
   측정: 큐브 2000·머티리얼 1 종에서 `build.batches` 665us → 564us. 맵만 넣었을 땐 901us 로 더 느렸다 —
   머티리얼이 하나뿐인 흔한 경우엔 해시가 1 원소 선형 탐색보다 비싸서, 직전 결과 메모를 앞에 뒀다.
 
@@ -426,7 +426,7 @@ Graphics 감사 후 고친 것 (2026-09-08):
   여기는 각 트랜지언트를 개별 텍스처로 프레임 내내 들고 있다. 정확성 문제는 아니고 메모리 차이다.
 - **DX12 에 PSO 디스크 캐시가 없다.** Vulkan 은 종료 시 파이프라인 캐시를 저장하는데 DX12 에는 대응물이 없다
   (`ID3D12PipelineLibrary`). 언리얼은 PSO 프리캐싱과 번들 캐시를 양쪽 다 쓴다.
-- **배리어는 웨이브 프롤로그가 한꺼번에 발행한다.** 언리얼 RDG 는 그래프에서 뽑고 스플릿 배리어까지 쓴다.
+- **배리어는 레벨 프롤로그가 한꺼번에 발행한다.** 언리얼 RDG 는 그래프에서 뽑고 스플릿 배리어까지 쓴다.
   더 단순하고 병렬 기록에 안전한 대신, 세밀한 겹침은 포기한 설계다.
 
 드로우 경로 최적화 (2026-09-08, 언리얼 구조로) — 다중 배치 워크로드에서 잰 것:

@@ -38,7 +38,7 @@ namespace sw
         if ( record._layout == targetLayout )
             return;
 
-        noteBarrierDuringRecording( "transitionTextureLayout" );
+        reportBarrierDuringRecording( "transitionTextureLayout" );
 
         transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
         record._layout = targetLayout;

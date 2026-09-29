@@ -123,7 +123,7 @@ namespace sw
          * @details 포인터는 이미 죽었을 수 있어 **역참조하지 않습니다.** 등록 시점에 복사해 둔
          *          이름만 씁니다. 조용히 지나가면 다음 실행에서 같은 일이 또 일어납니다.
          */
-        void warnAboutLeftoverModuleCaches() const;
+        void warnAboutRemainingModuleCaches() const;
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         ResourcePackManager&       getPackManager();

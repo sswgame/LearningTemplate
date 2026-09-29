@@ -95,7 +95,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         SW_EXPECT_TRUE_MSG( hasIssueContaining( listIssue, "같은 자리" ), "UBO binding 0 충돌이 보고돼야 한다" );
     }
 
-    // 3) Vulkan: 계약대로 — 세트 0 은 b/t/u 밴드(0/16/32 시프트), 세트 1 은 텍스처 배열(무제한)과 정적 샘플러.
+    // 3) Vulkan: 계약대로 — 세트 0 은 b/t/u 범위(0/16/32 시프트), 세트 1 은 텍스처 배열(무제한)과 정적 샘플러.
     {
         sw::ShaderReflectionData ok{};
         ok._listResource.push_back( makeRes( "PassCB", "ConstantBuffer", 0, vk::kBShift + sw::shaderslot::kPassConstantBuffer ) );
@@ -121,16 +121,16 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         SW_EXPECT_TRUE( hasIssueContaining( listIssue, "레이아웃에 없는 descriptor set" ) );
     }
 
-    // 5) Vulkan: 밴드 밖 binding / 밴드 종류 불일치(UBO 밴드에 SSBO) / 세트 1 오용 — 세 규칙이 각각 잡힌다.
+    // 5) Vulkan: 범위 밖 binding / 범위 종류 불일치(UBO 범위에 SSBO) / 세트 1 오용 — 세 규칙이 각각 잡힌다.
     {
         sw::ShaderReflectionData bad{};
-        bad._listResource.push_back( makeRes( "g_Foo", "StorageBuffer", 0, vk::kSlotBindingCount + 3 ) ); // 밴드 밖
-        bad._listResource.push_back( makeRes( "g_Bar", "StorageBuffer", 0, vk::kBShift + 2 ) );           // b 밴드에 SSBO
+        bad._listResource.push_back( makeRes( "g_Foo", "StorageBuffer", 0, vk::kSlotBindingCount + 3 ) ); // 범위 밖
+        bad._listResource.push_back( makeRes( "g_Bar", "StorageBuffer", 0, vk::kBShift + 2 ) );           // b 범위에 SSBO
         bad._listResource.push_back( makeRes( "g_Baz", "StorageBuffer", bindless::kVkTextureSet, 0 ) );   // 세트 1 에 버퍼
         listIssue.clear();
         SW_EXPECT_EQUAL( 3u, sw::ShaderBindingContract::validate( bad, sw::ShaderTargetFormat::SPIRV_Vulkan, "bad2.vk", &listIssue ) );
-        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "밴드 밖" ) );
-        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "밴드인데" ) );
+        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "범위 밖" ) );
+        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "범위인데" ) );
         SW_EXPECT_TRUE( hasIssueContaining( listIssue, "세트 1" ) );
     }
 

@@ -63,7 +63,7 @@ namespace sw::editor
                     if ( pContext != nullptr )
                     {
                         GameObject* pByGuid = pContext->getWorkspace().findGameObjectByGuid( guid );
-                        if ( pByGuid != nullptr && pByGuid->isPendingKill() == false )
+                        if ( pByGuid != nullptr && pByGuid->isPendingDestroy() == false )
                             return pByGuid;
                     }
                 }

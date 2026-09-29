@@ -299,7 +299,7 @@ namespace sw
         while ( _window->processMessages() )
         {
             // 프로파일 실행(-gv_profileFrames=N)은 목표 프레임을 채우면 스스로 끝난다.
-            if ( _engineLoop.wantsQuit() )
+            if ( _engineLoop.isQuitRequested() )
             {
                 _window->requestClose();
                 break;

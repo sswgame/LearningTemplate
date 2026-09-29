@@ -141,7 +141,7 @@ namespace sw
             return;
 
         if ( _pBarrierWatcher != nullptr )
-            _pBarrierWatcher->noteBarrierDuringRecording( "swapChain.transitionTo" );
+            _pBarrierWatcher->reportBarrierDuringRecording( "swapChain.transitionTo" );
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

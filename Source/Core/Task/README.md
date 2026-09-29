@@ -74,7 +74,7 @@ sequenceDiagram
 
   Main->>TM: dispatchMainThreadTasks()
   Main->>TM: (컴포넌트 병렬 tick 제출)
-  TM->>W: emplaceParallel / 웨이브 실행
+  TM->>W: emplaceParallel / 병렬 스테이지 실행
   Main->>TM: waitAll() / waitStage()
   Note over Main,W: wait 중에도 Work Helping<br/>메인/워커가 남은 일을 돕습니다
   W-->>Main: 완료
@@ -329,7 +329,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 
 ## 엔진 안에서 이미 쓰는 곳 (참고)
 
-- **Object / GameObject**: 컴포넌트 tick 웨이브를 `emplaceParallel` + stage wait  
+- **Object / GameObject**: 컴포넌트 tick 스테이지를 `emplaceParallel` + stage wait  
 - **SceneManager**: 씬 비동기 로드 태스크  
 - **RenderPass / Pipeline**: 에셋 비동기 로드  
 - **LiveReload / ModuleHost**: 언로드 전 `waitAll`

@@ -112,7 +112,7 @@ namespace sw
             inline constexpr uint32 kBShift           = SW_VK_B_SHIFT;
             inline constexpr uint32 kTShift           = SW_VK_T_SHIFT;
             inline constexpr uint32 kUShift           = SW_VK_U_SHIFT;
-            inline constexpr uint32 kBandWidth        = SW_VK_SLOT_BAND_WIDTH;
+            inline constexpr uint32 kRangeSize        = SW_VK_SLOT_RANGE_SIZE;
             inline constexpr uint32 kSlotBindingCount = SW_VK_SLOT_BINDING_COUNT;
         } // namespace vk
 
@@ -211,15 +211,15 @@ namespace sw
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,
                        "예약 CB 슬롯은 백엔드가 마련한 b# 자리 안이어야 한다" );
-        static_assert( kSrvSlotCount <= vk::kBandWidth && kComputeUavSlotCount <= vk::kBandWidth && kConstantBufferSlotCount <= vk::kBandWidth,
-                       "슬롯 수가 Vulkan 세트 0 의 종류별 밴드 폭을 넘는다" );
-        static_assert( vk::kTShift == vk::kBShift + vk::kBandWidth && vk::kUShift == vk::kTShift + vk::kBandWidth &&
-                           vk::kSlotBindingCount == vk::kUShift + vk::kBandWidth,
-                       "Vulkan 세트 0 밴드(b/t/u)는 연속이어야 한다" );
+        static_assert( kSrvSlotCount <= vk::kRangeSize && kComputeUavSlotCount <= vk::kRangeSize && kConstantBufferSlotCount <= vk::kRangeSize,
+                       "슬롯 수가 Vulkan 세트 0 의 종류별 범위 크기을 넘는다" );
+        static_assert( vk::kTShift == vk::kBShift + vk::kRangeSize && vk::kUShift == vk::kTShift + vk::kRangeSize &&
+                           vk::kSlotBindingCount == vk::kUShift + vk::kRangeSize,
+                       "Vulkan 세트 0 범위(b/t/u)는 연속이어야 한다" );
         static_assert( kRootConstantSpace != 0 && kRootConstantSpace != bindless::kTextureSpace, "루트 상수 space 가 슬롯/텍스처 배열과 겹친다" );
         static_assert( kRootConstantEmulSlot < kConstantBufferSlotCount && kRootConstantEmulSlot != kPassConstantBuffer && kRootConstantEmulSlot != kMaterialConstantBuffer,
                        "루트 상수 에뮬 슬롯은 예약 CB 와 겹치지 않는 b# 자리여야 한다" );
-        static_assert( kComputeTextureUav0 == kComputeUavSlotCount && kComputeTextureUav0 + kComputeTextureUavSlotCount <= vk::kBandWidth,
+        static_assert( kComputeTextureUav0 == kComputeUavSlotCount && kComputeTextureUav0 + kComputeTextureUavSlotCount <= vk::kRangeSize,
                        "컴퓨트 RW 텍스처 슬롯은 버퍼 UAV 슬롯 바로 다음이어야 한다" );
         static_assert( SW_SLOT_COMPUTE_TEXUAV1 == SW_SLOT_COMPUTE_TEXUAV0 + 1 && SW_SLOT_COMPUTE_TEXUAV2 == SW_SLOT_COMPUTE_TEXUAV0 + 2 &&
                            SW_SLOT_COMPUTE_TEXUAV3 == SW_SLOT_COMPUTE_TEXUAV0 + 3 && SW_GL_IMAGE_UNIT1 == SW_GL_IMAGE_UNIT0 + 1 &&

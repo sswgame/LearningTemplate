@@ -119,7 +119,7 @@ SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
  *          "창 관리자가 이미 매핑했는가" 다. 방금 보이라고 한 창도, 최소화된 창도, 다른 워크스페이스에
  *          있는 창도 거짓이다. 그 상태로 다시 만들면 **창이 사라진다.** 윈도우에서는 `IsWindowVisible`
  *          이 WS_VISIBLE 스타일이라 둘이 우연히 같았고, 그래서 윈도우만 보면 초록이었다.
- *          이제 엔진은 **의도**(`isVisibleIntended()`)로 판단하고, 이 케이스도 그것을 단언한다.
+ *          이제 엔진은 **의도**(`isVisibleRequested()`)로 판단하고, 이 케이스도 그것을 단언한다.
  */
 SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
 {
@@ -147,7 +147,7 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
 
     // 엔진의 계약은 **의도**다 — "보이기로 한 창은 다시 만든 뒤에도 보이기로 한 상태다".
     // 이것은 모든 플랫폼에서 즉시 답할 수 있고, `recreate()` 가 판단에 쓰는 값도 이것이다.
-    SW_EXPECT_TRUE_MSG( window->isVisibleIntended(),
+    SW_EXPECT_TRUE_MSG( window->isVisibleRequested(),
                         "다시 만든 창이 숨김으로 남았습니다 — 백엔드를 바꾸면 화면이 사라집니다" );
 
     if ( bPlatformAnswersVisibilitySynchronously )

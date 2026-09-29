@@ -175,7 +175,7 @@
 #define SW_VK_B_SHIFT                  0
 #define SW_VK_T_SHIFT                  16
 #define SW_VK_U_SHIFT                  32
-#define SW_VK_SLOT_BAND_WIDTH          16
+#define SW_VK_SLOT_RANGE_SIZE          16
 #define SW_VK_SLOT_BINDING_COUNT       48
 
 // ------------------------------------------------------------------------------
