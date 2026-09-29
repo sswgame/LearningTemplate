@@ -237,8 +237,21 @@ namespace sw
         mutable hashed_string _attachOwner;
         PROPERTY( HideInInspector )
         mutable hashed_string _attachComponent;
-        /** @brief 트랜스폼 칸이 든 페이지입니다. 페이지는 옮기지 않으므로 표를 거치지 않고 찾습니다. */
+        /**
+         * @brief 트랜스폼 칸이 든 페이지입니다. 페이지는 옮기지 않으므로 표를 거치지 않고 찾습니다.
+         * @details 이 셋(페이지 · 칸 번호 · 매니저)은 세터가 매번 읽는다. 한 캐시 줄(Component 뒤 첫 줄)에 붙여 둔다 — 칸 번호가 계층
+         *          필드 뒤에 있을 때는 세터 하나가 이 객체의 줄 셋을 건드렸다.
+         */
         SceneTransformPage* _pTransformPage;
+        /** @brief 트랜스폼 저장소의 칸 번호입니다. 만들 때 받고 소멸할 때 놓습니다. */
+        uint32 _transformSlot;
+        /**
+         * @brief 계층의 더티 루트 목록에서의 자기 자리입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 만집니다.
+         * @details 해제가 선형으로 찾던 것을 O(1) swap-remove 로 바꿨습니다(8000 개를 지우면 3200만 번 비교, 파괴 개당 2 µs 였다).
+         *          자리는 플러시가 비웁니다. 루트 전부의 목록과 그 자리(`_rootIndex`)는 읽는 곳이 없어 걷었습니다.
+         */
+        static constexpr uint32 kNotInList = 0xFFFFFFFFu;
+        uint32                  _dirtyRootIndex;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 등록 시점에 받아 둡니다.
          * @details 쓸 때마다 `getOwner()->getManager()` 로 두 단계 거슬러 찾던 것을 대체합니다.
@@ -248,8 +261,6 @@ namespace sw
         GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
-        /** @brief 트랜스폼 저장소의 칸 번호입니다. 만들 때 받고 소멸할 때 놓습니다. */
-        uint32 _transformSlot;
         /// @brief 비트필드가 **아닙니다.** 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세웁니다(`applyTransformWrite`).
         uint8 _bIsTransformDirty;
         uint8 _bHasDirtyDescendant;
@@ -258,12 +269,5 @@ namespace sw
          * @details 원자인 이유: 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 오르게 합니다(exchange).
          */
         atomic<uint8> _bQueuedDirtyRoot;
-        /**
-         * @brief 계층의 더티 루트 목록에서의 자기 자리입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 만집니다.
-         * @details 해제가 선형으로 찾던 것을 O(1) swap-remove 로 바꿨습니다(8000 개를 지우면 3200만 번 비교, 파괴 개당 2 µs 였다).
-         *          자리는 플러시가 비웁니다. 루트 전부의 목록과 그 자리(`_rootIndex`)는 읽는 곳이 없어 걷었습니다.
-         */
-        static constexpr uint32 kNotInList = 0xFFFFFFFFu;
-        uint32                  _dirtyRootIndex;
     };
 } // namespace sw

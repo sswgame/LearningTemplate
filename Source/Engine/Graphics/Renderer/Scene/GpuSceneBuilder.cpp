@@ -13,6 +13,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
@@ -299,6 +300,45 @@ namespace sw
         outInstance._spinSeed     = candidate._spinSeed;
     }
 
+    void GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
+    {
+        // 행렬 하나(64 바이트)와 번호 셋을 읽는 것뿐이다. 예전에는 움직인 프리미티브마다 후보를 다시 채웠다 — 메시 컴포넌트 · 소유
+        // 오브젝트(활성) · 메시 · 머티리얼을 건너다니고 소유 포인터 셋을 견줬다. 움직였다고 그것들이 바뀌지는 않는다.
+        //
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다. 번호 하나가 후보 하나라(등록부 → 후보 표는 단사) 워커끼리 겹치지 않는다.
+        struct TransformCopyJob
+        {
+            const uint32*                _pPrimitive{ nullptr };
+            const uint32*                _pTransformSlot{ nullptr };
+            const uint32*                _pMap{ nullptr };
+            DrawCandidate*               _pCandidate{ nullptr };
+            const SceneTransformStorage* _pStorage{ nullptr };
+
+            void copyRange( uint32 start, uint32 end )
+            {
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    const uint32              primitiveIndex = _pPrimitive[index];
+                    const uint32              transformSlot  = _pTransformSlot[primitiveIndex];
+                    const SceneTransformPage* pPage          = _pStorage->findPage( transformSlot );
+                    if ( pPage == nullptr )
+                        continue;
+                    DrawCandidate& candidate = _pCandidate[_pMap[primitiveIndex]];
+                    candidate._world         = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
+                    candidate._boundsCenter  = candidate._world.getTranslation();
+                }
+            }
+        };
+        TransformCopyJob job{};
+        job._pPrimitive     = std::as_const( _listTransformDirtyPrimitive ).data();
+        job._pTransformSlot = std::as_const( primitives.getTransformSlots() ).data();
+        job._pMap           = std::as_const( _listPrimitiveToCandidate ).data();
+        job._pCandidate     = _listScratchCandidate.data();
+        job._pStorage       = &SceneTransformStorage::get();
+        engine::runParallel( static_cast<uint32>( _listTransformDirtyPrimitive.size() ), kParallelTransformCopyCount,
+                             SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformCopyJob::copyRange, &job ) );
+    }
+
     void GpuSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
     {
         SW_PROFILE_SCOPE( "GT.GpuScene.build" );
@@ -339,8 +379,8 @@ namespace sw
         if ( bSetSame && bCamSame && bPermutationSame && primitives.hasDirty() == false )
             return;
 
-        _listDirtyPrimitive.clear();
-        pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive );
+        // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
+        pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
 
         const vector<MeshComponent*>&         listPrimitive     = primitives.getAll();
         const vector<PrimitiveInstanceEntry>& listInstanceEntry = primitives.getInstanceEntries();
@@ -379,6 +419,22 @@ namespace sw
             _listScratchCandidate.swap( _listBuiltCandidate );
             bPartialDone = _listScratchCandidate.size() >= _lastCandidateCount;
 
+            // 월드 행렬만 바뀐 것 가운데 지난 프레임에 실리지 않았던 것(메시가 아직 없었다 · 인스턴스 항목)은 다시 모아야 실릴지 안다.
+            // 렌더 상태 목록으로 넘기고, 남은 것만 행렬을 옮긴다.
+            if ( bPartialDone )
+            {
+                size_t keptCount = 0;
+                for ( const uint32 slot : _listTransformDirtyPrimitive )
+                {
+                    const uint32 candidateIndex = ( slot < meshCount ) ? _listPrimitiveToCandidate[slot] : kInvalidCandidateIndex;
+                    if ( candidateIndex < _lastCandidateCount )
+                        _listTransformDirtyPrimitive[keptCount++] = slot;
+                    else
+                        _listDirtyPrimitive.push_back( slot );
+                }
+                _listTransformDirtyPrimitive.resize( keptCount );
+            }
+
             for ( uint32 slot : _listDirtyPrimitive )
             {
                 if ( bPartialDone == false )
@@ -415,6 +471,12 @@ namespace sw
                 }
             }
 
+            if ( bPartialDone && _listTransformDirtyPrimitive.empty() == false )
+            {
+                copyCandidateTransforms( primitives );
+                bPartialAnyChange = true;
+            }
+
             if ( bPartialDone )
             {
                 candidateCount = _lastCandidateCount;
@@ -425,6 +487,8 @@ namespace sw
                 _listScratchCandidate.swap( _listBuiltCandidate );
             }
         }
+        // 채우기 · 제자리 갱신은 렌더 상태 · 트랜스폼을 가리지 않고 "바뀐 칸" 목록 하나를 본다.
+        _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listTransformDirtyPrimitive.begin(), _listTransformDirtyPrimitive.end() );
 
         // 등록부에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
         //
@@ -764,7 +828,11 @@ namespace sw
         // 회전 인스턴스 수는 모두 훑지 않으므로 **증감으로 유지한다**. 슬롯 하나를 고칠 때 옛 값이
         // 0 이 아니었으면 빼고 새 값이 0 이 아니면 더한다. 전체 훑기 경로만 0 부터 다시 센다.
         // 투명 꼬리를 다시 짓는 프레임은 접두부를 통째로 훑는다. 더티 목록에는 자리가 바뀔 투명 후보도 섞여 있다.
-        const bool bPartialRefresh = bPartialCollect && bTransparentOrderChanged == false && _listCandidateToInstance.size() == _listScratchCandidate.size();
+        // **더티가 많으면 통째로 훑는다.** 부분 훑기는 더티 목록 순서(프리미티브 번호)라 인스턴스 자리가 흩어지고 직렬이다. 트랜스폼만 바뀐
+        // 프리미티브는 몇 개든 부분 수집으로 오므로(큐브 8000 개가 모두 움직여도) 여기서 가른다. 수집의 문턱과 같은 4 분의 1 이다.
+        const bool bFewDirty       = _listDirtyPrimitive.size() * 4 < _listScratchCandidate.size();
+        const bool bPartialRefresh = bPartialCollect && bFewDirty && bTransparentOrderChanged == false &&
+                                     _listCandidateToInstance.size() == _listScratchCandidate.size();
         if ( bPartialRefresh == false )
             _snapshot._spinInstanceCount = 0;
 
@@ -973,14 +1041,11 @@ namespace sw
 
         // 배치 구성은 그대로지만 **회수 시계는 돌아야 한다**. 안 그러면 물체가 움직이기만 하는 씬에서
         // 시계가 멈춰, 안 쓰이게 된 머티리얼 원소가 영원히 회수되지 않는다(자리가 조금씩 샌다).
-        // 지금 인스턴스가 가리키는 원소는 모두 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
-        // **부분 갱신 프레임에는 회수 시계를 돌리지 않는다.** 시계를 돌리면서 더티 인스턴스의 원소만
-        // 도장을 찍으면, 손대지 않은(그러나 여전히 쓰이는) 원소가 낡은 것으로 보여 회수돼 버린다.
-        // 시계를 멈추면 아무것도 낡지 않으므로 잘못된 회수가 생기지 않는다. 회수는 전체 훑기
-        // 프레임(집합 변화 · 큰 변경)으로 미뤄질 뿐이다.
-        if ( bPartialRefresh )
-            return true;
-
+        // 지금 배치가 가리키는 원소는 모두 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
+        // **부분 갱신 프레임에도 돌린다.** 도장은 더티 인스턴스가 아니라 배치가 적어 둔 (배치, 원소) 쌍 전부에 찍고, 부분 갱신은
+        // 배치 구성이 그대로인 프레임이라(투명 꼬리도 다시 짓지 않는다) 그 목록이 지금 그리는 원소 그대로다. 예전에는 부분 갱신
+        // 프레임에 시계를 멈췄다. 트랜스폼만 바뀐 프리미티브가 부분 수집으로 가게 된 뒤로(모두 움직이는 씬도 그렇다) 멈춘 시계는
+        // 숨기거나 뺀 메시의 원소를 다음 구조 변경까지 붙들었다.
         ++_buildCounter;
         SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.stamp" );
         // 도장은 원소에 찍는다. 인스턴스 8000 개를 돌 것 없이 배치가 적어 둔 (배치, 원소) 쌍만 돈다.

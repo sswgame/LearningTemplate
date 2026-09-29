@@ -2021,6 +2021,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (트랜스폼 연속 배열 3단계 — 렌더 수집은 트랜스폼만 바뀐 프리미티브를 다시 모으지 않는다)
+
+**왜.** 2단계 뒤에도 `GpuScene.build.collect` 가 300 us 였다. 큐브 8000 개가 모두 움직이면 더티가 번호 공간의 4 분의 1 을 넘어 **전체 수집**이었고,
+프리미티브마다 메시 컴포넌트 · 소유 오브젝트(활성) · 메시 · 머티리얼을 건너다니며 소유 포인터 셋을 견줬다. 움직였다고 그것들이 바뀌지는 않는다.
+언리얼이 `UpdatePrimitiveTransform`(행렬만 보낸다)을 프록시 재생성과 가르는 자리다.
+
+**모양.**
+- `PrimitiveRegistry` 의 더티 깃발이 둘이다 — 렌더 상태(`markDirty` · `markInstanceDirty`)와 **월드 행렬만**(`markTransformDirty`, 트랜스폼 칸의
+  프리미티브 번호로 찍는다). `consumeDirty( 상태, 트랜스폼 )` 이 둘로 나눠 준다(둘 다 선 칸은 상태 쪽). 한 목록 판은 그대로 둔다(합쳐 정렬).
+  메시마다 트랜스폼 칸 번호(`getTransformSlots`)를 들고, 지우기가 두 깃발과 칸 번호를 같이 옮긴다.
+- `GpuSceneBuilder` 는 부분 수집의 문턱(4 분의 1)에 **상태 더티만** 센다. 트랜스폼만 바뀐 칸은 후보를 다시 채우지 않고 저장소의 행렬 ·
+  바운드 중심만 옮긴다(`copyCandidateTransforms`, 2048 개 이상이면 워커로 — 행렬은 방금 틱 뒤 적용을 한 다른 코어가 써서 한 스레드가
+  8000 줄을 끌어오면 114 us, 나누면 75 us). 지난 프레임에 실리지 않았던 칸은 상태 목록으로 넘겨 다시 모은다.
+- 제자리 갱신의 부분 경로(더티 목록 순서 · 직렬)는 더티가 4 분의 1 미만일 때만 탄다. 모두 움직인 프레임이 부분 수집으로 오게 되자 더티
+  구간이 잘게 흩어져 "전부 더티" 로 넘어갔다(`IncrementalTransparentTailMatchesFreshBuild` 가 잡았다).
+- **머티리얼 원소 회수 시계를 부분 갱신 프레임에도 돌린다.** 도장은 더티 인스턴스가 아니라 배치가 적어 둔 (배치, 원소) 쌍 전부에 찍고, 부분
+  갱신은 배치 구성이 그대로인 프레임이라 그 목록이 지금 그리는 원소 그대로다. 예전의 "부분 갱신 프레임에는 시계를 멈춘다" 는 도장이 더티
+  인스턴스 단위이던 때의 규칙이었다. 그대로 두면 모두 움직이는 씬에서 숨기거나 뺀 메시의 원소가 다음 구조 변경까지 남았다
+  (`MaterialElementIdsPersistAcrossBuildsAndAreFreed` 가 잡았다).
+- `SceneComponent` 의 세터가 매번 읽는 셋(페이지 · 칸 번호 · 매니저)을 한 캐시 줄에 붙였다(칸 번호가 계층 필드 뒤에 있어 줄 셋을 건드렸다).
+
+**숫자(Release · DX12 · 큐브 8000 이 틱에서 움직임 · 1000 프레임, `BinSoaOld`(d0af4f5c)와 3회 번갈아, avg — 1 · 2 · 3단계 합).**
+
+| 구간 | 전 | 후 |
+|---|---|---|
+| `GT.Frame` | 1242–1311 | **907–978** |
+| `Scene.tick.queuedTransforms` | 218–234 | 131–136 |
+| `GpuScene.build` | 557–581 | 308–344 |
+| `GpuScene.build.collect` | 317–336 | **75–89** |
+| `Scene.tick.components` | 451–478 | 450–477 (그대로) |
+| wall/frame | 1263–1333 | **925–999** |
+
+**남은 것.** `components`(8000 개 onTick, ~450 us)는 그대로다. 오브젝트 → 틱 항목 → 컴포넌트 → 대상 컴포넌트로 포인터를 건너다니는 비용이고,
+구조로 줄이려면 언리얼 Mass · 유니티 DOTS 처럼 오브젝트 모델 밖의 배치 경로가 필요하다(인라인 틱 항목은 2026-09-23 에 재서 기각).
+스폰은 개당 +60~100 ns(칸 초기화).
+
+**테스트.** `GpuSceneTest.PrimitiveRegistrySeparatesTransformOnlyChanges`(두 목록 · 워드 경계 · 지우기의 칸 번호 · 깃발 옮김). 기존
+`IncrementalTransparentTailMatchesFreshBuild`(1800 개가 모두 움직이는 동안 이어 짓기 = 새로 짓기) · `MaterialElementIdsPersistAcrossBuildsAndAreFreed` 가
+새 경로를 지킨다.
+
 ### 2026-09-29 (트랜스폼 연속 배열 2단계 — 값은 전역 저장소의 칸에, 틱 중 자기 오브젝트 쓰기는 칸에 바로)
 
 **모양.** 새 `SceneTransformStorage`(`Object/Component/`)가 모든 씬 컴포넌트의 로컬 TRS · 월드 행렬 · LWC 를 값마다 연속 배열로 든다

@@ -15,14 +15,14 @@ namespace sw
         : _attachOwner{}
         , _attachComponent{}
         , _pTransformPage{ nullptr }
+        , _transformSlot{ SceneTransformStorage::kInvalidSlot }
+        , _dirtyRootIndex{ kNotInList }
         , _pManager{ nullptr }
         , _pParent{ nullptr }
         , _listChild{}
-        , _transformSlot{ SceneTransformStorage::kInvalidSlot }
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
-        , _dirtyRootIndex{ kNotInList }
     {
         // 값(로컬 TRS · 월드 행렬 · LWC)은 저장소의 칸에 있다. 칸은 항등 로컬 · 항등 월드로 채워져 나온다.
         _transformSlot     = SceneTransformStorage::get().allocateSlot( this, _pTransformPage );

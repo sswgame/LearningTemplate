@@ -23,6 +23,7 @@ namespace sw
     class MaterialInstance;
     class Mesh;
     class MeshComponent;
+    class PrimitiveRegistry;
     class Scene;
 
     /**
@@ -48,6 +49,12 @@ namespace sw
          *          바로 이득이 나는 구조라 문턱만 두고 유지합니다. 부분 수집(더티 < 1/4)은 직렬입니다. 그쪽은 일이 작습니다.
          */
         static constexpr uint32 kParallelCollectPrimitiveCount = 4096;
+        /**
+         * @brief 월드 행렬만 바뀐 프리미티브가 이 수 이상이면 행렬 옮기기(`copyCandidateTransforms`)를 워커에 나눕니다.
+         * @details 한 건이 행렬 하나 복사라 싸지만, 행렬은 방금 틱 뒤 적용을 한 다른 코어들이 썼다 — 한 스레드가 8000 줄을 원격 캐시에서
+         *          끌어오면 그 지연이 쌓인다.
+         */
+        static constexpr uint32 kParallelTransformCopyCount = 2048;
 
         /** @brief 스냅샷 · 캐시 · 머티리얼 등록부를 비웁니다(스냅샷이 든 소유도 여기서 놓입니다). */
         void clear();
@@ -293,6 +300,12 @@ namespace sw
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드)를 채웁니다. 배치 · 머티리얼 인덱스는 손대지 않습니다. */
         static void fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance );
         /**
+         * @brief 월드 행렬만 바뀐 프리미티브(`_listTransformDirtyPrimitive`)의 후보에 트랜스폼 저장소의 행렬 · 바운드 중심을 옮깁니다.
+         * @details 컴포넌트 · 메시 · 머티리얼을 읽지 않습니다. 부분 수집 안에서만 부르고, 후보 자리는 지난 프레임 것 그대로입니다
+         *          (실리지 않았던 것은 부르기 전에 렌더 상태 목록으로 넘깁니다).
+         */
+        void copyCandidateTransforms( const PrimitiveRegistry& primitives );
+        /**
          * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(buildBatches 안).
          * @details 불투명과 투명이 **같은 함수**를 씁니다. 예전에는 둘이 같은 40여 줄을 따로 들고 있어 한쪽에 넣은
          *          고침(역매핑 · 회전 수 · 머티리얼 원소)이 다른 쪽에 안 가는 모양이었습니다. 다른 것은 인자로 줍니다:
@@ -328,8 +341,18 @@ namespace sw
 
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
         static constexpr uint32 kInvalidCandidateIndex = 0xFFFFFFFFu;
-        /** @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 등록부 인덱스입니다. */
+        /**
+         * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 등록부 인덱스입니다.
+         * @details 등록부에서 받을 때는 **렌더 상태가** 바뀐 것뿐이고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를
+         *          뒤에 이어 붙인다 — 채우기 · 제자리 갱신은 둘을 가리지 않는다.
+         */
         vector<uint32> _listDirtyPrimitive;
+        /**
+         * @brief 이번 프레임에 **월드 행렬만** 바뀐 프리미티브의 등록부 인덱스입니다(`PrimitiveRegistry::markTransformDirty`).
+         * @details 이것들은 후보를 다시 채우지 않고 트랜스폼 저장소의 행렬만 옮긴다(`copyCandidateTransforms`). 부분 수집의 문턱(더티가
+         *          번호 공간의 4 분의 1 미만)도 이것들은 세지 않는다 — 큐브 8000 개가 모두 움직이는 프레임이 예전에는 전체 수집이었다.
+         */
+        vector<uint32> _listTransformDirtyPrimitive;
         /** @brief 등록부 인덱스 -> 후보 인덱스입니다(`kInvalidCandidateIndex` = 후보에 안 실림). */
         vector<uint32> _listPrimitiveToCandidate;
         /// @brief 전체 수집이 프리미티브 번호 자리에 남긴 `CollectFlag` 입니다. 앞으로 당길 때 읽습니다.

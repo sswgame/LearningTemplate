@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 
 namespace sw
@@ -26,6 +27,7 @@ namespace sw
         // 인스턴스 항목이 메시 컴포넌트 뒤에 이어지므로 깃발은 전체 번호 공간만큼 있어야 한다.
         growDirtyFlags( slot + 1 + static_cast<uint32>( _listInstanceEntry.size() ) );
         _listPrimitive.push_back( pComp );
+        _listPrimitiveTransformSlot.push_back( pComp->getTransformSlot() );
         pComp->setPrimitiveIndex( slot );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
@@ -41,13 +43,18 @@ namespace sw
         const uint32                      oldWordCount = _dirtyFlagCapacity / 64u;
         const uint32                      wordCount    = capacity / 64u;
         std::unique_ptr<atomic<uint64>[]> arrNew{ new atomic<uint64>[wordCount] };
+        std::unique_ptr<atomic<uint64>[]> arrNewTransform{ new atomic<uint64>[wordCount] };
         for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
-            const uint64 previous = ( wordIndex < oldWordCount ) ? _arrDirtyWord[wordIndex].load( std::memory_order_relaxed ) : 0u;
+            const bool   bOld              = wordIndex < oldWordCount;
+            const uint64 previous          = bOld ? _arrDirtyWord[wordIndex].load( std::memory_order_relaxed ) : 0u;
+            const uint64 previousTransform = bOld ? _arrTransformDirtyWord[wordIndex].load( std::memory_order_relaxed ) : 0u;
             arrNew[wordIndex].store( previous, std::memory_order_relaxed );
+            arrNewTransform[wordIndex].store( previousTransform, std::memory_order_relaxed );
         }
-        _arrDirtyWord      = std::move( arrNew );
-        _dirtyFlagCapacity = capacity;
+        _arrDirtyWord          = std::move( arrNew );
+        _arrTransformDirtyWord = std::move( arrNewTransform );
+        _dirtyFlagCapacity     = capacity;
     }
 
     void PrimitiveRegistry::remove( MeshComponent* pComp )
@@ -67,17 +74,24 @@ namespace sw
         // 전부(번호 공간만큼)를 훑어 내렸다. 프레임에 100 개를 지우는 씬에서 8000 칸 × 100 이라 지우기 하나가 4 us 였다.
         // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다. 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
         // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
-        MeshComponent* pMoved   = _listPrimitive.back();
-        const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
-        _listPrimitive[slot]    = pMoved;
+        MeshComponent* pMoved             = _listPrimitive.back();
+        const uint32   lastSlot           = static_cast<uint32>( _listPrimitive.size() - 1 );
+        _listPrimitive[slot]              = pMoved;
+        _listPrimitiveTransformSlot[slot] = _listPrimitiveTransformSlot.back();
         _listPrimitive.pop_back();
+        _listPrimitiveTransformSlot.pop_back();
         if ( pMoved != pComp )
             pMoved->setPrimitiveIndex( slot );
         if ( lastSlot < _dirtyFlagCapacity )
         {
-            const bool bMovedDirty = takeSlotDirty( lastSlot );
+            // 깃발 둘을 다 옮긴다. 트랜스폼 깃발만 옮기지 않으면 움직인 물체가 한 프레임 멈춰 보인다.
+            const bool bMovedDirty          = takeWordBit( _arrDirtyWord.get(), lastSlot );
+            const bool bMovedTransformDirty = takeWordBit( _arrTransformDirtyWord.get(), lastSlot );
             if ( slot != lastSlot )
-                storeSlotDirty( slot, bMovedDirty );
+            {
+                storeWordBit( _arrDirtyWord.get(), slot, bMovedDirty );
+                storeWordBit( _arrTransformDirtyWord.get(), slot, bMovedTransformDirty );
+            }
         }
         pComp->setPrimitiveIndex( MeshComponent::kInvalidPrimitiveIndex );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
@@ -98,7 +112,19 @@ namespace sw
     {
         if ( slot >= _dirtyFlagCapacity )
             return;
-        atomic<uint64>& word = _arrDirtyWord[slot >> 6];
+        markWordBit( _arrDirtyWord.get(), slot );
+    }
+
+    void PrimitiveRegistry::markTransformDirty( uint32 primitiveIndex )
+    {
+        if ( primitiveIndex >= _dirtyFlagCapacity )
+            return;
+        markWordBit( _arrTransformDirtyWord.get(), primitiveIndex );
+    }
+
+    void PrimitiveRegistry::markWordBit( atomic<uint64>* pArrWord, uint32 slot )
+    {
+        atomic<uint64>& word = pArrWord[slot >> 6];
         const uint64    bit  = static_cast<uint64>( 1 ) << ( slot & 63u );
         // 이미 서 있으면 읽기만 한다. 같은 워드의 이웃 칸을 찍는 워커와 캐시 라인을 다투지 않는다.
         if ( ( word.load( std::memory_order_relaxed ) & bit ) != 0u )
@@ -109,23 +135,19 @@ namespace sw
             _bAnyDirty.store( 1u, std::memory_order_release );
     }
 
-    bool PrimitiveRegistry::takeSlotDirty( uint32 slot )
+    bool PrimitiveRegistry::takeWordBit( atomic<uint64>* pArrWord, uint32 slot )
     {
-        if ( slot >= _dirtyFlagCapacity )
-            return false;
         const uint64 bit = static_cast<uint64>( 1 ) << ( slot & 63u );
-        return ( _arrDirtyWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel ) & bit ) != 0u;
+        return ( pArrWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel ) & bit ) != 0u;
     }
 
-    void PrimitiveRegistry::storeSlotDirty( uint32 slot, bool bDirty )
+    void PrimitiveRegistry::storeWordBit( atomic<uint64>* pArrWord, uint32 slot, bool bDirty )
     {
-        if ( slot >= _dirtyFlagCapacity )
-            return;
         const uint64 bit = static_cast<uint64>( 1 ) << ( slot & 63u );
         if ( bDirty )
-            _arrDirtyWord[slot >> 6].fetch_or( bit, std::memory_order_acq_rel );
+            pArrWord[slot >> 6].fetch_or( bit, std::memory_order_acq_rel );
         else
-            _arrDirtyWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel );
+            pArrWord[slot >> 6].fetch_and( ~bit, std::memory_order_acq_rel );
     }
 
     PrimitiveRegistry::~PrimitiveRegistry()
@@ -210,7 +232,17 @@ namespace sw
 
     void PrimitiveRegistry::consumeDirty( vector<uint32>& outListSlot )
     {
-        outListSlot.clear();
+        // 한 목록이 필요한 쪽(테스트 · 도구)을 위한 판이다. 둘로 나눠 받아 잇는다 — 둘에 겹치는 번호는 없다.
+        thread_local vector<uint32> t_listTransformSlot;
+        consumeDirty( outListSlot, t_listTransformSlot );
+        outListSlot.insert( outListSlot.end(), t_listTransformSlot.begin(), t_listTransformSlot.end() );
+        std::sort( outListSlot.begin(), outListSlot.end() );
+    }
+
+    void PrimitiveRegistry::consumeDirty( vector<uint32>& outListStateSlot, vector<uint32>& outListTransformSlot )
+    {
+        outListStateSlot.clear();
+        outListTransformSlot.clear();
         std::scoped_lock<mutex> lock{ _mutex };
         if ( hasDirty() == false )
             return;
@@ -223,16 +255,24 @@ namespace sw
         const uint32 wordCount = ( count + 63u ) / 64u;
         for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
-            atomic<uint64>& word = _arrDirtyWord[wordIndex];
-            if ( word.load( std::memory_order_relaxed ) == 0u )
+            atomic<uint64>& stateWord     = _arrDirtyWord[wordIndex];
+            atomic<uint64>& transformWord = _arrTransformDirtyWord[wordIndex];
+            if ( stateWord.load( std::memory_order_relaxed ) == 0u && transformWord.load( std::memory_order_relaxed ) == 0u )
                 continue;
-            uint64 bits = word.exchange( 0u, std::memory_order_acq_rel );
-            while ( bits != 0u )
+            const uint64 stateBits = stateWord.exchange( 0u, std::memory_order_acq_rel );
+            // 렌더 상태까지 바뀐 칸은 어차피 다시 모으므로 트랜스폼 목록에서 뺀다.
+            const uint64 transformBits = transformWord.exchange( 0u, std::memory_order_acq_rel ) & ~stateBits;
+            for ( uint64 bits = stateBits; bits != 0u; bits &= bits - 1u )
             {
                 const uint32 slot = wordIndex * 64u + MathUtil::countTrailingZeros( bits );
-                bits &= bits - 1u;
                 if ( slot < count )
-                    outListSlot.push_back( slot );
+                    outListStateSlot.push_back( slot );
+            }
+            for ( uint64 bits = transformBits; bits != 0u; bits &= bits - 1u )
+            {
+                const uint32 slot = wordIndex * 64u + MathUtil::countTrailingZeros( bits );
+                if ( slot < count )
+                    outListTransformSlot.push_back( slot );
             }
         }
     }
@@ -245,6 +285,8 @@ namespace sw
         {
             if ( _arrDirtyWord[wordIndex].load( std::memory_order_relaxed ) != 0u )
                 _arrDirtyWord[wordIndex].store( 0u, std::memory_order_release );
+            if ( _arrTransformDirtyWord[wordIndex].load( std::memory_order_relaxed ) != 0u )
+                _arrTransformDirtyWord[wordIndex].store( 0u, std::memory_order_release );
         }
     }
 } // namespace sw

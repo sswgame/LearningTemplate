@@ -74,11 +74,15 @@ namespace sw
          */
         void markDirty( MeshComponent* pComp );
         /**
-         * @brief 프리미티브 번호 하나의 **월드 행렬**이 바뀌었다고 표시합니다. 락이 없습니다. 워커에서 불러도 됩니다.
+         * @brief 프리미티브 번호 하나의 **월드 행렬만** 바뀌었다고 표시합니다. 락이 없습니다. 워커에서 불러도 됩니다.
          * @details 트랜스폼 칸에 적힌 번호로 찍습니다(`SceneTransformPage::_arrPrimitiveIndex`). 틱 뒤 적용이 컴포넌트를 거치지 않고 부르는
          *          자리라 `markDirty` 처럼 목록과 대조하지 않습니다 — 번호는 이 등록부가 준 것이고, add/remove 는 병렬 구간 밖입니다.
+         *
+         *          렌더 상태(`markDirty`)와 깃발이 **따로**입니다. 빌더는 이쪽만 선 프리미티브를 다시 모으지 않고 트랜스폼 저장소의 행렬만
+         *          옮깁니다(언리얼이 `UpdatePrimitiveTransform` 을 프록시 재생성과 가르는 자리). 메시 · 머티리얼 · 가시성은 움직였다고
+         *          바뀌지 않기 때문입니다.
          */
-        void markTransformDirty( uint32 primitiveIndex ) { markSlotDirty( primitiveIndex ); }
+        void markTransformDirty( uint32 primitiveIndex );
         /**
          * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록/해제). 오브젝트 활성 토글은 여기가 아니라 그 오브젝트의 메시가 제 칸을
          *        더티로 찍습니다(`Component::onOwnerActiveInHierarchyChanged`).
@@ -95,11 +99,21 @@ namespace sw
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
         void clearDirty();
         /**
-         * @brief 더티 목록을 `outListSlot` 으로 옮기고 표시를 지웁니다(`clearDirty` + 목록 가져오기).
+         * @brief 더티 목록을 `outListSlot` 으로 옮기고 표시를 지웁니다(`clearDirty` + 목록 가져오기). 렌더 상태 · 트랜스폼을 가리지 않습니다.
          * @details 받는 쪽은 **바뀐 것만 다시 모으려고** 이 목록을 씁니다. 예전에는 지우기만 하고
          *          목록을 버려서, 8000 개 중 10 개만 움직여도 8000 개를 모두 다시 모았습니다.
          */
         void consumeDirty( vector<uint32>& outListSlot );
+        /**
+         * @brief 더티 목록을 둘로 나눠 옮기고 표시를 지웁니다. 렌더 상태가 바뀐 번호는 `outListStateSlot`, **월드 행렬만** 바뀐 번호는
+         *        `outListTransformSlot` 입니다(둘에 겹치는 번호는 없습니다 — 둘 다 선 번호는 앞쪽입니다).
+         */
+        void consumeDirty( vector<uint32>& outListStateSlot, vector<uint32>& outListTransformSlot );
+        /**
+         * @brief 메시 컴포넌트마다 트랜스폼 저장소의 칸 번호입니다(`getAll()` 과 같은 순서 · 길이). 빌더가 행렬을 컴포넌트를 거치지 않고 읽습니다.
+         * @details 칸 번호는 컴포넌트 수명 동안 바뀌지 않으므로 등록할 때 한 번 적고, 지울 때 자리 옮김을 따라갑니다.
+         */
+        const vector<uint32>& getTransformSlots() const { return _listPrimitiveTransformSlot; }
 
         /**
          * @brief 인스턴스 배치를 등록합니다. 항목마다 프리미티브 번호 하나를 받습니다(메시 컴포넌트 뒤에 이어서). 집합 세대가 오릅니다.
@@ -121,15 +135,19 @@ namespace sw
 
         /** @brief 더티 플래그 배열을 최소 @p count 칸으로 키웁니다(`_mutex` 를 쥔 채, 병렬 구간 밖). */
         void growDirtyFlags( uint32 count );
-        /** @brief 번호 하나에 깃발을 세웁니다. 메시 컴포넌트와 인스턴스 항목이 같은 길을 씁니다. */
+        /** @brief 번호 하나에 렌더 상태 깃발을 세웁니다. 메시 컴포넌트와 인스턴스 항목이 같은 길을 씁니다. */
         void markSlotDirty( uint32 slot );
-        /** @brief 번호 하나의 깃발을 내리고, 서 있었는지 반환합니다(`_mutex` 를 쥔 채). */
-        bool takeSlotDirty( uint32 slot );
-        /** @brief 번호 하나의 깃발을 @p bDirty 로 둡니다(`_mutex` 를 쥔 채). */
-        void storeSlotDirty( uint32 slot, bool bDirty );
+        /** @brief 깃발 배열 @p pArrWord 의 번호 하나를 세웁니다. 이미 서 있으면 읽기만 합니다. 0→1 로 바꿨으면 "하나라도" 를 세웁니다. */
+        void markWordBit( atomic<uint64>* pArrWord, uint32 slot );
+        /** @brief 깃발 배열 @p pArrWord 의 번호 하나를 내리고, 서 있었는지 반환합니다(`_mutex` 를 쥔 채). */
+        static bool takeWordBit( atomic<uint64>* pArrWord, uint32 slot );
+        /** @brief 깃발 배열 @p pArrWord 의 번호 하나를 @p bDirty 로 둡니다(`_mutex` 를 쥔 채). */
+        static void storeWordBit( atomic<uint64>* pArrWord, uint32 slot, bool bDirty );
 
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
-        vector<MeshComponent*>         _listPrimitive;
+        vector<MeshComponent*> _listPrimitive;
+        /** @brief `_listPrimitive` 와 같은 자리의 트랜스폼 칸 번호입니다(`getTransformSlots`). */
+        vector<uint32>                 _listPrimitiveTransformSlot;
         vector<PrimitiveInstanceEntry> _listInstanceEntry; ///< 배치 순서대로 이어 붙은 항목들
         vector<MeshInstanceBatch*>     _listInstanceBatch; ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
         /**
@@ -140,6 +158,12 @@ namespace sw
          *          찍는 쪽은 그대로 "읽어 보고 없으면 fetch_or" 라 이미 선 칸은 쓰지 않습니다.
          */
         std::unique_ptr<atomic<uint64>[]> _arrDirtyWord;
+        /**
+         * @brief 칸마다 "월드 행렬만 바뀌었다" 비트입니다(`markTransformDirty`). 모양은 `_arrDirtyWord` 와 같고 같이 자랍니다.
+         * @details 렌더 상태 비트와 따로 두는 이유: 빌더가 이쪽만 선 칸은 컴포넌트를 다시 읽지 않고 행렬만 옮긴다. 큐브 8000 개가 모두
+         *          움직이면 전부가 이쪽이다.
+         */
+        std::unique_ptr<atomic<uint64>[]> _arrTransformDirtyWord;
         /// @brief 더티 비트가 덮는 칸 수입니다. 항상 64 의 배수이고 번호 공간(`getSlotCount`) 이상입니다.
         uint32 _dirtyFlagCapacity{ 0 };
         /**

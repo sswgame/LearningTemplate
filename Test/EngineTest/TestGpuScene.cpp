@@ -1657,6 +1657,79 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
 }
 
 /**
+ * @brief [GpuSceneTest] 등록부는 월드 행렬만 바뀐 칸을 렌더 상태가 바뀐 칸과 따로 내놓고, 지우기가 두 깃발과 칸 번호를 같이 옮긴다
+ * @details 빌더는 트랜스폼만 바뀐 칸을 다시 모으지 않고 트랜스폼 저장소의 행렬만 옮긴다(언리얼 `UpdatePrimitiveTransform` 의 자리).
+ *          그러려면 (1) 월드 합성이 찍은 칸은 트랜스폼 목록에만 (2) 렌더 상태까지 바뀐 칸은 상태 목록에만 나와야 하고(겹치면 두 번 처리한다)
+ *          (3) 등록부가 든 칸 번호가 컴포넌트의 것과 같아야 하며 지우기의 자리 옮김을 따라가야 한다 — 틀리면 엉뚱한 물체의 행렬이 실린다.
+ */
+SW_TEST_CASE( GpuSceneTest, PrimitiveRegistrySeparatesTransformOnlyChanges )
+{
+    sw::Scene scene( "GpuSceneTransformOnly" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    constexpr uint32               kMeshCount = 70;
+    sw::vector<sw::MeshComponent*> listMesh;
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
+        sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( ( sw::string( "TransformOnly" ) + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( cube );
+        listMesh.push_back( pMesh );
+    }
+    pObjects->flushSceneTransforms();
+    sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    registry.clearDirty();
+    sw::vector<uint32> listStateSlot;
+    sw::vector<uint32> listTransformSlot;
+
+    // 1) 월드만 바뀌었다 — 트랜스폼 목록에만 나온다(64 칸 워드 경계를 걸친다).
+    listMesh[3]->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    listMesh[65]->setLocalPosition( sw::float3( 2.0f, 0.0f, 0.0f ) );
+    pObjects->flushSceneTransforms();
+    SW_EXPECT_TRUE( registry.hasDirty() );
+    registry.consumeDirty( listStateSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listStateSlot.empty() );
+    SW_ASSERT_EQUAL( size_t( 2 ), listTransformSlot.size() );
+    SW_EXPECT_EQUAL( uint32( 3 ), listTransformSlot[0] );
+    SW_EXPECT_EQUAL( uint32( 65 ), listTransformSlot[1] );
+    SW_EXPECT_FALSE( registry.hasDirty() );
+
+    // 2) 월드와 렌더 상태가 같이 바뀌었다 — 상태 목록에만 나온다(다시 모으면 행렬도 따라온다).
+    listMesh[3]->setLocalPosition( sw::float3( 3.0f, 0.0f, 0.0f ) );
+    pObjects->flushSceneTransforms();
+    listMesh[3]->setVisible( true );
+    registry.consumeDirty( listStateSlot, listTransformSlot );
+    SW_ASSERT_EQUAL( size_t( 1 ), listStateSlot.size() );
+    SW_EXPECT_EQUAL( uint32( 3 ), listStateSlot[0] );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
+
+    // 3) 칸 번호는 컴포넌트의 것이고, 지우기가 마지막 칸(69, 트랜스폼 더티)을 빈자리(10)로 옮기면 번호와 깃발이 같이 온다.
+    uint32 slotMismatchCount = 0;
+    for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
+        if ( registry.getTransformSlots()[index] != listMesh[index]->getTransformSlot() )
+            ++slotMismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, slotMismatchCount );
+    listMesh[69]->setLocalPosition( sw::float3( 4.0f, 0.0f, 0.0f ) );
+    pObjects->flushSceneTransforms();
+    registry.remove( listMesh[10] );
+    SW_ASSERT_TRUE( registry.getAll()[10] == listMesh[69] );
+    SW_EXPECT_EQUAL( listMesh[69]->getTransformSlot(), registry.getTransformSlots()[10] );
+    SW_EXPECT_EQUAL( size_t( kMeshCount - 1 ), registry.getTransformSlots().size() );
+    registry.consumeDirty( listStateSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listStateSlot.empty() );
+    SW_ASSERT_EQUAL( size_t( 1 ), listTransformSlot.size() );
+    SW_EXPECT_EQUAL( uint32( 10 ), listTransformSlot[0] );
+}
+
+/**
  * @brief [GpuSceneTest] 프리미티브가 문턱을 넘으면 수집 채우기가 잡으로 나뉘어도 결과는 직렬과 같다
  * @details 워커는 프리미티브 번호 자리에만 쓰고, 앞으로 당기기와 해시는 직렬이다. 인스턴스 수와 위치의 합이
  *          직렬 씬과 같은 규칙으로 맞아야 하고, 전부 움직인 뒤(부분 수집 불가 → 다시 전체 수집) 도 그래야 한다.
