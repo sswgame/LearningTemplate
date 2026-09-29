@@ -90,6 +90,13 @@ namespace sw
          *          SRV/CBV 쪽과 UAV 쪽에 한 벌씩 복사돼 있었습니다. 둘은 등록부와 로그 문구만 달랐습니다.
          */
         void releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
+        /**
+         * @brief 등록부의 칸 `index` 에 리소스 · 핸들 셋 · 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 적습니다. 칸이 모자라면 늘립니다.
+         * @details 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 같은 네 줄을 각자 들고 있었습니다.
+         *          인덱스를 집은 잠금 안에서 부릅니다.
+         */
+        void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
+                                  RHIBufferHandle buffer, RHITextureHandle texture );
 
         /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */
         void releaseBindlessSlot( RHIDescriptorIndex index );

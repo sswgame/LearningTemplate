@@ -451,6 +451,53 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
         SW_TEST_SKIP( "No RHI backend could initialize for bindless index-space test" );
 }
 
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [RHIDeviceTest] DX12 — 등록에 실패한 CBV 는 집은 힙 인덱스를 돌려준다
+ * @details 링이 아닌 버퍼는 CBV 크기를 256 바이트로 내려 맞춘다. 256 보다 좁으면 크기가 0 이라 등록을 거부하는데, 예전에는 그 전에 집은
+ *          인덱스를 돌려주지 않아 그런 등록마다 셰이더 가시 힙 슬롯이 하나씩 영영 샜다. 새 디바이스의 인덱스는 이어서 나오므로
+ *          (프리리스트가 비어 있다) 실패한 등록 뒤의 등록이 바로 다음 인덱스를 받아야 한다. 프리리스트가 비어 있지 않으면 건너뛴다.
+ */
+SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX12, window, device ) == false )
+        SW_TEST_SKIP( "DX12 device unavailable" );
+    sw::IRHIResource* pResource = device->getResource();
+
+    const sw::RHIBufferHandle    firstBuffer  = pResource->createConstantBuffer( 64 );
+    const sw::RHIBufferHandle    secondBuffer = pResource->createConstantBuffer( 64 );
+    const sw::RHIBufferHandle    thirdBuffer  = pResource->createConstantBuffer( 64 );
+    const float32                arrVertex[16]{};
+    const sw::RHIBufferHandle    narrowBuffer = pResource->createVertexBuffer( arrVertex, sizeof( arrVertex ) );
+    const sw::RHIDescriptorIndex firstIndex   = pResource->registerBindlessResource( firstBuffer );
+    const sw::RHIDescriptorIndex secondIndex  = pResource->registerBindlessResource( secondBuffer );
+    SW_ASSERT_TRUE( firstIndex != sw::kInvalidDescriptorIndex && secondIndex != sw::kInvalidDescriptorIndex );
+    SW_ASSERT_TRUE( narrowBuffer != 0 );
+
+    if ( secondIndex == firstIndex + 1 )
+    {
+        // 64 바이트 정점 버퍼는 링도 구조버퍼도 아니라 CBV 크기가 0 이다 — 거부돼야 하고, 집은 인덱스는 돌아와야 한다.
+        SW_EXPECT_EQUAL( sw::kInvalidDescriptorIndex, pResource->registerBindlessResource( narrowBuffer ) );
+        const sw::RHIDescriptorIndex thirdIndex = pResource->registerBindlessResource( thirdBuffer );
+        SW_EXPECT_EQUAL( secondIndex + 1, thirdIndex );
+        pResource->unregisterBindlessResource( thirdIndex );
+    }
+
+    pResource->unregisterBindlessResource( firstIndex );
+    pResource->unregisterBindlessResource( secondIndex );
+    pResource->destroyBuffer( firstBuffer );
+    pResource->destroyBuffer( secondBuffer );
+    pResource->destroyBuffer( thirdBuffer );
+    pResource->destroyBuffer( narrowBuffer );
+    const bool bSequential = secondIndex == firstIndex + 1;
+    shutdownDeviceWithWindow( device, window );
+    if ( bSequential == false )
+        SW_TEST_SKIP( "DX12 free list was not empty on a fresh device; index sequence is not predictable" );
+}
+#endif
+
 /**
  * @brief [RHIDeviceTest] 텍스처 픽셀 업로드 — 밉 체인 전체, 밉 0 만, 데이터 부족 거부 (4백엔드)
  * @details 읽어 오는 API 가 아직 없어 내용은 검증하지 못한다 — 성공/거부 계약과 디버그 레이어 무오류만 본다.

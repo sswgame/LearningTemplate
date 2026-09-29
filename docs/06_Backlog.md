@@ -2021,6 +2021,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Graphics/RHI: GL 인덱스 없는 드로우 한 몸통, DX12 bindless 기록 쓰기 · CBV 등록 실패의 힙 인덱스 누수)
+
+같은 중복 군집 스윕의 Graphics 차례다.
+
+- **GL `draw` · `drawInstanced`.** "프로그램 고르기 → 메시 VAO 나 기본 VAO → 그리기 → 풀기" 서른 줄이 두 벌이었고 다른 것은 GL 호출 하나였다. 비공개 `drawArrays( vertexCount,
+  instanceCount, startVertex )` 하나로 모았다. 인스턴스가 하나면 `glDrawArrays`, 둘 이상이면 `glDrawArraysInstanced` 다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 갈래).
+  그래서 `drawInstanced( n, 1 )` 은 이제 `glDrawArrays` 를 부른다 — 결과는 같다.
+- **DX12 bindless 기록 쓰기.** 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 "칸이 모자라면 늘리고 리소스 · 핸들 셋 · 원래 핸들을 적는다" 네 줄을
+  각자 들고 있었다. `writeBindlessRecord( registry, index, resource, handle, buffer, texture )` 로.
+- **고친 것 — CBV 등록 실패가 힙 인덱스를 샜다.** 링도 구조버퍼도 아닌 버퍼는 CBV 크기를 256 바이트로 내려 맞추는데, 256 보다 좁으면 0 이라 거부한다. 그 거부가 이미 집은
+  인덱스를 돌려주지 않아, 그런 등록마다 셰이더 가시 힙 슬롯이 하나씩 영영 빠졌다(재사용도 안 되고 용량 검사에는 잡힌다). 아직 뷰를 만들기 전이라 펜스를 기다릴 것 없이
+  잠금 안에서 바로 프리리스트에 돌려준다. 다른 백엔드는 같은 틈이 없다(DX11 · GL 은 인덱스를 집는 도우미가 실패하지 않고, Vulkan 의 가득 참 경로는 슬롯을 쓰지 않거나 돌려준다).
+  **회귀 테스트** `RHIDeviceTest.Dx12FailedCbvRegistrationReturnsItsIndex` — 새 디바이스에서 두 버퍼를 등록해 인덱스가 이어지는지 보고(아니면 건너뛴다), 64 바이트 정점 버퍼
+  등록이 거부된 뒤의 등록이 바로 다음 인덱스를 받는지 본다. 되돌려 확인: `Expected [2], Actual [3]` 로 진다.
+
+**검증.** Debug nogpu · hostgpu 9/9, 네 백엔드 스모크(`Scripts/dev/BackendSmoke.py`) 불투명 · 반투명 모두 오류 0 · 평균 RGB 일치.
+
 ### 2026-09-29 (리팩터 — Editor: 되돌리기 기록의 대상 찾기 · 스냅샷 되읽기, 정렬 · 분배의 축 이동)
 
 같은 중복 군집 스윕의 Editor 차례다.

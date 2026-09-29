@@ -489,42 +489,8 @@ namespace sw
         return outProgram != 0;
     }
 
-    void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    void OpenGLRHICommandContext::drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 )
-            return;
-
-        GLuint program{ 0 };
-        GLenum mode{ GL_TRIANGLES };
-        if ( resolveDrawProgram( program, mode ) == false )
-            return;
-
-        glUseProgram( program );
-
-        if ( _pState->_boundMeshVb != 0 )
-        {
-            const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-            if ( vbo != 0 && _pDevice->_meshVao != 0 )
-            {
-                bindMeshVaoAttribs( vbo );
-                glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
-                glBindVertexArray( 0 );
-                glBindBuffer( GL_ARRAY_BUFFER, 0 );
-            }
-        }
-        else if ( _pDevice->_vao != 0 )
-        {
-            glBindVertexArray( _pDevice->_vao );
-            glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
-            glBindVertexArray( 0 );
-        }
-    }
-
-    void OpenGLRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
-    {
-        // startInstance 는 무시한다(GL 3.1 호환 glDrawArraysInstanced 에는 시작 인스턴스 인자가 없다).
-        // 인스턴스 자리가 필요한 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
-        (void)startInstance;
         if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0 )
             return;
 
@@ -535,25 +501,42 @@ namespace sw
 
         glUseProgram( program );
 
-        if ( _pState->_boundMeshVb != 0 )
+        const bool bMeshVertexBuffer = _pState->_boundMeshVb != 0;
+        if ( bMeshVertexBuffer )
         {
             const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-            if ( vbo != 0 && _pDevice->_meshVao != 0 )
-            {
-                bindMeshVaoAttribs( vbo );
-                glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ),
-                                       static_cast<GLsizei>( instanceCount ) );
-                glBindVertexArray( 0 );
-                glBindBuffer( GL_ARRAY_BUFFER, 0 );
-            }
+            if ( vbo == 0 || _pDevice->_meshVao == 0 )
+                return;
+            bindMeshVaoAttribs( vbo );
         }
-        else if ( _pDevice->_vao != 0 )
+        else
         {
+            if ( _pDevice->_vao == 0 )
+                return;
             glBindVertexArray( _pDevice->_vao );
-            glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ),
-                                   static_cast<GLsizei>( instanceCount ) );
-            glBindVertexArray( 0 );
         }
+
+        if ( instanceCount == 1 )
+            glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
+        else
+            glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ), static_cast<GLsizei>( instanceCount ) );
+
+        glBindVertexArray( 0 );
+        if ( bMeshVertexBuffer )
+            glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    }
+
+    void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    {
+        drawArrays( vertexCount, 1, startVertex );
+    }
+
+    void OpenGLRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        // startInstance 는 무시한다(GL 3.1 호환 glDrawArraysInstanced 에는 시작 인스턴스 인자가 없다).
+        // 인스턴스 자리가 필요한 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
+        (void)startInstance;
+        drawArrays( vertexCount, instanceCount, startVertex );
     }
 
     void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )

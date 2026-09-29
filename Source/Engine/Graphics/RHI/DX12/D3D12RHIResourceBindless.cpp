@@ -87,11 +87,7 @@ namespace sw
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
-        if ( index >= _pDevice->_listRegisteredBindless.size() )
-            _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]          = { pResource, handle._cpu, handle._gpu, handle._offline };
-        _pDevice->_listRegisteredBindless[index]._texture = texture;
-
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture );
         return index;
     }
 
@@ -132,10 +128,7 @@ namespace sw
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
-            if ( index >= _pDevice->_listRegisteredBindless.size() )
-                _pDevice->_listRegisteredBindless.resize( index + 1 );
-            _pDevice->_listRegisteredBindless[index]         = { pResource, handle._cpu, handle._gpu, handle._offline };
-            _pDevice->_listRegisteredBindless[index]._buffer = buffer;
+            writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
             return index;
         }
 
@@ -157,17 +150,18 @@ namespace sw
             const UINT aligned  = MathUtil::align( width, 256u );
             cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
             if ( cbvDesc.SizeInBytes == 0 )
+            {
+                // 집은 인덱스를 돌려준다. 예전에는 그냥 반환해서 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 영영 샜다.
+                // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
+                _pDevice->_listFreeBindless.push_back( index );
                 return kInvalidDescriptorIndex;
+            }
         }
 
         _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._cpu );
         _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._offline );
 
-        if ( index >= _pDevice->_listRegisteredBindless.size() )
-            _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]         = { pResource, handle._cpu, handle._gpu, handle._offline };
-        _pDevice->_listRegisteredBindless[index]._buffer = buffer;
-
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
         return index;
     }
 
@@ -206,6 +200,20 @@ namespace sw
         record._buffer   = 0;
         record._texture  = 0;
         deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
+    }
+
+    void D3D12RHIResource::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
+                                                const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture )
+    {
+        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
+            ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        if ( index >= listRegistry.size() )
+            listRegistry.resize( index + 1 );
+
+        D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
+        record                                         = { pResource, handle._cpu, handle._gpu, handle._offline };
+        record._buffer                                 = buffer;
+        record._texture                                = texture;
     }
 
     void D3D12RHIResource::releaseBindlessSlot( RHIDescriptorIndex index )
@@ -268,11 +276,7 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
-        if ( index >= _pDevice->_listRegisteredUAV.size() )
-            _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]         = { pResource, handle._cpu, handle._gpu, handle._offline };
-        _pDevice->_listRegisteredUAV[index]._buffer = buffer;
-
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, buffer, 0 );
         return index;
     }
 
@@ -301,10 +305,7 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
-        if ( index >= _pDevice->_listRegisteredUAV.size() )
-            _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]          = { pResource, handle._cpu, handle._gpu, handle._offline };
-        _pDevice->_listRegisteredUAV[index]._texture = texture;
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, 0, texture );
         return index;
     }
 
