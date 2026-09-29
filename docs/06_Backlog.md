@@ -2021,6 +2021,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Serialization 2차: 길이 머리 블록 · XML 이름/별칭 루프)
+
+6 줄 창의 Serialization 몫이다.
+
+- **`SerializerUtil::deserializeValueBinary`** 의 구조체 · 텍스트 리더 갈래가 "uint32 길이 머리 → 범위 확인 → 본문" 여섯 줄을 두 벌 들고 있었다(같은 파일에 `readUint32` 가 이미 있었다).
+  `SerializerUtilInternal::readSizedBlock` 으로. 범위 확인은 뺄셈으로 바꿨다(스트림에서 읽은 길이가 크면 `offset + size` 가 넘친다 — 같은 파일의 다른 읽기와 같은 규칙).
+- **`XmlSerializer`** 의 필드 읽기가 "프로퍼티 이름, 안 되면 별칭" 루프를 세 벌(컨테이너 · 중첩 구조체 요소 들어가기, 속성 읽기) 들고 있었다. `tryNameOrAlias( prop, tryName )` 로.
+  별칭 테스트(`PropertyAliasAndReorderingTest` · `StructuralMoveAndPropertyAlias` 등)가 그대로 통과한다.
+- **일부러 둔 것.** JSON · XML 의 `deserializeVersioned` 는 이미 공용 절차(`runVersionedDeserialize`)를 부르는 한 줄씩이고 남은 겹침은 그 호출의 인자다.
+
 ### 2026-09-29 (리팩터 — Core: 투영 폭 보호 · 할당 헤더 · 프로세스 출력 줄 떼기)
 
 7 줄 창의 중복이 모두 판정(고치거나 일부러 둔 것)으로 끝나 6 줄 창으로 내려 다시 뽑았다. 이 회차는 Core 다.

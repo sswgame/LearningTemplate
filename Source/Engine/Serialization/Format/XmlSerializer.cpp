@@ -19,6 +19,23 @@ namespace sw
     {
         struct XmlSerializerInternal
         {
+            /**
+             * @brief 프로퍼티 이름, 안 되면 별칭 순으로 `tryName( pName )` 을 불러 처음 성공하면 true 입니다.
+             * @details 자식 요소 들어가기(컨테이너 · 중첩 구조체)와 속성 읽기가 같은 "이름 → 별칭" 루프를 세 벌 들고 있었습니다.
+             */
+            template <typename TryNameFunc>
+            static bool tryNameOrAlias( const PropertyInfo& prop, TryNameFunc&& tryName )
+            {
+                if ( tryName( prop._name.c_str() ) )
+                    return true;
+                for ( const hashed_string& alias : prop._listAlias )
+                {
+                    if ( alias.empty() == false && tryName( alias.c_str() ) )
+                        return true;
+                }
+                return false;
+            }
+
             static void recordCoerceFailure( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
             {
                 bFieldError = true;
@@ -333,18 +350,10 @@ namespace sw
                         if ( shape._typeName.empty() )
                             shape._typeName = prop._typeName;
                         // 컨테이너는 프로퍼티 이름 요소 안에 들어 있다.
-                        bool entered = backend.pushChild( prop._name.c_str() );
-                        if ( entered == false )
+                        const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
                         {
-                            for ( const hashed_string& alias : prop._listAlias )
-                            {
-                                if ( alias.empty() == false && backend.pushChild( alias.c_str() ) )
-                                {
-                                    entered = true;
-                                    break;
-                                }
-                            }
-                        }
+                            return backend.pushChild( pName );
+                        } );
                         if ( entered )
                         {
                             if ( readContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
@@ -359,18 +368,10 @@ namespace sw
                         const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, ctx );
                         if ( pNestedType != nullptr )
                         {
-                            bool entered = backend.pushChild( prop._name.c_str() );
-                            if ( entered == false )
+                            const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
                             {
-                                for ( const hashed_string& alias : prop._listAlias )
-                                {
-                                    if ( alias.empty() == false && backend.pushChild( alias.c_str() ) )
-                                    {
-                                        entered = true;
-                                        break;
-                                    }
-                                }
-                            }
+                                return backend.pushChild( pName );
+                            } );
                             if ( entered )
                             {
                                 if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
@@ -382,19 +383,11 @@ namespace sw
                             return;
                         }
 
-                        string strValue;
-                        bool   readOk = backend.readAttribute( prop._name.c_str(), strValue );
-                        if ( readOk == false )
+                        string     strValue;
+                        const bool readOk = tryNameOrAlias( prop, [&]( const utf8* pName )
                         {
-                            for ( const hashed_string& alias : prop._listAlias )
-                            {
-                                if ( alias.empty() == false && backend.readAttribute( alias.c_str(), strValue ) )
-                                {
-                                    readOk = true;
-                                    break;
-                                }
-                            }
-                        }
+                            return backend.readAttribute( pName, strValue );
+                        } );
 
                         if ( readOk )
                         {

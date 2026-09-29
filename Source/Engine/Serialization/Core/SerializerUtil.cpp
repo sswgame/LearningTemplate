@@ -80,6 +80,22 @@ namespace sw
             }
 
             /**
+             * @brief uint32 길이 머리와 그 길이만큼의 본문을 건너뜁니다. 본문 시작은 `outBlockStart`, 길이는 `outBlockSize` 이고 오프셋은 본문 뒤로 옮깁니다.
+             * @return 머리나 본문이 버퍼를 넘으면 false 입니다. 구조체 · 텍스트 리더 값의 바이너리 읽기가 같은 여섯 줄을 두 벌 들고 있었습니다.
+             */
+            static bool readSizedBlock( const uint8* pData, size_t dataSize, size_t& inoutOffset, size_t& outBlockStart, uint32& outBlockSize )
+            {
+                if ( readUint32( pData, dataSize, inoutOffset, outBlockSize ) == false )
+                    return false;
+                // 뺄셈으로 비교한다. 스트림에서 읽은 크기가 크면 덧셈이 넘친다.
+                if ( outBlockSize > dataSize - inoutOffset )
+                    return false;
+                outBlockStart = inoutOffset;
+                inoutOffset += outBlockSize;
+                return true;
+            }
+
+            /**
              * @brief 다형 소유 포인터 원소 하나를 `[이름][본문크기][본문]` 으로 적습니다.
              *
              * XML · JSON 은 태그 · 키 이름이 곧 런타임 타입이라 따로 적을 자리가 필요 없지만, 바이너리에는
@@ -337,32 +353,23 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                if ( offset + sizeof( uint32 ) > dataSize )
+                size_t blockStart{ 0 };
+                uint32 blockSize{ 0 };
+                if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                     return false;
-                uint32 size{ 0 };
-                Memory::copy( &size, pData + offset, sizeof( uint32 ) );
-                offset += sizeof( uint32 );
-                if ( offset + size > dataSize )
-                    return false;
-                const bool bOk = BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + offset, size, ctx );
-                offset += size;
-                return bOk;
+                return BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + blockStart, blockSize, ctx );
             }
         }
 
         const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
         if ( pTextReader != nullptr )
         {
-            if ( offset + sizeof( uint32 ) > dataSize )
+            size_t blockStart{ 0 };
+            uint32 blockSize{ 0 };
+            if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                 return false;
-            uint32 size{ 0 };
-            Memory::copy( &size, pData + offset, sizeof( uint32 ) );
-            offset += sizeof( uint32 );
-            if ( offset + size > dataSize )
-                return false;
-            string str( reinterpret_cast<const utf8*>( pData + offset ), size );
-            offset += size;
-            return ( *pTextReader )( pValuePtr, str );
+            const string text( reinterpret_cast<const utf8*>( pData + blockStart ), blockSize );
+            return ( *pTextReader )( pValuePtr, text );
         }
 
         if ( offset < dataSize )
