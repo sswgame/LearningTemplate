@@ -26,6 +26,49 @@ namespace sw
 
     /** @brief 엔진이 할당한 블록인지 식별하는 64비트 매직 상수입니다. */
     static constexpr uint64 kAllocMagic = 0x5C09B10CDA7A0000;
+
+    namespace
+    {
+        struct MemoryInternal
+        {
+            /**
+             * @brief 사용자 블록 앞의 헤더를 채우고 프로파일러에 할당을 알립니다. `allocate` · `allocateAligned` 가 함께 씁니다.
+             * @return 사용자 블록 주소(`pUserPtr`) 그대로입니다.
+             */
+            static void* writeAllocHeader( void* pUserPtr, void* pRawPtr, size_t size )
+            {
+                AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
+                pHeader->_size       = size;
+                pHeader->_tag        = MemoryProfiler::getCurrentMemoryTag();
+                pHeader->_magic      = kAllocMagic;
+                pHeader->_hash       = 0;
+                pHeader->_pRawPtr    = pRawPtr;
+
+                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler != nullptr )
+                    pHeader->_hash = pProfiler->recordAllocation( pUserPtr, size, pHeader->_tag );
+                return pUserPtr;
+            }
+
+            /**
+             * @brief 헤더를 확인하고 프로파일러에 해제를 알린 뒤 매직을 지웁니다(이중 해제 방지). `free` · `freeAligned` 가 함께 씁니다.
+             * @return OS 에 돌려줄 원래 할당 주소입니다. 헤더가 손상됐거나 엔진이 할당한 블록이 아니면 nullptr 이고, 그때는 해제하지 않습니다.
+             */
+            static void* releaseAllocHeader( void* pUserPtr )
+            {
+                AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
+                if ( pHeader->_magic != kAllocMagic )
+                    return nullptr;
+
+                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler != nullptr )
+                    pProfiler->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+
+                pHeader->_magic = 0;
+                return pHeader->_pRawPtr;
+            }
+        };
+    } // namespace
 #endif
 
     /**
@@ -66,19 +109,7 @@ namespace sw
 
         const uintptr_t rawAddr  = reinterpret_cast<uintptr_t>( pRawPtr );
         const uintptr_t userAddr = MathUtil::align( rawAddr + sizeof( AllocHeader ), static_cast<uintptr_t>( align ) );
-        AllocHeader*    pHeader  = reinterpret_cast<AllocHeader*>( userAddr - sizeof( AllocHeader ) );
-        pHeader->_size           = size;
-        pHeader->_tag            = MemoryProfiler::getCurrentMemoryTag();
-        pHeader->_magic          = kAllocMagic;
-        pHeader->_hash           = 0;
-        pHeader->_pRawPtr        = pRawPtr;
-
-        void*           userPtr   = reinterpret_cast<void*>( userAddr );
-        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler != nullptr )
-            pHeader->_hash = pProfiler->recordAllocation( userPtr, size, pHeader->_tag );
-
-        return userPtr;
+        return MemoryInternal::writeAllocHeader( reinterpret_cast<void*>( userAddr ), pRawPtr, size );
 #endif // SW_SHIPPING
     }
 
@@ -97,19 +128,9 @@ namespace sw
         ::free( pPtr );
     #endif
 #else // SW_SHIPPING
-        AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
-        if ( pHeader->_magic != kAllocMagic )
-        {
-            // 헤더가 손상됐거나 엔진이 할당한 블록이 아니다
+        void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
+        if ( pRawPtr == nullptr )
             return;
-        }
-
-        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler != nullptr )
-            pProfiler->recordFree( pPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
-
-        pHeader->_magic = 0; // 이중 해제 방지
-        void* pRawPtr   = pHeader->_pRawPtr;
     #if defined( SW_PLATFORM_WINDOWS )
         _aligned_free( pRawPtr );
     #else
@@ -135,20 +156,7 @@ namespace sw
         if ( pRawPtr == nullptr )
             return nullptr;
 
-        void* pUserPtr = static_cast<utf8*>( pRawPtr ) + sizeof( AllocHeader );
-
-        AllocHeader* pHeader = static_cast<AllocHeader*>( pRawPtr );
-        pHeader->_size       = size;
-        pHeader->_tag        = MemoryProfiler::getCurrentMemoryTag();
-        pHeader->_magic      = kAllocMagic;
-        pHeader->_hash       = 0;
-        pHeader->_pRawPtr    = pRawPtr;
-
-        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler != nullptr )
-            pHeader->_hash = pProfiler->recordAllocation( pUserPtr, size, pHeader->_tag );
-
-        return pUserPtr;
+        return MemoryInternal::writeAllocHeader( static_cast<utf8*>( pRawPtr ) + sizeof( AllocHeader ), pRawPtr, size );
 #endif // SW_SHIPPING
     }
 
@@ -163,19 +171,9 @@ namespace sw
 #if defined( SW_SHIPPING )
         ::free( pPtr );
 #else  // SW_SHIPPING
-        AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
-        if ( pHeader->_magic != kAllocMagic )
-        {
-            // 헤더가 손상됐거나 엔진이 할당한 블록이 아니다
-            return;
-        }
-
-        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler != nullptr )
-            pProfiler->recordFree( pPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
-
-        pHeader->_magic = 0;
-        ::free( pHeader->_pRawPtr );
+        void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
+        if ( pRawPtr != nullptr )
+            ::free( pRawPtr );
 #endif // SW_SHIPPING
     }
 

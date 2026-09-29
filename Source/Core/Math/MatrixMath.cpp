@@ -11,6 +11,15 @@ namespace sw
         struct MatrixMathInternal
         {
             /**
+             * @brief 투영 행렬이 나누는 폭(가로 · 세로 · 깊이)입니다. 0 에 가까우면 1 로 바꿔 무한대 · NaN 행렬을 막습니다. 부호는 그대로 둡니다.
+             * @details 투영 함수 다섯이 폭마다 같은 식을 각자 들고 있었습니다(열두 곳).
+             */
+            static float32 getNonZeroSpan( float32 span ) noexcept
+            {
+                return MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+            }
+
+            /**
              * @brief 앞 · 위 방향으로 직교 기저(오른쪽 · 위 · 앞)를 만듭니다. 뷰 행렬(`createLookAt`)과 월드 행렬(`createWorld`)이 같은 기저를 씁니다.
              * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둡니다. 앞과 위가 나란하면(바로 위나 아래를 볼 때) 외적이 0 이 되므로 다른 위 방향으로
              *          다시 잡습니다. 예전에는 두 함수가 이 열다섯 줄을 각자 들고 있었는데, 한쪽의 폴백만 고치면 카메라와 오브젝트가 같은
@@ -433,8 +442,7 @@ namespace sw
     {
         const float32 safeFov    = MathUtil::clamp( fov, 0.001f, MathUtil::Pi - 0.001f );
         const float32 safeAspect = aspectRatio > MathUtil::Epsilon ? aspectRatio : 1.0f;
-        const float32 span       = ( farPlane - nearPlane );
-        const float32 safeSpan   = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+        const float32 safeSpan   = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
 
         const float32 yScale = 1.0f / MathUtil::tan( safeFov * 0.5f );
         const float32 xScale = yScale / safeAspect;
@@ -443,41 +451,33 @@ namespace sw
 
     float4x4 float4x4::createPerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 safeW    = MathUtil::abs( width ) > MathUtil::Epsilon ? width : 1.0f;
-        const float32 safeH    = MathUtil::abs( height ) > MathUtil::Epsilon ? height : 1.0f;
-        const float32 span     = ( farPlane - nearPlane );
-        const float32 safeSpan = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+        const float32 safeW    = MatrixMathInternal::getNonZeroSpan( width );
+        const float32 safeH    = MatrixMathInternal::getNonZeroSpan( height );
+        const float32 safeSpan = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
         return float4x4{ 2.f * nearPlane / safeW, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeH, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }
 
     float4x4 float4x4::createPerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 spanX    = ( right - left );
-        const float32 spanY    = ( top - bottom );
-        const float32 safeX    = MathUtil::abs( spanX ) > MathUtil::Epsilon ? spanX : 1.0f;
-        const float32 safeY    = MathUtil::abs( spanY ) > MathUtil::Epsilon ? spanY : 1.0f;
-        const float32 spanZ    = ( farPlane - nearPlane );
-        const float32 safeSpan = MathUtil::abs( spanZ ) > MathUtil::Epsilon ? spanZ : 1.0f;
+        const float32 safeX    = MatrixMathInternal::getNonZeroSpan( right - left );
+        const float32 safeY    = MatrixMathInternal::getNonZeroSpan( top - bottom );
+        const float32 safeSpan = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
         return float4x4{ 2.f * nearPlane / safeX, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeY, 0.f, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }
 
     float4x4 float4x4::createOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 safeW    = MathUtil::abs( width ) > MathUtil::Epsilon ? width : 1.0f;
-        const float32 safeH    = MathUtil::abs( height ) > MathUtil::Epsilon ? height : 1.0f;
-        const float32 span     = ( farPlane - nearPlane );
-        const float32 safeSpan = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+        const float32 safeW    = MatrixMathInternal::getNonZeroSpan( width );
+        const float32 safeH    = MatrixMathInternal::getNonZeroSpan( height );
+        const float32 safeSpan = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
         return float4x4{ 2.f / safeW, 0.f, 0.f, 0.f, 0.f, 2.f / safeH, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, 0.f, 0.f, -nearPlane / safeSpan, 1.f };
     }
 
     float4x4 float4x4::createOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 spanX    = ( right - left );
-        const float32 spanY    = ( top - bottom );
-        const float32 safeX    = MathUtil::abs( spanX ) > MathUtil::Epsilon ? spanX : 1.0f;
-        const float32 safeY    = MathUtil::abs( spanY ) > MathUtil::Epsilon ? spanY : 1.0f;
-        const float32 spanZ    = ( farPlane - nearPlane );
-        const float32 safeSpan = MathUtil::abs( spanZ ) > MathUtil::Epsilon ? spanZ : 1.0f;
+        const float32 safeX    = MatrixMathInternal::getNonZeroSpan( right - left );
+        const float32 safeY    = MatrixMathInternal::getNonZeroSpan( top - bottom );
+        const float32 safeSpan = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
         return float4x4{ 2.f / safeX, 0.f, 0.f, 0.f, 0.f, 2.f / safeY, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), -nearPlane / safeSpan, 1.f };
     }
 

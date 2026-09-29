@@ -412,6 +412,30 @@ SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 }
 
 /**
+ * @brief [MathTest] 폭이 0 인 투영(가로 · 세로 · 깊이)은 무한대 · NaN 없이 폭 1 로 계산된다
+ * @details 원근 · 직교, 가운데 · 비대칭 넷이 같은 보호(`getNonZeroSpan`)를 쓴다. 한 함수에서라도 빠지면 0 으로 나눠 행렬에 inf 가 든다.
+ */
+SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
+{
+    const sw::float4x4 arrProj[] = {
+        sw::float4x4::createPerspective( 0.0f, 0.0f, 1.0f, 1.0f ),
+        sw::float4x4::createPerspectiveOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 1.0f, 1.0f ),
+        sw::float4x4::createOrthographic( 0.0f, 0.0f, 5.0f, 5.0f ),
+        sw::float4x4::createOrthographicOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 5.0f, 5.0f ),
+    };
+    for ( const sw::float4x4& proj : arrProj )
+    {
+        const float32* pElement = &proj._11;
+        for ( uint32 index = 0; index < 16; ++index )
+            SW_EXPECT_TRUE( std::isfinite( pElement[index] ) );
+    }
+
+    // 폭 1 로 계산된다: 직교의 x 배율은 2 / 1, 비대칭 원근의 x 배율은 2 * near / 1 이다.
+    SW_EXPECT_NEAR_EQUAL( 2.0f, arrProj[2]._11, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, arrProj[1]._11, 1e-6f );
+}
+
+/**
  * @brief [MathTest] float3::transformNormal 비균등 스케일 변환 시 법선 직교성 검증
  */
 SW_TEST_CASE( MathTest, VectorTransformNormalNonUniformScale )

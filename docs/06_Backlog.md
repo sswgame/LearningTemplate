@@ -2021,6 +2021,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Core: 투영 폭 보호 · 할당 헤더 · 프로세스 출력 줄 떼기)
+
+7 줄 창의 중복이 모두 판정(고치거나 일부러 둔 것)으로 끝나 6 줄 창으로 내려 다시 뽑았다. 이 회차는 Core 다.
+
+- **`float4x4` 투영 다섯**(원근 FOV · 원근 · 비대칭 원근 · 직교 · 비대칭 직교)이 폭(가로 · 세로 · 깊이)마다 "0 에 가까우면 1" 식을 열두 번 들고 있었다.
+  `MatrixMathInternal::getNonZeroSpan` 하나로. **테스트** `MathTest.ProjectionWithZeroSpanStaysFinite` — 폭 0 인 넷이 유한하고 폭 1 로 계산되는지(전에는 FOV 판 하나만 봤다).
+- **`Memory`** 의 `allocate` · `allocateAligned` 가 헤더 채우기 + 프로파일러 기록을, `free` · `freeAligned` 가 매직 확인 + 해제 기록 + 매직 지우기를 각자 들고 있었다.
+  `writeAllocHeader` · `releaseAllocHeader` 로(Shipping 에는 헤더가 없어 둘 다 비 Shipping 전용이다).
+- **Windows `Process::readOutputLine`** 이 "버퍼에서 첫 줄 떼기(CRLF 는 한 개행)" 여덟 줄을 읽기 전 · 파이프를 읽을 때마다 두 벌 들고 있었다. `takeBufferedLine` 로.
+
 ### 2026-09-29 (리팩터 — Graphics/RHI: GL 인덱스 없는 드로우 한 몸통, DX12 bindless 기록 쓰기 · CBV 등록 실패의 힙 인덱스 누수)
 
 같은 중복 군집 스윕의 Graphics 차례다.

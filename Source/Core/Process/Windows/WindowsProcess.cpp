@@ -11,6 +11,28 @@ namespace sw
 {
     SW_LOG_CALLER( "WindowsProcess" );
 
+    namespace
+    {
+        struct WindowsProcessInternal
+        {
+            /**
+             * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 떼어 내고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
+             * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 같은 여덟 줄을 두 벌 들고 있었습니다.
+             */
+            static bool takeBufferedLine( string& inoutBuffer, string& outLine )
+            {
+                const size_t newlinePos = inoutBuffer.find_first_of( "\r\n" );
+                if ( newlinePos == string::npos )
+                    return false;
+
+                outLine          = inoutBuffer.substr( 0, newlinePos );
+                const bool bCrLf = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 < inoutBuffer.length() && inoutBuffer[newlinePos + 1] == '\n';
+                inoutBuffer.erase( 0, newlinePos + ( bCrLf ? 2 : 1 ) );
+                return true;
+            }
+        };
+    } // namespace
+
     void Process::shutdown()
     {
         if ( _pStdOutRead != nullptr )
@@ -106,16 +128,8 @@ namespace sw
             return false;
 
         // 1) 버퍼에 이미 개행 문자가 남아 있는지 확인한다
-        size_t newlinePos = _bufferedOutput.find_first_of( "\r\n" );
-        if ( newlinePos != string::npos )
-        {
-            outLine = _bufferedOutput.substr( 0, newlinePos );
-            if ( newlinePos + 1 < _bufferedOutput.length() && _bufferedOutput[newlinePos] == '\r' && _bufferedOutput[newlinePos + 1] == '\n' )
-                _bufferedOutput.erase( 0, newlinePos + 2 );
-            else
-                _bufferedOutput.erase( 0, newlinePos + 1 );
+        if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
             return true;
-        }
 
         // 2) 파이프에서 데이터를 더 읽는다
         utf8  arrReadBuffer[constant::kMaxBuffer4096];
@@ -125,17 +139,8 @@ namespace sw
         {
             arrReadBuffer[bytesRead] = '\0';
             _bufferedOutput.append( arrReadBuffer, bytesRead );
-
-            newlinePos = _bufferedOutput.find_first_of( "\r\n" );
-            if ( newlinePos != string::npos )
-            {
-                outLine = _bufferedOutput.substr( 0, newlinePos );
-                if ( newlinePos + 1 < _bufferedOutput.length() && _bufferedOutput[newlinePos] == '\r' && _bufferedOutput[newlinePos + 1] == '\n' )
-                    _bufferedOutput.erase( 0, newlinePos + 2 );
-                else
-                    _bufferedOutput.erase( 0, newlinePos + 1 );
+            if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
                 return true;
-            }
         }
 
         // 3) EOF 에 도달했으면 버퍼에 남은 문자열을 반환한다
