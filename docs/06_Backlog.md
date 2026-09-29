@@ -2021,6 +2021,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Editor: 되돌리기 기록의 대상 찾기 · 스냅샷 되읽기, 정렬 · 분배의 축 이동)
+
+같은 중복 군집 스윕의 Editor 차례다.
+
+- **`EditorTransaction` 의 오브젝트 기록 셋**(바이너리 수정 · XML 수정 · 생성/삭제). 셋이 "guid · id · 이름 적기" 머리를, 수정 둘은 되돌리기 · 다시 하기 람다 넷에
+  "활성 매니저 → 대상 찾기 → 스냅샷 되읽기" 를, 셋 모두 "스택이 있으면 넣고 씬 dirty" 꼬리를 각자 들고 있었다. 열쇠(`TargetKey` · `makeTargetKey`),
+  `restoreBinarySnapshot` · `restoreXmlSnapshot`(XML 되읽기 + 계층 다시 잇기는 `loadXmlSnapshot` — 삭제 되돌리기의 다시 만들기도 쓴다), `pushCommand` 로 모았다.
+  람다는 한 줄이 됐다. 대상을 찾는 순서(guid → id → 이름)와 빈 바이너리 스냅샷을 건너뛰는 것은 그대로다.
+- **`EditorTransformCommands` 정렬 · 분배.** 오브젝트마다 "스냅샷 → 월드 차이만큼 로컬 축 이동 → 스냅샷 → 기록" 열 줄이 두 벌이었다. `moveAlongWorldAxis` 하나로.
+  축 읽기 · 쓰기 도우미는 로컬 값에도 쓰이므로 `worldAxisValue` · `setLocalAxisValue` 를 `getAxisValue` · `setAxisValue` 로 이름을 고쳤다.
+  **테스트가 없다.** 둘 다 `EditorContext::get()` 의 선택을 읽는데, 컨텍스트의 생성 · 초기화 TU(`EditorContextLifecycle.cpp`)가 UI 매니저를 끌고 와 EditorTest 에
+  링크되지 않는다. 빌드와 읽기로만 확인했다(계산은 한 줄도 바뀌지 않았다).
+- **일부러 둔 것.** 인스펙터 `NumericPropertyTraits<float64>` 는 `<float32>` 줄과 값이 같지만 타입마다 한 줄인 **표**라 상속으로 줄이지 않았다(표에서 한 줄만 다른 모양이
+  되면 읽는 사람이 그 줄만 따로 찾아야 한다).
+
 ### 2026-09-29 (리팩터 — Object: 제자리 상태 읽기의 걸음 한 곳)
 
 같은 중복 군집 스윕의 Object 차례다. `ObjectStateSerializer` 의 텍스트 로더(`loadFromText<T>`, XML · JSON)와 바이너리 로더(`loadFromBinaryBuffer`)가

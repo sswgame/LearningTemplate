@@ -28,7 +28,7 @@ namespace sw::editor
     {
         struct EditorTransformCommandsInternal
         {
-            static float32 worldAxisValue( const float3& pos, AlignAxis axis )
+            static float32 getAxisValue( const float3& pos, AlignAxis axis )
             {
                 if ( axis == AlignAxis::X )
                     return pos._x;
@@ -37,7 +37,7 @@ namespace sw::editor
                 return pos._z;
             }
 
-            static void setLocalAxisValue( float3& pos, AlignAxis axis, float32 value )
+            static void setAxisValue( float3& pos, AlignAxis axis, float32 value )
             {
                 if ( axis == AlignAxis::X )
                     pos._x = value;
@@ -59,9 +59,30 @@ namespace sw::editor
                     const SceneComponent* pRightSc = pRight->getPrimarySceneComponent();
                     const float3          posA     = pLeftSc != nullptr ? pLeftSc->getWorldPosition() : float3{};
                     const float3          posB     = pRightSc != nullptr ? pRightSc->getWorldPosition() : float3{};
-                    return worldAxisValue( posA, _axis ) < worldAxisValue( posB, _axis );
+                    return getAxisValue( posA, _axis ) < getAxisValue( posB, _axis );
                 }
             };
+
+            /**
+             * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬 · 분배가 함께 씁니다.
+             * @details 월드 차이만큼 로컬 위치를 옮깁니다. 부모에 회전 · 크기가 없을 때 정확합니다(예전 두 벌이 모두 그랬습니다).
+             *          주 씬 컴포넌트가 없으면 아무것도 하지 않습니다.
+             */
+            static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )
+            {
+                SceneComponent* pSc = pGo->getPrimarySceneComponent();
+                if ( pSc == nullptr )
+                    return;
+
+                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
+                const float32              delta          = targetValue - getAxisValue( pSc->getWorldPosition(), axis );
+                float3                     newLocal       = pSc->getLocalPosition();
+                setAxisValue( newLocal, axis, getAxisValue( newLocal, axis ) + delta );
+                pSc->setLocalPosition( newLocal );
+
+                const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+                EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -246,7 +267,7 @@ namespace sw::editor
             if ( pGo->getPrimarySceneComponent() == nullptr )
                 continue;
 
-            const float32 val = EditorTransformCommandsInternal::worldAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
+            const float32 val = EditorTransformCommandsInternal::getAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
 
             if ( type == AlignType::Min )
                 targetVal = MathUtil::min( targetVal, val );
@@ -264,26 +285,10 @@ namespace sw::editor
             targetVal = sumVal / static_cast<float32>( validCount );
 
         EditorTransaction::beginTransaction( "Align Objects" );
-
         for ( GameObject* pGo : listSel )
         {
-            if ( pGo->getPrimarySceneComponent() == nullptr )
-                continue;
-
-            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
-            SceneComponent*            pSc            = pGo->getPrimarySceneComponent();
-            const float3               localPos       = pSc->getLocalPosition();
-            const float3               worldPos       = pSc->getWorldPosition();
-            const float32              curWorldAxis   = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
-            const float32              delta          = targetVal - curWorldAxis;
-            float3                     newLocal       = localPos;
-            EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
-            pSc->setLocalPosition( newLocal );
-
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
-            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Align Objects" );
+            EditorTransformCommandsInternal::moveAlongWorldAxis( pGo, axis, targetVal, "Align Objects" );
         }
-
         EditorTransaction::endTransaction();
     }
 
@@ -313,33 +318,16 @@ namespace sw::editor
         const float3 firstPos = listSel.front()->getPrimarySceneComponent()->getWorldPosition();
         const float3 lastPos  = listSel.back()->getPrimarySceneComponent()->getWorldPosition();
 
-        const float32 minVal = EditorTransformCommandsInternal::worldAxisValue( firstPos, axis );
-        const float32 maxVal = EditorTransformCommandsInternal::worldAxisValue( lastPos, axis );
+        const float32 minVal = EditorTransformCommandsInternal::getAxisValue( firstPos, axis );
+        const float32 maxVal = EditorTransformCommandsInternal::getAxisValue( lastPos, axis );
         const float32 step   = ( maxVal - minVal ) / static_cast<float32>( listSel.size() - 1 );
 
         EditorTransaction::beginTransaction( "Distribute Objects" );
-
         for ( size_t idx = 0; idx < listSel.size(); ++idx )
         {
-            GameObject* pGo = listSel[idx];
-            if ( pGo->getPrimarySceneComponent() == nullptr )
-                continue;
-
-            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
-            SceneComponent*            pSc            = pGo->getPrimarySceneComponent();
-            const float3               localPos       = pSc->getLocalPosition();
-            const float3               worldPos       = pSc->getWorldPosition();
-            const float32              curWorldAxis   = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
-            const float32              targetDistVal  = minVal + step * static_cast<float32>( idx );
-            const float32              delta          = targetDistVal - curWorldAxis;
-            float3                     newLocal       = localPos;
-            EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
-            pSc->setLocalPosition( newLocal );
-
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
-            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Distribute Objects" );
+            const float32 targetValue = minVal + step * static_cast<float32>( idx );
+            EditorTransformCommandsInternal::moveAlongWorldAxis( listSel[idx], axis, targetValue, "Distribute Objects" );
         }
-
         EditorTransaction::endTransaction();
     }
 } // namespace sw::editor
