@@ -222,6 +222,60 @@ namespace sw
                 reader.skip( payloadSize );
                 return true;
             }
+
+            /**
+             * @brief `serializeRaw` 가 쓴 바이트를 `codecType` 으로 압축해 `outListBuffer` 에 담습니다. 압축 판 직렬화 둘이 함께 씁니다.
+             * @return 인스턴스가 없거나, 쓴 바이트가 없거나, 압축에 실패하면 false 입니다.
+             */
+            template <typename SerializeRawFunc>
+            static bool serializeThenCompress( const void* pInstance, vector<uint8>& outListBuffer, CompressionCodecType codecType,
+                                               SerializeRawFunc&& serializeRaw )
+            {
+                outListBuffer.clear();
+                if ( pInstance == nullptr )
+                    return false;
+
+                vector<uint8> listRawBinary;
+                serializeRaw( listRawBinary );
+                if ( listRawBinary.empty() )
+                    return false;
+
+                return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
+            }
+
+            /** @brief 압축을 풀어 나온 바이트를 `deserializeRaw` 로 읽습니다. 압축 판 역직렬화 둘이 함께 씁니다. */
+            template <typename DeserializeRawFunc>
+            static bool decompressThenDeserialize( void* pInstance, const uint8* pData, size_t dataSize, DeserializeRawFunc&& deserializeRaw )
+            {
+                if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+                    return false;
+
+                vector<uint8> listRawBinary;
+                const bool    bDecompressOk = CompressionStream::decompressBuffer( pData, dataSize, listRawBinary );
+                if ( bDecompressOk == false || listRawBinary.empty() )
+                    return false;
+
+                return deserializeRaw( listRawBinary.data(), listRawBinary.size() );
+            }
+
+            /** @brief 비어 있지 않은 버퍼를 아카이브 끝에 씁니다. Archive 판 직렬화는 모두 버퍼 판으로 쓴 뒤 이것으로 옮깁니다. */
+            static void writeBufferToArchive( const vector<uint8>& buffer, Archive& outArchive )
+            {
+                if ( buffer.empty() == false )
+                    outArchive.writeBytes( buffer.data(), buffer.size() );
+            }
+
+            /**
+             * @brief 아카이브의 남은 바이트(현재 자리 ~ 끝)를 `deserializeBytes` 로 읽습니다. Archive 판 역직렬화가 모두 씁니다.
+             * @details 오류 상태이거나 남은 바이트가 없으면 false 입니다. 읽기 자리는 옮기지 않습니다.
+             */
+            template <typename DeserializeBytesFunc>
+            static bool deserializeArchiveRemainder( Archive& inArchive, DeserializeBytesFunc&& deserializeBytes )
+            {
+                if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+                    return false;
+                return deserializeBytes( inArchive.getData() + inArchive.getOffset(), inArchive.getSize() - inArchive.getOffset() );
+            }
         };
     } // namespace
 } // namespace sw
@@ -353,16 +407,10 @@ namespace sw
                                                 CompressionCodecType    codecType,
                                                 const SerializeContext& ctx )
     {
-        outListBuffer.clear();
-        if ( pInstance == nullptr )
-            return false;
-
-        vector<uint8> listRawBinary;
-        BinarySerializer::serialize( pInstance, typeInfo, listRawBinary, ctx );
-        if ( listRawBinary.empty() )
-            return false;
-
-        return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
+        return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw )
+        {
+            serialize( pInstance, typeInfo, outListRaw, ctx );
+        } );
     }
 
     bool BinarySerializer::deserializeCompressed( void*                   pInstance,
@@ -371,15 +419,10 @@ namespace sw
                                                   size_t                  dataSize,
                                                   const SerializeContext& ctx )
     {
-        if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
-            return false;
-
-        vector<uint8> listRawBinary;
-        const bool    bDecompressOk = CompressionStream::decompressBuffer( pData, dataSize, listRawBinary );
-        if ( bDecompressOk == false || listRawBinary.empty() )
-            return false;
-
-        return BinarySerializer::deserialize( pInstance, typeInfo, listRawBinary.data(), listRawBinary.size(), ctx );
+        return BinarySerializerInternal::decompressThenDeserialize( pInstance, pData, dataSize, [&]( const uint8* pRaw, size_t rawSize )
+        {
+            return deserialize( pInstance, typeInfo, pRaw, rawSize, ctx );
+        } );
     }
 
     bool BinarySerializer::serializeVersionedCompressed( uint32                  version,
@@ -389,16 +432,10 @@ namespace sw
                                                          CompressionCodecType    codecType,
                                                          const SerializeContext& ctx )
     {
-        outListBuffer.clear();
-        if ( pInstance == nullptr )
-            return false;
-
-        vector<uint8> listRawBinary;
-        BinarySerializer::serializeVersioned( version, pInstance, typeInfo, listRawBinary, ctx );
-        if ( listRawBinary.empty() )
-            return false;
-
-        return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
+        return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw )
+        {
+            serializeVersioned( version, pInstance, typeInfo, outListRaw, ctx );
+        } );
     }
 
     bool BinarySerializer::deserializeVersionedCompressed( uint32&                 outVersion,
@@ -411,16 +448,10 @@ namespace sw
                                                            const TypeInfo*         pLegacyTypeInfo,
                                                            const SerializeContext& ctx )
     {
-        if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
-            return false;
-
-        vector<uint8> listRawBinary;
-        const bool    bDecompressOk = CompressionStream::decompressBuffer( pData, dataSize, listRawBinary );
-        if ( bDecompressOk == false || listRawBinary.empty() )
-            return false;
-
-        return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo, listRawBinary.data(), listRawBinary.size(),
-                                                       currentVersion, migrate, pLegacyTypeInfo, ctx );
+        return BinarySerializerInternal::decompressThenDeserialize( pInstance, pData, dataSize, [&]( const uint8* pRaw, size_t rawSize )
+        {
+            return deserializeVersioned( outVersion, pInstance, typeInfo, pRaw, rawSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
+        } );
     }
 
     void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
@@ -428,19 +459,16 @@ namespace sw
     {
         vector<uint8> buffer;
         serialize( pInstance, typeInfo, buffer, ctx );
-        if ( buffer.empty() == false )
-            outArchive.writeBytes( buffer.data(), buffer.size() );
+        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                         const SerializeContext& ctx )
     {
-        if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
-            return false;
-
-        const uint8* pData    = inArchive.getData() + inArchive.getOffset();
-        const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
-        return deserialize( pInstance, typeInfo, pData, dataSize, ctx );
+        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        {
+            return deserialize( pInstance, typeInfo, pData, dataSize, ctx );
+        } );
     }
 
     void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
@@ -448,20 +476,17 @@ namespace sw
     {
         vector<uint8> buffer;
         serializeVersioned( version, pInstance, typeInfo, buffer, ctx );
-        if ( buffer.empty() == false )
-            outArchive.writeBytes( buffer.data(), buffer.size() );
+        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                  uint32 currentVersion, SchemaMigrateFn migrate,
                                                  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {
-        if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
-            return false;
-
-        const uint8* pData    = inArchive.getData() + inArchive.getOffset();
-        const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
-        return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
+        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        {
+            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
+        } );
     }
 
     bool BinarySerializer::serializeCompressed( const void*             pInstance,
@@ -474,8 +499,7 @@ namespace sw
         if ( serializeCompressed( pInstance, typeInfo, buffer, codecType, ctx ) == false )
             return false;
 
-        if ( buffer.empty() == false )
-            outArchive.writeBytes( buffer.data(), buffer.size() );
+        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
         return true;
     }
 
@@ -484,12 +508,10 @@ namespace sw
                                                   Archive&                inArchive,
                                                   const SerializeContext& ctx )
     {
-        if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
-            return false;
-
-        const uint8* pData    = inArchive.getData() + inArchive.getOffset();
-        const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
-        return deserializeCompressed( pInstance, typeInfo, pData, dataSize, ctx );
+        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        {
+            return deserializeCompressed( pInstance, typeInfo, pData, dataSize, ctx );
+        } );
     }
 
     void BinarySerializer::serializeCompact( const void*             pInstance,
@@ -592,8 +614,7 @@ namespace sw
     {
         vector<uint8> buffer;
         serializeCompact( pInstance, typeInfo, buffer, ctx );
-        if ( buffer.empty() == false )
-            outArchive.writeBytes( buffer.data(), buffer.size() );
+        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
     bool BinarySerializer::deserializeCompact( void*                   pInstance,
@@ -674,11 +695,9 @@ namespace sw
                                                Archive&                inArchive,
                                                const SerializeContext& ctx )
     {
-        if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
-            return false;
-
-        const uint8* pData    = inArchive.getData() + inArchive.getOffset();
-        const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
-        return deserializeCompact( pInstance, typeInfo, pData, dataSize, ctx );
+        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        {
+            return deserializeCompact( pInstance, typeInfo, pData, dataSize, ctx );
+        } );
     }
 } // namespace sw

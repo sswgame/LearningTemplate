@@ -199,6 +199,31 @@ namespace sw
                 }
                 return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, ctx, wireTypeName );
             }
+
+            /**
+             * @brief orphan 값을 경로 `pPath` 의 프로퍼티에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 는 orphan 을 찾는 법만 다릅니다.
+             * @details 텍스트가 있으면 텍스트로, 없으면 바이너리로 적용합니다. 바이너리의 기록 타입은 `wireTypeHint`, 비었으면 orphan 에
+             *          남은 기록 타입 해시로 정합니다. 예전에는 경로 판이 힌트가 없을 때 프로퍼티 타입을 기록 타입으로 가정해,
+             *          타입이 바뀐 orphan(int32 → float32 등)을 그 비트 그대로 제자리에 읽었습니다.
+             */
+            static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
+                                       hashed_string wireTypeHint, const SerializeContext& ctx )
+            {
+                void*               pPtr{ nullptr };
+                const PropertyInfo* pProp = nullptr;
+                if ( resolvePropertyPath( pInstance, typeInfo, pPath, pPtr, pProp ) == false )
+                    return false;
+
+                if ( orphan._text.empty() == false )
+                    return parseTextValueCoerced( pPtr, pProp->_typeName, orphan._text, ctx );
+                if ( orphan._listBinary.empty() )
+                    return false;
+
+                hashed_string hint = wireTypeHint;
+                if ( hint.empty() )
+                    hint = resolveWireTypeHash( orphan._wireTypeHash );
+                return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, ctx );
+            }
         };
     } // namespace
 } // namespace sw
@@ -308,29 +333,14 @@ namespace sw
         if ( pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
 
-        void*               pPtr{ nullptr };
-        const PropertyInfo* pProp = nullptr;
-        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
-            return false;
-
         const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-
-        if ( pOrphan->_text.empty() == false )
-            return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
-
-        if ( pOrphan->_listBinary.empty() == false )
-        {
-            hashed_string hint = wireTypeHint;
-            if ( hint.empty() )
-                hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
-            return SchemaMigrateInternal::applyOrphanBinary( pPtr, pProp->_typeName, *pOrphan, hint, ctx );
-        }
-        return false;
+        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, ctx );
     }
 
     bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
     {
-        if ( pDottedPath == nullptr )
+        // `applyOrphanTo` 와 같은 검사. 예전에는 인스턴스 · 타입을 보지 않고 `*_pTypeInfo` 를 읽었다.
+        if ( pDottedPath == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
         const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
         if ( listPart.empty() )
@@ -344,24 +354,8 @@ namespace sw
         if ( pOrphan == nullptr )
             return false;
 
-        void*               pPtr{ nullptr };
-        const PropertyInfo* pProp = nullptr;
-        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pDottedPath, pPtr, pProp ) == false )
-            return false;
-
         const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-        if ( pOrphan->_text.empty() == false )
-            return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
-        if ( pOrphan->_listBinary.empty() == false )
-        {
-            // 기록 타입은 `applyOrphanTo` 와 같게 정한다. 예전에는 힌트가 없으면 프로퍼티 타입을 기록 타입으로 가정해,
-            // 타입이 바뀐 orphan(int32 → float32 등)을 그 비트 그대로 제자리에 읽었다.
-            hashed_string hint = wireTypeHint;
-            if ( hint.empty() )
-                hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
-            return SchemaMigrateInternal::applyOrphanBinary( pPtr, pProp->_typeName, *pOrphan, hint, ctx );
-        }
-        return false;
+        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, ctx );
     }
 
     bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const

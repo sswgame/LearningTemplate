@@ -156,6 +156,43 @@ namespace sw
 
                 return BinarySerializer::deserialize( pObj, *pType, pData + bodyStart, bodySize, ctx );
             }
+
+            /**
+             * @brief 텍스트(JSON · XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
+             * @return 텍스트를 읽지 못하면 false 이고, 그때 `outBinary` 는 건드리지 않습니다.
+             */
+            template <typename DeserializeTextFunc>
+            static bool transcodeTextToBinary( string_view text, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+                                               const SerializeContext& ctx, DeserializeTextFunc&& deserializeText )
+            {
+                if ( text.empty() || typeInfo._size == 0 )
+                    return false;
+
+                ScopedScratchInstance scratch( typeInfo );
+                if ( scratch.isValid() == false || deserializeText( scratch.get() ) == false )
+                    return false;
+
+                BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, ctx );
+                return true;
+            }
+
+            /**
+             * @brief 바이너리를 임시 인스턴스로 읽어 텍스트로 다시 씁니다. `serializeText` 가 텍스트 형식을 고릅니다.
+             * @return 바이너리를 읽지 못하면 빈 문자열입니다.
+             */
+            template <typename SerializeTextFunc>
+            static string transcodeBinaryToText( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, const SerializeContext& ctx,
+                                                 SerializeTextFunc&& serializeText )
+            {
+                if ( pData == nullptr || dataSize == 0 || typeInfo._size == 0 )
+                    return {};
+
+                ScopedScratchInstance scratch( typeInfo );
+                if ( scratch.isValid() == false || BinarySerializer::deserialize( scratch.get(), typeInfo, pData, dataSize, ctx ) == false )
+                    return {};
+
+                return serializeText( scratch.get() );
+            }
         };
     } // namespace
 } // namespace sw
@@ -581,68 +618,37 @@ namespace sw
     bool SerializerUtil::transcodeJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                 const SerializeContext& ctx )
     {
-        if ( jsonStr.empty() || typeInfo._size == 0 )
-            return false;
-
-        ScopedScratchInstance scratch( typeInfo );
-        if ( scratch.isValid() == false )
-            return false;
-
-        if ( JsonSerializer::deserialize( scratch.get(), typeInfo, jsonStr, ctx ) == false )
-            return false;
-
-        BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, ctx );
-        return true;
+        return SerializerUtilInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, ctx, [&]( void* pScratch )
+        {
+            return JsonSerializer::deserialize( pScratch, typeInfo, jsonStr, ctx );
+        } );
     }
 
     string SerializerUtil::transcodeBinaryToJson( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
                                                   const SerializeContext& ctx )
     {
-        if ( pData == nullptr || dataSize == 0 || typeInfo._size == 0 )
-            return {};
-
-        ScopedScratchInstance scratch( typeInfo );
-        if ( scratch.isValid() == false )
-            return {};
-
-        if ( BinarySerializer::deserialize( scratch.get(), typeInfo, pData, dataSize, ctx ) == false )
-            return {};
-
-        return bPretty ? JsonSerializer::serializePretty( scratch.get(), typeInfo, 4, ctx )
-                       : JsonSerializer::serialize( scratch.get(), typeInfo, ctx );
+        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, ctx, [&]( const void* pScratch )
+        {
+            return bPretty ? JsonSerializer::serializePretty( pScratch, typeInfo, 4, ctx ) : JsonSerializer::serialize( pScratch, typeInfo, ctx );
+        } );
     }
 
     bool SerializerUtil::transcodeXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                const SerializeContext& ctx )
     {
-        if ( xmlStr.empty() || typeInfo._size == 0 )
-            return false;
-
-        ScopedScratchInstance scratch( typeInfo );
-        if ( scratch.isValid() == false )
-            return false;
-
-        if ( XmlSerializer::deserialize( scratch.get(), typeInfo, xmlStr, ctx ) == false )
-            return false;
-
-        BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, ctx );
-        return true;
+        return SerializerUtilInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, ctx, [&]( void* pScratch )
+        {
+            return XmlSerializer::deserialize( pScratch, typeInfo, xmlStr, ctx );
+        } );
     }
 
     string SerializerUtil::transcodeBinaryToXml( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
                                                  const SerializeContext& ctx )
     {
-        if ( pData == nullptr || dataSize == 0 || typeInfo._size == 0 )
-            return {};
-
-        ScopedScratchInstance scratch( typeInfo );
-        if ( scratch.isValid() == false )
-            return {};
-
-        if ( BinarySerializer::deserialize( scratch.get(), typeInfo, pData, dataSize, ctx ) == false )
-            return {};
-
-        return XmlSerializer::serialize( scratch.get(), typeInfo, ctx );
+        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, ctx, [&]( const void* pScratch )
+        {
+            return XmlSerializer::serialize( pScratch, typeInfo, ctx );
+        } );
     }
 
 } // namespace sw

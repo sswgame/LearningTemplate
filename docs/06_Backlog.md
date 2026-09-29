@@ -2021,6 +2021,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Serialization: orphan 적용 · 변환 · 압축 · 아카이브 판의 겹친 몸통)
+
+`RunDuplicateCode.py --filter Source/ --no-headers --min-lines 7` 로 전 트리 중복 군집을 다시 뽑고, 앞 회차들이 기각하거나 일부러 둔 것
+(머티리얼 패킹 case 목록 · TypeInfo 생성자 · RLE · 호출 스택 캡처 · DX12 상태 조회 · 셰이더 반사 D3D11/12 · Win32 마우스 case · 비트셋 시프트)을 빼고
+남은 것을 폴더마다 정리한다. 이 회차는 Serialization 이다. 동작은 같다(아래 하나는 고친 것).
+
+- **`SchemaMigrateContext::applyOrphanTo` · `applyOrphanToPath`.** orphan 을 찾는 법만 다르고 "경로 풀기 → 텍스트면 텍스트, 아니면 기록 타입을 정해 바이너리"
+  몸통이 두 벌이었다. `SchemaMigrateInternal::applyOrphanAt` 하나로. **고친 것:** 경로 판은 인스턴스 · 타입이 없는지 보지 않고 `*_pTypeInfo` 를 읽었다
+  (`applyOrphanTo` 는 봤다). 이제 같은 검사를 한다.
+- **`SerializerUtil::transcode*` 넷**(JSON · XML ↔ 바이너리). 임시 인스턴스를 세워 한쪽으로 읽고 다른 쪽으로 쓰는 몸통이 형식마다 한 벌이었다.
+  `transcodeTextToBinary` · `transcodeBinaryToText` 둘에 형식만 람다로 넘긴다.
+- **`BinarySerializer` 압축 판 넷 · Archive 판 여덟.** "직렬화 → 압축" · "압축 풀기 → 역직렬화" 가 버전 판과 두 벌씩, 아카이브의 남은 바이트를 꺼내는 앞부분이
+  역직렬화 넷에, "비어 있지 않으면 아카이브에 쓴다" 가 직렬화 넷에 있었다. `serializeThenCompress` · `decompressThenDeserialize` · `deserializeArchiveRemainder` ·
+  `writeBufferToArchive` 로. Archive 판 역직렬화가 읽기 자리를 옮기지 않는 것은 예전 그대로다(형식에 길이 머리가 없어 얼마나 읽었는지 모른다).
+
 ### 2026-09-29 (CI 플레이크 — `TaskTest.StageDispatchDoesNotAllocate` 는 세 번까지 재어 가장 작은 값을 본다)
 
 88bef778 의 윈도우 Debug CI 가 이 테스트 하나로 졌다(`50 회에 힙 할당 2 회`, 637 통과 1 실패). 그 커밋은 태스크 코드를 건드리지 않았고
