@@ -2021,6 +2021,13 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (`-Wnrvo` — 트리에 남은 경고 하나)
+
+`LightComponent::computeLightDirection` 이 경로마다 다른 객체를 돌려줬다(`const` 인 `localDirection` / `worldDirection.normalize()` 가 돌려주는 참조의 복사) —
+복사 생략이 걸릴 수 없다는 경고다. 반환 변수를 `worldDirection` 하나로 모았다(길이가 0 에 가까우면 로컬 방향을 대입, 아니면 제자리 정규화). 동작은 같다.
+**검증.** `RunBuildWarnings.py` 세 구성(Debug · Release · Shipping) 모두 고유 경고 0건 · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 · `*Light*` 11/11.
+Release 빌드 폴더가 파일 이름 변경 전 컴파일 DB 로 남아 있으면 이 보고서가 옛 파일(`ShaderBakeRecipe.cpp`)을 찾다 오류를 낸다 — Release 를 한 번 빌드하면 사라진다.
+
 ### 2026-09-29 (ReflectionParser 이름 — 이름 정리 다섯째, App · Core · Engine · Editor 에 이어 마지막)
 
 같은 방식(식별자 단어 584 개 · 파일 이름). libclang API(`clang_dispose*` · `CXCursor_Unexposed*`)와 프로그래밍 용어(umbrella 헤더 · banner · lookback ·
@@ -2133,7 +2140,7 @@ Core · Engine 은 이어서 같은 방식으로 훑는다.
 
 **검증(Windows).** Debug · Shipping 빌드, 바꾼 TU 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 · 이름을 바꾼 SmokeTest 넷을
 따로 돌려 스킵 0, 바꾼 로그 문구가 실제로 찍힌다. 리눅스 분기(`isBoundTo`)는 이 PC 에서 컴파일할 수 없어 CI 로 본다.
-**지나가다 본 것(후보).** Shipping 빌드에 `LightComponent.cpp(47)` 의 `-Wnrvo` 경고가 하나 있다(1e362fee 에서 들어왔다, 이번 변경과 무관).
+**지나가다 본 것.** Shipping 빌드에 `LightComponent.cpp(47)` 의 `-Wnrvo` 경고가 하나 있었다(1e362fee 에서 들어왔다) — 같은 날 고쳤다(아래 한 줄).
 Shipping 의 라벨 없는 ctest 항목 `AppTest` 는 작업 폴더가 `TestBin` 이라 `App.exe` 를 못 띄워 `AppSmokeTest` 가 실패한다(1.7 ms) — 같은 케이스를 `Bin` 에서
 도는 `AppTest_NoGPU` · `AppTest_HostOnly` 는 통과하므로 등록(`Test/AppTest/CMakeLists.txt` 의 `sw_addTestExecutable` 기본 작업 폴더) 문제다.
 

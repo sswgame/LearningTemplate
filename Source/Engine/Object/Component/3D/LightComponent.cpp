@@ -41,11 +41,14 @@ namespace sw
     float3 LightComponent::computeLightDirection( const float3& defaultLocalDirection ) const
     {
         // 기본 방향을 월드 행렬의 3x3 으로 돌린다(행 벡터 규약). 회전이 없으면 그대로, 부모가 돌면 따라 돈다.
+        // 반환 변수는 하나다. 경로마다 다른 객체를 돌려주면 복사 생략(NRVO)이 걸리지 않는다(-Wnrvo).
         const float3 localDirection = float3{ defaultLocalDirection }.normalize();
         float3       worldDirection = float3::transformNormal( localDirection, getWorldMatrix() );
         if ( worldDirection.getLengthSquared() <= MathUtil::Epsilon )
-            return localDirection;
-        return worldDirection.normalize();
+            worldDirection = localDirection;
+        else
+            worldDirection.normalize();
+        return worldDirection;
     }
 
     void LightComponent::onRegister( GameObjectManager& manager )
