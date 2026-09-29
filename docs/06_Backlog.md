@@ -2021,6 +2021,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (ReflectionParser 이름 — 이름 정리 다섯째, App · Core · Engine · Editor 에 이어 마지막)
+
+같은 방식(식별자 단어 584 개 · 파일 이름). libclang API(`clang_dispose*` · `CXCursor_Unexposed*`)와 프로그래밍 용어(umbrella 헤더 · banner · lookback ·
+orphan)는 둔다. 파일 · 타입 이름에는 바꿀 것이 없었다. 바꾼 것: `ParsedReflection::wantsTypeApi` · `wantsComponentFactory` → `requiresTypeApi` ·
+`requiresComponentFactory`(AGENTS.md 의 술어 동사), `AstVisitor` 의 `bWantsFactory` → `bRequiresFactory`, `ReflectionPipeline` 의 `listSeenInput` →
+`listVisitedInput`. (Engine 커밋에서 `containerPeelMember` → `containerElementTypeMember` 호출부를 이미 바꿨다.)
+
+**검증(Windows).** Debug · Shipping 빌드(새 경고 0) · `nogpu`+`hostgpu` 각 9/9(ReflectionTest 포함).
+
+**이름 정리 다섯 커밋에서 일부러 둔 것.** API · 외부 라이브러리가 정한 이름, 엔진 표준 용어(bake · cook · in flight · orphan · high water mark · chord · pin),
+GameFramework · Games · RuntimeAPI(범위 밖 — `EditorAPI::abandonPendingDraw` 같은 ABI 이름 포함), 옛 함수 이름을 적은 이력 주석과 이 백로그의 옛 기록.
+
 ### 2026-09-29 (Editor 이름 — 비유로 쓴 단어를 걷었다)
 
 **어떻게 찾았나.** 같은 방식(식별자 단어 1,484 개 · 파일 이름). 새로 나온 단어는 대부분 UI 용어(dock · gizmo · toast · spinner · palette · chrome)와

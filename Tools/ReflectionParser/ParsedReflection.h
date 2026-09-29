@@ -195,8 +195,8 @@ namespace sw
         {
         }
 
-        bool wantsTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
-        bool wantsComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
+        bool requiresTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
+        bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
     };
 
     /** @brief 열거형 안의 개별 enumerator */

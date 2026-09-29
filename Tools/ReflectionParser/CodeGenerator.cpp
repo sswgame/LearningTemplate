@@ -189,14 +189,14 @@ namespace sw
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            if ( typeInfo.wantsComponentFactory() )
+            if ( typeInfo.requiresComponentFactory() )
                 emitComponentFactoryRegistrar( buffer, typeInfo );
         }
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
             emitReflectTypeTraits( buffer, typeInfo );
-            if ( typeInfo.wantsTypeApi() )
+            if ( typeInfo.requiresTypeApi() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
         return string( buffer.view() );

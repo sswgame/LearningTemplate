@@ -67,13 +67,13 @@ namespace sw
         [[maybe_unused]] uint32 noReflect  = 0;
 
         vector<PendingInput> listPending;
-        vector<string>       listSeenInput;
+        vector<string>       listVisitedInput;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
             // 같은 헤더가 두 번 오면 한 번만 처리한다. 묶음 TU 에서는 둘째 대상이 선언을 하나도 못 받아 빈 산출물로 첫째를 덮는다.
-            if ( std::find( listSeenInput.begin(), listSeenInput.end(), inputFile ) != listSeenInput.end() )
+            if ( std::find( listVisitedInput.begin(), listVisitedInput.end(), inputFile ) != listVisitedInput.end() )
                 continue;
-            listSeenInput.push_back( inputFile );
+            listVisitedInput.push_back( inputFile );
 
             GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
             if ( _incrementalCheck.isUpToDate( inputFile, paths ) )
