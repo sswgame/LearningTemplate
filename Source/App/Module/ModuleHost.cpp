@@ -345,14 +345,14 @@ namespace sw
     {
         if ( bindEditorApi( pLibraryModule ) == false )
         {
-            poisonLiveReload( "EditorAPI bind failed after reload" );
+            markReloadGraphBroken( "EditorAPI bind failed after reload" );
             return;
         }
 
         if ( createEditorInstance() == false )
         {
             _editorApi = {};
-            poisonLiveReload( "Editor create/initialize failed after reload" );
+            markReloadGraphBroken( "Editor create/initialize failed after reload" );
             return;
         }
 
@@ -381,7 +381,7 @@ namespace sw
 
         if ( bindGameApi( pModuleHandle ) == false )
         {
-            poisonLiveReload( "GameAPI bind failed after reload" );
+            markReloadGraphBroken( "GameAPI bind failed after reload" );
             return;
         }
 #endif
@@ -389,7 +389,7 @@ namespace sw
         if ( createGameInstance() == false )
         {
             _gameApi = {};
-            poisonLiveReload( "Game create/initialize failed after reload" );
+            markReloadGraphBroken( "Game create/initialize failed after reload" );
             return;
         }
 
@@ -459,8 +459,8 @@ namespace sw
         {
             if ( engine::getTaskManager().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
             {
-                SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload — poisoning LiveReload graph.", LiveReloadManager::kModuleDrainTimeoutMs );
-                poisonLiveReload( "task fencing timeout before unload" );
+                SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload — marking the LiveReload graph broken.", LiveReloadManager::kModuleDrainTimeoutMs );
+                markReloadGraphBroken( "task fencing timeout before unload" );
             }
         }
     }
@@ -483,7 +483,7 @@ namespace sw
         _listGameSavedState.clear();
     }
 
-    void ModuleHost::poisonLiveReload( const utf8* pReason )
+    void ModuleHost::markReloadGraphBroken( const utf8* pReason )
     {
 #if !defined( SW_SHIPPING )
         if ( _pLiveReloadManager != nullptr )

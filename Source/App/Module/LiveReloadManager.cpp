@@ -131,32 +131,32 @@ namespace sw
 
             /**
              * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
-             * @param pOutSeen     모듈이 실제로 본 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
+             * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
              * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 구운 도장 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
              *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
              */
-            static bool isBoundTo( void* pModule, string_view dependencyName, void* pExpected, const void*& pOutSeen, const void*& pOutExpected )
+            static bool isBoundTo( void* pModule, string_view dependencyName, void* pExpected, const void*& pOutActual, const void*& pOutExpected )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 pOutExpected = pExpected;
-                pOutSeen     = findBoundImportModule( pModule, FileUtil::formatSharedLibraryName( dependencyName ) );
-                return pOutSeen == nullptr || pOutSeen == pOutExpected;
+                pOutActual   = findBoundImportModule( pModule, FileUtil::formatSharedLibraryName( dependencyName ) );
+                return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
-                const string anchorName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
-                pOutExpected            = FileUtil::getDynamicSymbol( pExpected, anchorName );
-                pOutSeen                = nullptr;
+                const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
+                pOutExpected                 = FileUtil::getDynamicSymbol( pExpected, stampSymbolName );
+                pOutActual                   = nullptr;
                 // 도장이 없는 모듈(정적 링크 · 도장을 굽기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutSeen = FileUtil::getDynamicSymbol( pModule, anchorName );
-                return pOutSeen == nullptr || pOutSeen == pOutExpected;
+                pOutActual = FileUtil::getDynamicSymbol( pModule, stampSymbolName );
+                return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
                 (void)pModule;
                 (void)dependencyName;
                 (void)pExpected;
-                pOutSeen     = nullptr;
+                pOutActual   = nullptr;
                 pOutExpected = nullptr;
                 return true;
 #endif
@@ -458,8 +458,8 @@ namespace sw
           }
         , _onBeforeCommitBatch{}
         , _drainWorkers{}
-        , _listRetiredImage{}
-        , _retireBatchId{ 0 }
+        , _listDeferredUnloadImage{}
+        , _reloadBatchId{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bReloadingBatch{ SW_FALSE }
         , _reserved{ 0 }
@@ -492,11 +492,11 @@ namespace sw
             _fileWatcher.reset();
         }
 
-        // 퇴역한 옛 이미지를 먼저 내린다. 그것들은 같은 배치의 퇴역 이미지나 **지금 살아 있는** 이미지에 묶여 있으므로, 살아 있는
-        // 모듈을 먼저 내리면 옛 이미지의 정적 소멸자가 내려간 코드로 뛸 수 있다.
-        while ( _listRetiredImage.empty() == false )
+        // 언로드를 미룬 옛 이미지를 먼저 내린다. 그것들은 같은 배치의 미룬 이미지나 **지금 살아 있는** 이미지에 묶여 있으므로, 살아
+        // 있는 모듈을 먼저 내리면 옛 이미지의 정적 소멸자가 내려간 코드로 뛸 수 있다.
+        while ( _listDeferredUnloadImage.empty() == false )
         {
-            unloadOldestRetiredBatch();
+            unloadOldestDeferredBatch();
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -735,12 +735,12 @@ namespace sw
                 if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
                     continue;
 
-                const void* pSeen{ nullptr };
+                const void* pActual{ nullptr };
                 const void* pExpected{ nullptr };
-                if ( LiveReloadManagerInternal::isBoundTo( moduleContext._pLibraryModule, dependencyName, dependencyIt->second._pLibraryModule, pSeen, pExpected ) )
+                if ( LiveReloadManagerInternal::isBoundTo( moduleContext._pLibraryModule, dependencyName, dependencyIt->second._pLibraryModule, pActual, pExpected ) )
                     continue;
 
-                SW_LOG_ERROR( "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pSeen, pExpected );
+                SW_LOG_ERROR( "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
                 bAllBound = false;
             }
         }
@@ -823,14 +823,14 @@ namespace sw
 
             // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
             string     moduleStamp;
-            const bool bForeignEngine = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
-            if ( bForeignEngine )
+            const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
+            if ( bEngineAbiMismatch )
             {
                 // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
-                const utf8* pRemedy = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
-                                                                     : "rebuild the engine and its modules together";
+                const utf8* pHint = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
+                                                                   : "rebuild the engine and its modules together";
                 SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                              ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pRemedy );
+                              ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pHint );
                 return false;
             }
 #if defined( SW_PLATFORM_LINUX )
@@ -947,14 +947,14 @@ namespace sw
                 }
             }
 
-            // 옛 이미지는 바로 내리지 않고 퇴역시킨다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
+            // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
             if ( pPreviousHandle != nullptr )
-                retireImage( ctx._moduleName, pPreviousHandle, previousTempModule );
+                deferImageUnload( ctx._moduleName, pPreviousHandle, previousTempModule );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
-            SW_LOG_ERROR( "Module %# committed but onAfter poisoned the graph",
+            SW_LOG_ERROR( "Module %# committed but onAfter marked the graph broken",
                           ctx._moduleName );
             return false;
         }
@@ -1011,45 +1011,45 @@ namespace sw
         ctx._tempModulePath.clear();
     }
 
-    void LiveReloadManager::retireImage( string_view moduleName, void* pHandle, string_view tempPath )
+    void LiveReloadManager::deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath )
     {
         if ( pHandle == nullptr )
             return;
 
-        RetiredImage retired{};
-        retired._moduleName = string{ moduleName };
-        retired._tempPath   = string{ tempPath };
-        retired._pHandle    = pHandle;
-        retired._batchId    = _retireBatchId;
-        _listRetiredImage.push_back( std::move( retired ) );
+        DeferredUnloadImage deferredImage{};
+        deferredImage._moduleName = string{ moduleName };
+        deferredImage._tempPath   = string{ tempPath };
+        deferredImage._pHandle    = pHandle;
+        deferredImage._batchId    = _reloadBatchId;
+        _listDeferredUnloadImage.push_back( std::move( deferredImage ) );
 
         // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
-        while ( _listRetiredImage.back()._batchId - _listRetiredImage.front()._batchId >= kMaxRetiredBatchCount )
+        while ( _listDeferredUnloadImage.back()._batchId - _listDeferredUnloadImage.front()._batchId >= kMaxDeferredUnloadBatchCount )
         {
-            unloadOldestRetiredBatch();
+            unloadOldestDeferredBatch();
         }
     }
 
-    void LiveReloadManager::unloadOldestRetiredBatch()
+    void LiveReloadManager::unloadOldestDeferredBatch()
     {
-        if ( _listRetiredImage.empty() )
+        if ( _listDeferredUnloadImage.empty() )
             return;
 
-        const uint32 oldestBatchId = _listRetiredImage.front()._batchId;
+        const uint32 oldestBatchId = _listDeferredUnloadImage.front()._batchId;
         size_t       batchEnd{ 0 };
-        while ( batchEnd < _listRetiredImage.size() && _listRetiredImage[batchEnd]._batchId == oldestBatchId )
+        while ( batchEnd < _listDeferredUnloadImage.size() && _listDeferredUnloadImage[batchEnd]._batchId == oldestBatchId )
         {
             ++batchEnd;
         }
 
         for ( size_t imageIndex = batchEnd; imageIndex > 0; --imageIndex )
         {
-            const RetiredImage& retired = _listRetiredImage[imageIndex - 1];
-            SW_LOG_INFO( "Unloading retired module image %# (batch %#, handle=%#)", retired._moduleName, retired._batchId, retired._pHandle );
-            FileUtil::unloadDynamicLibrary( retired._pHandle );
-            LiveReloadManagerInternal::tryDeleteShadowArtifacts( retired._tempPath );
+            const DeferredUnloadImage& deferredImage = _listDeferredUnloadImage[imageIndex - 1];
+            SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchId, deferredImage._pHandle );
+            FileUtil::unloadDynamicLibrary( deferredImage._pHandle );
+            LiveReloadManagerInternal::tryDeleteShadowArtifacts( deferredImage._tempPath );
         }
-        _listRetiredImage.erase( _listRetiredImage.begin(), _listRetiredImage.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );
+        _listDeferredUnloadImage.erase( _listDeferredUnloadImage.begin(), _listDeferredUnloadImage.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );
     }
 
     bool LiveReloadManager::drainTasksBeforeUnload()
@@ -1253,7 +1253,7 @@ namespace sw
             _onBeforeCommitBatch( listOrder );
 
         _bReloadingBatch = SW_TRUE;
-        ++_retireBatchId;
+        ++_reloadBatchId;
 
         size_t committed{ 0 };
         for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )

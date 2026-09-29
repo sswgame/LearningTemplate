@@ -2021,6 +2021,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (App 이름 — 프로그래밍 용어가 아닌 단어를 걷었다)
+
+**바꾼 것** (옛 이름 → 새 이름. 아래 옛 기록의 이름으로 찾아 온 사람을 위해 적는다).
+- `ModuleHost::poisonLiveReload` → `markReloadGraphBroken` — 하는 일이 `LiveReloadManager::markGraphBroken` 을 부르는 것인데 이름만 비유(poison)였다.
+  로그 두 줄의 `poisoning` · `poisoned` 도 "marking … broken" 으로 바꿨다.
+- `App::warnUnclaimedGlobalOverrides` → `warnUnknownGlobalOverrides`.
+- `LiveReloadManager` 의 퇴역(retire) 계열 → 지연 언로드: `retireImage` → `deferImageUnload`, `unloadOldestRetiredBatch` → `unloadOldestDeferredBatch`,
+  `RetiredImage` → `DeferredUnloadImage`, `_listRetiredImage` → `_listDeferredUnloadImage`, `kMaxRetiredBatchCount` → `kMaxDeferredUnloadBatchCount`,
+  `getRetiredImageCount` → `getDeferredUnloadImageCount`, `_retireBatchId` → `_reloadBatchId`(연쇄 리로드마다 오르는 번호라 그 이름으로).
+- 인자 · 지역: `isBoundTo` 의 `pOutSeen` · `pSeen` → `pOutActual` · `pActual`(옆의 expected 와 짝), `anchorName` → `stampSymbolName`,
+  `bForeignEngine` → `bEngineAbiMismatch`, `pRemedy` → `pHint`.
+- SmokeTest 케이스 이름 넷: `LiveReloadPoisonIgnoresTrigger` → `LiveReloadBrokenGraphIgnoresTrigger`, `LiveReloadOnAfterPoisonFailsRegister` →
+  `LiveReloadOnAfterBrokenGraphFailsRegister`, `LiveReloadCascadeAbortsAfterOnAfterPoison` → `LiveReloadCascadeAbortsAfterOnAfterBrokenGraph`,
+  `RetiredImagesStayMappedUntilTheirBatchIsEvicted` → `DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted`.
+
+**일부러 둔 것.** `stamp`(ABI 도장 — RuntimeAPI 가 내보내는 `get*ModuleAbiStamp` 심볼과 `GenerateEngineAbiStamp.py` 까지 걸친 저장소 공용 용어라 App 에서만
+바꿀 수 없다), `wave`(위상 정렬의 한 단계 — TickRegistry · RenderGraph 와 같은 말), `kit`(GF_* 키트), 그리고 shadow copy · drain · debounce · fence ·
+cascade 처럼 이미 프로그래밍 용어인 것. Core · Engine 의 `retireSlot` · `retireUnusedMaterialElements` · `_listRetiredResolved` 는 App 밖이라 그대로다.
+
+**검증(Windows).** Debug · Shipping 빌드, 바꾼 TU 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 · 이름을 바꾼 SmokeTest 넷을
+따로 돌려 스킵 0, 바꾼 로그 문구가 실제로 찍힌다. 리눅스 분기(`isBoundTo`)는 이 PC 에서 컴파일할 수 없어 CI 로 본다.
+**지나가다 본 것(후보).** Shipping 빌드에 `LightComponent.cpp(47)` 의 `-Wnrvo` 경고가 하나 있다(1e362fee 에서 들어왔다, 이번 변경과 무관).
+
 ### 2026-09-24 (전역 변수 — 한 파일만 읽는 것은 그 파일에서 정의하고 extern 을 걷었다)
 
 **규칙.** 전역 변수의 선언(`SW_EXTERN_GLOBAL_VARIABLE_*`)은 정의한 파일 **밖**에서 읽는 곳이 있을 때만 쓴다. 한 파일만 읽으면 그 파일에서 정의한다

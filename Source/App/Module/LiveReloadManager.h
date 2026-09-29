@@ -118,7 +118,7 @@ namespace sw
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
      *       (의존하는 쪽 먼저)입니다. prepare 가 실패하면 새 이미지를 버리고 기존 핸들을 유지합니다(keep-old). commit 중에 실패하거나
-     *       onAfter 가 그래프를 깨진 상태(poison)로 표시하면 남은 commit 을 멈춥니다. 이미 교체된 DLL 은 되돌릴 수 없습니다.
+     *       onAfter 가 그래프를 깨진 상태로 표시하면 남은 commit 을 멈춥니다. 이미 교체된 DLL 은 되돌릴 수 없습니다.
      */
     class LiveReloadManager final : public IModuleHandleProvider
     {
@@ -137,12 +137,12 @@ namespace sw
         static constexpr uint32 kModuleDrainTimeoutMs = 5000;
 
         /**
-         * @brief 교체된 옛 이미지를 몇 번의 연쇄 리로드(배치)만큼 올려 둘지입니다.
+         * @brief 교체된 옛 이미지의 언로드를 몇 번의 연쇄 리로드(배치)만큼 미룰지입니다.
          * @details 옛 코드를 가리키는 것(델리게이트 · 함수 포인터 · vtable · 문자열 리터럴)이 어딘가 남아 있어도, 이미지가 올라와 있는
          *          동안은 크래시가 아니라 옛 동작이 한 번 더 돕니다. 섀도 복사본이라 올려 두어도 원본 파일은 잠기지 않습니다. 이보다
          *          오래된 배치는 의존하는 쪽부터 내립니다(Windows 지연 로드는 참조 수를 올리지 않으므로 순서를 손으로 지킵니다).
          */
-        static constexpr uint32 kMaxRetiredBatchCount = 4;
+        static constexpr uint32 kMaxDeferredUnloadBatchCount = 4;
 
         /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
         LiveReloadManager();
@@ -229,8 +229,8 @@ namespace sw
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
         void* getModuleHandle( string_view moduleName ) const;
 
-        /** @brief 교체된 뒤 아직 올려 둔 옛 이미지 수입니다(`kMaxRetiredBatchCount` 배치까지). */
-        uint32 getRetiredImageCount() const { return static_cast<uint32>( _listRetiredImage.size() ); }
+        /** @brief 교체된 뒤 언로드를 미루고 아직 올려 둔 옛 이미지 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
+        uint32 getDeferredUnloadImageCount() const { return static_cast<uint32>( _listDeferredUnloadImage.size() ); }
 
         // --- IModuleHandleProvider: 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
         /** @brief 리로드 그래프가 깨져 있으면 true 입니다. */
@@ -273,14 +273,14 @@ namespace sw
         void rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
-        /** @brief 교체된 옛 이미지를 퇴역 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
-        void retireImage( string_view moduleName, void* pHandle, string_view tempPath );
+        /** @brief 교체된 옛 이미지를 지연 언로드 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
+        void deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath );
         /**
-         * @brief 가장 오래된 퇴역 배치 하나를 내립니다. 배치 안에서는 나중에 퇴역한 것(의존하는 쪽)부터 내립니다.
-         * @details 퇴역한 이미지는 **같은 배치의 퇴역 이미지나 지금 살아 있는 이미지에만** 묶여 있습니다(의존이 바뀌면 의존하는 모듈도 같은
-         *          연쇄로 바뀐다). 그래서 오래된 배치부터 내려도 아직 쓰이는 이미지를 먼저 내리는 일이 없습니다.
+         * @brief 언로드를 미뤄 둔 가장 오래된 배치 하나를 내립니다. 배치 안에서는 나중에 목록에 오른 것(의존하는 쪽)부터 내립니다.
+         * @details 언로드를 미룬 이미지는 **같은 배치의 미룬 이미지나 지금 살아 있는 이미지에만** 묶여 있습니다(의존이 바뀌면 의존하는
+         *          모듈도 같은 연쇄로 바뀐다). 그래서 오래된 배치부터 내려도 아직 쓰이는 이미지를 먼저 내리는 일이 없습니다.
          */
-        void unloadOldestRetiredBatch();
+        void unloadOldestDeferredBatch();
         /**
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
@@ -307,7 +307,7 @@ namespace sw
         };
 
         /** @brief 교체되어 내려갈 차례를 기다리는 옛 이미지입니다. */
-        struct RetiredImage
+        struct DeferredUnloadImage
         {
             string _moduleName;
             string _tempPath;
@@ -348,8 +348,8 @@ namespace sw
         unique_ptr<IFileWatcher>             _fileWatcher;
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;
-        vector<RetiredImage>                 _listRetiredImage; ///< 교체된 옛 이미지. 오래된 것부터
-        uint32                               _retireBatchId;    ///< 연쇄 리로드마다 오르는 배치 번호
+        vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터
+        uint32                               _reloadBatchId;           ///< 연쇄 리로드마다 오르는 배치 번호
         uint8                                _bReloadGraphBroken : 1;
         uint8                                _bReloadingBatch    : 1;
         [[maybe_unused]] uint8               _reserved           : 6;

@@ -242,11 +242,11 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadKeepOldOnMissingOriginal )
 }
 
 /**
- * @brief poison 된 LiveReload 그래프는 이후 triggerReload 를 무시한다
+ * @brief 깨진 상태로 표시된 LiveReload 그래프는 이후 triggerReload 를 무시한다
  */
-SW_TEST_CASE( ArchitectureTest, LiveReloadPoisonIgnoresTrigger )
+SW_TEST_CASE( ArchitectureTest, LiveReloadBrokenGraphIgnoresTrigger )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "Testing broken/poisoned reload graph handling" );
+    SW_TEST_DEFENSIVE_SCOPE( "Testing broken reload graph handling" );
     sw::LiveReloadManager manager;
     SW_EXPECT_FALSE( manager.isGraphBroken() );
     manager.markGraphBroken( "test" );
@@ -256,15 +256,15 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadPoisonIgnoresTrigger )
 }
 
 /**
- * @brief onAfter poison 시 registerModule 은 실패해야 하고, 올렸던 이미지와 섀도 복사본은 그 자리에서 치운다
+ * @brief onAfter 가 그래프를 깨진 상태로 표시하면 registerModule 은 실패해야 하고, 올렸던 이미지와 섀도 복사본은 그 자리에서 치운다
  * @details commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfter 가 그래프를 막아도 실패를 돌려준다. 예전에는 등록이 그 컨텍스트를 내리지
  *          않고 지워서 이미지 · 섀도 파일이 프로세스 끝까지 남았다(이 테스트가 `SWGame_temp_*` 를 남기고 있었다).
  */
-SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterPoisonFailsRegister )
+SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterBrokenGraphFailsRegister )
 {
     if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
-    SW_TEST_DEFENSIVE_SCOPE( "Testing onAfter poison registration failure" );
+    SW_TEST_DEFENSIVE_SCOPE( "Testing registration failure when onAfter breaks the graph" );
     const uint32 shadowCountBefore = sw::countShadowCopies( "SWGame" );
 
     sw::LiveReloadManager manager;
@@ -282,11 +282,11 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterPoisonFailsRegister )
 }
 
 /**
- * @brief 캐스케이드 중 앞 모듈 onAfter poison 이면 이후 모듈은 commit 하지 않는다
+ * @brief 캐스케이드 중 앞 모듈의 onAfter 가 그래프를 깨진 상태로 표시하면 이후 모듈은 commit 하지 않는다
  */
-SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterPoison )
+SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterBrokenGraph )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort on poisoned dependent module" );
+    SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort when a dependency's onAfter breaks the graph" );
     const sw::string gfPath = sw::modulePath( "GameFramework" );
     if ( sw::FileUtil::fileExists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
@@ -892,9 +892,9 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
  * @brief [ArchitectureTest] 교체된 옛 이미지는 바로 내려가지 않고, 배치가 상한을 넘을 때 오래된 것부터 내려간다
  * @details 옛 코드를 가리키는 것이 남아 있어도 이미지가 올라와 있는 동안은 크래시가 아니라 옛 동작이 한 번 더 돈다. 그래서 첫 이미지에서
  *          얻은 함수 포인터를 리로드 **뒤에** 불러 본다 — 예전(바로 `FreeLibrary`)에는 이 호출이 내려간 코드로 뛰었다. 상한보다 많이
- *          리로드하면 퇴역 수는 상한에서 멈추고, 종료하면 모두 내려간다.
+ *          리로드하면 언로드를 미룬 이미지 수는 상한에서 멈추고, 종료하면 모두 내려간다.
  */
-SW_TEST_CASE( ArchitectureTest, RetiredImagesStayMappedUntilTheirBatchIsEvicted )
+SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
     if ( sw::FileUtil::fileExists( gfPath ) == false )
@@ -905,7 +905,7 @@ SW_TEST_CASE( ArchitectureTest, RetiredImagesStayMappedUntilTheirBatchIsEvicted 
         SW_TEST_SKIP( "GameFramework registration failed" );
     if ( manager.registerModule( "SWGame", { "GameFramework" } ) == false )
         SW_TEST_SKIP( "SWGame registration failed" );
-    SW_EXPECT_EQUAL( 0u, manager.getRetiredImageCount() );
+    SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 
     void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
     const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
@@ -913,22 +913,22 @@ SW_TEST_CASE( ArchitectureTest, RetiredImagesStayMappedUntilTheirBatchIsEvicted 
 
     SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
     SW_EXPECT_TRUE( manager.getModuleHandle( "SWGame" ) != pFirstGame );
-    SW_EXPECT_EQUAL( 1u, manager.getRetiredImageCount() );
+    SW_EXPECT_EQUAL( 1u, manager.getDeferredUnloadImageCount() );
 
     // 첫 이미지는 아직 올라와 있다 — 그 코드를 불러도 된다.
     sw::GameAPI firstApi{};
     SW_EXPECT_TRUE( pfnFirstExport( &firstApi ) );
 
-    for ( uint32 reloadIndex = 0; reloadIndex < sw::LiveReloadManager::kMaxRetiredBatchCount + 2; ++reloadIndex )
+    for ( uint32 reloadIndex = 0; reloadIndex < sw::LiveReloadManager::kMaxDeferredUnloadBatchCount + 2; ++reloadIndex )
     {
         SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
     }
     // SWGame 만 바뀌는 연쇄는 배치 하나에 이미지 하나다. 상한에서 멈춘다.
-    SW_EXPECT_EQUAL( sw::LiveReloadManager::kMaxRetiredBatchCount, manager.getRetiredImageCount() );
+    SW_EXPECT_EQUAL( sw::LiveReloadManager::kMaxDeferredUnloadBatchCount, manager.getDeferredUnloadImageCount() );
     SW_EXPECT_FALSE( manager.isGraphBroken() );
 
     manager.shutdown();
-    SW_EXPECT_EQUAL( 0u, manager.getRetiredImageCount() );
+    SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 }
 
 /**

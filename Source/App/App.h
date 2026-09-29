@@ -102,7 +102,7 @@ namespace sw
          * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류합니다(모듈이 선언하는 변수는 파싱 시점에 아직 없습니다). 그래서 오타가
          *          바로 드러나지 않으므로 여기서 대신 알립니다.
          */
-        void warnUnclaimedGlobalOverrides() const;
+        void warnUnknownGlobalOverrides() const;
 
         /** @brief 창 콜백 · 전역 변수 훅 · Present 훅을 연결합니다. */
         void bindHostCallbacks();

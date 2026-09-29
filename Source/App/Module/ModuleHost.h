@@ -193,7 +193,7 @@ namespace sw
          */
         void drainRenderWorkers();
         /** @brief 리로드 그래프를 깨진 상태로 표시해 이후 리로드를 막습니다. 배포 구성에서는 아무 일도 하지 않습니다. */
-        void poisonLiveReload( const utf8* pReason );
+        void markReloadGraphBroken( const utf8* pReason );
 
         // 4) 모듈 바인딩
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전 · 스탬프가 다르면 실패합니다. */

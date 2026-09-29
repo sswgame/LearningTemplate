@@ -126,7 +126,7 @@ namespace sw
             return false;
         }
 
-        warnUnclaimedGlobalOverrides();
+        warnUnknownGlobalOverrides();
 
         // 4. 창 콜백과 이벤트 전달을 설정한다
         splash.updateStatus( "Finalizing Setup...", 0.95f );
@@ -218,7 +218,7 @@ namespace sw
         return true;
     }
 
-    void App::warnUnclaimedGlobalOverrides() const
+    void App::warnUnknownGlobalOverrides() const
     {
         const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
         if ( pCommandLineManager == nullptr )
