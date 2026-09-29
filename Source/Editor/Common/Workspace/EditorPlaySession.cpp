@@ -78,24 +78,15 @@ namespace sw::editor
                 if ( data._bHasSnapshot == SW_FALSE )
                     return;
 
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
+                GameObjectManager* pObjects = editor::getActiveObjectManager();
+                if ( pObjects == nullptr )
                 {
                     data._listSnapshot.clear();
                     data._bHasSnapshot = SW_FALSE;
                     return;
                 }
 
-                Scene* pScene = pSceneManager->getActiveScene();
-                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-                {
-                    data._listSnapshot.clear();
-                    data._bHasSnapshot = SW_FALSE;
-                    return;
-                }
-
-                GameObjectManager* pObjects = pScene->getObjectManager();
-                EditorContext*     pContext = EditorContext::get();
+                EditorContext* pContext = EditorContext::get();
 
                 // 1. 플레이 도중 생성된 오브젝트 파괴
                 {

@@ -2021,6 +2021,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Editor 2차: 활성 씬 바로가기를 쓰지 않던 세 곳)
+
+6 줄 창의 Editor 몫이다. `editor::getActiveObjectManager()` 는 "SceneManager 서비스 → 활성 씬 → 오브젝트 매니저" 를 단계마다 null 확인하며 걷는 대여섯 줄을 없애려고 만든
+바로가기인데(`EditorService.h` 주석: 24곳을 걷었다), 명령 팔레트(목록 만들기 · 선택 동작), 빠른 실행기(목록 만들기 · 실행), 플레이 세션 스냅샷 되돌리기가 아직 손으로 걷고 있었다.
+다섯 곳이 그것을 부르고, 팝업 둘은 Scene · SceneManager 헤더가 필요 없어졌다.
+
+**일부러 둔 것.** `EditorAssetCommands` 의 프리팹 격리 나가기는 SceneManager 가 없을 때 false 로 돌아가고 씬만 없을 때는 격리를 푸는 데까지 간다 — 바로가기로 바꾸면 그 구분이
+사라져 두었다. 인스펙터의 `StringProperty` · `HashedStringProperty` 는 일곱 단계 가운데 넷(입력 칸 · 대입 · 비우기 · 되돌리기 추적)이 타입마다 달라 숫자 프로퍼티처럼
+표 한 줄로 줄지 않는다.
+
 ### 2026-09-29 (리팩터 — Graphics/RHI 2차: DX12 업로드 버퍼 · 즉시 제출, DX11 SRV 붙이기, Vulkan 정점 버퍼)
 
 6 줄 창의 RHI 몫이다.

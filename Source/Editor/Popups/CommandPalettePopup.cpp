@@ -15,8 +15,6 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -162,37 +160,30 @@ namespace sw::editor
         }
 
         // 3) 씬 내 게임오브젝트 검색 커맨드
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager != nullptr )
-        {
-            Scene* pScene = pSceneManager->getActiveScene();
-            if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-            {
-                // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
-                pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
-                {
-                    const uint64 objId   = pObj->getObjectId();
-                    const string objName = string{ pObj->getName().c_str() };
+        GameObjectManager* pObjects = editor::getActiveObjectManager();
+        if ( pObjects == nullptr )
+            return;
 
-                    CommandPaletteEntry entry;
-                    entry._category = "GameObject";
-                    entry._label    = "Select GameObject: " + objName;
-                    entry._detail   = "Scene Object (ID: " + to_string( objId ) + ")";
-                    entry._action   = [objId]()
-                    {
-                        SceneManager* pCurrentSceneManager = editor::getService<SceneManager>();
-                        if ( pCurrentSceneManager && pCurrentSceneManager->getActiveScene() && pCurrentSceneManager->getActiveScene()->getObjectManager() )
-                        {
-                            GameObject*    pFound      = pCurrentSceneManager->getActiveScene()->getObjectManager()->findGameObjectById( objId );
-                            EditorContext* pRunContext = EditorContext::get();
-                            if ( pFound != nullptr && pRunContext != nullptr )
-                                pRunContext->getSelectionManager().selectObject( pFound, SelectionMode::Replace );
-                        }
-                    };
-                    _listAllCommand.push_back( std::move( entry ) );
-                } );
-            }
-        }
+        // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
+        pObjects->forEachGameObject( [this]( GameObject* pObj )
+        {
+            const uint64 objId   = pObj->getObjectId();
+            const string objName = string{ pObj->getName().c_str() };
+
+            CommandPaletteEntry entry;
+            entry._category = "GameObject";
+            entry._label    = "Select GameObject: " + objName;
+            entry._detail   = "Scene Object (ID: " + to_string( objId ) + ")";
+            entry._action   = [objId]()
+            {
+                GameObjectManager* pCurrentObjects = editor::getActiveObjectManager();
+                GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectById( objId ) : nullptr;
+                EditorContext*     pRunContext     = EditorContext::get();
+                if ( pFound != nullptr && pRunContext != nullptr )
+                    pRunContext->getSelectionManager().selectObject( pFound, SelectionMode::Replace );
+            };
+            _listAllCommand.push_back( std::move( entry ) );
+        } );
     }
 
     void CommandPalettePopup::drawContent()

@@ -18,8 +18,6 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -99,27 +97,23 @@ namespace sw::editor
     {
         _listAllItem.clear();
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager != nullptr )
+        GameObjectManager* pObjects = editor::getActiveObjectManager();
+        if ( pObjects != nullptr )
         {
-            Scene* pScene = pSceneManager->getActiveScene();
-            if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+            // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
+            pObjects->forEachGameObject( [this]( GameObject* pObj )
             {
-                // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
-                pScene->getObjectManager()->forEachGameObject( [this]( GameObject* pObj )
-                {
-                    const uint64      objId = pObj->getObjectId();
-                    QuickLauncherItem item{};
-                    item._category = "GameObject";
-                    item._title    = string{ pObj->getName().c_str() };
+                const uint64      objId = pObj->getObjectId();
+                QuickLauncherItem item{};
+                item._category = "GameObject";
+                item._title    = string{ pObj->getName().c_str() };
 
-                    StringBuilder<constant::kMaxBuffer64> detailSb;
-                    detailSb.appendFormat( "Scene GameObject (ID: %#)", objId );
-                    item._detail         = string{ detailSb.view() };
-                    item._targetObjectId = objId;
-                    _listAllItem.push_back( std::move( item ) );
-                } );
-            }
+                StringBuilder<constant::kMaxBuffer64> detailSb;
+                detailSb.appendFormat( "Scene GameObject (ID: %#)", objId );
+                item._detail         = string{ detailSb.view() };
+                item._targetObjectId = objId;
+                _listAllItem.push_back( std::move( item ) );
+            } );
         }
 
         _fileIndexJob.request();
@@ -146,12 +140,11 @@ namespace sw::editor
     {
         if ( item._category == "GameObject" )
         {
-            SceneManager* pSceneManager = editor::getService<SceneManager>();
-            if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr ||
-                 pSceneManager->getActiveScene()->getObjectManager() == nullptr )
+            GameObjectManager* pObjects = editor::getActiveObjectManager();
+            if ( pObjects == nullptr )
                 return;
 
-            GameObject* pFound = pSceneManager->getActiveScene()->getObjectManager()->findGameObjectById( item._targetObjectId );
+            GameObject* pFound = pObjects->findGameObjectById( item._targetObjectId );
             EditorSceneCommands::select( pFound, SelectionMode::Replace );
             return;
         }
