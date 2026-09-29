@@ -4,7 +4,6 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -231,21 +230,10 @@ namespace sw
                 { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             };
 
-            const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-            const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeof( arrFullscreenVert ) );
-
-            if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                           nullptr, IID_PPV_ARGS( _vertexBuffer.GetAddressOf() ) ) ) )
-            {
-                SW_LOG_ERROR( "Failed to create fullscreen vertex buffer." );
-                return false;
-            }
-
             void* pMapped{ nullptr };
-            if ( FAILED( _vertexBuffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+            if ( createMappedUploadBuffer( sizeof( arrFullscreenVert ), _vertexBuffer, pMapped ) == false )
             {
-                SW_LOG_ERROR( "Failed to map fullscreen vertex buffer." );
-                _vertexBuffer.Reset();
+                SW_LOG_ERROR( "Failed to create or map fullscreen vertex buffer." );
                 return false;
             }
             Memory::copy( pMapped, arrFullscreenVert, sizeof( arrFullscreenVert ) );

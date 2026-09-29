@@ -18,17 +18,10 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
     {
-        const UINT                  alignedSize  = MathUtil::align( size, constant::kConstantBufferAlignment );
-        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc(
-            static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight );
-
+        const UINT                             alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
-            return 0;
-
-        void* pMapped{ nullptr };
-        if ( FAILED( buffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+        void*                                  pMapped{ nullptr };
+        if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight, buffer, pMapped ) == false )
             return 0;
 
         const RHIBufferHandle handle        = _pDevice->storeBuffer( buffer );
@@ -212,21 +205,11 @@ namespace sw
                 stagingOffset      = 0;
             }
 
-            const D3D12_HEAP_PROPERTIES uploadHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-            const D3D12_RESOURCE_DESC   uploadDesc = D3D12RHIResourcePreset::bufferDesc( newCapacity );
-
             Microsoft::WRL::ComPtr<ID3D12Resource> newHeap;
-            if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
-                                                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( newHeap.GetAddressOf() ) ) ) )
+            void*                                  pMapped{ nullptr };
+            if ( _pDevice->createMappedUploadBuffer( newCapacity, newHeap, pMapped ) == false )
             {
-                SW_LOG_ERROR( "acquireUploadStaging: failed to (re)create staging upload buffer (%# bytes)", newCapacity );
-                return false;
-            }
-
-            void* pMapped{ nullptr };
-            if ( FAILED( newHeap->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
-            {
-                SW_LOG_ERROR( "acquireUploadStaging: Map failed on staging buffer" );
+                SW_LOG_ERROR( "acquireUploadStaging: failed to create or map staging upload buffer (%# bytes)", newCapacity );
                 return false;
             }
 
@@ -538,15 +521,9 @@ namespace sw
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
-
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
-            return 0;
-
-        void* pMapped{ nullptr };
-        if ( FAILED( buffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+        void*                                  pMapped{ nullptr };
+        if ( _pDevice->createMappedUploadBuffer( sizeBytes, buffer, pMapped ) == false )
             return 0;
         Memory::copy( pMapped, pData, sizeBytes );
         buffer->Unmap( 0, nullptr );

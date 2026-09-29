@@ -305,6 +305,11 @@ namespace sw
         ID3D12Resource* resolveTexture( RHITextureHandle handle ) const;
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
+        /**
+         * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 부르는 쪽이 남깁니다.
+         * @details 상수버퍼 링 · 정점/인덱스 업로드 버퍼 · 전체 화면 삼각형 · 업로드 스테이징 넷이 "만들기 → 매핑" 여덟 줄을 각자 들고 있었습니다.
+         */
+        bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
         /**
@@ -433,6 +438,12 @@ namespace sw
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
          */
         void flushPendingUploads( bool bExecuteNow );
+        /**
+         * @brief 즉시 제출 모드(`setImmediateSubmit`)면 모아 둔 리스트를 지금 큐에 넣습니다. 그 앞에 여기까지 기록된 업로드 복사를 끼웁니다.
+         * @details 즉시 모드가 아니면 아무것도 하지 않습니다(endFrame 의 한 번의 제출에 같이 나갑니다). 잘라 담은 순서 그대로 내보내므로 실행
+         *          순서는 같고 제출 시점만 앞당깁니다. `executeCommandList` 의 두 갈래(빈 조각 · 자른 조각)가 이 열 줄을 각자 들고 있었습니다.
+         */
+        void submitPendingIfImmediate();
         /// @brief 복사 리스트는 게임 스레드(텍스처 · 메시 업로드)와 렌더 스레드(인스턴스 · 표)가 같이 씁니다. 열어 두는 동안 잠급니다.
         mutex _uploadSlotMutex;
 

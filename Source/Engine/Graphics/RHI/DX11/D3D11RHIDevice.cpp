@@ -318,6 +318,18 @@ namespace sw
         return _gpuBuffers.insert( std::move( buffer ) );
     }
 
+    RHIBufferHandle D3D11RHIDevice::storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
+    {
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+        if ( buffer != nullptr )
+            _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() );
+
+        const RHIBufferHandle handle = storeBuffer( std::move( buffer ) );
+        if ( handle != 0 && srv )
+            _mapBufferSrv[handle] = std::move( srv );
+        return handle;
+    }
+
     D3D11RHIDevice::TextureRecord* D3D11RHIDevice::resolveTexture( RHITextureHandle handle )
     {
         return _gpuTextures.get( handle );

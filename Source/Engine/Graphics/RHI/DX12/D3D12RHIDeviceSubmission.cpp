@@ -107,15 +107,7 @@ namespace sw
         if ( bSegmentEmpty )
         {
             _listPendingSubmit.push_back( pList );
-            if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
-            {
-                {
-                    std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
-                    flushPendingUploads( false );
-                }
-                _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
-                _listPendingSubmit.clear();
-            }
+            submitPendingIfImmediate();
             return;
         }
 
@@ -123,18 +115,7 @@ namespace sw
         releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
-
-        // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다. 제출 시점만 앞당긴다.
-        if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
-        {
-            // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다.
-            {
-                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
-                flushPendingUploads( false );
-            }
-            _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
-            _listPendingSubmit.clear();
-        }
+        submitPendingIfImmediate();
 
         ID3D12GraphicsCommandList* pNextSegment = beginNextFrameSegment();
         _pActiveFrameList                       = pNextSegment;
@@ -158,6 +139,20 @@ namespace sw
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         pNextSegment->RSSetScissorRects( 1, &scissor );
+    }
+
+    void D3D12RHIDevice::submitPendingIfImmediate()
+    {
+        if ( _bImmediateSubmit == false || _listPendingSubmit.empty() )
+            return;
+
+        // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다.
+        {
+            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( false );
+        }
+        _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+        _listPendingSubmit.clear();
     }
 
     void D3D12RHIDevice::flushPendingUploads( bool bExecuteNow )

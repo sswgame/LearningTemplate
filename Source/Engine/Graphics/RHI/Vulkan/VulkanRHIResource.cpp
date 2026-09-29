@@ -394,60 +394,11 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
-        if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
+        // 인덱스 버퍼와 같은 경로다. 예전에는 디바이스의 `createVulkanBuffer` 를 통째로 옮겨 적은 마흔 줄이었고, 그 사본은 용도(`_usage`)를
+        // 기록에 남기지 않았다.
+        if ( pData == nullptr )
             return 0;
-
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size        = sizeBytes;
-        bufferInfo.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkBuffer buffer = VK_NULL_HANDLE;
-        if ( vkCreateBuffer( _pDevice->_device, &bufferInfo, nullptr, &buffer ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR( "Failed to create VkBuffer for Vertex Buffer!" );
-            return 0;
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements( _pDevice->_device, buffer, &memRequirements );
-
-        uint32 memoryTypeIndex{ 0 };
-        if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
-        {
-            vkDestroyBuffer( _pDevice->_device, buffer, nullptr );
-            SW_LOG_ERROR( "Failed to find a host visible memory type for Vertex Buffer!" );
-            return 0;
-        }
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
-        {
-            vkDestroyBuffer( _pDevice->_device, buffer, nullptr );
-            SW_LOG_ERROR( "Failed to allocate memory for Vertex Buffer!" );
-            return 0;
-        }
-
-        vkBindBufferMemory( _pDevice->_device, buffer, memory, 0 );
-
-        void* pMapped{ nullptr };
-        if ( vkMapMemory( _pDevice->_device, memory, 0, sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
-        {
-            Memory::copy( pMapped, pData, sizeBytes );
-            vkUnmapMemory( _pDevice->_device, memory );
-        }
-
-        VulkanRHIDevice::VulkanBufferRecord record{};
-        record._buffer = buffer;
-        record._memory = memory;
-        record._size   = sizeBytes;
-        return _pDevice->_gpuBuffers.insert( record );
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData );
     }
 
     void VulkanRHIResource::destroyBuffer( RHIBufferHandle buffer )

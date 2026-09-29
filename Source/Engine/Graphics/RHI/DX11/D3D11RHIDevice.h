@@ -275,6 +275,11 @@ namespace sw
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer );
+        /**
+         * @brief 버퍼에 `srvDesc` 로 SRV 를 만들고, 버퍼를 핸들 표에 넣은 뒤 SRV 를 그 핸들에 붙입니다. SRV 를 못 만들면 버퍼만 넣습니다.
+         * @details 구조버퍼와 인다이렉트 인자 버퍼 생성이 같은 여섯 줄을 각자 들고 있었습니다(뷰 설명만 다릅니다).
+         */
+        RHIBufferHandle storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc );
         /** @brief 불투명 텍스처 핸들을 TextureRecord 로 풉니다. */
         TextureRecord*       resolveTexture( RHITextureHandle handle );
         const TextureRecord* resolveTexture( RHITextureHandle handle ) const;

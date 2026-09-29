@@ -5,6 +5,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -192,6 +193,26 @@ namespace sw
         if ( buffer == nullptr )
             return 0;
         return _gpuBuffers.insert( std::move( buffer ) );
+    }
+
+    bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
+    {
+        pOutMapped = nullptr;
+        outBuffer.Reset();
+
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
+        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                       IID_PPV_ARGS( outBuffer.GetAddressOf() ) ) ) )
+            return false;
+
+        if ( FAILED( outBuffer->Map( 0, nullptr, &pOutMapped ) ) || pOutMapped == nullptr )
+        {
+            pOutMapped = nullptr;
+            outBuffer.Reset();
+            return false;
+        }
+        return true;
     }
 
     RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture )
