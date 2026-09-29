@@ -25,7 +25,7 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=40 -dx12 -EnableEditor -gv_editorPanelDump=25 > after.log
 ```
 
-**도구 패널까지 재려면 `-gv_editorOpenAllPanels=1` 을 같이 준다.** 기본 레이아웃에는 도구 패널
+**도구 패널까지 재려면 `-gv_editorOpenPanel=all` 을 같이 준다.** (2026-09-29 전에는 `-gv_editorOpenAllPanels=1` 이었다.) 기본 레이아웃에는 도구 패널
 (Sequencer·Material·Prefab·TileMap·SpriteClip·AnimGraph·DialogueGraph·DataTable·InputMap)이 닫혀
 있어서 덤프가 다섯 개만 본다. 이 스위치는 (1) 등록된 패널을 전부 열고, (2) 저장된 도킹 레이아웃을
 적용하지 않으며(도킹하면 같은 노드의 탭 중 앞의 하나만 그려진다), (3) 첫 사용 크기를 900×620 으로
@@ -33,7 +33,7 @@ cd build/Ninja-Debug/Bin
 실행의 가시성·레이아웃은 **저장하지 않는다.**
 
 ```powershell
-./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40
+./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenPanel=all -gv_editorPanelDump=40
 ```
 
 현재 기준선 (2026-09-19 재측정, 시작 씬 = 테스트 씬): **기본 창 15개 · 내용 없는 패널 0개**, 전부 열면 **창 33개 ·
@@ -2020,6 +2020,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-29 (겹치던 gv 정리 — 에디터 패널 열기 스위치 둘을 하나로, 가시성이 굳던 결함)
+
+**어떻게 찾았나.** `gv_*` 45 개의 설명과 읽는 곳을 짝지어 봤다. 겹쳐 보였지만 역할이 다른 것은 둔다.
+`gv_benchMeshVariants`(배치 수) · `gv_benchMeshShapes`(그 배치가 돌아가며 쓰는 도형 수), `gv_benchAnimate`(GPU 회전까지 멈춤) ·
+`gv_benchMovePercent`(CPU 위치 쓰기 비율), `gv_morphDiag`(렌더러 진단, 백엔드 능력 무시) · `gv_benchMeshMorph`(벤치 메시 옵트인),
+`gv_deferred`(파이프라인을 주지 않은 기본 실행에서 실제로 고른다), `-dx12` 류 인자 · `-gv_rhiBackend=`(`RHI.cpp` 의 한 함수가 둘을 함께
+푸는 별칭이라 코드는 한 벌).
+
+**합친 것.** `gv_editorOpenAllPanels`(INT) 와 `gv_editorOpenPanel`(STRING) 은 둘 다 "시작할 때 열 패널을 강제" 였다.
+`-gv_editorOpenPanel=all` 이 전부 열기, `=<id>` 가 하나만 열기다. `EditorDockLayout::isPanelOverrideActive` · `isOpeningAllPanels` 가 다섯
+판단 자리를 맡는다. 두 파일(`EditorChrome` · `EditorDockLayout`)이 읽어서 남아 있던 `EditorGlobalVariable.h/.cpp` 는 지웠다.
+
+**고친 결함.** 저장된 레이아웃을 쓰지 않는 조건이 `gv_editorOpenAllPanels` 에만 걸려 있어서, `-gv_editorOpenPanel=<id>` 로 한 번 띄우면
+그 가시성이 `Config/Editor/windows.ini` 에 굳어 **다음 실행부터 그 패널만 열렸다**. 재현했다. `=console` 한 번에 `console=1` 만 남았고,
+이 PC 의 `windows.ini` 도 이미 `profiler=1` 만 남은 상태였다(예전의 `=profiler` 실행 흔적으로 보인다 — 파일은 건드리지 않았다. 지우면
+기본 레이아웃으로 돌아간다). 이제 스위치를 준 실행은 가시성과 도킹을 읽지도 쓰지도 않는다.
+
+**검증(Windows · Debug).** `-gv_editorOpenPanel=all -gv_editorPanelDump=40` 창 33개 · 내용 없는 패널 0개(기준선) · `=console` 뒤
+`windows.ini` 해시 그대로 · 옛 `-gv_editorOpenAllPanels=1` 은 "그런 전역 변수가 없습니다" 경고 · `nogpu`+`hostgpu` 9/9.
+0절의 실행 예시도 `=all` 로 바꿨다.
 
 ### 2026-09-29 (`-Wnrvo` — 트리에 남은 경고 하나)
 

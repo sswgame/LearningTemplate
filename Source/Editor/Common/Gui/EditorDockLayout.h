@@ -27,6 +27,14 @@ namespace sw::editor
         /** @brief 다음 프레임에 기본 도크 레이아웃을 다시 적용합니다. */
         void requestResetDefault();
 
+        /**
+         * @brief `-gv_editorOpenPanel` 이 시작할 때 열 패널을 정하고 있는지 반환합니다(`all` 또는 패널 id).
+         * @details 그 동안은 저장된 레이아웃을 읽지도 쓰지도 않습니다. 한 번 준 스위치가 다음 실행의 레이아웃으로 굳지 않게 합니다.
+         */
+        static bool isPanelOverrideActive();
+        /** @brief `-gv_editorOpenPanel=all` 로 등록된 패널을 전부 떠 있는 창으로 여는 중인지 반환합니다. */
+        static bool isOpeningAllPanels();
+
     private:
         void applyDefaultDockLayout( uint32 dockspaceId );
 

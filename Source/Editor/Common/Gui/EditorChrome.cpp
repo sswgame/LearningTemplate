@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 
-#include "Editor/Common/EditorGlobalVariable.h"
+#include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include <imgui.h>
 
@@ -92,7 +92,7 @@ namespace sw::editor
         // 진단 스위치가 켜지면 저장된 레이아웃 없이 전부 떠 있는 창이 된다. ImGui 기본 크기는
         // 내용에 비해 작아 내부 Child 가 한 줄 높이로 눌리고, 그러면 덤프가 "내용 없음" 으로 읽는다.
         // 재는 것이 목적이므로 첫 사용에 넉넉한 크기를 준다(사용자가 줄이면 그대로 따른다).
-        if ( gv_editorOpenAllPanels != 0 )
+        if ( EditorDockLayout::isOpeningAllPanels() )
             ImGui::SetNextWindowSize( ImVec2{ 900.0f, 620.0f }, ImGuiCond_FirstUseEver );
 
         const bool bNoPadding = ( flags & EditorPanelFlags::NoPadding ) != EditorPanelFlags::None;

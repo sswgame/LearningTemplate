@@ -3,11 +3,11 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/EditorGlobalVariable.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -26,6 +26,9 @@ namespace sw::editor
     {
         struct EditorDockLayoutInternal
         {
+            /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이라 겹치지 않습니다. */
+            static constexpr const utf8* kOpenAllPanels = "all";
+
             /**
              * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록돼 있는지 확인합니다.
              * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받습니다.** 그래서 패널 제목이 바뀌면 기본 배치만 말없이
@@ -58,12 +61,26 @@ namespace sw::editor
 
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
     /**
-     * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다.
-     * @details `-gv_editorOpenAllPanels` 는 모두 띄워 서로를 가립니다. 마지막에 등록된 것이 위로 와서 **원하는 패널이 화면
-     *          캡처에 나오지 않습니다**(실제로 새 패널을 확인하려다 막혔습니다). 하나만 띄우면 그 패널이 반드시 보입니다.
+     * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다. `-gv_editorOpenPanel=all` 이면 **전부** 엽니다.
+     * @details 하나만 열기는 화면 캡처용입니다. 전부 띄우면 서로를 가려 마지막에 등록된 것이 위로 오므로 원하는 패널이 캡처에
+     *          나오지 않습니다. 전부 열기는 `-gv_editorPanelDump` 가 도구 패널까지 재게 하려는 것입니다. 도구 패널은 기본이 닫힘이라
+     *          덤프가 기본 레이아웃의 다섯 개만 봤습니다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둡니다.
+     *          **어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않습니다.** 예전에는 전부 열기가 따로 된 스위치
+     *          (`-gv_editorOpenAllPanels=1`)였고 저장을 막는 것도 그쪽에만 있었습니다. 그래서 하나 열기로 한 번 띄우면 그 가시성이
+     *          `windows.ini` 에 굳어, 다음 실행부터 그 패널만 열렸습니다.
      *          id 는 `registerDefaultPanels` 가 준 것입니다(예: `render_targets` · `profiler` · `material`).
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "이 id 의 패널 하나만 연다 (비우면 사용 안 함)" );
+    SW_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
+
+    bool EditorDockLayout::isPanelOverrideActive()
+    {
+        return gv_editorOpenPanel.empty() == false;
+    }
+
+    bool EditorDockLayout::isOpeningAllPanels()
+    {
+        return StringUtil::equals( gv_editorOpenPanel, EditorDockLayoutInternal::kOpenAllPanels, true );
+    }
 
     EditorDockLayout::EditorDockLayout()
         : _imguiIniPath{}
@@ -99,9 +116,9 @@ namespace sw::editor
         // 진단 스위치가 켜져 있으면 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹된 패널은 같은 노드에
         // 탭으로 쌓여 **앞의 하나만 그려지므로**, 모두 열어도 뒤의 것은 여전히 확인되지 않는다.
         // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
-        // `-gv_editorOpenPanel` 도 같은 이유로 레이아웃을 비운다. 저장된 도킹으로 복원되면 그 패널이
+        // 하나만 열 때도 같은 이유로 레이아웃을 비운다. 저장된 도킹으로 복원되면 그 패널이
         // 탭 뒤에 숨어 결국 보이지 않는다.
-        if ( _imguiIniPath.empty() == false && gv_editorOpenAllPanels == 0 && gv_editorOpenPanel.empty() )
+        if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false )
             io.IniFilename = _imguiIniPath.c_str();
         else
             io.IniFilename = nullptr;
@@ -115,19 +132,19 @@ namespace sw::editor
 
         // 진단 스위치가 켜져 있으면 저장된 가시성을 **읽지 않는다**. 도구 패널은 기본이 닫힘이고
         // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
-        if ( gv_editorOpenAllPanels != 0 )
+        if ( isOpeningAllPanels() )
         {
             for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
             {
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
             }
-            SW_LOG_INFO( "gv_editorOpenAllPanels: 등록된 패널을 전부 열었습니다 (windows.ini 복원 건너뜀)." );
+            SW_LOG_INFO( "gv_editorOpenPanel=all: 등록된 패널을 전부 열었습니다 (windows.ini 복원 건너뜀)." );
             return;
         }
 
         // 하나만 연다. 모두 열면 서로를 가려서 원하는 패널이 화면 캡처에 나오지 않는다.
-        if ( gv_editorOpenPanel.empty() == false )
+        if ( isPanelOverrideActive() )
         {
             bool bFound = false;
             for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
@@ -172,9 +189,9 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 모두 열어 둔 상태를 사용자의 레이아웃으로 굳히지 않는다. 진단용으로 한 번 켠 스위치 때문에
-        // 다음 실행부터 항상 모든 패널이 열리는 일이 없어야 한다.
-        if ( _windowsIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
+        // 스위치로 정한 가시성(전부 열기 · 하나만 열기)을 사용자의 레이아웃으로 굳히지 않는다. 한 번 켠 스위치 때문에
+        // 다음 실행부터 모든 패널이, 또는 그 패널 하나만 열리는 일이 없어야 한다.
+        if ( _windowsIniPath.empty() == false && isPanelOverrideActive() == false )
         {
             KeyValueMap visibilityKv;
             for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
@@ -208,7 +225,7 @@ namespace sw::editor
         const ImGuiID        dockspaceId = ImGui::DockSpaceOverViewport(
             ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
-        if ( _bApplied == SW_FALSE && gv_editorOpenAllPanels != 0 )
+        if ( _bApplied == SW_FALSE && isOpeningAllPanels() )
         {
             // 기본 도킹 배치를 적용하지 않는다(위 applyIniFilename 참고). 모두 떠 있는 창으로 둔다.
             _bApplied = SW_TRUE;
