@@ -10,6 +10,8 @@
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 
 namespace sw
 {
@@ -20,6 +22,8 @@ namespace sw
         , _dirtyRootScratchCount{ 0 }
         , _listWriteScratch{}
         , _pWriteScratch{ nullptr }
+        , _listPendingSlotScratch{}
+        , _pPendingSlotScratch{ nullptr }
         , _writeScratchCount{ 0 }
         , _listScratchStack{}
         , _dirtyGeneration{ 1 }
@@ -134,8 +138,74 @@ namespace sw
         const uint32 slotCount = engine::getParallelScratchSlotCount();
         if ( _listWriteScratch.size() < slotCount )
             _listWriteScratch.resize( slotCount );
-        _pWriteScratch     = _listWriteScratch.data();
-        _writeScratchCount = static_cast<uint32>( _listWriteScratch.size() );
+        if ( _listPendingSlotScratch.size() < _listWriteScratch.size() )
+            _listPendingSlotScratch.resize( _listWriteScratch.size() );
+        _pWriteScratch       = _listWriteScratch.data();
+        _pPendingSlotScratch = _listPendingSlotScratch.data();
+        _writeScratchCount   = static_cast<uint32>( _listWriteScratch.size() );
+    }
+
+    bool SceneTransformHierarchy::queuePendingSlot( uint32 transformSlot )
+    {
+        const uint32 slot = engine::getParallelScratchSlot();
+        if ( slot >= _writeScratchCount )
+            return false;
+        _pPendingSlotScratch[slot].push_back( transformSlot );
+        return true;
+    }
+
+    bool SceneTransformHierarchy::applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry )
+    {
+        SceneTransformPage* pPage = storage.findPage( transformSlot );
+        if ( pPage == nullptr )
+            return false;
+        SceneTransformPage& page        = *pPage;
+        const uint32        pageIndex   = transformSlot & SceneTransformPage::kSlotMask;
+        const uint8         pendingMask = page._arrPendingMask[pageIndex];
+        page._arrPendingMask[pageIndex] = 0;
+
+        // 세터와 같은 규칙이다: 제곱 거리에 제곱한 허용치, 값이 같으면 쓰지 않는다.
+        bool bChanged = false;
+        if ( ( pendingMask & SceneTransformPage::kPendingPosition ) != 0 &&
+             float3::getDistanceSquared( page._arrLocalPosition[pageIndex], page._arrPendingPosition[pageIndex] ) > MathUtil::EpsilonSquared )
+        {
+            page._arrLocalPosition[pageIndex] = page._arrPendingPosition[pageIndex];
+            bChanged                          = true;
+        }
+        if ( ( pendingMask & SceneTransformPage::kPendingRotation ) != 0 &&
+             float3::getDistanceSquared( page._arrLocalRotation[pageIndex], page._arrPendingRotation[pageIndex] ) > MathUtil::EpsilonSquared )
+        {
+            page._arrLocalRotation[pageIndex] = page._arrPendingRotation[pageIndex];
+            bChanged                          = true;
+        }
+        if ( ( pendingMask & SceneTransformPage::kPendingScale ) != 0 &&
+             float3::getDistanceSquared( page._arrLocalScale[pageIndex], page._arrPendingScale[pageIndex] ) > MathUtil::EpsilonSquared )
+        {
+            page._arrLocalScale[pageIndex] = page._arrPendingScale[pageIndex];
+            bChanged                       = true;
+        }
+        if ( bChanged == false )
+            return false;
+
+        SceneComponent* pOwner = page._arrOwner[pageIndex];
+        const uint8     flag   = page._arrFlag[pageIndex];
+        if ( ( flag & ( SceneTransformPage::kHasParent | SceneTransformPage::kHasChildren ) ) == 0 )
+        {
+            // 잎 루트다. 순서를 기다릴 부모도 내려갈 자식도 없으니 여기서 곧장 월드를 만든다 — 컴포넌트를 만지지 않는다. 컴포넌트가
+            // 이미 더티(틱 전에 쓰였고 플러시 전)라면 더티 목록에 올라 있으므로 플러시가 한 번 더 합성한다. 값은 같다.
+            SceneTransformStorage::composeWorld( page, pageIndex, nullptr, nullptr );
+            const uint32 primitiveIndex = page._arrPrimitiveIndex[pageIndex];
+            if ( primitiveIndex != SceneTransformStorage::kNoPrimitive )
+                registry.markTransformDirty( primitiveIndex );
+            if ( ( flag & SceneTransformPage::kNotifyOwner ) != 0 && pOwner != nullptr )
+                pOwner->onWorldTransformUpdated();
+            return true;
+        }
+
+        // 계층이 있는 것은 컴포넌트를 거쳐 더티를 세우고 루트를 올린다. 플러시가 위에서부터 내려간다.
+        if ( pOwner != nullptr )
+            pOwner->markHierarchyDirtyParallel();
+        return true;
     }
 
     bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write )
@@ -177,12 +247,19 @@ namespace sw
             if ( listSlot.empty() == false )
                 return true;
         }
+        for ( const vector<uint32>& listSlot : _listPendingSlotScratch )
+        {
+            if ( listSlot.empty() == false )
+                return true;
+        }
         return false;
     }
 
     void SceneTransformHierarchy::clearQueuedWrites()
     {
         for ( vector<SceneTransformWrite>& listSlot : _listWriteScratch )
+            listSlot.clear();
+        for ( vector<uint32>& listSlot : _listPendingSlotScratch )
             listSlot.clear();
     }
 

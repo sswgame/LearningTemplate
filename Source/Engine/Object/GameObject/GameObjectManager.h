@@ -238,6 +238,13 @@ namespace sw
         void queueTransformWrite( const SceneTransformWrite& write );
 
         /**
+         * @brief 이 스레드가 지금 틱하고 있는 오브젝트입니다. 오브젝트 그룹 틱(보통 경로)이 항목을 도는 동안만 채워지고, 그 밖에서는 nullptr 입니다.
+         * @details 씬 컴포넌트의 세터가 "내 오브젝트를 틱하는 스레드인가" 를 묻습니다. 그렇다면 한 오브젝트의 항목은 한 워커가 도므로
+         *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트 · 선행 조건 스테이지 경로) 쓰기 큐로 갑니다.
+         */
+        static const GameObject* getTickingObject();
+
+        /**
          * @brief 병렬 틱이 끝난 뒤 메인 스레드에서 실행할 작업을 넣습니다.
          * @details GameObject 생성 · addComponent · 데미지 · 태그 변경 같은 구조 · 공유 상태 변경에 씁니다.
          */
@@ -435,12 +442,15 @@ namespace sw
         /** @brief `tick` 의 컴포넌트 단계입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents` → 표시 해제. 오브젝트가 있을 때만 돕니다. */
         void tickComponentsPhase( float32 deltaTime );
         /**
-         * @brief 틱 중 슬롯 큐에 쌓인 트랜스폼 쓰기를 슬롯 단위로 나눠 적용하고 큐를 비웁니다(틱 뒤, 게임 스레드).
-         * @details 같은 슬롯의 건은 한 워커가 순서대로 적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이깁니다. 다른 슬롯이
-         *          같은 컴포넌트를 쓴 경우는 예전(뮤텍스 순서)과 같이 순서가 없습니다.
+         * @brief 틱 중에 쓴 트랜스폼을 적용하고 목록을 비웁니다(틱 뒤, 게임 스레드). 먼저 칸에 바로 쓴 대기 값, 다음에 쓰기 큐입니다.
+         * @details 대기 칸은 스레드 슬롯 단위로 나눠 워커가 칸에서 바로 옮기고 합성합니다(`SceneTransformHierarchy::applyPendingSlot`).
+         *          쓰기 큐(다른 오브젝트의 컴포넌트에 쓴 것)는 그 뒤에 예전처럼 슬롯 단위로 적용합니다 — 같은 슬롯의 건은 한 워커가 순서대로
+         *          적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이깁니다. 다른 스레드가 같은 컴포넌트를 쓴 경우는 예전과 같이 순서가 없습니다.
          * @return 실제로 값이 바뀐 건수입니다.
          */
         uint32 applyQueuedTransformWrites();
+        /** @brief `applyQueuedTransformWrites` 의 앞 절반입니다 — 칸에 바로 쓴 대기 값을 옮기고 합성합니다. 바뀐 칸 수를 돌려줍니다. */
+        uint32 applyPendingTransformSlots();
         /** @brief 새 ObjectId 를 발급합니다. */
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */

@@ -5,6 +5,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -382,4 +383,123 @@ SW_TEST_CASE( SceneComponentTest, LazyReadDoesNotStrandDirtySiblings )
         SW_EXPECT_EQUAL( 1, pFirst->_worldUpdateCount );
         SW_EXPECT_EQUAL( 1, pSecond->_worldUpdateCount );
     }
+}
+
+/**
+ * @brief [SceneComponentTest] 트랜스폼 값은 저장소의 칸에 있고, 리플렉션 이름으로 찾은 자리도 그 칸이다
+ * @details 로컬 TRS · 월드 행렬은 컴포넌트가 아니라 `SceneTransformStorage` 의 칸에 있다. 씬에 붙지 않은 컴포넌트도 칸이 있고(만들 때 받고
+ *          소멸할 때 놓는다), 직렬화 키 `_localPosition` 의 값 자리는 그 칸이어야 인스펙터 · 직렬화 · 씬 파일이 그대로 돈다.
+ */
+SW_TEST_CASE( SceneComponentTest, TransformValuesLiveInTheStorageSlot )
+{
+    sw::SceneTransformStorage& storage    = sw::SceneTransformStorage::get();
+    const uint32               liveBefore = storage.getLiveSlotCount();
+    {
+        sw::SceneComponent comp;
+        SW_EXPECT_EQUAL( liveBefore + 1, storage.getLiveSlotCount() );
+        const uint32            slot  = comp.getTransformSlot();
+        sw::SceneTransformPage* pPage = storage.findPage( slot );
+        SW_ASSERT_NOT_NULL( pPage );
+        const uint32 pageIndex = slot & sw::SceneTransformPage::kSlotMask;
+        SW_EXPECT_TRUE( pPage->_arrOwner[pageIndex] == &comp );
+
+        comp.setLocalPosition( sw::float3( 1.0f, 2.0f, 3.0f ) );
+        SW_EXPECT_NEAR_EQUAL( 2.0f, pPage->_arrLocalPosition[pageIndex]._y, 1e-6f );
+
+        const sw::TypeInfo* pType = sw::SceneComponent::StaticType();
+        SW_ASSERT_NOT_NULL( pType );
+        const sw::PropertyInfo* pPositionProp = pType->findPropertyInHierarchy( sw::hashed_string( "_localPosition" ) );
+        SW_ASSERT_NOT_NULL( pPositionProp );
+        SW_EXPECT_TRUE( pPositionProp->hasValueAccessor() );
+        SW_EXPECT_TRUE( pPositionProp->getRawPtr( &comp ) == &pPage->_arrLocalPosition[pageIndex] );
+
+        // 리플렉션으로 쓰면 칸에 쓰이고, 알림(onPropertyChanged)을 거쳐 월드도 따라온다.
+        pPositionProp->setValue( &comp, sw::float3( 4.0f, 5.0f, 6.0f ) );
+        SW_EXPECT_NEAR_EQUAL( 5.0f, comp.getLocalPosition()._y, 1e-6f );
+        SW_EXPECT_NEAR_EQUAL( 5.0f, comp.getWorldPosition()._y, 1e-6f );
+        SW_EXPECT_NEAR_EQUAL( 6.0f, comp.getWorldMatrix()._43, 1e-6f );
+    }
+    // 소멸하면 칸을 놓는다.
+    SW_EXPECT_EQUAL( liveBefore, storage.getLiveSlotCount() );
+}
+
+/**
+ * @brief [SceneComponentTest] 회전 변환 캐시는 회전이 바뀔 때마다 따라가고, 결과는 캐시 없는 합성과 비트까지 같다
+ * @details 칸은 쿼터니언과 그것을 만든 오일러를 들고 있다가 같으면 삼각 함수를 건너뛴다(언리얼 `FRotationConversionCache` 의 자리).
+ *          회전을 바꾸고 · 0 으로 돌리고 · 처음 값으로 되돌리는 동안 한 번이라도 옛 쿼터니언을 쓰면 행렬이 틀린다.
+ */
+SW_TEST_CASE( SceneComponentTest, RotationCacheFollowsEveryRotationChange )
+{
+    sw::SceneComponent comp;
+    const sw::float3   position( 1.0f, -2.0f, 3.0f );
+    const sw::float3   scale( 2.0f, 1.0f, 0.5f );
+    comp.setLocalPosition( position );
+    comp.setLocalScale( scale );
+
+    const sw::float3 arrRotation[] = {
+        sw::float3( 0.3f, 0.0f, 0.0f ),
+        sw::float3( 0.3f, 1.1f, 0.0f ),
+        sw::float3( 0.0f, 0.0f, 0.0f ),
+        sw::float3( 0.3f, 0.0f, 0.0f ),
+        sw::float3( -0.7f, 0.2f, 2.5f ),
+    };
+    uint32 mismatchCount = 0;
+    for ( const sw::float3& rotation : arrRotation )
+    {
+        comp.setLocalRotation( rotation );
+        const sw::float4x4 world    = comp.getWorldMatrix();
+        const sw::float4x4 expected = sw::float4x4::createTrs( position, rotation, scale );
+        if ( sw::Memory::compare( &world, &expected, sizeof( sw::float4x4 ) ) != 0 )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatchCount );
+}
+
+/**
+ * @brief [SceneComponentTest] 틱 안에서 자기 오브젝트의 칸에 쓴 값은 틱이 끝나야 보이고, 메시는 틱 뒤 렌더 더티가 된다
+ * @details 틱 중의 세터는 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에 쓰고, 틱 뒤 적용이 칸 번호 목록을 따라 옮긴다. 그 사이에
+ *          다른 오브젝트가 읽는 로컬 · 월드 값은 틱 전 값이어야 한다(예전 쓰기 큐와 같다). 메시는 훅 없이 칸의 프리미티브 번호로
+ *          등록부에 더티가 찍혀야 렌더 수집이 움직임을 본다. 오브젝트가 16 개 미만이라 틱은 이 스레드가 만든 순서대로 돈다 — 쓰는 쪽이
+ *          먼저 돌고 읽는 쪽이 나중에 돈다.
+ */
+SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    sw::GameObject*             pMoverObj = manager.createGameObject( sw::hashed_string( "SlotMover" ) );
+    sw::MockTickSceneComponent* pMover    = pMoverObj->addComponent<sw::MockTickSceneComponent>();
+    sw::GameObject*             pWatchObj = manager.createGameObject( sw::hashed_string( "SlotWatcher" ) );
+    sw::MockTickSceneComponent* pWatcher  = pWatchObj->addComponent<sw::MockTickSceneComponent>();
+    sw::GameObject*             pMeshObj  = manager.createGameObject( sw::hashed_string( "SlotMesh" ) );
+    sw::MeshComponent*          pMesh     = pMeshObj->addComponent<sw::MeshComponent>();
+    sw::MockMeshComponent*      pMeshMove = pMeshObj->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pMover );
+    SW_ASSERT_NOT_NULL( pWatcher );
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_NOT_NULL( pMeshMove );
+    pWatcher->_pWatchedComp    = pMover;
+    pMover->_bWriteLocalOnTick = SW_TRUE;
+    pMover->_tickLocalPos      = sw::float3( 5.0f, 0.0f, 0.0f );
+    pMeshMove->_pTickMoveComp  = pMesh;
+    pMeshMove->_tickMovePos    = sw::float3( 0.0f, 3.0f, 0.0f );
+
+    manager.tick( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pMover->getWorldPosition()._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pMesh->getWorldPosition()._y, 1e-6f );
+
+    manager.getPrimitiveRegistry().clearDirty();
+    pMover->_tickLocalPos   = sw::float3( 7.0f, 0.0f, 0.0f );
+    pMeshMove->_tickMovePos = sw::float3( 0.0f, 4.0f, 0.0f );
+    manager.tick( 0.016f );
+
+    // 틱 중에 읽은 것은 틱 전 값(5)이다. 쓰는 쪽이 먼저 돌아 대기 자리에는 7 이 있었다.
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pWatcher->_watchedLocalPos._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pWatcher->_watchedWorldPos._x, 1e-6f );
+    // 틱 뒤에는 새 값이고, 대기 목록은 비었고, 메시는 렌더 더티다.
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pMover->getLocalPosition()._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pMover->getWorldPosition()._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pMesh->getWorldPosition()._y, 1e-6f );
+    SW_EXPECT_FALSE( manager.getTransformHierarchy().hasQueuedWrites() );
+    SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
 }

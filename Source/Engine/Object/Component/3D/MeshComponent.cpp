@@ -23,6 +23,8 @@ namespace sw
         , _bVisible{ SW_TRUE }
         , _reserved{ 0 }
     {
+        // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`setPrimitiveIndex`). 훅은 받지 않는다.
+        setWorldTransformNotify( false );
     }
 
     void MeshComponent::onBeginPlay()
@@ -63,15 +65,17 @@ namespace sw
     void MeshComponent::onPropertyChanged( hashed_string propertyName )
     {
         // 트랜스폼 PROPERTY 는 여기서 markTransformDirty 로 이어지고, 그 결과 월드 행렬이 다시
-        // 계산될 때 onWorldTransformUpdated 가 렌더 더티를 찍는다. 그래서 여기서는 렌더 관련
+        // 계산될 때 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다. 그래서 여기서는 렌더 관련
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
         SceneComponent::onPropertyChanged( propertyName );
         markRenderStateDirty();
     }
 
-    void MeshComponent::onWorldTransformUpdated()
+    void MeshComponent::setPrimitiveIndex( uint32 index )
     {
-        markRenderStateDirty();
+        _primitiveIndex = index;
+        // 틱 뒤 적용 · 플러시는 이 번호로 등록부에 바로 찍는다(컴포넌트를 거치지 않는다).
+        setTransformPrimitiveIndex( index == kInvalidPrimitiveIndex ? SceneTransformStorage::kNoPrimitive : index );
     }
 
     void MeshComponent::onOwnerActiveInHierarchyChanged()

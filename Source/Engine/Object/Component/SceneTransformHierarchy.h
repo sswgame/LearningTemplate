@@ -15,7 +15,9 @@
 
 namespace sw
 {
+    class PrimitiveRegistry;
     class SceneComponent;
+    class SceneTransformStorage;
 
     /**
      * @struct SceneTransformWrite
@@ -128,13 +130,29 @@ namespace sw
          * @return 큐에 올렸으면 true 입니다. 슬롯이 준비되지 않았으면 false 이고, 부르는 쪽이 지연 델리게이트로 돌립니다.
          */
         bool queueWriteParallel( const SceneTransformWrite& write );
-        /** @brief 어느 슬롯에든 쌓인 쓰기가 있으면 true 입니다. */
+        /**
+         * @brief 틱 중에 칸에 바로 쓴 컴포넌트의 칸 번호를 **자기 스레드 슬롯**의 대기 목록에 올립니다. 워커에서 불립니다.
+         * @details 세터(`SceneComponent::writeTickTransform`)가 칸이 처음 대기에 들 때 한 번 부릅니다. 대기 값 자체는 칸에 있고, 목록은
+         *          틱 뒤 적용이 어느 칸을 볼지만 압니다(4 바이트). 쓰기 큐의 건(64 바이트, 앞 건과 합치는 비교 포함)을 대신합니다.
+         * @return 올렸으면 true 입니다. 스레드가 스크래치 슬롯을 받지 못했으면 false 이고, 부르는 쪽이 쓰기 큐로 돌립니다.
+         */
+        bool queuePendingSlot( uint32 transformSlot );
+        /** @brief 슬롯별 대기 칸 번호 목록입니다(`getQueuedWriteSlotCount()` 길이). 적용하는 쪽(`GameObjectManager::applyQueuedTransformWrites`)이 읽습니다. */
+        vector<uint32>* getPendingSlotLists() { return _pPendingSlotScratch; }
+        /**
+         * @brief 칸 하나의 대기 값을 로컬 값으로 옮기고 월드를 갱신합니다. **워커에서 불립니다.** 값이 실제로 바뀌었으면 true 입니다.
+         * @details 잎 루트(부모도 자식도 없다)는 **컴포넌트를 거치지 않고** 칸에서 바로 합성하고, 칸의 프리미티브 번호로 렌더 더티를
+         *          찍습니다(메시가 아닌 파생은 알림 비트가 켜져 있으면 훅을 받습니다). 계층이 있는 것은 컴포넌트를 거쳐 예전처럼 더티를
+         *          세우고 루트를 올립니다 — 플러시가 내려갑니다. 칸 하나는 한 스레드의 목록에만 있으므로(처음 대기에 든 스레드) 워커끼리 겹치지 않습니다.
+         */
+        static bool applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry );
+        /** @brief 어느 슬롯에든 쌓인 쓰기나 대기 칸이 있으면 true 입니다. */
         bool hasQueuedWrites() const;
         /** @brief 쓰기 큐 슬롯 수입니다. `getQueuedWriteSlots()` 배열의 길이입니다. */
         uint32 getQueuedWriteSlotCount() const { return _writeScratchCount; }
         /** @brief 슬롯별 쓰기 큐입니다. 적용하는 쪽(`GameObjectManager::applyQueuedTransformWrites`)이 읽습니다. */
         vector<SceneTransformWrite>* getQueuedWriteSlots() { return _pWriteScratch; }
-        /** @brief 모든 슬롯의 쓰기 큐를 비웁니다(적용 뒤, 게임 스레드). */
+        /** @brief 모든 슬롯의 쓰기 큐와 대기 칸 목록을 비웁니다(적용 뒤, 게임 스레드). */
         void clearQueuedWrites();
 
         /** @brief 어떤 트랜스폼이 바뀌었음을 알려 세대를 올립니다. 워커에서 불러도 됩니다. */
@@ -175,7 +193,12 @@ namespace sw
         vector<vector<SceneTransformWrite>> _listWriteScratch;
         /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pDirtyRootScratch` 와 같은 이유입니다. `beginQueuedWrites` 가 맞춥니다.
         vector<SceneTransformWrite>* _pWriteScratch;
-        uint32                       _writeScratchCount;
+        /** @brief 병렬 틱 중 칸에 바로 쓴 컴포넌트의 칸 번호입니다(스레드 슬롯마다 하나). 크기는 `_listWriteScratch` 와 같습니다. */
+        vector<vector<uint32>> _listPendingSlotScratch;
+        /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pWriteScratch` 와 같은 이유입니다. `beginQueuedWrites` 가 맞춥니다.
+        vector<uint32>* _pPendingSlotScratch;
+        /** @brief 쓰기 큐 · 대기 칸 목록의 슬롯 수입니다(둘은 같이 자랍니다). */
+        uint32 _writeScratchCount;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택입니다(`engine::getParallelScratchSlotCount()` 크기). */
         vector<FlushStack> _listScratchStack;
         /**

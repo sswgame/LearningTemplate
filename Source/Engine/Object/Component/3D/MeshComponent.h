@@ -106,8 +106,12 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 인스펙터/직렬화가 PROPERTY 를 바꾸면 렌더 상태를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 월드 행렬이 다시 계산되면 렌더 상태를 더티로 표시합니다. */
-        void onWorldTransformUpdated() override;
+        /**
+         * @brief 쓰지 않습니다(`final`). 메시는 월드가 바뀌면 트랜스폼 칸에 적힌 프리미티브 번호로 등록부에 바로 더티가 찍힙니다.
+         * @details 생성자에서 이 훅의 알림을 끕니다 — 틱 뒤 적용이 움직인 메시마다 컴포넌트를 건너다니지 않게 하려는 것입니다. 그래서 파생이
+         *          덮어써도 불리지 않으므로 아예 막습니다.
+         */
+        void onWorldTransformUpdated() final {}
         /** @brief 소유 오브젝트가 켜지거나 꺼지면 렌더 상태를 더티로 표시합니다(스냅샷 포함 여부가 바뀐다). */
         void onOwnerActiveInHierarchyChanged() override;
 
@@ -115,7 +119,7 @@ namespace sw
         /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
         /** @brief 등록부 슬롯을 설정합니다. */
-        void                         setPrimitiveIndex( uint32 index ) { _primitiveIndex = index; }
+        void                         setPrimitiveIndex( uint32 index );
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;

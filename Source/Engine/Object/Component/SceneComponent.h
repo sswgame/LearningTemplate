@@ -11,6 +11,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -22,6 +23,10 @@ namespace sw
     /**
      * @class SceneComponent
      * @brief 로컬 트랜스폼 · 부모-자식 계층, float64 로 누적한 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트입니다.
+     * @details **트랜스폼 값은 이 객체 안에 없습니다.** 로컬 TRS · 월드 행렬 · LWC 는 전역 `SceneTransformStorage` 의 칸에 있고, 이 객체는
+     *          칸 번호와 페이지만 듭니다. 틱 뒤 적용 · 렌더 수집이 값만 연달아 읽게 하려는 것입니다(280 B → 칸 번호). 리플렉션 이름
+     *          (`_localPosition` · `_localRotation` · `_localScale`)은 그대로이고 값 접근자가 칸을 찾으므로, 씬 파일 · 인스펙터 · 직렬화는
+     *          바뀐 것이 없습니다. 계층(부모 · 자식)과 더티 표시는 여기 남아 있습니다.
      */
     REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy" )
     class SW_API SceneComponent : public Component
@@ -108,7 +113,8 @@ namespace sw
         /**
          * @brief 부모 캐시가 이미 유효하다고 보고 이 노드의 월드 캐시를 갱신합니다.
          * @details 트랜스폼 계층 플러시(`SceneTransformHierarchy::flushSubtree`)가 루트 → 자식 순으로 부릅니다.
-         *          잎 루트는 `applyTransformWrite` 가 그 자리에서 부릅니다.
+         *          잎 루트는 `applyTransformWrite` 가 그 자리에서 부릅니다. 틱 뒤 적용의 잎 루트는 이 함수를 거치지 않고 칸에서 바로
+         *          합성합니다(`SceneTransformHierarchy::applyPendingSlot`) — 합성 자체는 어느 쪽이든 `SceneTransformStorage::composeWorld` 입니다.
          */
         void updateWorldTransformFromParent();
 
@@ -136,6 +142,9 @@ namespace sw
         bool applyTransformWrite( const SceneTransformWrite& write );
         // 잎 루트(부모도 자식도 없음)는 위 함수가 월드 행렬까지 그 자리에서 만들고 더티 목록에 올리지 않는다.
 
+        /** @brief 트랜스폼 저장소의 칸 번호입니다. 컴포넌트가 사는 동안 바뀌지 않습니다. */
+        uint32 getTransformSlot() const { return _transformSlot; }
+
         /** @brief 트랜스폼 캐시가 더티면 true 입니다. */
         bool isTransformDirty() const { return _bIsTransformDirty == SW_TRUE; }
         /** @brief 더티 자손이 있으면 true 입니다. */
@@ -148,9 +157,31 @@ namespace sw
         /** @brief 로드된 Attach 필드로 `_pParent` 를 복원합니다. 부모 GameObject 가 아직 없으면 아무것도 하지 않습니다. */
         void applyAttachSerializeFields();
 
+    protected:
+        /**
+         * @brief 월드가 바뀔 때 `onWorldTransformUpdated` 를 부를지 정합니다. 기본은 부릅니다.
+         * @details 메시 컴포넌트는 끕니다 — 칸에 적힌 프리미티브 번호로 등록부에 바로 더티를 찍으므로, 틱 뒤 적용이 컴포넌트를 건너다니지 않습니다.
+         */
+        void setWorldTransformNotify( bool bNotify );
+        /** @brief 칸에 렌더 프리미티브 번호를 적습니다(`PrimitiveRegistry` 가 준 번호, 없으면 `SceneTransformStorage::kNoPrimitive`). */
+        void setTransformPrimitiveIndex( uint32 primitiveIndex );
+
     private:
-        /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)인지 반환합니다. 이때 세터는 바로 쓰지 않고 큐에 올립니다. */
+        /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)인지 반환합니다. 이때 세터는 바로 쓰지 않고 틱 뒤에 적용합니다. */
         bool isInParallelTick() const;
+        /**
+         * @brief 병렬 틱 중의 세터 한 건입니다. 이 컴포넌트의 오브젝트를 틱하는 스레드면 칸의 대기 자리에 바로 쓰고, 아니면 쓰기 큐에 올립니다.
+         * @details 대기 자리는 칸의 주인 오브젝트를 틱하는 스레드만 씁니다(한 오브젝트의 항목은 한 워커가 돈다). 그래서 잠금 없이 쓰고, 칸이
+         *          처음 대기에 들 때만 그 스레드의 대기 목록에 번호를 올립니다. 틱 중에 다른 스레드가 읽는 로컬 · 월드 값은 그대로라(틱 전 값)
+         *          예전 쓰기 큐와 보이는 것이 같습니다. 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 쓰기 큐로 갑니다.
+         */
+        void writeTickTransform( uint8 pendingBit, const float3& value );
+        /** @brief 페이지 안의 자리입니다. */
+        uint32 getPageIndex() const { return _transformSlot & SceneTransformPage::kSlotMask; }
+        /** @brief 월드가 다시 합성된 직후입니다. 칸의 프리미티브에 렌더 더티를 찍고, 알림이 켜져 있으면 `onWorldTransformUpdated` 를 부릅니다. */
+        void notifyWorldTransformUpdated();
+        /** @brief 칸 플래그 비트 하나를 켜거나 끕니다(게임 스레드, 구조 변경 때). */
+        void setTransformFlag( uint8 flag, bool bOn );
         /**
          * @brief 틱 중의 세터 한 건을 자기 스레드 슬롯의 큐에 올립니다. 핸들과 대상 포인터는 여기서 채웁니다.
          * @details 세 세터가 같은 열 줄을 각자 들고 있었고, 스케일만 `_pTarget` 을 빠뜨려 적용 쪽이 핸들을 다시 풀었습니다
@@ -186,20 +217,28 @@ namespace sw
         SceneComponent* markSelfAndAncestorsDirty();
         /** @brief 자손 전부를 더티로, 자식이 있는 노드에 "자손 더티" 를 세웁니다. 반복문이고 세대는 건드리지 않습니다. */
         void markDescendantsDirty();
+        /**
+         * @brief 계층이 있는 노드의 로컬 값이 워커에서 바뀐 뒤 부릅니다. 자기 · 조상 · 자손을 더티로 세우고 루트를 워커 스크래치에 올립니다.
+         * @details 배치 쓰기(`applyTransformWrite`)와 틱 뒤 적용(`SceneTransformHierarchy::applyPendingSlot`)이 같은 세 줄을 씁니다.
+         */
+        void markHierarchyDirtyParallel();
 
-        PROPERTY( Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
-        float3 _localPosition;
-        PROPERTY( Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=deg" )
-        float3 _localRotation;
-        PROPERTY( Category = "Transform", DisplayName = "Scale", Tooltip = "Local scale vector" )
-        float3 _localScale;
+        /** @brief 로컬 위치 값의 자리(칸)입니다. 리플렉션은 이 함수로 `_localPosition` 을 찾습니다. */
+        PROPERTY( Name = "_localPosition", Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
+        float3& getLocalPositionRef() { return _pTransformPage->_arrLocalPosition[getPageIndex()]; }
+        /** @brief 로컬 회전 값의 자리(칸)입니다. 리플렉션은 이 함수로 `_localRotation` 을 찾습니다. */
+        PROPERTY( Name = "_localRotation", Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=deg" )
+        float3& getLocalRotationRef() { return _pTransformPage->_arrLocalRotation[getPageIndex()]; }
+        /** @brief 로컬 스케일 값의 자리(칸)입니다. 리플렉션은 이 함수로 `_localScale` 을 찾습니다. */
+        PROPERTY( Name = "_localScale", Category = "Transform", DisplayName = "Scale", Tooltip = "Local scale vector" )
+        float3& getLocalScaleRef() { return _pTransformPage->_arrLocalScale[getPageIndex()]; }
+
         PROPERTY( HideInInspector )
         mutable hashed_string _attachOwner;
         PROPERTY( HideInInspector )
         mutable hashed_string _attachComponent;
-        float3                _cachedWorldPosition;
-        float4x4              _cachedWorldMatrix;
-        double3               _cachedWorldPositionLWC;
+        /** @brief 트랜스폼 칸이 든 페이지입니다. 페이지는 옮기지 않으므로 표를 거치지 않고 찾습니다. */
+        SceneTransformPage* _pTransformPage;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 등록 시점에 받아 둡니다.
          * @details 쓸 때마다 `getOwner()->getManager()` 로 두 단계 거슬러 찾던 것을 대체합니다.
@@ -209,6 +248,8 @@ namespace sw
         GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
+        /** @brief 트랜스폼 저장소의 칸 번호입니다. 만들 때 받고 소멸할 때 놓습니다. */
+        uint32 _transformSlot;
         /// @brief 비트필드가 **아닙니다.** 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세웁니다(`applyTransformWrite`).
         uint8 _bIsTransformDirty;
         uint8 _bHasDirtyDescendant;

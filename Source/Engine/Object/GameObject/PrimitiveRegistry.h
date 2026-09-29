@@ -74,6 +74,12 @@ namespace sw
          */
         void markDirty( MeshComponent* pComp );
         /**
+         * @brief 프리미티브 번호 하나의 **월드 행렬**이 바뀌었다고 표시합니다. 락이 없습니다. 워커에서 불러도 됩니다.
+         * @details 트랜스폼 칸에 적힌 번호로 찍습니다(`SceneTransformPage::_arrPrimitiveIndex`). 틱 뒤 적용이 컴포넌트를 거치지 않고 부르는
+         *          자리라 `markDirty` 처럼 목록과 대조하지 않습니다 — 번호는 이 등록부가 준 것이고, add/remove 는 병렬 구간 밖입니다.
+         */
+        void markTransformDirty( uint32 primitiveIndex ) { markSlotDirty( primitiveIndex ); }
+        /**
          * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록/해제). 오브젝트 활성 토글은 여기가 아니라 그 오브젝트의 메시가 제 칸을
          *        더티로 찍습니다(`Component::onOwnerActiveInHierarchyChanged`).
          * @details 드물게 일어나므로 무엇이 바뀌었는지 따지지 않고 전부 다시 만들게 합니다.

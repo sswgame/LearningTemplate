@@ -2021,6 +2021,34 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (트랜스폼 연속 배열 2단계 — 값은 전역 저장소의 칸에, 틱 중 자기 오브젝트 쓰기는 칸에 바로)
+
+**모양.** 새 `SceneTransformStorage`(`Object/Component/`)가 모든 씬 컴포넌트의 로컬 TRS · 월드 행렬 · LWC 를 값마다 연속 배열로 든다
+(`SceneTransformPage` 256 칸, 고정 크기 페이지 표 · 페이지는 옮기지 않는다). `SceneComponent` 는 칸 번호와 페이지 포인터만 든다 —
+**280 B → 160 B**. 값 필드 셋과 캐시 셋(`_cachedWorldPosition` 은 LWC 에서 내려 쓰고 없앴다)이 빠졌고, 리플렉션은 1단계의 값 접근자
+(`getLocalPositionRef` …, `PROPERTY( Name = "_localPosition" )`)로 칸을 찾아 씬 · 프리팹 파일은 그대로다.
+- **왜 씬마다가 아니라 전역인가.** 칸 번호가 컴포넌트 수명 동안 바뀌지 않아야 대기 목록 · 렌더 등록부가 번호만 들 수 있다. 매니저마다
+  두면 씬에 붙기 전 · 떨어진 뒤의 컴포넌트(스택 · 기본값 비교용)를 위해 값을 옮겨야 하고 그때 번호가 바뀐다. 칸 받기 · 놓기는 뮤텍스
+  (씬 로드 워커와 게임 스레드가 동시에 만든다), 찾기는 락 없음.
+- **틱 중 쓰기.** 세터가 **자기 오브젝트를 틱하는 스레드**(`GameObjectManager::getTickingObject`, 오브젝트 그룹 틱이 채우는 TLS)면 칸의
+  대기 자리에 바로 쓰고, 칸이 처음 대기에 들 때 번호 4 바이트를 스레드 목록에 올린다. 다른 오브젝트의 컴포넌트에 쓰는 것과 선행 조건
+  스테이지 경로는 예전 쓰기 큐(64 바이트 건)다. 틱 뒤 `applyPendingTransformSlots` 가 스레드 슬롯 단위로 나눠 칸에서 옮기고, 잎 루트는
+  **컴포넌트를 거치지 않고** 칸에서 합성한다. 틱 중에 다른 오브젝트가 읽는 값은 여전히 틱 전 값이다(테스트로 묶었다).
+- **렌더 더티.** 메시 컴포넌트는 `onWorldTransformUpdated` 를 끄고(`final`) 칸에 프리미티브 번호를 적는다 — 적용 · 플러시가 그 번호로
+  `PrimitiveRegistry::markTransformDirty` 를 부른다. 다른 파생은 칸의 알림 비트가 켜져 있어 예전처럼 훅을 받는다.
+- **회전 변환 캐시.** 칸이 쿼터니언과 그것을 만든 오일러를 들고 같으면 삼각 함수 여섯 번을 건너뛴다(언리얼 `FRotationConversionCache`).
+  부모만 움직여 자식을 다시 합성하거나 위치 · 스케일만 바뀔 때의 비용이다. 결과는 캐시 없는 합성과 비트까지 같다(테스트).
+- 합성은 `SceneTransformStorage::composeWorld` 한 곳이다(컴포넌트 · 틱 뒤 적용 · 플러시).
+
+**숫자(Release · DX12 · 큐브 8000 이 틱에서 움직임 · 1000 프레임, `BinSoaOld` 와 3회 번갈아, avg).** `queuedTransforms` 219–246 → **135–142 us**,
+`Scene.tick` 685–736 → 591–602, wall/frame 1372–1460 → 1285–1297 us. `components` 는 그대로(452–486), `GpuScene.build.collect` 는 조금
+나빠졌다(311–327 → 331–340 — 행렬을 읽을 때 페이지를 한 번 더 건넌다. 3단계에서 수집이 컴포넌트를 거치지 않게 한다). 마이크로벤치
+`GameObjectBenchTest.TickMovers` 275–448 → 212–257 us. **스폰은 개당 +60~100 ns**(칸 초기화가 배열 열넷을 만진다, 1.04 → 1.10~1.16 us).
+
+**테스트.** `SceneComponentTest.TransformValuesLiveInTheStorageSlot`(칸 수명 · 리플렉션 자리 · 스택 컴포넌트),
+`RotationCacheFollowsEveryRotationChange`, `TickWriteToOwnSlotIsHiddenUntilAfterTheTick`(틱 중 읽기는 틱 전 값 · 메시 렌더 더티).
+기존 `GameObjectTest.TickSettersQueueAndApplyAfterTick`(1061 개 · 계층 · 다른 오브젝트 쓰기 · 비트 비교)이 그대로 통과한다.
+
 ### 2026-09-29 (리플렉션 — 값이 객체 밖에 있는 프로퍼티, 트랜스폼 연속 배열 1단계)
 
 **왜.** GameObject · Component 최적화 요청으로 잰 8000 무버 벤치(Release · DX12)에서 게임 스레드 프레임의 약 80 % 가 트랜스폼 경로였다

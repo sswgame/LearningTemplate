@@ -178,6 +178,9 @@ namespace sw
         REFLECT_BODY();
 
         float3*                _pObservedWorld;
+        SceneComponent*        _pWatchedComp;    ///< 틱 안에서 이 컴포넌트의 로컬 · 월드 위치를 읽어 둔다 — 다른 오브젝트가 틱 중에 보는 값을 본다
+        float3                 _watchedLocalPos; ///< 틱 안에서 읽은 `_pWatchedComp` 의 로컬 위치
+        float3                 _watchedWorldPos; ///< 틱 안에서 읽은 `_pWatchedComp` 의 월드 위치
         float3                 _tickLocalPos;
         float3                 _tickLocalScale;
         uint8                  _bWriteLocalOnTick : 1;
@@ -190,6 +193,9 @@ namespace sw
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
+            , _pWatchedComp{ nullptr }
+            , _watchedLocalPos{}
+            , _watchedWorldPos{}
             , _tickLocalPos{}
             , _tickLocalScale{ 1.0f, 1.0f, 1.0f }
             , _bWriteLocalOnTick{ SW_FALSE }
@@ -220,6 +226,11 @@ namespace sw
             SceneComponent::onTick( deltaTime );
             if ( _pObservedWorld != nullptr )
                 *_pObservedWorld = getWorldPosition();
+            if ( _pWatchedComp != nullptr )
+            {
+                _watchedLocalPos = _pWatchedComp->getLocalPosition();
+                _watchedWorldPos = _pWatchedComp->getWorldPosition();
+            }
             if ( _bWriteTwiceOnTick == SW_TRUE )
                 setLocalPosition( float3( _tickLocalPos._x + 1000.0f, _tickLocalPos._y, _tickLocalPos._z ) );
             if ( _bWriteLocalOnTick == SW_TRUE )

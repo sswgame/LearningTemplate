@@ -6,82 +6,26 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct SceneComponentInternal
-        {
-            /**
-             * @brief 로컬 위치, 오일러 회전(Yaw/Pitch/Roll), 스케일 벡터로부터 TRS 로컬 변환 행렬을 생성합니다.
-             */
-            static float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
-            {
-                // DirectX 행-벡터 규격: Scale * Rotation * Translation.
-                // 행렬 셋을 곱하지 않고 결과를 바로 적는다. 값은 같고 곱 두 번이 사라진다
-                // (`float4x4::createTrs` 주석). 움직이는 컴포넌트마다 매 프레임 지나는 자리다.
-                return float4x4::createTrs( position, rotation, scale );
-            }
-
-            /**
-             * @brief 부모의 월드 행렬과 결합하여 현재 컴포넌트의 월드 행렬 및 64비트 LWC 월드 좌표를 합성합니다.
-             */
-            static void composeWorldFromParent( const float3&   localPosition,
-                                                const float3&   localRotation,
-                                                const float3&   localScale,
-                                                const float4x4* pParentWorldMatrix,
-                                                const double3*  pParentWorldLWC,
-                                                float4x4&       outWorldMatrix,
-                                                double3&        outWorldLWC,
-                                                float3&         outWorldPos )
-            {
-                const float4x4 localTRS = makeLocalTRS( localPosition, localRotation, localScale );
-
-                if ( pParentWorldMatrix != nullptr && pParentWorldLWC != nullptr )
-                {
-                    outWorldMatrix      = localTRS * ( *pParentWorldMatrix );
-                    const float3 offset = float3::transformNormal( localPosition, *pParentWorldMatrix );
-                    outWorldLWC         = *pParentWorldLWC + double3( static_cast<float64>( offset._x ),
-                                                                      static_cast<float64>( offset._y ),
-                                                                      static_cast<float64>( offset._z ) );
-                }
-                else
-                {
-                    outWorldMatrix = localTRS;
-                    outWorldLWC    = double3( static_cast<float64>( localPosition._x ),
-                                              static_cast<float64>( localPosition._y ),
-                                              static_cast<float64>( localPosition._z ) );
-                }
-
-                outWorldPos = float3( static_cast<float32>( outWorldLWC._x ),
-                                      static_cast<float32>( outWorldLWC._y ),
-                                      static_cast<float32>( outWorldLWC._z ) );
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SceneComponent::SceneComponent()
-        : _localPosition{ 0.0f, 0.0f, 0.0f }
-        , _localRotation{ 0.0f, 0.0f, 0.0f }
-        , _localScale{ 1.0f, 1.0f, 1.0f }
-        , _attachOwner{}
+        : _attachOwner{}
         , _attachComponent{}
-        , _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }
-        , _cachedWorldMatrix{ float4x4::Identity }
-        , _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }
+        , _pTransformPage{ nullptr }
         , _pManager{ nullptr }
         , _pParent{ nullptr }
         , _listChild{}
+        , _transformSlot{ SceneTransformStorage::kInvalidSlot }
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
         , _dirtyRootIndex{ kNotInList }
     {
+        // 값(로컬 TRS · 월드 행렬 · LWC)은 저장소의 칸에 있다. 칸은 항등 로컬 · 항등 월드로 채워져 나온다.
+        _transformSlot     = SceneTransformStorage::get().allocateSlot( this, _pTransformPage );
         _bCanEverTick      = SW_FALSE;
         _bIsSceneComponent = SW_TRUE;
     }
@@ -93,6 +37,7 @@ namespace sw
     // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로
     // 옮겨지는 일이 없었고(삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지
     // 않았다), 그래서 고치는 대신 **막는다.** 파생 7종의 `= default` 선언도 같이 걷었다.
+    // 트랜스폼 칸도 같은 이유로 옮길 수 없다(칸의 소유자 포인터가 이 주소다).
 
     SceneComponent::~SceneComponent()
     {
@@ -112,6 +57,9 @@ namespace sw
                 _listChild.pop_back();
         }
         detachFromParentImmediate();
+        SceneTransformStorage::get().freeSlot( _transformSlot );
+        _pTransformPage = nullptr;
+        _transformSlot  = SceneTransformStorage::kInvalidSlot;
     }
 
     void SceneComponent::onBeginPlay()
@@ -164,88 +112,128 @@ namespace sw
         _pManager->queueTransformWrite( write );
     }
 
+    void SceneComponent::writeTickTransform( uint8 pendingBit, const float3& value )
+    {
+        // **자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다.** 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
+        // 이 스레드 하나다. 예전에는 세터마다 64 바이트짜리 쓰기 건을 스레드 큐에 올렸고(같은 컴포넌트면 앞 건과 합치는 비교 포함), 틱 뒤
+        // 적용이 그 건의 대상 컴포넌트를 하나씩 찾아가 값을 옮겼다. 이제 틱 뒤 적용은 칸 번호 목록을 따라 배열만 읽는다.
+        const GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && GameObjectManager::getTickingObject() == pOwner )
+        {
+            const uint32 pageIndex   = getPageIndex();
+            uint8&       pendingMask = _pTransformPage->_arrPendingMask[pageIndex];
+            // 칸이 처음 대기에 들 때만 번호를 올린다. 스레드가 대기 목록 칸을 못 받았으면(도우미 칸이 다 찬 드문 경우) 아래 큐로 간다.
+            if ( pendingMask != 0 || _pManager->getTransformHierarchy().queuePendingSlot( _transformSlot ) )
+            {
+                pendingMask |= pendingBit;
+                if ( pendingBit == SceneTransformPage::kPendingPosition )
+                    _pTransformPage->_arrPendingPosition[pageIndex] = value;
+                else if ( pendingBit == SceneTransformPage::kPendingRotation )
+                    _pTransformPage->_arrPendingRotation[pageIndex] = value;
+                else
+                    _pTransformPage->_arrPendingScale[pageIndex] = value;
+                return;
+            }
+        }
+
+        // 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있으므로 예전처럼 쓰기 큐로 간다.
+        SceneTransformWrite write{};
+        if ( pendingBit == SceneTransformPage::kPendingPosition )
+        {
+            write._localPosition = value;
+            write._bSetPosition  = SW_TRUE;
+        }
+        else if ( pendingBit == SceneTransformPage::kPendingRotation )
+        {
+            write._localRotation = value;
+            write._bSetRotation  = SW_TRUE;
+        }
+        else
+        {
+            write._localScale = value;
+            write._bSetScale  = SW_TRUE;
+        }
+        queueTickWrite( write );
+    }
+
     void SceneComponent::setLocalPosition( const float3& pos )
     {
         if ( isInParallelTick() )
         {
-            SceneTransformWrite write{};
-            write._localPosition = pos;
-            write._bSetPosition  = SW_TRUE;
-            queueTickWrite( write );
+            writeTickTransform( SceneTransformPage::kPendingPosition, pos );
             return;
         }
         // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
         // "안 움직였다" 가 되는데, 비교 기준이 매번 **현재 값**이라 그 아래 움직임은 쌓이지도
         // 않는다. 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에 있었다.
-        if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::EpsilonSquared )
+        float3& localPosition = _pTransformPage->_arrLocalPosition[getPageIndex()];
+        if ( float3::getDistanceSquared( localPosition, pos ) <= MathUtil::EpsilonSquared )
             return;
-        _localPosition = pos;
+        localPosition = pos;
         markTransformDirty();
     }
 
     float3 SceneComponent::getLocalPosition() const
     {
-        return _localPosition;
+        return _pTransformPage->_arrLocalPosition[getPageIndex()];
     }
 
     void SceneComponent::setLocalRotation( const float3& rot )
     {
         if ( isInParallelTick() )
         {
-            SceneTransformWrite write{};
-            write._localRotation = rot;
-            write._bSetRotation  = SW_TRUE;
-            queueTickWrite( write );
+            writeTickTransform( SceneTransformPage::kPendingRotation, rot );
             return;
         }
-        if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::EpsilonSquared )
+        float3& localRotation = _pTransformPage->_arrLocalRotation[getPageIndex()];
+        if ( float3::getDistanceSquared( localRotation, rot ) <= MathUtil::EpsilonSquared )
             return;
-        _localRotation = rot;
+        localRotation = rot;
         markTransformDirty();
     }
 
     float3 SceneComponent::getLocalRotation() const
     {
-        return _localRotation;
+        return _pTransformPage->_arrLocalRotation[getPageIndex()];
     }
 
     void SceneComponent::setLocalScale( const float3& scale )
     {
         if ( isInParallelTick() )
         {
-            SceneTransformWrite write{};
-            write._localScale = scale;
-            write._bSetScale  = SW_TRUE;
-            queueTickWrite( write );
+            writeTickTransform( SceneTransformPage::kPendingScale, scale );
             return;
         }
-        if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::EpsilonSquared )
+        float3& localScale = _pTransformPage->_arrLocalScale[getPageIndex()];
+        if ( float3::getDistanceSquared( localScale, scale ) <= MathUtil::EpsilonSquared )
             return;
-        _localScale = scale;
+        localScale = scale;
         markTransformDirty();
     }
 
     float3 SceneComponent::getLocalScale() const
     {
-        return _localScale;
+        return _pTransformPage->_arrLocalScale[getPageIndex()];
     }
 
     float3 SceneComponent::getWorldPosition() const
     {
+        // float32 월드 위치는 LWC 를 내린 값이다. 따로 들지 않는다(예전에는 캐시가 하나 더 있었다).
         ensureWorldCache();
-        return _cachedWorldPosition;
+        const double3& worldLwc = _pTransformPage->_arrWorldPositionLwc[getPageIndex()];
+        return float3( static_cast<float32>( worldLwc._x ), static_cast<float32>( worldLwc._y ), static_cast<float32>( worldLwc._z ) );
     }
 
     double3 SceneComponent::getWorldPositionLwc() const
     {
         ensureWorldCache();
-        return _cachedWorldPositionLWC;
+        return _pTransformPage->_arrWorldPositionLwc[getPageIndex()];
     }
 
     float4x4 SceneComponent::getWorldMatrix() const
     {
         ensureWorldCache();
-        return _cachedWorldMatrix;
+        return _pTransformPage->_arrWorldMatrix[getPageIndex()];
     }
 
     void SceneComponent::ensureWorldCache() const
@@ -271,25 +259,56 @@ namespace sw
     float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const
     {
         ensureWorldCache();
-        const float4x4& worldMat      = _cachedWorldMatrix;
-        const double3   relativePos64 = _cachedWorldPositionLWC - cameraWorldPos;
-        const float3    relativePos32( static_cast<float32>( relativePos64._x ),
-                                       static_cast<float32>( relativePos64._y ),
-                                       static_cast<float32>( relativePos64._z ) );
-
-        float4x4 cameraRel = worldMat;
+        const uint32  pageIndex     = getPageIndex();
+        const double3 relativePos64 = _pTransformPage->_arrWorldPositionLwc[pageIndex] - cameraWorldPos;
+        const float3  relativePos32( static_cast<float32>( relativePos64._x ),
+                                     static_cast<float32>( relativePos64._y ),
+                                     static_cast<float32>( relativePos64._z ) );
+        float4x4      cameraRel = _pTransformPage->_arrWorldMatrix[pageIndex];
         cameraRel.setTranslation( relativePos32 );
         return cameraRel;
     }
 
     void SceneComponent::updateWorldTransformFromParent()
     {
-        const float4x4* pParentWorld = _pParent != nullptr ? &_pParent->_cachedWorldMatrix : nullptr;
-        const double3*  pParentLwc   = _pParent != nullptr ? &_pParent->_cachedWorldPositionLWC : nullptr;
-        SceneComponentInternal::composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
-                                                        _cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
+        if ( _pParent != nullptr )
+        {
+            const SceneTransformPage& parentPage      = *_pParent->_pTransformPage;
+            const uint32              parentPageIndex = _pParent->getPageIndex();
+            SceneTransformStorage::composeWorld( *_pTransformPage, getPageIndex(), &parentPage._arrWorldMatrix[parentPageIndex],
+                                                 &parentPage._arrWorldPositionLwc[parentPageIndex] );
+        }
+        else
+            SceneTransformStorage::composeWorld( *_pTransformPage, getPageIndex(), nullptr, nullptr );
         _bIsTransformDirty = SW_FALSE;
-        onWorldTransformUpdated();
+        notifyWorldTransformUpdated();
+    }
+
+    void SceneComponent::notifyWorldTransformUpdated()
+    {
+        // 렌더 프리미티브는 칸에 적힌 번호로 등록부에 바로 찍는다(메시 컴포넌트는 훅을 끈다). 그 밖의 파생은 예전처럼 훅을 받는다.
+        const uint32 pageIndex      = getPageIndex();
+        const uint32 primitiveIndex = _pTransformPage->_arrPrimitiveIndex[pageIndex];
+        if ( primitiveIndex != SceneTransformStorage::kNoPrimitive && _pManager != nullptr )
+            _pManager->getPrimitiveRegistry().markTransformDirty( primitiveIndex );
+        if ( ( _pTransformPage->_arrFlag[pageIndex] & SceneTransformPage::kNotifyOwner ) != 0 )
+            onWorldTransformUpdated();
+    }
+
+    void SceneComponent::setWorldTransformNotify( bool bNotify )
+    {
+        setTransformFlag( SceneTransformPage::kNotifyOwner, bNotify );
+    }
+
+    void SceneComponent::setTransformPrimitiveIndex( uint32 primitiveIndex )
+    {
+        _pTransformPage->_arrPrimitiveIndex[getPageIndex()] = primitiveIndex;
+    }
+
+    void SceneComponent::setTransformFlag( uint8 flag, bool bOn )
+    {
+        uint8& slotFlag = _pTransformPage->_arrFlag[getPageIndex()];
+        slotFlag        = bOn ? static_cast<uint8>( slotFlag | flag ) : static_cast<uint8>( slotFlag & ~flag );
     }
 
     void SceneComponent::deferSelfCall( void ( SceneComponent::*pMethod )() )
@@ -342,6 +361,9 @@ namespace sw
 
         _pParent = pParent;
         pParent->_listChild.push_back( this );
+        // 칸의 계층 비트는 틱 뒤 적용이 컴포넌트를 거치지 않고 "잎 루트인가" 를 묻는 데 쓴다.
+        setTransformFlag( SceneTransformPage::kHasParent, true );
+        pParent->setTransformFlag( SceneTransformPage::kHasChildren, true );
 
         if ( _pManager != nullptr )
             _pManager->unregisterRootSceneComponent( this );
@@ -377,6 +399,9 @@ namespace sw
                 break;
             }
         }
+        if ( listSibling.empty() )
+            _pParent->setTransformFlag( SceneTransformPage::kHasChildren, false );
+        setTransformFlag( SceneTransformPage::kHasParent, false );
         _pParent = nullptr;
 
         if ( _pManager != nullptr )
@@ -398,21 +423,25 @@ namespace sw
 
     bool SceneComponent::applyTransformWrite( const SceneTransformWrite& write )
     {
-        bool bChanged = false;
-        if ( write._bSetPosition != SW_FALSE && float3::getDistanceSquared( _localPosition, write._localPosition ) > MathUtil::EpsilonSquared )
+        const uint32 pageIndex     = getPageIndex();
+        float3&      localPosition = _pTransformPage->_arrLocalPosition[pageIndex];
+        float3&      localRotation = _pTransformPage->_arrLocalRotation[pageIndex];
+        float3&      localScale    = _pTransformPage->_arrLocalScale[pageIndex];
+        bool         bChanged      = false;
+        if ( write._bSetPosition != SW_FALSE && float3::getDistanceSquared( localPosition, write._localPosition ) > MathUtil::EpsilonSquared )
         {
-            _localPosition = write._localPosition;
-            bChanged       = true;
+            localPosition = write._localPosition;
+            bChanged      = true;
         }
-        if ( write._bSetRotation != SW_FALSE && float3::getDistanceSquared( _localRotation, write._localRotation ) > MathUtil::EpsilonSquared )
+        if ( write._bSetRotation != SW_FALSE && float3::getDistanceSquared( localRotation, write._localRotation ) > MathUtil::EpsilonSquared )
         {
-            _localRotation = write._localRotation;
-            bChanged       = true;
+            localRotation = write._localRotation;
+            bChanged      = true;
         }
-        if ( write._bSetScale != SW_FALSE && float3::getDistanceSquared( _localScale, write._localScale ) > MathUtil::EpsilonSquared )
+        if ( write._bSetScale != SW_FALSE && float3::getDistanceSquared( localScale, write._localScale ) > MathUtil::EpsilonSquared )
         {
-            _localScale = write._localScale;
-            bChanged    = true;
+            localScale = write._localScale;
+            bChanged   = true;
         }
         if ( bChanged == false )
             return false;
@@ -427,6 +456,12 @@ namespace sw
             return true;
         }
 
+        markHierarchyDirtyParallel();
+        return true;
+    }
+
+    void SceneComponent::markHierarchyDirtyParallel()
+    {
         // 계층이 있는 것은 루트를 올리고 플러시가 내려간다. 표시는 `markTransformDirty` 와 같은 두 함수다(세대 올리기와 지연 경로만
         // 없다). 모두 같은 값을 쓰는 바이트 저장이라 워커 여럿이 겹쳐 써도 무해하다. 루트는 워커 스크래치에 올린다 — 같은 루트를
         // 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
@@ -434,7 +469,6 @@ namespace sw
         if ( pRoot != nullptr && _pManager != nullptr )
             _pManager->getTransformHierarchy().queueDirtyRootParallel( pRoot );
         markDescendantsDirty();
-        return true;
     }
 
     SceneComponent* SceneComponent::markSelfAndAncestorsDirty()
