@@ -126,5 +126,12 @@ namespace sw
         /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXmlString` · `loadFromJsonString` 의 몸통입니다. */
         template <typename TSerializer>
         static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectIdentity* pIdentity );
+        /**
+         * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 세 로더(XML · JSON · 바이너리)는 포맷 읽기만 `deserializeState( version, ctx )` 로 넘깁니다.
+         * @details 자식 연결을 적어 두고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 되살리는 범위 안에서 읽습니다. 읽기에 실패해도 적어 둔 자식은 되붙입니다.
+         *          정의는 .cpp 에만 있습니다(ID 범위가 `GameObject` 의 비공개 타입이라 이 클래스의 멤버여야 합니다).
+         */
+        template <typename DeserializeStateFunc>
+        static bool loadStateInPlace( GameObject* pGameObject, const ObjectIdentity* pIdentity, DeserializeStateFunc&& deserializeState );
     };
 } // namespace sw

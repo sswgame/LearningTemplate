@@ -2021,6 +2021,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — Object: 제자리 상태 읽기의 걸음 한 곳)
+
+같은 중복 군집 스윕의 Object 차례다. `ObjectStateSerializer` 의 텍스트 로더(`loadFromText<T>`, XML · JSON)와 바이너리 로더(`loadFromBinaryBuffer`)가
+"자식 연결 적기 → 컴포넌트 비우기 → ID 되살리기 범위 → 버전 읽기 → 성공이면 `finishLoad` → 자식 되붙이기" 스무 줄을 각자 들고 있었다.
+09-2x 에 `finishLoad` 로 뒤처리 다섯 줄은 모았지만 앞뒤 걸음은 두 벌로 남았다. 비공개 템플릿 `loadStateInPlace( obj, identity, deserializeState )` 로 모았고
+로더는 포맷 읽기만 람다로 넘긴다. ID 범위(`GameObject::ComponentIdRestoreScope`)가 게임 오브젝트의 비공개 타입이라 익명 도우미가 아니라 friend 인 이 클래스의
+멤버다. 동작은 같다(실패해도 자식을 되붙이는 것, 범위가 되붙이기까지 사는 것 모두 예전 그대로).
+
 ### 2026-09-29 (리팩터 — Serialization: orphan 적용 · 변환 · 압축 · 아카이브 판의 겹친 몸통)
 
 `RunDuplicateCode.py --filter Source/ --no-headers --min-lines 7` 로 전 트리 중복 군집을 다시 뽑고, 앞 회차들이 기각하거나 일부러 둔 것

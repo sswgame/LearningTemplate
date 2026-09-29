@@ -159,6 +159,24 @@ namespace sw
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
     }
 
+    template <typename DeserializeStateFunc>
+    bool ObjectStateSerializer::loadStateInPlace( GameObject* pGameObject, const ObjectIdentity* pIdentity, DeserializeStateFunc&& deserializeState )
+    {
+        const hashed_string                              oldName = pGameObject->getName();
+        vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
+        ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
+        pGameObject->clearComponents();
+
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        const SerializeContext                    ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        uint32                                    version{ 0 };
+        const bool                                bLoaded = deserializeState( version, ctx );
+        if ( bLoaded )
+            ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
+        ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
+        return bLoaded;
+    }
+
     template <typename TSerializer>
     bool ObjectStateSerializer::loadFromText( GameObject* pGameObject, string_view text, const ObjectIdentity* pIdentity )
     {
@@ -169,24 +187,10 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return false;
 
-        const hashed_string                              oldName = pGameObject->getName();
-        vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
-        ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
-        pGameObject->clearComponents();
-
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
-        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32                                    ver{ 0 };
-        if ( TSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion,
-                                                nullptr, nullptr, ctx ) == false )
+        return loadStateInPlace( pGameObject, pIdentity, [&]( uint32& outVersion, const SerializeContext& ctx )
         {
-            ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
-            return false;
-        }
-
-        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
-        ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
-        return true;
+            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, nullptr, ctx );
+        } );
     }
 
     string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject )
@@ -254,25 +258,12 @@ namespace sw
         if ( bodyStart + bodySize > size )
             return 0;
 
-        const hashed_string                              oldName = pGameObject->getName();
-        vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
-        ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
-        pGameObject->clearComponents();
-
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
-        SerializeContext                          ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
-        uint32                                    ver{ 0 };
-        if ( BinarySerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
-                                                     kObjectReflectedSchemaVersion, nullptr, nullptr, ctx ) == false )
+        const bool bLoaded = loadStateInPlace( pGameObject, pIdentity, [&]( uint32& outVersion, const SerializeContext& ctx )
         {
-            ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
-            return 0;
-        }
-
-        ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
-        ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
-
-        return bodyStart + bodySize;
+            return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+                                                           kObjectReflectedSchemaVersion, nullptr, nullptr, ctx );
+        } );
+        return bLoaded ? bodyStart + bodySize : 0;
     }
 
     bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectIdentity* pIdentity )
