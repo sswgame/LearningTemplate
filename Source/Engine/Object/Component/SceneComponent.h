@@ -54,8 +54,6 @@ namespace sw
 
         /** @brief 플레이가 시작될 때 월드 행렬을 맞춥니다. */
         void onBeginPlay() override;
-        /** @brief 더티면 월드 행렬을 다시 계산합니다. */
-        void onTick( float32 deltaTime ) override;
         /** @brief 로컬 TRS PROPERTY 가 바뀌면 월드 캐시를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
@@ -66,10 +64,10 @@ namespace sw
 
         /**
          * @brief 월드 행렬이 실제로 다시 계산된 직후 불립니다.
-         * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 짚어 주는 유일한 지점입니다.
-         *          렌더 프리미티브는 여기서 자기를 더티로 표시합니다. 그래서 프레임마다 전부 훑어
-         *          "행렬이 바뀌었나" 되묻지 않아도 됩니다. 플러시가 부르기도 하고, 플러시 전에 월드 값을
-         *          읽어 캐시를 채울 때(`getWorldMatrix` 등)도 불립니다 — 어느 쪽이든 합성은 한 곳입니다.
+         * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 짚어 주는 지점입니다. 플러시 · 지연 합성(`getWorldMatrix` 등) · 틱 뒤 적용과
+         *          배치 쓰기의 잎 루트 합성이 모두 `SceneTransformHierarchy::notifyWorldUpdated` 를 거쳐 부릅니다. 칸의 알림 비트가 꺼진
+         *          파생은 불리지 않습니다(`setWorldTransformNotify`) — 메시 컴포넌트가 그렇고, 렌더 더티는 칸에 적힌 프리미티브 번호로
+         *          등록부에 바로 찍힙니다. 그래서 프레임마다 전부 훑어 "행렬이 바뀌었나" 되묻지 않아도 됩니다.
          */
         virtual void onWorldTransformUpdated() {}
 
@@ -180,10 +178,8 @@ namespace sw
         /** @brief 칸 플래그 비트 하나를 켜거나 끕니다(게임 스레드, 구조 변경 때). */
         void setTransformFlag( uint8 flag, bool bOn );
         /**
-         * @brief 틱 중의 세터 한 건을 자기 스레드 슬롯의 큐에 올립니다. 핸들과 대상 포인터는 여기서 채웁니다.
-         * @details 세 세터가 같은 열 줄을 각자 들고 있었고, 스케일만 `_pTarget` 을 빠뜨려 적용 쪽이 핸들을 다시 풀었습니다
-         *          ("한 곳에 넣은 고침이 형제에게 안 갔다" 의 자리). 큐에 쌓인 건은 같은 `tick()` 안에서 적용되므로
-         *          대상 포인터를 믿어도 됩니다(파괴는 틱 밖에서만 메모리를 놓습니다).
+         * @brief 틱 중의 쓰기 한 건을 자기 스레드 슬롯의 쓰기 큐에 올립니다(`writeTickTransform` 의 다른 오브젝트 길). 핸들과 대상 포인터는 여기서 채웁니다.
+         * @details 큐에 쌓인 건은 같은 `tick()` 안에서 적용되므로 대상 포인터를 믿어도 됩니다(파괴는 틱 밖에서만 메모리를 놓습니다).
          */
         void queueTickWrite( SceneTransformWrite& write );
         /**

@@ -68,11 +68,6 @@ namespace sw
         markTransformDirty();
     }
 
-    void SceneComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-    }
-
     void SceneComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );

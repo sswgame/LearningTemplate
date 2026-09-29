@@ -2043,6 +2043,10 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 쓰고 "렌더 상태만 찍었으니 트랜스폼 목록은 비었다" 까지 본다. 빌더의 부분 수집 안에 박혀 있던 "지난 프레임 후보에 없는 트랜스폼 칸을 상태 목록으로 넘기는" 루프를
 `moveTransformSlotsWithoutCandidate` 로 뺐다. Object README 의 틱 중 쓰기 설명도 적용 주체(계층)로 고쳤다.
 
+**④ `SceneComponent` 문서 · 빈 재정의.** `onWorldTransformUpdated` 설명이 아직 "렌더 프리미티브가 여기서 더티를 찍는다" 였다(메시는 이제 훅을 끄고 칸의 번호로
+찍힌다). 기반 호출만 하던 `onTick` 재정의(설명은 "더티면 월드 행렬을 다시 계산" — 씬 컴포넌트는 애초에 틱하지 않는다)를 걷었다. 부르던 세 곳
+(`SceneComponent::onTick( dt )`)은 기반의 것으로 풀린다.
+
 ### 2026-09-29 (틱 목록을 평평하게 — 언리얼 FTickTaskManager · 유니티 BehaviourManager 모양, components −28 %)
 
 **어떻게 골랐나.** 프로파일 뒤 후보 셋을 상용 엔진과 견줬다.
