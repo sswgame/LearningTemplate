@@ -57,7 +57,7 @@ namespace sw
      * @brief `-gv_benchMeshes=N` — 시작 시 만들 벤치 큐브 수. 0 이면 만들지 않습니다.
      * @details 이것이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 세운다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -67,14 +67,14 @@ namespace sw
      *          사용 중에 Reset 되는 기존 버그(간헐 3/8)를 확실히 터뜨린다. 그래서 기본은 꺼 두되,
      *          그 버그를 재현·수정할 때 쓰라고 남겨 둔다. DX11/Vulkan/GL 은 정상이다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
 
     /**
      * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
      * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 않는다.
      *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 재거나 다중 배치 버그를 보려면 이 값을 올린다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
 
     /**
      * @brief `-gv_benchTransparent=<퍼센트>` — 벤치 큐브 중 이 비율을 투명으로 만듭니다 (0=전부 불투명).
@@ -83,7 +83,7 @@ namespace sw
      *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
      *          인스턴스가 여럿 들어간다 — 그래야 배치 안의 정렬이 실제로 검사된다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
 
     /**
      * @brief `-gv_benchMaterialChurn=N` — 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
@@ -91,7 +91,7 @@ namespace sw
      *          "바뀐 것만 올린다" 경로(`GpuMaterialGpu::_lastBytes` 비교, 인스턴스 CB 재작성,
      *          구조버퍼 재업로드)를 **한 번도 지나지 않는다.** 이 스위치가 그 길을 매 프레임 태운다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialChurn, 0, "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialChurn, 0, "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMaterialChurnAdd=N` — 매 프레임 인스턴스 N 개를 새로 붙이거나 떼어냅니다.
@@ -102,7 +102,7 @@ namespace sw
      *          따라 사라지는지(상수버퍼 해제 포함)도 같이 검사된다.
      * @note 인스턴스 수는 512 개에서 멈춘다 — 그 뒤로는 새로 붙이는 대신 떼는 쪽으로 기운다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnAdd, 0, "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnAdd, 0, "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMaterialChurnKeyword=N` — N 프레임마다 키워드·멀티컴파일을 하나 흔듭니다.
@@ -110,7 +110,7 @@ namespace sw
      *          만들어지므로 프레임이 크게 튄다. 성능 측정용이 아니라 **퍼뮤테이션 경로가 살아 있는지**
      *          보는 스위치다. 값은 크게 준다(예: 60 = 1초에 한 번).
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMeshShapes=N` — 벤치가 섞어 쓸 도형 수 (1=큐브만, 최대 5).
@@ -120,7 +120,7 @@ namespace sw
      * @note 기본이 1 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다. 도형을 섞으면 그림이
      *       달라지므로 예전 수치와 직접 비교할 수 없다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
 
     /**
      * @brief `-gv_benchMeshMorph=1` — 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
@@ -131,7 +131,7 @@ namespace sw
      * @note 기본이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**다. 켠 상태의 검증은
      *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 그림이 실제로 달라지는지로 본다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchAnimate=0` — 벤치의 **모든** 시간 구동 변화를 멈춥니다 (기본 1 = 움직인다).
@@ -142,21 +142,21 @@ namespace sw
      *          변경의 0.5% 차이를 "다르다" 고 읽을 뻔했다 — 손대지 않은 대조군이 움직이면 하니스를
      *          먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아 여전히 0.05% 흔들렸다).
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
      * @details "일부만 움직이는 씬" 을 재기 위한 것이다 — 트랜스폼 플러시가 더티 루트만 돌게 된 뒤(2026-09-22) 그 이득은
      *          전부 움직이는 벤치에서는 보이지 않는다. 10 이면 열 개 중 하나만 쓴다(index % 100 < percent).
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMovePercent, 100, "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMovePercent, 100, "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)" );
 
     /**
      * @brief `-gv_benchInstanced=1` — 큐브를 GameObject·SceneComponent 없이 메시 인스턴스 배치(언리얼 ISM 자리)로 만듭니다.
      * @details 같은 격자·같은 움직임·같은 시드라 그림은 같아야 한다. 플러시와 배치 트랜스폼 쓰기가 사라지는 대신 월드 행렬을
      *          항목에 바로 적는다. 큐브별 머티리얼 인스턴스·투명 비율은 이 모드에서 지원하지 않는다(배치 하나 = 메시·머티리얼 하나).
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchInstanced, 0, "1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchInstanced, 0, "1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0)" );
 
     /**
      * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).
@@ -166,14 +166,14 @@ namespace sw
      * @note 홀수 번째는 스포트라이트다 — 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다.
      * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchLights, 0, "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchLights, 0, "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)" );
 
     /**
      * @brief `-gv_benchLightRadius=<유닛>` — 벤치 라이트가 닿는 반경 (0 이면 격자 간격에서 정한다).
      * @details 반경은 **비용을 정하는 값**이다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
      *          작으면 감쇠가 0 이라 일찍 빠진다 — 타일 컬링의 효과를 재려면 이 값을 흔들어야 한다.
      */
-    SW_GLOBAL_VARIABLE_FLOAT( gv_benchLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
+    SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_benchLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
 
     /**
      * @brief `-gv_benchGround=1` — 격자 아래에 바닥 평면을 깝니다.
@@ -182,7 +182,7 @@ namespace sw
      *          맞는지 그림으로 판단할 수가 없었다.
      * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
 
     /**
      * @brief `-gv_benchTickMovers=N` — 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치·스케일을 씁니다.
@@ -190,14 +190,14 @@ namespace sw
      *          병렬 틱 중이라 지연 경로를 탄다)을 재고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
      *          비용을 잰다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchTickMovers, 0, "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchTickMovers, 0, "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)" );
 
     /**
      * @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다 (총알처럼 스폰이 잦은 게임의 모양).
      * @details 스폰·파괴 경로(이름 유일화 · 풀 · 등록부)와 "틱 멤버십이 매 프레임 바뀌는" 틱 등록부를 잰다. 새 큐브는 같은 메시
      *          종류·기본 머티리얼이고, 무버(`-gv_benchTickMovers`)도 같이 붙는다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
 
     BenchScene::BenchScene()
         : _listBenchMesh{}

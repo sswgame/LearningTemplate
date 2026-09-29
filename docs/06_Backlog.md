@@ -2021,6 +2021,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (테스트용 gv 매크로 — 에디터 · 프리셋에서 숨기고 Shipping 에서 뺀다)
+
+**왜.** 전역 변수 정보에 용도 칸이 없어서 에디터 패널이 벤치 · 자동화 스위치(`gv_bench*` 17 개, `gv_profileFrames`, `gv_crashTest` …)를
+런타임 설정과 섞어 전부 보여 줬다. 프리셋 저장도 전부를 썼다 — `gv_profileFrames` 가 든 프리셋을 불러오면 에디터가 N 프레임 뒤 스스로
+꺼지고, `gv_crashTest` 가 들면 다음 실행이 일부러 죽는다.
+
+**모양.** 일반 `SW_GLOBAL_VARIABLE_*` 은 그대로, 테스트용 `SW_TEST_GLOBAL_VARIABLE_*` · `SW_EXTERN_TEST_GLOBAL_VARIABLE_*` 를 더했다.
+- 테스트용은 에디터 목록 · 개수 · 프리셋 저장 · 프리셋 불러오기에서 빠진다(`GlobalVariableInfo::_bTestOnly`). `-gv_*` 와 `findVariable` 은 그대로다.
+- **Shipping 에서는 등록되지 않는다**(기본값으로만 읽히고, 실행 인자를 주면 "그런 전역 변수가 없습니다" 경고). 배포 실행 파일을 스크립트가
+  조종해야 하는 다섯(`gv_profileFrames` — Shipping `AppSmokeTest` 가 이것으로 끝낸다, `gv_screenshot` · `gv_screenshotFrame` ·
+  `gv_screenshotAttachment`, `gv_crashTest`)만 마지막 인자 `SW_KEEP_IN_SHIPPING` 으로 남긴다. 나머지 22 개는 기본(빠짐).
+- 선택 인자는 **C++17 에서도** 되도록(기본 표준이 17 이다) `__VA_OPT__` 대신 인자 개수로 고른다. 잘못된 마지막 인자는 static_assert 로 막는다.
+- `extern` 도 같은 인자를 받고, 정의와 종류 · 인자 · 타입이 어긋나면 새 게이트 `CheckGlobalVariableKinds` 가 막는다(두 종류의 extern 은 같은
+  C++ 선언이라 컴파일러는 못 잡는다). AGENTS.md 에 규칙 한 줄.
+- 일반으로 둔 것: `gv_editorStartupScene`(사람이 쓰는 시작 옵션), `gv_morphDiag` 와 렌더러 토글들.
+
+**처음 모양에서 바꾼 것.** Shipping 에서 빠지는 변수를 처음에는 `const` 로 만들었다(쓰는 코드를 컴파일 오류로). 그랬더니 같은 TU 안에서
+컴파일 시간 상수가 되어 `BenchScene.cpp` 의 루프 셋이 **Shipping 에서만** `-Wtautological-unsigned-zero-compare`(`step < 0` 은 늘 거짓)를
+냈다. 스위치를 하나 더할 때마다 Shipping 에서만 드러나는 함정이라, 등록만 빼고 보통 변수로 뒀다. `EngineLoop` 의 백엔드 교체 탐침은
+테스트용이라 `#if !defined( SW_SHIPPING )` 으로 가뒀다.
+
+**검증(Windows).** Debug · Shipping 빌드 경고 0 · `nogpu`+`hostgpu` 각 9/9 · 린트 프리셋 21/21(새 게이트 포함, 2초) · `CheckLintsAreAlive`
+34 cases · 새 케이스 CoreTest `TestOnlyVariablesAreMarkedAndDroppedInShipping`(Debug · Shipping) · EditorTest
+`EditorGlobalVariableCommandsTest` 2/2 · 실기동: Debug `-gv_benchMeshes=8` 로 벤치가 뜨고 Shipping 은 같은 인자에 경고를 내며 `-gv_profileFrames=20`
+로 스스로 끝난다 · 에디터 전부 열기 덤프 창 33 · 내용 없는 패널 0.
+
 ### 2026-09-29 (겹치던 gv 정리 — 에디터 패널 열기 스위치 둘을 하나로, 가시성이 굳던 결함)
 
 **어떻게 찾았나.** `gv_*` 45 개의 설명과 읽는 곳을 짝지어 봤다. 겹쳐 보였지만 역할이 다른 것은 둔다.

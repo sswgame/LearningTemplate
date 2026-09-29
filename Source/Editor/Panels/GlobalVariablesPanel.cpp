@@ -206,8 +206,8 @@ namespace sw::editor
         drawVariableToolbar( *pGvm );
 
         // 2) 변수 목록 수집
-        const vector<string> listAllName   = pGvm->collectVariableNames();
-        const uint32         totalVarCount = pGvm->getVariableCount();
+        const vector<string> listAllName = pGvm->collectVariableNames();
+        uint32               totalVarCount{ 0 };
 
         const EditorListFilter filter{ _searchFilter.c_str() };
 
@@ -218,9 +218,11 @@ namespace sw::editor
 
         for ( const string& varName : listAllName )
         {
+            // 테스트용(`SW_TEST_GLOBAL_VARIABLE_*`)은 벤치 · 자동화 스위치라 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
             GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
-            if ( pInfo == nullptr )
+            if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;
+            ++totalVarCount;
             if ( filter.matchesAny( { pInfo->_name, pInfo->_description, pInfo->_moduleName } ) )
                 listFiltered.push_back( pInfo );
         }

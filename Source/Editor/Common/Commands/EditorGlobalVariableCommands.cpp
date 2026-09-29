@@ -60,8 +60,10 @@ namespace sw::editor
         const vector<string> listAllName = pGvm->collectVariableNames();
         for ( const string& varName : listAllName )
         {
+            // 테스트용은 저장하지 않는다. 프리셋에 `gv_profileFrames` 가 들어가면 불러온 에디터가 N 프레임 뒤 스스로 꺼지고,
+            // `gv_crashTest` 가 들어가면 일부러 죽는다. 실행 한 번에만 줄 스위치다.
             const GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
-            if ( pInfo == nullptr || pInfo->_pData == nullptr )
+            if ( pInfo == nullptr || pInfo->_pData == nullptr || pInfo->_bTestOnly )
                 continue;
 
             XmlNode varNode = root.appendChild( "Var" );
@@ -96,8 +98,9 @@ namespace sw::editor
             if ( pName == nullptr || pVal == nullptr )
                 continue;
 
+            // 테스트용을 담은 옛 프리셋(이 필터 전에 저장한 것)도 그 값은 적용하지 않는다.
             GlobalVariableInfo* pInfo = pGvm->findVariable( pName );
-            if ( pInfo == nullptr )
+            if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;
             pInfo->setValueFromString( pVal );
         }

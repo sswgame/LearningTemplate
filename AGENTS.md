@@ -58,6 +58,12 @@ cmake --build --preset Ninja-Debug
 - Classes, structs, enums: `PascalCase`; interfaces: `I` + `PascalCase`.
 - Functions: `camelCase`; members: `_camelCase`; locals: `camelCase`.
 - Constants: `kPascalCase`; globals: `gv_camelCase`.
+- Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`). Runtime settings someone would change
+  in the editor use `SW_GLOBAL_VARIABLE_*`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE_*`: they
+  stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Add
+  `SW_KEEP_IN_SHIPPING` as the last argument only when scripts must drive the shipped executable with it
+  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`). An `extern` uses the matching `SW_EXTERN_…` form with the same
+  argument; `CheckGlobalVariableKinds.py` blocks mismatches.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
 - Raw pointers use a `p` prefix (`pObject`, `_pObject`); double pointers use

@@ -23,13 +23,13 @@ namespace sw
      *          `EngineLoop.cpp` 의 다른 gv_ 들 사이에 선언만 놓여 있어서, 값을 읽는 곳과 규칙이 도는
      *          곳이 갈라져 있었습니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)", SW_KEEP_IN_SHIPPING );
     /**
      * @brief `-gv_profileAllocSites=N`: 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고합니다 (0=끄기).
      * @details 프레임당 할당 **횟수**는 시간 표에 보이지 않는 비용입니다. 잡았다 놓는 것은 살아 있는 양에 남지 않습니다.
      *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 재는 용도가 아닙니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
 
     void FrameProfileSession::begin()
     {

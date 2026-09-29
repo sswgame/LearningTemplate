@@ -99,7 +99,7 @@ namespace sw::editor
      * @brief `-gv_editorPanelDump=<N>`: N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
      * @details 0 이면 아무것도 하지 않습니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_editorPanelDump, 0, "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_editorPanelDump, 0, "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
 
     void EditorPanelDump::dumpIfRequested()
     {

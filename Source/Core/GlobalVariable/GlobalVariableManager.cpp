@@ -380,7 +380,7 @@ namespace sw
      *
      * std::unique_lock 을 잡아 동시 등록 경쟁을 막고, string_view 로 조회해 불필요한 string 을 만들지 않고 이미 있는지 확인합니다.
      */
-    bool GlobalVariableManager::registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType, string_view moduleName, uint32 typeSize )
+    bool GlobalVariableManager::registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType, string_view moduleName, uint32 typeSize, bool bTestOnly )
     {
         if ( name.empty() || pData == nullptr )
             return false;
@@ -405,6 +405,7 @@ namespace sw
         pInfo->_enumType                     = string{ enumType };
         pInfo->_moduleName                   = string{ moduleName };
         pInfo->_typeSize                     = typeSize;
+        pInfo->_bTestOnly                    = bTestOnly;
 
         const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
 
@@ -448,7 +449,8 @@ namespace sw
                               pCurrent->_description,
                               pCurrent->_enumType,
                               moduleName,
-                              pCurrent->_typeSize );
+                              pCurrent->_typeSize,
+                              pCurrent->_bTestOnly );
             pCurrent = pCurrent->_pNext;
         }
     }
@@ -599,7 +601,7 @@ namespace sw
     // GlobalVariableRegistrar 구현부
     // ============================================================================
 
-    GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
+    GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize, bool bTestOnly )
         : _name{ pName }
         , _type{ type }
         , _pData{ pData }
@@ -608,6 +610,7 @@ namespace sw
         , _enumType{ pEnumType }
         , _moduleName{ pModuleName }
         , _typeSize{ typeSize }
+        , _bTestOnly{ bTestOnly }
         , _pNext{ getHead() }
     {
         getHead() = this;

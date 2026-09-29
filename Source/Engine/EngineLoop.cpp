@@ -68,15 +68,15 @@ namespace sw
      * @details 크래시 리포트는 크래시가 나야만 만들어집니다. 그래서 "덤프가 제대로 써지는가" 는 일부러
      *          죽여 보는 것 말고는 확인할 방법이 없습니다. 배포하고 나서 안 된다는 것을 알면 늦습니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)", SW_KEEP_IN_SHIPPING );
     /**
      * @brief `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`: N 번째 프레임에 백엔드 교체를 요청합니다.
      * @details 교체는 에디터 메뉴에서만 일으킬 수 있어 헤드리스로 재현 · 검증할 방법이 없었습니다. 요청 방식은 에디터
      *          패널과 같습니다(`GlobalVariableInfo::setValueAsInt` → 변경 콜백 → BackendSwapController 가 다음 프레임에
      *          적용). C++ 대입(`gv_rhiBackend = x`)은 콜백을 부르지 않아 아무 일도 일어나지 않습니다. 0 이면 꺼져 있습니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
-    SW_GLOBAL_VARIABLE_ENUM( gv_rhiSwapTo, RHIBackend, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_ENUM( gv_rhiSwapTo, RHIBackend, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
 
 } // namespace sw
 
@@ -515,6 +515,8 @@ namespace sw
                            bool                              bTickScene )
     {
         // 진단: 지정한 프레임에 백엔드 교체를 요청한다(에디터 패널과 같은 경로. setValueAsInt 가 변경 콜백을 부른다).
+        // 테스트용 스위치라 Shipping 에는 없다(그 빌드에서 gv_rhiSwapAtFrame 은 등록되지 않아 늘 0 이다).
+#if !defined( SW_SHIPPING )
         if ( gv_rhiSwapAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_rhiSwapAtFrame ) &&
              gv_rhiBackend != gv_rhiSwapTo )
         {
@@ -524,6 +526,7 @@ namespace sw
                 pVar->setValueAsInt( static_cast<int32>( gv_rhiSwapTo ) );
             gv_rhiSwapAtFrame = 0; // 한 번만. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
         }
+#endif
 
         if ( _bHeadless )
             return;

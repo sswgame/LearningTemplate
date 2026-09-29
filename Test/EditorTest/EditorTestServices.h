@@ -12,6 +12,7 @@
 namespace sw
 {
     class CommandStack;
+    class GlobalVariableManager;
     class SceneManager;
 } // namespace sw
 
@@ -37,5 +38,16 @@ namespace sw::editor
 
         ScopedSceneManagerService( const ScopedSceneManagerService& )            = delete;
         ScopedSceneManagerService& operator=( const ScopedSceneManagerService& ) = delete;
+    };
+
+    /** @brief 스코프 동안 전역 변수 매니저를 지역 서비스로 걸어 둡니다 — 프리셋 저장 · 불러오기가 이 매니저를 봅니다. */
+    class ScopedGlobalVariableManagerService
+    {
+    public:
+        explicit ScopedGlobalVariableManagerService( GlobalVariableManager& manager ) { bindLocalService<GlobalVariableManager>( &manager ); }
+        ~ScopedGlobalVariableManagerService() { unbindLocalService<GlobalVariableManager>(); }
+
+        ScopedGlobalVariableManagerService( const ScopedGlobalVariableManagerService& )            = delete;
+        ScopedGlobalVariableManagerService& operator=( const ScopedGlobalVariableManagerService& ) = delete;
     };
 } // namespace sw::editor

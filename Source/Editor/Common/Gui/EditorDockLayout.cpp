@@ -70,7 +70,7 @@ namespace sw::editor
      *          `windows.ini` 에 굳어, 다음 실행부터 그 패널만 열렸습니다.
      *          id 는 `registerDefaultPanels` 가 준 것입니다(예: `render_targets` · `profiler` · `material`).
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 
     bool EditorDockLayout::isPanelOverrideActive()
     {
