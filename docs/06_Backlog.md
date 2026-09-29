@@ -2021,6 +2021,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — 트랜스폼 연속 배열 · 틱 목록 뒤에 흩어진 것을 모았다)
+
+세 단계와 틱 목록 작업이 끝난 뒤 바뀐 파일을 다시 읽고 겹친 것 · 자리가 틀린 것 · 쓰지 않게 된 것을 걷었다. 동작은 같다(Release 번갈아 3회, 잡음 안).
+
+**① 트랜스폼 쓰기 경로를 계층 한 곳으로.**
+- 틱 뒤 적용 · 배치 쓰기의 잡 셋과 도우미 둘(`applyTransformWriteRange` · `resolveSceneComponent`)이 매니저의 틱 파일에 있었다. 계층 클래스는 스스로를
+  "매니저는 단계만 정하고 알고리즘은 이 타입이 갖는다" 로 설명하는데 그 반대였다. `SceneTransformHierarchy::applyTickWrites` · `applyBatch` 로 옮겼고 매니저는
+  한 줄씩 부른다. 매니저의 비공개 함수 둘과 멤버 하나(`_listActiveWriteSlot`), 계층이 매니저에 내보내던 내부 배열 게터 셋을 걷었다.
+- "값 비교 → 쓰기 → 잎 루트면 합성, 아니면 계층 더티" 가 두 벌이었다(`SceneComponent::applyTransformWrite` · `applyPendingSlot`). 뒤처리는
+  `applyLocalChange` 하나, 알림(프리미티브 더티 + 훅)은 `notifyWorldUpdated` 하나다(컴포넌트의 합성도 이것을 부른다). `applyTransformWrite` 는 공개 API 에서 빠져
+  계층의 `applyWrite` 가 됐다(잎 루트면 컴포넌트 더티를 내리는 것까지 예전과 같다).
+- 로컬 값 셋을 다루는 곳마다 있던 세 갈래 분기(세터 셋 · 틱 대기 · 쓰기 큐 합치기 · 틱 중 배치 · 대기 적용 · 배치 적용)를 비트 하나(`SceneTransformPage::LocalValueBit`,
+  예전 `PendingBit`)와 도우미로 모았다 — `getLocalValueRef` · `getPendingValueRef` · `writeLocalValue`(허용치 규칙 한 곳) · `SceneTransformWrite::getValueMask/getValue/setValue`.
+  세터 셋은 `setLocalValue( bit, value )` 한 몸통을 부른다.
+
 ### 2026-09-29 (틱 목록을 평평하게 — 언리얼 FTickTaskManager · 유니티 BehaviourManager 모양, components −28 %)
 
 **어떻게 골랐나.** 프로파일 뒤 후보 셋을 상용 엔진과 견줬다.

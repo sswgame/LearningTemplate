@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
@@ -38,13 +39,45 @@ namespace sw
             kHasChildren = 1u << 1, ///< 자식이 하나 이상 있습니다
             kNotifyOwner = 1u << 2, ///< 월드가 바뀌면 소유 컴포넌트의 `onWorldTransformUpdated` 를 부릅니다
         };
-        /** @brief `_arrPendingMask` 비트입니다. 틱 중에 쓴 로컬 값 가운데 어느 것이 적용을 기다리는지 나타냅니다. */
-        enum PendingBit : uint8
+        /**
+         * @brief 로컬 값 하나를 가리키는 비트입니다. 세터 · 틱 대기 표시(`_arrPendingMask`) · 쓰기 건(`SceneTransformWrite`)이 같은 비트를 씁니다.
+         * @details 예전에는 세 값을 다루는 곳마다(세터 셋 · 틱 대기 · 쓰기 큐 합치기 · 배치 적용 · 대기 적용) 같은 세 갈래 분기를 따로 들고 있었습니다.
+         */
+        enum LocalValueBit : uint8
         {
-            kPendingPosition = 1u << 0,
-            kPendingRotation = 1u << 1,
-            kPendingScale    = 1u << 2,
+            kLocalPosition = 1u << 0,
+            kLocalRotation = 1u << 1,
+            kLocalScale    = 1u << 2,
         };
+        /** @brief `LocalValueBit` 전부입니다. 비트를 차례로 돌 때 씁니다(`for ( bit = kLocalPosition; bit <= kLocalScale; bit <<= 1 )`). */
+        static constexpr uint8 kAllLocalValues = kLocalPosition | kLocalRotation | kLocalScale;
+
+        /** @brief 비트 하나가 가리키는 로컬 값의 자리입니다. */
+        float3& getLocalValueRef( uint32 pageIndex, uint8 bit )
+        {
+            return ( bit == kLocalPosition ) ? _arrLocalPosition[pageIndex] : ( bit == kLocalRotation ) ? _arrLocalRotation[pageIndex]
+                                                                                                        : _arrLocalScale[pageIndex];
+        }
+        /** @brief 비트 하나가 가리키는 틱 대기 값의 자리입니다. */
+        float3& getPendingValueRef( uint32 pageIndex, uint8 bit )
+        {
+            return ( bit == kLocalPosition ) ? _arrPendingPosition[pageIndex] : ( bit == kLocalRotation ) ? _arrPendingRotation[pageIndex]
+                                                                                                          : _arrPendingScale[pageIndex];
+        }
+        /**
+         * @brief 로컬 값 하나를 씁니다. 지금 값과 거의 같으면 쓰지 않고 false 입니다.
+         * @details **제곱 거리에는 제곱한 허용치를 씁니다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가 "안 움직였다" 가 되는데, 비교
+         *          기준이 매번 **지금 값**이라 그 아래 움직임은 쌓이지도 않습니다. 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에
+         *          있었습니다. 세터 · 틱 뒤 적용 · 배치 쓰기가 모두 이 규칙 하나를 씁니다.
+         */
+        bool writeLocalValue( uint32 pageIndex, uint8 bit, const float3& value )
+        {
+            float3& current = getLocalValueRef( pageIndex, bit );
+            if ( float3::getDistanceSquared( current, value ) <= MathUtil::EpsilonSquared )
+                return false;
+            current = value;
+            return true;
+        }
 
         float4x4        _arrWorldMatrix[kSlotCount];      ///< 계층을 합성한 월드 행렬
         double3         _arrWorldPositionLwc[kSlotCount]; ///< float64 로 누적한 월드 위치(LWC)
@@ -58,7 +91,7 @@ namespace sw
         float3          _arrPendingScale[kSlotCount];     ///< 틱 중에 쓴 로컬 스케일(적용 전)
         SceneComponent* _arrOwner[kSlotCount];            ///< 칸을 쓰는 컴포넌트. 빈 칸이면 nullptr 입니다
         uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `SceneTransformStorage::kNoPrimitive`
-        uint8           _arrPendingMask[kSlotCount];      ///< `PendingBit` 조합. 칸의 주인 오브젝트를 틱하는 스레드만 씁니다
+        uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 칸의 주인 오브젝트를 틱하는 스레드만 씁니다
         uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
     };
 

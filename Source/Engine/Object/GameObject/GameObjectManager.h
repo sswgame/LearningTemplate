@@ -211,7 +211,8 @@ namespace sw
          *          (1) 핸들 해석 · 필드 쓰기 · 더티 표시가 워커에서 나란히 돌고 (2) 세대는 배치 끝에 한 번 오른다는 것입니다.
          *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다.
          *          **틱 중에는 부를 수 없습니다.** 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
-         *          부모 사슬이 흔들립니다. 그때는 건마다 세터로 돌립니다(세터가 지연 경로를 탑니다).
+         *          부모 사슬이 흔들립니다. 그때는 건마다 세터로 돌립니다(세터가 틱 중 쓰기 길을 탑니다). 알고리즘은
+         *          `SceneTransformHierarchy::applyBatch` 에 있습니다.
          * @return 실제로 값이 바뀐 건수입니다.
          */
         uint32 applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count );
@@ -232,7 +233,7 @@ namespace sw
 
         /**
          * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
-         * @details 큐는 `SceneTransformHierarchy` 의 것이고, 틱 뒤 `applyQueuedTransformWrites` 가 `applyTransformBatch` 와 같은
+         * @details 큐는 `SceneTransformHierarchy` 의 것이고, 틱 뒤 `SceneTransformHierarchy::applyTickWrites` 가 `applyTransformBatch` 와 같은
          *          병렬 적용을 돕니다. 스크래치 슬롯을 받지 못한 스레드(도우미 칸이 다 찬 드문 경우)만 지연 델리게이트로 갑니다.
          */
         void queueTransformWrite( const SceneTransformWrite& write );
@@ -441,16 +442,6 @@ namespace sw
         void queueBeginPlay( ComponentHandle handle );
         /** @brief `tick` 의 컴포넌트 단계입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents` → 표시 해제. 오브젝트가 있을 때만 돕니다. */
         void tickComponentsPhase( float32 deltaTime );
-        /**
-         * @brief 틱 중에 쓴 트랜스폼을 적용하고 목록을 비웁니다(틱 뒤, 게임 스레드). 먼저 칸에 바로 쓴 대기 값, 다음에 쓰기 큐입니다.
-         * @details 대기 칸은 스레드 슬롯 단위로 나눠 워커가 칸에서 바로 옮기고 합성합니다(`SceneTransformHierarchy::applyPendingSlot`).
-         *          쓰기 큐(다른 오브젝트의 컴포넌트에 쓴 것)는 그 뒤에 예전처럼 슬롯 단위로 적용합니다 — 같은 슬롯의 건은 한 워커가 순서대로
-         *          적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이깁니다. 다른 스레드가 같은 컴포넌트를 쓴 경우는 예전과 같이 순서가 없습니다.
-         * @return 실제로 값이 바뀐 건수입니다.
-         */
-        uint32 applyQueuedTransformWrites();
-        /** @brief `applyQueuedTransformWrites` 의 앞 절반입니다 — 칸에 바로 쓴 대기 값을 옮기고 합성합니다. 바뀐 칸 수를 돌려줍니다. */
-        uint32 applyPendingTransformSlots();
         /** @brief 새 ObjectId 를 발급합니다. */
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
@@ -573,7 +564,6 @@ namespace sw
         uint64                  _lastStageGeneration;     ///< DAG 스테이지 캐시(`_listCachedTickStage`)를 지은 등록부 세대
         atomic<uint32>          _tickStageBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
         vector<TickStage>       _listCachedTickStage;     ///< 선행 조건이 있을 때만 쓰는 DAG 스테이지(등록부가 짓습니다)
-        vector<uint32>          _listActiveWriteSlot;     ///< 이번 적용에서 비어 있지 않은 쓰기 큐 슬롯(할당 재사용)
         vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
         atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)
         mutex                   _beginPlayMutex;          ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)

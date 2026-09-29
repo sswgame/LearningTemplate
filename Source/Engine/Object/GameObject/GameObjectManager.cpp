@@ -94,7 +94,6 @@ namespace sw
         , _lastStageGeneration{ 0 }
         , _tickStageBuildCount{ 0 }
         , _listCachedTickStage{}
-        , _listActiveWriteSlot{}
         , _listPlayWalk{}
         , _bHasBegunPlay{ false }
         , _beginPlayMutex{}

@@ -1,6 +1,6 @@
 /**
  * @file SceneTransformHierarchy.cpp
- * @brief 트랜스폼 계층 플러시 구현입니다. 더티 루트만 돌고, 루트 단위로 병렬이며, DFS 스택은 슬롯별로 씁니다.
+ * @brief 트랜스폼 계층 구현입니다. 틱 중 쓰기의 적용 · 배치 쓰기 · 로컬 값이 바뀐 칸의 뒤처리 · 플러시(더티 루트만, 루트 단위 병렬, DFS 스택은 슬롯별).
  */
 #include "pch.h"
 
@@ -9,9 +9,39 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Common/EngineParallel.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct SceneTransformHierarchyInternal
+        {
+            /** @brief 핸들을 씬 컴포넌트로 풉니다(리플렉션 캐스트 없이 플래그 비트로). 씬 컴포넌트가 아니거나 죽었으면 nullptr 입니다. */
+            static SceneComponent* resolveSceneComponent( GameObjectManager& manager, ComponentHandle handle )
+            {
+                Component* pComp = manager.resolveComponent( handle );
+                if ( pComp == nullptr || pComp->isSceneComponent() == false )
+                    return nullptr;
+                return static_cast<SceneComponent*>( pComp );
+            }
+
+            /** @brief 비트 하나의 로컬 값을 세터로 씁니다(틱 중 배치 — 세터가 틱 중 쓰기 길을 탄다). */
+            static void setLocalValue( SceneComponent& target, uint8 bit, const float3& value )
+            {
+                if ( bit == SceneTransformPage::kLocalPosition )
+                    target.setLocalPosition( value );
+                else if ( bit == SceneTransformPage::kLocalRotation )
+                    target.setLocalRotation( value );
+                else
+                    target.setLocalScale( value );
+            }
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -25,6 +55,7 @@ namespace sw
         , _listPendingSlotScratch{}
         , _pPendingSlotScratch{ nullptr }
         , _writeScratchCount{ 0 }
+        , _listActiveScratchSlot{}
         , _listScratchStack{}
         , _dirtyGeneration{ 1 }
     {
@@ -133,7 +164,7 @@ namespace sw
         }
     }
 
-    void SceneTransformHierarchy::beginQueuedWrites()
+    void SceneTransformHierarchy::beginTickWrites()
     {
         const uint32 slotCount = engine::getParallelScratchSlotCount();
         if ( _listWriteScratch.size() < slotCount )
@@ -154,60 +185,6 @@ namespace sw
         return true;
     }
 
-    bool SceneTransformHierarchy::applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry )
-    {
-        SceneTransformPage* pPage = storage.findPage( transformSlot );
-        if ( pPage == nullptr )
-            return false;
-        SceneTransformPage& page        = *pPage;
-        const uint32        pageIndex   = transformSlot & SceneTransformPage::kSlotMask;
-        const uint8         pendingMask = page._arrPendingMask[pageIndex];
-        page._arrPendingMask[pageIndex] = 0;
-
-        // 세터와 같은 규칙이다: 제곱 거리에 제곱한 허용치, 값이 같으면 쓰지 않는다.
-        bool bChanged = false;
-        if ( ( pendingMask & SceneTransformPage::kPendingPosition ) != 0 &&
-             float3::getDistanceSquared( page._arrLocalPosition[pageIndex], page._arrPendingPosition[pageIndex] ) > MathUtil::EpsilonSquared )
-        {
-            page._arrLocalPosition[pageIndex] = page._arrPendingPosition[pageIndex];
-            bChanged                          = true;
-        }
-        if ( ( pendingMask & SceneTransformPage::kPendingRotation ) != 0 &&
-             float3::getDistanceSquared( page._arrLocalRotation[pageIndex], page._arrPendingRotation[pageIndex] ) > MathUtil::EpsilonSquared )
-        {
-            page._arrLocalRotation[pageIndex] = page._arrPendingRotation[pageIndex];
-            bChanged                          = true;
-        }
-        if ( ( pendingMask & SceneTransformPage::kPendingScale ) != 0 &&
-             float3::getDistanceSquared( page._arrLocalScale[pageIndex], page._arrPendingScale[pageIndex] ) > MathUtil::EpsilonSquared )
-        {
-            page._arrLocalScale[pageIndex] = page._arrPendingScale[pageIndex];
-            bChanged                       = true;
-        }
-        if ( bChanged == false )
-            return false;
-
-        SceneComponent* pOwner = page._arrOwner[pageIndex];
-        const uint8     flag   = page._arrFlag[pageIndex];
-        if ( ( flag & ( SceneTransformPage::kHasParent | SceneTransformPage::kHasChildren ) ) == 0 )
-        {
-            // 잎 루트다. 순서를 기다릴 부모도 내려갈 자식도 없으니 여기서 곧장 월드를 만든다 — 컴포넌트를 만지지 않는다. 컴포넌트가
-            // 이미 더티(틱 전에 쓰였고 플러시 전)라면 더티 목록에 올라 있으므로 플러시가 한 번 더 합성한다. 값은 같다.
-            SceneTransformStorage::composeWorld( page, pageIndex, nullptr, nullptr );
-            const uint32 primitiveIndex = page._arrPrimitiveIndex[pageIndex];
-            if ( primitiveIndex != SceneTransformStorage::kNoPrimitive )
-                registry.markTransformDirty( primitiveIndex );
-            if ( ( flag & SceneTransformPage::kNotifyOwner ) != 0 && pOwner != nullptr )
-                pOwner->onWorldTransformUpdated();
-            return true;
-        }
-
-        // 계층이 있는 것은 컴포넌트를 거쳐 더티를 세우고 루트를 올린다. 플러시가 위에서부터 내려간다.
-        if ( pOwner != nullptr )
-            pOwner->markHierarchyDirtyParallel();
-        return true;
-    }
-
     bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write )
     {
         const uint32 slot = engine::getParallelScratchSlot();
@@ -218,21 +195,12 @@ namespace sw
         // 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다).
         if ( listSlot.empty() == false && listSlot.back()._handle == write._handle )
         {
-            SceneTransformWrite& last = listSlot.back();
-            if ( write._bSetPosition != SW_FALSE )
+            SceneTransformWrite& last      = listSlot.back();
+            const uint8          valueMask = write.getValueMask();
+            for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
             {
-                last._localPosition = write._localPosition;
-                last._bSetPosition  = SW_TRUE;
-            }
-            if ( write._bSetRotation != SW_FALSE )
-            {
-                last._localRotation = write._localRotation;
-                last._bSetRotation  = SW_TRUE;
-            }
-            if ( write._bSetScale != SW_FALSE )
-            {
-                last._localScale = write._localScale;
-                last._bSetScale  = SW_TRUE;
+                if ( ( valueMask & bit ) != 0 )
+                    last.setValue( bit, write.getValue( bit ) );
             }
             return true;
         }
@@ -261,6 +229,259 @@ namespace sw
             listSlot.clear();
         for ( vector<uint32>& listSlot : _listPendingSlotScratch )
             listSlot.clear();
+    }
+
+    void SceneTransformHierarchy::notifyWorldUpdated( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry )
+    {
+        // 렌더 프리미티브는 칸에 적힌 번호로 등록부에 바로 찍는다(메시 컴포넌트는 훅을 끈다). 그 밖의 파생은 알림 비트로 훅을 받는다.
+        const uint32 primitiveIndex = page._arrPrimitiveIndex[pageIndex];
+        if ( primitiveIndex != SceneTransformStorage::kNoPrimitive && pRegistry != nullptr )
+            pRegistry->markTransformDirty( primitiveIndex );
+        SceneComponent* pOwner = page._arrOwner[pageIndex];
+        if ( ( page._arrFlag[pageIndex] & SceneTransformPage::kNotifyOwner ) != 0 && pOwner != nullptr )
+            pOwner->onWorldTransformUpdated();
+    }
+
+    bool SceneTransformHierarchy::applyLocalChange( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry )
+    {
+        if ( ( page._arrFlag[pageIndex] & ( SceneTransformPage::kHasParent | SceneTransformPage::kHasChildren ) ) == 0 )
+        {
+            // 잎 루트다. 순서를 기다릴 부모도 내려갈 자식도 없으니 여기서 곧장 월드를 만든다 — 컴포넌트를 만지지 않는다.
+            SceneTransformStorage::composeWorld( page, pageIndex, nullptr, nullptr );
+            notifyWorldUpdated( page, pageIndex, pRegistry );
+            return true;
+        }
+
+        // 계층이 있는 것은 소유 컴포넌트를 거쳐 더티를 세우고 루트를 올린다. 플러시가 위에서부터 내려간다.
+        SceneComponent* pOwner = page._arrOwner[pageIndex];
+        if ( pOwner != nullptr )
+            pOwner->markHierarchyDirtyParallel();
+        return false;
+    }
+
+    bool SceneTransformHierarchy::applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry )
+    {
+        SceneTransformPage* pPage = storage.findPage( transformSlot );
+        if ( pPage == nullptr )
+            return false;
+        SceneTransformPage& page        = *pPage;
+        const uint32        pageIndex   = transformSlot & SceneTransformPage::kSlotMask;
+        const uint8         pendingMask = page._arrPendingMask[pageIndex];
+        page._arrPendingMask[pageIndex] = 0;
+
+        bool bChanged = false;
+        for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
+        {
+            if ( ( pendingMask & bit ) != 0 && page.writeLocalValue( pageIndex, bit, page.getPendingValueRef( pageIndex, bit ) ) )
+                bChanged = true;
+        }
+        if ( bChanged == false )
+            return false;
+
+        // 잎 루트의 컴포넌트가 이미 더티였다면(틱 전에 쓰였고 플러시 전) 더티 목록에 올라 있어 플러시가 한 번 더 합성한다. 값은 같다.
+        // 그 더티를 내리려면 컴포넌트를 만져야 하는데, 이 길은 그것을 피하려고 칸만 본다.
+        applyLocalChange( page, pageIndex, &registry );
+        return true;
+    }
+
+    bool SceneTransformHierarchy::applyWrite( SceneComponent& target, const SceneTransformWrite& write )
+    {
+        SceneTransformPage& page      = *target._pTransformPage;
+        const uint32        pageIndex = target.getPageIndex();
+        const uint8         valueMask = write.getValueMask();
+        bool                bChanged  = false;
+        for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
+        {
+            if ( ( valueMask & bit ) != 0 && page.writeLocalValue( pageIndex, bit, write.getValue( bit ) ) )
+                bChanged = true;
+        }
+        if ( bChanged == false )
+            return false;
+
+        PrimitiveRegistry* pRegistry = ( target._pManager != nullptr ) ? &target._pManager->getPrimitiveRegistry() : nullptr;
+        if ( applyLocalChange( page, pageIndex, pRegistry ) )
+            target._bIsTransformDirty = SW_FALSE;
+        return true;
+    }
+
+    uint32 SceneTransformHierarchy::applyWriteRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget )
+    {
+        uint32 changedCount = 0;
+        for ( uint32 index = start; index < end; ++index )
+        {
+            SceneComponent* pScene = ( bUseCachedTarget && pWrite[index]._pTarget != nullptr )
+                                       ? pWrite[index]._pTarget
+                                       : SceneTransformHierarchyInternal::resolveSceneComponent( manager, pWrite[index]._handle );
+            if ( pScene == nullptr || pScene->isPendingDestroy() )
+                continue;
+            if ( applyWrite( *pScene, pWrite[index] ) )
+                ++changedCount;
+        }
+        return changedCount;
+    }
+
+    uint32 SceneTransformHierarchy::applyPendingSlots( PrimitiveRegistry& registry )
+    {
+        uint32 totalCount = 0;
+        _listActiveScratchSlot.clear();
+        for ( uint32 slot = 0; slot < _writeScratchCount; ++slot )
+        {
+            if ( _pPendingSlotScratch[slot].empty() )
+                continue;
+            totalCount += static_cast<uint32>( _pPendingSlotScratch[slot].size() );
+            _listActiveScratchSlot.push_back( slot );
+        }
+        if ( totalCount == 0 )
+            return 0;
+
+        // 스레드 슬롯 하나가 잡 하나다. 칸 하나는 처음 대기에 든 스레드의 목록에만 있으므로 워커끼리 같은 칸을 만지지 않는다.
+        struct PendingSlotJob
+        {
+            SceneTransformStorage* _pStorage{ nullptr };
+            PrimitiveRegistry*     _pRegistry{ nullptr };
+            vector<uint32>*        _pSlotList{ nullptr };
+            const uint32*          _pActiveSlot{ nullptr };
+            atomic<uint32>         _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                uint32 changedCount = 0;
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    for ( const uint32 transformSlot : std::as_const( _pSlotList[_pActiveSlot[index]] ) )
+                    {
+                        if ( applyPendingSlot( *_pStorage, transformSlot, *_pRegistry ) )
+                            ++changedCount;
+                    }
+                }
+                if ( changedCount > 0 )
+                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
+            }
+        };
+        PendingSlotJob job{};
+        job._pStorage            = &SceneTransformStorage::get();
+        job._pRegistry           = &registry;
+        job._pSlotList           = _pPendingSlotScratch;
+        job._pActiveSlot         = _listActiveScratchSlot.data();
+        const uint32 activeCount = static_cast<uint32>( _listActiveScratchSlot.size() );
+        if ( totalCount < kParallelWriteCount )
+            job.applyRange( 0, activeCount );
+        else
+            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PendingSlotJob::applyRange, &job ) );
+        return job._changedCount.load( std::memory_order_relaxed );
+    }
+
+    uint32 SceneTransformHierarchy::applyQueuedWriteSlots( GameObjectManager& manager )
+    {
+        // 비어 있지 않은 슬롯만 잡을 낸다. 도우미 슬롯(렌더 · 로더 스레드 몫)은 대개 비어 있다.
+        uint32 totalCount = 0;
+        _listActiveScratchSlot.clear();
+        for ( uint32 slot = 0; slot < _writeScratchCount; ++slot )
+        {
+            if ( _pWriteScratch[slot].empty() )
+                continue;
+            totalCount += static_cast<uint32>( _pWriteScratch[slot].size() );
+            _listActiveScratchSlot.push_back( slot );
+        }
+        if ( totalCount == 0 )
+            return 0;
+
+        // 슬롯 하나가 잡 하나다. 같은 슬롯의 건은 쌓인 순서대로 한 워커가 적용한다(마지막 값이 이긴다).
+        struct SlotWriteJob
+        {
+            GameObjectManager*           _pManager{ nullptr };
+            vector<SceneTransformWrite>* _pSlot{ nullptr };
+            const uint32*                _pActiveSlot{ nullptr };
+            atomic<uint32>               _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                uint32 changedCount = 0;
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[_pActiveSlot[index]] );
+                    changedCount += applyWriteRange( *_pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ), true );
+                }
+                if ( changedCount > 0 )
+                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
+            }
+        };
+        SlotWriteJob job{};
+        job._pManager            = &manager;
+        job._pSlot               = _pWriteScratch;
+        job._pActiveSlot         = _listActiveScratchSlot.data();
+        const uint32 activeCount = static_cast<uint32>( _listActiveScratchSlot.size() );
+        if ( totalCount < kParallelWriteCount )
+            job.applyRange( 0, activeCount );
+        else
+            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SlotWriteJob::applyRange, &job ) );
+        return job._changedCount.load( std::memory_order_relaxed );
+    }
+
+    uint32 SceneTransformHierarchy::applyTickWrites( GameObjectManager& manager, PrimitiveRegistry& registry )
+    {
+        // 워커가 올리는 더티 루트(계층이 있는 칸)는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
+        mergeQueuedDirtyRoots();
+        const uint32 changedCount = applyPendingSlots( registry ) + applyQueuedWriteSlots( manager );
+        mergeQueuedDirtyRoots();
+        clearQueuedWrites();
+        if ( changedCount > 0 )
+            notifyDirtied();
+        return changedCount;
+    }
+
+    uint32 SceneTransformHierarchy::applyBatch( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
+    {
+        if ( pWrite == nullptr || count == 0 )
+            return 0;
+
+        // 틱 중이면 세터로 돌린다. 세터가 틱 중 쓰기 길을 탄다. 배치의 병렬 적용은 틱 밖에서만 안전하다.
+        if ( manager.isStructuralMutationFrozen() )
+        {
+            uint32 deferredCount = 0;
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                SceneComponent* pScene = SceneTransformHierarchyInternal::resolveSceneComponent( manager, pWrite[index]._handle );
+                if ( pScene == nullptr || pScene->isPendingDestroy() )
+                    continue;
+                const uint8 valueMask = pWrite[index].getValueMask();
+                for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
+                {
+                    if ( ( valueMask & bit ) != 0 )
+                        SceneTransformHierarchyInternal::setLocalValue( *pScene, bit, pWrite[index].getValue( bit ) );
+                }
+                ++deferredCount;
+            }
+            return deferredCount;
+        }
+
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 건의
+        // 칸(과 부모 · 자식의 더티 바이트)뿐이다.
+        struct WriteJob
+        {
+            GameObjectManager*         _pManager{ nullptr };
+            const SceneTransformWrite* _pWrite{ nullptr };
+            atomic<uint32>             _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                const uint32 changedCount = applyWriteRange( *_pManager, _pWrite, start, end, false );
+                if ( changedCount > 0 )
+                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
+            }
+        };
+        WriteJob job{};
+        job._pManager = &manager;
+        job._pWrite   = pWrite;
+        // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
+        mergeQueuedDirtyRoots();
+        engine::runParallel( count, kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
+        mergeQueuedDirtyRoots();
+
+        const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
+        if ( changedCount > 0 )
+            notifyDirtied();
+        return changedCount;
     }
 
     void SceneTransformHierarchy::flush()

@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManagerTick.cpp
- * @brief GameObjectManager 의 프레임 경로입니다(tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 적용 · 지연 큐).
+ * @brief GameObjectManager 의 프레임 경로입니다(tick 의 단계 · 병렬 틱 디스패치 · 지연 큐). 트랜스폼 쓰기의 적용은 `SceneTransformHierarchy` 가 맡습니다.
  * @details 수명(생성 · 이름 · 파괴 · 팩토리)은 `GameObjectManager.cpp` 에 있습니다. 이 파일은 매 프레임 도는 것만 담습니다.
  */
 #include "pch.h"
@@ -10,8 +10,6 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
@@ -30,39 +28,6 @@ namespace sw
         {
             /** @brief 항목(오브젝트)이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다. 디스패치 바닥보다 작은 일입니다. */
             static constexpr uint32 kParallelTickThreshold = 16;
-
-            /** @brief 핸들을 씬 컴포넌트로 풉니다(리플렉션 캐스트 없이 플래그 비트로). 씬 컴포넌트가 아니거나 죽었으면 nullptr 입니다. */
-            static SceneComponent* resolveSceneComponent( GameObjectManager* pManager, ComponentHandle handle )
-            {
-                Component* pComp = pManager->resolveComponent( handle );
-                if ( pComp == nullptr || pComp->isSceneComponent() == false || pComp->isPendingDestroy() )
-                    return nullptr;
-                return static_cast<SceneComponent*>( pComp );
-            }
-
-            /**
-             * @brief 쓰기 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뜁니다.
-             * @param bUseCachedTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않을지 여부. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
-             */
-            static uint32 applyTransformWriteRange( GameObjectManager* pManager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget )
-            {
-                uint32 changedCount = 0;
-                for ( uint32 index = start; index < end; ++index )
-                {
-                    SceneComponent* pScene = nullptr;
-                    if ( bUseCachedTarget && pWrite[index]._pTarget != nullptr )
-                    {
-                        pScene = pWrite[index]._pTarget;
-                        if ( pScene->isPendingDestroy() )
-                            continue;
-                    }
-                    else
-                        pScene = resolveSceneComponent( pManager, pWrite[index]._handle );
-                    if ( pScene != nullptr && pScene->applyTransformWrite( pWrite[index] ) )
-                        ++changedCount;
-                }
-                return changedCount;
-            }
 
             /** @brief 항목 하나를 돌립니다. 주 틱이면 `onTick`, 서브틱이면 `onSubTick` 입니다. 살아 있고 켜져 있는지는 부르는 쪽이 이미 봤습니다. */
             static void runTickItem( float32 deltaTime, const TickItem& item )
@@ -179,10 +144,10 @@ namespace sw
             _deferredTransformQueue.drain();
         }
 
-        // 틱 중의 세터가 슬롯 큐에 쌓은 쓰기를 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
+        // 틱 중의 세터가 쓴 것(대기 칸 · 쓰기 큐)을 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
-            applyQueuedTransformWrites();
+            _transformHierarchy.applyTickWrites( *this, _primitiveRegistry );
         }
 
         // 병렬 onTick 이 미룬 스폰 · 데미지 · 태그, 그리고 그것이 만든 오브젝트의 병합.
@@ -214,8 +179,8 @@ namespace sw
             flushSceneTransforms();
         }
 
-        // 틱 중의 세터가 쌓을 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
-        _transformHierarchy.beginQueuedWrites();
+        // 틱 중의 세터가 쓸 대기 칸 목록 · 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
+        _transformHierarchy.beginTickWrites();
         _bTicking.store( true, std::memory_order_release );
 
         {
@@ -280,56 +245,7 @@ namespace sw
 
     uint32 GameObjectManager::applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count )
     {
-        if ( pWrite == nullptr || count == 0 )
-            return 0;
-
-        // 틱 중이면 세터로 돌린다. 세터가 지연 경로를 탄다. 배치의 병렬 쓰기는 틱 밖에서만 안전하다.
-        if ( isStructuralMutationFrozen() )
-        {
-            uint32 deferredCount = 0;
-            for ( uint32 index = 0; index < count; ++index )
-            {
-                SceneComponent* pScene = GameObjectManagerTickInternal::resolveSceneComponent( this, pWrite[index]._handle );
-                if ( pScene == nullptr )
-                    continue;
-                if ( pWrite[index]._bSetPosition != SW_FALSE )
-                    pScene->setLocalPosition( pWrite[index]._localPosition );
-                if ( pWrite[index]._bSetRotation != SW_FALSE )
-                    pScene->setLocalRotation( pWrite[index]._localRotation );
-                if ( pWrite[index]._bSetScale != SW_FALSE )
-                    pScene->setLocalScale( pWrite[index]._localScale );
-                ++deferredCount;
-            }
-            return deferredCount;
-        }
-
-        // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 건의
-        // 컴포넌트(와 부모 · 자식의 더티 바이트)뿐이다.
-        struct WriteJob
-        {
-            GameObjectManager*         _pManager{ nullptr };
-            const SceneTransformWrite* _pWrite{ nullptr };
-            atomic<uint32>             _changedCount{ 0 };
-
-            void applyRange( uint32 start, uint32 end )
-            {
-                const uint32 changedCount = GameObjectManagerTickInternal::applyTransformWriteRange( _pManager, _pWrite, start, end, false );
-                if ( changedCount > 0 )
-                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
-            }
-        };
-        WriteJob job{};
-        job._pManager = this;
-        job._pWrite   = pWrite;
-        // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
-        _transformHierarchy.mergeQueuedDirtyRoots();
-        engine::runParallel( count, SceneTransformHierarchy::kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &WriteJob::applyRange, &job ) );
-        _transformHierarchy.mergeQueuedDirtyRoots();
-
-        const uint32 changedCount = job._changedCount.load( std::memory_order_relaxed );
-        if ( changedCount > 0 )
-            _transformHierarchy.notifyDirtied();
-        return changedCount;
+        return _transformHierarchy.applyBatch( *this, pWrite, count );
     }
 
     const GameObject* GameObjectManager::getTickingObject()
@@ -342,131 +258,11 @@ namespace sw
         if ( _transformHierarchy.queueWriteParallel( write ) )
             return;
 
-        // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 간다.
+        // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
         deferTransformUpdate( [this, write]()
         {
-            if ( GameObjectManagerTickInternal::applyTransformWriteRange( this, &write, 0, 1, false ) > 0 )
-                _transformHierarchy.notifyDirtied();
+            _transformHierarchy.applyBatch( *this, &write, 1 );
         } );
-    }
-
-    uint32 GameObjectManager::applyPendingTransformSlots()
-    {
-        const uint32    slotCount  = _transformHierarchy.getQueuedWriteSlotCount();
-        vector<uint32>* pSlotList  = _transformHierarchy.getPendingSlotLists();
-        uint32          totalCount = 0;
-        _listActiveWriteSlot.clear();
-        for ( uint32 slot = 0; slot < slotCount; ++slot )
-        {
-            if ( pSlotList[slot].empty() )
-                continue;
-            totalCount += static_cast<uint32>( pSlotList[slot].size() );
-            _listActiveWriteSlot.push_back( slot );
-        }
-        if ( totalCount == 0 )
-            return 0;
-
-        // 스레드 슬롯 하나가 잡 하나다. 칸 하나는 처음 대기에 든 스레드의 목록에만 있으므로 워커끼리 같은 칸을 만지지 않는다.
-        struct PendingSlotJob
-        {
-            SceneTransformStorage* _pStorage{ nullptr };
-            PrimitiveRegistry*     _pRegistry{ nullptr };
-            vector<uint32>*        _pSlotList{ nullptr };
-            const uint32*          _pActiveSlot{ nullptr };
-            atomic<uint32>         _changedCount{ 0 };
-
-            void applyRange( uint32 start, uint32 end )
-            {
-                uint32 changedCount = 0;
-                for ( uint32 index = start; index < end; ++index )
-                {
-                    const vector<uint32>& listTransformSlot = std::as_const( _pSlotList[_pActiveSlot[index]] );
-                    for ( const uint32 transformSlot : listTransformSlot )
-                    {
-                        if ( SceneTransformHierarchy::applyPendingSlot( *_pStorage, transformSlot, *_pRegistry ) )
-                            ++changedCount;
-                    }
-                }
-                if ( changedCount > 0 )
-                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
-            }
-        };
-        PendingSlotJob job{};
-        job._pStorage            = &SceneTransformStorage::get();
-        job._pRegistry           = &_primitiveRegistry;
-        job._pSlotList           = pSlotList;
-        job._pActiveSlot         = _listActiveWriteSlot.data();
-        const uint32 activeCount = static_cast<uint32>( _listActiveWriteSlot.size() );
-        if ( totalCount < SceneTransformHierarchy::kParallelWriteCount )
-            job.applyRange( 0, activeCount );
-        else
-            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PendingSlotJob::applyRange, &job ) );
-        return job._changedCount.load( std::memory_order_relaxed );
-    }
-
-    uint32 GameObjectManager::applyQueuedTransformWrites()
-    {
-        // 워커가 올리는 더티 루트(계층이 있는 칸)는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
-        _transformHierarchy.mergeQueuedDirtyRoots();
-        const uint32 pendingChangedCount = applyPendingTransformSlots();
-
-        const uint32                 slotCount  = _transformHierarchy.getQueuedWriteSlotCount();
-        vector<SceneTransformWrite>* pSlot      = _transformHierarchy.getQueuedWriteSlots();
-        uint32                       totalCount = 0;
-        // 비어 있지 않은 슬롯만 잡을 낸다. 도우미 슬롯(렌더 · 로더 스레드 몫)은 대개 비어 있다.
-        _listActiveWriteSlot.clear();
-        for ( uint32 slot = 0; slot < slotCount; ++slot )
-        {
-            if ( pSlot[slot].empty() )
-                continue;
-            totalCount += static_cast<uint32>( pSlot[slot].size() );
-            _listActiveWriteSlot.push_back( slot );
-        }
-        if ( totalCount == 0 )
-        {
-            _transformHierarchy.mergeQueuedDirtyRoots();
-            _transformHierarchy.clearQueuedWrites();
-            if ( pendingChangedCount > 0 )
-                _transformHierarchy.notifyDirtied();
-            return pendingChangedCount;
-        }
-
-        // 슬롯 하나가 잡 하나다. 같은 슬롯의 건은 쌓인 순서대로 한 워커가 적용한다(마지막 값이 이긴다).
-        struct SlotWriteJob
-        {
-            GameObjectManager*           _pManager{ nullptr };
-            vector<SceneTransformWrite>* _pSlot{ nullptr };
-            const uint32*                _pActiveSlot{ nullptr };
-            atomic<uint32>               _changedCount{ 0 };
-
-            void applyRange( uint32 start, uint32 end )
-            {
-                uint32 changedCount = 0;
-                for ( uint32 index = start; index < end; ++index )
-                {
-                    const vector<SceneTransformWrite>& listWrite = std::as_const( _pSlot[_pActiveSlot[index]] );
-                    changedCount += GameObjectManagerTickInternal::applyTransformWriteRange( _pManager, listWrite.data(), 0, static_cast<uint32>( listWrite.size() ), true );
-                }
-                if ( changedCount > 0 )
-                    _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
-            }
-        };
-        SlotWriteJob job{};
-        job._pManager            = this;
-        job._pSlot               = pSlot;
-        job._pActiveSlot         = _listActiveWriteSlot.data();
-        const uint32 activeCount = static_cast<uint32>( _listActiveWriteSlot.size() );
-        if ( totalCount < SceneTransformHierarchy::kParallelWriteCount )
-            job.applyRange( 0, activeCount );
-        else
-            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SlotWriteJob::applyRange, &job ) );
-        _transformHierarchy.mergeQueuedDirtyRoots();
-        _transformHierarchy.clearQueuedWrites();
-
-        const uint32 changedCount = pendingChangedCount + job._changedCount.load( std::memory_order_relaxed );
-        if ( changedCount > 0 )
-            _transformHierarchy.notifyDirtied();
-        return changedCount;
     }
 
     void GameObjectManager::deferTransformUpdate( TransformUpdateDelegate func )

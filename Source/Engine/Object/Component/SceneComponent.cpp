@@ -112,7 +112,7 @@ namespace sw
         _pManager->queueTransformWrite( write );
     }
 
-    void SceneComponent::writeTickTransform( uint8 pendingBit, const float3& value )
+    void SceneComponent::writeTickTransform( uint8 bit, const float3& value )
     {
         // **자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다.** 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
         // 이 스레드 하나다. 예전에는 세터마다 64 바이트짜리 쓰기 건을 스레드 큐에 올렸고(같은 컴포넌트면 앞 건과 합치는 비교 포함), 틱 뒤
@@ -125,52 +125,33 @@ namespace sw
             // 칸이 처음 대기에 들 때만 번호를 올린다. 스레드가 대기 목록 칸을 못 받았으면(도우미 칸이 다 찬 드문 경우) 아래 큐로 간다.
             if ( pendingMask != 0 || _pManager->getTransformHierarchy().queuePendingSlot( _transformSlot ) )
             {
-                pendingMask |= pendingBit;
-                if ( pendingBit == SceneTransformPage::kPendingPosition )
-                    _pTransformPage->_arrPendingPosition[pageIndex] = value;
-                else if ( pendingBit == SceneTransformPage::kPendingRotation )
-                    _pTransformPage->_arrPendingRotation[pageIndex] = value;
-                else
-                    _pTransformPage->_arrPendingScale[pageIndex] = value;
+                pendingMask |= bit;
+                _pTransformPage->getPendingValueRef( pageIndex, bit ) = value;
                 return;
             }
         }
 
         // 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있으므로 예전처럼 쓰기 큐로 간다.
         SceneTransformWrite write{};
-        if ( pendingBit == SceneTransformPage::kPendingPosition )
-        {
-            write._localPosition = value;
-            write._bSetPosition  = SW_TRUE;
-        }
-        else if ( pendingBit == SceneTransformPage::kPendingRotation )
-        {
-            write._localRotation = value;
-            write._bSetRotation  = SW_TRUE;
-        }
-        else
-        {
-            write._localScale = value;
-            write._bSetScale  = SW_TRUE;
-        }
+        write.setValue( bit, value );
         queueTickWrite( write );
+    }
+
+    void SceneComponent::setLocalValue( uint8 bit, const float3& value )
+    {
+        if ( isInParallelTick() )
+        {
+            writeTickTransform( bit, value );
+            return;
+        }
+        // 거의 같은 값이면 쓰지 않는다(허용치 규칙은 `SceneTransformPage::writeLocalValue` 한 곳).
+        if ( _pTransformPage->writeLocalValue( getPageIndex(), bit, value ) )
+            markTransformDirty();
     }
 
     void SceneComponent::setLocalPosition( const float3& pos )
     {
-        if ( isInParallelTick() )
-        {
-            writeTickTransform( SceneTransformPage::kPendingPosition, pos );
-            return;
-        }
-        // **제곱 거리에는 제곱한 허용치를 쓴다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가
-        // "안 움직였다" 가 되는데, 비교 기준이 매번 **현재 값**이라 그 아래 움직임은 쌓이지도
-        // 않는다. 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에 있었다.
-        float3& localPosition = _pTransformPage->_arrLocalPosition[getPageIndex()];
-        if ( float3::getDistanceSquared( localPosition, pos ) <= MathUtil::EpsilonSquared )
-            return;
-        localPosition = pos;
-        markTransformDirty();
+        setLocalValue( SceneTransformPage::kLocalPosition, pos );
     }
 
     float3 SceneComponent::getLocalPosition() const
@@ -180,16 +161,7 @@ namespace sw
 
     void SceneComponent::setLocalRotation( const float3& rot )
     {
-        if ( isInParallelTick() )
-        {
-            writeTickTransform( SceneTransformPage::kPendingRotation, rot );
-            return;
-        }
-        float3& localRotation = _pTransformPage->_arrLocalRotation[getPageIndex()];
-        if ( float3::getDistanceSquared( localRotation, rot ) <= MathUtil::EpsilonSquared )
-            return;
-        localRotation = rot;
-        markTransformDirty();
+        setLocalValue( SceneTransformPage::kLocalRotation, rot );
     }
 
     float3 SceneComponent::getLocalRotation() const
@@ -199,16 +171,7 @@ namespace sw
 
     void SceneComponent::setLocalScale( const float3& scale )
     {
-        if ( isInParallelTick() )
-        {
-            writeTickTransform( SceneTransformPage::kPendingScale, scale );
-            return;
-        }
-        float3& localScale = _pTransformPage->_arrLocalScale[getPageIndex()];
-        if ( float3::getDistanceSquared( localScale, scale ) <= MathUtil::EpsilonSquared )
-            return;
-        localScale = scale;
-        markTransformDirty();
+        setLocalValue( SceneTransformPage::kLocalScale, scale );
     }
 
     float3 SceneComponent::getLocalScale() const
@@ -286,13 +249,8 @@ namespace sw
 
     void SceneComponent::notifyWorldTransformUpdated()
     {
-        // 렌더 프리미티브는 칸에 적힌 번호로 등록부에 바로 찍는다(메시 컴포넌트는 훅을 끈다). 그 밖의 파생은 예전처럼 훅을 받는다.
-        const uint32 pageIndex      = getPageIndex();
-        const uint32 primitiveIndex = _pTransformPage->_arrPrimitiveIndex[pageIndex];
-        if ( primitiveIndex != SceneTransformStorage::kNoPrimitive && _pManager != nullptr )
-            _pManager->getPrimitiveRegistry().markTransformDirty( primitiveIndex );
-        if ( ( _pTransformPage->_arrFlag[pageIndex] & SceneTransformPage::kNotifyOwner ) != 0 )
-            onWorldTransformUpdated();
+        // 칸의 합성(틱 뒤 적용)과 같은 알림 한 곳을 쓴다 — 프리미티브는 칸의 번호로, 그 밖의 파생은 알림 비트로 훅을 받는다.
+        SceneTransformHierarchy::notifyWorldUpdated( *_pTransformPage, getPageIndex(), _pManager != nullptr ? &_pManager->getPrimitiveRegistry() : nullptr );
     }
 
     void SceneComponent::setWorldTransformNotify( bool bNotify )
@@ -421,50 +379,11 @@ namespace sw
             pOwner->refreshActiveInHierarchy();
     }
 
-    bool SceneComponent::applyTransformWrite( const SceneTransformWrite& write )
-    {
-        const uint32 pageIndex     = getPageIndex();
-        float3&      localPosition = _pTransformPage->_arrLocalPosition[pageIndex];
-        float3&      localRotation = _pTransformPage->_arrLocalRotation[pageIndex];
-        float3&      localScale    = _pTransformPage->_arrLocalScale[pageIndex];
-        bool         bChanged      = false;
-        if ( write._bSetPosition != SW_FALSE && float3::getDistanceSquared( localPosition, write._localPosition ) > MathUtil::EpsilonSquared )
-        {
-            localPosition = write._localPosition;
-            bChanged      = true;
-        }
-        if ( write._bSetRotation != SW_FALSE && float3::getDistanceSquared( localRotation, write._localRotation ) > MathUtil::EpsilonSquared )
-        {
-            localRotation = write._localRotation;
-            bChanged      = true;
-        }
-        if ( write._bSetScale != SW_FALSE && float3::getDistanceSquared( localScale, write._localScale ) > MathUtil::EpsilonSquared )
-        {
-            localScale = write._localScale;
-            bChanged   = true;
-        }
-        if ( bChanged == false )
-            return false;
-
-        // 잎 루트(부모도 자식도 없다)는 **여기서 곧장** 월드를 만든다. 방금 쓴 캐시 라인이 뜨거운 채로, 같은 워커가 만든다. 자손이 없으니
-        // 순서를 기다릴 것이 없고 플러시 패스가 이 루트를 만질 일도 없다(더티 목록에 오르지 않는다). 큐브 8000 개가 모두 움직이는
-        // 프레임에서 사후 플러시 114 us 가 통째로 사라진 자리다. 계층이 있는 것은 예전처럼 루트를 올리고 플러시가 내려간다.
-        if ( _pParent == nullptr && _listChild.empty() )
-        {
-            _bIsTransformDirty = SW_TRUE;
-            updateWorldTransformFromParent();
-            return true;
-        }
-
-        markHierarchyDirtyParallel();
-        return true;
-    }
-
     void SceneComponent::markHierarchyDirtyParallel()
     {
-        // 계층이 있는 것은 루트를 올리고 플러시가 내려간다. 표시는 `markTransformDirty` 와 같은 두 함수다(세대 올리기와 지연 경로만
-        // 없다). 모두 같은 값을 쓰는 바이트 저장이라 워커 여럿이 겹쳐 써도 무해하다. 루트는 워커 스크래치에 올린다 — 같은 루트를
-        // 두 워커가 올리려 해도 원자 플래그가 한 번만 통과시킨다.
+        // 루트를 올리고 플러시가 내려간다. 표시는 `markTransformDirty` 와 같은 두 함수다(세대 올리기와 지연 경로만 없다). 모두 같은
+        // 값을 쓰는 바이트 저장이라 워커 여럿이 겹쳐 써도 무해하다. 루트는 워커 스크래치에 올린다 — 같은 루트를 두 워커가 올리려 해도
+        // 원자 플래그가 한 번만 통과시킨다.
         SceneComponent* pRoot = markSelfAndAncestorsDirty();
         if ( pRoot != nullptr && _pManager != nullptr )
             _pManager->getTransformHierarchy().queueDirtyRootParallel( pRoot );

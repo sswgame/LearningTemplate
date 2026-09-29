@@ -112,9 +112,9 @@ namespace sw
 
         /**
          * @brief 부모 캐시가 이미 유효하다고 보고 이 노드의 월드 캐시를 갱신합니다.
-         * @details 트랜스폼 계층 플러시(`SceneTransformHierarchy::flushSubtree`)가 루트 → 자식 순으로 부릅니다.
-         *          잎 루트는 `applyTransformWrite` 가 그 자리에서 부릅니다. 틱 뒤 적용의 잎 루트는 이 함수를 거치지 않고 칸에서 바로
-         *          합성합니다(`SceneTransformHierarchy::applyPendingSlot`) — 합성 자체는 어느 쪽이든 `SceneTransformStorage::composeWorld` 입니다.
+         * @details 트랜스폼 계층 플러시(`SceneTransformHierarchy::flushSubtree`)와 지연 합성(`ensureWorldCache`)이 부릅니다. 틱 뒤 적용 ·
+         *          배치 쓰기의 잎 루트는 이 함수를 거치지 않고 칸에서 바로 합성합니다(`SceneTransformHierarchy::applyLocalChange`) —
+         *          합성과 알림은 어느 쪽이든 `SceneTransformStorage::composeWorld` · `SceneTransformHierarchy::notifyWorldUpdated` 입니다.
          */
         void updateWorldTransformFromParent();
 
@@ -132,15 +132,6 @@ namespace sw
 
         /** @brief 트랜스폼이 바뀌었을 때 행렬 캐시를 다시 계산하도록 더티로 표시합니다. */
         void markTransformDirty();
-        /**
-         * @brief 배치 쓰기 한 건을 적용합니다. **워커에서 불립니다**(`GameObjectManager::applyTransformBatch` 전용).
-         * @details 값이 같으면 아무것도 하지 않고 false 를 반환합니다. 바뀌면 필드를 쓰고 더티를 표시합니다. 세대는 올리지 않습니다(배치가
-         *          끝에 한 번 올립니다). 더티 표시는 **바이트 저장**뿐이라(부모의 자손 더티 · 자식의 더티) 여러 워커가 같은
-         *          바이트에 TRUE 를 겹쳐 써도 무해합니다. 그래서 이 두 플래그는 비트필드가 아닙니다(비트필드는 이웃 비트를
-         *          같이 씁니다). 구조 변경(attach · detach)이 없는 구간에서만 부릅니다. 배치가 그 전제를 단언합니다.
-         */
-        bool applyTransformWrite( const SceneTransformWrite& write );
-        // 잎 루트(부모도 자식도 없음)는 위 함수가 월드 행렬까지 그 자리에서 만들고 더티 목록에 올리지 않는다.
 
         /** @brief 트랜스폼 저장소의 칸 번호입니다. 컴포넌트가 사는 동안 바뀌지 않습니다. */
         uint32 getTransformSlot() const { return _transformSlot; }
@@ -170,12 +161,18 @@ namespace sw
         /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)인지 반환합니다. 이때 세터는 바로 쓰지 않고 틱 뒤에 적용합니다. */
         bool isInParallelTick() const;
         /**
+         * @brief 세터 셋의 몸통입니다. 비트 하나(`SceneTransformPage::LocalValueBit`)의 로컬 값을 씁니다.
+         * @details 병렬 틱 중이면 `writeTickTransform` 으로 가고, 아니면 칸에 쓰고(거의 같은 값이면 건너뜀) 더티를 표시합니다. 예전에는 세터
+         *          셋이 같은 열 줄을 각자 들고 있었습니다.
+         */
+        void setLocalValue( uint8 bit, const float3& value );
+        /**
          * @brief 병렬 틱 중의 세터 한 건입니다. 이 컴포넌트의 오브젝트를 틱하는 스레드면 칸의 대기 자리에 바로 쓰고, 아니면 쓰기 큐에 올립니다.
          * @details 대기 자리는 칸의 주인 오브젝트를 틱하는 스레드만 씁니다(한 오브젝트의 항목은 한 워커가 돈다). 그래서 잠금 없이 쓰고, 칸이
          *          처음 대기에 들 때만 그 스레드의 대기 목록에 번호를 올립니다. 틱 중에 다른 스레드가 읽는 로컬 · 월드 값은 그대로라(틱 전 값)
          *          예전 쓰기 큐와 보이는 것이 같습니다. 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 쓰기 큐로 갑니다.
          */
-        void writeTickTransform( uint8 pendingBit, const float3& value );
+        void writeTickTransform( uint8 bit, const float3& value );
         /** @brief 페이지 안의 자리입니다. */
         uint32 getPageIndex() const { return _transformSlot & SceneTransformPage::kSlotMask; }
         /** @brief 월드가 다시 합성된 직후입니다. 칸의 프리미티브에 렌더 더티를 찍고, 알림이 켜져 있으면 `onWorldTransformUpdated` 를 부릅니다. */
@@ -212,14 +209,14 @@ namespace sw
         void ensureWorldCache() const;
         /**
          * @brief 자기를 더티로, 조상에 "자손 더티" 를 세웁니다. 더티 루트 목록에 올려야 할 루트를 돌려줍니다(이미 올라 있으면 nullptr).
-         * @details 바이트 저장뿐이라 워커(`applyTransformWrite`)와 직렬(`markTransformDirty`)이 같이 씁니다. 목록에 올리는 쪽만 다릅니다.
+         * @details 바이트 저장뿐이라 워커(`markHierarchyDirtyParallel`)와 직렬(`markTransformDirty`)이 같이 씁니다. 목록에 올리는 쪽만 다릅니다.
          */
         SceneComponent* markSelfAndAncestorsDirty();
         /** @brief 자손 전부를 더티로, 자식이 있는 노드에 "자손 더티" 를 세웁니다. 반복문이고 세대는 건드리지 않습니다. */
         void markDescendantsDirty();
         /**
          * @brief 계층이 있는 노드의 로컬 값이 워커에서 바뀐 뒤 부릅니다. 자기 · 조상 · 자손을 더티로 세우고 루트를 워커 스크래치에 올립니다.
-         * @details 배치 쓰기(`applyTransformWrite`)와 틱 뒤 적용(`SceneTransformHierarchy::applyPendingSlot`)이 같은 세 줄을 씁니다.
+         * @details 틱 뒤 적용 · 배치 쓰기의 뒤처리(`SceneTransformHierarchy::applyLocalChange`)가 계층이 있는 칸에 부릅니다.
          */
         void markHierarchyDirtyParallel();
 
@@ -261,7 +258,7 @@ namespace sw
         GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
-        /// @brief 비트필드가 **아닙니다.** 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세웁니다(`applyTransformWrite`).
+        /// @brief 비트필드가 **아닙니다.** 적용 · 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세웁니다(`markHierarchyDirtyParallel`) — 비트필드면 이웃 비트까지 쓴다.
         uint8 _bIsTransformDirty;
         uint8 _bHasDirtyDescendant;
         /**
