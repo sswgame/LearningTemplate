@@ -1010,6 +1010,8 @@ SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
  * @details 상용 잡 시스템의 기준이다 — 프레임마다 도는 병렬 그룹이 힙을 두드리면 그 수가 곧 프레임당 할당 수다.
  *          스테이지 노드는 풀·침입형 참조, 그룹 콜러블은 락프리 풀, 이름은 fixed_string 이라 워밍업 뒤에는 0 이어야 한다.
  *          `MemoryProfiler` 의 할당 횟수 누계로 잰다(sw 할당자만 센다 — 이 경로의 할당은 전부 그것이다).
+ *          누계는 프로세스 전체라 붐비는 기계에서는 잰 틈에 다른 것이 끼어든다. 그래서 50 회를 세 번까지 재어 **가장 작은 값**을
+ *          본다. 콜러블을 힙으로 되돌리는 회귀는 매 회 할당하므로 세 번 모두 50 이상이라 그대로 잡힌다.
  */
 SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
 {
@@ -1052,16 +1054,25 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
         }
     }
 
-    const bool bWasTracking = pMemory->isTrackingEnabled();
+    // 여러 번 재어 가장 작은 값을 본다. 한 번만 재면 CI 에서 "50 회에 할당 2 회" 로 가끔 졌다(2026-09-29, 태스크 코드를 건드리지 않은 커밋).
+    // 스테이지 여유분은 스테이지 노드의 틈만 메운다. 같은 틈에 다른 풀 · 다른 스레드가 할당하는 것은 막지 못한다.
+    const bool       bWasTracking = pMemory->isTrackingEnabled();
+    constexpr uint32 kRound       = 50;
+    constexpr uint32 kMaxAttempt  = 3;
+    uint32           attemptCount = 0;
+    uint64           allocations  = ~uint64( 0 );
     pMemory->setTrackingEnabled( true );
-    const uint64     before = pMemory->getTotalAllocationCount();
-    constexpr uint32 kRound = 50;
-    for ( uint32 round = 0; round < kRound; ++round )
-        dispatchOnce();
-    const uint64 allocations = pMemory->getTotalAllocationCount() - before;
+    while ( attemptCount < kMaxAttempt && allocations != 0 )
+    {
+        ++attemptCount;
+        const uint64 before = pMemory->getTotalAllocationCount();
+        for ( uint32 round = 0; round < kRound; ++round )
+            dispatchOnce();
+        allocations = std::min( allocations, pMemory->getTotalAllocationCount() - before );
+    }
     pMemory->setTrackingEnabled( bWasTracking );
 
-    SW_EXPECT_EQUAL( uint32( 64 * ( kRound + 4 ) ), s_dispatchTouch.load() );
+    SW_EXPECT_EQUAL( uint32( 64 * ( kRound * attemptCount + 4 ) ), s_dispatchTouch.load() );
     SW_EXPECT_TRUE_MSG( allocations == 0, ( sw::string( "스테이지 디스패치 " ) + sw::to_string( kRound ) + " 회에 힙 할당 " + sw::to_string( allocations ) + " 회 — 프레임마다 그만큼 churn 이다" ).c_str() );
 
     taskMgr.clear();
