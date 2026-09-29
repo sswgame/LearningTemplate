@@ -2021,6 +2021,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (Editor 이름 — 비유로 쓴 단어를 걷었다)
+
+**어떻게 찾았나.** 같은 방식(식별자 단어 1,484 개 · 파일 이름). 새로 나온 단어는 대부분 UI 용어(dock · gizmo · toast · spinner · palette · chrome)와
+아이콘 · 테마 이름(`ICON_FA_*` · midnight · charcoal)이라 둔다. ImGui API(`WantCaptureMouse`)도 외부 이름이라 둔다. 파일 · 타입 이름에는 바꿀 것이 없었다.
+
+**바꾼 것.**
+- 뷰포트 피킹의 consider → hitTest(광선이 맞으면 가장 가까운 것을 남긴다): `considerMesh` · `considerSprite` · `considerSphere` · `considerBoxCollider2D` ·
+  `considerSceneComponents` · `considerObject` → `hitTest…`, 타입 `PickConsiderFunc` → `PickHitTestFunc`.
+- 입력 맵 패널의 "Oscilloscope" 탭 → `drawInputGraphTab`, 탭 이름 "Input Graphs".
+- `ReloadFileManager` 의 `considerFileVal` → `pollFileChange`, `listSeen` → `listEmittedPath`, 단축키 검사의 `bWantAlt/Ctrl/Shift` → `bRequire…`,
+  게임 뷰의 `wantW/H` → `targetWidth/Height`, `batInfo` → `batteryInfo`, `bFeed` → `bShowHistory`, `pRematerialized` → `pResolved`,
+  `colLip` → `colPocketHighlight`, `cat` · `catCol` → `category` · `categoryColor`.
+- Engine 차례에 테스트 쪽 `seen` 을 덜 봤던 것: `seenAtContinuation` → `observedAtContinuation`, `listSeenName` → `listVisitedName`, `seenChoice` →
+  `listCollectedChoice`, `arrSeen` → `arrDistinctKey`.
+
+**검증(Windows).** Debug · Shipping 빌드(새 경고 0) · `nogpu`+`hostgpu` 각 9/9 · 에디터 전부 열기 덤프(`-gv_editorOpenAllPanels=1`) 창 33개 · 내용 없는 패널 0개 ·
+종료 코드 0 · `[Error]` 0건.
+
 ### 2026-09-29 (Engine 이름 — 비유로 쓴 단어를 걷었다, wave 포함 · 파일 이름 넷)
 
 **어떻게 찾았나.** Core 와 같은 방식(식별자 단어 2,493 개 · 파일 이름 단어)에 Core 에서 걸렀던 단어를 다시 물었다. 그래픽스 · 입력 · 오디오 · OS API 의

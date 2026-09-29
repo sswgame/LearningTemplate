@@ -762,9 +762,9 @@ SW_TEST_CASE( GamepadDeviceTest, BatteryInfoQuery )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    const sw::GamepadBatteryInfo batInfo = input.getGamepadBatteryInfo( 0 );
+    const sw::GamepadBatteryInfo batteryInfo = input.getGamepadBatteryInfo( 0 );
     // 비연결/가상 환경에서는 Disconnected 또는 Unknown 반환
-    SW_EXPECT_TRUE( batInfo._type == sw::GamepadBatteryType::Disconnected || batInfo._type == sw::GamepadBatteryType::Unknown || batInfo._type == sw::GamepadBatteryType::Wired || batInfo._type == sw::GamepadBatteryType::Alkaline );
+    SW_EXPECT_TRUE( batteryInfo._type == sw::GamepadBatteryType::Disconnected || batteryInfo._type == sw::GamepadBatteryType::Unknown || batteryInfo._type == sw::GamepadBatteryType::Wired || batteryInfo._type == sw::GamepadBatteryType::Alkaline );
 
     input.shutdown();
 }

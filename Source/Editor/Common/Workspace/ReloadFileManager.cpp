@@ -21,7 +21,7 @@ namespace sw
     {
         struct ReloadFileManagerInternal
         {
-            static void considerFileVal( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
+            static void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
             {
                 if ( FileUtil::fileExists( filePath ) == false )
                     return;
@@ -282,10 +282,10 @@ namespace sw
             return;
 
         // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다. 리로드는 멱등이지만 두 번 할 이유는 없다.
-        vector<string> listSeen;
-        listSeen.reserve( outListEvent.size() );
+        vector<string> listEmittedPath;
+        listEmittedPath.reserve( outListEvent.size() );
         for ( const FileChangeEvent& changeEvent : outListEvent )
-            listSeen.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+            listEmittedPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
         // 그 구성에서는 쓰이지 않는 변수가 된다.
@@ -305,9 +305,9 @@ namespace sw
                     continue;
 
                 const string normalized = FileUtil::normalizePath( filePath );
-                if ( std::find( listSeen.begin(), listSeen.end(), normalized ) != listSeen.end() )
+                if ( std::find( listEmittedPath.begin(), listEmittedPath.end(), normalized ) != listEmittedPath.end() )
                     continue;
-                listSeen.push_back( normalized );
+                listEmittedPath.push_back( normalized );
 
                 string relative{};
                 if ( FileUtil::makeRelativePath( entry._pathPrefix, filePath, relative ) == false || relative.empty() )
@@ -333,13 +333,13 @@ namespace sw
                 continue;
 
             if ( FileUtil::fileExists( entry._pathPrefix ) )
-                ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
+                ReloadFileManagerInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
             else
             {
                 vector<string> listFile;
                 FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
                 for ( const string& filePath : listFile )
-                    ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, filePath );
+                    ReloadFileManagerInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
             }
         }
     }

@@ -227,7 +227,7 @@ namespace sw::editor
             static_cast<int32>( folderColor._b * 235 + 20 ),
             255 );
         // 3) 앞주머니 윗면 하이라이트
-        const uint32 colLip = IM_COL32(
+        const uint32 colPocketHighlight = IM_COL32(
             static_cast<int32>( folderColor._r * 255 ),
             static_cast<int32>( folderColor._g * 255 ),
             static_cast<int32>( folderColor._b * 255 ),
@@ -249,7 +249,7 @@ namespace sw::editor
         // 앞주머니
         pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
         // 앞주머니 윗면 하이라이트
-        pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colLip, 1.5f );
+        pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colPocketHighlight, 1.5f );
         // 테두리
         pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
     }

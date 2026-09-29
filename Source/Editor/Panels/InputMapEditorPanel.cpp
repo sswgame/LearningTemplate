@@ -174,9 +174,9 @@ namespace sw::editor
                 ImGui::EndTabItem();
             }
 
-            if ( ImGui::BeginTabItem( "Input Oscilloscope (Graphs)" ) )
+            if ( ImGui::BeginTabItem( "Input Graphs" ) )
             {
-                drawOscilloscopeTab();
+                drawInputGraphTab();
                 ImGui::EndTabItem();
             }
 
@@ -585,8 +585,8 @@ namespace sw::editor
             GamepadDevice* pGamepad = pInput->getGamepad( 0 );
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
-                const GamepadBatteryInfo batInfo = pGamepad->getBatteryInfo();
-                ImGui::Text( "Battery: %s", InputMapEditorPanelInternal::batteryLevelName( batInfo._level ) );
+                const GamepadBatteryInfo batteryInfo = pGamepad->getBatteryInfo();
+                ImGui::Text( "Battery: %s", InputMapEditorPanelInternal::batteryLevelName( batteryInfo._level ) );
 
                 float32      lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
                 const float2 vecLeftStick3  = pGamepad->getLeftStick();
@@ -724,9 +724,9 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawOscilloscopeTab()
+    void InputMapEditorPanel::drawInputGraphTab()
     {
-        ImGui::Text( "Real-Time Input Time-Series Oscilloscope (Last 120 Frames)" );
+        ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
         ImGui::SameLine( 450.0f );
         bool bPaused = ( _bPlotPaused == SW_TRUE );
         if ( ImGui::Checkbox( "Pause Graph", &bPaused ) )
@@ -995,9 +995,9 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Show Face Buttons (A/B/X/Y)", &bButtons ) )
             config._bShowButtons = bButtons ? SW_TRUE : SW_FALSE;
 
-        bool bFeed = ( config._bShowCommandHistory == SW_TRUE );
-        if ( ImGui::Checkbox( "Show Live Action Trigger Stream", &bFeed ) )
-            config._bShowCommandHistory = bFeed ? SW_TRUE : SW_FALSE;
+        bool bShowHistory = ( config._bShowCommandHistory == SW_TRUE );
+        if ( ImGui::Checkbox( "Show Live Action Trigger Stream", &bShowHistory ) )
+            config._bShowCommandHistory = bShowHistory ? SW_TRUE : SW_FALSE;
     }
 
     void InputMapEditorPanel::drawCombosAndBufferTab()

@@ -2325,7 +2325,7 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
     {
         const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
         uint32       distinct      = 0;
-        uint64       arrSeen[16]{};
+        uint64       arrDistinctKey[16]{};
         for ( uint32 row = 0; row < layout._height && distinct < 2; ++row )
         {
             const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
@@ -2338,14 +2338,14 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
                 bool bFound = false;
                 for ( uint32 slot = 0; slot < distinct; ++slot )
                 {
-                    if ( arrSeen[slot] == key )
+                    if ( arrDistinctKey[slot] == key )
                     {
                         bFound = true;
                         break;
                     }
                 }
                 if ( bFound == false )
-                    arrSeen[distinct++] = key;
+                    arrDistinctKey[distinct++] = key;
             }
         }
         SW_EXPECT_TRUE_MSG( distinct >= 2,

@@ -29,17 +29,17 @@ namespace sw::editor
     {
         struct QuickLauncherPopupInternal
         {
-            static ImVec4 getCategoryColor( string_view cat )
+            static ImVec4 getCategoryColor( string_view category )
             {
-                if ( cat == "Scene" )
+                if ( category == "Scene" )
                     return ImVec4( 0.25f, 0.85f, 0.45f, 1.0f );
-                if ( cat == "Prefab" )
+                if ( category == "Prefab" )
                     return ImVec4( 0.30f, 0.65f, 1.0f, 1.0f );
-                if ( cat == "Texture" )
+                if ( category == "Texture" )
                     return ImVec4( 0.95f, 0.65f, 0.25f, 1.0f );
-                if ( cat == "Shader" )
+                if ( category == "Shader" )
                     return ImVec4( 0.85f, 0.40f, 0.95f, 1.0f );
-                if ( cat == "GameObject" )
+                if ( category == "GameObject" )
                     return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
                 return ImVec4( 0.60f, 0.65f, 0.75f, 1.0f );
             }
@@ -233,11 +233,11 @@ namespace sw::editor
                                         IM_COL32( 80, 140, 240, 255 ), 4.0f );
                 }
 
-                const ImVec4                         catCol = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
+                const ImVec4                         categoryColor = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
                 fixed_string<constant::kMaxBuffer32> badge;
                 formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
 
-                pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( catCol ),
+                pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( categoryColor ),
                                     badge.c_str() );
 
                 pDrawList->AddText( ImVec2( cursor.x + 95.0f, cursor.y + 8.0f ), IM_COL32( 240, 240, 245, 255 ),

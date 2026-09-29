@@ -143,9 +143,9 @@ namespace sw::editor
             return;
         }
 
-        Component* pRematerialized = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
-        if ( pRematerialized != nullptr )
-            _selectedComponentId = pRematerialized->getComponentId();
+        Component* pResolved = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
+        if ( pResolved != nullptr )
+            _selectedComponentId = pResolved->getComponentId();
         else
             _selectedComponentId = 0;
     }

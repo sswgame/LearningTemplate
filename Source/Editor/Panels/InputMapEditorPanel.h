@@ -57,7 +57,7 @@ namespace sw::editor
          *          원할 수 있습니다). 대신 무엇과 부딪히는지 알립니다.
          */
         void rebindSelectedAction( sw::Key newKey );
-        void drawOscilloscopeTab();
+        void drawInputGraphTab();
         void drawInputSimulatorTab();
         void drawInputReplayTab();
         void drawGlyphPreviewerTab();

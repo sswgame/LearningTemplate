@@ -438,12 +438,12 @@ namespace sw::editor
 
                 const ImGuiIO& io = ImGui::GetIO();
                 // macOS 의 Cmd 는 예전 코드와 같이 Ctrl 로 취급한다.
-                const bool bCtrlDown  = ( io.KeyCtrl || io.KeySuper );
-                const bool bWantCtrl  = ( ( shortcut._modifier & commandmod::kCtrl ) != 0 );
-                const bool bWantShift = ( ( shortcut._modifier & commandmod::kShift ) != 0 );
-                const bool bWantAlt   = ( ( shortcut._modifier & commandmod::kAlt ) != 0 );
+                const bool bCtrlDown     = ( io.KeyCtrl || io.KeySuper );
+                const bool bRequireCtrl  = ( ( shortcut._modifier & commandmod::kCtrl ) != 0 );
+                const bool bRequireShift = ( ( shortcut._modifier & commandmod::kShift ) != 0 );
+                const bool bRequireAlt   = ( ( shortcut._modifier & commandmod::kAlt ) != 0 );
 
-                if ( bCtrlDown != bWantCtrl || io.KeyShift != bWantShift || io.KeyAlt != bWantAlt )
+                if ( bCtrlDown != bRequireCtrl || io.KeyShift != bRequireShift || io.KeyAlt != bRequireAlt )
                     return false;
 
                 return ImGui::IsKeyPressed( imKey, false );

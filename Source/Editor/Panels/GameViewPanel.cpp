@@ -82,14 +82,14 @@ namespace sw::editor
         const ImVec2 size = ImGui::GetContentRegionAvail();
         if ( size.x > 1.0f && size.y > 1.0f )
         {
-            const uint32          wantW       = static_cast<uint32>( MathUtil::round( size.x ) );
-            const uint32          wantH       = static_cast<uint32>( MathUtil::round( size.y ) );
-            const EditorGameView& view        = pEditorContext->getGameView();
-            const int32           dW          = static_cast<int32>( wantW ) - static_cast<int32>( view._width );
-            const int32           dH          = static_cast<int32>( wantH ) - static_cast<int32>( view._height );
-            const bool            bNeedResize = ( dW > 1 || dW < -1 || dH > 1 || dH < -1 ) && wantW > 0 && wantH > 0;
+            const uint32          targetWidth  = static_cast<uint32>( MathUtil::round( size.x ) );
+            const uint32          targetHeight = static_cast<uint32>( MathUtil::round( size.y ) );
+            const EditorGameView& view         = pEditorContext->getGameView();
+            const int32           dW           = static_cast<int32>( targetWidth ) - static_cast<int32>( view._width );
+            const int32           dH           = static_cast<int32>( targetHeight ) - static_cast<int32>( view._height );
+            const bool            bNeedResize  = ( dW > 1 || dW < -1 || dH > 1 || dH < -1 ) && targetWidth > 0 && targetHeight > 0;
             if ( bNeedResize )
-                pEditorContext->ensureGameViewSize( wantW, wantH );
+                pEditorContext->ensureGameViewSize( targetWidth, targetHeight );
         }
 
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();

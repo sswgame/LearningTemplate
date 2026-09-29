@@ -1877,7 +1877,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
     SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
 
     int32  lineCount{ 0 };
-    string firstLineAsSeenAfterAdvancing;
+    string firstLineAfterAdvancing;
     runner.setOnDialogueLine( [&]( const string& speaker, const string& text )
     {
         ++lineCount;
@@ -1887,12 +1887,12 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
         // 첫 줄을 받은 자리에서 **바로 다음으로 넘긴다** — 그 안에서 러너의 멤버가 바뀐다.
         runner.advance();
         // 그래도 내가 받은 인자는 여전히 첫 줄이어야 한다.
-        firstLineAsSeenAfterAdvancing = speaker + ": " + text;
+        firstLineAfterAdvancing = speaker + ": " + text;
     } );
 
     SW_ASSERT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( 2, lineCount );
-    SW_EXPECT_TRUE_MSG( firstLineAsSeenAfterAdvancing == "NPC: First line",
+    SW_EXPECT_TRUE_MSG( firstLineAfterAdvancing == "NPC: First line",
                         "핸들러가 받은 줄이 진행 도중에 바뀌었습니다" );
 }
 
@@ -1921,12 +1921,12 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 	})";
     SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
 
-    vector<string> seenChoice;
+    vector<string> listCollectedChoice;
     runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
     {
         for ( size_t choiceIndex = 0; choiceIndex < listChoice.size(); ++choiceIndex )
         {
-            seenChoice.push_back( listChoice[choiceIndex] );
+            listCollectedChoice.push_back( listChoice[choiceIndex] );
             // 도는 도중에 고른다 — 러너는 이 자리에서 목록을 비우고 다시 채운다.
             if ( choiceIndex == 1 )
                 runner.selectChoice( static_cast<int32>( choiceIndex ) );
@@ -1934,10 +1934,10 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
     } );
 
     SW_ASSERT_TRUE( runner.startDialogue() );
-    SW_ASSERT_EQUAL( size_t( 3 ), seenChoice.size() );
-    SW_EXPECT_EQUAL( "Alpha", seenChoice[0] );
-    SW_EXPECT_EQUAL( "Beta", seenChoice[1] );
-    SW_EXPECT_TRUE_MSG( seenChoice[2] == "Gamma", "고르는 사이에 선택지 목록이 바뀌었습니다" );
+    SW_ASSERT_EQUAL( size_t( 3 ), listCollectedChoice.size() );
+    SW_EXPECT_EQUAL( "Alpha", listCollectedChoice[0] );
+    SW_EXPECT_EQUAL( "Beta", listCollectedChoice[1] );
+    SW_EXPECT_TRUE_MSG( listCollectedChoice[2] == "Gamma", "고르는 사이에 선택지 목록이 바뀌었습니다" );
     SW_EXPECT_EQUAL( "Took Beta", runner.getCurrentText() );
 }
 

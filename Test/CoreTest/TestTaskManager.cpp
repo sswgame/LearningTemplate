@@ -455,7 +455,7 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
     constexpr int32   kDependencyCount = 8;
     sw::atomic<int32> finishedCount{ 0 };
     sw::atomic<int32> continuationCount{ 0 };
-    sw::atomic<int32> seenAtContinuation{ -1 };
+    sw::atomic<int32> observedAtContinuation{ -1 };
 
     sw::vector<sw::TaskHandle> listTask;
     listTask.reserve( kDependencyCount );
@@ -469,9 +469,9 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
     }
 
     sw::TaskHandle joined = manager.whenAll( listTask,
-                                             SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&finishedCount, &continuationCount, &seenAtContinuation]()
+                                             SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&finishedCount, &continuationCount, &observedAtContinuation]()
     {
-        seenAtContinuation.store( finishedCount.load( std::memory_order_acquire ), std::memory_order_release );
+        observedAtContinuation.store( finishedCount.load( std::memory_order_acquire ), std::memory_order_release );
         continuationCount.fetch_add( 1, std::memory_order_release );
     } ) );
 
@@ -481,7 +481,7 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
 
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
     SW_EXPECT_EQUAL( 1, continuationCount.load() );
-    SW_EXPECT_EQUAL( kDependencyCount, seenAtContinuation.load() );
+    SW_EXPECT_EQUAL( kDependencyCount, observedAtContinuation.load() );
 
     manager.shutdown();
 }

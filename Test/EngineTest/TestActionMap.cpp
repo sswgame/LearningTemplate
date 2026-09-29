@@ -439,7 +439,7 @@ SW_TEST_CASE( ActionMapTest, BindingKindTableCoversEveryKind )
     const uint32 kindCount = static_cast<uint32>( sw::BindingKind::Count );
     SW_ASSERT_TRUE( kindCount > 0 );
 
-    sw::vector<sw::string> listSeenName;
+    sw::vector<sw::string> listVisitedName;
     for ( uint32 kindIndex = 0; kindIndex < kindCount; ++kindIndex )
     {
         const sw::BindingKind kind  = static_cast<sw::BindingKind>( kindIndex );
@@ -452,12 +452,12 @@ SW_TEST_CASE( ActionMapTest, BindingKindTableCoversEveryKind )
         SW_EXPECT_TRUE_MSG( sw::BindingKinds::fromName( pName ) == kind,
                             "toName/fromName 이 서로의 역이 아닙니다 — 저장한 파일을 못 읽습니다" );
 
-        for ( const sw::string& seenName : listSeenName )
+        for ( const sw::string& visitedName : listVisitedName )
         {
-            SW_EXPECT_TRUE_MSG( seenName != pName,
+            SW_EXPECT_TRUE_MSG( visitedName != pName,
                                 "두 바인딩 종류가 같은 XML 이름을 씁니다 — 나중 것이 조용히 앞 것으로 읽힙니다" );
         }
-        listSeenName.push_back( sw::string( pName ) );
+        listVisitedName.push_back( sw::string( pName ) );
 
         // 충돌 검사는 이 수만큼 `_arrSlot` 을 훑는다. 배열은 4칸이다.
         SW_EXPECT_TRUE_MSG( sw::BindingKinds::getConflictSlotCount( kind ) <= 4,
