@@ -643,7 +643,9 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
-                prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getUnqualifiedType( valueType ) ) ) );
+                // 위에서 const 가 아님을 확인했으므로 철자에 한정자가 붙지 않는다. `clang_getUnqualifiedType` 은 libclang 16 부터라 리눅스 CI 의
+                // libclang 에는 없다(2026-09-29 CI 가 잡았다).
+                prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( valueType ) ) );
 
                 if ( applyAnnotation( spelling, prop, session, owner ) == false )
                 {

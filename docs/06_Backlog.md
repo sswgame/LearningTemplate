@@ -2106,6 +2106,9 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 - 곁에 고친 것: `setValue<float3>` 가 컴파일되지 않았다(비트필드 분기의 `static_cast<T>( 0 )` 이 구조체에서 모호). 구조체 값 프로퍼티를
   `setValue` 로 쓴 곳이 없어 드러나지 않았다.
 
+**리눅스 CI.** 처음 푸시(569bb05f)에서 리눅스 잡 셋이 파서 컴파일에서 멈췄다 — `clang_getUnqualifiedType` 은 libclang 16 부터다. 한정자 없음을
+바로 앞에서 확인하므로 타입 철자를 그대로 쓴다. 파서에 새 libclang 함수를 쓸 때는 CI 의 libclang 판을 본다(`clang_CXXMethod_isDeleted` 처럼 `CINDEX_VERSION` 으로 가르거나 피한다).
+
 **테스트.** `ReflectionParserTest.AccessorPropertyEmitsValueAccessor`(코드젠 · 틀린 모양은 멈춤),
 `ReflectionSerializationTest.AccessorPropertyReadsAndWritesOutsideTheObject`(바깥 배열 칸에 대해 Binary · JSON · XML 왕복, `setValue` ·
 `getRawPtr`, 통째 복사 금지). 문서: `Source/Engine/Reflection/README.md` 5) 절.
