@@ -144,7 +144,7 @@ namespace sw
 
         /**
          * @brief 만들 때(빌더) 걸어 둔 임시 잠금 의존성을 풀고 태스크를 스케줄러에 제출합니다.
-         * @details precede · succeed 같은 의존성 설정을 마친 뒤 불러, 작업이 준비됐음을 알립니다.
+         * @details runBefore · runAfter 같은 의존성 설정을 마친 뒤 불러, 작업이 준비됐음을 알립니다.
          */
         void submit( const TaskHandle& handle );
         /**
@@ -159,11 +159,11 @@ namespace sw
          */
         void wakeSleepingWorkers();
         /**
-         * @brief 잠든 워커 중 @p wantedCount 개만 깨웁니다. `submitWithoutWake` 로 모두 넣은 뒤 부릅니다.
+         * @brief 잠든 워커 중 @p requestedCount 개만 깨웁니다. `submitWithoutWake` 로 모두 넣은 뒤 부릅니다.
          * @details 모두 깨우면 워커 열넷이 일감 여섯을 두고 다투는 thundering herd 가 됩니다. 렌더 그래프 병렬 기록이 두 배
          *          느려졌습니다(150~192 -> 329~380 us). 넣은 태스크 수만큼만 깨우는 것이 가장 빨랐습니다.
          */
-        void wakeSleepingWorkers( uint32 wantedCount );
+        void wakeSleepingWorkers( uint32 requestedCount );
         /** @brief 지금까지 워커를 깨운 시그널 수입니다. 테스트가 "그룹 하나에 한 번" 인지 확인하는 데 씁니다. */
         uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
         /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 몫이 빠져 있어야 합니다(테스트용). */
@@ -220,7 +220,7 @@ namespace sw
          *          `SW_ASSERT( isInsideParallelTask() == false )` 로 스스로를 지키는 데 씁니다. UE 가 `FTaskTagScope` 로 병렬
          *          작업 구간을 표시하고 `IsInParallelRenderingThread()` 같은 검사를 두는 것과 같은 자리입니다. `runParallel` 이
          *          문턱 아래라 호출 스레드가 한 번에 돌 때도 병렬 본문으로 봅니다(검사가 개수 · 워커 수에 따라 달라지지 않게).
-         *          청크 사이에 High 레인 태스크를 돌리는 동안은 병렬 본문 밖으로 봅니다(그 태스크는 병렬 본문이 아닙니다).
+         *          청크 사이에 High 큐 태스크를 돌리는 동안은 병렬 본문 밖으로 봅니다(그 태스크는 병렬 본문이 아닙니다).
          */
         bool isInsideParallelTask() const;
         /** @brief Debug: 병렬 태스크 본문 안이 아니면 assert 합니다. */
@@ -258,7 +258,7 @@ namespace sw
         /** @brief 의존성 하나를 풉니다. 마지막이었으면 큐에 넣습니다(`submit` · 선행 태스크 완료 · 병렬 그룹 완료가 모두 이 함수를 거칩니다). */
         void resolveDependency( TaskNode* pNode, bool bWakeWorker );
         /**
-         * @brief 의존성이 모두 풀린 태스크 노드를 레인(High · 로컬 데크 · Normal 전역 · Low · 메인)에 넣습니다.
+         * @brief 의존성이 모두 풀린 태스크 노드를 우선순위 큐(High · 로컬 데크 · Normal 전역 · Low · 메인)에 넣습니다.
          * @param bWakeWorker false 면 잠든 워커를 깨우지 않습니다(`submitWithoutWake`).
          */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
@@ -268,12 +268,12 @@ namespace sw
         // --- 병렬 그룹 ---
         /** @brief `emplaceParallel` · `emplaceParallelBlock` 의 공통 본체입니다. 부모 노드 하나 + 풀 그룹 하나 + 티켓으로 이루어집니다. */
         TaskHandle emplaceParallelGroup( string_view name, uint32 start, uint32 end, const ParallelBlockDelegate* pBlockBody, const ParallelTaskDelegate* pIndexBody, TaskThreadAffinity affinity );
-        /** @brief 티켓 @p ticketCount 장을 이 스레드의 레인에 넣고, 그만큼 워커를 깨웁니다. */
+        /** @brief 티켓 @p ticketCount 장을 이 스레드의 큐에 넣고, 그만큼 워커를 깨웁니다. */
         void pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount );
         /** @brief 그룹의 청크가 남지 않을 때까지 가져와 실행합니다(티켓을 받은 워커와 호출 스레드가 함께 씁니다). */
         void runGroupChunks( ParallelGroup* pGroup );
-        /** @brief 청크 사이에 High 레인을 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
-        void runHighLaneBetweenChunks();
+        /** @brief 청크 사이에 High 큐를 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
+        void drainHighQueueBetweenChunks();
         /** @brief 병렬 그룹의 티켓 하나를 처리합니다. 청크가 남아 있는 동안 가져와 실행하고 티켓을 닫습니다. */
         void runGroupTicket( ParallelGroup* pGroup );
         /**
@@ -299,8 +299,8 @@ namespace sw
          *          먼저 올리고 조건을 보는 쪽과, 조건을 바꾸고 수를 보는 완료 쪽이 Dekker 식 짝을 이룹니다.
          */
         uint32 prepareBroadcastWait();
-        /** @brief 브로드캐스트 세대가 @p seenEpoch 인 동안 잠듭니다. @p timeoutMilli 가 0 이면 무제한입니다. 대기자 수는 여기서 내립니다. */
-        void commitBroadcastWait( uint32 seenEpoch, uint32 timeoutMilli );
+        /** @brief 브로드캐스트 세대가 @p observedEpoch 인 동안 잠듭니다. @p timeoutMilli 가 0 이면 무제한입니다. 대기자 수는 여기서 내립니다. */
+        void commitBroadcastWait( uint32 observedEpoch, uint32 timeoutMilli );
         /** @brief 잠들지 않기로 했을 때 대기자 수만 내립니다. */
         void cancelBroadcastWait();
         /** @brief 브로드캐스트 대기자가 있으면 브로드캐스트 세대를 올려 모두 깨웁니다. */
@@ -321,9 +321,9 @@ namespace sw
         void completeTask( TaskNode* pNode );
 
         // --- 큐 ---
-        /** @brief Normal 레인에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
-        void pushToNormalLane( uintptr_t item );
-        /** @brief 레인 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. */
+        /** @brief Normal 큐에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
+        void pushToNormalQueue( uintptr_t item );
+        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. */
         bool tryTakeItem( int32 workerId, uintptr_t& outItem );
         /** @brief 이 스레드가 가져올 수 있는 항목 하나를 가져와 실행합니다. 기다리는 동안 다른 일을 돕는 곳입니다. */
         bool tryHelpAndExecute();
@@ -391,10 +391,10 @@ namespace sw
 
         /**
          * @brief `TaskPriority::High` 전용 전역 큐입니다. **모든 워커가 자기 데크보다 먼저 봅니다.**
-         * @details 게임 스레드의 대량 잡(트랜스폼 플러시 · 씬 수집)과 렌더 스레드의 병렬 패스 기록이 같은 풀을 씁니다. 레인이 없으면
+         * @details 게임 스레드의 대량 잡(트랜스폼 플러시 · 씬 수집)과 렌더 스레드의 병렬 패스 기록이 같은 풀을 씁니다. 우선순위 큐가 없으면
          *          렌더 스레드가 방금 넣은 기록 태스크가 게임 스레드의 청크 수십 개 뒤에 줄을 서고, 렌더 스레드는 그 스테이지를 바로
          *          기다리므로 그 줄이 그대로 프레임 지연이 됩니다(큐브 8000개에서 게임 스레드 잡을 켜자 렌더 스레드의 그래프 기록이
-         *          170 -> 261 us). 상용 엔진이 렌더 · 오디오 잡을 별도 레인에 두는 이유입니다. `_priority` 는 그동안 저장만 되고
+         *          170 -> 261 us). 상용 엔진이 렌더 · 오디오 잡을 별도 큐에 두는 이유입니다. `_priority` 는 그동안 저장만 되고
          *          스케줄러가 보지 않았습니다.
          */
         ConcurrentQueue<uintptr_t, 1024> _globalHighQueue;

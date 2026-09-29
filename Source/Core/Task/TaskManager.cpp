@@ -122,8 +122,8 @@ namespace sw
                     split._chunkSize = 1;
                 chunkCount = ( count + split._chunkSize - 1 ) / split._chunkSize;
                 // 티켓 하나는 스레드 하나의 몫이다. 청크가 티켓보다 적으면 남는 티켓은 가져가자마자 끝난다(헛된 깨우기).
-                const uint32 wantedTicketCount = bCallerRuns ? ( chunkCount > 0 ? chunkCount - 1 : 0 ) : chunkCount;
-                split._ticketCount             = MathUtil::min( wantedTicketCount, workerCount );
+                const uint32 requestedTicketCount = bCallerRuns ? ( chunkCount > 0 ? chunkCount - 1 : 0 ) : chunkCount;
+                split._ticketCount                = MathUtil::min( requestedTicketCount, workerCount );
                 return split;
             }
         };
@@ -420,7 +420,7 @@ namespace sw
             if ( task.isValid() )
             {
                 TaskHandle mutTask = task;
-                mutTask.precede( nextTask );
+                mutTask.runBefore( nextTask );
             }
         }
         return nextTask;
@@ -450,7 +450,7 @@ namespace sw
 
                 TaskHandle triggerTask = emplaceTask( "whenAny_Trigger", triggerDelegate );
                 TaskHandle mutTask     = task;
-                mutTask.precede( triggerTask );
+                mutTask.runBefore( triggerTask );
                 triggerTask.submit();
             }
         }
@@ -577,13 +577,13 @@ namespace sw
         const uintptr_t item = TaskQueueItem::fromTicket( pGroup );
         for ( uint32 index = 0; index < ticketCount; ++index )
         {
-            pushToNormalLane( item );
+            pushToNormalQueue( item );
         }
         // 티켓을 모두 넣은 뒤 **한 번만** 세대를 올리고, 티켓 수만큼만 깨운다.
         wakeSleepingWorkers( ticketCount );
     }
 
-    void TaskManager::runHighLaneBetweenChunks()
+    void TaskManager::drainHighQueueBetweenChunks()
     {
         // 빈 큐의 size 는 위치 두 개를 읽는 것이라 청크마다 확인해도 비용이 거의 없다.
         if ( _globalHighQueue.empty() )
@@ -604,14 +604,14 @@ namespace sw
         const uint32            chunkSize = pGroup->_chunkSize;
         for ( ;; )
         {
-            // **High 레인은 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
+            // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
             // 그 줄이 그대로 프레임 지연이 된다. 예전에는 청크가 노드라서 노드 사이에 저절로 확인했다. 지금의 청크 하나(참여자당 4개)는
             // 그때의 노드 하나보다 작으므로 기다리는 시간의 상한도 더 짧다.
-            runHighLaneBetweenChunks();
-            const uint64 claimed = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
-            if ( claimed >= end )
+            drainHighQueueBetweenChunks();
+            const uint64 reservedStart = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
+            if ( reservedStart >= end )
                 break;
-            const uint32 chunkStart = static_cast<uint32>( claimed );
+            const uint32 chunkStart = static_cast<uint32>( reservedStart );
             const uint32 chunkEnd   = MathUtil::min( chunkStart + chunkSize, end );
             if ( pGroup->_pBlockBody != nullptr )
             {
@@ -743,7 +743,7 @@ namespace sw
         const uint32    slotIndex = getCurrentThreadScratchSlot();
         atomic<uint32>& word      = getWaiterWord( slotIndex );
         // **등록하기 전에** 읽는다. 등록한 뒤에 온 깨우기는 워드를 바꾸므로 아래 wait 가 바로 돌아온다.
-        const uint32 seen = word.load( std::memory_order_acquire );
+        const uint32 observed = word.load( std::memory_order_acquire );
 
         switch ( join.tryRegisterWaiter( slotIndex + 1 ) )
         {
@@ -778,7 +778,7 @@ namespace sw
             }
         }
 
-        Futex::wait( word, seen );
+        Futex::wait( word, observed );
 
         if ( bMainThread )
             _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
@@ -792,12 +792,12 @@ namespace sw
         return epoch;
     }
 
-    void TaskManager::commitBroadcastWait( uint32 seenEpoch, uint32 timeoutMilli )
+    void TaskManager::commitBroadcastWait( uint32 observedEpoch, uint32 timeoutMilli )
     {
         if ( timeoutMilli == 0 )
-            Futex::wait( _completionEpoch, seenEpoch );
+            Futex::wait( _completionEpoch, observedEpoch );
         else
-            Futex::waitFor( _completionEpoch, seenEpoch, timeoutMilli );
+            Futex::waitFor( _completionEpoch, observedEpoch, timeoutMilli );
         _broadcastWaiterCount.fetch_sub( 1, std::memory_order_seq_cst );
     }
 
@@ -936,9 +936,9 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 8) 큐와 워커 — 레인 · 훔치기 · 깨우기 · 워커 루프
+    // 8) 큐와 워커 — 우선순위 큐 · 훔치기 · 깨우기 · 워커 루프
     // ------------------------------------------------------------------------------
-    void TaskManager::pushToNormalLane( uintptr_t item )
+    void TaskManager::pushToNormalQueue( uintptr_t item )
     {
         // 워커는 자기 데크(LIFO 라 방금 만든 것이 캐시에 남아 있다)에, 바깥 스레드(게임 · 렌더)는 전역 큐에 넣는다.
         // 데크가 가득 차면 전역 큐로 넘긴다.
@@ -967,7 +967,7 @@ namespace sw
         if ( numWorkers == 0 )
             return false;
 
-        // 레인 순서: High -> 내 데크 -> Normal 전역 -> 훔치기 -> Low. 빈 큐의 dequeue 는 시퀀스 하나를 읽는 것이라
+        // 큐 순서: High -> 내 데크 -> Normal 전역 -> 훔치기 -> Low. 빈 큐의 dequeue 는 시퀀스 하나를 읽는 것이라
         // High 를 매번 먼저 확인해도 비용이 거의 없다.
         if ( _globalHighQueue.dequeue( outItem ) && outItem != 0 )
             return true;
@@ -1037,7 +1037,7 @@ namespace sw
         if ( getWorkerCount() == 0 )
             return;
 
-        // 레인은 우선순위로 정한다. High · Low 는 워커가 넣어도 자기 데크가 아니라 전역 레인으로 간다. 데크는 LIFO 라
+        // 큐는 우선순위로 정한다. High · Low 는 워커가 넣어도 자기 데크가 아니라 전역 큐로 간다. 데크는 LIFO 라
         // "먼저" 도 "나중" 도 보장하지 못한다.
         const uintptr_t item = TaskQueueItem::fromNode( pNode );
         if ( pNode->_priority == TaskPriority::High )
@@ -1052,7 +1052,7 @@ namespace sw
         }
         else
         {
-            pushToNormalLane( item );
+            pushToNormalQueue( item );
         }
 
         if ( bWakeWorker )
@@ -1064,11 +1064,11 @@ namespace sw
         wakeSleepingWorkers( 0xFFFFFFFFu );
     }
 
-    void TaskManager::wakeSleepingWorkers( uint32 wantedCount )
+    void TaskManager::wakeSleepingWorkers( uint32 requestedCount )
     {
         // 스핀 중인 워커는 세대로 알아챈다. seq_cst 인 이유는 워커 쪽의 "유휴 비트 올리기 → 큐 확인" 과 Dekker 식 짝을 이루기 때문이다.
         _workEpoch.fetch_add( 1, std::memory_order_seq_cst );
-        if ( wantedCount == 0 )
+        if ( requestedCount == 0 )
             return;
 
         uint64 mask = _idleWorkerMask.load( std::memory_order_seq_cst );
@@ -1078,7 +1078,7 @@ namespace sw
         // **필요한 수만큼, 비트를 내린 쪽이** 깨운다. 두 제출자가 같은 워커를 두 번 깨우지 않고, 깨우기 하나는 주소 하나에 대한
         // 것이다. 예전의 `notify_one` × n 은 뮤텍스 아래에서 차례로 나갔고, 깨어난 n 개가 그 뮤텍스를 다시 잡느라 줄을 섰다.
         uint32 wokenCount = 0;
-        while ( mask != 0 && wokenCount < wantedCount )
+        while ( mask != 0 && wokenCount < requestedCount )
         {
             const uint32 workerId = MathUtil::countTrailingZeros( mask );
             const uint64 bit      = static_cast<uint64>( 1 ) << workerId;
@@ -1115,14 +1115,14 @@ namespace sw
 
             // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 일감이 세대를 올려 스핀이 알아챈다.
             // (읽은 뒤에 들어온 일감은 세대를 바꾸고, 읽기 전에 들어온 일감은 바로 아래 tryTakeItem 이 본다.)
-            bool       bFoundInSpin = false;
-            uint32     epochSeen    = _workEpoch.load( std::memory_order_acquire );
-            const auto spinStart    = std::chrono::steady_clock::now();
+            bool       bFoundInSpin  = false;
+            uint32     observedEpoch = _workEpoch.load( std::memory_order_acquire );
+            const auto spinStart     = std::chrono::steady_clock::now();
             for ( ;; )
             {
-                if ( _workEpoch.load( std::memory_order_acquire ) != epochSeen )
+                if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
-                    epochSeen = _workEpoch.load( std::memory_order_acquire );
+                    observedEpoch = _workEpoch.load( std::memory_order_acquire );
                     if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
                     {
                         bFoundInSpin = true;
@@ -1147,7 +1147,7 @@ namespace sw
 
             // 잠드는 순서: 워드를 읽고 → 유휴 비트를 올리고 → 큐를 한 번 더 본다. 제출하는 쪽은 큐에 넣고 → 세대를 올리고 → 유휴
             // 비트를 본다. 양쪽 모두 seq_cst 라 둘 중 하나는 반드시 상대를 본다. 그래서 넣은 일감이 잠든 워커 뒤에 남지 않는다.
-            const uint32 parkSeen = slot._park._word.load( std::memory_order_acquire );
+            const uint32 observedParkWord = slot._park._word.load( std::memory_order_acquire );
             _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
             if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
@@ -1161,7 +1161,7 @@ namespace sw
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 break;
             }
-            Futex::wait( slot._park._word, parkSeen );
+            Futex::wait( slot._park._word, observedParkWord );
             // 깨운 쪽이 비트를 내렸다. 이유 없이 깨어났다면 비트가 아직 켜져 있으니 여기서 내린다. 다시 잠들지는 다음 회차가 정한다.
             _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
         }

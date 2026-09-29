@@ -2021,6 +2021,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (Core 이름 — 프로그래밍 용어가 아닌 단어를 걷었다, App 과 같은 방식)
+
+**어떻게 찾았나.** 주석 · 문자열을 뺀 식별자를 camelCase 단어로 쪼개 겹치지 않는 단어 1,496 개를 뽑고, 비유로 쓰인 것만 골랐다. 수학 · OS ·
+동시성 용어(park · epoch · futex · ticket · shard · slab · arena · sink · steal)는 프로그래밍 용어라 둔다. 파일 · 타입 이름에는 바꿀 것이 없었다.
+
+**바꾼 것** (옛 이름 → 새 이름).
+- `TaskHandle::precede` · `succeed` → `runBefore` · `runAfter` — `succeed` 가 "성공" 으로 읽혔다(Taskflow 에서 온 이름). README · 테스트 포함.
+- TaskManager 의 레인(lane) → 큐: `pushToNormalLane` → `pushToNormalQueue`, `runHighLaneBetweenChunks` → `drainHighQueueBetweenChunks`, 주석의 "레인" 도 "큐".
+- futex 대기의 `seen` · `seenEpoch` · `epochSeen` · `parkSeen` → `observed` · `observedEpoch` · `observedParkWord`, 청크 분배의 `claimed` → `reservedStart`,
+  `wantedCount` · `wantedTicketCount` → `requestedCount` · `requestedTicketCount`.
+- `SlotHandleTable::retireSlot` → `freeSlot`(AGENTS.md 의 allocate/free).
+- `EventDispatcher::claimBusThread` → `bindBusThread`, `releaseCodeWithin` 의 `outStuckEntryCount` → `outRemainingEntryCount`.
+- `CommandLineManager::addArgument` 의 `listSynonym` → `listAlias`(주석의 "동의어" → "별칭", 테스트 `ParseSynonymArgument` → `ParseAliasArgument`,
+  `RHIBackendCommandLineFlagsAndSynonyms` → `…AndAliases`).
+- `mutex::notifyIntended` · `DeadlockDetector::recordLockIntended` → `notifyLockAttempt` · `recordLockAttempt`.
+- 지역: `hashed_string` 의 `permanentKey` → `internedKey`, `MemoryProfiler` 의 `bWanted` → `bIncluded`, `FileUtil::hasExtension` 의 `have` · `want` → `actual` · `expected`.
+
+**검증(Windows).** Debug · Shipping 빌드(새 경고 0 — `LightComponent.cpp(47)` `-Wnrvo` 는 전부터) · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 ·
+이름을 바꾼 CommandLineTest 둘을 따로 돌려 스킵 0.
+
 ### 2026-09-29 (App 이름 — 프로그래밍 용어가 아닌 단어를 걷었다)
 
 **바꾼 것** (옛 이름 → 새 이름. 아래 옛 기록의 이름으로 찾아 온 사람을 위해 적는다).

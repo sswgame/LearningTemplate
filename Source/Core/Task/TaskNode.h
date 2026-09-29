@@ -282,7 +282,7 @@ namespace sw
         TaskPriority       _priority{ TaskPriority::Normal };
         /**
          * @brief 큐에 한 번 넣었는지입니다. 두 번 넣지 않게 막는 문 하나입니다.
-         * @details 의존성 수는 0 을 한 번만 지나지만, 이미 제출한 태스크에 `precede` 로 선행을 더 걸면 수가 다시 올랐다가
+         * @details 의존성 수는 0 을 한 번만 지나지만, 이미 제출한 태스크에 `runBefore` 로 선행을 더 걸면 수가 다시 올랐다가
          *          내려와 한 번 더 0 을 봅니다. 예전의 5단 상태(`TaskState`)는 이 문 말고는 읽는 곳이 없었습니다(밖에서 물을 수
          *          있는 "끝났나" 는 `TaskHandle::isCompleted` 가 `_pendingChildren` 으로 답합니다).
          */

@@ -181,12 +181,12 @@ namespace sw
 
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 떼고, 그 범위가 만든 채널 항목을 치웁니다. 뗀 구독 수를 반환합니다.
-         * @param outStuckEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
+         * @param outRemainingEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
          * @details 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다(`engine::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트 ·
          *          떼기)는 그 이벤트 타입을 **처음** 구독 · 발행한 쪽에서 인스턴스화되므로, 모듈이 만든 항목은 모듈이 내려간 뒤 발행하면
          *          내려간 코드로 뜁니다. 그런 항목은 비었으면 지웁니다(다음 구독 · 발행이 자기 쪽에서 새로 만든다).
          */
-        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outStuckEntryCount );
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
 
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
@@ -219,7 +219,7 @@ namespace sw
          *          우연이지만, 프레임마다 큐를 꺼내 브로드캐스트하는 쪽은 설계상 하나로 정해져 있습니다(`EngineLoop::tick`).
          *          언리얼의 게임 스레드와 같은 역할입니다.
          */
-        void claimBusThread();
+        void bindBusThread();
 
         /**
          * @brief 버스 함수가 주인 스레드에서 불렸는지 확인합니다.

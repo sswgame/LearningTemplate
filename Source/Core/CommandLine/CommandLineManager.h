@@ -115,7 +115,7 @@ namespace sw
         /**
          * @brief 문자열 키로 파싱된 인자 값을 찾습니다.
          * @tparam T 가져올 값의 타입(bool, 정수, 부동소수, sw::string, string_view)
-         * @param key 등록된 이름이나 동의어(예: "WIDTH", "W"). 앞의 하이픈은 파싱할 때 떼어 내므로 **조회 키에는 붙이지
+         * @param key 등록된 이름이나 별칭(예: "WIDTH", "W"). 앞의 하이픈은 파싱할 때 떼어 내므로 **조회 키에는 붙이지
          *            않습니다.** `"--WIDTH"` 로는 찾지 못합니다.
          * @param outValue 찾은 값을 받을 변수
          * @return 키가 있고 타입 변환에 성공하면 true
@@ -148,12 +148,12 @@ namespace sw
          * @brief 인자를 추가합니다.
          * @tparam T 저장 타입. **값을 반드시 적어야 하는지도 이것으로 정해집니다.** `bool` 이면 `-key` 만 적을 수 있고(그때
          *         true), 나머지는 `-key=value` 를 요구합니다(`ArgumentInfo::isFlagArgument`).
-         * @param listSynonym 이 인자를 부르는 이름들. 하나라도 이미 쓰이고 있으면 **아무것도 넣지 않습니다.**
+         * @param listAlias 이 인자를 부르는 이름들. 하나라도 이미 쓰이고 있으면 **아무것도 넣지 않습니다.**
          * @param defaultValue `bUseDefaultValue` 가 켜져 있을 때 `getArgument` 가 반환할 값
          * @param bUseDefaultValue 인자를 주지 않아도 `getArgument` 가 true 를 반환할지 여부
          */
         template <typename T>
-        void addArgument( const std::initializer_list<string_view>& listSynonym, T defaultValue, bool bUseDefaultValue );
+        void addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, bool bUseDefaultValue );
 
         /**
          * @brief 아직 등록된 인자가 없어 보류해 둔 `gv_` 값을 찾습니다.
@@ -170,7 +170,7 @@ namespace sw
         /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. */
         void parseArgumentLine( string_view argumentLine );
 
-        /** @brief 등록된 이름이나 동의어로 인자를 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 등록된 이름이나 별칭으로 인자를 찾습니다. 없으면 nullptr 입니다. */
         const ArgumentInfo* findArgument( string_view key ) const;
 
         /** @brief 열거값을 `_listArgument` 인덱스로 바로 씁니다(initialize 가 그 일치를 보장합니다). */
@@ -191,7 +191,7 @@ namespace sw
         static constexpr auto kGlobalVariablePrefix = "gv_";
 
         vector<ArgumentInfo> _listArgument;
-        /** @brief 이름 · 동의어 → `_listArgument` 인덱스입니다. 기본 해시가 transparent 라 string_view 로 할당 없이 조회됩니다. */
+        /** @brief 이름 · 별칭 → `_listArgument` 인덱스입니다. 기본 해시가 transparent 라 string_view 로 할당 없이 조회됩니다. */
         unordered_map<string, uint32> _mapArgument;
         /** @brief 등록된 인자가 없어 보류해 둔 `gv_` 키 → 값입니다. 모듈이 나중에 선언할 때 꺼내 씁니다. */
         unordered_map<string, string> _mapPendingGlobal;
@@ -249,15 +249,15 @@ namespace sw
     }
 
     template <typename T>
-    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listSynonym, T defaultValue, const bool bUseDefaultValue )
+    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, const bool bUseDefaultValue )
     {
-        // 먼저 모두 검사한다. 예전에는 겹치는 이름을 만난 자리에서 돌아갔고, 그 앞에서 이미 넣은 동의어들이 끝내 만들어지지
-        // 않는 인덱스를 가리킨 채 남았다. 그 동의어로 조회하면 _listArgument 범위 밖을 읽는다.
-        for ( string_view synonym : listSynonym )
+        // 먼저 모두 검사한다. 예전에는 겹치는 이름을 만난 자리에서 돌아갔고, 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
+        // 않는 인덱스를 가리킨 채 남았다. 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.
+        for ( string_view alias : listAlias )
         {
-            if ( _mapArgument.find( synonym ) != _mapArgument.end() )
+            if ( _mapArgument.find( alias ) != _mapArgument.end() )
             {
-                SW_LOG_ASSERT( false, "%#은 이미 사용 중입니다", synonym );
+                SW_LOG_ASSERT( false, "%#은 이미 사용 중입니다", alias );
                 return;
             }
         }
@@ -268,9 +268,9 @@ namespace sw
 
         const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
         _listArgument.push_back( std::move( argument ) );
-        for ( string_view synonym : listSynonym )
+        for ( string_view alias : listAlias )
         {
-            _mapArgument.emplace( string{ synonym }, newArgumentIndex );
+            _mapArgument.emplace( string{ alias }, newArgumentIndex );
         }
     }
 } // namespace sw

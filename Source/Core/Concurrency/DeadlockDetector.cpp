@@ -64,7 +64,7 @@ namespace sw
     /**
      * @brief 락을 얻기 직전에 불려 대기 상태를 기록하고 사이클을 검사합니다.
      */
-    void DeadlockDetector::recordLockIntended( void* pLock )
+    void DeadlockDetector::recordLockAttempt( void* pLock )
     {
         if ( _bInitialized.load() == false )
             return;
@@ -100,7 +100,7 @@ namespace sw
         std::scoped_lock<sw::mutex> lock{ _mutex };
         ThreadState&                state = _mapThreadState[tid];
 
-        // `lock()` 은 바로 앞에서 recordLockIntended 로 이 락을 기다린다고 적어 두므로, 그때 캡처한 스택이 곧 획득 지점의
+        // `lock()` 은 바로 앞에서 recordLockAttempt 로 이 락을 기다린다고 적어 두므로, 그때 캡처한 스택이 곧 획득 지점의
         // 스택이다. 그래서 다시 캡처하지 않는다. 하지만 `try_lock()` 에는 그 단계가 없다(기다리지 않으니 사이클 검사를 할
         // 이유도 없다). 그 경로에서 예전 스택을 그대로 쓰면 데드락 덤프의 "Acquired at" 이 전혀 다른 락을 잡던 곳을 가리킨다.
         // 탐지기의 유일한 쓸모가 "어디서 잡았는가" 인데 바로 거기서 틀린 정보를 주게 된다. 그래서 기다린 락이 이 락일 때만

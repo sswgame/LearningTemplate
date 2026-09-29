@@ -89,7 +89,7 @@ SW_TEST_CASE( TaskManagerTest, SubmittedTaskRunsBeforeWaitAllReturns )
 }
 
 /**
- * @brief [TaskManagerTest] precede 로 건 순서가 지켜진다
+ * @brief [TaskManagerTest] runBefore 로 건 순서가 지켜진다
  * @details 후속 태스크는 선행이 **끝난 뒤에만** 돌아야 한다. 순서를 직접 보려고 선행이 깃발을
  *          세우고 후속이 그 깃발을 확인한다.
  */
@@ -114,7 +114,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
         bSecondRan.store( true, std::memory_order_release );
     } ) );
 
-    first.precede( second );
+    first.runBefore( second );
     first.submit();
     second.submit();
 
@@ -127,7 +127,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
 
 /**
  * @brief [TaskManagerTest] 이미 제출한 태스크에 선행을 더 걸어도 그 태스크는 한 번만 돈다
- * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `precede` 가 수를 1 로 올린 뒤 선행이 끝나며 **다시** 0 을
+ * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `runBefore` 가 수를 1 로 올린 뒤 선행이 끝나며 **다시** 0 을
  *          지난다. 노드의 "큐에 넣었다" 문(`_bScheduled`)이 그 두 번째를 막는다. 예전의 5단 상태(`TaskState`)가
  *          남아 있던 이유가 이 문 하나였다 — 상태를 걷어낸 뒤에도 문은 지켜야 한다.
  *
@@ -160,7 +160,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
     }
 
     sw::TaskHandle early = manager.emplaceTask( "Early", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
-    early.precede( late );
+    early.runBefore( late );
     early.submit();
 
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );

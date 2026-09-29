@@ -20,7 +20,7 @@ SW_TEST_CASE( DeadlockDetectorTest, BasicTracking )
     detector.initialize();
 
     void* dummyLock = reinterpret_cast<void*>( 0x1234 );
-    detector.recordLockIntended( dummyLock );
+    detector.recordLockAttempt( dummyLock );
     detector.recordLockAcquired( dummyLock );
     detector.recordLockReleased( dummyLock );
 
@@ -40,13 +40,13 @@ SW_TEST_CASE( DeadlockDetectorTest, MultiLockHierarchicalAcquisitionAndRelease )
     void* lockC = reinterpret_cast<void*>( 0x3000 );
 
     // 스레드에서 A -> B -> C 순차 획득
-    detector.recordLockIntended( lockA );
+    detector.recordLockAttempt( lockA );
     detector.recordLockAcquired( lockA );
 
-    detector.recordLockIntended( lockB );
+    detector.recordLockAttempt( lockB );
     detector.recordLockAcquired( lockB );
 
-    detector.recordLockIntended( lockC );
+    detector.recordLockAttempt( lockC );
     detector.recordLockAcquired( lockC );
 
     // 역순 해제 C -> B -> A

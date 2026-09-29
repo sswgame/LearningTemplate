@@ -573,8 +573,8 @@ namespace sw
 
         info._entryCount.store( newIndex + 1, std::memory_order_release );
 
-        StringKey permanentKey{ hash, internedStr, length };
-        shard._mapKeyToIndex.emplace( permanentKey, newIndex );
+        StringKey internedKey{ hash, internedStr, length };
+        shard._mapKeyToIndex.emplace( internedKey, newIndex );
 
         return newIndex;
     }

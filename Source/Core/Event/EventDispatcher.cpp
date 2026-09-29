@@ -34,7 +34,7 @@ namespace sw
     }
 
 #if defined( SW_DEBUG )
-    void EventDispatcher::claimBusThread()
+    void EventDispatcher::bindBusThread()
     {
         if ( _busThreadId == std::thread::id{} )
             _busThreadId = std::this_thread::get_id();
@@ -52,7 +52,7 @@ namespace sw
                        "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
     }
 #else
-    void EventDispatcher::claimBusThread() {}
+    void EventDispatcher::bindBusThread() {}
     void EventDispatcher::assertBusThread() const {}
 #endif
 
@@ -75,7 +75,7 @@ namespace sw
 
     void EventDispatcher::processEvents()
     {
-        claimBusThread();
+        bindBusThread();
         assertBusThread();
         int32                                currentAllocIdx{ 0 };
         vector<pair<hashed_string, IEvent*>> activeChannels;
@@ -154,11 +154,11 @@ namespace sw
         }
     }
 
-    uint32 EventDispatcher::releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outStuckEntryCount )
+    uint32 EventDispatcher::releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount )
     {
-        outStuckEntryCount    = 0;
-        const uintptr_t begin = reinterpret_cast<uintptr_t>( pBegin );
-        const uintptr_t end   = reinterpret_cast<uintptr_t>( pEnd );
+        outRemainingEntryCount = 0;
+        const uintptr_t begin  = reinterpret_cast<uintptr_t>( pBegin );
+        const uintptr_t end    = reinterpret_cast<uintptr_t>( pEnd );
 
         uint32                                   releasedCount{ 0 };
         vector<pair<hashed_string, EventTypeId>> listErase;
@@ -177,7 +177,7 @@ namespace sw
                 continue;
             if ( bHasSubscriber )
             {
-                ++outStuckEntryCount;
+                ++outRemainingEntryCount;
                 continue;
             }
             listErase.push_back( key );

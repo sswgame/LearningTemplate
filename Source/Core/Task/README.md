@@ -18,7 +18,7 @@
 | 개념 | 역할 |
 |------|------|
 | **TaskManager** | 워커 스레드 풀을 돌리고, 대기열의 작업을 분배합니다. |
-| **TaskHandle** | 만든 작업 하나. `submit` / `precede` / `then` 으로 연결합니다. |
+| **TaskHandle** | 만든 작업 하나. `submit` / `runBefore` / `then` 으로 연결합니다. |
 | **TaskStageHandle** | 여러 작업을 한 “단계”로 묶어 `waitStage` 로 끝날 때까지 기다립니다. |
 | **Affinity** | `Any`(아무 워커) 또는 `MainThread`(메인만). |
 | **Work Helping** | `wait` 할 때 놀지 않고 **다른 대기 작업을 대신 실행**합니다. |
@@ -50,7 +50,7 @@ waitAll / waitStage   ◄────►  Work Helping 으로 같이 진행
 ```mermaid
 flowchart TD
   A[initialize<br/>워커 N개 생성] --> B[emplaceTask / emplaceParallel]
-  B --> C[precede / succeed / then<br/>의존성 연결]
+  B --> C[runBefore / runAfter / then<br/>의존성 연결]
   C --> D[submit<br/>스케줄러에 넘김]
   D --> E{Affinity?}
   E -->|Any| F[워커 큐<br/>라운드로빈 / Steal]
@@ -145,8 +145,8 @@ TaskHandle upload = tm.emplaceTask( "Upload", [](){ /* ... */ },
                                     TaskThreadAffinity::MainThread );
 
 // load 가 끝난 뒤 bake, bake 가 끝난 뒤 upload
-load.precede( bake );
-bake.precede( upload );
+load.runBefore( bake );
+bake.runBefore( upload );
 
 load.submit();
 bake.submit();
@@ -156,7 +156,7 @@ upload.submit();
 같은 뜻의 다른 표현:
 
 ```cpp
-bake.succeed( load );           // bake 는 load 다음
+bake.runAfter( load );           // bake 는 load 다음
 load.then( [](){ /* bake 역할 */ } );  // 체이닝으로 후속 생성
 ```
 
@@ -322,7 +322,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 | `MainThread` 작업만 넣고 `dispatchMainThreadTasks` 안 함 | 큐에 쌓인 채 미실행 | 메인 루프마다 dispatch |
 | 워커에서 메인 전용 자원(RHI/UI) 직접 사용 | 크래시·레이스 | Affinity `MainThread` 또는 메인으로 다시 넘기기 |
 | `waitAll` 없이 종료 | 미완료 작업 / 종료 레이스 | `shutdown` 전 `waitAll` |
-| parallel 본문에서 또 무거운 동기 wait | 스레드 고갈 위험 | 의존성은 DAG/`precede`로, 깊은 wait 중첩 피하기 |
+| parallel 본문에서 또 무거운 동기 wait | 스레드 고갈 위험 | 의존성은 DAG/`runBefore`로, 깊은 wait 중첩 피하기 |
 | Games에서 `engine::getTaskManager` 직접 남용 | 레이어 경계 흐려짐 | 엔진/씬 API 경유, 또는 팀 규칙에 맞는 서비스 |
 
 ---
@@ -339,7 +339,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 ## 더 볼 곳
 
 - `TaskManager.h` — API 주석  
-- `TaskTypes.h` — `TaskHandle::precede` / `then` / `submit`
+- `TaskTypes.h` — `TaskHandle::runBefore` / `then` / `submit`
 - `TaskFuture.h` — `TaskFuture<T>` / `TaskPromise<T>` / `whenAllFutures` / `whenAnyFuture`  
 - [Object/README.md](../../Engine/Object/README.md) — 병렬 tick과 `waitAll` 타이밍  
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 병렬 tick Gotcha

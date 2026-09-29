@@ -45,7 +45,7 @@ namespace sw
         /**
          * @brief 락 획득을 시도하기 직전에, 이 락을 기다린다고 기록합니다.
          */
-        void recordLockIntended( void* pLock );
+        void recordLockAttempt( void* pLock );
 
         /**
          * @brief 락을 얻은 뒤 보유 목록에 넣고 대기 기록을 지웁니다.

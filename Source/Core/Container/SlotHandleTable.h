@@ -42,7 +42,7 @@ namespace sw
                 Slot* pSlot = _listSlot.find( index );
                 if ( pSlot == nullptr )
                     return SlotHandle{};
-                // 세대는 retireSlot 에서 이미 올려 두었으므로 그대로 쓴다. 옛 핸들은 계속 무효다.
+                // 세대는 freeSlot 에서 이미 올려 두었으므로 그대로 쓴다. 옛 핸들은 계속 무효다.
                 const uint32 generation = pSlot->generation( std::memory_order_relaxed );
                 pSlot->_value           = std::move( value );
                 pSlot->_state.store( Slot::kOccupiedBit | generation, std::memory_order_release );
@@ -87,7 +87,7 @@ namespace sw
             if ( pSlot == nullptr )
                 return false;
             outValue = std::move( pSlot->_value );
-            retireSlot( handle.index(), *pSlot );
+            freeSlot( handle.index(), *pSlot );
             return true;
         }
 
@@ -98,7 +98,7 @@ namespace sw
             Slot*                   pSlot = findOccupiedSlot( handle );
             if ( pSlot == nullptr )
                 return;
-            retireSlot( handle.index(), *pSlot );
+            freeSlot( handle.index(), *pSlot );
         }
 
         /** @brief 점유된 슬롯마다 fn(T&) 를 부릅니다. */
@@ -203,7 +203,7 @@ namespace sw
         }
 
         /** @brief 슬롯을 비우고 세대를 올린 뒤 프리 리스트에 넣습니다(뮤텍스를 잡은 상태에서 부릅니다). */
-        void retireSlot( uint32 index, Slot& slot )
+        void freeSlot( uint32 index, Slot& slot )
         {
             slot._value = T{};
             // 점유 해제와 세대 증가를 한 번의 store 로 발행한다. 둘로 나누면 그 사이에 락 없이 읽는 쪽이

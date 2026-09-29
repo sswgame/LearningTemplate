@@ -360,9 +360,9 @@ namespace sw
         if ( extension.empty() || fileName.empty() )
             return false;
 
-        string_view want = extension;
-        if ( want.front() == '.' )
-            want.remove_prefix( 1 );
+        string_view expected = extension;
+        if ( expected.front() == '.' )
+            expected.remove_prefix( 1 );
 
         const size_t slash = fileName.find_last_of( "/\\" );
         const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
@@ -370,8 +370,8 @@ namespace sw
         if ( dot == string_view::npos || dot < start )
             return false;
 
-        const string_view have = fileName.substr( dot + 1 );
-        return StringUtil::equals( have, want, true );
+        const string_view actual = fileName.substr( dot + 1 );
+        return StringUtil::equals( actual, expected, true );
     }
 
     bool FileUtil::hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension )

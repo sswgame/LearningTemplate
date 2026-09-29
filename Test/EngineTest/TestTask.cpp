@@ -94,8 +94,8 @@ SW_TEST_CASE( TaskTest, GeneralTaskDAG )
     sw::TaskHandle handleB = taskMgr.emplaceTask( "TaskB", delB );
     sw::TaskHandle handleC = taskMgr.emplaceTask( "TaskC", delC );
 
-    handleA.precede( handleB );
-    handleB.precede( handleC );
+    handleA.runBefore( handleB );
+    handleB.runBefore( handleC );
 
     handleA.submit();
     handleB.submit();
@@ -944,7 +944,7 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
     }
     SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
 
-    sw::TaskHandle highHandle = taskMgr.emplaceTask( "HighLane", SW_DELEGATE_FUNCTION( sw::TaskDelegate, PriorityContext::high ) );
+    sw::TaskHandle highHandle = taskMgr.emplaceTask( "HighPriority", SW_DELEGATE_FUNCTION( sw::TaskDelegate, PriorityContext::high ) );
     SW_ASSERT_TRUE( highHandle.isValid() );
     highHandle.setPriority( sw::TaskPriority::High );
     highHandle.submit();

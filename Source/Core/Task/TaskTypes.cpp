@@ -74,7 +74,7 @@ namespace sw
         return _pNode != nullptr ? _pNode->_priority : TaskPriority::Normal;
     }
 
-    TaskHandle& TaskHandle::precede( const TaskHandle& targetTask )
+    TaskHandle& TaskHandle::runBefore( const TaskHandle& targetTask )
     {
         TaskNode* pTargetNode = targetTask.getNode();
         if ( _pNode != nullptr && pTargetNode != nullptr && _pNode != pTargetNode )
@@ -86,9 +86,9 @@ namespace sw
         return *this;
     }
 
-    TaskHandle& TaskHandle::succeed( TaskHandle dependencyTask )
+    TaskHandle& TaskHandle::runAfter( TaskHandle dependencyTask )
     {
-        dependencyTask.precede( *this );
+        dependencyTask.runBefore( *this );
         return *this;
     }
 
@@ -98,7 +98,7 @@ namespace sw
             return TaskHandle{};
 
         TaskHandle nextTask = _pNode->_pOwner->emplaceTask( "ChainedTask", nextTaskDelegate, affinity );
-        precede( nextTask );
+        runBefore( nextTask );
         return nextTask;
     }
 

@@ -390,8 +390,8 @@ namespace sw
             listResult.reserve( _mapCallStackAllocInfo.size() );
             for ( const auto& [hash, info] : _mapCallStackAllocInfo )
             {
-                const bool bWanted = ( order == TopCallStackOrder::LiveBytes ) ? ( info._currentBytes > 0 ) : ( info._totalCount > 0 );
-                if ( bWanted )
+                const bool bIncluded = ( order == TopCallStackOrder::LiveBytes ) ? ( info._currentBytes > 0 ) : ( info._totalCount > 0 );
+                if ( bIncluded )
                     listResult.push_back( info );
             }
         }

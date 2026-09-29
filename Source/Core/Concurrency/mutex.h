@@ -41,7 +41,7 @@ namespace sw
         void unlock();
 
     private:
-        void notifyIntended();
+        void notifyLockAttempt();
         void notifyAcquired();
         void notifyReleased();
 
@@ -87,14 +87,14 @@ namespace sw
         bool _bEntered;
     };
 
-    inline void mutex::notifyIntended()
+    inline void mutex::notifyLockAttempt()
     {
         MutexReentryGuard guard;
         if ( guard )
         {
             DeadlockDetector* pDetector = DeadlockDetector::getActive();
             if ( pDetector != nullptr )
-                pDetector->recordLockIntended( this );
+                pDetector->recordLockAttempt( this );
         }
     }
 
@@ -120,14 +120,14 @@ namespace sw
         }
     }
 #else
-    inline void mutex::notifyIntended() {}
+    inline void mutex::notifyLockAttempt() {}
     inline void mutex::notifyAcquired() {}
     inline void mutex::notifyReleased() {}
 #endif
 
     inline void mutex::lock()
     {
-        notifyIntended();
+        notifyLockAttempt();
         _mutex.lock();
         notifyAcquired();
     }

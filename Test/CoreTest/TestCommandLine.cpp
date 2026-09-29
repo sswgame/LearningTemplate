@@ -5,7 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// 1) Engine_CommandLine — 기본값·동의어·RHI 플래그
+// 1) Engine_CommandLine — 기본값·별칭·RHI 플래그
 // ------------------------------------------------------------------------------
 /**
  * @brief [CommandLineTest] Width 기본값 존재
@@ -49,9 +49,9 @@ SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 }
 
 /**
- * @brief [CommandLineTest] 동의어 인자 파싱
+ * @brief [CommandLineTest] 별칭 인자 파싱
  */
-SW_TEST_CASE( CommandLineTest, ParseSynonymArgument )
+SW_TEST_CASE( CommandLineTest, ParseAliasArgument )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -102,9 +102,9 @@ SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
 }
 
 /**
- * @brief [CommandLineTest] RHI 백엔드 CLI 플래그와 동의어
+ * @brief [CommandLineTest] RHI 백엔드 CLI 플래그와 별칭
  */
-SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndSynonyms )
+SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndAliases )
 {
     {
         sw::CommandLineManager cmdManager;

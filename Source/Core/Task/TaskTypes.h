@@ -320,7 +320,7 @@ namespace sw
      * @brief 만든 태스크를 가리키는 핸들입니다. DAG 의존성 연결과 체이닝을 지원합니다.
      * @details
      * - 침입형 참조 계수를 써서, 복사 · 이동할 때 스마트 포인터 같은 별도 할당이 없습니다.
-     * - `then()`, `precede()`, `succeed()` 로 작업 사이의 선후 관계를 선언적으로 조립할 수 있습니다.
+     * - `then()`, `runBefore()`, `runAfter()` 로 작업 사이의 선후 관계를 선언적으로 조립할 수 있습니다.
      */
     struct SW_API TaskHandle
     {
@@ -354,13 +354,13 @@ namespace sw
          * @brief 이 태스크가 targetTask 보다 반드시 **먼저** 끝나도록 DAG 선후 의존성을 겁니다.
          * @param targetTask 이 태스크가 끝난 뒤 실행될 후속 태스크
          */
-        TaskHandle& precede( const TaskHandle& targetTask );
+        TaskHandle& runBefore( const TaskHandle& targetTask );
 
         /**
          * @brief dependencyTask 가 반드시 **먼저** 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
          * @param dependencyTask 이 태스크보다 먼저 끝나야 하는 선행 태스크
          */
-        TaskHandle& succeed( TaskHandle dependencyTask );
+        TaskHandle& runAfter( TaskHandle dependencyTask );
 
         /**
          * @brief 이 태스크가 끝나면 자동으로 실행될 후속 태스크(continuation)를 만들어 연결합니다.
