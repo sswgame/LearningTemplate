@@ -80,42 +80,42 @@ namespace sw
                 }
             }
 
-            /**
-             * @brief 오브젝트 하나의 그룹 `group` 항목을 순서대로 틱합니다. 워커에서 불립니다.
-             * @details 항목은 등록부가 지은 것이라 살아 있는 컴포넌트만 가리킵니다(지워진 컴포넌트는 소유 오브젝트가 표시되어 틱 전에
-             *          다시 지어집니다). 삭제 대기 · 비활성은 여기서 건너뜁니다.
-             */
-            static void tickObjectGroup( float32 deltaTime, GameObject* pObj, uint32 group )
+            /** @brief 항목 하나를 삭제 대기 · 자기 활성만 보고 돌립니다. 소유 오브젝트는 보지 않습니다(등록부 칸 설명). */
+            static void runTickItemIfLive( float32 deltaTime, const TickItem& item )
             {
-                if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
+                Component* pComp = item._pComponent;
+                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
                     return;
-                const TickItemList& listItem = pObj->getTickItems();
-                const uint32        end      = pObj->getTickGroupBegin( group + 1 );
-                // 이 오브젝트의 항목은 이 스레드만 돈다. 그동안 그 씬 컴포넌트의 세터는 칸에 바로 쓴다(`SceneComponent::writeTickTransform`).
-                t_pTickingObject = pObj;
-                for ( uint32 index = pObj->getTickGroupBegin( group ); index < end; ++index )
-                {
-                    const TickItem& item  = listItem[index];
-                    Component*      pComp = item._pComponent;
-                    // 소유자의 활성은 위에서 봤다. 여기서는 컴포넌트 자기 비트만 본다.
-                    if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
-                        continue;
-                    runTickItem( deltaTime, item );
-                }
-                t_pTickingObject = nullptr;
+                runTickItem( deltaTime, item );
             }
 
-            /** @brief 한 그룹의 오브젝트 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터 배열만 받습니다. */
+            /**
+             * @brief 등록부 칸 하나(오브젝트 하나의 그룹 항목)를 순서대로 틱합니다. 워커에서 불립니다.
+             * @details **게임 오브젝트를 읽지 않습니다.** 계층에서 꺼진 오브젝트는 칸이 없고(목록 소속이 곧 활성), 틱 중의 `setActive` 는 틱
+             *          뒤로 미뤄지며, 파괴는 컴포넌트마다 삭제 표시를 세웁니다 — 그래서 컴포넌트의 표시만 보면 됩니다. 언리얼 틱 함수가 대상
+             *          컴포넌트만 보고 액터는 보지 않는 것과 같습니다. 예전에는 여기서 오브젝트의 삭제 대기 · 계층 활성 · 항목 목록 · 그룹
+             *          자리를 읽고 항목 버퍼를 건넜다(큐브 8000 개 프로파일에서 틱 CPU 의 절반이 이 루프였다).
+             */
+            static void tickEntry( float32 deltaTime, const TickObjectEntry& entry )
+            {
+                // 이 오브젝트의 항목은 이 스레드만 돈다. 그동안 그 씬 컴포넌트의 세터는 칸에 바로 쓴다(`SceneComponent::writeTickTransform`).
+                t_pTickingObject = entry._pObject;
+                runTickItemIfLive( deltaTime, entry._firstItem );
+                for ( uint32 index = 1; index < entry._itemCount; ++index )
+                    runTickItemIfLive( deltaTime, entry._pItem[index] );
+            }
+
+            /** @brief 한 그룹의 칸 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다. 한 칸은 한 오브젝트라 나눠지지 않습니다. */
             struct ObjectGroupTick
             {
-                GameObject* const* _ppObject{ nullptr };
-                float32            _deltaTime{ 0.0f };
-                uint32             _group{ 0 };
+                const TickObjectEntry* _pEntry{ nullptr };
+                float32                _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
-                        tickObjectGroup( _deltaTime, _ppObject[index], _group );
+                        tickEntry( _deltaTime, _pEntry[index] );
+                    t_pTickingObject = nullptr;
                 }
             };
 
@@ -245,14 +245,13 @@ namespace sw
             // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다.
             for ( uint32 group = 0; group < TickRegistry::kGroupCount; ++group )
             {
-                const vector<GameObject*>& listObject = _tickRegistry.getObjects( group );
-                if ( listObject.empty() )
+                const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
+                if ( listEntry.empty() )
                     continue;
                 GameObjectManagerTickInternal::ObjectGroupTick job{};
-                job._ppObject  = listObject.data();
+                job._pEntry    = listEntry.data();
                 job._deltaTime = deltaTime;
-                job._group     = group;
-                engine::runParallel( static_cast<uint32>( listObject.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
+                engine::runParallel( static_cast<uint32>( listEntry.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::ObjectGroupTick::tickRange, &job ) );
             }
             return;

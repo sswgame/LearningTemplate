@@ -12,6 +12,14 @@
  * 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눕니다. 한 오브젝트의 항목은 한 워커가 순서대로 돕니다(같은 오브젝트의
  * 컴포넌트 둘이 동시에 돌지 않는다는 규칙은 그대로입니다).
  *
+ * **그룹 목록의 칸은 틱에 필요한 것을 직접 듭니다**(`TickObjectEntry` — 오브젝트 · 첫 항목 · 나머지 항목의 자리). 언리얼
+ * `FTickTaskManager` 가 그룹마다 틱 함수 포인터의 납작한 배열을 돌고, 유니티 `BehaviourManager` 가 콜백마다 동작 컴포넌트의 납작한
+ * 목록을 도는 것과 같은 모양입니다. 두 엔진 모두 매 틱 액터 · 게임 오브젝트를 거치지 않고, 꺼진 것은 **목록에서 뺍니다.** 여기서도
+ * 계층에서 꺼진 오브젝트는 목록에 없습니다(`GameObject::refreshActiveInHierarchy` 가 바뀔 때 표시합니다). 예전에는 틱마다 오브젝트
+ * 하나에 게임 오브젝트(삭제 대기 · 계층 활성 · 항목 목록 · 그룹 자리)와 항목 버퍼를 건넜습니다 — 큐브 8000 개 프로파일에서 틱 CPU 의
+ * 절반이 그 루프였습니다. 틱 중의 `setActive` 는 틱 뒤로 미뤄지고 파괴는 컴포넌트마다 삭제 표시를 세우므로, 틱 도중에 목록이
+ * 낡을 일은 컴포넌트의 표시로 다 가려집니다.
+ *
  * 선행 조건(`addSubTickPrerequisite`)이 하나라도 등록되어 있으면 매니저가 DAG 스테이지 경로로 갑니다. 오브젝트 단위로는
  * 계층을 넘는 순서를 표현할 수 없기 때문입니다. 그 스테이지도 **이 등록부가 자기 항목으로 짓습니다**(`computePrerequisiteStages`).
  * 예전에는 매니저가 씬 전체를 다시 훑어 같은 후보를 두 번째로 모았습니다. 그 캐시는 이 등록부의 세대로 무효화됩니다.
@@ -56,6 +64,20 @@ namespace sw
     using TickStage = vector<TickItem>;
 
     /**
+     * @struct TickObjectEntry
+     * @brief 그룹 목록의 칸 하나 — 오브젝트 하나의 그 그룹 항목입니다. 디스패치는 이 칸과 컴포넌트만 읽습니다.
+     * @details 첫 항목은 칸 안에 복사해 둡니다. 틱하는 오브젝트는 대개 그룹마다 항목이 하나라 항목 버퍼를 건너지 않습니다. 둘째부터는
+     *          오브젝트의 항목 버퍼(`_pItem`, 첫 항목 포함)에서 읽습니다. 그 버퍼는 등록부만 다시 짓고, 다시 지을 때 이 칸도 함께 고칩니다.
+     */
+    struct TickObjectEntry
+    {
+        GameObject*     _pObject{ nullptr }; ///< 이 칸의 오브젝트. 틱 중 "지금 이 스레드가 틱하는 오브젝트" 로 적힙니다
+        TickItem        _firstItem{};        ///< 이 그룹의 첫 항목(복사본)
+        const TickItem* _pItem{ nullptr };   ///< 이 그룹 항목들의 시작(오브젝트의 항목 버퍼 안)
+        uint32          _itemCount{ 0 };     ///< 이 그룹 항목 수(1 이상)
+    };
+
+    /**
      * @class TickRegistry
      * @brief 그룹마다의 "틱할 것이 있는 오브젝트" 목록, 멤버십 더티 표시, 오브젝트 항목 재구축, 선행 조건 스테이지를 맡습니다.
      * @note 락 순서: 이 클래스의 락(`_dirtyMutex`)은 가장 안쪽입니다. `markObjectDirty` 는 워커에서 불려도 됩니다(원자 플래그 + 짧은 잠금).
@@ -95,8 +117,8 @@ namespace sw
         /** @brief 목록과 더티 표시를 비웁니다(매니저 clear). */
         void clear();
 
-        /** @brief 이 그룹에서 틱할 것이 있는 오브젝트들입니다. 디스패치의 유일한 입력입니다. */
-        const vector<GameObject*>& getObjects( uint32 group ) const { return _arrListObject[group]; }
+        /** @brief 이 그룹에서 틱할 것이 있고 계층에서 켜진 오브젝트의 칸들입니다. 디스패치의 유일한 입력입니다. */
+        const vector<TickObjectEntry>& getEntries( uint32 group ) const { return _arrListEntry[group]; }
         /** @brief 선행 조건이 등록된 서브틱이 하나라도 있으면 true 입니다. 그때 매니저가 DAG 스테이지 경로로 갑니다. */
         bool hasPrerequisites() const { return _prerequisiteCount > 0; }
         /** @brief 항목이 바뀔 때마다 오르는 세대입니다. DAG 스테이지 캐시가 이것으로 무효화됩니다. */
@@ -114,15 +136,15 @@ namespace sw
     private:
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 짓고 그룹 멤버십을 맞춥니다. */
         void refreshObject( GameObject* pObj );
-        /** @brief 그룹 목록에 넣거나 뺍니다(O(1), 오브젝트가 자기 자리를 듭니다). */
-        void setMembership( GameObject* pObj, uint32 group, bool bMember );
+        /** @brief 그룹 목록에 넣거나 뺍니다(O(1), 오브젝트가 자기 자리를 듭니다). 넣을 때(이미 있으면 그 자리에) 칸 내용을 @p entry 로 씁니다. */
+        void setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry );
 
-        vector<GameObject*> _arrListObject[kGroupCount]; ///< 그룹마다 틱할 것이 있는 오브젝트. 소유하지 않습니다.
-        vector<uint64>      _listDirtyObjectId;          ///< 다시 훑을 오브젝트 id. 사라졌으면 해석이 비어 건너뜁니다
-        vector<uint64>      _listProcessingObjectId;     ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
-        mutex               _dirtyMutex;                 ///< `_listDirtyObjectId` 의 락. 워커에서 표시할 수 있습니다
-        atomic<uint8>       _bAllDirty;                  ///< 전부 다시 훑을지 여부
-        uint32              _prerequisiteCount;          ///< 등록된 서브틱 선행 조건의 총수
-        uint64              _generation;                 ///< 항목이 바뀔 때마다 오릅니다
+        vector<TickObjectEntry> _arrListEntry[kGroupCount]; ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 칸. 오브젝트를 소유하지 않습니다.
+        vector<uint64>          _listDirtyObjectId;         ///< 다시 훑을 오브젝트 id. 사라졌으면 해석이 비어 건너뜁니다
+        vector<uint64>          _listProcessingObjectId;    ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
+        mutex                   _dirtyMutex;                ///< `_listDirtyObjectId` 의 락. 워커에서 표시할 수 있습니다
+        atomic<uint8>           _bAllDirty;                 ///< 전부 다시 훑을지 여부
+        uint32                  _prerequisiteCount;         ///< 등록된 서브틱 선행 조건의 총수
+        uint64                  _generation;                ///< 항목이 바뀔 때마다 오릅니다
     };
 } // namespace sw

@@ -155,7 +155,7 @@ namespace sw
 namespace sw
 {
     TickRegistry::TickRegistry()
-        : _arrListObject{}
+        : _arrListEntry{}
         , _listDirtyObjectId{}
         , _listProcessingObjectId{}
         , _dirtyMutex{}
@@ -259,31 +259,53 @@ namespace sw
                 ++cursor;
         }
         pObj->_arrTickGroupBegin[kGroupCount] = cursor;
+
+        // 계층에서 꺼진 오브젝트는 목록에 두지 않는다(언리얼 · 유니티가 꺼진 것의 틱을 목록에서 빼는 것과 같다). 켜지고 꺼질 때
+        // `GameObject::refreshActiveInHierarchy` 가 표시하므로 다음 틱 전에 여기로 다시 온다. 항목 버퍼가 다시 지어졌으므로 칸도 새로 쓴다.
+        const bool bActive = pObj->isActiveInHierarchy();
         for ( uint32 group = 0; group < kGroupCount; ++group )
-            setMembership( pObj, group, pObj->_arrTickGroupBegin[group] < pObj->_arrTickGroupBegin[group + 1] );
+        {
+            const uint32    begin = pObj->_arrTickGroupBegin[group];
+            const uint32    end   = pObj->_arrTickGroupBegin[group + 1];
+            TickObjectEntry entry{};
+            if ( begin < end )
+            {
+                entry._pObject   = pObj;
+                entry._firstItem = listItem[begin];
+                entry._pItem     = listItem.data() + begin;
+                entry._itemCount = end - begin;
+            }
+            setMembership( pObj, group, bActive && begin < end, entry );
+        }
 
         _prerequisiteCount           = _prerequisiteCount - pObj->_tickPrerequisiteCount + prerequisiteCount;
         pObj->_tickPrerequisiteCount = prerequisiteCount;
         ++_generation;
     }
 
-    void TickRegistry::setMembership( GameObject* pObj, uint32 group, bool bMember )
+    void TickRegistry::setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry )
     {
-        vector<GameObject*>& listObject = _arrListObject[group];
-        uint32&              index      = pObj->_arrTickIndex[group];
-        const bool           bIsMember  = index != kNotInList && index < listObject.size() && listObject[index] == pObj;
-        if ( bMember == bIsMember )
-            return;
+        vector<TickObjectEntry>& listEntry = _arrListEntry[group];
+        uint32&                  index     = pObj->_arrTickIndex[group];
+        const bool               bIsMember = index != kNotInList && index < listEntry.size() && listEntry[index]._pObject == pObj;
         if ( bMember )
         {
-            index = static_cast<uint32>( listObject.size() );
-            listObject.push_back( pObj );
+            // 이미 있으면 그 자리의 칸만 새로 쓴다(항목 버퍼가 다시 지어졌다).
+            if ( bIsMember == false )
+            {
+                index = static_cast<uint32>( listEntry.size() );
+                listEntry.push_back( entry );
+            }
+            else
+                listEntry[index] = entry;
             return;
         }
-        GameObject* pMoved           = listObject.back();
-        listObject[index]            = pMoved;
-        pMoved->_arrTickIndex[group] = index;
-        listObject.pop_back();
+        if ( bIsMember == false )
+            return;
+        const TickObjectEntry moved          = listEntry.back();
+        listEntry[index]                     = moved;
+        moved._pObject->_arrTickIndex[group] = index;
+        listEntry.pop_back();
         index = kNotInList;
     }
 
@@ -295,7 +317,7 @@ namespace sw
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
             bHadItem = bHadItem || pObj->_arrTickIndex[group] != kNotInList;
-            setMembership( pObj, group, false );
+            setMembership( pObj, group, false, TickObjectEntry{} );
         }
         _prerequisiteCount -= pObj->_tickPrerequisiteCount;
         pObj->_tickPrerequisiteCount = 0;
@@ -306,8 +328,8 @@ namespace sw
 
     void TickRegistry::clear()
     {
-        for ( vector<GameObject*>& listObject : _arrListObject )
-            listObject.clear();
+        for ( vector<TickObjectEntry>& listEntry : _arrListEntry )
+            listEntry.clear();
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };
             _listDirtyObjectId.clear();
@@ -326,15 +348,14 @@ namespace sw
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
             listCandidate.clear();
-            for ( GameObject* pObj : _arrListObject[group] )
+            for ( const TickObjectEntry& entry : _arrListEntry[group] )
             {
+                GameObject* pObj = entry._pObject;
                 if ( pObj == nullptr || pObj->isPendingDestroy() )
                     continue;
-                const TickItemList& listItem = pObj->getTickItems();
-                const uint32        end      = pObj->getTickGroupBegin( group + 1 );
-                for ( uint32 index = pObj->getTickGroupBegin( group ); index < end; ++index )
+                for ( uint32 index = 0; index < entry._itemCount; ++index )
                 {
-                    const TickItem& item = listItem[index];
+                    const TickItem& item = entry._pItem[index];
                     if ( item._pComponent == nullptr || item._pComponent->isPendingDestroy() )
                         continue;
                     TickRegistryInternal::StageCandidate candidate{};

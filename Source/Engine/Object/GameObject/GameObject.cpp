@@ -284,6 +284,12 @@ namespace sw
         if ( bWasActive == bActiveInHierarchy )
             return;
 
+        // 틱 목록은 켜진 오브젝트만 든다(`TickRegistry` — 언리얼 · 유니티처럼 꺼진 것은 목록에서 뺀다). 다음 틱 전에 칸을 넣거나 뺀다.
+        // 틱 항목이 없는 오브젝트는 목록에 칸이 없으니 알릴 것도 없다(깊은 계층을 켜고 끌 때 오브젝트마다 잠금을 잡지 않는다). 항목이 막
+        // 생겨 아직 지어지지 않았다면 그 오브젝트는 이미 표시되어 있고, 다시 지을 때 지금의 활성을 읽는다.
+        if ( _listTickItem.empty() == false )
+            markTickOrderDirty();
+
         // 이 값이 곧 렌더 스냅샷의 포함 여부다. 자기 컴포넌트에만 알린다 — 메시가 제 칸을 더티로 찍는다. 예전에는 프리미티브 집합
         // 세대를 올려, 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GpuScene 이 전체를 다시 모았다.
         for ( Component* pComp : _listComponent )

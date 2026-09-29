@@ -1226,11 +1226,11 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     const uint32 kDuring = static_cast<uint32>( sw::TickGroup::DuringPhysics );
     const uint32 kPost   = static_cast<uint32>( sw::TickGroup::PostPhysics );
     const uint32 kUpdate = static_cast<uint32>( sw::TickGroup::PostUpdate );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
-    SW_EXPECT_EQUAL( pTicker, registry.getObjects( kDuring )[0] );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kUpdate ).size() ) );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
-    SW_EXPECT_EQUAL( pSub, registry.getObjects( kPost )[0] );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( pTicker, registry.getEntries( kDuring )[0]._pObject );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kUpdate ).size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
+    SW_EXPECT_EQUAL( pSub, registry.getEntries( kPost )[0]._pObject );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pQuiet->getTickItems().size() ) );
     // (5) 둘 다 틱했고, 항목은 그룹 순이다.
     SW_EXPECT_EQUAL( 1, pMeshA->_tickCount );
@@ -1252,7 +1252,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     SW_EXPECT_EQUAL( 2, pMeshA->_tickCount );
     pRoot->unregisterSubTick( 8 );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
 
     // (3) 선행 종속성 — 있으면 DAG 경로, 떼면 다시 오브젝트 경로.
     SW_EXPECT_FALSE( registry.hasPrerequisites() );
@@ -1263,7 +1263,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     pOther->addSubTickPrerequisite( 10, handleA );
     manager.tick( 0.016f );
     SW_EXPECT_TRUE( registry.hasPrerequisites() );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getObjects( kPost ).size() ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
     pOther->unregisterSubTick( 10 );
     manager.tick( 0.016f );
     SW_EXPECT_FALSE( registry.hasPrerequisites() );
@@ -1272,14 +1272,71 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     sw::GameObject*        pTicker2 = manager.createGameObject( sw::hashed_string( "RegTicker2" ) );
     sw::MockMeshComponent* pMesh2   = pTicker2->addComponent<sw::MockMeshComponent>();
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     manager.destroyObject( pTicker, false );
     manager.tick( 0.016f );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getObjects( kDuring ).size() ) );
-    SW_EXPECT_EQUAL( pTicker2, registry.getObjects( kDuring )[0] );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( pTicker2, registry.getEntries( kDuring )[0]._pObject );
     SW_EXPECT_EQUAL( 2, pMesh2->_tickCount );
     manager.tick( 0.016f );
     SW_EXPECT_EQUAL( 3, pMesh2->_tickCount );
+}
+
+/**
+ * @brief [GameObjectTest] 계층에서 꺼진 오브젝트는 틱 목록에서 빠지고 켜면 돌아온다 — 부모를 끄면 자식도, 파괴 표시된 것은 그 틱부터 돌지 않는다
+ * @details 틱 목록은 켜진 오브젝트만 든다(언리얼 `FTickTaskManager` · 유니티 `BehaviourManager` 처럼 꺼진 것은 목록에서 뺀다). 디스패치는 게임
+ *          오브젝트를 읽지 않으므로, 켜고 끌 때 등록부에 알리는 것이 빠지면 꺼진 오브젝트가 계속 틱한다. 파괴는 목록이 아니라 컴포넌트의
+ *          삭제 표시로 막는다 — 실제로 목록에서 빠지는 것은 파괴가 처리될 때다.
+ */
+SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    const sw::TickRegistry& registry = manager.getTickRegistry();
+    const uint32            kDuring  = static_cast<uint32>( sw::TickGroup::DuringPhysics );
+
+    sw::GameObject* pParent = manager.createGameObject( sw::hashed_string( "ListParent" ) );
+    sw::GameObject* pChild  = manager.createGameObject( sw::hashed_string( "ListChild" ) );
+    sw::GameObject* pOther  = manager.createGameObject( sw::hashed_string( "ListOther" ) );
+    pParent->addComponent<sw::SceneComponent>();
+    pChild->addComponent<sw::SceneComponent>();
+    sw::MockMeshComponent* pParentTick = pParent->addComponent<sw::MockMeshComponent>();
+    sw::MockMeshComponent* pChildTick  = pChild->addComponent<sw::MockMeshComponent>();
+    sw::MockMeshComponent* pOtherTick  = pOther->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( 1, pParentTick->_tickCount );
+    SW_EXPECT_EQUAL( 1, pChildTick->_tickCount );
+
+    // 부모를 끄면 부모와 자식이 목록에서 빠진다(자식은 계층 활성으로 꺼진다).
+    pParent->setActive( false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( pOther, registry.getEntries( kDuring )[0]._pObject );
+    SW_EXPECT_EQUAL( 1, pParentTick->_tickCount );
+    SW_EXPECT_EQUAL( 1, pChildTick->_tickCount );
+    SW_EXPECT_EQUAL( 2, pOtherTick->_tickCount );
+
+    // 켜면 돌아온다.
+    pParent->setActive( true );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( 2, pParentTick->_tickCount );
+    SW_EXPECT_EQUAL( 2, pChildTick->_tickCount );
+
+    // 컴포넌트 자기 비트를 끄면 목록에는 남고 그 컴포넌트만 돌지 않는다.
+    pChildTick->setActive( false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 3, pParentTick->_tickCount );
+    SW_EXPECT_EQUAL( 2, pChildTick->_tickCount );
+
+    // 파괴 표시된 오브젝트는 틱 전에 처리되어 목록에서 빠진다.
+    manager.destroyObject( pOther, false );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
+    SW_EXPECT_EQUAL( 4, pParentTick->_tickCount );
 }
 
 /**
