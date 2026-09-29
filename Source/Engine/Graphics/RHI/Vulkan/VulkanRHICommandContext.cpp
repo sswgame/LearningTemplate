@@ -127,8 +127,8 @@ namespace sw
         if ( pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != SW_FALSE )
             return;
 
-        VulkanRHIDevice::VulkanTextureRecord& srcRec = *pSrcResolved;
-        _pDevice->transitionTextureLayout( cmd, srcRec, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VulkanRHIDevice::VulkanTextureRecord& srcRecord = *pSrcResolved;
+        _pDevice->transitionTextureLayout( cmd, srcRecord, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                            VK_IMAGE_ASPECT_COLOR_BIT );
 
         VkImage dstImage = VK_NULL_HANDLE;
@@ -162,12 +162,12 @@ namespace sw
         VkImageBlit blit{};
         blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.layerCount = 1;
-        blit.srcOffsets[1]             = { static_cast<int32>( srcRec._width ), static_cast<int32>( srcRec._height ), 1 };
+        blit.srcOffsets[1]             = { static_cast<int32>( srcRecord._width ), static_cast<int32>( srcRecord._height ), 1 };
         blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.layerCount = 1;
         blit.dstOffsets[1]             = { static_cast<int32>( dstW ), static_cast<int32>( dstH ), 1 };
 
-        vkCmdBlitImage( cmd, srcRec._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        vkCmdBlitImage( cmd, srcRecord._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
 
         if ( dst == 0 )
@@ -919,12 +919,12 @@ namespace sw
 
         if ( countBuffer != 0 && _pDevice->_bDrawIndirectCount != 0 )
         {
-            const VulkanRHIDevice::VulkanBufferRecord* pCountRec = _pDevice->resolveAllocatedBuffer( countBuffer );
-            if ( pCountRec != nullptr )
+            const VulkanRHIDevice::VulkanBufferRecord* pCountRecord = _pDevice->resolveAllocatedBuffer( countBuffer );
+            if ( pCountRecord != nullptr )
             {
-                if ( pCountRec->_buffer != VK_NULL_HANDLE )
+                if ( pCountRecord->_buffer != VK_NULL_HANDLE )
                 {
-                    vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRec->_buffer, countBufferOffset,
+                    vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset,
                                             drawCount, stride );
                     return;
                 }

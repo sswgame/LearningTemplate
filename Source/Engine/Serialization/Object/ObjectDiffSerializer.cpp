@@ -18,46 +18,46 @@ namespace sw
         outDiffBytes.clear();
         const SerializeContext& ctx = SerializeContext::getDefault();
         vector<uint8>           cdoBytes;
-        vector<uint8>           modBytes;
+        vector<uint8>           modifiedBytes;
 
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
             if ( prop._metadata._bTransient == SW_TRUE )
                 return;
-            const void* pCdoPtr = prop.getRawPtr( pCdoInstance );
-            const void* pModPtr = prop.getRawPtr( pModifiedInstance );
-            if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModPtr == nullptr ) )
+            const void* pCdoPtr        = prop.getRawPtr( pCdoInstance );
+            const void* pModifiedValue = prop.getRawPtr( pModifiedInstance );
+            if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModifiedValue == nullptr ) )
                 return;
 
             cdoBytes.clear();
-            modBytes.clear();
+            modifiedBytes.clear();
             if ( prop._bIsBitField == SW_TRUE )
             {
-                const bool bCdo = prop.getValue<bool>( pCdoInstance );
-                const bool bMod = prop.getValue<bool>( pModifiedInstance );
+                const bool bCdo      = prop.getValue<bool>( pCdoInstance );
+                const bool bModified = prop.getValue<bool>( pModifiedInstance );
                 SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, ctx );
-                SerializerUtil::serializeValueBinary( &bMod, hashed_string( "bool" ), modBytes, ctx );
+                SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, ctx );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
                 SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
-                SerializerUtil::serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), modBytes, ctx );
+                SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, ctx );
             }
             else
             {
                 SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
-                SerializerUtil::serializeValueBinary( pModPtr, prop._typeName, modBytes, ctx );
+                SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, ctx );
             }
-            if ( cdoBytes == modBytes )
+            if ( cdoBytes == modifiedBytes )
                 return;
 
             const uint32 nameHash   = prop.getNameHash();
-            const uint32 size       = static_cast<uint32>( modBytes.size() );
+            const uint32 size       = static_cast<uint32>( modifiedBytes.size() );
             const uint8* pHashBytes = reinterpret_cast<const uint8*>( &nameHash );
             const uint8* pSizeBytes = reinterpret_cast<const uint8*>( &size );
             outDiffBytes.insert( outDiffBytes.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
             outDiffBytes.insert( outDiffBytes.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
-            outDiffBytes.insert( outDiffBytes.end(), modBytes.begin(), modBytes.end() );
+            outDiffBytes.insert( outDiffBytes.end(), modifiedBytes.begin(), modifiedBytes.end() );
         }, true /* 상속 PROPERTY 포함 */ );
 
         return true;

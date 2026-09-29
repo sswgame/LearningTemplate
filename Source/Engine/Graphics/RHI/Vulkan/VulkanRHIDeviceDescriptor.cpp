@@ -213,14 +213,14 @@ namespace sw
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_dummyUBO ) != VK_SUCCESS )
                 return false;
-            VkMemoryRequirements memReq{};
-            vkGetBufferMemoryRequirements( _device, _dummyUBO, &memReq );
+            VkMemoryRequirements memoryRequirements{};
+            vkGetBufferMemoryRequirements( _device, _dummyUBO, &memoryRequirements );
             uint32 memoryTypeIndex{ 0 };
-            if ( findMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
+            if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
                 return false;
             VkMemoryAllocateInfo allocMem{};
             allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocMem.allocationSize  = memReq.size;
+            allocMem.allocationSize  = memoryRequirements.size;
             allocMem.memoryTypeIndex = memoryTypeIndex;
             if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
                 return false;
@@ -258,10 +258,10 @@ namespace sw
         if ( vkCreateImage( _device, &imageInfo, nullptr, &_bindlessDummyImage ) != VK_SUCCESS )
             return false;
 
-        VkMemoryRequirements memReq{};
-        vkGetImageMemoryRequirements( _device, _bindlessDummyImage, &memReq );
+        VkMemoryRequirements memoryRequirements{};
+        vkGetImageMemoryRequirements( _device, _bindlessDummyImage, &memoryRequirements );
         uint32 memoryTypeIndex{ 0 };
-        if ( findMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
         {
             SW_LOG_ERROR( "Failed to find a device local memory type for the bindless dummy image." );
             return false;
@@ -269,7 +269,7 @@ namespace sw
 
         VkMemoryAllocateInfo allocMem{};
         allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocMem.allocationSize  = memReq.size;
+        allocMem.allocationSize  = memoryRequirements.size;
         allocMem.memoryTypeIndex = memoryTypeIndex;
         if ( vkAllocateMemory( _device, &allocMem, nullptr, &_bindlessDummyMemory ) != VK_SUCCESS )
             return false;

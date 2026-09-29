@@ -42,18 +42,18 @@ namespace sw
         // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
         // (드로우마다 하던 일이다. updateConstantBuffer 주석 참고.) 기록 시작 전 단일 스레드 구간이라 락이 필요 없다.
         const uint32 slot = _frameRing.currentIndex();
-        for ( BindlessResourceRecord& rec : _listRegisteredBindless )
+        for ( BindlessResourceRecord& record : _listRegisteredBindless )
         {
-            if ( rec._resource == nullptr || rec._buffer == 0 )
+            if ( record._resource == nullptr || record._buffer == 0 )
                 continue;
-            const auto sizeIt = _mapCbAlignedSize.find( rec._buffer );
+            const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
             if ( sizeIt == _mapCbAlignedSize.end() )
                 continue; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-            cbvDesc.BufferLocation = rec._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
+            cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
             cbvDesc.SizeInBytes    = sizeIt->second;
-            _device->CreateConstantBufferView( &cbvDesc, rec._cpuHandle );
+            _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
         }
     }
 
@@ -231,10 +231,10 @@ namespace sw
                 { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             };
 
-            const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-            const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourcePreset::bufferDesc( sizeof( arrFullscreenVert ) );
+            const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+            const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeof( arrFullscreenVert ) );
 
-            if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+            if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
                                                            nullptr, IID_PPV_ARGS( _vertexBuffer.GetAddressOf() ) ) ) )
             {
                 SW_LOG_ERROR( "Failed to create fullscreen vertex buffer." );

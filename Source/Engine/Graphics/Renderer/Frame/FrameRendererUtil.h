@@ -208,11 +208,11 @@ namespace sw
             {
                 if ( colorCount >= capacity )
                     break;
-                for ( const RenderPassAttachment& att : listAttachment )
+                for ( const RenderPassAttachment& attachment : listAttachment )
                 {
-                    if ( att._name != outName )
+                    if ( attachment._name != outName )
                         continue;
-                    const RHIFormat format = parseAttachmentFormat( att._format );
+                    const RHIFormat format = parseAttachmentFormat( attachment._format );
                     if ( isDepthFormat( format ) )
                     {
                         bHasDepthOutput = true;

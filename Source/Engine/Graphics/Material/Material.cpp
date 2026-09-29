@@ -706,18 +706,18 @@ namespace sw
         if ( _bDefinesDirty != SW_FALSE )
         {
             _listCachedDefine.clear();
-            const MaterialPermutationDesc& perm = _desc._permutations;
+            const MaterialPermutationDesc& permutationDesc = _desc._permutations;
 
-            for ( const string& defineStr : perm._listAlwaysDefine )
+            for ( const string& defineStr : permutationDesc._listAlwaysDefine )
             {
                 MaterialUtil::appendUniqueDefine( _listCachedDefine, defineStr );
             }
 
-            MaterialUtil::appendQualityDefines( perm._quality, _listCachedDefine );
-            MaterialUtil::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( perm._shaderLOD ) );
-            MaterialUtil::appendUsageDefines( perm._usage, _listCachedDefine );
+            MaterialUtil::appendQualityDefines( permutationDesc._quality, _listCachedDefine );
+            MaterialUtil::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
+            MaterialUtil::appendUsageDefines( permutationDesc._usage, _listCachedDefine );
 
-            for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
+            for ( const MaterialStaticSwitch& entry : permutationDesc._listStaticSwitch )
             {
                 if ( entry._bEnabled != 0 )
                 {
@@ -728,7 +728,7 @@ namespace sw
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, entry._keywordOff );
             }
 
-            for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
+            for ( const MaterialMultiCompile& mc : permutationDesc._listMultiCompile )
             {
                 if ( mc._selected.empty() == false )
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, mc._selected );

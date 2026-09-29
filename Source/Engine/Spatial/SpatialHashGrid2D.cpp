@@ -259,15 +259,15 @@ namespace sw
             return;
 
         dir.normalize();
-        const float32 ndx = dir._x;
-        const float32 ndy = dir._y;
+        const float32 directionX = dir._x;
+        const float32 directionY = dir._y;
 
         // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. 다른 질의들처럼 **항상 함께** 본다.
         // 형제들이 그렇듯 여기도 **좁힘을 거친다.** 크다는 이유로 무조건 맞았다고 하지 않는다.
         for ( const SlotHandle handle : _listOversizedHandle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
-            if ( boundIt != _mapHandleBound.end() && doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
+            if ( boundIt != _mapHandleBound.end() && doesRayHitBounds( startX, startY, directionX, directionY, maxDist, boundIt->second ) )
                 outListHandle.push_back( handle );
         }
 
@@ -275,8 +275,8 @@ namespace sw
         int32           cellX     = startCell._minX;
         int32           cellY     = startCell._minY;
 
-        const int32 stepX = ( ndx > 0.0f ) ? 1 : ( ( ndx < 0.0f ) ? -1 : 0 );
-        const int32 stepY = ( ndy > 0.0f ) ? 1 : ( ( ndy < 0.0f ) ? -1 : 0 );
+        const int32 stepX = ( directionX > 0.0f ) ? 1 : ( ( directionX < 0.0f ) ? -1 : 0 );
+        const int32 stepY = ( directionY > 0.0f ) ? 1 : ( ( directionY < 0.0f ) ? -1 : 0 );
 
         // 셀 번호는 좌표에서 나오고 좌표는 부르는 쪽에서 온다. int32 끝에 접혀 있을 수 있으므로
         // `+ 1` 은 넓은 타입에서 한다.
@@ -285,11 +285,11 @@ namespace sw
         const float32 nextBoundaryX = static_cast<float32>( boundaryCellX ) * _cellSize;
         const float32 nextBoundaryY = static_cast<float32>( boundaryCellY ) * _cellSize;
 
-        float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / ndx : MathUtil::MaxFloat;
-        float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / ndy : MathUtil::MaxFloat;
+        float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / directionX : MathUtil::MaxFloat;
+        float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / directionY : MathUtil::MaxFloat;
 
-        const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / ndx : MathUtil::MaxFloat;
-        const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / ndy : MathUtil::MaxFloat;
+        const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / directionX : MathUtil::MaxFloat;
+        const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / directionY : MathUtil::MaxFloat;
 
         // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다. 셀 크기에 견줘 사거리가
         // 길면 훑을 셀이 끝없이 늘어난다. 상한은 `kMaxQueryCellCount` 하나를 같이 쓴다.
@@ -310,7 +310,7 @@ namespace sw
                     // 각자의 판정을 거친다. 이쪽만 후보 목록을 그대로 내놓고 있었다.
                     const auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() &&
-                         doesRayHitBounds( startX, startY, ndx, ndy, maxDist, boundIt->second ) )
+                         doesRayHitBounds( startX, startY, directionX, directionY, maxDist, boundIt->second ) )
                         outListHandle.push_back( handle );
                 }
             }

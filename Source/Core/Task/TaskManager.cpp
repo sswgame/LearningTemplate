@@ -87,10 +87,10 @@ namespace sw
         {
             void operator()( std::monostate& ) const {}
 
-            void operator()( TaskDelegate& del ) const
+            void operator()( TaskDelegate& taskDelegate ) const
             {
-                if ( del.isBound() )
-                    del();
+                if ( taskDelegate.isBound() )
+                    taskDelegate();
             }
 
             void operator()( TaskArgsPayload& payload ) const
@@ -925,9 +925,9 @@ namespace sw
         {
             if ( pNode->_successors.isEmptyRelaxed() == false )
             {
-                pNode->_successors.forEach( [this]( TaskNode* pSucc )
+                pNode->_successors.forEach( [this]( TaskNode* pSuccessor )
                 {
-                    resolveDependency( pSucc, true );
+                    resolveDependency( pSuccessor, true );
                 } );
             }
 

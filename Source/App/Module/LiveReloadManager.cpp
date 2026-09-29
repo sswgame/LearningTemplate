@@ -599,11 +599,11 @@ namespace sw
                 _fileWatcher->pollEvents( listEvent );
         }
 
-        for ( const FileChangeEvent& ev : listEvent )
+        for ( const FileChangeEvent& changeEvent : listEvent )
         {
-            if ( ev._action == FileWatcherAction::Modified )
+            if ( changeEvent._action == FileWatcherAction::Modified )
             {
-                string fullPath = FileUtil::joinPath( ev._directory, ev._filename );
+                string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
 
                 for ( auto& [moduleName, moduleContext] : _mapModule )
                 {
@@ -1099,12 +1099,12 @@ namespace sw
             if ( _mapModule.find( cur ) == _mapModule.end() )
                 continue;
             outListUnique.push_back( cur );
-            for ( const auto& [modName, ctx] : _mapModule )
+            for ( const auto& [moduleName, ctx] : _mapModule )
             {
                 for ( const string& dep : ctx._listDependsOn )
                 {
                     if ( dep == cur )
-                        listStack.push_back( modName );
+                        listStack.push_back( moduleName );
                 }
             }
         }

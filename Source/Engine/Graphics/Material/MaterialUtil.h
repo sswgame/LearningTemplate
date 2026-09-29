@@ -52,9 +52,9 @@ namespace sw
         static const utf8*          qualityToString( MaterialQualityLevel quality );
 
         static void parsePermutationNode( XmlNode root, MaterialPermutationDesc& out );
-        static void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm );
+        static void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& permutationDesc );
 
-        static void   appendUniqueDefine( vector<string>& outListDefine, string_view def );
+        static void   appendUniqueDefine( vector<string>& outListDefine, string_view define );
         static void   appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );
         static void   appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine );
         static uint64 hashDefines( const vector<string>& listDefine );

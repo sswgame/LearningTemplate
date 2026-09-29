@@ -19,8 +19,8 @@ namespace sw
 
     namespace
     {
-        constexpr uint32 kLocPackBinaryMagic   = 0x31434F4C; // 'LOC1'
-        constexpr uint32 kLocPackBinaryVersion = 1;
+        constexpr uint32 kLocalizationPackBinaryMagic   = 0x31434F4C; // 'LOC1'
+        constexpr uint32 kLocalizationPackBinaryVersion = 1;
     } // namespace
 
     LocalizationManager::LocalizationManager()
@@ -286,8 +286,8 @@ namespace sw
             buffer.insert( buffer.end(), pByteSrc, pByteSrc + numBytes );
         };
 
-        const uint32 magic         = kLocPackBinaryMagic;
-        const uint32 version       = kLocPackBinaryVersion;
+        const uint32 magic         = kLocalizationPackBinaryMagic;
+        const uint32 version       = kLocalizationPackBinaryVersion;
         const uint32 languageCount = static_cast<uint32>( _mapLanguageTable.size() );
 
         appendBytes( &magic, sizeof( magic ) );
@@ -347,7 +347,7 @@ namespace sw
         Memory::copy( &languageCount, pPtr, sizeof( languageCount ) );
         pPtr += sizeof( languageCount );
 
-        if ( magic != kLocPackBinaryMagic || version != kLocPackBinaryVersion )
+        if ( magic != kLocalizationPackBinaryMagic || version != kLocalizationPackBinaryVersion )
         {
             SW_LOG_WARNING( "Invalid Localization binary pack format or version in %#", string( filePath ).c_str() );
             return false;

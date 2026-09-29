@@ -65,13 +65,13 @@ namespace sw
                 if ( shaderPath.empty() || entryPoint.empty() )
                     return;
 
-                const uint64 permHash = ShaderBaker::computePermutationHash( listPermutation );
-                const string normPath = FileUtil::normalizeSeparators( shaderPath );
+                const uint64 permutationHash = ShaderBaker::computePermutationHash( listPermutation );
+                const string normPath        = FileUtil::normalizeSeparators( shaderPath );
 
                 for ( const ShaderBakeRequest& existing : outListRequest )
                 {
                     if ( existing._stage == stage &&
-                         existing._permHash == permHash &&
+                         existing._permutationHash == permutationHash &&
                          existing._entryPoint == entryPoint &&
                          existing._shaderPath == normPath )
                         return;
@@ -82,7 +82,7 @@ namespace sw
                 request._entryPoint      = string( entryPoint );
                 request._stage           = stage;
                 request._listPermutation = listPermutation;
-                request._permHash        = permHash;
+                request._permutationHash = permutationHash;
                 outListRequest.push_back( std::move( request ) );
             }
 
@@ -145,11 +145,11 @@ namespace sw
                     if ( normXml.find( "pipeline/" ) == string::npos && normXml.find( "pipeline.xml" ) == string::npos )
                         continue;
 
-                    RenderPipelineResource pipelineRes;
-                    if ( pipelineRes.loadFromXmlFile( xmlPath ) == false )
+                    RenderPipelineResource pipelineResource;
+                    if ( pipelineResource.loadFromXmlFile( xmlPath ) == false )
                         continue;
 
-                    for ( const RenderGraphPassDesc& pass : pipelineRes.getGraphPass() )
+                    for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )
                     {
                         string shaderPath = pass._shaderPath;
                         if ( shaderPath.empty() )
@@ -173,7 +173,7 @@ namespace sw
                             passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                             passInfo._listPermutation     = listPassDefine;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
-                            passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment );
+                            passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             listMeshPass.push_back( std::move( passInfo ) );
                         }
 
@@ -191,7 +191,7 @@ namespace sw
 
                             // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 예전에는 여기서 타입
                             // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
-                            if ( FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment ) )
+                            if ( FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment ) )
                             {
                                 const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                                 appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );

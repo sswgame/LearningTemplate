@@ -76,14 +76,14 @@ namespace sw
             return false;
         }
 
-        bool         bHasError = false;
-        const uint32 numDiags  = clang_getNumDiagnostics( _translationUnit );
-        for ( uint32 diagIndex = 0; diagIndex < numDiags; ++diagIndex )
+        bool         bHasError       = false;
+        const uint32 diagnosticCount = clang_getNumDiagnostics( _translationUnit );
+        for ( uint32 diagnosticIndex = 0; diagnosticIndex < diagnosticCount; ++diagnosticIndex )
         {
-            const CXDiagnostic diag = clang_getDiagnostic( _translationUnit, diagIndex );
-            if ( clang_getDiagnosticSeverity( diag ) >= CXDiagnostic_Error )
+            const CXDiagnostic diagnostic = clang_getDiagnostic( _translationUnit, diagnosticIndex );
+            if ( clang_getDiagnosticSeverity( diagnostic ) >= CXDiagnostic_Error )
             {
-                const CXString message = clang_formatDiagnostic( diag, clang_defaultDiagnosticDisplayOptions() );
+                const CXString message = clang_formatDiagnostic( diagnostic, clang_defaultDiagnosticDisplayOptions() );
                 if ( bReportErrors )
                     SW_LOG_ERROR( "%#", clang_getCString( message ) );
                 else
@@ -91,7 +91,7 @@ namespace sw
                 clang_disposeString( message );
                 bHasError = true;
             }
-            clang_disposeDiagnostic( diag );
+            clang_disposeDiagnostic( diagnostic );
         }
 
         if ( bHasError && bReportErrors )

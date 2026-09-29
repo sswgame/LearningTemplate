@@ -180,10 +180,10 @@ namespace sw::editor
                     entry._detail   = "Scene Object (ID: " + to_string( objId ) + ")";
                     entry._action   = [objId]()
                     {
-                        SceneManager* pMgr = editor::getService<SceneManager>();
-                        if ( pMgr && pMgr->getActiveScene() && pMgr->getActiveScene()->getObjectManager() )
+                        SceneManager* pCurrentSceneManager = editor::getService<SceneManager>();
+                        if ( pCurrentSceneManager && pCurrentSceneManager->getActiveScene() && pCurrentSceneManager->getActiveScene()->getObjectManager() )
                         {
-                            GameObject*    pFound      = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
+                            GameObject*    pFound      = pCurrentSceneManager->getActiveScene()->getObjectManager()->findGameObjectById( objId );
                             EditorContext* pRunContext = EditorContext::get();
                             if ( pFound != nullptr && pRunContext != nullptr )
                                 pRunContext->getSelectionManager().selectObject( pFound, SelectionMode::Replace );

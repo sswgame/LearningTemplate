@@ -12,8 +12,8 @@ namespace sw::editor
     {
         struct ImGuiViewportSizeGuardInternal
         {
-            inline static void ( *s_pOrigCreateWindow )( ImGuiViewport* )          = nullptr;
-            inline static void ( *s_pOrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+            inline static void ( *s_pOriginalCreateWindow )( ImGuiViewport* )          = nullptr;
+            inline static void ( *s_pOriginalSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
 
             /** @brief 뷰포트 크기를 HWND 클라이언트 크기로 맞춥니다. DXGI_SCALING_NONE 은 두 크기가 같아야 합니다. */
             static void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
@@ -40,7 +40,7 @@ namespace sw::editor
 
             static void guardedCreateWindow( ImGuiViewport* pViewport )
             {
-                if ( pViewport == nullptr || s_pOrigCreateWindow == nullptr )
+                if ( pViewport == nullptr || s_pOriginalCreateWindow == nullptr )
                     return;
 
                 syncViewportSizeFromHwnd( pViewport );
@@ -49,19 +49,19 @@ namespace sw::editor
                 if ( pViewport->Size.y < 1.0f )
                     pViewport->Size.y = 1.0f;
 
-                s_pOrigCreateWindow( pViewport );
+                s_pOriginalCreateWindow( pViewport );
             }
 
             static void guardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
             {
-                if ( pViewport == nullptr || s_pOrigSetWindowSize == nullptr )
+                if ( pViewport == nullptr || s_pOriginalSetWindowSize == nullptr )
                     return;
 
                 syncViewportSizeFromHwnd( pViewport );
                 if ( pViewport->Size.x >= 1.0f && pViewport->Size.y >= 1.0f )
                     size = pViewport->Size;
 
-                s_pOrigSetWindowSize( pViewport, size );
+                s_pOriginalSetWindowSize( pViewport, size );
             }
         };
     } // namespace
@@ -76,22 +76,22 @@ namespace sw::editor
         if ( platformIO.Renderer_CreateWindow != nullptr &&
              platformIO.Renderer_CreateWindow != &ImGuiViewportSizeGuardInternal::guardedCreateWindow )
         {
-            ImGuiViewportSizeGuardInternal::s_pOrigCreateWindow = platformIO.Renderer_CreateWindow;
-            platformIO.Renderer_CreateWindow                    = &ImGuiViewportSizeGuardInternal::guardedCreateWindow;
+            ImGuiViewportSizeGuardInternal::s_pOriginalCreateWindow = platformIO.Renderer_CreateWindow;
+            platformIO.Renderer_CreateWindow                        = &ImGuiViewportSizeGuardInternal::guardedCreateWindow;
         }
 
         if ( platformIO.Renderer_SetWindowSize != nullptr &&
              platformIO.Renderer_SetWindowSize != &ImGuiViewportSizeGuardInternal::guardedSetWindowSize )
         {
-            ImGuiViewportSizeGuardInternal::s_pOrigSetWindowSize = platformIO.Renderer_SetWindowSize;
-            platformIO.Renderer_SetWindowSize                    = &ImGuiViewportSizeGuardInternal::guardedSetWindowSize;
+            ImGuiViewportSizeGuardInternal::s_pOriginalSetWindowSize = platformIO.Renderer_SetWindowSize;
+            platformIO.Renderer_SetWindowSize                        = &ImGuiViewportSizeGuardInternal::guardedSetWindowSize;
         }
     }
 
     void ImGuiViewportSizeGuard::clear()
     {
-        ImGuiViewportSizeGuardInternal::s_pOrigCreateWindow  = nullptr;
-        ImGuiViewportSizeGuardInternal::s_pOrigSetWindowSize = nullptr;
+        ImGuiViewportSizeGuardInternal::s_pOriginalCreateWindow  = nullptr;
+        ImGuiViewportSizeGuardInternal::s_pOriginalSetWindowSize = nullptr;
     }
 } // namespace sw::editor
 

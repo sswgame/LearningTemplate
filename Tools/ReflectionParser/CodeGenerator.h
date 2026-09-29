@@ -49,7 +49,7 @@ namespace sw
         void emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 호출용 invoker 람다를 출력합니다. */
         void emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
-                                const string& retType, const string& callArgs ) const;
+                                const string& returnType, const string& callArgs ) const;
         /** @brief ReflectTypeTraits 특수화를 출력합니다. */
         void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
         /** @brief StaticType / getTypeInfo 접근자를 출력합니다. */

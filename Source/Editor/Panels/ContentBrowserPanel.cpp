@@ -215,19 +215,19 @@ namespace sw::editor
 
         // UE5 스타일의 겹친 폴더 아이콘
         // 1) 뒤쪽 탭과 뒤판(짙은 슬레이트)
-        const uint32 colBack = IM_COL32(
+        const uint32 colorBack = IM_COL32(
             static_cast<int32>( folderColor._r * 110 + 15 ),
             static_cast<int32>( folderColor._g * 125 + 20 ),
             static_cast<int32>( folderColor._b * 165 + 30 ),
             255 );
         // 2) 앞주머니(테마 액센트)
-        const uint32 colFront = IM_COL32(
+        const uint32 colorFront = IM_COL32(
             static_cast<int32>( folderColor._r * 190 + 20 ),
             static_cast<int32>( folderColor._g * 205 + 25 ),
             static_cast<int32>( folderColor._b * 235 + 20 ),
             255 );
         // 3) 앞주머니 윗면 하이라이트
-        const uint32 colPocketHighlight = IM_COL32(
+        const uint32 colorPocketHighlight = IM_COL32(
             static_cast<int32>( folderColor._r * 255 ),
             static_cast<int32>( folderColor._g * 255 ),
             static_cast<int32>( folderColor._b * 255 ),
@@ -242,14 +242,14 @@ namespace sw::editor
         const float32 fBottom = minPos._y + h * 0.78f;
 
         // 뒤쪽 탭
-        pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colBack, 3.0f );
+        pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colorBack, 3.0f );
         // 뒤판
-        pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colBack, 3.0f );
+        pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colorBack, 3.0f );
 
         // 앞주머니
-        pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
+        pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colorFront, 3.0f );
         // 앞주머니 윗면 하이라이트
-        pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colPocketHighlight, 1.5f );
+        pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colorPocketHighlight, 1.5f );
         // 테두리
         pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
     }
@@ -749,8 +749,8 @@ namespace sw::editor
             const bool bIsLast = ( partIndex + 1 == listPart.size() );
             if ( bIsLast )
             {
-                const Color4 accentCol = EditorThemeUtil::getAccentColor();
-                ImGui::TextColored( ImVec4( accentCol._r, accentCol._g, accentCol._b, 1.0f ), ICON_FA_FOLDER_OPEN );
+                const Color4 accentColor = EditorThemeUtil::getAccentColor();
+                ImGui::TextColored( ImVec4( accentColor._r, accentColor._g, accentColor._b, 1.0f ), ICON_FA_FOLDER_OPEN );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( string( part ).c_str() );
             }
@@ -785,16 +785,16 @@ namespace sw::editor
         {
             for ( int32 row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row )
             {
-                for ( int32 col = 0; col < columns; ++col )
+                for ( int32 column = 0; column < columns; ++column )
                 {
-                    const int32 index = row * columns + col;
+                    const int32 index = row * columns + column;
                     if ( index >= itemCount )
                         break;
 
                     const AssetEntry& entry = *listVisible[static_cast<size_t>( index )];
                     ImGui::PushID( entry._absolutePath.c_str() );
 
-                    if ( col > 0 )
+                    if ( column > 0 )
                         ImGui::SameLine();
 
                     const bool   selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );

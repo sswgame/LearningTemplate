@@ -284,13 +284,13 @@ namespace sw
                     D3D11_SHADER_INPUT_BIND_DESC bindDesc{};
                     pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
-                    ShaderResourceBinding resBinding{};
-                    resBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
-                    resBinding._registerSpace = 0;
-                    resBinding._bindPoint     = bindDesc.BindPoint;
-                    resBinding._bindCount     = bindDesc.BindCount;
-                    resBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-                    data._listResource.push_back( std::move( resBinding ) );
+                    ShaderResourceBinding resourceBinding{};
+                    resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
+                    resourceBinding._registerSpace = 0;
+                    resourceBinding._bindPoint     = bindDesc.BindPoint;
+                    resourceBinding._bindCount     = bindDesc.BindCount;
+                    resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
+                    data._listResource.push_back( std::move( resourceBinding ) );
                 }
 
                 return data;
@@ -348,12 +348,12 @@ namespace sw
                     D3D12_SHADER_INPUT_BIND_DESC bindDesc{};
                     pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
-                    ShaderResourceBinding resBinding{};
-                    resBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
-                    resBinding._registerSpace = bindDesc.Space;
-                    resBinding._bindPoint     = bindDesc.BindPoint;
-                    resBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
-                    resBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
+                    ShaderResourceBinding resourceBinding{};
+                    resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
+                    resourceBinding._registerSpace = bindDesc.Space;
+                    resourceBinding._bindPoint     = bindDesc.BindPoint;
+                    resourceBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
+                    resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
 
                     // 이 짝맞추기는 **move 하기 전에** 해야 한다. 예전에는 push_back( std::move ) 뒤에 비어 버린 이름과
                     // 비교해 한 번도 맞지 않았고, DXIL 의 모든 cbuffer 가 bindPoint 0 으로 보고됐다(MaterialCB 도 b0).
@@ -362,7 +362,7 @@ namespace sw
                     {
                         for ( ShaderBufferInfo& cb : data._listConstantBuffer )
                         {
-                            if ( cb._name == resBinding._name )
+                            if ( cb._name == resourceBinding._name )
                             {
                                 cb._registerSpace = bindDesc.Space;
                                 cb._bindPoint     = bindDesc.BindPoint;
@@ -370,7 +370,7 @@ namespace sw
                             }
                         }
                     }
-                    data._listResource.push_back( std::move( resBinding ) );
+                    data._listResource.push_back( std::move( resourceBinding ) );
                 }
 
                 return data;

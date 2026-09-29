@@ -204,10 +204,10 @@ namespace sw::editor
 
     bool EditorCommandRegistry::isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs )
     {
-        constexpr uint8 kChordMask = commandmod::kCtrl | commandmod::kShift | commandmod::kAlt;
-        const bool      bSameKey   = ( lhs._key == rhs._key );
-        const bool      bSameMod   = ( ( lhs._modifier & kChordMask ) == ( rhs._modifier & kChordMask ) );
-        return bSameKey && bSameMod;
+        constexpr uint8 kChordMask    = commandmod::kCtrl | commandmod::kShift | commandmod::kAlt;
+        const bool      bSameKey      = ( lhs._key == rhs._key );
+        const bool      bSameModifier = ( ( lhs._modifier & kChordMask ) == ( rhs._modifier & kChordMask ) );
+        return bSameKey && bSameModifier;
     }
 
     bool EditorCommandRegistry::isHandledShortcut( const EditorCommandShortcut& shortcut )

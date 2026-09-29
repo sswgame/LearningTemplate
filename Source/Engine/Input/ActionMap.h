@@ -154,7 +154,7 @@ namespace sw
     } // namespace ActionMapDefaults
 
     /// @brief XML 레이어 정의입니다(우선순위, enabled, blockLower, alwaysOn).
-    struct LayerDef
+    struct LayerDefinition
     {
         hashed_string          _name;
         int32                  _priority;
@@ -163,7 +163,7 @@ namespace sw
         uint8                  _bAlwaysOn   : 1; /**< 스택이나 enableOnlyLayer 에 영향받지 않고 항상 활성입니다. */
         [[maybe_unused]] uint8 _reserved    : 5;
 
-        LayerDef()
+        LayerDefinition()
             : _name{}
             , _priority{ 0 }
             , _bEnabled{ SW_TRUE }
@@ -243,7 +243,7 @@ namespace sw
     class SW_API ActionMap
     {
     public:
-        using LayerDef                 = sw::LayerDef;
+        using LayerDefinition          = sw::LayerDefinition;
         using ActionCallbackDelegate   = Delegate<void()>;
         using PhaseCallbackDelegate    = Delegate<void( ActionPhase )>;
         using Vector2DCallbackDelegate = Delegate<void( float2 )>;
@@ -323,9 +323,9 @@ namespace sw
         void                 setInvertY( bool invert ) { _bInvertY = invert ? SW_TRUE : SW_FALSE; }
         bool                 isInvertX() const { return _bInvertX == SW_TRUE; }
         bool                 isInvertY() const { return _bInvertY == SW_TRUE; }
-        void                 setMouseSensitivity( float2 sens ) { _mouseSensitivity = sens; }
+        void                 setMouseSensitivity( float2 sensitivity ) { _mouseSensitivity = sensitivity; }
         float2               getMouseSensitivity() const { return _mouseSensitivity; }
-        void                 setGamepadSensitivity( float2 sens ) { _gamepadSensitivity = sens; }
+        void                 setGamepadSensitivity( float2 sensitivity ) { _gamepadSensitivity = sensitivity; }
         float2               getGamepadSensitivity() const { return _gamepadSensitivity; }
         void                 setDeadzoneShape( DeadzoneShape shape ) { _deadzoneShape = shape; }
         DeadzoneShape        getDeadzoneShape() const { return _deadzoneShape; }
@@ -556,11 +556,11 @@ namespace sw
          * @param bTriggerJustPressed true 면 방아쇠 키가 **이번 프레임에 눌렸는지**(`wasChordTriggered`), false 면 눌려 있는지(`isChordDown`)
          * @details 두 질의가 방아쇠 키를 묻는 한 줄만 다르고 나머지 열세 줄이 같았습니다.
          */
-        bool         hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const;
-        bool         isLayerActiveInternal( const hashed_string& layer ) const;
-        void         ensureActionListed( const hashed_string& action );
-        LayerDef&    ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
-        ActionEntry& getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
+        bool             hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const;
+        bool             isLayerActiveInternal( const hashed_string& layer ) const;
+        void             ensureActionListed( const hashed_string& action );
+        LayerDefinition& ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
+        ActionEntry&     getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
         /**
          * @brief 바인딩 하나의 공통 머리입니다. 레이어를 보장하고 액션을 목록에 올린 뒤, 레이어 인덱스를 캐시한 빈 바인딩을 반환합니다.
          * @details 예전에는 `bind*` 아홉이 이 열두 줄(과 아래 `commitBinding` 의 넷)을 각자 들었습니다. 바인딩 종류를 하나 더하면
@@ -569,18 +569,18 @@ namespace sw
          */
         ActionBinding beginBinding( const hashed_string& action, BindingKind kind, ActionTrigger trigger, const hashed_string& layer );
         /** @brief 바인딩을 액션의 세 목록(현재 · 기본값 · 상태)에 **함께** 넣습니다. 그래서 셋의 인덱스가 늘 같습니다. */
-        void               commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding );
-        LayerDef*          findLayer( const hashed_string& name );
-        const LayerDef*    findLayer( const hashed_string& name ) const;
-        ActionEntry*       findAction( const hashed_string& action );
-        const ActionEntry* findAction( const hashed_string& action ) const;
+        void                   commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding );
+        LayerDefinition*       findLayer( const hashed_string& name );
+        const LayerDefinition* findLayer( const hashed_string& name ) const;
+        ActionEntry*           findAction( const hashed_string& action );
+        const ActionEntry*     findAction( const hashed_string& action ) const;
 
     private:
         InputManager*                        _pInput;
         unordered_map<hashed_string, uint32> _mapAction;       /**< 액션 이름 → _listActionEntry 인덱스. */
         unordered_map<hashed_string, uint32> _mapLayer;        /**< 레이어 이름 → _listLayerEntry 인덱스. */
         vector<ActionEntry>                  _listActionEntry; /**< 안정된 인덱스로만 접근하는 액션 슬롯 저장소(소유). 포인터를 들지 않으므로 재할당에 안전. */
-        vector<LayerDef>                     _listLayerEntry;  /**< 안정된 인덱스로만 접근하는 레이어 저장소(소유). ActionBinding::_cachedLayerIndex 가 참조. */
+        vector<LayerDefinition>              _listLayerEntry;  /**< 안정된 인덱스로만 접근하는 레이어 저장소(소유). ActionBinding::_cachedLayerIndex 가 참조. */
         vector<hashed_string>                _listActionName;
         vector<hashed_string>                _listLayerName;
         vector<hashed_string>                _listLayerStack;

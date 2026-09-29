@@ -10,7 +10,7 @@
 namespace sw::editor
 {
     /** @brief 로컬라이제이션 문자열 다국어 레코드 */
-    struct LocRecord
+    struct LocalizationRecord
     {
         string _key;
         string _enUS;
@@ -35,9 +35,9 @@ namespace sw::editor
     {
     public:
         /** @brief ko/en/ja JSON을 읽어 레코드 목록을 만듭니다. */
-        static bool loadLocalization( vector<LocRecord>& outList );
+        static bool loadLocalization( vector<LocalizationRecord>& outList );
         /** @brief 레코드를 언어별 JSON으로 저장하고 LocalizationManager를 갱신합니다. */
-        static bool saveLocalization( vector<LocRecord>& listRecord );
+        static bool saveLocalization( vector<LocalizationRecord>& listRecord );
         /** @brief data 폴더의 XML 파일 목록을 채웁니다. */
         static bool collectGameDataFiles( vector<GameDataFileEntry>& outList );
 
@@ -46,6 +46,6 @@ namespace sw::editor
         /** @brief Resource/.../data 폴더 절대 경로를 반환합니다. */
         static string getGameDataFolderPath();
         /** @brief 수정된 로컬라이즈 레코드가 있으면 true입니다. */
-        static bool hasModifiedLocalization( const vector<LocRecord>& listRecord );
+        static bool hasModifiedLocalization( const vector<LocalizationRecord>& listRecord );
     };
 } // namespace sw::editor

@@ -85,7 +85,7 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<LocRecord> listRecord;
+        vector<LocalizationRecord> listRecord;
         EditorDataTableCommands::loadLocalization( listRecord );
 
         publish( pState, generation, std::move( listRecord ) );

@@ -636,28 +636,28 @@ namespace sw
         {
             if ( text[index] == '&' )
             {
-                const string_view rem = text.substr( index );
-                if ( StringUtil::startsWith( rem, "&amp;" ) )
+                const string_view remaining = text.substr( index );
+                if ( StringUtil::startsWith( remaining, "&amp;" ) )
                 {
                     out.append( '&' );
                     index += 4;
                 }
-                else if ( StringUtil::startsWith( rem, "&lt;" ) )
+                else if ( StringUtil::startsWith( remaining, "&lt;" ) )
                 {
                     out.append( '<' );
                     index += 3;
                 }
-                else if ( StringUtil::startsWith( rem, "&gt;" ) )
+                else if ( StringUtil::startsWith( remaining, "&gt;" ) )
                 {
                     out.append( '>' );
                     index += 3;
                 }
-                else if ( StringUtil::startsWith( rem, "&quot;" ) )
+                else if ( StringUtil::startsWith( remaining, "&quot;" ) )
                 {
                     out.append( '"' );
                     index += 5;
                 }
-                else if ( StringUtil::startsWith( rem, "&apos;" ) )
+                else if ( StringUtil::startsWith( remaining, "&apos;" ) )
                 {
                     out.append( '\'' );
                     index += 5;

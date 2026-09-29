@@ -57,19 +57,19 @@ namespace sw
          */
         bool push( T item )
         {
-            uint64 b = _bottom.load( std::memory_order_relaxed );
-            uint64 t = _top.load( std::memory_order_acquire );
+            uint64 bottom = _bottom.load( std::memory_order_relaxed );
+            uint64 top    = _top.load( std::memory_order_acquire );
 
-            if ( b - t > _capacityMask )
+            if ( bottom - top > _capacityMask )
             {
                 // 가득 찼다. 일부러 늘리지 않는다. 넘치는 일감을 어디로 보낼지는 호출하는 쪽이 안다.
                 return false;
             }
 
-            _pBuffer[b & _capacityMask].store( item, std::memory_order_relaxed );
+            _pBuffer[bottom & _capacityMask].store( item, std::memory_order_relaxed );
 
             std::atomic_thread_fence( std::memory_order_release );
-            _bottom.store( b + 1, std::memory_order_relaxed );
+            _bottom.store( bottom + 1, std::memory_order_relaxed );
             return true;
         }
 
@@ -79,36 +79,36 @@ namespace sw
          */
         bool pop( T& outItem )
         {
-            uint64 b = _bottom.load( std::memory_order_relaxed );
-            if ( b == 0 )
+            uint64 bottom = _bottom.load( std::memory_order_relaxed );
+            if ( bottom == 0 )
                 return false;
 
-            b -= 1;
-            _bottom.store( b, std::memory_order_relaxed );
+            bottom -= 1;
+            _bottom.store( bottom, std::memory_order_relaxed );
 
             std::atomic_thread_fence( std::memory_order_seq_cst );
 
-            uint64 t = _top.load( std::memory_order_relaxed );
+            uint64 top = _top.load( std::memory_order_relaxed );
 
-            if ( t <= b )
+            if ( top <= bottom )
             {
-                outItem = _pBuffer[b & _capacityMask].load( std::memory_order_relaxed );
-                if ( t == b )
+                outItem = _pBuffer[bottom & _capacityMask].load( std::memory_order_relaxed );
+                if ( top == bottom )
                 {
                     // 마지막 남은 하나
-                    if ( _top.compare_exchange_strong( t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
+                    if ( _top.compare_exchange_strong( top, top + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
                     {
                         // 다른 스레드가 먼저 훔쳐 갔다
-                        _bottom.store( b + 1, std::memory_order_relaxed );
+                        _bottom.store( bottom + 1, std::memory_order_relaxed );
                         return false;
                     }
-                    _bottom.store( b + 1, std::memory_order_relaxed );
+                    _bottom.store( bottom + 1, std::memory_order_relaxed );
                 }
                 return true;
             }
             else
             {
-                _bottom.store( b + 1, std::memory_order_relaxed );
+                _bottom.store( bottom + 1, std::memory_order_relaxed );
                 return false;
             }
         }
@@ -119,14 +119,14 @@ namespace sw
          */
         bool steal( T& outItem )
         {
-            uint64 t = _top.load( std::memory_order_acquire );
+            uint64 top = _top.load( std::memory_order_acquire );
             std::atomic_thread_fence( std::memory_order_seq_cst );
-            uint64 b = _bottom.load( std::memory_order_acquire );
+            uint64 bottom = _bottom.load( std::memory_order_acquire );
 
-            if ( t < b )
+            if ( top < bottom )
             {
-                outItem = _pBuffer[t & _capacityMask].load( std::memory_order_relaxed );
-                if ( _top.compare_exchange_strong( t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
+                outItem = _pBuffer[top & _capacityMask].load( std::memory_order_relaxed );
+                if ( _top.compare_exchange_strong( top, top + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
                     return false;
                 return true;
             }

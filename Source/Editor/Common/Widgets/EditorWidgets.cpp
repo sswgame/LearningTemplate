@@ -66,11 +66,11 @@ namespace sw::editor
         const ImVec2  buttonSize{ lineHeight + 3.0f, lineHeight };
         bool          bChanged{ false };
 
-        auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color4& col )
+        auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color4& color )
         {
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( col ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( col._r + 0.1f, col._g + 0.1f, col._b + 0.1f, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( col ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( color._r + 0.1f, color._g + 0.1f, color._b + 0.1f, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( color ) );
             if ( ImGui::Button( pAxisLabel, buttonSize ) )
             {
                 axisValue = resetValue;
@@ -114,9 +114,9 @@ namespace sw::editor
         }
         else
         {
-            const Color4 hdr    = EditorThemeUtil::getHeaderBgColor();
-            const Color4 accent = EditorThemeUtil::getAccentColor();
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( hdr._r, hdr._g, hdr._b, 1.0f ) );
+            const Color4 headerColor = EditorThemeUtil::getHeaderBgColor();
+            const Color4 accent      = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( headerColor._r, headerColor._g, headerColor._b, 1.0f ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( accent._r, accent._g, accent._b, 0.70f ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( accent._r, accent._g, accent._b, 0.90f ) );
         }
@@ -395,14 +395,14 @@ namespace sw::editor
             ImGui::SameLine( labelWidth );
         }
         ImGui::SetNextItemWidth( -1.0f );
-        float32 arrCol[4]{ color._r, color._g, color._b, color._a };
+        float32 arrColor[4]{ color._r, color._g, color._b, color._a };
         bool    bChanged{ false };
-        if ( ImGui::ColorEdit4( "##color", arrCol, ImGuiColorEditFlags_AlphaBar ) )
+        if ( ImGui::ColorEdit4( "##color", arrColor, ImGuiColorEditFlags_AlphaBar ) )
         {
-            color._r = arrCol[0];
-            color._g = arrCol[1];
-            color._b = arrCol[2];
-            color._a = arrCol[3];
+            color._r = arrColor[0];
+            color._g = arrColor[1];
+            color._b = arrColor[2];
+            color._a = arrColor[3];
             bChanged = true;
         }
         ImGui::PopID();

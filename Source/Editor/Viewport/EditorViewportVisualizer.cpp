@@ -27,7 +27,7 @@ namespace sw::editor
             /** @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다. */
             static void drawColliders( const EditorViewportVisualizerArgs& args )
             {
-                constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
+                constexpr ImU32 colorWire = IM_COL32( 60, 230, 80, 220 );
 
                 for ( GameObject* pObj : *args._pListObject )
                 {
@@ -54,10 +54,10 @@ namespace sw::editor
                          EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
                          EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
                     {
-                        args._pDrawList->AddLine( s0, s1, colWire, 1.5f );
-                        args._pDrawList->AddLine( s1, s2, colWire, 1.5f );
-                        args._pDrawList->AddLine( s2, s3, colWire, 1.5f );
-                        args._pDrawList->AddLine( s3, s0, colWire, 1.5f );
+                        args._pDrawList->AddLine( s0, s1, colorWire, 1.5f );
+                        args._pDrawList->AddLine( s1, s2, colorWire, 1.5f );
+                        args._pDrawList->AddLine( s2, s3, colorWire, 1.5f );
+                        args._pDrawList->AddLine( s3, s0, colorWire, 1.5f );
                     }
                 }
             }
@@ -65,7 +65,7 @@ namespace sw::editor
             /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. */
             static void drawCameraFrustums( const EditorViewportVisualizerArgs& args )
             {
-                constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
+                constexpr ImU32 colorCameraWire = IM_COL32( 60, 200, 255, 200 );
 
                 if ( args._pListCamera == nullptr )
                     return;
@@ -94,14 +94,14 @@ namespace sw::editor
                          EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
                          EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
                     {
-                        args._pDrawList->AddLine( sEye, s0, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s1, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s2, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s3, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( s0, s1, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( s1, s2, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( s2, s3, colCamWire, 1.2f );
-                        args._pDrawList->AddLine( s3, s0, colCamWire, 1.2f );
+                        args._pDrawList->AddLine( sEye, s0, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( sEye, s1, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( sEye, s2, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( sEye, s3, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( s0, s1, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( s1, s2, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( s2, s3, colorCameraWire, 1.2f );
+                        args._pDrawList->AddLine( s3, s0, colorCameraWire, 1.2f );
                     }
                 }
             }

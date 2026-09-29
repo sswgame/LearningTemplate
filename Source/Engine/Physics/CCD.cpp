@@ -143,8 +143,8 @@ namespace sw
         }
 
         // 2) 변위가 0 에 가까우면 더 쓸어 볼 필요가 없다
-        const float32 dispLenSq = displacement.getLengthSquared();
-        if ( dispLenSq < 0.000001f )
+        const float32 displacementLengthSq = displacement.getLengthSquared();
+        if ( displacementLengthSq < 0.000001f )
             return false;
 
         // 3) 반지름만큼 부풀린 AABB(TargetBox + Radius)에 대해 슬랩으로 쓸어 본다
@@ -177,7 +177,7 @@ namespace sw
         // 모서리 · 꼭짓점 영역은 광선-구 교차로 다시 보정한다
         const float3  rayToClosest      = closestOnBox - startCenter;
         const float32 dotVal            = rayToClosest.dot( displacement );
-        const float32 proj              = dotVal / dispLenSq;
+        const float32 proj              = dotVal / displacementLengthSq;
         const float32 clampedProj       = MathUtil::saturate( proj );
         const float3  closestPointOnRay = startCenter + displacement * clampedProj;
 

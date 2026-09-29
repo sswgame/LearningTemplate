@@ -441,9 +441,9 @@ namespace sw
                     {
                         if ( hashed_string( mc._name.c_str() ) != name )
                             continue;
-                        for ( const string& opt : mc._listOption )
+                        for ( const string& option : mc._listOption )
                         {
-                            _listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), opt ), _listCachedDefine.end() );
+                            _listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), option ), _listCachedDefine.end() );
                         }
                         break;
                     }
@@ -521,9 +521,9 @@ namespace sw
                         return true;
                 }
             }
-            for ( const ShaderResourceBinding& res : reflectionData._listResource )
+            for ( const ShaderResourceBinding& resourceBinding : reflectionData._listResource )
             {
-                if ( hashed_string( res._name.c_str() ) == paramName )
+                if ( hashed_string( resourceBinding._name.c_str() ) == paramName )
                     return true;
             }
             return false;

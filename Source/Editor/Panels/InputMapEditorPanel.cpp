@@ -319,19 +319,19 @@ namespace sw::editor
                 ImGui::TextUnformatted( actionName.c_str() );
 
                 ImGui::TableNextColumn();
-                const ActionTrigger trig      = _actionMap.getBindingTrigger( actionName, 0 );
-                const utf8*         pTrigName = ActionMap::actionTriggerToName( trig );
-                ImGui::TextUnformatted( pTrigName != nullptr ? pTrigName : "Unknown" );
+                const ActionTrigger trigger      = _actionMap.getBindingTrigger( actionName, 0 );
+                const utf8*         pTriggerName = ActionMap::actionTriggerToName( trigger );
+                ImGui::TextUnformatted( pTriggerName != nullptr ? pTriggerName : "Unknown" );
 
                 ImGui::TableNextColumn();
                 const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 EditorThemeUtil::textInfo( glyph.c_str() );
 
                 ImGui::TableNextColumn();
-                const bool        bDown = _actionMap.isActionDown( actionName );
-                const bool        bTrig = _actionMap.wasActionTriggered( actionName );
-                const ActionPhase phase = _actionMap.getActionPhase( actionName );
-                if ( bTrig )
+                const bool        bDown      = _actionMap.isActionDown( actionName );
+                const bool        bTriggered = _actionMap.wasActionTriggered( actionName );
+                const ActionPhase phase      = _actionMap.getActionPhase( actionName );
+                if ( bTriggered )
                     EditorThemeUtil::textError( "TRIGGERED" );
                 else if ( bDown )
                     EditorThemeUtil::textSuccess( "DOWN" );
@@ -413,12 +413,12 @@ namespace sw::editor
             InputManager* pInput = getService<InputManager>();
             if ( pInput != nullptr )
             {
-                for ( int32 kIdx = 1; kIdx < static_cast<int32>( Key::Count ); ++kIdx )
+                for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
                 {
-                    const Key k = static_cast<Key>( kIdx );
-                    if ( pInput->wasKeyPressed( k ) )
+                    const Key key = static_cast<Key>( keyIndex );
+                    if ( pInput->wasKeyPressed( key ) )
                     {
-                        rebindSelectedAction( k );
+                        rebindSelectedAction( key );
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -430,14 +430,14 @@ namespace sw::editor
             ImGui::BeginChild( "KeyGrid", ImVec2( 450, 200 ), true );
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
-                const Key   k        = static_cast<Key>( keyIndex );
-                const utf8* pKeyName = KeyCodes::toName( k );
+                const Key   key      = static_cast<Key>( keyIndex );
+                const utf8* pKeyName = KeyCodes::toName( key );
                 if ( StringUtil::isNullOrEmpty( pKeyName ) == false )
                 {
                     if ( ImGui::Button( pKeyName, ImVec2( 80, 24 ) ) )
 
                     {
-                        rebindSelectedAction( k );
+                        rebindSelectedAction( key );
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -512,12 +512,12 @@ namespace sw::editor
             ImGui::Text( "Held Keys:" );
             ImGui::SameLine();
             bool bAnyKey = false;
-            for ( int32 kIdx = 1; kIdx < static_cast<int32>( Key::Count ); ++kIdx )
+            for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
-                const Key k = static_cast<Key>( kIdx );
-                if ( pInput->isKeyDown( k ) )
+                const Key key = static_cast<Key>( keyIndex );
+                if ( pInput->isKeyDown( key ) )
                 {
-                    const utf8* pName = KeyCodes::toName( k );
+                    const utf8* pName = KeyCodes::toName( key );
                     if ( pName != nullptr )
                     {
                         ImGui::SameLine();

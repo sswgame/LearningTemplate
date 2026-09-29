@@ -40,8 +40,8 @@ namespace sw
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
 
-        ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
-        if ( pRes == nullptr )
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, buffer );
@@ -69,12 +69,12 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
-        ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
-        if ( pRes == nullptr )
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
 
         D3D11_BUFFER_DESC desc;
-        pRes->GetDesc( &desc );
+        pResource->GetDesc( &desc );
 
         D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
@@ -94,7 +94,7 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
-        if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRes, &uavDesc, uav.GetAddressOf() ) ) )
+        if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pResource, &uavDesc, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;
 
         return registerUavView( uav.Get(), buffer );

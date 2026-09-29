@@ -569,10 +569,10 @@ namespace sw
 
     RHIFormat FrameRenderer::attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const
     {
-        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
-            if ( att._name == attachmentName )
-                return FrameRendererUtil::parseAttachmentFormat( att._format );
+            if ( attachment._name == attachmentName )
+                return FrameRendererUtil::parseAttachmentFormat( attachment._format );
         }
         return fallback;
     }

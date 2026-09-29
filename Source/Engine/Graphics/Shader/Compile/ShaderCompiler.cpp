@@ -392,14 +392,14 @@ namespace sw
                 vector<string> listCandidate = {
                     execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
                     libName };
-                for ( const string& cand : listCandidate )
+                for ( const string& candidatePath : listCandidate )
                 {
-                    if ( FileUtil::fileExists( cand ) )
+                    if ( FileUtil::fileExists( candidatePath ) )
                     {
-                        void* pH = FileUtil::loadDynamicLibrary( cand );
-                        if ( pH != nullptr )
-                            return pH;
-                        SW_LOG_ERROR( "Failed to load %#", cand.c_str() );
+                        void* pLibrary = FileUtil::loadDynamicLibrary( candidatePath );
+                        if ( pLibrary != nullptr )
+                            return pLibrary;
+                        SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
                     }
                 }
                 return FileUtil::loadDynamicLibrary( libName );

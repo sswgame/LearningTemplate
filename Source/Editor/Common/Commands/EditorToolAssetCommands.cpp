@@ -426,46 +426,46 @@ namespace sw::editor
     void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
     {
         const SerializeContext& ctx = SerializeContext::getDefault();
-        for ( Component* pInstComp : pInstance->getComponents() )
+        for ( Component* pInstanceComponent : pInstance->getComponents() )
         {
-            if ( pInstComp == nullptr || pInstComp->getTypeInfo() == nullptr )
+            if ( pInstanceComponent == nullptr || pInstanceComponent->getTypeInfo() == nullptr )
                 continue;
-            const TypeInfo* pTypeInfo = pInstComp->getTypeInfo();
+            const TypeInfo* pTypeInfo = pInstanceComponent->getTypeInfo();
             Component*      pCdoComp  = pCdo->findComponentByTypeName( pTypeInfo->_name );
             if ( pCdoComp == nullptr )
                 continue;
 
             vector<uint8> cdoBytes;
-            vector<uint8> instBytes;
+            vector<uint8> instanceBytes;
             pTypeInfo->forEachProperty(
                 [&]( const PropertyInfo& prop )
             {
                 if ( prop._metadata._bTransient == SW_TRUE )
                     return;
-                const void* pCdoPtr  = prop.getRawPtr( pCdoComp );
-                const void* pInstPtr = prop.getRawPtr( pInstComp );
-                if ( pCdoPtr == nullptr || pInstPtr == nullptr )
+                const void* pCdoPtr        = prop.getRawPtr( pCdoComp );
+                const void* pInstanceValue = prop.getRawPtr( pInstanceComponent );
+                if ( pCdoPtr == nullptr || pInstanceValue == nullptr )
                     return;
 
                 cdoBytes.clear();
-                instBytes.clear();
+                instanceBytes.clear();
                 if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
                 {
                     SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
-                    SerializerUtil::serializeNestedContainerBinary( pInstPtr, prop.getContainerShape(), instBytes, ctx );
+                    SerializerUtil::serializeNestedContainerBinary( pInstanceValue, prop.getContainerShape(), instanceBytes, ctx );
                 }
                 else
                 {
                     SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
-                    SerializerUtil::serializeValueBinary( pInstPtr, prop._typeName, instBytes, ctx );
+                    SerializerUtil::serializeValueBinary( pInstanceValue, prop._typeName, instanceBytes, ctx );
                 }
 
                 PrefabOverrideItem item{};
                 item._componentName   = pTypeInfo->_name.c_str();
                 item._propertyName    = prop._name.c_str();
                 item._defaultValue    = EditorToolAssetInternal::formatPropertyValue( prop, pCdoComp );
-                item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstComp );
-                item._bModified       = ( cdoBytes != instBytes );
+                item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstanceComponent );
+                item._bModified       = ( cdoBytes != instanceBytes );
                 outListOverride.push_back( std::move( item ) );
             },
                 true );
@@ -497,15 +497,15 @@ namespace sw::editor
             return;
         ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
 
-        Component* pInstComp = pInstance->findComponentByTypeName( hashed_string{ item._componentName } );
-        Component* pCdoComp  = pCdo->findComponentByTypeName( hashed_string{ item._componentName } );
-        if ( pInstComp != nullptr && pCdoComp != nullptr && pInstComp->getTypeInfo() != nullptr )
+        Component* pInstanceComponent = pInstance->findComponentByTypeName( hashed_string{ item._componentName } );
+        Component* pCdoComp           = pCdo->findComponentByTypeName( hashed_string{ item._componentName } );
+        if ( pInstanceComponent != nullptr && pCdoComp != nullptr && pInstanceComponent->getTypeInfo() != nullptr )
         {
-            const PropertyInfo* pProp = pInstComp->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
+            const PropertyInfo* pProp = pInstanceComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
             if ( pProp != nullptr )
             {
                 const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
-                void*                      pDest          = pProp->getRawPtr( pInstComp );
+                void*                      pDest          = pProp->getRawPtr( pInstanceComponent );
                 const void*                pSrc           = pProp->getRawPtr( pCdoComp );
                 const SerializeContext&    ctx            = SerializeContext::getDefault();
                 if ( pDest != nullptr && pSrc != nullptr )

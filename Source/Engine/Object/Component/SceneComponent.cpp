@@ -294,11 +294,11 @@ namespace sw
 
     void SceneComponent::deferSelfCall( void ( SceneComponent::*pMethod )() )
     {
-        GameObjectManager*        pMgr   = _pManager;
-        const sw::ComponentHandle handle = getHandle();
-        pMgr->deferTransformUpdate( [pMgr, handle, pMethod]()
+        GameObjectManager*        pManager = _pManager;
+        const sw::ComponentHandle handle   = getHandle();
+        pManager->deferTransformUpdate( [pManager, handle, pMethod]()
         {
-            SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
+            SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( handle ) );
             if ( pSelf != nullptr )
                 ( pSelf->*pMethod )();
         } );
@@ -308,13 +308,13 @@ namespace sw
     {
         if ( isInParallelTick() )
         {
-            GameObjectManager*        pMgr         = _pManager;
+            GameObjectManager*        pManager     = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
             const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
-            pMgr->deferTransformUpdate( [pMgr, selfHandle, parentHandle]()
+            pManager->deferTransformUpdate( [pManager, selfHandle, parentHandle]()
             {
-                SceneComponent* pSelf           = static_cast<SceneComponent*>( pMgr->resolveComponent( selfHandle ) );
-                SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pMgr->resolveComponent( parentHandle ) ) : nullptr;
+                SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
+                SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;
                 if ( pSelf != nullptr )
                     pSelf->attachToComponent( pResolvedParent );
             } );

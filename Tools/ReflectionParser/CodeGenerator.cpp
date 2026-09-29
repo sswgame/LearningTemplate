@@ -312,11 +312,11 @@ namespace sw
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입을 컴파일 타임에 막는다.
         // 목록은 parser_config 의 emit.value_forbidden_base_types 에서 온다(비면 생략).
         emit.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
-        const ParserConfig& cfg = _session._config;
-        if ( cfg._listValueForbiddenBaseType.empty() == false )
+        const ParserConfig& config = _session._config;
+        if ( config._listValueForbiddenBaseType.empty() == false )
         {
             string condition;
-            for ( const string& baseType : cfg._listValueForbiddenBaseType )
+            for ( const string& baseType : config._listValueForbiddenBaseType )
             {
                 if ( condition.empty() == false )
                     condition += " || ";
@@ -326,7 +326,7 @@ namespace sw
             }
             emit.linef( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (%#);",
                         condition );
-            emit.linef( "static_assert(!kIsInvalidValue, \"%#\");", cfg._valueForbiddenMessage );
+            emit.linef( "static_assert(!kIsInvalidValue, \"%#\");", config._valueForbiddenMessage );
         }
         emit.line( "sw::PropertyInfo p(" );
         emit.push();
@@ -379,7 +379,7 @@ namespace sw
     }
 
     void CodeGenerator::emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
-                                           const ParsedFunctionInfo& method, const string& retType,
+                                           const ParsedFunctionInfo& method, const string& returnType,
                                            const string& callArgs ) const
     {
         emit.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
@@ -391,7 +391,7 @@ namespace sw
         if ( method._bStatic != SW_FALSE && method._bConstructor == SW_FALSE )
         {
             emit.line( "(void)objPtr;" );
-            if ( retType == annotationConstants::kVoidTypeName )
+            if ( returnType == annotationConstants::kVoidTypeName )
             {
                 emit.linef( "%#::%#(%#);", typeInfo._fullyQualifiedName, method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -409,7 +409,7 @@ namespace sw
                 emit.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
             }
-            else if ( retType == annotationConstants::kVoidTypeName )
+            else if ( returnType == annotationConstants::kVoidTypeName )
             {
                 emit.linef( "self->%#(%#);", method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -429,7 +429,7 @@ namespace sw
     {
         for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
         {
-            const string retType = _session._typeNameMap.normalize( method._returnTypeName );
+            const string returnType = _session._typeNameMap.normalize( method._returnTypeName );
 
             const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
 
@@ -438,7 +438,7 @@ namespace sw
             emit.line( "::sw::FunctionInfo funcInfo;" );
             emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != SW_FALSE ) ? annotationConstants::kCtorLookupName : method._name ) );
             emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
-            emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
+            emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( returnType ) );
             emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName, _session ) );
 
             AnnotationFields::emitMetadata( emit, method, "funcInfo._metadata." );
@@ -450,7 +450,7 @@ namespace sw
 
             const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName, _session );
 
-            emitMethodInvoker( emit, typeInfo, method, retType, callArgs );
+            emitMethodInvoker( emit, typeInfo, method, returnType, callArgs );
             emit.pop();
             emit.line( "}" );
         }

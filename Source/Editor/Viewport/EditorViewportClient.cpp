@@ -157,10 +157,10 @@ namespace sw::editor
         formatstring( arrObj.data(), arrObj.capacity(), "Objects: %u", totalObjects );
         pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
 
-        fixed_string<constant::kMaxBuffer32> arrRes;
-        formatstring( arrRes.data(), arrRes.capacity(), "Res: %#×%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
+        fixed_string<constant::kMaxBuffer32> arrResolutionText;
+        formatstring( arrResolutionText.data(), arrResolutionText.capacity(), "Res: %#×%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
                       Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
-        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
+        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrResolutionText.c_str() );
     }
 
     EditorViewportClient::EditorViewportClient()
@@ -720,7 +720,7 @@ namespace sw::editor
         struct AxisItem
         {
             float3      _dir;
-            ImU32       _col;
+            ImU32       _color;
             const utf8* _pLabel;
             float32     _depth;
             float2      _screenOffset;
@@ -766,14 +766,14 @@ namespace sw::editor
             const ImVec2    pt( cubeCenterX + ax._screenOffset._x, cubeCenterY + ax._screenOffset._y );
 
             // 중심에서 뻗는 축 선
-            pDrawList->AddLine( ImVec2( cubeCenterX, cubeCenterY ), pt, ax._col, 1.8f );
+            pDrawList->AddLine( ImVec2( cubeCenterX, cubeCenterY ), pt, ax._color, 1.8f );
 
             // 원판 손잡이
             const float32 handleRadius = ( ax._depth > 0.0f ) ? 6.5f : 4.5f;
             const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
             const bool    bHovered     = ( distToMouse <= handleRadius + 2.0f );
 
-            pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
+            pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._color );
 
             if ( ax._depth > -0.2f && ax._pLabel[0] != '-' )
                 pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._pLabel );
@@ -817,24 +817,24 @@ namespace sw::editor
                 const bool    bMajor   = ( index % 5 == 0 );
 
                 // x == 0 인 선은 Y 방향으로 뻗는다. 그것이 Y 축이고, y == 0 인 선이 X 축이다.
-                const ImU32 colAlongY = bOriginX ? EditorViewportClientInternal::_s_kColorAxisY
-                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colAlongX = bOriginY ? EditorViewportClientInternal::_s_kColorAxisX
-                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colorAlongY = bOriginX ? EditorViewportClientInternal::_s_kColorAxisY
+                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colorAlongX = bOriginY ? EditorViewportClientInternal::_s_kColorAxisX
+                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
                 // Y 에 나란한 세로선
                 const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
-                    pDrawList->AddLine( sY0, sY1, colAlongY, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sY0, sY1, colorAlongY, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
                 // X 에 나란한 가로선
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colAlongX, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sX0, sX1, colorAlongX, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
             }
         }
         else
@@ -852,24 +852,24 @@ namespace sw::editor
 
                 // x == 0 인 선은 Z 방향으로 뻗는다. 그것이 **Z 축**이고, z == 0 인 선이 X 축이다.
                 // 예전에는 이 둘의 색이 바뀌어 있어 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달랐다.
-                const ImU32 colAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
-                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX
-                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colorAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
+                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colorAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX
+                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
                 // Z 에 나란한 선
                 const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
-                    pDrawList->AddLine( sZ0, sZ1, colAlongZ, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sZ0, sZ1, colorAlongZ, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
                 // X 에 나란한 선
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colAlongX, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sX0, sX1, colorAlongX, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
             }
         }
     }

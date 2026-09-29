@@ -58,14 +58,14 @@ namespace sw
         // 어긋나 있었다. 두 오버로드가 같은 문자열을 보도록 여기서 맞춘다.
         vector<string> listSorted;
         listSorted.reserve( listPermutation.size() );
-        for ( const string& def : listPermutation )
+        for ( const string& define : listPermutation )
         {
-            if ( def.empty() )
+            if ( define.empty() )
                 continue;
-            if ( def.find( '=' ) == string::npos )
-                listSorted.push_back( def + "=1" );
+            if ( define.find( '=' ) == string::npos )
+                listSorted.push_back( define + "=1" );
             else
-                listSorted.push_back( def );
+                listSorted.push_back( define );
         }
         if ( listSorted.empty() )
             return 0;
@@ -73,11 +73,11 @@ namespace sw
         std::sort( listSorted.begin(), listSorted.end() );
 
         uint64 hash{ 14695981039346656037ull }; // FNV-1a 64비트 오프셋 기저값
-        for ( const string& def : listSorted )
+        for ( const string& define : listSorted )
         {
-            if ( def.empty() )
+            if ( define.empty() )
                 continue;
-            hash = StringUtil::computeHash64( def, false, hash );
+            hash = StringUtil::computeHash64( define, false, hash );
         }
         return hash;
     }
@@ -89,24 +89,24 @@ namespace sw
 
         vector<string> listString;
         listString.reserve( listDefine.size() );
-        for ( const auto& def : listDefine )
+        for ( const auto& define : listDefine )
         {
-            if ( def._name.empty() )
+            if ( define._name.empty() )
                 continue;
-            if ( def._value.empty() )
-                listString.push_back( def._name );
+            if ( define._value.empty() )
+                listString.push_back( define._name );
             else
-                listString.push_back( def._name + "=" + def._value );
+                listString.push_back( define._name + "=" + define._value );
         }
         return computePermutationHash( listString );
     }
 
     string ShaderBaker::computeBinaryFileName( string_view stemLower, ShaderStage stage,
-                                               string_view entryPoint, uint64 permHash, string_view ext )
+                                               string_view entryPoint, uint64 permutationHash, string_view ext )
     {
-        const string_view stageTag  = getShaderStageInfo( stage )._pTag;
-        const string_view defEntry  = getShaderStageInfo( stage )._pEntryPoint;
-        const bool        bStdEntry = entryPoint.empty() || StringUtil::equals( entryPoint, defEntry, true );
+        const string_view stageTag          = getShaderStageInfo( stage )._pTag;
+        const string_view defaultEntryPoint = getShaderStageInfo( stage )._pEntryPoint;
+        const bool        bStdEntry         = entryPoint.empty() || StringUtil::equals( entryPoint, defaultEntryPoint, true );
 
         string basePart = string( stemLower ) + "_";
         if ( bStdEntry )
@@ -114,10 +114,10 @@ namespace sw
         else
             basePart += StringUtil::toLower( string( entryPoint ).c_str() );
 
-        if ( permHash != 0 )
+        if ( permutationHash != 0 )
         {
             StringBuilder<constant::kMaxBuffer16> sb;
-            sb.appendFormat( "_%#", Fmt( static_cast<uint32>( permHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
+            sb.appendFormat( "_%#", Fmt( static_cast<uint32>( permutationHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
             basePart += sb.view();
         }
 
@@ -201,23 +201,23 @@ namespace sw
 
         if ( pListPermutation != nullptr )
         {
-            for ( const string& permStr : *pListPermutation )
+            for ( const string& permutationDefine : *pListPermutation )
             {
-                if ( permStr.empty() )
+                if ( permutationDefine.empty() )
                     continue;
-                const size_t      eqPos = permStr.find( '=' );
-                ShaderMacroDefine def;
+                const size_t      eqPos = permutationDefine.find( '=' );
+                ShaderMacroDefine define;
                 if ( eqPos != string::npos )
                 {
-                    def._name  = permStr.substr( 0, eqPos );
-                    def._value = permStr.substr( eqPos + 1 );
+                    define._name  = permutationDefine.substr( 0, eqPos );
+                    define._value = permutationDefine.substr( eqPos + 1 );
                 }
                 else
                 {
-                    def._name  = permStr;
-                    def._value = "1";
+                    define._name  = permutationDefine;
+                    define._value = "1";
                 }
-                desc._listDefine.push_back( std::move( def ) );
+                desc._listDefine.push_back( std::move( define ) );
             }
         }
 

@@ -733,9 +733,9 @@ namespace sw
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
         {
-            const hashed_string qualHash{ qualified.c_str() };
-            _mapAliasToFqn.insert_or_assign( qualHash, canonicalKey );
-            _mapHashToCanonicalName.insert_or_assign( qualHash.getHash(), canonicalName );
+            const hashed_string qualifiedHash{ qualified.c_str() };
+            _mapAliasToFqn.insert_or_assign( qualifiedHash, canonicalKey );
+            _mapHashToCanonicalName.insert_or_assign( qualifiedHash.getHash(), canonicalName );
         }
     }
 

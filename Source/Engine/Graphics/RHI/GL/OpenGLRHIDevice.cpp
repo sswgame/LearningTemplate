@@ -122,19 +122,19 @@ namespace sw
         {
             if ( key._arrColor[colorIndex] == 0 )
                 continue;
-            const OpenGLTextureRecord* pRec = resolveTexture( key._arrColor[colorIndex] );
-            if ( pRec == nullptr || pRec->_bDepthStencil != SW_FALSE )
+            const OpenGLTextureRecord* pRecord = resolveTexture( key._arrColor[colorIndex] );
+            if ( pRecord == nullptr || pRecord->_bDepthStencil != SW_FALSE )
                 return 0;
-            arrColorTex[attachedColors++] = pRec->_texture;
+            arrColorTex[attachedColors++] = pRecord->_texture;
         }
 
         GLuint depthTex{ 0 };
         if ( depth != 0 )
         {
-            const OpenGLTextureRecord* pDepthRec = resolveTexture( depth );
-            if ( pDepthRec == nullptr || pDepthRec->_bDepthStencil == SW_FALSE )
+            const OpenGLTextureRecord* pDepthRecord = resolveTexture( depth );
+            if ( pDepthRecord == nullptr || pDepthRecord->_bDepthStencil == SW_FALSE )
                 return 0;
-            depthTex = pDepthRec->_texture;
+            depthTex = pDepthRecord->_texture;
         }
         if ( attachedColors == 0 && depthTex == 0 )
             return 0;
@@ -158,8 +158,8 @@ namespace sw
 
         if ( depthTex != 0 )
         {
-            const OpenGLTextureRecord* pDepthRec       = resolveTexture( depth );
-            const GLenum               depthAttachment = ( pDepthRec != nullptr && pDepthRec->_format == RHIFormat::D24_UNORM_S8_UINT )
+            const OpenGLTextureRecord* pDepthRecord    = resolveTexture( depth );
+            const GLenum               depthAttachment = ( pDepthRecord != nullptr && pDepthRecord->_format == RHIFormat::D24_UNORM_S8_UINT )
                                                            ? GL_DEPTH_STENCIL_ATTACHMENT
                                                            : GL_DEPTH_ATTACHMENT;
             glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, depthTex, 0 );

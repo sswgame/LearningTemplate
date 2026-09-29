@@ -214,9 +214,9 @@ namespace sw
         _queueRawEvent.drain( _listDrainedEvent );
 
         // 3) 꺼낸 원시 이벤트를 각 장치로 디스패치한다(새 프레임 엣지 플래그 설정)
-        for ( const RawInputEvent& rawEvt : _listDrainedEvent )
+        for ( const RawInputEvent& rawEvent : _listDrainedEvent )
         {
-            dispatchRawEvent( rawEvt );
+            dispatchRawEvent( rawEvent );
         }
 
         // 4) 활성 장치 자동 감지(O(1) 플래그 조회)
@@ -239,14 +239,14 @@ namespace sw
         }
     }
 
-    void InputManager::dispatchRawEvent( const RawInputEvent& rawEvt )
+    void InputManager::dispatchRawEvent( const RawInputEvent& rawEvent )
     {
-        switch ( rawEvt._type )
+        switch ( rawEvent._type )
         {
             case RawInputEventType::KeyDown:
             {
                 if ( _pKeyboard != nullptr )
-                    _pKeyboard->setKeyDown( rawEvt._payload._keyData._key, true );
+                    _pKeyboard->setKeyDown( rawEvent._payload._keyData._key, true );
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
             }
@@ -254,7 +254,7 @@ namespace sw
             case RawInputEventType::KeyUp:
             {
                 if ( _pKeyboard != nullptr )
-                    _pKeyboard->setKeyDown( rawEvt._payload._keyData._key, false );
+                    _pKeyboard->setKeyDown( rawEvent._payload._keyData._key, false );
                 break;
             }
 
@@ -262,8 +262,8 @@ namespace sw
             {
                 if ( _pMouse != nullptr )
                 {
-                    _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
-                    _pMouse->addRawDelta( rawEvt._payload._mouseData._rawDelta._x, rawEvt._payload._mouseData._rawDelta._y );
+                    _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
+                    _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
@@ -273,8 +273,8 @@ namespace sw
             {
                 if ( _pMouse != nullptr )
                 {
-                    _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
-                    _pMouse->setButtonDown( rawEvt._payload._mouseData._button, true );
+                    _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
+                    _pMouse->setButtonDown( rawEvent._payload._mouseData._button, true );
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
@@ -284,8 +284,8 @@ namespace sw
             {
                 if ( _pMouse != nullptr )
                 {
-                    _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
-                    _pMouse->setButtonDown( rawEvt._payload._mouseData._button, false );
+                    _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
+                    _pMouse->setButtonDown( rawEvent._payload._mouseData._button, false );
                 }
                 break;
             }
@@ -294,8 +294,8 @@ namespace sw
             {
                 if ( _pMouse != nullptr )
                 {
-                    _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
-                    _pMouse->setButtonDown( rawEvt._payload._mouseData._button, true );
+                    _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
+                    _pMouse->setButtonDown( rawEvent._payload._mouseData._button, true );
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
@@ -304,58 +304,58 @@ namespace sw
             case RawInputEventType::MouseWheel:
             {
                 if ( _pMouse != nullptr )
-                    _pMouse->addWheelDelta( rawEvt._payload._mouseData._wheelDelta );
+                    _pMouse->addWheelDelta( rawEvent._payload._mouseData._wheelDelta );
                 break;
             }
 
             case RawInputEventType::MouseWheelHorizontal:
             {
                 if ( _pMouse != nullptr )
-                    _pMouse->addHorizontalWheelDelta( rawEvt._payload._mouseData._wheelDelta );
+                    _pMouse->addHorizontalWheelDelta( rawEvent._payload._mouseData._wheelDelta );
                 break;
             }
 
             case RawInputEventType::GamepadButtonDown:
             {
-                GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+                GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
-                    pPad->setButtonDown( rawEvt._payload._gamepadData._button, true );
+                    pPad->setButtonDown( rawEvent._payload._gamepadData._button, true );
                 setActiveDeviceType( InputDeviceType::GamepadXbox );
                 break;
             }
 
             case RawInputEventType::GamepadButtonUp:
             {
-                GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+                GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
-                    pPad->setButtonDown( rawEvt._payload._gamepadData._button, false );
+                    pPad->setButtonDown( rawEvent._payload._gamepadData._button, false );
                 break;
             }
 
             case RawInputEventType::GamepadAxis:
             {
-                GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+                GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
-                    pPad->setAxis( rawEvt._payload._gamepadData._axisIndex, rawEvt._payload._gamepadData._axisValue );
+                    pPad->setAxis( rawEvent._payload._gamepadData._axisIndex, rawEvent._payload._gamepadData._axisValue );
                 break;
             }
 
             case RawInputEventType::GamepadConnectionChanged:
             {
                 if ( _onGamepadConnectionChanged.isBound() )
-                    _onGamepadConnectionChanged( rawEvt._deviceIndex, rawEvt._payload._gamepadData._bConnected == SW_TRUE );
+                    _onGamepadConnectionChanged( rawEvent._deviceIndex, rawEvent._payload._gamepadData._bConnected == SW_TRUE );
                 break;
             }
 
             case RawInputEventType::TextInput:
             {
-                onTextInput( rawEvt._payload._textData._arrUtf8 );
+                onTextInput( rawEvent._payload._textData._arrUtf8 );
                 break;
             }
 
             case RawInputEventType::TextComposition:
             {
-                onTextComposition( rawEvt._payload._textData._arrUtf8 );
+                onTextComposition( rawEvent._payload._textData._arrUtf8 );
                 break;
             }
 

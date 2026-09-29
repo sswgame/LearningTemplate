@@ -146,12 +146,12 @@ namespace sw::editor
     {
         if ( item._category == "GameObject" )
         {
-            SceneManager* pMgr = editor::getService<SceneManager>();
-            if ( pMgr == nullptr || pMgr->getActiveScene() == nullptr ||
-                 pMgr->getActiveScene()->getObjectManager() == nullptr )
+            SceneManager* pSceneManager = editor::getService<SceneManager>();
+            if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr ||
+                 pSceneManager->getActiveScene()->getObjectManager() == nullptr )
                 return;
 
-            GameObject* pFound = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( item._targetObjectId );
+            GameObject* pFound = pSceneManager->getActiveScene()->getObjectManager()->findGameObjectById( item._targetObjectId );
             EditorSceneCommands::select( pFound, SelectionMode::Replace );
             return;
         }

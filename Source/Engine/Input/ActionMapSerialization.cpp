@@ -100,17 +100,17 @@ namespace sw
             return false;
         }
 
-        const float32 dblClick  = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
-        const float32 dblDist   = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
-        const float32 holdThr   = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
-        const utf8*   pDefLayer = root.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
+        const float32 dblClick      = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
+        const float32 dblDist       = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
+        const float32 holdThreshold = root.getAttributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
+        const utf8*   pDefaultLayer = root.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
 
         clear();
         setDoubleClickTime( dblClick );
         setDoubleClickMaxDistance( dblDist );
-        setHoldThreshold( holdThr );
-        if ( StringUtil::isNullOrEmpty( pDefLayer ) == false )
-            _defaultLayerName = hashed_string( pDefLayer );
+        setHoldThreshold( holdThreshold );
+        if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
+            _defaultLayerName = hashed_string( pDefaultLayer );
 
         XmlNode layersNode = root.findChild( ActionMapSerializationInternal::InputMapXml::kLayers );
         if ( layersNode.isValid() )
@@ -181,20 +181,20 @@ namespace sw
                 const utf8* pModifierAttr = bindNode.findAttribute( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
                 if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
                 {
-                    Key modKey = KeyCodes::fromName( pModifierAttr );
-                    if ( modKey == Key::Unknown )
+                    Key modifierKey = KeyCodes::fromName( pModifierAttr );
+                    if ( modifierKey == Key::Unknown )
                     {
                         if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
-                            modKey = Key::LeftControl;
+                            modifierKey = Key::LeftControl;
                         else if ( StringUtil::equals( pModifierAttr, "Shift", true ) )
-                            modKey = Key::LeftShift;
+                            modifierKey = Key::LeftShift;
                         else if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
-                            modKey = Key::LeftAlt;
+                            modifierKey = Key::LeftAlt;
                     }
                     const Key triggerKey = KeyCodes::fromName( pCode );
-                    if ( modKey != Key::Unknown && triggerKey != Key::Unknown )
+                    if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                     {
-                        bindChord( hashed_string( pActionName ), modKey, triggerKey, trigger, hashed_string( bindLayer.view() ) );
+                        bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( bindLayer.view() ) );
                         continue;
                     }
                 }
@@ -255,7 +255,7 @@ namespace sw
             for ( XmlNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
             {
                 const Key     posKey         = KeyCodes::fromName( axisNode.findAttribute( "positive" ) );
-                const Key     negKey         = KeyCodes::fromName( axisNode.findAttribute( "negative" ) );
+                const Key     negativeKey    = KeyCodes::fromName( axisNode.findAttribute( "negative" ) );
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
@@ -263,8 +263,8 @@ namespace sw
                     axisLayer = hashed_string( pAxisLayerAttr );
                     ensureLayer( axisLayer );
                 }
-                if ( posKey != Key::Unknown && negKey != Key::Unknown )
-                    bindAxis1DComposite( hashed_string( pActionName ), negKey, posKey, hashed_string( axisLayer.view() ) );
+                if ( posKey != Key::Unknown && negativeKey != Key::Unknown )
+                    bindAxis1DComposite( hashed_string( pActionName ), negativeKey, posKey, hashed_string( axisLayer.view() ) );
             }
 
             // 4) <stick> 태그 파싱
@@ -289,15 +289,15 @@ namespace sw
             // 5) <chord> 태그 파싱
             for ( XmlNode chordNode = actionNode.findChild( "chord" ); chordNode.isValid(); chordNode = chordNode.findNextSibling( "chord" ) )
             {
-                const Key     modKey    = KeyCodes::fromName( chordNode.findAttribute( "modifier" ) );
-                const Key     trigKey   = KeyCodes::fromName( chordNode.findAttribute( "trigger" ) );
-                ActionTrigger trig      = defaultTrigger;
-                const utf8*   pTrigAttr = chordNode.findAttribute( "triggerMode" );
-                if ( StringUtil::isNullOrEmpty( pTrigAttr ) == false )
+                const Key     modifierKey       = KeyCodes::fromName( chordNode.findAttribute( "modifier" ) );
+                const Key     triggerKey        = KeyCodes::fromName( chordNode.findAttribute( "trigger" ) );
+                ActionTrigger trigger           = defaultTrigger;
+                const utf8*   pChordTriggerAttr = chordNode.findAttribute( "triggerMode" );
+                if ( StringUtil::isNullOrEmpty( pChordTriggerAttr ) == false )
                 {
-                    const ActionTrigger parsed = actionTriggerFromName( pTrigAttr );
+                    const ActionTrigger parsed = actionTriggerFromName( pChordTriggerAttr );
                     if ( parsed != ActionTrigger::Count )
-                        trig = parsed;
+                        trigger = parsed;
                 }
                 hashed_string chordLayer      = layer;
                 const utf8*   pChordLayerAttr = chordNode.findAttribute( "layer" );
@@ -306,8 +306,8 @@ namespace sw
                     chordLayer = hashed_string( pChordLayerAttr );
                     ensureLayer( chordLayer );
                 }
-                if ( modKey != Key::Unknown && trigKey != Key::Unknown )
-                    bindChord( hashed_string( pActionName ), modKey, trigKey, trig, hashed_string( chordLayer.view() ) );
+                if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                    bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( chordLayer.view() ) );
             }
         };
 
@@ -388,9 +388,9 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
-                        const Key negKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        const Key posKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "negKey", KeyCodes::toName( negKey ) );
+                        const Key negativeKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                        const Key posKey      = static_cast<Key>( b._arrSlot[1]._controlIndex );
+                        bindNode.appendAttribute( "negKey", KeyCodes::toName( negativeKey ) );
                         bindNode.appendAttribute( "posKey", KeyCodes::toName( posKey ) );
                         break;
                     }
@@ -432,10 +432,10 @@ namespace sw
                     }
                     case BindingKind::Chord:
                     {
-                        const Key modKey  = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        const Key trigKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "modKey", KeyCodes::toName( modKey ) );
-                        bindNode.appendAttribute( "trigKey", KeyCodes::toName( trigKey ) );
+                        const Key modifierKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                        const Key triggerKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
+                        bindNode.appendAttribute( "modKey", KeyCodes::toName( modifierKey ) );
+                        bindNode.appendAttribute( "trigKey", KeyCodes::toName( triggerKey ) );
                         break;
                     }
                     case BindingKind::Shortcut:
@@ -499,10 +499,10 @@ namespace sw
                 {
                     case BindingKind::Axis1DComposite:
                     {
-                        const Key negKey = KeyCodes::fromName( bindNode.findAttribute( "negKey" ) );
-                        const Key posKey = KeyCodes::fromName( bindNode.findAttribute( "posKey" ) );
-                        if ( negKey != Key::Unknown && posKey != Key::Unknown )
-                            bindAxis1DComposite( hashed_string( pAction ), negKey, posKey, hashed_string( layer ) );
+                        const Key negativeKey = KeyCodes::fromName( bindNode.findAttribute( "negKey" ) );
+                        const Key posKey      = KeyCodes::fromName( bindNode.findAttribute( "posKey" ) );
+                        if ( negativeKey != Key::Unknown && posKey != Key::Unknown )
+                            bindAxis1DComposite( hashed_string( pAction ), negativeKey, posKey, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
@@ -545,18 +545,18 @@ namespace sw
                     }
                     case BindingKind::Chord:
                     {
-                        const Key modKey  = KeyCodes::fromName( bindNode.findAttribute( "modKey" ) );
-                        const Key trigKey = KeyCodes::fromName( bindNode.findAttribute( "trigKey" ) );
-                        if ( modKey != Key::Unknown && trigKey != Key::Unknown )
-                            bindChord( hashed_string( pAction ), modKey, trigKey, ActionTrigger::Pressed, hashed_string( layer ) );
+                        const Key modifierKey = KeyCodes::fromName( bindNode.findAttribute( "modKey" ) );
+                        const Key triggerKey  = KeyCodes::fromName( bindNode.findAttribute( "trigKey" ) );
+                        if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                            bindChord( hashed_string( pAction ), modifierKey, triggerKey, ActionTrigger::Pressed, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::Shortcut:
                     {
-                        const Key   key     = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
-                        const uint8 modMask = static_cast<uint8>( bindNode.getAttributeInt( "modifierMask", 0 ) );
+                        const Key   key          = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
+                        const uint8 modifierMask = static_cast<uint8>( bindNode.getAttributeInt( "modifierMask", 0 ) );
                         if ( key != Key::Unknown )
-                            bindShortcut( hashed_string( pAction ), key, modMask, ActionTrigger::Pressed, hashed_string( layer ) );
+                            bindShortcut( hashed_string( pAction ), key, modifierMask, ActionTrigger::Pressed, hashed_string( layer ) );
                         break;
                     }
                     case BindingKind::AnyKey:

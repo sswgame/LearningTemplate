@@ -280,9 +280,9 @@ namespace sw
                 {
                     if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
                     {
-                        const Key  key       = static_cast<Key>( binding._arrSlot[0]._controlIndex );
-                        const bool bIsModKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
-                        if ( bIsModKey == false )
+                        const Key  key            = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+                        const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
+                        if ( bIsModifierKey == false )
                         {
                             const bool bCtrlHeld = _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl );
                             const bool bAltHeld  = _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt );
@@ -297,10 +297,10 @@ namespace sw
             }
             case BindingKind::Axis1DComposite:
             {
-                IInputDevice* pNegDev   = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pPosDev   = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                float32       axisValue = 0.0f;
-                if ( pNegDev != nullptr && pNegDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
+                IInputDevice* pNegativeDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+                IInputDevice* pPosDev         = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
+                float32       axisValue       = 0.0f;
+                if ( pNegativeDevice != nullptr && pNegativeDevice->isControlDown( binding._arrSlot[0]._controlIndex ) )
                     axisValue -= 1.0f;
                 if ( pPosDev != nullptr && pPosDev->isControlDown( binding._arrSlot[1]._controlIndex ) )
                     axisValue += 1.0f;
@@ -389,13 +389,13 @@ namespace sw
             }
             case BindingKind::Chord:
             {
-                IInputDevice* pModDev  = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pTrigDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                if ( pModDev != nullptr && pTrigDev != nullptr )
+                IInputDevice* pModifierDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+                IInputDevice* pTriggerDevice  = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
+                if ( pModifierDevice != nullptr && pTriggerDevice != nullptr )
                 {
-                    const bool bModDown  = pModDev->isControlDown( binding._arrSlot[0]._controlIndex );
-                    const bool bTrigDown = pTrigDev->isControlDown( binding._arrSlot[1]._controlIndex );
-                    if ( bModDown && bTrigDown )
+                    const bool bModifierDown = pModifierDevice->isControlDown( binding._arrSlot[0]._controlIndex );
+                    const bool bTriggerDown  = pTriggerDevice->isControlDown( binding._arrSlot[1]._controlIndex );
+                    if ( bModifierDown && bTriggerDown )
                     {
                         outValue = float2{ 1.0f, 0.0f };
                         return true;
@@ -444,17 +444,17 @@ namespace sw
             }
             case BindingKind::Shortcut:
             {
-                bool bModMatch = true;
+                bool bModifierMatch = true;
                 if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-                    bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl ) );
+                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl ) );
                 if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-                    bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftShift ) || _pInput->isKeyDown( Key::RightShift ) );
+                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftShift ) || _pInput->isKeyDown( Key::RightShift ) );
                 if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-                    bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt ) );
+                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt ) );
                 if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-                    bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftSuper ) || _pInput->isKeyDown( Key::RightSuper ) );
+                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftSuper ) || _pInput->isKeyDown( Key::RightSuper ) );
 
-                if ( bModMatch == false )
+                if ( bModifierMatch == false )
                     return false;
 
                 IInputDevice* pDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
@@ -550,10 +550,10 @@ namespace sw
 
     bool ActionMap::isLayerActiveInternal( const hashed_string& layer ) const
     {
-        const LayerDef* pDef = findLayer( layer );
-        if ( pDef == nullptr || pDef->_bEnabled == SW_FALSE )
+        const LayerDefinition* pLayer = findLayer( layer );
+        if ( pLayer == nullptr || pLayer->_bEnabled == SW_FALSE )
             return false;
-        if ( pDef->_bAlwaysOn == SW_TRUE )
+        if ( pLayer->_bAlwaysOn == SW_TRUE )
             return true;
 
         if ( _listLayerStack.empty() == false )
@@ -562,8 +562,8 @@ namespace sw
             {
                 if ( *it == layer )
                     return true;
-                const LayerDef* pTopDef = findLayer( *it );
-                if ( pTopDef != nullptr && pTopDef->_bBlockLower == SW_TRUE )
+                const LayerDefinition* pTopLayer = findLayer( *it );
+                if ( pTopLayer != nullptr && pTopLayer->_bBlockLower == SW_TRUE )
                     return false;
             }
             return false;

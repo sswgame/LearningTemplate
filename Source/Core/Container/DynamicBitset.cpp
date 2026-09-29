@@ -23,11 +23,11 @@ namespace sw
 
         for ( uint32 bitIndex = 0; bitIndex < _bitCount; ++bitIndex )
         {
-            const utf8 c = str[_bitCount - 1 - bitIndex];
-            if ( c == '1' )
+            const utf8 digit = str[_bitCount - 1 - bitIndex];
+            if ( digit == '1' )
                 _listBlock[bitIndex / kBitsPerBlock] |= ( 1ULL << ( bitIndex % kBitsPerBlock ) );
-            else if ( c != '0' )
-                SW_LOG_ERROR( "DynamicBitset: Invalid character %# in bitset string", c );
+            else if ( digit != '0' )
+                SW_LOG_ERROR( "DynamicBitset: Invalid character %# in bitset string", digit );
         }
     }
 

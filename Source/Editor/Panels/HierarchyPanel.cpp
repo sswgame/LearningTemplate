@@ -404,10 +404,10 @@ namespace sw::editor
                 {
                     if ( pComp == nullptr )
                         continue;
-                    const TypeInfo* pT = pComp->getTypeInfo();
-                    if ( pT == nullptr )
+                    const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+                    if ( pTypeInfo == nullptr )
                         continue;
-                    EditorUtil::appendCategoryBadge( pT->getCategory(), badgeStr );
+                    EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
                 }
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
@@ -637,11 +637,11 @@ namespace sw::editor
         // 단축키(Ctrl+D 복제, F2 이름 바꾸기, Delete 삭제)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
-            const ImGuiIO&    io     = ImGui::GetIO();
-            SelectionManager& selMgr = pContext->getSelectionManager();
+            const ImGuiIO&    io               = ImGui::GetIO();
+            SelectionManager& selectionManager = pContext->getSelectionManager();
             // 사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
             vector<GameObject*> listSel;
-            selMgr.getSelectedObjects( listSel );
+            selectionManager.getSelectedObjects( listSel );
 
             if ( listSel.empty() == false )
             {
@@ -656,9 +656,9 @@ namespace sw::editor
                     }
                     if ( listNewCreated.empty() == false )
                     {
-                        selMgr.clearObjectSelection();
+                        selectionManager.clearObjectSelection();
                         for ( GameObject* pNewGo : listNewCreated )
-                            selMgr.selectObject( pNewGo, SelectionMode::Add );
+                            selectionManager.selectObject( pNewGo, SelectionMode::Add );
                     }
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
@@ -677,7 +677,7 @@ namespace sw::editor
                     {
                         EditorSceneCommands::destroy( pManager, pGo );
                     }
-                    selMgr.clearObjectSelection();
+                    selectionManager.clearObjectSelection();
                 }
             }
         }

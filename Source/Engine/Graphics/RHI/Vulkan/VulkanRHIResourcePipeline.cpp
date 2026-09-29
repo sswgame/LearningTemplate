@@ -327,11 +327,11 @@ namespace sw
                                             : static_cast<uint32>( desc._listColorAttachment.size() );
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
-            const RHIRenderPassAttachment& att = desc._listColorAttachment[colorIndex];
-            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( att._format ) ), toLoadOp( att._loadOp ),
-                           ( att._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            const RHIRenderPassAttachment& attachment = desc._listColorAttachment[colorIndex];
+            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( attachment._format ) ), toLoadOp( attachment._loadOp ),
+                           ( attachment._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-            spec._arrColorStoreOp[colorIndex] = toStoreOp( att._storeOp );
+            spec._arrColorStoreOp[colorIndex] = toStoreOp( attachment._storeOp );
         }
         if ( desc._bHasDepthStencil != SW_FALSE )
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );

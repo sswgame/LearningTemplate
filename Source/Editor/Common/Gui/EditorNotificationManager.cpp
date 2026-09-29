@@ -66,35 +66,35 @@ namespace sw::editor
             if ( remainingTime < 0.5f )
                 alpha = remainingTime / 0.5f;
 
-            ImVec4 bgCol{ 0.12f, 0.12f, 0.14f, 0.92f * alpha };
-            ImVec4 borderCol{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
-            ImVec4 titleCol{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
+            ImVec4 bgColor{ 0.12f, 0.12f, 0.14f, 0.92f * alpha };
+            ImVec4 borderColor{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
+            ImVec4 titleColor{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
 
             switch ( item._type )
             {
                 case NotificationType::Success:
                 {
-                    borderCol = ImVec4{ 0.2f, 0.7f, 0.3f, alpha };
-                    titleCol  = ImVec4{ 0.4f, 0.9f, 0.5f, alpha };
+                    borderColor = ImVec4{ 0.2f, 0.7f, 0.3f, alpha };
+                    titleColor  = ImVec4{ 0.4f, 0.9f, 0.5f, alpha };
                     break;
                 }
                 case NotificationType::Warning:
                 {
-                    borderCol = ImVec4{ 0.9f, 0.6f, 0.1f, alpha };
-                    titleCol  = ImVec4{ 1.0f, 0.8f, 0.3f, alpha };
+                    borderColor = ImVec4{ 0.9f, 0.6f, 0.1f, alpha };
+                    titleColor  = ImVec4{ 1.0f, 0.8f, 0.3f, alpha };
                     break;
                 }
                 case NotificationType::Error:
                 {
-                    borderCol = ImVec4{ 0.9f, 0.2f, 0.2f, alpha };
-                    titleCol  = ImVec4{ 1.0f, 0.4f, 0.4f, alpha };
+                    borderColor = ImVec4{ 0.9f, 0.2f, 0.2f, alpha };
+                    titleColor  = ImVec4{ 1.0f, 0.4f, 0.4f, alpha };
                     break;
                 }
                 case NotificationType::Info:
                 default:
                 {
-                    borderCol = ImVec4{ 0.2f, 0.5f, 0.9f, alpha };
-                    titleCol  = ImVec4{ 0.4f, 0.7f, 1.0f, alpha };
+                    borderColor = ImVec4{ 0.2f, 0.5f, 0.9f, alpha };
+                    titleColor  = ImVec4{ 0.4f, 0.7f, 1.0f, alpha };
                     break;
                 }
             }
@@ -111,17 +111,17 @@ namespace sw::editor
             toastDesc._size       = float2{ toastWidth, 0.0f };
             toastDesc._rounding   = 6.0f;
             toastDesc._borderSize = 1.5f;
-            toastDesc._bgAlpha    = bgCol.w;
+            toastDesc._bgAlpha    = bgColor.w;
             toastDesc._flags      = editor::EditorOverlayFlags::NoDecoration | editor::EditorOverlayFlags::NoInputs |
                                editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
                                editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
 
-            ImGui::PushStyleColor( ImGuiCol_WindowBg, bgCol );
-            ImGui::PushStyleColor( ImGuiCol_Border, borderCol );
+            ImGui::PushStyleColor( ImGuiCol_WindowBg, bgColor );
+            ImGui::PushStyleColor( ImGuiCol_Border, borderColor );
 
             if ( EditorChrome::beginOverlay( toastDesc ) )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, titleCol );
+                ImGui::PushStyleColor( ImGuiCol_Text, titleColor );
                 ImGui::TextUnformatted( item._title.c_str() );
                 ImGui::PopStyleColor();
 

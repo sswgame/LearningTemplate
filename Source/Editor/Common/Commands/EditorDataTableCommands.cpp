@@ -20,46 +20,46 @@ namespace sw::editor
     {
         struct EditorDataTableCommandsInternal
         {
-            enum class LocLang : uint8
+            enum class LocalizationLanguage : uint8
             {
                 EnUS = 0,
                 KoKR,
                 JaJP
             };
 
-            static const utf8* locLangFileStem( LocLang lang )
+            static const utf8* languageFileStem( LocalizationLanguage lang )
             {
-                if ( lang == LocLang::EnUS )
+                if ( lang == LocalizationLanguage::EnUS )
                     return "en_US";
-                if ( lang == LocLang::KoKR )
+                if ( lang == LocalizationLanguage::KoKR )
                     return "ko_KR";
                 return "ja_JP";
             }
 
-            static void setLocField( LocRecord& rec, LocLang lang, string_view value )
+            static void setLocalizationField( LocalizationRecord& record, LocalizationLanguage lang, string_view value )
             {
-                if ( lang == LocLang::EnUS )
-                    rec._enUS = string{ value };
-                else if ( lang == LocLang::KoKR )
-                    rec._koKR = string{ value };
+                if ( lang == LocalizationLanguage::EnUS )
+                    record._enUS = string{ value };
+                else if ( lang == LocalizationLanguage::KoKR )
+                    record._koKR = string{ value };
                 else
-                    rec._jaJP = string{ value };
+                    record._jaJP = string{ value };
             }
 
-            static const string& getLocField( const LocRecord& rec, LocLang lang )
+            static const string& getLocalizationField( const LocalizationRecord& record, LocalizationLanguage lang )
             {
-                if ( lang == LocLang::EnUS )
-                    return rec._enUS;
-                if ( lang == LocLang::KoKR )
-                    return rec._koKR;
-                return rec._jaJP;
+                if ( lang == LocalizationLanguage::EnUS )
+                    return record._enUS;
+                if ( lang == LocalizationLanguage::KoKR )
+                    return record._koKR;
+                return record._jaJP;
             }
 
-            static void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecord )
+            static void mergeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, map<string, LocalizationRecord>& mapRecord )
             {
-                // 활성 게임에 `data/localization` 도메인이 없으면 locFolder 가 비고, joinPath 는 빈 경로를 반환한다. 그대로 넘기면
+                // 활성 게임에 `data/localization` 도메인이 없으면 localizationFolder 가 비고, joinPath 는 빈 경로를 반환한다. 그대로 넘기면
                 // 파일 계층이 "File not found: " 로 **이름 없는** 에러를 언어 수만큼 남긴다. 없는 것은 파일이 아니라 폴더다.
-                const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+                const string path = FileUtil::joinPath( localizationFolder, string{ languageFileStem( lang ) } + ".json" );
                 if ( path.empty() )
                     return;
 
@@ -70,31 +70,31 @@ namespace sw::editor
                 const vector<string> listKey = doc.getRoot().getMemberNames();
                 for ( const string& key : listKey )
                 {
-                    LocRecord& rec = mapRecord[key];
-                    rec._key       = key;
-                    setLocField( rec, lang, doc.getRoot().get( key ).asString() );
+                    LocalizationRecord& record = mapRecord[key];
+                    record._key                = key;
+                    setLocalizationField( record, lang, doc.getRoot().get( key ).asString() );
                 }
             }
 
-            static void writeLangJson( LocLang lang, const string& locFolder, const vector<LocRecord>& listRecord )
+            static void writeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, const vector<LocalizationRecord>& listRecord )
             {
                 JsonDocument    doc;
                 const JsonValue root = doc.makeObject();
 
-                for ( const LocRecord& rec : listRecord )
+                for ( const LocalizationRecord& record : listRecord )
                 {
-                    const string& val = getLocField( rec, lang );
+                    const string& val = getLocalizationField( record, lang );
                     if ( val.empty() == false )
-                        root.set( rec._key ).setString( val );
+                        root.set( record._key ).setString( val );
                 }
 
-                const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+                const string path = FileUtil::joinPath( localizationFolder, string{ languageFileStem( lang ) } + ".json" );
                 if ( path.empty() || doc.saveFile( path, 4 ) == false )
                     return;
 
-                LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
-                if ( pLocMgr != nullptr )
-                    pLocMgr->loadLanguageJson( locLangFileStem( lang ), doc.dump( 4 ) );
+                LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();
+                if ( pLocalizationManager != nullptr )
+                    pLocalizationManager->loadLanguageJson( languageFileStem( lang ), doc.dump( 4 ) );
             }
         };
     } // namespace
@@ -115,15 +115,15 @@ namespace sw::editor
         return ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kDataFolder );
     }
 
-    bool EditorDataTableCommands::loadLocalization( vector<LocRecord>& outList )
+    bool EditorDataTableCommands::loadLocalization( vector<LocalizationRecord>& outList )
     {
         outList.clear();
-        const string locFolder = getLocalizationFolderPath();
+        const string localizationFolder = getLocalizationFolderPath();
 
-        map<string, LocRecord> mapRecord;
-        EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, mapRecord );
-        EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, mapRecord );
-        EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, mapRecord );
+        map<string, LocalizationRecord> mapRecord;
+        EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::EnUS, localizationFolder, mapRecord );
+        EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::KoKR, localizationFolder, mapRecord );
+        EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::JaJP, localizationFolder, mapRecord );
 
         outList.reserve( mapRecord.size() );
         for ( auto& pair : mapRecord )
@@ -131,27 +131,27 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorDataTableCommands::saveLocalization( vector<LocRecord>& listRecord )
+    bool EditorDataTableCommands::saveLocalization( vector<LocalizationRecord>& listRecord )
     {
-        const string locFolder = getLocalizationFolderPath();
-        FileUtil::ensureDirectoryExists( locFolder );
+        const string localizationFolder = getLocalizationFolderPath();
+        FileUtil::ensureDirectoryExists( localizationFolder );
 
-        EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, listRecord );
-        EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, listRecord );
-        EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, listRecord );
+        EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::EnUS, localizationFolder, listRecord );
+        EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::KoKR, localizationFolder, listRecord );
+        EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::JaJP, localizationFolder, listRecord );
 
-        for ( LocRecord& rec : listRecord )
-            rec._bModified = false;
+        for ( LocalizationRecord& record : listRecord )
+            record._bModified = false;
 
         SW_LOG_INFO( "Successfully saved all localization tables." );
         return true;
     }
 
-    bool EditorDataTableCommands::hasModifiedLocalization( const vector<LocRecord>& listRecord )
+    bool EditorDataTableCommands::hasModifiedLocalization( const vector<LocalizationRecord>& listRecord )
     {
-        for ( const LocRecord& rec : listRecord )
+        for ( const LocalizationRecord& record : listRecord )
         {
-            if ( rec._bModified )
+            if ( record._bModified )
                 return true;
         }
         return false;

@@ -209,15 +209,15 @@ namespace sw
         if ( getParent() == pParent )
             return true;
 
-        GameObjectManager* pMgr = getManager();
-        if ( pMgr != nullptr && pMgr->isStructuralMutationFrozen() )
+        GameObjectManager* pManager = getManager();
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId  = _objectId;
             const uint64 parentId = pParent->getObjectId();
-            pMgr->deferTransformUpdate( [pMgr, childId, parentId]()
+            pManager->deferTransformUpdate( [pManager, childId, parentId]()
             {
-                GameObject* pChildObj  = pMgr->findGameObjectById( childId );
-                GameObject* pParentObj = pMgr->findGameObjectById( parentId );
+                GameObject* pChildObj  = pManager->findGameObjectById( childId );
+                GameObject* pParentObj = pManager->findGameObjectById( parentId );
                 if ( pChildObj != nullptr && pParentObj != nullptr )
                     pChildObj->attachToParent( pParentObj );
             } );
@@ -238,13 +238,13 @@ namespace sw
 
     void GameObject::detachFromParent()
     {
-        GameObjectManager* pMgr = getManager();
-        if ( pMgr != nullptr && pMgr->isStructuralMutationFrozen() )
+        GameObjectManager* pManager = getManager();
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId = _objectId;
-            pMgr->deferTransformUpdate( [pMgr, childId]()
+            pManager->deferTransformUpdate( [pManager, childId]()
             {
-                GameObject* pChildObj = pMgr->findGameObjectById( childId );
+                GameObject* pChildObj = pManager->findGameObjectById( childId );
                 if ( pChildObj != nullptr )
                     pChildObj->detachFromParent();
             } );
@@ -577,10 +577,10 @@ namespace sw
         if ( _pOwnerManager == nullptr || func.isBound() == false )
             return;
         const uint64       objectId = _objectId;
-        GameObjectManager* pMgr     = _pOwnerManager;
-        pMgr->deferPostTick( [pMgr, objectId, deferred = std::move( func )]()
+        GameObjectManager* pManager = _pOwnerManager;
+        pManager->deferPostTick( [pManager, objectId, deferred = std::move( func )]()
         {
-            GameObject* pObj = pMgr->findGameObjectById( objectId );
+            GameObject* pObj = pManager->findGameObjectById( objectId );
             if ( pObj != nullptr )
                 deferred( *pObj );
         } );

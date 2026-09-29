@@ -54,7 +54,7 @@ namespace sw
         ShaderStage    _stage{ ShaderStage::Vertex };
         vector<string> _listPermutation;
         /// @brief `_listPermutation` 의 해시입니다. 구운 파일 이름에 들어갑니다(순서 무관).
-        uint64 _permHash{ 0 };
+        uint64 _permutationHash{ 0 };
     };
 
     /**
@@ -95,7 +95,7 @@ namespace sw
 
         /** @brief 셰이더 파일 이름 · 스테이지 · 진입점 · 퍼뮤테이션 해시를 조합한 표준 바이너리 파일 이름을 만듭니다. */
         static string computeBinaryFileName( string_view stemLower, ShaderStage stage,
-                                             string_view entryPoint, uint64 permHash, string_view ext );
+                                             string_view entryPoint, uint64 permutationHash, string_view ext );
 
         /**
          * @brief 소스와 **공유 헤더(.hlsli)** 를 합친 내용 해시입니다. 산출물이 최신인지 보는 **유일한 기준**입니다.

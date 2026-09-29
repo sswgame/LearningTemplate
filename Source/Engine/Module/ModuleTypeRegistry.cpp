@@ -67,9 +67,9 @@ namespace sw
 
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
-            auto&        cache  = getModuleHeadCache();
-            const string modStr = string{ moduleName };
-            const auto   it     = cache.find( modStr );
+            auto&        cache           = getModuleHeadCache();
+            const string ownedModuleName = string{ moduleName };
+            const auto   it              = cache.find( ownedModuleName );
             if ( it != cache.end() )
             {
                 if ( pTypeHead != nullptr )
@@ -89,7 +89,7 @@ namespace sw
             }
             else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr )
             {
-                cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
+                cache[ownedModuleName] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
             }
 
             getTypeRegistry().registerPendingTypes( moduleName, pTypeHead, pEnumHead );

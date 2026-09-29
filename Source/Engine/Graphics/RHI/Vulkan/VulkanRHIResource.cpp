@@ -230,10 +230,10 @@ namespace sw
                 return false;
             }
 
-            VkMemoryRequirements memReq{};
-            vkGetBufferMemoryRequirements( _pDevice->_device, slot._buffer, &memReq );
+            VkMemoryRequirements memoryRequirements{};
+            vkGetBufferMemoryRequirements( _pDevice->_device, slot._buffer, &memoryRequirements );
             uint32 memoryTypeIndex{ 0 };
-            if ( _pDevice->findMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
+            if ( _pDevice->findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
             {
                 vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
                 slot._buffer = VK_NULL_HANDLE;
@@ -243,7 +243,7 @@ namespace sw
 
             VkMemoryAllocateInfo allocInfo{};
             allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize  = memReq.size;
+            allocInfo.allocationSize  = memoryRequirements.size;
             allocInfo.memoryTypeIndex = memoryTypeIndex;
             if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &slot._memory ) != VK_SUCCESS ||
                  vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||

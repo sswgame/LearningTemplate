@@ -1012,18 +1012,18 @@ namespace sw
                 SetDllDirectoryA( dir.c_str() );
 
             // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
-            HMODULE hMod = LoadLibraryExA( nativePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
+            HMODULE hModule = LoadLibraryExA( nativePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
             // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryA 로 다시 시도한다
-            if ( hMod == nullptr )
-                hMod = LoadLibraryA( nativePath.c_str() );
+            if ( hModule == nullptr )
+                hModule = LoadLibraryA( nativePath.c_str() );
 
             if ( previousDllDirLen > 0 )
                 SetDllDirectoryA( arrPreviousDllDir );
             else
                 SetDllDirectoryA( nullptr );
 
-            if ( hMod != nullptr )
-                return hMod;
+            if ( hModule != nullptr )
+                return hModule;
         }
         const string nativeName = toNativeSeparators( libraryName );
         return LoadLibraryA( nativeName.c_str() );

@@ -197,9 +197,9 @@ namespace sw
         if ( _pData == nullptr || byteSize > _dataSize - _offset )
         {
             _bError = SW_TRUE;
-            Archive errArch( nullptr, 0 );
-            errArch.setError();
-            return errArch;
+            Archive failedArchive( nullptr, 0 );
+            failedArchive.setError();
+            return failedArchive;
         }
 
         const uint8* pSubData = _pData + _offset;

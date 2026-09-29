@@ -86,30 +86,30 @@ namespace sw
 
     int32 KeyValueFile::getInt( const KeyValueMap& mapData, string_view key, int32 fallback )
     {
-        const utf8* pV = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pV ) )
+        const utf8* pValue = get( mapData, key, nullptr );
+        if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
         int32 val{ fallback };
-        StringUtil::parseInt( pV, val );
+        StringUtil::parseInt( pValue, val );
         return val;
     }
 
     float32 KeyValueFile::getFloat( const KeyValueMap& mapData, string_view key, float32 fallback )
     {
-        const utf8* pV = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pV ) )
+        const utf8* pValue = get( mapData, key, nullptr );
+        if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
         float32 val{ fallback };
-        StringUtil::parseFloat( pV, val );
+        StringUtil::parseFloat( pValue, val );
         return val;
     }
 
     bool KeyValueFile::getBool( const KeyValueMap& mapData, string_view key, bool fallback )
     {
-        const utf8* pV = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pV ) )
+        const utf8* pValue = get( mapData, key, nullptr );
+        if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
-        return StringUtil::parseBool( pV, fallback );
+        return StringUtil::parseBool( pValue, fallback );
     }
 
     string KeyValueFile::dump( const KeyValueMap& mapData, string_view headerComment, string_view sectionName )

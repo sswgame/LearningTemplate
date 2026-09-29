@@ -149,44 +149,44 @@ namespace sw
         vector<pair<GameObject*, string_view>> listRebindTarget;
         listRebindTarget.reserve( doc._listEntityNode.size() );
 
-        for ( const SceneDocument::EntityNode& ent : doc._listEntityNode )
+        for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
         {
-            SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", ent._name, ent._prefab );
+            SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             GameObject* pGo{ nullptr };
-            if ( ent._prefab.empty() == false )
+            if ( entity._prefab.empty() == false )
             {
-                pGo = engine::getResourceManager().getPrefabManager().spawn( _objectManager.get(), ent._prefab, ent._name.c_str() );
+                pGo = engine::getResourceManager().getPrefabManager().spawn( _objectManager.get(), entity._prefab, entity._name.c_str() );
                 if ( pGo == nullptr )
-                    SW_LOG_WARNING( "Prefab spawn failed '%#' (%#)", ent._name, ent._prefab );
+                    SW_LOG_WARNING( "Prefab spawn failed '%#' (%#)", entity._name, entity._prefab );
             }
             else
             {
-                pGo = _objectManager->createGameObject( hashed_string( ent._name.c_str() ) );
+                pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
             }
 
             if ( pGo != nullptr )
             {
-                if ( ent._prefab.empty() == false )
-                    _mapPrefabSource[pGo->getObjectId()] = ent._prefab;
+                if ( entity._prefab.empty() == false )
+                    _mapPrefabSource[pGo->getObjectId()] = entity._prefab;
 
                 // **구워진 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
                 // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
-                if ( ent._embeddedStateBytes.empty() == false )
+                if ( entity._embeddedStateBytes.empty() == false )
                 {
                     string parentName;
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, ent._embeddedStateBytes.data(), ent._embeddedStateBytes.size(), parentName ) == 0 )
-                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", ent._name );
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), parentName ) == 0 )
+                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
                     else
                         listRebindTarget.emplace_back( pGo, string_view{} );
                 }
-                else if ( ent._embeddedXml.empty() == false )
+                else if ( entity._embeddedXml.empty() == false )
                 {
-                    if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
-                        SW_LOG_WARNING( "Embedded state apply failed for '%#'", ent._name );
+                    if ( ObjectStateSerializer::loadFromXmlString( pGo, entity._embeddedXml ) == false )
+                        SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
 
-                    const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
+                    const bool bHasHierarchy = ( entity._embeddedXml.find( "_attachOwner=" ) != string::npos );
                     if ( bHasHierarchy )
-                        listRebindTarget.emplace_back( pGo, ent._embeddedXml );
+                        listRebindTarget.emplace_back( pGo, entity._embeddedXml );
                 }
             }
         }

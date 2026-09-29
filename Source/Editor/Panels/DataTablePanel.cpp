@@ -20,19 +20,19 @@ namespace sw::editor
 
     DataTablePanel::DataTablePanel()
         : IEditorPanel{ false }
-        , _locFilter{}
+        , _localizationFilter{}
         , _newKeyBuffer{}
-        , _listLocRecord{}
+        , _listLocalizationRecord{}
         , _listGameDataFile{}
         , _selectedGameDataRawText{}
         , _savedGameDataRawText{}
-        , _locJob{}
+        , _localizationJob{}
         , _gameDataJob{}
         , _activeTab{ 0 }
         , _selectedGameDataIndex{ -1 }
-        , _bLocLoaded{ SW_FALSE }
+        , _bLocalizationLoaded{ SW_FALSE }
         , _bGameDataLoaded{ SW_FALSE }
-        , _bLocDirty{ SW_FALSE }
+        , _bLocalizationDirty{ SW_FALSE }
         , _bGameDataDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -44,20 +44,20 @@ namespace sw::editor
      */
     bool DataTablePanel::saveDocument()
     {
-        if ( _bLocDirty == SW_TRUE )
+        if ( _bLocalizationDirty == SW_TRUE )
             saveLocalization();
         if ( _bGameDataDirty == SW_TRUE )
             saveSelectedGameDataFile();
-        return _bLocDirty == SW_FALSE && _bGameDataDirty == SW_FALSE;
+        return _bLocalizationDirty == SW_FALSE && _bGameDataDirty == SW_FALSE;
     }
 
     void DataTablePanel::revertDocument()
     {
-        if ( _bLocDirty == SW_TRUE )
+        if ( _bLocalizationDirty == SW_TRUE )
         {
-            EditorDataTableCommands::loadLocalization( _listLocRecord );
-            _bLocLoaded = SW_TRUE;
-            _bLocDirty  = SW_FALSE;
+            EditorDataTableCommands::loadLocalization( _listLocalizationRecord );
+            _bLocalizationLoaded = SW_TRUE;
+            _bLocalizationDirty  = SW_FALSE;
             syncDocumentDirty();
         }
         if ( _bGameDataDirty == SW_TRUE )
@@ -68,9 +68,9 @@ namespace sw::editor
         }
     }
 
-    void DataTablePanel::markLocDirty()
+    void DataTablePanel::markLocalizationDirty()
     {
-        _bLocDirty = SW_TRUE;
+        _bLocalizationDirty = SW_TRUE;
         syncDocumentDirty();
     }
 
@@ -82,7 +82,7 @@ namespace sw::editor
 
     void DataTablePanel::syncDocumentDirty()
     {
-        const bool bAnyDirty = ( _bLocDirty == SW_TRUE || _bGameDataDirty == SW_TRUE );
+        const bool bAnyDirty = ( _bLocalizationDirty == SW_TRUE || _bGameDataDirty == SW_TRUE );
         if ( bAnyDirty )
             markDocumentDirty();
         else
@@ -91,17 +91,17 @@ namespace sw::editor
 
     void DataTablePanel::pollBackgroundJobs()
     {
-        vector<LocRecord> listLoc;
-        if ( _locJob.take( listLoc ) )
+        vector<LocalizationRecord> listLocalizationRecord;
+        if ( _localizationJob.take( listLocalizationRecord ) )
         {
-            if ( _bLocDirty == SW_FALSE )
+            if ( _bLocalizationDirty == SW_FALSE )
             {
-                _listLocRecord = std::move( listLoc );
-                _bLocLoaded    = SW_TRUE;
+                _listLocalizationRecord = std::move( listLocalizationRecord );
+                _bLocalizationLoaded    = SW_TRUE;
             }
         }
-        else if ( _bLocLoaded == SW_FALSE && _locJob.isPending() == false )
-            _locJob.request();
+        else if ( _bLocalizationLoaded == SW_FALSE && _localizationJob.isPending() == false )
+            _localizationJob.request();
 
         vector<GameDataFileEntry> listGameData;
         if ( _gameDataJob.take( listGameData ) )
@@ -143,7 +143,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        if ( _bLocLoaded == SW_FALSE )
+        if ( _bLocalizationLoaded == SW_FALSE )
         {
             EditorWidgets::drawEmptyHint( "Loading localization..." );
             return;
@@ -156,7 +156,7 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##locToolbar" ) )
         {
-            EditorWidgets::drawSearchField( "##locFilter", _locFilter, "Search keys or translations...", 240.0f, false );
+            EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, "Search keys or translations...", 240.0f, false );
             ImGui::SameLine();
 
             if ( ImGui::Button( "Save Localization" ) )
@@ -174,9 +174,9 @@ namespace sw::editor
             {
                 const string newKey{ _newKeyBuffer.c_str() };
                 bool         bExists{ false };
-                for ( const LocRecord& rec : _listLocRecord )
+                for ( const LocalizationRecord& record : _listLocalizationRecord )
                 {
-                    if ( rec._key == newKey )
+                    if ( record._key == newKey )
                     {
                         bExists = true;
                         break;
@@ -185,12 +185,12 @@ namespace sw::editor
 
                 if ( bExists == false )
                 {
-                    LocRecord newRec{};
-                    newRec._key       = newKey;
-                    newRec._bModified = true;
-                    _listLocRecord.push_back( std::move( newRec ) );
+                    LocalizationRecord newRecord{};
+                    newRecord._key       = newKey;
+                    newRecord._bModified = true;
+                    _listLocalizationRecord.push_back( std::move( newRecord ) );
                     _newKeyBuffer.clear();
-                    markLocDirty();
+                    markLocalizationDirty();
                 }
             }
         }
@@ -204,16 +204,16 @@ namespace sw::editor
 
         // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
         // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
-        const EditorListFilter filter{ _locFilter.c_str() };
+        const EditorListFilter filter{ _localizationFilter.c_str() };
 
         // **멤버 버퍼를 다시 쓴다.** 지역 `vector` 였을 때는 프레임마다 할당하고 해제했다.
-        vector<size_t>& listVisibleIndex = _listVisibleLocIndex;
+        vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
         listVisibleIndex.clear();
-        listVisibleIndex.reserve( _listLocRecord.size() );
-        for ( size_t recordIndex = 0; recordIndex < _listLocRecord.size(); ++recordIndex )
+        listVisibleIndex.reserve( _listLocalizationRecord.size() );
+        for ( size_t recordIndex = 0; recordIndex < _listLocalizationRecord.size(); ++recordIndex )
         {
-            const LocRecord& rec = _listLocRecord[recordIndex];
-            if ( filter.matchesAny( { rec._key, rec._enUS, rec._koKR, rec._jaJP } ) )
+            const LocalizationRecord& record = _listLocalizationRecord[recordIndex];
+            if ( filter.matchesAny( { record._key, record._enUS, record._koKR, record._jaJP } ) )
                 listVisibleIndex.push_back( recordIndex );
         }
 
@@ -239,37 +239,37 @@ namespace sw::editor
 
             for ( const size_t recordIndex : listVisibleIndex )
             {
-                LocRecord& rec = _listLocRecord[recordIndex];
+                LocalizationRecord& record = _listLocalizationRecord[recordIndex];
 
                 ImGui::PushID( static_cast<int32>( recordIndex ) );
                 ImGui::TableNextRow();
 
                 // Col 0: Key
                 ImGui::TableSetColumnIndex( 0 );
-                ImGui::TextUnformatted( rec._key.c_str() );
+                ImGui::TextUnformatted( record._key.c_str() );
 
                 // Col 1: en_US
                 ImGui::TableSetColumnIndex( 1 );
-                if ( EditorWidgets::drawTextField( "##en", rec._enUS, -1.0f ) )
+                if ( EditorWidgets::drawTextField( "##en", record._enUS, -1.0f ) )
                 {
-                    rec._bModified = true;
-                    markLocDirty();
+                    record._bModified = true;
+                    markLocalizationDirty();
                 }
 
                 // Col 2: ko_KR
                 ImGui::TableSetColumnIndex( 2 );
-                if ( EditorWidgets::drawTextField( "##ko", rec._koKR, -1.0f ) )
+                if ( EditorWidgets::drawTextField( "##ko", record._koKR, -1.0f ) )
                 {
-                    rec._bModified = true;
-                    markLocDirty();
+                    record._bModified = true;
+                    markLocalizationDirty();
                 }
 
                 // Col 3: ja_JP
                 ImGui::TableSetColumnIndex( 3 );
-                if ( EditorWidgets::drawTextField( "##ja", rec._jaJP, -1.0f ) )
+                if ( EditorWidgets::drawTextField( "##ja", record._jaJP, -1.0f ) )
                 {
-                    rec._bModified = true;
-                    markLocDirty();
+                    record._bModified = true;
+                    markLocalizationDirty();
                 }
 
                 // Col 4: Action
@@ -280,10 +280,10 @@ namespace sw::editor
                 ImGui::PopID();
             }
 
-            if ( 0 <= deleteIndex && static_cast<size_t>( deleteIndex ) < _listLocRecord.size() )
+            if ( 0 <= deleteIndex && static_cast<size_t>( deleteIndex ) < _listLocalizationRecord.size() )
             {
-                _listLocRecord.erase( _listLocRecord.begin() + deleteIndex );
-                markLocDirty();
+                _listLocalizationRecord.erase( _listLocalizationRecord.begin() + deleteIndex );
+                markLocalizationDirty();
             }
 
             ImGui::EndTable();
@@ -362,16 +362,16 @@ namespace sw::editor
 
     void DataTablePanel::reloadLocalization()
     {
-        _bLocDirty  = SW_FALSE;
-        _bLocLoaded = SW_FALSE;
+        _bLocalizationDirty  = SW_FALSE;
+        _bLocalizationLoaded = SW_FALSE;
         syncDocumentDirty();
-        _locJob.request();
+        _localizationJob.request();
     }
 
     void DataTablePanel::saveLocalization()
     {
-        EditorDataTableCommands::saveLocalization( _listLocRecord );
-        _bLocDirty = SW_FALSE;
+        EditorDataTableCommands::saveLocalization( _listLocalizationRecord );
+        _bLocalizationDirty = SW_FALSE;
         syncDocumentDirty();
     }
 

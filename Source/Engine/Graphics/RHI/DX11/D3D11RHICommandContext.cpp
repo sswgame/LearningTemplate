@@ -456,12 +456,12 @@ namespace sw
         ID3D11Buffer* pCb = _pState->_rootConstantCb.Get();
         if ( bCompute )
         {
-            _pContext->CSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
+            _pContext->CSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
         }
         else
         {
-            _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
-            _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
+            _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
         }
     }
 

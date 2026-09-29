@@ -40,8 +40,8 @@ namespace sw
                     return;
                 auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
                 {
-                    const uint8* pB = reinterpret_cast<const uint8*>( pPtr );
-                    listBuf.insert( listBuf.end(), pB, pB + sizeof( T ) );
+                    const uint8* pByte = reinterpret_cast<const uint8*>( pPtr );
+                    listBuf.insert( listBuf.end(), pByte, pByte + sizeof( T ) );
                 };
                 auto readFn = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
                 {

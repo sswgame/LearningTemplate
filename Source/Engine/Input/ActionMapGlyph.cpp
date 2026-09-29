@@ -132,16 +132,16 @@ namespace sw
                 }
                 else if ( b._kind == BindingKind::Shortcut )
                 {
-                    string modStr;
+                    string modifierText;
                     if ( ( b._modifierMask & ModifierKey::Ctrl ) != 0 )
-                        modStr += "Ctrl + ";
+                        modifierText += "Ctrl + ";
                     if ( ( b._modifierMask & ModifierKey::Shift ) != 0 )
-                        modStr += "Shift + ";
+                        modifierText += "Shift + ";
                     if ( ( b._modifierMask & ModifierKey::Alt ) != 0 )
-                        modStr += "Alt + ";
+                        modifierText += "Alt + ";
                     if ( ( b._modifierMask & ModifierKey::Super ) != 0 )
-                        modStr += "Win + ";
-                    return string( "[ " ) + modStr + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
+                        modifierText += "Win + ";
+                    return string( "[ " ) + modifierText + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
                 }
                 else if ( b._kind == BindingKind::AnyKey )
                 {

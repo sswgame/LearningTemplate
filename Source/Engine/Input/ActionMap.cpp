@@ -393,10 +393,10 @@ namespace sw
         {
             if ( binding._kind == BindingKind::Chord && isBindingLayerActive( binding ) )
             {
-                const Key  modKey     = static_cast<Key>( binding._arrSlot[0]._controlIndex );
-                const Key  trigKey    = static_cast<Key>( binding._arrSlot[1]._controlIndex );
-                const bool bTriggerOk = bTriggerJustPressed ? _pInput->wasKeyPressed( trigKey ) : _pInput->isKeyDown( trigKey );
-                if ( _pInput->isKeyDown( modKey ) && bTriggerOk )
+                const Key  modifierKey = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+                const Key  triggerKey  = static_cast<Key>( binding._arrSlot[1]._controlIndex );
+                const bool bTriggerOk  = bTriggerJustPressed ? _pInput->wasKeyPressed( triggerKey ) : _pInput->isKeyDown( triggerKey );
+                if ( _pInput->isKeyDown( modifierKey ) && bTriggerOk )
                     return true;
             }
         }
@@ -450,20 +450,20 @@ namespace sw
 
     void ActionMap::setLayerEnabled( const hashed_string& layer, bool enabled )
     {
-        LayerDef* pDef = findLayer( layer );
-        if ( pDef != nullptr )
-            pDef->_bEnabled = enabled ? SW_TRUE : SW_FALSE;
+        LayerDefinition* pLayer = findLayer( layer );
+        if ( pLayer != nullptr )
+            pLayer->_bEnabled = enabled ? SW_TRUE : SW_FALSE;
     }
 
     void ActionMap::pushLayer( const hashed_string& layer, bool blockLower, bool showCursor )
     {
         const hashed_string hLayer( layer );
         ensureLayer( hLayer, 0, true, blockLower );
-        LayerDef* pDef = findLayer( hLayer );
-        if ( pDef != nullptr )
+        LayerDefinition* pLayer = findLayer( hLayer );
+        if ( pLayer != nullptr )
         {
-            pDef->_bEnabled    = SW_TRUE;
-            pDef->_bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
+            pLayer->_bEnabled    = SW_TRUE;
+            pLayer->_bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
         }
 
         for ( auto it = _listLayerStack.begin(); it != _listLayerStack.end(); ++it )
@@ -510,7 +510,7 @@ namespace sw
         const hashed_string hLayer( layer );
         for ( auto& [name, index] : _mapLayer )
         {
-            LayerDef& def = _listLayerEntry[index];
+            LayerDefinition& def = _listLayerEntry[index];
             if ( def._bAlwaysOn == SW_TRUE )
                 continue;
             def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
@@ -694,8 +694,8 @@ namespace sw
 
     int32 ActionMap::getLayerPriority( const hashed_string& layer ) const
     {
-        const LayerDef* pDef = findLayer( layer );
-        return pDef != nullptr ? pDef->_priority : 0;
+        const LayerDefinition* pLayer = findLayer( layer );
+        return pLayer != nullptr ? pLayer->_priority : 0;
     }
 
     bool ActionMap::hasAction( const hashed_string& action ) const
@@ -856,13 +856,13 @@ namespace sw
         _listActionName.push_back( action );
     }
 
-    LayerDef& ActionMap::ensureLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
+    LayerDefinition& ActionMap::ensureLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
     {
         auto it = _mapLayer.find( name );
         if ( it != _mapLayer.end() )
             return _listLayerEntry[it->second];
 
-        LayerDef def{};
+        LayerDefinition def{};
         def._name        = name;
         def._priority    = priority;
         def._bEnabled    = enabled ? SW_TRUE : SW_FALSE;
@@ -899,13 +899,13 @@ namespace sw
         return entry;
     }
 
-    LayerDef* ActionMap::findLayer( const hashed_string& name )
+    LayerDefinition* ActionMap::findLayer( const hashed_string& name )
     {
         auto it = _mapLayer.find( name );
         return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;
     }
 
-    const LayerDef* ActionMap::findLayer( const hashed_string& name ) const
+    const LayerDefinition* ActionMap::findLayer( const hashed_string& name ) const
     {
         auto it = _mapLayer.find( name );
         return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;

@@ -543,8 +543,8 @@ namespace sw
             t_listRecord.push_back( { static_cast<uint32>( propIndex ), static_cast<uint32>( payloadStart ), payloadSize } );
         }
 
-        const size_t modCount  = t_listRecord.size();
-        const bool   bUseDense = PresenceMaskUtil::shouldUseDenseMode( modCount, totalProps );
+        const size_t modifiedCount = t_listRecord.size();
+        const bool   bUseDense     = PresenceMaskUtil::shouldUseDenseMode( modifiedCount, totalProps );
 
         if ( bUseDense )
         {
@@ -573,7 +573,7 @@ namespace sw
         else
         {
             writer.write( PresenceMaskUtil::kModeSparse );
-            writer.writeVarUint( static_cast<uint64>( modCount ) );
+            writer.writeVarUint( static_cast<uint64>( modifiedCount ) );
 
             for ( const auto& rec : t_listRecord )
             {
@@ -650,11 +650,11 @@ namespace sw
         }
         else if ( modeByte == PresenceMaskUtil::kModeSparse )
         {
-            uint64 modCount = 0;
-            if ( reader.readVarUint( modCount ) == false )
+            uint64 modifiedCount = 0;
+            if ( reader.readVarUint( modifiedCount ) == false )
                 return false;
 
-            for ( uint64 modIndex = 0; modIndex < modCount; ++modIndex )
+            for ( uint64 modifiedIndex = 0; modifiedIndex < modifiedCount; ++modifiedIndex )
             {
                 uint64 propIndex = 0;
                 if ( reader.readVarUint( propIndex ) == false )

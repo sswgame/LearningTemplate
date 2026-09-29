@@ -36,17 +36,17 @@ namespace sw
          */
         static D3D12_RESOURCE_DESC bufferDesc( uint64 sizeBytes, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE )
         {
-            D3D12_RESOURCE_DESC resDesc{};
-            resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resDesc.Width            = sizeBytes;
-            resDesc.Height           = 1;
-            resDesc.DepthOrArraySize = 1;
-            resDesc.MipLevels        = 1;
-            resDesc.Format           = DXGI_FORMAT_UNKNOWN;
-            resDesc.SampleDesc.Count = 1;
-            resDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resDesc.Flags            = flags;
-            return resDesc;
+            D3D12_RESOURCE_DESC resourceDesc{};
+            resourceDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+            resourceDesc.Width            = sizeBytes;
+            resourceDesc.Height           = 1;
+            resourceDesc.DepthOrArraySize = 1;
+            resourceDesc.MipLevels        = 1;
+            resourceDesc.Format           = DXGI_FORMAT_UNKNOWN;
+            resourceDesc.SampleDesc.Count = 1;
+            resourceDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            resourceDesc.Flags            = flags;
+            return resourceDesc;
         }
 
         /** @brief 힙 속성입니다. 버퍼 만들기에서 자리마다 다른 것은 이 종류와 초기 상태뿐입니다. */

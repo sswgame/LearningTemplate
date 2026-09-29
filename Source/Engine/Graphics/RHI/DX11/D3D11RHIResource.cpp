@@ -51,8 +51,8 @@ namespace sw
     {
         if ( buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr )
             return;
-        ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
-        if ( pRes == nullptr )
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
             return;
         // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다.
         // D3D11 런타임이 커맨드 리스트 단위로 이 버퍼를 버저닝하므로 그 리스트의 드로우가 기록
@@ -63,20 +63,20 @@ namespace sw
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if ( pRecording != nullptr )
         {
-            if ( SUCCEEDED( pRecording->Map( pRes, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+            if ( SUCCEEDED( pRecording->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
             {
                 Memory::copy( mapped.pData, pData, size );
-                pRecording->Unmap( pRes, 0 );
+                pRecording->Unmap( pResource, 0 );
             }
             return;
         }
 
         // 기록 중이 아니다(프레임 시드·셋업). 즉시 컨텍스트는 스레드 안전하지 않으므로 잠근다.
         std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
-        if ( SUCCEEDED( _pDevice->_deviceContext->Map( pRes, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        if ( SUCCEEDED( _pDevice->_deviceContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
             Memory::copy( mapped.pData, pData, size );
-            _pDevice->_deviceContext->Unmap( pRes, 0 );
+            _pDevice->_deviceContext->Unmap( pResource, 0 );
         }
     }
 
@@ -182,8 +182,8 @@ namespace sw
     {
         if ( buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_deviceContext == nullptr )
             return;
-        ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
-        if ( pRes == nullptr )
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
             return;
 
         const uint8*            pBase = static_cast<const uint8*>( pBaseSource );
@@ -196,7 +196,7 @@ namespace sw
 
             if ( region._dstOffset == 0 && regionCount == 1 )
             {
-                _pDevice->_deviceContext->UpdateSubresource( pRes, 0, nullptr, pBase, region._size, 0 );
+                _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._size, 0 );
                 continue;
             }
 
@@ -208,7 +208,7 @@ namespace sw
             box.bottom = 1;
             box.front  = 0;
             box.back   = 1;
-            _pDevice->_deviceContext->UpdateSubresource( pRes, 0, &box, pBase + region._srcOffset, region._size, 0 );
+            _pDevice->_deviceContext->UpdateSubresource( pResource, 0, &box, pBase + region._srcOffset, region._size, 0 );
         }
     }
 

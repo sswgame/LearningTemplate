@@ -73,22 +73,22 @@ namespace sw
     float2 float2::transform( const float2& v, const quaternion& rotation ) noexcept
     {
         const float3 v3{ v._x, v._y, 0.f };
-        const float3 res = float3::transform( v3, rotation );
-        return float2{ res._x, res._y };
+        const float3 result = float3::transform( v3, rotation );
+        return float2{ result._x, result._y };
     }
 
     float2 float2::transform( const float2& v, const float4x4& matrix ) noexcept
     {
         const float3 v3{ v._x, v._y, 0.f };
-        const float3 res = float3::transform( v3, matrix );
-        return float2{ res._x, res._y };
+        const float3 result = float3::transform( v3, matrix );
+        return float2{ result._x, result._y };
     }
 
     float2 float2::transformNormal( const float2& v, const float4x4& matrix ) noexcept
     {
         const float3 v3{ v._x, v._y, 0.f };
-        const float3 res = float3::transformNormal( v3, matrix );
-        return float2{ res._x, res._y };
+        const float3 result = float3::transformNormal( v3, matrix );
+        return float2{ result._x, result._y };
     }
 
     bool float2::isInBounds( const float2& bound ) const noexcept

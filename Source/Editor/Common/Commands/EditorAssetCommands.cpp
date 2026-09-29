@@ -742,18 +742,18 @@ namespace sw::editor
 
     void EditorAssetCommands::collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts )
     {
-        const string& resPath = ResourceUtil::getRootFolderPath();
-        if ( resPath.empty() )
+        const string& resourceRootPath = ResourceUtil::getRootFolderPath();
+        if ( resourceRootPath.empty() )
             return;
 
         vector<string> listScene;
         vector<string> listPrefab;
         vector<string> listTexture;
         vector<string> listShader;
-        FileUtil::collectFiles( resPath, ".scene.xml", listScene, true );
-        FileUtil::collectFiles( resPath, ".prefab.xml", listPrefab, true );
-        FileUtil::collectFiles( resPath, ".png", listTexture, true );
-        FileUtil::collectFiles( resPath, ".hlsl", listShader, true );
+        FileUtil::collectFiles( resourceRootPath, ".scene.xml", listScene, true );
+        FileUtil::collectFiles( resourceRootPath, ".prefab.xml", listPrefab, true );
+        FileUtil::collectFiles( resourceRootPath, ".png", listTexture, true );
+        FileUtil::collectFiles( resourceRootPath, ".hlsl", listShader, true );
 
         outCounts._sceneCount   = listScene.size();
         outCounts._prefabCount  = listPrefab.size();

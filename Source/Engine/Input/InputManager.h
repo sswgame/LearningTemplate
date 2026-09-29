@@ -171,7 +171,7 @@ namespace sw
         void restoreWindowsAccessibilityShortcuts();
 
     private:
-        void dispatchRawEvent( const RawInputEvent& rawEvt );
+        void dispatchRawEvent( const RawInputEvent& rawEvent );
 
         // ------------------------------------------------------------------------------
         // 9) 플랫폼별 구현(Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp)

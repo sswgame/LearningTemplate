@@ -127,8 +127,8 @@ namespace sw
             const InputReplayFrame& frame = _listFrame[_currentPlaybackIndex];
             if ( pInput != nullptr )
             {
-                for ( const RawInputEvent& evt : frame._listRawEvent )
-                    pInput->postRawEvent( evt );
+                for ( const RawInputEvent& event : frame._listRawEvent )
+                    pInput->postRawEvent( event );
             }
             ++_currentPlaybackIndex;
         }
@@ -164,8 +164,8 @@ namespace sw
         for ( uint32 index = 0; index < endIndex; ++index )
         {
             const InputReplayFrame& frame = _listFrame[index];
-            for ( const RawInputEvent& evt : frame._listRawEvent )
-                pInput->postRawEvent( evt );
+            for ( const RawInputEvent& event : frame._listRawEvent )
+                pInput->postRawEvent( event );
             pInput->beginFrame( frame._deltaTime );
             pInput->endFrame();
         }
@@ -199,8 +199,8 @@ namespace sw
 
             if ( pInput != nullptr )
             {
-                for ( const RawInputEvent& evt : frame._listRawEvent )
-                    pInput->postRawEvent( evt );
+                for ( const RawInputEvent& event : frame._listRawEvent )
+                    pInput->postRawEvent( event );
             }
 
             ++_currentPlaybackIndex;
@@ -258,10 +258,10 @@ namespace sw
             const uint8* pCount     = reinterpret_cast<const uint8*>( &eventCount );
             bytes.insert( bytes.end(), pCount, pCount + sizeof( uint32 ) );
 
-            for ( const RawInputEvent& evt : frame._listRawEvent )
+            for ( const RawInputEvent& event : frame._listRawEvent )
             {
-                const uint8* pEvtBytes = reinterpret_cast<const uint8*>( &evt );
-                bytes.insert( bytes.end(), pEvtBytes, pEvtBytes + sizeof( RawInputEvent ) );
+                const uint8* pEventBytes = reinterpret_cast<const uint8*>( &event );
+                bytes.insert( bytes.end(), pEventBytes, pEventBytes + sizeof( RawInputEvent ) );
             }
         }
 
@@ -335,15 +335,15 @@ namespace sw
             pCursor += sizeof( uint32 );
 
             frame._listRawEvent.reserve( eventCount );
-            for ( uint32 evtIndex = 0; evtIndex < eventCount; ++evtIndex )
+            for ( uint32 eventIndex = 0; eventIndex < eventCount; ++eventIndex )
             {
                 if ( pCursor + sizeof( RawInputEvent ) > pEnd )
                     break;
 
-                RawInputEvent evt{};
-                Memory::copy( &evt, pCursor, sizeof( RawInputEvent ) );
+                RawInputEvent event{};
+                Memory::copy( &event, pCursor, sizeof( RawInputEvent ) );
                 pCursor += sizeof( RawInputEvent );
-                frame._listRawEvent.push_back( evt );
+                frame._listRawEvent.push_back( event );
             }
 
             _listFrame.push_back( std::move( frame ) );

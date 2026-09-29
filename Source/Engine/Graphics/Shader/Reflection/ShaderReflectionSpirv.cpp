@@ -114,9 +114,9 @@ namespace sw
                     }
                     case SpirvType::Kind::Matrix:
                     {
-                        uint32 colSize = 16;
-                        resolveSpirvTypeName( spirvType._subTypeId, mapType, colSize );
-                        outSize = colSize * spirvType._count;
+                        uint32 columnSize = 16;
+                        resolveSpirvTypeName( spirvType._subTypeId, mapType, columnSize );
+                        outSize = columnSize * spirvType._count;
                         if ( spirvType._count == 4 )
                             return "Float4x4";
                         return "Float" + to_string( spirvType._count ) + "x" + to_string( spirvType._count );
@@ -194,46 +194,46 @@ namespace sw
         {
             const uint32 first = pWords[offset];
             // SPIR-V 명령어 헤더: 상위 16비트 = WordCount, 하위 16비트 = Opcode (스펙 2.3 "Physical Layout").
-            const uint32 instrWords = first >> 16;
-            const uint32 opcode     = first & 0xFFFFu;
-            if ( instrWords == 0 || offset + instrWords > wordCount )
+            const uint32 instructionWordCount = first >> 16;
+            const uint32 opcode               = first & 0xFFFFu;
+            if ( instructionWordCount == 0 || offset + instructionWordCount > wordCount )
                 break;
 
-            if ( opcode == ShaderReflectionSpirvInternal::kOpEntryPoint && instrWords >= 3 )
+            if ( opcode == ShaderReflectionSpirvInternal::kOpEntryPoint && instructionWordCount >= 3 )
             {
                 executionModel = pWords[offset + 1];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpName && instrWords >= 3 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpName && instructionWordCount >= 3 )
             {
                 const uint32 target = pWords[offset + 1];
                 const utf8*  pStr   = reinterpret_cast<const utf8*>( &pWords[offset + 2] );
-                const size_t maxLen = static_cast<size_t>( instrWords - 2 ) * 4;
+                const size_t maxLen = static_cast<size_t>( instructionWordCount - 2 ) * 4;
                 mapName[target]     = string( pStr, strnlen( pStr, maxLen ) );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberName && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberName && instructionWordCount >= 4 )
             {
                 const uint32 target                = pWords[offset + 1];
                 const uint32 memberIndex           = pWords[offset + 2];
                 const utf8*  pStr                  = reinterpret_cast<const utf8*>( &pWords[offset + 3] );
-                const size_t maxLen                = static_cast<size_t>( instrWords - 3 ) * 4;
+                const size_t maxLen                = static_cast<size_t>( instructionWordCount - 3 ) * 4;
                 mapMemberName[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpDecorate && instrWords >= 3 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpDecorate && instructionWordCount >= 3 )
             {
                 const uint32 target     = pWords[offset + 1];
                 const uint32 decoration = pWords[offset + 2];
-                if ( decoration == ShaderReflectionSpirvInternal::kDecorationBinding && instrWords >= 4 )
+                if ( decoration == ShaderReflectionSpirvInternal::kDecorationBinding && instructionWordCount >= 4 )
                     mapBinding[target] = pWords[offset + 3];
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationDescriptorSet && instrWords >= 4 )
+                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationDescriptorSet && instructionWordCount >= 4 )
                     mapDescriptorSet[target] = pWords[offset + 3];
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationArrayStride && instrWords >= 4 )
+                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationArrayStride && instructionWordCount >= 4 )
                     mapArrayStride[target] = pWords[offset + 3];
                 else if ( decoration == ShaderReflectionSpirvInternal::kDecorationBufferBlock )
                     uniqueBufferBlockType.insert( target );
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationLocation && instrWords >= 4 )
+                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationLocation && instructionWordCount >= 4 )
                     mapLocation[target] = pWords[offset + 3];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instrWords >= 5 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instructionWordCount >= 5 )
             {
                 const uint32 target      = pWords[offset + 1];
                 const uint32 memberIndex = pWords[offset + 2];
@@ -241,53 +241,53 @@ namespace sw
                 if ( decoration == ShaderReflectionSpirvInternal::kDecorationOffset )
                     mapMemberOffset[target][memberIndex] = pWords[offset + 4];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeBool && instrWords >= 2 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeBool && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Bool, 32, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeInt && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeInt && instructionWordCount >= 4 )
             {
                 const uint32 id         = pWords[offset + 1];
                 const uint32 width      = pWords[offset + 2];
                 const uint32 signedness = pWords[offset + 3];
                 mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ signedness ? ShaderReflectionSpirvInternal::SpirvType::Kind::Int : ShaderReflectionSpirvInternal::SpirvType::Kind::Uint, width, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeFloat && instrWords >= 3 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeFloat && instructionWordCount >= 3 )
             {
                 const uint32 id    = pWords[offset + 1];
                 const uint32 width = pWords[offset + 2];
                 mapType[id]        = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Float, width, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeVector && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeVector && instructionWordCount >= 4 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 compType = pWords[offset + 2];
                 const uint32 count    = pWords[offset + 3];
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Vector, 32, count, compType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeMatrix && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeMatrix && instructionWordCount >= 4 )
             {
-                const uint32 id      = pWords[offset + 1];
-                const uint32 colType = pWords[offset + 2];
-                const uint32 count   = pWords[offset + 3];
-                mapType[id]          = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, colType, 0, {}, 0 };
+                const uint32 id         = pWords[offset + 1];
+                const uint32 columnType = pWords[offset + 2];
+                const uint32 count      = pWords[offset + 3];
+                mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, columnType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeImage && instrWords >= 2 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeImage && instructionWordCount >= 2 )
             {
                 // OpTypeImage: result, sampled type, Dim, Depth, Arrayed, MS, Sampled(1 = 샘플, 2 = 스토리지), Format.
                 // Sampled 를 _count 에 담아 두면 리소스 분류가 RWTexture(스토리지 이미지)를 가릴 수 있다.
-                const uint32 sampled        = instrWords >= 8 ? pWords[offset + 7] : 0;
+                const uint32 sampled        = instructionWordCount >= 8 ? pWords[offset + 7] : 0;
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Image, 0, sampled, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampler && instrWords >= 2 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampler && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler, 0, 0, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampledImage && instrWords >= 2 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampledImage && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::SampledImage, 0, 0, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeArray && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeArray && instructionWordCount >= 4 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 elemType = pWords[offset + 2];
@@ -296,33 +296,33 @@ namespace sw
                 const uint32 length   = ( lenIt != mapConstantValue.end() ) ? lenIt->second : 0;
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Array, 0, length, elemType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeRuntimeArray && instrWords >= 3 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeRuntimeArray && instructionWordCount >= 3 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 elemType = pWords[offset + 2];
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray, 0, 0, elemType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeStruct && instrWords >= 2 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeStruct && instructionWordCount >= 2 )
             {
                 const uint32                             id = pWords[offset + 1];
                 ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {}, 0 };
-                for ( uint32 wordIndex = 2; wordIndex < instrWords; ++wordIndex )
+                for ( uint32 wordIndex = 2; wordIndex < instructionWordCount; ++wordIndex )
                     st._listMemberTypeId.push_back( pWords[offset + wordIndex] );
                 mapType[id] = std::move( st );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypePointer && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypePointer && instructionWordCount >= 4 )
             {
                 const uint32 id           = pWords[offset + 1];
                 const uint32 storageClass = pWords[offset + 2];
                 const uint32 subType      = pWords[offset + 3];
                 mapType[id]               = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer, 0, 0, subType, storageClass, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpConstant && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpConstant && instructionWordCount >= 4 )
             {
                 // 32비트 정수 상수만(배열 길이). 타입 확인은 생략한다. 길이 id 로 조회할 때만 쓴다.
                 mapConstantValue[pWords[offset + 2]] = pWords[offset + 3];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpVariable && instrWords >= 4 )
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpVariable && instructionWordCount >= 4 )
             {
                 const uint32 typeId       = pWords[offset + 1];
                 const uint32 resultId     = pWords[offset + 2];
@@ -330,7 +330,7 @@ namespace sw
                 mapVariable[resultId]     = VariableInfo{ storageClass, typeId };
             }
 
-            offset += instrWords;
+            offset += instructionWordCount;
         }
 
         // ArrayStride 데코레이션은 타입 정의 앞에 온다. 지금 붙인다.
@@ -532,8 +532,8 @@ namespace sw
             {
                 if ( var._storageClass != ShaderReflectionSpirvInternal::kStorageClassInput )
                     continue;
-                auto locIt = mapLocation.find( id );
-                if ( locIt == mapLocation.end() )
+                auto locationIt = mapLocation.find( id );
+                if ( locationIt == mapLocation.end() )
                     continue;
                 string name;
                 auto   nameIt = mapName.find( id );
@@ -544,7 +544,7 @@ namespace sw
                     name = name.substr( kPrefix.size() );
 
                 ShaderVertexInputInfo input{};
-                input._location   = locIt->second;
+                input._location   = locationIt->second;
                 size_t digitBegin = name.size();
                 while ( digitBegin > 0 && name[digitBegin - 1] >= '0' && name[digitBegin - 1] <= '9' )
                     --digitBegin;

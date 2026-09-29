@@ -276,16 +276,16 @@ namespace sw
             auto                   pNextState = sw::make_shared<internal::SharedFutureState<ReturnType>>();
             TaskFuture<ReturnType> nextFuture( pNextState );
 
-            _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void( const T& )>, [pNextState, contFunc = std::forward<F>( continuationFunc )]( const T& val )
+            _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void( const T& )>, [pNextState, continuation = std::forward<F>( continuationFunc )]( const T& val )
             {
                 if constexpr ( std::is_void_v<ReturnType> )
                 {
-                    contFunc( val );
+                    continuation( val );
                     pNextState->setValue();
                 }
                 else
                 {
-                    pNextState->setValue( contFunc( val ) );
+                    pNextState->setValue( continuation( val ) );
                 }
             } ) );
 
@@ -366,16 +366,16 @@ namespace sw
             auto                   pNextState = sw::make_shared<internal::SharedFutureState<ReturnType>>();
             TaskFuture<ReturnType> nextFuture( pNextState );
 
-            _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void()>, [pNextState, contFunc = std::forward<F>( continuationFunc )]()
+            _pState->setContinuation( SW_DELEGATE_LAMBDA( Delegate<void()>, [pNextState, continuation = std::forward<F>( continuationFunc )]()
             {
                 if constexpr ( std::is_void_v<ReturnType> )
                 {
-                    contFunc();
+                    continuation();
                     pNextState->setValue();
                 }
                 else
                 {
-                    pNextState->setValue( contFunc() );
+                    pNextState->setValue( continuation() );
                 }
             } ) );
 

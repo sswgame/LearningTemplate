@@ -234,9 +234,9 @@ namespace sw
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            int64        val = pEnumInfo->readValueFromMemory( pValuePtr );
-            const uint8* pB  = reinterpret_cast<const uint8*>( &val );
-            listBuffer.insert( listBuffer.end(), pB, pB + sizeof( int64 ) );
+            int64        val   = pEnumInfo->readValueFromMemory( pValuePtr );
+            const uint8* pByte = reinterpret_cast<const uint8*>( &val );
+            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( int64 ) );
             return;
         }
 
@@ -352,8 +352,8 @@ namespace sw
         {
             const size_t elementCount = pSeq->getSize( pContainerPtr );
             const uint32 count        = static_cast<uint32>( elementCount );
-            const uint8* pB           = reinterpret_cast<const uint8*>( &count );
-            listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
+            const uint8* pByte        = reinterpret_cast<const uint8*>( &count );
+            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( uint32 ) );
 
             for ( size_t elemIndex = 0; elemIndex < elementCount; ++elemIndex )
             {
@@ -373,8 +373,8 @@ namespace sw
         {
             const size_t elementCount = pMapWrap->getSize( pContainerPtr );
             const uint32 count        = static_cast<uint32>( elementCount );
-            const uint8* pB           = reinterpret_cast<const uint8*>( &count );
-            listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
+            const uint8* pByte        = reinterpret_cast<const uint8*>( &count );
+            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( uint32 ) );
 
             pMapWrap->forEach( pContainerPtr, [&]( const void* pKey, const void* pVal )
             {

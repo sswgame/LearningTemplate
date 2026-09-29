@@ -76,11 +76,11 @@ namespace sw::editor
         initInfo.SrvDescriptorFreeFn     = &ImGuiDX12RendererBackendInternal::ImGuiFreeSrv;
 
         SW_LOG_TRACE( "Calling ImGui_ImplDX12_Init" );
-        const bool bRet = ImGui_ImplDX12_Init( &initInfo );
-        SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bRet );
-        if ( bRet )
+        const bool bInitialized = ImGui_ImplDX12_Init( &initInfo );
+        SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bInitialized );
+        if ( bInitialized )
             ImGuiViewportSizeGuard::install();
-        return bRet;
+        return bInitialized;
     }
 
     void ImGuiDX12RendererBackend::shutdown()
@@ -140,8 +140,8 @@ namespace sw::editor
         if ( texture == 0 || _d3d12SrvHeap == nullptr || _pRHIDevice == nullptr )
             return nullptr;
 
-        ID3D12Resource* pRes = static_cast<ID3D12Resource*>( _pRHIDevice->getNativeTexturePointer( texture ) );
-        if ( pRes == nullptr )
+        ID3D12Resource* pResource = static_cast<ID3D12Resource*>( _pRHIDevice->getNativeTexturePointer( texture ) );
+        if ( pResource == nullptr )
             return nullptr;
 
         ID3D12Device* pDevice = static_cast<ID3D12Device*>( _pRHIDevice->getNativeDevice() );
@@ -154,15 +154,15 @@ namespace sw::editor
             return nullptr;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-        srvDesc.Format                        = pRes->GetDesc().Format;
+        srvDesc.Format                        = pResource->GetDesc().Format;
         srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srvDesc.Texture2D.MostDetailedMip     = 0;
-        srvDesc.Texture2D.MipLevels           = pRes->GetDesc().MipLevels;
+        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
         srvDesc.Texture2D.PlaneSlice          = 0;
         srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-        pDevice->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
+        pDevice->CreateShaderResourceView( pResource, &srvDesc, cpuHandle );
 
         return reinterpret_cast<void*>( gpuHandle.ptr );
     }

@@ -29,11 +29,11 @@ namespace
     bool hasRequestInternal( const sw::vector<sw::ShaderBakeRequest>& listRequest,
                              sw::string_view                          stemLower,
                              sw::ShaderStage                          stage,
-                             uint64                                   permHash )
+                             uint64                                   permutationHash )
     {
         for ( const sw::ShaderBakeRequest& request : listRequest )
         {
-            if ( request._stage != stage || request._permHash != permHash )
+            if ( request._stage != stage || request._permutationHash != permutationHash )
                 continue;
             if ( sw::ShaderBaker::getStemLower( request._shaderPath ) == stemLower )
                 return true;
@@ -88,7 +88,7 @@ SW_TEST_CASE( ShaderBakeRequestTest, RequestsAreUnique )
         for ( size_t inner = outer + 1; inner < listRequest.size(); ++inner )
         {
             const bool bSame = listRequest[outer]._stage == listRequest[inner]._stage &&
-                               listRequest[outer]._permHash == listRequest[inner]._permHash &&
+                               listRequest[outer]._permutationHash == listRequest[inner]._permutationHash &&
                                listRequest[outer]._entryPoint == listRequest[inner]._entryPoint &&
                                listRequest[outer]._shaderPath == listRequest[inner]._shaderPath;
             if ( bSame )

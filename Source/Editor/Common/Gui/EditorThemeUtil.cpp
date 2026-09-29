@@ -255,12 +255,12 @@ namespace sw::editor
         // 2. 통합 컬러 팔레트 구성
         ImVec4* pColors = style.Colors;
 
-        const Color4& accent = config._accentColor;
-        const Color4& winBg  = config._windowBg;
-        const Color4& panBg  = config._panelBg;
-        const Color4& hdrBg  = config._headerBg;
-        const Color4& frmBg  = config._frameBg;
-        const Color4& border = config._border;
+        const Color4& accent   = config._accentColor;
+        const Color4& winBg    = config._windowBg;
+        const Color4& panBg    = config._panelBg;
+        const Color4& headerBg = config._headerBg;
+        const Color4& frmBg    = config._frameBg;
+        const Color4& border   = config._border;
 
         // 텍스트
         pColors[ImGuiCol_Text]         = ImVec4( 0.92f, 0.94f, 0.97f, 1.0f );
@@ -281,7 +281,7 @@ namespace sw::editor
 
         // 타이틀바
         pColors[ImGuiCol_TitleBg]          = EditorThemeInternal::adjustBrightness( winBg, 0.9f, 1.0f );
-        pColors[ImGuiCol_TitleBgActive]    = EditorThemeInternal::toImVec4( hdrBg, 1.0f );
+        pColors[ImGuiCol_TitleBgActive]    = EditorThemeInternal::toImVec4( headerBg, 1.0f );
         pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
 
         // 스크롤바
@@ -296,7 +296,7 @@ namespace sw::editor
         pColors[ImGuiCol_ButtonActive]  = EditorThemeInternal::adjustBrightness( accent, 1.15f, 1.0f );
 
         // 헤더
-        pColors[ImGuiCol_Header]        = EditorThemeInternal::toImVec4( hdrBg, 1.0f );
+        pColors[ImGuiCol_Header]        = EditorThemeInternal::toImVec4( headerBg, 1.0f );
         pColors[ImGuiCol_HeaderHovered] = EditorThemeInternal::toImVec4( accent, 0.75f );
         pColors[ImGuiCol_HeaderActive]  = EditorThemeInternal::toImVec4( accent, 0.95f );
 
@@ -323,7 +323,7 @@ namespace sw::editor
         pColors[ImGuiCol_NavHighlight]      = EditorThemeInternal::toImVec4( accent, 0.85f );
 
         // 테이블
-        pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( hdrBg, 1.0f );
+        pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
         pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
         pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
         pColors[ImGuiCol_TableRowBg]        = ImVec4( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -332,54 +332,54 @@ namespace sw::editor
 
     void EditorThemeUtil::loadFromConfig()
     {
-        const EditorConfig& cfg = EditorConfig::getActive();
+        const EditorConfig& editorConfig = EditorConfig::getActive();
 
-        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigId( cfg._themePreset )._preset;
+        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigId( editorConfig._themePreset )._preset;
         applyPreset( preset );
 
         if ( preset != EditorThemePreset::ClassicDark )
         {
-            EditorThemeConfig themeCfg = EditorThemeInternal::activeTheme();
-            if ( cfg._themeAccentR > 0.0f || cfg._themeAccentG > 0.0f || cfg._themeAccentB > 0.0f )
-                themeCfg._accentColor = Color4{ cfg._themeAccentR, cfg._themeAccentG, cfg._themeAccentB, 1.0f };
+            EditorThemeConfig themeConfig = EditorThemeInternal::activeTheme();
+            if ( editorConfig._themeAccentR > 0.0f || editorConfig._themeAccentG > 0.0f || editorConfig._themeAccentB > 0.0f )
+                themeConfig._accentColor = Color4{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
 
-            if ( cfg._themeWindowRounding >= 0.0f )
+            if ( editorConfig._themeWindowRounding >= 0.0f )
             {
-                themeCfg._windowRounding    = cfg._themeWindowRounding;
-                themeCfg._frameRounding     = cfg._themeFrameRounding;
-                themeCfg._tabRounding       = cfg._themeTabRounding;
-                themeCfg._popupRounding     = cfg._themeWindowRounding;
-                themeCfg._scrollbarRounding = cfg._themeFrameRounding * 2.0f;
-                themeCfg._grabRounding      = cfg._themeFrameRounding;
+                themeConfig._windowRounding    = editorConfig._themeWindowRounding;
+                themeConfig._frameRounding     = editorConfig._themeFrameRounding;
+                themeConfig._tabRounding       = editorConfig._themeTabRounding;
+                themeConfig._popupRounding     = editorConfig._themeWindowRounding;
+                themeConfig._scrollbarRounding = editorConfig._themeFrameRounding * 2.0f;
+                themeConfig._grabRounding      = editorConfig._themeFrameRounding;
             }
 
-            applyTheme( themeCfg );
+            applyTheme( themeConfig );
         }
     }
 
     void EditorThemeUtil::saveToConfig()
     {
-        EditorConfig cfg = EditorConfig::getActive();
+        EditorConfig editorConfig = EditorConfig::getActive();
 
-        const EditorThemeConfig& themeCfg = EditorThemeInternal::activeTheme();
-        cfg._themePreset                  = EditorThemeInternal::findRow( themeCfg._preset )._pConfigId;
+        const EditorThemeConfig& themeConfig = EditorThemeInternal::activeTheme();
+        editorConfig._themePreset            = EditorThemeInternal::findRow( themeConfig._preset )._pConfigId;
 
-        cfg._themeAccentR        = themeCfg._accentColor._r;
-        cfg._themeAccentG        = themeCfg._accentColor._g;
-        cfg._themeAccentB        = themeCfg._accentColor._b;
-        cfg._themeWindowRounding = themeCfg._windowRounding;
-        cfg._themeFrameRounding  = themeCfg._frameRounding;
-        cfg._themeTabRounding    = themeCfg._tabRounding;
+        editorConfig._themeAccentR        = themeConfig._accentColor._r;
+        editorConfig._themeAccentG        = themeConfig._accentColor._g;
+        editorConfig._themeAccentB        = themeConfig._accentColor._b;
+        editorConfig._themeWindowRounding = themeConfig._windowRounding;
+        editorConfig._themeFrameRounding  = themeConfig._frameRounding;
+        editorConfig._themeTabRounding    = themeConfig._tabRounding;
 
-        EditorConfig::setActive( cfg );
+        EditorConfig::setActive( editorConfig );
         EditorConfig::saveToHost();
     }
 
     void EditorThemeUtil::setAccentColor( const Color4& accentColor )
     {
-        EditorThemeConfig cfg = EditorThemeInternal::activeTheme();
-        cfg._accentColor      = accentColor;
-        applyTheme( cfg );
+        EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
+        editorConfig._accentColor      = accentColor;
+        applyTheme( editorConfig );
         saveToConfig();
     }
 
@@ -518,7 +518,7 @@ namespace sw::editor
         ImGui::SetNextWindowSize( ImVec2( 460.0f, 380.0f ), ImGuiCond_FirstUseEver );
         if ( ImGui::Begin( ICON_FA_PALETTE "  Theme & Look and Feel", pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
-            EditorThemeConfig cfg = EditorThemeInternal::activeTheme();
+            EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
             // 1) 프리셋 선택. 이름과 순서는 프리셋 표에서 온다.
             //    예전에는 이름 배열을 따로 적고 `static_cast<int32>( _preset )` 로 인덱스를 삼았다.
@@ -531,7 +531,7 @@ namespace sw::editor
             for ( uint32 index = 0; index < rowCount; ++index )
             {
                 arrPresetName[index] = pRow[index]._pDisplayName;
-                if ( pRow[index]._preset == cfg._preset )
+                if ( pRow[index]._preset == editorConfig._preset )
                     currentPreset = static_cast<int32>( index );
             }
 
@@ -542,7 +542,7 @@ namespace sw::editor
                 {
                     applyPreset( pRow[selected]._preset );
                     saveToConfig();
-                    cfg = EditorThemeInternal::activeTheme();
+                    editorConfig = EditorThemeInternal::activeTheme();
                 }
             }
             EditorWidgets::drawTooltip( "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다" );
@@ -551,11 +551,11 @@ namespace sw::editor
             ImGui::TextDisabled( "Color Palette Customization" );
 
             // 2) 액센트 컬러 피커
-            float32 arrAccentRaw[4] = { cfg._accentColor._r, cfg._accentColor._g, cfg._accentColor._b, cfg._accentColor._a };
+            float32 arrAccentRaw[4] = { editorConfig._accentColor._r, editorConfig._accentColor._g, editorConfig._accentColor._b, editorConfig._accentColor._a };
             if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
             {
-                cfg._accentColor = Color4{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
-                applyTheme( cfg );
+                editorConfig._accentColor = Color4{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
+                applyTheme( editorConfig );
                 saveToConfig();
             }
             EditorWidgets::drawTooltip( "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상" );
@@ -579,7 +579,7 @@ namespace sw::editor
                 if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( arrSwatches[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( 22.0f, 22.0f ) ) )
                 {
                     setAccentColor( arrSwatches[index] );
-                    cfg = getActiveTheme();
+                    editorConfig = getActiveTheme();
                 }
                 EditorWidgets::drawTooltip( "추천 액센트 색상 팔레트" );
                 ImGui::PopID();
@@ -590,19 +590,19 @@ namespace sw::editor
 
             // 4) 라운딩 슬라이더
             bool bMetricsChanged = false;
-            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &cfg._windowRounding, 0.0f, 12.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._windowRounding, 0.0f, 12.0f, "%.0f px" );
             EditorWidgets::drawTooltip( "에디터 창 및 팝업 대화상자 모서리의 둥글기(px)" );
-            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &cfg._frameRounding, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._frameRounding, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px)" );
-            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &cfg._tabRounding, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._tabRounding, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px)" );
 
             if ( bMetricsChanged )
             {
-                cfg._popupRounding     = cfg._windowRounding;
-                cfg._scrollbarRounding = cfg._frameRounding * 2.0f;
-                cfg._grabRounding      = cfg._frameRounding;
-                applyTheme( cfg );
+                editorConfig._popupRounding     = editorConfig._windowRounding;
+                editorConfig._scrollbarRounding = editorConfig._frameRounding * 2.0f;
+                editorConfig._grabRounding      = editorConfig._frameRounding;
+                applyTheme( editorConfig );
                 saveToConfig();
             }
 

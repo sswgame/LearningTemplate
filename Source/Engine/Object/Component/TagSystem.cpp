@@ -49,9 +49,9 @@ namespace sw
 
     bool TagContainer::hasAllTags( const TagContainer& required ) const
     {
-        for ( const TagID& reqTag : required._listTag )
+        for ( const TagID& requiredTag : required._listTag )
         {
-            if ( hasTag( reqTag, false ) == false )
+            if ( hasTag( requiredTag, false ) == false )
                 return false;
         }
         return true;

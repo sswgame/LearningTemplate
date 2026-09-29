@@ -53,28 +53,28 @@ namespace sw::editor
         void loadSelectedGameDataFile();
         void saveSelectedGameDataFile();
         void pollBackgroundJobs();
-        void markLocDirty();
+        void markLocalizationDirty();
         void markGameDataDirty();
         /** @brief 두 문서의 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
         void syncDocumentDirty();
 
     private:
-        fixed_string<constant::kMaxBuffer128> _locFilter;
+        fixed_string<constant::kMaxBuffer128> _localizationFilter;
         fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
-        vector<LocRecord>                     _listLocRecord;
+        vector<LocalizationRecord>            _listLocalizationRecord;
         /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */
-        vector<size_t>            _listVisibleLocIndex;
+        vector<size_t>            _listVisibleLocalizationIndex;
         vector<GameDataFileEntry> _listGameDataFile;
         string                    _selectedGameDataRawText;
         string                    _savedGameDataRawText;
-        EditorLocalizationLoadJob _locJob;
+        EditorLocalizationLoadJob _localizationJob;
         EditorGameDataScanJob     _gameDataJob;
         int32                     _activeTab;
         int32                     _selectedGameDataIndex;
-        uint8                     _bLocLoaded      : 1;
-        uint8                     _bGameDataLoaded : 1;
-        uint8                     _bLocDirty       : 1;
-        uint8                     _bGameDataDirty  : 1;
-        [[maybe_unused]] uint8    _reserved        : 4;
+        uint8                     _bLocalizationLoaded : 1;
+        uint8                     _bGameDataLoaded     : 1;
+        uint8                     _bLocalizationDirty  : 1;
+        uint8                     _bGameDataDirty      : 1;
+        [[maybe_unused]] uint8    _reserved            : 4;
     };
 } // namespace sw::editor

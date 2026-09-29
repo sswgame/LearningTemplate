@@ -197,11 +197,11 @@ namespace sw
             return;
         }
 
-        fixed_string<constant::kMaxBuffer64> nameCol;
-        padRight( nameCol, "scope", 32 );
+        fixed_string<constant::kMaxBuffer64> nameColumn;
+        padRight( nameColumn, "scope", 32 );
 
         SW_LOG_INFO( "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );
-        SW_LOG_INFO( "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameCol.c_str() );
+        SW_LOG_INFO( "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameColumn.c_str() );
 
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
@@ -211,14 +211,14 @@ namespace sw
             if ( scope._sampledFrames == 0 || pScopeName == nullptr )
                 continue;
 
-            padRight( nameCol, pScopeName, 32 );
+            padRight( nameColumn, pScopeName, 32 );
 
             // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다. 시간 열은 의미가 없다.
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
             const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
 
             SW_LOG_INFO( "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
-                         nameCol.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
+                         nameColumn.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
                          toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
                          toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );
         }

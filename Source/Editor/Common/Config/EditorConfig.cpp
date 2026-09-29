@@ -31,20 +31,20 @@ namespace sw::editor
 
     void EditorConfig::loadFromHost()
     {
-        EditorConfig    cfg{};
+        EditorConfig    config{};
         const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
         const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
-        // loadFile 은 필드 하나만 어긋나도 false 를 반환하지만, 그 앞까지 읽은 값은 cfg 에 **이미 들어가 있다.**
+        // loadFile 은 필드 하나만 어긋나도 false 를 반환하지만, 그 앞까지 읽은 값은 config 에 **이미 들어가 있다.**
         // 그래서 "기본값을 쓴다" 는 파일이 없을 때만 맞는 말이다. 두 경우를 나눠 로그에 남긴다.
-        if ( pTypeInfo != nullptr && JsonSerializer::loadFile( configPath, &cfg, *pTypeInfo ) )
+        if ( pTypeInfo != nullptr && JsonSerializer::loadFile( configPath, &config, *pTypeInfo ) )
             SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
         else if ( FileUtil::fileExists( configPath ) == false )
             SW_LOG_INFO( "EditorConfig 파일이 없어 내장 기본값을 씁니다: %#", configPath.c_str() );
         else
             SW_LOG_WARNING( "EditorConfig 의 일부 필드를 읽지 못했습니다(키 오타·형식) — 읽힌 값은 쓰고 나머지는 기본값입니다. 파일을 확인하세요: %#", configPath.c_str() );
 
-        setActive( cfg );
+        setActive( config );
     }
 
     void EditorConfig::saveToHost()

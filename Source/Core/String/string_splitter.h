@@ -244,9 +244,9 @@ namespace sw
         else
         {
             bool bAllSingleChar = true;
-            for ( const auto& d : listDelim )
+            for ( const auto& delimiter : listDelim )
             {
-                if ( d.length() != 1 )
+                if ( delimiter.length() != 1 )
                 {
                     bAllSingleChar = false;
                     break;
@@ -255,8 +255,8 @@ namespace sw
             if ( bAllSingleChar )
             {
                 _multiChars.reserve( listDelim.size() );
-                for ( const auto& d : listDelim )
-                    _multiChars.push_back( d[0] );
+                for ( const auto& delimiter : listDelim )
+                    _multiChars.push_back( delimiter[0] );
                 _mode = Mode::MultiChar;
             }
             advance();

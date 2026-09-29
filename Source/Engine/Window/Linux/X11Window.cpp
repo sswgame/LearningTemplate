@@ -154,12 +154,12 @@ namespace sw
 
             if ( _customHandler.isBound() )
             {
-                NativeWindowEvent ev{};
-                ev._pNativeWindow = reinterpret_cast<void*>( static_cast<uintptr_t>( _x11Window ) );
-                ev._message       = NativeWindowEvent::kMessageX11;
-                ev._wParam        = 0;
-                ev._lParam        = reinterpret_cast<intptr_t>( &event );
-                if ( _customHandler( ev ) )
+                NativeWindowEvent windowEvent{};
+                windowEvent._pNativeWindow = reinterpret_cast<void*>( static_cast<uintptr_t>( _x11Window ) );
+                windowEvent._message       = NativeWindowEvent::kMessageX11;
+                windowEvent._wParam        = 0;
+                windowEvent._lParam        = reinterpret_cast<intptr_t>( &event );
+                if ( _customHandler( windowEvent ) )
                     continue;
             }
 

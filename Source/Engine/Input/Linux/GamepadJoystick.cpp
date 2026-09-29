@@ -250,11 +250,11 @@ namespace sw
     {
         using Internal = GamepadJoystickInternal;
 
-        js_event evt{};
+        js_event joystickEvent{};
         for ( ;; )
         {
-            const ssize_t bytesRead = read( _fdJoystick, &evt, sizeof( evt ) );
-            if ( bytesRead != static_cast<ssize_t>( sizeof( evt ) ) )
+            const ssize_t bytesRead = read( _fdJoystick, &joystickEvent, sizeof( joystickEvent ) );
+            if ( bytesRead != static_cast<ssize_t>( sizeof( joystickEvent ) ) )
             {
                 if ( bytesRead < 0 && errno != EAGAIN )
                 {
@@ -269,57 +269,57 @@ namespace sw
                 break;
             }
 
-            const uint8 type = evt.type & static_cast<uint8>( ~JS_EVENT_INIT );
+            const uint8 type = joystickEvent.type & static_cast<uint8>( ~JS_EVENT_INIT );
             if ( type == JS_EVENT_BUTTON )
             {
-                const GamepadButton button = Internal::mapJsButtonIndex( evt.number );
+                const GamepadButton button = Internal::mapJsButtonIndex( joystickEvent.number );
                 if ( button != GamepadButton::Count )
-                    setButtonDown( button, evt.value != 0 );
+                    setButtonDown( button, joystickEvent.value != 0 );
             }
             else if ( type == JS_EVENT_AXIS )
             {
-                switch ( evt.number )
+                switch ( joystickEvent.number )
                 {
                     case Internal::kAxisLeftX:
                     {
-                        setAxis( 0, Internal::normalizeStickAxis( evt.value, false ) );
+                        setAxis( 0, Internal::normalizeStickAxis( joystickEvent.value, false ) );
                         break;
                     }
                     case Internal::kAxisLeftY:
                     {
-                        setAxis( 1, Internal::normalizeStickAxis( evt.value, true ) );
+                        setAxis( 1, Internal::normalizeStickAxis( joystickEvent.value, true ) );
                         break;
                     }
                     case Internal::kAxisRightX:
                     {
-                        setAxis( 2, Internal::normalizeStickAxis( evt.value, false ) );
+                        setAxis( 2, Internal::normalizeStickAxis( joystickEvent.value, false ) );
                         break;
                     }
                     case Internal::kAxisRightY:
                     {
-                        setAxis( 3, Internal::normalizeStickAxis( evt.value, true ) );
+                        setAxis( 3, Internal::normalizeStickAxis( joystickEvent.value, true ) );
                         break;
                     }
                     case Internal::kAxisLeftTrigger:
                     {
-                        setAxis( 4, Internal::normalizeTriggerAxis( evt.value ) );
+                        setAxis( 4, Internal::normalizeTriggerAxis( joystickEvent.value ) );
                         break;
                     }
                     case Internal::kAxisRightTrigger:
                     {
-                        setAxis( 5, Internal::normalizeTriggerAxis( evt.value ) );
+                        setAxis( 5, Internal::normalizeTriggerAxis( joystickEvent.value ) );
                         break;
                     }
                     case Internal::kAxisDPadX:
                     {
-                        setButtonDown( GamepadButton::DPadLeft, evt.value < 0 );
-                        setButtonDown( GamepadButton::DPadRight, evt.value > 0 );
+                        setButtonDown( GamepadButton::DPadLeft, joystickEvent.value < 0 );
+                        setButtonDown( GamepadButton::DPadRight, joystickEvent.value > 0 );
                         break;
                     }
                     case Internal::kAxisDPadY:
                     {
-                        setButtonDown( GamepadButton::DPadUp, evt.value < 0 );
-                        setButtonDown( GamepadButton::DPadDown, evt.value > 0 );
+                        setButtonDown( GamepadButton::DPadUp, joystickEvent.value < 0 );
+                        setButtonDown( GamepadButton::DPadDown, joystickEvent.value > 0 );
                         break;
                     }
                     default:

@@ -237,8 +237,8 @@ namespace sw
 
     void* D3D11RHIDevice::getNativeTexturePointer( RHITextureHandle texture ) const
     {
-        const TextureRecord* pRec = resolveTexture( texture );
-        return pRec != nullptr ? pRec->_texture.Get() : nullptr;
+        const TextureRecord* pRecord = resolveTexture( texture );
+        return pRecord != nullptr ? pRecord->_texture.Get() : nullptr;
     }
 
     bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )

@@ -2021,6 +2021,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (변수명 — 알아보기 힘든 줄임말 · 뜻이 갈리는 줄임말 · 한 글자 이름)
+
+앞선 다섯 이름 정리(App · Core · Engine · Editor · ReflectionParser)는 비유를 걸렀고 변수도 거기 포함됐다. 이번에는 **변수명 고유의 문제**를 봤다.
+변수 자리 식별자(뒤에 `(` 가 없는 소문자)를 camelCase 로 쪼개 줄임말 140 여 개의 쓰임을 셌다.
+
+**기준.** 문맥을 봐야 뜻을 알거나 뜻이 둘 이상인 것만 바꾼다. 누구나 아는 줄임말(`ctx` · `desc` · `info` · `it` · `ptr` · `src`/`dst` ·
+`lhs`/`rhs` · `str` · `buf` · `len` · `pos` · `dir` · `idx` · `obj` · `cmd` · `val` · `tex` · `fmt` · `args` · `impl` · `init` · `prev` · `cur` …), 외부 API 가 정한
+이름(`hWnd` · `lParam` · Objective-C `sel` · X11 `KeySym` · `rootSig` · `pfn*`), 수학 표기(`x/y/z/w` · `lerp` 의 `t` · `m` · `q` · `det`), std 를 흉내 낸
+Core 컨테이너의 std 식 이름(`n` · `k` · `a`/`b`)은 둔다. 맥 전용 파일은 어디서도 빌드되지 않아 손대지 않았다.
+
+**바꾼 것(119 파일).**
+- 뜻이 갈리던 것: `res` → `result`(수학) · `pResource` · `resourceDesc` · `resourceBinding`, `col` → `column`(반복문 · SPIR-V 행렬) · `color`(ImGui 색),
+  `mod*` → `modifier*`(입력) · `moduleName` · `modified*`(직렬화 비교), `def` → `define`(셰이더) · `defaultEntryPoint` · `baseDefinition`,
+  `loc` → `location` · 로컬라이제이션, `rec` → `record`, `hdr` → `headerColor`, `hist` → `historyEntry` · `historyDesc`.
+- 알아보기 힘든 것: `cand` → `candidate`, `ent` → `entity`, `ndx`/`ndy` → `directionX/Y`, `sens` → `sensitivity`, `holdThr` → `holdThreshold`,
+  `mctx` → `migrateContext`, `att*` → `attachment*`, `listAdj` → `listAdjacent`, `perm*` → `permutation*`(`ShaderBakeRequest::_permHash` →
+  `_permutationHash`), `trig*` → `trigger*`, `negKey` → `negativeKey`, `evt`/`rawEvt` → `event`/`rawEvent`, `cfg` → `config`, `pMgr` → `pManager` ·
+  `pSceneManager`, `s_Orig*` → `s_original*`, `kRootConstantEmulSlot` → `kRootConstantEmulationSlot`, `dynCount` → `dynamicCount`,
+  `instrWords` → `instructionWordCount` …
+- 줄인 타입 이름: `LayerDef` → `LayerDefinition`(입력), `LocRecord` · `LocLang` → `LocalizationRecord` · `LocalizationLanguage`(에디터 데이터 표,
+  딸린 `_bLocDirty` · `locFolder` · `mergeLangJson` … 도).
+- 한 글자: `WorkStealingDeque` 의 `b`/`t` → `bottom`/`top`, `pA`/`pB` → `pLeft`/`pRight`, `pT` → `pTypeInfo`, `pH` → `pLibrary`, `pV` → `pValue`,
+  `l` → `link`, `k` → `key`, `d` → `delimiter`, `array.h` 의 `i` → `index`.
+
+**어떻게 안전하게 했나.** 파일 범위를 지정한 규칙 표로 바꿨고 **문자열 · 문자 리터럴은 건드리지 않았다**(직렬화 키 · 로그 문구 보존). 새 이름이 같은
+파일에 이미 있는 35 곳은 이 빌드의 `-Wall`(clang-cl 에서는 `-Weverything`)이 켜는 `-Wshadow` 로 가렸다 — 실제로 셋이 걸렸다(`GpuSceneBuilder`
+의 `inst` → `instance` 가 매개변수 `instance` 를 가림 → `gpuInstance`, 입력 `<chord>` 의 `pTriggerAttr` → `pChordTriggerAttr`, 커맨드 팔레트 람다의
+`pSceneManager` → `pCurrentSceneManager`).
+
+**검증(Windows).** Debug · Shipping 빌드 경고 0 · `nogpu`+`hostgpu` 각 9/9 · 린트 프리셋 21/21 · 에디터 전부 열기 덤프 창 33 · 내용 없는 패널 0.
+리눅스 전용 두 파일(`GamepadJoystick.cpp` · `X11Window.cpp`)은 CI 로 본다.
+
 ### 2026-09-29 (테스트용 gv 매크로 — 에디터 · 프리셋에서 숨기고 Shipping 에서 뺀다)
 
 **왜.** 전역 변수 정보에 용도 칸이 없어서 에디터 패널이 벤치 · 자동화 스위치(`gv_bench*` 17 개, `gv_profileFrames`, `gv_crashTest` …)를

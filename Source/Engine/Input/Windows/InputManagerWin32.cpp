@@ -82,22 +82,22 @@ namespace sw
             case WM_KEYDOWN:
             case WM_SYSKEYDOWN:
             {
-                const Key   key     = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
-                const uint8 modMask = getWin32ModifierMaskInternal();
-                const bool  bRepeat = ( event._lParam & 0x40000000 ) != 0;
+                const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+                const uint8 modifierMask = getWin32ModifierMaskInternal();
+                const bool  bRepeat      = ( event._lParam & 0x40000000 ) != 0;
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( key, true );
-                postRawEvent( RawInputEvent::makeKeyDown( key, static_cast<uint16>( event._wParam ), bRepeat, modMask ) );
+                postRawEvent( RawInputEvent::makeKeyDown( key, static_cast<uint16>( event._wParam ), bRepeat, modifierMask ) );
                 break;
             }
             case WM_KEYUP:
             case WM_SYSKEYUP:
             {
-                const Key   key     = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
-                const uint8 modMask = getWin32ModifierMaskInternal();
+                const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+                const uint8 modifierMask = getWin32ModifierMaskInternal();
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( key, false );
-                postRawEvent( RawInputEvent::makeKeyUp( key, static_cast<uint16>( event._wParam ), modMask ) );
+                postRawEvent( RawInputEvent::makeKeyUp( key, static_cast<uint16>( event._wParam ), modifierMask ) );
                 break;
             }
             case WM_INPUT:
@@ -131,7 +131,7 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
-                    const uint8 modMask = getWin32ModifierMaskInternal();
+                    const uint8 modifierMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, true );
 
@@ -143,7 +143,7 @@ namespace sw
                             SetCapture( pHwnd );
                     }
 
-                    postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mouseX, mouseY, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mouseX, mouseY, modifierMask ) );
                 }
                 break;
             }
@@ -158,10 +158,10 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
-                    const uint8 modMask = getWin32ModifierMaskInternal();
+                    const uint8 modifierMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, true );
-                    postRawEvent( RawInputEvent::makeMouseDoubleClick( btn, mouseX, mouseY, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseDoubleClick( btn, mouseX, mouseY, modifierMask ) );
                 }
                 break;
             }
@@ -176,14 +176,14 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     readMouseEventPositionInternal( _pMouse, event._lParam, mouseX, mouseY );
-                    const uint8 modMask = getWin32ModifierMaskInternal();
+                    const uint8 modifierMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, false );
 
                     if ( ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0 )
                         ReleaseCapture();
 
-                    postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modifierMask ) );
                 }
                 break;
             }

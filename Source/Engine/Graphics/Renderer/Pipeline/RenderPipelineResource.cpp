@@ -36,38 +36,38 @@ namespace sw
 
         auto findAttachment = [this]( string_view name ) -> const RenderPassAttachment*
         {
-            for ( const RenderPassAttachment& att : _desc._listAttachment )
+            for ( const RenderPassAttachment& attachment : _desc._listAttachment )
             {
-                if ( att._name == name )
-                    return &att;
+                if ( attachment._name == name )
+                    return &attachment;
             }
             return nullptr;
         };
 
         // 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 이름이 겹치지 않는가.
-        for ( uint32 attIndex = 0; attIndex < _desc._listAttachment.size(); ++attIndex )
+        for ( uint32 attachmentIndex = 0; attachmentIndex < _desc._listAttachment.size(); ++attachmentIndex )
         {
-            const RenderPassAttachment& att = _desc._listAttachment[attIndex];
+            const RenderPassAttachment& attachment = _desc._listAttachment[attachmentIndex];
             RHIFormat                   parsed{};
-            if ( engine::getTypeRegistry().enumFromString( att._format, parsed ) == false )
+            if ( engine::getTypeRegistry().enumFromString( attachment._format, parsed ) == false )
             {
-                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, att._name, att._format );
+                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
                 ++issueCount;
             }
-            for ( uint32 otherIndex = 0; otherIndex < attIndex; ++otherIndex )
+            for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
             {
-                if ( _desc._listAttachment[otherIndex]._name == att._name )
+                if ( _desc._listAttachment[otherIndex]._name == attachment._name )
                 {
-                    SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, att._name );
+                    SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, attachment._name );
                     ++issueCount;
                     break;
                 }
             }
         }
 
-        auto isDepthAttachment = [&]( const RenderPassAttachment* pAtt ) -> bool
+        auto isDepthAttachment = [&]( const RenderPassAttachment* pAttachment ) -> bool
         {
-            return pAtt != nullptr && engine::getTypeRegistry().enumFromString<RHIFormat>( pAtt->_format ) == constant::kDepthStencilFormat;
+            return pAttachment != nullptr && engine::getTypeRegistry().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
         };
 
         // 2) 패스: 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
@@ -119,17 +119,17 @@ namespace sw
             // 렌더 패스가 통째로 비호환이 된다.
             if ( pass._depthAttachment.empty() == false )
             {
-                const RenderPassAttachment* pDepthAtt = findAttachment( pass._depthAttachment );
-                if ( pDepthAtt == nullptr )
+                const RenderPassAttachment* pDepthAttachment = findAttachment( pass._depthAttachment );
+                if ( pDepthAttachment == nullptr )
                 {
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 이 _attachments 에 없습니다",
                                   sourcePath, pass._name, pass._depthAttachment );
                     ++issueCount;
                 }
-                else if ( engine::getTypeRegistry().enumFromString<RHIFormat>( pDepthAtt->_format ) != constant::kDepthStencilFormat )
+                else if ( engine::getTypeRegistry().enumFromString<RHIFormat>( pDepthAttachment->_format ) != constant::kDepthStencilFormat )
                 {
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
-                                  sourcePath, pass._name, pass._depthAttachment, pDepthAtt->_format );
+                                  sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
                     ++issueCount;
                 }
             }
@@ -138,8 +138,8 @@ namespace sw
                 // 뎁스를 쓰겠다고 출력에 적어 놓고 바인딩은 안 하는 것은 앞뒤가 안 맞는다.
                 for ( const string& outputName : pass._listOutput )
                 {
-                    const RenderPassAttachment* pAtt = findAttachment( outputName );
-                    if ( pAtt == nullptr || engine::getTypeRegistry().enumFromString<RHIFormat>( pAtt->_format ) != constant::kDepthStencilFormat )
+                    const RenderPassAttachment* pAttachment = findAttachment( outputName );
+                    if ( pAttachment == nullptr || engine::getTypeRegistry().enumFromString<RHIFormat>( pAttachment->_format ) != constant::kDepthStencilFormat )
                         continue;
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 을 출력으로 선언했는데 _depthAttachment 가 비어 "
                                   "있습니다 — 이대로면 뎁스 없이 그립니다",
@@ -155,11 +155,11 @@ namespace sw
             uint32 colorCount{ 0 };
             for ( const string& outputName : pass._listOutput )
             {
-                const RenderPassAttachment* pAtt = findAttachment( outputName );
-                if ( pAtt == nullptr )
+                const RenderPassAttachment* pAttachment = findAttachment( outputName );
+                if ( pAttachment == nullptr )
                     continue;
                 RHIFormat fmt{};
-                if ( engine::getTypeRegistry().enumFromString( pAtt->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
+                if ( engine::getTypeRegistry().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
                     ++colorCount;
             }
             if ( colorCount > kMaxColorAttachments )

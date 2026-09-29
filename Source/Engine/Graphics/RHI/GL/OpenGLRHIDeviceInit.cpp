@@ -320,17 +320,17 @@ namespace sw
         } );
         _gpuBuffers.clear();
 
-        _gpuTextures.forEach( []( OpenGLTextureRecord& rec )
+        _gpuTextures.forEach( []( OpenGLTextureRecord& record )
         {
-            if ( rec._texture != 0 )
+            if ( record._texture != 0 )
             {
-                glDeleteTextures( 1, &rec._texture );
-                rec._texture = 0;
+                glDeleteTextures( 1, &record._texture );
+                record._texture = 0;
             }
-            if ( rec._fbo != 0 )
+            if ( record._fbo != 0 )
             {
-                glDeleteFramebuffers( 1, &rec._fbo );
-                rec._fbo = 0;
+                glDeleteFramebuffers( 1, &record._fbo );
+                record._fbo = 0;
             }
         } );
         _gpuTextures.clear();

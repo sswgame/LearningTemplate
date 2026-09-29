@@ -27,11 +27,11 @@ namespace sw
             return false;
         }
         outFormat = RHIFormat::R8G8B8A8_UNORM;
-        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
-            if ( att._name == attachmentName )
+            if ( attachment._name == attachmentName )
             {
-                outFormat = FrameRendererUtil::parseAttachmentFormat( att._format );
+                outFormat = FrameRendererUtil::parseAttachmentFormat( attachment._format );
                 break;
             }
         }
@@ -107,9 +107,9 @@ namespace sw
         for ( uint32 row = 0; row < layout._height; ++row )
         {
             const uint8* pRow = byte.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 col = 0; col < layout._width; ++col )
+            for ( uint32 column = 0; column < layout._width; ++column )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                const uint8* pPixel = pRow + static_cast<size_t>( column ) * bytesPerPixel;
                 if ( bHalf )
                 {
                     // HDR 을 [0,1] 로 자르고 8비트로 옮긴다. 톤매핑은 하지 않는다. 이 덤프는

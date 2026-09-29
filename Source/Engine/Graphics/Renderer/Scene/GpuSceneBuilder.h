@@ -274,9 +274,9 @@ namespace sw
          * @details **전체 수집과 부분 수집이 이 함수를 함께 씁니다.** 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기고, 그 화면은 대부분의 프레임에서 멀쩡해 보입니다.
          */
-        bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& cand );
+        bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다. 메시 컴포넌트 판과 같은 규칙이고, 소유는 배치의 것입니다. */
-        bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& cand );
+        bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
         /**
          * @brief 후보의 머티리얼과 블렌드 모드를 정합니다. 메시 컴포넌트 판과 인스턴스 배치 판이 같은 규칙입니다.
          * @details 머티리얼이 없으면 인스턴스의 부모 머티리얼을, 그것도 없으면 씬 기본 머티리얼을 씁니다(언리얼의 기본 머티리얼).
@@ -287,11 +287,11 @@ namespace sw
          *          그리는 어긋난 상태가 만들어집니다. 블렌드 모드는 후보의 머티리얼에서 읽고, 그것이 없으면 `fallbackBlendMode`
          *          (메시 쪽 값)를 씁니다. 머티리얼이 없는 디버그 · 픽스처 메시가 그 경우입니다.
          */
-        static void fillCandidateMaterial( DrawCandidate& cand, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
+        static void fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
-        static void stampPermutationHash( DrawCandidate& cand );
+        static void stampPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드)를 채웁니다. 배치 · 머티리얼 인덱스는 손대지 않습니다. */
-        static void fillPayload( const DrawCandidate& cand, GpuInstance& outInstance );
+        static void fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance );
         /**
          * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(buildBatches 안).
          * @details 불투명과 투명이 **같은 함수**를 씁니다. 예전에는 둘이 같은 40여 줄을 따로 들고 있어 한쪽에 넣은

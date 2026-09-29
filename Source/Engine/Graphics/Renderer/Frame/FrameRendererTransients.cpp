@@ -45,10 +45,10 @@ namespace sw
         releaseTransientResources();
         _transientPool.setSize( width, height );
 
-        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
-            const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( att._format );
-            allocateTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._clearColor );
+            const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
+            allocateTransient( attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor );
         }
 
         auto ensureNamed = [&]( string_view name )
@@ -110,14 +110,14 @@ namespace sw
         const string_view taaTarget    = bHasTaaColor ? string_view{ "TaaColor" }
                                                       : string_view{ FrameRendererUtil::Attachment::kSceneColor };
 
-        RHITextureDesc histDesc{};
-        histDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
-        histDesc._height            = _transientPool.getHeight() != 0 ? _transientPool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
-        histDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
-        histDesc._bIsRenderTarget   = SW_TRUE;
-        histDesc._bIsShaderResource = SW_TRUE;
+        RHITextureDesc historyDesc{};
+        historyDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
+        historyDesc._height            = _transientPool.getHeight() != 0 ? _transientPool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
+        historyDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
+        historyDesc._bIsRenderTarget   = SW_TRUE;
+        historyDesc._bIsShaderResource = SW_TRUE;
 
-        _taaHistory = _pDevice->getResource()->createTexture2D( histDesc );
+        _taaHistory = _pDevice->getResource()->createTexture2D( historyDesc );
         if ( _taaHistory != 0 )
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
@@ -209,12 +209,12 @@ namespace sw
 
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
     {
-        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
-            if ( att._name == attachmentName )
+            if ( attachment._name == attachmentName )
             {
-                outClearColor = att._clearColor;
-                return att._bClear;
+                outClearColor = attachment._clearColor;
+                return attachment._bClear;
             }
         }
         return false;

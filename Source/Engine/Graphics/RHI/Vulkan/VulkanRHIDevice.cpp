@@ -236,9 +236,9 @@ namespace sw
                 createVulkanBuffer( static_cast<uint32>( sizeof( arrFullscreenVert ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, arrFullscreenVert );
             if ( vbHandle != 0 )
             {
-                const VulkanBufferRecord* pRec = resolveAllocatedBuffer( vbHandle );
-                if ( pRec != nullptr )
-                    _vertexBuffer = pRec->_buffer;
+                const VulkanBufferRecord* pRecord = resolveAllocatedBuffer( vbHandle );
+                if ( pRecord != nullptr )
+                    _vertexBuffer = pRecord->_buffer;
             }
             else
                 SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );

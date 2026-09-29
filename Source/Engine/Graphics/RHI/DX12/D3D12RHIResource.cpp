@@ -18,13 +18,13 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
     {
-        const UINT                  alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
-        const D3D12_HEAP_PROPERTIES heapProps   = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resDesc     = D3D12RHIResourcePreset::bufferDesc(
+        const UINT                  alignedSize  = MathUtil::align( size, constant::kConstantBufferAlignment );
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc(
             static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
             return 0;
 
         void* pMapped{ nullptr };
@@ -65,12 +65,12 @@ namespace sw
     RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
         // 64비트로 곱한다. 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
-        const uint64                totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
-        const D3D12_HEAP_PROPERTIES heapProps  = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
-        const D3D12_RESOURCE_DESC   resDesc    = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
+        const uint64                totalBytes   = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
@@ -336,14 +336,14 @@ namespace sw
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
-        const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
+        const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         RHITextureMipSpan         arrMip[constant::kMaxTextureMipCount]{};
-        const uint32              mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ),
-                                                                       resDesc.Height, resDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+        const uint32              mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
+                                                                       resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
-                          desc._sizeBytes, static_cast<uint32>( resDesc.Width ), resDesc.Height, static_cast<uint32>( resDesc.MipLevels ) );
+                          desc._sizeBytes, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, static_cast<uint32>( resourceDesc.MipLevels ) );
             return false;
         }
 
@@ -352,7 +352,7 @@ namespace sw
         UINT                               arrRowCount[constant::kMaxTextureMipCount]{};
         UINT64                             arrRowSize[constant::kMaxTextureMipCount]{};
         UINT64                             totalBytes{ 0 };
-        _pDevice->_device->GetCopyableFootprints( &resDesc, 0, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, 0, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         uint32 slotIndex{ 0 };
         uint64 stagingOffset{ 0 };
@@ -360,7 +360,7 @@ namespace sw
         if ( acquireUploadStaging( totalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
             return false;
         // 스테이징 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
-        _pDevice->_device->GetCopyableFootprints( &resDesc, 0, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, 0, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
@@ -444,17 +444,17 @@ namespace sw
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
-        const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
-        if ( mip >= resDesc.MipLevels )
+        const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
+        if ( mip >= resourceDesc.MipLevels )
             return false;
-        if ( computeRhiTextureMipLayout( fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ), resDesc.Height, mip, outLayout ) == false )
+        if ( computeRhiTextureMipLayout( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
             return false;
 
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         UINT                               rowCount{ 0 };
         UINT64                             rowSize{ 0 };
         UINT64                             totalBytes{ 0 };
-        _pDevice->_device->GetCopyableFootprints( &resDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
 
         const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
         const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
@@ -538,11 +538,11 @@ namespace sw
         if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        const D3D12_HEAP_PROPERTIES heapProps = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
-        const D3D12_RESOURCE_DESC   resDesc   = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
             return 0;
 
         void* pMapped{ nullptr };
@@ -569,9 +569,9 @@ namespace sw
         const auto mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
         {
-            ID3D12Resource* pRes = _pDevice->resolveBuffer( buffer );
-            if ( pRes != nullptr )
-                pRes->Unmap( 0, nullptr );
+            ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
+            if ( pResource != nullptr )
+                pResource->Unmap( 0, nullptr );
             _pDevice->_mapCbMapped.erase( mapIt );
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
@@ -581,19 +581,19 @@ namespace sw
 
         {
             std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-            for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
+            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
             {
-                if ( rec._buffer != buffer )
+                if ( record._buffer != buffer )
                     continue;
-                rec._resource.Reset();
-                rec._buffer = 0;
+                record._resource.Reset();
+                record._buffer = 0;
             }
-            for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAV )
+            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredUAV )
             {
-                if ( rec._buffer != buffer )
+                if ( record._buffer != buffer )
                     continue;
-                rec._resource.Reset();
-                rec._buffer = 0;
+                record._resource.Reset();
+                record._buffer = 0;
             }
         }
 
@@ -612,17 +612,17 @@ namespace sw
         const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::kDepthStencilFormat );
         const DXGI_FORMAT colorFmt    = toDxgiFormat( desc._format );
 
-        D3D12_RESOURCE_DESC resDesc{};
-        resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        resDesc.Alignment          = 0;
-        resDesc.Width              = desc._width;
-        resDesc.Height             = desc._height;
-        resDesc.DepthOrArraySize   = 1;
-        resDesc.MipLevels          = static_cast<UINT16>( desc._mipLevels );
-        resDesc.Format             = typelessFmt;
-        resDesc.SampleDesc.Count   = 1;
-        resDesc.SampleDesc.Quality = 0;
-        resDesc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        D3D12_RESOURCE_DESC resourceDesc{};
+        resourceDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        resourceDesc.Alignment          = 0;
+        resourceDesc.Width              = desc._width;
+        resourceDesc.Height             = desc._height;
+        resourceDesc.DepthOrArraySize   = 1;
+        resourceDesc.MipLevels          = static_cast<UINT16>( desc._mipLevels );
+        resourceDesc.Format             = typelessFmt;
+        resourceDesc.SampleDesc.Count   = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
         if ( desc._bIsRenderTarget )
@@ -632,7 +632,7 @@ namespace sw
         if ( desc._bIsUnorderedAccess )
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         // 깊이 + SRV: 셰이더 리소스 접근을 막지 않는다(DENY_SHADER_RESOURCE 를 붙이지 않는다).
-        resDesc.Flags = flags;
+        resourceDesc.Flags = flags;
 
         D3D12_CLEAR_VALUE  clearValue{};
         D3D12_CLEAR_VALUE* pClearValue{ nullptr };
@@ -654,7 +654,7 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D12Resource> texture;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                                  D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ) ) )
             return 0;
 
@@ -769,12 +769,12 @@ namespace sw
 
         {
             std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-            for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
+            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
             {
-                if ( rec._texture != texture )
+                if ( record._texture != texture )
                     continue;
-                rec._resource.Reset();
-                rec._texture = 0;
+                record._resource.Reset();
+                record._texture = 0;
             }
         }
 

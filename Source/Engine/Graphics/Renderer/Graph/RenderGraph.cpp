@@ -149,10 +149,10 @@ namespace sw
         {
             if ( from == to )
                 return;
-            auto& listAdj = adjacency[from];
-            if ( std::find( listAdj.begin(), listAdj.end(), to ) == listAdj.end() )
+            auto& listAdjacent = adjacency[from];
+            if ( std::find( listAdjacent.begin(), listAdjacent.end(), to ) == listAdjacent.end() )
             {
-                listAdj.push_back( to );
+                listAdjacent.push_back( to );
                 ++mapInDegree[to];
             }
         };
@@ -211,11 +211,11 @@ namespace sw
                 _listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
                 level.push_back( _listNode[nodeIndex]._name );
 
-                unordered_map<size_t, vector<size_t>>::iterator adjIt = adjacency.find( nodeIndex );
-                if ( adjIt == adjacency.end() )
+                unordered_map<size_t, vector<size_t>>::iterator adjacentIt = adjacency.find( nodeIndex );
+                if ( adjacentIt == adjacency.end() )
                     continue;
 
-                for ( size_t consumerIndex : adjIt->second )
+                for ( size_t consumerIndex : adjacentIt->second )
                 {
                     uint32& degree = mapInDegree[consumerIndex];
                     if ( degree > 0 )

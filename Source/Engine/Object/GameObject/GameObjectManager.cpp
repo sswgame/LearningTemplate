@@ -119,16 +119,16 @@ namespace sw
         vector<pair<string, ComponentFactoryRegistrar*>> listModuleHead;
         {
             std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
-            for ( const auto& [mod, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
-                listModuleHead.push_back( { mod, head } );
+            for ( const auto& [moduleName, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
+                listModuleHead.push_back( { moduleName, head } );
         }
-        for ( const auto& [mod, head] : listModuleHead )
+        for ( const auto& [moduleName, head] : listModuleHead )
         {
             if ( head == nullptr )
                 continue;
-            if ( mod == "Engine" && pEngineHead != nullptr )
+            if ( moduleName == "Engine" && pEngineHead != nullptr )
                 continue;
-            registerPendingFactories( mod.c_str(), head );
+            registerPendingFactories( moduleName.c_str(), head );
         }
     }
 

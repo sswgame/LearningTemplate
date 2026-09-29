@@ -455,14 +455,14 @@ namespace sw::editor
         startNode._position._y = 100.0f;
         _listNode.push_back( startNode );
 
-        DialogueNode diagNode{};
-        diagNode._id          = 2;
-        diagNode._type        = DialogueAssetNodeType::Dialogue;
-        diagNode._speaker     = "Elder";
-        diagNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
-        diagNode._position._x = 250.0f;
-        diagNode._position._y = 100.0f;
-        _listNode.push_back( diagNode );
+        DialogueNode dialogueNode{};
+        dialogueNode._id          = 2;
+        dialogueNode._type        = DialogueAssetNodeType::Dialogue;
+        dialogueNode._speaker     = "Elder";
+        dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
+        dialogueNode._position._x = 250.0f;
+        dialogueNode._position._y = 100.0f;
+        _listNode.push_back( dialogueNode );
 
         DialogueNode choiceNode{};
         choiceNode._id          = 3;

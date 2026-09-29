@@ -91,8 +91,8 @@ namespace sw
     {
         if ( texture == 0 )
             return 0;
-        const OpenGLTextureRecord* pRec = resolveTexture( texture );
-        return pRec != nullptr ? pRec->_texture : 0;
+        const OpenGLTextureRecord* pRecord = resolveTexture( texture );
+        return pRecord != nullptr ? pRecord->_texture : 0;
     }
 
     RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
@@ -260,17 +260,17 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
             return;
 
-        for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
+        for ( OpenGLRHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
         {
-            if ( rec._buffer != buffer )
+            if ( record._buffer != buffer )
                 continue;
-            rec._buffer = 0;
+            record._buffer = 0;
         }
-        for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAV )
+        for ( OpenGLRHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredUAV )
         {
-            if ( rec._buffer != buffer )
+            if ( record._buffer != buffer )
                 continue;
-            rec._buffer = 0;
+            record._buffer = 0;
         }
 
         auto releaseCb = [glBuffer = glName]()

@@ -152,13 +152,13 @@ namespace sw
         XmlNode encounters = root.findChild( "encounters" );
         if ( encounters.isValid() )
         {
-            for ( XmlNode encNode = encounters.findChild( "e" ); encNode; encNode = encNode.findNextSibling( "e" ) )
+            for ( XmlNode encounterNode = encounters.findChild( "e" ); encounterNode; encounterNode = encounterNode.findNextSibling( "e" ) )
             {
                 Encounter   entry{};
-                const utf8* pId = encNode.findAttribute( "id" );
+                const utf8* pId = encounterNode.findAttribute( "id" );
                 if ( pId != nullptr )
                     entry._speciesId = pId;
-                entry._weight = encNode.getAttributeFloat( "weight", 0.f );
+                entry._weight = encounterNode.getAttributeFloat( "weight", 0.f );
                 if ( entry._speciesId.empty() == false )
                     _listEncounterEntry.push_back( std::move( entry ) );
             }
@@ -256,9 +256,9 @@ namespace sw
             XmlNode encounters = root.appendChild( "encounters" );
             for ( const Encounter& entry : _listEncounterEntry )
             {
-                XmlNode encNode = encounters.appendChild( "e" );
-                encNode.appendAttribute( "id", entry._speciesId );
-                encNode.appendAttribute( "weight", entry._weight );
+                XmlNode encounterNode = encounters.appendChild( "e" );
+                encounterNode.appendAttribute( "id", entry._speciesId );
+                encounterNode.appendAttribute( "weight", entry._weight );
             }
         }
 

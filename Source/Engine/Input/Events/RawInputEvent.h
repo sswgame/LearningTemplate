@@ -103,157 +103,157 @@ namespace sw
 
         static RawInputEvent makeKeyDown( Key key, uint16 vk = 0, bool bRepeat = false, uint8 modifierMask = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                               = RawInputEventType::KeyDown;
-            evt._deviceKind                         = InputDeviceKind::Keyboard;
-            evt._modifierMask                       = modifierMask;
-            evt._bRepeat                            = bRepeat ? SW_TRUE : SW_FALSE;
-            evt._payload._keyData._key              = key;
-            evt._payload._keyData._nativeVirtualKey = vk;
-            return evt;
+            RawInputEvent event{};
+            event._type                               = RawInputEventType::KeyDown;
+            event._deviceKind                         = InputDeviceKind::Keyboard;
+            event._modifierMask                       = modifierMask;
+            event._bRepeat                            = bRepeat ? SW_TRUE : SW_FALSE;
+            event._payload._keyData._key              = key;
+            event._payload._keyData._nativeVirtualKey = vk;
+            return event;
         }
 
         static RawInputEvent makeKeyUp( Key key, uint16 vk = 0, uint8 modifierMask = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                               = RawInputEventType::KeyUp;
-            evt._deviceKind                         = InputDeviceKind::Keyboard;
-            evt._modifierMask                       = modifierMask;
-            evt._payload._keyData._key              = key;
-            evt._payload._keyData._nativeVirtualKey = vk;
-            return evt;
+            RawInputEvent event{};
+            event._type                               = RawInputEventType::KeyUp;
+            event._deviceKind                         = InputDeviceKind::Keyboard;
+            event._modifierMask                       = modifierMask;
+            event._payload._keyData._key              = key;
+            event._payload._keyData._nativeVirtualKey = vk;
+            return event;
         }
 
         static RawInputEvent makeMouseMove( int32 x, int32 y, float32 rawDx = 0.0f, float32 rawDy = 0.0f )
         {
-            RawInputEvent evt{};
-            evt._type                            = RawInputEventType::MouseMove;
-            evt._deviceKind                      = InputDeviceKind::Mouse;
-            evt._payload._mouseData._x           = x;
-            evt._payload._mouseData._y           = y;
-            evt._payload._mouseData._rawDelta._x = rawDx;
-            evt._payload._mouseData._rawDelta._y = rawDy;
-            return evt;
+            RawInputEvent event{};
+            event._type                            = RawInputEventType::MouseMove;
+            event._deviceKind                      = InputDeviceKind::Mouse;
+            event._payload._mouseData._x           = x;
+            event._payload._mouseData._y           = y;
+            event._payload._mouseData._rawDelta._x = rawDx;
+            event._payload._mouseData._rawDelta._y = rawDy;
+            return event;
         }
 
         static RawInputEvent makeMouseButtonDown( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                       = RawInputEventType::MouseButtonDown;
-            evt._deviceKind                 = InputDeviceKind::Mouse;
-            evt._modifierMask               = modifierMask;
-            evt._payload._mouseData._button = btn;
-            evt._payload._mouseData._x      = x;
-            evt._payload._mouseData._y      = y;
-            return evt;
+            RawInputEvent event{};
+            event._type                       = RawInputEventType::MouseButtonDown;
+            event._deviceKind                 = InputDeviceKind::Mouse;
+            event._modifierMask               = modifierMask;
+            event._payload._mouseData._button = btn;
+            event._payload._mouseData._x      = x;
+            event._payload._mouseData._y      = y;
+            return event;
         }
 
         static RawInputEvent makeMouseButtonUp( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                       = RawInputEventType::MouseButtonUp;
-            evt._deviceKind                 = InputDeviceKind::Mouse;
-            evt._modifierMask               = modifierMask;
-            evt._payload._mouseData._button = btn;
-            evt._payload._mouseData._x      = x;
-            evt._payload._mouseData._y      = y;
-            return evt;
+            RawInputEvent event{};
+            event._type                       = RawInputEventType::MouseButtonUp;
+            event._deviceKind                 = InputDeviceKind::Mouse;
+            event._modifierMask               = modifierMask;
+            event._payload._mouseData._button = btn;
+            event._payload._mouseData._x      = x;
+            event._payload._mouseData._y      = y;
+            return event;
         }
 
         static RawInputEvent makeMouseDoubleClick( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                       = RawInputEventType::MouseDoubleClick;
-            evt._deviceKind                 = InputDeviceKind::Mouse;
-            evt._modifierMask               = modifierMask;
-            evt._payload._mouseData._button = btn;
-            evt._payload._mouseData._x      = x;
-            evt._payload._mouseData._y      = y;
-            return evt;
+            RawInputEvent event{};
+            event._type                       = RawInputEventType::MouseDoubleClick;
+            event._deviceKind                 = InputDeviceKind::Mouse;
+            event._modifierMask               = modifierMask;
+            event._payload._mouseData._button = btn;
+            event._payload._mouseData._x      = x;
+            event._payload._mouseData._y      = y;
+            return event;
         }
 
         static RawInputEvent makeMouseWheel( float32 delta )
         {
-            RawInputEvent evt{};
-            evt._type                           = RawInputEventType::MouseWheel;
-            evt._deviceKind                     = InputDeviceKind::Mouse;
-            evt._payload._mouseData._wheelDelta = delta;
-            return evt;
+            RawInputEvent event{};
+            event._type                           = RawInputEventType::MouseWheel;
+            event._deviceKind                     = InputDeviceKind::Mouse;
+            event._payload._mouseData._wheelDelta = delta;
+            return event;
         }
 
         static RawInputEvent makeMouseHorizontalWheel( float32 delta )
         {
-            RawInputEvent evt{};
-            evt._type                           = RawInputEventType::MouseWheelHorizontal;
-            evt._deviceKind                     = InputDeviceKind::Mouse;
-            evt._payload._mouseData._wheelDelta = delta;
-            return evt;
+            RawInputEvent event{};
+            event._type                           = RawInputEventType::MouseWheelHorizontal;
+            event._deviceKind                     = InputDeviceKind::Mouse;
+            event._payload._mouseData._wheelDelta = delta;
+            return event;
         }
 
         static RawInputEvent makeGamepadButtonDown( GamepadButton btn, uint8 padIndex = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                         = RawInputEventType::GamepadButtonDown;
-            evt._deviceKind                   = InputDeviceKind::Gamepad;
-            evt._deviceIndex                  = padIndex;
-            evt._payload._gamepadData._button = btn;
-            return evt;
+            RawInputEvent event{};
+            event._type                         = RawInputEventType::GamepadButtonDown;
+            event._deviceKind                   = InputDeviceKind::Gamepad;
+            event._deviceIndex                  = padIndex;
+            event._payload._gamepadData._button = btn;
+            return event;
         }
 
         static RawInputEvent makeGamepadButtonUp( GamepadButton btn, uint8 padIndex = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                         = RawInputEventType::GamepadButtonUp;
-            evt._deviceKind                   = InputDeviceKind::Gamepad;
-            evt._deviceIndex                  = padIndex;
-            evt._payload._gamepadData._button = btn;
-            return evt;
+            RawInputEvent event{};
+            event._type                         = RawInputEventType::GamepadButtonUp;
+            event._deviceKind                   = InputDeviceKind::Gamepad;
+            event._deviceIndex                  = padIndex;
+            event._payload._gamepadData._button = btn;
+            return event;
         }
 
         static RawInputEvent makeGamepadAxis( uint16 axisIndex, float32 value, uint8 padIndex = 0 )
         {
-            RawInputEvent evt{};
-            evt._type                            = RawInputEventType::GamepadAxis;
-            evt._deviceKind                      = InputDeviceKind::Gamepad;
-            evt._deviceIndex                     = padIndex;
-            evt._payload._gamepadData._axisIndex = axisIndex;
-            evt._payload._gamepadData._axisValue = value;
-            return evt;
+            RawInputEvent event{};
+            event._type                            = RawInputEventType::GamepadAxis;
+            event._deviceKind                      = InputDeviceKind::Gamepad;
+            event._deviceIndex                     = padIndex;
+            event._payload._gamepadData._axisIndex = axisIndex;
+            event._payload._gamepadData._axisValue = value;
+            return event;
         }
 
         static RawInputEvent makeGamepadConnection( uint8 padIndex, bool bConnected )
         {
-            RawInputEvent evt{};
-            evt._type                             = RawInputEventType::GamepadConnectionChanged;
-            evt._deviceKind                       = InputDeviceKind::Gamepad;
-            evt._deviceIndex                      = padIndex;
-            evt._payload._gamepadData._bConnected = bConnected ? SW_TRUE : SW_FALSE;
-            evt._payload._gamepadData._reserved   = 0;
-            return evt;
+            RawInputEvent event{};
+            event._type                             = RawInputEventType::GamepadConnectionChanged;
+            event._deviceKind                       = InputDeviceKind::Gamepad;
+            event._deviceIndex                      = padIndex;
+            event._payload._gamepadData._bConnected = bConnected ? SW_TRUE : SW_FALSE;
+            event._payload._gamepadData._reserved   = 0;
+            return event;
         }
 
         static RawInputEvent makeTextInput( string_view text )
         {
-            RawInputEvent evt{};
-            evt._type        = RawInputEventType::TextInput;
-            evt._deviceKind  = InputDeviceKind::Keyboard;
-            const size_t len = text.size() < 31 ? text.size() : 31;
+            RawInputEvent event{};
+            event._type       = RawInputEventType::TextInput;
+            event._deviceKind = InputDeviceKind::Keyboard;
+            const size_t len  = text.size() < 31 ? text.size() : 31;
             if ( len > 0 )
-                Memory::copy( evt._payload._textData._arrUtf8, text.data(), len );
-            evt._payload._textData._arrUtf8[len] = '\0';
-            return evt;
+                Memory::copy( event._payload._textData._arrUtf8, text.data(), len );
+            event._payload._textData._arrUtf8[len] = '\0';
+            return event;
         }
 
         static RawInputEvent makeTextComposition( string_view text )
         {
-            RawInputEvent evt{};
-            evt._type        = RawInputEventType::TextComposition;
-            evt._deviceKind  = InputDeviceKind::Keyboard;
-            const size_t len = text.size() < 31 ? text.size() : 31;
+            RawInputEvent event{};
+            event._type       = RawInputEventType::TextComposition;
+            event._deviceKind = InputDeviceKind::Keyboard;
+            const size_t len  = text.size() < 31 ? text.size() : 31;
             if ( len > 0 )
-                Memory::copy( evt._payload._textData._arrUtf8, text.data(), len );
-            evt._payload._textData._arrUtf8[len] = '\0';
-            return evt;
+                Memory::copy( event._payload._textData._arrUtf8, text.data(), len );
+            event._payload._textData._arrUtf8[len] = '\0';
+            return event;
         }
     };
 } // namespace sw

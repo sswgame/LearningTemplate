@@ -557,8 +557,8 @@ namespace sw
                 // (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사한다.
                 if ( clang_Cursor_isNull( baseDecl ) != 0 )
                     return;
-                const CXCursor baseDef      = clang_getCursorDefinition( baseDecl );
-                const CXCursor searchCursor = clang_Cursor_isNull( baseDef ) == 0 ? baseDef : baseDecl;
+                const CXCursor baseDefinition = clang_getCursorDefinition( baseDecl );
+                const CXCursor searchCursor   = clang_Cursor_isNull( baseDefinition ) == 0 ? baseDefinition : baseDecl;
                 if ( hasAnnotation( searchCursor, annotationConstants::kReflect, collector._pSession->_config ) == false )
                     return;
 

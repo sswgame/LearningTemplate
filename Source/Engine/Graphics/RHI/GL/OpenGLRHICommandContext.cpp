@@ -38,8 +38,8 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || src == 0 )
             return;
 
-        const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRec = _pDevice->resolveTexture( src );
-        if ( pSrcRec == nullptr || pSrcRec->_fbo == 0 || pSrcRec->_bDepthStencil != SW_FALSE )
+        const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
+        if ( pSrcRecord == nullptr || pSrcRecord->_fbo == 0 || pSrcRecord->_bDepthStencil != SW_FALSE )
             return;
 
         GLuint dstFbo{ 0 };
@@ -47,17 +47,17 @@ namespace sw
         uint32 dstH = _pDevice->_height;
         if ( dst != 0 )
         {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRec = _pDevice->resolveTexture( dst );
-            if ( pDstRec == nullptr || pDstRec->_fbo == 0 || pDstRec->_bDepthStencil != SW_FALSE )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
+            if ( pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE )
                 return;
-            dstFbo = pDstRec->_fbo;
-            dstW   = pDstRec->_width;
-            dstH   = pDstRec->_height;
+            dstFbo = pDstRecord->_fbo;
+            dstW   = pDstRecord->_width;
+            dstH   = pDstRecord->_height;
         }
 
-        glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRec->_fbo );
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRecord->_fbo );
         glBindFramebuffer( GL_DRAW_FRAMEBUFFER, dstFbo );
-        glBlitFramebuffer( 0, 0, static_cast<GLint>( pSrcRec->_width ), static_cast<GLint>( pSrcRec->_height ),
+        glBlitFramebuffer( 0, 0, static_cast<GLint>( pSrcRecord->_width ), static_cast<GLint>( pSrcRecord->_height ),
                            0, 0, static_cast<GLint>( dstW ), static_cast<GLint>( dstH ),
                            GL_COLOR_BUFFER_BIT, GL_LINEAR );
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
@@ -143,8 +143,8 @@ namespace sw
         bool bDepthOnly = ( bBindColor == false );
         if ( bDepthOnly == false && colorCount == 1 && colorHandles[0] != 0 )
         {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pColorRec = _pDevice->resolveTexture( colorHandles[0] );
-            if ( pColorRec != nullptr && pColorRec->_bDepthStencil != SW_FALSE )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pColorRecord = _pDevice->resolveTexture( colorHandles[0] );
+            if ( pColorRecord != nullptr && pColorRecord->_bDepthStencil != SW_FALSE )
                 bDepthOnly = true;
         }
 
@@ -156,15 +156,15 @@ namespace sw
 
         if ( fbo == 0 && colorCount == 1 && colorHandles[0] != 0 )
         {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( colorHandles[0] );
-            if ( pRec != nullptr )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
+            if ( pRecord != nullptr )
             {
-                fbo        = pRec->_fbo;
-                bDepthOnly = pRec->_bDepthStencil != SW_FALSE;
+                fbo        = pRecord->_fbo;
+                bDepthOnly = pRecord->_bDepthStencil != SW_FALSE;
                 if ( beginInfo._width == 0 )
-                    targetWidth = pRec->_width;
+                    targetWidth = pRecord->_width;
                 if ( beginInfo._height == 0 )
-                    targetHeight = pRec->_height;
+                    targetHeight = pRecord->_height;
             }
         }
 
@@ -339,11 +339,11 @@ namespace sw
                 SW_LOG_WARNING( "bindComputeUav: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
                 return;
             }
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( record._texture );
-            if ( pRec == nullptr || pRec->_texture == 0 )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( record._texture );
+            if ( pRecord == nullptr || pRecord->_texture == 0 )
                 return;
-            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRec->_texture, 0,
-                                GL_FALSE, 0, GL_READ_WRITE, pRec->_internalFormat );
+            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRecord->_texture, 0,
+                                GL_FALSE, 0, GL_READ_WRITE, pRecord->_internalFormat );
             return;
         }
 
@@ -383,8 +383,8 @@ namespace sw
             return;
         }
 
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
-        const GLuint                                tex  = pRec != nullptr ? pRec->_texture : 0;
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
+        const GLuint                                tex     = pRecord != nullptr ? pRecord->_texture : 0;
         if ( tex == 0 )
             return;
 
@@ -649,7 +649,7 @@ namespace sw
         }
         // 루트 상수는 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL → UBO binding, SW_ROOT_CONSTANTS_BEGIN)에 건다.
         (void)rootParameterIndex;
-        glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulSlot, _pDevice->_computeRootConstantUbo );
+        glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulationSlot, _pDevice->_computeRootConstantUbo );
     }
 
     void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,

@@ -26,16 +26,16 @@ namespace sw
         s_permutationGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void MaterialUtil::appendUniqueDefine( vector<string>& outListDefine, string_view def )
+    void MaterialUtil::appendUniqueDefine( vector<string>& outListDefine, string_view define )
     {
-        if ( def.empty() )
+        if ( define.empty() )
             return;
         for ( const string& existing : outListDefine )
         {
-            if ( existing == def )
+            if ( existing == define )
                 return;
         }
-        outListDefine.push_back( string( def ) );
+        outListDefine.push_back( string( define ) );
     }
 
     void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )

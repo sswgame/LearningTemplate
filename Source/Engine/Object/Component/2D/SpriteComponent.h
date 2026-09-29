@@ -28,7 +28,7 @@ namespace sw
         void          setMeshName( const string& mesh ) { _meshName = mesh; }
 
         const string& getMaterialName() const { return _materialName; }
-        void          setMaterialName( const string& mtrl ) { _materialName = mtrl; }
+        void          setMaterialName( const string& materialName ) { _materialName = materialName; }
 
         const string& getTextureName() const { return _textureName; }
         void          setTextureName( const string& tex ) { _textureName = tex; }

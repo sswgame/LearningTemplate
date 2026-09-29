@@ -44,11 +44,11 @@ namespace sw::editor
                 return true;
             }
 
-            static bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )
+            static bool compareVariableInfo( const GlobalVariableInfo* pLeft, const GlobalVariableInfo* pRight )
             {
-                if ( pA->_moduleName != pB->_moduleName )
-                    return pA->_moduleName < pB->_moduleName;
-                return pA->_name < pB->_name;
+                if ( pLeft->_moduleName != pRight->_moduleName )
+                    return pLeft->_moduleName < pRight->_moduleName;
+                return pLeft->_name < pRight->_name;
             }
 
             static bool drawVariableWidget( GlobalVariableInfo& info )
@@ -380,11 +380,11 @@ namespace sw::editor
 
             for ( size_t varIndex = 0; varIndex < listFiltered.size(); )
             {
-                GlobalVariableInfo* pInfo   = listFiltered[varIndex];
-                const string&       modName = pInfo->_moduleName.empty() ? "Global / Core" : pInfo->_moduleName;
+                GlobalVariableInfo* pInfo      = listFiltered[varIndex];
+                const string&       moduleName = pInfo->_moduleName.empty() ? "Global / Core" : pInfo->_moduleName;
 
-                if ( modName != currentModule )
-                    currentModule = modName;
+                if ( moduleName != currentModule )
+                    currentModule = moduleName;
 
                 const bool bModuleHeaderOpen =
                     ImGui::CollapsingHeader( currentModule.c_str(), ImGuiTreeNodeFlags_DefaultOpen );
@@ -392,10 +392,10 @@ namespace sw::editor
                 size_t rangeEnd = varIndex;
                 while ( rangeEnd < listFiltered.size() )
                 {
-                    const string& rowMod = listFiltered[rangeEnd]->_moduleName.empty()
-                                             ? "Global / Core"
-                                             : listFiltered[rangeEnd]->_moduleName;
-                    if ( rowMod != currentModule )
+                    const string& rowModule = listFiltered[rangeEnd]->_moduleName.empty()
+                                                ? "Global / Core"
+                                                : listFiltered[rangeEnd]->_moduleName;
+                    if ( rowModule != currentModule )
                         break;
                     ++rangeEnd;
                 }

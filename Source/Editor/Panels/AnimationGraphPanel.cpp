@@ -112,11 +112,11 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
             {
-                GraphLink l{};
-                l._id       = nextLinkId();
-                l._fromNode = _listNode[_listNode.size() - 2]._id;
-                l._toNode   = _listNode[_listNode.size() - 1]._id;
-                _listLink.push_back( l );
+                GraphLink link{};
+                link._id       = nextLinkId();
+                link._fromNode = _listNode[_listNode.size() - 2]._id;
+                link._toNode   = _listNode[_listNode.size() - 1]._id;
+                _listLink.push_back( link );
                 notifyDocumentEdited( "Link Animation Graph Nodes" );
             }
             ImGui::SameLine();

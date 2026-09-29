@@ -195,21 +195,21 @@ namespace sw
         out = MaterialPermutationDesc{};
         if ( root.isValid() == false )
             return;
-        XmlNode perm = root.findChild( "_permutations" );
-        if ( perm.isValid() == false )
+        XmlNode permutationsNode = root.findChild( "_permutations" );
+        if ( permutationsNode.isValid() == false )
             return;
 
-        const string quality = MaterialUtil::fieldText( perm, "quality" );
+        const string quality = MaterialUtil::fieldText( permutationsNode, "quality" );
         if ( quality.empty() == false )
             out._quality = MaterialUtil::parseQuality( quality );
-        const string lod = MaterialUtil::fieldText( perm, "shaderLOD" );
+        const string lod = MaterialUtil::fieldText( permutationsNode, "shaderLOD" );
         if ( lod.empty() == false )
         {
             uint64 lodVal{ 0 };
             StringUtil::parseUint64( lod, lodVal, 10 );
             out._shaderLOD = static_cast<uint32>( lodVal );
         }
-        const string usage = MaterialUtil::fieldText( perm, "usage" );
+        const string usage = MaterialUtil::fieldText( permutationsNode, "usage" );
         if ( usage.empty() == false )
         {
             const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
@@ -217,10 +217,10 @@ namespace sw
                 out._usage = static_cast<MaterialUsageFlags>( pUsageEnum->stringFlagsToValue( usage ) );
         }
 
-        XmlNode always = perm.findChild( "_alwaysDefines" );
+        XmlNode always = permutationsNode.findChild( "_alwaysDefines" );
         MaterialXmlInternal::parseStringListItems( always, out._listAlwaysDefine );
 
-        XmlNode switches = perm.findChild( "_staticSwitches" );
+        XmlNode switches = permutationsNode.findChild( "_staticSwitches" );
         if ( switches.isValid() )
         {
             for ( XmlNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
@@ -238,7 +238,7 @@ namespace sw
             }
         }
 
-        XmlNode multiCompileNode = perm.findChild( "_multiCompiles" );
+        XmlNode multiCompileNode = permutationsNode.findChild( "_multiCompiles" );
         if ( multiCompileNode.isValid() )
         {
             for ( XmlNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
@@ -246,30 +246,30 @@ namespace sw
                 MaterialMultiCompile multiCompile{};
                 multiCompile._name     = MaterialUtil::fieldText( item, "name" );
                 multiCompile._selected = MaterialUtil::fieldText( item, "selected" );
-                XmlNode opts           = item.findChild( "_options" );
-                MaterialXmlInternal::parseStringListItems( opts, multiCompile._listOption );
+                XmlNode optionsNode    = item.findChild( "_options" );
+                MaterialXmlInternal::parseStringListItems( optionsNode, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
                     out._listMultiCompile.push_back( std::move( multiCompile ) );
             }
         }
     }
 
-    void MaterialUtil::appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm )
+    void MaterialUtil::appendPermutationNode( XmlNode root, const MaterialPermutationDesc& permutationsNode )
     {
         XmlNode node = root.appendChild( "_permutations" );
-        MaterialUtil::appendAttribute( node, "quality", MaterialUtil::qualityToString( perm._quality ) );
-        node.appendAttribute( "shaderLOD", perm._shaderLOD );
+        MaterialUtil::appendAttribute( node, "quality", MaterialUtil::qualityToString( permutationsNode._quality ) );
+        node.appendAttribute( "shaderLOD", permutationsNode._shaderLOD );
         {
             const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
-            const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( perm._usage ) ) : nullptr;
+            const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( permutationsNode._usage ) ) : nullptr;
             MaterialUtil::appendAttribute( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
         }
-        MaterialXmlInternal::appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
+        MaterialXmlInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
-        if ( perm._listStaticSwitch.empty() == false )
+        if ( permutationsNode._listStaticSwitch.empty() == false )
         {
             XmlNode list = node.appendChild( "_staticSwitches" );
-            for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
+            for ( const MaterialStaticSwitch& entry : permutationsNode._listStaticSwitch )
             {
                 XmlNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", entry._name );
@@ -281,10 +281,10 @@ namespace sw
             }
         }
 
-        if ( perm._listMultiCompile.empty() == false )
+        if ( permutationsNode._listMultiCompile.empty() == false )
         {
             XmlNode list = node.appendChild( "_multiCompiles" );
-            for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
+            for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
                 XmlNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", mc._name );

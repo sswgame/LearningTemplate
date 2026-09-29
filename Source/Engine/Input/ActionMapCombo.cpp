@@ -52,14 +52,14 @@ namespace sw
 
         for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
         {
-            const uint32               histIdx = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
-            const CommandHistoryEntry& hist    = _arrCommandHistory[histIdx];
+            const uint32               historyIndex = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
+            const CommandHistoryEntry& historyEntry = _arrCommandHistory[historyIndex];
 
             if ( matchIdx == seqCount )
             {
-                if ( hist._action == listSequence[seqCount - 1] )
+                if ( historyEntry._action == listSequence[seqCount - 1] )
                 {
-                    lastTime = hist._timestamp;
+                    lastTime = historyEntry._timestamp;
                     --matchIdx;
                     if ( matchIdx == 0 )
                         return true;
@@ -67,10 +67,10 @@ namespace sw
             }
             else
             {
-                if ( ( lastTime - hist._timestamp ) > maxWindowSeconds )
+                if ( ( lastTime - historyEntry._timestamp ) > maxWindowSeconds )
                     return false;
 
-                if ( hist._action == listSequence[matchIdx - 1] )
+                if ( historyEntry._action == listSequence[matchIdx - 1] )
                 {
                     --matchIdx;
                     if ( matchIdx == 0 )

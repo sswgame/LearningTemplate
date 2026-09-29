@@ -82,16 +82,16 @@ namespace sw
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
             return 0;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
-        if ( rec._resource == nullptr )
+        const D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
+        if ( record._resource == nullptr )
             return 0;
 
-        D3D12_GPU_VIRTUAL_ADDRESS address = rec._resource->GetGPUVirtualAddress();
+        D3D12_GPU_VIRTUAL_ADDRESS address = record._resource->GetGPUVirtualAddress();
         if ( bConstantBuffer )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다.
             // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
-            const auto sizeIt = _pDevice->_mapCbAlignedSize.find( rec._buffer );
+            const auto sizeIt = _pDevice->_mapCbAlignedSize.find( record._buffer );
             if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
                 address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
         }
@@ -279,8 +279,8 @@ namespace sw
         if ( _pCmdList == nullptr || src == 0 )
             return;
 
-        ID3D12Resource* pSrcRes = _pDevice->resolveTexture( src );
-        if ( pSrcRes == nullptr )
+        ID3D12Resource* pSrcResource = _pDevice->resolveTexture( src );
+        if ( pSrcResource == nullptr )
             return;
 
         auto srcIt = _pDevice->_mapOffscreenTexture.find( src );
@@ -290,7 +290,7 @@ namespace sw
         _pDevice->reportBarrierDuringRecording( "blitTexture(src)" );
         transitionTexture( src, D3D12_RESOURCE_STATE_COPY_SOURCE );
 
-        ID3D12Resource*       pDstRes        = nullptr;
+        ID3D12Resource*       pDstResource   = nullptr;
         D3D12_RESOURCE_STATES dstStateBefore = D3D12_RESOURCE_STATE_COMMON;
         D3D12_RESOURCE_STATES dstStateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
         RHITextureHandle      dstHandle      = dst;
@@ -298,8 +298,8 @@ namespace sw
 
         if ( dst == 0 )
         {
-            pDstRes = _pDevice->_swapChain.getCurrentBackBuffer();
-            if ( pDstRes == nullptr )
+            pDstResource = _pDevice->_swapChain.getCurrentBackBuffer();
+            if ( pDstResource == nullptr )
                 return;
             dstStateBefore = _pDevice->_swapChain.getState();
             dstStateAfter  = D3D12_RESOURCE_STATE_PRESENT;
@@ -307,8 +307,8 @@ namespace sw
         }
         else
         {
-            pDstRes = _pDevice->resolveTexture( dst );
-            if ( pDstRes == nullptr )
+            pDstResource = _pDevice->resolveTexture( dst );
+            if ( pDstResource == nullptr )
                 return;
             auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
             if ( dstIt == _pDevice->_mapOffscreenTexture.end() || dstIt->second._bHasDsv != SW_FALSE )
@@ -321,8 +321,8 @@ namespace sw
         // 그대로 정의되지 않은 동작이 됐다. 검증 레이어는 오류를 내고 드라이버는
         // DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
         {
-            const D3D12_RESOURCE_DESC srcDesc = pSrcRes->GetDesc();
-            const D3D12_RESOURCE_DESC dstDesc = pDstRes->GetDesc();
+            const D3D12_RESOURCE_DESC srcDesc = pSrcResource->GetDesc();
+            const D3D12_RESOURCE_DESC dstDesc = pDstResource->GetDesc();
             if ( srcDesc.Format != dstDesc.Format || srcDesc.Width != dstDesc.Width ||
                  srcDesc.Height != dstDesc.Height || srcDesc.DepthOrArraySize != dstDesc.DepthOrArraySize ||
                  srcDesc.MipLevels != dstDesc.MipLevels )
@@ -352,7 +352,7 @@ namespace sw
 
             D3D12_RESOURCE_BARRIER barrier{};
             barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pDstRes;
+            barrier.Transition.pResource   = pDstResource;
             barrier.Transition.StateBefore = stateBefore;
             barrier.Transition.StateAfter  = stateAfter;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -366,7 +366,7 @@ namespace sw
         if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
             transitionDst( dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
 
-        commandListForRecord()->CopyResource( pDstRes, pSrcRes );
+        commandListForRecord()->CopyResource( pDstResource, pSrcResource );
 
         transitionDst( D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
     }
@@ -493,13 +493,13 @@ namespace sw
 
     bool D3D12RHICommandContext::bindActiveGraphicsPso()
     {
-        const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRec = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
+        const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
+        if ( pPsoRecord == nullptr || pPsoRecord->_pso == nullptr )
             return false;
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
-            commandListForRecord()->SetPipelineState( pPsoRec->_pso.Get() );
+            commandListForRecord()->SetPipelineState( pPsoRecord->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
         return true;
@@ -603,9 +603,9 @@ namespace sw
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
         // countBuffer 가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한). ExecuteIndirect 는 둘을 같이 받는다.
-        ID3D12Resource* pCountRes = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
-        commandListForRecord()->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountRes,
-                                                 ( pCountRes != nullptr ) ? countBufferOffset : 0 );
+        ID3D12Resource* pCountResource = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
+        commandListForRecord()->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountResource,
+                                                 ( pCountResource != nullptr ) ? countBufferOffset : 0 );
     }
 
     void D3D12RHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,

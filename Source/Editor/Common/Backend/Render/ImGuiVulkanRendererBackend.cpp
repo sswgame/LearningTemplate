@@ -27,12 +27,12 @@ namespace sw::editor
     {
         struct ImGuiVulkanRendererBackendInternal
         {
-            inline static void ( *s_OrigVkCreateWindow )( ImGuiViewport* )          = nullptr;
-            inline static void ( *s_OrigVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+            inline static void ( *s_originalVkCreateWindow )( ImGuiViewport* )          = nullptr;
+            inline static void ( *s_originalVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
 
             static void GuardedVkCreateWindow( ImGuiViewport* pViewport )
             {
-                if ( pViewport == nullptr || s_OrigVkCreateWindow == nullptr )
+                if ( pViewport == nullptr || s_originalVkCreateWindow == nullptr )
                     return;
 
                 if ( pViewport->Size.x < 1.0f )
@@ -40,18 +40,18 @@ namespace sw::editor
                 if ( pViewport->Size.y < 1.0f )
                     pViewport->Size.y = 1.0f;
 
-                s_OrigVkCreateWindow( pViewport );
+                s_originalVkCreateWindow( pViewport );
             }
 
             static void GuardedVkSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
             {
-                if ( pViewport == nullptr || s_OrigVkSetWindowSize == nullptr )
+                if ( pViewport == nullptr || s_originalVkSetWindowSize == nullptr )
                     return;
 
                 if ( size.x < 1.0f || size.y < 1.0f )
                     return;
 
-                s_OrigVkSetWindowSize( pViewport, size );
+                s_originalVkSetWindowSize( pViewport, size );
             }
 
             static void installVulkanViewportGuards()
@@ -59,12 +59,12 @@ namespace sw::editor
                 ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
                 if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedVkCreateWindow )
                 {
-                    s_OrigVkCreateWindow             = platformIO.Renderer_CreateWindow;
+                    s_originalVkCreateWindow         = platformIO.Renderer_CreateWindow;
                     platformIO.Renderer_CreateWindow = &GuardedVkCreateWindow;
                 }
                 if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedVkSetWindowSize )
                 {
-                    s_OrigVkSetWindowSize             = platformIO.Renderer_SetWindowSize;
+                    s_originalVkSetWindowSize         = platformIO.Renderer_SetWindowSize;
                     platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
                 }
             }
@@ -148,19 +148,19 @@ namespace sw::editor
 
         ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 #if defined( SW_PLATFORM_WINDOWS )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vk_inst, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
+        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
         {
             VkWin32SurfaceCreateInfoKHR create_info = {};
             create_info.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
             create_info.hwnd                        = static_cast<HWND>( pVp->PlatformHandleRaw );
             create_info.hinstance                   = GetModuleHandle( nullptr );
-            VkResult err                            = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vk_inst ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
-            return err;
+            VkResult result                         = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
+            return result;
         };
 #elif defined( SW_PLATFORM_LINUX )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vk_inst, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
+        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
         {
-            const VkInstance             instance    = reinterpret_cast<VkInstance>( vk_inst );
+            const VkInstance             instance    = reinterpret_cast<VkInstance>( vulkanInstance );
             const VkAllocationCallbacks* pAllocators = static_cast<const VkAllocationCallbacks*>( pVkAllocators );
             Display*                     pDpy        = static_cast<Display*>( pVp->PlatformHandle );
             const xcb_window_t           window      = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( pVp->PlatformHandleRaw ) );
@@ -192,13 +192,13 @@ namespace sw::editor
             return static_cast<int32>( pCreateXcb( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
         };
 #elif defined( SW_PLATFORM_MACOS )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vk_inst, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
+        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
         {
             VkMetalSurfaceCreateInfoEXT create_info = {};
             create_info.sType                       = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
             create_info.pLayer                      = pVp->PlatformHandleRaw;
-            VkResult err                            = vkCreateMetalSurfaceEXT( reinterpret_cast<VkInstance>( vk_inst ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
-            return static_cast<int32>( err );
+            VkResult result                         = vkCreateMetalSurfaceEXT( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
+            return static_cast<int32>( result );
         };
 #endif
 

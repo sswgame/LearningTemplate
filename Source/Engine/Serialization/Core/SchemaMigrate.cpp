@@ -563,16 +563,16 @@ namespace sw
             migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
         if ( needsMigrate )
         {
-            SchemaMigrateContext mctx;
-            mctx._fromVersion     = fromVersion;
-            mctx._toVersion       = currentVersion;
-            mctx._pInstance       = pInstance;
-            mctx._pTypeInfo       = &typeInfo;
-            mctx._pLegacyInstance = pLegacyInstance;
-            mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-            mctx._pOrphans        = &listOrphan;
-            mctx._pSerializeCtx   = &ctx;
-            return migrate( mctx );
+            SchemaMigrateContext migrateContext;
+            migrateContext._fromVersion     = fromVersion;
+            migrateContext._toVersion       = currentVersion;
+            migrateContext._pInstance       = pInstance;
+            migrateContext._pTypeInfo       = &typeInfo;
+            migrateContext._pLegacyInstance = pLegacyInstance;
+            migrateContext._pLegacyTypeInfo = pLegacyTypeInfo;
+            migrateContext._pOrphans        = &listOrphan;
+            migrateContext._pSerializeCtx   = &ctx;
+            return migrate( migrateContext );
         }
 
         if ( migrate == nullptr && bWarnWhenNoMigrate )

@@ -230,9 +230,9 @@ namespace sw
         const string      binDirRel = makeBinDirRelativeInternal( desc._filePath, rhiFolder );
 
         // 키는 베이커가 만든 바이너리 파일 이름 그대로다. 진입점과 퍼뮤테이션 해시가 반영된다.
-        const uint64 permHash = ShaderBaker::computePermutationHash( desc._listDefine );
-        const string key      = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
-                                                                    desc._entryPoint, permHash, ext );
+        const uint64 permutationHash = ShaderBaker::computePermutationHash( desc._listDefine );
+        const string key             = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
+                                                                           desc._entryPoint, permutationHash, ext );
 
 #if !defined( SW_SHIPPING )
         // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다.** ShaderCache 의 베이크 바이너리와 같은 규칙이다

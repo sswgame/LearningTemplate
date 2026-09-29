@@ -94,7 +94,7 @@ namespace sw
                 const string_view subfolder = ShaderBaker::getSubfolderForFormat( fmt );
                 const string_view ext       = ShaderBaker::getExtensionForFormat( fmt );
                 const string      outDir    = FileUtil::joinPath( FileUtil::joinPath( shaderDir, "bin" ), subfolder );
-                const string      fileName  = ShaderBaker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permHash, ext );
+                const string      fileName  = ShaderBaker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash, ext );
                 const string      outPath   = FileUtil::joinPath( outDir, fileName );
 
                 // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 구운 바이너리까지 커밋하므로

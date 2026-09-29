@@ -266,11 +266,11 @@ namespace sw
 
         ShaderReservedLocation at( uint32 space, uint32 bind )
         {
-            ShaderReservedLocation loc{};
-            loc._space     = space;
-            loc._bind      = bind;
-            loc._bDeclared = true;
-            return loc;
+            ShaderReservedLocation location{};
+            location._space     = space;
+            location._bind      = bind;
+            location._bDeclared = true;
+            return location;
         }
 
         ShaderReservedLocation none()
@@ -321,7 +321,7 @@ namespace sw
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
                 add( shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kRootConstantEmulSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotB( shaderslot::kRootConstantEmulSlot ) );
+                     slotB( shaderslot::kRootConstantEmulationSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotB( shaderslot::kRootConstantEmulationSlot ) );
                 // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t9 (네 백엔드 공통)
                 add( shaderslot::resname::kInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ), vkT( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ) );
@@ -415,10 +415,10 @@ namespace sw
         vector<Internal::ReflectedBinding> listReflected;
         Internal::collect( reflection, listReflected );
 
-        const bool  bVulkan    = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan );
-        const bool  bOpenGl    = ( targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
-        const bool  bDx12      = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
-        const utf8* pLocFormat = bVulkan ? "set/binding" : "space/register";
+        const bool  bVulkan         = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan );
+        const bool  bOpenGl         = ( targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
+        const bool  bDx12           = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
+        const utf8* pLocationFormat = bVulkan ? "set/binding" : "space/register";
 
         // 1) 예약 리소스: 종류와 위치
         for ( const Internal::ReflectedBinding& reflected : listReflected )
@@ -446,15 +446,15 @@ namespace sw
             if ( expected._bDeclared == false )
             {
                 Internal::report( pOutIssue, shaderLabel, reflected._name,
-                                  string( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 " ) + Internal::formatLocation( pLocFormat, reflected._space, reflected._bindPoint ) + ")",
+                                  string( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 " ) + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) + ")",
                                   issueCount );
                 continue;
             }
             if ( reflected._bindPoint != expected._bind || reflected._space != expected._space )
             {
                 Internal::report( pOutIssue, shaderLabel, reflected._name,
-                                  string( "위치가 계약과 다릅니다 — 기대 " ) + Internal::formatLocation( pLocFormat, expected._space, expected._bind ) +
-                                      ", 리플렉션 " + Internal::formatLocation( pLocFormat, reflected._space, reflected._bindPoint ),
+                                  string( "위치가 계약과 다릅니다 — 기대 " ) + Internal::formatLocation( pLocationFormat, expected._space, expected._bind ) +
+                                      ", 리플렉션 " + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ),
                                   issueCount );
             }
         }
@@ -581,9 +581,9 @@ namespace sw
                 }
                 else
                 {
-                    const Internal::RegisterClass clsA = Internal::registerClassOf( reflectedA._kind );
-                    bCollide                           = ( reflectedA._space == reflectedB._space && clsA != Internal::RegisterClass::Other && clsA == Internal::registerClassOf( reflectedB._kind ) );
-                    where                              = string( Internal::registerClassLetter( clsA ) ) + to_string( reflectedA._bindPoint ) + " space" + to_string( reflectedA._space );
+                    const Internal::RegisterClass registerClassA = Internal::registerClassOf( reflectedA._kind );
+                    bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::registerClassOf( reflectedB._kind ) );
+                    where                                        = string( Internal::registerClassLetter( registerClassA ) ) + to_string( reflectedA._bindPoint ) + " space" + to_string( reflectedA._space );
                 }
                 if ( bCollide )
                 {

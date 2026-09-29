@@ -10,8 +10,8 @@ namespace sw::editor
                                                 Delegate<void()> action, string_view shortcut,
                                                 Delegate<bool()> enabledPredicate )
     {
-        const size_t locIdx = static_cast<size_t>( location );
-        if ( locIdx >= static_cast<size_t>( ActionMenuLocation::Count ) )
+        const size_t locationIndex = static_cast<size_t>( location );
+        if ( locationIndex >= static_cast<size_t>( ActionMenuLocation::Count ) )
             return;
 
         ActionMenuItem item;
@@ -20,13 +20,13 @@ namespace sw::editor
         item._action           = std::move( action );
         item._enabledPredicate = std::move( enabledPredicate );
 
-        _arrItem[locIdx].push_back( std::move( item ) );
+        _arrItem[locationIndex].push_back( std::move( item ) );
     }
 
     void EditorActionMenuManager::drawActionMenu( ActionMenuLocation location )
     {
-        const size_t locIdx = static_cast<size_t>( location );
-        if ( locIdx >= static_cast<size_t>( ActionMenuLocation::Count ) || _arrItem[locIdx].empty() )
+        const size_t locationIndex = static_cast<size_t>( location );
+        if ( locationIndex >= static_cast<size_t>( ActionMenuLocation::Count ) || _arrItem[locationIndex].empty() )
             return;
 
         // **인덱스로 돌고, 부르기 전에 델리게이트를 복사한다.** 액션이든 술어든 같은 위치에 항목을 더할 수 있고(확장 메뉴는
@@ -35,19 +35,19 @@ namespace sw::editor
         //
         // 문자열은 복사하지 않는다. ImGui 호출은 이 목록을 건드리지 않으므로 참조로 충분하고, 목록을 바꿀 수 있는 두 호출
         // 뒤에는 그 참조를 더 쓰지 않는다.
-        for ( size_t itemIndex = 0; itemIndex < _arrItem[locIdx].size(); ++itemIndex )
+        for ( size_t itemIndex = 0; itemIndex < _arrItem[locationIndex].size(); ++itemIndex )
         {
-            const Delegate<bool()> enabledPredicate = _arrItem[locIdx][itemIndex]._enabledPredicate;
+            const Delegate<bool()> enabledPredicate = _arrItem[locationIndex][itemIndex]._enabledPredicate;
 
             bool bEnabled = true;
             if ( enabledPredicate.isBound() )
                 bEnabled = enabledPredicate();
 
             // 술어가 목록을 줄였을 수 있다.
-            if ( itemIndex >= _arrItem[locIdx].size() )
+            if ( itemIndex >= _arrItem[locationIndex].size() )
                 break;
 
-            const ActionMenuItem&  item      = _arrItem[locIdx][itemIndex];
+            const ActionMenuItem&  item      = _arrItem[locationIndex][itemIndex];
             const Delegate<void()> action    = item._action;
             const utf8*            pShortcut = item._shortcut.empty() ? nullptr : item._shortcut.c_str();
 

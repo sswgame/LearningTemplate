@@ -53,7 +53,7 @@ namespace sw::editor
      * @class EditorLocalizationLoadJob
      * @brief 로컬라이즈 JSON을 워커에서 읽고 게임 스레드에서 적용합니다.
      */
-    class EditorLocalizationLoadJob final : public EditorBackgroundJob<EditorBackgroundNoInput, vector<LocRecord>>
+    class EditorLocalizationLoadJob final : public EditorBackgroundJob<EditorBackgroundNoInput, vector<LocalizationRecord>>
     {
     public:
         /** @brief 워커에 JSON 로드를 요청합니다. */

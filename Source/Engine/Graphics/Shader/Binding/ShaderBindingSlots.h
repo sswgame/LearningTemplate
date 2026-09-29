@@ -32,7 +32,7 @@ namespace sw
         inline constexpr uint32 kRootConstantSpace    = SW_SPACE_ROOT_CB;
         inline constexpr uint32 kRootConstantDwords   = SW_ROOT_DWORD_COUNT;
         /// @brief DX11 · GL 이 루트 상수를 담는 상수버퍼 슬롯입니다(b#, space0). setComputeRootConstants 가 여기에 겁니다.
-        inline constexpr uint32 kRootConstantEmulSlot = SW_SLOT_ROOT_CB_EMUL;
+        inline constexpr uint32 kRootConstantEmulationSlot = SW_SLOT_ROOT_CB_EMUL;
 
         // ------------------------------------------------------------------------------
         // 2) SRV (t#, space0): 네 백엔드 공통 슬롯
@@ -217,7 +217,7 @@ namespace sw
                            vk::kSlotBindingCount == vk::kUShift + vk::kRangeSize,
                        "Vulkan 세트 0 범위(b/t/u)는 연속이어야 한다" );
         static_assert( kRootConstantSpace != 0 && kRootConstantSpace != bindless::kTextureSpace, "루트 상수 space 가 슬롯/텍스처 배열과 겹친다" );
-        static_assert( kRootConstantEmulSlot < kConstantBufferSlotCount && kRootConstantEmulSlot != kPassConstantBuffer && kRootConstantEmulSlot != kMaterialConstantBuffer,
+        static_assert( kRootConstantEmulationSlot < kConstantBufferSlotCount && kRootConstantEmulationSlot != kPassConstantBuffer && kRootConstantEmulationSlot != kMaterialConstantBuffer,
                        "루트 상수 에뮬 슬롯은 예약 CB 와 겹치지 않는 b# 자리여야 한다" );
         static_assert( kComputeTextureUav0 == kComputeUavSlotCount && kComputeTextureUav0 + kComputeTextureUavSlotCount <= vk::kRangeSize,
                        "컴퓨트 RW 텍스처 슬롯은 버퍼 UAV 슬롯 바로 다음이어야 한다" );

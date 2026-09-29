@@ -61,11 +61,11 @@ namespace sw
 
         array( std::initializer_list<T> list )
         {
-            size_t i{ 0 };
+            size_t index{ 0 };
             for ( const auto& item : list )
             {
-                if ( i < N )
-                    _elems[i++] = item;
+                if ( index < N )
+                    _elems[index++] = item;
             }
         }
 

@@ -66,8 +66,8 @@ namespace sw
 
     void StringPool::saveToArchive( Archive& outArchive ) const
     {
-        const size_t dynCount = getDynamicCount();
-        outArchive.writeVarUint( static_cast<uint64>( dynCount ) );
+        const size_t dynamicCount = getDynamicCount();
+        outArchive.writeVarUint( static_cast<uint64>( dynamicCount ) );
         for ( size_t index = kPredefinedCount; index < _listString.size(); ++index )
         {
             outArchive.writeString( _listString[index] );
@@ -77,14 +77,14 @@ namespace sw
     bool StringPool::loadFromArchive( Archive& inArchive )
     {
         initializePredefined();
-        uint64 dynCount = 0;
-        if ( inArchive.readVarUint( dynCount ) == false || dynCount > kMaxDynamicStrings )
+        uint64 dynamicCount = 0;
+        if ( inArchive.readVarUint( dynamicCount ) == false || dynamicCount > kMaxDynamicStrings )
             return false;
 
-        _listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
-        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
+        _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
+        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
 
-        for ( uint64 strIndex = 0; strIndex < dynCount; ++strIndex )
+        for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
             string str;
             if ( inArchive.readString( str ) == false )
@@ -99,8 +99,8 @@ namespace sw
     void StringPool::saveToBinaryBuffer( vector<uint8>& outBytes ) const
     {
         BinaryStreamWriter writer( outBytes );
-        const size_t       dynCount = getDynamicCount();
-        writer.writeVarUint( static_cast<uint64>( dynCount ) );
+        const size_t       dynamicCount = getDynamicCount();
+        writer.writeVarUint( static_cast<uint64>( dynamicCount ) );
         for ( size_t index = kPredefinedCount; index < _listString.size(); ++index )
         {
             writer.writeString( _listString[index] );
@@ -110,14 +110,14 @@ namespace sw
     bool StringPool::loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset )
     {
         initializePredefined();
-        uint64 dynCount = 0;
-        if ( VarIntUtil::decodeVarUint64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > kMaxDynamicStrings )
+        uint64 dynamicCount = 0;
+        if ( VarIntUtil::decodeVarUint64( pData, dataSize, inoutOffset, dynamicCount ) == false || dynamicCount > kMaxDynamicStrings )
             return false;
 
-        _listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
-        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
+        _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
+        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
 
-        for ( uint64 strIndex = 0; strIndex < dynCount; ++strIndex )
+        for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
             if ( inoutOffset + sizeof( uint32 ) > dataSize )
                 return false;
