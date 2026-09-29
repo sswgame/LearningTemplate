@@ -74,12 +74,10 @@ namespace sw
         // 전부(번호 공간만큼)를 훑어 내렸다. 프레임에 100 개를 지우는 씬에서 8000 칸 × 100 이라 지우기 하나가 4 us 였다.
         // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다. 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
         // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
-        MeshComponent* pMoved             = _listPrimitive.back();
-        const uint32   lastSlot           = static_cast<uint32>( _listPrimitive.size() - 1 );
-        _listPrimitive[slot]              = pMoved;
-        _listPrimitiveTransformSlot[slot] = _listPrimitiveTransformSlot.back();
-        _listPrimitive.pop_back();
-        _listPrimitiveTransformSlot.pop_back();
+        MeshComponent* pMoved   = _listPrimitive.back();
+        const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
+        removeAtSwap( _listPrimitive, slot );
+        removeAtSwap( _listPrimitiveTransformSlot, slot );
         if ( pMoved != pComp )
             pMoved->setPrimitiveIndex( slot );
         if ( lastSlot < _dirtyFlagCapacity )
@@ -195,8 +193,7 @@ namespace sw
             MeshInstanceBatch* pOther = _listInstanceBatch[batchIndex];
             if ( pOther == pBatch )
             {
-                _listInstanceBatch[batchIndex] = _listInstanceBatch.back();
-                _listInstanceBatch.pop_back();
+                removeAtSwap( _listInstanceBatch, batchIndex );
                 --batchIndex;
                 continue;
             }

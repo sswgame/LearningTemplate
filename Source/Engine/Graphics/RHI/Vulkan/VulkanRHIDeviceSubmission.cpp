@@ -340,14 +340,7 @@ namespace sw
     void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
-        {
-            if ( _listLiveCmd[index] != pCmdList )
-                continue;
-            _listLiveCmd[index] = _listLiveCmd.back();
-            _listLiveCmd.pop_back();
-            return;
-        }
+        removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )

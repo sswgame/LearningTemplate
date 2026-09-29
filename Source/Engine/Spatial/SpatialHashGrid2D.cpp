@@ -166,15 +166,7 @@ namespace sw
         const CellRange range = CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
-            for ( size_t handleIndex = 0; handleIndex < _listOversizedHandle.size(); ++handleIndex )
-            {
-                if ( _listOversizedHandle[handleIndex] == handle )
-                {
-                    _listOversizedHandle[handleIndex] = _listOversizedHandle.back();
-                    _listOversizedHandle.pop_back();
-                    break;
-                }
-            }
+            removeSingleSwap( _listOversizedHandle, handle );
             return;
         }
 
@@ -185,15 +177,7 @@ namespace sw
                 return;
 
             auto& listHandle = bucketIt->second;
-            for ( size_t handleIndex = 0; handleIndex < listHandle.size(); ++handleIndex )
-            {
-                if ( listHandle[handleIndex] == handle )
-                {
-                    listHandle[handleIndex] = listHandle.back();
-                    listHandle.pop_back();
-                    break;
-                }
-            }
+            removeSingleSwap( listHandle, handle );
             if ( listHandle.empty() )
                 _mapBucket.erase( bucketIt );
         } );

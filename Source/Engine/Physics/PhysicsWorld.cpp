@@ -149,14 +149,7 @@ namespace sw
         // 반드시 같은 답을 낸다. 다르면 큰 바디가 목록에 영원히 남거나, 셀에 죽은 핸들이 남는다.
         if ( isOversizedForGrid( aabb ) )
         {
-            for ( size_t slot = 0; slot < _listOversizedBody.size(); ++slot )
-            {
-                if ( _listOversizedBody[slot] != handle )
-                    continue;
-                _listOversizedBody[slot] = _listOversizedBody.back();
-                _listOversizedBody.pop_back();
-                break;
-            }
+            removeSingleSwap( _listOversizedBody, handle );
             return;
         }
 

@@ -2021,6 +2021,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리팩터 — 순서 없는 삭제는 `removeAtSwap` · `removeSingleSwap` 으로)
+
+6 줄 창에서 백엔드 셋(DX11 · DX12 · Vulkan)의 `unregisterCommandList` 가 "찾기 → 마지막 원소로 덮기 → pop_back" 여덟 줄을 똑같이 들고 있었다. 트리 전체를 찾아 보니
+같은 swap-and-pop 이 열세 곳이었다(찾아서 지우기 여덟, 자리로 지우기 다섯 — 둘은 이동, 나머지는 복사로 옮겼다). 언리얼의 `TArray::RemoveAtSwap` · `RemoveSingleSwap` 과 같은
+자유 함수 둘을 `vector.h` 에 두고(`sw::vector` · STL 별칭 둘 다 된다) 열세 곳이 그것을 부른다: 명령 리스트 셋, 씬 컴포넌트 형제 목록, 빛 등록부, 물리 · 2D 공간 격자의
+큰 바디 목록 셋, XAudio2 보이스 둘, DX12 온라인 블록 회수, 프리미티브 등록부 둘, 벤치 씬.
+
+옮기기는 늘 이동이고 마지막 원소를 지울 때는 옮기지 않는다(예전 복사판들은 자기 대입을 했다 — 결과는 같다). 옮겨 온 원소가 제 자리를 기억하는 곳(프리미티브 등록부의
+`setPrimitiveIndex`)은 부르는 쪽이 전처럼 고친다. **테스트** `VectorTest.RemoveSwapMovesTheLastElementIntoTheGap` — 빈자리 채우기, 마지막 지우기, 못 찾음, 이동만 되는 원소.
+
+폴더 여럿을 건드리지만 "같은 도우미를 쓰게 한다" 한 가지라 한 커밋이다. 검증: Debug nogpu · hostgpu 9/9.
+
 ### 2026-09-29 (리팩터 — 저장 전 상위 폴더 만들기는 `FileUtil::createParentDirectory` 하나로)
 
 6 줄 창에서 에셋 셋(`AnimationGraphAsset` · `DialogueGraphAsset` · `SequenceAsset`)의 `saveToFile` 이 "폴더 부분 떼기 → 비어 있지 않으면 만들기 → 쓰기" 여섯 줄을

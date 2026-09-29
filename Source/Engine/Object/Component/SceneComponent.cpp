@@ -343,15 +343,7 @@ namespace sw
             return;
 
         vector<SceneComponent*>& listSibling = _pParent->_listChild;
-        for ( size_t childIndex = 0; childIndex < listSibling.size(); ++childIndex )
-        {
-            if ( listSibling[childIndex] == this )
-            {
-                listSibling[childIndex] = listSibling.back();
-                listSibling.pop_back();
-                break;
-            }
-        }
+        removeSingleSwap( listSibling, this );
         if ( listSibling.empty() )
             _pParent->setTransformFlag( SceneTransformPage::kHasChildren, false );
         setTransformFlag( SceneTransformPage::kHasParent, false );

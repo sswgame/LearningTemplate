@@ -45,14 +45,7 @@ namespace sw
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
-        {
-            if ( _listLiveCmd[index] != pCmdList )
-                continue;
-            _listLiveCmd[index] = _listLiveCmd.back();
-            _listLiveCmd.pop_back();
-            return;
-        }
+        removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()

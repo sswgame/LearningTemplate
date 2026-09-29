@@ -253,14 +253,7 @@ namespace sw
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
-        {
-            if ( _listLiveCmd[index] != pCmdList )
-                continue;
-            _listLiveCmd[index] = _listLiveCmd.back();
-            _listLiveCmd.pop_back();
-            return;
-        }
+        removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )

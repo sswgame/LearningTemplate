@@ -836,8 +836,7 @@ namespace sw
             if ( _listChurnInstance[slot].get() != pInstance )
                 continue;
             // swap-and-pop. 순서는 의미가 없다 — 무작위로 고르는 목록이다.
-            _listChurnInstance[slot] = _listChurnInstance.back();
-            _listChurnInstance.pop_back();
+            removeAtSwap( _listChurnInstance, slot );
             return;
         }
     }

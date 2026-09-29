@@ -183,8 +183,7 @@ namespace sw
                 _listFreeOnlineBlock.push_back( block );
             batch._listBlock.clear();
             _listOnlineRecyclePool.push_back( std::move( batch._listBlock ) );
-            _listPendingOnlineRecycle[index] = std::move( _listPendingOnlineRecycle.back() );
-            _listPendingOnlineRecycle.pop_back();
+            removeAtSwap( _listPendingOnlineRecycle, index );
         }
     }
 

@@ -510,3 +510,34 @@ SW_TEST_CASE( VectorTest, CopyAssignReusesElementStorage )
     SW_EXPECT_EQUAL( size_t( 8 ), target.size() );
     SW_EXPECT_TRUE( target[7] == bigger[7] );
 }
+
+/**
+ * @brief [VectorTest] removeAtSwap 은 마지막 원소를 빈자리로 옮기고, removeSingleSwap 은 같은 첫 원소만 그렇게 지운다
+ * @details 순서를 지키지 않는 O(1) 삭제다(언리얼 `RemoveAtSwap` · `RemoveSingleSwap`). 마지막 원소를 지울 때는 옮기지 않고,
+ *          옮기기는 이동이라 이동만 되는 원소(unique_ptr)도 된다.
+ */
+SW_TEST_CASE( VectorTest, RemoveSwapMovesTheLastElementIntoTheGap )
+{
+    sw::vector<int32> list{ 10, 20, 30, 40 };
+    sw::removeAtSwap( list, 1 );
+    SW_ASSERT_EQUAL( size_t( 3 ), list.size() );
+    SW_EXPECT_EQUAL( 10, list[0] );
+    SW_EXPECT_EQUAL( 40, list[1] );
+    SW_EXPECT_EQUAL( 30, list[2] );
+
+    sw::removeAtSwap( list, 2 ); // 마지막 — 옮기지 않는다
+    SW_ASSERT_EQUAL( size_t( 2 ), list.size() );
+    SW_EXPECT_EQUAL( 40, list[1] );
+
+    SW_EXPECT_TRUE( sw::removeSingleSwap( list, 10 ) );
+    SW_EXPECT_FALSE( sw::removeSingleSwap( list, 99 ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), list.size() );
+    SW_EXPECT_EQUAL( 40, list[0] );
+
+    sw::vector<sw::unique_ptr<int32>> listOwned;
+    listOwned.push_back( sw::make_unique<int32>( 1 ) );
+    listOwned.push_back( sw::make_unique<int32>( 2 ) );
+    sw::removeAtSwap( listOwned, 0 );
+    SW_ASSERT_EQUAL( size_t( 1 ), listOwned.size() );
+    SW_EXPECT_EQUAL( 2, *listOwned[0] );
+}

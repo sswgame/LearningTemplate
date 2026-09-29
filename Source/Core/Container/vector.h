@@ -1110,4 +1110,35 @@ namespace sw
 #endif
     template <typename T, size_t N = 32>
     using small_vector = vector<T, InlineAllocator<T, N>>;
+
+    /**
+     * @brief `index` 자리의 원소를 지우고 마지막 원소를 그 자리로 옮깁니다. 순서를 지키지 않는 O(1) 삭제입니다(언리얼 `TArray::RemoveAtSwap`).
+     * @details 옮겨 온 원소는 이제 `index` 에 있습니다. 원소가 제 자리를 따로 기억한다면 부르는 쪽이 그것을 고칩니다. 마지막 원소를 지울 때는 옮기지 않습니다.
+     */
+    template <typename TVector>
+    void removeAtSwap( TVector& list, size_t index )
+    {
+        SW_ASSERT( index < list.size() );
+        if ( index + 1 < list.size() )
+            list[index] = std::move( list.back() );
+        list.pop_back();
+    }
+
+    /**
+     * @brief `value` 와 같은 첫 원소를 `removeAtSwap` 으로 지웁니다(언리얼 `TArray::RemoveSingleSwap`). 찾아서 지웠으면 true 입니다.
+     * @details 여러 곳이 "찾기 → 마지막 원소로 덮기 → pop_back" 여덟 줄을 각자 들고 있었습니다.
+     */
+    template <typename TVector, typename TValue>
+    bool removeSingleSwap( TVector& list, const TValue& value )
+    {
+        for ( size_t index = 0; index < list.size(); ++index )
+        {
+            if ( list[index] == value )
+            {
+                removeAtSwap( list, index );
+                return true;
+            }
+        }
+        return false;
+    }
 } // namespace sw

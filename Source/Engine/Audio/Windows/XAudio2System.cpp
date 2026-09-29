@@ -494,9 +494,7 @@ namespace sw
                     _impl->_listIdleVoice.push_back( std::move( voiceBuffer ) );
                 else
                     voiceBuffer._pVoice->DestroyVoice();
-                if ( voiceIndex + 1 < voices.size() )
-                    voices[voiceIndex] = std::move( voices.back() );
-                voices.pop_back();
+                removeAtSwap( voices, voiceIndex );
                 continue;
             }
             ++voiceIndex;
@@ -638,9 +636,7 @@ namespace sw
                      XAudio2SystemImpl::isFormatEqual( _impl->_listIdleVoice[idx]._pClip->_format, pClip->_format ) )
                 {
                     pVoice = _impl->_listIdleVoice[idx]._pVoice;
-                    if ( idx + 1 < _impl->_listIdleVoice.size() )
-                        _impl->_listIdleVoice[idx] = std::move( _impl->_listIdleVoice.back() );
-                    _impl->_listIdleVoice.pop_back();
+                    removeAtSwap( _impl->_listIdleVoice, idx );
                     break;
                 }
             }
