@@ -70,7 +70,7 @@ namespace sw
 
             /** @brief 호스트가 제공하는 서비스 테이블을 만듭니다. 게임 모듈에는 gameAllowed=1 인 것만 노출합니다. */
             template <Target TargetModule>
-            static void buildModuleService( const ModuleHost* pHost, ModuleService& outService )
+            static void fillModuleService( const ModuleHost* pHost, ModuleService& outService )
             {
                 engine::fillModuleServices( outService, TargetModule == Target::Game );
 
@@ -682,7 +682,7 @@ namespace sw
             return;
 
         ModuleService editorService{};
-        ModuleHostInternal::buildModuleService<ModuleHostInternal::Target::Editor>( this, editorService );
+        ModuleHostInternal::fillModuleService<ModuleHostInternal::Target::Editor>( this, editorService );
         _editorApi.bindService( &editorService );
     }
 
@@ -692,7 +692,7 @@ namespace sw
             return;
 
         ModuleService gameService{};
-        ModuleHostInternal::buildModuleService<ModuleHostInternal::Target::Game>( this, gameService );
+        ModuleHostInternal::fillModuleService<ModuleHostInternal::Target::Game>( this, gameService );
         _gameApi.bindService( &gameService );
     }
 

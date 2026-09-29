@@ -1152,11 +1152,11 @@ namespace sw
         size_t cursor{ 0 };
         while ( cursor < listReady.size() )
         {
-            const size_t waveBegin = cursor;
-            const size_t waveEnd   = listReady.size();
-            for ( size_t waveIndex = waveBegin; waveIndex < waveEnd; ++waveIndex )
+            const size_t levelBegin = cursor;
+            const size_t levelEnd   = listReady.size();
+            for ( size_t levelIndex = levelBegin; levelIndex < levelEnd; ++levelIndex )
             {
-                const string readyModuleName = listReady[waveIndex];
+                const string readyModuleName = listReady[levelIndex];
                 listOrder.push_back( readyModuleName );
                 for ( const string& name : uniqueSubgraph )
                 {
@@ -1175,9 +1175,9 @@ namespace sw
                     }
                 }
             }
-            cursor = waveEnd;
-            if ( listReady.size() > waveEnd )
-                std::sort( listReady.begin() + static_cast<std::ptrdiff_t>( waveEnd ), listReady.end() );
+            cursor = levelEnd;
+            if ( listReady.size() > levelEnd )
+                std::sort( listReady.begin() + static_cast<std::ptrdiff_t>( levelEnd ), listReady.end() );
         }
 
         if ( listOrder.size() != uniqueSubgraph.size() )

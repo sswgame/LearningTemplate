@@ -2035,14 +2035,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 - SmokeTest 케이스 이름 넷: `LiveReloadPoisonIgnoresTrigger` → `LiveReloadBrokenGraphIgnoresTrigger`, `LiveReloadOnAfterPoisonFailsRegister` →
   `LiveReloadOnAfterBrokenGraphFailsRegister`, `LiveReloadCascadeAbortsAfterOnAfterPoison` → `LiveReloadCascadeAbortsAfterOnAfterBrokenGraph`,
   `RetiredImagesStayMappedUntilTheirBatchIsEvicted` → `DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted`.
+- 후속(사용자 요청): `ModuleHostInternal::buildModuleService` → `fillModuleService`(AGENTS.md 가 `build` 를 금지 동사로 둔다 — 옆의 `engine::fillModuleServices`
+  와 같은 동사), `LiveReloadManager::topoSortSubgraph` 의 지역 `waveBegin` · `waveEnd` · `waveIndex` → `level…`(Kahn 위상 정렬의 한 레벨).
 
 **일부러 둔 것.** `stamp`(ABI 도장 — RuntimeAPI 가 내보내는 `get*ModuleAbiStamp` 심볼과 `GenerateEngineAbiStamp.py` 까지 걸친 저장소 공용 용어라 App 에서만
-바꿀 수 없다), `wave`(위상 정렬의 한 단계 — TickRegistry · RenderGraph 와 같은 말), `kit`(GF_* 키트), 그리고 shadow copy · drain · debounce · fence ·
-cascade 처럼 이미 프로그래밍 용어인 것. Core · Engine 의 `retireSlot` · `retireUnusedMaterialElements` · `_listRetiredResolved` 는 App 밖이라 그대로다.
+바꿀 수 없다), `kit`(GF_* 키트), 그리고 shadow copy · drain · debounce · fence · cascade 처럼 이미 프로그래밍 용어인 것.
+Core · Engine 은 이어서 같은 방식으로 훑는다.
 
 **검증(Windows).** Debug · Shipping 빌드, 바꾼 TU 경고 0 · 린트 프리셋 20/20 · `nogpu`+`hostgpu` Debug · Shipping 각 9/9 · 이름을 바꾼 SmokeTest 넷을
 따로 돌려 스킵 0, 바꾼 로그 문구가 실제로 찍힌다. 리눅스 분기(`isBoundTo`)는 이 PC 에서 컴파일할 수 없어 CI 로 본다.
 **지나가다 본 것(후보).** Shipping 빌드에 `LightComponent.cpp(47)` 의 `-Wnrvo` 경고가 하나 있다(1e362fee 에서 들어왔다, 이번 변경과 무관).
+Shipping 의 라벨 없는 ctest 항목 `AppTest` 는 작업 폴더가 `TestBin` 이라 `App.exe` 를 못 띄워 `AppSmokeTest` 가 실패한다(1.7 ms) — 같은 케이스를 `Bin` 에서
+도는 `AppTest_NoGPU` · `AppTest_HostOnly` 는 통과하므로 등록(`Test/AppTest/CMakeLists.txt` 의 `sw_addTestExecutable` 기본 작업 폴더) 문제다.
 
 ### 2026-09-24 (전역 변수 — 한 파일만 읽는 것은 그 파일에서 정의하고 extern 을 걷었다)
 
