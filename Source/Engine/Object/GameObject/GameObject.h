@@ -281,10 +281,8 @@ namespace sw
         /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 등록부에 알립니다. 다음 틱 전에 항목을 다시 짓습니다. */
         void markTickOrderDirty();
 
-        /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 가 짓고 매니저의 디스패치가 읽습니다. */
+        /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 가 짓고, 디스패치는 등록부의 칸(`TickObjectEntry`)으로 읽습니다. */
         const TickItemList& getTickItems() const { return _listTickItem; }
-        /** @brief 그룹 `group` 의 항목이 시작하는 자리입니다. `group + 1` 의 시작이 그 끝입니다(`TickRegistry::kGroupCount` 까지 물을 수 있습니다). */
-        uint32 getTickGroupBegin( uint32 group ) const { return _arrTickGroupBegin[group]; }
 
         /** @brief 직렬화 직전에 SceneComponent 의 Attach* 필드를 `_pParent` 에서 채웁니다. */
         void prepareSerialize() const;
@@ -370,8 +368,6 @@ namespace sw
         mutable atomic<Component*> _pPrimaryScene;
         /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 만 짓습니다. 틱할 것이 없는 오브젝트는 비어 있습니다. */
         TickItemList _listTickItem;
-        /** @brief 그룹별 항목 시작 자리입니다(`kGroupCount` + 1 칸, 마지막은 전체 수). */
-        uint32 _arrTickGroupBegin[TickRegistry::kGroupCount + 1];
         /** @brief 등록부의 그룹 목록에서의 자기 자리입니다. 없으면 `TickRegistry::kNotInList` 입니다. */
         uint32 _arrTickIndex[TickRegistry::kGroupCount];
         /** @brief 이 오브젝트의 서브틱에 등록된 선행 조건 수입니다. 등록부가 총수를 유지하는 데 씁니다. */

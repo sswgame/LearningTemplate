@@ -2036,6 +2036,9 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
   예전 `PendingBit`)와 도우미로 모았다 — `getLocalValueRef` · `getPendingValueRef` · `writeLocalValue`(허용치 규칙 한 곳) · `SceneTransformWrite::getValueMask/getValue/setValue`.
   세터 셋은 `setLocalValue( bit, value )` 한 몸통을 부른다.
 
+**② 틱 목록의 그룹 자리.** 게임 오브젝트가 들던 그룹별 항목 시작 자리(`_arrTickGroupBegin`, 20 바이트)와 게터는 칸을 짓는 동안만 쓰이게 됐다(디스패치는
+등록부 칸을 읽는다). `TickRegistry::refreshObject` 의 지역 배열로 옮겨 게임 오브젝트가 그만큼 작아졌다.
+
 ### 2026-09-29 (틱 목록을 평평하게 — 언리얼 FTickTaskManager · 유니티 BehaviourManager 모양, components −28 %)
 
 **어떻게 골랐나.** 프로파일 뒤 후보 셋을 상용 엔진과 견줬다.

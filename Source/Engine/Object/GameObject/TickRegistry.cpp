@@ -251,22 +251,24 @@ namespace sw
             return left._orderKey < right._orderKey;
         } );
 
-        uint32 cursor = 0;
+        // 그룹마다 항목이 시작하는 자리. 칸을 짓는 데만 쓰므로 오브젝트에 들지 않는다(예전에는 오브젝트의 20 바이트였다 — 디스패치가 그것을 읽었다).
+        uint32 arrGroupBegin[kGroupCount + 1] = {};
+        uint32 cursor                         = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
-            pObj->_arrTickGroupBegin[group] = cursor;
+            arrGroupBegin[group] = cursor;
             while ( cursor < listItem.size() && listItem[cursor]._group == group )
                 ++cursor;
         }
-        pObj->_arrTickGroupBegin[kGroupCount] = cursor;
+        arrGroupBegin[kGroupCount] = cursor;
 
         // 계층에서 꺼진 오브젝트는 목록에 두지 않는다(언리얼 · 유니티가 꺼진 것의 틱을 목록에서 빼는 것과 같다). 켜지고 꺼질 때
         // `GameObject::refreshActiveInHierarchy` 가 표시하므로 다음 틱 전에 여기로 다시 온다. 항목 버퍼가 다시 지어졌으므로 칸도 새로 쓴다.
         const bool bActive = pObj->isActiveInHierarchy();
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
-            const uint32    begin = pObj->_arrTickGroupBegin[group];
-            const uint32    end   = pObj->_arrTickGroupBegin[group + 1];
+            const uint32    begin = arrGroupBegin[group];
+            const uint32    end   = arrGroupBegin[group + 1];
             TickObjectEntry entry{};
             if ( begin < end )
             {

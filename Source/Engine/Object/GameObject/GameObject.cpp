@@ -72,7 +72,6 @@ namespace sw
         , _listComponent{}
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
-        , _arrTickGroupBegin{}
         , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
         , _tickPrerequisiteCount{ 0 }
         , _bTickDirty{ SW_FALSE }
