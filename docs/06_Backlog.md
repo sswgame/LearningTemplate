@@ -2039,6 +2039,10 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 **② 틱 목록의 그룹 자리.** 게임 오브젝트가 들던 그룹별 항목 시작 자리(`_arrTickGroupBegin`, 20 바이트)와 게터는 칸을 짓는 동안만 쓰이게 됐다(디스패치는
 등록부 칸을 읽는다). `TickRegistry::refreshObject` 의 지역 배열로 옮겨 게임 오브젝트가 그만큼 작아졌다.
 
+**③ 프리미티브 등록부 · GPU 씬 빌더.** 한 목록짜리 `consumeDirty`(두 목록을 받아 잇고 정렬하는 테스트 전용 판, 스레드 지역 버퍼)를 걷었다 — 테스트는 두 목록 판을
+쓰고 "렌더 상태만 찍었으니 트랜스폼 목록은 비었다" 까지 본다. 빌더의 부분 수집 안에 박혀 있던 "지난 프레임 후보에 없는 트랜스폼 칸을 상태 목록으로 넘기는" 루프를
+`moveTransformSlotsWithoutCandidate` 로 뺐다. Object README 의 틱 중 쓰기 설명도 적용 주체(계층)로 고쳤다.
+
 ### 2026-09-29 (틱 목록을 평평하게 — 언리얼 FTickTaskManager · 유니티 BehaviourManager 모양, components −28 %)
 
 **어떻게 골랐나.** 프로파일 뒤 후보 셋을 상용 엔진과 견줬다.

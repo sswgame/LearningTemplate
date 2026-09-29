@@ -230,15 +230,6 @@ namespace sw
         clearDirtyLocked();
     }
 
-    void PrimitiveRegistry::consumeDirty( vector<uint32>& outListSlot )
-    {
-        // 한 목록이 필요한 쪽(테스트 · 도구)을 위한 판이다. 둘로 나눠 받아 잇는다 — 둘에 겹치는 번호는 없다.
-        thread_local vector<uint32> t_listTransformSlot;
-        consumeDirty( outListSlot, t_listTransformSlot );
-        outListSlot.insert( outListSlot.end(), t_listTransformSlot.begin(), t_listTransformSlot.end() );
-        std::sort( outListSlot.begin(), outListSlot.end() );
-    }
-
     void PrimitiveRegistry::consumeDirty( vector<uint32>& outListStateSlot, vector<uint32>& outListTransformSlot )
     {
         outListStateSlot.clear();

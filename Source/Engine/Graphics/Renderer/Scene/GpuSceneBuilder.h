@@ -306,6 +306,11 @@ namespace sw
          */
         void copyCandidateTransforms( const PrimitiveRegistry& primitives );
         /**
+         * @brief 월드 행렬만 바뀐 칸 가운데 지난 프레임 후보에 없는 것(메시가 아직 없었다 · 인스턴스 항목)을 렌더 상태 목록으로 넘깁니다.
+         * @details 그런 칸은 다시 모아야 실릴지 압니다. 남은 것만 `copyCandidateTransforms` 가 행렬을 옮깁니다. 부분 수집 안에서만 부릅니다.
+         */
+        void moveTransformSlotsWithoutCandidate( uint32 meshCount );
+        /**
          * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(buildBatches 안).
          * @details 불투명과 투명이 **같은 함수**를 씁니다. 예전에는 둘이 같은 40여 줄을 따로 들고 있어 한쪽에 넣은
          *          고침(역매핑 · 회전 수 · 머티리얼 원소)이 다른 쪽에 안 가는 모양이었습니다. 다른 것은 인자로 줍니다:

@@ -99,14 +99,10 @@ namespace sw
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
         void clearDirty();
         /**
-         * @brief 더티 목록을 `outListSlot` 으로 옮기고 표시를 지웁니다(`clearDirty` + 목록 가져오기). 렌더 상태 · 트랜스폼을 가리지 않습니다.
+         * @brief 더티 목록을 둘로 나눠 옮기고 표시를 지웁니다(`clearDirty` + 목록 가져오기). 렌더 상태가 바뀐 번호는 `outListStateSlot`,
+         *        **월드 행렬만** 바뀐 번호는 `outListTransformSlot` 입니다. 둘 다 오름차순이고 겹치는 번호는 없습니다(둘 다 선 번호는 앞쪽).
          * @details 받는 쪽은 **바뀐 것만 다시 모으려고** 이 목록을 씁니다. 예전에는 지우기만 하고
          *          목록을 버려서, 8000 개 중 10 개만 움직여도 8000 개를 모두 다시 모았습니다.
-         */
-        void consumeDirty( vector<uint32>& outListSlot );
-        /**
-         * @brief 더티 목록을 둘로 나눠 옮기고 표시를 지웁니다. 렌더 상태가 바뀐 번호는 `outListStateSlot`, **월드 행렬만** 바뀐 번호는
-         *        `outListTransformSlot` 입니다(둘에 겹치는 번호는 없습니다 — 둘 다 선 번호는 앞쪽입니다).
          */
         void consumeDirty( vector<uint32>& outListStateSlot, vector<uint32>& outListTransformSlot );
         /**

@@ -339,6 +339,20 @@ namespace sw
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformCopyJob::copyRange, &job ) );
     }
 
+    void GpuSceneBuilder::moveTransformSlotsWithoutCandidate( uint32 meshCount )
+    {
+        size_t keptCount = 0;
+        for ( const uint32 slot : _listTransformDirtyPrimitive )
+        {
+            const uint32 candidateIndex = ( slot < meshCount ) ? _listPrimitiveToCandidate[slot] : kInvalidCandidateIndex;
+            if ( candidateIndex < _lastCandidateCount )
+                _listTransformDirtyPrimitive[keptCount++] = slot;
+            else
+                _listDirtyPrimitive.push_back( slot );
+        }
+        _listTransformDirtyPrimitive.resize( keptCount );
+    }
+
     void GpuSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
     {
         SW_PROFILE_SCOPE( "GT.GpuScene.build" );
@@ -419,21 +433,8 @@ namespace sw
             _listScratchCandidate.swap( _listBuiltCandidate );
             bPartialDone = _listScratchCandidate.size() >= _lastCandidateCount;
 
-            // 월드 행렬만 바뀐 것 가운데 지난 프레임에 실리지 않았던 것(메시가 아직 없었다 · 인스턴스 항목)은 다시 모아야 실릴지 안다.
-            // 렌더 상태 목록으로 넘기고, 남은 것만 행렬을 옮긴다.
             if ( bPartialDone )
-            {
-                size_t keptCount = 0;
-                for ( const uint32 slot : _listTransformDirtyPrimitive )
-                {
-                    const uint32 candidateIndex = ( slot < meshCount ) ? _listPrimitiveToCandidate[slot] : kInvalidCandidateIndex;
-                    if ( candidateIndex < _lastCandidateCount )
-                        _listTransformDirtyPrimitive[keptCount++] = slot;
-                    else
-                        _listDirtyPrimitive.push_back( slot );
-                }
-                _listTransformDirtyPrimitive.resize( keptCount );
-            }
+                moveTransformSlotsWithoutCandidate( meshCount );
 
             for ( uint32 slot : _listDirtyPrimitive )
             {

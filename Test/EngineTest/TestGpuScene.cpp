@@ -1551,7 +1551,9 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
     listMesh[0]->setVisible( true );
     SW_EXPECT_TRUE( registry.hasDirty() );
     sw::vector<uint32> listSlot;
-    registry.consumeDirty( listSlot );
+    sw::vector<uint32> listTransformSlot; // 이 테스트는 렌더 상태만 찍는다 — 트랜스폼 목록은 늘 비어 있어야 한다
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     SW_EXPECT_EQUAL( size_t( 1 ), listSlot.size() );
     SW_EXPECT_FALSE( registry.hasDirty() );
 
@@ -1579,7 +1581,8 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
         thread.join();
 
     SW_EXPECT_TRUE( registry.hasDirty() );
-    registry.consumeDirty( listSlot );
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     SW_EXPECT_EQUAL( size_t( kMeshCount ), listSlot.size() );
     sw::vector<uint8> listVisited( kMeshCount, 0 );
     for ( uint32 slot : listSlot )
@@ -1589,7 +1592,8 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
         listVisited[slot] = 1;
     }
     SW_EXPECT_FALSE( registry.hasDirty() );
-    registry.consumeDirty( listSlot );
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     SW_EXPECT_TRUE( listSlot.empty() );
 }
 
@@ -1632,7 +1636,9 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
         registry.markDirty( listMesh[slot] );
     registry.markDirty( listMesh[64] ); // 두 번 찍어도 하나
     sw::vector<uint32> listSlot;
-    registry.consumeDirty( listSlot );
+    sw::vector<uint32> listTransformSlot; // 이 테스트는 렌더 상태만 찍는다 — 트랜스폼 목록은 늘 비어 있어야 한다
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     const uint32 arrExpected[] = { 0, 63, 64, 127, 128, 199 };
     SW_ASSERT_EQUAL( size_t( 6 ), listSlot.size() );
     for ( size_t index = 0; index < listSlot.size(); ++index )
@@ -1643,7 +1649,8 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
     registry.markDirty( listMesh[199] );
     registry.remove( listMesh[5] );
     SW_EXPECT_TRUE( registry.getAll()[5] == listMesh[199] );
-    registry.consumeDirty( listSlot );
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     SW_ASSERT_EQUAL( size_t( 1 ), listSlot.size() );
     SW_EXPECT_EQUAL( uint32( 5 ), listSlot[0] );
 
@@ -1651,7 +1658,8 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
     registry.markDirty( listMesh[6] );
     registry.markDirty( listMesh[7] );
     registry.remove( listMesh[6] ); // 마지막(198, 깨끗)이 6 으로 온다
-    registry.consumeDirty( listSlot );
+    registry.consumeDirty( listSlot, listTransformSlot );
+    SW_EXPECT_TRUE( listTransformSlot.empty() );
     SW_ASSERT_EQUAL( size_t( 1 ), listSlot.size() );
     SW_EXPECT_EQUAL( uint32( 7 ), listSlot[0] );
 }
