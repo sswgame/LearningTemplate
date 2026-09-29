@@ -62,6 +62,7 @@ REGISTER_ANNOTATION_FIELD( Property, SkipIfEmpty, _bSkipIfEmpty, Runtime )
 REGISTER_ANNOTATION_FIELD_FN( Property, MinRange, _minRange, applyMinRange, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Property, MaxRange, _maxRange, applyMaxRange, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Property, Alias, _listAlias, appendAlias, Manual )
+REGISTER_ANNOTATION_FIELD( Property, Name, _name, Manual )
 
 // ── FUNCTION ─────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD( Function, Category, _category, Editor )

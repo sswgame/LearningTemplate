@@ -255,7 +255,7 @@ namespace sw
             return;
 
         const utf8*  outerKind    = toCppExpr( prop._containerKind );
-        const string outerWrapper = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
+        const string outerWrapper = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._memberName );
 
         emit.line( "{" );
         emit.push();
@@ -272,7 +272,7 @@ namespace sw
 
         if ( node != nullptr && node->_bIsContainer )
         {
-            emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
+            emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._memberName );
             while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
             {
                 const utf8* kind              = toCppExpr( node->_containerKind );
@@ -311,7 +311,11 @@ namespace sw
         emit.push();
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입을 컴파일 타임에 막는다.
         // 목록은 parser_config 의 emit.value_forbidden_base_types 에서 온다(비면 생략).
-        emit.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
+        // 접근자 프로퍼티(값이 객체 밖)는 필드가 없다. 선언 타입은 메서드가 돌려주는 참조의 대상이다.
+        if ( prop._bIsAccessor == SW_TRUE )
+            emit.linef( "using PropDecl = std::remove_reference_t<decltype( std::declval<%#&>().%#() )>;", typeInfo._fullyQualifiedName, prop._memberName );
+        else
+            emit.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._memberName );
         const ParserConfig& config = _session._config;
         if ( config._listValueForbiddenBaseType.empty() == false )
         {
@@ -334,13 +338,15 @@ namespace sw
         emit.linef( "%#,", CodeEmit::hs( _session._typeNameMap.normalize( prop._typeName ) ) );
         if ( prop._bIsBitField == SW_TRUE )
             emit.linef( "%#u,", prop._byteOffset );
+        else if ( prop._bIsAccessor == SW_TRUE )
+            emit.line( "0u," );
         else
-            emit.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
+            emit.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._memberName );
 
         if ( prop._bIsContainer )
         {
             const utf8*  kindStr     = toCppExpr( prop._containerKind );
-            const string wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
+            const string wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._memberName );
 
             emit.line( "true," );
             emit.linef( "%#,", kindStr );
@@ -357,6 +363,12 @@ namespace sw
         }
 
         emit.pop(); // 생성자 인자 들여쓰기
+        if ( prop._bIsAccessor == SW_TRUE )
+        {
+            // 값 자리는 메서드가 안다. 인자는 오프셋이 기준으로 삼는 객체 주소다(`PropertyInfo::getRawPtr`).
+            emit.linef( "p._pValueAccessor = []( void* pInstance ) -> void* { return std::addressof( static_cast<%#*>( pInstance )->%#() ); };",
+                        typeInfo._fullyQualifiedName, prop._memberName );
+        }
         if ( prop._bIsBitField == SW_TRUE )
         {
             emit.line( "p._bIsBitField = SW_TRUE;" );

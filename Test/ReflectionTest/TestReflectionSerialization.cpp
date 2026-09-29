@@ -2076,3 +2076,77 @@ SW_TEST_CASE( ReflectionSerializationTest, SetPropertyRoundTripsInEveryFormat )
         expectContents( restored, "XML 왕복이 set 을 잃었습니다" );
     }
 }
+
+sw::float3 sw::ExternalStorageTestActor::s_arrExternalPosition[4]{};
+
+/**
+ * @brief [ReflectionSerializationTest] 값이 객체 밖에 있는 프로퍼티(접근자 프로퍼티)를 모든 길이 그 자리에서 읽고 쓴다
+ * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 간 모양이다. 직렬화기 · `getValue` · `setValue` 가 오프셋이 아니라
+ *          접근자가 찾은 자리를 써야 하고, 객체를 통째로 복사하는 지름길(`usesPodCopyFastPath`)은 막혀야 한다 — 복사하면 칸 번호가
+ *          따라가 두 객체가 한 자리를 나눠 쓴다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutsideTheObject )
+{
+    const sw::TypeInfo* pInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ExternalStorageTestActor" ) );
+    SW_ASSERT_NOT_NULL( pInfo );
+    const sw::TypeInfo& info = *pInfo;
+
+    // 선언 순서대로다: 접근자(`_position`) 다음 필드(`_level`).
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), info._listProperty.size() );
+    const sw::PropertyInfo& positionProp = info._listProperty[0];
+    SW_EXPECT_TRUE( positionProp._name == sw::hashed_string( "_position" ) );
+    SW_EXPECT_TRUE( positionProp._typeName == sw::hashed_string( "float3" ) );
+    SW_EXPECT_TRUE( positionProp.hasValueAccessor() );
+    SW_EXPECT_FALSE( info._listProperty[1].hasValueAccessor() );
+    SW_EXPECT_FALSE( info.usesPodCopyFastPath() );
+
+    for ( sw::float3& value : sw::ExternalStorageTestActor::s_arrExternalPosition )
+        value = sw::float3{ 0.0f, 0.0f, 0.0f };
+
+    sw::ExternalStorageTestActor source;
+    source._storageIndex = 1;
+    source._level        = 7;
+    // setValue 는 접근자가 찾은 바깥 칸에 쓴다.
+    positionProp.setValue( &source, sw::float3{ 1.0f, 2.0f, 3.0f } );
+    SW_EXPECT_TRUE( positionProp.getRawPtr( &source ) == &sw::ExternalStorageTestActor::s_arrExternalPosition[1] );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, sw::ExternalStorageTestActor::s_arrExternalPosition[1]._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, positionProp.getValue<sw::float3>( &source )._z, 1e-6f );
+
+    const auto expectRestored = [&]( uint32 storageIndex, const utf8* pFormat )
+    {
+        const sw::float3& restored = sw::ExternalStorageTestActor::s_arrExternalPosition[storageIndex];
+        SW_EXPECT_TRUE_MSG( sw::float3::getDistanceSquared( restored, sw::float3{ 1.0f, 2.0f, 3.0f } ) < 1e-10f, pFormat );
+        // 원본 칸은 그대로다(복사가 한 칸을 나눠 쓰게 만들지 않았다).
+        SW_EXPECT_TRUE_MSG( sw::float3::getDistanceSquared( sw::ExternalStorageTestActor::s_arrExternalPosition[1], sw::float3{ 1.0f, 2.0f, 3.0f } ) < 1e-10f, pFormat );
+    };
+
+    // 1) Binary — 직렬화가 바깥 칸을 읽고, 역직렬화가 대상 객체의 칸에 쓴다.
+    {
+        sw::vector<uint8> bytes;
+        sw::BinarySerializer::serialize( &source, info, bytes );
+        sw::ExternalStorageTestActor restored;
+        restored._storageIndex = 2;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &restored, info, bytes.data(), bytes.size() ) );
+        SW_EXPECT_EQUAL( 7, restored._level );
+        expectRestored( 2, "Binary" );
+    }
+    // 2) JSON — 키는 Name 이 준 옛 이름이다.
+    {
+        const sw::string json = sw::JsonSerializer::serialize( &source, info );
+        SW_EXPECT_TRUE_MSG( json.find( "\"_position\"" ) != sw::string::npos, json.c_str() );
+        sw::ExternalStorageTestActor restored;
+        restored._storageIndex = 3;
+        SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &restored, info, json ) );
+        SW_EXPECT_EQUAL( 7, restored._level );
+        expectRestored( 3, "JSON" );
+    }
+    // 3) XML
+    {
+        const sw::string             xml = sw::XmlSerializer::serialize( &source, info );
+        sw::ExternalStorageTestActor restored;
+        restored._storageIndex = 0;
+        SW_ASSERT_TRUE( sw::XmlSerializer::deserialize( &restored, info, xml ) );
+        SW_EXPECT_EQUAL( 7, restored._level );
+        expectRestored( 0, "XML" );
+    }
+}

@@ -138,6 +138,7 @@ namespace sw
         : _containerWrapper{ nullptr }
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
+        , _pValueAccessor{ nullptr }
         , _offset{ 0 }
         , _name{}
         , _typeName{}
@@ -175,6 +176,7 @@ namespace sw
         : _containerWrapper{ std::move( containerWrapper ) }
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
+        , _pValueAccessor{ nullptr }
         , _offset{ offset }
         , _name{ name }
         , _typeName{ typeName }
@@ -391,10 +393,12 @@ namespace sw
             hashed_string{ PredefinedNameType::NameType_hashed_string },
         };
 
+        // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열 · 컨테이너를 든 타입도 통째 복사로 갔다.
         _bIsPODFastPath = SW_TRUE;
-        for ( const PropertyInfo& prop : _listProperty )
+        for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
-            if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None )
+            // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 자리를 찾는 칸 번호가 복사돼 두 객체가 한 자리를 나눠 쓴다).
+            if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor() )
             {
                 _bIsPODFastPath = SW_FALSE;
                 break;

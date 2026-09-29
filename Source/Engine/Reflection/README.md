@@ -124,6 +124,21 @@ int32 health{ 0 };
 
 직렬화된 예전 이름도 TypeRegistry 별칭으로 찾을 수 있습니다.
 
+### 5) 값이 객체 밖에 있는 프로퍼티 (접근자 프로퍼티)
+
+```cpp
+PROPERTY( Name = "_localPosition", Category = "Transform", DisplayName = "Position" )
+float3& getLocalPositionRef() { return _pTransformPage->_arrLocalPosition[getPageIndex()]; }
+```
+
+`PROPERTY()` 를 필드가 아니라 **값 참조(`T&`)를 돌려주는 인자 없는 메서드**에 붙이면, 값은 그 메서드가 돌려주는 자리에 있는 것으로
+등록됩니다. 코드젠은 오프셋 대신 그 메서드를 부르는 `PropertyInfo::_pValueAccessor` 를 내고, `getRawPtr` · `getValue` · `setValue` ·
+직렬화기 · 인스펙터가 모두 그 자리를 읽고 씁니다. `Name` 은 리플렉션 이름(직렬화 키)입니다 — 필드였던 값을 옮길 때 옛 이름을 이어 쓰면
+씬 · 프리팹 파일을 고치지 않아도 됩니다. 씬 컴포넌트의 로컬 TRS 가 첫 예입니다(값은 트랜스폼 저장소의 칸에 있습니다).
+
+- 값으로 돌려주거나(쓸 자리가 없다) 인자가 있거나 정적이면 코드젠이 멈춥니다. 컨테이너 · 비트필드는 받지 않습니다.
+- 이런 프로퍼티가 하나라도 있는 타입은 객체 통째 복사(`TypeInfo::usesPodCopyFastPath`)를 쓰지 않습니다.
+
 ---
 
 ## 런타임에서 쓰기

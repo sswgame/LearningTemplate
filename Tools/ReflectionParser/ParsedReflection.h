@@ -42,10 +42,13 @@ namespace sw
         }
     };
 
-    /** @brief PROPERTY(...) 가 붙은 멤버 필드 */
+    /** @brief PROPERTY(...) 가 붙은 멤버 필드, 또는 값 참조를 돌려주는 메서드(값이 객체 밖에 있는 프로퍼티) */
     struct ParsedPropertyInfo
     {
-        string                          _name;
+        /** @brief 리플렉션 이름(직렬화 키)입니다. 기본은 멤버 이름이고 `PROPERTY( Name = "..." )` 로 바꿉니다. */
+        string _name;
+        /** @brief C++ 식별자입니다. 필드 이름, 또는 접근자 프로퍼티면 값 참조를 돌려주는 메서드 이름입니다. 코드젠이 `offsetof` · `decltype` · 호출에 씁니다. */
+        string                          _memberName;
         string                          _typeName;
         vector<string>                  _listAlias;
         string                          _category;
@@ -73,13 +76,19 @@ namespace sw
         uint8                           _bIsContainer  : 1;
         uint8                           _bTransient    : 1;
         /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
-        uint8                   _bSkipIfEmpty     : 1;
-        uint8                   _bHideInInspector : 1;
-        [[maybe_unused]] uint8  _reserved         : 7;
+        uint8 _bSkipIfEmpty     : 1;
+        uint8 _bHideInInspector : 1;
+        /**
+         * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
+         * @details 코드젠은 오프셋 대신 그 메서드를 부르는 `PropertyInfo::_pValueAccessor` 를 냅니다(`_memberName` 이 메서드 이름).
+         */
+        uint8                   _bIsAccessor : 1;
+        [[maybe_unused]] uint8  _reserved    : 6;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
             : _name{}
+            , _memberName{}
             , _typeName{}
             , _listAlias{}
             , _category{}
@@ -108,6 +117,7 @@ namespace sw
             , _bTransient{ SW_FALSE }
             , _bSkipIfEmpty{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
+            , _bIsAccessor{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {

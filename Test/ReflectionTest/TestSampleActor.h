@@ -7,6 +7,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectAny.h"
@@ -512,6 +513,30 @@ namespace sw
         {
             _health = 100;
         }
+    };
+
+    /**
+     * @brief 값이 객체 밖에 있는 프로퍼티(접근자 프로퍼티) 샘플입니다. 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소의 칸에 사는 모양의 축소판입니다.
+     * @details `_position` 은 이름만 옛 필드 이름을 이어 쓰고, 값은 바깥 배열 `s_arrExternalPosition` 의 이 객체 칸(`_storageIndex`)에 있습니다.
+     *          `_level` 은 보통 필드입니다. 둘이 한 타입에 섞여도 선언 순서대로 등록되는지, 직렬화가 두 자리를 다 따라가는지 봅니다.
+     */
+    REFLECT()
+    struct ExternalStorageTestActor
+    {
+        REFLECT_BODY();
+
+        /** @brief 값 저장소입니다. 객체마다 칸 하나를 씁니다. 정의는 `TestReflectionSerialization.cpp` 에 있습니다(헤더의 inline 정의는 모듈마다 사본이 생긴다). */
+        static float3 s_arrExternalPosition[4];
+
+        /** @brief 이 객체 칸의 위치 값 자리입니다. 리플렉션은 이 함수로 값을 찾습니다. */
+        PROPERTY( Name = "_position", Category = "Transform" )
+        float3& getPositionRef() { return s_arrExternalPosition[_storageIndex]; }
+
+        PROPERTY()
+        int32 _level{ 0 };
+
+        /** @brief `s_arrExternalPosition` 에서 이 객체가 쓰는 칸입니다. 리플렉션 대상이 아닙니다. */
+        uint32 _storageIndex{ 0 };
     };
 } // namespace sw
 

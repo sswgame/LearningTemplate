@@ -2021,6 +2021,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-29 (리플렉션 — 값이 객체 밖에 있는 프로퍼티, 트랜스폼 연속 배열 1단계)
+
+**왜.** GameObject · Component 최적화 요청으로 잰 8000 무버 벤치(Release · DX12)에서 게임 스레드 프레임의 약 80 % 가 트랜스폼 경로였다
+(`components` 425 · `queuedTransforms` 180 · `GpuScene.build.collect` 262 us / `GT.Frame` 1048 us p50). 남은 비용의 뿌리는 트랜스폼이
+280 B 짜리 `SceneComponent` 안에 흩어져 있다는 것 하나다. 연속 배열로 옮기는 길(유니티 `TransformHierarchy` 의 자리)을 막고 있던 것은
+리플렉션이었다 — 프로퍼티가 "객체 주소 + 오프셋" 이라 직렬화기 · 인스펙터 · 비교 도구가 그 주소에 바로 쓴다.
+
+**모양.** `PROPERTY()` 를 **값 참조(`T&`)를 돌려주는 인자 없는 메서드**에 붙이면 값이 객체 밖에 있는 프로퍼티가 된다.
+- 파서: `ParsedPropertyInfo::_memberName`(C++ 이름)과 `_name`(리플렉션 이름)을 나눴고, 새 토큰 `PROPERTY( Name = "..." )` 가 뒤쪽을 준다 —
+  옛 필드 이름(`_localPosition`)을 이어 써서 씬 · 프리팹 파일을 고치지 않는다. 모양이 틀리면(값으로 돌려줌 · 인자 · 정적 · 컨테이너 ·
+  FUNCTION 과 함께) 멈춘다. REFLECT 밖 메서드의 PROPERTY 도 잡는다.
+- 엔진: `PropertyInfo::_pValueAccessor`. `getRawPtr` 하나가 자리를 정하고 `getValue` · `setValue` · `getValuePtr` 이 모두 그리로 간다
+  (예전에는 넷이 각자 `+ _offset` 을 했다). 이런 프로퍼티가 있는 타입은 통째 복사(`usesPodCopyFastPath`)에서 뺐다 — 칸 번호가 복사돼 두
+  객체가 한 자리를 나눠 쓴다. 같은 함수가 **부모의 프로퍼티를 보지 않던 것**도 고쳤다(부모가 문자열을 든 타입도 통째 복사로 갔다).
+- 곁에 고친 것: `setValue<float3>` 가 컴파일되지 않았다(비트필드 분기의 `static_cast<T>( 0 )` 이 구조체에서 모호). 구조체 값 프로퍼티를
+  `setValue` 로 쓴 곳이 없어 드러나지 않았다.
+
+**테스트.** `ReflectionParserTest.AccessorPropertyEmitsValueAccessor`(코드젠 · 틀린 모양은 멈춤),
+`ReflectionSerializationTest.AccessorPropertyReadsAndWritesOutsideTheObject`(바깥 배열 칸에 대해 Binary · JSON · XML 왕복, `setValue` ·
+`getRawPtr`, 통째 복사 금지). 문서: `Source/Engine/Reflection/README.md` 5) 절.
+
+**다음.** 2단계 — `SceneComponent` 의 로컬 TRS · 월드 행렬 · LWC 를 전역 페이지 배열(`SceneTransformStorage`)로 옮기고 컴포넌트는 칸 번호만 든다.
+3단계 — 병렬 틱이 자기 오브젝트의 칸에 바로 쓰고(쓰기 큐 단계 제거), 렌더 수집은 트랜스폼만 바뀐 프리미티브의 행렬을 배열에서 읽는다.
+단계마다 `BinSoaOld`(d0af4f5c Release 사본)와 번갈아 잰다.
+
 ### 2026-09-29 (변수명 — 알아보기 힘든 줄임말 · 뜻이 갈리는 줄임말 · 한 글자 이름)
 
 앞선 다섯 이름 정리(App · Core · Engine · Editor · ReflectionParser)는 비유를 걸렀고 변수도 거기 포함됐다. 이번에는 **변수명 고유의 문제**를 봤다.

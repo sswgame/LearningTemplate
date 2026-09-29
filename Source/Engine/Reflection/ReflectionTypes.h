@@ -167,12 +167,21 @@ namespace sw
     struct SW_API PropertyInfo
     {
         using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, const void* pInstance )>;
+        /**
+         * @brief 값이 객체 **밖**에 있는 프로퍼티의 값 주소를 돌려주는 함수입니다(`PROPERTY` 를 참조를 돌려주는 메서드에 붙인 것).
+         * @details 받는 것은 오프셋이 기준으로 삼는 객체 주소(`getRawPtr` 의 인자와 같다)이고, 돌려주는 것은 그 인스턴스의 값
+         *          자리입니다. 씬 컴포넌트의 로컬 TRS 가 첫 예입니다 — 값은 트랜스폼 저장소의 칸에 있고 이름(`_localPosition`)은 그대로라,
+         *          직렬화기 · 인스펙터 · 비교 도구가 바뀐 것 없이 그 자리를 읽고 씁니다.
+         */
+        using ValueAccessor = void* (*)( void* pInstance );
 
         shared_ptr<IContainerWrapper>   _containerWrapper;
         shared_ptr<NestedContainerInfo> _nestedContainer; ///< 컨테이너일 때 전체 중첩 사슬
         mutable PropertyBindingDelegate _onPropertyBoundChanged;
 
-        size_t _offset;
+        /** @brief 값이 객체 밖에 있으면 그 자리를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
+        ValueAccessor _pValueAccessor;
+        size_t        _offset;
 
         hashed_string         _name;
         hashed_string         _typeName;
@@ -264,7 +273,7 @@ namespace sw
                     return static_cast<T>( bVal ? 1 : 0 );
             }
 
-            const T* pPtr = reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );
+            const T* pPtr = static_cast<const T*>( getRawPtr( static_cast<const void*>( pInstance ) ) );
             return *pPtr;
         }
 
@@ -276,14 +285,18 @@ namespace sw
             {
                 uint8* pByte = reinterpret_cast<uint8*>( pInstance ) + _offset;
                 bool   bVal  = false;
+                // 비트필드는 1비트 불리언 플래그뿐이다. 구조체 타입(float3 …)으로 부르면 이 분기는 닿지 않지만 컴파일은 되어야 한다 —
+                // 예전에는 `static_cast<T>( 0 )` 이 구조체에서 컴파일되지 않아 `setValue<float3>` 자체를 쓸 수 없었다.
                 if constexpr ( std::is_same_v<T, bool> )
                     bVal = newValue;
                 else if constexpr ( std::is_same_v<T, float32> )
                     bVal = ( MathUtil::nearEqual( newValue, 0.0f ) == false );
                 else if constexpr ( std::is_same_v<T, float64> )
                     bVal = ( MathUtil::nearEqual( newValue, 0.0 ) == false );
-                else
+                else if constexpr ( std::is_arithmetic_v<T> || std::is_enum_v<T> )
                     bVal = ( newValue != static_cast<T>( 0 ) );
+                else
+                    return;
 
                 if ( bVal )
                     *pByte |= _bitMask;
@@ -301,7 +314,7 @@ namespace sw
                 return;
             }
 
-            T* pPtr = reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
+            T* pPtr = static_cast<T*>( getRawPtr( static_cast<void*>( pInstance ) ) );
             if constexpr ( std::is_same_v<T, float32> || std::is_same_v<T, float64> )
             {
                 if ( MathUtil::nearEqual( *pPtr, newValue ) )
@@ -321,33 +334,44 @@ namespace sw
                 _onPropertyBoundChanged( *this, pInstance );
         }
 
-        /** @brief 인스턴스 + 오프셋의 값 포인터입니다(비트필드는 nullptr). */
+        /** @brief 값 포인터입니다(비트필드는 nullptr). 자리는 `getRawPtr` 가 정합니다. */
         template <typename T>
         T* getValuePtr( void* pInstance ) const
         {
             if ( _bIsBitField == SW_TRUE )
                 return nullptr;
-            return reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
+            return static_cast<T*>( getRawPtr( pInstance ) );
         }
 
-        /** @brief 인스턴스 + 오프셋의 값 포인터입니다(비트필드는 nullptr). */
+        /** @brief 값 포인터입니다(비트필드는 nullptr). 자리는 `getRawPtr` 가 정합니다. */
         template <typename T>
         const T* getValuePtr( const void* pInstance ) const
         {
             if ( _bIsBitField == SW_TRUE )
                 return nullptr;
-            return reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );
+            return static_cast<const T*>( getRawPtr( pInstance ) );
         }
 
-        /** @brief 인스턴스 기준 프로퍼티의 원시 메모리 시작 포인터를 반환합니다. */
+        /** @brief 값이 객체 밖에 있으면(`_pValueAccessor`) true 입니다. 이런 프로퍼티는 오프셋이 0 이고 뜻이 없습니다. */
+        bool hasValueAccessor() const noexcept { return _pValueAccessor != nullptr; }
+
+        /**
+         * @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 시작 포인터를 반환합니다.
+         * @details 보통은 `인스턴스 + _offset` 이고, 값이 객체 밖에 있는 프로퍼티는 `_pValueAccessor` 가 찾은 자리입니다.
+         *          값을 만지는 길(`getValue` · `setValue` · `getValuePtr` · 직렬화기)은 모두 여기를 지납니다.
+         */
         void* getRawPtr( void* pInstance ) const noexcept
         {
+            if ( _pValueAccessor != nullptr )
+                return _pValueAccessor( pInstance );
             return reinterpret_cast<utf8*>( pInstance ) + _offset;
         }
 
-        /** @brief 인스턴스 기준 프로퍼티의 원시 메모리 const 시작 포인터를 반환합니다. */
+        /** @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 const 시작 포인터를 반환합니다. */
         const void* getRawPtr( const void* pInstance ) const noexcept
         {
+            if ( _pValueAccessor != nullptr )
+                return _pValueAccessor( const_cast<void*>( pInstance ) );
             return reinterpret_cast<const utf8*>( pInstance ) + _offset;
         }
 

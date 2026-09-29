@@ -521,6 +521,64 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 값 참조를 돌려주는 메서드의 PROPERTY 는 오프셋 대신 값 접근자를 낸다
+ * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 가며 생긴 모양이다. 값은 객체 밖에 있고 이름(`Name`)은 옛 필드 이름을
+ *          이어 쓴다. 모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.
+ */
+SW_TEST_CASE( ReflectionParserTest, AccessorPropertyEmitsValueAccessor )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "AccessorPropertySample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct AccessorPropertySampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Name = \"_value\", Category = \"Sample\" )\n"
+                                                       "\t\tint32& getValueRef();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _level{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    // 이름은 Name 이 준 것, 자리는 메서드가 찾는다. 오프셋 식(offsetof)은 필드인 `_level` 에만 있다.
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::hashed_string( \"_value\" )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._pValueAccessor" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "->getValueRef()" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "offsetof(sw::AccessorPropertySampleActor, getValueRef)" ) == sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "offsetof(sw::AccessorPropertySampleActor, _level)" ) != sw::string::npos, generated.c_str() );
+
+#if defined( SW_DEBUG )
+    const ParserRunResult badRun = runParserOnTempHeader( parserExe, "AccessorPropertyByValueSample",
+                                                          "#pragma once\n"
+                                                          "#include \"Core/Common/Types.h\"\n"
+                                                          "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                          "namespace sw\n"
+                                                          "{\n"
+                                                          "\tREFLECT()\n"
+                                                          "\tstruct AccessorPropertyByValueSampleActor\n"
+                                                          "\t{\n"
+                                                          "\t\tREFLECT_BODY();\n"
+                                                          "\t\tPROPERTY()\n"
+                                                          "\t\tint32 getValue() const;\n"
+                                                          "\t};\n"
+                                                          "}\n" );
+    SW_EXPECT_TRUE_MSG( badRun._exitCode != 0, badRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( badRun._log.find( "sw::AccessorPropertyByValueSampleActor::getValue" ) != sw::string::npos, badRun._log.c_str() );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 추상 컴포넌트는 컴포넌트 팩토리를 내지 않고, 그 파생은 낸다
  * @details 팩토리는 `addComponent<T>()` 로 T 를 만든다. 예전에는 컴포넌트에서 파생했으면 무조건 냈기 때문에, 공통 기반 컴포넌트
  *          (`REFLECT( Abstract )` · 보호된 생성자)를 두면 생성된 코드가 컴파일되지 않았다. `LightComponent` 가 첫 예다.

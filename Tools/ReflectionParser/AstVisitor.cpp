@@ -579,8 +579,9 @@ namespace sw
                 const ParserSession& session   = *collector._pSession;
                 const CXType         fieldType = clang_getCursorType( cursor );
                 ParsedPropertyInfo   prop;
-                prop._name     = getCursorSpelling( cursor );
-                prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( fieldType ) ) );
+                prop._memberName = getCursorSpelling( cursor );
+                prop._name       = prop._memberName;
+                prop._typeName   = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( fieldType ) ) );
                 if ( clang_Cursor_isBitField( cursor ) != 0 )
                 {
                     const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );
@@ -602,7 +603,7 @@ namespace sw
                     }
                 }
 
-                const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
+                const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._memberName );
                 if ( applyAnnotation( spelling, prop, session, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
@@ -612,16 +613,65 @@ namespace sw
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 
-            /** @brief 메서드 · 생성자에 붙은 애노테이션 셋을 한 번의 자식 순회로 봅니다. */
+            /**
+             * @brief 값 참조를 돌려주는 메서드에 붙은 PROPERTY 를 "값이 객체 밖에 있는 프로퍼티" 로 수집합니다.
+             * @details 값은 객체 안의 필드가 아니라 메서드가 돌려주는 자리에 있습니다(씬 컴포넌트의 로컬 TRS 는 트랜스폼 저장소의 칸).
+             *          코드젠은 오프셋 대신 그 메서드를 부르는 접근자를 `PropertyInfo::_pValueAccessor` 에 넣습니다. 그래서 직렬화기 ·
+             *          인스펙터 · 비교 도구는 바뀐 것 없이 그 자리를 읽고 씁니다.
+             *
+             *          모양을 여기서 막습니다. 인자 없는 비정적 메서드여야 하고, 돌려주는 것은 const 가 아닌 lvalue 참조여야 합니다 —
+             *          값으로 돌려주면 쓸 자리가 없습니다. 비트필드 · 컨테이너는 받지 않습니다(컨테이너 래퍼 코드젠이 필드 이름을 씁니다).
+             */
+            static void collectAccessorProperty( const CXCursor cursor, const string& spelling, MemberCollector& collector )
+            {
+                const ParserSession& session = *collector._pSession;
+                ParsedPropertyInfo   prop;
+                prop._memberName   = getCursorSpelling( cursor );
+                prop._name         = prop._memberName;
+                prop._bIsAccessor  = SW_TRUE;
+                const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._memberName );
+
+                const CXType resultType = clang_getCursorResultType( cursor );
+                const CXType valueType  = clang_getPointeeType( resultType );
+                const bool   bShapeOk   = clang_CXXMethod_isStatic( cursor ) == 0 && clang_Cursor_getNumArguments( cursor ) == 0 &&
+                                      resultType.kind == CXType_LValueReference && clang_isConstQualifiedType( valueType ) == 0;
+                if ( bShapeOk == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' needs a non-static method with no parameters that returns a non-const "
+                                  "lvalue reference (T&) to the value. Put PROPERTY() on a field instead if the value lives in the object.",
+                                  owner );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getUnqualifiedType( valueType ) ) ) );
+
+                if ( applyAnnotation( spelling, prop, session, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                fillContainerDetails( prop, valueType, session );
+                if ( prop._bIsContainer == SW_TRUE )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                collector._pType->_listProperty.push_back( std::move( prop ) );
+            }
+
+            /** @brief 메서드 · 생성자에 붙은 애노테이션 넷을 한 번의 자식 순회로 봅니다. */
             struct MethodAnnotation
             {
                 string                 _functionSpelling; ///< FUNCTION(...) 철자. 없으면 비어 있다
+                string                 _propertySpelling; ///< PROPERTY(...) 철자. 값 참조를 돌려주는 메서드면 접근자 프로퍼티다
                 uint8                  _bBody    : 1;     ///< REFLECT_BODY
                 uint8                  _bFactory : 1;     ///< COMPONENT_FACTORY
                 [[maybe_unused]] uint8 _reserved : 6;
 
                 MethodAnnotation()
                     : _functionSpelling{}
+                    , _propertySpelling{}
                     , _bBody{ SW_FALSE }
                     , _bFactory{ SW_FALSE }
                     , _reserved{ 0 }
@@ -647,6 +697,8 @@ namespace sw
                         pAnnotation->_bFactory = SW_TRUE;
                     if ( pAnnotation->_functionSpelling.empty() && spelling.find( annotationConstants::kFunctionPrefix ) != string_view::npos )
                         pAnnotation->_functionSpelling = pText;
+                    if ( pAnnotation->_propertySpelling.empty() && spelling.find( annotationConstants::kPropertyPrefix ) != string_view::npos )
+                        pAnnotation->_propertySpelling = pText;
                 }
                 clang_disposeString( cxSpelling );
                 return CXChildVisit_Continue;
@@ -753,6 +805,18 @@ namespace sw
                 }
                 if ( kind == CXCursor_CXXMethod )
                 {
+                    if ( annotation._propertySpelling.empty() == false )
+                    {
+                        if ( annotation._functionSpelling.empty() == false )
+                        {
+                            SW_LOG_ERROR( "ERROR: '%#' has both PROPERTY() and FUNCTION(). A method is either a value accessor (PROPERTY) or a callable (FUNCTION).",
+                                          makeMemberOwnerName( collector._pType->_fullyQualifiedName, spelling ) );
+                            collector._bHasError = SW_TRUE;
+                            return;
+                        }
+                        collectAccessorProperty( cursor, annotation._propertySpelling, collector );
+                        return;
+                    }
                     collectMethod( cursor, annotation._functionSpelling, collector );
                     return;
                 }
@@ -973,11 +1037,14 @@ namespace sw
         if ( kind == CXCursor_CXXMethod )
         {
             const bool bHasFunction = AstVisitorInternal::hasAnnotation( cursor, annotationConstants::kFunction, config );
+            // 메서드의 PROPERTY 는 실제 애노테이션만 본다(값 참조 접근자). 소스 창 휴리스틱은 필드 쪽 것이다.
+            const bool bHasProperty = AstVisitorInternal::findAnnotateAttr( cursor, annotationConstants::kPropertyPrefix ).empty() == false;
             const bool bHasBody =
                 AstVisitorInternal::findAnnotateAttr( cursor, annotationConstants::kReflectBodyPrefix ).empty() == false ||
                 AstVisitorInternal::isStringEqual( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn );
-            const utf8* pMacroName   = bHasFunction ? annotationConstants::kFunctionMacro : annotationConstants::kReflectBodyPrefix;
-            const bool  bOrphanMacro = ( bHasFunction || bHasBody ) && AstVisitorInternal::isInsideReflectType( cursor, pMacroName, config ) == false;
+            const utf8* pMacroName   = bHasFunction ? annotationConstants::kFunctionMacro
+                                                    : ( bHasProperty ? annotationConstants::kPropertyMacro : annotationConstants::kReflectBodyPrefix );
+            const bool  bOrphanMacro = ( bHasFunction || bHasProperty || bHasBody ) && AstVisitorInternal::isInsideReflectType( cursor, pMacroName, config ) == false;
             if ( bOrphanMacro )
                 self->markHeaderError( header );
             return CXChildVisit_Continue;
