@@ -9,7 +9,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 # 2. Constants.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
 # (Python이 Single Source of Truth가 됨)
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
-sw_executePythonScript("Scripts/setup/GenerateCMakeConstants.py"
+sw_executePythonScript("Scripts/generate/GenerateCMakeConstants.py"
 	ARGS "${SW_GENERATED_CMAKE_VARS}"
 	REQUIRED
 )

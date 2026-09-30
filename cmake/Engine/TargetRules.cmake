@@ -134,9 +134,9 @@ function(sw_defineEngineAbiStamp)
 	)
 	add_custom_command(
 		OUTPUT "${SW_ENGINE_ABI_STAMP_HEADER}"
-		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/setup/GenerateEngineAbiStamp.py"
+		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateEngineAbiStamp.py"
 			--root "${CMAKE_SOURCE_DIR}" --out "${SW_ENGINE_ABI_STAMP_HEADER}"
-		DEPENDS ${swEngineAbiHeaders} "${CMAKE_SOURCE_DIR}/Scripts/setup/GenerateEngineAbiStamp.py"
+		DEPENDS ${swEngineAbiHeaders} "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateEngineAbiStamp.py"
 		COMMENT "Fingerprinting Core/Engine headers for the hot reload ABI stamp"
 		VERBATIM
 	)

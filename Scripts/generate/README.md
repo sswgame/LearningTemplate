@@ -6,11 +6,17 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| 스크립트 | 역할 | 출력/대상 |
-|---|---|---|
 | `CookAssets.py` | Prefab, Scene XML 파싱(PFB2, SCN1) 및 Resource 디렉터리 .pack 바이너리 패킹 | `Resource/**/*.bin`, `build/*/Bin/Packs/*.pack` |
 | `BakeShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 베이킹 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
+| `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
+| `GenerateCMakeConstants.py` | `Scripts/common/Constants.py` 의 상수를 CMake `set()` 목록으로 (구성 시점) | `build/.../ConfigVars.cmake` |
+| `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
+| `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |
+| `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
+
+`Generate*` 넷은 2026-09-30 까지 `setup/` 에 있었다. `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은
+구성 시점이든 빌드 시점이든 여기다.
 
 ## 팩 압축 코덱 고르기
 

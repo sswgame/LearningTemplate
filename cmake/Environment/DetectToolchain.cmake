@@ -37,7 +37,7 @@ sw_executePythonScript(
 # 있었고, 같은 키를 FindWindowsTools 는 리터럴 문자열로 적고 있었다.
 # 값이 없으면 변수도 없다(= 빈 값). 아래 `if(X AND EXISTS ...)` 가 그대로 동작한다.
 set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
-sw_executePythonScript("Scripts/setup/GenerateToolchainCMake.py"
+sw_executePythonScript("Scripts/generate/GenerateToolchainCMake.py"
     ARGS "${SW_GENERATED_TOOLCHAIN_VARS}"
     WARN
 )

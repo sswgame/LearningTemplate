@@ -98,7 +98,7 @@ up with no list to edit — and it must carry a `selfTestCases` snippet proving 
 (or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
 
 **CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
-`Scripts/setup/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
+`Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
 `include()`s at configure time. What differs per lint travels with the lint: a gate declares
 `buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class;
 `selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants. A

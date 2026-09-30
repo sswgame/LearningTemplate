@@ -53,7 +53,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("llvm", "setup.SetupLlvm", "LLVM/Clang 탐색 및 설정"),
     Subcommand("cook", "generate.CookAssets", "프리팹, 씬, 리소스 팩 일괄 쿠킹"),
     Subcommand("lint", "lint.PreCommitLint", "Staged 파일 대상 사전 커밋 린트 검사", bForwardArgs=False),
-    Subcommand("format", "lint.report.RunClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
+    Subcommand("format", "lint.fixer.RunClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
     Subcommand("docs", "generate.GenerateDocs", "Doxygen API 레퍼런스 문서 생성"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록",
                bForwardArgs=False),

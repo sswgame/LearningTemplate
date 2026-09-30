@@ -95,7 +95,7 @@ if(Python3_Interpreter_FOUND)
 	)
 
 	set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
-	sw_executePythonScript("Scripts/setup/GenerateLintTargets.py"
+	sw_executePythonScript("Scripts/generate/GenerateLintTargets.py"
 		ARGS "${SW_GENERATED_LINT_TARGETS}"
 		REQUIRED
 	)

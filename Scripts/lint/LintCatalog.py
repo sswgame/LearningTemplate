@@ -13,7 +13,7 @@
    `add_test` + `set_tests_properties` 한 덩이를 더한다 (11개가 그렇게 쌓여 135줄이었다)
 
 2~4 는 1 에서 **기계적으로 유도되는 것**이다. 그래서 여기서 유도하고, CMake 는 그 결과를
-`include()` 한다(`Scripts/setup/GenerateLintTargets.py` → `generated/sw/config/LintTargets.cmake`).
+`include()` 한다(`Scripts/generate/GenerateLintTargets.py` → `generated/sw/config/LintTargets.cmake`).
 이 저장소가 이미 `Constants.py` → `ConfigVars.cmake` 로 하고 있는 방식 그대로다.
 
 린트마다 다른 것(설명 · 타임아웃 · 추가 인자)은 **린트 자신이 든다** — 게이트는 `LintGate`

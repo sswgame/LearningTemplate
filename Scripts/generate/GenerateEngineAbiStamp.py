@@ -8,7 +8,7 @@
 맞으므로, 그 빌드의 모듈은 재시작 전까지 받지 않는 쪽이 안전합니다. 내용이 같으면 파일을 다시 쓰지 않아(재빌드를 부르지 않는다)
 Ninja 의 restat 이 그 뒤를 멈춥니다.
 
-사용법: py -3 Scripts/setup/GenerateEngineAbiStamp.py --root <repo> --out <path/EngineAbiStamp.gen.h>
+사용법: py -3 Scripts/generate/GenerateEngineAbiStamp.py --root <repo> --out <path/EngineAbiStamp.gen.h>
 """
 import argparse
 import hashlib
@@ -48,7 +48,7 @@ def computeStampInternal(repositoryRoot):
 
 def makeHeaderTextInternal(stamp):
     return (
-        "// 생성 파일 - Scripts/setup/GenerateEngineAbiStamp.py. 고치지 마십시오.\n"
+        "// 생성 파일 - Scripts/generate/GenerateEngineAbiStamp.py. 고치지 마십시오.\n"
         "// Core · Engine 헤더 내용의 지문입니다. Engine 과 모듈이 같은 값을 굽고, 핫 리로드가 올리기 전에 대조합니다.\n"
         "#pragma once\n"
         "#define SW_ENGINE_ABI_STAMP \"" + kStampMarker + stamp + "\"\n"

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Scripts/lint/report/RunClangFormat.py
+Scripts/lint/fixer/RunClangFormat.py
 
 Source / Test / Tools/ReflectionParser 내 C++ 코드에 대해 clang-format 포맷팅을 적용합니다.
 
 사용법:
-  py -3 Scripts/lint/report/RunClangFormat.py                    # 변경된 파일(없으면 전체) 자동 포맷팅
-  py -3 Scripts/lint/report/RunClangFormat.py [파일들...]        # 지정한 파일들만 포맷팅
-  py -3 Scripts/lint/report/RunClangFormat.py --all              # 프로젝트 전체 파일 강제 포맷팅
+  py -3 Scripts/lint/fixer/RunClangFormat.py                    # 변경된 파일(없으면 전체) 자동 포맷팅
+  py -3 Scripts/lint/fixer/RunClangFormat.py [파일들...]        # 지정한 파일들만 포맷팅
+  py -3 Scripts/lint/fixer/RunClangFormat.py --all              # 프로젝트 전체 파일 강제 포맷팅
 """
 
 from __future__ import annotations
@@ -24,6 +24,9 @@ from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from LintFixer import addFileArguments, selectTargetFiles
 from common import getProjectRoot, runClangFormatBatch, useUtf8Stdout
+
+# 파일을 고쳐 쓰므로 `fixer/` 에 있다(예전에는 "찍기만 하는" `report/` 에 있었다). 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
+kFixerSkipReason = "파이썬 변환(FixPass)이 아니라 clang-format 을 부르는 실행기다 — 대상 파일 고르기만 LintFixer 와 같다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
