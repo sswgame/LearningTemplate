@@ -44,8 +44,8 @@ jobs:
     name: ${{ matrix.name }}
     needs: lint
     runs-on: ${{ matrix.os }}
-    # TSan 잡은 **보고만 한다**(실패해도 CI 를 붉게 하지 않는다). 처음 켜는 잡이라 기존 트리의 경쟁 보고를 먼저 추려야 한다 —
-    # 추린 뒤 이 줄에서 빼면 막는 잡이 된다.
+    # 매트릭스 항목에 `reportOnly: true` 를 주면 그 잡은 **보고만 한다**(실패해도 CI 를 붉게 하지 않는다). 새 검사(새니타이저 등)를 처음
+    # 켤 때 기존 트리의 보고를 먼저 추리는 동안 쓴다. TSan 은 그렇게 시작해 첫 보고 둘(46c78038)을 고친 뒤 막는 잡이 됐다.
     continue-on-error: ${{ matrix.reportOnly == true }}
     strategy:
       fail-fast: false
@@ -63,10 +63,9 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Debug-ASAN
 
-          - name: Build Linux TSan (Clang, report-only)
+          - name: Build Linux TSan (Clang)
             os: ubuntu-22.04
             preset: CI-Debug-TSAN
-            reportOnly: true
 
           - name: Build Windows Shipping (clang-cl)
             os: windows-2022
