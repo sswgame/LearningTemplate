@@ -2021,6 +2021,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ⑤ — 커밋 훅 게이트 7.2 → 2.3 s: 헤더 색인이 외부 도구를 걷지 않고, 파일은 동시에 읽고 표식 없는 파일은 거른다)
+
+흔한 커밋(C++ 헤더 · 소스 · 테스트 · 파이썬 · CMake 각 하나)을 흉내 내 훅의 게이트를 하나씩 재니 7.2 s 였다. 큰 넷 중 셋은 **검사할 파일이 몇 개든
+저장소 전체를 다시 걷는** 일이었다.
+
+- **헤더 색인 둘.** `CheckCodeConventions.getExactPathMapInternal`(따옴표 include 대소문자 표)은 `Source` · `Test` · `Tools` 를 `os.walk` 로, `CheckIncludeOrder
+  .buildHeaderLookupMap`(따옴표 include 경로 복원 표)은 `glob("**/*.h")` 로 걸었다 — `Tools/vcpkg` · `Tools/LLVM` 까지. 파일 셋을 보면서 각각 1.6 s · 1.4 s 를
+  썼다. 둘 다 `collectRepositoryFiles`(외부 도구로 내려가지 않는다)로 바꿨고, `CheckIncludeOrder` 의 세 폴더 복사 루프는 `buildHeaderLookupInternal` 하나가 됐다.
+  표에서 없어진 것은 외부 헤더뿐이다(도구 표 3604 → 57 칸, 대소문자 표 13576 → 2128 칸, Source · Test 표와 우리 칸의 값은 하나도 다르지 않다). 외부 헤더는
+  꺾쇠로 include 하므로 따옴표 include 를 보는 두 표에서 그 칸은 쓰일 일이 없었다. 두 게이트의 전체 트리 출력이 기준과 같다.
+  **바로잡음:** 앞 회차(③)에 "`CheckCodeConventions` 는 include 대소문자 표에 vcpkg 를 일부러 넣으니 빼면 동작이 바뀐다" 고 적었는데 틀렸다 — 표의 열쇠가
+  `Tools/` 기준 경로(`vcpkg/installed/...`)라 따옴표 include 와 맞을 수가 없다.
+- **`common.Search.readTextFiles`** — 파일들을 스레드 풀로 **동시에** 읽어 넘긴 순서대로 `(경로, 내용)` 을 돌려주고, `mustContain` 을 주면 그 문자열이 없는 파일은
+  뺀다. 윈도우는 파일 열기가 느려(필터 드라이버) 천 개를 차례로 열면 그것만 0.5 s 이고, 표식(매크로 · 함수 이름)은 한두 파일에만 있다.
+  `CheckGlobalVariableKinds`(`GLOBAL_VARIABLE_` 이 없는 파일은 주석 · 문자열 지우기 정규식을 돌리지 않는다, 2.1 → 0.86 s, 모은 정의 49 · 참조 10 이 기준과 같다)와
+  `CheckEngineServiceBinding`(`bindEngineServices`, 0.93 → 0.60 s)이 쓴다.
+
+**결과.** 같은 커밋의 게이트 합 **7.2 → 2.3 s**(`CheckCodeConventions` 1640 → 92 ms, `CheckIncludeOrder` 1386 → <90 ms, `CheckGlobalVariableKinds` 1767 → 446 ms).
+린트 CTest 21/21(31.6 s).
+
+**하지 않은 것 — 훅의 게이트 병렬화.** 게이트는 파이썬이라 스레드로는 GIL 에 막히고, 하위 프로세스로 돌리면 게이트마다 기동 · import 가 0.2 s 가량이다. 가장 긴 게이트가
+0.6 s 가 된 지금은 줄어드는 것이 1 s 남짓이고 출력 순서를 맞추는 일이 생겨 값이 없다.
+
 ### 2026-09-30 (Scripts ④ — git 파일 목록 읽기 네 벌을 한 도우미로)
 
 `common/Host.py` 의 `getAllStagedFiles` · `getStagedCppFiles` · `getModifiedCppFiles`(수정 · untracked 두 번)가 "git 명령 → 줄마다 저장소 기준 경로를 절대 경로로 →

@@ -35,7 +35,6 @@ from __future__ import annotations
 import argparse
 import functools
 import json
-import os
 import re
 import sys
 from dataclasses import asdict, dataclass, field
@@ -45,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import (  # noqa: E402
+    collectRepositoryFiles,
     collectSourceFiles,
     flatMapConcurrent,
     getLintSearchDirs,
@@ -332,23 +332,20 @@ _s_exactPathMap: dict[str, str] = {}
 
 
 def getExactPathMapInternal(projectRoot: Path) -> dict[str, str]:
-    """저장소 내 모든 소스/헤더 파일의 실제 대소문자 경로 맵을 생성합니다."""
+    """
+    저장소 내 모든 소스/헤더 파일의 실제 대소문자 경로 맵을 생성합니다(Source · Test · Tools 기준 상대 경로와 저장소 기준 경로 둘을 열쇠로).
+
+    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`). 예전에는 그것까지 걸어 폴더 6894 개를
+    훑었고, 파일 셋만 검사해도 1.6 초를 썼습니다. 이 맵은 따옴표 include 에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
+    """
     global _s_exactPathMap
     if not _s_exactPathMap:
         newMap = {}
-        for searchDir in ["Source", "Test", "Tools"]:
-            baseDir = projectRoot / searchDir
-            if not baseDir.is_dir():
-                continue
-            for root, dirs, files in os.walk(baseDir):
-                for f in files:
-                    ext = os.path.splitext(f)[1].lower()
-                    if ext in kCppAllExtensions or ext == ".inl":
-                        fullPath = Path(root) / f
-                        rel = fullPath.relative_to(baseDir).as_posix()
-                        relRoot = fullPath.relative_to(projectRoot).as_posix()
-                        newMap[rel.lower()] = rel
-                        newMap[relRoot.lower()] = relRoot
+        for fullPath in collectRepositoryFiles(projectRoot, ("Source", "Test", "Tools"), suffixes=set(kCppAllExtensions) | {".inl"}):
+            relRoot = fullPath.relative_to(projectRoot).as_posix()
+            rel = relRoot.split("/", 1)[1]
+            newMap[rel.lower()] = rel
+            newMap[relRoot.lower()] = relRoot
         _s_exactPathMap = newMap
     return _s_exactPathMap
 

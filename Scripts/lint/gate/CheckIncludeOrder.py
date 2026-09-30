@@ -19,46 +19,35 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, flatMapConcurrent, getLintSearchDirs, kCppSourceExtensions  # noqa: E402
+from common import collectRepositoryFiles, collectSourceFiles, flatMapConcurrent, getLintSearchDirs, kCppSourceExtensions  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
 
-def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    sourceMap: dict[str, str] = {}
-    sourceCounts: dict[str, int] = {}
-    for headerPath in (repositoryRoot / "Source").glob("**/*.h"):
-        rel = headerPath.relative_to(repositoryRoot / "Source").as_posix()
-        sourceCounts[headerPath.name] = sourceCounts.get(headerPath.name, 0) + 1
-        sourceMap[headerPath.name] = rel
-        sourceMap[rel.lower()] = rel
-        sourceMap[headerPath.name.lower()] = rel
+def buildHeaderLookupInternal(repositoryRoot: Path, baseName: str) -> dict[str, str]:
+    """
+    `baseName`(Source · Test · Tools) 아래 헤더를 이름 · 소문자 상대 경로로 찾는 표입니다. 이름이 겹치는 헤더(pch.h 등)는 모호하므로 뺍니다.
 
+    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`). 예전에는 `glob("**/*.h")` 로
+    그것까지 걸어 도구 표 3604 칸 대부분이 vcpkg 헤더였고, 파일 셋만 검사해도 표를 짓느라 1.4 초를 썼습니다. 이 표는 따옴표 include 의
+    경로 복원에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
+    """
+    baseDir = repositoryRoot / baseName
+    lookupMap: dict[str, str] = {}
+    nameCounts: dict[str, int] = {}
+    for headerPath in collectRepositoryFiles(repositoryRoot, (baseName,), suffixes=(".h",)):
+        rel = headerPath.relative_to(baseDir).as_posix()
+        nameCounts[headerPath.name] = nameCounts.get(headerPath.name, 0) + 1
+        lookupMap[headerPath.name] = rel
+        lookupMap[rel.lower()] = rel
+        lookupMap[headerPath.name.lower()] = rel
     # Remove ambiguous duplicates (like pch.h)
-    sourceMap = {k: v for k, v in sourceMap.items() if not (k in sourceCounts and sourceCounts[k] > 1)}
+    return {k: v for k, v in lookupMap.items() if not (k in nameCounts and nameCounts[k] > 1)}
 
-    testMap: dict[str, str] = {}
-    testCounts: dict[str, int] = {}
-    for headerPath in (repositoryRoot / "Test").glob("**/*.h"):
-        rel = headerPath.relative_to(repositoryRoot / "Test").as_posix()
-        testCounts[headerPath.name] = testCounts.get(headerPath.name, 0) + 1
-        testMap[headerPath.name] = rel
-        testMap[rel.lower()] = rel
-        testMap[headerPath.name.lower()] = rel
-    testMap = {k: v for k, v in testMap.items() if not (k in testCounts and testCounts[k] > 1)}
 
-    toolsMap: dict[str, str] = {}
-    toolsCounts: dict[str, int] = {}
-    for headerPath in (repositoryRoot / "Tools").glob("**/*.h"):
-        rel = headerPath.relative_to(repositoryRoot / "Tools").as_posix()
-        toolsCounts[headerPath.name] = toolsCounts.get(headerPath.name, 0) + 1
-        toolsMap[headerPath.name] = rel
-        toolsMap[rel.lower()] = rel
-        toolsMap[headerPath.name.lower()] = rel
-    toolsMap = {k: v for k, v in toolsMap.items() if not (k in toolsCounts and toolsCounts[k] > 1)}
-
-    return sourceMap, testMap, toolsMap
+def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    return tuple(buildHeaderLookupInternal(repositoryRoot, baseName) for baseName in ("Source", "Test", "Tools"))
 
 
 def processFile(filePath: Path, repositoryRoot: Path,
