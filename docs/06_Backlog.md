@@ -2021,6 +2021,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (`sw::span` — vector · small_vector · array 를 한 인자로 받는 뷰)
+
+함수가 `const vector<T>&` 로 받으면 `small_vector<T, N>` 은 할당자가 달라 **다른 타입**이라 넘길 수 없고 `array<T, N>` 도 마찬가지다. 그래서 포인터 + 개수를 따로 받거나
+vector 로 복사해 넘겼다. 소유하지 않는 연속 구간 뷰 **`Core/Container/span.h`** 를 두었다 — 언리얼 `TArrayView` · C++20 `std::span` 자리다(사용자 요청 이름은
+`vector_reference` 였고, 나중에 표준 컨테이너로 옮길 수 있도록 표준 이름 · API 를 따랐다).
+
+- **받는 것.** `sw::vector` · `small_vector` · `sw::array` · `std::vector` · `std::array` · C 배열 · 포인터 + 개수. 읽기만 하면 `span<const T>`, 고쳐 쓰면 `span<T>`
+  (`span<T>` → `span<const T>` 는 된다). 원소를 더하거나 지우지는 못한다(그런 일은 컨테이너를 받거나 `VectorUtil`).
+- **막는 것**(`static_assert` 로 확인): const 컨테이너 · 임시 컨테이너로 쓰기 뷰, const 뷰 → 쓰기 뷰, 크기가 다른 원소(파생 → 기반). 임시 컨테이너는 `span<const T>` 인자로만
+  받는다(`std::span` 과 같다 — 문장이 끝나면 무효).
+- **C++ 최소 표준이 17** 이라 `std::span` 을 못 써서 직접 두었다(동적 길이만, `first` · `last` · `subspan` · `size_bytes` · 역순 순회까지 `std::span` 과 같은 이름).
+  `SW_ENABLE_STL_CONTAINER` + C++20 이면 `std::span` 의 별칭이다. `__cpp_lib_span` 은 libstdc++ 에서 `<version>` 에만 있어 먼저 include 한다.
+  네 조합(C++17/20 × STL 켬/끔)을 따로 컴파일해 같은 코드가 돌고, C++20 + STL 에서 `std::is_same_v<sw::span<int>, std::span<int>>` 인 것을 확인했다.
+- **테스트** `SpanTest` 셋 — 여섯 종류 컨테이너 · 포인터 + 개수 · 임시 · 빈 뷰를 `span<const int32>` 인자 하나로 받기, 쓰기 뷰가 가리키는 곳에 쓰고 const 뷰로 바뀌기,
+  부분 뷰 · 앞 · 뒤 · 역순 · 바이트 크기.
+
+기존 함수의 인자는 아직 바꾸지 않았다(포인터 + 개수 · `const vector<T>&` 를 받는 곳이 후보다).
+
 ### 2026-09-30 (순서 없는 삭제는 `VectorUtil` 의 정적 함수로 — `vector.h` 에서 떼어 냄)
 
 바로 앞 회차(612e4b1b)의 `removeAtSwap` · `removeSingleSwap` 은 `vector.h` 끝의 자유 함수였다. `SW_ENABLE_STL_CONTAINER` 분기 밖이라 표준 vector 로 바꿔도
