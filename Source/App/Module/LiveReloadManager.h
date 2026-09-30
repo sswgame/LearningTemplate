@@ -285,7 +285,7 @@ namespace sw
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& ctx );
         /** @brief 교체된 옛 이미지를 지연 언로드 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
-        void deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath );
+        void deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped );
         /**
          * @brief 언로드를 미뤄 둔 가장 오래된 배치 하나를 내립니다. 배치 안에서는 나중에 목록에 오른 것(의존하는 쪽)부터 내립니다.
          * @details 언로드를 미룬 이미지는 **같은 배치의 미룬 이미지나 지금 살아 있는 이미지에만** 묶여 있습니다(의존이 바뀌면 의존하는
@@ -324,6 +324,7 @@ namespace sw
             string _tempPath;
             void*  _pHandle{ nullptr };
             uint32 _batchId{ 0 };
+            bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 이미지 — 내리지 않는다(`engine::releaseModuleCode`)
         };
 
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).

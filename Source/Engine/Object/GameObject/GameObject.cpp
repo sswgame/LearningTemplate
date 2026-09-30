@@ -313,42 +313,52 @@ namespace sw
         }
     }
 
+    GameObject* GameObject::findChildObjectAttachedTo( const SceneComponent* pChildComp ) const
+    {
+        if ( pChildComp == nullptr )
+            return nullptr;
+        GameObject* pChildObj = pChildComp->getOwner();
+        // **같은 오브젝트 안의 부착은 자식 오브젝트가 아니다.** 한 GameObject 의 SceneComponent 를
+        // 다른 SceneComponent 에 붙이는 것은 정상적인 구성인데(`applyAttachSerializeFields` 가
+        // 복원까지 한다), 그러면 그 자식 컴포넌트의 owner 는 자기 자신이라 여기서 **자신이
+        // 자기 자식으로** 나왔다. `refreshActiveInHierarchy` 가 그대로 무한 재귀해 스택을 넘겼다.
+        if ( pChildObj == nullptr || pChildObj == this )
+            return nullptr;
+        // 자식 오브젝트는 **primary 가 우리에게 붙은** 오브젝트다(`getParent` 의 정의). 다른 씬 컴포넌트만 붙인 오브젝트는 자식이 아니고,
+        // 이렇게 가려야 한 오브젝트가 두 번 나오지 않는다.
+        return ( pChildObj->getPrimarySceneComponent() == pChildComp ) ? pChildObj : nullptr;
+    }
+
     void GameObject::getChildren( vector<GameObject*>& outListChild ) const
     {
         outListChild.clear();
-        SceneComponent* pSceneComp = getPrimarySceneComponent();
-        if ( pSceneComp == nullptr )
-            return;
-
-        const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
-        outListChild.reserve( listChildComp.size() );
-        for ( SceneComponent* pChildComp : listChildComp )
+        // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다 — 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 오브젝트도 자식이다
+        // (`getParent` · `refreshActiveInHierarchy` 가 이미 그렇게 본다). 예전에는 primary 의 자식만 돌려줘, `destroyObject( 캐릭터, true )`
+        // 가 소켓에 붙은 무기를 남겼고 그 무기는 루트가 되어 계속 틱하고 그려졌다. 계층 패널에도 보이지 않았다.
+        for ( Component* pOwnComp : _listComponent )
         {
-            if ( pChildComp == nullptr )
+            if ( pOwnComp == nullptr || pOwnComp->isSceneComponent() == false )
                 continue;
-            GameObject* pChildObj = pChildComp->getOwner();
-            // **같은 오브젝트 안의 부착은 자식 오브젝트가 아니다.** 한 GameObject 의 SceneComponent 를
-            // 다른 SceneComponent 에 붙이는 것은 정상적인 구성인데(`applyAttachSerializeFields` 가
-            // 복원까지 한다), 그러면 그 자식 컴포넌트의 owner 는 자기 자신이라 여기서 **자신이
-            // 자기 자식으로** 나왔다. `refreshActiveInHierarchy` 가 그대로 무한 재귀해 스택을 넘겼다.
-            if ( pChildObj == nullptr || pChildObj == this )
-                continue;
-            outListChild.push_back( pChildObj );
+            for ( SceneComponent* pChildComp : static_cast<SceneComponent*>( pOwnComp )->getChildren() )
+            {
+                GameObject* pChildObj = findChildObjectAttachedTo( pChildComp );
+                if ( pChildObj != nullptr )
+                    outListChild.push_back( pChildObj );
+            }
         }
     }
 
     bool GameObject::hasChildren() const
     {
-        SceneComponent* pSceneComp = getPrimarySceneComponent();
-        if ( pSceneComp == nullptr )
-            return false;
-        for ( SceneComponent* pChildComp : pSceneComp->getChildren() )
+        for ( Component* pOwnComp : _listComponent )
         {
-            if ( pChildComp == nullptr )
+            if ( pOwnComp == nullptr || pOwnComp->isSceneComponent() == false )
                 continue;
-            GameObject* pChildObj = pChildComp->getOwner();
-            if ( pChildObj != nullptr && pChildObj != this )
-                return true;
+            for ( SceneComponent* pChildComp : static_cast<SceneComponent*>( pOwnComp )->getChildren() )
+            {
+                if ( findChildObjectAttachedTo( pChildComp ) != nullptr )
+                    return true;
+            }
         }
         return false;
     }

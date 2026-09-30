@@ -2021,6 +2021,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ⑧ 오브젝트 수명 — 소켓 자식이 부모와 함께 지워지지 않음, 모듈 컴포넌트 걷기의 생포인터, 남은 이벤트 채널의 이미지, 리플렉션 없는 컴포넌트)
+
+**무엇이 틀렸나 · 고친 것.**
+- **`getChildren` · `hasChildren` 이 primary 씬 컴포넌트의 자식만 봤다.** `getParent` · `refreshActiveInHierarchy` 는 소켓(primary 가 아닌 씬 컴포넌트)에
+  붙은 오브젝트도 자식으로 보는데, `destroyObject( 캐릭터, true )` 는 소켓의 무기를 남겼다 — 무기는 루트가 되어 계속 틱하고 그려졌고 계층 패널에도
+  없었다. → 자기 씬 컴포넌트 전부에서, **primary 가 우리에게 붙은** 오브젝트만 센다(`getParent` 의 정의 그대로 · 중복 없음 ·
+  `findChildObjectAttachedTo`).
+- **`destroyComponentsOfModule` 이 지울 목록을 생포인터로 모아 돌았다.** 앞 컴포넌트의 해제 콜백(모듈 코드)이 형제를 곧바로 지우면 다음 차례가 풀에
+  반납된 자리를 건드렸다. → 핸들로 모으고 매번 다시 푼다(지연 파괴와 같은 방식). 옛 코드로 새 테스트를 돌리면 `removeComponent` 에서 접근 위반으로
+  죽는다.
+- **모듈이 만든 이벤트 채널을 다른 코드가 아직 구독하면 로그만 남기고 이미지를 내렸다.** 채널의 브로드캐스트 함수와 멀티캐스트 해제자(`shared_ptr`
+  제어 블록)가 그 이미지의 코드라, 다음 발행이나 종료 때 디스패처 소멸이 내려간 코드로 뛰었다. → `engine::releaseModuleCode` 가 "이미지를 내리면
+  안 된다" 를 돌려주고, 핫 리로드는 그런 이미지를 프로세스 끝까지 올려 둔다(지연 언로드 · 모듈 내리기 · 중단된 교체 모두). 떼어 낼 방법이 없는
+  코드를 가리키는 등록이 남은 모듈을 내리지 않는 것은 언리얼도 같다.
+  단위 테스트는 없다. "그 이미지가 만든 채널을 다른 이미지의 코드가 구독한" 상태를 만들려면 엔진 쪽 구독자가 있어야 하는데, 엔진 코드에는 이벤트
+  구독이 하나도 없다. 기존 리로드 테스트가 고정하지 않는 경로(`false`)를 지난다.
+- **리플렉션 없는 컴포넌트가 모듈 걷기를 빠져나갔다.** `addComponent` 의 `static_assert` 가 멤버 없는 파생(`sizeof( T ) == sizeof( Component )`)을
+  REFLECT_BODY 없이 받아, 부모의 TypeInfo(엔진 모듈)를 물려받은 인스턴스는 모듈을 내려도 지워지지 않고 vtable 이 내려간 이미지를 가리켰다.
+  → 예외를 없앴다. 트리에 그 예외에 기대던 타입은 없었다(전체 빌드 확인).
+
+**확인.** 새 `GameObjectTest.SocketChildIsListedAndDestroyedWithOwner` · `GameObjectManagerTest.ModuleSweepSurvivesCallbacksRemovingSiblings`
+— 고친 것을 되돌리면 앞의 것은 지고 뒤의 것은 접근 위반으로 죽는다(변이 확인). App 에디터 시작 씬 오류 0. Debug nogpu+린트 28/28 · hostgpu 2/2,
+Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ⑦ 모듈 등록 — GameFramework 가 남의 이름으로 등록됨, 키트 팩토리 모듈 이름, 엔진 ABI 도장 범위 · 도장 없는 모듈, 로드 중 모듈 등록, 리로드 실패 뒤 스냅숏)
 
 **무엇이 틀렸나 · 고친 것.**

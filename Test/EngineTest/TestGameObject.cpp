@@ -1042,6 +1042,37 @@ SW_TEST_CASE( GameObjectTest, SocketChildFollowsOwnerActive )
 }
 
 /**
+ * @brief 소켓에 붙은 자식 오브젝트도 자식 목록에 들고, 부모를 자식째 지우면 함께 지워진다.
+ * @details `getChildren` · `hasChildren` 이 primary 의 자식만 봐서, `destroyObject( 캐릭터, true )` 가 소켓에 붙은 무기를 남겼다 — 무기는
+ *          루트가 되어 계속 틱하고 그려졌고, 계층 패널에도 캐릭터 아래에 보이지 않았다(`getParent` 는 캐릭터라고 답하는데).
+ */
+SW_TEST_CASE( GameObjectTest, SocketChildIsListedAndDestroyedWithOwner )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCharacter = manager.createGameObject( sw::hashed_string( "Character" ) );
+    sw::SceneComponent*   pRoot      = pCharacter->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pSocket    = pCharacter->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pSocket->attachToComponent( pRoot ) );
+    sw::GameObject*     pWeapon   = manager.createGameObject( sw::hashed_string( "Weapon" ) );
+    sw::SceneComponent* pWeaponSc = pWeapon->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pWeaponSc->attachToComponent( pSocket ) );
+    SW_ASSERT_TRUE( pWeapon->getParent() == pCharacter );
+
+    sw::vector<sw::GameObject*> listChild;
+    pCharacter->getChildren( listChild );
+    SW_EXPECT_EQUAL( size_t( 1 ), listChild.size() );
+    SW_EXPECT_TRUE( listChild.empty() == false && listChild[0] == pWeapon );
+    SW_EXPECT_TRUE( pCharacter->hasChildren() );
+    // 같은 오브젝트 안의 부착(소켓 → 루트)은 자식 오브젝트가 아니다.
+    SW_EXPECT_FALSE( pWeapon->hasChildren() );
+
+    manager.destroyObject( pCharacter, true );
+    SW_EXPECT_TRUE( pWeapon->isPendingDestroy() );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( manager.findGameObjectByName( sw::hashed_string( "Weapon" ) ) == nullptr );
+}
+
+/**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
  *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진

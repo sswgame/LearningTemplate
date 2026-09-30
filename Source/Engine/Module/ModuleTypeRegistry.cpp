@@ -136,8 +136,10 @@ namespace sw
             getGlobalVariableManager().unregisterVariablesByModule( moduleName );
         }
 
-        uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd )
+        uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped )
         {
+            if ( pOutKeepImageMapped != nullptr )
+                *pOutKeepImageMapped = false;
             if ( areEngineServicesBound() == false || pBegin == nullptr || pEnd == nullptr )
                 return 0;
 
@@ -147,9 +149,14 @@ namespace sw
             const uint32 eventCount = getEventDispatcher().releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
             if ( eventCount > 0 )
                 SW_LOG_WARNING( "Module %# left %# event subscription(s) behind — released them before unloading its image", moduleName, eventCount );
+            // 그 채널의 함수와 해제자가 이 이미지의 코드다. 예전에는 알리기만 하고 내려, 다음 발행 · 종료 때 내려간 코드로 뛰었다. 올려 둔다.
             if ( remainingEntryCount > 0 )
-                SW_LOG_ERROR( "Module %# created %# event channel(s) that other code still subscribes to — publishing them after the unload would jump into the unloaded image",
-                              moduleName, remainingEntryCount );
+            {
+                SW_LOG_WARNING( "Module %# created %# event channel(s) that other code still subscribes to — keeping its image mapped until exit",
+                                moduleName, remainingEntryCount );
+                if ( pOutKeepImageMapped != nullptr )
+                    *pOutKeepImageMapped = true;
+            }
 
             const uint32 listenerCount = Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             if ( listenerCount > 0 )

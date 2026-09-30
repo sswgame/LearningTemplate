@@ -712,24 +712,32 @@ namespace sw
         // 지연 파괴 목록부터 비운다. 거기 남은 컴포넌트의 소멸자도 모듈 코드다.
         processDeferredDestruction();
 
-        const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
-        vector<Component*>  listToDestroy;
+        const hashed_string     hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+        vector<ComponentHandle> listToDestroy;
         forEachComponent( [&]( Component* pComp )
         {
             const TypeInfo* pTypeInfo = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
             if ( pTypeInfo != nullptr && pTypeInfo->_moduleName == hashModule )
-                listToDestroy.push_back( pComp );
+                listToDestroy.push_back( pComp->getHandle() );
         } );
-        for ( Component* pComp : listToDestroy )
+        // **핸들로 모으고 매번 다시 푼다.** 지우는 동안 모듈 콜백(onEndPlay · onUnregister · onDestroy)이 돌고, 그 콜백이 형제 컴포넌트를
+        // 곧바로 지울 수 있다. 예전에는 생포인터를 들고 돌아, 다음 차례가 풀에 반납된 자리(다른 컴포넌트가 다시 받았으면 엉뚱한 것)를
+        // 지웠다. 지연 파괴(`processDeferredDestruction`)가 핸들로 다시 푸는 것과 같은 이유다.
+        uint32 count{ 0 };
+        for ( const ComponentHandle handle : listToDestroy )
         {
+            Component* pComp = resolveComponent( handle );
+            if ( pComp == nullptr )
+                continue;
             GameObject* pOwner = pComp->getOwner();
-            if ( pOwner != nullptr )
-                pOwner->removeComponent( pComp );
+            if ( pOwner == nullptr )
+                continue;
+            pOwner->removeComponent( pComp );
+            ++count;
         }
         // removeComponent 는 얼려 있으면 미룬다. 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
         processDeferredDestruction();
 
-        const uint32 count = static_cast<uint32>( listToDestroy.size() );
         if ( count > 0 )
             SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
         return count;

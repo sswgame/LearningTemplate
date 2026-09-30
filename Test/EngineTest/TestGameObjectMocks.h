@@ -138,9 +138,10 @@ namespace sw
             return StaticType();
         }
 
-        hashed_string _lastChangedProperty;
-        int32*        _pUnregisterCount{ nullptr }; ///< 해제 콜백 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
-        int32*        _pDestroyCount{ nullptr };
+        hashed_string          _lastChangedProperty;
+        int32*                 _pUnregisterCount{ nullptr }; ///< 해제 콜백 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
+        int32*                 _pDestroyCount{ nullptr };
+        MockCallbackComponent* _pSiblingToRemoveOnUnregister{ nullptr }; ///< 설정되면 해제 콜백이 이 형제를 곧바로 지운다(한 번)
 
         /** @brief 변경된 프로퍼티 이름을 기록합니다. */
         virtual void onPropertyChanged( hashed_string propertyName ) override
@@ -153,6 +154,14 @@ namespace sw
         {
             if ( _pUnregisterCount != nullptr )
                 ++( *_pUnregisterCount );
+            // 모듈 콜백이 형제를 지우는 자리다. 짝이 서로를 지우지 않게 상대의 표시를 먼저 지운다.
+            MockCallbackComponent* pSibling = _pSiblingToRemoveOnUnregister;
+            _pSiblingToRemoveOnUnregister   = nullptr;
+            if ( pSibling != nullptr && getOwner() != nullptr )
+            {
+                pSibling->_pSiblingToRemoveOnUnregister = nullptr;
+                getOwner()->removeComponent( pSibling );
+            }
             Component::onUnregister( manager );
         }
 

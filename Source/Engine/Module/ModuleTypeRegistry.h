@@ -41,9 +41,12 @@ namespace sw
          * @details 모듈보다 오래 사는 엔진 쪽 등록부 넷을 봅니다 — 이벤트 버스(구독과 그 모듈이 만든 채널 항목) · 전역 로그 리스너 · Undo
          *          스택(들어 있으면 통째로 비운다) · 활성 창의 처리기. 에디터가 다는 자리가 이 넷이고, 모듈 코드를 들고 있는 등록부가 늘면
          *          여기에 더합니다. 뗀 것은 경고로 남깁니다 — 모듈이 스스로 떼지 않고 남긴 것이라 모듈 쪽 버그의 실마리입니다.
+         * @param pOutKeepImageMapped 주면, 이 이미지를 **내리면 안 되는지** 받습니다. 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독하면 true —
+         *                            채널의 브로드캐스트 함수와 멀티캐스트의 해제자(`shared_ptr` 제어 블록)가 그 이미지의 코드라, 내리면 다음
+         *                            발행 · 디스패처 소멸이 내려간 코드로 뛴다. 그런 이미지는 프로세스 끝까지 올려 둔다(떼어 낼 방법이 없다).
          * @return 뗀 것의 수(구독 · 리스너 · 버린 명령 · 처리기)입니다. 모듈이 제대로 정리했으면 0 입니다.
          */
-        SW_API uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd );
+        SW_API uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped = nullptr );
 #endif
     } // namespace engine
 } // namespace sw

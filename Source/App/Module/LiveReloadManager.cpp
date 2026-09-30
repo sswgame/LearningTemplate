@@ -162,14 +162,19 @@ namespace sw
 #endif
             }
 
-            /** @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`engine::releaseModuleCode`). 이미지를 내리기 전에 부릅니다. */
-            static void releaseImageCode( string_view moduleName, void* pHandle )
+            /**
+             * @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`engine::releaseModuleCode`). 이미지를 내리기 전에 부릅니다.
+             * @return 이미지를 내리면 안 되면 true 입니다 — 그 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독한다.
+             */
+            static bool releaseImageCode( string_view moduleName, void* pHandle )
             {
                 const void* pBegin{ nullptr };
                 const void* pEnd{ nullptr };
                 if ( pHandle == nullptr || FileUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
-                    return;
-                engine::releaseModuleCode( moduleName, pBegin, pEnd );
+                    return false;
+                bool bKeepMapped{ false };
+                engine::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
+                return bKeepMapped;
             }
 
             static void cleanStaleShadowArtifacts( string_view directoryPath )
@@ -937,6 +942,7 @@ namespace sw
 
         const string previousTempModule = ctx._tempModulePath;
         void*        pPreviousHandle    = ctx._pLibraryModule;
+        bool         bKeepPreviousImage{ false };
 
         BLOCK( "Swap Module Handles" )
         {
@@ -952,7 +958,7 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( ctx._moduleName );
-                LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, pPreviousHandle );
+                bKeepPreviousImage = LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, pPreviousHandle );
             }
 
             ctx._pLibraryModule    = prepared._pHandle;
@@ -995,7 +1001,7 @@ namespace sw
 
             // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
             if ( pPreviousHandle != nullptr )
-                deferImageUnload( ctx._moduleName, pPreviousHandle, previousTempModule );
+                deferImageUnload( ctx._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -1018,8 +1024,8 @@ namespace sw
             EnumRegistrar::getHead()                 = prepared._pPreviousEnumHead;
             sw::ComponentFactoryRegistrar::getHead() = prepared._pPreviousFactoryHead;
             GlobalVariableRegistrar::getHead()       = prepared._pPreviousVariableHead;
-            LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle );
-            FileUtil::unloadDynamicLibrary( prepared._pHandle );
+            if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle ) == false )
+                FileUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
@@ -1047,9 +1053,8 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( ctx._moduleName );
-            LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, ctx._pLibraryModule );
-
-            FileUtil::unloadDynamicLibrary( ctx._pLibraryModule );
+            if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, ctx._pLibraryModule ) == false )
+                FileUtil::unloadDynamicLibrary( ctx._pLibraryModule );
             ctx._pLibraryModule = nullptr;
         }
 
@@ -1057,16 +1062,17 @@ namespace sw
         ctx._tempModulePath.clear();
     }
 
-    void LiveReloadManager::deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath )
+    void LiveReloadManager::deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped )
     {
         if ( pHandle == nullptr )
             return;
 
         DeferredUnloadImage deferredImage{};
-        deferredImage._moduleName = string{ moduleName };
-        deferredImage._tempPath   = string{ tempPath };
-        deferredImage._pHandle    = pHandle;
-        deferredImage._batchId    = _reloadBatchId;
+        deferredImage._moduleName  = string{ moduleName };
+        deferredImage._tempPath    = string{ tempPath };
+        deferredImage._pHandle     = pHandle;
+        deferredImage._batchId     = _reloadBatchId;
+        deferredImage._bKeepMapped = bKeepMapped;
         _listDeferredUnloadImage.push_back( std::move( deferredImage ) );
 
         // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
@@ -1091,6 +1097,13 @@ namespace sw
         for ( size_t imageIndex = batchEnd; imageIndex > 0; --imageIndex )
         {
             const DeferredUnloadImage& deferredImage = _listDeferredUnloadImage[imageIndex - 1];
+            if ( deferredImage._bKeepMapped )
+            {
+                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`engine::releaseModuleCode`). 내리지도, 파일을 지우지도 않는다.
+                SW_LOG_INFO( "Keeping deferred module image %# mapped (batch %#) — an event channel it created is still subscribed", deferredImage._moduleName,
+                             deferredImage._batchId );
+                continue;
+            }
             SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchId, deferredImage._pHandle );
             FileUtil::unloadDynamicLibrary( deferredImage._pHandle );
             LiveReloadManagerInternal::tryDeleteShadowArtifacts( deferredImage._tempPath );

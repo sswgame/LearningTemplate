@@ -140,7 +140,7 @@ namespace sw
         GameObject* getParent() const;
 
         /**
-         * @brief 자식 GameObject 를 `outListChild` 에 채웁니다(비우고 채웁니다). primary SceneComponent 의 자식을 소유한 오브젝트들입니다.
+         * @brief 자식 GameObject 를 `outListChild` 에 채웁니다(비우고 채웁니다). 이 오브젝트의 씬 컴포넌트(소켓 포함)에 primary 가 붙은 오브젝트들입니다.
          * @details 예전에는 값으로 반환했습니다. 부르는 자리마다 벡터 하나였고, 에디터 계층 패널은 "자식이 있나" 를 물으려고
          *          노드마다 프레임마다 그 벡터를 만들었습니다. 있는지만 볼 때는 `hasChildren` 을 씁니다.
          */
@@ -315,6 +315,8 @@ namespace sw
         void destroyOwnedComponent( Component* pComp );
         /** @brief 틱이 끝난 뒤 이 오브젝트에 @p func 를 돌립니다(그때까지 살아 있으면). id 로 다시 찾습니다. */
         void deferOnSelfPostTick( Delegate<void( GameObject& )> func );
+        /** @brief 우리 씬 컴포넌트에 붙은 @p pChildComp 가 자식 오브젝트의 primary 면 그 오브젝트를, 아니면(같은 오브젝트 안의 부착 · 다른 컴포넌트) nullptr 를 반환합니다. */
+        GameObject* findChildObjectAttachedTo( const SceneComponent* pChildComp ) const;
         /**
          * @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고, **바뀌었을 때만** 자기 컴포넌트에 알리고 자식에 전파합니다.
          * @details 자식의 값은 부모의 값과 자기 비트로만 정해지므로, 값이 그대로면 자손도 그대로입니다(부모가 바뀌는 모든 자리 —
@@ -381,8 +383,10 @@ namespace sw
     T* GameObject::addComponent( Args&&... args )
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T> || sizeof( T ) == sizeof( Component ),
-                       "T must declare its own REFLECT_BODY()." );
+        // 멤버가 없는 파생도 예외가 아니다. 예전에는 `sizeof( T ) == sizeof( Component )` 를 통과시켜, REFLECT_BODY 없는 파생이 부모의
+        // TypeInfo 를 물려받았다 — 모듈을 내릴 때 `destroyComponentsOfModule` 은 TypeInfo 의 모듈 이름으로 고르므로 그 인스턴스를 놓쳤고, 그
+        // vtable 은 내려간 이미지를 가리킨 채 씬에 남았다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
+        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY()." );
 
         if ( _pOwnerManager == nullptr )
         {

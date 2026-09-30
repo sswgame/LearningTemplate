@@ -821,3 +821,35 @@ SW_TEST_CASE( GameObjectManagerTest, FactoryBelongsToTheRegisteringModuleNotTheB
     manager.clear();
 }
 #endif
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [GameObjectManagerTest] 모듈 컴포넌트를 걷는 동안 콜백이 형제를 지워도, 지워진 형제를 다시 건드리지 않는다
+ * @details `destroyComponentsOfModule` 은 지울 목록을 **생포인터**로 모은 뒤 차례로 지웠다. 앞 컴포넌트의 해제 콜백(모듈 코드)이 형제를
+ *          곧바로 지우면, 다음 차례가 풀에 반납된 자리(다시 쓰였으면 엉뚱한 컴포넌트)를 지웠다. 지연 파괴처럼 핸들로 다시 푼다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, ModuleSweepSurvivesCallbacksRemovingSiblings )
+{
+    GameObjectManager manager;
+    RegisterMockComponents( manager );
+    GameObject* pOwner = manager.createGameObject( hashed_string( "SweepOwner" ) );
+    SW_ASSERT_NOT_NULL( pOwner );
+    MockCallbackComponent* pFirst  = pOwner->addComponent<MockCallbackComponent>();
+    MockCallbackComponent* pSecond = pOwner->addComponent<MockCallbackComponent>();
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_ASSERT_NOT_NULL( pSecond );
+
+    int32 destroyCount{ 0 };
+    pFirst->_pDestroyCount                 = &destroyCount;
+    pSecond->_pDestroyCount                = &destroyCount;
+    pFirst->_pSiblingToRemoveOnUnregister  = pSecond; // 먼저 지워지는 쪽이 짝을 지운다
+    pSecond->_pSiblingToRemoveOnUnregister = pFirst;
+
+    const hashed_string moduleName = MockCallbackComponent::StaticType()->_moduleName;
+    manager.destroyComponentsOfModule( moduleName.view() );
+
+    SW_EXPECT_EQUAL( 2, destroyCount );
+    SW_EXPECT_TRUE( pOwner->findComponentByTypeName( hashed_string( "MockCallbackComponent" ) ) == nullptr );
+    manager.clear();
+}
+#endif
