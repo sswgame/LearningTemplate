@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -120,7 +121,13 @@ namespace sw
             _bContextBound  = false;
             return;
         }
-        _bStop.store( true, std::memory_order_release );
+        {
+            // 멈춤 표시는 **대기 쪽과 같은 락 안에서** 세운다. 렌더 스레드는 `_mutex` 를 쥔 채 조건(_bStop · 새 패킷)을 보고 잠드는데, 락 밖에서
+            // 세우고 알리면 "조건을 거짓으로 본 뒤 · 실제로 잠들기 전" 틈에 알림이 끼어 사라지고, 렌더 스레드는 영영 자고 아래 join 이 멈춘다
+            // (백엔드 교체 · gv_useRenderThread 토글에서 가장 잘 드러났다).
+            std::scoped_lock<mutex> lock{ _mutex };
+            _bStop.store( true, std::memory_order_release );
+        }
         _cvProduce.notify_all();
         _cvConsume.notify_all();
         _cvIdle.notify_all();
@@ -231,7 +238,12 @@ namespace sw
             }
 
             if ( _bStop.load( std::memory_order_relaxed ) && currentTail == _head.load( std::memory_order_acquire ) )
+            {
+                // 이 스레드가 태스크를 기다리며 받은 도우미 슬롯을 돌려준다. 렌더 스레드는 백엔드 교체 · 토글마다 새로 만들어진다.
+                if ( engine::areEngineServicesBound() )
+                    engine::getTaskManager().releaseCurrentThreadHelperSlot();
                 break;
+            }
 
             // 링 자리에서 그대로 처리한다. 옮겨 오면 링 자리의 저장소가 비어 GT 가 다음에 다시 할당한다. 생산자는
             // tail 이 앞으로 갈 때까지 이 자리를 덮어쓰지 않는다.

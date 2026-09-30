@@ -79,9 +79,15 @@ namespace sw
         TaskNode* pTargetNode = targetTask.getNode();
         if ( _pNode != nullptr && pTargetNode != nullptr && _pNode != pTargetNode )
         {
+            // 의존 수를 **먼저** 올린다. 목록에 붙인 뒤에 올리면, 그 사이에 이 태스크가 끝나 수를 내려 대상이 너무 일찍 돌 수 있다.
             pTargetNode->retain();
-            _pNode->_successors.push_back( pTargetNode );
-            pTargetNode->_unresolvedDependencies.fetch_add( 1, std::memory_order_relaxed );
+            pTargetNode->_unresolvedDependencies.fetch_add( 1, std::memory_order_acq_rel );
+            if ( _pNode->_successors.tryPushBack( pTargetNode ) == false )
+            {
+                // 이 태스크는 이미 끝났다 — 의존은 이미 채워졌다. 올린 수를 되돌린다(대상이 이것만 기다렸다면 여기서 준비된다).
+                pTargetNode->resolveOneDependency();
+                pTargetNode->release();
+            }
         }
         return *this;
     }

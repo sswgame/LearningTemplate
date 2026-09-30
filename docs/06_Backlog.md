@@ -2021,6 +2021,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ⑤ 태스크 · 동시성 — 끝나 가는 태스크에 붙인 후속 유실, 버려진 태스크가 종료를 막음, 병렬 본문이 선행 · 취소를 무시, 렌더 스레드 종료 깨움 유실)
+
+**무엇이 틀렸나 · 고친 것.**
+- **이미 끝나 가는 태스크에 `runBefore` · `whenAll` · `whenAny` 로 후속을 붙이면** 완료 쪽이 후속 목록을 이미 훑은 뒤라 후속이 영영 풀리지
+  않거나(유실 → `waitAll` · 종료 멈춤), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돌았다. 완료 쪽은 잠금 없이 `_count` 를
+  읽었다(데이터 경쟁). → 언리얼 `FGraphEvent` 처럼 완료가 후속 목록을 **닫고**(`closeAndForEach`), `runBefore` 는 의존 수를 **먼저** 올린 뒤
+  붙이고, 닫혀 있으면 "이미 끝남" 으로 보고 되돌린다(`tryPushBack` · `TaskNode::resolveOneDependency`).
+- **만들기만 하고 제출하지 않고 버린 태스크**가 활성 수 · 부모의 자식 수 · 후속을 영영 붙들어 `waitAll` 과 종료가 멈췄다. → 마지막 핸들이 놓일 때
+  한 번도 큐에 들어가지 않았으면 취소로 완료 처리한다. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드는 세대(`_clearEpoch`)로 가려 두 번 빼지 않는다.
+  유효한 핸들이 하나도 없는 `whenAny` 는 빈 목록과 같다(예전엔 트리거 몫을 걸어 두고 트리거를 만들지 않았다).
+- **`emplaceParallel*` 이 만드는 순간 티켓을 올려**, 부모에 건 `runAfter` 와 취소를 본문(청크)이 무시했다. → 티켓은 부모의 의존 수가 0 이 되는
+  순간(제출 + 선행) 올린다(`ParallelGroupLaunch` · `launchParallelGroup`). 취소됐으면 올리지 않는다. 부모 완료는 예전처럼 그룹이 끝난 뒤 제
+  실행 스레드에서 한다(`ParallelParentWithMainAffinityCompletesOnMainOnly` 계약 유지).
+- **병렬 본문이 돕던 태스크를 물려받았다.** 본문에서 만든 태스크가 어느 스레드가 티켓을 가져가느냐에 따라 엉뚱한 태스크의 자식이 됐고, 병렬 본문
+  안에서 도운 일반 태스크는 "병렬 본문 중" 표시를 물려받았다. → 병렬 본문 스코프가 현재 태스크를 비우고, 일반 태스크 본문은 표시를 내린다.
+- **도우미 슬롯을 돌려받지 않았다.** 렌더 스레드를 다시 만들 때마다(백엔드 교체 · 토글) 새 칸을 받아 상한(8)을 넘으면 칸을 나눠 써 스크래치가 겹쳤다.
+  매니저를 다시 만들면 스레드에 캐시된 옛 번호를 그대로 썼다. → `releaseCurrentThreadHelperSlot`(렌더 스레드가 끝날 때 부른다) · 비트마스크로
+  재사용 · 매니저 인스턴스 번호로 옛 캐시를 가린다.
+- **`RenderThread::stop` 이 멈춤 표시를 락 밖에서 세우고 알려**, 렌더 스레드가 조건을 거짓으로 본 뒤 잠들기 직전 틈에 알림이 사라지면 `join` 이
+  영원히 멈췄다(백엔드 교체 · 토글에서 가장 잘 드러남). → 대기 쪽과 같은 락 안에서 세운다.
+- `AssetStreamingQueue::requestAsset` 이 이미 로드된 경로의 콜백을 자기 락을 쥔 채 불러, 콜백이 큐에 다시 물으면 스스로 멈췄다 → 락 밖에서.
+- `MutexReentryGuard` 의 플래그가 헤더 익명 네임스페이스에 있어 번역 단위마다 따로 생겼다(ODR, 교착 감지 옵션을 켰을 때 감지기가 스스로 멈출 수
+  있음) → 클래스의 `static inline thread_local` 하나. 옵션을 켠 컴파일을 따로 확인했다.
+
+**확인.** 새 `TaskManagerTest` 넷(`SuccessorAddedAfterCompletionStillRuns` · `AbandonedTasksDoNotBlockWaitAll` ·
+`ParallelBodyWaitsForPrerequisiteAndHonoursCancel` · `HelperSlotIsRecycledWhenThreadEnds`), 22/22 를 연달아 세 번. 수정 도중 한 번,
+스코프를 "현재 태스크" 를 바꾼 **뒤에** 만들어 끝난 태스크가 스레드의 현재 태스크로 남는 실수로 기존 테스트가 멈췄다 — 그 순서가 주석으로 남아
+있다. App 백엔드 교체(`-gv_rhiSwapAtFrame=30`, 렌더 스레드 정지 · 재시작) 오류 없음. Debug nogpu+린트 28/28, Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ④ Core — 과정렬 할당 짝 불일치, 역행렬 절대 임계값, 자기 참조 컨테이너 · 문자열, 핸들 표 세대, UUID 씨앗)
 
 **무엇이 틀렸나 · 고친 것.**

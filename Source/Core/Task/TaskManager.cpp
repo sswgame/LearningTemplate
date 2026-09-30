@@ -17,8 +17,11 @@ namespace sw
 
     namespace
     {
-        thread_local int32     t_currentWorkerIndex  = -1;      ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
-        thread_local int32     t_helperScratchSlot   = -1;      ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+        thread_local int32  t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
+        thread_local int32  t_helperScratchSlot  = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+        thread_local uint32 t_helperSlotOwnerId  = 0;  ///< 위 번호를 준 매니저의 `_instanceId`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+        /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
+        atomic<uint32>         s_nextInstanceId{ 1 };
         thread_local bool      t_bInsideParallelTask = false;   ///< 지금 병렬 그룹의 본문을 실행 중인지 여부
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 
@@ -60,17 +63,25 @@ namespace sw
         {
             explicit ParallelTaskScope( bool bInside )
                 : _bPrevious{ t_bInsideParallelTask }
+                , _pPreviousRunningTask{ t_pCurrentRunningTask }
             {
                 t_bInsideParallelTask = bInside;
+                // 병렬 본문은 어느 태스크의 본문도 아니다. 예전에는 이 스레드가 **돕고 있던** 태스크를 그대로 물려받아, 본문에서 만든 태스크가
+                // 엉뚱한 태스크의 자식이 됐다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식). 어느 스레드가 티켓을 가져가느냐에 따라
+                // 부모가 달라졌다. 본문에서 만든 태스크는 최상위다.
+                if ( bInside )
+                    t_pCurrentRunningTask = nullptr;
             }
             ~ParallelTaskScope()
             {
                 t_bInsideParallelTask = _bPrevious;
+                t_pCurrentRunningTask = _pPreviousRunningTask;
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
             ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
 
-            bool _bPrevious;
+            bool      _bPrevious;
+            TaskNode* _pPreviousRunningTask;
         };
 
         /** @brief 큐 항목 하나입니다. 태스크 노드 포인터이거나, 태그 비트가 켜진 병렬 그룹 포인터입니다. */
@@ -99,6 +110,9 @@ namespace sw
                 if ( payload._delegate.isBound() )
                     payload._delegate( payload._args );
             }
+
+            /** @brief 병렬 그룹 띄우기는 `executeTask` 가 먼저 가로챈다(매니저가 필요하다). 여기까지 오지 않는다. */
+            void operator()( ParallelGroupLaunch& ) const {}
         };
 
         /** @brief 병렬 그룹을 어떻게 나눌지(청크 크기와 큐에 넣을 티켓 수)입니다. */
@@ -142,6 +156,8 @@ namespace sw
         , _bStop{ false }
         , _listWorkerSlot{}
         , _helperSlotCount{ 0 }
+        , _helperSlotFreeMask{ 0 }
+        , _instanceId{ s_nextInstanceId.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
         , _wakeSignalCount{ 0 }
@@ -154,6 +170,7 @@ namespace sw
         , _queueMainThread{}
         , _arrHelperWaiter{}
         , _activeTaskCount{ 0 }
+        , _clearEpoch{ 0 }
         , _nodePool{ sw::make_unique<TaskNodePool>() }
     {
     }
@@ -273,6 +290,7 @@ namespace sw
             }
         }
         _activeTaskCount.store( 0, std::memory_order_release );
+        _clearEpoch.fetch_add( 1, std::memory_order_acq_rel );
         // 큐를 모두 비웠으니 실행 중인 태스크가 없다. 살아 있는 스테이지를 모두 돌려준다.
         _nodePool->resetAllStages();
         notifyBroadcast();
@@ -325,20 +343,51 @@ namespace sw
     {
         if ( t_currentWorkerIndex >= 0 )
             return static_cast<uint32>( t_currentWorkerIndex );
-        if ( t_helperScratchSlot < 0 )
+        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerId != _instanceId )
         {
+            t_helperSlotOwnerId = _instanceId;
+            // 돌려받은 칸부터 다시 쓴다(가장 낮은 비트).
+            uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
+            while ( freeMask != 0 )
+            {
+                const uint32 lowestBit = freeMask & ( ~freeMask + 1u );
+                if ( _helperSlotFreeMask.compare_exchange_weak( freeMask, freeMask & ~lowestBit, std::memory_order_acq_rel ) )
+                {
+                    uint32 slot = 0;
+                    while ( ( lowestBit >> slot ) != 1u )
+                    {
+                        ++slot;
+                    }
+                    t_helperScratchSlot = static_cast<int32>( slot );
+                    return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
+                }
+            }
+
             const uint32 assigned = _helperSlotCount.fetch_add( 1, std::memory_order_relaxed );
             if ( assigned >= kMaxHelperThreadCount )
             {
-                // 넘치면 마지막 칸을 나눠 쓴다. 스크래치가 겹칠 수 있으니 알린다. 엔진에서는 닿지 않는 수다.
-                // (대기 워드는 나눠 써도 안전하다. 이유 없이 깨어날 뿐이다.)
-                SW_LOG_ERROR( "More than %# non-worker threads execute tasks — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+                // 넘치면 마지막 칸을 나눠 쓴다. 스크래치가 겹칠 수 있으니 알린다. 끝나는 스레드가 칸을 돌려주므로 동시에 살아 있는 비워커 스레드가
+                // 이만큼일 때만 닿는다.
+                SW_LOG_ERROR( "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
                 t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
             }
             else
                 t_helperScratchSlot = static_cast<int32>( assigned );
         }
         return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
+    }
+
+    void TaskManager::releaseCurrentThreadHelperSlot()
+    {
+        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerId != _instanceId )
+            return;
+        // 넘쳐서 나눠 쓰던 마지막 칸은 다른 스레드도 쓰고 있을 수 있어 돌려주지 않는다.
+        const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
+                             t_helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
+        if ( bShared == false )
+            _helperSlotFreeMask.fetch_or( 1u << static_cast<uint32>( t_helperScratchSlot ), std::memory_order_acq_rel );
+        t_helperScratchSlot = -1;
+        t_helperSlotOwnerId = 0;
     }
 
     atomic<uint32>& TaskManager::getWaiterWord( uint32 slotIndex )
@@ -357,6 +406,20 @@ namespace sw
     // ------------------------------------------------------------------------------
     void TaskManager::deallocateNode( TaskNode* pNode )
     {
+        // 한 번도 큐에 들어가지 않고 마지막 핸들이 놓였다 — 만들기만 하고 제출하지 않은 태스크다. 취소된 태스크처럼 완료 처리한다: 활성 수를 내리고
+        // 부모 · 스테이지 · 후속을 푼다. 그러지 않으면 `waitAll` · 부모 · 후속이 영영 기다린다. `clear()` 뒤라면 그 수는 이미 0 으로 놓였으니
+        // 건드리지 않는다.
+        const bool bNeverScheduled = pNode->_bScheduled.load( std::memory_order_acquire ) == false;
+        const bool bSameEpoch      = pNode->_clearEpoch == _clearEpoch.load( std::memory_order_acquire );
+        if ( bNeverScheduled && bSameEpoch )
+        {
+            pNode->_bCancelled.store( true, std::memory_order_release );
+            // 완료 처리가 이 노드의 참조를 잠깐 잡았다 놓을 수 있다(후속이 이 노드를 가리키지는 않는다). 풀로 돌리기 전에 한 번 더 잡아 둔다.
+            pNode->_refCount.store( 1, std::memory_order_relaxed );
+            releaseUnlaunchedGroup( pNode );
+            completeTask( pNode );
+            pNode->_refCount.store( 0, std::memory_order_relaxed );
+        }
         _nodePool->deallocate( pNode );
     }
 
@@ -368,8 +431,9 @@ namespace sw
             return nullptr;
         }
 
-        TaskNode* pNode = _nodePool->allocate();
-        pNode->_pOwner  = this;
+        TaskNode* pNode    = _nodePool->allocate();
+        pNode->_pOwner     = this;
+        pNode->_clearEpoch = _clearEpoch.load( std::memory_order_acquire );
         pNode->setName( name );
         pNode->_affinity = affinity;
 
@@ -429,7 +493,18 @@ namespace sw
 
     TaskHandle TaskManager::whenAny( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
     {
-        if ( listTask.empty() )
+        // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 예전에는 "선행 트리거 몫" 1 을 더해 두고 트리거를 하나도 만들지 않아, 후속이 영영 돌지
+        // 않았고 활성 수가 남아 `waitAll` · 종료가 멈췄다.
+        bool bHasValidTask{ false };
+        for ( const TaskHandle& task : listTask )
+        {
+            if ( task.isValid() )
+            {
+                bHasValidTask = true;
+                break;
+            }
+        }
+        if ( bHasValidTask == false )
             return emplaceTask( "WhenAnyContinuation", continuation, affinity );
 
         shared_ptr<atomic<bool>> firedFlag = sw::make_shared<atomic<bool>>( false );
@@ -463,8 +538,25 @@ namespace sw
     {
         if ( pNode == nullptr )
             return;
-        if ( pNode->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
-            scheduleReadyTask( pNode, bWakeWorker );
+        if ( pNode->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
+            return;
+
+        // 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 모두 채웠다 — 지금 티켓을 올린다. 0 을 보는 스레드는 하나뿐이므로 여기서 꺼내도 안전하다.
+        // 부모는 그룹이 끝나 의존 하나가 더 풀릴 때 큐로 가고, 거기서 제 실행 스레드(메인 지정이면 메인)에서 완료된다.
+        if ( std::holds_alternative<ParallelGroupLaunch>( pNode->_callable ) )
+        {
+            const ParallelGroupLaunch launch = std::get<ParallelGroupLaunch>( pNode->_callable );
+            pNode->_callable                 = std::monostate{};
+            if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false && launch._pGroup != nullptr )
+            {
+                launchParallelGroup( pNode, launch );
+                return;
+            }
+            // 취소됐다 — 본문(청크)은 돌지 않는다. 그룹을 돌려주고 부모는 빈 본문으로 끝낸다.
+            if ( launch._pGroup != nullptr )
+                _nodePool->deallocateGroup( launch._pGroup );
+        }
+        scheduleReadyTask( pNode, bWakeWorker );
     }
 
     void TaskManager::submit( const TaskHandle& handle )
@@ -517,15 +609,11 @@ namespace sw
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
         pGroup->_join.reset();
 
-        // 그룹이 부모를 잡고, 부모는 그룹이 끝나야 준비된다(빌더 의존성 1 + 그룹 의존성 1).
-        TaskNode* pParent = parentTask.getNode();
-        pParent->retain();
-        pParent->_unresolvedDependencies.fetch_add( 1, std::memory_order_relaxed );
-        pGroup->_pParent = pParent;
-
+        // 티켓은 **부모가 실행될 때** 올린다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
+        // 부모는 그룹이 끝나야 완료된다(그룹 = 부모의 자식 몫 하나).
+        TaskNode*    pParent     = parentTask.getNode();
         const uint32 ticketCount = MathUtil::max( split._ticketCount, 1u );
-        pGroup->_join.addPending( ticketCount );
-        pushGroupTickets( pGroup, ticketCount );
+        pParent->_callable       = ParallelGroupLaunch{ pGroup, ticketCount };
 
         return parentTask;
     }
@@ -624,6 +712,29 @@ namespace sw
                     pGroup->_indexBody( elementIndex );
             }
         }
+    }
+
+    void TaskManager::launchParallelGroup( TaskNode* pParent, const ParallelGroupLaunch& launch )
+    {
+        ParallelGroup* pGroup = launch._pGroup;
+        if ( pGroup == nullptr )
+            return;
+        // 그룹이 부모를 잡고(참조 하나), 부모는 그룹이 끝나야 준비된다(의존 하나 — 마지막 티켓이 푼다, `closeGroupTicket`).
+        pParent->retain();
+        pParent->_unresolvedDependencies.fetch_add( 1, std::memory_order_acq_rel );
+        pGroup->_pParent = pParent;
+        pGroup->_join.addPending( launch._ticketCount );
+        pushGroupTickets( pGroup, launch._ticketCount );
+    }
+
+    void TaskManager::releaseUnlaunchedGroup( TaskNode* pNode )
+    {
+        if ( std::holds_alternative<ParallelGroupLaunch>( pNode->_callable ) == false )
+            return;
+        ParallelGroup* pGroup = std::get<ParallelGroupLaunch>( pNode->_callable )._pGroup;
+        pNode->_callable      = std::monostate{};
+        if ( pGroup != nullptr )
+            _nodePool->deallocateGroup( pGroup );
     }
 
     void TaskManager::runGroupTicket( ParallelGroup* pGroup )
@@ -863,8 +974,12 @@ namespace sw
     {
         if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false )
         {
-            TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
-            t_pCurrentRunningTask      = pNode;
+            // 일반 태스크 본문은 병렬 본문이 아니다. 병렬 본문 안에서 기다리다 이 태스크를 도와도 표시를 물려받지 않게 내린다. 스코프는
+            // "지금 실행 중인 태스크" 를 **바꾸기 전에** 만든다 — 끝날 때 그 값을 되돌리므로, 바꾼 뒤에 만들면 끝난 태스크가 이 스레드의
+            // 현재 태스크로 남아 뒤에 만드는 태스크가 그 자식이 된다(영영 끝나지 않는다).
+            const ParallelTaskScope outsideScope{ false };
+            TaskNode*               pPrevRunningTask = t_pCurrentRunningTask;
+            t_pCurrentRunningTask                    = pNode;
 
             BLOCK( "Execute Task Delegate" )
             {
@@ -924,13 +1039,12 @@ namespace sw
 
         BLOCK( "Trigger Successors and Cleanup" )
         {
-            if ( pNode->_successors.isEmptyRelaxed() == false )
+            // 목록을 **닫고** 푼다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
+            // 예전에는 잠금 없이 비었는지만 보고 훑어서, 그 사이에 붙은 후속이 영영 풀리지 않거나 너무 일찍 돌았다.
+            pNode->_successors.closeAndForEach( [this]( TaskNode* pSuccessor )
             {
-                pNode->_successors.forEach( [this]( TaskNode* pSuccessor )
-                {
-                    resolveDependency( pSuccessor, true );
-                } );
-            }
+                resolveDependency( pSuccessor, true );
+            } );
 
             pNode->_callable = std::monostate{};
         }

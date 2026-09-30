@@ -34,12 +34,25 @@ namespace sw
     };
 
     /**
+     * @brief 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 채웠을 때 띄울 그룹입니다.
+     * @details 예전에는 `emplaceParallel*` 이 **만드는 순간** 티켓을 올려, 부모 태스크에 건 `runAfter` 와 취소를 본문(청크)이 무시했습니다
+     *          (README 의 "만들기 → 의존 연결 → 제출" 과 달랐다). 지금은 부모의 의존 수가 0 이 되는 순간 올립니다
+     *          (`TaskManager::resolveDependency` → `launchParallelGroup`). 부모의 완료는 예전처럼 그룹이 끝난 뒤 제 실행 스레드에서 합니다.
+     */
+    struct ParallelGroupLaunch
+    {
+        ParallelGroup* _pGroup{ nullptr };
+        uint32         _ticketCount{ 0 };
+    };
+
+    /**
      * @brief 타입을 지운 태스크 호출 대상 variant 입니다. 병렬 본문은 여기 없고 그룹이 가집니다.
      */
     using TaskCallable = std::variant<
         std::monostate,
         TaskDelegate,
-        TaskArgsPayload>;
+        TaskArgsPayload,
+        ParallelGroupLaunch>;
 
     /**
      * @struct JoinCounter
@@ -183,6 +196,7 @@ namespace sw
         static constexpr uint32 kInlineCapacity = 4;
 
         uint32                        _count{ 0 };
+        bool                          _bClosed{ false }; ///< 이 태스크가 끝나 후속을 이미 풀었다. 더 붙일 수 없다(`tryPushBack` 이 false)
         TaskNode*                     _arrInlineNode[kInlineCapacity]{};
         unique_ptr<vector<TaskNode*>> _pOverflow;
         mutable SpinLock              _lock;
@@ -190,9 +204,20 @@ namespace sw
         void lock() const noexcept { _lock.lock(); }
         void unlock() const noexcept { _lock.unlock(); }
 
-        void push_back( TaskNode* pNode )
+        /**
+         * @brief 후속을 붙입니다. 이 태스크가 이미 끝나 목록이 닫혔으면 붙이지 않고 false 를 돌려줍니다.
+         * @details 예전의 `push_back` 은 닫힘을 몰랐습니다. 끝나 가는 태스크에 `runBefore` · `whenAll` 로 후속을 붙이면, 완료 쪽이 이미 목록을
+         *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돌았습니다.
+         *          언리얼 `FGraphEvent::AddSubsequent` 도 같은 방식(닫힌 목록 = 이미 끝남)입니다.
+         */
+        bool tryPushBack( TaskNode* pNode )
         {
             lock();
+            if ( _bClosed )
+            {
+                unlock();
+                return false;
+            }
             if ( _count < kInlineCapacity )
             {
                 _arrInlineNode[_count++] = pNode;
@@ -205,19 +230,19 @@ namespace sw
                 ++_count;
             }
             unlock();
+            return true;
         }
 
-        /** @brief 비어 있으면 잠금 없이 답합니다. 완료 경로에서 흔한 경우(후속 없음)가 스핀락을 잡지 않게 하려는 것입니다. */
-        bool isEmptyRelaxed() const { return _count == 0; }
-
+        /** @brief 목록을 닫고(이후 `tryPushBack` 은 false) 닫기 전에 붙은 후속마다 func 를 부릅니다. 완료 경로가 한 번 부릅니다. */
         template <typename Func>
-        void forEach( Func&& func ) const
+        void closeAndForEach( Func&& func )
         {
             TaskNode*         arrInlineCopy[kInlineCapacity]{};
             uint32            inlineCopyCount{ 0 };
             vector<TaskNode*> listOverflowCopy;
 
             lock();
+            _bClosed        = true;
             inlineCopyCount = _count < kInlineCapacity ? _count : kInlineCapacity;
             for ( uint32 index = 0; index < inlineCopyCount; ++index )
             {
@@ -255,6 +280,8 @@ namespace sw
         void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
         /** @brief 마지막 참조가 놓이면 소유 매니저의 풀로 돌아갑니다. */
         void release();
+        /** @brief 선행 하나가 채워졌음을 알립니다. 마지막이었으면 소유 매니저가 큐에 넣습니다. */
+        void resolveOneDependency();
 
         /** @brief 디버깅 · 프로파일링용 이름을 정합니다(용량을 넘으면 잘라 담습니다). */
         void setName( [[maybe_unused]] string_view name )
@@ -291,6 +318,7 @@ namespace sw
 
         TaskManager* _pOwner{ nullptr };
         TaskNode*    _pParent{ nullptr }; ///< 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다
+        uint32       _clearEpoch{ 0 };    ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
         /**
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
          * @details 예전에는 "자식 수" 와 "상태 = 자식 대기" 를 따로 두고 seq_cst 로 Dekker 식 순서를 맞췄는데, 본문이 상태를 적고

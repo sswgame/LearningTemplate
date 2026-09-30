@@ -16,6 +16,7 @@ namespace sw
 {
     struct JoinCounter;
     struct ParallelGroup;
+    struct ParallelGroupLaunch;
     struct TaskNode;
 
     class TaskNodePool;
@@ -242,6 +243,12 @@ namespace sw
          *          로더 · 업로드 정도라 넘지 않습니다). 대기자 슬롯(잠드는 워드)도 같은 번호를 씁니다.
          */
         uint32 getCurrentThreadScratchSlot();
+        /**
+         * @brief 이 스레드가 받은 도우미 슬롯을 돌려줍니다. **이 매니저에서 태스크를 기다리던 비워커 스레드가 끝나기 직전에** 부릅니다.
+         * @details 예전에는 슬롯을 돌려받지 않아, 백엔드 교체 · `gv_useRenderThread` 토글로 렌더 스레드를 새로 만들 때마다 새 칸을 받았습니다.
+         *          상한(8)을 넘으면 두 스레드가 마지막 칸을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갔습니다.
+         */
+        void releaseCurrentThreadHelperSlot();
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
@@ -262,7 +269,11 @@ namespace sw
          * @param bWakeWorker false 면 잠든 워커를 깨우지 않습니다(`submitWithoutWake`).
          */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
-        /** @brief 마지막 참조가 놓인 노드를 풀로 돌려줍니다(`TaskNode::release` 가 부릅니다). */
+        /**
+         * @brief 마지막 참조가 놓인 노드를 풀로 돌려줍니다(`TaskNode::release` 가 부릅니다).
+         * @details 만들기만 하고 **제출하지 않은 채** 버려진 태스크(큐에 한 번도 들어가지 않았다)는 취소된 태스크로 완료 처리한 뒤 돌려줍니다.
+         *          예전에는 활성 수 · 부모의 자식 수 · 후속이 영영 풀리지 않아 `waitAll` 과 종료가 멈췄습니다.
+         */
         void deallocateNode( TaskNode* pNode );
 
         // --- 병렬 그룹 ---
@@ -270,6 +281,14 @@ namespace sw
         TaskHandle emplaceParallelGroup( string_view name, uint32 start, uint32 end, const ParallelBlockDelegate* pBlockBody, const ParallelTaskDelegate* pIndexBody, TaskThreadAffinity affinity );
         /** @brief 티켓 @p ticketCount 장을 이 스레드의 큐에 넣고, 그만큼 워커를 깨웁니다. */
         void pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount );
+        /**
+         * @brief 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 채웠을 때 그룹을 띄웁니다: 부모에 그룹 의존 하나를 걸고 티켓을 큐에 올립니다.
+         * @details `resolveDependency` 가 부릅니다(`ParallelGroupLaunch`). 부모가 취소됐으면 띄우지 않고, 한 번도 준비되지 않고 버려지면
+         *          `releaseUnlaunchedGroup` 이 그룹을 돌려줍니다.
+         */
+        void launchParallelGroup( TaskNode* pParent, const ParallelGroupLaunch& launch );
+        /** @brief 띄우지 않은 병렬 그룹이 노드에 남아 있으면 돌려줍니다(취소 · 버려진 부모). */
+        void releaseUnlaunchedGroup( TaskNode* pNode );
         /** @brief 그룹의 청크가 남지 않을 때까지 가져와 실행합니다(티켓을 받은 워커와 호출 스레드가 함께 씁니다). */
         void runGroupChunks( ParallelGroup* pGroup );
         /** @brief 청크 사이에 High 큐를 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
@@ -351,11 +370,13 @@ namespace sw
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
         static constexpr uint32 kMaxWorkerCount = 64;
 
-        bool                           _bInitialized;    ///< 매니저를 초기화했는지 여부
-        std::thread::id                _mainThreadId;    ///< 메인 스레드의 ID
-        atomic<bool>                   _bStop;           ///< 워커 스레드 종료 플래그
-        vector<unique_ptr<WorkerSlot>> _listWorkerSlot;  ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
-        atomic<uint32>                 _helperSlotCount; ///< 지금까지 도우미 슬롯을 받은 비워커 스레드 수
+        bool                           _bInitialized;       ///< 매니저를 초기화했는지 여부
+        std::thread::id                _mainThreadId;       ///< 메인 스레드의 ID
+        atomic<bool>                   _bStop;              ///< 워커 스레드 종료 플래그
+        vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
+        atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 칸은 `_helperSlotFreeMask` 로 다시 쓴다)
+        atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크
+        uint32                         _instanceId;         ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
         /**
          * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
          * @details 예전에는 `_sleepingWorkerCount` 와 조건 변수 하나였습니다. `notify_one` 은 누구를 깨울지 고를 수 없고, 깨어난 워커가
@@ -406,6 +427,11 @@ namespace sw
         WaiterSlot _arrHelperWaiter[kMaxHelperThreadCount];
 
         alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 지금 실행 중이거나 대기 중인 활성 태스크의 총 수
-        unique_ptr<TaskNodePool> _nodePool;            ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
+        /**
+         * @brief `clear()` 가 활성 수를 0 으로 놓을 때마다 올리는 세대입니다. 노드는 만들 때의 값을 적어 둡니다(`TaskNode::_clearEpoch`).
+         * @details 그 전에 만든 노드가 나중에 버려져도 이미 0 으로 놓은 수를 한 번 더 내리지 않게 가립니다(내리면 0xFFFFFFFF 로 돌아 `waitAll` 이 멈춘다).
+         */
+        atomic<uint32>           _clearEpoch;
+        unique_ptr<TaskNodePool> _nodePool; ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
     };
 } // namespace sw

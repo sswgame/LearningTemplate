@@ -55,36 +55,32 @@ namespace sw
 namespace sw
 {
 #if defined( SW_ENABLE_DEADLOCK_DETECTION )
-    namespace
-    {
-        struct MutexReentryGuardInternal
-        {
-            static bool& flag()
-            {
-                static thread_local bool t_bInHook = false;
-                return t_bInHook;
-            }
-        };
-    } // namespace
-
     struct MutexReentryGuard
     {
         MutexReentryGuard()
-            : _bEntered{ MutexReentryGuardInternal::flag() == false }
+            : _bEntered{ _s_bInHook == false }
         {
             if ( _bEntered )
-                MutexReentryGuardInternal::flag() = true;
+                _s_bInHook = true;
         }
 
         ~MutexReentryGuard()
         {
             if ( _bEntered )
-                MutexReentryGuardInternal::flag() = false;
+                _s_bInHook = false;
         }
 
         explicit operator bool() const { return _bEntered; }
 
         bool _bEntered;
+
+    private:
+        /**
+         * @brief 이 스레드가 지금 교착 감지 훅 안인지입니다. **프로그램(모듈)에 하나**여야 합니다.
+         * @details 예전에는 헤더의 익명 네임스페이스에 있어 번역 단위마다 따로 생겼습니다(ODR 위반). 인라인되면 감지기 파일(`DeadlockDetector.cpp`)
+         *          의 플래그가 부른 쪽 것과 달라, 감지기 자신의 `_mutex` 가 훅을 다시 타 방금 잡은 락을 또 잡으려다 스스로 멈출 수 있었습니다.
+         */
+        static inline thread_local bool _s_bInHook{ false };
     };
 
     inline void mutex::notifyLockAttempt()

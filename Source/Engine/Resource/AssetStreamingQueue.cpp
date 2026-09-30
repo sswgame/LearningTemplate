@@ -63,18 +63,25 @@ namespace sw
 
         const string pathStr = string( assetPath );
 
-        std::scoped_lock<mutex> lock{ _mutex };
-
         // **성공한 것만** 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다.
         // 예전에는 키가 있기만 하면 `true` 를 반환했고, 그래서 한 번 실패한 경로는 영영 실패였다.
         // (아직 굽지 않은 셰이더, 늦게 마운트되는 팩. 한 번 빗나가면 다시는 보지 않았다.)
-        const auto itResult = _mapAssetResult.find( pathStr );
-        if ( itResult != _mapAssetResult.end() && itResult->second )
+        // 콜백은 **락 밖에서** 부른다. 예전에는 락을 쥔 채 불러, 콜백이 이 큐에 다시 물으면(`isLoaded` · `requestAsset`) 같은 뮤텍스에
+        // 재진입해 스레드가 스스로 멈췄다. 비동기 완료(`update`)는 처음부터 락 밖에서 부르고 있었다.
+        bool bAlreadyLoaded{ false };
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            const auto              itResult = _mapAssetResult.find( pathStr );
+            bAlreadyLoaded                   = ( itResult != _mapAssetResult.end() && itResult->second );
+        }
+        if ( bAlreadyLoaded )
         {
             if ( onComplete.isBound() )
                 onComplete( pathStr, true );
             return true;
         }
+
+        std::scoped_lock<mutex> lock{ _mutex };
 
         if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
         {

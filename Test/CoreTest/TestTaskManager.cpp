@@ -767,3 +767,151 @@ SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
 
     manager.shutdown();
 }
+
+/**
+ * @brief [TaskManagerTest] 이미 끝난 태스크에 `runBefore` · `whenAll` · `whenAny` 로 후속을 붙여도 후속은 돈다(유실 없음).
+ * @details 예전에는 완료 쪽이 후속 목록을 훑고 난 뒤 붙은 후속이 영영 풀리지 않아 `waitAll` 과 종료가 멈췄다. 끝난 태스크의 목록은 닫혀
+ *          있고, 붙이려는 쪽은 "이미 끝남" 을 듣고 의존을 되돌린다(언리얼 FGraphEvent 와 같다).
+ */
+SW_TEST_CASE( TaskManagerTest, SuccessorAddedAfterCompletionStillRuns )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::TaskHandle first = manager.emplaceTask( "First", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+    first.submit();
+    SW_ASSERT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_ASSERT_TRUE( first.isCompleted() );
+
+    sw::atomic<int32> ranCount{ 0 };
+    sw::TaskHandle    late = manager.emplaceTask( "Late", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+       {
+        ranCount.fetch_add( 1 );
+    } ) );
+    first.runBefore( late );
+    late.submit();
+
+    sw::vector<sw::TaskHandle> listDone{ first };
+    sw::TaskHandle             all = manager.whenAll( listDone, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+                {
+        ranCount.fetch_add( 1 );
+    } ) );
+    all.submit();
+    sw::TaskHandle any = manager.whenAny( listDone, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+    {
+        ranCount.fetch_add( 1 );
+    } ) );
+    any.submit();
+
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "끝난 태스크에 붙인 후속이 풀리지 않았습니다" );
+    SW_EXPECT_EQUAL( 3, ranCount.load() );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 유효한 핸들이 하나도 없는 `whenAny`, 만들기만 하고 제출하지 않고 버린 태스크가 `waitAll` 을 막지 않는다.
+ */
+SW_TEST_CASE( TaskManagerTest, AbandonedTasksDoNotBlockWaitAll )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> ranCount{ 0 };
+    {
+        sw::vector<sw::TaskHandle> listInvalid{ sw::TaskHandle{}, sw::TaskHandle{} };
+        sw::TaskHandle             any = manager.whenAny( listInvalid, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+                    {
+            ranCount.fetch_add( 1 );
+        } ) );
+        any.submit();
+    }
+    {
+        // 만들고 선행까지 걸었지만 제출하지 않고 핸들을 버린다. 후속(제출됨)은 버려진 선행을 "취소로 끝남" 으로 보고 돈다.
+        sw::TaskHandle abandoned = manager.emplaceTask( "Abandoned", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+        {
+            ranCount.fetch_add( 100 );
+        } ) );
+        sw::TaskHandle follower  = manager.emplaceTask( "Follower", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+         {
+            ranCount.fetch_add( 1 );
+        } ) );
+        abandoned.runBefore( follower );
+        follower.submit();
+    }
+
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "버려진 태스크가 waitAll 을 막았습니다" );
+    SW_EXPECT_EQUAL( 2, ranCount.load() );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 병렬 그룹의 본문(청크)은 부모에 건 `runAfter` 를 기다리고, 취소하면 돌지 않는다.
+ * @details 예전에는 `emplaceParallel` 이 만드는 순간 티켓을 올려, 본문이 선행보다 먼저 돌고 취소도 듣지 않았다.
+ */
+SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<bool>  bPrerequisiteDone{ false };
+    sw::atomic<int32> earlyChunkCount{ 0 };
+    sw::atomic<int32> chunkCount{ 0 };
+
+    sw::TaskHandle prerequisite = manager.emplaceTask( "Prerequisite", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bPrerequisiteDone]()
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
+        bPrerequisiteDone.store( true, std::memory_order_release );
+    } ) );
+    sw::TaskHandle group        = manager.emplaceParallel( "GatedGroup", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&bPrerequisiteDone, &earlyChunkCount, &chunkCount]( uint32 )
+           {
+        if ( bPrerequisiteDone.load( std::memory_order_acquire ) == false )
+            earlyChunkCount.fetch_add( 1 );
+        chunkCount.fetch_add( 1 );
+    } ) );
+    group.runAfter( prerequisite );
+    group.submit();
+    prerequisite.submit();
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( 0, earlyChunkCount.load() );
+    SW_EXPECT_EQUAL( 256, chunkCount.load() );
+
+    sw::atomic<int32> cancelledChunkCount{ 0 };
+    sw::TaskHandle    cancelled = manager.emplaceParallel( "CancelledGroup", 64, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&cancelledChunkCount]( uint32 )
+       {
+        cancelledChunkCount.fetch_add( 1 );
+    } ) );
+    cancelled.cancel();
+    cancelled.submit();
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( 0, cancelledChunkCount.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 끝나는 비워커 스레드가 돌려준 도우미 슬롯을 다음 스레드가 다시 쓴다.
+ * @details 예전에는 돌려받지 않아, 렌더 스레드를 다시 만들 때마다 새 칸을 받았고 상한(8)을 넘으면 칸을 나눠 써 스크래치가 겹쳤다.
+ */
+SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    const uint32 helperLimit = manager.getScratchSlotCount();
+    uint32       firstSlot   = ~0u;
+    for ( uint32 threadIndex = 0; threadIndex < 20; ++threadIndex )
+    {
+        uint32      slot = ~0u;
+        std::thread helper( [&manager, &slot]()
+        {
+            slot = manager.getCurrentThreadScratchSlot();
+            manager.releaseCurrentThreadHelperSlot();
+        } );
+        helper.join();
+        SW_EXPECT_TRUE( slot < helperLimit );
+        if ( threadIndex == 0 )
+            firstSlot = slot;
+        SW_EXPECT_EQUAL( firstSlot, slot );
+    }
+    manager.shutdown();
+}

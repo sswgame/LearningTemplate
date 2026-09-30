@@ -28,8 +28,17 @@ namespace sw
             }
             _pOverflow.reset();
         }
-        _count = 0;
+        _count   = 0;
+        _bClosed = false;
         unlock();
+    }
+
+    void TaskNode::resolveOneDependency()
+    {
+        if ( _pOwner != nullptr )
+            _pOwner->resolveDependency( this, true );
+        else
+            _unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
     void TaskNode::release()
