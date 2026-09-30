@@ -2021,6 +2021,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ① — 포맷이 고정 버전이 아닌 clang-format 으로 돌고 있었다, 그리고 `common` 이 `setup` 을 거꾸로 불렀다)
+
+Scripts 구조 정리의 첫 자리다(09-14 두 회차 뒤로 쌓인 것을 다시 쟀다: 폴더 사이 import 방향 · 파이썬 6 줄 창 중복 · README 와 실제 목록).
+
+**import 방향에서 역방향이 하나였다.** 모든 폴더가 `common` 만 보는데 `common/Host.py` 의 `resolveClangFormat` 이 **함수 안에서** `setup.SetupLlvm` 을
+import 하고 있었다(순환을 피하려는 늦은 import). 그리고 그 함수가 버그였다:
+
+| | 포맷을 돌리는 쪽(`Host.resolveClangFormat` — `FormatModified` · 커밋 훅 · `RunClangFormat`) | 설치하는 쪽(`SetupLlvm.findClangFormatPath`) |
+| --- | --- | --- |
+| 1 | toolchain 의 `llvm_path/bin` — **버전 확인 없음** | 주어진 LLVM 경로 — 고정 버전일 때만 |
+| 2 | PATH | `Tools/LLVM/bin` — 고정 버전일 때만 |
+| 3 | (그제야) 설치하는 쪽 규칙 | 없으면 PyPI 휠 설치, 그래도 없으면 경고와 함께 아무 것 |
+
+이 PC 는 toolchain 이 시스템 LLVM(`C:/Utility/LLVM`, **21.1.1**)을 가리켜서, 고정본 **20.1.8** 이 `Tools/LLVM/bin` 에 설치돼 있는데도 포맷 · 커밋 훅이 21 로
+돌았다. 설치 쪽 주석이 경고하는 바로 그 일("버전이 다르면 두 PC 의 커밋이 서로를 되돌린다")이다.
+
+**고친 것.** clang-format 을 찾고 · 버전을 확인하고 · 설치하는 코드를 `setup/SetupLlvm.py` 에서 **`common/ClangFormat.py`** 로 옮겼다. `resolveClangFormat` 은
+toolchain 의 LLVM 경로를 넘겨 `ensureClangFormat` 과 같은 규칙을 쓴다. `SetupLlvm` · `SetupEnvironment` 는 `common` 에서 가져온다 — 역방향 import 가 없어졌다.
+덤으로 `SetupLlvm` 의 쓰지 않게 된 import 넷과 원래 안 쓰던 `Iterable`, bin 가지치기의 겹친 조건(`== "clang-format"` 은 `startswith("clang-format")` 에 포함) 하나.
+
+**확인.** 이제 `resolveClangFormat()` 은 `Tools/LLVM/bin/clang-format.exe`(20.1.8)다. 고정본으로 C++ 1064 파일을 `--dry-run --Werror` 로 훑어 **위반 0** —
+이번 세션에 21 로 포맷한 파일도 20 과 결과가 같아 다시 포맷할 것은 없다. Python 게이트 둘 통과, 이 커밋의 훅이 새 경로로 돈다.
+
 ### 2026-09-30 (`vector_reference<T>` — span 을 코드에서 부르는 이름)
 
 바로 앞 회차의 `sw::span` 은 표준과 같은 이름이라 옮기기는 쉽지만 이름만 보고 무엇을 받는지 읽히지 않는다(사용자 지적). `span.h` 끝에

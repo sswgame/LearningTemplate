@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from .Config import loadToolchainConfig
-from .Constants import kCppAllExtensions, kKeyLlvmPath
+from .ClangFormat import resolveClangFormat
+from .Constants import kCppAllExtensions
 from .Parallel import runUntilNonZero
 from .Paths import getProjectRoot, normalizePath
 
@@ -145,31 +145,6 @@ def getModifiedCppFiles(root: Path | None = None,
 
     return sorted(fileSet)
 
-
-def resolveClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
-    """
-    clang-format 실행 파일 경로를 찾습니다. **저장소가 들고 있는 것을 먼저 씁니다.**
-
-    예전에는 시스템 PATH 를 먼저 봤습니다. 그러면 PC 마다 다른 버전이 잡혀 **같은 파일이 서로 다르게
-    포맷됩니다.** 실제로 겪었습니다 — 한쪽에서 커밋한 줄을 다른 쪽 pre-commit 훅이 거부하고, 고쳐서
-    올리면 원래 PC 가 다시 되돌리는 왕복이 생겼습니다(이어붙인 줄의 정렬 칸 수가 달랐습니다).
-    `.clang-format` 은 규칙만 고정하지 **도구 버전은 고정하지 못합니다.** 그래서 순서를 뒤집어
-    toolchain_config.json → Tools/LLVM/bin 을 먼저 보고, 없을 때만 PATH 로 갑니다.
-    """
-    from setup.SetupLlvm import ensureClangFormat
-
-    if not llvmPath:
-        toolchain = loadToolchainConfig()
-        llvmPath = str(toolchain.get(kKeyLlvmPath, "") or "")
-
-    if llvmPath:
-        localPath = Path(llvmPath) / "bin" / ("clang-format.exe" if os.name == "nt" else "clang-format")
-        if localPath.is_file():
-            return normalizePath(str(localPath))
-
-    if foundPath := shutil.which("clang-format"):
-        return normalizePath(foundPath)
-    return ensureClangFormat(llvmPath, allowDownload=allowDownload)
 
 
 def runClangFormatBatch(files: Sequence[Path | str],

@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
     autoBootstrapEnabled,
+    ensureClangFormat,
     getOrFindCached,
     getProjectRoot,
     isVcpkgRoot,
@@ -155,8 +156,6 @@ class EnvironmentSetupManager:
             self.existing_config, kKeyLibclangDllPath, findLibClangDllPath, llvmPath
         )
         if llvmPath:
-            from setup.SetupLlvm import ensureClangFormat
-
             self.safeCallInternal("EnsureClangFormat", ensureClangFormat, llvmPath, allowDownload=True)
         return llvmPath, libclangPath
 
