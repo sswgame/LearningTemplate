@@ -10,6 +10,7 @@
 #include "Core/Log/ILogOutput.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -34,6 +35,9 @@ namespace sw
         /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
 
+        /// @brief 이 스레드가 지금 리스너를 부르는 중인 방송 깊이입니다(리스너 안에서 또 로그를 쓰면 겹친다). 떼기가 자기 자신을 기다리지 않게 한다.
+        thread_local uint32 t_broadcastDepth{ 0 };
+
     } // namespace
 
     Logger::Logger()
@@ -51,6 +55,8 @@ namespace sw
         , _cachedMonth{ 0 }
         , _cachedDay{ 0 }
         , _cachedHour{ 0 }
+        , _arrBroadcastInFlight{}
+        , _broadcastEpoch{ 0 }
         , _bIsRunning{ false }
         , _bInitialized{ false }
         , _arrCachedDateStr{}
@@ -141,14 +147,83 @@ namespace sw
      */
     void Logger::removeLogWrittenListener( const DelegateHandle& handle )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        _onLogWritten.remove( handle );
+        uint32 retiredSlot{ 0 };
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _onLogWritten.remove( handle );
+            retiredSlot = retireBroadcastSlot();
+        }
+        waitForRetiredBroadcasts( retiredSlot );
     }
 
     uint32 Logger::releaseListenerCodeWithin( const void* pBegin, const void* pEnd )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        return _onLogWritten.removeCodeWithin( pBegin, pEnd );
+        // 모듈을 내리기 직전에 불린다. 다른 스레드의 방송이 그 모듈 코드 안에 있는 채로 이미지를 내리면 안 된다 — 끝날 때까지 기다린다.
+        uint32 releasedCount{ 0 };
+        uint32 retiredSlot{ 0 };
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            releasedCount = _onLogWritten.removeCodeWithin( pBegin, pEnd );
+            retiredSlot   = retireBroadcastSlot();
+        }
+        waitForRetiredBroadcasts( retiredSlot );
+        return releasedCount;
+    }
+
+    uint32 Logger::retireBroadcastSlot()
+    {
+        const uint32 retiredSlot = _broadcastEpoch & 1u;
+        ++_broadcastEpoch;
+        return retiredSlot;
+    }
+
+    void Logger::waitForRetiredBroadcasts( uint32 retiredSlot )
+    {
+        if ( t_broadcastDepth > 0 )
+            return;
+
+        const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+        while ( _arrBroadcastInFlight[retiredSlot].load( std::memory_order_acquire ) != 0 )
+        {
+            if ( std::chrono::steady_clock::now() > deadline )
+            {
+                std::fputs( "[Logger] Timed out waiting for in-flight log broadcasts after removing a listener\n", stderr );
+                return;
+            }
+            std::this_thread::yield();
+        }
+    }
+
+    void Logger::flushForCrash()
+    {
+        // 크래시 경로다. 로거 락을 쥔 채 죽은 스레드가 있으면 기다리지 않고 포기한다.
+        ILogOutput* arrDevice[_s_kMaxOutput]{};
+        uint32      deviceCount{ 0 };
+        if ( _mutex.try_lock() == false )
+            return;
+        for ( unique_ptr<ILogOutput>& output : _listOutput )
+        {
+            if ( output != nullptr && deviceCount < SW_COUNT_OF( arrDevice ) )
+                arrDevice[deviceCount++] = output.get();
+        }
+        _mutex.unlock();
+
+        // 큐는 여러 스레드가 함께 꺼내도 되는 큐다. 작업 스레드가 동시에 꺼내도 한 줄은 한 번만 쓰인다.
+        LogRecord record;
+        while ( _queue.dequeue( record ) )
+        {
+            for ( uint32 index = 0; index < deviceCount; ++index )
+                arrDevice[index]->write( record );
+        }
+        for ( uint32 index = 0; index < deviceCount; ++index )
+            arrDevice[index]->flushWithoutWaiting();
+    }
+
+    void Logger::flushGlobalForCrash()
+    {
+        ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
+        if ( pSink != nullptr )
+            pSink->flushForCrash();
     }
 
     void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
@@ -284,6 +359,8 @@ namespace sw
 
     void Logger::workerLoop()
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
         {
             LogRecord record;
@@ -412,19 +489,23 @@ namespace sw
             pFormattedBuffer = fallbackUtf8.c_str();
         }
 
-        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)를 스냅샷으로 복사한 뒤 락 밖에서 알린다
+        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)를 스냅샷으로 복사한 뒤 락 밖에서 알린다. 복사한 세대 칸에 "부르는 중" 을
+        //        올려 두어, 떼기가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`).
         LogWrittenMulticast listenersCopy;
         bool                bHasListeners{ false };
+        uint32              broadcastSlot{ 0 };
         {
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _onLogWritten.isBound() )
             {
                 listenersCopy = _onLogWritten;
                 bHasListeners = true;
+                broadcastSlot = _broadcastEpoch & 1u;
+                _arrBroadcastInFlight[broadcastSlot].fetch_add( 1, std::memory_order_acq_rel );
             }
         }
 
-        if ( bHasListeners && listenersCopy.isBound() )
+        if ( bHasListeners )
         {
             LogEntry entry;
             entry._level     = level;
@@ -434,7 +515,10 @@ namespace sw
             entry._file      = pEffectiveFile;
             entry._line      = line;
             entry._timeStamp = dateStr.c_str();
+            ++t_broadcastDepth;
             listenersCopy.broadcast( entry );
+            --t_broadcastDepth;
+            _arrBroadcastInFlight[broadcastSlot].fetch_sub( 1, std::memory_order_acq_rel );
         }
 
         // 5단계: 비동기 I/O 큐에 넣는다(초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다)
@@ -460,6 +544,11 @@ namespace sw
         }
 
         _cv.notify_one();
+
+        // 위의 "실행 중" 확인과 넣기 사이에 종료가 시작됐으면, 작업 스레드는 이미 큐를 마지막으로 비우고 끝났을 수 있다 — 그러면 이 줄은
+        // 큐에 영영 남는다. 여기서 직접 비운다(장치가 이미 닫혔으면 장치가 조용히 버린다).
+        if ( _bIsRunning.load( std::memory_order_acquire ) == false )
+            flushQueue();
     }
 
 } // namespace sw

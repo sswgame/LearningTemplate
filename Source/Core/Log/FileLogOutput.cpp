@@ -88,4 +88,14 @@ namespace sw
         if ( record._level == LogLevel::Error )
             std::fflush( _pFile );
     }
+
+    void FileLogOutput::flushWithoutWaiting()
+    {
+        // Warning 이하는 stdio 버퍼에 머문다(줄마다 fflush 하면 느리다). 크래시로 끝나면 그 버퍼가 사라진다 — 여기서 내보낸다.
+        if ( _mutex.try_lock() == false )
+            return;
+        if ( _pFile != nullptr )
+            std::fflush( _pFile );
+        _mutex.unlock();
+    }
 } // namespace sw

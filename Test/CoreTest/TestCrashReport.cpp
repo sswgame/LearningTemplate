@@ -1,10 +1,15 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <cstdlib>
 
 // ------------------------------------------------------------------------------
 // 1) CrashReport — 크래시 경로에서 **할당 없이** 미리 담아 둔 컨텍스트와, 세 플랫폼이 함께 쓰는 리포트 본문
@@ -20,6 +25,33 @@ namespace
         sw::FileUtil::ensureDirectoryExists( folder );
         sw::setCrashReportFolder( folder );
         return folder;
+    }
+
+    /** @brief 자식 프로세스가 물려받을 환경 변수를 정합니다. @p pValue 가 nullptr 이면 지웁니다. */
+    void setEnvironmentValueInternal( const utf8* pName, const utf8* pValue )
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        SetEnvironmentVariableA( pName, pValue );
+#else
+        if ( pValue != nullptr )
+            setenv( pName, pValue, 1 );
+        else
+            unsetenv( pName );
+#endif
+    }
+
+    /** @brief @p folder 에서 이름이 @p suffix 로 끝나는 첫 파일을 찾습니다. 없으면 빈 문자열입니다. */
+    sw::string findReportFileInternal( const sw::string& folder, sw::string_view suffix )
+    {
+        sw::vector<sw::string> listFile;
+        sw::FileUtil::collectFiles( folder, "", listFile, false );
+        for ( const sw::string& filePath : listFile )
+        {
+            const sw::string_view pathView{ filePath.c_str(), filePath.size() };
+            if ( pathView.size() >= suffix.size() && pathView.substr( pathView.size() - suffix.size() ) == suffix )
+                return filePath;
+        }
+        return {};
     }
 
     /** @brief 세션 ID 로 만들어지는 리포트 파일 하나를 읽습니다. */
@@ -150,4 +182,98 @@ SW_TEST_CASE( CrashReportTest, SessionIdIsStableAndAppearsInReportPaths )
     SW_EXPECT_TRUE( path.find( folder ) != sw::string::npos );
     SW_EXPECT_TRUE( path.find( pFirst ) != sw::string::npos );
     SW_EXPECT_TRUE( path.find( ".dmp" ) != sw::string::npos );
+}
+
+// ------------------------------------------------------------------------------
+// 2) 진짜 크래시 — 이 실행 파일을 자식으로 띄워 죽게 하고, 리포트가 남았는지 본다
+//    크래시 핸들러는 크래시가 나야만 돈다. 조각을 직접 부르는 위 테스트로는 "그 방식으로 죽으면 핸들러에 들어오기는 하는가 · 들어와서
+//    쓸 스택이 남아 있는가" 를 볼 수 없다. 실측으로 스택 오버플로(덤프 0 바이트)와 abort · 순수 가상 호출(필터 미진입)이 그렇게 새고 있었다.
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [CrashReportTest] 자식 프로세스 역할: 환경 변수가 시키는 방식으로 죽는다. 그냥 실행하면 건너뛴다.
+ * @details 따로 스위트를 두지 않는다 — 이 케이스만 있는 스위트는 평소 실행에서 "모든 케이스가 건너뜀" 이 되어 실패로 친다.
+ */
+SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
+{
+    const utf8* pKind   = std::getenv( "SW_CRASH_CHILD_KIND" );
+    const utf8* pFolder = std::getenv( "SW_CRASH_CHILD_FOLDER" );
+    if ( pKind == nullptr || pFolder == nullptr )
+        SW_TEST_SKIP( "crash child only — EveryCrashKindLeavesAReport launches it" );
+
+    sw::setCrashReportFolder( pFolder );
+#if defined( SW_PLATFORM_WINDOWS )
+    // 오류 보고 창이 떠서 부모가 기다리지 않게 한다(핸들러가 처리하면 원래 뜨지 않는다 — 처리하지 못했을 때를 위한 것).
+    SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );
+#endif
+    sw::CrashHandler::crashForTest( static_cast<sw::CrashTestKind>( std::atoi( pKind ) ) );
+    SW_EXPECT_TRUE_MSG( false, "crashForTest returned instead of crashing" );
+}
+
+/**
+ * @brief [CrashReportTest] 죽는 방식마다(접근 위반 · 스택 오버플로 · 작업 스레드 스택 오버플로 · abort · 순수 가상 호출) 리포트가 남는다.
+ * @details 자식이 죽은 뒤 리포트 폴더에 콜 스택 파일이 있어야 하고, Windows 는 미니덤프도 비어 있지 않아야 한다. 예전에는
+ *          - 스택 오버플로: 필터에 들어오지만 넘친 스택에서 다시 넘쳐 덤프가 0 바이트였다(Windows). 작업 스레드에는 대체 스택이 없었다(POSIX).
+ *          - abort · 순수 가상 호출: CRT 가 `__fastfail` 로 끝내 필터에 아예 들어오지 않았다(Windows).
+ */
+SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
+{
+#if defined( SW_SANITIZER_ADDRESS )
+    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+#endif
+
+    struct CrashCase
+    {
+        sw::CrashTestKind _kind;
+        const utf8*       _pName;
+    };
+    const CrashCase arrCase[] = {
+        {    sw::CrashTestKind::AccessViolation,      "access-violation"},
+        {      sw::CrashTestKind::StackOverflow,        "stack-overflow"},
+        {sw::CrashTestKind::WorkerStackOverflow, "worker-stack-overflow"},
+        {              sw::CrashTestKind::Abort,                 "abort"},
+        {    sw::CrashTestKind::PureVirtualCall,     "pure-virtual-call"},
+    };
+
+    const sw::string executablePath = sw::FileUtil::getExecutablePath();
+    SW_ASSERT_FALSE( executablePath.empty() );
+
+    for ( const CrashCase& crashCase : arrCase )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> folderName;
+        folderName.append( "SwCrashChild_" ).append( crashCase._pName );
+        const sw::string folder = test::makeTempPath( folderName.view() );
+        sw::FileUtil::removeDirectory( folder );
+        sw::FileUtil::ensureDirectoryExists( folder );
+
+        sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
+        kindText.append( static_cast<int32>( crashCase._kind ) );
+        setEnvironmentValueInternal( "SW_CRASH_CHILD_KIND", kindText.c_str() );
+        setEnvironmentValueInternal( "SW_CRASH_CHILD_FOLDER", folder.c_str() );
+
+        sw::StringBuilder<sw::constant::kMaxPathSize> command;
+        command.append( '"' ).append( executablePath.c_str() ).append( "\" --test_filter=CrashReportTest.ChildProcessCrashesAsRequested" );
+        sw::ProcessOptions options;
+        options._workingDirectory = sw::FileUtil::getCurrentPath();
+        const int32 exitCode      = sw::Process::execute( command.view(), options );
+
+        setEnvironmentValueInternal( "SW_CRASH_CHILD_KIND", nullptr );
+        setEnvironmentValueInternal( "SW_CRASH_CHILD_FOLDER", nullptr );
+
+        SW_EXPECT_TRUE_MSG( exitCode != 0, crashCase._pName );
+
+        const sw::string stackPath = findReportFileInternal( folder, "stack.txt" );
+        SW_EXPECT_TRUE_MSG( stackPath.empty() == false, crashCase._pName );
+        if ( stackPath.empty() == false )
+        {
+            sw::string stackText;
+            SW_EXPECT_TRUE( sw::FileUtil::readTextFile( stackPath, stackText ) );
+            SW_EXPECT_TRUE_MSG( stackText.find( "CRASH" ) != sw::string::npos, crashCase._pName );
+        }
+#if defined( SW_PLATFORM_WINDOWS )
+        const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
+        SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0, crashCase._pName );
+#endif
+        sw::FileUtil::removeDirectory( folder );
+    }
 }

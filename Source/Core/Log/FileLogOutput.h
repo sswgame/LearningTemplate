@@ -36,6 +36,7 @@ namespace sw
         void close() override;
         /** @brief 시각이 바뀌었으면 파일을 새로 연 뒤 한 줄을 씁니다. */
         void write( const LogRecord& record ) override;
+        void flushWithoutWaiting() override;
 
         /** @brief 로그 파일이 있는 폴더 경로입니다. `open` 전에는 비어 있습니다. */
         const string& getLogFolderPath() const { return _logFolderPath; }

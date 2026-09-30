@@ -2021,6 +2021,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ③ 크래시 보고 — 스택 오버플로 · abort · 순수 가상 호출로 죽으면 아무것도 남지 않았다, 크래시 직전 로그 유실)
+
+**무엇이 틀렸나(실측).** 엔진 핸들러와 같은 모양의 탐침 프로그램으로 죽는 방식마다 재 봤다.
+- **스택 오버플로**(메인 · 작업 스레드): 필터에 들어오지만 넘친 스택 위에서 다시 넘쳐 **덤프 0 바이트**. POSIX 는 `sigaltstack` 을
+  `initialize` 를 부른 스레드 하나에만 깔아, 작업 · 렌더 스레드의 오버플로는 기록 없이 죽었다(`sigaltstack` 은 스레드마다다).
+- **`std::abort()` · 순수 가상 호출**(잘못된 CRT 인자도 같은 길): CRT 가 `__fastfail` 로 끝내 **예외 필터를 아예 타지 않았다**(종료 코드
+  0xC0000409). 엔진의 치명 경로가 "로그 + std::abort" 라 가장 흔한 죽음이 가장 기록이 없었다.
+- 크래시 리포트의 `SW_LOG_ERROR` 는 비동기 큐에 넣기만 하고 프로세스가 끝나, **크래시 직전의 경고 · 정보 줄과 파일 stdio 버퍼가 사라졌다.**
+- 두 스레드가 거의 동시에 죽으면, 두 번째 스레드가 "이미 보고 중" 을 보고 곧장 빠져나가 첫 스레드가 덤프를 쓰는 도중 프로세스를 끝냈다.
+- 로그 리스너를 떼도 다른 스레드의 방송(목록 복사본)이 뗀 리스너를 계속 부를 수 있었다 — 에디터 콘솔 패널 파괴 · 모듈 내리기 뒤에.
+  `Logger::_bInitialized` 는 락 없이 읽는 bool 이었다.
+
+**고친 것.**
+- `CrashHandler::initializeCurrentThread()`: Windows `SetThreadStackGuarantee( 64 KB )`, POSIX 스레드 전용 대체 시그널 스택(스레드가 끝날 때
+  돌려준다). `initialize` 가 부른 스레드는 자동, 엔진이 만드는 스레드(태스크 워커 · 렌더 · 로거 · 파일 감시 셋 · 모듈 컴파일 · 파일 대화 상자)는
+  시작할 때 부른다.
+- Windows: SIGABRT · `_set_purecall_handler` · `_set_invalid_parameter_handler` 에서 사용자 예외 코드를 올려 접근 위반과 같은 필터를 태운다
+  (리포트에 "std::abort() called" 등으로 적힌다). abort 메시지 창은 끈다. 종료 때 이전 훅을 되돌린다.
+- 보고 중인 스레드 ID 를 둬 두 번째 스레드는 끝날 때까지 기다린다(상한 30 초). 같은 스레드가 보고하다 또 죽으면 그대로 끝낸다.
+- 리포트를 쓴 뒤 `Logger::flushGlobalForCrash()` — 큐를 이 스레드에서 비우고 장치 버퍼를 내보낸다(언리얼 `GLog->Panic` 자리). 로거 · 장치 락을
+  바로 잡지 못하면 **기다리지 않고** 포기한다(기다리면 크래시가 멈춤이 된다). 테스트 싱크도 넘긴다.
+- 리스너 떼기(`removeLogWrittenListener` · 모듈 내리기용 `releaseListenerCodeWithin`)는 두 칸 세대 카운터로 **떼기 전에 시작한 방송이 끝날
+  때까지** 기다린다. 리스너 안에서 떼면(자기 자신을 기다리게 되므로) 기다리지 않는다. `_bInitialized` 는 atomic. 종료가 막 시작된 뒤 넣은 줄은
+  넣은 쪽이 직접 비운다.
+- `CrashHandler::crashForTest( CrashTestKind )` — 언리얼 `debug crash` · `debug stackoverflow` 와 같은 개발용 스위치. `-gv_crashTest=N` 이
+  종류를 고른다(1 널 쓰기 · 2 스택 오버플로 · 3 작업 스레드 오버플로 · 4 abort · 5 순수 가상 호출).
+
+**확인.** `CrashReportTest.EveryCrashKindLeavesAReport` 가 테스트 실행 파일을 자식으로 다섯 번 띄워 방식마다 죽게 하고, 리포트 폴더에 콜 스택
+파일(Windows 는 비어 있지 않은 미니덤프도)이 남았는지 본다(ASan 빌드는 건너뜀 — ASan 이 시그널을 쥔다). 스택 보증과 abort · 순수 가상 훅을
+되돌려 넣으면 실패한다. 실제 App: Debug `-gv_crashTest=2`(오버플로) → 덤프 18 MB · `EXCEPTION_STACK_OVERFLOW`, `=4` → `std::abort() called`,
+로그 파일 끝에 리포트가 남는다. Shipping `-gv_crashTest=3`(작업 스레드) → 덤프 · 컨텍스트(백엔드 · GPU). Debug nogpu+린트 28/28,
+Shipping nogpu+hostgpu 9/9. POSIX 쪽은 이 PC 에서 빌드할 수 없어 리눅스 CI 로 본다.
+
 ### 2026-09-30 (결함 점검 ② 파일 — 저장이 실패해도 "Saved", 한글 경로, 잘린 읽기를 성공으로)
 
 **무엇이 틀렸나.**

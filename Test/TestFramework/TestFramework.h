@@ -153,6 +153,12 @@ namespace test
             return _pWrappedSink != nullptr ? _pWrappedSink->getLogFolderPath() : s_emptyPath;
         }
 
+        void flushForCrash() override
+        {
+            if ( _pWrappedSink != nullptr )
+                _pWrappedSink->flushForCrash();
+        }
+
     private:
         sw::ILogSink* _pWrappedSink{ nullptr };
         sw::string    _reason;

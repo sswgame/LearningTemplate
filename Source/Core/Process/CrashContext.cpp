@@ -26,6 +26,42 @@ namespace sw
         /// @brief 덤프 · 리포트를 쓸 폴더입니다. 부팅 때 한 번 정하고 크래시 경로에서는 읽기만 합니다.
         fixed_string<constant::kMaxBuffer1024> s_reportFolder{};
 
+        /// @brief `overflowStackInternal` 의 재귀를 멈추는 척하는 값입니다. 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 합니다.
+        volatile bool s_bStopStackOverflow{ false };
+
+        /** @brief 스택이 넘칠 때까지 재귀합니다(`CrashTestKind::StackOverflow`). 프레임마다 4 KB 를 써서 금방 넘친다. */
+        uint32 overflowStackInternal( uint32 depth )
+        {
+            volatile uint8 arrPad[constant::kMaxBuffer4096];
+            arrPad[depth % constant::kMaxBuffer4096] = static_cast<uint8>( depth );
+            if ( s_bStopStackOverflow )
+                return 0;
+            // 재귀 뒤에 값을 더해 꼬리 호출로 바뀌지 않게 한다(꼬리 호출이면 스택이 자라지 않는다).
+            return overflowStackInternal( depth + 1 ) + arrPad[0];
+        }
+
+        /** @brief 새 스레드의 본체입니다. 스레드별 준비를 거친 뒤 넘친다. */
+        void overflowStackOnWorkerInternal()
+        {
+            CrashHandler::initializeCurrentThread();
+            overflowStackInternal( 0 );
+        }
+
+        /** @brief 생성자에서 순수 가상 함수를 (한 단계 건너) 부르는 기반 클래스입니다(`CrashTestKind::PureVirtualCall`). */
+        struct PureCallProbeBaseInternal
+        {
+            PureCallProbeBaseInternal() { callThrough(); }
+            virtual ~PureCallProbeBaseInternal() = default;
+            /** @brief 생성자에서 바로 부르면 컴파일러가 막는다. 한 단계 건너 부른다. */
+            void         callThrough() { onProbe(); }
+            virtual void onProbe() = 0;
+        };
+
+        struct PureCallProbeInternal final : PureCallProbeBaseInternal
+        {
+            void onProbe() override {}
+        };
+
         /**
          * @brief 세션 ID 를 한 번 만듭니다. 시각과 난수를 섞은 16진수 문자열입니다.
          * @details GUID API 를 쓰지 않는 이유는 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것"
@@ -239,6 +275,51 @@ namespace sw
         // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로도 남겨야 사용자가 보내 줄 수 있다.
         writeCrashStackFile( builder.c_str() );
         SW_LOG_ERROR( "%#", builder.c_str() );
+        // 로그는 작업 스레드가 비동기로 쓴다. 이대로 프로세스가 끝나면 큐에 남은 줄(크래시 직전의 경고 · 방금 쓴 리포트)과 파일 버퍼가 사라진다.
+        // 언리얼이 크래시 때 GLog->Panic 으로 동기 비우기를 하는 것과 같은 자리다.
+        Logger::flushGlobalForCrash();
+    }
+
+    void CrashHandler::crashForTest( CrashTestKind kind )
+    {
+        switch ( kind )
+        {
+            case CrashTestKind::AccessViolation:
+            {
+                SW_LOG_ERROR( "[CrashTest] writing through a null pointer" );
+                volatile int32* pNull = nullptr;
+                *pNull                = 1;
+                break;
+            }
+            case CrashTestKind::StackOverflow:
+            {
+                SW_LOG_ERROR( "[CrashTest] overflowing the stack of this thread" );
+                overflowStackInternal( 0 );
+                break;
+            }
+            case CrashTestKind::WorkerStackOverflow:
+            {
+                SW_LOG_ERROR( "[CrashTest] overflowing the stack of a new thread" );
+                std::thread worker( &overflowStackOnWorkerInternal );
+                worker.join();
+                break;
+            }
+            case CrashTestKind::Abort:
+            {
+                SW_LOG_ERROR( "[CrashTest] calling std::abort()" );
+                std::abort();
+            }
+            case CrashTestKind::PureVirtualCall:
+            {
+                SW_LOG_ERROR( "[CrashTest] calling a pure virtual function during construction" );
+                PureCallProbeInternal probe;
+                break;
+            }
+            case CrashTestKind::None:
+            case CrashTestKind::Count:
+            default:
+                break;
+        }
     }
 
     void CrashHandler::setContextValue( string_view key, string_view value )

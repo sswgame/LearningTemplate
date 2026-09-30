@@ -10,6 +10,22 @@
 namespace sw
 {
     /**
+     * @brief 개발 중 크래시 리포트 경로를 일부러 태워 보는 방법입니다(`CrashHandler::crashForTest`).
+     * @details 언리얼의 `debug crash` · `debug stackoverflow` · `debug gpf` 콘솔 명령과 같은 역할입니다. 리포트는 크래시가 나야만
+     *          만들어지므로 죽는 방식마다 한 번씩 태워 보지 않으면 배포 뒤에야 "그 방식으로 죽으면 아무것도 안 남는다" 를 압니다.
+     */
+    enum class CrashTestKind : uint8
+    {
+        None = 0,
+        AccessViolation,     ///< 널 포인터 쓰기
+        StackOverflow,       ///< 이 스레드에서 끝없는 재귀
+        WorkerStackOverflow, ///< 새 스레드에서 끝없는 재귀(스레드별 준비 `initializeCurrentThread` 를 태운다)
+        Abort,               ///< std::abort() — 엔진의 "로그 + abort" 치명 경로
+        PureVirtualCall,     ///< 생성 중인 객체의 순수 가상 함수 호출
+        Count
+    };
+
+    /**
      * @class CrashHandler
      * @brief 프로세스 전역 크래시 핸들러입니다.
      * @details 설치한 뒤 접근 위반이나 시그널이 발생하면 예외 코드 · 주소와 폴트 스레드의 콜 스택을 남기고, 원래 동작(프로세스
@@ -26,10 +42,28 @@ namespace sw
         /** @brief 크래시 리포트에 함께 적을 키-값의 최대 개수입니다. */
         static constexpr uint32 kMaxContextEntry = 24;
 
-        /** @brief 핸들러를 설치합니다. 두 번 불러도 한 번만 설치됩니다. */
+        /**
+         * @brief 핸들러를 설치합니다. 두 번 불러도 한 번만 설치됩니다. 부른 스레드는 `initializeCurrentThread` 도 거칩니다.
+         * @details Windows 는 처리되지 않은 SEH 예외 필터와 함께 SIGABRT · 순수 가상 호출 · 잘못된 CRT 인자 훅을 겁니다. 셋은 CRT 가
+         *          `__fastfail` 로 **예외 필터를 건너뛰고** 프로세스를 끝내는 길이라, 예전에는 abort 로 끝나면 덤프도 스택도 남지 않았습니다.
+         */
         static void initialize();
         /** @brief 핸들러를 제거하고 이전 핸들러를 되돌립니다. */
         static void shutdown();
+
+        /**
+         * @brief **이 스레드**에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
+         * @details 스택 오버플로는 스택이 바닥난 채로 핸들러에 들어옵니다. 준비가 없으면 핸들러가 첫 호출에서 다시 넘쳐 **아무것도 남기지
+         *          못합니다**(실측: 덤프 파일 0 바이트). Windows 는 `SetThreadStackGuarantee` 로 넘친 뒤에 쓸 자리를 남겨 두고, POSIX 는
+         *          이 스레드 전용 대체 시그널 스택을 깝니다 — `sigaltstack` 은 스레드마다라, 예전에는 `initialize` 를 부른 스레드만 덮였습니다.
+         *          핸들러 설치 전에 불러도 됩니다(로거 작업 스레드가 그렇다). 두 번 불러도 됩니다.
+         */
+        static void initializeCurrentThread();
+
+        /**
+         * @brief 일부러 죽습니다(`CrashTestKind` 설명). 돌아오지 않습니다. `None` · 모르는 값이면 아무것도 하지 않습니다.
+         */
+        static void crashForTest( CrashTestKind kind );
 
         /**
          * @brief 크래시 리포트에 함께 적을 키-값을 등록합니다.

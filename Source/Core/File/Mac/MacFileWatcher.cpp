@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/CrashHandler.h"
 
 #if defined( SW_PLATFORM_MACOS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -111,6 +112,8 @@ namespace sw
 
     void MacFileWatcher::workerThreadMain()
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         FSEventStreamRef stream = static_cast<FSEventStreamRef>( _pStream );
         if ( stream == nullptr )
             return;

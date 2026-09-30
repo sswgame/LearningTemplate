@@ -7,6 +7,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
@@ -904,6 +905,7 @@ namespace sw
         std::thread(
             [delegateCallback = std::move( onSuccess ), params, openGeneration]
         {
+            CrashHandler::initializeCurrentThread();
             vector<string> listResult;
             bool           bSuccess{ false };
 

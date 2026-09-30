@@ -43,5 +43,11 @@ namespace sw
         virtual void close() = 0;
         /** @brief 완성된 한 줄을 씁니다. 포맷과 타임스탬프는 이미 `record` 안에 있습니다. */
         virtual void write( const LogRecord& record ) = 0;
+        /**
+         * @brief 장치 안에 머문 기록(stdio 버퍼 등)을 지금 내보냅니다. **기다리지 않습니다** — 장치 락을 바로 잡지 못하면 그냥 돌아옵니다.
+         * @details 크래시 경로에서 부릅니다(`Logger::flushGlobalForCrash`). 그 순간 장치 락을 쥔 채 죽은 스레드가 있을 수 있고, 거기서 기다리면
+         *          크래시가 멈춤이 됩니다. 버퍼가 없는 장치는 아무것도 하지 않아도 됩니다.
+         */
+        virtual void flushWithoutWaiting() {}
     };
 } // namespace sw

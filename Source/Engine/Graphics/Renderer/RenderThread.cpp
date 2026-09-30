@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Process/CrashHandler.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -215,6 +216,8 @@ namespace sw
 
     void RenderThread::threadMain()
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         _bContextBound = false;
 
         for ( ;; )

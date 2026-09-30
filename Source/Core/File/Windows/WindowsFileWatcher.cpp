@@ -4,6 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Process/CrashHandler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Container/string.h"
@@ -101,6 +102,8 @@ namespace sw
 
     void WindowsFileWatcher::workerThreadMain()
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         constexpr DWORD bufferSize = 64 * 1024;
         vector<uint8>   buffer( bufferSize );
         OVERLAPPED      overlapped{};

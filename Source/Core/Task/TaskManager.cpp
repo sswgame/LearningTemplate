@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/Task/TaskNode.h"
 #include "Core/Task/TaskNodePool.h"
 
@@ -1099,6 +1100,8 @@ namespace sw
 
     void TaskManager::workerLoop( uint32 workerId )
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         t_currentWorkerIndex = static_cast<int32>( workerId );
 
         WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerId];

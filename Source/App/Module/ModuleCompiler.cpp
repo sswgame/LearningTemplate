@@ -6,6 +6,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/Process/Process.h"
 
 namespace sw
@@ -112,6 +113,8 @@ namespace sw
 
     void ModuleCompiler::runBuildThread( const string& targetName )
     {
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
+        CrashHandler::initializeCurrentThread();
         const string buildDir = findBuildDirectory();
         if ( buildDir.empty() || FileUtil::directoryExists( buildDir ) == false )
         {

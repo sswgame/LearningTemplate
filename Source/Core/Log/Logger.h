@@ -63,6 +63,11 @@ namespace sw
         virtual uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로입니다. */
         virtual const string& getLogFolderPath() = 0;
+        /**
+         * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 **지금 이 스레드에서** 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
+         * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.
+         */
+        virtual void flushForCrash() {}
     };
 
     // ------------------------------------------------------------------------------
@@ -121,6 +126,14 @@ namespace sw
 
         /** @brief 로그 파일이 있는 폴더의 경로입니다. 파일 출력 장치에 물어 답합니다. */
         const string& getLogFolderPath() override;
+        /**
+         * @brief 큐에 남은 줄을 이 스레드에서 모두 쓰고 장치 버퍼를 내보냅니다. 로거 락을 바로 잡지 못하면 포기합니다(기다리면 크래시가 멈춤이 된다).
+         * @details 예전에는 크래시 리포트의 `SW_LOG_ERROR` 도 큐에 넣기만 하고 프로세스가 끝나, 크래시 직전의 경고 · 정보 줄과 파일의 stdio
+         *          버퍼가 사라졌습니다. "로그 + std::abort" 치명 경로의 마지막 메시지도 그렇게 잃었습니다.
+         */
+        void flushForCrash() override;
+        /** @brief 전역 싱크의 `flushForCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
+        static void flushGlobalForCrash();
         /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
         static void setGlobalSink( ILogSink* pSink );
         /** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
@@ -155,6 +168,16 @@ namespace sw
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */
         void dispatchToOutputs( const LogRecord& record );
+        /**
+         * @brief 리스너를 뗀 뒤, 떼기 **전에** 시작한 방송이 모두 끝날 때까지 기다립니다.
+         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 그래서 떼기가 돌아온 뒤에도 다른 스레드의 방송이 뗀 리스너를 부를 수
+         *          있었습니다 — 에디터 콘솔 패널이 파괴되거나 모듈이 내려간 뒤에 그 코드로 들어갔습니다. 이 스레드가 방송 도중(리스너 안)이면
+         *          자기 자신을 기다리게 되므로 기다리지 않습니다. 끊임없는 로그로 세대가 비지 않으면 2 초 뒤 경고하고 돌아옵니다.
+         * @param retiredSlot 떼기 직전 세대 칸(_mutex 안에서 읽은 값)
+         */
+        void waitForRetiredBroadcasts( uint32 retiredSlot );
+        /** @brief 세대를 넘기고 넘기기 전 칸을 돌려줍니다. _mutex 를 쥐고 부릅니다. */
+        uint32 retireBroadcastSlot();
 
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
@@ -178,8 +201,10 @@ namespace sw
         int32                            _cachedMonth;
         int32                            _cachedDay;
         int32                            _cachedHour;
+        atomic<uint32>                   _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 칸). 떼기가 이전 세대가 빌 때까지 기다린다
+        uint32                           _broadcastEpoch;          ///< 방송 세대. _mutex 로 보호한다
         atomic<bool>                     _bIsRunning;
-        bool                             _bInitialized;
+        atomic<bool>                     _bInitialized;                             ///< 쓰는 스레드는 락 없이 읽는다(예전에는 bool 이라 초기화 · 종료와 데이터 경쟁이었다)
         utf8                             _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시한 날짜 문자열(YYYY-M-D H:M: 형식)
     };
 } // namespace sw
