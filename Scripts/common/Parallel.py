@@ -9,10 +9,15 @@
   복사본마다 워커 수 정책이 조금씩 달라서(`min(32, cpu*2)` · `min(16, cpu)` · `min(8, len, cpu)`)
   "이 저장소는 동시성을 어떻게 정하는가" 라는 질문에 답할 곳이 없었다. 여기가 그 자리다.
 
-**왜 스레드인가 (프로세스가 아니라).**
+**왜 스레드인가 (프로세스가 아니라) — 그리고 언제 프로세스인가.**
   2026-09-08 에 린트를 `ProcessPoolExecutor` 로 바꿔 보고 **5.3s → 9.4s** 로 더 느려져 되돌렸다
   (docs/06_Backlog.md). 이 스크립트들의 일은 대부분 파일 읽기와 정규식이라, 프로세스를 띄우는 비용과
   경로 목록을 피클로 넘기는 비용이 이득을 넘는다. 다시 프로세스로 바꾸자고 제안하기 전에 그 숫자를 볼 것.
+
+  **예외 — 파일마다 파이썬 정규식을 한참 돌리는 일은 `flatMapInProcesses`.** 스레드는 GIL 때문에 그런 일을
+  겹치지 못한다(`CheckCodeConventions` 의 파일별 검사가 스레드 풀에서도 사실상 한 코어였다). 2026-09-30 에 다시 쟀다:
+  **항목마다가 아니라 코어 수만큼의 덩어리로** 넘기면 프로세스 기동 · 피클 비용이 코어 수만큼만 들어 7.5 s → 2.25 s 다
+  (6 코어, 결과 동일). 09-08 의 실험이 느렸던 것은 파일마다 넘겼기 때문으로 본다. 파일 읽기가 대부분인 일은 여전히 스레드다.
 
 **정책이 둘인 이유.**
   - `getScanWorkerCount` — 파일을 읽고 훑는 일. IO 대기가 많아 코어보다 많이 띄우는 편이 낫다.
@@ -105,6 +110,47 @@ def flatMapConcurrent(
         if result:
             collected.extend(result)
     return collected
+
+
+#: 프로세스 하나가 맡을 최소 항목 수. 이보다 적으면 그만큼 적게 띄우고, 한 개면 띄우지 않는다 — 윈도우에서 프로세스를 띄우고
+#: 스크립트를 다시 import 하는 데 0.3 s 가량 든다(셀프테스트처럼 파일 몇 개짜리 훑기가 그 값을 치르지 않게).
+kMinItemsPerProcess = 64
+
+
+def runChunkInternal(worker: Callable[[TItem], Iterable[TResult]],
+                     listIndexedItem: list[tuple[int, TItem]]) -> list[tuple[int, list[TResult]]]:
+    """자식 프로세스에서 덩어리 하나를 돕니다. 순서를 되돌리려고 항목의 자리를 같이 돌려준다."""
+    return [(index, list(worker(item) or ())) for index, item in listIndexedItem]
+
+
+def flatMapInProcesses(
+    worker: Callable[[TItem], Iterable[TResult]],
+    items: Sequence[TItem],
+    *,
+    workerCount: int | None = None,
+) -> list[TResult]:
+    """
+    `items` 를 **프로세스**로 나눠 처리하고 각 결과(목록)를 **항목 순서대로** 이어 붙여 돌려줍니다.
+
+    파일마다 파이썬 정규식을 오래 돌리는 일(CPU)에 쓴다 — 스레드로는 GIL 에 막혀 겹치지 않는다. 항목을 코어 수만큼의 덩어리로
+    나눠 넘기므로 프로세스 기동 · 피클은 그만큼만 든다(모듈 머리말 참고).
+
+    - `worker` 와 항목 · 결과는 피클할 수 있어야 한다: 모듈 최상위 함수(인자를 묶으려면 `functools.partial`)와 그 모듈의 타입.
+      스크립트로 직접 돌리는 파일의 함수라면 그 스크립트가 `if __name__ == "__main__":` 으로 진입점을 막아 두어야 한다(자식이
+      같은 파일을 다시 import 한다).
+    - 항목이 `kMinItemsPerProcess` 의 두 배보다 적으면 프로세스를 띄우지 않고 이 프로세스에서 돈다.
+    """
+    listItem = list(items)
+    if workerCount is None:
+        workerCount = getProcessWorkerCount(max(1, len(listItem) // kMinItemsPerProcess))
+    if workerCount <= 1 or len(listItem) < 2 * kMinItemsPerProcess:
+        return [result for item in listItem for result in (worker(item) or ())]
+
+    listChunk = [[(index, listItem[index]) for index in range(start, len(listItem), workerCount)] for start in range(workerCount)]
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workerCount) as pool:
+        listIndexed = [pair for chunkResult in pool.map(runChunkInternal, [worker] * workerCount, listChunk) for pair in chunkResult]
+    listIndexed.sort(key=lambda pair: pair[0])
+    return [result for _, listResult in listIndexed for result in listResult]
 
 
 def runUntilNonZero(

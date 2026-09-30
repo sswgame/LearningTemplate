@@ -47,6 +47,7 @@ from common import (  # noqa: E402
     collectRepositoryFiles,
     collectSourceFiles,
     flatMapConcurrent,
+    flatMapInProcesses,
     getLintSearchDirs,
     getProjectRoot,
     kCppAllExtensions,
@@ -467,6 +468,28 @@ def isPluralWordInternal(word: str) -> bool:
     return False
 
 
+# [줄마다 부르는 정규식 — 미리 컴파일한다]
+# 예전에는 함수 안에서 `re.search( r"...", x )` 로 문자열을 넘겼다. 정규식 모듈이 캐시해 두긴 하지만 부를 때마다 그 캐시를
+# 찾는다 — 전체 스캔 한 번에 145 만 번이었다(프로파일 기준 1.5 s). 패턴은 그대로 옮겼다.
+_kTrailingArraySuffixRe = re.compile(r'\[[^\]]*\]$')
+_kTrailingIdentifierRe = re.compile(r'([A-Za-z0-9_]+)$')
+_kParameterTypeRe = re.compile(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$')
+_kTemplateArgumentRe = re.compile(r'<[^>]*>')
+_kStringLiteralStripRe = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
+_kFunctionSignatureTailRe = re.compile(r'\([a-zA-Z0-9_,\s*&:<>=./"-]*\)\s*(?:const|override|final|noexcept|SW_\w*API)*\s*[{;=]')
+_kLocalUnderscoreDeclRe = re.compile(r'^\s*(?:const\s+|static\s+|constexpr\s+|auto\s+)?(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[*&]*\s+)(_[a-zA-Z0-9]+)\s*(?:=|;|,|\{|\()')
+_kCallLikeNameRe = re.compile(r'\b[A-Za-z0-9_:]+\s*\(')
+_kCommentStripRe = re.compile(r"//.*$|/\*.*?\*/")
+_kLambdaParameterRe = re.compile(r'\[[^\]]*\]\s*\(([^)]*)\)')
+_kFunctionSignatureRe = re.compile(r'^\s*(?:(?:inline|static|virtual|explicit|constexpr|friend|SW_\w*API)\s+)*(?:(?:const\s+)?[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*[*&]+)?\s+)+([A-Za-z0-9_:]+)\s*\(([^)]*)\)')
+_kConstructorSignatureRe = re.compile(r'^\s*(?:explicit\s+)?([A-Za-z0-9_]+)(?:::([A-Za-z0-9_]+))?\s*\(([^)]*)\)')
+_kConstructorDefinitionRe = re.compile(r'\b([A-Za-z0-9_]+)::\1\s*\([^)]*\)')
+_kInitListTrailingMemberRe = re.compile(r'[\}\)]\s*,\s*_[a-zA-Z0-9_]+')
+_kConstructorDefinitionLineRe = re.compile(r"^\s*([A-Z]\w*)::\1\s*\(")
+_kPointerNamePrefixRe = re.compile(r'^_?p[A-Z]')
+_kBoolNamePrefixRe = re.compile(r'^_?b[A-Z]')
+
+
 # --- 5. 명명 판정 — 어휘 표를 읽는 단 한 벌의 검사 ---------------------------
 #
 # 위 `kMapContainerVocabulary` · `kMapNamingSubject` 를 읽어 실제 판정을 내린다.
@@ -828,13 +851,13 @@ def checkParameterItemInternal(paramStr: str, relPath: str, lineNum: int, snippe
         return violations
 
     # 고정 배열 파싱 (e.g. uint8 arrBuffer[256])
-    arrayMatch = re.search(r'\[[^\]]*\]$', paramDecl)
+    arrayMatch = _kTrailingArraySuffixRe.search(paramDecl)
     isArray = bool(arrayMatch)
     if isArray and arrayMatch:
         paramDecl = paramDecl[:arrayMatch.start()].strip()
 
     # 식별자(변수명) 분리
-    match = re.search(r'([A-Za-z0-9_]+)$', paramDecl)
+    match = _kTrailingIdentifierRe.search(paramDecl)
     if not match:
         return violations
 
@@ -846,7 +869,7 @@ def checkParameterItemInternal(paramStr: str, relPath: str, lineNum: int, snippe
         return violations
 
     # typePart가 유효한 C++ 타입 패턴인지 검증 (표현식 제외)
-    if not re.match(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$', typePart):
+    if not _kParameterTypeRe.match(typePart):
         return violations
 
     # 1. '_' 접두어 검사 (매개변수/지역변수에는 '_' 사용 금지)
@@ -867,7 +890,7 @@ def checkParameterItemInternal(paramStr: str, relPath: str, lineNum: int, snippe
     subject = kMapNamingSubject["parameter"]
 
     # 2. 원시 포인터 (템플릿 인자 <...> 내부의 *는 제외)
-    typeWithoutTemplate = re.sub(r'<[^>]*>', '', typePart)
+    typeWithoutTemplate = _kTemplateArgumentRe.sub('', typePart)
     numPointer = typeWithoutTemplate.count("*")
     if numPointer >= 1:
         if paramName in ("argv", "argc", "env", "this"):
@@ -913,14 +936,14 @@ def checkLocalVariableItemInternal(line: str, relPath: str, lineNum: int) -> lis
     if trimmed.startswith(("delete ", "delete[] ", "throw ", "goto ", "break;", "continue;")):
         return violations
 
-    codeClean = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+    codeClean = _kStringLiteralStripRe.sub('', line)
 
     # 함수 선언/정의 시그니처인 경우 변수 선언이 아님
-    if re.search(r'\([a-zA-Z0-9_,\s*&:<>=./"-]*\)\s*(?:const|override|final|noexcept|SW_\w*API)*\s*[{;=]', trimmed):
+    if _kFunctionSignatureTailRe.search(trimmed):
         return violations
 
     # 1. 지역 변수 '_' 접두어 검사 (예: int32 _val = 0;, auto _pPtr = ...)
-    localUnderscoreMatch = re.search(r'^\s*(?:const\s+|static\s+|constexpr\s+|auto\s+)?(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[*&]*\s+)(_[a-zA-Z0-9]+)\s*(?:=|;|,|\{|\()', codeClean)
+    localUnderscoreMatch = _kLocalUnderscoreDeclRe.search(codeClean)
     if localUnderscoreMatch:
         varName = localUnderscoreMatch.group(1)
         if not varName.startswith(("_s_", "__")):
@@ -939,7 +962,7 @@ def checkLocalVariableItemInternal(line: str, relPath: str, lineNum: int) -> lis
     subject = kMapNamingSubject["local"]
 
     # 2. 원시 포인터 — 함수 정의/선언(뒤에 괄호가 오는 이름)은 변수가 아니므로 제외한다.
-    if not re.search(r'\b[A-Za-z0-9_:]+\s*\(', codeClean):
+    if not _kCallLikeNameRe.search(codeClean):
         ptrDeclMatch = re.search(
             r'^\s*(?:const\s+|static\s+|constexpr\s+)?([A-Za-z0-9_:]+)\s*(\*{1,2})\s*(?:const\s+)?([a-zA-Z0-9_]+)\s*(?:=|;|,|{)',
             codeClean,
@@ -1165,11 +1188,43 @@ def extractClassMembersInternal(content: str) -> dict[str, list[str]]:
 
 # --- 4. 파일별 컨벤션 검사 로직 ----------------------------------------------
 
+class SourceTextCache:
+    """
+    검사 한 번 동안 **파일마다 한 번만 읽는다.** 바이트를 들고 있다가 자리마다 원하는 인코딩 · 오류 처리로 풉니다.
+
+    예전에는 파일별 검사 · 짝 헤더 멤버 · 헬퍼 이름 중복 · 헤더 멤버 초기값 · 비트필드 불리언이 같은 파일을 각자 열어, 전체 스캔 한 번에
+    파일 1064 개를 4842 번 열었다(윈도우는 여는 것이 느리다 — 필터 드라이버). 풀 때는 `Path.read_text` 와 같게 줄끝(CRLF · CR)을
+    LF 로 바꾼다 — 텍스트 모드 읽기가 하던 일이다.
+    """
+
+    def __init__(self) -> None:
+        self._mapBytes: dict[Path, bytes] = {}
+
+    def readText(self, path: Path, encoding: str, errors: str = "strict") -> str:
+        data = self._mapBytes.get(path)
+        if data is None:
+            data = path.read_bytes()
+            self._mapBytes[path] = data
+        return data.decode(encoding, errors).replace("\r\n", "\n").replace("\r", "\n")
+
+
+#: `runConventionsCheck` 가 도는 동안만 있다. 없으면 파일을 그냥 읽는다(다른 곳에서 함수를 따로 부를 때).
+_s_textCache: SourceTextCache | None = None
+
+
+def readSourceTextInternal(path: Path, encoding: str, errors: str = "strict") -> str:
+    """`Path.read_text` 와 같은 결과를, 검사가 도는 중이면 캐시에서."""
+    cache = _s_textCache
+    if cache is None:
+        return path.read_text(encoding=encoding, errors=errors)
+    return cache.readText(path, encoding, errors)
+
+
 @functools.lru_cache(maxsize=None)
 def readHeaderClassMembersInternal(headerPath: Path) -> dict:
     """짝 헤더의 클래스 멤버 맵. 헤더는 자기 차례에도 스캔되므로 캐시가 없으면 두 번 읽고 두 번 판다."""
     try:
-        return extractClassMembersInternal(headerPath.read_text(encoding="utf-8"))
+        return extractClassMembersInternal(readSourceTextInternal(headerPath, "utf-8"))
     except Exception:
         return {}
 
@@ -1181,10 +1236,10 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     isSource = filePath.suffix.lower() in kCppSourceExtensions
 
     try:
-        content = filePath.read_text(encoding="utf-8-sig")
+        content = readSourceTextInternal(filePath, "utf-8-sig")
     except UnicodeDecodeError:
         try:
-            content = filePath.read_text(encoding="latin-1")
+            content = readSourceTextInternal(filePath, "latin-1")
         except Exception:
             return violations
 
@@ -1252,10 +1307,10 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         if trimmed.startswith("//") or not trimmed:
             continue
 
-        codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+        codeWithoutStrings = _kStringLiteralStripRe.sub('', line)
         # 주석도 코드가 아니다. 이걸 안 지우면 "float 판은 …" 같은 산문이 타입 사용으로 잡힌다
         # (실제로 ZoneRuntime.h 의 한국어 주석이 Style/BasicTypeAlias 로 신고됐다).
-        codeWithoutStrings = re.sub(r"//.*$|/\*.*?\*/", "", codeWithoutStrings)
+        codeWithoutStrings = _kCommentStripRe.sub("", codeWithoutStrings)
 
         scanContext = LineScanContext(
             relPath=relPath,
@@ -1280,15 +1335,15 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         sigParamStr = None
         if not trimmed.startswith(("#", "//", "/*", "*", "return", "if", "while", "for", "switch", "catch")) and \
            not any(k in trimmed for k in ("SW_ASSERT", "SW_LOG", "SW_STATIC_ASSERT", "SW_EXPECT")):
-            if lambdaMatch := re.search(r'\[[^\]]*\]\s*\(([^)]*)\)', codeWithoutStrings):
+            if lambdaMatch := _kLambdaParameterRe.search(codeWithoutStrings):
                 sigParamStr = lambdaMatch.group(1)
                 isFnSig = True
-            elif fnMatch := re.search(r'^\s*(?:(?:inline|static|virtual|explicit|constexpr|friend|SW_\w*API)\s+)*(?:(?:const\s+)?[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*[*&]+)?\s+)+([A-Za-z0-9_:]+)\s*\(([^)]*)\)', codeWithoutStrings):
+            elif fnMatch := _kFunctionSignatureRe.search(codeWithoutStrings):
                 fnName = fnMatch.group(1)
                 if fnName not in ("if", "while", "for", "switch", "catch", "sizeof", "decltype", "alignas", "return"):
                     sigParamStr = fnMatch.group(2)
                     isFnSig = True
-            elif ctorSigMatch := re.search(r'^\s*(?:explicit\s+)?([A-Za-z0-9_]+)(?:::([A-Za-z0-9_]+))?\s*\(([^)]*)\)', codeWithoutStrings):
+            elif ctorSigMatch := _kConstructorSignatureRe.search(codeWithoutStrings):
                 c1 = ctorSigMatch.group(1)
                 c2 = ctorSigMatch.group(2)
                 if (c2 is None and classStack and c1 == classStack[-1][0]) or (c2 is not None and c1 == c2):
@@ -1307,7 +1362,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         # --- 생성자 초기화 리스트 검사 (포맷, 중괄호, 선언 순서) ---
         if isSource:
-            if ctorMatch := re.search(r'\b([A-Za-z0-9_]+)::\1\s*\([^)]*\)', trimmed):
+            if ctorMatch := _kConstructorDefinitionRe.search(trimmed):
                 currentCtorClass = ctorMatch.group(1)
                 ctorInitMembers = []
                 ctorInitStartLine = lineNum
@@ -1340,7 +1395,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     ctorInitMembers.append(initVar)
 
             if (trimmed.startswith(":") or trimmed.startswith(",")) and ("," in trimmed[1:]):
-                if re.search(r'[\}\)]\s*,\s*_[a-zA-Z0-9_]+', trimmed):
+                if _kInitListTrailingMemberRe.search(trimmed):
                     violations.append(
                         ConventionViolation(
                             file_path=relPath,
@@ -1425,7 +1480,7 @@ def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path
         if filePath.suffix.lower() != ".cpp":
             continue
         try:
-            content = filePath.read_text(encoding="utf-8", errors="ignore")
+            content = readSourceTextInternal(filePath, "utf-8", "ignore")
         except OSError:
             continue
         try:
@@ -1472,7 +1527,7 @@ def findCtorInitListClassesInternal(cppContent: str) -> set[str]:
     result: set[str] = set()
     lines = cppContent.splitlines()
     for index, line in enumerate(lines):
-        match = re.match(r"^\s*([A-Z]\w*)::\1\s*\(", line)
+        match = _kConstructorDefinitionLineRe.match(line)
         if match is None:
             continue
         className = match.group(1)
@@ -1518,8 +1573,8 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
         if not cppPath.is_file():
             continue
         try:
-            headerContent = headerPath.read_text(encoding="utf-8", errors="ignore")
-            cppContent = cppPath.read_text(encoding="utf-8", errors="ignore")
+            headerContent = readSourceTextInternal(headerPath, "utf-8", "ignore")
+            cppContent = readSourceTextInternal(cppPath, "utf-8", "ignore")
         except OSError:
             continue
         ctorClasses = findCtorInitListClassesInternal(cppContent)
@@ -1617,7 +1672,7 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     mapWiderInt: set[str] = set()
     for filePath in filesToScan:
         try:
-            lines = filePath.read_text(encoding="utf-8", errors="ignore").splitlines()
+            lines = readSourceTextInternal(filePath, "utf-8", "ignore").splitlines()
         except OSError:
             continue
         for line in lines:
@@ -1650,7 +1705,7 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     violations: list[ConventionViolation] = []
     for filePath in filesToScan:
         try:
-            content = filePath.read_text(encoding="utf-8", errors="ignore")
+            content = readSourceTextInternal(filePath, "utf-8", "ignore")
         except OSError:
             continue
         try:
@@ -1883,11 +1938,11 @@ class NegatedConditionRule( ConventionRule ):
         # 부정(!expr) 조건문 검사
         if negatedMatch := _kNegatedConditionRe.search(ctx.line):
             expr = negatedMatch.group(1).strip()
-            if re.match(r'^_?p[A-Z]', expr) or "->" in expr:
+            if _kPointerNamePrefixRe.match(expr) or "->" in expr:
                 msg = f"포인터 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == nullptr )' 비교를 사용하세요."
             elif expr.endswith(".empty()") or expr.endswith(".contains()"):
                 msg = f"상태 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
-            elif re.match(r'^_?b[A-Z]', expr) or expr.startswith(("is", "has", "can")):
+            elif _kBoolNamePrefixRe.match(expr) or expr.startswith(("is", "has", "can")):
                 msg = f"불리언 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
             else:
                 msg = f"부정 연산자 'if ( !{expr} )' 대신 명시적 비교('== false' 또는 '== nullptr')를 사용하세요."
@@ -2133,6 +2188,15 @@ def runConventionsCheck(rootDir: Path | None = None,
     """
     지정된 소스 파일 또는 전체 소스 디렉터리를 순회하며 코딩 컨벤션 위반 항목을 검사합니다.
     """
+    global _s_textCache
+    _s_textCache = SourceTextCache()
+    try:
+        return runConventionsCheckInternal(rootDir, specificFiles)
+    finally:
+        _s_textCache = None
+
+
+def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] | None) -> list[ConventionViolation]:
     projectRoot = rootDir or Path(getProjectRoot())
     getExactPathMapInternal(projectRoot)
     allViolations: list[ConventionViolation] = []
@@ -2162,8 +2226,9 @@ def runConventionsCheck(rootDir: Path | None = None,
     filesToScan = collectSourceFiles(
         searchDirs, excludeSubdirs=["ThirdParty", "build", ".vcpkg"]
     )
+    # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`, 7.5 → 2.3 s).
     allViolations.extend(
-        flatMapConcurrent(lambda filePath: checkFileConventionsInternal(filePath, projectRoot), filesToScan)
+        flatMapInProcesses(functools.partial(checkFileConventionsInternal, rootDir=projectRoot), filesToScan)
     )
 
     # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
