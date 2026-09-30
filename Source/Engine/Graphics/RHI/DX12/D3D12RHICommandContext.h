@@ -89,13 +89,16 @@ namespace sw
         /**
          * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 굳혀 루트 테이블로 겁니다. 드로우 · 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 과 같은 자리).
          * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).
+         * @return 바뀐 테이블을 모두 걸었으면 true. 온라인 블록을 못 빌려 걸지 못했으면 false 이고, 부르는 쪽은 그 드로우 · 디스패치를 건너뛴다
+         *         (예전에는 실패를 삼키고 이전 드로우의 테이블 — 이 리스트에서 처음이면 **걸린 적 없는 테이블** — 로 그렸다. 장치 제거로 이어진다).
          */
-        void flushSlotTables( bool bCompute );
+        bool flushSlotTables( bool bCompute );
         /** @brief 슬롯 배열을 온라인 블록에 복사하고 테이블 GPU 핸들을 반환합니다. 안 걸린 슬롯은 nullView 로 채웁니다. */
         bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
         /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌립니다. */
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
-        void bindMeshVertexBuffer();
+        /** @brief 걸어 둔 메시 정점버퍼를 겁니다. 핸들이 풀리지 않으면(이미 부서졌다) 아무것도 걸지 않고 false 를 반환합니다. */
+        bool bindMeshVertexBuffer();
         /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
         void bindMeshVertexBufferOrFallback();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 겁니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */

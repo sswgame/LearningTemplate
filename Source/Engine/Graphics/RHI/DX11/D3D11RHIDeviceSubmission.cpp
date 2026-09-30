@@ -192,7 +192,7 @@ namespace sw
         _releaseQueue.tickFrame();
     }
 
-    void D3D11RHIDevice::waitIdle()
+    void D3D11RHIDevice::waitIdleInternal()
     {
         if ( _deviceContext != nullptr )
         {

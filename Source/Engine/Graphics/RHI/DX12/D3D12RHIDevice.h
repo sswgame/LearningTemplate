@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -150,7 +151,7 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
-        void waitIdle() override;
+        void waitIdleInternal() override;
 
         /** @brief 리소스 생성 · 파괴 인터페이스(D3D12RHIResource)를 반환합니다. */
         IRHIResource* getResource() override;
@@ -328,6 +329,13 @@ namespace sw
          *          주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분합니다.
          */
         void refreshConstantBufferViews();
+        /**
+         * @brief 링 상수버퍼의 `slot` 칸에 씁니다. `_bindlessMutex` 를 (읽기로라도) 쥐고 부릅니다.
+         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 예전에는 그대로 복사해 다음 칸(다음 프레임의 값)까지 덮었습니다.
+         */
+        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
+        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). `waitForRingSlot` 이 부릅니다. */
+        void fillConstantBufferSlot();
         /**
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
          */
@@ -525,6 +533,7 @@ namespace sw
         vector<uint32>                                          _listFreeOffscreenDsvIndex;
         unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
+        RHIConstantBufferShadow                                 _constantBufferShadow; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         vector<D3D12RenderPassRecord>            _listRenderPass;

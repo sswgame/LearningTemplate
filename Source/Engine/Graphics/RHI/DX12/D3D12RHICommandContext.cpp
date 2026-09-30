@@ -74,10 +74,10 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return 0;
 
-        // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다.** 등록/해제는 모두 그래프 셋업에서
-        // 끝내고, 그 규칙은 assertRegistryMutableNow 가 디버그에서 감시한다
-        // (IRHIDevice::setParallelRecording 참고). 드로우마다 도는 경로라 락을 거는 대신 애초에
-        // 공유하지 않는 쪽을 택했다. const 참조로 받는 것도 중요하다. 비-const 접근은 "쓰기" 로 취급된다.
+        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 assertRegistryMutableNow 가 감시한다). 그러나
+        // **게임 스레드**는 렌더 스레드의 기록과 겹쳐 버퍼를 만들고 부순다(에디터가 없는 빌드 — 오브젝트가 사라지며 머티리얼 인스턴스가 풀린다).
+        // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
+        std::shared_lock<std::shared_mutex>                   registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -102,7 +102,8 @@ namespace sw
     {
         if ( index == kInvalidDescriptorIndex )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        // resolveBufferAddress 와 같은 이유로 락이 없다. 레지스트리는 기록 중 불변이다.
+        // resolveBufferAddress 와 같은 이유로 짧은 읽기 락을 잡는다.
+        std::shared_lock<std::shared_mutex>                   registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -153,41 +154,40 @@ namespace sw
         return true;
     }
 
-    void D3D12RHICommandContext::flushSlotTables( bool bCompute )
+    bool D3D12RHICommandContext::flushSlotTables( bool bCompute )
     {
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )
-            return;
+            return false;
         D3D12SlotTableState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
 
         if ( state._bSrvDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
-            if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) )
-            {
-                if ( bCompute )
-                    commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
-                else
-                    commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
-                state._bSrvDirty = SW_FALSE;
-            }
+            if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) == false )
+                return false;
+            if ( bCompute )
+                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+            else
+                commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+            state._bSrvDirty = SW_FALSE;
         }
         // u 테이블은 컴퓨트만 쓴다. 그래픽스 스테이지에는 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
         if ( bCompute && state._bUavDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
-            if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) )
-            {
-                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
-                state._bUavDirty = SW_FALSE;
-            }
+            if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) == false )
+                return false;
+            commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
+            state._bUavDirty = SW_FALSE;
         }
+        return true;
     }
 
-    void D3D12RHICommandContext::bindMeshVertexBuffer()
+    bool D3D12RHICommandContext::bindMeshVertexBuffer()
     {
         ID3D12Resource* pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
         if ( pVb == nullptr )
-            return;
+            return false;
         D3D12_VERTEX_BUFFER_VIEW vbv{};
         vbv.BufferLocation = pVb->GetGPUVirtualAddress() + _pState->_boundMeshOffset;
         vbv.SizeInBytes    = static_cast<UINT>( pVb->GetDesc().Width > _pState->_boundMeshOffset
@@ -195,13 +195,13 @@ namespace sw
                                                     : 0 );
         vbv.StrideInBytes  = _pState->_boundMeshStride;
         commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
+        return true;
     }
 
     void D3D12RHICommandContext::bindMeshVertexBufferOrFallback()
     {
-        if ( _pState->_boundMeshVb != 0 )
-            bindMeshVertexBuffer();
-        else
+        // 안 걸렸거나, 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 풀스크린 버퍼로 떨어진다.
+        if ( _pState->_boundMeshVb == 0 || bindMeshVertexBuffer() == false )
             bindFullscreenVertexBuffer();
 
         // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
@@ -513,7 +513,8 @@ namespace sw
         if ( bindActiveGraphicsPso() == false )
             return;
         // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다(루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
-        flushSlotTables( false );
+        if ( flushSlotTables( false ) == false )
+            return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         commandListForRecord()->DrawInstanced( vertexCount, 1, startVertex, 0 );
@@ -526,7 +527,8 @@ namespace sw
 
         if ( bindActiveGraphicsPso() == false )
             return;
-        flushSlotTables( false );
+        if ( flushSlotTables( false ) == false )
+            return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
@@ -558,7 +560,8 @@ namespace sw
     {
         if ( _pCmdList == nullptr )
             return;
-        flushSlotTables( true );
+        if ( flushSlotTables( true ) == false )
+            return;
         commandListForRecord()->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
@@ -598,7 +601,8 @@ namespace sw
         // setVertexBuffer 가 걸어 둔 배치 메시 VB 를 덮어써서, ExecuteIndirect 가 36 정점을 3 정점짜리
         // 버퍼에서 읽어 화면에 찢어진 삼각형이 나왔다(범위 밖은 0 이라 죽지는 않아 더 늦게 드러났다).
         // 다른 세 백엔드는 원래 메시 VB 를 우선한다.
-        flushSlotTables( false );
+        if ( flushSlotTables( false ) == false )
+            return;
         bindMeshVertexBufferOrFallback();
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
@@ -647,7 +651,8 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
-        flushSlotTables( false );
+        if ( flushSlotTables( false ) == false )
+            return;
         // 슬롯 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 예전에는 여기만 슬롯 0 을
         // 걸어, 이 리스트에서 슬롯 1 이 한 번도 안 걸렸으면 인스턴스 자리를 0 으로 읽었다(엔진에서 부르는 곳이 없어 드러나지
         // 않았다. RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
@@ -666,7 +671,8 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
-        flushSlotTables( true );
+        if ( flushSlotTables( true ) == false )
+            return;
         commandListForRecord()->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 

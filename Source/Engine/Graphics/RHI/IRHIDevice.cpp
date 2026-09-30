@@ -45,6 +45,22 @@ namespace sw
 
     SW_LOG_CALLER( "RHI" );
 
+    void IRHIDevice::waitIdle()
+    {
+        // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
+        // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
+        if ( _pfnRenderThreadDrain != nullptr && std::this_thread::get_id() != _renderThreadId )
+            _pfnRenderThreadDrain( _pRenderThreadDrainContext );
+        waitIdleInternal();
+    }
+
+    void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId )
+    {
+        _pfnRenderThreadDrain      = pfnDrain;
+        _pRenderThreadDrainContext = ( pfnDrain != nullptr ) ? pContext : nullptr;
+        _renderThreadId            = ( pfnDrain != nullptr ) ? renderThreadId : std::thread::id{};
+    }
+
     IRHIDevice::~IRHIDevice()
     {
         // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점에는 백엔드 자원이
@@ -54,6 +70,9 @@ namespace sw
 
     IRHIDevice::IRHIDevice()
         : _pSurface{ nullptr }
+        , _pfnRenderThreadDrain{ nullptr }
+        , _pRenderThreadDrainContext{ nullptr }
+        , _renderThreadId{}
         , _backBufferWidth{ 0 }
         , _backBufferHeight{ 0 }
         , _bPreferredVSync{ false }

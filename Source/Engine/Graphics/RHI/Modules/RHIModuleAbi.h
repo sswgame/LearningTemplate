@@ -2,9 +2,9 @@
  * @file RHIModuleAbi.h
  * @brief RHI MODULE 의 C ABI 버전과 스탬프입니다(Engine 과 RHI_* 가 일치해야 합니다).
  *
- * IRHIDevice / IRHIResource / IRHICommandList / IRHICommandContext 의 public 기록 표면이
- * 바이너리 비호환으로 바뀌면 kRHIModuleAbiVersion 이나 kRHIModuleAbiStamp 를
- * 올립니다. Engine 과 함께 모든 RHI_* 모듈을 다시 빌드하십시오.
+ * IRHIDevice / IRHIResource / IRHICommandList / IRHICommandContext 의 public 기록 표면이나
+ * 레이아웃(멤버 · 가상 함수)이 바이너리 비호환으로 바뀌면 kRHIModuleAbiVersion 과 kRHIModuleAbiStamp 를
+ * **함께** 올립니다(둘이 어긋나면 컴파일되지 않습니다). Engine 과 함께 모든 RHI_* 모듈을 다시 빌드하십시오.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -13,7 +13,8 @@ namespace sw
 {
     class IRHIDevice;
 
-    inline constexpr uint32 kRHIModuleAbiVersion = 6;
+    /** @brief 숫자 버전입니다. 도장의 `v<N>` 과 같아야 합니다. 예전에는 도장만 v16 까지 올리고 이 값은 6 에 머물러 둘이 다른 것을 셌습니다. */
+    inline constexpr uint32 kRHIModuleAbiVersion = 17;
     /** @brief 불투명 표면 지문입니다. 커맨드 리스트 · 디바이스 ABI 가 바뀌면 문자열을 바꿉니다.
      *         v3: IRHICommandList/ICommandReplayTarget 에 bindConstantBuffer/bindStructuredBuffer 추가.
      *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가.
@@ -38,8 +39,32 @@ namespace sw
      *              바뀐 인스턴스만 올리기 위해서다. 8000 개 중 10 개만 움직여도 전체를 올리고 있었다.
      *              updateStructuredBufferRange · updateStructuredBuffer 는 그 위의 비가상 도우미다.
      *         v16: IRHICommandList::writeTimestamp + IRHIDevice::setTimestampEnabled/getTimestampSlotCount/readTimestampsMicros.
-     *              패스별 GPU 시간을 재는 길. 없을 때는 백프레셔 대리값으로 추측해야 했고 실제로 틀렸다. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v16-2026-09";
+     *              패스별 GPU 시간을 재는 길. 없을 때는 백프레셔 대리값으로 추측해야 했고 실제로 틀렸다.
+     *         v17: IRHIDevice::waitIdle 이 비가상이 됐다(렌더 스레드를 먼저 비운 뒤 백엔드의 waitIdleInternal 을 부른다) +
+     *              setRenderThreadDrain 과 그 멤버. 비동기 씬 로드 · 핫 리로드가 렌더 스레드 기록 도중에 장치 대기를 끼워 넣던 것. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v17-2026-09";
+
+    namespace RHIModuleAbiInternal
+    {
+        /** @brief 도장 `rhi-cl-v<N>-…` 의 N 을 읽습니다. 숫자 버전과 도장이 어긋나지 않게 컴파일 때 견줍니다. */
+        constexpr uint32 readStampVersion( const utf8* pStamp )
+        {
+            uint32 index{ 0 };
+            while ( pStamp[index] != '\0' && pStamp[index] != 'v' )
+                ++index;
+            if ( pStamp[index] == 'v' )
+                ++index;
+            uint32 version{ 0 };
+            while ( pStamp[index] >= '0' && pStamp[index] <= '9' )
+            {
+                version = version * 10u + static_cast<uint32>( pStamp[index] - '0' );
+                ++index;
+            }
+            return version;
+        }
+    } // namespace RHIModuleAbiInternal
+    static_assert( RHIModuleAbiInternal::readStampVersion( kRHIModuleAbiStamp ) == kRHIModuleAbiVersion,
+                   "kRHIModuleAbiVersion and the v<N> in kRHIModuleAbiStamp must be bumped together" );
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();

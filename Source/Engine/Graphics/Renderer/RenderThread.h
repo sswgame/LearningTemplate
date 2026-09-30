@@ -62,6 +62,8 @@ namespace sw
         void submit( RenderFramePacket& packet );
         /** @brief 워커가 돌고 있으면 RT 큐가 빌 때까지 기다리고 디바이스 waitIdle 까지 합니다(워커가 없으면 할 일 없음). */
         void waitIdle();
+        /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(장치 대기는 하지 않는다). 렌더 스레드 자신이 부르면 곧바로 돌아온다. */
+        void drainPackets();
         /** @brief 호출 스레드에서 패킷 하나를 처리합니다. */
         void executeInline( RenderFramePacket& packet );
 
@@ -87,6 +89,8 @@ namespace sw
         bool executeFrameBody( RenderFramePacket& packet );
         /** @brief 지금 스레드에 그래픽스 컨텍스트가 있는지 확인합니다(없으면 붙입니다). */
         bool ensureContextOnCurrentThread();
+        /** @brief `IRHIDevice::setRenderThreadDrain` 에 거는 함수입니다(`pContext` 는 이 객체). */
+        static void drainPacketsThunk( void* pContext );
 
     private:
         IRHIDevice*         _pDevice;

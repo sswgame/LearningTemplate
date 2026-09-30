@@ -54,8 +54,26 @@ namespace sw
         /** @brief 백버퍼(스왑체인)를 새 크기로 다시 만듭니다. `resize` 가 크기를 적은 뒤 부릅니다. */
         virtual void resizeInternal( uint32 width, uint32 height ) = 0;
 
-        /** @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다. */
-        virtual void waitIdle() {}
+        /**
+         * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다.
+         * @details **렌더 스레드가 떠 있고 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다립니다**
+         *          (`setRenderThreadDrain`). 예전에는 비동기 씬 로드 완료(`SceneManager::tickTransitions`) · 텍스처 · 머티리얼 핫 리로드가 게임
+         *          스레드에서 곧바로 장치 대기를 불러, 렌더 스레드가 프레임을 기록 · 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들었습니다
+         *          (DX12: 아직 실행 전인 명령 할당자 재사용 → 장치 제거, Vulkan: 큐 외부 동기화 위반). 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
+         *          가려져 있었고, 에디터가 없는 빌드(Shipping)에서만 드러났습니다. 실제 대기는 백엔드의 `waitIdleInternal` 입니다.
+         */
+        void waitIdle();
+
+        /** @brief 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다리는 함수입니다(부르는 쪽은 렌더 스레드가 아니다). */
+        using RenderThreadDrainFunction = void ( * )( void* pContext );
+
+        /**
+         * @brief 렌더 스레드가 이 장치로 기록을 시작할 때 걸고(`RenderThread::start`), 멈춘 뒤 풉니다(nullptr).
+         * @param pfnDrain         다른 스레드의 `waitIdle` 이 먼저 부를 함수. nullptr 이면 풉니다.
+         * @param pContext         그 함수에 넘길 값(렌더 스레드 객체)
+         * @param renderThreadId   렌더 스레드. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않는다.
+         */
+        void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId );
 
         // ------------------------------------------------------------------------------
         // 2) 능력 · 스레드 — 백엔드 종류, bindless, 컨텍스트 소유
@@ -299,10 +317,16 @@ namespace sw
         void reportBarrierDuringRecording( const utf8* pWhat ) const;
 
     protected:
-        IRenderSurface* _pSurface;
-        uint32          _backBufferWidth;
-        uint32          _backBufferHeight;
-        bool            _bPreferredVSync;
+        /** @brief 백엔드의 실제 GPU 대기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤 부릅니다. */
+        virtual void waitIdleInternal() {}
+
+        IRenderSurface*           _pSurface;
+        RenderThreadDrainFunction _pfnRenderThreadDrain;
+        void*                     _pRenderThreadDrainContext;
+        std::thread::id           _renderThreadId;
+        uint32                    _backBufferWidth;
+        uint32                    _backBufferHeight;
+        bool                      _bPreferredVSync;
         /// @brief 프레임 스트림을 자를 때마다 곧바로 제출할지입니다(setImmediateSubmit 참고).
         bool _bImmediateSubmit;
         /// @brief 지금이 병렬 패스 기록 구간인지입니다(setParallelRecording 참고).

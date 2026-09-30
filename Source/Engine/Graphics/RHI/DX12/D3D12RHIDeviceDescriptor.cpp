@@ -39,8 +39,10 @@ namespace sw
             return;
 
         // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
-        // (드로우마다 하던 일이다. updateConstantBuffer 주석 참고.) 기록 시작 전 단일 스레드 구간이라 락이 필요 없다.
-        const uint32 slot = _frameRing.currentIndex();
+        // (드로우마다 하던 일이다. updateConstantBuffer 주석 참고.) 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고
+        // 부수므로(레지스트리 · 상수버퍼 맵에 쓴다) 읽기 락을 잡는다. 예전에는 "단일 스레드 구간" 이라 적고 락 없이 훑었다.
+        std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
+        const uint32                        slot = _frameRing.currentIndex();
         for ( BindlessResourceRecord& record : _listRegisteredBindless )
         {
             if ( record._resource == nullptr || record._buffer == 0 )
@@ -54,6 +56,25 @@ namespace sw
             cbvDesc.SizeInBytes    = sizeIt->second;
             _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
         }
+    }
+
+    void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    {
+        const auto sizeIt = _mapCbAlignedSize.find( buffer );
+        const auto mapIt  = _mapCbMapped.find( buffer );
+        if ( sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr )
+            return;
+        const uint32 alignedSize = sizeIt->second;
+        const uint32 copyBytes   = MathUtil::min( size, alignedSize );
+        Memory::copy( static_cast<uint8*>( mapIt->second ) + static_cast<size_t>( slot ) * alignedSize, pData, copyBytes );
+    }
+
+    void D3D12RHIDevice::fillConstantBufferSlot()
+    {
+        // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
+        std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
+        _constantBufferShadow.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
 
     bool D3D12RHIDevice::createGlobalResources()

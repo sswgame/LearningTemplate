@@ -2021,6 +2021,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ⑥ RHI — 장치 대기가 렌더 스레드를 안 세움, 게임 스레드 ↔ 렌더 스레드 맵 경합, 업로드 · 큐 동기화, 한 번 쓴 상수버퍼가 링 한 칸에만)
+
+**무엇이 틀렸나 · 고친 것.**
+- **다른 스레드의 `IRHIDevice::waitIdle` 이 렌더 스레드를 세우지 않았다.** 비동기 씬 로드 완료 · 텍스처 · 머티리얼 핫 리로드가 게임 스레드에서
+  장치 대기를 불러, 렌더 스레드가 기록 · 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들었다(DX12 할당자 재사용 · Vulkan 큐 외부 동기화
+  위반). 에디터는 UI 가 먼저 렌더 스레드를 비워 가렸고 Shipping 에서만 드러난다. → `waitIdle` 을 비가상으로 두고 렌더 스레드가 받은 패킷을 먼저
+  비운 뒤(`setRenderThreadDrain` · `RenderThread::drainPackets`) 백엔드의 `waitIdleInternal` 을 부른다. 렌더 스레드 자신은 기다리지 않는다.
+  캐시 락을 쥔 채 부르는 `TextureCache` · `MaterialCache::reload` 는 렌더 스레드가 그 캐시를 잠그지 않아 교착이 없다(확인함).
+- **게임 스레드의 버퍼 만들기 · 부수기가 렌더 스레드의 드로우별 맵 읽기와 락 없이 겹쳤다**(DX12 `_mapCbAlignedSize` · `_mapCbMapped`,
+  Vulkan `_mapCbSlotSize`, "기록 중 레지스트리 불변" 이라는 주석은 에디터 없는 빌드에서 틀렸다). → `_bindlessMutex` 읽기 · 배타 락.
+  `destroyBuffer` 가 렌더 스레드 전용 기록 상태(묶인 VB · IB)를 쓰던 것도 없앴다. 핸들에 세대가 있으니 부서진 VB 는 풀리지 않고 풀스크린
+  버퍼로 떨어진다(두 백엔드 같은 규칙).
+- **DX12 업로드 복사 리스트:** 닫아서 대기열에 넣은 뒤 실행 전에 락을 놓아, 그 틈의 게임 스레드 업로드가 리스트를 `Reset` 할 수 있었다 → 실행까지
+  업로드 락 안. 할당자 꼬리표(`_resetFence`)를 **열 때** 달아, 프레임 제출과 Signal 사이에 연 복사가 한 프레임 이른 펜스만 기다리고 실행 중인
+  할당자를 Reset 했다 → 제출할 때 단다(flush 뒤 같은 구간이면 Reset 없이 이어 쓴다).
+- **DX12 펜스 대기의 2 초 시간 초과가 성공으로 취급됐다**(링 칸 · 이전 프레임 · 리드백 · 해제). → 끝날 때까지 기다리고 2 초마다 알린다. 장치가
+  제거(TDR)되면 멈춘다.
+- **DX12 구조버퍼 업로드가 늘 UAV 상태로 끝나** SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 · 라이트)를 UAV 상태로 읽었다 → 셰이더 읽기 상태.
+- **DX12 슬롯 테이블을 못 걸면(온라인 블록 소진) 이전 테이블로 그렸다** → `flushSlotTables` 가 실패를 돌려주고 드로우 · 디스패치를 건너뛴다.
+- **Vulkan 일회성 업로드가 렌더 스레드의 `_commandPool` 을 함께 썼고, 큐 제출이 락 없이 겹쳤다** → 전용 풀(`_oneShotCommandPool` +
+  `_oneShotMutex`) · 큐 락(`_queueMutex`: submit · wait · present · deviceWaitIdle 모두).
+- **Vulkan 스왑체인 재생성이 실패해도 더티 표시를 내려**, 최소화 · 복원 중 한 번 실패하면 스왑체인 없이 프레임을 영영 건너뛰었다 → 성공할 때만
+  내리고 실패하면 매 프레임 다시 시도한다(알림은 한 번).
+- **값이 바뀔 때만 쓰는 상수버퍼(머티리얼 · 인스턴스)가 링 한 칸에만 있었다** — DX12 · Vulkan 에서 세 프레임 중 두 프레임을 0 으로 그렸다.
+  → `RHIConstantBufferShadow`(RHI/Support): 마지막 값을 들고 링이 그 칸으로 돌아왔을 때(펜스를 지난 뒤) 채운다. 다 채우면 목록에서 빠진다.
+  언리얼 멀티 프레임 유니폼 버퍼의 "읽는 쪽은 늘 마지막 값" 보장과 같다. 만들 때 크기를 넘는 쓰기는 자른다(다음 칸 침범).
+- **GPUScene 머티리얼 버퍼가 16 개를 넘은 뒤 하나 늘 때마다 다시 만들어졌다**(요구 용량이 늘 "원소 수 × 2") → 모자랄 때만 두 배.
+- RHI ABI: 숫자 버전(6)과 도장(v16)이 따로 놀았다 → 둘 다 17, 도장의 `v<N>` 과 버전이 다르면 컴파일되지 않는다(`static_assert`).
+
+**확인.** 새 `RHIDeviceTest.WriteOnceConstantBufferReachesEveryFrameSlot`(한 번 쓴 빨강을 링 두 바퀴 동안 매 프레임 그려 읽음, 4 백엔드) —
+채우기를 끄면 DX12 · Vulkan 이 세 프레임 중 두 프레임을 검게 그려 진다(변이 확인). `RHIConstantBufferShadowTest` 단위 테스트.
+작성 중 한 번, `registerBindlessResource` 안(이미 배타 락)에 읽기 락을 더 넣어 스스로 멈췄다 — 외부 스택 덤프로 찾았다. `BackendSmoke.py`
+네 백엔드 불투명 · 반투명 평균 RGB 일치 · 오류 0, App 렌더 스레드 + 백엔드 교체(`-gv_rhiSwapAtFrame=30`, Vulkan → DX12) 오류 0.
+Debug nogpu+린트 28/28 · hostgpu 2/2, Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ⑤ 태스크 · 동시성 — 끝나 가는 태스크에 붙인 후속 유실, 버려진 태스크가 종료를 막음, 병렬 본문이 선행 · 취소를 무시, 렌더 스레드 종료 깨움 유실)
 
 **무엇이 틀렸나 · 고친 것.**

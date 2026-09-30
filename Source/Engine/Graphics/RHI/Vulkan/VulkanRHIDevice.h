@@ -5,6 +5,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -171,7 +172,7 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
-        void waitIdle() override;
+        void waitIdleInternal() override;
 
         /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
@@ -332,7 +333,7 @@ namespace sw
          * @brief 스왑체인을 통째로 다시 만듭니다 (창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때).
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 표까지 함께 갱신합니다.
          */
-        void recreateSwapChain();
+        bool recreateSwapChain();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         bool initializePipelineCache();
@@ -348,6 +349,13 @@ namespace sw
         /** @brief 불투명 버퍼 핸들을 VulkanBufferRecord 로 풉니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
+        /**
+         * @brief 링 상수버퍼의 `slot` 칸에 씁니다. `_bindlessMutex` 를 (읽기로라도) 쥐고 부릅니다.
+         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 예전에는 그대로 매핑 · 복사해 다음 칸(다음 프레임의 값)까지 덮었습니다.
+         */
+        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
+        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). 칸의 펜스를 지난 뒤 부릅니다. */
+        void fillConstantBufferSlot();
         /** @brief 불투명 텍스처 핸들을 VulkanTextureRecord 로 풉니다. */
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
@@ -487,7 +495,20 @@ namespace sw
         VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더패스의 loadOp=LOAD 변종. 한 프레임에 백버퍼를
                                             ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 얹을 때) 앞의 내용을 보존한다.
         VkRenderPass  _offscreenRenderPass; ///< 게임뷰 · RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
-        VkCommandPool _commandPool;
+        VkCommandPool _commandPool;         ///< 프레임 버퍼 · 프레임 세그먼트용. 렌더 스레드만 쓴다.
+        /**
+         * @brief 프레임 밖 일회성 제출(텍스처 업로드 · 리드백 · 초기 버퍼 복사) 전용 풀입니다. `_oneShotMutex` 가 지킵니다.
+         * @details 커맨드 풀은 외부 동기화 대상입니다. 예전에는 게임 · 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
+         *          `_commandPool` 에서 할당 · 해제해, 에디터가 없는 빌드에서 스트리밍 텍스처가 프레임 기록과 겹치면 풀이 깨졌습니다.
+         */
+        VkCommandPool _oneShotCommandPool;
+        mutex         _oneShotMutex;
+        /**
+         * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkQueuePresentKHR` · `vkDeviceWaitIdle`)을 지킵니다.
+         * @details VkQueue 는 외부 동기화 대상입니다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 락 없이 겹쳤습니다.
+         */
+        mutable mutex _queueMutex;
+        uint8         _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
 
         /// @brief 텍스처 레이아웃 확인 + 전이를 보호합니다(transitionTextureLayout 참고).
         mutable mutex _imageLayoutMutex;
@@ -584,8 +605,10 @@ namespace sw
         VkBuffer         _vertexBuffer;      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 
-        RHIHandleTable<VulkanBufferRecord>     _gpuBuffers;
+        RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
+        /// @brief 링 상수버퍼 → 칸 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 지킵니다.
         unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
+        RHIConstantBufferShadow                _constantBufferShadow; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
         /// @brief 프레임 스트림 컨텍스트(백버퍼 패스 · Present · 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;

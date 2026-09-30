@@ -94,7 +94,7 @@ namespace sw
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief GPU 가 끝날 때까지 기다리고(glFinish) 지연 해제 큐를 비웁니다. */
-        void waitIdle() override;
+        void waitIdleInternal() override;
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }

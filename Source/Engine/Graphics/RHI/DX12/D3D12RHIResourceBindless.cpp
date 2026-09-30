@@ -135,6 +135,7 @@ namespace sw
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
         cbvDesc.BufferLocation = pResource->GetGPUVirtualAddress();
 
+        // 상수버퍼 맵 조회는 위에서 쥔 배타 락(`lock`) 안이다. 그 맵은 같은 `_bindlessMutex` 가 지킨다.
         const auto sizeIt = _pDevice->_mapCbAlignedSize.find( buffer );
         if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
         {

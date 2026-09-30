@@ -381,6 +381,10 @@ namespace sw
         poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
         if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_commandPool ) != VK_SUCCESS )
             return false;
+        // 일회성 제출 전용 풀. 짧게 살다 버려지는 버퍼라 TRANSIENT 를 준다.
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_oneShotCommandPool ) != VK_SUCCESS )
+            return false;
         return true;
     }
 
@@ -456,11 +460,14 @@ namespace sw
             _bSwapChainDirty = 1;
     }
 
-    void VulkanRHIDevice::recreateSwapChain()
+    bool VulkanRHIDevice::recreateSwapChain()
     {
         if ( _device == nullptr || _width == 0 || _height == 0 )
-            return;
-        vkDeviceWaitIdle( _device );
+            return false;
+        {
+            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            vkDeviceWaitIdle( _device );
+        }
 
         // 아래에서 스왑체인을 통째로 버린다. 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
         // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
@@ -471,28 +478,28 @@ namespace sw
         _swapChain.destroySemaphores( _device );
         _swapChain.destroy( _device );
 
+        // 실패하면 부르는 쪽이 다음 프레임에 다시 시도한다(최소화 · 복원 중에는 서피스 크기가 잠시 0 이라 실패한다). 알림은 연달아
+        // 실패하는 동안 한 번이다.
+        const utf8* pFailedStep{ nullptr };
         if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
+            pFailedStep = "swapchain";
+        else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
+            pFailedStep = "swapchain framebuffers";
+        else if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
+            pFailedStep = "swapchain semaphores";
+        else if ( createFrameFences() == false )
+            pFailedStep = "frame fences";
+        if ( pFailedStep != nullptr )
         {
-            SW_LOG_ERROR( "Failed to recreate the swapchain!" );
-            return;
-        }
-        if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
-        {
-            SW_LOG_ERROR( "Failed to recreate the swapchain framebuffers!" );
-            return;
-        }
-        if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
-        {
-            SW_LOG_ERROR( "Failed to recreate the swapchain semaphores!" );
-            return;
-        }
-        if ( createFrameFences() == false )
-        {
-            SW_LOG_ERROR( "Failed to recreate the frame fences!" );
-            return;
+            if ( _bSwapChainRecreateFailing == SW_FALSE )
+                SW_LOG_ERROR( "Failed to recreate the %# (%#x%#) — retrying every frame", pFailedStep, _width, _height );
+            _bSwapChainRecreateFailing = SW_TRUE;
+            return false;
         }
 
-        _currentFrame = 0;
+        _bSwapChainRecreateFailing = SW_FALSE;
+        _currentFrame              = 0;
+        return true;
     }
 
     bool VulkanRHIDevice::initializePipelineCache()

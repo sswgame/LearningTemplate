@@ -131,7 +131,7 @@ namespace sw
         _releaseQueue.tickFrame();
     }
 
-    void OpenGLRHIDevice::waitIdle()
+    void OpenGLRHIDevice::waitIdleInternal()
     {
         if ( _bInitialized == SW_FALSE )
             return;

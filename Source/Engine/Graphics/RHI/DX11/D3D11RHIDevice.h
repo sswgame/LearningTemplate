@@ -120,7 +120,7 @@ namespace sw
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief GPU 가 쉴 때까지 기다린 뒤 해제 큐를 비웁니다. */
-        void waitIdle() override;
+        void waitIdleInternal() override;
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }

@@ -20,7 +20,7 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12" );
 
-    void D3D12RHIDevice::waitIdle()
+    void D3D12RHIDevice::waitIdleInternal()
     {
         waitForPreviousFrame();
         _releaseQueue.flushAll();
@@ -148,11 +148,10 @@ namespace sw
         if ( _bImmediateSubmit == false || _listPendingSubmit.empty() )
             return;
 
-        // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다.
-        {
-            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
-            flushPendingUploads( false );
-        }
+        // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+        // 리스트를 실행 전에 다른 스레드의 업로드가 `Reset` 하면 그 복사가 사라진다.
+        std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+        flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
         _listPendingSubmit.clear();
     }
@@ -167,6 +166,10 @@ namespace sw
                 continue;
             slot._copyCommandList->Close();
             slot._bListOpen = SW_FALSE;
+            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 예전에는 리스트를 **열 때** 적어서, 프레임 제출 뒤 ·
+            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달았고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 했다 —
+            // `_resetFence` 가 막으려던 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
+            slot._resetFence = _fenceValue;
             if ( bExecuteNow )
             {
                 ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
@@ -205,16 +208,8 @@ namespace sw
             return;
         }
 
-        if ( _fence->GetCompletedValue() < fenceToWait )
-        {
-            if ( _fenceEvent == nullptr )
-                return;
-
-            _fence->SetEventOnCompletion( fenceToWait, _fenceEvent );
-            const DWORD waitResult = WaitForSingleObject( _fenceEvent, 2000 );
-            if ( waitResult != WAIT_OBJECT_0 )
-                SW_LOG_ERROR( "Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
-        }
+        if ( waitForFenceValue( fenceToWait ) == false )
+            return;
 
         if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
             _swapChain.acquireNextImage();
@@ -229,17 +224,21 @@ namespace sw
             return;
 
         const uint64 completed = _fence->GetCompletedValue();
-        if ( _frameRing.beginFrame( completed ) )
-            return;
-
-        const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
-        const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
-        if ( _fence->GetCompletedValue() < waitValue && _fenceEvent != nullptr )
+        bool         bAdvanced = _frameRing.beginFrame( completed );
+        if ( bAdvanced == false )
         {
-            _fence->SetEventOnCompletion( waitValue, _fenceEvent );
-            WaitForSingleObject( _fenceEvent, 2000 );
+            const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
+            const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
+            // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 예전에는 시간 초과를 무시하고 링을 넘기지 못한 채 이어가, 방금 제출한
+            // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어썼다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
+            // 기다리지 않는다.
+            waitForFenceValue( waitValue );
+            bAdvanced = _frameRing.beginFrame( _fence->GetCompletedValue() );
         }
-        _frameRing.beginFrame( _fence->GetCompletedValue() );
+        // 새 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다. 넘어가지 못했으면(장치 제거) 지금 칸은
+        // GPU 가 아직 읽는 중일 수 있으니 건드리지 않는다.
+        if ( bAdvanced )
+            fillConstantBufferSlot();
     }
 
     bool D3D12RHIDevice::waitForFenceValue( uint64 fenceValue )
@@ -252,7 +251,23 @@ namespace sw
             return false;
         if ( FAILED( _fence->SetEventOnCompletion( fenceValue, _fenceEvent ) ) )
             return false;
-        return WaitForSingleObject( _fenceEvent, 2000 ) == WAIT_OBJECT_0;
+        // 끝날 때까지 기다린다. 예전에는 2 초 뒤 실패를 돌려줘, 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을 풀거나
+        // 재사용했다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        uint32 waitedSeconds{ 0 };
+        while ( WaitForSingleObject( _fenceEvent, 2000 ) != WAIT_OBJECT_0 )
+        {
+            waitedSeconds += 2;
+            if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+            {
+                SW_LOG_ERROR( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
+                              static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                return false;
+            }
+            if ( _fence->GetCompletedValue() >= fenceValue )
+                return true;
+            SW_LOG_WARNING( "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
+        }
+        return true;
     }
 
     void D3D12RHIDevice::signalCurrentFrame()
@@ -520,21 +535,22 @@ namespace sw
                 releaseOnlineBlocksDeferred( _frameStreamState );
             }
 
-            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼운다. 프레임에 한 번의 제출이다.
+            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+            // 리스트를 실행 전에 게임 스레드의 업로드가 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
             {
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
-            }
 
-            // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
-            if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
-            {
-                SW_PROFILE_SCOPE( "RT.Present.submit.execute" );
-                engine::getFrameProfiler().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
-                _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
-                                                    _listPendingSubmit.data() );
+                // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
+                if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
+                {
+                    SW_PROFILE_SCOPE( "RT.Present.submit.execute" );
+                    engine::getFrameProfiler().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
+                    _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
+                                                        _listPendingSubmit.data() );
+                }
+                _listPendingSubmit.clear();
             }
-            _listPendingSubmit.clear();
             _pActiveFrameList = nullptr;
         }
 

@@ -24,9 +24,14 @@ namespace sw
         if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight, buffer, pMapped ) == false )
             return 0;
 
-        const RHIBufferHandle handle        = _pDevice->storeBuffer( buffer );
-        _pDevice->_mapCbAlignedSize[handle] = alignedSize;
-        _pDevice->_mapCbMapped[handle]      = pMapped;
+        const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
+        {
+            // 상수버퍼 맵은 렌더 스레드가 드로우마다 읽는다(`resolveBufferAddress`). 에디터가 없는 빌드는 게임 틱과 기록이 겹치므로, 게임 스레드의
+            // 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
+            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+            _pDevice->_mapCbAlignedSize[handle] = alignedSize;
+            _pDevice->_mapCbMapped[handle]      = pMapped;
+        }
         return handle;
     }
 
@@ -35,18 +40,15 @@ namespace sw
         if ( buffer == 0 || pData == nullptr )
             return;
 
-        // CBV 의 SizeInBytes 는 256 의 배수여야 한다(D3D12 요구).
-        uint32     alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
-        const auto sizeIt      = _pDevice->_mapCbAlignedSize.find( buffer );
-        if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
-            alignedSize = sizeIt->second;
-        const uint32 slot   = _pDevice->_frameRing.currentIndex();
-        const uint32 offset = slot * alignedSize;
-
-        const auto mapIt = _pDevice->_mapCbMapped.find( buffer );
-        if ( mapIt == _pDevice->_mapCbMapped.end() || mapIt->second == nullptr )
+        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferShadow` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
+        // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
+        // 도중에 쓰면 안 된다.
+        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
             return;
-        Memory::copy( static_cast<uint8*>( mapIt->second ) + offset, pData, size );
+        _pDevice->_constantBufferShadow.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
+                                               [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
 
         // 힙의 CBV 는 여기서 갱신하지 않는다. 예전에는 드로우마다 **레지스트리 전체를 훑어** 이 버퍼를 가리키는
         // 레코드마다 CreateConstantBufferView 를 다시 불렀다. 등록 수 N, 프레임당 드로우 D 면 O(N·D) 다.
@@ -81,7 +83,7 @@ namespace sw
             return false;
         const uint32                          slotIndex       = _pDevice->_frameRing.currentIndex();
         D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        const bool                            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+        bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
 
         // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
         if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
@@ -89,9 +91,13 @@ namespace sw
             outSlotIndex = slotIndex;
             return true;
         }
-        // 구간이 바뀌었는데 열려 있다면 flush 를 빠뜨린 것이다. 얼로케이터를 Reset 하기 전에 지금 내보낸다.
+        // 구간이 바뀌었는데 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
+        // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다 — 다시 판정한다.
         if ( slot._bListOpen != SW_FALSE )
+        {
             _pDevice->flushPendingUploads( true );
+            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+        }
 
         if ( slot._copyAllocator == nullptr )
         {
@@ -296,18 +302,22 @@ namespace sw
             cursor += MathUtil::align( region._size, kCopyAlignment );
         }
 
-        D3D12_RESOURCE_BARRIER toUav{};
-        toUav.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        toUav.Transition.pResource   = pDest;
-        toUav.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        toUav.Transition.StateAfter  = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        pList->ResourceBarrier( 1, &toUav );
+        // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 예전에는 늘 UAV 로 끝내서, 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
+        // 인스턴스가 없을 때의 인스턴스 버퍼)가 UAV 상태로 읽혔다(GPU 검증이 짚고, 드라이버 관용에 기대 동작했다). 컴퓨트로 쓰는 버퍼는 쓰기 전에
+        // `transitionBuffer( UnorderedAccess )` 가 기록된 상태에서 옮긴다.
+        constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        D3D12_RESOURCE_BARRIER          toShaderRead{};
+        toShaderRead.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        toShaderRead.Transition.pResource   = pDest;
+        toShaderRead.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+        toShaderRead.Transition.StateAfter  = kShaderReadState;
+        toShaderRead.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        pList->ResourceBarrier( 1, &toShaderRead );
         // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-            _pDevice->_mapStructuredBufferState[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            _pDevice->_mapStructuredBufferState[buffer] = kShaderReadState;
         }
     }
 
@@ -535,15 +545,15 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_frameStreamState._boundMeshVb )
-            _pDevice->_frameStreamState._boundMeshVb = 0;
-        if ( buffer == _pDevice->_frameStreamState._boundIndexBuffer )
-            _pDevice->_frameStreamState._boundIndexBuffer = 0;
+        // 렌더 스레드의 기록 상태(`_frameStreamState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
+        // 렌더 스레드만 쓴다(예전엔 여기서 써서 경쟁이었다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
+        // 풀어 건너뛴다.
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState.erase( buffer );
         }
-        const auto mapIt = _pDevice->_mapCbMapped.find( buffer );
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const auto                          mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
         {
             ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
@@ -552,12 +562,12 @@ namespace sw
             _pDevice->_mapCbMapped.erase( mapIt );
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
+        _pDevice->_constantBufferShadow.forget( buffer );
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
         {
-            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
             for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
             {
                 if ( record._buffer != buffer )

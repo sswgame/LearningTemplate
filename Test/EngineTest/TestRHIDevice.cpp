@@ -774,6 +774,126 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 }
 
 /**
+ * @brief [RHIDeviceTest] 한 번만 쓴 상수버퍼가 링의 **모든** 프레임 칸에서 보인다 — 4백엔드
+ * @details 링 상수버퍼는 프레임 칸이 `kMaxFrameCountInFlight` 개이고 `updateConstantBuffer` 는 이번 칸에만 쓴다. 값이 바뀔 때만 쓰는
+ *          머티리얼 상수버퍼는 DX12 · Vulkan 에서 나머지 칸이 0 으로 남아, 세 프레임 중 두 프레임을 검게 그렸다(DX11 · GL 은 버퍼
+ *          하나라 문제가 없었다). 빨강을 **한 번** 쓰고 링을 두 바퀴 돌며 매 프레임 그려 읽는다 — 어느 프레임이든 빨강이어야 한다.
+ *          그리기는 실제 렌더러처럼 프레임 안에서 리스트로 내고(`executeCommandList`), Present 없이 닫은 뒤 읽는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+        if ( device->getCapabilities()._bOffscreenRT == SW_FALSE )
+        {
+            shutdownDeviceWithWindow( device, window );
+            continue;
+        }
+
+        const float32             arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
+        SW_ASSERT_TRUE( cb != 0 );
+        pResource->updateConstantBuffer( cb, arrRed, sizeof( arrRed ) ); // 한 번만 쓴다
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_ASSERT_TRUE( pso != 0 );
+
+        constexpr uint32   kSize = 32;
+        sw::RHITextureDesc desc{};
+        desc._width                   = kSize;
+        desc._height                  = kSize;
+        desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
+        desc._bIsRenderTarget         = SW_TRUE;
+        desc._bIsShaderResource       = SW_TRUE;
+        desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+        const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+        SW_ASSERT_TRUE( rt != 0 );
+
+        constexpr uint32 kFrameCount = sw::constant::kMaxFrameCountInFlight * 2;
+        uint32           redFrameCount{ 0 };
+        for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+        {
+            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            SW_ASSERT_TRUE( cmd != nullptr );
+
+            sw::RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+            beginInfo._bBindColor = SW_TRUE;
+            beginInfo._width      = kSize;
+            beginInfo._height     = kSize;
+            sw::RHIViewport viewport{};
+            viewport._width  = static_cast<float32>( kSize );
+            viewport._height = static_cast<float32>( kSize );
+
+            cmd->beginCommandList();
+            cmd->setViewport( viewport );
+            cmd->beginRenderPass( beginInfo );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+            cmd->endCommandList();
+            device->executeCommandList( cmd.get() );
+            device->endFrame( false, false );
+            device->waitIdle();
+
+            sw::vector<uint8>     pixels;
+            sw::RHITextureMipSpan layout{};
+            SW_ASSERT_TRUE( pResource->readbackTexture2D( rt, 0, pixels, layout ) );
+            const uint8* pCenter = pixels.data() + static_cast<size_t>( layout._height / 2 ) * layout._rowBytes +
+                                   static_cast<size_t>( layout._width / 2 ) * 4;
+            const bool bRed = pCenter[0] > 200 && pCenter[1] < 80 && pCenter[2] < 80;
+            if ( bRed )
+                ++redFrameCount;
+            else
+            {
+                SW_LOG_WARNING( "%#: frame %# center pixel %# %# %# — expected red", device->getBackendName(), frame, pCenter[0], pCenter[1],
+                                pCenter[2] );
+            }
+        }
+        SW_EXPECT_TRUE_MSG( redFrameCount == kFrameCount, "한 번 쓴 상수버퍼가 일부 프레임 칸에서 옛 값(0)으로 읽혔습니다" );
+
+        pResource->destroyTexture( rt );
+        pResource->destroyPipelineState( pso );
+        pResource->unregisterBindlessResource( cbIndex );
+        pResource->destroyBuffer( cb );
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the write-once constant buffer test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 프로보킹 정점 규약이 네 백엔드에서 같다 — flat 값은 삼각형의 **첫** 정점에서 온다
  * @details `nointerpolation` 값은 삼각형의 정점 하나에서 오는데 어느 정점인지는 API 규약이다. DX·Vulkan 은
  *          FIRST, OpenGL 기본은 LAST 라 엔진이 GL 디바이스 초기화에서 `glProvokingVertex( FIRST )` 를 건다.

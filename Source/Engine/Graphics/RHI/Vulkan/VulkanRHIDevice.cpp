@@ -42,6 +42,10 @@ namespace sw
         , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
+        , _oneShotCommandPool{ nullptr }
+        , _oneShotMutex{}
+        , _queueMutex{}
+        , _bSwapChainRecreateFailing{ SW_FALSE }
         , _liveCmdListMutex{}
         , _listLiveCmd{}
         , _frameSegmentCursor{ 0 }
@@ -88,6 +92,7 @@ namespace sw
         , _listBindlessFree{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
+        , _constantBufferShadow{}
         , _listBindlessSourceBuffer{}
         , _listUavSourceBuffer{}
         , _listUavSourceTexture{}
@@ -251,11 +256,38 @@ namespace sw
         return true;
     }
 
+    void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    {
+        const auto          slotIt  = _mapCbSlotSize.find( buffer );
+        VulkanBufferRecord* pRecord = resolveAllocatedBuffer( buffer );
+        if ( slotIt == _mapCbSlotSize.end() || pRecord == nullptr || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0 )
+            return;
+        const uint32 slotSize  = slotIt->second;
+        const uint32 copyBytes = MathUtil::min( size, slotSize );
+        void*        pMapped{ nullptr };
+        if ( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ) != VK_SUCCESS )
+            return;
+        Memory::copy( pMapped, pData, copyBytes );
+        vkUnmapMemory( _device, pRecord->_memory );
+    }
+
+    void VulkanRHIDevice::fillConstantBufferSlot()
+    {
+        // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
+        std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
+        _constantBufferShadow.fillSlot( _currentFrame % constant::kMaxFrameCountInFlight,
+                                        [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
+    }
+
     void VulkanRHIDevice::shutdownInternal()
     {
         if ( _device )
         {
-            vkDeviceWaitIdle( _device );
+            {
+                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                vkDeviceWaitIdle( _device );
+            }
             _releaseQueue.flushAll();
             _frameStreamContext.reset();
 
@@ -276,6 +308,11 @@ namespace sw
                 vkDestroyCommandPool( _device, _commandPool, nullptr );
                 _commandPool = VK_NULL_HANDLE;
             }
+            if ( _oneShotCommandPool )
+            {
+                vkDestroyCommandPool( _device, _oneShotCommandPool, nullptr );
+                _oneShotCommandPool = VK_NULL_HANDLE;
+            }
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
             {
@@ -285,6 +322,7 @@ namespace sw
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
             _gpuBuffers.clear();
+            _constantBufferShadow.clear();
             for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
             {
                 if ( slot._pMapped != nullptr && slot._memory != VK_NULL_HANDLE )

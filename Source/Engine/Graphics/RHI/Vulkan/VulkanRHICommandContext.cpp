@@ -593,8 +593,9 @@ namespace sw
         if ( bConstantBuffer )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다. updateConstantBuffer 가
-            // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다.
-            const auto slotIt = _pDevice->_mapCbSlotSize.find( handle );
+            // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다. 표는 게임 스레드가 만들고 부수며 바꾸므로 짧은 읽기 락을 쥔다.
+            std::shared_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            const auto                          slotIt = _pDevice->_mapCbSlotSize.find( handle );
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             {
                 candidate._range  = slotIt->second;
@@ -697,7 +698,8 @@ namespace sw
                 slot0Offset = static_cast<VkDeviceSize>( _pState->_boundMeshOffset );
             }
         }
-        else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
+        // 안 걸렸거나, 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 풀스크린 버퍼로 떨어진다.
+        if ( slot0Buffer == VK_NULL_HANDLE && _pDevice->_vertexBuffer != VK_NULL_HANDLE )
             slot0Buffer = _pDevice->_vertexBuffer;
         if ( slot0Buffer == VK_NULL_HANDLE )
             return;

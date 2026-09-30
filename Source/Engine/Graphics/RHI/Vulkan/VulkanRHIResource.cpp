@@ -29,15 +29,19 @@ namespace sw
          *          없지만, **누군가 중간에 검사를 하나 더하는 날 커맨드 버퍼가 샙니다.** 풀에서 조용히
          *          자라다가 나중에 할당이 실패합니다. 해제를 소멸자에 두면 그 실수가 생길 수 없습니다.
          *
-         * @note 장치 핸들 셋을 인자로 받습니다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
+         * @note 장치 핸들과 락을 인자로 받습니다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
          *       `VulkanRHIResource` 만 friend 라, 이 클래스가 장치를 직접 알 수는 없습니다.
+         *       **일회성 풀 락은 이 객체가 사는 동안 쥡니다**(풀은 외부 동기화 대상이고 게임 · 로더 스레드가 함께 업로드한다).
+         *       큐 락은 제출과 대기 동안만 쥡니다.
          */
         class VulkanOneShotCommands
         {
         public:
-            /** @brief 커맨드 버퍼를 하나 할당하고 기록을 시작합니다. 실패하면 `isValid()` 가 false 입니다. */
-            VulkanOneShotCommands( VkDevice device, VkCommandPool commandPool, VkQueue queue )
-                : _device{ device }
+            /** @brief 일회성 풀 락을 쥐고 커맨드 버퍼를 하나 할당해 기록을 시작합니다. 실패하면 `isValid()` 가 false 입니다. */
+            VulkanOneShotCommands( VkDevice device, VkCommandPool commandPool, mutex& poolMutex, VkQueue queue, mutex& queueMutex )
+                : _poolLock{ poolMutex }
+                , _queueMutex{ queueMutex }
+                , _device{ device }
                 , _commandPool{ commandPool }
                 , _queue{ queue }
                 , _commandBuffer{ VK_NULL_HANDLE }
@@ -89,6 +93,7 @@ namespace sw
                 submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
                 submitInfo.commandBufferCount = 1;
                 submitInfo.pCommandBuffers    = &_commandBuffer;
+                std::scoped_lock<mutex> queueLock{ _queueMutex };
                 if ( vkQueueSubmit( _queue, 1, &submitInfo, VK_NULL_HANDLE ) != VK_SUCCESS )
                     return false;
 
@@ -97,10 +102,12 @@ namespace sw
             }
 
         private:
-            VkDevice        _device;
-            VkCommandPool   _commandPool;
-            VkQueue         _queue;
-            VkCommandBuffer _commandBuffer;
+            std::scoped_lock<mutex> _poolLock;
+            mutex&                  _queueMutex;
+            VkDevice                _device;
+            VkCommandPool           _commandPool;
+            VkQueue                 _queue;
+            VkCommandBuffer         _commandBuffer;
         };
 
         /**
@@ -132,36 +139,38 @@ namespace sw
         const uint32          total   = aligned * constant::kMaxFrameCountInFlight;
         const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
         if ( handle != 0 )
+        {
+            // 렌더 스레드가 드로우마다 이 표를 읽는다. 게임 스레드의 삽입(재배치)이 그와 겹치지 않게 배타 락으로 넣는다.
+            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize[handle] = aligned;
+        }
         return handle;
     }
 
     void VulkanRHIResource::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( pRecord == nullptr || pData == nullptr || size == 0 )
+        if ( buffer == 0 || pData == nullptr || size == 0 )
             return;
 
-        if ( pRecord->_memory == VK_NULL_HANDLE )
-            return;
-
-        uint32     slotSize = size;
-        const auto slotIt   = _pDevice->_mapCbSlotSize.find( buffer );
-        if ( slotIt != _pDevice->_mapCbSlotSize.end() )
-            slotSize = slotIt->second;
-        const uint32 offset = ( _pDevice->_currentFrame % constant::kMaxFrameCountInFlight ) * slotSize;
-
-        void* pMapped{ nullptr };
-        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, offset, size, 0, &pMapped ) == VK_SUCCESS )
+        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferShadow` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
+        // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
+        // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
+        std::shared_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_mapCbSlotSize.contains( buffer ) == false )
         {
-            Memory::copy( pMapped, pData, size );
-            vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+            VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+            void*                                pMapped{ nullptr };
+            if ( pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
+                 vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS )
+            {
+                Memory::copy( pMapped, pData, size );
+                vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+            }
+            return;
         }
-
-        // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 슬롯의 오프셋을
-        // 넣는다. 세트는 프레임마다 새로 할당되므로 아직 실행 중인 직전 프레임의 세트를 덮어쓸 일이 없다.
-        (void)slotSize;
-        (void)offset;
+        _pDevice->_constantBufferShadow.write( buffer, _pDevice->_currentFrame % constant::kMaxFrameCountInFlight, pData, size,
+                                               [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
     }
 
     RHIBufferHandle VulkanRHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -337,10 +346,10 @@ namespace sw
         std::optional<VulkanOneShotCommands> oneShot;
         if ( bOneShot )
         {
-            if ( _pDevice->_commandPool == VK_NULL_HANDLE )
+            if ( _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
                 return;
 
-            oneShot.emplace( _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue );
+            oneShot.emplace( _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue, _pDevice->_queueMutex );
             if ( oneShot->isValid() == false )
             {
                 SW_LOG_ERROR( "updateStructuredBuffer: failed to allocate the one-shot command buffer" );
@@ -405,11 +414,14 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_recordingState._boundMeshVb )
-            _pDevice->_recordingState._boundMeshVb = 0;
-        if ( buffer == _pDevice->_recordingState._boundIndexBuffer )
-            _pDevice->_recordingState._boundIndexBuffer = 0;
-        _pDevice->_mapCbSlotSize.erase( buffer );
+        // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
+        // 렌더 스레드만 쓴다(예전엔 여기서 써서 경쟁이었다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
+        // 정점 버퍼는 풀스크린 버퍼로 떨어진다(bindVertexBuffers).
+        {
+            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            _pDevice->_mapCbSlotSize.erase( buffer );
+            _pDevice->_constantBufferShadow.forget( buffer );
+        }
 
         VulkanRHIDevice::VulkanBufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -573,7 +585,7 @@ namespace sw
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
+             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
@@ -600,7 +612,8 @@ namespace sw
             return false;
         }
 
-        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue };
+        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
+                                       _pDevice->_queueMutex };
         if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );
@@ -666,7 +679,7 @@ namespace sw
         // (형제인 uploadTexture2D 는 같은 자리에서 모두 로그를 남기고 있었다).
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
+             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
         {
             SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
             return false;
@@ -693,7 +706,8 @@ namespace sw
             return false;
         }
 
-        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_commandPool, _pDevice->_graphicsQueue };
+        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
+                                       _pDevice->_queueMutex };
         if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );

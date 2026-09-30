@@ -10,10 +10,13 @@ namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
 
-    void VulkanRHIDevice::waitIdle()
+    void VulkanRHIDevice::waitIdleInternal()
     {
         if ( _device )
+        {
+            std::scoped_lock<mutex> queueLock{ _queueMutex };
             vkDeviceWaitIdle( _device );
+        }
         _releaseQueue.flushAll();
     }
 
@@ -92,15 +95,17 @@ namespace sw
         if ( _width == 0 || _height == 0 )
             return;
 
-        if ( _bSwapChainDirty )
-        {
-            recreateSwapChain();
+        // 재생성이 성공할 때만 표시를 내린다. 예전에는 실패해도 내려, 복원 도중 한 번 실패하면 스왑체인 없이 프레임을 **영영** 건너뛰었다
+        // (창이 검은 채로 멈춤).
+        if ( _bSwapChainDirty && recreateSwapChain() )
             _bSwapChainDirty = 0;
-        }
 
-        // 재생성이 실패하면 스왑체인 · 동기화 객체가 없는 상태이므로 프레임을 건너뛴다.
+        // 재생성이 실패하면 스왑체인 · 동기화 객체가 없는 상태이므로 프레임을 건너뛰고 다음 프레임에 다시 시도한다.
         if ( _swapChain.isValid() == false || _listInFlightFence.empty() )
+        {
+            _bSwapChainDirty = 1;
             return;
+        }
 
         vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
         // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
@@ -109,6 +114,8 @@ namespace sw
         // 이 링 슬롯의 펜스가 신호됐다는 것은 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
         // GPU 작업이 실제로 끝났다는 뜻이다. 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
+        // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
+        fillConstantBufferSlot();
         // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
         resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
@@ -122,9 +129,11 @@ namespace sw
             VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
             if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
             {
-                recreateSwapChain();
-                if ( _swapChain.isValid() == false )
+                if ( recreateSwapChain() == false || _swapChain.isValid() == false )
+                {
+                    _bSwapChainDirty = 1;
                     return;
+                }
 
                 status = _swapChain.acquireNextImage( _device, _currentFrame );
             }
@@ -241,6 +250,7 @@ namespace sw
         // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
+        std::unique_lock<mutex> queueLock{ _queueMutex };
         vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
@@ -248,7 +258,7 @@ namespace sw
 
         if ( bPresent )
         {
-            const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue );
+            const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue ); // 큐 락 안(위의 queueLock)
             if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
             {
                 // 다음 beginFrame 에서 스왑체인을 다시 만든다.
@@ -258,6 +268,8 @@ namespace sw
             // 이미지 자체가 사라지므로, 어느 쪽이든 더 이상 쥐고 있지 않다.
             _bSwapChainImageHeld = SW_FALSE;
         }
+        // 해제 콜백(아래 tickFrame)을 큐 락 안에서 부르지 않는다.
+        queueLock.unlock();
 
         _listPendingSubmit.clear();
         _activeFrameBuffer = VK_NULL_HANDLE;
@@ -411,6 +423,7 @@ namespace sw
         submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers    = &listBuffer;
+        std::scoped_lock<mutex> queueLock{ _queueMutex };
         if ( vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
             vkQueueWaitIdle( _graphicsQueue );
     }
@@ -452,7 +465,10 @@ namespace sw
                 flushInfo.pWaitDstStageMask  = &waitStage;
                 _bFrameAcquireWaitPending    = SW_FALSE;
             }
-            vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            {
+                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            }
             _listPendingSubmit.clear();
         }
 

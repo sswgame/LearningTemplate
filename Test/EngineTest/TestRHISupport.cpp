@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
@@ -233,4 +234,59 @@ SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegat
     // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
     SW_EXPECT_TRUE( sw::RHIGpuTimestamp::resolveMicro( arrTick, 0, 0.5, listMicro ) == false );
     SW_EXPECT_TRUE( listMicro.empty() );
+}
+
+/**
+ * @brief [RHIConstantBufferShadowTest] 한 번 쓴 값이 링이 도는 동안 나머지 칸에 채워지고, 다 채우면 목록에서 빠진다
+ * @details 링 상수버퍼의 칸 `kMaxFrameCountInFlight` 개를 배열로 흉내 낸다. 칸 0 에 쓰고 링을 한 바퀴 돌리면 모든 칸이 같은 값이어야
+ *          한다. 채우는 도중 짧은 쓰기는 앞부분만 덮고, 부순 버퍼는 채우지 않는다.
+ */
+SW_TEST_CASE( RHIConstantBufferShadowTest, FillsStaleSlotsOnceAndForgets )
+{
+    constexpr uint32 kSlotCount = sw::constant::kMaxFrameCountInFlight;
+    constexpr uint32 kSlotBytes = 8;
+    uint8            arrSlot[kSlotCount][kSlotBytes]{};
+    uint32           writeCount{ 0 };
+    auto             writeSlot = [&arrSlot, &writeCount]( sw::RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    {
+        SW_EXPECT_EQUAL( sw::RHIBufferHandle{ 7 }, buffer );
+        sw::Memory::copy( arrSlot[slot], pData, size );
+        ++writeCount;
+    };
+
+    sw::RHIConstantBufferShadow shadow;
+    const uint8                 arrFirst[kSlotBytes] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    shadow.write( 7, 0, arrFirst, kSlotBytes, writeSlot );
+    SW_EXPECT_EQUAL( 1u, writeCount );
+    SW_EXPECT_EQUAL( 1u, shadow.getPendingBufferCount() );
+
+    // 같은 칸으로 돌아와도(아직 다른 칸이 남았다) 다시 쓰지 않는다.
+    shadow.fillSlot( 0, writeSlot );
+    SW_EXPECT_EQUAL( 1u, writeCount );
+
+    for ( uint32 slot = 1; slot < kSlotCount; ++slot )
+        shadow.fillSlot( slot, writeSlot );
+    SW_EXPECT_EQUAL( kSlotCount, writeCount );
+    for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+        SW_EXPECT_TRUE( sw::Memory::compare( arrSlot[slot], arrFirst, kSlotBytes ) == 0 );
+    SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
+
+    // 다 채운 뒤에는 링이 더 돌아도 아무것도 쓰지 않는다.
+    shadow.fillSlot( 1, writeSlot );
+    SW_EXPECT_EQUAL( kSlotCount, writeCount );
+
+    // 짧은 쓰기: 앞 두 바이트만 바뀌고 뒤는 그대로여야 한다.
+    const uint8 arrPrefix[2] = { 9, 9 };
+    shadow.write( 7, 1, arrPrefix, 2, writeSlot );
+    shadow.fillSlot( 2 % kSlotCount, writeSlot );
+    const uint8 arrExpected[kSlotBytes] = { 9, 9, 3, 4, 5, 6, 7, 8 };
+    SW_EXPECT_TRUE( sw::Memory::compare( arrSlot[2 % kSlotCount], arrExpected, kSlotBytes ) == 0 );
+
+    // 부순 버퍼는 채우지 않는다.
+    shadow.forget( 7 );
+    SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
+    const uint32 writeCountBeforeForget = writeCount;
+    for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+        shadow.fillSlot( slot, writeSlot );
+    SW_EXPECT_EQUAL( writeCountBeforeForget, writeCount );
 }

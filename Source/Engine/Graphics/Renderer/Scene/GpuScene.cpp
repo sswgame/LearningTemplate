@@ -451,11 +451,12 @@ namespace sw
             }
 
             GpuMaterialGpu& gpu = _mapMaterialGpu[group._shaderPath];
-            // 여유를 두어 머티리얼이 하나 늘 때마다 다시 만들지 않는다. stride 가 달라지면 슬롯이 알아서
-            // 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어 셰이더 선언과 달라지면 안 된다.
-            const uint32 capacityElements = MathUtil::max( elementCount * 2u, 16u );
-            const bool   bRecreate        = ( gpu._slot._buffer == 0 ) || ( gpu._slot._elementSize != stride ) ||
-                                   ( gpu._slot._capacityElements < capacityElements );
+            // 모자랄 때만 두 배로 키운다. 예전에는 "원소 수 × 2" 를 **매번** 요구해서, 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
+            // 만들었다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
+            // 셰이더 선언과 달라지면 안 된다.
+            const bool   bFits            = ( gpu._slot._buffer != 0 ) && ( gpu._slot._elementSize == stride ) && ( gpu._slot._capacityElements >= elementCount );
+            const uint32 capacityElements = bFits ? gpu._slot._capacityElements : MathUtil::max( elementCount * 2u, 16u );
+            const bool   bRecreate        = ( bFits == false );
             if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
                                            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {

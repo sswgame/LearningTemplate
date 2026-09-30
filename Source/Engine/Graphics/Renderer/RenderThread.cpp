@@ -108,6 +108,9 @@ namespace sw
         _bStop    = false;
         _bRunning = true;
         _thread   = std::thread( &RenderThread::threadMain, this );
+        // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 일을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
+        if ( pDevice != nullptr )
+            pDevice->setRenderThreadDrain( &RenderThread::drainPacketsThunk, this, _thread.get_id() );
         SW_LOG_TRACE( "Dedicated worker started" );
         return true;
     }
@@ -136,6 +139,8 @@ namespace sw
             if ( std::this_thread::get_id() != _thread.get_id() )
                 _thread.join();
         }
+        if ( _pDevice != nullptr )
+            _pDevice->setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
         _pDevice        = nullptr;
         _pFrameRenderer = nullptr;
         _bContextBound  = false;
@@ -196,6 +201,20 @@ namespace sw
             _head.store( nextHead, std::memory_order_release );
         }
         _cvConsume.notify_one();
+    }
+
+    void RenderThread::drainPacketsThunk( void* pContext )
+    {
+        static_cast<RenderThread*>( pContext )->drainPackets();
+    }
+
+    void RenderThread::drainPackets()
+    {
+        if ( _bRunning.load( std::memory_order_acquire ) == false || std::this_thread::get_id() == _thread.get_id() )
+            return;
+        std::unique_lock<mutex> lock{ _mutex };
+        _cvIdle.wait( lock, [this]()
+        { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
 
     void RenderThread::waitIdle()
