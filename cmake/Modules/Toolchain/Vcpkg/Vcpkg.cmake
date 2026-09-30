@@ -15,7 +15,7 @@
 # VcpkgRuntime은 BuildLayout.cmake의 sw_queueRuntimeCopy에 의존하므로 internal에 유지
 # ==============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/GenerateConfigConstants.cmake" OPTIONAL)
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/LoadConfigConstants.cmake")
 
 # ------------------------------------------------------------------------------
 # 1) sw_vcpkgComputeManifestHash — manifest + overlay port/triplet SHA256

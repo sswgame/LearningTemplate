@@ -8,12 +8,15 @@ CMake는 빌드 그래프·플래그·의존성만 담당합니다. 컴파일러
 cmake/
 ├── Config/                      [1계층: 전역 설정 및 프로젝트 옵션]
 │   ├── BuildOptions.cmake       — SW_* 빌드 기능 옵션 및 프로젝트 메타데이터 정의
-│   ├── GenerateConfigConstants.cmake — ConfigConstants.h 및 Shipping 호스트 기본값 자동 생성
+│   ├── LoadConfigConstants.cmake — Constants.py 의 상수를 SW_* 변수로 (상수만 필요한 곳은 이것만 include)
+│   ├── GenerateConfigConstants.cmake — 위 상수로 ConfigConstants.h · PackFormat.gen.h · Shipping 호스트 기본값 생성 (한 번)
 │   └── ConfigConstants.h.in     — C++ 헤더 템플릿
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
 │   ├── DetectToolchain.cmake    — toolchain_config.json 파싱 & LLVM/Ninja 바인딩
 │   ├── VcpkgIntegration.cmake   — vcpkg 매니페스트 및 오버레이 게이트
+│   ├── FindLlvmBin.cmake        — clang-cl / clang 이 있는 LLVM bin 찾기 (vcpkg 포트 툴체인도 쓴다)
+│   ├── ToolchainBinaries.cmake  — 아카이버를 "지금 쓰는 컴파일러 옆" 에서 고정 (LTO 비트코드를 읽어야 한다)
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
 │   └── PythonUtils.cmake        — Python 인터프리터 탐색 및 스크립트 실행 헬퍼
 │
@@ -24,7 +27,7 @@ cmake/
 │   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake
 │   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, UnityBuild.cmake
 │   ├── Platform/                — Windows.cmake, Linux.cmake, MacOS.cmake
-│   └── Toolchain/               — Vcpkg triplet 및 LLVM 바이너리 탐색
+│   └── Toolchain/Vcpkg/         — vcpkg 에게 건네는 파일: triplet · 포트 툴체인 · 포트 컴파일 규칙
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]
     ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐

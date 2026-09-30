@@ -3,11 +3,18 @@
 # @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_executePythonScript)
 # ==============================================================================
 
-find_package(Python3 QUIET COMPONENTS Interpreter)
+# 이 파일은 여러 곳에서 include 된다(상수 · vcpkg · 툴체인 · 에셋 타겟). 인터프리터는 한 번 찾으면 된다 — 예전에는 include 마다
+# FindPython 을 다시 돌려 configure 한 번에 그것만 0.7 s 였다. 가드 대신 결과 변수를 본다: `Python3_Interpreter_FOUND` 는 일반
+# 변수라, 처음 찾은 스코프 밖(함수 안에서 처음 include 된 경우 등)에서는 다시 찾아야 한다.
+if(NOT Python3_Interpreter_FOUND)
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+endif()
 
-# CMake Tools 등 얇은 PATH에서도 Git for Windows를 쓰도록 기본 경로를 앞에 붙입니다.
+# CMake Tools 등 얇은 PATH에서도 Git for Windows를 쓰도록 기본 경로를 앞에 붙입니다. 환경 변수는 프로세스 전체라 한 번만 붙인다.
 # 주의: ENV{ProgramFiles(x86)} 는 괄호 때문에 if(DEFINED ...) 파싱이 깨지므로 쓰지 않음.
-if(WIN32)
+get_property(_swGitPathPrepended GLOBAL PROPERTY SW_GIT_PATH_PREPENDED)
+if(WIN32 AND NOT _swGitPathPrepended)
+    set_property(GLOBAL PROPERTY SW_GIT_PATH_PREPENDED TRUE)
     set(_swGitCandidates
         "$ENV{ProgramFiles}/Git/cmd"
         "$ENV{ProgramFiles}/Git/bin"
@@ -29,6 +36,7 @@ if(WIN32)
     unset(_swGitDir)
     unset(_swGitCandidates)
 endif()
+unset(_swGitPathPrepended)
 
 if(NOT COMMAND sw_executePythonScript)
     # ------------------------------------------------------------------------------

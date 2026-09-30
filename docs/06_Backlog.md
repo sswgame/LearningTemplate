@@ -2021,6 +2021,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (CMake ① — configure 한 번에 파이썬 생성기가 아홉 번 돌았다: 상수 읽기와 헤더 생성을 나누고 한 번만)
+
+CMake 구조 정리의 첫 자리다. 이미 구성된 트리를 다시 configure 하는 데 8.4 s 였고, `cmake --profiling-format=google-trace` 로 재니 그중 **파이썬 하위
+프로세스가 3.1 s** 였다.
+
+**`GenerateConfigConstants.cmake` 가 세 번 include 됐다** — 최상위 CMakeLists, `FindLlvmBin.cmake` 의 `sw_findLlvmBin` **함수 안**, `Vcpkg.cmake`. 가드가
+없어 매번 파이썬 생성기 셋(`GenerateCMakeConstants` · `GeneratePackFormat` · `BakeShippingHostDefaults`)을 돌렸다(한 번에 0.8~1.0 s). 뒤의 둘이 필요한
+것은 **상수(`ConfigVars.cmake`)뿐**이었다 — `SW_DIR_CONFIG_ENV` · `SW_KEY_LLVM_PATH` · `SW_SCRIPT_SETUP_VCPKG` 등. 게다가 vcpkg 포트 빌드용 툴체인
+(`VcpkgPortsToolchain.cmake`)이 `sw_findLlvmBin` 을 부르므로, **포트를 빌드할 때마다 포트 빌드 폴더에 엔진 헤더를 써 넣고** 있었다.
+
+**나눴다.**
+- `cmake/Config/LoadConfigConstants.cmake`(새 파일) — 상수를 만들어 읽는 일만. `include_guard(GLOBAL)`. 상수만 필요한 곳(`FindLlvmBin` · `Vcpkg.cmake`)은
+  이것을 **파일 스코프에서** include 한다(함수 안에서 처음 include 되면 상수가 그 함수에만 생기고 뒤의 include 는 가드에 걸린다 — 파일 머리말에 적었다).
+- `GenerateConfigConstants.cmake` — 그것을 부른 뒤 C++ 헤더 셋을 만든다. `include_guard(GLOBAL)`, 최상위가 한 번.
+- `PythonUtils.cmake` — include 마다 `find_package(Python3)` 를 다시 돌렸다(0.7 s). 이미 찾았으면 건너뛴다. 가드 대신 결과 변수를 보는 이유: 그 변수는
+  일반 변수라 처음 찾은 스코프 밖에서는 다시 찾아야 한다. Git PATH 앞붙이기는 전역 속성으로 한 번만.
+
+**확인.** configure **8.4 → 6.5 s**. 생성 파일 여섯(`ConfigVars.cmake` · `ConfigConstants.h` · `PackFormat.gen.h` · `ShippingHostDefaults.h` ·
+`ToolchainVars.cmake` · `LintTargets.cmake`)이 바이트 단위로 같고 configure 메시지도 같다. 포트 툴체인을 건 탐침 프로젝트가 구성된다(컴파일러를 찾고 상수를 읽고,
+포트 빌드 폴더에는 `ConfigVars.cmake` 하나만 생긴다). Debug 빌드 · nogpu 7/7 · CMake 게이트 둘. README 의 `Environment/` 목록에 빠져 있던 둘(`FindLlvmBin` ·
+`ToolchainBinaries`)을 넣고, "LLVM 바이너리 탐색" 이 아직 `Modules/Toolchain` 설명에 남아 있던 것을 고쳤다(09-14 에 `Environment/` 로 옮겼다).
+
 ### 2026-09-30 (Scripts ⑧ — `CheckLintsAreAlive` 탐침 34 개를 동시에: 8.7 → 2.8 s, 린트 CTest 31.6 → 19.1 s)
 
 게이트마다 "반드시 잡아야 하는 조각" 을 임시 저장소에 풀고 게이트를 하위 프로세스로 돌리는 셀프테스트다. 34 조각을 **차례로** 돌려 린트 CTest 에서 둘째로 길었다.

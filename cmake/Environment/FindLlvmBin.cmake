@@ -3,6 +3,10 @@
 # @brief LLVM/clang-cl bin 디렉터리 탐색
 # ==============================================================================
 
+# toolchain_config · search_paths 의 파일 이름과 키(SW_DIR_CONFIG_ENV · SW_KEY_LLVM_PATH …)를 쓴다. vcpkg 포트 툴체인처럼 최상위
+# CMakeLists 를 거치지 않는 곳에서도 이 파일이 include 되므로 여기서 읽는다(파일 스코프 — 함수 안에서 읽으면 부를 때마다 다시 돈다).
+include("${CMAKE_CURRENT_LIST_DIR}/../Config/LoadConfigConstants.cmake")
+
 if(NOT COMMAND sw_findLlvmBin)
     # ------------------------------------------------------------------------------
     # 1) sw_findLlvmBin — clang-cl / clang 이 있는 bin 경로
@@ -10,7 +14,6 @@ if(NOT COMMAND sw_findLlvmBin)
     # 시스템/기존 설치를 프로젝트 Tools보다 먼저 (최초 clone 시 Tools 없어도 OK)
     # ------------------------------------------------------------------------------
     function(sw_findLlvmBin OUT_VAR)
-        include("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../Config/GenerateConfigConstants.cmake" OPTIONAL)
         set(llvmBin "")
 
         foreach(envName LLVM_ROOT LLVM_PATH LLVM_DIR LLVM_HOME)

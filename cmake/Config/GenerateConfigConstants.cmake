@@ -1,21 +1,13 @@
 # ==============================================================================
 # @file cmake/Config/GenerateConfigConstants.cmake
-# @brief Python Constants.py를 읽어 CMake 내부 상수 및 C++ ConfigConstants.h를 자동 생성
+# @brief Constants.py 의 상수를 읽고(LoadConfigConstants), 그것으로 C++ 헤더 셋(ConfigConstants.h · PackFormat.gen.h ·
+#        ShippingHostDefaults.h)을 만듭니다. 최상위 CMakeLists 가 project() 전에 한 번 include 한다.
 # ==============================================================================
+# 상수만 필요하면 이 파일이 아니라 `LoadConfigConstants.cmake` 를 include 한다(그 파일 머리말 참고).
+include_guard(GLOBAL)
 
-# 1. 파이썬 실행 헬퍼 포함 (sw_executePythonScript)
-include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
-
-# 2. Constants.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
-# (Python이 Single Source of Truth가 됨)
-set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
-sw_executePythonScript("Scripts/generate/GenerateCMakeConstants.py"
-	ARGS "${SW_GENERATED_CMAKE_VARS}"
-	REQUIRED
-)
-
-# 3. 방금 파이썬이 생성한 CMake 변수들을 현재 스코프에 인클루드
-include("${SW_GENERATED_CMAKE_VARS}")
+# 1~3. Constants.py 의 상수를 CMake 변수로 (SW_GENERATED_CMAKE_VARS 도 거기서 정한다)
+include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 
 # 4. 가져온 CMake 변수들을 바탕으로 C++ 헤더(ConfigConstants.h) 생성
 configure_file(
