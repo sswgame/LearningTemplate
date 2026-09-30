@@ -176,6 +176,7 @@ namespace sw::editor
         , _cameraMode{ CameraControlMode::Fly }
         , _toolbarSettings{}
         , _gizmoUndoBefore{}
+        , _gizmoObject{}
         , _listGizmoObject{}
         , _listGizmoUndo{}
         , _listGizmoRelativeWorld{}
@@ -488,7 +489,10 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
         if ( EditorUtil::areSceneEditsAllowed() == false )
+        {
+            endGizmoDrag();
             return;
+        }
 
         vector<GameObject*> listSelected;
         pContext->getSelectionManager().getSelectedObjects( listSelected );
@@ -501,7 +505,10 @@ namespace sw::editor
             listGizmo.push_back( pRaw );
         }
         if ( listGizmo.empty() )
+        {
+            endGizmoDrag();
             return;
+        }
 
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
@@ -536,12 +543,18 @@ namespace sw::editor
         SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
         if ( pSceneComp == nullptr )
             return;
+        // 추적 중인 드래그가 이 오브젝트 것이 아니면(선택이 바뀌었다 · 그룹 드래그였다) 먼저 정리한다 — 그 스냅숏을 이 오브젝트에 커밋하지 않는다.
+        if ( _bGizmoTracking == SW_TRUE && _gizmoObject != pRaw->getHandle() )
+            endGizmoDrag();
 
         float32 arrMatrix[16];
         EditorViewportClientInternal::storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
 
         if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+        {
             _gizmoUndoBefore = EditorSceneCommands::captureSnapshot( pRaw );
+            _gizmoObject     = pRaw->getHandle();
+        }
 
         if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
         {
@@ -573,14 +586,43 @@ namespace sw::editor
 
         if ( ImGuizmo::IsUsing() )
         {
+            // 클릭 없이 시작된 드래그(스냅숏이 없다)는 대상만 기억한다 — 커밋할 "이전" 이 없으니 끝에서 버린다.
+            if ( _bGizmoTracking == SW_FALSE && _gizmoObject != pRaw->getHandle() )
+            {
+                _gizmoUndoBefore = EditorObjectSnapshot{};
+                _gizmoObject     = pRaw->getHandle();
+            }
             _bGizmoTracking = SW_TRUE;
         }
         else if ( _bGizmoTracking == SW_TRUE )
         {
-            EditorSceneCommands::commitModify( pRaw, _gizmoUndoBefore, "Gizmo Transform" );
-            _gizmoUndoBefore = EditorObjectSnapshot{};
-            _bGizmoTracking  = SW_FALSE;
+            endGizmoDrag();
         }
+    }
+
+    void EditorViewportClient::endGizmoDrag()
+    {
+        if ( _bGizmoTracking == SW_TRUE && EditorUtil::areSceneEditsAllowed() )
+        {
+            // 단일 드래그: 스냅숏을 찍은 **그 오브젝트**에만 커밋한다(핸들로 다시 찾는다 — 지워졌으면 버린다).
+            GameObject* pTracked = editor::findGameObject( _gizmoObject );
+            if ( pTracked != nullptr && _gizmoUndoBefore._xml.empty() == false )
+                EditorSceneCommands::commitModify( pTracked, _gizmoUndoBefore, "Gizmo Transform" );
+            // 그룹 드래그: 살아 있는 대상마다 커밋한다.
+            const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+            for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+            {
+                GameObject* pObj = editor::findGameObject( _listGizmoObject[objectIndex] );
+                if ( pObj != nullptr )
+                    EditorSceneCommands::commitModify( pObj, _listGizmoUndo[objectIndex], "Gizmo Transform" );
+            }
+        }
+        _gizmoUndoBefore = EditorObjectSnapshot{};
+        _gizmoObject     = GameObjectHandle{};
+        _listGizmoObject.clear();
+        _listGizmoUndo.clear();
+        _listGizmoRelativeWorld.clear();
+        _bGizmoTracking = SW_FALSE;
     }
 
     void EditorViewportClient::manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap )
@@ -635,20 +677,9 @@ namespace sw::editor
         }
 
         if ( ImGuizmo::IsUsing() )
-        {
             _bGizmoTracking = SW_TRUE;
-        }
         else if ( _bGizmoTracking == SW_TRUE )
-        {
-            const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
-            for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-                EditorSceneCommands::commitModify( editor::findGameObject( _listGizmoObject[objectIndex] ), _listGizmoUndo[objectIndex],
-                                                   "Gizmo Transform" );
-            _listGizmoObject.clear();
-            _listGizmoUndo.clear();
-            _listGizmoRelativeWorld.clear();
-            _bGizmoTracking = SW_FALSE;
-        }
+            endGizmoDrag();
     }
 
     void EditorViewportClient::frameSelected()

@@ -68,6 +68,13 @@ namespace sw::editor
         /** @brief 다중 선택 기즈모를 조작합니다(열거형은 ImGuizmo 에 묶이지 않도록 uint32 로 받습니다). */
         void manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
                                    const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap );
+        /**
+         * @brief 끊긴 기즈모 드래그를 정리합니다. 대상이 아직 있고 편집이 허용되면 그 대상에 되돌리기를 남기고, 아니면 버립니다.
+         * @details 드래그 도중 선택이 비거나(Delete · 생성 되돌리기) 편집이 막히면(Play) `drawGizmo` 가 앞에서 돌아가, 추적 표시와
+         *          A 의 스냅숏이 남았습니다. 다음에 B 를 고른 첫 프레임이 그 스냅숏을 **B 에** 커밋해 엉터리 "Gizmo Transform" 항목이 생기고
+         *          redo 가 잘렸으며, 그것을 되돌리면 A 의 XML(컴포넌트 id 포함)이 B 에 들어갔습니다.
+         */
+        void endGizmoDrag();
         void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,
@@ -90,6 +97,7 @@ namespace sw::editor
         CameraControlMode       _cameraMode;
         ViewportToolbarSettings _toolbarSettings;
         EditorObjectSnapshot    _gizmoUndoBefore;
+        GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
         /**
          * @brief 이 프레임의 오브젝트 스냅샷 (용량 재사용). 시각화와 통계 오버레이가 함께 봅니다.
          * @details 값 반환 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당·복사합니다.
