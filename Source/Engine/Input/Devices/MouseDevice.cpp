@@ -209,6 +209,15 @@ namespace sw
         updateSmoothDelta( static_cast<float32>( _delta._x ), static_cast<float32>( _delta._y ) );
     }
 
+    void MouseDevice::setPositionWithoutDelta( int32 x, int32 y )
+    {
+        // 이번 프레임의 `_delta` 는 이미 계산돼 있다. 기준점(`_prevMouse`)도 함께 옮겨야 다음 이동이 되돌린 자리에서부터 잰다.
+        _mouse._x     = x;
+        _mouse._y     = y;
+        _prevMouse._x = x;
+        _prevMouse._y = y;
+    }
+
     void MouseDevice::addRawDelta( float32 dx, float32 dy )
     {
         _rawDelta._x += dx;

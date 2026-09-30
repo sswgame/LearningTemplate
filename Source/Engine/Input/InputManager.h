@@ -56,7 +56,13 @@ namespace sw
         bool initialize();
         void shutdown();
 
-        /** @brief 프레임을 시작합니다. 락프리 큐를 비우고, 장치 상태를 갱신하고, 프레임 엣지를 맞춥니다. */
+        /**
+         * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 **들어온 순서대로** 적용하고, 프레임 엣지를 맞춥니다.
+         * @details 창 메시지는 `processNativeEvent` 가 큐에 넣기만 합니다. 장치 상태를 바꾸는 길은 여기 하나입니다. 예전에는
+         *          메시지를 받을 때 상태를 바로 바꾸고 큐에도 넣어, 여기서 엣지를 지운 뒤 재생하면 이미 눌린 키라 "새로 눌림" 이
+         *          사라졌습니다(`wasKeyPressed` 가 실제 루프에서 뜨지 않았다).
+         * @param deltaSeconds 지난 프레임의 실제 시간(초). 진동 타이머 · 재연결 주기가 이 값으로 흐릅니다.
+         */
         void beginFrame( float32 deltaSeconds = 0.016f );
         /** @brief 프레임을 마치며 엣지 플래그와 원시 델타를 리셋합니다. */
         void endFrame();
@@ -210,6 +216,13 @@ namespace sw
         }
         /** @brief 커서 표시 · 숨김을 OS 에 실제로 적용합니다(setCursorVisible() 의 플랫폼 훅). */
         void setCursorVisiblePlatform( bool bVisible );
+        /**
+         * @brief 가운데 고정 잠금이면, 창이 포커스를 쥐고 있을 때 커서를 잠금 영역 가운데로 되돌립니다(beginFrame 끝의 플랫폼 훅).
+         * @details 예전에는 포커스를 얻을 때 · 창이 움직일 때만 가운데로 옮겨, 커서가 잠금 영역 가장자리에 닿으면 더 돌지 않았습니다.
+         */
+        void recenterLockedCursorPlatform();
+        /** @brief 음소거와 상관없이 큐에 넣습니다. 포커스 · 포인터 진입 같은 **창 상태** 알림용입니다(입력이 아니다). */
+        bool postWindowStateEvent( const RawInputEvent& rawEvent );
 
     private:
         ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;        /**< OS · 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐. beginFrame() 이 매 프레임 비움. */

@@ -37,6 +37,18 @@ namespace sw
             /** @brief 창이 X11 포커스를 쥐고 있는지 여부입니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
             static inline bool   s_bWindowFocused{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
+            /** @brief 감지 가능한 자동 반복을 켜 둔 Display* 입니다(Display 마다 한 번). */
+            static inline void* s_pAutoRepeatDisplay{ nullptr };
+
+            /** @brief 누르고 있는 키가 Release/Press 쌍 대신 Press 만 되풀이하도록 X 서버에 요청합니다(Display 마다 한 번). */
+            static void enableDetectableAutoRepeat( Display* pDisplay )
+            {
+                if ( pDisplay == nullptr || s_pAutoRepeatDisplay == pDisplay )
+                    return;
+                Bool bSupported = 0;
+                XkbSetDetectableAutoRepeat( pDisplay, 1, &bSupported ); // 1 == True. X11MacroUndef.h 가 True 매크로를 지운다.
+                s_pAutoRepeatDisplay = pDisplay;
+            }
 
             /** @brief 활성 창에 대한 XIC 를 지연 생성해 반환합니다(실패하면 nullptr). */
             static XIC getOrCreateInputContext()
@@ -176,16 +188,20 @@ namespace sw
             return;
 
         const XEvent* pXev = reinterpret_cast<const XEvent*>( event._lParam );
+        // 장치 상태는 여기서 바꾸지 않는다. 큐에만 넣고 `beginFrame` 이 순서대로 적용한다(Win32 와 같은 규칙,
+        // `InputManager::beginFrame` 설명 참고). 예전에는 여기서 상태를 바로 바꾸고 큐에도 넣어 엣지가 사라졌다.
         switch ( pXev->type )
         {
             case KeyPress:
             case KeyRelease:
             {
+                // 누르고 있으면 X 서버는 기본으로 Release/Press 쌍을 되풀이 보낸다(자동 반복). 그대로 받으면 누르고 있는 동안
+                // "눌림 · 뗌" 엣지가 계속 생긴다. 감지 가능한 자동 반복을 켜면 반복은 Press 만 온다.
+                X11InputInternal::enableDetectableAutoRepeat( pXev->xany.display );
+
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
                 const Key    key    = InputKeyMap::mapX11KeySym( static_cast<uint64>( keySym ) );
                 const bool   bDown  = ( pXev->type == KeyPress );
-                if ( _pKeyboard != nullptr )
-                    _pKeyboard->setKeyDown( key, bDown );
                 if ( bDown )
                     postRawEvent( RawInputEvent::makeKeyDown( key ) );
                 else
@@ -215,120 +231,99 @@ namespace sw
             case ButtonPress:
             case ButtonRelease:
             {
-                const bool bDown = ( pXev->type == ButtonPress );
+                const bool  bDown  = ( pXev->type == ButtonPress );
+                const int32 mouseX = static_cast<int32>( pXev->xbutton.x );
+                const int32 mouseY = static_cast<int32>( pXev->xbutton.y );
+                // 버튼 이벤트에도 좌표를 실어 보낸다. 예전에는 좌표 없이(0, 0) 보내, 클릭할 때마다 커서가 창 왼쪽 위로 튀었다.
+                MouseButton button = MouseButton::Count;
                 switch ( pXev->xbutton.button )
                 {
                     case Button1:
                     {
-                        if ( _pMouse != nullptr )
-                            _pMouse->setButtonDown( MouseButton::Left, bDown );
-                        postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Left ) : RawInputEvent::makeMouseButtonUp( MouseButton::Left ) );
+                        button = MouseButton::Left;
                         break;
                     }
                     case Button2:
                     {
-                        if ( _pMouse != nullptr )
-                            _pMouse->setButtonDown( MouseButton::Middle, bDown );
-                        postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Middle ) : RawInputEvent::makeMouseButtonUp( MouseButton::Middle ) );
+                        button = MouseButton::Middle;
                         break;
                     }
                     case Button3:
                     {
-                        if ( _pMouse != nullptr )
-                            _pMouse->setButtonDown( MouseButton::Right, bDown );
-                        postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Right ) : RawInputEvent::makeMouseButtonUp( MouseButton::Right ) );
+                        button = MouseButton::Right;
+                        break;
+                    }
+                    case 8:
+                    {
+                        button = MouseButton::X1;
+                        break;
+                    }
+                    case 9:
+                    {
+                        button = MouseButton::X2;
                         break;
                     }
                     case Button4:
                     {
                         if ( bDown )
-                        {
-                            if ( _pMouse != nullptr )
-                                _pMouse->addWheelDelta( 1.0f );
                             postRawEvent( RawInputEvent::makeMouseWheel( 1.0f ) );
-                        }
                         break;
                     }
                     case Button5:
                     {
                         if ( bDown )
-                        {
-                            if ( _pMouse != nullptr )
-                                _pMouse->addWheelDelta( -1.0f );
                             postRawEvent( RawInputEvent::makeMouseWheel( -1.0f ) );
-                        }
                         break;
                     }
                     case 6:
                     {
                         if ( bDown )
-                        {
-                            if ( _pMouse != nullptr )
-                                _pMouse->addHorizontalWheelDelta( -1.0f );
                             postRawEvent( RawInputEvent::makeMouseHorizontalWheel( -1.0f ) );
-                        }
                         break;
                     }
                     case 7:
                     {
                         if ( bDown )
-                        {
-                            if ( _pMouse != nullptr )
-                                _pMouse->addHorizontalWheelDelta( 1.0f );
                             postRawEvent( RawInputEvent::makeMouseHorizontalWheel( 1.0f ) );
-                        }
-                        break;
-                    }
-                    case 8:
-                    {
-                        if ( _pMouse != nullptr )
-                            _pMouse->setButtonDown( MouseButton::X1, bDown );
-                        postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::X1 ) : RawInputEvent::makeMouseButtonUp( MouseButton::X1 ) );
-                        break;
-                    }
-                    case 9:
-                    {
-                        if ( _pMouse != nullptr )
-                            _pMouse->setButtonDown( MouseButton::X2, bDown );
-                        postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::X2 ) : RawInputEvent::makeMouseButtonUp( MouseButton::X2 ) );
                         break;
                     }
                     default:
                         break;
                 }
+                if ( button != MouseButton::Count )
+                    postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, mouseX, mouseY ) : RawInputEvent::makeMouseButtonUp( button, mouseX, mouseY ) );
                 break;
             }
             case MotionNotify:
             {
                 const int32 mouseX = static_cast<int32>( pXev->xmotion.x );
                 const int32 mouseY = static_cast<int32>( pXev->xmotion.y );
-                if ( _pMouse != nullptr )
-                    _pMouse->setPosition( mouseX, mouseY );
                 postRawEvent( RawInputEvent::makeMouseMove( mouseX, mouseY ) );
                 break;
             }
             case EnterNotify:
             {
-                if ( _pMouse != nullptr )
-                    _pMouse->setPointerInsideState( true );
+                postWindowStateEvent( RawInputEvent::makePointerCrossing( true ) );
                 break;
             }
             case LeaveNotify:
             {
-                if ( _pMouse != nullptr )
-                    _pMouse->setPointerInsideState( false );
+                postWindowStateEvent( RawInputEvent::makePointerCrossing( false ) );
                 break;
             }
+            // 포커스: OS 쪽 일(포인터 잡기 · 놓기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다.
             case FocusIn:
             {
                 X11InputInternal::s_bWindowFocused = true;
-                onWindowFocusGained();
+                applyMouseLockMode();
+                postWindowStateEvent( RawInputEvent::makeFocusChange( true ) );
                 break;
             }
             case FocusOut:
             {
                 X11InputInternal::s_bWindowFocused = false;
-                onWindowFocusLost();
+                releaseMouseLockMode();
+                postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
                 break;
             }
             case ConfigureNotify:
@@ -394,14 +389,36 @@ namespace sw
         // owner_events=1(True), confine_to/cursor 뒤 두 인자는 각각 x11Window/None(0). X11MacroUndef.h 가
         // True/None 매크로를 지우므로 리터럴 값을 쓴다.
         XGrabPointer( pDisplay, x11Window, 1, mask, GrabModeAsync, GrabModeAsync, x11Window, 0, CurrentTime );
+        XFlush( pDisplay );
 
         if ( lockMode == MouseLockMode::LockedInCenter )
-        {
-            XWindowAttributes attrs{};
-            XGetWindowAttributes( pDisplay, x11Window, &attrs );
-            XWarpPointer( pDisplay, 0, x11Window, 0, 0, 0, 0, attrs.width / 2, attrs.height / 2 );
-        }
+            recenterLockedCursorPlatform();
+    }
+
+    void InputManager::recenterLockedCursorPlatform()
+    {
+        if ( _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter || X11InputInternal::s_bWindowFocused == false )
+            return;
+
+        IWindow* pWindow = IWindow::getActiveWindow();
+        if ( pWindow == nullptr )
+            return;
+        Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
+        Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
+        if ( pDisplay == nullptr || x11Window == 0 )
+            return;
+
+        XWindowAttributes attrs{};
+        if ( XGetWindowAttributes( pDisplay, x11Window, &attrs ) == 0 )
+            return;
+        const int2 center{ attrs.width / 2, attrs.height / 2 };
+        if ( _pMouse->getPosition() == center )
+            return;
+
+        XWarpPointer( pDisplay, 0, x11Window, 0, 0, 0, 0, center._x, center._y );
         XFlush( pDisplay );
+        // 되돌림은 사용자가 움직인 것이 아니다. XWarpPointer 가 만드는 MotionNotify(가운데)는 다음 프레임에 델타 0 으로 들어온다.
+        _pMouse->setPositionWithoutDelta( center._x, center._y );
     }
 
     void InputManager::releaseMouseLockMode()

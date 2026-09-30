@@ -116,6 +116,16 @@ namespace sw
         return bPushed;
     }
 
+    bool InputManager::postWindowStateEvent( const RawInputEvent& rawEvent )
+    {
+        // 음소거는 "입력을 무시한다" 는 뜻이지 "창이 포커스를 잃은 것도 모른다" 는 뜻이 아니다. 음소거 중에 포커스를 잃고
+        // 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
+        const bool bPushed = _queueRawEvent.push( rawEvent );
+        if ( bPushed == false )
+            _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
+        return bPushed;
+    }
+
     uint32 InputManager::drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount )
     {
         return _queueRawEvent.drain( pOutBuffer, maxCount );
@@ -206,6 +216,7 @@ namespace sw
             {
                 pDev->onFrameBegin( deltaSeconds );
                 pDev->poll( deltaSeconds );
+                pDev->onPolled();
             }
         }
 
@@ -213,11 +224,16 @@ namespace sw
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
 
-        // 3) 꺼낸 원시 이벤트를 각 장치로 디스패치한다(새 프레임 엣지 플래그 설정)
+        // 3) 꺼낸 원시 이벤트를 **들어온 순서대로** 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스 잃음도 이 순서 안에서
+        //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 되살아나지 않는다(알트탭하면 캐릭터가 계속 달리던 원인).
         for ( const RawInputEvent& rawEvent : _listDrainedEvent )
         {
             dispatchRawEvent( rawEvent );
         }
+
+        // 가운데 고정 잠금: 이번 프레임의 델타를 잰 뒤에 커서를 되돌린다.
+        if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
+            recenterLockedCursorPlatform();
 
         // 4) 활성 장치 자동 감지(O(1) 플래그 조회)
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
@@ -368,6 +384,22 @@ namespace sw
             case RawInputEventType::FocusLost:
             {
                 onWindowFocusLost();
+                break;
+            }
+
+            case RawInputEventType::PointerEntered:
+            case RawInputEventType::PointerLeft:
+            {
+                if ( _pMouse != nullptr )
+                    _pMouse->setPointerInsideState( rawEvent._type == RawInputEventType::PointerEntered );
+                break;
+            }
+
+            case RawInputEventType::MouseRawDelta:
+            {
+                if ( _pMouse != nullptr )
+                    _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
+                setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
             }
 

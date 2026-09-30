@@ -92,6 +92,11 @@ namespace sw
 
         /** @brief OS 원시 이벤트를 받거나 하드웨어 API 를 폴링합니다. */
         virtual void poll( float32 deltaTime ) = 0;
+        /**
+         * @brief 이번 프레임의 폴링이 끝났습니다(`onFrameBegin` → `poll` → 이것 순서).
+         * @details 폴링으로 상태를 읽는 장치가 "리셋 직후 처음 읽은 값" 을 이전 값으로 삼아 가짜 엣지를 막는 자리입니다.
+         */
+        virtual void onPolled() {}
         /** @brief 새 프레임을 시작할 때 이번 프레임의 임시 상태(Pressed/Released)를 준비합니다. */
         virtual void onFrameBegin( float32 deltaTime ) = 0;
         /** @brief 프레임을 마칠 때 정리합니다. */

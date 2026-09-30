@@ -42,7 +42,10 @@ namespace sw
         TextInput,
         TextComposition,
         FocusGained,
-        FocusLost
+        FocusLost,
+        PointerEntered, ///< 포인터가 창 안으로 들어왔습니다. 값은 뒤에 덧붙입니다(리플레이 파일이 번호를 담습니다).
+        PointerLeft,    ///< 포인터가 창 밖으로 나갔습니다.
+        MouseRawDelta   ///< 위치 없이 장치가 보고한 이동량(Win32 WM_INPUT)만 담습니다. 위치를 건드리지 않습니다.
     };
 
     /**
@@ -190,6 +193,34 @@ namespace sw
             return event;
         }
 
+        /** @brief 위치 없이 이동량만 담은 이벤트를 만듭니다(원시 마우스 입력). */
+        static RawInputEvent makeMouseRawDelta( float32 rawDx, float32 rawDy )
+        {
+            RawInputEvent event{};
+            event._type                            = RawInputEventType::MouseRawDelta;
+            event._deviceKind                      = InputDeviceKind::Mouse;
+            event._payload._mouseData._rawDelta._x = rawDx;
+            event._payload._mouseData._rawDelta._y = rawDy;
+            return event;
+        }
+
+        /** @brief 포인터가 창 안으로 들어오거나(true) 나간(false) 이벤트를 만듭니다. */
+        static RawInputEvent makePointerCrossing( bool bEntered )
+        {
+            RawInputEvent event{};
+            event._type       = bEntered ? RawInputEventType::PointerEntered : RawInputEventType::PointerLeft;
+            event._deviceKind = InputDeviceKind::Mouse;
+            return event;
+        }
+
+        /** @brief 창이 포커스를 얻거나(true) 잃은(false) 이벤트를 만듭니다. */
+        static RawInputEvent makeFocusChange( bool bGained )
+        {
+            RawInputEvent event{};
+            event._type = bGained ? RawInputEventType::FocusGained : RawInputEventType::FocusLost;
+            return event;
+        }
+
         static RawInputEvent makeGamepadButtonDown( GamepadButton btn, uint8 padIndex = 0 )
         {
             RawInputEvent event{};
@@ -237,10 +268,7 @@ namespace sw
             RawInputEvent event{};
             event._type       = RawInputEventType::TextInput;
             event._deviceKind = InputDeviceKind::Keyboard;
-            const size_t len  = text.size() < 31 ? text.size() : 31;
-            if ( len > 0 )
-                Memory::copy( event._payload._textData._arrUtf8, text.data(), len );
-            event._payload._textData._arrUtf8[len] = '\0';
+            copyTextPayload( event, text );
             return event;
         }
 
@@ -249,11 +277,31 @@ namespace sw
             RawInputEvent event{};
             event._type       = RawInputEventType::TextComposition;
             event._deviceKind = InputDeviceKind::Keyboard;
-            const size_t len  = text.size() < 31 ? text.size() : 31;
-            if ( len > 0 )
-                Memory::copy( event._payload._textData._arrUtf8, text.data(), len );
-            event._payload._textData._arrUtf8[len] = '\0';
+            copyTextPayload( event, text );
             return event;
+        }
+
+    private:
+        /**
+         * @brief 글자를 페이로드에 담습니다. 넘치면 **UTF-8 글자 경계에서** 자릅니다.
+         * @details 예전에는 31 바이트에서 그냥 잘라, 한글 조합 문자열(글자당 3 바이트)이 길면 마지막 글자의 앞 바이트만 남아
+         *          받는 쪽이 깨진 UTF-8 을 받았습니다.
+         */
+        static void copyTextPayload( RawInputEvent& outEvent, string_view text )
+        {
+            constexpr size_t kMaxTextBytes = constant::kMaxBuffer32 - 1;
+            size_t           len           = text.size() < kMaxTextBytes ? text.size() : kMaxTextBytes;
+            if ( len < text.size() )
+            {
+                // 잘리는 자리가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.
+                while ( len > 0 && ( static_cast<uint8>( text[len] ) & 0xC0 ) == 0x80 )
+                {
+                    --len;
+                }
+            }
+            if ( len > 0 )
+                Memory::copy( outEvent._payload._textData._arrUtf8, text.data(), len );
+            outEvent._payload._textData._arrUtf8[len] = '\0';
         }
     };
 } // namespace sw

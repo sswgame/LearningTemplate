@@ -111,6 +111,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         void setButtonDown( MouseButton button, bool bDown );
         void setPosition( int32 x, int32 y );
+        /**
+         * @brief 이번 프레임의 델타를 바꾸지 않고 위치만 옮깁니다.
+         * @details 가운데 고정 잠금이 커서를 가운데로 되돌릴 때 씁니다. 되돌림은 사용자가 움직인 것이 아니므로 델타가 되면
+         *          안 됩니다. 다음 프레임의 델타는 이 위치에서부터 잽니다.
+         */
+        void setPositionWithoutDelta( int32 x, int32 y );
         void addRawDelta( float32 dx, float32 dy );
         void addWheelDelta( float32 delta );
         void addHorizontalWheelDelta( float32 delta );

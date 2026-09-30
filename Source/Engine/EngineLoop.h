@@ -76,8 +76,12 @@ namespace sw
         /** @brief 매니저들을 종료하고 정리합니다. */
         void shutdown();
 
-        /** @brief 입력 등을 시작하는 프레임의 첫 단계입니다. */
-        void beginFrame();
+        /**
+         * @brief 입력 등을 시작하는 프레임의 첫 단계입니다.
+         * @param deltaSeconds 지난 프레임의 실제 시간(초). 입력 장치의 타이머(진동 길이 · 게임패드 재연결 주기)가 이 값으로 흐릅니다.
+         *                     예전에는 인자 없이 불려 입력이 늘 16 ms 로 흘렀고, 0.3 초 진동이 144 fps 에서 0.13 초로 끝났습니다.
+         */
+        void beginFrame( float32 deltaSeconds );
         /**
          * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
          * @param deltaTime 델타 타임

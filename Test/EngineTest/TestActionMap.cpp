@@ -691,3 +691,42 @@ SW_TEST_CASE( ActionMapTest, ComboParserRingBufferOverflowStress )
 
     input.shutdown();
 }
+
+/**
+ * @brief [ActionMapTest] Pulse 는 누르고 있는 동안 간격(0.1 초)마다 한 번 발화하고, 발화 수가 프레임률을 따르지 않는다.
+ * @details 예전에는 `타이머 >= 간격` 만 봐서 첫 간격이 지나면 매 프레임 발화했다. 연사 무기가 144 fps 에서 초당 144 발, 30 fps 에서
+ *          30 발을 쐈다.
+ */
+SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bind( "Fire", sw::Key::F, sw::ActionTrigger::Pulse );
+
+    // 1.05 초 동안 누른다 — 100 fps 와 30 fps 두 번. 둘 다 10 번이어야 한다(0.1 · 0.2 · … · 1.0 초).
+    const float32 arrFrameSecond[] = { 0.01f, 0.035f };
+    for ( const float32 frameSecond : arrFrameSecond )
+    {
+        input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F ) );
+        const uint32 frameCount = static_cast<uint32>( 1.05f / frameSecond + 0.5f );
+        uint32       fireCount  = 0;
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            input.beginFrame( frameSecond );
+            actionMap.update( frameSecond );
+            if ( actionMap.wasActionTriggered( "Fire" ) )
+                ++fireCount;
+            input.endFrame();
+        }
+        SW_EXPECT_EQUAL( 10u, fireCount );
+
+        input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F ) );
+        input.beginFrame( frameSecond );
+        actionMap.update( frameSecond );
+        input.endFrame();
+    }
+
+    input.shutdown();
+}

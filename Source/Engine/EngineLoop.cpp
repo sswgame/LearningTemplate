@@ -501,10 +501,10 @@ namespace sw
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
     }
 
-    void EngineLoop::beginFrame()
+    void EngineLoop::beginFrame( float32 deltaSeconds )
     {
         if ( _owned._pInputManager != nullptr )
-            _owned._pInputManager->beginFrame();
+            _owned._pInputManager->beginFrame( deltaSeconds );
     }
 
     void EngineLoop::tick( float32                           deltaTime,

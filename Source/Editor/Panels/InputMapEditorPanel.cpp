@@ -30,6 +30,98 @@ namespace sw::editor
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct InputMapEditorPanelInternal
         {
+            /** @brief ImGui 키 하나와 엔진 키 하나의 짝입니다. 두 열거형에서 연속이 아닌 키만 표로 둡니다. */
+            struct ImGuiKeyPair
+            {
+                ImGuiKey _imguiKey;
+                Key      _key;
+            };
+
+            static constexpr ImGuiKeyPair kArrNamedKey[] = {
+                {           ImGuiKey_Tab,            Key::Tab},
+                {     ImGuiKey_LeftArrow,           Key::Left},
+                {    ImGuiKey_RightArrow,          Key::Right},
+                {       ImGuiKey_UpArrow,             Key::Up},
+                {     ImGuiKey_DownArrow,           Key::Down},
+                {        ImGuiKey_PageUp,         Key::PageUp},
+                {      ImGuiKey_PageDown,       Key::PageDown},
+                {          ImGuiKey_Home,           Key::Home},
+                {           ImGuiKey_End,            Key::End},
+                {        ImGuiKey_Insert,         Key::Insert},
+                {        ImGuiKey_Delete,         Key::Delete},
+                {     ImGuiKey_Backspace,      Key::Backspace},
+                {         ImGuiKey_Space,          Key::Space},
+                {         ImGuiKey_Enter,          Key::Enter},
+                {        ImGuiKey_Escape,         Key::Escape},
+                {      ImGuiKey_LeftCtrl,    Key::LeftControl},
+                {     ImGuiKey_LeftShift,      Key::LeftShift},
+                {       ImGuiKey_LeftAlt,        Key::LeftAlt},
+                {     ImGuiKey_LeftSuper,      Key::LeftSuper},
+                {     ImGuiKey_RightCtrl,   Key::RightControl},
+                {    ImGuiKey_RightShift,     Key::RightShift},
+                {      ImGuiKey_RightAlt,       Key::RightAlt},
+                {    ImGuiKey_RightSuper,     Key::RightSuper},
+                {          ImGuiKey_Menu,           Key::Menu},
+                {    ImGuiKey_Apostrophe,     Key::Apostrophe},
+                {         ImGuiKey_Comma,          Key::Comma},
+                {         ImGuiKey_Minus,          Key::Minus},
+                {        ImGuiKey_Period,         Key::Period},
+                {         ImGuiKey_Slash,          Key::Slash},
+                {     ImGuiKey_Semicolon,      Key::Semicolon},
+                {         ImGuiKey_Equal,          Key::Equal},
+                {   ImGuiKey_LeftBracket,    Key::LeftBracket},
+                {     ImGuiKey_Backslash,      Key::Backslash},
+                {  ImGuiKey_RightBracket,   Key::RightBracket},
+                {   ImGuiKey_GraveAccent,          Key::Grave},
+                {      ImGuiKey_CapsLock,       Key::CapsLock},
+                {    ImGuiKey_ScrollLock,     Key::ScrollLock},
+                {       ImGuiKey_NumLock,        Key::NumLock},
+                {   ImGuiKey_PrintScreen,    Key::PrintScreen},
+                {         ImGuiKey_Pause,          Key::Pause},
+                { ImGuiKey_KeypadDecimal,  Key::NumpadDecimal},
+                {  ImGuiKey_KeypadDivide,   Key::NumpadDivide},
+                {ImGuiKey_KeypadMultiply, Key::NumpadMultiply},
+                {ImGuiKey_KeypadSubtract, Key::NumpadSubtract},
+                {     ImGuiKey_KeypadAdd,      Key::NumpadAdd},
+                {   ImGuiKey_KeypadEnter,    Key::NumpadEnter},
+            };
+
+            /** @brief ImGuiKey 의 연속 구간(시작 · 개수)을 엔진 키의 연속 구간으로 옮깁니다. */
+            static Key findPressedInRange( ImGuiKey firstImGuiKey, Key firstKey, int32 count )
+            {
+                for ( int32 offset = 0; offset < count; ++offset )
+                {
+                    if ( ImGui::IsKeyPressed( static_cast<ImGuiKey>( firstImGuiKey + offset ), false ) )
+                        return static_cast<Key>( static_cast<int32>( firstKey ) + offset );
+                }
+                return Key::Unknown;
+            }
+
+            /**
+             * @brief 이번 프레임에 눌린 키를 ImGui 에서 읽습니다. 없으면 `Key::Unknown` 입니다.
+             * @details 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 쥐고 있고(`WantCaptureKeyboard`), 에디터는 그 키를
+             *          게임 입력으로 넘기지 않습니다(`ImGuiEditor::processEvent`). 그래서 예전처럼 `InputManager::wasKeyPressed` 를
+             *          물으면 키가 영원히 오지 않았습니다 — 창을 닫는 길은 아래 버튼 목록뿐이었습니다. 키는 창이 받은 곳에서 읽습니다.
+             */
+            static Key findPressedKey()
+            {
+                Key key = findPressedInRange( ImGuiKey_A, Key::A, 26 );
+                if ( key == Key::Unknown )
+                    key = findPressedInRange( ImGuiKey_0, Key::Digit0, 10 );
+                if ( key == Key::Unknown )
+                    key = findPressedInRange( ImGuiKey_F1, Key::F1, 12 );
+                if ( key == Key::Unknown )
+                    key = findPressedInRange( ImGuiKey_Keypad0, Key::Numpad0, 10 );
+                if ( key != Key::Unknown )
+                    return key;
+                for ( const ImGuiKeyPair& pair : kArrNamedKey )
+                {
+                    if ( ImGui::IsKeyPressed( pair._imguiKey, false ) )
+                        return pair._key;
+                }
+                return Key::Unknown;
+            }
+
             /**
              * @brief 활성 입력 장치 종류의 표시 이름입니다.
              * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 쓰이지 않는 저장이 됩니다(분석기가 열거자를 모두 알기
@@ -409,21 +501,13 @@ namespace sw::editor
             ImGui::Text( "Press any keyboard key, or click a button below to bind..." );
             ImGui::Separator();
 
-            // 실시간 활성 입력 감지
-            InputManager* pInput = getService<InputManager>();
-            if ( pInput != nullptr )
+            // 실시간 활성 입력 감지 — 모달이 떠 있는 동안 키는 ImGui 로만 온다(`findPressedKey` 설명).
+            const Key pressedKey = InputMapEditorPanelInternal::findPressedKey();
+            if ( pressedKey != Key::Unknown )
             {
-                for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
-                {
-                    const Key key = static_cast<Key>( keyIndex );
-                    if ( pInput->wasKeyPressed( key ) )
-                    {
-                        rebindSelectedAction( key );
-                        _bCapturingKey = SW_FALSE;
-                        ImGui::CloseCurrentPopup();
-                        break;
-                    }
-                }
+                rebindSelectedAction( pressedKey );
+                _bCapturingKey = SW_FALSE;
+                ImGui::CloseCurrentPopup();
             }
 
             // 버튼 리스트 폴백

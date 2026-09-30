@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Events/RawInputEvent.h"
@@ -48,43 +49,47 @@ SW_TEST_CASE( InputManagerTest, NativeEventKeyPressReleaseEdges )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    // 초기 스냅샷 맞춤
-    input.endFrame();
+    // 앱 루프와 같은 순서로 돈다: 메시지 펌프(processNativeEvent) → beginFrame → 게임플레이 조회 → endFrame.
+    // 예전 테스트는 processNativeEvent 직후 바로 물었다. 그 순서에서는 맞았지만 실제 루프에서는 beginFrame 이 엣지를 지우고
+    // 이벤트를 재생하면서 "새로 눌림" 이 사라졌고, 테스트는 그것을 볼 수 없었다.
 
     // 프레임 1: Space KeyDown 이벤트 수신
     sw::NativeWindowEvent downEvt{};
     downEvt._message = WM_KEYDOWN;
     downEvt._wParam  = VK_SPACE;
     input.processNativeEvent( downEvt );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
     SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
-
-    // 프레임 1 종료: 키 눌림 상태가 prev로 복사됨
     input.endFrame();
 
-    // 프레임 2: 키 유지 중
+    // 프레임 2: 키 유지 중(이벤트 없음)
+    input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    input.endFrame();
 
-    // 프레임 2: Space KeyUp 이벤트 수신
+    // 프레임 3: Space KeyUp 이벤트 수신
     sw::NativeWindowEvent upEvt{};
     upEvt._message = WM_KEYUP;
     upEvt._wParam  = VK_SPACE;
     input.processNativeEvent( upEvt );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
     SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Space ) );
-
-    // 프레임 2 종료
     input.endFrame();
 
+    // 프레임 4: 뗀 상태 유지
+    input.beginFrame( 0.016f );
     SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
     SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    input.endFrame();
 
     input.shutdown();
 }
@@ -96,10 +101,7 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    // 초기 스냅샷
-    input.endFrame();
-
-    // 프레임 1: 마우스 이동 및 좌클릭 다운
+    // 프레임 1: 마우스 이동 및 좌클릭 다운(버튼 메시지도 lParam 에 좌표를 싣는다)
     sw::NativeWindowEvent moveEvt1{};
     moveEvt1._message = WM_MOUSEMOVE;
     moveEvt1._lParam  = MAKELPARAM( 100, 200 );
@@ -107,7 +109,9 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
 
     sw::NativeWindowEvent clickEvt{};
     clickEvt._message = WM_LBUTTONDOWN;
+    clickEvt._lParam  = MAKELPARAM( 100, 200 );
     input.processNativeEvent( clickEvt );
+    input.beginFrame( 0.016f );
 
     int32          mx = 0, my = 0;
     const sw::int2 vecMousePos2 = input.getMousePosition();
@@ -129,8 +133,12 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
 
     sw::NativeWindowEvent releaseEvt{};
     releaseEvt._message = WM_LBUTTONUP;
+    releaseEvt._lParam  = MAKELPARAM( 150, 230 );
     input.processNativeEvent( releaseEvt );
+    input.beginFrame( 0.016f );
 
+    // 델타는 이번 프레임에 들어온 이동의 합이다. 예전에는 메시지를 받을 때 위치를 바로 바꿔 두고 beginFrame 이 같은 이동을
+    // 한 번 더 재생해, 실제 루프에서는 움직이는 동안 델타가 늘 0 이었다.
     int32          dx = 0, dy = 0;
     const sw::int2 vecMouseDelta3 = input.getMouseDelta();
     dx                            = vecMouseDelta3._x;
@@ -195,39 +203,42 @@ SW_TEST_CASE( InputManagerTest, NativeEventRightAndMiddleMouseButtons )
     sw::NativeWindowEvent rDown{};
     rDown._message = WM_RBUTTONDOWN;
     input.processNativeEvent( rDown );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
     SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
     SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
-
     input.endFrame();
 
+    input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
     SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
+    input.endFrame();
 
     // 2) 우클릭 업
     sw::NativeWindowEvent rUp{};
     rUp._message = WM_RBUTTONUP;
     input.processNativeEvent( rUp );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Right ) );
     SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
-
     input.endFrame();
 
     // 3) 휠(중간) 클릭 다운 및 업
     sw::NativeWindowEvent mDown{};
     mDown._message = WM_MBUTTONDOWN;
     input.processNativeEvent( mDown );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
     SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Middle ) );
-
     input.endFrame();
 
     sw::NativeWindowEvent mUp{};
     mUp._message = WM_MBUTTONUP;
     input.processNativeEvent( mUp );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
     SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Middle ) );
@@ -257,6 +268,7 @@ SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
     wDown._message = WM_KEYDOWN;
     wDown._wParam  = 'W';
     input.processNativeEvent( wDown );
+    input.beginFrame( 0.016f );
 
     sw::float2 vUp = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vUp._x, 0.0001f );
@@ -267,6 +279,7 @@ SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
     dDown._message = WM_KEYDOWN;
     dDown._wParam  = 'D';
     input.processNativeEvent( dDown );
+    input.beginFrame( 0.016f );
 
     sw::float2    vDiag        = actionMap.getVector2D( "Move" );
     const float32 expectedDiag = 1.0f / sw::MathUtil::sqrt( 2.0f );
@@ -298,6 +311,7 @@ SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
     ctrlDown._message = WM_KEYDOWN;
     ctrlDown._wParam  = VK_LCONTROL;
     input.processNativeEvent( ctrlDown );
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
     SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
@@ -307,12 +321,15 @@ SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
     sDown._message = WM_KEYDOWN;
     sDown._wParam  = 'S';
     input.processNativeEvent( sDown );
+    input.endFrame();
+    input.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
     SW_EXPECT_TRUE( actionMap.wasChordTriggered( "QuickSave" ) );
 
     // 4) 다음 프레임 -> isDown은 true, wasTriggered는 false
     input.endFrame();
+    input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
     SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
 
@@ -991,4 +1008,60 @@ SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
     SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothDelta()._y, 0.001f );
 
     input.shutdown();
+}
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [InputManagerTest] 포커스를 잃기 직전에 들어온 키 누름이 리셋 뒤에 되살아나지 않는다.
+ * @details 한 번의 메시지 펌프 안에서 자동 반복 KeyDown(W) 이 먼저 오고 그 뒤에 WM_KILLFOCUS 가 온다(알트탭). 뗌 메시지는 다른
+ *          창으로 간다. 예전에는 포커스 잃음이 메시지를 받는 즉시 장치를 리셋하고, 그보다 먼저 큐에 들어간 KeyDown 이 다음
+ *          beginFrame 에 재생되어 W 가 눌린 채 남았다 — 캐릭터가 배경에서, 돌아온 뒤에도 계속 달렸다.
+ */
+SW_TEST_CASE( InputManagerTest, FocusLossAfterQueuedKeyDownLeavesNoKeyStuck )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    sw::NativeWindowEvent wDown{};
+    wDown._message = WM_KEYDOWN;
+    wDown._wParam  = 'W';
+    input.processNativeEvent( wDown );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::W ) );
+    input.endFrame();
+
+    sw::NativeWindowEvent wRepeat{};
+    wRepeat._message = WM_KEYDOWN;
+    wRepeat._wParam  = 'W';
+    wRepeat._lParam  = 0x40000000; // 이전에도 눌려 있었다(자동 반복)
+    input.processNativeEvent( wRepeat );
+
+    sw::NativeWindowEvent killFocus{};
+    killFocus._message = WM_KILLFOCUS;
+    input.processNativeEvent( killFocus );
+
+    input.beginFrame( 0.016f );
+    SW_EXPECT_FALSE_MSG( input.isKeyDown( sw::Key::W ), "포커스를 잃은 뒤에도 W 가 눌린 채 남았습니다" );
+    input.endFrame();
+
+    input.shutdown();
+}
+#endif
+
+/**
+ * @brief [RawInputEventTest] 글자 페이로드는 UTF-8 글자 경계에서 자른다.
+ * @details 칸은 31 바이트다. 한글은 글자당 3 바이트라 11 글자(33 바이트)면 10 글자(30 바이트)까지만 담아야 한다. 예전에는 31 바이트에서
+ *          그냥 잘라 마지막 글자의 앞 바이트 하나가 남았고, 받는 쪽(IME 조합 표시)이 깨진 UTF-8 을 받았다.
+ */
+SW_TEST_CASE( RawInputEventTest, TextPayloadTruncatesAtUtf8Boundary )
+{
+    const sw::string_view   text  = "가나다라마바사아자차카";
+    const sw::RawInputEvent event = sw::RawInputEvent::makeTextComposition( text );
+    const sw::string_view   payload( event._payload._textData._arrUtf8 );
+    SW_EXPECT_EQUAL( 30u, static_cast<uint32>( payload.size() ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( event._payload._textData._arrUtf8 ) );
+
+    // 담을 수 있는 길이는 그대로 담는다.
+    const sw::RawInputEvent shortEvent = sw::RawInputEvent::makeTextInput( "abc" );
+    SW_EXPECT_TRUE( sw::string_view( shortEvent._payload._textData._arrUtf8 ) == "abc" );
 }

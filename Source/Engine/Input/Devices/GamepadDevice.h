@@ -59,6 +59,7 @@ namespace sw
         virtual GamepadBatteryInfo getBatteryInfo() const { return GamepadBatteryInfo{}; }
 
         void onFrameBegin( float32 deltaTime ) override;
+        void onPolled() override;
         void onFrameEnd() override;
         void resetState() override;
 
@@ -136,6 +137,7 @@ namespace sw
         float32                   _vibrationDurationTimer;    /**< playVibration() 으로 시작한 타이머 진동의 남은 시간(초). 0 이하가 되면 저절로 멈춤. */
         float32                   _triggerDeadzone;           /**< 트리거 축 노이즈를 거르는 데드존. 이 값 미만이면 0 으로 취급(디지털 눌림 판정용 0.5 임계값과는 별개). `setAxis` 가 적용함. */
         uint8                     _bTimedVibrationActive : 1; /**< playVibration() 으로 시작한 타이머 진동이 진행 중인지 여부. */
-        [[maybe_unused]] uint8    _reserved              : 7;
+        uint8                     _bSuppressEdgeOnce     : 1; /**< resetState() 뒤 첫 폴링 값을 "직전 값" 으로 삼아, 누르고 있던 버튼이 새로 눌린 것처럼 보이지 않게 함. */
+        [[maybe_unused]] uint8    _reserved              : 6;
     };
 } // namespace sw

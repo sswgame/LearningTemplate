@@ -2021,6 +2021,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ① 입력 — 실제 루프에서 `wasKeyPressed` 가 뜨지 않았다: 창 메시지는 큐 한 길로)
+
+2026-09-30 전 트리 결함 점검(동시성 · 입력 경계 · RHI · 모듈 수명 · 코어 · 서브시스템 여섯 갈래를 읽고, 후보마다 코드로 재확인)의 첫 수정이다.
+
+**무엇이 틀렸나.** Win32 · X11 의 `processNativeEvent` 가 메시지를 받는 순간 장치 상태를 바꾸고(**`setKeyDown`** · `setButtonDown` ·
+`setPosition` · 휠) 같은 이벤트를 큐에도 넣었다. 앱 루프는 메시지 펌프 → `beginFrame` 순서라, `beginFrame` 이 이번 프레임 엣지를 지운
+뒤 큐를 재생하면 키는 이미 눌린 상태여서 "새로 눌림" 이 생기지 않았다. 그래서 실제 앱에서 `wasKeyPressed` / `wasKeyReleased` · 마우스
+버튼 엣지 · 조합 키(`wasChordTriggered`) · AnyKey 바인딩이 모두 죽어 있었다(ActionMap 의 일반 Pressed 는 자기 이전 값을 따로 들고
+있어 살아 있었다). 같은 이중 경로 때문에 **움직이는 동안 마우스 델타가 늘 0**(재생이 같은 위치를 다시 넣었다)이었고, 포커스 잃음은 메시지를
+받는 즉시 리셋해 **그보다 먼저 큐에 들어간 KeyDown 이 리셋 뒤에 되살아났다**(알트탭하면 W 가 눌린 채 캐릭터가 계속 달렸다). 테스트는
+`processNativeEvent` 직후 `beginFrame` 없이 물어서 이 순서를 볼 수 없었다.
+
+**고친 것.**
+- 창 메시지는 **큐에만** 넣는다. 장치 상태를 바꾸는 길은 `beginFrame` 의 재생 하나다. OS 쪽 일(SetCapture · ClipCursor · 포인터 잡기)만
+  즉시 한다. 포커스 · 포인터 진입/이탈은 `postWindowStateEvent`(음소거와 무관 — 음소거 중에 포커스를 잃어도 리셋은 해야 한다)로 큐 순서
+  안에 넣는다. `RawInputEventType` 에 `PointerEntered` · `PointerLeft` · `MouseRawDelta` 를 **뒤에 덧붙였다**(리플레이 파일이 번호를 담는다).
+- Windows 는 `TrackMouseEvent` / `WM_MOUSELEAVE` 로 포인터 진입 · 이탈을 처음으로 알린다 — 전에는 `isPointerInside()` 가 늘 false 라
+  `isPointerOverRect()` 도 늘 false 였다. 버튼 메시지는 lParam 좌표를 그대로 쓴다((0, 0) 을 "좌표 없음" 으로 보던 폴백 제거).
+- X11: 버튼 이벤트에 좌표를 싣는다(예전엔 (0, 0) 으로 보내 클릭마다 커서가 왼쪽 위로 튀었다). `XkbSetDetectableAutoRepeat` 로 누르고 있는
+  키가 Release/Press 쌍을 되풀이하지 않게 한다.
+- 가운데 고정 잠금(`LockedInCenter`)은 매 프레임 끝에 커서를 잠금 영역 가운데로 되돌리고(`recenterLockedCursorPlatform`), 되돌림은
+  델타가 아니다(`MouseDevice::setPositionWithoutDelta`). 예전엔 포커스를 얻을 때만 되돌려 커서가 가장자리에 닿으면 시점이 멈췄다.
+- 게임패드: 리셋 뒤 첫 폴링 값을 직전 값으로 삼는다(`IInputDevice::onPolled` · `_bSuppressEdgeOnce`). 누르고 있던 버튼이 창을 오가면
+  "새로 눌림" 이 되던 것.
+- `ActionTrigger::Pulse` 는 간격 경계를 넘을 때만 발화한다(예전엔 첫 0.1 초 뒤 **매 프레임** — 연사 속도가 프레임률을 따라갔다).
+- 입력 `beginFrame` 에 실제 프레임 시간을 넘긴다(`EngineLoop::beginFrame( deltaSeconds )`; 예전엔 늘 16 ms 라 0.3 초 진동이 144 fps 에서
+  0.13 초).
+- 글자 이벤트 페이로드(31 바이트)를 UTF-8 글자 경계에서 자른다(한글 조합 문자열이 길면 깨진 바이트가 남았다).
+- 에디터 "Press Key To Bind" 창은 ImGui 에서 키를 읽는다. 모달이 떠 있는 동안 ImGui 가 키보드를 쥐어 `InputManager` 까지 키가 오지
+  않았다(`ImGuiEditor::processEvent`) — 창을 닫는 길이 버튼 목록뿐이었다.
+
+**확인.** 기존 입력 테스트를 앱 루프 순서(메시지 → `beginFrame` → 조회 → `endFrame`)로 고쳤고 넷을 더했다
+(`FocusLossAfterQueuedKeyDownLeavesNoKeyStuck` · `PulseTriggerFiresOncePerInterval` · `GamepadResetDoesNotReportHeldButtonAsNewPress` ·
+`TextPayloadTruncatesAtUtf8Boundary`). 옛 동작을 되돌려 넣는 돌연변이 넷(직접 `setKeyDown` · 즉시 포커스 리셋 · 옛 Pulse 조건 · 억제 끔)을
+넣으면 해당 테스트가 모두 실패한다. Debug nogpu 7/7, Shipping nogpu+hostgpu 9/9. X11 쪽은 이 PC 에서 빌드할 수 없어 리눅스 CI 로 본다.
+
 ### 2026-09-30 (CMake ③ — `directxtex` 를 서드파티 자리에서 한 번 찾는다)
 
 다른 vcpkg 패키지(`glad` · `imgui` · `pugixml` …)는 `ThirdParty/<이름>/CMakeLists.txt` 가 한 번 찾아 저장소 이름의 타겟으로 두고 쓰는 쪽은 그 이름으로 링크한다.

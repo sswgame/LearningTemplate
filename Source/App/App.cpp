@@ -307,7 +307,7 @@ namespace sw
 
             const FrameTime frameTime = _frameTimeline.advance();
 
-            _engineLoop.beginFrame();
+            _engineLoop.beginFrame( frameTime._deltaTime );
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
             // 모든 단계가 같은 답을 본다.
             _moduleHost->beginFrame();

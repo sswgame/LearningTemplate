@@ -3,6 +3,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Input/ActionMap.h"
+#include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputReplay.h"
@@ -291,4 +292,45 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
     }
 
     SW_EXPECT_TRUE( actionMap.hasAction( "StressAction_0" ) );
+}
+
+/**
+ * @brief [InputEdgeCaseTest] 리셋 뒤 첫 폴링에서 누르고 있던 게임패드 버튼은 "새로 눌림" 이 아니다.
+ * @details 포커스를 잃으면 모든 장치를 리셋한다. 게임패드는 폴링으로 상태를 읽으므로, 리셋 뒤 첫 폴링이 계속 누르고 있던 버튼을 읽으면
+ *          직전 값 0 과 비교해 눌림 엣지가 생겼다 — 창을 오가기만 해도 점프가 나갔다.
+ */
+SW_TEST_CASE( InputEdgeCaseTest, GamepadResetDoesNotReportHeldButtonAsNewPress )
+{
+    struct HeldButtonGamepadDevice : public sw::GamepadDevice
+    {
+        using sw::GamepadDevice::GamepadDevice;
+        void poll( [[maybe_unused]] float32 deltaTime ) override { setButtonDown( sw::GamepadButton::A, true ); }
+    };
+
+    HeldButtonGamepadDevice pad( 0 );
+
+    // 프레임 1: 누르기 시작 — 새로 눌림
+    pad.onFrameBegin( 0.016f );
+    pad.poll( 0.016f );
+    pad.onPolled();
+    SW_EXPECT_TRUE( pad.wasButtonPressed( sw::GamepadButton::A ) );
+    pad.onFrameEnd();
+
+    // 포커스를 잃어 리셋된다. 버튼은 여전히 눌려 있다.
+    pad.resetState();
+    pad.onFrameBegin( 0.016f );
+    pad.poll( 0.016f );
+    pad.onPolled();
+    SW_EXPECT_TRUE( pad.isButtonDown( sw::GamepadButton::A ) );
+    SW_EXPECT_FALSE_MSG( pad.wasButtonPressed( sw::GamepadButton::A ), "리셋 뒤 누르고 있던 버튼이 새로 눌린 것으로 보고됐습니다" );
+    pad.onFrameEnd();
+
+    // 한 번 떼고 다시 누르면 그때는 눌림이다(억제는 한 번뿐).
+    pad.onFrameBegin( 0.016f );
+    pad.setButtonDown( sw::GamepadButton::A, false );
+    pad.onFrameEnd();
+    pad.onFrameBegin( 0.016f );
+    pad.poll( 0.016f );
+    pad.onPolled();
+    SW_EXPECT_TRUE( pad.wasButtonPressed( sw::GamepadButton::A ) );
 }

@@ -75,6 +75,7 @@ namespace sw
         , _vibrationDurationTimer{ 0.0f }
         , _triggerDeadzone{ 0.05f }
         , _bTimedVibrationActive{ SW_FALSE }
+        , _bSuppressEdgeOnce{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -93,22 +94,35 @@ namespace sw
         }
     }
 
+    void GamepadDevice::onPolled()
+    {
+        // 리셋(포커스 잃음 · 리플레이 재동기화)은 눌림 상태를 0 으로 만든다. 그 뒤 첫 폴링이 **계속 누르고 있던** 버튼을 읽으면
+        // 직전 값 0 과 비교해 "이번 프레임에 눌렸다" 가 된다 — 창을 오가기만 해도 점프가 나갔다. 첫 폴링 값을 직전 값으로 삼는다.
+        if ( _bSuppressEdgeOnce == SW_FALSE )
+            return;
+        _prevButtonMask    = _buttonMask;
+        _prevLeftTrigger   = _leftTrigger;
+        _prevRightTrigger  = _rightTrigger;
+        _bSuppressEdgeOnce = SW_FALSE;
+    }
+
     void GamepadDevice::onFrameEnd()
     {
     }
 
     void GamepadDevice::resetState()
     {
-        _buttonMask       = 0;
-        _prevButtonMask   = 0;
-        _leftStick._x     = 0.0f;
-        _leftStick._y     = 0.0f;
-        _rightStick._x    = 0.0f;
-        _rightStick._y    = 0.0f;
-        _leftTrigger      = 0.0f;
-        _rightTrigger     = 0.0f;
-        _prevLeftTrigger  = 0.0f;
-        _prevRightTrigger = 0.0f;
+        _buttonMask        = 0;
+        _prevButtonMask    = 0;
+        _leftStick._x      = 0.0f;
+        _leftStick._y      = 0.0f;
+        _rightStick._x     = 0.0f;
+        _rightStick._y     = 0.0f;
+        _leftTrigger       = 0.0f;
+        _rightTrigger      = 0.0f;
+        _prevLeftTrigger   = 0.0f;
+        _prevRightTrigger  = 0.0f;
+        _bSuppressEdgeOnce = SW_TRUE;
         stopVibration();
     }
 
