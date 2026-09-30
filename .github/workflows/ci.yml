@@ -97,6 +97,9 @@ jobs:
     # Linux Environment Setup
     - name: Setup Linux toolchain & dependencies
       if: runner.os == 'Linux'
+      # apt 미러가 멈추면 이 단계가 잡의 기본 제한(6 시간)까지 러너를 붙잡는다 — 실제로 f3097b6a 의 TSan 잡이 여기서 2 시간 넘게 멈췄다.
+      # 평소 1~2 분이다. 빨리 실패하게 해서 다시 돌리게 한다.
+      timeout-minutes: 15
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
