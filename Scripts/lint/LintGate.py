@@ -22,13 +22,25 @@
 ```python
 class CheckSomethingGate(LintGate):
     description = "무엇을 검사하는가"
+    preCommitPattern = ("Source/*",)            # 이 파일이 staged 됐을 때만 훅에서 돈다
+    preCommitFileArgument = "--files"           # 훅이 staged 부분집합을 --files 로 넘긴다
     selfTestCases = [{"name": "...", "files": {"Source/Probe.h": "..."}}]
 
+    def addArguments(self, parser):
+        self.addFilesArgument(parser)
+
     def scan(self, repositoryRoot, args):
-        return GateResult(listViolation=[...], summary=f"{n} files scanned")
+        # 파일 고르기: --files 와 전체 훑기가 같은 규칙, 빌드 산출물 · 내려받은 외부 도구로는 내려가지 않는다
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
+        # 읽기: 동시에, 찾는 표식이 없는 파일은 거른다(비싼 정규식 앞에서)
+        listViolation = [f"{path}: ..." for path, text in readTextFiles(listPath, mustContain="SOMETHING") if ...]
+        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files scanned")
 
 main = CheckSomethingGate.run
 ```
+
+파일마다 파이썬 정규식을 오래 돌리는 게이트라면 파일별 일을 `common.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) —
+스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
 
 `gate/` 에 놓으면 `CheckLintsAreAlive` 가 알아서 집어 가고(목록이 아니라 자리가 규칙이다),
 증거(`selfTestCases`)를 들고 있지 않으면 그 자리에서 실패한다.
