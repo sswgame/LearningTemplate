@@ -196,6 +196,19 @@ namespace sw
                     return 0;
                 }
 
+                case WM_DPICHANGED:
+                {
+                    // 모니터별 DPI 인식(PerMonitorV2)에서는 OS 가 창 크기를 바꿔 주지 않는다. 권장 사각형으로 옮긴다 — 그 뒤의 WM_SIZE 가
+                    // 스왑체인을 맞춘다. 이 처리가 없으면 배율이 다른 모니터로 옮길 때 창이 실제 크기의 절반 · 두 배가 된다.
+                    const RECT* pSuggested = reinterpret_cast<const RECT*>( lParam );
+                    if ( pSuggested != nullptr )
+                    {
+                        SetWindowPos( hWnd, nullptr, pSuggested->left, pSuggested->top, pSuggested->right - pSuggested->left,
+                                      pSuggested->bottom - pSuggested->top, SWP_NOZORDER | SWP_NOACTIVATE );
+                    }
+                    return 0;
+                }
+
                 case WM_CLOSE:
                 {
                     if ( pThis->_bRecreating == SW_FALSE )

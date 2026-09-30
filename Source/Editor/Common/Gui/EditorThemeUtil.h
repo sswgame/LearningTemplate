@@ -57,6 +57,15 @@ namespace sw::editor
         /** @brief 주어진 테마 설정을 ImGui 스타일에 한 번에 적용합니다. */
         static void applyTheme( const EditorThemeConfig& config );
 
+        /**
+         * @brief 모니터 DPI 배율을 정하고 지금 테마를 그 배율로 다시 적용합니다(여백 · 둥글기 · 글자).
+         * @details 테마는 96 DPI 기준의 절대 크기를 적으므로 배율은 테마를 적용할 때마다 곱합니다. 글자는 `style.FontScaleDpi` 로 키웁니다
+         *          (ImGui 1.92 동적 폰트 — 흐려지지 않는다). 모니터를 옮길 때의 글자는 `io.ConfigDpiScaleFonts` 가 따라갑니다.
+         */
+        static void setDpiScale( float32 dpiScale );
+        /** @brief 지금 DPI 배율입니다(96 DPI = 1). */
+        static float32 getDpiScale();
+
         /** @brief 프리셋으로 테마를 바로 적용합니다. */
         static void applyPreset( EditorThemePreset preset );
 

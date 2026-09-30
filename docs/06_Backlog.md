@@ -2021,6 +2021,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (고도화 ② Windows DPI 인식 · 에디터 UI 배율)
+
+**왜.** 프로세스가 DPI 를 몰라, 125 % · 150 % 모니터에서 OS 가 창을 96 DPI 로 그린 뒤 비트맵으로 늘렸다 — 화면과 에디터 글자가 흐렸고 창 ·
+스왑체인이 실제 픽셀보다 작았다. 언리얼 · 유니티는 모니터별 DPI 를 안다.
+
+**한 것.**
+- 매니페스트(`WindowsProcess.manifest`, App · 테스트 · ReflectionParser)에 모니터별 DPI 인식(PerMonitorV2, 옛 Windows 는 `true/pm`).
+- `Win32Window` 가 `WM_DPICHANGED` 의 권장 사각형으로 창을 옮긴다(PerMonitorV2 에서는 OS 가 하지 않는다) — 뒤따르는 WM_SIZE 가 스왑체인을 맞춘다.
+- 에디터: 플랫폼 백엔드가 창의 DPI 배율을 알려 주고(`IImGuiPlatformBackend::getDpiScale` — Win32 는 imgui_impl_win32), 테마를 읽은 뒤
+  `EditorThemeUtil::setDpiScale` 이 스타일 크기(96 DPI 기준)에 배율을 곱하고 `style.FontScaleDpi` 로 글자를 키운다(ImGui 1.92 동적 폰트라
+  흐려지지 않는다). 테마를 바꿀 때마다 곱하고, 스타일에서 되읽는 경로는 나눠 이중 배율을 막는다. 모니터를 옮기면 `io.ConfigDpiScaleFonts` ·
+  `ConfigDpiScaleViewports` 가 따라간다.
+- `-gv_editorUiScale=<배율>`(0 = 모니터 DPI): 언리얼 Editor Preferences 의 UI 배율 · 유니티 UI Scaling 과 같은 설정. 정하면 모니터를 옮겨도
+  덮어쓰지 않는다.
+
+**확인.** 이 기계는 96 DPI 라 자동 배율은 1.0 이다 — `-gv_editorUiScale=1.5` 로 강제해 여백 6×4 → 9×6 과 오류 0 을 확인했다. 150 % 모니터
+실물 확인과 `WM_DPICHANGED` 모니터 이동은 해당 장비에서 확인이 필요하다. Debug nogpu+린트 28/28 · hostgpu 2/2, Shipping 9/9, Shipping App 60 프레임.
+
 ### 2026-09-30 (고도화 ① ThreadSanitizer CI 잡 — 보고 전용으로 시작)
 
 **왜.** 이번 결함 점검의 동시성 결함 다섯 건(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드 맵 경쟁 · 업로드 리스트 · 큐 외부 동기화)은

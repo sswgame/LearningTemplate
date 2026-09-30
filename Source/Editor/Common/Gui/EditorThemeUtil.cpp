@@ -102,16 +102,24 @@ namespace sw::editor
                 return pRow[0];
             }
 
-            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 되읽습니다. */
+            /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 적고 적용할 때 이것을 곱한다. */
+            static float32& dpiScale()
+            {
+                static float32 s_dpiScale{ 1.0f };
+                return s_dpiScale;
+            }
+
+            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 되읽습니다. 스타일에는 DPI 배율이 곱해져 있으므로 나눠 96 DPI 기준으로 적는다. */
             static void readGeometryFromStyle( EditorThemeConfig& outConfig )
             {
                 const ImGuiStyle& style      = ImGui::GetStyle();
-                outConfig._windowRounding    = style.WindowRounding;
-                outConfig._frameRounding     = style.FrameRounding;
-                outConfig._popupRounding     = style.PopupRounding;
-                outConfig._tabRounding       = style.TabRounding;
-                outConfig._scrollbarRounding = style.ScrollbarRounding;
-                outConfig._grabRounding      = style.GrabRounding;
+                const float32     invScale   = 1.0f / dpiScale();
+                outConfig._windowRounding    = style.WindowRounding * invScale;
+                outConfig._frameRounding     = style.FrameRounding * invScale;
+                outConfig._popupRounding     = style.PopupRounding * invScale;
+                outConfig._tabRounding       = style.TabRounding * invScale;
+                outConfig._scrollbarRounding = style.ScrollbarRounding * invScale;
+                outConfig._grabRounding      = style.GrabRounding * invScale;
             }
         };
 
@@ -251,6 +259,9 @@ namespace sw::editor
         style.IndentSpacing     = 20.0f;
         style.ScrollbarSize     = 12.0f;
         style.GrabMinSize       = 8.0f;
+        // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
+        if ( EditorThemeInternal::dpiScale() != 1.0f )
+            style.ScaleAllSizes( EditorThemeInternal::dpiScale() );
 
         // 2. 통합 컬러 팔레트 구성
         ImVec4* pColors = style.Colors;
@@ -328,6 +339,28 @@ namespace sw::editor
         pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
         pColors[ImGuiCol_TableRowBg]        = ImVec4( 0.0f, 0.0f, 0.0f, 0.0f );
         pColors[ImGuiCol_TableRowBgAlt]     = ImVec4( 1.0f, 1.0f, 1.0f, 0.02f );
+    }
+
+    void EditorThemeUtil::setDpiScale( float32 dpiScale )
+    {
+        const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
+        if ( EditorThemeInternal::dpiScale() == scale )
+            return;
+        // 지금 테마를 96 DPI 기준으로 되읽고 새 배율로 다시 적용한다. ImGui 기본 다크 프리셋은 지오메트리를 건드리지 않으므로, 바뀐 비율만큼
+        // 지금 스타일을 늘린다.
+        const float32     previousScale = EditorThemeInternal::dpiScale();
+        EditorThemeConfig config        = getActiveTheme();
+        EditorThemeInternal::dpiScale() = scale;
+        if ( EditorThemeInternal::findRow( config._preset )._bUseImGuiDarkColors )
+            ImGui::GetStyle().ScaleAllSizes( scale / previousScale );
+        else
+            applyTheme( config );
+        ImGui::GetStyle().FontScaleDpi = scale;
+    }
+
+    float32 EditorThemeUtil::getDpiScale()
+    {
+        return EditorThemeInternal::dpiScale();
     }
 
     void EditorThemeUtil::loadFromConfig()

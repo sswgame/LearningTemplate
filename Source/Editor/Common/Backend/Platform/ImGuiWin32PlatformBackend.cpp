@@ -22,9 +22,18 @@ namespace sw::editor
                 return false;
 
             HWND hWnd = static_cast<HWND>( pWindow->getNativeHandle() );
+            _hWnd     = hWnd;
             if ( backendType == RHIBackend::OpenGL )
                 return ImGui_ImplWin32_InitForOpenGL( hWnd );
             return ImGui_ImplWin32_Init( hWnd );
+        }
+
+        float32 getDpiScale() const override
+        {
+            if ( _hWnd == nullptr )
+                return 1.0f;
+            const float32 scale = ImGui_ImplWin32_GetDpiScaleForHwnd( _hWnd );
+            return scale > 0.0f ? scale : 1.0f;
         }
 
         void shutdown() override
@@ -50,6 +59,9 @@ namespace sw::editor
             LPARAM lp   = event._lParam;
             return ImGui_ImplWin32_WndProcHandler( hWnd, uMsg, wp, lp ) != 0;
         }
+
+    private:
+        HWND _hWnd{ nullptr }; ///< 메인 창(DPI 를 물을 때 쓴다)
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()

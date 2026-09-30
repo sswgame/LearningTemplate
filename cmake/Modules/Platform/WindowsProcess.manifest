@@ -7,12 +7,17 @@
                           해석한다. 그래서 사용자 폴더 이름이 한글이면 같은 경로를 읽기(UTF-16 변환)와 쓰기(ANSI)가 서로 다른 파일로
                           봤다. 더 오래된 Windows 는 이 항목을 무시한다.
   longPathAware        : 260 자를 넘는 경로를 허용한다(시스템 설정 LongPathsEnabled 가 켜져 있을 때). 언리얼 · 유니티 에디터도 켠다.
+  dpiAwareness         : 모니터별 DPI 인식(PerMonitorV2, 옛 Windows 는 dpiAware=true/pm). 없으면 OS 가 창을 96 DPI 로 그린 뒤 비트맵으로
+                          늘려(125 % · 150 % 모니터) 화면과 에디터 글자가 흐렸고, 창과 스왑체인이 실제 픽셀보다 작았다. 창은 WM_DPICHANGED 에서
+                          권장 크기로 옮기고(Win32Window), 에디터는 창 DPI 로 스타일 · 글자를 키운다(EditorThemeUtil::setDpiScale).
 -->
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
       <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
     </windowsSettings>
   </application>
 </assembly>

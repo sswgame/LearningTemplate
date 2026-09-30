@@ -97,6 +97,13 @@ namespace sw::editor
      */
     SW_GLOBAL_VARIABLE_STRING( gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
 
+    /**
+     * @brief `-gv_editorUiScale=<배율>`: 에디터 UI 배율입니다. 0 이면 창이 놓인 모니터의 DPI 를 따릅니다.
+     * @details 언리얼 Editor Preferences 의 UI 배율 · 유니티 UI Scaling 설정과 같은 자리입니다. 모니터 DPI 와 상관없이 크게 · 작게 보고
+     *          싶을 때, 그리고 고해상도 모니터가 없는 기계에서 배율 경로를 확인할 때 씁니다.
+     */
+    SW_GLOBAL_VARIABLE_FLOAT( gv_editorUiScale, 0.0f, "에디터 UI 배율 (0 = 모니터 DPI 를 따름)" );
+
     ImGuiEditor::ImGuiEditor()
         : _platformBackend{ nullptr }
         , _rendererBackend{ nullptr }
@@ -239,6 +246,16 @@ namespace sw::editor
             _editorContext->getPanelManager().registerDefaultPanels();
             EditorCommandGui::registerDefaults();
             _dockLayout.loadPanelVisibility();
+
+            // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이
+            // 따라간다(ImGui 1.92 동적 폰트).
+            // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
+            const bool bFixedUiScale = gv_editorUiScale > 0.0f;
+            EditorThemeUtil::setDpiScale( bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
+            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
+            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
+            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI",
+                         ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
             // `-gv_editorStartupScene=<경로>`: 검증용이다. 정의는 이 파일 위에 있다.
             // 빈 씬만 보던 실제 기동 검증이 오브젝트를 순회하는 코드까지 다루게 하는 스위치다.
