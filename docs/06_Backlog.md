@@ -2021,6 +2021,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (CMake ② — 윈도우 도구 찾기 두 벌 · 매니페스트 해시 두 벌을 한 벌로, 포트 툴체인도 상수로 설정을 읽는다)
+
+`RunDuplicateCode --language cmake`(979fa99c 로 넣었다)로 `*.cmake` · `CMakeLists.txt` 83 개를 재니 6 줄 이상 복사가 셋이었다.
+
+- **MSVC `lib.exe` · Windows SDK `mt.exe` 찾기(22 줄 + 9 줄)가 본 프로젝트(`FindWindowsTools`)와 vcpkg 포트 툴체인(`VcpkgPortsToolchain`)에 한 벌씩.**
+  `cmake/Environment/WindowsToolSearch.cmake` 의 `sw_findMsvcLibExe` · `sw_findWindowsSdkMt` 로 모았다. 무엇을 먼저 볼지(본 프로젝트는 고정 llvm-lib · 환경 변수의
+  llvm-mt, 포트는 찾은 LLVM 옆의 것)는 부르는 쪽마다 달라 거기 남기고, "MSVC · SDK 폴더 안에서 어디를 보는가" 만 공용이다.
+- **포트 툴체인이 `toolchain_config.json` 을 키 이름을 글자 그대로 적어 다시 읽었다** — 본 프로젝트 쪽 주석이 "철자가 갈라져서 고쳤다" 고 적어 둔 바로 그 모양이다.
+  ① 로 포트 툴체인도 상수를 읽게 됐으므로 `${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}` 와 `SW_KEY_WINDOWS_SDK_DIR` · `SW_KEY_WINDOWS_SDK_VERSION` ·
+  `SW_KEY_MSVC_TOOLS_DIR` 를 쓴다.
+- **`sw_vcpkgComputeManifestHash` 의 앞부분이 `sw_vcpkgComputeManifestHashLegacy` 를 글자 그대로 들고 있었다**(매니페스트 두 파일의 해시). 레거시를 부르고 오버레이를
+  덧붙인다.
+
+**확인.** 옛 탐색 코드와 새 함수를 이 PC 의 실제 SDK · MSVC 경로로 `cmake -P` 에서 비교 — `lib.exe` · SDK 판 `mt.exe` · Windows Kits 훑기 · 빈 입력 모두 같다(이 PC 는
+LLVM 의 llvm-lib · llvm-mt 가 있어 두 탐색을 평소에 타지 않으므로 따로 쟀다). 재구성 뒤 vcpkg 스탬프 파일이 바이트 단위로 같다(새 해시 = 옛 해시, "스탬프 일치 — 설치
+건너뜀"), configure 메시지 · `CMAKE_AR` · `CMAKE_MT` 캐시가 같다. 포트 툴체인을 건 탐침 프로젝트의 결과(컴파일러 · 아카이버 · mt)가 같다. CMake 6 줄 이상 복사 **0**.
+
 ### 2026-09-30 (CMake ① — configure 한 번에 파이썬 생성기가 아홉 번 돌았다: 상수 읽기와 헤더 생성을 나누고 한 번만)
 
 CMake 구조 정리의 첫 자리다. 이미 구성된 트리를 다시 configure 하는 데 8.4 s 였고, `cmake --profiling-format=google-trace` 로 재니 그중 **파이썬 하위

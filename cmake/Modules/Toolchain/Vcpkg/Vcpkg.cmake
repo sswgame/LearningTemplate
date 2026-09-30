@@ -29,17 +29,8 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
         set(swSrcDir "${CMAKE_SOURCE_DIR}")
     endif()
 
-    set(hash "")
-
-    if(EXISTS "${swSrcDir}/vcpkg.json")
-        file(SHA256 "${swSrcDir}/vcpkg.json" h1)
-        string(APPEND hash "${h1}")
-    endif()
-
-    if(EXISTS "${swSrcDir}/vcpkg-configuration.json")
-        file(SHA256 "${swSrcDir}/vcpkg-configuration.json" h2)
-        string(APPEND hash "${h2}")
-    endif()
+    # 앞부분(매니페스트 두 파일)은 레거시 스탬프와 같다 — 두 벌로 적지 않고 그것에 오버레이를 덧붙인다.
+    sw_vcpkgComputeManifestHashLegacy(hash)
 
     file(GLOB_RECURSE swOverlayPortFiles
         "${swSrcDir}/ThirdParty/*/vcpkg-port/portfile.cmake"

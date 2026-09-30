@@ -7,6 +7,7 @@
 # 1) clang-cl / lld-link / llvm-rc — 포트 빌드 컴파일러
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/FindLlvmBin.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/WindowsToolSearch.cmake")
 sw_findLlvmBin(llvmBin)
 
 if(NOT llvmBin)
@@ -37,14 +38,16 @@ set(swMsvcTools "")
 
 foreach(candidateRoot IN ITEMS "${swRepoRoot}" "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 	get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
-	set(cfgCandidate "${absRoot}/Config/Environment/toolchain_config.json")
+	# 파일 이름과 키는 Constants.py 의 상수다(FindLlvmBin 이 LoadConfigConstants 로 읽어 두었다). 예전에는 여기 글자 그대로 적혀 있었다 —
+	# 본 프로젝트 쪽(FindWindowsTools)이 같은 이유로 철자가 갈라진 적이 있다.
+	set(cfgCandidate "${absRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
 
 	if(EXISTS "${cfgCandidate}")
 		set(swCfgJson "${cfgCandidate}")
 		file(READ "${swCfgJson}" cfgContent)
-		string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "windows_sdk_dir")
-		string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "windows_sdk_version")
-		string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "msvc_tools_dir")
+		string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "${SW_KEY_WINDOWS_SDK_DIR}")
+		string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "${SW_KEY_WINDOWS_SDK_VERSION}")
+		string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "${SW_KEY_MSVC_TOOLS_DIR}")
 		break()
 	endif()
 endforeach()
@@ -57,21 +60,8 @@ set(swAr "")
 
 if(EXISTS "${llvmBin}/llvm-lib.exe")
 	set(swAr "${llvmBin}/llvm-lib.exe")
-elseif(swMsvcTools AND NOT swMsvcTools STREQUAL "")
-	foreach(hostArch IN ITEMS Hostx64 Hostx86)
-		foreach(targetArch IN ITEMS x64 x86)
-			set(arCandidate "${swMsvcTools}/bin/${hostArch}/${targetArch}/lib.exe")
-
-			if(EXISTS "${arCandidate}")
-				set(swAr "${arCandidate}")
-				break()
-			endif()
-		endforeach()
-
-		if(swAr)
-			break()
-		endif()
-	endforeach()
+else()
+	sw_findMsvcLibExe("${swMsvcTools}" swAr)
 endif()
 
 if(swAr)
@@ -95,48 +85,8 @@ set(swMt "")
 
 if(EXISTS "${llvmBin}/llvm-mt.exe")
 	set(swMt "${llvmBin}/llvm-mt.exe")
-elseif(swSdkDir AND swSdkVer AND NOT swSdkDir STREQUAL "" AND NOT swSdkVer STREQUAL "")
-	foreach(arch IN ITEMS x64 x86)
-		set(mtCandidate "${swSdkDir}/bin/${swSdkVer}/${arch}/mt.exe")
-
-		if(EXISTS "${mtCandidate}")
-			set(swMt "${mtCandidate}")
-			break()
-		endif()
-	endforeach()
-endif()
-
-if(NOT swMt)
-	foreach(kitsRoot IN ITEMS
-		"C:/Program Files (x86)/Windows Kits/10"
-		"C:/Program Files/Windows Kits/10"
-	)
-		if(NOT IS_DIRECTORY "${kitsRoot}/bin")
-			continue()
-		endif()
-
-		file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
-		list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
-
-		foreach(verDir IN LISTS sdkVerDirs)
-			foreach(arch IN ITEMS x64 x86)
-				set(mtCandidate "${verDir}/${arch}/mt.exe")
-
-				if(EXISTS "${mtCandidate}")
-					set(swMt "${mtCandidate}")
-					break()
-				endif()
-			endforeach()
-
-			if(swMt)
-				break()
-			endif()
-		endforeach()
-
-		if(swMt)
-			break()
-		endif()
-	endforeach()
+else()
+	sw_findWindowsSdkMt("${swSdkDir}" "${swSdkVer}" swMt)
 endif()
 
 if(swMt)

@@ -3,6 +3,9 @@
 # @brief Windows lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩 헬퍼 (캐시 최적화)
 # ==============================================================================
 
+# MSVC · SDK 폴더 안을 뒤지는 일은 vcpkg 포트 툴체인과 함께 쓴다.
+include("${CMAKE_CURRENT_LIST_DIR}/WindowsToolSearch.cmake")
+
 # ------------------------------------------------------------------------------
 # 1) sw_findWindowsArchiveAndMt — lib.exe(아카이버) / mt.exe 경로
 # 우선순위: llvm-lib·llvm-mt → toolchain_config MSVC/SDK → Windows Kits
@@ -44,69 +47,16 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 
 	if(swPinnedAr)
 		set(swAr "${swPinnedAr}")
-	elseif(swMsvcTools AND NOT swMsvcTools STREQUAL "")
-		foreach(hostArch IN ITEMS Hostx64 Hostx86)
-			foreach(targetArch IN ITEMS x64 x86)
-				set(arCandidate "${swMsvcTools}/bin/${hostArch}/${targetArch}/lib.exe")
-
-				if(EXISTS "${arCandidate}")
-					set(swAr "${arCandidate}")
-					break()
-				endif()
-			endforeach()
-
-			if(swAr)
-				break()
-			endif()
-		endforeach()
+	else()
+		sw_findMsvcLibExe("${swMsvcTools}" swAr)
 	endif()
 
 	if(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
 		set(swMt "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
 	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
 		set(swMt "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
-	elseif(swSdkDir AND swSdkVer AND NOT swSdkDir STREQUAL "" AND NOT swSdkVer STREQUAL "")
-		foreach(arch IN ITEMS x64 x86)
-			set(mtCandidate "${swSdkDir}/bin/${swSdkVer}/${arch}/mt.exe")
-
-			if(EXISTS "${mtCandidate}")
-				set(swMt "${mtCandidate}")
-				break()
-			endif()
-		endforeach()
-	endif()
-
-	if(NOT swMt)
-		foreach(kitsRoot IN ITEMS
-			"C:/Program Files (x86)/Windows Kits/10"
-			"C:/Program Files/Windows Kits/10"
-		)
-			if(NOT IS_DIRECTORY "${kitsRoot}/bin")
-				continue()
-			endif()
-
-			file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
-			list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
-
-			foreach(verDir IN LISTS sdkVerDirs)
-				foreach(arch IN ITEMS x64 x86)
-					set(mtCandidate "${verDir}/${arch}/mt.exe")
-
-					if(EXISTS "${mtCandidate}")
-						set(swMt "${mtCandidate}")
-						break()
-					endif()
-				endforeach()
-
-				if(swMt)
-					break()
-				endif()
-			endforeach()
-
-			if(swMt)
-				break()
-			endif()
-		endforeach()
+	else()
+		sw_findWindowsSdkMt("${swSdkDir}" "${swSdkVer}" swMt)
 	endif()
 
 	set(SW_CACHED_WIN_AR "${swAr}" CACHE INTERNAL "Cached Windows ar tool")

@@ -18,6 +18,7 @@ cmake/
 │   ├── FindLlvmBin.cmake        — clang-cl / clang 이 있는 LLVM bin 찾기 (vcpkg 포트 툴체인도 쓴다)
 │   ├── ToolchainBinaries.cmake  — 아카이버를 "지금 쓰는 컴파일러 옆" 에서 고정 (LTO 비트코드를 읽어야 한다)
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
+│   ├── WindowsToolSearch.cmake  — MSVC lib.exe · SDK mt.exe 폴더 탐색 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
 │   └── PythonUtils.cmake        — Python 인터프리터 탐색 및 스크립트 실행 헬퍼
 │
 ├── Modules/                     [3계층: 컴파일러/플랫폼/아키텍처 INTERFACE 플래그]
