@@ -1,13 +1,15 @@
 /**
  * @file span.h
  * @brief 연속 구간을 소유하지 않고 가리키는 뷰입니다(C++20 `std::span` 과 같은 API, 동적 길이만). 함수 인자로 받을 때 씁니다.
+ *        **코드에서는 별칭 `vector_reference<T>` 로 씁니다**(이름만 보고 "vector 류를 참조로 받는다" 가 읽히도록). `span` 은 그 구현이고,
+ *        표준으로 옮길 때 `std::span` 과 바꿔 끼우는 자리입니다.
  *
  * @details `sw::vector<T>` · `small_vector<T, N>` · `sw::array<T, N>` · `std::vector<T>` · `std::array<T, N>` · C 배열 · 포인터 + 개수를
  *          **모두 같은 인자 하나로** 받습니다. `const vector<T>&` 로 받으면 `small_vector` 는 할당자가 달라 다른 타입이라 넘길 수 없고,
  *          `array` 도 마찬가지입니다. 그래서 예전에는 포인터와 개수를 따로 받거나 vector 로 복사해 넘겼습니다.
  *          언리얼의 `TArrayView` · `TConstArrayView` 와 같은 자리입니다.
  *
- *          - 읽기만 하면 `span<const T>`, 원소를 고쳐 쓰면 `span<T>` 로 받습니다. `span<T>` 는 `span<const T>` 로 바뀝니다.
+ *          - 읽기만 하면 `vector_reference<const T>`, 원소를 고쳐 쓰면 `vector_reference<T>` 로 받습니다. 쓰기 쪽은 읽기 쪽으로 바뀝니다.
  *          - 원소를 더하거나 지우지는 못합니다(길이는 고정입니다). 그런 일은 컨테이너를 받거나 `VectorUtil` 을 씁니다.
  *          - **소유하지 않습니다.** 가리키는 컨테이너가 커지거나(재할당) 사라지면 뷰는 무효입니다. 멤버로 오래 들고 있지 말고 인자로만 씁니다.
  *
@@ -243,4 +245,12 @@ namespace sw
     template <typename TContainer>
     span( const TContainer& ) -> span<SpanInternal::DataElement<const TContainer>>;
 #endif
+
+    /**
+     * @brief 함수 인자로 vector 류(`vector` · `small_vector` · `array` · C 배열 · 포인터 + 개수)를 받을 때 쓰는 이름입니다. `span<T>` 와 같은 타입입니다.
+     * @details 읽기만 하면 `vector_reference<const T>`, 원소를 고쳐 쓰면 `vector_reference<T>` 입니다. 별칭이라 C++17 에서는 타입을 적지 않는
+     *          선언(`vector_reference view = list;`)은 안 됩니다 — 원소 타입을 적습니다.
+     */
+    template <typename T>
+    using vector_reference = span<T>;
 } // namespace sw

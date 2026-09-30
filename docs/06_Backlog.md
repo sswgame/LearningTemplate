@@ -2021,6 +2021,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (`vector_reference<T>` — span 을 코드에서 부르는 이름)
+
+바로 앞 회차의 `sw::span` 은 표준과 같은 이름이라 옮기기는 쉽지만 이름만 보고 무엇을 받는지 읽히지 않는다(사용자 지적). `span.h` 끝에
+`template <typename T> using vector_reference = span<T>;` 를 두었다. **함수 인자에는 이 이름을 쓴다** — 읽기만 하면 `vector_reference<const T>`, 고쳐 쓰면
+`vector_reference<T>`. `span` 은 구현이자 `std::span` 과 바꿔 끼우는 자리로 남는다(별칭이 두 분기 밖이라 STL + C++20 에서는 `std::span` 의 별칭이 된다 — 네 조합 다시 확인).
+별칭 템플릿이라 C++17 에서는 원소 타입을 적지 않는 선언(`vector_reference view = list;`)이 안 된다. `SpanTest` 의 인자 · 변수는 `vector_reference` 로 바꿨고
+`std::is_same_v<sw::vector_reference<const int32>, sw::span<const int32>>` 를 본다.
+
 ### 2026-09-30 (`sw::span` — vector · small_vector · array 를 한 인자로 받는 뷰)
 
 함수가 `const vector<T>&` 로 받으면 `small_vector<T, N>` 은 할당자가 달라 **다른 타입**이라 넘길 수 없고 `array<T, N>` 도 마찬가지다. 그래서 포인터 + 개수를 따로 받거나
