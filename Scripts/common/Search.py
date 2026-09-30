@@ -6,10 +6,11 @@ Scripts/common/Search.py
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
-from .Constants import kCppAllExtensions, kLintTargetRelDirs
+from .Constants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames
 from .Paths import expandPathTemplate, platformKey
 
 _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}
@@ -51,6 +52,34 @@ def collectSourceFiles(roots: Iterable[Path],
                 continue
             resultList.append(path)
     return sorted(resultList)
+
+
+def collectRepositoryFiles(repositoryRoot: Path,
+                           listRoot: Iterable[str] = ("",),
+                           *,
+                           suffixes: Iterable[str] = (),
+                           fileNames: Iterable[str] = (),
+                           excludedDirNames: Iterable[str] = kNotOurDirNames) -> list[Path]:
+    """
+    저장소의 `listRoot`(저장소 기준 경로, 비우면 전체) 아래에서 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일을 모읍니다.
+
+    `excludedDirNames` 의 폴더로는 **내려가지 않습니다**(걷는 중에 가지를 친다). `Path.rglob` 로 전부 걸은 뒤 거르면 빌드 트리와
+    내려받은 외부 도구까지 다 걷는다. 정렬된 목록을 돌려줍니다.
+    """
+    setSuffix = {suffix.lower() for suffix in suffixes}
+    setFileName = set(fileNames)
+    setExcluded = set(excludedDirNames)
+    resultSet: set[Path] = set()
+    for relRoot in listRoot:
+        baseDir = repositoryRoot / relRoot if relRoot else repositoryRoot
+        if not baseDir.is_dir():
+            continue
+        for current, listDirName, listFileName in os.walk(baseDir):
+            listDirName[:] = [name for name in listDirName if name not in setExcluded]
+            for fileName in listFileName:
+                if fileName in setFileName or os.path.splitext(fileName)[1].lower() in setSuffix:
+                    resultSet.add(Path(current) / fileName)
+    return sorted(resultSet)
 
 
 def getOrFindCached(existing: dict[str, Any],

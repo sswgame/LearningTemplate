@@ -37,7 +37,6 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kDunderRe = re.compile(r'^__[a-z0-9_]+__$')
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
-_kExcludedPart = ("vcpkg", "build", "generated", ".git", "__pycache__", ".venv")
 
 #: `PascalCase.py` 예외. 패키지 표시 파일과 `python -m` 진입점은 이름이 정해져 있다.
 _kAllowedModuleName = {"__init__", "__main__"}
@@ -222,20 +221,12 @@ class CheckPythonConventionsGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 파일 (생략 시 전체)")
+        self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            listPath = [Path(item).resolve() for item in args.files]
-            listPath = [path for path in listPath if path.suffix == ".py" and path.is_file()]
-        else:
-            # 저장소 전체를 본다. `Scripts/` 와 `Tools/` 만 훑으면 다른 데 놓인 파이썬이 조용히
-            # 규칙 밖에 있게 된다 — 이 저장소가 린트에서 반복해 배운 것이 "목록이 아니라 자리" 다.
-            listPath = sorted(
-                path
-                for path in repositoryRoot.rglob("*.py")
-                if not any(part in _kExcludedPart for part in path.relative_to(repositoryRoot).parts)
-            )
+        # 저장소 전체를 본다. `Scripts/` 와 `Tools/` 만 훑으면 다른 데 놓인 파이썬이 조용히
+        # 규칙 밖에 있게 된다 — 이 저장소가 린트에서 반복해 배운 것이 "목록이 아니라 자리" 다.
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".py",))
 
         listViolation: list[str] = []
         for path in listPath:

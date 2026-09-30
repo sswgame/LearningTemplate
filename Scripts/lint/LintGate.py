@@ -41,10 +41,11 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
+from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot, useUtf8Stdout  # noqa: E402
+from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, useUtf8Stdout  # noqa: E402
 
 
 class GateError(Exception):
@@ -181,6 +182,61 @@ class LintGate:
 
         print(f"[{self.name}] OK ({result.summary})" if result.summary else f"[{self.name}] OK")
         return 0
+
+    # --- 대상 파일 고르기 — `--files` 를 받는 게이트가 함께 쓴다 ---------------
+
+    @staticmethod
+    def addFilesArgument(parser: argparse.ArgumentParser, helpText: str = "검사할 파일 (생략 시 전체)") -> None:
+        """커밋 훅이 staged 부분집합을 넘기는 `--files` 인자를 더합니다(`preCommitFileArgument = "--files"`)."""
+        parser.add_argument("--files", nargs="*", default=None, help=helpText)
+
+    @staticmethod
+    def selectTargetFiles(repositoryRoot: Path,
+                          listFileArgument: list[str] | None,
+                          *,
+                          listScanRoot: Iterable[str] = ("",),
+                          suffixes: Iterable[str] = (),
+                          fileNames: Iterable[str] = (),
+                          excludedDirNames: Iterable[str] = kNotOurDirNames) -> list[Path]:
+        """
+        게이트가 볼 파일을 고릅니다. `--files` 가 있으면 그 파일 가운데서, 없으면 `listScanRoot` 를 걸어서 — **같은 규칙으로**.
+
+        - 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일만.
+        - `excludedDirNames` 의 폴더 아래는 뺀다(기본은 빌드 산출물 · 내려받은 외부 도구, `kNotOurDirNames`). 걸을 때는 그 폴더로 내려가지 않는다.
+        - `listScanRoot`(저장소 기준, `""` 은 전체) 밖의 파일은 뺀다.
+        - `--files` 의 상대 경로는 **저장소 루트 기준**으로 풀고, 거기 없으면 현재 폴더 기준으로 푼다. 저장소 밖 파일은 뺀다.
+
+        예전에는 게이트마다 이 일을 따로 했다. `--files` 의 상대 경로를 어떤 게이트는 저장소 기준, 어떤 게이트는 현재 폴더 기준으로
+        풀었고, 제외 목록은 다섯 벌이 서로 달랐고, `--files` 에는 제외를 걸지 않아 **커밋 훅과 전체 검사가 서로 다른 파일을 봤다.**
+        """
+        listScanRoot = tuple(listScanRoot)
+        setExcluded = set(excludedDirNames)
+        if not listFileArgument:
+            return collectRepositoryFiles(repositoryRoot, listScanRoot, suffixes=suffixes, fileNames=fileNames,
+                                          excludedDirNames=setExcluded)
+
+        setSuffix = {suffix.lower() for suffix in suffixes}
+        setFileName = set(fileNames)
+        listScanPrefix = [root.rstrip("/") + "/" for root in listScanRoot if root]
+        resultSet: set[Path] = set()
+        for item in listFileArgument:
+            path = Path(item)
+            if not path.is_absolute():
+                candidate = repositoryRoot / path
+                path = candidate if candidate.exists() else path.resolve()
+            path = path.resolve()
+            if not path.is_file() or not (path.name in setFileName or path.suffix.lower() in setSuffix):
+                continue
+            try:
+                relative = path.relative_to(repositoryRoot).as_posix()
+            except ValueError:
+                continue
+            if any(part in setExcluded for part in relative.split("/")[:-1]):
+                continue
+            if listScanPrefix and not any(relative.startswith(prefix) for prefix in listScanPrefix):
+                continue
+            resultSet.add(path)
+        return sorted(resultSet)
 
     @staticmethod
     def printListInternal(lines: list[str], maxShown: int) -> None:

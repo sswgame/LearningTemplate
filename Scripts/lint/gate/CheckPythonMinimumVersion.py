@@ -51,13 +51,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import kNotOurDirNames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: CI 러너(ubuntu-22.04)의 `python3` 가 이 버전이다. 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.
 kMinimumVersion = (3, 10)
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
-_kExcludedPart = ("vcpkg", "build", "generated", ".git", "__pycache__", ".venv", "ThirdParty", "Tools")
+_kExcludedDirName = kNotOurDirNames | {"ThirdParty", "Tools"}
 
 
 def describeMinimumVersionInternal() -> str:
@@ -133,18 +134,10 @@ class CheckPythonMinimumVersionGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 파일 (생략 시 전체)")
+        self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            listPath = [Path(item).resolve() for item in args.files]
-            listPath = [path for path in listPath if path.suffix == ".py" and path.is_file()]
-        else:
-            listPath = sorted(
-                path
-                for path in repositoryRoot.rglob("*.py")
-                if not any(part in _kExcludedPart for part in path.relative_to(repositoryRoot).parts)
-            )
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".py",), excludedDirNames=_kExcludedDirName)
 
         listViolation: list[str] = []
         for path in listPath:

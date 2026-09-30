@@ -35,7 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, normalizePath  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 곧바로 화살표가 붙는 모양만 잡는다 — 포인터를 받아 두고 확인한 뒤 쓰는 형태
@@ -94,19 +94,9 @@ _kListScanRoot = ( "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
     """`getService<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
-    if listTargetFile:
-        listPath = [repositoryRoot / f for f in listTargetFile]
-    else:
-        listPath = collectSourceFiles([repositoryRoot / r for r in _kListScanRoot], {".cpp", ".h"})
-
     violations: list[str] = []
-    for path in listPath:
-        if not path.exists() or path.is_dir():
-            continue
+    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h")):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if not any(relative.startswith(r) for r in _kListScanRoot):
-            continue
-
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -175,7 +165,7 @@ class CheckNullableServiceUseGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 특정 파일 (생략 시 Editor · GameFramework · Games 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Editor · GameFramework · Games 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findDirectDereferences(repositoryRoot, args.files)

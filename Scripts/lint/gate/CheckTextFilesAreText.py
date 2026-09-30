@@ -42,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
 
+from common import kNotOurDirNames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 텍스트로 다뤄야 하는 확장자. 여기 없는 것(이미지·폰트·바이너리 에셋)은 검사하지 않는다.
@@ -70,7 +71,7 @@ kTextSuffix = (
 )
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
-kExcludedPart = ("build", "generated", ".git", "__pycache__", ".venv", "ThirdParty", "Tools", "vcpkg")
+kExcludedDirName = kNotOurDirNames | {"ThirdParty", "Tools"}
 
 
 def describeNulLocationInternal(data: bytes, index: int) -> tuple[int, str]:
@@ -129,20 +130,10 @@ class CheckTextFilesAreTextGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 파일 (생략 시 전체)")
+        self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            listPath = [Path(item).resolve() for item in args.files]
-            listPath = [path for path in listPath if path.suffix in kTextSuffix and path.is_file()]
-        else:
-            listPath = sorted(
-                path
-                for path in repositoryRoot.rglob("*")
-                if path.suffix in kTextSuffix
-                and path.is_file()
-                and not any(part in kExcludedPart for part in path.relative_to(repositoryRoot).parts)
-            )
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=kTextSuffix, excludedDirNames=kExcludedDirName)
 
         listViolation: list[str] = []
         for path in listPath:

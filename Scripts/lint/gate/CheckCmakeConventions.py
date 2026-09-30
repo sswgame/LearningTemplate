@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import kNotOurDirNames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: `function(name ...)` · `macro(name ...)` 선언.
@@ -56,14 +57,10 @@ _kCommentRe = re.compile(r'^\s*#')
 #: `ThirdParty/` 를 통째로 빼지 않는다. 그 아래 `CMakeLists.txt` 는 **우리가 쓴 얇은 래퍼**이고
 #: (`sw_copyDxcDlls` 같은 우리 함수가 거기 있다) 우리 규칙을 따라야 한다. 남의 코드는 vcpkg 가
 #: 가져오는 포트 파일뿐이라 그것만 뺀다.
-_kExcludedPart = ("vcpkg", "vcpkg-port", "build", "generated")
+_kExcludedDirName = kNotOurDirNames | {"vcpkg-port"}
 
 #: CMake 자신이 정한 이름들 — 우리 규칙을 들이댈 수 없다.
 _kReservedVariablePrefix = ("CMAKE_", "CTEST_", "CPACK_", "ENV", "SW_", "VCPKG_", "Python3_", "_CMAKE_")
-
-
-def isExcludedPathInternal(path: Path) -> bool:
-    return any(part in _kExcludedPart for part in path.parts)
 
 
 def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
@@ -153,22 +150,11 @@ class CheckCmakeConventionsGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 파일 (생략 시 전체)")
+        self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            listPath = [Path(item).resolve() for item in args.files]
-            listPath = [
-                path for path in listPath
-                if path.is_file() and (path.suffix == ".cmake" or path.name == "CMakeLists.txt")
-            ]
-        else:
-            listPath = sorted(
-                path
-                for pattern in ("*.cmake", "CMakeLists.txt")
-                for path in repositoryRoot.rglob(pattern)
-                if not isExcludedPathInternal(path.relative_to(repositoryRoot))
-            )
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".cmake",), fileNames=("CMakeLists.txt",),
+                                          excludedDirNames=_kExcludedDirName)
 
         listViolation: list[str] = []
         for path in listPath:

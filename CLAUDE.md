@@ -96,6 +96,8 @@ the exit code (`0` clean, `1` violations, `2` raise `GateError` — the check co
 exports it as `main = XxxGate.run`. `CheckLintsAreAlive.py` enumerates the folder, so a new gate is picked
 up with no list to edit — and it must carry a `selfTestCases` snippet proving it still catches something
 (or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
+A gate that takes `--files` picks its files with `addFilesArgument` / `selectTargetFiles` (same rule for the hook's
+staged subset and the full scan; it never descends into `kNotOurDirNames` — build output and downloaded tools).
 
 **CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
 `Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake

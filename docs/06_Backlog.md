@@ -2021,6 +2021,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ③ — 게이트의 대상 파일 고르기를 `LintGate` 한 곳으로, 내려받은 외부 도구로 내려가지 않는다)
+
+파이썬 6 줄 창 중복의 가장 큰 덩어리가 게이트들의 "`--files` 가 있으면 그 파일, 없으면 폴더를 훑어 거르고 읽기" 였다(`CheckLogViewArgument` ↔
+`CheckNullableServiceUse` 스무 줄, `CheckPythonConventions` ↔ `CheckPythonMinimumVersion` 열다섯 줄 …). 일곱 게이트가 각자 적었고 **각자 달랐다**:
+
+- `--files` 의 상대 경로를 둘은 저장소 기준(`repositoryRoot / f`), 넷은 현재 폴더 기준(`Path(f).resolve()`)으로 풀었다 — 저장소 밖 폴더에서
+  `--files Scripts/common/Paths.py` 를 주면 넷은 0 개를 봤다.
+- 제외 목록이 다섯 벌이었고(`_kExcludedPart` · `kExcludedPart`, 서로 다른 원소), `--files` 에는 제외를 걸지 않아 **커밋 훅과 전체 검사가 서로 다른 파일을 봤다.**
+- 넷은 `repositoryRoot.rglob(...)` 로 저장소를 **다 걸은 뒤** 걸렀다(빌드 트리 · `Tools/LLVM` · `Tools/vcpkg` 까지). 둘은 `Tools` 를 통째로 훑어 내려받은
+  외부 파일을 실제로 검사하고 있었다 — `CheckLogViewArgument` 는 C++ 5499 개 중 **4566 개가 `Tools/vcpkg`**, `CheckEngineServiceBinding` 은 2928 개 중 2379 개.
+
+**바꾼 것.**
+- `common.Constants.kNotOurDirNames` — 빌드 산출물(`build` · `generated` · `__pycache__` …)과 부트스트랩이 `Tools/` 아래 내려받는 외부 도구(`vcpkg` · `LLVM` ·
+  `Sccache` · `Ninja` · `_cache` · `_deps`). 추적되는 경로에 이 이름을 쓰는 곳이 없음을 확인했다. `ThirdParty/` 는 넣지 않았다(저장소에 있고 우리 CMake 연결 파일이 있다).
+- `common.Search.collectRepositoryFiles` — `os.walk` 로 걷되 **제외 폴더로는 내려가지 않는다.**
+- `LintGate.addFilesArgument` · `LintGate.selectTargetFiles` — `--files` 와 전체 훑기를 같은 규칙(확장자 · 파일 이름 · 제외 폴더 · 훑는 폴더)으로. `--files` 는 저장소
+  기준으로 풀고 없으면 현재 폴더 기준, 저장소 밖은 뺀다. 게이트별로 더 빼던 것은 그대로다(`ThirdParty` · `Tools` · `vcpkg-port`).
+- 일곱 게이트(`CheckLogViewArgument` · `CheckNullableServiceUse` · `CheckPythonConventions` · `CheckPythonMinimumVersion` · `CheckTextFilesAreText` ·
+  `CheckCmakeConventions` · `CheckEngineServiceBinding`)가 그것을 쓴다.
+
+**확인.** 옛 고르기(백업한 코드와 같은 식)와 새 고르기의 파일 집합을 게이트마다 비교 — 다섯은 **완전히 같고**, 둘은 `Tools/vcpkg` 만 빠졌다. 일곱 게이트 출력이
+기준과 한 글자도 다르지 않다. `--files` 네 경로(저장소 기준 · 다른 폴더에서 저장소 기준 · 현재 폴더 기준 · 절대)가 모두 같은 파일을 고르고, 제외 폴더 · 훑는 폴더 밖은
+빠지며, 위반 탐침 둘(파이썬 명명 · 로그 `.data()`)을 `--files` 로 주면 잡는다. `CheckLintsAreAlive` 34 조각 · 린트 21/21. 시간(전체 훑기):
+
+| 게이트 | 전 | 후 |
+| --- | --- | --- |
+| `CheckLogViewArgument` | 15.2 s | 1.4 s |
+| `CheckTextFilesAreText` | 10.1 s | 1.1 s |
+| `CheckEngineServiceBinding` | 5.4 s | 0.9 s |
+| `CheckCmakeConventions` | 3.9 s | 0.5 s |
+| `CheckPythonMinimumVersion` | 2.8 s | 1.1 s |
+| `CheckPythonConventions` | 2.6 s | 0.7 s |
+
+**일부러 둔 것.** `CheckCodeConventions`(13 s)는 include 대소문자 표를 만들 때 `Tools/vcpkg` 를 **일부러** 넣는다(외부 헤더 include 의 대소문자도 본다) — 빼면 동작이
+바뀐다. 매개변수 · 지역변수 사슬은 09-14 에 기각된 그대로. 게이트 머리의 `sys.path.insert` 두 줄은 스크립트로 직접 돌리기 위한 것이라 둔다.
+
 ### 2026-09-30 (Scripts ② — 폴더가 성격을 말하게: 생성기 넷은 `generate/`, 고쳐 쓰는 `RunClangFormat` 은 `fixer/`, README 목록을 실제와 맞춤)
 
 `lint/` 는 09-14 에 "폴더가 곧 성격" 으로 갈랐는데 그 밖의 폴더는 그 규칙을 따르지 않고 있었다.

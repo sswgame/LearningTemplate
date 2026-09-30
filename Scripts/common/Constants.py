@@ -145,3 +145,22 @@ kLintTargetRelDirs: tuple[str, ...] = (
     "Tools/ReflectionParser",
 )
 
+#: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다. 저장소를 훑는 린트는 이 이름의 폴더로 내려가지 않습니다
+#: (`collectRepositoryFiles`). 빌드 산출물과, 부트스트랩이 `Tools/` 아래로 내려받는 외부 도구(vcpkg · LLVM · sccache ·
+#: ninja · 캐시)입니다. 예전에는 게이트마다 제외 목록을 따로 들어 다섯 벌이 서로 달랐고, 몇 게이트는 저장소 전체를 다 걸은 뒤에
+#: 걸렀습니다 — `CheckLogViewArgument` 는 `Tools/vcpkg` 의 외부 헤더 4566 개까지 훑느라 한 번에 15 초를 썼습니다.
+#: `ThirdParty/` 는 여기 없습니다 — 저장소에 들어 있고 우리 CMake 연결 파일도 있어, 빼는 것은 게이트가 정합니다.
+kNotOurDirNames: frozenset[str] = frozenset({
+    "build",
+    "generated",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "vcpkg",
+    "LLVM",
+    "Sccache",
+    "Ninja",
+    "_cache",
+    "_deps",
+})
+

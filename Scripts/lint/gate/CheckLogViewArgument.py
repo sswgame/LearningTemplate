@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, normalizePath  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 한 줄 안에 로그 호출과 `<식별자>.data()` 가 같이 있는 모양만 본다.
@@ -41,19 +41,9 @@ _kListScanRoot = ("Source", "Tools")
 
 def findLogViewArguments(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
     """로그 호출 줄에 있는 `.data()` 를 모아 위반 문자열로 돌려줍니다."""
-    if listTargetFile:
-        listPath = [repositoryRoot / f for f in listTargetFile]
-    else:
-        listPath = collectSourceFiles([repositoryRoot / r for r in _kListScanRoot], {".cpp", ".h"})
-
     violations: list[str] = []
-    for path in listPath:
-        if not path.exists() or path.is_dir():
-            continue
+    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h")):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if not any(relative.startswith(r) for r in _kListScanRoot):
-            continue
-
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -97,7 +87,7 @@ class CheckLogViewArgumentGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 특정 파일 (생략 시 Source · Tools 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Tools 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findLogViewArguments(repositoryRoot, args.files)
