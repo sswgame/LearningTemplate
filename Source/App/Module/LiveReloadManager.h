@@ -164,6 +164,17 @@ namespace sw
          */
         bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} );
 
+        /**
+         * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 올리고, 그 정적 등록기를 **제 이름으로** 등록합니다.
+         * @details 키트 · SWGame 이 링크하는 공용 모듈은 예전에 **처음 부르는 쪽**이 올렸습니다(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED).
+         *          그러면 그 정적 등록기(타입 · 컴포넌트 팩토리 · 전역 변수)가 그때 등록을 모으는 모듈(SWGame · 첫 키트)의 이름으로 들어가,
+         *          SWGame 의 팩토리 캐시를 덮고(그 뒤에 만든 씬에 SWGame 컴포넌트가 없다) 첫 SWGame 리로드가 공용 모듈의 컴포넌트와 타입을 모든
+         *          씬에서 지웠습니다 — 공용 모듈은 다시 올라오지 않으므로 돌아오지 않았습니다. 그 모듈을 링크하는 모듈을 등록하기 **전에** 부릅니다.
+         *          올리기 전에 엔진 ABI 도장을 대조합니다. 이미지는 프로세스가 끝날 때까지 둡니다(의존 모듈의 import 가 그 이미지를 가리킨다).
+         * @return 올렸거나 이 매니저가 이미 올렸으면 true. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 입니다.
+         */
+        bool loadSharedModule( string_view moduleName );
+
         /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. */
         void triggerReload( string_view moduleName );
 
@@ -345,6 +356,7 @@ namespace sw
         static constexpr int32 kMtimeDebounceMs = 300;
 
         unordered_map<string, ModuleContext> _mapModule;
+        vector<string>                       _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
         unique_ptr<IFileWatcher>             _fileWatcher;
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;

@@ -357,6 +357,12 @@ namespace sw
         static void registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
         /** @brief 전역 모듈 팩토리 헤드를 해제합니다. */
         static void unregisterModuleFactoryHead( string_view moduleName );
+        /**
+         * @brief 모듈 팩토리 헤드가 바뀐(등록 · 해제) 횟수입니다.
+         * @details 오브젝트 매니저는 **만들 때** 그때의 헤드로 팩토리를 모읍니다. 워커에서 씬을 짓는 동안 모듈이 올라오면 그 씬에는 새 모듈의
+         *          팩토리가 없어 그 컴포넌트가 조용히 빠집니다. 비동기 씬 로드가 시작 · 끝에서 이 값을 견줘 다시 짓습니다(`SceneManager`).
+         */
+        static uint32 getFactoryHeadSerial();
 
         using ComponentFactoryDelegate = Delegate<Component*( GameObject* )>;
 
@@ -372,15 +378,16 @@ namespace sw
                 return pGameObject->addComponent<T>();
             };
 
-            if ( _mapFactoryModule.find( typeName ) == _mapFactoryModule.end() )
-            {
-                if ( moduleName.getHash() != 0 )
-                    _mapFactoryModule[typeName] = moduleName;
-                else if ( _activeModuleName.getHash() != 0 )
-                    _mapFactoryModule[typeName] = _activeModuleName;
-                else
-                    _mapFactoryModule[typeName] = hashed_string( "Engine" );
-            }
+            // 모듈 이름은 **지금 등록을 모으는 모듈**(`registerPendingFactories` 가 세운 `_activeModuleName`)이 먼저다. 생성 코드에 구운 이름은
+            // 파서의 경로 규칙에서 오는데, `Source/GameFramework/Kits/<키트>` 가 "GameFramework" 규칙에 걸려 키트 팩토리가 GameFramework 로
+            // 구워졌다 — 키트를 내려도 `unregisterFactoriesByModule( "GF_<키트>" )` 가 아무것도 지우지 않아, 내린 이미지의 람다가 팩토리 표에
+            // 남았다. 타입 쪽(`registerClass`)도 같은 이유로 실제 모듈 이름을 쓴다. 표의 람다는 마지막에 등록한 모듈의 것이므로 모듈도 늘 덮어쓴다.
+            if ( _activeModuleName.getHash() != 0 )
+                _mapFactoryModule[typeName] = _activeModuleName;
+            else if ( moduleName.getHash() != 0 )
+                _mapFactoryModule[typeName] = moduleName;
+            else
+                _mapFactoryModule[typeName] = hashed_string( "Engine" );
         }
 
         /** @brief 등록된 이름으로 컴포넌트를 추가합니다. 에디터 · 직렬화 전용입니다. 게임은 addComponent<T> 를 씁니다. */

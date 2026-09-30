@@ -445,6 +445,7 @@ namespace sw
 
     LiveReloadManager::LiveReloadManager()
         : _mapModule{}
+        , _listSharedModule{}
         , _fileWatcher{
 #if defined( SW_PLATFORM_WINDOWS )
               make_unique<WindowsFileWatcher>()
@@ -536,6 +537,49 @@ namespace sw
                 unloadModule( mapIt->second );
         }
         _mapModule.clear();
+    }
+
+    bool LiveReloadManager::loadSharedModule( string_view moduleName )
+    {
+        for ( const string& loadedName : _listSharedModule )
+        {
+            if ( loadedName == moduleName )
+                return true;
+        }
+
+        const string execDir    = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+        const string modulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
+        if ( FileUtil::fileExists( modulePath ) == false )
+        {
+            SW_LOG_INFO( "Shared module %# is not built next to the executable — nothing links it", moduleName );
+            return true;
+        }
+
+        // 섀도 복사본과 같은 이유로 올리기 **전에** 도장을 본다. 도장이 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+        vector<uint8> bytes;
+        if ( LiveReloadManagerInternal::readFileWithRetry( modulePath, bytes ) == false )
+        {
+            SW_LOG_ERROR( "Failed to read the shared module %# (locked)", modulePath );
+            return false;
+        }
+        string moduleStamp;
+        if ( ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp() )
+        {
+            SW_LOG_ERROR( "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
+                          moduleName, moduleStamp, engine::getEngineAbiStamp() );
+            return false;
+        }
+
+        // 불변 조건: 여기서 전역 머리는 비어 있다(등록할 때마다 비운다). 올리면 이 모듈의 정적 등록기만 매달린다.
+        if ( FileUtil::loadDynamicLibrary( modulePath ) == nullptr )
+        {
+            SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
+            return false;
+        }
+        engine::registerModuleTypes( moduleName );
+        _listSharedModule.push_back( string{ moduleName } );
+        SW_LOG_INFO( "Shared module loaded: %#", moduleName );
+        return true;
     }
 
     bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
@@ -822,8 +866,10 @@ namespace sw
             }
 
             // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+            // 도장이 **없는** 모듈도 거절한다. 예전에는 통과시켜, 도장을 굽지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라왔다(동적 모듈은 모두
+            // `sw_registerDynamicModule` 이 도장을 굽는다).
             string     moduleStamp;
-            const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) && moduleStamp != engine::getEngineAbiStamp();
+            const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
             if ( bEngineAbiMismatch )
             {
                 // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.

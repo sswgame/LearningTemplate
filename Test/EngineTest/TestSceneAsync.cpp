@@ -7,6 +7,8 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/SceneDocument.h"
 
+#include "EngineTest/TestGameObjectMocks.h"
+
 #include "TestFramework/TestFramework.h"
 
 namespace sw
@@ -27,6 +29,11 @@ namespace sw
             manager.tickTransitions();
         }
 
+        /** @brief 씬 로드 도중에 올라오는 모듈의 팩토리 등록입니다. */
+        void registerLateModuleFactoryInternal( GameObjectManager& manager )
+        {
+            manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
+        }
     } // namespace
 } // namespace sw
 
@@ -470,4 +477,93 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     SW_EXPECT_EQUAL( manager.getActiveScene(), futC.get() );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneAsyncTest] 씬을 짓는 동안 모듈 팩토리가 등록되면 그 씬을 다시 짓는다 — 새 모듈의 컴포넌트가 빠지지 않는다
+ * @details 에디터가 시작 씬을 여는 동안 키트 · SWGame 이 올라오면, 워커의 오브젝트 매니저는 **만들 때의** 팩토리로 씬을 지어 그 모듈의
+ *          컴포넌트를 조용히 건너뛰었다(만들 수 없는 컴포넌트는 경고도 없다). 그 씬을 저장하면 컴포넌트가 사라졌다.
+ */
+SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
+{
+    static sw::ComponentFactoryRegistrar* s_pLateHead{ nullptr };
+    static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
+    (void)sw::MockAudioComponent::StaticType();
+
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory.xml" );
+    const sw::string xmlStr =
+        "<Scene formatVersion=\"0\" name=\"LateFactory\">\n"
+        "  <entities>\n"
+        "    <entity name=\"Speaker\">\n"
+        "      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
+        "        <_listComponent>\n"
+        "          <MockAudioComponent />\n"
+        "        </_listComponent>\n"
+        "      </GameObject>\n"
+        "    </entity>\n"
+        "  </entities>\n"
+        "</Scene>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
+    // Shipping 은 구운 바이너리 씬만 읽는다. 같은 문서를 옆에 굽는다.
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory.bin" );
+    sw::SceneDocument cooked{};
+    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    // 워커가 씬을 다 지은 뒤에(팩토리 없이) 모듈이 올라온다.
+    sw::engine::getTaskManager().waitAll();
+    sw::GameObjectManager::registerModuleFactoryHead( "LateModule", s_pLateHead );
+
+    sw::drainSceneTransitions( manager );
+    SW_ASSERT_NOT_NULL( manager.getActiveScene() );
+    sw::GameObject* pSpeaker = manager.getActiveScene()->getObjectManager()->findGameObjectByName( sw::hashed_string( "Speaker" ) );
+    SW_ASSERT_NOT_NULL( pSpeaker );
+    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "MockAudioComponent" ) ) != nullptr,
+                        "로드 도중에 등록된 모듈의 컴포넌트가 씬에서 빠졌습니다" );
+
+    manager.shutdown();
+    sw::GameObjectManager::unregisterModuleFactoryHead( "LateModule" );
+    sw::FileUtil::removeFile( xmlPath );
+    sw::FileUtil::removeFile( binPath );
+}
+
+/**
+ * @brief [SceneAsyncTest] 저장이 막혀 있으면 활성 씬을 저장하지 않고, 풀면 저장한다
+ * @details 게임 모듈 리로드가 게임 컴포넌트를 걷어 낸 채 실패하면 호스트가 막는다. 그 상태로 저장하면 컴포넌트가 빠진 씬이 저장됐다.
+ */
+SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
+{
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.xml" );
+    const sw::string xmlStr  = "<Scene formatVersion=\"0\" name=\"SaveBlock\"><entities><entity name=\"A\"/></entities></Scene>";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.bin" );
+    sw::SceneDocument cooked{};
+    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+    const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.xml" );
+    sw::FileUtil::removeFile( savePath );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    sw::drainSceneTransitions( manager );
+    SW_ASSERT_NOT_NULL( manager.getActiveScene() );
+
+    manager.setSaveBlockReason( "test: components removed" );
+    SW_EXPECT_TRUE( manager.isSaveBlocked() );
+    SW_EXPECT_FALSE( manager.saveActiveScene( savePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( savePath ) );
+
+    manager.setSaveBlockReason( {} );
+    SW_EXPECT_FALSE( manager.isSaveBlocked() );
+    SW_EXPECT_TRUE( manager.saveActiveScene( savePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
+
+    manager.shutdown();
+    sw::FileUtil::removeFile( xmlPath );
+    sw::FileUtil::removeFile( binPath );
+    sw::FileUtil::removeFile( savePath );
 }

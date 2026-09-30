@@ -30,6 +30,7 @@ namespace sw
         , _queuedPromise{}
         , _bLoadInFlight{ false }
         , _loadHandle{}
+        , _saveBlockReason{}
         , _bInitialized{ false }
     {
     }
@@ -201,7 +202,8 @@ namespace sw
     {
         _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
-        _asyncLoad->_promise = std::move( promise );
+        _asyncLoad->_promise           = std::move( promise );
+        _asyncLoad->_factoryHeadSerial = GameObjectManager::getFactoryHeadSerial();
         SW_LOG_TRACE( "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
@@ -309,6 +311,11 @@ namespace sw
      */
     bool SceneManager::saveActiveScene( string_view path )
     {
+        if ( _saveBlockReason.empty() == false )
+        {
+            SW_LOG_ERROR( "Scene save refused — %#", _saveBlockReason );
+            return false;
+        }
         Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
@@ -349,6 +356,19 @@ namespace sw
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _bLoadInFlight.store( false, std::memory_order_release );
         _loadHandle = {};
+
+        // 짓는 동안 모듈 팩토리가 바뀌었으면(시작할 때 키트 · SWGame 이 올라오는 중에 에디터가 시작 씬을 열었다) 그 씬은 **워커가 만들 때의**
+        // 팩토리로 지어져, 새 모듈의 컴포넌트가 조용히 빠졌다(만들 수 없는 컴포넌트는 경고 없이 건너뛴다). 그대로 쓰면 저장할 때 사라진다.
+        // 버리고 같은 경로를 다시 띄운다. 대기열이 있으면 어차피 이 결과를 버리므로 아래에 맡긴다.
+        if ( pendingScene != nullptr && _queuedPath.empty() && _asyncLoad->_factoryHeadSerial != GameObjectManager::getFactoryHeadSerial() )
+        {
+            const string path = pendingScene->getSourcePath();
+            SW_LOG_INFO( "Module factories changed while '%#' was loading — loading it again", path );
+            pendingScene->shutdown();
+            pendingScene.reset();
+            dispatchLoad( path, std::move( _asyncLoad->_promise ) );
+            return;
+        }
 
         // 씬 전환 요청이 대기열에 있으면 이번 로드 결과를 버리고 다음 요청을 바로 띄운다
         bool bQueuedSatisfiedByThisLoad{ false };

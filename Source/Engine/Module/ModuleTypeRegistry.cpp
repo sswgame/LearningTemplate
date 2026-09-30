@@ -40,6 +40,15 @@ namespace sw
         void registerModuleTypes( string_view moduleName )
         {
             // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다. 그것을 걷어서 넘긴다.
+            // 이미 등록한 모듈인데 머리에 새 등록기가 있으면 **다른 이미지**의 것이다 — 핫 리로드는 올린 직후 머리를 따로 걷어 넘기므로(인자 있는
+            // 오버로드) 이 자리에서는 비어 있어야 한다. 지연 로드로 늦게 올라온 공용 모듈이 이렇게 남의 이름으로 들어갔다. 알린다.
+            if ( getModuleHeadCache().contains( string{ moduleName } ) &&
+                 ( TypeRegistrar::getHead() != nullptr || sw::ComponentFactoryRegistrar::getHead() != nullptr ) )
+            {
+                SW_LOG_WARNING( "Registrars of another image were waiting when '%#' registered again — they are attributed to '%#'. "
+                                "Load shared modules explicitly first (LiveReloadManager::loadSharedModule).",
+                                moduleName, moduleName );
+            }
             // **캐시 병합은 아래 오버로드가 한 자리에서 한다.** 예전에는 같은 18줄이 여기에도
             // 한 벌 더 있었고(조건만 뒤집힌 같은 로직), 그러고 나서 아래를 불러 또 병합했다.
             registerModuleTypes( moduleName,

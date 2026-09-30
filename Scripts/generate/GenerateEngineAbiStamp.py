@@ -15,8 +15,13 @@ import hashlib
 import os
 import sys
 
-kHeaderRoots = ("Source/Core", "Source/Engine")
-kHeaderExtensions = (".h", ".hpp", ".inl")
+# 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
+# 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `EngineServiceList.xxx` 가
+# 서비스 색인과 `EngineServices` 배치를, `PredefinedNameType.xxx` 가 예약 이름 색인을 정한다. 예전에는 셋 다 빠져, 거기에 줄을 더한 모듈이
+# 같은 도장으로 옛 엔진에 올라 `getService<T>()` 가 엉뚱한 서비스를 돌려줄 수 있었다.
+kHeaderRoots = ("Source/Core", "Source/Engine", "Source/RuntimeAPI", "Source/GameFramework")
+kExcludedRoots = ("Source/GameFramework/Kits",)
+kHeaderExtensions = (".h", ".hpp", ".inl", ".xxx")
 kStampMarker = "swEngineAbiStamp:"
 
 
@@ -27,8 +32,12 @@ def collectHeaderPathsInternal(repositoryRoot):
         absoluteRoot = os.path.join(repositoryRoot, headerRoot)
         for dirPath, _, listFileName in os.walk(absoluteRoot):
             for fileName in listFileName:
-                if fileName.endswith(kHeaderExtensions):
-                    listPath.append(os.path.relpath(os.path.join(dirPath, fileName), repositoryRoot).replace("\\", "/"))
+                if not fileName.endswith(kHeaderExtensions):
+                    continue
+                relativePath = os.path.relpath(os.path.join(dirPath, fileName), repositoryRoot).replace("\\", "/")
+                if relativePath.startswith(tuple(excludedRoot + "/" for excludedRoot in kExcludedRoots)):
+                    continue
+                listPath.append(relativePath)
     listPath.sort()
     return listPath
 

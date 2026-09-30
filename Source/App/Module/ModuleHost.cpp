@@ -166,6 +166,14 @@ namespace sw
                 const string   gameFrameworkModule = "GameFramework";
                 vector<string> listGameModule{ gameFrameworkModule };
 
+                // 공용 모듈을 **먼저** 올려 제 이름으로 등록한다. 키트 · SWGame 이 처음 부를 때 올라오면 그 등록기가 SWGame · 첫 키트의 이름으로
+                // 들어갔다(`LiveReloadManager::loadSharedModule`).
+                if ( _pLiveReloadManager->loadSharedModule( gameFrameworkModule ) == false )
+                {
+                    SW_LOG_ERROR( "Shared module load failed (%#)", gameFrameworkModule );
+                    return false;
+                }
+
                 for ( const GameKitConfig& kitConfig : listGameKitModule )
                 {
                     vector<string> listDep = kitConfig._listDependencyModule;
@@ -476,11 +484,13 @@ namespace sw
 
     void ModuleHost::onGameReloadFault( uint32 faultCode )
     {
-        SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off until restart",
-                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+        // 스냅숏은 **버리지 않는다.** 게임 컴포넌트는 리로드 앞에서 이미 모든 씬에서 걷어 냈다(`destroyGameInstance`). 예전에는 여기서 비워, 그
+        // 상태로 저장하면 컴포넌트가 빠진 씬이 저장됐다. 고쳐서 다시 빌드하면 다음 리로드가 이 스냅숏을 되돌린다(게임이 없으니 새로 찍지 않는다).
+        // 그때까지 씬 저장은 막혀 있다(`destroyGameInstance` 가 막았다).
+        SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off; fix it and rebuild, the next reload restores the %# byte snapshot (scene saving is blocked until then)",
+                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), static_cast<uint64>( _listGameSavedState.size() ) );
         _game    = nullptr;
         _gameApi = {};
-        _listGameSavedState.clear();
     }
 
     void ModuleHost::markReloadGraphBroken( const utf8* pReason )
@@ -621,13 +631,22 @@ namespace sw
 
     void ModuleHost::restoreGameState()
     {
-        if ( _game == nullptr || _gameApi.deserializeState == nullptr || _listGameSavedState.empty() )
+        if ( _game == nullptr )
             return;
+        // 되돌릴 것이 없으면(상태 직렬화가 없는 게임 · 스냅숏이 비었다) 막을 이유도 없다.
+        if ( _gameApi.deserializeState == nullptr || _listGameSavedState.empty() )
+        {
+            if ( engine::areEngineServicesBound() )
+                engine::getSceneManager().setSaveBlockReason( {} );
+            return;
+        }
 
         if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
         {
             SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
+            if ( engine::areEngineServicesBound() )
+                engine::getSceneManager().setSaveBlockReason( {} );
         }
         else
         {
@@ -725,7 +744,13 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
         if ( bReleaseApiTable )
+        {
             engine::unregisterModuleTypes( sw::config::kTargetGameModule );
+            // 게임 컴포넌트를 모든 씬에서 걷어 냈다. 되돌릴 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다 — 리로드가 실패 ·
+            // 중단되면 되돌리는 쪽이 오지 않으므로 여기서 막는다.
+            if ( engine::areEngineServicesBound() )
+                engine::getSceneManager().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
+        }
 #endif
 
         if ( _gameApi.bindService != nullptr )

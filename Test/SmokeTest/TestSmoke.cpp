@@ -7,6 +7,8 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -1363,6 +1365,74 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
             sw::FileUtil::unloadDynamicLibrary( handle );
         }
     }
+}
+
+/**
+ * @brief [ModuleApiTest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
+ * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(예전에는 여기서 GameFramework 가
+ *          지연 로드로 **처음** 올라왔다), 그리고 `bindGameApi` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
+ *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 잴 수 없어 자식에서 잰다.
+ */
+SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
+{
+    if ( std::getenv( "SW_SHARED_MODULE_CHILD" ) == nullptr )
+        SW_TEST_SKIP( "child only — GameFrameworkRegistersUnderItsOwnName launches it" );
+
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.loadSharedModule( "GameFramework" ) );
+    SW_ASSERT_TRUE( manager.registerModule( "GF_Overworld", { "GameFramework" } ) );
+    SW_ASSERT_TRUE( manager.registerModule( "SWGame", { "GameFramework", "GF_Overworld" } ) );
+
+    void* const hGame = manager.getModuleHandle( "SWGame" );
+    SW_ASSERT_NOT_NULL( hGame );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    SW_ASSERT_NOT_NULL( pfnExport );
+    sw::GameAPI api{};
+    SW_ASSERT_TRUE( pfnExport( &api ) );
+    sw::ModuleService gameService{};
+    if ( api.bindService != nullptr )
+    {
+        sw::engine::fillModuleServices( gameService, true );
+        api.bindService( &gameService );
+    }
+    sw::engine::registerModuleTypes( "SWGame" );
+
+    const sw::TypeInfo* pGravity = sw::engine::getTypeRegistry().findType( sw::hashed_string( "GravityComponent" ) );
+    SW_ASSERT_NOT_NULL( pGravity );
+    SW_EXPECT_TRUE_MSG( pGravity->_moduleName == sw::hashed_string( "GameFramework" ),
+                        "GameFramework 의 타입이 다른 모듈 이름으로 등록됐습니다 — 그 모듈을 내리면 함께 지워집니다" );
+
+    if ( api.bindService != nullptr )
+        api.bindService( nullptr );
+    manager.shutdown();
+}
+
+/**
+ * @brief [ModuleApiTest] 공용 모듈(GameFramework)의 타입은 그것을 링크한 키트 · SWGame 이 아니라 **제 이름**으로 등록된다
+ * @details 예전에는 공용 모듈을 처음 부르는 쪽(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)이 올려, 그 정적 등록기가 SWGame · 첫 키트의
+ *          이름으로 들어갔다 — 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지웠고 돌아오지 않았다. 새 프로세스에서 잰다.
+ */
+SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::fileExists( sw::modulePath( "GF_Overworld" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · GF_Overworld 모듈이 옆에 없습니다" );
+
+    #if defined( SW_PLATFORM_WINDOWS )
+    SetEnvironmentVariableA( "SW_SHARED_MODULE_CHILD", "1" );
+    #else
+    setenv( "SW_SHARED_MODULE_CHILD", "1", 1 );
+    #endif
+    sw::StringBuilder<sw::constant::kMaxPathSize> command;
+    command.append( '"' ).append( sw::FileUtil::getExecutablePath().c_str() ).append( "\" --test_filter=ModuleApiTest.SharedModuleChildKeepsItsRegistrations" );
+    sw::ProcessOptions options;
+    options._workingDirectory = sw::FileUtil::getCurrentPath();
+    const int32 exitCode      = sw::Process::execute( command.view(), options );
+    #if defined( SW_PLATFORM_WINDOWS )
+    SetEnvironmentVariableA( "SW_SHARED_MODULE_CHILD", nullptr );
+    #else
+    unsetenv( "SW_SHARED_MODULE_CHILD" );
+    #endif
+    SW_EXPECT_TRUE_MSG( exitCode == 0, "자식 프로세스에서 GameFramework 타입의 모듈 귀속 검사가 실패했습니다(로그 참고)" );
 }
 
 /**

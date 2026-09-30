@@ -56,6 +56,14 @@ namespace sw
          * @param path 리소스 상대 또는 절대 경로. 비어 있으면 씬 소스 경로를 씁니다.
          */
         bool saveActiveScene( string_view path = {} );
+        /**
+         * @brief 씬 저장을 막거나(사유) 풉니다(빈 문자열).
+         * @details 호스트가 모듈 컴포넌트를 씬에서 걷어 낸 채 아직 되돌리지 못한 동안 세웁니다(게임 모듈 리로드 · 그 실패). 그 사이에 저장하면
+         *          그 컴포넌트가 빠진 씬이 저장됩니다. 막혀 있으면 `saveActiveScene` 이 사유를 알리고 false 를 반환합니다.
+         */
+        void setSaveBlockReason( string_view reason ) { _saveBlockReason = string{ reason }; }
+        /** @brief 씬 저장이 막혀 있으면 true 입니다. */
+        bool isSaveBlocked() const { return _saveBlockReason.empty() == false; }
         /** @brief 끝난 비동기 로드를 활성 씬으로 바꿔 넣습니다. 메인 스레드에서 프레임당 한 번 부르십시오. */
         void tickTransitions();
         /** @brief 활성 씬만 틱합니다. App 메인 루프가 부릅니다(게임 모듈에서 또 부르지 마십시오). */
@@ -106,6 +114,7 @@ namespace sw
             atomic<bool>        _bReady{ false };
             atomic<bool>        _bAccepting{ true };
             TaskPromise<Scene*> _promise{};
+            uint32              _factoryHeadSerial{ 0 }; ///< 로드를 띄울 때의 `GameObjectManager::getFactoryHeadSerial`
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;
@@ -120,6 +129,7 @@ namespace sw
         TaskPromise<Scene*> _queuedPromise;
         atomic<bool>        _bLoadInFlight;
         TaskHandle          _loadHandle;
+        string              _saveBlockReason; ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         bool                _bInitialized;
     };
 } // namespace sw

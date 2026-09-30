@@ -2021,6 +2021,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ⑦ 모듈 등록 — GameFramework 가 남의 이름으로 등록됨, 키트 팩토리 모듈 이름, 엔진 ABI 도장 범위 · 도장 없는 모듈, 로드 중 모듈 등록, 리로드 실패 뒤 스냅숏)
+
+**무엇이 틀렸나 · 고친 것.**
+- **GameFramework 의 타입 · 팩토리 · 전역 변수가 SWGame 의 이름으로 등록됐다**(개발 구성). `EngineLoop` 의 `registerModuleTypes( "GameFramework" )`
+  는 DLL 이 올라오기 전에 돌아 아무것도 하지 않았고, 실제로는 SWGame 의 `bindService` 가 지연 로드로 GameFramework 를 **처음** 올린 직후 인자
+  없는 `registerModuleTypes( "SWGame" )` 가 그 등록기를 모아 SWGame 의 캐시까지 덮었다 — 뒤에 만든 씬에 SWGame 팩토리가 없고, 첫 SWGame
+  리로드가 GameFramework 컴포넌트 · 타입을 모든 씬에서 지웠다(다시 올라오지 않는다). 자식 프로세스에서 재현해 "SWGame" 으로 들어가는 것을
+  확인했다. → `LiveReloadManager::loadSharedModule`: 키트 · SWGame 을 등록하기 **전에** 공용 모듈을 섀도 복사 없이 올리고(도장 대조 포함) 제
+  이름으로 등록한다(`ModuleHost`). 이미 등록한 모듈이 다시 등록될 때 머리에 남의 등록기가 있으면 경고한다(재발 감지).
+- **키트 팩토리가 "GameFramework" 로 구워져**(파서 경로 규칙이 `GameFramework/Kits/` 를 잡는다) 키트를 내려도 팩토리가 지워지지 않았다 — 내린
+  이미지의 람다가 표에 남았다. → 팩토리의 모듈은 **등록을 모으는 모듈**(`_activeModuleName`)이 먼저다. 타입 쪽 `registerClass` 와 같은 규칙.
+- **엔진 ABI 도장이 Core · Engine 의 .h 만 봤다.** `EngineServiceList.xxx`(서비스 색인 · `EngineServices` 배치) · `PredefinedNameType.xxx` ·
+  RuntimeAPI · GameFramework(다시 올리지 않는 공용 모듈)가 빠져, 거기를 바꾼 모듈이 같은 도장으로 옛 엔진에 올라왔다. 도장이 **없는** 모듈은
+  대조 없이 통과했다. → 도장 입력에 넷을 더하고(Kits 제외), 도장이 없으면 거절한다(동적 모듈은 모두 `sw_registerDynamicModule` 이 굽는다).
+- **씬을 짓는 동안 모듈이 올라오면 그 모듈의 컴포넌트가 조용히 빠졌다**(에디터 시작 씬 · 키트 등록이 겹칠 때). 워커의 오브젝트 매니저가 만들
+  때의 팩토리로 짓고, 만들 수 없는 컴포넌트는 경고 없이 건너뛴다. → 모듈 팩토리 헤드의 세대(`GameObjectManager::getFactoryHeadSerial`)를 로드를
+  띄울 때 적고, 결과를 받을 때 다르면 버리고 같은 경로를 다시 띄운다. 오브젝트 매니저는 봉인 뒤 전역 머리를 읽지 않는다(올라오는 중인 모듈의
+  등록기를 "Engine" 으로 잡았다 · 락 없는 읽기).
+- **게임 모듈 리로드가 실패하면 복원용 스냅숏을 버렸다** — 게임 컴포넌트는 이미 모든 씬에서 걷어 낸 뒤라, 그 상태로 저장하면 빠진 씬이
+  저장됐다. → 스냅숏을 두고(다음 성공 리로드가 되돌린다), 걷어 낸 순간부터 되돌릴 때까지 씬 저장을 막는다(`SceneManager::setSaveBlockReason`).
+
+**확인.** 새 `ModuleApiTest.GameFrameworkRegistersUnderItsOwnName`(자식 프로세스에서 공용 모듈 → 키트 → SWGame → 서비스 묶기 → 인자 없는
+등록 뒤 `GravityComponent` 의 모듈), `GameObjectManagerTest.FactoryBelongsToTheRegisteringModuleNotTheBakedName`,
+`SceneAsyncTest.FactoriesRegisteredDuringLoadAreNotLost` · `SaveIsRefusedWhileBlocked` — 셋 모두 고친 것을 되돌리면 진다(변이 확인).
+Shipping 은 구운 씬만 읽으므로 새 씬 테스트는 `.bin` 도 굽는다. App(개발 구성): "Shared module loaded: GameFramework" 가 키트보다 먼저,
+경고 · 오류 0, 에디터 시작 씬 오류 0. Debug nogpu+린트 28/28 · hostgpu 2/2, Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ⑥ RHI — 장치 대기가 렌더 스레드를 안 세움, 게임 스레드 ↔ 렌더 스레드 맵 경합, 업로드 · 큐 동기화, 한 번 쓴 상수버퍼가 링 한 칸에만)
 
 **무엇이 틀렸나 · 고친 것.**

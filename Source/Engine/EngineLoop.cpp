@@ -209,7 +209,9 @@ namespace sw
 
             engine::bindEngineServices( services );
             engine::registerModuleTypes( "Engine" );
-            engine::registerModuleTypes( "GameFramework" );
+            // GameFramework 는 여기서 등록하지 않는다. 개발 구성에서는 이 시점에 아직 올라와 있지 않아(키트 · SWGame 이 링크한다) 아무것도
+            // 등록하지 못했고, 배포 구성은 정적 링크라 위의 "Engine" 이 이미 다 모았다. 올리며 제 이름으로 등록하는 것은
+            // `LiveReloadManager::loadSharedModule` 이다(`ModuleHost` 가 키트보다 먼저 부른다).
         }
 
         // 설정은 리소스 초기화보다 **먼저** 읽는다.

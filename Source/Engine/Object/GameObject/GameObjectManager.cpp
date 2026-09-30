@@ -46,6 +46,7 @@ namespace sw
 
     static ComponentFactoryRegistrar* _s_engineHead{ nullptr };
     static bool                       _s_engineHeadSealed{ false };
+    static atomic<uint32>             _s_factoryHeadSerial{ 0 };
 
     ComponentFactoryRegistrar*& ComponentFactoryRegistrar::getHead()
     {
@@ -110,7 +111,9 @@ namespace sw
         , _cameraRegistry{}
         , _tickRegistry{}
     {
-        ComponentFactoryRegistrar* pEngineHead = ComponentFactoryRegistrar::getHead();
+        // 봉인(첫 모듈 등록) 뒤에는 전역 머리를 읽지 않는다. 그 뒤에 머리에 매달린 것은 **올라오는 중인 모듈**의 등록기다 — 워커에서 씬을 짓는
+        // 동안 다른 스레드가 DLL 을 올리면, 그 모듈의 팩토리를 "Engine" 으로 등록했다(내려도 지워지지 않는다). 락 없이 읽는 것이기도 했다.
+        ComponentFactoryRegistrar* pEngineHead = _s_engineHeadSealed ? _s_engineHead : ComponentFactoryRegistrar::getHead();
         if ( pEngineHead == nullptr )
             pEngineHead = _s_engineHead;
         registerPendingFactories( "Engine", pEngineHead );
@@ -741,12 +744,19 @@ namespace sw
             GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
         else
             GameObjectManagerInternal::getModuleFactoryHeads()[string( moduleName )] = pHead;
+        _s_factoryHeadSerial.fetch_add( 1, std::memory_order_release );
     }
 
     void GameObjectManager::unregisterModuleFactoryHead( string_view moduleName )
     {
         std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
         GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
+        _s_factoryHeadSerial.fetch_add( 1, std::memory_order_release );
+    }
+
+    uint32 GameObjectManager::getFactoryHeadSerial()
+    {
+        return _s_factoryHeadSerial.load( std::memory_order_acquire );
     }
 
     Component* GameObjectManager::addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )

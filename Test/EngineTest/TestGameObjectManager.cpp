@@ -781,3 +781,43 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
     runScene( 16 );
     runScene( sw::SceneTransformHierarchy::kParallelFlushRootCount + 37 );
 }
+
+#if !defined( SW_SHIPPING )
+namespace
+{
+    /** @brief 키트의 생성 코드처럼 모듈 이름을 "GameFramework" 로 구운 팩토리 등록입니다. */
+    void registerKitFactoryWithBakedNameInternal( GameObjectManager& manager )
+    {
+        manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ), hashed_string( "GameFramework" ) );
+    }
+} // namespace
+
+/**
+ * @brief [GameObjectManagerTest] 팩토리는 생성 코드에 구운 이름이 아니라 **등록한 모듈**에 속한다 — 그 모듈을 내리면 지워진다
+ * @details 파서의 경로 규칙이 `Source/GameFramework/Kits/<키트>` 를 "GameFramework" 로 읽어, 키트 팩토리가 그 이름으로 구워졌다. 키트를 내려도
+ *          `unregisterFactoriesByModule( "GF_<키트>" )` 가 아무것도 지우지 않아, 내린 이미지의 람다가 표에 남아 다음 `addComponentByName` 이
+ *          내려간 코드로 뛰었다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, FactoryBelongsToTheRegisteringModuleNotTheBakedName )
+{
+    static ComponentFactoryRegistrar* s_pKitHead{ nullptr };
+    static ComponentFactoryRegistrar  s_kitRegistrar{ &registerKitFactoryWithBakedNameInternal, s_pKitHead };
+    (void)MockAudioComponent::StaticType();
+
+    GameObjectManager manager;
+    manager.registerPendingFactories( "GF_TestKit", s_pKitHead );
+    GameObject* pFirst = manager.createGameObject( hashed_string( "First" ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_NOT_NULL( manager.addComponentByName( pFirst, hashed_string( "MockAudioComponent" ) ) );
+
+    manager.unregisterFactoriesByModule( "GF_TestKit" );
+    GameObject* pSecond = manager.createGameObject( hashed_string( "Second" ) );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_TRUE_MSG( manager.addComponentByName( pSecond, hashed_string( "MockAudioComponent" ), false ) == nullptr,
+                        "내린 키트의 팩토리가 남았습니다 — 구운 모듈 이름(GameFramework)으로 등록됐습니다" );
+
+    // `registerPendingFactories` 는 전역 모듈 헤드 표에도 적는다. 다른 케이스의 매니저가 이 헤드를 모으지 않게 뗀다.
+    GameObjectManager::unregisterModuleFactoryHead( "GF_TestKit" );
+    manager.clear();
+}
+#endif
