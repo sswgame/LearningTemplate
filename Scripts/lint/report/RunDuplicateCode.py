@@ -55,6 +55,13 @@
   py -3 Scripts/lint/report/RunDuplicateCode.py --filter Engine/Graphics
   py -3 Scripts/lint/report/RunDuplicateCode.py --same-file-only     # 한 파일 안의 복사만
   py -3 Scripts/lint/report/RunDuplicateCode.py --top 50
+  py -3 Scripts/lint/report/RunDuplicateCode.py --language py        # Scripts · Tools 의 파이썬
+
+[언어는 표 한 줄이다]
+언어마다 다른 것은 **어디를 훑고(폴더 · 확장자) 어떤 줄을 세지 않는가(주석 · 머리말 · 뜻 없는 줄)** 뿐이고, 창을 해시해
+병합하는 방법은 같다. 그래서 `kLanguageSpec` 에 한 줄씩 적는다. 파이썬을 처음 쟀을 때(2026-09-30) 이 도구가 C++ 만 봐서
+스크래치 스크립트를 두 번 따로 썼다 — 그 스크립트가 여기로 들어온 것이다. 파이썬은 `import` · `sys.path.insert` 머리말과
+독스트링을 세지 않는다(스크립트로 직접 돌리려고 파일마다 있는 머리말이 상위권을 채운다).
 """
 
 from __future__ import annotations
@@ -67,15 +74,58 @@ import sys
 from pathlib import Path
 from typing import Iterable, NamedTuple
 
+sys.path.insert( 0, str( Path( __file__ ).resolve().parents[ 2 ] ) )   # Scripts — common
+
+from common import collectRepositoryFiles  # noqa: E402
+
 #: 해시할 창의 줄 수. 짧으면 잡음이, 길면 놓치는 것이 는다 — 6 이 이 저장소에서 쓸 만했다.
 kWindowLines = 6
-#: 창 하나의 최소 글자 수. 짧은 줄만으로 이루어진 창(닫는 괄호 연속 등)을 버린다.
-kMinWindowChars = 180
 #: 기본으로 보고할 최소 길이(병합 후 줄 수).
 kDefaultMinLines = 10
 
-#: 정규화에서 아예 버리는 줄 — 있으나 없으나 중복 여부를 바꾸지 않는다.
-kIgnoredLines = frozenset( { "{", "}", "};", "break;", "return;", "public:", "private:", "protected:", "else" } )
+
+class LanguageSpec( NamedTuple ):
+    """
+    언어 하나를 훑는 법.
+
+    - `listRoot`        : 훑을 폴더(저장소 기준). 내려받은 외부 도구로는 내려가지 않는다(`collectRepositoryFiles`).
+    - `sourceSuffixes`  : 늘 보는 확장자. `headerSuffixes` 는 `--no-headers` 면 뺀다.
+    - `skipPrefixes`    : 이것으로 시작하는 줄은 세지 않는다(주석 · include/import 머리말).
+    - `ignoredLines`    : 그 자체로 뜻이 없는 줄(닫는 괄호 등) — 있으나 없으나 중복 여부를 바꾸지 않는다.
+    - `docstringQuote`  : 이 따옴표로 열고 닫는 블록(파이썬 독스트링)은 통째로 세지 않는다. 비우면 없음.
+    - `minWindowChars`  : 창 하나의 최소 글자 수. 짧은 줄만으로 된 창을 버린다(파이썬 줄은 C++ 보다 짧다).
+    """
+
+    listRoot: tuple[ str, ... ]
+    sourceSuffixes: tuple[ str, ... ]
+    headerSuffixes: tuple[ str, ... ]
+    skipPrefixes: tuple[ str, ... ]
+    ignoredLines: frozenset[ str ]
+    docstringQuote: str
+    minWindowChars: int
+
+
+kLanguageSpec: dict[ str, LanguageSpec ] = {
+    "cpp": LanguageSpec(
+        listRoot       = ( "Source", ),
+        sourceSuffixes = ( ".cpp", ),
+        headerSuffixes = ( ".h", ".inl" ),
+        # include 묶음은 중복이 아니다(파일 머리말 참고).
+        skipPrefixes   = ( "//", "*", "/*", "#include" ),
+        ignoredLines   = frozenset( { "{", "}", "};", "break;", "return;", "public:", "private:", "protected:", "else" } ),
+        docstringQuote = "",
+        minWindowChars = 180,
+    ),
+    "py": LanguageSpec(
+        listRoot       = ( "Scripts", "Tools" ),
+        sourceSuffixes = ( ".py", ),
+        headerSuffixes = (),
+        skipPrefixes   = ( "#", "import ", "from ", "sys.path.insert" ),
+        ignoredLines   = frozenset( { ")", "]", "}", "),", "],", "},", "else:", "try:", "pass", "return", "continue", "break" } ),
+        docstringQuote = '"""',
+        minWindowChars = 120,
+    ),
+}
 
 
 class Finding( NamedTuple ):
@@ -91,8 +141,8 @@ class Finding( NamedTuple ):
         return self.leftPath == self.rightPath
 
 
-def normalizeFile( repositoryRoot: Path, path: Path ) -> tuple[ list[ str ], list[ int ] ]:
-    """주석·공백·include 를 걷어낸 줄들과, 각 줄의 원래 줄 번호를 돌려줍니다."""
+def normalizeFile( repositoryRoot: Path, path: Path, spec: LanguageSpec ) -> tuple[ list[ str ], list[ int ] ]:
+    """주석·공백·머리말(include/import)·독스트링을 걷어낸 줄들과, 각 줄의 원래 줄 번호를 돌려줍니다."""
     try:
         rawLines = ( repositoryRoot / path ).read_text( encoding = "utf-8", errors = "replace" ).split( "\n" )
     except OSError:
@@ -100,34 +150,39 @@ def normalizeFile( repositoryRoot: Path, path: Path ) -> tuple[ list[ str ], lis
 
     normalized: list[ str ] = []
     lineNumbers: list[ int ] = []
+    bInDocstring = False
     for lineNumber, rawLine in enumerate( rawLines, 1 ):
         stripped = rawLine.strip()
+        if spec.docstringQuote and ( bInDocstring or stripped.startswith( spec.docstringQuote ) ):
+            # 여는 줄에서 닫히지 않으면(따옴표가 홀수 번) 닫는 줄까지 건너뛴다.
+            if stripped.count( spec.docstringQuote ) % 2 == 1:
+                bInDocstring = not bInDocstring
+            continue
         if not stripped:
             continue
-        # include 묶음은 중복이 아니다(파일 머리말 참고).
-        if stripped.startswith( ( "//", "*", "/*", "#include" ) ):
+        if stripped.startswith( spec.skipPrefixes ):
             continue
-        if stripped in kIgnoredLines:
+        if stripped in spec.ignoredLines:
             continue
         normalized.append( re.sub( r"\s+", " ", stripped ) )
         lineNumbers.append( lineNumber )
     return normalized, lineNumbers
 
 
-def collectFindings( repositoryRoot: Path, files: Iterable[ Path ], bSameFileOnly: bool ) -> list[ Finding ]:
+def collectFindings( repositoryRoot: Path, files: Iterable[ Path ], bSameFileOnly: bool, spec: LanguageSpec ) -> list[ Finding ]:
     """창을 해시해 짝을 모으고, **연속된 창을 한 건으로 병합**합니다."""
     fileLines: dict[ str, tuple[ list[ str ], list[ int ] ] ] = {}
     windowOwners: dict[ str, list[ tuple[ str, int ] ] ] = collections.defaultdict( list )
 
     for path in files:
-        normalized, lineNumbers = normalizeFile( repositoryRoot, path )
+        normalized, lineNumbers = normalizeFile( repositoryRoot, path, spec )
         if len( normalized ) < kWindowLines:
             continue
         key = path.as_posix()
         fileLines[ key ] = ( normalized, lineNumbers )
         for offset in range( len( normalized ) - kWindowLines + 1 ):
             chunk = "\n".join( normalized[ offset : offset + kWindowLines ] )
-            if len( chunk ) < kMinWindowChars:
+            if len( chunk ) < spec.minWindowChars:
                 continue
             windowOwners[ hashlib.sha1( chunk.encode( "utf-8" ) ).hexdigest() ].append( ( key, offset ) )
 
@@ -168,16 +223,15 @@ def collectFindings( repositoryRoot: Path, files: Iterable[ Path ], bSameFileOnl
     return findings
 
 
-def selectFiles( repositoryRoot: Path, filterText: str, bIncludeHeaders: bool ) -> list[ Path ]:
+def selectFiles( repositoryRoot: Path, filterText: str, bIncludeHeaders: bool, spec: LanguageSpec ) -> list[ Path ]:
     """검사할 파일을 **저장소 상대 경로**로 돌려줍니다 (보고가 짧고 클릭 가능한 경로가 되도록)."""
-    patterns = [ "*.cpp" ] + ( [ "*.h", "*.inl" ] if bIncludeHeaders else [] )
+    suffixes = spec.sourceSuffixes + ( spec.headerSuffixes if bIncludeHeaders else () )
     selected: list[ Path ] = []
-    for pattern in patterns:
-        for path in ( repositoryRoot / "Source" ).rglob( pattern ):
-            relativePath = path.relative_to( repositoryRoot )
-            if filterText and filterText.replace( "\\", "/" ) not in relativePath.as_posix():
-                continue
-            selected.append( relativePath )
+    for path in collectRepositoryFiles( repositoryRoot, spec.listRoot, suffixes = suffixes ):
+        relativePath = path.relative_to( repositoryRoot )
+        if filterText and filterText.replace( "\\", "/" ) not in relativePath.as_posix():
+            continue
+        selected.append( relativePath )
     return sorted( selected )
 
 
@@ -189,6 +243,7 @@ def parseArgs( argv: list[ str ] | None = None ) -> argparse.Namespace:
     parser.add_argument( "--top", type = int, default = 20, help = "보고할 최대 건수" )
     parser.add_argument( "--same-file-only", action = "store_true", help = "한 파일 안의 복사만" )
     parser.add_argument( "--no-headers", action = "store_true", help = "헤더를 빼고 소스만" )
+    parser.add_argument( "--language", choices = sorted( kLanguageSpec ), default = "cpp", help = "훑을 언어 (기본 cpp)" )
     return parser.parse_args( argv )
 
 
@@ -196,13 +251,14 @@ def main( argv: list[ str ] | None = None ) -> int:
     args = parseArgs( argv )
     repositoryRoot = Path( args.root ).resolve() if args.root else Path( __file__ ).resolve().parents[ 3 ]
 
-    files = selectFiles( repositoryRoot, args.filter, bIncludeHeaders = not args.no_headers )
+    spec = kLanguageSpec[ args.language ]
+    files = selectFiles( repositoryRoot, args.filter, bIncludeHeaders = not args.no_headers, spec = spec )
     if not files:
         print( "[DuplicateCode] 검사할 파일이 없습니다." )
         return 0
 
     print( f"[DuplicateCode] 파일 {len( files )}개에서 {kWindowLines}줄 창을 해시합니다 …" )
-    findings = [ f for f in collectFindings( repositoryRoot, files, args.same_file_only ) if f.lineCount >= args.min_lines ]
+    findings = [ f for f in collectFindings( repositoryRoot, files, args.same_file_only, spec ) if f.lineCount >= args.min_lines ]
 
     if not findings:
         print( f"[DuplicateCode] {args.min_lines}줄 이상 중복 없음." )

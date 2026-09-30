@@ -86,7 +86,7 @@ Scripts/
   │     │     ├── RunClangTidy.py
   │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
-  │     │     ├── RunDuplicateCode.py         # 복사돼 있는 C++ 코드 블록
+  │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py`)
   │     │     └── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
