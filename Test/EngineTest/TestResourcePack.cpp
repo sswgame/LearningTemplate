@@ -257,6 +257,28 @@ namespace sw
             Memory::copy( bytes.data(), &header, sizeof( PackHeader ) );
             return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
         }
+
+        /** @brief 파일 @p path 의 @p offset 에 @p byteCount 바이트를 덮어씁니다(팩 변조 시뮬레이션). */
+        bool patchFileBytesInternal( const sw::string& path, uint64 offset, const void* pBytes, size_t byteCount )
+        {
+            sw::vector<uint8> bytes;
+            if ( sw::FileUtil::readFile( path, bytes ) == false || offset + byteCount > bytes.size() )
+                return false;
+            sw::Memory::copy( bytes.data() + offset, pBytes, byteCount );
+            return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        }
+
+        /** @brief 팩 헤더에서 FAT 시작 오프셋을 읽습니다(PackHeader::_indexOffset, offset 22). */
+        uint64 readIndexOffsetInternal( const sw::string& path )
+        {
+            sw::vector<uint8> bytes;
+            if ( sw::FileUtil::readFile( path, bytes ) == false || bytes.size() < 30 )
+                return 0;
+            uint64 indexOffset{ 0 };
+            sw::Memory::copy( &indexOffset, bytes.data() + 22, sizeof( indexOffset ) );
+            return indexOffset;
+        }
+
     } // namespace
 } // namespace sw
 
@@ -1045,4 +1067,87 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
     target.close();
     sw::FileUtil::removeFile( packPathA );
     sw::FileUtil::removeFile( packPathB );
+}
+
+/**
+ * @brief [ResourcePackTest] 저장된 CRC 를 0 으로 지워도 검사가 꺼지지 않는다
+ * @details 예전에는 저장된 CRC 가 0 이면 검사를 건너뛰어, 그 칸을 지우고 페이로드를 바꾸면 변조가 통과했다(굽는 쪽은 모든 항목의 CRC 를
+ *          적는다 — 빈 데이터의 CRC 가 0).
+ */
+SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_crc_zeroed.pack" );
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                            { "secure/zeroed.bin", "PAYLOAD_THAT_WILL_BE_TAMPERED" }
+    } ) );
+
+    const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
+    SW_ASSERT_TRUE( indexOffset != 0 );
+    const uint32 zeroCrc{ 0 };
+    const uint8  tampered{ 0xFF };
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 24, &zeroCrc, sizeof( zeroCrc ) ) );
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, sw::kPackSectorAlignment, &tampered, sizeof( tampered ) ) );
+
+    sw::ResourcePackReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+    sw::vector<uint8> buffer;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( reader.readFile( "secure/zeroed.bin", buffer ) );
+    }
+    reader.close();
+    sw::FileUtil::removeFile( packPath );
+}
+
+/**
+ * @brief [ResourcePackTest] 압축 크기 0 인 항목은 0 바이트 N 개가 아니라 실패다
+ * @details 예전에는 원본 크기가 N 이어도 압축 크기가 0 이면 "풀 것 없음" 으로 성공해, CRC 가 없는 팩에서 0 으로 찬 데이터를 돌려줬다.
+ */
+SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_empty_payload.pack" );
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::RLE, {
+                                                                                           { "secure/empty.bin", "AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB" }
+    } ) );
+
+    const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
+    SW_ASSERT_TRUE( indexOffset != 0 );
+    // CRC 없는 팩으로 만든다 — CRC 가 있으면 0 으로 찬 데이터를 그것이 먼저 잡아, 이 수정만 따로 잴 수 없다.
+    const uint32 zero{ 0 };
+    const uint16 noFlags{ 0 };
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 16, &zero, sizeof( zero ) ) ); // _compressedSize
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &noFlags, sizeof( noFlags ) ) );         // PackHeader::_flags
+
+    sw::ResourcePackReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+    sw::vector<uint8> buffer;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( reader.readFile( "secure/empty.bin", buffer ) );
+    }
+    reader.close();
+    sw::FileUtil::removeFile( packPath );
+}
+
+/**
+ * @brief [ResourcePackTest] 암호화 표시가 있는 팩은 열지 않는다
+ * @details 풀 방법이 없는데 예전에는 플래그 · 방식을 보지 않고 평문으로 풀었다.
+ */
+SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_encrypted_flag.pack" );
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                            { "secure/enc.bin", "PLAINTEXT" }
+    } ) );
+
+    const uint16 flags = static_cast<uint16>( static_cast<uint16>( sw::PackFlag::HasCrc32 ) | static_cast<uint16>( sw::PackFlag::Encrypted ) );
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &flags, sizeof( flags ) ) ); // PackHeader::_flags
+
+    sw::ResourcePackReader reader;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
+    reader.close();
+    sw::FileUtil::removeFile( packPath );
 }

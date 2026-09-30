@@ -31,6 +31,37 @@ namespace sw
             inline static std::once_flag _s_initOnce{};
 
             /**
+             * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
+             * @details 예전에는 `..` 를 거르지 않아 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽었다(언리얼은 경로를 가상
+             *          경로 · 팩 마운트 지점 안으로 가둔다). 저장소의 데이터 · 코드에는 `..` 를 쓰는 id 가 없다.
+             */
+            static bool hasParentDirectoryComponent( string_view path )
+            {
+                size_t start{ 0 };
+                while ( start <= path.size() )
+                {
+                    size_t end = path.find_first_of( "/\\", start );
+                    if ( end == string_view::npos )
+                        end = path.size();
+                    if ( path.substr( start, end - start ) == ".." )
+                        return true;
+                    start = end + 1;
+                }
+                return false;
+            }
+
+            /** @brief 절대 경로가 리소스 루트 안이면 true 입니다(팩 전용 모드가 막아야 하는 낱개 에셋). */
+            static bool isInsideResourceRoot( string_view absolutePath )
+            {
+                const string& root = ResourceUtil::getRootFolderPath();
+                if ( root.empty() )
+                    return false;
+                const string normalized = FileUtil::normalizeSeparators( absolutePath );
+                return normalized.size() > root.size() && StringUtil::startsWith( normalized, root, true ) &&
+                       ( normalized[root.size()] == '/' || root.back() == '/' );
+            }
+
+            /**
              * @brief 전역 ID(`engine/` · `common/` · `editor/` · `game/<pack>/`)를 도메인 루트로 매핑합니다.
              * @param lowerRel normalizePath 한 상대 키
              * @param outRoot 도메인 절대 루트
@@ -161,14 +192,26 @@ namespace sw
             if ( relativePath.empty() )
                 return false;
 
-            // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다
+            // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
+            //    **안**을 가리키면 거절한다. 예전에는 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽었다.
             if ( FileUtil::isAbsolutePath( relativePath ) )
             {
+                if ( ResourceUtil::getPackManager().isAllowLooseFiles() == false && ResourceUtilInternal::isInsideResourceRoot( relativePath ) )
+                {
+                    SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
+                    return false;
+                }
                 if ( FileUtil::fileExists( relativePath ) == false )
                     return false;
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );
                 return readFromDisk( relativePath );
+            }
+
+            if ( ResourceUtilInternal::hasParentDirectoryComponent( relativePath ) )
+            {
+                SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the resource root", relativePath );
+                return false;
             }
 
             ResourcePackManager& packManager = ResourceUtil::getPackManager();
@@ -287,6 +330,9 @@ namespace sw
                 return FileUtil::normalizeSeparators( filePath );
             return {};
         }
+        // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
+        if ( ResourceUtilInternal::hasParentDirectoryComponent( filePath ) )
+            return {};
 
         uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
         if ( folderName.empty() == false )

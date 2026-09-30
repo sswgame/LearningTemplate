@@ -48,7 +48,12 @@ namespace sw
         static bool packCall( RpcEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
                               const TaskArgs& args );
 
-        /** @brief 인자를 푼 뒤 TypeRegistry::invokeMethod로 로컬 호출합니다. */
-        static TaskValue unpackAndInvoke( void* pInstance, const RpcEnvelope& envelope );
+        /**
+         * @brief 인자를 푼 뒤 TypeRegistry::invokeMethod 로 로컬 호출합니다.
+         * @param instanceType `pInstance` 의 실제 타입입니다. 봉투의 타입이 이것이거나 이것의 부모여야 부릅니다.
+         * @details 봉투를 믿지 않습니다. 예전에는 봉투가 적은 타입으로 메서드를 찾아 인스턴스가 그 타입인지 보지 않고 불렀고(다른 타입을
+         *          적은 봉투 = 타입 혼동), RPC 로 표시되지 않은 메서드(`FUNCTION()` 의 NetRole 이 Local)도 불렀습니다.
+         */
+        static TaskValue unpackAndInvoke( void* pInstance, const TypeInfo& instanceType, const RpcEnvelope& envelope );
     };
 } // namespace sw

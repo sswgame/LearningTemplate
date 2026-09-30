@@ -211,8 +211,9 @@ namespace sw
                 if ( payloadSize > dataSize - payloadStart )
                     return false;
 
-                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다.
-                if ( propIndex < listProp.size() )
+                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다. 쓰는 쪽이 적지 않는 프로퍼티(Transient ·
+                // 직렬화 제외)를 가리키는 페이로드도 건너뛴다 — 예전에는 희소 모드가 아무 인덱스에나 써, 망가진 스트림이 런타임 전용 값을 덮었다.
+                if ( propIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( listProp[static_cast<size_t>( propIndex )] ) )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
                                                pData, payloadStart, payloadSize, ctx, false ) == false )

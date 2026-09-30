@@ -129,7 +129,14 @@ namespace sw
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_float64 ) )
                     return formatPodAs<float64, float64>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_bool ) )
-                    return formatPodAs<bool, int32>( pPayload, payloadSize, out );
+                {
+                    // 바이트로 읽어 0 · 1 로 접는다. bool 로 memcpy 하면 0 · 1 이 아닌 바이트가 정의되지 않은 값이 된다.
+                    uint8 byteValue{ 0 };
+                    if ( readPod( pPayload, payloadSize, byteValue ) == false )
+                        return false;
+                    out = sw::to_string( static_cast<int32>( byteValue != 0 ? 1 : 0 ) );
+                    return true;
+                }
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int8 ) )
                     return formatPodAs<int8, int32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int16 ) )

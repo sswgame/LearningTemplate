@@ -164,9 +164,12 @@ namespace sw
                 if ( nameLen == 0 )
                     return true;
 
-                const hashed_string typeName( typeNameText );
-                void*               pObj  = ctx.createOwnedPointer( typeName );
-                const TypeInfo*     pType = engine::getTypeRegistry().findType( typeName );
+                // 찾기만 한다 — 파일의 이름을 intern 하면 전역 표가 파일 크기만큼 는다(`hashed_string::findInterned`).
+                const hashed_string typeName = hashed_string::findInterned( typeNameText );
+                if ( typeName.empty() )
+                    return true; // 등록된 적 없는 타입이다. 위에서 이미 그만큼 밀어 두었다.
+                void*           pObj  = ctx.createOwnedPointer( typeName );
+                const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
                 if ( pObj == nullptr || pType == nullptr )
                     return true; // 모르는 타입은 건너뛴다. 위에서 이미 그만큼 밀어 두었다.
 

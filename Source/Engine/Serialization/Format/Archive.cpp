@@ -85,9 +85,12 @@ namespace sw
         outListDestination.assign( _bytes.begin(), _bytes.end() );
     }
 
-    void Archive::setOffset( uint64 offset )
+    bool Archive::setOffset( uint64 offset )
     {
+        if ( offset > _dataSize )
+            return false;
         _offset = offset;
+        return true;
     }
 
     void Archive::setReadModeAndResetPosition( const bool bSetReadMode )

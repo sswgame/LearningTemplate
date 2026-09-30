@@ -183,8 +183,10 @@ namespace sw
                         const vector<string> listKey = elem.getMemberNames();
                         if ( listKey.size() != 1 )
                             continue;
-                        const hashed_string typeName( listKey[0].c_str() );
-                        void*               pObj = ctx.createOwnedPointer( typeName );
+                        const hashed_string typeName = hashed_string::findInterned( listKey[0] );
+                        if ( typeName.empty() )
+                            continue;
+                        void* pObj = ctx.createOwnedPointer( typeName );
                         if ( pObj == nullptr )
                             continue;
                         const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
@@ -221,7 +223,7 @@ namespace sw
                         const vector<string> listMember = elem.getMemberNames();
                         const bool           bWrapped =
                             ( listMember.size() == 1 &&
-                              engine::getTypeRegistry().findType( hashed_string( listMember[0].c_str() ) ) != nullptr );
+                              engine::getTypeRegistry().findType( hashed_string::findInterned( listMember[0] ) ) != nullptr );
                         const JsonValue body = bWrapped ? elem.get( listMember[0], false ) : elem;
                         return JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx );
                     } ) );

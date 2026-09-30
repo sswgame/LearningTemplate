@@ -47,7 +47,12 @@ namespace sw
                 {
                     if ( offset + sizeof( T ) > size )
                         return false;
-                    Memory::copy( pPtr, pData + offset, sizeof( T ) );
+                    // bool 은 바이트를 그대로 옮기지 않는다. 0 · 1 이 아닌 바이트(망가진 파일)를 memcpy 하면 값이 정의되지 않는 bool 이 되고,
+                    // 컴파일러는 그것을 2 로 쓰거나 `b` 와 `b == true` 를 다르게 본다.
+                    if constexpr ( std::is_same_v<T, bool> )
+                        *static_cast<bool*>( pPtr ) = pData[offset] != 0;
+                    else
+                        Memory::copy( pPtr, pData + offset, sizeof( T ) );
                     offset += sizeof( T );
                     return true;
                 };

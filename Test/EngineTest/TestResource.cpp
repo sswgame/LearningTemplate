@@ -10,6 +10,8 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourcePackManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -702,4 +704,74 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
     SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
     if ( bFound )
         SW_EXPECT_STREQ( expected.c_str(), guid.toString().c_str() );
+}
+
+/**
+ * @brief [ResourceTest] 담기지 않거나 읽을 수 없는 formatVersion 은 "지원하는 것보다 새 형식" 으로 거절된다
+ * @details 예전에는 파싱 결과를 버리고 32 비트로 잘라 담아, "4294967296" · "-1" 이 0(현재 버전)으로 읽혀 그 거절을 지나쳤다.
+ */
+SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    for ( const utf8* pVersion : { "4294967296", "-1", "notanumber" } )
+    {
+        const sw::string xml = sw::string( "<MaterialDesc formatVersion=\"" ) + pVersion +
+                               "\" name=\"M\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\"><_properties/></MaterialDesc>";
+        sw::XmlDocument doc;
+        doc.parse( xml.c_str() );
+        sw::XmlNode root = doc.getRoot( "MaterialDesc" );
+        SW_ASSERT_TRUE( root.isValid() );
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE_MSG( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+                                                                                                   sw::AssetFormatVersions::kMaterial ),
+                             pVersion );
+    }
+}
+
+/**
+ * @brief [ResourceTest] `..` 로 리소스 루트 밖을 가리키는 id 는 풀지도 읽지도 않는다
+ * @details 예전에는 `..` 를 거르지 않아 도메인 루트에 붙은 id 가 루트 밖 파일을 읽었다.
+ */
+SW_TEST_CASE( ResourceTest, ParentDirectoryIdsAreRefused )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    // 루트 바로 위의 실제 파일을 가리킨다 — 막지 않으면 읽힌다.
+    const sw::string escapingId = "engine/../../CLAUDE.md";
+    sw::string       content;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( sw::ResourceUtil::readTextResource( escapingId, content ) );
+    }
+    SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( escapingId ).empty() );
+}
+
+/**
+ * @brief [ResourceTest] 팩 전용 모드에서는 리소스 루트 안을 가리키는 절대 경로로 낱개 파일을 읽을 수 없다
+ * @details 루트 밖(임시 파일 · 세이브)은 그대로 읽는다. 예전에는 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽었다.
+ */
+SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+    const bool               bWasLoose   = packManager.isAllowLooseFiles();
+
+    const sw::string insideRoot  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/maps/editortest.scene.xml" );
+    const sw::string outsideRoot = test::makeTempPath( "sw_test_pack_only_outside.txt" );
+    SW_ASSERT_TRUE( sw::FileUtil::fileExists( insideRoot ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
+
+    packManager.setAllowLooseFiles( false );
+    sw::string content;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( sw::ResourceUtil::readTextResource( insideRoot, content ) );
+    }
+    SW_EXPECT_TRUE( sw::ResourceUtil::readTextResource( outsideRoot, content ) );
+    SW_EXPECT_EQUAL( sw::string( "OUTSIDE" ), content );
+
+    packManager.setAllowLooseFiles( true );
+    SW_EXPECT_TRUE( sw::ResourceUtil::readTextResource( insideRoot, content ) );
+
+    packManager.setAllowLooseFiles( bWasLoose );
+    sw::FileUtil::removeFile( outsideRoot );
 }

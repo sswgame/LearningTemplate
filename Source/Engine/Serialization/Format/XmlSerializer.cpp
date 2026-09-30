@@ -175,9 +175,11 @@ namespace sw
                         if ( bOwnedPtr )
                         {
                             // 다형 원소: 태그 이름이 런타임 타입이다.
-                            const hashed_string typeName( string( tagName ).c_str() );
-                            void*               pObj  = ctx.createOwnedPointer( typeName );
-                            const TypeInfo*     pType = engine::getTypeRegistry().findType( typeName );
+                            const hashed_string typeName = hashed_string::findInterned( tagName );
+                            if ( typeName.empty() )
+                                return;
+                            void*           pObj  = ctx.createOwnedPointer( typeName );
+                            const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
                             if ( pObj == nullptr || pType == nullptr )
                                 return;
                             readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan );

@@ -219,19 +219,33 @@ namespace sw
         return true;
     }
 
-    TaskValue ReflectionRpc::unpackAndInvoke( void* pInstance, const RpcEnvelope& envelope )
+    TaskValue ReflectionRpc::unpackAndInvoke( void* pInstance, const TypeInfo& instanceType, const RpcEnvelope& envelope )
     {
         if ( pInstance == nullptr || envelope._typeFqn.empty() || envelope._methodName.empty() )
             return {};
 
-        const hashed_string typeFqn( envelope._typeFqn.c_str() );
-        const hashed_string methodName( envelope._methodName.c_str() );
-        const TypeInfo*     pTypeInfo = engine::getTypeRegistry().findType( typeFqn );
-        if ( pTypeInfo == nullptr )
+        // 봉투의 이름은 찾기만 한다(`findInterned`) — 받은 문자열로 전역 이름 표를 채우지 않는다.
+        const hashed_string typeFqn    = hashed_string::findInterned( envelope._typeFqn );
+        const hashed_string methodName = hashed_string::findInterned( envelope._methodName );
+        const TypeInfo*     pTypeInfo  = typeFqn.empty() ? nullptr : engine::getTypeRegistry().findType( typeFqn );
+        if ( pTypeInfo == nullptr || methodName.empty() )
             return {};
+        // 인스턴스가 봉투의 타입(이나 그 자식)이어야 한다. 다른 타입을 적은 봉투는 그 메서드를 엉뚱한 객체 위에서 부른다.
+        if ( &instanceType != pTypeInfo && instanceType.isDerivedFrom( pTypeInfo ) == false )
+        {
+            SW_LOG_WARNING( "RPC envelope names %# but the instance is %# — not invoked", typeFqn.c_str(), instanceType._fullyQualifiedName.c_str() );
+            return {};
+        }
         const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
         if ( pFunc == nullptr )
             return {};
+        // RPC 로 표시된 메서드만 받는다(`FUNCTION( Server | Client | Multicast )`). 로컬 메서드를 봉투로 부르게 두면 모든 리플렉션 메서드가
+        // 원격 호출 표면이 된다.
+        if ( pFunc->_metadata._netRole == FunctionNetRole::Local )
+        {
+            SW_LOG_WARNING( "RPC envelope targets %#::%# which is not an RPC — not invoked", typeFqn.c_str(), methodName.c_str() );
+            return {};
+        }
 
         TaskArgs                unpacked;
         const SerializeContext& serializeContext = SerializeContext::getDefault();

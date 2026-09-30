@@ -115,6 +115,15 @@ namespace sw
             return false;
         }
 
+        // 암호화한 팩은 받지 않는다. 풀 방법이 없는데 예전에는 플래그 · 방식을 보지 않고 평문으로 풀었다.
+        if ( ( _header._flags & static_cast<uint16>( PackFlag::Encrypted ) ) != 0 ||
+             static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
+        {
+            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", static_cast<uint32>( _header._encryptionType ), packFilePath );
+            close();
+            return false;
+        }
+
         // 2. FAT 인덱스와 스트링 풀을 읽는다
         if ( loadIndexTable() == false )
         {
@@ -260,7 +269,9 @@ namespace sw
         // CRC32 로 무결성을 검증한다
         const bool bHasCrc32 = ( ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0 );
 
-        if ( bHasCrc32 && entry._crc32 != 0 )
+        // 플래그가 있으면 **늘** 대조한다. 굽는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 예전에는 저장된 값이 0 이면 건너뛰어,
+        // 그 칸을 0 으로 지우면 검사가 꺼졌다.
+        if ( bHasCrc32 )
         {
             const uint32 computedCrc = StringUtil::computeCrc32( outBytes.data(), outBytes.size() );
             if ( computedCrc != entry._crc32 )
@@ -469,8 +480,12 @@ namespace sw
 
     bool ResourcePackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const
     {
-        if ( srcSize == 0 || dstSize == 0 )
-            return true;
+        // 풀 것이 없으면 둘 다 0 이어야 한다. 예전에는 `srcSize == 0` 이면 성공이라, 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로
+        // 읽혔다.
+        if ( dstSize == 0 )
+            return srcSize == 0;
+        if ( srcSize == 0 )
+            return false;
 
         if ( type == PackCompressionType::None )
         {

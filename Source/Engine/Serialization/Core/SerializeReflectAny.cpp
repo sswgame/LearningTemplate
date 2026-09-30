@@ -43,7 +43,8 @@ namespace sw
                 offset += sizeof( uint32 );
                 if ( offset + nameLen > size )
                     return false;
-                any._typeFqn = hashed_string{ reinterpret_cast<const utf8*>( pData + offset ), nameLen };
+                // 찾기만 한다. 모르는 타입이면 None 으로 남는다(그 값은 어차피 풀 수 없다) — 파일의 이름을 intern 하지 않는다.
+                any._typeFqn = hashed_string::findInterned( string_view{ reinterpret_cast<const utf8*>( pData + offset ), nameLen } );
                 offset += nameLen;
                 if ( offset + sizeof( uint32 ) > size )
                     return false;

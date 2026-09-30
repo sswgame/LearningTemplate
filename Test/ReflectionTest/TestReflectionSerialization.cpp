@@ -5,7 +5,10 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Core/Serializer.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
@@ -1898,7 +1901,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
     sw::RpcEnvelope envelope;
     SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
                                                  sw::hashed_string( "applyDamage" ), args ) );
-    sw::ReflectionRpc::unpackAndInvoke( &actor, envelope );
+    sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RpcDemoActor>(), envelope );
     SW_EXPECT_EQUAL( 75, actor._hp );
 }
 
@@ -1928,7 +1931,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnArgumentTypeThatDoesNotMa
 
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRpc::unpackAndInvoke( &actor, envelope );
+        sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RpcDemoActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( actor._hp == 100, "전선이 말한 타입과 다른데도 인자를 그대로 읽어 호출했습니다" );
 }
@@ -2149,4 +2152,150 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
         SW_EXPECT_EQUAL( 7, restored._level );
         expectRestored( 0, "XML" );
     }
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 다른 타입을 적은 RPC 봉투는 인스턴스에 부르지 않는다
+ * @details 봉투는 믿을 수 없는 입력이다. 예전에는 봉투가 적은 타입으로 메서드를 찾아 인스턴스가 그 타입인지 보지 않고 불러, 다른 타입의
+ *          메서드가 엉뚱한 객체의 메모리를 썼다(타입 혼동).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnEnvelopeForAnotherType )
+{
+    sw::TaskArgs args;
+    args.add( int32{ 25 } );
+    sw::RpcEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ), sw::hashed_string( "applyDamage" ), args ) );
+
+    sw::SampleTestActor other;
+    other._hp = 100;
+    {
+        test::ScopedLogSuppressor suppressor;
+        sw::ReflectionRpc::unpackAndInvoke( &other, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+    }
+    SW_EXPECT_TRUE_MSG( other._hp == 100, "봉투가 적은 타입이 아닌 인스턴스에 RPC 를 불렀습니다" );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] RPC 로 표시되지 않은 메서드는 봉투로 부를 수 없다
+ * @details `FUNCTION()` 만 적은 메서드의 NetRole 은 Local 이다. 예전에는 그것도 불러, 모든 리플렉션 메서드가 원격 호출 표면이었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAMethodThatIsNotAnRpc )
+{
+    sw::TaskArgs args;
+    args.add( int32{ 25 } );
+    sw::RpcEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::SampleTestActor" ), sw::hashed_string( "takeDamage" ), args ) );
+
+    sw::SampleTestActor actor;
+    actor._hp = 100;
+    {
+        test::ScopedLogSuppressor suppressor;
+        sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+    }
+    SW_EXPECT_TRUE_MSG( actor._hp == 100, "RPC 가 아닌(Local) 메서드를 봉투로 불렀습니다" );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 파일에 적힌 모르는 타입 이름은 전역 이름 표에 들어가지 않는다
+ * @details 전역 `hashed_string` 표는 줄지 않는다. 예전에는 다형 값의 타입 이름을 찾으려고 intern 해서, 서로 다른 이름 수만 개를 담은 파일
+ *          하나가 표를 채울 수 있었고 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 됐다. 이제는 찾기만 한다(`findInterned`).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned )
+{
+    const sw::TypeInfo* pActorType   = sw::engine::getTypeRegistry().findType<sw::AssetPathActor>();
+    const sw::TypeInfo* pPayloadType = sw::engine::getTypeRegistry().findType<sw::PolyPayloadA>();
+    SW_ASSERT_NOT_NULL( pActorType );
+    SW_ASSERT_NOT_NULL( pPayloadType );
+
+    sw::PolyPayloadA payload;
+    payload._a = 3;
+    sw::AssetPathActor source;
+    source._payload = sw::ReflectAny::makeFrom( *pPayloadType, &payload );
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &source, *pActorType, bytes );
+
+    // 같은 길이의 등록된 적 없는 이름으로 바꾼다(길이 접두가 그대로 맞는다).
+    const sw::string_view knownName   = "sw::PolyPayloadA";
+    const sw::string_view unknownName = "sw::PolyPayloadQ";
+    SW_ASSERT_TRUE( sw::hashed_string::findInterned( unknownName ).empty() );
+    bool bPatched{ false };
+    for ( size_t byteIndex = 0; byteIndex + knownName.size() <= bytes.size(); ++byteIndex )
+    {
+        if ( sw::Memory::compare( bytes.data() + byteIndex, knownName.data(), knownName.size() ) == 0 )
+        {
+            sw::Memory::copy( bytes.data() + byteIndex, unknownName.data(), unknownName.size() );
+            bPatched = true;
+        }
+    }
+    SW_ASSERT_TRUE( bPatched );
+
+    const uint32       countBefore = sw::hashed_string::getInternedCount();
+    sw::AssetPathActor restored;
+    {
+        test::ScopedLogSuppressor suppressor;
+        (void)sw::BinarySerializer::deserialize( &restored, *pActorType, bytes.data(), bytes.size() );
+    }
+    SW_EXPECT_TRUE_MSG( sw::hashed_string::findInterned( unknownName ).empty(), "파일의 모르는 타입 이름을 전역 이름 표에 넣었습니다" );
+    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 바이너리 bool 은 0 · 1 이 아닌 바이트도 true 로 접어 읽는다
+ * @details 예전에는 바이트를 그대로 memcpy 해, 망가진 파일의 0x02 가 값이 정의되지 않은 bool 이 됐다(컴파일러가 2 로 쓰거나 `b` 와
+ *          `b == true` 를 다르게 본다).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
+{
+    const uint8 arrByte[1] = { 0x02 };
+    bool        value{ false };
+    size_t      offset{ 0 };
+    SW_ASSERT_TRUE( sw::SerializerUtil::deserializeValueBinary( &value, sw::hashed_string( "bool" ), arrByte, sizeof( arrByte ), offset,
+                                                                sw::SerializeContext::getDefault() ) );
+    uint8 rawValue{ 0 };
+    sw::Memory::copy( &rawValue, &value, sizeof( rawValue ) );
+    SW_EXPECT_EQUAL( uint8{ 1 }, rawValue );
+    SW_EXPECT_EQUAL( size_t( 1 ), offset );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 압축 스트림이 기록하지 않는 프로퍼티(Transient)를 가리키면 쓰지 않는다
+ * @details 쓰는 쪽은 Transient 를 적지 않는다. 예전에는 희소 모드가 아무 인덱스에나 페이로드를 써, 망가진 스트림이 런타임 전용 값을 덮었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientProperties )
+{
+    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    SW_ASSERT_NOT_NULL( pType );
+    const sw::vector<sw::PropertyInfo>& listProp = pType->getPropertiesWithBase();
+    uint8                               healthIndex{ 0xFF };
+    for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
+    {
+        if ( listProp[propIndex]._name == sw::hashed_string( "_health" ) )
+            healthIndex = static_cast<uint8>( propIndex );
+    }
+    SW_ASSERT_TRUE( healthIndex < 0x80 ); // varint 한 바이트
+
+    // [희소 모드][수정 1 개][인덱스][크기 4][int32 777]
+    const int32       injected = 777;
+    sw::vector<uint8> stream{ sw::PresenceMaskUtil::kModeSparse, 1, healthIndex, 4 };
+    const uint8*      pInjected = reinterpret_cast<const uint8*>( &injected );
+    stream.insert( stream.end(), pInjected, pInjected + sizeof( injected ) );
+
+    sw::MetaTestActor actor;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &actor, *pType, stream.data(), stream.size(), sw::SerializeContext::getDefault() ) );
+    SW_EXPECT_EQUAL( 100, actor._health );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] `Archive::setOffset` 은 데이터 끝을 넘기지 않는다
+ * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 남은 양을 뺄셈으로 센다. 예전에는 검사 없이 넣어 그 뺄셈이 돌았고 다음 읽기가 버퍼
+ *          밖을 읽었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ArchiveOffsetCannotPassTheEnd )
+{
+    const uint8 arrData[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    sw::Archive archive( arrData, sizeof( arrData ) );
+    SW_EXPECT_TRUE( archive.setOffset( 8 ) );
+    SW_EXPECT_FALSE( archive.setOffset( 9 ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, archive.getRemainingBytes() );
+    SW_EXPECT_FALSE( archive.hasBytesAvailable( 1 ) );
 }

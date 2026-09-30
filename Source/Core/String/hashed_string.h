@@ -79,7 +79,7 @@ namespace sw
         static constexpr uint32 kChunkShift     = 10;                  /**< 청크 크기의 비트 시프트(1024 = 2^10) */
         static constexpr uint32 kChunkSize      = 1u << kChunkShift;   /**< 청크 하나의 엔트리 수(1024) */
         static constexpr uint32 kChunkMask      = kChunkSize - 1u;     /**< 청크 안 오프셋 마스크 */
-        static constexpr uint32 kMaxChunks      = 64;                  /**< 최대 청크 수(총 65,536개) */
+        static constexpr uint32 kMaxChunks      = 1024;                /**< 최대 청크 수(총 1,048,576개). 예전 64(65,536개)는 파일이 채울 수 있었다 */
         static constexpr uint32 kNumShards      = 32;                  /**< 해시로 나눈 락 샤드 수 */
         static constexpr size_t kArenaBlockSize = size_t{ 64 } * 1024; /**< 문자열 아레나 블록 크기(64KB) */
 
@@ -162,6 +162,17 @@ namespace sw
             else
                 return StringUtil::computeHash64( text.data(), text.size() );
         }
+
+        /**
+         * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. **표에 넣지 않습니다.**
+         * @details 파일에서 읽은 이름으로 무엇을 **찾기만** 할 때 씁니다(타입 · 메서드). 등록된 것의 이름은 이미 표에 있으므로 표에 없으면
+         *          찾는 대상도 없습니다. 예전에는 찾으려고 intern 해서, 파일 하나가 서로 다른 이름 수만 개로 전역 표를 채울 수 있었고 차면
+         *          그 뒤 **엔진의 모든** 새 이름이 None 이 됐습니다.
+         */
+        static basic_hashed_string findInterned( std::basic_string_view<value_type> text ) noexcept;
+
+        /** @brief 전역 표에 intern 된 문자열 수입니다(진단 · 테스트). 줄지 않습니다. */
+        static uint32 getInternedCount() noexcept { return getAllocationInfo()._entryCount.load( std::memory_order_acquire ); }
 
         /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept { return _stringKeyIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) || size() == 0; }
@@ -501,6 +512,26 @@ namespace sw
         return 0;
     }
 
+    template <typename T, typename N>
+    basic_hashed_string<T, N> basic_hashed_string<T, N>::findInterned( std::basic_string_view<value_type> text ) noexcept
+    {
+        basic_hashed_string result;
+        if ( text.empty() )
+            return result;
+
+        auto&           info       = getAllocationInfo();
+        const hash_type hash       = computeHash( text );
+        const uint32    shardIndex = ( hash ^ ( hash >> 16 ) ) % kNumShards;
+        auto&           shard      = info._arrShard[shardIndex];
+        StringKey       lookupKey{ hash, text.data(), static_cast<size_type>( text.size() ) };
+
+        std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
+        const auto                          iter = shard._mapKeyToIndex.find( lookupKey );
+        if ( iter != shard._mapKeyToIndex.end() )
+            result._stringKeyIndex = iter->second;
+        return result;
+    }
+
     /** @brief 전역 intern 테이블에서 인덱스를 찾거나 넣습니다. */
     template <typename T, typename N>
     uint32 basic_hashed_string<T, N>::helper( const T* str, const size_type length ) noexcept
@@ -549,7 +580,7 @@ namespace sw
         const uint32 newIndex = info._entryCount.load( std::memory_order_relaxed );
         if ( newIndex >= kMaxChunks * kChunkSize )
         {
-            SW_LOG_ASSERT( false, "hashed_string 풀 용량(65,536개)을 초과했습니다!" );
+            SW_LOG_ASSERT( false, "hashed_string 풀 용량(1,048,576개)을 초과했습니다!" );
             return static_cast<uint32>( PredefinedNameType::NameType_None );
         }
 
