@@ -365,8 +365,10 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const basic_fixed_string& rhs )
         : _arrData{}
-        , _size{ rhs._size }
+        , _size{ rhs.size() }
     {
+        // 길이는 다시 잰다(`size()`). `data()` 로 버퍼에 직접 쓴 뒤라면(ImGui 입력칸 · formatstring) 캐시된 `_size` 가 틀려 있고, 예전에는 그
+        // 값으로 복사해 글자가 잘리거나 종료 문자 없이 옛 글자와 섞였다(`"world"` 에 캐시 0 인 `"hello"` 를 대입하면 `"horld"`).
         Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
     }
 
@@ -378,7 +380,7 @@ namespace sw
     {
         if ( this != &rhs )
         {
-            _size = rhs._size;
+            _size = rhs.size(); // 복사 생성자와 같은 이유로 다시 잰다.
             Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
         }
         return *this;
@@ -506,6 +508,15 @@ namespace sw
         const uint32 fitLength = clampToRemaining( currentSize, length );
         if ( fitLength == 0 )
             return *this;
+
+        // 넣을 글자가 이 버퍼 안에 있으면(`s.insert( 1, s.c_str() )`) 아래에서 뒤를 미는 순간 원본이 바뀐다. 먼저 떠 둔다.
+        T          arrSource[N + 1];
+        const bool bSourceInside = ( _arrData <= pStr ) && ( pStr < _arrData + N + 1 );
+        if ( bSourceInside )
+        {
+            Memory::copy( arrSource, pStr, sizeof( T ) * fitLength );
+            pStr = arrSource;
+        }
 
         Memory::move( _arrData + pos + fitLength, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
         Memory::copy( _arrData + pos, pStr, sizeof( T ) * fitLength );

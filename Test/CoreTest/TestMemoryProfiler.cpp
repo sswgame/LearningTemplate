@@ -110,3 +110,42 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
 
     profiler.shutdown();
 }
+
+/**
+ * @brief [MemoryProfilerTest] `getTopCallStacks` 를 되풀이해 불러도 현재 사용량이 줄지 않는다.
+ * @details 예전에는 결과 버퍼를 추적 가드 안에서 잡아 할당은 세지 않고, 호출한 쪽이 풀 때만 세어 현재 사용량이 줄기만 했다. 프로파일러
+ *          패널이 매 프레임 불러 태그 카운터가 0 에 붙었다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
+{
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+
+    const bool bWasTracking = pProfiler->isTrackingEnabled();
+    const bool bWasDetailed = pProfiler->isDetailedTrackingEnabled();
+    pProfiler->setTrackingEnabled( true );
+    pProfiler->setDetailedTrackingEnabled( true );
+
+    // 표에 항목이 있어야 결과 버퍼가 생긴다.
+    sw::vector<sw::vector<uint8>> listKeepAlive;
+    for ( uint32 index = 0; index < 64; ++index )
+        listKeepAlive.emplace_back( 256 + index );
+
+    const MemoryTag tag       = MemoryProfiler::getCurrentMemoryTag();
+    const uint64    before    = pProfiler->getStats( tag )._currentAllocatedBytes.load();
+    size_t          lastBytes = 0;
+    for ( uint32 repeat = 0; repeat < 64; ++repeat )
+    {
+        const sw::vector<CallStackAllocInfo> listTop = pProfiler->getTopCallStacks();
+        lastBytes                                    = listTop.capacity() * sizeof( CallStackAllocInfo );
+    }
+    const uint64 after = pProfiler->getStats( tag )._currentAllocatedBytes.load();
+
+    pProfiler->setDetailedTrackingEnabled( bWasDetailed );
+    pProfiler->setTrackingEnabled( bWasTracking );
+
+    // 다른 스레드의 할당이 섞여 들 수 있어 정확히 같을 필요는 없다. 예전 결함은 호출마다 버퍼 한 벌씩 줄어 64 벌 줄었다.
+    const uint64 drift = ( after < before ) ? ( before - after ) : 0;
+    SW_EXPECT_TRUE_MSG( drift < static_cast<uint64>( lastBytes ) * 8, "현재 사용량이 조회할 때마다 줄었습니다" );
+}

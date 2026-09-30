@@ -486,13 +486,29 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 키가 없을 때만 값을 제자리에서 생성해 넣습니다. */
+        /**
+         * @brief 키가 없을 때만 값을 만들어 넣습니다. **키가 있으면 인자를 건드리지 않습니다**(표준 계약).
+         * @details 예전에는 값을 먼저 만들어 넣어 보고 되돌려서, 키가 있어도 인자를 소비했습니다(`try_emplace( k, std::move( pOwned ) )` 가
+         *          키가 있을 때 `pOwned` 를 없앴다). 값은 괄호로 만듭니다 — 중괄호면 `try_emplace( k, 5 )` 가 `vector<int>{ 5 }` 가 됩니다.
+         */
         template <typename... Args>
-        pair<iterator, bool> try_emplace( const Key& k, Args&&... args ) { return emplace( k, T{ std::forward<Args>( args )... } ); }
+        pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
+        {
+            iterator it = find( k );
+            if ( it != end() )
+                return { it, false };
+            return emplace( k, T( std::forward<Args>( args )... ) );
+        }
 
-        /** @brief 키가 없을 때만 값을 제자리에서 생성해 넣습니다. */
+        /** @brief 키가 없을 때만 값을 만들어 넣습니다. 키가 있으면 인자를 건드리지 않습니다. */
         template <typename... Args>
-        pair<iterator, bool> try_emplace( Key&& k, Args&&... args ) { return emplace( std::move( k ), T{ std::forward<Args>( args )... } ); }
+        pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
+        {
+            iterator it = find( k );
+            if ( it != end() )
+                return { it, false };
+            return emplace( std::move( k ), T( std::forward<Args>( args )... ) );
+        }
 
         /** @brief 원소를 제자리에서 생성해 넣습니다. */
         template <typename... Args>

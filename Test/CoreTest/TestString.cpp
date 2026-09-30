@@ -1,7 +1,10 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/String/hashed_string.h"
 
 #include "TestFramework/TestFramework.h"
@@ -1507,4 +1510,58 @@ SW_TEST_CASE( StringTest, Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing )
     const sw::wstring hangul = sw::StringUtil::utf8ToUtf16( "가/" );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( hangul.size() ) );
     SW_EXPECT_TRUE( hangul[0] == 0xAC00 && hangul[1] == L'/' );
+}
+
+namespace
+{
+    enum class SignedCodeInternal : int32
+    {
+        Negative = -1,
+        Positive = 3
+    };
+} // namespace
+
+/**
+ * @brief [StringTest] 0 채움은 부호 뒤에 붙고, 부호 있는 열거형은 음수로 찍히고, 버퍼 끝에서는 UTF-8 글자 경계에서 자른다.
+ * @details 예전에는 "%05d" 로 -42 가 "00-42", 열거형 -1 이 18446744073709551615 였고, 버퍼 끝에 걸친 한글 한 글자가 깨진 바이트로 남았다.
+ */
+SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
+{
+    sw::fixed_string<sw::constant::kMaxBuffer64> text;
+    sw::formatstring( text.data(), text.capacity(), "%05d", -42 );
+    SW_EXPECT_STREQ( "-0042", text.c_str() );
+
+    sw::formatstring( text.data(), text.capacity(), "%#", SignedCodeInternal::Negative );
+    SW_EXPECT_STREQ( "-1", text.c_str() );
+
+    // 버퍼 5 바이트(글자 4 바이트 + 종료) 에 "가나"(6 바이트) — "가" 3 바이트만 남아야 한다.
+    utf8 arrSmall[5]{};
+    sw::formatstring( arrSmall, 5, "%#", "가나" );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( arrSmall ) );
+    SW_EXPECT_STREQ( "가", arrSmall );
+}
+
+/**
+ * @brief [StringTest] `fixed_string` 은 `data()` 로 직접 쓴 뒤에도 복사가 맞고, 자기 자신을 끼워 넣어도 맞다. `StringBuilder` 는 자기 내용을 이어 붙여도 맞다.
+ */
+SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
+{
+    sw::fixed_string<sw::constant::kMaxBuffer64> source;
+    std::memcpy( source.data(), "hello", 6 ); // ImGui 입력칸처럼 버퍼에 직접 쓴다 — 캐시된 길이는 0 그대로다
+    sw::fixed_string<sw::constant::kMaxBuffer64> target = "world";
+    target                                              = source;
+    SW_EXPECT_STREQ( "hello", target.c_str() );
+    const sw::fixed_string<sw::constant::kMaxBuffer64> copied( source );
+    SW_EXPECT_STREQ( "hello", copied.c_str() );
+
+    sw::fixed_string<sw::constant::kMaxBuffer64> selfInsert = "abc";
+    selfInsert.insert( 1, selfInsert.c_str() );
+    SW_EXPECT_STREQ( "aabcbc", selfInsert.c_str() );
+
+    sw::StringBuilder<sw::constant::kMaxBuffer16> builder;
+    builder.append( "0123456789" );
+    for ( uint32 repeat = 0; repeat < 4; ++repeat )
+        builder.append( builder.view() );
+    SW_EXPECT_EQUAL( 160u, static_cast<uint32>( builder.view().size() ) );
+    SW_EXPECT_TRUE( builder.view().substr( 150 ) == "0123456789" );
 }

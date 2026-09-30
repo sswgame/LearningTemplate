@@ -383,15 +383,24 @@ namespace sw
 
     vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
+        // 결과 버퍼는 **가드 밖에서** 잡는다. 예전에는 가드(`t_bIsInsideProfiler`)를 켠 뒤 reserve 해서 이 할당은 세지 않고, 호출한 쪽이
+        // 가드 밖에서 풀 때는 세어 현재 사용량이 줄기만 했다(프로파일러 패널이 매 프레임 불러 태그 카운터가 0 에 붙었다). 표가 자란 만큼만
+        // 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
+        size_t entryCount{ 0 };
+        {
+            std::scoped_lock<mutex> lock{ _stackMapMutex };
+            entryCount = _mapCallStackAllocInfo.size();
+        }
         vector<CallStackAllocInfo> listResult;
+        listResult.reserve( entryCount + entryCount / 4 + 16 );
+
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
         {
             std::scoped_lock<mutex> lock{ _stackMapMutex };
-            listResult.reserve( _mapCallStackAllocInfo.size() );
             for ( const auto& [hash, info] : _mapCallStackAllocInfo )
             {
                 const bool bIncluded = ( order == TopCallStackOrder::LiveBytes ) ? ( info._currentBytes > 0 ) : ( info._totalCount > 0 );
-                if ( bIncluded )
+                if ( bIncluded && listResult.size() < listResult.capacity() )
                     listResult.push_back( info );
             }
         }

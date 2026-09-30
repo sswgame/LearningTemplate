@@ -1391,3 +1391,32 @@ SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolOwnsOnlyItsOwnBlocks )
     pool.release( pMine );
     other.release( pTheirs );
 }
+
+/**
+ * @brief [DataStructureTest] `try_emplace` 는 키가 있으면 인자를 건드리지 않고, 값을 괄호로 만든다. `map::upper_bound` 가 스칼라 키로 동작한다.
+ * @details 예전 `try_emplace` 는 값을 먼저 만들어 넣어 보고 되돌려 키가 있어도 옮겨 받은 인자를 없앴고, 중괄호로 만들어 `try_emplace( k, 5 )` 가
+ *          원소 하나(5)짜리 벡터가 됐다. `map` 비교자의 (키, 원소) 쪽은 키에서 `.first` 를 읽어 스칼라 키로 `upper_bound` 가 컴파일되지 않았다.
+ */
+SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
+{
+    sw::unordered_map<int32, sw::unique_ptr<int32>> mapOwned;
+    mapOwned.try_emplace( 1, sw::make_unique<int32>( 10 ) );
+
+    sw::unique_ptr<int32> pSecond = sw::make_unique<int32>( 20 );
+    const auto            result  = mapOwned.try_emplace( 1, std::move( pSecond ) );
+    SW_EXPECT_FALSE( result.second );
+    SW_EXPECT_TRUE_MSG( pSecond != nullptr, "키가 있는데 옮겨 받은 인자가 사라졌습니다" );
+    SW_EXPECT_EQUAL( 10, *mapOwned.find( 1 )->second );
+
+    sw::unordered_map<int32, sw::vector<int32>> mapList;
+    mapList.try_emplace( 7, 5 );
+    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
+
+    sw::map<int32, int32> mapSorted;
+    mapSorted.insert( { 10, 1 } );
+    mapSorted.insert( { 20, 2 } );
+    mapSorted.insert( { 30, 3 } );
+    const auto upper = mapSorted.upper_bound( 20 );
+    SW_ASSERT_TRUE( upper != mapSorted.end() );
+    SW_EXPECT_EQUAL( 30, upper->first );
+}

@@ -137,6 +137,8 @@ namespace sw
 
         /** @brief NaN(Not a Number)인지 확인합니다. */
         [[nodiscard]] static SW_INLINE bool isNan( const float32 value ) noexcept { return std::isnan( value ); }
+        /** @brief 무한대도 NaN 도 아닌 수이면 true 입니다. */
+        [[nodiscard]] static SW_INLINE bool isFinite( const float32 value ) noexcept { return std::isfinite( value ); }
         [[nodiscard]] static SW_INLINE bool isNan( const float64 value ) noexcept { return std::isnan( value ); }
 
         /** @brief 역제곱근(1 / sqrt(x))을 계산합니다. */

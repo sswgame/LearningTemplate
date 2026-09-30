@@ -382,8 +382,11 @@ namespace sw
 
     float4x4::float4x4( const float32* pArray ) noexcept
     {
+        // nullptr 이면 예전에는 원소를 채우지 않아 쓰레기 값이 남았다. 기본 생성과 같은 항등 행렬로 둔다.
         if ( pArray != nullptr )
             Memory::copy( &_11, pArray, sizeof( float32 ) * 16 );
+        else
+            *this = Identity;
     }
 
     float4x4 float4x4::createTranslation( const float3& position ) noexcept
@@ -572,6 +575,12 @@ namespace sw
             return false;
         }
 
+        // 거울 변환(3x3 행렬식이 음수)은 축 길이만으로는 알 수 없다. 길이는 늘 양수라서, 예전에는 반사가 섞인 행렬을 회전으로 보고
+        // 쿼터니언으로 바꿔 쓰레기 회전이 나왔다(거울 본 포즈를 블렌드할 때). X 스케일에 부호를 싣는다(DirectXMath · 언리얼과 같은 선택).
+        const float32 det3x3 = _11 * ( _22 * _33 - _23 * _32 ) - _12 * ( _21 * _33 - _23 * _31 ) + _13 * ( _21 * _32 - _22 * _31 );
+        if ( det3x3 < 0.f )
+            outScale._x = -outScale._x;
+
         float4x4 rotMat = *this;
         rotMat._11 /= outScale._x;
         rotMat._12 /= outScale._x;
@@ -698,12 +707,18 @@ namespace sw
 
     float4x4 float4x4::invert() const noexcept
     {
+        // 뒤집을 수 없으면 항등 행렬이다(언리얼 FMatrix::Inverse 와 같은 규칙: 행렬식이 **정확히** 0 이거나 수가 아닐 때).
+        // 예전에는 |det| < 1e-7 이라는 절대 임계값이라, 균일 스케일 0.004 이하의 부모(det 6.4e-8)나 높이 200 인 직교 카메라의
+        // 뷰-투영(det 5.6e-8)처럼 멀쩡히 뒤집히는 행렬이 항등 행렬이 됐다 — 자식이 재부모화 · 드래그 때 튀고, 마우스 피킹이 틀렸다.
+        // 행렬식은 스케일의 세제곱으로 줄어서 "작다" 는 기준을 절대값으로 정할 수 없다.
         const float32 det = determinant();
-        if ( MathUtil::abs( det ) < 1e-7f )
+        if ( det == 0.0f || MathUtil::isFinite( det ) == false )
             return Identity;
 
         const float32 invDet = 1.0f / det;
-        float4x4      result{};
+        if ( MathUtil::isFinite( invDet ) == false )
+            return Identity;
+        float4x4 result{};
 
         result._11 = ( _22 * ( _33 * _44 - _34 * _43 ) - _23 * ( _32 * _44 - _34 * _42 ) + _24 * ( _32 * _43 - _33 * _42 ) ) * invDet;
         result._12 = -( _12 * ( _33 * _44 - _34 * _43 ) - _13 * ( _32 * _44 - _34 * _42 ) + _14 * ( _32 * _43 - _33 * _42 ) ) * invDet;

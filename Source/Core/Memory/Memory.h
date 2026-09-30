@@ -47,6 +47,19 @@ namespace sw
     {
     };
 
+    /**
+     * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned` · `freeAligned`)으로 잡아야 하는지입니다.
+     * @details **`sw_new` · `sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
+     *          고르는 경계(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`, x64 에서 16)입니다. `Memory::allocate` 는 16 바이트 정렬을 보장합니다(헤더 48 바이트).
+     *
+     *          예전에는 해제 쪽만 `alignof( std::max_align_t )` 를 봤습니다. MSVC 에서 그 값은 **8** 이라, 16 바이트 정렬 타입이 `sw_new`(일반
+     *          할당)로 잡히고 `sw_delete`(정렬 해제)로 풀려 힙이 깨졌습니다. 64 바이트 정렬 타입(`ParallelGroup` 등)은 `sw_new` 에 정렬 오버로드가
+     *          없어 일반 할당(16 바이트 정렬)으로 잡혀 정렬 자체가 틀렸고, 풀 때는 정렬 해제였습니다. `Allocator` 는 정렬을 아예 보지 않아
+     *          `vector` · `make_shared` 에 담긴 과정렬 타입도 16 바이트 정렬이었습니다.
+     */
+    template <typename T>
+    inline constexpr bool kUsesAlignedAllocation = alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+
     template <typename T>
     struct Allocator
     {
@@ -68,13 +81,23 @@ namespace sw
             if ( n > ( ~size_t( 0 ) ) / sizeof( T ) )
                 throw std::bad_alloc();
 
-            T* p = static_cast<T*>( Memory::allocate( n * sizeof( T ) ) );
+            T* p{ nullptr };
+            if constexpr ( kUsesAlignedAllocation<T> )
+                p = static_cast<T*>( Memory::allocateAligned( n * sizeof( T ), alignof( T ) ) );
+            else
+                p = static_cast<T*>( Memory::allocate( n * sizeof( T ) ) );
             if ( p != nullptr )
                 return p;
             throw std::bad_alloc();
         }
 
-        void deallocate( T* p, size_t ) noexcept { Memory::free( static_cast<void*>( p ) ); }
+        void deallocate( T* p, size_t ) noexcept
+        {
+            if constexpr ( kUsesAlignedAllocation<T> )
+                Memory::freeAligned( static_cast<void*>( p ) );
+            else
+                Memory::free( static_cast<void*>( p ) );
+        }
     };
 
     template <typename T, typename U>
@@ -84,11 +107,15 @@ namespace sw
     bool operator!=( const Allocator<T>&, const Allocator<U>& ) { return false; }
 } // namespace sw
 
-// sw_new 용 전역 placement new/delete 오버로드
+// sw_new 용 전역 placement new/delete 오버로드. 정렬이 기본(16)보다 큰 타입은 컴파일러가 align_val_t 판을 고른다(kUsesAlignedAllocation).
 inline void* operator new( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
 inline void* operator new[]( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
 inline void  operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
 inline void  operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
+inline void* operator new( size_t size, std::align_val_t alignment, sw::MemoryAllocTag ) { return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) ); }
+inline void* operator new[]( size_t size, std::align_val_t alignment, sw::MemoryAllocTag ) { return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) ); }
+inline void  operator delete( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept { sw::Memory::freeAligned( pPtr ); }
+inline void  operator delete[]( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept { sw::Memory::freeAligned( pPtr ); }
 
 template <typename T>
 void sw_delete_func( T* pPtr )
@@ -96,7 +123,7 @@ void sw_delete_func( T* pPtr )
     if ( pPtr != nullptr )
     {
         pPtr->~T();
-        if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
+        if constexpr ( sw::kUsesAlignedAllocation<T> )
             sw::Memory::freeAligned( pPtr );
         else
             sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
@@ -117,7 +144,7 @@ void sw_delete_array_func( T* pPtr )
                    "sw_delete_array 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 new[]/delete[] 짝을 쓰세요." );
     if ( pPtr != nullptr )
     {
-        if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
+        if constexpr ( sw::kUsesAlignedAllocation<T> )
             sw::Memory::freeAligned( pPtr );
         else
             sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
@@ -159,7 +186,7 @@ namespace sw
     template <typename T, typename... Args>
     unique_ptr<T> make_unique( Args&&... args )
     {
-        if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
+        if constexpr ( kUsesAlignedAllocation<T> )
         {
             void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )

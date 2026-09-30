@@ -891,13 +891,15 @@ namespace sw
     template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
     inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, InputIt first, InputIt last )
     {
-        size_t offset = static_cast<size_t>( pos - _pData );
+        const size_t startOffset = static_cast<size_t>( pos - _pData );
+        size_t       offset      = startOffset;
         for ( auto it = first; it != last; ++it )
         {
             insert( _pData + offset, *it );
             ++offset;
         }
-        return _pData + ( pos - _pData );
+        // 넣는 도중 버퍼가 늘면 `pos` 는 옛 버퍼를 가리킨다. 예전에는 `pos - _pData`(새 버퍼)를 빼서 엉뚱한 곳을 돌려줬다.
+        return _pData + startOffset;
     }
 
     template <typename T, typename Allocator>
@@ -1059,9 +1061,19 @@ namespace sw
         {
             // 위 오버로드와 같은 이유로 두 배 이상 늘린다.
             if ( count > _capacity )
+            {
+                // `value` 가 이 버퍼의 원소면(`v.resize( n, v[0] )`) 늘리는 순간 옛 버퍼와 함께 해제된다. 먼저 떠 둔다 — push_back ·
+                // insert 가 이미 지키는 규칙이고, std::vector 도 이 호출을 허용한다. 예전에는 해제된 메모리에서 복사했다.
+                const T valueCopy( value );
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
-            for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-                sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
+                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
+                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( valueCopy );
+            }
+            else
+            {
+                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
+                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
+            }
         }
         _size = count;
     }

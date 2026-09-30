@@ -165,10 +165,16 @@ namespace sw
                 return *this;
 
             const uint32 svSize = static_cast<uint32>( sv.size() );
+            // 자기 내용을 이어 붙이면(`sb.append( sb.view() )`) 늘리는 순간 원본이 해제된다. 위치를 떠 뒀다가 새 버퍼에서 다시 가리킨다.
+            const utf8*  pSource      = sv.data();
+            const bool   bInside      = ( _pBuffer <= pSource ) && ( pSource < _pBuffer + _capacity );
+            const size_t sourceOffset = bInside ? static_cast<size_t>( pSource - _pBuffer ) : 0;
             if ( ensureCapacity( svSize ) == false )
                 return *this;
+            if ( bInside )
+                pSource = _pBuffer + sourceOffset;
 
-            Memory::copy( _pBuffer + _length, sv.data(), svSize );
+            Memory::copy( _pBuffer + _length, pSource, svSize );
             _length += svSize;
             _pBuffer[_length] = '\0';
             return *this;
@@ -190,8 +196,13 @@ namespace sw
             if ( pStr == nullptr || strLen == 0 )
                 return *this;
 
+            // `append( string_view )` 와 같은 이유로 자기 버퍼를 가리키면 늘린 뒤 다시 가리킨다.
+            const bool   bInside      = ( _pBuffer <= pStr ) && ( pStr < _pBuffer + _capacity );
+            const size_t sourceOffset = bInside ? static_cast<size_t>( pStr - _pBuffer ) : 0;
             if ( ensureCapacity( strLen ) == false )
                 return *this;
+            if ( bInside )
+                pStr = _pBuffer + sourceOffset;
 
             Memory::copy( _pBuffer + _length, pStr, strLen );
             _length += strLen;

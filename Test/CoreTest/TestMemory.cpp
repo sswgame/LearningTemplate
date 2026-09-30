@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/LockFreeObjectPool.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
@@ -533,4 +534,47 @@ SW_TEST_CASE( MemoryTest, PoolFreeListDoesNotLoopAfterChurn )
 
     // 고리가 생겼으면 여기가 1 이 된다.
     SW_EXPECT_EQUAL( size_t( kBlockCount ), setFresh.size() );
+}
+
+namespace
+{
+    struct alignas( 64 ) CacheLineAlignedInternal
+    {
+        uint8 _value{ 7 };
+    };
+
+    struct alignas( 16 ) SixteenAlignedInternal
+    {
+        float32 _arrValue[4]{ 1.f, 2.f, 3.f, 4.f };
+    };
+} // namespace
+
+/**
+ * @brief [MemoryTest] `sw_new` 로 만든 과정렬 타입은 제 정렬로 잡히고, `sw_delete` 는 같은 힙 계열로 푼다.
+ * @details 예전에는 `sw_new` 에 정렬 오버로드가 없어 64 바이트 정렬 타입(`ParallelGroup` 등)이 16 바이트 정렬로 잡혔고, `sw_delete` 는
+ *          정렬 해제(`_aligned_free`)로 풀었다. 16 바이트 정렬 타입은 MSVC 의 `max_align_t` 가 8 이라 해제만 정렬 해제였다 — 힙이 깨진다.
+ */
+SW_TEST_CASE( MemoryTest, SwNewHonoursOverAlignmentAndMatchesSwDelete )
+{
+    for ( uint32 repeat = 0; repeat < 32; ++repeat )
+    {
+        CacheLineAlignedInternal* pLine = sw_new CacheLineAlignedInternal();
+        SW_ASSERT_NOT_NULL( pLine );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pLine ) % 64 ) );
+        SW_EXPECT_EQUAL( 7u, static_cast<uint32>( pLine->_value ) );
+        sw_delete( pLine );
+
+        SixteenAlignedInternal* pSixteen = sw_new SixteenAlignedInternal();
+        SW_ASSERT_NOT_NULL( pSixteen );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pSixteen ) % 16 ) );
+        sw_delete( pSixteen );
+
+        sw::unique_ptr<CacheLineAlignedInternal> pOwned = sw::make_unique<CacheLineAlignedInternal>();
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pOwned.get() ) % 64 ) );
+    }
+
+    // 컨테이너(`sw::Allocator`)도 원소 정렬을 지킨다.
+    sw::vector<CacheLineAlignedInternal> listLine;
+    listLine.resize( 5 );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( listLine.data() ) % 64 ) );
 }

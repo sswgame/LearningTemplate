@@ -244,6 +244,21 @@ namespace sw
         return float3{ MathUtil::hermite( p1._x, slope1._x, p2._x, slope2._x, t ), MathUtil::hermite( p1._y, slope1._y, p2._y, slope2._y, t ), MathUtil::hermite( p1._z, slope1._z, p2._z, slope2._z, t ) };
     }
 
+    float3 float3::refract( const float3& source, const float3& normal, float32 refractionIndex ) noexcept
+    {
+        // 선언만 있고 정의가 없어서, 부르는 순간 링크가 실패했다. 식은 DirectXMath XMVector3Refract 와 같다(법선은 단위 벡터로 만든다).
+        // 전반사(근이 음수)면 영 벡터다.
+        const float32 normalLenSq = normal.getLengthSquared();
+        if ( normalLenSq < MathUtil::Epsilon )
+            return source;
+        const float3  direction   = normal / MathUtil::sqrt( normalLenSq );
+        const float32 incidentDot = source.dot( direction );
+        const float32 radicand    = 1.f - refractionIndex * refractionIndex * ( 1.f - incidentDot * incidentDot );
+        if ( radicand < 0.f )
+            return float3{};
+        return refractionIndex * source - ( refractionIndex * incidentDot + MathUtil::sqrt( radicand ) ) * direction;
+    }
+
     float3 float3::reflect( const float3& source, const float3& normal ) noexcept
     {
         const float32 normalLenSq = normal.getLengthSquared();

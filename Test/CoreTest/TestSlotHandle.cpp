@@ -231,3 +231,23 @@ SW_TEST_CASE( SlotHandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
     SW_ASSERT_NOT_NULL( table.get( reused ) );
     SW_EXPECT_EQUAL( 88, *table.get( reused ) );
 }
+
+/**
+ * @brief [SlotHandleTableTest] `clear` 뒤에 새로 넣은 값을 비우기 전의 핸들로 꺼낼 수 없다.
+ * @details 예전 `clear` 는 슬롯을 버리고 세대를 1 부터 다시 시작해, 비우기 전의 `(0, 1)` 핸들이 새 값으로 풀렸다.
+ */
+SW_TEST_CASE( SlotHandleTableTest, ClearKeepsOldHandlesInvalid )
+{
+    sw::SlotHandleTable<int32> table;
+    const sw::SlotHandle       oldHandle = table.insert( 100 );
+    SW_ASSERT_NOT_NULL( table.get( oldHandle ) );
+
+    table.clear();
+    SW_EXPECT_TRUE( table.empty() );
+    SW_EXPECT_TRUE( table.get( oldHandle ) == nullptr );
+
+    const sw::SlotHandle newHandle = table.insert( 200 );
+    SW_ASSERT_NOT_NULL( table.get( newHandle ) );
+    SW_EXPECT_EQUAL( 200, *table.get( newHandle ) );
+    SW_EXPECT_TRUE_MSG( table.get( oldHandle ) == nullptr, "비우기 전의 핸들이 새 값을 가리킵니다" );
+}

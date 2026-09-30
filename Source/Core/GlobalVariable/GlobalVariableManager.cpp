@@ -273,7 +273,11 @@ namespace sw
             case GlobalVariableType::String:
             {
                 if ( std::holds_alternative<string>( _defaultValue ) )
+                {
+                    // 문자열 읽기(`getValueAsString`)는 이 락을 잡고 복사한다. 쓰는 쪽도 잡아야 복사 도중 재할당된 버퍼를 읽지 않는다.
+                    std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                     *static_cast<string*>( _pData ) = std::get<string>( _defaultValue );
+                }
                 break;
             }
             default:
@@ -367,7 +371,10 @@ namespace sw
                 string val;
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    *static_cast<string*>( info->_pData ) = std::move( val );
+                    {
+                        std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                        *static_cast<string*>( info->_pData ) = std::move( val );
+                    }
                     if ( info->_onValueChanged.isBound() )
                         info->_onValueChanged( info.get() );
                 }
@@ -542,7 +549,10 @@ namespace sw
                     case GlobalVariableType::String:
                     {
                         if ( std::holds_alternative<string>( info->_defaultValue ) )
+                        {
+                            std::unique_lock<std::shared_mutex> stringLock{ GlobalVariableInternal::s_stringVarMutex };
                             *static_cast<string*>( info->_pData ) = std::get<string>( info->_defaultValue );
+                        }
                         break;
                     }
                     default:

@@ -628,3 +628,53 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
         SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pActualYaw[elementIndex], 1e-5f );
 }
+
+/**
+ * @brief [MathTest] 행렬식이 작아도 뒤집히는 행렬은 뒤집힌다. 거울 행렬의 분해 · 굴절 · nullptr 생성도 맞다.
+ * @details 예전 `invert` 는 |det| < 1e-7 을 특이로 봐서, 균일 스케일 0.001(det 1e-9)이나 높이 200 인 직교 투영(det 5.6e-8)이 항등 행렬이 됐다.
+ *          `decompose` 는 거울 행렬의 반사를 회전으로 봤고, `float3::refract` 는 선언만 있었다.
+ */
+SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
+{
+    const sw::float4x4 tinyScale = sw::float4x4::createScale( 0.001f ) * sw::float4x4::createTranslation( 5.f, -3.f, 2.f );
+    const sw::float4x4 roundTrip = tinyScale * tinyScale.invert();
+    for ( uint32 row = 0; row < 4; ++row )
+    {
+        for ( uint32 column = 0; column < 4; ++column )
+        {
+            const float32 expected = ( row == column ) ? 1.f : 0.f;
+            SW_EXPECT_NEAR_EQUAL( expected, ( &roundTrip._11 )[row * 4 + column], 1e-3f );
+        }
+    }
+
+    // 높이 200 · 깊이 1000 인 직교 투영
+    const sw::float4x4 ortho        = sw::float4x4::createScale( 2.f / 355.f, 2.f / 200.f, 1.f / 1000.f );
+    const sw::float4x4 orthoInverse = ortho.invert();
+    SW_EXPECT_NEAR_EQUAL( 355.f / 2.f, orthoInverse._11, 1e-2f );
+    SW_EXPECT_NEAR_EQUAL( 100.f, orthoInverse._22, 1e-2f );
+
+    // 거울(X 반전) 행렬을 분해해 다시 합치면 원래 행렬이다.
+    const sw::float4x4 mirrored = sw::float4x4::createScale( -2.f, 3.f, 4.f ) * sw::float4x4::createRotationY( 0.7f ) * sw::float4x4::createTranslation( 1.f, 2.f, 3.f );
+    sw::float3         scale{};
+    sw::quaternion     rotation{};
+    sw::float3         translation{};
+    SW_ASSERT_TRUE( mirrored.decompose( scale, rotation, translation ) );
+    SW_EXPECT_TRUE( scale._x < 0.f );
+    const sw::float4x4 recomposed = sw::float4x4::createScale( scale ) * sw::float4x4::createFromQuaternion( rotation ) * sw::float4x4::createTranslation( translation );
+    for ( uint32 row = 0; row < 4; ++row )
+    {
+        for ( uint32 column = 0; column < 4; ++column )
+            SW_EXPECT_NEAR_EQUAL( ( &mirrored._11 )[row * 4 + column], ( &recomposed._11 )[row * 4 + column], 1e-3f );
+    }
+
+    // 굴절: 굴절률 1 이면 그대로, 전반사면 영 벡터
+    const sw::float3 incident = sw::float3{ 1.f, -1.f, 0.f }.normalize();
+    const sw::float3 same     = sw::float3::refract( incident, sw::float3{ 0.f, 1.f, 0.f }, 1.f );
+    SW_EXPECT_NEAR_EQUAL( incident._x, same._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( incident._y, same._y, 1e-4f );
+    const sw::float3 total = sw::float3::refract( incident, sw::float3{ 0.f, 1.f, 0.f }, 1.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.f, total.getLength(), 1e-6f );
+
+    const sw::float4x4 fromNull( static_cast<const float32*>( nullptr ) );
+    SW_EXPECT_TRUE( fromNull == sw::float4x4::Identity );
+}

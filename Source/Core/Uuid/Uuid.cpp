@@ -3,6 +3,9 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+
+#include <random>
 
 namespace sw
 {
@@ -28,10 +31,17 @@ namespace sw
 {
     Uuid Uuid::generate()
     {
+        // 난수는 운영체제에서 곧바로 받는다(std::random_device — Windows 는 RtlGenRandom, 리눅스는 getrandom). 예전에는 32 비트 씨앗 하나로
+        // 시작한 mt19937_64 에서 뽑아, 서로 다른 실행이 같은 씨앗을 뽑으면 **같은 GUID 열**이 다시 나왔다(씨앗이 2^32 가지뿐이라 편집기를 수만
+        // 번 열면 일어난다). 에셋 GUID 는 여러 사람의 작업이 저장소에서 합쳐지므로 겹치면 참조가 엉뚱한 에셋으로 풀린다. 언리얼의
+        // FGuid::NewGuid 도 OS 의 GUID 를 쓴다. random_device 는 스레드 안전이 약속되지 않아 스레드마다 둔다.
+        thread_local std::random_device t_randomDevice;
+
         Uuid uuid{};
-        for ( uint8& byteVal : uuid._arrBytes )
+        for ( uint32 wordIndex = 0; wordIndex < 4; ++wordIndex )
         {
-            byteVal = static_cast<uint8>( MathUtil::getRandomRange<uint32>( 0, 255 ) );
+            const uint32 randomWord = static_cast<uint32>( t_randomDevice() );
+            Memory::copy( uuid._arrBytes + wordIndex * 4, &randomWord, sizeof( randomWord ) );
         }
 
         // 버전 4

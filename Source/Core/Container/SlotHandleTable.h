@@ -150,13 +150,20 @@ namespace sw
         /** @brief 테이블이 비어 있는지 반환합니다. */
         bool empty() const { return size() == 0; }
 
-        /** @brief 모든 슬롯을 비웁니다. 락 없이 `get` 하는 스레드가 없을 때만 부릅니다(청크를 해제합니다). */
+        /**
+         * @brief 모든 슬롯을 비웁니다. **세대는 이어 갑니다** — 비우기 전에 받은 핸들은 비운 뒤 새로 넣은 값을 가리키지 않습니다.
+         * @details 예전에는 청크를 해제하고 슬롯 수를 0 으로 돌려, 다시 넣으면 0 번 슬롯이 세대 1 로 발행됐습니다. 그러면 비우기 전의
+         *          `(0, 1)` 핸들이 새 값으로 풀렸습니다 — 핸들이 막으려던 바로 그 일입니다. 청크는 남깁니다(다시 채울 때 씁니다).
+         */
         void clear()
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _listSlot.releaseChunks();
-            _slotCount = 0;
-            _listFree.clear();
+            for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
+            {
+                Slot* pSlot = _listSlot.find( slotIndex );
+                if ( pSlot != nullptr && pSlot->isOccupied( std::memory_order_relaxed ) )
+                    freeSlot( slotIndex, *pSlot );
+            }
         }
 
     private:

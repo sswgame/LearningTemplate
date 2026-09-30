@@ -2021,6 +2021,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ④ Core — 과정렬 할당 짝 불일치, 역행렬 절대 임계값, 자기 참조 컨테이너 · 문자열, 핸들 표 세대, UUID 씨앗)
+
+**무엇이 틀렸나 · 고친 것.**
+- **`sw_new` / `sw_delete` 의 힙 계열이 어긋났다.** 해제는 `alignof( T ) > alignof( std::max_align_t )` 면 정렬 해제였는데, MSVC 에서 그 값은
+  **8** 이라 16 바이트 정렬 타입도 해제만 `_aligned_free` 였다(할당은 일반 `malloc`). 64 바이트 정렬 타입(`ParallelGroup` · 모듈 export 의
+  `GameClass` 등)은 `sw_new` 에 정렬 오버로드가 없어 16 바이트 정렬로 잡혔다. `sw::Allocator` 는 정렬을 보지 않아 `vector` · `make_shared` 의
+  과정렬 원소도 16 바이트였다. → 기준 하나 `kUsesAlignedAllocation<T>`(= `alignof > __STDCPP_DEFAULT_NEW_ALIGNMENT__`)를 `sw_delete` ·
+  `sw_delete_array` · `make_unique` · `Allocator` 가 같이 쓰고, `operator new( size_t, align_val_t, MemoryAllocTag )` 짝을 더했다.
+- **`float4x4::invert` 가 |det| < 1e-7 을 특이로 봤다.** 행렬식은 스케일의 세제곱으로 줄어, 균일 스케일 0.004 이하의 부모 · 높이 200 인 직교
+  카메라가 항등 행렬이 됐다(재부모화 때 튐 · 피킹 틀림). → 언리얼 `FMatrix::Inverse` 와 같이 **정확히 0 이거나 수가 아닐 때만** 항등.
+  `decompose` 는 거울(3x3 행렬식 음수)을 X 스케일 부호로 싣는다. 선언만 있던 `float3::refract` 정의. `float4x4( nullptr )` 는 항등.
+- **자기 참조:** `vector::resize( n, v[0] )` 가 늘린 뒤 해제된 옛 버퍼에서 복사했다(먼저 떠 둔다). 범위 `insert` 가 늘어난 뒤 엉뚱한 반복자를
+  돌려줬다. `fixed_string` 은 `data()` 로 쓴 뒤 캐시된 길이로 복사했고(`"horld"`), `insert( 1, s.c_str() )` 가 겹친 복사였다.
+  `StringBuilder::append( sb.view() )` 는 늘리는 순간 원본을 해제했다.
+- `unordered_map::try_emplace` 가 키가 있어도 인자를 소비했고 값을 중괄호로 만들었다. `map` 비교자의 (키, 원소) 쪽이 키에서 `.first` 를
+  읽었다(`upper_bound` 가 스칼라 키로 컴파일되지 않음).
+- `formatstring`: `"%05d"` 로 -42 가 `"00-42"`, 부호 있는 열거형 -1 이 18446744073709551615, 버퍼 끝에서 UTF-8 글자를 반으로 잘랐다.
+- `SlotHandleTable::clear` 가 세대를 1 부터 다시 시작해 비우기 전 핸들이 새 값으로 풀렸다 → 세대를 이어 간다.
+- `Uuid::generate` 가 32 비트 씨앗 하나의 `mt19937_64` 였다(실행 사이 같은 GUID 열이 나올 수 있다) → OS 난수(`random_device`).
+- `MemoryProfiler::getTopCallStacks` 가 결과 버퍼를 추적 가드 안에서 잡아 현재 사용량이 조회마다 줄었다 → 가드 밖에서 잡는다.
+- Dev 빌드의 `Memory::free` 가 엔진이 할당하지 않은 블록(이중 해제 · 남의 포인터)을 조용히 넘겼다 — 배포본에서는 진짜 이중 해제다 → stderr 로
+  알린다. 전체 테스트 · App 60 프레임에서 0 건이었다.
+- 전역 변수의 문자열 쓰기 셋(`resetToDefault` · `resetAllToDefault` · 커맨드라인 적용)이 읽기가 잡는 락 없이 대입했다.
+
+**확인.** 새 테스트 여덟(`MemoryTest.SwNewHonoursOverAlignmentAndMatchesSwDelete` · `MemoryProfilerTest.TopCallStackQueryDoesNotDriftLiveCounters` ·
+`VectorTest.ResizeFromOwnElementAndRangeInsertIterator` · `DataStructureTest.TryEmplaceKeepsArgumentsAndMapUpperBound` ·
+`SlotHandleTableTest.ClearKeepsOldHandlesInvalid` · `StringTest.FormatSignPaddingSignedEnumAndUtf8Truncation` ·
+`StringTest.FixedStringAndBuilderSelfReference` · `MathTest.SmallDeterminantMirrorRefractAndNullConstruct`). Debug nogpu+린트 28/28,
+Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ③ 크래시 보고 — 스택 오버플로 · abort · 순수 가상 호출로 죽으면 아무것도 남지 않았다, 크래시 직전 로그 유실)
 
 **무엇이 틀렸나(실측).** 엔진 핸들러와 같은 모양의 탐침 프로그램으로 죽는 방식마다 재 봤다.

@@ -542,3 +542,28 @@ SW_TEST_CASE( VectorTest, RemoveSwapMovesTheLastElementIntoTheGap )
     SW_ASSERT_EQUAL( size_t( 1 ), listOwned.size() );
     SW_EXPECT_EQUAL( 2, *listOwned[0] );
 }
+
+/**
+ * @brief [VectorTest] `resize( n, v[0] )` 처럼 자기 원소로 늘려도 값이 맞다. 범위 `insert` 는 넣은 첫 원소를 돌려준다.
+ * @details 예전 `resize` 는 버퍼를 늘려 옛 버퍼를 해제한 뒤 `value`(옛 버퍼의 원소)를 복사했다. 범위 `insert` 는 늘어난 뒤 옛 `pos` 에서 새
+ *          버퍼 주소를 빼 엉뚱한 반복자를 돌려줬다.
+ */
+SW_TEST_CASE( VectorTest, ResizeFromOwnElementAndRangeInsertIterator )
+{
+    sw::vector<sw::string> listText;
+    listText.push_back( "first-element-long-enough-to-live-on-the-heap" );
+    listText.shrink_to_fit();
+    listText.resize( 64, listText[0] );
+    SW_ASSERT_EQUAL( 64u, static_cast<uint32>( listText.size() ) );
+    for ( const sw::string& text : listText )
+        SW_EXPECT_TRUE( text == "first-element-long-enough-to-live-on-the-heap" );
+
+    sw::vector<int32> listNumber{ 1, 2, 3 };
+    listNumber.shrink_to_fit();
+    const int32 arrExtra[] = { 7, 8, 9, 10, 11, 12, 13, 14 };
+    const auto  it         = listNumber.insert( listNumber.begin() + 1, std::begin( arrExtra ), std::end( arrExtra ) );
+    SW_ASSERT_TRUE( listNumber.begin() <= it && it < listNumber.end() );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( it - listNumber.begin() ) );
+    SW_EXPECT_EQUAL( 7, *it );
+    SW_EXPECT_EQUAL( 11u, static_cast<uint32>( listNumber.size() ) );
+}
