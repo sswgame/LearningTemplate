@@ -56,6 +56,7 @@
   py -3 Scripts/lint/report/RunDuplicateCode.py --same-file-only     # 한 파일 안의 복사만
   py -3 Scripts/lint/report/RunDuplicateCode.py --top 50
   py -3 Scripts/lint/report/RunDuplicateCode.py --language py        # Scripts · Tools 의 파이썬
+  py -3 Scripts/lint/report/RunDuplicateCode.py --language cmake     # *.cmake · CMakeLists.txt
 
 [언어는 표 한 줄이다]
 언어마다 다른 것은 **어디를 훑고(폴더 · 확장자) 어떤 줄을 세지 않는가(주석 · 머리말 · 뜻 없는 줄)** 뿐이고, 창을 해시해
@@ -89,7 +90,7 @@ class LanguageSpec( NamedTuple ):
     언어 하나를 훑는 법.
 
     - `listRoot`        : 훑을 폴더(저장소 기준). 내려받은 외부 도구로는 내려가지 않는다(`collectRepositoryFiles`).
-    - `sourceSuffixes`  : 늘 보는 확장자. `headerSuffixes` 는 `--no-headers` 면 뺀다.
+    - `sourceSuffixes`  : 늘 보는 확장자. `headerSuffixes` 는 `--no-headers` 면 뺀다. `fileNames` 는 확장자 대신 이름으로 고른다(`CMakeLists.txt`).
     - `skipPrefixes`    : 이것으로 시작하는 줄은 세지 않는다(주석 · include/import 머리말).
     - `ignoredLines`    : 그 자체로 뜻이 없는 줄(닫는 괄호 등) — 있으나 없으나 중복 여부를 바꾸지 않는다.
     - `docstringQuote`  : 이 따옴표로 열고 닫는 블록(파이썬 독스트링)은 통째로 세지 않는다. 비우면 없음.
@@ -99,6 +100,7 @@ class LanguageSpec( NamedTuple ):
     listRoot: tuple[ str, ... ]
     sourceSuffixes: tuple[ str, ... ]
     headerSuffixes: tuple[ str, ... ]
+    fileNames: tuple[ str, ... ]
     skipPrefixes: tuple[ str, ... ]
     ignoredLines: frozenset[ str ]
     docstringQuote: str
@@ -110,6 +112,7 @@ kLanguageSpec: dict[ str, LanguageSpec ] = {
         listRoot       = ( "Source", ),
         sourceSuffixes = ( ".cpp", ),
         headerSuffixes = ( ".h", ".inl" ),
+        fileNames      = (),
         # include 묶음은 중복이 아니다(파일 머리말 참고).
         skipPrefixes   = ( "//", "*", "/*", "#include" ),
         ignoredLines   = frozenset( { "{", "}", "};", "break;", "return;", "public:", "private:", "protected:", "else" } ),
@@ -120,9 +123,20 @@ kLanguageSpec: dict[ str, LanguageSpec ] = {
         listRoot       = ( "Scripts", "Tools" ),
         sourceSuffixes = ( ".py", ),
         headerSuffixes = (),
+        fileNames      = (),
         skipPrefixes   = ( "#", "import ", "from ", "sys.path.insert" ),
         ignoredLines   = frozenset( { ")", "]", "}", "),", "],", "},", "else:", "try:", "pass", "return", "continue", "break" } ),
         docstringQuote = '"""',
+        minWindowChars = 120,
+    ),
+    "cmake": LanguageSpec(
+        listRoot       = ( "", ),
+        sourceSuffixes = ( ".cmake", ),
+        headerSuffixes = (),
+        fileNames      = ( "CMakeLists.txt", ),
+        skipPrefixes   = ( "#", ),
+        ignoredLines   = frozenset( { ")", "endif()", "endforeach()", "endfunction()", "endmacro()", "else()" } ),
+        docstringQuote = "",
         minWindowChars = 120,
     ),
 }
@@ -227,7 +241,7 @@ def selectFiles( repositoryRoot: Path, filterText: str, bIncludeHeaders: bool, s
     """검사할 파일을 **저장소 상대 경로**로 돌려줍니다 (보고가 짧고 클릭 가능한 경로가 되도록)."""
     suffixes = spec.sourceSuffixes + ( spec.headerSuffixes if bIncludeHeaders else () )
     selected: list[ Path ] = []
-    for path in collectRepositoryFiles( repositoryRoot, spec.listRoot, suffixes = suffixes ):
+    for path in collectRepositoryFiles( repositoryRoot, spec.listRoot, suffixes = suffixes, fileNames = spec.fileNames ):
         relativePath = path.relative_to( repositoryRoot )
         if filterText and filterText.replace( "\\", "/" ) not in relativePath.as_posix():
             continue
