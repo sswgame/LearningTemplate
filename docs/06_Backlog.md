@@ -2021,6 +2021,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ⑧ — `CheckLintsAreAlive` 탐침 34 개를 동시에: 8.7 → 2.8 s, 린트 CTest 31.6 → 19.1 s)
+
+게이트마다 "반드시 잡아야 하는 조각" 을 임시 저장소에 풀고 게이트를 하위 프로세스로 돌리는 셀프테스트다. 34 조각을 **차례로** 돌려 린트 CTest 에서 둘째로 길었다.
+조각마다 임시 폴더가 따로이고 서로 기다릴 것이 없으므로 `common.Parallel.mapConcurrent` 로 동시에 돌린다 — 하위 프로세스를 기다리는 일이라 스레드가 GIL 에 막히지
+않고, 워커 수는 자식 프로세스를 띄우는 일의 정책(`getProcessWorkerCount`)이다. 조각 하나를 준비 · 실행 · 정리하는 일은 `runCaseInternal` 로 뺐고, 보고(`--verbose`
+줄 · 오류)는 조각 순서대로 한다.
+
+**확인.** 34 조각 통과. 되돌려 확인: `CheckTextFilesAreText` 의 검사를 지우면 "위반을 넣었는데 통과했습니다 — 이 검사는 죽었습니다" 로 실패(rc 1). 린트 CTest 21/21,
+합 **31.6 → 19.1 s**(⑦ 의 `CheckCodeConventions` 와 합쳐). 가장 긴 것은 이제 `CheckCodeConventions` 5.1 s · 이것 2.8 s 이고 나머지는 모두 1.2 s 아래다.
+
 ### 2026-09-30 (Scripts ⑦ — `CheckCodeConventions` 전체 훑기 13.2 → 5.2 s: 파일마다 한 번 읽기 · 정규식 미리 컴파일 · 덩어리 프로세스 풀)
 
 CI 가 매번 도는 가장 긴 린트다(린트 CTest 31.6 s 중 11.7 s). 프로파일하니 세 가지였다.
