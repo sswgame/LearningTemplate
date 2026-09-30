@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
@@ -184,7 +186,7 @@ namespace sw
                 _listFreeOnlineBlock.push_back( block );
             batch._listBlock.clear();
             _listOnlineRecyclePool.push_back( std::move( batch._listBlock ) );
-            removeAtSwap( _listPendingOnlineRecycle, index );
+            VectorUtil::removeAtSwap( _listPendingOnlineRecycle, index );
         }
     }
 

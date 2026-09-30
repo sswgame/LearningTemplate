@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -343,7 +345,7 @@ namespace sw
             return;
 
         vector<SceneComponent*>& listSibling = _pParent->_listChild;
-        removeSingleSwap( listSibling, this );
+        VectorUtil::removeSingleSwap( listSibling, this );
         if ( listSibling.empty() )
             _pParent->setTransformFlag( SceneTransformPage::kHasChildren, false );
         setTransformFlag( SceneTransformPage::kHasParent, false );

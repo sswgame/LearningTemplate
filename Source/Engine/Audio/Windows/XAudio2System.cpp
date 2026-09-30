@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/Windows/XAudio2System.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Task/TaskManager.h"
 
@@ -494,7 +496,7 @@ namespace sw
                     _impl->_listIdleVoice.push_back( std::move( voiceBuffer ) );
                 else
                     voiceBuffer._pVoice->DestroyVoice();
-                removeAtSwap( voices, voiceIndex );
+                VectorUtil::removeAtSwap( voices, voiceIndex );
                 continue;
             }
             ++voiceIndex;
@@ -636,7 +638,7 @@ namespace sw
                      XAudio2SystemImpl::isFormatEqual( _impl->_listIdleVoice[idx]._pClip->_format, pClip->_format ) )
                 {
                     pVoice = _impl->_listIdleVoice[idx]._pVoice;
-                    removeAtSwap( _impl->_listIdleVoice, idx );
+                    VectorUtil::removeAtSwap( _impl->_listIdleVoice, idx );
                     break;
                 }
             }

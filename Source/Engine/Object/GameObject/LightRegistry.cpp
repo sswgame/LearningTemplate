@@ -6,6 +6,8 @@
 
 #include "Engine/Object/GameObject/LightRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Object/Component/3D/LightComponent.h"
 
 namespace sw
@@ -49,7 +51,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         // swap-and-pop. 부르는 쪽이 "활성인 첫 빛"을 고르고, 빛이 둘 이상일 때 어느 쪽이 뽑히는지는 예전(오브젝트 순회 순서)에도
         // 정해져 있지 않았다.
-        removeSingleSwap( _arrListLight[pLight->getLightType()], pLight );
+        VectorUtil::removeSingleSwap( _arrListLight[pLight->getLightType()], pLight );
     }
 
     const vector<LightComponent*>& LightRegistry::getAll( uint32 lightType ) const

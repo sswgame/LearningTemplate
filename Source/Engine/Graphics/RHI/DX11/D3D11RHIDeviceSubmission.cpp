@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
@@ -253,7 +255,7 @@ namespace sw
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        removeSingleSwap( _listLiveCmd, pCmdList );
+        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )

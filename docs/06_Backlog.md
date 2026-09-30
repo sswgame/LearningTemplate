@@ -2021,6 +2021,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (순서 없는 삭제는 `VectorUtil` 의 정적 함수로 — `vector.h` 에서 떼어 냄)
+
+바로 앞 회차(612e4b1b)의 `removeAtSwap` · `removeSingleSwap` 은 `vector.h` 끝의 자유 함수였다. `SW_ENABLE_STL_CONTAINER` 분기 밖이라 표준 vector 로 바꿔도
+컴파일은 됐지만, 표준 vector 에 없는 함수가 vector 헤더에 붙어 있으면 "이것은 어느 vector 의 멤버 같은 것인가" 가 흐려진다(사용자 지적). `StringUtil` · `FileUtil` 처럼
+따로 둔 도구 클래스로 옮겼다: **`Core/Container/VectorUtil.h`**(헤더 전용, `struct VectorUtil` 의 static 템플릿 둘). `vector.h` 를 include 하지 않고 `size()` · `back()` ·
+`pop_back()` · `operator[]` 만 쓰므로 `sw::vector` · `small_vector` · `std::vector` 어디에나 된다. 부르는 열세 곳은 `VectorUtil::removeAtSwap` · `VectorUtil::removeSingleSwap`
+으로 바꾸고 헤더를 include 한다. `vector.h` 는 88bef778 과 같아졌다.
+
 ### 2026-09-29 (리팩터 — Editor 2차: 활성 씬 바로가기를 쓰지 않던 세 곳)
 
 6 줄 창의 Editor 몫이다. `editor::getActiveObjectManager()` 는 "SceneManager 서비스 → 활성 씬 → 오브젝트 매니저" 를 단계마다 null 확인하며 걷는 대여섯 줄을 없애려고 만든

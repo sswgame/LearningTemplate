@@ -3,6 +3,7 @@
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/Math.h"
 
 namespace sw
@@ -166,7 +167,7 @@ namespace sw
         const CellRange range = CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
-            removeSingleSwap( _listOversizedHandle, handle );
+            VectorUtil::removeSingleSwap( _listOversizedHandle, handle );
             return;
         }
 
@@ -177,7 +178,7 @@ namespace sw
                 return;
 
             auto& listHandle = bucketIt->second;
-            removeSingleSwap( listHandle, handle );
+            VectorUtil::removeSingleSwap( listHandle, handle );
             if ( listHandle.empty() )
                 _mapBucket.erase( bucketIt );
         } );

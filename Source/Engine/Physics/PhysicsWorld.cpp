@@ -1,7 +1,8 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include "Engine/Physics/PhysicsWorld.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Physics/CCD.h"
@@ -149,7 +150,7 @@ namespace sw
         // 반드시 같은 답을 낸다. 다르면 큰 바디가 목록에 영원히 남거나, 셀에 죽은 핸들이 남는다.
         if ( isOversizedForGrid( aabb ) )
         {
-            removeSingleSwap( _listOversizedBody, handle );
+            VectorUtil::removeSingleSwap( _listOversizedBody, handle );
             return;
         }
 

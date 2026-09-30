@@ -2,6 +2,7 @@
 
 #include "Games/Empty/BenchScene.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -836,7 +837,7 @@ namespace sw
             if ( _listChurnInstance[slot].get() != pInstance )
                 continue;
             // swap-and-pop. 순서는 의미가 없다 — 무작위로 고르는 목록이다.
-            removeAtSwap( _listChurnInstance, slot );
+            VectorUtil::removeAtSwap( _listChurnInstance, slot );
             return;
         }
     }

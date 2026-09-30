@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -76,8 +77,8 @@ namespace sw
         // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
         MeshComponent* pMoved   = _listPrimitive.back();
         const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
-        removeAtSwap( _listPrimitive, slot );
-        removeAtSwap( _listPrimitiveTransformSlot, slot );
+        VectorUtil::removeAtSwap( _listPrimitive, slot );
+        VectorUtil::removeAtSwap( _listPrimitiveTransformSlot, slot );
         if ( pMoved != pComp )
             pMoved->setPrimitiveIndex( slot );
         if ( lastSlot < _dirtyFlagCapacity )
@@ -193,7 +194,7 @@ namespace sw
             MeshInstanceBatch* pOther = _listInstanceBatch[batchIndex];
             if ( pOther == pBatch )
             {
-                removeAtSwap( _listInstanceBatch, batchIndex );
+                VectorUtil::removeAtSwap( _listInstanceBatch, batchIndex );
                 --batchIndex;
                 continue;
             }

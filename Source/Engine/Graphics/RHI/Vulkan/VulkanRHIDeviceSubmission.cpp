@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
@@ -340,7 +342,7 @@ namespace sw
     void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        removeSingleSwap( _listLiveCmd, pCmdList );
+        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )

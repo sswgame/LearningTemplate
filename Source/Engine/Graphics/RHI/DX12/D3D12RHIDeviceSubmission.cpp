@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
@@ -45,7 +47,7 @@ namespace sw
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        removeSingleSwap( _listLiveCmd, pCmdList );
+        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
     }
 
     ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()
