@@ -80,20 +80,32 @@ def runGit(args: Sequence[str],
     )
 
 
+_kStagedFileArgument = ["diff", "--cached", "--name-only", "--diff-filter=ACM"]
+
+
+def listGitFilesInternal(projectRoot: Path, listGitArgument: list[str], extensions: set[str] | None) -> set[Path]:
+    """
+    git 명령이 한 줄에 하나씩 찍는 저장소 기준 경로를 절대 경로로 풀어 모읍니다. 지금 있는 파일만, `extensions` 가 있으면 그 확장자만.
+
+    staged 전체 · staged C++ · 수정된 C++ · untracked C++ 네 곳이 이 여덟 줄을 각자 적고 있었습니다.
+    """
+    fileSet: set[Path] = set()
+    gitResult = runGit(listGitArgument, cwd=projectRoot)
+    if gitResult.returncode != 0:
+        return fileSet
+    for rawLine in gitResult.stdout.splitlines():
+        if line := rawLine.strip():
+            resolvedPath = (projectRoot / line).resolve()
+            if resolvedPath.is_file() and (extensions is None or resolvedPath.suffix.lower() in extensions):
+                fileSet.add(resolvedPath)
+    return fileSet
+
+
 def getAllStagedFiles(root: Path | None = None) -> list[Path]:
     """
     Git Staged(인덱스) 상태인 모든 파일 목록을 반환합니다.
     """
-    projectRoot = root or getProjectRoot()
-    fileSet: set[Path] = set()
-    gitResult = runGit(["diff", "--cached", "--name-only", "--diff-filter=ACM"], cwd=projectRoot)
-    if gitResult.returncode == 0:
-        for rawLine in gitResult.stdout.splitlines():
-            if line := rawLine.strip():
-                resolvedPath = (projectRoot / line).resolve()
-                if resolvedPath.is_file():
-                    fileSet.add(resolvedPath)
-    return sorted(fileSet)
+    return sorted(listGitFilesInternal(root or getProjectRoot(), _kStagedFileArgument, None))
 
 
 def getStagedCppFiles(root: Path | None = None,
@@ -102,16 +114,7 @@ def getStagedCppFiles(root: Path | None = None,
     Git Staged(인덱스) 상태인 C++ 소스 및 헤더 파일 목록을 반환합니다.
     """
     targetExtensions = extensions if extensions is not None else kCppAllExtensions
-    projectRoot = root or getProjectRoot()
-    fileSet: set[Path] = set()
-    gitResult = runGit(["diff", "--cached", "--name-only", "--diff-filter=ACM"], cwd=projectRoot)
-    if gitResult.returncode == 0:
-        for rawLine in gitResult.stdout.splitlines():
-            if line := rawLine.strip():
-                resolvedPath = (projectRoot / line).resolve()
-                if resolvedPath.is_file() and resolvedPath.suffix.lower() in targetExtensions:
-                    fileSet.add(resolvedPath)
-    return sorted(fileSet)
+    return sorted(listGitFilesInternal(root or getProjectRoot(), _kStagedFileArgument, targetExtensions))
 
 
 def getModifiedCppFiles(root: Path | None = None,
@@ -122,27 +125,12 @@ def getModifiedCppFiles(root: Path | None = None,
     """
     targetExtensions = extensions if extensions is not None else kCppAllExtensions
     projectRoot = root or getProjectRoot()
-    fileSet: set[Path] = set()
 
     # 1. 수정된 파일 (Staged + Unstaged)
-    gitResult = runGit(["diff", "--name-only", "HEAD"], cwd=projectRoot)
-    if gitResult.returncode == 0:
-        for rawLine in gitResult.stdout.splitlines():
-            if line := rawLine.strip():
-                resolvedPath = (projectRoot / line).resolve()
-                if resolvedPath.is_file() and resolvedPath.suffix.lower() in targetExtensions:
-                    fileSet.add(resolvedPath)
-
+    fileSet = listGitFilesInternal(projectRoot, ["diff", "--name-only", "HEAD"], targetExtensions)
     # 2. 새로 추가된 파일 (Untracked)
     if includeUntracked:
-        resUntracked = runGit(["ls-files", "--others", "--exclude-standard"], cwd=projectRoot)
-        if resUntracked.returncode == 0:
-            for rawLine in resUntracked.stdout.splitlines():
-                if line := rawLine.strip():
-                    resolvedPath = (projectRoot / line).resolve()
-                    if resolvedPath.is_file() and resolvedPath.suffix.lower() in targetExtensions:
-                        fileSet.add(resolvedPath)
-
+        fileSet |= listGitFilesInternal(projectRoot, ["ls-files", "--others", "--exclude-standard"], targetExtensions)
     return sorted(fileSet)
 
 

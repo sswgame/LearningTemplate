@@ -2021,6 +2021,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ④ — git 파일 목록 읽기 네 벌을 한 도우미로)
+
+`common/Host.py` 의 `getAllStagedFiles` · `getStagedCppFiles` · `getModifiedCppFiles`(수정 · untracked 두 번)가 "git 명령 → 줄마다 저장소 기준 경로를 절대 경로로 →
+있는 파일이고 확장자가 맞으면 담기" 여덟 줄을 네 번 적고 있었다(파이썬 6 줄 창의 셋째 군집). `listGitFilesInternal( root, gitArgument, extensions )` 하나로
+모았고 staged 인자는 상수 하나다. 동작은 같다 — untracked C++ 탐침을 `getModifiedCppFiles` 가 잡고, 이 커밋의 훅이 staged 두 함수로 파일을 읽는다.
+
+**일부러 둔 것.** `CheckTestSuites` 의 셀프테스트 조각마다 되풀이되는 CMake 조각(시험 데이터는 조각마다 한눈에 읽히는 편이 낫다), `CheckCodeConventions` 의 위반 객체 생성
+인자 반복(얻는 것이 적고 09-14 에 손대지 않기로 한 파일이다).
+
 ### 2026-09-30 (Scripts ③ — 게이트의 대상 파일 고르기를 `LintGate` 한 곳으로, 내려받은 외부 도구로 내려가지 않는다)
 
 파이썬 6 줄 창 중복의 가장 큰 덩어리가 게이트들의 "`--files` 가 있으면 그 파일, 없으면 폴더를 훑어 거르고 읽기" 였다(`CheckLogViewArgument` ↔
