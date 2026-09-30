@@ -1,8 +1,12 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <atomic>
+#include <thread>
 
 namespace
 {
@@ -306,4 +310,170 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
     SW_EXPECT_EQUAL( 7, imageRangeProbe() );
 
     SW_EXPECT_FALSE( sw::FileUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
+}
+
+/**
+ * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
+ * @details 예전 `writeTextFile` 은 원본을 "wb" 로 열어 그 자리에 쓰고 결과를 보지 않았다. 도중에 실패하면 원본이 빈 파일로 남았다.
+ */
+SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
+{
+    const sw::string dir = test::makeTempPath( "SwAtomicWriteTest" );
+    sw::FileUtil::removeDirectory( dir );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string filePath = sw::FileUtil::joinPath( dir, "scene.xml" );
+
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "first" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "second-longer" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "3" ) );
+
+    sw::string text;
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_EXPECT_EQUAL( sw::string( "3" ), text );
+
+    sw::vector<sw::string> listFile;
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
+
+    // 빈 글자도 빈 파일로 쓴다.
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::getFileSize( filePath ) == 0 );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
+}
+
+/**
+ * @brief [FileTest] 쓰기가 실패하면 false 이고 원본은 그대로다.
+ * @details 대상 자리에 폴더가 있으면 바꿔 끼울 수 없다. 예전 `writeTextFile` 은 어떤 실패에도 true 를 돌려줬다.
+ */
+SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
+{
+    const sw::string dir = test::makeTempPath( "SwFailedWriteTest" );
+    sw::FileUtil::removeDirectory( dir );
+    const sw::string blockedPath = sw::FileUtil::joinPath( dir, "blocked" );
+    sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( blockedPath, "must-not-land" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::directoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
+
+    // 폴더 안에 임시 파일을 남기지 않았다.
+    sw::vector<sw::string> listFile;
+    sw::FileUtil::collectFiles( dir, "", listFile, false );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
+
+    // 없는 폴더에 쓰기도 false 다.
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( dir, "missing/leaf.txt" ), "x" ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
+}
+
+/**
+ * @brief [FileTest] 한글이 들어간 경로도 쓰기 · 읽기 · 존재 확인 · 폴더 훑기가 같은 파일을 본다.
+ * @details Windows 에서 좁은 문자 경로는 ANSI 코드 페이지(CP949)로 해석됐다. 읽기는 UTF-16 으로 바꿔 열어서, 사용자 폴더 이름이 한글이면
+ *          `fileExists` 는 있다고 하는데 읽기는 "File not found" 였다. 실행 파일 매니페스트(activeCodePage=UTF-8)와 UTF-16 열기로 고쳤다.
+ */
+SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
+{
+    const sw::string dir = test::makeTempPath( "SwUnicodePath_한글폴더" );
+    sw::FileUtil::removeDirectory( dir );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    SW_ASSERT_TRUE( sw::FileUtil::directoryExists( dir ) );
+
+    const sw::string filePath = sw::FileUtil::joinPath( dir, "세이브_1.txt" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "저장됨" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( filePath ) );
+
+    sw::string text;
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_EXPECT_EQUAL( sw::string( "저장됨" ), text );
+
+    sw::vector<sw::string> listFile;
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "txt", listFile, false ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
+    SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( listFile[0] ) == "세이브_1.txt" );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
+}
+
+/**
+ * @brief [FileTest] 범위 읽기의 오프셋 · 길이는 64 비트다(예전엔 uint32 라 4 GB 이상 파일이 조용히 잘렸다). 파일 끝을 넘는 오프셋은 실패다.
+ */
+SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
+{
+    const sw::string dir = test::makeTempPath( "SwReadRangeTest" );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string filePath = sw::FileUtil::joinPath( dir, "range.bin" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "0123456789" ) );
+
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( sw::FileUtil::readFile( filePath, bytes, 3ull, 4ull ) );
+    SW_EXPECT_EQUAL( sw::string( "3456" ), sw::string( bytes.begin(), bytes.end() ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::readFile( filePath, bytes, 8ull ) );
+    SW_EXPECT_EQUAL( sw::string( "89" ), sw::string( bytes.begin(), bytes.end() ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::readFile( filePath, bytes, 11ull ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
+}
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [FileTest] 이 프로세스의 ANSI 코드 페이지는 UTF-8 이다(실행 파일 매니페스트 activeCodePage).
+ * @details 엔진의 좁은 문자 문자열은 UTF-8 이다. 매니페스트가 빠지면 fopen · std::filesystem · CreateFileA · argv 가 다시 CP949 로
+ *          해석되고, 한글 경로가 조용히 깨진다. 매니페스트를 붙이는 CMake 함수(sw_embedProcessManifest)가 빠진 실행 파일을 여기서 잡는다.
+ */
+SW_TEST_CASE( FileTest, ProcessUsesUtf8AnsiCodePage )
+{
+    SW_EXPECT_EQUAL( static_cast<uint32>( CP_UTF8 ), static_cast<uint32>( GetACP() ) );
+}
+#endif
+
+/**
+ * @brief [FileTest] 다른 스레드가 읽는 동안 같은 파일을 계속 덮어써도, 읽는 쪽은 반쯤 쓴 파일을 한 번도 보지 않는다.
+ * @details 예전 쓰기는 원본을 "wb" 로 열어(길이 0) 그 자리에 썼다. 그 사이에 읽으면 빈 파일이나 앞부분만 있는 파일을 "정상으로" 읽었다 —
+ *          에디터가 저장하는 순간 핫 리로드 · 파일 감시가 읽으면 그렇게 됐다. 지금은 다 쓴 뒤 바꿔 끼우므로 읽는 쪽은 옛 파일 전체나 새 파일
+ *          전체만 본다.
+ */
+SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
+{
+    const sw::string dir = test::makeTempPath( "SwTornWriteTest" );
+    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string filePath = sw::FileUtil::joinPath( dir, "shared.bin" );
+
+    constexpr size_t  kFileBytes = 256 * 1024;
+    sw::vector<uint8> bytesA( kFileBytes, static_cast<uint8>( 'A' ) );
+    sw::vector<uint8> bytesB( kFileBytes, static_cast<uint8>( 'B' ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( filePath, bytesA.data(), bytesA.size() ) );
+
+    std::atomic<bool>   bWriterDone{ false };
+    std::atomic<uint32> tornReadCount{ 0 };
+    std::atomic<uint32> goodReadCount{ 0 };
+    std::thread         reader( [&]()
+    {
+        sw::vector<uint8> readBytes;
+        while ( bWriterDone.load() == false )
+        {
+            if ( sw::FileUtil::readFile( filePath, readBytes ) == false )
+                continue;
+            const bool bWholeFile = readBytes.size() == kFileBytes && ( readBytes.front() == 'A' || readBytes.front() == 'B' ) &&
+                                    readBytes.back() == readBytes.front();
+            if ( bWholeFile )
+                goodReadCount.fetch_add( 1 );
+            else
+                tornReadCount.fetch_add( 1 );
+        }
+    } );
+
+    for ( uint32 writeIndex = 0; writeIndex < 60; ++writeIndex )
+    {
+        const sw::vector<uint8>& bytes = ( writeIndex % 2 == 0 ) ? bytesB : bytesA;
+        SW_EXPECT_TRUE( sw::FileUtil::writeFile( filePath, bytes.data(), bytes.size() ) );
+    }
+    bWriterDone.store( true );
+    reader.join();
+
+    SW_EXPECT_EQUAL( 0u, tornReadCount.load() );
+    SW_EXPECT_TRUE( goodReadCount.load() > 0 );
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }

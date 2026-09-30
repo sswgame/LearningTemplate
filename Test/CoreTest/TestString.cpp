@@ -1467,3 +1467,44 @@ SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
     SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"SCENE" ), false ) );
     SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"Scenes" ), true ) );
 }
+
+/**
+ * @brief [StringTest] 잘못된 UTF-8 은 U+FFFD 로 바뀌고, 그 뒤의 글자를 삼키지 않는다.
+ * @details 예전 `utf8ToUtf16` 은 검증 없이 비트만 이어 붙였다. 선두가 될 수 없는 바이트는 U+0000 이 되어 Win32 경로 API 에서 문자열이
+ *          거기서 끊겼고, 연속 바이트를 확인하지 않아 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼켰다.
+ */
+SW_TEST_CASE( StringTest, Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing )
+{
+    // 선두가 될 수 없는 바이트 → U+FFFD, 뒤의 ASCII 는 그대로
+    const sw::wstring stray = sw::StringUtil::utf8ToUtf16( "\x80"
+                                                           "abc" );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( stray.size() ) );
+    SW_EXPECT_TRUE( stray[0] == 0xFFFD );
+    SW_EXPECT_TRUE( stray[1] == L'a' && stray[2] == L'b' && stray[3] == L'c' );
+
+    // 두 바이트 시퀀스가 ASCII 에서 끊겼다 → U+FFFD 하나 + 'A'(삼키지 않는다)
+    const sw::wstring cut = sw::StringUtil::utf8ToUtf16( "\xC3"
+                                                         "A/" );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( cut.size() ) );
+    SW_EXPECT_TRUE( cut[0] == 0xFFFD );
+    SW_EXPECT_TRUE( cut[1] == L'A' && cut[2] == L'/' );
+
+    // 문자열 끝에서 잘렸다
+    const sw::wstring tail = sw::StringUtil::utf8ToUtf16( "a"
+                                                          "\xEA\xB0" );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( tail.size() ) );
+    SW_EXPECT_TRUE( tail[0] == L'a' && tail[1] == 0xFFFD );
+
+    // 과잉 인코딩('/' 를 두 바이트로) · 서로게이트 구간 → U+FFFD 한 글자
+    const sw::wstring overlong = sw::StringUtil::utf8ToUtf16( "\xC0\xAF" );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( overlong.size() ) );
+    SW_EXPECT_TRUE( overlong[0] == 0xFFFD );
+    const sw::wstring surrogate = sw::StringUtil::utf8ToUtf16( "\xED\xA0\x80" );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( surrogate.size() ) );
+    SW_EXPECT_TRUE( surrogate[0] == 0xFFFD );
+
+    // 올바른 입력은 그대로
+    const sw::wstring hangul = sw::StringUtil::utf8ToUtf16( "가/" );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( hangul.size() ) );
+    SW_EXPECT_TRUE( hangul[0] == 0xAC00 && hangul[1] == L'/' );
+}

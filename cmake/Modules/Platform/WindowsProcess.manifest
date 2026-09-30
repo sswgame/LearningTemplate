@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Windows 실행 파일(App · 테스트 · ReflectionParser)에 박는 프로세스 설정. sw_embedProcessManifest 가 붙인다.
+
+  activeCodePage=UTF-8 : 이 프로세스의 ANSI 코드 페이지를 UTF-8 로 만든다(Windows 10 1903+). 엔진의 좁은 문자 문자열은 모두 UTF-8
+                          인데, fopen · std::filesystem 의 좁은 경로 · CreateFileA · argv 는 ANSI 코드 페이지(한국어 Windows 는 CP949)로
+                          해석한다. 그래서 사용자 폴더 이름이 한글이면 같은 경로를 읽기(UTF-16 변환)와 쓰기(ANSI)가 서로 다른 파일로
+                          봤다. 더 오래된 Windows 는 이 항목을 무시한다.
+  longPathAware        : 260 자를 넘는 경로를 허용한다(시스템 설정 LongPathsEnabled 가 켜져 있을 때). 언리얼 · 유니티 에디터도 켠다.
+-->
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+</assembly>

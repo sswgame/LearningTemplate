@@ -68,6 +68,64 @@ namespace sw
             }
 #endif
 
+            /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
+            static inline atomic<uint32> s_tempFileSerial{ 0 };
+
+            /**
+             * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 자리로 바꿔 끼웁니다.
+             * @details 예전 `writeTextFile` 은 원본을 "wb" 로 열어(그 순간 길이 0 이 된다) 그 자리에 쓰고, `fwrite` · `fclose` 결과를 보지
+             *          않고 true 를 돌려줬습니다. 디스크가 차거나, 백신이 파일을 잡거나, 쓰는 도중 죽으면 씬 · 에셋 · `.meta` 가 빈 파일로 남는데
+             *          로그는 "Saved" 였고, 씬을 바꾸기 전 저장 흐름은 저장이 성공한 줄 알고 다음 씬으로 넘어가 편집을 잃었습니다. 4 KB 보다
+             *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
+             *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
+             */
+            static bool writeAtomically( string_view fileName, const void* pData, size_t size )
+            {
+                const string filePath = FileUtil::normalizeSeparators( fileName );
+#if defined( SW_PLATFORM_WINDOWS )
+                const uint64 processId = static_cast<uint64>( GetCurrentProcessId() );
+#else
+                const uint64 processId = static_cast<uint64>( ::getpid() );
+#endif
+                // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
+                StringBuilder<constant::kMaxPathSize> tempPathBuilder;
+                tempPathBuilder.append( filePath.c_str() )
+                    .append( ".tmp" )
+                    .append( processId )
+                    .append( '_' )
+                    .append( s_tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
+                const string tempPath{ tempPathBuilder.c_str() };
+
+                FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
+                if ( pFile == nullptr )
+                {
+                    SW_LOG_ERROR( "Failed to open temporary file for writing: %#", tempPath.c_str() );
+                    return false;
+                }
+
+                const size_t written  = ( size > 0 ) ? std::fwrite( pData, 1, size, pFile ) : 0;
+                const bool   bFlushed = std::fflush( pFile ) == 0;
+                const bool   bClosed  = std::fclose( pFile ) == 0;
+                if ( written != size || bFlushed == false || bClosed == false )
+                {
+                    SW_LOG_ERROR( "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
+                    FileUtil::removeFile( tempPath );
+                    return false;
+                }
+
+                // 다른 프로세스(파일 감시 · 백신 · 에디터)가 대상을 잠깐 쥐고 있으면 Windows 의 바꿔치기가 실패한다. 잠깐 기다렸다 다시 한다.
+                constexpr uint32 kReplaceAttemptCount = 10;
+                for ( uint32 attemptIndex = 0; attemptIndex < kReplaceAttemptCount; ++attemptIndex )
+                {
+                    if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
+                        return true;
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+                }
+                SW_LOG_ERROR( "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
+                FileUtil::removeFile( tempPath );
+                return false;
+            }
+
 #if !defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief 읽기용으로 열고 크기를 잽니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
@@ -110,8 +168,10 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
                 const string  filePath = FileUtil::normalizeSeparators( fileName );
                 const wstring widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
-                HANDLE        hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr );
+                // FILE_SHARE_DELETE: 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있게 한다. 없으면 에디터가
+                // 파일을 읽는 순간 겹친 저장이 실패한다(POSIX 의 rename 은 원래 막히지 않는다).
+                HANDLE hFile = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+                                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr );
                 if ( hFile == INVALID_HANDLE_VALUE )
                 {
                     SW_LOG_ERROR( "File not found: %#", fileName );
@@ -151,8 +211,14 @@ namespace sw
                     readTotal += readNow;
                 }
                 CloseHandle( hFile );
+                // 잰 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 예전에는 버퍼를
+                // 줄이고 true 를 돌려줘, 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 됐다. 체크섬이 없는 호출부는 알 길이 없었다.
                 if ( readTotal != dataSize )
-                    outBuffer.resize( static_cast<size_t>( readTotal ) );
+                {
+                    outBuffer.clear();
+                    SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readTotal, dataSize, fileName );
+                    return false;
+                }
                 return true;
 #else
                 int64 fileSize{ 0 };
@@ -169,15 +235,24 @@ namespace sw
                 }
 
                 const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
-                PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET );
-                outBuffer.resize( static_cast<size_t>( dataSize ) );
-                if ( dataSize > 0 )
+                if ( PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET ) == false )
                 {
-                    const size_t readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
-                    if ( readBytes != static_cast<size_t>( dataSize ) )
-                        outBuffer.resize( readBytes );
+                    std::fclose( pFile );
+                    SW_LOG_ERROR( "Failed to seek to %# in: %#", offset, fileName );
+                    return false;
                 }
+                outBuffer.resize( static_cast<size_t>( dataSize ) );
+                size_t readBytes = 0;
+                if ( dataSize > 0 )
+                    readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
                 std::fclose( pFile );
+                // Windows 갈래와 같은 규칙: 잰 크기만큼 읽지 못했으면 실패다.
+                if ( readBytes != static_cast<size_t>( dataSize ) )
+                {
+                    outBuffer.clear();
+                    SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
+                    return false;
+                }
                 return true;
 #endif
             }
@@ -765,18 +840,11 @@ namespace sw
     {
         if ( size == 0 || pData == nullptr )
             return false;
-
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "wb" );
-        if ( pFile == nullptr )
-            return false;
-
-        const size_t written = std::fwrite( pData, 1, static_cast<size_t>( size ), pFile );
-        std::fclose( pFile );
-        return written == static_cast<size_t>( size );
+        static_assert( sizeof( size_t ) == sizeof( uint64 ), "64 비트 대상만 지원한다 — size_t 로 줄여도 잘리지 않는다" );
+        return FileUtilInternal::writeAtomically( fileName, pData, static_cast<size_t>( size ) );
     }
 
-    bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint32 offset, const uint32 maxReadCount )
+    bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
         return FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes );
     }
@@ -797,15 +865,7 @@ namespace sw
 
     bool FileUtil::writeTextFile( string_view fileName, string_view text )
     {
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "wb" );
-        if ( pFile == nullptr )
-            return false;
-
-        if ( text.empty() == false )
-            std::fwrite( text.data(), 1, text.size(), pFile );
-        std::fclose( pFile );
-        return true;
+        return FileUtilInternal::writeAtomically( fileName, text.data(), text.size() );
     }
 
     string_view FileUtil::skipUtf8Bom( string_view text )

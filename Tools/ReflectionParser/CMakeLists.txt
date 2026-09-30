@@ -101,6 +101,7 @@ endif()
 file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
 add_executable(ReflectionParser ${PARSER_SOURCES})
+sw_embedProcessManifest(ReflectionParser)
 
 target_include_directories(ReflectionParser PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}"

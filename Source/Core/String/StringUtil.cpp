@@ -149,24 +149,46 @@ namespace sw
                 return true;
             }
 
+            /** @brief 잘못된 UTF-8 자리에 넣는 대체 문자(U+FFFD)입니다. */
+            static constexpr uint32 kReplacementCodepoint = 0xFFFD;
+
             struct DecodedCodepoint
             {
                 uint32 _codepoint;
-                size_t _byteCount;
+                size_t _byteCount; ///< 이 글자로 소비한 바이트 수. 잘못된 입력이어도 1 이상입니다.
+                bool   _bValid;    ///< 올바른 UTF-8 이었으면 true. false 면 `_codepoint` 는 U+FFFD 입니다.
             };
 
+            /**
+             * @brief UTF-8 한 글자를 읽습니다. 잘못된 입력은 U+FFFD 한 글자로 바꾸고, **읽을 수 있는 다음 바이트부터** 다시 시작합니다.
+             * @details 예전에는 검증 없이 비트만 이어 붙였습니다. 선두가 될 수 없는 바이트(0x80~0xBF · 0xF8~0xFF)는 U+0000 이 되어 Win32
+             *          경로 API 에서 문자열이 그 자리에서 끊겼고, 연속 바이트를 확인하지 않아 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼켰습니다.
+             *          CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리켰습니다. 대체 방식은 유니코드 권고(최대
+             *          부분 시퀀스마다 U+FFFD 하나)를 따릅니다.
+             */
             static DecodedCodepoint decodeUtf8Sequence( const utf8* pData, const size_t remaining ) noexcept
             {
-                const Utf8LeadInfo lead      = classifyUtf8LeadByte( static_cast<uint8>( pData[0] ) );
-                const size_t       byteCount = MathUtil::min( lead._sequenceLength, remaining );
+                const Utf8LeadInfo lead = classifyUtf8LeadByte( static_cast<uint8>( pData[0] ) );
+                if ( lead._sequenceLength == 0 )
+                    return { kReplacementCodepoint, 1, false };
 
                 uint32 codepoint = lead._initialBits;
-                for ( size_t byteIndex = 1; byteIndex < byteCount; ++byteIndex )
+                for ( size_t byteIndex = 1; byteIndex < lead._sequenceLength; ++byteIndex )
                 {
+                    // 잘렸거나 연속 바이트가 아니면 거기까지를 한 글자로 치고, 그 바이트부터 다시 읽는다(삼키지 않는다).
+                    const bool bTruncated = byteIndex >= remaining;
+                    if ( bTruncated || ( static_cast<uint8>( pData[byteIndex] ) & 0xC0 ) != 0x80 )
+                        return { kReplacementCodepoint, byteIndex, false };
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
 
-                return { codepoint, byteCount };
+                const bool bIsOverlong   = codepoint < lead._minCodepoint;
+                const bool bIsSurrogate  = ( kSurrogateBegin <= codepoint ) && ( codepoint <= kSurrogateEnd );
+                const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
+                if ( bIsOverlong || bIsSurrogate || bIsOutOfRange )
+                    return { kReplacementCodepoint, lead._sequenceLength, false };
+
+                return { codepoint, lead._sequenceLength, true };
             }
 
             static void appendWideChar( wstring& out, const uint32 codepoint )
@@ -485,12 +507,13 @@ namespace sw
         if ( isNullOrEmpty( pInput ) )
             return {};
 
-        SW_LOG_ASSERT( isValidUtf8( pInput ), "UTF8 문자열이 아닙니다" );
-
         const size_t length = strlen( pInput );
         wstring      result{};
         result.reserve( length );
 
+        // 잘못된 입력은 어서트가 아니라 대체 문자다. 이 입력은 파일 이름 · 사용자 글자처럼 **밖에서** 온다. 예전에는 Debug 에서 멈추고
+        // 그 밖의 빌드에서는 로그만 남긴 뒤 망가진 문자열을 돌려줬다.
+        bool   bHadInvalidSequence{ false };
         size_t pos{ 0 };
         while ( pos < length )
         {
@@ -504,9 +527,13 @@ namespace sw
 
             const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( pInput + pos, length - pos );
             StringUtilInternal::appendWideChar( result, decoded._codepoint );
-            pos += MathUtil::max( decoded._byteCount, static_cast<size_t>( 1 ) );
+            pos += decoded._byteCount;
+            if ( decoded._bValid == false )
+                bHadInvalidSequence = true;
         }
 
+        if ( bHadInvalidSequence )
+            SW_LOG_WARNING( "utf8ToUtf16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
         return result;
     }
 

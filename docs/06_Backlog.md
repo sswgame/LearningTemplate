@@ -2021,6 +2021,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ② 파일 — 저장이 실패해도 "Saved", 한글 경로, 잘린 읽기를 성공으로)
+
+**무엇이 틀렸나.**
+- `FileUtil::writeTextFile` 은 원본을 "wb" 로 열어(그 순간 길이 0) 그 자리에 쓰고, `fwrite` · `fclose` 결과를 보지 않고 **늘 true** 였다.
+  디스크가 차거나 도중에 죽으면 씬 · 에셋 · `.meta` 가 빈 파일로 남는데 로그는 "Saved" 였고, 씬을 바꾸기 전 저장 흐름은 성공한 줄 알고 다음
+  씬으로 넘어가 편집을 잃었다. `writeFile` 도 제자리 쓰기라 실패하면 옛 파일이 사라졌다(`SaveGame` 이진 저장이 이 길). TurnBattle 세이브는
+  ".tmp" 에 쓰고 원본에 **복사**했는데, 그 임시 쓰기가 실패를 알리지 않아 잘린 파일이 멀쩡한 세이브를 덮을 수 있었다.
+- Windows 에서 좁은 문자 경로를 두 인코딩으로 읽었다. 읽기(`readRange`)는 UTF-8→UTF-16 으로 열고, `fopen_s` · `std::filesystem` ·
+  `CreateFileA` · `argv` 는 **ANSI 코드 페이지(CP949)** 로 해석했다. 사용자 폴더 이름이 한글이면 `fileExists` 는 있다는데 읽기는 "File not
+  found" 였다. 게다가 `utf8ToUtf16` 이 잘못된 바이트를 U+0000 으로 만들고(경로가 거기서 끊긴다) 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼켰다.
+- `readRange` 는 읽기 오류나 읽는 도중 파일이 줄어든 경우 버퍼를 줄이고 **true** 였다. `readFile` 의 오프셋 · 길이는 uint32 라 4 GB 이상
+  파일이 조용히 잘렸다.
+
+**고친 것.**
+- 쓰기 둘은 **원자적**이다(`FileUtilInternal::writeAtomically`): 같은 폴더의 임시 파일에 쓰고 → `fwrite` · `fflush` · `fclose` 결과를
+  확인하고 → `PlatformFileUtil::replaceFile` 로 바꿔 끼운다. 실패하면 false 이고 원본은 그대로다. 언리얼 `SaveArrayToFile` 과 같은 방식.
+- **Windows 의 바꿔 끼우기는 POSIX 방식 이름 바꾸기**(`SetFileInformationByHandle( FileRenameInfoEx, REPLACE_IF_EXISTS | POSIX_SEMANTICS )`)
+  다. 처음엔 `MoveFileExW` 로 했는데, 대상을 누가 열고 있으면(삭제 공유로 열었어도) 실패해서 동시 읽기 테스트에서 재시도 열 번이 모두
+  실패했다. POSIX 방식은 연 쪽이 옛 파일을 끝까지 읽게 두고 새 파일을 제자리에 넣는다. 그것을 모르는 파일 시스템(FAT · exFAT)은
+  `MoveFileExW` 로 물러난다. 읽기는 `FILE_SHARE_DELETE` 로 연다.
+- 실행 파일마다 매니페스트(`cmake/Modules/Platform/WindowsProcess.manifest`, `sw_embedProcessManifest`)를 박는다:
+  `activeCodePage=UTF-8`(프로세스의 ANSI 코드 페이지가 UTF-8 — 좁은 문자 API 가 한꺼번에 맞는다) · `longPathAware`. App · 테스트 exe 전부 ·
+  ReflectionParser. `PlatformFileUtil::openFile` 도 Windows 에서 UTF-16 으로 연다(`_wfopen_s`).
+- `utf8ToUtf16` 은 잘못된 입력을 최대 부분 시퀀스마다 U+FFFD 로 바꾸고 뒤의 글자를 삼키지 않는다(과잉 인코딩 · 서로게이트 · 범위 밖도).
+  Debug 어서트 대신 경고 한 줄 — 이 입력은 파일 이름 · 사용자 글자처럼 밖에서 온다.
+- `readRange` 는 잰 크기만큼 못 읽으면 false(POSIX 는 seek 실패도). `readFile` 인자는 uint64. TurnBattle 세이브는 `writeTextFile` 하나로.
+
+**확인.** `FileTest` 여섯(`WriteReplacesAtomicallyAndLeavesNoTemporaryFile` · `FailedWriteReportsFalseAndKeepsOriginal` ·
+`NonAsciiPathRoundTrips` · `ReadRangeRespectsOffsetAndRejectsPastEnd` · `ProcessUsesUtf8AnsiCodePage` · **`ReadersNeverObserveHalfWrittenFile`**)과
+`StringTest.Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing`. 마지막 `FileTest` 는 한 스레드가 256 KB 파일을 60 번 덮어쓰는 동안 다른 스레드가
+읽으며 반쯤 쓴 파일을 센다 — 옛 제자리 쓰기를 되돌려 넣으면 실패한다. 네 실행 파일에 매니페스트가 들어간 것을 바이너리에서 확인했고, App 60
+프레임이 오류 없이 끝난다. Debug nogpu 7/7 · 린트 21/21, Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ① 입력 — 실제 루프에서 `wasKeyPressed` 가 뜨지 않았다: 창 메시지는 큐 한 길로)
 
 2026-09-30 전 트리 결함 점검(동시성 · 입력 경계 · RHI · 모듈 수명 · 코어 · 서브시스템 여섯 갈래를 읽고, 후보마다 코드로 재확인)의 첫 수정이다.

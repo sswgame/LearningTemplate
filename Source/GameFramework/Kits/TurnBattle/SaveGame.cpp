@@ -147,25 +147,16 @@ namespace sw
             sb.append( "flag." ).append( key.c_str() ).append( '=' ).append( val ).append( '\n' );
         }
 
-        const string tempPath = string( path ) + ".tmp";
-        if ( FileUtil::writeTextFile( tempPath, sb.view() ) == false )
+        // `writeTextFile` 이 임시 파일 → 결과 확인 → 바꿔 끼우기를 한다. 예전에는 여기서 ".tmp" 에 쓰고 원본에 **복사**했는데, 그 임시 쓰기가
+        // 실패를 알리지 않아(`fwrite` · `fclose` 결과를 보지 않았다) 잘린 파일이 멀쩡한 세이브를 덮을 수 있었고, 복사 자체도 원자적이지 않았다.
+        if ( FileUtil::writeTextFile( path, sb.view() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write temporary save file: %#", tempPath.c_str() );
+            SW_LOG_ERROR( "Failed to save %# — the previous save was left untouched", path );
             return false;
         }
 
-        const bool bCopied = FileUtil::copyFile( tempPath, path );
-        if ( bCopied )
-        {
-            FileUtil::removeFile( tempPath );
-            SW_LOG_INFO( "Saved %# (party=%# flags=%#)", path, _listParty.size(), _mapFlag.size() );
-        }
-        else
-        {
-            SW_LOG_ERROR( "Failed to commit atomic save to %# (temporary file retained at %#)", path, tempPath.c_str() );
-        }
-
-        return bCopied;
+        SW_LOG_INFO( "Saved %# (party=%# flags=%#)", path, _listParty.size(), _mapFlag.size() );
+        return true;
     }
 
     bool TurnBattleSaveGame::loadFromFile( string_view path )

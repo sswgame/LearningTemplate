@@ -12,6 +12,7 @@ if(SW_SHIPPING_BUILD)
 endif()
 
 add_executable(App ${APP_SOURCES})
+sw_embedProcessManifest(App)
 set_target_properties(App PROPERTIES FOLDER "Source/App")
 
 target_include_directories(App PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

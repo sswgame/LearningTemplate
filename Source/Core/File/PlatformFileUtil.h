@@ -26,10 +26,21 @@ namespace sw
 
         /**
          * @brief 파일을 엽니다. 실패하면 nullptr 입니다.
-         * @param pFilePath 널 종료 경로. 구분자 정규화는 호출하는 쪽이 먼저 합니다.
+         * @param pFilePath 널 종료 **UTF-8** 경로. 구분자 정규화는 호출하는 쪽이 먼저 합니다.
          * @param pMode fopen 모드 문자열("rb", "wb", "a" 등)
+         * @details Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfopen_s`). 좁은 문자 `fopen_s` 는 경로를 **ANSI 코드 페이지**(한국어
+         *          Windows 는 CP949)로 해석해, 한글이 들어간 UTF-8 경로를 다른 이름으로 읽었습니다. 읽기(`readRange`)는 이미 UTF-16 으로
+         *          열고 있어서, 같은 경로를 쓰기와 읽기가 서로 다른 파일로 봤습니다.
          */
         static FILE* openFile( const utf8* pFilePath, const utf8* pMode );
+
+        /**
+         * @brief @p pSourcePath 를 @p pTargetPath 자리로 옮기며, 이미 있으면 **한 번에** 바꿔치기합니다(같은 볼륨 안에서 원자적).
+         * @details 저장은 임시 파일에 다 쓴 뒤 이것으로 바꿔 끼웁니다. 도중에 죽어도 원본은 온전하거나 새 파일이 온전하며, 반쯤 쓴 파일이
+         *          남지 않습니다. Windows 는 `MoveFileExW( REPLACE_EXISTING | WRITE_THROUGH )`, POSIX 는 `rename` 입니다.
+         * @return 성공하면 true 입니다. 다른 프로세스가 대상 파일을 삭제 공유 없이 열고 있으면 Windows 에서 실패할 수 있습니다.
+         */
+        static bool replaceFile( const utf8* pSourcePath, const utf8* pTargetPath );
 
         /**
          * @brief 64비트 오프셋으로 이동합니다.

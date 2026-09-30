@@ -479,6 +479,19 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	)
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_embedProcessManifest — Windows 실행 파일에 프로세스 설정 매니페스트를 박는다
+#   (UTF-8 ANSI 코드 페이지 · 긴 경로; cmake/Modules/Platform/WindowsProcess.manifest 설명)
+#   .manifest 를 소스로 주면 CMake 가 링크 단계에서 CMAKE_MT 로 합쳐 넣는다. 실행 파일마다 부른다 — 앱만 켜고 테스트를
+#   빼면 테스트가 앱과 다른 코드 페이지에서 돌아 경로 인코딩 결함을 볼 수 없다.
+# ------------------------------------------------------------------------------
+function(sw_embedProcessManifest TARGET_NAME)
+	if(NOT WIN32)
+		return()
+	endif()
+	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/cmake/Modules/Platform/WindowsProcess.manifest")
+endfunction()
+
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
 
@@ -488,6 +501,7 @@ function(sw_addTestExecutable TARGET_NAME)
 
 	add_executable(${TARGET_NAME} ${ARG_SOURCES})
 	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp")
+	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
 
 	# 배포 빌드의 Bin 은 App.exe 와 Packs/ 만 담아야 한다. 테스트는 계속 빌드하되 옆 디렉터리로
