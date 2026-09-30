@@ -151,17 +151,21 @@ namespace sw
             /** @brief 이 범위가 덮는 셀 수입니다. 비어 있으면 0 입니다. */
             int64 getCellCount() const noexcept;
 
-            /** @brief 범위의 셀마다 콜백을 부릅니다. 비어 있으면 한 번도 부르지 않습니다. */
+            /**
+             * @brief 범위의 셀마다 콜백을 부릅니다. 비어 있으면 한 번도 부르지 않습니다.
+             * @details 순회 변수는 int64 다. 셀 번호는 int32 끝(`MaxInt32`)까지 접히는데(+inf · 아주 먼 좌표), int32 로 돌면 `++` 가 넘쳐
+             *          `<= _maxX` 가 영원히 참이었다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다.
+             */
             template <typename Func>
             void forEachCell( Func&& func ) const
             {
-                for ( int32 gridZ = _minZ; gridZ <= _maxZ; ++gridZ )
+                for ( int64 gridZ = _minZ; gridZ <= _maxZ; ++gridZ )
                 {
-                    for ( int32 gridY = _minY; gridY <= _maxY; ++gridY )
+                    for ( int64 gridY = _minY; gridY <= _maxY; ++gridY )
                     {
-                        for ( int32 gridX = _minX; gridX <= _maxX; ++gridX )
+                        for ( int64 gridX = _minX; gridX <= _maxX; ++gridX )
                         {
-                            func( CellCoord{ gridX, gridY, gridZ } );
+                            func( CellCoord{ static_cast<int32>( gridX ), static_cast<int32>( gridY ), static_cast<int32>( gridZ ) } );
                         }
                     }
                 }

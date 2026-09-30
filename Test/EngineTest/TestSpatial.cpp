@@ -714,3 +714,20 @@ SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
     SW_ASSERT_TRUE( listVisible.size() == 1 );
     SW_EXPECT_TRUE( listVisible[0] == sw::SlotHandle::make( 1, 1 ) );
 }
+
+/**
+ * @brief [SpatialTest] 셀 번호가 int32 끝에 닿는 항목도 넣고 찾고 뺄 수 있다(순회가 끝난다)
+ * @details `PhysicsWorld` 와 같은 순회 넘침이 여기에도 있었다.
+ */
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
+{
+    const sw::SlotHandle  entity = sw::SlotHandle::make( 1, 1 );
+    sw::SpatialHashGrid2D grid{ 32.0f };
+    grid.insert( entity, 1.0e12f, 1.0e12f, 1.0e12f, 1.0e12f );
+
+    sw::vector<sw::SlotHandle> hits;
+    grid.queryAabb( 1.0e12f, 1.0e12f, 1.0e12f, 1.0e12f, hits );
+    SW_EXPECT_EQUAL( size_t( 1 ), hits.size() );
+    grid.remove( entity );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
+}

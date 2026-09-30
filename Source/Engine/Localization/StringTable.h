@@ -59,7 +59,8 @@ namespace sw
         bool        empty() const;
 
     private:
-        mutable std::shared_mutex     _mutex;
-        unordered_map<uint64, string> _mapTable;
+        mutable std::shared_mutex _mutex;
+        /// @brief 키 해시 → 번역 문자열. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 표가 바뀌어도 사라지지 않는다.
+        unordered_map<uint64, const utf8*> _mapTable;
     };
 } // namespace sw

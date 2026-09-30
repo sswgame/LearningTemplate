@@ -47,6 +47,13 @@ namespace sw
         /** @brief 단발성 효과음(SFX)을 비동기로 재생합니다. */
         virtual bool play( string_view path ) = 0;
 
+        /**
+         * @brief 소리를 **지금** 디코드해 캐시에 올립니다(언리얼 사운드 프리캐시 · 유니티 `AudioClip.LoadAudioData`).
+         * @details 재생은 비동기라 첫 재생 때 디코드가 끼어 끊기고, 디코드에 실패해도 부르는 쪽은 알 수 없습니다. 로딩 화면 등에서 불러 두면
+         *          재생이 캐시에서 바로 시작합니다. 디코드할 수 없는 형식 · 없는 파일이면 false 입니다.
+         */
+        virtual bool preload( string_view path ) = 0;
+
         /** @brief 배경음악(BGM)을 루프로 재생합니다. */
         virtual bool playMusic( string_view path ) = 0;
 

@@ -386,3 +386,21 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
     animator.onTick( 0.4f );
     SW_EXPECT_TRUE( animator.getCurrentFrame() < 4 );
 }
+
+/**
+ * @brief [AnimationTest] BlendSpace2D 는 표본 범위 밖 파라미터를 범위로 가둬, 첫 표본이 아니라 가장 가까운 모서리를 낸다
+ * @details 1/d² 를 그대로 더해 절대값 1e-6 과 견줘, cm/s 단위(표본 0~600)에서 대시 2500 이면 합이 그보다 작아 **처음 넣은 표본**(Idle)으로
+ *          튀었다. 언리얼 블렌드 스페이스처럼 파라미터를 범위로 가둔다.
+ */
+SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
+{
+    BlendSpace2D blendSpace;
+    blendSpace.addSample( 0.0f, 0.0f, "Idle", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+    blendSpace.addSample( 600.0f, 0.0f, "Run", float4x4::createTranslation( float3{ 600.0f, 0.0f, 0.0f } ) );
+    blendSpace.addSample( 0.0f, 600.0f, "Strafe", float4x4::createTranslation( float3{ 0.0f, 600.0f, 0.0f } ) );
+    blendSpace.addSample( 600.0f, 600.0f, "RunStrafe", float4x4::createTranslation( float3{ 600.0f, 600.0f, 0.0f } ) );
+
+    const float4x4 dashPose = blendSpace.evaluate( 2500.0f, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 600.0f, dashPose._41, 1e-2f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, dashPose._42, 1e-2f );
+}

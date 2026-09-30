@@ -909,3 +909,56 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeHandlerCanUnregisterItselfWhileEx
         SW_EXPECT_TRUE( fsm.getCurrentMode().empty() );
     }
 }
+
+/**
+ * @brief [LocalizationManagerTest] 조회가 준 포인터는 표가 바뀐 뒤에도 그때의 문자열을 가리킨다
+ * @details 조회는 락을 놓은 뒤 `const utf8*` 를 돌려주고 UI · 워커가 그것을 들고 있다. 예전에는 표가 문자열을 값으로 가져, 같은 키를
+ *          다시 쓰면 들고 있던 포인터가 새 값을 읽었고(제자리 대입), 다른 키를 넣거나 비우면 해제된 메모리를 읽었다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
+{
+    sw::StringTable table;
+    table.setString( sw::hashed_string( "KEY_KEEP" ), "Alpha" );
+    const utf8* pHeld = table.getString( sw::hashed_string( "KEY_KEEP" ) );
+    SW_ASSERT_NOT_NULL( pHeld );
+
+    table.setString( sw::hashed_string( "KEY_KEEP" ), "Changed" );
+    SW_EXPECT_STREQ( "Changed", table.getString( sw::hashed_string( "KEY_KEEP" ) ) );
+    SW_EXPECT_STREQ( "Alpha", pHeld );
+
+    // 다른 키를 많이 넣어 표를 다시 배치하고, 비운다 — 그래도 들고 있던 문자열은 그대로다.
+    for ( int32 index = 0; index < 200; ++index )
+    {
+        const sw::string key = sw::string( "KEY_FILL_" ) + sw::to_string( index );
+        table.setString( sw::hashed_string( key.c_str() ), "Fill" );
+    }
+    table.clear();
+    SW_EXPECT_STREQ( "Alpha", pHeld );
+}
+
+/**
+ * @brief [LocalizationManagerTest] 언어 표를 하나도 읽지 못한 바이너리 팩은 실패다(텍스트 폴백이 돈다)
+ * @details 예전에는 표가 모두 깨져도 true 여서, 부르는 쪽이 텍스트 파일 폴백을 건너뛰고 활성 언어 없이 끝났다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, BinaryPackWithNoReadableTableFails )
+{
+    SW_TEST_SUPPRESS_LOGS();
+    const sw::string packPath = test::makeTempPath( "test_loc_corrupt.bin" );
+
+    sw::LocalizationManager source;
+    source.setString( "en_US", sw::hashed_string( "TXT_HELLO" ), "Hello" );
+    SW_ASSERT_TRUE( source.saveToBinaryPack( packPath ) );
+
+    // [magic][version][count] 뒤 [codeLen][code "en_US"][tableSize] 다음이 표의 첫 바이트(표 매직)다 — 그것을 깬다.
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( packPath, bytes ) );
+    const size_t tableStart = 12 + 4 + 5 + 4;
+    SW_ASSERT_TRUE( bytes.size() > tableStart );
+    bytes[tableStart] ^= 0xFFu;
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), bytes.size() ) );
+
+    sw::LocalizationManager loaded;
+    SW_EXPECT_FALSE( loaded.loadFromBinaryPack( packPath ) );
+    SW_EXPECT_FALSE( loaded.hasLanguage( "en_US" ) );
+    sw::FileUtil::removeFile( packPath );
+}

@@ -353,16 +353,18 @@ namespace sw
             return false;
         }
 
+        // 경계는 **남은 바이트와 뺄셈으로** 견준다. `pPtr + n > pEnd` 는 버퍼 끝을 넘는 포인터를 만드는 것부터가 규약 밖이다.
+        uint32 loadedLanguageCount{ 0 };
         for ( uint32 index = 0; index < languageCount; ++index )
         {
-            if ( pPtr + sizeof( uint32 ) > pEnd )
+            if ( static_cast<size_t>( pEnd - pPtr ) < sizeof( uint32 ) )
                 return false;
 
             uint32 codeLen{ 0 };
             Memory::copy( &codeLen, pPtr, sizeof( codeLen ) );
             pPtr += sizeof( codeLen );
 
-            if ( pPtr + codeLen + sizeof( uint32 ) > pEnd )
+            if ( static_cast<size_t>( pEnd - pPtr ) < static_cast<size_t>( codeLen ) + sizeof( uint32 ) )
                 return false;
 
             string langCode( reinterpret_cast<const utf8*>( pPtr ), codeLen );
@@ -372,20 +374,29 @@ namespace sw
             Memory::copy( &tableSize, pPtr, sizeof( tableSize ) );
             pPtr += sizeof( tableSize );
 
-            if ( pPtr + tableSize > pEnd )
+            if ( static_cast<size_t>( pEnd - pPtr ) < static_cast<size_t>( tableSize ) )
                 return false;
 
             if ( tableSize > 0 )
             {
                 auto pTable = make_unique<StringTable>();
                 if ( pTable->loadFromBinaryBuffer( pPtr, tableSize ) )
+                {
                     registerLanguageTable( langCode, std::move( pTable ) );
+                    ++loadedLanguageCount;
+                }
             }
 
             pPtr += tableSize;
         }
 
-        SW_LOG_INFO( "Loaded binary localization pack '%#' (%# languages).", string( filePath ).c_str(), languageCount );
+        // 하나도 못 올렸으면 실패다. 예전에는 표가 다 깨져도 true 여서, 부르는 쪽이 텍스트 파일 폴백을 건너뛰고 활성 언어 없이 끝났다.
+        if ( loadedLanguageCount == 0 )
+        {
+            SW_LOG_WARNING( "Localization binary pack '%#' has no readable language table — falling back to text files", string( filePath ).c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Loaded binary localization pack '%#' (%# of %# languages).", string( filePath ).c_str(), loadedLanguageCount, languageCount );
         return true;
     }
 

@@ -13,6 +13,7 @@ namespace sw
 
     class GameObjectManager;
     class SequenceAsset;
+    class SequencePlayer;
 
     /**
      * @brief 시퀀서 타임라인을 GameObject 에 반영하는 공용 도우미입니다.
@@ -44,5 +45,16 @@ namespace sw
         static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame,
                                 int32                             previousFrame        = kNoPreviousFrame,
                                 vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
+        /**
+         * @brief 플레이어의 이번 갱신을 적용합니다(`applyFrame`). 루프를 되감았으면 되감기 전 끝 구간(직전 프레임, `_frameMax`]의
+         *        이벤트를 먼저 모읍니다 — 그 구간과 되감은 뒤 구간을 합친 것이 이번 갱신에 지나간 이벤트입니다.
+         */
+        static void applyPlayback( GameObjectManager* pManager, const SequencePlayer& player,
+                                   vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
+
+    private:
+        /** @brief (@p previousFrame, @p frame] 에서 시작하는 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
+        static void appendCrossedEvents( const SequenceAsset& asset, int32 previousFrame, int32 frame,
+                                         vector<const SequenceTrackItem*>* pOutListCrossedEvent );
     };
 } // namespace sw

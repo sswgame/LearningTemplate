@@ -11,6 +11,7 @@ namespace sw
         , _framesPerSecond{ 30.0f }
         , _playbackTime{ 0.0f }
         , _previousFrame{ 0 }
+        , _frameBeforeWrap{ kNoLoopWrap }
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bLoop{ SW_FALSE }
@@ -76,6 +77,7 @@ namespace sw
 
     void SequencePlayer::update( float32 deltaSeconds )
     {
+        _frameBeforeWrap = kNoLoopWrap;
         if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
             return;
         if ( deltaSeconds < 0.0f )
@@ -101,7 +103,8 @@ namespace sw
             // 한 바퀴를 돌았으면 `play()` 와 같은 자리에서 다시 시작해야 한다. 그러지 않으면
             // 이전 프레임이 끝쪽(`_frameMax` 근처)인 채로 남아, 되감긴 첫 프레임의 이벤트가
             // "이미 지난 것" 이 되어 **루프마다 빠진다.**
-            _previousFrame = _asset._frameMin - 1;
+            _frameBeforeWrap = _previousFrame;
+            _previousFrame   = _asset._frameMin - 1;
         }
         else
         {

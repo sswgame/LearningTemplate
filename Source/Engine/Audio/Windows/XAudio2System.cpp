@@ -17,13 +17,18 @@ namespace sw
         struct XAudio2SystemInternal
         {
             /**
-             * @brief 디코딩한 PCM 오디오 포맷과 바이트 버퍼를 담는 구조체입니다.
+             * @struct PcmClip
+             * @brief 디코드한 소리 하나입니다. 형식은 **확장형까지** 담습니다(`_format.Format.cbSize` 가 22 면 확장형).
+             * @details 24 비트 · 다채널 · 부동소수 WAV 는 DAW 가 흔히 내보내는 형식인데 `WAVEFORMATEX` 만으로는 그 하위 형식을 전하지 못합니다.
              */
             struct PcmClip
             {
-                WAVEFORMATEX  _format{};
-                vector<uint8> _listData;
+                WAVEFORMATEXTENSIBLE _format{};
+                vector<uint8>        _listData;
             };
+
+            /** @brief 확장형 WAV 의 하위 형식 GUID 에서 "PCM · IEEE float" 뒤 12 바이트입니다(KSDATAFORMAT_SUBTYPE_* 공통 꼬리). */
+            inline static constexpr uint8 kArrSubFormatTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
 
             struct VoiceBuffer
             {
@@ -94,11 +99,12 @@ namespace sw
                 if ( Memory::compare( pBytes, "RIFF", 4 ) != 0 || Memory::compare( pBytes + 8, "WAVE", 4 ) != 0 )
                     return false;
 
-                size_t       offset = 12;
-                const uint8* pData  = nullptr;
-                uint32       dataSize{ 0 };
-                WAVEFORMATEX fmt{};
-                bool         bHaveFmt{ false };
+                size_t               offset = 12;
+                const uint8*         pData  = nullptr;
+                uint32               dataSize{ 0 };
+                WAVEFORMATEXTENSIBLE fmt{};
+                bool                 bHaveFmt{ false };
+                uint16               baseFormatTag{ 0 }; ///< PCM · IEEE float — 확장형이면 하위 형식에서 읽는다
 
                 while ( offset + 8 <= byteCount )
                 {
@@ -111,15 +117,29 @@ namespace sw
 
                     if ( Memory::compare( pChunkId, "fmt ", 4 ) == 0 && chunkSize >= 16 )
                     {
-                        const uint8* pFmt   = pBytes + offset;
-                        fmt.wFormatTag      = readUint16LE( pFmt + 0 );
-                        fmt.nChannels       = readUint16LE( pFmt + 2 );
-                        fmt.nSamplesPerSec  = readUint32LE( pFmt + 4 );
-                        fmt.nAvgBytesPerSec = readUint32LE( pFmt + 8 );
-                        fmt.nBlockAlign     = readUint16LE( pFmt + 12 );
-                        fmt.wBitsPerSample  = readUint16LE( pFmt + 14 );
-                        fmt.cbSize          = 0;
-                        bHaveFmt            = true;
+                        const uint8* pFmt          = pBytes + offset;
+                        fmt.Format.wFormatTag      = readUint16LE( pFmt + 0 );
+                        fmt.Format.nChannels       = readUint16LE( pFmt + 2 );
+                        fmt.Format.nSamplesPerSec  = readUint32LE( pFmt + 4 );
+                        fmt.Format.nAvgBytesPerSec = readUint32LE( pFmt + 8 );
+                        fmt.Format.nBlockAlign     = readUint16LE( pFmt + 12 );
+                        fmt.Format.wBitsPerSample  = readUint16LE( pFmt + 14 );
+                        fmt.Format.cbSize          = 0;
+                        baseFormatTag              = fmt.Format.wFormatTag;
+                        // 확장형(0xFFFE): 유효 비트 · 채널 마스크 · 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM · IEEE float 일 때만 받는다.
+                        if ( fmt.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE )
+                        {
+                            baseFormatTag = 0;
+                            if ( chunkSize >= 40 && Memory::compare( pFmt + 28, kArrSubFormatTail, sizeof( kArrSubFormatTail ) ) == 0 )
+                            {
+                                fmt.Format.cbSize               = 22;
+                                fmt.Samples.wValidBitsPerSample = readUint16LE( pFmt + 18 );
+                                fmt.dwChannelMask               = readUint32LE( pFmt + 20 );
+                                Memory::copy( &fmt.SubFormat, pFmt + 24, sizeof( fmt.SubFormat ) );
+                                baseFormatTag = static_cast<uint16>( readUint32LE( pFmt + 24 ) );
+                            }
+                        }
+                        bHaveFmt = true;
                     }
                     else if ( Memory::compare( pChunkId, "data", 4 ) == 0 )
                     {
@@ -131,7 +151,10 @@ namespace sw
 
                 if ( bHaveFmt == false || pData == nullptr || dataSize == 0 )
                     return false;
-                if ( fmt.wFormatTag != WAVE_FORMAT_PCM || fmt.nChannels == 0 || fmt.nSamplesPerSec == 0 || fmt.nBlockAlign == 0 )
+                // PCM 과 IEEE float(확장형 포함)를 받는다. 예전에는 PCM 태그만 받아, 24 비트 · 다채널 · 부동소수 WAV 가 "디코드 실패" 경고 하나만
+                // 남기고 소리가 나지 않았다. XAudio2 는 둘 다 그대로 재생한다.
+                if ( ( baseFormatTag != WAVE_FORMAT_PCM && baseFormatTag != WAVE_FORMAT_IEEE_FLOAT ) || fmt.Format.nChannels == 0 ||
+                     fmt.Format.nSamplesPerSec == 0 || fmt.Format.nBlockAlign == 0 )
                     return false;
 
                 outClip._format = fmt;
@@ -226,16 +249,19 @@ namespace sw
 
                 if ( listPcm.empty() )
                     return false;
-                outClip._format   = fmt;
-                outClip._listData = std::move( listPcm );
+                outClip._format               = WAVEFORMATEXTENSIBLE{};
+                outClip._format.Format        = fmt;
+                outClip._format.Format.cbSize = 0;
+                outClip._listData             = std::move( listPcm );
                 return true;
             }
 
             /** @brief 확장자에 맞는 디코더로 PCM 을 뽑습니다. */
             static bool loadClip( string_view path, PcmClip& outClip )
             {
-                if ( FileUtil::hasExtension( path, ".wav" ) )
-                    return loadWavPcm( path, outClip );
+                // WAV 는 직접 읽는다(팩 안에서도 된다). 직접 못 읽는 WAV(ADPCM 등)는 Media Foundation 에 넘긴다 — 예전에는 거기서 멈췄다.
+                if ( FileUtil::hasExtension( path, ".wav" ) && loadWavPcm( path, outClip ) )
+                    return true;
 
                 string absPath = ResourceUtil::getResourcePath( path );
                 if ( absPath.empty() )
@@ -293,12 +319,13 @@ namespace sw
             , _reservedAudio{ 0 } {}
 
         /** @brief 같은 보이스로 재생할 수 있는 포맷인지 봅니다. */
-        static bool isFormatEqual( const WAVEFORMATEX& lhs, const WAVEFORMATEX& rhs )
+        static bool isFormatEqual( const WAVEFORMATEXTENSIBLE& lhs, const WAVEFORMATEXTENSIBLE& rhs )
         {
-            return lhs.wFormatTag == rhs.wFormatTag &&
-                   lhs.nChannels == rhs.nChannels &&
-                   lhs.nSamplesPerSec == rhs.nSamplesPerSec &&
-                   lhs.wBitsPerSample == rhs.wBitsPerSample;
+            const bool bSameBase = lhs.Format.wFormatTag == rhs.Format.wFormatTag && lhs.Format.nChannels == rhs.Format.nChannels &&
+                                   lhs.Format.nSamplesPerSec == rhs.Format.nSamplesPerSec && lhs.Format.wBitsPerSample == rhs.Format.wBitsPerSample;
+            if ( bSameBase == false || lhs.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE )
+                return bSameBase;
+            return lhs.dwChannelMask == rhs.dwChannelMask && Memory::compare( &lhs.SubFormat, &rhs.SubFormat, sizeof( lhs.SubFormat ) ) == 0;
         }
 
         /** @brief 캐시에 있으면 그것을, 없으면 디코드해 캐시에 넣고 반환합니다. */
@@ -511,6 +538,13 @@ namespace sw
         return playInternal( path, false );
     }
 
+    bool XAudio2System::preload( string_view path )
+    {
+        if ( path.empty() || _impl == nullptr )
+            return false;
+        return _impl->getOrLoadClip( path ) != nullptr;
+    }
+
     /**
      * @brief 배경음악(BGM)을 루프로 재생합니다. 재생 중인 BGM 이 있으면 교체합니다.
      */
@@ -647,7 +681,7 @@ namespace sw
         HRESULT hr = S_OK;
         if ( pVoice == nullptr )
         {
-            hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format );
+            hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format.Format );
             if ( FAILED( hr ) || pVoice == nullptr )
             {
                 SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );

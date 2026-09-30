@@ -46,6 +46,9 @@ namespace sw
         /** @brief 할 일이 없습니다. */
         void update( float32 ) override {}
 
+        /** @brief 디코드하지 않습니다(소리를 내지 않는 구성). 리소스가 있는지만 봅니다. */
+        bool preload( string_view path ) override { return hasPlayableResource( path ); }
+
         /** @brief 리소스가 있으면 재생한 것으로 칩니다. */
         bool play( string_view path ) override
         {

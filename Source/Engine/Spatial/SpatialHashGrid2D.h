@@ -83,11 +83,12 @@ namespace sw
             template <typename Func>
             void forEachCell( Func&& func ) const
             {
-                for ( int32 cellY = _minY; cellY <= _maxY; ++cellY )
+                // int64 로 돈다. 셀 번호가 int32 끝이면 `++` 가 넘쳐 끝나지 않았다(PhysicsWorld::CellRange 와 같은 이유).
+                for ( int64 cellY = _minY; cellY <= _maxY; ++cellY )
                 {
-                    for ( int32 cellX = _minX; cellX <= _maxX; ++cellX )
+                    for ( int64 cellX = _minX; cellX <= _maxX; ++cellX )
                     {
-                        func( cellX, cellY );
+                        func( static_cast<int32>( cellX ), static_cast<int32>( cellY ) );
                     }
                 }
             }

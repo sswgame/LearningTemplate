@@ -83,9 +83,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
 
-        const int32 prevFrame    = _player.getPreviousFrame();
-        const int32 currentFrame = _player.getCurrentFrame();
-
-        SequenceTimelineUtil::applyFrame( pManager, _player.getAsset(), currentFrame, prevFrame );
+        // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
+        SequenceTimelineUtil::applyPlayback( pManager, _player );
     }
 } // namespace sw

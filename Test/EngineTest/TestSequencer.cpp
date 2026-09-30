@@ -291,3 +291,55 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
     SW_EXPECT_TRUE( itemSpan >= static_cast<int64>( sw::MathUtil::MinInt32 ) );
     SW_EXPECT_TRUE( itemSpan <= static_cast<int64>( sw::MathUtil::MaxInt32 ) );
 }
+
+/**
+ * @brief [SequencerTest] 루프가 되감길 때 끝 구간 이벤트와 마지막 프레임 이벤트도 발화한다
+ * @details 되감으면 이전 프레임이 `_frameMin - 1` 로 돌아가 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않았다 — 끝쪽 이벤트가 루프마다
+ *          빠졌고 `_frameMax` 의 이벤트는 루프 중에 한 번도 뜨지 않았다.
+ */
+SW_TEST_CASE( SequencerTest, LoopWrapFiresTailAndLastFrameEvents )
+{
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 60;
+    for ( const auto& [pName, frame] : {
+              std::pair<const utf8*, int32>{ "TailEvent", 58},
+              {  "EndEvent", 60},
+              {"StartEvent",  2}
+    } )
+    {
+        sw::SequenceTrackItem event{};
+        event._name         = pName;
+        event._targetObject = "SeqTarget";
+        event._start        = frame;
+        event._end          = frame;
+        event._type         = 1;
+        asset._listItem.push_back( std::move( event ) );
+    }
+
+    sw::SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 60.0f );
+    player.setLoop( true );
+    player.play();
+    player.seekToFrame( 50 );
+    // 15 프레임 → 65 에서 되감겨 5.
+    player.update( 15.0f / 60.0f );
+    SW_ASSERT_TRUE( player.getFrameBeforeWrap() != sw::SequencePlayer::kNoLoopWrap );
+
+    sw::GameObjectManager manager;
+    SW_ASSERT_NOT_NULL( manager.createGameObject( sw::hashed_string{ "SeqTarget" } ) );
+    manager.mergePendingAdds();
+
+    sw::vector<const sw::SequenceTrackItem*> listCrossed;
+    sw::SequenceTimelineUtil::applyPlayback( &manager, player, &listCrossed );
+    SW_EXPECT_TRUE( sw::containsEvent( listCrossed, "TailEvent" ) );
+    SW_EXPECT_TRUE( sw::containsEvent( listCrossed, "EndEvent" ) );
+    SW_EXPECT_TRUE( sw::containsEvent( listCrossed, "StartEvent" ) );
+
+    // 되감지 않은 다음 갱신에서는 끝 구간을 다시 보지 않는다.
+    player.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( player.getFrameBeforeWrap() == sw::SequencePlayer::kNoLoopWrap );
+    sw::SequenceTimelineUtil::applyPlayback( &manager, player, &listCrossed );
+    SW_EXPECT_FALSE( sw::containsEvent( listCrossed, "EndEvent" ) );
+}

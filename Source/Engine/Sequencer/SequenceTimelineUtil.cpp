@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequencePlayer.h"
 
 namespace sw
 {
@@ -116,6 +117,12 @@ namespace sw
 
         if ( previousFrame == kNoPreviousFrame )
             return;
+        appendCrossedEvents( asset, previousFrame, frame, pOutListCrossedEvent );
+    }
+
+    void SequenceTimelineUtil::appendCrossedEvents( const SequenceAsset& asset, int32 previousFrame, int32 frame,
+                                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent )
+    {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
             if ( item._type != 1 )
@@ -127,5 +134,21 @@ namespace sw
                 pOutListCrossedEvent->push_back( &item );
             SW_LOG_INFO( "Sequence event %# on %#", item._name.c_str(), item._targetObject.c_str() );
         }
+    }
+
+    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequencePlayer& player,
+                                              vector<const SequenceTrackItem*>* pOutListCrossedEvent )
+    {
+        const SequenceAsset& asset           = player.getAsset();
+        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
+
+        // 되감기 전 끝 구간을 먼저 모은다. `applyFrame` 이 출력을 비우므로 따로 모아 앞에 붙인다.
+        vector<const SequenceTrackItem*> listTailEvent;
+        if ( frameBeforeWrap != SequencePlayer::kNoLoopWrap )
+            appendCrossedEvents( asset, frameBeforeWrap, asset._frameMax, &listTailEvent );
+
+        applyFrame( pManager, asset, player.getCurrentFrame(), player.getPreviousFrame(), pOutListCrossedEvent );
+        if ( pOutListCrossedEvent != nullptr && listTailEvent.empty() == false )
+            pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
     }
 } // namespace sw

@@ -49,6 +49,9 @@ namespace sw
         /** @brief 리소스 상대 · 절대 경로를 해석해 효과음(SFX)을 한 번 재생합니다. */
         bool play( string_view path ) override;
 
+        /** @brief 디코드해 캐시에 올립니다(동기). 첫 재생의 디코드 끊김을 없앱니다. 디코드할 수 없으면 false 입니다. */
+        bool preload( string_view path ) override;
+
         /** @brief 배경음악(BGM)을 루프 재생하고 이전 음악 보이스는 멈춥니다. 같은 곡이 이미 재생 중이면 다시 시작하지 않습니다. */
         bool playMusic( string_view path ) override;
 

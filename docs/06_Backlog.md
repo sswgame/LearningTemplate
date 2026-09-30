@@ -2021,6 +2021,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (결함 점검 ⑩ 서브시스템 — 물리 셀 순회 무한 루프, 루프 시퀀스 끝 이벤트, 블렌드 스페이스 먼 파라미터, 확장형 · 부동소수 WAV, 로컬라이제이션 포인터 수명)
+
+**무엇이 틀렸나 · 고친 것.**
+- **셀 번호가 int32 끝에 닿으면 셀 순회가 끝나지 않았다**(`PhysicsWorld::CellRange::forEachCell` · `SpatialHashGrid2D`). 아주 먼 좌표 · +inf 는
+  `MaxInt32` 로 접히는데 int32 로 돌아 `++` 가 넘치고 `<= INT32_MAX` 가 늘 참 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다.
+  → 순회 변수를 int64 로. 옛 코드로 새 테스트를 돌리면 둘 다 시간 초과로 멈춘다.
+- **루프 시퀀스가 되감길 때 끝 구간 이벤트가 빠지고 `_frameMax` 이벤트는 한 번도 뜨지 않았다.** → 플레이어가 되감기 직전 프레임을 기억하고
+  (`getFrameBeforeWrap`), `SequenceTimelineUtil::applyPlayback` 이 (직전 프레임, `_frameMax`] 를 먼저 본다. 컴포넌트가 이것을 쓴다.
+- **BlendSpace2D 가 표본 범위 밖 파라미터에서 가장 가까운 표본이 아니라 처음 넣은 표본으로 튀었다**(1/d² 합을 절대값 1e-6 과 견줌).
+  → 언리얼처럼 파라미터를 표본 범위로 가두고, 가중치를 가장 가까운 거리로 정규화한다.
+- **WAV 파서가 `WAVE_FORMAT_PCM` 태그만 받아** 부동소수 · 확장형(24 비트 · 다채널) WAV 가 소리 없이 실패했고, WAV 는 Media Foundation 으로
+  넘기지도 않았다. → 파서가 IEEE float 와 확장형(하위 형식 PCM · float)을 받고(`WAVEFORMATEXTENSIBLE` 로 담아 XAudio2 에 그대로), 그래도
+  못 읽는 WAV 는 Media Foundation 으로 넘긴다. 결과를 볼 수 있게 `IAudioSystem::preload`(동기 디코드 · 캐시 — 언리얼 프리캐시 · 유니티
+  `LoadAudioData`)를 더했다. 둘 중 하나만 있어도 낱개 파일은 되지만 팩 안의 WAV 는 파서만 읽는다 — 둘 다 되돌려야 테스트가 진다.
+- **로컬라이제이션 조회가 준 `const utf8*` 가 표가 바뀌면 해제된 메모리를 가리켰다**(같은 키를 다시 쓰면 새 값을 읽었고, 다른 키를 넣거나
+  비우거나 언어를 내리면 해제). → 번역 문자열을 추가 전용 · 내용 중복 제거 저장소(`LocalizedTextArena`)에 두고 표는 그 포인터만 든다.
+  같은 파일을 다시 읽으면 늘지 않는다. 파일의 키는 전역 이름 표에 넣지 않고 `computeHash` 로만 센다.
+  **깨진 바이너리 팩이 "로드됨" 이었다**(표를 하나도 못 읽어도 true → 텍스트 폴백을 건너뛰고 활성 언어 없음) → 하나도 못 읽으면 실패. 경계
+  검사를 끝을 넘는 포인터 대신 남은 바이트 뺄셈으로.
+
+**확인.** 새 테스트 일곱(물리 · 2D 그리드 · 루프 시퀀스 · 블렌드 · 부동소수/확장형 WAV `preload` · 포인터 수명 · 깨진 팩) — 수정을 되돌리면
+모두 진다(물리 둘은 시간 초과). Debug nogpu+린트 28/28 · hostgpu 2/2, Shipping nogpu+hostgpu 9/9.
+
 ### 2026-09-30 (결함 점검 ⑨ 직렬화 · 리소스 — 파일이 전역 이름 표를 채움, bool memcpy, 팩 무결성, formatVersion, Archive 위치, RPC 봉투, Transient, 리소스 id 샌드박스)
 
 **무엇이 틀렸나 · 고친 것.**

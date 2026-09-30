@@ -121,20 +121,33 @@ namespace sw
         // 역거리 가중치(IDW). 표본 수에 상한이 없다. 예전에는 가중치를 `float[32]` 에 담고
         // 표본 수를 그 길이로 min 해서, 33번째 표본부터 한 마디 없이 버렸다. 거리 제곱을
         // 두 번 구하는 대신 그 고정 버퍼를 없앴다.
-        const float2 targetParam{ paramX, paramY };
-        float32      totalWeight = 0.0f;
+        //
+        // 파라미터는 **표본 범위로 먼저 가둔다**(언리얼 블렌드 스페이스와 같다). 가중치는 가장 가까운 표본의 거리로 나눠 1 이 되게 한다.
+        // 예전에는 1/d² 를 그대로 더해 절대값 1e-6 과 견줬다 — cm/s 단위(표본 0~600)에서 대시 2500 이면 표본마다 가중치가 2e-7 쯤이라
+        // "합이 너무 작다" 에 걸려, 가장 가까운 표본이 아니라 **처음 넣은 표본**(보통 Idle)으로 튀었다.
+        float2 minParam = _listSample.front()._parameter;
+        float2 maxParam = _listSample.front()._parameter;
+        for ( const BlendSample2D& sample : _listSample )
+        {
+            minParam = float2{ MathUtil::min( minParam._x, sample._parameter._x ), MathUtil::min( minParam._y, sample._parameter._y ) };
+            maxParam = float2{ MathUtil::max( maxParam._x, sample._parameter._x ), MathUtil::max( maxParam._y, sample._parameter._y ) };
+        }
+        const float2 targetParam{ MathUtil::clamp( paramX, minParam._x, maxParam._x ), MathUtil::clamp( paramY, minParam._y, maxParam._y ) };
+
+        float32 nearestDistSq = MathUtil::MaxFloat;
         for ( const BlendSample2D& sample : _listSample )
         {
             const float32 distSq = float2::getDistanceSquared( targetParam, sample._parameter );
             if ( distSq < MathUtil::Epsilon )
                 return sample._pose;
-            totalWeight += 1.0f / distSq;
+            nearestDistSq = MathUtil::min( nearestDistSq, distSq );
         }
 
-        if ( totalWeight < MathUtil::Epsilon )
-            return _listSample.front()._pose;
-
-        const float32 invTotalWeight = 1.0f / totalWeight;
+        // 가장 가까운 표본의 상대 가중치가 1 이므로 합은 1 이상이다 — 작아서 버리는 일이 없다.
+        float32 totalWeight = 0.0f;
+        for ( const BlendSample2D& sample : _listSample )
+            totalWeight += nearestDistSq / float2::getDistanceSquared( targetParam, sample._parameter );
+        const float32 invTotalWeight = nearestDistSq / totalWeight;
 
         float3         sampleScale{};
         DualQuaternion accumDq     = BlendSpaceInternal::splitPose( _listSample.front()._pose, sampleScale );

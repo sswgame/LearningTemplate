@@ -503,3 +503,27 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
         SW_EXPECT_TRUE( handle != enormousHandle );
     }
 }
+
+/**
+ * @brief [PhysicsTest] 셀 번호가 int32 끝에 닿는 바디도 등록 · 질의가 끝난다
+ * @details 셀 번호는 int32 끝으로 접히는데(아주 먼 좌표 · +inf), 셀 순회가 int32 로 돌아 `++` 가 넘치고 `<= INT32_MAX` 가 영원히
+ *          참이었다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다. 이 케이스가 다시 멈추면 CTest 시간 초과로 드러난다.
+ */
+SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
+{
+    PhysicsWorld world;
+    AABB         farBox;
+    farBox._min = float3( 1.0e12f, 0.0f, 0.0f );
+    farBox._max = float3( 1.0e12f, 0.5f, 0.5f );
+
+    const PhysicsWorld::BodyHandle handle = world.addBody( farBox, 0 );
+    SW_ASSERT_TRUE( handle.isValid() );
+
+    vector<PhysicsWorld::BodyHandle> hits;
+    world.queryAabb( farBox, 0, hits );
+    bool bFound{ false };
+    for ( const PhysicsWorld::BodyHandle& hit : hits )
+        bFound = bFound || hit == handle;
+    SW_EXPECT_TRUE( bFound );
+    world.removeBody( handle );
+}

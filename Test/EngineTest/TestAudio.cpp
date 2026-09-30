@@ -56,6 +56,53 @@ namespace
 
         return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
+
+    /**
+     * @brief 부동소수(IEEE float) 또는 확장형(WAVE_FORMAT_EXTENSIBLE) WAV 를 만듭니다. DAW 가 흔히 내보내는 형식입니다.
+     * @param subFormatTag 확장형의 하위 형식(1 PCM · 3 float). 0 이면 확장형이 아닌 `formatTag` 그대로입니다.
+     */
+    bool writeFormattedWav( const sw::string& path, uint16 formatTag, uint16 channelCount, uint16 bitsPerSample, uint16 subFormatTag )
+    {
+        const bool        bExtensible = subFormatTag != 0;
+        const uint32      fmtBytes    = bExtensible ? 40u : 16u;
+        const uint16      blockAlign  = static_cast<uint16>( channelCount * bitsPerSample / 8 );
+        const uint32      dataBytes   = static_cast<uint32>( blockAlign ) * 64u;
+        sw::vector<uint8> bytes;
+        auto              appendUint32 = [&bytes]( uint32 value )
+        {
+            for ( uint32 shift = 0; shift < 32; shift += 8 )
+                bytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+        };
+        auto appendUint16 = [&bytes]( uint16 value )
+        {
+            bytes.push_back( static_cast<uint8>( value & 0xFFu ) );
+            bytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
+        };
+        bytes.insert( bytes.end(), { 'R', 'I', 'F', 'F' } );
+        appendUint32( 4u + 8u + fmtBytes + 8u + dataBytes );
+        bytes.insert( bytes.end(), { 'W', 'A', 'V', 'E' } );
+        bytes.insert( bytes.end(), { 'f', 'm', 't', ' ' } );
+        appendUint32( fmtBytes );
+        appendUint16( bExtensible ? uint16{ 0xFFFE } : formatTag );
+        appendUint16( channelCount );
+        appendUint32( 48000u );
+        appendUint32( 48000u * blockAlign );
+        appendUint16( blockAlign );
+        appendUint16( bitsPerSample );
+        if ( bExtensible )
+        {
+            appendUint16( 22u );                         // cbSize
+            appendUint16( bitsPerSample );               // wValidBitsPerSample
+            appendUint32( ( 1u << channelCount ) - 1u ); // dwChannelMask
+            appendUint32( subFormatTag );                // SubFormat.Data1
+            const uint8 arrTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
+            bytes.insert( bytes.end(), arrTail, arrTail + sizeof( arrTail ) );
+        }
+        bytes.insert( bytes.end(), { 'd', 'a', 't', 'a' } );
+        appendUint32( dataBytes );
+        bytes.insert( bytes.end(), dataBytes, uint8{ 0 } );
+        return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
+    }
 } // namespace
 
 SW_TEST_CASE( AudioSystemTest, LifecycleAndState )
@@ -347,4 +394,32 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
     for ( const sw::string& path : listWavPath )
         sw::FileUtil::removeFile( path );
+}
+
+/**
+ * @brief [AudioSystemTest] 부동소수 · 확장형(24 비트 다채널) WAV 도 디코드된다
+ * @details 파서가 `WAVE_FORMAT_PCM` 태그만 받아, DAW 가 흔히 내보내는 부동소수 · 확장형 WAV 가 "디코드 실패" 경고 하나만 남기고 소리가
+ *          나지 않았다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 잰다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
+ */
+SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
+{
+    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
+    SW_ASSERT_TRUE( pAudioSystem->initialize() );
+
+    const sw::string floatPath      = test::makeTempPath( "test_float32.wav" );
+    const sw::string extensiblePath = test::makeTempPath( "test_ext24_6ch.wav" );
+    const sw::string extFloatPath   = test::makeTempPath( "test_ext_float.wav" );
+    SW_ASSERT_TRUE( writeFormattedWav( floatPath, 3u, 2u, 32u, 0u ) );      // WAVE_FORMAT_IEEE_FLOAT 스테레오
+    SW_ASSERT_TRUE( writeFormattedWav( extensiblePath, 1u, 6u, 24u, 1u ) ); // 확장형 24 비트 PCM 5.1
+    SW_ASSERT_TRUE( writeFormattedWav( extFloatPath, 3u, 2u, 32u, 3u ) );   // 확장형 float
+
+    SW_EXPECT_TRUE( pAudioSystem->preload( floatPath ) );
+    SW_EXPECT_TRUE( pAudioSystem->preload( extensiblePath ) );
+    SW_EXPECT_TRUE( pAudioSystem->preload( extFloatPath ) );
+    SW_EXPECT_FALSE( pAudioSystem->preload( "NonExistentSoundFile.wav" ) );
+
+    pAudioSystem->shutdown();
+    sw::FileUtil::removeFile( floatPath );
+    sw::FileUtil::removeFile( extensiblePath );
+    sw::FileUtil::removeFile( extFloatPath );
 }
