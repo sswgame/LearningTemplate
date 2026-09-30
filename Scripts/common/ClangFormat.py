@@ -20,8 +20,6 @@ import platform
 import shutil
 import subprocess
 import sys
-import urllib.request
-import zipfile
 from pathlib import Path
 
 from .Archive import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
@@ -100,6 +98,7 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
 
     URL 에 해시가 들어 있어 손으로 적어 둘 수 없으므로 버전만 고정하고 URL 은 여기서 받아 온다.
     """
+    import urllib.request  # PyPI 를 물을 때만(Archive.downloadUrl 과 같은 이유)
     if not version:
         return ""
 
@@ -132,6 +131,7 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
 
 def installClangFormatFromWheelInternal(wheel: Path, destBin: Path) -> bool:
     """휠(zip)에서 clang-format 실행 파일만 destBin 으로 꺼냅니다."""
+    import zipfile  # 휠을 풀 때만
     wantName = clangFormatFileNameInternal()
     destBin.mkdir(parents=True, exist_ok=True)
     try:

@@ -2021,6 +2021,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (Scripts ⑨ — `common` 이 다운로드 · 압축 모듈을 머리에서 불러 모든 스크립트가 값을 치렀다)
+
+CMake configure 를 다시 재니(②) 남은 파이썬 여섯 번이 1.76 s 였고, 생성기 하나가 0.34 s 인데 **하는 일은 거의 0** 이었다 — 파이썬 기동 0.18 s + `import common`
+0.16 s. `common/__init__` 은 하위 모듈을 전부 불러오는데, `Archive` 가 다운로드에만 쓰는 `urllib.request`(→ `http.client` · `email`, 45 ms)와 압축 해제에만 쓰는
+`tarfile` · `zipfile` 을, `ClangFormat` 이 PyPI 조회 · 휠 풀기에만 쓰는 `urllib.request` · `zipfile` 을 모듈 머리에서 불렀다. 상수 하나 읽는 생성기도, 린트 하나도
+매번 그 값을 냈다.
+
+쓰는 함수 안에서 불러오게 했다(`downloadUrl` · `extractZipSafe` · `extractTarSafe` · `resolveClangFormatWheelUrlInternal` · `installClangFormatFromWheelInternal`).
+`from common import *` 로 그 모듈 이름을 빌려 쓰던 스크립트는 없음을 확인했다.
+
+**결과.** `import common` **151 → 111 ms**, 생성기 하나 344 → 283 ms, configure 6.5 → **5.9 s**, 린트 CTest 19.1 → **17.7 s**(하위 프로세스마다 줄어든다). Python 게이트 둘 통과.
+
 ### 2026-09-30 (CMake ② — 윈도우 도구 찾기 두 벌 · 매니페스트 해시 두 벌을 한 벌로, 포트 툴체인도 상수로 설정을 읽는다)
 
 `RunDuplicateCode --language cmake`(979fa99c 로 넣었다)로 `*.cmake` · `CMakeLists.txt` 83 개를 재니 6 줄 이상 복사가 셋이었다.

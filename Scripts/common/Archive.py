@@ -8,9 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-import tarfile
-import urllib.request
-import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +57,7 @@ def downloadUrl(url: str, destPath: Path, *, label: str = "Download") -> None:
     """
     지정된 URL에서 파일을 다운로드하여 대상 경로에 저장하고 진행률(%)을 콘솔에 표시합니다.
     """
+    import urllib.request  # 받을 때만 — 모듈 머리에 두면 상수 하나 읽는 스크립트도 http · email 까지 불러온다(45 ms)
     destPath.parent.mkdir(parents=True, exist_ok=True)
     print(f"[{label}] Downloading {url}")
     lastPercent = -1
@@ -110,6 +108,7 @@ def extractZipSafe(archivePath: Path, destPath: Path) -> None:
         archivePath: 해제할 Zip 파일 경로
         destPath: 저장할 대상 디렉터리 경로
     """
+    import zipfile  # 풀 때만
     destPath.mkdir(parents=True, exist_ok=True)
     destResolved = destPath.resolve()
     with zipfile.ZipFile(archivePath, "r") as zipHandle:
@@ -128,6 +127,7 @@ def extractTarSafe(archivePath: Path, destPath: Path, *, mode: str = "r:*") -> N
         destPath: 저장할 대상 디렉터리 경로
         mode: tarfile 모드 (기본값: "r:*")
     """
+    import tarfile  # 풀 때만
     destPath.mkdir(parents=True, exist_ok=True)
     destResolved = destPath.resolve()
     with tarfile.open(archivePath, mode) as tarHandle:
