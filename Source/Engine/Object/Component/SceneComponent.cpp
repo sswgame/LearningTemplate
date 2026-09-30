@@ -199,7 +199,7 @@ namespace sw
     void SceneComponent::ensureWorldCache() const
     {
         // 병렬 틱 중에는 캐시만 읽는다(워커가 계층을 고쳐 쓰면 안 된다).
-        if ( _bIsTransformDirty == SW_FALSE || isInParallelTick() )
+        if ( _bIsTransformDirty.load( std::memory_order_relaxed ) == SW_FALSE || isInParallelTick() )
             return;
 
         // **합성은 `updateWorldTransformFromParent` 한 곳에서만 한다.** 예전에는 여기에 같은 합성 · 해제가 한 벌 더 있었고, 그쪽만
@@ -209,7 +209,7 @@ namespace sw
         // 더티인 조상 사슬을 위에서부터 합성한다. 깨끗한 노드의 조상은 모두 깨끗하다(더티는 자손 전부에 세우고, 해제는 위에서 아래로).
         // 재귀하지 않는다 — 깊은 계층에서도 스택이 자라지 않는다.
         vector<SceneComponent*, InlineAllocator<SceneComponent*, 16>> listChain;
-        for ( SceneComponent* pNode = const_cast<SceneComponent*>( this ); pNode != nullptr && pNode->_bIsTransformDirty == SW_TRUE;
+        for ( SceneComponent* pNode = const_cast<SceneComponent*>( this ); pNode != nullptr && pNode->_bIsTransformDirty.load( std::memory_order_relaxed ) == SW_TRUE;
               pNode                 = pNode->_pParent )
             listChain.push_back( pNode );
         for ( auto it = listChain.rbegin(); it != listChain.rend(); ++it )
@@ -240,7 +240,7 @@ namespace sw
         }
         else
             SceneTransformStorage::composeWorld( *_pTransformPage, getPageIndex(), nullptr, nullptr );
-        _bIsTransformDirty = SW_FALSE;
+        _bIsTransformDirty.store( SW_FALSE, std::memory_order_relaxed );
         notifyWorldTransformUpdated();
     }
 
@@ -381,16 +381,16 @@ namespace sw
 
     SceneComponent* SceneComponent::markSelfAndAncestorsDirty()
     {
-        _bIsTransformDirty = SW_TRUE;
+        _bIsTransformDirty.store( SW_TRUE, std::memory_order_relaxed );
 
         // 부모 사슬을 올라가며 "자손 더티" 를 세우고, 루트에 닿으면 그것을 돌려준다. 이미 서 있는 조상을 만나면 그 루트는 이미 올라
         // 있다(불변식) — 거기서 멈추고 nullptr. 내가 루트면 나다.
         SceneComponent* pRoot = ( _pParent == nullptr ) ? this : nullptr;
         for ( SceneComponent* pParentComp = _pParent; pParentComp != nullptr; pParentComp = pParentComp->_pParent )
         {
-            if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
+            if ( pParentComp->_bHasDirtyDescendant.load( std::memory_order_relaxed ) == SW_TRUE )
                 break;
-            pParentComp->_bHasDirtyDescendant = SW_TRUE;
+            pParentComp->_bHasDirtyDescendant.store( SW_TRUE, std::memory_order_relaxed );
             if ( pParentComp->_pParent == nullptr )
                 pRoot = pParentComp;
         }
@@ -414,12 +414,12 @@ namespace sw
             listStack.pop_back();
             if ( pNode->_listChild.empty() )
                 continue;
-            pNode->_bHasDirtyDescendant = SW_TRUE;
+            pNode->_bHasDirtyDescendant.store( SW_TRUE, std::memory_order_relaxed );
             for ( SceneComponent* pChild : pNode->_listChild )
             {
-                if ( pChild == nullptr || pChild->_bIsTransformDirty == SW_TRUE )
+                if ( pChild == nullptr || pChild->_bIsTransformDirty.load( std::memory_order_relaxed ) == SW_TRUE )
                     continue;
-                pChild->_bIsTransformDirty = SW_TRUE;
+                pChild->_bIsTransformDirty.store( SW_TRUE, std::memory_order_relaxed );
                 listStack.push_back( pChild );
             }
         }

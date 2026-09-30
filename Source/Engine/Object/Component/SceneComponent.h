@@ -135,11 +135,11 @@ namespace sw
         uint32 getTransformSlot() const { return _transformSlot; }
 
         /** @brief 트랜스폼 캐시가 더티면 true 입니다. */
-        bool isTransformDirty() const { return _bIsTransformDirty == SW_TRUE; }
+        bool isTransformDirty() const { return _bIsTransformDirty.load( std::memory_order_relaxed ) == SW_TRUE; }
         /** @brief 더티 자손이 있으면 true 입니다. */
-        bool hasDirtyDescendant() const { return _bHasDirtyDescendant == SW_TRUE; }
+        bool hasDirtyDescendant() const { return _bHasDirtyDescendant.load( std::memory_order_relaxed ) == SW_TRUE; }
         /** @brief 더티 자손 플래그를 지웁니다. */
-        void clearDirtyDescendant() { _bHasDirtyDescendant = SW_FALSE; }
+        void clearDirtyDescendant() { _bHasDirtyDescendant.store( SW_FALSE, std::memory_order_relaxed ); }
 
         /** @brief `_pParent` 에서 Attach 직렬화 필드를 채웁니다. */
         void syncAttachSerializeFields() const;
@@ -254,9 +254,11 @@ namespace sw
         GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
-        /// @brief 비트필드가 **아닙니다.** 적용 · 배치 쓰기의 워커들이 이 둘을 바이트 저장으로 같이 세웁니다(`markHierarchyDirtyParallel`) — 비트필드면 이웃 비트까지 쓴다.
-        uint8 _bIsTransformDirty;
-        uint8 _bHasDirtyDescendant;
+        /// @brief 비트필드가 **아닙니다.** 적용 · 배치 쓰기의 워커들이 이 둘을 같은 조상 · 자손에 겹쳐 세웁니다(`markHierarchyDirtyParallel`) —
+        /// 비트필드면 이웃 비트까지 쓴다. 같은 값을 쓰니 결과는 무해하지만 평범한 바이트면 데이터 경쟁(미정의 동작)이라 ThreadSanitizer 가
+        /// 짚었다 — relaxed 원자로 둔다(x86 에서 같은 명령).
+        atomic<uint8> _bIsTransformDirty;
+        atomic<uint8> _bHasDirtyDescendant;
         /**
          * @brief 루트일 때 계층의 더티 루트 목록에 올라 있는지 나타냅니다. `SceneTransformHierarchy` 만 만집니다.
          * @details 원자인 이유: 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 오르게 합니다(exchange).

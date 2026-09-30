@@ -300,7 +300,7 @@ namespace sw
 
         PrimitiveRegistry* pRegistry = ( target._pManager != nullptr ) ? &target._pManager->getPrimitiveRegistry() : nullptr;
         if ( applyLocalChange( page, pageIndex, pRegistry ) )
-            target._bIsTransformDirty = SW_FALSE;
+            target._bIsTransformDirty.store( SW_FALSE, std::memory_order_relaxed );
         return true;
     }
 

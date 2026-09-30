@@ -2021,6 +2021,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (TSan 첫 보고 추리기 — 테스트 하네스 종료 순서, 트랜스폼 더티 표시)
+
+**첫 CI(14197318)의 TSan 보고 여섯 건은 두 종류였다.**
+- **다섯 실행 파일 모두: 종료 때 프로파일러 해제 후 사용.** 테스트 하네스(`Test/TestFramework/main.cpp`)가 `MemoryProfiler` 를 로거보다 먼저
+  지웠는데, 로거 스레드도 메모리를 풀며 `Memory::free` → `recordFree` 로 그 프로파일러를 읽었다. → 로거를 먼저 세우고(조인) 프로파일러를 지운다.
+  `EngineLoop` 은 이미 이 순서다.
+- **EngineTest: 병렬 트랜스폼 반영의 더티 표시.** `markHierarchyDirtyParallel` 의 워커 여럿이 같은 조상 · 자손의 `_bIsTransformDirty` ·
+  `_bHasDirtyDescendant` 를 평범한 바이트로 겹쳐 썼다 — 같은 값이라 결과는 무해했지만(주석도 그렇게 적었다) C++ 에서는 데이터 경쟁이다.
+  → 둘을 `atomic<uint8>` 로 두고 모든 접근을 relaxed 로(x86 에서 같은 명령).
+
+**확인.** Debug nogpu+린트 28/28(부하 상태 5 회 · CoreTest 단독 12 회 반복), hostgpu 2/2, Shipping 9/9. 첫 전체 실행에서 CoreTest 가 한 번
+졌는데 케이스 이름을 잡지 못했고 이후 17 회 재현되지 않았다 — 다시 보이면 `intermittent-crash-diagnosis` 순서로 본다. TSan 결과는 다음 CI 로 확인한다.
+
 ### 2026-09-30 (고도화 ② Windows DPI 인식 · 에디터 UI 배율)
 
 **왜.** 프로세스가 DPI 를 몰라, 125 % · 150 % 모니터에서 OS 가 창을 96 DPI 로 그린 뒤 비트맵으로 늘렸다 — 화면과 에디터 글자가 흐렸고 창 ·

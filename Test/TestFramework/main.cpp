@@ -207,12 +207,14 @@ int main( int32 argc, utf8* argv[] )
     // 위에서 순서대로 놓은 것 말고 남은 것을 쓸어 담는다(EngineLoop 과 같은 자리).
     owned.destroyAll();
 
-    memoryProfiler.reset();
-    deadlockDetector.reset();
-
+    // 로거 스레드를 **먼저** 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부르는데(`Memory::free` → `recordFree`), 예전에는 프로파일러를
+    // 먼저 지워 그 스레드가 읽던 객체가 사라졌다(ThreadSanitizer 가 모든 테스트 실행 파일에서 짚었다). `EngineLoop` 은 이미 이 순서다.
     sw::CrashHandler::shutdown();
     logger->shutdown();
     logger.reset();
+
+    memoryProfiler.reset();
+    deadlockDetector.reset();
 
     sw::HashedStringPool::shutdown();
 
