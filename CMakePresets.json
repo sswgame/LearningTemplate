@@ -151,6 +151,19 @@
         "SW_ENABLE_UNITY_BUILD": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "CI-Debug-TSAN",
+      "displayName": "CI Debug + TSan (Ninja, Linux Clang)",
+      "description": "CI Debug with ThreadSanitizer enabled (GNU/Clang only)",
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SW_ENABLE_SANITIZER": "ON",
+        "SW_SANITIZER_KIND": "thread",
+        "SW_ENABLE_UNITY_BUILD": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -189,6 +202,10 @@
     {
       "name": "CI-Debug-ASAN",
       "configurePreset": "CI-Debug-ASAN"
+    },
+    {
+      "name": "CI-Debug-TSAN",
+      "configurePreset": "CI-Debug-TSAN"
     },
     {
       "name": "CI-Shipping",

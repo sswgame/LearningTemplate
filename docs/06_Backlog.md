@@ -2021,6 +2021,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (고도화 ① ThreadSanitizer CI 잡 — 보고 전용으로 시작)
+
+**왜.** 이번 결함 점검의 동시성 결함 다섯 건(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드 맵 경쟁 · 업로드 리스트 · 큐 외부 동기화)은
+모두 ThreadSanitizer 하나로 잡힐 종류였고, CI 에는 ASan 만 있었다.
+
+**한 것.** `SW_SANITIZER_KIND`(address | thread, `cmake/Config/BuildOptions.cmake`) — `Sanitizer.cmake` 가 thread 면 `-fsanitize=thread` 와
+`SW_SANITIZER_THREAD` 를 건다(GNU/Clang 전용, clang-cl · MSVC 는 구성 단계에서 막는다. ASan 과 함께 켤 수 없다). 프리셋 `CI-Debug-TSAN`,
+CI 매트릭스 "Build Linux TSan (Clang, report-only)". 크래시 자식 프로세스 테스트는 ASan 과 같은 이유로 TSan 에서도 건너뛴다.
+**이 잡은 처음에 보고만 한다**(`continue-on-error` — 실패해도 CI 를 붉게 하지 않는다). 이 PC 에는 WSL 이 없어 로컬에서 돌려 볼 수 없고,
+기존 트리의 경쟁 보고를 먼저 추려야 한다. 추린 뒤 매트릭스의 `reportOnly` 를 지우면 막는 잡이 된다(아래 '남은 일').
+
+**남은 일.** 첫 CI 결과의 TSan 보고를 추려(진짜 경쟁은 고치고, 계측되지 않는 서드파티만 억제 파일로) 막는 잡으로 바꾼다.
+
 ### 2026-09-30 (결함 점검 ⑪ 에디터 — 끊긴 기즈모 드래그의 스냅숏이 다른 오브젝트에 커밋됨)
 
 **무엇이 틀렸나 · 고친 것.** 드래그 도중 선택이 비거나(Delete · 생성 되돌리기) 편집이 막히면(Play) `drawGizmo` 가 앞에서 돌아가 추적 표시와

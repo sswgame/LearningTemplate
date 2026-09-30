@@ -42,6 +42,10 @@ function(sw_configurePch targetName headerPath)
 endfunction()
 
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
+# 어떤 새니타이저인가. address(ASan+UBSan, 기본) 와 thread(TSan)는 함께 켤 수 없다 — 런타임이 서로 다른 섀도 메모리를 쓴다.
+# TSan 은 GNU/Clang(리눅스)만 된다(clang-cl 은 지원하지 않는다).
+set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
+set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 
 # 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 한때 Shipping 에서 테스트를
 # 통째로 껐는데, 그러면 CI 가 Shipping 을 CoreTest 로 스모크하는 경로(`--target App CoreTest`)가

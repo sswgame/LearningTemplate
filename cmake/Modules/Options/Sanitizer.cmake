@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Options/Sanitizer.cmake
-# @brief Address/UB Sanitizer 플래그 (SW_ENABLE_SANITIZER)
+# @brief Address/UB 또는 Thread Sanitizer 플래그 (SW_ENABLE_SANITIZER · SW_SANITIZER_KIND)
 # ==============================================================================
 
 if(NOT SW_ENABLE_SANITIZER)
@@ -8,6 +8,24 @@ if(NOT SW_ENABLE_SANITIZER)
 endif()
 
 add_library(sw_sanitizer INTERFACE)
+
+# ------------------------------------------------------------------------------
+# 0) ThreadSanitizer — 데이터 경쟁 탐지. 이번 결함 점검에서 동시성 결함 다섯 건(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드
+#    맵 경쟁 등)이 이것 하나로 잡힐 종류였다. GNU/Clang 전용이고 ASan 과 함께 켤 수 없다.
+# ------------------------------------------------------------------------------
+if(SW_SANITIZER_KIND STREQUAL "thread")
+	if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+		message(FATAL_ERROR "[Sanitizer] ThreadSanitizer 는 clang-cl · MSVC 에서 지원되지 않는다 — 리눅스 Clang 프리셋(CI-Debug-TSAN)을 쓰십시오")
+	endif()
+	target_compile_definitions(sw_sanitizer INTERFACE SW_SANITIZER_THREAD=1)
+	target_compile_options(sw_sanitizer INTERFACE -fsanitize=thread -fno-omit-frame-pointer)
+	target_link_options(sw_sanitizer INTERFACE -fsanitize=thread)
+	message(STATUS "[Sanitizer] ThreadSanitizer (GNU/Clang)")
+	list(APPEND sw_flag_libraries sw_sanitizer)
+	return()
+elseif(NOT SW_SANITIZER_KIND STREQUAL "address")
+	message(FATAL_ERROR "[Sanitizer] SW_SANITIZER_KIND 는 address 또는 thread 입니다(받은 값: ${SW_SANITIZER_KIND})")
+endif()
 
 # 코드·테스트가 "지금 ASan 빌드인가" 를 알아야 하는 자리가 있다. clang-cl 은
 # `__SANITIZE_ADDRESS__` 를 정의하지 않고(`__has_feature` 방식) 컴파일러마다 달라서, 빌드가

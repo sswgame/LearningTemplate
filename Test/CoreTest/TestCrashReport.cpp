@@ -218,7 +218,7 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
  */
 SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 {
-#if defined( SW_SANITIZER_ADDRESS )
+#if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
     SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
 #endif
 
