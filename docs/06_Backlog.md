@@ -2021,6 +2021,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-30 (CMake ③ — `directxtex` 를 서드파티 자리에서 한 번 찾는다)
+
+다른 vcpkg 패키지(`glad` · `imgui` · `pugixml` …)는 `ThirdParty/<이름>/CMakeLists.txt` 가 한 번 찾아 저장소 이름의 타겟으로 두고 쓰는 쪽은 그 이름으로 링크한다.
+`directxtex` 만 그 틀 밖이라 `Source/Editor` 와 `Test/EditorTest` 가 각자 `find_package` 했고, configure 마다 vcpkg 설정 스크립트를 두 번(0.24 s 씩) 돌렸다.
+
+`ThirdParty/directxtex/CMakeLists.txt` 가 `find_package(directxtex CONFIG REQUIRED GLOBAL)` 로 한 번 찾아 `Microsoft::DirectXTex` 를 전역 타겟으로 올린다(CMake 3.24,
+이 저장소의 최소 버전). `sw_addVcpkgConfigLib` 를 쓰지 않은 이유: 그 함수는 못 찾으면 빈 타겟으로 조용히 대신하는데 이 패키지는 원래 `REQUIRED` 였다(없으면 configure
+가 멈춰야 한다). EditorTest 는 Shipping 에서도 빌드되므로 조건 없이 찾는다(두 곳 중 넓은 쪽 조건).
+
+**확인.** `build.ninja` 의 차이는 새 폴더가 받는 유틸리티 타겟뿐이고 DirectXTex 링크 줄은 그대로(6 곳). Debug 빌드 · EditorTest · EditorUiTest 통과, Shipping configure 통과,
+린트 21/21, configure 5.9 → 5.7 s.
+
 ### 2026-09-30 (Scripts ⑨ — `common` 이 다운로드 · 압축 모듈을 머리에서 불러 모든 스크립트가 값을 치렀다)
 
 CMake configure 를 다시 재니(②) 남은 파이썬 여섯 번이 1.76 s 였고, 생성기 하나가 0.34 s 인데 **하는 일은 거의 0** 이었다 — 파이썬 기동 0.18 s + `import common`

@@ -3,8 +3,6 @@
 # @brief Editor 판별·세션 정책 단위 테스트 (UI/ImGui 없음)
 # ==============================================================================
 
-find_package(directxtex CONFIG REQUIRED)
-
 # Editor 소스를 직접 나열해 같이 컴파일한다 — `EditorModule` 은 MODULE DLL 이라 링크할 수 없다.
 #
 # **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야
