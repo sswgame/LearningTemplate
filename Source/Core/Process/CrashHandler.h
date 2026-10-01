@@ -22,6 +22,7 @@ namespace sw
         WorkerStackOverflow, ///< 새 스레드에서 끝없는 재귀(스레드별 준비 `initializeCurrentThread` 를 태운다)
         Abort,               ///< std::abort() — 엔진의 "로그 + abort" 치명 경로
         PureVirtualCall,     ///< 생성 중인 객체의 순수 가상 함수 호출
+        StderrHeld,          ///< 다른 스레드가 stderr 를 쥔 채 놓지 않는 동안 접근 위반 — 보고가 끝날 수 없다(시한이 끝내야 한다)
         Count
     };
 
@@ -86,5 +87,13 @@ namespace sw
 
         /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다(기본값은 로그 폴더). */
         static void setReportFolder( string_view folderPath );
+
+        /**
+         * @brief 크래시 보고에 줄 시한(초)입니다. 넘기면 보고를 버리고 곧장 끝냅니다. 0 이면 기본값(20 초).
+         * @details 보고는 죽어 가는 프로세스 안에서 돈다. 크래시가 남긴 락(힙 손상으로 abort 한 malloc 의 락 · 막힌 stdio · 로더)을
+         *          보고가 기다리면 영영 끝나지 않고, 크래시 난 게임이 창을 띄운 채 서 있다. 덤프 · 컨텍스트 · 스택 파일을 먼저 쓰므로
+         *          시한에 걸려도 대개 남는다. Windows 는 폴트 스레드가 보고 스레드를 이만큼만 기다리고, POSIX 는 `alarm` 이 끝낸다.
+         */
+        static void setReportDeadline( uint32 seconds );
     };
 } // namespace sw

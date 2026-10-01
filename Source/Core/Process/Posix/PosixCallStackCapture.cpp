@@ -107,7 +107,11 @@ namespace sw
         if ( s_initRefCount.fetch_add( 1, std::memory_order_acq_rel ) != 0 )
             return;
 
-        // POSIX 는 심볼 초기화가 따로 필요 없다
+        // 심볼 초기화는 따로 없다. 대신 backtrace() 를 **한 번 불러 둔다** — glibc 는 처음 불릴 때 libgcc_s 를 dlopen 하고 거기서
+        // malloc 한다(`man 3 backtrace` 의 NOTES). 그 첫 호출이 크래시 핸들러 안이면, malloc 의 락을 쥔 채 죽은 경우(힙 손상 abort)
+        // 그 자리에서 멈춘다. 크로미움의 WarmUpBacktrace 와 같은 일이다.
+        void* arrWarmUpFrame[2]{};
+        backtrace( arrWarmUpFrame, 2 );
     }
 
     void CallStackCapture::shutdown()

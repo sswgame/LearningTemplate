@@ -2051,6 +2051,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑤ 끝날 수 없는 크래시 보고 — stderr 가 막히면 스택 파일이 없었고, 시한 줄도 막혔고, POSIX 는 시한이 없었다)
+
+결함 ④ 의 시한이 정말 "끝낸다" 인지 시험하려고, 보고가 끝날 수 없는 크래시를 하나 만들었다 — `CrashTestKind::StderrHeld`(다른 스레드가
+stderr 의 락을 쥔 채 놓지 않는 동안 접근 위반. 읽는 쪽이 멈춘 파이프에 쓰다 선 스레드의 흉내). 시한을 2 초로 줘도 자식이 15 초 시한까지
+서 있었다. 구멍이 셋이었다.
+- **파일보다 stderr 가 먼저였다.** `writeCrashReport` 가 본문을 stderr 에 쓰고 나서 스택 파일을 썼다 — stderr 에서 막히면 사용자가 보내 줄
+  파일이 없다. 순서를 바꿨다(배포본에서 stderr 는 아무도 안 본다).
+- **시한이 지났다는 줄을 `fputs( stderr )` 로 썼다** — 시한이 지나도 그 줄에서 다시 막혔다. Windows 는 `WriteFile( 표준 에러 핸들 )` 로
+  쓰고 `TerminateProcess` 로 곧장 끝낸다(이전 필터에도 넘기지 않는다 — 시한은 "여기서 끝난다" 여야 한다. 넘겨도 이 경우엔 끝났다: OS 의
+  미처리 예외 종료는 CRT 정리를 태우지 않는다).
+- **POSIX 는 시한이 아예 없었다.** glibc 는 힙 손상을 malloc 의 락을 쥔 채 abort 하고, 보고의 할당(심볼 변환)이 그 락을 같은 스레드에서
+  영영 기다린다. 보고 시작에 `alarm` 을 걸고, SIGALRM 핸들러가 `write` + `_exit( 128 + 시그널 )` 로 끝낸다(핸들러의 sa_mask 가 비어 있어
+  보고 중에도 들어온다).
+
+곁들여: 시한은 `CrashHandler::setReportDeadline( 초 )`(기본 20 초, 0 이면 기본값 — 서버는 짧게 둘 수 있다). POSIX `CallStackCapture::initialize`
+가 `backtrace()` 를 한 번 불러 둔다 — glibc 는 첫 호출에서 libgcc_s 를 dlopen 하며 malloc 한다(`man 3 backtrace` NOTES, 크로미움 `WarmUpBacktrace`).
+**검증.** `CrashReportTest.StuckReportStillEndsAndKeepsTheStackFile`(시한 2 초 · 자식 시한 15 초 안에 끝남 · "did not finish in time" 줄 ·
+스택 파일 · Windows 덤프) — 고치기 전 15 초 시한 초과, 순서를 되돌리면 스택 파일 없음으로 진다. `--test_repeat=10` 20/20.
+`TerminateProcess` 를 빼도 이 시험은 통과한다(위 괄호). Linux 경로는 CI 로 본다(이 PC 에 WSL 없음). Debug 28/28 · hostgpu 2/2 · Shipping 9/9.
+
 ### 2026-10-01 (테스트 확인 ② 이름만으로 돌리기 — `py -3 -m Scripts test`)
 
 케이스 하나를 돌리려면 세 가지를 알아야 했다: 그 스위트가 **어느 실행 파일**에 사는지(CoreTest? EngineTest? 일곱 중 하나), 작업

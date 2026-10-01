@@ -55,15 +55,14 @@ namespace sw
          *          `MiniDumpWriteDump` · 심볼 변환을 했다. CI 에서 크래시 자식이 **간헐로 멈췄다**(2026-10-01, Windows Debug · Shipping
          *          각 한 번 — 이 PC 에서는 하나씩 200 번 돌려 한 번도 안 났고, 12 개씩 겹쳐 400 번 돌리면 2~5 번 났다). 브레이크패드와 언리얼
          *          (`FCrashReportingThread`)이 같은 이유로 보고를 미리 띄운 스레드에서 한다 — 그 스레드는 멀쩡한 스택을 갖고 있다.
-         *          그리고 폴트 스레드는 **시한까지만** 기다린다: 보고가 어디서 멈추든(로더 락 · 힙 락을 쥔 채 세워진 스레드) 프로세스는
-         *          끝난다. 크래시 난 게임이 창을 띄운 채 서 있는 것보다 덤프 없이 끝나는 편이 낫다.
+         *          그리고 폴트 스레드는 **시한까지만**(`CrashHandler::setReportDeadline`) 기다린다: 보고가 어디서 멈추든(힙 · stdio 락)
+         *          프로세스는 끝난다. 크래시 난 게임이 창을 띄운 채 서 있는 것보다 보고 없이 끝나는 편이 낫다.
          */
-        HANDLE          s_hReportThread{ nullptr };
-        HANDLE          s_hReportRequested{ nullptr };
-        HANDLE          s_hReportFinished{ nullptr };
-        DWORD           s_reportThreadId{ 0 };
-        atomic<bool>    s_bStopReportThread{ false };
-        constexpr DWORD kReportDeadlineMilli = 20000;
+        HANDLE       s_hReportThread{ nullptr };
+        HANDLE       s_hReportRequested{ nullptr };
+        HANDLE       s_hReportFinished{ nullptr };
+        DWORD        s_reportThreadId{ 0 };
+        atomic<bool> s_bStopReportThread{ false };
 
         /** @brief 보고 스레드에 넘기는 크래시 하나(폴트 스레드가 시한까지 기다리는 동안만 유효하다 — 그 스레드의 스택을 가리킨다). */
         struct PendingCrash
@@ -249,10 +248,18 @@ namespace sw
                 // 보고 스레드에 맡기고 시한까지만 기다린다(이 스레드의 스택 · 예외 정보는 그동안 그대로다).
                 s_pendingCrash = crash;
                 SetEvent( s_hReportRequested );
-                if ( WaitForSingleObject( s_hReportFinished, kReportDeadlineMilli ) != WAIT_OBJECT_0 )
+                if ( WaitForSingleObject( s_hReportFinished, getCrashReportDeadlineSeconds() * 1000 ) != WAIT_OBJECT_0 )
                 {
-                    std::fputs( "\n[CrashHandler] crash report did not finish in time - exiting without it\n", stderr );
-                    std::fflush( stderr );
+                    // **stdio 를 거치지 않는다** — 보고가 막힌 자리가 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). 예전에는
+                    // 이 줄을 fputs 로 써서 시한이 지나도 여기서 다시 막혔다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다 — 그 필터도
+                    // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다" 는 약속이어야 한다.
+                    constexpr utf8 kMessage[] = "\n[CrashHandler] crash report did not finish in time - exiting without it\n";
+                    DWORD          written    = 0;
+                    WriteFile( GetStdHandle( STD_ERROR_HANDLE ), kMessage, sizeof( kMessage ) - 1, &written, nullptr );
+                    const UINT exitCode = ( pExceptionInfo != nullptr && pExceptionInfo->ExceptionRecord != nullptr )
+                                            ? static_cast<UINT>( pExceptionInfo->ExceptionRecord->ExceptionCode )
+                                            : 1u;
+                    TerminateProcess( GetCurrentProcess(), exitCode );
                 }
             }
             else

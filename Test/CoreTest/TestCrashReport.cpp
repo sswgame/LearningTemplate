@@ -187,6 +187,8 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
         SW_TEST_SKIP( "crash child only — EveryCrashKindLeavesAReport launches it" );
 
     sw::setCrashReportFolder( pFolder );
+    if ( const utf8* pDeadline = std::getenv( "SW_CRASH_CHILD_DEADLINE_SECONDS" ) )
+        sw::CrashHandler::setReportDeadline( static_cast<uint32>( std::atoi( pDeadline ) ) );
 #if defined( SW_PLATFORM_WINDOWS )
     // 오류 보고 창이 떠서 부모가 기다리지 않게 한다(핸들러가 처리하면 원래 뜨지 않는다 — 처리하지 못했을 때를 위한 것).
     SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );
@@ -262,4 +264,48 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 #endif
         sw::FileUtil::removeDirectory( folder );
     }
+}
+
+/**
+ * @brief [CrashReportTest] 보고가 끝날 수 없어도(다른 스레드가 stderr 를 쥔 채 놓지 않는다) 프로세스는 시한에 끝나고 스택 파일은 남는다
+ * @details 보고는 죽어 가는 프로세스 안에서 돈다 — 크래시가 남긴 락을 기다리면 영영 끝나지 않는다. 예전에는
+ *          - 보고 본문을 stderr 에 먼저 쓰고 파일에 썼다: stderr 에서 막히면 사용자가 보내 줄 스택 파일이 없었다.
+ *          - 시한이 지났다는 줄도 stderr(`fputs`)로 썼다: 시한이 지나도 그 줄에서 다시 막혔다.
+ *          - POSIX 는 시한이 아예 없었다(glibc 가 힙 손상을 malloc 의 락을 쥔 채 abort 하면, 보고의 할당이 그 락을 영영 기다린다).
+ */
+SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
+{
+#if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
+    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+#endif
+
+    const sw::string folder = test::makeTempPath( "SwCrashChild_stuck" );
+    sw::FileUtil::removeDirectory( folder );
+    sw::FileUtil::ensureDirectoryExists( folder );
+
+    sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
+    kindText.append( static_cast<int32>( sw::CrashTestKind::StderrHeld ) );
+
+    // 시한 2 초 — 자식의 시한(15 초)보다 한참 짧다. 넘기면 시한이 듣지 않은 것이다.
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        {            "SW_CRASH_CHILD_KIND", kindText.c_str()},
+        {          "SW_CRASH_CHILD_FOLDER",           folder},
+        {"SW_CRASH_CHILD_DEADLINE_SECONDS",              "2"},
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "보고가 시한에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    if ( child._bTimedOut )
+        return;
+    SW_EXPECT_TRUE( child._exitCode != 0 );
+    SW_EXPECT_TRUE_MSG( child._output.find( "did not finish in time" ) != sw::string::npos,
+                        ( "시한에 끝났다는 줄이 없습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+
+    // 파일은 stderr 보다 먼저 쓴다 — 사용자가 보내 주는 것은 파일이다.
+    SW_EXPECT_FALSE( findReportFileInternal( folder, "stack.txt" ).empty() );
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
+    SW_EXPECT_TRUE( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0 );
+#endif
+    sw::FileUtil::removeDirectory( folder );
 }

@@ -3,6 +3,7 @@
 #include "Core/Process/CrashContext.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
@@ -12,6 +13,7 @@
 #include <chrono>
 #include <cstdio>
 #include <random>
+#include <thread>
 
 #if !defined( SW_PLATFORM_WINDOWS )
     #include <fcntl.h>
@@ -25,6 +27,29 @@ namespace sw
     {
         /// @brief 덤프 · 리포트를 쓸 폴더입니다. 부팅 때 한 번 정하고 크래시 경로에서는 읽기만 합니다.
         fixed_string<constant::kMaxBuffer1024> s_reportFolder{};
+
+        /// @brief 크래시 보고에 줄 시한(초)입니다(`CrashHandler::setReportDeadline`).
+        constexpr uint32 kDefaultReportDeadlineSeconds = 20;
+        atomic<uint32>   s_reportDeadlineSeconds{ kDefaultReportDeadlineSeconds };
+
+        /// @brief `holdStderrForeverInternal` 이 stderr 를 쥐었는지입니다.
+        atomic<bool> s_bStderrHeld{ false };
+
+        /**
+         * @brief stderr 의 스트림 락을 쥐고 영영 놓지 않습니다(`CrashTestKind::StderrHeld`).
+         * @details 가득 찬 파이프에 쓰다 막힌 스레드의 흉내다 — 읽는 쪽이 멈추면 그 스레드는 stderr 의 락을 쥔 채 서 있다.
+         */
+        [[noreturn]] void holdStderrForeverInternal()
+        {
+#if defined( SW_PLATFORM_WINDOWS )
+            _lock_file( stderr );
+#else
+            flockfile( stderr );
+#endif
+            s_bStderrHeld.store( true );
+            while ( true )
+                std::this_thread::sleep_for( std::chrono::hours( 1 ) );
+        }
 
         /// @brief `overflowStackInternal` 의 재귀를 멈추는 척하는 값입니다. 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 합니다.
         volatile bool s_bStopStackOverflow{ false };
@@ -183,6 +208,11 @@ namespace sw
         s_reportFolder = folderPath;
     }
 
+    uint32 getCrashReportDeadlineSeconds()
+    {
+        return s_reportDeadlineSeconds.load();
+    }
+
     void buildCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension )
     {
         if ( pOutPath == nullptr || outSize == 0 )
@@ -269,11 +299,13 @@ namespace sw
         }
         builder.append( "===============================================\n" );
 
+        // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로 남겨야 사용자가 보내 줄 수 있다 — 그래서 **파일이 먼저다.** stderr 는
+        // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 예전에는 순서가 반대라 거기서
+        // 막히면 스택 파일이 없었다.
+        writeCrashStackFile( builder.c_str() );
         // 로거가 비동기일 수 있으므로 stderr 로도 직접 내보내 크래시 직전의 기록을 확실히 남긴다.
         std::fputs( builder.c_str(), stderr );
         std::fflush( stderr );
-        // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로도 남겨야 사용자가 보내 줄 수 있다.
-        writeCrashStackFile( builder.c_str() );
         SW_LOG_ERROR( "%#", builder.c_str() );
         // 로그는 작업 스레드가 비동기로 쓴다. 이대로 프로세스가 끝나면 큐에 남은 줄(크래시 직전의 경고 · 방금 쓴 리포트)과 파일 버퍼가 사라진다.
         // 언리얼이 크래시 때 GLog->Panic 으로 동기 비우기를 하는 것과 같은 자리다.
@@ -315,11 +347,27 @@ namespace sw
                 PureCallProbeInternal probe;
                 break;
             }
+            case CrashTestKind::StderrHeld:
+            {
+                SW_LOG_ERROR( "[CrashTest] writing through a null pointer while another thread holds stderr" );
+                std::thread holder( &holdStderrForeverInternal );
+                holder.detach();
+                while ( s_bStderrHeld.load() == false )
+                    std::this_thread::yield();
+                volatile int32* pNull = nullptr;
+                *pNull                = 1;
+                break;
+            }
             case CrashTestKind::None:
             case CrashTestKind::Count:
             default:
                 break;
         }
+    }
+
+    void CrashHandler::setReportDeadline( uint32 seconds )
+    {
+        s_reportDeadlineSeconds.store( ( seconds != 0 ) ? seconds : kDefaultReportDeadlineSeconds );
     }
 
     void CrashHandler::setContextValue( string_view key, string_view value )

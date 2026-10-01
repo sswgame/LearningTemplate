@@ -44,6 +44,8 @@ namespace sw
          *          올려 프로세스를 끝냈습니다 — 첫 스레드가 리포트를 쓰는 도중에.
          */
         atomic<uint64> s_reportingThreadId{ 0 };
+        /** @brief 지금 보고 중인 시그널 — 시한이 지나 끝낼 때 종료 코드(128 + 시그널)로 쓴다. */
+        atomic<int32> s_reportSignalNumber{ 0 };
 
         /**
          * @brief 대체 시그널 스택입니다.
@@ -82,9 +84,21 @@ namespace sw
         thread_local ThreadSignalStackInternal t_signalStack{};
 
         /**
+         * @brief 보고가 시한을 넘겼다(`alarm`) — 보고를 버리고 곧장 끝냅니다.
+         * @details 시그널 안이라 async-signal-safe 한 것(`write` · `_exit`)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 자리가 바로
+         *          stderr 의 락일 수 있다(CrashTestKind::StderrHeld).
+         */
+        void onReportDeadlineInternal( int32 )
+        {
+            constexpr utf8                 kMessage[] = "\n[CrashHandler] crash report did not finish in time - exiting without it\n";
+            [[maybe_unused]] const ssize_t written    = ::write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 );
+            ::_exit( 128 + s_reportSignalNumber.load() );
+        }
+
+        /**
          * @brief 폴트 종류와 콜 스택을 로그로 남깁니다.
          */
-        void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext )
+        void reportCrash( int32 signalNumber, const utf8* pReason, const void* pFaultAddress, void* pPlatformContext )
         {
             const uint64 selfThreadId = currentThreadId64Internal();
             uint64       expectedId   = 0;
@@ -100,6 +114,16 @@ namespace sw
                 return;
             }
 
+            // 시한을 건다(CrashHandler::setReportDeadline). 보고는 죽어 가는 프로세스 안에서 돈다 — glibc 는 힙 손상을 malloc 의 락을
+            // 쥔 채 abort 하고, 아래의 할당은 그 락을 **같은 스레드에서** 영영 기다린다. 예전에는 시한이 없어 그대로 서 있었다.
+            // (Windows 는 폴트 스레드가 보고 스레드를 시한까지만 기다린다.) 핸들러의 sa_mask 가 비어 있어 SIGALRM 은 여기서도 들어온다.
+            s_reportSignalNumber.store( signalNumber );
+            struct sigaction deadlineAction{};
+            deadlineAction.sa_handler = &onReportDeadlineInternal;
+            sigemptyset( &deadlineAction.sa_mask );
+            sigaction( SIGALRM, &deadlineAction, nullptr );
+            ::alarm( getCrashReportDeadlineSeconds() );
+
             // 컨텍스트를 **먼저** 쓴다. 아래 symbolize() 는 sw::string 을 값으로 반환하므로 반드시 할당하고, StringBuilder 도
             // 8KB 를 넘기면 힙으로 늘어난다. 힙이 깨져서 죽은 경우라면 거기서 다시 죽는다. 컨텍스트 쓰기는 fixed_string 과
             // fprintf 뿐이라 할당이 없다(formatstring 은 호출하는 쪽의 버퍼에 쓰므로 크래시 경로에서도 안전하다).
@@ -112,6 +136,7 @@ namespace sw
             // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp). 미니덤프는 여기서 만들 수 없으므로 목록에도 넣지 않는다.
             writeCrashReport( pReason, pFaultAddress, pPlatformContext, false );
 
+            ::alarm( 0 );
             s_reportingThreadId.store( 0 );
         }
 
@@ -145,7 +170,7 @@ namespace sw
         void onFatalSignal( int32 signalNumber, siginfo_t* pSignalInfo, void* pPlatformContext )
         {
             const void* pFaultAddress = ( pSignalInfo != nullptr ) ? pSignalInfo->si_addr : nullptr;
-            reportCrash( signalName( signalNumber ), pFaultAddress, pPlatformContext );
+            reportCrash( signalNumber, signalName( signalNumber ), pFaultAddress, pPlatformContext );
 
             // 기본 동작으로 되돌려 시그널을 다시 올린다. 코어 덤프가 켜져 있으면 그때 남는다.
             struct sigaction restoreAction{};

@@ -50,6 +50,9 @@ namespace sw
     /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다. */
     SW_API void setCrashReportFolder( string_view folderPath );
 
+    /** @brief 크래시 보고에 줄 시한(초)입니다(`CrashHandler::setReportDeadline`). */
+    SW_API uint32 getCrashReportDeadlineSeconds();
+
     /**
      * @brief 리포트 파일 경로 `<폴더>/crash_<세션ID>.<확장자>` 를 만듭니다.
      * @details **할당하지 않습니다.** 크래시 시점에 힙을 건드리지 않도록 호출하는 쪽의 버퍼에 씁니다.
