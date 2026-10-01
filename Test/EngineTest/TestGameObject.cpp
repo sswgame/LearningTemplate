@@ -1411,12 +1411,17 @@ SW_TEST_CASE( GameObjectTest, CastFastPathsMatchVirtualPath )
     sw::Component* pMeshBase  = pMesh;
     sw::Component* pSceneBase = pScene;
 
-    // findStaticType 은 StaticType 그대로. 리플렉션 본체가 없는 기반(Component)은 nullptr.
-    const sw::TypeInfo* pSceneType = sw::findStaticType<sw::SceneComponent>();
-    const sw::TypeInfo* pMeshType  = sw::findStaticType<sw::MeshComponent>();
+    // findStaticType 은 StaticType 그대로. 컴포넌트 기반(Component)도 등록 타입이다 — 만들 수 없는 기반(Abstract)이고, 모든 컴포넌트의
+    // 부모 사슬이 거기서 끝난다(예전에는 등록되지 않아 사슬이 SceneComponent 에서 끊겼다).
+    const sw::TypeInfo* pSceneType     = sw::findStaticType<sw::SceneComponent>();
+    const sw::TypeInfo* pMeshType      = sw::findStaticType<sw::MeshComponent>();
+    const sw::TypeInfo* pComponentType = sw::findStaticType<sw::Component>();
     SW_EXPECT_TRUE( pSceneType == sw::SceneComponent::StaticType() );
     SW_EXPECT_TRUE( pMeshType == sw::MeshComponent::StaticType() );
-    SW_EXPECT_NULL( sw::findStaticType<sw::Component>() );
+    SW_ASSERT_NOT_NULL( pComponentType );
+    SW_EXPECT_TRUE( pComponentType == sw::Component::StaticType() );
+    SW_EXPECT_FALSE( pComponentType->canConstruct() );
+    SW_EXPECT_TRUE( pMeshType->isDerivedFrom( pComponentType ) );
 
     // 이름 캐시 판은 가상 판과 같은 타입(이름)을 준다.
     const sw::TypeInfo* pVirtual = pMeshBase->getTypeInfo();

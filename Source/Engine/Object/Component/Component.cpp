@@ -254,7 +254,8 @@ namespace sw
     const TypeInfo* Component::getTypeInfo() const
     {
         // 만들 때 받은 타입이다. 모듈이 내려가 타입이 묘비가 됐으면 없는 것으로 답한다. 예전의 폴백(`findType<Component>()`)은
-        // Component 가 등록 타입이 아니라 늘 nullptr 이었고, 그 답을 얻으려고 캐스트가 빗나갈 때마다 레지스트리를 잠갔다.
+        // 그때 Component 가 등록 타입이 아니라 늘 nullptr 이었고, 그 답을 얻으려고 캐스트가 빗나갈 때마다 레지스트리를 잠갔다
+        // (지금은 `REFLECT( Abstract )` 로 등록돼 있지만, 기반의 타입을 파생의 답으로 내면 안 되므로 폴백은 두지 않는다).
         return ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() ) ? _pTypeInfo : nullptr;
     }
 

@@ -2051,6 +2051,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉑ 리플렉션 — 컴포넌트 · 설정의 기반이 등록되지 않아 부모 사슬이 끊겼다: `Component` · `IConfig` 를 `REFLECT( Abstract )` 로)
+
+`-gv_dumpReflection`(확인 ③)을 처음 돌리자 `SceneComponent` 의 부모 `sw::Component` 가 "not registered" 였다. 전수로 보니 둘이었다 — `Component`
+(자식 `SceneComponent` · `TagComponent` · `SequencePlayerComponent` · `ColliderTileComponent` · 시험용 `TestScriptComponent`)와 `IConfig`(`EngineConfig` ·
+`GameConfig`). 설계 의도가 아니었다(사용자 확인). 부모가 없으면 상속 병합 · `isDerivedFrom( Component )` 같은 질문이 사슬 중간에서 멈춘다.
+`IConfig` 는 `REFLECT_BODY()` 만 있고 `REFLECT()` 가 없어 `StaticType()` 이 선언만 된 채였다.
+**고침.** 둘 다 만들 수 없는 기반으로 등록한다 — `REFLECT( Abstract, … )` + `REFLECT_BODY()`(팩토리 · `$ctor` 없음, `canConstruct()` 는 false).
+`addComponent<T>` · `getComponent<T>` 는 처음부터 `HasOwnReflectBody_v<T>`(자기 `REFLECT_BODY`)를 요구하므로 기반의 `StaticType()` 이 파생에 새어
+쓰일 길은 없다. **함정**: 처음으로 REFLECT 를 단 헤더는 configure 를 다시 돌려야 파서 대상에 든다(`StaticType()` 미정의 링크 오류) — CLAUDE.md 에 적었다.
+**검증.** `ReflectionTypeInfoTest.EveryReflectedParentIsRegistered`(등록된 모든 타입의 부모가 등록됐는가 — 고치기 전 일곱 줄로 진다). 엔진 · GameFramework ·
+게임의 `REFLECT(` 50 개를 `ReflectionParser --dump` 로 모두 훑어 끊긴 부모가 없음을 봤다. `GameObjectTest.CastFastPathsMatchVirtualPath` 의 옛 기대
+("Component 는 nullptr")를 새 상태(등록됨 · 추상 · 메시가 그 자손)로 바꿨다. Debug 28/28 · hostgpu 2/2.
+
 ### 2026-10-01 (확인 ③ 런타임 리플렉션 덤프 — `TypeRegistry::describeType` · `-gv_dumpReflection`)
 
 등록된 타입을 물을 곳이 없었다 — `forEachType` · `forEachEnum` 을 부르는 곳이 하나도 없었고, "왜 인스펙터에 없나 · 왜 씬이 이 값을 못 읽나 · 부모가

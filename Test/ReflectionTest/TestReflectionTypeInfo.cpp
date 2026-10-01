@@ -1175,3 +1175,20 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
 
     SW_EXPECT_TRUE( registry.describeType( sw::hashed_string( "NoSuchTypeAnywhere" ) ).find( "is not registered" ) != sw::string::npos );
 }
+
+/**
+ * @brief [ReflectionTypeInfoTest] 등록된 모든 타입의 부모는 등록돼 있다 — 사슬이 중간에 끊기지 않는다
+ * @details `SceneComponent` 의 부모 `Component` 가 리플렉션에 없었다(`-gv_dumpReflection` 이 처음 보여 줬다). 부모가 없으면 상속 병합 · `castTo` ·
+ *          "이 타입은 컴포넌트인가" 같은 질문이 사슬 중간에서 멈춘다. 만들 수 없는 기반은 `REFLECT( Abstract )` 로 등록한다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::string              report;
+    registry.forEachType( [&registry, &report]( const sw::TypeInfo& typeInfo )
+    {
+        if ( typeInfo._parentFQN.empty() == false && registry.findType( typeInfo._parentFQN ) == nullptr )
+            report += sw::string( "\n  " ) + typeInfo._fullyQualifiedName.c_str() + " : " + typeInfo._parentFQN.c_str();
+    } );
+    SW_EXPECT_TRUE_MSG( report.empty(), ( "unregistered parents:" + report ).c_str() );
+}

@@ -207,6 +207,11 @@ which `RenderGraph` topologically sorts at runtime.
 
 ## Gotchas
 
+- **The first `REFLECT`/`ENUM` in a header needs a re-configure.** The reflected-header list is scanned at
+  configure time (`sw_addReflectionStep` auto-scan), so a header that never had one is not parsed until
+  `cmake --preset <preset>` runs again. The symptom is an undefined `X::StaticType()` link error. A base that
+  cannot be instantiated is still registered, as `REFLECT( Abstract )` — every reflected parent must be
+  registered (`ReflectionTypeInfoTest.EveryReflectedParentIsRegistered`).
 - **Never re-parent during tick.** `GameObjectManager::tick` runs `onTick()` across threads;
   `attachToParent`/`detach` on any object inside it is forbidden. Structural changes (`addComponent`,
   `addTag`) auto-defer via `deferPostTick`, so `addComponent` returns `nullptr` mid-tick — use

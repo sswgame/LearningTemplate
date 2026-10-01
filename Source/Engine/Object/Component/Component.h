@@ -9,6 +9,7 @@
 #include "Core/Container/ComponentHandle.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -92,13 +93,18 @@ namespace sw
     /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
+     * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다 — 팩토리가 없어 이름으로 붙일 수 없다. 예전에는 등록하지 않아
+     *          모든 컴포넌트의 부모 사슬이 여기서 끊겼다(`SceneComponent : Component` 의 부모가 "없음").
      */
+    REFLECT( Abstract, Category = "Core", DisplayName = "Component", Tooltip = "Base of every component" )
     class SW_API Component
     {
         friend class GameObject;
         friend class GameObjectManager; ///< 생성이 `_pPool` 을 적고 파괴가 읽습니다
 
     public:
+        REFLECT_BODY();
+
         /** @brief 기본 컴포넌트를 만듭니다. */
         Component();
 
