@@ -2051,6 +2051,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑯ 리플렉션 파서 — 컨테이너를 부분 문자열로 알아봤다: TextureAsset 은 set, Bitmap 은 map)
+
+`ContainerTypeMap::match` 는 타입 표기 **어디에든** 규칙 이름(`map` · `set` · `list` · `vector` …)이 들어 있으면 그 컨테이너로 쳤다.
+`PROPERTY() TextureAsset _t;` · `Offset2D` · `Bitmap` · `Playlist` · `sw::settings::X` 는 `SetWrapper` · `MapWrapper` 로 나가 생성 파일 안에서
+빌드가 깨졌다(원소 타입도 같은 길). 지금 트리에 걸린 이름은 없었다 — 고친 뒤 Debug 생성 폴더 79 파일이 ABI 도장 말고는 한 글자도 바뀌지 않았다.
+**고침.** 바깥 템플릿 이름(`ParserUtil::outerTemplateName` — `const sw::unordered_map<K, V>` → "unordered_map")이 규칙과 **같아야** 맞는다.
+템플릿이 아니면 컨테이너가 아니다.
+**검증.** `ReflectionParserTest.ContainerIsRecognizedByItsOuterTemplateNameOnly`(컨테이너 넷은 이름을 내고, 템플릿이 아닌 다섯은 빈 값).
+
 ### 2026-10-01 (결함 ⑮ 시퀀서 — 반복 안 하는 시퀀스가 끝 프레임에 닿지 않았다, 프레임으로 찾아가면 한 칸 앞)
 
 `SequencePlayer::computeFrame` 은 `static_cast<int32>( 시간 * fps )` 로 잘랐다. 끝에서 멈춘 시간(span/fps)과 `seekToFrame` 이 만든 시간은

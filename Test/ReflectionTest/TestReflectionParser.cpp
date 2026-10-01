@@ -890,3 +890,22 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     SW_EXPECT_TRUE_MSG( runParser( headerB ) == 0,
                         "옛 헤더가 사라졌는데도 산출물 갱신을 막았습니다 — 파일을 옮길 때마다 빌드가 막힙니다" );
 }
+
+/**
+ * @brief [ReflectionParserTest] 컨테이너는 바깥 템플릿 이름으로만 알아본다 — 이름에 set · map · list 가 든 타입은 컨테이너가 아니다
+ * @details 예전에는 표기 어디에든 규칙 이름이 있으면 컨테이너였다. `TextureAsset` · `Offset2D` 는 set, `Bitmap` 은 map, `Playlist` 는 list 로
+ *          나가 생성 파일 안에서 빌드가 깨졌다.
+ */
+SW_TEST_CASE( ReflectionParserTest, ContainerIsRecognizedByItsOuterTemplateNameOnly )
+{
+    SW_EXPECT_STREQ( "vector", sw::string( sw::ParserUtil::outerTemplateName( "sw::vector<int32>" ) ).c_str() );
+    SW_EXPECT_STREQ( "unordered_map", sw::string( sw::ParserUtil::outerTemplateName( "const sw::unordered_map<sw::string, sw::vector<int32>>" ) ).c_str() );
+    SW_EXPECT_STREQ( "set", sw::string( sw::ParserUtil::outerTemplateName( "std::set<int>" ) ).c_str() );
+    SW_EXPECT_STREQ( "TArray", sw::string( sw::ParserUtil::outerTemplateName( "TArray<float>" ) ).c_str() );
+
+    // 템플릿이 아니면 컨테이너가 아니다 — 이름에 규칙 철자가 들어 있어도.
+    for ( const utf8* pPlain : { "sw::TextureAsset", "Offset2D", "game::Bitmap", "Playlist", "sw::settings::Window" } )
+        SW_EXPECT_TRUE_MSG( sw::ParserUtil::outerTemplateName( pPlain ).empty(), pPlain );
+    // 템플릿이어도 이름이 같아야 한다.
+    SW_EXPECT_STREQ( "TextureAssetRef", sw::string( sw::ParserUtil::outerTemplateName( "sw::TextureAssetRef<sw::Texture>" ) ).c_str() );
+}
