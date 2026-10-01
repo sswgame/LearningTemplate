@@ -2077,6 +2077,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊳ 입력 — 충돌 해결 리바인딩이 조합 키의 수식 키를 덮고, 방아쇠 · 축 키와의 겹침을 몰랐다)
+
+㊲ 이 `rebindKey` · `rebindSlot` 만 고쳤고 `ActionMap::rebindWithResolution`(맞바꾸기 · 덮어쓰기 · 보조로 더하기)은 그대로였다. 늘 대상의 **0 번** 슬롯에 써서 Chord
+(`Ctrl+S`)의 수식 키를 덮었고, 겹침도 다른 액션의 0 번 슬롯만 봐서 Chord 의 방아쇠(1 번)나 축의 양의 키와 같은 키를 잡아도 몰랐다 — 같은 키가 두 액션에
+남는다. 대상 슬롯은 `BindingKinds::getRebindSlotIndex`(키 하나로 못 바꾸는 종류는 경고와 함께 거절), 겹침은 `findConflictingSlot` — 다시 잡는 슬롯이 있는
+종류는 그 슬롯만(Chord 의 수식 키는 겹침이 아니다), 없는 합성 축 · 2D 합성은 키를 점유하는 모든 슬롯 — 으로 찾고, 맞바꾸기 · 비우기는 **겹친 그 슬롯**에 한다.
+**검증.** `ActionMapTest.RebindWithResolutionKeepsTheBindingKind` — Chord 는 방아쇠만, Jump 를 Chord 의 방아쇠 키로 잡으면 맞바뀌고 수식 키는 그대로, 축의 양의
+키로 잡으면 축의 그 부분이 맞바뀌고 축은 축, 축 자체는 거절. 겹침을 0 번만 보는 변이 · 대상에 0 번으로 쓰는 변이가 모두 실패했다. 기존
+`RebindConflictResolution` 은 그대로 통과.
+
 ### 2026-10-01 (결함 ㊲ 입력 — 키를 다시 잡으면 조합 키의 수식 키 · 합성 축이 사라졌다)
 
 `ActionMap::rebindKey` · `rebindSlot` 은 어떤 바인딩이든 **단일 키로 바꿨다**(`_kind = SingleSlot`, 0 번 슬롯에 새 키). 편집기의 Rebind(입력 맵 패널)는 늘 이것을

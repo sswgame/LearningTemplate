@@ -764,3 +764,46 @@ SW_TEST_CASE( ActionMapTest, RebindKeepsTheBindingKind )
     SW_EXPECT_TRUE( pAxis->_arrSlot[0] == sw::InputSlot::fromKey( sw::Key::A ) );
     SW_EXPECT_TRUE( pAxis->_arrSlot[1] == sw::InputSlot::fromKey( sw::Key::D ) );
 }
+
+/**
+ * @brief [ActionMapTest] 충돌 해결 리바인딩도 바인딩 종류를 지킨다 — Chord 는 방아쇠를 바꾸고, 남의 방아쇠 · 축의 키와의 겹침을 알아본다
+ * @details `rebindWithResolution` 은 늘 0 번 슬롯에 써서 Chord 의 수식 키를 덮었고, 겹침도 남의 0 번 슬롯만 봐서 Chord 의 방아쇠(1 번)나 축의 양의
+ *          키와 겹쳐도 몰랐다(같은 키가 두 액션에 남는다).
+ */
+SW_TEST_CASE( ActionMapTest, RebindWithResolutionKeepsTheBindingKind )
+{
+    const auto keySlot = []( sw::Key key )
+    { return sw::InputSlot::fromKey( key ); };
+    sw::ActionMap actionMap;
+    actionMap.bindChord( "Save", sw::Key::LeftControl, sw::Key::S );
+    actionMap.bind( "Jump", sw::Key::D );
+    actionMap.bindAxis1DComposite( "MoveX", sw::Key::A, sw::Key::E );
+
+    // Chord 는 방아쇠가 바뀌고 수식 키는 그대로다.
+    SW_EXPECT_TRUE( actionMap.rebindWithResolution( "Save", keySlot( sw::Key::F ), sw::ConflictResolution::Swap ) );
+    const sw::ActionBinding* pSave = actionMap.getBinding( "Save", 0 );
+    SW_ASSERT_NOT_NULL( pSave );
+    SW_EXPECT_TRUE( pSave->_arrSlot[0] == keySlot( sw::Key::LeftControl ) );
+    SW_EXPECT_TRUE( pSave->_arrSlot[1] == keySlot( sw::Key::F ) );
+
+    // Jump 를 F 로 — Save 의 방아쇠(1 번)와 겹친다. 맞바꾸면 Save 의 방아쇠가 Jump 의 옛 키 D 가 된다.
+    SW_EXPECT_TRUE( actionMap.rebindWithResolution( "Jump", keySlot( sw::Key::F ), sw::ConflictResolution::Swap ) );
+    SW_EXPECT_TRUE( actionMap.getBinding( "Jump", 0 )->_arrSlot[0] == keySlot( sw::Key::F ) );
+    SW_EXPECT_TRUE( pSave->_arrSlot[0] == keySlot( sw::Key::LeftControl ) );
+    SW_EXPECT_TRUE( pSave->_arrSlot[1] == keySlot( sw::Key::D ) );
+
+    // Jump 를 E 로 — 축의 양의 키(1 번)와 겹친다. 맞바꾸면 그 부분이 F 가 된다(축은 그대로 축).
+    SW_EXPECT_TRUE( actionMap.rebindWithResolution( "Jump", keySlot( sw::Key::E ), sw::ConflictResolution::Swap ) );
+    const sw::ActionBinding* pAxis = actionMap.getBinding( "MoveX", 0 );
+    SW_ASSERT_NOT_NULL( pAxis );
+    SW_EXPECT_TRUE( pAxis->_kind == sw::BindingKind::Axis1DComposite );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[0] == keySlot( sw::Key::A ) );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[1] == keySlot( sw::Key::F ) );
+
+    // 축 자체는 키 하나로 다시 잡지 않는다.
+    {
+        test::ScopedDefensiveTestLog expected( "rebinding a composite axis with one key" );
+        SW_EXPECT_FALSE( actionMap.rebindWithResolution( "MoveX", keySlot( sw::Key::Q ), sw::ConflictResolution::Override ) );
+    }
+    SW_EXPECT_TRUE( pAxis->_arrSlot[0] == keySlot( sw::Key::A ) );
+}
