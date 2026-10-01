@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉛ 리플렉션 파서 — 애노테이션 문자열의 이스케이프가 값을 자르거나 토큰을 갈랐다)
+
+`PROPERTY( Tooltip = "Say \"hi\"" )` 는 첫 안쪽 따옴표에서 값이 끝나 `Say \` 로 **조용히** 잘렸다(생성기는 그것을 다시 바르게 이스케이프하므로 컴파일은
+됐다). 그리고 토큰을 가르는 `splitAnnotationArgs` 는 `\"` 도 따옴표를 닫는 것으로 세어, 짝 없는 `\"` 뒤의 쉼표에서 토큰을 갈랐다 — 뒷조각은 "모르는
+애노테이션 토큰" 으로 빌드를 세웠다(원인과 먼 오류).
+- `splitAnnotationArgs` — 따옴표 안의 백슬래시는 다음 글자를 건너뛴다(따옴표를 닫지 않는다).
+- `parseAnnotationStringValue` — 따옴표 값의 이스케이프(`\"` · `\\` · `\n` · `\t` · `\r`)를 풀어 `string` 으로 돌려준다(반환은 한 객체 — `-Wnrvo`).
+지금 저장소의 애노테이션에는 이스케이프가 없어 생성 폴더는 고치기 전과 같다(통째로 비교했다).
+**검증.** `ReflectionParserTest.AnnotationStringKeepsEscapesAndCommas` — `Tooltip = "Say \"hi, then go \\ home", Category = "Sample"` 이 빌드되고 생성 코드에
+`"Say \"hi, then go \\ home"` 와 `"Sample"` 이 든다. 쪼개기 · 풀기를 각각 되돌리는 변이 둘이 모두 실패했다(처음 쓴 시험 글은 `\"` 가 짝수라 쪼개기 변이를
+놓쳤다 — 짝 없는 `\"` 로 바꿨다).
+
 ### 2026-10-01 (결함 ㉚ Core — fixed_string 에 자기 버퍼 안쪽을 대입하면 겹친 memcpy 였다)
 
 `operator=( const T* )` 는 시작 주소가 같은 자기 대입만 걸렀다. `s = s.c_str() + 2`(앞을 잘라 내는 흔한 꼴) · `s = s.view().substr( 1 )` 은 두 영역이

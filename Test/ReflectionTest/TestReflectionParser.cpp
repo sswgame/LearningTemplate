@@ -973,3 +973,37 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
     SW_EXPECT_TRUE_MSG( helpExit == 0, helpLog.c_str() );
     SW_EXPECT_TRUE_MSG( helpLog.find( "--dump" ) != sw::string::npos, helpLog.c_str() );
 }
+
+/**
+ * @brief [ReflectionParserTest] 애노테이션 문자열 안의 이스케이프(`\"` · `\\`)와 쉼표를 그대로 읽는다
+ * @details 첫 안쪽 따옴표에서 값이 끝나 `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘렸고, 이스케이프한 따옴표 뒤의 쉼표에서 토큰이 갈라져 뒷조각이
+ *          "모르는 토큰" 으로 빌드를 세웠다.
+ */
+SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "EscapedAnnotationSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct EscapedAnnotationSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Tooltip = \"Say \\\"hi, then go \\\\ home\", Category = \"Sample\" )\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    // 값은 `Say "hi, then go \ home` 이다 — 짝 없는 `\"` 뒤의 쉼표가 토큰을 가르지 않는다. 생성 코드에는 다시 C++ 이스케이프된 꼴로 들어간다.
+    SW_EXPECT_TRUE_MSG( generated.find( "\"Say \\\"hi, then go \\\\ home\"" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"Sample\"" ) != sw::string::npos, generated.c_str() );
+}

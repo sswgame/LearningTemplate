@@ -19,21 +19,37 @@ namespace sw
             /**
              * @brief `key="value"` 또는 `key=value` 형태의 단일 토큰에서 따옴표를 고려하여 값 문자열을 추출합니다.
              */
-            static string_view parseAnnotationStringValue( string_view token, size_t eqPos )
+            static string parseAnnotationStringValue( string_view token, size_t eqPos )
             {
+                string value; // 반환은 모두 이 객체다(복사 없이 돌려준다)
                 size_t valueStart = eqPos + 1;
                 while ( valueStart < token.size() && ( token[valueStart] == ' ' || token[valueStart] == '\t' ) )
                     ++valueStart;
 
                 if ( valueStart >= token.size() )
-                    return {};
+                    return value;
 
                 if ( token[valueStart] == '"' )
                 {
-                    const size_t endQuote = token.find( '"', valueStart + 1 );
-                    if ( endQuote == string_view::npos )
-                        return {};
-                    return token.substr( valueStart + 1, endQuote - valueStart - 1 );
+                    // 따옴표 안의 이스케이프를 푼다(`\"` · `\\` · `\n` · `\t` · `\r`). 예전에는 첫 안쪽 따옴표에서 값이 끝나
+                    // `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘렸다. 생성기는 값을 다시 C++ 문자열로 이스케이프한다(`CodeEmit::escapeCppString`).
+                    for ( size_t charIndex = valueStart + 1; charIndex < token.size(); ++charIndex )
+                    {
+                        const utf8 character = token[charIndex];
+                        if ( character == '"' )
+                            return value;
+                        if ( character == '\\' && charIndex + 1 < token.size() )
+                        {
+                            const utf8 escaped = token[++charIndex];
+                            value.push_back( escaped == 'n' ? '\n' : escaped == 't' ? '\t'
+                                                                 : escaped == 'r'   ? '\r'
+                                                                                    : escaped );
+                            continue;
+                        }
+                        value.push_back( character );
+                    }
+                    value.clear(); // 닫는 따옴표가 없다
+                    return value;
                 }
 
                 size_t valueEnd = valueStart;
@@ -44,7 +60,8 @@ namespace sw
                         break;
                     ++valueEnd;
                 }
-                return token.substr( valueStart, valueEnd - valueStart );
+                value.assign( token.data() + valueStart, valueEnd - valueStart );
+                return value;
             }
         };
     } // namespace
@@ -74,6 +91,12 @@ namespace sw
         for ( size_t charIndex = 0; charIndex < args.size(); ++charIndex )
         {
             const utf8 character = args[charIndex];
+            // 따옴표 안의 `\"` 는 따옴표를 닫지 않는다. 예전에는 닫는 것으로 세어, 그 뒤의 쉼표에서 토큰이 갈라졌다(뒷조각은 "모르는 토큰").
+            if ( character == '\\' && bInQuote )
+            {
+                ++charIndex;
+                continue;
+            }
             if ( character == '"' )
             {
                 bInQuote = ( bInQuote == false );
@@ -119,6 +142,7 @@ namespace sw
             const size_t             eqPos    = token.find( '=' );
             const bool               bBare    = ( eqPos == string::npos );
             const AnnotationBinding* pBinding = nullptr;
+            string                   valueText; // 이스케이프를 푼 값 — `value` 가 이것을 본다
             string_view              value;
             if ( bBare )
             {
@@ -126,8 +150,9 @@ namespace sw
             }
             else
             {
-                pBinding = meta.findKey( scope._pDesc->_pScope, StringUtil::trim( string_view( token.data(), eqPos ) ) );
-                value    = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
+                pBinding  = meta.findKey( scope._pDesc->_pScope, StringUtil::trim( string_view( token.data(), eqPos ) ) );
+                valueText = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
+                value     = valueText;
             }
 
             if ( pBinding == nullptr )
