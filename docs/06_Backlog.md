@@ -2051,6 +2051,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ② 보강 — Shipping 파서의 `--help` 가 아무것도 찍지 않았다)
+
+배포본은 Info 로그를 컴파일하지 않는데(`SW_LOG_COMPILED_VERBOSITY`), 사용법은 `SW_LOG_INFO` 로 남겼다. 그래서 Shipping 으로 빌드한 파서는 `--help` 에도,
+인자가 틀렸을 때에도 사용법을 한 줄도 내지 않았다(`[[maybe_unused]]` 가 붙어 있던 것이 그 흔적). `ParserOptions::printUsage` 로 바꿔 `--dump` 처럼
+표준 출력에 한 번에 쓴다.
+**검증.** Shipping 에서 `ReflectionParserTest.DumpShowsWhatWasExtracted` 의 `--help` 확인이 실패했다가 통과한다(Debug 는 원래 통과 — Debug 만으로는
+안 보이는 종류).
+
 ### 2026-10-01 (결함 ㉑ 리플렉션 — 컴포넌트 · 설정의 기반이 등록되지 않아 부모 사슬이 끊겼다: `Component` · `IConfig` 를 `REFLECT( Abstract )` 로)
 
 `-gv_dumpReflection`(확인 ③)을 처음 돌리자 `SceneComponent` 의 부모 `sw::Component` 가 "not registered" 였다. 전수로 보니 둘이었다 — `Component`

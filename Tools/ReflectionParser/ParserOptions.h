@@ -28,8 +28,12 @@ namespace sw
          */
         bool parse( int32 argc, utf8* argv[] );
 
-        /** @brief 표에서 만든 사용법을 로그로 남깁니다. */
-        static void logUsage();
+        /**
+         * @brief 표에서 만든 사용법을 표준 출력에 씁니다.
+         * @details 로그가 아니라 `fwrite` 다 — 배포본은 Info 로그를 컴파일하지 않아(`SW_LOG_COMPILED_VERBOSITY`), 로그로 남기던 때는
+         *          Shipping 파서의 `--help` 가 아무것도 찍지 않았다.
+         */
+        static void printUsage();
 
         /** @brief ReflectBuiltins.gen.cpp 만 쓰는 모드인지 봅니다. */
         bool isBuiltinsGenMode() const noexcept { return _emitBuiltinsGenPath.empty() == false; }

@@ -3,6 +3,7 @@
 #include "ReflectionParser/ParserOptions.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "ReflectionParser/ParserDefines.h"
 
@@ -131,13 +132,16 @@ namespace sw
                ParserOptionsInternal::isGiven( _annotationMetaPath, cliConstants::kAnnotationMeta, cliConstants::kInput );
     }
 
-    void ParserOptions::logUsage()
+    void ParserOptions::printUsage()
     {
-        SW_LOG_INFO( "Usage: ReflectionParser --input <header.h> ... --output <dir> --annotation-meta <file> --emit-templates <dir> [...]" );
-        SW_LOG_INFO( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>" );
-        for ( [[maybe_unused]] const OptionRow& row : kArrOptionRow )
-            SW_LOG_INFO( "  %# %#  %#", row._pFlag, row._pValueName, row._pHelp );
-        for ( [[maybe_unused]] const SwitchRow& row : kArrSwitchRow )
-            SW_LOG_INFO( "  %#  %#", row._pFlag, row._pHelp );
+        StringBuilder<constant::kMaxBuffer4096> out;
+        out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --annotation-meta <file> --emit-templates <dir> [...]\n" );
+        out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>\n" );
+        for ( const OptionRow& row : kArrOptionRow )
+            out.appendFormat( "  %# %#  %#\n", row._pFlag, row._pValueName, row._pHelp );
+        for ( const SwitchRow& row : kArrSwitchRow )
+            out.appendFormat( "  %#  %#\n", row._pFlag, row._pHelp );
+        std::fwrite( out.c_str(), 1, out.size(), stdout );
+        std::fflush( stdout );
     }
 } // namespace sw

@@ -100,12 +100,12 @@ int32 main( int32 argc, utf8* argv[] )
     sw::ParserOptions options;
     if ( options.parse( argc, argv ) == false )
     {
-        sw::ParserOptions::logUsage();
+        sw::ParserOptions::printUsage();
         return 1;
     }
     if ( options._bHelp )
     {
-        sw::ParserOptions::logUsage();
+        sw::ParserOptions::printUsage();
         return 0;
     }
 
