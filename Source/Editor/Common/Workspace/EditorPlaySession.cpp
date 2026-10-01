@@ -42,6 +42,12 @@ namespace sw::editor
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return;
 
+                // Stop 때 활성 씬이 이 씬인지 알아보려고 세대를, 아니면 다시 세우려고 이름 · 소스 경로를 적는다.
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                data._sceneGeneration       = pSceneManager != nullptr ? pSceneManager->getSceneGeneration() : 0;
+                data._sceneName             = pScene->getName();
+                data._sceneSourcePath       = pScene->getSourcePath();
+
                 GameObjectManager* pObjects = pScene->getObjectManager();
                 EditorContext*     pContext = EditorContext::get();
                 // 예전에는 여기서 getAllGameObjects() 를 두 번 불렀다. 개수를 세려고 한 번, 순회하려고 한 번이다.
@@ -56,8 +62,9 @@ namespace sw::editor
                         continue;
 
                     PlaySessionData::ObjectSnapshot entry;
-                    entry._identity = ObjectStateSerializer::captureIdentity( pObj );
-                    entry._name     = pObj->getName().c_str();
+                    entry._identity   = ObjectStateSerializer::captureIdentity( pObj );
+                    entry._name       = pObj->getName().c_str();
+                    entry._prefabPath = pScene->getEntityPrefabPath( entry._identity._objectId );
                     if ( pContext != nullptr )
                         entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._identity._objectId );
 
@@ -78,6 +85,21 @@ namespace sw::editor
                 if ( data._bHasSnapshot == SW_FALSE )
                     return;
 
+                // 플레이 중에 활성 씬이 바뀌었으면(게임 코드가 다음 레벨을 열었다 · 씬 로드가 끝났다) 스냅샷은 지금 씬의 것이 아니다. 예전에는
+                // 그 씬에 그대로 되돌려 두 씬의 오브젝트가 섞였고, 활성 씬은 플레이 중에 연 씬의 소스 경로를 든 채라 저장하면 **그 씬 파일**을
+                // 덮어썼다. 편집하던 씬을 빈 씬으로 다시 세우고(이름 · 소스 경로) 거기에 되돌린다. 로드가 아직 돌고 있으면 끝나며 씬을 다시
+                // 바꿔 놓으므로 먼저 거둔다. 오브젝트는 원래 id 로 되살아나므로 프리팹 연결도 id 로 다시 맨다(아래 2).
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager != nullptr && pSceneManager->getSceneGeneration() != data._sceneGeneration )
+                {
+                    pSceneManager->cancelPendingAsyncLoads();
+                    Scene* pRebuilt = pSceneManager->createEmptyActiveScene( data._sceneName );
+                    if ( pRebuilt != nullptr )
+                        pRebuilt->setSourcePath( data._sceneSourcePath );
+                    SW_LOG_INFO( "플레이 중에 활성 씬이 바뀌었습니다 — 편집하던 씬 '%#' 을 다시 세워 되돌립니다.", data._sceneName.c_str() );
+                }
+
+                Scene*             pScene   = editor::getActiveScene();
                 GameObjectManager* pObjects = editor::getActiveObjectManager();
                 if ( pObjects == nullptr )
                 {
@@ -133,6 +155,8 @@ namespace sw::editor
 
                     if ( snap._guid.isNull() == false && pContext != nullptr )
                         pContext->getWorkspace().setGuid( pObj->getObjectId(), snap._guid );
+                    if ( snap._prefabPath.empty() == false && pScene != nullptr )
+                        pScene->setEntityPrefabPath( pObj->getObjectId(), snap._prefabPath );
 
                     mapRestored[snap._identity._objectId] = pObj;
 
@@ -230,7 +254,11 @@ namespace sw::editor
         if ( pData == nullptr )
             return;
         if ( pData->_state == PlaySessionState::Stopped )
+        {
             setState( PlaySessionState::Playing );
+            if ( pData->_state == PlaySessionState::Stopped ) // 시작하지 못했다(씬을 여는 중) — 스냅샷 없이 한 프레임을 돌리지 않는다
+                return;
+        }
         pData->_bStepPending = SW_TRUE;
     }
 
@@ -250,6 +278,18 @@ namespace sw::editor
         if ( pData == nullptr || pData->_state == state )
             return;
 
+        // 씬을 여는 중이면 플레이를 시작하지 않는다. 스냅샷은 지금 씬을 찍는데 플레이 중에 로드가 끝나 씬이 바뀌면, Stop 이 되돌릴 씬이 사용자가
+        // 막 연 씬이 아니게 된다.
+        if ( pData->_state == PlaySessionState::Stopped )
+        {
+            const SceneManager* pSceneManager = editor::getService<SceneManager>();
+            if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
+            {
+                SW_LOG_WARNING( "씬을 여는 중이라 플레이를 시작하지 않습니다 — 로드가 끝난 뒤 다시 시작하십시오." );
+                return;
+            }
+        }
+
         pData->_bStepPending            = SW_FALSE;
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;
@@ -263,14 +303,24 @@ namespace sw::editor
         // 멈춤 → 일시정지는 일시정지 상태로 플레이를 시작한다(스냅샷 · 시작은 하고 씬은 틱하지 않는다).
         if ( previous == PlaySessionState::Stopped )
         {
-            EditorPlaySessionInternal::capturePlaySnapshot( *pData );
+            captureSnapshot( *pData );
             EditorPlaySessionInternal::setWorldPlaying( true );
         }
         else if ( state == PlaySessionState::Stopped )
         {
             EditorPlaySessionInternal::setWorldPlaying( false );
-            EditorPlaySessionInternal::restorePlaySnapshot( *pData );
+            restoreSnapshot( *pData );
         }
+    }
+
+    void EditorPlaySession::captureSnapshot( PlaySessionData& data )
+    {
+        EditorPlaySessionInternal::capturePlaySnapshot( data );
+    }
+
+    void EditorPlaySession::restoreSnapshot( PlaySessionData& data )
+    {
+        EditorPlaySessionInternal::restorePlaySnapshot( data );
     }
 
 } // namespace sw::editor

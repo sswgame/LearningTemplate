@@ -41,9 +41,18 @@ namespace sw::editor
             string         _name;
             vector<uint8>  _bytes;
             string         _xml;
+            string         _prefabPath; ///< 씬이 이 오브젝트에 매어 둔 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 세울 때 되살린다
         };
 
         vector<ObjectSnapshot> _listSnapshot;
+        /**
+         * @brief 스냅샷을 찍을 때의 활성 씬입니다(`SceneManager::getSceneGeneration` · 이름 · 소스 경로).
+         * @details Stop 때 활성 씬의 세대가 다르면 플레이 중에 씬이 바뀐 것이다(게임 코드가 다음 레벨을 열었다). 그때는 편집하던 씬을 이 이름 ·
+         *          소스 경로로 다시 세운 뒤 되돌린다(`EditorPlaySession::restoreSnapshot`).
+         */
+        uint64                 _sceneGeneration;
+        string                 _sceneName;
+        string                 _sceneSourcePath;
         PlaySessionState       _state{ PlaySessionState::Stopped };
         uint8                  _bStepPending : 1;
         uint8                  _bHasSnapshot : 1;
@@ -51,6 +60,9 @@ namespace sw::editor
 
         PlaySessionData()
             : _listSnapshot{}
+            , _sceneGeneration{ 0 }
+            , _sceneName{}
+            , _sceneSourcePath{}
             , _state{ PlaySessionState::Stopped }
             , _bStepPending{ SW_FALSE }
             , _bHasSnapshot{ SW_FALSE }
@@ -91,5 +103,17 @@ namespace sw::editor
         static void stepOnce();
         /** @brief 예약된 Step을 소비하고 일시정지로 되돌립니다. */
         static void consumePendingStep();
+
+        /**
+         * @brief 활성 씬을 스냅샷으로 찍습니다(Play 시작). 활성 씬의 세대 · 이름 · 소스 경로와 오브젝트의 프리팹 연결도 함께 적습니다.
+         * @details `setState` 가 정지를 떠날 때 부릅니다. 상태(`PlaySessionData`)를 인자로 받아 에디터 컨텍스트 없이도 시험할 수 있습니다.
+         */
+        static void captureSnapshot( PlaySessionData& data );
+        /**
+         * @brief 스냅샷을 활성 씬에 되돌립니다(Stop).
+         * @details 플레이 중에 활성 씬이 바뀌었으면 그 씬에 되돌리지 않고, 편집하던 씬을 빈 씬으로 다시 세운 뒤(이름 · 소스 경로) 되돌립니다.
+         *          예전에는 지금 씬에 그대로 되돌려 두 씬이 섞였고, 활성 씬이 플레이 중에 연 씬의 소스 경로를 든 채라 저장하면 그 씬 파일을 덮어썼습니다.
+         */
+        static void restoreSnapshot( PlaySessionData& data );
     };
 } // namespace sw::editor

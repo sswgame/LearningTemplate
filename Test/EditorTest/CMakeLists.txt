@@ -17,6 +17,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorGlobalVariableCommands.cpp
 		TestEditorListFilter.cpp
 		TestEditorPanelDocument.cpp
+		TestEditorPlaySession.cpp
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorTransaction.cpp
