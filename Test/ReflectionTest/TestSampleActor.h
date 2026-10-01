@@ -538,6 +538,27 @@ namespace sw
         /** @brief `s_arrExternalPosition` 에서 이 객체가 쓰는 칸입니다. 리플렉션 대상이 아닙니다. */
         uint32 _storageIndex{ 0 };
     };
+
+    /// @brief 별칭으로 적은 컨테이너 — 파서가 벗겨서 컨테이너로 알아봐야 한다(`AliasContainerActor`).
+    using TestAliasScoreList = sw::vector<int32>;
+    /// @brief 별칭으로 적은 스칼라 — 이름(int32 의 별칭)이 그대로여야 한다.
+    using TestAliasCount = int32;
+
+    /**
+     * @struct AliasContainerActor
+     * @brief 별칭으로 적은 컨테이너 · 스칼라 프로퍼티 샘플(`ReflectionTest.AliasedContainerPropertyIsAContainer`).
+     */
+    REFLECT()
+    struct AliasContainerActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        TestAliasScoreList _aliasScores;
+
+        PROPERTY()
+        TestAliasCount _aliasCount{ 0 };
+    };
 } // namespace sw
 
 // ------------------------------------------------------------------------------

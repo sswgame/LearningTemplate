@@ -25,6 +25,9 @@ namespace sw
         /** @brief clang 수식어를 제거한 뒤 alias → canonical 로 정규화합니다. */
         string normalize( const string& clangSpelling ) const;
 
+        /** @brief 이 표기(수식어를 떼고, `sw::` 를 떼고)가 표에 있는 이름인지 — 내장 스칼라 · 문자열 · 수학 타입(`int32` · `string` · `float3` …). */
+        bool isKnown( const string& clangSpelling ) const;
+
         /** @brief canonical·네임스페이스·별칭을 맵에 등록합니다. */
         void registerEntry( const string& canonical, const string& nameSpace,
                             const vector<string>& aliases );

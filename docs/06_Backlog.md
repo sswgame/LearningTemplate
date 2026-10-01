@@ -2077,6 +2077,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊺ 리플렉션 파서 — 별칭(`using`)으로 적은 프로퍼티 타입을 풀지 않아 값이 직렬화되지 않았다)
+
+파서는 프로퍼티의 **적힌 이름**만 봤다. `using ScoreList = sw::vector<int32>; PROPERTY() ScoreList _scores;` 는 컨테이너로 인식되지 않고(`--dump` 에 컨테이너 표시
+없음), `using Health = int32; PROPERTY() Health _hp;` 도 모르는 타입 이름 `Health` 로 남았다 — 런타임은 그 이름을 몰라 JSON 에 `"null"` 을 쓰고 다시 읽지 못했다.
+경고도 없었다(㊸ 의 시험을 쓰다 찾았다).
+`resolvePropertyAlias` — 사용자 별칭을 한 겹씩 벗기다가 **컨테이너 · 표에 있는 이름**(`int32` · `string` · `float3` …, `TypeNameMap::isKnown`)이 나오면 멈추고,
+별칭이 아닌 타입(구조체 · enum)에 닿으면 그것을 쓴다. 그래서 이미 알려진 별칭(`int32` · `sw::string`)은 이름 그대로다.
+**검증.** 시험 헤더에 `AliasContainerActor`(`using TestAliasScoreList = sw::vector<int32>` · `using TestAliasCount = int32`)를 더했다.
+`ReflectionTest.AliasedContainerPropertyIsAContainer` — 컨테이너(Sequence)로 등록되고 스칼라 별칭은 컨테이너가 아니며, JSON 왕복이 `[3,1,4]` · `7` 을 지킨다(고치기
+전에는 `"_aliasCount":"null"` 로 읽기가 실패). 벗기기를 끄는 변이에서 실패했다. 고치기 전후로 생성 폴더 전체를 비교하면 **시험 헤더 하나만** 바뀐다 — 엔진의
+기존 프로퍼티 이름은 하나도 바뀌지 않았다.
+
 ### 2026-10-01 (결함 ㊹ 리플렉션 파서 · 셋업 — 로컬 parser_config.json 이 커밋된 기본값을 키마다 덮었다)
 
 셋업(`SetupEnvironment.py`)은 로컬 `parser_config.json` 에 **기본값 전체에 로컬을 덮은 사본**을 썼고, 파서는 로컬을 키마다 이기게 읽었다. 그래서 나중에

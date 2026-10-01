@@ -85,6 +85,17 @@ namespace sw
         return spelling;
     }
 
+    bool TypeNameMap::isKnown( const string& clangSpelling ) const
+    {
+        string_view key = stripDecorations( clangSpelling );
+        if ( _mapAliasToCanonical.find( string( key ) ) != _mapAliasToCanonical.end() )
+            return true;
+        constexpr string_view kSwPrefix = "sw::";
+        if ( StringUtil::startsWith( key, kSwPrefix ) )
+            key = key.substr( kSwPrefix.size() );
+        return _mapAliasToCanonical.find( string( key ) ) != _mapAliasToCanonical.end();
+    }
+
     string TypeNameMap::normalize( const string& clangSpelling ) const
     {
         // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아

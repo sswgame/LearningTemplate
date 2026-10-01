@@ -486,6 +486,34 @@ namespace sw
                 return node;
             }
 
+            /**
+             * @brief 프로퍼티 타입이 사용자 별칭(`using` · `typedef`)이면 **알려진 이름**이 나올 때까지 벗겨 그 타입을 돌려줍니다.
+             * @details 예전에는 적힌 이름만 봐서 `using ScoreList = sw::vector<int32>;` · `using Health = int32;` 로 적은 프로퍼티가 모르는 타입 이름
+             *          (`ScoreList` · `Health`)으로 남았다 — 컨테이너로도 스칼라로도 읽히지 않아 직렬화가 그 값을 쓰지 못했다(JSON 에는 `"null"`).
+             *          한 겹씩 벗기다가 컨테이너 · 표에 있는 이름(`int32` · `string` · `float3` …)이 나오면 거기서 멈추고, 별칭이 아닌 타입(구조체 ·
+             *          enum)에 닿으면 그것을 쓴다. 그래서 `int32` · `sw::string` 처럼 이미 알려진 별칭은 이름 그대로다.
+             */
+            static CXType resolvePropertyAlias( const CXType type, const ParserSession& session )
+            {
+                CXType resolved = type; // 반환은 이 하나다(-Wnrvo)
+                CXType current  = type;
+                for ( int32 depth = 0; depth < 8 && current.kind != CXType_Invalid; ++depth )
+                {
+                    const string  spelling = takeString( clang_getTypeSpelling( current ) );
+                    ContainerKind kind     = ContainerKind::None;
+                    string        wrapperStem;
+                    const CXType  named = current.kind == CXType_Elaborated ? clang_Type_getNamedType( current ) : current;
+                    if ( session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, session._config, kind, wrapperStem ) ||
+                         session._typeNameMap.isKnown( spelling ) || named.kind != CXType_Typedef )
+                    {
+                        resolved = current;
+                        break;
+                    }
+                    current = clang_getTypedefDeclUnderlyingType( clang_getTypeDeclaration( named ) );
+                }
+                return resolved;
+            }
+
             /** @brief 필드 타입의 컨테이너 트리를 프로퍼티에 복사합니다. */
             static void fillContainerDetails( ParsedPropertyInfo& prop, const CXType fieldType, const ParserSession& session )
             {
@@ -588,7 +616,7 @@ namespace sw
                     return;
 
                 const ParserSession& session   = *collector._pSession;
-                const CXType         fieldType = clang_getCursorType( cursor );
+                const CXType         fieldType = resolvePropertyAlias( clang_getCursorType( cursor ), session ); // 사용자 별칭은 벗긴다
                 ParsedPropertyInfo   prop;
                 prop._memberName = getCursorSpelling( cursor );
                 prop._name       = prop._memberName;

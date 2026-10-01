@@ -6,6 +6,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -417,4 +418,31 @@ SW_TEST_CASE( ReflectionTest, ComponentLoadsByItsOldName )
     SW_ASSERT_NOT_NULL( pByOldName );
     SW_EXPECT_TRUE( sw::castTo<sw::TestGrandChildScriptComponent>( pByOldName ) != nullptr );
     SW_EXPECT_TRUE( pByOldName->getTypeName() == sw::hashed_string( "TestGrandChildScriptComponent" ) );
+}
+
+/**
+ * @brief [ReflectionTest] 별칭(`using`)으로 적은 컨테이너 프로퍼티도 컨테이너다 — 직렬화가 그 값을 쓰고 읽는다, 스칼라 별칭은 그대로
+ * @details 파서가 적힌 이름만 봐서 `using ScoreList = sw::vector<int32>;` 로 적은 프로퍼티를 모르는 타입 이름으로 남겼다 — 직렬화가 그 값을 쓰지 못했다.
+ */
+SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
+{
+    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasContainerActor" ) );
+    SW_ASSERT_NOT_NULL( pType );
+    const sw::PropertyInfo* pScores = pType->findProperty( sw::hashed_string( "_aliasScores" ) );
+    const sw::PropertyInfo* pCount  = pType->findProperty( sw::hashed_string( "_aliasCount" ) );
+    SW_ASSERT_NOT_NULL( pScores );
+    SW_ASSERT_NOT_NULL( pCount );
+    SW_EXPECT_TRUE( pScores->_bIsContainer );
+    SW_EXPECT_TRUE( pScores->_containerKind == sw::ContainerKind::Sequence );
+    SW_EXPECT_FALSE( pCount->_bIsContainer );
+
+    sw::AliasContainerActor source;
+    source._aliasScores          = { 3, 1, 4 };
+    source._aliasCount           = 7;
+    const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
+    sw::AliasContainerActor restored;
+    SW_ASSERT_TRUE_MSG( sw::JsonSerializer::deserialize( &restored, *pType, json ), json.c_str() );
+    SW_EXPECT_EQUAL( size_t( 3 ), restored._aliasScores.size() );
+    SW_EXPECT_TRUE_MSG( restored._aliasScores.size() == 3 && restored._aliasScores[2] == 4, json.c_str() );
+    SW_EXPECT_EQUAL( 7, restored._aliasCount );
 }
