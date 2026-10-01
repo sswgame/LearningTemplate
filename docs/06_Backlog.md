@@ -2051,6 +2051,13 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ⑥ 진단 도구를 한 표로 — docs/01_GettingStarted.md §5)
+
+이번에 더한 "디버거 없이 묻는 길" 이 커밋마다 흩어져 있었다. `docs/01_GettingStarted.md` 에 **5. 무엇이 일어났는지 보기** 를 두고 질문 → 보는 법으로
+모았다: `-gv_dumpReflection` · 파서 `--dump` · `-gv_dumpRenderGraph` · 순환의 `waits on` · `경로:줄:열: 이유` · enum 글 경고 · 짧은 이름 경고 ·
+`[SW_ASSERT]` stderr · 로그의 잘못된 UTF-8 바이트 · `-gv_screenshot`, 그리고 시험 도우미(`ScopedLogCollector` · `ScopedDefensiveTestLog` · `makeTempPath` ·
+`SW_ASSERT_TRUE_MSG`).
+
 ### 2026-10-01 (확인 ⑤ 렌더 그래프 — 순환은 서로 기다리는 패스를 이름으로, 컴파일된 레벨은 `-gv_dumpRenderGraph=1`)
 
 순환이면 `Cycle detected during compile — 1/3 active passes scheduled.` 뿐이었다 — 어느 패스가 무엇을 기다리는지는 파이프라인 XML 의 입출력을 손으로

@@ -79,5 +79,30 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 > Ninja 는 단일 구성(single-config) 생성기라 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다.
 > 구성은 프리셋(=빌드 디렉터리)이 정합니다.
 
+## 5. 무엇이 일어났는지 보기 (진단 도구)
+
+"왜 이렇게 됐나" 를 디버거 없이 묻는 길입니다. 실행 플래그는 `App.exe` 뒤에 붙이고, 스스로 끝나게 `-gv_profileFrames=3` 을 같이 줍니다.
+`-gv_dump*` 는 Debug · Release 빌드에만 있습니다(Shipping 에서는 빠집니다).
+
+| 묻고 싶은 것 | 보는 법 |
+|---|---|
+| 이 타입 · enum 이 실행 중에 어떻게 등록됐나(부모 사슬 · 실제 자리 · 범위 · 플래그 · 열거자) | `-gv_dumpReflection=CameraComponent,CameraRole` |
+| 리플렉션 파서가 이 헤더에서 무엇을 뽑았나 | `ReflectionParser --dump …` (예시 명령은 `Tools/ReflectionParser/README.md`) |
+| 렌더 패스가 어떤 순서 · 레벨로 도나, 무엇이 컬링됐나 | `-gv_dumpRenderGraph=1` |
+| 렌더 그래프가 순환해서 그려지지 않는다 | 로그의 `'A' waits on 'B'` 줄들 |
+| 씬 · 프리팹 · XML · JSON 이 왜 안 읽히나 | 로그의 `경로:줄:열: 이유` (코드에서는 `XmlDocument` · `JsonDocument::getLastError()`) — 없는 파일만 `not found` 라고 한다 |
+| 에셋의 enum 값이 왜 안 먹나 | 경고 `'Bogus' is not a value of enum sw::X - the field keeps its current value` |
+| 짧은 이름이 같은 타입 둘 | 경고 `Reflected type name 'X' now means a::X and no longer b::X` |
+| 디버거 없이 `SW_ASSERT` 가 멈춘 자리 | stderr 의 `[SW_ASSERT] 식 / at 파일:줄 / in 함수`, 크래시면 `Saved/Logs/crash_*` 의 스택 |
+| 로그에 이상한 바이트가 섞였다 | 잘못된 UTF-8 바이트만 `\xNN` 으로 남고 나머지 글은 그대로다 |
+| 화면에 무엇이 나갔나 | `-gv_screenshot=out.ppm` (`-gv_screenshotFrame=N`) |
+
+시험을 쓸 때의 도우미(`Test/TestFramework/TestFramework.h`):
+
+- `test::ScopedLogCollector` — 스코프 동안의 Warning · Error 를 모아 `countContaining( "…" )` 로 "그 경고가 나왔나" 를 묻는다. 실패 메시지에는 `joined()`.
+- `test::ScopedDefensiveTestLog` — 일부러 내는 오류 · 경고를 `[Expected Defensive Test]` 로 표시한다(실패로 읽히지 않게).
+- `test::makeTempPath( "이름" )` — 케이스마다 따로 지워지는 임시 경로.
+- `SW_ASSERT_TRUE_MSG( 조건, 메시지 )` — 실패하면 메시지(대개 실제로 받은 글)를 남기고 그 케이스를 멈춘다.
+
 ---
 [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 서브시스템 개요](02_EngineSubsystems.md)
