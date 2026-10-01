@@ -176,8 +176,6 @@ SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
     SW_EXPECT_EQUAL( parsed._listNode[1]._text, loaded._listNode[1]._text );
     SW_EXPECT_EQUAL( 4, loaded.findChoiceNextNodeId( 2, 1 ) );
-
-    FileUtil::removeFile( filePath );
 }
 
 /**

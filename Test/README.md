@@ -130,7 +130,15 @@ AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이�
 ### 테스트 상태 정리
 
 각 테스트가 종료되면 프레임워크가 비동기 씬 로드와 TaskManager를 정리합니다. 그 밖에 테스트가
-직접 만든 것(코덱 등록·임시 파일·전역 설정)은 `SW_TEST_DEFER_CLEANUP` 으로 되돌립니다.
+직접 만든 것(코덱 등록·전역 설정)은 `SW_TEST_DEFER_CLEANUP` 으로 되돌립니다.
+
+**임시 파일은 정리하지 않습니다 — 프레임워크가 합니다.** `test::makeTempPath( "x.xml" )` 는
+`<임시 폴더>/sw_<pid>/<스위트_케이스>/x.xml` 을 주고, 케이스가 끝나면(정리 함수가 돈 뒤) 그 케이스 폴더를 통째로
+지웁니다. 엔진이 옆에 구운 `.bin` · `.meta` 도 같이 지워집니다. 파일 이름이 뜻을 갖는 경우(팩 이름이 우선순위를
+정한다)는 `test::makeTempDirectory( "packs" )` 안에 원래 이름으로 둡니다. 못 지우면(파일을 연 채로 둔 경우) 그 케이스가
+집니다. **실행 파일 폴더(`Bin`)나 소스 트리에 쓰지 않습니다** — 같은 `Bin` 을 쓰는 다른 프로세스와 부딪치고, 단언으로
+일찍 빠지면 남습니다. 소스 트리의 `Resource/` 에 꼭 써야 하면(리소스 루트로만 풀리는 경로) 만들기 **전에**
+`SW_TEST_DEFER_CLEANUP` 으로 지우는 것을 걸어 둡니다(`ResourceTest.ConfigurableResourcePriorityAndDlcSupport`).
 
 ```cpp
 // Test/CoreTest/TestCompression.cpp 에서 실제로 쓰는 모양.

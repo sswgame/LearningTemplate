@@ -83,8 +83,6 @@ SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJson )
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
     SW_EXPECT_EQUAL( parsed._listNode[1]._name, loaded._listNode[1]._name );
     SW_EXPECT_NEAR_EQUAL( parsed._listNode[1]._position._y, loaded._listNode[1]._position._y, 1e-3f );
-
-    FileUtil::removeFile( filePath );
 }
 
 /**

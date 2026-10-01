@@ -6,6 +6,9 @@
 
 namespace
 {
+    /** @brief 앞 케이스가 만든 임시 경로 — 다음 케이스가 그것이 지워졌는지 본다(케이스 경계를 넘어야 볼 수 있는 일이다). */
+    sw::vector<sw::string> s_listPathOfPreviousCase;
+
     /** @brief 단언 하나를 부르고 그 뒤 줄까지 왔는지 남깁니다 — ASSERT 는 함수를 끝내야 하고 EXPECT 는 아니다. */
     void runAssertTrue( bool bCondition, bool& outReachedEnd )
     {
@@ -272,4 +275,41 @@ SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
     staleRegistry.registerHostSuite( "RenamedAwayTest", "needs a GPU" );
     configureWithArgument( staleRegistry, "--host_suites=exclude" );
     SW_EXPECT_EQUAL( 1, staleRegistry.runAllTests() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 케이스가 만든 임시 경로를 남겨 둔다 — 바로 다음 케이스가 그것이 지워졌는지 본다
+ * @details 파일 · 폴더(안에 파일) · 테스트가 알려 주지 않은 옆 파일(엔진이 구워 두는 `.bin` · `.meta` 를 흉내) 셋을 만든다.
+ *          지우는 것은 케이스가 **끝난 뒤** 프레임워크라 같은 케이스 안에서는 볼 수 없다.
+ */
+SW_TEST_CASE( TestFrameworkTest, TempPathsOfACaseAreCreated )
+{
+    s_listPathOfPreviousCase.clear();
+
+    const sw::string filePath = test::makeTempPath( "Probe.txt" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "probe" ) );
+
+    const sw::string directory = test::makeTempDirectory( "ProbeDir" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( directory, "nested.txt" ), "nested" ) );
+
+    // 테스트가 이름을 받은 적 없는 옆 파일 — 엔진이 `x.xml` 옆에 `x.bin` · `x.meta` 를 쓰는 것과 같다.
+    const sw::string siblingPath = filePath + ".meta";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( siblingPath, "meta" ) );
+
+    s_listPathOfPreviousCase = { filePath, directory, siblingPath };
+}
+
+/**
+ * @brief [TestFrameworkTest] 앞 케이스의 임시 경로는 그 케이스가 끝날 때 프레임워크가 지웠다
+ * @details 예전에는 케이스마다 끝에서 `removeFile` 을 손으로 불렀고(193 곳), 단언으로 일찍 빠지면 그 줄에 닿지 않아 남았다 —
+ *          이 PC 의 임시 폴더에 3,000 개 넘게 쌓여 있었다. 앞 케이스 없이 이것만 고르면 볼 것이 없어 건너뛴다.
+ */
+SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
+{
+    if ( s_listPathOfPreviousCase.empty() )
+        SW_TEST_SKIP( "run together with TestFrameworkTest.TempPathsOfACaseAreCreated" );
+
+    for ( const sw::string& path : s_listPathOfPreviousCase )
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( path ) || sw::FileUtil::directoryExists( path ), path.c_str() );
+    s_listPathOfPreviousCase.clear();
 }

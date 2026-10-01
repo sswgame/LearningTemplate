@@ -58,8 +58,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
  */
 SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 {
-    const sw::string dir = test::makeTempPath( "SwPathCaseTestDir" );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string dir     = test::makeTempDirectory( "SwPathCaseTestDir" );
     const sw::string pathStr = sw::FileUtil::joinPath( dir, "MixedCaseFile.bin" );
     const sw::string content = "case-sensitive-io";
 
@@ -69,8 +68,6 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
     sw::vector<uint8> readBuffer;
     SW_EXPECT_TRUE( sw::FileUtil::readFile( pathStr, readBuffer ) );
     SW_EXPECT_EQUAL( content, sw::string( readBuffer.begin(), readBuffer.end() ) );
-
-    sw::FileUtil::removeFile( pathStr );
 }
 
 /**
@@ -98,8 +95,7 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
  */
 SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
 {
-    const sw::string dir = test::makeTempPath( "SwFileStampTestDir" );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string dir  = test::makeTempDirectory( "SwFileStampTestDir" );
     const sw::string path = sw::FileUtil::joinPath( dir, "Stamp.txt" );
 
     const sw::string shortText = "0123456789";
@@ -124,8 +120,6 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
     SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( sw::FileUtil::joinPath( dir, "Missing.txt" ), none ) );
     SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( dir, none ) );
     SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( "", none ) );
-
-    sw::FileUtil::removeFile( path );
 }
 
 /**
@@ -164,9 +158,6 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
         SW_EXPECT_TRUE( sw::FileUtil::readFile( listFile[0], readBuffer ) );
         SW_EXPECT_EQUAL( content, sw::string( readBuffer.begin(), readBuffer.end() ) );
     }
-
-    sw::FileUtil::removeFile( filePath );
-    sw::FileUtil::removeDirectory( rootDir );
 }
 
 /**
@@ -187,8 +178,6 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 
     sw::string readContent( readBuffer.begin(), readBuffer.end() );
     SW_EXPECT_EQUAL( testContent, readContent );
-
-    sw::FileUtil::removeFile( testPath );
 }
 
 /**
@@ -243,15 +232,6 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( topFile, "a" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( nestedFile, "b" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( otherFile, "c" ) );
-
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [topFile, nestedFile, otherFile, subDir, rootDir]()
-    {
-        sw::FileUtil::removeFile( topFile );
-        sw::FileUtil::removeFile( nestedFile );
-        sw::FileUtil::removeFile( otherFile );
-        sw::FileUtil::removeDirectory( subDir );
-        sw::FileUtil::removeDirectory( rootDir );
-    } ) );
 
     BLOCK( "비재귀 파일 — 바로 아래만, 확장자 필터가 걸린다" )
     {
@@ -400,8 +380,7 @@ SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
  */
 SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
 {
-    const sw::string dir = test::makeTempPath( "SwReadRangeTest" );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string dir      = test::makeTempDirectory( "SwReadRangeTest" );
     const sw::string filePath = sw::FileUtil::joinPath( dir, "range.bin" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "0123456789" ) );
 
@@ -437,8 +416,7 @@ SW_TEST_CASE( FileTest, ProcessUsesUtf8AnsiCodePage )
  */
 SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
 {
-    const sw::string dir = test::makeTempPath( "SwTornWriteTest" );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string dir      = test::makeTempDirectory( "SwTornWriteTest" );
     const sw::string filePath = sw::FileUtil::joinPath( dir, "shared.bin" );
 
     constexpr size_t  kFileBytes = 256 * 1024;

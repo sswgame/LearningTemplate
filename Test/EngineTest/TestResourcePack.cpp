@@ -287,7 +287,7 @@ namespace sw
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
 {
-    const sw::string testPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_01.pack" );
+    const sw::string testPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_01.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         {"maps/title.scene.xml",         "<Scene name=\"Title\" version=\"1.0\"/>"},
@@ -319,7 +319,6 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
     SW_EXPECT_EQUAL( textContent, "{\"sword\": {\"atk\": 50, \"durability\": 100}}" );
 
     reader.close();
-    sw::FileUtil::removeFile( testPackPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -354,7 +353,7 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
     for ( const CodecCase& codecCase : arrCase )
     {
         const sw::string packPath = sw::FileUtil::joinPath(
-            sw::FileUtil::getCurrentPath(), sw::string( "test_codec_" ) + codecCase._pName + ".pack" );
+            test::makeTempDirectory( "packs" ), sw::string( "test_codec_" ) + codecCase._pName + ".pack" );
 
         SW_EXPECT_TRUE_MSG( sw::createTestPackFile( packPath, 0, codecCase._type, listFile, false ), codecCase._pName );
 
@@ -381,10 +380,10 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
 {
     const sw::GlobalVfsScope vfsScope;
 
-    const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_engine.pack" );
-    const sw::string gamePack   = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_main.pack" );
-    const sw::string dlcPack    = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_dlc_exp1.pack" );
-    const sw::string patchPack  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_patch.pack" );
+    const sw::string enginePack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_engine.pack" );
+    const sw::string gamePack   = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_game_main.pack" );
+    const sw::string dlcPack    = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_dlc_exp1.pack" );
+    const sw::string patchPack  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_patch.pack" );
 
     // 1. 각 팩에 동일한 키의 파일 생성
     sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, {
@@ -428,10 +427,6 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
     SW_EXPECT_EQUAL( content, "VERSION_DLC" );
 
     packManager.unmountAll();
-    sw::FileUtil::removeFile( enginePack );
-    sw::FileUtil::removeFile( gamePack );
-    sw::FileUtil::removeFile( dlcPack );
-    sw::FileUtil::removeFile( patchPack );
 }
 
 // ------------------------------------------------------------------------------
@@ -439,7 +434,7 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
 {
-    const sw::string dlcPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_secure_dlc.pack" );
+    const sw::string dlcPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_secure_dlc.pack" );
     constexpr uint32 kDlcAppId   = 5001;
 
     SW_ASSERT_TRUE( sw::createTestPackFile( dlcPackPath, kDlcAppId, sw::PackCompressionType::None, {
@@ -473,7 +468,6 @@ SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
     SW_EXPECT_EQUAL( text, "<Weapon name=\"Excalibur\"/>" );
 
     packManager.unmountAll();
-    sw::FileUtil::removeFile( dlcPackPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -483,8 +477,8 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
 {
     const sw::GlobalVfsScope vfsScope;
 
-    const sw::string packPath  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_opt.pack" );
-    const sw::string loosePath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_file.xml" );
+    const sw::string packPath  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_opt.pack" );
+    const sw::string loosePath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_file.xml" );
 
     sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                             { "test_loose_file.xml", "CONTENT_IN_PACK" }
@@ -509,8 +503,6 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
 
     packManager.setAllowLooseFiles( true );
     packManager.unmountAll();
-    sw::FileUtil::removeFile( packPath );
-    sw::FileUtil::removeFile( loosePath );
 }
 
 /**
@@ -530,10 +522,6 @@ SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
     const sw::GlobalVfsScope vfsScope;
 
     const sw::string packPath = test::makeTempPath( "same_source.pack" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
-    {
-        sw::FileUtil::removeFile( packPath );
-    } ) );
 
     constexpr const utf8* kKey     = "config/same_source.txt";
     constexpr const utf8* kPayload = "PAYLOAD_FROM_PACK";
@@ -584,11 +572,11 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
 {
     const sw::GlobalVfsScope vfsScope;
 
-    const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "engine_autotest.pack" );
-    const sw::string commonPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "common_autotest.pack" );
-    const sw::string gamePack   = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "game_main_autotest.pack" );
-    const sw::string patchGame  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_game_main_autotest.pack" );
-    const sw::string hotfixPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_hotfix_autotest.pack" );
+    const sw::string enginePack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "engine_autotest.pack" );
+    const sw::string commonPack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "common_autotest.pack" );
+    const sw::string gamePack   = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "game_main_autotest.pack" );
+    const sw::string patchGame  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_game_main_autotest.pack" );
+    const sw::string hotfixPack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_hotfix_autotest.pack" );
 
     sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, {
                                                                               { "core/version.txt", "ENGINE_1.0" }
@@ -650,11 +638,6 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
     SW_EXPECT_EQUAL( "ENGINE_1.0", versionText );
 
     packManager.unmountAll();
-    sw::FileUtil::removeFile( enginePack );
-    sw::FileUtil::removeFile( commonPack );
-    sw::FileUtil::removeFile( gamePack );
-    sw::FileUtil::removeFile( patchGame );
-    sw::FileUtil::removeFile( hotfixPack );
 }
 
 // ------------------------------------------------------------------------------
@@ -662,7 +645,7 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_crc_tamper.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_tamper.pack" );
 
     const sw::string originalData = "INTEGRITY_CHECK_SAMPLE_PAYLOAD_DATA_1234567890";
     SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
@@ -709,8 +692,6 @@ SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
         SW_EXPECT_TRUE( buffer.empty() );
         reader.close();
     }
-
-    sw::FileUtil::removeFile( packPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -718,7 +699,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_concurrent_vfs.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_concurrent_vfs.pack" );
 
     sw::vector<sw::pair<sw::string, sw::string>> listFile;
     for ( uint32 fileIndex = 0; fileIndex < 16; ++fileIndex )
@@ -765,7 +746,6 @@ SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
     SW_EXPECT_EQUAL( successCount.load(), kThreadCount * kReadsPerThread );
 
     manager.unmountAll();
-    sw::FileUtil::removeFile( packPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -840,7 +820,6 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
     SW_EXPECT_EQUAL( bytes.size(), strlen( "SHADER_PAYLOAD_DATA" ) );
 
     packManager.unmountAll();
-    sw::FileUtil::removeFile( packPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -855,11 +834,7 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
  */
 SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_corrupt_geometry.pack" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
-    {
-        sw::FileUtil::removeFile( packPath );
-    } ) );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_corrupt_geometry.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         {"data/items.json", "{\"sword\": 1}"},
@@ -927,11 +902,7 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
  */
 SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_unterminated_pool.pack" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
-    {
-        sw::FileUtil::removeFile( packPath );
-    } ) );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_unterminated_pool.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "data/items.json", "{\"sword\": 1}" },
@@ -967,11 +938,7 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
  */
 SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_corrupt_entry.pack" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
-    {
-        sw::FileUtil::removeFile( packPath );
-    } ) );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_corrupt_entry.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         {"data/items.json", "{\"sword\": 1}"},
@@ -1028,8 +995,8 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
  */
 SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
 {
-    const sw::string packPathA = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_move_a.pack" );
-    const sw::string packPathB = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_move_b.pack" );
+    const sw::string packPathA = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_move_a.pack" );
+    const sw::string packPathB = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_move_b.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFileA = {
         { "data/a.txt", "pack-a" }
@@ -1065,8 +1032,6 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
     SW_EXPECT_EQUAL( packPathA, target.getPackPath() );
 
     target.close();
-    sw::FileUtil::removeFile( packPathA );
-    sw::FileUtil::removeFile( packPathB );
 }
 
 /**
@@ -1076,7 +1041,7 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
  */
 SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_crc_zeroed.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_zeroed.pack" );
     SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                                             { "secure/zeroed.bin", "PAYLOAD_THAT_WILL_BE_TAMPERED" }
     } ) );
@@ -1096,7 +1061,6 @@ SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
         SW_EXPECT_FALSE( reader.readFile( "secure/zeroed.bin", buffer ) );
     }
     reader.close();
-    sw::FileUtil::removeFile( packPath );
 }
 
 /**
@@ -1105,7 +1069,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
  */
 SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_empty_payload.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_empty_payload.pack" );
     SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::RLE, {
                                                                                            { "secure/empty.bin", "AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB" }
     } ) );
@@ -1126,7 +1090,6 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
         SW_EXPECT_FALSE( reader.readFile( "secure/empty.bin", buffer ) );
     }
     reader.close();
-    sw::FileUtil::removeFile( packPath );
 }
 
 /**
@@ -1135,7 +1098,7 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
  */
 SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_encrypted_flag.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_encrypted_flag.pack" );
     SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                                             { "secure/enc.bin", "PLAINTEXT" }
     } ) );
@@ -1149,5 +1112,4 @@ SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
         SW_EXPECT_FALSE( reader.open( packPath ) );
     }
     reader.close();
-    sw::FileUtil::removeFile( packPath );
 }

@@ -754,7 +754,6 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 
     sw::Component::setDefaultGamedataPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
-    sw::FileUtil::removeFile( defaultsPath );
 }
 
 /**
@@ -796,7 +795,6 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
 
     sw::Component::setDefaultGamedataPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
-    sw::FileUtil::removeFile( defaultsPath );
 }
 
 /**
@@ -836,7 +834,6 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
     pObjects->processDeferredDestruction();
     sw::Component::setDefaultGamedataPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
-    sw::FileUtil::removeFile( defaultsPath );
 }
 
 /**

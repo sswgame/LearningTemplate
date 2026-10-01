@@ -56,8 +56,6 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
     SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
     SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachment[0]._name );
-
-    sw::FileUtil::removeFile( testPath );
 }
 
 /**
@@ -133,8 +131,6 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
     SW_EXPECT_EQUAL( sw::string( "Present" ), loadedRes.getGraphPass()[0]._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listRenderPassRef.size() );
-
-    sw::FileUtil::removeFile( testPath );
 }
 
 /**
@@ -161,7 +157,6 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 
     sw::RenderPipelineResource loaded;
     SW_EXPECT_FALSE( loaded.loadFromXmlFile( testPath ) );
-    sw::FileUtil::removeFile( testPath );
 }
 
 // ------------------------------------------------------------------------------
@@ -664,8 +659,6 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     SW_EXPECT_EQUAL( sw::string( "DSMainCustom" ), loadedPass._domainEntryPoint );
     SW_EXPECT_EQUAL( sw::string( "MSMainCustom" ), loadedPass._meshEntryPoint );
     SW_EXPECT_EQUAL( sw::string( "ASMainCustom" ), loadedPass._amplificationEntryPoint );
-
-    sw::FileUtil::removeFile( testPath );
 }
 
 /**
@@ -717,6 +710,4 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     SW_EXPECT_TRUE( loadedPass._meshEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._amplificationEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._computeEntryPoint.empty() );
-
-    sw::FileUtil::removeFile( testPath );
 }

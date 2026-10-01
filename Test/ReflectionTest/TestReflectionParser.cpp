@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -88,22 +89,30 @@ namespace
     };
 
     /**
-     * @brief 임시 헤더들을 **한 번의 파서 실행**에 넣고 종료 코드 · 로그 · 산출물을 돌려줍니다. 헤더와 산출물은 돌린 뒤 지웁니다.
+     * @brief 임시 헤더들을 **한 번의 파서 실행**에 넣고 종료 코드 · 로그 · 산출물을 돌려줍니다.
      * @details 진단 메시지를 보는 케이스들이 헤더 쓰기 · 명령줄 · 출력 수집 · 정리 스무 줄을 각자 들고 있었습니다. 헤더가 둘
      *          이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다.
+     *          실행마다 **새 폴더**(이 케이스의 임시 경로 아래)를 쓰므로 앞 실행의 산출물이 "이미 최신" 으로 읽히지 않고,
+     *          케이스가 끝나면 프레임워크가 통째로 지웁니다. 예전에는 실행 파일 폴더(`Bin`)에 헤더와 `temp_gen_diagnostics`
+     *          를 두고 손으로 지웠습니다 — 같은 `Bin` 을 쓰는 두 프로세스가 서로의 산출물을 밟을 수 있었습니다.
      */
     [[maybe_unused]] ParserRunResult runParserOnTempHeaders( const sw::string& parserExe, const sw::vector<TempHeader>& listHeader )
     {
-        const sw::string binDir      = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+        static uint32 s_runIndex = 0;
+
+        sw::StringBuilder<sw::constant::kMaxBuffer64> runName;
+        runName.append( "parser_run_" );
+        runName.append( static_cast<int32>( ++s_runIndex ) );
+        const sw::string runRoot     = test::makeTempPath( runName.c_str() );
         const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
-        const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_diagnostics" );
+        const sw::string outGenDir   = sw::FileUtil::joinPath( runRoot, "gen" );
         sw::FileUtil::ensureDirectoryExists( outGenDir );
 
         ParserRunResult result;
         sw::string      command;
         for ( const TempHeader& header : listHeader )
         {
-            const sw::string headerPath = sw::FileUtil::joinPath( binDir, header._fileStem + ".h" );
+            const sw::string headerPath = sw::FileUtil::joinPath( runRoot, header._fileStem + ".h" );
             if ( sw::FileUtil::writeTextFile( headerPath, header._content ) == false )
             {
                 result._log = "failed to write " + headerPath;
@@ -135,11 +144,6 @@ namespace
             if ( sw::FileUtil::fileExists( genCpp ) )
                 sw::FileUtil::readTextFile( genCpp, generated );
             result._listGeneratedCpp.push_back( generated );
-
-            sw::FileUtil::removeFile( sw::FileUtil::joinPath( binDir, header._fileStem + ".h" ) );
-            sw::FileUtil::removeFile( genCpp );
-            sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.h" ) );
-            sw::FileUtil::removeFile( genCpp + ".stamp" );
         }
         return result;
     }
@@ -708,15 +712,15 @@ SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
  */
 SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
 {
-    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
-    const sw::string headerPath  = sw::FileUtil::joinPath( binDir, "StalenessProbeSample.h" );
-    const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_staleness" );
+    const sw::string caseRoot    = test::makeTempPath( "staleness" );
+    const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "StalenessProbeSample.h" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
     sw::FileUtil::ensureDirectoryExists( outGenDir );
 
     const sw::string headerContent = "#pragma once\n"
@@ -770,11 +774,6 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, regeneratedText ) );
     SW_EXPECT_TRUE_MSG( regeneratedText.find( "SW_STALE_PROBE" ) == sw::string::npos,
                         "파서가 자기보다 오래된 산출물을 그대로 두었습니다 — 도구를 고쳐도 옛 모양이 남습니다" );
-
-    sw::FileUtil::removeFile( headerPath );
-    sw::FileUtil::removeFile( genPath );
-    sw::FileUtil::removeFile( genHeaderPath );
-    sw::FileUtil::removeFile( stampPath );
 }
 
 /**
@@ -789,7 +788,6 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
  */
 SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
 {
-    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
@@ -797,7 +795,7 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
 
-    const sw::string caseRoot  = sw::FileUtil::joinPath( binDir, "temp_collide" );
+    const sw::string caseRoot  = test::makeTempPath( "collide" );
     const sw::string dirA      = sw::FileUtil::joinPath( caseRoot, "A" );
     const sw::string dirB      = sw::FileUtil::joinPath( caseRoot, "B" );
     const sw::string outGenDir = sw::FileUtil::joinPath( caseRoot, "gen" );
@@ -807,14 +805,6 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
 
     const sw::string headerA = sw::FileUtil::joinPath( dirA, "CollidingSample.h" );
     const sw::string headerB = sw::FileUtil::joinPath( dirB, "CollidingSample.h" );
-
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [headerA, headerB, outGenDir]()
-    {
-        sw::FileUtil::removeFile( headerA );
-        sw::FileUtil::removeFile( headerB );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.cpp" ) );
-        sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.h" ) );
-    } ) );
 
     const auto makeHeader = []( const utf8* pTypeName ) -> sw::string
     {
@@ -858,11 +848,9 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
         return sw::Process::execute( cmd, options, outputCb );
     };
 
-    // **남아 있는 산출물을 먼저 지운다.** 파서는 "이미 최신" 이면 통째로 건너뛰므로, 앞선 실행이
-    // 남긴 파일이 있으면 첫 단계가 아무것도 만들지 않고 지나가 이 케이스가 제 할 일을 못 한다.
+    // 산출물 폴더는 이 케이스의 임시 경로라 처음엔 비어 있다 — 파서는 "이미 최신" 이면 통째로 건너뛰므로,
+    // 예전처럼 `Bin` 에 두면 앞선 실행이 남긴 파일 때문에 첫 단계가 아무것도 만들지 않고 지나갈 수 있었다.
     const sw::string genCppPath = sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.cpp" );
-    sw::FileUtil::removeFile( genCppPath );
-    sw::FileUtil::removeFile( sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.h" ) );
 
     // 첫 헤더는 정상적으로 산출물을 만든다.
     const int32 firstExit = runParser( headerA );

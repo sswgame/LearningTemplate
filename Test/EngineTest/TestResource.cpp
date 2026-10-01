@@ -128,24 +128,12 @@ SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    const sw::string tempFolder = test::makeTempPath( "sw_unique_save" );
-    sw::FileUtil::ensureDirectoryExists( tempFolder );
+    const sw::string tempFolder = test::makeTempDirectory( "sw_unique_save" );
     SW_ASSERT_TRUE( sw::FileUtil::directoryExists( tempFolder ) );
 
     const sw::string firstPath  = sw::ResourceUtil::makeUniqueSavePath( tempFolder, "hero.png" );
     const sw::string secondPath = sw::FileUtil::joinPath( tempFolder, "hero_2.png" );
     const sw::string thirdPath  = sw::FileUtil::joinPath( tempFolder, "hero_3.png" );
-
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [firstPath, secondPath, thirdPath]()
-    {
-        sw::FileUtil::removeFile( firstPath );
-        sw::FileUtil::removeFile( secondPath );
-        sw::FileUtil::removeFile( thirdPath );
-    } ) );
-
-    sw::FileUtil::removeFile( firstPath );
-    sw::FileUtil::removeFile( secondPath );
-    sw::FileUtil::removeFile( thirdPath );
 
     // 비어 있으면 `makeSavePath` 와 같은 경로다.
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( firstPath, sw::ResourceUtil::makeSavePath( tempFolder, "hero.png" ) ) );
@@ -199,7 +187,6 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
     SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
-    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -222,7 +209,6 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_FALSE( material->loadFromFile( tempPath ) );
-    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -339,14 +325,28 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
 
     // 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
-    const sw::string gameDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/test_asset" );
-    const sw::string gameFile = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
+    //    **소스 트리의 Resource/ 에 쓴다** — 우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 임시 폴더로는 못 잰다.
+    //    그래서 정리를 끝에 손으로 두지 않고 만들기 전에 걸어 둔다(일찍 빠지거나 죽어도 작업 트리에 남지 않게). 지우는 것은
+    //    이 케이스가 만든 폴더뿐이다 — 예전 정리는 `Resource/dlc` 를 통째로 지웠다(진짜 DLC 가 있었다면 같이 사라졌다).
+    const sw::string rootDir    = sw::ResourceUtil::getRootFolderPath();
+    const sw::string gameDir    = sw::FileUtil::joinPath( rootDir, "game/empty/test_asset" );
+    const sw::string gameFile   = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
+    const sw::string dlcRootDir = sw::FileUtil::joinPath( rootDir, "dlc" );
+    const sw::string dlcPackDir = sw::FileUtil::joinPath( dlcRootDir, "test_dlc" );
+    const bool       bHadDlcDir = sw::FileUtil::directoryExists( dlcRootDir );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [gameDir, dlcRootDir, dlcPackDir, bHadDlcDir]()
+    {
+        sw::FileUtil::removeDirectory( gameDir );
+        sw::FileUtil::removeDirectory( dlcPackDir );
+        if ( bHadDlcDir == false )
+            sw::FileUtil::removeDirectory( dlcRootDir );
+    } ) );
     sw::FileUtil::ensureDirectoryExists( gameDir );
     const utf8* kGameContent = "<Asset source=\"game\" />";
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( gameFile, reinterpret_cast<const uint8*>( kGameContent ),
                                              static_cast<uint64>( sw::StringUtil::strlen( kGameContent ) ) ) );
 
-    const sw::string dlcDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/test_asset" );
+    const sw::string dlcDir  = sw::FileUtil::joinPath( dlcPackDir, "test_asset" );
     const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "priority_test.xml" );
     sw::FileUtil::ensureDirectoryExists( dlcDir );
 
@@ -379,15 +379,6 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     SW_EXPECT_FALSE( resolvedGamePath.empty() );
     SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, gameFile ) );
-
-    // 6. 임시 파일 및 디렉터리 정리
-    sw::FileUtil::removeFile( dlcFile );
-    sw::FileUtil::removeDirectory( dlcDir );
-    sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
-    sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
-
-    sw::FileUtil::removeFile( gameFile );
-    sw::FileUtil::removeDirectory( gameDir );
 }
 
 /**
@@ -773,5 +764,4 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
     SW_EXPECT_TRUE( sw::ResourceUtil::readTextResource( insideRoot, content ) );
 
     packManager.setAllowLooseFiles( bWasLoose );
-    sw::FileUtil::removeFile( outsideRoot );
 }

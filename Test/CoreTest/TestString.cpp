@@ -708,8 +708,6 @@ SW_TEST_CASE( StringTest, Utf8BomHandling )
     sw::string readText;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( bomFilePath, readText ) );
     SW_EXPECT_STREQ( "Hello UTF-8 BOM!", readText.c_str() );
-
-    sw::FileUtil::removeFile( bomFilePath );
 }
 
 /**

@@ -76,11 +76,6 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( missingPath,
                                              reinterpret_cast<const uint8*>( payload.data() ),
                                              static_cast<uint64>( payload.size() ) ) );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [missingPath]()
-    {
-        sw::FileUtil::removeFile( missingPath );
-    } ) );
-
     bool bSecondCompleted{ false };
     bool bSecondSuccess{ false };
     queue.requestAsset( missingPath, sw::StreamingPriority::Normal,
@@ -197,7 +192,6 @@ SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndLockFreeQueue )
     SW_EXPECT_TRUE( queue.isLoaded( tempFile ) );
 
     queue.shutdown();
-    sw::FileUtil::removeFile( tempFile );
 }
 
 /**
@@ -293,10 +287,6 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     // **직접 만든 파일을 절대 경로로** 준다. `ResourceUtil` 은 절대 경로를 디스크에서 그대로
     // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
     const sw::string assetPath = test::makeTempPath( "sw_stream_piggyback.bin" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [assetPath]()
-    {
-        sw::FileUtil::removeFile( assetPath );
-    } ) );
 
     const sw::vector<uint8> payload( 4096, uint8{ 0xAB } );
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );

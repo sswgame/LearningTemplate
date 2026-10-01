@@ -391,9 +391,6 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
         SW_EXPECT_FALSE( pAudioSystem->isInitialized() );
     }
-
-    for ( const sw::string& path : listWavPath )
-        sw::FileUtil::removeFile( path );
 }
 
 /**
@@ -419,7 +416,4 @@ SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
     SW_EXPECT_FALSE( pAudioSystem->preload( "NonExistentSoundFile.wav" ) );
 
     pAudioSystem->shutdown();
-    sw::FileUtil::removeFile( floatPath );
-    sw::FileUtil::removeFile( extensiblePath );
-    sw::FileUtil::removeFile( extFloatPath );
 }

@@ -35,6 +35,22 @@ namespace test
             return safe;
         }
 
+        /** @brief 이 프로세스의 임시 폴더 — `<임시 폴더>/sw_<pid>`. 케이스 폴더가 전부 그 아래에 생긴다. */
+        sw::string getProcessTempDirectory()
+        {
+            sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+            name.append( "sw_" );
+            name.append( static_cast<int32>( currentProcessId() ) );
+            return sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), name.c_str() );
+        }
+
+        /** @brief 이 케이스의 임시 폴더 — `<임시 폴더>/sw_<pid>/<스위트_케이스>`(케이스 밖이면 프로세스 폴더). */
+        sw::string getCaseTempDirectory( const sw::string& testName )
+        {
+            const sw::string processDirectory = getProcessTempDirectory();
+            return testName.empty() ? processDirectory : sw::FileUtil::joinPath( processDirectory, toFileNameSafe( testName ) );
+        }
+
         /** @brief CLI 인자 값의 따옴표를 제거합니다. */
         sw::string trimArgValue( std::string_view value )
         {
@@ -70,20 +86,20 @@ namespace test
 
     sw::string makeTempPath( sw::string_view fileName )
     {
-        sw::StringBuilder<sw::constant::kMaxBuffer256> prefix;
-        prefix.append( "sw_" );
-        prefix.append( static_cast<int32>( currentProcessId() ) );
-        prefix.append( "_" );
+        TestContext* pContext = TestRegistry::getInstance().getCurrentContext();
+        if ( pContext->getTestName().empty() == false )
+            pContext->markTempPathUsed();
 
-        const sw::string testName = TestRegistry::getInstance().getCurrentContext()->getTestName();
-        if ( testName.empty() == false )
-        {
-            prefix.append( toFileNameSafe( testName ).c_str() );
-            prefix.append( "_" );
-        }
+        const sw::string caseDirectory = getCaseTempDirectory( pContext->getTestName() );
+        sw::FileUtil::ensureDirectoryExists( caseDirectory );
+        return sw::FileUtil::joinPath( caseDirectory, fileName );
+    }
 
-        const sw::string uniqueName = sw::string( prefix.c_str() ) + sw::string( fileName );
-        return sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), uniqueName );
+    sw::string makeTempDirectory( sw::string_view directoryName )
+    {
+        const sw::string directory = makeTempPath( directoryName );
+        sw::FileUtil::ensureDirectoryExists( directory );
+        return directory;
     }
 
     TestRegistry& TestRegistry::getInstance()
@@ -364,6 +380,15 @@ namespace test
 
             _currentContext.runCleanup();
 
+            // 정리(핸들 닫기 · 등록 해제)가 끝난 뒤에 케이스 폴더를 통째로 지운다. 못 지웠다면 그 케이스가 파일을 연 채로
+            // 두었다는 뜻이다 — Windows 에서는 열린 파일을 지울 수 없다. 핸들 누수는 결함이므로 그 케이스의 실패로 남긴다.
+            if ( _currentContext.isTempPathUsed() )
+            {
+                const sw::string caseDirectory = getCaseTempDirectory( testInfo.fullName() );
+                if ( sw::FileUtil::removeDirectory( caseDirectory ) == false )
+                    addFailure( "temp directory removed after the case", caseDirectory, 0, "still exists - is a file handle left open?" );
+            }
+
             const std::chrono::high_resolution_clock::time_point end     = std::chrono::high_resolution_clock::now();
             const float64                                        elapsed = std::chrono::duration<float64, std::milli>( end - start ).count();
             totalMs += elapsed;
@@ -439,6 +464,9 @@ namespace test
                      skippedCount,
                      totalMs );
         SW_LOG_INFO( "====================================================" );
+
+        // 케이스 밖에서 만든 임시 경로와 빈 프로세스 폴더를 거둔다.
+        sw::FileUtil::removeDirectory( getProcessTempDirectory() );
 
         // 호스트 스위트만 고른 실행이 아무것도 안 돌았다면 그 ctest 항목(`<타깃>_HostOnly`)은 빈 그물이다.
         const bool bHostOnlyRanNothing = _hostSuiteMode == HostSuiteMode::Only && runnableCount == 0;

@@ -183,12 +183,7 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
  */
 SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
 {
-    const sw::string path = test::makeTempPath( "sw_test_sequence.json" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [path]()
-    {
-        sw::FileUtil::removeFile( path );
-    } ) );
-
+    const sw::string  path   = test::makeTempPath( "sw_test_sequence.json" );
     sw::SequenceAsset source = sw::makeSequenceWithFirstFrameEvent();
     source._note             = "round trip";
     SW_ASSERT_TRUE( source.saveToFile( path ) );

@@ -116,10 +116,6 @@ SW_TEST_CASE( LocalizationManagerTest, MultiFormatFileLoading )
     SW_EXPECT_STREQ( "Spiel starten", loc.getStringFromLanguage( "de_DE", kKeyPlay ) );
 
     // 정리
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathJa );
-    sw::FileUtil::removeFile( pathDe );
 }
 
 /**
@@ -175,8 +171,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageSwitchingAndFallback )
  */
 SW_TEST_CASE( LocalizationManagerTest, DirectoryBatchLoading )
 {
-    const sw::string tempDir = test::makeTempPath( "sw_test_loc_dir" );
-    sw::FileUtil::ensureDirectoryExists( tempDir );
+    const sw::string tempDir = test::makeTempDirectory( "sw_test_loc_dir" );
 
     const utf8* kKo = R"({ "MSG_WELCOME": "환영합니다!" })";
     const utf8* kEn = R"({ "MSG_WELCOME": "Welcome!" })";
@@ -207,10 +202,6 @@ SW_TEST_CASE( LocalizationManagerTest, DirectoryBatchLoading )
     SW_EXPECT_STREQ( "Bienvenue!", loc.getStringFromLanguage( "fr_FR", kKeyWelcome ) );
 
     // 임시 디렉터리 정리
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathFr );
-    sw::FileUtil::removeFile( tempDir );
 }
 
 /**
@@ -327,11 +318,6 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
     sw::StringTable stKv;
     SW_EXPECT_TRUE( stKv.loadFromFile( pathKv ) );
     SW_EXPECT_STREQ( "KV 텍스트", stKv.getString( sw::hashed_string( "KEY_KV" ) ) );
-
-    sw::FileUtil::removeFile( pathJson );
-    sw::FileUtil::removeFile( pathXml );
-    sw::FileUtil::removeFile( pathIni );
-    sw::FileUtil::removeFile( pathKv );
 }
 
 /**
@@ -434,10 +420,6 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
     // 콜백 해제
     sw::GameStrings::unregisterLanguageChangedCallback( cbId );
     sw::GameStrings::clear();
-
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathJa );
 }
 
 /**
@@ -449,8 +431,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::LocalizationManager )] = &sw::engine::getLocalizationManager();
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
-    const sw::string packDir = test::makeTempPath( "temp_localization_pack" );
-    sw::FileUtil::ensureDirectoryExists( packDir );
+    const sw::string packDir = test::makeTempDirectory( "temp_localization_pack" );
 
     const sw::string pathKo = sw::FileUtil::joinPath( packDir, "ko_KR.json" );
     const sw::string pathEn = sw::FileUtil::joinPath( packDir, "en_US.json" );
@@ -505,11 +486,6 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     SW_EXPECT_STREQ( "Quit", sw::GameStrings::get( "UI_QUIT" ) );
 
     sw::GameStrings::clear();
-
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathJa );
-    sw::FileUtil::removeFile( pathZh );
 }
 
 /**
@@ -563,9 +539,6 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
     SW_EXPECT_STREQ( "こんにちは", loadedLoc.getString( sw::hashed_string( "TXT_HELLO" ) ) );
     // ja_JP에는 TXT_BYE가 없으므로 en_US로 폴백
     SW_EXPECT_STREQ( "Goodbye", loadedLoc.getString( sw::hashed_string( "TXT_BYE" ) ) );
-
-    sw::FileUtil::removeFile( stBinPath );
-    sw::FileUtil::removeFile( locBinPath );
 }
 
 /**
@@ -579,8 +552,7 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
  */
 SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager )
 {
-    const sw::string tempDir = test::makeTempPath( "sw_test_loc_bin_dir" );
-    sw::FileUtil::ensureDirectoryExists( tempDir );
+    const sw::string tempDir = test::makeTempDirectory( "sw_test_loc_bin_dir" );
 
     const sw::hashed_string kKeyWelcome{ "MSG_WELCOME" };
     const sw::string        pathKo = sw::FileUtil::joinPath( tempDir, "ko_KR.bin" );
@@ -613,10 +585,6 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager 
         SW_EXPECT_STREQ( "환영합니다!", loc.getStringFromLanguage( "ko_KR", kKeyWelcome ) );
         SW_EXPECT_STREQ( "Welcome!", loc.getStringFromLanguage( "en_US", kKeyWelcome ) );
     }
-
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( tempDir );
 }
 
 /**
@@ -828,9 +796,6 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryPackIsDeterministic )
     SW_EXPECT_EQUAL( forwardPackBytes.size(), reversePackBytes.size() );
     SW_EXPECT_TRUE( forwardPackBytes.size() > 0 );
     SW_EXPECT_TRUE( sw::Memory::compare( forwardPackBytes.data(), reversePackBytes.data(), forwardPackBytes.size() ) == 0 );
-
-    sw::FileUtil::removeFile( forwardPath );
-    sw::FileUtil::removeFile( reversePath );
 }
 
 /**
@@ -960,5 +925,4 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryPackWithNoReadableTableFails )
     sw::LocalizationManager loaded;
     SW_EXPECT_FALSE( loaded.loadFromBinaryPack( packPath ) );
     SW_EXPECT_FALSE( loaded.hasLanguage( "en_US" ) );
-    sw::FileUtil::removeFile( packPath );
 }

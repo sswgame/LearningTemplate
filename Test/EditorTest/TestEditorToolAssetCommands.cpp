@@ -52,9 +52,7 @@ namespace
     /** @brief 어떤 방법으로도 쓸 수 없는 경로 — 디렉터리 이름으로 파일을 만들 수는 없다. */
     string makeUnwritablePath()
     {
-        const string dir = test::makeTempPath( "sw_test_unwritable_dir" );
-        FileUtil::ensureDirectoryExists( dir );
-        return dir; // 이 경로에 파일을 쓰려 하면 실패한다(이미 디렉터리다).
+        return test::makeTempDirectory( "sw_test_unwritable_dir" ); // 이 경로에 파일을 쓰려 하면 실패한다(이미 디렉터리다).
     }
 } // namespace
 
@@ -67,10 +65,6 @@ namespace
 SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
 {
     const string unwritable = makeUnwritablePath();
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [unwritable]()
-    {
-        FileUtil::removeDirectory( unwritable );
-    } ) );
 
     AnimationGraphAsset asset;
 
@@ -85,10 +79,6 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
 SW_TEST_CASE( EditorToolAssetCommandsTest, DialogueGraphSaveFailureIsReported )
 {
     const string unwritable = makeUnwritablePath();
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [unwritable]()
-    {
-        FileUtil::removeDirectory( unwritable );
-    } ) );
 
     DialogueGraphAsset asset;
 
@@ -104,10 +94,6 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, DialogueGraphSaveFailureIsReported )
 SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
 {
     const string path = test::makeTempPath( "sw_test_animgraph_ok.animgraph.json" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [path]()
-    {
-        FileUtil::removeFile( path );
-    } ) );
 
     AnimationGraphAsset asset;
 

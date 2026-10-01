@@ -85,8 +85,6 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -114,9 +112,6 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
     SW_EXPECT_TRUE( doc._bValid );
     SW_EXPECT_STREQ( "DescOnly", doc._name );
     SW_EXPECT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
-
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -151,8 +146,6 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDoc._listEntityNode[0]._embeddedXml );
     SW_EXPECT_STREQ( "Monster", loadedDoc._listEntityNode[1]._name );
     SW_EXPECT_STREQ( "game/empty/prefabs/monster.prefab", loadedDoc._listEntityNode[1]._prefab );
-
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -206,10 +199,6 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( townA );
-    sw::FileUtil::removeFile( binA );
-    sw::FileUtil::removeFile( townB );
-    sw::FileUtil::removeFile( binB );
 }
 
 /**
@@ -246,8 +235,6 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -296,10 +283,6 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     SW_EXPECT_STREQ( "SceneSecond", manager.getActiveScene()->getName() );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( scenePath1 );
-    sw::FileUtil::removeFile( binPath1 );
-    sw::FileUtil::removeFile( scenePath2 );
-    sw::FileUtil::removeFile( binPath2 );
 }
 
 /**
@@ -356,8 +339,6 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     SW_EXPECT_EQUAL( future.get(), manager.getActiveScene() );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -526,8 +507,6 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
 
     manager.shutdown();
     sw::GameObjectManager::unregisterModuleFactoryHead( "LateModule" );
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -563,7 +542,4 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
 
     manager.shutdown();
-    sw::FileUtil::removeFile( xmlPath );
-    sw::FileUtil::removeFile( binPath );
-    sw::FileUtil::removeFile( savePath );
 }

@@ -309,7 +309,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     node._prefabGuid        = heroGuid.toString();
     doc._listEntityNode.push_back( node );
 
-    const sw::string tempSceneXml = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() ), "temp_guid_scene.scene.xml" );
+    const sw::string tempSceneXml = test::makeTempPath( "guid_scene.scene.xml" );
     SW_ASSERT_TRUE( doc.saveXml( tempSceneXml ) );
 
     if ( sw::engine::areEngineServicesBound() )
@@ -324,7 +324,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
         SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
 
     // 바이너리(SCN1)도 같은 풀이를 지난다 — 두 로더가 GUID 풀이를 각자 들고 있었고, Dev 에서는 바이너리 쪽을 지나는 테스트가 없었다.
-    const sw::string tempSceneBin = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() ), "temp_guid_scene.scene.bin" );
+    const sw::string tempSceneBin = test::makeTempPath( "guid_scene.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( tempSceneBin ) );
     sw::SceneDocument loadedBinaryDoc{};
     SW_ASSERT_TRUE( loadedBinaryDoc.loadBinary( tempSceneBin ) );
@@ -332,9 +332,6 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedBinaryDoc._listEntityNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
         SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedBinaryDoc._listEntityNode[0]._prefab.c_str() );
-
-    sw::FileUtil::removeFile( tempSceneXml );
-    sw::FileUtil::removeFile( tempSceneBin );
 }
 
 /**
@@ -601,11 +598,6 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
 SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 {
     const sw::string binPath = test::makeTempPath( "sw_test_scene_badcount.bin" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [binPath]()
-    {
-        sw::FileUtil::removeFile( binPath );
-    } ) );
-
     // 멀쩡한 씬 하나를 굽고, 헤더의 엔티티 수만 터무니없는 값으로 바꾼다.
     sw::SceneDocument doc{};
     doc._name = "BoundedScene";

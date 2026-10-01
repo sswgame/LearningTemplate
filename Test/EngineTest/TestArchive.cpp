@@ -297,8 +297,6 @@ SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
     SW_EXPECT_EQUAL( 0x12345678u, outMagic );
     SW_EXPECT_EQUAL( sw::string( "TempArchiveFilePayload" ), outText );
     SW_EXPECT_NEAR_EQUAL( -999.5f, outVal, 1e-4f );
-
-    sw::FileUtil::removeFile( tempFilePath );
 }
 
 /**
@@ -423,8 +421,6 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
     SW_EXPECT_EQUAL( 9999, readSlot.getFlag( "gold_coins" ) );
     SW_EXPECT_EQUAL( 3, readSlot.getFlag( "current_chapter" ) );
     SW_EXPECT_EQUAL( 0, readSlot.getFlag( "non_existent_flag", 0 ) );
-
-    sw::FileUtil::removeFile( savePath );
 }
 
 /**
@@ -452,8 +448,6 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
     // 변조된 파일 로드시 CRC 불일치로 실패해야 함
     sw::TurnBattleSaveGame tamperedSlot;
     SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( tamperedSlot, savePath ) );
-
-    sw::FileUtil::removeFile( savePath );
 }
 
 /**
@@ -511,9 +505,6 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         SW_EXPECT_TRUE( prefabRead.getStateData().find( "DragonBoss" ) != sw::string::npos );
         SW_EXPECT_TRUE( prefabRead.isValid() );
     }
-
-    sw::FileUtil::removeFile( tempSceneBin );
-    sw::FileUtil::removeFile( tempPrefabBin );
 }
 
 /**
@@ -1670,7 +1661,6 @@ SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
     SW_EXPECT_EQUAL( 1, slot2.getFlag( "area.unlocked_gate" ) );
 
     // Cleanup
-    sw::FileUtil::removeFile( testSavePath );
 }
 
 /**

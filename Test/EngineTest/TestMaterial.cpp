@@ -52,8 +52,6 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     bool                         reloadOk         = reloadedMaterial->loadFromFile( tempPath );
     SW_EXPECT_TRUE( reloadOk );
     SW_EXPECT_EQUAL( material->getName(), reloadedMaterial->getName() );
-
-    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -139,8 +137,6 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
         SW_EXPECT_EQUAL( 1u, *shade );
         SW_EXPECT_EQUAL( 3u, *flags ); // 비트 1|2
     }
-
-    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -221,7 +217,6 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( material.get() );
     SW_EXPECT_TRUE( reloaded->loadFromFile( tempPath ) );
     SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "color" ) ) );
-    sw::FileUtil::removeFile( tempPath );
 }
 
 /**

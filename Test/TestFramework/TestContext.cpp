@@ -10,7 +10,8 @@ namespace test
         _listFailure.clear();
         _listCleanup.clear();
         _skipReason.clear();
-        _bSkipped = false;
+        _bSkipped      = false;
+        _bTempPathUsed = false;
     }
 
     void TestContext::deferCleanup( sw::Delegate<void()> cleanup )

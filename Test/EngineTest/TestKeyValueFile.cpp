@@ -297,11 +297,6 @@ SW_TEST_CASE( KeyValueFileTest, StringTableMultiLanguageJsonFileLoading )
     SW_EXPECT_STREQ( "Stufe geschafft!", stringTable.getString( kKeyClear ) );
 
     // 임시 파일 정리
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathJa );
-    sw::FileUtil::removeFile( pathZh );
-    sw::FileUtil::removeFile( pathDe );
 }
 
 /**

@@ -223,7 +223,6 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
     SW_EXPECT_EQUAL( 42, dstSlot.getFlag( "player_level" ) );
 
     // 임시 파일 삭제
-    FileUtil::removeFile( tempSavePath );
 }
 
 /**
@@ -265,8 +264,6 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
     SW_EXPECT_EQUAL( 3, dstSlot.getFlag( "key_silver" ) );
     SW_EXPECT_EQUAL( 0, dstSlot.getFlag( "boss_defeated" ) );
     SW_EXPECT_EQUAL( 2, dstSlot.getFlag( "difficulty" ) );
-
-    FileUtil::removeFile( binSavePath );
 }
 
 /**
@@ -506,8 +503,6 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     SW_EXPECT_TRUE( fileRestoredInstance.loadStateFromFile( tempStateFile ) );
     SW_EXPECT_EQUAL( 77777, fileRestoredInstance._customState._score );
     SW_EXPECT_EQUAL( string( "BossRoom_03" ), fileRestoredInstance._customState._stageName );
-
-    FileUtil::removeFile( tempStateFile );
 }
 
 /**
@@ -951,7 +946,7 @@ SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_MoveSlotCountFollowsData )
  */
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_VariableMoveSlotRoundtrip )
 {
-    const string savePath = "TestTemp/TurnBattleSaveGame_VariableSlots.sav";
+    const string savePath = test::makeTempPath( "variable_slots.sav" );
 
     TurnBattleSaveGame originalSlot;
     originalSlot._mapPath = "Levels/SlotTest.scene";
@@ -979,8 +974,6 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_VariableMoveSlotRoundtrip )
     SW_EXPECT_EQUAL( size_t( 1 ), loaded._listParty[1]._listPp.size() );
     SW_EXPECT_EQUAL( int32( 40 ), loaded._listParty[0]._listPp[3] );
     SW_EXPECT_EQUAL( int32( 7 ), loaded._listParty[1]._listPp[0] );
-
-    FileUtil::removeFile( savePath );
 }
 
 /**
@@ -1334,7 +1327,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DebugChordsAndDefaultFallback )
  */
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_ReflectionSaveRoundtrip )
 {
-    const string binaryPath = "TestTemp/TurnBattleSaveGame_ReflectionTest.sav";
+    const string binaryPath = test::makeTempPath( "reflection_roundtrip.sav" );
 
     TurnBattleSaveGame originalSlot;
     originalSlot._mapPath = "Levels/Dungeon_Floor5.scene";
@@ -1377,8 +1370,6 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_ReflectionSaveRoundtrip )
     SW_EXPECT_EQUAL( 25, loadedBinarySlot._listParty[0]._level );
     SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hp );
     SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hpMax );
-
-    FileUtil::removeFile( binaryPath );
 }
 
 /**
@@ -2201,12 +2192,7 @@ SW_TEST_CASE( GameFrameworkTest, SpeciesCatalogLookupDoesNotReseedItself )
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
 {
     const string savePath = test::makeTempPath( "huge_level.sav" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [savePath]()
-    {
-        FileUtil::removeFile( savePath );
-    } ) );
-
-    string text;
+    string       text;
     text += "map=Levels/Huge.scene\n";
     text += "partyCount=1\n";
     text += "party0.speciesId=huge\n";
@@ -2248,11 +2234,6 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
 {
     const string savePath = test::makeTempPath( "sw_turnbattle_huge_pp.sav" );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [savePath]()
-    {
-        FileUtil::removeFile( savePath );
-    } ) );
-
     // 손으로 고친 세이브를 흉내낸다 — 텍스트 경로(SAV1 매직이 없다)로 읽힌다.
     string text;
     text += "map=Levels/Huge.scene\n";

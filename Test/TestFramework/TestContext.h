@@ -23,12 +23,15 @@ namespace test
         void skip( const sw::string& reason, const sw::string& file, int32 line );
         void deferCleanup( sw::Delegate<void()> cleanup );
         void runCleanup();
+        /** @brief 이 케이스가 `test::makeTempPath` 를 썼다고 표시합니다 — 끝나면 프레임워크가 그 접두어의 경로를 지운다. */
+        void markTempPathUsed() { _bTempPathUsed = true; }
 
         sw::string              getTestName() const { return _testName; }
         sw::vector<TestFailure> getListFailure() const { return _listFailure; }
         sw::string              getSkipReason() const { return _skipReason; }
         bool                    hasFailed() const { return _listFailure.empty() == false; }
         bool                    isSkipped() const { return _bSkipped; }
+        bool                    isTempPathUsed() const { return _bTempPathUsed; }
 
     private:
         sw::string                       _testName;
@@ -36,5 +39,6 @@ namespace test
         sw::vector<sw::Delegate<void()>> _listCleanup;
         sw::string                       _skipReason;
         bool                             _bSkipped{ false };
+        bool                             _bTempPathUsed{ false };
     };
 } // namespace test

@@ -279,8 +279,7 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
  */
 SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
 {
-    const sw::string dir = test::makeTempPath( "SwShaderSourceHashDir" );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    const sw::string dir  = test::makeTempDirectory( "SwShaderSourceHashDir" );
     const sw::string path = sw::FileUtil::joinPath( dir, "edit.hlsl" );
 
     const sw::string original = "float4 main() : SV_Target { return 1; }\n";

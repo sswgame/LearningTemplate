@@ -540,8 +540,6 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
     {
         SW_EXPECT_NOT_NULL( pMouseBind );
     }
-
-    sw::FileUtil::removeFile( savePath );
 }
 
 /**
