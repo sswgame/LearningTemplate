@@ -95,7 +95,8 @@ namespace sw
         , _assetType{}
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
-        , _bHasRange{ SW_FALSE }
+        , _bHasMinRange{ SW_FALSE }
+        , _bHasMaxRange{ SW_FALSE }
         , _bReadOnly{ SW_FALSE }
         , _bXmlAttribute{ SW_FALSE }
         , _bAssetPath{ SW_FALSE }

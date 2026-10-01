@@ -69,7 +69,8 @@ namespace sw
         uint8                           _bXmlAttribute : 1;
         uint8                           _bAssetPath    : 1;
         uint8                           _bPolymorphic  : 1;
-        uint8                           _bHasRange     : 1;
+        uint8                           _bHasMinRange  : 1;
+        uint8                           _bHasMaxRange  : 1;
         uint8                           _bIsContainer  : 1;
         uint8                           _bTransient    : 1;
         /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
@@ -106,7 +107,8 @@ namespace sw
             , _bXmlAttribute{ SW_FALSE }
             , _bAssetPath{ SW_FALSE }
             , _bPolymorphic{ SW_FALSE }
-            , _bHasRange{ SW_FALSE }
+            , _bHasMinRange{ SW_FALSE }
+            , _bHasMaxRange{ SW_FALSE }
             , _bIsContainer{ SW_FALSE }
             , _bTransient{ SW_FALSE }
             , _bSkipIfEmpty{ SW_FALSE }

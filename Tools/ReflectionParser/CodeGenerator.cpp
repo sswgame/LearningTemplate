@@ -237,14 +237,18 @@ namespace sw
     {
         AnnotationFields::emitMetadata( emit, prop, "p._metadata." );
 
-        // 범위는 값 둘과 "있음" 표시 하나가 함께 가는 Manual 필드다.
-        if ( prop._bHasRange != SW_FALSE )
+        // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 예전에는 표시가 하나라 `Min` 만 적어도
+        // 위 경계(기본 1)까지 나가, 인스펙터가 빛의 세기 · 광원 반경을 1 에서 막았다.
+        // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
+        if ( prop._bHasMinRange != SW_FALSE )
         {
-            // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가
-            // **생성된 파일마다** 난다. 여기서 한 번 고치면 전부 사라진다.
             emit.linef( "p._metadata._minRange     = %#f;", prop._minRange );
+            emit.assign( "p._metadata._bHasMinRange", "SW_TRUE" );
+        }
+        if ( prop._bHasMaxRange != SW_FALSE )
+        {
             emit.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
-            emit.assign( "p._metadata._bHasRange", "SW_TRUE" );
+            emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
     }
 

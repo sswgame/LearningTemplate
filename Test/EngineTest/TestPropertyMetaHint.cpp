@@ -12,9 +12,10 @@
 SW_TEST_CASE( PropertyMetaHintTest, PropertyMetaHintWidgetDeduction )
 {
     sw::PropertyMetadata rangeMeta{};
-    rangeMeta._bHasRange = SW_TRUE;
-    rangeMeta._minRange  = 0.0f;
-    rangeMeta._maxRange  = 100.0f;
+    rangeMeta._bHasMinRange = SW_TRUE;
+    rangeMeta._bHasMaxRange = SW_TRUE;
+    rangeMeta._minRange     = 0.0f;
+    rangeMeta._maxRange     = 100.0f;
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::Slider ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( rangeMeta, "float32" ) ) );
 
     float32 minVal = 0.0f;

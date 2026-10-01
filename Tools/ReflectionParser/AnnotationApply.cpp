@@ -146,8 +146,16 @@ namespace sw
 
             // 바인딩이 가리키는 줄은 파서가 시작할 때 `AnnotationFields::validateBindings` 가 보장한다.
             const AnnotationField<TParsed>* pField = scope.findField( fieldId );
-            if ( pField != nullptr )
-                pField->_pApply( target, value );
+            if ( pField == nullptr )
+                continue;
+            // 숫자를 받는 줄에 숫자가 아닌 값(`Min = 0.5f` · `Max = ten`)은 거절한다. 예전에는 변환 실패를 무시해 조용히 0 이 됐다.
+            float32 number{ 0.0f };
+            if ( pField->_value == AnnotationValue::Float && StringUtil::parseFloat( value, number ) == false )
+            {
+                outListUnknownToken.push_back( token + "  (value is not a number)" );
+                continue;
+            }
+            pField->_pApply( target, value );
         }
     }
 

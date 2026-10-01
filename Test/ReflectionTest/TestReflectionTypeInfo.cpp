@@ -116,10 +116,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
     prop._metadata._displayName = "Light Intensity";
     prop._metadata._tooltip     = "Controls light intensity";
 #endif
-    prop._metadata._minRange  = 0.0f;
-    prop._metadata._maxRange  = 100.0f;
-    prop._metadata._bHasRange = SW_TRUE;
-    prop._metadata._bReadOnly = SW_TRUE;
+    prop._metadata._minRange     = 0.0f;
+    prop._metadata._maxRange     = 100.0f;
+    prop._metadata._bHasMinRange = SW_TRUE;
+    prop._metadata._bHasMaxRange = SW_TRUE;
+    prop._metadata._bReadOnly    = SW_TRUE;
 
 #if !defined( SW_SHIPPING )
     SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata._category );
@@ -128,7 +129,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 #endif
     SW_EXPECT_NEAR_EQUAL( 0.0f, prop._metadata._minRange, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 100.0f, prop._metadata._maxRange, 1e-4f );
-    SW_EXPECT_TRUE( prop._metadata._bHasRange );
+    SW_EXPECT_TRUE( prop._metadata.hasFullRange() );
     SW_EXPECT_TRUE( prop._metadata._bReadOnly );
 }
 
@@ -1123,4 +1124,30 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
         report += "\n  " + violation;
     SW_EXPECT_TRUE( bitFieldCount > 0 ); // 엔진 타입이 등록돼 있어야 이 검사가 무엇을 본다
     SW_EXPECT_TRUE_MSG( listViolation.empty(), report.c_str() );
+}
+
+/**
+ * @brief [ReflectionTypeInfoTest] 한쪽만 적은 범위(`Min = 0`)는 그쪽만 막는다 — 위 경계가 기본값 1 로 따라오지 않는다
+ * @details 예전에는 범위 표시가 하나라 `Min` 만 적어도 `_maxRange` 의 기본값 1 이 함께 나갔고, 인스펙터가 빛의 세기 · 광원 반경 ·
+ *          그림자 범위를 1 에서 막았다. 슬라이더는 두 경계가 다 있을 때만이다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    const sw::TypeInfo* pLight = registry.findType( sw::hashed_string( "sw::LightComponent" ) );
+    SW_ASSERT_NOT_NULL( pLight );
+    const sw::PropertyInfo* pIntensity = pLight->findProperty( sw::hashed_string( "_intensity" ) );
+    SW_ASSERT_NOT_NULL( pIntensity );
+    SW_EXPECT_TRUE( pIntensity->_metadata._bHasMinRange == SW_TRUE );
+    SW_EXPECT_TRUE( pIntensity->_metadata._bHasMaxRange == SW_FALSE );
+    SW_EXPECT_FALSE( pIntensity->_metadata.hasFullRange() );
+
+    const sw::TypeInfo* pSequence = registry.findType( sw::hashed_string( "sw::SequencePlayerComponent" ) );
+    SW_ASSERT_NOT_NULL( pSequence );
+    const sw::PropertyInfo* pFps = pSequence->findProperty( sw::hashed_string( "_framesPerSecond" ) );
+    SW_ASSERT_NOT_NULL( pFps );
+    SW_EXPECT_TRUE( pFps->_metadata.hasFullRange() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pFps->_metadata._minRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 120.0f, pFps->_metadata._maxRange, 1e-4f );
 }

@@ -512,6 +512,13 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
                                                        "\t\tPROPERTY( Category = \"Light\", Colr )\n"
                                                        "\t\tint32 _value{ 0 };\n"
                                                        "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct BadNumberSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Min = 0.5f )\n"
+                                                       "\t\tfloat32 _ratio{ 0.0f };\n"
+                                                       "\t};\n"
                                                        "}\n" );
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
 
@@ -519,6 +526,11 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
     const bool bNamesTheToken  = run._log.find( "unknown token 'Colr'" ) != sw::string::npos;
     const bool bNamesTheMember = run._log.find( "sw::UnknownTokenSampleActor::_value" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesTheToken && bNamesTheMember, run._log.c_str() );
+
+    // 숫자를 받는 자리에 숫자가 아닌 값(C++ 습관의 접미사 f)은 조용히 0 이 되지 않고 멈춘다.
+    const bool bNamesTheBadNumber = run._log.find( "Min = 0.5f  (value is not a number)" ) != sw::string::npos &&
+                                    run._log.find( "sw::BadNumberSampleActor::_ratio" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheBadNumber, run._log.c_str() );
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif

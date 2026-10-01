@@ -28,7 +28,7 @@ namespace sw
 {
     PropertyWidgetType PropertyMetaHint::deduceWidgetType( const PropertyMetadata& meta, string_view typeName )
     {
-        if ( meta._bHasRange == SW_TRUE )
+        if ( meta.hasFullRange() )
             return PropertyWidgetType::Slider;
 
         if ( meta._bAssetPath == SW_TRUE || meta._assetType.empty() == false )
@@ -55,7 +55,7 @@ namespace sw
 
     bool PropertyMetaHint::getSliderRange( const PropertyMetadata& meta, float32& outMin, float32& outMax )
     {
-        if ( meta._bHasRange == SW_FALSE )
+        if ( meta.hasFullRange() == false )
             return false;
 
         outMin = meta._minRange;

@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑪ 리플렉션 — `Min` 만 적은 프로퍼티를 인스펙터가 1 에서 막았다, 숫자가 아닌 범위 값은 조용히 0)
+
+범위 표시가 하나(`_bHasRange`)라, `PROPERTY( Min = 0 )` 만 적어도 `_maxRange` 의 DTO 기본값 1 이 함께 나갔다. 인스펙터는 [min, 1] 로
+클램프했다 — 열 개 남짓이 그랬다: 빛의 `Intensity`, 점 · 스포트 광원의 `Radius`, 스포트의 원뿔 각, 방향광의 `Ambient` · `Shadow Extent` ·
+`Shadow Distance`, 메시의 `Bounds Radius`, 스프라이트 애니메이터의 `Current Frame`. 에디터에서 이 값들을 1 넘게 올릴 수 없었다.
+그리고 `Min = 0.5f`(C++ 습관의 접미사) 같은 숫자 아닌 값은 변환 실패가 무시돼 조용히 0 이 됐다.
+
+**고침.** 경계마다 표시를 둔다 — `PropertyMetadata::_bHasMinRange` · `_bHasMaxRange`(파서 DTO 도), 둘 다면 `hasFullRange()`. 생성 코드는 적힌
+쪽만 낸다. 인스펙터는 적힌 쪽만 막고, 슬라이더 · `PropertyMetaHint` 의 슬라이더 판정은 두 경계가 다 있을 때만이다. 숫자를 받는 애노테이션
+줄(Float)에 숫자가 아닌 값이 오면 `AnnotationApply` 가 거절해 "unknown token 'Min = 0.5f  (value is not a number)'" 로 멈춘다.
+**검증.** `ReflectionTypeInfoTest.OneSidedRangeOnlyBoundsThatSide`(`LightComponent::_intensity` 는 아래만, `SequencePlayerComponent::_framesPerSecond`
+는 1..120) · `ReflectionParserTest.UnknownAnnotationTokenStopsTheBuild` 에 숫자 아닌 `Min` 한 줄 — 아래 경계가 위 경계를 켜는 돌연변이, 숫자 검사를
+끄는 돌연변이에 각각 진다. **곁가지(남김):** 파서는 타입 하나에서 첫 애노테이션 오류만 알린다 — 같은 타입의 두 번째 오류는 다음 실행에서야 보인다.
+
 ### 2026-10-01 (결함 ⑩ 씬 — 프리팹을 찾지 못한 엔티티를 버려, 열고 저장하는 것만으로 파일에서 지웠다)
 
 `Scene::instantiate` 는 프리팹 스폰이 실패하면 경고 한 줄(`Prefab spawn failed`)을 남기고 그 엔티티를 버렸다. `serializeToDocument` 는 살아 있는

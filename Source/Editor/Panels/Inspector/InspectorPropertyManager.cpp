@@ -246,11 +246,11 @@ namespace sw::editor
                     return true;
                 }
 
-                const bool   bHasRange = prop._metadata._bHasRange != SW_FALSE;
-                const Widget minValue  = bHasRange ? static_cast<Widget>( prop._metadata._minRange ) : Traits::kMin;
-                const Widget maxValue  = bHasRange ? static_cast<Widget>( prop._metadata._maxRange ) : Traits::kMax;
-                const bool   bSlider   = bHasRange && isSliderRequested( prop );
-                const string fmt       = getFormatWithUnits( prop, Traits::kFormat );
+                // 적힌 쪽만 막는다 — `Min = 0` 만 적은 프로퍼티는 위로 열려 있다(`PropertyMetadata::_bHasMinRange` 설명).
+                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._minRange ) : Traits::kMin;
+                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._maxRange ) : Traits::kMax;
+                const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
+                const string fmt      = getFormatWithUnits( prop, Traits::kFormat );
 
                 Widget widgetValue = static_cast<Widget>( *pPtr );
                 if ( drawNumberWidget( _pLabel, &widgetValue, Traits::kDragSpeed, minValue, maxValue, fmt.c_str(), bSlider ) )

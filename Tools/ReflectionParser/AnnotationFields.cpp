@@ -163,20 +163,23 @@ namespace sw
                 target._bAssetPath = SW_TRUE;
             }
 
+            /** @brief 아래 경계만 적는다 — 위 경계는 따로다(한쪽만 적은 범위는 그쪽만 막는다). 숫자가 아니면 `AnnotationApply` 가 이미 거절했다. */
             static void applyMinRange( ParsedPropertyInfo& target, const string_view value )
             {
                 float32 parsed{ 0.0f };
-                StringUtil::parseFloat( value, parsed );
-                target._minRange  = parsed;
-                target._bHasRange = SW_TRUE;
+                if ( StringUtil::parseFloat( value, parsed ) == false )
+                    return;
+                target._minRange     = parsed;
+                target._bHasMinRange = SW_TRUE;
             }
 
             static void applyMaxRange( ParsedPropertyInfo& target, const string_view value )
             {
                 float32 parsed{ 0.0f };
-                StringUtil::parseFloat( value, parsed );
-                target._maxRange  = parsed;
-                target._bHasRange = SW_TRUE;
+                if ( StringUtil::parseFloat( value, parsed ) == false )
+                    return;
+                target._maxRange     = parsed;
+                target._bHasMaxRange = SW_TRUE;
             }
 
             /** @brief 넷 역할은 토큰 자체가 값입니다(`FUNCTION( Server )` → "Server"). */

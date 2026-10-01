@@ -70,8 +70,14 @@ namespace sw
         string  _assetType;
         float32 _minRange;
         float32 _maxRange;
-        uint8   _bHasRange : 1;
-        uint8   _bReadOnly : 1;
+        /**
+         * @brief 아래 · 위 경계가 각각 적혀 있는가(`PROPERTY( Min = … )` · `Max = …`). 적힌 쪽만 막는다.
+         * @details 예전에는 표시가 하나라 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남았다 — 인스펙터가 빛의 세기 · 광원
+         *          반경 · 그림자 범위를 1 에서 막았다. 슬라이더는 둘 다 있을 때만 그린다(`hasFullRange`).
+         */
+        uint8 _bHasMinRange : 1;
+        uint8 _bHasMaxRange : 1;
+        uint8 _bReadOnly    : 1;
         /** @brief 부모 엘리먼트의 XML attribute로 직렬화 (PROPERTY(XmlAttribute)). */
         uint8 _bXmlAttribute : 1;
         uint8 _bAssetPath    : 1;
@@ -98,6 +104,9 @@ namespace sw
 
         /** @brief 범위 · 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;
+
+        /** @brief 아래 · 위 경계가 둘 다 있으면(슬라이더로 그릴 수 있으면) true 입니다. */
+        bool hasFullRange() const noexcept { return _bHasMinRange != SW_FALSE && _bHasMaxRange != SW_FALSE; }
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
         const string* findCustomMeta( const hashed_string& key ) const noexcept
