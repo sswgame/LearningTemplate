@@ -234,6 +234,7 @@ clang 인자·SDK 상대경로·emit 확장자·튜닝의 **단일 소스**입�
 | `--emit-templates <Templates dir>` | tpl 폴더 (필수) |
 | `--source-root <dir>` | 모듈 판별을 이 경로 기준 상대 경로로 |
 | `--emit-builtins-gen <path>` | builtins 전용 gen 모드 (`--builtins` · `--emit-templates` 와 함께) |
+| `--depfile <file.d>` | 입력들이 include 한 프로젝트 헤더를 Makefile 꼴 의존 파일로 **실행마다** 쓴다. `sw_addReflectionStep` 이 `<출력>/ReflectionParser.d` 로 넘기고 `DEPFILE` 로 받아, 반사되지 않은 헤더가 바뀌어도 이 단계가 다시 돈다 |
 | `--dump` | 최신이어도 다시 파싱하고, 헤더마다 **무엇을 뽑았는지** 찍는다(타입 · 부모 · 팩토리, 프로퍼티의 타입 · 값 자리 · 컨테이너 · 범위 · 플래그, 함수, enum 값) |
 | `--help` · `-h` | 사용법만 찍고 0 으로 끝난다 |
 

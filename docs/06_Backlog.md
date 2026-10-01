@@ -2077,6 +2077,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊸ 리플렉션 파서 · CMake — 반사된 헤더가 include 한 헤더가 바뀌어도 생성 코드가 낡은 채 남았다)
+
+생성 코드는 입력 헤더만이 아니라 그 헤더가 include 한 헤더에도 기댄다 — 예를 들어 반사되지 않은 기반 클래스에 순수 가상 함수가 생기면 파생 타입은 추상이
+되고(`_bAbstract`), 낡은 생성 코드는 그 타입을 만드는 생성자를 들고 있어 **컴파일이 깨진다**. 그런데 생성 단계의 의존(`add_custom_command DEPENDS`)은 반사된
+헤더뿐이라 ninja 는 다시 돌지 않았고, 파서가 돌더라도 스탬프가 입력만 봐서 건너뛰었다 — 그 헤더를 건드리거나 깨끗이 빌드할 때까지.
+- 파서가 번역 단위의 include 목록(`clang_getInclusions` — 시스템 헤더 · 출력 폴더 · 묶음 TU 의 가상 원본은 뺀다)을 스탬프에 `dep <시각> <경로>` 로 적는다.
+  묶음은 **묶음 전체**로 적는다(`#pragma once` 로 두 번째 include 는 항목이 생기지 않아 헤더별로 가르면 먼저 include 한 헤더에만 붙는다). 그래서 의존 하나가
+  바뀌면 그 묶음이 함께 다시 파싱된다 — 묶음 파싱은 입력 수와 거의 무관하게 1 초 남짓이다.
+- `IncrementalCheck::isUpToDate` 는 의존마다 지금 시각이 적힌 시각과 같은지 본다(한 실행 안에서 시각을 캐시). 실행 시작에 출력 폴더의 표식
+  파일(`ReflectionParser.run`)을 써서, 그 뒤에 바뀐 의존은 0 으로 적는다 — 파싱하는 동안 저장한 편집을 놓치지 않는다(㊷ 과 같은 틈).
+- `--depfile <file>` — 실행마다(모두 최신이어도 스탬프에서 모아) 모든 산출물을 목표로, 의존의 합을 Makefile 꼴로 쓴다(절대 경로 · 슬래시 · 공백 · `#` · `$`
+  이스케이프). `sw_addReflectionStep` 이 `<출력>/ReflectionParser.d` 로 넘기고 `DEPFILE` 로 받는다(CMake 4.4 · Ninja 1.13, CMP0116 NEW).
+**검증.** `ReflectionParserTest.IncludedHeaderChangeRegeneratesAndIsInTheDepfile` — 반사되지 않은 기반 헤더에 순수 가상 함수를 더하면 다시 파싱해
+`_bAbstract = 1` 이 되고, depfile 에 그 헤더가 슬래시 경로로 있으며 묶음 원본 · 역슬래시가 없다. 의존 검사를 끄는 변이에서 실패했다. 실제 빌드에서 Engine 의
+반사되지 않은 헤더(`AnimationGraphAsset.h`)를 건드리면 파서 단계가 다시 돌고(`Parsing 30 of 30`), 그다음 빌드는 `ninja: no work to do`(계속 더러워지지 않는다).
+**같이 찾은 것(고치지 않음).** 파서는 `using` 별칭으로 적은 프로퍼티 타입을 풀지 않는다 — `using ScoreList = sw::vector<int32>; PROPERTY() ScoreList _s;` 는
+컨테이너로 인식되지 않고 모르는 타입 이름으로 남는다(`--dump` 로 확인). 컨테이너 프로퍼티는 지금 타입을 바로 적어야 한다.
+
 ### 2026-10-01 (결함 ㊷ 리플렉션 파서 — 파싱하는 동안 저장한 헤더 편집을 스탬프가 가렸다)
 
 증분 판정은 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지를 봤다. 파서가 헤더를 읽은 뒤 · 스탬프를 쓰기 전(묶음 파싱은 1 초 남짓)에 저장한 편집은

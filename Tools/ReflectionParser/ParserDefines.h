@@ -87,6 +87,7 @@ namespace sw
         inline static constexpr const utf8* kSourceRoot      = "--source-root";
         inline static constexpr const utf8* kEmitTemplates   = "--emit-templates";
         inline static constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
+        inline static constexpr const utf8* kDepfile         = "--depfile";
     }; // struct cliConstants
 
     // ------------------------------------------------------------------------------

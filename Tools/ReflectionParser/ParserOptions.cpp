@@ -23,14 +23,15 @@ namespace sw
         };
 
         constexpr OptionRow kArrOptionRow[] = {
-            {          cliConstants::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                "header to parse (repeatable)"},
-            {         cliConstants::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",    "directory for .gen.cpp / .gen.h / stamps"},
-            {        cliConstants::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",             "clang include path (repeatable)"},
-            {       cliConstants::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",          "scalar aliases and container rules"},
-            { cliConstants::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                  "annotation token spellings"},
-            {  cliConstants::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                   "Templates/*.tpl directory"},
-            {     cliConstants::kSourceRoot,          &ParserOptions::_sourceRoot,                          nullptr,                 "<dir>",   "module rules match paths relative to this"},
-            {cliConstants::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>", "only write ReflectBuiltins.gen.cpp and exit"},
+            {          cliConstants::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                     "header to parse (repeatable)"},
+            {         cliConstants::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                         "directory for .gen.cpp / .gen.h / stamps"},
+            {        cliConstants::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                  "clang include path (repeatable)"},
+            {       cliConstants::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                               "scalar aliases and container rules"},
+            { cliConstants::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                       "annotation token spellings"},
+            {  cliConstants::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                        "Templates/*.tpl directory"},
+            {     cliConstants::kSourceRoot,          &ParserOptions::_sourceRoot,                          nullptr,                 "<dir>",                        "module rules match paths relative to this"},
+            {cliConstants::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                      "only write ReflectBuiltins.gen.cpp and exit"},
+            {        cliConstants::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>", "write the headers the inputs include as a Makefile-style depfile"},
         };
 
         /** @brief 값 없이 켜는 플래그 한 줄입니다. */

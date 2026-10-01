@@ -48,8 +48,19 @@ namespace sw
         bool parseAndGenerate( const PendingInput& pending ) const;
         /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */
         int32 parseEachInParallel( const vector<PendingInput>& listPending ) const;
-        /** @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프(`inputWriteTime` 은 읽기 전에 잰 입력 시각). */
-        bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime ) const;
+        /**
+         * @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프.
+         * @param inputWriteTime 읽기 전에 잰 입력 시각.
+         * @param listDependency 이 입력을 파싱한 번역 단위가 include 한 프로젝트 헤더(스탬프에 적는다).
+         */
+        bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
+                           const vector<StampDependency>& listDependency ) const;
+        /**
+         * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. **실행마다** 씁니다.
+         * @details ninja 는 이 파일로 "반사되지 않은 헤더가 바뀌면 이 단계를 다시 돌린다" 를 안다. 빠지면 단계가 늘 더럽다고 보거나(파일 없음)
+         *          옛 의존으로 판단한다 — 그래서 모두 최신인 실행도 스탬프에서 모아 쓴다.
+         */
+        bool writeDepfile() const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
         bool writeFlagOpsUmbrella() const;
 
@@ -57,6 +68,7 @@ namespace sw
         const ParserOptions* _pOptions;
         const ParserSession* _pSession;
         IncrementalCheck     _incrementalCheck;
+        uint64               _runStartTime;    ///< 이번 실행의 시작(출력 폴더 표식 파일의 시각) — 그 뒤에 바뀐 의존은 0 으로 적는다
         vector<string>       _listIncludePath; ///< 출력 디렉터리가 맨 앞이다(생성 헤더를 include 하는 원본이 있다)
     };
 } // namespace sw

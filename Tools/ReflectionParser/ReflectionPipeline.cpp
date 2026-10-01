@@ -113,6 +113,72 @@ namespace sw
                 std::fflush( stdout );
             }
 
+            /** @brief `clang_getInclusions` 가 넘기는 것을 모으는 자리입니다. */
+            struct InclusionCollector
+            {
+                CXTranslationUnit        _translationUnit;
+                string                   _outputDirPrefix; ///< 슬래시 · 끝에 `/` — 이 아래는 이 단계 자신의 산출물이라 의존이 아니다
+                uint64                   _runStartTime;
+                vector<StampDependency>* _pListDependency;
+            };
+
+            /** @brief include 된 파일 하나를 의존으로 적습니다 — 시스템 헤더 · 출력 폴더 · 디스크에 없는 파일(묶음 TU 의 가상 원본)은 뺍니다. */
+            static void collectInclusion( CXFile includedFile, CXSourceLocation*, uint32, CXClientData clientData )
+            {
+                InclusionCollector& collector = *static_cast<InclusionCollector*>( clientData );
+                if ( clang_Location_isInSystemHeader( clang_getLocationForOffset( collector._translationUnit, includedFile, 0 ) ) != 0 )
+                    return;
+                CXString realName = clang_File_tryGetRealPathName( includedFile );
+                string   path     = clang_getCString( realName ) != nullptr ? string( clang_getCString( realName ) ) : string();
+                clang_disposeString( realName );
+                if ( path.empty() )
+                {
+                    CXString fileName = clang_getFileName( includedFile );
+                    path              = clang_getCString( fileName ) != nullptr ? string( clang_getCString( fileName ) ) : string();
+                    clang_disposeString( fileName );
+                }
+                path = FileUtil::normalizeSeparators( path );
+                if ( path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) )
+                    return;
+                const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );
+                if ( writeTime == 0 )
+                    return;
+                for ( const StampDependency& existing : *collector._pListDependency )
+                {
+                    if ( existing._path == path )
+                        return;
+                }
+                // 이번 실행이 시작된 뒤에 바뀐 것은 0 으로 — 파싱하는 동안 저장한 편집을 다음 실행이 놓치지 않게(`markRunStart`).
+                collector._pListDependency->push_back( StampDependency{ std::move( path ), writeTime >= collector._runStartTime ? 0 : writeTime } );
+            }
+
+            /** @brief 번역 단위가 include 한 프로젝트 헤더들을 모읍니다(입력 자신도 들어간다 — 해가 없다). */
+            static vector<StampDependency> collectDependencies( CXTranslationUnit translationUnit, const string& outputDir, uint64 runStartTime )
+            {
+                vector<StampDependency> listDependency;
+                InclusionCollector      collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ), runStartTime, &listDependency };
+                if ( collector._outputDirPrefix.empty() == false && collector._outputDirPrefix.back() != '/' )
+                    collector._outputDirPrefix.push_back( '/' );
+                clang_getInclusions( translationUnit, &collectInclusion, &collector );
+                return listDependency;
+            }
+
+            /** @brief Makefile depfile 의 경로 한 조각 — 슬래시로, 공백 · `#` · `$` 를 이스케이프합니다. */
+            static string escapeDepfilePath( string_view path )
+            {
+                string escaped;
+                escaped.reserve( path.size() + 8 );
+                for ( const utf8 character : path )
+                {
+                    if ( character == ' ' || character == '#' )
+                        escaped.push_back( '\\' );
+                    if ( character == '$' )
+                        escaped.push_back( '$' );
+                    escaped.push_back( character == '\\' ? '/' : character );
+                }
+                return escaped;
+            }
+
             /** @brief 묶음 TU 의 주 파일 이름입니다. 디스크에는 없고 내용으로만 넘깁니다. */
             static constexpr const utf8* kBatchSourceName = "ReflectionParser.batch.cpp";
 
@@ -140,6 +206,7 @@ namespace sw
         : _pOptions{ &options }
         , _pSession{ &session }
         , _incrementalCheck{ options, session._config }
+        , _runStartTime{ 0 }
         , _listIncludePath{}
     {
         // 출력 디렉터리를 include 경로 맨 앞에 한 번만 넣는다(원본이 다른 생성 헤더를 include 할 수 있다).
@@ -155,6 +222,9 @@ namespace sw
         int32                   errorCount = 0;
         [[maybe_unused]] uint32 upToDate   = 0;
         [[maybe_unused]] uint32 noReflect  = 0;
+
+        // 이번 실행의 시작을 먼저 적는다 — 이 뒤에 바뀐 의존은 0 으로 적혀 다음 실행이 다시 본다(`GeneratedFileUtil::markRunStart`).
+        _runStartTime = GeneratedFileUtil::markRunStart( _pOptions->_outputDir );
 
         vector<PendingInput> listPending;
         vector<string>       listVisitedInput;
@@ -189,7 +259,7 @@ namespace sw
             {
                 SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
                 ++noReflect;
-                if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime ) == false )
+                if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime, {} ) == false )
                     ++errorCount;
                 continue;
             }
@@ -202,6 +272,8 @@ namespace sw
         errorCount += parsePending( listPending );
 
         if ( writeFlagOpsUmbrella() == false )
+            ++errorCount;
+        if ( writeDepfile() == false )
             ++errorCount;
         return errorCount;
     }
@@ -255,6 +327,10 @@ namespace sw
         AstVisitor visitor( context.getTranslationUnit(), *_pSession, listTargetFile );
         visitor.visit();
         const vector<ParsedHeader>& listHeader = visitor.getParsedHeaders();
+        // 묶음의 의존은 묶음 전체로 적는다. `#pragma once` 로 두 번째 include 는 새 파일 항목이 생기지 않아, 헤더별로 가르면 먼저 include 한
+        // 헤더에만 붙는다 — 그러면 그 헤더만 다시 파싱되고 나머지는 옛 것을 든다.
+        const vector<StampDependency> listDependency =
+            ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
         for ( size_t index = 0; index < listPending.size(); ++index )
         {
             const string& inputFile = *listPending[index]._pInputFile;
@@ -264,7 +340,7 @@ namespace sw
                 ++outErrorCount;
                 continue;
             }
-            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime ) == false )
+            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime, listDependency ) == false )
                 ++outErrorCount;
         }
         return true;
@@ -292,7 +368,8 @@ namespace sw
             return false;
         }
 
-        return writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime );
+        return writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime,
+                             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
     }
 
     int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending ) const
@@ -332,7 +409,8 @@ namespace sw
         return errorCount.load();
     }
 
-    bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime ) const
+    bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
+                                           const vector<StampDependency>& listDependency ) const
     {
         const ParserConfig& config = _pSession->_config;
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
@@ -370,7 +448,7 @@ namespace sw
 
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, generator.makeSourceText() ) &&
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
-                              GeneratedFileUtil::writeStamp( paths._stampPath, inputFile, inputWriteTime );
+                              GeneratedFileUtil::writeStamp( paths._stampPath, inputFile, inputWriteTime, listDependency );
         if ( bWritten == false )
             SW_LOG_ERROR( "Code generation failed: %#", inputFile );
         return bWritten;
@@ -383,6 +461,41 @@ namespace sw
      *          모든 TU 에 들어가 다른 헤더들의 include 누락을 통째로 가렸습니다. 지금은 `.gen.h` 자신이 열거형을 전방 선언하므로
      *          그것 하나만 모으면 됩니다.
      */
+    bool ReflectionPipeline::writeDepfile() const
+    {
+        if ( _pOptions->_depfilePath.empty() )
+            return true;
+
+        const ParserConfig& config = _pSession->_config;
+        vector<string>      listTarget;
+        vector<string>      listDependency;
+        for ( const string& inputFile : _pOptions->_listInputFile )
+        {
+            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
+            listTarget.push_back( paths._cppPath );
+            listTarget.push_back( paths._headerPath );
+            (void)GeneratedFileUtil::readStampDependencies( paths._stampPath, listDependency );
+        }
+        listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, config._emitFlagOpsHeader ) );
+        std::sort( listDependency.begin(), listDependency.end() );
+        listDependency.erase( std::unique( listDependency.begin(), listDependency.end() ), listDependency.end() );
+
+        // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
+        string text;
+        for ( const string& target : listTarget )
+            text += ReflectionPipelineInternal::escapeDepfilePath( target ) + " ";
+        text += ":";
+        for ( const string& dependency : listDependency )
+            text += " \\\n  " + ReflectionPipelineInternal::escapeDepfilePath( dependency );
+        text += "\n";
+        if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text ) == false )
+        {
+            SW_LOG_ERROR( "Failed to write depfile %#", _pOptions->_depfilePath );
+            return false;
+        }
+        return true;
+    }
+
     bool ReflectionPipeline::writeFlagOpsUmbrella() const
     {
         const ParserConfig& config = _pSession->_config;

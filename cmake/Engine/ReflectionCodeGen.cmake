@@ -118,10 +118,15 @@ function(sw_addReflectionStep TARGET_NAME)
     file(WRITE "${swReflectInputList}.in" "${swReflectInputText}\n")
     configure_file("${swReflectInputList}.in" "${swReflectInputList}" COPYONLY)
 
+    # 반사된 헤더가 include 한 **반사되지 않은** 헤더(예: `using ScoreList = …`)가 바뀌어도 이 단계가 다시 돌게 한다. 파서가 실행마다
+    # include 목록을 이 파일에 쓰고 ninja 가 읽는다. 예전에는 DEPENDS 가 반사된 헤더뿐이라 생성 코드가 옛 컨테이너 래퍼로 남았다.
+    set(swReflectDepfile "${ARG_OUTPUT_DIR}/ReflectionParser.d")
+
     add_custom_command(
         OUTPUT ${generatedFiles}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-        COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs}
+        COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs} --depfile "${swReflectDepfile}"
+        DEPFILE "${swReflectDepfile}"
         DEPENDS ${ARG_HEADERS} "${swReflectInputList}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
         "${swReflectBuiltins}" "${swAnnotationMeta}" ${swEmitTpls}
         ${swParserConfigs}

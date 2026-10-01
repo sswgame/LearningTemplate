@@ -1128,3 +1128,73 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
     SW_EXPECT_TRUE( std::filesystem::last_write_time( stampPath.c_str() ) == stampBefore );
 }
+
+/**
+ * @brief [ReflectionParserTest] 반사된 헤더가 include 한 **다른** 헤더가 바뀌면 다시 파싱하고, depfile 에 그 헤더를 적는다
+ * @details 생성 코드는 include 한 헤더에도 기댄다 — 반사되지 않은 기반 클래스에 순수 가상 함수가 생기면 파생 타입은 추상이 되고(`_bAbstract`),
+ *          낡은 생성 코드는 그 타입을 만드는 생성자를 들고 있어 컴파일이 깨진다. 예전에는 그 헤더가 바뀌어도 ninja 는 다시 돌지 않았고(생성 단계의
+ *          의존이 반사된 헤더뿐) 파서도 스탬프가 입력만 봐서 건너뛰었다. 이제 스탬프가 include 한 헤더를 적고, `--depfile` 이 ninja 에 같은 목록을 준다.
+ */
+SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDepfile )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string caseRoot    = test::makeTempPath( "include_dependency" );
+    const sw::string basePath    = sw::FileUtil::joinPath( caseRoot, "DependencyBaseSample.h" );
+    const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "DependencyHolderSample.h" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
+    const sw::string depfilePath = sw::FileUtil::joinPath( outGenDir, "ReflectionParser.d" );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    const auto writeBase = [&basePath]( const utf8* pExtraMember )
+    {
+        return sw::FileUtil::writeTextFile( basePath, sw::string( "#pragma once\n"
+                                                                  "namespace sw\n{\n    struct DependencyBaseSample\n    {\n"
+                                                                  "        virtual ~DependencyBaseSample() = default;\n" ) +
+                                                          pExtraMember + "    };\n}\n" );
+    };
+    SW_ASSERT_TRUE( writeBase( "" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, "#pragma once\n"
+                                                             "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                             "#include \"DependencyBaseSample.h\"\n"
+                                                             "namespace sw\n"
+                                                             "{\n"
+                                                             "    REFLECT()\n"
+                                                             "    struct DependencyHolderSampleActor : public DependencyBaseSample\n"
+                                                             "    {\n"
+                                                             "        REFLECT_BODY();\n"
+                                                             "        PROPERTY()\n"
+                                                             "        int32 _value{ 0 };\n"
+                                                             "    };\n"
+                                                             "}\n" ) );
+
+    const sw::string   command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ) + " --depfile \"" + depfilePath + "\"";
+    sw::ProcessOptions options;
+    options._workingDirectory = projectRoot;
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+
+    const sw::string genPath = sw::FileUtil::joinPath( outGenDir, "DependencyHolderSample.gen.cpp" );
+    sw::string       generated;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generated ) );
+    SW_ASSERT_TRUE_MSG( generated.find( "_bAbstract = 1" ) == sw::string::npos, generated.c_str() );
+
+    // depfile: 목표에 산출물이, 의존에 include 한 헤더가(슬래시로) — 출력 폴더 · 묶음 원본은 없다.
+    sw::string depfile;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( depfilePath, depfile ) );
+    SW_EXPECT_TRUE_MSG( depfile.find( "DependencyHolderSample.gen.cpp" ) != sw::string::npos, depfile.c_str() );
+    SW_EXPECT_TRUE_MSG( depfile.find( sw::FileUtil::normalizeSeparators( basePath ) ) != sw::string::npos, depfile.c_str() );
+    SW_EXPECT_TRUE_MSG( depfile.find( "batch.cpp" ) == sw::string::npos, depfile.c_str() );
+    SW_EXPECT_TRUE_MSG( depfile.find( ":\\" ) == sw::string::npos, depfile.c_str() ); // 드라이브 뒤 역슬래시가 없다(Makefile 이스케이프와 섞인다)
+
+    // 반사되지 않은 기반에만 순수 가상 함수를 더한다(반사된 헤더는 그대로). 시각은 한 시간 뒤로 — 같은 초 안의 변화도 확실히.
+    SW_ASSERT_TRUE( writeBase( "        virtual void mustImplement() = 0;\n" ) );
+    std::filesystem::last_write_time( basePath.c_str(), std::filesystem::last_write_time( basePath.c_str() ) + std::chrono::hours( 1 ) );
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generated ) );
+    SW_EXPECT_TRUE_MSG( generated.find( "_bAbstract = 1" ) != sw::string::npos,
+                        "include 한 기반이 추상이 됐는데 생성 코드가 옛것(만들 수 있는 타입)으로 남았습니다" );
+}

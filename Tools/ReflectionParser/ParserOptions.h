@@ -19,6 +19,7 @@ namespace sw
         string         _emitTemplatesDir;    ///< --emit-templates
         string         _sourceRoot;          ///< --source-root: 모듈 판별을 이 경로 기준 상대 경로로 한다
         string         _emitBuiltinsGenPath; ///< --emit-builtins-gen: ReflectBuiltins.gen.cpp 만 쓰는 모드
+        string         _depfilePath;         ///< --depfile: 입력들이 include 한 헤더를 Makefile 꼴 의존 파일로 쓴다(빌드 체계의 DEPFILE)
         bool           _bDump{ false };      ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다
         bool           _bHelp{ false };      ///< --help: 사용법만 찍고 끝낸다
 

@@ -27,6 +27,18 @@ namespace sw
         string _stampPath;
     };
 
+    /**
+     * @brief 산출물이 기대는 파일 하나 — 입력이 include 한 헤더와 그것을 본 쓰기 시각입니다(스탬프의 `dep <시각> <경로>` 줄).
+     * @details 산출물은 입력 헤더만이 아니라 그 헤더가 include 한 헤더에도 기댄다 — `PROPERTY() ScoreList _scores;` 의 컨테이너 종류는 다른 헤더의
+     *          `using ScoreList = …` 가 정한다. 예전에는 그 헤더가 바뀌어도 ninja 도(의존이 반사된 헤더뿐) 파서도(스탬프가 입력만 봄) 다시 돌지 않아,
+     *          생성 코드가 옛 컨테이너 래퍼로 직렬화했다.
+     */
+    struct StampDependency
+    {
+        string _path;      /**< 절대 경로(슬래시) */
+        uint64 _writeTime; /**< 본 쓰기 시각. 이번 실행이 시작된 뒤에 바뀐 것은 0 — 다음 실행이 다시 본다 */
+    };
+
     struct GeneratedFileUtil
     {
         /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로 셋을 만듭니다. */
@@ -44,7 +56,17 @@ namespace sw
          *          봅니다(`IncrementalCheck::isUpToDate`). 예전에는 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 봐서, 파싱하는 동안
          *          저장한 편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시됐다 — 그 헤더를 다시 저장할 때까지.
          */
-        static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime );
+        static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency );
+
+        /** @brief 스탬프에 적힌 의존(`dep` 줄)의 경로를 `outListPath` 에 더합니다. 스탬프가 없거나 옛 꼴이면 false 입니다. depfile 을 모을 때 씁니다. */
+        static bool readStampDependencies( const string& stampPath, vector<string>& outListPath );
+
+        /**
+         * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.
+         * @details 의존의 시각은 파싱한 **뒤에야** 잴 수 있다(무엇을 include 했는지 그때 안다). 그 사이에 저장한 편집을 놓치지 않으려고, 이 시각
+         *          이후에 바뀐 의존은 0 으로 적는다 — 다음 실행이 다시 파싱한다. 파일 시각과 같은 시계 · 단위라 비교가 맞다.
+         */
+        static uint64 markRunStart( const string& outputDir );
 
         /** @brief 파일의 마지막 쓰기 시각(플랫폼 단위 그대로)입니다. 없으면 0 입니다. 스탬프에 적는 값과 같은 단위입니다. */
         static uint64 getWriteTime( string_view path );
@@ -73,5 +95,7 @@ namespace sw
     private:
         const ParserConfig* _pConfig;
         uint64              _newestToolWriteTime;
+        /** @brief 의존 파일의 쓰기 시각 캐시 — 같은 헤더를 입력마다 다시 재지 않는다(한 실행 안에서만, 한 스레드에서만 쓴다). */
+        mutable unordered_map<string, uint64> _mapDependencyWriteTime;
     };
 } // namespace sw
