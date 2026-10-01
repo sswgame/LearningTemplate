@@ -64,10 +64,11 @@ ctest --test-dir build/Ninja-Debug -L core
 ctest --preset Ninja-Debug-lint
 ```
 
-> **`nogpu` 는 "CI 러너가 돌릴 수 있다"는 계약이다.** 실제 GPU·디스플레이·DXC 가 필요한 다섯 스위트
-> (`RHIDeviceTest` · `RenderPassGpuTest` · `WindowTest` · `ShaderCompilerTest` · `LiveShaderTest`)를
-> `EngineTest_NoGPU` 필터가 통째로 뺀다. 디바이스가 필요한 테스트를 새로 쓰면 **`RenderPassGpuTest` 에
-> 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
+> **`nogpu` 는 "CI 러너가 돌릴 수 있다"는 계약이다.** 실제 GPU·디스플레이·DXC 가 필요한 스위트는 자기 파일에서
+> `SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, `HOST_SPLIT` 으로 등록한 실행 파일(`EngineTest` · `AppTest`)이
+> 그 선언으로 ctest 항목을 가른다 — `<타깃>_NoGPU` 는 `--host_suites=exclude`, `<타깃>_HostOnly` 는 `--host_suites=only`.
+> 지금 선언된 것은 `EngineTest --test_list` 끝에 이유와 함께 찍힌다. 디바이스가 필요한 테스트를 새로 쓰면
+> **`RenderPassGpuTest` 에 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
 
 ### 구성마다 도는 케이스 수가 다르다
 
@@ -99,17 +100,19 @@ AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이�
 
 ### 스위트 이름 규칙 — `CheckTestSuites.py` 가 강제합니다
 
-스위트 이름은 장식이 아닙니다. `EngineTest_NoGPU` 가 **스위트 이름으로** CI 가 못 돌리는 것을 걸러내고
-`--test_filter` 도 스위트 단위로 고르므로, 이름이 흔들리면 필터가 흔들립니다. 규칙은 넷입니다.
+스위트 이름은 장식이 아닙니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고 `--test_filter` 도
+스위트 단위로 고르므로, 이름이 흔들리면 그 둘이 흔들립니다. 규칙은 넷입니다.
 
 1. 스위트 이름은 **`XxxTest`** — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없습니다.
    계층 접두어(`Core_` · `Engine_`)는 붙이지 않습니다. **실행 파일 이름이 이미 그 말을 합니다.**
 2. 한 스위트는 **한 파일에만** 삽니다.
-3. CI 가 못 돌리는 스위트는 자기 파일에 이유와 함께 마커를 답니다. 린트가 이 마커와 CMake 의
-   `EngineTest_NoGPU` 필터를 **양방향으로** 대조하므로, 한쪽만 고치면 커밋이 막힙니다.
+3. CI 가 못 돌리는 스위트는 자기 파일에서 이유와 함께 선언합니다. **이 한 줄이 분류의 전부입니다** — CMake 에
+   스위트 이름을 적는 곳이 없습니다. 린트는 선언이 효력이 있는지만 봅니다: 그 스위트가 그 파일에 있는가,
+   그 폴더의 실행 파일이 `HOST_SPLIT` 으로 등록되는가.
 
    ```cpp
-   // SW_TEST_REQUIRES_HOST( WindowTest ): 진짜 창을 만든다. 헤드리스 CI 러너엔 디스플레이가 없다.
+   // 진짜 창을 만든다. 헤드리스 CI 러너엔 디스플레이가 없다.
+   SW_TEST_REQUIRES_HOST( WindowTest, "creates a real OS window; headless CI runners have no display" );
    ```
 4. 그런 스위트가 있는 파일에는 **다른 스위트를 두지 않습니다.** 섞여 있으면 새 케이스를 옆 스위트에
    붙이기 쉽고, 그 순간 GPU 가 필요한 케이스가 CI 로 들어갑니다.

@@ -51,26 +51,27 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-
 build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
 ```
 
-- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`.
+- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`.
   **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current
-  directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does.
-  In Shipping the binaries themselves live in `build/Ninja-Shipping/TestBin` (so the shipped `Bin` stays
-  free of test binaries and DXC), but the working directory is still `Bin`:
-  `cd build/Ninja-Shipping/Bin && ../TestBin/EngineTest.exe`. Running them from `TestBin` used to
-  segfault mid-run; the resource asserts now fail the affected cases loudly instead.
-- CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites CI
-  cannot run filtered out (`RHIDeviceTest`, `RenderPassGpuTest`, `WindowTest`, `ShaderCompilerTest`,
-  `LiveShaderTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
-- **`EngineTest_HostOnly` (label `hostgpu`) is exactly that excluded set** — the part CI can never run.
-  **Run it in Shipping before you call work done**, on the machine with the GPU. Nothing else covers it:
-  CI skips those suites and local habit is Debug-only, which is how two `RenderPassGpuTest` failures and
-  two `ShaderCompilerTest` failures sat in the tree unnoticed (see `docs/06_Backlog.md`, 2026-09-17).
-  `CheckTestSuites.py` keeps the two filters and the `SW_TEST_REQUIRES_HOST` markers in agreement, so a
-  suite can never be dropped from both.
+  directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does, in every
+  configuration (`sw_registerTestRun`). In Shipping the binaries themselves live in
+  `build/Ninja-Shipping/TestBin` (so the shipped `Bin` stays free of test binaries and DXC), but the working
+  directory is still `Bin`: `cd build/Ninja-Shipping/Bin && ../TestBin/EngineTest.exe`.
+- **A suite CI cannot run declares it in code**: `SW_TEST_REQUIRES_HOST( SuiteName, "reason" );` in the
+  suite's own file. That declaration is the whole classification — an executable registered with
+  `sw_addTestExecutable( ... HOST_SPLIT )` gets two CTest entries, `<Target>_NoGPU` (`--host_suites=exclude`,
+  label `nogpu`, what CI runs) and `<Target>_HostOnly` (`--host_suites=only`, label `hostgpu`). No suite name
+  is written in CMake. Today `EngineTest` and `AppTest` split this way; the other executables are one entry each.
+  **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+- **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
+  machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, which is
+  how two `RenderPassGpuTest` failures and two `ShaderCompilerTest` failures sat in the tree unnoticed (see
+  `docs/06_Backlog.md`, 2026-09-17). A `--host_suites=only` run that selects nothing fails, and so does a
+  declaration naming a suite that has no cases.
 - **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
-  (no underscore), lives in exactly one file, and a suite CI cannot run declares
-  `// SW_TEST_REQUIRES_HOST( SuiteName ): <reason>` in its file — the lint cross-checks those markers
-  against the `EngineTest_NoGPU` filter in both directions, and keeps such suites in a file of their own.
+  (no underscore), lives in exactly one file, a host suite has its file to itself, and every
+  `SW_TEST_REQUIRES_HOST` sits in a folder whose CMakeLists says `HOST_SPLIT` (otherwise nothing reads it and
+  CI runs the suite).
 - Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
 

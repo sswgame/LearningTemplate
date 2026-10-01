@@ -13,6 +13,7 @@
 #
 # 소스를 명시하는 이유도 같다. 글롭이면 App 소스를 하나 끌어올 때마다 그 의존성이 조용히 따라온다.
 sw_addTestExecutable(AppTest
+	HOST_SPLIT
 	SOURCES
 		TestAppSmoke.cpp
 		TestFrameTimeline.cpp
@@ -20,10 +21,13 @@ sw_addTestExecutable(AppTest
 	LIBS
 		Engine
 	LABELS
-		# `nogpu` 는 여기 없다 — 아래 `AppTest_NoGPU` 가 스모크를 빼고 그 라벨을 단다.
+		# `nogpu` · `hostgpu` 는 `HOST_SPLIT` 이 붙인다 — `AppTest_NoGPU` 는 실기동 스모크(`AppSmokeTest`)를 빼고,
+		# `AppTest_HostOnly` 는 그것만 돈다(직렬 — 창을 띄우고 GPU 를 잡는다).
 		"unit;app"
 	TIMEOUT
-		180
+		60
+	HOST_TIMEOUT
+		300
 )
 
 # 스모크는 **빌드된 App 을 띄운다** — 타깃이 옆에 서 있어야 한다.
@@ -40,41 +44,3 @@ sw_getDynamicModules(listRhiBackend KINDS rhi)
 foreach(rhiMod IN LISTS listRhiBackend)
 	add_dependencies(AppTest ${rhiMod})
 endforeach()
-
-if(BUILD_TESTING)
-	# --------------------------------------------------------------------------
-	# ctest — NoGPU: 스모크만 뺀 나머지 (CI 가 도는 집합)
-	# --------------------------------------------------------------------------
-	add_test(
-		NAME AppTest_NoGPU
-		COMMAND AppTest --test_filter=-AppSmokeTest.*
-	)
-	set_tests_properties(AppTest_NoGPU PROPERTIES
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
-		LABELS "unit;app;nogpu"
-		TIMEOUT 60
-	)
-	sw_applySanitizerTestProperties(AppTest_NoGPU)
-
-	# --------------------------------------------------------------------------
-	# ctest — HostOnly: 위 필터가 빼는 **바로 그 집합** (백로그 0절의 실기동 게이트)
-	#
-	# 이름을 두 번 적는 것은 맞다 — 위는 빼는 목록, 여기는 고르는 목록이라 형태가 다르다.
-	# 대신 **갈라지지 못하게 막는다**: `CheckTestSuites.py` 가 두 필터와 `SW_TEST_REQUIRES_HOST`
-	# 마커를 모두 대조한다.
-	#
-	# `RUN_SERIAL` 인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게
-	# 만들고, 드라이버에 따라 서로의 디바이스 생성을 막는다.
-	# --------------------------------------------------------------------------
-	add_test(
-		NAME AppTest_HostOnly
-		COMMAND AppTest --test_filter=AppSmokeTest.*
-	)
-	set_tests_properties(AppTest_HostOnly PROPERTIES
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
-		LABELS "unit;app;hostgpu"
-		RUN_SERIAL TRUE
-		TIMEOUT 300
-	)
-	sw_applySanitizerTestProperties(AppTest_HostOnly)
-endif()

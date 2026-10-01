@@ -76,6 +76,50 @@ namespace test
         _listTest.push_back( { suiteName, testName, func } );
     }
 
+    void TestRegistry::registerHostSuite( const sw::string& suiteName, const sw::string& reason )
+    {
+        _mapHostSuiteReason[suiteName] = reason;
+    }
+
+    bool TestRegistry::isSelected( const TestCaseInfo& testInfo ) const
+    {
+        if ( _filter.matches( testInfo.fullName() ) == false )
+            return false;
+
+        const bool bHostSuite = _mapHostSuiteReason.find( testInfo._groupName ) != _mapHostSuiteReason.end();
+        if ( _hostSuiteMode == HostSuiteMode::Exclude )
+            return bHostSuite == false;
+        if ( _hostSuiteMode == HostSuiteMode::Only )
+            return bHostSuite;
+        return true;
+    }
+
+    int32 TestRegistry::countHostSuiteMismatch() const
+    {
+        // 선언한 스위트에 케이스가 하나도 없으면 그 선언은 아무것도 빼지 않는다 — 대개 스위트 이름을 바꾸고 선언을
+        // 놓친 것이고, 그 순간 이름이 바뀐 스위트는 **CI 로 들어간다.** 그래서 조용히 넘기지 않는다.
+        int32 mismatchCount{ 0 };
+        for ( const auto& [suiteName, reason] : _mapHostSuiteReason )
+        {
+            bool bHasCase{ false };
+            for ( const TestCaseInfo& testInfo : _listTest )
+            {
+                if ( testInfo._groupName == suiteName )
+                {
+                    bHasCase = true;
+                    break;
+                }
+            }
+            if ( bHasCase )
+                continue;
+
+            ++mismatchCount;
+            std::fprintf( stdout, " SW_TEST_REQUIRES_HOST( %s ) names a suite with no cases in this executable\n", suiteName.c_str() );
+            SW_LOG_ERROR( "SW_TEST_REQUIRES_HOST( %# ) names a suite with no cases in this executable", suiteName.c_str() );
+        }
+        return mismatchCount;
+    }
+
     void TestRegistry::setFilter( const sw::string& filter )
     {
         _filter.setPattern( filter );
@@ -123,6 +167,25 @@ namespace test
                 continue;
             }
 
+            constexpr std::string_view kHostSuitesPrefix = "--host_suites=";
+            if ( arg.substr( 0, kHostSuitesPrefix.size() ) == kHostSuitesPrefix )
+            {
+                const std::string_view mode = arg.substr( kHostSuitesPrefix.size() );
+                if ( mode == "exclude" )
+                    _hostSuiteMode = HostSuiteMode::Exclude;
+                else if ( mode == "only" )
+                    _hostSuiteMode = HostSuiteMode::Only;
+                else if ( mode == "all" )
+                    _hostSuiteMode = HostSuiteMode::All;
+                else
+                {
+                    // 오타를 "전부" 로 읽으면 CI 가 GPU 스위트를 돌린다 — 실행을 실패로 끝낸다.
+                    _bInvalidArgument = true;
+                    std::fprintf( stdout, "Unknown --host_suites value '%s' (expected exclude, only or all)\n", sw::string( mode ).c_str() );
+                }
+                continue;
+            }
+
             listApplicationArg.push_back( argv[argIndex] );
         }
 
@@ -157,7 +220,7 @@ namespace test
         listSelected.reserve( _listTest.size() );
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( _filter.matches( testInfo.fullName() ) )
+            if ( isSelected( testInfo ) )
                 listSelected.push_back( testInfo.fullName() );
         }
 
@@ -179,16 +242,28 @@ namespace test
             std::fprintf( stdout, "  %s\n", fullName.c_str() );
             SW_LOG_INFO( "  %#", fullName.c_str() );
         }
+
+        if ( _mapHostSuiteReason.empty() == false )
+        {
+            std::fprintf( stdout, "Host suites - CI cannot run these (%u):\n", static_cast<uint32>( _mapHostSuiteReason.size() ) );
+            for ( const auto& [suiteName, reason] : _mapHostSuiteReason )
+                std::fprintf( stdout, "  %s - %s\n", suiteName.c_str(), reason.c_str() );
+        }
         std::fflush( stdout );
     }
 
     int32 TestRegistry::runAllTests()
     {
+        if ( _bInvalidArgument )
+            return 1;
+
         if ( _listOnly )
         {
             listTests();
             return 0;
         }
+
+        const int32 hostSuiteMismatchCount = countHostSuiteMismatch();
 
         int32   passedCount{ 0 };
         int32   failedCount{ 0 };
@@ -198,7 +273,7 @@ namespace test
         uint32 runnableCount{ 0 };
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( _filter.matches( testInfo.fullName() ) )
+            if ( isSelected( testInfo ) )
                 ++runnableCount;
         }
 
@@ -218,7 +293,7 @@ namespace test
 
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( _filter.matches( testInfo.fullName() ) == false )
+            if ( isSelected( testInfo ) == false )
                 continue;
 
             if ( mapSuiteRanSkipped.find( testInfo._groupName ) == mapSuiteRanSkipped.end() )
@@ -338,7 +413,19 @@ namespace test
                      totalMs );
         SW_LOG_INFO( "====================================================" );
 
+        // 호스트 스위트만 고른 실행이 아무것도 안 돌았다면 그 ctest 항목(`<타깃>_HostOnly`)은 빈 그물이다.
+        const bool bHostOnlyRanNothing = _hostSuiteMode == HostSuiteMode::Only && runnableCount == 0;
+
         std::fprintf( stdout, "====================================================\n" );
+        if ( _hostSuiteMode == HostSuiteMode::Exclude && _mapHostSuiteReason.empty() == false )
+        {
+            std::fprintf( stdout, " Host suites left out (run them with --host_suites=only):" );
+            for ( const auto& [suiteName, reason] : _mapHostSuiteReason )
+                std::fprintf( stdout, " %s", suiteName.c_str() );
+            std::fprintf( stdout, "\n" );
+        }
+        if ( bHostOnlyRanNothing )
+            std::fprintf( stdout, " --host_suites=only selected no test - no SW_TEST_REQUIRES_HOST suite matched\n" );
         std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount + skippedCount, skippedCount, totalMs );
         if ( failedCount > 0 )
         {
@@ -351,6 +438,7 @@ namespace test
         std::fprintf( stdout, "====================================================\n" );
         std::fflush( stdout );
 
-        return ( failedCount == 0 && bEmptySuiteIsFailure == false ) ? 0 : 1;
+        const bool bPassed = failedCount == 0 && bEmptySuiteIsFailure == false && hostSuiteMismatchCount == 0 && bHostOnlyRanNothing == false;
+        return bPassed ? 0 : 1;
     }
 } // namespace test

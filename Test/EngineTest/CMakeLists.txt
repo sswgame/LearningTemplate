@@ -8,6 +8,7 @@
 # ------------------------------------------------------------------------------
 sw_addTestExecutable(EngineTest
 	RUN_SERIAL
+	HOST_SPLIT
 	LIBS
 		Engine
 		GameFramework
@@ -46,62 +47,17 @@ if(SW_RHI_AS_MODULES)
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) ctest — NoGPU 필터
+# 2) ctest — `HOST_SPLIT` 이 `EngineTest_NoGPU` · `EngineTest_HostOnly` 를 등록한다
 #
-# 아래 다섯은 CI 러너가 못 돌린다(GPU · 디스플레이 · DXC). 예전엔 `-RenderPassTest.FrameRenderer*`
-# 처럼 케이스 이름을 하나씩 적었는데, 2026-09-08 에 들어온 픽셀 리드백 테스트 여섯이 그 규칙을
-# 비켜가면서 그대로 CI 로 들어갔다. 리눅스는 X11 디스플레이가 없어 조용히 스킵되지만, Windows 는
-# DX11/DX12 가 Basic Render Driver(WARP)로 **초기화에 성공해서** 픽셀 검증이 실제로 돌고 진다.
+# CI 러너가 못 돌리는 스위트(GPU · 디스플레이 · DXC)는 **자기 파일에서** `SW_TEST_REQUIRES_HOST( 스위트, "이유" )`
+# 로 선언한다. `_NoGPU` 는 그 선언을 뺀 집합(`--host_suites=exclude`, 라벨 `nogpu` — CI 가 도는 것),
+# `_HostOnly` 는 그 나머지(`--host_suites=only`, 라벨 `hostgpu`)다. GPU 가 있는 개발자는 배포 구성에서 이렇게 돈다:
 #
-# **이 목록은 손으로 맞추지 않는다.** 각 스위트는 자기 파일에 `SW_TEST_REQUIRES_HOST( 스위트 ): 이유`
-# 를 적어 두고, `CheckTestSuites.py` 가 그 마커와 아래 필터를 **양방향으로** 대조한다 — 마커가 있는데
-# 필터에 없으면 CI 가 그걸 돌리고 있다는 뜻이고, 필터에 있는데 마커가 없으면 죽은 항목이다. 같은
-# 린트가 "마커 붙은 스위트가 있는 파일엔 다른 스위트를 두지 않는다"도 본다. 예전엔 한 파일에 섞여
-# 있어서(TestRHI.cpp · TestShader.cpp) 새 케이스를 옆 스위트에 붙이기가 너무 쉬웠다.
+#   ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 #
-# 이 케이스들은 사라지지 않는다 — GPU 가 있는 개발자가 돌리는 `EngineTest` 전체에는 그대로 있다.
-#
-# 그래서 **전체 `ctest` 는 EngineTest 를 두 번 돈다** (전체 460개 + NoGPU 410개). 중복이지만 의도한
-# 것이다: CI 는 `-L nogpu` 로 부분집합만 고르고, 개발자는 전체를 돈다. 없애려면 둘 중 하나를 포기해야
-# 하는데 3초(전체 48초 중) 아끼자고 할 일이 아니다.
+# 예전에는 스위트 이름을 이 파일에 **두 번** 적었다(빼는 필터 · 고르는 필터). 그보다 전에는 케이스 이름을 하나씩
+# 적었는데, 2026-09-08 에 들어온 픽셀 리드백 테스트 여섯이 그 규칙을 비켜가 그대로 CI 로 들어갔다 — 리눅스는 X11
+# 디스플레이가 없어 조용히 스킵되지만, Windows 는 DX11/DX12 가 Basic Render Driver(WARP)로 **초기화에 성공해서**
+# 픽셀 검증이 실제로 돌고 진다. 그리고 `HostOnly` 가 없던 때에는 그 집합을 따로 고를 방법이 없어 아무도 돌지 않았고,
+# `RenderPassGpuTest` 두 건이 Shipping 에서만 지는 채로 숨어 있었다(docs/06_Backlog.md 2026-09-17).
 # ------------------------------------------------------------------------------
-if(BUILD_TESTING)
-	add_test(
-		NAME EngineTest_NoGPU
-		COMMAND EngineTest --test_filter=-RHIDeviceTest.*,-WindowTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*,-RenderPassGpuTest.*
-	)
-	set_tests_properties(EngineTest_NoGPU PROPERTIES
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
-		LABELS "unit;engine;nogpu"
-		RUN_SERIAL TRUE
-		TIMEOUT 180
-	)
-
-	# 이 테스트는 손으로 등록하므로 sw_addTestExecutable 의 ASan 보정을 받지 못한다. 직접 부른다.
-	sw_applySanitizerTestProperties(EngineTest_NoGPU)
-
-	# --------------------------------------------------------------------------
-	# 3) ctest — HostOnly: 위 필터가 빼는 **바로 그 집합**
-	#
-	# CI 가 못 도는 것을 **이름으로 돌 수 있게** 한다. 예전엔 이 집합을 고르는 방법이 "전체
-	# EngineTest 를 돌린다" 뿐이었고, 그래서 아무도 따로 돌지 않았다 — 특히 배포 구성에서.
-	# `RenderPassGpuTest` 두 건이 Shipping 에서만 지는 채로 오래 숨어 있던 것이 그 결과다
-	# (docs/06_Backlog.md 2026-09-17). 이제 GPU 가 있는 개발자는 이렇게 돈다:
-	#
-	#   ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
-	#
-	# 이름을 여기 한 번 더 적는 것은 맞다 — 위는 빼는 목록이고 여기는 고르는 목록이라 형태가
-	# 다르다. 대신 **갈라지지 못하게 막는다**: `CheckTestSuites.py` 가 두 필터와
-	# `SW_TEST_REQUIRES_HOST` 마커 셋이 모두 같은 집합인지 본다.
-	add_test(
-		NAME EngineTest_HostOnly
-		COMMAND EngineTest --test_filter=RHIDeviceTest.*,WindowTest.*,ShaderCompilerTest.*,LiveShaderTest.*,RenderPassGpuTest.*
-	)
-	set_tests_properties(EngineTest_HostOnly PROPERTIES
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
-		LABELS "unit;engine;hostgpu"
-		RUN_SERIAL TRUE
-		TIMEOUT 180
-	)
-	sw_applySanitizerTestProperties(EngineTest_HostOnly)
-endif()

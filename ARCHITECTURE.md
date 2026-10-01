@@ -117,7 +117,9 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 
 ## 🧪 테스트 아키텍처
 
-CTest 타겟은 `CoreTest`, `EngineTest`(`EngineTest_NoGPU`), `ReflectionTest`, `SmokeTest`, `EditorTest` 입니다.
+CTest 항목은 `CoreTest`, `EngineTest_NoGPU` · `EngineTest_HostOnly`, `ReflectionTest`, `SmokeTest`, `EditorTest`,
+`EditorUiTest`, `AppTest_NoGPU` · `AppTest_HostOnly` 입니다. CI 가 못 돌리는 스위트는 자기 파일에서
+`SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, `HOST_SPLIT` 으로 등록한 실행 파일이 그 선언으로 두 항목을 가릅니다.
 GPU가 없는 CI는 `nogpu` 라벨만 돌립니다. 루트는 추가로 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)
 가 Python lint 여섯(`CheckEngineLayers`·`CheckIncludeOrder`·`CheckResourceCasing`·`CheckCodeConventions`·
 `CheckSourceGlob`·`CheckDataFileReferences`)을 `lint` 라벨로 등록합니다.

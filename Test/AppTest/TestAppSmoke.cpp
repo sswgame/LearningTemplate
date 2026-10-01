@@ -10,8 +10,9 @@
 
 using namespace sw;
 
-// SW_TEST_REQUIRES_HOST( AppSmokeTest ): 실제 App.exe 를 띄운다 — GPU · 창 · 셰이더가 필요하다. CI 러너엔 없다.
-//
+// 실제 App.exe 를 띄운다 — GPU · 창 · 셰이더가 필요하다. CI 러너엔 없다.
+SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a GPU, a window and baked shaders" );
+
 // ------------------------------------------------------------------------------
 // 1) AppSmokeTest — "실기동 게이트" 를 자동화한 것
 //

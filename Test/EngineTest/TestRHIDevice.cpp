@@ -14,10 +14,10 @@
 
 // 실제 RHI 디바이스를 만드는 케이스만 모은다 — 네 백엔드의 생성·바인드리스·업로드·리드백·드로우.
 //
-// SW_TEST_REQUIRES_HOST( RHIDeviceTest ): 실제 GPU 디바이스를 만든다. CI 러너엔 GPU 가 없고,
-// Windows 는 WARP 로 **초기화에 성공해** 픽셀 검증이 실제로 돌고 진다.
-//
+// 실제 GPU 디바이스를 만든다. CI 러너엔 GPU 가 없고, Windows 는 WARP 로 **초기화에 성공해** 픽셀 검증이 실제로 돌고 진다.
 // 디바이스가 필요 없는 RHI 자료구조(핸들 표·해제 큐·셰이더 요청)는 TestRHISupport.cpp 에 있다.
+
+SW_TEST_REQUIRES_HOST( RHIDeviceTest, "creates real GPU devices on every backend" );
 
 namespace
 {

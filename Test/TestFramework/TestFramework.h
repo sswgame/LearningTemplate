@@ -25,6 +25,18 @@ namespace test
         sw::string fullName() const { return _groupName + "." + _testName; }
     };
 
+    /**
+     * @brief 호스트 스위트(CI 러너가 못 돌리는 것)를 이번 실행에서 어떻게 다루는지.
+     * @details `--host_suites=exclude` 는 CI 가 도는 집합(`<타깃>_NoGPU`), `--host_suites=only` 는 그 나머지
+     *          (`<타깃>_HostOnly`)다. 두 ctest 항목은 `sw_addTestExecutable( ... HOST_SPLIT )` 가 등록한다.
+     */
+    enum class HostSuiteMode : uint8
+    {
+        All,     /**< 전부 돈다(기본 — 개발자가 실행 파일을 직접 돌릴 때). */
+        Exclude, /**< 호스트 스위트를 뺀다. */
+        Only,    /**< 호스트 스위트만 돈다. */
+    };
+
     // ------------------------------------------------------------------------------
     // 2) 레지스트리 — 등록·필터·실행
     // ------------------------------------------------------------------------------
@@ -36,6 +48,8 @@ namespace test
 
         /** @brief 스위트·이름·함수로 테스트를 등록합니다. */
         void registerTest( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func );
+        /** @brief 스위트가 GPU · 창 · DXC 같은 호스트 자원을 요구한다고 등록합니다(`SW_TEST_REQUIRES_HOST`). */
+        void registerHostSuite( const sw::string& suiteName, const sw::string& reason );
 
         /** @brief 테스트 전용 인자를 파싱하고 나머지 인자를 반환합니다. */
         sw::vector<utf8*> configureFromArgs( int32 argc, utf8* argv[] );
@@ -47,6 +61,8 @@ namespace test
         int32 runAllTests();
         /** @brief 등록된 테스트 이름을 나열합니다. */
         void listTests() const;
+        /** @brief 이번 실행이 이 케이스를 고르는지 — 이름 필터와 호스트 스위트 모드를 함께 봅니다. */
+        bool isSelected( const TestCaseInfo& testInfo ) const;
 
         /** @brief 현재 테스트의 실패를 기록합니다. */
         void addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message = "" );
@@ -62,12 +78,18 @@ namespace test
         const TestContext* getCurrentContext() const { return &_currentContext; }
 
     private:
-        sw::vector<TestCaseInfo> _listTest;
-        TestFilter               _filter;
-        TestContext              _currentContext;
-        TestEnvironment          _environment;
-        bool                     _listOnly{ false };
-        bool                     _bAllowEmptySuite{ false };
+        /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
+        int32 countHostSuiteMismatch() const;
+
+        sw::vector<TestCaseInfo>        _listTest;
+        sw::map<sw::string, sw::string> _mapHostSuiteReason;
+        TestFilter                      _filter;
+        TestContext                     _currentContext;
+        TestEnvironment                 _environment;
+        HostSuiteMode                   _hostSuiteMode{ HostSuiteMode::All };
+        bool                            _listOnly{ false };
+        bool                            _bAllowEmptySuite{ false };
+        bool                            _bInvalidArgument{ false };
     };
 
     /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
@@ -249,6 +271,17 @@ namespace test
             TestRegistry::getInstance().registerTest( suiteName, testName, func );
         }
     };
+
+    /** @brief 정적 초기화로 호스트 스위트 선언을 레지스트리에 붙입니다. */
+    class HostSuiteRegistrar
+    {
+    public:
+        /** @brief 정적 초기화 시점에 호스트 스위트를 등록합니다. */
+        HostSuiteRegistrar( const sw::string& suiteName, const sw::string& reason )
+        {
+            TestRegistry::getInstance().registerHostSuite( suiteName, reason );
+        }
+    };
 } // namespace test
 
 // ------------------------------------------------------------------------------
@@ -265,6 +298,17 @@ namespace test
     void                       test_##SuiteName##_##TestName();                                                                                                          \
     static test::TestRegistrar registrar_##SuiteName##_##TestName( #SuiteName, #TestName, SW_DELEGATE_FUNCTION( sw::Delegate<void()>, test_##SuiteName##_##TestName ) ); \
     void                       test_##SuiteName##_##TestName()
+
+/**
+ * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다 — GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.
+ * @param SuiteName 그 스위트. **이 파일에 사는 스위트**여야 하고, 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
+ * @param reason    왜 CI 가 못 돌리는지(영문 — `--test_list` 와 실행 요약에 찍힌다).
+ * @details 선언이 곧 분류다. `sw_addTestExecutable( ... HOST_SPLIT )` 가 `<타깃>_NoGPU`(`--host_suites=exclude`,
+ *          라벨 `nogpu`)와 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`)를 등록하므로 새 호스트 스위트는
+ *          **이 한 줄**로 CI 에서 빠지고 호스트 실행에 들어간다. 예전에는 같은 집합을 주석 마커 · NoGPU 필터 ·
+ *          HostOnly 필터 세 곳에 적고 린트가 셋을 대조했다.
+ */
+#define SW_TEST_REQUIRES_HOST( SuiteName, reason ) static test::HostSuiteRegistrar hostSuite_##SuiteName( #SuiteName, reason )
 
 /** @brief 현재 테스트를 사유와 함께 건너뜁니다(스위트 실패로 치지 않음). */
 #define SW_TEST_SKIP( reason )                                                               \

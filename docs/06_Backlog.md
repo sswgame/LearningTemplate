@@ -1831,6 +1831,24 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - `RenderResourceXml` 은 이제 `Serialization` 쪽으로 옮길 수 있다. 쓰는 쪽 옆에 둔 이유(직렬화가 `Resource` 를 못 봄)는
   `Resource/ResourceUtil.h` 가 티어 예외가 되면서 사라졌다.
 
+### 1-0h. `Test/` 구조 정리 — 진행 중 (2026-10-01 시작)
+
+사용자 요청 "TEST 폴더도 구조적 리팩토링을 통한 고도화 · 최적화 · 재사용성 · 확장성". 단위마다 검증 · 커밋 · 푸시.
+시작 측정(Debug): `ctest -L "nogpu|lint" -j 4` 벽시계 **44 초** — 직렬인 SmokeTest(12.9 s) · EngineTest_NoGPU(9.3 s)가 끝에
+혼자 돌고, ReflectionTest(22 s, 파서 프로세스를 차례로 띄운다)가 가장 길다. 6줄 중복 창은 `TestRenderPassGpu.cpp` 335 ·
+`TestRHIDevice.cpp` 124 에 몰려 있다(`RunDuplicateCode` 는 `Source/` 만 훑어서 `Test/` 를 못 봤다).
+
+- [x] ① 호스트 스위트를 코드에서 선언 · `HOST_SPLIT` · 작업 폴더 `Bin` 통일 (3절 2026-10-01 ①)
+- [ ] ② 단언 매크로를 한 코어로 — EXPECT/ASSERT 가 `return;` 한 줄만 다른 복사본이고, 실패 서식(`ostringstream`)이
+      단언 자리마다 인라인으로 펼쳐진다. 바이너리 크기 · 컴파일 시간을 재고 판단.
+- [ ] ③ `makeTempPath` 로 만든 경로는 케이스가 끝나면 프레임워크가 지운다 — 손으로 쓴 `removeFile` 193 곳, 단언으로
+      일찍 빠지면 남는다.
+- [ ] ④ RHI 테스트 디바이스 RAII 공용화(RHIDevice · RenderPassGpu) — 케이스마다 창 · 디바이스 생성 12줄 + 정리 6줄을
+      손으로 반복하고, 중간 `SW_ASSERT` 로 빠지면 정리를 건너뛴다.
+- [ ] ⑤ 벤치 통계(`elapsedMicro` · `percentile` · `logSamples`) 세 파일 공용화.
+- [ ] ⑥ 자식 프로세스로 자기 자신을 다시 띄우는 도우미(CrashReport · Smoke) 공용화.
+- [ ] ⑦ ctest 병렬화 — `RUN_SERIAL` 의 근거를 찾아 `RESOURCE_LOCK` 으로 좁히거나 느린 실행 파일을 샤딩.
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -2020,6 +2038,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ① 호스트 스위트를 코드에서 선언 · ctest 짝 자동 등록 · 작업 폴더 `Bin` 통일)
+
+**무엇이 문제였나.** CI 가 못 돌리는 스위트 하나를 들이려면 **세 곳**을 같이 고쳐야 했다 — 그 파일의 주석 마커
+(`// SW_TEST_REQUIRES_HOST( X ): 이유`), `EngineTest_NoGPU` 의 빼는 필터, `EngineTest_HostOnly` 의 고르는 필터. 셋이
+갈라지지 않게 `CheckTestSuites` 가 CMake 문자열을 파싱해 대조했다. `AppTest` 도 같은 짝을 손으로 한 벌 더 들고 있었다.
+그리고 갈라진 두 항목 말고 **전체 실행이 하나 더** 등록돼 있어서(`EngineTest` · `AppTest`) 라벨 없는 `ctest` 가 같은
+케이스를 두 번 돌았다 — 주석은 "없애려면 둘 중 하나를 포기해야 한다" 였는데, `_HostOnly` 가 생긴 뒤로는 두 반쪽이
+곧 전체라 포기할 것이 없었다.
+
+**지금.** `SW_TEST_REQUIRES_HOST( 스위트, "이유" );` 가 **진짜 선언**이다(정적 등록 — 레지스트리가 스위트 목록을 든다).
+실행 파일이 `--host_suites=exclude|only|all` 로 그 선언을 읽고, `sw_addTestExecutable( ... HOST_SPLIT )` 가
+`<타깃>_NoGPU`(exclude, `nogpu`) · `<타깃>_HostOnly`(only, `hostgpu`, 직렬)를 등록한다. CMake 에 스위트 이름이 없다.
+새 호스트 스위트는 **선언 한 줄**이다. 등록은 `sw_registerTestRun` 하나로 모았다(작업 폴더 · 라벨 · 제한 시간 · 새니타이저 보정).
+
+- 효력이 없는 선언은 실행이 진다: 선언한 스위트에 케이스가 없으면(이름을 바꾸고 선언을 놓친 것 — 그 스위트는 CI 로 간다),
+  `--host_suites=only` 가 아무것도 안 골랐으면, 값을 잘못 적었으면(`--host_suites=bogus` — "전부" 로 읽으면 CI 가 GPU 를 돈다).
+  `--test_list` 끝에 선언과 이유가, `exclude` 실행의 요약에 빠진 스위트가 찍힌다.
+- `CheckTestSuites` 는 필터 파싱을 걷고 **선언이 효력이 있는가**를 본다 — 그 스위트가 그 파일에 있는가, 그 폴더의
+  CMakeLists 가 `HOST_SPLIT` 인가(주석의 낱말은 세지 않는다), 거꾸로 `HOST_SPLIT` 인데 선언이 없는가, 옛 주석 마커가 남았는가.
+  선언도 케이스처럼 토큰 수와 파싱 수를 대조한다.
+- **린트 자기 검사가 증거가 아니었다.** 예전 조각 셋은 바탕부터 다른 규칙(EditorTest 소스 목록이 비었다)에 걸려, 넣은 규칙이
+  죽어도 실패했다. 이 검사가 **통과하는** 바탕(`_kCleanFixture`)을 두고 조각마다 위반 하나만 얹었다(여섯 조각, 각 위반 1건 확인).
+
+**작업 폴더.** `sw_addTestExecutable` 이 실행 파일이 나가는 폴더를 작업 폴더로 써서 **Shipping 의 라벨 없는 항목만 `TestBin`
+에서** 돌았다(CoreTest · ReflectionTest · SmokeTest · EditorTest · EditorUiTest · 전체 EngineTest · 전체 AppTest). 문서와
+손으로 등록한 짝은 `Bin` 이었다. 2026-09-24 항목이 "Shipping 의 `AppTest` 는 `TestBin` 이라 `App.exe` 를 못 띄워 진다 — 등록
+문제" 로 적어 둔 그것이다. 이제 구성과 무관하게 `Bin` 이다(Shipping CTestTestfile 9 항목 전부 확인).
+
+**검증.** Debug `nogpu|lint` 28/28 · `hostgpu` 2/2, Shipping `nogpu|hostgpu` 9/9(전부 `Bin` 에서). EngineTest 723 = exclude 661 +
+only 62. 변이: AppTest 에 없는 스위트 선언을 넣으면 rc=1("names a suite with no cases"), CoreTest `--host_suites=only` rc=1,
+`--host_suites=bogus` rc=1. `CheckLintsAreAlive` 37 조각 통과.
 
 ### 2026-09-30 (TSan 잡을 막는 잡으로)
 

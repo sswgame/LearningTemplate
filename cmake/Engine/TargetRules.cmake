@@ -442,7 +442,6 @@ function(sw_addGameModule TARGET_NAME)
 	endif()
 endfunction()
 
-# 테스트 실행 파일 타겟을 정의하고 공통 PCH, 로그 태그, CTest 등록을 수행합니다.
 # ------------------------------------------------------------------------------
 # ASan 테스트 보정 — 등록된 CTest 이름 하나에 적용한다.
 #
@@ -499,8 +498,48 @@ function(sw_embedProcessManifest TARGET_NAME)
 	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/cmake/Modules/Platform/WindowsProcess.manifest")
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_registerTestRun — 테스트 실행 파일 하나를 ctest 항목 하나로 등록한다
+#
+# 작업 폴더는 **구성과 무관하게 `Bin`** 이다. 테스트는 거기서 위로 올라가며 `Resource/` 를 찾고, 배포 구성은
+# 실행 파일만 `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 예전에는 이 등록이 실행 파일이 나가는
+# 폴더를 작업 폴더로 써서, Shipping 의 라벨 없는 항목(`CoreTest` · `AppTest` …)만 `TestBin` 에서 돌았다 —
+# 문서와 손으로 등록한 `_NoGPU` 짝은 `Bin` 이었고, `AppTest` 는 거기서 `App.exe` 를 못 찾아 졌다.
+# ------------------------------------------------------------------------------
+function(sw_registerTestRun TEST_NAME TARGET_NAME)
+	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
+
+	add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARG_ARGS})
+	set_tests_properties(${TEST_NAME} PROPERTIES
+		WORKING_DIRECTORY "${sw_output_directory}/Bin"
+		LABELS "${ARG_LABELS}"
+		TIMEOUT ${ARG_TIMEOUT}
+	)
+	if(ARG_RUN_SERIAL)
+		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
+	endif()
+
+	# ASan 의 ODR 검사를 완화한다. 이 엔진은 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
+	# EditorModule) 그 DLL 들이 같은 SDK·CRT 헤더를 포함한다. 그러면 헤더가 박는 전역이
+	# DLL 마다 생기고 ASan 은 그것을 ODR 위반으로 본다 — 실제로 나온 것이
+	# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
+	# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
+	sw_applySanitizerTestProperties(${TEST_NAME} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
+#
+#   HOST_SPLIT    호스트 스위트(`SW_TEST_REQUIRES_HOST`)가 있는 실행 파일. ctest 항목을 둘로 가른다 —
+#                 `<타깃>_NoGPU`(`--host_suites=exclude`, 라벨 `nogpu`, CI 가 도는 집합)와
+#                 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`, 직렬). 어느 스위트가 호스트인지는
+#                 **코드의 선언이 정한다** — 여기에 스위트 이름을 적지 않는다. 예전에는 같은 집합을 두 필터
+#                 문자열로 손으로 적고(빼는 목록 · 고르는 목록) 린트가 주석 마커와 대조했다. 그리고 갈라진
+#                 두 항목 말고 **전체 실행도 하나 더** 등록돼 있어서, 라벨 없는 `ctest` 가 EngineTest 를 두 번 돌았다.
+#   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
+# ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
 
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
@@ -513,14 +552,13 @@ function(sw_addTestExecutable TARGET_NAME)
 
 	# 배포 빌드의 Bin 은 App.exe 와 Packs/ 만 담아야 한다. 테스트는 계속 빌드하되 옆 디렉터리로
 	# 뺀다 — CI 가 Shipping 을 CoreTest 로 스모크할 수 있으면서 배포 산출물은 깨끗하다.
-	set(swTestOutputDir "${sw_output_directory}/Bin")
-
+	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`).
 	if(SW_SHIPPING_BUILD)
-		set(swTestOutputDir "${sw_output_directory}/TestBin")
+		set(testOutputDir "${sw_output_directory}/TestBin")
 		set_target_properties(${TARGET_NAME} PROPERTIES
-			RUNTIME_OUTPUT_DIRECTORY "${swTestOutputDir}"
-			RUNTIME_OUTPUT_DIRECTORY_DEBUG "${swTestOutputDir}"
-			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${swTestOutputDir}"
+			RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}"
+			RUNTIME_OUTPUT_DIRECTORY_DEBUG "${testOutputDir}"
+			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
 		)
 	endif()
 
@@ -546,38 +584,42 @@ function(sw_addTestExecutable TARGET_NAME)
 	)
 	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
-	if(BUILD_TESTING)
-		add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
-		set(timeout 30)
-
-		if(ARG_TIMEOUT)
-			set(timeout ${ARG_TIMEOUT})
-		endif()
-
-		set(labels "unit")
-
-		if(ARG_LABELS)
-			set(labels "${ARG_LABELS}")
-		endif()
-
-		set_tests_properties(${TARGET_NAME} PROPERTIES
-			WORKING_DIRECTORY "${swTestOutputDir}"
-			LABELS "${labels}"
-			TIMEOUT ${timeout}
-		)
-
-		if(ARG_RUN_SERIAL)
-			set_tests_properties(${TARGET_NAME} PROPERTIES RUN_SERIAL TRUE)
-		endif()
-
-		# ASan 의 ODR 검사를 완화한다. 이 엔진은 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
-		# EditorModule) 그 DLL 들이 같은 SDK·CRT 헤더를 포함한다. 그러면 헤더가 박는 전역이
-		# DLL 마다 생기고 ASan 은 그것을 ODR 위반으로 본다 — 실제로 나온 것이
-		# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
-		# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
-		#
-		sw_applySanitizerTestProperties(${TARGET_NAME} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+	if(NOT BUILD_TESTING)
+		return()
 	endif()
+
+	set(timeout 30)
+	if(ARG_TIMEOUT)
+		set(timeout ${ARG_TIMEOUT})
+	endif()
+
+	set(labels "unit")
+	if(ARG_LABELS)
+		set(labels "${ARG_LABELS}")
+	endif()
+
+	set(runSerial "")
+	if(ARG_RUN_SERIAL)
+		set(runSerial RUN_SERIAL)
+	endif()
+
+	if(NOT ARG_HOST_SPLIT)
+		sw_registerTestRun(${TARGET_NAME} ${TARGET_NAME} ${runSerial}
+			LABELS "${labels}" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+		return()
+	endif()
+
+	set(hostTimeout ${timeout})
+	if(ARG_HOST_TIMEOUT)
+		set(hostTimeout ${ARG_HOST_TIMEOUT})
+	endif()
+
+	sw_registerTestRun(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${runSerial}
+		ARGS --host_suites=exclude LABELS "${labels};nogpu" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+	# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
+	# 서로의 디바이스 생성을 막는다.
+	sw_registerTestRun(${TARGET_NAME}_HostOnly ${TARGET_NAME} RUN_SERIAL
+		ARGS --host_suites=only LABELS "${labels};hostgpu" TIMEOUT ${hostTimeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 endfunction()
 
 # ------------------------------------------------------------------------------

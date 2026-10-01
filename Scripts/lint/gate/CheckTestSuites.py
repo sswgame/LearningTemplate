@@ -3,8 +3,8 @@
 """
 테스트 스위트 규칙 검사.
 
-스위트 이름은 장식이 아니다. `EngineTest_NoGPU` 가 **스위트 이름으로** CI 가 못 돌리는 것을 걸러내고,
-`--test_filter` 도 스위트 단위로 고른다. 그래서 이름이 흔들리면 필터가 흔들린다.
+스위트 이름은 장식이 아니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고(`SW_TEST_REQUIRES_HOST`),
+`--test_filter` 도 스위트 단위로 고른다. 그래서 이름이 흔들리면 그 둘이 흔들린다.
 
 강제 규칙 다섯:
 
@@ -16,11 +16,15 @@
 
   2) 한 스위트는 **한 파일에만** 산다. 갈라져 있으면 "이 스위트를 고치려면 어디를 여나" 에 답이 둘이 된다.
 
-  3) CI 가 못 돌리는 스위트는 자기 파일에 `// SW_TEST_REQUIRES_HOST( 스위트 ): <이유>` 를 적고,
-     그 집합이 `Test/EngineTest/CMakeLists.txt` 의 `EngineTest_NoGPU` 필터와 **양방향으로** 같아야 한다.
-       - 마커가 있는데 필터에 없다 → CI 가 그것을 돌리고 있다. 2026-09-08 에 이 방향으로 나흘간 빨갰다.
-       - 필터에 있는데 마커가 없다 → 죽은 필터 항목. 지워야 할지 아무도 모른다.
-     **목록이 아니라 마커가 정본이다** — 필터는 마커에서 유도되는 값으로 본다.
+  3) CI 가 못 돌리는 스위트는 자기 파일에서 `SW_TEST_REQUIRES_HOST( 스위트, "이유" );` 로 선언한다.
+     **선언이 곧 분류다** — 테스트 실행 파일이 그 선언을 들고 있다가 `--host_suites=exclude|only` 로 가르고,
+     `sw_addTestExecutable( ... HOST_SPLIT )` 가 그 둘을 `<타깃>_NoGPU` · `<타깃>_HostOnly` 로 등록한다.
+     예전에는 같은 집합을 주석 마커 · NoGPU 필터 · HostOnly 필터 세 곳에 적고 이 검사가 셋을 대조했다.
+     이제 이 검사가 보는 것은 선언이 **실제로 효력이 있는가** 다:
+       - 선언한 스위트가 그 파일에 있는가(이름을 바꾸고 선언을 놓치면 그 스위트가 CI 로 들어간다).
+       - 그 폴더의 실행 파일이 `HOST_SPLIT` 으로 등록되는가(아니면 선언을 아무도 읽지 않는다 — CI 가 그것을 돈다).
+       - 거꾸로 `HOST_SPLIT` 인데 선언이 하나도 없으면 `_HostOnly` 는 빈 그물이다.
+       - 옛 주석 마커(`// SW_TEST_REQUIRES_HOST( X ): ...`)는 아무 효력이 없으므로 남아 있으면 실패다.
 
   4) 마커가 붙은 스위트가 있는 파일에는 **다른 스위트를 두지 않는다.**
      예전엔 `TestRHI.cpp` 가 `RHITest`(CI 제외)와 Support 세 스위트(CI 실행)를 같이 들고 있었고,
@@ -50,11 +54,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
-# NoGPU/HostOnly 짝은 **타깃마다** 있을 수 있다 - 이름을 적지 않고 `Test/*/CMakeLists.txt` 에서 찾는다.
-# 예전에는 EngineTest 하나만 보고 있었고, 그래서 다른 타깃이 같은 갈라짐을 만들면 검사 밖이었다
-# (AppTest 가 실기동 스모크를 hostgpu 로 가르면서 실제로 그렇게 됐다).
-_kNoGpuSuffix = "_NoGPU"
-_kHostOnlySuffix = "_HostOnly"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
 
 # 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 실제로 있었고,
@@ -63,9 +62,11 @@ _kCaseRe = re.compile(r"^[ 	]*SW_TEST_CASE\(\s*(\w+)\s*,\s*(\w+)\s*\)", re.M)
 # 위 정규식이 놓치는 표기가 생기면 조용히 줄어들 뿐이라, 토큰을 따로 세어 대조한다.
 _kCaseTokenRe = re.compile(r"\bSW_TEST_CASE\s*\(")
 _kSuiteNameRe = re.compile(r"^[A-Z][A-Za-z0-9]*Test$")
-_kMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:\s*(\S.*)")
-_kFilterRe = re.compile(r"--test_filter=(\S+)")
-_kNamedTestRe = re.compile(r"NAME\s+(\w+)\s+COMMAND\s+\S+\s+--test_filter=(\S+)")
+_kMarkerRe = re.compile(r'^[ \t]*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*,\s*"([^"]*)"\s*\)\s*;', re.M)
+# 선언도 케이스처럼 토큰을 따로 세어 대조한다 - 여러 줄로 쪼갠 표기를 놓치면 그 스위트가 조용히 CI 로 간다.
+_kMarkerTokenRe = re.compile(r"^[ \t]*SW_TEST_REQUIRES_HOST\s*\(", re.M)
+_kLegacyMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:")
+_kHostSplitRe = re.compile(r"\bHOST_SPLIT\b")
 _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cpp)")
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
 
@@ -86,63 +87,39 @@ def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
     return out, missed
 
 
-def collectMarkers(rootDir: Path) -> dict[str, tuple[str, str]]:
-    """스위트 -> (파일, 이유). 마커는 그 스위트가 사는 파일에 적는다."""
+def collectMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """(스위트 -> (파일, 이유), 오류들). 선언은 그 스위트가 사는 파일에 둔다."""
     out: dict[str, tuple[str, str]] = {}
+    errors: list[str] = []
     for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
         relPath = path.relative_to(rootDir).as_posix()
-        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-            match = _kMarkerRe.search(line)
-            if match is not None:
-                out[match.group(1)] = (relPath, match.group(2).strip())
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        parsed = list(_kMarkerRe.finditer(text))
+        for match in parsed:
+            out[match.group(1)] = (relPath, match.group(2).strip())
+        tokenCount = len(_kMarkerTokenRe.findall(text))
+        if tokenCount != len(parsed):
+            errors.append(f"{relPath}: SW_TEST_REQUIRES_HOST 를 {tokenCount}개 썼는데 {len(parsed)}개만 읽혔습니다 "
+                          f"— 한 줄에 `SW_TEST_REQUIRES_HOST( 스위트, \"이유\" );` 로 쓰세요")
+        for legacy in _kLegacyMarkerRe.finditer(text):
+            errors.append(f"{relPath}: 옛 주석 마커 `// SW_TEST_REQUIRES_HOST( {legacy.group(1)} ): ...` 는 아무 효력이 "
+                          f"없습니다 — `SW_TEST_REQUIRES_HOST( {legacy.group(1)}, \"이유\" );` 로 선언하세요")
+    return out, errors
+
+
+def collectHostSplitFolders(rootDir: Path) -> set[str]:
+    """`HOST_SPLIT` 으로 등록하는 테스트 폴더(`Test/<폴더>`). 주석에 적힌 낱말은 세지 않는다."""
+    out: set[str] = set()
+    for path in sorted((rootDir / _kTestRoot).glob("*/CMakeLists.txt")):
+        code = "\n".join(line.split("#", 1)[0] for line in path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if _kHostSplitRe.search(code) is not None:
+            out.add(path.parent.relative_to(rootDir).as_posix())
     return out
 
 
-def collectSplitFilters(rootDir: Path) -> tuple[dict[str, str], dict[str, str], list[str]]:
-    """
-    (NoGPU 가 빼는 스위트 -> 적힌 파일, HostOnly 가 고르는 스위트 -> 적힌 파일, 오류들).
-
-    타깃 이름을 적지 않는다 - `Test/*/CMakeLists.txt` 에서 `<타깃>_NoGPU` · `<타깃>_HostOnly` 등록을
-    찾는다. 한쪽만 있는 타깃은 그 자체가 오류다(빼기만 하면 그 스위트는 아무 데서도 안 돌고,
-    고르기만 하면 CI 에서도 돈다).
-    """
-    excluded: dict[str, str] = {}
-    hostOnly: dict[str, str] = {}
-    errors: list[str] = []
-    listCMake = sorted((rootDir / _kTestRoot).glob("*/CMakeLists.txt"))
-    if not listCMake:
-        return excluded, hostOnly, [f"{_kTestRoot}: 테스트 CMakeLists 를 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)"]
-
-    for path in listCMake:
-        relPath = path.relative_to(rootDir).as_posix()
-        text = " ".join(path.read_text(encoding="utf-8", errors="ignore").split())
-
-        setNoGpuTarget: set[str] = set()
-        setHostOnlyTarget: set[str] = set()
-        for name, rawFilter in _kNamedTestRe.findall(text):
-            if name.endswith(_kNoGpuSuffix):
-                setNoGpuTarget.add(name[: -len(_kNoGpuSuffix)])
-                for token in rawFilter.split(","):
-                    token = token.strip()
-                    if token.startswith("-") and token.endswith(".*"):
-                        excluded[token[1:-2]] = relPath
-            elif name.endswith(_kHostOnlySuffix):
-                setHostOnlyTarget.add(name[: -len(_kHostOnlySuffix)])
-                for token in rawFilter.split(","):
-                    token = token.strip()
-                    if token.endswith(".*") and token.startswith("-") is False:
-                        hostOnly[token[:-2]] = relPath
-
-        for target in sorted(setNoGpuTarget - setHostOnlyTarget):
-            errors.append(f"{relPath}: `{target}{_kNoGpuSuffix}` 는 있는데 `{target}{_kHostOnlySuffix}` 가 없습니다 - "
-                          f"빼기만 하면 그 스위트는 **아무 데서도 안 돕니다**")
-        for target in sorted(setHostOnlyTarget - setNoGpuTarget):
-            errors.append(f"{relPath}: `{target}{_kHostOnlySuffix}` 는 있는데 `{target}{_kNoGpuSuffix}` 가 없습니다 - "
-                          f"고르기만 하면 그 스위트가 **CI 에서도 돕니다**")
-
-    if not excluded and not hostOnly:
-        errors.append(f"{_kTestRoot}: `_NoGPU`/`_HostOnly` 등록을 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)")
-    return excluded, hostOnly, errors
+def testFolderOf(relPath: str) -> str:
+    """`Test/EngineTest/TestRHIDevice.cpp` -> `Test/EngineTest`. 그 폴더의 CMakeLists 가 실행 파일 하나를 만든다."""
+    return "/".join(relPath.split("/")[:2])
 
 
 def checkEditorTestSources(rootDir: Path) -> list[str]:
@@ -204,43 +181,35 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             errors.append(f"스위트 `{suite}` 가 파일 {len(homes[suite])}개에 걸쳐 있습니다 "
                           f"({' · '.join(sorted(homes[suite]))}) — 한 파일로 모으거나 이름을 가르세요")
 
-    # 3) 마커 <-> 필터 양방향
-    markers = collectMarkers(rootDir)
-    excluded, hostOnly, filterErrors = collectSplitFilters(rootDir)
-    errors += filterErrors
-    if excluded or hostOnly:
-        for suite, (relPath, reason) in sorted(markers.items()):
-            if suite not in homes:
-                errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그런 스위트가 없습니다")
-                continue
-            if relPath not in homes[suite]:
-                errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그 스위트는 이 파일에 없습니다 "
-                              f"({' · '.join(sorted(homes[suite]))} 에 있습니다)")
-            if not reason:
-                errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` 에 이유가 없습니다")
-            if suite not in excluded:
-                errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 적혀 있는데 어느 "
-                              f"`*{_kNoGpuSuffix}` 필터도 빼지 않습니다 — **CI 가 이것을 돌리고 있습니다**")
-        for suite in sorted(set(excluded) - set(markers)):
-            where = f" ({' · '.join(sorted(homes[suite]))})" if suite in homes else " (그런 스위트가 없습니다)"
-            errors.append(f"{excluded[suite]}: 필터가 `{suite}` 를 빼는데 그 스위트에 "
-                          f"`SW_TEST_REQUIRES_HOST` 마커가 없습니다{where} — 마커를 달거나 필터에서 지우세요")
-
-        # 3-b) HostOnly 필터 — NoGPU 가 빼는 집합과 **글자 그대로 같아야** 한다.
-        # 빼는 목록과 고르는 목록은 형태가 달라 한 문자열로 못 쓴다. 대신 갈라지면 여기서 선다 —
-        # 갈라진 채로 두면 "CI 가 안 도는 것을 돌려 보는" 명령이 조용히 일부를 빠뜨린다.
-        for suite in sorted(set(excluded) - set(hostOnly)):
-            errors.append(f"{excluded[suite]}: `{suite}` 는 `*{_kNoGpuSuffix}` 가 빼는데 "
-                          f"`*{_kHostOnlySuffix}` 가 고르지 않습니다 — 그 스위트는 **아무 데서도 안 돕니다**")
-        for suite in sorted(set(hostOnly) - set(excluded)):
-            errors.append(f"{hostOnly[suite]}: `{suite}` 는 `*{_kHostOnlySuffix}` 가 고르는데 "
-                          f"`*{_kNoGpuSuffix}` 가 빼지 않습니다 — 두 번 돕니다 (CI 에서도 돕니다)")
+    # 3) 호스트 스위트 선언이 효력이 있는가
+    markers, markerErrors = collectMarkers(rootDir)
+    errors += markerErrors
+    hostSplitFolders = collectHostSplitFolders(rootDir)
+    for suite, (relPath, reason) in sorted(markers.items()):
+        if suite not in homes:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그런 스위트가 없습니다 "
+                          f"(이름을 바꿨다면 선언도 바꾸세요 — 안 그러면 그 스위트가 CI 로 들어갑니다)")
+            continue
+        if relPath not in homes[suite]:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그 스위트는 이 파일에 없습니다 "
+                          f"({' · '.join(sorted(homes[suite]))} 에 있습니다)")
+        if not reason:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` 에 이유가 없습니다")
+        folder = testFolderOf(relPath)
+        if folder not in hostSplitFolders:
+            errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 선언했는데 `{folder}/CMakeLists.txt` 의 "
+                          f"`sw_addTestExecutable` 에 `HOST_SPLIT` 이 없습니다 — **CI 가 이것을 돌립니다**")
+    for folder in sorted(hostSplitFolders - {testFolderOf(relPath) for relPath, _ in markers.values()}):
+        errors.append(f"{folder}/CMakeLists.txt: `HOST_SPLIT` 인데 이 폴더에 `SW_TEST_REQUIRES_HOST` 선언이 하나도 "
+                      f"없습니다 — `_HostOnly` 가 아무것도 돌지 않습니다")
 
     # 4) 마커가 붙은 스위트는 자기 파일을 독차지한다
     suitesByFile: dict[str, set[str]] = defaultdict(set)
     for suite, _, relPath in cases:
         suitesByFile[relPath].add(suite)
     for suite, (relPath, _) in sorted(markers.items()):
+        if suite not in homes:
+            continue  # 위 3) 이 이미 "그런 스위트가 없다" 로 보고했다
         others = sorted(suitesByFile.get(relPath, set()) - {suite})
         if others:
             errors.append(f"{relPath}: `{suite}` 는 CI 가 못 돌리는데 같은 파일에 "
@@ -253,53 +222,81 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     return errors, len(homes), len(cases)
 
 
+# 이 검사가 **통과하는** 가장 작은 저장소 — 호스트 스위트 하나(HOST_SPLIT 폴더) · 평범한 스위트 하나 · EditorTest 목록.
+_kCleanFixture: dict[str, str] = {
+    "Test/EngineTest/CMakeLists.txt": "sw_addTestExecutable(EngineTest\n\tHOST_SPLIT\n)\n",
+    "Test/EngineTest/TestHostProbe.cpp": (
+        'SW_TEST_REQUIRES_HOST( HostProbeTest, "needs a GPU" );\nSW_TEST_CASE( HostProbeTest, One )\n{\n}\n'
+    ),
+    "Test/EngineTest/TestPlainProbe.cpp": "SW_TEST_CASE( PlainProbeTest, One )\n{\n}\n",
+    "Test/EditorTest/CMakeLists.txt": (
+        'sw_addTestExecutable(EditorTest\n\tSOURCES\n\t\t"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Probe.cpp"\n)\n'
+    ),
+    "Source/Editor/Common/Probe.cpp": "int probe() { return 0; }\n",
+}
+
+
 class CheckTestSuitesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "테스트 스위트 규칙 검사"
-    buildComment = "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
+    buildComment = "Checking test suite naming, one-file-per-suite, and that every SW_TEST_REQUIRES_HOST takes effect..."
     timeoutSeconds = 15
     preCommitPattern = ("Test/*",)
+    # 조각마다 **위반 하나만** 넣는다 — 나머지는 깨끗한 바탕(`_kCleanFixture`)이라, 이 검사가 그 바탕에서 통과하는
+    # 한 실패는 넣은 위반 때문이다. 예전 조각들은 바탕부터 다른 규칙(EditorTest 소스 목록이 비었다)에 걸려 있어서
+    # 넣은 규칙이 죽어도 실패했다 — 증거가 아니었다.
     selfTestCases = [
         {
             "name": "스위트 이름이 XxxTest 가 아님",
-            "files": {
-                "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n",
-                "Test/EngineTest/CMakeLists.txt": (
-                    "add_test(\n\tNAME EngineTest_NoGPU\n"
-                    "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
-                ),
-                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
-            },
+            "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n"},
         },
         {
             "name": "한 스위트가 두 파일에",
             "files": {
-                "Test/EngineTest/TestProbeA.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
                 "Test/EngineTest/TestProbeB.cpp": "SW_TEST_CASE( ProbeTest, Two )\n{\n}\n",
-                "Test/EngineTest/CMakeLists.txt": (
-                    "add_test(\n\tNAME EngineTest_NoGPU\n"
-                    "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
-                ),
-                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
             },
         },
         {
-            # NoGPU 가 빼는데 HostOnly 가 안 고르면 그 스위트는 **아무 데서도 안 돈다** —
-            # 이 저장소가 실제로 그 상태였고, Shipping 전용 렌더 결함 둘이 거기 숨어 있었다.
-            "name": "CI 가 빼는 스위트를 HostOnly 도 안 고름",
+            # 선언을 읽는 것은 `HOST_SPLIT` 으로 등록된 실행 파일뿐이다 — 없으면 그 스위트는 CI 에서 돈다.
+            "name": "호스트 선언이 있는데 HOST_SPLIT 이 없음",
             "files": {
+                **_kCleanFixture,
+                "Test/GpuTest/TestGpuProbe.cpp": (
+                    'SW_TEST_REQUIRES_HOST( GpuProbeTest, "needs a GPU" );\nSW_TEST_CASE( GpuProbeTest, One )\n{\n}\n'
+                ),
+                "Test/GpuTest/CMakeLists.txt": "# HOST_SPLIT 은 주석으로만 적혀 있다\nsw_addTestExecutable(GpuTest)\n",
+            },
+        },
+        {
+            # 이름을 바꾸고 선언을 놓치면 선언은 아무것도 빼지 않고, 바뀐 스위트가 CI 로 들어간다.
+            "name": "호스트 선언이 없는 스위트를 가리킴",
+            "files": {
+                **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": (
-                    "// SW_TEST_REQUIRES_HOST( ProbeTest ): GPU 가 필요합니다\n"
-                    "SW_TEST_CASE( ProbeTest, One )\n{\n}\n"
+                    'SW_TEST_REQUIRES_HOST( OldNameTest, "needs a GPU" );\nSW_TEST_CASE( NewNameTest, One )\n{\n}\n'
                 ),
-                "Test/EngineTest/CMakeLists.txt": (
-                    "add_test(\n\tNAME EngineTest_NoGPU\n"
-                    "\tCOMMAND EngineTest --test_filter=-ProbeTest.*\n)\n"
-                    "add_test(\n\tNAME EngineTest_HostOnly\n"
-                    "\tCOMMAND EngineTest --test_filter=RHIDeviceTest.*\n)\n"
+            },
+        },
+        {
+            "name": "호스트 스위트 파일에 다른 스위트가 섞임",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": (
+                    'SW_TEST_REQUIRES_HOST( ProbeTest, "needs a GPU" );\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n'
+                    "SW_TEST_CASE( NeighbourTest, Two )\n{\n}\n"
                 ),
-                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+            },
+        },
+        {
+            "name": "옛 주석 마커",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": (
+                    "// SW_TEST_REQUIRES_HOST( ProbeTest ): GPU 가 필요합니다\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n"
+                ),
             },
         },
     ]
