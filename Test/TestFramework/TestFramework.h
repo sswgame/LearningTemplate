@@ -96,6 +96,14 @@ namespace test
          */
         sw::vector<const TestCaseInfo*> buildRunOrder( uint32 iteration ) const;
 
+        /**
+         * @brief 이 실행이 맡은 케이스 — 고른 케이스(`isSelected`) 중 이 샤드의 것을 등록 순서로.
+         * @details `--test_shard=INDEX/COUNT`(또는 gtest 의 `GTEST_SHARD_INDEX` · `GTEST_TOTAL_SHARDS`)이면 **스위트 안에서 번갈아** 나눈다
+         *          (스위트 번호 + 스위트 안 순번을 COUNT 로 나눈 나머지). 느린 스위트 하나가 실행 시간을 다 차지할 때(ReflectionTest 의 파서 시험)
+         *          그 스위트가 반씩 갈려야 샤드가 의미 있다. 샤드가 하나면 고른 케이스 전부다.
+         */
+        sw::vector<const TestCaseInfo*> selectCasesForThisShard() const;
+
     private:
         /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
         int32 countHostSuiteMismatch() const;
@@ -114,6 +122,8 @@ namespace test
         bool                            _bShuffle{ false };
         bool                            _listOnly{ false };
         bool                            _bAllowEmptySuite{ false };
+        uint32                          _shardIndex{ 0 }; /**< 이 실행의 샤드(0 부터) — `--test_shard=INDEX/COUNT` */
+        uint32                          _shardCount{ 1 }; /**< 샤드 수(1 = 나누지 않는다) */
         bool                            _bInvalidArgument{ false };
     };
 

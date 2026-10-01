@@ -52,6 +52,7 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate c
 py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: finds the exe (Bin/TestBin) and runs it from Bin
 build/Ninja-Debug/Bin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration
 build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order dependence; prints the seed, --test_shuffle=<seed> replays
+build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
 ```
 
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`.
@@ -75,6 +76,11 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order depen
   (no underscore), lives in exactly one file, a host suite has its file to itself, and every
   `SW_TEST_REQUIRES_HOST` sits in a folder whose CMakeLists says `HOST_SPLIT` (otherwise nothing reads it and
   CI runs the suite).
+- **A slow executable is split with `SHARDS <n>`** in `sw_addTestExecutable`: it registers `<Target>_Shard1..n`, each with
+  `--test_shard=<k>/<n>`, and cases are dealt out **within each suite** so one slow suite is halved (`ReflectionTest` — its
+  parser suite was ~21 s of a 30 s limit). A suite split across shards is not judged by the "every case skipped" check, so a
+  suite whose cases skip when a prerequisite is missing keeps one case that asserts the prerequisite
+  (`ReflectionParserTest.ParserExecutableIsBuilt`).
 - Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
 

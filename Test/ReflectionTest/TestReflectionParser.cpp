@@ -1055,3 +1055,14 @@ SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
     SW_EXPECT_TRUE_MSG( generated.find( "AliasedComponentBase" ) == sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "AliasedBaseSampleParent" ) == sw::string::npos, generated.c_str() );
 }
+
+/**
+ * @brief [ReflectionParserTest] 파서 실행 파일이 있다 — 없으면 이 스위트의 다른 케이스는 모두 건너뛰므로, 그 전제를 여기서 단언한다
+ * @details 파서를 못 찾은 케이스는 `SW_TEST_SKIP` 한다. "스위트 전체가 건너뜀" 은 실행 끝의 검사가 잡았지만, ReflectionTest 를 샤드로 나눈 뒤로는
+ *          갈린 스위트를 한 샤드가 판단할 수 없다 — 그래서 전제를 케이스로 둔다.
+ */
+SW_TEST_CASE( ReflectionParserTest, ParserExecutableIsBuilt )
+{
+    SW_EXPECT_TRUE_MSG( findReflectionParserExecutable().empty() == false,
+                        "ReflectionParser executable not found next to the tests (Bin/ · BuildTools/) - the other parser cases skip" );
+}

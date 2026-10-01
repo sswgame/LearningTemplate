@@ -187,6 +187,26 @@ namespace test
         if ( argc > 0 )
             listApplicationArg.push_back( argv[0] );
 
+        // 샤드 — gtest 의 환경 변수도 받는다(아래 `--test_shard=` 가 있으면 그쪽이 이긴다).
+        const auto setShard = [this]( std::string_view indexText, std::string_view countText )
+        {
+            const int32 index = std::atoi( sw::string( indexText ).c_str() );
+            const int32 count = std::atoi( sw::string( countText ).c_str() );
+            if ( count < 1 || index < 0 || index >= count )
+            {
+                _bInvalidArgument = true;
+                std::fprintf( stdout, "Invalid test shard '%s/%s' (expected <index>/<count> with 0 <= index < count)\n", sw::string( indexText ).c_str(),
+                              sw::string( countText ).c_str() );
+                return;
+            }
+            _shardIndex = static_cast<uint32>( index );
+            _shardCount = static_cast<uint32>( count );
+        };
+        const utf8* pShardIndexEnv = std::getenv( "GTEST_SHARD_INDEX" );
+        const utf8* pShardCountEnv = std::getenv( "GTEST_TOTAL_SHARDS" );
+        if ( pShardIndexEnv != nullptr && pShardCountEnv != nullptr )
+            setShard( pShardIndexEnv, pShardCountEnv );
+
         for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
         {
             const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
@@ -255,6 +275,18 @@ namespace test
                 continue;
             }
 
+            constexpr std::string_view kShardPrefix = "--test_shard=";
+            if ( arg.substr( 0, kShardPrefix.size() ) == kShardPrefix )
+            {
+                const std::string_view value = arg.substr( kShardPrefix.size() );
+                const size_t           slash = value.find( '/' );
+                if ( slash == std::string_view::npos )
+                    setShard( value, "" ); // 형식 오류로 보고된다
+                else
+                    setShard( value.substr( 0, slash ), value.substr( slash + 1 ) );
+                continue;
+            }
+
             constexpr std::string_view kHostSuitesPrefix = "--host_suites=";
             if ( arg.substr( 0, kHostSuitesPrefix.size() ) == kHostSuitesPrefix )
             {
@@ -314,11 +346,8 @@ namespace test
         // 확인할 때 쓰는 기능이라, 틀린 답을 주면 그걸 믿고 필터를 잘못 적는다.
         sw::vector<sw::string> listSelected;
         listSelected.reserve( _listTest.size() );
-        for ( const TestCaseInfo& testInfo : _listTest )
-        {
-            if ( isSelected( testInfo ) )
-                listSelected.push_back( testInfo.fullName() );
-        }
+        for ( const TestCaseInfo* pTestInfo : selectCasesForThisShard() )
+            listSelected.push_back( pTestInfo->fullName() );
 
         const uint32 selectedCount = static_cast<uint32>( listSelected.size() );
         const uint32 totalCount    = static_cast<uint32>( _listTest.size() );
@@ -348,15 +377,36 @@ namespace test
         std::fflush( stdout );
     }
 
-    sw::vector<const TestCaseInfo*> TestRegistry::buildRunOrder( uint32 iteration ) const
+    sw::vector<const TestCaseInfo*> TestRegistry::selectCasesForThisShard() const
     {
-        sw::vector<const TestCaseInfo*> listRun;
-        listRun.reserve( _listTest.size() );
+        sw::vector<const TestCaseInfo*> listSelected;
+        listSelected.reserve( _listTest.size() );
+        sw::map<sw::string, sw::pair<uint32, uint32>> mapSuiteOrdinalAndNextIndex; // 스위트 번호, 그 스위트의 다음 순번
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( isSelected( testInfo ) )
-                listRun.push_back( &testInfo );
+            if ( isSelected( testInfo ) == false )
+                continue;
+            if ( _shardCount <= 1 )
+            {
+                listSelected.push_back( &testInfo );
+                continue;
+            }
+            auto suiteIt = mapSuiteOrdinalAndNextIndex.find( testInfo._groupName );
+            if ( suiteIt == mapSuiteOrdinalAndNextIndex.end() )
+            {
+                const uint32 suiteOrdinal = static_cast<uint32>( mapSuiteOrdinalAndNextIndex.size() );
+                suiteIt                   = mapSuiteOrdinalAndNextIndex.emplace( testInfo._groupName, sw::pair<uint32, uint32>{ suiteOrdinal, 0u } ).first;
+            }
+            const uint32 indexInSuite = suiteIt->second.second++;
+            if ( ( suiteIt->second.first + indexInSuite ) % _shardCount == _shardIndex )
+                listSelected.push_back( &testInfo );
         }
+        return listSelected;
+    }
+
+    sw::vector<const TestCaseInfo*> TestRegistry::buildRunOrder( uint32 iteration ) const
+    {
+        sw::vector<const TestCaseInfo*> listRun = selectCasesForThisShard();
         if ( _bShuffle == false )
             return listRun;
 
@@ -478,6 +528,11 @@ namespace test
         if ( filteredOut > 0 )
             SW_LOG_INFO( " Filtered out: %#", filteredOut );
         SW_LOG_INFO( "====================================================" );
+        if ( _shardCount > 1 )
+        {
+            std::fprintf( stdout, "Running shard %u of %u (%u cases)\n", _shardIndex + 1, _shardCount, runnableCount );
+            std::fflush( stdout );
+        }
         if ( _bShuffle )
         {
             // 순서에 기대는 테스트를 찾으려고 섞는다 — 진 순서를 다시 만들 수 있어야 고칠 수 있다.
@@ -545,11 +600,26 @@ namespace test
         // 아무도 모른 채로. 검증 공백은 통과가 아니므로 여기서 실패로 만든다.
         // (2026-09-13 기준 Debug·Release·Shipping 어디에도 통째로 스킵되는 스위트는 없다. 그래서
         //  예외 목록이 없다 — 정말 필요해지면 `--allow_empty_suite` 로 그 실행만 열어 준다.)
+        //
+        // 샤드로 나눴으면 **여러 샤드에 갈린 스위트는 여기서 판단하지 않는다** — 이 샤드가 받은 케이스가 마침 모두 건너뛰는 것이어도 다른
+        // 샤드에서는 검증했을 수 있다. 통째로 이 샤드에 온 스위트만 본다. 갈린 스위트가 "전부 건너뜀" 을 막아야 하면 그 전제를 단언하는
+        // 케이스를 따로 둔다(`ReflectionParserTest.ParserExecutableIsBuilt`).
+        sw::map<sw::string, uint32> mapSuiteSelectedCount;
+        if ( _shardCount > 1 )
+        {
+            for ( const TestCaseInfo& testInfo : _listTest )
+            {
+                if ( isSelected( testInfo ) )
+                    ++mapSuiteSelectedCount[testInfo._groupName];
+            }
+        }
         sw::vector<sw::string> listEmptySuite;
         for ( const sw::string& suiteName : listSuiteOrder )
         {
             const sw::pair<int32, int32>& ranSkipped = mapSuiteRanSkipped[suiteName];
-            if ( ranSkipped.first == 0 && ranSkipped.second > 0 )
+            const uint32                  casesHere  = static_cast<uint32>( ranSkipped.first + ranSkipped.second ) / _repeatCount;
+            const bool                    bSplit     = _shardCount > 1 && mapSuiteSelectedCount[suiteName] > casesHere;
+            if ( ranSkipped.first == 0 && ranSkipped.second > 0 && bSplit == false )
                 listEmptySuite.push_back( suiteName );
         }
 

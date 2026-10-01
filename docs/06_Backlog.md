@@ -2077,6 +2077,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ⑦ 시험 샤드 — ReflectionTest 가 제한 30 초에 붙어 부하에서 넘었다)
+
+ReflectionTest 는 파서를 차례로 띄우는 `ReflectionParserTest`(21 케이스 · ~21 초)가 실행 시간의 거의 전부다(나머지 125 케이스는 0.1 초). 이번 점검에서 파서
+시험이 넷 늘며 단독 26 초가 됐고, 점검 에이전트가 함께 돌던 전체 실행에서 **30 초 제한에 걸렸다**(다시 돌리면 통과 — 부하에 따라 지는 시험).
+- 시험 프레임워크에 샤드: `--test_shard=<k>/<n>`(gtest 의 `GTEST_SHARD_INDEX` · `GTEST_TOTAL_SHARDS` 도). 고른 케이스를 **스위트 안에서 번갈아** 나눈다(스위트 번호 +
+  스위트 안 순번) — 느린 스위트 하나가 반씩 갈려야 의미가 있다. 잘못된 값은 실패로 끝난다. `--test_list` 도 샤드를 따른다.
+- CMake `sw_addTestExecutable( … SHARDS <n> )` 가 `<타깃>_Shard1..n` 을 등록한다(스위트 이름을 적지 않는다). ReflectionTest 는 `SHARDS 2` — 13.4 · 8.4 초.
+- 여러 샤드에 갈린 스위트는 실행 끝의 "모든 케이스가 건너뜀" 검사를 하지 않는다(한 샤드가 판단할 수 없다). 그 검사가 지키던 "파서를 못 찾아 파서
+  시험이 다 건너뜀" 은 `ReflectionParserTest.ParserExecutableIsBuilt` 가 단언한다.
+**검증.** 두 샤드의 `--test_list` 를 합치면 전체 147 케이스와 같고 겹치지 않는다(파서 케이스 11 · 11). `--test_shard=2/2` 는 종료 코드 1. ctest 29 항목 통과.
+CLAUDE.md Test 절에 적었다.
+
 ### 2026-10-01 (결함 ㊳ 입력 — 충돌 해결 리바인딩이 조합 키의 수식 키를 덮고, 방아쇠 · 축 키와의 겹침을 몰랐다)
 
 ㊲ 이 `rebindKey` · `rebindSlot` 만 고쳤고 `ActionMap::rebindWithResolution`(맞바꾸기 · 덮어쓰기 · 보조로 더하기)은 그대로였다. 늘 대상의 **0 번** 슬롯에 써서 Chord

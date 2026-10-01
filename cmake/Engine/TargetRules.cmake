@@ -537,11 +537,17 @@ endfunction()
 #                 문자열로 손으로 적고(빼는 목록 · 고르는 목록) 린트가 주석 마커와 대조했다. 그리고 갈라진
 #                 두 항목 말고 **전체 실행도 하나 더** 등록돼 있어서, 라벨 없는 `ctest` 가 EngineTest 를 두 번 돌았다.
 #   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
+#   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
+#                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
+#                 스위트 이름을 적지 않는다. HOST_SPLIT 과는 아직 함께 쓰지 않는다.
 #   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일. **지금 쓰는 타겟은 없다** — EngineTest · SmokeTest 가 들고 있었지만 겹치면 안 될
 #                 이유(같은 파일 · 같은 장치)가 없어서 2026-10-01 에 걷었다(그 둘의 CMakeLists 참고). 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	if(ARG_SHARDS AND ARG_HOST_SPLIT)
+		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): SHARDS 와 HOST_SPLIT 은 아직 함께 쓰지 않는다")
+	endif()
 
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
@@ -603,6 +609,16 @@ function(sw_addTestExecutable TARGET_NAME)
 	set(runSerial "")
 	if(ARG_RUN_SERIAL)
 		set(runSerial RUN_SERIAL)
+	endif()
+
+	if(NOT ARG_HOST_SPLIT AND ARG_SHARDS AND ARG_SHARDS GREATER 1)
+		math(EXPR lastShard "${ARG_SHARDS} - 1")
+		foreach(shardIndex RANGE 0 ${lastShard})
+			math(EXPR shardNumber "${shardIndex} + 1")
+			sw_registerTestRun(${TARGET_NAME}_Shard${shardNumber} ${TARGET_NAME} ${runSerial}
+				ARGS --test_shard=${shardIndex}/${ARG_SHARDS} LABELS "${labels}" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+		endforeach()
+		return()
 	endif()
 
 	if(NOT ARG_HOST_SPLIT)
