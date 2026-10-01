@@ -1198,3 +1198,66 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
     SW_EXPECT_TRUE_MSG( generated.find( "_bAbstract = 1" ) != sw::string::npos,
                         "include 한 기반이 추상이 됐는데 생성 코드가 옛것(만들 수 있는 타입)으로 남았습니다" );
 }
+
+/**
+ * @brief [ReflectionParserTest] 로컬 parser_config.json 은 커밋된 기본값을 덮지 못한다 — 이 기계에 딸린 키만 받고, 나머지는 경고하고 버린다
+ * @details 셋업이 로컬에 기본값 **전체 사본**을 써 두고 파서는 로컬을 키마다 이기게 읽어, 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 썼다 —
+ *          `flag_ops_marker` 가 바뀐 뒤 옛 로컬 값 때문에 FlagOps 우산이 비어 Engine 빌드가 깨졌다. 여기서는 그 옛 값을 든 로컬 파일로 돌려, 우산이 여전히
+ *          ENUM(Flags) 헤더를 담고 로그가 무시한 키를 말하는지 본다.
+ */
+SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string caseRoot    = test::makeTempPath( "local_config" );
+    const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
+    sw::FileUtil::ensureDirectoryExists( envDir );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    // 파서는 작업 폴더에서 위로 올라가며 설정을 찾는다 — 이 케이스 폴더의 사본이 먼저 잡힌다.
+    for ( const utf8* pName : { "parser_config.defaults.json", "toolchain_config.json" } )
+    {
+        const sw::string source = sw::FileUtil::joinPath( sw::FileUtil::joinPath( projectRoot, "Config/Environment" ), pName );
+        if ( sw::FileUtil::fileExists( source ) == false )
+            SW_TEST_SKIP( "Config/Environment is not set up on this machine (run Scripts/setup/SetupEnvironment.py)" );
+        SW_ASSERT_TRUE( sw::FileUtil::copyFile( source, sw::FileUtil::joinPath( envDir, pName ) ) );
+    }
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( envDir, "parser_config.json" ),
+                                                 "{ \"emit\": { \"flag_ops_marker\": \"operator|\" }, \"default_parser_args\": [] }\n" ) );
+
+    const sw::string headerPath = sw::FileUtil::joinPath( caseRoot, "LocalConfigFlagsSample.h" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, "#pragma once\n"
+                                                             "#include \"Core/Common/Types.h\"\n"
+                                                             "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                             "namespace sw\n"
+                                                             "{\n"
+                                                             "    ENUM( Flags )\n"
+                                                             "    enum class LocalConfigFlagsSample : uint8\n"
+                                                             "    {\n"
+                                                             "        None = 0,\n"
+                                                             "        First = 1,\n"
+                                                             "    };\n"
+                                                             "}\n" ) );
+
+    sw::ProcessOptions options;
+    options._workingDirectory = caseRoot;
+    sw::string  log;
+    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options,
+                                                 SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&log]( sw::string_view line )
+    {
+        log.append( line.data(), line.size() );
+        log.push_back( '\n' );
+    } ) );
+    SW_ASSERT_TRUE_MSG( exitCode == 0, log.c_str() );
+
+    sw::string umbrella;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( outGenDir, "FlagOps.gen.h" ), umbrella ) );
+    SW_EXPECT_TRUE_MSG( umbrella.find( "LocalConfigFlagsSample.gen.h" ) != sw::string::npos,
+                        "로컬의 옛 flag_ops_marker 가 기본값을 덮어 FlagOps 우산이 비었습니다" );
+    SW_EXPECT_TRUE_MSG( log.find( "emit.flag_ops_marker" ) != sw::string::npos, log.c_str() );
+    SW_EXPECT_TRUE_MSG( log.find( "default_parser_args" ) != sw::string::npos, log.c_str() );
+}

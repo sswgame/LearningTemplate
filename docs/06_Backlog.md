@@ -2077,6 +2077,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊹ 리플렉션 파서 · 셋업 — 로컬 parser_config.json 이 커밋된 기본값을 키마다 덮었다)
+
+셋업(`SetupEnvironment.py`)은 로컬 `parser_config.json` 에 **기본값 전체에 로컬을 덮은 사본**을 썼고, 파서는 로컬을 키마다 이기게 읽었다. 그래서 나중에
+커밋된 기본값(`parser_config.defaults.json`)을 고쳐도 그 기계는 셋업 때의 옛 값을 계속 썼다 — `flag_ops_marker` 가 바뀐 뒤 옛 로컬 값 때문에 FlagOps 우산이
+비어 Engine 빌드가 깨진 일(기억: stale-flagops-gen-engine-build-break)이 그것이다. 이 PC 의 로컬 파일도 이미 어긋나 있었다(`emit.value_forbidden_message` ·
+`parser_args.default`, 옛 이름 `default_parser_args` · `platform_parser_args`).
+- 파서(`ParserConfig::load` → `keepMachineLocalKeys`): 로컬에서는 **이 기계에 딸린 키만** 받는다 — `paths.*` · `parser_args.extra` · `parser_args.force_include`.
+  나머지는 기본값과 다르면 파일 · 키를 말하는 경고와 함께 버린다(기본값이 이긴다). 기본값에 없는 키(옛 이름)도 알린다.
+- 셋업: 로컬 파일에 그 허용된 키 중 **기본값과 다른 것만** 쓴다(이 PC 는 `{}`). 나머지는 모두 기본값 파일에서 온다.
+- 이 PC 의 로컬 파일을 새 셋업 규칙으로 다시 썼다(옛 파일은 스크래치에 백업) — 그 전에는 빌드마다 대상 수만큼(11) 경고 넷이 찍혔고, 다시 쓴 뒤로는 0.
+**검증.** `ReflectionParserTest.LocalConfigCannotOverrideCommittedDefaults` — 케이스 폴더에 기본값 · 툴체인 사본과 옛 `flag_ops_marker`("operator|") · 옛 키를 든
+로컬 파일을 두고 그 폴더에서 파서를 돌리면, FlagOps 우산이 ENUM(Flags) 헤더를 담고 로그가 무시한 키 둘을 말한다. 로컬이 이기던 옛 동작으로 되돌리는 변이에서
+우산이 비어 실패했다.
+
 ### 2026-10-01 (결함 ㊸ 리플렉션 파서 · CMake — 반사된 헤더가 include 한 헤더가 바뀌어도 생성 코드가 낡은 채 남았다)
 
 생성 코드는 입력 헤더만이 아니라 그 헤더가 include 한 헤더에도 기댄다 — 예를 들어 반사되지 않은 기반 클래스에 순수 가상 함수가 생기면 파생 타입은 추상이

@@ -199,6 +199,61 @@ namespace sw
                 config._sourceLookbackBytes = getUintOrDefault( obj, jsonKeyConstants::kSourceLookbackBytes, config._sourceLookbackBytes );
             }
 
+            /**
+             * @brief 로컬 문서에서 **이 기계에 딸린 키만** 남깁니다 — `paths.*` 와 `parser_args.extra` · `parser_args.force_include`.
+             * @details 나머지 키는 기본값과 다르면 경고하고 버린다(기본값이 이긴다). 예전에는 로컬이 키마다 이겼는데, 셋업이 로컬에 기본값 **전체 사본**을
+             *          써 두므로 나중에 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 썼다 — `flag_ops_marker` 가 바뀐 뒤 옛 로컬 값 때문에 FlagOps
+             *          우산이 비어 Engine 빌드가 깨진 일이 그것이다. 기본값에 없는 키(옛 이름)도 알린다.
+             */
+            static nlohmann::json keepMachineLocalKeys( const nlohmann::json& defaultsDoc, const nlohmann::json& localDoc, const string& localPath )
+            {
+                nlohmann::json kept = nlohmann::json::object();
+                if ( localDoc.is_object() == false )
+                    return kept;
+                for ( auto sectionIt = localDoc.begin(); sectionIt != localDoc.end(); ++sectionIt )
+                {
+                    const std::string& section = sectionIt.key();
+                    if ( section == jsonKeyConstants::kPaths )
+                    {
+                        kept[section] = sectionIt.value();
+                        continue;
+                    }
+                    const auto defaultsIt = defaultsDoc.is_object() ? defaultsDoc.find( section ) : defaultsDoc.end();
+                    if ( defaultsIt == defaultsDoc.end() )
+                    {
+                        SW_LOG_WARNING( "%#: '%#' is not a parser setting (an old name?) and is ignored - remove it", localPath, section.c_str() );
+                        continue;
+                    }
+                    if ( sectionIt.value().is_object() == false || defaultsIt->is_object() == false )
+                    {
+                        if ( *defaultsIt != sectionIt.value() )
+                            SW_LOG_WARNING( "%#: '%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra and "
+                                            "parser_args.force_include are local settings",
+                                            localPath, section.c_str() );
+                        continue;
+                    }
+                    for ( auto keyIt = sectionIt.value().begin(); keyIt != sectionIt.value().end(); ++keyIt )
+                    {
+                        const std::string& key           = keyIt.key();
+                        const bool         bMachineLocal = section == jsonKeyConstants::kParserArgsSection &&
+                                                   ( key == jsonKeyConstants::kArgsExtra || key == jsonKeyConstants::kArgsForceInclude );
+                        if ( bMachineLocal )
+                        {
+                            kept[section][key] = keyIt.value();
+                            continue;
+                        }
+                        const auto defaultIt = defaultsIt->find( key );
+                        if ( defaultIt == defaultsIt->end() || *defaultIt != keyIt.value() )
+                        {
+                            SW_LOG_WARNING( "%#: '%#.%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra "
+                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/SetupEnvironment.py)",
+                                            localPath, section.c_str(), key.c_str() );
+                        }
+                    }
+                }
+                return kept;
+            }
+
             using ApplyFn = void ( * )( ParserConfig&, const nlohmann::json& );
 
             /** @brief 기본값 문서 다음 로컬 문서 순으로 한 섹션을 덮어씁니다(로컬이 이긴다). */
@@ -336,7 +391,10 @@ namespace sw
 #endif
 
         const nlohmann::json defaultsDoc = ParserConfigInternal::loadDocument( pathConstants::kParserConfigDefaults, _listLoadedFile );
-        const nlohmann::json localDoc    = ParserConfigInternal::loadDocument( pathConstants::kParserConfig, _listLoadedFile );
+        // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
+        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys(
+            defaultsDoc, ParserConfigInternal::loadDocument( pathConstants::kParserConfig, _listLoadedFile ),
+            ParserConfigInternal::findConfigFile( pathConstants::kParserConfig ) );
 
         BLOCK( "Load Base Arguments from Config" )
         {

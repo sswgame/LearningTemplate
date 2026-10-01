@@ -54,7 +54,6 @@ from common import (
     kKeyWindowsSdkVersion,
     loadSearchPaths,
     loadToolchainConfig,
-    mergeJsonDictInternal,
     normalizePath,
     readJsonDictInternal,
 )
@@ -284,7 +283,13 @@ class EnvironmentSetupManager:
         return config
 
     def updateParserConfigInternal(self, targetOs: str) -> None:
-        """parser_config.defaults.json 과 로컬 parser_config.json을 병합하여 갱신합니다."""
+        """
+        로컬 parser_config.json 에 **이 기계에 딸린 값만** 씁니다 — paths.* 와 parser_args.extra · force_include 중 기본값과 다른 것.
+
+        예전에는 기본값 전체에 로컬을 덮은 사본을 썼고, 파서는 로컬을 키마다 이기게 읽었다. 그래서 나중에 커밋된 기본값을 고쳐도
+        이 기계는 옛 값을 계속 썼다(flag_ops_marker 가 바뀐 뒤 Engine 빌드가 깨진 일). 파서도 같은 규칙으로 읽는다
+        (ParserConfig::load — 다른 키는 경고하고 버린다). 나머지는 모두 parser_config.defaults.json 에서 온다.
+        """
         defaultsFile = self.project_root / kDirConfigEnv / kFileParserDefaults
         if not defaultsFile.is_file():
             self.logger.error(f"[SetupEnvironment] Required defaults config not found: {defaultsFile}")
@@ -300,54 +305,29 @@ class EnvironmentSetupManager:
         seed = normalizeParserConfigInternal(seedRaw)
         local = normalizeParserConfigInternal(localRaw)
 
-        managedKeys = (
-            kKeyParserArgsSection,
-            kKeyPaths,
-            kKeyClangFlags,
-            kKeyEmit,
-            kKeyTuning,
-        )
-        localPassthrough = {key: value for key, value in local.items() if key not in managedKeys}
-        parserData = mergeJsonDictInternal(seed, localPassthrough)
-
         seedArgs = asDictInternal(seed.get(kKeyParserArgsSection))
         localArgs = asDictInternal(local.get(kKeyParserArgsSection))
-        seedPlatform = asDictInternal(seedArgs.get(kKeyParserArgsPlatform))
-        localPlatform = asDictInternal(localArgs.get(kKeyParserArgsPlatform))
+        argsData: dict[str, list[str]] = {}
+        for listKey in (kKeyParserArgsExtra, kKeyParserArgsForceInclude):
+            seedItems = set(unionStrListInternal(seedArgs.get(listKey), []))
+            localOnly = [item for item in unionStrListInternal(localArgs.get(listKey), []) if item not in seedItems]
+            if localOnly:
+                argsData[listKey] = localOnly
 
-        mergedArgs = {
-            kKeyParserArgsDefault: unionStrListInternal(
-                seedArgs.get(kKeyParserArgsDefault), localArgs.get(kKeyParserArgsDefault)
-            ),
-            kKeyParserArgsPlatform: {
-                osKey: unionStrListInternal(seedPlatform.get(osKey), localPlatform.get(osKey))
-                for osKey in set(seedPlatform.keys()) | set(localPlatform.keys())
-            },
-            kKeyParserArgsExtra: unionStrListInternal(
-                seedArgs.get(kKeyParserArgsExtra), localArgs.get(kKeyParserArgsExtra)
-            ),
-            kKeyParserArgsForceInclude: unionStrListInternal(
-                seedArgs.get(kKeyParserArgsForceInclude), localArgs.get(kKeyParserArgsForceInclude)
-            ),
-        }
-        parserData[kKeyParserArgsSection] = mergedArgs
-        parserData[kKeyPaths] = mergeJsonDictInternal(
-            asDictInternal(seed.get(kKeyPaths)), asDictInternal(local.get(kKeyPaths))
-        )
-        parserData[kKeyClangFlags] = mergeJsonDictInternal(
-            asDictInternal(seed.get(kKeyClangFlags)), asDictInternal(local.get(kKeyClangFlags))
-        )
-        parserData[kKeyEmit] = mergeJsonDictInternal(
-            asDictInternal(seed.get(kKeyEmit)), asDictInternal(local.get(kKeyEmit))
-        )
-        parserData[kKeyTuning] = mergeJsonDictInternal(
-            asDictInternal(seed.get(kKeyTuning)), asDictInternal(local.get(kKeyTuning))
-        )
+        seedPaths = asDictInternal(seed.get(kKeyPaths))
+        localPaths = {key: value for key, value in asDictInternal(local.get(kKeyPaths)).items() if seedPaths.get(key) != value}
+
+        parserData: dict[str, Any] = {}
+        if argsData:
+            parserData[kKeyParserArgsSection] = argsData
+        if localPaths:
+            parserData[kKeyPaths] = localPaths
 
         self.parser_config_file.write_text(json.dumps(parserData, indent=4), encoding="utf-8")
         self.logger.info(
             f"[SetupEnvironment] Wrote {kDirConfigEnv}/{kFileParserConfig} "
-            f"(platform '{targetOs}', default args={len(mergedArgs[kKeyParserArgsDefault])})."
+            f"(platform '{targetOs}', machine-local: {len(localPaths)} path(s), {len(argsData)} argument list(s); "
+            f"everything else comes from {kFileParserDefaults})."
         )
 
 
