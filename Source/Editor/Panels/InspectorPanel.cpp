@@ -624,17 +624,27 @@ namespace sw::editor
         if ( pRegistry == nullptr )
             return;
 
-        int32* pEnumValue = prop.getValuePtr<int32>( pInstance );
-        if ( pEnumValue == nullptr )
+        // **enum 의 실제 크기로** 읽고 쓴다(`EnumInfo::_size` · 부호). 예전에는 늘 int32 로 읽고 썼다 — 엔진의 enum 은 대부분 uint8 ·
+        // uint16 이라, 하나를 고를 때마다 뒤의 필드를 덮었고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼졌다),
+        // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 떴다.
+        void* pEnumMemory = prop.getValuePtr<void>( pInstance );
+        if ( pEnumMemory == nullptr )
             return;
+        const int64 currentValue = enumInfo.readValueFromMemory( pEnumMemory );
+        int64       editedValue  = currentValue;
+        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, pLabel]()
+        {
+            if ( editedValue != currentValue )
+                enumInfo.writeValueToMemory( pEnumMemory, editedValue );
+            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, pLabel );
+        };
 
         if ( enumInfo._bIsBitFlag )
         {
             string previewStr;
             for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
             {
-                const int32 val32 = static_cast<int32>( val );
-                if ( val32 != 0 && ( *pEnumValue & val32 ) == val32 )
+                if ( val != 0 && ( currentValue & val ) == val )
                 {
                     if ( previewStr.empty() == false )
                         previewStr += " | ";
@@ -642,7 +652,7 @@ namespace sw::editor
                 }
             }
             if ( previewStr.empty() )
-                previewStr = ( *pEnumValue == 0 ) ? "None" : "<Unknown>";
+                previewStr = ( currentValue == 0 ) ? "None" : "<Unknown>";
 
             if ( bReadOnly )
             {
@@ -657,34 +667,33 @@ namespace sw::editor
                 if ( ImGui::SmallButton( "Select All" ) )
                 {
                     for ( const auto& [val, _] : enumInfo._mapValueToName )
-                        *pEnumValue |= static_cast<int32>( val );
+                        editedValue |= val;
                 }
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Clear All" ) )
-                    *pEnumValue = 0;
+                    editedValue = 0;
                 ImGui::Separator();
 
                 for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
                 {
-                    const int32 val32 = static_cast<int32>( val );
-                    if ( val32 == 0 )
+                    if ( val == 0 )
                         continue;
-                    bool bChecked = ( ( *pEnumValue & val32 ) == val32 );
+                    bool bChecked = ( ( editedValue & val ) == val );
                     if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
                     {
                         if ( bChecked )
-                            *pEnumValue |= val32;
+                            editedValue |= val;
                         else
-                            *pEnumValue &= ~val32;
+                            editedValue &= ~val;
                     }
                 }
                 ImGui::EndCombo();
             }
-            InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
+            commitEdit();
             return;
         }
 
-        const utf8* pName = pRegistry->enumToString( prop._typeName, *pEnumValue );
+        const utf8* pName = pRegistry->enumToString( prop._typeName, currentValue );
         if ( bReadOnly )
         {
             ImGui::TextDisabled( "%s", pLabel );
@@ -699,17 +708,15 @@ namespace sw::editor
         {
             for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
             {
-                const int32 val32     = static_cast<int32>( val );
-                const utf8* name      = nameHashed.c_str();
-                bool        bSelected = ( val32 == *pEnumValue );
-                if ( ImGui::Selectable( name, bSelected ) )
-                    *pEnumValue = val32;
+                const bool bSelected = ( val == currentValue );
+                if ( ImGui::Selectable( nameHashed.c_str(), bSelected ) )
+                    editedValue = val;
                 if ( bSelected )
                     ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
         }
-        InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
+        commitEdit();
         return;
     }
 

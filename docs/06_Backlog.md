@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑨ 에디터 인스펙터 — enum 을 늘 int32 로 읽고 써서 뒤의 필드를 덮었다)
+
+`InspectorPanel::drawEnumProperty` 가 `prop.getValuePtr<int32>()` 로 읽고 `*pEnumValue = val32` · `|=` · `&=` 로 썼다. 엔진의 reflected enum 은
+대부분 `uint8` · `uint16` 이라, 하나를 고를 때마다 그 뒤 세 바이트를 덮었다 — `CameraComponent::_role`(uint8)을 고르면 바로 뒤의
+`_bOrthographic` 이 꺼졌다. 읽을 때도 이웃 바이트가 섞여(`_bOrthographic` 이 켜져 있으면 `role | 0x100`) 멀쩡한 값이 "<Unknown>" 으로 떴다.
+
+**고침.** `EnumInfo::readValueFromMemory` · `writeValueToMemory`(크기 · 부호 — 결함 ⑧)로 int64 를 읽고, 콤보에서 바꾼 값만 그 크기로 되쓴다.
+되돌리기 추적(`trackPod`)도 enum 의 크기를 넘긴다. 직렬화기는 처음부터 이 두 함수를 썼다 — 인스펙터만 따로 int32 였다.
+**검증.** 인스펙터는 ImGui 를 헤드리스로 그릴 시험 틀이 없어 이 단위에 시험이 없다. 쓰는 두 함수는 결함 ⑧ 의 시험이 덮는다. 같은 모양
+(`getValuePtr<int32>` 로 enum 을 읽는 곳)은 트리에 여기뿐이었다.
+
 ### 2026-10-01 (결함 ⑧ 리플렉션 — 좁은 enum 의 높은 비트 · 음수 값이 이름을 잃었다)
 
 코드젠은 열거자 값을 libclang 의 **부호 있는** 64 비트 값(`clang_getEnumConstantDeclValue`)으로 박았고, 런타임
