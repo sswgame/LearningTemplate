@@ -131,6 +131,17 @@ namespace
 
         uint32 _writeCount{ 0 };
     };
+
+    /** @brief 받은 줄의 완성된 글(`LogRecord::_formatted` — 파일 · 콘솔이 쓰는 그것)을 모으는 시험용 출력 장치. */
+    class CapturingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        bool open() override { return true; }
+        void close() override {}
+        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+
+        sw::vector<sw::string> _listFormatted;
+    };
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -524,4 +535,26 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
 
     SW_EXPECT_EQUAL( 0, releasedValue );
     SW_EXPECT_EQUAL( 10, keptValue );
+}
+
+/**
+ * @brief [LogTest] 잘못된 UTF-8 바이트가 섞인 줄은 그 바이트만 백슬래시 + `xNN` 이 되고, 나머지(한글 포함)는 그대로 파일 · 콘솔에 간다
+ * @details 예전에는 한 바이트만 틀려도 줄 전체를 로캘 변환했다. 아무도 `setlocale` 을 부르지 않아 C 로캘이라, Windows 에서는 멀쩡한 한글까지
+ *          바이트마다 다른 글자로 깨졌고 glibc 에서는 변환이 실패해 줄이 통째로 비었다.
+ */
+SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
+{
+    sw::Logger logger;
+    logger.initialize();
+    sw::unique_ptr<CapturingLogOutput> output   = sw::make_unique<CapturingLogOutput>();
+    CapturingLogOutput*                pCapture = output.get();
+    SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
+
+    logger.writeLog( sw::LogLevel::Error, "Test", "Utf8", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end"
+    logger.shutdown();
+
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    const sw::string& line = pCapture->_listFormatted[0];
+    SW_EXPECT_TRUE_MSG( line.find( "\xED\x95\x9C\xEA\xB8\x80 \\xFF end" ) != sw::string::npos, line.c_str() );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( line.c_str() ) );
 }

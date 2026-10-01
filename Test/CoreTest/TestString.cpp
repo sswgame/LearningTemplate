@@ -1584,3 +1584,18 @@ SW_TEST_CASE( StringTest, FloatParsersAcceptOnlyFiniteNumbersWithOneSign )
         SW_EXPECT_FALSE_MSG( sw::StringUtil::parseDouble( pBad, value64 ), pBad );
     }
 }
+
+/**
+ * @brief [StringTest] 잘못된 UTF-8 바이트만 백슬래시 + `xNN` 으로 바뀌고 올바른 글자(한글 포함)는 그대로다 — 로그 한 줄이 통째로 깨지지 않는다
+ * @details 로그는 한 바이트만 틀려도 줄 전체를 로캘 변환했다 — C 로캘이라 Windows 에서는 한글까지 깨졌고 glibc 에서는 줄이 비었다.
+ */
+SW_TEST_CASE( StringTest, EscapeInvalidUtf8KeepsValidText )
+{
+    const sw::string mixed = sw::StringUtil::escapeInvalidUtf8( "\xED\x95\x9C\xEA\xB8\x80 \xFF ok \xC3" ); // "한글 <FF> ok <잘린 2바이트>"
+    SW_EXPECT_STREQ( "\xED\x95\x9C\xEA\xB8\x80 \\xFF ok \\xC3", mixed.c_str() );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( mixed.c_str() ) );
+
+    SW_EXPECT_STREQ( "plain ascii", sw::StringUtil::escapeInvalidUtf8( "plain ascii" ).c_str() );
+    SW_EXPECT_STREQ( "\\xC0\\xAF", sw::StringUtil::escapeInvalidUtf8( "\xC0\xAF" ).c_str() );          // overlong '/'
+    SW_EXPECT_STREQ( "\\xED\\xA0\\x80", sw::StringUtil::escapeInvalidUtf8( "\xED\xA0\x80" ).c_str() ); // 서로게이트
+}

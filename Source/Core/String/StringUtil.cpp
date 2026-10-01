@@ -1105,6 +1105,31 @@ namespace sw
         return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( pInput ), strlen( pInput ) );
     }
 
+    string StringUtil::escapeInvalidUtf8( string_view text )
+    {
+        constexpr utf8 kHexDigit[] = "0123456789ABCDEF";
+        string         result;
+        result.reserve( text.size() + 16 );
+        size_t pos = 0;
+        while ( pos < text.size() )
+        {
+            const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + pos, text.size() - pos );
+            if ( decoded._bValid )
+            {
+                result.append( text.data() + pos, decoded._byteCount );
+                pos += decoded._byteCount;
+                continue;
+            }
+            // 잘못된 바이트 하나를 `\xNN` 으로. 디코더가 몇 바이트를 묶었든 첫 바이트만 적고 한 칸 간다 — 뒤 바이트가 올바른 글자의 시작일 수 있다.
+            const uint8 byte = static_cast<uint8>( text[pos] );
+            result.append( "\\x" );
+            result.push_back( kHexDigit[byte >> 4] );
+            result.push_back( kHexDigit[byte & 0x0F] );
+            ++pos;
+        }
+        return result;
+    }
+
     StringChangeSpan StringUtil::makeChangeSpan( string_view before, string_view after )
     {
         StringChangeSpan span{};

@@ -72,6 +72,12 @@ namespace sw
 
         /** @brief 바이트열이 올바른 UTF-8 인지 검사합니다. */
         static bool isValidUtf8( const utf8* pInput );
+        /**
+         * @brief 올바른 UTF-8 은 그대로 두고, 잘못된 바이트만 백슬래시 + `xNN`(16진 두 자리) 넉 자로 바꿉니다. 결과는 늘 올바른 UTF-8 입니다.
+         * @details 로그가 이것을 쓴다. 예전에는 한 바이트만 틀려도 **줄 전체**를 로캘 변환했는데, `setlocale` 을 부르는 곳이 없어 C 로캘이라
+         *          Windows 에서는 멀쩡한 한글까지 깨졌고 glibc 에서는 줄이 통째로 비었다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
+         */
+        static string escapeInvalidUtf8( string_view text );
 
         /** @brief UTF-8 문자열을 UTF-16(sw::wstring)으로 바꿉니다. */
         static wstring utf8ToUtf16( const utf8* pInput );

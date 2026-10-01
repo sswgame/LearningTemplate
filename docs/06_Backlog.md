@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉕ Core — 잘못된 UTF-8 한 바이트에 로그 한 줄이 통째로 깨졌다)
+
+Logger 는 완성된 줄이 UTF-8 이 아니면 **줄 전체**를 `StringUtil::localeToUtf8` 로 바꿨다. 저장소 어디에도 `setlocale` 이 없어 C 로캘이고, 그래서
+Windows 에서는 멀쩡한 한글까지 바이트마다 다른 글자로 깨졌고(`한글` → `챠혮혵챗쨍`), glibc 에서는 `mbstowcs` 가 실패해 줄이 비었다. 바이트 하나(잘린
+경로 · 남의 라이브러리가 준 CP949 글)가 그 줄의 나머지를 지운 셈이다 — 원인을 찾으려고 보는 바로 그 줄이.
+`StringUtil::escapeInvalidUtf8` — 올바른 글자는 그대로 두고 잘못된 바이트만 백슬래시 + `xNN` 으로 적는다(결과는 늘 올바른 UTF-8, 무슨 바이트였는지
+남는다). Logger 의 대체 경로가 이것을 쓴다. 리스너(에디터 콘솔)가 받는 `LogEntry::_message` 는 예전처럼 원문이다.
+**검증.** `StringTest.EscapeInvalidUtf8KeepsValidText`(한글 + `FF` + 잘린 2바이트, overlong, 서로게이트), `LogTest.InvalidUtf8ByteIsEscapedNotTheWholeLine`
+(로거에 출력 장치를 달아 파일 · 콘솔이 받는 완성된 줄을 본다). Logger 를 옛 로캘 변환으로 되돌리는 변이에서 실패했다 — 그때 찍힌 줄이 바로 위의
+`챠혮혵챗쨍` 이다.
+
 ### 2026-10-01 (결함 ㉔ 리플렉션 — 기반을 다시 등록 · 해제해도 파생 타입은 옛 기반의 프로퍼티를 냈다)
 
 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록은 그 타입 자신의 캐시만 비웠고(대입의 `invalidateDerivedCaches`),

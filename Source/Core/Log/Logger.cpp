@@ -480,12 +480,13 @@ namespace sw
                           dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
         }
 
-        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, UTF-8 이 아니면(ANSI/CP949 한글 등) 안전하게 변환한다
+        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 예전에는 줄 전체를 로캘
+        //        변환했는데 C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 비었다(glibc).
         string      fallbackUtf8;
         const utf8* pFormattedBuffer = formattedBuffer.c_str();
         if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
         {
-            fallbackUtf8     = StringUtil::localeToUtf8( pFormattedBuffer );
+            fallbackUtf8     = StringUtil::escapeInvalidUtf8( string_view{ pFormattedBuffer } );
             pFormattedBuffer = fallbackUtf8.c_str();
         }
 
