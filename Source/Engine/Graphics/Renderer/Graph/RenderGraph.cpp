@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -254,9 +255,22 @@ namespace sw
 
         if ( _listCompiledExecutionOrder.size() != listActiveIndex.size() )
         {
-            SW_LOG_WARNING( "Cycle detected during compile — %#/%# active passes scheduled.",
-                            static_cast<uint32>( _listCompiledExecutionOrder.size() ),
-                            static_cast<uint32>( listActiveIndex.size() ) );
+            // 무엇이 무엇을 기다리다 남았는지 이름으로 적는다. 예전에는 "몇 개 중 몇 개" 뿐이라 파이프라인 XML 의 입출력을 손으로 따라가야
+            // 했다. 남은 패스는 진입 차수가 0 이 되지 못한 것이고, 그 사이의 간선이 순환(과 그 뒤에 매달린 패스)이다.
+            StringBuilder<constant::kMaxBuffer4096> waits;
+            for ( const auto& [producerIndex, listConsumer] : adjacency )
+            {
+                if ( mapInDegree[producerIndex] == 0 )
+                    continue;
+                for ( size_t consumerIndex : listConsumer )
+                {
+                    if ( mapInDegree[consumerIndex] > 0 )
+                        waits.appendFormat( "\n  '%#' waits on '%#'", _listNode[consumerIndex]._name.c_str(), _listNode[producerIndex]._name.c_str() );
+                }
+            }
+            SW_LOG_ERROR( "Render graph has a cycle - %#/%# active passes scheduled; these wait on each other "
+                          "(a pass reads what a later pass writes, which reads this one's output):%#",
+                          static_cast<uint32>( _listCompiledExecutionOrder.size() ), static_cast<uint32>( listActiveIndex.size() ), waits.c_str() );
             _listCompiledExecutionOrder.clear();
             _listCompiledLevel.clear();
             return false;
@@ -515,6 +529,48 @@ namespace sw
     /**
      * @brief 그래프 구성을 Mermaid 다이어그램 텍스트로 내보냅니다.
      */
+    string RenderGraph::describeCompiledOrder() const
+    {
+        if ( _listCompiledLevel.empty() )
+            return "render graph: not compiled (or the last compile failed)\n";
+
+        StringBuilder<constant::kMaxBuffer8192> out;
+        out.appendFormat( "render graph: %# passes in %# levels (passes in one level record in parallel)\n",
+                          static_cast<uint32>( _listCompiledExecutionOrder.size() ), static_cast<uint32>( _listCompiledLevel.size() ) );
+        const auto appendNames = [&out]( const vector<hashed_string>& listName )
+        {
+            for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
+                out.appendFormat( "%#%#", nameIndex == 0 ? "" : ", ", listName[nameIndex].c_str() );
+        };
+        for ( size_t levelIndex = 0; levelIndex < _listCompiledLevel.size(); ++levelIndex )
+        {
+            out.appendFormat( "  level %#\n", static_cast<uint32>( levelIndex ) );
+            for ( const hashed_string& passName : _listCompiledLevel[levelIndex] )
+            {
+                const auto nodeIt = std::find_if( _listNode.begin(), _listNode.end(), [&passName]( const RenderGraphNode& node )
+                { return node._name == passName; } );
+                out.appendFormat( "    %#", passName.c_str() );
+                if ( nodeIt == _listNode.end() )
+                {
+                    out.append( "\n" );
+                    continue;
+                }
+                out.append( "  reads [" );
+                appendNames( nodeIt->_listInput );
+                out.append( "] writes [" );
+                appendNames( nodeIt->_listOutput );
+                out.append( "]\n" );
+            }
+        }
+        // 컬링된 패스도 적는다 — "왜 이 패스가 안 도나" 의 답이다.
+        for ( const RenderGraphNode& node : _listNode )
+        {
+            if ( node._bCulled )
+                out.appendFormat( "  culled: %# (nothing reads what it writes)\n", node._name.c_str() );
+        }
+        return string( out.c_str() );
+    }
+
     string RenderGraph::exportToMermaid() const
     {
         string result = "graph TD\n";

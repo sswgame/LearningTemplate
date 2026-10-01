@@ -271,6 +271,13 @@ namespace sw
         /** @brief 디버깅 · 시각화를 위해 지금 그래프 구성을 Mermaid 다이어그램 텍스트로 내보냅니다. */
         string exportToMermaid() const;
 
+        /**
+         * @brief 컴파일된 순서를 레벨마다 사람이 읽는 글로 돌려줍니다(레벨 · 패스 · 읽는 자원 · 쓰는 자원).
+         * @details `exportToMermaid` 는 그래프 **구성**이고, 이것은 그 **결과** — 무엇이 어떤 순서로, 무엇과 같은 레벨에서 나란히 기록되는가
+         *          — 다. "왜 이 패스가 저 패스보다 먼저 도나" 를 물을 곳이 없었다. `-gv_dumpRenderGraph` 가 이것을 로그로 남긴다.
+         */
+        string describeCompiledOrder() const;
+
         /** @brief 디버깅을 위해 지금 그래프 구성을 Graphviz DOT 다이어그램 텍스트로 내보냅니다. */
         string exportToDot() const;
 

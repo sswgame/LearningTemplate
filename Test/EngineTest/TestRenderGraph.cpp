@@ -192,3 +192,47 @@ SW_TEST_CASE( RenderGraphTest, DuplicatePassNameIsRejected )
     SW_EXPECT_EQUAL( 1u, firstCount );
     SW_EXPECT_EQUAL( 0u, secondCount );
 }
+
+/**
+ * @brief [RenderGraphTest] 순환이면 서로 기다리는 패스를 이름으로 말한다 — "몇 개 중 몇 개" 가 아니라
+ * @details A 가 X 를 읽고 Y 를 쓰고, B 가 Y 를 읽고 X 를 쓰면 둘은 서로를 기다린다. 예전 경고는 `Cycle detected during compile — 1/3 active passes
+ *          scheduled.` 뿐이라 파이프라인 XML 의 입출력을 손으로 따라가야 했다.
+ */
+SW_TEST_CASE( RenderGraphTest, CycleNamesThePassesThatWaitOnEachOther )
+{
+    sw::RenderGraph         graph;
+    const sw::hashed_string resourceX( "CycleX" );
+    const sw::hashed_string resourceY( "CycleY" );
+    graph.addPass( sw::hashed_string( "Free" ), {}, { sw::hashed_string( "FreeOut" ) } );
+    graph.addPass( sw::hashed_string( "LoopA" ), { resourceX }, { resourceY } );
+    graph.addPass( sw::hashed_string( "LoopB" ), { resourceY }, { resourceX } );
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a render graph whose passes wait on each other" );
+        SW_EXPECT_FALSE( graph.compile() );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'LoopA' waits on 'LoopB'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'LoopB' waits on 'LoopA'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'Free'" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE( graph.describeCompiledOrder().find( "not compiled" ) != sw::string::npos );
+}
+
+/**
+ * @brief [RenderGraphTest] 컴파일된 순서를 레벨 · 패스 · 읽고 쓰는 자원으로 적는다(`-gv_dumpRenderGraph` 가 로그로 남기는 글)
+ */
+SW_TEST_CASE( RenderGraphTest, DescribeCompiledOrderListsLevelsAndResources )
+{
+    sw::RenderGraph         graph;
+    const sw::hashed_string sceneColor( "SceneColor" );
+    graph.addPass( sw::hashed_string( "Geometry" ), {}, { sceneColor } );
+    graph.addPass( sw::hashed_string( "Bloom" ), { sceneColor }, { sw::hashed_string( "BloomOut" ) } );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    const sw::string text = graph.describeCompiledOrder();
+    for ( const utf8* pExpected : { "2 passes in 2 levels", "level 0", "Geometry  reads [] writes [SceneColor]", "level 1",
+                                    "Bloom  reads [SceneColor] writes [BloomOut]" } )
+    {
+        SW_EXPECT_TRUE_MSG( text.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + text ).c_str() );
+    }
+}

@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ⑤ 렌더 그래프 — 순환은 서로 기다리는 패스를 이름으로, 컴파일된 레벨은 `-gv_dumpRenderGraph=1`)
+
+순환이면 `Cycle detected during compile — 1/3 active passes scheduled.` 뿐이었다 — 어느 패스가 무엇을 기다리는지는 파이프라인 XML 의 입출력을 손으로
+따라가야 했다. 그리고 컴파일된 **결과**(어느 패스가 어느 레벨에서 무엇과 나란히 기록되나, 무엇이 컬링됐나)를 볼 길이 없었다 — `exportToMermaid` ·
+`exportToDot` 은 구성을 내보내고, 그마저 부르는 곳이 없었다.
+- 순환: Error 로 올리고, 끝내 차례가 오지 않은 패스 사이의 간선을 `'LoopA' waits on 'LoopB'` 줄로 적는다(순환 밖 패스는 적지 않는다).
+- `RenderGraph::describeCompiledOrder()` — `N passes in M levels`, 레벨마다 `패스  reads [...] writes [...]`, 컬링된 패스와 그 이유.
+- `-gv_dumpRenderGraph=1` — 파이프라인을 묶을 때마다(`FrameRenderer::bindPassCallbacks`) 위 글을 로그로 남긴다. 지금 포워드 파이프라인은
+  `Shadow → ForwardOpaque → Transparent → Present` 4 레벨이다.
+**검증.** `RenderGraphTest.CycleNamesThePassesThatWaitOnEachOther`(X↔Y 를 서로 읽고 쓰는 두 패스 + 무관한 패스 — 두 줄만, 무관한 패스는 없음),
+`RenderGraphTest.DescribeCompiledOrderListsLevelsAndResources`. 이름 줄을 끄는 변이에서 실패했다. App 에서 플래그로 위 덤프를 확인했다.
+
 ### 2026-10-01 (확인 ④ XML · JSON 구문 오류가 `경로:줄:열: 이유` 로 — 씬 · 프리팹은 "없다" 와 "깨졌다" 를 가른다)
 
 깨진 에셋을 고치려고 로그를 보면: XML 은 `PugiXML Parse Error: Start-end tags mismatch (offset 412)` — 어느 파일인지가 없다. JSON 은 `Parse error in json text`
