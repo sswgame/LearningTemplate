@@ -22,9 +22,29 @@ namespace sw
         inline constexpr size_t kXmlWrapColumn = 120;
 
         /**
-         * @brief 한 줄에 담긴 속성들의 끝 위치를 모읍니다.
+         * @brief 시작 태그의 끝(따옴표 밖의 첫 `>`) 위치입니다. 없으면 npos 입니다.
+         * @details 접는 것은 **시작 태그의 속성뿐**이다. 그 뒤는 요소 텍스트인데, pugixml 은 텍스트 안의 `"` 를 이스케이프하지 않는다 —
+         *          예전에는 줄 끝까지 따옴표를 세어 `<item>The "Fire" and "Ice" …</item>` 같은 텍스트 속 공백에서 줄을 접었고, 읽을 때는
+         *          양 끝만 다듬으므로 그 줄바꿈 · 들여쓰기가 값에 영영 남았다(씬 · 직렬화한 문자열 목록 · 맵 값이 모두 이 길로 저장된다).
+         */
+        size_t findStartTagEnd( string_view line, size_t from )
+        {
+            bool bInQuotes = false;
+            for ( size_t charIndex = from; charIndex < line.size(); ++charIndex )
+            {
+                if ( line[charIndex] == '"' )
+                    bInQuotes = !bInQuotes;
+                else if ( line[charIndex] == '>' && bInQuotes == false )
+                    return charIndex;
+            }
+            return string_view::npos;
+        }
+
+        /**
+         * @brief 한 줄에 담긴 속성들의 끝 위치를 모읍니다. 부르는 쪽이 줄을 **시작 태그까지** 잘라 넘깁니다(`findStartTagEnd`).
          * @details 속성 값 안에도 공백이 있으므로 따옴표 밖의 공백만 경계로 셉니다. 값 안의 따옴표는
-         *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전합니다.
+         *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전합니다 — 속성 안에서는. 요소 텍스트의 따옴표는
+         *          이스케이프되지 않으므로 거기까지 세면 안 됩니다.
          * @param outListEnd 각 속성의 끝 위치(반열림). 첫 원소가 첫 속성의 끝입니다.
          */
         void collectAttributeEnds( string_view line, size_t from, vector<size_t>& outListEnd )
@@ -79,10 +99,12 @@ namespace sw
                 const bool bOpenTag = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
                                       line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
                 const size_t firstSpace = line.find( ' ', indentLen );
+                const size_t tagEnd     = bOpenTag ? findStartTagEnd( line, indentLen ) : string_view::npos;
 
+                // 속성은 시작 태그 안에서만 찾는다(`findStartTagEnd` 설명). 태그 이름 뒤 첫 공백이 태그 밖이면 속성이 없는 요소다.
                 listAttrEnd.clear();
-                if ( line.size() > kXmlWrapColumn && bOpenTag && firstSpace != string_view::npos )
-                    collectAttributeEnds( line, firstSpace, listAttrEnd );
+                if ( line.size() > kXmlWrapColumn && bOpenTag && firstSpace != string_view::npos && tagEnd != string_view::npos && firstSpace < tagEnd )
+                    collectAttributeEnds( line.substr( 0, tagEnd ), firstSpace, listAttrEnd );
 
                 if ( listAttrEnd.size() < 2 )
                 {

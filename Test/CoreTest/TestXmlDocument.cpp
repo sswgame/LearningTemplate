@@ -63,3 +63,41 @@ SW_TEST_CASE( XmlDocumentTest, CaseSensitiveKeyOptOut )
     SW_EXPECT_TRUE( root.findChild( "Child", false ).isValid() );
     SW_EXPECT_STREQ( "ok", root.findChildText( "Child", false ) );
 }
+
+/**
+ * @brief [XmlDocumentTest] 긴 줄 접기는 시작 태그의 속성만 접는다 — 따옴표 든 요소 텍스트는 저장 · 읽기를 지나도 그대로다
+ * @details 예전에는 줄 끝까지 따옴표를 세어, 120 자를 넘는 `<item>The "Fire" … "Ice" …</item>` 의 텍스트 속 공백에서 줄을 접었다. 읽을 때는
+ *          양 끝만 다듬어 그 줄바꿈과 들여쓰기가 값에 남았다.
+ */
+SW_TEST_CASE( XmlDocumentTest, LongTextWithQuotesSurvivesSave )
+{
+    const sw::string longText = "The \"Fire\" spell burns, the \"Ice\" spell freezes, and the \"Storm\" spell does both while "
+                                "the caster keeps \"Focus\" for long enough to finish the incantation.";
+    SW_ASSERT_TRUE( longText.size() > 120 );
+
+    sw::XmlDocument doc;
+    sw::XmlNode     root = doc.appendRoot( "Root" );
+    root.appendChild( "item", sw::string_view{ longText.c_str(), longText.size() } );
+    // 속성이 있는 요소의 텍스트 — 시작 태그 뒤까지 따옴표를 세면 여기서 접힌다.
+    sw::XmlNode tagged = root.appendChild( "tagged", sw::string_view{ longText.c_str(), longText.size() } );
+    tagged.setAttribute( "id", "7" );
+    sw::XmlNode wide = root.appendChild( "wide" );
+    wide.setAttribute( "first", "a long attribute value that keeps going and going" );
+    wide.setAttribute( "second", "another long attribute value so the line passes the wrap column" );
+    wide.setAttribute( "third", "yet another one" );
+
+    const sw::string saved = doc.saveToString();
+    sw::XmlDocument  reloaded;
+    SW_ASSERT_TRUE( reloaded.parse( saved ) );
+    sw::XmlNode reloadedRoot = reloaded.getRoot( "Root" );
+    SW_ASSERT_TRUE( reloadedRoot.isValid() );
+    SW_EXPECT_STREQ( longText.c_str(), reloadedRoot.findChildText( "item" ) );
+    SW_EXPECT_STREQ( longText.c_str(), reloadedRoot.findChildText( "tagged" ) );
+    SW_EXPECT_STREQ( "7", reloadedRoot.findChild( "tagged" ).findAttribute( "id" ) );
+
+    // 속성 접기는 그대로 돈다 — 긴 속성 줄은 여러 줄이 되고 값은 같다.
+    sw::XmlNode reloadedWide = reloadedRoot.findChild( "wide" );
+    SW_ASSERT_TRUE( reloadedWide.isValid() );
+    SW_EXPECT_STREQ( "yet another one", reloadedWide.findAttribute( "third" ) );
+    SW_EXPECT_TRUE( saved.find( "\n" ) != sw::string::npos );
+}
