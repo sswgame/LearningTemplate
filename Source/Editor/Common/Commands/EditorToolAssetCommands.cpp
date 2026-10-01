@@ -52,6 +52,22 @@ namespace sw::editor
             }
 
             /**
+             * @brief 도구 문서를 읽고 **어떻게 됐는지** 답합니다 — 파일이 없음(새 문서) · 읽음 · 있는데 읽지 못함(깨졌거나 새 형식).
+             * @details 예전에는 셋 다 bool 하나였고 실패는 로그도 없었다. 패널은 "없음" 과 "깨짐" 을 가를 수 없어 둘 다 앞 문서의 데이터를
+             *          든 채 저장할 수 있게 두었다 — 깨진 파일을 앞 문서로 덮는 길이었다.
+             */
+            template <typename TAsset>
+            static ToolAssetLoadResult loadToolAssetFile( TAsset& outData, const string& resolved, const utf8* pKind )
+            {
+                if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
+                    return ToolAssetLoadResult::Missing;
+                if ( outData.loadFromFile( resolved ) )
+                    return ToolAssetLoadResult::Loaded;
+                SW_LOG_WARNING( "Could not read %# '%#' (malformed or a newer format)", pKind, resolved );
+                return ToolAssetLoadResult::Malformed;
+            }
+
+            /**
              * @brief 열린 문서 경로가 비면 에디터 기본 문서 경로를 씁니다. **둘 다 없으면 빈 문자열**이고, 그대로 파일 계층까지
              *        내려가면 `File not found: ` 처럼 이름이 빈 에러가 남습니다. 부르는 쪽에서 빈 경로를 먼저 걸러야 합니다.
              */
@@ -144,12 +160,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorToolAssetCommands" );
 
-    bool EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
-        if ( resolved.empty() )
-            return false;
-        return outData.loadFromFile( resolved );
+        return EditorToolAssetInternal::loadToolAssetFile( outData, EditorToolAssetInternal::resolveAnimGraphPath( path ), "animation graph" );
     }
 
     bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
@@ -171,12 +184,9 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
-        if ( resolved.empty() )
-            return false;
-        return outData.loadFromFile( resolved );
+        return EditorToolAssetInternal::loadToolAssetFile( outData, EditorToolAssetInternal::resolveDialogueGraphPath( path ), "dialogue graph" );
     }
 
     bool EditorToolAssetCommands::saveDialogueGraph( const DialogueGraphAsset& data, string_view path )

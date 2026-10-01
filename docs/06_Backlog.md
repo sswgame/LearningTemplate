@@ -2051,6 +2051,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑬ 에디터 문서 패널 — 다른 문서의 되돌리기가 지금 문서에 붙었다, 읽지 못한 문서를 앞 문서로 덮었다)
+
+**다른 문서의 되돌리기.** `EditorDocumentPanel::notifyDocumentEdited` 의 되돌리기는 `this` 와 바뀐 구간(앞뒤 같은 길이 + 지운 · 넣은 글)만
+잡았다. 머티리얼 A 를 고치고 B 를 연 뒤 Ctrl+Z 하면 A 의 구간을 B 의 텍스트에 다시 짜 넣었다 — B 가 깨진 채 dirty 가 되고 저장하면 그대로
+쓰였다. 이제 편집이 속한 문서 경로를 함께 적고, 그 문서가 아직 열려 있을 때만 적용한다(아니면 "Undo skipped: … is no longer open" 경고).
+구간 다시 짜기는 길이가 맞지 않아도 메모리를 넘지 않으므로 막는 자리는 적용 쪽 하나다.
+
+**읽지 못한 문서.** 머티리얼 · 애니메이션 그래프 · 대화 그래프 패널은 로드가 실패해도 `markDocumentLoaded()` 를 불렀다(매 프레임 다시
+읽지 않으려고). 패널은 앞 문서의 데이터를 든 채 새 경로를 제목으로 띄웠고, 저장을 누르면 읽지 못한 파일(깨졌거나 더 새 형식)을 앞 문서의
+내용으로 덮었다. 그래프 로더는 "파일 없음(새 문서)" 과 "읽지 못함" 을 가르지도 못했고 실패에 로그도 없었다.
+- `IEditorPanel::canSaveDocument()` — 저장 경로(`saveDocumentAndClearDirty`)가 먼저 묻는다. `EditorDocumentPanel::markDocumentLoadFailed( 까닭 )`
+  은 다시 읽지 않되 저장을 막고 경고를 남긴다(패널 · 경로 · 까닭). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다.
+- 그래프 로더는 `ToolAssetLoadResult`(Loaded · Missing · Malformed)를 돌려주고 읽지 못하면 경로를 적는다. 그래프 패널은 읽지 못하면 앞 그래프를
+  버리고 기본 그래프를 보이며 저장을 막는다. 머티리얼 패널의 Save 버튼이 계약을 건너 `saveDocument()` 를 바로 부르던 것도 고쳤다.
+**검증.** `EditorPanelDocumentTest.SaveIsRefusedWhenTheDocumentCannotBeSaved` · `EditorToolAssetCommandsTest.GraphLoadTellsMissingFromMalformed` —
+저장 막기를 끄는 돌연변이, 없는 파일을 "읽지 못함" 으로 치는 돌연변이에 각각 진다. 문서 패널 자체(되돌리기의 문서 확인)는 ImGui 에 묶여
+EditorTest 에 들어가지 않아 시험이 없다. EditorTest 83/83.
+
 ### 2026-10-01 (결함 ⑫ 에디터 — 되돌리기 · 컴포넌트 제거 · 인스펙터 직접 편집이 씬을 dirty 로 만들지 않아 묻지 않고 잃었다)
 
 씬 dirty(닫거나 다른 씬을 열 때 "저장할까요?")를 놓치는 길이 셋이었다.

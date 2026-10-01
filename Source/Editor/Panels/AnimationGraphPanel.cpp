@@ -251,8 +251,12 @@ namespace sw::editor
 
     void AnimationGraphPanel::loadGraphData()
     {
-        AnimationGraphAsset data;
-        if ( EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() ) )
+        AnimationGraphAsset       data;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
+        // 읽지 못한 파일 앞에서는 앞 문서의 그래프를 들고 있지 않는다 — 기본 그래프를 보이고 저장을 막는다(덮지 않게).
+        _listNode.clear();
+        _listLink.clear();
+        if ( result == ToolAssetLoadResult::Loaded )
         {
             _listNode = std::move( data._listNode );
             _listLink = std::move( data._listLink );
@@ -262,7 +266,10 @@ namespace sw::editor
         _bGraphLayoutReady = SW_FALSE;
         _previewPlayer.stop();
         _bPreviewPlaying = SW_FALSE;
-        markDocumentLoaded();
+        if ( result == ToolAssetLoadResult::Malformed )
+            markDocumentLoadFailed( "malformed or newer format" );
+        else
+            markDocumentLoaded();
         _nodeGraph.requestContentFit();
     }
 

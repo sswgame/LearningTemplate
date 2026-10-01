@@ -42,6 +42,15 @@ namespace sw::editor
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
         void          markDocumentLoaded();
         bool          isDocumentLoaded() const;
+        /**
+         * @brief 문서를 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`).
+         * @details 예전에는 실패해도 `markDocumentLoaded` 를 불러, 패널이 앞 문서의 데이터를 들고 새 경로를 제목으로 띄웠다. 저장을 누르면
+         *          읽지 못한 파일(깨졌거나 더 새 형식)을 앞 문서의 내용으로 덮었다. 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다.
+         * @param reason 로그에 남길 까닭(예: "malformed or newer format")
+         */
+        void markDocumentLoadFailed( string_view reason );
+        bool isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
+        bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
 
         /**
          * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다.
@@ -78,6 +87,7 @@ namespace sw::editor
         string                 _lastSavedDocumentText;
         uint8                  _bLoaded        : 1;
         uint8                  _bConfirmSwitch : 1;
-        [[maybe_unused]] uint8 _reserved       : 6;
+        uint8                  _bLoadFailed    : 1;
+        [[maybe_unused]] uint8 _reserved       : 5;
     };
 } // namespace sw::editor

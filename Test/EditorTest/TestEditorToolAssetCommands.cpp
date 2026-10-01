@@ -102,3 +102,31 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
     SW_EXPECT_TRUE( bSaved );
     SW_EXPECT_EQUAL( 0, collector.getErrorCount() );
 }
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 그래프 문서를 읽으면 "없음(새 문서)" · "읽음" · "있는데 읽지 못함" 을 가른다
+ * @details 예전에는 셋 다 bool 하나였다. 패널은 없는 파일과 깨진 파일을 가를 수 없어 둘 다 앞 문서의 그래프를 든 채 저장할 수 있게
+ *          두었다 — 깨진(또는 더 새 형식의) 파일을 앞 문서로 덮는 길이었다.
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
+{
+    const string folder      = test::makeTempDirectory( "sw_graph_load" );
+    const string missingPath = FileUtil::joinPath( folder, "never_written.animgraph.json" );
+    const string brokenPath  = FileUtil::joinPath( folder, "broken.animgraph.json" );
+    const string goodPath    = FileUtil::joinPath( folder, "good.animgraph.json" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( brokenPath, "{ this is not json" ) );
+
+    AnimationGraphAsset good;
+    SW_ASSERT_TRUE( EditorToolAssetCommands::saveAnimationGraph( good, goodPath ) );
+
+    AnimationGraphAsset data;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, missingPath ) == ToolAssetLoadResult::Missing );
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, goodPath ) == ToolAssetLoadResult::Loaded );
+    {
+        test::ScopedDefensiveTestLog expected( "a graph file that is not JSON" );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, brokenPath ) == ToolAssetLoadResult::Malformed );
+
+        DialogueGraphAsset dialogue;
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogue, brokenPath ) == ToolAssetLoadResult::Malformed );
+    }
+}

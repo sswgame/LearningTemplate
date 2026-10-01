@@ -226,7 +226,7 @@ namespace sw::editor
             loadFromFocusedPath();
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
-            saveDocument();
+            saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다)
         ImGui::SameLine();
         if ( ImGui::Button( "Apply to Selection" ) )
             applyLivePreview();
@@ -310,8 +310,8 @@ namespace sw::editor
             acceptFocusedDocument();
         if ( _material->loadFromFile( path ) == false )
         {
-            _status = "Load failed";
-            markDocumentLoaded();
+            _status = "Load failed - saving is disabled so the file is not overwritten";
+            markDocumentLoadFailed( "parse or format upgrade failed" );
             return;
         }
         syncNameBuffers();

@@ -69,6 +69,8 @@ namespace sw::editor
          */
         bool saveDocumentAndClearDirty()
         {
+            if ( canSaveDocument() == false )
+                return false;
             if ( saveDocument() == false )
                 return false;
             clearDocumentDirty();
@@ -129,6 +131,12 @@ namespace sw::editor
         void clearDocumentDirty() { _bDocumentDirty = false; }
         /** @brief 문서를 디스크에 씁니다. 성공하면 true입니다. 문서가 없는 패널은 구현하지 않습니다. */
         virtual bool saveDocument() { return false; }
+        /**
+         * @brief 지금 저장해도 되는가 — 아니면 `saveDocumentAndClearDirty` 가 `saveDocument` 를 부르지 않고 false 입니다.
+         * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 앞 문서의 데이터를 들고 있다 — 그대로 쓰면 읽지 못한 파일을 앞 문서로
+         *          덮는다(`EditorDocumentPanel::markDocumentLoadFailed`).
+         */
+        virtual bool canSaveDocument() const { return true; }
         /** @brief 저장하지 않고 디스크/기본값 상태로 되돌립니다. 되돌릴 것이 없으면 구현하지 않습니다. */
         virtual void revertDocument() {}
 

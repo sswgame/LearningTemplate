@@ -46,6 +46,14 @@ namespace sw::editor
         vector<EditorSpriteClipKey>   _listKey;
     };
 
+    /** @brief 도구 문서를 읽은 결과 — 패널이 "새 문서" 와 "읽지 못한 파일" 을 가른다(`EditorDocumentPanel::markDocumentLoadFailed`). */
+    enum class ToolAssetLoadResult : uint8
+    {
+        Loaded,    ///< 읽었다
+        Missing,   ///< 파일이 없다 — 새 문서(기본값으로 시작하고 저장하면 만든다)
+        Malformed, ///< 파일은 있는데 읽지 못했다(깨졌거나 더 새 형식) — 덮으면 안 된다
+    };
+
     /** @brief 프리팹 인스턴스 컴포넌트 프로퍼티 오버라이드 항목 */
     struct PrefabOverrideItem
     {
@@ -64,11 +72,11 @@ namespace sw::editor
     {
     public:
         /** @brief 애니메이션 그래프 JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
-        static bool loadAnimationGraph( AnimationGraphAsset& outData, string_view path = {} );
+        static ToolAssetLoadResult loadAnimationGraph( AnimationGraphAsset& outData, string_view path = {} );
         /** @brief 애니메이션 그래프 JSON을 씁니다. */
         static bool saveAnimationGraph( const AnimationGraphAsset& data, string_view path = {} );
         /** @brief 대화 그래프 JSON을 읽습니다. path가 비면 기본 대화 파일을 씁니다. */
-        static bool loadDialogueGraph( DialogueGraphAsset& outData, string_view path = {} );
+        static ToolAssetLoadResult loadDialogueGraph( DialogueGraphAsset& outData, string_view path = {} );
         /** @brief 대화 그래프 JSON을 씁니다. */
         static bool saveDialogueGraph( const DialogueGraphAsset& data, string_view path = {} );
         /** @brief Resource 상대 경로의 TileMap XML을 읽습니다. */

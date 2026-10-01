@@ -29,6 +29,7 @@ namespace
         void edit() { markDocumentDirty(); }
 
         int32 getSaveCount() const { return _saveCount; }
+        void  setSaveAllowed( bool bAllowed ) { _bSaveAllowed = bAllowed; }
         int32 getRevertCount() const { return _revertCount; }
         void  setSaveSucceeds( bool bSucceeds ) { _bSaveSucceeds = bSucceeds; }
 
@@ -48,11 +49,13 @@ namespace
         }
 
         void revertDocument() override { ++_revertCount; }
+        bool canSaveDocument() const override { return _bSaveAllowed; }
 
     private:
         int32 _saveCount{ 0 };
         int32 _revertCount{ 0 };
         bool  _bSaveSucceeds{ true };
+        bool  _bSaveAllowed{ true };
     };
 
     /** @brief 문서가 없는 패널 — 계약을 아무것도 구현하지 않는다. */
@@ -168,4 +171,25 @@ SW_TEST_CASE( EditorPanelDocumentTest, BaseClearsDirtyOnSuccessfulSave )
     SW_EXPECT_FALSE( panel.trySaveDirtyDocument() );
     SW_EXPECT_EQUAL( 2, panel.getSaveCount() );
     SW_EXPECT_TRUE( panel.isDocumentDirty() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 저장해도 되지 않는 문서는 `saveDocument` 를 부르지 않고, dirty 도 그대로 남는다
+ * @details 문서를 읽지 못한 패널은 앞 문서의 데이터를 들고 있다(`EditorDocumentPanel::markDocumentLoadFailed`). 예전에는 그 상태에서도
+ *          저장을 눌러 읽지 못한 파일을 앞 문서로 덮었다.
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, SaveIsRefusedWhenTheDocumentCannotBeSaved )
+{
+    FakeDocumentPanel panel;
+    panel.setSaveAllowed( false );
+    panel.edit();
+
+    SW_EXPECT_FALSE( panel.saveDocumentAndClearDirty() );
+    SW_EXPECT_FALSE( panel.trySaveDirtyDocument() );
+    SW_EXPECT_EQUAL( 0, panel.getSaveCount() );
+    SW_EXPECT_TRUE( panel.isDocumentDirty() );
+
+    panel.setSaveAllowed( true );
+    SW_EXPECT_TRUE( panel.saveDocumentAndClearDirty() );
+    SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
 }
