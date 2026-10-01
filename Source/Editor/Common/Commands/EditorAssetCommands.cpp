@@ -679,9 +679,10 @@ namespace sw::editor
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
 #endif
 
-        ProcessOptions options{};
-        options._bCreateWindow = false;
-        if ( Process::execute( command, options ) != 0 )
+        // **띄우고 기다리지 않는다.** 예전에는 `Process::execute` 라 UI 스레드가 탐색기(또는 그것이 띄운 창)가 출력 파이프를 놓을
+        // 때까지 멈췄고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 돌려줘서 실패 경고가 매번 찍혔다. 알 수 있는 실패는
+        // "띄우지 못했다" 뿐이다.
+        if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
             return false;

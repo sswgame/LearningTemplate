@@ -122,6 +122,17 @@ namespace sw
          */
         static int32 execute( string_view command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
 
+        /**
+         * @brief 출력을 받지 않고 **기다리지도 않고** 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).
+         * @details 파일 탐색기 · 브라우저처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
+         *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다 —
+         *          에디터의 "탐색기에서 보기" 가 UI 스레드에서 그렇게 불렀습니다. 게다가 `explorer.exe /select,` 는 성공해도 1 을
+         *          돌려줘서 실패 경고가 매번 찍혔습니다. 언리얼의 `CreateProc( bLaunchDetached )` 와 같은 자리입니다.
+         *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
+         *          좀비를 남기지 않습니다).
+         */
+        static bool launchDetached( string_view command, const ProcessOptions& options = {} );
+
     private:
         void shutdown();
 

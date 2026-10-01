@@ -80,13 +80,34 @@ namespace sw
         wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
-        STARTUPINFOW si{};
-        si.cb         = sizeof( STARTUPINFOW );
-        si.hStdError  = hStdOutWrite;
-        si.hStdOutput = hStdOutWrite;
-        si.dwFlags |= STARTF_USESTDHANDLES;
+        // **자식이 물려받는 핸들을 이 파이프 하나로 못박는다.** `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
+        // 전부* 가 넘어간다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 파이프 쓰기 끝을 물려받고, 그러면 한쪽의 읽기는 자기 자식이
+        // 끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
+        SIZE_T attributeListSize = 0;
+        InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
+        vector<uint8>                attributeListBytes( attributeListSize );
+        LPPROC_THREAD_ATTRIBUTE_LIST pAttributeList        = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( attributeListBytes.data() );
+        HANDLE                       arrInheritedHandle[1] = { hStdOutWrite };
+        const bool                   bAttributeReady       = InitializeProcThreadAttributeList( pAttributeList, 1, 0, &attributeListSize ) != FALSE;
+        if ( bAttributeReady == false ||
+             UpdateProcThreadAttribute( pAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, sizeof( arrInheritedHandle ), nullptr, nullptr ) == FALSE )
+        {
+            if ( bAttributeReady )
+                DeleteProcThreadAttributeList( pAttributeList );
+            CloseHandle( hStdOutRead );
+            CloseHandle( hStdOutWrite );
+            SW_LOG_ERROR( "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
+            return false;
+        }
 
-        const DWORD creationFlags = options._bCreateWindow ? 0 : CREATE_NO_WINDOW;
+        STARTUPINFOEXW startupInfo{};
+        startupInfo.StartupInfo.cb         = sizeof( STARTUPINFOEXW );
+        startupInfo.StartupInfo.hStdError  = hStdOutWrite;
+        startupInfo.StartupInfo.hStdOutput = hStdOutWrite;
+        startupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+        startupInfo.lpAttributeList = pAttributeList;
+
+        const DWORD creationFlags = ( options._bCreateWindow ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT;
 
         PROCESS_INFORMATION pi{};
         const BOOL          bCreated = CreateProcessW(
@@ -98,9 +119,10 @@ namespace sw
             creationFlags,
             nullptr,
             options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
-            &si,
+            &startupInfo.StartupInfo,
             &pi );
 
+        DeleteProcThreadAttributeList( pAttributeList );
         CloseHandle( hStdOutWrite );
 
         if ( bCreated == FALSE )
@@ -115,6 +137,30 @@ namespace sw
         _pStdOutRead   = hStdOutRead;
         _processId.store( static_cast<int32>( pi.dwProcessId ) );
 
+        return true;
+    }
+
+    bool Process::launchDetached( string_view command, const ProcessOptions& options )
+    {
+        const string  cmdStr      = string( command );
+        wstring       wsCmdLine   = StringUtil::utf8ToUtf16( cmdStr.c_str() );
+        const wstring wsDirectory = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
+
+        STARTUPINFOW startupInfo{};
+        startupInfo.cb = sizeof( STARTUPINFOW );
+
+        // 핸들을 하나도 물려주지 않는다(bInheritHandles = FALSE) — 띄운 프로그램이 이 프로세스의 파이프 · 파일을 붙들지 않는다.
+        PROCESS_INFORMATION pi{};
+        const BOOL          bCreated = CreateProcessW( nullptr, wsCmdLine.data(), nullptr, nullptr, FALSE, options._bCreateWindow ? 0 : CREATE_NO_WINDOW,
+                                                       nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
+        if ( bCreated == FALSE )
+        {
+            SW_LOG_ERROR( "Failed to launch detached command: %#", cmdStr.c_str() );
+            return false;
+        }
+
+        CloseHandle( pi.hThread );
+        CloseHandle( pi.hProcess );
         return true;
     }
 

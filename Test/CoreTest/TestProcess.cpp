@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 
 #include "TestFramework/TestFramework.h"
@@ -9,6 +11,7 @@
 
 #if !defined( SW_PLATFORM_WINDOWS )
     #include <csignal>
+    #include <unistd.h>
 #endif
 
 // ------------------------------------------------------------------------------
@@ -154,4 +157,93 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
 
     // 묻는 것이 자식을 거두지는 않았어야 한다.
     SW_EXPECT_EQUAL( 7, proc.waitForExit() );
+}
+
+/**
+ * @brief [ProcessTest] 자식은 자기 출력 파이프 말고는 이 프로세스의 핸들 · 서술자를 물려받지 않는다
+ * @details 다른 스레드가 거의 동시에 띄운 자식의 파이프(여기서는 테스트가 만든 상속 가능한 파이프로 흉내 낸다)를 새 자식이 물려받으면,
+ *          그 파이프의 읽기는 **새 자식이 끝날 때까지** EOF 를 못 받는다. 예전에는 Windows 가 `bInheritHandles = TRUE` 만 줘서 상속
+ *          가능한 핸들이 전부 넘어갔고, POSIX 는 CLOEXEC 없는 서술자가 exec 를 넘어갔다. 그래서 여기서는 오래 사는 자식을 띄운 뒤
+ *          흉내 낸 파이프의 쓰기 끝을 닫고 읽는다 — 바로 EOF 여야 한다(물려받았다면 자식이 끝나는 3 초 뒤에야 온다).
+ */
+SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    SECURITY_ATTRIBUTES inheritable{};
+    inheritable.nLength        = sizeof( SECURITY_ATTRIBUTES );
+    inheritable.bInheritHandle = TRUE;
+    HANDLE hForeignRead        = nullptr;
+    HANDLE hForeignWrite       = nullptr;
+    SW_ASSERT_TRUE( CreatePipe( &hForeignRead, &hForeignWrite, &inheritable, 0 ) != FALSE );
+    const sw::string longCommand = "ping.exe 127.0.0.1 -n 4";
+#else
+    int32 arrForeignFd[2] = { -1, -1 };
+    SW_ASSERT_TRUE( pipe( arrForeignFd ) == 0 );
+    const sw::string longCommand = "sleep 3";
+#endif
+
+    sw::Process child;
+    SW_ASSERT_TRUE( child.launch( longCommand ) );
+
+    // 흉내 낸 "남의 파이프" 의 쓰기 끝을 닫고 읽는다. 아무도 물려받지 않았다면 바로 끝(EOF)이다.
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+#if defined( SW_PLATFORM_WINDOWS )
+    CloseHandle( hForeignWrite );
+    utf8       byte      = 0;
+    DWORD      readCount = 0;
+    const BOOL bRead     = ReadFile( hForeignRead, &byte, 1, &readCount, nullptr );
+    CloseHandle( hForeignRead );
+    SW_EXPECT_TRUE( bRead == FALSE || readCount == 0 );
+#else
+    close( arrForeignFd[1] );
+    utf8          byte      = 0;
+    const ssize_t readCount = read( arrForeignFd[0], &byte, 1 );
+    close( arrForeignFd[0] );
+    SW_EXPECT_EQUAL( static_cast<ssize_t>( 0 ), readCount );
+#endif
+    const int64 elapsedMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+
+    child.terminate( 1 );
+    child.waitForExit();
+
+    SW_EXPECT_TRUE_MSG( elapsedMilli < 1500, "새 자식이 남의 파이프를 물려받았다 — 그 파이프의 읽기가 자식이 끝날 때까지 막혔다" );
+}
+
+/**
+ * @brief [ProcessTest] 분리 실행은 기다리지 않고 돌아오고, 명령은 실제로 돈다
+ * @details "탐색기에서 보기" 같은 자리 — 사용자가 닫을 때까지 사는 프로그램을 띄운다. 예전에는 `execute` 라 부른 스레드(에디터 UI)가
+ *          그 프로그램이 출력 파이프를 놓을 때까지 멈췄다. 여기서는 1 초쯤 걸리는 명령을 띄워 **곧바로** 돌아오는지, 그리고 명령이
+ *          끝에 남기는 표식으로 실제로 돌았는지를 본다.
+ */
+SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
+{
+    const sw::string markerPath = test::makeTempPath( "detached_marker.txt" );
+#if defined( SW_PLATFORM_WINDOWS )
+    sw::string windowsMarkerPath = markerPath;
+    for ( utf8& ch : windowsMarkerPath )
+    {
+        if ( ch == '/' )
+            ch = '\\';
+    }
+    const sw::string command = "cmd.exe /c ping.exe 127.0.0.1 -n 2 > nul & echo done> \"" + windowsMarkerPath + "\"";
+#else
+    const sw::string command = "sleep 1; echo done > '" + markerPath + "'";
+#endif
+
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    SW_ASSERT_TRUE( sw::Process::launchDetached( command ) );
+    const int64 launchMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+    SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );
+
+    // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).
+    bool bFinished = false;
+    for ( uint32 attempt = 0; attempt < 200 && bFinished == false; ++attempt )
+    {
+        sw::string text;
+        bFinished = sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
+        if ( bFinished == false )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+    }
+    SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 10 초 안에 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
 }

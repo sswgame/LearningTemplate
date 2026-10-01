@@ -9,6 +9,9 @@
 
     #include <cerrno>
     #include <csignal>
+    #include <fcntl.h>
+    #include <sys/syscall.h>
+    #include <unistd.h>
 
 namespace sw
 {
@@ -24,6 +27,29 @@ namespace sw
         FILE* asOutputStream( void* pHandle )
         {
             return static_cast<FILE*>( pHandle );
+        }
+
+        /** @brief 자식에서 닫을 서술자의 상한 — **fork 전에** 구한다(자식에서는 async-signal-safe 함수만 부른다). */
+        int32 getDescriptorLimit()
+        {
+            const int64 openMax = static_cast<int64>( sysconf( _SC_OPEN_MAX ) );
+            return ( openMax <= 0 || openMax > 65536 ) ? 65536 : static_cast<int32>( openMax );
+        }
+
+        /**
+         * @brief (자식에서) 표준 입출력 밖의 서술자를 전부 닫습니다. async-signal-safe 한 호출만 쓴다.
+         * @details CLOEXEC 없이 열린 것(로그 파일 · 남의 파이프 · 소켓)이 exec 를 넘어 셸과 그 손자에게 그대로 간다 — 파이썬
+         *          subprocess 의 기본값(close_fds)과 같은 이유다.
+         */
+        void closeDescriptorsAboveStandardInChild( int32 descriptorMax )
+        {
+            int32 closedFrom = 3;
+    #if defined( SYS_close_range )
+            if ( syscall( SYS_close_range, 3U, ~0U, 0U ) == 0 )
+                closedFrom = descriptorMax;
+    #endif
+            for ( int32 descriptor = closedFrom; descriptor < descriptorMax; ++descriptor )
+                close( descriptor );
         }
 
         /** @brief `waitpid` 가 준 상태를 종료 코드로 바꿉니다. 시그널로 죽었으면 셸 규약대로 128 + 시그널 번호입니다. */
@@ -69,12 +95,27 @@ namespace sw
         const utf8*  pCommand          = cmd.c_str();
         const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
 
+        // 파이프는 exec 를 넘지 않게 연다. 다른 스레드가 거의 동시에 띄운 자식이 이 파이프를 물려받으면, 이쪽의 읽기는 자기 자식이
+        // 끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. 자식 쪽에서 쓸 끝은 아래 `dup2` 가 표준 출력으로 옮기며
+        // CLOEXEC 를 떼므로 그대로 넘어간다.
         int32 arrPipeFd[2] = { -1, -1 };
-        if ( pipe( arrPipeFd ) != 0 )
+    #if defined( SW_PLATFORM_LINUX )
+        const bool bPipeOpened = pipe2( arrPipeFd, O_CLOEXEC ) == 0;
+    #else
+        const bool bPipeOpened = pipe( arrPipeFd ) == 0;
+        if ( bPipeOpened )
+        {
+            fcntl( arrPipeFd[0], F_SETFD, FD_CLOEXEC );
+            fcntl( arrPipeFd[1], F_SETFD, FD_CLOEXEC );
+        }
+    #endif
+        if ( bPipeOpened == false )
         {
             SW_LOG_ERROR( "pipe() failed for command: %#", pCommand );
             return false;
         }
+
+        const int32 descriptorMax = getDescriptorLimit();
 
         const pid_t childPid = fork();
         if ( childPid < 0 )
@@ -97,6 +138,8 @@ namespace sw
             dup2( arrPipeFd[1], STDOUT_FILENO );
             dup2( arrPipeFd[1], STDERR_FILENO );
             close( arrPipeFd[1] );
+
+            closeDescriptorsAboveStandardInChild( descriptorMax );
 
             // 자기만의 프로세스 그룹을 갖게 한다. `terminate` 가 그룹째 죽여야 `sh` 가 띄운 손자 프로세스(실제 컴파일러)까지
             // 멈춘다. 셸만 죽이면 손자는 계속 돌면서 파이프를 붙들고 있다.
@@ -131,6 +174,58 @@ namespace sw
         _pNativeHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( childPid ) );
         _processId.store( static_cast<int32>( childPid ) );
         return true;
+    }
+
+    bool Process::launchDetached( string_view command, const ProcessOptions& options )
+    {
+        const string cmd{ command };
+        const utf8*  pCommand          = cmd.c_str();
+        const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
+        const int32  descriptorMax     = getDescriptorLimit();
+
+        // 두 번 fork 한다 — 가운데 프로세스는 손자를 띄우자마자 끝나고 여기서 바로 거둔다. 손자의 부모는 init 이 되어 끝나도
+        // 좀비로 남지 않고, 이 프로세스는 손자가 언제 끝나든 기다리지 않는다.
+        const pid_t middlePid = fork();
+        if ( middlePid < 0 )
+        {
+            SW_LOG_ERROR( "fork() failed for detached command: %#", pCommand );
+            return false;
+        }
+
+        if ( middlePid == 0 )
+        {
+            // ---- 가운데 · 손자: exec 까지 async-signal-safe 한 함수만 ----
+            setsid();
+            const pid_t grandchildPid = fork();
+            if ( grandchildPid != 0 )
+                _exit( grandchildPid < 0 ? 127 : 0 );
+
+            const int32 nullFd = open( "/dev/null", O_RDWR );
+            if ( nullFd >= 0 )
+            {
+                dup2( nullFd, STDIN_FILENO );
+                dup2( nullFd, STDOUT_FILENO );
+                dup2( nullFd, STDERR_FILENO );
+            }
+            closeDescriptorsAboveStandardInChild( descriptorMax );
+
+            if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
+                _exit( 127 );
+            execl( "/bin/sh", "sh", "-c", pCommand, static_cast<utf8*>( nullptr ) );
+            _exit( 127 );
+        }
+
+        int32 status = 0;
+        pid_t reaped = 0;
+        do
+        {
+            reaped = waitpid( middlePid, &status, 0 );
+        } while ( reaped < 0 && errno == EINTR );
+
+        const bool bLaunched = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+        if ( bLaunched == false )
+            SW_LOG_ERROR( "Failed to launch detached command: %#", pCommand );
+        return bLaunched;
     }
 
     bool Process::readOutputLine( string& outLine )

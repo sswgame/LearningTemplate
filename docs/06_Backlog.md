@@ -2051,6 +2051,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ② 자식 프로세스가 남의 핸들을 물려받았다 · "탐색기에서 보기" 가 에디터를 세웠다)
+
+**자식이 물려받는 것.** Windows `Process::launch` 는 `CreateProcessW( …, bInheritHandles = TRUE, … )` 만 줘서 이 프로세스의 **상속 가능한
+핸들 전부**가 자식에게 갔다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 출력 파이프 쓰기 끝을 물려받고, 한쪽의 읽기는 자기 자식이 끝나도
+EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. POSIX 도 같다 — `pipe()` 에 CLOEXEC 가 없었고 자식은 받은 서술자를 전부 들고 exec 했다.
+- Windows: `STARTUPINFOEX` + `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` 로 상속을 **이 파이프 하나**로 못박았다(Microsoft 가 권하는 방법).
+- POSIX: 파이프를 CLOEXEC 로 열고(리눅스 `pipe2`, 그 밖은 `fcntl`), 자식은 exec 전에 표준 입출력 밖의 서술자를 전부 닫는다
+  (`close_range` 가 있으면 그것, 없으면 루프 — 파이썬 subprocess 의 `close_fds` 와 같다).
+- 시험 `ProcessTest.ChildInheritsOnlyItsOwnPipe`: 상속 가능한 "남의 파이프" 를 만들어 두고 오래 사는 자식을 띄운 뒤 그 파이프의 쓰기 끝을
+  닫고 읽는다 — 바로 EOF 여야 한다. 옛 동작으로 돌리면 자식이 끝나는 3.08 초 뒤에야 와서 진다.
+
+**탐색기에서 보기.** `EditorAssetCommands::showInFileExplorer`(콘텐츠 브라우저 우클릭)가 `Process::execute` 로 `explorer.exe /select,…` 를
+불렀다 — **UI 스레드에서** 출력 파이프가 닫히고 프로세스가 끝날 때까지 기다린다. 리눅스는 `xdg-open` 이 띄운 파일 관리자가 그 파이프를 물면
+그 창을 닫을 때까지 에디터가 멈출 수 있었다. 게다가 `explorer.exe /select,` 는 성공해도 종료 코드 1 을 돌려줘서 실패 경고가 매번 찍혔다.
+- `Process::launchDetached( command )` 를 더했다 — 출력을 받지 않고 기다리지 않는다, 핸들을 하나도 물려주지 않는다(POSIX 는 두 번 fork,
+  표준 입출력은 /dev/null). 언리얼 `CreateProc( bLaunchDetached )` 의 자리. 탐색기 열기는 이것으로 띄우고 "띄우지 못함" 만 실패로 본다.
+- 시험 `ProcessTest.DetachedLaunchReturnsWithoutWaiting`: 1 초쯤 걸리는 명령이 곧바로(< 0.7 초) 돌아오고, 명령이 남기는 표식으로 실제로
+  돈 것을 본다. 띄운 뒤 끝을 기다리게 바꾸면 1.34 초로 진다.
+
+**검증.** Windows Debug `nogpu|lint` 28/28 · `hostgpu` 2/2, Shipping 9/9. POSIX 쪽은 이 PC 에서 컴파일되지 않아 CI 로 본다.
+탐색기 자체를 띄워 보지는 않았다(사용자 화면에 창이 뜬다) — 종료 코드 1 은 알려진 동작을 근거로 했다.
+
 ### 2026-10-01 (결함 ① 테스트 단언이 작업 스레드에서 동시에 실패하면 실행 파일이 죽었다)
 
 단언(`SW_EXPECT_*`)은 작업 스레드에서도 불린다 — `runParallel` 본문 · `std::thread` 람다 안에 열 곳(TestDataStructure · TestGlobalVariable ·
