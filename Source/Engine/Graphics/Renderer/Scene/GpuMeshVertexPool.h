@@ -75,6 +75,8 @@ namespace sw
         unordered_map<const Mesh*, uint32> _mapBase;
         /// @brief 지난 build 의 메시 집합(포인터 오름차순)입니다. 같으면 다시 만들지 않습니다.
         vector<const Mesh*> _listBuilt;
+        /// @brief `_listBuilt` 와 같은 순서의 내용 번호(`Mesh::getContentId`)입니다. 포인터가 같아도 이것이 다르면 다른 메시다.
+        vector<uint64> _listBuiltContentId;
         /// @brief build 가 집합을 정렬해 두는 스크래치입니다. 프레임마다 할당하지 않습니다.
         vector<const Mesh*> _listScratchSorted;
         uint32              _vertexCount{ 0 };

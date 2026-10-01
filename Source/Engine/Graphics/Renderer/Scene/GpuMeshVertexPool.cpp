@@ -34,13 +34,20 @@ namespace sw
         std::sort( _listScratchSorted.begin(), _listScratchSorted.end() );
         _listScratchSorted.erase( std::unique( _listScratchSorted.begin(), _listScratchSorted.end() ), _listScratchSorted.end() );
 
-        const bool bSameSet = ( _listBuilt.size() == _listScratchSorted.size() ) &&
-                              std::equal( _listBuilt.begin(), _listBuilt.end(), _listScratchSorted.begin() );
+        // 포인터와 **내용 번호**를 함께 본다. 포인터만 보면 지워진 메시 자리에 새 메시가 생기거나 같은 메시의 정점이 바뀌어도(setVertices)
+        // 같은 집합으로 보여 옛 정점을 그렸다. 번호는 지금 살아 있는 쪽(scratch)에서 읽는다 — 지난 목록의 포인터는 이미 죽었을 수 있다.
+        bool bSameSet = ( _listBuilt.size() == _listScratchSorted.size() ) &&
+                        std::equal( _listBuilt.begin(), _listBuilt.end(), _listScratchSorted.begin() );
+        for ( size_t index = 0; bSameSet && index < _listScratchSorted.size(); ++index )
+            bSameSet = _listBuiltContentId[index] == _listScratchSorted[index]->getContentId();
         if ( bSameSet && ( _vertexBuffer != 0 || _listScratchSorted.empty() ) )
             return false;
 
         release( pDevice );
         _listBuilt = _listScratchSorted;
+        _listBuiltContentId.clear();
+        for ( const Mesh* pMesh : _listBuilt )
+            _listBuiltContentId.push_back( pMesh->getContentId() );
 
         vector<RHIVertex> listVertex;
         for ( const Mesh* pMesh : _listBuilt )
@@ -78,6 +85,7 @@ namespace sw
         _vertexBuffer = 0;
         _mapBase.clear();
         _listBuilt.clear();
+        _listBuiltContentId.clear();
         _vertexCount = 0;
     }
 } // namespace sw

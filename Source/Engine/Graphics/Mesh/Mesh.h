@@ -79,6 +79,12 @@ namespace sw
         bool isGpuMorphEnabled() const { return _bGpuMorph != SW_FALSE; }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
+        /**
+         * @brief 이 메시 **내용**의 프로세스 고유 번호입니다. 만들 때와 `setVertices` 때마다 새 번호를 받습니다.
+         * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 예전에는 포인터만 봐서, 메시가 지워진 자리에 새 메시가
+         *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꾸면 "같은 집합" 으로 보여 옛 정점을 그렸습니다.
+         */
+        uint64 getContentId() const { return _contentId; }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
         bool initRhi( IRHIDevice* pDevice ) override;
@@ -96,8 +102,12 @@ namespace sw
     private:
         /** @brief 정점 버퍼를 실제로 놓습니다. 살아 있는 디바이스면 돌려주고, 아니면 잊습니다. */
         void releaseVertexBuffer();
+        /** @brief 새 내용 번호를 냅니다(프로세스 전역, 0 은 쓰지 않습니다). */
+        static uint64 allocateContentId();
 
         vector<RHIVertex> _listVertex;
+        /// @brief getContentId 참고. 만들 때와 setVertices 때 새로 받습니다.
+        uint64 _contentId{ allocateContentId() };
         /// @brief setGpuMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGpuMorph{ SW_FALSE };
         /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 듭니다(RHIResidentBuffer). */

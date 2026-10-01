@@ -30,14 +30,18 @@ namespace sw
 
         // 목록이 그대로면 다시 만들지 않는다. 레스트 포즈는 변하지 않으므로 **한 번만** 올린다.
         // 매 프레임 올리면 이 클래스가 없애려던 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
-        const bool bSameSet = ( _listBuilt.size() == listMesh.size() ) &&
-                              std::equal( _listBuilt.begin(), _listBuilt.end(), listMesh.begin() );
+        // 포인터와 **내용 번호**를 함께 본다(GpuMeshVertexPool::build 와 같은 이유). 번호는 지금 받은 목록에서 읽는다.
+        bool bSameSet = ( _listBuilt.size() == listMesh.size() ) &&
+                        std::equal( _listBuilt.begin(), _listBuilt.end(), listMesh.begin() );
+        for ( size_t index = 0; bSameSet && index < listMesh.size(); ++index )
+            bSameSet = _listBuiltContentId[index] == listMesh[index]->getContentId();
         if ( bSameSet && _vertexCount > 0 )
             return;
 
         _mapBase.clear();
         _listBuilt.clear();
         _listBuilt.reserve( listMesh.size() );
+        _listBuiltContentId.clear();
         _vertexCount = 0;
 
         // 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
@@ -59,6 +63,7 @@ namespace sw
             }
             _mapBase.emplace( pMesh, _vertexCount );
             _listBuilt.push_back( pMesh );
+            _listBuiltContentId.push_back( pMesh->getContentId() );
             for ( const RHIVertex& vertex : listVertex )
             {
                 GpuMorphVertex morphVertex{};
@@ -101,6 +106,7 @@ namespace sw
         _morph.release( pDevice );
         _mapBase.clear();
         _listBuilt.clear();
+        _listBuiltContentId.clear();
         _vertexCount = 0;
     }
 } // namespace sw

@@ -24,6 +24,8 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
+#include "Engine/Graphics/Renderer/Scene/GpuMeshVertexPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -2531,6 +2533,59 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도
+ * @details 두 풀은 메시 집합이 그대로인지를 포인터로만 봤다. 메시가 지워진 자리에 새 메시가 생기거나(할당기는 같은 크기의 자리를 곧바로
+ *          다시 준다) 같은 메시의 정점을 바꾸면(`setVertices`) "같은 집합" 으로 보여 옛 정점을 그렸고, 정점 수가 줄었으면 배치의 정점 구간이
+ *          다른 메시의 정점을 읽었다. 주소 재사용은 시험에서 마음대로 일으킬 수 없어, 같은 원인의 다른 얼굴(같은 메시의 정점 교체)로 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
+{
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+            SW_ASSERT_NOT_NULL( mesh.get() );
+            const uint32 cubeVertexCount = mesh->getVertexCount();
+            SW_ASSERT_TRUE( cubeVertexCount > 3 );
+            sw::vector<sw::Mesh*> listMesh;
+            listMesh.push_back( mesh.get() );
+
+            sw::GpuMeshVertexPool vertexPool;
+            sw::GpuMeshMorphPool  morphPool;
+            SW_EXPECT_TRUE( vertexPool.build( device.get(), listMesh ) );
+            SW_EXPECT_FALSE( vertexPool.build( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
+            morphPool.build( device.get(), listMesh );
+            SW_EXPECT_EQUAL( cubeVertexCount, vertexPool.getVertexCount() );
+            SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getVertexCount() );
+
+            // 같은 메시, 다른 내용 — 삼각형 하나.
+            sw::vector<sw::RHIVertex> listTriangle;
+            for ( uint32 vertexIndex = 0; vertexIndex < 3; ++vertexIndex )
+                listTriangle.push_back( mesh->getVertices()[vertexIndex] );
+            mesh->setVertices( listTriangle );
+
+            SW_EXPECT_TRUE_MSG( vertexPool.build( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
+            morphPool.build( device.get(), listMesh );
+            SW_EXPECT_EQUAL( 3u, vertexPool.getVertexCount() );
+            SW_EXPECT_EQUAL( 3u, morphPool.getVertexCount() );
+
+            vertexPool.release( device.get() );
+            morphPool.release( device.get() );
+            mesh->releaseRhi( device.get() );
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the mesh pool content test" );
 }
 
 /**

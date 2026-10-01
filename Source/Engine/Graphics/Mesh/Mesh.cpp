@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -29,12 +30,20 @@ namespace sw
     {
         releaseVertexBuffer();
         _listVertex = listVertex;
+        _contentId  = allocateContentId();
     }
 
     void Mesh::setVertices( vector<RHIVertex>&& listVertex )
     {
         releaseVertexBuffer();
         _listVertex = std::move( listVertex );
+        _contentId  = allocateContentId();
+    }
+
+    uint64 Mesh::allocateContentId()
+    {
+        static atomic<uint64> s_nextContentId{ 1 };
+        return s_nextContentId.fetch_add( 1u, std::memory_order_relaxed );
     }
 
     bool Mesh::initRhi( IRHIDevice* pDevice )

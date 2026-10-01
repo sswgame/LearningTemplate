@@ -103,6 +103,8 @@ namespace sw
         unordered_map<const Mesh*, uint32> _mapBase;
         /// @brief 지난 build 의 메시 목록입니다. 같으면 다시 만들지 않습니다.
         vector<const Mesh*> _listBuilt;
-        uint32              _vertexCount{ 0 };
+        /// @brief `_listBuilt` 와 같은 순서의 내용 번호(`Mesh::getContentId`)입니다. 포인터가 같아도 이것이 다르면 다른 메시다.
+        vector<uint64> _listBuiltContentId;
+        uint32         _vertexCount{ 0 };
     };
 } // namespace sw
