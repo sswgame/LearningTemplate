@@ -2,6 +2,7 @@
 
 #include "Core/Delegate/Delegate.h"
 
+#include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
@@ -290,4 +291,71 @@ SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )
         ObjectStateSerializer::loadFromXmlString( pObj, before._xml );
         SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
     }
+}
+
+/**
+ * @brief [EditorTransactionTest] 자식이 있는 오브젝트를 지우고 되돌리면 자식 · 손자까지 원래 계층으로 돌아온다
+ * @details 삭제(`destroyObject`)는 자식까지 지우는데, 기록은 그 오브젝트 **하나의** 스냅샷만 남겼다. 되돌리면 부모만 돌아오고
+ *          자식은 영영 사라졌다 — 그대로 저장하면 파일에서도. 이제 서브트리를 자식부터 기록해 한 묶음으로 넣는다(묶음의
+ *          되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 이름으로 부모를 찾아 다시 붙는다).
+ */
+SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "SubtreeProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+
+    GameObject* pParent     = pManager->createGameObject( hashed_string( "SubtreeParent" ) );
+    GameObject* pChild      = pManager->createGameObject( hashed_string( "SubtreeChild" ) );
+    GameObject* pGrandChild = pManager->createGameObject( hashed_string( "SubtreeGrandChild" ) );
+    SW_ASSERT_NOT_NULL( pParent );
+    SW_ASSERT_NOT_NULL( pChild );
+    SW_ASSERT_NOT_NULL( pGrandChild );
+    pParent->addComponent<SceneComponent>();
+    pChild->addComponent<SceneComponent>();
+    pGrandChild->addComponent<SceneComponent>();
+    pManager->mergePendingAdds();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    SW_ASSERT_TRUE( pGrandChild->attachToParent( pChild ) );
+
+    SW_ASSERT_TRUE( EditorSceneCommands::destroy( pManager, pParent ) );
+    pManager->processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "SubtreeParent" ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "SubtreeChild" ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "SubtreeGrandChild" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), stack.getCommandCount() ); // 한 번의 삭제는 한 번의 되돌리기
+
+    const auto expectWholeSubtree = [pManager]( const utf8* pStep )
+    {
+        GameObject* pRestoredParent     = pManager->findGameObjectByName( hashed_string( "SubtreeParent" ) );
+        GameObject* pRestoredChild      = pManager->findGameObjectByName( hashed_string( "SubtreeChild" ) );
+        GameObject* pRestoredGrandChild = pManager->findGameObjectByName( hashed_string( "SubtreeGrandChild" ) );
+        SW_EXPECT_TRUE_MSG( pRestoredParent != nullptr, pStep );
+        SW_EXPECT_TRUE_MSG( pRestoredChild != nullptr, pStep );
+        SW_EXPECT_TRUE_MSG( pRestoredGrandChild != nullptr, pStep );
+        if ( pRestoredParent == nullptr || pRestoredChild == nullptr || pRestoredGrandChild == nullptr )
+            return;
+        SW_EXPECT_TRUE_MSG( pRestoredChild->getParent() == pRestoredParent, pStep );
+        SW_EXPECT_TRUE_MSG( pRestoredGrandChild->getParent() == pRestoredChild, pStep );
+    };
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    expectWholeSubtree( "첫 되돌리기" );
+
+    stack.redo();
+    pManager->processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "SubtreeChild" ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "SubtreeGrandChild" ) );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    expectWholeSubtree( "다시 하기 뒤 두 번째 되돌리기" );
 }

@@ -34,6 +34,19 @@ namespace sw::editor
             {
                 return EditorUtil::areSceneEditsAllowed();
             }
+
+            /** @brief 서브트리를 **자식부터**(후위 순서) 모읍니다. 마지막이 pObj 입니다. */
+            static void collectSubtreeChildFirst( GameObject* pObj, vector<GameObject*>& outListObject )
+            {
+                vector<GameObject*> listChild;
+                pObj->getChildren( listChild );
+                for ( GameObject* pChild : listChild )
+                {
+                    if ( pChild != nullptr )
+                        collectSubtreeChildFirst( pChild, outListObject );
+                }
+                outListObject.push_back( pObj );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -143,15 +156,27 @@ namespace sw::editor
         if ( pManager == nullptr || pObj == nullptr )
             return false;
 
+        // 삭제는 자식까지 지운다(`destroyObject` 기본). 그러니 기록도 서브트리 전체다 — 예전에는 이 오브젝트 하나의 스냅샷만 남겨,
+        // 되돌리면 부모만 돌아오고 자식은 영영 사라졌다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 묶음으로 넣는다: 묶음의
+        // 되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 이름으로 부모를 찾아 다시 붙는다.
+        vector<GameObject*> listSubtree;
+        EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
+
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
             SelectionManager& sel = pContext->getSelectionManager();
-            if ( sel.hasObject( pObj ) )
-                sel.selectObject( pObj, SelectionMode::Remove );
+            for ( GameObject* pDoomed : listSubtree )
+            {
+                if ( sel.hasObject( pDoomed ) )
+                    sel.selectObject( pDoomed, SelectionMode::Remove );
+            }
         }
 
-        EditorTransaction::recordDestruction( pObj, "Destroy GameObject" );
+        EditorTransaction::beginTransaction( "Destroy GameObject" );
+        for ( GameObject* pDoomed : listSubtree )
+            EditorTransaction::recordDestruction( pDoomed, "Destroy GameObject" );
+        EditorTransaction::endTransaction();
         pManager->destroyObject( pObj );
         return true;
     }

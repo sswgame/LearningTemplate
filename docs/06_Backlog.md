@@ -2051,6 +2051,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑥ 에디터 — 자식이 있는 오브젝트를 지우고 되돌리면 부모만 돌아왔다)
+
+`EditorSceneCommands::destroy` 는 `destroyObject`(기본으로 자식까지 지운다)를 부르면서, 되돌리기 기록은 그 오브젝트 **하나의** XML
+스냅샷만 남겼다(`ObjectStateSerializer::saveToXmlString` 은 오브젝트 하나다). 부모를 지우고 Ctrl+Z 하면 부모만 돌아오고 자식 · 손자는
+영영 사라졌다 — 그대로 저장하면 파일에서도.
+
+**고침.** 서브트리를 **자식부터**(후위 순서) 모아 각각 `recordDestruction` 하고 한 묶음(`beginTransaction` · `endTransaction`)으로 넣는다.
+묶음의 되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 `SceneComponent` 의 부착 필드(부모 이름)로 부모를 찾아 다시 붙는다. 선택에서도
+서브트리 전체를 뺀다(예전에는 지운 오브젝트만 — 선택된 자식이 지연 파괴까지 인스펙터 대상으로 남았다).
+**검증.** `EditorTransactionTest.UndoOfDestroyBringsBackTheWholeSubtree`(부모 · 자식 · 손자, 되돌리기 → 계층까지 그대로, 다시 하기 →
+셋 다 사라짐, 다시 되돌리기 → 그대로, 기록은 한 개) — 고치기 전에는 자식 · 손자가 돌아오지 않아 진다.
+(이번 점검은 여섯 영역을 읽기 전용 에이전트로 훑고 후보마다 직접 확인한 뒤 시험부터 썼다 — 목록과 판정은 이 절의 같은 날 항목들.)
+
 ### 2026-10-01 (테스트 안정 ② 스트리밍 큐 시험이 "요청 직후 아직 진행 중" 에 기댔다)
 
 6ac216f6 의 CI(Linux Shipping)에서 `ResourceTest.AssetStreamingQueueLifecycleAndThrottling` 이 `isStreaming` · `getPendingCount() == 1` 로 졌다.
