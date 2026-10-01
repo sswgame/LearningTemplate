@@ -491,8 +491,9 @@ namespace test
         sw::vector<sw::string>                      listSuiteOrder;
         sw::map<sw::string, sw::pair<int32, int32>> mapSuiteRanSkipped;
 
-        // 오래 걸린 케이스 — 끝에 몇 개를 찍는다. 테스트가 느려지는 것은 조용히 일어난다.
-        sw::vector<sw::pair<float64, const TestCaseInfo*>> listElapsed;
+        // 오래 걸린 케이스 — 끝에 몇 개를 찍는다. 테스트가 느려지는 것은 조용히 일어난다. 되풀이하면 케이스마다 가장 오래 걸린 회차
+        // 하나로 센다(예전에는 회차마다 따로 들어가 같은 케이스 하나가 목록을 다 채웠다).
+        sw::map<const TestCaseInfo*, float64> mapSlowestElapsed;
 
         for ( uint32 iteration = 0; iteration < _repeatCount; ++iteration )
         {
@@ -514,7 +515,8 @@ namespace test
                 float64          elapsed = 0.0;
                 const CaseResult result  = runCase( testInfo, elapsed );
                 totalMs += elapsed;
-                listElapsed.push_back( { elapsed, pTestInfo } );
+                float64& slowestElapsed = mapSlowestElapsed[pTestInfo];
+                slowestElapsed          = std::max( slowestElapsed, elapsed );
 
                 if ( result == CaseResult::Skipped )
                 {
@@ -597,7 +599,11 @@ namespace test
         if ( bHostOnlyRanNothing )
             std::fprintf( stdout, " --host_suites=only selected no test - no SW_TEST_REQUIRES_HOST suite matched\n" );
 
-        constexpr size_t kSlowestShown = 5;
+        constexpr size_t                                   kSlowestShown = 5;
+        sw::vector<sw::pair<float64, const TestCaseInfo*>> listElapsed;
+        listElapsed.reserve( mapSlowestElapsed.size() );
+        for ( const auto& [pTestInfo, slowestElapsed] : mapSlowestElapsed )
+            listElapsed.push_back( { slowestElapsed, pTestInfo } );
         if ( listElapsed.size() > kSlowestShown )
         {
             std::partial_sort( listElapsed.begin(), listElapsed.begin() + kSlowestShown, listElapsed.end(),

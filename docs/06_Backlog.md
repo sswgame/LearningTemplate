@@ -2051,6 +2051,12 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (테스트 확인 ③ 느린 케이스 목록은 케이스마다 한 번)
+
+테스트 확인 ① 의 `Slowest cases:` 가 회차마다 따로 들어가, `--test_repeat` 와 함께 쓰면 같은 케이스 하나가 다섯 줄을 다 채웠다(크래시 시험을
+10 번 되풀이하자 `EveryCrashKindLeavesAReport` 만 다섯 번). 이제 케이스마다 가장 오래 걸린 회차 하나로 센다.
+**검증.** 세 스위트를 `--test_repeat=3` 으로 — 다섯 줄이 모두 다른 케이스.
+
 ### 2026-10-01 (테스트 안정 ① 띄운 스레드가 늦게 뜨면 진 시험 둘 — 돌기 시작한 뒤에 겨룬다)
 
 a26d9cfb 의 CI(Windows Debug)에서 `FileTest.ReadersNeverObserveHalfWrittenFile` 이 `goodReadCount > 0` 으로 졌다. 반쯤 쓴 파일을 본 것이
