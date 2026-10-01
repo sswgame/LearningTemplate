@@ -15,7 +15,6 @@ namespace sw
         , _pNativeThread{ nullptr }
         , _bufferedOutput{}
         , _processId{ 0 }
-        , _bRunning{ false }
     {
     }
 
@@ -29,14 +28,12 @@ namespace sw
         , _pStdOutRead{ other._pStdOutRead }
         , _pNativeThread{ other._pNativeThread }
         , _bufferedOutput{ std::move( other._bufferedOutput ) }
-        , _processId{ other._processId }
-        , _bRunning{ other._bRunning }
+        , _processId{ other._processId.load() }
     {
         other._pNativeHandle = nullptr;
         other._pStdOutRead   = nullptr;
         other._pNativeThread = nullptr;
-        other._processId     = 0;
-        other._bRunning      = false;
+        other._processId.store( 0 );
     }
 
     Process& Process::operator=( Process&& other ) noexcept
@@ -49,14 +46,12 @@ namespace sw
             _pStdOutRead    = other._pStdOutRead;
             _pNativeThread  = other._pNativeThread;
             _bufferedOutput = std::move( other._bufferedOutput );
-            _processId      = other._processId;
-            _bRunning       = other._bRunning;
+            _processId.store( other._processId.load() );
 
             other._pNativeHandle = nullptr;
             other._pStdOutRead   = nullptr;
             other._pNativeThread = nullptr;
-            other._processId     = 0;
-            other._bRunning      = false;
+            other._processId.store( 0 );
         }
         return *this;
     }

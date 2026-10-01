@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 
@@ -108,7 +109,7 @@ namespace sw
          * @details **POSIX 는 `waitForExit` 이 거둔 뒤에도 0 입니다.** 그 시점에 pid 를 놓기 때문입니다. Windows 는 핸들을 닫을
          *          때까지 값이 남습니다.
          */
-        int32 getProcessId() const { return _processId; }
+        int32 getProcessId() const { return _processId.load(); }
         /** @brief 네이티브 프로세스 핸들입니다(Windows: HANDLE, POSIX: pid 를 그대로 담은 값). */
         void* getNativeHandle() const { return _pNativeHandle; }
 
@@ -129,7 +130,11 @@ namespace sw
         void*  _pStdOutRead;
         void*  _pNativeThread;
         string _bufferedOutput;
-        int32  _processId;
-        bool   _bRunning;
+        /**
+         * @brief 자식의 pid(없으면 0). **원자다** — `terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불리는 것이
+         *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다. 예전에는 보통 정수였고
+         *        같은 자리에 쓰기만 하고 읽지 않는 `_bRunning` 이 하나 더 있었다 — ThreadSanitizer 가 두 스레드의 쓰기를 짚었다(2026-10-01).
+         */
+        atomic<int32> _processId;
     };
 } // namespace sw

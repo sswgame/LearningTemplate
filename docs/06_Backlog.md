@@ -2038,6 +2038,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (Core `Process` — `terminate` 과 `waitForExit` 을 다른 스레드에서 부르는 것이 계약인데 필드가 원자가 아니었다)
+
+④b · ⑥(1445d1e1)의 CI 에서 **리눅스 TSan 잡이 졌다** — 새 시험 `TestFrameworkTest.HangingChildIsKilledAtTheDeadline` 이 처음으로
+`Process::terminate` 를 감시 스레드에서, `waitForExit` 을 본 스레드에서 같이 불렀다. 보고: `waitForExit`(PosixProcess.cpp:171)과
+`terminate`(205)가 같은 1 바이트를 쓴다 — `_bRunning`. `Process` 는 주석으로 "`terminate` 는 다른 스레드가 `readOutputLine` ·
+`waitForExit` 을 도는 중에 불린다(`ModuleCompiler::cancel` 이 UI 스레드에서 그렇게 부른다)" 고 계약하고, 그래서 pid 를 지역 변수로 한 번만
+읽는 손질까지 해 두었는데 **필드 자체는 보통 변수**였다. `_processId` 도 `terminate` 가 읽는 동안 `waitForExit` 이 0 으로 쓴다(같은 종류의
+경쟁 — 이번 실행에서는 `_bRunning` 이 먼저 걸렸다). 지금까지는 그 둘을 동시에 부르는 시험이 없었다.
+
+**고침.** `_bRunning` 을 걷었다 — **쓰기만 하고 읽는 곳이 없었다**(`isRunning` 은 OS 에 직접 묻는다). `_processId` 는 `sw::atomic<int32>`.
+Windows 쪽도 같은 두 필드를 같은 식으로(거기서는 `terminate` 와 `waitForExit` 이 둘 다 `_bRunning` 을 썼다).
+
+**검증.** 이 PC 에는 TSan(리눅스)이 없어 CI 로 본다 — 같은 시험이 그 경쟁을 다시 만든다. Windows Debug `nogpu|lint` 28/28 ·
+`hostgpu` 2/2, Shipping 9/9.
+
 ### 2026-10-01 (Test 구조 ⑤ 벤치 통계를 한 벌로 — `TestFramework/TestBench.h`)
 
 벤치 파일 셋(`TestTaskManagerBench` · `TestGameObjectBench` · `TestContainerBench`)이 백분위 · 경과 시간 · 한 줄 보고를 각자 들었다 —

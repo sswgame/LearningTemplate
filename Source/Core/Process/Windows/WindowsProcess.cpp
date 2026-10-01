@@ -54,8 +54,7 @@ namespace sw
         }
 
         _bufferedOutput.clear();
-        _processId = 0;
-        _bRunning  = false;
+        _processId.store( 0 );
     }
 
     bool Process::launch( string_view command, const ProcessOptions& options )
@@ -114,8 +113,7 @@ namespace sw
         _pNativeHandle = pi.hProcess;
         _pNativeThread = pi.hThread;
         _pStdOutRead   = hStdOutRead;
-        _processId     = static_cast<int32>( pi.dwProcessId );
-        _bRunning      = true;
+        _processId.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
     }
@@ -163,8 +161,6 @@ namespace sw
 
         DWORD exitCode = 0;
         GetExitCodeProcess( static_cast<HANDLE>( _pNativeHandle ), &exitCode );
-
-        _bRunning = false;
         return static_cast<int32>( exitCode );
     }
 
@@ -173,13 +169,7 @@ namespace sw
         if ( _pNativeHandle == nullptr )
             return false;
 
-        const BOOL ok = TerminateProcess( static_cast<HANDLE>( _pNativeHandle ), static_cast<UINT>( exitCode ) );
-        if ( ok != FALSE )
-        {
-            _bRunning = false;
-            return true;
-        }
-        return false;
+        return TerminateProcess( static_cast<HANDLE>( _pNativeHandle ), static_cast<UINT>( exitCode ) ) != FALSE;
     }
 
     bool Process::isRunning() const
