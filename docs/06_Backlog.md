@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (테스트 안정 ① 띄운 스레드가 늦게 뜨면 진 시험 둘 — 돌기 시작한 뒤에 겨룬다)
+
+a26d9cfb 의 CI(Windows Debug)에서 `FileTest.ReadersNeverObserveHalfWrittenFile` 이 `goodReadCount > 0` 으로 졌다. 반쯤 쓴 파일을 본 것이
+아니다(torn 0, 읽기 오류 줄도 0) — 읽는 스레드를 띄우자마자 60 번을 썼는데(65 ms), 붐비는 러너(Test 구조 ⑦ 에서 `RUN_SERIAL` 을 걷어
+ctest 가 병렬)에서 그 스레드가 쓰기가 다 끝날 때까지 **한 번도 돌지 못했다.** 이 PC 에서는 300 번 돌려 한 번도 안 났다.
+- `FileTest.ReadersNeverObserveHalfWrittenFile` — 읽는 쪽이 첫 시도를 한 뒤에 쓰고, **쓰는 동안 겹친 읽기**를 세어 다섯 번이 안 되면 더
+  쓴다(상한 2000). 단언도 "읽은 적 있음" 에서 "쓰기와 겹친 읽기 ≥ 5" 로.
+- `ShaderCacheStressTest.MultiThreadedClearAndQueryStress` — 같은 모양(지우는 스레드를 띄우자마자 쿼리 여섯 개, 끝에 `clearsDone > 0`).
+  지우는 쪽이 한 번 지운 뒤에 쿼리를 띄운다.
+나머지 "스레드를 띄우고 그 일을 단언" 하는 시험(`LockFreeObjectPoolConcurrent` · 에셋 스트리밍 콜백 · 생산자/소비자 큐)은 join · 드레인
+뒤에 세므로 늦게 떠도 지지 않는다. `GlobalVariableTest` 의 동시 읽기는 늦게 뜨면 조용히 약해질 뿐 지지는 않는다(둔다).
+**검증.** 읽는 스레드를 300 ms 늦게 띄우는 돌연변이에도 통과(옛 시험은 진다), 제자리 쓰기(원자적이지 않은 쓰기) 돌연변이는 여전히 진다.
+`--test_repeat=100` 100/100 · 셰이더 스트레스 `--test_repeat=20` 40/40.
+
 ### 2026-10-01 (결함 ⑤ 끝날 수 없는 크래시 보고 — stderr 가 막히면 스택 파일이 없었고, 시한 줄도 막혔고, POSIX 는 시한이 없었다)
 
 결함 ④ 의 시한이 정말 "끝낸다" 인지 시험하려고, 보고가 끝날 수 없는 크래시를 하나 만들었다 — `CrashTestKind::StderrHeld`(다른 스레드가

@@ -6,6 +6,7 @@
 #include "TestFramework/TestFramework.h"
 
 #include <atomic>
+#include <chrono>
 #include <thread>
 
 namespace
@@ -413,6 +414,10 @@ SW_TEST_CASE( FileTest, ProcessUsesUtf8AnsiCodePage )
  * @details 예전 쓰기는 원본을 "wb" 로 열어(길이 0) 그 자리에 썼다. 그 사이에 읽으면 빈 파일이나 앞부분만 있는 파일을 "정상으로" 읽었다 —
  *          에디터가 저장하는 순간 핫 리로드 · 파일 감시가 읽으면 그렇게 됐다. 지금은 다 쓴 뒤 바꿔 끼우므로 읽는 쪽은 옛 파일 전체나 새 파일
  *          전체만 본다.
+ *
+ *          읽기가 쓰기와 **겹쳐야** 시험이 된다. 예전에는 읽는 스레드를 띄우자마자 60 번을 썼는데, 붐비는 CI 러너(ctest 병렬)에서 그
+ *          스레드가 쓰기가 다 끝날 때(65 ms)까지 한 번도 돌지 못해 "읽은 적 없음" 으로 졌다(2026-10-01, Windows Debug — 읽기 오류 줄도
+ *          없었다). 이제 읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어 모자라면 더 쓴다.
  */
 SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
 {
@@ -427,12 +432,15 @@ SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
     std::atomic<bool>   bWriterDone{ false };
     std::atomic<uint32> tornReadCount{ 0 };
     std::atomic<uint32> goodReadCount{ 0 };
+    std::atomic<uint32> attemptCount{ 0 };
     std::thread         reader( [&]()
     {
         sw::vector<uint8> readBytes;
         while ( bWriterDone.load() == false )
         {
-            if ( sw::FileUtil::readFile( filePath, readBytes ) == false )
+            const bool bRead = sw::FileUtil::readFile( filePath, readBytes );
+            attemptCount.fetch_add( 1 );
+            if ( bRead == false )
                 continue;
             const bool bWholeFile = readBytes.size() == kFileBytes && ( readBytes.front() == 'A' || readBytes.front() == 'B' ) &&
                                     readBytes.back() == readBytes.front();
@@ -443,15 +451,26 @@ SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
         }
     } );
 
-    for ( uint32 writeIndex = 0; writeIndex < 60; ++writeIndex )
+    // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
+    const auto waitStart = std::chrono::steady_clock::now();
+    while ( attemptCount.load() == 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+        std::this_thread::yield();
+    const uint32 readBeforeWrite = goodReadCount.load() + tornReadCount.load();
+
+    // 쓰는 동안 겹친 읽기가 몇 번은 있어야 한다 — 60 번을 쓰고도 모자라면 더 쓴다(상한이 있다).
+    constexpr uint32 kMinOverlappedRead = 5;
+    for ( uint32 writeIndex = 0; writeIndex < 2000; ++writeIndex )
     {
+        if ( writeIndex >= 60 && goodReadCount.load() + tornReadCount.load() - readBeforeWrite >= kMinOverlappedRead )
+            break;
         const sw::vector<uint8>& bytes = ( writeIndex % 2 == 0 ) ? bytesB : bytesA;
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( filePath, bytes.data(), bytes.size() ) );
     }
+    const uint32 overlappedRead = goodReadCount.load() + tornReadCount.load() - readBeforeWrite;
     bWriterDone.store( true );
     reader.join();
 
     SW_EXPECT_EQUAL( 0u, tornReadCount.load() );
-    SW_EXPECT_TRUE( goodReadCount.load() > 0 );
+    SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 시험하지 않은 것이다" );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }

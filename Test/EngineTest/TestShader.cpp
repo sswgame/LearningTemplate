@@ -13,6 +13,7 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <chrono>
 #include <thread>
 
 // 셰이더 주변 — 스테이지 비트 연산 · 굽기(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 굽기 도장.
@@ -380,6 +381,9 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedCacheAccessStress )
 
 /**
  * @brief [ShaderCacheStressTest] 동시 쿼리와 clearCache 간의 레이스 컨디션 스트레스
+ * @details 지우는 스레드가 **돌기 시작한 뒤에** 쿼리를 띄운다. 붐비는 기계(CI 의 ctest 병렬)에서는 스레드가 늦게 떠서, 쿼리가 다 끝날
+ *          때까지 한 번도 지우지 못하면 아무것도 겨루지 않은 채 `clearsDone == 0` 으로 진다 — `FileTest.ReadersNeverObserveHalfWrittenFile`
+ *          이 같은 모양으로 CI 에서 졌다(2026-10-01).
  */
 SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
 {
@@ -398,6 +402,11 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
             std::this_thread::yield();
         }
     } );
+
+    const auto waitStart = std::chrono::steady_clock::now();
+    while ( clearsDone.load() == 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+        std::this_thread::yield();
+    SW_EXPECT_TRUE_MSG( clearsDone.load() > 0, "지우는 스레드가 10 초 안에 돌지 않았다" );
 
     sw::vector<std::thread> listWorker;
     listWorker.reserve( kWorkerCount );
@@ -427,8 +436,6 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
     bRunning.store( false, std::memory_order_relaxed );
     if ( clearerThread.joinable() )
         clearerThread.join();
-
-    SW_EXPECT_TRUE( clearsDone.load() > 0 );
 }
 
 /**
