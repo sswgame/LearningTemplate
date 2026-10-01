@@ -931,6 +931,13 @@ namespace sw
             _ancestorDepth.store( constants::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
+         * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록과 그 이름 맵 · POD 판정)를 비웁니다. 다음 조회가 지금 부모로 다시 만듭니다.
+         * @details 등록 · 해제 뒤에 `TypeRegistry` 가 모든 타입에 부릅니다. 예전에는 대입(`invalidateDerivedCaches`)만 비워서, 기반이 다시
+         *          등록되거나 내려가도 **다른 모듈의 파생 타입**은 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈 코드를 가리키는 접근자)를
+         *          계속 내놓았다.
+         */
+        void clearInheritedProperties() const;
+        /**
          * @brief 선언에서 **파생된** 캐시(이름 맵 · 상속 포함 목록 · 부모 포인터 · 조상 표 · POD 판정)를 모두 비웁니다.
          * @details 복사 · 이동 대입이 이 열한 줄을 각자 갖고 있었습니다. 캐시가 하나 늘면 두 곳을 같이 고쳐야 했고, 빠뜨리면 대입된
          *          타입이 **옛 타입의 캐시**로 답했습니다(이름 조회가 다른 오프셋을 줍니다).

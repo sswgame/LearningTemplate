@@ -360,19 +360,27 @@ namespace sw
         other._bIsCacheBuilt   = SW_FALSE;
     }
 
-    void TypeInfo::invalidateDerivedCaches()
+    void TypeInfo::clearInheritedProperties() const
     {
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        clearParentType();
-        clearAncestorDisplay();
-        _bIsCacheBuilt              = SW_FALSE;
+        // 등록마다 모든 타입에 불린다(배치 동안 타입 수의 제곱) — 빈 것은 건드리지 않는다.
+        if ( _listPropertyWithBase.empty() == false )
+            _listPropertyWithBase.clear();
+        if ( _mapNameToPropertyWithBase.empty() == false )
+            _mapNameToPropertyWithBase.clear();
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
         _bBuildingPropertyWithBase  = SW_FALSE;
+    }
+
+    void TypeInfo::invalidateDerivedCaches()
+    {
+        clearInheritedProperties();
+        _mapNameToProperty.clear();
+        _mapNameToMethod.clear();
+        clearParentType();
+        clearAncestorDisplay();
+        _bIsCacheBuilt = SW_FALSE;
     }
 
     TypeInfo& TypeInfo::operator=( const TypeInfo& other )
@@ -593,11 +601,12 @@ namespace sw
         }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
         // 사슬이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
-        // 조상 표를 모두 비운다. 배치 끝의 buildLookupCaches 나 첫 상속 검사가 다시 세운다.
+        // 조상 표와 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 buildLookupCaches 나 첫 조회가 다시 세운다.
         for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
         {
             (void)storedFqn;
             pStoredInfo->clearAncestorDisplay();
+            pStoredInfo->clearInheritedProperties();
         }
         if ( stored._name.empty() == false && stored._name != canonicalKey )
         {
@@ -846,12 +855,14 @@ namespace sw
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
         // 부모 포인터는 옮겨지지 않지만 **해제된 부모**를 가리킬 수 있다. 비워서 다음 조회가 이름으로 다시 풀게 한다
-        // (해제된 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도 같이 비운다.
+        // (해제된 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도, 부모에게서 복사해 온 프로퍼티도 같이 비운다 —
+        // 그 사본의 접근자는 지금 내려가는 모듈의 코드를 가리킨다(모듈이 아직 살아 있는 지금 버려야 한다, `clearContent` 와 같은 이유).
         for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
             pInfo->clearParentType();
             pInfo->clearAncestorDisplay();
+            pInfo->clearInheritedProperties();
         }
         gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }

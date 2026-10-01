@@ -2051,6 +2051,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉔ 리플렉션 — 기반을 다시 등록 · 해제해도 파생 타입은 옛 기반의 프로퍼티를 냈다)
+
+파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록은 그 타입 자신의 캐시만 비웠고(대입의 `invalidateDerivedCaches`),
+모듈 해제는 부모 포인터와 조상 표만 비웠다. 그래서 **다른 모듈의 파생 타입**은 기반이 핫 리로드로 바뀐 뒤에도 옛 기반의 프로퍼티(옛 오프셋)로
+직렬화했고, 기반 모듈이 내려간 뒤에는 그 모듈 코드를 가리키는 접근자 사본까지 들고 있었다(`clearContent` 가 막으려던 바로 그 모양).
+`TypeInfo::clearInheritedProperties`(상속 포함 목록 · 이름 맵 · POD 판정)를 두고, `registerClass` 와 `unregisterTypesByModule` 이 조상 표를 비우는 그
+자리에서 모든 타입에 부른다(빈 것은 건드리지 않는다 — 등록 배치는 타입 수의 제곱만큼 부른다). `invalidateDerivedCaches` 도 이것을 쓴다.
+**검증.** `ReflectionTypeRegistryTest.DerivedPropertyListFollowsItsBase` — 기반을 프로퍼티 하나 더해 다시 등록하면 파생 목록이 2 → 3, 기반 모듈만
+내리면 1(내려간 `_a` 를 못 찾는다). 두 자리 각각을 빼는 변이 둘이 모두 실패했다.
+
 ### 2026-10-01 (결함 ㉓ 리플렉션 — 컴포넌트에는 `REFLECT( Alias = 옛이름 )` 이 먹지 않았다)
 
 리플렉션 README §4 의 예가 바로 컴포넌트 별칭이다("직렬화된 예전 이름도 찾을 수 있습니다"). 그런데 컴포넌트 팩토리는 지금 이름으로만 등록되고

@@ -1192,3 +1192,53 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
     } );
     SW_EXPECT_TRUE_MSG( report.empty(), ( "unregistered parents:" + report ).c_str() );
 }
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 기반을 다시 등록 · 해제하면 파생 타입의 상속 포함 목록이 따라 바뀐다
+ * @details 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록은 그 타입 자신의 캐시만 비웠고(대입), 해제는 부모
+ *          포인터와 조상 표만 비웠다. 그래서 다른 모듈의 파생 타입은 핫 리로드 뒤에도 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈의 접근자)로
+ *          직렬화했다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
+{
+    sw::TypeRegistry& registry     = sw::engine::getTypeRegistry();
+    const auto        makeProperty = []( const utf8* pName, size_t offset )
+    {
+        return sw::PropertyInfo{ sw::hashed_string( pName ), sw::hashed_string( "int32" ), offset };
+    };
+
+    sw::TypeInfo base;
+    base._name               = sw::hashed_string( "MergeBase" );
+    base._fullyQualifiedName = sw::hashed_string( "swtest::MergeBase" );
+    base._moduleName         = sw::hashed_string( "TestMergeBase" );
+    base._size               = 8;
+    base._listProperty       = { makeProperty( "_a", 0 ) };
+
+    sw::TypeInfo derived;
+    derived._name               = sw::hashed_string( "MergeDerived" );
+    derived._fullyQualifiedName = sw::hashed_string( "swtest::MergeDerived" );
+    derived._parentFQN          = sw::hashed_string( "swtest::MergeBase" );
+    derived._moduleName         = sw::hashed_string( "TestMergeDerived" );
+    derived._size               = 12;
+    derived._listProperty       = { makeProperty( "_b", 8 ) };
+
+    registry.registerClass( base );
+    registry.registerClass( derived );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::MergeDerived" ) );
+    SW_ASSERT_NOT_NULL( pDerived );
+    SW_EXPECT_EQUAL( 2u, pDerived->getPropertiesWithBase().size() );
+
+    // 기반이 바뀌어 다시 올라온다(핫 리로드). 파생 모듈은 그대로다 — 파생 쪽 목록이 새 기반을 본다.
+    base._listProperty = { makeProperty( "_a", 0 ), makeProperty( "_c", 4 ) };
+    registry.registerClass( base );
+    SW_EXPECT_EQUAL( 3u, pDerived->getPropertiesWithBase().size() );
+    SW_EXPECT_NOT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) ) );
+
+#if !defined( SW_SHIPPING )
+    // 기반 모듈만 내려간다 — 파생 쪽 목록에 내려간 모듈의 프로퍼티가 남지 않는다.
+    registry.unregisterTypesByModule( "TestMergeBase" );
+    SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
+    SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
+    registry.unregisterTypesByModule( "TestMergeDerived" );
+#endif
+}
