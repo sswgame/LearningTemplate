@@ -56,6 +56,7 @@ namespace sw
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
+        , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
         , _listMaterialTextureSrv{}
         , _blendMode{ RHIBlendMode::Opaque }
@@ -134,6 +135,7 @@ namespace sw
         // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRhi->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getResourceManager().getTextureManager();
+        _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
@@ -159,6 +161,41 @@ namespace sw
             _listMaterialTextureSrv.push_back( pTexture->getSrv() );
             setTextureParameter( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
         }
+    }
+
+    bool Material::refreshTextureBindings()
+    {
+        if ( _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false )
+            return false;
+        TextureCache& textures   = engine::getResourceManager().getTextureManager();
+        const uint32  generation = textures.getReloadGeneration();
+        if ( generation == _textureReloadGeneration )
+            return false;
+        _textureReloadGeneration = generation;
+
+        // resolveTextureAssets 가 프로퍼티 순서대로(빌리지 못한 것은 건너뛰고) 쌓았으므로 같은 순서로 맞춰 간다. 슬롯 바인딩 백엔드(DX11 · GL)의
+        // 바이트에는 인덱스가 아니라 서수가 실려 있어 바꿀 것이 슬롯 목록뿐이다.
+        const bool bNativeBindless = _pRHIDevice->supportsNativeBindlessSampling();
+        bool       bChanged{ false };
+        size_t     ordinal{ 0 };
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            if ( ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listMaterialTextureSrv.size() )
+                break;
+            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
+                continue;
+            const Texture2D*         pTexture = textures.find( prop._assetPath );
+            const RHIDescriptorIndex srv      = pTexture != nullptr ? pTexture->getSrv() : kInvalidDescriptorIndex;
+            if ( srv != _listMaterialTextureSrv[ordinal] )
+            {
+                _listMaterialTextureSrv[ordinal] = srv;
+                if ( bNativeBindless )
+                    setTextureParameter( _pRHIDevice, hashed_string( prop._name.c_str() ), srv );
+                bChanged = true;
+            }
+            ++ordinal;
+        }
+        return bChanged;
     }
 
     void Material::releaseTextureAssets( IRHIDevice* pRhi )

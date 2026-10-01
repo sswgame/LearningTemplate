@@ -142,6 +142,14 @@ namespace sw
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 돌려줍니다. */
         void releaseTextureAssets( IRHIDevice* pRhi );
         /**
+         * @brief 빌린 텍스처가 다시 올라왔으면(`TextureCache::reload`) 새 SRV 인덱스를 받아 다시 패킹합니다.
+         * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스는 돌려줍니다. 예전에는 머티리얼이 resolve 때
+         *          받은 인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11 · GL)에 그대로 들고 있어 **돌려준 자리**를 읽었습니다. 캐시의 reload
+         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 쌉니다(`GpuSceneBuilder` 가 세대가 바뀐 빌드에서만 부릅니다).
+         * @return 인덱스가 하나라도 바뀌었으면 true 입니다.
+         */
+        bool refreshTextureBindings();
+        /**
          * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다.
          * @details 네이티브 bindless 가 없는 백엔드(DX11 · GL)에서 엔진이 이 순서대로 t5..t8 에 바인딩합니다.
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**입니다.
@@ -246,6 +254,7 @@ namespace sw
         uint32                     _shaderLayoutCacheGeneration; /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
         RHIBackend                 _shaderLayoutBackend;         /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 뜻이 있다 */
         IRHIDevice*                _pRHIDevice;
+        uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로. releaseTextureAssets 가 그대로 돌려줌
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         RHIBlendMode               _blendMode;

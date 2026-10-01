@@ -42,6 +42,14 @@ namespace sw
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킵니다.
          */
         void reload( string_view relativePath, IRHIDevice* pDevice ) override;
+        /** @brief 이미 든 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없으면 nullptr 입니다. */
+        const Texture2D* find( string_view relativePath ) const;
+        /**
+         * @brief `reload` 가 텍스처를 다시 올린 횟수입니다.
+         * @details 다시 올리면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙습니다. 머티리얼은 resolve 때 받은 인덱스를 들고 있으므로, 이 값이
+         *          바뀌면 다시 받습니다(`Material::refreshTextureBindings` — `GpuSceneBuilder` 가 부릅니다).
+         */
+        uint32 getReloadGeneration() const;
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
         void release( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다(`MaterialCache::isCached` 와 같은 뜻). */

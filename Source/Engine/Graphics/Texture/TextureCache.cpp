@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 
@@ -22,6 +23,7 @@ namespace sw
         };
         unordered_map<string, Entry> _mapEntry;
         std::shared_mutex            _mutex;
+        atomic<uint32>               _reloadGeneration{ 0 }; ///< reload 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
     };
 
     TextureCache::TextureCache()
@@ -69,6 +71,23 @@ namespace sw
         it->second._texture->releaseRhi( pDevice );
         if ( it->second._texture->loadFromResource( pDevice, key ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
+        // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
+        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+    }
+
+    const Texture2D* TextureCache::find( string_view relativePath ) const
+    {
+        if ( relativePath.empty() || _impl == nullptr )
+            return nullptr;
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const auto                          it = _impl->_mapEntry.find( key );
+        return it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
+    }
+
+    uint32 TextureCache::getReloadGeneration() const
+    {
+        return _impl != nullptr ? _impl->_reloadGeneration.load( std::memory_order_acquire ) : 0u;
     }
     void TextureCache::release( string_view relativePath, IRHIDevice* pDevice )
     {

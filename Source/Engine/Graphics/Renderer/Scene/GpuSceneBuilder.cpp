@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
@@ -18,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
@@ -376,6 +378,9 @@ namespace sw
             pObjects->flushSceneTransforms();
         }
 
+        // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 — 바뀐 머티리얼이 있으면 그 세대가 오른다.
+        refreshReloadedTextures();
+
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
         const uint64             setGeneration = primitives.getSetGeneration();
         const bool               bHasCache     = _listBuiltCandidate.empty() == false;
@@ -726,6 +731,27 @@ namespace sw
         // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GpuInstanceRing.h).
         SW_PROFILE_SCOPE( "GT.GpuScene.build.publish" );
         publishInstances();
+    }
+
+    void GpuSceneBuilder::refreshReloadedTextures()
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return;
+        const uint32 generation = engine::getResourceManager().getTextureManager().getReloadGeneration();
+        if ( generation == _lastTextureReloadGeneration )
+            return;
+        _lastTextureReloadGeneration = generation;
+
+        bool         bChanged{ false };
+        const size_t candidateCount = MathUtil::min( _lastCandidateCount, _listBuiltCandidate.size() );
+        for ( size_t index = 0; index < candidateCount; ++index )
+        {
+            Material* pMaterial = _listBuiltCandidate[index]._material.get();
+            if ( pMaterial != nullptr && pMaterial->refreshTextureBindings() )
+                bChanged = true;
+        }
+        if ( bChanged )
+            MaterialUtil::bumpPermutationGeneration();
     }
 
     void GpuSceneBuilder::publishInstances()

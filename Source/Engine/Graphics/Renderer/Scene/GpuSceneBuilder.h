@@ -176,6 +176,12 @@ namespace sw
         bool refreshInstancesInPlace( bool bPartialCollect );
         /** @brief 재구축 판단 캐시를 무효로 만듭니다. */
         void invalidateBuildCache();
+        /**
+         * @brief 텍스처가 다시 올라왔으면(`TextureCache::getReloadGeneration`) 지난 빌드의 머티리얼이 새 SRV 인덱스를 받게 합니다.
+         * @details 슬롯 바인딩 백엔드(DX11 · GL)의 배치는 SRV 를 값으로 들고 있으므로(`GpuMeshBatch::_arrMaterialTexSrv`) 바뀐 머티리얼이 있으면
+         *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 합니다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 가져갑니다.
+         */
+        void refreshReloadedTextures();
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCpuSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 표 · 머티리얼 그룹은 여기서 계속 자랍니다. */
         GpuSceneSnapshot _snapshot;
@@ -207,6 +213,8 @@ namespace sw
          *          않습니다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않습니다.
          */
         uint64 _lastPermutationGeneration{ 0 };
+        /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
+        uint32 _lastTextureReloadGeneration{ 0 };
         /**
          * @brief 재구축 중 **퍼뮤테이션 해시** → 대표 머티리얼입니다(배치 키 합치기용).
          * @details 예전에는 셰이더 **경로**가 키였습니다. 그러면 forwardlit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이

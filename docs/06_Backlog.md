@@ -2077,6 +2077,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊽ 텍스처 핫 리로드 — 머티리얼과 배치가 돌려준 SRV 인덱스를 계속 썼다)
+
+`TextureCache::reload` 는 같은 `Texture2D` 를 두고 GPU 텍스처만 갈아 끼운다(머티리얼이 포인터를 빌려 갔으므로). 그런데 갈아 끼우면 **새 SRV 인덱스**가 붙고
+옛 인덱스는 돌려준다. 머티리얼은 resolve 때 받은 인덱스를 바이트(DX12 · Vulkan — 셰이더가 bindless 로 읽는다)와 슬롯 목록(DX11 · GL)에 그대로 들고 있었고,
+씬 빌더의 배치는 그 슬롯 목록을 값으로 복사해 들고 있었다. 그래서 다시 올린 뒤에도 **돌려준 자리**를 읽었다 — DX12 · Vulkan 은 지연 해제가 끝나면 그 자리를
+다른 텍스처가 받는다(엉뚱한 텍스처가 그려진다). DX11 · GL 은 인덱스를 바로 다시 쓰므로 대개 같은 자리가 돌아와 드러나지 않았다.
+- `TextureCache` 가 다시 올린 횟수를 센다(`getReloadGeneration`)와 참조 수를 바꾸지 않는 조회(`find`).
+- `Material::refreshTextureBindings` — 세대가 바뀌었으면 빌린 텍스처의 지금 SRV 를 다시 받아 슬롯 목록을 고치고, 네이티브 bindless 면 다시 패킹한다(바이트 세대가
+  올라 인스턴스도 따라온다, ㊻).
+- `GpuSceneBuilder::refreshReloadedTextures` — 빌드마다 세대 하나만 비교하고, 바뀌었으면 지난 빌드의 머티리얼을 새로 고친다. 바뀐 것이 있으면 퍼뮤테이션 세대를
+  올려 배치를 다시 만든다(정지한 씬은 빌드를 건너뛰므로).
+
+**검증.** `RenderPassGpuTest.ReloadedTextureIsReboundToMaterialsAndBatches`(네 백엔드 — benchtextured 머티리얼을 씬에 올리고 checker.dds 를 다시 올린 뒤 다음 빌드에서
+머티리얼의 슬롯 목록 · 패킹 값 · 배치의 SRV 가 새 인덱스다; 인덱스가 실제로 바뀐 백엔드가 하나는 있어야 한다). 변이 넷(빌더가 새로 고치지 않음 · 머티리얼 새로 고침이
+아무것도 안 함 · 배치를 다시 만들지 않음 · reload 가 세대를 안 올림)이 모두 실패했다. 인스턴스의 텍스처 오버라이드(`MaterialInstance::setTextureParameter` 로 넣은 날
+인덱스)는 경로를 모르므로 새로 고치지 못한다 — 그 경로는 부르는 쪽이 인덱스를 다시 넣어야 한다.
+
 ### 2026-10-01 (결함 ㊼ 렌더 — 지오메트리 패스가 컬러 타깃 이름을 코드에 박아 썼다, 없는 첨부는 핸들 0(백버퍼)으로 열렸다)
 
 풀스크린 패스는 "선언이 곧 바인딩"(선언한 출력 중 있는 것)인데, 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 컬러 타깃을 코드의 이름

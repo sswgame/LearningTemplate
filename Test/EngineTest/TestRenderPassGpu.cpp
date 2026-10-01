@@ -27,12 +27,15 @@
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -2578,6 +2581,81 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the material texture ordinal test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 다시 올린 텍스처의 새 SRV 인덱스를 머티리얼과 배치가 받는다
+ * @details 텍스처 핫 리로드(`TextureCache::reload`)는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스를 돌려준다. 머티리얼은
+ *          resolve 때 받은 인덱스를 바이트(DX12 · Vulkan)와 슬롯 목록(DX11 · GL — 배치가 값으로 복사한다)에 그대로 들고 있어 **돌려준 자리**를
+ *          읽었다 — 지연 해제가 끝나면 다른 텍스처가 그 자리를 받는다. 씬 빌드가 reload 세대를 보고 머티리얼이 새 인덱스를 받게 한다.
+ *          DX11 · GL 은 인덱스를 바로 다시 쓰므로(지연 해제가 없다) 같은 인덱스가 돌아오는 일이 있다 — 그때는 결함이 보이지 않아 상태만 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
+{
+    const sw::string kTexturePath = "engine/textures/test/checker.dds";
+    int32            attemptedCount{ 0 };
+    int32            changedIndexCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
+            const sw::RHIDescriptorIndex before = material->getMaterialTextureSrvs()[0];
+
+            sw::Scene                scene( "TextureReloadScene" );
+            sw::shared_ptr<sw::Mesh> cube    = sw::MeshUtil::createUnitCube();
+            sw::GameObject*          pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "TexturedCube" ) );
+            SW_ASSERT_NOT_NULL( pObject );
+            sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( cube );
+            pMesh->setMaterial( material.get() );
+
+            sw::GpuSceneBuilder builder;
+            const sw::float3    camPos{ 0.0f, 0.0f, -5.0f };
+            builder.buildFromScene( &scene, camPos );
+            SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
+
+            sw::TextureCache& textures = sw::engine::getResourceManager().getTextureManager();
+            textures.reload( kTexturePath, device.get() );
+            const sw::Texture2D* pTexture = textures.find( kTexturePath );
+            SW_ASSERT_NOT_NULL( pTexture );
+            const sw::RHIDescriptorIndex after = pTexture->getSrv();
+            if ( after != before )
+                ++changedIndexCount;
+
+            // 다음 씬 빌드가 새 인덱스를 받게 한다 — 머티리얼(바이트 · 슬롯 목록)과 배치(슬롯 바인딩 백엔드가 값으로 든 SRV).
+            builder.buildFromScene( &scene, camPos );
+            SW_EXPECT_EQUAL( after, material->getMaterialTextureSrvs()[0] );
+            if ( device->supportsNativeBindlessSampling() )
+            {
+                const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "albedoMap" ) );
+                SW_ASSERT_NOT_NULL( pAlbedo );
+                uint32 packed{ 0 };
+                SW_ASSERT_TRUE( pAlbedo->_offset + sizeof( packed ) <= material->getBuffer().size() );
+                sw::Memory::copy( &packed, material->getBuffer().data() + pAlbedo->_offset, sizeof( packed ) );
+                SW_EXPECT_EQUAL( after, packed );
+            }
+            // 배치는 SRV 를 값으로 복사해 든다(슬롯 바인딩 백엔드가 읽는다). 씬이 정지해 있어도 배치를 다시 만들어야 한다.
+            SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
+            SW_EXPECT_EQUAL( after, builder.getOpaqueBatches()[0]._arrMaterialTexSrv[0] );
+
+            builder.clear();
+            cube->releaseRhi( device.get() );
+            material->releaseRhi( device.get() );
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the texture reload rebinding test" );
+    // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 시험은 아무것도 보지 못한 것이다.
+    SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 시험이 결함을 볼 수 없습니다" );
 }
 
 /**
