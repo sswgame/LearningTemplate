@@ -87,7 +87,7 @@ namespace sw
             : _arrData{}
             , _size{ 0 }
         {
-            const uint32 length = clampToCapacity( rhs.size() );
+            const uint32 length = clampToCapacity( rhs.c_str(), rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
             _size           = length;
             _arrData[_size] = T{ 0 };
@@ -103,7 +103,7 @@ namespace sw
         template <uint32 M>
         basic_fixed_string& operator=( const basic_fixed_string<T, M>& rhs )
         {
-            const uint32 length = clampToCapacity( rhs.size() );
+            const uint32 length = clampToCapacity( rhs.c_str(), rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
             _size           = length;
             _arrData[_size] = T{ 0 };
@@ -288,17 +288,17 @@ namespace sw
          *          오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로 단언으로
          *          멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다.
          */
-        static uint32 clampToCapacity( size_t length )
+        static uint32 clampToCapacity( const T* pSource, size_t length )
         {
             if ( length <= static_cast<size_t>( N ) )
                 return static_cast<uint32>( length );
 
             SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
-            return N;
+            return backOffToCharacterStart( pSource, N );
         }
 
-        /** @brief 남은 자리(N - currentSize)에 맞게 추가할 길이를 잘라 반환합니다. */
-        static uint32 clampToRemaining( uint32 currentSize, size_t length )
+        /** @brief 남은 자리(N - currentSize)에 맞게 추가할 길이를 잘라 반환합니다. `pSource` 는 글자 경계를 보려고 받습니다(채우기는 nullptr). */
+        static uint32 clampToRemaining( uint32 currentSize, const T* pSource, size_t length )
         {
             const size_t remaining = static_cast<size_t>( N ) - static_cast<size_t>( currentSize );
             if ( length <= remaining )
@@ -306,7 +306,31 @@ namespace sw
 
             SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
                             static_cast<uint32>( length ) );
-            return static_cast<uint32>( remaining );
+            return backOffToCharacterStart( pSource, static_cast<uint32>( remaining ) );
+        }
+
+        /**
+         * @brief 자를 자리 `cut` 이 글자 한가운데면(UTF-8 의 이어지는 바이트 · UTF-16 의 뒤 서로게이트) 그 글자의 시작으로 물립니다.
+         * @details 예전에는 바이트 수로만 잘라, 긴 한글 이름이 `fixed_string` 에 들어가면 끝 글자가 반 토막(잘못된 UTF-8)으로 남았다 — ImGui 는
+         *          그 자리를 `?` 로 그렸고 로그는 줄을 통째로 바꿨다. `pSource[cut]` 은 잘려 나가는 첫 단위다. 잘못된 UTF-8 을 끝없이 거슬러
+         *          가지 않도록 UTF-8 은 세 바이트까지만 물린다.
+         */
+        static uint32 backOffToCharacterStart( const T* pSource, uint32 cut )
+        {
+            if ( pSource == nullptr )
+                return cut;
+            if constexpr ( sizeof( T ) == 1 )
+            {
+                for ( uint32 step = 0; step < 3 && cut > 0 && ( static_cast<uint8>( pSource[cut] ) & 0xC0 ) == 0x80; ++step )
+                    --cut;
+            }
+            else if constexpr ( sizeof( T ) == 2 )
+            {
+                const uint32 unit = static_cast<uint32>( static_cast<uint16>( pSource[cut] ) );
+                if ( cut > 0 && unit >= 0xDC00 && unit <= 0xDFFF )
+                    --cut;
+            }
+            return cut;
         }
 
         T              _arrData[N + 1];
@@ -328,7 +352,7 @@ namespace sw
     {
         if ( pStr != nullptr )
         {
-            const uint32 length = clampToCapacity( StringUtil::strlen( pStr ) );
+            const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
             Memory::copy( _arrData, pStr, sizeof( T ) * length );
             _size = length;
         }
@@ -338,7 +362,7 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string<T>& str )
         : _arrData{}
-        , _size{ clampToCapacity( str.length() ) }
+        , _size{ clampToCapacity( str.data(), str.length() ) }
     {
         Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
@@ -347,7 +371,7 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string_view<T>& str )
         : _arrData{}
-        , _size{ clampToCapacity( str.length() ) }
+        , _size{ clampToCapacity( str.data(), str.length() ) }
     {
         Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
@@ -356,7 +380,7 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const uint32 count, T ch )
         : _arrData{}
-        , _size{ clampToCapacity( count ) }
+        , _size{ clampToCapacity( nullptr, count ) }
     {
         std::fill_n( _arrData, _size, ch );
         _arrData[_size] = T{ 0 };
@@ -397,7 +421,7 @@ namespace sw
 
         if ( pStr != nullptr )
         {
-            const uint32 length = clampToCapacity( StringUtil::strlen( pStr ) );
+            const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
             Memory::copy( _arrData, pStr, sizeof( T ) * length );
             _size = length;
         }
@@ -412,7 +436,7 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string<T>& str )
     {
-        _size = clampToCapacity( str.length() );
+        _size = clampToCapacity( str.data(), str.length() );
         Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
         return *this;
@@ -421,7 +445,7 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string_view<T>& str )
     {
-        _size = clampToCapacity( str.length() );
+        _size = clampToCapacity( str.data(), str.length() );
         Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
         return *this;
@@ -505,7 +529,7 @@ namespace sw
         if ( pos > currentSize )
             return *this;
 
-        const uint32 fitLength = clampToRemaining( currentSize, length );
+        const uint32 fitLength = clampToRemaining( currentSize, pStr, length );
         if ( fitLength == 0 )
             return *this;
 
@@ -583,7 +607,7 @@ namespace sw
         if ( pStr != nullptr )
         {
             const uint32 currentSize = size();
-            const uint32 length      = clampToRemaining( currentSize, StringUtil::strlen( pStr ) );
+            const uint32 length      = clampToRemaining( currentSize, pStr, StringUtil::strlen( pStr ) );
             Memory::copy( _arrData + currentSize, pStr, sizeof( T ) * length );
             _size           = currentSize + length;
             _arrData[_size] = T{ 0 };
@@ -597,7 +621,7 @@ namespace sw
         if ( count == 0 )
             return *this;
         const uint32 currentSize = size();
-        const uint32 fitCount    = clampToRemaining( currentSize, count );
+        const uint32 fitCount    = clampToRemaining( currentSize, nullptr, count );
         std::fill_n( _arrData + currentSize, fitCount, c );
         _size           = currentSize + fitCount;
         _arrData[_size] = T{ 0 };
@@ -608,7 +632,7 @@ namespace sw
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const std::basic_string_view<T>& str )
     {
         const uint32 currentSize = size();
-        const uint32 length      = clampToRemaining( currentSize, str.length() );
+        const uint32 length      = clampToRemaining( currentSize, str.data(), str.length() );
         Memory::copy( _arrData + currentSize, str.data(), sizeof( T ) * length );
         _size           = currentSize + length;
         _arrData[_size] = T{ 0 };

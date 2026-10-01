@@ -2051,6 +2051,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉘ Core — fixed_string 이 넘치는 글을 글자 한가운데서 잘랐다)
+
+`basic_fixed_string` 은 용량을 넘는 글을 경고와 함께 **바이트(단위) 수로** 잘랐다. 긴 한글 이름 · 경로가 들어가면 끝 글자가 반 토막(잘못된 UTF-8)으로
+남았다 — 에디터는 그 자리를 `?` 로 그렸고, 그 글이 로그로 가면 줄 전체가 대체 경로를 탔다(결함 ㉕). `clampToCapacity` · `clampToRemaining` 이
+원본 포인터를 받아, 자를 자리가 글자 한가운데면(UTF-8 이어지는 바이트 · UTF-16 뒤 서로게이트) 그 글자의 시작으로 물린다(UTF-8 은 세 바이트까지 —
+잘못된 글을 끝없이 거슬러 가지 않게). 생성 · 대입 · `append` · `insert` 가 모두 이 두 함수를 지난다. 채우기(`count, ch`)는 원본이 없어 그대로다.
+**검증.** `StringTest.FixedStringTruncatesOnCharacterBoundary` — `fixed_string<4>( "ab한" )` 은 `"ab"`, `"abc"` 에 `"한"` 을 붙이면 그대로 `"abc"`,
+`"한글"` 을 4 바이트에 대입하면 `"한"`, `fixed_wstring<2>( "a😀" )` 는 `"a"`(UTF-16 일 때), 들어맞는 글은 그대로. 물리기를 끄는 변이에서 `ab��` 로 실패했다.
+
 ### 2026-10-01 (확인 ⑥ 진단 도구를 한 표로 — docs/01_GettingStarted.md §5)
 
 이번에 더한 "디버거 없이 묻는 길" 이 커밋마다 흩어져 있었다. `docs/01_GettingStarted.md` 에 **5. 무엇이 일어났는지 보기** 를 두고 질문 → 보는 법으로

@@ -1616,3 +1616,36 @@ SW_TEST_CASE( StringTest, LineAndColumnCountCharactersNotBytes )
     sw::StringUtil::getLineAndColumn( "ab", 99, line, column ); // 글 밖이면 끝 자리
     SW_EXPECT_TRUE( line == 1 && column == 3 );
 }
+
+/**
+ * @brief [StringTest] fixed_string 이 넘치는 글을 자를 때 글자 한가운데가 아니라 그 글자의 앞에서 자른다(UTF-8 · UTF-16)
+ * @details 바이트 수로만 잘라 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남았다 — 에디터는 `?` 로 그렸다.
+ */
+SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
+{
+    test::ScopedDefensiveTestLog expected( "fixed_string capacity overflow" );
+
+    const sw::fixed_string<4> constructed( "ab\xED\x95\x9C" ); // "ab한" = 5 바이트
+    SW_EXPECT_STREQ( "ab", constructed.c_str() );
+
+    sw::fixed_string<5> appended( "abc" );
+    appended.append( "\xED\x95\x9C" ); // 남은 2 바이트에 3 바이트 글자 — 아무것도 붙이지 않는다
+    SW_EXPECT_STREQ( "abc", appended.c_str() );
+
+    sw::fixed_string<4> assigned;
+    assigned = sw::string_view( "\xED\x95\x9C\xEA\xB8\x80" ); // "한글" 6 바이트 → "한"
+    SW_EXPECT_STREQ( "\xED\x95\x9C", assigned.c_str() );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( assigned.c_str() ) );
+
+    // `utf16` 은 wchar_t 다 — Windows 에서만 2 바이트(UTF-16)이고 서로게이트 쌍이 있다. 4 바이트(UTF-32)면 쌍이 없다.
+    if constexpr ( sizeof( utf16 ) == 2 )
+    {
+        const utf16                arrWide[] = { L'a', static_cast<utf16>( 0xD83D ), static_cast<utf16>( 0xDE00 ), 0 }; // "a😀"
+        const sw::fixed_wstring<2> wide( arrWide );
+        SW_EXPECT_EQUAL( 1u, wide.size() );
+    }
+
+    // 들어맞는 글은 그대로다.
+    const sw::fixed_string<6> exact( "ab\xED\x95\x9C" );
+    SW_EXPECT_STREQ( "ab\xED\x95\x9C", exact.c_str() );
+}
