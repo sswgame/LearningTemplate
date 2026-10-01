@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑭ 렌더 그래프 — 읽은 자원을 뒤에서 다시 쓰는 패스가 먼저 돌 수 있었다, 같은 이름의 패스를 받았다)
+
+**Write-after-Read 간선이 없었다.** `RenderGraph::compile` 은 같은 자원의 쓰기 사슬(W→B)과 "읽기 전 마지막 쓰기 → 읽기"(W→A)만 이었다.
+W 가 SceneColor 를 쓰고 A(블룸)가 읽고 B(오버레이)가 다시 쓰면 A 와 B 가 같은 레벨에 들어가고, 쓰기 사슬이 먼저 줄을 서서 직렬로는
+B 가 먼저 돌았다 — A 가 B 의 출력을 읽었다. 병렬 기록에서는 둘이 겨뤘다. 지금 배포 파이프라인에는 이 모양이 없지만 UI · 오버레이 패스를
+붙이는 순간 생긴다. 이제 읽기마다 "그 읽기 뒤의 첫 쓰기" 로 간선을 잇는다.
+
+**같은 이름의 패스.** `addPass` 는 이름이 겹쳐도 받았고 이름→노드 표가 뒤의 것으로 덮였다 — 한 패스는 두 번 돌고 다른 하나는 한 번도 안
+돌았으며, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트 · 패스 컨텍스트 칸에 썼다. 파이프라인 검사(`RenderPipelineResource::validate`)는
+첨부 이름의 중복은 보면서 패스 이름은 보지 않았다. 이제 `addPass` 가 두 번째를 버리고 `false` 를 돌려주며(오류 로그), 검사가 XML 단계에서
+알린다. `FrameRenderer` 의 이름→인덱스 표도 앞의 것을 지킨다.
+**검증.** `RenderGraphTest.ReaderRunsBeforeTheNextWriterOfItsInput`(순서 W·A·B, 레벨 셋) · `DuplicatePassNameIsRejected`(첫 콜백 한 번, 둘째 0) ·
+`RenderPassTest.PipelineValidationCatchesInconsistencies` 의 중복 이름 블록 — 간선 · 중복 거절 · 검사를 각각 빼는 돌연변이에 진다.
+
 ### 2026-10-01 (결함 ⑬ 에디터 문서 패널 — 다른 문서의 되돌리기가 지금 문서에 붙었다, 읽지 못한 문서를 앞 문서로 덮었다)
 
 **다른 문서의 되돌리기.** `EditorDocumentPanel::notifyDocumentEdited` 의 되돌리기는 `this` 와 바뀐 구간(앞뒤 같은 길이 + 지운 · 넣은 글)만

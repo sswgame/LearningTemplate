@@ -402,6 +402,19 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
  */
 SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 {
+    // 0) 같은 이름의 패스 두 번 — 이름은 패스의 열쇠라 뒤의 것이 조용히 버려진다(그래프는 하나만 받는다)
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderGraphPassDesc    pass{};
+        pass._name = "Twice";
+        pass._type = "Present";
+        pass._listOutput.push_back( "Swapchain" );
+        desc._listPass.push_back( pass );
+        desc._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+
     // 1) 알 수 없는 패스 타입
     {
         sw::RenderPipelineResource res;

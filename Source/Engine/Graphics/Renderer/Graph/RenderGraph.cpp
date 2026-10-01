@@ -87,9 +87,20 @@ namespace sw
     /**
      * @brief 그래프에 새 패스 노드를 등록합니다.
      */
-    void RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
+    bool RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
                                RenderGraphPassExecuteFn execute )
     {
+        // 이름은 패스의 열쇠다(실행 순서 · 레벨 · 이름→노드 표). 예전에는 같은 이름을 그대로 받아, 이름→노드 표가 뒤의 것으로 덮였다 —
+        // 한 패스는 두 번 돌고 다른 하나는 한 번도 안 돌았고, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트에 썼다.
+        for ( const RenderGraphNode& existing : _listNode )
+        {
+            if ( existing._name == passName )
+            {
+                SW_LOG_ERROR( "Render graph pass '%#' is declared twice - the second declaration is ignored", passName.c_str() );
+                return false;
+            }
+        }
+
         RenderGraphNode node;
         node._name       = passName;
         node._listInput  = std::move( listInput );
@@ -97,6 +108,7 @@ namespace sw
         node._execute    = std::move( execute );
         node._bCulled    = false;
         _listNode.push_back( std::move( node ) );
+        return true;
     }
 
     /**
@@ -185,6 +197,18 @@ namespace sw
                 }
 
                 addEdge( producerIndex, consumerIndex );
+
+                // 읽은 뒤에 같은 자원을 덮어쓰는 패스는 **이 읽기 뒤에** 와야 한다(Write-after-Read). 예전에는 이 간선이 없어, W 가 쓰고
+                // A 가 읽고 B 가 다시 쓰면 A 와 B 가 같은 레벨에 들어갔다 — 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을 읽었고, 병렬로는
+                // 둘이 겨뤘다(W→B 쓰기 사슬이 W→A 보다 먼저 줄을 섰다).
+                for ( size_t writerIndex : listWriter )
+                {
+                    if ( writerIndex > consumerIndex )
+                    {
+                        addEdge( consumerIndex, writerIndex );
+                        break;
+                    }
+                }
             }
         }
 

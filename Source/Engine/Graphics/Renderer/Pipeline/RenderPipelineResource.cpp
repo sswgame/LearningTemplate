@@ -70,7 +70,20 @@ namespace sw
             return pAttachment != nullptr && engine::getTypeRegistry().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
         };
 
-        // 2) 패스: 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
+        // 2) 패스: 이름이 하나뿐인가, 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
+        for ( size_t passIndex = 0; passIndex < _desc._listPass.size(); ++passIndex )
+        {
+            for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+            {
+                if ( _desc._listPass[earlierIndex]._name == _desc._listPass[passIndex]._name )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#' 가 두 번 선언됐습니다 — 이름은 패스의 열쇠라 뒤의 것은 버려집니다", sourcePath,
+                                  _desc._listPass[passIndex]._name );
+                    ++issueCount;
+                    break;
+                }
+            }
+        }
         for ( RenderGraphPassDesc& pass : _desc._listPass )
         {
             pass._resolvedType = engine::getTypeRegistry().enumFromString<RenderPassType>( pass._type );

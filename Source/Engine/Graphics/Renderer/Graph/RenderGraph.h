@@ -191,7 +191,7 @@ namespace sw
          * @param listOutput 패스가 쓸 출력 자원 목록
          * @param execute 위상 정렬 순서로 실행할 때 부를 콜백(바인딩되지 않았으면 건너뜀)
          */
-        void addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
+        bool addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
                       RenderGraphPassExecuteFn execute = {} );
 
         /**

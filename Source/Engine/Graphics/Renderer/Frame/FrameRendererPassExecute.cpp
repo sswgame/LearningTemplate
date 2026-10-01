@@ -23,7 +23,9 @@ namespace sw
         {
             const RenderGraphPassDesc& pass = listPass[index];
             const hashed_string        nameHash( pass._name.c_str() );
-            _mapPassNameToIndex[nameHash] = index;
+            // 이름이 겹치면 앞의 것이 이긴다 — 그래프도 뒤의 선언을 버린다(`RenderGraph::addPass`). 파이프라인 검사가 먼저 알린다.
+            if ( _mapPassNameToIndex.find( nameHash ) == _mapPassNameToIndex.end() )
+                _mapPassNameToIndex[nameHash] = index;
 
             vector<hashed_string> listInput;
             vector<hashed_string> listOutput;

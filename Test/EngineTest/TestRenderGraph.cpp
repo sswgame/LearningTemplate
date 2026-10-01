@@ -128,3 +128,54 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphReadModifyWriteAndLifetimes )
     }
     SW_EXPECT_TRUE( bFoundColorBuffer );
 }
+
+/**
+ * @brief [RenderGraphTest] 읽은 자원을 뒤에서 다시 쓰는 패스는 그 읽기 뒤에 돈다(Write-after-Read)
+ * @details W 가 쓰고 A 가 읽고 B 가 다시 쓰면, 예전에는 간선이 W→B(쓰기 사슬) · W→A(읽기)뿐이라 A 와 B 가 같은 레벨이었고 B 가 먼저
+ *          줄을 섰다 — A 가 B 의 출력을 읽었다. UI · 오버레이가 블룸이 읽은 SceneColor 를 다시 쓰는 모양이 그렇다.
+ */
+SW_TEST_CASE( RenderGraphTest, ReaderRunsBeforeTheNextWriterOfItsInput )
+{
+    sw::RenderGraph         graph;
+    const sw::hashed_string sceneColor( "SceneColor" );
+    graph.addPass( sw::hashed_string( "W_Geometry" ), {}, { sceneColor } );
+    graph.addPass( sw::hashed_string( "A_Bloom" ), { sceneColor }, { sw::hashed_string( "BloomOut" ) } );
+    graph.addPass( sw::hashed_string( "B_Overlay" ), {}, { sceneColor } );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    const auto& order = graph.getExecutionOrder();
+    SW_ASSERT_EQUAL( size_t( 3 ), order.size() );
+    SW_EXPECT_STREQ( "W_Geometry", order[0].c_str() );
+    SW_EXPECT_STREQ( "A_Bloom", order[1].c_str() );
+    SW_EXPECT_STREQ( "B_Overlay", order[2].c_str() );
+
+    // 레벨도 갈린다 — 같은 레벨이면 병렬 기록에서 둘이 겨룬다.
+    const auto& listLevel = graph.getExecutionLevels();
+    SW_EXPECT_EQUAL( size_t( 3 ), listLevel.size() );
+}
+
+/**
+ * @brief [RenderGraphTest] 같은 이름의 패스는 두 번째를 버린다 — 한 패스가 두 번 돌고 다른 하나가 안 도는 일이 없다
+ */
+SW_TEST_CASE( RenderGraphTest, DuplicatePassNameIsRejected )
+{
+    sw::RenderGraph graph;
+    uint32          firstCount  = 0;
+    uint32          secondCount = 0;
+    SW_EXPECT_TRUE( graph.addPass( sw::hashed_string( "Dup" ), {}, { sw::hashed_string( "Out" ) },
+                                   SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&firstCount]( const sw::RenderGraphPassContext& )
+    { ++firstCount; } ) ) );
+    {
+        test::ScopedDefensiveTestLog expected( "the same pass name declared twice" );
+        SW_EXPECT_FALSE( graph.addPass( sw::hashed_string( "Dup" ), {}, { sw::hashed_string( "Out2" ) },
+                                        SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&secondCount]( const sw::RenderGraphPassContext& )
+        { ++secondCount; } ) ) );
+    }
+    SW_ASSERT_TRUE( graph.compile() );
+    SW_EXPECT_EQUAL( size_t( 1 ), graph.getExecutionOrder().size() );
+
+    sw::RenderGraphExecutionContext context;
+    SW_ASSERT_TRUE( graph.execute( context ) );
+    SW_EXPECT_EQUAL( 1u, firstCount );
+    SW_EXPECT_EQUAL( 0u, secondCount );
+}
