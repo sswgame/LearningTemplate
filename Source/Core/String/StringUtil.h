@@ -78,6 +78,11 @@ namespace sw
          *          Windows 에서는 멀쩡한 한글까지 깨졌고 glibc 에서는 줄이 통째로 비었다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
          */
         static string escapeInvalidUtf8( string_view text );
+        /**
+         * @brief 바이트 오프셋이 몇째 줄 · 몇째 글자인지 셉니다(둘 다 1 부터). 열은 바이트가 아니라 UTF-8 글자 수입니다.
+         * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 꼴을 눌러 그 자리로 간다. 오프셋이 글 밖이면 끝 자리입니다.
+         */
+        static void getLineAndColumn( string_view text, size_t byteOffset, uint32& outLine, uint32& outColumn );
 
         /** @brief UTF-8 문자열을 UTF-16(sw::wstring)으로 바꿉니다. */
         static wstring utf8ToUtf16( const utf8* pInput );

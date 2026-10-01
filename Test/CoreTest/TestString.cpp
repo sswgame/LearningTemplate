@@ -1599,3 +1599,20 @@ SW_TEST_CASE( StringTest, EscapeInvalidUtf8KeepsValidText )
     SW_EXPECT_STREQ( "\\xC0\\xAF", sw::StringUtil::escapeInvalidUtf8( "\xC0\xAF" ).c_str() );          // overlong '/'
     SW_EXPECT_STREQ( "\\xED\\xA0\\x80", sw::StringUtil::escapeInvalidUtf8( "\xED\xA0\x80" ).c_str() ); // 서로게이트
 }
+
+/**
+ * @brief [StringTest] 바이트 오프셋 → 줄 · 열(1 부터, 열은 UTF-8 글자 수)
+ */
+SW_TEST_CASE( StringTest, LineAndColumnCountCharactersNotBytes )
+{
+    uint32 line   = 0;
+    uint32 column = 0;
+    sw::StringUtil::getLineAndColumn( "ab\ncd", 0, line, column );
+    SW_EXPECT_TRUE( line == 1 && column == 1 );
+    sw::StringUtil::getLineAndColumn( "ab\ncd", 4, line, column ); // 'd'
+    SW_EXPECT_TRUE( line == 2 && column == 2 );
+    sw::StringUtil::getLineAndColumn( "\xED\x95\x9C\xEA\xB8\x80x", 6, line, column ); // "한글" 뒤의 x — 6 바이트 뒤지만 3 번째 글자
+    SW_EXPECT_TRUE( line == 1 && column == 3 );
+    sw::StringUtil::getLineAndColumn( "ab", 99, line, column ); // 글 밖이면 끝 자리
+    SW_EXPECT_TRUE( line == 1 && column == 3 );
+}

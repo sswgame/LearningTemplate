@@ -1105,6 +1105,28 @@ namespace sw
         return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( pInput ), strlen( pInput ) );
     }
 
+    void StringUtil::getLineAndColumn( string_view text, size_t byteOffset, uint32& outLine, uint32& outColumn )
+    {
+        const size_t end    = byteOffset < text.size() ? byteOffset : text.size();
+        uint32       line   = 1;
+        uint32       column = 1;
+        for ( size_t index = 0; index < end; ++index )
+        {
+            const uint8 byte = static_cast<uint8>( text[index] );
+            if ( byte == '\n' )
+            {
+                ++line;
+                column = 1;
+            }
+            else if ( ( byte & 0xC0 ) != 0x80 ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
+            {
+                ++column;
+            }
+        }
+        outLine   = line;
+        outColumn = column;
+    }
+
     string StringUtil::escapeInvalidUtf8( string_view text )
     {
         constexpr utf8 kHexDigit[] = "0123456789ABCDEF";

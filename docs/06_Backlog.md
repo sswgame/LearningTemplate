@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ④ XML · JSON 구문 오류가 `경로:줄:열: 이유` 로 — 씬 · 프리팹은 "없다" 와 "깨졌다" 를 가른다)
+
+깨진 에셋을 고치려고 로그를 보면: XML 은 `PugiXML Parse Error: Start-end tags mismatch (offset 412)` — 어느 파일인지가 없다. JSON 은 `Parse error in json text`
+한 줄뿐. 그리고 씬은 **바로 거기 있는** 파일을 `File not found` 라고 했다(`loadPath` 의 실패를 모두 그렇게 불렀다). 프리팹도 `Not found`.
+- `XmlDocument` · `JsonDocument` 에 `getLastError()` — 구문 오류는 `경로:줄:열: 이유`(IDE 터미널에서 눌러 그 자리로 간다), 없는 파일은
+  `…: not found (no file at that path and no resource by that name)`, 읽지 못하면 `cannot read the file`. `parse( text, sourceName )` 이 이름을 받고 load 는
+  절대 경로를 넘긴다. 로그도 같은 꼴(`XML parse error at …` · `JSON parse error at …`).
+- JSON 은 값을 만드는 파싱이 실패하면 자리 · 이유를 주지 않는다 — **실패했을 때만** SAX 로 한 번 더 읽어 받는다(nlohmann 의 예외 머리말은 떼고 이유만).
+- `StringUtil::getLineAndColumn` — 바이트 오프셋 → 줄 · 열(1 부터, 열은 UTF-8 글자 수).
+- `SceneDocument::loadXml` · `PrefabAsset` XML/JSON — `Scene not loaded - <getLastError>` · `Prefab not loaded - …`.
+**검증.** `XmlDocumentTest` · `JsonDocumentTest.ParseErrorNamesSourceLineAndColumn`(줄 · 열 · 이유, 한글 뒤의 열, 없는 파일, 성공하면 비워짐),
+`StringTest.LineAndColumnCountCharactersNotBytes`, `SceneTest.BrokenSceneFileSaysWhereNotFileNotFound`(임시 폴더의 깨진 씬은 `broken.scene.xml:3:` 로, 없는
+씬만 `not found`). 씬 메시지를 옛 "File not found" 로 되돌리는 변이 · 열을 바이트로 세는 변이가 모두 실패했다.
+
 ### 2026-10-01 (결함 ㉗ 리플렉션 — 짧은 이름이 겹치는 타입 · enum 이 오르면 조용히 앞의 것을 가렸다)
 
 씬 · 프리팹 · `addComponentByName` 은 타입을 짧은 이름으로 찾는다. `a::Foo` 뒤에 `b::Foo` 가 등록되면 `Foo` 는 그 순간부터 `b::Foo` 였고(별칭 표

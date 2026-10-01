@@ -207,8 +207,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 파싱 · 로드
         // ------------------------------------------------------------------------------
-        /** @brief XML 전체 문서를 파싱합니다 (내부 버퍼에 복사). */
-        bool parse( string_view xmlText );
+        /**
+         * @brief XML 전체 문서를 파싱합니다 (내부 버퍼에 복사).
+         * @param sourceName 오류에 적는 이름(대개 경로)입니다. 비우면 `<memory>` 입니다.
+         */
+        bool parse( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
         bool loadFile( string_view absPath );
@@ -221,6 +224,13 @@ namespace sw
          * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
          */
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+
+        /**
+         * @brief 마지막 parse · load 가 실패한 이유입니다(성공했으면 빈 문자열).
+         * @details 구문 오류는 `경로:줄:열: 이유` 꼴이다 — IDE 터미널에서 눌러 그 자리로 간다. 파일이 없으면 `not found`, 읽지 못하면 `cannot read`.
+         *          예전에는 로그에 오프셋만 남고 어느 파일인지가 없었고, 부르는 쪽(씬 · 프리팹)은 구문 오류도 "File not found" 로 알렸다.
+         */
+        const string& getLastError() const { return _lastError; }
 
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(기본은 대소문자 무시). */
         XmlNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
@@ -246,5 +256,6 @@ namespace sw
     private:
         struct Impl;
         unique_ptr<Impl> _impl;
+        string           _lastError; /**< 마지막 parse · load 의 실패 이유(`getLastError`) */
     };
 } // namespace sw

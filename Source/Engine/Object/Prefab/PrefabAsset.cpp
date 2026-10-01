@@ -164,7 +164,7 @@ namespace sw
         XmlDocument doc;
         if ( doc.loadPath( assetRelativePath, &absPath ) == false )
         {
-            SW_LOG_ERROR( "Not found: %#", assetRelativePath );
+            SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
         }
 
@@ -227,7 +227,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( assetRelativePath, &absPath ) == false )
         {
-            SW_LOG_ERROR( "Not found: %#", assetRelativePath );
+            SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
         }
 

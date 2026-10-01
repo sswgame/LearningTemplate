@@ -121,7 +121,8 @@ namespace sw
         string      absPath;
         if ( doc.loadPath( path, &absPath ) == false )
         {
-            SW_LOG_ERROR( "File not found: %#", path );
+            // 없는 파일과 깨진 파일을 가른다 — 예전에는 구문 오류도 "File not found" 였다.
+            SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
             return false;
         }
 

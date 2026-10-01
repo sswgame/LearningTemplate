@@ -3,6 +3,7 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -75,6 +76,58 @@ namespace sw
                 if ( indent < 0 )
                     return fromStdString( value.dump() );
                 return fromStdString( value.dump( indent ) );
+            }
+
+            /**
+             * @brief 실패한 글을 SAX 로 다시 읽어 오류 자리(읽은 바이트 수)와 이유를 받는 처리기입니다. 값은 만들지 않습니다.
+             * @note 함수 이름은 nlohmann 의 SAX 규약이다(`sax_parse` 가 이 이름들을 부른다).
+             */
+            struct ParseErrorRecorder
+            {
+                size_t      _position{ 0 };
+                std::string _message;
+
+                bool null() { return true; }
+                bool boolean( bool ) { return true; }
+                bool number_integer( JsonImpl::number_integer_t ) { return true; }
+                bool number_unsigned( JsonImpl::number_unsigned_t ) { return true; }
+                bool number_float( JsonImpl::number_float_t, const JsonImpl::string_t& ) { return true; }
+                bool string( JsonImpl::string_t& ) { return true; }
+                bool binary( JsonImpl::binary_t& ) { return true; }
+                bool start_object( std::size_t ) { return true; }
+                bool key( JsonImpl::string_t& ) { return true; }
+                bool end_object() { return true; }
+                bool start_array( std::size_t ) { return true; }
+                bool end_array() { return true; }
+                bool parse_error( std::size_t position, const std::string&, const nlohmann::detail::exception& error )
+                {
+                    _position = position;
+                    _message  = error.what();
+                    return false;
+                }
+            };
+
+            /**
+             * @brief 파싱에 실패한 글의 오류를 `이름:줄:열: 이유` 로 만듭니다. 실패했을 때만 부릅니다(글을 한 번 더 읽는다).
+             * @details 값을 만드는 `parse( …, allow_exceptions = false )` 는 실패하면 버려진 값만 주고 자리 · 이유를 주지 않는다.
+             */
+            static sw::string describeParseError( const std::string& text, string_view sourceName )
+            {
+                ParseErrorRecorder recorder;
+                (void)JsonImpl::sax_parse( text, &recorder );
+                // what() 은 "[json.exception.parse_error.101] parse error at line 3, column 5: <이유>" 다. 줄 · 열은 우리 꼴로 다시 적으므로 이유만 남긴다.
+                std::string_view reason{ recorder._message };
+                const size_t     columnPos = reason.find( "column " );
+                const size_t     reasonPos = columnPos != std::string_view::npos ? reason.find( ": ", columnPos ) : std::string_view::npos;
+                if ( reasonPos != std::string_view::npos )
+                    reason = reason.substr( reasonPos + 2 );
+                // 자리는 읽은 바이트 수다 — 틀린 글자는 그 직전 바이트다.
+                uint32 line   = 0;
+                uint32 column = 0;
+                StringUtil::getLineAndColumn( string_view{ text.data(), text.size() }, recorder._position > 0 ? recorder._position - 1 : 0, line, column );
+                StringBuilder<constant::kMaxBuffer1024> message;
+                message.appendFormat( "%#:%#:%#: %#", sourceName, line, column, string_view{ reason.data(), reason.size() } );
+                return sw::string( message.c_str() );
             }
         };
     } // namespace
@@ -319,12 +372,16 @@ namespace sw
     JsonDocument::~JsonDocument() = default;
 
     JsonDocument::JsonDocument( JsonDocument&& other ) noexcept
-        : _impl{ std::move( other._impl ) } {}
+        : _impl{ std::move( other._impl ) }
+        , _lastError{ std::move( other._lastError ) } {}
 
     JsonDocument& JsonDocument::operator=( JsonDocument&& other ) noexcept
     {
         if ( this != &other )
-            _impl = std::move( other._impl );
+        {
+            _impl      = std::move( other._impl );
+            _lastError = std::move( other._lastError );
+        }
         return *this;
     }
 
@@ -336,20 +393,25 @@ namespace sw
             _impl->root = nullptr;
     }
 
-    bool JsonDocument::parse( string_view jsonText )
+    bool JsonDocument::parse( string_view jsonText, string_view sourceName )
     {
+        _lastError.clear();
+        const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( jsonText.empty() )
         {
             clear();
+            _lastError = string( source ) + ": empty document";
             return false;
         }
 
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::parse( JsonDocumentInternal::toStdString( jsonText ), nullptr, false, false );
+        const std::string stdText = JsonDocumentInternal::toStdString( jsonText );
+        _impl->root               = JsonImpl::parse( stdText, nullptr, false, false );
         if ( _impl->root.is_discarded() )
         {
-            SW_LOG_ERROR( "Parse error in json text" );
+            _lastError = JsonDocumentInternal::describeParseError( stdText, source );
+            SW_LOG_ERROR( "JSON parse error at %#", _lastError );
             clear();
             return false;
         }
@@ -360,8 +422,11 @@ namespace sw
     {
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
+        {
+            _lastError = string( absPath ) + ": cannot read the file";
             return false;
-        return parse( text );
+        }
+        return parse( text, absPath );
     }
 
     bool JsonDocument::loadResource( string_view relativePath, string* pOutAbsPath )
@@ -369,16 +434,22 @@ namespace sw
         string text;
         string absPath;
         if ( ResourceUtil::readTextResource( relativePath, text, &absPath ) == false )
+        {
+            _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;
+        }
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
-        return parse( text );
+        return parse( text, absPath );
     }
 
     bool JsonDocument::loadPath( string_view path, string* pOutAbsPath )
     {
         if ( path.empty() )
+        {
+            _lastError = "empty path";
             return false;
+        }
         if ( FileUtil::fileExists( path ) )
         {
             if ( pOutAbsPath != nullptr )

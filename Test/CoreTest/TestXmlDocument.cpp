@@ -101,3 +101,23 @@ SW_TEST_CASE( XmlDocumentTest, LongTextWithQuotesSurvivesSave )
     SW_EXPECT_STREQ( "yet another one", reloadedWide.findAttribute( "third" ) );
     SW_EXPECT_TRUE( saved.find( "\n" ) != sw::string::npos );
 }
+
+/**
+ * @brief [XmlDocumentTest] 구문 오류는 `이름:줄:열: 이유` 로, 없는 파일은 `not found` 로 알린다 — 성공하면 비워진다
+ * @details 예전에는 로그에 오프셋만 남고 어느 파일인지가 없었고, 부르는 쪽은 둘을 가를 수 없어 구문 오류도 "File not found" 로 알렸다.
+ */
+SW_TEST_CASE( XmlDocumentTest, ParseErrorNamesSourceLineAndColumn )
+{
+    sw::XmlDocument doc;
+    {
+        test::ScopedDefensiveTestLog expected( "malformed XML" );
+        SW_EXPECT_FALSE( doc.parse( "<Root>\n  <A>\n</Root>\n", "scene.xml" ) );
+    }
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( doc.getLastError(), "scene.xml:3:" ), doc.getLastError().c_str() );
+
+    SW_EXPECT_FALSE( doc.loadPath( "no/such/dir/missing.xml" ) );
+    SW_EXPECT_TRUE_MSG( doc.getLastError().find( "missing.xml: not found" ) != sw::string::npos, doc.getLastError().c_str() );
+
+    SW_EXPECT_TRUE( doc.parse( "<Root/>" ) );
+    SW_EXPECT_TRUE( doc.getLastError().empty() );
+}

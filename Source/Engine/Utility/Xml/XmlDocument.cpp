@@ -505,12 +505,16 @@ namespace sw
     XmlDocument::~XmlDocument() = default;
 
     XmlDocument::XmlDocument( XmlDocument&& other ) noexcept
-        : _impl{ std::move( other._impl ) } {}
+        : _impl{ std::move( other._impl ) }
+        , _lastError{ std::move( other._lastError ) } {}
 
     XmlDocument& XmlDocument::operator=( XmlDocument&& other ) noexcept
     {
         if ( this != &other )
-            _impl = std::move( other._impl );
+        {
+            _impl      = std::move( other._impl );
+            _lastError = std::move( other._lastError );
+        }
         return *this;
     }
 
@@ -522,13 +526,18 @@ namespace sw
             _impl->doc.reset();
     }
 
-    bool XmlDocument::parse( string_view xmlText )
+    bool XmlDocument::parse( string_view xmlText, string_view sourceName )
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->doc.reset();
+        _lastError.clear();
+        const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( xmlText.empty() )
+        {
+            _lastError = string( source ) + ": empty document";
             return false;
+        }
 
         const pugi::xml_parse_result result = _impl->doc.load_buffer(
             xmlText.data(),
@@ -537,19 +546,34 @@ namespace sw
 
         if ( result.status != pugi::status_ok )
         {
-            SW_LOG_ERROR( "PugiXML Parse Error: %# (offset %#)", result.description(), result.offset );
+            // `경로:줄:열: 이유` — IDE 터미널에서 눌러 그 자리로 간다. 예전에는 오프셋만 남고 어느 파일인지가 없었다.
+            uint32 line   = 0;
+            uint32 column = 0;
+            StringUtil::getLineAndColumn( xmlText, result.offset > 0 ? static_cast<size_t>( result.offset ) : 0, line, column );
+            StringBuilder<constant::kMaxBuffer1024> message;
+            message.appendFormat( "%#:%#:%#: %#", source, line, column, result.description() );
+            _lastError = message.c_str();
+            SW_LOG_ERROR( "XML parse error at %#", _lastError );
             return false;
         }
 
-        return _impl->doc.first_child().empty() == false;
+        if ( _impl->doc.first_child().empty() )
+        {
+            _lastError = string( source ) + ": no element";
+            return false;
+        }
+        return true;
     }
 
     bool XmlDocument::loadFile( string_view absPath )
     {
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
+        {
+            _lastError = string( absPath ) + ": cannot read the file";
             return false;
-        return parse( text );
+        }
+        return parse( text, absPath );
     }
 
     bool XmlDocument::loadResource( string_view relativePath, string* pOutAbsPath )
@@ -557,16 +581,22 @@ namespace sw
         string text;
         string absPath;
         if ( ResourceUtil::readTextResource( relativePath, text, &absPath ) == false )
+        {
+            _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;
+        }
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
-        return parse( text );
+        return parse( text, absPath );
     }
 
     bool XmlDocument::loadPath( string_view path, string* pOutAbsPath )
     {
         if ( path.empty() )
+        {
+            _lastError = "empty path";
             return false;
+        }
         if ( FileUtil::fileExists( path ) )
         {
             if ( pOutAbsPath != nullptr )

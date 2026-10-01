@@ -168,3 +168,32 @@ SW_TEST_CASE( JsonDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
     SW_EXPECT_EQUAL( int64( 4289362560ll ), root.get( "color" ).asInt( 0 ) );
     SW_EXPECT_NEAR_EQUAL( 4289362560.0, root.get( "color" ).asFloat( 0.0 ), 1.0 );
 }
+
+/**
+ * @brief [JsonDocumentTest] 구문 오류는 `이름:줄:열: 이유` 로 알린다 — nlohmann 의 예외 머리말 없이
+ * @details 예전 로그는 "Parse error in json text" 한 줄뿐이었다. 어느 파일의 어디인지 알 수 없었다.
+ */
+SW_TEST_CASE( JsonDocumentTest, ParseErrorNamesSourceLineAndColumn )
+{
+    sw::JsonDocument doc;
+    {
+        test::ScopedDefensiveTestLog expected( "malformed JSON" );
+        SW_EXPECT_FALSE( doc.parse( "{\n  \"a\": 1,\n}\n", "data.json" ) );
+    }
+    const sw::string& error = doc.getLastError();
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( error, "data.json:3:1: " ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( error.find( "json.exception" ) == sw::string::npos, error.c_str() );
+
+    // 줄 가운데 · 한글 뒤의 자리 — 열은 글자 수다.
+    {
+        test::ScopedDefensiveTestLog expected( "malformed JSON" );
+        SW_EXPECT_FALSE( doc.parse( "{\"\xED\x95\x9C\": tru}", "korean.json" ) );
+    }
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( doc.getLastError(), "korean.json:1:" ), doc.getLastError().c_str() );
+
+    SW_EXPECT_FALSE( doc.loadPath( "no/such/dir/missing.json" ) );
+    SW_EXPECT_TRUE_MSG( doc.getLastError().find( "missing.json: not found" ) != sw::string::npos, doc.getLastError().c_str() );
+
+    SW_EXPECT_TRUE( doc.parse( "{}" ) );
+    SW_EXPECT_TRUE( doc.getLastError().empty() );
+}

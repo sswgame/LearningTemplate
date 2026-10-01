@@ -184,8 +184,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 파싱 · 로드
         // ------------------------------------------------------------------------------
-        /** @brief JSON 전체 문서를 파싱합니다. */
-        bool parse( string_view jsonText );
+        /**
+         * @brief JSON 전체 문서를 파싱합니다.
+         * @param sourceName 오류에 적는 이름(대개 경로)입니다. 비우면 `<memory>` 입니다.
+         */
+        bool parse( string_view jsonText, string_view sourceName = {} );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
         bool loadFile( string_view absPath );
@@ -198,6 +201,12 @@ namespace sw
          * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
          */
         bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+
+        /**
+         * @brief 마지막 parse · load 가 실패한 이유입니다(성공했으면 빈 문자열). `XmlDocument::getLastError` 와 같은 꼴입니다.
+         * @details 구문 오류는 `경로:줄:열: 이유` 다. 예전 로그는 "Parse error in json text" 한 줄뿐이라 어느 파일 어디인지 알 수 없었다.
+         */
+        const string& getLastError() const { return _lastError; }
 
         /** @brief 루트 값입니다. */
         JsonValue getRoot() const;
@@ -231,5 +240,6 @@ namespace sw
     private:
         struct Impl;
         unique_ptr<Impl> _impl;
+        string           _lastError; /**< 마지막 parse · load 의 실패 이유(`getLastError`) */
     };
 } // namespace sw

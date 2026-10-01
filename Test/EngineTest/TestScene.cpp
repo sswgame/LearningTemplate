@@ -675,3 +675,31 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
 
     manager.shutdown();
 }
+
+/**
+ * @brief [SceneTest] 깨진 씬 파일은 "없다" 가 아니라 어디가 틀렸는지(`경로:줄:열`)로 알린다
+ * @details `SceneDocument::loadXml` 은 읽기 실패를 모두 "File not found" 로 알렸다 — 파일이 바로 거기 있는데. 구문 오류의 자리는 XML 로그의
+ *          오프셋뿐이었다.
+ */
+SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
+{
+    const sw::string path = test::makeTempPath( "broken.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<Scene name=\"Broken\">\n  <Entity>\n</Scene>\n" ) );
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a scene file with a syntax error" );
+        sw::SceneDocument            document;
+        SW_EXPECT_FALSE( document.loadXml( path ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "broken.scene.xml:3:" ) > 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "not found" ) == 0, logs.joined().c_str() );
+
+    // 정말 없는 파일은 없다고 한다.
+    {
+        test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
+        sw::SceneDocument            document;
+        SW_EXPECT_FALSE( document.loadXml( test::makeTempPath( "missing.scene.xml" ) ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "missing.scene.xml: not found" ) == 1, logs.joined().c_str() );
+}
