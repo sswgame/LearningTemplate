@@ -73,6 +73,17 @@ namespace sw
         if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
             return result;
 
+        // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 예전에는 그런 경로(테스트의 임시 프리팹, 사용자가 연
+        // 바깥 파일)에도 소문자로 정규화한 경로 옆에 `.meta` 를 써서 프로젝트 밖 폴더에 사이드카를 흘렸다 — 대소문자를 가리는 파일
+        // 시스템에서는 원래 파일 옆도 아닌(없는 폴더일 수도 있는) 자리였다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수도 없다(유니티도
+        // `Assets/` 밖에는 .meta 를 만들지 않는다). 판정은 정규화 **전** 경로로 한다 — 루트와 대소문자를 견줘야 한다.
+        if ( FileUtil::isAbsolutePath( relativePath ) )
+        {
+            const string rootRelative = toRelativePath( relativePath );
+            if ( rootRelative.empty() || rootRelative.rfind( "..", 0 ) == 0 )
+                return result;
+        }
+
         BLOCK( "Check Existing Meta" )
         {
             std::shared_lock<std::shared_mutex> lock{ _mutex };

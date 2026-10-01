@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ③ 리소스 루트 밖 파일에도 `.meta` 를 썼다)
+
+`AssetDatabase::ensureMeta` 는 리소스 상대 id 를 받는다고 적혀 있는데, 리소스 루트 **밖**의 절대 경로(테스트의 임시 프리팹, 사용자가 연
+바깥 파일)도 그대로 받아 **소문자로 정규화한 경로** 옆에 `.meta` 를 썼다. 그래서 테스트 실행마다 `%TEMP%` 에 사이드카가 쌓였고
+(`sw_4856_prefabtest_…_x.prefab.xml.meta` — Test 구조 ③ 에서 찾았다), 대소문자를 가리는 파일 시스템에서는 원래 파일 옆도 아닌(없는
+폴더일 수도 있는) 자리였다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수도 없다 — 유니티도 `Assets/` 밖에는 .meta 를 만들지 않는다.
+
+**고침.** 루트 밖 절대 경로면 null GUID 를 돌려주고 아무것도 쓰지 않는다. 판정은 정규화 **전** 경로로 한다(루트와 대소문자를 견줘야 한다).
+부르는 곳(프리팹 저장 · 머티리얼 캐시 · 씬의 프리팹 GUID)은 모두 null GUID 를 경로로 물러나는 길로 받는다.
+**검증.** `ResourceTest.EnsureMetaGivesNoIdentityOutsideTheResourceRoot`(GUID 없음 · 원래 경로와 소문자 경로 어디에도 .meta 없음 · 루트 안
+에셋은 그대로 GUID) — 판정을 빼면 셋 다 진다. Resource · Prefab · Scene 스위트 48/48.
+
 ### 2026-10-01 (결함 ② 자식 프로세스가 남의 핸들을 물려받았다 · "탐색기에서 보기" 가 에디터를 세웠다)
 
 **자식이 물려받는 것.** Windows `Process::launch` 는 `CreateProcessW( …, bInheritHandles = TRUE, … )` 만 줘서 이 프로세스의 **상속 가능한

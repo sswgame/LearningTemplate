@@ -641,6 +641,30 @@ SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 }
 
 /**
+ * @brief [ResourceTest] 리소스 루트 밖의 절대 경로에는 GUID 도 `.meta` 도 만들지 않는다
+ * @details 예전에는 임시 폴더의 프리팹처럼 프로젝트 밖 파일에도 소문자로 정규화한 경로 옆에 `.meta` 를 썼다 — 테스트 실행마다
+ *          `%TEMP%` 에 사이드카가 쌓였고(`sw_..._prefabtest_..._x.prefab.xml.meta`), 대소문자를 가리는 파일 시스템에서는 원래 파일 옆도
+ *          아니었다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수 없으므로 식별자가 없는 것이 맞다.
+ */
+SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string outsidePath = test::makeTempPath( "Outside.prefab.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( outsidePath, "<Prefab/>" ) );
+
+    sw::AssetDatabase db;
+    SW_EXPECT_TRUE_MSG( db.ensureMeta( outsidePath ).isNull(), "리소스 루트 밖 파일에 GUID 를 지었다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( outsidePath + ".meta" ), "리소스 루트 밖 파일 옆에 .meta 를 썼다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( sw::FileUtil::normalizePath( outsidePath ) + ".meta" ),
+                         "리소스 루트 밖 파일의 소문자 경로에 .meta 를 썼다" );
+
+    // 루트 안의 에셋은 그대로 식별자를 받는다(개발 빌드 — 배포 빌드는 .meta 가 팩에 없다).
+#if !defined( SW_SHIPPING )
+    SW_EXPECT_FALSE( db.ensureMeta( "engine/materials/defaultmaterial.material" ).isNull() );
+#endif
+}
+
+/**
  * @brief [ResourceTest] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
  * @details 이 형식은 `CookAssets.py buildAssetRegistryInternal` 이 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
  */
