@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉖ 리플렉션 — `findEnum` 이 준 포인터가 enum 하나 더 오르면 죽었다)
+
+`TypeRegistry` 는 EnumInfo 를 `unordered_map<hashed_string, EnumInfo>` 에 **값으로** 들었고, 이 저장소의 `unordered_map` 은 밀집 배열이다
+(`SW_ENABLE_STL_CONTAINER` 꺼짐). 그래서 enum 이 하나 더 등록돼 배열이 커지면 모든 EnumInfo 가 옮겨져, 그때 누가 들고 있던 `const EnumInfo*` 가 그
+자리에서 죽었다 — 워커가 씬을 역직렬화하는 동안 모듈이 올라오는 길(`SceneManager` 가 따로 다루는 그 상황)이다. 게다가 FQN · 짧은 이름 · 별칭이 각자
+**복사본**이라, 같은 enum 을 다른 이름으로 찾으면 다른 객체였고 핫 리로드로 열거자가 늘어도 별칭 쪽은 옛 목록으로 답했다.
+TypeInfo 와 같은 규칙으로 바꿨다: FQN 하나당 `unique_ptr<EnumInfo>` 하나(`_mapFqnToEnum`, 주소 고정 · 지우지 않음), 이름 · 별칭은 그 객체를 가리키는
+포인터(`_mapNameToEnum`). 재등록은 그 객체에 덮어쓰고, 모듈 해제는 이름만 걷는다(묘비 — 다시 오르면 같은 자리).
+**검증.** `ReflectionEnumInfoTest.EnumInfoAddressIsStableAndShared` — enum 256개를 더 올려도 `CameraRole` 의 주소가 그대로, 짧은 이름 · FQN · 별칭이 같은
+객체, 다시 등록하면 별칭으로도 늘어난 열거자, 해제하면 이름으로 못 찾고 다시 오르면 같은 주소. 옛 저장 방식으로 되돌려 빌드하면 넷 모두 실패한다
+(주소 이동 · 짧은 이름과 FQN 이 다른 사본 · 별칭 사본 · 별칭은 열거자 1개).
+
 ### 2026-10-01 (결함 ㉕ Core — 잘못된 UTF-8 한 바이트에 로그 한 줄이 통째로 깨졌다)
 
 Logger 는 완성된 줄이 UTF-8 이 아니면 **줄 전체**를 `StringUtil::localeToUtf8` 로 바꿨다. 저장소 어디에도 `setlocale` 이 없어 C 로캘이고, 그래서

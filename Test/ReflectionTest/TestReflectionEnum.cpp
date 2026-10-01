@@ -342,3 +342,58 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     } );
     SW_EXPECT_TRUE_MSG( report.empty(), ( "enum text that does not read back:" + report ).c_str() );
 }
+
+/**
+ * @brief [ReflectionEnumInfoTest] `findEnum` 이 준 포인터는 enum 이 더 등록돼도 그대로이고, 이름 · FQN · 별칭이 같은 객체를 가리킨다
+ * @details 레지스트리는 EnumInfo 를 밀집 배열 해시맵에 **값으로** 들었다. enum 이 하나 더 오르며 배열이 커지면 모든 EnumInfo 가 옮겨져, 워커가 씬을
+ *          읽으며 들고 있던 포인터가 그 자리에서 죽었다. 짧은 이름 · 별칭은 각자 복사본이라, 다시 등록돼 열거자가 늘어도 별칭으로 찾으면 옛 목록이었다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
+{
+    sw::TypeRegistry&   registry = sw::engine::getTypeRegistry();
+    const sw::EnumInfo* pRole    = registry.findEnum( sw::hashed_string( "sw::CameraRole" ) );
+    SW_ASSERT_NOT_NULL( pRole );
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "CameraRole" ) ) == pRole );
+
+    const auto makeEnum = []( const sw::string& fqn, int64 valueCount )
+    {
+        sw::EnumInfo info;
+        info._fullyQualifiedName = sw::hashed_string( fqn.c_str() );
+        info._name               = sw::hashed_string( fqn.substr( fqn.rfind( ':' ) + 1 ).c_str() );
+        info._moduleName         = sw::hashed_string( "TestEnumGrowth" );
+        info._size               = 1;
+        for ( int64 value = 0; value < valueCount; ++value )
+        {
+            const sw::hashed_string name( ( "V" + sw::to_string( value ) ).c_str() );
+            info._mapNameToValue.insert_or_assign( name, value );
+            info._mapValueToName.insert_or_assign( value, name );
+        }
+        return info;
+    };
+
+    // 많이 올려 밀집 배열이 여러 번 커지게 한다.
+    for ( int32 index = 0; index < 256; ++index )
+        registry.registerEnum( makeEnum( "swtest::GrowthEnum" + sw::to_string( index ), 1 ) );
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "sw::CameraRole" ) ) == pRole );
+
+    // 별칭은 같은 객체다 — 다시 등록돼 열거자가 늘면 별칭으로 찾아도 늘어 있다.
+    registry.registerEnumAlias( "OldGrowthEnum0", "swtest::GrowthEnum0" );
+    const sw::EnumInfo* pGrowth = registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) );
+    SW_ASSERT_NOT_NULL( pGrowth );
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) ) == pGrowth );
+    registry.registerEnum( makeEnum( "swtest::GrowthEnum0", 3 ) );
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) == pGrowth );
+    const sw::EnumInfo* pByAlias = registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) );
+    SW_ASSERT_NOT_NULL( pByAlias );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pByAlias->_mapValueToName.size() ) );
+
+#if !defined( SW_SHIPPING )
+    // 모듈이 내려가면 이름으로는 못 찾고, 다시 오르면 같은 자리에 되살아난다.
+    registry.unregisterTypesByModule( "TestEnumGrowth" );
+    SW_EXPECT_NULL( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) );
+    SW_EXPECT_NULL( registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) ) );
+    registry.registerEnum( makeEnum( "swtest::GrowthEnum0", 2 ) );
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) == pGrowth );
+    registry.unregisterTypesByModule( "TestEnumGrowth" );
+#endif
+}

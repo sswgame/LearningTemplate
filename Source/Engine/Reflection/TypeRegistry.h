@@ -188,7 +188,10 @@ namespace sw
          *          (주소 고정 · 묘비). 살아 있는지는 `TypeInfo::isAlive()` 가 답합니다.
          */
         uint32 getGeneration() const;
-        /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
+        /**
+         * @brief 이름 · FQN · 별칭으로 EnumInfo 를 찾습니다. 어느 이름으로 찾든 같은 객체이고, 주소는 등록이 더 일어나도 바뀌지 않습니다.
+         * @details 모듈이 내려가면 nullptr 를 답하지만 객체는 남습니다(묘비 — 같은 FQN 이 다시 오르면 그 자리에 덮어씁니다).
+         */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
         /**
@@ -253,10 +256,10 @@ namespace sw
         void forEachEnum( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [key, enumInfo] : _mapNameToEnum )
+            for ( const auto& [key, pEnumInfo] : _mapNameToEnum )
             {
-                if ( key == enumInfo._fullyQualifiedName )
-                    func( enumInfo );
+                if ( key == pEnumInfo->_fullyQualifiedName )
+                    func( *pEnumInfo );
             }
         }
 
@@ -396,9 +399,17 @@ namespace sw
         unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType;
         /** @brief 짧은 이름 · 별칭 → FQN 입니다. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모입니다. */
         unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
-        unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
-        unordered_map<uint32, hashed_string>        _mapHashToCanonicalName;
-        hashed_string                               _activeModuleName;
+        /**
+         * @brief FQN 하나당 EnumInfo **하나**입니다(주소 고정 · 지우지 않는다 — TypeInfo 와 같은 규칙).
+         * @details 예전에는 값으로 들었다. 이 맵은 밀집 배열이라 enum 이 하나 더 등록돼 배열이 커지면 **모든 EnumInfo 가 옮겨졌고**,
+         *          `findEnum` 이 건넨 포인터가 그 자리에서 죽었다(워커가 씬을 짓는 동안 모듈이 올라오는 길). 짧은 이름 · 별칭은 각자
+         *          **복사본**이라 핫 리로드로 열거자가 늘어도 별칭 쪽은 옛 목록으로 답했다.
+         */
+        unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum;
+        /** @brief FQN · 짧은 이름 · 별칭 → `_mapFqnToEnum` 의 객체입니다. 모듈 해제는 여기서만 지웁니다. */
+        unordered_map<hashed_string, EnumInfo*> _mapNameToEnum;
+        unordered_map<uint32, hashed_string>    _mapHashToCanonicalName;
+        hashed_string                           _activeModuleName;
     };
 
     // ------------------------------------------------------------------------------

@@ -626,9 +626,16 @@ namespace sw
         else if ( stored._moduleName.empty() )
             stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
 
-        _mapNameToEnum.insert_or_assign( stored._fullyQualifiedName, stored );
-        if ( stored._name.empty() == false && stored._name != stored._fullyQualifiedName )
-            _mapNameToEnum.insert_or_assign( stored._name, stored );
+        // 같은 FQN 이면 그 객체에 덮어쓴다(주소 고정 — 별칭 · 밖에서 든 포인터가 새 내용을 본다). 새 enum 은 새 객체다.
+        unique_ptr<EnumInfo>& pOwned = _mapFqnToEnum[stored._fullyQualifiedName];
+        if ( pOwned == nullptr )
+            pOwned = make_unique<EnumInfo>( std::move( stored ) );
+        else
+            *pOwned = std::move( stored );
+        EnumInfo* pEnumInfo = pOwned.get();
+        _mapNameToEnum.insert_or_assign( pEnumInfo->_fullyQualifiedName, pEnumInfo );
+        if ( pEnumInfo->_name.empty() == false && pEnumInfo->_name != pEnumInfo->_fullyQualifiedName )
+            _mapNameToEnum.insert_or_assign( pEnumInfo->_name, pEnumInfo );
     }
 
     void TypeRegistry::registerPendingTypes( string_view moduleName, TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
@@ -829,9 +836,10 @@ namespace sw
                 ++it;
         }
 
+        // enum 은 이름만 걷는다. 객체는 `_mapFqnToEnum` 에 남는다(묘비) — 건넨 포인터가 허공을 가리키지 않고, 다시 오르면 그 자리에 덮어쓴다.
         for ( auto it = _mapNameToEnum.begin(); it != _mapNameToEnum.end(); )
         {
-            if ( it->second._moduleName == hashModule )
+            if ( it->second->_moduleName == hashModule )
                 it = _mapNameToEnum.erase( it );
             else
                 ++it;
@@ -923,12 +931,13 @@ namespace sw
         if ( it == _mapNameToEnum.end() )
             return;
 
-        const EnumInfo stored = it->second;
-        _mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), stored );
+        // 별칭은 같은 객체를 가리킨다(예전에는 복사본이라 다시 등록된 열거자를 못 봤다).
+        EnumInfo* const pEnumInfo = it->second;
+        _mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), pEnumInfo );
 
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
-            _mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), stored );
+            _mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), pEnumInfo );
     }
 
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const
@@ -967,7 +976,7 @@ namespace sw
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         auto                                it = _mapNameToEnum.find( nameOrFqn );
-        return it != _mapNameToEnum.end() ? &it->second : nullptr;
+        return it != _mapNameToEnum.end() ? it->second : nullptr;
     }
 
     hashed_string TypeRegistry::canonicalTypeNameByHash( const uint32 nameHash ) const
