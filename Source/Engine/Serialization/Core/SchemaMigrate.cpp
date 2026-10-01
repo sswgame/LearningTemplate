@@ -312,9 +312,11 @@ namespace sw
     {
         if ( _pOrphans == nullptr )
             return nullptr;
+        const uint32 nameHash = name.getHash();
         for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
         {
-            if ( orphanValue._name == name )
+            // 파일에서 읽은 고아는 이름을 intern 하지 않고 해시만 들 수 있다(XML · JSON 읽기) — 그때는 해시로 맞춰 본다.
+            if ( orphanValue._name == name || ( orphanValue._name.empty() && orphanValue._nameHash == nameHash ) )
                 return &orphanValue;
         }
         return nullptr;

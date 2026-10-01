@@ -82,7 +82,8 @@ namespace sw
                 const size_t bar = str.find( '|' );
                 if ( bar == string_view::npos )
                     return false;
-                any._typeFqn          = hashed_string{ str.substr( 0, bar ) };
+                // 찾기만 한다 — 바이너리 읽기(위)와 같다. 파일의 모르는 타입 이름을 전역 이름 표에 넣지 않는다.
+                any._typeFqn          = hashed_string::findInterned( str.substr( 0, bar ) );
                 const string_view hex = str.substr( bar + 1 );
                 if ( ( hex.size() % 2 ) != 0 )
                     return false;

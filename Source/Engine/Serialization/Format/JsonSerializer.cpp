@@ -523,10 +523,10 @@ namespace sw
             {
                 if ( pOutListOrphan != nullptr )
                 {
-                    SchemaOrphanValue   orphan;
-                    const hashed_string keyHs( keyRaw.c_str() );
-                    orphan._name     = keyHs;
-                    orphan._nameHash = keyHs.getHash();
+                    // 파일의 모르는 키를 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만).
+                    SchemaOrphanValue orphan;
+                    orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
+                    orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
                     orphan._text     = field.dump();
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }

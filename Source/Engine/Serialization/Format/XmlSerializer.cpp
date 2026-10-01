@@ -443,10 +443,10 @@ namespace sw
                     if ( pNameAttr != nullptr && isNameKnown( uniqueKnownNames, pNameAttr ) )
                         continue;
 
-                    const hashed_string nameHs( pChildName );
-                    SchemaOrphanValue   orphan;
-                    orphan._name     = nameHs;
-                    orphan._nameHash = nameHs.getHash();
+                    // 파일의 모르는 이름을 전역 이름 표에 넣지 않는다 — 아는 이름이면 그것을, 아니면 해시만 든다(`SchemaMigrateContext::findOrphan`).
+                    SchemaOrphanValue orphan;
+                    orphan._name     = hashed_string::findInterned( string_view{ pChildName } );
+                    orphan._nameHash = hashed_string::computeHash( string_view{ pChildName } );
                     orphan._text     = child.getText() != nullptr ? child.getText() : "";
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
@@ -461,10 +461,9 @@ namespace sw
                     if ( isNameKnown( uniqueKnownNames, pAttrName ) )
                         continue;
 
-                    const hashed_string nameHs( pAttrName );
-                    SchemaOrphanValue   orphan;
-                    orphan._name     = nameHs;
-                    orphan._nameHash = nameHs.getHash();
+                    SchemaOrphanValue orphan; // 이름은 위와 같이 찾기만 한다
+                    orphan._name     = hashed_string::findInterned( string_view{ pAttrName } );
+                    orphan._nameHash = hashed_string::computeHash( string_view{ pAttrName } );
                     orphan._text     = attr.getValue() != nullptr ? attr.getValue() : "";
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }

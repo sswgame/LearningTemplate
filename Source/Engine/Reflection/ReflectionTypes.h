@@ -548,13 +548,17 @@ namespace sw
             return hashed_string( result.c_str() );
         }
 
-        /** @brief `"A | B"` 플래그 문자열을 값으로 파싱합니다. */
+        /**
+         * @brief `"A | B"` 플래그 문자열을 값으로 파싱합니다.
+         * @note 이 함수와 `tryParse` 는 이름을 **찾기만** 한다(`hashed_string::findInterned`). 열거자 이름은 등록 때 이미 intern 됐으므로
+         *       답은 같고, 에셋의 모르는 글은 전역 이름 표에 들어가지 않는다 — 예전에는 틀린 이름 · 오타가 그때마다 표에 쌓였다.
+         */
         int64 stringFlagsToValue( string_view flagsStr ) const
         {
             if ( _bIsBitFlag == SW_FALSE )
             {
-                hashed_string nameKey{ flagsStr };
-                auto          iter = _mapNameToValue.find( nameKey );
+                const hashed_string nameKey = hashed_string::findInterned( flagsStr );
+                auto                iter    = _mapNameToValue.find( nameKey );
                 return iter != _mapNameToValue.end() ? iter->second : 0;
             }
 
@@ -567,8 +571,8 @@ namespace sw
                 const string_view token        = StringUtil::trim( flagsStr.substr( startPos, endPos - startPos ) );
                 if ( token.empty() == false )
                 {
-                    hashed_string tokenKey{ token };
-                    auto          iter = _mapNameToValue.find( tokenKey );
+                    const hashed_string tokenKey = hashed_string::findInterned( token );
+                    auto                iter     = _mapNameToValue.find( tokenKey );
                     if ( iter != _mapNameToValue.end() )
                         intResult |= iter->second;
                 }
@@ -596,8 +600,8 @@ namespace sw
                 return false;
 
             {
-                hashed_string key{ name };
-                const auto    it = _mapNameToValue.find( key );
+                const hashed_string key = hashed_string::findInterned( name ); // 찾기만 한다(`stringFlagsToValue` 설명)
+                const auto          it  = _mapNameToValue.find( key );
                 if ( it != _mapNameToValue.end() )
                 {
                     if ( isValidValue( it->second ) == false )

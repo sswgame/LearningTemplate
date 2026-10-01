@@ -2299,3 +2299,46 @@ SW_TEST_CASE( ReflectionSerializationTest, ArchiveOffsetCannotPassTheEnd )
     SW_EXPECT_EQUAL( uint64{ 0 }, archive.getRemainingBytes() );
     SW_EXPECT_FALSE( archive.hasBytesAvailable( 1 ) );
 }
+
+/**
+ * @brief [ReflectionSerializationTest] 에셋의 모르는 글(틀린 enum 이름 · 모르는 태그 · 속성)은 전역 이름 표에 쌓이지 않는다 — 읽기 결과는 그대로
+ * @details enum 이름 조회 · ReflectAny 글 · XML/JSON 의 고아 값이 글을 `hashed_string` 으로 만들어 intern 했다. 표는 프로세스 끝까지 줄지 않고 상한(약
+ *          백만)에 닿으면 그 뒤의 **모든** 새 이름이 None 이 된다 — 모드 · 생성 · 깨진 파일의 고유 글이 그만큼 쌓였다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::EnumInfo*     pRole    = registry.findEnum( sw::hashed_string( "CameraRole" ) );
+    const sw::EnumInfo*     pFlag    = registry.findEnum( sw::hashed_string( "TestFlag" ) );
+    const sw::TypeInfo*     pType    = registry.findType( sw::hashed_string( "sw::ComplexData" ) );
+    SW_ASSERT_NOT_NULL( pRole );
+    SW_ASSERT_NOT_NULL( pFlag );
+    SW_ASSERT_NOT_NULL( pType );
+
+    const uint32 countBefore = sw::hashed_string::getInternedCount();
+    int64        value       = -1;
+    SW_EXPECT_TRUE( pRole->tryParse( "editor", value ) && value == 1 ); // 대소문자를 가리지 않는 답은 그대로
+    SW_EXPECT_EQUAL( int64( 3 ), pFlag->stringFlagsToValue( "Read | write" ) );
+    SW_EXPECT_FALSE( pRole->tryParse( "R8NoSuchRole", value ) );
+    SW_EXPECT_EQUAL( int64( 0 ), pRole->stringFlagsToValue( "R8NoSuchRoleToo" ) );
+    SW_EXPECT_EQUAL( int64( 1 ), pFlag->stringFlagsToValue( "Read | R8NoSuchFlag" ) );
+
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    sw::ComplexData                   data;
+    {
+        test::ScopedLogSuppressor suppressor;
+        (void)sw::XmlSerializer::deserializeSoft( &data, *pType,
+                                                  "<ComplexData _id=\"7\" R8NoSuchAttribute=\"1\"><R8NoSuchTagProbe>2</R8NoSuchTagProbe></ComplexData>",
+                                                  &listOrphan );
+    }
+    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+    SW_EXPECT_TRUE( sw::hashed_string::findInterned( "R8NoSuchAttribute" ).empty() );
+
+    // 고아는 여전히 이름으로 찾는다 — 마이그레이션이 옛 이름을 물을 때 그 이름은 **그때** intern 되고, 고아는 해시로 맞춘다.
+    SW_EXPECT_EQUAL( size_t( 2 ), listOrphan.size() );
+    sw::SchemaMigrateContext ctx;
+    ctx._pOrphans                           = &listOrphan;
+    const sw::SchemaOrphanValue* pOrphanTag = ctx.findOrphan( sw::hashed_string( "R8NoSuchTagProbe" ) );
+    SW_ASSERT_NOT_NULL( pOrphanTag );
+    SW_EXPECT_STREQ( "2", pOrphanTag->_text.c_str() );
+}

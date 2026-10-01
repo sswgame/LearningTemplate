@@ -2077,6 +2077,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊶ 리플렉션 · 직렬화 — 에셋의 모르는 글이 전역 이름 표에 쌓였다)
+
+`hashed_string` 을 글로 만들면 전역 intern 표에 들어가고, 그 표는 프로세스 끝까지 줄지 않으며 상한(약 백만 개)에 닿으면 **그 뒤의 모든 새 이름이 None** 이
+된다. 저장소 규칙("에셋 글을 intern 하지 않는다")과 달리 다음 자리가 파일의 글을 intern 했다: `EnumInfo::stringFlagsToValue` · `tryParse`(재질 파일의 사용 플래그 ·
+품질 이름, 틀린 이름 · 오타마다), ReflectAny 텍스트 읽기(바이너리 읽기는 이미 찾기만 했다), XML 의 모르는 태그 · 속성과 JSON 의 모르는 키(고아 값). 같은
+에셋을 다시 읽으면 늘지 않지만 모드 · 생성 · 깨진 파일의 고유 글은 그만큼 쌓였다.
+- 이름 조회는 `hashed_string::findInterned` 로 **찾기만** 한다. 열거자 이름은 등록 때 이미 intern 됐고 찾기도 대소문자를 가리지 않으므로 답은 같다.
+- 고아 값은 아는 이름이면 그것을, 아니면 해시만 든다(`computeHash` — intern 하지 않는다). `SchemaMigrateContext::findOrphan` 은 이름이 비어 있으면 해시로
+  맞춘다 — 마이그레이션이 옛 이름을 물을 때 그 이름은 그때 intern 된다.
+**검증.** `ReflectionSerializationTest.AssetTextDoesNotGrowTheNameTable` — 틀린 enum 이름 셋 · 모르는 XML 속성 · 태그를 읽어도 intern 수가 그대로이고, 대소문자가
+다른 이름은 그대로 읽히며, 모르는 태그의 고아는 이름으로 찾아진다. 옛 코드로 되돌려 빌드하면 이 시험에서만 5 개가 늘었다(690 → 695). 해시로 맞추지 않는
+변이에서 고아를 못 찾아 실패했다.
+
 ### 2026-10-01 (결함 ㊵ 창 — 리사이즈 콜백 안에서 다시 들어온 WM_SIZE 의 크기를 잃었다)
 
 `Win32Window` 의 WM_SIZE 는 재진입 가드(`_bResizing`)가 있어, 콜백(스왑체인 리사이즈) 안에서 같은 스레드로 다시 들어온 WM_SIZE 는 `_width`/`_height` 만 적고
