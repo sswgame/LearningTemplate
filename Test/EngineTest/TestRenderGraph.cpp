@@ -152,6 +152,19 @@ SW_TEST_CASE( RenderGraphTest, ReaderRunsBeforeTheNextWriterOfItsInput )
     // 레벨도 갈린다 — 같은 레벨이면 병렬 기록에서 둘이 겨룬다.
     const auto& listLevel = graph.getExecutionLevels();
     SW_EXPECT_EQUAL( size_t( 3 ), listLevel.size() );
+
+    // 소비자를 먼저 선언해도 된다(앞에 쓰는 이가 없으면 첫 쓰기가 생산자). 그 다음 쓰기만 소비자 뒤로 간다 — 선언 순서로 고르면
+    // 생산자 자신을 골라 순환이 됐다(고치던 중 한 번 그렇게 깨졌다).
+    sw::RenderGraph earlyConsumer;
+    earlyConsumer.addPass( sw::hashed_string( "C_Reads" ), { sceneColor }, { sw::hashed_string( "COut" ) } );
+    earlyConsumer.addPass( sw::hashed_string( "W1_Writes" ), {}, { sceneColor } );
+    earlyConsumer.addPass( sw::hashed_string( "W2_Writes" ), {}, { sceneColor } );
+    SW_ASSERT_TRUE( earlyConsumer.compile() );
+    const auto& earlyOrder = earlyConsumer.getExecutionOrder();
+    SW_ASSERT_EQUAL( size_t( 3 ), earlyOrder.size() );
+    SW_EXPECT_STREQ( "W1_Writes", earlyOrder[0].c_str() );
+    SW_EXPECT_STREQ( "C_Reads", earlyOrder[1].c_str() );
+    SW_EXPECT_STREQ( "W2_Writes", earlyOrder[2].c_str() );
 }
 
 /**

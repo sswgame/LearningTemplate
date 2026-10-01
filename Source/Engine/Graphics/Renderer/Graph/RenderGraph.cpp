@@ -198,14 +198,16 @@ namespace sw
 
                 addEdge( producerIndex, consumerIndex );
 
-                // 읽은 뒤에 같은 자원을 덮어쓰는 패스는 **이 읽기 뒤에** 와야 한다(Write-after-Read). 예전에는 이 간선이 없어, W 가 쓰고
-                // A 가 읽고 B 가 다시 쓰면 A 와 B 가 같은 레벨에 들어갔다 — 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을 읽었고, 병렬로는
-                // 둘이 겨뤘다(W→B 쓰기 사슬이 W→A 보다 먼저 줄을 섰다).
-                for ( size_t writerIndex : listWriter )
+                // 이 읽기가 본 판(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 예전에는 이
+                // 간선이 없어, W 가 쓰고 A 가 읽고 B 가 다시 쓰면 A 와 B 가 같은 레벨에 들어갔다 — 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
+                // 읽었고, 병렬로는 둘이 겨뤘다(W→B 쓰기 사슬이 W→A 보다 먼저 줄을 섰다). 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
+                // 다음**이다 — 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
+                // 생산자 자신을 골라 순환이 된다.
+                for ( size_t chainIndex = 0; chainIndex + 1 < listWriter.size(); ++chainIndex )
                 {
-                    if ( writerIndex > consumerIndex )
+                    if ( listWriter[chainIndex] == producerIndex )
                     {
-                        addEdge( consumerIndex, writerIndex );
+                        addEdge( consumerIndex, listWriter[chainIndex + 1] );
                         break;
                     }
                 }
