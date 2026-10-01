@@ -114,3 +114,20 @@ SW_TEST_CASE( FrameProfilerTest, PercentilesFollowTheDistribution )
     profiler.reset();
     SW_EXPECT_EQUAL( uint64( 0 ), profiler.getPercentileNanos( slot, 50 ) );
 }
+
+/**
+ * @brief [FrameProfilerTest] 등록한 이름은 사본으로 든다 — 부른 쪽의 버퍼가 바뀌거나 사라져도 같은 이름을 찾는다
+ * @details 프로파일러는 부른 쪽의 포인터를 그대로 들었다. 이름이 임시 버퍼거나 핫 리로드되는 모듈의 문자열 상수면, 버퍼가 바뀐 뒤 · 모듈이 내려간
+ *          뒤 같은 이름 찾기와 보고가 그 자리를 읽었다.
+ */
+SW_TEST_CASE( FrameProfilerTest, ScopeNameIsCopiedNotBorrowed )
+{
+    sw::FrameProfiler profiler;
+    utf8              arrName[] = "Scope.Borrowed";
+    const uint32      slot      = profiler.registerScope( arrName );
+    SW_ASSERT_TRUE( slot != sw::FrameProfiler::kInvalidSlot );
+
+    arrName[0] = 'Z'; // 부른 쪽의 버퍼가 바뀐다(모듈이 내려가 그 자리가 다른 것이 된 셈)
+    SW_EXPECT_EQUAL( slot, profiler.registerScope( "Scope.Borrowed" ) );
+    SW_EXPECT_TRUE( profiler.registerScope( "Zcope.Borrowed" ) != slot );
+}

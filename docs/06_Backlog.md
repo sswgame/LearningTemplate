@@ -2077,6 +2077,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊴ 프로파일러 — 구간 이름을 부른 쪽의 포인터 그대로 들었다)
+
+`FrameProfiler::registerScope` 는 이름 포인터를 그대로 슬롯에 적었다. 같은 이름 찾기(`StringUtil::equals`)와 보고(`report`)가 그 포인터를 다시 읽는다. 지금
+`SW_PROFILE_*` 를 쓰는 곳은 Engine · App 뿐이라 드러나지 않았지만, 핫 리로드되는 모듈(게임 · 에디터 · 키트)이 매크로를 쓰거나 임시 버퍼의 이름을 넘기는
+순간 모듈이 내려간 뒤 · 버퍼가 바뀐 뒤 사라진 메모리를 읽는다(FrameRenderer 의 GPU 패스 이름은 이것을 알고 스스로 intern 해서 넘기고 있었다). 이제
+등록할 때 intern 한 사본을 든다(구간 이름은 유한한 집합). 곁가지: 넘침 경고를 한 번만 내던 `static bool` 을 `atomic<bool>::exchange` 로(여러 스레드가 함께
+넘치면 형식상 경쟁이었다).
+**검증.** `FrameProfilerTest.ScopeNameIsCopiedNotBorrowed` — 버퍼로 등록한 뒤 버퍼를 바꿔도 원래 이름이 같은 슬롯을 찾고, 바뀐 글은 다른 이름이다. 포인터를
+그대로 드는 변이에서 실패했다.
+
 ### 2026-10-01 (확인 ⑦ 시험 샤드 — ReflectionTest 가 제한 30 초에 붙어 부하에서 넘었다)
 
 ReflectionTest 는 파서를 차례로 띄우는 `ReflectionParserTest`(21 케이스 · ~21 초)가 실행 시간의 거의 전부다(나머지 125 케이스는 0.1 초). 이번 점검에서 파서

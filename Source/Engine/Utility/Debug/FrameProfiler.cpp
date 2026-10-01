@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
 
@@ -95,17 +96,16 @@ namespace sw
             // 오래 돌면 `uint32` 를 한 바퀴 돌아 0 이 되어 남의 슬롯을 내주게 된다.
             _scopeCount.store( kMaxScope, std::memory_order_release );
 
-            // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다.
-            static bool s_bWarned = false;
-            if ( s_bWarned == false )
-            {
-                s_bWarned = true;
+            // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다. 여러 스레드가 함께 넘칠 수 있어 원자로 한 번을 고른다.
+            static atomic<bool> s_bWarned{ false };
+            if ( s_bWarned.exchange( true, std::memory_order_relaxed ) == false )
                 SW_LOG_WARNING( "FrameProfiler: 구간이 %#개를 넘었습니다 — '%#' 이후는 무시합니다.", kMaxScope, pName );
-            }
             return kInvalidSlot;
         }
 
-        _arrScope[slot]._pName.store( pName, std::memory_order_release );
+        // 부른 쪽의 포인터가 아니라 intern 한 사본을 든다(`registerScope` 설명). intern 아레나는 프로세스 끝까지 그대로다.
+        const hashed_string stableName{ string_view( pName ) };
+        _arrScope[slot]._pName.store( stableName.c_str(), std::memory_order_release );
         return slot;
     }
 
