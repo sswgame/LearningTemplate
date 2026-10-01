@@ -510,6 +510,61 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
 }
 
 /**
+ * @brief [SceneAsyncTest] 같은 씬이 대기열에 있어도, 짓는 동안 모듈 팩토리가 올라오면 다시 짓는다 — 두 요청자 모두 새 씬을 받는다
+ * @details 팩토리 변경 검사는 대기열이 비었을 때만 했다. 같은 경로가 대기열에 있으면 그 결과를 그대로 활성으로 썼으므로, 낡은 팩토리로 지은(새 모듈의
+ *          컴포넌트가 빠진) 씬이 남았다 — 에디터가 시작 씬을 두 번 여는 흔한 순서다.
+ */
+SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePathQueued )
+{
+    static sw::ComponentFactoryRegistrar* s_pLateHead{ nullptr };
+    static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
+    (void)sw::MockAudioComponent::StaticType();
+
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory_queued.xml" );
+    const sw::string xmlStr =
+        "<Scene formatVersion=\"0\" name=\"LateFactoryQueued\">\n"
+        "  <entities>\n"
+        "    <entity name=\"Speaker\">\n"
+        "      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
+        "        <_listComponent>\n"
+        "          <MockAudioComponent />\n"
+        "        </_listComponent>\n"
+        "      </GameObject>\n"
+        "    </entity>\n"
+        "  </entities>\n"
+        "</Scene>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory_queued.bin" );
+    sw::SceneDocument cooked{};
+    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::TaskFuture<sw::Scene*> first  = manager.requestLoadFuture( xmlPath );
+    sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( xmlPath ); // 같은 씬이 대기열로
+    SW_ASSERT_TRUE( first.isValid() );
+    SW_ASSERT_TRUE( second.isValid() );
+    // 워커가 씬을 다 지은 뒤에(팩토리 없이) 모듈이 올라온다.
+    sw::engine::getTaskManager().waitAll();
+    sw::GameObjectManager::registerModuleFactoryHead( "LateModuleQueued", s_pLateHead );
+
+    sw::drainSceneTransitions( manager );
+    SW_ASSERT_NOT_NULL( manager.getActiveScene() );
+    sw::GameObject* pSpeaker = manager.getActiveScene()->getObjectManager()->findGameObjectByName( sw::hashed_string( "Speaker" ) );
+    SW_ASSERT_NOT_NULL( pSpeaker );
+    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "MockAudioComponent" ) ) != nullptr,
+                        "같은 씬이 대기열에 있을 때 로드 도중에 등록된 모듈의 컴포넌트가 빠졌습니다" );
+    SW_ASSERT_TRUE( first.isReady() );
+    SW_ASSERT_TRUE( second.isReady() );
+    SW_EXPECT_EQUAL( manager.getActiveScene(), first.get() );
+    SW_EXPECT_EQUAL( manager.getActiveScene(), second.get() );
+
+    manager.shutdown();
+    sw::GameObjectManager::unregisterModuleFactoryHead( "LateModuleQueued" );
+}
+
+/**
  * @brief [SceneAsyncTest] 저장이 막혀 있으면 활성 씬을 저장하지 않고, 풀면 저장한다
  * @details 게임 모듈 리로드가 게임 컴포넌트를 걷어 낸 채 실패하면 호스트가 막는다. 그 상태로 저장하면 컴포넌트가 빠진 씬이 저장됐다.
  */

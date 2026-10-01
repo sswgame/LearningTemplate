@@ -359,8 +359,13 @@ namespace sw
 
         // 짓는 동안 모듈 팩토리가 바뀌었으면(시작할 때 키트 · SWGame 이 올라오는 중에 에디터가 시작 씬을 열었다) 그 씬은 **워커가 만들 때의**
         // 팩토리로 지어져, 새 모듈의 컴포넌트가 조용히 빠졌다(만들 수 없는 컴포넌트는 경고 없이 건너뛴다). 그대로 쓰면 저장할 때 사라진다.
-        // 버리고 같은 경로를 다시 띄운다. 대기열이 있으면 어차피 이 결과를 버리므로 아래에 맡긴다.
-        if ( pendingScene != nullptr && _queuedPath.empty() && _asyncLoad->_factoryHeadSerial != GameObjectManager::getFactoryHeadSerial() )
+        // 버리고 같은 경로를 다시 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는
+        // 이 결과를 그대로 쓴다 — 예전에는 그 경우를 빠뜨려 낡은 팩토리로 지은 씬이 활성이 됐다. 대기열은 그대로 두어, 다시 지은 결과가 두
+        // 요청자를 함께 채운다.
+        const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
+                                     FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), _queuedPath );
+        if ( pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) &&
+             _asyncLoad->_factoryHeadSerial != GameObjectManager::getFactoryHeadSerial() )
         {
             const string path = pendingScene->getSourcePath();
             SW_LOG_INFO( "Module factories changed while '%#' was loading — loading it again", path );
