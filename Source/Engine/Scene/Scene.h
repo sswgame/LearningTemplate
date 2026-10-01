@@ -4,11 +4,12 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+
+#include "Engine/Scene/SceneDocument.h"
 
 namespace sw
 {
-    struct SceneDocument;
-
     class CameraComponent;
     class GameObject;
     class GameObjectManager;
@@ -91,6 +92,13 @@ namespace sw
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
         const string& getEntityPrefabPath( uint64 objectId ) const;
 
+        /**
+         * @brief 프리팹을 찾지 못해 오브젝트로 만들지 못한 엔티티의 수입니다(유니티의 "Missing Prefab").
+         * @details 그 엔티티는 문서 그대로 들고 있다가 `serializeToDocument` 가 다시 써 넣는다 — 열고 저장하는 것만으로 데이터가
+         *          사라지지 않게. 0 이 아니면 에디터 · 로그가 알려야 할 상태다.
+         */
+        size_t getUnresolvedEntityCount() const { return _listUnresolvedEntity.size(); }
+
     private:
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
@@ -100,13 +108,14 @@ namespace sw
         /** @brief 카메라 핸들을 기록합니다. */
         void storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle );
 
-        string                        _name;
-        string                        _sourcePath;
-        string                        _defaultMaterialPath;
-        unique_ptr<GameObjectManager> _objectManager;
-        Material*                     _pMaterial;
-        unordered_map<uint64, string> _mapPrefabSource;
-        sw::ComponentHandle           _activeGameCamera;   ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        sw::ComponentHandle           _gameCameraOverride; ///< `setActiveGameCamera` 로 직접 고른 카메라
+        string                            _name;
+        string                            _sourcePath;
+        string                            _defaultMaterialPath;
+        unique_ptr<GameObjectManager>     _objectManager;
+        Material*                         _pMaterial;
+        unordered_map<uint64, string>     _mapPrefabSource;
+        vector<SceneDocument::EntityNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        sw::ComponentHandle               _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        sw::ComponentHandle               _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

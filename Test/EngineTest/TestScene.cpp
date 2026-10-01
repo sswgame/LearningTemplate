@@ -628,3 +628,50 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
     }
     SW_EXPECT_TRUE( corrupted._listEntityNode.empty() );
 }
+
+/**
+ * @brief [SceneTest] 프리팹을 찾지 못한 엔티티도 저장하면 그대로 남는다(유니티의 "Missing Prefab" 과 같은 자리)
+ * @details 예전에는 스폰이 실패하면 경고 한 줄을 남기고 엔티티를 버렸다. 씬을 열고 저장하면 그 엔티티 · 덮어쓴 값 · 프리팹 GUID 가
+ *          파일에서 영영 사라졌다 — 프리팹을 `.meta` 없이 옮겼거나 잠깐 없던 것만으로. 이제 풀지 못한 엔티티는 문서 그대로 들고 있다가
+ *          저장 때 다시 써 넣는다.
+ */
+SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "MissingPrefabWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+
+    sw::SceneDocument             doc;
+    sw::SceneDocument::EntityNode ghost;
+    ghost._name        = "Ghost";
+    ghost._prefab      = "prefabs/test_missing_for_scene_test.prefab.xml";
+    ghost._prefabGuid  = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f60";
+    ghost._embeddedXml = "<GameObject _name=\"Ghost\" />";
+    doc._listEntityNode.push_back( ghost );
+    sw::SceneDocument::EntityNode plain;
+    plain._name = "Plain";
+    doc._listEntityNode.push_back( plain );
+
+    {
+        test::ScopedDefensiveTestLog expected( "prefab of 'Ghost' does not exist" );
+        SW_EXPECT_TRUE( pScene->instantiate( doc ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), pScene->getUnresolvedEntityCount() );
+
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    const sw::SceneDocument::EntityNode* pSavedGhost = nullptr;
+    for ( const sw::SceneDocument::EntityNode& node : saved._listEntityNode )
+    {
+        if ( node._name == "Ghost" )
+            pSavedGhost = &node;
+    }
+    SW_ASSERT_NOT_NULL( pSavedGhost );
+    SW_EXPECT_STREQ( ghost._prefab.c_str(), pSavedGhost->_prefab.c_str() );
+    SW_EXPECT_STREQ( ghost._prefabGuid.c_str(), pSavedGhost->_prefabGuid.c_str() );
+    SW_EXPECT_STREQ( ghost._embeddedXml.c_str(), pSavedGhost->_embeddedXml.c_str() );
+    SW_EXPECT_EQUAL( size_t( 2 ), saved._listEntityNode.size() );
+
+    manager.shutdown();
+}

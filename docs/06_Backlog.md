@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑩ 씬 — 프리팹을 찾지 못한 엔티티를 버려, 열고 저장하는 것만으로 파일에서 지웠다)
+
+`Scene::instantiate` 는 프리팹 스폰이 실패하면 경고 한 줄(`Prefab spawn failed`)을 남기고 그 엔티티를 버렸다. `serializeToDocument` 는 살아 있는
+오브젝트만 걸으므로, 그 씬을 열고 저장하면 엔티티 · 덮어쓴 값 · 프리팹 GUID 가 파일에서 영영 사라졌다 — 프리팹을 `.meta` 없이 옮겼거나
+잠깐 없던 것만으로. 저장 막기(`_saveBlockReason`)도 이 경우를 덮지 않았다.
+
+**고침(유니티의 "Missing Prefab" 과 같은 자리).** 풀지 못한 엔티티를 문서 그대로(`SceneDocument::EntityNode`) 들고 있다가 `serializeToDocument`
+가 다시 써 넣는다. 경고에 GUID 와 "kept as-is and written back on save" 를 붙였고, `Scene::getUnresolvedEntityCount()` 로 에디터 · 도구가 그
+상태를 물을 수 있다. `shutdown` 이 비운다. `Scene.h` 가 `SceneDocument.h`(가볍다)를 직접 포함한다.
+**검증.** `SceneTest.EntityWhosePrefabIsMissingSurvivesSave`(없는 프리팹 엔티티 + 보통 엔티티 → 저장 문서에 둘 다, 프리팹 · GUID · 상태 XML 그대로) —
+들고 있지 않게 하거나 다시 써 넣지 않게 하는 돌연변이 둘 다 진다.
+
 ### 2026-10-01 (결함 ⑨ 에디터 인스펙터 — enum 을 늘 int32 로 읽고 써서 뒤의 필드를 덮었다)
 
 `InspectorPanel::drawEnumProperty` 가 `prop.getValuePtr<int32>()` 로 읽고 `*pEnumValue = val32` · `|=` · `&=` 로 썼다. 엔진의 reflected enum 은

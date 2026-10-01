@@ -157,7 +157,13 @@ namespace sw
             {
                 pGo = engine::getResourceManager().getPrefabManager().spawn( _objectManager.get(), entity._prefab, entity._name.c_str() );
                 if ( pGo == nullptr )
-                    SW_LOG_WARNING( "Prefab spawn failed '%#' (%#)", entity._name, entity._prefab );
+                {
+                    // 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값 · 프리팹 GUID 까지). 문서 그대로 들고 있다가 저장 때
+                    // 다시 써 넣는다(유니티의 "Missing Prefab" 과 같은 자리). 예전에는 경고 한 줄 뒤에 사라졌다.
+                    SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
+                                    entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
+                    _listUnresolvedEntity.push_back( entity );
+                }
             }
             else
             {
@@ -236,6 +242,9 @@ namespace sw
             if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
                 outDoc._listEntityNode.push_back( std::move( node ) );
         } );
+        // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명).
+        for ( const SceneDocument::EntityNode& unresolved : _listUnresolvedEntity )
+            outDoc._listEntityNode.push_back( unresolved );
         return true;
     }
 
@@ -246,6 +255,7 @@ namespace sw
     {
         releaseDefaultMaterial();
         _mapPrefabSource.clear();
+        _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
             for ( GameObject* pObj : _objectManager->getAllGameObjects() )
