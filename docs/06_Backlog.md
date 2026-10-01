@@ -2051,6 +2051,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑲ 게임 프레임워크 — 핫 리로드 상태 복원이 반쯤 실패해도 성공이라 했다)
+
+`GameInstanceBase::deserializeSceneObjects` 는 씬을 비운 뒤 오브젝트를 하나씩 읽는다. 읽지 못하면(컴포넌트 레이아웃이 바뀐 리로드) `break` 하고도
+끝에서 `true` 를 돌려줬다. `ModuleHost::restoreGameState` 는 그것을 믿고 **스냅샷을 버리고 저장 막기를 풀었다** — 못 읽은 오브젝트부터 뒤가
+사라진 씬을 저장할 수 있었고, 못 읽은 자리에는 이름이 "GameObject" 인 빈 오브젝트도 남았다.
+**고침.** 하나라도 못 읽으면 실패를 돌려준다("stopped after N of M objects" 오류). 못 읽은 자리에 만든 오브젝트는 지운다. 호출하는 쪽은 이미 실패면
+스냅샷을 지키고 저장을 막아 둔다(다음 리로드가 다시 시도한다).
+**검증.** `GameFrameworkTest.SnapshotRestoreThatStopsHalfwayFails` — 오브젝트 수를 하나 늘린 스냅샷은 실패하고 빈 "GameObject" 가 남지 않으며, 온전한
+스냅샷은 그대로 된다. 끝에서 true 를 돌려주는 돌연변이에 진다.
+
 ### 2026-10-01 (결함 ⑱ XML 저장 — 긴 줄 접기가 따옴표 든 요소 텍스트를 접어 값을 바꿨다)
 
 `XmlDocument` 의 저장은 120 자를 넘는 줄을 속성마다 접는다(`wrapLongElementLines`). 속성 경계는 따옴표 쌍으로 셌는데 **줄 끝까지** 셌다 —

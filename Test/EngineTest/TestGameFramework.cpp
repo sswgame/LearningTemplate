@@ -2285,3 +2285,56 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )
     SW_EXPECT_TRUE( tileMap.isWalkable( 7, 7 ) );
     SW_EXPECT_TRUE( tileMap.isSolid( 8, 8 ) );
 }
+
+/**
+ * @brief [GameFrameworkTest] 스냅샷의 오브젝트 하나라도 못 읽으면 복원은 실패다 — 성공이라 하고 반쯤 빈 씬을 남기지 않는다
+ * @details 예전에는 못 읽은 자리에서 `break` 하고도 true 를 돌려줬다. 핫 리로드(`ModuleHost::restoreGameState`)는 그것을 믿고 스냅샷을
+ *          버리며 저장 막기를 풀었다 — 씬은 이미 비운 뒤라, 컴포넌트 레이아웃이 바뀐 오브젝트부터 뒤가 사라진 채 저장할 수 있었다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "HalfRestoreProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    struct ScopedSceneGameService
+    {
+        explicit ScopedSceneGameService( SceneManager& manager )
+        {
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            game::bindGameService( service );
+        }
+        ~ScopedSceneGameService() { game::unbindGameService(); }
+
+        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
+        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+    };
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+    SW_ASSERT_NOT_NULL( pManager->createGameObject( hashed_string( "First" ) ) );
+    SW_ASSERT_NOT_NULL( pManager->createGameObject( hashed_string( "Second" ) ) );
+    pManager->mergePendingAdds();
+
+    GameInstanceBase instance;
+    vector<uint8>    snapshot;
+    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+
+    // 봉투(magic 4 · version 4 · token 8) 뒤 씬 섹션(길이 4) 다음이 오브젝트 수다. 하나 늘리면 마지막 읽기가 데이터 끝에서 멈춘다.
+    constexpr size_t kObjectCountOffset = 4 + 4 + 8 + 4;
+    SW_ASSERT_TRUE( snapshot.size() > kObjectCountOffset + 4 );
+    vector<uint8> oneTooMany = snapshot;
+    ++oneTooMany[kObjectCountOffset];
+
+    {
+        test::ScopedDefensiveTestLog expected( "a snapshot that claims one object more than it holds" );
+        SW_EXPECT_FALSE( instance.restoreSnapshot( oneTooMany ) );
+    }
+    pManager->mergePendingAdds();
+    pManager->processDeferredDestruction();
+    SW_EXPECT_TRUE( pManager->findGameObjectByName( hashed_string( "GameObject" ) ) == nullptr ); // 빈 자리 오브젝트가 남지 않는다
+
+    // 온전한 스냅샷은 그대로 된다.
+    SW_EXPECT_TRUE( instance.restoreSnapshot( snapshot ) );
+}

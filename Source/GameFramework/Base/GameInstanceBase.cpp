@@ -148,7 +148,10 @@ namespace sw
         listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
         // 1차: 모든 게임오브젝트 생성 및 직렬화 복구. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도 되살린다.
+        // **하나라도 못 읽으면 실패다.** 예전에는 `break` 로 멈추고도 끝에서 true 를 돌려줘, 핫 리로드가 스냅샷을 버리고 저장 막기를
+        // 풀었다 — 씬은 이미 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있었다(빈 "GameObject" 하나도 남았다).
         const bool bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
+        bool       bComplete        = true;
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
             ObjectIdentity identity;
@@ -158,6 +161,7 @@ namespace sw
                 if ( identityBytes == 0 )
                 {
                     SW_LOG_ERROR( "Failed to read object identity at index %u", objectIndex );
+                    bComplete = false;
                     break;
                 }
                 offset += identityBytes;
@@ -171,6 +175,8 @@ namespace sw
             if ( readBytes == 0 )
             {
                 SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
+                pObjectManager->destroyObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다
+                bComplete = false;
                 break;
             }
             listRestoredObject.push_back( { pObj, parentName } );
@@ -195,6 +201,12 @@ namespace sw
         // 복원된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
         pObjectManager->flushSceneTransforms();
 
+        if ( bComplete == false )
+        {
+            SW_LOG_ERROR( "Scene restore stopped after %# of %# objects - the snapshot is kept and saving stays blocked",
+                          static_cast<uint32>( listRestoredObject.size() ), count );
+            return false;
+        }
         return true;
     }
 
