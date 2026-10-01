@@ -2051,6 +2051,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉚ Core — fixed_string 에 자기 버퍼 안쪽을 대입하면 겹친 memcpy 였다)
+
+`operator=( const T* )` 는 시작 주소가 같은 자기 대입만 걸렀다. `s = s.c_str() + 2`(앞을 잘라 내는 흔한 꼴) · `s = s.view().substr( 1 )` 은 두 영역이
+겹친 채 `Memory::copy`(memcpy)였다 — 정의되지 않은 동작이다. 두 대입을 `Memory::move`(memmove)로 바꿨다(복사 생성 · 다른 용량에서의 대입은 다른 버퍼라
+겹칠 수 없다).
+**검증.** `StringTest.FixedStringAssignFromItsOwnInterior`(`"abcdef"` → `"cdef"` → `"de"`). **이 PC 에서는 고치기 전에도 통과한다** — Windows 의
+memcpy 가 겹쳐도 맞게 옮기기 때문이다. 옛 코드의 겹침은 CI 의 리눅스 ASan 잡(`-L nogpu` 로 CoreTest 를 돈다)이 `memcpy-param-overlap` 으로 잡는 종류다.
+
 ### 2026-10-01 (결함 ㉙ Core — 인라인 버퍼의 람다를 옮기면 원본이 파괴되지 않았다)
 
 `Delegate` 는 작은 람다를 인라인 버퍼(24 바이트)에 둔다. 이동(`moveFrom` → `lambdaManager( Move )`)은 새 자리에 이동 생성만 하고 원본을 파괴하지

@@ -1649,3 +1649,18 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
     const sw::fixed_string<6> exact( "ab\xED\x95\x9C" );
     SW_EXPECT_STREQ( "ab\xED\x95\x9C", exact.c_str() );
 }
+
+/**
+ * @brief [StringTest] fixed_string 에 자기 버퍼 안쪽(포인터 · 뷰)을 대입해도 맞게 옮긴다
+ * @details 시작 주소가 같은 자기 대입만 걸렀고, `s = s.c_str() + 2` 는 겹친 memcpy(정의되지 않은 동작)였다. Windows 의 memcpy 는 우연히 맞게 옮겨
+ *          이 시험은 여기서 늘 통과한다 — 겹침은 리눅스 ASan CI(`memcpy-param-overlap`)가 잡는다.
+ */
+SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )
+{
+    sw::fixed_string<sw::constant::kMaxBuffer32> text = "abcdef";
+    text                                              = text.c_str() + 2;
+    SW_EXPECT_STREQ( "cdef", text.c_str() );
+
+    text = sw::string_view( text.c_str() + 1, 2 );
+    SW_EXPECT_STREQ( "de", text.c_str() );
+}

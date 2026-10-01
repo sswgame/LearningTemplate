@@ -421,8 +421,10 @@ namespace sw
 
         if ( pStr != nullptr )
         {
+            // `move`(memmove) 다 — `s = s.c_str() + 2` 처럼 자기 버퍼 **안쪽**을 대입하면 두 영역이 겹친다. 시작 주소가 같은 경우만 위에서
+            // 걸렀고, 그 밖은 겹친 memcpy(정의되지 않은 동작)였다. Windows 의 memcpy 는 우연히 맞게 옮겨 드러나지 않았다.
             const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
-            Memory::copy( _arrData, pStr, sizeof( T ) * length );
+            Memory::move( _arrData, pStr, sizeof( T ) * length );
             _size = length;
         }
         else
@@ -445,8 +447,9 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string_view<T>& str )
     {
+        // 뷰가 자기 버퍼를 볼 수 있다(`s = s.view().substr( 1 )`) — 겹쳐도 맞는 `move` 로 옮긴다.
         _size = clampToCapacity( str.data(), str.length() );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
+        Memory::move( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
         return *this;
     }
