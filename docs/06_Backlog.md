@@ -2051,6 +2051,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉓ 리플렉션 — 컴포넌트에는 `REFLECT( Alias = 옛이름 )` 이 먹지 않았다)
+
+리플렉션 README §4 의 예가 바로 컴포넌트 별칭이다("직렬화된 예전 이름도 찾을 수 있습니다"). 그런데 컴포넌트 팩토리는 지금 이름으로만 등록되고
+`GameObjectManager::addComponentByName` 은 별칭을 보지 않았다 — 이름을 바꾼 컴포넌트가 옛 씬 · 프리팹에서 경고 한 줄과 함께 **빠졌고**, 그 씬을 다시
+저장하면 그 데이터가 지워졌다. 팩토리에서 못 찾으면 `TypeRegistry::findType` 으로 별칭을 풀어 지금 이름으로 한 번 더 찾는다(저장은 지금 이름이므로 한 번
+열고 저장하면 옮겨진다).
+**검증.** `ReflectionTest.ComponentLoadsByItsOldName` — 시험 컴포넌트에 `Alias = LegacyGrandChildScriptComponent` 를 달고 옛 이름으로 붙이면 지금 타입이
+붙는다. 별칭 조회를 끄는 변이에서 실패했다.
+
 ### 2026-10-01 (결함 ㉒ 리플렉션 — 에셋의 enum 글을 못 읽으면 조용히 0 이 됐다)
 
 XML · JSON 직렬화는 enum 필드를 `EnumInfo::stringFlagsToValue` 로 읽었고, 그 함수는 모르는 이름을 0 으로 돌려준다. 이름을 바꾼 열거자 · 대소문자만

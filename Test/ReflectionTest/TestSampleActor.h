@@ -480,7 +480,7 @@ namespace sw
         }
     };
 
-    REFLECT()
+    REFLECT( Alias = LegacyGrandChildScriptComponent )
     struct TestGrandChildScriptComponent : public TestDerivedScriptComponent
     {
         REFLECT_BODY();

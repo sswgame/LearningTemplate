@@ -790,6 +790,15 @@ namespace sw
             }
             it = _mapFactory.find( factoryName );
         }
+        if ( it == _mapFactory.end() && engine::areEngineServicesBound() )
+        {
+            // 옛 이름(`REFLECT( Alias = Old )`)이면 지금 타입의 이름으로 다시 찾는다. 팩토리는 지금 이름으로만 등록된다 — 예전에는 이 길이
+            // 없어 이름을 바꾼 컴포넌트가 옛 씬 · 프리팹에서 **조용히 빠졌고**, 다시 저장하면 그 데이터가 지워졌다(리플렉션 README §4 가
+            // 약속한 "옛 이름도 읽힌다" 가 컴포넌트에는 지켜지지 않았다).
+            const TypeInfo* pAliasedType = engine::getTypeRegistry().findType( factoryName );
+            if ( pAliasedType != nullptr && pAliasedType->_name != factoryName )
+                it = _mapFactory.find( pAliasedType->_name );
+        }
         if ( it != _mapFactory.end() )
         {
             if ( it->second.isBound() == false )

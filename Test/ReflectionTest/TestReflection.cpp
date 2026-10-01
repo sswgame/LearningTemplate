@@ -401,3 +401,20 @@ SW_TEST_CASE( ReflectAnyTest, ReflectAnyDirectMakeAndExtract )
     sw::SampleTestActor wrongTarget;
     SW_EXPECT_FALSE( anyValue.tryGetFrom( *pWrongType, &wrongTarget ) );
 }
+
+/**
+ * @brief [ReflectionTest] 옛 이름(`REFLECT( Alias = … )`)으로도 컴포넌트를 붙일 수 있다 — 이름을 바꾼 컴포넌트가 옛 씬에서 빠지지 않는다
+ * @details 팩토리는 지금 이름으로만 등록되고 `addComponentByName` 은 별칭을 보지 않았다. 씬 · 프리팹을 읽을 때 옛 이름의 컴포넌트는 로그도
+ *          없이 빠졌고, 다시 저장하면 그 데이터가 지워졌다.
+ */
+SW_TEST_CASE( ReflectionTest, ComponentLoadsByItsOldName )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "AliasHost" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+
+    sw::Component* pByOldName = manager.addComponentByName( pObj, sw::hashed_string( "LegacyGrandChildScriptComponent" ) );
+    SW_ASSERT_NOT_NULL( pByOldName );
+    SW_EXPECT_TRUE( sw::castTo<sw::TestGrandChildScriptComponent>( pByOldName ) != nullptr );
+    SW_EXPECT_TRUE( pByOldName->getTypeName() == sw::hashed_string( "TestGrandChildScriptComponent" ) );
+}
