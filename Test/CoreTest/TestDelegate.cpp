@@ -10,6 +10,17 @@ namespace
     {
         s_TestValue += val;
     }
+
+    /** @brief 살아 있는 개수를 세는 캡처입니다. 이동 생성자가 없어 "옮기기" 가 복사다(참조 카운트 핸들이 흔히 그렇다). */
+    struct DelegateLiveCapture
+    {
+        static inline int32 s_liveCount = 0;
+
+        DelegateLiveCapture() noexcept { ++s_liveCount; }
+        DelegateLiveCapture( const DelegateLiveCapture& ) noexcept { ++s_liveCount; }
+        DelegateLiveCapture& operator=( const DelegateLiveCapture& ) noexcept = default;
+        ~DelegateLiveCapture() { --s_liveCount; }
+    };
 } // namespace
 
 struct DummyListener
@@ -352,4 +363,33 @@ SW_TEST_CASE( DelegateTest, RemoveCodeWithinDropsOnlyTheDelegatesBuiltInThatRang
     SW_EXPECT_EQUAL( 0, s_TestValue );
     SW_EXPECT_EQUAL( 5, listener._value );
     SW_EXPECT_EQUAL( 0u, multicast.removeCodeWithin( pFreeCode, pFreeCode + 1 ) );
+}
+
+/**
+ * @brief [DelegateTest] 인라인 버퍼(SBO)에 든 람다를 옮겨도 캡처가 새지 않는다 — 옮긴 원본도 파괴된다
+ * @details 이동은 새 자리에 이동 생성만 하고 원본을 파괴하지 않았다. 원본의 관리자를 지우므로 그 뒤로 아무도 파괴하지 않았다 — 이동이 사실상
+ *          복사인 캡처는 하나씩 새었다(참조 카운트가 내려가지 않는다).
+ */
+SW_TEST_CASE( DelegateTest, MovingAnInlineLambdaDestroysTheSource )
+{
+    DelegateLiveCapture::s_liveCount = 0;
+    {
+        DelegateLiveCapture capture;
+        int32               callCount = 0;
+        {
+            sw::Delegate<void()> first  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [capture, &callCount]()
+             {
+                (void)capture;
+                ++callCount;
+            } );
+            sw::Delegate<void()> second = std::move( first ); // 이동 생성
+            sw::Delegate<void()> third;
+            third = std::move( second ); // 이동 대입
+            third();
+            SW_EXPECT_EQUAL( 1, callCount );
+            SW_EXPECT_EQUAL( 2, DelegateLiveCapture::s_liveCount ); // 지역 하나 + 델리게이트 안의 하나
+        }
+        SW_EXPECT_EQUAL( 1, DelegateLiveCapture::s_liveCount );
+    }
+    SW_EXPECT_EQUAL( 0, DelegateLiveCapture::s_liveCount );
 }

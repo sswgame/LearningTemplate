@@ -288,7 +288,11 @@ namespace sw
                 {
                     if constexpr ( bIsSBO )
                     {
-                        sw_placement_new( pDest ) Lambda( std::move( *static_cast<Lambda*>( const_cast<void*>( pSrc ) ) ) );
+                        Lambda* pSource = static_cast<Lambda*>( const_cast<void*>( pSrc ) );
+                        sw_placement_new( pDest ) Lambda( std::move( *pSource ) );
+                        // 옮긴 뒤 원래 자리를 파괴한다. `moveFrom` 이 원본의 관리자를 지우므로 그 뒤로는 아무도 원본을 파괴하지 않는다. 예전에는
+                        // 이 줄이 없어, 이동이 사실상 복사인 캡처(복사 생성자만 둔 참조 카운트 핸들 등)는 참조가 새고 소멸자의 부작용이 사라졌다.
+                        pSource->~Lambda();
                         return pDest;
                     }
                     else
