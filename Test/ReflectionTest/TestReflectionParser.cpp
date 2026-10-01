@@ -1186,7 +1186,8 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
     sw::string depfile;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( depfilePath, depfile ) );
     SW_EXPECT_TRUE_MSG( depfile.find( "DependencyHolderSample.gen.cpp" ) != sw::string::npos, depfile.c_str() );
-    SW_EXPECT_TRUE_MSG( depfile.find( sw::FileUtil::normalizeSeparators( basePath ) ) != sw::string::npos, depfile.c_str() );
+    // 경로는 실제 경로로 적힌다(Windows CI 의 TEMP 는 8.3 짧은 이름 `RUNNER~1` 이라 받은 경로와 글자가 다르다) — 파일 이름으로 본다.
+    SW_EXPECT_TRUE_MSG( depfile.find( "/DependencyBaseSample.h" ) != sw::string::npos, depfile.c_str() );
     SW_EXPECT_TRUE_MSG( depfile.find( "batch.cpp" ) == sw::string::npos, depfile.c_str() );
     SW_EXPECT_TRUE_MSG( depfile.find( ":\\" ) == sw::string::npos, depfile.c_str() ); // 드라이브 뒤 역슬래시가 없다(Makefile 이스케이프와 섞인다)
 

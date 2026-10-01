@@ -117,7 +117,8 @@ namespace sw
             struct InclusionCollector
             {
                 CXTranslationUnit        _translationUnit;
-                string                   _outputDirPrefix; ///< 슬래시 · 끝에 `/` — 이 아래는 이 단계 자신의 산출물이라 의존이 아니다
+                string                   _outputDirPrefix;     ///< 슬래시 · 끝에 `/` — 이 아래는 이 단계 자신의 산출물이라 의존이 아니다
+                string                   _outputDirRealPrefix; ///< 같은 폴더의 실제 경로(8.3 짧은 이름 · 심볼릭 링크를 푼 것). include 경로는 실제 경로로 온다
                 uint64                   _runStartTime;
                 vector<StampDependency>* _pListDependency;
             };
@@ -138,7 +139,8 @@ namespace sw
                     clang_disposeString( fileName );
                 }
                 path = FileUtil::normalizeSeparators( path );
-                if ( path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) )
+                if ( path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) ||
+                     ( collector._outputDirRealPrefix.empty() == false && StringUtil::startsWith( path, collector._outputDirRealPrefix, true ) ) )
                     return;
                 const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );
                 if ( writeTime == 0 )
@@ -156,9 +158,18 @@ namespace sw
             static vector<StampDependency> collectDependencies( CXTranslationUnit translationUnit, const string& outputDir, uint64 runStartTime )
             {
                 vector<StampDependency> listDependency;
-                InclusionCollector      collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ), runStartTime, &listDependency };
-                if ( collector._outputDirPrefix.empty() == false && collector._outputDirPrefix.back() != '/' )
-                    collector._outputDirPrefix.push_back( '/' );
+                // 출력 폴더는 받은 꼴과 실제 경로 둘로 거른다 — clang 은 include 한 파일을 실제 경로로 주는데, 받은 경로는 8.3 짧은 이름
+                // (`RUNNER~1`)이거나 링크일 수 있다(Windows CI 의 TEMP 가 그렇다).
+                std::error_code    errorCode;
+                const auto         realOutputDir = std::filesystem::canonical( std::filesystem::path( outputDir.c_str() ), errorCode );
+                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ),
+                                              errorCode ? string() : FileUtil::normalizeSeparators( string( realOutputDir.generic_string().c_str() ) ),
+                                              runStartTime, &listDependency };
+                for ( string* pPrefix : { &collector._outputDirPrefix, &collector._outputDirRealPrefix } )
+                {
+                    if ( pPrefix->empty() == false && pPrefix->back() != '/' )
+                        pPrefix->push_back( '/' );
+                }
                 clang_getInclusions( translationUnit, &collectInclusion, &collector );
                 return listDependency;
             }

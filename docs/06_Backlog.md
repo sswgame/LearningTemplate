@@ -2077,6 +2077,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (㊷ · ㊸ 보완 — 리눅스에서 스탬프를 읽지 못했다, Windows CI 의 8.3 짧은 경로)
+
+㊷ · ㊸ 을 푸시한 CI(1e434144)에서 리눅스 셋 · Windows Debug 가 졌다.
+- **리눅스:** libstdc++ 의 파일 시계는 기원이 2174 년이라 지금 시각이 음수다. 스탬프에는 그것을 부호 없이 옮긴 값(int64 를 넘는다)을 쓰는데 읽기는 `parseInt64`
+  였다 — 늘 실패해 스탬프가 옛 꼴로 읽혔고, 그래서 **매 실행이 모두 다시 파싱**했고(㊷ 의 "그대로 다시 돌리면 최신" 이 짐) depfile 의 의존이 비었다(㊸).
+  시각은 부호 없는 64 비트로 읽는다(`parseWriteTime`, `std::from_chars`).
+- **Windows CI:** 러너의 TEMP 가 8.3 짧은 이름(`C:/Users/RUNNER~1/…`)이라, clang 이 주는 실제 경로(`…/runneradmin/…`)와 시험이 비교한 받은 경로가 글자로 달랐다
+  (depfile 자체는 맞았다). 시험은 파일 이름으로 본다. 같은 이유로 출력 폴더 거르기가 짧은 이름 경로에서 새지 않게, 출력 폴더의 실제 경로(`canonical`)로도
+  거른다.
+**검증.** Debug 전체 통과, 이 PC 의 실제 스탬프가 `input <시각>` · `dep <시각> <경로>` 꼴. 리눅스 쪽은 이 PC 에서 돌릴 수 없어 CI 로 본다.
+
 ### 2026-10-01 (결함 ㊺ 리플렉션 파서 — 별칭(`using`)으로 적은 프로퍼티 타입을 풀지 않아 값이 직렬화되지 않았다)
 
 파서는 프로퍼티의 **적힌 이름**만 봤다. `using ScoreList = sw::vector<int32>; PROPERTY() ScoreList _scores;` 는 컨테이너로 인식되지 않고(`--dump` 에 컨테이너 표시

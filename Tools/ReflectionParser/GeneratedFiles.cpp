@@ -34,6 +34,18 @@ namespace sw
                 vector<pair<uint64, string_view>> _listDependency; ///< (시각, 경로) — 경로는 스탬프 글을 가리킨다
             };
 
+            /**
+             * @brief 스탬프에 적은 쓰기 시각을 **부호 없는** 64 비트로 읽습니다.
+             * @details 리눅스(libstdc++)의 파일 시계는 기원이 2174 년이라 지금 시각이 음수이고, 그것을 부호 없이 옮겨 적은 값은 int64 를 넘는다.
+             *          예전에는 `parseInt64` 로 읽어 리눅스에서 늘 실패했다 — 스탬프가 옛 꼴로 읽혀 매 실행이 모두 다시 파싱했고 depfile 의 의존이 비었다.
+             */
+            static bool parseWriteTime( string_view text, uint64& outTime )
+            {
+                text                         = StringUtil::trim( text );
+                const auto [pEnd, errorCode] = std::from_chars( text.data(), text.data() + text.size(), outTime );
+                return errorCode == std::errc() && pEnd == text.data() + text.size();
+            }
+
             /** @brief `"<키> <나머지>"` 꼴 줄에서 키 뒤의 나머지를 꺼냅니다. 키가 다르면 false. */
             static bool takeKeyedRest( string_view line, string_view key, string_view& outRest )
             {
@@ -62,18 +74,18 @@ namespace sw
                         continue;
                     }
                     string_view rest;
-                    int64       time{ 0 };
+                    uint64      time{ 0 };
                     if ( takeKeyedRest( line, kStampInputTimeKey, rest ) )
                     {
-                        bHasInput                 = StringUtil::parseInt64( StringUtil::trim( rest ), time );
-                        outRecord._inputWriteTime = static_cast<uint64>( time );
+                        bHasInput                 = parseWriteTime( rest, time );
+                        outRecord._inputWriteTime = time;
                     }
                     else if ( takeKeyedRest( line, kStampDependencyKey, rest ) )
                     {
                         const size_t space = rest.find( ' ' );
-                        if ( space == string_view::npos || StringUtil::parseInt64( rest.substr( 0, space ), time ) == false )
+                        if ( space == string_view::npos || parseWriteTime( rest.substr( 0, space ), time ) == false )
                             return false;
-                        outRecord._listDependency.emplace_back( static_cast<uint64>( time ), rest.substr( space + 1 ) );
+                        outRecord._listDependency.emplace_back( time, rest.substr( space + 1 ) );
                     }
                 }
                 return bHasInput;
