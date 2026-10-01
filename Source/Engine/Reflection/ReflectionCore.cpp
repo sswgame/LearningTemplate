@@ -586,6 +586,7 @@ namespace sw
             stored._typeId = _s_typeIdCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
+        const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
         // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다. 밖에서 든 포인터
         // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
@@ -608,13 +609,30 @@ namespace sw
             pStoredInfo->clearAncestorDisplay();
             pStoredInfo->clearInheritedProperties();
         }
-        if ( stored._name.empty() == false && stored._name != canonicalKey )
+        hashed_string shadowedFqn;
+        if ( shortName.empty() == false && shortName != canonicalKey )
         {
-            _mapAliasToFqn.insert_or_assign( stored._name, canonicalKey );
-            _mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
+            // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로
+            // 찾으므로 그 뒤로는 다른 타입이 만들어진다. 예전에는 조용히 덮어썼다. 동작(나중 것이 이긴다)은 두고 알린다.
+            const auto previousIt = _mapAliasToFqn.find( shortName );
+            if ( previousIt != _mapAliasToFqn.end() && previousIt->second != canonicalKey )
+            {
+                const auto previousTypeIt = _mapFqnToClassType.find( previousIt->second );
+                if ( previousTypeIt != _mapFqnToClassType.end() && previousTypeIt->second->isAlive() )
+                    shadowedFqn = previousIt->second;
+            }
+            _mapAliasToFqn.insert_or_assign( shortName, canonicalKey );
+            _mapHashToCanonicalName.insert_or_assign( shortName.getHash(), canonicalName );
         }
         // 표가 바뀌었으니 세대를 올린다. 적어 둔 빈 답(`TypeLookupCache` 의 미등록 · 풀지 못한 부모)을 다음 조회가 다시 찾는다.
         gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+
+        // 로그는 잠금 밖에서 — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
+        lock.unlock();
+        if ( shadowedFqn.empty() == false )
+            SW_LOG_WARNING( "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
+                            "addComponentByName look types up by them)",
+                            shortName.c_str(), canonicalKey.c_str(), shadowedFqn.c_str() );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -634,8 +652,20 @@ namespace sw
             *pOwned = std::move( stored );
         EnumInfo* pEnumInfo = pOwned.get();
         _mapNameToEnum.insert_or_assign( pEnumInfo->_fullyQualifiedName, pEnumInfo );
+        hashed_string shadowedFqn;
         if ( pEnumInfo->_name.empty() == false && pEnumInfo->_name != pEnumInfo->_fullyQualifiedName )
+        {
+            // 타입과 같은 규칙 — 짧은 이름이 다른 enum 을 가리키고 있었으면 알린다(에셋의 enum 필드는 짧은 이름으로 찾기도 한다).
+            const auto previousIt = _mapNameToEnum.find( pEnumInfo->_name );
+            if ( previousIt != _mapNameToEnum.end() && previousIt->second != pEnumInfo )
+                shadowedFqn = previousIt->second->_fullyQualifiedName;
             _mapNameToEnum.insert_or_assign( pEnumInfo->_name, pEnumInfo );
+        }
+
+        lock.unlock();
+        if ( shadowedFqn.empty() == false )
+            SW_LOG_WARNING( "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
+                            pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
     }
 
     void TypeRegistry::registerPendingTypes( string_view moduleName, TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )

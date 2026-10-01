@@ -2051,6 +2051,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉗ 리플렉션 — 짧은 이름이 겹치는 타입 · enum 이 오르면 조용히 앞의 것을 가렸다)
+
+씬 · 프리팹 · `addComponentByName` 은 타입을 짧은 이름으로 찾는다. `a::Foo` 뒤에 `b::Foo` 가 등록되면 `Foo` 는 그 순간부터 `b::Foo` 였고(별칭 표
+`insert_or_assign`), 옛 씬은 다른 컴포넌트를 만들었다 — 로그 한 줄 없이. enum 도 같았다. 동작(나중 것이 이긴다)은 그대로 두고, 짧은 이름이 **다른
+살아 있는** 타입 · enum 을 가리키고 있었으면 `Reflected type name 'Foo' now means b::Foo and no longer a::Foo - short names must be unique …` 를 남긴다
+(같은 타입의 재등록 · 핫 리로드는 조용하다). 로그는 레지스트리 잠금을 푼 뒤에 남긴다. 지금 게임 · 에디터 · 시험 실행에는 이 경고가 하나도 없다.
+곁가지: `registerClass` 가 새 타입이면 `stored` 를 옮긴 **뒤에** 그 짧은 이름을 읽고 있었다(`hashed_string` 이 복사라 우연히 맞았다) — 옮기기 전에 받아 둔다.
+**시험 도우미.** `test::ScopedLogCollector` — 스코프 동안의 Warning · Error 를 모아 `countContaining(text)` · `joined()`(실패 메시지용)로 묻는다. 시험마다
+`Logger::addGlobalListener` 리스너를 손으로 만들던 자리(AssetCacheRegistry · ToolAssetCommands …)의 공용판이다.
+**검증.** `ReflectionTypeRegistryTest.ShortNameCollisionIsReported` — 재등록은 조용, 겹치면 타입 · enum 각각 경고 한 줄이 두 FQN 을 말하고, 짧은 이름은
+나중 타입을 가리킨다. 타입 · enum 경고를 각각 끄는 변이 둘이 모두 실패했다.
+
 ### 2026-10-01 (결함 ㉖ 리플렉션 — `findEnum` 이 준 포인터가 enum 하나 더 오르면 죽었다)
 
 `TypeRegistry` 는 EnumInfo 를 `unordered_map<hashed_string, EnumInfo>` 에 **값으로** 들었고, 이 저장소의 `unordered_map` 은 밀집 배열이다

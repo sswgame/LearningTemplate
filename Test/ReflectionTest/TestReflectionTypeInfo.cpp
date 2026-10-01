@@ -1242,3 +1242,57 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     registry.unregisterTypesByModule( "TestMergeDerived" );
 #endif
 }
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 짧은 이름이 겹치는 두 타입 · 두 enum 을 등록하면 경고가 두 FQN 을 모두 말한다 — 같은 타입의 재등록은 조용하다
+ * @details 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로 찾는다. `a::Foo` 뒤에 `b::Foo` 가 오르면 그 이름은 조용히 `b::Foo` 가 됐고, 옛 씬은
+ *          다른 컴포넌트를 만들었다. 동작(나중 것이 이긴다)은 그대로 두고 알린다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
+{
+    // `--repeat` 로 같은 프로세스에서 다시 돌아도(Shipping 은 해제가 없다) 처음처럼 — 회차마다 다른 이름을 쓴다.
+    static int32      s_runIndex = 0;
+    const sw::string  suffix     = sw::to_string( ++s_runIndex );
+    sw::TypeRegistry& registry   = sw::engine::getTypeRegistry();
+
+    const auto makeType = [&suffix]( const utf8* pNamespace )
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( ( "TwinType" + suffix ).c_str() );
+        info._fullyQualifiedName = sw::hashed_string( ( sw::string( pNamespace ) + "::TwinType" + suffix ).c_str() );
+        info._moduleName         = sw::hashed_string( "TestShortNameCollision" );
+        return info;
+    };
+    const auto makeEnum = [&suffix]( const utf8* pNamespace )
+    {
+        sw::EnumInfo info;
+        info._name               = sw::hashed_string( ( "TwinEnum" + suffix ).c_str() );
+        info._fullyQualifiedName = sw::hashed_string( ( sw::string( pNamespace ) + "::TwinEnum" + suffix ).c_str() );
+        info._moduleName         = sw::hashed_string( "TestShortNameCollision" );
+        info._size               = 1;
+        return info;
+    };
+
+    test::ScopedLogCollector logs;
+    registry.registerClass( makeType( "swtest::left" ) );
+    registry.registerClass( makeType( "swtest::left" ) ); // 같은 타입의 재등록(핫 리로드)은 조용하다
+    registry.registerEnum( makeEnum( "swtest::left" ) );
+    registry.registerEnum( makeEnum( "swtest::left" ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Twin" ) == 0, logs.joined().c_str() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "two reflected types and two enums share a short name" );
+        registry.registerClass( makeType( "swtest::right" ) );
+        registry.registerEnum( makeEnum( "swtest::right" ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( ( "no longer swtest::left::TwinType" + suffix ).c_str() ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( ( "now means swtest::right::TwinEnum" + suffix ).c_str() ) == 1, logs.joined().c_str() );
+    // 동작은 그대로 — 나중 것이 이긴다.
+    const sw::TypeInfo* pByShortName = registry.findType( sw::hashed_string( ( "TwinType" + suffix ).c_str() ) );
+    SW_ASSERT_NOT_NULL( pByShortName );
+    SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( ( "swtest::right::TwinType" + suffix ).c_str() ) );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestShortNameCollision" );
+#endif
+}

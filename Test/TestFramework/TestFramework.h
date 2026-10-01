@@ -278,6 +278,63 @@ namespace test
         DefensiveTestLogSink _defensiveSink;
     };
 
+    /**
+     * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
+     * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들어 왔다(AssetCacheRegistry · ToolAssetCommands …). 리스너는 남기는 스레드에서
+     *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에
+     *          `[Expected Defensive Test]` 가 붙지만 `countContaining` 은 부분 문자열로 찾는다.
+     */
+    class ScopedLogCollector
+    {
+    public:
+        ScopedLogCollector()
+        {
+            _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
+            {
+                if ( entry._level != sw::LogLevel::Error && entry._level != sw::LogLevel::Warning )
+                    return;
+                std::scoped_lock<sw::mutex> lock{ _mutex };
+                _listMessage.push_back( entry._message );
+            } ) );
+        }
+
+        ~ScopedLogCollector() { sw::Logger::removeGlobalListener( _handle ); }
+
+        ScopedLogCollector( const ScopedLogCollector& )            = delete;
+        ScopedLogCollector& operator=( const ScopedLogCollector& ) = delete;
+
+        /** @brief 모은 Warning · Error 중 `text` 를 담은 줄의 수입니다. */
+        uint32 countContaining( sw::string_view text ) const
+        {
+            std::scoped_lock<sw::mutex> lock{ _mutex };
+            uint32                      count = 0;
+            for ( const sw::string& message : _listMessage )
+            {
+                if ( sw::string_view{ message.c_str(), message.size() }.find( text ) != sw::string_view::npos )
+                    ++count;
+            }
+            return count;
+        }
+
+        /** @brief 모은 줄을 한 줄에 하나씩 이어 붙입니다 — 실패 메시지에 붙여 "무엇이 나왔나" 를 보입니다. */
+        sw::string joined() const
+        {
+            std::scoped_lock<sw::mutex> lock{ _mutex };
+            sw::string                  result;
+            for ( const sw::string& message : _listMessage )
+            {
+                result += "\n  ";
+                result += message;
+            }
+            return result;
+        }
+
+    private:
+        mutable sw::mutex      _mutex;
+        sw::vector<sw::string> _listMessage;
+        sw::DelegateHandle     _handle;
+    };
+
     // ------------------------------------------------------------------------------
     // 실패 보고 — 단언 매크로가 부르는 **바깥** 함수들
     //
