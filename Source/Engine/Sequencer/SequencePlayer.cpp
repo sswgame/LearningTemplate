@@ -142,8 +142,12 @@ namespace sw
 
     int32 SequencePlayer::computeFrame( float32 timeSeconds ) const
     {
-        const float32 fps   = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
-        int32         frame = _asset._frameMin + static_cast<int32>( timeSeconds * fps );
+        const float32 fps = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
+        // 프레임 경계에 **정확히** 놓인 시간(끝에서 멈춤 · `seekToFrame`)이 float32 로는 경계 바로 아래가 된다 — (63/30)*30 은 62.999996
+        // 이라 그냥 자르면 한 프레임 모자랐다. 반복 안 하는 시퀀스가 `_frameMax` 에 영영 닿지 않아, 그 프레임에서 끝나는 클립 · 이벤트가
+        // 빠졌다. 프레임의 천분의 일만큼 얹어 자른다(배 정밀도로 곱해 긴 시퀀스에서도 오차가 그보다 작다).
+        constexpr float64 kFrameBoundaryTolerance = 1e-3;
+        int32             frame                   = _asset._frameMin + static_cast<int32>( static_cast<float64>( timeSeconds ) * static_cast<float64>( fps ) + kFrameBoundaryTolerance );
         if ( frame < _asset._frameMin )
             frame = _asset._frameMin;
         if ( frame > _asset._frameMax )

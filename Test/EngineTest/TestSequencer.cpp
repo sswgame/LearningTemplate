@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -337,4 +338,46 @@ SW_TEST_CASE( SequencerTest, LoopWrapFiresTailAndLastFrameEvents )
     SW_EXPECT_TRUE( player.getFrameBeforeWrap() == sw::SequencePlayer::kNoLoopWrap );
     sw::SequenceTimelineUtil::applyPlayback( &manager, player, &listCrossed );
     SW_EXPECT_FALSE( sw::containsEvent( listCrossed, "EndEvent" ) );
+}
+
+/**
+ * @brief [SequencerTest] 반복 안 하는 시퀀스는 끝 프레임에 닿고, 프레임으로 찾아가면 그 프레임이다(float32 경계 반올림)
+ * @details 끝에서 멈춘 시간은 span/fps 인데 float32 로는 경계 바로 아래라(63/30*30 = 62.999996) 잘라서 한 프레임 모자랐다. 30 fps 의
+ *          63 · 125 · 126 · 127, 25 fps 의 53 · 59 프레임 길이가 그랬다 — 그 프레임에서 끝나는 클립은 끝까지 가지 않았고, 거기 놓인
+ *          이벤트는 발화하지 않았다.
+ */
+SW_TEST_CASE( SequencerTest, NonLoopingSequenceReachesItsLastFrame )
+{
+    for ( const float32 fps : { 30.0f, 60.0f, 25.0f, 29.97f } )
+    {
+        for ( int32 span = 1; span <= 300; ++span )
+        {
+            sw::SequenceAsset asset;
+            asset._frameMin = 0;
+            asset._frameMax = span;
+
+            sw::SequencePlayer player;
+            player.setAsset( asset );
+            player.setFramesPerSecond( fps );
+            player.setLoop( false );
+            player.play();
+            player.update( 100000.0f );
+            if ( player.getCurrentFrame() != span )
+            {
+                sw::StringBuilder<sw::constant::kMaxBuffer128> message;
+                message.appendFormat( "end frame at fps %# span %# was %#", fps, span, player.getCurrentFrame() );
+                SW_EXPECT_TRUE_MSG( false, message.c_str() );
+                return;
+            }
+
+            player.seekToFrame( span / 2 );
+            if ( player.getCurrentFrame() != span / 2 )
+            {
+                sw::StringBuilder<sw::constant::kMaxBuffer128> message;
+                message.appendFormat( "seek to %# at fps %# landed on %#", span / 2, fps, player.getCurrentFrame() );
+                SW_EXPECT_TRUE_MSG( false, message.c_str() );
+                return;
+            }
+        }
+    }
 }
