@@ -224,3 +224,42 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
     SW_ASSERT_NOT_NULL( pFlagInfo );
     SW_EXPECT_TRUE( pFlagInfo->_bIsBitFlag != SW_FALSE );
 }
+
+/**
+ * @brief [ReflectionEnumInfoTest] 좁은 enum 의 높은 비트 · 음수 값도 메모리에서 읽은 값과 이름표의 값이 같다
+ * @details 코드젠은 열거자 값을 libclang 의 **부호 있는** 값으로 적었고, 런타임은 1 · 2 바이트 enum 을 **부호 없이** 읽었다. 둘이
+ *          엇갈린 값은 이름을 잃었다 — `ShaderStageFlag::Amplification`(0x80)은 이름표에 -128 로, 메모리에서는 128 로 읽혀
+ *          `toString` 이 비었고 `All` 을 저장하면 그 비트가 빠졌다. 부호 있는 좁은 enum 의 음수는 반대로 어긋났다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    const auto expectRoundTrip = [&registry]( const utf8* pEnumName, auto value, const utf8* pExpectedName )
+    {
+        const sw::EnumInfo* pInfo = registry.findEnum( sw::hashed_string( pEnumName ) );
+        SW_ASSERT_NOT_NULL( pInfo );
+        auto        storage = value;
+        const int64 read    = pInfo->readValueFromMemory( &storage );
+        SW_EXPECT_EQUAL( static_cast<int64>( value ), read );
+        SW_EXPECT_STREQ( pExpectedName, pInfo->toString( read ).c_str() );
+
+        auto written = decltype( value ){};
+        pInfo->writeValueToMemory( &written, read );
+        SW_EXPECT_TRUE( written == value );
+    };
+
+    expectRoundTrip( "TestHighBitEnum", TestHighBitEnum::Low, "Low" );
+    expectRoundTrip( "TestHighBitEnum", TestHighBitEnum::High, "High" );
+    expectRoundTrip( "TestHighBitEnum", TestHighBitEnum::Max, "Max" );
+    expectRoundTrip( "TestSignedNarrowEnum", TestSignedNarrowEnum::Negative, "Negative" );
+    expectRoundTrip( "TestSignedNarrowEnum", TestSignedNarrowEnum::Positive, "Positive" );
+
+    // 엔진의 실제 예: 셰이더 단계 플래그의 맨 위 비트
+    const sw::EnumInfo* pStage = registry.findEnum( sw::hashed_string( "ShaderStageFlag" ) );
+    SW_ASSERT_NOT_NULL( pStage );
+    const uint8 amplification = 0x80;
+    SW_EXPECT_STREQ( "Amplification", pStage->toString( pStage->readValueFromMemory( &amplification ) ).c_str() );
+    const uint8 all = 0xFF;
+    SW_EXPECT_TRUE( pStage->toStringFlags( pStage->readValueFromMemory( &all ) ).view().find( "Amplification" ) != sw::string_view::npos );
+}

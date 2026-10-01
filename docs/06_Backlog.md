@@ -2051,6 +2051,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑧ 리플렉션 — 좁은 enum 의 높은 비트 · 음수 값이 이름을 잃었다)
+
+코드젠은 열거자 값을 libclang 의 **부호 있는** 64 비트 값(`clang_getEnumConstantDeclValue`)으로 박았고, 런타임
+`EnumInfo::readValueFromMemory` 는 1 · 2 바이트 enum 을 **부호 없이** 읽었다. 두 규칙이 엇갈리는 값은 이름표에서 찾을 수 없었다:
+`ShaderStageFlag::Amplification`(uint8 0x80)은 이름표에 -128, 메모리에서는 128 — `toString` 이 비고, `All`(0xFF, 이름표 -1)을 저장하면
+Amplification 비트가 빠진 채 127 로 다시 읽혔다. `PackCompressionType::Custom`(0xFF)은 로그에 "Raw" 로 찍혔다. 부호 있는 좁은 enum 의
+음수는 반대로 어긋났다(-1 이 255 로 읽힘). 4 바이트 `uint32` enum 의 높은 비트도 같은 구멍이었다(int32 로 읽음).
+
+**고침.** 값은 숫자로 박지 않고 컴파일러가 계산하게 한다 — 생성 코드가 `static_cast<int64>( ::FQN::열거자 )` 를 낸다(Invalid · Count
+센티널도). `EnumInfo::_bIsSigned`(예약 비트 하나)를 두고 생성 코드가 `std::is_signed_v<std::underlying_type_t<FQN>>` 로 채운다.
+`readValueFromMemory` 가 그 부호대로 1 · 2 · 4 바이트를 넓힌다. 기본값은 부호 있음(밑바탕을 안 적은 enum 의 `int` 와 같다).
+**검증.** `ReflectionEnumInfoTest.NarrowEnumValuesMatchTheirNamesInMemory` — `TestHighBitEnum : uint8`(0x80 · 0xFF) · `TestSignedNarrowEnum : int8`(-1)
+을 메모리에서 읽어 이름 · 값 · 되쓰기가 맞는지, 그리고 엔진의 `ShaderStageFlag` 0x80 · 0xFF 가 Amplification 을 부르는지. 고치기 전
+High · Max · Negative 셋이 이름을 잃고 -1 이 255 로 읽혀 진다. ReflectionTest 134/134 · EngineTest 665/665.
+
 ### 2026-10-01 (결함 ⑦ 리플렉션 — Debug 에서 비트필드 프로퍼티가 엉뚱한 바이트를 썼다)
 
 보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어 파서가

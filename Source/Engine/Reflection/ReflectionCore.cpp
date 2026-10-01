@@ -254,6 +254,7 @@ namespace sw
         , _bIsBitFlag{ SW_FALSE }
         , _bHasInvalid{ SW_FALSE }
         , _bHasCount{ SW_FALSE }
+        , _bIsSigned{ SW_TRUE }
         , _reservedFlags{ 0 }
     {
     }

@@ -545,16 +545,23 @@ namespace sw
         const ParsedEnumeratorInfo* invalidEn = findEnumerator( enumInfo, enumInfo._invalidEnumerator );
         const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
+        // 값은 숫자로 박지 않고 **컴파일러가 계산하게** 한다. libclang 의 값은 부호 있는 64 비트라 `uint8` 의 0x80 이 -128 로 적혔고,
+        // 런타임은 그것을 128 로 읽어 이름을 잃었다(`EnumInfo::readValueFromMemory`). 열거자 자체를 넓히면 밑바탕 타입의 부호를 따른다.
+        const auto valueExpr = [&enumInfo]( const ParsedEnumeratorInfo& enumerator )
+        {
+            return "static_cast<int64>( ::" + enumInfo._fullyQualifiedName + "::" + enumerator._name + " )";
+        };
+
         appendTemplate( out, tplConstants::kEnumRegistrarBegin, {
-                                                                    {          templateKeyConstants::kId,                                                         registrarName},
-                                                                    {         templateKeyConstants::kFqn,                                          enumInfo._fullyQualifiedName},
-                                                                    {        templateKeyConstants::kName,                                                        enumInfo._name},
-                                                                    {  templateKeyConstants::kModuleName,                                                           _moduleName},
-                                                                    {   templateKeyConstants::kIsBitFlag,                               enumInfo._bIsBitFlag ? "true" : "false"},
-                                                                    {  templateKeyConstants::kHasInvalid,                               invalidEn != nullptr ? "true" : "false"},
-                                                                    {templateKeyConstants::kInvalidValue, invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
-                                                                    {    templateKeyConstants::kHasCount,                                 countEn != nullptr ? "true" : "false"},
-                                                                    {  templateKeyConstants::kCountValue,     countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
+                                                                    {          templateKeyConstants::kId,                                                  registrarName},
+                                                                    {         templateKeyConstants::kFqn,                                   enumInfo._fullyQualifiedName},
+                                                                    {        templateKeyConstants::kName,                                                 enumInfo._name},
+                                                                    {  templateKeyConstants::kModuleName,                                                    _moduleName},
+                                                                    {   templateKeyConstants::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
+                                                                    {  templateKeyConstants::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
+                                                                    {templateKeyConstants::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
+                                                                    {    templateKeyConstants::kHasCount,                          countEn != nullptr ? "true" : "false"},
+                                                                    {  templateKeyConstants::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
         } );
 
         CodeEmit emit( out );
@@ -569,7 +576,7 @@ namespace sw
             emit.line( "{" );
             emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-                emit.linef( "{ %#, %# },", CodeEmit::hs( en._name ), en._value );
+                emit.linef( "{ %#, %# },", CodeEmit::hs( en._name ), valueExpr( en ) );
             emit.pop();
             emit.line( "};" );
 
@@ -577,7 +584,7 @@ namespace sw
             emit.line( "{" );
             emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-                emit.linef( "{ %#, %# },", en._value, CodeEmit::hs( en._name ) );
+                emit.linef( "{ %#, %# },", valueExpr( en ), CodeEmit::hs( en._name ) );
             emit.pop();
             emit.line( "};" );
         }

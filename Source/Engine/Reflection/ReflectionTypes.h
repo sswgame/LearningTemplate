@@ -416,7 +416,8 @@ namespace sw
         uint8                  _bIsBitFlag    : 1;
         uint8                  _bHasInvalid   : 1;
         uint8                  _bHasCount     : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 5;
+        uint8                  _bIsSigned     : 1; ///< 밑바탕 타입이 부호 있는가 — 좁은 값을 메모리에서 읽을 때 확장 방식을 정한다
+        [[maybe_unused]] uint8 _reservedFlags : 4;
 
         /** @brief 빈 이름↔값 맵으로 만듭니다. */
         EnumInfo() noexcept;
@@ -433,23 +434,28 @@ namespace sw
 #endif
         }
 
-        /** @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64로 반환합니다. */
+        /**
+         * @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64로 반환합니다.
+         * @details 밑바탕 타입의 부호대로 넓힌다 — 이름표(`_mapValueToName`)의 값도 같은 규칙(생성 코드의 `static_cast<int64>( 열거자 )`)
+         *          이다. 예전에는 1 · 2 바이트를 늘 부호 없이 읽고 이름표는 libclang 의 부호 있는 값이라, `uint8` 의 0x80(`-128` 로
+         *          적힘)과 `int8` 의 -1(`255` 로 읽힘)이 이름을 잃었다.
+         */
         int64 readValueFromMemory( const void* pPtr ) const noexcept
         {
             if ( pPtr == nullptr )
                 return 0;
+            const bool bSigned = _bIsSigned != SW_FALSE;
             switch ( _size )
             {
                 case 1:
-                    return static_cast<int64>( *static_cast<const uint8*>( pPtr ) );
+                    return bSigned ? static_cast<int64>( *static_cast<const int8*>( pPtr ) ) : static_cast<int64>( *static_cast<const uint8*>( pPtr ) );
                 case 2:
-                    return static_cast<int64>( *static_cast<const uint16*>( pPtr ) );
-                case 4:
-                    return static_cast<int64>( *static_cast<const int32*>( pPtr ) );
+                    return bSigned ? static_cast<int64>( *static_cast<const int16*>( pPtr ) ) : static_cast<int64>( *static_cast<const uint16*>( pPtr ) );
                 case 8:
                     return *static_cast<const int64*>( pPtr );
+                case 4:
                 default:
-                    return static_cast<int64>( *static_cast<const int32*>( pPtr ) );
+                    return bSigned ? static_cast<int64>( *static_cast<const int32*>( pPtr ) ) : static_cast<int64>( *static_cast<const uint32*>( pPtr ) );
             }
         }
 

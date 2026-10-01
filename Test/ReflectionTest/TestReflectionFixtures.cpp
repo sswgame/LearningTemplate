@@ -86,6 +86,7 @@ namespace
             info._name               = sw::hashed_string( "DummyType" );
             info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
             info._size               = static_cast<uint8>( sizeof( sw::DummyType ) );
+            info._bIsSigned          = std::is_signed_v<std::underlying_type_t<sw::DummyType>> ? SW_TRUE : SW_FALSE;
             info._bIsBitFlag         = SW_FALSE;
             info._mapNameToValue =
                 {
@@ -107,6 +108,7 @@ namespace
             info._name               = sw::hashed_string( "DummyBitFlag" );
             info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
             info._size               = static_cast<uint8>( sizeof( sw::DummyBitFlag ) );
+            info._bIsSigned          = std::is_signed_v<std::underlying_type_t<sw::DummyBitFlag>> ? SW_TRUE : SW_FALSE;
             info._bIsBitFlag         = SW_TRUE;
             info._mapNameToValue =
                 {
@@ -130,6 +132,7 @@ namespace
             info._name               = sw::hashed_string( "NarrowEnum" );
             info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnum" );
             info._size               = static_cast<uint8>( sizeof( sw::NarrowEnum ) );
+            info._bIsSigned          = std::is_signed_v<std::underlying_type_t<sw::NarrowEnum>> ? SW_TRUE : SW_FALSE;
             info._bIsBitFlag         = SW_FALSE;
             info._mapNameToValue =
                 {

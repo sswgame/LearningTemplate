@@ -9,6 +9,7 @@
 			info._fullyQualifiedName = ::sw::hashed_string( "$FQN" );
 			info._moduleName         = ::sw::hashed_string( "$ModuleName" );
 			info._size               = static_cast<uint8>( sizeof( ::$FQN ) );
+			info._bIsSigned          = std::is_signed_v<std::underlying_type_t<::$FQN>> ? SW_TRUE : SW_FALSE;
 			info._bIsBitFlag         = $IsBitFlag;
 			info._bHasInvalid        = $HasInvalid;
 			info._invalidValue       = $InvalidValue;
