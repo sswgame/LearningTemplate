@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ② 리플렉션 파서 `--dump` · `--help` — 무엇을 뽑았는지 본다)
+
+"왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나 · 범위가 왜 이렇나" 를 물을 곳이 없었다. 파서가 무엇을 봤는지는 Debug 로 빌드한
+파서의 trace 한 줄(개수만)뿐이었고, 옵션 표는 값 없는 플래그를 몰라 `--help` 마저 "Unknown argument" 오류였다.
+- `--dump` — 최신이어도 다시 파싱하고, 헤더마다 한 덩어리로 찍는다: `REFLECT 타입 : 부모 [component factory] [abstract]`, `PROPERTY 이름 : 타입`
+  과 값 자리(비트필드 · 접근자) · 컨테이너(종류 · 키 · 원소) · `Min=` · `Max=`(적힌 쪽만) · Default · 에셋 · 플래그(ReadOnly · Transient …) · 별칭,
+  `FUNCTION 이름(인자) -> 반환`, `ENUM 타입 : 밑바탕 [Flags]` 와 열거자 값.
+- `--help` · `-h` — 사용법을 찍고 0. 옵션 표에 값 없는 스위치 줄(`kArrSwitchRow`)을 더했다.
+- 곁가지: 파서 안의 열거자 값을 밑바탕 부호대로 읽는다(`clang_getEnumConstantDeclUnsignedValue`) — `uint8` 의 200 이 -56 으로 찍혔다(생성 코드는
+  결함 ⑧ 부터 컴파일러 식이라 영향이 없었다 — 고친 뒤 생성 폴더가 그대로였다).
+README(CLI 표 · 예시 명령)와 CLAUDE.md 에 적었다.
+**검증.** `ReflectionParserTest.DumpShowsWhatWasExtracted`(임시 헤더 하나: 타입 · 한쪽 범위 · Transient · 비트필드 · enum `Busy = 200` 이 찍히고 `Max=` 는
+없음, `--help` 는 0 으로 끝나고 `--dump` 를 안내) — 열거자 값 수정 전에는 -56 으로 찍혀 졌다.
+
 ### 2026-10-01 (확인 ① 실패한 `SW_ASSERT` 가 멈추기 전에 식 · 자리를 남긴다)
 
 Debug 의 `SW_ASSERT` 는 아무것도 찍지 않고 `__debugbreak()`(리눅스 `__builtin_trap`)로 멈췄다. 디버거가 붙어 있으면 그 자리에 서지만, CI · 테스트

@@ -234,6 +234,16 @@ clang 인자·SDK 상대경로·emit 확장자·튜닝의 **단일 소스**입�
 | `--emit-templates <Templates dir>` | tpl 폴더 (필수) |
 | `--source-root <dir>` | 모듈 판별을 이 경로 기준 상대 경로로 |
 | `--emit-builtins-gen <path>` | builtins 전용 gen 모드 (`--builtins` · `--emit-templates` 와 함께) |
+| `--dump` | 최신이어도 다시 파싱하고, 헤더마다 **무엇을 뽑았는지** 찍는다(타입 · 부모 · 팩토리, 프로퍼티의 타입 · 값 자리 · 컨테이너 · 범위 · 플래그, 함수, enum 값) |
+| `--help` · `-h` | 사용법만 찍고 0 으로 끝난다 |
+
+**"왜 이 프로퍼티가 인스펙터에 없지?" 는 `--dump` 로 먼저 본다.** 빌드가 넘기는 인자 그대로 헤더 하나만 주면 된다:
+
+```bash
+build/Ninja-Debug/BuildTools/ReflectionParser.exe --dump --input Source/Engine/Object/Component/CameraComponent.h \
+  --output <임시 폴더> --include Source --annotation-meta Source/Core/Predefined/AnnotationMeta.txt \
+  --builtins Source/Engine/Reflection/ReflectBuiltins.xxx --emit-templates Tools/ReflectionParser/Templates
+```
 
 로컬에서 직접 돌릴 일은 드물고, 보통:
 

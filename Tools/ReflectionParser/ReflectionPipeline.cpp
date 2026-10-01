@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "ReflectionParser/AstVisitor.h"
@@ -23,6 +24,95 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
+            /**
+             * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
+             * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 물을 곳이 없었다 — 파서가 무엇을 봤는지는
+             *          Debug 파서의 trace 한 줄(개수만)뿐이었다. 타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
+             *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
+             */
+            static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed )
+            {
+                StringBuilder<constant::kMaxBuffer8192> out;
+                out.appendFormat( "== %#\n", inputFile );
+                for ( const ParsedTypeInfo& type : parsed._listType )
+                {
+                    out.appendFormat( "REFLECT %#", type._fullyQualifiedName );
+                    if ( type._parentFQN.empty() == false )
+                        out.appendFormat( " : %#", type._parentFQN );
+                    if ( type._bComponentFactory == SW_TRUE )
+                        out.append( "  [component factory]" );
+                    if ( type._bAbstract == SW_TRUE )
+                        out.append( "  [abstract]" );
+                    if ( type._bStatic == SW_TRUE )
+                        out.append( "  [static]" );
+                    out.append( "\n" );
+                    for ( const ParsedPropertyInfo& prop : type._listProperty )
+                    {
+                        out.appendFormat( "  PROPERTY %# : %#", prop._name, prop._typeName );
+                        if ( prop._bIsBitField == SW_TRUE )
+                            out.append( "  [bit field - located at runtime]" );
+                        else if ( prop._bIsAccessor == SW_TRUE )
+                            out.appendFormat( "  [accessor %#()]", prop._memberName );
+                        if ( prop._bIsContainer == SW_TRUE )
+                        {
+                            out.appendFormat( "  [container %#", prop._containerType );
+                            if ( prop._keyTypeName.empty() == false )
+                                out.appendFormat( " key=%#", prop._keyTypeName );
+                            if ( prop._elementTypeName.empty() == false )
+                                out.appendFormat( " element=%#", prop._elementTypeName );
+                            out.append( "]" );
+                        }
+                        if ( prop._bHasMinRange == SW_TRUE )
+                            out.appendFormat( "  Min=%#", prop._minRange );
+                        if ( prop._bHasMaxRange == SW_TRUE )
+                            out.appendFormat( "  Max=%#", prop._maxRange );
+                        if ( prop._defaultValue.empty() == false )
+                            out.appendFormat( "  Default=\"%#\"", prop._defaultValue );
+                        if ( prop._bAssetPath == SW_TRUE )
+                            out.appendFormat( "  [asset %#]", prop._assetType.empty() ? "any" : prop._assetType.c_str() );
+                        const pair<uint8, const utf8*> arrFlag[] = {
+                            {       prop._bReadOnly,        "ReadOnly"},
+                            {      prop._bTransient,       "Transient"},
+                            {   prop._bXmlAttribute,    "XmlAttribute"},
+                            {    prop._bPolymorphic,     "Polymorphic"},
+                            {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
+                            {prop._bHideInInspector, "HideInInspector"},
+                        };
+                        for ( const auto& [bSet, pFlagName] : arrFlag )
+                        {
+                            if ( bSet == SW_TRUE )
+                                out.appendFormat( "  [%#]", pFlagName );
+                        }
+                        for ( const string& alias : prop._listAlias )
+                            out.appendFormat( "  alias=%#", alias );
+                        out.append( "\n" );
+                    }
+                    for ( const ParsedFunctionInfo& method : type._listMethod )
+                    {
+                        out.appendFormat( "  FUNCTION %#(", method._name );
+                        for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
+                            out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", method._listParameterTypeName[paramIndex] );
+                        out.appendFormat( ") -> %#", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
+                        if ( method._bStatic == SW_TRUE )
+                            out.append( "  [static]" );
+                        if ( method._bCallInEditor == SW_TRUE )
+                            out.append( "  [CallInEditor]" );
+                        if ( method._bConstructor == SW_TRUE )
+                            out.append( "  [constructor]" );
+                        out.append( "\n" );
+                    }
+                }
+                for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
+                {
+                    out.appendFormat( "ENUM %# : %#%#\n", enumInfo._fullyQualifiedName, enumInfo._underlyingType,
+                                      enumInfo._bIsBitFlag == SW_TRUE ? "  [Flags]" : "" );
+                    for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                        out.appendFormat( "  %# = %#\n", enumerator._name, enumerator._value );
+                }
+                std::fwrite( out.c_str(), 1, out.size(), stdout );
+                std::fflush( stdout );
+            }
+
             /** @brief 묶음 TU 의 주 파일 이름입니다. 디스크에는 없고 내용으로만 넘깁니다. */
             static constexpr const utf8* kBatchSourceName = "ReflectionParser.batch.cpp";
 
@@ -76,7 +166,8 @@ namespace sw
             listVisitedInput.push_back( inputFile );
 
             GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
-            if ( _incrementalCheck.isUpToDate( inputFile, paths ) )
+            // `--dump` 는 무엇을 뽑았는지 보려는 실행이라 최신이어도 다시 파싱한다.
+            if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths ) )
             {
                 SW_LOG_TRACE( "Up-to-date, skipping AST parsing: %#", inputFile );
                 ++upToDate;
@@ -242,6 +333,8 @@ namespace sw
     bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed ) const
     {
         const ParserConfig& config = _pSession->_config;
+        if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
+            ReflectionPipelineInternal::printParsedHeader( inputFile, parsed );
 
         const CodeGenerator generator( parsed, inputFile, *_pSession, _pOptions->_sourceRoot );
         string              headerText;

@@ -96,7 +96,8 @@ namespace
      *          케이스가 끝나면 프레임워크가 통째로 지웁니다. 예전에는 실행 파일 폴더(`Bin`)에 헤더와 `temp_gen_diagnostics`
      *          를 두고 손으로 지웠습니다 — 같은 `Bin` 을 쓰는 두 프로세스가 서로의 산출물을 밟을 수 있었습니다.
      */
-    [[maybe_unused]] ParserRunResult runParserOnTempHeaders( const sw::string& parserExe, const sw::vector<TempHeader>& listHeader )
+    [[maybe_unused]] ParserRunResult runParserOnTempHeaders( const sw::string& parserExe, const sw::vector<TempHeader>& listHeader,
+                                                             const sw::string& extraArguments = {} )
     {
         static uint32 s_runIndex = 0;
 
@@ -124,6 +125,8 @@ namespace
             else
                 command += " --input \"" + headerPath + "\"";
         }
+        if ( extraArguments.empty() == false )
+            command += " " + extraArguments;
 
         sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
             sw::ProcessOutputDelegate,
@@ -908,4 +911,65 @@ SW_TEST_CASE( ReflectionParserTest, ContainerIsRecognizedByItsOuterTemplateNameO
         SW_EXPECT_TRUE_MSG( sw::ParserUtil::outerTemplateName( pPlain ).empty(), pPlain );
     // 템플릿이어도 이름이 같아야 한다.
     SW_EXPECT_STREQ( "TextureAssetRef", sw::string( sw::ParserUtil::outerTemplateName( "sw::TextureAssetRef<sw::Texture>" ) ).c_str() );
+}
+
+/**
+ * @brief [ReflectionParserTest] `--dump` 는 헤더마다 뽑은 것(타입 · 부모 · 프로퍼티의 값 자리 · 범위 · 플래그 · enum 값)을 찍고, `--help` 는 성공이다
+ * @details "왜 이 프로퍼티가 인스펙터에 없나" 를 물을 곳이 없었다 — 파서가 무엇을 봤는지는 Debug 파서의 trace 한 줄(개수만)뿐이었고,
+ *          알 수 없는 플래그는 모두 거절해(`--help` 도) 볼 스위치를 붙일 수도 없었다.
+ */
+SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "DumpSample",
+                                      "#pragma once\n"
+                                      "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                      "namespace sw\n"
+                                      "{\n"
+                                      "\tENUM()\n"
+                                      "\tenum class DumpSampleMode : uint8\n"
+                                      "\t{\n"
+                                      "\t\tIdle = 0,\n"
+                                      "\t\tBusy = 200\n"
+                                      "\t};\n"
+                                      "\tREFLECT()\n"
+                                      "\tstruct DumpSampleActor\n"
+                                      "\t{\n"
+                                      "\t\tREFLECT_BODY();\n"
+                                      "\t\tPROPERTY( Min = 0.0, Transient )\n"
+                                      "\t\tfloat32 _speed{ 0.0f };\n"
+                                      "\t\tPROPERTY()\n"
+                                      "\t\tuint8 _bFlag : 1;\n"
+                                      "\t\tPROPERTY()\n"
+                                      "\t\tDumpSampleMode _mode{ DumpSampleMode::Idle };\n"
+                                      "\t};\n"
+                                      "}\n" } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader, "--dump" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+
+    for ( const utf8* pExpected : { "REFLECT sw::DumpSampleActor", "PROPERTY _speed : float32", "Min=0", "[Transient]",
+                                    "PROPERTY _bFlag : uint8  [bit field - located at runtime]", "ENUM sw::DumpSampleMode", "Busy = 200" } )
+    {
+        SW_EXPECT_TRUE_MSG( run._log.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + run._log ).c_str() );
+    }
+    // 한쪽 범위는 한쪽만 찍는다(결함 ⑪).
+    SW_EXPECT_TRUE_MSG( run._log.find( "Max=" ) == sw::string::npos, run._log.c_str() );
+
+    // `--help` 는 오류가 아니다.
+    sw::ProcessOptions options;
+    options._workingDirectory = sw::ResourceUtil::getProjectFolderPath();
+    sw::string  helpLog;
+    const int32 helpExit = sw::Process::execute( "\"" + parserExe + "\" --help", options,
+                                                 SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&helpLog]( sw::string_view line )
+    {
+        helpLog.append( line.data(), line.size() );
+        helpLog.push_back( '\n' );
+    } ) );
+    SW_EXPECT_TRUE_MSG( helpExit == 0, helpLog.c_str() );
+    SW_EXPECT_TRUE_MSG( helpLog.find( "--dump" ) != sw::string::npos, helpLog.c_str() );
 }

@@ -19,6 +19,8 @@ namespace sw
         string         _emitTemplatesDir;    ///< --emit-templates
         string         _sourceRoot;          ///< --source-root: 모듈 판별을 이 경로 기준 상대 경로로 한다
         string         _emitBuiltinsGenPath; ///< --emit-builtins-gen: ReflectBuiltins.gen.cpp 만 쓰는 모드
+        bool           _bDump{ false };      ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다
+        bool           _bHelp{ false };      ///< --help: 사용법만 찍고 끝낸다
 
         /**
          * @brief argv 를 읽고 모드별 필수 인자를 확인합니다.

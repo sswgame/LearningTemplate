@@ -32,8 +32,32 @@ namespace sw
             {cliConstants::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>", "only write ReflectBuiltins.gen.cpp and exit"},
         };
 
+        /** @brief 값 없이 켜는 플래그 한 줄입니다. */
+        struct SwitchRow
+        {
+            const utf8* _pFlag;
+            bool ParserOptions::* _pSwitch;
+            const utf8*           _pHelp;
+        };
+
+        constexpr SwitchRow kArrSwitchRow[] = {
+            {"--dump", &ParserOptions::_bDump, "re-parse even up-to-date inputs and print what was extracted per header"},
+            {"--help", &ParserOptions::_bHelp,                                               "print this usage and exit"},
+            {    "-h", &ParserOptions::_bHelp,                                                          "same as --help"},
+        };
+
         struct ParserOptionsInternal
         {
+            static const SwitchRow* findSwitch( const string_view flag )
+            {
+                for ( const SwitchRow& row : kArrSwitchRow )
+                {
+                    if ( flag == row._pFlag )
+                        return &row;
+                }
+                return nullptr;
+            }
+
             static const OptionRow* findRow( const string_view flag )
             {
                 for ( const OptionRow& row : kArrOptionRow )
@@ -62,6 +86,11 @@ namespace sw
     {
         for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
         {
+            if ( const SwitchRow* pSwitch = ParserOptionsInternal::findSwitch( argv[argIndex] ) )
+            {
+                this->*pSwitch->_pSwitch = true;
+                continue;
+            }
             const OptionRow* pRow = ParserOptionsInternal::findRow( argv[argIndex] );
             if ( pRow == nullptr )
             {
@@ -80,6 +109,10 @@ namespace sw
             else
                 this->*pRow->_pValue = pValue;
         }
+
+        // 사용법만 묻는 실행 — 필수 인자를 따지지 않는다(예전에는 `--help` 가 "Unknown argument" 오류였다).
+        if ( _bHelp )
+            return true;
 
         if ( isBuiltinsGenMode() )
         {
@@ -104,5 +137,7 @@ namespace sw
         SW_LOG_INFO( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>" );
         for ( [[maybe_unused]] const OptionRow& row : kArrOptionRow )
             SW_LOG_INFO( "  %# %#  %#", row._pFlag, row._pValueName, row._pHelp );
+        for ( [[maybe_unused]] const SwitchRow& row : kArrSwitchRow )
+            SW_LOG_INFO( "  %#  %#", row._pFlag, row._pHelp );
     }
 } // namespace sw

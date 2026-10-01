@@ -103,6 +103,11 @@ int32 main( int32 argc, utf8* argv[] )
         sw::ParserOptions::logUsage();
         return 1;
     }
+    if ( options._bHelp )
+    {
+        sw::ParserOptions::logUsage();
+        return 0;
+    }
 
     // 파서 한 번 실행이 쓰는 설정과 표들이다. 여기가 소유자고, 아래로는 읽기만 하게 내려 준다.
     sw::ParserSession session;

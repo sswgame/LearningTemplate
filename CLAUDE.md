@@ -196,6 +196,8 @@ RuntimeAPI, delegates, or events instead. See `Source/Engine/README.md`.
 `sw_addReflectionStep` in `cmake/Engine/ReflectionCodeGen.cmake`. Scene loading, the inspector, hot
 reload, and `addComponentByName` all depend on the generated `TypeInfo`/registrars, so `ReflectionParser`
 must build before Engine. ReflectionParser links `Core` only, to avoid a cycle with Engine.dll.
+To see what the parser extracted from a header (why a property is missing, a range, a container kind), run
+`build/<preset>/BuildTools/ReflectionParser.exe --dump --input <header> ...` (full arguments in `Tools/ReflectionParser/README.md`).
 
 **Resources.** `Resource/` splits into `engine/`, `common/`, and `game/<active game>/`. Paths are global ids
 including the domain (`engine/pipeline/forward.xml`) and are lowercased via `normalizePath` at lookup —
