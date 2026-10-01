@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉜ 리플렉션 파서 — 별칭으로 적은 기반 클래스는 부모와 컴포넌트 팩토리를 잃었다)
+
+파서는 베이스 지정자(`: public X`)의 선언을 **적힌 타입 그대로** 물었다. `using Base = Component; class X : public Base` 면 답이 별칭 선언이라, 부모 FQN 이
+`sw::Base`(별칭 이름)가 되어 실행 중에 부모를 못 찾았고(상속 병합 · 캐스트 · "이것은 컴포넌트인가" 가 사슬 중간에서 멈춘다 — 결함 ㉑ 의 전수 시험이 잡는
+모양), 컴포넌트 판별도 별칭에서 멈춰 **팩토리가 생기지 않았다**(씬에서 그 컴포넌트를 만들 수 없다). `typedef` 도 같다.
+`getBaseClassDeclaration` — 정규 타입(canonical, 별칭을 벗긴 레코드 타입)의 선언을 묻는다. 부모 기록(`collectBase`)과 컴포넌트 판별(`componentBaseVisitor`)이
+모두 이것을 쓴다. 지금 저장소에는 별칭 기반이 없어 생성 폴더는 고치기 전과 같다(통째로 비교했다).
+**검증.** `ReflectionParserTest.AliasedBaseClassKeepsParentAndFactory` — `using` 으로 적은 `Component` 기반과 `typedef` 로 적은 반사 타입 기반: 둘 다 팩토리가
+생기고 부모 FQN 이 실제 클래스(`sw::Component` · `sw::AliasedBaseSampleComponent`)이며 별칭 이름은 생성 코드에 없다. 두 자리를 각각 되돌리는 변이가 모두
+실패했다.
+
 ### 2026-10-01 (결함 ㉛ 리플렉션 파서 — 애노테이션 문자열의 이스케이프가 값을 자르거나 토큰을 갈랐다)
 
 `PROPERTY( Tooltip = "Say \"hi\"" )` 는 첫 안쪽 따옴표에서 값이 끝나 `Say \` 로 **조용히** 잘렸다(생성기는 그것을 다시 바르게 이스케이프하므로 컴파일은

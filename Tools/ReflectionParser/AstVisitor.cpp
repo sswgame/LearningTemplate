@@ -531,6 +531,17 @@ namespace sw
             };
 
             /**
+             * @brief 베이스 지정자(`: public X`)가 가리키는 **클래스** 선언입니다. 별칭(`using` · `typedef`)은 풀어 냅니다.
+             * @details 적힌 타입의 선언을 바로 물으면 `using Base = Component; struct X : Base` 의 답은 별칭 선언이다. 예전에는 그래서 부모 FQN 이
+             *          별칭 이름(`sw::Base`)이 되어 실행 중에 부모를 못 찾았고(상속 병합 · 캐스트가 사슬 중간에서 멈춘다), 컴포넌트 판별도 별칭에서
+             *          멈춰 팩토리가 생기지 않았다. 정규 타입(canonical)은 별칭을 벗긴 레코드 타입이다.
+             */
+            static CXCursor getBaseClassDeclaration( const CXCursor baseSpecifier )
+            {
+                return clang_getTypeDeclaration( clang_getCanonicalType( clang_getCursorType( baseSpecifier ) ) );
+            }
+
+            /**
              * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다 (단일 상속 체인).
              * @details PropertyInfo 의 오프셋 접근 · 캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다" 는
              *          전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스는 그렇지
@@ -542,7 +553,7 @@ namespace sw
              */
             static void collectBase( const CXCursor cursor, MemberCollector& collector )
             {
-                const CXCursor baseDecl = clang_getTypeDeclaration( clang_getCursorType( cursor ) );
+                const CXCursor baseDecl = getBaseClassDeclaration( cursor );
                 const string   baseFQN  = ( clang_Cursor_isNull( baseDecl ) == 0 ) ? makeFullyQualifiedName( baseDecl ) : string{};
 
                 ++collector._baseCount;
@@ -857,7 +868,7 @@ namespace sw
                     return CXChildVisit_Continue;
 
                 ComponentSearch* pSearch  = static_cast<ComponentSearch*>( clientData );
-                const CXCursor   baseDecl = clang_getTypeDeclaration( clang_getCursorType( cursor ) );
+                const CXCursor   baseDecl = getBaseClassDeclaration( cursor );
                 if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromComponent( baseDecl, *pSearch->_pConfig ) == false )
                     return CXChildVisit_Continue;
 

@@ -1007,3 +1007,51 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
     SW_EXPECT_TRUE_MSG( generated.find( "\"Say \\\"hi, then go \\\\ home\"" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "\"Sample\"" ) != sw::string::npos, generated.c_str() );
 }
+
+/**
+ * @brief [ReflectionParserTest] 별칭(`using`)으로 적은 기반도 실제 클래스로 읽는다 — 부모 FQN 과 컴포넌트 팩토리를 잃지 않는다
+ * @details 베이스 지정자의 선언을 그대로 물으면 별칭 선언이 나온다. 부모 FQN 이 별칭 이름이 되어 실행 중에 부모를 못 찾았고, 컴포넌트 판별이 별칭에서
+ *          멈춰 팩토리가 생기지 않았다(씬에서 그 컴포넌트를 만들 수 없다).
+ */
+SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "AliasedBaseSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Object/Component/Component.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tusing AliasedComponentBase = Component;\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tclass AliasedBaseSampleComponent : public AliasedComponentBase\n"
+                                                       "\t{\n"
+                                                       "\tpublic:\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "\ttypedef AliasedBaseSampleComponent AliasedBaseSampleParent;\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tclass AliasedBaseSampleChild : public AliasedBaseSampleParent\n"
+                                                       "\t{\n"
+                                                       "\tpublic:\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( size_t( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AliasedBaseSampleComponent>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AliasedBaseSampleChild>" ) != sw::string::npos, generated.c_str() );
+    // 부모는 별칭이 아니라 실제 클래스 이름이다.
+    SW_EXPECT_TRUE_MSG( generated.find( "_parentFQN          = ::sw::hashed_string( \"sw::AliasedBaseSampleComponent\" )" ) != sw::string::npos,
+                        generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "_parentFQN          = ::sw::hashed_string( \"sw::Component\" )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "AliasedComponentBase" ) == sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "AliasedBaseSampleParent" ) == sw::string::npos, generated.c_str() );
+}
