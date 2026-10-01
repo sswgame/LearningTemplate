@@ -43,10 +43,19 @@ namespace sw
 
         const float32 effectiveDelta = deltaSeconds * _playSpeed;
 
+        // 반복 클립의 시간은 한 바퀴 안으로 감는다. 예전에는 끝없이 커져, 오래 켜 둔 루프(대기 · 배경)는 float32 정밀도가 무너졌다 — 10^6 초
+        // 근처에서는 한 프레임(0.016 초)을 더해도 값이 거의 움직이지 않아 애니메이션이 떨리거나 멈췄다. 샘플은 어차피 한 바퀴 안으로 접어 읽는다.
+        const auto advance = []( float32& time, float32 delta, const AnimClip* pClip, bool bLooping )
+        {
+            time += delta;
+            const float32 duration = pClip->getDuration();
+            if ( bLooping && duration > 0.0f && time >= duration ) // 속도는 0 이상이다(`setSpeed`)
+                time = std::fmod( time, duration );
+        };
         if ( _pCurrent != nullptr )
-            _currentTime += effectiveDelta;
+            advance( _currentTime, effectiveDelta, _pCurrent, _bCurrentLoop );
         if ( _pNext != nullptr )
-            _nextTime += effectiveDelta;
+            advance( _nextTime, effectiveDelta, _pNext, _bNextLoop );
 
         if ( _pNext != nullptr && _fadeDuration > 0.0f )
         {

@@ -404,3 +404,20 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
     SW_EXPECT_NEAR_EQUAL( 600.0f, dashPose._41, 1e-2f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, dashPose._42, 1e-2f );
 }
+
+/**
+ * @brief [AnimationTest] 오래 돈 반복 재생도 시간이 한 바퀴 안에 있어 프레임마다 앞으로 간다
+ * @details 시간이 끝없이 커져 10^6 초 근처에서는 0.01 초를 더해도 float32 값이 움직이지 않았다(애니메이션이 멈춘다).
+ */
+SW_TEST_CASE( AnimationTest, AnimPlayerLongLoopKeepsAdvancing )
+{
+    AnimClip   idleClip( "Idle", 1.0f );
+    AnimPlayer player;
+    player.play( &idleClip, true );
+
+    player.update( 1000000.25f ); // 열하루 남짓 켜 둔 셈
+    SW_EXPECT_TRUE( player.getCurrentTime() >= 0.0f && player.getCurrentTime() < idleClip.getDuration() );
+    for ( int32 frame = 0; frame < 50; ++frame )
+        player.update( 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, player.evaluate()._normalizedTime, 1e-3f );
+}
