@@ -2051,6 +2051,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊱ Core — 이름이 같은 두 파일의 로그 호출자 이름이 섞였다)
+
+로그의 `[Caller]` 칸은 `SW_LOG_CALLER( "이름" )` 이 파일마다 등록한 이름이다. 표의 키가 **파일 이름뿐**이라 `GameFramework/Base/SaveGame.cpp`("SaveGame")와
+`GameFramework/Kits/TurnBattle/SaveGame.cpp`("TurnBattleSaveGame")가 같은 키였고, 나중에 등록된 이름이 두 파일의 로그에 모두 붙었다 — 저장 문제를 쫓을 때
+엉뚱한 쪽을 보게 된다(지금 저장소에서 실제로 겹치는 쌍은 이 하나다). 키를 경로의 **마지막 두 조각**(상위 폴더/파일 이름, 구분자는 슬래시 · 역슬래시를
+같게)으로 넓혔다. 전체 경로를 쓰지 않는 것은 같은 헤더라도 TU 마다 `__FILE__` 의 앞부분이 다를 수 있어서다.
+**검증.** `LogTest.CallerNamesOfSameNamedFilesStayApart` — 두 폴더의 같은 이름 파일이 각자 이름을 받고, 앞부분 · 구분자가 다른 경로도 같은 파일로 찾는다.
+파일 이름만 쓰는 변이에서 `KitCaller` 가 두 파일 모두에 붙어 실패했다.
+
 ### 2026-10-01 (결함 ㉟ 씬 — 같은 씬이 대기열에 있으면 로드 중 올라온 모듈의 컴포넌트가 빠졌다)
 
 비동기 로드 중에 모듈 팩토리가 바뀌면(시작할 때 키트 · SWGame 이 올라오는 동안 에디터가 시작 씬을 연다) `SceneManager::tickTransitions` 는 그 결과를

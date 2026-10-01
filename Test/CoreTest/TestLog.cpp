@@ -558,3 +558,18 @@ SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
     SW_EXPECT_TRUE_MSG( line.find( "\xED\x95\x9C\xEA\xB8\x80 \\xFF end" ) != sw::string::npos, line.c_str() );
     SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( line.c_str() ) );
 }
+
+/**
+ * @brief [LogTest] 이름이 같은 두 파일(다른 폴더)의 로그 호출자 이름이 섞이지 않는다 — 구분자가 섞여도 같은 파일은 같다
+ * @details 호출자 표는 파일 이름만 키로 썼다. `GameFramework/Base/SaveGame.cpp` 와 `Kits/TurnBattle/SaveGame.cpp` 가 같은 키라, 나중에 등록된
+ *          "TurnBattleSaveGame" 이 두 파일의 로그에 모두 붙었다.
+ */
+SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
+{
+    sw::Logger::registerCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp", "BaseCaller" );
+    sw::Logger::registerCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp", "KitCaller" );
+    SW_EXPECT_STREQ( "BaseCaller", sw::Logger::getCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp" ) );
+    SW_EXPECT_STREQ( "KitCaller", sw::Logger::getCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp" ) );
+    // 앞부분 · 구분자가 달라도(헤더는 TU 마다 `__FILE__` 의 꼴이 다를 수 있다) 같은 파일이다.
+    SW_EXPECT_STREQ( "KitCaller", sw::Logger::getCaller( "../elsewhere/CallerKit/SameNamedFile.cpp" ) );
+}

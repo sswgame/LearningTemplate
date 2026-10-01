@@ -20,7 +20,34 @@ namespace sw
         /** @brief 프로세스 전역 활성 로그 싱크 포인터입니다. */
         atomic<ILogSink*> s_globalSink{ nullptr };
 
-        /** @brief 파일 이름 해시별 로그 Caller 이름 항목입니다(힙 할당 없음). */
+        /**
+         * @brief 호출자 표의 키 — 경로의 **마지막 두 조각**(상위 폴더/파일 이름)의 해시입니다. 구분자는 슬래시와 역슬래시를 같게 봅니다.
+         * @details 예전에는 파일 이름만 썼다. `GameFramework/Base/SaveGame.cpp`("SaveGame")와 `Kits/TurnBattle/SaveGame.cpp`("TurnBattleSaveGame")가
+         *          같은 키라, 나중에 등록된 이름이 두 파일의 로그에 모두 붙었다. 전체 경로는 쓰지 않는다 — 같은 헤더라도 TU 마다 `__FILE__` 의
+         *          앞부분(절대 · 상대 · 구분자)이 다를 수 있다.
+         */
+        uint64 computeCallerKey( string_view filePath )
+        {
+            size_t cut            = filePath.size();
+            int32  separatorCount = 0;
+            while ( cut > 0 )
+            {
+                const utf8 character = filePath[cut - 1];
+                if ( ( character == '/' || character == '\\' ) && ++separatorCount == 2 )
+                    break;
+                --cut;
+            }
+            utf8         arrSuffix[constant::kMaxBuffer256];
+            const size_t length = MathUtil::min( filePath.size() - cut, sizeof( arrSuffix ) );
+            for ( size_t index = 0; index < length; ++index )
+            {
+                const utf8 character = filePath[cut + index];
+                arrSuffix[index]     = character == '\\' ? '/' : character;
+            }
+            return StringUtil::computeHash64( string_view{ arrSuffix, length } );
+        }
+
+        /** @brief 경로 키(`computeCallerKey`)별 로그 Caller 이름 항목입니다(힙 할당 없음). */
         struct CallerEntry
         {
             uint64 _fileHash{ 0 };
@@ -228,9 +255,7 @@ namespace sw
 
     void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
     {
-        string_view fileName;
-        FileUtil::getFileNamePart( filePath, fileName );
-        const uint64            fileHash = StringUtil::computeHash64( fileName );
+        const uint64            fileHash = computeCallerKey( filePath );
         std::scoped_lock<mutex> lock{ s_callerMutex };
 
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
@@ -258,9 +283,7 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pFile ) )
             return nullptr;
-        string_view fileName;
-        FileUtil::getFileNamePart( string_view{ pFile }, fileName );
-        const uint64            fileHash = StringUtil::computeHash64( fileName );
+        const uint64            fileHash = computeCallerKey( string_view{ pFile } );
         std::scoped_lock<mutex> lock{ s_callerMutex };
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
         {
