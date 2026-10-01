@@ -1563,3 +1563,24 @@ SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
     SW_EXPECT_EQUAL( 160u, static_cast<uint32>( builder.view().size() ) );
     SW_EXPECT_TRUE( builder.view().substr( 150 ) == "0123456789" );
 }
+
+/**
+ * @brief [StringTest] 부동소수 파서는 유한한 수만, 부호는 하나만 받는다
+ * @details 예전에는 앞의 `+` 를 떼고 `from_chars` 에 넘겨 `"+-5"` 가 -5 가 됐고(`parseInt` 는 거절했다), "nan" · "inf" 도 성공이었다 — 설정 ·
+ *          에셋의 그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들었다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
+ */
+SW_TEST_CASE( StringTest, FloatParsersAcceptOnlyFiniteNumbersWithOneSign )
+{
+    float32 value32{ 0.0f };
+    float64 value64{ 0.0 };
+    SW_EXPECT_TRUE( sw::StringUtil::parseFloat( " 1.5 ", value32 ) && value32 == 1.5f );
+    SW_EXPECT_TRUE( sw::StringUtil::parseFloat( "+2.25", value32 ) && value32 == 2.25f );
+    SW_EXPECT_TRUE( sw::StringUtil::parseFloat( "-0.5", value32 ) && value32 == -0.5f );
+    SW_EXPECT_TRUE( sw::StringUtil::parseDouble( "1e-3", value64 ) && value64 == 1e-3 );
+
+    for ( const utf8* pBad : { "+-5", "++5", "+", "nan", "NaN", "inf", "-inf", "+inf", "infinity", "1e400", "0.5f", "" } )
+    {
+        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseFloat( pBad, value32 ), pBad );
+        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseDouble( pBad, value64 ), pBad );
+    }
+}

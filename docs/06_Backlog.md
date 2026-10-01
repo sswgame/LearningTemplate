@@ -2051,6 +2051,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑳ Core — 부동소수 파서가 "+-5" 와 nan · inf 를 받았다)
+
+`StringUtil::parseFloat` · `parseDouble` 은 앞의 `+` 를 떼고 `from_chars` 에 넘겨 `"+-5"` 를 -5 로 읽었다(`parseInt` 는 거절했다). 그리고
+`from_chars` 가 받는 "nan" · "inf" 를 그대로 성공으로 돌려줘, 설정 · 에셋의 그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들었다(NaN 은 비교마다
+거짓이라 범위 검사도 지나간다). 범위 애노테이션 검사(결함 ⑪)도 이 함수에 기댄다.
+**고침.** 둘이 한 도우미(`parseFiniteFloatToken`)를 쓴다 — 앞 `+` 는 하나만, 그 뒤 부호는 거절, **유한한 수만**. float32 는 float32 로 바로 읽는다
+(배 정밀도를 거치면 드물게 반올림이 두 번 일어난다). 데이터 파일에 nan · inf 를 쓴 곳은 없었다.
+**검증.** `StringTest.FloatParsersAcceptOnlyFiniteNumbersWithOneSign`(받을 것 넷, 거절할 것 열둘 — "+-5" · "++5" · nan · inf · 1e400 · "0.5f" …) —
+유한 검사를 빼면 nan 에서 진다.
+
 ### 2026-10-01 (결함 ⑲ 게임 프레임워크 — 핫 리로드 상태 복원이 반쯤 실패해도 성공이라 했다)
 
 `GameInstanceBase::deserializeSceneObjects` 는 씬을 비운 뒤 오브젝트를 하나씩 읽는다. 읽지 못하면(컴포넌트 레이아웃이 바뀐 리로드) `break` 하고도

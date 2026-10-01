@@ -365,6 +365,34 @@ namespace sw
             }
 
             /**
+             * @brief 부동소수 토큰을 `from_chars` 로 **유한한 수로만** 읽습니다(`parseFloat` · `parseDouble`).
+             * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — 예전에는 `+` 를 떼고
+             *          넘겨 `"+-5"` 가 -5 가 됐다(`parseInt` 는 거절했다). 그리고 `from_chars` 는 "nan" · "inf" 를 받는데, 설정 · 에셋의
+             *          그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들면 원인을 찾기 어렵다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
+             *          float32 는 float32 로 바로 읽는다(배 정밀도를 거치면 드물게 반올림이 두 번 일어난다).
+             */
+            template <typename TFloat>
+            static bool parseFiniteFloatToken( string_view token, TFloat& outValue )
+            {
+                string_view trimmed = StringUtil::trim( token );
+                if ( trimmed.empty() )
+                    return false;
+                if ( trimmed.front() == '+' )
+                {
+                    trimmed.remove_prefix( 1 );
+                    if ( trimmed.empty() || trimmed.front() == '-' || trimmed.front() == '+' )
+                        return false;
+                }
+
+                TFloat value{ 0 };
+                const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), value );
+                if ( ec != std::errc{} || ptr != trimmed.data() + trimmed.size() || std::isfinite( value ) == false )
+                    return false;
+                outValue = value;
+                return true;
+            }
+
+            /**
              * @brief 정수 토큰의 앞부분(공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`))을 떼어 냅니다.
              * @details `parseInt` · `parseInt64` · `parseUint64` 가 이 스무 줄을 각자 들고 있었습니다. 기수가 0 이면 접두사로 정하고
              *          (없으면 10), 기수 16 은 `0x` 가 있어도 되고 없어도 됩니다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
@@ -1043,42 +1071,12 @@ namespace sw
 
     bool StringUtil::parseFloat( string_view token, float32& outValue )
     {
-        string_view trimmed = trim( token );
-        if ( trimmed.empty() )
-            return false;
-        if ( trimmed.front() == '+' )
-            trimmed.remove_prefix( 1 );
-        if ( trimmed.empty() )
-            return false;
-
-        float32 val{ 0.0f };
-        const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val );
-        if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
-        {
-            outValue = val;
-            return true;
-        }
-        return false;
+        return StringUtilInternal::parseFiniteFloatToken( token, outValue );
     }
 
     bool StringUtil::parseDouble( string_view token, float64& outValue )
     {
-        string_view trimmed = trim( token );
-        if ( trimmed.empty() )
-            return false;
-        if ( trimmed.front() == '+' )
-            trimmed.remove_prefix( 1 );
-        if ( trimmed.empty() )
-            return false;
-
-        float64 val{ 0.0 };
-        const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val );
-        if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
-        {
-            outValue = val;
-            return true;
-        }
-        return false;
+        return StringUtilInternal::parseFiniteFloatToken( token, outValue );
     }
 
     bool StringUtil::parseInt( string_view token, int32& outValue, int32 base )
