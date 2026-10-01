@@ -5,6 +5,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -262,4 +264,81 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
     SW_EXPECT_STREQ( "Amplification", pStage->toString( pStage->readValueFromMemory( &amplification ) ).c_str() );
     const uint8 all = 0xFF;
     SW_EXPECT_TRUE( pStage->toStringFlags( pStage->readValueFromMemory( &all ) ).view().find( "Amplification" ) != sw::string_view::npos );
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] 텍스트를 enum 으로 읽을 때 모르는 이름은 실패다 — 조용히 0 이 되지 않는다
+ * @details 예전 직렬화는 모르는 이름 · 대소문자만 다른 이름 · 숫자를 모두 0 으로 읽어 썼다(orphan 도 로그도 없이). 이제 이름은 대소문자를 가리지
+ *          않고, 알려진 값의 숫자도 받고, 비트플래그는 토큰마다 알려진 이름이어야 한다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::EnumInfo*     pRole    = registry.findEnum( sw::hashed_string( "CameraRole" ) );
+    const sw::EnumInfo*     pFlag    = registry.findEnum( sw::hashed_string( "TestFlag" ) );
+    SW_ASSERT_NOT_NULL( pRole );
+    SW_ASSERT_NOT_NULL( pFlag );
+
+    int64 value = -1;
+    SW_EXPECT_TRUE( pRole->tryParseText( "Editor", value ) && value == 1 );
+    SW_EXPECT_TRUE( pRole->tryParseText( "editor", value ) && value == 1 ); // 대소문자 무시
+    SW_EXPECT_TRUE( pRole->tryParseText( " 2 ", value ) && value == 2 );    // 알려진 값의 숫자
+    SW_EXPECT_FALSE( pRole->tryParseText( "Bogus", value ) );
+    SW_EXPECT_FALSE( pRole->tryParseText( "99", value ) );
+    SW_EXPECT_FALSE( pRole->tryParseText( "", value ) );
+
+    SW_EXPECT_TRUE( pFlag->tryParseText( "Read | Write", value ) && value == 3 );
+    SW_EXPECT_TRUE( pFlag->tryParseText( "execute", value ) && value == 4 );
+    SW_EXPECT_FALSE( pFlag->tryParseText( "Read | Bogus", value ) );
+    SW_EXPECT_FALSE( pFlag->tryParseText( "64", value ) ); // 모르는 비트
+
+    // 직렬화 경로(JSON · XML): 못 읽으면 그 필드는 쓰지 않는다(값은 그대로 — 예전에는 0 이 됐다). 대소문자만 다른 이름은 읽는다.
+    const sw::TypeInfo* pHostType = registry.findType( sw::hashed_string( "sw::NarrowEnumHost" ) );
+    SW_ASSERT_NOT_NULL( pHostType );
+    {
+        test::ScopedDefensiveTestLog expected( "enum text that names no enumerator" );
+        sw::NarrowEnumHost           fromJson;
+        fromJson._mode = sw::NarrowEnum::One;
+        (void)sw::JsonSerializer::deserialize( &fromJson, *pHostType, R"({"_mode":"Bogus"})" );
+        SW_EXPECT_TRUE( fromJson._mode == sw::NarrowEnum::One );
+
+        sw::NarrowEnumHost source;
+        source._mode         = sw::NarrowEnum::Two;
+        sw::string   xml     = sw::XmlSerializer::serialize( &source, *pHostType );
+        const size_t namePos = xml.find( "\"Two\"" );
+        SW_ASSERT_TRUE_MSG( namePos != sw::string::npos, xml.c_str() );
+        xml.replace( namePos, 5, "\"Bogus\"" );
+        sw::NarrowEnumHost fromXml;
+        fromXml._mode = sw::NarrowEnum::One;
+        (void)sw::XmlSerializer::deserialize( &fromXml, *pHostType, xml );
+        SW_EXPECT_TRUE( fromXml._mode == sw::NarrowEnum::One );
+    }
+    sw::NarrowEnumHost caseInsensitive;
+    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &caseInsensitive, *pHostType, R"({"_mode":"two"})" ) );
+    SW_EXPECT_TRUE( caseInsensitive._mode == sw::NarrowEnum::Two );
+
+    // 쓰는 쪽이 적는 글은 모두 다시 읽힌다 — 등록된 모든 enum 의 모든 값과, 비트플래그의 0(`None`) · 모든 비트 합.
+    sw::string report;
+    registry.forEachEnum( [&report]( const sw::EnumInfo& info )
+    {
+        const auto checkRoundTrip = [&report, &info]( int64 expected )
+        {
+            const sw::hashed_string written = info._bIsBitFlag ? info.toStringFlags( expected ) : info.toString( expected );
+            int64                   parsed  = -1;
+            if ( info.tryParseText( written.c_str(), parsed ) == false || parsed != expected )
+                report += sw::string( "\n  " ) + info._fullyQualifiedName.c_str() + " " + sw::to_string( expected ) + " -> '" + written.c_str() + "'";
+        };
+        int64 allBits = 0;
+        for ( const auto& [enumValue, name] : info._mapValueToName )
+        {
+            checkRoundTrip( enumValue );
+            allBits |= enumValue;
+        }
+        if ( info._bIsBitFlag )
+        {
+            checkRoundTrip( 0 );
+            checkRoundTrip( allBits );
+        }
+    } );
+    SW_EXPECT_TRUE_MSG( report.empty(), ( "enum text that does not read back:" + report ).c_str() );
 }

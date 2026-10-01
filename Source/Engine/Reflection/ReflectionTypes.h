@@ -618,13 +618,101 @@ namespace sw
                 }
             }
 
+            int64 flagsValue{ 0 };
+            if ( _bIsBitFlag == SW_FALSE || tryParseFlags( name, flagsValue ) == false || isValidValue( flagsValue ) == false )
+                return false;
+            outValue = flagsValue;
+            return true;
+        }
+
+        /**
+         * @brief 에셋 · 설정 텍스트를 값으로 읽습니다 — 이름(대소문자 무시), 비트플래그면 `A | B`, 그리고 **알려진 값의 숫자**까지.
+         * @details 모르는 이름 · 모르는 플래그 토큰이 하나라도 있으면 false 다. 예전 직렬화는 `stringFlagsToValue` 로 읽어, 이름이 바뀐
+         *          열거자 · 대소문자만 다른 `"editor"` · 숫자 `"2"` · 잘못 적은 `PROPERTY( Default = … )` 가 **조용히 0** 이 됐다(실패도
+         *          orphan 도 로그도 없었다).
+         *
+         *          `tryParse` 와 달리 표식 값(`Invalid` · `Count`)도 받는다. 직렬화는 필드에 든 값을 이름으로 적으므로(`Key::Unknown` 은
+         *          "바인딩 없음" 이다) 읽기도 그 이름을 받아야 왕복이 맞는다. 이름을 해시로 바꾸지 않는다 — 에셋 글을 전역 이름표에 넣지
+         *          않는다.
+         */
+        bool tryParseText( string_view text, int64& outValue ) const
+        {
+            const string_view trimmed = StringUtil::trim( text );
+            // 비트플래그의 빈 글은 "아무 비트도 없음" 이다(손으로 쓴 에셋). 쓰는 쪽은 0 을 `None` 으로 적는다(`toStringFlags`).
+            if ( trimmed.empty() && _bIsBitFlag != SW_FALSE )
+            {
+                outValue = 0;
+                return true;
+            }
+            for ( const auto& [nameKey, enumValue] : _mapNameToValue )
+            {
+                if ( StringUtil::equals( trimmed, nameKey.view(), true ) )
+                {
+                    outValue = enumValue;
+                    return true;
+                }
+            }
+            if ( _bIsBitFlag != SW_FALSE && tryParseFlags( trimmed, outValue ) )
+                return true;
+            int64 number{ 0 };
+            if ( StringUtil::parseInt64( trimmed, number ) == false )
+                return false;
             if ( _bIsBitFlag != SW_FALSE )
             {
-                outValue = stringFlagsToValue( name );
-                return isValidValue( outValue );
+                int64 knownBits{ 0 };
+                for ( const auto& [bitValue, name] : _mapValueToName )
+                    knownBits |= bitValue;
+                if ( ( number & ~knownBits ) != 0 )
+                    return false;
             }
-            return false;
+            else if ( _mapValueToName.find( number ) == _mapValueToName.end() )
+            {
+                return false;
+            }
+            outValue = number;
+            return true;
         }
+
+    private:
+        /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(대소문자 무시)이어야 합니다 — 하나라도 모르면 false. 표식 값 검사는 부르는 쪽이 합니다. */
+        bool tryParseFlags( string_view text, int64& outValue ) const
+        {
+            int64  result{ 0 };
+            size_t startPos{ 0 };
+            bool   bAnyToken = false;
+            while ( startPos <= text.size() )
+            {
+                const size_t      delimiterPos = text.find( '|', startPos );
+                const size_t      endPos       = ( delimiterPos != string_view::npos ) ? delimiterPos : text.size();
+                const string_view token        = StringUtil::trim( text.substr( startPos, endPos - startPos ) );
+                if ( token.empty() == false )
+                {
+                    bool bKnown = false;
+                    for ( const auto& [nameKey, enumValue] : _mapNameToValue )
+                    {
+                        if ( StringUtil::equals( token, nameKey.view(), true ) )
+                        {
+                            result |= enumValue;
+                            bKnown = true;
+                            break;
+                        }
+                    }
+                    // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 — 읽을 때도 0 이어야 왕복이 맞는다.
+                    if ( bKnown == false && StringUtil::equals( token, constants::reflection::kNone, true ) == false )
+                        return false;
+                    bAnyToken = true;
+                }
+                if ( delimiterPos == string_view::npos )
+                    break;
+                startPos = delimiterPos + 1;
+            }
+            if ( bAnyToken == false )
+                return false;
+            outValue = result;
+            return true;
+        }
+
+    public:
     };
 
     /// @brief 리플렉션 메서드: 이름, 시그니처, invoker

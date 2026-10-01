@@ -2051,6 +2051,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉒ 리플렉션 — 에셋의 enum 글을 못 읽으면 조용히 0 이 됐다)
+
+XML · JSON 직렬화는 enum 필드를 `EnumInfo::stringFlagsToValue` 로 읽었고, 그 함수는 모르는 이름을 0 으로 돌려준다. 이름을 바꾼 열거자 · 대소문자만
+다른 `"editor"` · 숫자 `"2"`(JSON 문자열) · 잘못 적은 `PROPERTY( Default = … )` 가 모두 **0 으로 쓰였다** — 실패도 orphan 도 로그도 없었다.
+- `EnumInfo::tryParseText` — 이름(대소문자 무시), 비트플래그 `A | B`(토큰마다 알려진 이름, `None` 과 빈 글은 0), 알려진 값의 숫자. 하나라도 모르면
+  false. **표식 값(`Invalid` · `Count`)도 받는다** — 쓰는 쪽이 필드 값을 이름으로 적으므로(`Key::Unknown` = 바인딩 없음) 읽기도 받아야 왕복이 맞다.
+  처음 판은 표식을 거부해서, 비운 바인딩을 읽으면 기본 키로 돌아갈 뻔했다(아래 왕복 검사가 잡았다). 이름을 해시로 바꾸지 않는다(에셋 글을 전역
+  이름표에 넣지 않는다).
+- `SerializerUtil::parseTextValue` · JSON enum 읽기 — 못 읽으면 그 필드를 쓰지 않고(값은 그대로) `'Bogus' is not a value of enum sw::X` 경고를 남긴다.
+- `tryParse` 의 비트플래그 경로도 모르는 토큰을 거부한다(예전에는 모르는 토큰을 건너뛴 값을 냈다).
+- 곁가지: 시험 프레임워크에 `SW_ASSERT_TRUE_MSG` 가 없었다(EXPECT 에는 있다) — 더했다.
+남은 것: `MaterialXml` · `MaterialPacking` 의 사용 플래그 읽기도 `stringFlagsToValue` 다(재질 파일 전용 경로라 따로 본다).
+**검증.** `ReflectionEnumInfoTest.TextParseRejectsUnknownNamesInsteadOfZero` — 이름 · 대소문자 · 숫자 · 모르는 이름 · 모르는 비트, JSON · XML 에서 모르는 이름이면
+필드가 그대로, 그리고 **등록된 모든 enum 의 모든 값(비트플래그는 0 과 모든 비트 합까지)이 쓴 글 그대로 다시 읽힌다**. 변이 넷(XML · JSON 을 옛 0 으로,
+`None` 거부, 표식 거부)이 모두 실패했다. 게임 · 에디터 실행 로그에 새 경고가 없다(지금 에셋에는 못 읽는 enum 글이 없다).
+
 ### 2026-10-01 (확인 ② 보강 — Shipping 파서의 `--help` 가 아무것도 찍지 않았다)
 
 배포본은 Info 로그를 컴파일하지 않는데(`SW_LOG_COMPILED_VERBOSITY`), 사용법은 `SW_LOG_INFO` 로 남겼다. 그래서 Shipping 으로 빌드한 파서는 `--help` 에도,

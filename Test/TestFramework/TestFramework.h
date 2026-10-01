@@ -510,6 +510,9 @@ namespace test
 /** @brief 강한 어서션 — 실패를 기록하고 현재 테스트를 중단합니다. */
 #define SW_ASSERT_TRUE( cond ) SW_TEST_CHECK_IMPL( cond, #cond, nullptr, return )
 
+/** @brief 강한 어서션 — 실패 시 메시지(대개 실제로 받은 텍스트)를 함께 기록하고 중단합니다. */
+#define SW_ASSERT_TRUE_MSG( cond, msg ) SW_TEST_CHECK_IMPL( cond, #cond, msg, return )
+
 /** @brief 조건이 거짓이어야 하며, 아니면 테스트를 중단합니다. */
 #define SW_ASSERT_FALSE( cond ) SW_TEST_CHECK_IMPL( !( cond ), "!(" #cond ")", nullptr, return )
 

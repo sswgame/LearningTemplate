@@ -321,17 +321,16 @@ namespace sw
                 const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
                 if ( pEnumInfo != nullptr )
                 {
-                    if ( src.isString() )
+                    // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`). 예전에는 0 을 썼다.
+                    int64        parsedValue{ 0 };
+                    const string text = src.isString() ? string( src.asString() ) : sw::to_string( src.asInt( 0 ) );
+                    if ( ( src.isString() || src.isNumber() ) && pEnumInfo->tryParseText( text, parsedValue ) )
                     {
-                        const int64 v = pEnumInfo->stringFlagsToValue( src.asString() );
-                        pEnumInfo->writeValueToMemory( pValPtr, v );
+                        pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
                         return true;
                     }
-                    if ( src.isNumber() )
-                    {
-                        pEnumInfo->writeValueToMemory( pValPtr, src.asInt( 0 ) );
-                        return true;
-                    }
+                    SW_LOG_WARNING( "'%#' is not a value of enum %# - the field keeps its current value", text, pEnumInfo->_fullyQualifiedName.c_str() );
+                    return false;
                 }
 
                 const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );

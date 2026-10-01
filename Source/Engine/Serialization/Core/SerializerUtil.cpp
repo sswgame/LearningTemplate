@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Core/SerializerUtil.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -566,8 +567,15 @@ namespace sw
             string_view flagsText = valStr;
             if ( flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"' )
                 flagsText = flagsText.substr( 1, flagsText.size() - 2 );
-            const int64 flagsValue = pEnumInfo->stringFlagsToValue( flagsText );
-            pEnumInfo->writeValueToMemory( pValPtr, flagsValue );
+            // 모르는 이름이면 쓰지 않고 실패를 돌려준다(값은 그대로 — 대개 멤버 초기값). 읽는 쪽이 orphan 으로 남기거나 실패로 알린다.
+            // 예전에는 `stringFlagsToValue` 가 모르는 이름을 0 으로 만들어 그 0 을 썼다(`EnumInfo::tryParseText` 설명).
+            int64 parsedValue{ 0 };
+            if ( pEnumInfo->tryParseText( flagsText, parsedValue ) == false )
+            {
+                SW_LOG_WARNING( "'%#' is not a value of enum %# - the field keeps its current value", flagsText, pEnumInfo->_fullyQualifiedName.c_str() );
+                return false;
+            }
+            pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
             return true;
         }
 
