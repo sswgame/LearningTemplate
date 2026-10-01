@@ -39,10 +39,15 @@ namespace sw
         static bool writeIfChanged( const string& path, const string_view content );
 
         /**
-         * @brief 스탬프를 지금 시각으로 씁니다. 내용은 원본 경로 한 줄입니다.
-         * @details 빈 파일을 빈 파일로 덮어쓰면 쓰기 시각이 바뀌는지는 파일 시스템마다 다를 수 있어, 내용을 적어 확실히 씁니다.
+         * @brief 스탬프를 씁니다. 내용은 원본 경로 한 줄과 `input <쓰기 시각>` 한 줄입니다.
+         * @details `inputWriteTime` 은 **파싱하려고 읽기 전에** 잰 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
+         *          봅니다(`IncrementalCheck::isUpToDate`). 예전에는 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 봐서, 파싱하는 동안
+         *          저장한 편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시됐다 — 그 헤더를 다시 저장할 때까지.
          */
-        static bool writeStamp( const string& stampPath, const string& inputFile );
+        static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime );
+
+        /** @brief 파일의 마지막 쓰기 시각(플랫폼 단위 그대로)입니다. 없으면 0 입니다. 스탬프에 적는 값과 같은 단위입니다. */
+        static uint64 getWriteTime( string_view path );
 
         /** @brief 산출물 머리말(`// Source: …`)에 적힌 원본 경로입니다. 없으면 빈 뷰입니다. */
         static string_view findRecordedSourcePath( const string_view generatedText, const ParserConfig& config );

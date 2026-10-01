@@ -19,6 +19,8 @@ namespace sw
         {
             /** @brief 스탬프 확장자입니다 — `<.gen.cpp>.stamp`. CMake 가 ReflectBuiltins 에 쓰는 규칙과 같습니다. */
             static constexpr const utf8* kStampSuffix = ".stamp";
+            /** @brief 스탬프의 "파싱 전에 본 입력의 쓰기 시각" 줄 머리입니다 — `input <시각>`. */
+            static constexpr const utf8* kStampInputTimeKey = "input";
 
             /**
              * @brief 증분 판정은 앞부분만 읽습니다. 머리말(원본 경로)과 자리 표시자 표식이 모두 여기 들어옵니다.
@@ -81,14 +83,20 @@ namespace sw
         return true;
     }
 
-    bool GeneratedFileUtil::writeStamp( const string& stampPath, const string& inputFile )
+    bool GeneratedFileUtil::writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime )
     {
-        if ( FileUtil::writeTextFile( stampPath, inputFile ) == false )
+        const string stampText = inputFile + "\n" + GeneratedFilesInternal::kStampInputTimeKey + " " + to_string( inputWriteTime ) + "\n";
+        if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
         {
             SW_LOG_ERROR( "Failed to write %#", stampPath );
             return false;
         }
         return true;
+    }
+
+    uint64 GeneratedFileUtil::getWriteTime( string_view path )
+    {
+        return GeneratedFilesInternal::getWriteTime( path );
     }
 
     string_view GeneratedFileUtil::findRecordedSourcePath( const string_view generatedText, const ParserConfig& config )
@@ -142,8 +150,9 @@ namespace sw
         if ( stampTime == 0 || FileUtil::fileExists( paths._cppPath ) == false || FileUtil::fileExists( paths._headerPath ) == false )
             return false;
 
+        // 스탬프 파일의 시각은 **도구**가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).
         const uint64 inputTime = GeneratedFilesInternal::getWriteTime( inputFile );
-        if ( inputTime == 0 || stampTime < inputTime || stampTime < _newestToolWriteTime )
+        if ( inputTime == 0 || stampTime < _newestToolWriteTime )
             return false;
 
         // 시각이 최신이어도 내용이 자리 표시자면 다시 만든다(산출물이 지워져 CMake 가 구성 때 다시 심은 경우).
@@ -162,9 +171,23 @@ namespace sw
         // 예전에는 .gen.cpp 머리말(`// Source: …`)을 대조했는데, 리플렉트된 타입이 **없는** 헤더의 산출물에는 그 머리말이
         // 없어서 그런 헤더는 한 번도 "최신" 이 되지 못하고 **파서가 돌 때마다 다시 파싱**됐다(Engine 의 TypeRegistry.h ·
         // ReflectionMacros.h, GameFramework 의 한 개 — Engine 파서 호출마다 약 1 초).
-        string recordedSource;
-        if ( FileUtil::readTextFile( paths._stampPath, recordedSource ) == false )
+        string stampText;
+        if ( FileUtil::readTextFile( paths._stampPath, stampText ) == false )
             return false;
-        return recordedSource == inputFile;
+        // 첫 줄은 원본 경로, 다음 줄은 `input <파싱 전에 본 쓰기 시각>`. 옛 꼴(경로 한 줄)은 시각이 없으니 한 번 다시 만든다.
+        const string_view text       = stampText;
+        const size_t      firstBreak = text.find( '\n' );
+        const string_view recorded   = text.substr( 0, firstBreak );
+        if ( firstBreak == string_view::npos || recorded != string_view( inputFile ) )
+            return false;
+        const string_view inputLine = StringUtil::trim( text.substr( firstBreak + 1, text.find( '\n', firstBreak + 1 ) - ( firstBreak + 1 ) ) );
+        const string_view key       = GeneratedFilesInternal::kStampInputTimeKey;
+        if ( inputLine.size() <= key.size() + 1 || inputLine.substr( 0, key.size() ) != key )
+            return false;
+        int64 recordedTime{ 0 };
+        if ( StringUtil::parseInt64( StringUtil::trim( inputLine.substr( key.size() ) ), recordedTime ) == false )
+            return false;
+        // **같아야** 최신이다. 파싱하는 동안 저장한 편집은 스탬프보다 오래된 시각을 가질 수 있다 — 크고 작음이 아니라 같음으로 본다.
+        return static_cast<uint64>( recordedTime ) == inputTime;
     }
 } // namespace sw

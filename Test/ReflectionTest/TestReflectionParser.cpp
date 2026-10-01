@@ -1066,3 +1066,65 @@ SW_TEST_CASE( ReflectionParserTest, ParserExecutableIsBuilt )
     SW_EXPECT_TRUE_MSG( findReflectionParserExecutable().empty() == false,
                         "ReflectionParser executable not found next to the tests (Bin/ · BuildTools/) - the other parser cases skip" );
 }
+
+/**
+ * @brief [ReflectionParserTest] 파싱하는 동안 저장한 편집도 다음 실행이 다시 파싱한다 — 스탬프보다 오래된 시각이어도
+ * @details 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 봤다. 파서가 헤더를 읽은 뒤 · 스탬프를 쓰기 전에 저장한 편집은 스탬프보다 오래된 시각을
+ *          가져 다음 실행에서도 "최신" 이었다 — 그 헤더를 다시 저장할 때까지 생성 코드에 들어가지 않았다. 이제 스탬프에 읽기 전에 본 시각을 적고 같음으로 본다.
+ */
+SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string caseRoot    = test::makeTempPath( "midparse_edit" );
+    const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "MidParseEditSample.h" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    const auto makeHeader = []( const utf8* pExtraProperty )
+    {
+        return sw::string( "#pragma once\n"
+                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                           "namespace sw\n"
+                           "{\n"
+                           "    REFLECT()\n"
+                           "    struct MidParseEditSampleActor\n"
+                           "    {\n"
+                           "        REFLECT_BODY();\n"
+                           "        PROPERTY()\n"
+                           "        int32 _value;\n" ) +
+               pExtraProperty + "    };\n}\n";
+    };
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, makeHeader( "" ) ) );
+    // 처음 읽을 때의 헤더 시각을 두 시간 전으로 — 아래의 "편집" 시각을 그 뒤 · 스탬프 앞에 둘 자리를 만든다.
+    const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
+    std::filesystem::last_write_time( headerPath.c_str(), now - std::chrono::hours( 2 ) );
+
+    const sw::string   command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+    sw::ProcessOptions options;
+    options._workingDirectory = projectRoot;
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+
+    const sw::string genPath   = sw::FileUtil::joinPath( outGenDir, "MidParseEditSample.gen.cpp" );
+    const sw::string stampPath = genPath + ".stamp";
+    SW_ASSERT_TRUE( sw::FileUtil::fileExists( stampPath ) );
+
+    // 파싱 도중에 저장한 편집: 내용이 바뀌고 시각은 처음 읽은 때보다 뒤, 스탬프보다는 앞.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, makeHeader( "        PROPERTY()\n        int32 _addedWhileParsing;\n" ) ) );
+    std::filesystem::last_write_time( headerPath.c_str(), std::filesystem::last_write_time( stampPath.c_str() ) - std::chrono::seconds( 1 ) );
+
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+    sw::string generated;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generated ) );
+    SW_EXPECT_TRUE_MSG( generated.find( "_addedWhileParsing" ) != sw::string::npos,
+                        "파싱하는 동안 저장한 편집을 스탬프가 가렸습니다 — 그 헤더를 다시 저장할 때까지 생성 코드에 들어가지 않습니다" );
+
+    // 그대로 다시 돌리면 최신이다(다시 파싱하지 않는다 — 산출물을 건드리지 않는다).
+    const std::filesystem::file_time_type stampBefore = std::filesystem::last_write_time( stampPath.c_str() );
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+    SW_EXPECT_TRUE( std::filesystem::last_write_time( stampPath.c_str() ) == stampBefore );
+}

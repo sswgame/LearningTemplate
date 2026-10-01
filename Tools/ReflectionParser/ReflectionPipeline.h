@@ -33,6 +33,7 @@ namespace sw
             const string*  _pInputFile;
             string         _content;
             GeneratedPaths _paths;
+            uint64         _inputWriteTime; /**< 내용을 **읽기 전에** 잰 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
         };
 
         /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
@@ -47,8 +48,8 @@ namespace sw
         bool parseAndGenerate( const PendingInput& pending ) const;
         /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */
         int32 parseEachInParallel( const vector<PendingInput>& listPending ) const;
-        /** @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프. */
-        bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed ) const;
+        /** @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프(`inputWriteTime` 은 읽기 전에 잰 입력 시각). */
+        bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime ) const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
         bool writeFlagOpsUmbrella() const;
 

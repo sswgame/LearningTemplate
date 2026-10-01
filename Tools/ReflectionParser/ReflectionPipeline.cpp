@@ -174,7 +174,9 @@ namespace sw
                 continue;
             }
 
-            string content;
+            // 시각을 **읽기 전에** 잰다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
+            const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
+            string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )
             {
                 SW_LOG_ERROR( "Failed to read input: %#", inputFile );
@@ -187,12 +189,12 @@ namespace sw
             {
                 SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
                 ++noReflect;
-                if ( writeOutputs( inputFile, paths, ParsedHeader{} ) == false )
+                if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime ) == false )
                     ++errorCount;
                 continue;
             }
 
-            listPending.push_back( PendingInput{ &inputFile, std::move( content ), std::move( paths ) } );
+            listPending.push_back( PendingInput{ &inputFile, std::move( content ), std::move( paths ), inputWriteTime } );
         }
 
         SW_LOG_INFO( "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size(),
@@ -262,7 +264,7 @@ namespace sw
                 ++outErrorCount;
                 continue;
             }
-            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index] ) == false )
+            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime ) == false )
                 ++outErrorCount;
         }
         return true;
@@ -290,7 +292,7 @@ namespace sw
             return false;
         }
 
-        return writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front() );
+        return writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime );
     }
 
     int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending ) const
@@ -330,7 +332,7 @@ namespace sw
         return errorCount.load();
     }
 
-    bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed ) const
+    bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime ) const
     {
         const ParserConfig& config = _pSession->_config;
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
@@ -368,7 +370,7 @@ namespace sw
 
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, generator.makeSourceText() ) &&
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
-                              GeneratedFileUtil::writeStamp( paths._stampPath, inputFile );
+                              GeneratedFileUtil::writeStamp( paths._stampPath, inputFile, inputWriteTime );
         if ( bWritten == false )
             SW_LOG_ERROR( "Code generation failed: %#", inputFile );
         return bWritten;
