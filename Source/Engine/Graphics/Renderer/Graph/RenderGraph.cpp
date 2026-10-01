@@ -363,6 +363,41 @@ namespace sw
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
             scratch._listNodeCmdList.resize( _listNode.size() );
 
+        // 모든 레벨의 커맨드 리스트를 **기록 · 제출 전에** 마련한다. 예전에는 레벨을 돌며 만들다 실패하면 직렬 `execute` 로 넘어갔다 —
+        // 그때는 앞 레벨이 이미 기록 · 제출된 뒤라 그 패스들이 **두 번** 돌았고, 직렬 경로는 커맨드 리스트 없이 기록했다(병렬로 오기 전에
+        // 부르는 쪽이 프레임 리스트를 닫아 제출했다 — `FrameRenderer`). 이제 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
+        for ( const vector<hashed_string>& level : _listCompiledLevel )
+        {
+            for ( const hashed_string& passName : level )
+            {
+                const auto indexIt = _mapNameToIndex.find( passName );
+                if ( indexIt == _mapNameToIndex.end() )
+                {
+                    SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
+                    return false;
+                }
+                const RenderGraphNode& node = _listNode[indexIt->second];
+                if ( node._bCulled || node._execute.isBound() == false )
+                    continue;
+
+                unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[indexIt->second];
+                if ( passCmd == nullptr )
+                    passCmd = pDevice->createCommandList();
+                if ( passCmd == nullptr )
+                {
+                    // 디바이스가 죽으면 매 프레임 여기로 온다 — 같은 오류를 끝없이 되풀이하지 않는다.
+                    static bool s_bCreateFailureLogged = false;
+                    if ( s_bCreateFailureLogged == false )
+                    {
+                        s_bCreateFailureLogged = true;
+                        SW_LOG_ERROR( "executeParallel: could not create a command list for pass '%#' - nothing was recorded or submitted this frame",
+                                      passName.c_str() );
+                    }
+                    return false;
+                }
+            }
+        }
+
         // 의존성 레벨 단위로 처리한다. 같은 레벨의 패스들만 동시에 병렬 기록하고,
         // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
         // 그래야 레벨 N+1 이 참조할 수도 있는 레벨 N 의 출력(예: DepthPrepass → ForwardOpaque)이
@@ -396,21 +431,8 @@ namespace sw
                 if ( node._execute.isBound() == false )
                     continue;
 
-                unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[indexIt->second];
-                if ( passCmd == nullptr )
-                    passCmd = pDevice->createCommandList();
-                if ( passCmd == nullptr )
-                {
-                    // 디바이스가 죽으면 매 프레임 여기로 떨어지므로, 같은 경고를 무한 반복하지 않는다.
-                    static bool s_bFallbackLogged = false;
-                    if ( s_bFallbackLogged == false )
-                    {
-                        s_bFallbackLogged = true;
-                        SW_LOG_WARNING( "Deferred command list unsupported by RHI — falling back to serial execute" );
-                    }
-                    return execute( context );
-                }
-                listPassEntry.push_back( ParallelPassEntry{ &node, passCmd.get() } );
+                // 리스트는 위에서 모두 마련했다.
+                listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[indexIt->second].get() } );
             }
 
             if ( listPassEntry.empty() )
@@ -447,6 +469,12 @@ namespace sw
                     stage.addTask( handle );
                     // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
                     pTaskManager->submitWithoutWake( handle );
+                }
+                else
+                {
+                    // 작업을 넣지 못했다(풀이 바닥났거나 내리는 중). 예전에는 그냥 넘어가, 그 리스트가 기록 없이 아래에서 제출됐다 — 레벨의 첫
+                    // 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로. 여기서(렌더 스레드) 직접 기록한다.
+                    entry.record();
                 }
             }
             pTaskManager->wakeSleepingWorkers( static_cast<uint32>( listPassEntry.size() ) );

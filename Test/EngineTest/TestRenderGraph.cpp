@@ -1,8 +1,28 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Task/TaskManager.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
+#include "EngineTest/RHIFakeDevice.h"
+
 #include "TestFramework/TestFramework.h"
+
+namespace
+{
+    /** @brief 패스마다 몇 번 돌았는지 세고, 받은 가짜 리스트에 자기 이름을 적는 콜백을 만듭니다. */
+    sw::RenderGraphPassExecuteFn makeCountingPass( sw::atomic<int32>& callCount )
+    {
+        return SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&callCount]( const sw::RenderGraphPassContext& ctx )
+        {
+            callCount.fetch_add( 1 );
+            if ( ctx._pCmdList != nullptr )
+                static_cast<test::FakeRHICommandList*>( ctx._pCmdList )->_passName = ctx._passName;
+        } );
+    }
+} // namespace
 
 // Engine_Renderer — RenderGraph 가 배리어를 **바뀐 것만** 추론하는지, 읽고-쓰는 자원의 수명을 맞추는지.
 // ------------------------------------------------------------------------------
@@ -235,4 +255,65 @@ SW_TEST_CASE( RenderGraphTest, DescribeCompiledOrderListsLevelsAndResources )
     {
         SW_EXPECT_TRUE_MSG( text.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + text ).c_str() );
     }
+}
+
+/**
+ * @brief [RenderGraphTest] 병렬 기록은 패스마다 한 번 기록하고, 레벨 순서로 닫힌 리스트를 제출한다(가짜 디바이스 — GPU 불필요)
+ * @details 이 경로는 디바이스가 있어야 돌아서 GPU 시험에서만 지나갔다. A · C 는 레벨 0, A 의 출력을 읽는 B 는 레벨 1 이다.
+ */
+SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder )
+{
+    sw::atomic<int32> countA{ 0 };
+    sw::atomic<int32> countB{ 0 };
+    sw::atomic<int32> countC{ 0 };
+    sw::RenderGraph   graph;
+    graph.addPass( sw::hashed_string( "A" ), {}, { sw::hashed_string( "OutA" ) }, makeCountingPass( countA ) );
+    graph.addPass( sw::hashed_string( "B" ), { sw::hashed_string( "OutA" ) }, { sw::hashed_string( "OutB" ) }, makeCountingPass( countB ) );
+    graph.addPass( sw::hashed_string( "C" ), {}, { sw::hashed_string( "OutC" ) }, makeCountingPass( countC ) );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    test::FakeRHIDevice             device;
+    sw::RenderGraphExecutionContext context;
+    SW_ASSERT_TRUE( graph.executeParallel( context, &sw::engine::getTaskManager(), &device ) );
+
+    SW_EXPECT_EQUAL( 1, countA.load() );
+    SW_EXPECT_EQUAL( 1, countB.load() );
+    SW_EXPECT_EQUAL( 1, countC.load() );
+    SW_ASSERT_EQUAL( size_t( 3 ), device._listExecuted.size() );
+    SW_EXPECT_TRUE( device._listExecuted[2]->_passName == sw::hashed_string( "B" ) ); // 레벨 0 의 둘 다음
+    for ( const test::FakeRHICommandList* pList : device._listExecuted )
+    {
+        SW_EXPECT_EQUAL( 1u, pList->_beginCount );
+        SW_EXPECT_EQUAL( 1u, pList->_endCount );
+        SW_EXPECT_FALSE( pList->_bOpen );
+    }
+}
+
+/**
+ * @brief [RenderGraphTest] 커맨드 리스트를 만들 수 없으면 병렬 기록은 아무것도 기록 · 제출하지 않고 실패한다 — 앞 레벨을 두 번 돌리지 않는다
+ * @details 예전에는 레벨을 돌며 리스트를 만들다 실패하면 직렬 `execute` 로 넘어갔다. 앞 레벨은 이미 기록 · 제출된 뒤라 그 패스들이 두 번 돌았고(같은
+ *          프레임에 두 번 그린다), 직렬 경로는 리스트 없이 기록했다(부르는 쪽은 프레임 리스트를 이미 닫았다).
+ */
+SW_TEST_CASE( RenderGraphTest, ParallelExecutionSubmitsNothingWhenACommandListCannotBeMade )
+{
+    sw::atomic<int32> countA{ 0 };
+    sw::atomic<int32> countB{ 0 };
+    sw::atomic<int32> countC{ 0 };
+    sw::RenderGraph   graph;
+    graph.addPass( sw::hashed_string( "A" ), {}, { sw::hashed_string( "OutA" ) }, makeCountingPass( countA ) );
+    graph.addPass( sw::hashed_string( "B" ), { sw::hashed_string( "OutA" ) }, { sw::hashed_string( "OutB" ) }, makeCountingPass( countB ) );
+    graph.addPass( sw::hashed_string( "C" ), {}, { sw::hashed_string( "OutC" ) }, makeCountingPass( countC ) );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    test::FakeRHIDevice device;
+    device._maxCreatable = 2; // 레벨 0 의 둘은 만들고, 레벨 1 의 B 에서 실패한다
+    sw::RenderGraphExecutionContext context;
+    {
+        test::ScopedDefensiveTestLog expected( "a device that cannot make more command lists" );
+        SW_EXPECT_FALSE( graph.executeParallel( context, &sw::engine::getTaskManager(), &device ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 0 ), device._listExecuted.size() );
+    SW_EXPECT_EQUAL( 0, countA.load() );
+    SW_EXPECT_EQUAL( 0, countB.load() );
+    SW_EXPECT_EQUAL( 0, countC.load() );
 }

@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㉞ 렌더 그래프 — 병렬 기록이 리스트를 못 만들면 앞 레벨을 두 번 그렸다 · 가짜 RHI 디바이스)
+
+`RenderGraph::executeParallel` 은 레벨을 돌며 패스마다 커맨드 리스트를 만들다가 실패하면 직렬 `execute` 로 넘어갔다. 그때는 앞 레벨들이 **이미 기록 ·
+제출된 뒤**라 그 패스들이 같은 프레임에 두 번 돌았고, 직렬 경로는 커맨드 리스트 없이 기록했다 — 병렬로 오기 전에 `FrameRenderer` 가 프레임 리스트를
+닫아 제출했으므로 패스는 닫힌 리스트에 쓴다. 그리고 `true` 를 돌려줬다. 또 작업 제출이 실패한 패스(`emplaceTask` 가 무효 핸들)는 기록 없이 넘어가,
+그 리스트가 그대로 제출됐다 — 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로.
+- 모든 레벨의 리스트를 **기록 · 제출 전에** 마련한다. 못 만들면 그 패스 이름과 함께 오류(한 번만)를 남기고 아무것도 내지 않은 채 `false`.
+- 작업을 넣지 못한 패스는 렌더 스레드가 직접 기록한다.
+**시험 기반.** `Test/EngineTest/RHIFakeDevice.h` — `test::FakeRHIDevice`(병렬 기록 지원이라 답하고, 만든 리스트와 **제출 순서**를 적고, `_maxCreatable` 개
+뒤로는 만들지 못한다) · `test::FakeRHICommandList`(열기 · 닫기 횟수, 기록한 패스 이름). 병렬 기록 경로가 처음으로 GPU 없이(nogpu) 돈다.
+**검증.** `RenderGraphTest.ParallelExecutionRecordsEachPassOnceInLevelOrder`(패스마다 한 번, 레벨 0 의 둘 다음에 레벨 1, 모두 한 번 열고 닫힌 채 제출),
+`RenderGraphTest.ParallelExecutionSubmitsNothingWhenACommandListCannotBeMade`. 옛 코드로 되돌려 빌드하면 두 번째가 `true`, 제출 2, A · C 두 번씩으로 실패한다.
+GPU 시험(hostgpu)과 DX12 실행도 그대로다. 작업 제출 실패 경로는 시험이 만들 수 없어 고치기만 했다.
+
 ### 2026-10-01 (결함 ㉝ 애니메이션 — 오래 돈 반복 재생은 시간이 멈췄다)
 
 `AnimPlayer::update` 는 반복 클립의 시간을 끝없이 더했다(샘플할 때만 한 바퀴 안으로 접었다). float32 라 오래 켜 둔 루프(대기 · 배경 오브젝트)는 정밀도가
