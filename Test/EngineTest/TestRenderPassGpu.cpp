@@ -33,6 +33,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
+#include "EngineTest/RHITestDevice.h"
+
 #include "TestFramework/TestFramework.h"
 
 // 프레임 렌더러를 실제 디바이스 위에서 돌린다 — 패스 · 파이프라인 · 백엔드 패리티를 픽셀로 본다.
@@ -44,35 +46,6 @@ SW_TEST_REQUIRES_HOST( RenderPassGpuTest, "runs FrameRenderer on a real GPU devi
 
 namespace
 {
-    bool tryInitDeviceForFrameRenderer( sw::RHIBackend backend, sw::unique_ptr<sw::IWindow>& outWindow,
-                                        sw::shared_ptr<sw::IRHIDevice>& outDevice )
-    {
-        if ( sw::RHIAvailability::isAvailable( backend ) == false )
-            return false;
-        outWindow = sw::IWindow::createPlatformWindow();
-        if ( outWindow == nullptr || outWindow->initializeWindow( "FrameRendererGolden", 320, 240 ) == false )
-        {
-            outWindow.reset();
-            return false;
-        }
-        outDevice = sw::RHI::createDevice( backend );
-        if ( outDevice == nullptr )
-        {
-            outWindow->destroy();
-            outWindow.reset();
-            return false;
-        }
-        outDevice->setRenderSurface( outWindow.get() );
-        if ( outDevice->initialize() == false )
-        {
-            outDevice.reset();
-            outWindow->destroy();
-            outWindow.reset();
-            return false;
-        }
-        return true;
-    }
-
     /**
      * @brief 첨부 하나의 R 채널 평균(0~255)을 되읽습니다. 실패하면 0.
      * @details 반정밀도(R16G16B16A16_FLOAT) 첨부는 [0,1] 로 클램프해 환산한다 — 두 판을 비교하는 데만
@@ -169,20 +142,8 @@ namespace
  */
 SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for FrameRenderer smoke" );
 
     sw::FrameRenderer renderer;
@@ -210,10 +171,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
         cube->releaseRhi( device.get() );
 
     renderer.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -228,20 +185,8 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
  */
 SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for shader recompile test" );
 
     sw::FrameRenderer renderer;
@@ -279,10 +224,6 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
     if ( cube != nullptr )
         cube->releaseRhi( device.get() );
     renderer.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -293,20 +234,8 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
  */
 SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for GpuScene buffer reuse test" );
 
     sw::FrameRenderer renderer;
@@ -349,10 +278,6 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
         cube->releaseRhi( device.get() );
 
     renderer.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -365,20 +290,8 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
  */
 SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for material lifetime test" );
 
     sw::FrameRenderer renderer;
@@ -436,10 +349,6 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
     if ( cube != nullptr )
         cube->releaseRhi( device.get() );
     renderer.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -455,24 +364,14 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
  */
 SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
-        {
-            device->shutdown();
-            device.reset();
-            window->destroy();
-            window.reset();
             continue;
-        }
         ++attemptedCount;
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
 
@@ -503,10 +402,6 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 
         device->waitIdle();
         taskManager.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -528,27 +423,17 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
  */
 SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         // **병렬로 기록하는 백엔드는 전부 돈다 — 하나 찾고 멈추지 않는다.** 예전엔 목록이 {DX12, Vulkan}
         // 이고 첫 성공에서 break 였다. 레이스를 잡으려고 만든 테스트가 정작 레이스가 있던 DX11 을
         // 건너뛰고 있었다.
         if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
-        {
-            device->shutdown();
-            device.reset();
-            window->destroy();
-            window.reset();
             continue;
-        }
         ++attemptedCount;
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
 
@@ -622,10 +507,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
             cube->releaseRhi( device.get() );
         renderer.shutdown();
         taskManager.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -644,9 +525,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
  */
 SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
     {
         for ( const sw::string& defineStr : desc._listShaderDefine )
@@ -658,11 +536,10 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
     };
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -803,20 +680,16 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
  */
 SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     // 라이트 직교 상자는 원점 중심 폭 2.22 — 반폭 1.11 에 바운드 반지름 0.87 을 더해도 2.5 는 밖이다.
     constexpr float32 kSideX = 2.5f;
     // 카메라(0, 1.2, 3.2)에서 뒤로 물려 시야 폭을 넓힌다 — 그래야 ±2.5 가 화면 안에 들어온다.
     constexpr float32 kDepthZ = -6.0f;
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -901,10 +774,6 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         if ( sharedMesh != nullptr )
             sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -925,19 +794,15 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
  */
 SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     bool    bHasReference{ false };
     float32 referenceMean[3]{};
     uint32  referenceDrawn{ 0 };
     uint32  attemptedCount{ 0 };
 
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -1072,10 +937,6 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         if ( sharedMesh != nullptr )
             sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -1097,20 +958,16 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
  */
 SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     // 기본 카메라는 (0, 1.2, 3.2) 에서 원점을 본다 — -Z 를 보므로 월드 +X 는 화면 왼쪽이다.
     constexpr float32 kSideOffset = 1.2f;
     // 카메라 뒤(+Z 쪽 멀리)로 보내 절두체 밖에 둔다.
     constexpr float32 kBehindCameraZ = 40.0f;
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -1209,10 +1066,6 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         if ( sharedMesh != nullptr )
             sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -1231,19 +1084,15 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
  */
 SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     // 기본 카메라는 -Z 를 본다 — 월드 +X 가 화면 **왼쪽**으로 간다. 그래서 붉은 큐브를 -X 에 두면
     // 화면 오른쪽이 붉어진다.
     constexpr float32 kSideOffset = 1.2f;
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -1378,10 +1227,6 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         if ( meshBlue != nullptr )
             meshBlue->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -1401,18 +1246,14 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
  */
 SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     /// @brief 두 큐브를 카메라가 보는 원점에서 좌우로 이만큼 떼어 놓는다.
     constexpr float32 kSideOffset = 1.1f;
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -1504,10 +1345,6 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         if ( meshRight != nullptr )
             meshRight->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -1528,16 +1365,12 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
  */
 SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     uint32 attemptedCount{ 0 };
 
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
 
         ++attemptedCount;
@@ -1622,10 +1455,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
                 mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
 
         SW_EXPECT_TRUE_MSG( bOk, ( sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) ) + " execute" ).c_str() );
     }
@@ -1640,9 +1469,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
  */
 SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     /// @brief 큐브를 원점(카메라가 보는 지점)보다 이만큼 위에 둔다 — 그림을 세로로 비대칭하게 만들어 방향을 검사할 수 있게.
     constexpr float32 kParityCubeHeight = 1.0f;
 
@@ -1652,11 +1478,10 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
     float32 referenceMean[3]{};
     uint32  referenceDrawnCount{ 0 };
 
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
 
         ++attemptedCount;
@@ -1796,10 +1621,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
                 mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
 
         if ( bOk )
             ++okCount;
@@ -1826,9 +1647,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
  */
 SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
     {
         for ( const sw::string& defineStr : desc._listShaderDefine )
@@ -1840,11 +1658,10 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
     };
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -1978,10 +1795,6 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         if ( mesh != nullptr )
             mesh->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -1998,21 +1811,8 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
  */
 SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-    sw::RHIBackend                 backend    = sw::RHIBackend::DirectX12;
-    bool                           bOk{ false };
-    for ( sw::RHIBackend candidate : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
-        {
-            backend = candidate;
-            bOk     = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for device recreate test" );
 
     constexpr const utf8* kGlassMaterial = "engine/materials/glassmaterial.material";
@@ -2039,14 +1839,9 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     material->releaseRhi( device.get() );
     cube->releaseRhi( device.get() );
     gtGpuScene.clear();
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
+    device.shutdownDevice();
 
-    device = sw::RHI::createDevice( backend );
-    SW_ASSERT_NOT_NULL( device.get() );
-    device->setRenderSurface( window.get() );
-    SW_ASSERT_TRUE( device->initialize() );
+    SW_ASSERT_TRUE( device.recreateDevice() );
     SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
 
     // 같은 렌더러 객체를 새 디바이스로 다시 세운다 — 앱이 하는 그대로.
@@ -2066,11 +1861,6 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     freshRenderer.shutdown();
     material->releaseRhi( device.get() );
     cube->releaseRhi( device.get() );
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -2081,19 +1871,8 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
  */
 SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-    bool                           bOk{ false };
-    for ( sw::RHIBackend candidate : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for upload queue test" );
 
     sw::GpuUploadQueue queue;
@@ -2130,11 +1909,6 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
         arrMesh[meshIndex]->releaseRhi( device.get() );
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -2153,21 +1927,8 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
  */
 SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-    sw::RHIBackend                 backend    = sw::RHIBackend::DirectX12;
-    bool                           bOk{ false };
-    for ( sw::RHIBackend candidate : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
-        {
-            backend = candidate;
-            bOk     = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for render resource registry test" );
 
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -2175,15 +1936,10 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
 
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
+    device.shutdownDevice();
     SW_EXPECT_TRUE( cube->isRhiValid() == false );
 
-    device = sw::RHI::createDevice( backend );
-    SW_ASSERT_NOT_NULL( device.get() );
-    device->setRenderSurface( window.get() );
-    SW_ASSERT_TRUE( device->initialize() );
+    SW_ASSERT_TRUE( device.recreateDevice() );
 
     // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
     sw::RHIRenderResource::initAllFor( device.get() );
@@ -2198,31 +1954,12 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
     // 내 디바이스의 통보에는 반응해야 한다.
     sw::RHIRenderResource::releaseAllFor( device.get() );
     SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "내 디바이스의 해제 통보를 받고도 상주라고 답한다" );
-
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-    sw::RHIBackend                 backend    = sw::RHIBackend::DirectX12;
-    bool                           bOk{ false };
-    for ( sw::RHIBackend candidate : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
-        {
-            backend = candidate;
-            bOk     = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for device generation test" );
 
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -2232,29 +1969,19 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 
     // **releaseGpu 를 부르지 않고** 디바이스를 죽인다 — 실수로 잊은 경우가 바로 이 카운터가 막아야 할 상황이다.
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
+    device.shutdownDevice();
 
     // **동작으로 단언한다** — 세대 번호든 수명 토큰이든 구현은 바뀔 수 있다. 바뀌면 안 되는 것은
     // "디바이스가 죽으면 그 핸들은 더 이상 상주가 아니다" 뿐이다.
     SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "죽은 디바이스의 핸들을 아직 상주 라고 답한다" );
 
     // 새 디바이스에는 **새로** 올라가야 한다. 옛 핸들을 그대로 돌려주면 그 드로우는 남의 버퍼를 읽는다.
-    device = sw::RHI::createDevice( backend );
-    SW_ASSERT_NOT_NULL( device.get() );
-    device->setRenderSurface( window.get() );
-    SW_ASSERT_TRUE( device->initialize() );
+    SW_ASSERT_TRUE( device.recreateDevice() );
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 
     cube->releaseRhi( device.get() );
-    device->waitIdle();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -2271,20 +1998,8 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
  */
 SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for deferred pipeline test" );
 
     sw::FrameRenderer renderer;
@@ -2355,10 +2070,6 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
         cube->releaseRhi( device.get() );
 
     renderer.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -2370,9 +2081,6 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
  */
 SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     struct Snapshot
     {
         uint32  _drawnCount{ 0 };
@@ -2424,11 +2132,10 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
     };
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
@@ -2531,10 +2238,6 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
                 mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -2549,9 +2252,6 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
  */
 SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     /// @brief 첨부 하나의 평균 밝기와 "가림이 있는(255 미만)" 픽셀 수.
     struct Stat
     {
@@ -2605,11 +2305,10 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
     };
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
@@ -2688,10 +2387,6 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
         if ( floor != nullptr )
             floor->releaseRhi( device.get() );
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -2709,20 +2404,8 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
  */
 SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for render target registry test" );
 
     sw::RenderTargetRegistry* pRegistry = sw::engine::getRenderTargetRegistry();
@@ -2770,11 +2453,6 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
     registry.snapshot( listTarget );
     SW_EXPECT_TRUE_MSG( listTarget.empty(), "렌더러가 내려갔는데 목록에 죽은 핸들이 남았다" );
     SW_EXPECT_TRUE_MSG( registry.getGeneration() != generation, "목록이 바뀌었는데 세대가 그대로다" );
-
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
 }
 
 /**
@@ -2790,9 +2468,6 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
  */
 SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균, 그리고 픽셀 비교용 원본.
     struct Snapshot
     {
@@ -2882,11 +2557,10 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
     };
 
     uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
@@ -2976,10 +2650,6 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
                 mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( attemptedCount == 0 )
@@ -3005,9 +2675,8 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
     int32 attemptedCount{ 0 };
     for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -3030,14 +2699,6 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
                                 "다시 올린 뒤 텍스처 서수가 누적됐습니다 — DX11 · GL 이 엉뚱한 슬롯을 읽습니다" );
 
             material->releaseRhi( device.get() );
-        }
-
-        device->shutdown();
-        device.reset();
-        if ( window != nullptr )
-        {
-            window->destroy();
-            window.reset();
         }
     }
 
@@ -3067,9 +2728,8 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
     int32 attemptedCount{ 0 };
     for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -3113,14 +2773,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             instance->releaseRhi( device.get() );
             parent->releaseRhi( device.get() );
         }
-
-        device->shutdown();
-        device.reset();
-        if ( window != nullptr )
-        {
-            window->destroy();
-            window.reset();
-        }
     }
 
     if ( attemptedCount == 0 )
@@ -3143,9 +2795,8 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
     int32 attemptedCount{ 0 };
     for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++attemptedCount;
 
@@ -3174,14 +2825,6 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
             if ( normal != 0 )
                 pResource->destroyBuffer( normal );
         }
-
-        device->shutdown();
-        device.reset();
-        if ( window != nullptr )
-        {
-            window->destroy();
-            window.reset();
-        }
     }
 
     if ( attemptedCount == 0 )
@@ -3202,16 +2845,12 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
  */
 SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     uint32 comparedCount{ 0 };
 
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
 
         // 씬은 한 번만 만든다 — 두 파이프라인이 **같은 입력**을 받아야 비교가 성립한다.
@@ -3347,10 +2986,6 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
             if ( mesh != nullptr )
                 mesh->releaseRhi( device.get() );
         }
-        device->shutdown();
-        device.reset();
-        window->destroy();
-        window.reset();
     }
 
     if ( comparedCount == 0 )

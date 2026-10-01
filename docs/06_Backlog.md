@@ -1841,8 +1841,8 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - [x] ① 호스트 스위트를 코드에서 선언 · `HOST_SPLIT` · 작업 폴더 `Bin` 통일 (3절 2026-10-01 ①)
 - [x] ② 단언 매크로를 한 뼈대로 · 실패 경로를 바깥 함수로 — Release EngineTest.exe 12.5 → 3.3 MB (3절 2026-10-01 ②)
 - [x] ③ 임시 경로는 케이스 폴더(`sw_<pid>/<케이스>/`) — 끝나면 프레임워크가 지운다, `Bin` · 소스 트리에 쓰던 테스트 정리 (3절 2026-10-01 ③)
-- [ ] ④ RHI 테스트 디바이스 RAII 공용화(RHIDevice · RenderPassGpu) — 케이스마다 창 · 디바이스 생성 12줄 + 정리 6줄을
-      손으로 반복하고, 중간 `SW_ASSERT` 로 빠지면 정리를 건너뛴다.
+- [x] ④ GPU 테스트의 창 + 디바이스를 RAII 한 벌로(`test::RHITestDevice`) (3절 2026-10-01 ④)
+- [ ] ④b 픽셀 되읽기 도우미 — `readbackTransient` 13 곳 · BGRA 뒤집기 16 곳이 케이스마다 같은 줄을 든다.
 - [ ] ⑤ 벤치 통계(`elapsedMicro` · `percentile` · `logSamples`) 세 파일 공용화.
 - [ ] ⑥ 자식 프로세스로 자기 자신을 다시 띄우는 도우미(CrashReport · Smoke) 공용화.
 - [ ] ⑦ ctest 병렬화 — `RUN_SERIAL` 의 근거를 찾아 `RESOURCE_LOCK` 으로 좁히거나 느린 실행 파일을 샤딩.
@@ -2036,6 +2036,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ④ GPU 테스트의 창 + 디바이스를 RAII 한 벌로 — `test::RHITestDevice`)
+
+**무엇이 문제였나.** `RHIDeviceTest` · `RenderPassGpuTest` 의 케이스 마흔 남짓이 창 만들기 · 디바이스 만들기 · 표면 붙이기 ·
+초기화 · 실패 시 되감기(12 줄)와 끝의 내리기(`device->shutdown()` · `reset` · `window->destroy()` · `reset`, 4~6 줄)를 손으로
+들고 있었다. 두 파일에 같은 일을 하는 도우미가 이름만 달리 둘(`tryInitDeviceForFrameRenderer` · `tryInitDeviceWithWindow`)
+있었다. 그리고 **그 사이의 `SW_ASSERT_*` 가 실패하면 내리기에 닿지 않았다** — 디바이스는 `shutdown()` 없이 소멸자만 돌고 창은
+`destroy()` 되지 않은 채 다음 케이스로 넘어갔다. 백엔드 목록도 케이스마다 `#if defined( SW_PLATFORM_WINDOWS )` 로 가른 배열을
+따로 들었다(이 호스트에 없는 백엔드는 어차피 `RHIAvailability` 가 거른다). 6 줄 중복 창의 대부분이 이 두 파일이었다(335 · 124).
+
+**지금.** `test::RHITestDevice`(`Test/EngineTest/RHITestDevice.h`)가 창 + 디바이스 한 벌이다. 스마트 포인터처럼 쓰고
+(`device->beginFrame( … )`, `renderer.initialize( device.get() )`), 소멸자가 디바이스 → 창 순서로 내린다.
+`RHITestDevice device( backend )` 는 그 백엔드로, `RHITestDevice device( { A, B, C } )` 는 처음으로 서는 것으로 세운다 —
+`isReady()` 가 false 면 그 호스트에 없는 것이다. 디바이스를 잃는 경로를 재는 케이스는 `shutdownDevice()`(창은 둔다) ·
+`recreateDevice()`(같은 창 위에 같은 백엔드로 — 앱의 교체 순서)를 쓴다. 네 백엔드를 도는 케이스는 `test::kArrAllRhiBackend`
+하나를 돈다(플랫폼 `#if` 배열 열 · 네 백엔드 배열 열아홉을 걷었다 — 걷은 배열이 넷 다 담고 있었는지 diff 로 확인했다).
+
+두 파일 841 → 129 줄 바뀜(712 줄 삭제), 6 줄 중복 창 335 → 251 · 124 → 102. 남은 큰 덩어리는 픽셀 되읽기(`readbackTransient`
+13 곳, BGRA 뒤집기 16 곳)다 — 다음 단계.
+
+**검증.** EngineTest `--host_suites=only` 62/62(스킵 0 — 네 백엔드 모두), Debug `nogpu|lint` 28/28 · `hostgpu` 2/2, Shipping 9/9.
+일찍 빠진 케이스가 이제 내려간다는 것을 따로 재는 시험은 없다 — 소멸자가 도는 것은 언어 규칙이고, 디바이스가 `shutdown()`
+없이 사라질 때의 안전망(`~IRHIDevice` → `forgetRhi`)이 이미 있어 핸들 상태로는 둘을 가를 수 없다.
 
 ### 2026-10-01 (Test 구조 ③ 임시 경로는 케이스 폴더 — 프레임워크가 지운다, `Bin` · 소스 트리에 쓰던 테스트 정리)
 

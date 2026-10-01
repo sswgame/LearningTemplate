@@ -8,6 +8,8 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
+#include "EngineTest/RHITestDevice.h"
+
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
@@ -21,54 +23,6 @@ SW_TEST_REQUIRES_HOST( RHIDeviceTest, "creates real GPU devices on every backend
 
 namespace
 {
-    bool tryInitDeviceWithWindow( sw::RHIBackend backend, sw::unique_ptr<sw::IWindow>& outWindow,
-                                  sw::shared_ptr<sw::IRHIDevice>& outDevice )
-    {
-        if ( sw::RHIAvailability::isAvailable( backend ) == false )
-            return false;
-
-        outWindow = sw::IWindow::createPlatformWindow();
-        if ( outWindow == nullptr )
-            return false;
-        if ( outWindow->initializeWindow( "RHIDualContextTest", 320, 240 ) == false )
-        {
-            outWindow.reset();
-            return false;
-        }
-
-        outDevice = sw::RHI::createDevice( backend );
-        if ( outDevice == nullptr )
-        {
-            outWindow->destroy();
-            outWindow.reset();
-            return false;
-        }
-
-        outDevice->setRenderSurface( outWindow.get() );
-        if ( outDevice->initialize() == false )
-        {
-            outDevice.reset();
-            outWindow->destroy();
-            outWindow.reset();
-            return false;
-        }
-        return true;
-    }
-
-    void shutdownDeviceWithWindow( sw::shared_ptr<sw::IRHIDevice>& device, sw::unique_ptr<sw::IWindow>& window )
-    {
-        if ( device != nullptr )
-        {
-            device->shutdown();
-            device.reset();
-        }
-        if ( window != nullptr )
-        {
-            window->destroy();
-            window.reset();
-        }
-    }
-
     /**
      * @brief Present 없이 오프스크린 RT로 파이프라인을 검증합니다.
      * @details createTexture2D → beginRenderPass → setPSO → fullscreen draw → (선택) readback → destroy.
@@ -219,13 +173,7 @@ SW_TEST_CASE( RHIDeviceTest, CapabilityMatrixNativeVsEmulated )
  */
 SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 {
-    sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::OpenGL,
-        sw::RHIBackend::Vulkan };
-
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
         sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( backend );
         if ( device != nullptr )
@@ -241,19 +189,11 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
  */
 SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
 
         sw::RHIRenderPassDesc       rpDesc{};
@@ -266,7 +206,6 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
         if ( pass == 0 )
         {
             SW_LOG_WARNING( "createRenderPass failed for backend %# — skip", static_cast<uint32>( backend ) );
-            shutdownDeviceWithWindow( device, window );
             continue;
         }
 
@@ -297,7 +236,6 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
             device->getResource()->destroyPipelineState( pso );
 
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -309,25 +247,9 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
  */
 SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> rhiDevice;
-    const sw::RHIBackend           prefer[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan
-#else
-        sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan
-#endif
-    };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : prefer )
-    {
-        if ( tryInitDeviceWithWindow( backend, window, rhiDevice ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
+    // 이 호스트에 없는 백엔드(리눅스의 DX)는 `RHITestDevice` 가 창을 띄우기 전에 거른다 — 목록을 플랫폼마다 가를 필요가 없다.
+    test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan } );
+    if ( rhiDevice.isReady() == false )
         SW_TEST_SKIP( "RHI device create/init failed (backend unavailable in this environment)" );
 
     struct DummyCB
@@ -366,7 +288,6 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 
     rhiDevice->getResource()->unregisterBindlessResource( descIdx );
     rhiDevice->getResource()->destroyBuffer( buffer );
-    shutdownDeviceWithWindow( rhiDevice, window );
 }
 
 /**
@@ -378,24 +299,11 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
  */
 SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -444,7 +352,6 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
             pResource->destroyBuffer( arrBuffer[slot] );
         }
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -460,9 +367,8 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
  */
 SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX12, window, device ) == false )
+    test::RHITestDevice device( sw::RHIBackend::DirectX12 );
+    if ( device.isReady() == false )
         SW_TEST_SKIP( "DX12 device unavailable" );
     sw::IRHIResource* pResource = device->getResource();
 
@@ -492,7 +398,6 @@ SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
     pResource->destroyBuffer( thirdBuffer );
     pResource->destroyBuffer( narrowBuffer );
     const bool bSequential = secondIndex == firstIndex + 1;
-    shutdownDeviceWithWindow( device, window );
     if ( bSequential == false )
         SW_TEST_SKIP( "DX12 free list was not empty on a fresh device; index sequence is not predictable" );
 }
@@ -504,18 +409,6 @@ SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
  */
 SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     // 4x4 + 2x2 + 1x1 = 21 픽셀 x RGBA 4바이트. 밉마다 다른 색으로 채운다.
     constexpr uint32 kPixelCount = 16 + 4 + 1;
     uint8            arrPixel[kPixelCount * 4]{};
@@ -527,11 +420,10 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
     }
 
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -570,7 +462,6 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
         pResource->destroyTexture( texture );
 
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -583,18 +474,6 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
  */
 SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     // R8G8B8A8 4x4 → 2x2 → 1x1 = 21 픽셀. 픽셀마다 다른 값을 넣어 행/밉 어긋남을 잡는다.
     uint8 arrRgba[21 * 4]{};
     for ( uint32 byteIndex = 0; byteIndex < sizeof( arrRgba ); ++byteIndex )
@@ -621,11 +500,10 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
     };
 
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -671,7 +549,6 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
         }
 
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -687,24 +564,11 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
  */
 SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -766,7 +630,6 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -782,31 +645,15 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
  */
 SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
         if ( device->getCapabilities()._bOffscreenRT == SW_FALSE )
-        {
-            shutdownDeviceWithWindow( device, window );
             continue;
-        }
 
         const float32             arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
         const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
@@ -886,7 +733,6 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -902,24 +748,11 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
  */
 SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -969,7 +802,6 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
         }
 
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -1004,9 +836,8 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
     uint32 okCount{ 0 };
     for ( const Expectation& expectation : arrExpectation )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( expectation._backend, window, device ) == false )
+        test::RHITestDevice device( expectation._backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -1113,7 +944,6 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
         if ( pso != 0 )
             pResource->destroyPipelineState( pso );
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -1131,24 +961,11 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
  */
 SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -1263,7 +1080,6 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
         if ( pso != 0 )
             pResource->destroyPipelineState( pso );
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -1277,24 +1093,11 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
  */
 SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
 {
-    const sw::RHIBackend backends[] = {
-#if defined( SW_PLATFORM_WINDOWS )
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#else
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-#endif
-    };
-
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
@@ -1323,7 +1126,6 @@ SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
         SW_EXPECT_EQUAL( static_cast<uint32>( sw::RHIFormat::Unknown ), static_cast<uint32>( pResource->getTextureFormat( 0 ) ) );
 
         ++okCount;
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( okCount == 0 )
@@ -1335,11 +1137,8 @@ SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
  */
 SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> rhiDevice;
-    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX11, window, rhiDevice ) == false &&
-         tryInitDeviceWithWindow( sw::RHIBackend::DirectX12, window, rhiDevice ) == false &&
-         tryInitDeviceWithWindow( sw::RHIBackend::OpenGL, window, rhiDevice ) == false )
+    test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL } );
+    if ( rhiDevice.isReady() == false )
         SW_TEST_SKIP( "RHI initialize failed (no GPU / display context)" );
 
     sw::unique_ptr<sw::IRHICommandList> cmdList = rhiDevice->createCommandList();
@@ -1360,8 +1159,6 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
     // 순서가 뒤집히면 이미 파괴된 디바이스를 만진다 — 이 테스트가 드물게 SEGFAULT 한 이유다.
     // (디바이스 쪽에도 보호를 넣었지만, 올바른 사용 순서를 테스트가 먼저 보여야 한다.)
     cmdList.reset();
-
-    shutdownDeviceWithWindow( rhiDevice, window );
 }
 
 /**
@@ -1379,9 +1176,8 @@ SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordi
     uint32               testedCount{ 0 };
     for ( sw::RHIBackend backend : arrBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         ++testedCount;
 
@@ -1406,7 +1202,6 @@ SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordi
             device->getResource()->destroyBuffer( cb );
         }
         device->waitIdle();
-        shutdownDeviceWithWindow( device, window );
     }
     if ( testedCount == 0 )
         SW_TEST_SKIP( "No parallel-recording backend (DX11/DX12/Vulkan) available" );
@@ -1417,11 +1212,8 @@ SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordi
  */
 SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> rhiDevice;
-    if ( tryInitDeviceWithWindow( sw::RHIBackend::DirectX11, window, rhiDevice ) == false &&
-         tryInitDeviceWithWindow( sw::RHIBackend::DirectX12, window, rhiDevice ) == false &&
-         tryInitDeviceWithWindow( sw::RHIBackend::OpenGL, window, rhiDevice ) == false )
+    test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL } );
+    if ( rhiDevice.isReady() == false )
         SW_TEST_SKIP( "RHI initialize failed (no GPU / display context)" );
 
     sw::RHIDrawIndirectCommand drawCmd{};
@@ -1463,8 +1255,6 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
 
         rhiDevice->getResource()->destroyBuffer( argBuf );
     }
-
-    shutdownDeviceWithWindow( rhiDevice, window );
 }
 
 /**
@@ -1474,15 +1264,13 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
  */
 SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 {
-    const sw::RHIBackend backends[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-    constexpr uint32     kSize      = 8;
+    constexpr uint32 kSize = 8;
 
     uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
         sw::IRHIResource* pResource = device->getResource();
         const utf8*       pName     = backend == sw::RHIBackend::DirectX11 ? "DirectX11" : backend == sw::RHIBackend::DirectX12 ? "DirectX12"
@@ -1551,7 +1339,6 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
             pResource->unregisterBindlessUav( uav );
         if ( texture != 0 )
             pResource->destroyTexture( texture );
-        shutdownDeviceWithWindow( device, window );
     }
     if ( okCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the compute RW texture test" );
@@ -1567,20 +1354,16 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
  */
 SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
 {
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
-
     /// @brief 몇 프레임 늦게 오므로 링 깊이보다 넉넉히 돌린다.
     constexpr uint32 kFrameCount = 12;
 
     uint32 attemptedCount{ 0 };
     uint32 reportedCount{ 0 };
 
-    for ( sw::RHIBackend backend : backends )
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
             continue;
 
         ++attemptedCount;
@@ -1649,7 +1432,6 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         }
 
         device->waitIdle();
-        shutdownDeviceWithWindow( device, window );
     }
 
     if ( attemptedCount == 0 )

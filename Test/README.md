@@ -68,7 +68,9 @@ ctest --preset Ninja-Debug-lint
 > `SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, `HOST_SPLIT` 으로 등록한 실행 파일(`EngineTest` · `AppTest`)이
 > 그 선언으로 ctest 항목을 가른다 — `<타깃>_NoGPU` 는 `--host_suites=exclude`, `<타깃>_HostOnly` 는 `--host_suites=only`.
 > 지금 선언된 것은 `EngineTest --test_list` 끝에 이유와 함께 찍힌다. 디바이스가 필요한 테스트를 새로 쓰면
-> **`RenderPassGpuTest` 에 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
+> **`RenderPassGpuTest` 에 넣고** 창 + 디바이스는 `test::RHITestDevice`(`Test/EngineTest/RHITestDevice.h`)로 세운다 — 스코프를
+> 벗어나면 내려가므로 단언으로 일찍 빠져도 다음 케이스에 남지 않는다. (이름을 하나씩 필터에 적던 시절에는 새 테스트가
+> 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.)
 
 ### 구성마다 도는 케이스 수가 다르다
 
