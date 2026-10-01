@@ -2051,6 +2051,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (테스트 확인 ② 이름만으로 돌리기 — `py -3 -m Scripts test`)
+
+케이스 하나를 돌리려면 세 가지를 알아야 했다: 그 스위트가 **어느 실행 파일**에 사는지(CoreTest? EngineTest? 일곱 중 하나), 작업
+폴더가 **`Bin`** 이어야 한다는 것(아니면 `Resource/` 를 못 찾는다), Shipping 은 실행 파일이 **`TestBin`** 에 있다는 것. 셋 다
+CLAUDE.md 의 함정 목록에 있고, 이번 결함 점검에서만 여러 번 손으로 맞췄다.
+
+`Scripts/dev/RunTests.py`(통합 CLI `test`) — 실행 파일마다 `--test_list --test_filter=<패턴>` 을 동시에 물어 고른 케이스가 있는 것만
+`Bin` 에서 돌린다. `--preset` · `--list`(돌리지 않고 어디에 무엇이 있는지) · `--repeat N` · `--shuffle [씨앗]`(테스트 확인 ① 의 플래그로).
+모르는 인자는 실행 파일에 그대로 간다(`parse_known_args` — 위치 인자 REMAINDER 로 받으면 패턴 뒤의 `--list` 까지 삼켰다). 고른 케이스가
+어디에도 없으면 1(오타 난 패턴이 "통과" 로 보이지 않게), 실행 파일이 없으면 2.
+**검증.** `--list` 가 두 실행 파일에 걸친 패턴을 가른다 · 없는 패턴 1 · Shipping 은 `TestBin` 의 실행 파일을 `Bin` 에서 · 넘긴 인자
+(`--host_suites=all`)가 그대로 간다 · `--repeat 2 --shuffle 42` 가 `--test_repeat=2 --test_shuffle=42` 로.
+
 ### 2026-10-01 (테스트 확인 ① 되풀이 · 섞기 · 느린 케이스 — `--test_repeat` · `--test_shuffle`)
 
 간헐 실패를 찾을 때마다 셸 루프를 새로 짰고(결함 ①~④ 가 모두 그렇게 잡혔다), 앞 케이스가 남긴 상태에 기대는 테스트는 찾을 길이 없었다

@@ -72,6 +72,22 @@ ctest --preset Ninja-Debug-lint
 > 벗어나면 내려가므로 단언으로 일찍 빠져도 다음 케이스에 남지 않는다. (이름을 하나씩 필터에 적던 시절에는 새 테스트가
 > 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.)
 
+### 이름만으로 돌리기 — `RunTests.py`
+
+케이스 하나를 돌리려면 세 가지를 알아야 했다: 그 스위트가 **어느 실행 파일**에 사는지, 작업 폴더가 **`Bin`** 이어야 한다는 것,
+Shipping 은 실행 파일이 **`TestBin`** 에 있다는 것. `Scripts/dev/RunTests.py` 가 셋을 대신 안다 — 실행 파일마다
+`--test_list` 로 물어 패턴이 고르는 케이스가 있는 것만, `Bin` 에서 돌린다.
+
+```powershell
+py -3 -m Scripts test SceneTest.*                                    # = py -3 Scripts/dev/RunTests.py SceneTest.*
+py -3 -m Scripts test "SceneTest.*,ResourceTest.Ensure*" --list      # 어느 실행 파일에 어떤 케이스가 있나
+py -3 -m Scripts test ResourceTest.* --preset Ninja-Shipping
+py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle            # 아래 두 플래그로 넘어간다
+```
+
+이 스크립트가 모르는 인자(`--host_suites=all` 같은)는 실행 파일에 그대로 간다. 고른 케이스가 어디에도 없으면 1 로 끝난다
+(오타 난 패턴이 "통과" 로 보이지 않게).
+
 ### 간헐 실패 · 순서 의존 찾기 — 되풀이와 섞기
 
 | 플래그 | 하는 일 |

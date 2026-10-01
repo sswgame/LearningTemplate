@@ -95,7 +95,8 @@ Scripts/
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
-  │     └── GenerateStressScene.py    # 로드 경로를 재기 위한 큰 씬
+  │     ├── GenerateStressScene.py    # 로드 경로를 재기 위한 큰 씬
+  │     └── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 그 케이스가 사는 실행 파일을 `Bin` 에서
   │
   └── __main__.py                     # ★ 통합 CLI 오케스트레이터 (`py -3 -m Scripts <cmd>`)
 ```
@@ -113,6 +114,7 @@ py -3 -m Scripts llvm                 # LLVM/Clang 탐색 및 설정 (SetupLlvm)
 py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (RunClangFormat)
 py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린트 검사 (PreCommitLint)
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
+py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 ```
 
 ## 개별 스크립트 실행
