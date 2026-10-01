@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -183,6 +184,13 @@ namespace sw
             static unordered_map<string, ShaderReflectionLibrary::EntryMap> s_mapManifest;
             return s_mapManifest;
         }
+
+        /// @brief clearCache 횟수입니다 — 머티리얼이 맞춘 레이아웃이 낡았는지 본다.
+        atomic<uint32>& cacheGenerationInternal()
+        {
+            static atomic<uint32> s_generation{ 0 };
+            return s_generation;
+        }
     } // namespace
 
     const utf8* ShaderReflectionLibrary::getManifestFileName()
@@ -355,5 +363,11 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ manifestMutexInternal() };
         manifestCacheInternal().clear();
+        cacheGenerationInternal().fetch_add( 1u, std::memory_order_acq_rel );
+    }
+
+    uint32 ShaderReflectionLibrary::getCacheGeneration()
+    {
+        return cacheGenerationInternal().load( std::memory_order_acquire );
     }
 } // namespace sw

@@ -147,6 +147,8 @@ namespace sw
          *          (레이아웃이 바뀝니다) 만들 때의 크기를 들고 있다가 커지면 다시 만듭니다.
          */
         uint32 _constantByteSize;
+        /** @brief `_bytes` 를 복사할 때의 부모 `getBufferGeneration()` 입니다. 다르면 부모 값 · 레이아웃이 바뀐 것이라 다시 복사합니다. */
+        uint32 _parentBufferGeneration;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

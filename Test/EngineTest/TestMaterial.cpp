@@ -810,3 +810,56 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
     SW_EXPECT_TRUE_MSG( tintValue > 0.24f && tintValue < 0.26f,
                         "옆 프로퍼티(_tint)의 값이 _mask 의 16바이트 쓰기에 덮였습니다" );
 }
+
+/**
+ * @brief [MaterialTest] 다시 로드한 머티리얼은 셰이더 레이아웃을 잊는다 — 원소 stride 를 비우고 바이트 세대를 올린다
+ * @details 리플렉션으로 레이아웃을 맞춘 뒤 같은 머티리얼을 다시 로드하면(에셋 핫 리로드 · 에디터 미리보기) 프로퍼티가 XML 순서로 다시
+ *          쌓인다. 예전에는 "맞췄다" 는 표시가 남아 다시 맞추지 않았고, **옛 stride 와 XML 순서 바이트**가 함께 GpuScene 에 올라갔다 —
+ *          셰이더가 color 를 읽는 자리에 roughness 가 들어간다. 실제 리플렉션으로 다시 맞추는 것은
+ *          `RenderPassGpuTest.ReloadedMaterialIsLaidOutByTheShaderAgain` 이 본다.
+ */
+SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    // XML 은 roughness 를 먼저 적고, 셰이더(SwMaterialData_t)는 color 를 먼저 둔다.
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"ReloadProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\"/>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"0 0 0 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+
+    sw::ShaderReflectionData reflection{};
+    sw::ShaderBufferInfo     element{};
+    element._name      = "g_SwMaterials";
+    element._totalSize = 20;
+    sw::ShaderVariableInfo varColor{};
+    varColor._name   = "color";
+    varColor._type   = "Float4";
+    varColor._offset = 0;
+    varColor._size   = 16;
+    element._listVariable.push_back( varColor );
+    sw::ShaderVariableInfo varRoughness{};
+    varRoughness._name   = "roughness";
+    varRoughness._type   = "Float";
+    varRoughness._offset = 16;
+    varRoughness._size   = 4;
+    element._listVariable.push_back( varRoughness );
+    reflection._listStructuredElement.push_back( element );
+    SW_ASSERT_TRUE( material->syncPropertiesFromReflection( reflection ) );
+    SW_ASSERT_EQUAL( 20u, material->getElementStride() );
+
+    const uint32 syncedGeneration = material->getBufferGeneration();
+    SW_ASSERT_TRUE( material->loadFromXml( xml ) ); // 핫 리로드 — XML 순서로 다시 쌓인다
+
+    const sw::MaterialProperty* pColor = material->findProperty( sw::hashed_string( "color" ) );
+    SW_ASSERT_NOT_NULL( pColor );
+    SW_EXPECT_EQUAL( 16u, pColor->_offset ); // 다시 맞추기 전에는 XML 순서다
+    SW_EXPECT_TRUE_MSG( material->getElementStride() == 0, "옛 stride 가 XML 순서 바이트와 함께 남았습니다 — 다시 맞추지 않습니다" );
+    SW_EXPECT_TRUE_MSG( material->getBufferGeneration() != syncedGeneration, "바이트가 바뀌었는데 세대가 그대로입니다 — 인스턴스가 옛 복사본을 씁니다" );
+}

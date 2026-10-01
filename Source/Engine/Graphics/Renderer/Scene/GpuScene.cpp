@@ -423,7 +423,8 @@ namespace sw
                 Material* pMaterial = entry._material.get();
                 if ( pMaterial == nullptr )
                     continue;
-                // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(백엔드마다 한 번).
+                // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
+                // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRhi 가 이미 맞췄다).
                 pMaterial->ensureShaderLayout( pDevice );
                 uint32 entryStride = pMaterial->getElementStride();
                 if ( entryStride == 0 )

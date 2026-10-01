@@ -72,6 +72,7 @@ namespace sw
         , _constant{}
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _constantByteSize{ 0 }
+        , _parentBufferGeneration{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
@@ -194,10 +195,19 @@ namespace sw
             _bGpuDirty        = SW_TRUE;
         }
 
+        // 부모 레이아웃을 먼저 셰이더에 맞춘다. 예전에는 GpuScene 이 인스턴스 CB 를 올린 **뒤에** 부모를 맞춰, 첫 프레임의 인스턴스는
+        // XML 순서 바이트를 복사해 들고 있었다.
+        (void)_pParentMaterial->ensureShaderLayout( pRhi );
+        // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 예전에는 인스턴스가 더러워질 때만 다시 복사해, 오버라이드가
+        // 없는 파라미터에서 부모의 값 변경을 놓쳤고 다시 맞춘 레이아웃도 놓쳤다.
+        if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
+            _bGpuDirty = SW_TRUE;
+
         if ( _bGpuDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
 
-        _bytes = _pParentMaterial->getBuffer();
+        _bytes                  = _pParentMaterial->getBuffer();
+        _parentBufferGeneration = _pParentMaterial->getBufferGeneration();
         if ( _bytes.empty() )
             return false;
 

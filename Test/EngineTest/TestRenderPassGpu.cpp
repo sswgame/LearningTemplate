@@ -24,6 +24,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -2647,6 +2648,77 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the instance constant buffer growth test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 다시 로드한 머티리얼은 셰이더 레이아웃으로 다시 맞춰지고, 인스턴스는 부모 바이트가 바뀌면 다시 복사한다
+ * @details 셋이 함께 어긋났다. (1) "이 백엔드는 맞췄다" 는 비트를 아무도 지우지 않아, 다시 로드(XML 순서로 다시 쌓는다) 뒤에 다시 맞추지
+ *          않았다. (2) GpuScene 이 인스턴스 CB 를 부모 레이아웃을 맞추기 **전에** 올려, 첫 프레임 인스턴스는 XML 순서 바이트를 들었다.
+ *          (3) 인스턴스는 자기가 더러워질 때만 부모 바이트를 다시 복사해 부모의 값 변경을 놓쳤다. 셋 다 화면에서는 "엉뚱한 색" 이다.
+ *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 SwMaterialData_t: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
+{
+    // roughness 를 먼저 — XML 순서로 쌓으면 roughness 가 0, color 가 16 에 간다. 셰이더는 color 가 0, roughness 가 16.
+    const sw::string reorderedXml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"DefaultMaterial\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\">"
+        "  <_properties>"
+        "    <item name=\"roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\" min=\"0.0\" max=\"1.0\"/>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"0 0 0 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    const auto readFloat = []( const sw::vector<uint8>& bytes, size_t offset )
+    {
+        float32 value{ -1.0f };
+        if ( offset + sizeof( value ) <= bytes.size() )
+            sw::Memory::copy( &value, bytes.data() + offset, sizeof( value ) );
+        return value;
+    };
+
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        {
+            sw::shared_ptr<sw::Material> parent = sw::Material::create();
+            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
+            SW_ASSERT_TRUE( parent->ensureShaderLayout( device.get() ) );
+            SW_ASSERT_TRUE( parent->isShaderLayoutSynced( backend ) );
+
+            // 핫 리로드 — 같은 머티리얼을 프로퍼티 순서만 바꿔 다시 읽는다.
+            SW_ASSERT_TRUE( parent->loadFromXml( reorderedXml ) );
+            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( backend ) );
+
+            // 인스턴스가 먼저 올라가도(GpuScene 의 순서) 셰이더 레이아웃의 바이트를 집는다.
+            sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
+            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_NEAR_EQUAL( 0.5f, readFloat( instance->getBuffer(), 16 ), 1e-6f ); // roughness 는 셰이더의 16 자리
+            SW_EXPECT_NEAR_EQUAL( 0.0f, readFloat( instance->getBuffer(), 0 ), 1e-6f );  // color.x
+
+            // 부모 값만 바꾼다(인스턴스 오버라이드 없음) — 인스턴스가 따라와야 한다.
+            SW_ASSERT_TRUE( parent->setParameter( device.get(), sw::hashed_string( "roughness" ), "0.125" ) );
+            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_EXPECT_NEAR_EQUAL( 0.125f, readFloat( instance->getBuffer(), 16 ), 1e-6f );
+
+            // 리플렉션 캐시를 비우면(다시 굽기 · 라이브 셰이더 편집) 맞춘 레이아웃은 낡은 것이다 — 다시 맞춘다.
+            sw::ShaderReflectionLibrary::clearCache();
+            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_TRUE( parent->ensureShaderLayout( device.get() ) );
+            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( backend ) );
+
+            instance->releaseRhi( device.get() );
+            parent->releaseRhi( device.get() );
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the material reload layout test" );
 }
 
 /**

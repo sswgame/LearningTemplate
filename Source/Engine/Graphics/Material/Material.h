@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    enum class RHIBackend : uint32;
+
     struct float4;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
@@ -87,10 +89,18 @@ namespace sw
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
         /**
          * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
-         * @details 백엔드마다 한 번만 합니다. GpuScene 이 머티리얼 버퍼를 올리기 전에 부릅니다. 레이아웃의 기준은 셰이더입니다.
+         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GpuScene 과 인스턴스(`MaterialInstance::updateRhi`)가 바이트를
+         *          읽기 전에 부릅니다. 레이아웃의 기준은 셰이더입니다.
          * @return 원소 stride 를 얻었으면 true 입니다.
          */
         bool ensureShaderLayout( IRHIDevice* pDevice );
+        /**
+         * @brief 프로퍼티 오프셋 · stride 가 지금 이 백엔드의 셰이더 레이아웃에 맞춰져 있는지입니다.
+         * @details 다시 로드하면(`loadFromXml` — 에셋 핫 리로드 · 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가
+         *          비워지면(다시 굽기 · 라이브 셰이더 편집) 낡은 것이 됩니다. 마지막으로 맞춘 백엔드와 다른 백엔드로 물어도 false 입니다.
+         *          리플렉션을 얻지 못한 시도도 "맞춰 봤다" 로 남습니다 — 매 프레임 같은 오류를 내지 않게.
+         */
+        bool isShaderLayoutSynced( RHIBackend backend ) const;
         /** @brief 프로퍼티를 패킹 CB 에 다시 씁니다. */
         bool rebuildPackedBuffer();
         /**
@@ -162,6 +172,11 @@ namespace sw
         const vector<MaterialProperty>& getProperties() const { return _data._listProperty; }
         /** @brief 패킹된 상수 버퍼를 반환합니다. */
         const vector<uint8>& getBuffer() const { return _data._bytes; }
+        /**
+         * @brief `getBuffer()` 의 바이트가 바뀔 때마다 오르는 세대입니다(값 · 레이아웃 · 크기).
+         * @details 인스턴스는 부모 바이트의 복사본을 들고 있어, 이 값이 바뀌면 다시 복사합니다(`MaterialInstance::updateRhi`).
+         */
+        uint32 getBufferGeneration() const { return _bufferGeneration; }
         /** @brief 이름으로 프로퍼티를 찾습니다. */
         const MaterialProperty* findProperty( hashed_string name ) const;
         /** @brief 이름으로 프로퍼티를 찾습니다. */
@@ -226,8 +241,10 @@ namespace sw
         MaterialData               _data;
         RHIBufferHandle            _constantBuffer;
         RHIDescriptorIndex         _descriptorIndex;
-        uint32                     _elementStride;           /**< g_SwMaterials 원소 stride(리플렉션). 0 = 구조버퍼 머티리얼 아님 */
-        uint32                     _shaderLayoutBackendMask; /**< ensureShaderLayout 을 끝낸 백엔드 비트 */
+        uint32                     _elementStride;               /**< g_SwMaterials 원소 stride(리플렉션). 0 = 구조버퍼 머티리얼 아님 */
+        uint32                     _bufferGeneration;            /**< `_data._bytes` 가 바뀔 때마다 오른다 — 인스턴스가 복사본이 낡았는지 본다 */
+        uint32                     _shaderLayoutCacheGeneration; /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
+        RHIBackend                 _shaderLayoutBackend;         /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 뜻이 있다 */
         IRHIDevice*                _pRHIDevice;
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로. releaseTextureAssets 가 그대로 돌려줌
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
@@ -239,6 +256,7 @@ namespace sw
         mutable uint64         _cachedShaderPathHash;
         mutable uint8          _bDefinesDirty        : 1;
         mutable uint8          _bShaderPathHashDirty : 1;
-        [[maybe_unused]] uint8 _reservedMaterial     : 6;
+        uint8                  _bShaderLayoutSynced  : 1; /**< ensureShaderLayout 이 맞췄다(백엔드 · 캐시 세대와 함께 본다). 다시 로드하면 풀린다 */
+        [[maybe_unused]] uint8 _reservedMaterial     : 5;
     };
 } // namespace sw

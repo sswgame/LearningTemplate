@@ -2077,6 +2077,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊻ 머티리얼 — 다시 로드해도 셰이더 레이아웃을 다시 맞추지 않았다, 인스턴스는 부모 바이트가 바뀐 것을 몰랐다)
+
+머티리얼 바이트의 기준은 셰이더의 `SwMaterialData_t` 원소 레이아웃이고, `ensureShaderLayout` 이 리플렉션으로 오프셋 · stride 를 맞춘다. 셋이 함께 어긋났다.
+- **맞춘 표시를 아무도 지우지 않았다.** "이 백엔드는 맞췄다" 를 백엔드 비트로 들고 있었는데, 다시 로드(`loadFromXml` — 에셋 핫 리로드 · 에디터 미리보기)가
+  프로퍼티를 XML 순서로 다시 쌓아도 비트는 남았다. 그래서 **XML 순서 바이트와 옛 stride** 가 함께 GpuScene 에 올라갔다 — XML 의 프로퍼티 순서가 셰이더와
+  다르면 셰이더가 color 를 읽는 자리에 roughness 가 들어간다. 지금은 다시 로드가 표시와 stride 를 풀고(`applyDescToRuntime`), 표시는 맞춘 백엔드 하나와
+  리플렉션 캐시 세대(`ShaderReflectionLibrary::getCacheGeneration`, `clearCache` 마다 오른다)를 함께 본다(`Material::isShaderLayoutSynced`). 라이브 셰이더
+  편집이 바이트코드를 갈면 리플렉션 캐시도 비워(`LiveShaderManager::update`) 머티리얼 구조가 바뀐 셰이더에 다시 맞춘다.
+- **인스턴스가 부모를 맞추기 전에 복사했다.** GpuScene 은 인스턴스 CB 를 올린(`updateRhi`) 뒤에 부모 레이아웃을 맞춰, 첫 프레임 인스턴스는 XML 순서 바이트를
+  들었다. `MaterialInstance::updateRhi` 가 먼저 부모의 `ensureShaderLayout` 을 부른다.
+- **인스턴스는 자기가 더러워질 때만 부모 바이트를 다시 복사했다** — 오버라이드가 없는 파라미터에서 부모의 값 변경을 놓쳤고 다시 맞춘 레이아웃도 놓쳤다.
+  부모는 바이트가 바뀔 때마다 세대를 올리고(`Material::getBufferGeneration`), 인스턴스는 복사할 때의 세대와 다르면 다시 복사한다.
+
+**검증.** `MaterialTest.ReloadForgetsTheShaderLayout`(nogpu — 리플렉션으로 맞춘 뒤 다시 로드하면 stride 가 비고 세대가 오른다),
+`RenderPassGpuTest.ReloadedMaterialIsLaidOutByTheShaderAgain`(네 백엔드 — 프로퍼티 순서를 셰이더와 다르게 적은 XML 로 다시 로드한 뒤 새 인스턴스의 바이트가
+셰이더 자리(roughness 16)에 있고, 부모 값 변경을 인스턴스가 따라오며, 리플렉션 캐시를 비우면 다시 맞춘다). 변이 여섯(다시 로드의 풀기 없음 ×2 · 인스턴스의 앞선
+맞추기 없음 · 세대 비교 없음 · 캐시 세대 무시 · 다시 쌓기의 세대 올리기 없음)이 모두 실패했다. defaultmaterial 은 XML 순서와 셰이더 순서가 우연히 같아 이 결함이
+바이트로는 드러나지 않았다 — 시험은 순서를 일부러 바꾼다.
+
 ### 2026-10-01 (㊷ · ㊸ 보완 — 리눅스에서 스탬프를 읽지 못했다, Windows CI 의 8.3 짧은 경로)
 
 ㊷ · ㊸ 을 푸시한 CI(1e434144)에서 리눅스 셋 · Windows Debug 가 졌다.

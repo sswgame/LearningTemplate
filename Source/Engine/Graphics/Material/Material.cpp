@@ -52,7 +52,9 @@ namespace sw
         , _constantBuffer{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _elementStride{ 0 }
-        , _shaderLayoutBackendMask{ 0 }
+        , _bufferGeneration{ 0 }
+        , _shaderLayoutCacheGeneration{ 0 }
+        , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
         , _listAcquiredTexturePath{}
         , _listMaterialTextureSrv{}
@@ -63,6 +65,7 @@ namespace sw
         , _cachedShaderPathHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _bShaderPathHashDirty{ SW_TRUE }
+        , _bShaderLayoutSynced{ SW_FALSE }
         , _reservedMaterial{ 0 }
     {
         _asyncLoadState->_pMaterial = this;
@@ -102,6 +105,7 @@ namespace sw
             _data._bytes.resize( alignedSize, 0 );
             bufferSize = alignedSize;
         }
+        ++_bufferGeneration; // 크기를 256 정렬로 맞췄다
 
         _constantBuffer = pRhi->getResource()->createConstantBuffer( bufferSize );
         if ( _constantBuffer == 0 )
@@ -236,12 +240,17 @@ namespace sw
         // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData_t 원소 레이아웃**이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전에는 셰이더 핫 리로드 경로에서만 맞췄고 로드 경로에서는 XML
         // 순서로 패킹해 stride 가 0 이었다. 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
+        //
+        // "맞췄다" 는 백엔드 비트로 들고 있었고 **아무도 지우지 않았다** — 다시 로드(XML 순서로 다시 쌓는다) 뒤에도 맞춘 줄 알고 넘어가
+        // XML 순서 바이트와 옛 stride 가 함께 올라갔다. 지금은 다시 로드가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
         if ( pDevice == nullptr || _desc._shaderPath.empty() )
             return false;
-        const uint32 backendBit = 1u << static_cast<uint32>( pDevice->getBackendType() );
-        if ( ( _shaderLayoutBackendMask & backendBit ) != 0 )
+        const RHIBackend backend = pDevice->getBackendType();
+        if ( isShaderLayoutSynced( backend ) )
             return _elementStride != 0;
-        _shaderLayoutBackendMask |= backendBit;
+        _bShaderLayoutSynced         = SW_TRUE;
+        _shaderLayoutBackend         = backend;
+        _shaderLayoutCacheGeneration = ShaderReflectionLibrary::getCacheGeneration();
 
         ShaderCompileDesc desc{};
         desc._filePath     = _desc._shaderPath;
@@ -256,6 +265,12 @@ namespace sw
         }
         syncPropertiesFromReflection( reflection );
         return _elementStride != 0;
+    }
+
+    bool Material::isShaderLayoutSynced( RHIBackend backend ) const
+    {
+        return _bShaderLayoutSynced != SW_FALSE && _shaderLayoutBackend == backend &&
+               _shaderLayoutCacheGeneration == ShaderReflectionLibrary::getCacheGeneration();
     }
 
     bool Material::syncPropertiesFromReflection( const ShaderReflectionData& reflectionData )
@@ -392,6 +407,7 @@ namespace sw
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
+        ++_bufferGeneration;
     }
 
     bool Material::rebuildPackedBuffer()
@@ -467,6 +483,7 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         if ( alignedTotal > _data._bytes.size() )
             _data._bytes.resize( alignedTotal, 0 );
+        ++_bufferGeneration;
 
         _desc._listProperty = _data._listProperty;
         return bAllPacked;
@@ -552,6 +569,7 @@ namespace sw
         prop->_value = value;
         if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._bytes ) == false )
             return false;
+        ++_bufferGeneration;
         if ( pRhi != nullptr && _constantBuffer != 0 )
             pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
         _desc._listProperty = _data._listProperty;
@@ -574,6 +592,7 @@ namespace sw
             prop._value        = to_string( descIdx );
             if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
+            ++_bufferGeneration;
             if ( pRhi != nullptr && _constantBuffer != 0 )
                 pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             _desc._listProperty = _data._listProperty;
@@ -664,6 +683,7 @@ namespace sw
             prop._value = to_string( value );
             if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
+            ++_bufferGeneration;
             if ( pRhi != nullptr && _constantBuffer != 0 )
                 pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             return true;

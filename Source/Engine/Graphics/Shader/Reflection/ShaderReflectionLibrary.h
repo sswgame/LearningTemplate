@@ -64,7 +64,13 @@ namespace sw
          */
         static bool getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
 
-        /** @brief 캐시를 비웁니다(셰이더를 다시 구운 뒤 등). */
+        /** @brief 캐시를 비웁니다(셰이더를 다시 구운 뒤 · 라이브 셰이더 편집 뒤). 캐시 세대가 오릅니다. */
         static void clearCache();
+
+        /**
+         * @brief 캐시를 비운 횟수입니다. 이 값이 바뀌면 전에 얻은 리플렉션은 낡았을 수 있습니다.
+         * @details 머티리얼은 셰이더 레이아웃을 맞출 때 이 값을 적어 두고, 바뀌면 다시 맞춥니다(`Material::isShaderLayoutSynced`).
+         */
+        static uint32 getCacheGeneration();
     };
 } // namespace sw

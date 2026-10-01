@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
 {
@@ -125,6 +126,9 @@ namespace sw
             // 인메모리 캐시는 마지막에 한 번만 비운다. 셰이더마다 비우면 같은 패스의 남은 재컴파일이
             // 방금 지운 항목을 다시 채워 넣는다.
             engine::getShaderCache().clearCache();
+            // 리플렉션도 비운다 — 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
+            // 다시 맞춘다(Material::isShaderLayoutSynced). 예전에는 맞춘 레이아웃이 옛 셰이더 것 그대로 남았다.
+            ShaderReflectionLibrary::clearCache();
         }
 
         SW_LOG_INFO( "Shader reload: %# 개 확인, %# 개 갱신, %# 개 실패.",
