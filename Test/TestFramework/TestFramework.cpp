@@ -47,6 +47,27 @@ namespace test
 
     } // namespace
 
+    void reportFailure( const utf8* pCondition, const utf8* pFile, int32 line, const utf8* pMessage )
+    {
+        TestRegistry::getInstance().addFailure( pCondition, pFile, line, pMessage != nullptr ? pMessage : "" );
+    }
+
+    void reportFailure( const utf8* pCondition, const utf8* pFile, int32 line, const sw::string& message )
+    {
+        TestRegistry::getInstance().addFailure( pCondition, pFile, line, message );
+    }
+
+    void expectSameText( const utf8* pCondition, const utf8* pFile, int32 line, const ComparableText& expected, const ComparableText& actual )
+    {
+        if ( expected._bNull == actual._bNull && expected._text == actual._text )
+            return;
+
+        std::ostringstream oss;
+        oss << "Expected [" << ( expected._bNull ? sw::string_view( "<null>" ) : expected._text ) << "], Actual ["
+            << ( actual._bNull ? sw::string_view( "<null>" ) : actual._text ) << "]";
+        reportFailure( pCondition, pFile, line, oss.str().c_str() );
+    }
+
     sw::string makeTempPath( sw::string_view fileName )
     {
         sw::StringBuilder<sw::constant::kMaxBuffer256> prefix;
@@ -71,14 +92,14 @@ namespace test
         return s_instance;
     }
 
-    void TestRegistry::registerTest( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func )
+    void TestRegistry::registerTest( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
     {
-        _listTest.push_back( { suiteName, testName, func } );
+        _listTest.push_back( { pSuiteName, pTestName, func } );
     }
 
-    void TestRegistry::registerHostSuite( const sw::string& suiteName, const sw::string& reason )
+    void TestRegistry::registerHostSuite( const utf8* pSuiteName, const utf8* pReason )
     {
-        _mapHostSuiteReason[suiteName] = reason;
+        _mapHostSuiteReason[pSuiteName] = pReason;
     }
 
     bool TestRegistry::isSelected( const TestCaseInfo& testInfo ) const
@@ -194,6 +215,12 @@ namespace test
 
     void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
     {
+        if ( _pFailureCapture != nullptr )
+        {
+            _pFailureCapture->push_back( { condition, file, line, message } );
+            return;
+        }
+
         _currentContext.addFailure( condition, file, line, message );
         std::fprintf( stdout, "\n  [FAILED] %s:%d\n    Condition: %s\n", file.c_str(), line, condition.c_str() );
         if ( message.empty() == false )

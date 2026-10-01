@@ -1839,8 +1839,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 `TestRHIDevice.cpp` 124 에 몰려 있다(`RunDuplicateCode` 는 `Source/` 만 훑어서 `Test/` 를 못 봤다).
 
 - [x] ① 호스트 스위트를 코드에서 선언 · `HOST_SPLIT` · 작업 폴더 `Bin` 통일 (3절 2026-10-01 ①)
-- [ ] ② 단언 매크로를 한 코어로 — EXPECT/ASSERT 가 `return;` 한 줄만 다른 복사본이고, 실패 서식(`ostringstream`)이
-      단언 자리마다 인라인으로 펼쳐진다. 바이너리 크기 · 컴파일 시간을 재고 판단.
+- [x] ② 단언 매크로를 한 뼈대로 · 실패 경로를 바깥 함수로 — Release EngineTest.exe 12.5 → 3.3 MB (3절 2026-10-01 ②)
 - [ ] ③ `makeTempPath` 로 만든 경로는 케이스가 끝나면 프레임워크가 지운다 — 손으로 쓴 `removeFile` 193 곳, 단언으로
       일찍 빠지면 남는다.
 - [ ] ④ RHI 테스트 디바이스 RAII 공용화(RHIDevice · RenderPassGpu) — 케이스마다 창 · 디바이스 생성 12줄 + 정리 6줄을
@@ -2038,6 +2037,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ② 단언 매크로를 한 뼈대로 · 실패 경로를 바깥 함수로 — Release 테스트 바이너리 −73 %)
+
+**무엇이 문제였나.** 단언 열다섯이 각자 매크로 본문을 들고 있었고 EXPECT 와 ASSERT 는 `return;` 한 줄만 다른 복사본이었다.
+게다가 **실패 경로가 단언마다 인라인으로 펼쳐졌다** — 조건 · 파일 이름으로 `sw::string` 둘을 만들고(`addFailure( const sw::string& … )`),
+값 비교는 `std::ostringstream` 을 그 자리에서 만들었다. 단언이 9,562 곳이라 그것이 테스트 바이너리의 대부분이었고,
+최적화 빌드는 그것을 더 펼쳐 **Release 의 EngineTest.exe(12.5 MB)가 Debug(7.7 MB)보다 컸다.** 정적 등록도 케이스마다
+`sw::string` 둘을 등록 코드에 펼쳤다.
+
+**지금.** 단언은 `SW_TEST_CHECK_IMPL`(조건) · `SW_TEST_CHECK_EQUAL_IMPL`(값 비교) 두 뼈대 위의 한 줄이고, `onFail` 이
+`(void)0` 이면 EXPECT, `return` 이면 ASSERT 다. 실패는 `SW_NOINLINE` 바깥 함수(`reportFailure` · `reportNotEqual` ·
+`reportEqual` · `reportNotNear` · `expectSameText`)가 찍는다. 조건 글은 **바깥 매크로에서** 만든다 — 안쪽 뼈대에서 `#` 하면
+인자가 이미 풀린 뒤라 `SW_TRUE` 가 `1` 로 찍힌다. STREQ 는 복사 없이 뷰 + 널 표시(`ComparableText`)로 비교한다.
+등록자는 `const utf8*` 를 받는다.
+
+| Release | 전 | 후 |
+| --- | ---: | ---: |
+| EngineTest.exe | 12.53 MB | **3.31 MB** |
+| CoreTest.exe | 4.63 MB | 1.27 MB |
+| ReflectionTest.exe | 2.39 MB | 0.96 MB |
+| `TestArchive.cpp` 컴파일(단독, sccache 없이, 3 회 최소) | 5.00 s · obj 2.03 MB | **2.24 s** · 0.69 MB |
+| `TestGameObject.cpp` | 5.15 s · 2.25 MB | 2.22 s · 0.67 MB |
+| `TestString.cpp` | 6.32 s · 2.28 MB | 3.11 s · 0.80 MB |
+
+Debug 도 같은 세 TU 가 1.84 / 1.96 / 2.18 s → 1.54 / 1.63 / 1.79 s(−16~18 %), obj −18~24 %. (A/B 는 PCH 를 그대로 두고 헤더만
+옛것으로 바꿔 같은 명령으로 쟀다 — PCH 는 `TestFramework.h` 를 담지 않는다.)
+
+**단언을 시험하는 창구.** 프레임워크 자기 시험이 임시 경로 둘뿐이었다. `test::ScopedFailureCapture`(gtest 의
+`EXPECT_FATAL_FAILURE` 와 같은 일 — 스코프 안의 실패를 현재 케이스 대신 모은다)를 두고 `TestFrameworkTest` 에 여섯을 더했다:
+EXPECT 는 실패 하나씩 남기고 계속 간다(조건 글 · 메시지 · 파일 · 줄), ASSERT 넷은 함수를 끝내고 통과한 ASSERT 는 안 끝낸다,
+STREQ 는 널을 널끼리만 같다고 본다(글자 "<null>" 과 다르다), 메시지는 글자 · `sw::string` · 널을 받는다, `--host_suites` 가
+선언으로 가른다(이름 필터와 AND), 효력 없는 실행(모르는 값 · 빈 only · 케이스 없는 선언)은 진다.
+
+**검증.** 변이: 뼈대에서 `onFail` 을 빼면 `AssertStopsTheFunctionExpectDoesNot`, STREQ 가 널 표시를 무시하면
+`StreqTellsNullApartFromTheTextNull` 이 진다(6/8). Debug `nogpu|lint` 28/28 · `hostgpu` 2/2, Shipping 9/9, 빌드 경고 0.
 
 ### 2026-10-01 (Test 구조 ① 호스트 스위트를 코드에서 선언 · ctest 짝 자동 등록 · 작업 폴더 `Bin` 통일)
 

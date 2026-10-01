@@ -47,9 +47,9 @@ namespace test
         static TestRegistry& getInstance();
 
         /** @brief 스위트·이름·함수로 테스트를 등록합니다. */
-        void registerTest( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func );
+        void registerTest( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
         /** @brief 스위트가 GPU · 창 · DXC 같은 호스트 자원을 요구한다고 등록합니다(`SW_TEST_REQUIRES_HOST`). */
-        void registerHostSuite( const sw::string& suiteName, const sw::string& reason );
+        void registerHostSuite( const utf8* pSuiteName, const utf8* pReason );
 
         /** @brief 테스트 전용 인자를 파싱하고 나머지 인자를 반환합니다. */
         sw::vector<utf8*> configureFromArgs( int32 argc, utf8* argv[] );
@@ -77,6 +77,10 @@ namespace test
         TestContext*       getCurrentContext() { return &_currentContext; }
         const TestContext* getCurrentContext() const { return &_currentContext; }
 
+        /** @brief 실패를 현재 케이스 대신 이 목록에 모읍니다(널이면 되돌림). `ScopedFailureCapture` 만 부릅니다. */
+        void                     setFailureCapture( sw::vector<TestFailure>* pCapture ) { _pFailureCapture = pCapture; }
+        sw::vector<TestFailure>* getFailureCapture() const { return _pFailureCapture; }
+
     private:
         /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
         int32 countHostSuiteMismatch() const;
@@ -86,10 +90,39 @@ namespace test
         TestFilter                      _filter;
         TestContext                     _currentContext;
         TestEnvironment                 _environment;
+        sw::vector<TestFailure>*        _pFailureCapture{ nullptr };
         HostSuiteMode                   _hostSuiteMode{ HostSuiteMode::All };
         bool                            _listOnly{ false };
         bool                            _bAllowEmptySuite{ false };
         bool                            _bInvalidArgument{ false };
+    };
+
+    /**
+     * @brief 스코프 안의 단언 실패를 현재 케이스 대신 여기에 모읍니다 — **단언 자체를 검사할 때만** 씁니다.
+     * @details 실패하는 단언을 일부러 불러 "실패를 기록하는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 보려면 그 실패가
+     *          케이스를 떨어뜨리면 안 된다. gtest 의 `EXPECT_FATAL_FAILURE`(`ScopedFakeTestPartResultReporter`)가 같은 일을 한다.
+     *          모인 실패는 찍지도 로그로 남기지도 않는다. 겹쳐 쓰면 안쪽이 이긴다.
+     */
+    class ScopedFailureCapture
+    {
+    public:
+        ScopedFailureCapture()
+            : _pPreviousCapture{ TestRegistry::getInstance().getFailureCapture() }
+        {
+            TestRegistry::getInstance().setFailureCapture( &_listFailure );
+        }
+
+        ~ScopedFailureCapture() { TestRegistry::getInstance().setFailureCapture( _pPreviousCapture ); }
+
+        ScopedFailureCapture( const ScopedFailureCapture& )            = delete;
+        ScopedFailureCapture& operator=( const ScopedFailureCapture& ) = delete;
+
+        /** @brief 지금까지 모인 실패. */
+        const sw::vector<TestFailure>& getListFailure() const { return _listFailure; }
+
+    private:
+        sw::vector<TestFailure>  _listFailure;
+        sw::vector<TestFailure>* _pPreviousCapture{ nullptr };
     };
 
     /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
@@ -225,26 +258,65 @@ namespace test
         DefensiveTestLogSink _defensiveSink;
     };
 
-    /**
-     * @brief `SW_EXPECT_STREQ` 가 받은 값을 **널에도 안전하게** 비교용 문자열로 만듭니다.
-     * @details 널 `const utf8*` 로 `sw::string` 을 만들면 그 자리에서 죽는다. 그러면 실패를
-     *          찍어 보기도 전에 **테스트 바이너리 전체가 내려가고**, 같은 파일의 뒤쪽 케이스가
-     *          통째로 사라진다 — 어느 단언이 문제였는지도 남지 않는다. 그런데 "널을 돌려주기
-     *          시작한 회귀" 야말로 이 매크로가 가장 잡아야 할 것이다. 정확히 그 순간에
-     *          못 잡고 있었다.
-     */
-    inline sw::string toComparableText( const utf8* pText ) { return pText != nullptr ? sw::string( pText ) : sw::string( "<null>" ); }
-    inline sw::string toComparableText( const sw::string& text ) { return text; }
-    inline sw::string toComparableText( sw::string_view text ) { return sw::string( text ); }
+    // ------------------------------------------------------------------------------
+    // 실패 보고 — 단언 매크로가 부르는 **바깥** 함수들
+    //
+    // 단언 자리에는 비교와 이 호출 하나만 남긴다. 예전에는 실패 경로(문자열 둘 · `ostringstream` · 서식)가 단언마다
+    // 인라인으로 펼쳐졌다. 단언이 9,500 곳이라 그것이 테스트 바이너리의 대부분이었고, 최적화 빌드는 그것을 더 펼쳐
+    // **Release 의 EngineTest.exe 가 Debug 보다 컸다**(12.5 MB 대 7.7 MB). 실패는 드물고 느려도 되는 경로다.
+    // ------------------------------------------------------------------------------
+    /** @brief 단언 실패 하나를 기록합니다. @param pMessage 덧붙일 말(널이면 없음). */
+    SW_NOINLINE void reportFailure( const utf8* pCondition, const utf8* pFile, int32 line, const utf8* pMessage );
+    /** @brief 단언 실패 하나를 덧붙일 말과 함께 기록합니다. */
+    SW_NOINLINE void reportFailure( const utf8* pCondition, const utf8* pFile, int32 line, const sw::string& message );
+
+    /** @brief 같아야 할 두 값이 다를 때 — 두 값을 찍어 실패를 기록합니다. */
+    template <typename TExpected, typename TActual>
+    SW_NOINLINE void reportNotEqual( const utf8* pCondition, const utf8* pFile, int32 line, const TExpected& expected, const TActual& actual )
+    {
+        std::ostringstream oss;
+        oss << "Expected [" << expected << "], Actual [" << actual << "]";
+        reportFailure( pCondition, pFile, line, oss.str().c_str() );
+    }
+
+    /** @brief 달라야 할 두 값이 같을 때 — 그 값을 찍어 실패를 기록합니다. */
+    template <typename TValue>
+    SW_NOINLINE void reportEqual( const utf8* pCondition, const utf8* pFile, int32 line, const TValue& value )
+    {
+        std::ostringstream oss;
+        oss << "Expected not equal to [" << value << "]";
+        reportFailure( pCondition, pFile, line, oss.str().c_str() );
+    }
+
+    /** @brief 허용 오차를 넘었을 때 — 차이와 오차를 찍어 실패를 기록합니다. */
+    template <typename TDifference, typename TTolerance>
+    SW_NOINLINE void reportNotNear( const utf8* pCondition, const utf8* pFile, int32 line, const TDifference& difference, const TTolerance& tolerance )
+    {
+        std::ostringstream oss;
+        oss << "Diff [" << difference << "] exceeds tolerance [" << tolerance << "]";
+        reportFailure( pCondition, pFile, line, oss.str().c_str() );
+    }
 
     /**
-     * @brief 비교 대상이 널 포인터였는지 알려줍니다.
-     * @details 널을 `"<null>"` 로 찍는 것만으로는 부족하다 — 진짜 `"<null>"` 문자열과 널이
-     *          같다고 나와 버린다. 널 여부를 따로 들고 비교한다.
+     * @brief `SW_EXPECT_STREQ` 가 비교하는 글 — 복사하지 않는 뷰와, 그것이 널 포인터였는지.
+     * @details 널 `const utf8*` 로 `sw::string` 을 만들면 그 자리에서 죽는다. 그러면 실패를 찍어 보기도 전에
+     *          **테스트 바이너리 전체가 내려가고**, 같은 파일의 뒤쪽 케이스가 통째로 사라진다. 그런데 "널을 돌려주기
+     *          시작한 회귀" 야말로 이 매크로가 가장 잡아야 할 것이다. 그리고 널을 `"<null>"` 로 찍는 것만으로는
+     *          부족하다 — 진짜 `"<null>"` 문자열과 널이 같다고 나온다. 그래서 널 여부를 따로 든다.
      */
-    inline bool isNullText( const utf8* pText ) { return pText == nullptr; }
-    inline bool isNullText( const sw::string& ) { return false; }
-    inline bool isNullText( sw::string_view ) { return false; }
+    struct ComparableText
+    {
+        sw::string_view _text;
+        bool            _bNull{ false };
+    };
+
+    /** @brief 널에도 안전하게 비교용 글을 만듭니다. 받는 형태는 이 셋이다 — 나머지는 이 중 하나로 바뀌어 들어온다. */
+    inline ComparableText toComparableText( const utf8* pText ) { return pText != nullptr ? ComparableText{ pText, false } : ComparableText{ {}, true }; }
+    inline ComparableText toComparableText( const sw::string& text ) { return ComparableText{ text, false }; }
+    inline ComparableText toComparableText( sw::string_view text ) { return ComparableText{ text, false }; }
+
+    /** @brief 두 글이 같은지 보고, 다르면 두 글을 찍어 실패를 기록합니다(`SW_EXPECT_STREQ`). */
+    void expectSameText( const utf8* pCondition, const utf8* pFile, int32 line, const ComparableText& expected, const ComparableText& actual );
 
     /**
      * @brief 이 프로세스·이 케이스만 쓰는 임시 파일 경로를 만듭니다.
@@ -266,9 +338,9 @@ namespace test
     {
     public:
         /** @brief 정적 초기화 시점에 테스트를 레지스트리에 등록합니다. */
-        TestRegistrar( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func )
+        TestRegistrar( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
         {
-            TestRegistry::getInstance().registerTest( suiteName, testName, func );
+            TestRegistry::getInstance().registerTest( pSuiteName, pTestName, func );
         }
     };
 
@@ -277,9 +349,9 @@ namespace test
     {
     public:
         /** @brief 정적 초기화 시점에 호스트 스위트를 등록합니다. */
-        HostSuiteRegistrar( const sw::string& suiteName, const sw::string& reason )
+        HostSuiteRegistrar( const utf8* pSuiteName, const utf8* pReason )
         {
-            TestRegistry::getInstance().registerHostSuite( suiteName, reason );
+            TestRegistry::getInstance().registerHostSuite( pSuiteName, pReason );
         }
     };
 } // namespace test
@@ -321,35 +393,42 @@ namespace test
 /** @brief 현재 테스트 종료 후 역순으로 실행할 정리 함수를 등록합니다. */
 #define SW_TEST_DEFER_CLEANUP( cleanup ) test::TestRegistry::getInstance().getCurrentContext()->deferCleanup( cleanup )
 
-/** @brief 약한 기대 — 실패를 기록하고 계속합니다. */
-#define SW_EXPECT_TRUE( cond )                                                         \
-    do                                                                                 \
-    {                                                                                  \
-        if ( !( cond ) )                                                               \
-        {                                                                              \
-            test::TestRegistry::getInstance().addFailure( #cond, __FILE__, __LINE__ ); \
-        }                                                                              \
+// 단언은 전부 아래 둘 중 하나의 뼈대다 — `onFail` 이 `(void)0` 이면 EXPECT(기록하고 계속), `return` 이면 ASSERT(기록하고
+// 그 케이스를 끝낸다). 예전에는 단언마다 `return;` 한 줄만 다른 복사본이 따로 있었다. 조건 글(`#cond`)은 **바깥 매크로에서**
+// 만든다 — 안쪽 뼈대로 넘어간 인자는 이미 매크로가 풀린 뒤라, 거기서 만들면 `SW_TRUE` 가 `1` 로 찍힌다.
+
+/** @brief 조건 단언의 뼈대 — `bPassed` 가 거짓이면 실패를 기록하고 `onFail` 을 실행합니다. */
+#define SW_TEST_CHECK_IMPL( bPassed, pCondition, message, onFail )          \
+    do                                                                      \
+    {                                                                       \
+        if ( !( bPassed ) )                                                 \
+        {                                                                   \
+            test::reportFailure( pCondition, __FILE__, __LINE__, message ); \
+            onFail;                                                         \
+        }                                                                   \
     } while ( 0 )
 
-/** @brief 약한 기대 — 실패 시 메시지를 함께 기록합니다. */
-#define SW_EXPECT_TRUE_MSG( cond, msg )                                                     \
+/** @brief 값 비교 단언의 뼈대 — 두 값을 한 번씩만 평가하고, 다르면 두 값을 찍어 기록한 뒤 `onFail` 을 실행합니다. */
+#define SW_TEST_CHECK_EQUAL_IMPL( expected, actual, pCondition, onFail )                    \
     do                                                                                      \
     {                                                                                       \
-        if ( !( cond ) )                                                                    \
+        const auto _swExpected = ( expected );                                              \
+        const auto _swActual   = ( actual );                                                \
+        if ( !( _swExpected == _swActual ) )                                                \
         {                                                                                   \
-            test::TestRegistry::getInstance().addFailure( #cond, __FILE__, __LINE__, msg ); \
+            test::reportNotEqual( pCondition, __FILE__, __LINE__, _swExpected, _swActual ); \
+            onFail;                                                                         \
         }                                                                                   \
     } while ( 0 )
 
+/** @brief 약한 기대 — 실패를 기록하고 계속합니다. */
+#define SW_EXPECT_TRUE( cond ) SW_TEST_CHECK_IMPL( cond, #cond, nullptr, (void)0 )
+
+/** @brief 약한 기대 — 실패 시 메시지를 함께 기록합니다. */
+#define SW_EXPECT_TRUE_MSG( cond, msg ) SW_TEST_CHECK_IMPL( cond, #cond, msg, (void)0 )
+
 /** @brief 조건이 거짓이어야 합니다. */
-#define SW_EXPECT_FALSE( cond )                                                                 \
-    do                                                                                          \
-    {                                                                                           \
-        if ( ( cond ) )                                                                         \
-        {                                                                                       \
-            test::TestRegistry::getInstance().addFailure( "!(" #cond ")", __FILE__, __LINE__ ); \
-        }                                                                                       \
-    } while ( 0 )
+#define SW_EXPECT_FALSE( cond ) SW_TEST_CHECK_IMPL( !( cond ), "!(" #cond ")", nullptr, (void)0 )
 
 /**
  * @brief 조건이 거짓이어야 하며, 실패 시 메시지를 함께 기록합니다.
@@ -357,153 +436,56 @@ namespace test
  *          `SW_EXPECT_TRUE_MSG( x == false, ... )` 로 뒤집어 썼다. **실패했을 때 가장 설명이
  *          필요한 쪽이 부정 단언**이다(무엇이 열려 있으면 안 되는지). 그래서 짝을 맞춘다.
  */
-#define SW_EXPECT_FALSE_MSG( cond, msg )                                                             \
-    do                                                                                               \
-    {                                                                                                \
-        if ( ( cond ) )                                                                              \
-        {                                                                                            \
-            test::TestRegistry::getInstance().addFailure( "!(" #cond ")", __FILE__, __LINE__, msg ); \
-        }                                                                                            \
-    } while ( 0 )
+#define SW_EXPECT_FALSE_MSG( cond, msg ) SW_TEST_CHECK_IMPL( !( cond ), "!(" #cond ")", msg, (void)0 )
 
 /** @brief 두 값이 같아야 합니다. */
-#define SW_EXPECT_EQUAL( expected, actual )                                                                                  \
-    do                                                                                                                       \
-    {                                                                                                                        \
-        const auto _swExpected = ( expected );                                                                               \
-        const auto _swActual   = ( actual );                                                                                 \
-        if ( !( _swExpected == _swActual ) )                                                                                 \
-        {                                                                                                                    \
-            std::ostringstream oss;                                                                                          \
-            oss << "Expected [" << _swExpected << "], Actual [" << _swActual << "]";                                         \
-            test::TestRegistry::getInstance().addFailure( #actual " == " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
-        }                                                                                                                    \
-    } while ( 0 )
+#define SW_EXPECT_EQUAL( expected, actual ) SW_TEST_CHECK_EQUAL_IMPL( expected, actual, #actual " == " #expected, (void)0 )
 
 /** @brief 두 값이 달라야 합니다. */
-#define SW_EXPECT_NOT_EQUAL( expected, actual )                                                                              \
-    do                                                                                                                       \
-    {                                                                                                                        \
-        const auto _swExpected = ( expected );                                                                               \
-        const auto _swActual   = ( actual );                                                                                 \
-        if ( _swExpected == _swActual )                                                                                      \
-        {                                                                                                                    \
-            std::ostringstream oss;                                                                                          \
-            oss << "Expected not equal to [" << _swExpected << "]";                                                          \
-            test::TestRegistry::getInstance().addFailure( #actual " != " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
-        }                                                                                                                    \
+#define SW_EXPECT_NOT_EQUAL( expected, actual )                                             \
+    do                                                                                      \
+    {                                                                                       \
+        const auto _swExpected = ( expected );                                              \
+        const auto _swActual   = ( actual );                                                \
+        if ( _swExpected == _swActual )                                                     \
+            test::reportEqual( #actual " != " #expected, __FILE__, __LINE__, _swExpected ); \
     } while ( 0 )
 
 /** @brief 허용 오차 안에서 두 값이 가까워야 합니다. */
-#define SW_EXPECT_NEAR_EQUAL( expected, actual, tolerance )                                                                                        \
-    do                                                                                                                                             \
-    {                                                                                                                                              \
-        const auto _swExpected   = ( expected );                                                                                                   \
-        const auto _swActual     = ( actual );                                                                                                     \
-        const auto _swTolerance  = ( tolerance );                                                                                                  \
-        const auto _swDifference = sw::MathUtil::abs( _swExpected - _swActual );                                                                   \
-        if ( _swDifference > _swTolerance )                                                                                                        \
-        {                                                                                                                                          \
-            std::ostringstream oss;                                                                                                                \
-            oss << "Diff [" << _swDifference << "] exceeds tolerance [" << _swTolerance << "]";                                                    \
-            test::TestRegistry::getInstance().addFailure( "|" #actual " - " #expected "| <= " #tolerance, __FILE__, __LINE__, oss.str().c_str() ); \
-        }                                                                                                                                          \
+#define SW_EXPECT_NEAR_EQUAL( expected, actual, tolerance )                                                                         \
+    do                                                                                                                              \
+    {                                                                                                                               \
+        const auto _swTolerance  = ( tolerance );                                                                                   \
+        const auto _swDifference = sw::MathUtil::abs( ( expected ) - ( actual ) );                                                  \
+        if ( _swDifference > _swTolerance )                                                                                         \
+            test::reportNotNear( "|" #actual " - " #expected "| <= " #tolerance, __FILE__, __LINE__, _swDifference, _swTolerance ); \
     } while ( 0 )
 
 /** @brief 포인터가 null 이 아니어야 합니다. */
-#define SW_EXPECT_NOT_NULL( ptr )                                                                   \
-    do                                                                                              \
-    {                                                                                               \
-        if ( ( ptr ) == nullptr )                                                                   \
-        {                                                                                           \
-            test::TestRegistry::getInstance().addFailure( #ptr " != nullptr", __FILE__, __LINE__ ); \
-        }                                                                                           \
-    } while ( 0 )
+#define SW_EXPECT_NOT_NULL( ptr ) SW_TEST_CHECK_IMPL( ( ptr ) != nullptr, #ptr " != nullptr", nullptr, (void)0 )
 
 /** @brief 포인터가 null 이어야 합니다. */
-#define SW_EXPECT_NULL( ptr )                                                                       \
-    do                                                                                              \
-    {                                                                                               \
-        if ( ( ptr ) != nullptr )                                                                   \
-        {                                                                                           \
-            test::TestRegistry::getInstance().addFailure( #ptr " == nullptr", __FILE__, __LINE__ ); \
-        }                                                                                           \
-    } while ( 0 )
+#define SW_EXPECT_NULL( ptr ) SW_TEST_CHECK_IMPL( ( ptr ) == nullptr, #ptr " == nullptr", nullptr, (void)0 )
 
-/** @brief null 종료/문자열 유사 값을 sw::string 으로 비교합니다. */
-#define SW_EXPECT_STREQ( expected, actual )                                                                                  \
-    do                                                                                                                       \
-    {                                                                                                                        \
-        const bool       _sw_expect_streq_en = test::isNullText( expected );                                                 \
-        const bool       _sw_expect_streq_an = test::isNullText( actual );                                                   \
-        const sw::string _sw_expect_streq_e  = test::toComparableText( expected );                                           \
-        const sw::string _sw_expect_streq_a  = test::toComparableText( actual );                                             \
-        if ( _sw_expect_streq_en != _sw_expect_streq_an || _sw_expect_streq_e != _sw_expect_streq_a )                        \
-        {                                                                                                                    \
-            std::ostringstream oss;                                                                                          \
-            oss << "Expected [" << _sw_expect_streq_e << "], Actual [" << _sw_expect_streq_a << "]";                         \
-            test::TestRegistry::getInstance().addFailure( #actual " == " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
-        }                                                                                                                    \
-    } while ( 0 )
+/** @brief null 종료/문자열 유사 값을 비교합니다 — 널은 널끼리만 같습니다. */
+#define SW_EXPECT_STREQ( expected, actual ) \
+    test::expectSameText( #actual " == " #expected, __FILE__, __LINE__, test::toComparableText( expected ), test::toComparableText( actual ) )
 
 /** @brief 컨테이너/문자열이 비어 있어야 합니다. */
-#define SW_EXPECT_EMPTY( value )                                                                   \
-    do                                                                                             \
-    {                                                                                              \
-        if ( !( ( value ).empty() ) )                                                              \
-        {                                                                                          \
-            test::TestRegistry::getInstance().addFailure( #value ".empty()", __FILE__, __LINE__ ); \
-        }                                                                                          \
-    } while ( 0 )
+#define SW_EXPECT_EMPTY( value ) SW_TEST_CHECK_IMPL( ( value ).empty(), #value ".empty()", nullptr, (void)0 )
 
 /** @brief 강한 어서션 — 실패를 기록하고 현재 테스트를 중단합니다. */
-#define SW_ASSERT_TRUE( cond )                                                         \
-    do                                                                                 \
-    {                                                                                  \
-        if ( !( cond ) )                                                               \
-        {                                                                              \
-            test::TestRegistry::getInstance().addFailure( #cond, __FILE__, __LINE__ ); \
-            return;                                                                    \
-        }                                                                              \
-    } while ( 0 )
+#define SW_ASSERT_TRUE( cond ) SW_TEST_CHECK_IMPL( cond, #cond, nullptr, return )
 
 /** @brief 조건이 거짓이어야 하며, 아니면 테스트를 중단합니다. */
-#define SW_ASSERT_FALSE( cond )                                                                 \
-    do                                                                                          \
-    {                                                                                           \
-        if ( ( cond ) )                                                                         \
-        {                                                                                       \
-            test::TestRegistry::getInstance().addFailure( "!(" #cond ")", __FILE__, __LINE__ ); \
-            return;                                                                             \
-        }                                                                                       \
-    } while ( 0 )
+#define SW_ASSERT_FALSE( cond ) SW_TEST_CHECK_IMPL( !( cond ), "!(" #cond ")", nullptr, return )
 
 /** @brief 두 값이 같아야 하며, 아니면 테스트를 중단합니다. */
-#define SW_ASSERT_EQUAL( expected, actual )                                                                                  \
-    do                                                                                                                       \
-    {                                                                                                                        \
-        const auto _swExpected = ( expected );                                                                               \
-        const auto _swActual   = ( actual );                                                                                 \
-        if ( !( _swExpected == _swActual ) )                                                                                 \
-        {                                                                                                                    \
-            std::ostringstream oss;                                                                                          \
-            oss << "Expected [" << _swExpected << "], Actual [" << _swActual << "]";                                         \
-            test::TestRegistry::getInstance().addFailure( #actual " == " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
-            return;                                                                                                          \
-        }                                                                                                                    \
-    } while ( 0 )
+#define SW_ASSERT_EQUAL( expected, actual ) SW_TEST_CHECK_EQUAL_IMPL( expected, actual, #actual " == " #expected, return )
 
 /** @brief 포인터가 null 이 아니어야 하며, 아니면 테스트를 중단합니다. */
-#define SW_ASSERT_NOT_NULL( ptr )                                                                   \
-    do                                                                                              \
-    {                                                                                               \
-        if ( ( ptr ) == nullptr )                                                                   \
-        {                                                                                           \
-            test::TestRegistry::getInstance().addFailure( #ptr " != nullptr", __FILE__, __LINE__ ); \
-            return;                                                                                 \
-        }                                                                                           \
-    } while ( 0 )
+#define SW_ASSERT_NOT_NULL( ptr ) SW_TEST_CHECK_IMPL( ( ptr ) != nullptr, #ptr " != nullptr", nullptr, return )
 
 // `SW_ASSERT_NULL` 은 **일부러 없다.** 짝을 맞추려고 만들 수는 있지만 부를 자리가 하나도 없었다
 // (`SW_EXPECT_NULL` 은 50곳이 쓴다 — 그쪽은 실패해도 계속 가는 게 맞는 자리들이다).
-// 쓰는 곳이 생기면 그때 `SW_ASSERT_FALSE` 옆에 같은 모양으로 넣는다.
+// 쓰는 곳이 생기면 그때 위 뼈대로 한 줄 넣는다.

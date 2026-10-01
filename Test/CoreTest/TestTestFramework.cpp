@@ -4,6 +4,54 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace
+{
+    /** @brief 단언 하나를 부르고 그 뒤 줄까지 왔는지 남깁니다 — ASSERT 는 함수를 끝내야 하고 EXPECT 는 아니다. */
+    void runAssertTrue( bool bCondition, bool& outReachedEnd )
+    {
+        outReachedEnd = false;
+        SW_ASSERT_TRUE( bCondition );
+        outReachedEnd = true;
+    }
+
+    void runAssertFalse( bool bCondition, bool& outReachedEnd )
+    {
+        outReachedEnd = false;
+        SW_ASSERT_FALSE( bCondition );
+        outReachedEnd = true;
+    }
+
+    void runAssertEqual( int32 expected, int32 actual, bool& outReachedEnd )
+    {
+        outReachedEnd = false;
+        SW_ASSERT_EQUAL( expected, actual );
+        outReachedEnd = true;
+    }
+
+    void runAssertNotNull( const void* pValue, bool& outReachedEnd )
+    {
+        outReachedEnd = false;
+        SW_ASSERT_NOT_NULL( pValue );
+        outReachedEnd = true;
+    }
+
+    void runExpectTrue( bool bCondition, bool& outReachedEnd )
+    {
+        outReachedEnd = false;
+        SW_EXPECT_TRUE( bCondition );
+        outReachedEnd = true;
+    }
+
+    /** @brief 테스트 실행 파일 인자 하나로 지역 레지스트리를 설정합니다. */
+    void configureWithArgument( test::TestRegistry& registry, const utf8* pArgument )
+    {
+        utf8       programName[] = "probe";
+        sw::string argument( pArgument );
+        utf8*      argv[] = { programName, argument.data() };
+        registry.configureFromArgs( 2, argv );
+    }
+} // namespace
+
 /**
  * @brief [TestFrameworkTest] 임시 파일 경로는 **프로세스마다 · 케이스마다** 다르다
  * @details 테스트들이 `%TEMP%/test_malformed.wav` 처럼 고정된 이름에 쓰고 있었다. 같은 테스트
@@ -44,4 +92,184 @@ SW_TEST_CASE( TestFrameworkTest, TwoCasesAskingForTheSameFileNameGetDifferentPat
                         "케이스 이름이 경로에 없습니다" );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( path, "TempPathIsUniquePerProcessAndPerCase" ) == false,
                         "옆 케이스의 경로와 같습니다" );
+}
+
+/**
+ * @brief [TestFrameworkTest] 실패한 EXPECT 는 실패 하나를 남기고 계속 간다 — 조건 글은 매크로가 풀리기 전 철자다
+ * @details 단언은 전부 한 뼈대(`SW_TEST_CHECK_IMPL` · `SW_TEST_CHECK_EQUAL_IMPL`)를 지난다. 그 뼈대가 실패를 놓치거나
+ *          두 번 세거나, 조건 글을 안쪽 매크로에서 만들어 `SW_TRUE` 를 `1` 로 찍으면 여기서 진다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ExpectRecordsOneFailureEachAndKeepsGoing )
+{
+    sw::vector<test::TestFailure> listFailure;
+    {
+        test::ScopedFailureCapture capture;
+        SW_EXPECT_TRUE( 1 + 1 == 3 );
+        SW_EXPECT_TRUE( 1 + 1 == 2 );
+        SW_EXPECT_FALSE( SW_TRUE );
+        SW_EXPECT_EQUAL( 4, 2 + 1 );
+        SW_EXPECT_NOT_EQUAL( 7, 7 );
+        SW_EXPECT_NEAR_EQUAL( 1.0, 1.5, 0.25 );
+        SW_EXPECT_NULL( &listFailure );
+        SW_EXPECT_NOT_NULL( static_cast<const void*>( nullptr ) );
+        SW_EXPECT_EMPTY( sw::string( "x" ) );
+        listFailure = capture.getListFailure();
+    }
+
+    SW_ASSERT_EQUAL( size_t{ 8 }, listFailure.size() );
+    SW_EXPECT_STREQ( "1 + 1 == 3", listFailure[0]._condition );
+    SW_EXPECT_STREQ( "!(SW_TRUE)", listFailure[1]._condition );
+    SW_EXPECT_STREQ( "2 + 1 == 4", listFailure[2]._condition );
+    SW_EXPECT_STREQ( "Expected [4], Actual [3]", listFailure[2]._message );
+    SW_EXPECT_STREQ( "7 != 7", listFailure[3]._condition );
+    SW_EXPECT_STREQ( "Expected not equal to [7]", listFailure[3]._message );
+    SW_EXPECT_STREQ( "|1.5 - 1.0| <= 0.25", listFailure[4]._condition );
+    SW_EXPECT_STREQ( "Diff [0.5] exceeds tolerance [0.25]", listFailure[4]._message );
+    SW_EXPECT_STREQ( "&listFailure == nullptr", listFailure[5]._condition );
+    SW_EXPECT_STREQ( "static_cast<const void*>( nullptr ) != nullptr", listFailure[6]._condition );
+    SW_EXPECT_STREQ( "sw::string( \"x\" ).empty()", listFailure[7]._condition );
+
+    // 이 파일 · 이 줄을 가리켜야 실패를 따라갈 수 있다.
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( listFailure[0]._file, "TestTestFramework.cpp" ) );
+    SW_EXPECT_TRUE( listFailure[0]._line > 0 );
+}
+
+/**
+ * @brief [TestFrameworkTest] 실패한 ASSERT 는 그 자리에서 함수를 끝내고, EXPECT 는 끝내지 않는다
+ * @details ASSERT 는 뒤 줄이 앞 줄의 결과에 기대는 자리(널 포인터를 바로 쓰는 자리)에 쓴다. 멈추지 않으면 실패를
+ *          찍어 놓고 그 다음 줄에서 죽는다 — 어느 단언이었는지도 못 남긴 채.
+ */
+SW_TEST_CASE( TestFrameworkTest, AssertStopsTheFunctionExpectDoesNot )
+{
+    bool   bAssertTrueRan{ true };
+    bool   bAssertFalseRan{ true };
+    bool   bAssertEqualRan{ true };
+    bool   bAssertNotNullRan{ true };
+    bool   bExpectTrueRan{ false };
+    bool   bPassingAssertRan{ false };
+    size_t failureCount{ 0 };
+    {
+        test::ScopedFailureCapture capture;
+        runAssertTrue( false, bAssertTrueRan );
+        runAssertFalse( true, bAssertFalseRan );
+        runAssertEqual( 1, 2, bAssertEqualRan );
+        runAssertNotNull( nullptr, bAssertNotNullRan );
+        runExpectTrue( false, bExpectTrueRan );
+        runAssertTrue( true, bPassingAssertRan );
+        failureCount = capture.getListFailure().size();
+    }
+
+    SW_EXPECT_EQUAL( size_t{ 5 }, failureCount );
+    SW_EXPECT_FALSE_MSG( bAssertTrueRan, "SW_ASSERT_TRUE 가 실패했는데 함수가 계속 돌았습니다" );
+    SW_EXPECT_FALSE_MSG( bAssertFalseRan, "SW_ASSERT_FALSE 가 실패했는데 함수가 계속 돌았습니다" );
+    SW_EXPECT_FALSE_MSG( bAssertEqualRan, "SW_ASSERT_EQUAL 이 실패했는데 함수가 계속 돌았습니다" );
+    SW_EXPECT_FALSE_MSG( bAssertNotNullRan, "SW_ASSERT_NOT_NULL 이 실패했는데 함수가 계속 돌았습니다" );
+    SW_EXPECT_TRUE_MSG( bExpectTrueRan, "SW_EXPECT_TRUE 가 실패하자 함수가 멈췄습니다" );
+    SW_EXPECT_TRUE_MSG( bPassingAssertRan, "통과한 SW_ASSERT_TRUE 가 함수를 끝냈습니다" );
+}
+
+/**
+ * @brief [TestFrameworkTest] STREQ 는 널을 널끼리만 같다고 본다 — 글자 "<null>" 과도 다르다
+ * @details 널을 `sw::string` 으로 만들면 그 자리에서 죽어 뒤 케이스가 통째로 사라진다. 그렇다고 널을 "<null>" 로 바꿔
+ *          비교하면 진짜 "<null>" 과 같다고 나온다. 두 쪽을 다 본다.
+ */
+SW_TEST_CASE( TestFrameworkTest, StreqTellsNullApartFromTheTextNull )
+{
+    const utf8*                   pNull = nullptr;
+    sw::vector<test::TestFailure> listFailure;
+    {
+        test::ScopedFailureCapture capture;
+        SW_EXPECT_STREQ( "<null>", pNull );
+        SW_EXPECT_STREQ( pNull, pNull );
+        SW_EXPECT_STREQ( "abc", sw::string( "abc" ) );
+        SW_EXPECT_STREQ( sw::string_view( "abc" ), "abd" );
+        listFailure = capture.getListFailure();
+    }
+
+    SW_ASSERT_EQUAL( size_t{ 2 }, listFailure.size() );
+    SW_EXPECT_STREQ( "Expected [<null>], Actual [<null>]", listFailure[0]._message );
+    SW_EXPECT_STREQ( "Expected [abc], Actual [abd]", listFailure[1]._message );
+}
+
+/**
+ * @brief [TestFrameworkTest] 덧붙일 말은 글자 · `sw::string` · 널을 다 받는다
+ * @details 메시지는 실패할 때만 만든다. 널 메시지(조건에 따라 고른 이름이 비었을 때)를 받아 죽으면 실패를 못 찍는다.
+ */
+SW_TEST_CASE( TestFrameworkTest, FailureMessageAcceptsLiteralStringAndNull )
+{
+    const utf8*                   pNoMessage = nullptr;
+    sw::vector<test::TestFailure> listFailure;
+    {
+        test::ScopedFailureCapture capture;
+        SW_EXPECT_TRUE_MSG( false, "literal" );
+        SW_EXPECT_TRUE_MSG( false, sw::string( "owned" ) );
+        SW_EXPECT_FALSE_MSG( true, pNoMessage );
+        listFailure = capture.getListFailure();
+    }
+
+    SW_ASSERT_EQUAL( size_t{ 3 }, listFailure.size() );
+    SW_EXPECT_STREQ( "literal", listFailure[0]._message );
+    SW_EXPECT_STREQ( "owned", listFailure[1]._message );
+    SW_EXPECT_TRUE( listFailure[2]._message.empty() );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--host_suites` 는 선언한 스위트로 가른다 — exclude 는 빼고, only 는 그것만, 기본은 전부
+ * @details `<타깃>_NoGPU` · `<타깃>_HostOnly` 가 이 둘로 돈다. 두 쪽이 겹치거나 빈 곳이 생기면 CI 가 GPU 스위트를 돌거나
+ *          어떤 스위트가 아무 데서도 안 돈다.
+ */
+SW_TEST_CASE( TestFrameworkTest, HostSuitesArgumentSplitsByDeclaration )
+{
+    const test::TestCaseInfo gpuCase{ "GpuProbeTest", "One", {} };
+    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {} };
+
+    test::TestRegistry defaultRegistry;
+    defaultRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    SW_EXPECT_TRUE( defaultRegistry.isSelected( gpuCase ) );
+    SW_EXPECT_TRUE( defaultRegistry.isSelected( plainCase ) );
+
+    test::TestRegistry excludeRegistry;
+    excludeRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    configureWithArgument( excludeRegistry, "--host_suites=exclude" );
+    SW_EXPECT_FALSE( excludeRegistry.isSelected( gpuCase ) );
+    SW_EXPECT_TRUE( excludeRegistry.isSelected( plainCase ) );
+
+    test::TestRegistry onlyRegistry;
+    onlyRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    configureWithArgument( onlyRegistry, "--host_suites=only" );
+    SW_EXPECT_TRUE( onlyRegistry.isSelected( gpuCase ) );
+    SW_EXPECT_FALSE( onlyRegistry.isSelected( plainCase ) );
+
+    // 이름 필터와 함께 쓰면 둘 다 맞아야 고른다.
+    test::TestRegistry filteredRegistry;
+    filteredRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    configureWithArgument( filteredRegistry, "--host_suites=only" );
+    filteredRegistry.setFilter( "Plain*" );
+    SW_EXPECT_FALSE( filteredRegistry.isSelected( gpuCase ) );
+    SW_EXPECT_FALSE( filteredRegistry.isSelected( plainCase ) );
+}
+
+/**
+ * @brief [TestFrameworkTest] 효력 없는 실행은 진다 — 모르는 `--host_suites` 값, 아무것도 안 고른 `only`
+ * @details 모르는 값을 "전부" 로 읽으면 CI 가 GPU 스위트를 돈다. 아무것도 안 고른 `only` 는 `_HostOnly` 가 빈 그물이라는 뜻이다.
+ */
+SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    test::TestRegistry bogusRegistry;
+    configureWithArgument( bogusRegistry, "--host_suites=bogus" );
+    SW_EXPECT_EQUAL( 1, bogusRegistry.runAllTests() );
+
+    // 호스트 선언이 없는 실행 파일의 `only` — 고른 것이 없다.
+    test::TestRegistry onlyRegistry;
+    onlyRegistry.registerTest( "PlainProbeTest", "One", {} );
+    configureWithArgument( onlyRegistry, "--host_suites=only" );
+    SW_EXPECT_EQUAL( 1, onlyRegistry.runAllTests() );
+
+    // 케이스가 하나도 없는 스위트를 가리키는 선언 — 이름을 바꾸고 선언을 놓친 것이다.
+    test::TestRegistry staleRegistry;
+    staleRegistry.registerHostSuite( "RenamedAwayTest", "needs a GPU" );
+    configureWithArgument( staleRegistry, "--host_suites=exclude" );
+    SW_EXPECT_EQUAL( 1, staleRegistry.runAllTests() );
 }

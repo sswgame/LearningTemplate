@@ -117,6 +117,16 @@ AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이�
 4. 그런 스위트가 있는 파일에는 **다른 스위트를 두지 않습니다.** 섞여 있으면 새 케이스를 옆 스위트에
    붙이기 쉽고, 그 순간 GPU 가 필요한 케이스가 CI 로 들어갑니다.
 
+### 단언
+
+`SW_EXPECT_*` 는 실패를 기록하고 계속 가고, `SW_ASSERT_*` 는 기록하고 그 케이스(또는 그 함수)를 끝냅니다 — 뒤 줄이
+앞 줄의 결과에 기대는 자리(널 포인터를 바로 쓰는 자리)에만 ASSERT 를 씁니다. 전부 한 뼈대(`SW_TEST_CHECK_IMPL` ·
+`SW_TEST_CHECK_EQUAL_IMPL`)를 지나고, **실패 경로는 바깥 함수**(`test::reportFailure` · `reportNotEqual` …)라 단언 자리에는
+비교와 호출 하나만 남습니다. 새 단언은 그 뼈대로 한 줄입니다.
+
+단언 자체를 시험할 때는 `test::ScopedFailureCapture` 로 실패를 가로챕니다(gtest 의 `EXPECT_FATAL_FAILURE` 와 같은 일).
+`Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 "실패를 하나 남기는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 봅니다.
+
 ### 테스트 상태 정리
 
 각 테스트가 종료되면 프레임워크가 비동기 씬 로드와 TaskManager를 정리합니다. 그 밖에 테스트가
