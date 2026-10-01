@@ -213,6 +213,9 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 
 /**
  * @brief [ResourceTest] AssetStreamingQueue 비동기 요청 등록, 취소, 프레임 쓰로틀링 콜백 검증
+ * @details 콜백은 요청마다 **정확히 한 번**, `update()` 를 부른 스레드에서 온다 — 워커가 먼저 끝냈으면 그 결과로, 취소가 먼저였으면
+ *          false 로. 예전 시험은 요청 직후 "아직 진행 중" 을 단언했는데, 없는 파일은 워커가 그 사이에 끝내 버린다(2026-10-01 CI Linux
+ *          Shipping 에서 그렇게 졌다). 그러면서 정작 콜백이 왔는지 · 몇 번 왔는지 · 쓰로틀링이 듣는지는 하나도 보지 않았다.
  */
 SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
 {
@@ -222,44 +225,48 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
     SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
     SW_EXPECT_EQUAL( size_t( 0 ), queue.getCompletedCount() );
 
-    bool       bCompleted1{ false };
-    bool       bSuccess1{ false };
-    sw::string path1{};
-
-    queue.requestAsset(
-        "Textures/Character.png",
-        sw::StreamingPriority::Normal,
-        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
+    uint32 cancelledCallCount = 0;
+    queue.requestAsset( "Textures/Character.png", sw::StreamingPriority::Normal,
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&cancelledCallCount]( std::string_view, bool )
     {
-        bCompleted1 = true;
-        bSuccess1   = ok;
-        path1       = sw::string( p );
+        ++cancelledCallCount;
     } ) );
+    // 요청 직후는 진행 중이거나, 없는 파일이라 워커가 벌써 끝냈다 — 어느 쪽이든 된다.
+    SW_EXPECT_TRUE( queue.isStreaming( "Textures/Character.png" ) || queue.getCompletedCount() == 1 );
 
-    SW_EXPECT_TRUE( queue.isStreaming( "Textures/Character.png" ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), queue.getPendingCount() );
-
-    // 취소 요청 검증
     queue.cancelRequest( "Textures/Character.png" );
     SW_EXPECT_FALSE( queue.isStreaming( "Textures/Character.png" ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
+    SW_EXPECT_EQUAL( 0u, cancelledCallCount ); // update() 전에는 오지 않는다
 
-    // 새 요청 등록 후 메인 프레임 틱 업데이트
-    queue.requestAsset(
-        "Audio/BGM.wav",
-        sw::StreamingPriority::High,
-        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
+    // 요청 셋 — 모두 끝날 때까지 기다린 뒤(진행 표에서 빠지는 것과 완료 큐에 들어가는 것은 같은 락 안이다) 프레임마다 나눠 받는다.
+    uint32            deliveredCallCount = 0;
+    const utf8* const arrPath[]          = { "Audio/BGM.wav", "Audio/Step.wav", "Textures/Hero.png" };
+    for ( const utf8* pPath : arrPath )
     {
-        bCompleted1 = true;
-        bSuccess1   = ok;
-        path1       = sw::string( p );
-    } ) );
+        queue.requestAsset( pPath, sw::StreamingPriority::High,
+                            SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&deliveredCallCount]( std::string_view, bool )
+        {
+            ++deliveredCallCount;
+        } ) );
+    }
+    const auto waitStart = std::chrono::steady_clock::now();
+    while ( queue.getPendingCount() != 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    SW_ASSERT_EQUAL( size_t( 0 ), queue.getPendingCount() );
 
-    // 워커 스레드 작업 완료 대기
-    std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
-
+    // 완료 큐의 맨 앞은 취소한 요청의 것이다. 프레임당 상한을 지킨다.
+    queue.update( 1 );
+    SW_EXPECT_EQUAL( 1u, cancelledCallCount );
+    SW_EXPECT_EQUAL( 0u, deliveredCallCount );
+    queue.update( 2 );
+    SW_EXPECT_EQUAL( 2u, deliveredCallCount );
     queue.update( 10 );
-    queue.clearCompletionRecord();
+    SW_EXPECT_EQUAL( 3u, deliveredCallCount );
+    SW_EXPECT_EQUAL( 1u, cancelledCallCount ); // 정확히 한 번 — 늦게 끝난 옛 태스크가 또 부르지 않는다
 
+    queue.clearCompletionRecord();
+    SW_EXPECT_EQUAL( size_t( 0 ), queue.getCompletedCount() );
     queue.shutdown();
 }
 

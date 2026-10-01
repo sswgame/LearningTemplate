@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (테스트 안정 ② 스트리밍 큐 시험이 "요청 직후 아직 진행 중" 에 기댔다)
+
+6ac216f6 의 CI(Linux Shipping)에서 `ResourceTest.AssetStreamingQueueLifecycleAndThrottling` 이 `isStreaming` · `getPendingCount() == 1` 로 졌다.
+없는 파일의 존재 확인은 워커가 곧바로 끝내므로, 요청 직후에 "아직 진행 중" 이라는 보장이 없다. 그러면서 이 시험은 이름과 달리 콜백이 왔는지 ·
+몇 번 왔는지 · 프레임당 상한이 듣는지를 하나도 단언하지 않았다(콜백 변수에 쓰기만 했다).
+- 요청 직후는 "진행 중이거나 이미 끝남" 둘 다 받는다.
+- 큐 설계를 시험으로 적었다: 콜백은 **요청마다 정확히 한 번**, `update()` 에서만 — 취소가 먼저면 false, 워커가 먼저 끝냈으면 그 결과.
+  늦게 끝난 옛 태스크는 세대로 걸러져 두 번 부르지 않는다.
+- 요청 셋이 모두 끝나기를 기다린 뒤(진행 표에서 빠지는 것과 완료 큐에 들어가는 것은 같은 락 안) `update(1)` · `update(2)` · `update(10)` 으로
+  프레임당 상한을 본다.
+같은 가정을 하는 시험을 더 찾았다 — `EditorBackgroundJobTest`(워커를 시험이 흉내 낸다) · `GpuUploadQueue`(flush 전까지 목록에 머문다) ·
+`ProcessTest`(10 초 명령)는 결정적이다. `AssetStreamingTest` 는 이미 "진행 중이거나 끝남" 으로 쓰여 있었다.
+**검증.** 요청 직후 50 ms 쉬어 워커가 먼저 끝나게 하는 돌연변이에도 통과(옛 시험은 진다), `update` 가 상한을 무시하면 진다. `--test_repeat=200` 200/200.
+
 ### 2026-10-01 (테스트 확인 ③ 느린 케이스 목록은 케이스마다 한 번)
 
 테스트 확인 ① 의 `Slowest cases:` 가 회차마다 따로 들어가, `--test_repeat` 와 함께 쓰면 같은 케이스 하나가 다섯 줄을 다 채웠다(크래시 시험을
