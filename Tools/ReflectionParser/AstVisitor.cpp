@@ -593,14 +593,8 @@ namespace sw
                         return;
                     }
 
-                    prop._bIsBitField     = SW_TRUE;
-                    const int64 bitOffset = clang_Cursor_getOffsetOfField( cursor );
-                    if ( bitOffset >= 0 )
-                    {
-                        prop._bitOffset  = static_cast<uint32>( bitOffset );
-                        prop._byteOffset = static_cast<uint32>( bitOffset / 8 );
-                        prop._bitMask    = static_cast<uint8>( 1u << ( bitOffset % 8 ) );
-                    }
+                    // 자리는 재지 않는다 — 런타임이 그 구성의 레이아웃에서 찾는다(`PropertyInfo::resolveBitField`).
+                    prop._bIsBitField = SW_TRUE;
                 }
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._memberName );

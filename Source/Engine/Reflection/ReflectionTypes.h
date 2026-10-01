@@ -259,6 +259,23 @@ namespace sw
         /** @brief 값 변경 콜백을 바인딩합니다. */
         void bindOnChanged( PropertyBindingDelegate delegate ) const { _onPropertyBoundChanged = std::move( delegate ); }
 
+        /** @brief 비트필드의 그 비트 하나만 1 로 세우는 함수입니다(생성 코드가 만든다). 받는 것은 0 으로 채운, 그 타입 크기의 자리입니다. */
+        using SetBitFunction = void ( * )( void* pInstance );
+
+        /**
+         * @brief 비트필드의 바이트 · 마스크를 **이 빌드 구성의 실제 레이아웃에서** 찾아 이 프로퍼티를 비트필드로 만듭니다.
+         * @details 0 으로 채운 자리에 그 비트만 세우는 함수를 불러, 바뀐 바이트와 비트를 읽는다(언리얼 `FBoolProperty` 가 UHT 의
+         *          SetBit 함수로 하는 것과 같다). 예전에는 파서가 libclang 으로 잰 바이트를 생성 코드에 박았는데, 파서는 Debug 정의
+         *          (`SW_DEBUG` · `_DEBUG`)를 모른 채 잰다 — Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의
+         *          비트필드가 엉뚱한 바이트를 가리켰다(`DirectionalLightComponent::_bCastShadow` · `SequencePlayerComponent::_bLoop` 등
+         *          넷). 씬을 읽을 때마다 그 자리의 다른 필드를 덮어썼다. 다른 프로퍼티는 처음부터 `offsetof` 라 맞았다.
+         * @param ownerSize 이 프로퍼티를 가진 타입의 크기(`sizeof`)
+         * @param pSetBit   그 비트만 세우는 함수
+         * @return 바이트 하나의 비트 하나를 찾았으면 true. 아니면 오류를 남기고, 읽으면 false · 쓰면 무시되는 비트필드로 둡니다 —
+         *         엉뚱한 바이트를 건드리지 않게.
+         */
+        bool resolveBitField( size_t ownerSize, SetBitFunction pSetBit );
+
         /** @brief 인스턴스의 프로퍼티 값을 읽습니다(비트필드 지원). */
         template <typename T, typename ObjectType>
         T getValue( const ObjectType* pInstance ) const

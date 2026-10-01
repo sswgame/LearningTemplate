@@ -1069,3 +1069,58 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
     SW_EXPECT_EQUAL( 0u, aliveFillerCount );
 #endif
 }
+
+/**
+ * @brief [ReflectionTypeInfoTest] 등록된 모든 비트필드는 **이 빌드 구성의 실제 레이아웃에서** 앞뒤의 보통 프로퍼티 사이에 있다
+ * @details 보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어
+ *          파서가 libclang 으로 잰 숫자를 박는데, 파서는 Debug 정의(`SW_DEBUG` · `_DEBUG`)를 모른 채 잰다 — Debug 에서 커지는 멤버
+ *          (`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의 비트필드는 엉뚱한 바이트를 가리켰다. `SequencePlayerComponent::_bLoop`
+ *          의 124 는 Debug 에서 문자열 안이었고, 씬 로드 · 인스펙터가 그 비트를 쓰면 문자열의 용량 비트를 뒤집었다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
+{
+    uint32                 bitFieldCount = 0;
+    sw::vector<sw::string> listViolation;
+    sw::engine::getTypeRegistry().forEachType( [&bitFieldCount, &listViolation]( const sw::TypeInfo& typeInfo )
+    {
+        const sw::vector<sw::PropertyInfo>& listProperty    = typeInfo._listProperty;
+        const auto                          isPlainProperty = []( const sw::PropertyInfo& property )
+        {
+            return property._bIsBitField != SW_TRUE && property._pValueAccessor == nullptr;
+        };
+        for ( size_t index = 0; index < listProperty.size(); ++index )
+        {
+            const sw::PropertyInfo& bitField = listProperty[index];
+            if ( bitField._bIsBitField != SW_TRUE )
+                continue;
+            ++bitFieldCount;
+
+            const sw::string where = sw::string( typeInfo._fullyQualifiedName.c_str() ) + "::" + bitField._name.c_str() + " @" +
+                                     sw::to_string( static_cast<uint64>( bitField._offset ) );
+            for ( size_t previous = index; previous-- > 0; )
+            {
+                if ( isPlainProperty( listProperty[previous] ) == false )
+                    continue;
+                if ( bitField._offset <= listProperty[previous]._offset )
+                    listViolation.push_back( where + " is not after " + listProperty[previous]._name.c_str() + " @" +
+                                             sw::to_string( static_cast<uint64>( listProperty[previous]._offset ) ) );
+                break;
+            }
+            for ( size_t next = index + 1; next < listProperty.size(); ++next )
+            {
+                if ( isPlainProperty( listProperty[next] ) == false )
+                    continue;
+                if ( bitField._offset >= listProperty[next]._offset )
+                    listViolation.push_back( where + " is not before " + listProperty[next]._name.c_str() + " @" +
+                                             sw::to_string( static_cast<uint64>( listProperty[next]._offset ) ) );
+                break;
+            }
+        }
+    } );
+
+    sw::string report;
+    for ( const sw::string& violation : listViolation )
+        report += "\n  " + violation;
+    SW_EXPECT_TRUE( bitFieldCount > 0 ); // 엔진 타입이 등록돼 있어야 이 검사가 무엇을 본다
+    SW_EXPECT_TRUE_MSG( listViolation.empty(), report.c_str() );
+}

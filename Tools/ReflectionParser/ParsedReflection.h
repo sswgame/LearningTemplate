@@ -63,10 +63,7 @@ namespace sw
         shared_ptr<ParsedContainerNode> _containerTree;
         float32                         _minRange;
         float32                         _maxRange;
-        uint32                          _bitOffset;
-        uint32                          _byteOffset;
         ContainerKind                   _containerKind;
-        uint8                           _bitMask;
         uint8                           _bIsBitField   : 1;
         uint8                           _bReadOnly     : 1;
         uint8                           _bXmlAttribute : 1;
@@ -103,10 +100,7 @@ namespace sw
             , _containerTree{ nullptr }
             , _minRange{ 0.0f }
             , _maxRange{ 1.0f }
-            , _bitOffset{ 0 }
-            , _byteOffset{ 0 }
             , _containerKind{ ContainerKind::None }
-            , _bitMask{ 0xFF }
             , _bIsBitField{ SW_FALSE }
             , _bReadOnly{ SW_FALSE }
             , _bXmlAttribute{ SW_FALSE }

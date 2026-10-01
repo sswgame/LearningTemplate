@@ -154,6 +154,49 @@ namespace sw
         , _bIsBitField{ SW_FALSE }
         , _reservedFlags{ 0 } {}
 
+    bool PropertyInfo::resolveBitField( size_t ownerSize, SetBitFunction pSetBit )
+    {
+        _bIsBitField = SW_TRUE;
+        _offset      = 0;
+        _bitOffset   = 0;
+        _bitMask     = 0; // 못 찾으면 읽기 false · 쓰기 무시
+        if ( pSetBit == nullptr || ownerSize == 0 )
+            return false;
+
+        // 그 타입이 요구할 수 있는 어떤 정렬보다 넉넉하게 — 비트필드의 저장 단위(uint32 · uint64)를 통째로 읽고 쓰는 코드가 나온다.
+        constexpr size_t kAlignment = 64;
+        uint8*           pZeroed    = static_cast<uint8*>( Memory::allocateAligned( ownerSize, kAlignment ) );
+        if ( pZeroed == nullptr )
+            return false;
+        Memory::set( pZeroed, 0, ownerSize );
+        pSetBit( pZeroed );
+
+        size_t changedByteCount = 0;
+        size_t changedByteIndex = 0;
+        for ( size_t byteIndex = 0; byteIndex < ownerSize; ++byteIndex )
+        {
+            if ( pZeroed[byteIndex] != 0 )
+            {
+                ++changedByteCount;
+                changedByteIndex = byteIndex;
+            }
+        }
+        const uint8 changedBits = ( changedByteCount == 1 ) ? pZeroed[changedByteIndex] : uint8{ 0 };
+        Memory::freeAligned( pZeroed );
+
+        const bool bSingleBit = changedBits != 0 && ( changedBits & static_cast<uint8>( changedBits - 1 ) ) == 0;
+        if ( bSingleBit == false )
+        {
+            SW_LOG_ERROR( "Bit field '%#' could not be located (%# bytes changed) - it will read as false and ignore writes", _name.c_str(),
+                          static_cast<uint64>( changedByteCount ) );
+            return false;
+        }
+        _offset    = changedByteIndex;
+        _bitMask   = changedBits;
+        _bitOffset = static_cast<uint32>( changedByteIndex * 8 + MathUtil::countTrailingZeros( changedBits ) );
+        return true;
+    }
+
     NestedContainerInfo PropertyInfo::getContainerShape() const
     {
         if ( _nestedContainer != nullptr )

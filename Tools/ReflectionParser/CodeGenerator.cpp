@@ -336,9 +336,8 @@ namespace sw
         emit.push();
         emit.linef( "%#,", CodeEmit::hs( prop._name ) );
         emit.linef( "%#,", CodeEmit::hs( _session._typeNameMap.normalize( prop._typeName ) ) );
-        if ( prop._bIsBitField == SW_TRUE )
-            emit.linef( "%#u,", prop._byteOffset );
-        else if ( prop._bIsAccessor == SW_TRUE )
+        // 비트필드는 `offsetof` 를 쓸 수 없다. 자리는 아래 `resolveBitField` 가 이 구성의 실제 레이아웃에서 찾는다.
+        if ( prop._bIsBitField == SW_TRUE || prop._bIsAccessor == SW_TRUE )
             emit.line( "0u," );
         else
             emit.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._memberName );
@@ -371,9 +370,9 @@ namespace sw
         }
         if ( prop._bIsBitField == SW_TRUE )
         {
-            emit.line( "p._bIsBitField = SW_TRUE;" );
-            emit.linef( "p._bitOffset = %#;", prop._bitOffset );
-            emit.linef( "p._bitMask = %#;", prop._bitMask );
+            // 파서가 잰 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 잰다(`PropertyInfo::resolveBitField` 설명).
+            emit.linef( "p.resolveBitField( sizeof( %# ), []( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<PropDecl>( 1 ); } );",
+                        typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, prop._memberName );
         }
         if ( prop._listAlias.empty() == false )
         {

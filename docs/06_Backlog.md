@@ -2051,6 +2051,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑦ 리플렉션 — Debug 에서 비트필드 프로퍼티가 엉뚱한 바이트를 썼다)
+
+보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어 파서가
+libclang 으로 잰 바이트(`clang_Cursor_getOffsetOfField`)를 박았는데, 파서 인자(`parser_config*.json`)에는 Debug 정의(`SW_DEBUG` ·
+`_DEBUG`)가 없다. Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 자리 · MSVC 반복자 디버그) 뒤의 비트필드는 엉뚱한 바이트를
+가리켰다 — 실측 넷: `DirectionalLightComponent::_bCastShadow`(196, 실제는 `_shadowDistance` 224 뒤) · `SequencePlayerComponent::_bLoop` ·
+`_bAutoPlay`(124, `_framesPerSecond` 160 앞) · `SpriteAnimatorComponent::_bRepeat`(312, `_totalFrames` 436 앞). **Debug 에서 씬을 읽을 때마다**
+(방향광은 거의 모든 씬에 있다) 그 바이트에 있던 다른 필드의 비트를 뒤집었고, 인스펙터의 체크박스도 같은 자리를 썼다.
+
+**고침(언리얼 `FBoolProperty` 와 같은 방식).** 생성 코드는 바이트를 박지 않고 "그 비트만 1 로 세우는 함수" 를 낸다. 런타임
+`PropertyInfo::resolveBitField( sizeof( T ), setBit )` 이 0 으로 채운 자리(64 바이트 정렬)에 그 함수를 불러 바뀐 바이트 · 비트를 읽는다 —
+그 구성의 컴파일러가 실제로 놓은 자리다. 바이트 하나의 비트 하나가 아니면 오류를 남기고 읽기 false · 쓰기 무시로 둔다(엉뚱한 바이트를
+건드리지 않게). 파서는 이제 비트필드 자리를 재지 않는다(`_bitOffset` · `_byteOffset` · `_bitMask` 를 DTO 에서 걷었다).
+**검증.** `ReflectionTypeInfoTest.EveryBitFieldLiesBetweenItsNeighbours` — 등록된 모든 타입의 모든 비트필드가 앞뒤 보통 프로퍼티(`offsetof`)
+사이에 있는가. 고치기 전 Debug 에서 위의 넷으로 진다. ReflectionTest 133/133 · EngineTest 665/665.
+
 ### 2026-10-01 (결함 ⑥ 에디터 — 자식이 있는 오브젝트를 지우고 되돌리면 부모만 돌아왔다)
 
 `EditorSceneCommands::destroy` 는 `destroyObject`(기본으로 자식까지 지운다)를 부르면서, 되돌리기 기록은 그 오브젝트 **하나의** XML
