@@ -18,6 +18,19 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorWorkspace;
+
+    /** @brief 스코프 동안 워크스페이스를 지역 서비스로 걸어 둡니다 — 에디터 컨텍스트가 없어도 씬 dirty 표시가 여기에 닿습니다. */
+    class ScopedWorkspaceService
+    {
+    public:
+        explicit ScopedWorkspaceService( EditorWorkspace& workspace ) { bindLocalService<EditorWorkspace>( &workspace ); }
+        ~ScopedWorkspaceService() { unbindLocalService<EditorWorkspace>(); }
+
+        ScopedWorkspaceService( const ScopedWorkspaceService& )            = delete;
+        ScopedWorkspaceService& operator=( const ScopedWorkspaceService& ) = delete;
+    };
+
     /** @brief 스코프 동안 커맨드 스택을 지역 서비스로 걸어 둡니다. */
     class ScopedCommandStackService
     {

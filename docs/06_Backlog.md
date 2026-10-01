@@ -2051,6 +2051,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑫ 에디터 — 되돌리기 · 컴포넌트 제거 · 인스펙터 직접 편집이 씬을 dirty 로 만들지 않아 묻지 않고 잃었다)
+
+씬 dirty(닫거나 다른 씬을 열 때 "저장할까요?")를 놓치는 길이 셋이었다.
+- **되돌리기 · 다시 하기.** dirty 는 기록할 때만 표시했다. 편집 → 저장 → Ctrl+Z 하면 씬은 바뀌었는데 깨끗하다고 했다.
+- **컴포넌트 제거**(`EditorSceneCommands::destroyComponent` — 인스펙터 · 계층 창의 Remove Component)는 기록도 dirty 도 없었다 — 되돌릴 수도 없었다.
+- **인스펙터의 직접 편집** — 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거를 `pObj->setName` 등으로 바로 바꿨다.
+
+**고침.** 트랜잭션의 되살리기 · 지우기 · 스냅샷 되읽기(XML · 바이너리)가 씬을 바꿀 때 dirty 를 표시한다. 컴포넌트 제거는 지우기 전 스냅샷과
+지운 뒤 스냅샷(삭제 대기 컴포넌트는 스냅샷에 실리지 않는다)으로 기록한다 — 되돌리면 원래 id 로 돌아온다. 인스펙터는
+`InspectorPanelInternal::applyObjectEdit` 로 — 멈춰 있으면 스냅샷 · 기록 · dirty, **플레이 중이면 예전처럼 바로**(씬 명령이 막혀 있고 플레이
+사본은 Stop 이 되돌린다; 언리얼 PIE 도 편집을 허용한다).
+**시험 이음매.** dirty 는 에디터 컨텍스트의 워크스페이스로만 갔는데 시험에는 컨텍스트가 없어 이 경로를 볼 수 없었다. 컨텍스트가 없으면 지역
+서비스 `EditorWorkspace` 로 간다(커맨드 스택 · 씬 매니저와 같은 방식) — `ScopedWorkspaceService`(`Test/EditorTest/EditorTestServices.h`).
+**검증.** `EditorTransactionTest.UndoAndRedoMarkTheSceneDirty` · `RemovingAComponentCanBeUndone` — 되읽기에서 dirty 를 빼는 돌연변이, 제거 기록을
+빼는 돌연변이에 각각 진다. EditorTest 81/81. 인스펙터 쪽은 ImGui 를 헤드리스로 그릴 틀이 없어 시험이 없다(쓰는 두 명령은 위 시험이 덮는다).
+
 ### 2026-10-01 (결함 ⑪ 리플렉션 — `Min` 만 적은 프로퍼티를 인스펙터가 1 에서 막았다, 숫자가 아닌 범위 값은 조용히 0)
 
 범위 표시가 하나(`_bHasRange`)라, `PROPERTY( Min = 0 )` 만 적어도 `_maxRange` 의 DTO 기본값 1 이 함께 나갔다. 인스펙터는 [min, 1] 로

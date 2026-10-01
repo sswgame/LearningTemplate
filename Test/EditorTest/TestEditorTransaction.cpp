@@ -5,9 +5,12 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "EditorTest/EditorTestServices.h"
 
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -358,4 +361,83 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
     stack.undo();
     pManager->mergePendingAdds();
     expectWholeSubtree( "다시 하기 뒤 두 번째 되돌리기" );
+}
+
+/**
+ * @brief [EditorTransactionTest] 되돌리기 · 다시 하기도 씬을 dirty 로 만든다
+ * @details 예전에는 기록할 때만 dirty 를 표시했다. 편집 → 저장 → Ctrl+Z 하면 씬은 바뀌었는데 깨끗하다고 해서, 그대로 끄거나 다른
+ *          씬을 열면 묻지도 않고 되돌린 상태를 잃었다(유니티 · 언리얼은 되돌리기도 수정으로 친다).
+ */
+SW_TEST_CASE( EditorTransactionTest, UndoAndRedoMarkTheSceneDirty )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "DirtyProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    SelectionManager          selection;
+    EditorWorkspace           workspace{ &selection };
+    ScopedWorkspaceService    scopedWorkspace{ workspace };
+
+    GameObject* pTarget = pManager->createGameObject( hashed_string( "DirtyTarget" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    pManager->mergePendingAdds();
+
+    SW_ASSERT_TRUE( EditorSceneCommands::rename( pTarget, "DirtyRenamed" ) );
+    SW_EXPECT_TRUE( workspace.isSceneDirty() ); // 기록 — 예전에도 됐다
+
+    workspace.clearSceneDirty(); // 저장한 셈
+    stack.undo();
+    SW_EXPECT_TRUE( workspace.isSceneDirty() );
+    SW_EXPECT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "DirtyTarget" ) );
+
+    workspace.clearSceneDirty();
+    stack.redo();
+    SW_EXPECT_TRUE( workspace.isSceneDirty() );
+    SW_EXPECT_EQUAL( size_t( 1 ), countLiveObjectsNamed( *pManager, "DirtyRenamed" ) );
+}
+
+/**
+ * @brief [EditorTransactionTest] 컴포넌트 제거는 기록되고(되돌리면 돌아온다) 씬을 dirty 로 만든다
+ * @details 예전 `EditorSceneCommands::destroyComponent` 는 기록도 dirty 도 없었다 — 인스펙터 · 계층 창의 "Remove Component" 를
+ *          되돌릴 수 없었고, 그대로 다른 씬을 열면 묻지도 않고 사라졌다.
+ */
+SW_TEST_CASE( EditorTransactionTest, RemovingAComponentCanBeUndone )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "RemoveComponentProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    SelectionManager          selection;
+    EditorWorkspace           workspace{ &selection };
+    ScopedWorkspaceService    scopedWorkspace{ workspace };
+
+    GameObject* pOwner = pManager->createGameObject( hashed_string( "ComponentOwner" ) );
+    SW_ASSERT_NOT_NULL( pOwner );
+    pOwner->addComponent<SceneComponent>();
+    BoxCollider2DComponent* pCollider = pOwner->addComponent<BoxCollider2DComponent>();
+    SW_ASSERT_NOT_NULL( pCollider );
+    pManager->mergePendingAdds();
+    workspace.clearSceneDirty();
+
+    SW_ASSERT_TRUE( EditorSceneCommands::destroyComponent( pManager, pOwner, pCollider ) );
+    pManager->processDeferredDestruction();
+    SW_EXPECT_TRUE( pOwner->getComponent<BoxCollider2DComponent>() == nullptr );
+    SW_EXPECT_TRUE( workspace.isSceneDirty() );
+    SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    GameObject* pRestoredOwner = pManager->findGameObjectByName( hashed_string( "ComponentOwner" ) );
+    SW_ASSERT_NOT_NULL( pRestoredOwner );
+    SW_EXPECT_TRUE( pRestoredOwner->getComponent<BoxCollider2DComponent>() != nullptr );
 }

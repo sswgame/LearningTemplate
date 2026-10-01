@@ -7,12 +7,14 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
+#include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -42,6 +44,27 @@ namespace sw::editor
     {
         struct InspectorPanelInternal
         {
+            /**
+             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
+             * @details 예전에는 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거를 바로 바꿨다 — 기록도 dirty 도 없어, 그 편집만
+             *          하고 다른 씬을 열거나 끄면 묻지도 않고 사라졌고 Ctrl+Z 로도 돌릴 수 없었다. 플레이 중에는 씬 명령이 막히므로
+             *          (플레이 사본은 Stop 이 되돌린다) 예전처럼 바로 바꾼다.
+             */
+            template <typename EditFunc>
+            static void applyObjectEdit( GameObject* pObj, string_view undoLabel, EditFunc&& edit )
+            {
+                if ( pObj == nullptr )
+                    return;
+                if ( EditorUtil::areSceneEditsAllowed() == false )
+                {
+                    edit();
+                    return;
+                }
+                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+                edit();
+                EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
+            }
+
             static const utf8* propLabel( const PropertyInfo& prop )
             {
                 if ( prop._metadata._displayName.empty() == false )
@@ -284,15 +307,18 @@ namespace sw::editor
                 EditorWidgets::endComponentCard();
             }
             if ( bActive != bWasActive )
-                pComp->setActive( bActive );
+                InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
+                { pComp->setActive( bActive ); } );
 
             if ( bRemove )
             {
                 GameObjectManager* pGameObjectManager = pObj->getManager();
-                if ( pGameObjectManager != nullptr )
-                    pGameObjectManager->destroyComponent( pComp );
-                else
+                if ( pGameObjectManager == nullptr )
                     pObj->removeComponent( pComp );
+                else if ( EditorUtil::areSceneEditsAllowed() )
+                    EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록 · dirty
+                else
+                    pGameObjectManager->destroyComponent( pComp ); // 플레이 사본 — Stop 이 되돌린다
                 break;
             }
         }
@@ -390,12 +416,14 @@ namespace sw::editor
 
         fixed_string<constant::kMaxBuffer256> nameBuf{ pObj->getName().c_str() };
         if ( ImGui::InputText( "Name", nameBuf.data(), nameBuf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            pObj->setName( hashed_string( nameBuf.c_str() ) );
+            InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, &nameBuf]()
+            { pObj->setName( hashed_string( nameBuf.c_str() ) ); } );
         EditorWidgets::drawTooltip( "게임오브젝트의 고유 이름 (Enter 키로 적용)" );
 
         bool bActive = pObj->isActive();
         if ( ImGui::Checkbox( "Active", &bActive ) )
-            pObj->setActive( bActive );
+            InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Active", [pObj, bActive]()
+            { pObj->setActive( bActive ); } );
         EditorWidgets::drawTooltip( "게임오브젝트의 활성화 상태를 토글합니다" );
 
         GameObject* pParent = pObj->getParent();
@@ -404,7 +432,8 @@ namespace sw::editor
             ImGui::Text( "Parent: %s", pParent->getName().c_str() );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Unparent" ) )
-                pObj->detachFromParent();
+                InspectorPanelInternal::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
+                { pObj->detachFromParent(); } );
             EditorWidgets::drawTooltip( "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다" );
         }
         else

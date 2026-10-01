@@ -44,12 +44,17 @@ namespace sw::editor
                 return pActiveScene->getObjectManager();
             }
 
+            /**
+             * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 **되돌리기 · 다시 하기가 씬을 바꿀 때** 부릅니다.
+             * @details 예전에는 기록할 때만 표시해서, 편집 → 저장 → Ctrl+Z 하면 씬이 바뀌었는데도 깨끗하다고 했다 — 그대로 끄거나
+             *          다른 씬을 열면 묻지도 않고 되돌린 상태를 잃었다. 컨텍스트가 없으면(테스트 · 도구) 지역 서비스로 건 워크스페이스에.
+             */
             static void markActiveSceneDirty()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-                pContext->getWorkspace().markSceneDirty();
+                EditorContext*   pContext   = EditorContext::get();
+                EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getWorkspace() : editor::getService<EditorWorkspace>();
+                if ( pWorkspace != nullptr )
+                    pWorkspace->markSceneDirty();
             }
 
             /** @brief 되돌리기 · 다시 하기가 대상 오브젝트를 다시 찾는 열쇠입니다. 기록할 때 적고, 되돌릴 때 `findTargetGameObject` 로 찾습니다. */
@@ -105,8 +110,10 @@ namespace sw::editor
             static void restoreXmlSnapshot( const TargetKey& key, const EditorObjectSnapshot& snapshot )
             {
                 GameObject* pTarget = findTargetGameObject( getActiveGameObjectManager(), key );
-                if ( pTarget != nullptr )
-                    loadXmlSnapshot( pTarget, snapshot );
+                if ( pTarget == nullptr )
+                    return;
+                loadXmlSnapshot( pTarget, snapshot );
+                markActiveSceneDirty();
             }
 
             /**
@@ -122,6 +129,7 @@ namespace sw::editor
                     return;
                 string parentName;
                 ObjectStateSerializer::loadFromBinaryBuffer( pTarget, snapshot._bytes.data(), snapshot._bytes.size(), parentName, &snapshot._identity );
+                markActiveSceneDirty();
             }
 
             /**
@@ -252,6 +260,7 @@ namespace sw::editor
                 if ( pCurrentContext != nullptr && pCurrentContext->getSelectionManager().hasObject( pTarget ) )
                     pCurrentContext->getSelectionManager().selectObject( pTarget, SelectionMode::Remove );
                 pManager->destroyObject( pTarget );
+                EditorTransactionInternal::markActiveSceneDirty();
             }
         } );
 
@@ -276,6 +285,7 @@ namespace sw::editor
                     pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
                     pCurrentContext->getSelectionManager().selectObject( pCreated, SelectionMode::Replace );
                 }
+                EditorTransactionInternal::markActiveSceneDirty();
             }
         } );
 

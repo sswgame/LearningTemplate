@@ -214,7 +214,11 @@ namespace sw::editor
             }
         }
 
+        // 기록을 남긴다 — 예전에는 기록도 dirty 도 없어 되돌릴 수 없었고, 그대로 다른 씬을 열면 묻지도 않고 사라졌다. 삭제 대기 컴포넌트는
+        // 스냅샷에 실리지 않으므로(지우기 전 · 후 스냅샷이 다르다) 되돌리면 그 컴포넌트가 원래 id 로 돌아온다.
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pManager->destroyComponent( pComp );
+        commitModify( pObj, beforeSnapshot, "Remove Component" );
         return true;
     }
 
