@@ -146,7 +146,7 @@ namespace sw
         outStack._hash = hash;
     }
 
-    void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext )
+    void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext, [[maybe_unused]] void* pPlatformThread )
     {
         outStack._frameCount = 0;
 

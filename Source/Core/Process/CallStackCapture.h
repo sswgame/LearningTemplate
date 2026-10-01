@@ -116,10 +116,12 @@ namespace sw
          * @brief 주어진 플랫폼 컨텍스트가 가리키는 지점의 콜 스택을 캡처합니다.
          * @param outStack 캡처한 콜 스택을 담을 구조체
          * @param pPlatformContext Windows 는 `CONTEXT*`. 다른 플랫폼은 이 값을 무시하고 현재 스택을 캡처합니다.
+         * @param pPlatformThread  그 컨텍스트의 스레드(Windows `HANDLE`). nullptr 이면 지금 스레드 — 크래시를 **다른 스레드에서** 보고할 때
+         *                         폴트 스레드를 넘깁니다. 다른 플랫폼은 무시합니다.
          * @details 크래시 핸들러용입니다. 핸들러 안에서 capture() 를 부르면 예외 디스패치 프레임(KiUserExceptionDispatcher 등)이
          *          앞쪽을 채워서 정작 폴트 지점이 잘립니다. 컨텍스트에서 스택을 따라가면 실제 폴트 프레임이 [0] 에 옵니다.
          */
-        static void captureFromContext( DeepCallStack& outStack, void* pPlatformContext );
+        static void captureFromContext( DeepCallStack& outStack, void* pPlatformContext, void* pPlatformThread = nullptr );
 
         /**
          * @brief 캡처한 프레임을 심볼 · 파일 · 줄 번호 문자열로 바꿉니다.

@@ -231,12 +231,12 @@ namespace sw
         writeWholeFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) );
     }
 
-    void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten )
+    void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten, void* pPlatformThread )
     {
         // 예외 컨텍스트에서 스택을 따라가야 디스패치 프레임(KiUserExceptionDispatcher 등)이 앞을 차지하지 않고
         // 실제 폴트 지점이 [0] 에 온다.
         DeepCallStack stack{};
-        CallStackCapture::captureFromContext( stack, pPlatformContext );
+        CallStackCapture::captureFromContext( stack, pPlatformContext, pPlatformThread );
 
         StringBuilder<constant::kMaxBuffer8192> builder;
         builder.append( "\n==================== CRASH ====================\n" );

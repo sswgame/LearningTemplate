@@ -2051,6 +2051,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ④ Windows 크래시 보고가 간헐로 영영 멈췄다 — 시한도 듣지 않았다)
+
+d66fe971 의 CI(Windows Debug)에서 `CrashReportTest.EveryCrashKindLeavesAReport` 의 스택 오버플로 자식이 시한을 넘겼다(같은 날 Shipping 에서도
+한 번). 이 PC 에서는 자식을 하나씩 200 번 돌려 한 번도 안 났지만 **12 개씩 겹쳐 400 번** 돌리면 2~5 번 났다(종류는 가리지 않았다).
+멈춘 자식의 스레드 스택을 떠 보니 늘 같았다: 덤프를 쓰는 스레드는 `MiniDumpWriteDump` → `LoadLibraryExA` → `LdrLoadDll` 에서 기다리고,
+다른 스레드 하나는 막 시작하던 참(`LdrInitializeThunk`)이었다. **살아 있는 자기 프로세스를 덤프하면 `MiniDumpWriteDump` 가 다른 스레드를
+모두 세운다** — 로더를 쥔 채 세워진 스레드를 덤프 안의 `LoadLibraryExA` 가 영영 기다린 것이다.
+
+**고친 것 셋.**
+- **보고 스레드.** 덤프 · 심볼 변환을 죽은 스레드(스택 오버플로면 보증 자리 64 KB 위)에서 하지 않고, 설치할 때 띄워 둔 스레드에서 한다
+  (브레이크패드 · 언리얼 `FCrashReportingThread` 와 같은 모양). 폴트 스레드는 그 스레드에 맡기고 **시한(20 초)까지만** 기다린다.
+  `CallStackCapture::captureFromContext` · `writeCrashReport` 가 폴트 스레드 핸들을 받는다(다른 스레드에서 그 스택을 따라가려고).
+- **스냅샷을 덤프한다.** `PssCaptureSnapshot`(주소 공간 복제 · 스레드 컨텍스트 · 핸들)을 떠서 그것을 `MiniDumpWriteDump` 에 넘긴다
+  (`IsProcessSnapshotCallback` → `S_FALSE`). 덤프는 복제본을 읽고 살아 있는 스레드를 세우지 않으므로, 로더를 쥔 스레드는 제 일을 마치고
+  놓는다. 마이크로소프트가 자기 프로세스를 덤프할 때 권하는 길이다. 스냅샷을 못 뜨면 예전처럼 살아 있는 프로세스를 덤프한다.
+- dbgcore.dll 을 설치할 때 싣는다(크래시 순간의 일 하나 덜기 — 이것만으로는 멈춤이 남는다).
+
+**막다른 길(다시 파지 말 것).** dbgcore 를 미리 싣기 → 400 번 중 4 번 멈춤, 같은 종류의 덤프를 설치 때 `NUL` 에 한 번 써 두기(예열) →
+2 번 — 덤프 안의 `LoadLibraryExA` 는 **매번** 난다. 그리고 보고 스레드의 시한만으로는 안 된다: 덤프가 시한을 기다리던 폴트 스레드까지
+세워서, 20 초 시한인데 45 초째 그대로 서 있었다. 스냅샷이 둘 다 푼다.
+**검증.** 크래시 자식 다섯 종류를 12 개씩 겹쳐 Debug 1400 번 · Shipping 600 번 — 멈춤 0(고치기 전 400 번에 2~5). 남은 덤프는 예외
+스트림(폴트 스레드 · 코드) · 스레드 10 개 · 핸들 정보를 그대로 담는다. Debug 28/28 · hostgpu 2/2 · Shipping 9/9.
+
 ### 2026-10-01 (결함 ③ 리소스 루트 밖 파일에도 `.meta` 를 썼다)
 
 `AssetDatabase::ensureMeta` 는 리소스 상대 id 를 받는다고 적혀 있는데, 리소스 루트 **밖**의 절대 경로(테스트의 임시 프리팹, 사용자가 연

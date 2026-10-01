@@ -117,7 +117,7 @@ namespace sw
         outStack._hash = hash;
     }
 
-    void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext )
+    void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext, void* pPlatformThread )
     {
         outStack._frameCount = 0;
 
@@ -147,7 +147,7 @@ namespace sw
         frame.AddrStack.Mode = AddrModeFlat;
 
         HANDLE                  process = GetCurrentProcess();
-        HANDLE                  thread  = GetCurrentThread();
+        HANDLE                  thread  = ( pPlatformThread != nullptr ) ? static_cast<HANDLE>( pPlatformThread ) : GetCurrentThread();
         std::scoped_lock<mutex> lock{ s_symbolMutex }; // StackWalk64 도 dbghelp 의 전역 상태를 쓴다.
         while ( outStack._frameCount < DeepCallStack::kMaxFrames )
         {

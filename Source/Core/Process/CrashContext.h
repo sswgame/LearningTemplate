@@ -79,8 +79,10 @@ namespace sw
      * @param pFaultAddress    폴트 주소. 없으면 nullptr
      * @param pPlatformContext 스택을 따라가기 시작할 지점(Windows 는 `CONTEXT*`). nullptr 이면 현재 스택
      * @param bMiniDumpWritten 미니덤프를 **실제로** 남겼는지 여부. 남긴 경우에만 그 경로를 목록에 넣습니다
+     * @param pPlatformThread  폴트 스레드(Windows `HANDLE`). nullptr 이면 지금 스레드 — 보고 스레드가 대신 쓸 때 넘깁니다
      * @note 여기서부터는 **할당이 생깁니다.** `symbolize` 가 `sw::string` 을 값으로 반환하고, `StringBuilder` 도 8KB 를 넘기면
      *       힙으로 늘어납니다. 할당이 없는 것(미니덤프 · 컨텍스트 파일)은 호출하는 쪽이 이 함수보다 **먼저** 써 두어야 합니다.
      */
-    SW_API void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten );
+    SW_API void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten,
+                                  void* pPlatformThread = nullptr );
 } // namespace sw
