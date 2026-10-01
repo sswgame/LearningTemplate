@@ -25,6 +25,14 @@ namespace test
         sw::string fullName() const { return _groupName + "." + _testName; }
     };
 
+    /** @brief 케이스 하나를 돌린 결과. */
+    enum class CaseResult : uint8
+    {
+        Passed,
+        Failed,
+        Skipped,
+    };
+
     /**
      * @brief 호스트 스위트(CI 러너가 못 돌리는 것)를 이번 실행에서 어떻게 다루는지.
      * @details `--host_suites=exclude` 는 CI 가 도는 집합(`<타깃>_NoGPU`), `--host_suites=only` 는 그 나머지
@@ -81,9 +89,18 @@ namespace test
         void                     setFailureCapture( sw::vector<TestFailure>* pCapture ) { _pFailureCapture = pCapture; }
         sw::vector<TestFailure>* getFailureCapture() const { return _pFailureCapture; }
 
+        /**
+         * @brief 이번 실행의 케이스 순서 — 고른 케이스를 등록 순서로, `--test_shuffle` 이면 섞어서.
+         * @details 섞을 때는 gtest 처럼 **스위트 순서를 섞고 스위트 안의 케이스를 섞는다**(스위트는 붙어 있다). 회차마다 씨앗에 회차를
+         *          더한다 — 같은 `--test_shuffle=<씨앗>` 이면 같은 순서가 다시 나온다.
+         */
+        sw::vector<const TestCaseInfo*> buildRunOrder( uint32 iteration ) const;
+
     private:
         /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
         int32 countHostSuiteMismatch() const;
+        /** @brief 케이스 하나를 돌리고(정리 · 임시 폴더 지우기까지) 결과 줄을 찍습니다. */
+        CaseResult runCase( const TestCaseInfo& testInfo, float64& outElapsedMs );
 
         sw::vector<TestCaseInfo>        _listTest;
         sw::map<sw::string, sw::string> _mapHostSuiteReason;
@@ -92,6 +109,9 @@ namespace test
         TestEnvironment                 _environment;
         sw::vector<TestFailure>*        _pFailureCapture{ nullptr };
         HostSuiteMode                   _hostSuiteMode{ HostSuiteMode::All };
+        uint32                          _repeatCount{ 1 };
+        uint32                          _shuffleSeed{ 0 };
+        bool                            _bShuffle{ false };
         bool                            _listOnly{ false };
         bool                            _bAllowEmptySuite{ false };
         bool                            _bInvalidArgument{ false };

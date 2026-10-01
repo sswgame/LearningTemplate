@@ -72,6 +72,23 @@ ctest --preset Ninja-Debug-lint
 > 벗어나면 내려가므로 단언으로 일찍 빠져도 다음 케이스에 남지 않는다. (이름을 하나씩 필터에 적던 시절에는 새 테스트가
 > 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.)
 
+### 간헐 실패 · 순서 의존 찾기 — 되풀이와 섞기
+
+| 플래그 | 하는 일 |
+| --- | --- |
+| `--test_repeat=N` (`--gtest_repeat=N`) | 고른 케이스를 N 번 되풀이한다. 진 케이스는 몇 번째 회차였는지 함께 찍힌다. |
+| `--test_shuffle` (`--gtest_shuffle`) | 스위트 순서와 스위트 안의 케이스 순서를 섞는다(gtest 와 같다 — 스위트는 붙어 있다). 쓴 씨앗을 맨 앞에 찍는다. |
+| `--test_shuffle=<씨앗>` (`--gtest_random_seed=<씨앗>`) | 그 순서를 다시 만든다. 섞어서 진 실행은 끝에 다시 돌릴 플래그를 찍는다. |
+
+끝 요약에는 오래 걸린 케이스 다섯이 찍힌다(`Slowest cases:`) — 테스트가 느려지는 것은 조용히 일어난다.
+
+```powershell
+cd build/Ninja-Debug/Bin
+./CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50   # 간헐 실패
+./EngineTest.exe --test_shuffle                               # 앞 케이스가 남긴 상태에 기대는 테스트
+./EngineTest.exe --test_shuffle=81234                         # 진 순서 다시 만들기
+```
+
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다

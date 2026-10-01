@@ -2051,6 +2051,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (테스트 확인 ① 되풀이 · 섞기 · 느린 케이스 — `--test_repeat` · `--test_shuffle`)
+
+간헐 실패를 찾을 때마다 셸 루프를 새로 짰고(결함 ①~④ 가 모두 그렇게 잡혔다), 앞 케이스가 남긴 상태에 기대는 테스트는 찾을 길이 없었다
+— 케이스는 늘 등록 순서로 돌았다. gtest 에 있는 둘을 같은 이름으로 들였다(gtest 이름도 받는다).
+- `--test_repeat=N` · `--gtest_repeat=N` — 고른 케이스를 N 번. 진 케이스는 `(iteration k)` 를 붙여 찍는다. 1 미만은 잘못된 인자.
+- `--test_shuffle` · `--gtest_shuffle` — 스위트 순서를 섞고 스위트 안의 케이스를 섞는다(스위트는 붙어 있다 — gtest 와 같다). 씨앗을
+  맨 앞에 찍고, 지면 끝에 `Replay this order with --test_shuffle=<씨앗>` 을 찍는다. `--test_shuffle=<씨앗>` · `--gtest_random_seed=<씨앗>`
+  이 그 순서를 다시 만든다. 회차마다 씨앗에 회차를 더한다(되풀이와 함께 쓰면 매 회차 다른 순서).
+- 끝 요약에 오래 걸린 케이스 다섯(`Slowest cases:`).
+- 케이스 하나를 돌리는 몸통을 `TestRegistry::runCase` 로 뽑고, 순서는 `buildRunOrder( iteration )` 이 정한다(공개 — 자체 검사가 쓴다).
+
+**찾은 것.** 일곱 실행 파일을 모두 섞어 돌렸다 — 순서에 기대는 테스트는 없었다.
+**검증.** `TestFrameworkTest.ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed`(등록 순서 · 같은 씨앗 재현 · 회차마다 다름 · 빠짐없음 ·
+스위트 붙음) — 씨앗에서 회차를 빼면, 스위트를 흩어 섞으면 각각 진다. Debug 28/28 · hostgpu 2/2 · Shipping 9/9.
+
 ### 2026-10-01 (결함 ④ Windows 크래시 보고가 간헐로 영영 멈췄다 — 시한도 듣지 않았다)
 
 d66fe971 의 CI(Windows Debug)에서 `CrashReportTest.EveryCrashKindLeavesAReport` 의 스택 오버플로 자식이 시한을 넘겼다(같은 날 Shipping 에서도

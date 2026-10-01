@@ -5,6 +5,7 @@
 #include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <thread>
@@ -410,4 +411,63 @@ SW_TEST_CASE( TestFrameworkTest, FailuresFromManyThreadsAreAllRecorded )
 
     SW_EXPECT_EQUAL( size_t{ kThreadCount * kFailurePerThread }, recordedCount );
     SW_EXPECT_TRUE( bEveryRecordIsWhole );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--test_shuffle=<씨앗>` 은 같은 케이스를 빠짐없이, 스위트를 붙인 채로, 씨앗마다 같은 순서로 섞는다
+ * @details 순서에 기대는 테스트를 찾으려고 섞는다 — 진 순서를 **다시 만들 수 있어야** 고칠 수 있다. 스위트를 붙여 두는 것은 gtest 와 같다.
+ *          섞지 않으면 등록 순서 그대로다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed )
+{
+    const auto registerProbes = []( test::TestRegistry& registry )
+    {
+        for ( const utf8* pSuite : { "AlphaProbeTest", "BetaProbeTest", "GammaProbeTest", "DeltaProbeTest" } )
+        {
+            for ( const utf8* pCase : { "One", "Two", "Three", "Four", "Five" } )
+                registry.registerTest( pSuite, pCase, {} );
+        }
+    };
+    const auto toNames = []( const sw::vector<const test::TestCaseInfo*>& listRun )
+    {
+        sw::vector<sw::string> listName;
+        for ( const test::TestCaseInfo* pTestInfo : listRun )
+            listName.push_back( pTestInfo->fullName() );
+        return listName;
+    };
+
+    test::TestRegistry plainRegistry;
+    registerProbes( plainRegistry );
+    const sw::vector<sw::string> listPlain = toNames( plainRegistry.buildRunOrder( 0 ) );
+    SW_ASSERT_EQUAL( size_t{ 20 }, listPlain.size() );
+    SW_EXPECT_STREQ( "AlphaProbeTest.One", listPlain.front() );
+    SW_EXPECT_STREQ( "DeltaProbeTest.Five", listPlain.back() );
+
+    test::TestRegistry shuffledRegistry;
+    registerProbes( shuffledRegistry );
+    configureWithArgument( shuffledRegistry, "--test_shuffle=7" );
+    const sw::vector<sw::string> listFirst  = toNames( shuffledRegistry.buildRunOrder( 0 ) );
+    const sw::vector<sw::string> listReplay = toNames( shuffledRegistry.buildRunOrder( 0 ) );
+    const sw::vector<sw::string> listNext   = toNames( shuffledRegistry.buildRunOrder( 1 ) );
+
+    SW_EXPECT_TRUE_MSG( listFirst == listReplay, "같은 씨앗 · 같은 회차인데 순서가 다르다 — 진 순서를 다시 만들 수 없다" );
+    SW_EXPECT_TRUE_MSG( listFirst != listPlain, "섞었는데 등록 순서 그대로다" );
+    SW_EXPECT_TRUE_MSG( listFirst != listNext, "회차가 바뀌었는데 같은 순서다 — --test_repeat 와 함께 쓰면 같은 순서만 되풀이한다" );
+
+    // 빠짐없이 — 정렬하면 등록한 것과 같다.
+    sw::vector<sw::string> listSorted   = listFirst;
+    sw::vector<sw::string> listExpected = listPlain;
+    std::sort( listSorted.begin(), listSorted.end() );
+    std::sort( listExpected.begin(), listExpected.end() );
+    SW_EXPECT_TRUE( listSorted == listExpected );
+
+    // 스위트는 붙어 있다 — 스위트가 바뀌는 자리가 정확히 셋.
+    uint32 suiteChangeCount = 0;
+    for ( size_t index = 1; index < listFirst.size(); ++index )
+    {
+        const sw::string previousSuite = listFirst[index - 1].substr( 0, listFirst[index - 1].find( '.' ) );
+        const sw::string currentSuite  = listFirst[index].substr( 0, listFirst[index].find( '.' ) );
+        suiteChangeCount += previousSuite != currentSuite ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 3u, suiteChangeCount );
 }

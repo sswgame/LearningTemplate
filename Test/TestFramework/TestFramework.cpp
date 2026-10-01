@@ -2,7 +2,10 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <algorithm>
+#include <chrono>
 #include <mutex>
+#include <random>
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <process.h>
@@ -219,6 +222,39 @@ namespace test
                 continue;
             }
 
+            // 되풀이 · 섞기 — gtest 의 이름(`--gtest_repeat` · `--gtest_shuffle` · `--gtest_random_seed`)도 받는다.
+            constexpr std::string_view kRepeatPrefixA = "--test_repeat=";
+            constexpr std::string_view kRepeatPrefixB = "--gtest_repeat=";
+            if ( arg.substr( 0, kRepeatPrefixA.size() ) == kRepeatPrefixA || arg.substr( 0, kRepeatPrefixB.size() ) == kRepeatPrefixB )
+            {
+                const std::string_view value = arg.substr( arg.find( '=' ) + 1 );
+                const int32            count = std::atoi( sw::string( value ).c_str() );
+                if ( count < 1 )
+                {
+                    _bInvalidArgument = true;
+                    std::fprintf( stdout, "Invalid --test_repeat value '%s' (expected a count of 1 or more)\n", sw::string( value ).c_str() );
+                }
+                else
+                    _repeatCount = static_cast<uint32>( count );
+                continue;
+            }
+
+            constexpr std::string_view kShufflePrefix = "--test_shuffle=";
+            constexpr std::string_view kSeedPrefix    = "--gtest_random_seed=";
+            if ( arg == "--test_shuffle" || arg == "--gtest_shuffle" )
+            {
+                _bShuffle = true;
+                if ( _shuffleSeed == 0 )
+                    _shuffleSeed = static_cast<uint32>( std::chrono::steady_clock::now().time_since_epoch().count() % 100000 ) + 1;
+                continue;
+            }
+            if ( arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || arg.substr( 0, kSeedPrefix.size() ) == kSeedPrefix )
+            {
+                _bShuffle    = arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || _bShuffle;
+                _shuffleSeed = static_cast<uint32>( std::strtoul( sw::string( arg.substr( arg.find( '=' ) + 1 ) ).c_str(), nullptr, 10 ) );
+                continue;
+            }
+
             constexpr std::string_view kHostSuitesPrefix = "--host_suites=";
             if ( arg.substr( 0, kHostSuitesPrefix.size() ) == kHostSuitesPrefix )
             {
@@ -312,6 +348,110 @@ namespace test
         std::fflush( stdout );
     }
 
+    sw::vector<const TestCaseInfo*> TestRegistry::buildRunOrder( uint32 iteration ) const
+    {
+        sw::vector<const TestCaseInfo*> listRun;
+        listRun.reserve( _listTest.size() );
+        for ( const TestCaseInfo& testInfo : _listTest )
+        {
+            if ( isSelected( testInfo ) )
+                listRun.push_back( &testInfo );
+        }
+        if ( _bShuffle == false )
+            return listRun;
+
+        // 스위트 순서를 섞고 스위트 안의 케이스를 섞는다(스위트는 붙어 있다 — gtest 와 같다).
+        sw::vector<sw::string>                               listSuiteOrder;
+        sw::map<sw::string, sw::vector<const TestCaseInfo*>> mapSuiteCase;
+        for ( const TestCaseInfo* pTestInfo : listRun )
+        {
+            sw::vector<const TestCaseInfo*>& listCase = mapSuiteCase[pTestInfo->_groupName];
+            if ( listCase.empty() )
+                listSuiteOrder.push_back( pTestInfo->_groupName );
+            listCase.push_back( pTestInfo );
+        }
+
+        std::mt19937 random( _shuffleSeed + iteration );
+        std::shuffle( listSuiteOrder.begin(), listSuiteOrder.end(), random );
+        listRun.clear();
+        for ( const sw::string& suiteName : listSuiteOrder )
+        {
+            sw::vector<const TestCaseInfo*>& listCase = mapSuiteCase[suiteName];
+            std::shuffle( listCase.begin(), listCase.end(), random );
+            listRun.insert( listRun.end(), listCase.begin(), listCase.end() );
+        }
+        return listRun;
+    }
+
+    CaseResult TestRegistry::runCase( const TestCaseInfo& testInfo, float64& outElapsedMs )
+    {
+        _currentContext.begin( testInfo.fullName() );
+        std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
+        std::fflush( stdout );
+        SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
+
+        const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+
+        try
+        {
+            testInfo._func();
+        }
+        catch ( const std::exception& exception )
+        {
+            addFailure( "test exception", "TestFramework", 0, exception.what() );
+        }
+        catch ( ... )
+        {
+            addFailure( "test exception", "TestFramework", 0, "Unknown test exception" );
+        }
+
+        try
+        {
+            _environment.tearDown();
+        }
+        catch ( const std::exception& exception )
+        {
+            addFailure( "environment teardown", "TestFramework", 0, exception.what() );
+        }
+        catch ( ... )
+        {
+            addFailure( "environment teardown", "TestFramework", 0, "Unknown teardown exception" );
+        }
+
+        _currentContext.runCleanup();
+
+        // 정리(핸들 닫기 · 등록 해제)가 끝난 뒤에 케이스 폴더를 통째로 지운다. 못 지웠다면 그 케이스가 파일을 연 채로
+        // 두었다는 뜻이다 — Windows 에서는 열린 파일을 지울 수 없다. 핸들 누수는 결함이므로 그 케이스의 실패로 남긴다.
+        if ( _currentContext.isTempPathUsed() )
+        {
+            const sw::string caseDirectory = getCaseTempDirectory( testInfo.fullName() );
+            if ( sw::FileUtil::removeDirectory( caseDirectory ) == false )
+                addFailure( "temp directory removed after the case", caseDirectory, 0, "still exists - is a file handle left open?" );
+        }
+
+        outElapsedMs = std::chrono::duration<float64, std::milli>( std::chrono::high_resolution_clock::now() - start ).count();
+
+        if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
+        {
+            std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
+            std::fflush( stdout );
+            SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
+            return CaseResult::Skipped;
+        }
+        if ( _currentContext.hasFailed() )
+        {
+            std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), outElapsedMs );
+            std::fflush( stdout );
+            const sw::string testName = testInfo.fullName();
+            SW_LOG_ERROR( "%# (%# ms)", testName.c_str(), sw::Fmt( outElapsedMs, sw::Format().precision( 2 ) ) );
+            return CaseResult::Failed;
+        }
+        std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), outElapsedMs );
+        std::fflush( stdout );
+        SW_LOG_INFO( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( outElapsedMs, sw::Format().precision( 2 ) ) );
+        return CaseResult::Passed;
+    }
+
     int32 TestRegistry::runAllTests()
     {
         if ( _bInvalidArgument )
@@ -330,20 +470,20 @@ namespace test
         int32   skippedCount{ 0 };
         float64 totalMs{ 0.0 };
 
-        uint32 runnableCount{ 0 };
-        for ( const TestCaseInfo& testInfo : _listTest )
-        {
-            if ( isSelected( testInfo ) )
-                ++runnableCount;
-        }
-
-        const uint32 filteredOut = static_cast<uint32>( _listTest.size() ) - runnableCount;
+        const uint32 runnableCount = static_cast<uint32>( buildRunOrder( 0 ).size() );
+        const uint32 filteredOut   = static_cast<uint32>( _listTest.size() ) - runnableCount;
 
         SW_LOG_INFO( "====================================================" );
         SW_LOG_INFO( " Running %# / %# Test Cases...", runnableCount, static_cast<uint32>( _listTest.size() ) );
         if ( filteredOut > 0 )
             SW_LOG_INFO( " Filtered out: %#", filteredOut );
         SW_LOG_INFO( "====================================================" );
+        if ( _bShuffle )
+        {
+            // 순서에 기대는 테스트를 찾으려고 섞는다 — 진 순서를 다시 만들 수 있어야 고칠 수 있다.
+            std::fprintf( stdout, "Shuffling test order with seed %u (replay: --test_shuffle=%u)\n", _shuffleSeed, _shuffleSeed );
+            std::fflush( stdout );
+        }
 
         sw::vector<sw::string> listFailedTestName;
 
@@ -351,90 +491,48 @@ namespace test
         sw::vector<sw::string>                      listSuiteOrder;
         sw::map<sw::string, sw::pair<int32, int32>> mapSuiteRanSkipped;
 
-        for ( const TestCaseInfo& testInfo : _listTest )
+        // 오래 걸린 케이스 — 끝에 몇 개를 찍는다. 테스트가 느려지는 것은 조용히 일어난다.
+        sw::vector<sw::pair<float64, const TestCaseInfo*>> listElapsed;
+
+        for ( uint32 iteration = 0; iteration < _repeatCount; ++iteration )
         {
-            if ( isSelected( testInfo ) == false )
-                continue;
-
-            if ( mapSuiteRanSkipped.find( testInfo._groupName ) == mapSuiteRanSkipped.end() )
+            if ( _repeatCount > 1 )
             {
-                mapSuiteRanSkipped[testInfo._groupName] = { 0, 0 };
-                listSuiteOrder.push_back( testInfo._groupName );
-            }
-
-            _currentContext.begin( testInfo.fullName() );
-            std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
-            std::fflush( stdout );
-            SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
-
-            const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-
-            try
-            {
-                testInfo._func();
-            }
-            catch ( const std::exception& exception )
-            {
-                addFailure( "test exception", "TestFramework", 0, exception.what() );
-            }
-            catch ( ... )
-            {
-                addFailure( "test exception", "TestFramework", 0, "Unknown test exception" );
-            }
-
-            try
-            {
-                _environment.tearDown();
-            }
-            catch ( const std::exception& exception )
-            {
-                addFailure( "environment teardown", "TestFramework", 0, exception.what() );
-            }
-            catch ( ... )
-            {
-                addFailure( "environment teardown", "TestFramework", 0, "Unknown teardown exception" );
-            }
-
-            _currentContext.runCleanup();
-
-            // 정리(핸들 닫기 · 등록 해제)가 끝난 뒤에 케이스 폴더를 통째로 지운다. 못 지웠다면 그 케이스가 파일을 연 채로
-            // 두었다는 뜻이다 — Windows 에서는 열린 파일을 지울 수 없다. 핸들 누수는 결함이므로 그 케이스의 실패로 남긴다.
-            if ( _currentContext.isTempPathUsed() )
-            {
-                const sw::string caseDirectory = getCaseTempDirectory( testInfo.fullName() );
-                if ( sw::FileUtil::removeDirectory( caseDirectory ) == false )
-                    addFailure( "temp directory removed after the case", caseDirectory, 0, "still exists - is a file handle left open?" );
-            }
-
-            const std::chrono::high_resolution_clock::time_point end     = std::chrono::high_resolution_clock::now();
-            const float64                                        elapsed = std::chrono::duration<float64, std::milli>( end - start ).count();
-            totalMs += elapsed;
-
-            if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
-            {
-                ++skippedCount;
-                ++mapSuiteRanSkipped[testInfo._groupName].second;
-                std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
+                std::fprintf( stdout, "\nRepeating all tests (iteration %u / %u) . . .\n\n", iteration + 1, _repeatCount );
                 std::fflush( stdout );
-                SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
             }
-            else if ( _currentContext.hasFailed() )
+
+            for ( const TestCaseInfo* pTestInfo : buildRunOrder( iteration ) )
             {
+                const TestCaseInfo& testInfo = *pTestInfo;
+                if ( mapSuiteRanSkipped.find( testInfo._groupName ) == mapSuiteRanSkipped.end() )
+                {
+                    mapSuiteRanSkipped[testInfo._groupName] = { 0, 0 };
+                    listSuiteOrder.push_back( testInfo._groupName );
+                }
+
+                float64          elapsed = 0.0;
+                const CaseResult result  = runCase( testInfo, elapsed );
+                totalMs += elapsed;
+                listElapsed.push_back( { elapsed, pTestInfo } );
+
+                if ( result == CaseResult::Skipped )
+                {
+                    ++skippedCount;
+                    ++mapSuiteRanSkipped[testInfo._groupName].second;
+                    continue;
+                }
                 ++mapSuiteRanSkipped[testInfo._groupName].first;
-                ++failedCount;
-                listFailedTestName.push_back( testInfo.fullName() );
-                std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
-                std::fflush( stdout );
-                const sw::string testName = testInfo.fullName();
-                SW_LOG_ERROR( "%# (%# ms)", testName.c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
-            }
-            else
-            {
-                ++mapSuiteRanSkipped[testInfo._groupName].first;
-                ++passedCount;
-                std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
-                std::fflush( stdout );
-                SW_LOG_INFO( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
+                if ( result == CaseResult::Failed )
+                {
+                    ++failedCount;
+                    sw::string failedName = testInfo.fullName();
+                    if ( _repeatCount > 1 )
+                        failedName += " (iteration " + sw::to_string( iteration + 1 ) + ")";
+                    listFailedTestName.push_back( std::move( failedName ) );
+                }
+                else
+                    ++passedCount;
             }
         }
 
@@ -498,6 +596,20 @@ namespace test
         }
         if ( bHostOnlyRanNothing )
             std::fprintf( stdout, " --host_suites=only selected no test - no SW_TEST_REQUIRES_HOST suite matched\n" );
+
+        constexpr size_t kSlowestShown = 5;
+        if ( listElapsed.size() > kSlowestShown )
+        {
+            std::partial_sort( listElapsed.begin(), listElapsed.begin() + kSlowestShown, listElapsed.end(),
+                               []( const sw::pair<float64, const TestCaseInfo*>& lhs, const sw::pair<float64, const TestCaseInfo*>& rhs )
+            {
+                return lhs.first > rhs.first;
+            } );
+            std::fprintf( stdout, " Slowest cases:\n" );
+            for ( size_t index = 0; index < kSlowestShown; ++index )
+                std::fprintf( stdout, "   %9.2f ms  %s\n", listElapsed[index].first, listElapsed[index].second->fullName().c_str() );
+        }
+
         std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount + skippedCount, skippedCount, totalMs );
         if ( failedCount > 0 )
         {
@@ -506,6 +618,8 @@ namespace test
             {
                 std::fprintf( stdout, "   - %s\n", name.c_str() );
             }
+            if ( _bShuffle )
+                std::fprintf( stdout, " Replay this order with --test_shuffle=%u\n", _shuffleSeed );
         }
         std::fprintf( stdout, "====================================================\n" );
         std::fflush( stdout );

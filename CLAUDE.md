@@ -49,6 +49,8 @@ ctest --preset Ninja-Debug-lint                                   # lint tests o
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*      # one suite
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
 build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
+build/Ninja-Debug/Bin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration
+build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order dependence; prints the seed, --test_shuffle=<seed> replays
 ```
 
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`.
