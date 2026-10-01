@@ -342,6 +342,65 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
     SW_EXPECT_TRUE( queue.empty() );
     SW_EXPECT_EQUAL( kNumProducers * kItemsPerThread, totalSumReceived.load() );
 }
+#if !defined( SW_DEBUG )
+namespace
+{
+    /** @brief 살아 있는 개수를 세는 풀 원소 — 소멸자가 두 번 돌면 음수가 된다. */
+    struct PoolLifeProbe
+    {
+        static inline int32 s_liveCount = 0;
+        PoolLifeProbe() { ++s_liveCount; }
+        ~PoolLifeProbe() { --s_liveCount; }
+    };
+} // namespace
+#endif
+
+/**
+ * @brief [DataStructureTest] 다른 블록이 나가 있는 동안의 이중 반납도 잡는다 — 같은 블록이 두 번 나가지 않는다
+ * @details 예전에는 자유 큐가 가득 찼을 때만(다른 블록이 모두 돌아와 있을 때만) 알아챘다. 다른 블록이 나가 있으면 두 번째 반납도 큐에
+ *          들어가 같은 블록이 자유 목록에 두 번 들었고 소멸자도 두 번 돌았다 — 그 뒤 두 `acquire` 가 같은 메모리를 받았다.
+ *          (Debug 의 `SW_LOG_ASSERT` 는 디버거에서 멈추는 구성이라 이 방어 경로는 Release · Shipping 에서 본다.)
+ */
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolCatchesDoubleReleaseWhileOthersAreOut )
+{
+#if defined( SW_DEBUG )
+    SW_TEST_SKIP( "SW_LOG_ASSERT stops in Debug - this guards the release-build path" );
+#else
+    PoolLifeProbe::s_liveCount = 0;
+    {
+        sw::LockFreeObjectPool<PoolLifeProbe, 4> pool;
+        PoolLifeProbe*                           pFirst  = pool.acquire();
+        PoolLifeProbe*                           pSecond = pool.acquire();
+        SW_ASSERT_NOT_NULL( pFirst );
+        SW_ASSERT_NOT_NULL( pSecond );
+        PoolLifeProbe* pAlias = pFirst;
+
+        pool.release( pFirst );
+        {
+            test::ScopedDefensiveTestLog expected( "the same block released twice" );
+            pool.release( pAlias );
+        }
+        SW_EXPECT_NULL( pAlias );
+        SW_EXPECT_EQUAL( 1u, pool.getActiveCount() );
+        SW_EXPECT_EQUAL( 1, PoolLifeProbe::s_liveCount ); // 소멸자는 한 번만
+
+        // 남은 셋은 모두 다른 블록이고, 넷째는 없다(같은 블록이 자유 목록에 두 번 들었다면 넷째가 나온다).
+        PoolLifeProbe* arrTaken[4]{ pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire() };
+        SW_EXPECT_NOT_NULL( arrTaken[0] );
+        SW_EXPECT_NOT_NULL( arrTaken[1] );
+        SW_EXPECT_NOT_NULL( arrTaken[2] );
+        SW_EXPECT_NULL( arrTaken[3] );
+        SW_EXPECT_TRUE( arrTaken[0] != arrTaken[1] && arrTaken[1] != arrTaken[2] && arrTaken[0] != arrTaken[2] );
+        SW_EXPECT_TRUE( arrTaken[0] != pSecond && arrTaken[1] != pSecond && arrTaken[2] != pSecond );
+
+        for ( PoolLifeProbe*& pTaken : arrTaken )
+            pool.release( pTaken );
+        pool.release( pSecond );
+    }
+    SW_EXPECT_EQUAL( 0, PoolLifeProbe::s_liveCount );
+#endif
+}
+
 /**
  * @brief [DataStructureTest] LockFreeObjectPool 기본 수명주기 및 인자 전달 검증
  */

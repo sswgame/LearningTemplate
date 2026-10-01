@@ -95,6 +95,7 @@ namespace sw
             T* pPtr{ nullptr };
             if ( _freeQueue.dequeue( pPtr ) && pPtr != nullptr )
             {
+                _arrSlotInUse[getSlotIndex( pPtr )].store( 1, std::memory_order_release );
                 sw_placement_new( pPtr ) T( std::forward<Args>( args )... );
                 _activeCount.fetch_add( 1, std::memory_order_relaxed );
                 return pPtr;
@@ -106,7 +107,7 @@ namespace sw
          * @brief 이 풀의 저장 공간에서 나온 포인터인지 확인합니다(반납하기 전에 걸러 내는 용도).
          * @details 주소 범위와 슬롯 간격으로 판정하므로 기다릴 필요가 없습니다. 예전에는 다른 풀의 포인터도 "자리가 나지 않는다" 는
          *          증상으로 알아냈는데, 그 증상은 경합 중인 정상 반납과 구별되지 않았습니다. 같은 단언이 양쪽에 걸려 있었던 것입니다.
-         * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 대기 시간으로 가려냅니다.
+         * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 칸마다 든 "쓰는 중" 표시가 가려냅니다.
          */
         SW_INLINE bool owns( const T* pPtr ) const
         {
@@ -138,6 +139,16 @@ namespace sw
                 return;
             }
 
+            // **이중 반납은 칸의 "쓰는 중" 표시로 가린다** — 소멸자를 부르기 전에. 예전에는 자유 큐가 가득 찼을 때만(= 다른 블록이 모두
+            // 돌아와 있을 때만) 알아챘다. 다른 블록이 나가 있으면 두 번째 반납도 큐에 들어가, 같은 블록이 자유 목록에 두 번 들었고 소멸자도
+            // 두 번 돌았다. 그 뒤 두 `acquire` 가 같은 메모리를 받아 서로의 객체를 덮었다(`ParallelGroupPool` 이 이 풀을 쓴다).
+            if ( _arrSlotInUse[getSlotIndex( pPtr )].exchange( 0, std::memory_order_acq_rel ) == 0 )
+            {
+                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: slot %# was already released (double release).", getSlotIndex( pPtr ) );
+                pPtr = nullptr;
+                return;
+            }
+
             pPtr->~T();
 
             // "가득 찼다" 는 응답이 곧 이중 반납을 뜻하지는 않는다. 내부 MPMC 큐(Vyukov)는 소비자가 칸을 가져간 뒤 그 칸의 순번을
@@ -161,15 +172,21 @@ namespace sw
                 if ( std::chrono::steady_clock::now() < deadline )
                     continue;
 
-                // 반납에 실패하면 카운트를 줄이지 않는다. `_activeCount` 를 줄이면 0 에서 언더플로가 나 40억이 되고,
-                // 소멸자의 "모두 반납됐는가" 단언이 엉뚱한 결과를 낸다.
-                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full for the whole wait — this block was already released." );
+                // 이중 반납은 위에서 걸렀으니 여기는 일어나면 안 되는 자리다. 카운트는 줄이지 않는다(`_activeCount` 를 줄이면 0 에서
+                // 언더플로가 나 40억이 되고, 소멸자의 "모두 반납됐는가" 단언이 엉뚱한 결과를 낸다).
+                SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full for the whole wait." );
                 pPtr = nullptr;
                 return;
             }
 
             _activeCount.fetch_sub( 1, std::memory_order_relaxed );
             pPtr = nullptr; // 호출한 쪽이 실수로 다시 쓰지 못하게 바로 무효화한다
+        }
+
+        /** @brief 이 풀의 블록 포인터가 몇 번째 칸인지입니다(`owns` 를 먼저 거친 포인터만). */
+        SW_INLINE uint32 getSlotIndex( const T* pPtr ) const
+        {
+            return static_cast<uint32>( ( reinterpret_cast<uintptr_t>( pPtr ) - reinterpret_cast<uintptr_t>( _arrStorage.data() ) ) / sizeof( T ) );
         }
 
         /** @brief 지금 acquire 된 객체 수를 반환합니다. */
@@ -187,7 +204,8 @@ namespace sw
 
     private:
         alignas( alignof( T ) ) std::array<uint8, Capacity * sizeof( T )> _arrStorage;
-        ConcurrentQueue<T*, Capacity> _freeQueue; ///< 다중 생산자 · 다중 소비자. acquire/release 를 스레드 안전하게 만든다
-        atomic<uint32>                _activeCount{ 0 };
+        ConcurrentQueue<T*, Capacity>       _freeQueue;      ///< 다중 생산자 · 다중 소비자. acquire/release 를 스레드 안전하게 만든다
+        std::array<atomic<uint8>, Capacity> _arrSlotInUse{}; ///< 칸마다 "나가 있음" — 이중 반납을 가린다(`release`)
+        atomic<uint32>                      _activeCount{ 0 };
     };
 } // namespace sw

@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ⑰ Core — `LockFreeObjectPool` 이 다른 블록이 나가 있을 때의 이중 반납을 못 잡았다)
+
+`release` 는 이중 반납을 "자유 큐가 시한 내내 가득 찼다" 로만 알아챘다 — 그것은 **다른 블록이 모두 돌아와 있을 때**뿐이다. 다른 블록이 하나라도
+나가 있으면 두 번째 반납도 큐에 들어가, 같은 블록이 자유 목록에 두 번 들었고 소멸자도 두 번 돌았다. 그 뒤 두 `acquire` 가 같은 메모리를 받아
+서로의 객체를 덮었다(`_activeCount` 도 어긋났다). 태스크 시스템의 `ParallelGroupPool` 이 이 풀을 쓴다.
+**고침.** 칸마다 "나가 있음" 원자 표시(`_arrSlotInUse`, 칸당 1 바이트)를 둔다. `acquire` 가 세우고 `release` 가 **소멸자를 부르기 전에**
+`exchange( 0 )` 해서 이미 0 이면 이중 반납으로 단언하고 물러난다. 큐가 가득 찬 채 버티는 경우는 이제 일어나면 안 되는 자리로만 남았다.
+**검증.** `DataStructureTest.LockFreeObjectPoolCatchesDoubleReleaseWhileOthersAreOut`(용량 4, 둘 나간 상태에서 같은 블록 두 번 반납 → 나간 수 1 ·
+소멸자 한 번 · 남은 셋이 모두 다른 블록이고 넷째는 없음). Debug 의 `SW_LOG_ASSERT` 는 디버거에서 멈추는 구성이라 이 방어 경로는 Release ·
+Shipping 에서 돈다 — Shipping 에서 통과, 가드를 끄는 돌연변이에 진다.
+
 ### 2026-10-01 (결함 ⑯ 리플렉션 파서 — 컨테이너를 부분 문자열로 알아봤다: TextureAsset 은 set, Bitmap 은 map)
 
 `ContainerTypeMap::match` 는 타입 표기 **어디에든** 규칙 이름(`map` · `set` · `list` · `vector` …)이 들어 있으면 그 컨테이너로 쳤다.
