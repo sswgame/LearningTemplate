@@ -21,38 +21,13 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "GameObjectBench" );
 
 namespace
 {
-    /** @brief 정렬한 표본의 백분위 값. */
-    int64 percentile( sw::vector<int64>& listSample, uint32 percent )
-    {
-        if ( listSample.empty() )
-            return 0;
-        std::sort( listSample.begin(), listSample.end() );
-        size_t rank = ( listSample.size() * percent ) / 100;
-        if ( rank >= listSample.size() )
-            rank = listSample.size() - 1;
-        return listSample[rank];
-    }
-
-    int64 elapsedMicro( const std::chrono::steady_clock::time_point& start )
-    {
-        return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now() - start ).count();
-    }
-
-    /** @brief 표본 하나를 [min · p50 · max] 로 찍습니다. Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. */
-    void logSamples( [[maybe_unused]] const utf8* pLabel, sw::vector<int64>& listSample )
-    {
-        [[maybe_unused]] const int64 minValue = percentile( listSample, 0 );
-        [[maybe_unused]] const int64 p50      = percentile( listSample, 50 );
-        [[maybe_unused]] const int64 maxValue = percentile( listSample, 100 );
-        SW_LOG_INFO( "[Bench] %#  min %# us  p50 %# us  max %# us  (%# samples)", pLabel, minValue, p50, maxValue, listSample.size() );
-    }
-
     constexpr uint32 kObjectCount = 8000;
 
     /** @brief 이름은 전부 같다 — 총알처럼 같은 이름으로 거듭 만드는 모양. 유일화가 O(1) 인지도 같이 잰다. */
@@ -110,18 +85,18 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
     {
         listObject.push_back( spawnMoverObject( manager, false ) );
     }
-    [[maybe_unused]] const int64 spawnMicro = elapsedMicro( spawnStart );
+    [[maybe_unused]] const int64 spawnMicro = test::getElapsedMicroseconds( spawnStart );
 
     const auto firstTickStart = std::chrono::steady_clock::now();
     manager.tick( 0.016f );
-    [[maybe_unused]] const int64 firstTickMicro = elapsedMicro( firstTickStart );
+    [[maybe_unused]] const int64 firstTickMicro = test::getElapsedMicroseconds( firstTickStart );
 
     sw::vector<int64> listTick;
     for ( uint32 round = 0; round < 30; ++round )
     {
         const auto start = std::chrono::steady_clock::now();
         manager.tick( 0.016f );
-        listTick.push_back( elapsedMicro( start ) );
+        listTick.push_back( test::getElapsedMicroseconds( start ) );
     }
 
     const auto destroyStart = std::chrono::steady_clock::now();
@@ -131,12 +106,12 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
             manager.destroyObject( pObj );
     }
     manager.processDeferredDestruction();
-    [[maybe_unused]] const int64 destroyMicro = elapsedMicro( destroyStart );
+    [[maybe_unused]] const int64 destroyMicro = test::getElapsedMicroseconds( destroyStart );
 
     SW_LOG_INFO( "[Bench] sizeof GameObject %#  Component %#  SceneComponent %#  TickItemList %#", sizeof( sw::GameObject ), sizeof( sw::Component ), sizeof( sw::SceneComponent ), sizeof( sw::TickItemList ) );
     SW_LOG_INFO( "[Bench] spawn %# objects (scene + tick component): %# us (%# ns each)", kObjectCount, spawnMicro, ( spawnMicro * 1000 ) / kObjectCount );
     SW_LOG_INFO( "[Bench] first tick (merge + registry build): %# us", firstTickMicro );
-    logSamples( "steady tick, 8000 tick-only components", listTick );
+    test::logBenchSamples( "steady tick, 8000 tick-only components", listTick );
     SW_LOG_INFO( "[Bench] destroy %# objects + process: %# us (%# ns each)", kObjectCount, destroyMicro, ( destroyMicro * 1000 ) / kObjectCount );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
@@ -171,9 +146,9 @@ SW_TEST_CASE( GameObjectBenchTest, TickMovers )
         }
         const auto start = std::chrono::steady_clock::now();
         manager.tick( 0.016f );
-        listTick.push_back( elapsedMicro( start ) );
+        listTick.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "tick, 8000 movers writing position + scale", listTick );
+    test::logBenchSamples( "tick, 8000 movers writing position + scale", listTick );
 
     uint32 wrongCount = 0;
     for ( sw::MockTickSceneComponent* pMover : listMover )
@@ -213,9 +188,9 @@ SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
         const auto start = std::chrono::steady_clock::now();
         pRoot->setActive( false );
         pRoot->setActive( true );
-        listToggle.push_back( elapsedMicro( start ) );
+        listToggle.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "setActive false+true on a 1000-deep chain root", listToggle );
+    test::logBenchSamples( "setActive false+true on a 1000-deep chain root", listToggle );
     SW_EXPECT_TRUE( pPrev->isActiveInHierarchy() );
 }
 
@@ -242,7 +217,7 @@ SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
     {
         sink += reinterpret_cast<uintptr_t>( pObj->getComponent<sw::SceneComponent>() );
     }
-    [[maybe_unused]] const int64 micro = elapsedMicro( start );
+    [[maybe_unused]] const int64 micro = test::getElapsedMicroseconds( start );
     SW_LOG_INFO( "[Bench] getComponent<SceneComponent> (third of three, two misses first): %# ns per call", ( micro * 1000 ) / kIterationCount );
     SW_EXPECT_TRUE( sink != 0 );
 }
@@ -317,13 +292,13 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
     {
         const auto markStart = std::chrono::steady_clock::now();
         pRootScene->setLocalPosition( sw::float3{ static_cast<float32>( round + 1 ), 0.0f, 0.0f } );
-        listMark.push_back( elapsedMicro( markStart ) );
+        listMark.push_back( test::getElapsedMicroseconds( markStart ) );
         const auto flushStart = std::chrono::steady_clock::now();
         manager.flushSceneTransforms();
-        listFlush.push_back( elapsedMicro( flushStart ) );
+        listFlush.push_back( test::getElapsedMicroseconds( flushStart ) );
     }
-    logSamples( "mark dirty: setLocalPosition on a 1000-deep chain root", listMark );
-    logSamples( "flush: flushSceneTransforms after that move", listFlush );
+    test::logBenchSamples( "mark dirty: setLocalPosition on a 1000-deep chain root", listMark );
+    test::logBenchSamples( "flush: flushSceneTransforms after that move", listFlush );
     SW_EXPECT_NEAR_EQUAL( 40.0f, pLeafScene->getWorldPosition()._x, 1e-3f );
 }
 
@@ -346,12 +321,12 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
 
             const auto tickStart = std::chrono::steady_clock::now();
             manager.tick( 0.016f );
-            listFirstTick.push_back( elapsedMicro( tickStart ) );
+            listFirstTick.push_back( test::getElapsedMicroseconds( tickStart ) );
 
             const auto destroyStart = std::chrono::steady_clock::now();
             manager.destroyObject( pRoot, true );
             manager.processDeferredDestruction();
-            listDestroy.push_back( elapsedMicro( destroyStart ) );
+            listDestroy.push_back( test::getElapsedMicroseconds( destroyStart ) );
             SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
         }
         {
@@ -362,10 +337,10 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             pManager->tick( 0.016f );
             const auto teardownStart = std::chrono::steady_clock::now();
             sw_delete( pManager );
-            listTeardown.push_back( elapsedMicro( teardownStart ) );
+            listTeardown.push_back( test::getElapsedMicroseconds( teardownStart ) );
         }
     }
-    logSamples( "first tick (merge) of a 1000-deep chain", listFirstTick );
-    logSamples( "destroyObject(root) + process on a 1000-deep chain", listDestroy );
-    logSamples( "manager teardown with a 1000-deep chain", listTeardown );
+    test::logBenchSamples( "first tick (merge) of a 1000-deep chain", listFirstTick );
+    test::logBenchSamples( "destroyObject(root) + process on a 1000-deep chain", listDestroy );
+    test::logBenchSamples( "manager teardown with a 1000-deep chain", listTeardown );
 }

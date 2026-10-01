@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
 
+#include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "TaskManagerBench" );
@@ -52,33 +53,6 @@ namespace
             value ^= value << 5;
         }
         return value;
-    }
-
-    /** @brief 정렬한 표본의 백분위 값. */
-    int64 percentile( sw::vector<int64>& listSample, uint32 percent )
-    {
-        if ( listSample.empty() )
-            return 0;
-        std::sort( listSample.begin(), listSample.end() );
-        size_t rank = ( listSample.size() * percent ) / 100;
-        if ( rank >= listSample.size() )
-            rank = listSample.size() - 1;
-        return listSample[rank];
-    }
-
-    int64 elapsedMicro( const std::chrono::steady_clock::time_point& start )
-    {
-        return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now() - start ).count();
-    }
-
-    /** @brief 표본 하나를 [min · p50 · p90 · max] 로 찍습니다. Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. */
-    void logSamples( [[maybe_unused]] const utf8* pLabel, sw::vector<int64>& listSample )
-    {
-        [[maybe_unused]] const int64 minValue = percentile( listSample, 0 );
-        [[maybe_unused]] const int64 p50      = percentile( listSample, 50 );
-        [[maybe_unused]] const int64 p90      = percentile( listSample, 90 );
-        [[maybe_unused]] const int64 maxValue = percentile( listSample, 100 );
-        SW_LOG_INFO( "[Bench] %#  min %# us  p50 %# us  p90 %# us  max %# us  (%# samples)", pLabel, minValue, p50, p90, maxValue, listSample.size() );
     }
 
     struct BenchBody
@@ -162,9 +136,9 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
         const auto start = std::chrono::steady_clock::now();
         manager.runParallel( kCount, 1, body );
-        listCold.push_back( elapsedMicro( start ) );
+        listCold.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "forkJoin cold (workers asleep), 4096 x touch", listCold );
+    test::logBenchSamples( "forkJoin cold (workers asleep), 4096 x touch", listCold );
 
     sw::vector<int64> listHot;
     listHot.reserve( kHotRound );
@@ -172,9 +146,9 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     {
         const auto start = std::chrono::steady_clock::now();
         manager.runParallel( kCount, 1, body );
-        listHot.push_back( elapsedMicro( start ) );
+        listHot.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "forkJoin hot (back to back), 4096 x touch", listHot );
+    test::logBenchSamples( "forkJoin hot (back to back), 4096 x touch", listHot );
 
     SW_EXPECT_EQUAL( 0u, countWrongHits( kCount, 16 + kColdRound + kHotRound ) );
     manager.shutdown();
@@ -197,9 +171,9 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     {
         const auto start = std::chrono::steady_clock::now();
         BenchBody::recordPass();
-        listSerialPass.push_back( elapsedMicro( start ) );
+        listSerialPass.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "one pass body (ideal level time)", listSerialPass );
+    test::logBenchSamples( "one pass body (ideal level time)", listSerialPass );
 
     const sw::TaskDelegate record    = SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::recordPass );
     auto                   levelOnce = [&manager, &record]()
@@ -225,18 +199,18 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
         const auto start = std::chrono::steady_clock::now();
         levelOnce();
-        listCold.push_back( elapsedMicro( start ) );
+        listCold.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "stage level cold, 4 x High pass", listCold );
+    test::logBenchSamples( "stage level cold, 4 x High pass", listCold );
 
     sw::vector<int64> listHot;
     for ( uint32 round = 0; round < kRound; ++round )
     {
         const auto start = std::chrono::steady_clock::now();
         levelOnce();
-        listHot.push_back( elapsedMicro( start ) );
+        listHot.push_back( test::getElapsedMicroseconds( start ) );
     }
-    logSamples( "stage level hot, 4 x High pass", listHot );
+    test::logBenchSamples( "stage level hot, 4 x High pass", listHot );
 
     SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
     manager.shutdown();
@@ -266,10 +240,10 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
         }
         manager.wakeSleepingWorkers();
         SW_ASSERT_TRUE( manager.waitAll( 5000 ) );
-        listRound.push_back( elapsedMicro( start ) );
+        listRound.push_back( test::getElapsedMicroseconds( start ) );
         SW_EXPECT_EQUAL( kTaskCount, s_ranCount.load() );
     }
-    [[maybe_unused]] const int64 p50 = percentile( listRound, 50 );
+    [[maybe_unused]] const int64 p50 = test::getPercentile( listRound, 50 );
     SW_LOG_INFO( "[Bench] 4096 tiny tasks: p50 %# us per round = %# ns per task", p50, ( p50 * 1000 ) / kTaskCount );
 
     manager.shutdown();
@@ -292,7 +266,7 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     {
         const auto start = std::chrono::steady_clock::now();
         BenchBody::computeRange( 0, kCount );
-        listSerial.push_back( elapsedMicro( start ) );
+        listSerial.push_back( test::getElapsedMicroseconds( start ) );
     }
 
     for ( uint32 round = 0; round < 4; ++round )
@@ -303,11 +277,11 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     {
         const auto start = std::chrono::steady_clock::now();
         manager.runParallel( kCount, 1, body );
-        listParallel.push_back( elapsedMicro( start ) );
+        listParallel.push_back( test::getElapsedMicroseconds( start ) );
     }
 
-    const int64                  serialP50   = percentile( listSerial, 50 );
-    const int64                  parallelP50 = percentile( listParallel, 50 );
+    const int64                  serialP50   = test::getPercentile( listSerial, 50 );
+    const int64                  parallelP50 = test::getPercentile( listParallel, 50 );
     [[maybe_unused]] const int64 speedupX100 = parallelP50 > 0 ? ( serialP50 * 100 ) / parallelP50 : 0;
     SW_LOG_INFO( "[Bench] cpu-bound 2048 x ~1us: serial p50 %# us, parallel p50 %# us, speedup %#.%#x (threads %#)",
                  serialP50, parallelP50, speedupX100 / 100, speedupX100 % 100, manager.getWorkerCount() + 1 );

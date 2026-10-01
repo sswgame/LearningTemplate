@@ -27,6 +27,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "ContainerBench" );
@@ -48,26 +49,6 @@ namespace
         return value ^ ( value >> 31 );
     }
 
-    /** @brief @p pBody 를 kRoundCount 번 돌려 가장 짧은 판의 연산당 ns 를 10 배 정수로 돌려줍니다(소수 한 자리). */
-    template <typename BodyFn>
-    int64 bestDeciNanosPerOp( uint64 opCount, BodyFn&& body )
-    {
-        int64 bestNanos = std::numeric_limits<int64>::max();
-        for ( uint32 round = 0; round < kRoundCount; ++round )
-        {
-            const auto start = std::chrono::steady_clock::now();
-            body();
-            const int64 nanos = std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now() - start ).count();
-            bestNanos         = std::min( bestNanos, nanos );
-        }
-        return ( bestNanos * 10 ) / static_cast<int64>( opCount == 0 ? 1 : opCount );
-    }
-
-    /** @brief `[Bench] 이름  x.y ns/op` 한 줄. Shipping 은 Info 로그가 컴파일에서 빠진다. */
-    void logDeciNanos( [[maybe_unused]] const utf8* pLabel, [[maybe_unused]] int64 deciNanos )
-    {
-        SW_LOG_INFO( "[Bench] %#  %#.%# ns/op", pLabel, deciNanos / 10, deciNanos % 10 );
-    }
 } // namespace
 
 /**
@@ -105,7 +86,7 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
     const uint64* pMissKey = listMissKey.data();
 
     uint32      wrongCount   = 0;
-    const int64 hitDeci      = bestDeciNanosPerOp( kKeyCount, [&]()
+    const int64 hitDeci      = test::measureBestDeciNanosPerOp( kKeyCount, kRoundCount, [&]()
          {
         uint64 sum = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
@@ -118,7 +99,7 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
         }
         s_benchSink = sum;
     } );
-    const int64 missDeci     = bestDeciNanosPerOp( kKeyCount, [&]()
+    const int64 missDeci     = test::measureBestDeciNanosPerOp( kKeyCount, kRoundCount, [&]()
         {
         uint64 found = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
@@ -126,7 +107,7 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
         wrongCount += static_cast<uint32>( found );
         s_benchSink = found;
     } );
-    const int64 reservedDeci = bestDeciNanosPerOp( 3000u * 16u, [&]()
+    const int64 reservedDeci = test::measureBestDeciNanosPerOp( 3000u * 16u, kRoundCount, [&]()
     {
         uint64 sum = 0;
         for ( uint32 repeat = 0; repeat < 16; ++repeat )
@@ -142,7 +123,7 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
         }
         s_benchSink = sum;
     } );
-    const int64 setDeci      = bestDeciNanosPerOp( kKeyCount, [&]()
+    const int64 setDeci      = test::measureBestDeciNanosPerOp( kKeyCount, kRoundCount, [&]()
          {
         uint64 found = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
@@ -152,10 +133,10 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
     } );
 
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    logDeciNanos( "unordered_map<uint64> find hit  (50000, grown)", hitDeci );
-    logDeciNanos( "unordered_map<uint64> find miss (50000, grown)", missDeci );
-    logDeciNanos( "unordered_map<uint64> find hit  (3000, reserve(3000))", reservedDeci );
-    logDeciNanos( "unordered_set<uint64> contains  (50000, grown)", setDeci );
+    test::logBenchDeciNanos( "unordered_map<uint64> find hit  (50000, grown)", hitDeci );
+    test::logBenchDeciNanos( "unordered_map<uint64> find miss (50000, grown)", missDeci );
+    test::logBenchDeciNanos( "unordered_map<uint64> find hit  (3000, reserve(3000))", reservedDeci );
+    test::logBenchDeciNanos( "unordered_set<uint64> contains  (50000, grown)", setDeci );
 }
 
 /**
@@ -174,7 +155,7 @@ SW_TEST_CASE( ContainerBenchTest, StringKeyLookup )
         mapName.emplace( listName[index], index );
 
     uint32      wrongCount = 0;
-    const int64 deci       = bestDeciNanosPerOp( kKeyCount, [&]()
+    const int64 deci       = test::measureBestDeciNanosPerOp( kKeyCount, kRoundCount, [&]()
           {
         uint64 sum = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
@@ -188,7 +169,7 @@ SW_TEST_CASE( ContainerBenchTest, StringKeyLookup )
         s_benchSink = sum;
     } );
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    logDeciNanos( "unordered_map<string> find(string_view) hit (4096)", deci );
+    test::logBenchDeciNanos( "unordered_map<string> find(string_view) hit (4096)", deci );
 }
 
 /**
@@ -206,7 +187,7 @@ SW_TEST_CASE( ContainerBenchTest, HashedStringInternHit )
         listExpected.push_back( sw::hashed_string( sw::string_view( name ) ).getIndex() );
 
     uint32      wrongCount = 0;
-    const int64 deci       = bestDeciNanosPerOp( kNameCount * kRepeatCount, [&]()
+    const int64 deci       = test::measureBestDeciNanosPerOp( kNameCount * kRepeatCount, kRoundCount, [&]()
           {
         for ( uint32 repeat = 0; repeat < kRepeatCount; ++repeat )
         {
@@ -218,7 +199,7 @@ SW_TEST_CASE( ContainerBenchTest, HashedStringInternHit )
         }
     } );
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    logDeciNanos( "hashed_string(string_view) intern hit (24 chars)", deci );
+    test::logBenchDeciNanos( "hashed_string(string_view) intern hit (24 chars)", deci );
 }
 
 /**
@@ -228,7 +209,7 @@ SW_TEST_CASE( ContainerBenchTest, VectorGrowByResize )
 {
     constexpr uint32 kFinalSize = 20000;
     uint32           wrongCount = 0;
-    const int64      deci       = bestDeciNanosPerOp( kFinalSize, [&]()
+    const int64      deci       = test::measureBestDeciNanosPerOp( kFinalSize, kRoundCount, [&]()
                {
         sw::vector<uint32> listValue;
         for ( uint32 index = 0; index < kFinalSize; ++index )
@@ -241,7 +222,7 @@ SW_TEST_CASE( ContainerBenchTest, VectorGrowByResize )
         s_benchSink = listValue.capacity();
     } );
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    logDeciNanos( "vector<uint32>::resize( size() + 1 ) x20000", deci );
+    test::logBenchDeciNanos( "vector<uint32>::resize( size() + 1 ) x20000", deci );
 }
 
 /**
@@ -266,7 +247,7 @@ SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
 
     const sw::SlotHandle* pProbe     = listProbe.data();
     uint32                wrongCount = 0;
-    const int64           getDeci    = bestDeciNanosPerOp( kProbeCount, [&]()
+    const int64           getDeci    = test::measureBestDeciNanosPerOp( kProbeCount, kRoundCount, [&]()
                  {
         uint64 sum = 0;
         for ( uint32 index = 0; index < kProbeCount; ++index )
@@ -281,5 +262,5 @@ SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
     } );
 
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    logDeciNanos( "SlotHandleTable<uint64>::get hit (16384 slots, scattered)", getDeci );
+    test::logBenchDeciNanos( "SlotHandleTable<uint64>::get hit (16384 slots, scattered)", getDeci );
 }

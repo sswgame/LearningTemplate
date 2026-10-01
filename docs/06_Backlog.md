@@ -1843,7 +1843,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - [x] ③ 임시 경로는 케이스 폴더(`sw_<pid>/<케이스>/`) — 끝나면 프레임워크가 지운다, `Bin` · 소스 트리에 쓰던 테스트 정리 (3절 2026-10-01 ③)
 - [x] ④ GPU 테스트의 창 + 디바이스를 RAII 한 벌로(`test::RHITestDevice`) (3절 2026-10-01 ④)
 - [x] ④b 픽셀 되읽기 `test::RHITestImage` (3절 2026-10-01 ④b · ⑥)
-- [ ] ⑤ 벤치 통계(`elapsedMicro` · `percentile` · `logSamples`) 세 파일 공용화.
+- [x] ⑤ 벤치 통계 `TestFramework/TestBench.h` (3절 2026-10-01 ⑤)
 - [x] ⑥ 자식 프로세스 실행 `test::runThisExecutableAsChild` — 시한 · 출력 · 환경 변수 (3절 2026-10-01 ④b · ⑥)
       **남은 원인 하나:** CI Windows Shipping 에서 크래시 자식이 간헐로 멈춘다(bb8f9852). 다음에 지면 로그에 종류 · 마지막 출력이 남는다.
 - [ ] ⑦ ctest 병렬화 — `RUN_SERIAL` 의 근거를 찾아 `RESOURCE_LOCK` 으로 좁히거나 느린 실행 파일을 샤딩.
@@ -2037,6 +2037,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ⑤ 벤치 통계를 한 벌로 — `TestFramework/TestBench.h`)
+
+벤치 파일 셋(`TestTaskManagerBench` · `TestGameObjectBench` · `TestContainerBench`)이 백분위 · 경과 시간 · 한 줄 보고를 각자 들었다 —
+앞의 둘은 같은 13 줄(파일을 넘는 유일한 7 줄 이상 중복이었다)인데 한쪽은 p90 을 찍고 다른 쪽은 안 찍어 두 벤치의 줄을 나란히 견줄 수
+없었다. `test::getElapsedMicroseconds` · `getPercentile` · `logBenchSamples`(min · p50 · p90 · max) · `measureBestDeciNanosPerOp` ·
+`logBenchDeciNanos` 로 모았다. 새 벤치는 이 헤더 하나를 쓴다.
+
+**바뀐 것 하나.** 보고 줄이 프레임워크에서 찍혀 파일별 호출자 꼬리표(`[TaskManagerBench]`)가 빠진다 — 줄의 이름(무엇을 쟀는지)은 그대로다.
+**검증.** 벤치 세 스위트의 줄이 전과 같은 모양으로 찍힌다(GameObjectBench 는 p90 이 붙었다). Debug `nogpu|lint` 28/28 · `hostgpu` 2/2,
+Shipping 9/9.
 
 ### 2026-10-01 (Test 구조 ④b 픽셀 되읽기 `test::RHITestImage` · ⑥ 자식 프로세스 실행에 시한 — CI 에서 멈춘 크래시 자식)
 
