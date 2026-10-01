@@ -554,8 +554,9 @@ namespace sw::editor
                             _selectedAction.c_str(), sw::KeyCodes::toName( newKey ), conflictingAction.c_str() );
         }
 
-        _actionMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex );
-        markDocumentDirty();
+        // 키 하나로 바꿀 수 없는 바인딩(합성 축 · 스틱)이면 바뀌지 않는다 — 경고는 ActionMap 이 남긴다. 그때 문서를 더럽히지 않는다.
+        if ( _actionMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex ) )
+            markDocumentDirty();
     }
 
     void InputMapEditorPanel::drawDeviceMonitorTab()

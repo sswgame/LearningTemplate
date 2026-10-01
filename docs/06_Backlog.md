@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊲ 입력 — 키를 다시 잡으면 조합 키의 수식 키 · 합성 축이 사라졌다)
+
+`ActionMap::rebindKey` · `rebindSlot` 은 어떤 바인딩이든 **단일 키로 바꿨다**(`_kind = SingleSlot`, 0 번 슬롯에 새 키). 편집기의 Rebind(입력 맵 패널)는 늘 이것을
+부르므로, `Ctrl+S` 를 다시 잡으면 수식 키가 사라져 맨 `D` 가 됐고, A/D 축을 다시 잡으면 축이 단일 키가 됐다 — 저장하면 그대로 남는다.
+- 바인딩 종류 표(`kArrBindingKindTraits`)에 "키 하나로 다시 잡을 때 바뀌는 슬롯" 칸을 더했다: 단일 · Shortcut 은 0, Chord 는 방아쇠(1, 수식 키는 그대로),
+  합성 축 · 2D 합성 · 스틱 · 마우스 델타 · AnyKey · 가상 스틱은 `BindingKinds::kNoRebindSlot`(`getRebindSlotIndex`).
+- `rebindSlot`(과 그것을 부르는 `rebindKey`)은 종류를 그대로 두고 그 슬롯만 바꾼다. 키 하나로 못 바꾸는 종류면 바꾸지 않고 경고와 함께 false.
+- 편집기는 실패하면 문서를 더럽히지 않는다. `rebindWithResolution`(충돌 해결)은 이번에 손대지 않았다.
+**검증.** `ActionMapTest.RebindKeepsTheBindingKind` — 단일은 새 키, Chord 는 종류 · 수식 키를 지키고 방아쇠만, A/D 축은 거절하고 그대로. Chord 의 슬롯을 0 으로
+· 축을 다시 잡을 수 있게 바꾸는 변이 둘이 모두 실패했다.
+
 ### 2026-10-01 (결함 ㊱ Core — 이름이 같은 두 파일의 로그 호출자 이름이 섞였다)
 
 로그의 `[Caller]` 칸은 `SW_LOG_CALLER( "이름" )` 이 파일마다 등록한 이름이다. 표의 키가 **파일 이름뿐**이라 `GameFramework/Base/SaveGame.cpp`("SaveGame")와

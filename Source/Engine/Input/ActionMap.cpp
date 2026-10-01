@@ -37,19 +37,22 @@ namespace sw
             BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 들고 있는 자기 값.
             const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
+            uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯(`BindingKinds::kNoRebindSlot` = 키 하나로는 못 바꾼다).
         };
+
+        constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
 
         // 종류를 더하면 **여기 한 줄**이다. 빠뜨리면 아래 static_assert 가 컴파일을 세운다.
         constexpr BindingKindTraits kArrBindingKindTraits[] = {
-            {       BindingKind::SingleSlot,          "single", 1},
-            {  BindingKind::Axis1DComposite,          "axis1d", 2},
-            {BindingKind::Vector2DComposite,        "vector2d", 4},
-            {   BindingKind::GamepadStick2D,           "stick", 0},
-            {            BindingKind::Chord,           "chord", 2},
-            {     BindingKind::MouseDelta2D,      "mouseDelta", 0},
-            {         BindingKind::Shortcut,        "shortcut", 1},
-            {           BindingKind::AnyKey,          "anyKey", 0},
-            {BindingKind::VirtualJoystick2D, "virtualJoystick", 1},
+            {       BindingKind::SingleSlot,          "single", 1,         0},
+            {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind},
+            {BindingKind::Vector2DComposite,        "vector2d", 4, kNoRebind},
+            {   BindingKind::GamepadStick2D,           "stick", 0, kNoRebind},
+            {            BindingKind::Chord,           "chord", 2,         1},
+            {     BindingKind::MouseDelta2D,      "mouseDelta", 0, kNoRebind},
+            {         BindingKind::Shortcut,        "shortcut", 1,         0},
+            {           BindingKind::AnyKey,          "anyKey", 0, kNoRebind},
+            {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind},
         };
 
         static_assert( sizeof( kArrBindingKindTraits ) / sizeof( kArrBindingKindTraits[0] ) == static_cast<size_t>( BindingKind::Count ),
@@ -85,6 +88,12 @@ namespace sw
                 return traits._kind;
         }
         return BindingKind::Count;
+    }
+
+    uint32 BindingKinds::getRebindSlotIndex( BindingKind kind )
+    {
+        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
+        return ( pTraits != nullptr ) ? pTraits->_rebindSlotIndex : kNoRebindSlot;
     }
 
     uint32 BindingKinds::getConflictSlotCount( BindingKind kind )
@@ -535,13 +544,7 @@ namespace sw
 
     bool ActionMap::rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex )
     {
-        ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
-            return false;
-
-        pEntry->_listBinding[bindIndex]._kind       = BindingKind::SingleSlot;
-        pEntry->_listBinding[bindIndex]._arrSlot[0] = InputSlot::fromKey( newKey );
-        return true;
+        return rebindSlot( action, InputSlot::fromKey( newKey ), bindIndex );
     }
 
     bool ActionMap::rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex )
@@ -550,8 +553,16 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
             return false;
 
-        pEntry->_listBinding[bindIndex]._kind       = BindingKind::SingleSlot;
-        pEntry->_listBinding[bindIndex]._arrSlot[0] = slot;
+        // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명). 예전에는 무엇이든 단일 키로 바꿔 수식 키 · 축이 사라졌다.
+        ActionBinding& binding   = pEntry->_listBinding[bindIndex];
+        const uint32   slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
+        if ( slotIndex == BindingKinds::kNoRebindSlot )
+        {
+            SW_LOG_WARNING( "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
+                            action.c_str(), BindingKinds::toName( binding._kind ) );
+            return false;
+        }
+        binding._arrSlot[slotIndex] = slot;
         return true;
     }
 

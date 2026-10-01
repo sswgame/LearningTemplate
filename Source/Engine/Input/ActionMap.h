@@ -83,6 +83,15 @@ namespace sw
          *          다음 사람이 그 차이를 모르고 슬롯 순회에 씁니다.
          */
         static uint32 getConflictSlotCount( BindingKind kind );
+
+        /** @brief 키 하나로 바꿀 수 있는 슬롯이 없는 종류가 `getRebindSlotIndex` 에서 받는 값입니다. */
+        static constexpr uint32 kNoRebindSlot = 0xFFFFFFFFu;
+        /**
+         * @brief 키 하나를 새로 잡았을 때(`ActionMap::rebindKey` · 편집기의 Rebind) **그 키가 들어갈** 슬롯입니다.
+         * @details 단일 · Shortcut 은 0, Chord 는 방아쇠(1)이고 수식 키는 그대로 둡니다. 합성 축 · 스틱 · 마우스 델타 · AnyKey 는 키 하나로
+         *          바꿀 수 없어 `kNoRebindSlot` 입니다.
+         */
+        static uint32 getRebindSlotIndex( BindingKind kind );
     };
 
     enum class ConflictResolution : uint8
@@ -358,7 +367,11 @@ namespace sw
         string getGlyphForAction( const hashed_string& action ) const;
         string getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const;
 
-        /** @brief 런타임에 액션의 키 바인딩을 바꿉니다. */
+        /**
+         * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 **종류는 그대로**입니다 — Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
+         * @details 키 하나로 바꿀 수 없는 종류(합성 축 · 스틱 …)면 바꾸지 않고 경고와 함께 false 입니다(`BindingKinds::getRebindSlotIndex`).
+         *          예전에는 어떤 종류든 단일 키로 바꿔 버려, 편집기에서 `Ctrl+S` 를 다시 잡으면 수식 키가, A/D 축을 다시 잡으면 축이 사라졌다.
+         */
         bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
         bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
         bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );

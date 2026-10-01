@@ -728,3 +728,39 @@ SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
 
     input.shutdown();
 }
+
+/**
+ * @brief [ActionMapTest] 키를 다시 잡아도 바인딩 종류는 그대로다 — Chord 는 방아쇠만 바뀌고, 합성 축은 키 하나로 바꾸지 않는다
+ * @details `rebindKey` 는 어떤 바인딩이든 단일 키로 바꿨다. 편집기의 Rebind 로 `Ctrl+S` 를 다시 잡으면 수식 키가 사라졌고, A/D 축을 다시 잡으면 축이
+ *          단일 키가 됐다.
+ */
+SW_TEST_CASE( ActionMapTest, RebindKeepsTheBindingKind )
+{
+    sw::ActionMap actionMap;
+
+    actionMap.bind( "Jump", sw::Key::Space );
+    SW_EXPECT_TRUE( actionMap.rebindKey( "Jump", sw::Key::J ) );
+    const sw::ActionBinding* pSingle = actionMap.getBinding( "Jump", 0 );
+    SW_ASSERT_NOT_NULL( pSingle );
+    SW_EXPECT_TRUE( pSingle->_kind == sw::BindingKind::SingleSlot );
+    SW_EXPECT_TRUE( pSingle->_arrSlot[0] == sw::InputSlot::fromKey( sw::Key::J ) );
+
+    actionMap.bindChord( "Save", sw::Key::LeftControl, sw::Key::S );
+    SW_EXPECT_TRUE( actionMap.rebindKey( "Save", sw::Key::D ) );
+    const sw::ActionBinding* pChord = actionMap.getBinding( "Save", 0 );
+    SW_ASSERT_NOT_NULL( pChord );
+    SW_EXPECT_TRUE( pChord->_kind == sw::BindingKind::Chord );
+    SW_EXPECT_TRUE( pChord->_arrSlot[0] == sw::InputSlot::fromKey( sw::Key::LeftControl ) ); // 수식 키는 그대로
+    SW_EXPECT_TRUE( pChord->_arrSlot[1] == sw::InputSlot::fromKey( sw::Key::D ) );
+
+    actionMap.bindAxis1DComposite( "MoveX", sw::Key::A, sw::Key::D );
+    {
+        test::ScopedDefensiveTestLog expected( "rebinding a composite axis with one key" );
+        SW_EXPECT_FALSE( actionMap.rebindKey( "MoveX", sw::Key::Q ) );
+    }
+    const sw::ActionBinding* pAxis = actionMap.getBinding( "MoveX", 0 );
+    SW_ASSERT_NOT_NULL( pAxis );
+    SW_EXPECT_TRUE( pAxis->_kind == sw::BindingKind::Axis1DComposite );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[0] == sw::InputSlot::fromKey( sw::Key::A ) );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[1] == sw::InputSlot::fromKey( sw::Key::D ) );
+}
