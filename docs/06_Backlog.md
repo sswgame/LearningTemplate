@@ -2051,6 +2051,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ① 실패한 `SW_ASSERT` 가 멈추기 전에 식 · 자리를 남긴다)
+
+Debug 의 `SW_ASSERT` 는 아무것도 찍지 않고 `__debugbreak()`(리눅스 `__builtin_trap`)로 멈췄다. 디버거가 붙어 있으면 그 자리에 서지만, CI · 테스트
+자식 · 다른 사람의 PC 에서는 크래시 리포트의 "EXCEPTION_BREAKPOINT"(SIGILL)와 스택만 남아 **어느 식이 어긋났는지** 몰랐다 — `vector::operator[]`
+· `span` · `sparse_set` 의 범위 검사가 CI 에서 그렇게 보였다. 이제 멈추기 전에 stderr 에 `[SW_ASSERT] <식>` · `at <파일>:<줄>` · `in <함수>` 를
+남기고 비운다(로거는 비동기라 멈추면 잃을 수 있다). `Macros.h` 의 `sw::internal::printAssertFailure`(인라인, `<cstdio>` 하나).
+**검증.** 크래시 자식에 `CrashTestKind::AssertFailure` 를 더했다. `CrashReportTest.FailedAssertNamesItsExpressionBeforeStopping`(Debug) — 자식 출력에
+`[SW_ASSERT] s_bAssertProbeHolds` 와 `CrashContext.cpp:` 가 있고 스택 파일도 남는다. 찍기를 빼는 돌연변이에 진다.
+
 ### 2026-10-01 (결함 ⑳ Core — 부동소수 파서가 "+-5" 와 nan · inf 를 받았다)
 
 `StringUtil::parseFloat` · `parseDouble` 은 앞의 `+` 를 떼고 `from_chars` 에 넘겨 `"+-5"` 를 -5 로 읽었다(`parseInt` 는 거절했다). 그리고

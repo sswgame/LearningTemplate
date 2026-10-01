@@ -23,6 +23,7 @@ namespace sw
         Abort,               ///< std::abort() — 엔진의 "로그 + abort" 치명 경로
         PureVirtualCall,     ///< 생성 중인 객체의 순수 가상 함수 호출
         StderrHeld,          ///< 다른 스레드가 stderr 를 쥔 채 놓지 않는 동안 접근 위반 — 보고가 끝날 수 없다(시한이 끝내야 한다)
+        AssertFailure,       ///< `SW_ASSERT` 실패(Debug 에서만 멈춘다 — 그 밖의 빌드는 아무것도 하지 않고 돌아온다)
         Count
     };
 

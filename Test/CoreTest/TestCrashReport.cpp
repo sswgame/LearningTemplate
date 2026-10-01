@@ -309,3 +309,38 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 #endif
     sw::FileUtil::removeDirectory( folder );
 }
+
+/**
+ * @brief [CrashReportTest] 실패한 `SW_ASSERT` 는 멈추기 전에 식 · 자리를 남기고, 크래시 리포트도 남는다(Debug)
+ * @details 예전에는 아무것도 찍지 않고 멈췄다 — 디버거 없이 돌면 "EXCEPTION_BREAKPOINT"(리눅스 SIGILL)와 스택만 남아 어느 식이 어긋났는지 몰랐다.
+ */
+SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
+{
+#if !defined( SW_DEBUG )
+    SW_TEST_SKIP( "SW_ASSERT exists only in Debug builds" );
+#elif defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
+    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+#else
+    const sw::string folder = test::makeTempPath( "SwCrashChild_assert" );
+    sw::FileUtil::removeDirectory( folder );
+    sw::FileUtil::ensureDirectoryExists( folder );
+
+    sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
+    kindText.append( static_cast<int32>( sw::CrashTestKind::AssertFailure ) );
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
+        {"SW_CRASH_CHILD_FOLDER",           folder},
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "단언 자식이 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    if ( child._bTimedOut )
+        return;
+    SW_EXPECT_TRUE( child._exitCode != 0 );
+    const bool bNamesExpression = child._output.find( "[SW_ASSERT] s_bAssertProbeHolds" ) != sw::string::npos;
+    const bool bNamesPlace      = child._output.find( "CrashContext.cpp:" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, ( "단언이 식 · 자리를 남기지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_FALSE( findReportFileInternal( folder, "stack.txt" ).empty() );
+    sw::FileUtil::removeDirectory( folder );
+#endif
+}

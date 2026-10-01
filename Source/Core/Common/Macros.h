@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include <cstdio>      // SW_ASSERT 가 멈추기 전에 남기는 한 줄(Debug)
 #include <type_traits> // SW_REQUIRES · arrayCountHelper 의 std::enable_if_t
 
 // ------------------------------------------------------------------------------
@@ -73,14 +74,30 @@
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
  */
 #if defined( SW_DEBUG )
-    /** @brief 식이 거짓이면 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다. */
-    #define SW_ASSERT( expr )     \
-        do                        \
-        {                         \
-            if ( !( expr ) )      \
-            {                     \
-                SW_DEBUG_BREAK(); \
-            }                     \
+namespace sw::internal
+{
+    /**
+     * @brief `SW_ASSERT` 가 멈추기 **전에** 무엇이 어디서 어긋났는지 stderr 에 남깁니다.
+     * @details 예전에는 아무것도 찍지 않고 멈췄다. 디버거 없이 돌면(CI · 테스트 자식 · 다른 사람의 PC) 남는 것은 크래시 리포트의
+     *          "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와 스택뿐이라, 어느 식이 어긋났는지 몰랐다 — `vector::operator[]` 의 범위 검사가
+     *          CI 에서 그렇게 보였다. 식 · 파일 · 줄 · 함수를 남기고 버퍼를 비운 뒤 멈춘다(로거는 비동기라 멈추면 잃을 수 있다).
+     */
+    inline void printAssertFailure( const utf8* pExpression, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    {
+        std::fprintf( stderr, "\n[SW_ASSERT] %s\n  at %s:%d\n  in %s\n", pExpression, pFile, line, pFunction );
+        std::fflush( stderr );
+    }
+} // namespace sw::internal
+
+    /** @brief 식이 거짓이면 그 식 · 자리를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다. */
+    #define SW_ASSERT( expr )                                                                                                 \
+        do                                                                                                                    \
+        {                                                                                                                     \
+            if ( !( expr ) )                                                                                                  \
+            {                                                                                                                 \
+                ::sw::internal::printAssertFailure( #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
+                SW_DEBUG_BREAK();                                                                                             \
+            }                                                                                                                 \
         } while ( false )
 #else
     /** @brief Debug 가 아니면 어서션을 없앱니다(식도 평가하지 않습니다). */
