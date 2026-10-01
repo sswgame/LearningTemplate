@@ -7,8 +7,6 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/Process.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -30,6 +28,7 @@
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
 
+#include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #if !defined( SW_SHIPPING )
@@ -1417,22 +1416,14 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
     if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::fileExists( sw::modulePath( "GF_Overworld" ) ) == false )
         SW_TEST_SKIP( "GameFramework · GF_Overworld 모듈이 옆에 없습니다" );
 
-    #if defined( SW_PLATFORM_WINDOWS )
-    SetEnvironmentVariableA( "SW_SHARED_MODULE_CHILD", "1" );
-    #else
-    setenv( "SW_SHARED_MODULE_CHILD", "1", 1 );
-    #endif
-    sw::StringBuilder<sw::constant::kMaxPathSize> command;
-    command.append( '"' ).append( sw::FileUtil::getExecutablePath().c_str() ).append( "\" --test_filter=ModuleApiTest.SharedModuleChildKeepsItsRegistrations" );
-    sw::ProcessOptions options;
-    options._workingDirectory = sw::FileUtil::getCurrentPath();
-    const int32 exitCode      = sw::Process::execute( command.view(), options );
-    #if defined( SW_PLATFORM_WINDOWS )
-    SetEnvironmentVariableA( "SW_SHARED_MODULE_CHILD", nullptr );
-    #else
-    unsetenv( "SW_SHARED_MODULE_CHILD" );
-    #endif
-    SW_EXPECT_TRUE_MSG( exitCode == 0, "자식 프로세스에서 GameFramework 타입의 모듈 귀속 검사가 실패했습니다(로그 참고)" );
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_SHARED_MODULE_CHILD", "1" }
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.SharedModuleChildKeepsItsRegistrations", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0,
+                        ( "자식 프로세스에서 GameFramework 타입의 모듈 귀속 검사가 실패했습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
 }
 
 /**

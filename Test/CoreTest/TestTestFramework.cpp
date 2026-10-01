@@ -2,7 +2,12 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
+
+#include <chrono>
+#include <cstdlib>
+#include <thread>
 
 namespace
 {
@@ -312,4 +317,62 @@ SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
     for ( const sw::string& path : s_listPathOfPreviousCase )
         SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( path ) || sw::FileUtil::directoryExists( path ), path.c_str() );
     s_listPathOfPreviousCase.clear();
+}
+
+/**
+ * @brief [TestFrameworkTest] 자식 역할: 환경 변수대로 표식을 찍고 끝나거나, 끝나지 않는다. 그냥 실행하면 건너뛴다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ChildRoleEchoesOrHangs )
+{
+    const utf8* pMode = std::getenv( "SW_TEST_CHILD_MODE" );
+    if ( pMode == nullptr )
+        SW_TEST_SKIP( "child only — ChildProcessGetsItsEnvironmentAndOutputIsCaptured · HangingChildIsKilledAtTheDeadline launch it" );
+
+    if ( sw::string_view( pMode ) == "hang" )
+    {
+        // 크래시 처리기가 멈춘 자식을 흉내 낸다 — 아무것도 찍지 않고 서 있다.
+        std::this_thread::sleep_for( std::chrono::seconds( 600 ) );
+        return;
+    }
+    std::fprintf( stdout, "SW_CHILD_ECHO:%s\n", pMode );
+    std::fflush( stdout );
+}
+
+/**
+ * @brief [TestFrameworkTest] 자식은 걸어 준 환경 변수를 받고, 그 출력이 돌아오며, 부모의 환경은 되돌려진다
+ */
+SW_TEST_CASE( TestFrameworkTest, ChildProcessGetsItsEnvironmentAndOutputIsCaptured )
+{
+    SW_ASSERT_TRUE( std::getenv( "SW_TEST_CHILD_MODE" ) == nullptr );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_TEST_CHILD_MODE", "marker42" }
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE( child._bTimedOut );
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_CHILD_ECHO:marker42" ), child.getOutputTail().c_str() );
+    SW_EXPECT_TRUE_MSG( std::getenv( "SW_TEST_CHILD_MODE" ) == nullptr, "자식에게 걸어 준 환경 변수가 부모에 남았습니다 — 다음 케이스가 자식 역할을 합니다" );
+}
+
+/**
+ * @brief [TestFrameworkTest] 멈춘 자식은 시한에 죽고 그 사실이 남는다 — 테스트 실행 파일 전체가 CTest 시한까지 서 있지 않는다
+ * @details 2026-10-01 CI 에서 크래시 자식 하나가 멈춰 CoreTest 가 30 초 시한까지 서 있다 졌다. 어느 크래시 종류였는지도,
+ *          자식이 어디까지 갔는지도 남지 않았다. 시한이 없으면 이 케이스는 600 초를 기다린다.
+ */
+SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
+{
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_TEST_CHILD_MODE", "hang" }
+    };
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    const test::ChildRunResult                  child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
+
+    const int64 elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - start ).count();
+
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_TRUE( child._bTimedOut );
+    SW_EXPECT_NOT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( elapsedSeconds < 60, "시한(1 초)을 넘긴 자식을 죽이지 못하고 기다렸습니다" );
 }

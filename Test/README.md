@@ -126,6 +126,10 @@ AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이�
 `SW_TEST_CHECK_EQUAL_IMPL`)를 지나고, **실패 경로는 바깥 함수**(`test::reportFailure` · `reportNotEqual` …)라 단언 자리에는
 비교와 호출 하나만 남습니다. 새 단언은 그 뼈대로 한 줄입니다.
 
+자기 자신을 자식 프로세스로 다시 띄워 케이스 하나만 돌릴 때(프로세스마다 한 번뿐인 상태 · 프로세스를 죽이는 일)는
+`test::runThisExecutableAsChild`(`TestFramework/TestChildProcess.h`)를 씁니다 — 환경 변수를 띄우는 동안만 걸고, 출력을 모으고,
+**시한을 넘기면 자식을 죽입니다.** 시한 없이 기다리면 멈춘 자식 하나가 실행 파일 전체를 CTest 시한까지 세워 둡니다.
+
 단언 자체를 시험할 때는 `test::ScopedFailureCapture` 로 실패를 가로챕니다(gtest 의 `EXPECT_FATAL_FAILURE` 와 같은 일).
 `Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 "실패를 하나 남기는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 봅니다.
 

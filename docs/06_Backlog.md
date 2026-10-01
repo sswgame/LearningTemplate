@@ -1842,9 +1842,10 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - [x] ② 단언 매크로를 한 뼈대로 · 실패 경로를 바깥 함수로 — Release EngineTest.exe 12.5 → 3.3 MB (3절 2026-10-01 ②)
 - [x] ③ 임시 경로는 케이스 폴더(`sw_<pid>/<케이스>/`) — 끝나면 프레임워크가 지운다, `Bin` · 소스 트리에 쓰던 테스트 정리 (3절 2026-10-01 ③)
 - [x] ④ GPU 테스트의 창 + 디바이스를 RAII 한 벌로(`test::RHITestDevice`) (3절 2026-10-01 ④)
-- [ ] ④b 픽셀 되읽기 도우미 — `readbackTransient` 13 곳 · BGRA 뒤집기 16 곳이 케이스마다 같은 줄을 든다.
+- [x] ④b 픽셀 되읽기 `test::RHITestImage` (3절 2026-10-01 ④b · ⑥)
 - [ ] ⑤ 벤치 통계(`elapsedMicro` · `percentile` · `logSamples`) 세 파일 공용화.
-- [ ] ⑥ 자식 프로세스로 자기 자신을 다시 띄우는 도우미(CrashReport · Smoke) 공용화.
+- [x] ⑥ 자식 프로세스 실행 `test::runThisExecutableAsChild` — 시한 · 출력 · 환경 변수 (3절 2026-10-01 ④b · ⑥)
+      **남은 원인 하나:** CI Windows Shipping 에서 크래시 자식이 간헐로 멈춘다(bb8f9852). 다음에 지면 로그에 종류 · 마지막 출력이 남는다.
 - [ ] ⑦ ctest 병렬화 — `RUN_SERIAL` 의 근거를 찾아 `RESOURCE_LOCK` 으로 좁히거나 느린 실행 파일을 샤딩.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
@@ -2036,6 +2037,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ④b 픽셀 되읽기 `test::RHITestImage` · ⑥ 자식 프로세스 실행에 시한 — CI 에서 멈춘 크래시 자식)
+
+**⑥ 무엇이 일어났나.** ④(bb8f9852)의 CI 에서 **Windows Shipping 의 CoreTest 가 30 초 시한으로 졌다.** 평소 6.9 초다. 멈춘 자리는
+`CrashReportTest.EveryCrashKindLeavesAReport` — 다섯 크래시 종류마다 자기 자신을 자식으로 띄워 죽이는 케이스다. ④ 는 EngineTest
+만 고쳤고 앞 두 실행(③ · ②)의 같은 잡은 통과했으므로 **간헐**이다. 이 PC 의 Shipping 에서 25 번 돌려 한 번도 재현되지 않았다.
+2026-09-30 결함 점검 때 "CoreTest 가 한 번 졌는데 케이스를 못 잡았다" 고 남긴 것도 아마 이것이다.
+**왜 원인을 모르나:** 부모는 `Process::execute` 로 자식을 **시한 없이** 기다렸고 자식의 출력을 버렸다. 그래서 로그에는 어느 크래시
+종류였는지도, 자식이 크래시 처리기의 어디까지 갔는지도 남지 않았다.
+
+**⑥ 지금.** `test::runThisExecutableAsChild( "Suite.Case", 환경 변수들, 시한 )`(`TestFramework/TestChildProcess.h`)가 이 실행 파일을
+자식으로 띄워 케이스 하나만 돌린다 — 환경 변수는 띄우는 순간만 걸고 되돌리며, 출력을 모으고, **시한을 넘기면 감시 스레드가 자식을
+죽인다**(출력을 읽는 스레드는 말없이 멈춘 자식에게서 영영 깨지 않으므로). 결과에 `_bTimedOut` 과 출력 꼬리(`getOutputTail`)가 있다.
+크래시 케이스는 종류마다 10 초, 넘기면 **그 종류 이름과 자식의 마지막 출력**을 남기고 다음 종류로 간다. 새니타이저 빌드는 시한이 열 배다.
+`TestCrashReport` 의 환경 변수 도우미와 `TestSmoke` 의 플랫폼 `#if` 환경 변수 · 명령줄 조립을 걷었다.
+- 시험: `ChildProcessGetsItsEnvironmentAndOutputIsCaptured`(자식이 받은 값을 찍고, 그 출력이 돌아오고, 부모 환경은 되돌려진다),
+  `HangingChildIsKilledAtTheDeadline`(600 초 자는 자식을 1 초 시한으로 — 2.0 초에 끝난다). 변이: 감시 스레드의 `terminate` 를 빼면
+  25 초 뒤에도 끝나지 않는다.
+- **남은 것: 원인.** 다음에 CI 가 그 자리에서 지면 이제 어느 크래시 종류가 · 어디서 멈췄는지 로그에 남는다. 그때 고친다.
+
+**④b 픽셀 되읽기.** `RenderPassGpuTest` 의 열세 곳이 되읽기 세 변수 · 행 포인터 · BGRA 뒤집기(`format == B8G8R8A8 ? p[2] : p[0]`, 열여섯 곳)를
+손으로 들었다. `test::RHITestImage`(`Test/EngineTest/RHITestImage.h`)가 형식(RGBA8 · BGRA8 · RGBA16F)과 무관하게 `getPixel` 로 RGBA 를 주고,
+반복되던 두 판정에 이름을 붙였다 — `isDefaultClearBackground`(기본 클리어 색이 톤매핑 뒤 놓이는 칸 R 22~40 · G 28~48 · B 36~56)와
+`getColorDistance`(모서리 픽셀과 견주기). 반정밀도 풀기는 두 벌이 한 벌이 됐다. 형식 그대로의 바이트가 필요한 곳(서로 다른 값 세기)은
+`getRawPixel`. 그 파일 257 줄 삭제 · 127 줄 추가.
+- **변이로 배운 것:** BGRA 뒤집기를 틀려도 GPU 케이스 28 개가 전부 통과했다 — 이 PC 의 네 백엔드는 `SceneColor` 를 다 RGBA8 로 되읽는다.
+  그래서 해석 규칙은 GPU 없이 `RHITestImageTest`(nogpu, `assign` 으로 바이트를 넣는다)가 지킨다: RGBA/BGRA · 반정밀도(1.0 · 0.5 · 2.0 ·
+  음수 · 무한 · 비정상 수) · 범위 밖 · 배경 칸 경계 · 색 거리. 같은 변이에 이제 진다.
+
+**검증.** Debug `nogpu|lint` 28/28 · `hostgpu` 2/2(RenderPassGpuTest 28/28 스킵 0), Shipping 9/9, 빌드 경고 0.
 
 ### 2026-10-01 (Test 구조 ④ GPU 테스트의 창 + 디바이스를 RAII 한 벌로 — `test::RHITestDevice`)
 

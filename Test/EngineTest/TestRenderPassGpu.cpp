@@ -34,6 +34,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/RHITestDevice.h"
+#include "EngineTest/RHITestImage.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -53,37 +54,16 @@ namespace
      */
     float64 readMeanChannel( sw::FrameRenderer& renderer, const utf8* pAttachment )
     {
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( pAttachment, bytes, layout, format ) == false )
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, pAttachment ) == false )
             return 0.0;
-        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
-        const bool   bHalf         = ( format == sw::RHIFormat::R16G16B16A16_FLOAT );
-        uint64       sum{ 0 };
-        uint64       count{ 0 };
-        for ( uint32 row = 0; row < layout._height; ++row )
+        uint64 sum{ 0 };
+        uint64 count{ 0 };
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 col = 0; col < layout._width; ++col )
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
-                uint32       red{ 0 };
-                if ( bHalf )
-                {
-                    const uint16 half     = static_cast<uint16>( pPixel[0] | ( pPixel[1] << 8 ) );
-                    const uint32 exponent = ( half >> 10 ) & 0x1Fu;
-                    const uint32 mantissa = half & 0x3FFu;
-                    float32      value    = 0.0f;
-                    if ( exponent != 0 && exponent != 0x1Fu )
-                        value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * std::ldexp( 1.0f, static_cast<int32>( exponent ) - 15 );
-                    if ( ( half & 0x8000u ) != 0 )
-                        value = 0.0f;
-                    red = static_cast<uint32>( sw::MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f );
-                }
-                else
-                    red = pPixel[0];
-                sum += red;
+                sum += image.getPixel( col, row )._r;
                 ++count;
             }
         }
@@ -115,21 +95,15 @@ namespace
         }
         pDevice->waitIdle();
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "SceneColor" ) == false )
             return -1;
         int64 drawnCount{ 0 };
-        for ( uint32 y = 0; y < layout._height; ++y )
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-            for ( uint32 x = 0; x < layout._width; ++x )
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                if ( test::RHITestImage::isDefaultClearBackground( image.getPixel( x, y ) ) == false )
                     ++drawnCount;
             }
         }
@@ -734,35 +708,25 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
             device->waitIdle();
         }
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        test::RHITestImage image;
+        if ( bOk && image.readTransient( renderer, "SceneColor" ) )
         {
-            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
-            const uint8* pCorner = bytes.data();
-            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
-            const int32  bgG     = pCorner[1];
-            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
 
             uint32 arrDrawn[2]{};
-            for ( uint32 y = 0; y < layout._height; ++y )
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
             {
-                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                for ( uint32 x = 0; x < layout._width; ++x )
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
                 {
-                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
-                    const int32  g      = pPixel[1];
-                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
-                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
                         continue;
-                    ++arrDrawn[( x < layout._width / 2 ) ? 0u : 1u];
+                    ++arrDrawn[( x < image.getWidth() / 2 ) ? 0u : 1u];
                 }
             }
 
             const sw::string label    = sw::string( device->getBackendName() );
-            const uint32     minDrawn = ( layout._width * layout._height ) / 3000;
+            const uint32     minDrawn = image.getPixelCount() / 3000;
             SW_EXPECT_TRUE_MSG( arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn,
                                 ( label + ": 라이트 상자 밖의 큐브가 사라졌다 (좌 " + sw::to_string( arrDrawn[0] ) + ", 우 " +
                                   sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) +
@@ -864,39 +828,29 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
             device->waitIdle();
         }
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        test::RHITestImage image;
+        if ( bOk && image.readTransient( renderer, "SceneColor" ) )
         {
-            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
-            const uint8* pCorner = bytes.data();
-            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
-            const int32  bgG     = pCorner[1];
-            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
 
             uint64 arrSum[3]{};
             uint32 drawn{ 0 };
-            for ( uint32 y = 0; y < layout._height; ++y )
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
             {
-                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                for ( uint32 x = 0; x < layout._width; ++x )
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
                 {
-                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
-                    const int32  g      = pPixel[1];
-                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
-                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
                         continue;
-                    arrSum[0] += static_cast<uint64>( r );
-                    arrSum[1] += static_cast<uint64>( g );
-                    arrSum[2] += static_cast<uint64>( b );
+                    arrSum[0] += static_cast<uint64>( pixel._r );
+                    arrSum[1] += static_cast<uint64>( pixel._g );
+                    arrSum[2] += static_cast<uint64>( pixel._b );
                     ++drawn;
                 }
             }
 
             const sw::string label = sw::string( device->getBackendName() );
-            SW_EXPECT_TRUE_MSG( drawn > ( layout._width * layout._height ) / 400,
+            SW_EXPECT_TRUE_MSG( drawn > image.getPixelCount() / 400,
                                 ( label + ": 투명 큐브가 그려지지 않았다 (" + sw::to_string( drawn ) + " px)" ).c_str() );
             if ( drawn > 0 )
             {
@@ -1026,35 +980,25 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
             device->waitIdle();
         }
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        test::RHITestImage image;
+        if ( bOk && image.readTransient( renderer, "SceneColor" ) )
         {
-            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
-            const uint8* pCorner = bytes.data();
-            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
-            const int32  bgG     = pCorner[1];
-            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
 
             uint32 arrDrawn[2]{};
-            for ( uint32 y = 0; y < layout._height; ++y )
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
             {
-                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                for ( uint32 x = 0; x < layout._width; ++x )
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
                 {
-                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
-                    const int32  g      = pPixel[1];
-                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
-                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
                         continue;
-                    ++arrDrawn[( x < layout._width / 2 ) ? 0u : 1u];
+                    ++arrDrawn[( x < image.getWidth() / 2 ) ? 0u : 1u];
                 }
             }
 
             const sw::string label    = sw::string( device->getBackendName() );
-            const uint32     minDrawn = ( layout._width * layout._height ) / 400;
+            const uint32     minDrawn = image.getPixelCount() / 400;
             SW_EXPECT_TRUE_MSG( arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn,
                                 ( label + ": 보이는 큐브 둘이 화면 좌우에 남지 않았다 (좌 " + sw::to_string( arrDrawn[0] ) +
                                   ", 우 " + sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) +
@@ -1170,10 +1114,8 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
             device->waitIdle();
         }
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        test::RHITestImage image;
+        if ( bOk && image.readTransient( renderer, "SceneColor" ) )
         {
             // 그려진 픽셀(검은 배경이 아닌 곳)만 모아 좌/우 절반의 평균 (R - B) 를 낸다.
             int64  arrSumDiff[2]{};
@@ -1181,30 +1123,22 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
 
             // 배경은 검지 않다 — 패스 리소스가 정한 클리어 색과 톤매핑이 섞여 회색빛이 깔린다. 그래서
             // "검지 않은 픽셀" 이 아니라 **모서리 픽셀과 확연히 다른 픽셀** 을 큐브로 본다.
-            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
-            const uint8* pCorner = bytes.data();
-            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
-            const int32  bgG     = pCorner[1];
-            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
-            for ( uint32 y = 0; y < layout._height; ++y )
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
             {
-                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                for ( uint32 x = 0; x < layout._width; ++x )
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
                 {
-                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
-                    const int32  g      = pPixel[1];
-                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
-                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
                         continue; // 배경
-                    const uint32 side = ( x < layout._width / 2 ) ? 0u : 1u;
-                    arrSumDiff[side] += ( r - b );
+                    const uint32 side = ( x < image.getWidth() / 2 ) ? 0u : 1u;
+                    arrSumDiff[side] += ( pixel._r - pixel._b );
                     ++arrDrawn[side];
                 }
             }
 
             const sw::string label    = sw::string( device->getBackendName() );
-            const uint32     minDrawn = ( layout._width * layout._height ) / 400;
+            const uint32     minDrawn = image.getPixelCount() / 400;
             const bool       bEnough  = arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn;
             SW_EXPECT_TRUE_MSG( bEnough, ( label + ": 큐브가 화면 양쪽에 그려지지 않았다 (좌 " + sw::to_string( arrDrawn[0] ) +
                                            ", 우 " + sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) + ")" )
@@ -1306,29 +1240,23 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
 
         if ( bOk )
         {
-            sw::vector<uint8>     bytes;
-            sw::RHITextureMipSpan layout{};
-            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-            if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+            test::RHITestImage image;
+            if ( image.readTransient( renderer, "SceneColor" ) )
             {
                 // 화면을 좌/우로 나눠 각각 그려진 픽셀을 센다. 한 배치가 다른 배치의 인스턴스를 읽으면
                 // 두 큐브가 같은 자리에 겹쳐 그려져 한쪽이 비어 버린다.
                 uint32 arrSideCount[2]{};
-                for ( uint32 y = 0; y < layout._height; ++y )
+                for ( uint32 y = 0; y < image.getHeight(); ++y )
                 {
-                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                    for ( uint32 x = 0; x < layout._width; ++x )
+                    for ( uint32 x = 0; x < image.getWidth(); ++x )
                     {
-                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
-                            ++arrSideCount[x < layout._width / 2 ? 0 : 1];
+                        if ( test::RHITestImage::isDefaultClearBackground( image.getPixel( x, y ) ) == false )
+                            ++arrSideCount[x < image.getWidth() / 2 ? 0 : 1];
                     }
                 }
 
                 const sw::string label      = sw::string( device->getBackendName() );
-                const uint32     minPerSide = ( layout._width * layout._height ) / 400;
+                const uint32     minPerSide = image.getPixelCount() / 400;
                 SW_EXPECT_TRUE_MSG( arrSideCount[0] > minPerSide,
                                     ( label + ": 왼쪽 큐브가 없다 (left " + sw::to_string( arrSideCount[0] ) + ", right " +
                                       sw::to_string( arrSideCount[1] ) + ") — 배치마다 다른 상수가 유지되지 않는다" )
@@ -1420,24 +1348,18 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
 
         if ( bOk )
         {
-            sw::vector<uint8>     bytes;
-            sw::RHITextureMipSpan layout{};
-            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-            const bool            bRead  = renderer.readbackTransient( "SceneColor", bytes, layout, format );
+            test::RHITestImage image;
+            const bool         bRead = image.readTransient( renderer, "SceneColor" );
             SW_EXPECT_TRUE_MSG( bRead, "SceneColor readback" );
             if ( bRead )
             {
-                const uint32 pixelCount = layout._width * layout._height;
+                const uint32 pixelCount = image.getPixelCount();
                 uint32       drawnCount{ 0 };
-                for ( uint32 y = 0; y < layout._height; ++y )
+                for ( uint32 y = 0; y < image.getHeight(); ++y )
                 {
-                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                    for ( uint32 x = 0; x < layout._width; ++x )
+                    for ( uint32 x = 0; x < image.getWidth(); ++x )
                     {
-                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                        if ( test::RHITestImage::isDefaultClearBackground( image.getPixel( x, y ) ) == false )
                             ++drawnCount;
                     }
                 }
@@ -1538,30 +1460,25 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         // (예전엔 여기가 비어 있어서 Vulkan 이 아무것도 안 그리고 GL 이 큐브를 한 자리에 겹쳐 그려도 통과했다.)
         if ( bOk )
         {
-            sw::vector<uint8>     bytes;
-            sw::RHITextureMipSpan layout{};
-            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-            const bool            bRead  = renderer.readbackTransient( "SceneColor", bytes, layout, format );
+            test::RHITestImage image;
+            const bool         bRead = image.readTransient( renderer, "SceneColor" );
             SW_EXPECT_TRUE_MSG( bRead, "SceneColor readback" );
             if ( bRead )
             {
-                const uint32 pixelCount = layout._width * layout._height;
+                const uint32 pixelCount = image.getPixelCount();
                 uint64       arrSum[3]{};
                 uint32       drawnCount{ 0 };
                 uint64       drawnSumY{ 0 };
-                for ( uint32 y = 0; y < layout._height; ++y )
+                for ( uint32 y = 0; y < image.getHeight(); ++y )
                 {
-                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-                    for ( uint32 x = 0; x < layout._width; ++x )
+                    for ( uint32 x = 0; x < image.getWidth(); ++x )
                     {
-                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                        arrSum[0] += r;
-                        arrSum[1] += pPixel[1];
-                        arrSum[2] += b;
+                        const test::Rgba8 pixel = image.getPixel( x, y );
+                        arrSum[0] += pixel._r;
+                        arrSum[1] += pixel._g;
+                        arrSum[2] += pixel._b;
                         // 파이프라인 클리어 색(0.12, 0.15, 0.18 → 31, 38, 46) 이 아니면 무언가 그려진 픽셀이다.
-                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                        if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
                         {
                             ++drawnCount;
                             drawnSumY += y;
@@ -1577,7 +1494,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
                 if ( drawnCount > 0 )
                 {
                     const float32 centroidY = static_cast<float32>( drawnSumY ) / static_cast<float32>( drawnCount );
-                    const float32 centerY   = static_cast<float32>( layout._height ) * 0.5f;
+                    const float32 centerY   = static_cast<float32>( image.getHeight() ) * 0.5f;
                     SW_EXPECT_TRUE_MSG( centroidY < centerY,
                                         ( label + ": 그림이 상하로 뒤집혔다 — 큐브 무게중심 y=" + sw::to_string( static_cast<int32>( centroidY ) ) +
                                           " 가 중앙 " + sw::to_string( static_cast<int32>( centerY ) ) + " 보다 아래다" )
@@ -2030,22 +1947,19 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
         device->waitIdle();
     }
 
-    sw::vector<uint8>     bytes;
-    sw::RHITextureMipSpan layout{};
-    sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-    const bool            bRead  = renderer.readbackTransient( presented, bytes, layout, format );
+    test::RHITestImage image;
+    const bool         bRead = image.readTransient( renderer, presented );
     SW_EXPECT_TRUE_MSG( bRead, "화면에 나간 첨부를 되읽지 못했다" );
     if ( bRead )
     {
-        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = image.getBytesPerPixel();
         uint32       distinct      = 0;
         uint64       arrDistinctKey[16]{};
-        for ( uint32 row = 0; row < layout._height && distinct < 2; ++row )
+        for ( uint32 row = 0; row < image.getHeight() && distinct < 2; ++row )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 col = 0; col < layout._width && distinct < 2; ++col )
+            for ( uint32 col = 0; col < image.getWidth() && distinct < 2; ++col )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                const uint8* pPixel = image.getRawPixel( col, row );
                 uint64       key    = 0;
                 for ( uint32 b = 0; b < bytesPerPixel && b < 8; ++b )
                     key |= static_cast<uint64>( pPixel[b] ) << ( b * 8 );
@@ -2103,28 +2017,23 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
         }
         result._drawCallCount = renderer.getLastIndirectDrawCallCount();
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "SceneColor" ) == false )
             return result;
         uint64 arrSum[3]{};
-        for ( uint32 y = 0; y < layout._height; ++y )
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-            for ( uint32 x = 0; x < layout._width; ++x )
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                arrSum[0] += r;
-                arrSum[1] += pPixel[1];
-                arrSum[2] += b;
-                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                arrSum[0] += pixel._r;
+                arrSum[1] += pixel._g;
+                arrSum[2] += pixel._b;
+                if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
                     ++result._drawnCount;
             }
         }
-        const uint32 pixelCount = layout._width * layout._height;
+        const uint32 pixelCount = image.getPixelCount();
         for ( uint32 channel = 0; channel < 3; ++channel )
             result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
         result._bOk = pixelCount > 0;
@@ -2261,38 +2170,17 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
     };
     auto readStat = []( sw::FrameRenderer& renderer, const utf8* pAttachment ) -> Stat
     {
-        Stat                  stat{};
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( pAttachment, bytes, layout, format ) == false )
+        Stat               stat{};
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, pAttachment ) == false )
             return stat;
-        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
-        const bool   bHalf         = ( format == sw::RHIFormat::R16G16B16A16_FLOAT );
-        uint64       sum{ 0 };
-        uint32       count{ 0 };
-        for ( uint32 row = 0; row < layout._height; ++row )
+        uint64 sum{ 0 };
+        uint32 count{ 0 };
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 col = 0; col < layout._width; ++col )
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
-                uint32       r{ 0 };
-                if ( bHalf )
-                {
-                    // IEEE 반정밀도 → float. 정규 수만 풀면 된다(색은 [0, 몇] 범위) — 비정규·무한은 0 으로 본다.
-                    const uint16 half     = static_cast<uint16>( pPixel[0] | ( pPixel[1] << 8 ) );
-                    const uint32 exponent = ( half >> 10 ) & 0x1Fu;
-                    const uint32 mantissa = half & 0x3FFu;
-                    float32      value    = 0.0f;
-                    if ( exponent != 0 && exponent != 0x1Fu )
-                        value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * std::ldexp( 1.0f, static_cast<int32>( exponent ) - 15 );
-                    if ( ( half & 0x8000u ) != 0 )
-                        value = 0.0f;
-                    r = static_cast<uint32>( sw::MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f );
-                }
-                else
-                    r = pPixel[0];
+                const uint32 r = image.getPixel( col, row )._r;
                 sum += r;
                 ++count;
                 if ( r < 250 )
@@ -2471,37 +2359,27 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
     /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균, 그리고 픽셀 비교용 원본.
     struct Snapshot
     {
-        uint32            _drawnCount{ 0 };
-        float32           _arrMean[3]{};
-        bool              _bOk{ false };
-        sw::vector<uint8> _bytes;
-        uint32            _width{ 0 };
-        uint32            _height{ 0 };
-        uint32            _rowBytes{ 0 };
+        uint32             _drawnCount{ 0 };
+        float32            _arrMean[3]{};
+        bool               _bOk{ false };
+        test::RHITestImage _image;
     };
     /// @brief 두 그림에서 어느 채널이든 8 이상 다른 픽셀 수 — 실루엣 수보다 튼튼한 지표(변형은 음영도 바꾼다).
     auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
     {
-        if ( a._width != b._width || a._height != b._height )
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
             return 0;
         uint32 count{ 0 };
-        for ( uint32 y = 0; y < a._height; ++y )
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
         {
-            const uint8* pRowA = a._bytes.data() + static_cast<size_t>( y ) * a._rowBytes;
-            const uint8* pRowB = b._bytes.data() + static_cast<size_t>( y ) * b._rowBytes;
-            for ( uint32 x = 0; x < a._width; ++x )
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
             {
-                const uint8* pA = pRowA + static_cast<size_t>( x ) * 4;
-                const uint8* pB = pRowB + static_cast<size_t>( x ) * 4;
-                for ( uint32 channel = 0; channel < 3; ++channel )
-                {
-                    const int32 diff = static_cast<int32>( pA[channel] ) - static_cast<int32>( pB[channel] );
-                    if ( diff > 8 || diff < -8 )
-                    {
-                        ++count;
-                        break;
-                    }
-                }
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 8 || rhs > lhs + 8; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
             }
         }
         return count;
@@ -2522,37 +2400,29 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
             device.waitIdle();
         }
 
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "SceneColor" ) == false )
             return result;
 
         uint64 arrSum[3]{};
-        for ( uint32 y = 0; y < layout._height; ++y )
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
-            for ( uint32 x = 0; x < layout._width; ++x )
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
-                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
-                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
-                arrSum[0] += r;
-                arrSum[1] += pPixel[1];
-                arrSum[2] += b;
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                arrSum[0] += pixel._r;
+                arrSum[1] += pixel._g;
+                arrSum[2] += pixel._b;
                 // 파이프라인 클리어 색(31, 38, 46) 이 아니면 그려진 픽셀이다 — FrameRendererParityAllBackends 와 같은 기준.
-                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
                     ++result._drawnCount;
             }
         }
-        const uint32 pixelCount = layout._width * layout._height;
+        const uint32 pixelCount = image.getPixelCount();
         for ( uint32 channel = 0; channel < 3; ++channel )
             result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
-        result._bOk      = pixelCount > 0;
-        result._bytes    = std::move( bytes );
-        result._width    = layout._width;
-        result._height   = layout._height;
-        result._rowBytes = layout._rowBytes;
+        result._bOk   = pixelCount > 0;
+        result._image = std::move( image );
         return result;
     };
 

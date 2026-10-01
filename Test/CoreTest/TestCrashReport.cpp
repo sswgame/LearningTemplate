@@ -1,12 +1,11 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
-#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
+#include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -24,19 +23,6 @@ namespace
         const sw::string folder = test::makeTempDirectory( "SwCrashReportTest" );
         sw::setCrashReportFolder( folder );
         return folder;
-    }
-
-    /** @brief 자식 프로세스가 물려받을 환경 변수를 정합니다. @p pValue 가 nullptr 이면 지웁니다. */
-    void setEnvironmentValueInternal( const utf8* pName, const utf8* pValue )
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        SetEnvironmentVariableA( pName, pValue );
-#else
-        if ( pValue != nullptr )
-            setenv( pName, pValue, 1 );
-        else
-            unsetenv( pName );
-#endif
     }
 
     /** @brief @p folder 에서 이름이 @p suffix 로 끝나는 첫 파일을 찾습니다. 없으면 빈 문자열입니다. */
@@ -234,8 +220,7 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
         {    sw::CrashTestKind::PureVirtualCall,     "pure-virtual-call"},
     };
 
-    const sw::string executablePath = sw::FileUtil::getExecutablePath();
-    SW_ASSERT_FALSE( executablePath.empty() );
+    constexpr uint32 kCrashChildTimeoutSeconds = 10;
 
     for ( const CrashCase& crashCase : arrCase )
     {
@@ -247,19 +232,21 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 
         sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
         kindText.append( static_cast<int32>( crashCase._kind ) );
-        setEnvironmentValueInternal( "SW_CRASH_CHILD_KIND", kindText.c_str() );
-        setEnvironmentValueInternal( "SW_CRASH_CHILD_FOLDER", folder.c_str() );
 
-        sw::StringBuilder<sw::constant::kMaxPathSize> command;
-        command.append( '"' ).append( executablePath.c_str() ).append( "\" --test_filter=CrashReportTest.ChildProcessCrashesAsRequested" );
-        sw::ProcessOptions options;
-        options._workingDirectory = sw::FileUtil::getCurrentPath();
-        const int32 exitCode      = sw::Process::execute( command.view(), options );
-
-        setEnvironmentValueInternal( "SW_CRASH_CHILD_KIND", nullptr );
-        setEnvironmentValueInternal( "SW_CRASH_CHILD_FOLDER", nullptr );
-
-        SW_EXPECT_TRUE_MSG( exitCode != 0, crashCase._pName );
+        // 자식은 평소 1 초 안에 죽는다. 시한을 넘기면 크래시 경로 어딘가가 멈춘 것이다 — 2026-10-01 CI 에서 한 번 그렇게 CoreTest
+        // 전체가 30 초 시한까지 서 있다 졌고, 어느 종류였는지 남지 않았다. 이제 그 종류와 자식의 마지막 출력을 남기고 다음으로 간다.
+        const test::ChildEnvironmentVariable arrEnvironment[] = {
+            {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
+            {"SW_CRASH_CHILD_FOLDER",           folder}
+        };
+        const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, kCrashChildTimeoutSeconds );
+        SW_EXPECT_TRUE_MSG( child._bLaunched, crashCase._pName );
+        SW_EXPECT_FALSE_MSG( child._bTimedOut, ( sw::string( crashCase._pName ) + " 크래시 자식이 시한 안에 끝나지 않았습니다 — 마지막 출력:" +
+                                                 child.getOutputTail() )
+                                                   .c_str() );
+        if ( child._bLaunched == false || child._bTimedOut )
+            continue;
+        SW_EXPECT_TRUE_MSG( child._exitCode != 0, crashCase._pName );
 
         const sw::string stackPath = findReportFileInternal( folder, "stack.txt" );
         SW_EXPECT_TRUE_MSG( stackPath.empty() == false, crashCase._pName );
