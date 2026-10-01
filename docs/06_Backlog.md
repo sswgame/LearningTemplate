@@ -1861,6 +1861,32 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
   달라 지금은 두었다. 같은 모양의 새 케이스가 늘면 그때 도우미로.
 - `%TEMP%` 의 옛 `sw_*` 3,012 개와 `Bin` 의 옛 `prefab_test/` · `TestTemp/` · `temp_gen_*` 는 지우지 않았다(이제 아무도 쓰지 않는다).
 
+### 1-0i. `Source/` · 리플렉션 파서 결함 점검 + 확인 용이 — ✅ **한 바퀴 끝났다** (2026-10-01, 결함 ⑥~㊲ · 확인 ①~⑥ · 남은 것은 아래)
+
+사용자 요청 "Source 와 ReflectionPart 하위에서도 잠재적 결함을 확인해 개선하고, 프로그래머 친화적으로 확인이 쉽게". 읽기 전용 점검(에디터 ·
+리플렉션 런타임 · Core · 렌더러 · 파서 · 서브시스템) → 확인 → 시험 먼저 → 고침 → 변이 검사(되돌리면 시험이 실패하는가) → Debug · Shipping · hostgpu →
+단위마다 커밋 · 푸시 · CI. 각 단위는 3절에 있다.
+
+**고친 것(32).** 에디터 되돌리기 · dirty · 문서 패널(⑥ ⑫ ⑬), 리플렉션 데이터 손상(⑦ 비트필드 · ⑧ ⑨ 좁은 enum · ⑪ 한쪽 범위 · ㉒ enum 글이 조용히 0 ·
+㉓ 컴포넌트 별칭 · ㉔ 옛 기반 프로퍼티 사본 · ㉖ EnumInfo 포인터 · ㉗ 짧은 이름 충돌 · ㉑ 등록되지 않은 부모), 씬 · 저장 데이터 손실(⑩ ⑱ ⑲ ㉟),
+렌더 그래프(⑭ WAR · 중복 패스 · ㉞ 병렬 폴백), 파서(⑯ 컨테이너 판별 · ㉛ 이스케이프 · ㉜ 별칭 기반), Core(⑰ 풀 이중 반납 · ⑳ 부동소수 파서 ·
+㉕ 로그 UTF-8 · ㉘ ㉚ fixed_string · ㉙ Delegate · ㊱ 로그 호출자), 시퀀서 · 애니메이션 · 입력(⑮ ㉝ ㊲).
+**확인 용이(6).** `[SW_ASSERT]` stderr · 파서 `--dump`/`--help` · `-gv_dumpReflection` · XML/JSON `경로:줄:열: 이유` · 렌더 그래프 순환의 `waits on` 과
+`-gv_dumpRenderGraph` · `docs/01_GettingStarted.md` §5 "무엇이 일어났는지 보기" 표. 시험 도우미: `test::ScopedLogCollector` · `SW_ASSERT_TRUE_MSG` ·
+가짜 RHI 디바이스(`Test/EngineTest/RHIFakeDevice.h` — 병렬 기록 경로가 처음으로 nogpu 로 돈다).
+
+**남은 것(확인했지만 이번에 고치지 않은 것).**
+- **P2 파서 최신 검사가 include 한 헤더를 보지 않는다.** A.h 의 PROPERTY 타입이 B.h 의 별칭(`using ScoreList = vector<int32>`)이면, B 만 바꿔도
+  ninja 는 파서를 다시 부르지 않는다(생성 단계의 DEPENDS 가 반사된 헤더뿐). 컨테이너 종류가 바뀌면 낡은 래퍼로 직렬화한다. 바른 길은 파서가 depfile
+  을 쓰고 `sw_addReflectionStep` 이 `DEPFILE` 로 받는 것 — 빌드 체계를 건드리는 일이라 따로.
+- **G6 정점 · 모프 풀이 메시를 포인터 집합으로 알아본다.** 메시가 해제되고 같은 주소에 새 메시가 오면 다시 만들지 않는다. 지금은 메시를 실행 중에
+  해제 · 교체하는 길이 없고 `setVertices` 는 생성 때만 불러 드러나지 않는다 — 메시 핫 리로드를 만들 때 생성 일련번호를 키에 넣을 것.
+- **`ActionMap::rebindWithResolution`** 은 여전히 0 번 슬롯만 본다(조합 키의 방아쇠는 1 번). ㊲ 은 `rebindKey`/`rebindSlot` 만 고쳤다.
+- 에디터: Play 중 씬이 바뀐 뒤 Stop(E4), Win32 중첩 `WM_SIZE`(S5), `SW_PROFILE_SCOPE` 정적 칸(S6), 텍스처 핫 리로드 뒤 머티리얼의 bindless 인덱스(G1 ·
+  GPU), 머티리얼 GPU 레이아웃의 백엔드 비트(G2), 기하 패스의 첨부 이름 하드코딩(G5), 데이터 문자열이 전역 이름표로(R8), 로컬 `parser_config.json` 이
+  기본값을 키마다 덮음(P3), 빌드 중 저장한 편집을 스탬프가 숨김(P8) — 각각 점검 메모만 있다.
+- 기각: `StringBuilder::appendFormat` 의 조용한 잘림(C3) — 버퍼를 늘려 다시 포맷한다. 로그 한 줄의 8 KB 상한은 남지만 지금 가장 큰 덤프가 1.5 KB 다.
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
