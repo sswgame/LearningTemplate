@@ -2077,6 +2077,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊼ 렌더 — 지오메트리 패스가 컬러 타깃 이름을 코드에 박아 썼다, 없는 첨부는 핸들 0(백버퍼)으로 열렸다)
+
+풀스크린 패스는 "선언이 곧 바인딩"(선언한 출력 중 있는 것)인데, 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 컬러 타깃을 코드의 이름
+(`SceneColor` · `GBufferAlbedo` · `GBufferNormal`)으로 열었다. 파이프라인이 다른 이름을 쓰면 없는 첨부를 열었고, `findTransient` 가 주는 **핸들 0 은 백버퍼**라
+씬이 화면용 백버퍼로 가고 Present 는 아무도 그리지 않은 타깃을 냈다. 뎁스 로드 연산도 바인딩한 뎁스가 아니라 `SceneDepth` 의 클리어 기록으로 정했고,
+클리어 색도 `SceneColor` 이름으로 찾았다.
+- 로드 때 컬러 출력만 선언 순서대로 해석해 둔다(`RenderGraphPassDesc::_listResolvedColorOutput` — 뎁스 포맷 · 스왑체인 · 선언 안 된 이름 제외). 지오메트리 패스는
+  그것을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 뎁스 로드 · 클리어 색은 실제로 거는 이름으로 정한다. 선언이 없을 때만 예전 이름으로 간다.
+- 검증: 지오메트리 패스에 컬러 출력이 없으면 오류(`RenderPipelineResource::validate` 3-1).
+- `beginColorPass(Mrt)` 는 컬러 타깃이 이번 프레임에 없으면 **열지 않고** false 를 돌려준다(오류는 렌더러당 한 번) — 부르는 쪽(지오메트리 · 풀스크린 · TAA)은
+  그때 그리거나 닫지 않는다.
+
+**검증.** `RenderPassTest.GeometryPassColorTargetsComeFromTheDeclaration`(nogpu — 출력에 뎁스가 섞여도 컬러만 선언 순서대로, 뎁스만 내는 ForwardOpaque 는 오류,
+DepthPrepass 는 괜찮다), `RenderPassGpuTest.RenamedAttachmentsRenderTheSameImage`(네 백엔드 — `forwardpipeline.xml` 의 SceneColor · SceneDepth 이름만 바꾼 파이프라인이
+같은 그림을 내고, 컬러 출력을 뺀 ForwardOpaque 는 그리지 않고 오류를 한 번 낸다). 변이 넷(ForwardOpaque 가 정본 이름 사용 · 핸들 0 보호 없음 · 검증 규칙 없음 ·
+뎁스를 컬러로 셈)이 모두 실패했다. 뎁스 로드 연산의 차이는 이름을 바꾼 뎁스에 DepthPrepass 가 앞설 때만 그림에 드러나 이 시험으로는 보이지 않는다(같은 규칙의 수정이라
+함께 고쳤다). GBuffer 첨부 이름은 Lighting 입력의 역할이 이름으로 정해져(`resolveRenderPassInputRole`) 지금도 바꿀 수 없다 — GBuffer 쪽은 선언 순서만 따른다.
+
 ### 2026-10-01 (결함 ㊻ 머티리얼 — 다시 로드해도 셰이더 레이아웃을 다시 맞추지 않았다, 인스턴스는 부모 바이트가 바뀐 것을 몰랐다)
 
 머티리얼 바이트의 기준은 셰이더의 `SwMaterialData_t` 원소 레이아웃이고, `ensureShaderLayout` 이 리플렉션으로 오프셋 · stride 를 맞춘다. 셋이 함께 어긋났다.

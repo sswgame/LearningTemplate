@@ -158,6 +158,15 @@ namespace sw
         /** @brief `_listOutput` 을 intern 해 둔 값입니다. 풀스크린 패스가 "첫 번째로 존재하는 출력" 을 타깃으로 고릅니다. */
         vector<hashed_string> _listResolvedOutput;
 
+        /**
+         * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 둔 것입니다(뎁스 포맷 · 스왑체인 · 선언되지 않은 이름은 빠집니다). XML 로드 시
+         *        RenderPipelineResource 가 채웁니다.
+         * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 이 순서대로 컬러 타깃을 겁니다 — GBuffer 는 [0] 알베도, [1] 노멀.
+         *          예전에는 그 이름을 코드에 박아(SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열었고, 없는
+         *          첨부의 핸들 0 은 백버퍼라 화면에 그렸습니다.
+         */
+        vector<hashed_string> _listResolvedColorOutput;
+
         /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
         PROPERTY( SkipIfEmpty )
         string _shaderPath;

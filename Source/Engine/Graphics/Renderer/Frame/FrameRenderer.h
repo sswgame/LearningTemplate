@@ -398,11 +398,15 @@ namespace sw
         void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
         /** @brief 일시 텍스처를 할당합니다. */
         void allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
-        /** @brief 컬러(+깊이) 패스를 시작합니다. */
-        void beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
+        /** @brief 컬러(+깊이) 패스를 시작합니다. 열지 못하면 false 이고, 그때는 그리거나 닫지 않습니다(`beginColorPassMrt`). */
+        bool beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
-        /** @brief MRT 컬러 패스를 시작합니다. */
-        void beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
+        /**
+         * @brief MRT 컬러 패스를 시작합니다.
+         * @return 열었으면 true. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 돌려줍니다(오류는 한 번 남깁니다) —
+         *         없는 첨부의 핸들 0 은 백버퍼라, 예전에는 그대로 열어 패스가 화면에 그렸습니다.
+         */
+        bool beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
@@ -692,7 +696,9 @@ namespace sw
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치입니다.
         atomic<uint8> _bPresentPsoMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치입니다(드로우 경로라 프레임마다 찍으면 안 됩니다).
-        atomic<uint8>                        _bMaterialFallbackMissingLogged;
+        atomic<uint8> _bMaterialFallbackMissingLogged;
+        /// @brief 컬러 타깃이 없어 패스를 건너뛴다고 한 번만 알리기 위한 래치입니다(패스 경로라 프레임마다 찍으면 안 됩니다).
+        atomic<uint8>                        _bMissingColorTargetLogged;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
         RHITextureHandle                     _taaHistory;    ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)

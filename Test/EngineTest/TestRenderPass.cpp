@@ -724,3 +724,61 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     SW_EXPECT_TRUE( loadedPass._amplificationEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._computeEntryPoint.empty() );
 }
+
+/**
+ * @brief [RenderPassTest] 지오메트리 패스의 컬러 타깃은 선언에서 온다 — 컬러 출력만 선언 순서대로, 컬러 출력이 없으면 검증 오류
+ * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 예전에는 이름을 코드에 박아
+ *          (SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 열었다. 실제 그림은
+ *          `RenderPassGpuTest.RenamedAttachmentsRenderTheSameImage` 가 본다.
+ */
+SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    auto makePipeline = []( sw::RenderPipelineResource& res, const utf8* pType, std::initializer_list<const utf8*> listOutput )
+    {
+        sw::RenderPipelineDesc& desc          = res.getDesc();
+        auto                    addAttachment = [&desc]( const utf8* pName, const utf8* pFormat )
+        {
+            sw::RenderPassAttachment att{};
+            att._name   = pName;
+            att._format = pFormat;
+            desc._listAttachment.push_back( att );
+        };
+        addAttachment( "MainAlbedo", "R8G8B8A8_UNORM" );
+        addAttachment( "MainNormal", "R16G16B16A16_FLOAT" );
+        addAttachment( "MainDepth", "D24_UNORM_S8_UINT" );
+
+        sw::RenderGraphPassDesc pass{};
+        pass._name            = pType;
+        pass._type            = pType;
+        pass._depthAttachment = "MainDepth";
+        for ( const utf8* pOutput : listOutput )
+            pass._listOutput.push_back( pOutput );
+        desc._listPass.push_back( pass );
+    };
+
+    // 출력에 뎁스가 섞여 있어도 컬러만, 선언 순서대로 — 이름은 정본(GBufferAlbedo …)이 아니어도 된다.
+    {
+        sw::RenderPipelineResource res;
+        makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal" } );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+        const sw::vector<sw::hashed_string>& listColor = res.getGraphPass()[0]._listResolvedColorOutput;
+        SW_ASSERT_EQUAL( size_t( 2 ), listColor.size() );
+        SW_EXPECT_TRUE( listColor[0].view() == "MainAlbedo" );
+        SW_EXPECT_TRUE( listColor[1].view() == "MainNormal" );
+    }
+    // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(예전에는 SceneColor 를 짐작해 열었다).
+    {
+        sw::RenderPipelineResource res;
+        makePipeline( res, "ForwardOpaque", { "MainDepth" } );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_TRUE( res.getGraphPass()[0]._listResolvedColorOutput.empty() );
+    }
+    // 뎁스 전용 패스는 컬러가 없어도 된다.
+    {
+        sw::RenderPipelineResource res;
+        makePipeline( res, "DepthPrepass", { "MainDepth" } );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+}

@@ -91,6 +91,7 @@ namespace sw
                 pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
             pass._listResolvedInput.clear();
             pass._listResolvedOutput.clear();
+            pass._listResolvedColorOutput.clear();
             for ( const string& inputName : pass._listInput )
             {
                 RenderGraphPassDesc::ResolvedInput resolved{};
@@ -99,7 +100,12 @@ namespace sw
                 pass._listResolvedInput.push_back( resolved );
             }
             for ( const string& outputName : pass._listOutput )
+            {
                 pass._listResolvedOutput.emplace_back( outputName.c_str() );
+                const RenderPassAttachment* pOutput = findAttachment( outputName );
+                if ( pOutput != nullptr && isDepthAttachment( pOutput ) == false )
+                    pass._listResolvedColorOutput.emplace_back( outputName.c_str() );
+            }
             if ( isPipelinePassType( pass._resolvedType ) == false )
             {
                 SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
@@ -181,6 +187,19 @@ namespace sw
                               sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
                 ++issueCount;
             }
+        }
+
+        // 3-1) 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다 —
+        //      예전에는 코드에 박힌 이름(SceneColor …)으로 그렸고, 그 첨부가 없으면 핸들 0(백버퍼)에 그렸다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::GBuffer ||
+                                            pass._resolvedType == RenderPassType::Transparent;
+            if ( bGeometryColorPass == false || pass._listResolvedColorOutput.empty() == false )
+                continue;
+            SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
+                          sourcePath, pass._name, pass._type );
+            ++issueCount;
         }
 
         // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.

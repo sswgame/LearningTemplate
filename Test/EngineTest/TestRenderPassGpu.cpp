@@ -1,8 +1,10 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -31,6 +33,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
@@ -2928,6 +2931,159 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
             if ( mesh != nullptr )
                 mesh->releaseRhi( device.get() );
         }
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run both pipelines" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 첨부 이름만 바꾼 파이프라인이 같은 그림을 낸다 — 지오메트리 패스는 선언한 컬러 출력 · 뎁스에 그린다
+ * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 컬러 타깃 이름을 코드에 박아(SceneColor …) 썼다. 다른 이름을 쓰는
+ *          파이프라인에서는 없는 첨부를 열었고, 없는 첨부의 핸들 0 은 백버퍼라 씬이 화면용 백버퍼로 가고 Present 는 아무도 그리지 않은
+ *          타깃을 냈다. 뎁스 로드 연산도 바인딩한 뎁스가 아니라 SceneDepth 의 클리어 기록으로 정했다. `forwardpipeline.xml` 의 SceneColor ·
+ *          SceneDepth 를 다른 이름으로 바꿔 같은 씬을 그리고 픽셀을 맞춘다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+    pipelineText                 = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
+    pipelineText                 = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
+    const sw::string renamedPath = test::makeTempPath( "renamedforwardpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, pipelineText ) );
+
+    // 컬러 출력을 뺀 ForwardOpaque — 그릴 곳이 없다. 예전 이름(SceneColor)으로 짐작해 열면 없는 첨부(핸들 0 = 백버퍼)다.
+    sw::string       brokenText   = pipelineText;
+    const sw::string colorItem    = "<item>MainColor</item>";
+    const size_t     forwardBegin = brokenText.find( "_name=\"ForwardOpaque\"" );
+    const size_t     outputBegin  = forwardBegin == sw::string::npos ? sw::string::npos : brokenText.find( "<_listOutput>", forwardBegin );
+    const size_t     itemBegin    = outputBegin == sw::string::npos ? sw::string::npos : brokenText.find( colorItem, outputBegin );
+    SW_ASSERT_TRUE( itemBegin != sw::string::npos );
+    brokenText.erase( itemBegin, colorItem.size() );
+    const sw::string brokenPath = test::makeTempPath( "nocolorforwardpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, brokenText ) );
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+
+        // 씬은 한 번만 만든다 — 두 파이프라인이 같은 입력을 받아야 비교가 성립한다.
+        sw::Scene scene( "RenamedAttachmentScene" );
+        bool      bOk = scene.ensureDefaultCameras();
+        if ( bOk )
+        {
+            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            if ( pLightObject != nullptr )
+            {
+                if ( sw::DirectionalLightComponent* pLight = pLightObject->addComponent<sw::DirectionalLightComponent>(); pLight != nullptr )
+                    pLight->setIntensity( 2.0f );
+            }
+        }
+
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        if ( bOk )
+            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
+                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.5 0.25 1.0" );
+
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+        bOk                           = bOk && mesh != nullptr;
+        if ( bOk )
+        {
+            sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+            sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                        = pMesh != nullptr;
+            if ( bOk )
+            {
+                pMesh->setMesh( mesh );
+                pMesh->setMaterial( material.get() );
+                pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+            }
+        }
+
+        // 파이프라인 하나로 몇 프레임 돌리고 **화면에 나간 그림**을 읽어 온다.
+        auto renderThrough = [&]( const utf8* pPipelinePath, sw::vector<uint8>& outByte, sw::RHITextureMipSpan& outLayout ) -> bool
+        {
+            sw::FrameRenderer renderer;
+            if ( renderer.initialize( device.get(), pPipelinePath ) == false || renderer.isReady() == false )
+                return false;
+            renderer.setPresentCaptureEnabled( true );
+
+            // 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
+            constexpr uint32 kWarmupFrameCount = 3;
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
+            {
+                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                if ( renderer.execute( device.get(), &scene ) == false )
+                {
+                    device->endFrame( false, false );
+                    return false;
+                }
+                device->endFrame( false, false );
+                device->waitIdle();
+            }
+            const bool bRead = renderer.readbackPresentCapture( outByte, outLayout );
+            renderer.shutdown();
+            return bRead;
+        };
+
+        sw::vector<uint8>     listReference;
+        sw::vector<uint8>     listRenamed;
+        sw::RHITextureMipSpan layoutReference{};
+        sw::RHITextureMipSpan layoutRenamed{};
+        const utf8*           pName = device->getBackendName();
+        if ( bOk )
+            bOk = renderThrough( "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
+        if ( bOk )
+            bOk = renderThrough( renamedPath.c_str(), listRenamed, layoutRenamed );
+
+        if ( bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height )
+        {
+            ++comparedCount;
+            const size_t compareCount = ( listReference.size() < listRenamed.size() ) ? listReference.size() : listRenamed.size();
+            uint32       differCount{ 0 };
+            uint32       maxDelta{ 0 };
+            uint32       notBackgroundCount{ 0 };
+            for ( size_t index = 0; index < compareCount; ++index )
+            {
+                if ( listReference[index] != listReference[index % 4] )
+                    ++notBackgroundCount;
+                const uint32 delta = ( listReference[index] > listRenamed[index] )
+                                       ? static_cast<uint32>( listReference[index] - listRenamed[index] )
+                                       : static_cast<uint32>( listRenamed[index] - listReference[index] );
+                if ( delta == 0 )
+                    continue;
+                ++differCount;
+                if ( delta > maxDelta )
+                    maxDelta = delta;
+            }
+            // 기준 그림에 큐브가 있어야 비교가 뜻이 있다 — 둘 다 배경뿐이면 이름을 무시해도 같게 나온다.
+            SW_EXPECT_TRUE_MSG( notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( maxDelta <= 1 && differCount * 100u <= compareCount,
+                                ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (최대 차이 " + sw::to_string( maxDelta ) + ", 다른 칸 " +
+                                  sw::to_string( differCount ) + ")" )
+                                    .c_str() );
+        }
+        else if ( bOk == false )
+            SW_LOG_WARNING( "RenamedAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+
+        // 컬러 출력이 없는 패스는 그리지 않고 한 번 알린다 — 없는 첨부의 핸들 0(백버퍼)을 열지 않는다.
+        if ( bOk )
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "ForwardOpaque without a colour output" );
+            test::ScopedLogCollector collector;
+            sw::vector<uint8>        listBroken;
+            sw::RHITextureMipSpan    layoutBroken{};
+            (void)renderThrough( brokenPath.c_str(), listBroken, layoutBroken );
+            SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 타깃 'SceneColor'" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
+        }
+
+        // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 자원을 놓는다.
+        if ( mesh != nullptr )
+            mesh->releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )

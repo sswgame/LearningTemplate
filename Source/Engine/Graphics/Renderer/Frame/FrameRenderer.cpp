@@ -84,6 +84,7 @@ namespace sw
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bPresentPsoMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
+        , _bMissingColorTargetLogged{ 0 }
         , _outputRenderTarget{ 0 }
         , _taaHistory{ 0 }
         , _taaHistorySrv{ kInvalidDescriptorIndex }
