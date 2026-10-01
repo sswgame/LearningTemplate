@@ -376,3 +376,38 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
     SW_EXPECT_NOT_EQUAL( 0, child._exitCode );
     SW_EXPECT_TRUE_MSG( elapsedSeconds < 60, "시한(1 초)을 넘긴 자식을 죽이지 못하고 기다렸습니다" );
 }
+
+/**
+ * @brief [TestFrameworkTest] 작업 스레드 여럿이 동시에 실패해도 실패는 하나도 빠지지 않고 깨지지 않는다
+ * @details 단언은 `runParallel` 본문 · `std::thread` 람다에서도 불린다. 기록이 락 없는 `push_back` 이던 때는 둘이 동시에 실패하면
+ *          벡터가 깨졌다 — 병렬 코드가 틀렸다는 것을 알려야 할 그 순간에 테스트 실행 파일이 죽거나 실패 수가 틀렸다.
+ *          (작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝낸다 — gtest 와 같다.)
+ */
+SW_TEST_CASE( TestFrameworkTest, FailuresFromManyThreadsAreAllRecorded )
+{
+    constexpr uint32 kThreadCount        = 8;
+    constexpr uint32 kFailurePerThread   = 300;
+    size_t           recordedCount       = 0;
+    bool             bEveryRecordIsWhole = true;
+    {
+        test::ScopedFailureCapture capture;
+        sw::vector<std::thread>    listThread;
+        for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+        {
+            listThread.emplace_back( []()
+            {
+                for ( uint32 failureIndex = 0; failureIndex < kFailurePerThread; ++failureIndex )
+                    SW_EXPECT_TRUE_MSG( failureIndex == kFailurePerThread, "from a worker thread" );
+            } );
+        }
+        for ( std::thread& thread : listThread )
+            thread.join();
+
+        recordedCount = capture.getListFailure().size();
+        for ( const test::TestFailure& failure : capture.getListFailure() )
+            bEveryRecordIsWhole = bEveryRecordIsWhole && failure._message == "from a worker thread";
+    }
+
+    SW_EXPECT_EQUAL( size_t{ kThreadCount * kFailurePerThread }, recordedCount );
+    SW_EXPECT_TRUE( bEveryRecordIsWhole );
+}

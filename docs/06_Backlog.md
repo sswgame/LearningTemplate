@@ -2051,6 +2051,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ① 테스트 단언이 작업 스레드에서 동시에 실패하면 실행 파일이 죽었다)
+
+단언(`SW_EXPECT_*`)은 작업 스레드에서도 불린다 — `runParallel` 본문 · `std::thread` 람다 안에 열 곳(TestDataStructure · TestGlobalVariable ·
+TestTaskManager · TestGameObjectManager · TestTask …). 그런데 실패 기록(`TestRegistry::addFailure`)은 락 없는 `vector::push_back` 이었다.
+**둘이 동시에 실패하면 그 벡터가 깨진다** — 병렬 코드가 틀렸다는 것을 알려야 할 바로 그 순간에. 재현: 스레드 여덟이 300 번씩 실패하는
+시험을 락 없이 돌리면 **다섯 번 다 프로세스가 죽었다**(종료 코드 3, 힙 손상 감지). gtest 도 단언을 스레드 안전하게 보장한다.
+
+**고침.** 실패 · 건너뜀 기록을 락 하나로 세운다(출력 줄도 섞이지 않는다). 엔진의 `sw::mutex` 가 아니라 `std::mutex` 다 — 그것은 Debug 에서
+데드락 탐지기를 타고, 그 탐지기를 시험하는 케이스가 있다. 작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝낸다(gtest 와 같다 — 시험 주석에 적었다).
+**검증.** `TestFrameworkTest.FailuresFromManyThreadsAreAllRecorded`(2,400 실패가 하나도 빠지지 않고 메시지가 온전하다) — 락을 빼면 죽는다.
+
 ### 2026-10-01 (Test 구조 ⑦ ctest 병렬 — EngineTest_NoGPU · SmokeTest 의 RUN_SERIAL 을 걷었다, 44 초 → 24 초)
 
 `ctest -L "nogpu|lint" -j 4`(Debug) 벽시계가 **44 초**였다. 끝의 22 초는 `RUN_SERIAL` 인 둘(EngineTest_NoGPU 9.3 · SmokeTest 12.9)이

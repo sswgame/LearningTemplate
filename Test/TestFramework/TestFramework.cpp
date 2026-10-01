@@ -2,6 +2,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <mutex>
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include <process.h>
 #else
@@ -49,6 +51,19 @@ namespace test
         {
             const sw::string processDirectory = getProcessTempDirectory();
             return testName.empty() ? processDirectory : sw::FileUtil::joinPath( processDirectory, toFileNameSafe( testName ) );
+        }
+
+        /**
+         * @brief 실패 · 건너뜀 기록을 한 줄로 세우는 락.
+         * @details 단언은 작업 스레드에서도 불린다(`runParallel` 본문 · `std::thread` 람다 — 테스트 열 곳 남짓). 예전에는 기록이
+         *          벡터 `push_back` 이라 **둘이 동시에 실패하면** 그 벡터가 깨졌다 — 병렬 코드가 틀렸다는 것을 알려야 할 바로 그 순간에.
+         *          gtest 도 단언을 스레드 안전하게 보장한다. 엔진의 `sw::mutex` 를 쓰지 않는 것은 그것이 Debug 에서 데드락 탐지기를
+         *          타기 때문이다 — 그 탐지기를 시험하는 케이스가 있다.
+         */
+        std::mutex& getRecordMutex()
+        {
+            static std::mutex s_mutex;
+            return s_mutex;
         }
 
         /** @brief CLI 인자 값의 따옴표를 제거합니다. */
@@ -231,6 +246,7 @@ namespace test
 
     void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
     {
+        const std::lock_guard<std::mutex> lock( getRecordMutex() );
         if ( _pFailureCapture != nullptr )
         {
             _pFailureCapture->push_back( { condition, file, line, message } );
@@ -250,6 +266,7 @@ namespace test
 
     void TestRegistry::skipCurrentTest( [[maybe_unused]] const sw::string& reason, [[maybe_unused]] const sw::string& file, [[maybe_unused]] int32 line )
     {
+        const std::lock_guard<std::mutex> lock( getRecordMutex() );
         _currentContext.skip( reason, file, line );
         SW_LOG_INFO( "\n  [SKIPPED] %#:%# — %#", file.c_str(), line, reason.c_str() );
     }
