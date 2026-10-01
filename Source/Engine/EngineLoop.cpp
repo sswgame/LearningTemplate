@@ -11,7 +11,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
+#include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -78,6 +80,11 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
     SW_TEST_GLOBAL_VARIABLE_ENUM( gv_rhiSwapTo, RHIBackend, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+    /**
+     * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
+     * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
 
 } // namespace sw
 
@@ -504,6 +511,23 @@ namespace sw
     {
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
+
+        if ( gv_dumpReflection.empty() == false )
+        {
+            const TypeRegistry&   registry = engine::getTypeRegistry();
+            const string_splitter parts( string_view{ gv_dumpReflection.c_str(), gv_dumpReflection.size() }, { "," } );
+            for ( const string_view part : parts.getSplitList() )
+            {
+                const string_view name = StringUtil::trim( part );
+                if ( name.empty() )
+                    continue;
+                const hashed_string key( name );
+                const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key )
+                                                                                                                          : registry.describeType( key );
+                SW_LOG_INFO( "[gv_dumpReflection]\n%#", text.c_str() );
+            }
+            gv_dumpReflection = string{}; // 한 번만
+        }
     }
 
     void EngineLoop::tick( float32                           deltaTime,

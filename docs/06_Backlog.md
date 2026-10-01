@@ -2051,6 +2051,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (확인 ③ 런타임 리플렉션 덤프 — `TypeRegistry::describeType` · `-gv_dumpReflection`)
+
+등록된 타입을 물을 곳이 없었다 — `forEachType` · `forEachEnum` 을 부르는 곳이 하나도 없었고, "왜 인스펙터에 없나 · 왜 씬이 이 값을 못 읽나 · 부모가
+왜 안 붙나(부모가 늦게 · 다른 모듈에서 등록됨)" 는 디버거로 맵을 뒤져야 했다.
+- `TypeRegistry::describeType( 이름 )` — 모듈 · 크기 · 부모 사슬(풀리지 않는 부모는 그렇다고 적는다), 사슬의 단계마다 선언된 프로퍼티(타입, **이
+  빌드의 실제 자리** — `@offset` · 비트필드 `@byte · mask` · `@accessor`, 컨테이너 · 범위 · Default · 플래그 · 별칭)와 함수. `describeEnum( 이름 )` —
+  모듈 · 크기 · 부호 · Flags, 값 순 열거자, Invalid · Count. 등록되지 않았으면 그렇다고 적는다.
+- `-gv_dumpReflection=CameraComponent,CameraRole` — 첫 프레임(게임 · 에디터 모듈까지 등록된 뒤)에 로그로 남기고 비운다. 디버거의 직접 실행
+  창에서 `sw::engine::getTypeRegistry().describeType(...)` 로도 부를 수 있다. 파서 쪽 짝은 `ReflectionParser --dump`(확인 ②).
+실제로 돌려 보니 `sw::SceneComponent` 의 부모 `sw::Component` 는 리플렉션에 없다(REFLECT 하지 않는 기반 — 프로퍼티가 없어 지금은 문제 아님)는 것이
+한 줄로 보였다.
+**검증.** `ReflectionTypeInfoTest.DescribeTypeShowsTheRegisteredLayout`(카메라의 부모 사슬 · 오프셋 · 범위, 방향광의 비트필드, `CameraRole` 의 값 · 부호,
+없는 이름). App 을 `-gv_dumpReflection=CameraComponent,CameraRole,NoSuchThing -gv_profileFrames=3` 으로 띄워 로그에 셋이 찍히는 것을 봤다.
+
 ### 2026-10-01 (확인 ② 리플렉션 파서 `--dump` · `--help` — 무엇을 뽑았는지 본다)
 
 "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나 · 범위가 왜 이렇나" 를 물을 곳이 없었다. 파서가 무엇을 봤는지는 Debug 로 빌드한

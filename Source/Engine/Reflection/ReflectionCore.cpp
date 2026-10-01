@@ -6,10 +6,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionEnumNames.h"
 
 namespace sw
 {
@@ -644,6 +646,116 @@ namespace sw
 
         // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다. 여기는 아직 단일 스레드다.
         buildLookupCaches();
+    }
+
+    string TypeRegistry::describeType( const hashed_string& nameOrFqn ) const
+    {
+        const TypeInfo* pType = findType( nameOrFqn );
+        if ( pType == nullptr )
+            return string( "TYPE '" ) + nameOrFqn.c_str() + "' is not registered (no REFLECT, its module is not loaded, or a typo)\n";
+
+        // 부모 사슬 — 기반부터 찍으려고 모은다. 풀리지 않는 부모 이름도 그대로 적는다(부모가 늦게 등록된 경우가 여기서 보인다).
+        vector<const TypeInfo*> listChain;
+        hashed_string           unresolvedParent;
+        for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr && listChain.size() < 64; )
+        {
+            listChain.push_back( pCurrent );
+            if ( pCurrent->_parentFQN.empty() )
+                break;
+            const TypeInfo* pParent = findType( pCurrent->_parentFQN );
+            if ( pParent == nullptr )
+                unresolvedParent = pCurrent->_parentFQN;
+            pCurrent = pParent;
+        }
+
+        StringBuilder<constant::kMaxBuffer8192> out;
+        out.appendFormat( "TYPE %# (module %#, %# bytes%#)\n", pType->_fullyQualifiedName.c_str(),
+                          pType->_moduleName.empty() ? "?" : pType->_moduleName.c_str(), static_cast<uint64>( pType->_size ),
+                          pType->isAlive() ? "" : ", module unloaded" );
+        if ( listChain.size() > 1 )
+        {
+            out.append( "  parents: " );
+            for ( size_t chainIndex = 1; chainIndex < listChain.size(); ++chainIndex )
+                out.appendFormat( "%#%#", chainIndex == 1 ? "" : " -> ", listChain[chainIndex]->_fullyQualifiedName.c_str() );
+            out.append( "\n" );
+        }
+        if ( unresolvedParent.empty() == false )
+            out.appendFormat( "  parent '%#' is not registered (not reflected, or its module is not loaded) - nothing it declares is listed\n",
+                              unresolvedParent.c_str() );
+
+        for ( size_t chainIndex = listChain.size(); chainIndex-- > 0; )
+        {
+            const TypeInfo& level = *listChain[chainIndex];
+            out.appendFormat( "  [%#]\n", level._fullyQualifiedName.c_str() );
+            for ( const PropertyInfo& prop : level._listProperty )
+            {
+                out.appendFormat( "    PROPERTY %# : %#", prop._name.c_str(), prop._typeName.c_str() );
+                if ( prop._bIsBitField == SW_TRUE )
+                    out.appendFormat( "  @byte %# mask 0x%# (bit field)", static_cast<uint64>( prop._offset ), Fmt( static_cast<uint32>( prop._bitMask ), Format().hex() ) );
+                else if ( prop._pValueAccessor != nullptr )
+                    out.append( "  @accessor" );
+                else
+                    out.appendFormat( "  @offset %#", static_cast<uint64>( prop._offset ) );
+                if ( prop._bIsContainer == SW_TRUE )
+                    out.appendFormat( "  [%# element=%#%#%#]", toString( prop._containerKind ), prop._elementTypeName.c_str(),
+                                      prop._keyTypeName.empty() ? "" : " key=", prop._keyTypeName.c_str() );
+                if ( prop._metadata._bHasMinRange == SW_TRUE )
+                    out.appendFormat( "  Min=%#", prop._metadata._minRange );
+                if ( prop._metadata._bHasMaxRange == SW_TRUE )
+                    out.appendFormat( "  Max=%#", prop._metadata._maxRange );
+                if ( prop._metadata._defaultValue.empty() == false )
+                    out.appendFormat( "  Default=\"%#\"", prop._metadata._defaultValue.c_str() );
+                const pair<bool, const utf8*> arrFlag[] = {
+                    {    prop._metadata._bReadOnly != SW_FALSE,     "ReadOnly"},
+                    {   prop._metadata._bTransient != SW_FALSE,    "Transient"},
+                    {prop._metadata._bXmlAttribute != SW_FALSE, "XmlAttribute"},
+                    {   prop._metadata._bAssetPath != SW_FALSE,    "AssetPath"},
+                    { prop._metadata._bPolymorphic != SW_FALSE,  "Polymorphic"},
+                    { prop._metadata._bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
+                };
+                for ( const auto& [bSet, pFlagName] : arrFlag )
+                {
+                    if ( bSet )
+                        out.appendFormat( "  [%#]", pFlagName );
+                }
+                for ( const hashed_string& alias : prop._listAlias )
+                    out.appendFormat( "  alias=%#", alias.c_str() );
+                out.append( "\n" );
+            }
+            for ( const FunctionInfo& method : level._listMethod )
+            {
+                out.appendFormat( "    FUNCTION %#(", method._name.c_str() );
+                for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
+                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", method._listParameterTypeName[paramIndex].c_str() );
+                out.appendFormat( ") -> %#\n", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
+            }
+        }
+        return string( out.view() );
+    }
+
+    string TypeRegistry::describeEnum( const hashed_string& nameOrFqn ) const
+    {
+        const EnumInfo* pEnum = findEnum( nameOrFqn );
+        if ( pEnum == nullptr )
+            return string( "ENUM '" ) + nameOrFqn.c_str() + "' is not registered (no ENUM(), its module is not loaded, or a typo)\n";
+
+        StringBuilder<constant::kMaxBuffer4096> out;
+        out.appendFormat( "ENUM %# (module %#, %# bytes, %#%#)\n", pEnum->_fullyQualifiedName.c_str(),
+                          pEnum->_moduleName.empty() ? "?" : pEnum->_moduleName.c_str(), static_cast<uint32>( pEnum->_size ),
+                          pEnum->_bIsSigned != SW_FALSE ? "signed" : "unsigned", pEnum->_bIsBitFlag != SW_FALSE ? ", Flags" : "" );
+        // 값 순으로 — 이름표는 밀집 해시라 등록 순서가 남지 않는다.
+        vector<pair<int64, const utf8*>> listEntry;
+        for ( const auto& [value, name] : pEnum->_mapValueToName )
+            listEntry.emplace_back( value, name.c_str() );
+        std::sort( listEntry.begin(), listEntry.end(), []( const auto& lhs, const auto& rhs )
+        { return lhs.first < rhs.first; } );
+        for ( const auto& [value, pName] : listEntry )
+            out.appendFormat( "  %# = %#\n", pName, value );
+        if ( pEnum->_bHasInvalid != SW_FALSE )
+            out.appendFormat( "  (Invalid = %#)\n", pEnum->_invalidValue );
+        if ( pEnum->_bHasCount != SW_FALSE )
+            out.appendFormat( "  (Count = %#)\n", pEnum->_countValue );
+        return string( out.view() );
     }
 
     void TypeRegistry::buildLookupCaches() const

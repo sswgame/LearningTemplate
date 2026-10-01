@@ -1151,3 +1151,27 @@ SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pFps->_metadata._minRange, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 120.0f, pFps->_metadata._maxRange, 1e-4f );
 }
+
+/**
+ * @brief [ReflectionTypeInfoTest] `describeType` · `describeEnum` 은 등록된 그대로(부모 사슬 · 실제 자리 · 범위 · 열거자 값)를 글로 보여 준다
+ * @details 등록 내용을 물을 곳이 없었다 — `forEachType` 을 부르는 곳이 하나도 없었다. `-gv_dumpReflection` 이 이것을 첫 프레임에 찍는다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    const sw::string camera = registry.describeType( sw::hashed_string( "CameraComponent" ) );
+    for ( const utf8* pExpected : { "TYPE sw::CameraComponent", "parents:", "sw::SceneComponent", "[sw::CameraComponent]", "PROPERTY _fovY : float32",
+                                    "@offset", "Min=0.1", "Max=3.14" } )
+    {
+        SW_EXPECT_TRUE_MSG( camera.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + camera ).c_str() );
+    }
+
+    const sw::string light = registry.describeType( sw::hashed_string( "sw::DirectionalLightComponent" ) );
+    SW_EXPECT_TRUE_MSG( light.find( "(bit field)" ) != sw::string::npos, light.c_str() );
+
+    const sw::string role = registry.describeEnum( sw::hashed_string( "CameraRole" ) );
+    SW_EXPECT_TRUE_MSG( role.find( "Editor = 1" ) != sw::string::npos && role.find( "unsigned" ) != sw::string::npos, role.c_str() );
+
+    SW_EXPECT_TRUE( registry.describeType( sw::hashed_string( "NoSuchTypeAnywhere" ) ).find( "is not registered" ) != sw::string::npos );
+}

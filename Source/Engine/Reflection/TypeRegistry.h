@@ -191,6 +191,17 @@ namespace sw
         /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
+        /**
+         * @brief 이 타입이 **실제로 무엇으로 등록됐는지** 사람이 읽는 글로 돌려줍니다(진단용).
+         * @details 모듈 · 크기 · 부모 사슬, 그리고 사슬의 단계마다 선언된 프로퍼티(타입 · 이 빌드의 실제 자리 — 오프셋, 비트필드 바이트 ·
+         *          마스크, 접근자 — 컨테이너 · 범위 · 플래그 · 별칭)와 함수. "왜 인스펙터에 없나 · 왜 씬이 이 값을 못 읽나 · 부모가 왜
+         *          안 붙나" 를 물을 곳이 없었다(`forEachType` 을 부르는 곳이 하나도 없었다). 파서 쪽 짝은 `ReflectionParser --dump` 다.
+         *          `-gv_dumpReflection=이름,이름` 이면 첫 프레임에 로그로 남긴다. 등록되지 않았으면 그렇다고 적는다.
+         */
+        string describeType( const hashed_string& nameOrFqn ) const;
+        /** @brief 이 enum 의 등록 내용(모듈 · 크기 · 부호 · 플래그 · 값 순으로 열거자)을 사람이 읽는 글로 돌려줍니다(`describeType` 의 짝). */
+        string describeEnum( const hashed_string& nameOrFqn ) const;
+
         /** @brief 템플릿 인자 타입 T의 TypeInfo를 조회합니다. */
         template <typename T>
         const TypeInfo* findType() const
