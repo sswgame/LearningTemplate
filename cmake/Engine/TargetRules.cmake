@@ -537,6 +537,8 @@ endfunction()
 #                 문자열로 손으로 적고(빼는 목록 · 고르는 목록) 린트가 주석 마커와 대조했다. 그리고 갈라진
 #                 두 항목 말고 **전체 실행도 하나 더** 등록돼 있어서, 라벨 없는 `ctest` 가 EngineTest 를 두 번 돌았다.
 #   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
+#   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일. **지금 쓰는 타겟은 없다** — EngineTest · SmokeTest 가 들고 있었지만 겹치면 안 될
+#                 이유(같은 파일 · 같은 장치)가 없어서 2026-10-01 에 걷었다(그 둘의 CMakeLists 참고). 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})

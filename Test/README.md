@@ -75,25 +75,26 @@ ctest --preset Ninja-Debug-lint
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(2026-09-19 실측, 소스의 케이스는 937개):
+(2026-10-01 실측 — 등록된 케이스 / 그중 스킵, 호스트 스위트 포함):
 
-| 실행 파일 | Debug · Release | Shipping |
+| 실행 파일 | Debug | Shipping |
 | --- | ---: | ---: |
-| CoreTest | 209 | 209 |
-| EngineTest | 529 | 525 |
-| ReflectionTest | 104 | 104 |
-| **SmokeTest** | **21** | **2** |
-| EditorTest | 63 | 63 |
-| EditorUiTest | 2 | 2 |
-| **AppTest** | **6** | **5** |
+| CoreTest | 328 / 4 | 328 / 10 |
+| EngineTest | 726 / 0 | 720 / 3 |
+| ReflectionTest | 132 / 0 | 132 / 8 |
+| **SmokeTest** | **36 / 1** | **2 / 0** |
+| EditorTest | 78 / 0 | 78 / 0 |
+| EditorUiTest | 2 / 0 | 2 / 0 |
+| **AppTest** | **6 / 0** | **5 / 0** |
 
-SmokeTest 가 19 → 1 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
-Shipping 스모크는 정적 `fillGameAPI` 경로 하나만 본다(`Test/SmokeTest/CMakeLists.txt` 참고).
-스킵도 구성을 탄다 — Release·Shipping 의 CoreTest 는 8개가 스킵되고(`SW_LOG_*` 가 컴파일에서 빠진다),
-Shipping 의 EngineTest 는 3개, ReflectionTest 는 5개가 스킵된다(Dev 전용 경로와 배포본에 없는 메타데이터).
-**Debug 의 스킵은 0이다** — 2026-09-19 까지는 `ReflectionParser` 실행 파일을 `Bin/` 에서만 찾던 케이스가
-늘 스스로 빠졌는데(파서는 `BuildTools/` 에 있다), 두 자리를 다 보게 고쳐 그 케이스가 실제로 돈다.
-AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이스는 배포본에 에디터가 없어 아예 컴파일되지 않는다.
+SmokeTest 가 36 → 2 가 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+Shipping 스모크는 정적 `fillGameAPI` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 6 → 5 인 것도
+같은 이유다 — 에디터 실기동 케이스는 배포본에 에디터가 없어 아예 컴파일되지 않는다.
+스킵도 구성을 탄다. **어느 구성에서나 스킵되는 것은 "자식 역할" 케이스다** — 환경 변수가 없으면 스스로 빠지고, 다른 케이스가
+자기 자신을 자식 프로세스로 띄울 때만 돈다(`CrashReportTest.ChildProcessCrashesAsRequested` · `TestFrameworkTest.ChildRoleEchoesOrHangs` ·
+`ModuleApiTest.SharedModuleChildKeepsItsRegistrations`). Debug 의 CoreTest 는 둘이 더 빠진다 — `SW_ASSERT` 가 프로세스를 세우는
+구성이라, 단언이 사라진 구성에서만 뜻이 있는 방어 경로 검사다. Shipping 은 `SW_LOG_*` 가 컴파일에서 빠져 로그 검사가,
+ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이터 검사가 빠진다.
 
 **의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**
 필터로 고른 스위트의 케이스가 **전부 스킵되면** 그 실행은 아무것도 검증하지 않은 것이므로 프레임워크가

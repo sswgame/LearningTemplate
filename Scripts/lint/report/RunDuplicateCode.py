@@ -50,7 +50,8 @@
 **정당한 중복이 상위권을 채운다** — 막으면 거짓 양성으로 아무도 린트를 돌리지 않게 된다.
 
 사용법:
-  py -3 Scripts/lint/report/RunDuplicateCode.py                      # Source/ 소스+헤더, 상위 20건
+  py -3 Scripts/lint/report/RunDuplicateCode.py                      # Source/ · Test/ 소스+헤더, 상위 20건
+  py -3 Scripts/lint/report/RunDuplicateCode.py --filter Test/       # 테스트만
   py -3 Scripts/lint/report/RunDuplicateCode.py --min-lines 12       # 12줄 이상만
   py -3 Scripts/lint/report/RunDuplicateCode.py --filter Engine/Graphics
   py -3 Scripts/lint/report/RunDuplicateCode.py --same-file-only     # 한 파일 안의 복사만
@@ -109,7 +110,9 @@ class LanguageSpec( NamedTuple ):
 
 kLanguageSpec: dict[ str, LanguageSpec ] = {
     "cpp": LanguageSpec(
-        listRoot       = ( "Source", ),
+        # 테스트도 우리 C++ 이다 — 예전에는 `Source` 만 훑어서 `Test/` 의 복사(GPU 케이스마다 디바이스 세우기 12 줄 · 픽셀 되읽기 ·
+        # 벤치 통계)를 이 도구가 못 봤다. `--filter Source/` 로 예전과 같은 범위를 고를 수 있다.
+        listRoot       = ( "Source", "Test" ),
         sourceSuffixes = ( ".cpp", ),
         headerSuffixes = ( ".h", ".inl" ),
         fileNames      = (),

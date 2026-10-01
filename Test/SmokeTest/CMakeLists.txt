@@ -25,8 +25,12 @@ endif()
 
 # `ModuleHost` 는 구성과 무관하게 가져온다 — 검사하는 것이 "디바이스가 없을 때의 호스트" 라
 # 배포 구성에서도 같은 자리를 지나가야 한다(그쪽은 게임이 정적 링크라 경로가 오히려 더 깊다).
+#
+# `RUN_SERIAL` 은 **일부러 없다**(2026-10-01 에 걷었다). 다른 테스트와 함께 돌면 안 될 이유를 찾았지만 없었다 — `Bin` 에 쓰는 파일이
+# 없고(실행 전후로 `Bin` 을 통째로 견줬다. 임시 파일은 케이스 폴더 `%TEMP%/sw_<pid>/…`), 로그는 이름이 실행마다 다르고, Vulkan 파이프라인
+# 캐시는 원자적으로 쓴다. 직렬로 묶여 있는 동안 `ctest -L "nogpu|lint" -j 4` 의 끝이 이 둘(EngineTest_NoGPU · SmokeTest)이 혼자 도는
+# 22 초였다 — 풀자 44 초 → 24 초(다섯 번 다 통과). GPU 를 잡는 `_HostOnly` 는 그대로 직렬이다(`sw_addTestExecutable`).
 sw_addTestExecutable(SmokeTest
-	RUN_SERIAL
 	SOURCES
 		TestSmoke.cpp
 		TestModuleHost.cpp

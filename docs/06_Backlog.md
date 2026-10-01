@@ -1831,7 +1831,7 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - `RenderResourceXml` 은 이제 `Serialization` 쪽으로 옮길 수 있다. 쓰는 쪽 옆에 둔 이유(직렬화가 `Resource` 를 못 봄)는
   `Resource/ResourceUtil.h` 가 티어 예외가 되면서 사라졌다.
 
-### 1-0h. `Test/` 구조 정리 — 진행 중 (2026-10-01 시작)
+### 1-0h. `Test/` 구조 정리 — ✅ **끝났다** (2026-10-01, 8커밋 · 남은 것은 아래 "남은 것")
 
 사용자 요청 "TEST 폴더도 구조적 리팩토링을 통한 고도화 · 최적화 · 재사용성 · 확장성". 단위마다 검증 · 커밋 · 푸시.
 시작 측정(Debug): `ctest -L "nogpu|lint" -j 4` 벽시계 **44 초** — 직렬인 SmokeTest(12.9 s) · EngineTest_NoGPU(9.3 s)가 끝에
@@ -1846,7 +1846,20 @@ Engine 이 SHARED 라 이 결함이 **원리상 나올 수 없는** 구성이다
 - [x] ⑤ 벤치 통계 `TestFramework/TestBench.h` (3절 2026-10-01 ⑤)
 - [x] ⑥ 자식 프로세스 실행 `test::runThisExecutableAsChild` — 시한 · 출력 · 환경 변수 (3절 2026-10-01 ④b · ⑥)
       **남은 원인 하나:** CI Windows Shipping 에서 크래시 자식이 간헐로 멈춘다(bb8f9852). 다음에 지면 로그에 종류 · 마지막 출력이 남는다.
-- [ ] ⑦ ctest 병렬화 — `RUN_SERIAL` 의 근거를 찾아 `RESOURCE_LOCK` 으로 좁히거나 느린 실행 파일을 샤딩.
+- [x] ⑦ ctest 병렬 — EngineTest_NoGPU · SmokeTest 의 `RUN_SERIAL` 을 근거가 없어 걷었다, 44 → 24 초 (3절 2026-10-01 ⑦)
+
+**결과.** `ctest -L "nogpu|lint" -j 4` 44 → 24 초 · Release 테스트 바이너리 −73 % · 단독 TU 컴파일 −51~57 %(Debug −16~18 %) ·
+`Test/` 7 줄 이상 중복 195 → 95 건. 새 공용 자리: `SW_TEST_REQUIRES_HOST` · `HOST_SPLIT` · `test::ScopedFailureCapture` ·
+`test::makeTempDirectory` · `test::RHITestDevice` · `test::RHITestImage` · `TestFramework/TestBench.h` · `test::runThisExecutableAsChild`.
+그 길에 찾은 결함: Shipping 테스트 작업 폴더(`TestBin`), `Resource/dlc` 를 통째로 지우던 정리, 리눅스 `Process` 의 스레드 경쟁(TSan).
+
+**남은 것.**
+- **CI 의 크래시 자식이 간헐로 멈춘다**(Windows Shipping, bb8f9852 한 번). 이제 지면 종류와 자식의 마지막 출력이 남는다 — 그때 원인을 고친다.
+- **ReflectionTest 가 병렬 실행의 끝을 정한다**(23 초, `ReflectionParserTest` 가 파서를 차례로 띄운다). 가르면 ~17 초.
+- **`AssetDatabase::ensureMeta` 가 리소스 루트 밖 절대 경로에도 소문자로 정규화한 자리에 `.meta` 를 쓴다**(엔진, 3절 ③ 참고).
+- `TestRenderPassGpu.cpp` 의 남은 같은 줄(6 줄 창 215)은 "큐브 하나 든 씬" · "한 프레임 돌리기" 모양이다 — 케이스마다 씬 구성이 조금씩
+  달라 지금은 두었다. 같은 모양의 새 케이스가 늘면 그때 도우미로.
+- `%TEMP%` 의 옛 `sw_*` 3,012 개와 `Bin` 의 옛 `prefab_test/` · `TestTemp/` · `temp_gen_*` 는 지우지 않았다(이제 아무도 쓰지 않는다).
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -2037,6 +2050,22 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-01 (Test 구조 ⑦ ctest 병렬 — EngineTest_NoGPU · SmokeTest 의 RUN_SERIAL 을 걷었다, 44 초 → 24 초)
+
+`ctest -L "nogpu|lint" -j 4`(Debug) 벽시계가 **44 초**였다. 끝의 22 초는 `RUN_SERIAL` 인 둘(EngineTest_NoGPU 9.3 · SmokeTest 12.9)이
+**혼자** 도는 시간이었다. 직렬의 근거는 어디에도 적혀 있지 않았다(들어온 커밋 메시지는 "개선"). 함께 돌면 안 될 이유를 찾았다:
+`Bin` 에 쓰는 파일 — SmokeTest 전후로 `Bin` 을 통째로 견줘 바뀐 파일 0(③ 뒤로 임시 파일은 케이스 폴더다), 로그는 실행마다 이름이 다르고,
+Vulkan 파이프라인 캐시는 원자적으로 쓴다. 시간 단언이 있는 TaskManager 검사는 이미 CoreTest 에서 병렬로 돌고 있었다.
+걷고 다섯 번 + 세 번 돌려 전부 통과, **24 초**(23~26). Shipping `-j 4` 는 16 초. GPU 를 잡는 `_HostOnly` 는 그대로 직렬이다.
+`sw_addTestExecutable` 의 `RUN_SERIAL` 은 남기되(쓰는 타겟 없음) 쓸 때는 이유를 옆에 적으라고 적었다.
+
+**같이.** `RunDuplicateCode.py` 가 `Source/` 만 훑어 `Test/` 의 복사를 못 봤다 — 뿌리에 `Test` 를 더했다(`--filter Source/` 로 예전 범위).
+이 패스 동안 `Test/` 의 7 줄 이상 중복 195 → 95 건(6 줄 창: RenderPassGpu 335 → 215 · RHIDevice 124 → 102).
+README 의 구성별 케이스 수 표를 오늘 값으로 고쳤다(2026-09-19 값은 소스 케이스 937 개일 때였다 — 지금 1,309).
+
+**다음 병목.** 이제 끝을 정하는 것은 ReflectionTest(23 초) — `ReflectionParserTest` 가 케이스마다 파서 프로세스를 차례로 띄운다
+(혼자 16 초). 스위트를 둘로 가르면 ~17 초까지 내려가지만 가르는 장치(코드 선언 또는 샤딩)가 더 필요해서 이번에는 두었다.
 
 ### 2026-10-01 (Core `Process` — `terminate` 과 `waitForExit` 을 다른 스레드에서 부르는 것이 계약인데 필드가 원자가 아니었다)
 
