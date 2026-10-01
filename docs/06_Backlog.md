@@ -2077,6 +2077,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-01 (결함 ㊵ 창 — 리사이즈 콜백 안에서 다시 들어온 WM_SIZE 의 크기를 잃었다)
+
+`Win32Window` 의 WM_SIZE 는 재진입 가드(`_bResizing`)가 있어, 콜백(스왑체인 리사이즈) 안에서 같은 스레드로 다시 들어온 WM_SIZE 는 `_width`/`_height` 만 적고
+콜백을 건너뛴다(중첩 리사이즈가 렌더 타깃을 깨뜨려서 둔 가드). 그런데 바깥 호출은 들어올 때의 옛 크기로 콜백을 마치고 끝났다 — 스왑체인이 다음 WM_SIZE
+까지 **옛 크기**였다. DPI 변경의 `SetWindowPos`(WM_DPICHANGED)가 바로 그 재진입을 만든다. 콜백이 돌아온 뒤 크기가 바뀌었으면 마지막 크기로 다시 부른다
+(끝없이 돌지 않게 네 번까지).
+**검증.** `WindowTest.NestedResizeEndsAtTheLastSize`(호스트 스위트 — 실제 창) — 첫 콜백 안에서 640×480 WM_SIZE 를 보내고 바깥은 800×600: 콜백은 두 번,
+마지막이 640×480. 한 번만 부르는 변이에서 마지막이 800 으로 실패했다.
+
 ### 2026-10-01 (결함 ㊴ 프로파일러 — 구간 이름을 부른 쪽의 포인터 그대로 들었다)
 
 `FrameProfiler::registerScope` 는 이름 포인터를 그대로 슬롯에 적었다. 같은 이름 찾기(`StringUtil::equals`)와 보고(`report`)가 그 포인터를 다시 읽는다. 지금

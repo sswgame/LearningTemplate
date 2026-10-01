@@ -189,8 +189,18 @@ namespace sw
                     // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
                     if ( pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
                     {
-                        pThis->_bResizing = SW_TRUE;
-                        pThis->_onResize( pThis->_width, pThis->_height );
+                        // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
+                        // 더** 부른다 — 예전에는 바깥 호출이 넘긴 옛 크기로 끝나, 스왑체인이 다음 WM_SIZE 까지 옛 크기였다(DPI 변경의
+                        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 막는다.
+                        pThis->_bResizing    = SW_TRUE;
+                        uint32 resizedWidth  = 0;
+                        uint32 resizedHeight = 0;
+                        for ( int32 round = 0; round < 4 && ( pThis->_width != resizedWidth || pThis->_height != resizedHeight ); ++round )
+                        {
+                            resizedWidth  = pThis->_width;
+                            resizedHeight = pThis->_height;
+                            pThis->_onResize( resizedWidth, resizedHeight );
+                        }
                         pThis->_bResizing = SW_FALSE;
                     }
                     return 0;

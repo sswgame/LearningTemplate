@@ -210,3 +210,35 @@ SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
     SW_TEST_SKIP( "최소화 요청 경로가 플랫폼마다 달라 Win32 에서만 봅니다" );
 #endif
 }
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [WindowTest] 리사이즈 콜백 안에서 다시 들어온 WM_SIZE 의 크기를 잃지 않는다 — 마지막 크기로 끝난다
+ * @details 재진입한 WM_SIZE 는 크기만 적고 콜백을 건너뛰는데, 바깥 호출은 옛 크기로 끝나 스왑체인이 다음 WM_SIZE 까지 옛 크기였다(DPI 변경의
+ *          `SetWindowPos` 가 콜백 안에서 그 재진입을 만든다).
+ */
+SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
+{
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+    SW_ASSERT_TRUE( window->initializeWindow( "NestedResizeTestWindow", 320, 240 ) );
+    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+
+    sw::vector<sw::pair<uint32, uint32>> listResize;
+    window->setResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&listResize, hWnd]( uint32 width, uint32 height )
+    {
+        listResize.push_back( { width, height } );
+        if ( listResize.size() == 1 )
+            SendMessageW( hWnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM( 640, 480 ) ); // 콜백 안에서 크기가 또 바뀐다
+    } ) );
+
+    SendMessageW( hWnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM( 800, 600 ) );
+    SW_ASSERT_TRUE( listResize.empty() == false );
+    SW_EXPECT_EQUAL( 640u, listResize.back().first );
+    SW_EXPECT_EQUAL( 480u, listResize.back().second );
+    SW_EXPECT_EQUAL( size_t( 2 ), listResize.size() );
+
+    window->setResizeCallback( sw::WindowResizeDelegate{} );
+    window->destroy();
+}
+#endif
