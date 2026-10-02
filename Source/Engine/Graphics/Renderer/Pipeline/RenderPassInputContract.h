@@ -1,11 +1,9 @@
 /**
  * @file RenderPassInputContract.h
  * @brief 풀스크린 패스 타입이 **읽는 입력의 역할**입니다. 로드 시점 검증과 프레임 실행이 같은 표를 봅니다.
- * @details 예전에는 패스마다 코드가 "어느 첨부를 SourceColor 로 걸지" 를 후보 목록으로 짐작했고
- *          (`pickFirstExisting( { "TransparentColor", "LitColor", … } )`), XML 이 선언한 입력은 그래프
- *          정렬에만 쓰였습니다. 그래서 디퍼드 XML 이 Bloom 의 입력으로 `AOColor` 를 적어 두어도 아무도 걸지
- *          않았고 SSAO 는 매 프레임 돌고 버려졌습니다(백로그 1-6). 선언이 곧 바인딩이 되려면 "이 패스
- *          타입은 어떤 역할의 입력을 읽는가" 가 한 표에 있어야 합니다. 그 표가 이 파일입니다.
+ * @details 선언이 곧 바인딩이 되려면 "이 패스 타입은 어떤 역할의 입력을 읽는가" 가 한 곳에 있어야 합니다. 역할과
+ *          계약의 모양은 이 파일에, 타입마다의 계약은 패스 종류 표(`RenderPassTypeTraits::_inputContract`)에 있습니다.
+ *          계약이 없으면 XML 이 선언한 입력을 아무도 걸지 않아도(Bloom 의 `AOColor` 처럼) 오류 없이 지나갑니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
