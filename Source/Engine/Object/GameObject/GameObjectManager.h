@@ -88,8 +88,16 @@ namespace sw
         /** @brief 이름으로 GameObject 를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
 
-        /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. */
+        /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
         GameObject* findGameObjectById( uint64 objectId ) const;
+
+        /**
+         * @brief 락 없는 id 표의 칸 수입니다. 칸은 id 의 아래 비트(`id % kObjectSlotCount`)입니다.
+         * @details 이만큼 떨어진 id 둘이 함께 살아 있을 때만 뒤에 온 것이 맵(잠금 + 해시)으로 갑니다 — `getOverflowObjectCount`.
+         */
+        static constexpr uint64 kObjectSlotCount = 1ull << 22;
+        /** @brief 표의 칸을 다른 오브젝트가 써서 맵에 든 오브젝트 수입니다. 진단 · 회귀 테스트용입니다(보통 0). */
+        uint32 getOverflowObjectCount() const { return _overflowObjectCount.load( std::memory_order_relaxed ); }
 
         /**
          * @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용).
@@ -521,29 +529,41 @@ namespace sw
          *          쓰기는 모두 매니저 락 안에서 일어나고, 읽기는 청크 포인터 하나와 슬롯 하나의 원자적 로드입니다.
          *          예전에는 이 표가 청크 관리를 따로 구현했습니다. `SlotHandleTable` 이 쓰는 `PagedArray` 와 같은 일이었습니다.
          *
-         * @note 범위 안의 id 는 이 표가 **유일한 기준**입니다(맵에 넣지 않습니다). 표가 답하지 못하는 id(범위 밖)만
-         *       부르는 쪽이 맵으로 갑니다.
+         * @note **칸은 id 의 아래 비트입니다**(`kObjectSlotCount` 로 나눈 나머지). 예전에는 id 를 그대로 칸 번호로 써서 약 420 만을 넘는
+         *       id 는 모두 맵(잠금 + 해시, 호출당 110 ns)으로 갔고 되감지 않았습니다 — 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이, 그런
+         *       세션에서 저장한 id 를 되살리면 처음부터 그 길이었습니다. 지금은 칸을 **다른 살아 있는 오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
+         *       함께 살아 있을 때 — 오래 사는 오브젝트와 420 만 뒤의 스폰) 뒤에 온 것이 맵으로 갑니다. 칸의 오브젝트가 다른 id 면 "여기 없음" 이라
+         *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromId` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
+         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 조회가 0.8 ns 느렸다 — 오브젝트의 `_objectId` 를
+         *       한 번 더 읽는다. Release · FindById 번갈아 5 회 5.6 → 6.4 ns).
+         *       청크는 늘 1024 개 이하(32 MB 상한)라 지금과 같습니다 — id 범위를
+         *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랐을 것입니다. 언리얼 `FUObjectArray` 는 칸을
+         *       재사용하고 약한 포인터가 일련번호로 견줍니다. 여기서는 id 자체가 일련번호입니다.
          */
         struct ObjectSlotTable
         {
             /** @brief 청크 하나가 담는 슬롯 수입니다. */
             static constexpr uint32 kChunkSize = 4096;
-            /** @brief 청크 표의 칸 수입니다. `kChunkSize` 와 곱하면 다룰 수 있는 id 범위가 됩니다(약 420만). */
+            /** @brief 청크 표의 칸 수입니다. `kChunkSize` 와 곱하면 칸 수(`kObjectSlotCount`)입니다. */
             static constexpr uint32 kMaxChunk = 1024;
+            static_assert( static_cast<uint64>( kChunkSize ) * kMaxChunk == kObjectSlotCount, "ObjectSlotTable must cover kObjectSlotCount slots" );
 
             using SlotArray = PagedArray<atomic<GameObject*>, kChunkSize, kMaxChunk>;
 
-            /** @brief 슬롯에 포인터를 씁니다. 매니저 락을 쥔 채 부르십시오. 범위 밖이면 false 입니다. */
-            bool store( uint64 objectId, GameObject* pObject );
-            /** @brief 슬롯을 읽습니다. **락이 필요 없습니다.** 범위 밖이거나 비었으면 nullptr 입니다. */
+            /** @brief id 의 칸 번호입니다. */
+            static constexpr uint64 getSlotIndex( uint64 objectId ) { return objectId & ( kObjectSlotCount - 1 ); }
+            /** @brief 칸이 비었으면 씁니다. 다른 오브젝트가 쓰고 있으면 false — 부르는 쪽이 맵에 넣습니다. 매니저 락을 쥔 채 부르십시오. */
+            bool tryStore( uint64 objectId, GameObject* pObject );
+            /** @brief 칸이 이 오브젝트를 들고 있으면 비웁니다. 아니면 false — 맵에 든 것입니다. 매니저 락을 쥔 채 부르십시오. */
+            bool tryRemove( uint64 objectId, const GameObject* pObject );
+            /** @brief 칸이 **그 id 의** 오브젝트를 들고 있으면 반환합니다. **락이 필요 없습니다.** 비었거나 다른 id 면 nullptr 입니다. */
             GameObject* load( uint64 objectId ) const;
-            /** @brief 그 id 가 표가 다룰 수 있는 범위인지 반환합니다. 범위 밖이면 부르는 쪽이 맵으로 갑니다. */
-            static bool isInRange( uint64 objectId ) { return SlotArray::isInRange( objectId ); }
             /** @brief 모든 슬롯을 비웁니다. 락 없이 읽는 쪽이 있을 수 있어 청크는 그대로 둡니다. */
             void clear();
 
         private:
-            SlotArray _listSlot;
+            SlotArray      _listSlot;
+            atomic<uint64> _compareFromId{ kObjectSlotCount }; ///< 이 이상의 id 를 물으면 칸의 오브젝트 id 와 견준다. 감긴 id 를 넣으면 0(`clear` 가 되돌린다)
         };
 
         TypedPoolAllocator<GameObject>                          _poolGameObject;
@@ -553,13 +573,14 @@ namespace sw
         unordered_map<hashed_string, NameEntry>       _mapNameToObject;
         unordered_map<hashed_string, NameSuffixState> _mapNameSuffix; ///< 밑 이름마다 번호 상태. 중복 이름 만들기가 O(1) 입니다(언리얼 MakeUniqueObjectName 의 자리)
         /**
-         * @brief id → 오브젝트 맵입니다. **슬롯 표가 다루지 못하는 id(범위 밖)만** 듭니다.
+         * @brief id → 오브젝트 맵입니다. **슬롯 표의 칸을 다른 살아 있는 오브젝트가 쓰는 id 만** 듭니다(보통 비어 있습니다).
          * @details 예전에는 모든 오브젝트를 여기에도 넣었습니다. 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다
-         *          해제 하나였습니다(총알처럼 스폰이 잦은 게임의 비용). 표가 답하는 범위(약 420만 id)에서는 비어 있습니다.
+         *          해제 하나였습니다(총알처럼 스폰이 잦은 게임의 비용).
          */
         unordered_map<uint64, GameObject*> _mapIdToObject;
-        /** @brief id → 오브젝트의 **빠른 읽기 길**이자 기준입니다. 범위 밖 id 만 위 맵으로 갑니다. */
+        /** @brief id → 오브젝트의 **빠른 읽기 길**입니다. 칸이 막힌 id 만 위 맵으로 갑니다. */
         ObjectSlotTable         _objectSlotTable;
+        atomic<uint32>          _overflowObjectCount; ///< `_mapIdToObject` 의 크기. 0 이면 읽는 쪽이 표에서 못 찾은 id 로 잠그지 않습니다
         vector<GameObject*>     _listPendingAdd;
         vector<GameObject*>     _listPendingDestroyObject;
         vector<ComponentHandle> _listPendingDestroyComponent; ///< 핸들로 든다(`destroyComponent` 설명 참고)

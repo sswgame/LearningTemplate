@@ -82,6 +82,7 @@ namespace sw
         , _mapNameToObject{}
         , _mapNameSuffix{}
         , _mapIdToObject{}
+        , _overflowObjectCount{ 0 }
         , _listPendingAdd{}
         , _listPendingDestroyObject{}
         , _listPendingDestroyComponent{}
@@ -193,8 +194,11 @@ namespace sw
 
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
-        if ( _objectSlotTable.store( objectId, pObj ) == false )
+        if ( _objectSlotTable.tryStore( objectId, pObj ) == false )
+        {
             _mapIdToObject.insert_or_assign( objectId, pObj );
+            _overflowObjectCount.store( static_cast<uint32>( _mapIdToObject.size() ), std::memory_order_release );
+        }
 
         _listPendingAdd.push_back( pObj );
         return pObj;
@@ -252,22 +256,45 @@ namespace sw
     // ObjectSlotTable: id → GameObject* 를 락 없이 읽는 밀집 표
     // ======================================================================
 
-    bool GameObjectManager::ObjectSlotTable::store( uint64 objectId, GameObject* pObject )
+    bool GameObjectManager::ObjectSlotTable::tryStore( uint64 objectId, GameObject* pObject )
     {
-        if ( isInRange( objectId ) == false )
+        // 쓰기는 모두 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
+        atomic<GameObject*>* pSlot = _listSlot.ensure( getSlotIndex( objectId ) );
+        if ( pSlot == nullptr )
             return false;
+        const GameObject* pOccupant = pSlot->load( std::memory_order_relaxed );
+        if ( pOccupant != nullptr && pOccupant != pObject )
+            return false;
+        // 칸을 발행하기 **전에** 적는다. 읽는 쪽은 칸을 acquire 로 읽은 뒤 이것을 보므로, 감긴 id 의 오브젝트를 보는 쪽은 반드시 true 를 본다.
+        if ( objectId >= kObjectSlotCount )
+            _compareFromId.store( 0, std::memory_order_relaxed );
+        pSlot->store( pObject, std::memory_order_release );
+        return true;
+    }
 
-        // 지우는 길이라면 청크를 새로 만들 이유가 없다. 쓰기는 모두 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
-        atomic<GameObject*>* pSlot = ( pObject != nullptr ) ? _listSlot.ensure( objectId ) : _listSlot.find( objectId );
-        if ( pSlot != nullptr )
-            pSlot->store( pObject, std::memory_order_release );
+    bool GameObjectManager::ObjectSlotTable::tryRemove( uint64 objectId, const GameObject* pObject )
+    {
+        // 지우는 길이라 청크를 새로 만들 이유가 없다.
+        atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectId ) );
+        if ( pSlot == nullptr || pSlot->load( std::memory_order_relaxed ) != pObject )
+            return false;
+        pSlot->store( nullptr, std::memory_order_release );
         return true;
     }
 
     GameObject* GameObjectManager::ObjectSlotTable::load( uint64 objectId ) const
     {
-        const atomic<GameObject*>* pSlot = _listSlot.find( objectId );
-        return ( pSlot != nullptr ) ? pSlot->load( std::memory_order_acquire ) : nullptr;
+        const atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectId ) );
+        if ( pSlot == nullptr )
+            return nullptr;
+        GameObject* pObject = pSlot->load( std::memory_order_acquire );
+        if ( pObject == nullptr )
+            return nullptr;
+        // 칸은 id 의 아래 비트라 같은 칸의 다른 id 가 들어 있을 수 있다 — 묻는 id 가 감긴 것이거나, 감긴 id 가 들어온 적이 있을 때
+        // (`_compareFromId` 가 0). 그때만 오브젝트의 id 로 견준다. 둘 다 아니면 이 칸에는 칸 번호와 같은 id 만 들어올 수 있었다.
+        if ( objectId >= _compareFromId.load( std::memory_order_relaxed ) && pObject->getObjectId() != objectId )
+            return nullptr;
+        return pObject;
     }
 
     void GameObjectManager::ObjectSlotTable::clear()
@@ -276,12 +303,13 @@ namespace sw
         {
             slot.store( nullptr, std::memory_order_release );
         } );
+        _compareFromId.store( kObjectSlotCount, std::memory_order_relaxed );
     }
 
     GameObject* GameObjectManager::findRegisteredUnlocked( uint64 objectId ) const
     {
-        if ( ObjectSlotTable::isInRange( objectId ) )
-            return _objectSlotTable.load( objectId );
+        if ( GameObject* pSlotObject = _objectSlotTable.load( objectId ); pSlotObject != nullptr )
+            return pSlotObject;
         const auto it = _mapIdToObject.find( objectId );
         return ( it != _mapIdToObject.end() ) ? it->second : nullptr;
     }
@@ -290,13 +318,12 @@ namespace sw
     {
         // **빠른 길: 락도 해시도 없다.** 핸들 해석이 프레임당 오브젝트 수만큼 도는 자리라
         // 공유 잠금 하나가 곧 밀리초가 된다(벤치 실측: 호출당 110ns → 프레임당 2.2ms).
-        if ( ObjectSlotTable::isInRange( objectId ) )
-        {
-            GameObject* pSlotObject = _objectSlotTable.load( objectId );
-            return ( pSlotObject != nullptr && pSlotObject->isPendingDestroy() == false ) ? pSlotObject : nullptr;
-        }
+        if ( GameObject* pSlotObject = _objectSlotTable.load( objectId ); pSlotObject != nullptr )
+            return ( pSlotObject->isPendingDestroy() == false ) ? pSlotObject : nullptr;
 
-        // id 가 표의 범위를 넘어선 경우에만 맵으로 간다. 범위 안의 id 는 표가 유일한 기준이다(맵에는 넣지 않는다).
+        // 칸이 막혀 맵에 든 오브젝트가 있을 때만 맵으로 간다(보통 없다). 없는 id 를 묻는 핸들(파괴된 대상)도 잠그지 않는다.
+        if ( _overflowObjectCount.load( std::memory_order_acquire ) == 0 )
+            return nullptr;
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         auto                                it = _mapIdToObject.find( objectId );
         if ( it == _mapIdToObject.end() )
@@ -564,8 +591,11 @@ namespace sw
                         releaseNameSuffixUnlocked( nameIt->second );
                         _mapNameToObject.erase( nameIt );
                     }
-                    if ( _objectSlotTable.store( pObj->getObjectId(), nullptr ) == false )
+                    if ( _objectSlotTable.tryRemove( pObj->getObjectId(), pObj ) == false )
+                    {
                         _mapIdToObject.erase( pObj->getObjectId() );
+                        _overflowObjectCount.store( static_cast<uint32>( _mapIdToObject.size() ), std::memory_order_release );
+                    }
                 }
             }
         }
@@ -614,6 +644,7 @@ namespace sw
             _mapNameToObject.clear();
             _mapNameSuffix.clear();
             _mapIdToObject.clear();
+            _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();
             _transformHierarchy.clear();
             _listCachedTickStage.clear();

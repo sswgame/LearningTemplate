@@ -2571,3 +2571,71 @@ SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
     SW_EXPECT_FALSE( std::is_move_constructible_v<sw::Component> );
     SW_EXPECT_FALSE( std::is_move_constructible_v<sw::SceneComponent> );
 }
+
+/**
+ * @brief 되살린 큰 id 도 락 없는 표에서 찾는다 — 표 범위(약 420 만)를 넘었다고 맵으로 떨어지지 않는다.
+ * @details 예전 표는 id 를 그대로 칸 번호로 써서 `kChunkSize * kMaxChunk` 를 넘는 id 는 모두 잠금 + 해시 맵(호출당 110 ns)으로 갔고, 되감지
+ *          않았다. 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길로 갔고, 그런 세션에서 저장한 id 를 되살리면(세이브 · 플레이 복원) 처음부터
+ *          그랬다. 지금 칸은 id 의 아래 비트다 — 칸을 다른 살아 있는 오브젝트가 쓸 때만 맵으로 간다.
+ */
+SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
+{
+    sw::GameObjectManager manager;
+    constexpr uint64      kLargeId  = 5'000'000ull;
+    sw::GameObject*       pRestored = manager.createGameObjectWithId( sw::hashed_string( "Restored" ), kLargeId );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_EQUAL( kLargeId, pRestored->getObjectId() );
+    SW_EXPECT_EQUAL( pRestored, manager.findGameObjectById( kLargeId ) );
+    SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
+
+    // 발급은 그 뒤로 이어지고, 역시 표에 있다.
+    sw::GameObject* pNext = manager.createGameObject( sw::hashed_string( "Next" ) );
+    SW_ASSERT_NOT_NULL( pNext );
+    SW_EXPECT_EQUAL( kLargeId + 1, pNext->getObjectId() );
+    SW_EXPECT_EQUAL( pNext, manager.findGameObjectById( kLargeId + 1 ) );
+    SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
+}
+
+/**
+ * @brief 표의 같은 칸을 쓰는 id 둘(`kObjectSlotCount` 만큼 떨어진)이 함께 살아 있어도 둘 다 찾고, 없는 id 는 찾지 않는다.
+ * @details 뒤에 온 것은 맵으로 간다(드물다 — 오래 사는 오브젝트와 420 만 뒤의 id 가 겹칠 때). 칸 주인이 사라지면 칸이 비고, 맵의 것은 맵에서
+ *          그대로 찾는다. 칸의 오브젝트가 다른 id 면 "없음" 이다 — 예전 표와 달리 칸만 보고 답하면 엉뚱한 오브젝트를 준다.
+ */
+SW_TEST_CASE( GameObjectTest, ObjectIdsThatShareATableSlotAreBothFound )
+{
+    sw::GameObjectManager manager;
+    constexpr uint64      kSlotCount = sw::GameObjectManager::kObjectSlotCount;
+    constexpr uint64      kOldId     = 7;
+    constexpr uint64      kNewId     = kOldId + kSlotCount;
+
+    sw::GameObject* pOld = manager.createGameObjectWithId( sw::hashed_string( "Old" ), kOldId );
+    sw::GameObject* pNew = manager.createGameObjectWithId( sw::hashed_string( "New" ), kNewId );
+    SW_ASSERT_NOT_NULL( pOld );
+    SW_ASSERT_NOT_NULL( pNew );
+    SW_EXPECT_EQUAL( pOld, manager.findGameObjectById( kOldId ) );
+    SW_EXPECT_EQUAL( pNew, manager.findGameObjectById( kNewId ) );
+    SW_EXPECT_EQUAL( 1u, manager.getOverflowObjectCount() );
+    // 같은 칸의 다른 id 는 없다.
+    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId + 2 * kSlotCount ) == nullptr );
+
+    // 칸 주인이 사라져도 맵의 것은 찾는다.
+    manager.destroyObject( pOld );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId ) == nullptr );
+    SW_EXPECT_EQUAL( pNew, manager.findGameObjectById( kNewId ) );
+
+    // 빈 칸은 다음 id 가 쓴다 — 맵으로 가지 않는다.
+    sw::GameObject* pThird = manager.createGameObjectWithId( sw::hashed_string( "Third" ), kOldId + 2 * kSlotCount );
+    SW_ASSERT_NOT_NULL( pThird );
+    SW_EXPECT_EQUAL( pThird, manager.findGameObjectById( kOldId + 2 * kSlotCount ) );
+    SW_EXPECT_EQUAL( 1u, manager.getOverflowObjectCount() );
+    // 사라진 작은 id 로 물으면 그 칸의 감긴 id 오브젝트를 주지 않는다(파괴된 대상을 가리키던 핸들).
+    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId ) == nullptr );
+
+    // 맵의 것이 사라지면 맵이 빈다.
+    manager.destroyObject( pNew );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( manager.findGameObjectById( kNewId ) == nullptr );
+    SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
+    SW_EXPECT_EQUAL( pThird, manager.findGameObjectById( kOldId + 2 * kSlotCount ) );
+}
