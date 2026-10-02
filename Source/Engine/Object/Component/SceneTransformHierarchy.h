@@ -169,9 +169,13 @@ namespace sw
          *          **힙에 만들고** 뮤텍스 하나에 줄을 서서 지연 큐에 넣었고, 틱 뒤에 게임 스레드가 건마다 핸들을 다시 풀어
          *          세터를 **직렬로** 돌렸습니다. 큐브 8000 개가 틱 안에서 움직이면 틱 2.9 ms + 재적용 1.0 ms 였습니다(Release).
          *          같은 슬롯의 직전 건이 같은 컴포넌트면 합칩니다(위치 · 스케일을 잇따라 부르는 흔한 모양).
+         *          @p writerId 는 이 쓰기를 낸 틱의 주인 오브젝트(`GameObjectManager::getTickWriter`)이고 순서 키가 됩니다 — 같은 컴포넌트에 여러
+         *          오브젝트의 틱이 썼으면 (쓴 오브젝트 id, 그 스레드의 순번) 순으로 적용해 마지막이 이깁니다(유니티 `EntityCommandBuffer.ParallelWriter`
+         *          의 sortKey). 키는 건(`SceneTransformWrite`)이 아니라 슬롯의 키 목록에 둡니다 — 건은 바깥 배치도 쓰는 64 바이트라, 키를 넣어
+         *          80 바이트가 되자 배치 8000 건이 읽는 양이 25% 늘었습니다.
          * @return 큐에 올렸으면 true 입니다. 슬롯이 준비되지 않았으면 false 이고, 부르는 쪽이 지연 델리게이트로 돌립니다.
          */
-        bool queueWriteParallel( const SceneTransformWrite& write );
+        bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerId );
         /**
          * @brief 틱 중에 칸에 바로 쓴 컴포넌트의 칸 번호를 **자기 스레드 슬롯**의 대기 목록에 올립니다. 워커에서 불립니다.
          * @details 세터(`SceneComponent::writeTickTransform`)가 칸이 처음 대기에 들 때 한 번 부릅니다. 대기 값 자체는 칸에 있고, 목록은
@@ -181,16 +185,19 @@ namespace sw
         bool queuePendingSlot( uint32 transformSlot );
         /**
          * @brief 틱 중에 쓴 트랜스폼을 적용하고 목록을 비웁니다(틱 뒤, 게임 스레드). 먼저 대기 칸, 다음에 쓰기 큐입니다.
-         * @details 스레드 슬롯 하나가 잡 하나입니다. 대기 칸 하나는 처음 대기에 든 스레드의 목록에만 있어 워커끼리 겹치지 않고, 같은 슬롯의
-         *          쓰기 건은 한 워커가 쌓인 순서대로 적용하므로 한 스레드가 잇따라 쓴 값은 마지막이 이깁니다. 다른 스레드가 같은 컴포넌트를
-         *          쓴 경우는 예전과 같이 순서가 없습니다.
+         * @details 대기 칸은 스레드 슬롯 하나가 잡 하나입니다(칸 하나는 처음 대기에 든 스레드의 목록에만 있어 겹치지 않습니다). 쓰기 큐는
+         *          **대상 단위로** 나눕니다: 건을 (대상, 쓴 오브젝트, 순번)으로 정렬하고 대상 경계에서만 잘라 잡에 줍니다 — 한 컴포넌트는 한
+         *          워커만 쓰고(유니티 `TransformAccessArray` 가 트랜스폼 하나를 한 잡에만 주는 것), 이기는 값은 스레드 배정과 무관하게 정해집니다.
+         *          예전에는 스레드 슬롯 하나가 잡 하나라, 두 오브젝트의 틱이 같은 컴포넌트를 쓰면 두 워커가 그 칸을 동시에 썼습니다.
          * @return 실제로 값이 바뀐 건수입니다.
          */
         uint32 applyTickWrites( GameObjectManager& manager, PrimitiveRegistry& registry );
         /**
          * @brief 바깥에서 준 쓰기 여럿을 적용합니다(`GameObjectManager::applyTransformBatch`). 건수가 문턱을 넘으면 워커에 나눕니다.
          * @details 틱 중이면 건마다 세터로 돌립니다 — 세터가 틱 중 쓰기 길을 탑니다. 배치의 병렬 적용은 구조 변경이 없는 틱 밖에서만 안전합니다.
-         *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다. 세대는 끝에 한 번 올립니다.
+         *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다. 세대는 끝에 한 번 올립니다. 같은 핸들이 여러 번 있으면 배열에서
+         *          뒤의 것이 이깁니다 — 병렬일 때도 그렇도록 건을 대상(componentId) 버킷으로 나눠, 한 대상은 한 워커가 배열 순서대로 씁니다.
+         *          예전에는 배열을 연속 구간으로 잘라 같은 핸들이 두 구간에 있으면 두 워커가 한 칸을 동시에 썼습니다.
          * @return 실제로 값이 바뀐 건수입니다(틱 중이면 세터로 돌린 건수).
          */
         uint32 applyBatch( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count );
@@ -227,6 +234,20 @@ namespace sw
         static void flushSubtree( SceneComponent* pRoot, bool bParentChanged, FlushStack& stack );
 
     private:
+        /** @brief 틱 큐 건 하나의 순서 키입니다(슬롯의 건 목록과 같은 자리). */
+        struct TickWriteKey
+        {
+            uint64 _writerId{ 0 }; ///< 이 쓰기를 낸 틱의 주인 오브젝트 id(틱 밖이면 0)
+            uint32 _sequence{ 0 }; ///< 그 스레드가 올린 순번 — 같은 오브젝트의 틱이 잇따라 쓴 건의 순서
+        };
+        /** @brief 정렬할 틱 큐 건 하나입니다. 비교에 쓰는 값을 함께 들어 정렬이 건을 따라가지 않습니다. */
+        struct OrderedTickWrite
+        {
+            const SceneTransformWrite* _pWrite{ nullptr };
+            uint64                     _targetId{ 0 }; ///< 대상 componentId
+            TickWriteKey               _key;
+        };
+
         /** @brief 루트의 대기 플래그를 잡아 본 목록에 올립니다. 이미 잡혀 있으면 false. */
         static bool tryMarkQueued( SceneComponent* pRoot );
         /** @brief 더티 루트 목록을 비우며 각 루트의 대기 플래그를 내립니다(플러시 · clear). */
@@ -257,8 +278,10 @@ namespace sw
         static uint32 applyWriteRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget );
         /** @brief 대기 칸 목록을 슬롯 단위로 나눠 적용합니다(`applyTickWrites` 의 앞 절반). 바뀐 칸 수를 돌려줍니다. */
         uint32 applyPendingSlots( PrimitiveRegistry& registry );
-        /** @brief 쓰기 큐를 슬롯 단위로 나눠 적용합니다(`applyTickWrites` 의 뒤 절반). 바뀐 건수를 돌려줍니다. */
+        /** @brief 쓰기 큐를 대상 단위로 정렬 · 분할해 적용합니다(`applyTickWrites` 의 뒤 절반). 바뀐 건수를 돌려줍니다. */
         uint32 applyQueuedWriteSlots( GameObjectManager& manager );
+        /** @brief 정렬한 틱 큐 건 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 대상은 건이 든 `_pTarget` 입니다. */
+        static uint32 applyOrderedWrites( const OrderedTickWrite* pOrdered, uint32 start, uint32 end );
 
         /** @brief 이번 플러시가 돌 루트입니다. 더러워진 노드가 자기 루트를 한 번씩 올립니다. */
         vector<SceneComponent*> _listDirtyRoot;
@@ -271,6 +294,10 @@ namespace sw
         vector<vector<SceneTransformWrite>> _listWriteScratch;
         /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pDirtyRootScratch` 와 같은 이유입니다. `beginTickWrites` 가 맞춥니다.
         vector<SceneTransformWrite>* _pWriteScratch;
+        /** @brief 쓰기 큐의 건마다 순서 키입니다(스레드 슬롯마다 하나, 건 목록과 같은 자리). 크기는 `_listWriteScratch` 와 같습니다. */
+        vector<vector<TickWriteKey>> _listWriteKeyScratch;
+        /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pWriteScratch` 와 같은 이유입니다. `beginTickWrites` 가 맞춥니다.
+        vector<TickWriteKey>* _pWriteKeyScratch;
         /** @brief 병렬 틱 중 칸에 바로 쓴 컴포넌트의 칸 번호입니다(스레드 슬롯마다 하나). 크기는 `_listWriteScratch` 와 같습니다. */
         vector<vector<uint32>> _listPendingSlotScratch;
         /// @brief 워커가 자기 칸을 찾는 포인터입니다. `_pWriteScratch` 와 같은 이유입니다. `beginTickWrites` 가 맞춥니다.
@@ -279,6 +306,12 @@ namespace sw
         uint32 _writeScratchCount;
         /** @brief 이번 적용에서 비어 있지 않은 스레드 슬롯입니다. 적용 잡의 입력이고, 할당을 재사용합니다. */
         vector<uint32> _listActiveScratchSlot;
+        /** @brief 틱 큐의 건을 (대상, 쓴 오브젝트, 순번)으로 정렬한 것입니다. 할당을 재사용합니다. */
+        vector<OrderedTickWrite> _listOrderedWrite;
+        /** @brief 정렬한 틱 큐를 잡으로 나눈 경계(대상 경계에서만 자릅니다)입니다. 마지막 값은 전체 건수입니다. */
+        vector<uint32> _listWriteGroupStart;
+        /** @brief 배치를 대상 버킷으로 나눈 건 번호입니다(버킷마다 배열 순서). 프레임마다 비우고 다시 채웁니다(할당은 재사용). */
+        vector<vector<uint32>> _listBatchBucket;
         /** @brief 스레드 슬롯마다 하나씩 재사용하는 DFS 스택입니다(`engine::getParallelScratchSlotCount()` 크기). */
         vector<FlushStack> _listScratchStack;
         /**

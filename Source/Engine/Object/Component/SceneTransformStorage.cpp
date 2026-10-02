@@ -122,9 +122,11 @@ namespace sw
 
     void SceneTransformStorage::composeWorld( SceneTransformPage& page, uint32 pageIndex, const float4x4* pParentWorld, const double3* pParentLwc )
     {
-        const float3& position = page._arrLocalPosition[pageIndex];
-        const float3& rotation = page._arrLocalRotation[pageIndex];
-        const float3& scale    = page._arrLocalScale[pageIndex];
+        // 값으로 한 번만 읽는다. 참조로 들면 아래의 "캐시와 같은가" 비교와 쿼터니언 만들기 · 캐시 적기가 칸을 따로 읽어, 그 사이에 칸이 바뀌면
+        // 캐시(`source`)는 새 값인데 쿼터니언은 옛 값으로 남고 다음 합성이 그것을 다시 쓴다.
+        const float3 position = page._arrLocalPosition[pageIndex];
+        const float3 rotation = page._arrLocalRotation[pageIndex];
+        const float3 scale    = page._arrLocalScale[pageIndex];
 
         // DirectX 행-벡터 규격: Scale * Rotation * Translation. 행렬 셋을 곱하지 않고 결과를 바로 적는다(`float4x4::createTrs` 주석).
         // 회전이 없으면 회전 행렬은 단위 행렬이라 대각선에 스케일만 놓는다(격자 배치 · 파티클 · 떠다니는 소품이 흔하다).

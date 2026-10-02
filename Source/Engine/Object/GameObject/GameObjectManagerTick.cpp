@@ -23,6 +23,11 @@ namespace sw
          * @details 포인터라 초기화가 상수이고, TLS 접근에 감싸는 함수가 붙지 않습니다.
          */
         thread_local const GameObject* t_pTickingObject = nullptr;
+        /**
+         * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다(`GameObjectManager::getTickWriter`). 두 틱 길(오브젝트 그룹 · 선행 조건 스테이지)이
+         *          모두 채웁니다. 다른 오브젝트에 쓴 건의 순서 키가 됩니다 — 대기 칸 길을 고르는 `t_pTickingObject` 와 달리 스테이지 길에서도 채웁니다.
+         */
+        thread_local const GameObject* t_pTickWriter = nullptr;
 
         struct GameObjectManagerTickInternal
         {
@@ -65,6 +70,7 @@ namespace sw
             {
                 // 이 오브젝트의 항목은 이 스레드만 돈다. 그동안 그 씬 컴포넌트의 세터는 칸에 바로 쓴다(`SceneComponent::writeTickTransform`).
                 t_pTickingObject = entry._pObject;
+                t_pTickWriter    = entry._pObject;
                 runTickItemIfLive( deltaTime, entry._firstItem );
                 for ( uint32 index = 1; index < entry._itemCount; ++index )
                     runTickItemIfLive( deltaTime, entry._pItem[index] );
@@ -81,6 +87,7 @@ namespace sw
                     for ( uint32 index = start; index < end; ++index )
                         tickEntry( _deltaTime, _pEntry[index] );
                     t_pTickingObject = nullptr;
+                    t_pTickWriter    = nullptr;
                 }
             };
 
@@ -103,8 +110,10 @@ namespace sw
                         GameObject* pOwner = pComp->getOwner();
                         if ( pOwner == nullptr || pOwner->isPendingDestroy() )
                             continue;
+                        t_pTickWriter = pOwner;
                         runTickItem( _deltaTime, item );
                     }
+                    t_pTickWriter = nullptr;
                 }
             };
         };
@@ -253,9 +262,16 @@ namespace sw
         return t_pTickingObject;
     }
 
+    const GameObject* GameObjectManager::getTickWriter()
+    {
+        return t_pTickWriter;
+    }
+
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
     {
-        if ( _transformHierarchy.queueWriteParallel( write ) )
+        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다(`getTickWriter`) — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
+        const uint64 writerId = ( t_pTickWriter != nullptr ) ? t_pTickWriter->getObjectId() : 0;
+        if ( _transformHierarchy.queueWriteParallel( write, writerId ) )
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.

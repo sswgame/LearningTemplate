@@ -1,7 +1,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
@@ -11,6 +13,8 @@
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <thread>
 
 using namespace sw;
 
@@ -529,4 +533,136 @@ SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
     SW_EXPECT_NEAR_EQUAL( 4.0f, pMesh->getWorldPosition()._y, 1e-6f );
     SW_EXPECT_FALSE( manager.getTransformHierarchy().hasQueuedWrites() );
     SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
+}
+
+namespace
+{
+    /** @brief 틱 큐 건 하나와 그것을 낸 틱의 주인 오브젝트 id(순서 키)입니다. */
+    struct KeyedTickWrite
+    {
+        sw::SceneTransformWrite _write;
+        uint64                  _writerId{ 0 };
+    };
+
+    /** @brief 컴포넌트 하나의 로컬 위치 X 를 쓰는 틱 큐 건입니다. */
+    KeyedTickWrite makeTickWrite( sw::SceneComponent* pTarget, uint64 writerId, float32 positionX )
+    {
+        KeyedTickWrite keyed{};
+        keyed._write.setValue( sw::SceneTransformPage::kLocalPosition, sw::float3( positionX, 0.0f, 0.0f ) );
+        keyed._write._handle  = pTarget->getHandle();
+        keyed._write._pTarget = pTarget;
+        keyed._writerId       = writerId;
+        return keyed;
+    }
+
+    /** @brief 이 스레드의 스크래치 슬롯에 건을 올립니다. */
+    bool queueTickWrite( sw::SceneTransformHierarchy& hierarchy, const KeyedTickWrite& keyed )
+    {
+        return hierarchy.queueWriteParallel( keyed._write, keyed._writerId );
+    }
+
+    /** @brief 다른 스레드(다른 스크래치 슬롯)에서 건들을 틱 큐에 올리고, 받은 도우미 슬롯을 돌려줍니다. 모두 올렸으면 true 입니다. */
+    bool queueFromAnotherThread( sw::SceneTransformHierarchy& hierarchy, const sw::vector<KeyedTickWrite>& listWrite )
+    {
+        bool        bAllQueued = true;
+        std::thread other( [&]()
+        {
+            for ( const KeyedTickWrite& keyed : listWrite )
+                bAllQueued = queueTickWrite( hierarchy, keyed ) && bAllQueued;
+            sw::engine::getTaskManager().releaseCurrentThreadHelperSlot();
+        } );
+        other.join();
+        return bAllQueued;
+    }
+} // namespace
+
+/**
+ * @brief [SceneComponentTest] 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 이기는 값은 스레드 배정과 무관하다 — 쓴 오브젝트 id 가 큰 쪽
+ * @details 틱 큐는 **쓴 스레드 슬롯** 단위로 적용돼 슬롯 번호가 큰 쪽이 이겼다. 같은 장면도 어느 워커가 그 오브젝트를 틱했느냐에 따라 실행마다
+ *          다른 값이 남았고, 건수가 문턱(1024)을 넘으면 두 워커가 그 칸을 동시에 썼다. 이제 (대상, 쓴 오브젝트, 순번)으로 정렬해 대상 경계에서만
+ *          잡을 나눈다(유니티 `EntityCommandBuffer.ParallelWriter` 의 sortKey). 두 스레드가 서로 다른 슬롯에 쓰게 하고 역할을 바꿔 두 번 돌린다.
+ */
+SW_TEST_CASE( SceneComponentTest, CrossObjectTickWritesResolveByWriterNotThread )
+{
+    auto runOnce = []( bool bThisThreadWritesHigh ) -> float32
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pObj  = manager.createGameObject( sw::hashed_string( "WriteTarget" ) );
+        sw::SceneComponent*   pComp = pObj->addComponent<sw::SceneComponent>();
+        manager.flushSceneTransforms();
+
+        sw::SceneTransformHierarchy& hierarchy = manager.getTransformHierarchy();
+        hierarchy.beginTickWrites();
+        const KeyedTickWrite highWrite = makeTickWrite( pComp, 20, 2.0f );
+        const KeyedTickWrite lowWrite  = makeTickWrite( pComp, 10, 1.0f );
+        SW_EXPECT_TRUE( queueTickWrite( hierarchy, bThisThreadWritesHigh ? highWrite : lowWrite ) );
+        SW_EXPECT_TRUE( queueFromAnotherThread( hierarchy, { bThisThreadWritesHigh ? lowWrite : highWrite } ) );
+        hierarchy.applyTickWrites( manager, manager.getPrimitiveRegistry() );
+        return pComp->getLocalPosition()._x;
+    };
+    SW_EXPECT_NEAR_EQUAL( 2.0f, runOnce( true ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, runOnce( false ), 1e-6f );
+}
+
+/**
+ * @brief [SceneComponentTest] 한 스레드가 서로 다른 오브젝트의 쓰기를 잇따라 올려도 합치지 않는다 — 합치면 순서 키가 틀어진다
+ * @details 같은 슬롯의 직전 건이 같은 컴포넌트면 한 건으로 합친다. 쓴 오브젝트가 다른데 합치면, 합친 건은 앞 건의 키(30)를 들고 뒤 건의 값을
+ *          싣는다 — 그 사이에 다른 스레드가 쓴 건(20)보다 뒤로 정렬돼 엉뚱한 값(10 의 값)이 이긴다. 기대: 키가 가장 큰 30 의 값.
+ */
+SW_TEST_CASE( SceneComponentTest, TickWritesFromDifferentWritersAreNotMerged )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj  = manager.createGameObject( sw::hashed_string( "MergeTarget" ) );
+    sw::SceneComponent*   pComp = pObj->addComponent<sw::SceneComponent>();
+    manager.flushSceneTransforms();
+
+    sw::SceneTransformHierarchy& hierarchy = manager.getTransformHierarchy();
+    hierarchy.beginTickWrites();
+    SW_EXPECT_TRUE( queueTickWrite( hierarchy, makeTickWrite( pComp, 30, 3.0f ) ) );
+    SW_EXPECT_TRUE( queueTickWrite( hierarchy, makeTickWrite( pComp, 10, 1.0f ) ) );
+    SW_EXPECT_TRUE( queueFromAnotherThread( hierarchy, { makeTickWrite( pComp, 20, 2.0f ) } ) );
+    hierarchy.applyTickWrites( manager, manager.getPrimitiveRegistry() );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pComp->getLocalPosition()._x, 1e-6f );
+}
+
+/**
+ * @brief [SceneComponentTest] 배치에 같은 핸들이 두 번 있으면 병렬로 나눠도 배열에서 뒤의 것이 이긴다
+ * @details 배치는 배열을 연속 구간으로 잘라 워커에 줬다. 같은 핸들이 여러 구간에 있으면 워커 여럿이 한 칸을 동시에 썼고, 마지막에 끝난 워커의
+ *          값이 남았다(배열의 마지막 값이 아니다). 이제 대상 버킷(componentId)으로 나눠 한 대상은 한 워커가 배열 순서대로 쓴다. 반복 핸들을 배열
+ *          전체에 흩어 두어(61 칸마다) 나눔이 어긋나면 거의 확실히 진다. 월드도 이긴 로컬과 맞아야 한다(잎 루트는 적용 자리에서 합성한다).
+ */
+SW_TEST_CASE( SceneComponentTest, BatchWithARepeatedHandleKeepsTheLastWrite )
+{
+    constexpr uint32 kCount = sw::SceneTransformHierarchy::kParallelWriteCount * 2;
+
+    sw::GameObjectManager           manager;
+    sw::vector<sw::SceneComponent*> listComp;
+    for ( uint32 index = 0; index < kCount; ++index )
+    {
+        sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "BatchRepeat" ) );
+        listComp.push_back( pObj->addComponent<sw::SceneComponent>() );
+    }
+    manager.flushSceneTransforms();
+
+    constexpr uint32 kRepeatedComp = 0;
+    constexpr uint32 kRepeatStride = 61; // 소수 — 버킷 수의 배수면 배열 자리로 나눠도 반복 건이 한 버킷에 모인다
+    for ( uint32 round = 1; round <= 8; ++round )
+    {
+        sw::vector<sw::SceneTransformWrite> listWrite( kCount );
+        float32                             lastRepeatedValue = 0.0f;
+        for ( uint32 index = 0; index < kCount; ++index )
+        {
+            const bool    bRepeated  = ( index % kRepeatStride ) == kRepeatStride - 1;
+            const float32 value      = static_cast<float32>( round * 10000 + index );
+            listWrite[index]._handle = listComp[bRepeated ? kRepeatedComp : index]->getHandle();
+            listWrite[index].setValue( sw::SceneTransformPage::kLocalPosition, sw::float3( value, 0.0f, 0.0f ) );
+            if ( bRepeated )
+                lastRepeatedValue = value;
+        }
+
+        manager.applyTransformBatch( listWrite.data(), kCount );
+        manager.flushSceneTransforms();
+        SW_EXPECT_NEAR_EQUAL( lastRepeatedValue, listComp[kRepeatedComp]->getLocalPosition()._x, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( lastRepeatedValue, listComp[kRepeatedComp]->getWorldPosition()._x, 1e-3f );
+    }
 }

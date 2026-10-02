@@ -15,8 +15,10 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -154,6 +156,51 @@ SW_TEST_CASE( GameObjectBenchTest, TickMovers )
     for ( sw::MockTickSceneComponent* pMover : listMover )
     {
         if ( pMover == nullptr || sw::float3::getDistanceSquared( pMover->getWorldPosition(), pMover->_tickLocalPos ) > 1e-6f )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 배치 트랜스폼 쓰기 8000 건(잎 루트, 핸들은 모두 다름) — `GameObjectManager::applyTransformBatch`
+ * @details 벤치 씬의 인스턴스 모드가 매 프레임 이 길로 큐브 8000 개를 움직인다. 병렬 적용이 같은 대상을 두 워커에 주지 않게 대상 버킷으로
+ *          나눈 비용(세는 정렬 두 번)을 여기서 본다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, ApplyTransformBatch )
+{
+    sw::GameObjectManager           manager;
+    sw::vector<sw::SceneComponent*> listComp;
+    listComp.reserve( kObjectCount );
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "BatchBench" ) );
+        listComp.push_back( pObj->addComponent<sw::SceneComponent>() );
+    }
+    manager.flushSceneTransforms();
+
+    sw::vector<sw::SceneTransformWrite> listWrite( kObjectCount );
+    sw::vector<int64>                   listApply;
+    for ( uint32 round = 0; round < 60; ++round )
+    {
+        // 값이 매 라운드 달라야 실제로 쓴다 — 같은 값은 건너뛴다.
+        const float32 offset = static_cast<float32>( round + 1 ) * 0.25f;
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            listWrite[index]._handle = listComp[index]->getHandle();
+            listWrite[index].setValue( sw::SceneTransformPage::kLocalPosition, sw::float3( static_cast<float32>( index ), offset, 0.0f ) );
+            listWrite[index].setValue( sw::SceneTransformPage::kLocalRotation, sw::float3( 0.0f, offset, 0.0f ) );
+        }
+        const auto start = std::chrono::steady_clock::now();
+        manager.applyTransformBatch( listWrite.data(), kObjectCount );
+        listApply.push_back( test::getElapsedMicroseconds( start ) );
+    }
+    test::logBenchSamples( "applyTransformBatch, 8000 leaf roots (position + rotation)", listApply );
+
+    manager.flushSceneTransforms();
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        if ( sw::MathUtil::nearEqual( listComp[index]->getWorldPosition()._x, static_cast<float32>( index ) ) == false )
             ++wrongCount;
     }
     SW_EXPECT_EQUAL( 0u, wrongCount );
