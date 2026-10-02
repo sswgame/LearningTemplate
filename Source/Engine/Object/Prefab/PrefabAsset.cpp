@@ -410,18 +410,26 @@ namespace sw
             _bValid = SW_FALSE;
             return;
         }
-        _name        = pGameObject->getName().c_str();
-        _stateData   = ObjectStateSerializer::saveToXmlString( pGameObject );
-        _stateFormat = PrefabStateFormat::Xml;
-        _bValid      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
+        // 프리팹 루트에는 부모가 없다 — 자식 인스턴스로 프리팹을 만들어도 옛 부모를 싣지 않는다. 예전에는 실어서, 그 프리팹을 스폰할 때마다
+        // 그 이름의 오브젝트에 붙었다(언리얼 · 유니티의 프리팹 루트도 부모를 들지 않는다).
+        ObjectSaveOptions options{};
+        options._bOmitExternalParent = true;
+        _name                        = pGameObject->getName().c_str();
+        _stateData                   = ObjectStateSerializer::saveToXmlString( pGameObject, options );
+        _stateFormat                 = PrefabStateFormat::Xml;
+        _bValid                      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
     }
 
-    bool PrefabAsset::applyStateTo( GameObject* pTarget ) const
+    bool PrefabAsset::applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity ) const
     {
         if ( pTarget == nullptr || _stateData.empty() )
             return false;
-        return ( _stateFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::loadFromJsonString( pTarget, _stateData )
-                                                           : ObjectStateSerializer::loadFromXmlString( pTarget, _stateData );
+        // 옛 프리팹에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
+        ObjectLoadContext context{};
+        context._pIdentity              = pIdentity;
+        context._bExternalParentAllowed = false;
+        return ( _stateFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::loadFromJsonString( pTarget, _stateData, context )
+                                                           : ObjectStateSerializer::loadFromXmlString( pTarget, _stateData, context );
     }
 
     string PrefabAsset::convertState( PrefabStateFormat targetFormat ) const
@@ -549,22 +557,27 @@ namespace sw
             return false;
 
         // 인스턴스의 자리를 적어 둔다. 상태를 읽으면 컴포넌트가 모두 새로 만들어지고 이름 · 부착 · 트랜스폼이 프리팹의 것이 된다.
-        const hashed_string   name     = pInstance->getName();
-        GameObject*           pParent  = pInstance->getParent();
-        const SceneComponent* pOldRoot = pInstance->getPrimarySceneComponent();
-        const bool            bHadRoot = pOldRoot != nullptr;
-        const float3          position = bHadRoot ? pOldRoot->getLocalPosition() : float3{};
-        const float3          rotation = bHadRoot ? pOldRoot->getLocalRotation() : float3{};
+        // 부모는 오브젝트가 아니라 **붙어 있던 컴포넌트**(소켓일 수 있다)를 핸들로 적는다 — 예전에는 부모 오브젝트의 primary 에 다시 붙여,
+        // 소켓에 달린 무기가 튀었다. 컴포넌트 id 도 되살린다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
+        const hashed_string   name         = pInstance->getName();
+        const SceneComponent* pOldRoot     = pInstance->getPrimarySceneComponent();
+        const bool            bHadRoot     = pOldRoot != nullptr;
+        const ComponentHandle parentHandle = ( bHadRoot && pOldRoot->getParent() != nullptr ) ? pOldRoot->getParent()->getHandle() : ComponentHandle{};
+        const float3          position     = bHadRoot ? pOldRoot->getLocalPosition() : float3{};
+        const float3          rotation     = bHadRoot ? pOldRoot->getLocalRotation() : float3{};
+        const ObjectIdentity  identity     = ObjectStateSerializer::captureIdentity( pInstance );
 
-        if ( pAsset->applyStateTo( pInstance ) == false )
+        if ( pAsset->applyStateTo( pInstance, &identity ) == false )
             return false;
 
         pInstance->setName( name );
         SceneComponent* pNewRoot = pInstance->getPrimarySceneComponent();
         if ( pNewRoot != nullptr )
         {
-            if ( pParent != nullptr && pInstance->getParent() != pParent )
-                pInstance->attachToParent( pParent );
+            GameObjectManager* pManager = pInstance->getManager();
+            Component*         pParent  = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
+            if ( pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent )
+                pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) );
             if ( bHadRoot )
             {
                 pNewRoot->setLocalPosition( position );

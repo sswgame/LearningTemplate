@@ -23,6 +23,7 @@
 namespace sw
 {
     struct ObjectIdentity;
+    struct ObjectSaveOptions;
 
     class GameObjectManager;
     class ObjectStateSerializer;
@@ -284,10 +285,11 @@ namespace sw
         /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 가 짓고, 디스패치는 등록부의 칸(`TickObjectEntry`)으로 읽습니다. */
         const TickItemList& getTickItems() const { return _listTickItem; }
 
-        /** @brief 직렬화 직전에 SceneComponent 의 Attach* 필드를 `_pParent` 에서 채웁니다. */
-        void prepareSerialize() const;
-        /** @brief 로드된 Attach 필드로 SceneComponent 계층을 복원합니다. */
-        void applyLoadedHierarchy();
+        /**
+         * @brief 직렬화 직전에 SceneComponent 의 부착 필드를 `_pParent` 에서 채웁니다.
+         * @details 읽은 부착 필드로 계층을 잇는 쪽은 `ObjectStateBatch::finish` 하나입니다 — 예전에는 오브젝트마다 읽는 자리에서 이름으로 이었습니다.
+         */
+        void prepareSerialize( const ObjectSaveOptions& options ) const;
 
         /** @brief 게임 오브젝트를 해제합니다. */
         virtual ~GameObject();

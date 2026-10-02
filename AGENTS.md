@@ -164,9 +164,14 @@ able to guess the rest; that is the whole point.
   selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and
   resolves it on each use through the owning manager (`resolveGameObject` / `resolveComponent`, `nullptr`
   once the target is gone). Handles are ids that are never reused, so they survive renames; editor undo,
-  play-session restore and hot reload recreate objects with their original ids. Ids are counted per
-  `GameObjectManager`, so a handle means nothing in another scene. Structural links the object model
-  maintains itself (owner, scene hierarchy, registries) stay raw pointers.
+  play-session restore and hot reload recreate objects with their original ids. Ids are unique across the
+  process, but a handle resolves only through the manager (scene) that owns the object. Structural links the
+  object model maintains itself (owner, scene hierarchy, registries) stay raw pointers.
+- **Saved state never points at another object by name.** A parent reference is the parent's id (a scene file's
+  own entity id, or the runtime id in same-process snapshots), resolved by `ObjectStateBatch` after every
+  object of the batch is loaded. Any new path that loads object state goes through a batch
+  (`ObjectLoadContext::_pBatch` + `finish()`); names are uniquified by the manager, so a lookup by name lands on
+  a namesake.
 - Do not spell out buffer/path-size magic numbers (e.g. `char buf[64]`,
   `fixed_string<256>`, `StringBuilder<32>`). Use the sentinels in the
   `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`

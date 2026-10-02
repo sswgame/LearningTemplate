@@ -45,6 +45,25 @@ namespace
         int32  _score{ 1000 };
         string _stageName{ "Stage_01" };
     };
+
+    /**
+     * @brief 게임 서비스에 씬 매니저만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
+     * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다. 시험 셋이 같은 가드를 각자 들고 있었습니다.
+     *          (`TestFramework/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
+     */
+    struct ScopedSceneGameService
+    {
+        explicit ScopedSceneGameService( SceneManager& manager )
+        {
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            game::bindGameService( service );
+        }
+        ~ScopedSceneGameService() { game::unbindGameService(); }
+
+        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
+        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+    };
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -736,21 +755,6 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
     SceneManager sceneManager;
     Scene*       pScene = sceneManager.createEmptyActiveScene( "ReloadProbe" );
     SW_ASSERT_NOT_NULL( pScene );
-    // 게임 서비스에 씬 매니저만 건다 — `GameInstanceBase` 가 활성 씬을 여기서 찾는다. 어서션이 중간에 빠져나가도 풀리게 RAII 로.
-    // (`TestFramework/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
-    struct ScopedSceneGameService
-    {
-        explicit ScopedSceneGameService( SceneManager& manager )
-        {
-            ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
-            game::bindGameService( service );
-        }
-        ~ScopedSceneGameService() { game::unbindGameService(); }
-
-        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
-        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
-    };
     const ScopedSceneGameService scopedService{ sceneManager };
 
     GameObjectManager* pManager = pScene->getObjectManager();
@@ -791,6 +795,54 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
 }
 
 /**
+ * @brief [GameFrameworkTest] 스냅샷 복원은 부모보다 먼저 읽힌 자식을 원래 **소켓**에 다시 붙인다 — 핫 리로드 · 다른 실행의 세이브 둘 다
+ * @details 복원은 오브젝트를 모두 읽은 뒤 바깥 칸의 부모 이름으로 부모를 찾아 `attachToParent`(부모의 primary)로 붙였다. 손(소켓)에 든 무기가 몸통으로
+ *          옮겨 갔고 오프셋이 몸통 기준이 됐다. 이제 상태의 부착 필드(부모의 id · 컴포넌트 키)를 묶음이 잇는다 — 씬 로드와 같은 규칙이다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsParent )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "SocketReloadProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    GameObjectManager* pManager = pScene->getObjectManager();
+    GameObject*        pWeapon  = pManager->createGameObject( hashed_string( "Weapon" ) ); // 먼저 만든다 — 스냅샷에서 부모보다 앞이다
+    GameObject*        pHero    = pManager->createGameObject( hashed_string( "Hero" ) );
+    SceneComponent*    pBlade   = pWeapon->addComponent<SceneComponent>();
+    SceneComponent*    pBody    = pHero->addComponent<SceneComponent>();
+    SceneComponent*    pHand    = pHero->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pHand->attachToComponent( pBody ) );
+    SW_ASSERT_TRUE( pBlade->attachToComponent( pHand ) );
+    pManager->mergePendingAdds();
+
+    GameInstanceBase instance;
+    vector<uint8>    snapshot;
+    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+
+    const auto expectWeaponInHand = [pManager]( const utf8* pStep )
+    {
+        GameObject* pRestoredWeapon = pManager->findGameObjectByName( hashed_string( "Weapon" ) );
+        GameObject* pRestoredHero   = pManager->findGameObjectByName( hashed_string( "Hero" ) );
+        SW_ASSERT_TRUE_MSG( pRestoredWeapon != nullptr && pRestoredHero != nullptr, pStep );
+        const SceneComponent* pRestoredBlade = pRestoredWeapon->getPrimarySceneComponent();
+        SW_ASSERT_TRUE_MSG( pRestoredBlade != nullptr && pRestoredBlade->getParent() != nullptr, pStep );
+        SW_EXPECT_TRUE_MSG( pRestoredBlade->getParent()->getOwner() == pRestoredHero, pStep );
+        SW_EXPECT_TRUE_MSG( pRestoredBlade->getParent() != pRestoredHero->getPrimarySceneComponent(), pStep ); // 몸통이 아니라 손
+    };
+
+    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    pManager->mergePendingAdds();
+    expectWeaponInHand( "같은 실행(핫 리로드)" );
+
+    vector<uint8> foreign = snapshot;
+    foreign[8] ^= 0xFF; // 프로세스 토큰 — 다른 실행의 세이브처럼 id 를 되살리지 않는다
+    SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+    pManager->mergePendingAdds();
+    expectWeaponInHand( "다른 실행(세이브)" );
+}
+
+/**
  * @brief [GameFrameworkTest] `DontDestroyOnLoadComponent` 를 단 오브젝트는 플레이 중 씬을 바꿔도 남는다
  * @details 예전에는 시작할 때 태그(`DontDestroyOnLoad`)만 붙였고 그 태그를 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다.
  *          이제 시작이 씬 매니저에 루트를 영속으로 표시한다(유니티 `Object.DontDestroyOnLoad`) — 옮겨 심는 쪽은 `SceneTest.PersistentRootsCarryIntoTheNextScene`.
@@ -801,19 +853,6 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
     sceneManager.setWorldPlaying( true );
     Scene* pTown = sceneManager.createEmptyActiveScene( "Town" );
     SW_ASSERT_NOT_NULL( pTown );
-    struct ScopedSceneGameService
-    {
-        explicit ScopedSceneGameService( SceneManager& manager )
-        {
-            ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
-            game::bindGameService( service );
-        }
-        ~ScopedSceneGameService() { game::unbindGameService(); }
-
-        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
-        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
-    };
     const ScopedSceneGameService scopedService{ sceneManager };
 
     GameObject* pInventory = pTown->getObjectManager()->createGameObject( hashed_string( "Inventory" ) );
@@ -2343,19 +2382,6 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
     SceneManager sceneManager;
     Scene*       pScene = sceneManager.createEmptyActiveScene( "HalfRestoreProbe" );
     SW_ASSERT_NOT_NULL( pScene );
-    struct ScopedSceneGameService
-    {
-        explicit ScopedSceneGameService( SceneManager& manager )
-        {
-            ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
-            game::bindGameService( service );
-        }
-        ~ScopedSceneGameService() { game::unbindGameService(); }
-
-        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
-        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
-    };
     const ScopedSceneGameService scopedService{ sceneManager };
 
     GameObjectManager* pManager = pScene->getObjectManager();

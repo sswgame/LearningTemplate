@@ -97,8 +97,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
 
     sw::GameObject* pRestored = manager.createGameObjectWithId( sw::hashed_string( "Source" ), identity._objectId );
     SW_ASSERT_NOT_NULL( pRestored );
-    sw::string parentName;
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), parentName, &identity ) > 0 );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), { &identity } ) > 0 );
 
     sw::Component* pRestoredScene = manager.resolveComponent( sceneHandle );
     sw::Component* pRestoredMesh  = manager.resolveComponent( meshHandle );
@@ -112,7 +111,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
     {
         sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "Copy" ) );
         SW_ASSERT_NOT_NULL( pCopy );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size(), parentName ) > 0 );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size() ) > 0 );
 
         uint32 sameIdCount = 0;
         for ( const sw::Component* pComp : pCopy->getComponents() )

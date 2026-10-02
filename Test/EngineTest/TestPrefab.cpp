@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "TestFramework/TestFramework.h"
@@ -282,6 +283,83 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     SW_EXPECT_TRUE( pRoot->getLocalPosition() == sw::float3( 9.0f, 8.0f, 7.0f ) );
     SW_EXPECT_TRUE( pRoot->getLocalRotation() == sw::float3( 0.0f, 1.0f, 0.0f ) );
     SW_EXPECT_TRUE( pRoot->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
+}
+
+/**
+ * @brief [PrefabTest] 되돌리기는 소켓에 단 인스턴스를 **그 소켓**에 둔다 — 컴포넌트 id 도 그대로라 핸들이 이어진다
+ * @details 되돌리기가 부모를 오브젝트로 적고 `attachToParent`(부모의 primary)로 다시 붙여, 트럭 짐칸(소켓)에 실린 상자가 트럭 몸통으로 옮겨 가며
+ *          자리가 튀었다. 컴포넌트는 새 id 를 받아, 인스턴스의 컴포넌트를 가리키던 핸들(씬의 활성 카메라 · 게임 코드)이 끊겼다. 되돌리기 · 플레이
+ *          종료 · 핫 리로드와 같이 원래 id 를 되살린다.
+ */
+SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIds )
+{
+    const sw::string xmlPath = test::makeTempPath( "crate_socket.prefab.xml" );
+    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
+
+    sw::GameObjectManager objects;
+    sw::PrefabManager     prefabs;
+    sw::GameObject*       pTruck = objects.createGameObject( sw::hashed_string( "Truck" ) );
+    sw::SceneComponent*   pBody  = pTruck->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pBed   = pTruck->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pBed->attachToComponent( pBody ) );
+    sw::GameObject* pInstance = prefabs.spawn( &objects, xmlPath, "Cargo" );
+    SW_ASSERT_NOT_NULL( pInstance );
+    sw::SceneComponent* pRoot = pInstance->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_ASSERT_TRUE( pRoot->attachToComponent( pBed ) );
+    const sw::ComponentHandle rootHandle = pRoot->getHandle();
+
+    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, xmlPath ) );
+    pRoot = pInstance->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_EXPECT_TRUE( pRoot->getParent() == pBed ); // 몸통이 아니라 짐칸
+    SW_EXPECT_TRUE( objects.resolveComponent( rootHandle ) == pRoot );
+}
+
+/**
+ * @brief [PrefabTest] 자식 인스턴스로 만든 프리팹에는 옛 부모가 실리지 않는다 — 스폰한 인스턴스는 같은 이름의 오브젝트에 붙지 않는다
+ * @details 오브젝트 상태는 부모를 부착 필드로 들어, 플레이어 밑의 총으로 프리팹을 만들면 프리팹에 "Player" 가 실렸다. 그 프리팹을 스폰할 때마다
+ *          그 씬에서 이름이 "Player" 인 오브젝트에 옛 오프셋으로 붙었다. 프리팹 루트에는 부모가 없다 — 쓸 때 싣지 않고, 옛 프리팹에 남은 것도 읽지 않는다.
+ */
+SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
+{
+    sw::GameObjectManager authoring;
+    sw::GameObject*       pPlayer = authoring.createGameObject( sw::hashed_string( "Player" ) );
+    sw::GameObject*       pGun    = authoring.createGameObject( sw::hashed_string( "Gun" ) );
+    SW_ASSERT_NOT_NULL( pPlayer->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pGun->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pGun->attachToParent( pPlayer ) );
+
+    sw::PrefabAsset asset;
+    asset.setFromGameObject( pGun );
+    SW_ASSERT_TRUE( asset.isValid() );
+    SW_EXPECT_TRUE( asset.getStateData().find( "Player" ) == sw::string::npos );
+    const sw::string xmlPath = test::makeTempPath( "gun_from_child.prefab.xml" );
+    SW_ASSERT_TRUE( asset.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
+
+    // 옛 프리팹 — 부모를 실은 채 저장된 것(이 수정 전의 `setFromGameObject`).
+    const sw::string legacyPath = test::makeTempPath( "gun_legacy.prefab.xml" );
+    const sw::string legacyText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXmlString( pGun ) + "</Prefab>";
+    SW_ASSERT_TRUE( legacyText.find( "Player" ) != sw::string::npos );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( legacyPath, legacyText ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( legacyPath, false ) );
+
+    sw::GameObjectManager world;
+    sw::GameObject*       pWorldPlayer = world.createGameObject( sw::hashed_string( "Player" ) );
+    SW_ASSERT_NOT_NULL( pWorldPlayer->addComponent<sw::SceneComponent>() );
+    sw::PrefabManager prefabs;
+    for ( const sw::string& path : { xmlPath, legacyPath } )
+    {
+        sw::GameObject* pInstance = prefabs.spawn( &world, path, "Pickup" );
+        SW_ASSERT_NOT_NULL( pInstance );
+        SW_EXPECT_TRUE_MSG( pInstance->getParent() == nullptr, path.c_str() );
+        // 원래 부모가 살아 있는 매니저(프리팹을 만든 씬에 바로 놓는 경우)에서도 붙지 않는다 — 옛 프리팹에는 그 부모의 id 까지 실려 있다.
+        sw::GameObject* pBesideOriginal = prefabs.spawn( &authoring, path, "PickupBesideOriginal" );
+        SW_ASSERT_NOT_NULL( pBesideOriginal );
+        SW_EXPECT_TRUE_MSG( pBesideOriginal->getParent() == nullptr, path.c_str() );
+    }
 }
 
 /**

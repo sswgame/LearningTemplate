@@ -231,15 +231,14 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
         const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pParent );
         bool                     bLoaded  = false;
         if ( format == 0 )
-            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pParent, sw::ObjectStateSerializer::saveToXmlString( pParent ), &identity );
+            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pParent, sw::ObjectStateSerializer::saveToXmlString( pParent ), { &identity } );
         else if ( format == 1 )
-            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pParent, sw::ObjectStateSerializer::saveToJsonString( pParent ), &identity );
+            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pParent, sw::ObjectStateSerializer::saveToJsonString( pParent ), { &identity } );
         else
         {
             sw::vector<uint8> buffer;
             SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pParent, buffer ) );
-            sw::string parentName;
-            bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pParent, buffer.data(), buffer.size(), parentName, &identity ) != 0;
+            bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pParent, buffer.data(), buffer.size(), { &identity } ) != 0;
         }
         SW_ASSERT_TRUE( bLoaded );
         manager.flushSceneTransforms();
@@ -250,6 +249,74 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
         SW_EXPECT_NEAR_EQUAL( worldBefore._y, worldAfter._y, 1e-3f );
         SW_EXPECT_NEAR_EQUAL( worldBefore._z, worldAfter._z, 1e-3f );
     }
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 오브젝트 안의 부착(소켓)은 복사본 안에서 잇는다 — 이름이 바뀐 복사본이 원본에 붙지 않는다
+ * @details 오브젝트 안의 부착도 소유자 이름을 적어, 원본이 살아 있는 매니저에 같은 상태를 읽으면(복제 · 같은 프리팹 두 번 · 영속 이월) 복사본의 이름이
+ *          유일하게 바뀌어(`Rig` → `Rig_2`) 이름으로 **원본**을 찾았다 — 복사본의 팔이 원본의 루트에 붙었다. 이제 소유자 칸을 비운다(= 자기).
+ *          옛 데이터(자기 이름을 적은 것)는 읽기 전 이름과 견준다. 세 형식이 같은 길이다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCopy )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pRig  = manager.createGameObject( sw::hashed_string( "Rig" ) );
+    sw::SceneComponent*   pRoot = pRig->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pArm  = pRig->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pArm->attachToComponent( pRoot ) );
+
+    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pRig );
+    SW_EXPECT_TRUE( xml.find( "_attachOwner=\"Rig\"" ) == sw::string::npos ); // 자기 이름을 적지 않는다
+
+    const auto expectArmOnOwnRoot = []( sw::GameObject* pCopy, const utf8* pStep )
+    {
+        SW_ASSERT_TRUE_MSG( pCopy->getName() != sw::hashed_string( "Rig" ), pStep ); // 이름이 유일하게 바뀐 복사본이다
+        sw::vector<sw::SceneComponent*> listScene;
+        for ( sw::Component* pComp : pCopy->getComponents() )
+        {
+            if ( pComp != nullptr && pComp->isSceneComponent() )
+                listScene.push_back( static_cast<sw::SceneComponent*>( pComp ) );
+        }
+        SW_ASSERT_TRUE_MSG( listScene.size() == 2, pStep );
+        SW_EXPECT_TRUE_MSG( listScene[1]->getParent() == listScene[0], pStep );
+    };
+
+    BLOCK( "XML · JSON · 바이너리 — 원본이 살아 있는 매니저에 읽는다" )
+    {
+        sw::GameObject* pXmlCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pXmlCopy, xml ) );
+        expectArmOnOwnRoot( pXmlCopy, "XML" );
+
+        sw::GameObject* pJsonCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pJsonCopy, sw::ObjectStateSerializer::saveToJsonString( pRig ) ) );
+        expectArmOnOwnRoot( pJsonCopy, "JSON" );
+
+        sw::vector<uint8> bytes;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pRig, bytes ) );
+        sw::GameObject* pBinaryCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pBinaryCopy, bytes.data(), bytes.size() ) > 0 );
+        expectArmOnOwnRoot( pBinaryCopy, "바이너리" );
+    }
+
+    BLOCK( "옛 데이터 — 자기 안의 부착에 자기 이름을 적었고 id 칸이 없다" )
+    {
+        // 빈 이름은 "None" 으로 적힌다(읽으면 빈 값). 옛 저장은 같은 오브젝트의 부모에도 소유자 이름을 적었다.
+        const sw::string kIdField    = "_attachOwnerId=\"0\"";
+        const sw::string kEmptyOwner = "_attachOwner=\"None\"";
+        sw::string       legacy      = xml;
+        SW_ASSERT_TRUE( legacy.find( kIdField ) != sw::string::npos );
+        for ( size_t found = legacy.find( kIdField ); found != sw::string::npos; found = legacy.find( kIdField ) )
+            legacy.erase( found, kIdField.size() );
+        for ( size_t found = legacy.find( kEmptyOwner ); found != sw::string::npos; found = legacy.find( kEmptyOwner ) )
+            legacy.replace( found, kEmptyOwner.size(), "_attachOwner=\"Rig\"" );
+        SW_ASSERT_TRUE( legacy.find( "_attachOwner=\"Rig\"" ) != sw::string::npos );
+        sw::GameObject* pLegacyCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pLegacyCopy, legacy ) );
+        expectArmOnOwnRoot( pLegacyCopy, "옛 데이터" );
+    }
+
+    SW_EXPECT_TRUE( pArm->getParent() == pRoot ); // 원본은 그대로
+    SW_EXPECT_EQUAL( size_t( 1 ), pRoot->getChildren().size() );
 }
 
 /**
@@ -303,7 +370,6 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, json ) );
     SW_EXPECT_STREQ( "SerializedHero", jsonTargetPtr->getName().c_str() );
     SW_EXPECT_FALSE( jsonTargetPtr->isActive() );
-    SW_EXPECT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( jsonTargetPtr ) );
 
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( nullptr, json ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, "" ) );
@@ -350,8 +416,11 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 
     SW_EXPECT_TRUE( childXml.find( "ParentGO" ) != sw::string::npos );
     SW_EXPECT_TRUE( grandXml.find( "ChildGO" ) != sw::string::npos );
+    const uint64 parentSavedId = parent->getObjectId();
+    const uint64 childSavedId  = child->getObjectId();
+    const uint64 grandSavedId  = grand->getObjectId();
 
-    // 계층을 해체하고 빈 GO 를 다시 만든 뒤 로드·리바인드한다(Play 스냅샷 순서).
+    // 계층을 해체하고 빈 GO 를 다시 만든 뒤 한 묶음으로 읽는다(Play 스냅샷 순서). 새 오브젝트는 새 id 라, 묶음이 상태를 찍을 때의 id 로 서로를 찾는다.
     manager->clear();
     parent = manager->createGameObject( hashed_string( "TempParent" ) );
     child  = manager->createGameObject( hashed_string( "TempChild" ) );
@@ -360,14 +429,13 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_ASSERT_NOT_NULL( child );
     SW_ASSERT_NOT_NULL( grand );
 
-    // 자식을 부모보다 먼저 로드해 두 번째 패스 리바인드를 강제한다(비순서 스냅샷 복원).
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml ) );
-
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( parent ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( child ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( grand ) );
+    // 자식을 부모보다 먼저 로드한다 — 읽는 자리에서는 부모가 아직 없고, 묶음의 끝(`finish`)이 잇는다(비순서 스냅샷 복원).
+    ObjectStateBatch batch( ObjectIdSpace::Saved );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml, { nullptr, &batch, childSavedId } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml, { nullptr, &batch, grandSavedId } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    SW_EXPECT_NULL( child->getParent() );
+    batch.finish();
 
     parent = manager->findGameObjectByName( hashed_string( "ParentGO" ) );
     child  = manager->findGameObjectByName( hashed_string( "ChildGO" ) );

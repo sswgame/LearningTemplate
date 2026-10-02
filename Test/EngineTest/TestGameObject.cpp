@@ -939,7 +939,7 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
     // 상태를 되돌려도 같은 id 를 되찾는다(식별 목록이 타입 이름으로 적힌다).
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pObj );
     const sw::string         state    = sw::ObjectStateSerializer::saveToJsonString( pObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, &identity ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, { &identity } ) );
     sw::SceneComponent* pRestored = pObj->getComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_EQUAL( componentId, pRestored->getComponentId() );
@@ -1933,8 +1933,7 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryBufferRoundtrip )
     SW_ASSERT_NOT_NULL( pTarget );
     pTarget->setActive( true );
 
-    sw::string   parentName;
-    const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size(), parentName );
+    const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size() );
     SW_EXPECT_EQUAL( buffer.size(), bytesRead );
     SW_EXPECT_STREQ( "BinaryHero", pTarget->getName().c_str() );
     SW_EXPECT_FALSE( pTarget->isActive() );
@@ -2008,8 +2007,7 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryCarriesTagsAndAttachHierarchy )
     sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string( "Blank" ) );
     SW_ASSERT_NOT_NULL( pTarget );
 
-    sw::string   parentName;
-    const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size(), parentName );
+    const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size() );
     SW_EXPECT_EQUAL( buffer.size(), bytesRead );
 
     // 1. 태그 — `TagComponent` 가 상태에 실려 왔어야 한다.

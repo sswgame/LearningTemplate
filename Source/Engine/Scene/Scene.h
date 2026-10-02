@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Scene/SceneDocument.h"
 
 namespace sw
@@ -33,10 +34,19 @@ namespace sw
         /** @brief 붙들고 있던 GPU · 머티리얼 자원을 놓습니다. 파괴하기 전이나 비동기 로드 결과를 버릴 때 부릅니다. */
         virtual void shutdown();
 
-        /** @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다. */
+        /**
+         * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
+         * @details 모든 엔티티를 하나의 묶음(`ObjectStateBatch`, 파일 id 공간)으로 읽고 끝에서 한 번에 잇습니다 — 자식이 부모보다 앞에 적혀도 된다.
+         *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIdMap`) 저장할 때 같은 값을 다시 씁니다.
+         */
         bool instantiate( const SceneDocument& doc );
-        /** @brief 현재 씬의 루트 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. */
+        /** @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다. */
         bool serializeToDocument( SceneDocument& outDoc ) const;
+        /**
+         * @brief 살아 있는 오브젝트마다의 파일 id 표(런타임 id → 파일 id)를 채웁니다. id 가 없는 오브젝트(새로 만든 것)에는 여기서 줍니다.
+         * @details 파일 id 는 한 번 정하면 그 오브젝트가 사라져도 다시 쓰지 않습니다 — 남은 참조가 새 오브젝트를 가리키지 않게. 쿠커 · 저장이 씁니다.
+         */
+        void collectSavedIdMap( ObjectSavedIdMap& outMap ) const;
 
         /**
          * @brief 활성 씬의 GameObject 를 병렬로 틱합니다.
@@ -108,12 +118,17 @@ namespace sw
         /** @brief 카메라 핸들을 기록합니다. */
         void storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle );
 
-        string                            _name;
-        string                            _sourcePath;
-        string                            _defaultMaterialPath;
-        unique_ptr<GameObjectManager>     _objectManager;
-        Material*                         _pMaterial;
-        unordered_map<uint64, string>     _mapPrefabSource;
+        string                        _name;
+        string                        _sourcePath;
+        string                        _defaultMaterialPath;
+        unique_ptr<GameObjectManager> _objectManager;
+        Material*                     _pMaterial;
+        unordered_map<uint64, string> _mapPrefabSource;
+        /**
+         * @brief 런타임 오브젝트 id → 파일 id 입니다. 읽을 때 엔티티의 id 로 채우고 저장 때 없는 것을 새로 줍니다(`collectSavedIdMap`).
+         * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
+         */
+        mutable ObjectSavedIdMap          _mapObjectIdToFileId;
         vector<SceneDocument::EntityNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
         sw::ComponentHandle               _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
         sw::ComponentHandle               _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라

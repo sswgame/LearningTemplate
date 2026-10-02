@@ -510,12 +510,6 @@ namespace sw
             vector<uint8>  _bytes{};
             GameObject*    _pTarget{ nullptr };
         };
-        struct CrossAttachment
-        {
-            uint64 _childComponentId{ 0 };
-            uint64 _parentObjectId{ 0 };
-            uint64 _parentComponentId{ 0 };
-        };
 
         vector<uint64> listKept;
         for ( const uint64 rootId : _listPersistentObjectId )
@@ -524,24 +518,15 @@ namespace sw
             if ( pRoot == nullptr )
                 continue; // 그새 파괴됐다
 
-            // 루트와 자손(부모 먼저). 부착은 다른 오브젝트 쪽만 적어 둔다 — 오브젝트 안의 부착은 상태 로드가 되붙인다.
-            vector<CarriedObject>   listCarried;
-            vector<CrossAttachment> listCross;
-            vector<GameObject*>     listChild;
+            // 루트와 자손(부모 먼저).
+            vector<CarriedObject> listCarried;
+            vector<GameObject*>   listChild;
             listCarried.push_back( CarriedObject{ pRoot } );
             for ( size_t cursor = 0; cursor < listCarried.size(); ++cursor )
             {
-                GameObject* pObject = listCarried[cursor]._pSource;
-                pObject->getChildren( listChild );
+                listCarried[cursor]._pSource->getChildren( listChild );
                 for ( GameObject* pChild : listChild )
                     listCarried.push_back( CarriedObject{ pChild } );
-                for ( const Component* pComp : pObject->getComponents() )
-                {
-                    const SceneComponent* pScene  = ( pComp != nullptr && pComp->isSceneComponent() ) ? static_cast<const SceneComponent*>( pComp ) : nullptr;
-                    const SceneComponent* pParent = ( pScene != nullptr ) ? pScene->getParent() : nullptr;
-                    if ( pParent != nullptr && pParent->getOwner() != pObject )
-                        listCross.push_back( CrossAttachment{ pScene->getComponentId(), pParent->getOwner()->getObjectId(), pParent->getComponentId() } );
-                }
             }
 
             // 상태를 모두 찍은 뒤에 만든다 — 만드는 동안 원본은 그대로다.
@@ -550,34 +535,20 @@ namespace sw
                 carried._identity = ObjectStateSerializer::captureIdentity( carried._pSource );
                 ObjectStateSerializer::saveToBinaryBuffer( carried._pSource, carried._bytes );
             }
+            // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 **원래 id** 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
+            // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙었다.
+            ObjectStateBatch batch( ObjectIdSpace::Live );
             for ( CarriedObject& carried : listCarried )
             {
                 carried._pTarget = pTarget->createGameObjectWithId( carried._pSource->getName(), carried._identity._objectId );
-                string parentName;
+                ObjectLoadContext context{};
+                context._pIdentity = &carried._identity;
+                context._pBatch    = &batch;
                 if ( carried._pTarget == nullptr ||
-                     ObjectStateSerializer::loadFromBinaryBuffer( carried._pTarget, carried._bytes.data(), carried._bytes.size(), parentName,
-                                                                  &carried._identity ) == 0 )
+                     ObjectStateSerializer::loadFromBinaryBuffer( carried._pTarget, carried._bytes.data(), carried._bytes.size(), context ) == 0 )
                     SW_LOG_WARNING( "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
             }
-            // 다른 오브젝트로의 부착은 **컴포넌트 id** 로 되붙인다(이름으로 찾지 않는다 — 새 씬에 같은 이름이 있으면 이름이 바뀐다). 소켓도 그대로다.
-            for ( const CrossAttachment& attachment : listCross )
-            {
-                GameObject*     pParentObject = pTarget->findGameObjectById( attachment._parentObjectId );
-                Component*      pParentComp   = ( pParentObject != nullptr ) ? pParentObject->findComponentById( attachment._parentComponentId ) : nullptr;
-                SceneComponent* pParent       = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;
-                SceneComponent* pChild        = nullptr;
-                for ( const CarriedObject& carried : listCarried )
-                {
-                    Component* pFound = ( carried._pTarget != nullptr ) ? carried._pTarget->findComponentById( attachment._childComponentId ) : nullptr;
-                    if ( pFound != nullptr )
-                    {
-                        pChild = pFound->isSceneComponent() ? static_cast<SceneComponent*>( pFound ) : nullptr;
-                        break;
-                    }
-                }
-                if ( pChild != nullptr && pParent != nullptr )
-                    pChild->attachToComponent( pParent );
-            }
+            batch.finish();
             if ( listCarried.front()._pTarget != nullptr )
                 listKept.push_back( rootId );
         }

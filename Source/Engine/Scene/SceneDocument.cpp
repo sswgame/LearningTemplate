@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
@@ -24,13 +25,15 @@ namespace sw
             static constexpr const utf8* kName          = "name";
             static constexpr const utf8* kEntities      = "entities";
             static constexpr const utf8* kEntity        = "entity";
+            static constexpr const utf8* kFileId        = "id";
             static constexpr const utf8* kPrefab        = "prefab";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kSceneBinMagic = 0x53434E31u; // 'SCN1'
             // v1 부터 엔티티마다 **바이너리 상태**가 한 필드 더 붙는다(비어 있을 수 있다). v0 은
             // XML 문자열만 실려 있었고, 그 파일도 계속 읽는다 — 아래 읽기가 버전으로 갈린다.
-            static constexpr uint32 kSceneBinVersion = 1;
+            // v2 부터 엔티티의 파일 id(부착이 부모를 가리키는 값)가 끝에 붙는다.
+            static constexpr uint32 kSceneBinVersion = 2;
 
             /** @brief 속성으로 먼저 찾고, 없으면 같은 이름의 자식 텍스트를 봅니다(저작본의 두 모양을 다 읽습니다). 없으면 nullptr 입니다. */
             static const utf8* findAttributeOrChildText( const XmlNode& node, const utf8* pKey )
@@ -161,6 +164,11 @@ namespace sw
                 if ( pName != nullptr )
                     node._name = pName;
 
+                // 파일 id 를 못 읽으면 0(없음)으로 두고 알린다 — 그 엔티티를 가리키는 부착은 풀리지 않고 남는다.
+                const utf8* pFileId = entityNode.findAttribute( SceneDocumentInternal::kFileId );
+                if ( pFileId != nullptr && StringUtil::parseUint64( pFileId, node._fileId ) == false )
+                    SW_LOG_WARNING( "Entity '%#' has an unreadable id '%#' in %# - its children may stay unattached", node._name, pFileId, absPath );
+
                 const utf8* pPrefabGuid = SceneDocumentInternal::findAttributeOrChildText( entityNode, "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
@@ -202,6 +210,12 @@ namespace sw
         for ( const EntityNode& entity : _listEntityNode )
         {
             XmlNode entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
+            if ( entity._fileId != 0 )
+            {
+                utf8         arrFileIdText[constant::kMaxBuffer32]{};
+                const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
+                entityNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
+            }
             entityNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
                 entityNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
@@ -301,7 +315,7 @@ namespace sw
         // 필드 넷(v1 부터는 다섯)이므로, 남은 바이트를 그 최소치로 나눈 것보다 많은 엔티티는 있을 수
         // 없다. 손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다. 읽기는 어차피
         // 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
-        const uint64 kMinBytesPerEntity = ( version >= 1 ? 5u : 4u ) * sizeof( uint32 );
+        const uint64 kMinBytesPerEntity = ( version >= 1 ? 5u : 4u ) * sizeof( uint32 ) + ( version >= 2 ? sizeof( uint64 ) : 0u );
         const uint64 maxPossibleEntity  = arch.getRemainingBytes() / kMinBytesPerEntity;
         if ( static_cast<uint64>( entityCount ) > maxPossibleEntity )
         {
@@ -317,6 +331,8 @@ namespace sw
             arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml;
             if ( version >= 1 )
                 arch >> node._embeddedStateBytes;
+            if ( version >= 2 )
+                arch >> node._fileId;
             // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
             if ( arch.isError() )
                 break;
@@ -362,6 +378,7 @@ namespace sw
             arch << prefabGuid;
             arch << entity._embeddedXml;
             arch << entity._embeddedStateBytes;
+            arch << entity._fileId;
         }
 
         const string absPath = ResourceUtil::getWritePath( path );
@@ -401,5 +418,23 @@ namespace sw
 
         return loadXml( path );
 #endif
+    }
+
+    void SceneDocument::assignMissingFileIds()
+    {
+        uint64 nextFileId = getMaxFileId() + 1;
+        for ( EntityNode& entity : _listEntityNode )
+        {
+            if ( entity._fileId == 0 )
+                entity._fileId = nextFileId++;
+        }
+    }
+
+    uint64 SceneDocument::getMaxFileId() const
+    {
+        uint64 maxFileId = 0;
+        for ( const EntityNode& entity : _listEntityNode )
+            maxFileId = MathUtil::max( maxFileId, entity._fileId );
+        return maxFileId;
     }
 } // namespace sw

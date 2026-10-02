@@ -194,6 +194,54 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
 }
 
 /**
+ * @brief [EditorPlaySessionTest] 플레이 중에 이름을 서로 바꿔도 Stop 이 자식을 원래 부모에 붙이고 이름도 되돌린다
+ * @details 되살리기는 오브젝트마다 상태를 읽으며 부모를 이름으로 찾았다. 플레이 중 A("Left") 가 "Tmp" 로, B("Right") 가 "Left" 로 바뀌면, A 를 되돌리는
+ *          순간 "Left" 는 아직 B 의 것이라 A 는 영영 `Left_2` 가 됐고, A 의 자식은 이름 "Left" 로 **B** 를 찾아 붙었다. 이제 부모는 원래 id 로 찾고,
+ *          모두 읽은 뒤 비어 있는 저장된 이름을 되찾는다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
+{
+    SceneManager sceneManager;
+    Scene*       pEdited = sceneManager.createEmptyActiveScene( "RenamedLevel" );
+    SW_ASSERT_NOT_NULL( pEdited );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pObjects = pEdited->getObjectManager();
+    GameObject*        pLeft    = pObjects->createGameObject( hashed_string( "Left" ) );
+    GameObject*        pChild   = pObjects->createGameObject( hashed_string( "LeftHand" ) );
+    GameObject*        pRight   = pObjects->createGameObject( hashed_string( "Right" ) );
+    for ( GameObject* pObj : { pLeft, pChild, pRight } )
+        SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+    SW_ASSERT_TRUE( pChild->attachToParent( pLeft ) );
+    pObjects->mergePendingAdds();
+    const uint64 leftId  = pLeft->getObjectId();
+    const uint64 childId = pChild->getObjectId();
+    const uint64 rightId = pRight->getObjectId();
+
+    PlaySessionData data;
+    EditorPlaySession::captureSnapshot( data );
+
+    // 플레이 중: 이름을 서로 바꾸고, 자식을 떼어 오른쪽에 붙인다.
+    pLeft->setName( hashed_string( "Tmp" ) );
+    pRight->setName( hashed_string( "Left" ) );
+    SW_ASSERT_TRUE( pChild->attachToParent( pRight ) );
+
+    EditorPlaySession::restoreSnapshot( data );
+    pObjects->processDeferredDestruction();
+    pObjects->mergePendingAdds();
+
+    GameObject* pRestoredLeft  = pObjects->findGameObjectById( leftId );
+    GameObject* pRestoredChild = pObjects->findGameObjectById( childId );
+    GameObject* pRestoredRight = pObjects->findGameObjectById( rightId );
+    SW_ASSERT_NOT_NULL( pRestoredLeft );
+    SW_ASSERT_NOT_NULL( pRestoredChild );
+    SW_ASSERT_NOT_NULL( pRestoredRight );
+    SW_EXPECT_TRUE_MSG( pRestoredChild->getParent() == pRestoredLeft, "자식이 플레이 중 이름을 가져간 다른 오브젝트에 붙었습니다" );
+    SW_EXPECT_TRUE( pRestoredLeft->getName() == hashed_string( "Left" ) );
+    SW_EXPECT_TRUE( pRestoredRight->getName() == hashed_string( "Right" ) );
+}
+
+/**
  * @brief [EditorPlaySessionTest] 멈춤에서 일시정지를 거쳐 Play 해도 월드가 켜지고 스냅샷이 찍힌다 — Stop 이 편집 씬을 되돌린다
  * @details 예전에는 멈춤 → 플레이만 월드를 켜서, 멈춤 → 일시정지 → 플레이는 스냅샷도 onBeginPlay 도 없이 플레이가 돌았고 Stop 이 편집 씬을
  *          되돌리지 못했다(고쳤지만 EditorContext 를 세울 수 없어 시험이 없었다 — 상태 전환 본체가 상태를 인자로 받으면서 생겼다).

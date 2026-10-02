@@ -80,29 +80,70 @@ namespace sw::editor
         if ( pManager == nullptr || pSrc == nullptr )
             return nullptr;
 
-        vector<uint8> buffer;
-        if ( ObjectStateSerializer::saveToBinaryBuffer( pSrc, buffer ) == false )
-            return nullptr;
+        // **서브트리 전체를 복제한다**(유니티 Ctrl+D · 언리얼 Duplicate). 씬은 자식을 자기 엔티티로 저장하므로, 예전처럼 선택한 것만 복제하면
+        // 자식은 원본 밑에 남았다. 부모부터 모은다 — 되돌리기 묶음의 다시 하기가 부모를 먼저 되살린다.
+        vector<GameObject*> listSource;
+        EditorSceneCommandsInternal::collectSubtreeChildFirst( pSrc, listSource );
+        std::reverse( listSource.begin(), listSource.end() );
 
+        vector<vector<uint8>> listState( listSource.size() );
+        for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
+        {
+            if ( ObjectStateSerializer::saveToBinaryBuffer( listSource[sourceIndex], listState[sourceIndex] ) == false )
+                return nullptr;
+        }
+
+        // 복제본끼리의 부착(자식 → 복제된 부모 · 오브젝트 안)은 묶음이 **원본 id** 로 잇는다. 복제한 루트의 부모(묶음 밖)는 같은 실행의 id 로
+        // 원본과 같은 부모 · 같은 소켓에 붙는다. 예전에는 이름으로 찾아, 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의 메시가 **원본**의
+        // 루트에 붙었고, 루트는 원본 부모의 primary 에 다시 붙어 소켓을 잃었다.
+        ObjectStateBatch    batch( ObjectIdSpace::Live );
+        vector<GameObject*> listCopy;
+        listCopy.reserve( listSource.size() );
+        bool bAllLoaded = true;
+        for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
+        {
+            GameObject* pCopy = pManager->createGameObject( listSource[sourceIndex]->getName() );
+            if ( pCopy == nullptr )
+            {
+                bAllLoaded = false;
+                break;
+            }
+            listCopy.push_back( pCopy );
+            ObjectLoadContext context{};
+            context._pBatch            = &batch;
+            context._savedId           = listSource[sourceIndex]->getObjectId();
+            const vector<uint8>& state = listState[sourceIndex];
+            if ( ObjectStateSerializer::loadFromBinaryBuffer( pCopy, state.data(), state.size(), context ) == 0 )
+            {
+                bAllLoaded = false;
+                break;
+            }
+        }
+        batch.finish();
+        if ( bAllLoaded == false )
+        {
+            SW_LOG_WARNING( "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
+            for ( GameObject* pCopy : listCopy )
+                pManager->destroyObject( pCopy );
+            return nullptr;
+        }
+
+        GameObject*                           pNewObj = listCopy.front();
         fixed_string<constant::kMaxBuffer256> newName;
         formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
-
-        GameObject* pNewObj = pManager->createGameObject( hashed_string( newName.c_str() ) );
-        if ( pNewObj == nullptr )
-            return nullptr;
-
-        string parentName;
-        ObjectStateSerializer::loadFromBinaryBuffer( pNewObj, buffer.data(), buffer.size(), parentName );
-
         pNewObj->setName( hashed_string( newName.c_str() ) );
-        if ( pSrc->getParent() != nullptr )
-            pNewObj->attachToParent( pSrc->getParent() );
 
-        EditorContext* pContext   = EditorContext::get();
-        const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( pSrc->getObjectId() ) : string{};
-        if ( prefabPath.empty() == false && pContext != nullptr )
-            pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
-        EditorTransaction::recordCreation( pNewObj, "Duplicate GameObject" );
+        EditorContext* pContext = EditorContext::get();
+        EditorTransaction::beginTransaction( "Duplicate GameObject" );
+        for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
+        {
+            const string prefabPath =
+                ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectId() ) : string{};
+            if ( prefabPath.empty() == false && pContext != nullptr )
+                pContext->getWorkspace().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectId(), prefabPath );
+            EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
+        }
+        EditorTransaction::endTransaction();
         select( pNewObj, SelectionMode::Replace );
         return pNewObj;
     }
@@ -150,7 +191,7 @@ namespace sw::editor
 
         // 삭제는 자식까지 지운다(`destroyObject` 기본). 그러니 기록도 서브트리 전체다 — 예전에는 이 오브젝트 하나의 스냅샷만 남겨,
         // 되돌리면 부모만 돌아오고 자식은 영영 사라졌다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 묶음으로 넣는다: 묶음의
-        // 되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 이름으로 부모를 찾아 다시 붙는다.
+        // 되돌리기는 역순이라 부모가 먼저 (원래 id 로) 살아나고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
         vector<GameObject*> listSubtree;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
 

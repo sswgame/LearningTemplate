@@ -90,9 +90,9 @@ namespace sw
             }
 
             /**
-             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층과 읽은 부모 연결을 맞춥니다.
+             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층을 맞추고 컴포넌트에 알립니다.
              * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들고 있었습니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
-             *          이름으로 찾을 수 없게 됩니다.
+             *          이름으로 찾을 수 없게 됩니다. 부모 연결은 여기서 잇지 않습니다 — 묶음(`ObjectStateBatch::finish`)이 모두 읽은 뒤 잇습니다.
              */
             static void finishLoad( GameObject* pGameObject, hashed_string oldName )
             {
@@ -100,13 +100,20 @@ namespace sw
                     pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
 
                 pGameObject->setActive( pGameObject->isActive() );
-                pGameObject->applyLoadedHierarchy();
                 // 값을 다 읽었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`). 편집 중에도 불린다.
                 for ( Component* pComp : pGameObject->getComponents() )
                 {
                     if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                         pComp->onPostLoad();
                 }
+            }
+
+            /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 되살리는 원래 id 입니다. */
+            static uint64 resolveSavedId( const ObjectLoadContext& context )
+            {
+                if ( context._savedId != 0 )
+                    return context._savedId;
+                return ( context._pIdentity != nullptr ) ? context._pIdentity->_objectId : 0;
             }
 
             /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리). */
@@ -150,12 +157,12 @@ namespace sw
 namespace sw
 {
     template <typename TSerializer>
-    string ObjectStateSerializer::saveToText( const GameObject* pGameObject )
+    string ObjectStateSerializer::saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
         if ( pGameObject == nullptr )
             return {};
 
-        pGameObject->prepareSerialize();
+        pGameObject->prepareSerialize( options );
 
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
         if ( pTypeInfo == nullptr )
@@ -166,25 +173,41 @@ namespace sw
     }
 
     template <typename DeserializeStateFunc>
-    bool ObjectStateSerializer::loadStateInPlace( GameObject* pGameObject, const ObjectIdentity* pIdentity, DeserializeStateFunc&& deserializeState )
+    bool ObjectStateSerializer::loadStateInPlace( GameObject* pGameObject, const ObjectLoadContext& context, DeserializeStateFunc&& deserializeState )
     {
         const hashed_string                              oldName = pGameObject->getName();
         vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
         ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
         pGameObject->clearComponents();
 
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, pIdentity );
+        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, context._pIdentity );
         const SerializeContext                    ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
         uint32                                    version{ 0 };
         const bool                                bLoaded = deserializeState( version, ctx );
         if ( bLoaded )
+        {
+            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 옛 데이터는 자기 안의 부착에 이 이름을 적었다.
+            const hashed_string savedName = pGameObject->getName();
             ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
+            const uint64 savedId = ObjectStateSerializerInternal::resolveSavedId( context );
+            if ( context._pBatch != nullptr )
+            {
+                context._pBatch->add( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+            }
+            else
+            {
+                // 혼자 읽는 상태도 같은 규칙으로 잇는다 — 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
+                ObjectStateBatch single( ObjectIdSpace::Live );
+                single.add( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+                single.finish();
+            }
+        }
         ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
         return bLoaded;
     }
 
     template <typename TSerializer>
-    bool ObjectStateSerializer::loadFromText( GameObject* pGameObject, string_view text, const ObjectIdentity* pIdentity )
+    bool ObjectStateSerializer::loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context )
     {
         if ( pGameObject == nullptr || text.empty() )
             return false;
@@ -193,28 +216,28 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return false;
 
-        return loadStateInPlace( pGameObject, pIdentity, [&]( uint32& outVersion, const SerializeContext& ctx )
+        return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& ctx )
         {
             return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, nullptr, ctx );
         } );
     }
 
-    string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject )
+    string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
-        return saveToText<XmlSerializer>( pGameObject );
+        return saveToText<XmlSerializer>( pGameObject, options );
     }
 
-    string ObjectStateSerializer::saveToJsonString( const GameObject* pGameObject )
+    string ObjectStateSerializer::saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
-        return saveToText<JsonSerializer>( pGameObject );
+        return saveToText<JsonSerializer>( pGameObject, options );
     }
 
-    bool ObjectStateSerializer::saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer )
+    bool ObjectStateSerializer::saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options )
     {
         if ( pGameObject == nullptr )
             return false;
 
-        pGameObject->prepareSerialize();
+        pGameObject->prepareSerialize( options );
 
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
         if ( pTypeInfo == nullptr )
@@ -222,9 +245,8 @@ namespace sw
 
         BinaryStreamWriter writer( outBuffer );
 
-        // **바깥에 남는 것은 부모 이름 하나뿐이다.** 오브젝트 사이의 부모 관계만 리플렉션 상태에
-        // 없고(씬이 나중에 rebind 한다), 이름 · 활성 · 태그 · 컴포넌트 · 컴포넌트 간 부착은 모두
-        // `_name` / `_bActive` / `_listComponent` 로 실린다. XML · JSON 과 같은 상태다.
+        // **바깥의 부모 이름은 옛 세이브 형식의 칸일 뿐이다.** 부모는 씬 컴포넌트의 부착 필드(`_attachOwnerId` · `_attachComponent`)로
+        // 상태 안에 든다 — 읽는 쪽은 이 칸을 읽고 버린다. 세이브 · 핫 리로드 스냅샷의 형식을 바꾸지 않으려고 그대로 쓴다.
         string parentName;
         if ( pGameObject->getParent() != nullptr )
             parentName = pGameObject->getParent()->getName().c_str();
@@ -242,8 +264,7 @@ namespace sw
         return true;
     }
 
-    size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, string& outParentName,
-                                                        const ObjectIdentity* pIdentity )
+    size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context )
     {
         if ( pGameObject == nullptr || pData == nullptr || size == 0 )
             return 0;
@@ -253,7 +274,8 @@ namespace sw
             return 0;
 
         BinaryStreamReader reader( pData, size );
-        if ( reader.readString( outParentName ) == false )
+        string             legacyParentName; // 옛 칸 — 읽고 버린다(`saveToBinaryBuffer` 설명)
+        if ( reader.readString( legacyParentName ) == false )
             return 0;
 
         uint32 bodySize{ 0 };
@@ -264,7 +286,7 @@ namespace sw
         if ( bodyStart + bodySize > size )
             return 0;
 
-        const bool bLoaded = loadStateInPlace( pGameObject, pIdentity, [&]( uint32& outVersion, const SerializeContext& ctx )
+        const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& ctx )
         {
             return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
                                                            kObjectReflectedSchemaVersion, nullptr, nullptr, ctx );
@@ -272,23 +294,14 @@ namespace sw
         return bLoaded ? bodyStart + bodySize : 0;
     }
 
-    bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectIdentity* pIdentity )
+    bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
     {
-        return loadFromText<XmlSerializer>( pGameObject, xmlString, pIdentity );
+        return loadFromText<XmlSerializer>( pGameObject, xmlString, context );
     }
 
-    bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectIdentity* pIdentity )
+    bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context )
     {
-        return loadFromText<JsonSerializer>( pGameObject, jsonString, pIdentity );
-    }
-
-    bool ObjectStateSerializer::rebindSceneHierarchy( GameObject* pGameObject )
-    {
-        if ( pGameObject == nullptr )
-            return false;
-
-        pGameObject->applyLoadedHierarchy();
-        return true;
+        return loadFromText<JsonSerializer>( pGameObject, jsonString, context );
     }
 
     ObjectIdentity ObjectStateSerializer::captureIdentity( const GameObject* pGameObject )
@@ -356,6 +369,128 @@ namespace sw
     {
         static const uint64 s_processToken = ObjectStateSerializerInternal::makeProcessToken();
         return s_processToken;
+    }
+
+    // ======================================================================
+    // ObjectStateBatch: 모두 읽은 뒤 부착을 한 번에 잇는다
+    // ======================================================================
+
+    ObjectStateBatch::ObjectStateBatch( ObjectIdSpace idSpace )
+        : _listEntry{}
+        , _mapSavedIdToObject{}
+        , _mapSavedNameToEntry{}
+        , _idSpace{ idSpace }
+        , _bFinished{ false }
+    {
+    }
+
+    ObjectStateBatch::~ObjectStateBatch()
+    {
+        // 적어 놓고 잇지 않으면 그 오브젝트들은 루트로 남는다 — 부른 쪽이 `finish` 를 빠뜨렸다.
+        SW_ASSERT( _listEntry.empty() || _bFinished );
+    }
+
+    void ObjectStateBatch::add( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed )
+    {
+        if ( pObject == nullptr )
+            return;
+        SW_ASSERT( _bFinished == false );
+
+        const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
+        _listEntry.push_back( Entry{ pObject, savedId, savedName, bExternalParentAllowed } );
+        // 같은 id · 이름이 둘이면 먼저 적힌 것이다(옛 문서에는 이름이 겹친 엔티티가 있을 수 있다).
+        if ( savedId != 0 )
+            _mapSavedIdToObject.emplace( savedId, pObject );
+        if ( savedName.empty() == false )
+            _mapSavedNameToEntry.emplace( savedName, entryIndex );
+    }
+
+    void ObjectStateBatch::finish()
+    {
+        if ( _bFinished )
+            return;
+        _bFinished = true;
+
+        // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 쥐고 있던 저장된 이름이 이제 비었으면 되찾는다 — 플레이 중 이름을 서로 바꾼 오브젝트를
+        //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 쥐고 있어, 앞의 것이 영영 `Left_2` 로 남았다. 아직 쥔 오브젝트가 있으면 그대로다.
+        for ( const Entry& entry : _listEntry )
+        {
+            GameObject* pObject = entry._pObject;
+            if ( pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName )
+                continue;
+            pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 쥐고 있으면 매니저가 지금 이름(번호)을 그대로 둔다
+        }
+
+        // 2) 부착. 모든 오브젝트가 생긴 뒤라 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
+        for ( const Entry& entry : _listEntry )
+            resolveEntry( entry );
+    }
+
+    GameObject* ObjectStateBatch::findBySavedId( uint64 savedId ) const
+    {
+        const auto mapIt = _mapSavedIdToObject.find( savedId );
+        return ( mapIt != _mapSavedIdToObject.end() ) ? mapIt->second : nullptr;
+    }
+
+    GameObject* ObjectStateBatch::findBySavedName( hashed_string savedName ) const
+    {
+        const auto mapIt = _mapSavedNameToEntry.find( savedName );
+        return ( mapIt != _mapSavedNameToEntry.end() ) ? _listEntry[mapIt->second]._pObject : nullptr;
+    }
+
+    GameObject* ObjectStateBatch::findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerId ) const
+    {
+        if ( ownerId == 0 )
+        {
+            // 소유자 칸이 비었으면 자기다. 옛 데이터는 자기 안의 부착에도 자기 이름을 적었다 — 읽기 전 이름(저장된 이름)과 견준다.
+            if ( ownerName.empty() || ownerName == entry._savedName )
+                return entry._pObject;
+            // id 가 없는 옛 데이터. **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
+            return findBySavedName( ownerName );
+        }
+        if ( ownerId == entry._savedId )
+            return entry._pObject;
+
+        GameObject* pOwner = findBySavedId( ownerId );
+        if ( pOwner != nullptr )
+            return pOwner;
+        // 같은 실행의 상태면 묶음 밖(이미 살아 있는 부모 — 되돌리기 · 복제)도 런타임 id 로 찾는다. 파일 id 는 이 실행의 id 와 우연히 같을 수 있어 찾지 않는다.
+        if ( _idSpace == ObjectIdSpace::Live && entry._pObject->getManager() != nullptr )
+            return entry._pObject->getManager()->findGameObjectById( ownerId );
+        return nullptr;
+    }
+
+    void ObjectStateBatch::resolveEntry( const Entry& entry ) const
+    {
+        GameObject* pObject = entry._pObject;
+        if ( pObject->isPendingDestroy() )
+            return;
+
+        for ( Component* pComp : pObject->getComponents() )
+        {
+            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false )
+                continue;
+            SceneComponent*      pScene    = static_cast<SceneComponent*>( pComp );
+            SceneAttachReference reference = pScene->getLoadedAttachReference();
+            if ( reference._componentKey.empty() )
+                continue; // 루트
+            reference._idSpace = _idSpace;
+
+            GameObject* pOwner    = findAttachOwner( entry, reference._ownerName, reference._ownerId );
+            const bool  bExternal = pOwner != pObject;
+            if ( bExternal && entry._bExternalParentAllowed == false )
+                continue; // 프리팹 — 루트에는 부모가 없다
+
+            Component*      pParentComp = ( pOwner != nullptr ) ? ComponentStableKey::findComponent( pOwner, reference._componentKey.c_str() ) : nullptr;
+            SceneComponent* pParent     = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;
+            if ( pParent != nullptr && pParent != pScene && pScene->attachToComponent( pParent ) )
+                continue;
+
+            // 찾지 못했다 — 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾았다) 다음 로드가 붙인다.
+            SW_LOG_WARNING( "'%#' keeps its parent reference to '%#' (id %#, %#) - the parent is not loaded", pObject->getName().c_str(),
+                            reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerId, reference._componentKey.c_str() );
+            pScene->keepUnresolvedAttach( reference );
+        }
     }
 
 } // namespace sw

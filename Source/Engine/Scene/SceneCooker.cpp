@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
 namespace sw
@@ -17,56 +18,31 @@ namespace sw
     {
         struct SceneCookerInternal
         {
-            /** @brief 오브젝트의 컴포넌트 타입 이름을 순서대로 이어 붙인 지문입니다. */
-            static string makeComponentFingerprint( const GameObject* pGameObject )
+            /** @brief 파일 id → 그 엔티티로 지은 오브젝트 표를 만듭니다(씬의 런타임 id → 파일 id 표를 뒤집습니다). */
+            static void makeObjectByFileId( const Scene& scene, unordered_map<uint64, GameObject*>& outMap )
             {
-                string fingerprint;
-                if ( pGameObject == nullptr )
-                    return fingerprint;
-
-                for ( const Component* pComp : pGameObject->getComponents() )
+                outMap.clear();
+                const GameObjectManager* pManager = scene.getObjectManager();
+                if ( pManager == nullptr )
+                    return;
+                ObjectSavedIdMap mapSavedId;
+                scene.collectSavedIdMap( mapSavedId );
+                for ( const auto& [objectId, fileId] : mapSavedId )
                 {
-                    const TypeInfo* pTypeInfo = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
-                    fingerprint += ( pTypeInfo != nullptr ) ? pTypeInfo->_name.c_str() : "<null>";
-                    fingerprint += ';';
+                    GameObject* pObject = pManager->findGameObjectById( objectId );
+                    if ( pObject != nullptr )
+                        outMap.emplace( fileId, pObject );
                 }
-                return fingerprint;
             }
 
-            /**
-             * @brief XML 상태 하나를 바이너리로 굽고, 되읽어 같은 구성이 나오는지 확인합니다.
-             * @return 검증까지 통과했으면 true. 이때만 `outState` 가 채워집니다.
-             */
-            static bool cookOneEntityState( GameObjectManager& manager, string_view entityName,
-                                            const string& embeddedXml, vector<uint8>& outState )
+            /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 굽기 전 · 구운 뒤의 상태를 견주는 기준입니다. */
+            static string makeStateText( const Scene& scene, const GameObject* pObject )
             {
-                outState.clear();
-
-                GameObject* pSource = manager.createGameObject( hashed_string( string( entityName ).c_str() ) );
-                if ( pSource == nullptr )
-                    return false;
-                if ( ObjectStateSerializer::loadFromXmlString( pSource, embeddedXml ) == false )
-                    return false;
-
-                vector<uint8> stateBytes;
-                if ( ObjectStateSerializer::saveToBinaryBuffer( pSource, stateBytes ) == false || stateBytes.empty() )
-                    return false;
-
-                // **구운 것을 그 자리에서 되읽어 본다.** 모르는 컴포넌트 타입이 섞이면 여기서 구성이
-                // 어긋나고, 그 엔티티는 XML 로 남는다. 쿠킹이 조용히 컴포넌트를 떨어뜨리지 않는다.
-                GameObject* pVerify = manager.createGameObject( hashed_string( "SceneCooker.Verify" ) );
-                if ( pVerify == nullptr )
-                    return false;
-
-                string parentName;
-                if ( ObjectStateSerializer::loadFromBinaryBuffer( pVerify, stateBytes.data(), stateBytes.size(), parentName ) == 0 )
-                    return false;
-
-                if ( makeComponentFingerprint( pSource ) != makeComponentFingerprint( pVerify ) )
-                    return false;
-
-                outState = std::move( stateBytes );
-                return true;
+                ObjectSavedIdMap mapSavedId;
+                scene.collectSavedIdMap( mapSavedId );
+                ObjectSaveOptions options{};
+                options._pSavedIdMap = &mapSavedId;
+                return ObjectStateSerializer::saveToXmlString( pObject, options );
             }
         };
     } // namespace
@@ -78,30 +54,79 @@ namespace sw
 
     uint32 SceneCooker::cookEntityState( SceneDocument& inoutDoc )
     {
-        uint32 cookedCount{ 0 };
+        // **런타임이 읽는 그대로 짓고 굽는다.** 예전에는 엔티티를 하나씩 따로 읽어, 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못했고 저장이
+        // 그 연결을 지웠다(배포본에서 자식이 루트가 됐다). 검증도 컴포넌트 타입 목록만 봐서 값이 어긋나도 통과했다. 이제 문서 전체를
+        // `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과 같은 길)로 짓고, 구운 문서를 다시 지어 엔티티마다 상태 전체를 견준다.
+        // id 가 없는 옛 문서는 먼저 id 를 준다 — 구운 상태의 부착은 파일 id 로만 부모를 가리킨다.
+        inoutDoc.assignMissingFileIds();
 
-        // 쿠킹 전용 매니저다. 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
-        GameObjectManager manager;
+        // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
+        Scene source{ "SceneCooker.Source" };
+        if ( source.instantiate( inoutDoc ) == false )
+            return 0;
+        unordered_map<uint64, GameObject*> mapSourceByFileId;
+        SceneCookerInternal::makeObjectByFileId( source, mapSourceByFileId );
 
-        for ( SceneDocument::EntityNode& entity : inoutDoc._listEntityNode )
+        ObjectSavedIdMap mapSourceSavedId;
+        source.collectSavedIdMap( mapSourceSavedId );
+        ObjectSaveOptions saveOptions{};
+        saveOptions._pSavedIdMap = &mapSourceSavedId;
+
+        SceneDocument cooked = inoutDoc;
+        for ( SceneDocument::EntityNode& entity : cooked._listEntityNode )
         {
             if ( entity._embeddedXml.empty() )
                 continue;
-
+            const auto  sourceIt = mapSourceByFileId.find( entity._fileId );
+            GameObject* pSource  = ( sourceIt != mapSourceByFileId.end() ) ? sourceIt->second : nullptr;
+            if ( pSource == nullptr )
+                continue;
             vector<uint8> stateBytes;
-            if ( SceneCookerInternal::cookOneEntityState( manager, entity._name, entity._embeddedXml, stateBytes ) == false )
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pSource, stateBytes, saveOptions ) && stateBytes.empty() == false )
             {
-                SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
+                entity._embeddedStateBytes = std::move( stateBytes );
+                entity._embeddedXml.clear();
+            }
+        }
+
+        // **구운 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
+        // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
+        Scene verify{ "SceneCooker.Verify" };
+        if ( verify.instantiate( cooked ) == false )
+            return 0;
+        unordered_map<uint64, GameObject*> mapVerifyByFileId;
+        SceneCookerInternal::makeObjectByFileId( verify, mapVerifyByFileId );
+
+        uint32 cookedCount{ 0 };
+        for ( size_t entityIndex = 0; entityIndex < inoutDoc._listEntityNode.size(); ++entityIndex )
+        {
+            SceneDocument::EntityNode&       entity      = inoutDoc._listEntityNode[entityIndex];
+            const SceneDocument::EntityNode& cookedState = cooked._listEntityNode[entityIndex];
+            if ( cookedState._embeddedStateBytes.empty() )
+            {
+                if ( entity._embeddedXml.empty() == false )
+                    SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
+                continue;
+            }
+            const auto        sourceIt = mapSourceByFileId.find( entity._fileId );
+            const auto        verifyIt = mapVerifyByFileId.find( entity._fileId );
+            const GameObject* pSource  = ( sourceIt != mapSourceByFileId.end() ) ? sourceIt->second : nullptr;
+            const GameObject* pVerify  = ( verifyIt != mapVerifyByFileId.end() ) ? verifyIt->second : nullptr;
+            if ( pSource == nullptr || pVerify == nullptr ||
+                 SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify ) )
+            {
+                SW_LOG_WARNING( "Entity '%#' changes when its cooked state is read back - keeping XML.", entity._name );
                 continue;
             }
 
-            entity._embeddedStateBytes = std::move( stateBytes );
+            entity._embeddedStateBytes = cookedState._embeddedStateBytes;
             // 둘 다 실으면 파일만 커진다. 바이너리가 기준이 된 순간 XML 은 뺀다.
             entity._embeddedXml.clear();
             ++cookedCount;
         }
 
-        manager.clear();
+        verify.shutdown();
+        source.shutdown();
         return cookedCount;
     }
 

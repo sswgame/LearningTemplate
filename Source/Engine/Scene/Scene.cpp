@@ -148,9 +148,10 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
-        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다. 그래서 두 번째 단계가 있다.
-        vector<GameObject*> listRebindTarget;
-        listRebindTarget.reserve( doc._listEntityNode.size() );
+        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 엔티티를 모두 하나의 묶음으로 읽고 끝에서 잇는다. 부착은 부모를
+        // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 뜻이 있는 값이라 묶음 안에서만 푼다). 예전에는 이름으로 찾았는데, 이름이 겹친
+        // 엔티티(옛 문서 · 병합)는 자식이 앞의 것에 붙었다.
+        ObjectStateBatch batch( ObjectIdSpace::Saved );
 
         for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
         {
@@ -187,31 +188,34 @@ namespace sw
             {
                 if ( entity._prefab.empty() == false )
                     _mapPrefabSource[pGo->getObjectId()] = entity._prefab;
+                if ( entity._fileId != 0 )
+                    _mapObjectIdToFileId[pGo->getObjectId()] = entity._fileId;
 
+                ObjectLoadContext context{};
+                context._pBatch  = &batch;
+                context._savedId = entity._fileId;
                 // **구워진 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
                 // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
                 if ( entity._embeddedStateBytes.empty() == false )
                 {
-                    string parentName;
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), parentName ) == 0 )
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
                         SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
-                    else
-                        listRebindTarget.push_back( pGo );
                 }
                 else if ( entity._embeddedXml.empty() == false )
                 {
-                    if ( ObjectStateSerializer::loadFromXmlString( pGo, entity._embeddedXml ) == false )
+                    if ( ObjectStateSerializer::loadFromXmlString( pGo, entity._embeddedXml, context ) == false )
                         SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
-
-                    const bool bHasHierarchy = ( entity._embeddedXml.find( "_attachOwner=" ) != string::npos );
-                    if ( bHasHierarchy )
-                        listRebindTarget.push_back( pGo );
+                }
+                else
+                {
+                    // 상태 없이 프리팹으로만 지은 엔티티 — 다른 엔티티가 파일 id 로 가리킬 수 있으니 묶음에 적는다. 프리팹의 부착은 스폰이 이미
+                    // 이었고, 프리팹은 다른 오브젝트로의 부착을 싣지 않는다(옛 프리팹에 남은 것도 여기서 다시 읽지 않는다).
+                    batch.add( pGo, entity._fileId, hashed_string( entity._name.c_str() ), false );
                 }
             }
         }
 
-        for ( GameObject* pTargetGo : listRebindTarget )
-            ObjectStateSerializer::rebindSceneHierarchy( pTargetGo );
+        batch.finish();
 
         _objectManager->mergePendingAdds();
         _objectManager->flushSceneTransforms();
@@ -228,8 +232,14 @@ namespace sw
         outDoc._listEntityNode.clear();
         outDoc._bValid = true;
 
-        // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 제 씬 컴포넌트의 `_attachOwner` 로 읽은 뒤
-        // 되붙는다(`instantiate` 의 두 번째 단계 — 그래서 순서도 상관없다). 예전에는 부모가 있는 오브젝트를 건너뛰어, 계층 아래의 오브젝트가
+        // 파일 id 를 먼저 모두 정한다 — 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
+        ObjectSavedIdMap mapSavedId;
+        collectSavedIdMap( mapSavedId );
+        ObjectSaveOptions saveOptions{};
+        saveOptions._pSavedIdMap = &mapSavedId;
+
+        // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 제 씬 컴포넌트의 부착 필드(부모의 파일 id)로
+        // 읽은 뒤 되붙는다(`instantiate` 의 묶음 — 그래서 순서도 상관없다). 예전에는 부모가 있는 오브젝트를 건너뛰어, 계층 아래의 오브젝트가
         // 저장할 때마다 파일에서 사라졌다.
         _objectManager->forEachGameObject( [&]( GameObject* pGo )
         {
@@ -239,7 +249,9 @@ namespace sw
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
                 return;
             SceneDocument::EntityNode node{};
-            node._name = pGo->getName().c_str();
+            node._name           = pGo->getName().c_str();
+            const auto savedIdIt = mapSavedId.find( pGo->getObjectId() );
+            node._fileId         = ( savedIdIt != mapSavedId.end() ) ? savedIdIt->second : 0;
 
             const auto prefabIt = _mapPrefabSource.find( pGo->getObjectId() );
             if ( prefabIt != _mapPrefabSource.end() )
@@ -251,14 +263,50 @@ namespace sw
                 if ( guid.isNull() == false )
                     node._prefabGuid = guid.toString();
             }
-            node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
+            node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo, saveOptions );
             if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
                 outDoc._listEntityNode.push_back( std::move( node ) );
         } );
-        // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명).
+        // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다 — 그 자식들이 그 id 로 가리킨다.
         for ( const SceneDocument::EntityNode& unresolved : _listUnresolvedEntity )
             outDoc._listEntityNode.push_back( unresolved );
         return true;
+    }
+
+    void Scene::collectSavedIdMap( ObjectSavedIdMap& outMap ) const
+    {
+        outMap.clear();
+        if ( _objectManager == nullptr )
+            return;
+
+        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다 — 사라진 오브젝트 · 풀지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
+        // 새 오브젝트에 붙는다.
+        uint64 nextFileId = 1;
+        for ( const auto& [objectId, fileId] : _mapObjectIdToFileId )
+        {
+            (void)objectId;
+            nextFileId = MathUtil::max( nextFileId, fileId + 1 );
+        }
+        for ( const SceneDocument::EntityNode& unresolved : _listUnresolvedEntity )
+            nextFileId = MathUtil::max( nextFileId, unresolved._fileId + 1 );
+
+        vector<GameObject*> listObject;
+        _objectManager->getAllGameObjects( listObject );
+        outMap.reserve( listObject.size() );
+        for ( const GameObject* pGo : listObject )
+        {
+            if ( pGo == nullptr )
+                continue;
+            const auto mapIt = _mapObjectIdToFileId.find( pGo->getObjectId() );
+            if ( mapIt != _mapObjectIdToFileId.end() )
+            {
+                outMap.emplace( pGo->getObjectId(), mapIt->second );
+                continue;
+            }
+            _mapObjectIdToFileId.emplace( pGo->getObjectId(), nextFileId );
+            outMap.emplace( pGo->getObjectId(), nextFileId );
+            ++nextFileId;
+        }
     }
 
     /**
@@ -268,6 +316,7 @@ namespace sw
     {
         releaseDefaultMaterial();
         _mapPrefabSource.clear();
+        _mapObjectIdToFileId.clear();
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {

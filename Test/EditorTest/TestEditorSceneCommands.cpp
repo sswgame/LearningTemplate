@@ -3,9 +3,13 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -85,6 +89,60 @@ SW_TEST_CASE( EditorSceneCommandsTest, ApplyTransformAndSnapshotSafety )
     // nullptr 안전성
     EditorSceneCommands::applyLocalTransform( nullptr, targetPos, targetRot, targetScale );
     SW_EXPECT_TRUE( EditorSceneCommands::captureSnapshot( nullptr )._xml.empty() );
+}
+
+/**
+ * @brief [EditorSceneCommandsTest] 복제는 서브트리 전체를 복제하고, 복제본 안의 부착(소켓 · 자식)은 복제본끼리 잇는다
+ * @details 예전 복제는 선택한 오브젝트 하나만 복제했다 — 씬은 자식을 자기 엔티티로 저장하므로 자식은 원본 밑에 남았다. 그리고 복제본 안의 부착을
+ *          이름으로 풀어, 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의 팔이 **원본**의 루트에 붙었다. 복제본의 루트는 원본의 부모 primary 에 다시
+ *          붙어 소켓을 잃었다. 이제 묶음이 원본 id 로 복제본끼리 잇고, 묶음 밖의 부모(원본과 같은 부모 · 같은 소켓)는 런타임 id 로 찾는다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, DuplicateCopiesTheSubtreeAndKeepsItsAttachmentsInside )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "DuplicateProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+
+    GameObject*     pHolder = pManager->createGameObject( hashed_string( "Holder" ) );
+    SceneComponent* pBody   = pHolder->addComponent<SceneComponent>();
+    SceneComponent* pSocket = pHolder->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pSocket->attachToComponent( pBody ) );
+
+    GameObject*     pRig     = pManager->createGameObject( hashed_string( "Rig" ) );
+    SceneComponent* pRigRoot = pRig->addComponent<SceneComponent>();
+    SceneComponent* pRigArm  = pRig->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pRigArm->attachToComponent( pRigRoot ) );
+    SW_ASSERT_TRUE( pRigRoot->attachToComponent( pSocket ) );
+    GameObject*     pTool     = pManager->createGameObject( hashed_string( "Tool" ) );
+    SceneComponent* pToolRoot = pTool->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pToolRoot->attachToComponent( pRigArm ) );
+    pManager->mergePendingAdds();
+
+    GameObject* pCopy = EditorSceneCommands::duplicate( pManager, pRig );
+    SW_ASSERT_NOT_NULL( pCopy );
+    pManager->mergePendingAdds();
+
+    SceneComponent* pCopyRoot = pCopy->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pCopyRoot );
+    SW_EXPECT_TRUE( pCopyRoot->getParent() == pSocket ); // 원본과 같은 소켓
+    SceneComponent* pCopyArm = nullptr;
+    for ( Component* pComp : pCopy->getComponents() )
+    {
+        if ( pComp != nullptr && pComp->isSceneComponent() && pComp != pCopyRoot )
+            pCopyArm = static_cast<SceneComponent*>( pComp );
+    }
+    SW_ASSERT_NOT_NULL( pCopyArm );
+    SW_EXPECT_TRUE( pCopyArm->getParent() == pCopyRoot ); // 원본의 루트가 아니다
+
+    // 자식도 복제됐고, 복제된 팔에 붙었다. 원본의 자식은 그대로다.
+    SW_ASSERT_EQUAL( size_t( 1 ), pCopyArm->getChildren().size() );
+    SceneComponent* pCopyToolRoot = pCopyArm->getChildren().front();
+    SW_EXPECT_TRUE( pCopyToolRoot->getOwner() != pTool );
+    SW_EXPECT_TRUE( pToolRoot->getParent() == pRigArm );
+    SW_EXPECT_EQUAL( size_t( 1 ), pRigArm->getChildren().size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), pRigRoot->getChildren().size() );
 }
 
 /**

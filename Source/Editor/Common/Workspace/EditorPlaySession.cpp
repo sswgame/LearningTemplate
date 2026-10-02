@@ -131,8 +131,8 @@ namespace sw::editor
                     }
                 }
 
-                // 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성
-                unordered_map<uint64, GameObject*> mapRestored;
+                // 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성. 계층은 모두 읽은 뒤 묶음이 잇는다(아래 3).
+                ObjectStateBatch batch( ObjectIdSpace::Live );
                 for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
                     GameObject* pObj = pObjects->findGameObjectById( snap._identity._objectId );
@@ -155,21 +155,17 @@ namespace sw::editor
                     if ( snap._prefabPath.empty() == false && pScene != nullptr )
                         pScene->setEntityPrefabPath( pObj->getObjectId(), snap._prefabPath );
 
-                    mapRestored[snap._identity._objectId] = pObj;
-
-                    string parentName;
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName, &snap._identity ) == 0 )
+                    ObjectLoadContext context{};
+                    context._pIdentity = &snap._identity;
+                    context._pBatch    = &batch;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
                         SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
                 }
 
-                // 3. 계층을 다시 잇는다 — **모두 읽은 뒤에.** 읽는 동안에는 부모를 이름으로 찾는데, 플레이 중에 부모도 지워졌고 자식이 스냅샷에서
-                // 먼저 나오면(먼저 만들었으면) 그 순간 부모가 아직 없어 루트로 남았다. 씬 로드(`Scene::instantiate`)와 같은 두 단계다. 예전에는
-                // 이 단계가 XML 폴백에만 있었는데, 그 폴백은 바이너리 저장이 실패할 때만(오브젝트가 null) 타서 실제로는 돌지 않았다.
-                for ( const auto& [objectId, pObj] : mapRestored )
-                {
-                    (void)objectId;
-                    ObjectStateSerializer::rebindSceneHierarchy( pObj );
-                }
+                // 3. 계층을 다시 잇는다 — **모두 읽은 뒤에**, 부모의 **원래 id** 로. 읽는 자리에서 이으면 플레이 중에 부모도 지워졌고 자식이
+                // 스냅샷에서 먼저 나올 때(먼저 만들었으면) 부모가 아직 없어 루트로 남았다. 이름으로 찾으면 플레이 중 이름을 바꾼 오브젝트(A 가 B 의
+                // 이름을 가져갔다)의 자식이 엉뚱한 쪽에 붙었다. 씬 로드(`Scene::instantiate`)와 같은 묶음이다.
+                batch.finish();
 
                 SW_LOG_TRACE( "Play snapshot restored (%# objects).",
                               static_cast<uint32>( data._listSnapshot.size() ) );

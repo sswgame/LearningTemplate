@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
@@ -17,6 +18,7 @@ namespace sw
 
     SceneComponent::SceneComponent()
         : _attachOwner{}
+        , _attachOwnerId{ 0 }
         , _attachComponent{}
         , _pTransformPage{ nullptr }
         , _transformSlot{ SceneTransformStorage::kInvalidSlot }
@@ -24,6 +26,7 @@ namespace sw
         , _pManager{ nullptr }
         , _pParent{ nullptr }
         , _listChild{}
+        , _unresolvedAttach{}
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
@@ -371,6 +374,7 @@ namespace sw
 
         detachFromComponent();
 
+        _unresolvedAttach.reset(); // 부모가 정해졌다 — 남겨 둔 참조는 이제 뜻이 없다
         _pParent = pParent;
         pParent->_listChild.push_back( this );
         // 칸의 계층 비트는 틱 뒤 적용이 컴포넌트를 거치지 않고 "잎 루트인가" 를 묻는 데 쓴다.
@@ -393,6 +397,8 @@ namespace sw
             return;
         }
 
+        // 일부러 뗐다 — 찾지 못해 남겨 둔 참조도 버린다(그대로 두면 다음 로드가 그 부모에 다시 붙인다).
+        _unresolvedAttach.reset();
         detachFromParentImmediate();
     }
 
@@ -499,12 +505,27 @@ namespace sw
         markDescendantsDirty();
     }
 
-    void SceneComponent::syncAttachSerializeFields() const
+    void SceneComponent::syncAttachSerializeFields( const ObjectSaveOptions& options ) const
     {
         _attachOwner     = {};
+        _attachOwnerId   = 0;
         _attachComponent = {};
         if ( _pParent == nullptr )
+        {
+            // 찾지 못한 참조는 지우지 않는다 — 예전에는 여기서 비워, 부모가 아직 없던(쿠커가 엔티티를 하나씩 읽었다) · 프리팹이 없는 부모의
+            // 자식이 저장할 때마다 연결을 잃었다. 다른 공간으로 옮겨 적을 때는 id 가 엉뚱한 오브젝트를 가리킬 수 있으니 이름만 남긴다.
+            if ( _unresolvedAttach == nullptr )
+                return;
+            const SceneAttachReference& kept           = *_unresolvedAttach;
+            const ObjectIdSpace         writtenIdSpace = ( options._pSavedIdMap != nullptr ) ? ObjectIdSpace::Saved : ObjectIdSpace::Live;
+            const bool                  bExternal      = kept._ownerName.empty() == false || kept._ownerId != 0;
+            if ( bExternal && options._bOmitExternalParent )
+                return;
+            _attachOwner     = kept._ownerName;
+            _attachOwnerId   = ( kept._idSpace == writtenIdSpace ) ? kept._ownerId : 0;
+            _attachComponent = kept._componentKey;
             return;
+        }
 
         GameObject* pParentOwner = _pParent->getOwner();
         if ( pParentOwner == nullptr )
@@ -513,34 +534,40 @@ namespace sw
         const string parentKey = ComponentStableKey::makeKey( _pParent );
         if ( parentKey.empty() )
             return;
+
+        // 같은 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 예전에는 자기 이름을 적어, 읽을 때 이름이 유일하게 바뀐(`Rig` → `Rig_2`)
+        // 복제본 · 두 번째 프리팹 인스턴스가 이름으로 **원본**을 찾아 그 컴포넌트에 붙었다.
+        if ( pParentOwner == getOwner() )
+        {
+            _attachComponent = hashed_string( parentKey.c_str() );
+            return;
+        }
+        if ( options._bOmitExternalParent )
+            return;
+
+        uint64 ownerId = pParentOwner->getObjectId();
+        if ( options._pSavedIdMap != nullptr )
+        {
+            const auto mapIt = options._pSavedIdMap->find( ownerId );
+            ownerId          = ( mapIt != options._pSavedIdMap->end() ) ? mapIt->second : 0;
+        }
         _attachOwner     = pParentOwner->getName();
+        _attachOwnerId   = ownerId;
         _attachComponent = hashed_string( parentKey.c_str() );
     }
 
-    void SceneComponent::applyAttachSerializeFields()
+    SceneAttachReference SceneComponent::getLoadedAttachReference() const
     {
-        if ( _attachComponent.empty() )
-            return;
+        SceneAttachReference reference{};
+        reference._ownerName    = _attachOwner;
+        reference._ownerId      = _attachOwnerId;
+        reference._componentKey = _attachComponent;
+        return reference;
+    }
 
-        GameObject* pSelfOwner = getOwner();
-        if ( pSelfOwner == nullptr )
-            return;
-
-        GameObject* pParentOwner = pSelfOwner;
-        if ( _attachOwner.empty() == false && _attachOwner != pSelfOwner->getName() )
-        {
-            if ( _pManager == nullptr )
-                return;
-            pParentOwner = _pManager->findGameObjectByName( _attachOwner );
-            if ( pParentOwner == nullptr )
-                return;
-        }
-
-        Component*      pParentComp = ComponentStableKey::findComponent( pParentOwner, _attachComponent.c_str() );
-        SceneComponent* pParent     = pParentComp != nullptr ? castTo<SceneComponent>( pParentComp ) : nullptr;
-        if ( pParent == nullptr || pParent == this )
-            return;
-        attachToComponent( pParent );
+    void SceneComponent::keepUnresolvedAttach( const SceneAttachReference& reference )
+    {
+        _unresolvedAttach = make_unique<SceneAttachReference>( reference );
     }
 
 } // namespace sw

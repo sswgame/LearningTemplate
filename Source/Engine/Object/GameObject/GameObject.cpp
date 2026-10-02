@@ -714,23 +714,13 @@ namespace sw
             _pOwnerManager->getTickRegistry().markObjectDirty( this );
     }
 
-    void GameObject::prepareSerialize() const
+    void GameObject::prepareSerialize( const ObjectSaveOptions& options ) const
     {
         for ( Component* pComp : _listComponent )
         {
             SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
             if ( pSceneComp != nullptr )
-                pSceneComp->syncAttachSerializeFields();
-        }
-    }
-
-    void GameObject::applyLoadedHierarchy()
-    {
-        for ( Component* pComp : _listComponent )
-        {
-            SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-            if ( pSceneComp != nullptr )
-                pSceneComp->applyAttachSerializeFields();
+                pSceneComp->syncAttachSerializeFields( options );
         }
     }
 } // namespace sw

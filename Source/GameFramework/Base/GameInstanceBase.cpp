@@ -131,12 +131,7 @@ namespace sw
         Memory::copy( &count, pData + offset, sizeof( uint32 ) );
         offset += sizeof( uint32 );
 
-        struct RestoredObject
-        {
-            GameObject* _pObj{ nullptr };
-            string      _parentName{};
-        };
-        vector<RestoredObject> listRestoredObject;
+        vector<GameObject*> listRestoredObject;
 
         // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 오브젝트 하나는 적어도 길이 4바이트를
         // 쓰므로, 남은 바이트 / 4 보다 많은 오브젝트는 어떤 스냅샷에도 있을 수 없다. 아래 읽기는
@@ -147,11 +142,15 @@ namespace sw
         const size_t     maxPossibleObject  = ( size - offset ) / kMinBytesPerObject;
         listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
-        // 1차: 모든 게임오브젝트 생성 및 직렬화 복구. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도 되살린다.
+        // 모든 게임오브젝트를 만들고 읽은 뒤 묶음이 계층을 한 번에 잇는다. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도
+        // 되살린다. 부착은 상태의 부착 필드(부모의 **id** · 컴포넌트 키)로 잇는다 — 예전에는 바깥 칸의 부모 이름으로 찾아 부모의 primary 에
+        // 붙여, 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 갔다. 다른 실행의 세이브는 id 를 되살리지 않지만, 스트림에 적힌
+        // 그때의 id 로 묶음 안에서 찾는다.
         // **하나라도 못 읽으면 실패다.** 예전에는 `break` 로 멈추고도 끝에서 true 를 돌려줘, 핫 리로드가 스냅샷을 버리고 저장 막기를
         // 풀었다 — 씬은 이미 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있었다(빈 "GameObject" 하나도 남았다).
-        const bool bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
-        bool       bComplete        = true;
+        const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
+        bool             bComplete        = true;
+        ObjectStateBatch batch( bRestoreIdentity ? ObjectIdSpace::Live : ObjectIdSpace::Saved );
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
             ObjectIdentity identity;
@@ -167,11 +166,13 @@ namespace sw
                 offset += identityBytes;
             }
 
-            GameObject* pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( "GameObject" ), identity._objectId )
-                                                : pObjectManager->createGameObject();
-            string      parentName;
-            size_t      readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, parentName,
-                                                                            bRestoreIdentity ? &identity : nullptr );
+            GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( "GameObject" ), identity._objectId )
+                                                      : pObjectManager->createGameObject();
+            ObjectLoadContext context{};
+            context._pIdentity     = bRestoreIdentity ? &identity : nullptr;
+            context._pBatch        = &batch;
+            context._savedId       = identity._objectId;
+            const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
             if ( readBytes == 0 )
             {
                 SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
@@ -179,24 +180,12 @@ namespace sw
                 bComplete = false;
                 break;
             }
-            listRestoredObject.push_back( { pObj, parentName } );
+            listRestoredObject.push_back( pObj );
             offset += readBytes;
         }
 
-        // 2차: 씬 계층 구조(Hierarchy) 및 부모-자식 관계 복원
-        for ( const RestoredObject& restoredObj : listRestoredObject )
-        {
-            if ( restoredObj._parentName.empty() )
-                continue;
-
-            GameObject* pParent = pObjectManager->findGameObjectByName( hashed_string( restoredObj._parentName.c_str() ) );
-            if ( pParent == nullptr )
-            {
-                SW_LOG_WARNING( "State Restore ParentGO not found: %s", restoredObj._parentName.c_str() );
-                continue;
-            }
-            restoredObj._pObj->attachToParent( pParent );
-        }
+        // 씬 계층 구조(부모 · 소켓)를 한 번에 잇는다 — 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
+        batch.finish();
 
         // 복원된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
         pObjectManager->flushSceneTransforms();

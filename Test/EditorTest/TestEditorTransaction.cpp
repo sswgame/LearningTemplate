@@ -362,6 +362,51 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
 }
 
 /**
+ * @brief [EditorTransactionTest] 지운 계층을 되돌리면 자식은 **원래** 부모에 붙는다 — 그사이 같은 이름으로 생긴 오브젝트가 아니라
+ * @details 엔진은 쓸 만한 게임 카메라가 없으면 프레임마다 "GameCamera" 를 만든다(`Scene::ensureDefaultCameras`). 하나뿐인 게임 카메라를 자식째 지우면
+ *          다음 프레임에 새 "GameCamera" 가 생기고, 되돌리면 원래 것은 `GameCamera_2` 로 돌아오는데 자식은 이름으로 부모를 찾아 **새 것**에 붙었다
+ *          (저장하면 게임 카메라 둘이 굳는다). 되돌리기는 같은 실행의 스냅샷이라 부모의 런타임 id 로 찾는다.
+ */
+SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentNotANamesake )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "NamesakeProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+
+    GameObject* pCamera = pManager->createGameObject( hashed_string( "Lookout" ) );
+    GameObject* pAnchor = pManager->createGameObject( hashed_string( "HudAnchor" ) );
+    SW_ASSERT_NOT_NULL( pCamera->addComponent<SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pAnchor->addComponent<SceneComponent>() );
+    pManager->mergePendingAdds();
+    SW_ASSERT_TRUE( pAnchor->attachToParent( pCamera ) );
+    const uint64 cameraId = pCamera->getObjectId();
+    const uint64 anchorId = pAnchor->getObjectId();
+
+    SW_ASSERT_TRUE( EditorSceneCommands::destroy( pManager, pCamera ) );
+    pManager->processDeferredDestruction();
+
+    // 지운 사이에 같은 이름의 오브젝트가 생긴다(엔진이 만든 기본 카메라의 자리).
+    GameObject* pNamesake = pManager->createGameObject( hashed_string( "Lookout" ) );
+    SW_ASSERT_NOT_NULL( pNamesake->addComponent<SceneComponent>() );
+    pManager->mergePendingAdds();
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    GameObject* pRestoredCamera = pManager->findGameObjectById( cameraId );
+    GameObject* pRestoredAnchor = pManager->findGameObjectById( anchorId );
+    SW_ASSERT_NOT_NULL( pRestoredCamera );
+    SW_ASSERT_NOT_NULL( pRestoredAnchor );
+    SW_EXPECT_TRUE( pRestoredAnchor->getParent() == pRestoredCamera );
+    SW_EXPECT_TRUE( pRestoredAnchor->getParent() != pNamesake );
+}
+
+/**
  * @brief [EditorTransactionTest] 되돌리기 · 다시 하기도 씬을 dirty 로 만든다
  * @details 예전에는 기록할 때만 dirty 를 표시했다. 편집 → 저장 → Ctrl+Z 하면 씬은 바뀌었는데 깨끗하다고 해서, 그대로 끄거나 다른
  *          씬을 열면 묻지도 않고 되돌린 상태를 잃었다(유니티 · 언리얼은 되돌리기도 수정으로 친다).

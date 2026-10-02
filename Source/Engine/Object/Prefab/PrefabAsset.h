@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    struct ObjectIdentity;
+
     class GameObject;
     class GameObjectManager;
 
@@ -56,8 +58,10 @@ namespace sw
          * @brief 프리팹 상태를 오브젝트에 읽어 넣습니다. 오브젝트의 컴포넌트는 모두 다시 만들어집니다(오브젝트는 매니저에 속해야 합니다).
          * @details 스폰 · 되돌리기 · 오버라이드 비교(CDO) · 형식 변환이 모두 이것을 씁니다. 예전에는 다섯 자리가 본문 첫 글자('{')로 형식을 짐작했고,
          *          되돌리기 둘은 XML 로만 읽어 JSON 프리팹의 인스턴스를 비웠습니다(컴포넌트를 지운 뒤 읽기에 실패).
+         *          다른 오브젝트로의 부착은 읽지 않습니다 — 프리팹 루트에는 부모가 없습니다(옛 프리팹에 남은 것도).
+         * @param pIdentity 있으면 다시 만드는 컴포넌트가 그 id 를 되찾습니다(되돌리기 — 인스턴스의 컴포넌트를 가리키던 핸들이 이어진다).
          */
-        bool applyStateTo( GameObject* pTarget ) const;
+        bool applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity = nullptr ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */

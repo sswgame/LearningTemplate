@@ -99,11 +99,16 @@ namespace sw::editor
                 return pTarget;
             }
 
-            /** @brief XML 스냅샷을 오브젝트에 되읽고 씬 계층을 다시 잇습니다. 수정 되돌리기와 삭제 되돌리기(다시 만들기)가 함께 씁니다. */
+            /**
+             * @brief XML 스냅샷을 오브젝트에 되읽고 씬 계층을 다시 잇습니다. 수정 되돌리기와 삭제 되돌리기(다시 만들기)가 함께 씁니다.
+             * @details 부모는 스냅샷에 적힌 **런타임 id** 로 찾습니다(같은 실행의 스냅샷이고, 지운 오브젝트는 원래 id 로 되살아난다). 예전에는
+             *          이름으로 찾아, 지운 사이 같은 이름의 오브젝트가 생기면(엔진이 프레임마다 만드는 "GameCamera") 자식이 그쪽에 붙었다.
+             */
             static void loadXmlSnapshot( GameObject* pTarget, const EditorObjectSnapshot& snapshot )
             {
-                ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, &snapshot._identity );
-                ObjectStateSerializer::rebindSceneHierarchy( pTarget );
+                ObjectLoadContext context{};
+                context._pIdentity = &snapshot._identity;
+                ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, context );
             }
 
             /** @brief 활성 씬에서 대상을 다시 찾아 XML 스냅샷을 되읽습니다. 대상이 없으면 아무것도 하지 않습니다. */

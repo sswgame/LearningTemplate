@@ -363,13 +363,11 @@ SW_TEST_CASE( EditorCommandStackTest, GameObjectBinarySnapshotUndoRedoTransactio
         cmd._label = "MoveStep_" + to_string( stepIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, afterBytes]()
          {
-            string parentName;
-            ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size(), parentName );
+            ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size() );
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, beforeBytes]()
          {
-            string parentName;
-            ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size(), parentName );
+            ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size() );
         } );
 
         stack.push( std::move( cmd ) );
@@ -481,8 +479,7 @@ SW_TEST_CASE( EditorCommandStackTest, EditorPlaySessionBinaryHierarchySnapshotSt
     {
         GameObject* pRestored = manager.createGameObject( hashed_string( record._name.c_str() ) );
         SW_ASSERT_NOT_NULL( pRestored );
-        string       parentName;
-        const size_t bytesRead = ObjectStateSerializer::loadFromBinaryBuffer( pRestored, record._bytes.data(), record._bytes.size(), parentName );
+        const size_t bytesRead = ObjectStateSerializer::loadFromBinaryBuffer( pRestored, record._bytes.data(), record._bytes.size() );
         SW_EXPECT_EQUAL( record._bytes.size(), bytesRead );
     }
 

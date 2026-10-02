@@ -1656,6 +1656,55 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   (`Texture2D` 는 DDS 만 — 텍스처 임포터 · 쿠킹의 몫), 스프라이트 클립의 런타임 에셋(프레임 이름 → UV 사각형), 강체 · 고정 스텝(물리는 겹침
   이벤트뿐), 핫 리로드 때 메시 컴포넌트가 아닌 다른 컴포넌트의 `onPostLoad` 활용.
 
+### 1-0j. 근본 원인 리팩터 — 결함 ①~74 를 원인 여섯으로 묶고, 원인마다 구조로 막는다 (2026-10-02 시작)
+
+사용자 요청 "구조적 리팩토링으로 나머지도 해결하고 근본 원인을 제거". 결함 기록(3절)을 원인으로 묶고, 원인마다 읽기 전용 감사 에이전트를
+돌려 **같은 모양이 아직 남은 곳**을 찾았다(확인 약 80건). 단위마다 시험 먼저 → 구조 변경 → 변이 검사 → Debug · hostgpu · Shipping → 커밋.
+
+| 원인 | 대표 결함 | 구조로 막는 법 | 상태 |
+|------|-----------|----------------|------|
+| R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
+| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + 게이트, 검사하는 파싱 한 벌 | 다음 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 남음 |
+| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
+| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
+| R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
+
+**남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
+
+- **R2** — 실패할 수 있는 동사(load · save · parse · apply · …)의 상태 반환 함수 약 506 개 중 `[[nodiscard]]` 0, 결과를 버리는 호출 155 곳
+  (Editor 67 · Engine 77 · GF 7). 확인된 결함: ① "Prefab › Apply Overrides" 가 **마지막에 클릭한 에셋**(씬 · 머티리얼)을 프리팹으로 덮는다
+  (`EditorCommandGui.cpp` `commandApplyPrefabOverrides` 가 `getFocusedAssetPath` 를 먼저, 술어 없음) ② Apply to Prefab 이 `.prefab.json` 에 XML 을
+  쓴다(`EditorInspectorCommands::applyToPrefab` 이 늘 `saveToXmlFile`; `saveToXmlFile` 은 변환 실패에도 빈 `<Prefab>` + true) ③ 셰이더 컴파일 실패를
+  최신 굽기로 도장(`ShaderBakeDriver.cpp` 104-135, `EngineLoop.cpp` 282 결과 버림 → 종료 코드 0) ④ 언어 파일 하나가 깨지면 저장 때 그 언어를 통째로
+  지운다(`EditorDataTableCommands.cpp` 58-148) ⑤ TileMap · SpriteClip 패널이 로드 실패를 버리고 `markDocumentLoaded`(다른 파일 내용으로 덮어쓴다)
+  ⑥ `DataTablePanel.cpp` 390 `readTextFile` 결과 버림 ⑦ 에셋 삭제가 실패해도 `.meta` 를 지운다(`EditorAssetCommands.cpp` 648) ⑧ 모르는 컴포넌트
+  타입을 세 형식 모두 **조용히** 버리고 다음 저장이 지운다(`ObjectStateSerializer.cpp` `bLogWarning=false`). 조용한 강제 변환: bool 은 아무 글이나
+  받는다(`SerializeContext.cpp` 358 · XML/JSON 비트필드 · CLI · 전역 변수), 숫자 아닌 글은 경고 없이 고아(Ignore 정책), 머티리얼 파싱이 ⑪ · 61 을
+  되풀이(`MaterialPacking.cpp` 198-235 · `MaterialXml.cpp`), ActionMap 의 `static_cast<uint8>(getAttributeInt)`(pad "256" → 0), 대화 조건(`flag.gold>=10`),
+  `XmlNode::getAttributeInt/Float` 의 조용한 폴백. 그리고 JSON 쓰기가 `"0,0,0"` 같은 값이 스칼라인지 보려고 파싱해 보며 **오류 로그**를 남긴다
+  (`JsonSerializer.cpp` 53 — float3 하나마다 `[Error]`).
+- **R3** — 에디터의 컴포넌트 값 쓰기(붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 하나 되돌리기 · 기본값)가 `finishLoad` 를 우회해 트랜스폼이 더티가
+  되지 않고 렌더 에셋을 다시 풀지 않는다(`EditorTransformCommands.cpp` 91-196 · `EditorToolAssetCommands.cpp` 469-516 · `InspectorPanel.cpp` 528).
+  메시 id 를 바꿔도 다시 풀지 않는다(`MeshComponent.cpp` 79-124). 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
+  소스 → 쿠킹 경로 규칙 여섯 벌(`EditorAssetType.cpp` · `SceneDocument::load` · `loadPrefab` · `SceneCooker` `.scene.xml` · 씬 쿠킹 실패를 안 셈).
+  GUID 레지스트리가 Dev 는 `.meta` 위치, 쿠커는 `sourcePath=` 필드로 경로를 정한다(`CookAssets.py` 388-409 — 옮긴 프리팹이 배포본에서 사라진다).
+  텍스처 드롭이 흰 스프라이트(`EditorAssetCommands.cpp` 514 상대 경로를 `makeRelativePath` 에), Quick Launcher 경로가 "Resource/…", 프리셋 경로 규칙
+  셋, 씬 XML 재이스케이프가 속성 개행을 잃음(`SceneDocument.cpp` `appendNodeXml`), `ResourceUtil::getWritePath` 가 ".." 를 받음. 인스펙터 Transform ·
+  Camera 섹션은 되돌리기 · dirty 가 없다(`InspectorComponentManager.cpp` 28-110). 오버라이드 도구가 비트필드를 바이트째 견주고 타입의 첫 컴포넌트와 짝짓는다.
+- **R4** — `Component::_bActive` · `MeshComponent::_bVisible` 이 저장되지 않는다(Stop · 되돌리기 · 저장 뒤 다시 켜진다, 토글이 되돌리기를 남기지
+  않는다). 계층 패널 "Add Component" 가 되돌리기 · dirty · `onPostLoad` 없이 붙인다. 지원하지 않는 PROPERTY 타입은 "null" · 0 바이트로 조용히 쓰인다
+  (지금 걸리는 것은 `RHISwapChainDesc` 의 `void*` 둘, 잠복: quaternion · float4x4 텍스트, 컨테이너 원소 별칭). 효과 없는 컴포넌트 · 칸:
+  `CameraControllerComponent` 가 주인을 (0,0) 에 고정, `SpriteAnimator` 무효과, HPBar · DamageUI · Effect · `Projectile::_damage`, `GameData` 의 칸 아홉.
+- **R5** — `clearComponents` · `destroyComponentInstance` · 상태 로드를 틱 안에서 부르면 해제 후 사용(형제 `removeComponent` 는 미룬다),
+  `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 미룬 일의 순서(부착 큐가 addComponent 큐보다 먼저 — 틱 안의 생성 + 부착이 루트로
+  남는다; README "거부" 는 틀림), 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove, `forEachGameObject` 공유 잠금 재진입 교착 가능,
+  `setName` · 서브틱 · 컴포넌트 비트필드. `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드).
+- **R6** — 같은 오브젝트의 둘째 씬 컴포넌트가 primary 에 붙지 않아 원점에 남는다(`editortest.scene.xml` 의 TestCollider · `testprop.prefab.xml`
+  데이터가 이미 그렇다), 재부모 · 부모 떼기가 월드 자리를 지키지 않는다(KeepWorld 없음), `CameraComponent::lookAt` 이 월드 방향을 로컬 회전에 쓴다,
+  셰이더가 노멀을 월드 행렬로 변환(부등 스케일에서 조명이 틀림), 에디터 크기 판정 넷이 로컬 스케일(`frameSelected` · 바닥/표면 붙이기 · 콜라이더
+  와이어프레임), GameFramework 이동 컴포넌트 넷이 월드 값을 로컬에, 메시 경계 반지름이 0.866 고정(캡슐 끝이 잘린다), 단위 메타 셋.
+
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
 
 `Source/Core` 를 폴더 단위로 훑은 것(2026-09-17, `Common` → `Uuid`, 17커밋)과 **같은 방식으로**
@@ -2063,6 +2112,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-02 (구조 ⑤ 오브젝트 상태는 묶음으로 복원하고, 부모는 id 로 가리킨다 — 1-0j 의 R1)
+
+결함 56 · 69 와 같은 뿌리가 아홉 곳에 남아 있었다. 씬 컴포넌트의 부모를 **오브젝트 이름**(`_attachOwner`)으로 저장하고, 상태를 읽는 길마다
+**읽는 자리에서** 매니저의 이름으로 찾고, 저장할 때 **살아 있는 부모 포인터**에서 필드를 다시 만들었다. 매니저는 이름을 유일하게 바꾸므로
+(`Rig` → `Rig_2`) 이름으로 찾으면 같은 이름의 다른 오브젝트가 나왔다:
+- 쿠커가 엔티티를 하나씩 따로 읽어, 문서에서 부모보다 앞인 자식의 연결을 **배포본에서 지웠다**(검증은 컴포넌트 타입 목록만 봤다).
+- 복제본 · 같은 프리팹 둘째 인스턴스 · 영속 이월의 **오브젝트 안** 부착이 원본(같은 이름)의 컴포넌트에 붙었다. 복제는 선택한 것만 복제해 자식이
+  원본에 남았고, 루트는 원본 부모의 primary 에 다시 붙어 소켓을 잃었다.
+- 서브트리 삭제를 되돌리면 그사이 생긴 같은 이름(엔진이 프레임마다 만드는 "GameCamera")에 자식이 붙었다. 플레이 중 이름을 서로 바꾸면 Stop 이
+  자식을 엉뚱한 부모에 붙이고 이름을 `Left_2` 로 남겼다.
+- 핫 리로드 · 세이브 복원은 바깥 칸의 부모 이름으로 primary 에 붙여 소켓을 잃었다. 프리팹 되돌리기도 primary 에 붙이고 컴포넌트 id 를 새로 줬다.
+- 자식 인스턴스로 만든 프리팹에 옛 부모 이름이 실려, 스폰할 때마다 그 이름의 오브젝트에 붙었다. 프리팹을 찾지 못한 엔티티의 자식은 저장할 때마다
+  부모 연결을 잃었다. 같은 이름의 엔티티 둘이 든 문서는 두 자식이 앞의 것에 붙었다.
+
+상용 엔진의 자리 — 유니티 씬의 fileID(파일 안 id) · 언리얼의 레벨 안 오브젝트 경로 · 둘 다 로드는 "모두 만들고 나서 참조를 푼다". 바꾼 것:
+- **`ObjectStateBatch`** — 상태를 읽는 길 아홉(씬 로드 · 쿠커 · 플레이 종료 · 핫 리로드 · 세이브 · 영속 이월 · 복제 · 되돌리기 · 프리팹)이 모두 지난다.
+  모두 읽은 뒤 `finish()` 가 (1) 다른 오브젝트가 잠시 쥐었던 저장된 이름을 되찾고 (2) 부착을 한 번에 잇는다. 상태 하나만 읽는 로드도 한 개짜리 묶음이다.
+  `rebindSceneHierarchy` · `applyLoadedHierarchy` · 손으로 짠 컴포넌트 id 되붙이기(이월) · 바깥 부모 이름 단계(GameInstanceBase)를 걷었다.
+- **부착 필드 `_attachOwnerId`** — 같은 오브젝트면 소유자 칸을 비우고(자기), 다른 오브젝트는 id. 찾는 순서: 묶음의 저장된 id → (`ObjectIdSpace::Live`,
+  같은 실행의 상태일 때만) 매니저의 런타임 id. id 없는 옛 데이터만 이름으로 찾되 **묶음의 저장된 이름**에서만(옛 자기 이름은 읽기 전 이름과 견준다).
+- **씬 파일 id** — 엔티티에 `id` 속성(SCN 바이너리 v2). 씬이 런타임 id ↔ 파일 id 표를 들고 저장 때 같은 값을 다시 쓴다(저장마다 파일이 흔들리지
+  않는다 — 다시 연 씬을 저장하면 상태 본문이 바이트 단위로 같다). 새 오브젝트는 지금껏 쓴 어느 id 보다 큰 값을 받는다.
+- **못 푼 참조는 보존**(`SceneComponent::keepUnresolvedAttach`) — 다른 공간으로 옮겨 적을 때는 id 를 비우고 이름만 남긴다. 붙이거나 떼면 잊는다.
+- **프리팹 루트에는 부모가 없다** — `setFromGameObject` 가 싣지 않고 `applyStateTo` 가 읽지 않는다. 되돌리기는 붙어 있던 **컴포넌트**(소켓)에 다시 붙이고
+  컴포넌트 id 를 되살린다.
+- **쿠커는 런타임과 같은 `Scene::instantiate` 로 짓고**, 구운 문서를 다시 지어 엔티티마다 상태 전체(XML)를 견준다 — 값이 어긋나면 그 엔티티는 XML 로 남는다.
+- **복제는 서브트리 전체**(유니티 Ctrl+D) — 묶음이 원본 id 로 복제본끼리 잇고, 묶음 밖 부모(같은 소켓)는 런타임 id 로 찾는다.
+- 같이: `TestGameFramework.cpp` 의 지역 `ScopedSceneGameService` 세 벌을 파일 머리 하나로. `AGENTS.md` 의 "id 는 매니저마다" 를 바로잡고 "저장된
+  상태는 이름으로 다른 오브젝트를 가리키지 않는다" 규칙을 더했다. `Object/README.md` 에 표.
+
+**검증.** 새 시험 11(모두 이전 코드에서 진다): `SceneTest.CookedSceneKeepsAChildWrittenBeforeItsParent`(바이너리 씬 파일 왕복 · 소켓) ·
+`FileIdsStayTheSameAcrossSaveAndReload`(XML 파일 왕복 · 바이트 동일) · `ChildrenOfSameNamedEntitiesFindTheirOwnParent` ·
+`ChildOfAMissingPrefabEntityKeepsItsParentReference`(파일 id 와 같은 런타임 id 의 사칭자 포함), `ObjectStateRoundTripTest.AttachmentInsideAnObjectStaysInsideItsCopy`
+(세 형식 · 옛 데이터), `PrefabTest.RevertKeepsTheSocketAndTheComponentIds` · `PrefabMadeFromAChildDoesNotRememberItsParent`(옛 프리팹 · 원래 부모 곁),
+`GameFrameworkTest.SnapshotRestoreKeepsASocketChildReadBeforeItsParent`(같은 실행 · 다른 실행), `EditorTransactionTest.UndoOfDestroyReattachesToTheOriginalParentNotANamesake`,
+`EditorPlaySessionTest.StopRestoresParentsByIdAfterPlayRenames`, `EditorSceneCommandsTest.DuplicateCopiesTheSubtreeAndKeepsItsAttachmentsInside`.
+변이 17 중 16 이 진다(자기 표식 · 보존 · 공간 규칙 · 이름 되찾기 · 씬 · 세이브 · 플레이 · 복제의 묶음 · 프리팹 쓰기/읽기 · 되돌리기 소켓/id · id 를 안 씀 ·
+런타임 id 저장 · XML/바이너리 id 읽기). 남은 하나(이월에서 묶음 생략)는 동등 변이다 — 부모 먼저 + id 보존이라 결과가 같다. Debug 빌드 경고 0 ·
+nogpu · hostgpu · 린트 31/31, Shipping 빌드(쿠킹 포함) · nogpu · hostgpu 10/10.
 
 ### 2026-10-02 (경고 정리 — 라운드 끝 전 트리 경고 스윕: Release 3 · Shipping 1 → 0)
 

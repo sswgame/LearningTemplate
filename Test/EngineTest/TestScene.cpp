@@ -475,7 +475,7 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르던
     // 때는 여기서 뒤집혔다.
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pDefaultObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pDefaultObj, sw::ObjectStateSerializer::saveToXmlString( pDefaultObj ), &identity ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pDefaultObj, sw::ObjectStateSerializer::saveToXmlString( pDefaultObj ), { &identity } ) );
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 }
@@ -674,6 +674,246 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
     SW_EXPECT_TRUE( pReloadedGrand->getParent() == pReloadedChild );
     SW_ASSERT_NOT_NULL( pReloadedChild->getPrimarySceneComponent() );
     SW_EXPECT_TRUE( pReloadedChild->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 쿠킹한 씬에서도 부모보다 앞에 적힌 자식이 부모의 소켓에 붙는다 — 쿠커가 연결을 지우지 않는다
+ * @details 쿠커가 엔티티를 하나씩 따로 읽어, 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못했고 바이너리로 쓸 때 그 연결을 지웠다(저장은 살아 있는
+ *          부모 포인터에서 부착 필드를 다시 만든다). 검증은 컴포넌트 타입 목록만 봐서 통과했고, 쿠킹한 바이너리만 읽는 배포본에서 자식이 루트가
+ *          됐다 — 로컬 위치가 월드 위치로 읽혔다. 에디터에서 자식을 먼저 만들고 부모 밑에 끌어 놓는 것만으로 생긴다.
+ */
+SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "CookOrderWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+
+    sw::GameObject*     pSword = pObjects->createGameObject( sw::hashed_string( "Sword" ) ); // 먼저 만든다 — 문서에서 부모보다 앞에 적힌다
+    sw::GameObject*     pHero  = pObjects->createGameObject( sw::hashed_string( "Hero" ) );
+    sw::SceneComponent* pBlade = pSword->addComponent<sw::SceneComponent>();
+    sw::SceneComponent* pBody  = pHero->addComponent<sw::SceneComponent>();
+    sw::SceneComponent* pHand  = pHero->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pHand->attachToComponent( pBody ) );
+    SW_ASSERT_TRUE( pBlade->attachToComponent( pHand ) );
+    pBlade->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+    pObjects->mergePendingAdds();
+
+    sw::SceneDocument doc;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( doc ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), doc._listEntityNode.size() );
+    SW_EXPECT_STREQ( "Sword", doc._listEntityNode[0]._name.c_str() );
+    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( doc ) );
+    SW_EXPECT_TRUE( doc._listEntityNode[0]._embeddedXml.empty() ); // 구운 상태로만 읽힌다
+
+    // 배포본처럼 바이너리 씬 파일을 건너 읽는다 — 엔티티의 파일 id 도 파일에 실려야 한다.
+    const sw::string cookedPath = test::makeTempPath( "cook_order.scene.bin" );
+    SW_ASSERT_TRUE( doc.saveBinary( cookedPath ) );
+    sw::SceneDocument fromFile{};
+    SW_ASSERT_TRUE( fromFile.loadBinary( cookedPath ) );
+
+    sw::Scene* pCooked = manager.createScene( "CookOrderWorldCooked" );
+    SW_ASSERT_NOT_NULL( pCooked );
+    SW_ASSERT_TRUE( pCooked->instantiate( fromFile ) );
+    sw::GameObject* pLoadedSword = pCooked->getObjectManager()->findGameObjectByName( sw::hashed_string( "Sword" ) );
+    sw::GameObject* pLoadedHero  = pCooked->getObjectManager()->findGameObjectByName( sw::hashed_string( "Hero" ) );
+    SW_ASSERT_NOT_NULL( pLoadedSword );
+    SW_ASSERT_NOT_NULL( pLoadedHero );
+    const sw::SceneComponent* pLoadedBlade = pLoadedSword->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pLoadedBlade );
+    SW_ASSERT_NOT_NULL( pLoadedBlade->getParent() );
+    SW_EXPECT_TRUE( pLoadedBlade->getParent()->getOwner() == pLoadedHero );
+    SW_EXPECT_TRUE( pLoadedBlade->getParent() != pLoadedHero->getPrimarySceneComponent() ); // 몸통이 아니라 손(소켓)
+    SW_EXPECT_TRUE( pLoadedBlade->getLocalPosition() == sw::float3( 0.0f, 1.0f, 0.0f ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 씬을 다시 열어 저장해도 엔티티의 파일 id 와 자식의 부모 참조가 그대로다 — 저장할 때마다 파일이 흔들리지 않는다
+ * @details 부모는 파일 안의 id 로 가리킨다(유니티 fileID). 런타임 오브젝트 id 를 그대로 적으면 실행마다 값이 달라 저장할 때마다 모든 엔티티가
+ *          바뀐 것처럼 보인다 — 씬이 런타임 id ↔ 파일 id 표를 들고 같은 값을 다시 쓴다. 상태 본문까지 바이트 단위로 같아야 한다.
+ */
+SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "StableIdWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    sw::GameObject*        pParent  = pObjects->createGameObject( sw::hashed_string( "Parent" ) );
+    sw::GameObject*        pChild   = pObjects->createGameObject( sw::hashed_string( "Child" ) );
+    SW_ASSERT_NOT_NULL( pParent->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pChild->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    pObjects->mergePendingAdds();
+
+    sw::SceneDocument first;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( first ) );
+    // 다른 오브젝트를 몇 개 더 만들어 런타임 id 를 밀어 둔다 — 다시 읽은 씬의 오브젝트는 다른 런타임 id 를 받는다.
+    for ( uint32 extraIndex = 0; extraIndex < 3; ++extraIndex )
+        SW_ASSERT_NOT_NULL( pObjects->createGameObject( sw::hashed_string( "Spacer" ) ) );
+
+    // 저작 파일(XML)을 건너 다시 연다 — 엔티티의 `id` 속성이 실려야 한다.
+    const sw::string scenePath = test::makeTempPath( "stable_ids.scene.xml" );
+    SW_ASSERT_TRUE( first.saveXml( scenePath ) );
+    sw::SceneDocument fromFile{};
+    SW_ASSERT_TRUE( fromFile.loadXml( scenePath ) );
+
+    sw::Scene* pReloaded = manager.createScene( "StableIdWorldReloaded" );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_ASSERT_TRUE( pReloaded->instantiate( fromFile ) );
+    sw::GameObject* pReloadedChild  = pReloaded->getObjectManager()->findGameObjectByName( sw::hashed_string( "Child" ) );
+    sw::GameObject* pReloadedParent = pReloaded->getObjectManager()->findGameObjectByName( sw::hashed_string( "Parent" ) );
+    SW_ASSERT_NOT_NULL( pReloadedChild );
+    SW_EXPECT_TRUE( pReloadedChild->getParent() == pReloadedParent ); // 파일 id 로 실제로 이어졌다
+    sw::SceneDocument second;
+    SW_ASSERT_TRUE( pReloaded->serializeToDocument( second ) );
+
+    SW_ASSERT_EQUAL( first._listEntityNode.size(), second._listEntityNode.size() );
+    for ( const sw::SceneDocument::EntityNode& before : first._listEntityNode )
+    {
+        SW_EXPECT_TRUE( before._fileId != 0 );
+        const sw::SceneDocument::EntityNode* pAfter = nullptr;
+        for ( const sw::SceneDocument::EntityNode& candidate : second._listEntityNode )
+        {
+            if ( candidate._name == before._name )
+                pAfter = &candidate;
+        }
+        SW_ASSERT_NOT_NULL( pAfter );
+        SW_EXPECT_EQUAL( before._fileId, pAfter->_fileId );
+        SW_EXPECT_STREQ( before._embeddedXml.c_str(), pAfter->_embeddedXml.c_str() );
+    }
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 이름이 같은 엔티티 둘의 자식이 저마다 제 부모에 붙는다
+ * @details 매니저는 이름을 유일하게 바꾸므로(`Enemy` → `Enemy_2`) 이름이 같은 엔티티가 든 문서(옛 저장 · 병합 · 손 편집)를 읽으면, 이름으로 부모를
+ *          찾던 자식들이 모두 앞의 것에 붙었다 — 그대로 저장하면 그것이 굳었다. 부착은 이제 부모의 파일 id 로 가리킨다.
+ */
+SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "TwinWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+
+    sw::GameObject* pEnemyA = pObjects->createGameObject( sw::hashed_string( "Enemy" ) );
+    sw::GameObject* pArmA   = pObjects->createGameObject( sw::hashed_string( "ArmA" ) );
+    sw::GameObject* pEnemyB = pObjects->createGameObject( sw::hashed_string( "Enemy" ) );
+    sw::GameObject* pArmB   = pObjects->createGameObject( sw::hashed_string( "ArmB" ) );
+    for ( sw::GameObject* pObj : { pEnemyA, pArmA, pEnemyB, pArmB } )
+        SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pEnemyB->getName() != sw::hashed_string( "Enemy" ) ); // 매니저가 유일하게 바꿨다
+    pEnemyA->getPrimarySceneComponent()->setLocalPosition( sw::float3{ 1.0f, 0.0f, 0.0f } );
+    pEnemyB->getPrimarySceneComponent()->setLocalPosition( sw::float3{ 2.0f, 0.0f, 0.0f } );
+    SW_ASSERT_TRUE( pArmA->attachToParent( pEnemyA ) );
+    SW_ASSERT_TRUE( pArmB->attachToParent( pEnemyB ) );
+
+    sw::SceneDocument doc;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( doc ) );
+    // 두 적의 이름을 같게 만든다(병합 · 손 편집으로 생기는 문서) — 상태의 이름 · 자식의 부모 이름까지.
+    const sw::string renamed = pEnemyB->getName().c_str();
+    for ( sw::SceneDocument::EntityNode& entity : doc._listEntityNode )
+    {
+        if ( entity._name == renamed )
+            entity._name = "Enemy";
+        for ( size_t found = entity._embeddedXml.find( renamed ); found != sw::string::npos; found = entity._embeddedXml.find( renamed ) )
+            entity._embeddedXml.replace( found, renamed.size(), "Enemy" );
+    }
+
+    sw::Scene* pReloaded = manager.createScene( "TwinWorldReloaded" );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_ASSERT_TRUE( pReloaded->instantiate( doc ) );
+    sw::GameObject* pLoadedArmA = pReloaded->getObjectManager()->findGameObjectByName( sw::hashed_string( "ArmA" ) );
+    sw::GameObject* pLoadedArmB = pReloaded->getObjectManager()->findGameObjectByName( sw::hashed_string( "ArmB" ) );
+    SW_ASSERT_NOT_NULL( pLoadedArmA );
+    SW_ASSERT_NOT_NULL( pLoadedArmB );
+    SW_ASSERT_NOT_NULL( pLoadedArmA->getParent() );
+    SW_ASSERT_NOT_NULL( pLoadedArmB->getParent() );
+    SW_EXPECT_TRUE( pLoadedArmA->getParent() != pLoadedArmB->getParent() );
+    SW_EXPECT_TRUE( pLoadedArmB->getParent()->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 2.0f, 0.0f, 0.0f ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 프리팹을 찾지 못한 엔티티의 자식은 저장해도 부모 참조를 잃지 않는다 — 프리팹이 돌아오면 다시 붙는다
+ * @details 프리팹을 찾지 못한 엔티티는 오브젝트로 만들지 않고 문서 그대로 들고 있다가 다시 쓴다("Missing Prefab"). 그런데 그 **자식**은 읽을 때 부모가
+ *          없어 루트로 남았고, 저장이 살아 있는 부모 포인터(없음)에서 부착 필드를 다시 만들어 연결을 지웠다 — 프리팹을 되찾아 다시 열어도 자식은 루트였다.
+ *          찾지 못한 참조는 이제 그대로 남는다(유니티의 missing reference).
+ */
+SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "GhostParentWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    sw::GameObject*        pGhost   = pObjects->createGameObject( sw::hashed_string( "Ghost" ) );
+    sw::GameObject*        pGun     = pObjects->createGameObject( sw::hashed_string( "Gun" ) );
+    SW_ASSERT_NOT_NULL( pGhost->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pGun->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pGun->attachToParent( pGhost ) );
+
+    sw::SceneDocument authored;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( authored ) );
+    sw::SceneDocument withMissingPrefab = authored;
+    for ( sw::SceneDocument::EntityNode& entity : withMissingPrefab._listEntityNode )
+    {
+        if ( entity._name == "Ghost" )
+            entity._prefab = "prefabs/test_missing_ghost_parent.prefab.xml";
+    }
+
+    sw::Scene* pOpened = manager.createScene( "GhostParentWorldOpened" );
+    SW_ASSERT_NOT_NULL( pOpened );
+    // 고스트의 **파일 id** 와 같은 **런타임 id** 를 가진 다른 오브젝트가 이 씬에 있다 — 파일 id 는 파일 안에서만 뜻이 있으니 이것에 붙으면 안 된다.
+    uint64 ghostFileId = 0;
+    for ( const sw::SceneDocument::EntityNode& entity : withMissingPrefab._listEntityNode )
+    {
+        if ( entity._name == "Ghost" )
+            ghostFileId = entity._fileId;
+    }
+    SW_ASSERT_TRUE( ghostFileId != 0 );
+    sw::GameObject* pSameNumber = pOpened->getObjectManager()->createGameObjectWithId( sw::hashed_string( "SameNumber" ), ghostFileId );
+    SW_ASSERT_NOT_NULL( pSameNumber );
+    SW_ASSERT_EQUAL( ghostFileId, pSameNumber->getObjectId() );
+    SW_ASSERT_NOT_NULL( pSameNumber->addComponent<sw::SceneComponent>() );
+    {
+        test::ScopedDefensiveTestLog expected( "prefab of 'Ghost' does not exist and Gun cannot find its parent" );
+        SW_ASSERT_TRUE( pOpened->instantiate( withMissingPrefab ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), pOpened->getUnresolvedEntityCount() );
+    sw::GameObject* pOpenedGun = pOpened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Gun" ) );
+    SW_ASSERT_NOT_NULL( pOpenedGun );
+    SW_EXPECT_NULL( pOpenedGun->getParent() );
+
+    // 열고 저장한다 — 자식의 부모 참조가 그대로 남아야 한다. 같은 번호의 오브젝트는 지운다(저장 문서에 엔티티가 늘지 않게).
+    pOpened->getObjectManager()->destroyObject( pSameNumber );
+    pOpened->getObjectManager()->processDeferredDestruction();
+    sw::SceneDocument resaved;
+    SW_ASSERT_TRUE( pOpened->serializeToDocument( resaved ) );
+
+    // 프리팹이 돌아왔다(여기서는 고스트를 다시 상태만 든 엔티티로) — 다시 열면 자식이 부모에 붙는다.
+    for ( sw::SceneDocument::EntityNode& entity : resaved._listEntityNode )
+    {
+        if ( entity._name == "Ghost" )
+            entity._prefab.clear();
+    }
+    sw::Scene* pRestored = manager.createScene( "GhostParentWorldRestored" );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_ASSERT_TRUE( pRestored->instantiate( resaved ) );
+    sw::GameObject* pRestoredGun   = pRestored->getObjectManager()->findGameObjectByName( sw::hashed_string( "Gun" ) );
+    sw::GameObject* pRestoredGhost = pRestored->getObjectManager()->findGameObjectByName( sw::hashed_string( "Ghost" ) );
+    SW_ASSERT_NOT_NULL( pRestoredGun );
+    SW_ASSERT_NOT_NULL( pRestoredGhost );
+    SW_EXPECT_TRUE( pRestoredGun->getParent() == pRestoredGhost );
 
     manager.shutdown();
 }
