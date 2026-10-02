@@ -29,6 +29,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorToolAssetCommands.cpp
 		TestEditorViewportMath.cpp
 		TestEditorWorkspaceGuid.cpp
+		TestInspectorBuiltinValue.cpp
 		TestInspectorPropertyLayout.cpp
 		TestEditorViewportPick.cpp
 		TestReloadFileManager.cpp
@@ -48,6 +49,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"

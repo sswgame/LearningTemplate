@@ -7,12 +7,14 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
 
 namespace sw
 {
@@ -96,14 +98,11 @@ namespace sw::editor
     private:
         /** @brief 프로퍼티 검색 필터 버퍼 */
         fixed_string<constant::kMaxBuffer64> _propertyFilter;
-        /** @brief FUNCTION() 인자 편집용 임시 버퍼입니다(창마다 따로). */
-        int32                                 _arrArgInt[8];
-        float32                               _arrArgFloat[8];
-        bool                                  _arrArgBool[8];
-        fixed_string<constant::kMaxBuffer256> _arrArgString[8];
-        fixed_string<constant::kMaxBuffer256> _lastInvokeResult;
-        EditorFileCollectJob                  _componentPresetJob;
-        vector<string>                        _listComponentPresetFile;
+        /** @brief FUNCTION() 인자 칸입니다. 키는 (타입 · 메서드) 이름 해시라, 메서드마다 인자 타입 그대로의 값을 따로 듭니다. */
+        unordered_map<uint64, vector<InspectorMethodArgSlot>> _mapMethodArgSlot;
+        fixed_string<constant::kMaxBuffer256>                 _lastInvokeResult;
+        EditorFileCollectJob                                  _componentPresetJob;
+        vector<string>                                        _listComponentPresetFile;
         /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트입니다. 편집 통지를 받습니다. */
         Component* _pEditTargetComponent;
         /** @brief 지금 프로퍼티를 그리는 중인 GameObject 입니다. 컴포넌트가 없을 때만 씁니다. */

@@ -10,6 +10,8 @@
 
 namespace sw::editor
 {
+    struct InspectorMethodArgSlot;
+
     class IInspectorProperty;
 
     /** @brief 타입별 인스펙터 프로퍼티 UI 관리자 (EditorContext 소유) */
@@ -21,7 +23,11 @@ namespace sw::editor
 
         void                registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
         IInspectorProperty* find( string_view typeName ) const;
-        void                registerDefaults();
+        /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 갈래를 정합니다). */
+        void registerDefaults();
+
+        /** @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다. */
+        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot );
 
     private:
         map<string, unique_ptr<IInspectorProperty>> _mapProperty;

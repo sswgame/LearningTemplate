@@ -66,62 +66,6 @@ namespace sw::editor
                 edit();
                 EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
             }
-
-            static bool isSupportedMethodArgType( string_view typeName )
-            {
-                hashed_string hashedName( typeName );
-                return hashedName.isPredefinedType( PredefinedNameType::NameType_int32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_int64 ) ||
-                       hashedName.isPredefinedType( PredefinedNameType::NameType_float32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-                       hashedName.isPredefinedType( PredefinedNameType::NameType_string );
-            }
-
-            static bool formatTaskValue( const TaskValue& value, string_view returnType, utf8* pOutBuf, size_t outSize )
-            {
-                if ( pOutBuf == nullptr || outSize == 0 )
-                    return false;
-                const uint32  cap      = static_cast<uint32>( outSize );
-                TypeRegistry& registry = *editor::getService<TypeRegistry>();
-
-                if ( returnType.empty() || returnType == "void" || value.hasValue() == false )
-                {
-                    formatstring( pOutBuf, cap, "(void / empty)" );
-                    return true;
-                }
-                if ( registry.isType( hashed_string( returnType ), "int32" ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", value.getValue<int32>() );
-                    return true;
-                }
-                if ( registry.isType( hashed_string( returnType ), "int64" ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", value.getValue<int64>() );
-                    return true;
-                }
-                if ( registry.isType( hashed_string( returnType ), "float32" ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", static_cast<float64>( value.getValue<float32>() ) );
-                    return true;
-                }
-                if ( registry.isType( hashed_string( returnType ), "float64" ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", value.getValue<float64>() );
-                    return true;
-                }
-                if ( registry.isType( hashed_string( returnType ), "bool" ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", value.getValue<bool>() ? "true" : "false" );
-                    return true;
-                }
-                if ( hashed_string( returnType ).isPredefinedType( PredefinedNameType::NameType_string ) )
-                {
-                    formatstring( pOutBuf, cap, "%#", value.getValue<string>().c_str() );
-                    return true;
-                }
-
-                formatstring( pOutBuf, cap, "(unsupported return: %#)",
-                              string( returnType ).c_str() );
-                return false;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -130,10 +74,7 @@ namespace sw::editor
 {
     InspectorPanel::InspectorPanel()
         : _propertyFilter{}
-        , _arrArgInt{ 0, 0, 0, 0, 0, 0, 0, 0 }
-        , _arrArgFloat{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }
-        , _arrArgBool{ false, false, false, false, false, false, false, false }
-        , _arrArgString{}
+        , _mapMethodArgSlot{}
         , _lastInvokeResult{}
         , _componentPresetJob{}
         , _listComponentPresetFile{}
@@ -928,68 +869,31 @@ namespace sw::editor
                 ImGui::TextColored( ImVec4{ 0.3f, 0.8f, 1.0f, 1.0f }, "[Editor]" );
             }
             EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
-            bool bArgsOk{ true };
-            for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
-            {
-                if ( paramIndex >= 8 || InspectorPanelInternal::isSupportedMethodArgType( method._listParameterTypeName[paramIndex] ) == false )
-                {
-                    bArgsOk = false;
-                    break;
-                }
-            }
-
-            for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
+            const uint64                    slotKey  = static_cast<uint64>( pTypeInfo->_fullyQualifiedName.getHash() ) * 31u + static_cast<uint64>( method._hashName.getHash() );
+            vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
+            const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
+            for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( listSlot.size() ); ++paramIndex )
             {
                 ImGui::PushID( static_cast<int32>( paramIndex ) );
-                const string&                        p = method._listParameterTypeName[paramIndex];
                 fixed_string<constant::kMaxBuffer64> label;
-                formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, p.c_str() );
-
-                TypeRegistry& registry = *editor::getService<TypeRegistry>();
-                if ( registry.isType( hashed_string( p ), "int32" ) || registry.isType( hashed_string( p ), "int64" ) )
-                    ImGui::InputInt( label.c_str(), &_arrArgInt[paramIndex] );
-                else if ( registry.isType( hashed_string( p ), "float32" ) )
-                    ImGui::DragFloat( label.c_str(), &_arrArgFloat[paramIndex], 0.1f );
-                else if ( registry.isType( hashed_string( p ), "bool" ) )
-                    ImGui::Checkbox( label.c_str(), &_arrArgBool[paramIndex] );
-                else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
-                    ImGui::InputText( label.c_str(), _arrArgString[paramIndex].data(), _arrArgString[paramIndex].capacity() );
-                else
-                    ImGui::TextDisabled( "%s (unsupported in UI)", label.c_str() );
-
+                formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, method._listParameterTypeName[paramIndex].c_str() );
+                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex] );
                 ImGui::PopID();
             }
 
-            if ( paramCount > 8 )
-                ImGui::TextDisabled( "Too many arguments (max 8 in UI)." );
+            if ( paramCount > InspectorBuiltinValueUtil::kMaxMethodArgCount )
+                ImGui::TextDisabled( "Too many arguments (max %u in UI).", InspectorBuiltinValueUtil::kMaxMethodArgCount );
 
             if ( bArgsOk == false )
             {
                 ImGui::BeginDisabled();
                 ImGui::Button( "Invoke" );
                 ImGui::EndDisabled();
-                ImGui::TextDisabled( "Unsupported FUNCTION args ??invoke skipped." );
+                ImGui::TextDisabled( "Unsupported FUNCTION args - invoke skipped." );
             }
             else if ( ImGui::Button( "Invoke" ) )
             {
-                TaskArgs args;
-                for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
-                {
-                    const string& p        = method._listParameterTypeName[paramIndex];
-                    TypeRegistry& registry = *editor::getService<TypeRegistry>();
-                    if ( registry.isType( hashed_string( p ), "int32" ) )
-                        args.add( int32{ _arrArgInt[paramIndex] } );
-                    else if ( registry.isType( hashed_string( p ), "int64" ) )
-                        args.add( int64{ _arrArgInt[paramIndex] } );
-                    else if ( registry.isType( hashed_string( p ), "float32" ) )
-                        args.add( _arrArgFloat[paramIndex] );
-                    else if ( registry.isType( hashed_string( p ), "bool" ) )
-                        args.add( _arrArgBool[paramIndex] );
-                    else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
-                        args.add( string( _arrArgString[paramIndex].c_str() ) );
-                }
-
-                invokeTypeMethod( pInstance, pTypeInfo, method, args );
+                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
             }
 
             ImGui::PopID();
@@ -1005,7 +909,7 @@ namespace sw::editor
             return;
 
         const TaskValue result = pTypeRegistry->invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-        InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
-                                                 _lastInvokeResult.capacity() );
+        InspectorBuiltinValueUtil::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
+                                                       _lastInvokeResult.capacity() );
     }
 } // namespace sw::editor

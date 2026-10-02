@@ -3,10 +3,17 @@
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/SlotHandle.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/String/TagID.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
@@ -44,6 +51,15 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
                 showTooltipIfHovered( prop );
+            }
+            /** @brief 내장 타입 값을 표의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
+            void drawReadOnlyValue( const PropertyInfo& prop, const void* pValue )
+            {
+                fixed_string<constant::kMaxBuffer512> buf;
+                const InspectorBuiltinValue*          pRow = InspectorBuiltinValueUtil::findBuiltin( prop._typeName.c_str() );
+                if ( pRow != nullptr )
+                    pRow->_pFormatValue( pValue, buf.data(), buf.capacity() );
+                drawReadOnlyText( prop, buf.c_str() );
             }
             bool isSliderRequested( const PropertyInfo& prop )
             {
@@ -108,117 +124,181 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 숫자 프로퍼티. 타입마다 다른 것은 표 한 줄뿐이고, 그리는 경로는 하나다
+        // 값 위젯. 프로퍼티와 CallInEditor 인자가 같은 함수로 그린다 — 갈래는 `InspectorWidgetFor<T>` 가 정한다
         // ------------------------------------------------------------------------------
+        static_assert( ImGuiDataType_S8 + 1 == ImGuiDataType_U8 && ImGuiDataType_U8 + 1 == ImGuiDataType_S16 &&
+                           ImGuiDataType_S16 + 2 == ImGuiDataType_S32 && ImGuiDataType_S32 + 2 == ImGuiDataType_S64 &&
+                           ImGuiDataType_S64 + 1 == ImGuiDataType_U64,
+                       "getNumberDataType assumes ImGuiDataType orders S8 U8 S16 U16 S32 U32 S64 U64" );
+
+        /** @brief 숫자 타입의 ImGui 데이터 타입입니다. 정수는 크기 · 부호로 정합니다. */
+        template <typename T>
+        constexpr ImGuiDataType getNumberDataType()
+        {
+            if constexpr ( std::is_same_v<T, float32> )
+                return ImGuiDataType_Float;
+            else if constexpr ( std::is_same_v<T, float64> )
+                return ImGuiDataType_Double;
+            else
+            {
+                static_assert( std::is_integral_v<T> && sizeof( T ) <= 8, "Number widget needs an integer or float type" );
+                constexpr int32 kSizeRank = sizeof( T ) == 1 ? 0 : ( sizeof( T ) == 2 ? 1 : ( sizeof( T ) == 4 ? 2 : 3 ) );
+                return static_cast<ImGuiDataType>( ImGuiDataType_S8 + kSizeRank * 2 + ( std::is_unsigned_v<T> ? 1 : 0 ) );
+            }
+        }
+
+        /** @brief 숫자 위젯의 서식입니다. 정수는 ImGui 의 타입별 서식(`%lld` 등), 실수는 소수 둘째 자리입니다. */
+        template <typename T>
+        const utf8* getNumberFormat()
+        {
+            if constexpr ( std::is_floating_point_v<T> )
+                return "%.2f";
+            else
+                return ImGui::DataTypeGetInfo( getNumberDataType<T>() )->PrintFmt;
+        }
+
+        /** @brief Enter 로 확정하는 입력 칸입니다. 키 입력마다 인턴하지 않으려는 것입니다. 확정했으면 true 입니다. */
+        bool drawNameInput( const utf8* pId, hashed_string& value )
+        {
+            fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };
+            if ( ImGui::InputText( pId, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+                return false;
+            value = hashed_string( buf.c_str() );
+            return true;
+        }
+
         /**
-         * @brief 숫자 타입 하나의 표 한 줄입니다. 위젯이 다루는 값 타입(ImGui 는 int32 · float32 만 압니다) · 읽기 전용
-         *        표시용 타입 · 서식 · 드래그 속도 · 범위 메타가 없을 때의 한계(0·0 은 무제한)를 담습니다.
-         * @details 예전에는 int32 · uint32 · int64 · uint8 · float32 · float64 가 각자 40줄짜리 `draw` 를 갖고 있었습니다.
-         *          같은 여섯 단계(포인터 · 읽기 전용 · 범위 · 슬라이더 · 툴팁 · 되돌리기)에 캐스트만 달랐습니다. 폭이 다른
-         *          타입은 임시 값으로 위젯을 오가고, 바뀌었을 때만 되씁니다.
+         * @brief 내장 값 하나를 고치는 위젯입니다. 메타데이터(범위 · 단위 · 색 · 애셋 경로)를 모르는 기본 모양입니다.
+         * @details CallInEditor 인자 칸은 늘 이것을 쓰고, 메타데이터가 필요 없는 갈래(행렬 · 회전 · 핸들 · 태그)의 프로퍼티도
+         *          이것을 씁니다. 갈래가 늘었는데 여기 분기가 없으면 컴파일되지 않습니다.
+         * @return 값이 바뀌었으면 true 입니다.
          */
         template <typename T>
-        struct NumericPropertyTraits;
-
-        template <>
-        struct NumericPropertyTraits<int32>
+        bool drawValueWidget( const utf8* pLabel, T& value )
         {
-            using Widget                            = int32;
-            using Print                             = int32;
-            static constexpr const utf8* kFormat    = "%d";
-            static constexpr float32     kDragSpeed = 1.0f;
-            static constexpr int32       kMin       = 0;
-            static constexpr int32       kMax       = 0;
-            static constexpr bool        kIsInteger = true;
-        };
-
-        template <>
-        struct NumericPropertyTraits<uint32>
-        {
-            using Widget                            = int32;
-            using Print                             = uint32;
-            static constexpr const utf8* kFormat    = "%u";
-            static constexpr float32     kDragSpeed = 1.0f;
-            static constexpr int32       kMin       = 0;
-            static constexpr int32       kMax       = 0;
-            static constexpr bool        kIsInteger = true;
-        };
-
-        template <>
-        struct NumericPropertyTraits<int64>
-        {
-            using Widget                            = int32;
-            using Print                             = int64;
-            static constexpr const utf8* kFormat    = "%d";
-            static constexpr float32     kDragSpeed = 1.0f;
-            static constexpr int32       kMin       = 0;
-            static constexpr int32       kMax       = 0;
-            static constexpr bool        kIsInteger = true;
-        };
-
-        template <>
-        struct NumericPropertyTraits<uint8>
-        {
-            using Widget                            = int32;
-            using Print                             = uint32;
-            static constexpr const utf8* kFormat    = "%u";
-            static constexpr float32     kDragSpeed = 1.0f;
-            static constexpr int32       kMin       = 0;
-            static constexpr int32       kMax       = 255;
-            static constexpr bool        kIsInteger = true;
-        };
-
-        template <>
-        struct NumericPropertyTraits<float32>
-        {
-            using Widget                            = float32;
-            using Print                             = float64;
-            static constexpr const utf8* kFormat    = "%.2f";
-            static constexpr float32     kDragSpeed = 0.01f;
-            static constexpr float32     kMin       = 0.0f;
-            static constexpr float32     kMax       = 0.0f;
-            static constexpr bool        kIsInteger = false;
-        };
-
-        template <>
-        struct NumericPropertyTraits<float64>
-        {
-            using Widget                            = float32;
-            using Print                             = float64;
-            static constexpr const utf8* kFormat    = "%.2f";
-            static constexpr float32     kDragSpeed = 0.01f;
-            static constexpr float32     kMin       = 0.0f;
-            static constexpr float32     kMax       = 0.0f;
-            static constexpr bool        kIsInteger = false;
-        };
-
-        /** @brief 범위가 있고 슬라이더를 요청했으면 슬라이더, 아니면 드래그 위젯을 그립니다. 0·0 범위는 무제한입니다. */
-        bool drawNumberWidget( const utf8* pLabel, int32* pValue, float32 dragSpeed, int32 minValue, int32 maxValue,
-                               const utf8* pFormat, bool bSlider )
-        {
-            if ( bSlider )
-                return ImGui::SliderInt( pLabel, pValue, minValue, maxValue, pFormat );
-            return ImGui::DragInt( pLabel, pValue, dragSpeed, minValue, maxValue, pFormat );
+            constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
+            if constexpr ( kWidget == InspectorValueWidget::Number )
+                return ImGui::DragScalar( pLabel, getNumberDataType<T>(), &value, std::is_integral_v<T> ? 1.0f : 0.01f, nullptr, nullptr, getNumberFormat<T>() );
+            else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
+            {
+                if constexpr ( std::is_same_v<T, bool> )
+                    return ImGui::Checkbox( pLabel, &value );
+                else
+                {
+                    bool bValue = value.load( std::memory_order_relaxed );
+                    if ( ImGui::Checkbox( pLabel, &bValue ) == false )
+                        return false;
+                    value.store( bValue, std::memory_order_relaxed );
+                    return true;
+                }
+            }
+            else if constexpr ( kWidget == InspectorValueWidget::Text )
+                return EditorWidgets::drawTextField( pLabel, value );
+            else if constexpr ( kWidget == InspectorValueWidget::Name )
+                return drawNameInput( pLabel, value );
+            else if constexpr ( kWidget == InspectorValueWidget::Vector2 )
+                return ImGui::DragFloat2( pLabel, &value._x, 0.1f );
+            else if constexpr ( kWidget == InspectorValueWidget::Vector3 )
+                return ImGui::DragFloat3( pLabel, &value._x, 0.1f );
+            else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
+                return ImGui::DragFloat4( pLabel, &value._x, 0.01f );
+            else if constexpr ( kWidget == InspectorValueWidget::Matrix )
+            {
+                // 행 넷을 한 묶음으로 둔다 — 되돌리기 추적이 마지막 항목(묶음)을 본다.
+                bool bChanged = false;
+                ImGui::PushID( pLabel );
+                ImGui::BeginGroup();
+                for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
+                {
+                    ImGui::PushID( rowIndex );
+                    bChanged |= ImGui::DragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
+                    ImGui::PopID();
+                }
+                ImGui::EndGroup();
+                ImGui::PopID();
+                return bChanged;
+            }
+            else if constexpr ( kWidget == InspectorValueWidget::Rotation )
+            {
+                float3 degrees = value.getEulerAngles() * MathUtil::RadianToDegree;
+                if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
+                    return false;
+                value = quaternion::createFromYawPitchRoll( degrees * MathUtil::DegreeToRadian );
+                return true;
+            }
+            else if constexpr ( kWidget == InspectorValueWidget::Handle )
+            {
+                if constexpr ( std::is_same_v<T, GameObjectHandle> )
+                {
+                    uint64 objectId = value.objectId();
+                    if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectId ) == false )
+                        return false;
+                    value = GameObjectHandle::make( objectId );
+                    return true;
+                }
+                else if constexpr ( std::is_same_v<T, ComponentHandle> )
+                {
+                    uint64 arrId[2] = { value.objectId(), value.componentId() };
+                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrId, 2 ) == false )
+                        return false;
+                    value = ComponentHandle::makeOwned( arrId[0], arrId[1] );
+                    return true;
+                }
+                else
+                {
+                    static_assert( std::is_same_v<T, SlotHandle>, "Handle widget: unknown handle type" );
+                    uint32 arrPart[2] = { value.index(), value.generation() };
+                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U32, arrPart, 2 ) == false )
+                        return false;
+                    value = SlotHandle::make( arrPart[0], arrPart[1] );
+                    return true;
+                }
+            }
+            else
+            {
+                static_assert( kWidget == InspectorValueWidget::Tag, "drawValueWidget: no widget for this InspectorValueWidget" );
+                fixed_string<constant::kMaxBuffer256> buf{ value.isValid() ? value.getString() : "" };
+                if ( ImGui::InputText( pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+                    return false;
+                value = buf.empty() ? TagID{} : TagID::request( buf.c_str() );
+                return true;
+            }
         }
 
-        bool drawNumberWidget( const utf8* pLabel, float32* pValue, float32 dragSpeed, float32 minValue, float32 maxValue,
-                               const utf8* pFormat, bool bSlider )
+        /** @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. `ReflectBuiltins.xxx` 줄마다 하나입니다. */
+        template <typename T>
+        bool drawMethodArgFor( const utf8* pLabel, TaskValue& value )
         {
-            if ( bSlider )
-                return ImGui::SliderFloat( pLabel, pValue, minValue, maxValue, pFormat );
-            return ImGui::DragFloat( pLabel, pValue, dragSpeed, minValue, maxValue, pFormat );
+            T edited = value.getValue<T>();
+            if ( drawValueWidget( pLabel, edited ) == false )
+                return false;
+            value = TaskValue{ std::move( edited ) };
+            return true;
         }
 
+        using DrawMethodArgFn = bool ( * )( const utf8* pLabel, TaskValue& value );
+
+        /** @brief 인자 위젯 표입니다. 순서는 `InspectorBuiltinValueUtil` 표와 같습니다(같은 파일을 같은 순서로 include). */
+        const DrawMethodArgFn kArrDrawMethodArg[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgFor<InspectorBuiltinCppTypeT<CppType>>,
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+        };
+
+        // ------------------------------------------------------------------------------
+        // 숫자 프로퍼티. 정수 여덟 · 실수 둘이 같은 경로로 그리고, 타입마다 다른 것은 ImGui 데이터 타입뿐이다
+        // ------------------------------------------------------------------------------
         template <typename T>
         class NumericProperty : public BuiltinPropertyBase
         {
-            using Traits = NumericPropertyTraits<T>;
-            using Widget = typename Traits::Widget;
+            static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                if constexpr ( Traits::kIsInteger )
+                if constexpr ( kIsInteger )
                 {
                     if ( prop._bIsBitField == SW_TRUE )
                         return drawBitFieldCheckbox( pInstance, prop );
@@ -230,13 +310,13 @@ namespace sw::editor
 
                 // 보이는 단위(라디안 → 도)의 배율은 실수에만 건다. 정수는 단위를 글자로만 붙인다.
                 const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
-                const float64              scale     = Traits::kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
-                const float32              dragSpeed = ( Traits::kIsInteger == false && unit._dragSpeed > 0.0f ) ? unit._dragSpeed : Traits::kDragSpeed;
+                const float64              scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
+                const float32              dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer64> buf;
-                    if constexpr ( Traits::kIsInteger )
-                        formatstring( buf.data(), buf.capacity(), "%#", static_cast<typename Traits::Print>( *pPtr ) );
+                    if constexpr ( kIsInteger )
+                        formatstring( buf.data(), buf.capacity(), "%#", *pPtr );
                     else
                         formatstring( buf.data(), buf.capacity(), "%#", static_cast<float64>( *pPtr ) * scale );
                     drawReadOnlyText( prop, buf.c_str() );
@@ -244,23 +324,22 @@ namespace sw::editor
                 }
 
                 // 적힌 쪽만 막는다 — `Min = 0` 만 적은 프로퍼티는 위로 열려 있다(`PropertyMetadata::_bHasMinRange` 설명).
-                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._minRange ) * scale ) : Traits::kMin;
-                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._maxRange ) * scale ) : Traits::kMax;
+                // 적히지 않은 쪽은 nullptr 이라 ImGui 가 타입의 범위로 막는다(uint8 은 0..255).
+                const T      minValue = static_cast<T>( static_cast<float64>( prop._metadata._minRange ) * scale );
+                const T      maxValue = static_cast<T>( static_cast<float64>( prop._metadata._maxRange ) * scale );
+                const T*     pMin     = ( prop._metadata._bHasMinRange != SW_FALSE ) ? &minValue : nullptr;
+                const T*     pMax     = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? &maxValue : nullptr;
                 const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
-                const string fmt      = InspectorPropertyLayout::appendUnitSuffix( Traits::kFormat, unit._suffix );
+                const string fmt      = InspectorPropertyLayout::appendUnitSuffix( getNumberFormat<T>(), unit._suffix );
 
-                Widget widgetValue{};
-                if constexpr ( Traits::kIsInteger )
-                    widgetValue = static_cast<Widget>( *pPtr );
+                T    widgetValue = kIsInteger ? *pPtr : static_cast<T>( static_cast<float64>( *pPtr ) * scale );
+                bool bChanged    = false;
+                if ( bSlider )
+                    bChanged = ImGui::SliderScalar( _pLabel, getNumberDataType<T>(), &widgetValue, pMin, pMax, fmt.c_str() );
                 else
-                    widgetValue = static_cast<Widget>( static_cast<float64>( *pPtr ) * scale );
-                if ( drawNumberWidget( _pLabel, &widgetValue, dragSpeed, minValue, maxValue, fmt.c_str(), bSlider ) )
-                {
-                    if constexpr ( Traits::kIsInteger )
-                        *pPtr = static_cast<T>( widgetValue );
-                    else
-                        *pPtr = static_cast<T>( static_cast<float64>( widgetValue ) / scale );
-                }
+                    bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, fmt.c_str() );
+                if ( bChanged )
+                    *pPtr = kIsInteger ? widgetValue : static_cast<T>( static_cast<float64>( widgetValue ) / scale );
                 showTooltipIfHovered( prop );
                 InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
@@ -270,47 +349,54 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 그 밖의 내장 타입
         // ------------------------------------------------------------------------------
-        class BoolProperty : public BuiltinPropertyBase
+        /** @brief bool · atomic<bool> 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
+        template <typename T>
+        class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                if ( prop._bIsBitField == SW_TRUE )
-                    return drawBitFieldCheckbox( pInstance, prop );
+                if constexpr ( std::is_same_v<T, bool> )
+                {
+                    if ( prop._bIsBitField == SW_TRUE )
+                        return drawBitFieldCheckbox( pInstance, prop );
+                }
 
-                bool* pPtr = prop.getValuePtr<bool>( pInstance );
+                T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, *pPtr ? "true" : "false" );
+                    drawReadOnlyValue( prop, pPtr );
                     return true;
                 }
-                ImGui::Checkbox( _pLabel, pPtr );
+                drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                // atomic<bool> 은 다른 스레드가 쓰는 값이라 되돌리기 기록에 넣지 않는다.
+                if constexpr ( std::is_same_v<T, bool> )
+                    InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
             }
         };
 
-        class AtomicBoolProperty : public BuiltinPropertyBase
+        /** @brief 메타데이터가 필요 없는 갈래(행렬 · 회전 · 핸들 · 태그)의 프로퍼티입니다. 고치는 위젯은 인자 칸과 같습니다. */
+        template <typename T>
+        class ValueProperty : public BuiltinPropertyBase
         {
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                atomic<bool>* pPtr = prop.getValuePtr<atomic<bool>>( pInstance );
+                T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-
-                bool value = pPtr->load( std::memory_order_relaxed );
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, value ? "true" : "false" );
+                    drawReadOnlyValue( prop, pPtr );
                     return true;
                 }
-                if ( ImGui::Checkbox( _pLabel, &value ) )
-                    pPtr->store( value, std::memory_order_relaxed );
+                drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
             }
         };
@@ -373,7 +459,7 @@ namespace sw::editor
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pId )
-                    { drawHashedStringInput( pId, *pPtr ); }, droppedPath );
+                    { drawNameInput( pId, *pPtr ); }, droppedPath );
                     if ( action == AssetFieldAction::Dropped )
                         *pPtr = hashed_string( droppedPath.c_str() );
                     else if ( action == AssetFieldAction::Cleared )
@@ -381,21 +467,12 @@ namespace sw::editor
                 }
                 else
                 {
-                    drawHashedStringInput( _pLabel, *pPtr );
+                    drawNameInput( _pLabel, *pPtr );
                 }
                 showTooltipIfHovered( prop );
                 // 인턴 인덱스 하나라 POD 로 되돌린다 — 인턴된 문자열은 해제되지 않으므로 옛 인덱스는 언제나 유효하다.
                 InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
-            }
-
-        private:
-            /** @brief Enter 로 확정하는 입력 칸입니다. 키 입력마다 인턴하지 않으려는 것입니다. */
-            static void drawHashedStringInput( const utf8* pId, hashed_string& value )
-            {
-                fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };
-                if ( ImGui::InputText( pId, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
-                    value = hashed_string( buf.c_str() );
             }
         };
 
@@ -483,6 +560,35 @@ namespace sw::editor
                 return true;
             }
         };
+
+        /**
+         * @brief 내장 타입 하나의 프로퍼티 위젯을 만듭니다. 갈래는 `InspectorWidgetFor<T>` 가 정합니다.
+         * @details 메타데이터(범위 · 단위 · 색 · 애셋 경로)를 읽는 갈래는 전용 클래스, 나머지는 `ValueProperty` 입니다.
+         */
+        template <typename T>
+        unique_ptr<IInspectorProperty> createBuiltinProperty()
+        {
+            constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
+            if constexpr ( kWidget == InspectorValueWidget::Number )
+                return make_unique<NumericProperty<T>>();
+            else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
+                return make_unique<CheckboxProperty<T>>();
+            else if constexpr ( kWidget == InspectorValueWidget::Text )
+                return make_unique<StringProperty>();
+            else if constexpr ( kWidget == InspectorValueWidget::Name )
+                return make_unique<HashedStringProperty>();
+            else if constexpr ( kWidget == InspectorValueWidget::Vector2 )
+                return make_unique<Float2Property>();
+            else if constexpr ( kWidget == InspectorValueWidget::Vector3 )
+                return make_unique<Float3Property>();
+            else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
+                return make_unique<Float4Property>();
+            else
+                return make_unique<ValueProperty<T>>();
+        }
+
+        static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValueUtil::kBuiltinCount,
+                       "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
     } // namespace
 
     void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
@@ -500,18 +606,20 @@ namespace sw::editor
 
     void InspectorPropertyManager::registerDefaults()
     {
-        registerType( "int32", make_unique<NumericProperty<int32>>() );
-        registerType( "uint32", make_unique<NumericProperty<uint32>>() );
-        registerType( "uint8", make_unique<NumericProperty<uint8>>() );
-        registerType( "int64", make_unique<NumericProperty<int64>>() );
-        registerType( "float32", make_unique<NumericProperty<float32>>() );
-        registerType( "float64", make_unique<NumericProperty<float64>>() );
-        registerType( "bool", make_unique<BoolProperty>() );
-        registerType( "atomic_bool", make_unique<AtomicBoolProperty>() );
-        registerType( "string", make_unique<StringProperty>() );
-        registerType( "float3", make_unique<Float3Property>() );
-        registerType( "float2", make_unique<Float2Property>() );
-        registerType( "float4", make_unique<Float4Property>() );
-        registerType( "hashed_string", make_unique<HashedStringProperty>() );
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) registerType( #Canon, createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>() );
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+    }
+
+    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot )
+    {
+        if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
+        {
+            ImGui::TextDisabled( "%s (unsupported in UI)", pLabel );
+            return false;
+        }
+        return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
     }
 } // namespace sw::editor
