@@ -883,6 +883,46 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueEncodedEnumsFromBeforeTheChangeS
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 컨테이너 안의 모르는 열거자는 **그 원소만** 실패한다 — 뒤 원소 · 다른 항목은 읽힌다(XML 과 같다)
+ * @details 바이너리 컨테이너 읽기는 원소 하나가 실패하면 멈췄다 — 지운 열거자 하나 뒤의 원소를 **모두 잃었다**(맵은 그 항목 뒤 항목 전부). XML 은 그 원소만
+ *          기본값으로 두고 계속 읽는다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 같은 규칙을 쓸 수 있다(망가진 스트림은 그대로 멈춘다). 칸은 여전히
+ *          실패로 알린다 — 모르는 칸을 받는 문맥은 그 칸을 넘기되 읽은 원소는 남는다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnlyItsElement )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info       = makeWireShiftHostType();
+    WireShiftHost                     saved      = makeSavedWireShiftHost();
+    saved._listColor                             = { WireShiftColor::Blue, WireShiftColor::Green, WireShiftColor::Red };
+    saved._mapColorToCount[WireShiftColor::Blue] = 3; // Green(값 1) 뒤에 온다 — 예전에는 Green 에서 멈춰 이것을 잃었다
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &saved, info, bytes );
+
+    // 다음 빌드: Green 이 Lime 이 됐다(별칭 없음).
+    registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                           {
+                               { "Red", 0, false},
+                               {"Lime", 1, false},
+                               {"Blue", 2, false}
+    } );
+
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    lenient.setAllowUnknownProperties( true );
+    WireShiftHost target;
+    {
+        test::ScopedDefensiveTestLog expected( "saved enumerators this build no longer has" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &target, info, bytes.data(), bytes.size(), lenient ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 3 ), target._listColor.size() );
+    SW_EXPECT_TRUE( target._listColor[0] == WireShiftColor::Blue );
+    SW_EXPECT_TRUE( target._listColor[2] == WireShiftColor::Red ); // 모르는 원소 뒤도 읽힌다
+    SW_EXPECT_EQUAL( size_t( 1 ), target._mapColorToCount.size() );
+    SW_EXPECT_TRUE( target._mapColorToCount.count( WireShiftColor::Blue ) == 1 && target._mapColorToCount[WireShiftColor::Blue] == 3 );
+    SW_EXPECT_EQUAL( 9, target._after );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 지금 enum 에 없는 열거자 이름은 **그 칸만** 실패한다 — 값은 그대로, 0 이 되지 않는다(XML 과 같다)
  * @details 열거자를 지웠거나 ValueAlias 없이 이름을 바꾼 다음 빌드의 자리다. 엄격한 읽기는 실패를 알리고 그 칸은 지금 값을 지킨다. 모르는 칸을 받는 문맥
  *          (오브젝트 상태)은 그 칸만 건너뛰고 나머지를 읽는다 — 예전에는 바이너리만 그 컴포넌트를 통째로 버렸다. 옛 이름을 ValueAlias 로 남기면 새 이름으로 읽힌다.

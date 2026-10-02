@@ -627,21 +627,33 @@ namespace sw
 
             pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
 
+            // 모르는 열거자는 그 원소의 바이트를 끝까지 읽고 실패한다 — 그 원소만 기본값으로 두고 나머지를 읽는다(XML 과 같다). 예전에는 첫 실패에서
+            // 멈춰 **그 뒤 원소를 모두 잃었다.** 칸은 여전히 실패로 알린다(스칼라 enum 과 같다). 그 밖의 실패는 스트림이 망가진 것이라 멈춘다.
+            const bool bEnumElement = nested._elementNested == nullptr && engine::getTypeRegistry().findEnum( nested._elementTypeName ) != nullptr;
+            bool       bElementFailed{ false };
+
             // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다
             // (트리에 들어간 원소를 제자리에서 고치면 정렬 불변식이 깨진다).
             for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
             {
-                const bool bAppended = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
-                                                                                               [&]( void* pElement ) -> bool
-                {
+                const size_t elementStart = offset;
+                const bool   bAppended    = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
+                                                                                                    [&]( void* pElement ) -> bool
+                     {
                     if ( nested._elementNested != nullptr )
                         return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
                     return SerializerUtil::deserializeValueBinary( pElement, nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
                 } ) );
-                if ( bAppended == false )
-                    return false;
+                if ( bAppended )
+                    continue;
+                if ( bEnumElement && offset > elementStart && offset <= dataSize )
+                {
+                    bElementFailed = true;
+                    continue;
+                }
+                return false;
             }
-            return true;
+            return bElementFailed == false;
         }
 
         IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
@@ -649,26 +661,43 @@ namespace sw
         {
             vector<uint8> listKBuf( pMapWrap->getKeySize() );
             vector<uint8> listVBuf( pMapWrap->getValueSize() );
+            // 시퀀스와 같은 규칙 — 모르는 열거자(키 · 값)인 항목만 빼고 나머지를 읽는다. 키가 모르는 열거자여도 값은 읽어야 다음 항목과 어긋나지 않는다.
+            const bool bEnumKey   = engine::getTypeRegistry().findEnum( nested._keyTypeName ) != nullptr;
+            const bool bEnumValue = nested._elementNested == nullptr && engine::getTypeRegistry().findEnum( nested._elementTypeName ) != nullptr;
+            bool       bEntryFailed{ false };
             for ( uint32 entryIndex = 0; entryIndex < count; ++entryIndex )
             {
                 pMapWrap->defaultConstructKey( listKBuf.data() );
                 pMapWrap->defaultConstructValue( listVBuf.data() );
-                bool bOk = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx, wireVersion );
-                if ( bOk )
+                const size_t keyStart        = offset;
+                const bool   bKeyOk          = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx, wireVersion );
+                const bool   bKeySkippable   = bKeyOk == false && bEnumKey && offset > keyStart && offset <= dataSize;
+                bool         bValueOk        = false;
+                bool         bValueSkippable = false;
+                if ( bKeyOk || bKeySkippable )
                 {
+                    const size_t valueStart = offset;
                     if ( nested._elementNested != nullptr )
-                        bOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
+                        bValueOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
                     else
-                        bOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
+                        bValueOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
+                    bValueSkippable = bValueOk == false && bEnumValue && offset > valueStart && offset <= dataSize;
                 }
-                if ( bOk )
+                const bool bInsert = bKeyOk && bValueOk;
+                if ( bInsert )
                     pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
                 pMapWrap->destroyKey( listKBuf.data() );
                 pMapWrap->destroyValue( listVBuf.data() );
-                if ( bOk == false )
-                    return false;
+                if ( bInsert )
+                    continue;
+                if ( ( bKeyOk || bKeySkippable ) && ( bValueOk || bValueSkippable ) )
+                {
+                    bEntryFailed = true;
+                    continue;
+                }
+                return false;
             }
-            return true;
+            return bEntryFailed == false;
         }
         return false;
     }
