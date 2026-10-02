@@ -68,7 +68,7 @@ namespace sw
          */
         bool createTestPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<sw::pair<string, string>>& listFileContent, bool bIncludeDebugStringPool = false )
         {
-            FileUtil::createParentDirectory( packPath );
+            FileUtil::ensureParentDirectoryExists( packPath );
 
             FILE* pFile{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )

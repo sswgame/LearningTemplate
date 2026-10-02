@@ -59,7 +59,7 @@ namespace sw
             fileArch << static_cast<uint32>( payloadArch.getSize() );
             fileArch.writeBytes( payloadArch.getData(), payloadArch.getSize() );
 
-            FileUtil::createParentDirectory( path );
+            FileUtil::ensureParentDirectoryExists( path );
             return fileArch.saveFile( path );
         }
 

@@ -345,7 +345,7 @@ namespace sw
         // 상위 폴더가 없으면 쓰기가 실패한다. 로더는 실패를 모두 로그하는데 세이버는 조용히 false 만
         // 반환하고 있었다. 새 폴더에 프리팹을 저장하면 아무 메시지도 없이 아무 일도 일어나지 않았다.
         // SceneDocument::saveXml 과 같은 형태로 맞춘다.
-        FileUtil::createParentDirectory( absPath );
+        FileUtil::ensureParentDirectoryExists( absPath );
 
         const bool writeOk = xmlDoc.saveFile( absPath );
         if ( writeOk == false )
@@ -376,7 +376,7 @@ namespace sw
             jsonStr = doc.dump( 1 );
         }
 
-        FileUtil::createParentDirectory( absPath );
+        FileUtil::ensureParentDirectoryExists( absPath );
 
         const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ),
                                                   jsonStr.size() );
@@ -414,7 +414,7 @@ namespace sw
         arch << _name;
         arch << _stateData;
 
-        FileUtil::createParentDirectory( absPath );
+        FileUtil::ensureParentDirectoryExists( absPath );
         if ( arch.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Failed to write prefab binary: %#", absPath );

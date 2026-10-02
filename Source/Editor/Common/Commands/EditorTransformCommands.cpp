@@ -204,7 +204,7 @@ namespace sw::editor
         string fullPath( filePath );
         if ( StringUtil::endsWith( fullPath, EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
             fullPath = FileUtil::removeExtension( fullPath ) + string( EditorTransformCommandsInternal::kPresetSuffix );
-        FileUtil::createParentDirectory( fullPath );
+        FileUtil::ensureParentDirectoryExists( fullPath );
 
         const string xmlData = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
         return FileUtil::writeTextFile( fullPath, xmlData );

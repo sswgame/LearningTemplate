@@ -346,7 +346,7 @@ namespace sw
             if ( text.empty() )
                 continue;
             const string outputPath = FileUtil::joinPath( FileUtil::joinPath( cookedDir, domain ), "assetregistry.txt" );
-            FileUtil::createParentDirectory( outputPath );
+            FileUtil::ensureParentDirectoryExists( outputPath );
             if ( FileUtil::writeTextFile( outputPath, text ) == false )
             {
                 SW_LOG_ERROR( "Asset registry: could not write '%#'", outputPath );
@@ -412,7 +412,7 @@ namespace sw
                          relativePath,
                          bImported ? 1 : 0 );
 
-        FileUtil::createParentDirectory( absMeta );
+        FileUtil::ensureParentDirectoryExists( absMeta );
         return FileUtil::writeTextFile( absMeta, sb.view() );
     }
 

@@ -72,7 +72,7 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 }
 
 /**
- * @brief [FileTest] createParentDirectory 는 없는 상위 폴더를 여러 단 만들고, 폴더가 없는 파일 이름에는 아무것도 하지 않는다
+ * @brief [FileTest] ensureParentDirectoryExists 는 없는 상위 폴더를 여러 단 만들고, 폴더가 없는 파일 이름에는 아무것도 하지 않는다
  * @details 에셋 셋(애니메이션 그래프 · 대화 그래프 · 시퀀스) · 전역 변수 프리셋 · 셰이더 디스크 캐시가 저장 전에 이것을 부른다.
  *          구분자가 섞여 있어도(`\\` · `/`) 만든다 — `ensureDirectoryExists` 와 같은 정규화를 거친다.
  */
@@ -80,12 +80,33 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
 {
     const sw::string root     = test::makeTempPath( "SwParentDirTest" );
     const sw::string filePath = root + "/a\\b/c/leaf.txt";
-    sw::FileUtil::createParentDirectory( filePath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::directoryExists( root + "/a/b/c" ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "leaf" ) );
 
-    sw::FileUtil::createParentDirectory( "LeafWithoutFolder.txt" ); // 폴더 부분이 없다 — 아무것도 만들지 않는다
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( "LeafWithoutFolder.txt" ) ); // 폴더 부분이 없다 — 할 일이 없다
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [FileTest] 폴더를 만들지 못하면 false 이고 어느 폴더인지 알린다 — 길을 파일이 막고 있을 때
+ * @details 예전에는 void 라 말이 없었다. 뒤따르는 쓰기가 "임시 파일을 열 수 없다" 로만 실패해 막힌 폴더를 알 수 없었다.
+ */
+SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
+{
+    const sw::string root    = test::makeTempPath( "SwBlockedDirTest" );
+    const sw::string blocker = sw::FileUtil::joinPath( root, "blocker" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( blocker, "a file, not a folder" ) );
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a folder whose path runs through a file" );
+        SW_EXPECT_FALSE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blocker, "child" ) ) );
+        SW_EXPECT_FALSE( sw::FileUtil::ensureParentDirectoryExists( sw::FileUtil::joinPath( blocker, "child/leaf.txt" ) ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Could not create directory" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "blocker" ) == 2, logs.joined().c_str() );
 }
 
 /**
@@ -332,7 +353,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     const sw::string dir = test::makeTempPath( "SwFailedWriteTest" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     const sw::string blockedPath = sw::FileUtil::joinPath( dir, "blocked" );
-    sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
 
     SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( blockedPath, "must-not-land" ) );
     SW_EXPECT_TRUE( sw::FileUtil::directoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );

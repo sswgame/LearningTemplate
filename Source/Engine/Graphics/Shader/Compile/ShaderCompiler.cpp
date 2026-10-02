@@ -303,7 +303,7 @@ namespace sw
         {
             if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
             {
-                FileUtil::createParentDirectory( cachePath );
+                FileUtil::ensureParentDirectoryExists( cachePath );
                 if ( FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() ) == false )
                     SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
             }

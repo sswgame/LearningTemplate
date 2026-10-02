@@ -124,12 +124,17 @@ namespace sw
          */
         static string suffixAfterPathComponent( string_view path, string_view component );
         /**
-         * @brief 대상 파일이 들어갈 상위 디렉터리를 만듭니다.
-         * @param filePath 대상 파일 경로(상위 디렉터리가 없으면 재귀적으로 만듭니다)
+         * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
+         * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        static void createParentDirectory( string_view filePath );
-        /** @brief 디렉터리 경로 자체를 만듭니다(필요하면 상위 디렉터리도). */
-        static void ensureDirectoryExists( string_view directoryPath );
+        static bool ensureParentDirectoryExists( string_view filePath );
+        /**
+         * @brief 디렉터리가 있게 합니다(필요하면 상위 디렉터리도).
+         * @details 예전에는 둘 다 void 라 만들지 못해도 말이 없었다 — 뒤따르는 쓰기가 "열 수 없다" 로만 실패해 어느 폴더가 왜 막혔는지 몰랐다. 이름도
+         *          `createParentDirectory` · `ensureDirectoryExists` 로 같은 일에 동사가 둘이었다.
+         * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
+         */
+        static bool ensureDirectoryExists( string_view directoryPath );
         /** @brief 경로에 일반 파일이 있는지 반환합니다. */
         static bool fileExists( string_view fileName );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */

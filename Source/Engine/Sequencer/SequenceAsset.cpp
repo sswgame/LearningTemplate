@@ -69,7 +69,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        FileUtil::createParentDirectory( path );
+        FileUtil::ensureParentDirectoryExists( path );
         return FileUtil::writeTextFile( path, toJson() );
     }
 

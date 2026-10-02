@@ -695,7 +695,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     sw::SceneDocument good;
     good._name                = "Good";
     const sw::string goodPath = sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml" );
-    sw::FileUtil::createParentDirectory( goodPath );
+    sw::FileUtil::ensureParentDirectoryExists( goodPath );
     SW_ASSERT_TRUE( good.saveXml( goodPath ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/broken.scene.xml" ), "<Scene name=\"Broken\"><Entity" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml.bak" ), "<Scene" ) ); // 굽는 것이 아니다

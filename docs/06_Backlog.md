@@ -1672,9 +1672,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
-- **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — `FileUtil::createParentDirectory` ·
-  `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
-  (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
+- **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — 이름 가운데 동사(`recreate*`)와 .cpp 안 정적 함수는 `CheckFallibleNodiscard` 밖이다.
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
   컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
 - **R4**(구조 ⑪ · ⑯ · ⑰ · ⑱ · ⑲ · ⑳ 뒤) — **만들기로 결정(2026-10-03)**, 넷 다 만들었다. 스프라이트: 클립 `transformKeys` 의 런타임 적용(뿌리 컴포넌트를
@@ -2101,6 +2099,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R2 남은 것 — 폴더를 만들지 못하면 알린다, "폴더가 있게 한다" 는 동사 하나)
+
+- **`FileUtil::createParentDirectory` · `ensureDirectoryExists` 가 void 라 만들지 못해도 말이 없었다** — 뒤따르는 쓰기가 "임시 파일을 열 수 없다" 로만 실패해 어느
+  폴더가 왜 막혔는지 몰랐다. 같은 일에 동사도 둘이었다. 이제 둘 다 `ensure…Exists`(`ensureParentDirectoryExists` 로 33 곳 이름 변경)이고 bool 을 돌려주며,
+  만들지 못하면 그 자리에서 경로와 OS 이유를 알린다(실패를 알리는 곳이 하나라, 58 곳 부르는 쪽을 모두 고치지 않았다 — 뒤따르는 쓰기는 그대로 제 실패를 본다).
+
+**검증.** 새 시험 1(이전 코드에서 진다): `FileTest.DirectoryThatCannotBeCreatedSaysSo`(길을 파일이 막음 — false · 경로가 든 오류). 변이 2 모두 죽음(말 없음 · 성공이라 함).
+Debug nogpu 30/30.
 
 ### 2026-10-03 (킷 — 유닛이 HP 바와 데미지 숫자를 몰고 간다: ⑱ 의 피해와 ⑳ 의 그리기를 잇는다)
 
@@ -4788,13 +4795,13 @@ vector 로 복사해 넘겼다. 소유하지 않는 연속 구간 뷰 **`Core/Co
 
 폴더 여럿을 건드리지만 "같은 도우미를 쓰게 한다" 한 가지라 한 커밋이다. 검증: Debug nogpu · hostgpu 9/9.
 
-### 2026-09-29 (리팩터 — 저장 전 상위 폴더 만들기는 `FileUtil::createParentDirectory` 하나로)
+### 2026-09-29 (리팩터 — 저장 전 상위 폴더 만들기는 `FileUtil::ensureParentDirectoryExists` 하나로)
 
 6 줄 창에서 에셋 셋(`AnimationGraphAsset` · `DialogueGraphAsset` · `SequenceAsset`)의 `saveToFile` 이 "폴더 부분 떼기 → 비어 있지 않으면 만들기 → 쓰기" 여섯 줄을
-똑같이 들고 있었다. `FileUtil::createParentDirectory( filePath )` 가 이미 그 일을 하는데 아무도 쓰지 않았다(테스트 두 곳만 썼다). 같은 두 줄을 들던 전역 변수 프리셋
+똑같이 들고 있었다. `FileUtil::ensureParentDirectoryExists( filePath )` 가 이미 그 일을 하는데 아무도 쓰지 않았다(테스트 두 곳만 썼다). 같은 두 줄을 들던 전역 변수 프리셋
 저장(`EditorGlobalVariableCommands`)과 셰이더 디스크 캐시(`ShaderCompiler`)까지 다섯 곳이 그것을 부른다.
 
-**고친 것.** `createParentDirectory` 만 구분자 정규화 없이 폴더를 만들었다(`ensureDirectoryExists` 는 `\` → `/` 로 바꾼다). 이제 `ensureDirectoryExists( getDirectoryPart( path ) )` 한 줄이라
+**고친 것.** `ensureParentDirectoryExists` 만 구분자 정규화 없이 폴더를 만들었다(`ensureDirectoryExists` 는 `\` → `/` 로 바꾼다). 이제 `ensureDirectoryExists( getDirectoryPart( path ) )` 한 줄이라
 둘이 같다. **테스트** `FileTest.CreateParentDirectoryMakesNestedFolders` — 섞인 구분자로 여러 단을 만들고, 폴더 부분이 없는 이름에는 아무것도 하지 않는다.
 
 폴더 여럿을 건드리지만 "있던 함수를 쓰게 한다" 한 가지라 한 커밋이다.
@@ -18455,7 +18462,7 @@ nogpu 5/5 **양쪽 모두 회귀 없음**, 린트 6/6, 컨벤션 0건, 기본 �
 
 1. **상위 폴더를 만들지 않았다.** `PrefabAsset::saveToXmlFile`/`saveToJsonFile`/`saveToBinaryFile`
    은 폴더가 없으면 쓰기가 실패하는데 **로그도 남기지 않고** false 만 돌려줬다(로더는 실패를
-   모두 로그한다). `SceneDocument::saveXml` 은 `createParentDirectory` 를 부른다. 맞췄고,
+   모두 로그한다). `SceneDocument::saveXml` 은 `ensureParentDirectoryExists` 를 부른다. 맞췄고,
    세 세이버 모두 실패 시 오류를 남긴다.
 2. **경로 해석이 달랐다.** `PrefabAsset` 은 `ResourceUtil::getResourcePath` 만 쓰고 실패 시
    **상대 경로를 그대로** 넘겼다 — `getResourcePath` 는 *이미 있는* 파일만 찾으므로 새 파일에는

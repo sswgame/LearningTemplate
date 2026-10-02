@@ -665,19 +665,26 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
-    void FileUtil::createParentDirectory( string_view filePath )
+    bool FileUtil::ensureParentDirectoryExists( string_view filePath )
     {
         // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다. 예전에는 이 함수만 정규화 없이 만들었다.
-        ensureDirectoryExists( getDirectoryPart( filePath ) );
+        return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
-    void FileUtil::ensureDirectoryExists( string_view directoryPath )
+    bool FileUtil::ensureDirectoryExists( string_view directoryPath )
     {
         if ( directoryPath.empty() || directoryExists( directoryPath ) )
-            return;
+            return true;
 
+        const string    normalized = normalizeSeparators( directoryPath );
         std::error_code ec;
-        std::filesystem::create_directories( normalizeSeparators( directoryPath ).c_str(), ec );
+        std::filesystem::create_directories( normalized.c_str(), ec );
+        if ( ec || directoryExists( normalized ) == false )
+        {
+            SW_LOG_ERROR( "Could not create directory '%#': %#", normalized.c_str(), ec ? ec.message().c_str() : "a file is in the way" );
+            return false;
+        }
+        return true;
     }
 
     bool FileUtil::fileExists( string_view fileName )

@@ -773,10 +773,10 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
     const sw::Uuid   stayed = sw::Uuid::generate();
     // 프리팹을 하위 폴더로 옮겼다 — .meta 는 따라왔지만 안의 sourcePath 는 옛 경로 그대로다.
     const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
-    sw::FileUtil::createParentDirectory( movedMeta );
+    sw::FileUtil::ensureParentDirectoryExists( movedMeta );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, sw::string( "guid=" ) + moved.toString() + "\nsourcePath=game/demo/prefabs/crate.prefab.xml\n" ) );
     const sw::string engineMeta = sw::FileUtil::joinPath( root, "engine/materials/default.material.meta" );
-    sw::FileUtil::createParentDirectory( engineMeta );
+    sw::FileUtil::ensureParentDirectoryExists( engineMeta );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, sw::string( "guid=" ) + stayed.toString() + "\n" ) );
     const sw::string brokenMeta = sw::FileUtil::joinPath( root, "engine/materials/broken.material.meta" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, "guid=not-a-guid\n" ) );

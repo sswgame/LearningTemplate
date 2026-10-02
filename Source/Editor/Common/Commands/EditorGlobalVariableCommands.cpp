@@ -72,7 +72,7 @@ namespace sw::editor
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
-        FileUtil::createParentDirectory( filePath );
+        FileUtil::ensureParentDirectoryExists( filePath );
         return doc.saveFile( filePath );
     }
 

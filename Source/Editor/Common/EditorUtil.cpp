@@ -46,7 +46,7 @@ namespace sw::editor
         const string configDir =
             FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorData._configFolder ), editorData._editorConfigFolder );
         const string markerFile = FileUtil::joinPath( configDir, editorData._imguiIniFile );
-        FileUtil::createParentDirectory( markerFile );
+        FileUtil::ensureParentDirectoryExists( markerFile );
         return configDir;
     }
 

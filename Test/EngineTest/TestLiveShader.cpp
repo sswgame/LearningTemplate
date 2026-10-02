@@ -100,7 +100,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     const sw::string includeAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsli" );
     const sw::string shaderAbs  = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsl" );
 
-    sw::FileUtil::createParentDirectory( shaderAbs );
+    sw::FileUtil::ensureParentDirectoryExists( shaderAbs );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 1.0\n" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs,
                                                  "#include \"livereloadprobe.hlsli\"\n"

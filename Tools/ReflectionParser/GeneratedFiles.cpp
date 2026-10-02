@@ -142,7 +142,7 @@ namespace sw
                 return true;
         }
 
-        FileUtil::createParentDirectory( path );
+        FileUtil::ensureParentDirectoryExists( path );
         if ( FileUtil::writeTextFile( path, content ) == false )
         {
             SW_LOG_ERROR( "Failed to write %#", path );

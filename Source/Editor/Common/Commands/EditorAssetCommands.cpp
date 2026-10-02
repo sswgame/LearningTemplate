@@ -630,7 +630,7 @@ namespace sw::editor
             // 경우다.
             const string destPath = ResourceUtil::makeUniqueSavePath( destFolderAbs, fileName );
 
-            FileUtil::createParentDirectory( destPath );
+            FileUtil::ensureParentDirectoryExists( destPath );
             if ( FileUtil::copyFile( sourcePath, destPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
