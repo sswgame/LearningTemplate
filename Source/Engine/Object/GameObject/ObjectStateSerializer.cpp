@@ -190,19 +190,15 @@ namespace sw
             }
 
             /**
-             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(옛 상태에만 있는 필드)을 알리고 넘깁니다. 스키마 버전이 같을 때만 받습니다.
+             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(옛 상태에만 있는 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
              * @details 바이너리의 판 붙은 읽기는 남는 칸이 있으면 이관 함수를 부르고, 없으면 실패합니다. 오브젝트 상태에는 이관할 것이 없다 —
              *          지운 칸은 버리고 나머지를 읽는 것이 XML · JSON 과 같은 규칙입니다. 버전이 다르면 받지 않습니다(진짜 이관이 필요하다).
+             *          버린 칸은 여기서 알리지 않습니다 — 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 칸을
+             *          이름과 함께 로드마다 한 번 알립니다(여기서도 알리면 같은 일이 두 줄이 됩니다).
              */
             static bool skipFieldsTheTypeNoLongerHas( const SchemaMigrateContext& migrateContext )
             {
-                if ( migrateContext._fromVersion != migrateContext._toVersion )
-                    return false;
-                const size_t orphanCount = migrateContext._pOrphans != nullptr ? migrateContext._pOrphans->size() : 0;
-                if ( orphanCount > 0 && migrateContext._pTypeInfo != nullptr )
-                    SW_LOG_WARNING( "%#: %# saved value(s) are not in the type any more - skipped", migrateContext._pTypeInfo->_name.c_str(),
-                                    static_cast<uint64>( orphanCount ) );
-                return true;
+                return migrateContext._fromVersion == migrateContext._toVersion;
             }
         };
     } // namespace

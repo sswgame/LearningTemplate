@@ -67,11 +67,20 @@ namespace sw
         const utf8* getText() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
         const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 정수로 반환합니다. */
+        /** @brief 속성 값을 정수로 반환합니다. 정수가 아닌 글이면 알리고 `fallback` 입니다. */
         int32 getAttributeInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 실수로 반환합니다. */
+        /**
+         * @brief 정수 속성을 `[minValue, maxValue]` 안에서 읽습니다. 속성이 없으면 `outValue` 는 `fallback` 이고 true 입니다.
+         * @return 글이 정수가 아니거나 범위를 벗어나면 요소 · 속성 이름과 함께 경고하고 false 입니다(`outValue` 는 `fallback`).
+         *         부르는 쪽은 그 값으로 만들던 것을 버립니다.
+         * @details 좁은 칸에 `static_cast<uint8>( getAttributeInt( … ) )` 로 넣으면 "256" 이 0 으로, "-1" 이 255 로 감겨 말없이
+         *          엉뚱한 값(다른 패드)이 됐습니다. 범위는 칸의 타입이 아니라 **뜻**으로 줍니다(패드 번호는 슬롯 수까지).
+         */
+        [[nodiscard]] bool tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
+                                                      bool bIgnoreCaseKeys = true ) const;
+        /** @brief 속성 값을 실수로 반환합니다. 실수가 아닌 글이면 알리고 `fallback` 입니다. */
         float32 getAttributeFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on). */
+        /** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on · 0/false/no/off). 불리언이 아닌 글이면 알리고 `fallback` 입니다. */
         bool getAttributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 자식 노드를 찾습니다. pName 이 nullptr 이면 첫 자식입니다. */

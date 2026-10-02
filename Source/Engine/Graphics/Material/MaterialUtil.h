@@ -36,10 +36,16 @@ namespace sw
         static MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
         static uint32               alignOffset( uint32 offset, uint32 typeSize );
 
-        [[nodiscard]] static bool parseBoolToken( string_view token );
+        /**
+         * @brief 머티리얼의 불리언 글(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`)을 읽습니다. 머티리얼의 불리언 글은 모두 여기를 지납니다.
+         * @details 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 `name`(파라미터 · 필드 이름)과 함께 알리고 `fallback` 입니다.
+         *          예전에는 읽지 못한 글을 말없이 false 로 읽어, `bSrgb="ture"` 가 기본값(true)도 아닌 false 가 됐습니다.
+         */
+        [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, bool fallback );
         static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
 
-        static string             fieldText( XmlNode node, const utf8* pName );
+        static string fieldText( XmlNode node, const utf8* pName );
+        /** @brief `fieldText` 를 `parseBoolToken` 으로 읽습니다. 필드가 없거나 비었으면 `defaultValue` 입니다. */
         [[nodiscard]] static bool parseBoolField( XmlNode node, const utf8* pName, bool defaultValue );
         static MaterialProperty   parsePropertyNode( XmlNode item );
 

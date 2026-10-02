@@ -14,6 +14,7 @@
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Events/RawInputEvent.h"
+#include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputSnapshot.h"
 #include "Engine/Input/KeyCodes.h"
@@ -185,9 +186,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice() 로 등록합니다(Windows: XInput, Linux: 조이스틱 API). */
         void registerPlatformGamepads();
-
-        /** @brief 게임패드 슬롯 수입니다. XInput 규격이 넷이고, 조이스틱도 `js0`~`js3` 로 맞춰 둡니다. */
-        static constexpr uint32 kMaxGamepadSlot = 4;
 
         /**
          * @brief 게임패드 슬롯 넷을 만들어 등록합니다. 플랫폼이 정하는 것은 **만드는 타입뿐**입니다.

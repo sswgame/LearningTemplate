@@ -104,10 +104,7 @@ namespace sw
 
     bool MaterialUtil::parseBoolField( XmlNode node, const utf8* pName, bool defaultValue )
     {
-        const string text = MaterialUtil::fieldText( node, pName );
-        if ( text.empty() )
-            return defaultValue;
-        return MaterialUtil::parseBoolToken( text );
+        return MaterialUtil::parseBoolToken( MaterialUtil::fieldText( node, pName ), pName != nullptr ? pName : "", defaultValue );
     }
 
     MaterialProperty MaterialUtil::parsePropertyNode( XmlNode item )

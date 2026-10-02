@@ -1534,6 +1534,78 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 판 붙은 로드가 값을 버리면 로드마다 한 번, 타입 · 칸 이름과 함께 알린다 — 이관이 찾아 본 값은 빼고
+ * @details JSON · XML 의 판 붙은 로드(씬 · 프리팹 · 오브젝트 상태가 지나는 길)는 orphan 을 버리고 성공한다(`SchemaOrphanPolicy::Ignore`).
+ *          숫자 칸의 "abc" 는 읽지 못해 orphan 이 되고 칸은 기본값으로 남는데, **그 사실을 아무도 알리지 않았다** — 손으로 고친 씬의
+ *          오타가 말없이 기본값이 됐다. 이제 orphan 의 운명이 정해지는 `runSchemaMigrateStep` 이 버린 칸을 한 줄에 모아 경고한다.
+ *          이관 함수가 찾아 본 orphan(`findOrphan`)은 이관이 처리한 것이라 그 줄에 들지 않는다. 읽은 값이 모두 자리를 찾으면 조용하다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "versioned loads that drop values must say so" );
+    struct DropProbe
+    {
+        int32 _hp{ 5 };
+        int32 _mp{ 6 };
+        int32 _level{ 7 };
+    };
+
+    sw::TypeInfo info;
+    info._name               = sw::hashed_string( "DropProbeActor" );
+    info._fullyQualifiedName = sw::hashed_string( "sw::DropProbeActor" );
+    info._size               = sizeof( DropProbe );
+    info._listProperty       = {
+        {   sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( DropProbe,    _hp )},
+        {   sw::hashed_string( "_mp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( DropProbe,    _mp )},
+        {sw::hashed_string( "_level" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( DropProbe, _level )}
+    };
+
+    test::ScopedLogCollector logs;
+
+    // ① JSON — 읽지 못한 값 둘. 한 줄에 둘 다, 나머지 칸은 읽혔다.
+    DropProbe fromJson;
+    uint32    ver{ 0 };
+    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &fromJson, info, R"({"_schemaVersion":1,"_hp":"abc","_mp":"x1","_level":9})", 1u ) );
+    SW_EXPECT_EQUAL( 5, fromJson._hp );
+    SW_EXPECT_EQUAL( 6, fromJson._mp );
+    SW_EXPECT_EQUAL( 9, fromJson._level );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 2 saved field(s)" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_hp, _mp" ) == 1, logs.joined().c_str() );
+
+    // ② XML — 같은 규칙, 로드 하나에 한 줄.
+    DropProbe        fromXml;
+    const sw::string xml = R"(<DropProbeActor _schemaVersion="1" _hp="12" _mp="lots" _level="3"/>)";
+    ver                  = 0;
+    SW_EXPECT_TRUE( sw::XmlSerializer::deserializeVersioned( ver, &fromXml, info, xml, 1u ) );
+    SW_EXPECT_EQUAL( 12, fromXml._hp );
+    SW_EXPECT_EQUAL( 6, fromXml._mp );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s)" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "could not read: _mp" ) == 1, logs.joined().c_str() );
+
+    // ③ 이관이 찾아 본 orphan 은 이관이 처리한 것이다 — 줄에는 아무도 찾지 않은 칸만 남는다. 타입이 모르는 키는 전역 이름 표에
+    //    올리지 않지만(intern 하지 않는다) 적힌 이름 그대로 찍힌다 — `_dropProbeJunk` 는 이 시험의 어디서도 hashed_string 이 되지 않는다.
+    auto moveHealth = []( const sw::SchemaMigrateContext& ctx ) -> bool
+    {
+        const sw::SchemaOrphanValue* pHealth = ctx.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
+        return pHealth != nullptr && ctx.setPropertyFromText( sw::hashed_string( "_hp" ), pHealth->_text );
+    };
+    DropProbe migrated;
+    ver = 0;
+    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})",
+                                                              2u, +moveHealth ) );
+    SW_EXPECT_EQUAL( 42, migrated._hp );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s) that the type does not have or could not read: _dropProbeJunk" ) == 1,
+                        logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_dropProbeHealth" ) == 0, logs.joined().c_str() );
+
+    // ④ 모든 값이 자리를 찾은 로드는 조용하다.
+    DropProbe clean;
+    ver = 0;
+    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &clean, info, R"({"_schemaVersion":1,"_hp":1,"_mp":2,"_level":3})", 1u ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor" ) == 3, logs.joined().c_str() );
+}
+
+/**
  * @brief [ReflectionSerializationTest] orphan 구조 이동 + PROPERTY Alias 개명
  */
 SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )

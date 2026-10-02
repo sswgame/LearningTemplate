@@ -810,7 +810,7 @@ namespace sw
                     continue;
                 if ( prop._shaderKeyword.empty() )
                     continue;
-                if ( MaterialUtil::parseBoolToken( prop._value ) )
+                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, false ) )
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
             }
 

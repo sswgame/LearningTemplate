@@ -231,6 +231,63 @@ namespace sw
                     hint = resolveWireTypeHash( orphan._wireTypeHash );
                 return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, ctx );
             }
+
+            /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 듭니다. */
+            static uint32 getOrphanNameHash( const SchemaOrphanValue& orphan )
+            {
+                return orphan._nameHash != 0 ? orphan._nameHash : orphan._name.getHash();
+            }
+
+            /** @brief 타입(상속 포함)의 프로퍼티 이름 · 별칭 가운데 orphan 의 이름이 있는지 묻습니다. */
+            static bool isOrphanNameKnownTo( const TypeInfo& typeInfo, const SchemaOrphanValue& orphan )
+            {
+                const uint32 nameHash = getOrphanNameHash( orphan );
+                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+                {
+                    if ( prop.matchesNameHash( nameHash ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 로드가 성공으로 끝난 뒤 아무 데도 가지 않은 orphan — 읽지 못한 값 · 타입에 없는 칸 — 을 **로드마다 한 번** 알립니다.
+             * @details 이관 함수가 찾아 본 orphan(`_bClaimed`)은 그 함수가 처리했으므로 뺍니다. 옛 TypeInfo 를 스테이징했으면 같은 본문을
+             *          두 타입으로 읽어 한쪽만 아는 칸은 반드시 다른 쪽의 orphan 이 되므로, 두 타입 중 하나라도 아는 이름은 스테이징된
+             *          인스턴스가 실어 날랐다고 보고 뺍니다. 이름은 칸마다 한 번만 적습니다(컨테이너 원소가 여럿 실패해도 칸 하나).
+             *          예전에는 JSON · XML 의 Ignore 정책이 이것을 말없이 버려, 숫자 칸의 "abc" 가 기본값으로 남은 것을 아무도 몰랐습니다.
+             */
+            static void warnDroppedOrphans( const TypeInfo& typeInfo, const TypeInfo* pLegacyTypeInfo, const vector<SchemaOrphanValue>& listOrphan )
+            {
+                vector<uint32> listListedHash;
+                string         names;
+                for ( const SchemaOrphanValue& orphan : listOrphan )
+                {
+                    if ( orphan._bClaimed )
+                        continue;
+                    const bool bStagedElsewhere =
+                        pLegacyTypeInfo != nullptr && ( isOrphanNameKnownTo( typeInfo, orphan ) || isOrphanNameKnownTo( *pLegacyTypeInfo, orphan ) );
+                    if ( bStagedElsewhere )
+                        continue;
+                    const uint32 nameHash = getOrphanNameHash( orphan );
+                    if ( std::find( listListedHash.begin(), listListedHash.end(), nameHash ) != listListedHash.end() )
+                        continue;
+                    listListedHash.push_back( nameHash );
+
+                    if ( names.empty() == false )
+                        names += ", ";
+                    if ( orphan._name.empty() == false )
+                        names += orphan._name.c_str();
+                    else if ( orphan._writtenName.empty() == false )
+                        names += orphan._writtenName; // 파일의 모르는 이름은 intern 하지 않는다 — 적힌 글 그대로
+                    else
+                        names += "#" + to_string( nameHash ); // 바이너리는 이름 없이 해시만 싣는다
+                }
+                if ( listListedHash.empty() )
+                    return;
+                SW_LOG_WARNING( "%#: dropped %# saved field(s) that the type does not have or could not read: %#", typeInfo._name.c_str(),
+                                static_cast<uint32>( listListedHash.size() ), names );
+            }
         };
     } // namespace
 } // namespace sw
@@ -312,26 +369,35 @@ namespace sw
     {
         if ( _pOrphans == nullptr )
             return nullptr;
-        const uint32 nameHash = name.getHash();
+        const uint32             nameHash = name.getHash();
+        const SchemaOrphanValue* pFirst   = nullptr;
         for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
         {
             // 파일에서 읽은 고아는 이름을 intern 하지 않고 해시만 들 수 있다(XML · JSON 읽기) — 그때는 해시로 맞춰 본다.
-            if ( orphanValue._name == name || ( orphanValue._name.empty() && orphanValue._nameHash == nameHash ) )
-                return &orphanValue;
+            if ( orphanValue._name != name && ( orphanValue._name.empty() == false || orphanValue._nameHash != nameHash ) )
+                continue;
+            // 같은 이름은 모두 이관이 처리한 것이다 — 컨테이너 원소가 여럿 실패하면 같은 칸 이름의 orphan 이 여럿 생긴다.
+            orphanValue._bClaimed = true;
+            if ( pFirst == nullptr )
+                pFirst = &orphanValue;
         }
-        return nullptr;
+        return pFirst;
     }
 
     const SchemaOrphanValue* SchemaMigrateContext::findOrphanHash( uint32 nameHash ) const
     {
         if ( _pOrphans == nullptr || nameHash == 0 )
             return nullptr;
+        const SchemaOrphanValue* pFirst = nullptr;
         for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
         {
-            if ( orphanValue._nameHash == nameHash )
-                return &orphanValue;
+            if ( orphanValue._nameHash != nameHash )
+                continue;
+            orphanValue._bClaimed = true;
+            if ( pFirst == nullptr )
+                pFirst = &orphanValue;
         }
-        return nullptr;
+        return pFirst;
     }
 
     bool SchemaMigrateContext::applyOrphanTo( hashed_string propName, hashed_string wireTypeHint ) const
@@ -575,7 +641,11 @@ namespace sw
             migrateContext._pLegacyTypeInfo = pLegacyTypeInfo;
             migrateContext._pOrphans        = &listOrphan;
             migrateContext._pSerializeCtx   = &ctx;
-            return migrate( migrateContext );
+            if ( migrate( migrateContext ) == false )
+                return false;
+            // 이관이 받아 준 로드다. 이관이 찾아 보지 않은 orphan 은 버려진다.
+            SchemaMigrateInternal::warnDroppedOrphans( typeInfo, pLegacyTypeInfo, listOrphan );
+            return true;
         }
 
         if ( migrate == nullptr && bWarnWhenNoMigrate )
@@ -585,6 +655,8 @@ namespace sw
                             listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
             return false;
         }
+        // 이관 없이 받아 주는 로드다(JSON · XML 의 Ignore 정책). orphan 은 모두 버려진다.
+        SchemaMigrateInternal::warnDroppedOrphans( typeInfo, pLegacyTypeInfo, listOrphan );
         return true;
     }
 

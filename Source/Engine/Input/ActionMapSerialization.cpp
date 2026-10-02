@@ -3,6 +3,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/ActionMap.h"
+#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/KeyCodes.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -77,6 +78,34 @@ namespace sw
                 {        "Repeat",         ActionTrigger::Repeat},
                 {     "NavRepeat",         ActionTrigger::Repeat},
             };
+
+            /**
+             * @brief `pad` 속성을 슬롯 범위(0 ~ `kMaxGamepadSlot` - 1)에서 읽습니다. 없으면 0 번 패드입니다.
+             * @return 정수가 아니거나 범위 밖이면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다.
+             * @details 예전에는 `static_cast<uint8>( getAttributeInt( "pad" ) )` 라 "256" 이 0 번, "-1" 이 255 번 패드가 됐고, 4 번 이상은
+             *          없는 패드에 말없이 묶였습니다. 패드 번호를 읽는 자리 셋(리소스 스틱 · 유저 스틱 · 유저 단일 버튼)이 이 하나를 지납니다.
+             */
+            [[nodiscard]] static bool tryGetPadIndex( XmlNode node, uint8& outPadIndex )
+            {
+                int32 padIndex{ 0 };
+                if ( node.tryGetAttributeIntInRange( "pad", 0, 0, static_cast<int32>( kMaxGamepadSlot ) - 1, padIndex ) == false )
+                    return false;
+                outPadIndex = static_cast<uint8>( padIndex );
+                return true;
+            }
+
+            /**
+             * @brief `modifierMask` 속성을 아는 수정 키 비트(`ModifierKey::All`) 안에서 읽습니다. 없으면 0(수정 키 없음)입니다.
+             * @return 정수가 아니거나 모르는 비트를 들면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다("257" 이 Ctrl 로 감기던 자리).
+             */
+            [[nodiscard]] static bool tryGetModifierMask( XmlNode node, uint8& outModifierMask )
+            {
+                int32 modifierMask{ 0 };
+                if ( node.tryGetAttributeIntInRange( "modifierMask", 0, 0, ModifierKey::All, modifierMask ) == false )
+                    return false;
+                outModifierMask = static_cast<uint8>( modifierMask );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -270,6 +299,9 @@ namespace sw
             // 4) <stick> 태그 파싱
             for ( XmlNode stickNode = actionNode.findChild( "stick" ); stickNode.isValid(); stickNode = stickNode.findNextSibling( "stick" ) )
             {
+                uint8 padIndex{ 0 };
+                if ( ActionMapSerializationInternal::tryGetPadIndex( stickNode, padIndex ) == false )
+                    continue; // 경고했다 — 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
                 const utf8*        pStickName      = stickNode.findAttribute( "stick" );
                 const GamepadStick stick           = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
                 const float32      deadzone        = stickNode.getAttributeFloat( "deadzone", 0.15f );
@@ -280,7 +312,6 @@ namespace sw
                     stickLayer = hashed_string( pStickLayerAttr );
                     ensureLayer( stickLayer );
                 }
-                const uint8   padIndex         = static_cast<uint8>( stickNode.getAttributeInt( "pad", 0 ) );
                 const float32 outerDeadzone    = stickNode.getAttributeFloat( "outerDeadzone", 1.0f );
                 const float32 responseExponent = stickNode.getAttributeFloat( "responseExponent", 1.0f );
                 bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent );
@@ -518,9 +549,11 @@ namespace sw
                     }
                     case BindingKind::GamepadStick2D:
                     {
+                        uint8 pad{ 0 };
+                        if ( ActionMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
+                            break; // 경고했다 — 처리한 것으로 두고(레거시 경로로 떨어지지 않게) 이 바인딩을 버린다
                         const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
                         const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                        const uint8        pad           = static_cast<uint8>( bindNode.getAttributeInt( "pad", 0 ) );
                         const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
                         const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
                         const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
@@ -553,8 +586,10 @@ namespace sw
                     }
                     case BindingKind::Shortcut:
                     {
-                        const Key   key          = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
-                        const uint8 modifierMask = static_cast<uint8>( bindNode.getAttributeInt( "modifierMask", 0 ) );
+                        uint8 modifierMask{ 0 };
+                        if ( ActionMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
+                            break; // 경고했다 — 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
+                        const Key key = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
                         if ( key != Key::Unknown )
                             bindShortcut( hashed_string( pAction ), key, modifierMask, ActionTrigger::Pressed, hashed_string( layer ) );
                         break;
@@ -591,7 +626,6 @@ namespace sw
             const utf8* pCodeStr   = bindNode.findAttribute( "code" );
             const utf8* pButtonStr = bindNode.findAttribute( "button" );
             const utf8* pSourceStr = bindNode.findAttribute( "source" );
-            const uint8 padIndex   = static_cast<uint8>( bindNode.getAttributeInt( "pad", 0 ) );
 
             if ( pKeyStr != nullptr )
             {
@@ -622,7 +656,8 @@ namespace sw
                 else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
                 {
                     const GamepadButton btn = GamepadButtons::fromName( pCodeStr );
-                    if ( btn != GamepadButton::Count )
+                    uint8               padIndex{ 0 };
+                    if ( btn != GamepadButton::Count && ActionMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
                     {
                         InputSlot slot    = InputSlot::fromGamepadButton( btn );
                         slot._deviceIndex = padIndex;

@@ -21,6 +21,8 @@ namespace sw
         inline constexpr uint8 Shift = SW_BIT( 1 );
         inline constexpr uint8 Alt   = SW_BIT( 2 );
         inline constexpr uint8 Super = SW_BIT( 3 );
+        /** @brief 아는 수정 키 비트 전부입니다. 이보다 큰 마스크는 모르는 비트를 든 것입니다(파일에서 읽은 마스크의 범위 검사). */
+        inline constexpr uint8 All = Ctrl | Shift | Alt | Super;
     } // namespace ModifierKey
 
     /** @brief 원시 입력 이벤트 종류입니다. */

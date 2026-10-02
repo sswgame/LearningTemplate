@@ -457,6 +457,56 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
     SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Finished ), static_cast<uint8>( runner.getState() ) );
 }
 
+/**
+ * @brief [GameFrameworkTest] 대화 Branch 조건이 비교 연산자 여섯을 모두 안다 — `>=` 가 든 식을 통째로 플래그 키로 읽지 않는다
+ * @details 조건 평가는 `==` 와 `!=` 만 손으로 찾았다. `flag.gold >= 10` 은 연산자를 못 찾아 **식 전체를 키**("gold >= 10")로 읽었고,
+ *          그런 플래그는 없으니 늘 0 — 금화가 충분해도 늘 거짓 쪽 분기로 갔다(`<=` · `>` · `<` 도 같다). 이제 연산자는 표 하나가 정하고
+ *          (두 글자를 먼저), 읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 `=` 하나)은 경고하고 거짓이다 — 예전에는 `!= lots` 가 1 과 비교돼 참이었다.
+ */
+SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
+{
+    TurnBattleSaveGame save;
+    save.setFlag( "gold", 10 );
+
+    // Start → Branch(조건) → 참이면 "yes", 거짓이면 "no" 를 보여 준다.
+    const auto takesTrueBranch = [&save]( const utf8* pCondition ) -> bool
+    {
+        DialogueRunnerComponent runner;
+        runner.setFlagStore( &save );
+        string json = R"({ "nodes": [ { "id": 1, "type": "Start" }, { "id": 2, "type": "Branch", "condition": ")";
+        json += pCondition;
+        json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
+		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
+		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
+        SW_EXPECT_TRUE( runner.loadGraphJson( json ) );
+        SW_EXPECT_TRUE( runner.startDialogue() );
+        return runner.getCurrentText() == "yes";
+    };
+
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold >= 10" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold >= 11" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold <= 10" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold <= 9" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold > 9" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold > 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold < 11" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold < 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold>=-1" ) ); // 공백 없이 · 음수 · `flag.` 없이
+
+    // 이미 알던 둘과 연산자 없는 키는 그대로다(`키` 는 `키 == 1`).
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold == 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold != 3" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold" ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "unreadable dialogue conditions" );
+        SW_EXPECT_FALSE( takesTrueBranch( "flag.gold != lots" ) );
+        SW_EXPECT_FALSE( takesTrueBranch( "flag.gold = 10" ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "the condition is false" ) == 2, logs.joined().c_str() );
+}
+
 // ------------------------------------------------------------------------------
 // 6) GameInstanceBaseStateTest — 런타임 스냅샷/세이브 파일 직렬화 검증
 // ------------------------------------------------------------------------------

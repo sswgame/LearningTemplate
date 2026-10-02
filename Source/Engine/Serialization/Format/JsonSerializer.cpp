@@ -545,6 +545,8 @@ namespace sw
                     orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
                     orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
                     orphan._text     = field.dump();
+                    // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
+                    orphan._writtenName = keyRaw;
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
                 else

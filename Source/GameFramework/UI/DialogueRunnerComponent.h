@@ -85,6 +85,11 @@ namespace sw
         void setOnDialogueFinished( OnDialogueFinishedFunc func );
 
     private:
+        /**
+         * @brief Branch 노드의 조건식을 평가합니다. 빈 식은 참입니다.
+         * @details 모양은 `[flag.]키` (= `키 == 1`) 또는 `[flag.]키 <연산자> 정수` 이고 연산자는 `==` · `!=` · `>=` · `<=` · `>` · `<` 입니다.
+         *          읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 연산자 글자)은 경고하고 거짓입니다.
+         */
         bool evaluateCondition( const string& condition ) const;
         void executeNode( int32 nodeId, int32 recursionDepth = 0 );
         void executeAction( string actionCmd );

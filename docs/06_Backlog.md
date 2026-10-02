@@ -1664,7 +1664,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | 원인 | 대표 결함 | 구조로 막는 법 | 상태 |
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
-| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 (3절) — 남은 것 아래 |
+| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 · 버린 값 · 범위 · 불리언 · 대화 조건 ✅ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ (3절) — 소비 없는 컴포넌트는 결정 거리 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ (3절) — 서브틱 남음 |
@@ -1672,9 +1672,10 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
-- **R2 에서 남은 것**(구조 ⑥ · ⑦ 뒤) — 숫자 아닌 글은 경고 없이 고아가 되어 Ignore 정책에 묻힌다(XML · JSON 로더 — 고아가 생기면 로드마다 한 번
-  경고할 것), ActionMap 의 `static_cast<uint8>( getAttributeInt )`(pad "256" → 0 · "-1" → 255), `XmlNode::getAttributeBool` · 머티리얼
-  `parseBoolToken` 의 조용한 폴백(`StringUtil::tryParseBool` 로), 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다. `FileUtil::createParentDirectory` ·
+- **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — JSON 소유 포인터 원소(컴포넌트) 읽기는 엄격해 원소 안의 읽지 못한 값이 `_listComponent` 칸으로 보고된다
+  (XML 처럼 orphan 목록을 내려 줄 것). `KeyValueFile.cpp` · `GameData.cpp` 의 `StringUtil::parseBool` 폴백은 그대로다.
+  `PrefabTest.CircularReferenceSpawnProtection` 의 `_prefabAssetPath` 는 GameObject 프로퍼티가 아니라 이 시험은 순환 참조를 **한 번도 태우지 않는다**
+  (버린 값 경고가 드러냄 — 실제로 순환하는 프리팹으로 고칠 것). `FileUtil::createParentDirectory` ·
   `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ 뒤) — 바이너리는 enum 을 **값**으로 싣는다(XML 은 이름) — 열거자 순서를 바꾸면 세이브 · 핫 리로드 스냅샷이 다른 값으로 읽힌다.
@@ -2100,6 +2101,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R2 남은 조용한 실패 넷 — 버린 값은 로드마다 한 번 알리고, 패드 번호 · 마스크는 범위로, 불리언 글은 tryParseBool, 대화 조건은 연산자 표 하나로 — 1-0j 의 R2)
+
+- **JSON · XML 판 붙은 로드(씬 · 프리팹 · 오브젝트 상태)가 읽지 못한 값 · 모르는 칸을 말없이 버렸다** — 숫자 칸의 "abc" 는 orphan 이 되고 Ignore 정책이 버려 칸은
+  기본값으로 남았다. orphan 의 운명이 정해지는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 orphan 을 타입 · 칸 이름과 함께 **로드마다 한 줄**로 알린다.
+  이관이 찾아 본 것(`findOrphan` · `findOrphanHash` · `applyOrphanTo…`)은 `SchemaOrphanValue::_bClaimed` 로 빼고, 모르는 이름은 적힌 글 그대로(`_writtenName`) 찍는다.
+  바이너리 오브젝트 상태 갈고리의 같은 경고는 지웠다(두 줄이 되지 않게).
+- **ActionMap 이 패드 번호 · 수정 키 마스크를 감았다**(`static_cast<uint8>`: pad "256" → 0 · "-1" → 255 · "4" 는 없는 패드, modifierMask "257" → Ctrl).
+  `XmlNode::tryGetAttributeIntInRange`(경고 · 거절)로 읽고, 패드는 슬롯 수(`kMaxGamepadSlot` — InputManager 의 private 상수를 GamepadButtons.h 로),
+  마스크는 `ModifierKey::All` 안에서만 받는다. 벗어나면 그 바인딩을 버린다.
+- **불리언 글의 조용한 폴백** — `XmlNode::getAttributeBool` · `getChildBool`, 머티리얼 `parseBoolToken`(기본값도 아닌 false — `bSrgb="ture"` 가 sRGB 를 껐다).
+  `StringUtil::tryParseBool` + 이름 경고 + 기본값. 머티리얼의 불리언 글은 `parseBoolToken( 글, 이름, 기본값 )` 하나를 지난다.
+- **대화 조건이 `>=` · `<=` · `>` · `<` 를 몰라 식 전체를 키로 읽었다**(늘 거짓). 연산자 표 하나(두 글자 먼저). 읽지 못한 식은 경고하고 거짓 —
+  예전에는 정수가 아닌 오른쪽을 1 과 비교해 `!= lots` 가 참이었다.
+
+**검증.** 새 시험 6(모두 이전 코드에서 진다): `ReflectionSerializationTest.DroppedValuesWarnOncePerLoad`, `ActionMapTest.UserBindingsRejectOutOfRangePadAndModifierMask`,
+`XmlDocumentTest.UnreadableBooleanFallsBackAndSaysSo` · `RangeCheckedIntegerRejectsWhatDoesNotFit`, `MaterialTest.UnreadableBooleanKeepsTheDefaultAndSaysSo`,
+`GameFrameworkTest.DialogueConditionUnderstandsEveryComparison`. 변이 8 모두 죽음(경고 끔 · claim 없음 · 패드 · 마스크 옛 캐스트 · XmlNode 불리언 · 범위 검사 · 머티리얼 불리언 ·
+연산자 표). worktree 에서 Debug nogpu · lint 30/30, 메인에 ⑯ 과 합친 뒤 다시 nogpu 전부.
 
 ### 2026-10-03 (구조 ⑥ 잇기 — 만들기 · 지우기 · 옮기기 동사도 `[[nodiscard]]`, 1-0j 의 R2 남은 것)
 

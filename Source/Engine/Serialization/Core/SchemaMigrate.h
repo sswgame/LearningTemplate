@@ -20,8 +20,20 @@ namespace sw
         hashed_string _name;
         uint32        _nameHash{ 0 };
         uint32        _wireTypeHash{ 0 }; ///< 바이너리에 적힌 프로퍼티 타입 해시(없으면 0)
+        /**
+         * @brief 이관 함수가 이 값을 찾아 봤는지(`findOrphan` · `findOrphanHash` · `applyOrphanTo…`)입니다.
+         * @details 찾아 본 값은 이관이 처리한 것이고, 아무도 찾지 않은 값은 로드가 **버린** 것입니다 — `runSchemaMigrateStep` 이
+         *          버린 값을 로드마다 한 번 알립니다. 조회가 `const` 라 `mutable` 입니다.
+         */
+        mutable bool  _bClaimed{ false };
         vector<uint8> _listBinary;
         string        _text;
+        /**
+         * @brief 텍스트 형식에 적힌 이름 그대로입니다(타입이 모르는 키 · 태그 · 속성). 경고에 찍는 데만 씁니다.
+         * @details 파일의 모르는 이름은 전역 이름 표에 넣지 않으므로 `_name` 이 비고 해시만 남습니다 — 그대로는 "어느 칸을 버렸나" 를
+         *          말할 수 없습니다. 바이너리는 이름을 싣지 않아 늘 비어 있습니다.
+         */
+        string _writtenName;
     };
 
     // ------------------------------------------------------------------------------
@@ -60,9 +72,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) orphan 조회 · 현재 인스턴스에 적용
         // ------------------------------------------------------------------------------
-        /** @brief 이름으로 orphan 을 찾습니다. */
+        /** @brief 이름으로 orphan 을 찾습니다. 같은 이름의 orphan 은 모두 "이관이 처리했다"(`_bClaimed`)로 표시됩니다. */
         const SchemaOrphanValue* findOrphan( hashed_string name ) const;
-        /** @brief 이름 해시로 orphan 을 찾습니다. */
+        /** @brief 이름 해시로 orphan 을 찾습니다. 같은 해시의 orphan 은 모두 "이관이 처리했다"(`_bClaimed`)로 표시됩니다. */
         const SchemaOrphanValue* findOrphanHash( uint32 nameHash ) const;
 
         /**
@@ -95,6 +107,10 @@ namespace sw
      * @brief deserializeVersioned 의 마지막 단계입니다. migrate 를 부를 조건을 판정해 부르거나, migrate 가 없으면 경고합니다.
      * @details soft 역직렬화가 끝난 뒤의 공통 로직입니다. 세 포맷 모두 `runVersionedDeserialize` 를 거쳐 여기로 옵니다.
      *          스크래치 인스턴스 파괴는 부르는 쪽 책임입니다.
+     *          **orphan 의 운명이 정해지는 유일한 자리**이기도 합니다. 로드가 성공으로 끝나는데 migrate 가 찾아 보지 않은 orphan
+     *          (읽지 못한 값 · 타입에 없는 칸)이 남으면 그 값은 버려진 것이므로, 타입 이름과 칸 이름을 담아 **로드마다 한 번** 경고합니다.
+     *          예전에는 JSON · XML 의 Ignore 정책이 그것을 조용히 버려, 숫자 칸의 "abc" 가 아무 말 없이 기본값으로 남았습니다.
+     *          옛 TypeInfo 를 스테이징했으면 두 타입 중 하나라도 아는 이름은 스테이징된 쪽이 실어 날랐다고 보고 빼고 셉니다.
      * @param bWarnWhenNoMigrate migrate 가 없고 이 값이 true 이면 경고한 뒤 false 를 반환합니다(버전 · orphan 정책은 부르는 쪽이 계산합니다).
      */
     SW_API bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,

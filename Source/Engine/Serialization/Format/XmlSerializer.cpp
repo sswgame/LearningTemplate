@@ -466,6 +466,8 @@ namespace sw
                     orphan._name     = hashed_string::findInterned( string_view{ pChildName } );
                     orphan._nameHash = hashed_string::computeHash( string_view{ pChildName } );
                     orphan._text     = child.getText() != nullptr ? child.getText() : "";
+                    // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
+                    orphan._writtenName = pChildName;
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
 
@@ -483,6 +485,8 @@ namespace sw
                     orphan._name     = hashed_string::findInterned( string_view{ pAttrName } );
                     orphan._nameHash = hashed_string::computeHash( string_view{ pAttrName } );
                     orphan._text     = attr.getValue() != nullptr ? attr.getValue() : "";
+                    // 버렸다고 알릴 때 찍을 이름
+                    orphan._writtenName = pAttrName;
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
             }

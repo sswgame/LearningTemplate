@@ -104,10 +104,11 @@ namespace sw
      *          `OrphanOnlyPolicyDiffersByFormat`). 어느 쪽이 옳은지는 정하지 않고, **동작을 바꾸지 않은 채** 이름을
      *          붙여 부르는 쪽에 드러냈습니다. 텍스트를 엄격하게 바꾸면 모르는 필드가 하나만 있어도 씬 · 프리팹이
      *          통째로 로드에 실패합니다. 바꿀 값이 있는지는 백로그에 질문으로 남겼습니다.
+     *          "통과" 가 더는 조용하지 않습니다 — 버린 orphan 은 `runSchemaMigrateStep` 이 타입 · 칸 이름과 함께 로드마다 한 번 알립니다.
      */
     enum class SchemaOrphanPolicy : uint8
     {
-        Ignore, ///< orphan 은 버리고 성공으로 봅니다(JSON/XML. 손으로 고치는 파일이라 관대합니다).
+        Ignore, ///< orphan 은 버리고(경고하고) 성공으로 봅니다(JSON/XML. 손으로 고치는 파일이라 관대합니다).
         Reject  ///< orphan 이 있으면 migrate 없이는 실패합니다(Binary. 스키마가 바뀐 것이 확실합니다).
     };
 

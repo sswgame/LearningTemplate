@@ -217,11 +217,20 @@ namespace sw
                 return {};
             }
 
-            static bool parseNodeBool( const utf8* pText, bool fallback )
+            /**
+             * @brief 속성 · 자식 텍스트를 불리언으로 읽습니다. 없거나 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 알리고 `fallback` 입니다.
+             * @details 예전에는 `StringUtil::parseBool` 이 읽지 못한 글을 말없이 폴백으로 돌려줘 `enabled="ture"` 가 아무 말 없이
+             *          기본값이 됐다. 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)는 이미 알렸다 — 같은 규칙이다.
+             * @param pKind 경고에 찍을 자리 종류("Attribute" · "Element").
+             */
+            static bool parseNodeBool( const utf8* pKind, const utf8* pName, const utf8* pText, bool fallback )
             {
-                if ( StringUtil::isNullOrEmpty( pText ) )
+                if ( pText == nullptr || StringUtil::trim( pText ).empty() )
                     return fallback;
-                return StringUtil::parseBool( pText, fallback );
+                bool value{ fallback };
+                if ( StringUtil::tryParseBool( pText, value ) == false )
+                    SW_LOG_WARNING( "%# '%#' has an unreadable boolean '%#' - using %#", pKind, pName, pText, fallback ? "true" : "false" );
+                return value;
             }
         };
     } // namespace
@@ -291,6 +300,24 @@ namespace sw
         return val;
     }
 
+    bool XmlNode::tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
+                                             bool bIgnoreCaseKeys ) const
+    {
+        outValue           = fallback;
+        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
+        if ( pValue == nullptr )
+            return true;
+        int32      parsed{ 0 };
+        const bool bInRange = StringUtil::parseInt( pValue, parsed ) && minValue <= parsed && parsed <= maxValue;
+        if ( bInRange == false )
+        {
+            SW_LOG_WARNING( "<%#> attribute '%#' is '%#', not an integer in [%#, %#] - rejected", getName(), pName, pValue, minValue, maxValue );
+            return false;
+        }
+        outValue = parsed;
+        return true;
+    }
+
     float32 XmlNode::getAttributeFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
@@ -304,7 +331,7 @@ namespace sw
 
     bool XmlNode::getAttributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
-        return XmlDocumentInternal::parseNodeBool( findAttribute( pName, bIgnoreCaseKeys ), fallback );
+        return XmlDocumentInternal::parseNodeBool( "Attribute", pName, findAttribute( pName, bIgnoreCaseKeys ), fallback );
     }
 
     XmlNode XmlNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -360,7 +387,7 @@ namespace sw
 
     bool XmlNode::getChildBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
-        return XmlDocumentInternal::parseNodeBool( findChildText( pName, bIgnoreCaseKeys ), fallback );
+        return XmlDocumentInternal::parseNodeBool( "Element", pName, findChildText( pName, bIgnoreCaseKeys ), fallback );
     }
 
     bool XmlNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const

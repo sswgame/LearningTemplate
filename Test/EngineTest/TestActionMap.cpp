@@ -543,6 +543,62 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
 }
 
 /**
+ * @brief [ActionMapTest] 유저 바인딩의 패드 번호 · 수정 키 마스크가 범위를 벗어나면 그 바인딩을 버리고 알린다 — 감아서 엉뚱한 패드에 묶지 않는다
+ * @details 읽는 자리 넷이 `static_cast<uint8>( getAttributeInt( … ) )` 였다. `pad="256"` 은 0 번, `pad="-1"` 은 255 번 패드가 됐고
+ *          (`pad="4"` 는 없는 패드), `modifierMask="257"` 은 Ctrl 이 됐다 — 모두 말없이. 이제 패드 번호는 슬롯 수(`kMaxGamepadSlot`),
+ *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고(`XmlNode::tryGetAttributeIntInRange`), 벗어나면 경고하고 그 바인딩을 버린다.
+ */
+SW_TEST_CASE( ActionMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
+{
+    const sw::string stickKind    = sw::BindingKinds::toName( sw::BindingKind::GamepadStick2D );
+    const sw::string shortcutKind = sw::BindingKinds::toName( sw::BindingKind::Shortcut );
+    const sw::string keyS         = sw::KeyCodes::toName( sw::Key::S );
+
+    sw::string xml = "<UserBindings>";
+    xml += "<bind action=\"StickOk\" kind=\"" + stickKind + "\" stick=\"Right\" pad=\"3\"/>";
+    xml += "<bind action=\"StickWrapsHigh\" kind=\"" + stickKind + "\" pad=\"256\"/>";
+    xml += "<bind action=\"StickWrapsLow\" kind=\"" + stickKind + "\" pad=\"-1\"/>";
+    xml += "<bind action=\"StickNoSuchPad\" kind=\"" + stickKind + "\" pad=\"4\"/>";
+    xml += "<bind action=\"ShortcutOk\" kind=\"" + shortcutKind + "\" key=\"" + keyS + "\" modifierMask=\"3\"/>";
+    xml += "<bind action=\"ShortcutWraps\" kind=\"" + shortcutKind + "\" key=\"" + keyS + "\" modifierMask=\"257\"/>";
+    xml += "<bind action=\"PadButtonOk\" source=\"gamepad\" code=\"A\" pad=\"2\"/>";
+    xml += "<bind action=\"PadButtonWraps\" source=\"gamepad\" code=\"A\" pad=\"256\"/>";
+    xml += "</UserBindings>";
+
+    const sw::string path = test::makeTempPath( "range_checked_user_bindings.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, xml ) );
+
+    test::ScopedLogCollector logs;
+    sw::ActionMap            actionMap;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range pad index and modifier mask in user bindings" );
+        SW_ASSERT_TRUE( actionMap.loadUserBindings( path ) );
+    }
+
+    // 범위 안의 값은 그대로 읽힌다.
+    const sw::ActionBinding* pStick = actionMap.getBinding( "StickOk", 0 );
+    SW_ASSERT_NOT_NULL( pStick );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( pStick->_deviceIndex ) );
+    const sw::ActionBinding* pShortcut = actionMap.getBinding( "ShortcutOk", 0 );
+    SW_ASSERT_NOT_NULL( pShortcut );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( pShortcut->_modifierMask ) );
+    const sw::ActionBinding* pButton = actionMap.getBinding( "PadButtonOk", 0 );
+    SW_ASSERT_NOT_NULL( pButton );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( pButton->_arrSlot[0]._deviceIndex ) );
+
+    // 벗어난 값은 감기지 않는다 — 그 바인딩이 없다.
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "StickWrapsHigh" ) == false, "pad=\"256\" 이 0 번 패드로 감겼습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "StickWrapsLow" ) == false, "pad=\"-1\" 이 255 번 패드로 감겼습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "StickNoSuchPad" ) == false, "없는 4 번 패드에 묶였습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "ShortcutWraps" ) == false, "modifierMask=\"257\" 이 Ctrl 로 감겼습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "PadButtonWraps" ) == false, "단일 버튼의 pad=\"256\" 이 0 번 패드로 감겼습니다" );
+
+    // 버린 것마다 한 줄씩 알린다.
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'pad'" ) == 4, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'modifierMask'" ) == 1, logs.joined().c_str() );
+}
+
+/**
  * @brief [ActionMapTest] 대량 레이어 동적 등록으로 _mapLayer/_listLayerEntry가 여러 번 재할당된 뒤에도
  *        먼저 바인딩된 액션의 ActionBinding::_cachedLayerIndex(레이어 활성 판정 캐시)가 여전히 정확한지 검증.
  */

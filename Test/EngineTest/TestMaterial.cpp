@@ -813,6 +813,38 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
 }
 
 /**
+ * @brief [MaterialTest] 머티리얼의 불리언이 아닌 글은 기본값을 쓰고 알린다 — 말없이 false 가 되지 않는다
+ * @details `MaterialUtil::parseBoolToken` 은 `StringUtil::parseBool( token, false )` 라 읽지 못한 글이 **기본값이 아니라 false** 가 됐다.
+ *          텍스처의 `bSrgb="ture"` 는 기본(true)인 sRGB 를 말없이 껐다. 이제 머티리얼의 불리언 글은 모두 `parseBoolToken( 글, 이름, 기본값 )`
+ *          하나를 지나(필드 · 파라미터 값 · 키워드 define) 기본값을 쓰고 이름과 함께 경고한다.
+ */
+SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"BoolProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"_albedo\" type=\"Texture2D\" bSrgb=\"ture\" bHdr=\"yes\"/>"
+        "    <item name=\"_flip\" type=\"Bool\" shaderType=\"Uint\" defaultValue=\"maybe\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "non-boolean material text" );
+        SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+    }
+
+    const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "_albedo" ) );
+    SW_ASSERT_NOT_NULL( pAlbedo );
+    SW_EXPECT_TRUE_MSG( pAlbedo->_bSrgb == SW_TRUE, "bSrgb=\"ture\" 가 기본값(true)이 아니라 false 로 읽혔습니다" );
+    SW_EXPECT_TRUE( pAlbedo->_bHdr == SW_TRUE );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value 'bSrgb' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value '_flip' has an unreadable boolean 'maybe'" ) >= 1, logs.joined().c_str() );
+}
+
+/**
  * @brief [MaterialTest] 다시 로드한 머티리얼은 셰이더 레이아웃을 잊는다 — 원소 stride 를 비우고 바이트 세대를 올린다
  * @details 리플렉션으로 레이아웃을 맞춘 뒤 같은 머티리얼을 다시 로드하면(에셋 핫 리로드 · 에디터 미리보기) 프로퍼티가 XML 순서로 다시
  *          쌓인다. 예전에는 "맞췄다" 는 표시가 남아 다시 맞추지 않았고, **옛 stride 와 XML 순서 바이트**가 함께 GpuScene 에 올라갔다 —

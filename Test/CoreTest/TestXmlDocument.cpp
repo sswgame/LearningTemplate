@@ -121,3 +121,67 @@ SW_TEST_CASE( XmlDocumentTest, ParseErrorNamesSourceLineAndColumn )
     SW_EXPECT_TRUE( doc.parse( "<Root/>" ) );
     SW_EXPECT_TRUE( doc.getLastError().empty() );
 }
+
+/**
+ * @brief [XmlDocumentTest] 불리언이 아닌 글은 폴백을 쓰되 알린다 — 속성 · 자식 텍스트 모두
+ * @details `getAttributeBool` · `getChildBool` 은 `StringUtil::parseBool` 로 읽어, `enabled="ture"` 가 **아무 말 없이** 폴백이 됐다.
+ *          정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)는 이미 알렸다 — 이제 같은 규칙이다(`StringUtil::tryParseBool`).
+ *          없거나 빈 값은 여전히 조용한 폴백이다.
+ */
+SW_TEST_CASE( XmlDocumentTest, UnreadableBooleanFallsBackAndSaysSo )
+{
+    sw::XmlDocument doc;
+    SW_ASSERT_TRUE( doc.parse( R"(<Root on="yes" off="0" typo="ture" empty=""><flag>nope</flag><good>TRUE</good></Root>)" ) );
+    const sw::XmlNode root = doc.getRoot( "Root" );
+    SW_ASSERT_TRUE( root.isValid() );
+
+    test::ScopedLogCollector logs;
+    SW_EXPECT_TRUE( root.getAttributeBool( "on", false ) );
+    SW_EXPECT_FALSE( root.getAttributeBool( "off", true ) );
+    SW_EXPECT_TRUE( root.getAttributeBool( "missing", true ) );
+    SW_EXPECT_TRUE( root.getAttributeBool( "empty", true ) );
+    SW_EXPECT_TRUE( root.getChildBool( "good", false ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable boolean" ) == 0, logs.joined().c_str() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "non-boolean attribute and element text" );
+        SW_EXPECT_TRUE( root.getAttributeBool( "typo", true ) );
+        SW_EXPECT_FALSE( root.getChildBool( "flag", false ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Attribute 'typo' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Element 'flag' has an unreadable boolean 'nope'" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [XmlDocumentTest] 범위를 정한 정수 속성은 범위 밖 · 정수가 아닌 글을 거절하고 알린다 — 좁은 칸으로 감지 않는다
+ * @details 좁은 칸에 `static_cast<uint8>( getAttributeInt( … ) )` 로 넣으면 "256" 이 0, "-1" 이 255 로 감겼다(입력 맵의 패드 번호).
+ *          `tryGetAttributeIntInRange` 는 없으면 폴백으로 성공, 범위 안이면 그 값, 아니면 경고하고 false(값은 폴백)다.
+ */
+SW_TEST_CASE( XmlDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
+{
+    sw::XmlDocument doc;
+    SW_ASSERT_TRUE( doc.parse( R"(<bind low="0" high="3" over="256" under="-1" text="two" huge="99999999999"/>)" ) );
+    const sw::XmlNode node = doc.getRoot( "bind" );
+    SW_ASSERT_TRUE( node.isValid() );
+
+    test::ScopedLogCollector logs;
+    int32                    value{ -7 };
+    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "missing", 1, 0, 3, value ) );
+    SW_EXPECT_EQUAL( 1, value );
+    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "low", 1, 0, 3, value ) );
+    SW_EXPECT_EQUAL( 0, value );
+    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "high", 1, 0, 3, value ) );
+    SW_EXPECT_EQUAL( 3, value );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "rejected" ) == 0, logs.joined().c_str() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "out-of-range and non-integer attributes" );
+        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "over", 1, 0, 255, value ) );
+        SW_EXPECT_EQUAL( 1, value );
+        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "under", 1, 0, 255, value ) );
+        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "text", 1, 0, 255, value ) );
+        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "huge", 1, 0, 255, value ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind> attribute 'over' is '256', not an integer in [0, 255]" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "rejected" ) == 4, logs.joined().c_str() );
+}
