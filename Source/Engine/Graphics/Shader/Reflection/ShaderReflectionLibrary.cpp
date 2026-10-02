@@ -191,6 +191,45 @@ namespace sw
             static atomic<uint32> s_generation{ 0 };
             return s_generation;
         }
+
+        /**
+         * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
+         * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
+         */
+        bool readManifestInternal( const string& manifestRelative, ShaderReflectionLibrary::EntryMap& outMapEntry )
+        {
+            outMapEntry.clear();
+            Archive archive( manifestRelative, true );
+            if ( archive.isError() )
+                return false;
+
+            uint32 magic{ 0 };
+            uint32 version{ 0 };
+            uint32 entryCount{ 0 };
+            archive >> magic;
+            archive >> version;
+            archive >> entryCount;
+            if ( magic != kManifestMagic || version != kManifestVersion )
+            {
+                SW_LOG_WARNING( "리플렉션 매니페스트 형식이 맞지 않습니다 (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
+                return false;
+            }
+
+            for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
+            {
+                string               entryKey;
+                ShaderReflectionData entryData;
+                archive >> entryKey;
+                if ( readReflectionInternal( archive, entryData ) == false )
+                {
+                    SW_LOG_WARNING( "리플렉션 매니페스트가 손상되었습니다: %#", manifestRelative.c_str() );
+                    outMapEntry.clear();
+                    return false;
+                }
+                outMapEntry.emplace( std::move( entryKey ), std::move( entryData ) );
+            }
+            return true;
+        }
     } // namespace
 
     const utf8* ShaderReflectionLibrary::getManifestFileName()
@@ -229,6 +268,14 @@ namespace sw
         SW_LOG_INFO( "리플렉션 매니페스트 %# (%# 항목, %# bytes)", outPath.c_str(),
                      static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( bytes.size() ) );
         return true;
+    }
+
+    bool ShaderReflectionLibrary::loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry )
+    {
+        string manifestRelative( binDirectoryRelative );
+        if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
+            manifestRelative += '/';
+        return readManifestInternal( manifestRelative + getManifestFileName(), outMapEntry );
     }
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
@@ -272,39 +319,10 @@ namespace sw
         auto manifestIter = mapManifest.find( binDirRel );
         if ( manifestIter == mapManifest.end() )
         {
-            EntryMap     loaded;
-            const string manifestRel = binDirRel + getManifestFileName();
-            Archive      archive( manifestRel, true );
-            if ( archive.isError() == false )
-            {
-                uint32 magic{ 0 };
-                uint32 version{ 0 };
-                uint32 entryCount{ 0 };
-                archive >> magic;
-                archive >> version;
-                archive >> entryCount;
-
-                if ( magic != kManifestMagic || version != kManifestVersion )
-                {
-                    SW_LOG_WARNING( "리플렉션 매니페스트 형식이 맞지 않습니다 (magic=%# version=%#): %#",
-                                    magic, version, manifestRel.c_str() );
-                    entryCount = 0;
-                }
-
-                for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
-                {
-                    string               entryKey;
-                    ShaderReflectionData entryData;
-                    archive >> entryKey;
-                    if ( readReflectionInternal( archive, entryData ) == false )
-                    {
-                        SW_LOG_WARNING( "리플렉션 매니페스트가 손상되었습니다: %#", manifestRel.c_str() );
-                        loaded.clear();
-                        break;
-                    }
-                    loaded.emplace( std::move( entryKey ), std::move( entryData ) );
-                }
-            }
+            // 없거나 망가진 파일도 빈 채로 캐시한다 — 매번 다시 열지 않는다.
+            EntryMap loaded;
+            if ( readManifestInternal( binDirRel + getManifestFileName(), loaded ) == false )
+                loaded.clear();
             manifestIter = mapManifest.emplace( binDirRel, std::move( loaded ) ).first;
         }
 

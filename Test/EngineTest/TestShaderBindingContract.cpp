@@ -6,9 +6,11 @@
  */
 #include "pch.h"
 
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
@@ -16,6 +18,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -56,6 +59,64 @@ namespace
         for ( const sw::ShaderBindingContractIssue& issue : listIssue )
         {
             if ( issue._message.find( pText ) != sw::string::npos )
+                return true;
+        }
+        return false;
+    }
+
+    /// @brief 구운 리플렉션 매니페스트에 나오는 이름들 — 바인딩(cbuffer · 리소스 · 구조버퍼 원소) 이름과 cbuffer 멤버 이름.
+    struct BakedNameSet
+    {
+        sw::unordered_set<sw::string> _uniqueBindingName;
+        sw::unordered_set<sw::string> _uniqueMemberName;
+        uint32                        _entryCount{ 0 };
+    };
+
+    void collectBakedNames( const sw::ShaderReflectionLibrary::EntryMap& mapEntry, BakedNameSet& outNameSet )
+    {
+        for ( const auto& entry : mapEntry )
+        {
+            const sw::ShaderReflectionData& reflection = entry.second;
+            ++outNameSet._entryCount;
+            for ( const sw::ShaderBufferInfo& constantBuffer : reflection._listConstantBuffer )
+            {
+                outNameSet._uniqueBindingName.insert( constantBuffer._name );
+                for ( const sw::ShaderVariableInfo& variable : constantBuffer._listVariable )
+                    outNameSet._uniqueMemberName.insert( variable._name );
+            }
+            for ( const sw::ShaderResourceBinding& resource : reflection._listResource )
+                outNameSet._uniqueBindingName.insert( resource._name );
+            for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
+                outNameSet._uniqueBindingName.insert( element._name );
+        }
+    }
+
+    bool hasName( const sw::unordered_set<sw::string>& uniqueName, const sw::string& name )
+    {
+        return uniqueName.find( name ) != uniqueName.end();
+    }
+
+    /// @brief 이름의 숫자 자리를 `#` 로 바꾼 묶음 열쇠입니다. `g_SwSampler3` 과 `g_SwSampler0` 은 같은 묶음(`g_SwSampler#`)입니다.
+    sw::string makeNumberedFamilyKey( const sw::string& name )
+    {
+        sw::string key;
+        for ( const utf8 character : name )
+        {
+            const bool bDigit = ( '0' <= character && character <= '9' );
+            if ( bDigit == false )
+                key += character;
+            else if ( key.empty() || key.back() != '#' )
+                key += '#';
+        }
+        return key;
+    }
+
+    bool hasNumberedFamilyMember( const sw::unordered_set<sw::string>& uniqueName, const sw::string& name )
+    {
+        const sw::string familyKey = makeNumberedFamilyKey( name );
+        for ( const sw::string& candidate : uniqueName )
+        {
+            if ( makeNumberedFamilyKey( candidate ) == familyKey )
                 return true;
         }
         return false;
@@ -105,7 +166,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         ok._listResource.push_back( makeRes( "g_SwMaterials", "StorageBuffer", 0, vk::kTShift + sw::shaderslot::kMaterialBuffer ) );
         ok._listResource.push_back( makeRes( "g_IndirectArgs", "StorageBuffer", 0, vk::kUShift + 0 ) );
         ok._listResource.push_back( makeRes( "g_SwBindlessTex2D", "TextureOrSampler", bindless::kVkTextureSet, bindless::kVkTextureBinding, 0 ) );
-        ok._listResource.push_back( makeRes( "g_SwSamplerLinearWrap", "Sampler", bindless::kVkTextureSet, bindless::kVkSamplerBinding ) );
+        ok._listResource.push_back( makeRes( "g_SwSamplers", "Sampler", bindless::kVkTextureSet, bindless::kVkSamplerBinding ) );
         listIssue.clear();
         SW_EXPECT_EQUAL( 0u, sw::ShaderBindingContract::validate( ok, sw::ShaderTargetFormat::SPIRV_Vulkan, "ok.vk", &listIssue ) );
     }
@@ -167,7 +228,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         ok._listResource.push_back( makeRes( "g_SwInstances", "StructuredBuffer", 0, sw::shaderslot::kInstanceBuffer ) );
         ok._listResource.push_back( makeRes( "g_SwMaterials", "StructuredBuffer", 0, sw::shaderslot::kMaterialBuffer ) );
         ok._listResource.push_back( makeRes( "g_SwBindlessTex2D", "Texture", bindless::kTextureSpace, 0, 0 ) );
-        ok._listResource.push_back( makeRes( "g_SwSamplerLinearWrap", "Sampler", 0, 0 ) );
+        ok._listResource.push_back( makeRes( "g_SwSampler0", "Sampler", 0, 0 ) );
         listIssue.clear();
         SW_EXPECT_EQUAL( 0u, sw::ShaderBindingContract::validate( ok, sw::ShaderTargetFormat::DXIL_D3D12, "ok.dx12", &listIssue ) );
     }
@@ -431,11 +492,6 @@ SW_TEST_CASE( ShaderBindingContractTest, ReflectionNamesAreUniformAcrossBackends
 }
 
 /**
- * @brief 계약 표 자체의 일관성 — 이름이 비지 않고 겹치지 않는다. 자리 충돌은 백엔드별로 뜻이 달라
- *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSamplerLinearWrap=s0 처럼 서로 다른 셰이더에 산다) 여기서
- *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
- */
-/**
  * @brief [ShaderBindingContractTest] DX12 루트 시그니처 예산 — 슬롯 수를 늘려도 64 dword 안에 있어야 한다.
  * @details 루트 배치는 계약(shaderslot::dx12)에서 나온다: CB 는 루트 CBV(2 dword), t/u 슬롯과 텍스처 배열은 테이블(1 dword),
  *          루트 상수는 dword 수. 예전엔 t/u 도 루트 디스크립터라 51 이었고, 슬롯 하나가 2 dword 씩 예산을 먹었다.
@@ -559,6 +615,136 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
         SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 구운 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
 }
 
+/**
+ * @brief [ShaderBindingContractTest] C++ 가 이름으로 묶는 셰이더 이름이 구운 리플렉션(reflection.manifest)에 **실제로 있다**.
+ * @details validate 는 리플렉션의 이름을 계약 표에서 찾고, 표에 없는 이름은 **조용히 지나친다**. 그래서 셰이더 쪽에서
+ *          `g_SwBatches` 를 다른 이름으로 바꾸면 그 리소스의 자리 · 종류 검사가 통째로 꺼지고(위반 0), 엔진의 이름 바인딩도
+ *          아무 말 없이 빈다. 셰이더 이름을 C++ 규칙으로 고치면서(2026-10-03) 문자열로 묶인 이름이 그렇게 사라질 수 있었다.
+ *          여기서는 반대 방향을 본다. C++ 가 아는 이름 — 계약 표, 계약 표 밖의 예약 리소스 이름, PassCB · 루트 상수 멤버
+ *          (`PassConstantNames`), 레지스트리 이름(`g_<이름>`), 패스 텍스처 역할(`g_<역할>Index`) — 이 매니페스트 어딘가에 나와야 한다.
+ *          계약 표에서 샘플러가 아닌 이름은 **그 백엔드 계약에 선언된 백엔드마다** 그 백엔드의 매니페스트에 있어야 한다.
+ *          샘플러는 두 이유로 백엔드마다 빠질 수 있어, 같은 번호 묶음(`g_SwSampler#`)이 어딘가 구워져 있으면 된다.
+ *          컴파일러가 안 쓰는 샘플러를 리플렉션에서 지우고(DX12 정적 샘플러 s1 · s2 · s4..s6 은 지금 어느 셰이더도 고르지 않는다),
+ *          GL 은 결합 이미지 샘플러를 텍스처 이름 하나로 보고한다. 묶음의 이름을 바꾸면 여전히 걸린다.
+ *          매니페스트는 리플렉터 없이 읽히므로 DXBC · DXIL 리플렉터가 없는 플랫폼에서도 네 백엔드를 다 본다.
+ */
+SW_TEST_CASE( ShaderBindingContractTest, EveryBoundNameIsInBakedReflection )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    constexpr uint32             kFormatCount            = 4;
+    const sw::ShaderTargetFormat arrFormat[kFormatCount] = {
+        sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12, sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+    const utf8* arrFormatName[kFormatCount] = { "dx11", "dx12", "vulkan", "opengl" };
+    const utf8* arrDomain[]                 = { "engine", "common" };
+
+    BakedNameSet arrNameSet[kFormatCount];
+    BakedNameSet allNameSet;
+    for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+    {
+        for ( const utf8* pDomain : arrDomain )
+        {
+            const sw::string                      binDirectory = sw::string( pDomain ) + "/shaders/bin/" + sw::string( sw::ShaderBaker::getSubfolderForFormat( arrFormat[formatIndex] ) );
+            sw::ShaderReflectionLibrary::EntryMap mapEntry;
+            if ( sw::ShaderReflectionLibrary::loadManifest( binDirectory, mapEntry ) == false )
+                continue;
+            collectBakedNames( mapEntry, arrNameSet[formatIndex] );
+            collectBakedNames( mapEntry, allNameSet );
+        }
+    }
+    if ( allNameSet._entryCount == 0 )
+        SW_TEST_SKIP( "구운 리플렉션 매니페스트를 찾지 못했습니다 (App.exe --bake-shaders 필요)" );
+    for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+        SW_EXPECT_TRUE_MSG( arrNameSet[formatIndex]._entryCount > 0, ( sw::string( arrFormatName[formatIndex] ) + " 매니페스트가 없다 — 그 백엔드의 이름은 검사되지 않는다" ).c_str() );
+
+    // 1) 계약 표
+    for ( const sw::ShaderReservedBinding& reserved : sw::ShaderBindingContract::getReservedBindings() )
+    {
+        const sw::string name( reserved._name );
+        if ( reserved._kind == sw::ShaderBindingKind::Sampler )
+        {
+            const bool bFound = hasName( allNameSet._uniqueBindingName, name ) || hasNumberedFamilyMember( allNameSet._uniqueBindingName, name );
+            SW_EXPECT_TRUE_MSG( bFound, ( "계약 샘플러 '" + name + "' 의 묶음이 어느 매니페스트에도 없다 — 셰이더 쪽 이름이 바뀌었다" ).c_str() );
+            continue;
+        }
+        const sw::ShaderReservedLocation* arrLocation[kFormatCount] = { &reserved._dx11, &reserved._dx12, &reserved._vulkan, &reserved._opengl };
+        for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+        {
+            const bool bChecked = arrLocation[formatIndex]->_bDeclared && arrNameSet[formatIndex]._entryCount > 0;
+            if ( bChecked == false )
+                continue;
+            SW_EXPECT_TRUE_MSG( hasName( arrNameSet[formatIndex]._uniqueBindingName, name ),
+                                ( sw::string( arrFormatName[formatIndex] ) + " 매니페스트에 계약 이름 '" + name +
+                                  "' 가 없다 — 셰이더 쪽 이름이 바뀌면 validate 는 그 리소스를 조용히 건너뛴다" )
+                                    .c_str() );
+        }
+    }
+
+    // 2) 계약 표 밖에서 C++ 가 이름으로 부르는 리소스(meshmorph 의 레스트 · 결과 버퍼)
+    const utf8* arrResourceName[] = { sw::shaderslot::resname::kMorphRestVertices, sw::shaderslot::resname::kMorphVerticesRw };
+    for ( const utf8* pName : arrResourceName )
+        SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueBindingName, pName ), ( sw::string( "리소스 '" ) + pName + "' 가 어느 매니페스트에도 없다" ).c_str() );
+
+    // 3) PassCB · 루트 상수 멤버 — 엔진이 리플렉션 멤버 이름으로 값을 채운다
+    const sw::PassConstantNames& passNames       = sw::passConstantNames();
+    const sw::hashed_string*     arrMemberName[] = {
+        &passNames._lightViewProj,
+        &passNames._viewProj,
+        &passNames._invViewProj,
+        &passNames._world,
+        &passNames._keyLightDirIntensity,
+        &passNames._keyLightColor,
+        &passNames._shadowParams,
+        &passNames._bloomParams,
+        &passNames._outlineColor,
+        &passNames._outlineParams,
+        &passNames._flags,
+        &passNames._swInstanceCount,
+        &passNames._swMaterialCount,
+        &passNames._swMorphVertexCount,
+        &passNames._swBatchCount,
+        &passNames._swLightCount,
+    };
+    for ( const sw::hashed_string* pName : arrMemberName )
+        SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueMemberName, pName->c_str() ), ( sw::string( "cbuffer 멤버 '" ) + pName->c_str() + "' 가 어느 매니페스트에도 없다" ).c_str() );
+
+    // 4) 레지스트리 이름 — 리소스 `g_<이름>` 으로 걸린다(ShaderBindingLayout 의 canonical 이름)
+    const sw::hashed_string* arrRegistryName[] = {
+        &passNames._swInstances,
+        &passNames._swMorphVertices,
+        &passNames._swVisibleInstanceIds,
+        &passNames._swMaterials,
+        &passNames._swLights,
+        &passNames._swBatches,
+    };
+    for ( const sw::hashed_string* pName : arrRegistryName )
+    {
+        const sw::string resourceName = sw::string( "g_" ) + pName->c_str();
+        SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueBindingName, resourceName ), ( "레지스트리 리소스 '" + resourceName + "' 가 어느 매니페스트에도 없다" ).c_str() );
+    }
+
+    // 5) 패스 텍스처 역할 — PassCB 의 `g_<역할>Index` 를 엔진이 bindless 인덱스로 채운다
+    const sw::AttachmentNames& attachment    = sw::attachmentNames();
+    const sw::hashed_string*   arrRoleName[] = {
+        &attachment._shadowMap,
+        &attachment._gbufferAlbedo,
+        &attachment._gbufferNormal,
+        &attachment._sceneDepth,
+        &attachment._sourceColor,
+        &attachment._ambientOcclusion,
+    };
+    for ( const sw::hashed_string* pRole : arrRoleName )
+    {
+        const sw::string memberName = sw::string( "g_" ) + pRole->c_str() + "Index";
+        SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueMemberName, memberName ), ( "패스 텍스처 인덱스 '" + memberName + "' 가 어느 매니페스트에도 없다" ).c_str() );
+    }
+}
+
+/**
+ * @brief 계약 표 자체의 일관성 — 이름이 비지 않고 겹치지 않는다. 자리 충돌은 백엔드별로 뜻이 달라
+ *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSampler0=s0 처럼 서로 다른 셰이더에 산다) 여기서
+ *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
+ */
 SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )
 {
     const sw::vector<sw::ShaderReservedBinding>& list = sw::ShaderBindingContract::getReservedBindings();

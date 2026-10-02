@@ -42,6 +42,15 @@ namespace sw
         [[nodiscard]] static bool save( const EntryMap& mapEntry, string_view absDirectory );
 
         /**
+         * @brief 매니페스트 하나를 통째로 읽습니다. 캐시하지 않고 신선도도 따지지 않습니다.
+         * @details 셰이더 하나가 아니라 **구운 것 전부**를 보는 쪽(계약 시험: C++ 가 묶는 이름이 실제로 구워졌는가)이 씁니다.
+         *          매니페스트는 리플렉터 없이 읽히므로 DXBC · DXIL 리플렉터가 없는 플랫폼에서도 네 백엔드를 다 봅니다.
+         * @param binDirectoryRelative 리소스 상대 `<domain>/shaders/bin/<rhi>` 디렉터리
+         * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).
+         */
+        [[nodiscard]] static bool loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry );
+
+        /**
          * @brief 셰이더 하나의 리플렉션을 조회합니다.
          * @details 매니페스트는 경로별로 한 번만 읽어 캐시합니다. 팩 · 낱개 파일을 가리지 않고 읽습니다.
          * @return 매니페스트에 없거나 (개발 빌드에서) 지금 소스와 맞지 않으면 false 입니다. 부르는 쪽이 폴백(개발 빌드 한정)을 정합니다.
