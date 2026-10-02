@@ -21,7 +21,8 @@ namespace sw
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
      * @details 이름은 물리 파이프라인 단계(언리얼 ETickingGroup)를 따르지만, 그룹 사이에 물리 스텝이 끼지는 않습니다.
-     *          순서를 정하는 슬롯으로만 씁니다.
+     *          순서를 정하는 슬롯으로만 씁니다. 물리(겹침 이벤트)는 모든 그룹과 트랜스폼 적용이 끝난 뒤 한 번 step 합니다
+     *          (`GameObjectManager::stepPhysics` — 트랜스폼 쓰기가 틱 뒤에 적용되므로 그룹 사이에서는 그 프레임의 자리를 볼 수 없다).
      */
     enum class TickGroup : uint8
     {
@@ -166,6 +167,13 @@ namespace sw
         virtual void onTick( float32 deltaTime );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
         virtual void onSubTick( uint32 subTickId, float32 deltaTime );
+        /**
+         * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했습니다(유니티 `OnTriggerEnter2D` · 언리얼 `BeginOverlap`).
+         * @details 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불립니다 — 스폰 · 파괴 · 구조 변경을 그 자리에서 해도 됩니다.
+         */
+        virtual void onOverlapBegin( GameObject* pOther ) { (void)pOther; }
+        /** @brief 겹침이 끝났습니다(떨어짐 · 꺼짐 · 사라짐). 상대가 이미 사라졌으면 @p pOther 는 nullptr 입니다. */
+        virtual void onOverlapEnd( GameObject* pOther ) { (void)pOther; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
          * @details 자기가 어떤 등록부에 들어가야 하는지는 자기가 압니다. GameObject 가 `castTo` 로

@@ -9,6 +9,7 @@
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -174,6 +175,12 @@ namespace sw
             flushSceneTransforms();
         }
 
+        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것도 아래에서 함께 놓는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
+            stepPhysics( deltaTime );
+        }
+
         // 틱이 지운 것(맞은 투사체 등)을 여기서 놓는다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
@@ -249,6 +256,63 @@ namespace sw
             job._deltaTime = deltaTime;
             engine::runParallel( static_cast<uint32>( stage.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
                                  SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::StageTick::tickRange, &job ) );
+        }
+    }
+
+    void GameObjectManager::registerCollider( BoxCollider2DComponent* pCollider )
+    {
+        if ( pCollider == nullptr || pCollider->_colliderIndex != BoxCollider2DComponent::kNotRegistered )
+            return;
+        pCollider->_colliderIndex = static_cast<uint32>( _listCollider.size() );
+        _listCollider.push_back( pCollider );
+    }
+
+    void GameObjectManager::unregisterCollider( BoxCollider2DComponent* pCollider )
+    {
+        if ( pCollider == nullptr || pCollider->_colliderIndex >= _listCollider.size() || _listCollider[pCollider->_colliderIndex] != pCollider )
+            return;
+        BoxCollider2DComponent* pMoved           = _listCollider.back();
+        _listCollider[pCollider->_colliderIndex] = pMoved;
+        pMoved->_colliderIndex                   = pCollider->_colliderIndex;
+        _listCollider.pop_back();
+        pCollider->_colliderIndex = BoxCollider2DComponent::kNotRegistered;
+    }
+
+    void GameObjectManager::stepPhysics( float32 deltaTime )
+    {
+        // 바디를 한 번에 맞춘다 — 틱 · 트랜스폼 적용이 끝난 뒤라 모두 같은 프레임의 자리를 본다. 꺼진 콜라이더는 빠진다(겹침이 끝난다).
+        for ( BoxCollider2DComponent* pCollider : _listCollider )
+            pCollider->syncPhysicsBody();
+        _physicsWorld.step( deltaTime );
+
+        const vector<PhysicsOverlapEvent>& listEvent = _physicsWorld.getOverlapEvents();
+        if ( listEvent.empty() )
+            return;
+        // 이벤트 처리가 콜라이더를 만들거나 지워도 이 목록은 다음 step 까지 그대로지만, 같은 프레임에 다시 step 할 일은 없게 베껴 둔다.
+        const vector<PhysicsOverlapEvent> listDelivered = listEvent;
+        vector<Component*>                listTarget;
+        auto                              deliver = [this, &listTarget]( uint64 selfId, uint64 otherId, bool bBegin )
+        {
+            GameObject* pSelf = findGameObjectById( selfId );
+            if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
+                return;
+            GameObject* pOther = findGameObjectById( otherId );
+            // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.
+            listTarget.assign( pSelf->getComponents().begin(), pSelf->getComponents().end() );
+            for ( Component* pComp : listTarget )
+            {
+                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
+                    continue;
+                if ( bBegin )
+                    pComp->onOverlapBegin( pOther );
+                else
+                    pComp->onOverlapEnd( pOther );
+            }
+        };
+        for ( const PhysicsOverlapEvent& event : listDelivered )
+        {
+            deliver( event._objectA, event._objectB, event._bBegin == SW_TRUE );
+            deliver( event._objectB, event._objectA, event._bBegin == SW_TRUE );
         }
     }
 

@@ -88,3 +88,19 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
     uint64 hitObjectId = hit._hitObjectId;
 }
 ```
+
+---
+
+## 4. 겹침 이벤트 (`PhysicsWorld::step`)
+
+강체가 없으므로 `step` 은 적분하지 않고 **겹침만 다시 잽니다.** 지난 step 과 견줘 새로 겹친 쌍은 시작, 떨어지거나 바디가 사라진 쌍은 끝으로
+`getOverlapEvents()` 에 냅니다(유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap`). 계속 겹친 쌍은 다시 내지 않습니다.
+
+`GameObjectManager` 가 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 한 번 부릅니다(`stepPhysics`):
+
+1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리로 한 번에 맞춘다 — 시작 전이거나 꺼진 콜라이더는 빠진다.
+2. `step` 해 이벤트를 받는다.
+3. 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin( pOther )` / `onOverlapEnd( pOther )` 를 부른다(상대가 사라졌으면 nullptr).
+
+콜라이더는 틱하지 않습니다. 예전에는 병렬 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 봤습니다.
+틱 안의 질의(`queryAabb` · `sweepTest`)는 지난 step 의 자리를 봅니다(유니티 물리 질의와 같다).

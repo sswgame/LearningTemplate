@@ -249,7 +249,74 @@ namespace sw
      */
     void PhysicsWorld::step( float32 deltaTime )
     {
-        (void)deltaTime;
+        (void)deltaTime; // 적분하지 않는다 — 강체가 없다. 겹침만 다시 잰다.
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+
+        // 바디를 먼저 베낀다 — 표를 도는 동안(표의 잠금 안) 다른 바디를 꺼내면 같은 잠금을 다시 잡는다.
+        struct BodyEntry
+        {
+            BodyHandle  _handle{};
+            PhysicsBody _body{};
+        };
+        vector<BodyEntry> listBody;
+        listBody.reserve( _bodies.size() );
+        _bodies.forEachHandle( [&listBody]( SlotHandle handle, const PhysicsBody& body )
+        { listBody.push_back( BodyEntry{ handle, body } ); } );
+
+        _listScratchPair.clear();
+        vector<BodyHandle> listCandidate;
+        for ( const BodyEntry& entry : listBody )
+        {
+            if ( entry._body._aabb.isValid() == false )
+                continue;
+            const CellRange range = CellRange::fromAabb( entry._body._aabb, kCellSize );
+            if ( shouldScanAllBodies( range ) )
+            {
+                listCandidate.clear();
+                for ( const BodyEntry& other : listBody )
+                    listCandidate.push_back( other._handle );
+            }
+            else
+            {
+                gatherCandidateHandles( range, listCandidate );
+            }
+            for ( const BodyHandle candidate : listCandidate )
+            {
+                // 쌍마다 한 번 — 작은 핸들 쪽에서만 센다.
+                if ( ( entry._handle < candidate ) == false )
+                    continue;
+                const PhysicsBody* pOther = _bodies.get( candidate );
+                if ( pOther == nullptr || queryOverlaps( entry._body._aabb, entry._body._layer, pOther->_aabb, pOther->_layer, _layers ) == false )
+                    continue;
+                _listScratchPair.push_back( OverlapPair{ entry._handle, candidate, entry._body._objectId, pOther->_objectId } );
+            }
+        }
+        std::sort( _listScratchPair.begin(), _listScratchPair.end() );
+
+        // 지난 쌍과 견줘 달라진 것만 낸다(둘 다 정렬돼 있다).
+        _listOverlapEvent.clear();
+        size_t previousIndex = 0;
+        size_t currentIndex  = 0;
+        while ( previousIndex < _listOverlapPair.size() || currentIndex < _listScratchPair.size() )
+        {
+            const bool bHasPrevious = previousIndex < _listOverlapPair.size();
+            const bool bHasCurrent  = currentIndex < _listScratchPair.size();
+            if ( bHasPrevious && bHasCurrent && _listOverlapPair[previousIndex].isSamePair( _listScratchPair[currentIndex] ) )
+            {
+                ++previousIndex;
+                ++currentIndex;
+                continue;
+            }
+            if ( bHasCurrent && ( bHasPrevious == false || _listScratchPair[currentIndex] < _listOverlapPair[previousIndex] ) )
+            {
+                const OverlapPair& pair = _listScratchPair[currentIndex++];
+                _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, SW_TRUE } );
+                continue;
+            }
+            const OverlapPair& pair = _listOverlapPair[previousIndex++];
+            _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, SW_FALSE } );
+        }
+        _listOverlapPair.swap( _listScratchPair );
     }
 
     /**

@@ -30,6 +30,7 @@
 
 namespace sw
 {
+    class BoxCollider2DComponent;
     class Component;
     class GameObjectManager;
     class MeshComponent;
@@ -420,6 +421,14 @@ namespace sw
         /** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
         vector<hashed_string> getRegisteredComponentTypeNames() const;
 
+        /**
+         * @brief 물리 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 매니저가 step 직전에 한 번에 맞춥니다.
+         * @details 예전에는 콜라이더가 병렬 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 봤다.
+         */
+        void registerCollider( BoxCollider2DComponent* pCollider );
+        /** @brief 콜라이더 등록을 풉니다. 멱등입니다. */
+        void unregisterCollider( BoxCollider2DComponent* pCollider );
+
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
         void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
@@ -597,6 +606,12 @@ namespace sw
         static atomic<uint64> _s_nextObjectId;
 
         PhysicsWorld _physicsWorld;
+        /**
+         * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
+         * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.
+         */
+        void                            stepPhysics( float32 deltaTime );
+        vector<BoxCollider2DComponent*> _listCollider; ///< `registerCollider` 한 콜라이더. 콜라이더가 자기 자리(`_colliderIndex`)를 든다
 
         atomic<bool>            _bTicking;                ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
         bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다

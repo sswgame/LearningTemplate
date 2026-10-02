@@ -2079,6 +2079,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 71 물리 step — 빈 함수였고 부르는 곳도 없어 겹침 시작 · 끝을 알 수 없었고, 콜라이더는 병렬 틱에서 바디를 맞췄다)
+
+남은 항목 "물리 step 이 불리지 않음". `PhysicsWorld::step` 은 빈 함수였고 부르는 곳이 없었다 — 겹침은 매번 직접 물어야 했고 "들어왔다 · 나갔다"
+를 알려 주는 곳이 없었다. 콜라이더(`BoxCollider2DComponent`)는 DuringPhysics 그룹의 **병렬** 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이
+스케줄에 따라 옛 · 새 자리를 봤다.
+
+바디가 축 정렬 상자뿐이고 강체가 없으므로 step 이 할 일은 **겹침 이벤트**다(유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap`).
+적분 · 고정 스텝 누적기는 강체가 생길 때의 몫이다 — `deltaTime` 은 그 자리로 둔다.
+- `PhysicsWorld::step`: 바디 쌍의 겹침을 그리드로 다시 재고(레이어 행렬을 지킨다) 지난 step 의 정렬된 쌍과 견줘 새로 겹친 쌍은 시작, 떨어지거나
+  바디가 사라진 쌍은 끝으로 낸다(`getOverlapEvents`). 계속 겹친 쌍은 다시 내지 않는다. 쌍은 오브젝트 id 를 함께 들어 바디가 사라진 뒤에도 끝을 낸다.
+- `GameObjectManager::stepPhysics`: 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 — 등록된 콜라이더 바디를 그 프레임의 월드 자리로 한 번에 맞추고
+  (시작 전 · 꺼진 콜라이더는 빠진다 → 겹침이 끝난다), step 하고, 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin` · `onOverlapEnd`
+  (새 가상 함수, 상대가 사라졌으면 nullptr)를 부른다 — 처리가 스폰 · 파괴 · 구조 변경을 그 자리에서 해도 된다. 그룹 사이에서 step 하지 않는 이유:
+  트랜스폼 쓰기가 틱 뒤에 적용되어 그룹 사이에서는 그 프레임의 자리를 볼 수 없다.
+- 콜라이더는 이제 틱하지 않는다(매니저의 콜라이더 목록 — 메시 · 카메라 · 라이트 등록부와 같은 자리). 틱 안의 질의는 지난 step 의 자리를 본다.
+
+**검증.** `PhysicsTest.StepReportsOverlapsThatBeginAndEnd`(시작 · 반복 없음 · 떨어짐 · 다시 · 바디 제거) · `StepRespectsTheLayerMatrix`,
+`BoxCollider2DTest.OverlapEventsReachBothObjectsAfterTheTick`(두 쪽 모두 · 반복 없음 · 떨어짐 · 꺼짐 · 다시 켬 · 파괴된 상대는 nullptr). 변이 일곱
+(계속 겹친 쌍 다시 내기 · 끝 빼기 · 레이어 무시 · step 안 부름 · 한쪽만 · 바디 안 맞춤 · 꺼진 콜라이더 남기기)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 70 2D 박스 콜라이더 — 상자가 월드 스케일 · 회전을 받지 않아, 키운 적이 작은 상자로 맞았다)
 
 남은 항목 "BoxCollider2D 크기가 스케일을 따르지 않음"(결함 54 에서 남긴 것). `getBounds` 가 상자 크기(`_offsetScale`)와 오프셋을 월드 **위치**에 그대로

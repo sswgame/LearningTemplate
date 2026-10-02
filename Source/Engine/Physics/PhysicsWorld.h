@@ -20,9 +20,17 @@ namespace sw
         uint8  _layer{ 0 };
     };
 
+    /** @brief `step` 이 낸 겹침 시작 · 끝 하나입니다. 두 바디의 오브젝트 id 입니다(순서는 정해져 있지 않다). */
+    struct PhysicsOverlapEvent
+    {
+        uint64 _objectA{ 0 };
+        uint64 _objectB{ 0 };
+        uint8  _bBegin{ SW_FALSE }; ///< 시작이면 SW_TRUE, 끝이면 SW_FALSE
+    };
+
     /**
      * @class PhysicsWorld
-     * @brief 겹침 질의와 레이어 필터입니다. step() 은 적분하지 않습니다.
+     * @brief 겹침 질의 · 레이어 필터 · 겹침 이벤트입니다. 강체가 없어 `step` 은 적분하지 않고 겹침만 다시 잽니다.
      */
     class SW_API PhysicsWorld
     {
@@ -40,8 +48,16 @@ namespace sw
         void setAabb( BodyHandle handle, const AABB& aabb );
         /** @brief 핸들이 유효하면 out 에 복사하고 true 를 반환합니다. */
         bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
-        /** @brief 솔버 자리입니다. 지금은 아무것도 하지 않습니다(적분하지 않고, 부르는 곳도 없습니다). */
+        /**
+         * @brief 바디 쌍의 겹침을 다시 재고, 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 냅니다(`getOverlapEvents`).
+         * @details 유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap` 의 자리입니다. 계속 겹친 쌍은 다시 내지 않고, 바디가 사라진
+         *          쌍은 끝납니다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 강체가 없으므로 적분하지 않습니다 — @p deltaTime 은 그때를 위한
+         *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`GameObjectManager::stepPhysics`). 예전에는 빈 함수였고
+         *          부르는 곳도 없었습니다.
+         */
         void step( float32 deltaTime );
+        /** @brief 마지막 `step` 이 낸 겹침 이벤트입니다. 다음 `step` 까지 그대로입니다. */
+        const vector<PhysicsOverlapEvent>& getOverlapEvents() const { return _listOverlapEvent; }
 
         /** @brief 두 바디가 레이어와 AABB 모두에서 겹치면 true 입니다. */
         bool overlaps( BodyHandle a, BodyHandle b ) const;
@@ -191,5 +207,23 @@ namespace sw
         unordered_map<CellCoord, vector<BodyHandle>, CellCoordHash> _mapGrid;
         /** @brief 그리드에 넣기에는 너무 큰 바디들입니다. 그리드로 가는 질의가 **항상 함께** 봅니다. */
         vector<BodyHandle> _listOversizedBody;
+
+        /** @brief 겹친 쌍 하나 — 두 핸들(작은 쪽이 먼저)과 그 오브젝트 id 입니다. 바디가 사라진 뒤에도 끝 이벤트를 낼 수 있게 id 를 함께 든다. */
+        struct OverlapPair
+        {
+            BodyHandle _first{};
+            BodyHandle _second{};
+            uint64     _firstObjectId{ 0 };
+            uint64     _secondObjectId{ 0 };
+
+            bool operator<( const OverlapPair& other ) const noexcept
+            {
+                return ( _first != other._first ) ? ( _first < other._first ) : ( _second < other._second );
+            }
+            bool isSamePair( const OverlapPair& other ) const noexcept { return _first == other._first && _second == other._second; }
+        };
+        vector<OverlapPair>         _listOverlapPair;  ///< 지난 step 의 겹친 쌍(정렬)
+        vector<OverlapPair>         _listScratchPair;  ///< 이번 step 의 겹친 쌍을 모으는 자리(할당 재사용)
+        vector<PhysicsOverlapEvent> _listOverlapEvent; ///< 지난 step 이 낸 이벤트
     };
 } // namespace sw

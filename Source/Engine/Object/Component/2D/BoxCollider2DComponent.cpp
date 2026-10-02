@@ -35,14 +35,13 @@ namespace sw
         , _pPhysics{ nullptr }
         , _physicsBody{}
         , _colliderType{ 0 }
+        , _colliderIndex{ kNotRegistered }
     {
-        setCanEverTick( true );
     }
 
     void BoxCollider2DComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
-        setTickGroup( TickGroup::DuringPhysics );
 
         GameObject* pGameObject = getOwner();
         if ( pGameObject != nullptr )
@@ -61,12 +60,6 @@ namespace sw
     {
         unregisterPhysicsBody();
         SceneComponent::onDestroy();
-    }
-
-    void BoxCollider2DComponent::onTick( float32 deltaTime )
-    {
-        SceneComponent::onTick( deltaTime );
-        syncPhysicsBody();
     }
 
     void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
@@ -99,11 +92,13 @@ namespace sw
     {
         SceneComponent::onRegister( manager );
         _pPhysics = &manager.getPhysicsWorld();
+        manager.registerCollider( this );
     }
 
     void BoxCollider2DComponent::onUnregister( GameObjectManager& manager )
     {
         unregisterPhysicsBody();
+        manager.unregisterCollider( this );
         _pPhysics = nullptr;
         SceneComponent::onUnregister( manager );
     }
@@ -151,6 +146,12 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _pPhysics == nullptr )
             return;
+        // 시작 전(편집 중)이거나 꺼진 콜라이더는 겹침에 들지 않는다 — 유니티도 꺼진 콜라이더를 시뮬레이션에서 뺀다.
+        if ( hasBegunPlay() == false || isActive() == false || isPendingDestroy() )
+        {
+            unregisterPhysicsBody();
+            return;
+        }
 
         float2 minB{};
         float2 maxB{};

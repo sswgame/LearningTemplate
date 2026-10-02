@@ -527,3 +527,76 @@ SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
     SW_EXPECT_TRUE( bFound );
     world.removeBody( handle );
 }
+
+namespace
+{
+    /** @brief (0..1)³ 를 @p shift 만큼 옮긴 상자입니다. */
+    AABB makeUnitBox( float32 shift )
+    {
+        AABB box;
+        box._min = float3( shift, 0.0f, 0.0f );
+        box._max = float3( shift + 1.0f, 1.0f, 1.0f );
+        return box;
+    }
+
+    /** @brief 이벤트 목록에서 두 오브젝트 쌍의 시작(true) · 끝(false) 이벤트 수를 셉니다(순서 무관). */
+    uint32 countOverlapEvent( const vector<PhysicsOverlapEvent>& listEvent, uint64 objectA, uint64 objectB, bool bBegin )
+    {
+        uint32 count = 0;
+        for ( const PhysicsOverlapEvent& event : listEvent )
+        {
+            const bool bPair = ( event._objectA == objectA && event._objectB == objectB ) || ( event._objectA == objectB && event._objectB == objectA );
+            if ( bPair && ( event._bBegin == SW_TRUE ) == bBegin )
+                ++count;
+        }
+        return count;
+    }
+} // namespace
+
+/**
+ * @brief [PhysicsTest] step 은 겹침을 다시 재고 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 낸다(유니티 OnTriggerEnter2D/Exit2D · 언리얼 Begin/EndOverlap)
+ * @details 예전 `step` 은 빈 함수였고 부르는 곳도 없었다 — 겹침은 매번 물어야만 알 수 있었고 "들어왔다 · 나갔다" 를 알려 주는 곳이 없었다.
+ *          바디가 사라지면 그 쌍은 끝난다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 계속 겹친 쌍은 다시 내지 않는다.
+ */
+SW_TEST_CASE( PhysicsTest, StepReportsOverlapsThatBeginAndEnd )
+{
+    PhysicsWorld                   world;
+    const PhysicsWorld::BodyHandle a = world.addBody( makeUnitBox( 0.0f ), 0, 11 );
+    const PhysicsWorld::BodyHandle b = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
+    world.addBody( makeUnitBox( 50.0f ), 0, 33 );
+
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, true ) );
+
+    // 계속 겹친 쌍은 다시 내지 않는다.
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+
+    // 떨어지면 끝, 다시 겹치면 시작.
+    world.setAabb( b, makeUnitBox( 10.0f ) );
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, false ) );
+    world.setAabb( b, makeUnitBox( 0.5f ) );
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, true ) );
+
+    // 바디가 사라지면 그 쌍은 끝난다.
+    world.removeBody( a );
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, false ) );
+}
+
+/**
+ * @brief [PhysicsTest] 레이어 행렬이 막은 쌍은 겹쳐도 이벤트를 내지 않는다
+ */
+SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
+{
+    PhysicsWorld world;
+    world.layers().setLayerCollision( 0, 1, false );
+    world.addBody( makeUnitBox( 0.0f ), 0, 11 );
+    world.addBody( makeUnitBox( 0.5f ), 1, 22 );
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+}

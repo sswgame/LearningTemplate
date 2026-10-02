@@ -14,24 +14,29 @@
 
 namespace sw
 {
+    class GameObjectManager;
     class PhysicsWorld;
 
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
     class SW_API BoxCollider2DComponent : public SceneComponent
     {
+        friend class GameObjectManager; ///< step 직전에 바디를 맞추고(`syncPhysicsBody`) 목록 자리(`_colliderIndex`)를 적는다
+
     public:
         REFLECT_BODY();
+        /** @brief 매니저의 콜라이더 목록에 없다는 표시입니다. */
+        static constexpr uint32 kNotRegistered = 0xFFFFFFFFu;
+
         BoxCollider2DComponent();
         virtual ~BoxCollider2DComponent() override = default;
 
         void onBeginPlay() override;
         void onEndPlay() override;
         void onDestroy() override;
-        /** @brief 물리 월드를 등록 시점에 받아 둡니다. */
+        /** @brief 물리 월드를 등록 시점에 받아 두고 매니저의 콜라이더 목록에 듭니다(바디는 매니저가 step 직전에 맞춘다 — 틱하지 않는다). */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 물리 월드 참조를 놓습니다. */
+        /** @brief 바디를 빼고 물리 월드 참조 · 콜라이더 목록 자리를 놓습니다. */
         void onUnregister( GameObjectManager& manager ) override;
-        void onTick( float32 deltaTime ) override;
 
         int32 getColliderType() const { return _colliderType; }
         void  setColliderType( int32 type ) { _colliderType = type; }
@@ -53,6 +58,7 @@ namespace sw
 
     private:
         void unregisterPhysicsBody();
+        /** @brief 바디를 지금 상자에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다). */
         void syncPhysicsBody();
 
         /**
@@ -71,6 +77,7 @@ namespace sw
         PhysicsWorld* _pPhysics;
         SlotHandle    _physicsBody;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
-        int32 _colliderType;
+        int32  _colliderType;
+        uint32 _colliderIndex; ///< 매니저의 콜라이더 목록 자리(`GameObjectManager::registerCollider`). 없으면 `kNotRegistered`
     };
 } // namespace sw
