@@ -514,6 +514,8 @@ namespace sw::editor
             FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, pPath, relPath );
             relPath = FileUtil::normalizeSeparators( relPath );
             pSprite->setTextureName( relPath );
+            // 편집 모드에서는 시작(onBeginPlay)이 없다 — 떨군 자리에서 바로 그려지게 렌더 에셋을 푼다.
+            pSprite->resolveRenderAssets();
         }
 
         EditorTransaction::recordCreation( pSpawned, "Spawn Sprite in Viewport" );

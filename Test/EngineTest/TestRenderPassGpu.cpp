@@ -34,6 +34,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -775,6 +776,77 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
     // 네 백엔드가 전부 초기화에 실패하고, 그건 결함이 아니라 그 환경에 GPU 가 없다는 뜻이다.
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend available for material permutation PSO test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 스프라이트는 스프라이트 셰이더(`sprite2d.hlsl`)의 반투명 배치로 그려진다 (4 백엔드)
+ * @details 예전에는 스프라이트가 씬 기본 머티리얼의 단위 큐브였다 — `sprite2d.material` 과 그 셰이더는 구워지기만 하고 한 번도 걸리지 않았다.
+ *          스프라이트가 사각형 + 스프라이트 머티리얼 + 텍스처 인스턴스로 풀리면, 엔진 루프가 패킷 전에 그 머티리얼을 올리고(`initializePending`)
+ *          배치 PSO 가 스프라이트 셰이더가 된다. Shipping 에서는 그 퍼뮤테이션이 구워져 있어야 한다(베이크 구멍이면 여기서 진다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk   = renderer.initialize( device.get() ) && renderer.isReady();
+        const sw::string  label = sw::string( device->getBackendName() );
+        {
+            sw::Scene scene( "SpriteScene" );
+            if ( bOk )
+                bOk = scene.ensureDefaultCameras();
+            sw::SpriteComponent* pSprite = nullptr;
+            if ( bOk )
+            {
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Torch" ) );
+                pSprite              = ( pObj != nullptr ) ? pObj->addComponent<sw::SpriteComponent>() : nullptr;
+                bOk                  = pSprite != nullptr;
+            }
+            if ( bOk )
+            {
+                pSprite->setTextureName( "engine/textures/perlin.dds" );
+                pSprite->resolveRenderAssets();
+                // 엔진 루프가 패킷을 내기 전에 하는 일 — 컴포넌트가 디바이스 없이 잡은 머티리얼을 올린다.
+                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRhiValid();
+                SW_EXPECT_TRUE_MSG( bOk, ( label + ": 스프라이트 머티리얼이 올라가지 않았다" ).c_str() );
+            }
+            if ( bOk )
+            {
+                const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+                device->beginFrame( clear );
+                bOk = renderer.execute( device.get(), &scene );
+                device->endFrame( false, false );
+                device->waitIdle();
+                SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
+            }
+            if ( bOk )
+            {
+                const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getTransparentBatches();
+                SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 스프라이트(반투명 머티리얼)인데 반투명 배치가 없다" ).c_str() );
+                const sw::RHIPipelineStateHandle passPso = renderer.getEnginePso( sw::RenderPassType::Transparent );
+                if ( batches.empty() == false && passPso != 0 )
+                {
+                    sw::RHIPipelineStateDesc batchDesc{};
+                    SW_EXPECT_TRUE_MSG( renderer.findPsoDesc( renderer.psoForBatch( passPso, batches[0] ), batchDesc ),
+                                        ( label + ": 스프라이트 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( batchDesc._pixelShaderPath.find( "sprite2d" ) != sw::string::npos,
+                                        ( label + ": 스프라이트 배치가 스프라이트 셰이더가 아니다 — " + batchDesc._pixelShaderPath ).c_str() );
+                }
+            }
+        }
+        renderer.shutdown();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the sprite shader test" );
 }
 
 /**

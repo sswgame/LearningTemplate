@@ -37,6 +37,11 @@ namespace sw
     void MeshComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
+        resolveRenderAssets();
+    }
+
+    void MeshComponent::resolveRenderAssets()
+    {
         resolveRuntimeMesh();
         resolveMaterialAsset();
     }
@@ -44,27 +49,28 @@ namespace sw
     void MeshComponent::setMaterialPath( string_view path )
     {
         _materialPath = hashed_string( string{ path }.c_str() );
-        resolveMaterialAsset();
+        resolveRenderAssets();
     }
 
     void MeshComponent::resolveMaterialAsset()
     {
-        if ( _materialPath == _acquiredMaterialPath || engine::areEngineServicesBound() == false )
+        const hashed_string path = _materialPath.empty() ? getDefaultMaterialPath() : _materialPath;
+        if ( path == _acquiredMaterialPath || engine::areEngineServicesBound() == false )
             return;
 
         MaterialCache& cache     = engine::getResourceManager().getMaterialManager();
         Material*      pMaterial = nullptr;
-        if ( _materialPath.empty() == false )
+        if ( path.empty() == false )
         {
-            pMaterial = cache.acquire( _materialPath.c_str(), nullptr );
+            pMaterial = cache.acquire( path.c_str(), nullptr );
             if ( pMaterial != nullptr )
-                cache.requestInitialize( _materialPath.c_str() );
+                cache.requestInitialize( path.c_str() );
             else
-                SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the scene default", _materialPath.c_str() );
+                SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the scene default", path.c_str() );
         }
 
         const hashed_string previousPath = _acquiredMaterialPath;
-        _acquiredMaterialPath            = ( pMaterial != nullptr ) ? _materialPath : hashed_string{};
+        _acquiredMaterialPath            = ( pMaterial != nullptr ) ? path : hashed_string{};
         setMaterial( pMaterial );
         if ( previousPath.empty() == false )
             cache.release( previousPath.c_str() );
@@ -75,7 +81,7 @@ namespace sw
         if ( _mesh != nullptr )
             return;
         // **공유되는** 프리미티브를 받는다. 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
-        _mesh = MeshUtil::acquirePrimitive( _meshId );
+        _mesh = MeshUtil::acquirePrimitive( _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId } );
         markRenderStateDirty();
     }
 
@@ -114,7 +120,7 @@ namespace sw
         SceneComponent::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
         if ( propertyName == s_materialPathName )
-            resolveMaterialAsset();
+            resolveRenderAssets();
         markRenderStateDirty();
     }
 

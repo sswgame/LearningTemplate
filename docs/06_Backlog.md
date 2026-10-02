@@ -2079,6 +2079,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 68 스프라이트 — 씬 기본 머티리얼의 단위 큐브로 그려졌고, 스프라이트 셰이더는 GL 에서 링크조차 되지 않았다)
+
+남은 항목 "스프라이트가 스프라이트로 안 그려짐". `SpriteComponent` 는 메시 컴포넌트의 기본을 그대로 따라 **빈 메시 id → 단위 큐브, 머티리얼 없음 →
+씬 기본**으로 그려졌다. 텍스처 · 메시 · 머티리얼 이름 칸은 저장만 되고 읽는 곳이 없었고, `sprite2d.material` · `sprite2d.hlsl` 은 구워지기만 했다.
+유니티 `SpriteRenderer`(스프라이트 기본 머티리얼 · 텍스처는 프로퍼티 블록) · 언리얼 Paper2D(`UPaperSpriteComponent` — 사각형 + 스프라이트 머티리얼
++ 텍스처)의 모양으로 바꿨다.
+
+- **타입의 기본**: `MeshComponent` 에 `getDefaultMeshId` · `getDefaultMaterialPath`(보호 · 가상)를 두고 저장된 값이 비면 그것을 쓴다. 스프라이트는 사각형 ·
+  `sprite2d.material`(투명). 렌더 에셋을 푸는 자리를 `resolveRenderAssets`(가상) 하나로 모았다 — 시작 · 씬 초기화 · 머티리얼 참조 변경이 부른다.
+- **텍스처**: 그 머티리얼의 인스턴스가 `albedoMap` 을 덮어쓴다. 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 쓴다(약한 참조 표 —
+  `MeshUtil::acquirePrimitive` 와 같은 모양) — 배치 키가 인스턴스라 그래야 한 드로우로 묶인다. 이 컴포넌트가 건 인스턴스만 바꾸거나 뗀다(코드가 건
+  인스턴스는 둔다). 에디터의 텍스처 드롭은 편집 모드에서도 바로 그려지게 푼다.
+- **칸 정리**: 스프라이트의 `_meshName` 은 메시의 `_meshId` 옛 이름(Alias)으로 읽힌다(두 칸이 같은 것을 들었다).
+- **GL 링크 실패(새 GPU 시험이 찾았다)**: `sprite2d.hlsl` 이 머티리얼(`g_SwMaterials`)을 정점(uvRect) · 픽셀 두 단계에서 읽었다. GL(ARB_gl_spirv)
+  드라이버가 구조 버퍼의 이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 지어("_struct14_member0" · "_struct19_member0") 링크를 거절했고, 그 배치는
+  패스 셰이더(forwardlit)로 물러났다. 머티리얼을 읽는 셰이더 가운데 정점에서 읽는 것은 이것뿐이었다. uvRect 를 픽셀에서 적용하고(아핀이라 결과가
+  같다) 규칙을 `binding.hlsli` 의 `SW_MATERIAL` 옆에 적었다. 다시 구웠다(sprite2d 바이너리만 바뀌었다).
+
+**남은 것.** 런타임 텍스처는 DDS 만 읽는다(`Texture2D` → `DdsLoader`) — 에디터가 떨군 PNG 는 경로만 걸리고 읽히지 않는다(텍스처 임포터 · 쿠킹의 몫).
+애니메이터가 적는 프레임 이름(`_spriteName`)을 UV 사각형으로 바꿀 런타임 클립 에셋이 없다(클립은 에디터 데이터뿐) — 칸은 상용 엔진의 플립북 자리라 둔다.
+
+**검증.** `SpriteComponentTest.SpriteDrawsATexturedQuadWithTheSpriteMaterial`(정점 여섯 · 스프라이트 머티리얼 · 인스턴스의 텍스처) ·
+`SpritesWithTheSameTextureShareOneInstance` · `OldMeshNameLoadsIntoTheMeshId`, `RenderPassGpuTest.SpriteDrawsWithTheSpriteShader`(네 백엔드 — 반투명
+배치의 PSO 가 sprite2d. 고치기 전 GL 에서 졌다). 변이 여섯(큐브 · 씬 기본 · 텍스처 안 걸기 · 스프라이트마다 인스턴스 · 비워도 남김 · 바꿔도 옛 것)이
+모두 실패했다. 결함 59 의 인스펙터 시험이 스프라이트 칸의 예로 `_meshName` 을 들고 있어 `_textureName` 으로 바꿨다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 67 메시 머티리얼 — 참조가 저장되지 않아 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐다)
 
 남은 항목 "메시 머티리얼 참조가 씬에 저장되지 않음". `MeshComponent` 의 머티리얼은 날 포인터(`_pMaterial`)뿐이었다 — 코드 · 미리보기가 건 머티리얼은

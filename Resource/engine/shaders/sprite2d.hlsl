@@ -24,12 +24,9 @@ PSInput VSMain(SwVertexInput input)
 	float4 worldPos = mul(float4(input.pos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
 
-	// Default UV from position [-0.5, 0.5] mapped to [0, 1]
-	float2 baseUv = input.pos.xy * float2(1.0f, -1.0f) + 0.5f;
-
-	// Apply UVRect (x=u, y=v, z=width, w=height)
-	float4 uvRect = SW_MATERIAL(inst.materialIndex).uvRect;
-	output.uv = baseUv * uvRect.zw + uvRect.xy;
+	// Default UV from position [-0.5, 0.5] mapped to [0, 1]. The pixel stage applies uvRect:
+	// the material is read in the pixel stage only (see SW_MATERIAL in binding.hlsli - GL rejects the link otherwise).
+	output.uv = input.pos.xy * float2(1.0f, -1.0f) + 0.5f;
 	output.col = input.col;
 	output.materialIndex = inst.materialIndex;
 
@@ -39,10 +36,12 @@ PSInput VSMain(SwVertexInput input)
 float4 PSMain(PSInput input) : SV_TARGET
 {
 	SwMaterialData_t material = SW_MATERIAL(input.materialIndex);
+	// Apply UVRect (x=u, y=v, z=width, w=height) - affine, so per pixel equals per vertex
+	float2 uv = input.uv * material.uvRect.zw + material.uvRect.xy;
 	float4 texColor = float4(1,1,1,1);
 	if (material.albedoMap != SW_INVALID_INDEX)
 	{
-		texColor = SW_SampleMaterialTexture(material.albedoMap, input.uv);
+		texColor = SW_SampleMaterialTexture(material.albedoMap, uv);
 	}
 
 	float4 finalColor = texColor * material.color * input.col;

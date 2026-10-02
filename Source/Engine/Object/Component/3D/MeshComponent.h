@@ -42,10 +42,17 @@ namespace sw
         void onBeginPlay() override;
 
         /**
+         * @brief 렌더 에셋(메시 · 머티리얼)을 풉니다. 시작(`onBeginPlay`) · 씬 초기화 · 머티리얼 참조 변경이 부릅니다.
+         * @details 파생이 덧붙입니다(스프라이트는 텍스처 인스턴스). 로드는 값만 채우므로 이것이 값을 자원으로 바꾸는 자리입니다.
+         */
+        virtual void resolveRenderAssets();
+        /**
          * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
-         * @details 이미 메시가 있으면 그대로 둡니다. 비어 있거나 "Cube"면 단위 큐브.
+         * @details 이미 메시가 있으면 그대로 둡니다. 비어 있으면 타입의 기본(`getDefaultMeshId` — 메시는 단위 큐브, 스프라이트는 사각형).
          */
         void resolveRuntimeMesh();
+        /** @brief 저장되는 메시 id 입니다(프리미티브 이름). 비어 있으면 타입의 기본입니다. */
+        const string& getMeshId() const { return _meshId; }
 
         /** @brief 메시를 설정합니다. */
         void setMesh( shared_ptr<Mesh> mesh );
@@ -68,7 +75,7 @@ namespace sw
         /** @brief 저장되는 머티리얼 에셋 경로입니다. 비어 있으면 씬 기본 머티리얼입니다. */
         hashed_string getMaterialPath() const { return _materialPath; }
         /**
-         * @brief `_materialPath` 의 머티리얼을 캐시에서 잡아 겁니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다.
+         * @brief `_materialPath`(비어 있으면 타입의 기본 `getDefaultMaterialPath`)의 머티리얼을 캐시에서 잡아 겁니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다.
          * @details 로드는 값만 채우므로 시작(`onBeginPlay`) · 씬 초기화 · 프로퍼티 편집 · 세터가 부릅니다(`resolveRuntimeMesh` 와 같은 자리).
          *          컴포넌트는 디바이스를 모르므로 디바이스 없이 잡고 GPU 업로드를 캐시에 맡깁니다(`MaterialCache::requestInitialize`).
          *          새 것을 건 **뒤에** 옛 것을 놓습니다 — 놓는 순간 캐시가 지울 수 있습니다. 경로가 비면 런타임 지정(`setMaterial`)은 건드리지
@@ -134,6 +141,12 @@ namespace sw
         /** @brief 소유 오브젝트가 켜지거나 꺼지면 렌더 상태를 더티로 표시합니다(스냅샷 포함 여부가 바뀐다). */
         void onOwnerActiveInHierarchyChanged() override;
 
+    protected:
+        /** @brief `_meshId` 가 비었을 때의 메시 id 입니다. 빈 글이면 단위 큐브입니다(`MeshUtil::acquirePrimitive`). */
+        virtual string_view getDefaultMeshId() const { return {}; }
+        /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 빈 것이면 씬 기본 머티리얼입니다(렌더러가 고른다). */
+        virtual hashed_string getDefaultMaterialPath() const { return {}; }
+
     private:
         /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
@@ -142,7 +155,8 @@ namespace sw
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
-        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
+        /** @brief 저장되는 메시 id 입니다. `_meshName` 은 스프라이트가 따로 들던(읽는 곳 없던) 옛 칸 이름입니다. */
+        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path", Alias = "_meshName, Mesh" )
         string _meshId;
         /** @brief 저장되는 머티리얼 참조입니다. `_materialName` 은 스프라이트가 따로 들던(읽는 곳 없던) 옛 칸 이름입니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default",
