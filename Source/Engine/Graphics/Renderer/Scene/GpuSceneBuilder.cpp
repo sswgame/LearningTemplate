@@ -228,11 +228,14 @@ namespace sw
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
             return false;
 
-        const float4x4 world    = pMeshComp->getWorldMatrix();
-        candidate._world        = world;
-        candidate._boundsCenter = world.getTranslation();
-        candidate._boundsRadius = pMeshComp->getBoundsRadius();
-        candidate._spinSeed     = pMeshComp->getGpuSpinSeed();
+        // 경계는 컴포넌트와 같은 규칙이다(`MeshComponent::getWorldBounds`): 메시 반지름에 월드의 최대 축 스케일을 곱한다. 예전에는 메시
+        // 반지름을 그대로 실어, 부모나 자기 스케일로 키운 메시가 화면에 있는데도 절두체 컬링에 잘렸다.
+        const float4x4 world         = pMeshComp->getWorldMatrix();
+        candidate._world             = world;
+        candidate._boundsCenter      = world.getTranslation();
+        candidate._localBoundsRadius = pMeshComp->getBoundsRadius();
+        candidate._boundsRadius      = candidate._localBoundsRadius * world.getMaximumAxisScale();
+        candidate._spinSeed          = pMeshComp->getGpuSpinSeed();
         // 소유를 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼 · 인스턴스의 소유도
         // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
         // 먼저 비교**한다. 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
@@ -258,7 +261,8 @@ namespace sw
         const MeshInstanceBatch::Entry& item = pBatch->getEntry( entry._index );
         candidate._world                     = item._world;
         candidate._boundsCenter              = item._world.getTranslation();
-        candidate._boundsRadius              = item._boundsRadius;
+        candidate._localBoundsRadius         = item._boundsRadius;
+        candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
         candidate._spinSeed                  = item._spinSeed;
         // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
         if ( candidate._mesh.get() != pMesh )
@@ -328,6 +332,7 @@ namespace sw
                     DrawCandidate& candidate = _pCandidate[_pMap[primitiveIndex]];
                     candidate._world         = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
                     candidate._boundsCenter  = candidate._world.getTranslation();
+                    candidate._boundsRadius  = candidate._localBoundsRadius * candidate._world.getMaximumAxisScale();
                 }
             }
         };

@@ -280,6 +280,13 @@ namespace sw
         } );
     }
 
+    bool SceneComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const
+    {
+        (void)outCenter;
+        (void)outRadius;
+        return false;
+    }
+
     bool SceneComponent::canAttachTo( const SceneComponent* pParent ) const
     {
         if ( pParent == nullptr || pParent == this )

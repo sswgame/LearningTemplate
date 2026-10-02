@@ -34,7 +34,7 @@ namespace sw::editor
 
     /**
      * @class EditorViewportPick
-     * @brief 뷰포트 피킹 로직입니다. 컴포넌트 종류별 경계는 이 안의 표가 정합니다.
+     * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 안의 표가 정합니다.
      * @details 예전에는 `EditorViewportClient.cpp` 안에 `considerMeshPick` · `considerSpritePick` · `considerBoxPick` ·
      *          `hitTestScenePick` 네 함수가 있었고, 마지막 하나는 `getPrimarySceneComponent()` **하나만** 봤습니다. 그래서
      *          게임이 만든 컴포넌트는 그것이 주 컴포넌트가 아니면 뷰포트에서 클릭으로 집을 수 없었습니다. 지금은 (1) 종류를
@@ -74,7 +74,7 @@ namespace sw::editor
          */
         static bool rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint );
 
-        /** @brief 종류를 아는 피킹 제공자 개수입니다 (표가 비어 있지 않은지 보는 데 씁니다). */
+        /** @brief 순서 표의 줄 수입니다(표가 비어 있지 않은지 보는 데 씁니다). */
         static uint32 getTypedProviderCount();
     };
 } // namespace sw::editor

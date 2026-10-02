@@ -596,6 +596,48 @@ SW_TEST_CASE( GpuSceneTest, DisabledMeshComponentIsNotDrawn )
 }
 
 /**
+ * @brief 컬링 반지름은 월드 스케일을 따른다 — 부모가 키운 메시도, 트랜스폼만 바뀐 프레임도
+ * @details GPU 컬링(`gpucull.hlsl`)은 인스턴스의 바운드 중심 · 반지름으로 절두체를 본다. 반지름에 메시 반지름(0.866)을 그대로 실어, 부모나
+ *          자기 스케일로 키운 메시는 화면에 걸쳐 있어도 중심이 절두체 밖이면 잘렸다. 언리얼 `FBoxSphereBounds::TransformBy` 처럼 월드의 최대
+ *          축 스케일을 곱한다. 트랜스폼만 바뀐 프레임(후보를 다시 채우지 않는 길)도 같은 값을 내야 하고, 컴포넌트가 선언한 경계와 같아야 한다.
+ */
+SW_TEST_CASE( GpuSceneTest, CullingRadiusFollowsWorldScale )
+{
+    sw::Scene scene( "GpuSceneScaledBounds" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::GameObject*     pParent   = objects->createGameObject( sw::hashed_string( "ScaledParent" ) );
+    sw::SceneComponent* pParentSc = pParent->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pParentSc );
+    pParentSc->setLocalPosition( sw::float3( 0.0f, 0.0f, -20.0f ) );
+    pParentSc->setLocalScale( sw::float3( 10.0f, 10.0f, 10.0f ) );
+    sw::GameObject*    pChild = objects->createGameObject( sw::hashed_string( "ScaledMesh" ) );
+    sw::MeshComponent* pMesh  = pChild->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( sw::MeshUtil::createUnitCube() );
+    pMesh->setVisible( true );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    SW_EXPECT_NEAR_EQUAL( pMesh->getBoundsRadius() * 10.0f, gpuScene.getInstances()[0]._boundsRadius, 1e-4f );
+    sw::float3 center{};
+    float32    radius{ 0.0f };
+    SW_ASSERT_TRUE( pMesh->getWorldBounds( center, radius ) );
+    SW_EXPECT_NEAR_EQUAL( radius, gpuScene.getInstances()[0]._boundsRadius, 1e-4f );
+
+    // 트랜스폼만 바뀐 프레임 — 부등 스케일이면 가장 큰 축을 쓴다.
+    pParentSc->setLocalScale( sw::float3( 2.0f, 3.0f, 2.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    SW_EXPECT_NEAR_EQUAL( pMesh->getBoundsRadius() * 3.0f, gpuScene.getInstances()[0]._boundsRadius, 1e-4f );
+}
+
+/**
  * @brief 트랜스폼만 바뀌면 배치를 다시 나누지 않지만, 결과는 다시 나눈 것과 같아야 한다.
  * @details 정렬을 건너뛰는 경로라 조용히 틀리기 쉽다. 키가 바뀐 경우와 나란히 확인한다.
  */

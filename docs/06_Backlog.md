@@ -2079,6 +2079,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 54 경계 — GPU 컬링이 월드 스케일을 몰라 키운 메시를 잘랐고, 피킹은 로컬 스케일만 봤다: 컴포넌트가 월드 경계를 선언한다)
+
+(B) 스물다섯째의 남은 것 "뷰포트 피킹(월드 스케일 · 컴포넌트가 선언한 월드 바운드)" 을 점검하다 렌더 쪽 결함이 함께 나왔다.
+- **GPU 컬링 반지름이 메시 반지름 그대로였다.** `GpuSceneBuilder` 가 바운드 중심은 월드로 옮기면서 반지름은 메시 공간 값(0.866)을 실었다. 부모나
+  자기 스케일로 키운 메시는 화면에 걸쳐 있어도 중심이 절두체 밖이면 `gpucull.hlsl` 이 잘랐다. 트랜스폼만 바뀐 프레임의 복사 길도 같았다.
+- **피킹은 종류마다 경계를 손으로 셌고 모두 로컬 스케일을 봤다**(메시 · 스프라이트 · 2D 박스). 부모 스케일 10 아래의 메시는 중심에서 5 떨어진
+  클릭에 집히지 않았고, 게임이 만든 컴포넌트는 경계가 있어도 기본 반지름(0.35)으로만 집혔다.
+
+언리얼 `USceneComponent::CalcBounds( LocalToWorld )` · `FBoxSphereBounds::TransformBy`(반지름 × `GetMaximumAxisScale`), 유니티 `Renderer.bounds` ·
+`Collider.bounds` 처럼 **컴포넌트가 월드 경계를 선언**한다: `SceneComponent::getWorldBounds`(기본 없음) — 메시(메시 반지름 × 월드 최대 축 스케일) ·
+스프라이트(단위 사각형 반대각선 × 월드 X · Y 중 큰 스케일) · 2D 박스(물리가 쓰는 상자를 덮는 구). `float4x4::getMaximumAxisScale` 을 더했다.
+GPU 후보는 메시 공간 반지름을 따로 들어(`_localBoundsRadius`) 트랜스폼만 바뀐 프레임도 월드 반지름을 다시 만든다. 에디터 피킹 표는 경계 함수를
+버리고 **같은 거리에서 어느 종류가 이기나**(순서)와 2D 의 편집 여유만 남겼다 — 표에 없는 종류는 선언한 경계로 표 다음 순서에 집힌다.
+
+**검증.** `GpuSceneTest.CullingRadiusFollowsWorldScale`(부모 스케일 10 → 8.66, 트랜스폼만 (2,3,2) 로 → 최대 축 3, 컴포넌트 경계와 같다),
+`EditorViewportPickTest.ParentScaleGrowsTheMeshPickBounds`. 변이 다섯(후보가 메시 반지름 · 트랜스폼 복사가 반지름을 안 고침 · 최대 축 대신 최소 ·
+메시 경계가 로컬 · 피킹이 선언 경계를 무시)이 모두 실패했다. Debug 29 + hostgpu 2. 남은 것: 2D 박스 충돌체의 크기는 물리와 같이 아직 스케일을 따르지
+않는다(유니티는 `lossyScale` 을 곱한다) — 물리 단위에서 함께 본다.
+
 ### 2026-10-02 (결함 53 씬 저장 — 다른 오브젝트에 붙은 자식 오브젝트를 저장할 때마다 파일에서 지웠다)
 
 남은 항목을 점검하다 새로 찾았다. `Scene::serializeToDocument` 가 부모가 있는 오브젝트를 건너뛰었다. 오브젝트 상태에는 자식 목록이 없다 —

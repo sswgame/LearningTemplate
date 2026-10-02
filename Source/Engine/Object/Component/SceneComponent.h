@@ -109,6 +109,14 @@ namespace sw
         float4x4 getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const;
 
         /**
+         * @brief 이 컴포넌트가 차지하는 월드 공간의 경계 구입니다. 경계가 없는 컴포넌트(빈 트랜스폼 · 빛 · 카메라)는 false 입니다.
+         * @details 경계는 **컴포넌트가 선언**합니다 — 언리얼 `USceneComponent::CalcBounds( LocalToWorld )`, 유니티 `Renderer.bounds` ·
+         *          `Collider.bounds` 의 자리입니다. 에디터 피킹과 GPU 컬링이 같은 답을 씁니다. 예전에는 에디터가 종류마다 경계를 손으로 셌고
+         *          (메시 · 스프라이트 · 2D 박스) 모두 **로컬** 스케일을 봐서, 부모가 키운 물체는 클릭이 빗나갔습니다.
+         */
+        virtual bool getWorldBounds( float3& outCenter, float32& outRadius ) const;
+
+        /**
          * @brief 부모 캐시가 이미 유효하다고 보고 이 노드의 월드 캐시를 갱신합니다.
          * @details 트랜스폼 계층 플러시(`SceneTransformHierarchy::flushSubtree`)와 지연 합성(`ensureWorldCache`)이 부릅니다. 틱 뒤 적용 ·
          *          배치 쓰기의 잎 루트는 이 함수를 거치지 않고 칸에서 바로 합성합니다(`SceneTransformHierarchy::applyLocalChange`) —

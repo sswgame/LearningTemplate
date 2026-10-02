@@ -608,6 +608,14 @@ namespace sw
         return float3{ r.getLength(), u.getLength(), f.getLength() };
     }
 
+    float32 float4x4::getMaximumAxisScale() const noexcept
+    {
+        const float32 lengthSqX = _11 * _11 + _12 * _12 + _13 * _13;
+        const float32 lengthSqY = _21 * _21 + _22 * _22 + _23 * _23;
+        const float32 lengthSqZ = _31 * _31 + _32 * _32 + _33 * _33;
+        return MathUtil::sqrt( MathUtil::max( lengthSqX, MathUtil::max( lengthSqY, lengthSqZ ) ) );
+    }
+
     quaternion float4x4::getRotation() const noexcept
     {
         float3     scale{};

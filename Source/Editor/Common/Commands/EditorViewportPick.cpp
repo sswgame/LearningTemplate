@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportPick.cpp
- * @brief 컴포넌트 종류별 피킹 경계 표와 일반 SceneComponent 폴백
+ * @brief 뷰포트 피킹 — 컴포넌트가 선언한 월드 경계(`SceneComponent::getWorldBounds`) · 종류별 순서 표 · 기본 반지름 폴백
  */
 #include "pch.h"
 
@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw::editor
 {
@@ -55,126 +56,92 @@ namespace sw::editor
                 ioBest._pComponent = pComp;
             }
 
-            // ------------------------------------------------------------------------------
-            // 종류를 아는 제공자. 각자 고유한 경계 계산을 안다
-            // ------------------------------------------------------------------------------
-            static void hitTestMesh( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
-            {
-                MeshComponent* pMesh = pObj->getComponent<MeshComponent>();
-                if ( pMesh == nullptr || pMesh->isActive() == false || pMesh->isVisible() == false )
-                    return;
-
-                const float3  scale    = pMesh->getLocalScale();
-                const float32 absX     = MathUtil::abs( scale._x );
-                const float32 absY     = MathUtil::abs( scale._y );
-                const float32 absZ     = MathUtil::abs( scale._z );
-                const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
-                const float32 radius   = pMesh->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
-
-                hitTestSphere( pObj, pMesh, pMesh->getWorldPosition(), radius, ray, ioBest );
-            }
-
-            static void hitTestSprite( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
-            {
-                SpriteComponent* pSprite = pObj->getComponent<SpriteComponent>();
-                if ( pSprite == nullptr || pSprite->isActive() == false )
-                    return;
-
-                const float3  scale  = pSprite->getLocalScale();
-                const float32 absX   = MathUtil::abs( scale._x );
-                const float32 absY   = MathUtil::abs( scale._y );
-                const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
-
-                hitTestSphere( pObj, pSprite, pSprite->getWorldPosition(), radius, ray, ioBest );
-            }
-
-            static void hitTestBoxCollider2D( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
-            {
-                BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
-                if ( pBox == nullptr || pBox->isActive() == false )
-                    return;
-
-                const float2  offsetPos = pBox->getOffsetPosition();
-                const float2  offsetScl = pBox->getOffsetScale();
-                const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-                const float32 radius    = offsetScl.getLength() * 0.5f + 0.1f;
-
-                hitTestSphere( pObj, pBox, center, radius, ray, ioBest );
-            }
-
             /**
-             * @brief 오브젝트의 **모든** SceneComponent를 기본 반지름으로 후보에 넣습니다.
-             * @details 표가 종류를 모르는 컴포넌트, 즉 게임이 만든 컴포넌트를 집을 수 있게 하는 유일한 경로입니다. 예전
-             *          `hitTestScenePick` 은 주 컴포넌트 하나만 봤습니다. RTTI 가 꺼져 있어 `dynamic_cast` 를 쓸 수 없으므로
-             *          리플렉션 `castTo` 로 판별합니다.
+             * @brief 같은 거리일 때 어느 종류가 이기는지 정하는 표의 한 줄입니다. **경계는 표가 아니라 컴포넌트가 선언합니다**(`SceneComponent::getWorldBounds`).
+             * @details 예전에는 이 표가 종류마다 경계 계산 함수를 들고 있었고 모두 로컬 스케일을 봤다 — 부모가 키운 물체는 클릭이 빗나갔고, 게임이
+             *          만든 컴포넌트는 경계가 있어도 기본 반지름으로만 집혔다. 이제 표는 순서와 편집 여유만 정한다.
+             *          `_order3D`/`_order2D` 는 낮은 값이 먼저 보이고 같은 거리에서는 먼저 본 쪽이 남는다(2D 모드에서는 스프라이트가 메시보다 앞선다).
+             *          `_pickPadding` 은 얇은 2D 경계를 집기 쉽게 더하는 여유다 — 편집 편의라 엔진 경계에는 넣지 않는다.
+             *          표에 없는 종류는 선언한 경계로 표 다음 순서에 집힌다.
              */
-            static void hitTestSceneComponents( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest )
+            struct PickOrderRow
             {
-                for ( Component* pComp : pObj->getComponents() )
+                const utf8* _pName; ///< 진단용 이름
+                uint8       _order3D;
+                uint8       _order2D;
+                float32     _pickPadding;
+                const TypeInfo* ( *_pStaticType )();
+            };
+
+            /** @brief 종류를 아는 순서 표입니다. 새 종류는 경계만 선언하면 집히고, 순서가 따로 필요할 때만 여기에 한 줄을 더합니다. */
+            inline static const PickOrderRow _s_arrOrder[] = {
+                {         "MeshComponent", 0, 2, 0.0f,          &MeshComponent::StaticType},
+                {       "SpriteComponent", 1, 0, 0.1f,        &SpriteComponent::StaticType},
+                {"BoxCollider2DComponent", 2, 1, 0.1f, &BoxCollider2DComponent::StaticType}
+            };
+
+            static constexpr uint32 kOrderRowCount = static_cast<uint32>( sizeof( _s_arrOrder ) / sizeof( _s_arrOrder[0] ) );
+
+            /** @brief 컴포넌트에 맞는 표 줄입니다. 타입 사슬을 파생에서 기반으로 오르며 가장 가까운 줄을 고릅니다(스프라이트는 메시이기도 하다). */
+            static const PickOrderRow* findOrderRow( const Component* pComp )
+            {
+                for ( const TypeInfo* pType = pComp->getTypeInfo(); pType != nullptr; pType = pType->getParentType() )
                 {
-                    SceneComponent* pScene = castTo<SceneComponent>( pComp );
-                    if ( pScene == nullptr || pScene->isActive() == false )
-                        continue;
-
-                    hitTestSphere( pObj, pScene, pScene->getWorldPosition(), EditorViewportPick::kFallbackRadius,
-                                   ray, ioBest );
+                    for ( const PickOrderRow& row : _s_arrOrder )
+                    {
+                        if ( row._pStaticType() == pType )
+                            return &row;
+                    }
                 }
+                return nullptr;
             }
 
-            /** @brief 이 종류의 후보를 넣는 함수 */
-            using PickHitTestFunc = void ( * )( GameObject* pObj, const EditorPickRay& ray, EditorPickResult& ioBest );
+            /** @brief 이 컴포넌트를 피킹 후보로 볼 수 있는지(활성 · 메시면 보이는 것)입니다. */
+            static bool isPickable( const SceneComponent* pScene )
+            {
+                if ( pScene->isActive() == false )
+                    return false;
+                const MeshComponent* pMesh = castTo<MeshComponent>( pScene );
+                return pMesh == nullptr || pMesh->isVisible();
+            }
 
             /**
-             * @brief 피킹 제공자 표의 한 줄입니다.
-             * @details `_order3D`/`_order2D` 는 **같은 거리일 때 어느 종류가 이기는지**를 정합니다
-             *          (낮은 값이 먼저 보이고, 동거리에서는 먼저 본 쪽이 남습니다). 2D 모드에서
-             *          스프라이트가 메시보다 앞서는 것이 규약이라 두 순서를 따로 둡니다.
+             * @brief 오브젝트 하나: 경계를 선언한 컴포넌트를 순서대로 보고, 못 잡았으면 모든 씬 컴포넌트를 기본 반지름으로 봅니다.
+             * @details 기본 반지름 길은 경계가 없는 컴포넌트(빈 트랜스폼 · 빛)와, 게임이 만든 컴포넌트를 집게 하는 자리다. 경계가 맞은 오브젝트에서는
+             *          타지 않는다 — 기본 반지름 구가 선언한 경계보다 커서 더 가까운 t 를 내면 선택 컴포넌트가 뒤바뀐다.
              */
-            struct PickProviderRow
-            {
-                const utf8*     _pName; ///< 진단용 이름
-                uint8           _order3D;
-                uint8           _order2D;
-                PickHitTestFunc _pHitTest;
-            };
-
-            /** @brief 종류를 아는 제공자 표입니다. 새 종류는 여기에 한 줄을 더하면 됩니다. */
-            inline static const PickProviderRow _s_arrProvider[] = {
-                {         "MeshComponent", 0, 2,          &hitTestMesh},
-                {       "SpriteComponent", 1, 0,        &hitTestSprite},
-                {"BoxCollider2DComponent", 2, 1, &hitTestBoxCollider2D}
-            };
-
-            static constexpr uint32 kProviderCount = static_cast<uint32>( sizeof( _s_arrProvider ) / sizeof( _s_arrProvider[0] ) );
-
-            /** @brief 활성 모드에서 이 줄의 순서입니다. */
-            static uint8 orderOf( const PickProviderRow& row, bool b2DMode )
-            {
-                return b2DMode ? row._order2D : row._order3D;
-            }
-
-            /** @brief 오브젝트 하나에 대해 전용 제공자를 순서대로 보고, 못 잡았으면 일반 경로로 내려갑니다. */
-            static void hitTestObject( GameObject* pObj, const EditorPickRay& ray, bool b2DMode,
-                                       EditorPickResult& ioBest )
+            static void hitTestObject( GameObject* pObj, const EditorPickRay& ray, bool b2DMode, EditorPickResult& ioBest )
             {
                 if ( pObj == nullptr || pObj->isActive() == false )
                     return;
 
                 const float32 beforeDistance = ioBest._distance;
-
-                for ( uint8 pass = 0; pass < static_cast<uint8>( kProviderCount ); ++pass )
+                for ( uint32 pass = 0; pass <= kOrderRowCount; ++pass )
                 {
-                    for ( const PickProviderRow& row : _s_arrProvider )
+                    for ( Component* pComp : pObj->getComponents() )
                     {
-                        if ( orderOf( row, b2DMode ) == pass )
-                            row._pHitTest( pObj, ray, ioBest );
+                        SceneComponent* pScene = castTo<SceneComponent>( pComp );
+                        if ( pScene == nullptr || isPickable( pScene ) == false )
+                            continue;
+                        const PickOrderRow* pRow  = findOrderRow( pScene );
+                        const uint32        order = ( pRow != nullptr ) ? ( b2DMode ? pRow->_order2D : pRow->_order3D ) : kOrderRowCount;
+                        if ( order != pass )
+                            continue;
+                        float3  center{};
+                        float32 radius{ 0.0f };
+                        if ( pScene->getWorldBounds( center, radius ) )
+                            hitTestSphere( pObj, pScene, center, radius + ( pRow != nullptr ? pRow->_pickPadding : 0.0f ), ray, ioBest );
                     }
                 }
 
-                // 전용 제공자가 이 오브젝트에서 아무것도 못 잡았을 때만 일반 경로를 쓴다. 그러지 않으면
-                // 기본 반지름 구가 전용 경계보다 커서 더 가까운 t 를 내는 경우에 선택 컴포넌트가 뒤바뀐다.
-                if ( beforeDistance <= ioBest._distance )
-                    hitTestSceneComponents( pObj, ray, ioBest );
+                if ( beforeDistance > ioBest._distance )
+                    return;
+                for ( Component* pComp : pObj->getComponents() )
+                {
+                    SceneComponent* pScene = castTo<SceneComponent>( pComp );
+                    if ( pScene != nullptr && pScene->isActive() )
+                        hitTestSphere( pObj, pScene, pScene->getWorldPosition(), EditorViewportPick::kFallbackRadius, ray, ioBest );
+                }
             }
         };
     } // namespace
@@ -270,6 +237,6 @@ namespace sw::editor
 
     uint32 EditorViewportPick::getTypedProviderCount()
     {
-        return EditorViewportPickInternal::kProviderCount;
+        return EditorViewportPickInternal::kOrderRowCount;
     }
 } // namespace sw::editor

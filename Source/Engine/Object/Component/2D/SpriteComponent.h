@@ -23,6 +23,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
+        /** @brief 단위 사각형(한 변 1)의 반대각선에 월드 X · Y 스케일 중 큰 쪽을 곱한 구입니다. */
+        bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
 
         const string& getMeshName() const { return _meshName; }
         void          setMeshName( const string& mesh ) { _meshName = mesh; }

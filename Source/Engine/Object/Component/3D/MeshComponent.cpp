@@ -108,6 +108,14 @@ namespace sw
         markRenderStateDirty();
     }
 
+    bool MeshComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const
+    {
+        const float4x4 world = getWorldMatrix();
+        outCenter            = world.getTranslation();
+        outRadius            = _boundsRadius * world.getMaximumAxisScale();
+        return true;
+    }
+
     void MeshComponent::setBoundsRadius( float32 radius )
     {
         _boundsRadius = radius;

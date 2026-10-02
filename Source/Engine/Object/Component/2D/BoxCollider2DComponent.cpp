@@ -78,6 +78,16 @@ namespace sw
         outMax = float2{ center._x + halfSize._x, center._y + halfSize._y };
     }
 
+    bool BoxCollider2DComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const
+    {
+        float2 minB{};
+        float2 maxB{};
+        getBounds( minB, maxB );
+        outCenter = float3{ ( minB._x + maxB._x ) * 0.5f, ( minB._y + maxB._y ) * 0.5f, getWorldPosition()._z };
+        outRadius = float2{ maxB._x - minB._x, maxB._y - minB._y }.getLength() * 0.5f;
+        return true;
+    }
+
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );

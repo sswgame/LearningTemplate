@@ -5,6 +5,7 @@
 
 #include "Editor/Common/Commands/EditorViewportPick.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -126,6 +127,30 @@ SW_TEST_CASE( EditorViewportPickTest, NonPrimarySceneComponentIsPickable )
     EditorPickResult primaryResult{};
     SW_EXPECT_TRUE( EditorViewportPick::pick( &manager, makeForwardRay( 0.0f, 0.0f ), false, primaryResult ) );
     SW_EXPECT_EQUAL( static_cast<Component*>( pPrimary ), primaryResult._pComponent );
+}
+
+/**
+ * @brief [EditorViewportPickTest] 부모가 키운 메시는 커진 만큼 집힌다 — 경계는 컴포넌트가 월드로 선언한다
+ * @details 피킹이 메시의 **로컬** 스케일만 봐서, 부모 스케일 10 아래의 메시(월드 반지름 8.66)는 중심에서 5 떨어진 클릭에 집히지 않았다
+ *          (반지름 0.866 · 기본 반지름 0.35 모두 빗나간다). 이제 `SceneComponent::getWorldBounds` 가 월드 행렬로 답하고, 피킹 · GPU 컬링이
+ *          같은 답을 쓴다(언리얼 `CalcBounds`, 유니티 `Renderer.bounds`).
+ */
+SW_TEST_CASE( EditorViewportPickTest, ParentScaleGrowsTheMeshPickBounds )
+{
+    GameObjectManager manager;
+    GameObject*       pParent = makeSceneObject( manager, "ScaledParent", float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pParent );
+    pParent->getPrimarySceneComponent()->setLocalScale( float3{ 10.0f, 10.0f, 10.0f } );
+    GameObject*    pChild = manager.createGameObject( hashed_string( "ScaledMesh" ) );
+    MeshComponent* pMesh  = pChild->addComponent<MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    manager.flushSceneTransforms();
+
+    EditorPickResult result{};
+    SW_EXPECT_TRUE( EditorViewportPick::pick( &manager, makeForwardRay( 5.0f, 0.0f ), false, result ) );
+    SW_EXPECT_EQUAL( pChild, result._pObject );
+    SW_EXPECT_EQUAL( static_cast<Component*>( pMesh ), result._pComponent );
 }
 
 /**

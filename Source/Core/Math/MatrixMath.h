@@ -335,6 +335,11 @@ namespace sw
 
         /** @brief 1 · 2 · 3 행의 길이로 축별 스케일을 구합니다. 음수 스케일은 구분하지 못합니다. */
         float3 getScale() const noexcept;
+        /**
+         * @brief 가장 큰 축 스케일(1 · 2 · 3 행 길이의 최댓값)입니다.
+         * @details 경계 구를 이 행렬로 옮길 때 반지름에 곱합니다. 회전 · 부등 스케일이 섞여도 구가 물체를 덮습니다(언리얼 `GetMaximumAxisScale`).
+         */
+        float32 getMaximumAxisScale() const noexcept;
         /** @brief 회전을 구합니다(decompose() 의 회전 부분). */
         quaternion getRotation() const noexcept;
         /** @brief 이동(마지막 행)을 반환합니다. */

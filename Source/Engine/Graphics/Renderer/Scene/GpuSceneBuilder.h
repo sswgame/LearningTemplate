@@ -229,7 +229,8 @@ namespace sw
         {
             float4x4                     _world{};
             float3                       _boundsCenter{};
-            float32                      _boundsRadius{ 1.0f };
+            float32                      _boundsRadius{ 1.0f };      ///< 월드 반지름(메시 반지름 × 월드의 최대 축 스케일) — 컬링이 읽는다
+            float32                      _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임이 월드 반지름을 다시 만든다
             shared_ptr<Mesh>             _mesh;
             shared_ptr<Material>         _material;
             shared_ptr<MaterialInstance> _instance;
