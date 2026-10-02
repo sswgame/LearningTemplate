@@ -117,7 +117,6 @@ SW_TEST_CASE( ActionMapTest, MouseDeltaLookBinding )
 
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 5 ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     const sw::float2 lookVec = actionMap.getVector2D( "Look" );
     SW_EXPECT_TRUE( lookVec._x != 0.0f || lookVec._y != 0.0f );
@@ -138,20 +137,17 @@ SW_TEST_CASE( ActionMapTest, MultiModifierShortcutBinding )
 
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.wasActionTriggered( "SaveAs" ) );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftControl ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftShift ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S, 0, false, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.wasActionTriggered( "SaveAs" ) );
 
     input.shutdown();
@@ -169,13 +165,11 @@ SW_TEST_CASE( ActionMapTest, AnyKeyBinding )
     actionMap.bindAnyKey( "PressAnyKeyToStart" );
 
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
 
     input.shutdown();
@@ -194,7 +188,6 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
 
     // 1) 버튼을 누르지 않은 상태에서는 0벡터
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     sw::float2 idleVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._y, 0.001f );
@@ -203,7 +196,6 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
     // 2) (200,200)에서 누르면 그 지점이 앵커가 되고, 아직 같은 지점이라 0벡터
     input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 200, 200 ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     sw::float2 anchoredVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._y, 0.001f );
@@ -212,7 +204,6 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
     // 3) 앵커(200,200)에서 (300,200)으로 드래그 → +X 방향 최대치(반경 100 도달)
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 300, 200 ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     sw::float2 dragVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 1.0f, dragVec._x, 0.01f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, dragVec._y, 0.01f );
@@ -221,7 +212,6 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
     // 4) 버튼을 떼면 즉시 0벡터로 리셋
     input.postRawEvent( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left, 300, 200 ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     sw::float2 releasedVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._y, 0.001f );
@@ -230,7 +220,6 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
     // 5) 다른 위치(50,50)에서 다시 누르면 앵커가 새 위치로 플로팅되어 다시 0벡터
     input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 50, 50 ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     sw::float2 reAnchoredVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._y, 0.001f );
@@ -302,7 +291,6 @@ SW_TEST_CASE( ActionMapTest, ActionHandleZeroLookup )
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     SW_EXPECT_TRUE( actionMap.wasActionTriggered( hFire ) );
     SW_EXPECT_TRUE( actionMap.isActionDown( hFire ) );
@@ -333,7 +321,6 @@ SW_TEST_CASE( ActionMapTest, DigitalNormalizationModes )
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     sw::float2 vecIndep = actionMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 1.0f, vecIndep._x, 0.001f );
@@ -343,7 +330,6 @@ SW_TEST_CASE( ActionMapTest, DigitalNormalizationModes )
     // 2) Circular 모드: W + D 대각선 입력 시 단위 원(길이 1.0)으로 정규화
     actionMap.setDigitalNormalization( sw::DigitalNormalization::Circular );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     sw::float2    vecCirc = actionMap.getVector2D( "Move" );
     const float32 len     = sw::MathUtil::sqrt( vecCirc._x * vecCirc._x + vecCirc._y * vecCirc._y );
@@ -393,25 +379,21 @@ SW_TEST_CASE( ActionMapTest, CommandPatternFuzzyCombo )
     // 1) 2 (Down) -> 3 (DownRight) -> 6 (Right) -> Punch (236P 파동권) 순차 입력
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
     input.beginFrame( 0.05f );
-    actionMap.update( 0.05f );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::C ) );
     input.beginFrame( 0.05f );
-    actionMap.update( 0.05f );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::C ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
     input.beginFrame( 0.05f );
-    actionMap.update( 0.05f );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::D ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::J ) );
     input.beginFrame( 0.05f );
-    actionMap.update( 0.05f );
     input.endFrame();
 
     SW_EXPECT_TRUE( actionMap.wasCommandPatternTriggered( "236Punch", 0.5f ) );
@@ -624,7 +606,6 @@ SW_TEST_CASE( ActionMapTest, LayerCacheStableAcrossMassiveDynamicRegistration )
     // 3) 재할당 이후에도 EarlyAction의 레이어 활성 판정이 정확해야 한다.
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.isActionDown( "EarlyAction" ) );
     input.endFrame();
 
@@ -633,7 +614,6 @@ SW_TEST_CASE( ActionMapTest, LayerCacheStableAcrossMassiveDynamicRegistration )
     actionMap.setLayerEnabled( "EarlyLayer", false );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
     input.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.isActionDown( "EarlyAction" ) );
     input.endFrame();
 
@@ -769,7 +749,6 @@ SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             input.beginFrame( frameSecond );
-            actionMap.update( frameSecond );
             if ( actionMap.wasActionTriggered( "Fire" ) )
                 ++fireCount;
             input.endFrame();
@@ -778,7 +757,6 @@ SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
 
         input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F ) );
         input.beginFrame( frameSecond );
-        actionMap.update( frameSecond );
         input.endFrame();
     }
 
@@ -862,4 +840,28 @@ SW_TEST_CASE( ActionMapTest, RebindWithResolutionKeepsTheBindingKind )
         SW_EXPECT_FALSE( actionMap.rebindWithResolution( "MoveX", keySlot( sw::Key::Q ), sw::ConflictResolution::Override ) );
     }
     SW_EXPECT_TRUE( pAxis->_arrSlot[0] == keySlot( sw::Key::A ) );
+}
+
+/**
+ * @brief [ActionMapTest] 통합 ActionMap 은 입력 프레임이 갱신한다 — 따로 update() 를 부르지 않아도 액션이 한 번 발동한다
+ * @details 아무도 통합 맵을 갱신하지 않아, 실제 루프에서 게임플레이 맵(`PlayerController` 가 읽는 맵)의 액션이 하나도 발동하지 않았다.
+ *          시험만 `beginFrame` 뒤에 손으로 `update` 를 불러 통과하고 있었다.
+ */
+SW_TEST_CASE( ActionMapTest, IntegratedMapIsUpdatedByTheInputFrame )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( actionMap.wasActionTriggered( "Jump" ) );
+    input.endFrame();
+
+    input.beginFrame( 0.016f ); // 누른 채다 — 눌림 엣지는 한 프레임뿐이다
+    SW_EXPECT_FALSE( actionMap.wasActionTriggered( "Jump" ) );
+    SW_EXPECT_TRUE( actionMap.isActionDown( "Jump" ) );
+    input.endFrame();
+    input.shutdown();
 }

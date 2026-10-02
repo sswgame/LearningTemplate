@@ -3,6 +3,8 @@
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSnapshot.h"
@@ -19,6 +21,7 @@
 #include "GameFramework/Base/GravityComponent.h"
 #include "GameFramework/Base/SaveGame.h"
 #include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
@@ -1569,25 +1572,21 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
     // 트리거 비활성 시
     pStickRaw->setTrigger( false );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
 
     // 트리거 활성 시
     pStickRaw->setTrigger( true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
 
     // 4) 키보드 키로 슬롯 런타임 리매핑 검증
     actionMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) );
     pStickRaw->setTrigger( true ); // 커스텀 장치는 무시되어야 함
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
 
     inputManager.getKeyboard()->setKeyDown( Key::F, true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
 
     inputManager.shutdown();
@@ -1620,19 +1619,16 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvance
     // Frame 1: Key Down 시작 -> Triggered (Pressed 트리거이므로 발화)
     inputManager.getKeyboard()->setKeyDown( Key::J, true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Triggered );
     SW_EXPECT_EQUAL( 1, triggeredCount );
 
     // Frame 2: Key 유지 -> Ongoing
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Ongoing );
 
     // Frame 3: Key Release -> Completed
     inputManager.getKeyboard()->setKeyDown( Key::J, false );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Completed );
     SW_EXPECT_EQUAL( 1, completedCount );
 
@@ -1642,25 +1638,20 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvance
     // 2.1) 미달 취소 테스트: 0.05초 누르고 뗌
     inputManager.getKeyboard()->setKeyDown( Key::K, true );
     inputManager.beginFrame( 0.05f );
-    actionMap.update( 0.05f );
     SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
 
     inputManager.getKeyboard()->setKeyDown( Key::K, false );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
     SW_EXPECT_TRUE( actionMap.getActionPhase( "ChargeShot" ) == ActionPhase::Canceled );
 
     // 2.2) 정상 차지 테스트: 0.25초 누르고 뗌 -> 발화
     inputManager.getKeyboard()->setKeyDown( Key::K, true );
     inputManager.beginFrame( 0.15f );
-    actionMap.update( 0.15f );
-    inputManager.beginFrame( 0.15f );
-    actionMap.update( 0.15f ); // 총 0.30초 홀드
+    inputManager.beginFrame( 0.15f ); // 총 0.30초 홀드
 
     inputManager.getKeyboard()->setKeyDown( Key::K, false );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_TRUE( actionMap.wasActionTriggered( "ChargeShot" ) );
 
     inputManager.shutdown();
@@ -1681,13 +1672,11 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
 
     inputManager.getKeyboard()->setKeyDown( Key::W, true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
 
     inputManager.getKeyboard()->setKeyDown( Key::W, false );
     inputManager.getKeyboard()->setKeyDown( Key::S, true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
 
     // 2) 2D 벡터 합성 및 축 반전(Invert) 모디파이어 검증
@@ -1697,7 +1686,6 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
     inputManager.getKeyboard()->setKeyDown( Key::D, true ); // 오른쪽 (+X)
     inputManager.getKeyboard()->setKeyDown( Key::W, true ); // 위쪽 (+Y)
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     float2 moveVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_TRUE( moveVec._x > 0.5f );
@@ -1707,7 +1695,6 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
     actionMap.setInvertX( true );
     actionMap.setInvertY( true );
     inputManager.beginFrame( 0.016f );
-    actionMap.update( 0.016f );
 
     moveVec = actionMap.getVector2D( "Move" );
     SW_EXPECT_TRUE( moveVec._x < -0.5f );
@@ -2547,4 +2534,111 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 
     // 온전한 스냅샷은 그대로 된다.
     SW_EXPECT_TRUE( instance.restoreSnapshot( snapshot ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] GameData 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 그것을 쓴다
+ * @details `GameInstanceBase` 는 gamedata 를 읽기만 했다 — 표준 칸 아홉은 읽는 곳이 없었고, 서비스로 묶지 않아 커스텀 칸을 읽는 킷 코드
+ *          (`TurnBattleSaveGame` 의 파티 상한)조차 제품에서 늘 기본값이었다. 게임플레이 입력 맵은 읽지도 갱신하지도 않았다.
+ */
+SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
+{
+    // 실행 설정 · 서비스 · 전역 기본값 경로는 시험이 빠져나가도 되돌린다.
+    struct ScopedRunState
+    {
+        GameConfig   _oldConfig{ GameConfig::getActive() };
+        string       _oldGamedataPath{ Component::getDefaultGamedataPath() };
+        InputManager _input;
+
+        ScopedRunState()
+        {
+            (void)_input.initialize(); // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::InputManager )]        = &_input;
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::LocalizationManager )] = &engine::getLocalizationManager();
+            game::bindGameService( service );
+        }
+        ~ScopedRunState()
+        {
+            GameStrings::clear();
+            game::unbindGameService();
+            _input.shutdown();
+            Component::setDefaultGamedataPath( _oldGamedataPath );
+            GameConfig::setActive( _oldConfig );
+        }
+        ScopedRunState( const ScopedRunState& )            = delete;
+        ScopedRunState& operator=( const ScopedRunState& ) = delete;
+    };
+    ScopedRunState runState;
+
+    // 팩에 gamedata.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다. 실행 시작 씬도 없다.
+    GameConfig runConfig = runState._oldConfig;
+    runConfig._packRoot  = "game/no_such_pack";
+    runConfig._startupScene.clear();
+    GameConfig::setActive( runConfig );
+
+    const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.json" ), R"({ "UI_PLAY": "플레이" })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "en_us.json" ), R"({ "UI_PLAY": "Play", "UI_ONLY_EN": "English" })" ) );
+
+    class BootstrapGame : public GameInstanceBase
+    {
+    public:
+        string _localeDir;
+        string _savePath;
+
+    protected:
+        void configureBootstrap( BootstrapConfig& outConfig ) override
+        {
+            GameData& data                          = outConfig._data;
+            data._startMap                          = "game/test/maps/start.scene.xml";
+            data._titleScene                        = "game/test/maps/title.scene.xml";
+            data._inputMap                          = "engine/input/default.input.xml";
+            data._localizationDirectory             = _localeDir;
+            data._defaultLanguage                   = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
+            data._fallbackLanguage                  = "en-US";
+            data._defaultSavePath                   = _savePath;
+            data._mapCustomProperty["maxPartySize"] = "3";
+        }
+    };
+
+    BootstrapGame instance;
+    instance._localeDir = localeDir;
+    instance._savePath  = test::makeTempPath( "bootstrap_default.sav" );
+    SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
+
+    // 1) 서비스 — 커스텀 칸을 읽는 킷 코드가 데이터의 값을 쓴다
+    SW_ASSERT_NOT_NULL( game::getService<GameData>() );
+    TurnBattleSaveGame party{};
+    party.setPartyFrom( vector<PartyMember>( 5 ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), party._listParty.size() );
+
+    // 2) 입력 맵 — 통합 맵에 읽혔다
+    SW_EXPECT_TRUE( runState._input.getActionMap().hasAction( "Confirm" ) );
+
+    // 3) 다국어 — 철자가 달라도 기본 · 폴백 언어를 찾는다
+    SW_EXPECT_EQUAL( string( "ko_kr" ), GameStrings::getLanguage() );
+    SW_EXPECT_STREQ( "English", GameStrings::get( "UI_ONLY_EN" ) );
+
+    // 4) 씬 흐름 — 실행 시작 씬이 없으면 타이틀, 타이틀 다음은(입구 씬이 없어) 시작 맵. 실행 시작 씬이 있으면 그것이 이긴다.
+    SW_EXPECT_STREQ( "game/test/maps/title.scene.xml", instance.getFirstScene().c_str() );
+    SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", instance.getEntranceScene().c_str() );
+    runConfig._startupScene = "game/test/maps/run.scene.xml";
+    GameConfig::setActive( runConfig );
+    SW_EXPECT_STREQ( "game/test/maps/run.scene.xml", instance.getFirstScene().c_str() );
+
+    // 5) 세이브 경로 — 경로 없는 저장 · 읽기는 기본 슬롯이다
+    SW_EXPECT_TRUE( instance.saveStateToFile() );
+    SW_EXPECT_TRUE( FileUtil::fileExists( instance._savePath ) );
+    SW_EXPECT_TRUE( instance.loadStateFromFile() );
+
+    // 6) 턴제 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다
+    const string mapLessSave = test::makeTempPath( "bootstrap_mapless.txt" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( mapLessSave, "x=3\ny=4\npartyCount=0\n" ) );
+    TurnBattleSaveGame loaded{};
+    SW_ASSERT_TRUE( loaded.loadFromFile( mapLessSave ) );
+    SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", loaded._mapPath.c_str() );
+
+    instance.shutdown();
+    SW_EXPECT_NULL( game::getService<GameData>() );
 }

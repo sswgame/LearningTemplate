@@ -229,8 +229,8 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     // 1) 언어 변경 -> 콜백 정상 호출
     loc.setCurrentLanguage( "ko_KR" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), recordedOldLang );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), recordedNewLang );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), recordedOldLang );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), recordedNewLang );
 
     // 2) 동일 언어 설정 시 콜백 미호출
     loc.setCurrentLanguage( "ko_KR" );
@@ -240,7 +240,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     loc.unregisterLanguageChangedCallback( callbackId );
     loc.setCurrentLanguage( "ja_JP" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
-    SW_EXPECT_EQUAL( sw::string( "ja_JP" ), loc.getCurrentLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "ja_jp" ), loc.getCurrentLanguage() );
 }
 
 /**
@@ -257,14 +257,14 @@ SW_TEST_CASE( LocalizationManagerTest, MoveSemantics )
 
     // 이동 생성
     sw::LocalizationManager moved( std::move( source ) );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), moved.getCurrentLanguage() );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), moved.getFallbackLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), moved.getCurrentLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), moved.getFallbackLanguage() );
     SW_EXPECT_STREQ( "테스트 값", moved.getString( kKeyTest ) );
 
     // 이동 대입
     sw::LocalizationManager assigned;
     assigned = std::move( moved );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), assigned.getCurrentLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), assigned.getCurrentLanguage() );
     SW_EXPECT_STREQ( "테스트 값", assigned.getString( kKeyTest ) );
 }
 
@@ -368,7 +368,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 
     // 1) 기본 언어를 en_US로 먼저 설정
     SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "en_US" ) );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), sw::GameStrings::getLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getLanguage() );
 
     // 언어 변경 알림 콜백 등록
     sw::string notifiedOldLang;
@@ -385,27 +385,27 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 
     // 2) 한국어로 전환
     SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "ko_KR" ) );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), sw::GameStrings::getLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), sw::GameStrings::getLanguage() );
     SW_EXPECT_EQUAL( uint32( 1 ), callbackCount );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), notifiedOldLang );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), notifiedNewLang );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), notifiedOldLang );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), notifiedNewLang );
 
     SW_EXPECT_STREQ( "신비의 섬", sw::GameStrings::get( "UI_TITLE" ) );
     SW_EXPECT_STREQ( "게임 시작", sw::GameStrings::get( "UI_START" ) );
 
     // 3) 다시 영어로 전환
     SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "en_US" ) );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), sw::GameStrings::getLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getLanguage() );
     SW_EXPECT_EQUAL( uint32( 2 ), callbackCount );
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), notifiedOldLang );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), notifiedNewLang );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), notifiedOldLang );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), notifiedNewLang );
 
     SW_EXPECT_STREQ( "Mystery Island", sw::GameStrings::get( "UI_TITLE" ) );
     SW_EXPECT_STREQ( "Start Game", sw::GameStrings::get( "UI_START" ) );
 
     // 4) 일본어로 전환 및 Fallback 검증
     sw::GameStrings::setFallbackLanguage( "en_US" );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), sw::GameStrings::getFallbackLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getFallbackLanguage() );
 
     SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "ja_JP" ) );
     SW_EXPECT_STREQ( "神秘の島", sw::GameStrings::get( "UI_TITLE" ) );
@@ -453,8 +453,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     SW_EXPECT_TRUE( bSetup );
 
     // 언어 세팅 상태 확인
-    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), sw::GameStrings::getLanguage() );
-    SW_EXPECT_EQUAL( sw::string( "en_US" ), sw::GameStrings::getFallbackLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), sw::GameStrings::getLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getFallbackLanguage() );
 
     // 로드된 언어 목록 확인
     SW_EXPECT_TRUE( sw::GameStrings::hasLanguage( "ko_KR" ) );
@@ -656,8 +656,33 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
     loc.setFallbackLanguage( sw::string( 4096, 'b' ) );
 
     // 고치기 전이라면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
-    SW_EXPECT_STREQ( "ko_KR", sw::string( heldCurrent ).c_str() );
-    SW_EXPECT_STREQ( "en_US", sw::string( heldFallback ).c_str() );
+    SW_EXPECT_STREQ( "ko_kr", sw::string( heldCurrent ).c_str() );
+    SW_EXPECT_STREQ( "en_us", sw::string( heldFallback ).c_str() );
+}
+
+/**
+ * @brief [LocalizationManagerTest] 언어 코드는 철자가 달라도 한 언어다 — `ko-KR` · `ko_KR` · `ko_kr` 는 같다
+ * @details 파일 이름에서 읽은 코드(`Resource/` 는 소문자만 받는다 → `ko_kr`)와 기본값(`GameStrings` 의 "ko_KR" · `GameData` 의 "ko_kr") · 명령줄
+ *          (`-language=ko-KR`)의 철자가 달랐는데 표는 대소문자를 그대로 키로 썼다. 기본 언어를 찾지 못해 아무 언어나 골랐고, 폴백 "en_US" 표가 없어
+ *          현재 언어에 없는 키는 늘 빈 글이었다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
+{
+    const sw::string packDir = test::makeTempDirectory( "sw_test_loc_case" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( packDir, "ja_jp.json" ), R"({ "UI_PLAY": "プレイ" })" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( packDir, "ko_kr.json" ), R"({ "UI_PLAY": "플레이" })" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( packDir, "en_us.json" ), R"({ "UI_PLAY": "Play", "UI_ONLY_EN": "English" })" ) );
+
+    sw::LocalizationManager loc;
+    SW_ASSERT_TRUE( loc.initialize( packDir, "ko_KR", "en_US" ) );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), loc.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "플레이", loc.getString( sw::hashed_string( "UI_PLAY" ) ) );
+    SW_EXPECT_STREQ( "English", loc.getString( sw::hashed_string( "UI_ONLY_EN" ) ) ); // 폴백 "en_US" 가 en_us 표를 찾는다
+
+    SW_EXPECT_TRUE( loc.hasLanguage( "ja-JP" ) );
+    SW_EXPECT_TRUE( loc.setCurrentLanguage( "JA-jp" ) );
+    SW_EXPECT_EQUAL( sw::string( "ja_jp" ), loc.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "プレイ", loc.getString( sw::hashed_string( "UI_PLAY" ) ) );
 }
 
 /**

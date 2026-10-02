@@ -28,7 +28,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Alias = "mapPath" )
-        string _mapPath{}; ///< 현재 맵. 비었을 때 GameData::_startMap 으로 채우는 코드는 킷에 없다(게임 몫)
+        string _mapPath{}; ///< 현재 맵. 비었으면 `ensureStartMap` 이 시작 맵(`GameData::_startMap`)으로 채운다(세이브를 읽은 뒤에도)
 
         PROPERTY( Alias = "playerX" )
         int32 _playerX{ 1 };
@@ -48,6 +48,8 @@ namespace sw
         void setPartyFrom( const vector<PartyMember>& listParty );
         /** @brief 스타터 파티가 없으면 채웁니다. */
         void ensureStarterParty();
+        /** @brief 맵이 비었으면 시작 맵(`GameData::_startMap`)으로 채웁니다. 세이브를 읽은 뒤에도 부릅니다(맵 없는 세이브는 시작 맵에서). */
+        void ensureStartMap();
 
         /** @brief 플래그 값을 반환합니다. 없으면 defaultValue 입니다. */
         int32 getFlag( string_view key, int32 defaultValue = 0 ) const override;

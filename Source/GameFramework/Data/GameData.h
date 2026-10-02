@@ -16,7 +16,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) GameData — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
     // ------------------------------------------------------------------------------
-    /** @brief 씬 흐름 · 기본 세이브 · 다국어 · 입력과 범용 게임플레이 튜닝 설정입니다. */
+    /**
+     * @brief 씬 흐름 · 기본 세이브 · 다국어 · 입력과 범용 게임플레이 튜닝 설정입니다.
+     * @details 리소스 경로 칸은 도메인을 포함한 전역 id 입니다(`game/<팩>/maps/start.scene.xml`). `GameInstanceBase` 가 읽은 뒤 게임 서비스로 묶고
+     *          다국어 · 입력 맵을 적용하며, 씬 칸은 `getFirstScene` · `getEntranceScene`, 세이브 경로는 경로 없는 `saveStateToFile` 이 씁니다.
+     */
     REFLECT()
     struct SW_GF_API GameData
     {
@@ -33,7 +37,7 @@ namespace sw
         string _entranceScene{}; ///< 타이틀 다음 씬
 
         PROPERTY( Alias = "defaultSavePath, DefaultSavePath" )
-        string _defaultSavePath{}; ///< 기본 세이브 슬롯 경로
+        string _defaultSavePath{}; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`)
 
         PROPERTY( Alias = "stringsData, StringsData" )
         string _stringsData{}; ///< 문자열 테이블 (단일 파일 폴백)
@@ -48,7 +52,7 @@ namespace sw
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어
 
         PROPERTY( Alias = "inputMap, InputMap" )
-        string _inputMap{}; ///< 게임플레이 InputMap 경로
+        string _inputMap{}; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getActionMap()` 에 읽힌다)
 
         PROPERTY( Alias = "customProperties, CustomProperties" )
         map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소

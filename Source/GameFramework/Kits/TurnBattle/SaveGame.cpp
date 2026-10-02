@@ -107,6 +107,15 @@ namespace sw
         SW_LOG_INFO( "Added starter party %# (lv%#)", _listParty[0]._speciesId, _listParty[0]._level );
     }
 
+    void TurnBattleSaveGame::ensureStartMap()
+    {
+        if ( _mapPath.empty() == false )
+            return;
+        const GameData* pData = game::getService<GameData>();
+        if ( pData != nullptr )
+            _mapPath = pData->_startMap;
+    }
+
     int32 TurnBattleSaveGame::getFlag( string_view key, int32 defaultValue ) const
     {
         const auto it = _mapFlag.find( string( key ) );
@@ -167,7 +176,12 @@ namespace sw
             uint32 magic = 0;
             Memory::copy( &magic, headBytes.data(), sizeof( magic ) );
             if ( magic == SaveGameSerializer::kSaveBinMagic )
-                return SaveGameSerializer::loadGameFromSlot( *this, path );
+            {
+                if ( SaveGameSerializer::loadGameFromSlot( *this, path ) == false )
+                    return false;
+                ensureStartMap();
+                return true;
+            }
         }
 
         KeyValueMap map;
@@ -238,6 +252,7 @@ namespace sw
 
         if ( _listParty.empty() )
             ensureStarterParty();
+        ensureStartMap();
 
         _mapFlag.clear();
         constexpr const utf8* kFlagPrefix = "flag.";

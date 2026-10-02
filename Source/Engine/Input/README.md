@@ -100,7 +100,9 @@ flowchart TD
   그 프레임엔 "눌렸었다"로 인정됩니다 — `evaluateBindingDown()`의 SingleSlot 케이스가
   `isControlDown() || wasControlPressed()`를 함께 보기 때문입니다.
 - `ActionMap::update()`를 프레임마다 부르지 않으면 `isActionDown`/`wasActionTriggered`/커맨드 콤보/버퍼
-  만료가 전부 멈춥니다 — 직접 `ActionMap`을 만들어 쓰는 도구(에디터 패널 등)라면 반드시 매 프레임 호출하세요.
+  만료가 전부 멈춥니다. **통합 맵(`InputManager::getActionMap()`)은 `beginFrame()`이 끝에서 갱신합니다** — 따로 부르면
+  한 프레임에 두 번 흐릅니다. 직접 `ActionMap`을 만들어 쓰는 도구(에디터 패널 · 셸 맵 등)는 만든 쪽이 매 프레임 호출하세요.
+  (2026-10-03 전에는 통합 맵을 아무도 갱신하지 않아 게임플레이 액션이 하나도 발동하지 않았습니다.)
 
 ---
 

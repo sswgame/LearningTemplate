@@ -27,9 +27,14 @@ namespace sw
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */
         virtual ~GameInstanceBase() override = default;
 
-        /** @brief configureBootstrap 으로 부트스트랩을 채우고(GameConfig 의 팩 루트가 있으면 그것이 우선) gamedata 를 읽은 뒤 onInitialize 를 부릅니다. */
+        /**
+         * @brief configureBootstrap 으로 부트스트랩을 채우고(GameConfig 의 팩 루트가 있으면 그것이 우선) gamedata 를 읽은 뒤 onInitialize 를 부릅니다.
+         * @details 읽은 `GameData` 를 게임 서비스로 묶고(`game::getService<GameData>()`), 다국어(`_localizationDirectory` · `_stringsData`)와
+         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 예전에는 읽기만 하고 아무 칸도 쓰지 않았고 서비스로도 묶지 않아,
+         *          커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터)가 제품에서 늘 기본값을 썼습니다.
+         */
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
-        /** @brief onShutdown 뒤에 윈도우 · RHI 포인터를 끊습니다. */
+        /** @brief onShutdown 뒤에 `GameData` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /** @brief onUpdate 로 한 프레임을 넘깁니다. */
         void update( float32 deltaTime ) final;
@@ -49,11 +54,23 @@ namespace sw
         /** @brief Shipping/Gameplay: 인메모리 스냅샷 버퍼로부터 씬과 게임 상태를 즉시 복원합니다. */
         [[nodiscard]] bool restoreSnapshot( const vector<uint8>& inBytes );
 
-        /** @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. */
-        [[nodiscard]] bool saveStateToFile( string_view filePath );
+        /** @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameData::_defaultSavePath`)입니다. */
+        [[nodiscard]] bool saveStateToFile( string_view filePath = {} );
 
-        /** @brief Shipping/Gameplay: 바이너리 파일로부터 씬과 게임 상태 전체를 복원합니다. */
-        [[nodiscard]] bool loadStateFromFile( string_view filePath );
+        /** @brief Shipping/Gameplay: 바이너리 파일로부터 씬과 게임 상태 전체를 복원합니다. 경로를 비우면 기본 세이브 경로입니다. */
+        [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
+
+        // --------------------------------------------------------------------------
+        // 부트스트랩 씬 흐름 (GameData 의 씬 칸을 읽는 자리)
+        // --------------------------------------------------------------------------
+        /** @brief 게임이 처음 여는 씬입니다 — 실행 설정의 시작 씬(`GameConfig::_startupScene`) > 타이틀 씬 > 시작 맵. 셋 다 비었으면 빈 문자열입니다. */
+        const string& getFirstScene() const;
+        /** @brief 타이틀 다음에 여는 씬입니다 — 입구 씬 > 시작 맵. */
+        const string& getEntranceScene() const;
+        /** @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다). */
+        [[nodiscard]] bool requestFirstScene();
+        /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. */
+        [[nodiscard]] bool requestEntranceScene();
 
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
@@ -100,5 +117,9 @@ namespace sw
         BootstrapConfig _bootstrap{};           ///< 팩 루트와 gamedata
         IWindow*        _pWindow{ nullptr };    ///< 호스트 윈도우 (App 이 소유)
         IRHIDevice*     _pRhiDevice{ nullptr }; ///< 활성 RHI 디바이스
+
+    private:
+        /** @brief `GameData` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
+        void applyBootstrap();
     };
 } // namespace sw

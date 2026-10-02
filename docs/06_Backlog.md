@@ -1666,7 +1666,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 · 버린 값 · 범위 · 불리언 · 대화 조건 ✅ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ · 바이너리 enum 은 열거자로 · 에디터 씬 · 프리팹 판정 · CheckSourceGlob Shipping ✅ (3절) — 남은 것 아래 |
-| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ · 모듈 PROPERTY 판정 ✅ (3절) — 소비 없는 킷 기능은 만든다(사용자 결정 2026-10-03, 진행 중) |
+| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ · 모듈 PROPERTY 판정 ✅ (3절) · GameData 부트스트랩 ✅ ⑰ — 소비 없는 킷 기능은 만든다(사용자 결정 2026-10-03, 진행 중) |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ · 서브틱 · 죽은 가드 ✅ (3절) |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ ⑬ · 월드 값 이동 · 월드 상자 ✅ ⑭ · 셰이더 노멀 · 단위 메타 ✅ (3절) — 남은 것 아래 |
 
@@ -1683,7 +1683,8 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   않는다. Shipping 쿠킹이 `game/empty/prefabs/old/testprop.prefab.bin` 없음 오류를 낸다(씬이 옛 프리팹 경로를 가리킴 — 2026-10-03 enum 작업 중 확인).
   씬 저장 대화상자에 기본 확장자가 없어 "level" 로 저장하면 굽지 않는 이름이 되고, `SceneManager::saveActiveScene` 의 폴백 `DefaultScene.scene` 도 굽지 않는
   이름이다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
-- **R4**(구조 ⑪ · ⑯ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 투사체 맞음 처리 · 스프라이트 클립 · 월드 UI 그리기 · GameData 부트스트랩.
+- **R4**(구조 ⑪ · ⑯ · ⑰ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 투사체 맞음 처리 · 스프라이트 클립 · 월드 UI 그리기(GameData 부트스트랩은 ⑰).
+  `GameEvents.h` 의 세이브 · 레벨 요청 이벤트 열둘은 여전히 어휘뿐이다(발행자 · 구독자 없음 — 헤더 경고대로). `GameModeStateMachine` 은 쓰는 곳이 없다.
   **원래 목록**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
   셰이더 + 런타임 스프라이트 클립 에셋), `ProjectileComponent::_damage` 는 세터뿐이고 투사체의 맞음 처리가 없다, HPBar · DamageUI · Effect 는 비율을 움직이지만
@@ -2102,6 +2103,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑰ GameData 의 칸은 읽힌다 — 서비스로 묶고, 다국어 · 입력 맵을 적용하고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 쓴다; 통합 ActionMap 은 입력 프레임이 갱신, 언어 코드는 정본 철자 하나 — 1-0j 의 R4)
+
+- **`GameData` 는 읽히기만 했다** — 표준 칸 아홉(시작 맵 · 타이틀 · 입구 씬 · 기본 세이브 · 문자열 · 다국어 폴더 · 기본 · 폴백 언어 · 입력 맵)을 읽는 곳이 없었고,
+  `GameInstanceBase` 가 서비스로 묶지도 않아 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터 · 전투 BGM)조차 제품에서 늘 기본값이었다(묶는 곳은
+  시험 하나뿐). 이제 `initialize` 가 묶고(`shutdown` 이 자기 것만 푼다) 다국어(`GameStrings::initialize` · 단일 파일)와 게임플레이 입력 맵을 적용한다. 씬 칸은
+  `getFirstScene`(실행 설정의 시작 씬 > 타이틀 > 시작 맵) · `getEntranceScene`(입구 > 시작 맵)과 `request…` 가 쓰고 EmptyGame 이 그것으로 연다, 경로 없는
+  `saveStateToFile` · `loadStateFromFile` 은 기본 세이브 경로다, 맵 없는 턴제 세이브는 시작 맵에서(`ensureStartMap`). 리소스 경로 칸은 전역 id 다(문서화).
+- **통합 ActionMap 을 아무도 갱신하지 않았다** — `InputManager` 가 만든 게임플레이 맵(`PlayerController` 가 읽는 맵)은 로드도 `update()` 도 없어 액션이 하나도
+  발동하지 않았다. 시험 38 곳은 `beginFrame` 뒤에 손으로 `update` 를 불러 통과하고 있었다. 이제 `beginFrame` 이 끝에서 갱신한다(맵의 주인이 갱신 — 엔진 루프 ·
+  리플레이 재동기화 · 시험이 같은 길). 따로 만든 맵(셸 맵 · 에디터 도구)은 만든 쪽이 갱신한다(Input/README).
+- **언어 코드를 철자 그대로 키로 썼다** — `Resource/` 는 소문자만 받아 파일 이름에서 읽은 코드는 `ko_kr` 인데 기본값(`GameStrings` "ko_KR")과 명령줄(`ko-KR`)은
+  달랐다. 기본 언어를 못 찾아 아무 언어나 골랐고, 폴백 "en_US" 표가 없어 현재 언어에 없는 키는 늘 빈 글이었다. `LocalizationManager::normalizeLanguageCode`
+  (소문자, `-` → `_`)를 표에 넣고 찾는 모든 길이 지난다. `getLanguage()` 는 이제 정본 철자(`ko_kr`)를 돌려준다.
+
+**검증.** 새 시험 3(이전 코드에서 진다): `GameFrameworkTest.BootstrapGameDataIsBoundAndApplied`(서비스 · 파티 상한 · 입력 맵 · 철자가 다른 기본 · 폴백 언어 ·
+씬 흐름 우선순위 · 기본 세이브 슬롯 · 맵 없는 턴제 세이브 · shutdown 뒤 풀림), `ActionMapTest.IntegratedMapIsUpdatedByTheInputFrame`,
+`LocalizationManagerTest.LanguageCodeSpellingsNameOneLanguage`. 변이 10 모두 죽음(프레임 갱신 · 철자 정본 · 서비스 · 다국어 · 입력 맵 · 실행 씬 우선 · 입구 폴백 ·
+기본 세이브 · 턴제 시작 맵 · shutdown 풀기). Debug nogpu · lint 30/30.
 
 ### 2026-10-03 (도구 · 정리 다섯 — 에디터 씬 · 프리팹 판정 단일화, CheckSourceGlob 의 Shipping, 모듈 PROPERTY 판정, 틱 중 서브틱, 죽은 병렬 가드 — 1-0j 의 R3 · R4 · R5 남은 것)
 

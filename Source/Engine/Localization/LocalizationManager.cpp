@@ -23,6 +23,19 @@ namespace sw
         constexpr uint32 kLocalizationPackBinaryVersion = 1;
     } // namespace
 
+    string LocalizationManager::normalizeLanguageCode( string_view languageCode )
+    {
+        string code( StringUtil::trim( languageCode ) );
+        for ( utf8& character : code )
+        {
+            if ( character == '-' )
+                character = '_';
+            else if ( character >= 'A' && character <= 'Z' )
+                character = static_cast<utf8>( character - 'A' + 'a' );
+        }
+        return code;
+    }
+
     LocalizationManager::LocalizationManager()
         : _mutex{}
         , _currentLanguage{}
@@ -120,9 +133,10 @@ namespace sw
 
     void LocalizationManager::markLanguageLoaded( string_view languageCode )
     {
+        string                              code = normalizeLanguageCode( languageCode );
         std::unique_lock<std::shared_mutex> lock( _mutex );
         if ( _currentLanguage.empty() )
-            _currentLanguage = languageCode;
+            _currentLanguage = std::move( code );
     }
 
     bool LocalizationManager::loadLanguageJson( string_view languageCode, string_view jsonText )
@@ -408,37 +422,40 @@ namespace sw
         if ( languageCode.empty() || pStringTable == nullptr )
             return;
 
+        const string                        code = normalizeLanguageCode( languageCode );
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        _mapLanguageTable[string( languageCode )] = std::move( pStringTable );
+        _mapLanguageTable[code] = std::move( pStringTable );
         if ( _currentLanguage.empty() )
-            _currentLanguage = languageCode;
+            _currentLanguage = code;
     }
 
     void LocalizationManager::unloadLanguage( string_view languageCode )
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        _mapLanguageTable.erase( string( languageCode ) );
+        _mapLanguageTable.erase( code );
     }
 
     bool LocalizationManager::setCurrentLanguage( string_view languageCode )
     {
-        string oldLanguage;
-        bool   bChanged{ false };
+        const string code = normalizeLanguageCode( languageCode );
+        string       oldLanguage;
+        bool         bChanged{ false };
 
         {
             std::unique_lock<std::shared_mutex> lock( _mutex );
-            if ( _currentLanguage != languageCode )
+            if ( _currentLanguage != code )
             {
                 oldLanguage      = _currentLanguage;
-                _currentLanguage = languageCode;
+                _currentLanguage = code;
                 bChanged         = true;
             }
         }
 
         if ( bChanged )
         {
-            SW_LOG_INFO( "Language changed: '%#' -> '%#'", string( oldLanguage ).c_str(), string( languageCode ).c_str() );
-            notifyLanguageChanged( oldLanguage, languageCode );
+            SW_LOG_INFO( "Language changed: '%#' -> '%#'", oldLanguage.c_str(), code.c_str() );
+            notifyLanguageChanged( oldLanguage, code );
         }
 
         return true;
@@ -452,8 +469,9 @@ namespace sw
 
     void LocalizationManager::setFallbackLanguage( string_view languageCode )
     {
+        string                              code = normalizeLanguageCode( languageCode );
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        _fallbackLanguage = languageCode;
+        _fallbackLanguage = std::move( code );
     }
 
     string LocalizationManager::getFallbackLanguage() const
@@ -464,8 +482,9 @@ namespace sw
 
     bool LocalizationManager::hasLanguage( string_view languageCode ) const
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
-        return _mapLanguageTable.find( string( languageCode ) ) != _mapLanguageTable.end();
+        return _mapLanguageTable.find( code ) != _mapLanguageTable.end();
     }
 
     vector<string> LocalizationManager::getAvailableLanguages() const
@@ -530,8 +549,9 @@ namespace sw
 
     const utf8* LocalizationManager::getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText ) const
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
-        const auto                          iter = _mapLanguageTable.find( string( languageCode ) );
+        const auto                          iter = _mapLanguageTable.find( code );
         if ( iter != _mapLanguageTable.end() && iter->second != nullptr )
         {
             const utf8* pFound = iter->second->getString( key );
@@ -561,8 +581,9 @@ namespace sw
 
     bool LocalizationManager::hasStringInLanguage( string_view languageCode, const hashed_string& key ) const
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
-        const auto                          iter = _mapLanguageTable.find( string( languageCode ) );
+        const auto                          iter = _mapLanguageTable.find( code );
         if ( iter != _mapLanguageTable.end() && iter->second != nullptr )
             return iter->second->contains( key );
         return false;
@@ -577,8 +598,9 @@ namespace sw
 
     const StringTable* LocalizationManager::getLanguageTable( string_view languageCode ) const
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
-        const auto                          iter = _mapLanguageTable.find( string( languageCode ) );
+        const auto                          iter = _mapLanguageTable.find( code );
         if ( iter != _mapLanguageTable.end() )
             return iter->second.get();
         return nullptr;
@@ -586,8 +608,9 @@ namespace sw
 
     StringTable* LocalizationManager::getOrCreateLanguageTable( string_view languageCode )
     {
+        const string                        code = normalizeLanguageCode( languageCode );
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        auto&                               pTable = _mapLanguageTable[string( languageCode )];
+        auto&                               pTable = _mapLanguageTable[code];
         if ( pTable == nullptr )
             pTable = make_unique<StringTable>();
         return pTable.get();

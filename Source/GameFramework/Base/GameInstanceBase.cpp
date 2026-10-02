@@ -6,6 +6,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Input/ActionMap.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -15,6 +17,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "GameFramework/Base/GameService.h"
+#include "GameFramework/Data/GameStrings.h"
 
 namespace sw
 {
@@ -37,6 +40,25 @@ namespace sw
                     return nullptr;
                 Scene* pActiveScene = pSceneManager->getActiveScene();
                 return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
+            }
+
+            /** @brief 씬 로드를 요청합니다. 경로가 비었으면 조용히 false, 요청이 실패하면 알리고 false 입니다. */
+            static bool requestSceneLoad( const string& scenePath, const utf8* pWhich )
+            {
+                if ( scenePath.empty() )
+                    return false;
+                SceneManager* pSceneManager = game::getService<SceneManager>();
+                if ( pSceneManager == nullptr )
+                {
+                    SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
+                    return false;
+                }
+                if ( pSceneManager->requestLoadAsync( scenePath ) == false )
+                {
+                    SW_LOG_ERROR( "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
+                    return false;
+                }
+                return true;
             }
         };
 
@@ -71,14 +93,68 @@ namespace sw
             gameCfg._gameDataFile.empty() ? string_view( "data/gamedata.xml" ) : string_view( gameCfg._gameDataFile );
         if ( _bootstrap.load( gameDataFile ) == false )
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
+        game::bindLocalService<GameData>( &_bootstrap._data );
+        applyBootstrap();
         return onInitialize();
     }
 
     void GameInstanceBase::shutdown()
     {
         onShutdown();
+        // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
+        if ( game::getService<GameData>() == &_bootstrap._data )
+            game::unbindLocalService<GameData>();
         _pWindow    = nullptr;
         _pRhiDevice = nullptr;
+    }
+
+    void GameInstanceBase::applyBootstrap()
+    {
+        const GameData& data = _bootstrap._data;
+
+        // 다국어 — 팩 폴더가 있으면 그것, 없으면 단일 문자열 파일.
+        if ( data._localizationDirectory.empty() == false )
+        {
+            if ( GameStrings::initialize( data._localizationDirectory, data._defaultLanguage, data._fallbackLanguage ) == false )
+                SW_LOG_WARNING( "GameData localization '%#' could not be loaded - strings show their keys", data._localizationDirectory.c_str() );
+        }
+        else if ( data._stringsData.empty() == false && GameStrings::loadFromResource( data._stringsData ) == false )
+        {
+            SW_LOG_WARNING( "GameData strings '%#' could not be loaded - strings show their keys", data._stringsData.c_str() );
+        }
+
+        // 게임플레이 입력 맵 — `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵(`PlayerController` 가 읽는 맵)이다.
+        if ( data._inputMap.empty() == false )
+        {
+            InputManager* pInput = game::getService<InputManager>();
+            if ( pInput == nullptr )
+                SW_LOG_WARNING( "GameData input map '%#' is not loaded - no InputManager service", data._inputMap.c_str() );
+            else if ( pInput->getActionMap().loadFromResource( data._inputMap ) == false )
+                SW_LOG_WARNING( "GameData input map '%#' could not be loaded - gameplay actions keep their current bindings", data._inputMap.c_str() );
+        }
+    }
+
+    const string& GameInstanceBase::getFirstScene() const
+    {
+        const string& runScene = GameConfig::getActive()._startupScene;
+        if ( runScene.empty() == false )
+            return runScene;
+        return _bootstrap._data._titleScene.empty() ? _bootstrap._data._startMap : _bootstrap._data._titleScene;
+    }
+
+    const string& GameInstanceBase::getEntranceScene() const
+    {
+        return _bootstrap._data._entranceScene.empty() ? _bootstrap._data._startMap : _bootstrap._data._entranceScene;
+    }
+
+    bool GameInstanceBase::requestFirstScene()
+    {
+        return GameInstanceBaseInternal::requestSceneLoad( getFirstScene(), "first" );
+    }
+
+    bool GameInstanceBase::requestEntranceScene()
+    {
+        return GameInstanceBaseInternal::requestSceneLoad( getEntranceScene(), "entrance" );
     }
 
     void GameInstanceBase::update( float32 deltaTime )
@@ -349,16 +425,28 @@ namespace sw
 
     bool GameInstanceBase::saveStateToFile( string_view filePath )
     {
+        const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
+        if ( path.empty() )
+        {
+            SW_LOG_ERROR( "No save path was given and GameData has no defaultSavePath - nothing is saved" );
+            return false;
+        }
         vector<uint8> snapshotBytes;
         if ( captureSnapshot( snapshotBytes ) == false )
             return false;
-        return FileUtil::writeFile( filePath, snapshotBytes.data(), snapshotBytes.size() );
+        return FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
     }
 
     bool GameInstanceBase::loadStateFromFile( string_view filePath )
     {
+        const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
+        if ( path.empty() )
+        {
+            SW_LOG_ERROR( "No save path was given and GameData has no defaultSavePath - nothing is loaded" );
+            return false;
+        }
         vector<uint8> snapshotBytes;
-        if ( FileUtil::readFile( filePath, snapshotBytes ) == false )
+        if ( FileUtil::readFile( path, snapshotBytes ) == false )
             return false;
         return restoreSnapshot( snapshotBytes );
     }

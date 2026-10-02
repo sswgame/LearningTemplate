@@ -61,7 +61,8 @@ namespace sw
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 **들어온 순서대로** 적용하고, 프레임 엣지를 맞춥니다.
          * @details 창 메시지는 `processNativeEvent` 가 큐에 넣기만 합니다. 장치 상태를 바꾸는 길은 여기 하나입니다. 예전에는
          *          메시지를 받을 때 상태를 바로 바꾸고 큐에도 넣어, 여기서 엣지를 지운 뒤 재생하면 이미 눌린 키라 "새로 눌림" 이
-         *          사라졌습니다(`wasKeyPressed` 가 실제 루프에서 뜨지 않았다).
+         *          사라졌습니다(`wasKeyPressed` 가 실제 루프에서 뜨지 않았다). 끝에서 통합 ActionMap(`getActionMap()`)을 갱신합니다 —
+         *          그 맵을 따로 `update()` 하지 마십시오(한 프레임에 두 번 흐릅니다). 따로 만든 ActionMap 은 만든 쪽이 갱신합니다.
          * @param deltaSeconds 지난 프레임의 실제 시간(초). 진동 타이머 · 재연결 주기가 이 값으로 흐릅니다.
          */
         void beginFrame( float32 deltaSeconds = 0.016f );
