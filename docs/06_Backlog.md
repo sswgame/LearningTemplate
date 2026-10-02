@@ -1678,9 +1678,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
   컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). 한 enum 안의 이름 해시 충돌은 등록 때 검사하지
-  않는다. Shipping 쿠킹이 `game/empty/prefabs/old/testprop.prefab.bin` 없음 오류를 낸다(씬이 옛 프리팹 경로를 가리킴 — 2026-10-03 enum 작업 중 확인).
-  씬 저장 대화상자에 기본 확장자가 없어 "level" 로 저장하면 굽지 않는 이름이 되고, `SceneManager::saveActiveScene` 의 폴백 `DefaultScene.scene` 도 굽지 않는
-  이름이다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
+  않는다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
 - **R4**(구조 ⑪ · ⑯ · ⑰ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 투사체 맞음 처리 · 스프라이트 클립 · 월드 UI 그리기(GameData 부트스트랩은 ⑰).
   `GameEvents.h` 의 세이브 · 레벨 요청 이벤트 열둘은 여전히 어휘뿐이다(발행자 · 구독자 없음 — 헤더 경고대로). `GameModeStateMachine` 은 쓰는 곳이 없다.
   **원래 목록**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
@@ -2101,6 +2099,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R3 남은 것 — 씬은 쿠커가 굽는 이름으로만 저장된다, 저작 소스 이름도 쿠킹 표 하나에서)
+
+- **씬 저장이 굽지 않는 이름을 그대로 썼다** — 저장 대화상자에 "level" 을 적거나 Shipping 이 읽은 `.scene.bin` 을 다시 저장하면 그 이름 그대로 썼다(에디터에서는
+  열리는데 쿠커가 굽지 않아 배포본에 없다). 경로도 출처도 없는 씬은 `Resource/` 밖의 `Assets/Scenes/DefaultScene.scene`(대문자 · 굽지 않는 이름)을 지어냈다.
+  이제 `AssetCookPath::toSourcePath( path, kind )` — 쿠킹 표의 굽지 않는 줄(`.scene.bin` · `.scene`)은 정본 접미사로 바꾸고, 끝의 `.xml` 은 그 자리에서,
+  나머지는 `.scene.xml` 을 붙인다 — 를 씬을 쓰는 한 자리(`SceneManager::saveActiveScene`)가 지나고(바꾸면 경고), 경로가 전혀 없으면 쓰지 않는다(오류).
+- enum 작업 중 본 "Shipping 쿠킹이 `prefabs/old/testprop.prefab.bin` 없음" 은 메인에서 재현되지 않았다(쿠킹 두 번 · 오류 없음 — 씬의 `old/` 경로는 GUID 로
+  찾는 시험 항목이라 의도된 것). 목록에서 뺐다.
+
+**검증.** 새 시험 2(이전 코드에서 진다): `ResourceTest.SourcePathsComeFromTheSameRule`, `SceneAsyncTest.SavedSceneNamesAreCookable`. 변이 4 모두 죽음(요청한
+이름 그대로 · 폴백 지어내기 · 굽지 않는 줄 바꾸기 끔 · `.xml` 겹침). Debug nogpu · lint 30/30.
 
 ### 2026-10-03 (R2 남은 것 — 순환 프리팹 시험이 순환을 태운다, 키-값 · GameData 커스텀 칸의 못 읽은 값은 알린다)
 

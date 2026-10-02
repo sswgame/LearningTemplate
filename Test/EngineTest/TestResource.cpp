@@ -827,6 +827,29 @@ SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 }
 
 /**
+ * @brief [ResourceTest] 저작 소스 이름도 같은 표에서 나온다 — 굽지 않는 이름은 쿠커가 굽는 이름이 된다
+ * @details 씬 저장은 대화상자에 적은 이름(`level`) · Shipping 이 읽은 쿠킹본(`.scene.bin`)을 그대로 썼다 — 에디터에서는 열리는데 쿠커가 굽지 않아
+ *          배포본에 없었다. 저장 폴백 `Assets/Scenes/DefaultScene.scene` 도 굽지 않는 이름이었다.
+ */
+SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
+{
+    using sw::AssetCookPath;
+    using sw::AssetKind;
+    SW_EXPECT_STREQ( "maps/a.scene.xml", AssetCookPath::toSourcePath( "maps/a.scene.xml", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/A.Scene.XML", AssetCookPath::toSourcePath( "maps/A.Scene.XML", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.xml", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene.bin", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "maps/forest.scenery.scene.xml", AssetCookPath::toSourcePath( "maps/forest.scenery.xml", AssetKind::Scene ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.json", AssetCookPath::toSourcePath( "prefabs/b.prefab.json", AssetKind::Prefab ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", AssetKind::Prefab ).c_str() );
+    SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", AssetKind::Material ).c_str() );
+    for ( const utf8* pName : { "maps/level", "maps/level.xml", "maps/level.scene", "maps/level.scene.bin" } )
+        SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, AssetKind::Scene ), AssetKind::Scene ) );
+}
+
+/**
  * @brief [ResourceTest] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
  * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. 예전엔 ensureMeta 를 거친 에셋만 표에 있어서 이름을 바꾼
  *          프리팹의 GUID 복구가 우연히만 동작했다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.

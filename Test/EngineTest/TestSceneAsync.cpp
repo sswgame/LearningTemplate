@@ -652,3 +652,43 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 
     manager.shutdown();
 }
+
+/**
+ * @brief [SceneAsyncTest] 씬은 쿠커가 굽는 이름으로만 저장된다 — 확장자 없는 이름은 `.scene.xml` 이 붙고, 경로가 전혀 없으면 쓰지 않는다
+ * @details 저장 대화상자에 "level" 을 적으면 그 이름 그대로 저장돼 에디터에서는 열리는데 쿠커가 굽지 않아 배포본에 없었다. 경로도 출처도 없는 씬은
+ *          `Resource/` 밖의 `Assets/Scenes/DefaultScene.scene`(굽지 않는 이름)을 지어내 썼다.
+ */
+SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
+{
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_name.scene.xml" );
+    const sw::string xmlStr  = "<Scene formatVersion=\"0\" name=\"SaveName\"><entities><entity name=\"A\"/></entities></Scene>";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_name.scene.bin" );
+    sw::SceneDocument cooked{};
+    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    sw::drainSceneTransitions( manager );
+    SW_ASSERT_NOT_NULL( manager.getActiveScene() );
+
+    const sw::string bareName = test::makeTempPath( "level" );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene saved under a name the cooker does not bake" );
+        SW_EXPECT_TRUE( manager.saveActiveScene( bareName ) );
+    }
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( bareName ) );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( bareName + ".scene.xml" ) );
+    SW_EXPECT_STREQ( ( bareName + ".scene.xml" ).c_str(), manager.getActiveScene()->getSourcePath().c_str() ); // 다음 저장도 그 이름이다
+
+    manager.getActiveScene()->setSourcePath( {} );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene with no path at all" );
+        SW_EXPECT_FALSE( manager.saveActiveScene( {} ) );
+    }
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( "Assets/Scenes/DefaultScene.scene" ) );
+
+    manager.shutdown();
+}

@@ -64,6 +64,13 @@ namespace sw
         static bool isCookableSource( string_view path, AssetKind kind );
         /** @brief @p kind 의 저작 소스 접미사를 표 순서대로 @p outListSuffix 에 더합니다(정적 문자열이라 들고 있어도 됩니다). */
         static void appendSourceSuffixes( AssetKind kind, vector<string_view>& outListSuffix );
+        /**
+         * @brief @p path 를 @p kind 의 저작 소스 이름으로 만듭니다 — 이미 그렇다면 그대로, 쿠킹본 · 확장자 없는 이름(`.scene.bin` · `.scene`)은 정본 접미사로
+         *        바꾸고, 그 밖에는 정본 접미사(`.scene.xml`)를 붙입니다(끝의 `.xml` 은 겹치지 않게 그 자리에서). 씬 · 프리팹이 아니면 그대로입니다.
+         * @details 씬을 쓰는 자리(`SceneManager::saveActiveScene`)가 이것을 지난다. 예전에는 저장 대화상자에 "level" 을 적거나 Shipping 이 읽은
+         *          `.scene.bin` 을 다시 저장하면 쿠커가 굽지 않는 이름이 생겼다 — 에디터에서는 열리는데 배포본에는 없었다.
+         */
+        static string toSourcePath( string_view path, AssetKind kind );
     };
 
     /** @brief 런타임이 쿠킹된 바이너리를 쓰는지 반환합니다. Shipping 은 쿠킹된 바이너리를, Dev 는 XML 저작본을 로드합니다. */

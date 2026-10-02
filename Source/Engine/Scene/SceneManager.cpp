@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -327,11 +328,17 @@ namespace sw
             return false;
         }
 
-        string outPath( path );
-        if ( outPath.empty() )
-            outPath = pScene->getSourcePath();
-        if ( outPath.empty() )
-            outPath = "Assets/Scenes/DefaultScene.scene";
+        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다 — 예전에는 `Resource/` 밖의 `Assets/Scenes/DefaultScene.scene`(대문자 ·
+        // 쿠커가 굽지 않는 이름)을 지어내 썼다. 쓰는 이름은 쿠커가 굽는 씬 이름이다(`AssetCookPath::toSourcePath`).
+        const string_view requestedPath = path.empty() ? string_view( pScene->getSourcePath() ) : path;
+        if ( requestedPath.empty() )
+        {
+            SW_LOG_ERROR( "saveActiveScene: no path was given and the scene has no source path - nothing is saved" );
+            return false;
+        }
+        const string outPath = AssetCookPath::toSourcePath( requestedPath, AssetKind::Scene );
+        if ( outPath != requestedPath )
+            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker bakes - saving as '%#'", requestedPath, outPath.c_str() );
 
         SceneDocument doc{};
         if ( pScene->serializeToDocument( doc ) == false )
