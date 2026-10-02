@@ -174,6 +174,13 @@ namespace sw
     {
         if ( name == _name )
             return;
+        // 틱 중이면 틱 뒤로 미룬다 — 다른 워커가 이 이름을 읽고(`getName`), 이름 표는 매니저의 것이다. addTag · setActive 와 같다.
+        if ( isComponentMutationFrozen() )
+        {
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [name]( GameObject& self )
+            { self.setName( name ); } ) );
+            return;
+        }
 
         const hashed_string oldName = _name;
         _name                       = name;
@@ -493,25 +500,6 @@ namespace sw
         if ( pTagComp == nullptr )
             return s_emptyTags;
         return pTagComp->getTags();
-    }
-
-    TagContainer& GameObject::getOrCreateTags()
-    {
-        TagComponent* pTagComp = getComponent<TagComponent>();
-        if ( pTagComp == nullptr )
-            pTagComp = addComponent<TagComponent>();
-        if ( pTagComp != nullptr )
-            return pTagComp->getTags();
-
-        // 틱 중이라 `addComponent` 가 미뤄져 nullptr 을 준 경우다. 시그니처는 참조를 요구하는데
-        // 반환할 컨테이너가 없다. 예전에는 **공용 상수** `s_emptyTags` 를 `const_cast` 해서
-        // 줬다. 그쪽에 한 번이라도 쓰면 태그가 없는 **모든** 오브젝트의 `getTags() const` ·
-        // `hasTag` · `matchesTagQuery` 가 그 값을 보게 된다. 버리는 통을 따로 둬서 쓰기가
-        // 아무에게도 새지 않게 한다.
-        SW_LOG_ERROR( "getOrCreateTags(): cannot attach a TagComponent while structural mutation is frozen — writes are discarded." );
-        thread_local TagContainer t_discardedTags;
-        t_discardedTags.clear();
-        return t_discardedTags;
     }
 
     size_t GameObject::getComponentCount() const

@@ -1667,7 +1667,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ (3절) — 소비 없는 컴포넌트 · 모르는 컴포넌트 보존은 남음 |
-| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ 구조 ⑫ (3절) — 남은 것 아래 |
+| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ (3절) — 서브틱 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ ⑬ · 월드 값 이동 · 월드 상자 ✅ ⑭ (3절) — 셰이더 노멀 · 단위 메타 남음 |
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
@@ -1688,9 +1688,8 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
   셰이더 + 런타임 스프라이트 클립 에셋), `ProjectileComponent::_damage` 는 세터뿐이고 투사체의 맞음 처리가 없다, HPBar · DamageUI · Effect 는 비율을 움직이지만
   그리는 것이 없다(UI 렌더 경로 없음), `GameData` 의 부트스트랩 칸 아홉(시작 맵 · 타이틀 씬 · 기본 언어 · 입력 맵 …)은 읽는 곳이 없다(커스텀 맵만 읽힌다).
-- **R5**(구조 ⑫ 뒤) — `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove,
-  `forEachGameObject` 공유 잠금 재진입 교착 가능,
-  `setName` · 서브틱 · 컴포넌트 비트필드. `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드).
+- **R5**(구조 ⑫ · ⑮ 뒤) — 틱 안의 서브틱 등록(`registerSubTick` 이 `_listSubTick` 벡터를 늘린다 — 틱 등록부가 그 사이 읽는지 확인 후 같은 큐로),
+  `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드 — 지우거나 단언에 쓸 것). `forEachGameObject` 재진입은 이미 `WalkScope` 단언이 막는다(2026-10-03 확인).
 - **R6**(구조 ⑬ · ⑭ 뒤) — 셰이더가 노멀을 월드 행렬로 변환(부등 스케일에서 조명이 틀림 — 3x3 여인수 행렬(외적 셋)이면 역전치 없이 맞다, 네 백엔드 스크린샷으로 볼 것),
   단위 메타 셋(감사 목록 — 다음에 다시 짚을 것).
 
@@ -2101,6 +2100,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑮ 틱 중 쓰기의 남은 형제들도 같은 큐로 — 태그 컴포넌트 · 프리팹 스폰 · 이름 · 틱 설정 — 1-0j 의 R5 둘째 단위)
+
+- **`TagComponent::addTag` · `removeTag` · `clearTags` 가 틱 안에서 살아 있는 컨테이너를 바로 썼다**(형제 `GameObject::addTag` 는 미뤘다) → 같은 미룸 길.
+  컨테이너를 쓰기용으로 내주던 `GameObject::getOrCreateTags()`(부르는 곳 없음, 틱 중에는 쓰기를 버리는 통)와 `TagComponent` 의 쓰기용 `getTags()` 는 지웠다.
+- **틱 안의 프리팹 스폰이 프리팹의 값을 버렸다** — 상태 읽기가 그 자리에서 돌며 컴포넌트 추가가 모두 미뤄졌다(구조 ⑫ 뒤로는 거절). 이제 오브젝트는 바로 돌려주고
+  상태는 틱 직후 구조 변경 큐에서 채운다(프리팹은 경로로 다시 찾는다 — 그 사이 다시 읽혀도 안전).
+- **`setName` · `setCanEverTick` · `setTickGroup` 이 틱 안에서 바로 썼다** — 이름은 다른 워커가 읽고 매니저 표가 갖고, 틱 비트는 다른 워커가 읽는 비트와 한 바이트다.
+  `Component::deferIfStructureFrozen`(핸들로 다시 찾는다)으로 같은 큐에 넣는다.
+
+**검증.** 새 시험 3(이전 코드에서 진다 — 틱 **안에서** 본 값을 기록하는 목 훅): `GameObjectTest.TagComponentWritesDuringTickAreDeferred` ·
+`NameAndTickSettingsChangedDuringTickApplyAfterIt`, `PrefabTest.SpawnDuringTickKeepsThePrefabsState`. 변이 4 모두 죽음. Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-03 (구조 ⑭ 월드 값은 월드로 움직이고, 크기는 월드 상자 하나로 잰다 — 1-0j 의 R6 둘째 단위)
 

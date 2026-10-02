@@ -346,7 +346,12 @@ namespace sw
         hashed_string getComponentName() const { return _componentName; }
 
     private:
-        bool                  isSubTickActiveSlow( uint32 subTickId ) const;
+        bool isSubTickActiveSlow( uint32 subTickId ) const;
+        /**
+         * @brief 소유 매니저가 구조 변경을 얼려 두었으면(컴포넌트 틱 중) @p func 를 틱 직후 구조 변경 큐로 미루고 true 를 돌려줍니다. 아니면 false 입니다.
+         * @details 핸들로 다시 찾으므로 그 사이 파괴돼도 안전합니다. 틱 설정(그룹 · 틱 여부)이 `GameObject` 의 setName · addTag 와 같은 규칙을 지킵니다.
+         */
+        bool                  deferIfStructureFrozen( Delegate<void( Component& )> func );
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
     protected:

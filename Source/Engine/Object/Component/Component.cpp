@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
@@ -251,6 +252,9 @@ namespace sw
         // 같은 그룹이면 틱 항목을 다시 짓게 하지 않는다(기본 그룹을 onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿이다).
         if ( _tickGroup == group )
             return;
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group]( Component& self )
+        { self.setTickGroup( group ); } ) ) )
+            return;
         // 없는 그룹을 받아 두면 등록부가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
         if ( isValidTickGroup( group ) == false )
         {
@@ -267,9 +271,28 @@ namespace sw
         const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
         if ( _bCanEverTick == newValue )
             return;
+        // 틱 중이면 틱 뒤로 — 이 비트는 다른 워커가 읽는 비트(`_bIsSceneComponent` · `_bHasBegunPlay`)와 한 바이트다.
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [bCanEverTick]( Component& self )
+        { self.setCanEverTick( bCanEverTick ); } ) ) )
+            return;
         _bCanEverTick = newValue;
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
+    }
+
+    bool Component::deferIfStructureFrozen( Delegate<void( Component& )> func )
+    {
+        GameObjectManager* pManager = ( _pOwner != nullptr ) ? _pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || pManager->isStructuralMutationFrozen() == false )
+            return false;
+        const sw::ComponentHandle handle = getHandle();
+        pManager->deferStructuralChange( [pManager, handle, deferred = std::move( func )]()
+        {
+            Component* pSelf = pManager->resolveComponent( handle );
+            if ( pSelf != nullptr )
+                deferred( *pSelf );
+        } );
+        return true;
     }
 
     sw::ComponentHandle Component::getHandle() const

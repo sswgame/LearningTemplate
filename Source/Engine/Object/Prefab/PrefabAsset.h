@@ -114,6 +114,8 @@ namespace sw
         [[nodiscard]] bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
         /**
          * @brief 프리팹을 스폰합니다. instanceDiff 가 있으면 루트 GameObject 에 적용합니다.
+         * @details 컴포넌트 틱 중이면 오브젝트는 바로 돌려주고 프리팹 상태는 틱 직후(구조 변경 큐)에 채웁니다 — 그때까지 오브젝트는 비어 있습니다.
+         *          상태를 쓰지 못하면 그 오브젝트를 지웁니다. 틱 안에서 스폰하고 바로 초기화하려면 `executeOrDeferPostTick` 으로 감쌀 것.
          */
         GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath,
                            const utf8* pInstanceName = nullptr, const uint8* pInstanceDiff = nullptr,
@@ -147,6 +149,10 @@ namespace sw
         static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
 
     private:
+        /** @brief 스폰한 오브젝트에 프리팹 상태 · 이름 · 인스턴스 차이를 씁니다. 바로 스폰과 틱 뒤로 미룬 스폰이 같이 씁니다. 실패하면 false 입니다. */
+        [[nodiscard]] static bool applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName, const uint8* pInstanceDiff,
+                                                   size_t instanceDiffSize );
+
         mutable std::shared_mutex                      _mapCacheMutex;
         unordered_map<string, unique_ptr<PrefabAsset>> _mapCache;
     };

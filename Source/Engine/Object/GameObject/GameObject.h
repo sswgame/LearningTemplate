@@ -180,15 +180,10 @@ namespace sw
         /** @brief TagQuery(불리언 복합 질의)를 만족하는지 검사합니다. */
         bool matchesTagQuery( const TagQuery& query ) const;
         /**
-         * @brief TagComponent 의 태그 컨테이너를 **쓰기 위해** 얻습니다. 없으면 만들어 붙입니다.
-         * @details 이름에 `getOrCreate` 가 들어간 이유가 있습니다. 예전에는 이것이 `getTags()` 의
-         *          비-const 오버로드였고, `GameObject*` 로 부르면 **읽을 생각이었는데도** 이쪽이
-         *          골라졌습니다. 인스펙터가 태그 없는 오브젝트를 보여 주는 것만으로 그 오브젝트에
-         *          `TagComponent` 가 붙었고, 저장하면 씬 파일에까지 들어갔습니다. 구성이 바뀌는 일이
-         *          오버로드 해석으로 조용히 정해지면 안 됩니다.
+         * @brief TagComponent 의 태그 컨테이너입니다. 없으면 빈 컨테이너입니다. **읽기 전용**입니다 — 쓰기는 `addTag` · `removeTag` · `clearTags` 뿐입니다.
+         * @details 컨테이너를 쓰기용으로 내주던 `getOrCreateTags()` 는 지웠다(부르는 곳이 없었다). 틱 중에는 그것이 쓰기를 버리는 통을 줬고, 그
+         *          밖에서는 미룸 규칙을 거치지 않고 살아 있는 컨테이너에 썼다. 쓰기는 미룸 규칙을 지키는 창구로만 한다.
          */
-        TagContainer& getOrCreateTags();
-        /** @brief TagComponent 의 태그 컨테이너입니다. 없으면 빈 컨테이너입니다. */
         const TagContainer& getTags() const;
 
         /**

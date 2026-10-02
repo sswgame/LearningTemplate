@@ -15,8 +15,10 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -65,6 +67,16 @@ namespace sw
         int32              _tickLoadResult{ -1 };       ///< 그 결과(1 성공 · 0 실패 · -1 안 함)
         GameObject*        _pTickAdoptChild{ nullptr }; ///< 설정되면 틱이 이 오브젝트에 씬 컴포넌트를 붙이고 이어 `_pTickAdoptParent` 에 붙인다
         GameObject*        _pTickAdoptParent{ nullptr };
+        TagComponent*      _pTickTagComponent{ nullptr };   ///< 설정되면 틱이 그 컴포넌트에 태그 "TickAdded" 를 더한다
+        bool               _bTickTagVisibleInTick{ false }; ///< 더한 **직후**(아직 틱 안) 그 태그가 보였는지 — 미뤘으면 아직 안 보인다
+        PrefabManager*     _pTickPrefabs{ nullptr };        ///< 설정되면 틱이 `_tickSpawnPath` 프리팹을 `_pTickSpawnManager` 에 스폰한다
+        GameObjectManager* _pTickSpawnManager{ nullptr };
+        string             _tickSpawnPath;
+        GameObject*        _pTickSpawned{ nullptr };           ///< 스폰이 돌려준 오브젝트
+        GameObject*        _pTickRenameTarget{ nullptr };      ///< 설정되면 틱이 그 오브젝트의 이름을 "TickRenamed" 로 바꾼다
+        bool               _bTickRenameVisibleInTick{ false }; ///< 바꾼 **직후**(아직 틱 안) 새 이름이 보였는지
+        Component*         _pTickStopTicking{ nullptr };       ///< 설정되면 틱이 그 컴포넌트의 틱을 끈다(`setCanEverTick( false )`)
+        bool               _bTickStopVisibleInTick{ false };   ///< 끈 **직후**(아직 틱 안) 꺼진 것이 보였는지
 
         /** @brief 부른 횟수를 세고, 설정된 매니저가 있으면 오브젝트 하나를 만듭니다(onBeginPlay 안의 스폰). */
         void onBeginPlay() override
@@ -103,6 +115,23 @@ namespace sw
             }
             if ( _pTickLoadTarget != nullptr )
                 _tickLoadResult = ObjectStateSerializer::loadFromXmlString( _pTickLoadTarget, _tickLoadXml ) ? 1 : 0;
+            if ( _pTickRenameTarget != nullptr )
+            {
+                _pTickRenameTarget->setName( hashed_string( "TickRenamed" ) );
+                _bTickRenameVisibleInTick = ( _pTickRenameTarget->getName() == hashed_string( "TickRenamed" ) );
+            }
+            if ( _pTickStopTicking != nullptr )
+            {
+                _pTickStopTicking->setCanEverTick( false );
+                _bTickStopVisibleInTick = ( _pTickStopTicking->canEverTick() == false );
+            }
+            if ( _pTickPrefabs != nullptr && _pTickSpawnManager != nullptr && _pTickSpawned == nullptr )
+                _pTickSpawned = _pTickPrefabs->spawn( _pTickSpawnManager, _tickSpawnPath, "TickSpawned" );
+            if ( _pTickTagComponent != nullptr )
+            {
+                _pTickTagComponent->addTag( "TickAdded"_tag );
+                _bTickTagVisibleInTick = _pTickTagComponent->hasTag( "TickAdded"_tag );
+            }
             if ( _pTickAdoptChild != nullptr && _pTickAdoptParent != nullptr )
             {
                 (void)_pTickAdoptChild->addComponent<SceneComponent>();      // 틱 중이라 미뤄진다(nullptr)

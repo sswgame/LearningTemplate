@@ -4,6 +4,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetFormat.h"
+
+#include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -58,7 +61,7 @@ namespace sw
             sw::PrefabAsset cooked;
             if ( ( bJson ? cooked.loadFromJsonFile( sourcePath ) : cooked.loadFromXmlFile( sourcePath ) ) == false )
                 return false;
-            return cooked.saveToBinaryFile( sw::FileUtil::replaceExtension( sourcePath, ".bin" ) );
+            return cooked.saveToBinaryFile( sw::AssetCookPath::toCookedPath( sourcePath ) ); // 런타임 로더 · 쿠커와 같은 이름 규칙
         }
     } // namespace
 } // namespace sw
@@ -225,6 +228,36 @@ SW_TEST_CASE( PrefabTest, ConvertingAPrefabKeepsItsComponents )
         SW_ASSERT_NOT_NULL( pRoot );
         SW_EXPECT_TRUE( pRoot->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
     }
+}
+
+/**
+ * @brief [PrefabTest] 틱 안에서 스폰한 프리팹도 프리팹의 값을 가진다 — 상태는 틱 직후에 채운다
+ * @details 틱 안의 스폰은 상태 읽기를 그 자리에서 돌렸고, 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려졌다** — 틱 뒤에 생긴 컴포넌트는
+ *          기본값이었다(스케일 1). 이제 오브젝트는 바로 돌려주고 상태는 틱 직후 구조 변경 큐에서 채운다.
+ */
+SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
+{
+    const sw::string xmlPath = test::makeTempPath( "crate_tick.prefab.xml" );
+    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
+
+    sw::GameObjectManager objects;
+    sw::RegisterMockComponents( objects );
+    sw::PrefabManager      prefabs;
+    sw::GameObject*        pSpawner = objects.createGameObject( sw::hashed_string( "Spawner" ) );
+    sw::MockMeshComponent* pMock    = pSpawner->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pMock );
+    pMock->_pTickPrefabs      = &prefabs;
+    pMock->_pTickSpawnManager = &objects;
+    pMock->_tickSpawnPath     = xmlPath;
+
+    objects.tick( 0.016f );
+
+    SW_ASSERT_NOT_NULL( pMock->_pTickSpawned );
+    const sw::SceneComponent* pRoot = pMock->_pTickSpawned->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_EXPECT_TRUE( pRoot->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
+    SW_EXPECT_STREQ( "TickSpawned", pMock->_pTickSpawned->getName().c_str() );
 }
 
 /**

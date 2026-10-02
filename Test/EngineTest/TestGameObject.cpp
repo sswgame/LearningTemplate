@@ -626,6 +626,55 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
 }
 
 /**
+ * @brief [GameObjectTest] 틱 안에서 태그 컴포넌트에 직접 쓴 태그도 틱 뒤에 적용된다 — 다른 워커가 읽는 컨테이너를 바로 만지지 않는다
+ * @details `GameObject::addTag` 는 틱 중이면 미뤘지만 `TagComponent::addTag` · `removeTag` · `clearTags` 는 살아 있는 컨테이너에 바로 썼다. 다른
+ *          워커의 `hasTag` · 태그 질의가 같은 컨테이너를 읽는 동안이었다. 이제 같은 미룸 길이다.
+ */
+SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    GameObject* keeper = manager.createGameObject( hashed_string( "TickTagger" ) );
+    GameObject* tagged = manager.createGameObject( hashed_string( "TickTagged" ) );
+    keeper->addComponent<MockMeshComponent>();
+    sw::TagComponent*  pTags      = tagged->addComponent<sw::TagComponent>();
+    MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+    SW_ASSERT_TRUE( pTags != nullptr && keeperMesh != nullptr );
+    keeperMesh->_pTickTagComponent = pTags;
+
+    manager.tick( 0.016f );
+
+    SW_EXPECT_FALSE( keeperMesh->_bTickTagVisibleInTick ); // 틱 안에서는 아직이다
+    SW_EXPECT_TRUE( tagged->hasTag( "TickAdded"_tag ) );   // 틱 뒤에 적용됐다
+}
+
+/**
+ * @brief [GameObjectTest] 틱 안의 이름 · 틱 설정 변경도 틱 뒤에 적용된다
+ * @details `setName` 은 다른 워커가 읽는 이름과 매니저의 이름 표를, `setCanEverTick` · `setTickGroup` 은 다른 워커가 읽는 비트와 한 바이트를
+ *          틱 안에서 바로 고쳤다(형제 addTag · setActive 는 미뤘다). 이제 같은 구조 변경 큐다.
+ */
+SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    GameObject* keeper = manager.createGameObject( hashed_string( "TickRenamer" ) );
+    GameObject* target = manager.createGameObject( hashed_string( "TickTarget" ) );
+    keeper->addComponent<MockMeshComponent>();
+    MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+    MockMeshComponent* targetMesh = target->addComponent<MockMeshComponent>();
+    SW_ASSERT_TRUE( keeperMesh != nullptr && targetMesh != nullptr );
+    keeperMesh->_pTickRenameTarget = target;
+    keeperMesh->_pTickStopTicking  = targetMesh;
+
+    manager.tick( 0.016f );
+
+    SW_EXPECT_FALSE( keeperMesh->_bTickRenameVisibleInTick );
+    SW_EXPECT_FALSE( keeperMesh->_bTickStopVisibleInTick );
+    SW_EXPECT_STREQ( "TickRenamed", target->getName().c_str() );
+    SW_EXPECT_FALSE( targetMesh->canEverTick() );
+}
+
+/**
  * @brief [GameObjectTest] 같은 엔티티의 서로 다른 컴포넌트도 모두 tick된다
  */
 SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
@@ -2632,7 +2681,7 @@ SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
  *          컴포넌트가 하나 생겼고, 저장하면 씬 파일에까지 들어갔다. 오브젝트의 구성이 바뀌는
  *          일이 오버로드 해석으로 조용히 정해지고 있었던 것이다.
  *
- *          쓰는 쪽은 이제 `getOrCreateTags()` 라는 다른 이름이라 실수로 골라지지 않는다.
+ *          이제 컨테이너는 읽기로만 내주고, 쓰기는 `addTag` · `removeTag` · `clearTags` 창구뿐이다.
  */
 SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 {

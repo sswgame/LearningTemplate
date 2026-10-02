@@ -650,32 +650,58 @@ namespace sw
         if ( pGameObject == nullptr )
             return nullptr;
 
-        if ( StringUtil::trim( pAsset->getStateData() ).empty() == false )
+        // 컴포넌트 틱 중이면 오브젝트는 지금 만들어 돌려주고(부르는 쪽이 핸들을 든다), 상태는 틱 직후 구조 변경 큐에서 채운다. 예전에는 상태 읽기가
+        // 그 자리에서 돌며 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려졌다** — 빈 오브젝트만 남았다.
+        if ( pGameObjectManager->isStructuralMutationFrozen() )
         {
-            if ( pAsset->applyStateTo( pGameObject ) == false )
+            const uint64  objectId = pGameObject->getObjectId();
+            const string  instanceName( pInstanceNameUtf8 );
+            vector<uint8> diffCopy;
+            if ( pInstanceDiff != nullptr && instanceDiffSize > 0 )
+                diffCopy.assign( pInstanceDiff, pInstanceDiff + instanceDiffSize );
+            // 캐시의 프리팹은 그 사이 다시 읽힐 수 있다(에디터 핫 리로드) — 포인터가 아니라 경로를 들고 그때 다시 찾는다.
+            pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectId, resolvedPath, instanceName, savedDiff = std::move( diffCopy )]()
             {
-                SW_LOG_ERROR( "ObjectState apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
-                pGameObjectManager->destroyObject( pGameObject );
-                return nullptr;
+                GameObject*  pSpawned      = pGameObjectManager->findGameObjectById( objectId );
+                PrefabAsset* pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
+                const bool   bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName, savedDiff.data(), savedDiff.size() );
+                if ( pSpawned != nullptr && bStateWritten == false )
+                    pGameObjectManager->destroyObject( pSpawned );
+            } );
+            return pGameObject;
+        }
+
+        if ( applySpawnState( pGameObject, *pAsset, pInstanceNameUtf8, pInstanceDiff, instanceDiffSize ) == false )
+        {
+            pGameObjectManager->destroyObject( pGameObject );
+            return nullptr;
+        }
+        return pGameObject;
+    }
+
+    bool PrefabManager::applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName, const uint8* pInstanceDiff,
+                                         size_t instanceDiffSize )
+    {
+        if ( StringUtil::trim( asset.getStateData() ).empty() == false )
+        {
+            if ( asset.applyStateTo( pGameObject ) == false )
+            {
+                SW_LOG_ERROR( "ObjectState apply failed for '%#' — spawn aborted", instanceName );
+                return false;
             }
-            pGameObject->setName( hashed_string( pInstanceNameUtf8 ) );
+            pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
         }
 
         if ( pInstanceDiff != nullptr && instanceDiffSize > 0 )
         {
             const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
-            if ( pTypeInfo != nullptr )
+            if ( pTypeInfo != nullptr && ObjectDiffSerializer::deserializeDiff( pGameObject, *pTypeInfo, pInstanceDiff, instanceDiffSize ) == false )
             {
-                if ( ObjectDiffSerializer::deserializeDiff( pGameObject, *pTypeInfo, pInstanceDiff, instanceDiffSize ) == false )
-                {
-                    SW_LOG_ERROR( "Instance diff apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
-                    pGameObjectManager->destroyObject( pGameObject );
-                    return nullptr;
-                }
+                SW_LOG_ERROR( "Instance diff apply failed for '%#' — spawn aborted", instanceName );
+                return false;
             }
         }
-
-        return pGameObject;
+        return true;
     }
 
     uint32 PrefabManager::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
