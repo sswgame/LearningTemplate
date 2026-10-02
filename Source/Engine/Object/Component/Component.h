@@ -200,6 +200,14 @@ namespace sw
         virtual void onDestroy();
         /** @brief 프로퍼티가 바뀌었을 때 불리는 콜백입니다. */
         virtual void onPropertyChanged( hashed_string propertyName );
+        /**
+         * @brief 상태(저장된 PROPERTY)를 읽어 이 컴포넌트를 채운 뒤에 불립니다 — 씬 · 프리팹 로드, 되돌리기, 복제, 핫 리로드(언리얼 `PostLoad` ·
+         *        유니티 `OnAfterDeserialize`).
+         * @details 값을 자원으로 바꾸는 자리입니다(메시 id → 메시, 머티리얼 참조 → 머티리얼). 플레이 중이 아니어도(편집 중) 불립니다 — 예전에는
+         *          그 일을 시작(`onBeginPlay`) · 씬 초기화에서만 해서, 편집 중에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려지지 않았습니다.
+         *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으니 공유 상태는 잠그는 API 로만 만집니다.
+         */
+        virtual void onPostLoad() {}
 
         /**
          * @brief 서브틱을 등록합니다(TickGroup · Phase · Priority 지정).

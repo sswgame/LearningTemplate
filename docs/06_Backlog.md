@@ -2079,6 +2079,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 74 편집 중 메시 — 되돌리기 · 프리팹 드래그 · 복제로 다시 만든 메시가 플레이 · 씬 재로드 전까지 그려지지 않았다)
+
+결함 67 에서 남긴 것("로드는 값만 채운다")을 확인하니 에디터 결함이었다. 상태를 읽으면 컴포넌트를 새로 만드는데, 메시는 렌더 에셋(메시 id → 메시,
+머티리얼 참조 → 머티리얼)을 **시작(`onBeginPlay`) · 씬 초기화**에서만 풀었다. 플레이 중이면 다시 만든 컴포넌트도 다음 틱에 시작해 괜찮았지만,
+**편집 중**에 되돌리기 · 프리팹 드래그 · 복제로 다시 만든 메시는 `_mesh` 가 비어 GpuScene 이 건너뛰었다(다음 플레이 · 씬 재로드까지 안 보였다).
+언리얼 `PostLoad` · 유니티 `OnAfterDeserialize` 처럼 상태를 읽은 뒤 컴포넌트마다 `Component::onPostLoad` 를 부른다 — XML · JSON · 바이너리 세
+로더가 지나는 `finishLoad` 한 곳에서. 메시는 거기서 `resolveRenderAssets` 를 부른다(스프라이트는 텍스처 인스턴스까지). 비동기 씬 로드는 워커에서
+부르므로 그 경로(머티리얼 캐시 · 프리미티브 표 · 스프라이트 인스턴스 표)가 모두 잠그는 API 인지 확인했다. 씬 초기화의 풀기는 이제 대개 이미 풀린
+것을 보고 돌아간다.
+
+**검증.** `ObjectStateRoundTripTest.LoadedMeshResolvesItsRenderAssetsWithoutPlay`(시작하지 않은 월드에서 제자리 다시 읽기 · 새 오브젝트에 읽기 — 둘 다
+메시 · 머티리얼이 있다. 이전 코드에서 진다). 변이 둘(부르지 않기 · 메시가 무시하기)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (정리 — 리플렉션 desc 의 XML 파일 읽기 · 쓰기(`RenderResourceXml`)를 렌더러 옆에서 직렬화로: `ReflectedXmlFile`)
 
 남은 항목 "RenderResourceXml → Serialization". 렌더 패스 · 파이프라인 리소스가 함께 쓰는 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로

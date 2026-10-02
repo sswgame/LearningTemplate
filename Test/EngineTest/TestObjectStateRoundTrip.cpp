@@ -173,6 +173,38 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 }
 
 /**
+ * @brief [ObjectStateRoundTripTest] 플레이 중이 아니어도 상태를 읽은 메시는 그릴 메시 · 머티리얼을 갖는다 — 편집 중 되돌리기 · 프리팹 드래그
+ * @details 상태를 읽으면 컴포넌트를 새로 만든다. 메시는 렌더 에셋(메시 id → 메시, 머티리얼 참조 → 머티리얼)을 시작(`onBeginPlay`) · 씬 초기화에서만
+ *          풀어, **편집 중**에 되돌리기 · 프리팹 드래그로 다시 만든 메시는 다음 플레이 · 씬 재로드까지 그려지지 않았다(GpuScene 은 메시 없는 것을
+ *          건너뛴다). 언리얼 `PostLoad` · 유니티 `OnAfterDeserialize` 처럼 상태를 읽은 뒤 컴포넌트마다 `onPostLoad` 를 부른다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithoutPlay )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::GameObjectManager manager; // 시작하지 않은 월드(편집 중)
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Statue" ) );
+    sw::MeshComponent*    pMesh   = pSource->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMaterialPath( "engine/materials/benchtextured.material" );
+    SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+
+    // 되돌리기 — 같은 오브젝트에 제자리로 다시 읽는다.
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pSource, xml ) );
+    const sw::MeshComponent* pReloaded = pSource->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_TRUE( pReloaded->getRawMesh() != nullptr );
+    SW_EXPECT_TRUE( pReloaded->getMaterial() != nullptr );
+
+    // 프리팹 드래그 · 복제 — 새 오브젝트에 읽는다.
+    sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "StatueCopy" ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    const sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pCopyMesh );
+    SW_EXPECT_TRUE( pCopyMesh->getRawMesh() != nullptr );
+}
+
+/**
  * @brief [ObjectStateRoundTripTest] 부모를 제자리에서 다시 읽어도(되돌리기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 다른 오브젝트의 자식이 붙어 있다
  * @details 제자리 로드는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가
  *          됐다.** 로드는 이 오브젝트 안의 부착만 되붙였다. 에디터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튀었다.

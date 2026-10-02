@@ -46,6 +46,8 @@ namespace sw
          * @details 파생이 덧붙입니다(스프라이트는 텍스처 인스턴스). 로드는 값만 채우므로 이것이 값을 자원으로 바꾸는 자리입니다.
          */
         virtual void resolveRenderAssets();
+        /** @brief 읽은 메시 id · 머티리얼 참조를 자원으로 풉니다(`resolveRenderAssets`). 편집 중 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려진다. */
+        void onPostLoad() override { resolveRenderAssets(); }
         /**
          * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
          * @details 이미 메시가 있으면 그대로 둡니다. 비어 있으면 타입의 기본(`getDefaultMeshId` — 메시는 단위 큐브, 스프라이트는 사각형).

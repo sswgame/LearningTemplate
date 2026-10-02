@@ -101,6 +101,12 @@ namespace sw
 
                 pGameObject->setActive( pGameObject->isActive() );
                 pGameObject->applyLoadedHierarchy();
+                // 값을 다 읽었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`). 편집 중에도 불린다.
+                for ( Component* pComp : pGameObject->getComponents() )
+                {
+                    if ( pComp != nullptr && pComp->isPendingDestroy() == false )
+                        pComp->onPostLoad();
+                }
             }
 
             /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리). */
