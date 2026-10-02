@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 
 namespace sw
 {
@@ -76,91 +77,34 @@ namespace sw
         };
         createComputeConstantBuffer( _instanceSortCb, sizeof( GpuSortParams ), "instance sort" );
 
-        constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
-        const EngineData&   engineData         = engine::getEngineData();
-        // 셰이더 경로는 파이프라인 XML 패스 설정이 먼저다. EngineData 경로는 마지막 폴백일 뿐이다.
-
-        auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
-                                   const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true,
-                                   const vector<string>* pExtraDefine = nullptr ) -> RHIPipelineStateHandle
+        // 엔진 PSO 는 패스 종류의 표(RenderPassTypeTraits)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
+        // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 베이커가 같은 표를 훑는다.
+        const EngineData&     engineData = engine::getEngineData();
+        const RHICapabilities caps       = _pDevice->getCapabilities();
+        for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
-            const RHIPipelineStateHandle pso =
-                createPsoForPassType( passType, shaderPath, bDepthTest, numRt, pRtFormats, bBlend, bDepthWrite, pExtraDefine );
+            const RenderPassType        passType = static_cast<RenderPassType>( typeIndex );
+            const RenderPassTypeTraits& traits   = getRenderPassTypeTraits( passType );
+            if ( traits._pDefaultShader == nullptr )
+                continue;
+
+            RHIPipelineStateHandle pso{ 0 };
+            if ( traits.hasFlag( RenderPassTraitFlag::kCompute ) )
+            {
+                // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGpuCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
+                // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
+                const bool bCapable = traits.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
+                if ( bCapable )
+                    pso = _pDevice->getResource()->createComputePipelineState( ( engineData.*traits._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
+            }
+            else
+            {
+                pso = createPsoForPassType( passType );
+                if ( pso == 0 && traits._pFallbackShader != nullptr )
+                    pso = createEnginePso( ( engineData.*traits._pFallbackShader ).c_str(), traits.hasFlag( RenderPassTraitFlag::kDepthTest ) );
+            }
             if ( pso != 0 )
                 _psoCache.setEnginePso( passType, pso );
-            return pso;
-        };
-
-        registerPso( RenderPassType::Shadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        // 깊이 프리패스는 그림자와 같은 셰이더 파일을 **카메라** 행렬로 그린다(패스 define, 셰이더가 행렬을 고른다). 베이크도 같은 함수에 묻는다.
-        const vector<string> listPrepassDefine = FrameRendererUtil::getPassDefine( RenderPassType::DepthPrepass );
-        registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true, &listPrepassDefine );
-        registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
-        registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
-        // 반투명 패스는 블렌드를 켜고 뎁스 쓰기를 끄는 것까지가 **패스의 몫**이다. 어떤 셰이더 퍼뮤테이션으로
-        // 그릴지는 머티리얼이 정한다. glassmaterial 이 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로 들고
-        // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전에는 이 define 을 여기에 박아 두어
-        // "반투명 패스에 들어온 것은 무조건 반투명" 이었다. 머티리얼이 무엇을 선언했든 상관이 없었다.
-        registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
-        // G버퍼 패스의 PSO 에는 define 을 얹는다. 이 desc 를 물려받는 **머티리얼 변형**까지 같이
-        // MRT 서명으로 컴파일된다(createMaterialPsoVariant 가 패스 desc 를 통째로 복사한다).
-        const vector<string> listGbufferDefine = FrameRendererUtil::getPassDefine( RenderPassType::GBuffer );
-        registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat, false, true,
-                     &listGbufferDefine );
-        registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
-        registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
-        registerPso( RenderPassType::Lighting, engineData._shaderDeferredLighting.c_str(), false );
-        registerPso( RenderPassType::Bloom, engineData._shaderPostBloom.c_str(), false );
-
-        {
-            RHIPipelineStateHandle psoOutline = createPsoForPassType( RenderPassType::Outline, engineData._shaderPostOutlineCommon.c_str(), false );
-            if ( psoOutline == 0 )
-                psoOutline = createEnginePso( engineData._shaderPostOutlineEngine.c_str(), false );
-            if ( psoOutline != 0 )
-                _psoCache.setEnginePso( RenderPassType::Outline, psoOutline );
-        }
-
-        registerPso( RenderPassType::Present, engineData._shaderFullscreenBlit.c_str(), false );
-
-        const RHIPipelineStateHandle psoSsao = registerPso( RenderPassType::SSAO, engineData._shaderSsao.c_str(), false );
-        if ( psoSsao != 0 )
-            _psoCache.setEnginePso( RenderPassType::SSAO, psoSsao );
-
-        registerPso( RenderPassType::TAA, engineData._shaderTaa.c_str(), false );
-        registerPso( RenderPassType::Tonemap, engineData._shaderTonemap.c_str(), false );
-
-        // 컴퓨트 PSO: GpuCull. capabilities 가 허락하고 PSO 생성이 실제로 성공했을 때만 GPU 드리븐으로 간다.
-        const RHICapabilities caps = _pDevice->getCapabilities();
-        if ( caps._bGpuCulling != SW_FALSE )
-        {
-            const RHIPipelineStateHandle psoGpuCull =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoGpuCull != 0 )
-                _psoCache.setEnginePso( RenderPassType::GpuCull, psoGpuCull );
-
-            // 압축한 가시 목록을 깊이순으로 되돌리는 패스. 컬링과 같은 바인딩 자리를 쓴다.
-            const RHIPipelineStateHandle psoSort =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceSort.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoSort != 0 )
-                _psoCache.setEnginePso( RenderPassType::InstanceSort, psoSort );
-        }
-
-        // 인스턴스 애니메이션은 **컬링 능력과 무관하다.** 구조버퍼 UAV 하나만 있으면 된다.
-        // 예전에는 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
-        // 같이 못 건다" 는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
-        // 버퍼만 쓰므로 그 제약과 상관이 없는데 같이 꺼져서, DX11 에서만 큐브가 아예 돌지 않았다.
-        if ( caps._bCompute != SW_FALSE )
-        {
-            const RHIPipelineStateHandle psoAnim =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoAnim != 0 )
-                _psoCache.setEnginePso( RenderPassType::InstanceAnim, psoAnim );
-
-            // 메시 모프도 같은 조건이다. 구조버퍼 SRV 하나와 UAV 하나뿐이라 컬링 능력과 무관하다.
-            const RHIPipelineStateHandle psoMorph =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderMeshMorph.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoMorph != 0 )
-                _psoCache.setEnginePso( RenderPassType::MeshMorph, psoMorph );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다. 예전에는 진단용 전역 변수로 끌 수 있는 두 번째
@@ -268,6 +212,15 @@ namespace sw
         return _psoCache.findEnginePso( passType );
     }
 
+    RHIPipelineStateHandle FrameRenderer::findPassPso( RenderPassType passType ) const
+    {
+        const RHIPipelineStateHandle pso = _psoCache.findEnginePso( passType );
+        if ( pso != 0 )
+            return pso;
+        const RenderPassType fallbackType = getRenderPassTypeTraits( passType )._psoFallbackType;
+        return fallbackType != RenderPassType::Invalid ? _psoCache.findEnginePso( fallbackType ) : 0;
+    }
+
     void FrameRenderer::ensureMaterialFallbackBuffers()
     {
         if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
@@ -332,8 +285,7 @@ namespace sw
             if ( format == RHIFormat::Unknown || _psoCache.findPresentPso( format, existing ) )
                 continue;
             const RHIFormat              arrRtvFormat[] = { format };
-            const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
-                                                                                false, 1, arrRtvFormat );
+            const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, arrRtvFormat );
             // 실패해도 기록한다. 0 이면 부르는 쪽이 blit 폴백으로 간다.
             _psoCache.setPresentPso( format, pso );
         }

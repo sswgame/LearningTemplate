@@ -67,7 +67,7 @@ namespace sw
     inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
 
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯 · Invalid 제외). */
-    inline bool isPipelinePassType( RenderPassType type )
+    constexpr bool isPipelinePassType( RenderPassType type )
     {
         return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Present );
     }

@@ -26,8 +26,13 @@ Renderer/
 - `RenderPassManager` — 위 둘의 로드·캐시
 - `RenderPassType` (RenderPassResource.h) — 패스 타입 이름. XML 의 `_type` 이 이 열거형으로
   해석되고, 해석되지 않으면 `RenderPipelineResource::validate` 가 잡습니다.
-- `RenderPassInputContract` — 패스 입력의 **역할** 표(필수/선택). 검증과 실행이 같은 표를 보므로
-  "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다.
+- `RenderPassTypeTraits` — 패스 종류 하나의 사실을 **enum 값마다 한 줄**로 모은 표입니다. 기본 셰이더(EngineData 칸) ·
+  PSO 기본 상태 · 패스 define · 컬러 RT 수 · 그리는 대상(씬 메시 · 일반 풀스크린 · 컴퓨트) · 대신할 PSO · 입력 계약.
+  엔진 PSO 등록(`ensurePassResources`) · 셰이더 베이크 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
+  enum 으로 읽습니다. 새 포스트 패스는 enum 한 줄 + 표의 case 하나이고, 전용 실행 코드가 필요한 패스만
+  `executePass` 의 switch 에 case 를 더합니다.
+- `RenderPassInputContract` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
+  칸을 보므로 "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다.
 
 XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 잘못 그리거나 GPU 가 죽습니다.
 그래서 로드 시점에 `validate()` 가 자기모순을 검사합니다.

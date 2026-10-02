@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -221,49 +222,46 @@ namespace sw
                     }
                 }
 
-                // 2) 부트스트랩 · EngineData 기본 셰이더
+                // 2) 패스 종류 표(RenderPassTypeTraits)의 엔진 셰이더. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
+                //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 굽는다(폴백 셰이더 포함).
+                for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+                {
+                    const RenderPassTypeTraits& traits = getRenderPassTypeTraits( static_cast<RenderPassType>( typeIndex ) );
+                    if ( traits._pDefaultShader == nullptr )
+                        continue;
+                    if ( traits.hasFlag( RenderPassTraitFlag::kCompute ) )
+                    {
+                        appendRequestUnique( outListRequest, engineData.*traits._pDefaultShader, "CSMain", ShaderStage::Compute, {} );
+                        continue;
+                    }
+                    for ( string EngineData::* pShader : { traits._pDefaultShader, traits._pFallbackShader } )
+                    {
+                        if ( pShader == nullptr )
+                            continue;
+                        appendRequestUnique( outListRequest, engineData.*pShader, "VSMain", ShaderStage::Vertex, {} );
+                        appendRequestUnique( outListRequest, engineData.*pShader, "PSMain", ShaderStage::Pixel, {} );
+                    }
+                }
+
+                // 패스가 아닌 엔진 · 시험 셰이더.
                 const vector<string> listEngineShader = {
-                    engineData._shaderShadowDepth,
-                    engineData._shaderForwardLit,
-                    engineData._shaderGBuffer,
-                    engineData._shaderGBufferAlbedo,
-                    engineData._shaderGBufferNormal,
-                    engineData._shaderDeferredLighting,
-                    engineData._shaderPostBloom,
-                    engineData._shaderPostOutlineCommon,
-                    engineData._shaderPostOutlineEngine,
-                    engineData._shaderFullscreenBlit,
                     engineData._shaderFullscreenTriangle,
-                    engineData._shaderSsao,
-                    engineData._shaderTaa,
-                    engineData._shaderTonemap,
                     "engine/shaders/sprite2d.hlsl",
                     "common/shaders/computetestgeometry.hlsl",
                     "common/shaders/provokingvertex.hlsl",
                     "common/shaders/instanceslotprobe.hlsl" };
-
                 for ( const string& path : listEngineShader )
                 {
-                    if ( path.empty() )
-                        continue;
                     appendRequestUnique( outListRequest, path, "VSMain", ShaderStage::Vertex, {} );
                     appendRequestUnique( outListRequest, path, "PSMain", ShaderStage::Pixel, {} );
                 }
 
-                // 부트스트랩 컴퓨트 셰이더
                 const vector<string> listEngineComputeShader = {
-                    engineData._shaderGpuCull,
-                    engineData._shaderInstanceAnim,
-                    engineData._shaderInstanceSort,
-                    engineData._shaderMeshMorph,
                     "common/shaders/samplecompute.hlsl",
                     "common/shaders/sampleindirect.hlsl",
                     "common/shaders/computetexturewrite.hlsl" };
-
                 for ( const string& path : listEngineComputeShader )
                 {
-                    if ( path.empty() )
-                        continue;
                     appendRequestUnique( outListRequest, path, "CSMain", ShaderStage::Compute, {} );
                 }
 

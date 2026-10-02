@@ -49,12 +49,12 @@ namespace sw
     /**
      * @struct RenderPassInputContract
      * @brief 패스 타입 하나가 읽는 역할 목록입니다. 필수가 빠지면 검증 오류이고, 목록에 없는 역할을 선언해도 오류입니다.
+     * @details 패스 타입마다의 계약은 `RenderPassTypeTraits::_inputContract` 에 있습니다.
      */
     struct RenderPassInputContract
     {
         static constexpr uint32 kMaxRole = 4;
 
-        RenderPassType      _type{ RenderPassType::Invalid };
         RenderPassInputRole _arrRequired[kMaxRole]{};
         uint32              _requiredCount{ 0 };
         RenderPassInputRole _arrOptional[kMaxRole]{};
@@ -65,7 +65,7 @@ namespace sw
     };
 
     /**
-     * @brief 풀스크린 패스 타입의 입력 계약을 반환합니다. 메시 패스(Shadow · GBuffer · ForwardOpaque · Transparent …)는 nullptr 입니다.
+     * @brief 풀스크린 패스 타입의 입력 계약을 반환합니다(`RenderPassTypeTraits` 의 칸). 메시 패스(Shadow · GBuffer · ForwardOpaque · Transparent …)는 nullptr 입니다.
      * @details 메시 패스의 입력은 지오메트리 드로우가 정하고(그림자 · 인스턴스 · 머티리얼), 선언은 그래프 순서용입니다.
      */
     const RenderPassInputContract* findRenderPassInputContract( RenderPassType type );

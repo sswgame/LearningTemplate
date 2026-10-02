@@ -468,12 +468,13 @@ namespace sw
         RHIPipelineStateHandle createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets = 1,
                                                 const RHIFormat* pRtvFormats = nullptr, bool bBlend = false,
                                                 bool bDepthWrite = true );
-        /** @brief 파이프라인 XML 패스 설정으로 PSO 를 만들고, 없으면 타입 기본값을 씁니다. */
-        RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, string_view defaultShader,
-                                                     bool bDepthTest, uint32 numRenderTargets = 1,
-                                                     const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
-                                                     bool                  bDefaultDepthWrite = true,
-                                                     const vector<string>* pExtraDefines      = nullptr );
+        /**
+         * @brief 패스 종류의 표(RenderPassTypeTraits)와 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
+         * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변종). nullptr 이면 표의 고정 포맷 → 출력 선언 순입니다
+         */
+        RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );
+        /** @brief 패스의 엔진 PSO 를 찾고, 없으면 표가 정한 대신할 패스(`_psoFallbackType`)의 PSO 를 반환합니다. */
+        RHIPipelineStateHandle findPassPso( RenderPassType passType ) const;
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.

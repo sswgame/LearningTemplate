@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -70,17 +71,24 @@ namespace sw
         return handle;
     }
 
-    RHIPipelineStateHandle FrameRenderer::createPsoForPassType( RenderPassType passType, string_view defaultShader,
-                                                                bool bDepthTest, uint32 numRenderTargets, const RHIFormat* pRtvFormats,
-                                                                bool bDefaultBlend, bool bDefaultDepthWrite,
-                                                                const vector<string>* pExtraDefines )
+    RHIPipelineStateHandle FrameRenderer::createPsoForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride )
     {
         if ( _pDevice == nullptr )
             return 0;
 
-        const RenderGraphPassDesc* pPassDesc = findPassDescByType( passType );
-        RHIPipelineStateDesc       desc{};
-        desc._vertexShaderPath = ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false ) ? pPassDesc->_shaderPath : defaultShader;
+        // 셰이더 · define · 기본 렌더 상태는 패스 종류의 표(RenderPassTypeTraits)가 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
+        // 셰이더와 define 은 베이커와 **같은 함수**(selectRenderPassShader)로 정한다 — 어긋나면 Shipping 에서 매니페스트 미스가 난다.
+        const RenderPassTypeTraits&     traits             = getRenderPassTypeTraits( passType );
+        const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
+        const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getEngineData() );
+        const bool                      bDepthTest         = traits.hasFlag( RenderPassTraitFlag::kDepthTest );
+        const bool                      bDefaultDepthWrite = traits.hasFlag( RenderPassTraitFlag::kDepthWrite );
+        const bool                      bDefaultBlend      = traits.hasFlag( RenderPassTraitFlag::kBlend );
+        const uint32                    numRenderTargets   = traits._colorTargetCount;
+        const RHIFormat*                pRtvFormats        = pRtvFormatOverride != nullptr ? pRtvFormatOverride : traits._pColorFormat;
+
+        RHIPipelineStateDesc desc{};
+        desc._vertexShaderPath = shader._shaderPath;
         desc._pixelShaderPath  = desc._vertexShaderPath;
         desc._vertexEntryPoint = ( pPassDesc != nullptr && pPassDesc->_vertexEntryPoint.empty() == false )
                                    ? pPassDesc->_vertexEntryPoint
@@ -88,13 +96,9 @@ namespace sw
         desc._pixelEntryPoint  = ( pPassDesc != nullptr && pPassDesc->_pixelEntryPoint.empty() == false )
                                    ? pPassDesc->_pixelEntryPoint
                                    : FrameRendererUtil::Entry::kPSMain;
-        // 예전에는 pPassDesc 가 있으면 XML 값으로 **덮어썼다**. 그런데 RenderGraphPassDesc 의
-        // _bEnableDepthTest/_bEnableDepthWrite 기본값이 true 이고 파이프라인 XML 은 이 항목을
-        // 아예 적지 않는다. 그래서 registerPso 가 풀스크린 패스에 명시적으로 넘긴 bDepthTest=false 가
-        // 통째로 무시되고 뎁스 테스트가 켜졌다. 그 PSO 는 뎁스 포맷을 선언하는데 풀스크린 패스는
-        // DSV 를 바인딩하지 않으므로 드로우마다 검증 오류가 났다.
-        // 부르는 쪽의 bDepthTest 는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은
-        // 그 안에서의 조정이다. 그래서 덮어쓰기가 아니라 AND 다. XML 로 끌 수는 있어도 켤 수는 없다.
+        // 표의 깊이 테스트는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은 그 안에서의 조정이다.
+        // 그래서 덮어쓰기가 아니라 AND 다. XML 로 끌 수는 있어도 켤 수는 없다(RenderGraphPassDesc 의 기본값이 true 라
+        // 덮어쓰면 풀스크린 패스에 깊이 테스트가 켜지고, DSV 없이 그리는 드로우마다 검증 오류가 난다).
         const bool bPassDepthTest  = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthTest != 0 );
         const bool bPassDepthWrite = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthWrite != 0 );
         desc._bEnableDepthTest     = ( bDepthTest && bPassDepthTest ) ? 1 : 0;
@@ -130,27 +134,8 @@ namespace sw
                 else if ( cull == "Front" || cull == "front" )
                     desc._cullMode = RHICullMode::Front;
             }
-            if ( pPassDesc->_listPermutation.empty() == false )
-                desc._listShaderDefine = pPassDesc->_listPermutation;
         }
-
-        if ( pExtraDefines != nullptr )
-        {
-            for ( const string& defineStr : *pExtraDefines )
-            {
-                bool found{ false };
-                for ( const string& existing : desc._listShaderDefine )
-                {
-                    if ( existing == defineStr )
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if ( found == false )
-                    desc._listShaderDefine.push_back( defineStr );
-            }
-        }
+        desc._listShaderDefine = shader._listDefine;
 
         desc._numRenderTargets = numRenderTargets;
         if ( desc._numRenderTargets > kMaxColorAttachments )
@@ -320,7 +305,7 @@ namespace sw
         {
             if ( passPso == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
-            const bool            bTransparentPass = ( passType == RenderPassType::Transparent );
+            const bool            bTransparentPass = getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<uint32>& listPermutation  = bTransparentPass ? listTransparentPermutation : listOpaquePermutation;
             const bool            bHasPlain        = bTransparentPass ? bTransparentHasPlain : bOpaqueHasPlain;
 

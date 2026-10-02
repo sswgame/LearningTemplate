@@ -12,6 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -41,24 +42,6 @@ namespace sw
      *          컴파일은 되고 화면만 안 바뀝니다(조용한 실패). 셰이더를 더할 때 이 이름을 보십시오.
      */
     inline constexpr const utf8* kViewModeUnlitDefine = "SW_VIEWMODE_UNLIT=1";
-
-    /**
-     * @brief G버퍼 패스가 머티리얼 셰이더에 얹는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
-     * @details 머티리얼이 셰이더 경로를 정하므로(`usesMaterialShader`) 디퍼드의 G버퍼 패스도 머티리얼의
-     *          `.hlsl` 로 그립니다. 그 셰이더가 `SV_TARGET` 하나만 내면 **노멀 타깃이 클리어 값 그대로**
-     *          남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산합니다. 오류도 경고도 없이 말입니다. 언리얼이
-     *          같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리를 이 엔진에서는 define 이 맡습니다.
-     * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고
-     *       화면만 틀립니다. `kViewModeUnlitDefine` 과 같은 종류의 기준입니다.
-     */
-    inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
-
-    /**
-     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadowdepth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
-     * @details 예전에는 이 구분이 없어 프리패스가 그림자와 같은 광원 행렬(`g_LightViewProj`)로 그렸고, 장면 깊이에 광원 공간의 깊이가 들어갔다 —
-     *          프리패스를 넣은 파이프라인이 하나도 없어서 드러나지 않았다. 언리얼의 EarlyZ 패스 · 유니티 URP 의 Depth Priming 자리다.
-     */
-    inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
 
     /** @brief FrameRenderer TU 들이 함께 쓰는 패스 · 어태치먼트 이름과 도우미입니다. */
     struct FrameRendererUtil
@@ -178,7 +161,7 @@ namespace sw
         /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
         static bool isDepthOnlyPassType( RenderPassType passType )
         {
-            return passType == RenderPassType::Shadow || passType == RenderPassType::DepthPrepass;
+            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDepthOnly );
         }
 
         /**
@@ -251,43 +234,31 @@ namespace sw
          */
         static bool drawsSceneMeshes( RenderPassType passType )
         {
-            return passType == RenderPassType::Shadow || passType == RenderPassType::DepthPrepass ||
-                   passType == RenderPassType::ForwardOpaque || passType == RenderPassType::ForwardOpaqueNoDepthWrite ||
-                   passType == RenderPassType::GBuffer || passType == RenderPassType::GBufferAlbedo ||
-                   passType == RenderPassType::GBufferNormal || passType == RenderPassType::Transparent;
+            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes );
         }
 
         /**
          * @brief 이 패스가 **머티리얼의 셰이더**로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
          * @details 언리얼로 치면 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
          *          퍼뮤테이션을 줍니다. 그림자 · 뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 기준이고, 머티리얼은
-         *          define 만 얹습니다(알파 마스크 같은 것이 나중에 여기로 들어옵니다). 여기서 true 인 패스만
-         *          머티리얼이 선언한 .hlsl 로 갈아탑니다.
+         *          define 만 얹습니다. 여기서 true 인 패스만 머티리얼이 선언한 .hlsl 로 갈아탑니다.
          */
         static bool usesMaterialShader( RenderPassType passType )
         {
-            return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
+            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader );
         }
 
         /**
          * @brief 이 패스 타입이 셰이더에 **얹는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
-         * @details 패스가 더하는 define 은 XML 에만 있는 것이 아닙니다. G버퍼 패스는 픽셀 출력 서명을 MRT 로
-         *          바꾸려고 `SW_PASS_GBUFFER=1` 을 **C++ 에서** 얹습니다. 그래서 "이 패스의 define 집합" 을
-         *          XML 만 보고 답하면 런타임과 어긋납니다. 실제로 어긋나 있었습니다: 베이커는 XML 의 빈
-         *          `<_listPermutation />` 만 보고 G버퍼를 define 없이 구웠고, 런타임은
-         *          `SW_PASS_GBUFFER=1` 이 든 해시를 찾았습니다. Shipping 은 런타임 컴파일이 없으므로 G버퍼
-         *          드로우가 통째로 사라졌고, 디퍼드 화면이 한 색으로 남았습니다
-         *          (`RenderPassGpuTest.DeferredPipelineDrawsGeometry` · `AmbientOcclusionReachesBloom`).
-         * @note `hasPixelStage` · `usesMaterialShader` 와 같은 종류의 기준입니다. 런타임과 베이커가 **같은
-         *       이 함수**를 보므로, 패스에 define 을 더할 자리는 앞으로도 여기 하나입니다.
+         * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 얹습니다. 그래서 "이 패스의
+         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 베이커가 같은 표(`RenderPassTypeTraits`)를 봅니다.
          */
         static vector<string> getPassDefine( RenderPassType passType )
         {
             vector<string> listDefine;
-            if ( passType == RenderPassType::GBuffer )
-                listDefine.push_back( string{ kPassGBufferDefine } );
-            else if ( passType == RenderPassType::DepthPrepass )
-                listDefine.push_back( string{ kPassDepthPrepassDefine } );
+            const utf8*    pDefine = getRenderPassTypeTraits( passType )._pPassDefine;
+            if ( pDefine != nullptr )
+                listDefine.push_back( string{ pDefine } );
             return listDefine;
         }
 
@@ -297,12 +268,11 @@ namespace sw
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
          *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빕니다.
          *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 늘 Solid · Lit 로 둡니다.
-         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 따로 둡니다.
-         *       한쪽이 바뀔 때 다른 쪽이 조용히 따라가면 안 됩니다.
+         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 표의 칸도 따로 둡니다.
          */
         static bool appliesViewMode( RenderPassType passType )
         {
-            return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
+            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kAppliesViewMode );
         }
 
         /**

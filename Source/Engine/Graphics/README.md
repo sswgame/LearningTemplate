@@ -214,11 +214,11 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 나머지 컬러는 SourceColor. 셰이더는 역할 이름으로 읽는다(`g_SourceColorIndex` · `g_AmbientOcclusionIndex` …).
 타깃은 선언한 출력 중 첫 번째로 존재하는 것이다.
 
-`RenderPassInputContract`(Pipeline/) 가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineResource::validate` 4번
+`RenderPassInputContract`(Pipeline/, 타입마다의 목록은 `RenderPassTypeTraits` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineResource::validate` 4번
 검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
 "셰이더가 kInvalidIndex 를 읽습니다", SourceColor 가 둘이면 오류. 디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어
 두고도 아무도 걸지 않아 SSAO 가 매 프레임 버려지던 것이 이 검사가 없어서였다. 새 역할이 필요하면 (1) enum 과
-이름표, (2) 계약 표, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
+이름표, (2) 패스 종류 표(`RenderPassTypeTraits`)의 계약 칸, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
 네 곳이다. `FrameRenderer::setInputRoleEnabled( role, false )` 는 그 역할을 걸지 않는 쇼 플래그다(테스트가 켬/끔을 비교한다).
 
 **`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
