@@ -76,6 +76,20 @@ namespace sw
 /**
  * @brief [TaskTest] 일반 태스크 DAG
  */
+/**
+ * @brief [TaskTest] `TaskArgs{ a, b }` 는 값을 그 타입 그대로 담는다
+ * @details 초기화 목록 생성자가 `_listValue{ begin, end }` 로 vector 를 채워, 반복자 두 개(`const TaskValue*`)가 TaskValue 로 담겼다 —
+ *          `get<int32>( 0 )` 이 포인터를 읽었다(Debug 는 타입 크기 assert).
+ */
+SW_TEST_CASE( TaskTest, InitializerListArgsKeepValueTypes )
+{
+    const sw::TaskArgs args{ sw::TaskValue{ int32{ 7 } }, sw::TaskValue{ sw::string( "seven-long-enough-to-leave-sso-behind" ) } };
+    SW_ASSERT_EQUAL( 2u, args.getCount() );
+    SW_ASSERT_NOT_NULL( args.getPtr<int32>( 0 ) );
+    SW_EXPECT_EQUAL( 7, args.get<int32>( 0 ) );
+    SW_EXPECT_STREQ( "seven-long-enough-to-leave-sso-behind", args.get<sw::string>( 1 ).c_str() );
+}
+
 SW_TEST_CASE( TaskTest, GeneralTaskDAG )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
