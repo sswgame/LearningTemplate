@@ -97,6 +97,17 @@ namespace sw
                         dst.setObject();
                         return;
                     }
+                    // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
+                    SerializeContext::OpaqueElementView opaque{};
+                    if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Json )
+                    {
+                        JsonDocument rawDoc;
+                        if ( rawDoc.tryParse( opaque._text ) )
+                        {
+                            dst.assignFrom( rawDoc.getRoot() );
+                            return;
+                        }
+                    }
                     const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
                     if ( pRuntimeType == nullptr )
                     {
@@ -184,14 +195,19 @@ namespace sw
                         if ( listKey.size() != 1 )
                             continue;
                         const hashed_string typeName = hashed_string::findInterned( listKey[0] );
-                        if ( typeName.empty() )
-                            continue;
-                        void* pObj = ctx.createOwnedPointer( typeName );
+                        const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                        void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
                         if ( pObj == nullptr )
+                        {
+                            // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다.
+                            const string                        rawJson = elem.dump();
+                            SerializeContext::OpaqueElementView opaque{};
+                            opaque._typeName = listKey[0];
+                            opaque._format   = SerializeContext::OpaqueFormat::Json;
+                            opaque._text     = rawJson;
+                            (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다(예전과 같다)
                             continue;
-                        const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
-                        if ( pType == nullptr )
-                            continue;
+                        }
                         if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
                             bOk = false;
                     }

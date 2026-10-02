@@ -8,6 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
+#include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -128,11 +129,34 @@ namespace sw
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
                 if ( pGameObject == nullptr || pGameObject->getManager() == nullptr )
                     return nullptr;
-                Component* pCreated = pGameObject->getManager()->addComponentByName( pGameObject, typeName, false );
-                if ( pCreated == nullptr )
-                    SW_LOG_WARNING( "'%#' has a component of unknown type '%#' - it is not created and saving now would drop it",
-                                    pGameObject->getName().c_str(), typeName.c_str() );
-                return pCreated;
+                // 만들지 못하면 직렬화기가 원문을 `keepMissingComponent` 에 맡긴다(경고도 그쪽이 한다).
+                return pGameObject->getManager()->addComponentByName( pGameObject, typeName, false );
+            }
+
+            /**
+             * @brief 모르는 타입의 컴포넌트 원문을 `MissingComponent` 로 맡습니다. 예전에는 건너뛰어, 그대로 저장하면 그 값이 영영 사라졌다.
+             */
+            static bool keepMissingComponent( void* pOuter, const SerializeContext::OpaqueElementView& element )
+            {
+                GameObject* pGameObject = static_cast<GameObject*>( pOuter );
+                if ( pGameObject == nullptr )
+                    return false;
+                MissingComponent* pMissing = pGameObject->addComponent<MissingComponent>();
+                if ( pMissing == nullptr )
+                    return false;
+                pMissing->setOriginalElement( element );
+                SW_LOG_WARNING( "'%#' has a component of unknown type '%#' - kept as MissingComponent, saving writes its data back unchanged",
+                                pGameObject->getName().c_str(), element._typeName );
+                return true;
+            }
+
+            /** @brief 원소가 `MissingComponent` 면 맡은 원문을 돌려줍니다 — 직렬화기가 같은 형식이면 그대로 다시 씁니다. */
+            static bool queryMissingComponent( const void* pElement, SerializeContext::OpaqueElementView& outElement )
+            {
+                const Component* pComp = static_cast<const Component*>( pElement );
+                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() != MissingComponent::StaticType() )
+                    return false;
+                return static_cast<const MissingComponent*>( pComp )->tryGetOriginalElement( outElement );
             }
 
             static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
@@ -158,6 +182,7 @@ namespace sw
                 ctx.setOuterInstance( pGameObject );
                 ctx.setOwnedPointerFactory( &createOwnedComponent );
                 ctx.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
+                ctx.setOpaqueElementHandlers( &keepMissingComponent, &queryMissingComponent );
                 // 지금 타입에 없는 칸은 건너뛰고 읽는다 — 세 형식이 같은 규칙이다. 예전에는 XML · JSON 만 건너뛰고 바이너리는 **오브젝트 통째로**
                 // 실패해, 컴포넌트 PROPERTY 하나를 지우면 그 컴포넌트를 가진 모든 오브젝트의 세이브 · 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못했다.
                 ctx.setAllowUnknownProperties( true );

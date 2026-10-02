@@ -227,10 +227,31 @@ namespace sw
                 }
             }
 
-            /** @brief 매크로와 커서 사이에 다른 선언의 경계(`;` `{` `}`)가 없는지 봅니다. 있으면 그 매크로는 앞 선언의 것입니다. */
+            /**
+             * @brief 매크로와 커서 사이에 다른 선언의 경계(`;` `{` `}`)가 없는지 봅니다. 있으면 그 매크로는 앞 선언의 것입니다.
+             * @details 따옴표 안(애노테이션 문자열)은 경계가 아닙니다. 예전에는 따옴표 안도 셌다 — `Tooltip = "…; …"` 하나로 그 타입의
+             *          `REFLECT()` 가 "앞 선언의 것" 이 되어, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로 빌드가 섰다.
+             */
             static bool hasNoDeclarationBoundary( const string_view text )
             {
-                return text.find_first_of( ";{}" ) == string_view::npos;
+                bool bInQuote = false;
+                for ( size_t index = 0; index < text.size(); ++index )
+                {
+                    const utf8 character = text[index];
+                    if ( bInQuote )
+                    {
+                        if ( character == '\\' )
+                            ++index; // 이스케이프한 글자는 따옴표를 닫지 않는다
+                        else if ( character == '"' )
+                            bInQuote = false;
+                        continue;
+                    }
+                    if ( character == '"' )
+                        bInQuote = true;
+                    else if ( character == ';' || character == '{' || character == '}' )
+                        return false;
+                }
+                return true;
             }
 
             /**
@@ -268,9 +289,8 @@ namespace sw
                 if ( macroPos == string_view::npos )
                     return {};
 
-                const string_view afterMacro = source._window.substr( macroPos );
-                const size_t      closeParen = afterMacro.find( ')' );
-                if ( closeParen != string_view::npos && hasNoDeclarationBoundary( afterMacro.substr( closeParen + 1 ) ) == false )
+                // 매크로와 커서 사이에 경계가 있으면 앞 선언의 것이다(`hasSourceAnnotation` 과 같은 판정 — 따옴표 안은 보지 않는다).
+                if ( hasNoDeclarationBoundary( source._window.substr( macroPos ) ) == false )
                     return {};
 
                 // 매크로 괄호 깊이를 따라 읽는다. 인자는 창 끝(커서)을 넘어 끝날 수 있어 파일 내용에서 읽는다.
@@ -282,21 +302,23 @@ namespace sw
                 while ( charIndex < content.size() && depth > 0 )
                 {
                     const utf8 character = content[charIndex++];
-                    if ( character == '"' )
+                    if ( bInQuote )
                     {
-                        bInQuote = ( bInQuote == false );
+                        if ( character == '\\' )
+                            ++charIndex; // 이스케이프한 글자(`\"`)는 따옴표를 닫지 않는다
+                        else if ( character == '"' )
+                            bInQuote = false;
                         continue;
                     }
-                    if ( bInQuote )
-                        continue;
-
-                    if ( character == '(' )
+                    if ( character == '"' )
+                        bInQuote = true;
+                    else if ( character == '(' )
                         ++depth;
                     else if ( character == ')' )
                         --depth;
                 }
-                if ( charIndex <= argsStart )
-                    return {};
+                if ( depth != 0 || charIndex <= argsStart )
+                    return {}; // 괄호가 닫히지 않았다(파일 끝) — 컴파일러가 먼저 알린다
 
                 StringBuilder<constant::kMaxBuffer1024> b;
                 b.append( desc._pPrefix );

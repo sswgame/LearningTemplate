@@ -116,6 +116,14 @@ namespace sw
             (void)outText;
             return false;
         }
+        /** @brief 현재 노드(그 서브트리)를 XML 원문으로 씁니다. 지원하지 않으면 false 입니다(모르는 원소를 맡길 때). */
+        [[nodiscard]] virtual bool readCurrentNodeXml( string& outXml )
+        {
+            (void)outXml;
+            return false;
+        }
+        /** @brief XML 원문 원소 하나를 현재 부모의 자식으로 그대로 붙입니다(맡아 둔 원소를 다시 쓸 때). */
+        virtual void writeRawElement( string_view xml ) { (void)xml; }
         /** @brief 현재 노드의 자식 요소를 이름과 상관없이 순서대로 방문합니다. */
         virtual bool iterateChildren( const XmlChildVisitDelegate& callback )
         {
@@ -198,6 +206,10 @@ namespace sw
         void popChild() override;
         /** @brief 현재 노드의 텍스트를 설정합니다. */
         void writeText( const utf8* pText ) override;
+        /** @brief 현재 노드(그 서브트리)를 XML 원문으로 씁니다. */
+        [[nodiscard]] bool readCurrentNodeXml( string& outXml ) override;
+        /** @brief XML 원문 원소 하나를 현재 부모의 자식으로 붙입니다. 원문을 읽지 못하면 아무것도 붙이지 않습니다. */
+        void writeRawElement( string_view xml ) override;
         /** @brief 현재 노드의 텍스트를 읽습니다. */
         [[nodiscard]] bool readText( string& outText ) override;
         /** @brief 현재 노드의 자식 요소를 순서대로 방문합니다. */

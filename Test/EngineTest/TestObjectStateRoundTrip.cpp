@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -722,4 +723,87 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachRuleKeepsWorldOrRelativeAsAsked )
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 3.0f, pChild->getLocalPosition()._x, 1e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( pChild->getWorldPosition()._x - 3.0f ) > 1.0f );
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 모르는 타입의 컴포넌트는 버려지지 않는다 — 다시 저장하면 원문 그대로 남는다(XML · JSON · 바이너리)
+ * @details 세 직렬화기가 모르는 타입의 원소를 건너뛰었다. 게임 모듈이 안 뜬 채 에디터가 씬을 저장하면 그 컴포넌트의 값이 **영영** 사라졌다.
+ *          이제 원문을 `MissingComponent` 가 맡고, 같은 형식으로 저장할 때 그대로 다시 쓴다. 다른 형식(플레이 스냅샷 · 되돌리기 = 바이너리)을
+ *          거쳐도 원래 형식으로 돌아오면 원문이 돌아간다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
+{
+    GameObjectManager manager;
+    GameObject*       pSource = manager.createGameObject( hashed_string( "Lamp" ) );
+    SW_ASSERT_NOT_NULL( pSource->addComponent<SceneComponent>() );
+
+    // XML: 모르는 원소를 하나 끼운다(모듈이 안 뜬 컴포넌트).
+    string       xml      = ObjectStateSerializer::saveToXmlString( pSource );
+    const size_t listOpen = xml.find( "<_listComponent>" );
+    SW_ASSERT_TRUE( listOpen != string::npos );
+    const string kUnknownXml = "<NotLoadedLampDriver _flicker=\"0.25\" _mode=\"Candle\" />";
+    xml.insert( listOpen + string_view( "<_listComponent>" ).size(), kUnknownXml );
+
+    GameObject* pFromXml = manager.createGameObject( hashed_string( "FromXml" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFromXml, xml ) );
+    }
+    const MissingComponent* pMissing = pFromXml->getComponent<MissingComponent>();
+    SW_ASSERT_NOT_NULL( pMissing );
+    SW_EXPECT_STREQ( "NotLoadedLampDriver", pMissing->getOriginalTypeName().c_str() );
+    const string savedAgain = ObjectStateSerializer::saveToXmlString( pFromXml );
+    SW_EXPECT_TRUE( savedAgain.find( "<NotLoadedLampDriver" ) != string::npos );
+    SW_EXPECT_TRUE( savedAgain.find( "_flicker=\"0.25\"" ) != string::npos );
+    SW_EXPECT_TRUE( savedAgain.find( "MissingComponent" ) == string::npos ); // 자리 표시가 아니라 원문이 나간다
+
+    // 바이너리를 거쳐(플레이 스냅샷) 다시 XML 로 — 원문이 돌아온다.
+    vector<uint8> snapshot;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pFromXml, snapshot ) );
+    GameObject* pRestored = manager.createGameObject( hashed_string( "Restored" ) );
+    SW_ASSERT_EQUAL( snapshot.size(), ObjectStateSerializer::loadFromBinaryBuffer( pRestored, snapshot.data(), snapshot.size() ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::saveToXmlString( pRestored ).find( "_flicker=\"0.25\"" ) != string::npos );
+
+    // JSON
+    string       json     = ObjectStateSerializer::saveToJsonString( pSource );
+    const size_t jsonList = json.find( "\"_listComponent\"" );
+    SW_ASSERT_TRUE( jsonList != string::npos );
+    const size_t arrayOpen = json.find( '[', jsonList );
+    SW_ASSERT_TRUE( arrayOpen != string::npos );
+    json.insert( arrayOpen + 1, "{\"NotLoadedLampDriver\":{\"_flicker\":0.25}}," );
+    GameObject* pFromJson = manager.createGameObject( hashed_string( "FromJson" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pFromJson, json ) );
+    }
+    const string jsonAgain = ObjectStateSerializer::saveToJsonString( pFromJson );
+    SW_EXPECT_TRUE( jsonAgain.find( "NotLoadedLampDriver" ) != string::npos );
+    SW_EXPECT_TRUE( jsonAgain.find( "_flicker" ) != string::npos );
+    SW_EXPECT_TRUE( jsonAgain.find( "MissingComponent" ) == string::npos ); // 자리 표시가 아니라 원문이 나간다
+
+    // 바이너리: 원소 이름을 같은 길이의 모르는 이름으로 바꾼다(지운 타입의 세이브).
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
+    const string_view kKnown   = "SceneComponent";
+    const string_view kUnknown = "SceneComponenX";
+    auto              nameAt   = std::search( bytes.begin(), bytes.end(), kKnown.begin(), kKnown.end() );
+    SW_ASSERT_TRUE( nameAt != bytes.end() );
+    std::copy( kUnknown.begin(), kUnknown.end(), nameAt );
+    GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
+        SW_ASSERT_EQUAL( bytes.size(), ObjectStateSerializer::loadFromBinaryBuffer( pFromBinary, bytes.data(), bytes.size() ) );
+    }
+    SW_ASSERT_NOT_NULL( pFromBinary->getComponent<MissingComponent>() );
+    vector<uint8> bytesAgain;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pFromBinary, bytesAgain ) );
+    auto unknownAt = std::search( bytesAgain.begin(), bytesAgain.end(), kUnknown.begin(), kUnknown.end() );
+    SW_ASSERT_TRUE( unknownAt != bytesAgain.end() );
+
+    // 모듈이 돌아왔다(이름을 되돌린다) — 원래 컴포넌트로 읽힌다. 자리 표시가 자기 자신으로 저장됐다면 다시 MissingComponent 가 된다.
+    std::copy( kKnown.begin(), kKnown.end(), unknownAt );
+    GameObject* pModuleBack = manager.createGameObject( hashed_string( "ModuleBack" ) );
+    SW_ASSERT_EQUAL( bytesAgain.size(), ObjectStateSerializer::loadFromBinaryBuffer( pModuleBack, bytesAgain.data(), bytesAgain.size() ) );
+    SW_EXPECT_NULL( pModuleBack->getComponent<MissingComponent>() );
+    SW_EXPECT_NOT_NULL( pModuleBack->getComponent<SceneComponent>() );
 }

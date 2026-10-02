@@ -106,9 +106,22 @@ namespace sw
              */
             static void writeOwnedPointerBinary( const void* pElemPtr, vector<uint8>& buffer, const SerializeContext& ctx )
             {
-                const void* const* ppObj        = static_cast<const void* const*>( pElemPtr );
-                const void*        pObj         = ( ppObj != nullptr ) ? *ppObj : nullptr;
-                const TypeInfo*    pRuntimeType = ( pObj != nullptr ) ? ctx.getRuntimeTypeInfo( pObj ) : nullptr;
+                const void* const* ppObj = static_cast<const void* const*>( pElemPtr );
+                const void*        pObj  = ( ppObj != nullptr ) ? *ppObj : nullptr;
+
+                // 맡아 둔 원소(모르는 타입)는 읽은 이름 · 본문 그대로 다시 쓴다.
+                SerializeContext::OpaqueElementView opaque{};
+                if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
+                {
+                    appendUint32( buffer, static_cast<uint32>( opaque._typeName.size() ) );
+                    const auto* pNameBytes = reinterpret_cast<const uint8*>( opaque._typeName.data() );
+                    buffer.insert( buffer.end(), pNameBytes, pNameBytes + opaque._typeName.size() );
+                    appendUint32( buffer, static_cast<uint32>( opaque._byteCount ) );
+                    if ( opaque._pBytes != nullptr && opaque._byteCount > 0 )
+                        buffer.insert( buffer.end(), opaque._pBytes, opaque._pBytes + opaque._byteCount );
+                    return;
+                }
+                const TypeInfo* pRuntimeType = ( pObj != nullptr ) ? ctx.getRuntimeTypeInfo( pObj ) : nullptr;
 
                 if ( pRuntimeType == nullptr )
                 {
@@ -167,12 +180,19 @@ namespace sw
 
                 // 찾기만 한다 — 파일의 이름을 intern 하면 전역 표가 파일 크기만큼 는다(`hashed_string::findInterned`).
                 const hashed_string typeName = hashed_string::findInterned( typeNameText );
-                if ( typeName.empty() )
-                    return true; // 등록된 적 없는 타입이다. 위에서 이미 그만큼 밀어 두었다.
-                void*           pObj  = ctx.createOwnedPointer( typeName );
-                const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
-                if ( pObj == nullptr || pType == nullptr )
-                    return true; // 모르는 타입은 건너뛴다. 위에서 이미 그만큼 밀어 두었다.
+                const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
+                if ( pObj == nullptr )
+                {
+                    // 모르는(만들 수 없는) 타입이다 — 이름 · 본문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다(위에서 이미 그만큼 밀어 두었다).
+                    SerializeContext::OpaqueElementView opaque{};
+                    opaque._typeName  = typeNameText;
+                    opaque._format    = SerializeContext::OpaqueFormat::Binary;
+                    opaque._pBytes    = pData + bodyStart;
+                    opaque._byteCount = bodySize;
+                    (void)ctx.keepOpaqueElement( opaque );
+                    return true;
+                }
 
                 return BinarySerializer::deserialize( pObj, *pType, pData + bodyStart, bodySize, ctx );
             }

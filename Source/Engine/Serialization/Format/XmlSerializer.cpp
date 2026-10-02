@@ -84,6 +84,13 @@ namespace sw
                             void*        pObj  = ppObj != nullptr ? *ppObj : nullptr;
                             if ( pObj == nullptr )
                                 continue;
+                            // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
+                            SerializeContext::OpaqueElementView opaque{};
+                            if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Xml )
+                            {
+                                backend.writeRawElement( opaque._text );
+                                continue;
+                            }
                             // 다형 원소만 태그 이름이 곧 런타임 타입 정보다.
                             const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
                             if ( pRuntimeType == nullptr )
@@ -176,12 +183,22 @@ namespace sw
                         {
                             // 다형 원소: 태그 이름이 런타임 타입이다.
                             const hashed_string typeName = hashed_string::findInterned( tagName );
-                            if ( typeName.empty() )
-                                return;
-                            void*           pObj  = ctx.createOwnedPointer( typeName );
-                            const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
+                            const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                            void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
                             if ( pObj == nullptr || pType == nullptr )
+                            {
+                                // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다.
+                                string rawXml;
+                                if ( backend.readCurrentNodeXml( rawXml ) )
+                                {
+                                    SerializeContext::OpaqueElementView opaque{};
+                                    opaque._typeName = tagName;
+                                    opaque._format   = SerializeContext::OpaqueFormat::Xml;
+                                    opaque._text     = rawXml;
+                                    (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다(예전과 같다)
+                                }
                                 return;
+                            }
                             readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan );
                             return;
                         }
@@ -768,6 +785,26 @@ namespace sw
         const utf8* pText = _impl->_currentParent.getText();
         outText           = ( pText != nullptr ) ? pText : "";
         return true;
+    }
+
+    bool XmlDocumentBackend::readCurrentNodeXml( string& outXml )
+    {
+        if ( _impl->_currentParent.isValid() == false )
+            return false;
+        outXml = _impl->_currentParent.toString();
+        return outXml.empty() == false;
+    }
+
+    void XmlDocumentBackend::writeRawElement( string_view xml )
+    {
+        if ( _impl->_currentParent.isValid() == false || xml.empty() )
+            return;
+        XmlDocument rawDoc;
+        if ( rawDoc.parse( xml, "<kept element>" ) == false )
+            return;
+        const XmlNode rawRoot = rawDoc.getRoot();
+        if ( rawRoot.isValid() )
+            (void)_impl->_currentParent.appendClone( rawRoot );
     }
 
     bool XmlDocumentBackend::iterateChildren( const XmlChildVisitDelegate& callback )

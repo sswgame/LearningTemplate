@@ -26,6 +26,31 @@ namespace sw
         using OwnedPointerCreateFn = void* (*)( void* pOuter, hashed_string typeName );
         using RuntimeTypeInfoFn    = const TypeInfo* (*)( const void* pInstance );
 
+        /** @brief 맡겨 둔 원소의 원문 형식입니다(`OpaqueElementView`). */
+        enum class OpaqueFormat : uint8
+        {
+            Xml,
+            Json,
+            Binary
+        };
+        /**
+         * @brief 등록되지 않은 타입의 다형 원소 하나의 **원문**입니다(모듈이 안 뜬 컴포넌트 · 지운 타입).
+         * @details 예전에는 세 직렬화기가 이런 원소를 건너뛰었고, 다음 저장에서 영영 사라졌다(유니티는 "Missing Script" 로 들고 있다 그대로 쓴다).
+         *          이제 읽을 때 맡기고(`keepOpaqueElement`), 쓸 때 같은 형식이면 원문 그대로 다시 쓴다(`queryOpaqueElement`).
+         */
+        struct OpaqueElementView
+        {
+            string_view  _typeName;
+            OpaqueFormat _format{ OpaqueFormat::Xml };
+            string_view  _text;              ///< XML 원소 · JSON 원소(`{ "타입": { … } }`) 원문
+            const uint8* _pBytes{ nullptr }; ///< 바이너리 본문(이름 · 크기 머리 뒤)
+            size_t       _byteCount{ 0 };
+        };
+        /** @brief 모르는 원소를 맡습니다. 맡았으면 true 입니다. */
+        using OpaqueElementKeepFn = bool ( * )( void* pOuter, const OpaqueElementView& element );
+        /** @brief 이 원소가 맡아 둔 원소인지 묻습니다. 그렇다면 원문을 채우고 true 입니다. */
+        using OpaqueElementQueryFn = bool ( * )( const void* pElement, OpaqueElementView& outElement );
+
         // ------------------------------------------------------------------------------
         // 1) 수명: 기본은 키 대소문자 무시
         // ------------------------------------------------------------------------------
@@ -40,6 +65,8 @@ namespace sw
             , _pOuterInstance{ nullptr }
             , _pOwnedPointerCreateFn{ nullptr }
             , _pRuntimeTypeInfoFn{ nullptr }
+            , _pOpaqueKeepFn{ nullptr }
+            , _pOpaqueQueryFn{ nullptr }
             , _bIgnoreCaseKeys{ SW_TRUE }
             , _bAllowUnknownProperties{ SW_FALSE }
             , _bEnableObjectDeduplication{ SW_FALSE }
@@ -124,6 +151,26 @@ namespace sw
             return _pRuntimeTypeInfoFn( pInstance );
         }
 
+        /** @brief 모르는 다형 원소를 맡고(읽기) 다시 쓰는(쓰기) 함수 쌍을 설정합니다(`OpaqueElementView`). */
+        SerializeContext& setOpaqueElementHandlers( OpaqueElementKeepFn keepFn, OpaqueElementQueryFn queryFn )
+        {
+            _pOpaqueKeepFn  = keepFn;
+            _pOpaqueQueryFn = queryFn;
+            return *this;
+        }
+
+        /** @brief 모르는 원소를 맡깁니다. 맡을 곳이 없거나 거절하면 false — 예전처럼 건너뜁니다. */
+        bool keepOpaqueElement( const OpaqueElementView& element ) const
+        {
+            return _pOpaqueKeepFn != nullptr && _pOpaqueKeepFn( _pOuterInstance, element );
+        }
+
+        /** @brief @p pElement 가 맡아 둔 원소면 원문을 채우고 true 입니다. */
+        bool queryOpaqueElement( const void* pElement, OpaqueElementView& outElement ) const
+        {
+            return _pOpaqueQueryFn != nullptr && pElement != nullptr && _pOpaqueQueryFn( pElement, outElement );
+        }
+
         /** @brief 객체 중복 제거(포인터 표)를 켤지 설정합니다. */
         SerializeContext& setEnableObjectDeduplication( bool bEnable )
         {
@@ -206,6 +253,8 @@ namespace sw
         void*                   _pOuterInstance;
         OwnedPointerCreateFn    _pOwnedPointerCreateFn;
         RuntimeTypeInfoFn       _pRuntimeTypeInfoFn;
+        OpaqueElementKeepFn     _pOpaqueKeepFn;
+        OpaqueElementQueryFn    _pOpaqueQueryFn;
         uint8                   _bIgnoreCaseKeys            : 1;
         uint8                   _bAllowUnknownProperties    : 1;
         uint8                   _bEnableObjectDeduplication : 1;

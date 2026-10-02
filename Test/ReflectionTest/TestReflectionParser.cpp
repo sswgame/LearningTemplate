@@ -1009,6 +1009,40 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
 }
 
 /**
+ * @brief [ReflectionParserTest] 애노테이션 문자열 안의 `;` `{` `}` `)` 는 선언 경계가 아니다 — 그 타입의 REFLECT() 를 잃지 않는다
+ * @details `class` 앞의 속성은 clang 이 버려 파서가 소스를 되읽는다. 매크로와 선언 사이의 `;` `{` `}` 를 "앞 선언의 매크로" 표시로 보는데
+ *          따옴표 안도 셌다 — `Tooltip = "…; …"` 하나로 그 타입의 REFLECT() 가 사라져, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로
+ *          빌드가 섰다(`MissingComponent` 를 만들다 만났다). 인자를 읽는 괄호 세기도 따옴표 안의 `\"` 뒤에서 어긋났다.
+ */
+SW_TEST_CASE( ReflectionParserTest, PunctuationInsideAnnotationStringIsNotADeclarationBoundary )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "PunctuatedAnnotationSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT( Tooltip = \"Kept; {braced} \\\"(\\\" stays\" )\n"
+                                                       "\tstruct PunctuatedAnnotationSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Tooltip = \"Also; here\" )\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "Kept; {braced} \\\"(\\\" stays" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"Also; here\"" ) != sw::string::npos, generated.c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] 별칭(`using`)으로 적은 기반도 실제 클래스로 읽는다 — 부모 FQN 과 컴포넌트 팩토리를 잃지 않는다
  * @details 베이스 지정자의 선언을 그대로 물으면 별칭 선언이 나온다. 부모 FQN 이 별칭 이름이 되어 실행 중에 부모를 못 찾았고, 컴포넌트 판별이 별칭에서
  *          멈춰 팩토리가 생기지 않았다(씬에서 그 컴포넌트를 만들 수 없다).
