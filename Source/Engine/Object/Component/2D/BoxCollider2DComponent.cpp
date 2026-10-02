@@ -2,6 +2,9 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
@@ -68,14 +71,18 @@ namespace sw
 
     void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
     {
-        const float3 worldPos = getWorldPosition();
-        const float2 offset   = _offsetPos;
-        const float2 scale    = _offsetScale;
-        const float2 center{ worldPos._x + offset._x, worldPos._y + offset._y };
-        const float2 halfSize{ scale._x * 0.5f, scale._y * 0.5f };
+        // 상자(오프셋 · 크기)는 콜라이더의 로컬 공간에 있다 — 월드 행렬의 회전 · 스케일을 받는다(유니티 `BoxCollider2D.size` · 언리얼 박스
+        // 범위). 예전에는 월드 위치에 그대로 더해, 키운 콜라이더가 그려진 모습보다 작았다. 물리는 축 정렬 상자로 판정하므로 돈 상자는 그것을
+        // 덮는 축 정렬 상자다 — 축마다 회전 · 스케일 성분의 절댓값으로 반 크기를 모은다(언리얼 `FBox::TransformBy`).
+        const float4x4 world   = getWorldMatrix();
+        const float3   center  = float3::transform( float3{ _offsetPos._x, _offsetPos._y, 0.0f }, world );
+        const float32  halfX   = _offsetScale._x * 0.5f;
+        const float32  halfY   = _offsetScale._y * 0.5f;
+        const float32  extentX = MathUtil::abs( world._11 ) * halfX + MathUtil::abs( world._21 ) * halfY;
+        const float32  extentY = MathUtil::abs( world._12 ) * halfX + MathUtil::abs( world._22 ) * halfY;
 
-        outMin = float2{ center._x - halfSize._x, center._y - halfSize._y };
-        outMax = float2{ center._x + halfSize._x, center._y + halfSize._y };
+        outMin = float2{ center._x - extentX, center._y - extentY };
+        outMax = float2{ center._x + extentX, center._y + extentY };
     }
 
     bool BoxCollider2DComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

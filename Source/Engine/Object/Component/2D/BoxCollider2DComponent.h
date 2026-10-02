@@ -40,7 +40,7 @@ namespace sw
         float2 getOffsetPosition() const { return _offsetPos; }
         void   setOffsetPosition( const float2& offset ) { _offsetPos = offset; }
 
-        /** @brief 콜라이더 박스의 가로 · 세로 크기입니다. */
+        /** @brief 콜라이더 박스의 가로 · 세로 크기입니다(로컬 — 월드 스케일을 받는다). */
         float2 getOffsetScale() const { return _offsetScale; }
         void   setOffsetScale( const float2& scale ) { _offsetScale = scale; }
 

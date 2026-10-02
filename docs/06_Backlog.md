@@ -2079,6 +2079,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 70 2D 박스 콜라이더 — 상자가 월드 스케일 · 회전을 받지 않아, 키운 적이 작은 상자로 맞았다)
+
+남은 항목 "BoxCollider2D 크기가 스케일을 따르지 않음"(결함 54 에서 남긴 것). `getBounds` 가 상자 크기(`_offsetScale`)와 오프셋을 월드 **위치**에 그대로
+더했다 — 부모나 자기를 키운 콜라이더가 그려진 모습보다 작았고, 오프셋도 늘거나 돌지 않았다. 유니티 `BoxCollider2D.size` · 언리얼 박스 범위는
+트랜스폼의 스케일 · 회전을 받는다. 상자를 콜라이더의 로컬 공간에 두고 월드 행렬로 옮긴다: 중심은 오프셋을 행렬로 변환한 점, 반 크기는 축마다 회전 ·
+스케일 성분의 절댓값으로 모은다(돈 상자를 덮는 축 정렬 상자 — 물리가 축 정렬 상자로 판정한다. 언리얼 `FBox::TransformBy` 와 같은 계산). 물리 바디 ·
+피킹 경계(`getWorldBounds`) · 겹침 판정이 모두 `getBounds` 하나를 읽는다.
+
+**검증.** `BoxCollider2DTest.BoxFollowsWorldScale`(부모 스케일 (2, 3) — 크기 · 오프셋이 늘어난다) · `RotatedBoxIsCoveredByItsAxisAlignedBounds`(Z 90 도 —
+(2, 3) 이 (3, 2) 를 덮고 오프셋이 돈다). 둘 다 이전 코드에서 진다. 변이 셋(회전 성분 빼기 · 오프셋 그대로 · 크기 그대로)이 모두 실패했다.
+Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 69 DontDestroyOnLoad — 태그 하나만 붙이고 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다)
 
 남은 항목 "DontDestroyOnLoad 가 아무것도 안 함". `DontDestroyOnLoadComponent` 는 시작할 때 `DontDestroyOnLoad` 태그를 붙이는 것이 전부였고 그 태그를
