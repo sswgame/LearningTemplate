@@ -91,8 +91,30 @@ namespace sw::editor
             unit._suffix    = "deg";
             return unit;
         }
+        if ( *pUnits == "ratio" )
+        {
+            unit._scale     = 100.0f;
+            unit._dragSpeed = kPercentDragSpeed;
+            unit._suffix    = "%";
+            return unit;
+        }
         unit._suffix = *pUnits;
         return unit;
+    }
+
+    string InspectorPropertyLayout::appendUnitSuffix( const utf8* pNumberFormat, const string& suffix )
+    {
+        string format = ( pNumberFormat != nullptr ) ? pNumberFormat : "";
+        if ( suffix.empty() )
+            return format;
+        format += " ";
+        for ( const utf8 letter : suffix )
+        {
+            format += letter;
+            if ( letter == '%' )
+                format += '%';
+        }
+        return format;
     }
 } // namespace sw::editor
 

@@ -148,4 +148,26 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, RadianAnglesAreShownInDegrees )
     SW_EXPECT_EQUAL( string( "m" ), meters._suffix );
 }
 
+/**
+ * @brief [InspectorPropertyLayoutTest] 0..1 비율(`Units=ratio`)은 백분율로 보이고, 단위 글자의 `%` 는 서식을 깨지 않는다
+ * @details HP 바의 비율 셋(0..1, 슬라이더)이 `Units=%` 라고 적혀 있었다 — 0.5 가 "0.5 %" 라는 뜻이 되고, 그 `%` 는 printf 서식에 그대로 붙어
+ *          짝 없는 변환 지정자가 됐다(UCRT 는 조용히 버려 단위가 화면에 나오지도 않았다). 비율은 `ratio` 로 적고 × 100 · "%" 로 보이며,
+ *          서식에는 `%%` 로 들어간다. 저장 값은 그대로 0..1 이다.
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, RatiosAreShownAsPercent )
+{
+    PropertyInfo ratio;
+    ratio._metadata._mapCustomMeta[hashed_string( "Units" )] = "ratio";
+    const InspectorDisplayUnit unit                          = InspectorPropertyLayout::getDisplayUnit( ratio );
+    // 0.25 가 25 % 로 보인다. 드래그는 퍼센트 단위다 — 한 픽셀이 1 % 이하.
+    SW_EXPECT_NEAR_EQUAL( 25.0f, 0.25f * unit._scale, 1e-4f );
+    SW_EXPECT_EQUAL( string( "%" ), unit._suffix );
+    SW_EXPECT_TRUE( unit._dragSpeed > 0.0f && unit._dragSpeed <= 1.0f );
+
+    // 서식에는 `%%` 로 들어간다 — printf 가 글자 `%` 하나를 찍는다.
+    SW_EXPECT_EQUAL( string( "%.3f %%" ), InspectorPropertyLayout::appendUnitSuffix( "%.3f", unit._suffix ) );
+    SW_EXPECT_EQUAL( string( "%.3f m/s" ), InspectorPropertyLayout::appendUnitSuffix( "%.3f", "m/s" ) );
+    SW_EXPECT_EQUAL( string( "%d" ), InspectorPropertyLayout::appendUnitSuffix( "%d", "" ) );
+}
+
 #endif // !SW_SHIPPING

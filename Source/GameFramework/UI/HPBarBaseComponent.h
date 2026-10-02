@@ -21,11 +21,11 @@ namespace sw
         void setTargetRatio( float32 ratio );
 
     private:
-        PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Current displayed HP ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "hpRatio" )
+        PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Current displayed HP ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio", Alias = "hpRatio" )
         float32 _hpRatio;
-        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "remainRatio" )
+        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio", Alias = "remainRatio" )
         float32 _remainRatio;
-        PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "Target HP ratio to lerp towards (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "targetRatio" )
+        PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "Target HP ratio to lerp towards (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio", Alias = "targetRatio" )
         float32 _targetRatio;
         PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "Speed of HP bar transition", Min = 0.1, Max = 20.0, Alias = "lerpSpeed" )
         float32 _lerpSpeed;

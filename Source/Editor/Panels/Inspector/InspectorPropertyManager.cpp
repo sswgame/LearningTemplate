@@ -45,17 +45,6 @@ namespace sw::editor
                 ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
                 showTooltipIfHovered( prop );
             }
-            /** @brief 서식 뒤에 단위 글자를 붙입니다(`InspectorDisplayUnit::_suffix`). */
-            static string appendUnitSuffix( const utf8* pDefaultFmt, const string& suffix )
-            {
-                string fmt = pDefaultFmt;
-                if ( suffix.empty() == false )
-                {
-                    fmt += " ";
-                    fmt += suffix;
-                }
-                return fmt;
-            }
             bool isSliderRequested( const PropertyInfo& prop )
             {
                 return prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
@@ -258,7 +247,7 @@ namespace sw::editor
                 const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._minRange ) * scale ) : Traits::kMin;
                 const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._maxRange ) * scale ) : Traits::kMax;
                 const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
-                const string fmt      = appendUnitSuffix( Traits::kFormat, unit._suffix );
+                const string fmt      = InspectorPropertyLayout::appendUnitSuffix( Traits::kFormat, unit._suffix );
 
                 Widget widgetValue{};
                 if constexpr ( Traits::kIsInteger )

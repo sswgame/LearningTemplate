@@ -25,7 +25,8 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 	float4 worldPos = SwWorldPositionOf(localPos, world);
 	output.pos = SwClipPositionOf(worldPos, g_ViewProj);
 	output.col = input.col;
-	output.nrm = normalize(mul(float4(localNormal, 0.0f), world).xyz);
+	// 노멀은 여인수 행렬로 옮긴다(binding.hlsli SwWorldNormalOf) — 월드 행렬을 곱하면 비균등 스케일에서 기운다.
+	output.nrm = SwWorldNormalOf(localNormal, world);
 	return output;
 }
 

@@ -38,6 +38,8 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -245,6 +247,42 @@ namespace
                 difference._maxDelta = delta;
         }
         return difference;
+    }
+
+    /**
+     * @brief G버퍼 노멀 첨부에서 그려진 픽셀(알파 1 — 클리어는 알파 0)의 노멀을 풀어 평균합니다. 정규화하지 않습니다.
+     * @param outDrawnCount 그려진 픽셀 수. 되읽기에 실패했거나 아무것도 그려지지 않았으면 0 이고 반환값은 영벡터입니다.
+     */
+    sw::float3 readMeanGBufferNormal( sw::FrameRenderer& renderer, uint32& outDrawnCount )
+    {
+        outDrawnCount = 0;
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "GBufferNormal" ) == false )
+            return sw::float3{};
+        sw::float3 sum{};
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
+            {
+                const test::Rgba8 pixel = image.getPixel( col, row );
+                if ( pixel._a < 128 )
+                    continue;
+                // 셰이더가 n * 0.5 + 0.5 로 적었다(SwStoreSurface · gbuffer.hlsl).
+                sum._x += static_cast<float32>( pixel._r ) / 255.0f * 2.0f - 1.0f;
+                sum._y += static_cast<float32>( pixel._g ) / 255.0f * 2.0f - 1.0f;
+                sum._z += static_cast<float32>( pixel._b ) / 255.0f * 2.0f - 1.0f;
+                ++outDrawnCount;
+            }
+        }
+        if ( outDrawnCount == 0 )
+            return sw::float3{};
+        return sum * ( 1.0f / static_cast<float32>( outDrawnCount ) );
+    }
+
+    /** @brief 실패 메시지에 붙일 벡터 글입니다. */
+    sw::string describeVector( const sw::float3& value )
+    {
+        return sw::string( "(" ) + sw::to_string( value._x ) + ", " + sw::to_string( value._y ) + ", " + sw::to_string( value._z ) + ")";
     }
 } // namespace
 
@@ -3698,4 +3736,128 @@ SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 비균등 스케일 · 거울 스케일 아래에서도 G버퍼 노멀이 표면에 수직이다 — 네 백엔드, 머티리얼 셰이더(forwardlit)와 엔진 G버퍼 셰이더(gbuffer) 둘 다
+ * @details 셰이더가 노멀을 월드 행렬로 옮기고 있었다(`mul( float4( n, 0 ), world )`). 균등 스케일 · 회전뿐이면 방향이 같아 드러나지 않지만, X 로 세 배
+ *          늘린 부모 아래에서 Y 로 돈 쿼드는 노멀이 늘어난 축 쪽으로 50° 넘게 기울었다 — 늘린 메시의 조명이 통째로 틀렸다. 고친 셰이더는 3x3 의
+ *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `SwWorldNormalOf`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
+ *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 예전 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 시험은
+ *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. G버퍼 패스의 컬링은 끈다 — 거울 변환은 감김을 뒤집는데 엔진은 아직
+ *          컬 모드를 뒤집지 않으므로(남은 결함), 컬링을 두면 거울 배치의 그려지는 면이 그 수정에 따라 바뀐다. 이 시험은 노멀만 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
+{
+    struct NormalCase
+    {
+        const utf8* _pName;
+        sw::float3  _parentScale;
+    };
+    const NormalCase kArrCase[] = {
+        {"stretched",  sw::float3{ 3.0f, 1.0f, 1.0f }},
+        { "mirrored", sw::float3{ -3.0f, 1.0f, 1.0f }},
+    };
+    constexpr float32 kChildYaw = 0.7f;
+    // 예전 식과 기대값 사이의 내적 상한(약 20°)과, 읽은 노멀과 기대값 사이의 내적 하한(약 5°). 쿼드의 노멀은 한 값이라 8 비트 양자화만 남는다.
+    constexpr float32 kBlindDotLimit = 0.94f;
+    constexpr float32 kMatchDotFloor = 0.996f;
+    constexpr uint32  kMinDrawnCount = 1000;
+    const sw::float3  localNormal{ 0.0f, 0.0f, 1.0f }; // MeshUtil::createRectMesh 의 노멀
+
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
+    constexpr sw::string_view kCullBack     = "_cullMode=\"Back\"";
+    constexpr sw::string_view kCullNone     = "_cullMode=\"None\"";
+    const size_t              gbufferPassAt = pipelineText.find( "_type=\"GBuffer\"" );
+    SW_ASSERT_TRUE( gbufferPassAt != sw::string::npos );
+    const size_t cullAt = pipelineText.find( kCullBack.data(), gbufferPassAt );
+    SW_ASSERT_TRUE( cullAt != sw::string::npos );
+    pipelineText.replace( cullAt, kCullBack.size(), kCullNone.data() );
+    const sw::string twoSidedPath = test::makeTempPath( "twosidedgbufferpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( twoSidedPath, pipelineText ) );
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string backendName( device->getBackendName() );
+
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+        sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
+        SW_ASSERT_NOT_NULL( quad.get() );
+
+        for ( const NormalCase& normalCase : kArrCase )
+        {
+            // 머티리얼이 있으면 그 셰이더(forwardlit)의 G버퍼 퍼뮤테이션이, 없으면 엔진 G버퍼 PSO(gbuffer.hlsl)가 그린다.
+            for ( const bool bWithMaterial : { true, false } )
+            {
+                const sw::string label = backendName + " " + normalCase._pName + ( bWithMaterial ? " forwardlit: " : " gbuffer: " );
+
+                sw::Scene scene( "NonUniformScaleScene" );
+                SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+                sw::GameObjectManager* pObjectManager = scene.getObjectManager();
+                sw::GameObject*        pParent        = pObjectManager->createGameObject( sw::hashed_string( "Stretch" ) );
+                SW_ASSERT_NOT_NULL( pParent );
+                sw::SceneComponent* pParentRoot = pParent->addComponent<sw::SceneComponent>();
+                SW_ASSERT_NOT_NULL( pParentRoot );
+                pParentRoot->setLocalScale( normalCase._parentScale );
+                sw::GameObject* pChild = pObjectManager->createGameObject( sw::hashed_string( "Quad" ) );
+                SW_ASSERT_NOT_NULL( pChild );
+                sw::MeshComponent* pMesh = pChild->addComponent<sw::MeshComponent>();
+                SW_ASSERT_NOT_NULL( pMesh );
+                pMesh->setMesh( quad );
+                if ( bWithMaterial )
+                    pMesh->setMaterial( material.get() );
+                pMesh->setLocalRotation( sw::float3{ 0.0f, kChildYaw, 0.0f } );
+                SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+                pObjectManager->flushSceneTransforms();
+
+                const sw::float4x4 world             = pMesh->getWorldMatrix();
+                const sw::float3   expected          = sw::float3::transformNormal( localNormal, world.invert().transpose() ).normalize();
+                const sw::float3   worldMatrixNormal = sw::float3::transformNormal( localNormal, world ).normalize();
+                SW_ASSERT_TRUE_MSG( expected.dot( worldMatrixNormal ) < kBlindDotLimit,
+                                    ( label + "배치가 시험이 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
+
+                sw::FrameRenderer renderer;
+                const bool        bReady = renderer.initialize( device.get(), twoSidedPath.c_str() ) && renderer.isReady();
+                SW_EXPECT_TRUE_MSG( bReady, ( label + "디퍼드 파이프라인을 만들지 못했다" ).c_str() );
+                if ( bReady )
+                {
+                    // 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
+                    constexpr uint32 kWarmupFrameCount = 4;
+                    for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
+                    {
+                        device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+                        device->endFrame( false, false );
+                        device->waitIdle();
+                    }
+
+                    uint32           drawnCount{ 0 };
+                    const sw::float3 measured = readMeanGBufferNormal( renderer, drawnCount ).normalize();
+                    SW_EXPECT_TRUE_MSG( drawnCount >= kMinDrawnCount,
+                                        ( label + "쿼드가 G버퍼에 그려지지 않았다 (" + sw::to_string( drawnCount ) + " 픽셀)" ).c_str() );
+                    if ( drawnCount >= kMinDrawnCount )
+                    {
+                        ++comparedCount;
+                        SW_EXPECT_TRUE_MSG( measured.dot( expected ) > kMatchDotFloor,
+                                            ( label + "G버퍼 노멀 " + describeVector( measured ) + " 이 표면에 수직이 아니다 — 기대 " + describeVector( expected ) +
+                                              ", 월드 행렬로 옮기면 " + describeVector( worldMatrixNormal ) )
+                                                .c_str() );
+                    }
+                }
+                renderer.shutdown();
+            }
+        }
+
+        quad->releaseRhi( device.get() );
+        material->releaseRhi( device.get() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the deferred pipeline for the normal test" );
 }

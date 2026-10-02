@@ -230,6 +230,29 @@ float4 SwClipPositionOf( float4 worldPosition, float4x4 viewProj )
 	return clipPosition;
 }
 
+/**
+ * @brief 로컬 노멀을 월드로 옮겨 정규화한다. 노멀을 내보내는 **모든** 지오메트리 패스(forwardlit · gbuffer · gbuffernormal)가 이것을 쓴다.
+ * @details 노멀은 위치처럼 월드 행렬로 옮기면 안 된다. 행 벡터 규약(`p' = p · M`)에서 접선은 `t · M` 으로 가므로, 수직을 지키는 노멀은
+ *          `n · (M⁻¹)ᵀ` 다. 균등 스케일 · 회전뿐이면 두 식의 방향이 같아 드러나지 않지만, 비균등 스케일(스케일한 부모 아래 회전한 자식도)에서는
+ *          노멀이 늘어난 축 **쪽으로** 기울어 조명이 틀린다 — 예전 식(`mul( float4( n, 0 ), world )`)이 그랬다.
+ *          역행렬은 필요 없다. 3x3 의 `(M⁻¹)ᵀ = cof(M) / det(M)` 이고 여인수 행렬의 행은 월드 행 셋의 외적 셋(r1×r2, r2×r0, r0×r1)이다.
+ *          정규화하므로 행렬식은 **부호만** 남긴다 — 거울 변환(det < 0)에서 노멀이 안쪽을 보지 않게 한다. 한 축이 0 인 납작한 물체도
+ *          보이는 면의 노멀이 남는다(월드 행렬을 곱하면 그 면의 노멀이 0 이 되어 NaN 이었다). 언리얼의 로컬 정점 팩토리도 노멀을
+ *          역스케일 · 행렬식 부호로 옮긴다. 회귀는 RenderPassGpuTest.NormalsStayPerpendicularUnderNonUniformScale 가 G버퍼 노멀로 잡는다.
+ */
+float3 SwWorldNormalOf( float3 localNormal, float4x4 world )
+{
+	const float3 row0        = world[0].xyz;
+	const float3 row1        = world[1].xyz;
+	const float3 row2        = world[2].xyz;
+	const float3 cofactor0   = cross( row1, row2 );
+	const float3 cofactor1   = cross( row2, row0 );
+	const float3 cofactor2   = cross( row0, row1 );
+	const float  handedness  = ( dot( row0, cofactor0 ) < 0.0f ) ? -1.0f : 1.0f;
+	const float3 worldNormal = localNormal.x * cofactor0 + localNormal.y * cofactor1 + localNormal.z * cofactor2;
+	return normalize( worldNormal * handedness );
+}
+
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );
 

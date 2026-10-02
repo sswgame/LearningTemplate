@@ -23,6 +23,8 @@ namespace sw::editor
      * @details 각도는 라디안으로 저장하고(`Units=rad` — 트랜스폼 회전 · FOV · 원뿔 각) 도로 보이고 고칩니다. 언리얼 Details 의 FRotator · FOV,
      *          유니티 인스펙터의 `localEulerAngles` · `fieldOfView` 가 모두 도입니다. 예전에는 트랜스폼 회전이 라디안을 `Units=deg` 라고 적었고
      *          인스펙터는 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
+     *          0..1 비율도 같은 모양이다 — `Units=ratio` 로 적고 백분율(× 100, "%")로 보인다. 예전에는 HP 바의 비율 셋이 `Units=%` 라고 적어
+     *          0.5 를 "0.5 %" 로 읽게 했고, 그 `%` 는 printf 서식 문자라 화면에는 붙지도 않았다.
      */
     struct InspectorDisplayUnit
     {
@@ -65,8 +67,20 @@ namespace sw::editor
 
         /** @brief 각도를 도로 고칠 때 픽셀당 도입니다. 트랜스폼 섹션 · 시퀀서도 같은 값을 씁니다. */
         static constexpr float32 kAngleDragSpeed = 0.5f;
+        /** @brief 비율을 백분율로 고칠 때 픽셀당 퍼센트입니다. */
+        static constexpr float32 kPercentDragSpeed = 0.5f;
 
-        /** @brief 프로퍼티의 `Units` 메타로 보이는 단위를 정합니다. `rad` 는 도로 보입니다(배율 · 드래그 속도 · "deg"), 나머지는 글자만 붙습니다. */
+        /**
+         * @brief 프로퍼티의 `Units` 메타로 보이는 단위를 정합니다.
+         * @details `rad` 는 도로(배율 180/π · 드래그 속도 · "deg"), `ratio` 는 백분율로(배율 100 · 드래그 속도 · "%") 보입니다. 나머지는 글자만 붙습니다.
+         */
         static InspectorDisplayUnit getDisplayUnit( const PropertyInfo& prop );
+
+        /**
+         * @brief 숫자 서식(`"%.3f"`) 뒤에 단위 글자를 붙인 printf 서식을 만듭니다.
+         * @details 단위 글자는 서식 안에 들어가므로 `%` 는 `%%` 로 적습니다 — 그대로 두면 짝 없는 변환 지정자가 되어 글자가 사라지거나
+         *          (UCRT 는 조용히 버린다) 다음 인자를 읽는다.
+         */
+        static string appendUnitSuffix( const utf8* pNumberFormat, const string& suffix );
     };
 } // namespace sw::editor

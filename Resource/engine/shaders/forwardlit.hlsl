@@ -40,9 +40,9 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 	// 함정이다 — 원점 중심 단위 도형이 아니면 텍스처가 엉뚱하게 붙고, 도형의 옆면과 뚜껑이
 	// 같은 자리를 물었다(도형이 XY 평면에 투영되므로 앞뒤가 겹친다).
 	output.uv = input.uv;
-	// 월드 노멀. 비균등 스케일에서는 역전치 행렬이 맞지만 이 엔진의 인스턴스는 균등 스케일이라
-	// 월드 행렬을 그대로 쓴다 — 비균등 스케일을 넣는 날 여기가 먼저 틀린다.
-	output.nrm = normalize(mul(float4(localNormal, 0.0f), inst.world).xyz);
+	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli SwWorldNormalOf). 예전엔 "인스턴스는
+	// 균등 스케일" 이라 믿고 월드 행렬을 그대로 곱했는데, 트랜스폼은 비균등 스케일을 받으므로 늘린 메시의 조명이 틀렸다.
+	output.nrm = SwWorldNormalOf(localNormal, inst.world);
 	output.materialIndex = inst.materialIndex;
 	return output;
 }
