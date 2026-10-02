@@ -2196,6 +2196,45 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 }
 
 /**
+ * @brief [GameFrameworkTest] 카메라 컨트롤러는 놓인 자리를 지키고, 흔들림은 끝나면 그 자리로 돌아오며, 따라가기는 시킬 때만 한다
+ * @details 컨트롤러는 매 틱 `_currentPos`(기본 (0,0))를 주인의 위치로 썼고, 따라가는 속도의 기본이 0 이며 목표 · 속도를 코드에서 넣을 창구가 없었다 —
+ *          이 컴포넌트를 단 카메라는 놓은 자리와 상관없이 **원점에 박혔다.** 이제 기준은 주인이 놓인 자리(지난 틱의 흔들림을 걷어 낸 자리)이고,
+ *          목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` · `setFollowSpeed`).
+ */
+SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhenAsked )
+{
+    GameObjectManager          manager;
+    GameObject*                pCamera     = manager.createGameObject( hashed_string( "OverworldCamera" ) );
+    SceneComponent*            pScene      = pCamera->addComponent<SceneComponent>();
+    CameraControllerComponent* pController = pCamera->addComponent<CameraControllerComponent>();
+    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
+    pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
+
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+        pController->onTick( kFrame );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, pScene->getLocalPosition()._z, 1e-4f );
+
+    // 흔들고 나면 놓인 자리로 돌아온다.
+    pController->shake( 2.0f, 0.25f );
+    for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
+        pController->onTick( kFrame );
+    SW_EXPECT_FALSE( pController->isShaking() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+
+    // 시키면 따라간다.
+    pController->setTargetPosition( float2( 20.0f, 3.0f ) );
+    pController->setFollowSpeed( 10.0f );
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+        pController->onTick( kFrame );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+}
+
+/**
  * @brief [GameFrameworkTest] 땅에 닿은 뒤에도 **다시 떨어질 수 있다**
  * @details `_bIsGrounded` 는 한 번 참이 되면 영영 참이었다. 점프든 리프트든 순간이동이든
  *          무엇이 올려 놓아도 중력이 다시는 안 걸렸고, 코드에서 되돌릴 창구조차 없었다

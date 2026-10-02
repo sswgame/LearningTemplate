@@ -1,4 +1,6 @@
 #pragma once
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -42,14 +44,29 @@ namespace sw
 
         /** @brief 이번 프레임의 흔들림 오프셋입니다. 흔들림이 없으면 (0,0) 입니다. */
         float2 getShakeOffset() const;
+
+        /**
+         * @brief 따라갈 자리(XY)입니다. 따라가는 속도가 0 보다 클 때만 카메라가 그쪽으로 갑니다.
+         * @details 예전에는 코드에서 넣을 창구가 없었다(리플렉션 프로퍼티뿐). 속도의 기본이 0 이라 따라가지 않으면서도 매 틱 `_currentPos`(기본 (0,0))
+         *          를 주인의 위치로 썼으므로, 이 컴포넌트를 단 카메라는 놓은 자리와 상관없이 **원점에 박혔다.**
+         */
+        void setTargetPosition( const float2& targetPosition ) { _targetPos = targetPosition; }
+        /** @brief 따라갈 자리입니다. */
+        const float2& getTargetPosition() const { return _targetPos; }
+        /** @brief 초당 따라가는 비율입니다. 0 이면 따라가지 않고 주인이 놓인 자리(다른 코드가 옮긴 자리)를 지킵니다. */
+        void setFollowSpeed( float32 followSpeed ) { _followSpeed = MathUtil::max( followSpeed, 0.0f ); }
+        /** @brief 초당 따라가는 비율입니다. */
+        float32 getFollowSpeed() const { return _followSpeed; }
         /** @brief 흔들리는 중인지 여부입니다. */
         bool isShaking() const { return _shakeDuration > 0.0f; }
 
     private:
         PROPERTY( Alias = "targetPos" )
         float2 _targetPos;
-        PROPERTY( Alias = "currentPos" )
+        /** @brief 흔들림을 뺀 카메라 자리입니다. 매 틱 주인의 위치에서 다시 구하는 런타임 값이라 저장하지 않습니다. */
+        PROPERTY( Alias = "currentPos", Transient )
         float2 _currentPos;
+        float2 _appliedShake; ///< 지난 틱에 주인 위치에 얹은 흔들림. 다음 틱에 걷어 내고 기준을 구한다
         PROPERTY( Alias = "followSpeed" )
         float32 _followSpeed;
         PROPERTY( Alias = "shakeIntensity" )

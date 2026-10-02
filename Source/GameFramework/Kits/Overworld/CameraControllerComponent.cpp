@@ -9,6 +9,7 @@ namespace sw
     CameraControllerComponent::CameraControllerComponent()
         : _targetPos{ 0.0f, 0.0f }
         , _currentPos{ 0.0f, 0.0f }
+        , _appliedShake{ 0.0f, 0.0f }
         , _followSpeed{ 0.0f }
         , _shakeIntensity{ 0.0f }
         , _shakeDuration{ 0.0f }
@@ -33,8 +34,6 @@ namespace sw
     {
         Component::onTick( deltaTime );
 
-        _currentPos = float2::lerp( _currentPos, _targetPos, MathUtil::saturate( _followSpeed * deltaTime ) );
-
         if ( _shakeDuration > 0.0f )
         {
             _shakeDuration = MathUtil::max( _shakeDuration - deltaTime, 0.0f );
@@ -50,8 +49,15 @@ namespace sw
         if ( pSceneComp == nullptr )
             return;
 
-        const float3 pos = pSceneComp->getLocalPosition();
-        pSceneComp->setLocalPosition( float3{ _currentPos + shakeOffset, pos._z } );
+        // 기준은 주인이 지금 놓인 자리에서 지난 틱에 얹은 흔들림을 걷어 낸 자리다 — 놓은 자리 · 다른 코드가 옮긴 자리를 따른다. 따라가는 속도가 있을 때만
+        // 목표 쪽으로 옮긴다. 예전에는 `_currentPos`(기본 (0,0))를 매 틱 썼고 속도의 기본이 0 이라, 카메라가 놓인 자리와 상관없이 원점에 박혔다.
+        const float3 pos     = pSceneComp->getLocalPosition();
+        float2       basePos = float2{ pos._x, pos._y } - _appliedShake;
+        if ( _followSpeed > 0.0f )
+            basePos = float2::lerp( basePos, _targetPos, MathUtil::saturate( _followSpeed * deltaTime ) );
+        _currentPos   = basePos;
+        _appliedShake = shakeOffset;
+        pSceneComp->setLocalPosition( float3{ basePos + shakeOffset, pos._z } );
     }
 
     float2 CameraControllerComponent::getShakeOffset() const

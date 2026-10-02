@@ -1683,8 +1683,11 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
 - **R4**(구조 ⑪ 뒤) — 모르는 컴포넌트 타입은 읽을 때 버려지고(경고는 한다) 다음 저장에서 영영 사라진다(게임 모듈이 안 뜬 채 에디터가 씬을 저장하면
   그 컴포넌트 값이 없어진다 — 유니티 "Missing Script" 처럼 원문을 들고 있다 다시 쓸 것). PROPERTY 판정 시험(`EveryPropertyHasATypeTheSerializersCanCarry`)은
-  ReflectionTest 가 등록하는 타입만 본다 — 게임 모듈 · GameFramework 타입은 모듈을 올리는 시험(AppTest)에서도 돌릴 것. 효과 없는 컴포넌트 · 칸:
-  `CameraControllerComponent` 가 주인을 (0,0) 에 고정, `SpriteAnimator` 무효과, HPBar · DamageUI · Effect · `Projectile::_damage`, `GameData` 의 칸 아홉.
+  ReflectionTest 가 등록하는 타입만 본다 — 게임 모듈 · GameFramework 타입은 모듈을 올리는 시험(AppTest)에서도 돌릴 것.
+  **만들지 지울지 결정이 필요한 것**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
+  `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
+  셰이더 + 런타임 스프라이트 클립 에셋), `ProjectileComponent::_damage` 는 세터뿐이고 투사체의 맞음 처리가 없다, HPBar · DamageUI · Effect 는 비율을 움직이지만
+  그리는 것이 없다(UI 렌더 경로 없음), `GameData` 의 부트스트랩 칸 아홉(시작 맵 · 타이틀 씬 · 기본 언어 · 입력 맵 …)은 읽는 곳이 없다(커스텀 맵만 읽힌다).
 - **R5** — `clearComponents` · `destroyComponentInstance` · 상태 로드를 틱 안에서 부르면 해제 후 사용(형제 `removeComponent` 는 미룬다),
   `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 미룬 일의 순서(부착 큐가 addComponent 큐보다 먼저 — 틱 안의 생성 + 부착이 루트로
   남는다; README "거부" 는 틀림), 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove, `forEachGameObject` 공유 잠금 재진입 교착 가능,
@@ -2101,6 +2104,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (결함 — 오버월드 카메라 컨트롤러가 카메라를 원점에 박았다 · 1-0j 의 R4)
+
+`CameraControllerComponent` 는 매 틱 `_currentPos`(기본 (0,0))를 주인의 위치로 썼고, 따라가는 속도의 기본이 0 이며 목표 · 속도를 코드에서 넣을 창구가 없었다
+(리플렉션 프로퍼티뿐). 그래서 이 컴포넌트를 단 카메라는 **놓은 자리와 상관없이 원점에 박혔다**. 이제 기준은 주인이 놓인 자리 — 지난 틱에 얹은 흔들림을 걷어 낸
+자리라 다른 코드가 옮긴 자리도 따른다 — 이고, 목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` · `setFollowSpeed`). `_currentPos` 는 매 틱 다시 구하는
+런타임 값이라 `Transient`. 시험 `GameFrameworkTest.CameraControllerKeepsItsPlaceAndFollowsOnlyWhenAsked`(놓인 자리 · 흔들림 뒤 복귀 · 따라가기; 옛 코드는 첫
+틱에 (0,0)). 같이 본 "효과 없는" 컴포넌트 넷과 `GameData` 칸은 결함이 아니라 끝나지 않은 기능이라 1-0j R4 에 결정 거리로 적었다.
 
 ### 2026-10-03 (구조 ⑪ 저장되는 상태는 PROPERTY 이고, 모든 PROPERTY 는 직렬화기가 실어 나를 수 있는 타입이다 — 1-0j 의 R4 첫 단위)
 
