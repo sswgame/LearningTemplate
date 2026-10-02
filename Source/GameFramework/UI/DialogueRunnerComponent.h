@@ -68,7 +68,7 @@ namespace sw
         bool advance();
         bool selectChoice( int32 choiceIndex );
         void stopDialogue();
-        FUNCTION( Category = "Preview", DisplayName = "Preview Line" )
+        FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
         void previewLine( string speaker, string text );
 
         void setFlagStore( IFlagStore* pFlagStore );

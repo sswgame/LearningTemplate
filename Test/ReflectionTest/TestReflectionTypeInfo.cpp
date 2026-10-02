@@ -483,7 +483,7 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 }
 
 /**
- * @brief [ReflectionMetadataTest] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, CustomMeta) 검증
+ * @brief [ReflectionMetadataTest] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, EditorPreview, CustomMeta) 검증
  */
 SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
@@ -498,6 +498,7 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
     SW_EXPECT_TRUE( pMethod->_metadata._displayName == "Reset Health" );
     SW_EXPECT_TRUE( pMethod->_metadata._category == "Actions" );
     SW_EXPECT_TRUE( pMethod->_metadata._tooltip == "Resets health to 100" );
+    SW_EXPECT_TRUE( pMethod->_metadata._editorPreview == "HealthReset" );
 
     const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
     SW_ASSERT_NOT_NULL( pActionType );

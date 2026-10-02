@@ -508,7 +508,7 @@ namespace sw
         PROPERTY( Category = "Stats", DisplayName = "Armor", Tooltip = "Armor rating" )
         int32 _armor = 50;
 
-        FUNCTION( Category = "Actions", DisplayName = "Reset Health", Tooltip = "Resets health to 100", CallInEditor, Meta = "ActionType=Reset" )
+        FUNCTION( Category = "Actions", DisplayName = "Reset Health", Tooltip = "Resets health to 100", CallInEditor, Meta = "ActionType=Reset", EditorPreview = "HealthReset" )
         void resetHealth()
         {
             _health = 100;

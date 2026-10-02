@@ -153,6 +153,7 @@ namespace sw
         : _category{ constants::reflection::kDefaultCategory }
         , _displayName{}
         , _tooltip{}
+        , _editorPreview{}
         , _mapCustomMeta{}
         , _netRole{ FunctionNetRole::Local }
 #else

@@ -128,6 +128,7 @@ namespace sw
         string                               _category;
         string                               _displayName;
         string                               _tooltip;
+        string                               _editorPreview; ///< `FUNCTION( EditorPreview = "..." )` — 에디터 뷰포트 미리보기가 이 종류로 메서드를 찾습니다
         unordered_map<hashed_string, string> _mapCustomMeta;
 #endif
         FunctionNetRole _netRole;

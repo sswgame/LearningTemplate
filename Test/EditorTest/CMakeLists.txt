@@ -32,6 +32,7 @@ sw_addTestExecutable(EditorTest
 		TestInspectorBuiltinValue.cpp
 		TestInspectorPropertyLayout.cpp
 		TestEditorViewportPick.cpp
+		TestEditorViewportPreview.cpp
 		TestReloadFileManager.cpp
 		TestSelectionManager.cpp
 		TestTexturePipeline.cpp
@@ -41,6 +42,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorGlobalVariableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPick.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPreview.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTransformCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorToolAssetCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorInspectorCommands.cpp"
@@ -80,6 +82,7 @@ sw_addReflectionStep(EditorTest
 	HEADERS
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.h"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorData.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES
 		"${CMAKE_SOURCE_DIR}/Source"
 )

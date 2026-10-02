@@ -129,6 +129,7 @@ namespace sw
         string                       _category;
         string                       _displayName;
         string                       _tooltip;
+        string                       _editorPreview; ///< `EditorPreview = "..."` — 에디터 뷰포트 미리보기가 이 메서드를 찾는 종류
         vector<pair<string, string>> _listCustomMeta;
         FunctionNetRole              _netRole;
         uint8                        _bReliable     : 1;
@@ -147,6 +148,7 @@ namespace sw
             , _category{ annotationConstants::kDefaultMethodCategory }
             , _displayName{}
             , _tooltip{}
+            , _editorPreview{}
             , _listCustomMeta{}
             , _netRole{ FunctionNetRole::Local }
             , _bReliable{ SW_FALSE }

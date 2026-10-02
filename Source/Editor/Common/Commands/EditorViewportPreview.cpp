@@ -20,7 +20,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -61,29 +60,11 @@ namespace sw::editor
                 return FileUtil::pathsEqualNormalized( animatorPath, graphPath );
             }
 
-            static bool isDialogueRunnerType( const TypeInfo* pType )
+            /** @brief 대사 미리보기 메서드의 시그니처( string speaker, string text )인지입니다. */
+            static bool takesDialogueLineArgs( const FunctionInfo& method )
             {
-                if ( pType == nullptr )
-                    return false;
-                if ( pType->_name == hashed_string( "DialogueRunnerComponent" ) )
-                    return true;
-                return pType->_fullyQualifiedName == hashed_string( "sw::DialogueRunnerComponent" );
-            }
-
-            static void invokeDialoguePreviewLine( Component* pComp, string_view speaker, string_view text )
-            {
-                if ( pComp == nullptr )
-                    return;
-                const TypeInfo* pType = pComp->getTypeInfo();
-                if ( pType == nullptr )
-                    return;
-                TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
-                if ( pRegistry == nullptr )
-                    return;
-                TaskArgs args;
-                args.add( string{ speaker } );
-                args.add( string{ text } );
-                pRegistry->invokeMethod( pComp, pType->_fullyQualifiedName, hashed_string( "previewLine" ), args );
+                return method._listParameterTypeName.size() == 2 && method._listParameterTypeName[0] == "string" &&
+                       method._listParameterTypeName[1] == "string" && method._invoker.isBound();
             }
         };
 
@@ -160,16 +141,44 @@ namespace sw::editor
                 const vector<Component*> listComp( pObject->getComponents().begin(), pObject->getComponents().end() );
                 for ( Component* pComp : listComp )
                 {
-                    if ( pComp == nullptr )
+                    const TypeInfo* pType = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
+                    if ( pType == nullptr )
                         continue;
-                    if ( EditorViewportPreviewInternal::isDialogueRunnerType( pComp->getTypeInfo() ) == false )
+                    const FunctionInfo* pMethod = findPreviewMethod( *pType, kDialogueLinePreview );
+                    if ( pMethod == nullptr )
                         continue;
-                    EditorViewportPreviewInternal::invokeDialoguePreviewLine( pComp, speaker, text );
+                    if ( EditorViewportPreviewInternal::takesDialogueLineArgs( *pMethod ) == false )
+                    {
+                        SW_LOG_WARNING( "%#::%# is EditorPreview=%# but does not take ( string speaker, string text )",
+                                        pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );
+                        continue;
+                    }
+                    pMethod->_invoker( pComp, TaskArgs{ string{ speaker }, string{ text } } );
                 }
             }
         }
         if ( speaker.empty() == false || text.empty() == false )
             SW_LOG_INFO( "Dialogue preview [%#]: %#", string{ speaker }.c_str(), string{ text }.c_str() );
+    }
+
+    const FunctionInfo* EditorViewportPreview::findPreviewMethod( const TypeInfo& type, string_view previewKind )
+    {
+#if !defined( SW_SHIPPING )
+        if ( previewKind.empty() )
+            return nullptr;
+        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        {
+            for ( const FunctionInfo& method : pType->_listMethod )
+            {
+                if ( method._metadata._editorPreview == previewKind )
+                    return &method;
+            }
+        }
+#else
+        (void)type;
+        (void)previewKind;
+#endif
+        return nullptr;
     }
 
     void EditorViewportPreview::applyMaterial( Material* pMaterial, string_view assetPath )
