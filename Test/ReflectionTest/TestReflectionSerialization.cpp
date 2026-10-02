@@ -2342,3 +2342,42 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
     SW_ASSERT_NOT_NULL( pOrphanTag );
     SW_EXPECT_STREQ( "2", pOrphanTag->_text.c_str() );
 }
+
+/**
+ * @brief [ReflectionSerializationTest] 필드 범위를 넘는 정수 글자는 잘라 넣지 않고 거절한다 — 값은 그대로 남는다
+ * @details 텍스트 스칼라 파서가 64 비트로 읽은 뒤 잘라 넣어, "300" 이 uint8 44 · "4000000000" 이 int32 음수가 됐다(XML · JSON · 바이너리 이관 ·
+ *          기본값이 모두 이 길을 탄다). 모르는 enum 이름과 같이 실패로 돌려주고 값은 둔다. 쓰는 쪽은 늘 범위 안의 값을 적으므로 왕복은 그대로다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
+{
+    struct NarrowFields
+    {
+        uint8 _narrow{ 7 };
+        int32 _wide{ 5 };
+        int8  _signedByte{ 3 };
+    };
+    sw::TypeInfo info;
+    info._name               = sw::hashed_string( "NarrowFields" );
+    info._fullyQualifiedName = sw::hashed_string( "sw::NarrowFields" );
+    info._size               = sizeof( NarrowFields );
+    info._listProperty       = {
+        {    sw::hashed_string( "_narrow" ), sw::hashed_string( "uint8" ), SW_OFFSET_OF( NarrowFields,     _narrow )},
+        {      sw::hashed_string( "_wide" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NarrowFields,       _wide )},
+        {sw::hashed_string( "_signedByte" ),  sw::hashed_string( "int8" ), SW_OFFSET_OF( NarrowFields, _signedByte )}
+    };
+
+    NarrowFields value;
+    {
+        test::ScopedDefensiveTestLog expected( "integers that do not fit their fields" );
+        sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":300,"_wide":4000000000,"_signedByte":-129})" );
+    }
+    SW_EXPECT_EQUAL( 7, static_cast<int32>( value._narrow ) );
+    SW_EXPECT_EQUAL( 5, value._wide );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( value._signedByte ) );
+
+    // 경계 값은 그대로 읽힌다.
+    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":255,"_wide":-2147483648,"_signedByte":-128})" ) );
+    SW_EXPECT_EQUAL( 255, static_cast<int32>( value._narrow ) );
+    SW_EXPECT_TRUE( value._wide == std::numeric_limits<int32>::min() );
+    SW_EXPECT_EQUAL( -128, static_cast<int32>( value._signedByte ) );
+}

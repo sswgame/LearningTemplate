@@ -268,3 +268,23 @@ SW_TEST_CASE( TileMapXmlTest, SizeBeyondTheTileLimitIsRejected )
     SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><width>64</width><height>64</height></TileMap>" ) );
     SW_EXPECT_EQUAL( size_t( 4096 ), loaded._listWalkable.size() );
 }
+
+/**
+ * @brief [TileMapXmlTest] 0~255 칸(높이 · 색)이 범위를 넘으면 묶는다 — 잘라 넣지 않는다
+ * @details `int32` 로 읽어 그대로 잘라 넣어, 색 "300" 이 44 · "-1" 이 255 가 됐다. 유니티 `Color32` 처럼 0 · 255 로 묶는다.
+ */
+SW_TEST_CASE( TileMapXmlTest, OutOfRangeByteAttributesAreClamped )
+{
+    sw::TileMapXmlData loaded;
+    {
+        test::ScopedDefensiveTestLog expected( "tile attributes outside 0..255" );
+        SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><width>1</width><height>1</height><tiles>"
+                                            "<t h=\"999\" tr=\"300\" tg=\"-1\" tb=\"128\">1</t></tiles></TileMap>" ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listVisual.size() );
+    const sw::TileMapXmlData::Visual& visual = loaded._listVisual[0];
+    SW_EXPECT_EQUAL( 255, static_cast<int32>( visual._height ) );
+    SW_EXPECT_EQUAL( 255, static_cast<int32>( visual._tintR ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( visual._tintG ) );
+    SW_EXPECT_EQUAL( 128, static_cast<int32>( visual._tintB ) );
+}

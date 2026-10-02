@@ -2079,6 +2079,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 61 직렬화 — 범위를 넘는 정수 글자를 잘라 넣었다: "300" 이 uint8 44, "4000000000" 이 int32 음수)
+
+1-0g 에서 남긴 것 "텍스트 스칼라 파서가 좁은 정수로 범위 검사 없이 자른다(에셋을 훑어 본 뒤 정한다)". `SerializeContext` 의 `parseScalarValue` 가
+64 비트로 읽은 뒤 `static_cast` 로 잘라 넣었다 — XML · JSON 읽기, 바이너리 스칼라 이관(텍스트를 거친다), PROPERTY 기본값이 모두 이 길이다.
+에셋을 훑었다(`Resource/` 의 xml · material · scene · prefab 과 `Config/*.json`): 범위를 넘는 값을 적은 파일이 없고, 반사 PROPERTY 에 좁은 정수(int8 ·
+uint8 · int16 · uint16)는 비트필드뿐이다 — 엄격하게 바꿔도 지금 읽히는 에셋은 그대로다. 쓰는 쪽은 늘 범위 안의 값을 적으므로 왕복도 그대로다.
+모르는 enum 이름(`SerializerUtil::parseTextValue`)과 같은 규칙으로 실패를 돌려주고 값은 둔다(경고 한 줄 — 읽는 쪽이 orphan 으로 남기거나 실패로
+알린다). 형제 자리 `TileMapXml` 의 0~255 칸(높이 · 아틀라스 · 색)도 `int32` 를 잘라 넣었다 — 색 "300" 이 44, "-1" 이 255 — 유니티 `Color32` 처럼
+0 · 255 로 묶는다(경고).
+
+**검증.** `ReflectionSerializationTest.OutOfRangeIntegerTextIsRejectedNotWrapped`(JSON 으로 uint8 300 · int32 4000000000 · int8 -129 — 값이 그대로,
+경계 값은 읽힌다), `TileMapXmlTest.OutOfRangeByteAttributesAreClamped`. 변이 셋(부호 없는 · 부호 있는 범위 검사, 타일 묶기)이 모두 실패했다.
+Debug 29 + hostgpu 2. (`SerializerUtil` 은 Engine 밖으로 내보내지 않아 시험은 공개 경로 JSON 역직렬화로 본다. Windows 헤더가 `small` 을 매크로로
+정의하니 변수 이름으로 쓰지 말 것.)
+
 ### 2026-10-02 (결함 60 월드 ↔ 로컬 — 에디터 세 곳이 부모 있는 오브젝트를 엉뚱한 자리로 옮겼고, 기즈모는 섞인 회전을 다른 회전으로 넣었다: 엔진 월드 세터)
 
 (B) 스물다섯째의 남은 것 "에디터가 월드 → 로컬 변환을 다섯 벌 들고 셋이 틀렸다(월드 세터 없음)". 점검하다 하나가 더 나왔다.

@@ -9,6 +9,27 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct TileMapXmlInternal
+        {
+            /**
+             * @brief 0~255 칸(높이 · 아틀라스 · 색)을 읽습니다. 범위를 넘으면 0 · 255 로 묶고 경고합니다.
+             * @details 예전에는 `int32` 로 읽어 그대로 잘라 넣어, 색 "300" 이 44 · "-1" 이 255 가 됐다(유니티 `Color32` 는 묶는다).
+             */
+            static uint8 readByteAttribute( const XmlNode& node, const utf8* pName, int32 fallback )
+            {
+                const int32 value = node.getAttributeInt( pName, fallback );
+                if ( value < 0 || value > 255 )
+                {
+                    SW_LOG_WARNING( "Tile attribute '%#'=%# is outside 0..255 - clamped", pName, value );
+                    return static_cast<uint8>( value < 0 ? 0 : 255 );
+                }
+                return static_cast<uint8>( value );
+            }
+        };
+    } // namespace
+
     SW_LOG_CALLER( "TileMapXml" );
 
     bool TileMapXmlData::load( string_view path )
@@ -93,19 +114,19 @@ namespace sw
 
                 Visual tileVisual{};
                 if ( tileNode.findAttribute( "h" ) != nullptr )
-                    tileVisual._height = static_cast<uint8>( tileNode.getAttributeInt( "h", 0 ) );
+                    tileVisual._height = TileMapXmlInternal::readByteAttribute( tileNode, "h", 0 );
                 else
                     tileVisual._height = _listEncounter[elementIndex] != 0 ? 2 : ( _listWalkable[elementIndex] != 0 ? 1 : 0 );
 
                 if ( tileNode.findAttribute( "atlas" ) != nullptr )
-                    tileVisual._atlasId = static_cast<uint8>( tileNode.getAttributeInt( "atlas", 0 ) );
+                    tileVisual._atlasId = TileMapXmlInternal::readByteAttribute( tileNode, "atlas", 0 );
 
                 const bool bHasTint = tileNode.findAttribute( "tr" ) != nullptr || tileNode.findAttribute( "tg" ) != nullptr || tileNode.findAttribute( "tb" ) != nullptr;
                 if ( bHasTint )
                 {
-                    tileVisual._tintR = static_cast<uint8>( tileNode.getAttributeInt( "tr", 255 ) );
-                    tileVisual._tintG = static_cast<uint8>( tileNode.getAttributeInt( "tg", 255 ) );
-                    tileVisual._tintB = static_cast<uint8>( tileNode.getAttributeInt( "tb", 255 ) );
+                    tileVisual._tintR = TileMapXmlInternal::readByteAttribute( tileNode, "tr", 255 );
+                    tileVisual._tintG = TileMapXmlInternal::readByteAttribute( tileNode, "tg", 255 );
+                    tileVisual._tintB = TileMapXmlInternal::readByteAttribute( tileNode, "tb", 255 );
                 }
                 else if ( _listEncounter[elementIndex] != 0 )
                 {
