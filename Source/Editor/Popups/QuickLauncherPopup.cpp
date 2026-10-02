@@ -11,7 +11,7 @@
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -146,12 +146,10 @@ namespace sw::editor
             return;
         }
 
-        if ( item._kind == EditorAssetKind::Scene )
-        {
-            (void)EditorAssetCommands::tryOpenScene( item._path ); // 실패는 tryOpenScene 이 알린다
+        // 여는 동작이 있는 종류(씬)는 연다 — 실패는 그 동작이 알린다. 나머지는 콘텐츠 브라우저에서 고른다.
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActions( item._kind );
+        if ( pActions != nullptr && pActions->open( item._path ) )
             return;
-        }
-
         EditorAssetCommands::focusPath( item._path );
     }
 
