@@ -619,3 +619,34 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
         SW_EXPECT_EQUAL( size_t( 0 ), ObjectStateSerializer::loadFromBinaryBuffer( pOtherVersion, otherVersion.data(), otherVersion.size() ) );
     }
 }
+
+/**
+ * @brief [ObjectStateRoundTripTest] 끈 컴포넌트와 숨긴 메시는 상태를 건너도 그대로다 — 저장 · 되돌리기 · Stop · 씬 다시 열기
+ * @details `Component::_bActive` 와 `MeshComponent::_bVisible` 은 PROPERTY 가 아니었다. 상태(씬 파일 · 되돌리기 스냅샷 · 플레이 스냅샷)가 이 값을 싣지
+ *          않아, 끈 컴포넌트 · 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜졌고 토글은 되돌리기에 남지 않았다(앞뒤 스냅샷이 같았다).
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, TurnedOffComponentsAndHiddenMeshesStayThatWay )
+{
+    GameObjectManager manager;
+    GameObject*       pSource = manager.createGameObject( hashed_string( "Lamp" ) );
+    MeshComponent*    pMesh   = pSource->addComponent<MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setActive( false );
+    pMesh->setVisible( false );
+
+    const string  xml = ObjectStateSerializer::saveToXmlString( pSource );
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
+
+    GameObject* pFromXml    = manager.createGameObject( hashed_string( "FromXml" ) );
+    GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFromXml, xml ) );
+    SW_ASSERT_EQUAL( bytes.size(), ObjectStateSerializer::loadFromBinaryBuffer( pFromBinary, bytes.data(), bytes.size() ) );
+    for ( GameObject* pLoaded : { pFromXml, pFromBinary } )
+    {
+        const MeshComponent* pLoadedMesh = pLoaded->getComponent<MeshComponent>();
+        SW_ASSERT_NOT_NULL( pLoadedMesh );
+        SW_EXPECT_FALSE( pLoadedMesh->isSelfActive() );
+        SW_EXPECT_FALSE( pLoadedMesh->isVisible() );
+    }
+}

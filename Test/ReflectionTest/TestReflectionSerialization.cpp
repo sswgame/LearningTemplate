@@ -2486,3 +2486,40 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
     SW_EXPECT_TRUE( ( *pBoolReader )( &bPlain, "0" ) );
     SW_EXPECT_FALSE( bPlain );
 }
+
+/**
+ * @brief [ReflectionSerializationTest] 등록된 모든 PROPERTY 는 세 형식이 실어 나를 수 있는 타입이다
+ * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 썼고, 읽으면 그 칸은 기본값이 됐다 — 저장한 줄 알았던 값이 사라졌다.
+ *          선언(PROPERTY)만 있고 저장이 없는 것이 결함 62 · ㊺ 의 모양이다. 새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
+ *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
+{
+    const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+    // 판정 자체가 늘 참이면 이 시험은 아무것도 지키지 않는다.
+    SW_EXPECT_FALSE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "void *" ), ctx ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), ctx ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "sw::RHIBlendMode" ), ctx ) );
+
+    sw::vector<const sw::TypeInfo*> listType;
+    sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+    { listType.push_back( &typeInfo ); } );
+    SW_ASSERT_TRUE( listType.size() > 50 );
+
+    sw::string offenders;
+    uint32     checkedCount{ 0 };
+    for ( const sw::TypeInfo* pType : listType )
+    {
+        for ( const sw::PropertyInfo& prop : pType->_listProperty )
+        {
+            if ( prop._metadata._bTransient == SW_TRUE )
+                continue;
+            ++checkedCount;
+            if ( sw::SerializerUtil::canCarryProperty( prop, ctx ) )
+                continue;
+            offenders += sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (" + prop._typeName.c_str() + ")\n";
+        }
+    }
+    SW_EXPECT_TRUE( checkedCount > 100 );
+    SW_EXPECT_TRUE_MSG( offenders.empty(), offenders.c_str() );
+}

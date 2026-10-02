@@ -1666,7 +1666,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
-| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
+| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ (3절) — 소비 없는 컴포넌트 · 모르는 컴포넌트 보존은 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
 
@@ -1681,9 +1681,9 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
   린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
   모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
-- **R4** — `Component::_bActive` · `MeshComponent::_bVisible` 이 저장되지 않는다(Stop · 되돌리기 · 저장 뒤 다시 켜진다, 토글이 되돌리기를 남기지
-  않는다). 지원하지 않는 PROPERTY 타입은 "null" · 0 바이트로 조용히 쓰인다
-  (지금 걸리는 것은 `RHISwapChainDesc` 의 `void*` 둘, 잠복: quaternion · float4x4 텍스트, 컨테이너 원소 별칭). 효과 없는 컴포넌트 · 칸:
+- **R4**(구조 ⑪ 뒤) — 모르는 컴포넌트 타입은 읽을 때 버려지고(경고는 한다) 다음 저장에서 영영 사라진다(게임 모듈이 안 뜬 채 에디터가 씬을 저장하면
+  그 컴포넌트 값이 없어진다 — 유니티 "Missing Script" 처럼 원문을 들고 있다 다시 쓸 것). PROPERTY 판정 시험(`EveryPropertyHasATypeTheSerializersCanCarry`)은
+  ReflectionTest 가 등록하는 타입만 본다 — 게임 모듈 · GameFramework 타입은 모듈을 올리는 시험(AppTest)에서도 돌릴 것. 효과 없는 컴포넌트 · 칸:
   `CameraControllerComponent` 가 주인을 (0,0) 에 고정, `SpriteAnimator` 무효과, HPBar · DamageUI · Effect · `Projectile::_damage`, `GameData` 의 칸 아홉.
 - **R5** — `clearComponents` · `destroyComponentInstance` · 상태 로드를 틱 안에서 부르면 해제 후 사용(형제 `removeComponent` 는 미룬다),
   `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 미룬 일의 순서(부착 큐가 addComponent 큐보다 먼저 — 틱 안의 생성 + 부착이 루트로
@@ -2101,6 +2101,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑪ 저장되는 상태는 PROPERTY 이고, 모든 PROPERTY 는 직렬화기가 실어 나를 수 있는 타입이다 — 1-0j 의 R4 첫 단위)
+
+- **끈 컴포넌트 · 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜졌다** — `Component::_bActive` · `MeshComponent::_bVisible` 이 PROPERTY 가 아니라 상태
+  (씬 파일 · 되돌리기 · 플레이 스냅샷)에 실리지 않았고, 토글은 되돌리기에 남지 않았다(앞뒤 스냅샷이 같았다). 이제 PROPERTY 다(`_bActive` 는 머리의 체크박스가
+  그리므로 `HideInInspector`). 메시의 "Visible" 하나만 그리던 인스펙터 확장 구역은 지웠다 — 반사 프로퍼티가 그린다.
+- **다룰 줄 모르는 PROPERTY 타입이 조용히 텍스트 `null` · 바이너리 0 바이트로 쓰였다**(읽으면 그 칸은 기본값). 지금 걸린 것은 `RHISwapChainDesc` 의 창 핸들
+  둘(`void*`) — 실행마다 다른 런타임 값이라 `Transient` 로.
+
+구조로 막은 것: `SerializerUtil::canCarryProperty` · `canCarryValueType`(직렬화기 분기와 같은 판정 — 글 처리기 짝 · enum · 반사 구조체, 컨테이너는 원소 · 키,
+소유 포인터 원소는 팩토리)와 그것으로 **등록된 모든 PROPERTY 를 훑는 시험** — 새 PROPERTY 가 실어 나를 수 없는 타입이면 이름으로 진다.
+
+**검증.** 새 시험 2(이전 코드에서 진다): `ObjectStateRoundTripTest.TurnedOffComponentsAndHiddenMeshesStayThatWay`(XML · 바이너리),
+`ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`(창 핸들 둘을 이름으로 짚었다; 판정이 늘 참이 아닌지도 본다). 변이 2 모두 죽음
+(PROPERTY 를 빼면 코드젠을 거쳐 진다). Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-03 (구조 ⑩ 지금 타입에 없는 칸은 세 형식 모두 건너뛴다 — 바이너리만 오브젝트를 통째로 버렸다 — 1-0j 의 R3 넷째 단위)
 

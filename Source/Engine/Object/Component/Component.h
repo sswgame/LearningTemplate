@@ -350,8 +350,13 @@ namespace sw
          */
         PoolAllocator* _pPool;
 
-        atomic<uint64>      _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
-        atomic<bool>        _bActive;           ///< 컴포넌트 자기 활성 비트
+        atomic<uint64> _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
+        /**
+         * @brief 컴포넌트 자기 활성 비트입니다. 저장됩니다 — 예전에는 PROPERTY 가 아니라 끈 컴포넌트가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜졌고,
+         *        토글이 되돌리기에 남지 않았다(스냅샷이 이 값을 싣지 않았다). 인스펙터는 컴포넌트 머리의 체크박스로 그린다.
+         */
+        PROPERTY( HideInInspector )
+        atomic<bool>        _bActive;
         atomic<bool>        _bIsPendingDestroy; ///< 삭제 예정 표시
         TickGroup           _tickGroup;         ///< TickGroup 슬롯
         uint8               _bCanEverTick      : 1;

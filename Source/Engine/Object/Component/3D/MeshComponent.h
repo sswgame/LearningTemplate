@@ -180,6 +180,8 @@ namespace sw
         uint32 _primitiveIndex;
         // "더티" 비트는 여기 없다. 등록부의 원자 플래그 하나가 기준이다. 비트필드였을 때는 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 형식상 레이스였다.
+        /** @brief 그리는지 여부입니다. 저장됩니다 — 예전에는 PROPERTY 가 아니라 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 보였다. */
+        PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )
         uint8 _bVisible : 1;
         uint8 _reserved : 7;
     };

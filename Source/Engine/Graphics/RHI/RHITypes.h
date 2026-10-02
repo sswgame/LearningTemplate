@@ -227,10 +227,12 @@ namespace sw
     struct RHISwapChainDesc
     {
         REFLECT_BODY();
-        PROPERTY()
+        // 창 핸들은 실행마다 다른 런타임 값이라 저장하지 않는다(`Transient`). 예전에는 그냥 PROPERTY 라 직렬화기가 다룰 줄 몰라 텍스트 "null" ·
+        // 바이너리 0 바이트로 조용히 썼다 — `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry` 가 짚는다.
+        PROPERTY( Transient )
         void* _pWindowHandle{ nullptr }; ///< OS 윈도우 핸들 (HWND, Window XID 등)
 
-        PROPERTY()
+        PROPERTY( Transient )
         void* _pWindowDisplay{ nullptr }; ///< X11 Display 포인터 (리눅스 전용)
 
         PROPERTY()

@@ -682,6 +682,46 @@ namespace sw
         return pValue != nullptr && parseTextValue( pValue, prop._typeName, text, ctx );
     }
 
+    bool SerializerUtil::canCarryValueType( hashed_string typeName, const SerializeContext& ctx )
+    {
+        if ( typeName.empty() )
+            return false;
+        // 바이너리는 글 처리기로 물러나므로(`serializeValueBinary` 의 마지막 갈래) 글 처리기 짝이 있으면 세 형식 모두 된다. 바이너리 처리기만 있는
+        // 타입은 XML · JSON 에 "null" 로 나간다 — 실어 나르지 못한다.
+        const hashed_string resolved = resolveHandlerTypeName( typeName, ctx );
+        if ( ctx.findTextWriter( resolved ) != nullptr && ctx.findTextReader( resolved ) != nullptr )
+            return true;
+        if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
+            return true;
+        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        return pStructInfo != nullptr && pStructInfo->isPrimitive() == false;
+    }
+
+    bool SerializerUtil::canCarryProperty( const PropertyInfo& prop, const SerializeContext& ctx )
+    {
+        if ( prop._bIsBitField == SW_TRUE )
+            return true;
+        if ( prop._bIsContainer == SW_FALSE )
+            return canCarryValueType( prop._typeName, ctx );
+        if ( prop.hasContainerWrapper() == false )
+            return false;
+
+        // 원소가 다시 컨테이너면 안으로 내려간다. 소유 포인터 원소는 런타임 팩토리가 타입을 정한다(이름에 `*`).
+        NestedContainerInfo shape = prop.getContainerShape();
+        while ( true )
+        {
+            if ( shape._keyTypeName.empty() == false && canCarryValueType( shape._keyTypeName, ctx ) == false )
+                return false;
+            if ( shape._elementNested != nullptr )
+            {
+                const NestedContainerInfo inner = *shape._elementNested;
+                shape                           = inner;
+                continue;
+            }
+            return isOwnedPointerElementType( shape._elementTypeName ) || canCarryValueType( shape._elementTypeName, ctx );
+        }
+    }
+
     string SerializerUtil::formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
     {
         if ( pInstance == nullptr )

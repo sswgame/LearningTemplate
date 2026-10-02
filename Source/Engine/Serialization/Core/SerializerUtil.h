@@ -181,6 +181,15 @@ namespace sw
         SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& ctx );
         /** @brief 글 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 못 읽으면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& ctx );
+        /**
+         * @brief 이 프로퍼티의 값을 세 형식(XML · JSON · 바이너리)이 모두 실어 나를 수 있으면 true 입니다 — 직렬화기의 분기와 같은 판정입니다.
+         * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null` · 바이너리 0 바이트로 썼고, 읽을 때는 그 칸이 기본값이 됐다(저장한 줄 알았던
+         *          값이 사라진다). 컨테이너는 원소 · 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿습니다. 모든 PROPERTY 를 이것으로 훑는 시험이 있다.
+         */
+        SW_API static bool canCarryProperty( const PropertyInfo& prop, const SerializeContext& ctx );
+        /** @brief 값 타입 하나를 세 형식이 모두 실어 나를 수 있으면 true 입니다(글 처리기 짝 · enum · 반사 구조체). */
+        SW_API static bool canCarryValueType( hashed_string typeName, const SerializeContext& ctx );
+
         /** @brief 프로퍼티 값을 사람이 읽는 글로 씁니다(XML 속성 값과 같은 꼴). 비트필드는 `true` · `false`, 컨테이너는 `[n]`(원소 수)입니다. */
         SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx );
 

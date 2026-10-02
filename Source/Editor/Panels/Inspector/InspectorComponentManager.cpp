@@ -13,7 +13,6 @@
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
@@ -150,19 +149,6 @@ namespace sw::editor
                     }
                 }
             };
-
-            /** @brief MeshComponent 의 가시성(반사 프로퍼티가 아니다 — 트랜스폼은 SceneComponent 단계가, 메시 칸은 반사 프로퍼티가 그린다) */
-            class MeshComponentInspector : public IInspectorComponent
-            {
-            public:
-                void drawSection( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
-                {
-                    MeshComponent* pMeshComp = static_cast<MeshComponent*>( pComponent );
-                    bool           bVisible  = pMeshComp->isVisible();
-                    if ( ImGui::Checkbox( "Visible", &bVisible ) )
-                        pMeshComp->setVisible( bVisible );
-                }
-            };
         };
     } // namespace
 } // namespace sw::editor
@@ -201,6 +187,5 @@ namespace sw::editor
         registerComponent<CameraComponent, InspectorComponentManagerInternal::CameraComponentInspector>();
         registerComponent<TagComponent, InspectorComponentManagerInternal::TagComponentInspector>();
         registerComponent<SpriteComponent, InspectorComponentManagerInternal::SpriteComponentInspector>();
-        registerComponent<MeshComponent, InspectorComponentManagerInternal::MeshComponentInspector>();
     }
 } // namespace sw::editor
