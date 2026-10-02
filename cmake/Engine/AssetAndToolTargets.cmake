@@ -76,7 +76,7 @@ if(Python3_Interpreter_FOUND)
 	endif()
 
 	sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
-		COMMENT "Cooking scene XML, prefab XML and Resource packs to binary..."
+		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary..."
 		ARGS ${swCookArgs}
 	)
 	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
