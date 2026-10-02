@@ -1034,6 +1034,88 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
 }
 
 /**
+ * @brief [ReflectionSerializationTest] enum **타입 자체를 지운** 뒤 그 칸이 수로 바뀌어도 열거자 이름 해시를 수로 읽지 않는다
+ * @details 기록 타입 해시를 모르면(지운 enum · 타입) 이관이 크기로 짐작했다 — 4 바이트 열거자 이름 해시가 int32 칸에 그대로 들어갔다. 이제 기록 타입을
+ *          모르면 그 칸은 읽지 않는다(값은 그대로, 나머지는 읽힌다). 바이너리 칸 읽기와 orphan 이관이 같은 규칙이다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANumber )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
+#else
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::EnumInfo      goneEnum;
+    goneEnum._name               = sw::hashed_string( "GoneColor" );
+    goneEnum._fullyQualifiedName = sw::hashed_string( "swtest::GoneColor" );
+    goneEnum._moduleName         = sw::hashed_string( "TestGoneEnum" );
+    goneEnum._size               = static_cast<uint8>( sizeof( WireShiftColor ) );
+    goneEnum._bIsSigned          = SW_TRUE;
+    for ( const auto& [pName, value] : {
+              std::pair<const utf8*, int64>{  "Red", 0},
+              {"Green", 1},
+              { "Blue", 2}
+    } )
+    {
+        goneEnum._mapNameToValue[sw::hashed_string( pName )] = value;
+        goneEnum._mapValueToName[value]                      = sw::hashed_string( pName );
+    }
+    registry.registerEnum( goneEnum );
+
+    // 이번 빌드: `_color` 는 GoneColor 다.
+    sw::TypeInfo savedType;
+    savedType._name               = sw::hashed_string( "WireShiftHost" );
+    savedType._fullyQualifiedName = sw::hashed_string( "sw::WireShiftHost" );
+    savedType._size               = sizeof( WireShiftHost );
+    savedType._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( "swtest::GoneColor" ), SW_OFFSET_OF( WireShiftHost, _color ) } );
+    savedType._listProperty.push_back( { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftHost, _after ) } );
+    WireShiftHost saved;
+    saved._color = WireShiftColor::Green;
+    saved._after = 9;
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &saved, savedType, bytes );
+
+    // 다음 빌드: enum 은 지워졌고 `_color` 는 int32 다.
+    registry.unregisterTypesByModule( "TestGoneEnum" );
+    SW_ASSERT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GoneColor" ) ) == nullptr );
+
+    const sw::TypeInfo   asNumber = makeWireShiftRetypedType( false );
+    WireShiftRetypedHost lenientTarget;
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    lenient.setAllowUnknownProperties( true );
+    {
+        test::ScopedDefensiveTestLog expected( "a saved field whose type no longer exists" );
+        (void)sw::BinarySerializer::deserialize( &lenientTarget, asNumber, bytes.data(), bytes.size(), lenient ); // 칸 하나는 실패로 알린다 — 값을 본다
+    }
+    SW_EXPECT_TRUE_MSG( lenientTarget._colorNumber == -1, "지운 enum 의 열거자 이름 해시가 수 칸에 그대로 들어갔습니다" );
+    SW_EXPECT_EQUAL( 9, lenientTarget._after );
+
+    WireShiftRetypedHost              softTarget;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    {
+        test::ScopedDefensiveTestLog expected( "a saved field whose type no longer exists" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, asNumber, bytes.data(), bytes.size(), &listOrphan ) );
+    }
+    SW_EXPECT_TRUE_MSG( softTarget._colorNumber == -1, "지운 enum 의 열거자 이름 해시가 수 칸에 그대로 들어갔습니다(soft)" );
+    SW_EXPECT_EQUAL( 9, softTarget._after );
+
+    // 이관 함수가 orphan 을 수 칸으로 옮기려 해도 같다 — `_color` 가 없는 타입으로 읽어 orphan 을 만들고 옮겨 본다.
+    sw::TypeInfo withoutColor = asNumber;
+    withoutColor._listProperty.erase( withoutColor._listProperty.begin() );
+    WireShiftRetypedHost              partial;
+    sw::vector<sw::SchemaOrphanValue> listColorOrphan;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, bytes.data(), bytes.size(), &listColorOrphan ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listColorOrphan.size() );
+    WireShiftRetypedHost     migrated;
+    sw::SchemaMigrateContext migrateContext;
+    migrateContext._pInstance = &migrated;
+    migrateContext._pTypeInfo = &asNumber;
+    migrateContext._pOrphans  = &listColorOrphan;
+    SW_EXPECT_FALSE( migrateContext.applyOrphanTo( sw::hashed_string( "_color" ) ) );
+    SW_EXPECT_TRUE_MSG( migrated._colorNumber == -1, "지운 enum 의 열거자 이름 해시가 이관으로 수 칸에 들어갔습니다" );
+#endif
+}
+
+/**
  * @brief [ReflectionSerializationTest] JSON 맵 컨테이너를 평범한 오브젝트 표현으로도 읽고 쓴다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, JsonMapUsesPlainObject )

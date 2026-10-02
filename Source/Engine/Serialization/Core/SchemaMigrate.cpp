@@ -255,6 +255,9 @@ namespace sw
                 hashed_string hint = wireTypeHint;
                 if ( hint.empty() )
                     hint = findWireTypeName( orphan._wireTypeHash );
+                // 기록 타입이 적혀 있는데 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 옮기지 않는다(바이너리 칸 읽기와 같은 규칙).
+                if ( hint.empty() && orphan._wireTypeHash != 0 )
+                    return false;
                 return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, ctx );
             }
 

@@ -221,9 +221,14 @@ namespace sw
                     {
                         void*               pPropPtr     = prop.getRawPtr( pInstance );
                         const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                        bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
-                        if ( bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false )
-                            bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false, wireVersion );
+                        // 기록 타입을 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 읽지 않는다. 예전에는 지운 enum 의 열거자 이름 해시
+                        // (4 바이트)가 int32 로 바뀐 칸에 그대로 읽혔다.
+                        if ( wireTypeName.empty() == false )
+                        {
+                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
+                            if ( bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false )
+                                bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false, wireVersion );
+                        }
                     }
                     else
                     {
