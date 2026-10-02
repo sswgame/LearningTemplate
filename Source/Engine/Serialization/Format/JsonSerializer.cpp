@@ -175,9 +175,12 @@ namespace sw
                 }
             }
 
-            // items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
+            /**
+             * @brief items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
+             * @param pOutListOrphan 소유 포인터 원소(컴포넌트)의 못 읽은 칸을 받을 바깥 orphan 목록(XML 과 같다). 없으면 그 원소를 엄격하게 읽는다.
+             */
             static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
-                                               bool bOwnedPtr, const SerializeContext& ctx )
+                                               bool bOwnedPtr, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 ISequenceContainerWrapper* pSeq = nested._wrapper != nullptr ? nested._wrapper->asSequence() : nullptr;
                 if ( pSeq == nullptr || items.isArray() == false )
@@ -208,7 +211,9 @@ namespace sw
                             (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다(예전과 같다)
                             continue;
                         }
-                        if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
+                        // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로 — 예전에는 엄격하게 읽어 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들었고,
+                        // 로드는 "_listComponent 를 버렸다" 고 알렸다(컴포넌트는 읽혔는데). XML 은 처음부터 바깥 목록을 내려 줬다.
+                        if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, pOutListOrphan, nullptr, ctx ) == false )
                             bOk = false;
                     }
                     return bOk;
@@ -299,7 +304,7 @@ namespace sw
              * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 얼마든지 중첩할 수 있습니다.
              */
             static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-                                                const SerializeContext& ctx )
+                                                const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return false;
@@ -309,7 +314,7 @@ namespace sw
                     const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
                     if ( bOwnedPtr == false )
                         nested._wrapper->clear( pContainerPtr );
-                    return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx );
+                    return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx, pOutListOrphan );
                 }
 
                 if ( src.isObject() && nested._wrapper->asMap() != nullptr )
@@ -385,7 +390,8 @@ namespace sw
                 writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
             }
 
-            static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
+            static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx,
+                                      vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
@@ -402,7 +408,7 @@ namespace sw
                 }
                 void* pPropPtr = prop.getRawPtr( pInstance );
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
+                    return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx, pOutListOrphan );
                 return readJsonValue( pPropPtr, prop._typeName, field, ctx );
             }
         };
@@ -555,7 +561,7 @@ namespace sw
             }
 
             uniqueMatched.insert( pMatched->getNameHash() );
-            if ( JsonSerializerInternal::readProperty( field, *pMatched, pInstance, ctx ) == false )
+            if ( JsonSerializerInternal::readProperty( field, *pMatched, pInstance, ctx, pOutListOrphan ) == false )
             {
                 if ( pOutListOrphan != nullptr )
                 {

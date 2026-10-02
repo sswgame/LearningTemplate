@@ -1672,8 +1672,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
-- **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — JSON 소유 포인터 원소(컴포넌트) 읽기는 엄격해 원소 안의 읽지 못한 값이 `_listComponent` 칸으로 보고된다
-  (XML 처럼 orphan 목록을 내려 줄 것). `FileUtil::createParentDirectory` ·
+- **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — `FileUtil::createParentDirectory` ·
   `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
@@ -2099,6 +2098,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R2 남은 것 — JSON 컴포넌트 안의 못 읽은 칸은 그 칸만, 이름으로)
+
+- **JSON 이 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽었다** — 원소 안의 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드는 "_listComponent 를
+  버렸다" 고 알렸다(컴포넌트는 읽혔는데 어느 칸인지 말하지 않았다). XML 은 처음부터 바깥 orphan 목록을 원소까지 내려 줬다. JSON 도 `readProperty` →
+  `readTypedContainerJson` → `readSequenceItemsJson` 으로 같은 목록을 내려 준다(재귀 컨테이너는 그대로 엄격).
+
+**검증.** 새 시험 1(이전 코드에서 진다): `ObjectStateRoundTripTest.JsonComponentFieldThatDoesNotReadIsNamed`. 변이 1 죽음(원소를 엄격하게 읽기).
+Debug nogpu · lint 30/30.
 
 ### 2026-10-03 (R3 남은 것 — 씬은 쿠커가 굽는 이름으로만 저장된다, 저작 소스 이름도 쿠킹 표 하나에서)
 

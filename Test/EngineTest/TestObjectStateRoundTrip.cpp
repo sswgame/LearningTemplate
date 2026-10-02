@@ -953,3 +953,36 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
         SW_EXPECT_EQUAL( 7, pRenamedNext->_kept );
     }
 }
+
+/**
+ * @brief [ObjectStateRoundTripTest] JSON 컴포넌트 안의 못 읽은 칸은 그 칸만 버려지고 이름으로 알린다 — 컴포넌트의 나머지는 읽힌다
+ * @details JSON 은 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽었다. 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드는
+ *          "_listComponent 를 버렸다" 고 알렸다 — 컴포넌트는 읽혔는데 어느 칸이 문제인지는 말하지 않았다. XML 은 처음부터 바깥 목록을 내려 줬다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed )
+{
+    GameObjectManager manager;
+    GameObject*       pSource = manager.createGameObject( hashed_string( "Mover" ) );
+    SceneComponent*   pRoot   = pSource->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    pRoot->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+
+    string       json    = ObjectStateSerializer::saveToJsonString( pSource );
+    const size_t typeKey = json.find( "\"SceneComponent\"" );
+    SW_ASSERT_TRUE( typeKey != string::npos );
+    const size_t bodyOpen = json.find( '{', typeKey );
+    SW_ASSERT_TRUE( bodyOpen != string::npos );
+    json.insert( bodyOpen + 1, "\"_noSuchField\":1," );
+
+    GameObject*              pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a component field the type does not have" );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pLoaded, json ) );
+    }
+    const SceneComponent* pLoadedRoot = pLoaded->getComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pLoadedRoot );
+    SW_EXPECT_TRUE( pLoadedRoot->getLocalScale() == float3( 2.0f, 2.0f, 2.0f ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_noSuchField" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_listComponent" ) == 0, logs.joined().c_str() );
+}
