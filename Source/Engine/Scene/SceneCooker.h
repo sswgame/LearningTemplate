@@ -43,8 +43,8 @@ namespace sw
          * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않습니다.
          * @return 기록한 씬 파일 수입니다.
          *
-         * @details 산출물을 소스 옆에 두지 않는 이유는 `CookAssets.py::cookedOutputPathInternal` 의
-         *          주석과 같습니다. 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 실패를 가립니다.
+         * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
+         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다.
          */
         SW_API static uint32 cookAllScenes( string_view cookedDir );
     };

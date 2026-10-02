@@ -283,3 +283,47 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     SW_EXPECT_TRUE( pRoot->getLocalRotation() == sw::float3( 0.0f, 1.0f, 0.0f ) );
     SW_EXPECT_TRUE( pRoot->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
 }
+
+/**
+ * @brief [PrefabTest] 엔진이 저작 프리팹(XML · JSON, 하위 폴더 포함)을 쿠킹본(.prefab.bin)으로 굽는다 — 읽지 못한 것 · 같은 쿠킹본을 쓰는 둘은 실패로 센다
+ * @details 예전에는 파이썬(`CookAssets.py`)이 PFB2 형식을 따로 들고 `.prefab.xml` 만 구웠다 — `.prefab.json` 은 Shipping 에서 쿠킹본이 없어 스폰이
+ *          실패했고, 엔진의 `cookPrefabToBinary` 는 쓰이지 않았다. 씬처럼 엔진이 굽는다(`App --cook-scenes` 가 함께 부른다, 언리얼 쿡 커맨드렛 자리).
+ */
+SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
+{
+    const sw::string sourceRoot = test::makeTempDirectory( "prefab_src" );
+    const sw::string cookedRoot = test::makeTempDirectory( "prefab_cooked" );
+    SW_ASSERT_FALSE( sourceRoot.empty() );
+    SW_ASSERT_FALSE( cookedRoot.empty() );
+
+    const sw::PrefabAsset crate = sw::makeCratePrefab();
+    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/crate.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToJsonFile( sourceRoot + "/barrel.prefab.json" ) );
+    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/sub/deep.prefab.xml" ) );
+    // 읽지 못하는 프리팹과, 같은 쿠킹본(.prefab.bin)을 쓰는 두 소스.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/broken.prefab.json", "{ not json" ) );
+    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/twin.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToJsonFile( sourceRoot + "/twin.prefab.json" ) );
+    // 프리팹이 아닌 XML 은 건드리지 않는다.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/notes.xml", "<Notes/>" ) );
+
+    uint32       failedCount  = 0;
+    const uint32 writtenCount = sw::PrefabManager::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    SW_EXPECT_EQUAL( 4u, writtenCount ); // crate · barrel · deep · twin 둘 중 하나
+    SW_EXPECT_EQUAL( 2u, failedCount );  // broken · twin 의 나머지 하나
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedRoot + "/broken.prefab.bin" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedRoot + "/notes.bin" ) );
+
+    sw::GameObjectManager check;
+    for ( const utf8* pCooked : { "/crate.prefab.bin", "/barrel.prefab.bin", "/sub/deep.prefab.bin" } )
+    {
+        sw::PrefabAsset cooked;
+        SW_ASSERT_TRUE_MSG( cooked.loadFromBinaryFile( cookedRoot + pCooked ), pCooked );
+        SW_EXPECT_TRUE( cooked.getName() == crate.getName() );
+        sw::GameObject* pObj = check.createGameObject( sw::hashed_string( "Check" ) );
+        SW_ASSERT_TRUE( cooked.applyStateTo( pObj ) );
+        const sw::SceneComponent* pRoot = pObj->getPrimarySceneComponent();
+        SW_ASSERT_NOT_NULL( pRoot );
+        SW_EXPECT_TRUE( pRoot->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
+    }
+}

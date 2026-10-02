@@ -2079,6 +2079,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 72 프리팹 쿠킹 — 파이썬이 PFB2 형식을 따로 들고 XML 만 구워, JSON 프리팹은 배포본에서 스폰이 실패했다)
+
+남은 항목 "프리팹 쿠킹이 Python 에 PFB2 형식 중복 · .prefab.json 은 쿠킹 안 됨 · 엔진의 cookPrefabToBinary 미사용". 런타임은 배포본에서
+`x.prefab.json` 을 `x.prefab.bin` 으로 바꿔 읽는데(`loadPrefab` 의 표), 쿠커(`CookAssets.py`)는 `Resource/game/*/prefabs/*.prefab.xml` 만 PFB2 로
+구웠다 — JSON 프리팹은 쿠킹본이 없어 스폰이 실패했고, 엔진의 `cookPrefabToBinary` 는 쓰이지 않았다. 형식을 쓰는 곳이 둘(파이썬 · 엔진)이었다.
+
+씬과 같은 자리로 옮겼다(언리얼 쿡 커맨드렛 · 씬은 이미 `App --cook-scenes`): `PrefabManager::cookAllPrefabs( sourceRoot, cookedDir, outFailed )` 가
+리소스 루트 아래(모든 도메인 · 하위 폴더)의 `*.prefab.xml` · `*.prefab.json` 을 `PrefabAsset` 으로 읽어 `<cookedDir>/<상대 경로>/<이름>.prefab.bin`
+으로 쓴다(형식을 쓰는 곳은 `PrefabAsset::saveToBinaryFile` 하나). 읽지 못한 것과, 앞의 소스와 같은 쿠킹본을 쓰게 되는 소스(`x.prefab.xml` 과
+`x.prefab.json`)는 실패로 세고 경고한다 — 배포본은 하나만 읽으므로 어느 쪽이 이길지 조용히 정하면 안 된다. 쿠킹 실행이 실패로 끝난다. 순서는 정렬로
+고정했다. 파이썬의 PFB2 쓰기 · 프리팹 쿠커와 그것만 쓰던 공용 도우미 넷(`writeBinaryIfChanged` · 길이 접두 패킹 둘 · `batchCookAssets`)을 걷었고,
+`--prefabs-only` 는 같은 엔진 실행을 부른다. 쓰이지 않던 `cookPrefabToBinary` 는 이것으로 바뀌었다.
+
+**검증.** `PrefabTest.EngineCooksXmlAndJsonPrefabs`(XML · JSON · 하위 폴더 셋이 구워져 다시 읽으면 같은 상태, 읽지 못한 것 · 쌍둥이는 실패로 센다,
+프리팹 아닌 XML 은 건드리지 않는다). 실제 `App --cook-scenes` 가 저장소의 씬 하나 · 프리팹 하나를 같은 상대 경로로 썼다. 변이 넷(JSON 건너뛰기 ·
+쌍둥이 둘 다 쓰기 · 하위 폴더 안 보기 · 실패 안 세기)이 모두 실패했다. Debug 29 + hostgpu 2, Shipping(팩이 엔진 쿠킹본을 담는다).
+
 ### 2026-10-02 (결함 71 물리 step — 빈 함수였고 부르는 곳도 없어 겹침 시작 · 끝을 알 수 없었고, 콜라이더는 병렬 틱에서 바디를 맞췄다)
 
 남은 항목 "물리 step 이 불리지 않음". `PhysicsWorld::step` 은 빈 함수였고 부르는 곳이 없었다 — 겹침은 매번 직접 물어야 했고 "들어왔다 · 나갔다"

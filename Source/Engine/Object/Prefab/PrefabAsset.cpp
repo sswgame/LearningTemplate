@@ -648,14 +648,56 @@ namespace sw
         return pGameObject;
     }
 
-    bool PrefabManager::cookPrefabToBinary( string_view sourceRelativePath, string_view binRelativePath )
+    uint32 PrefabManager::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
     {
-        PrefabAsset asset;
-        const bool  bLoaded = FileUtil::hasExtension( sourceRelativePath, ".json" )
-                                ? asset.loadFromJsonFile( sourceRelativePath )
-                                : asset.loadFromXmlFile( sourceRelativePath );
-        if ( bLoaded == false )
-            return false;
-        return asset.saveToBinaryFile( binRelativePath );
+        outFailedCount = 0;
+        if ( sourceRoot.empty() || cookedDir.empty() )
+        {
+            SW_LOG_ERROR( "Prefab cook needs a source root and an output directory (--cooked-dir)." );
+            return 0;
+        }
+
+        vector<string> listFile;
+        FileUtil::collectFiles( sourceRoot, {}, listFile, true );
+        // 순서를 정한다 — 같은 쿠킹본을 쓰는 두 소스 가운데 어느 것이 먼저인지가 실행마다 같아야 한다.
+        std::sort( listFile.begin(), listFile.end() );
+
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot ) );
+        string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
+        out += '/';
+
+        vector<string> listWrittenKey;
+        uint32         writtenCount = 0;
+        for ( const string& filePath : listFile )
+        {
+            const string normalized = FileUtil::normalizeSeparators( filePath );
+            const bool   bXml       = StringUtil::endsWith( normalized, ".prefab.xml", true );
+            const bool   bJson      = StringUtil::endsWith( normalized, ".prefab.json", true );
+            if ( ( bXml || bJson ) == false || normalized.size() <= root.size() + 1 )
+                continue;
+
+            // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 에 같은 이름으로, 확장자만 .bin 이다(런타임 `loadPrefab` 의 표와 같은 규칙).
+            string outputPath = out + normalized.substr( root.size() + 1 );
+            outputPath.replace( outputPath.size() - ( bXml ? 4 : 5 ), bXml ? 4 : 5, ".bin" );
+            const string outputKey = StringUtil::toLower( outputPath.c_str() );
+            if ( std::find( listWrittenKey.begin(), listWrittenKey.end(), outputKey ) != listWrittenKey.end() )
+            {
+                SW_LOG_WARNING( "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
+                ++outFailedCount;
+                continue;
+            }
+
+            PrefabAsset asset;
+            const bool  bLoaded = bJson ? asset.loadFromJsonFile( normalized ) : asset.loadFromXmlFile( normalized );
+            if ( bLoaded == false || asset.isValid() == false || asset.saveToBinaryFile( outputPath ) == false )
+            {
+                SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );
+                ++outFailedCount;
+                continue;
+            }
+            listWrittenKey.push_back( outputKey );
+            ++writtenCount;
+        }
+        return writtenCount;
     }
 } // namespace sw

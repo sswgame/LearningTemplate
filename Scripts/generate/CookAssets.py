@@ -4,10 +4,11 @@
 Scripts/generate/CookAssets.py
 
 SW Engine 통합 에셋 쿠커:
-  1. Prefabs: Resource/**/prefabs/*.prefab.xml -> <cooked-dir>/**/prefabs/*.prefab.bin (PFB2 바이너리)
-  2. Scenes:  Resource/**/*.scene.xml          -> <cooked-dir>/**/<name>.scene.bin     (SCN1 바이너리)
+  1. Scenes · Prefabs: 엔진(`App --cook-scenes`)이 굽는다 — 리플렉션 · 형식이 엔진 안에 있다.
+       Resource/**/*.scene.xml                  -> <cooked-dir>/**/<name>.scene.bin  (SCN1 바이너리)
+       Resource/**/*.prefab.xml · *.prefab.json -> <cooked-dir>/**/<name>.prefab.bin (PFB2 바이너리)
      (산출물은 소스 옆이 아니라 스테이징 폴더에 쓰고, 팩에는 같은 상대 경로로 병합한다)
-  3. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
+  2. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
 
 사용법:
   py -3 Scripts/generate/CookAssets.py [--all] [--output <dir>]
@@ -23,16 +24,13 @@ import binascii
 import fnmatch
 import json
 from pathlib import Path
-import struct
 import sys
-import xml.etree.ElementTree as ET
 import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
     PackFormatSpec,
-    batchCookAssets,
     findAppExecutable,
     getProjectRoot,
     kFilePackConfig,
@@ -44,20 +42,15 @@ from common import (
     kKeyRecursive,
     kKeyRules,
     normalizePath,
-    packLengthPrefixedString,
     readJsonDictInternal,
     resolveDefaultOutputDir,
     runSceneCook,
     runShaderBake,
-    writeBinaryIfChanged,
 )
 
 # ==============================================================================
 # 1. 포맷 매직 및 상수 정의
 # ==============================================================================
-
-_kPfb2Magic = 0x50464232  # 'PFB2'
-_kPfb2Version = 0
 
 # ------------------------------------------------------------------------------
 # .pack 바이너리 포맷 계약 — Config/Engine/PackFormat.json 이 단일 출처다.
@@ -70,90 +63,16 @@ _gPackFormat = PackFormatSpec.load()
 
 
 # ==============================================================================
-# 2. Prefab 쿠커
-# ==============================================================================
-
-def readXmlPrefabInternal(path: Path) -> tuple[str, str]:
-    """XML 포맷의 프리팹 파일에서 이름(name)과 내부 요소(xmlBody)를 추출합니다."""
-    tree = ET.parse(path)
-    root = tree.getroot()
-    name = ""
-    if (nameNode := root.find("name")) is not None and nameNode.text:
-        name = nameNode.text.strip()
-    elif root.get("name"):
-        name = root.get("name", "")
-
-    body = ""
-    for tag in ("GameObject", "GameObjectState", "ObjectState"):
-        if (node := root.find(tag)) is not None:
-            body = ET.tostring(node, encoding="unicode")
-            break
-    if not body:
-        body = path.read_text(encoding="utf-8")
-    if not name:
-        name = path.stem.split(".")[0]
-    return name, body
-
-
-def writePfb2Internal(outPath: Path, name: str, body: str) -> bool:
-    """프리팹을 PFB2 바이너리로 변환하여 변경 시에만 기록합니다."""
-    blob = (
-        struct.pack("<II", _kPfb2Magic, _kPfb2Version)
-        + packLengthPrefixedString(name)
-        + packLengthPrefixedString(body)
-    )
-    return writeBinaryIfChanged(outPath, blob)
-
-
-def cookedOutputPathInternal(sourceFile: Path, resourceDir: Path, cookedDir: Path, outputName: str) -> Path:
-    """쿠킹 산출물의 스테이징 경로: `<cookedDir>/<Resource 기준 상대 폴더>/<outputName>`.
-
-    산출물은 소스 옆이 아니라 `build/<preset>/Cooked/` 에 쓴다. 소스 옆에 두면 (1) `.gitignore` 로 가려야
-    하고, (2) 소스가 옮겨지거나 지워진 뒤에도 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다
-    (프리팹을 옮기는 실험에서 실제로 그랬다). 팩에 들어가는 상대 경로는 그대로다 — 팩은 "어디에 있었나" 가
-    아니라 "팩 안의 상대 경로" 로 정해지므로 cookPack 이 스테이징 폴더를 같은 경로로 병합한다.
-    """
-    relDir = sourceFile.parent.relative_to(resourceDir)
-    return cookedDir / relDir / outputName
-
-
-def cookPrefabs(resourceRoot: Path | None = None, cookedDir: Path | None = None) -> int:
-    """게임 리소스 폴더 내의 .prefab.xml 파일들을 찾아 .prefab.bin으로 변환합니다 (스테이징 폴더에)."""
-    projectRoot = getProjectRoot()
-    resourceDir = projectRoot / "Resource"
-    cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
-    root = resourceRoot or (resourceDir / "game")
-    if not root.is_dir():
-        print(f"[CookPrefabs] Directory not found: {root} (skipping)")
-        return 0
-
-    searchRoots = sorted(path for path in root.glob("*/prefabs") if path.is_dir())
-    if not searchRoots:
-        print("[CookPrefabs] No prefab directory found under Resource/game/*/prefabs (skipping)")
-        return 0
-
-    tasks: list[Path] = []
-    for prefabDir in searchRoots:
-        tasks.extend(sorted(prefabDir.glob("*.prefab.xml")))
-
-    def cookOne(sourceFile: Path) -> bool:
-        name, body = readXmlPrefabInternal(sourceFile)
-        outputBinaryFile = cookedOutputPathInternal(sourceFile, resourceDir, cookedDir, sourceFile.with_suffix(".bin").name)
-        wrote = writePfb2Internal(outputBinaryFile, name, body)
-        if wrote:
-            print(f"[CookPrefabs] {sourceFile.name} -> {outputBinaryFile.name} ('{name}')")
-        return wrote
-
-    batchCookAssets(tasks, cookOne, label="CookPrefabs")
-    return 0
-
-
-# ==============================================================================
-# 3. Scene 쿠커
+# 2. Scene · Prefab 쿠커(엔진)
 # ==============================================================================
 
 def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, appExePath: Path | None = None) -> int:
-    """씬을 `App.exe --cook-scenes` 로 굽습니다 (엔티티 상태까지 바이너리로).
+    """씬과 프리팹을 `App.exe --cook-scenes` 로 굽습니다 (씬은 엔티티 상태까지 바이너리로, 프리팹은 XML · JSON 모두).
+
+    **프리팹도 여기다.** 예전에는 이 스크립트가 PFB2 형식을 따로 들고 `.prefab.xml` 만 구웠다 — `.prefab.json` 은 쿠킹본이
+    없어 배포본에서 스폰이 실패했고, 엔진의 쿠킹 함수는 쓰이지 않았다. 형식을 쓰는 곳은 이제 엔진(`PrefabAsset::saveToBinaryFile`)
+    하나다. 산출물은 소스 옆이 아니라 스테이징 폴더에 쓴다 — 소스 옆에 두면 `.gitignore` 로 가려야 하고, 소스가 옮겨지거나
+    지워진 뒤에도 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다.
 
     **왜 파이썬이 직접 안 쓰는가.** 예전에는 여기서 SCN1 을 직접 썼는데, 그 파일은 엔티티마다
     `<GameObject ...>` **XML 문자열을 그대로** 담고 있었다 — 쿠킹이 바깥 파싱만 줄이고 정작
@@ -185,7 +104,7 @@ def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, 
 
 
 # ==============================================================================
-# 4. Resource Pack (.pack) 쿠커
+# 3. Resource Pack (.pack) 쿠커
 # ==============================================================================
 
 def _deflateForReaderInternal(rawBytes: bytes) -> bytes:
@@ -736,7 +655,7 @@ def cookAllPacks(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="SW Engine 통합 에셋 쿠커 (Prefabs, Scenes, Packs)")
     parser.add_argument("--all", action="store_true", help="프리팹, 씬, 리소스 팩 전체를 순서대로 쿠킹 (기본 동작)")
-    parser.add_argument("--prefabs-only", action="store_true", help="프리팹 바이너리(.prefab.bin)만 쿠킹")
+    parser.add_argument("--prefabs-only", action="store_true", help="프리팹 · 씬 바이너리만 쿠킹(같은 엔진 실행이 둘 다 굽는다)")
     parser.add_argument("--scenes-only", action="store_true", help="씬 바이너리(.scene.bin)만 쿠킹")
     parser.add_argument("--packs-only", action="store_true", help="리소스 팩(.pack)만 쿠킹")
     parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
@@ -762,9 +681,8 @@ def main(argv: list[str] | None = None) -> int:
     cookedDir = Path(args.cooked_dir) if args.cooked_dir else resolveDefaultOutputDir(projectRoot, "Cooked")
 
     exitCode = 0
-    if doPrefabs:
-        exitCode = cookPrefabs(cookedDir=cookedDir) or exitCode
-    if doScenes:
+    # 씬과 프리팹은 같은 엔진 실행이 굽는다.
+    if doPrefabs or doScenes:
         exitCode = cookScenes(cookedDir=cookedDir, appExePath=appExePath) or exitCode
     if doPacks:
         stripNames = not args.include_debug_names

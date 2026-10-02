@@ -127,8 +127,15 @@ namespace sw
         /** @brief 캐시를 통째로 비웁니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다. */
         void clear() override;
 
-        /** @brief 저작본을 PFB2 바이너리로 쿠킹합니다. */
-        bool cookPrefabToBinary( string_view sourceRelativePath, string_view binRelativePath );
+        /**
+         * @brief @p sourceRoot 아래(하위 폴더 포함)의 저작 프리팹(`*.prefab.xml` · `*.prefab.json`)을 `<cookedDir>/<상대 경로>/<이름>.prefab.bin` 으로 굽습니다.
+         * @return 기록한 쿠킹본 수입니다. 읽지 못한 것과, 앞의 소스와 같은 쿠킹본을 쓰게 되는 소스(`x.prefab.xml` 과 `x.prefab.json`)는
+         *         @p outFailedCount 로 세고 경고합니다 — Shipping 은 쿠킹본 하나만 읽으므로 어느 것이 이길지 정해 두면 안 됩니다.
+         * @details 씬처럼 엔진이 굽습니다(`App --cook-scenes` 가 리소스 루트로 함께 부른다 — 언리얼 쿡 커맨드렛 자리). 예전에는 파이썬
+         *          (`CookAssets.py`)이 PFB2 형식을 따로 들고 `.prefab.xml` 만 구워, `.prefab.json` 은 Shipping 에 쿠킹본이 없어 스폰이 실패했고
+         *          엔진의 쿠킹 함수는 쓰이지 않았습니다. 형식을 쓰는 곳은 이제 `PrefabAsset::saveToBinaryFile` 하나입니다.
+         */
+        static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
 
     private:
         mutable std::shared_mutex                      _mapCacheMutex;

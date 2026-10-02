@@ -50,6 +50,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
@@ -291,7 +292,12 @@ namespace sw
                 string cookedDir;
                 _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-                _bHeadlessTaskFailed = ( SceneCooker::cookAllScenes( cookedDir ) == 0 );
+                const uint32 sceneCount = SceneCooker::cookAllScenes( cookedDir );
+                // 프리팹도 여기서 굽는다 — 형식을 쓰는 곳이 엔진 하나여야 한다(예전에는 파이썬이 PFB2 를 따로 들고 XML 만 구웠다).
+                uint32       prefabFailedCount = 0;
+                const uint32 prefabCount       = PrefabManager::cookAllPrefabs( ResourceUtil::getRootFolderPath(), cookedDir, prefabFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes, %# prefabs (%# prefab failures).", sceneCount, prefabCount, prefabFailedCount );
+                _bHeadlessTaskFailed = sceneCount == 0 || prefabFailedCount > 0;
                 return true;
             }
 
