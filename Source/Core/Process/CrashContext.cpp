@@ -33,7 +33,8 @@ namespace sw
         atomic<uint32>   s_reportDeadlineSeconds{ kDefaultReportDeadlineSeconds };
 
         /// @brief `CrashTestKind::AssertFailure` 가 거짓으로 만드는 단언 식입니다(컴파일러가 단언을 상수로 접지 못하게 volatile).
-        volatile bool s_bAssertProbeHolds{ false };
+        ///        단언이 빠지는 빌드(Release · Shipping)에서는 읽는 곳이 없다.
+        [[maybe_unused]] volatile bool s_bAssertProbeHolds{ false };
 
         /// @brief `holdStderrForeverInternal` 이 stderr 를 쥐었는지입니다.
         atomic<bool> s_bStderrHeld{ false };

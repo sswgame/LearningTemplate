@@ -255,8 +255,8 @@ namespace sw::editor
                 }
 
                 // 적힌 쪽만 막는다 — `Min = 0` 만 적은 프로퍼티는 위로 열려 있다(`PropertyMetadata::_bHasMinRange` 설명).
-                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._minRange * scale ) : Traits::kMin;
-                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._maxRange * scale ) : Traits::kMax;
+                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._minRange ) * scale ) : Traits::kMin;
+                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( static_cast<float64>( prop._metadata._maxRange ) * scale ) : Traits::kMax;
                 const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
                 const string fmt      = appendUnitSuffix( Traits::kFormat, unit._suffix );
 

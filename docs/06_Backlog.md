@@ -2064,6 +2064,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (경고 정리 — 라운드 끝 전 트리 경고 스윕: Release 3 · Shipping 1 → 0)
+
+라운드(결함 52~74)를 끝내며 `RunBuildWarnings.py`(Debug · Release · Shipping, 캐시를 거치지 않는다)를 한 번 돌렸다. Debug 0, Release 3, Shipping 1.
+- `-Wdouble-promotion` 둘 — 결함 64 의 인스펙터 범위 배율(`_minRange * scale`, float32 × float64). 명시 변환으로.
+- `-Wunused-variable` 하나 — `CrashContext.cpp` 의 `s_bAssertProbeHolds`(2026-10-01 확인 ①). 읽는 곳이 `SW_ASSERT` 안뿐이라 단언이 빠지는 빌드에서
+  쓰이지 않는다. `[[maybe_unused]]` 와 이유 한 줄.
+Release 의 컴파일 DB 가 정리 2762eb96(파일 이동) 전 것이라 옛 경로를 찾다 "no such file" 을 냈다 — 다시 구성했다. 세 구성 모두 0. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 74 편집 중 메시 — 되돌리기 · 프리팹 드래그 · 복제로 다시 만든 메시가 플레이 · 씬 재로드 전까지 그려지지 않았다)
 
 결함 67 에서 남긴 것("로드는 값만 채운다")을 확인하니 에디터 결함이었다. 상태를 읽으면 컴포넌트를 새로 만드는데, 메시는 렌더 에셋(메시 id → 메시,
