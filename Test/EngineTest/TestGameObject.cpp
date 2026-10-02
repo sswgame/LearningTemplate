@@ -5,6 +5,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -12,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -419,6 +422,41 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
     comp->setActive( false );
     // 프로퍼티 변경 알림은 동작해야 하지만, 정확한 이름은 리플렉션 시스템에 따라 달라질 수 있다
     SW_EXPECT_TRUE( comp->_lastChangedProperty.getHash() != 0 );
+}
+
+/**
+ * @brief [PostEditChangePropertyTest] 메시 id 를 바꾸면 그리는 메시가 바뀐다 — 런타임에 건 메시는 id 가 바뀔 때까지 남는다
+ * @details 메시 해석은 "메시가 이미 있으면 그대로" 였다. 인스펙터에서 Mesh Asset 을 바꾸거나, 다른 id 를 붙여 넣거나, 되돌리기가 다른 id 를
+ *          다시 읽어도 옛 메시를 그렸다(플레이 · 씬 재로드 전까지). `_meshId` 는 알림도 받지 않았다. 이제 메시는 자기가 어느 id 의 것인지
+ *          들고(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙) 다르면 다시 잡는다.
+ */
+SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIdChangesTheDrawnMesh )
+{
+    const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+    sw::GameObjectManager       manager;
+    sw::GameObject*             pProp = manager.createGameObject( sw::hashed_string( "Prop" ) );
+    sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->resolveRuntimeMesh();
+    const sw::PropertyInfo* pMeshId = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshId" ) );
+    SW_ASSERT_NOT_NULL( pMeshId );
+
+    // 인스펙터 편집: 값을 쓰고 알린다.
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Sphere", ctx ) );
+    pMesh->onPropertyChanged( pMeshId->_name );
+    SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Sphere" ).get() );
+
+    // 런타임에 건 메시는 그때의 id 의 것이다 — 같은 id 로 다시 읽어도 남는다.
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Cube", ctx ) );
+    const sw::shared_ptr<sw::Mesh> custom = sw::MeshUtil::createPrimitive( "Cube" );
+    pMesh->setMesh( custom );
+    pMesh->onPostLoad();
+    SW_EXPECT_TRUE( pMesh->getRawMesh() == custom.get() );
+
+    // 다른 id 를 읽으면(되돌리기 · 붙여넣기) 그 id 의 메시가 된다.
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Cylinder", ctx ) );
+    pMesh->onPostLoad();
+    SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Cylinder" ).get() );
 }
 
 // ------------------------------------------------------------------------------

@@ -418,6 +418,25 @@ namespace sw
         return true;
     }
 
+    bool JsonDocument::tryParse( string_view jsonText )
+    {
+        _lastError.clear();
+        if ( jsonText.empty() )
+        {
+            clear();
+            return false;
+        }
+        if ( _impl == nullptr )
+            _impl = make_unique<Impl>();
+        _impl->root = JsonImpl::parse( JsonDocumentInternal::toStdString( jsonText ), nullptr, false, false );
+        if ( _impl->root.is_discarded() )
+        {
+            clear();
+            return false;
+        }
+        return true;
+    }
+
     bool JsonDocument::loadFile( string_view absPath )
     {
         string text;

@@ -207,7 +207,10 @@ namespace sw
         {
             case GlobalVariableType::Boolean:
             {
-                const bool bVal = StringUtil::parseBool( strValue, false );
+                // 정수 · 실수처럼 읽지 못하면 false 다(값은 그대로). 예전에는 "ture" · "enabled" 가 조용히 false 로 들어갔다.
+                bool bVal = false;
+                if ( StringUtil::tryParseBool( strValue, bVal ) == false )
+                    return false;
                 return setValueAsBool( bVal );
             }
             case GlobalVariableType::Int32:

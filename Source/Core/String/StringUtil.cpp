@@ -1069,6 +1069,22 @@ namespace sw
         return bFallback;
     }
 
+    bool StringUtil::tryParseBool( string_view token, bool& outValue )
+    {
+        const string_view trimmed = trim( token );
+        if ( trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) || equals( trimmed, "on", true ) )
+        {
+            outValue = true;
+            return true;
+        }
+        if ( trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) || equals( trimmed, "off", true ) )
+        {
+            outValue = false;
+            return true;
+        }
+        return false;
+    }
+
     bool StringUtil::parseFloat( string_view token, float32& outValue )
     {
         return StringUtilInternal::parseFiniteFloatToken( token, outValue );

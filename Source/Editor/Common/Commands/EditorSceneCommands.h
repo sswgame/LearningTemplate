@@ -40,6 +40,13 @@ namespace sw::editor
         static bool destroy( GameObjectManager* pManager, GameObject* pObj );
         /** @brief 이름을 바꾸고 Undo에 기록합니다. */
         static bool rename( GameObject* pObj, const utf8* pNewName );
+        /**
+         * @brief 타입 이름으로 컴포넌트를 붙이고 Undo에 기록합니다. 붙이지 못하면 nullptr 입니다.
+         * @details 새 컴포넌트에 `onPostLoad` 를 부릅니다 — 기본값이 그 상태이고, 값을 자원으로 바꾸는 자리가 거기다(메시 · 머티리얼). 예전에는
+         *          계층 패널이 매니저에 바로 붙여 기록도 dirty 도 없었고(되돌릴 수 없고, 저장을 묻지 않고 사라졌다), 붙인 메시는 플레이 전까지
+         *          그려지지 않았다. 컴포넌트를 만드는 편집기 길은 모두 이것(또는 `onPostLoad` 를 부르는 붙여넣기)을 지난다.
+         */
+        static Component* addComponent( GameObject* pObj, const hashed_string& typeName );
         /** @brief 소유 오브젝트에서 컴포넌트를 제거합니다. */
         static bool destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp );
         /** @brief 워크스페이스 선택을 바꿉니다. */

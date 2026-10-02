@@ -219,6 +219,11 @@ namespace sw
          * @details 앞뒤 공백을 자른 뒤 비교합니다. 비어 있거나 알 수 없는 값이면 bFallback 을 반환합니다.
          */
         [[nodiscard]] static bool parseBool( string_view token, bool bFallback = false );
+        /**
+         * @brief 불리언 토큰(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`, 대소문자 무시)을 읽습니다. 아니면 false 이고 값은 그대로입니다.
+         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됐습니다 — 실패를 알아야 하는 자리는 이것을 씁니다.
+         */
+        [[nodiscard]] static bool tryParseBool( string_view token, bool& outValue );
 
         /**
          * @brief string_view 토큰을 32비트 실수로 파싱합니다(할당 없음).

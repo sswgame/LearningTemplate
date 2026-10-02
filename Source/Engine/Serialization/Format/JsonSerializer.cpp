@@ -51,7 +51,7 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, pValPtr, typeName, ctx );
                     JsonDocument parsed;
-                    if ( parsed.parse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false )
+                    if ( parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false )
                     {
                         dst.assignFrom( parsed.getRoot() );
                         return;
@@ -373,13 +373,14 @@ namespace sw
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
+                    // 불리언 · 숫자 · 불리언 글만 받는다. 예전에는 그 밖의 것("ture" · 오브젝트 · null)을 조용히 false 로 썼다.
                     bool bVal = false;
                     if ( field.isBool() )
                         bVal = field.asBool();
                     else if ( field.isNumber() )
                         bVal = ( field.asInt() != 0 );
-                    else if ( field.isString() )
-                        bVal = StringUtil::parseBool( field.asString(), false );
+                    else if ( field.isString() == false || StringUtil::tryParseBool( field.asString(), bVal ) == false )
+                        return false;
                     prop.setValue<bool>( pInstance, bVal );
                     return true;
                 }
@@ -555,7 +556,7 @@ namespace sw
         {
             if ( uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() )
                 continue;
-            SerializerUtil::applyPropertyDefault( prop.getRawPtr( pInstance ), prop, ctx );
+            SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
         }
 
         if ( pOutListOrphan != nullptr )

@@ -1,13 +1,17 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -63,4 +67,44 @@ SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorl
     manager.flushSceneTransforms();
     // 단위 상자 · 월드 Y 스케일 2 — 바닥까지 1.
     SW_EXPECT_NEAR_EQUAL( 1.0f, pMesh->getWorldPosition()._y, 1e-4f );
+}
+
+/**
+ * @brief [EditorTransformCommandsTest] 붙여 넣은 값 · 프리셋은 컴포넌트에 알려진다 — 위치는 월드 행렬에, 메시 id 는 그리는 메시에 든다
+ * @details 붙여넣기 · 프리셋은 직렬화기로 반사 값을 바로 쓰고 알리지 않았다. 위치는 트랜스폼 칸에 들어갔지만 더티가 아니라 월드 행렬 · 화면 ·
+ *          기즈모가 옛 자리였고, 메시 id 를 붙여 넣어도 옛 메시를 그렸다. 이제 `Component::notifyStateWritten` 이 프로퍼티마다
+ *          `onPropertyChanged` 를, 그다음 `onPostLoad` 를 부른다(씬 로드 · 되돌리기와 같은 길).
+ */
+SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTransformAndTheMesh )
+{
+    const SerializeContext& ctx = SerializeContext::getDefault();
+    GameObjectManager       manager;
+    GameObject*             pSource     = manager.createGameObject( hashed_string( "Source" ) );
+    MeshComponent*          pSourceMesh = pSource->addComponent<MeshComponent>();
+    GameObject*             pTarget     = manager.createGameObject( hashed_string( "Target" ) );
+    MeshComponent*          pTargetMesh = pTarget->addComponent<MeshComponent>();
+    SW_ASSERT_TRUE( pSourceMesh != nullptr && pTargetMesh != nullptr );
+    const PropertyInfo* pMeshId = pSourceMesh->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_meshId" ) );
+    SW_ASSERT_NOT_NULL( pMeshId );
+    pTargetMesh->resolveRuntimeMesh();
+    manager.flushSceneTransforms();
+
+    // 붙여넣기
+    pSourceMesh->setLocalPosition( float3( 3.0f, 0.0f, 0.0f ) );
+    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Sphere", ctx ) );
+    SW_ASSERT_TRUE( pTargetMesh->getRawMesh() != MeshUtil::acquirePrimitive( "Sphere" ).get() );
+    SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pTargetMesh->getWorldPosition()._x, 1e-4f );
+    SW_EXPECT_TRUE( pTargetMesh->getRawMesh() == MeshUtil::acquirePrimitive( "Sphere" ).get() );
+
+    // 프리셋
+    pSourceMesh->setLocalPosition( float3( 0.0f, 4.0f, 0.0f ) );
+    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Cylinder", ctx ) );
+    const string presetPath = test::makeTempPath( "mesh.preset.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( presetPath, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
+    SW_ASSERT_TRUE( EditorTransformCommands::loadComponentPreset( pTargetMesh, presetPath ) );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pTargetMesh->getWorldPosition()._y, 1e-4f );
+    SW_EXPECT_TRUE( pTargetMesh->getRawMesh() == MeshUtil::acquirePrimitive( "Cylinder" ).get() );
 }

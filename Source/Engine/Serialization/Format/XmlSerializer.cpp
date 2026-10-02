@@ -363,7 +363,7 @@ namespace sw
                             backend.popChild();
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );
+                            SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
                     }
                     else
                     {
@@ -381,7 +381,7 @@ namespace sw
                                 backend.popChild();
                             }
                             else
-                                SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );
+                                SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
                             return;
                         }
 
@@ -393,16 +393,17 @@ namespace sw
 
                         if ( readOk )
                         {
+                            // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 예전처럼 false 로 삼키지 않고 실패로 남긴다.
                             if ( prop._bIsBitField == SW_TRUE )
                             {
-                                const bool bVal = StringUtil::parseBool( strValue, false );
-                                prop.setValue<bool>( pInstance, bVal );
+                                if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, ctx ) == false )
+                                    recordCoerceFailure( pOutListOrphan, bFieldError, prop, strValue );
                             }
                             else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
                                 recordCoerceFailure( pOutListOrphan, bFieldError, prop, strValue );
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );
+                            SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 

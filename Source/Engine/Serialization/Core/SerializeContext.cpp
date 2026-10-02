@@ -353,10 +353,10 @@ namespace sw
 
             auto boolWrite = []( const void* pPtr )
             { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
+            // 불리언 글이 아니면 실패다(값은 그대로) — 예전에는 무엇이든 받아 "ture" 가 조용히 false 가 됐다. 읽는 쪽이 고아 · 실패로 알린다.
             auto boolRead = []( void* pPtr, string_view strView )
             {
-                *static_cast<bool*>( pPtr ) = StringUtil::parseBool( strView, false );
-                return true;
+                return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );
             };
             ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
 
@@ -364,7 +364,10 @@ namespace sw
             { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
             auto atomicBoolRead = []( void* pPtr, string_view strView )
             {
-                static_cast<atomic<bool>*>( pPtr )->store( StringUtil::parseBool( strView, false ) );
+                bool bValue = false;
+                if ( StringUtil::tryParseBool( strView, bValue ) == false )
+                    return false;
+                static_cast<atomic<bool>*>( pPtr )->store( bValue );
                 return true;
             };
             ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );

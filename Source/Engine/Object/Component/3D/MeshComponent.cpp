@@ -22,6 +22,7 @@ namespace sw
         , _meshId{}
         , _materialPath{}
         , _acquiredMaterialPath{}
+        , _resolvedMeshId{}
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
@@ -78,10 +79,13 @@ namespace sw
 
     void MeshComponent::resolveRuntimeMesh()
     {
-        if ( _mesh != nullptr )
+        const string_view   meshId = _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId };
+        const hashed_string hashedMeshId( string{ meshId }.c_str() );
+        if ( _mesh != nullptr && _resolvedMeshId == hashedMeshId )
             return;
         // **공유되는** 프리미티브를 받는다. 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
-        _mesh = MeshUtil::acquirePrimitive( _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId } );
+        _mesh           = MeshUtil::acquirePrimitive( meshId );
+        _resolvedMeshId = hashedMeshId;
         markRenderStateDirty();
     }
 
@@ -119,7 +123,8 @@ namespace sw
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
         SceneComponent::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
-        if ( propertyName == s_materialPathName )
+        static const hashed_string s_meshIdName( "_meshId" );
+        if ( propertyName == s_materialPathName || propertyName == s_meshIdName )
             resolveRenderAssets();
         markRenderStateDirty();
     }
@@ -140,6 +145,8 @@ namespace sw
     void MeshComponent::setMesh( shared_ptr<Mesh> mesh )
     {
         _mesh = std::move( mesh );
+        // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
+        _resolvedMeshId = hashed_string( string{ _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId } }.c_str() );
         markRenderStateDirty();
     }
 

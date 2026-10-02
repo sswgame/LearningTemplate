@@ -189,7 +189,7 @@ namespace sw::editor
                     const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
                     if ( ImGui::MenuItem( pDisplayName ) )
                     {
-                        if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
+                        if ( EditorSceneCommands::addComponent( pObj, typeName ) == nullptr )
                             ImGui::OpenPopup( "AddCompFailed" );
                     }
                     if ( pTypeInfo != nullptr )

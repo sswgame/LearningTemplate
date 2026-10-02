@@ -166,9 +166,23 @@ namespace sw
         /**
          * @brief 프로퍼티에 선언된 기본값(PROPERTY `Default=`)이 있으면 적용합니다. 없으면 아무것도 하지 않습니다.
          * @details 예전에는 "기본값 없음"(정상)과 "선언된 기본값을 읽지 못함"(코드 결함)을 같은 false 로 돌려줬고, 다섯 호출자가 모두 버렸습니다.
-         *          뒤의 것은 이제 경고합니다 — 그 필드는 지금 값을 지킵니다.
+         *          뒤의 것은 이제 경고합니다 — 그 필드는 지금 값을 지킵니다. 값은 `applyPropertyText` 로 씁니다(비트필드는 그 비트만 — 예전에는
+         *          값 주소에 bool 을 통째로 써 같은 바이트의 다른 플래그까지 지웠다).
          */
-        static void applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx );
+        static void applyPropertyDefault( const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx );
+
+        // ------------------------------------------------------------------------------
+        // 프로퍼티 값 하나 — 비트필드 · 컨테이너 · 값의 세 갈래를 한 벌로. 예전에는 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 각자 들었고,
+        // 오버라이드 도구는 비트필드를 바이트째 견주고 옮겨(같은 바이트의 다른 플래그까지 바뀌었다) 컨테이너는 되돌리지 못했다.
+        // ------------------------------------------------------------------------------
+        /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. */
+        [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& ctx );
+        /** @brief 두 인스턴스의 프로퍼티 값이 같은지 봅니다. 비트필드는 그 비트만 견줍니다. */
+        SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& ctx );
+        /** @brief 글 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 못 읽으면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
+        [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& ctx );
+        /** @brief 프로퍼티 값을 사람이 읽는 글로 씁니다(XML 속성 값과 같은 꼴). 비트필드는 `true` · `false`, 컨테이너는 `[n]`(원소 수)입니다. */
+        SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx );
 
         /** @brief 컨테이너 TypeInfo 이름을 태그로 바꿉니다(`vector`, `map`). */
         static const utf8* containerTypeTagName( hashed_string typeName );

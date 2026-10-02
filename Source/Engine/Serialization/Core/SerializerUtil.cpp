@@ -597,15 +597,111 @@ namespace sw
         return false;
     }
 
-    void SerializerUtil::applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
+    void SerializerUtil::applyPropertyDefault( const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
     {
-        if ( pPropPtr == nullptr || prop._bIsContainer != SW_FALSE )
+        if ( pInstance == nullptr || prop._bIsContainer != SW_FALSE )
             return;
         if ( prop._metadata._defaultValue.empty() )
             return;
-        if ( SerializerUtil::parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx ) == false )
+        if ( applyPropertyText( prop, pInstance, prop._metadata._defaultValue, ctx ) == false )
             SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata._defaultValue,
                             prop._name.c_str(), prop._typeName.c_str() );
+    }
+
+    bool SerializerUtil::copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& ctx )
+    {
+        if ( pSrcInstance == nullptr || pDstInstance == nullptr )
+            return false;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            const uint8 srcByte = *( static_cast<const uint8*>( pSrcInstance ) + prop._offset );
+            uint8&      dstByte = *( static_cast<uint8*>( pDstInstance ) + prop._offset );
+            dstByte             = ( ( srcByte & prop._bitMask ) != 0 ) ? static_cast<uint8>( dstByte | prop._bitMask ) : static_cast<uint8>( dstByte & ~prop._bitMask );
+            return true;
+        }
+
+        const void* pSrc = prop.getRawPtr( pSrcInstance );
+        void*       pDst = prop.getRawPtr( pDstInstance );
+        if ( pSrc == nullptr || pDst == nullptr )
+            return false;
+        vector<uint8> bytes;
+        size_t        offset{ 0 };
+        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+        {
+            serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, ctx );
+            return deserializeNestedContainerBinary( pDst, prop.getContainerShape(), bytes.data(), bytes.size(), offset, ctx );
+        }
+        serializeValueBinary( pSrc, prop._typeName, bytes, ctx );
+        return deserializeValueBinary( pDst, prop._typeName, bytes.data(), bytes.size(), offset, ctx );
+    }
+
+    bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& ctx )
+    {
+        if ( pInstanceA == nullptr || pInstanceB == nullptr )
+            return pInstanceA == pInstanceB;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            const uint8 byteA = *( static_cast<const uint8*>( pInstanceA ) + prop._offset );
+            const uint8 byteB = *( static_cast<const uint8*>( pInstanceB ) + prop._offset );
+            return ( byteA & prop._bitMask ) == ( byteB & prop._bitMask );
+        }
+
+        const void* pA = prop.getRawPtr( pInstanceA );
+        const void* pB = prop.getRawPtr( pInstanceB );
+        if ( pA == nullptr || pB == nullptr )
+            return pA == pB;
+        vector<uint8> bytesA;
+        vector<uint8> bytesB;
+        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+        {
+            serializeNestedContainerBinary( pA, prop.getContainerShape(), bytesA, ctx );
+            serializeNestedContainerBinary( pB, prop.getContainerShape(), bytesB, ctx );
+        }
+        else
+        {
+            serializeValueBinary( pA, prop._typeName, bytesA, ctx );
+            serializeValueBinary( pB, prop._typeName, bytesB, ctx );
+        }
+        return bytesA == bytesB;
+    }
+
+    bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& ctx )
+    {
+        if ( pInstance == nullptr || prop._bIsContainer == SW_TRUE )
+            return false;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            bool bValue = false;
+            if ( StringUtil::tryParseBool( text, bValue ) == false )
+                return false;
+            uint8& byte = *( static_cast<uint8*>( pInstance ) + prop._offset );
+            byte        = bValue ? static_cast<uint8>( byte | prop._bitMask ) : static_cast<uint8>( byte & ~prop._bitMask );
+            return true;
+        }
+        void* pValue = prop.getRawPtr( pInstance );
+        return pValue != nullptr && parseTextValue( pValue, prop._typeName, text, ctx );
+    }
+
+    string SerializerUtil::formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
+    {
+        if ( pInstance == nullptr )
+            return {};
+        if ( prop._bIsBitField == SW_TRUE )
+            return prop.getValue<bool>( pInstance ) ? "true" : "false";
+        const void* pValue = prop.getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return {};
+        StringBuilder<constant::kMaxBuffer8192> ss;
+        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+        {
+            const NestedContainerInfo shape = prop.getContainerShape();
+            ss.append( "[" );
+            ss.append( static_cast<uint64>( shape._wrapper != nullptr ? shape._wrapper->getSize( pValue ) : 0 ) );
+            ss.append( "]" );
+            return ss.c_str();
+        }
+        valueToText( ss, pValue, prop._typeName, ctx );
+        return ss.c_str();
     }
 
     bool SerializerUtil::keysEqual( string_view left, string_view right, bool bIgnoreCase )

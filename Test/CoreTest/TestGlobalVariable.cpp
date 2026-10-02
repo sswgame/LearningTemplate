@@ -95,6 +95,22 @@ SW_TEST_CASE( GlobalVariableTest, ModificationAndReset )
 }
 
 /**
+ * @brief [GlobalVariableTest] 불리언이 아닌 글은 불리언 변수를 바꾸지 않는다
+ * @details 정수 · 실수는 읽지 못하면 실패였는데 불리언만 `parseBool( text, false )` 로 무엇이든 받아, `-gv_x=ture` · 프리셋의 "enabled" 가 조용히
+ *          그 변수를 껐다. 이제 실패를 돌려주고 값은 그대로다(명령줄 적용은 실패를 경고한다).
+ */
+SW_TEST_CASE( GlobalVariableTest, BooleanTextThatIsNotABooleanIsRefused )
+{
+    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
+    SW_ASSERT_TRUE( manager.resetToDefault( "gv_testBool" ) );
+    SW_EXPECT_FALSE( manager.setValueFromString( "gv_testBool", "ture" ) );
+    SW_EXPECT_TRUE( gv_testBool );
+    SW_EXPECT_TRUE( manager.setValueFromString( "gv_testBool", "Off" ) );
+    SW_EXPECT_FALSE( gv_testBool );
+    SW_EXPECT_TRUE( manager.resetToDefault( "gv_testBool" ) );
+}
+
+/**
  * @brief [GlobalVariableTest] 직접 타입별 값 수정 및 리셋
  */
 SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )

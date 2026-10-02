@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
@@ -730,6 +731,42 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
     SW_EXPECT_TRUE( pLoadedBlade->getLocalPosition() == sw::float3( 0.0f, 1.0f, 0.0f ) );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 씬 파일을 건넌 여러 줄 글은 줄바꿈을 지킨다
+ * @details 씬 문서는 엔티티 상태 서브트리를 손으로 다시 써(`appendNodeXml`) 속성 값의 줄바꿈을 그대로 적었고, 그것을 다시 읽는 XML 은 속성
+ *          값을 정규화해 줄바꿈이 공백이 됐다 — 여러 줄 대사 · 설명이 씬을 열 때마다 한 줄이 됐다. XML 을 쓰는 규칙이 두 벌이었다. 이제 서브트리는
+ *          XML 문서가 쓴다(`XmlNode::toString`).
+ */
+SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "LineBreakWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObject* pSign = pScene->getObjectManager()->createGameObject( sw::hashed_string( "Sign" ) );
+    SW_ASSERT_NOT_NULL( pSign->addComponent<sw::SceneComponent>() );
+    sw::SpriteAnimatorComponent* pAnimator = pSign->addComponent<sw::SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pAnimator );
+    pAnimator->setCurrentAnimation( "first line\nsecond line" );
+    pScene->getObjectManager()->mergePendingAdds();
+
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    const sw::string scenePath = test::makeTempPath( "line_breaks.scene.xml" );
+    SW_ASSERT_TRUE( saved.saveXml( scenePath ) );
+    sw::SceneDocument fromFile{};
+    SW_ASSERT_TRUE( fromFile.loadXml( scenePath ) );
+
+    sw::Scene* pReloaded = manager.createScene( "LineBreakWorldReloaded" );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_ASSERT_TRUE( pReloaded->instantiate( fromFile ) );
+    sw::GameObject* pReloadedSign = pReloaded->getObjectManager()->findGameObjectByName( sw::hashed_string( "Sign" ) );
+    SW_ASSERT_NOT_NULL( pReloadedSign );
+    const sw::SpriteAnimatorComponent* pReloadedAnimator = pReloadedSign->getComponent<sw::SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pReloadedAnimator );
+    SW_EXPECT_STREQ( "first line\nsecond line", pReloadedAnimator->getCurrentAnimation().c_str() );
 }
 
 /**

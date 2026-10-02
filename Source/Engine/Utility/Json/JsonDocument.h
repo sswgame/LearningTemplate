@@ -189,6 +189,11 @@ namespace sw
          * @param sourceName 오류에 적는 이름(대개 경로)입니다. 비우면 `<memory>` 입니다.
          */
         [[nodiscard]] bool parse( string_view jsonText, string_view sourceName = {} );
+        /**
+         * @brief JSON 인지 **알아보려고** 파싱합니다. `parse` 와 같지만 실패를 로그로 남기지 않습니다(오류 글은 비어 있습니다).
+         * @details 값이 JSON 스칼라인지 보는 쪽(`JsonSerializer` 쓰기)이 `parse` 를 써서, `"0,0,0"` 같은 정상 값을 쓸 때마다 `[Error]` 가 찍혔다.
+         */
+        [[nodiscard]] bool tryParse( string_view jsonText );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
         [[nodiscard]] bool loadFile( string_view absPath );

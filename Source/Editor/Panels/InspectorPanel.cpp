@@ -33,7 +33,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include <imgui.h>
@@ -540,10 +540,22 @@ namespace sw::editor
                             formatstring( resetLabel.data(), resetLabel.capacity(), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
                             if ( ImGui::MenuItem( resetLabel.c_str() ) )
                             {
-                                fixed_string<constant::kMaxBuffer256> jsonWrap;
-                                formatstring( jsonWrap.data(), jsonWrap.capacity(), "{\"%#\":%#}", prop->_name.c_str(), prop->_metadata._defaultValue.c_str() );
-                                if ( JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap.c_str() ) == false )
-                                    SW_LOG_WARNING( "Reset to Default could not apply '%#' to %#", prop->_metadata._defaultValue.c_str(), prop->_name.c_str() );
+                                // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 예전에는 `{"이름":기본값}` 을 JSON 으로
+                                // 읽혀, 읽기가 빠진 프로퍼티마다 기본값을 채우므로 **기본값이 있는 다른 프로퍼티까지** 되돌렸고, 따옴표 없는 문자열
+                                // 기본값은 JSON 이 아니라 실패했으며, 알리지도 기록하지도 않았다.
+                                const PropertyInfo& resetProp = *prop;
+                                GameObject*         pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
+                                auto                reset     = [this, &resetProp, pInstance]()
+                                {
+                                    if ( SerializerUtil::applyPropertyText( resetProp, pInstance, resetProp._metadata._defaultValue, SerializeContext::getDefault() ) )
+                                        notifyPropertyEdited( resetProp );
+                                    else
+                                        SW_LOG_WARNING( "Reset to Default could not apply '%#' to %#", resetProp._metadata._defaultValue.c_str(), resetProp._name.c_str() );
+                                };
+                                if ( pOwnerObj != nullptr )
+                                    InspectorPanelInternal::applyObjectEdit( pOwnerObj, "Reset to Default", reset );
+                                else
+                                    reset();
                             }
                         }
                         if ( ImGui::MenuItem( "Copy Property Name" ) )

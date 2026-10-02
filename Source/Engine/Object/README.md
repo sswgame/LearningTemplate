@@ -318,6 +318,24 @@ if ( pTarget != nullptr ) { ... }
 예전에는 이름으로 찾는 `GameObjectPtr` · `ComponentPtr` 도 있었습니다. 이름을 바꾸면 끊겼고, 옛 이름으로 새 오브젝트가
 생기면 조용히 그쪽을 가리켰으며, `ComponentPtr` 은 같은 타입 컴포넌트가 둘이면 첫 번째를 잡았습니다. 2026-09-24 에 지웠습니다.
 
+### 반사 값을 직접 쓰면 알린다
+
+직렬화기 · `SerializerUtil` 은 **값만** 씁니다. 트랜스폼 칸은 더티가 되지 않고, 메시 · 머티리얼은 다시 풀리지 않습니다. 그래서 값을 쓴 쪽이
+컴포넌트에 알립니다.
+
+| 쓴 것 | 부를 것 |
+|-------|---------|
+| 상태 전체(붙여넣기 · 프리셋) | `Component::notifyStateWritten()` — 프로퍼티마다 `onPropertyChanged`, 그다음 `onPostLoad` |
+| 프로퍼티 하나(오버라이드 되돌리기 · 기본값 · 인스펙터) | `onPropertyChanged( 이름 )` |
+| 새로 만든 컴포넌트(에디터의 "컴포넌트 추가") | `onPostLoad()` — 기본값이 그 상태다 |
+| 묶음 · 제자리 로드 | 아무것도 — `ObjectStateSerializer` 가 `onPostLoad` 를 부른다 |
+
+- 값 하나를 옮기고 · 견주고 · 글로 쓰고 · 읽는 규칙은 `SerializerUtil::copyPropertyValue` · `arePropertyValuesEqual` · `formatPropertyText` ·
+  `applyPropertyText` **한 벌**입니다. 비트필드는 그 비트만, 컨테이너는 원소째 다룹니다. 예전에는 오버라이드 도구 · 인스펙터가 각자 들어 비트필드를
+  바이트째 견주고 옮겼습니다(같은 바이트의 다른 플래그가 "바뀜" 으로 보이고 되돌리면 지워졌다).
+- 컴포넌트는 값에서 자원을 다시 만들지 판단할 때 **무엇으로 만들었는지**를 들고 견줍니다(`MeshComponent::_resolvedMeshId` ·
+  `_acquiredMaterialPath`). "이미 있으면 그대로" 로 판단하면 id 를 바꿔도 옛 것이 남습니다.
+
 ---
 
 ## 트랜스폼 · 계층

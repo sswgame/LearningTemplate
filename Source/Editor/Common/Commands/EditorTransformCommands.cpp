@@ -103,6 +103,11 @@ namespace sw::editor
         if ( bSuccess == false && xmlFallback.empty() == false )
             bSuccess = XmlSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
 
+        // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 예전에는 알리지 않아 붙여 넣은 위치가 월드 행렬에 들지 않았고
+        // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그렸다.
+        if ( bSuccess )
+            pTargetComp->notifyStateWritten();
+
         if ( bSuccess && pOwner != nullptr )
         {
             const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
@@ -136,6 +141,8 @@ namespace sw::editor
 
             if ( bSuccess == false && xmlFallback.empty() == false )
                 bSuccess = XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
+            // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
+            pNewComp->notifyStateWritten();
 
             // 예전에는 이 결과를 **아무도 읽지 않았다.** 둘 다 실패해도 값이 하나도 안 들어간
             // 컴포넌트를 붙여 놓고 "붙여넣기" 실행 취소 항목까지 남겨서, 쓰는 사람은 왜 비었는지
@@ -188,6 +195,8 @@ namespace sw::editor
         const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
 
         const bool bSuccess = XmlSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
+        if ( bSuccess )
+            pComp->notifyStateWritten();
         if ( bSuccess && pOwner != nullptr )
         {
             const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );

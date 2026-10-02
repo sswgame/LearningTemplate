@@ -185,7 +185,7 @@ namespace sw
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
                     if ( bMatched == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx].getRawPtr( pInstance ), listProp[propIdx], ctx );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, ctx );
                 }
                 return true;
             }

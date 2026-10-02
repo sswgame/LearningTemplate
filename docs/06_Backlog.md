@@ -1665,28 +1665,26 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
-| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 남음 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ 구조 ⑦ (3절) — 경로 · 경계는 남음 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
-- **R2 에서 남은 것**(구조 ⑥ 뒤) — bool 은 아무 글이나 받는다(`SerializeContext.cpp` `parseBool( s, false )` 뒤 true · XML/JSON 비트필드 · CLI · 전역 변수 —
-  "ture" 가 false), 숫자 아닌 글은 경고 없이 고아가 되어 Ignore 정책에 묻힌다(XML · JSON 로더 — 고아가 생기면 로드마다 한 번 경고할 것), JSON 쓰기가
-  `"0,0,0"` 같은 값이 스칼라인지 보려고 파싱해 보며 **`[Error]` 로그**를 남긴다(`JsonSerializer.cpp` 53 — 로그 없는 시도 파싱으로), ActionMap 의
-  `static_cast<uint8>( getAttributeInt )`(pad "256" → 0 · "-1" → 255), `XmlNode::getAttributeBool` 의 조용한 폴백, 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다,
-  `FileUtil::removeFile` · `copyFile` 같은 "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
-- **R3** — 에디터의 컴포넌트 값 쓰기(붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 하나 되돌리기 · 기본값)가 `finishLoad` 를 우회해 트랜스폼이 더티가
-  되지 않고 렌더 에셋을 다시 풀지 않는다(`EditorTransformCommands.cpp` 91-196 · `EditorToolAssetCommands.cpp` 469-516 · `InspectorPanel.cpp` 528).
-  메시 id 를 바꿔도 다시 풀지 않는다(`MeshComponent.cpp` 79-124). 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
+- **R2 에서 남은 것**(구조 ⑥ · ⑦ 뒤) — 숫자 아닌 글은 경고 없이 고아가 되어 Ignore 정책에 묻힌다(XML · JSON 로더 — 고아가 생기면 로드마다 한 번
+  경고할 것), ActionMap 의 `static_cast<uint8>( getAttributeInt )`(pad "256" → 0 · "-1" → 255), `XmlNode::getAttributeBool` · 머티리얼
+  `parseBoolToken` 의 조용한 폴백(`StringUtil::tryParseBool` 로), 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다, `FileUtil::removeFile` · `copyFile` 같은
+  "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
+- **R3**(구조 ⑦ 뒤 — 값 쓰기는 닫혔다) — 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
   소스 → 쿠킹 경로 규칙 여섯 벌(`EditorAssetType.cpp` · `SceneDocument::load` · `loadPrefab` · `SceneCooker` `.scene.xml` · 씬 쿠킹 실패를 안 셈).
   GUID 레지스트리가 Dev 는 `.meta` 위치, 쿠커는 `sourcePath=` 필드로 경로를 정한다(`CookAssets.py` 388-409 — 옮긴 프리팹이 배포본에서 사라진다).
   텍스처 드롭이 흰 스프라이트(`EditorAssetCommands.cpp` 514 상대 경로를 `makeRelativePath` 에), Quick Launcher 경로가 "Resource/…", 프리셋 경로 규칙
-  셋, 씬 XML 재이스케이프가 속성 개행을 잃음(`SceneDocument.cpp` `appendNodeXml`), `ResourceUtil::getWritePath` 가 ".." 를 받음. 인스펙터 Transform ·
-  Camera 섹션은 되돌리기 · dirty 가 없다(`InspectorComponentManager.cpp` 28-110). 오버라이드 도구가 비트필드를 바이트째 견주고 타입의 첫 컴포넌트와 짝짓는다.
+  셋, `ResourceUtil::getWritePath` 가 ".." 를 받음. 인스펙터 Transform · Camera 섹션은 되돌리기 · dirty 가 없다(`InspectorComponentManager.cpp` 28-110).
+  린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
+  모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
 - **R4** — `Component::_bActive` · `MeshComponent::_bVisible` 이 저장되지 않는다(Stop · 되돌리기 · 저장 뒤 다시 켜진다, 토글이 되돌리기를 남기지
-  않는다). 계층 패널 "Add Component" 가 되돌리기 · dirty · `onPostLoad` 없이 붙인다. 지원하지 않는 PROPERTY 타입은 "null" · 0 바이트로 조용히 쓰인다
+  않는다). 지원하지 않는 PROPERTY 타입은 "null" · 0 바이트로 조용히 쓰인다
   (지금 걸리는 것은 `RHISwapChainDesc` 의 `void*` 둘, 잠복: quaternion · float4x4 텍스트, 컨테이너 원소 별칭). 효과 없는 컴포넌트 · 칸:
   `CameraControllerComponent` 가 주인을 (0,0) 에 고정, `SpriteAnimator` 무효과, HPBar · DamageUI · Effect · `Projectile::_damage`, `GameData` 의 칸 아홉.
 - **R5** — `clearComponents` · `destroyComponentInstance` · 상태 로드를 틱 안에서 부르면 해제 후 사용(형제 `removeComponent` 는 미룬다),
@@ -2105,6 +2103,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-02 (구조 ⑦ 값 하나를 쓰는 규칙을 한 벌로 — 직접 쓴 값은 컴포넌트에 알리고, 비트필드는 그 비트만 — 1-0j 의 R3 첫 단위)
+
+에디터가 컴포넌트에 반사 값을 쓰는 길 다섯(붙여넣기 · 새로 붙여넣기 · 프리셋 · 프리팹 오버라이드 하나 되돌리기 · 인스펙터 "기본값으로")이 직렬화기로
+**값만** 쓰고 컴포넌트에 알리지 않았고, 값 하나를 견주고 옮기는 규칙은 직렬화기 셋 · 오버라이드 도구 · 인스펙터가 각자 들었다. 드러난 결함:
+- **붙여 넣은 위치 · 프리셋이 화면에 들지 않았다** — 트랜스폼 칸에 들어갔지만 더티가 아니라 월드 행렬 · 기즈모가 옛 자리였다. 메시 id 를 붙여 넣어도 옛 메시.
+- **메시 id 를 바꿔도 옛 메시를 그렸다**(인스펙터 · 붙여넣기 · 되돌리기 — 플레이 · 씬 재로드 전까지). 해석이 "메시가 있으면 그대로" 였고 `_meshId` 는
+  알림도 받지 않았다. 이제 메시가 자기가 어느 id 의 것인지 든다(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙). 런타임 `setMesh` 는
+  그때의 id 의 것으로 남는다.
+- **프리팹 오버라이드가 컴포넌트를 타입 이름으로 짝지었다** — 같은 타입의 둘째 컴포넌트(소켓)가 첫째의 원형과 비교돼 바꾸지 않은 위치가 오버라이드로
+  보였고, 되돌리기는 첫째에 적용됐다. 비트필드는 바이트째 견주고 옮겨 같은 바이트의 런타임 플래그(재생 중)가 다르면 "바뀜" 이었고 되돌리면 재생이 멈췄다.
+  컨테이너는 값 경로로 옮겨 되돌리지 못했다. 이제 안정 키(`타입#n`)로 짝짓는다(`PrefabOverrideItem::_componentKey`).
+- **"기본값으로" 가 다른 프로퍼티까지 되돌렸다** — `{"이름":기본값}` 을 JSON 으로 읽혀, 읽기가 빠진 프로퍼티마다 기본값을 채웠다. 따옴표 없는 문자열 기본값은
+  JSON 이 아니라 실패했고, 알리지도 되돌리기에 남기지도 않았다.
+- **씬 파일의 여러 줄 글이 열 때마다 한 줄이 됐다** — 씬 문서가 엔티티 상태 서브트리를 손으로 다시 써(`appendNodeXml`) 속성 값의 줄바꿈을 그대로 적었고,
+  다시 읽는 XML 이 속성 값을 정규화했다. XML 을 쓰는 규칙이 두 벌이었다 → `XmlNode::toString`.
+- **계층 패널 "Add Component" 가 기록 · dirty 없이 붙였고, 붙인 메시는 플레이 전까지 그려지지 않았다** → `EditorSceneCommands::addComponent`(기록 + `onPostLoad`).
+- **불리언 글은 무엇이든 받았다** — XML 비트필드 · JSON 비트필드 · `bool` 글 읽기 · 전역 변수 · 명령줄이 `parseBool( text, false )` 로 "ture" 를 조용히 false 로
+  읽고 성공이라 했다. 이제 `StringUtil::tryParseBool` — 읽지 못하면 실패(값은 그대로, 명령줄은 경고). JSON 쓰기가 값이 스칼라인지 보려고 `parse` 를 불러
+  `"0,0,0"` 마다 `[Error]` 를 찍던 것은 로그 없는 `JsonDocument::tryParse` 로.
+
+구조로 막은 것:
+- **`Component::notifyStateWritten()`** — 반사 값을 직접 쓴 쪽이 부른다: 프로퍼티마다 `onPropertyChanged`, 그다음 `onPostLoad`(언리얼 `PostEditChangeProperty` ·
+  `PostLoad`). 프로퍼티 하나는 `onPropertyChanged`, 새 컴포넌트는 `onPostLoad`. 표는 `Source/Engine/Object/README.md` "반사 값을 직접 쓰면 알린다".
+- **값 하나 다루기 한 벌** — `SerializerUtil::copyPropertyValue` · `arePropertyValuesEqual` · `formatPropertyText` · `applyPropertyText`(비트필드는 그 비트만,
+  컨테이너는 원소째). 오버라이드 도구의 손 포매터(아는 타입 여덟 외 `<value>`)는 지웠다. `applyPropertyDefault` 도 `applyPropertyText` 를 지난다(예전에는
+  비트필드 기본값이 바이트를 통째로 덮을 수 있었다 — 지금 그런 선언은 없다).
+
+**검증.** 새 시험 8(모두 이전 코드에서 진다): `EditorTransformCommandsTest.PastedValuesAndPresetsReachTheWorldTransformAndTheMesh`,
+`PostEditChangePropertyTest.ChangingTheMeshIdChangesTheDrawnMesh`, `EditorToolAssetCommandsTest.OverridesPairComponentsByKeyAndRevertOnlyTheirOwnValue`
+(오버라이드를 원형으로 견주고 되돌리는 `revertComponentOverride` 를 따로 꺼냈다 — 프리팹 없이 시험한다), `ReflectionSerializationTest.PropertyValueHelpersTouchOnlyTheirOwnBit` ·
+`BitfieldTextThatIsNotABooleanFailsTheRead`, `SceneTest.MultiLineTextKeepsItsLineBreaksThroughASceneFile`, `EditorSceneCommandsTest.AddComponentIsUndoableAndResolvesItsMesh`,
+`GlobalVariableTest.BooleanTextThatIsNotABooleanIsRefused`. 변이 16 개 모두 죽음(알림 빼기 둘 · 메시 해석 셋 · 타입 이름 짝짓기 · 비트 견주기 · 비트 옮기기 ·
+되돌림 알림 · 컨테이너 값 경로 · XML/JSON 관대한 불리언 · `tryParseBool` 관대 · 옛 `appendNodeXml` · 추가의 `onPostLoad` · 추가의 기록).
 
 ### 2026-10-02 (구조 ⑥ 실패는 버릴 수 없다 — `[[nodiscard]]` + 빌드 오류 + 게이트, 실패를 삼키던 여덟 결함 — 1-0j 의 R2)
 

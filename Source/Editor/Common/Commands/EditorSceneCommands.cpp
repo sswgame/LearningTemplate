@@ -228,6 +228,22 @@ namespace sw::editor
         return true;
     }
 
+    Component* EditorSceneCommands::addComponent( GameObject* pObj, const hashed_string& typeName )
+    {
+        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+            return nullptr;
+        if ( pObj == nullptr || pObj->getManager() == nullptr || typeName.empty() )
+            return nullptr;
+
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        Component*                 pComp          = pObj->getManager()->addComponentByName( pObj, typeName );
+        if ( pComp == nullptr )
+            return nullptr;
+        pComp->onPostLoad();
+        commitModify( pObj, beforeSnapshot, "Add Component" );
+        return pComp;
+    }
+
     bool EditorSceneCommands::destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )

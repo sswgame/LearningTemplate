@@ -21,6 +21,7 @@
 #include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -90,67 +91,6 @@ namespace sw::editor
                 if ( path.empty() == false )
                     return resolveExistingOrRelativePath( path );
                 return EditorUtil::resolveEditorConfigFile( getEditorData()._spriteClipFile.c_str() );
-            }
-
-            static string formatPropertyValue( const PropertyInfo& prop, const void* pInstance )
-            {
-                const void* pPtr = prop.getRawPtr( pInstance );
-                if ( pPtr == nullptr )
-                    return "<null>";
-
-                const string                          typeName = prop._typeName.c_str();
-                fixed_string<constant::kMaxBuffer128> arrBuf;
-                if ( typeName == "float32" || typeName == "float" )
-                {
-                    float32 value{ 0.0f };
-                    Memory::copy( &value, pPtr, sizeof( float32 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "%#", Fmt( value, Format().precision( 4 ) ) );
-                    return arrBuf.c_str();
-                }
-                if ( typeName == "int32" || typeName == "int" )
-                {
-                    int32 value{ 0 };
-                    Memory::copy( &value, pPtr, sizeof( int32 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "%d", value );
-                    return arrBuf.c_str();
-                }
-                if ( typeName == "uint32" )
-                {
-                    uint32 value{ 0 };
-                    Memory::copy( &value, pPtr, sizeof( uint32 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "%u", value );
-                    return arrBuf.c_str();
-                }
-                if ( typeName == "bool" )
-                {
-                    bool value{ false };
-                    Memory::copy( &value, pPtr, sizeof( bool ) );
-                    return value ? "true" : "false";
-                }
-                if ( typeName == "string" )
-                    return *static_cast<const string*>( pPtr );
-                if ( typeName == "float3" )
-                {
-                    float3 value{};
-                    Memory::copy( &value, pPtr, sizeof( float3 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ), Fmt( value._z, Format().precision( 3 ) ) );
-                    return arrBuf.c_str();
-                }
-                if ( typeName == "float2" )
-                {
-                    float2 value{};
-                    Memory::copy( &value, pPtr, sizeof( float2 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ) );
-                    return arrBuf.c_str();
-                }
-                if ( typeName == "float4" )
-                {
-                    float4 value{};
-                    Memory::copy( &value, pPtr, sizeof( float4 ) );
-                    formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#, %#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ), Fmt( value._z, Format().precision( 3 ) ), Fmt( value._w, Format().precision( 3 ) ) );
-                    return arrBuf.c_str();
-                }
-                return "<value>";
             }
         };
     } // namespace
@@ -418,47 +358,31 @@ namespace sw::editor
 
     void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
     {
+        if ( pInstance == nullptr || pCdo == nullptr )
+            return;
         const SerializeContext& ctx = SerializeContext::getDefault();
         for ( Component* pInstanceComponent : pInstance->getComponents() )
         {
             if ( pInstanceComponent == nullptr || pInstanceComponent->getTypeInfo() == nullptr )
                 continue;
             const TypeInfo* pTypeInfo = pInstanceComponent->getTypeInfo();
-            Component*      pCdoComp  = pCdo->findComponentByTypeName( pTypeInfo->_name );
-            if ( pCdoComp == nullptr )
+            const string    key       = ComponentStableKey::makeKey( pInstanceComponent );
+            Component*      pCdoComp  = ComponentStableKey::findComponent( pCdo, key );
+            if ( pCdoComp == nullptr || pCdoComp->getTypeInfo() != pTypeInfo )
                 continue;
 
-            vector<uint8> cdoBytes;
-            vector<uint8> instanceBytes;
             pTypeInfo->forEachProperty(
                 [&]( const PropertyInfo& prop )
             {
                 if ( prop._metadata._bTransient == SW_TRUE )
                     return;
-                const void* pCdoPtr        = prop.getRawPtr( pCdoComp );
-                const void* pInstanceValue = prop.getRawPtr( pInstanceComponent );
-                if ( pCdoPtr == nullptr || pInstanceValue == nullptr )
-                    return;
-
-                cdoBytes.clear();
-                instanceBytes.clear();
-                if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-                {
-                    SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
-                    SerializerUtil::serializeNestedContainerBinary( pInstanceValue, prop.getContainerShape(), instanceBytes, ctx );
-                }
-                else
-                {
-                    SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
-                    SerializerUtil::serializeValueBinary( pInstanceValue, prop._typeName, instanceBytes, ctx );
-                }
-
                 PrefabOverrideItem item{};
                 item._componentName   = pTypeInfo->_name.c_str();
+                item._componentKey    = key;
                 item._propertyName    = prop._name.c_str();
-                item._defaultValue    = EditorToolAssetInternal::formatPropertyValue( prop, pCdoComp );
-                item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstanceComponent );
-                item._bModified       = ( cdoBytes != instanceBytes );
+                item._defaultValue    = SerializerUtil::formatPropertyText( prop, pCdoComp, ctx );
+                item._overriddenValue = SerializerUtil::formatPropertyText( prop, pInstanceComponent, ctx );
+                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, ctx ) == false );
                 outListOverride.push_back( std::move( item ) );
             },
                 true );
@@ -487,36 +411,38 @@ namespace sw::editor
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabRevertCdo" ) );
         if ( pLoaded->applyStateTo( pCdo ) == false )
             return;
+        (void)revertComponentOverride( pInstance, pCdo, item ); // 실패는 그대로 남은 항목과 경고가 알린다
+    }
 
-        Component* pInstanceComponent = pInstance->findComponentByTypeName( hashed_string{ item._componentName } );
-        Component* pCdoComp           = pCdo->findComponentByTypeName( hashed_string{ item._componentName } );
-        if ( pInstanceComponent != nullptr && pCdoComp != nullptr && pInstanceComponent->getTypeInfo() != nullptr )
+    bool EditorToolAssetCommands::revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item )
+    {
+        if ( pInstance == nullptr || pCdo == nullptr )
+            return false;
+        Component* pInstanceComponent = ComponentStableKey::findComponent( pInstance, item._componentKey );
+        Component* pCdoComp           = ComponentStableKey::findComponent( pCdo, item._componentKey );
+        if ( pInstanceComponent == nullptr || pCdoComp == nullptr || pInstanceComponent->getTypeInfo() == nullptr ||
+             pInstanceComponent->getTypeInfo() != pCdoComp->getTypeInfo() )
         {
-            const PropertyInfo* pProp = pInstanceComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
-            if ( pProp != nullptr )
-            {
-                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
-                void*                      pDest          = pProp->getRawPtr( pInstanceComponent );
-                const void*                pSrc           = pProp->getRawPtr( pCdoComp );
-                const SerializeContext&    ctx            = SerializeContext::getDefault();
-                if ( pDest != nullptr && pSrc != nullptr )
-                {
-                    vector<uint8> bytes;
-                    SerializerUtil::serializeValueBinary( pSrc, pProp->_typeName, bytes, ctx );
-                    size_t local{ 0 };
-                    // 값을 옮기지 못했으면 되돌렸다고 표시하지 않는다(예전에는 실패해도 "되돌림" 으로 표시하고 되돌리기 기록을 남겼다).
-                    if ( SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, bytes.data(), bytes.size(), local, ctx ) == false )
-                    {
-                        SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentName.c_str(), item._propertyName.c_str() );
-                        return;
-                    }
-                }
-                const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
-                EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
-                item._overriddenValue = item._defaultValue;
-                item._bModified       = false;
-            }
+            SW_LOG_WARNING( "Prefab override '%#.%#' has no matching component to revert", item._componentKey.c_str(), item._propertyName.c_str() );
+            return false;
         }
+        const PropertyInfo* pProp = pInstanceComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
+        if ( pProp == nullptr )
+            return false;
+
+        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
+        // 값을 옮기지 못했으면 되돌렸다고 표시하지 않는다(예전에는 실패해도 "되돌림" 으로 표시하고 되돌리기 기록을 남겼다).
+        if ( SerializerUtil::copyPropertyValue( *pProp, pCdoComp, pInstanceComponent, SerializeContext::getDefault() ) == false )
+        {
+            SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );
+            return false;
+        }
+        pInstanceComponent->onPropertyChanged( pProp->_name );
+        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
+        EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
+        item._overriddenValue = item._defaultValue;
+        item._bModified       = false;
+        return true;
     }
 
     bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, string_view prefabPath )

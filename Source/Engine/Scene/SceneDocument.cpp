@@ -4,7 +4,6 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
 
@@ -59,53 +58,6 @@ namespace sw
                 string resolved;
                 if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
                     node._prefab = std::move( resolved );
-            }
-
-            static void appendNodeXml( StringBuilder<constant::kMaxBuffer8192>& out, XmlNode node )
-            {
-                if ( node.isValid() == false )
-                    return;
-
-                const utf8* pNodeName = node.getName();
-                if ( StringUtil::isNullOrEmpty( pNodeName ) )
-                    return;
-
-                out.append( '<' ).append( pNodeName );
-                for ( XmlAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
-                {
-                    out.append( ' ' ).append( attr.getName() ).append( "=\"" ).append( XmlDocument::escapeString( attr.getValue() != nullptr ? attr.getValue() : "" ) ).append( '"' );
-                }
-
-                bool bHasElementChild = false;
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
-                {
-                    const utf8* pChildName = child.getName();
-                    if ( StringUtil::isNullOrEmpty( pChildName ) == false )
-                    {
-                        bHasElementChild = true;
-                        break;
-                    }
-                }
-
-                const bool bHasValue = StringUtil::isNullOrEmpty( node.getText() ) == false;
-                if ( bHasElementChild == false && bHasValue == false )
-                {
-                    out.append( "/>" );
-                    return;
-                }
-
-                out.append( '>' );
-                if ( bHasValue )
-                    out.append( XmlDocument::escapeString( node.getText() ) );
-
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
-                {
-                    const utf8* pChildName = child.getName();
-                    if ( StringUtil::isNullOrEmpty( pChildName ) == false )
-                        appendNodeXml( out, child );
-                }
-
-                out.append( "</" ).append( pNodeName ).append( '>' );
             }
         };
     } // namespace
@@ -180,12 +132,10 @@ namespace sw
                 SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
                 XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
+                // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`). 예전에는 여기서 손으로 다시 썼는데, 속성 값의 줄바꿈을 그대로 적어 다시
+                // 읽을 때 공백이 됐다(XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로) — 쓰는 규칙이 두 벌이었다.
                 if ( stateNode.isValid() )
-                {
-                    StringBuilder<constant::kMaxBuffer8192> stateSb;
-                    SceneDocumentInternal::appendNodeXml( stateSb, stateNode );
-                    node._embeddedXml = stateSb.view();
-                }
+                    node._embeddedXml = stateNode.toString();
 
                 if ( node._name.empty() )
                     node._name = SceneDocumentInternal::kDefaultEntity;

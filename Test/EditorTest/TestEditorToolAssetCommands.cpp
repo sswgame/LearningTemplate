@@ -7,6 +7,8 @@
 
 #include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -191,4 +193,64 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
     string sceneAfter;
     SW_ASSERT_TRUE( FileUtil::readTextFile( scenePath, sceneAfter ) );
     SW_EXPECT_STREQ( kScene.c_str(), sceneAfter.c_str() );
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 오버라이드는 컴포넌트를 안정 키로 짝짓고, 되돌리기는 그 컴포넌트의 그 비트만 바꾼다
+ * @details 예전에는 컴포넌트를 타입 이름으로 짝지어 같은 타입의 둘째 컴포넌트(소켓)가 첫째의 원형과 비교됐고(바꾸지 않은 위치가 오버라이드로
+ *          보였다), 되돌리기는 첫째에 적용됐다. 비트필드는 바이트째 견주고 옮겨, 같은 바이트의 런타임 플래그(재생 중)가 다르면 반복 설정이
+ *          오버라이드로 보였고, 되돌리면 재생이 멈췄다. 되돌린 값은 알리지 않아 위치가 월드 행렬에 들지 않았다.
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevertOnlyTheirOwnValue )
+{
+    GameObjectManager manager;
+    auto              makeObject = [&manager]( const utf8* pName )
+    {
+        GameObject* pObj = manager.createGameObject( hashed_string( pName ) );
+        (void)pObj->addComponent<SceneComponent>();
+        SceneComponent* pSocket = pObj->addComponent<SceneComponent>();
+        pSocket->setLocalPosition( float3( 5.0f, 0.0f, 0.0f ) );
+        SpriteAnimatorComponent* pAnimator = pObj->addComponent<SpriteAnimatorComponent>();
+        pAnimator->play( "Walk", true );
+        return pObj;
+    };
+    GameObject* pCdo      = makeObject( "Template" );
+    GameObject* pInstance = makeObject( "Instance" );
+    pCdo->getComponent<SpriteAnimatorComponent>()->stop(); // 런타임 비트(재생 중)만 다르다
+    manager.flushSceneTransforms();
+
+    auto countModified = []( const vector<PrefabOverrideItem>& listItem )
+    {
+        uint32 count = 0;
+        for ( const PrefabOverrideItem& item : listItem )
+            count += item._bModified ? 1 : 0;
+        return count;
+    };
+    vector<PrefabOverrideItem> listOverride;
+    EditorToolAssetCommands::collectComponentOverrides( pInstance, pCdo, listOverride );
+    SW_EXPECT_EQUAL( 0u, countModified( listOverride ) );
+
+    // 소켓을 옮기고 반복을 끈다 — 그 둘만 오버라이드다.
+    SceneComponent* pInstanceSocket = static_cast<SceneComponent*>( ComponentStableKey::findComponent( pInstance, "SceneComponent#1" ) );
+    SW_ASSERT_NOT_NULL( pInstanceSocket );
+    pInstanceSocket->setLocalPosition( float3( 7.0f, 0.0f, 0.0f ) );
+    SpriteAnimatorComponent* pInstanceAnimator = pInstance->getComponent<SpriteAnimatorComponent>();
+    pInstanceAnimator->setRepeat( false );
+    manager.flushSceneTransforms();
+    listOverride.clear();
+    EditorToolAssetCommands::collectComponentOverrides( pInstance, pCdo, listOverride );
+    SW_EXPECT_EQUAL( 2u, countModified( listOverride ) );
+
+    for ( PrefabOverrideItem& item : listOverride )
+    {
+        if ( item._bModified == false )
+            continue;
+        SW_EXPECT_TRUE( EditorToolAssetCommands::revertComponentOverride( pInstance, pCdo, item ) );
+        SW_EXPECT_FALSE( item._bModified );
+    }
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pInstanceSocket->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pInstanceSocket->getWorldPosition()._x, 1e-4f ); // 알렸다
+    SW_EXPECT_TRUE( pInstanceAnimator->isRepeating() );
+    SW_EXPECT_TRUE( pInstanceAnimator->isPlaying() ); // 같은 바이트의 다른 비트는 그대로다
 }

@@ -2382,3 +2382,107 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
     SW_EXPECT_TRUE( value._wide == std::numeric_limits<int32>::min() );
     SW_EXPECT_EQUAL( -128, static_cast<int32>( value._signedByte ) );
 }
+
+/**
+ * @brief [ReflectionSerializationTest] 프로퍼티 값 하나를 옮기고 견주고 글로 쓰는 한 벌 — 비트필드는 그 비트만, 컨테이너는 원소째
+ * @details 예전에는 이 규칙을 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 각자 들었고, 오버라이드 도구는 비트필드의 **바이트**를
+ *          견주고 옮겨 같은 바이트의 다른 플래그까지 "바뀜" 으로 보이거나 지워졌다. 컨테이너는 값 경로로만 옮겨 되돌리지 못했다.
+ *          불리언 글은 엄격하다 — 예전 XML · JSON 은 "ture" 를 조용히 false 로 읽었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwnBit )
+{
+    const sw::SerializeContext& ctx   = sw::SerializeContext::getDefault();
+    const sw::TypeInfo*         pBits = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    SW_ASSERT_NOT_NULL( pBits );
+    const sw::PropertyInfo* pActive  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bActive" ) );
+    const sw::PropertyInfo* pInvuln  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
+    const sw::PropertyInfo* pCanJump = pBits->findPropertyInHierarchy( sw::hashed_string( "_bCanJump" ) );
+    SW_ASSERT_TRUE( pActive != nullptr && pInvuln != nullptr && pCanJump != nullptr );
+
+    sw::BitfieldTestActor source;
+    source._bActive       = SW_TRUE;
+    source._bInvulnerable = SW_FALSE;
+    source._bCanJump      = SW_TRUE;
+    sw::BitfieldTestActor target;
+    target._bActive       = SW_FALSE;
+    target._bInvulnerable = SW_FALSE;
+    target._bCanJump      = SW_FALSE;
+
+    // 같은 바이트의 다른 비트가 달라도 그 비트가 같으면 같다.
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, &source, &target, ctx ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, ctx ) );
+
+    // 옮기면 그 비트만 바뀐다.
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, &source, &target, ctx ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bInvulnerable ) );
+
+    // 글은 불리언이어야 한다 — 아니면 값은 그대로다.
+    SW_EXPECT_FALSE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "ture", ctx ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "Yes", ctx ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bCanJump ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
+    SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, &target, ctx ).c_str() );
+    SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, &target, ctx ).c_str() );
+
+    // 컨테이너는 원소째 옮기고 견준다.
+    const sw::TypeInfo* pNested = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    SW_ASSERT_NOT_NULL( pNested );
+    const sw::PropertyInfo* pGrid = pNested->findPropertyInHierarchy( sw::hashed_string( "_grid" ) );
+    SW_ASSERT_NOT_NULL( pGrid );
+    sw::NestedContainerActor gridSource;
+    gridSource._grid = {
+        { 1, 2 },
+        { 3 }
+    };
+    sw::NestedContainerActor gridTarget;
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, &gridSource, &gridTarget, ctx ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
+    SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, ctx ) );
+    SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, &gridTarget, ctx ).c_str() );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 불리언이 아닌 비트필드 글은 읽기 실패다 — 조용히 false 가 되지 않는다
+ * @details XML 은 `parseBool( text, false )` 로, JSON 은 문자열 · 오브젝트 · null 을 모두 false 로 읽고 성공을 돌려줬다. 손으로 고친 씬의
+ *          오타("ture")가 그 플래그를 꺼도 아무도 몰랐다. 이제 읽기는 실패를 알리고 값은 그대로다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsTheRead )
+{
+    const sw::TypeInfo* pBits = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    SW_ASSERT_NOT_NULL( pBits );
+
+    sw::BitfieldTestActor fromXml;
+    fromXml._bActive       = SW_FALSE;
+    fromXml._bInvulnerable = SW_TRUE;
+    fromXml._bCanJump      = SW_FALSE;
+    {
+        test::ScopedDefensiveTestLog expected( "a bitfield written as 'ture'" );
+        SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &fromXml, *pBits,
+                                                         "<BitfieldTestActor _bActive=\"on\" _bInvulnerable=\"ture\" _bCanJump=\"1\" _score=\"5\" />" ) );
+    }
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bInvulnerable ) ); // 그대로다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bActive ) );       // 다른 것은 읽혔다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bCanJump ) );
+
+    sw::BitfieldTestActor fromJson;
+    fromJson._bInvulnerable = SW_TRUE;
+    {
+        test::ScopedDefensiveTestLog expected( "a bitfield written as 'ture'" );
+        SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromJson, *pBits, R"({"_bInvulnerable":"ture"})" ) );
+    }
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromJson._bInvulnerable ) );
+
+    // 비트필드가 아닌 bool 도 같은 규칙이다(직렬화기가 함께 쓰는 글 읽기).
+    const sw::SerializeContext::TextReadFn* pBoolReader = sw::SerializeContext::getDefault().findTextReader( sw::hashed_string( "bool" ) );
+    SW_ASSERT_NOT_NULL( pBoolReader );
+    bool bPlain = true;
+    SW_EXPECT_FALSE( ( *pBoolReader )( &bPlain, "ture" ) );
+    SW_EXPECT_TRUE( bPlain );
+    SW_EXPECT_TRUE( ( *pBoolReader )( &bPlain, "0" ) );
+    SW_EXPECT_FALSE( bPlain );
+}

@@ -5,11 +5,13 @@
 
 #include "EditorTest/EditorTestServices.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -202,4 +204,34 @@ SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstan
         SW_EXPECT_TRUE( prev._instanceCount > cur._instanceCount ||
                         ( prev._instanceCount == cur._instanceCount && prev._typeName <= cur._typeName ) );
     }
+}
+
+/**
+ * @brief [EditorSceneCommandsTest] 계층 패널의 "컴포넌트 추가" 는 되돌릴 수 있고, 붙인 메시는 바로 그려진다
+ * @details 예전에는 매니저에 바로 붙여 되돌리기 기록도 씬 dirty 도 없었고(Ctrl+Z 가 듣지 않고, 저장을 묻지 않고 사라졌다), 새 메시
+ *          컴포넌트는 메시를 풀지 않아 플레이 전까지 그려지지 않았다. 이제 `EditorSceneCommands::addComponent` 가 기록하고 `onPostLoad` 를 부른다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "AddComponentProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    GameObject*               pObj     = pManager->createGameObject( hashed_string( "Crate" ) );
+    SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+    pManager->mergePendingAdds();
+
+    MeshComponent* pMesh = static_cast<MeshComponent*>( EditorSceneCommands::addComponent( pObj, hashed_string( "sw::MeshComponent" ) ) );
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_EXPECT_NOT_NULL( pMesh->getRawMesh() );
+    SW_ASSERT_TRUE( stack.canUndo() );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    GameObject* pRestored = pManager->findGameObjectById( pObj->getObjectId() );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_NULL( pRestored->getComponent<MeshComponent>() );
 }

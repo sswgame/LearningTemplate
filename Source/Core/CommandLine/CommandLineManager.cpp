@@ -216,7 +216,10 @@ namespace sw
     {
         if ( std::holds_alternative<bool>( argument._defaultValue ) )
         {
-            argument._value = StringUtil::parseBool( newValue, false );
+            bool bParsed = false;
+            if ( StringUtil::tryParseBool( newValue, bParsed ) == false )
+                SW_LOG_WARNING( "%#: 불리언이 아닙니다 (%#). false 로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+            argument._value = bParsed;
         }
         else if ( std::holds_alternative<int32>( argument._defaultValue ) )
         {

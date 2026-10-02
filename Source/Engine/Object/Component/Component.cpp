@@ -221,6 +221,15 @@ namespace sw
         (void)propertyName;
     }
 
+    void Component::notifyStateWritten()
+    {
+        const TypeInfo* pTypeInfo = getTypeInfo();
+        if ( pTypeInfo != nullptr )
+            pTypeInfo->forEachProperty( [this]( const PropertyInfo& prop )
+            { onPropertyChanged( prop._name ); }, true );
+        onPostLoad();
+    }
+
     void Component::applyTypeDefaults( const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo != nullptr )
