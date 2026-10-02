@@ -2,10 +2,13 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/TextureBaker.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/ResourceManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -227,4 +230,79 @@ SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
     // 빈 입력은 빈 결과이거나 루트 그 자체다 — 어느 쪽이든 터지지 않는다.
     const sw::string empty = sw::editor::EditorUtil::resolveProjectRelativePath( "" );
     SW_EXPECT_TRUE( empty.find( ".." ) == sw::string::npos );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 핫 리로드 경로는 표가 정한다 — 파일 종류마다 다시 읽을 엔진 캐시와(있으면) 먼저 돌릴 임포터
+ * @details `AssetHotReload` 에는 종류별 코드가 없으므로, 종류를 더하거나 빼는 일은 이 표의 한 줄로 끝나야 한다.
+ *          이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 가서 굽는 임포터를 탄다. `.dds` 는 임포터가 넘기고 캐시가 다시 읽는다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
+{
+    using sw::editor::AssetReloadRoute;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    const AssetReloadRoute texture = EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures/hero.dds" );
+    SW_ASSERT_NOT_NULL( texture._pCacheKindName );
+    SW_EXPECT_STREQ( "Texture", texture._pCacheKindName );
+    SW_EXPECT_TRUE( texture._pfnImportSource == &sw::editor::TextureBaker::importChangedSourceImage );
+    SW_EXPECT_FALSE( texture._pfnImportSource( "game/empty/textures/hero.dds" ) ); // 구운 결과는 캐시가 다시 읽는다
+
+    const AssetReloadRoute spriteImage = EditorAssetTypeRegistry::findReloadRoute( "game/empty/sprites/hero.png" );
+    SW_ASSERT_NOT_NULL( spriteImage._pCacheKindName );
+    SW_EXPECT_STREQ( "Texture", spriteImage._pCacheKindName );
+
+    const AssetReloadRoute material = EditorAssetTypeRegistry::findReloadRoute( "engine/materials/sprite2d.material" );
+    SW_ASSERT_NOT_NULL( material._pCacheKindName );
+    SW_EXPECT_STREQ( "Material", material._pCacheKindName );
+    SW_EXPECT_TRUE( material._pfnImportSource == nullptr );
+
+    const AssetReloadRoute prefab = EditorAssetTypeRegistry::findReloadRoute( "prefabs/hero.prefab.xml" );
+    SW_ASSERT_NOT_NULL( prefab._pCacheKindName );
+    SW_EXPECT_STREQ( "Prefab", prefab._pCacheKindName );
+
+    const AssetReloadRoute clip = EditorAssetTypeRegistry::findReloadRoute( "engine/textures/ui/digits.sprite.json" );
+    SW_ASSERT_NOT_NULL( clip._pCacheKindName );
+    SW_EXPECT_STREQ( "SpriteClip", clip._pCacheKindName );
+
+    // 다시 읽을 캐시가 없는 종류는 핫 리로드 대상이 아니다.
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "engine/shaders/forward.hlsl" )._pCacheKindName == nullptr );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "maps/town.scene.xml" )._pCacheKindName == nullptr );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "" )._pCacheKindName == nullptr );
+
+    // 감시 확장자는 같은 표에서 온다 — 경로가 있는 종류만.
+    sw::vector<sw::string> listSuffix{};
+    EditorAssetTypeRegistry::appendReloadableSuffixes( listSuffix );
+    const auto hasSuffix = [&listSuffix]( sw::string_view suffix )
+    {
+        for ( const sw::string& candidate : listSuffix )
+        {
+            if ( candidate == suffix )
+                return true;
+        }
+        return false;
+    };
+    SW_EXPECT_TRUE( hasSuffix( ".material" ) );
+    SW_EXPECT_TRUE( hasSuffix( ".sprite.json" ) );
+    SW_EXPECT_FALSE( hasSuffix( ".hlsl" ) );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 표에 적힌 핫 리로드 캐시 이름은 전부 엔진 등록부에 있다
+ * @details 이름이 어긋나면 핫 리로드가 그 종류에서 "캐시 없음" 경고만 남기고 아무것도 다시 읽지 않는다 — 에디터 표와 엔진 등록을 이 테스트가 묶는다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )
+{
+    sw::vector<sw::string_view> listKindName{};
+    sw::editor::EditorAssetTypeRegistry::appendReloadCacheKindNames( listKindName );
+    SW_ASSERT_TRUE( listKindName.empty() == false );
+
+    sw::ResourceManager resources;
+    for ( sw::string_view kindName : listKindName )
+    {
+        const sw::IAssetCache* pCache = resources.findAssetCache( kindName );
+        SW_EXPECT_NOT_NULL( pCache );
+        if ( pCache != nullptr )
+            SW_EXPECT_TRUE( kindName == pCache->getAssetKindName() );
+    }
 }

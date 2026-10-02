@@ -41,7 +41,10 @@ namespace sw
         void onEndPlay() override;
         /** @brief 메시 · 머티리얼을 풀고 클립 · 텍스처 인스턴스 · 프레임을 맞춥니다. */
         void resolveRenderAssets() override;
-        /** @brief 텍스처 · 클립 · 프레임 · 색 칸을 고치면 다시 맞춥니다. */
+        /**
+         * @brief 텍스처 · 클립 · 프레임 · 색 칸을 고치면 다시 맞춥니다.
+         * @details 값이 같아도 다시 맞춥니다 — 에디터 핫 리로드는 클립을 제자리로 다시 읽은 뒤 `_clipPath` 로 이것을 부릅니다.
+         */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 단위 사각형(한 변 1)의 반대각선에 월드 X · Y 스케일 중 큰 쪽을 곱한 구입니다. */
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
@@ -53,12 +56,10 @@ namespace sw
 
         /** @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
         const string& getClipPath() const { return _clipPath; }
-        /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 나눠 갖습니다 — `SpriteClipAsset::acquireShared`). */
+        /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 나눠 갖습니다 — `SpriteClipCache::acquire`). */
         void setClipPath( string_view path );
         /** @brief 읽은 클립입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
         const SpriteClipAsset* getClip() const { return _clip.get(); }
-        /** @brief 쥔 클립이 다시 읽혔을 때 부릅니다(`SpriteClipAsset::reloadShared` 뒤) — 아틀라스와 지금 프레임의 UV 를 다시 맞춥니다. */
-        void refreshFromClip();
 
         /** @brief 보일 클립 프레임 번호입니다. */
         int32 getClipFrame() const { return _clipFrame; }

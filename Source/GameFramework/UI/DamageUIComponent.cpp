@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
 {
@@ -39,7 +40,7 @@ namespace sw
         {
             pOwner->addTag( "UI"_tag );
             // 클립을 못 읽으면 로더가 이유를 남겼다. 숫자 없이 수명만 돈다(오브젝트는 그대로 지워진다).
-            _digitClip                  = SpriteClipAsset::acquireShared( _digitClipPath );
+            _digitClip                  = SpriteClipCache::acquire( _digitClipPath );
             GameObjectManager* pManager = pOwner->getManager();
             if ( _digitClip != nullptr && pManager != nullptr && _spriteBatch.initialize( *pManager, _digitClip->_atlasPath, kMaxGlyphCount ) == false )
                 SW_LOG_WARNING( "Damage number sprites could not be created" );

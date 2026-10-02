@@ -9,6 +9,11 @@
 
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
+#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/Resource/ResourceUtil.h"
 
 #if defined( TileShape )
     #undef TileShape
@@ -293,5 +298,43 @@ namespace sw::editor
             SW_LOG_WARNING( "No matching rule found in config for %#; using default rule.", sourcePath );
 
         return bakeTexture( sourcePath, outputPath, rule, pOutResult );
+    }
+
+    bool TextureBaker::importChangedSourceImage( string_view relativePath )
+    {
+        // 소스 이미지를 두는 폴더. 구운 DDS 는 옆의 `textures/` 로 간다.
+        constexpr string_view kRawTextureFolder = "textures_raw";
+
+        if ( FileUtil::hasExtension( relativePath, ".dds" ) )
+            return false;
+
+        if ( FileUtil::hasExtension( relativePath, ".hdr" ) )
+        {
+            SW_LOG_WARNING( "HDR 은 자동 베이크 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
+            return true;
+        }
+
+        const string normalized = FileUtil::normalizeSeparators( FileUtil::joinPath( ResourceUtil::getRootFolderPath(), relativePath ) );
+        const size_t rawPos     = string_view( normalized ).find( kRawTextureFolder );
+        if ( rawPos == string::npos )
+        {
+            SW_LOG_WARNING( "소스 이미지는 `%#` 아래에 있어야 구워집니다: %#", kRawTextureFolder, relativePath );
+            return true;
+        }
+
+        const string outputPath =
+            FileUtil::replaceExtension( normalized.substr( 0, rawPos ) + "textures" + normalized.substr( rawPos + kRawTextureFolder.size() ), ".dds" );
+
+        // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 굽는다.
+        TextureImportConfig config{};
+        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
+        if ( bakeTextureWithConfig( normalized, outputPath, config ) == false )
+        {
+            SW_LOG_ERROR( "텍스처 베이크 실패: %#", relativePath );
+            return true;
+        }
+
+        SW_LOG_INFO( "텍스처를 구웠습니다: %# -> %#", relativePath, outputPath.c_str() );
+        return true;
     }
 } // namespace sw::editor

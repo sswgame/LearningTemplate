@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/TextureBaker.h"
+
 #include "Engine/Resource/AssetFormat.h"
 
 namespace sw::editor
@@ -56,13 +58,15 @@ namespace sw::editor
          */
         struct AssetKindRow
         {
-            EditorAssetKind    _kind;
-            MatchMode          _mode;
-            const string_view* _pSuffix;
-            uint32             _suffixCount;
-            const utf8*        _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
-            const utf8*        _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 라벨. nullptr 이면 필터에 없습니다
-            bool               _bOtherExcluded; ///< "Other" 필터에서 뺄지
+            EditorAssetKind         _kind;
+            MatchMode               _mode;
+            const string_view*      _pSuffix;
+            uint32                  _suffixCount;
+            const utf8*             _pPanelTitle;     ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
+            const utf8*             _pBrowserLabel;   ///< 콘텐츠 브라우저 필터 라벨. nullptr 이면 필터에 없습니다
+            bool                    _bOtherExcluded;  ///< "Other" 필터에서 뺄지
+            const utf8*             _pCacheKindName;  ///< 이 줄의 파일을 들고 있는 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
+            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 굽는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
         };
 
         template <size_t N>
@@ -73,19 +77,19 @@ namespace sw::editor
 
         // 줄 순서가 곧 **브라우저 필터와 도구 패널의 표시 순서**다.
         const AssetKindRow kArrAssetKind[] = {
-            {         EditorAssetKind::Scene, MatchMode::CookableSource,             nullptr,                              0,           nullptr,    "Scenes",  true},
-            {        EditorAssetKind::Prefab, MatchMode::CookableSource,             nullptr,                              0,   "Prefab Editor",   "Prefabs",  true},
-            {       EditorAssetKind::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),           nullptr,  "Textures",  true},
-            {        EditorAssetKind::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),           nullptr,   "Shaders",  true},
-            {      EditorAssetKind::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),        "Material", "Materials",  true},
-            {         EditorAssetKind::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),           nullptr,     "Audio",  true},
-            {EditorAssetKind::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ), "Animation Graph",      "Anim",  true},
-            { EditorAssetKind::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),  "Dialogue Graph",  "Dialogue",  true},
-            {    EditorAssetKind::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ),     "Sprite Clip",    "Sprite",  true},
-            {    EditorAssetKind::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),           nullptr,     nullptr,  true},
-            {       EditorAssetKind::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),   "Tile Map Tool",  "Tile Map",  true},
-            {      EditorAssetKind::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),       "Sequencer",       "Seq",  true},
-            {          EditorAssetKind::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),           nullptr,      "Data", false},
+            {         EditorAssetKind::Scene, MatchMode::CookableSource,             nullptr,                              0,           nullptr,    "Scenes",  true,      nullptr,                                 nullptr},
+            {        EditorAssetKind::Prefab, MatchMode::CookableSource,             nullptr,                              0,   "Prefab Editor",   "Prefabs",  true,     "Prefab",                                 nullptr},
+            {       EditorAssetKind::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),           nullptr,  "Textures",  true,    "Texture", &TextureBaker::importChangedSourceImage},
+            {        EditorAssetKind::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),           nullptr,   "Shaders",  true,      nullptr,                                 nullptr},
+            {      EditorAssetKind::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),        "Material", "Materials",  true,   "Material",                                 nullptr},
+            {         EditorAssetKind::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),           nullptr,     "Audio",  true,      nullptr,                                 nullptr},
+            {EditorAssetKind::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ), "Animation Graph",      "Anim",  true,      nullptr,                                 nullptr},
+            { EditorAssetKind::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),  "Dialogue Graph",  "Dialogue",  true,      nullptr,                                 nullptr},
+            {    EditorAssetKind::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ),     "Sprite Clip",    "Sprite",  true, "SpriteClip",                                 nullptr},
+            {    EditorAssetKind::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),           nullptr,     nullptr,  true,      nullptr,                                 nullptr},
+            {       EditorAssetKind::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),   "Tile Map Tool",  "Tile Map",  true,      nullptr,                                 nullptr},
+            {      EditorAssetKind::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),       "Sequencer",       "Seq",  true,      nullptr,                                 nullptr},
+            {          EditorAssetKind::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),           nullptr,      "Data", false,      nullptr,                                 nullptr},
         };
 
         struct EditorAssetTypeInternal
@@ -330,6 +334,41 @@ namespace sw::editor
         static const vector<EditorAssetBrowserFilter> s_listFilter = EditorAssetTypeInternal::buildBrowserFilters();
         outCount                                                   = static_cast<uint32>( s_listFilter.size() );
         return s_listFilter.data();
+    }
+
+    AssetReloadRoute EditorAssetTypeRegistry::findReloadRoute( string_view path )
+    {
+        AssetReloadRoute route{};
+        if ( path.empty() )
+            return route;
+        // 표 순서대로 첫 일치 줄이 이긴다(이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 간다).
+        for ( const AssetKindRow& row : kArrAssetKind )
+        {
+            if ( EditorAssetTypeInternal::matchRow( row, path ) == false )
+                continue;
+            route._pCacheKindName  = row._pCacheKindName;
+            route._pfnImportSource = row._pfnImportSource;
+            return route;
+        }
+        return route;
+    }
+
+    void EditorAssetTypeRegistry::appendReloadCacheKindNames( vector<string_view>& outListKindName )
+    {
+        for ( const AssetKindRow& row : kArrAssetKind )
+        {
+            if ( row._pCacheKindName != nullptr )
+                outListKindName.push_back( row._pCacheKindName );
+        }
+    }
+
+    void EditorAssetTypeRegistry::appendReloadableSuffixes( vector<string>& outListSuffix )
+    {
+        for ( const AssetKindRow& row : kArrAssetKind )
+        {
+            if ( row._pCacheKindName != nullptr )
+                EditorAssetTypeInternal::appendUniqueRowSuffixes( row, outListSuffix );
+        }
     }
 
     void EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix )

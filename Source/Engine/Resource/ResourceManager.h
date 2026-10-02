@@ -26,6 +26,7 @@ namespace sw
     class MaterialCache;
     class PrefabManager;
     class ResourcePackManager;
+    class SpriteClipCache;
     class TextureCache;
 
     /**
@@ -149,11 +150,15 @@ namespace sw
         const PrefabManager& getPrefabManager() const;
 
     private:
+        /** @brief 이 매니저가 소유한 캐시를 등록하고 내장으로 표시합니다(종료 경고에서 뺍니다). */
+        void registerBuiltInAssetCache( IAssetCache* pCache );
+
         AssetDatabase                   _assetDatabase;
         AssetFormatRegistry             _assetFormatRegistry;
         unique_ptr<MaterialCache>       _materialCache;
         unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabManager>       _prefabManager;
+        unique_ptr<SpriteClipCache>     _spriteClipCache; ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager> _pPackManager;
         /**
          * @struct RegisteredAssetCache
@@ -166,6 +171,7 @@ namespace sw
         {
             IAssetCache* _pCache{ nullptr }; ///< 소유하지 않습니다.
             string       _kindName{};        ///< 등록 시점의 이름 사본.
+            bool         _bBuiltIn{ false }; ///< 이 매니저가 소유한 내장 캐시(모듈이 내려야 하는 것이 아님).
         };
 
         /** @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 셋은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다). */

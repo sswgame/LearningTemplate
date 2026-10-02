@@ -40,6 +40,19 @@ namespace sw::editor
         Sequence
     };
 
+    /** @brief 소스 파일을 굽는 임포터입니다. 처리했으면(구웠거나 굽지 않는다고 알렸으면) true — 그 파일의 캐시 리로드는 하지 않습니다. */
+    using AssetSourceImporterFunc = bool ( * )( string_view relativePath );
+
+    /**
+     * @struct AssetReloadRoute
+     * @brief 핫 리로드가 바뀐 파일 하나를 처리하는 방법입니다(`EditorAssetTypeRegistry::findReloadRoute`).
+     */
+    struct AssetReloadRoute
+    {
+        const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
+        AssetSourceImporterFunc _pfnImportSource{ nullptr }; ///< 캐시가 읽기 전에 돌리는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
+    };
+
     /** @brief 확장자/접미사 → 도구 패널 종류 */
     struct EditorAssetPanelMapping
     {
@@ -114,6 +127,16 @@ namespace sw::editor
          *          않았습니다.
          */
         static void appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix );
+        /**
+         * @brief 바뀐 파일 하나를 핫 리로드가 처리하는 방법(다시 읽을 캐시 · 먼저 돌릴 임포터)입니다. 대상이 아니면 둘 다 nullptr 입니다.
+         * @details 새 에셋 종류는 엔진에 `IAssetCache` 를 등록하고 이 표의 줄에 그 이름을 적으면 핫 리로드됩니다.
+         *          `AssetHotReload` 에는 종류별 코드가 없습니다 — 거기에 분기를 더하지 말 것.
+         */
+        static AssetReloadRoute findReloadRoute( string_view path );
+        /** @brief 표에 적힌 핫 리로드 캐시 이름을 전부 @p outListKindName 에 더합니다(엔진 등록부와 맞는지 보는 테스트용). */
+        static void appendReloadCacheKindNames( vector<string_view>& outListKindName );
+        /** @brief 엔진 캐시가 있는 종류(핫 리로드 대상)의 접미사를 @p outListSuffix 에 더합니다(중복은 건너뜁니다). */
+        static void appendReloadableSuffixes( vector<string>& outListSuffix );
         /**
          * @brief @p directory 아래(재귀)에서 지정 종류인 파일을 @p outListFilePath 에 더합니다. 폴더가 없으면 false 입니다.
          * @details 판정은 `matches` 그대로다. 예전에는 리소스 카탈로그가 종류마다 확장자 하나(`.prefab.xml` · `.png` · `.hlsl`)로 따로 셌다 —

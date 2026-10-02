@@ -7,14 +7,11 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 
-// AssetCacheRegistryTest — 에셋 종류를 늘리는 자리. 전역을 건드리지 않는다(지역 ResourceManager).
-//
-// 예전에는 캐시 셋을 **이름으로** 아는 코드가 여럿이었고, 그래서 종료 경로가 프리팹 캐시를 빠뜨렸다.
-// 지금은 등록부 하나를 훑는다 — 그 등록부에 내장 셋이 실제로 들어 있는지, 훑는 동작이 등록된 것을
-// 빠짐없이 지나가는지가 이 스위트가 보는 것이다.
+// AssetCacheRegistryTest — 에셋 캐시 등록부(종료 · 진단 · 핫 리로드가 훑는 정본). 전역을 건드리지 않는다(지역 ResourceManager).
 
 namespace
 {
@@ -39,18 +36,18 @@ namespace
 } // namespace
 
 /**
- * @brief [AssetCacheRegistryTest] 내장 캐시 셋은 등록부를 통해 보인다
- * @details 종료·진단이 이름으로 셋을 적지 않으려면 **등록부가 정본**이어야 한다. 프리팹이 여기
- *          들어 있는지가 특히 중요하다 — 종료가 그것만 빠뜨리고 있었다.
+ * @brief [AssetCacheRegistryTest] 내장 캐시 넷은 등록부를 통해 보인다
+ * @details 종료 · 진단 · 핫 리로드는 이름으로 캐시를 적지 않고 등록부를 훑는다 — 등록부에 빠진 캐시는 그 셋 모두에서 빠진다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistry )
 {
     sw::ResourceManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 3 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 4 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "SpriteClip" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "NoSuchKind" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 

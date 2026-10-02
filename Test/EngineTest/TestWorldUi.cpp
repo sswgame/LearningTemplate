@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/UI/DamageUIComponent.h"
@@ -144,7 +145,7 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
 SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::shared_ptr<const sw::SpriteClipAsset> glyphs = sw::SpriteClipAsset::acquireShared( "engine/textures/ui/digits.sprite.json" );
+    const sw::shared_ptr<const sw::SpriteClipAsset> glyphs = sw::SpriteClipCache::acquire( "engine/textures/ui/digits.sprite.json" );
     SW_ASSERT_NOT_NULL( glyphs.get() );
     SW_ASSERT_EQUAL( 11, glyphs->getFrameCount() );
 

@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -127,13 +128,13 @@ SW_TEST_CASE( SpriteClipAssetTest, MalformedTextIsRejected )
  * @brief [SpriteClipAssetTest] 같은 경로의 클립은 한 번 읽어 나눠 갖고, 아무도 안 쓰면 표에서 사라지며, 읽을 수 없는 경로는 nullptr 이다
  * @details 같은 클립을 쓰는 스프라이트 백 개가 파일을 백 번 읽지 않게 하는 표다(`SpriteComponent` 가 씬 로드 워커에서도 부른다).
  */
-SW_TEST_CASE( SpriteClipAssetTest, AcquireSharedReturnsTheSameClip )
+SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
 {
     const sw::string path = test::makeTempPath( "shared.sprite.json" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, kLegacyEditorClip ) );
 
-    sw::shared_ptr<const sw::SpriteClipAsset> first  = sw::SpriteClipAsset::acquireShared( path );
-    sw::shared_ptr<const sw::SpriteClipAsset> second = sw::SpriteClipAsset::acquireShared( path );
+    sw::shared_ptr<const sw::SpriteClipAsset> first  = sw::SpriteClipCache::acquire( path );
+    sw::shared_ptr<const sw::SpriteClipAsset> second = sw::SpriteClipCache::acquire( path );
     SW_ASSERT_NOT_NULL( first.get() );
     SW_EXPECT_TRUE( first.get() == second.get() );
     SW_EXPECT_EQUAL( 3, first->getFrameCount() );
@@ -145,11 +146,11 @@ SW_TEST_CASE( SpriteClipAssetTest, AcquireSharedReturnsTheSameClip )
     SW_ASSERT_TRUE( edited.parseJson( kLegacyEditorClip ) );
     edited._listFrame.pop_back();
     SW_ASSERT_TRUE( edited.saveToFile( path ) );
-    sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SpriteClipAsset::acquireShared( path );
+    sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SpriteClipCache::acquire( path );
     SW_ASSERT_NOT_NULL( reloaded.get() );
     SW_EXPECT_EQUAL( 2, reloaded->getFrameCount() );
 
     test::ScopedDefensiveTestLog expected( "a missing sprite clip is reported and yields nothing" );
-    SW_EXPECT_TRUE( sw::SpriteClipAsset::acquireShared( test::makeTempPath( "never_written.sprite.json" ) ) == nullptr );
-    SW_EXPECT_TRUE( sw::SpriteClipAsset::acquireShared( "" ) == nullptr );
+    SW_EXPECT_TRUE( sw::SpriteClipCache::acquire( test::makeTempPath( "never_written.sprite.json" ) ) == nullptr );
+    SW_EXPECT_TRUE( sw::SpriteClipCache::acquire( "" ) == nullptr );
 }

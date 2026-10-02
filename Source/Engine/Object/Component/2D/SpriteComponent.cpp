@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
 {
@@ -73,12 +74,6 @@ namespace sw
         }
     }
 
-    void SpriteComponent::refreshFromClip()
-    {
-        refreshTextureInstance();    // 아틀라스가 바뀌었을 수 있다
-        refreshSpriteInstanceData(); // 지금 프레임의 UV
-    }
-
     void SpriteComponent::setTextureName( string_view texture )
     {
         _textureName = string{ texture };
@@ -136,7 +131,7 @@ namespace sw
         if ( _clipPath == _loadedClipPath )
             return;
         _loadedClipPath = _clipPath;
-        _clip           = SpriteClipAsset::acquireShared( _clipPath );
+        _clip           = SpriteClipCache::acquire( _clipPath );
         // 읽지 못한 경로는 `_loadedClipPath` 에 남아 다시 읽지 않는다. 경고는 로더가 이유와 함께 남겼다. 여기서는 무엇을 대신 그리는지만 말한다.
         if ( _clip == nullptr && _clipPath.empty() == false )
             SW_LOG_WARNING( "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );

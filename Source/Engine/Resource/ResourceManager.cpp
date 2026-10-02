@@ -14,6 +14,7 @@
 #include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
 {
@@ -25,14 +26,15 @@ namespace sw
         , _materialCache{ make_unique<MaterialCache>() }
         , _textureCache{ make_unique<TextureCache>() }
         , _prefabManager{ make_unique<PrefabManager>() }
+        , _spriteClipCache{ make_unique<SpriteClipCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _listAssetCache{}
     {
-        // 내장 캐시도 **등록부를 통해서만** 훑는다. 이름을 따로 적는 경로를 남기면 그 경로가
-        // 다시 어긋난다(종료가 프리팹을 잊고 있었다).
-        registerAssetCache( _materialCache.get() );
-        registerAssetCache( _textureCache.get() );
-        registerAssetCache( _prefabManager.get() );
+        // 내장 캐시도 **등록부를 통해서만** 훑는다 — 이름으로 캐시를 적는 경로를 따로 두지 말 것.
+        registerBuiltInAssetCache( _materialCache.get() );
+        registerBuiltInAssetCache( _textureCache.get() );
+        registerBuiltInAssetCache( _prefabManager.get() );
+        registerBuiltInAssetCache( _spriteClipCache.get() );
     }
 
     ResourceManager::~ResourceManager() = default;
@@ -152,6 +154,13 @@ namespace sw
         _listAssetCache.push_back( std::move( entry ) );
     }
 
+    void ResourceManager::registerBuiltInAssetCache( IAssetCache* pCache )
+    {
+        registerAssetCache( pCache );
+        if ( _listAssetCache.empty() == false && _listAssetCache.back()._pCache == pCache )
+            _listAssetCache.back()._bBuiltIn = true;
+    }
+
     void ResourceManager::unregisterAssetCache( const IAssetCache* pCache )
     {
         if ( pCache == nullptr )
@@ -203,8 +212,7 @@ namespace sw
     {
         for ( const RegisteredAssetCache& entry : _listAssetCache )
         {
-            if ( entry._pCache == _materialCache.get() || entry._pCache == _textureCache.get() ||
-                 entry._pCache == _prefabManager.get() )
+            if ( entry._bBuiltIn )
                 continue;
 
             // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**

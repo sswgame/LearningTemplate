@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -222,10 +223,9 @@ SW_TEST_CASE( SpriteComponentTest, OldSpriteNameLoadsIntoTheClipPath )
 }
 
 /**
- * @brief [SpriteComponentTest] 쥔 동안 고친 클립도 살아 있는 스프라이트에 닿는다 — 제자리 다시 읽기 뒤 프레임을 다시 맞춘다
- * @details 공유 표는 약한 참조라, 쥔 스프라이트가 하나라도 있으면 파일을 고쳐도 옛 내용을 줬다 — 플레이 중 에디터에서 클립을 저장해도 살아 있는
- *          스프라이트는 옛 프레임을 그렸다. `SpriteClipAsset::reloadShared` 가 쥔 쪽 모두의 클립을 제자리로 다시 읽고(언리얼 재임포트),
- *          `refreshFromClip` 이 아틀라스와 지금 프레임의 UV 를 다시 맞춘다(에디터 핫 리로드가 둘을 부른다).
+ * @brief [SpriteComponentTest] 사용 중인 클립을 캐시가 제자리로 다시 읽은 뒤 `_clipPath` 변경 알림을 받으면, 경로가 같아도 새 프레임 · 아틀라스를 쓴다
+ * @details 에디터 핫 리로드와 같은 두 단계다: 등록부에서 찾은 "SpriteClip" 캐시가 제자리로 다시 읽고(`IAssetCache::reload`),
+ *          에디터가 그 경로를 든 프로퍼티로 `onPropertyChanged` 를 부른다(`AssetHotReload::notifyAssetUsers`).
  */
 SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
 {
@@ -248,15 +248,22 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     clip._atlasPath            = kTextureB;
     clip._listFrame[1]._uvRect = sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f };
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SpriteClipAsset::acquireShared( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 쥔 동안은 옛 내용
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SpriteClipCache::acquire( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
 
-    SW_ASSERT_TRUE( sw::SpriteClipAsset::reloadShared( clipPath ) );
+    sw::ResourceManager resources;
+    sw::IAssetCache*    pCache = resources.findAssetCache( "SpriteClip" );
+    SW_ASSERT_NOT_NULL( pCache );
+    SW_EXPECT_TRUE( pCache->isCached( clipPath ) );
+    pCache->reload( clipPath, nullptr );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getClip()->findFrame( 1 )->_uvRect._x, 1e-4f );
-    pSprite->refreshFromClip();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f ); // 알림 전에는 컴포넌트 상태가 그대로다
+
+    pSprite->onPropertyChanged( sw::hashed_string( "_clipPath" ) ); // 값은 같다
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
     SW_ASSERT_NOT_NULL( pSprite->getRawMaterialInstance() );
     SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
 
-    // 아무도 쥐지 않은 경로는 다시 읽을 것이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
-    SW_EXPECT_FALSE( sw::SpriteClipAsset::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
+    // 아무도 쓰지 않는 경로는 다시 읽을 것이 없다(다음 `acquire` 가 새 내용을 읽는다).
+    SW_EXPECT_FALSE( sw::SpriteClipCache::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
+    SW_EXPECT_FALSE( pCache->isCached( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
 }

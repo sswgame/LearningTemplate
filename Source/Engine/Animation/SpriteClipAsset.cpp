@@ -2,8 +2,6 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -13,25 +11,6 @@ namespace sw
 {
     SW_LOG_CALLER( "SpriteClip" );
 
-    namespace
-    {
-        struct SpriteClipAssetInternal
-        {
-            /** @brief 공유 표 하나입니다. 경로 → 약한 참조. 잠금과 함께 둡니다. */
-            struct SharedTable
-            {
-                mutex                                            _mutex;
-                unordered_map<string, weak_ptr<SpriteClipAsset>> _mapClip; ///< 쥔 쪽에는 const 로 준다 — 고치는 것은 `reloadShared` 뿐이다
-            };
-
-            /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). */
-            static SharedTable& getSharedTable()
-            {
-                static SharedTable s_table;
-                return s_table;
-            }
-        };
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -226,70 +205,6 @@ namespace sw
         outRange._firstFrame = pAnimation->_firstFrame;
         outRange._frameCount = pAnimation->_frameCount;
         outRange._bLoop      = pAnimation->_bLoop;
-        return true;
-    }
-
-    shared_ptr<const SpriteClipAsset> SpriteClipAsset::acquireShared( string_view path )
-    {
-        if ( path.empty() )
-            return nullptr;
-
-        SpriteClipAssetInternal::SharedTable& table = SpriteClipAssetInternal::getSharedTable();
-        const string                          key   = FileUtil::normalizeSeparators( path ); // 핫 리로드가 같은 칸을 찾도록 구분자를 맞춘다
-        {
-            std::scoped_lock<mutex> lock{ table._mutex };
-            const auto              it = table._mapClip.find( key );
-            if ( it != table._mapClip.end() )
-            {
-                shared_ptr<const SpriteClipAsset> clip = it->second.lock();
-                if ( clip != nullptr )
-                    return clip;
-            }
-        }
-
-        // 읽기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        shared_ptr<SpriteClipAsset> loaded = make_shared<SpriteClipAsset>();
-        if ( loaded->loadFromFile( path ) == false )
-            return nullptr;
-
-        std::scoped_lock<mutex> lock{ table._mutex };
-        for ( auto iter = table._mapClip.begin(); iter != table._mapClip.end(); )
-        {
-            if ( iter->second.expired() )
-                iter = table._mapClip.erase( iter );
-            else
-                ++iter;
-        }
-        weak_ptr<SpriteClipAsset>&        slot   = table._mapClip[key];
-        shared_ptr<const SpriteClipAsset> winner = slot.lock();
-        if ( winner != nullptr )
-            return winner;
-        slot = loaded;
-        return loaded;
-    }
-
-    bool SpriteClipAsset::reloadShared( string_view path )
-    {
-        if ( path.empty() )
-            return false;
-
-        SpriteClipAssetInternal::SharedTable& table = SpriteClipAssetInternal::getSharedTable();
-        const string                          key   = FileUtil::normalizeSeparators( path );
-        shared_ptr<SpriteClipAsset>           live;
-        {
-            std::scoped_lock<mutex> lock{ table._mutex };
-            const auto              it = table._mapClip.find( key );
-            if ( it != table._mapClip.end() )
-                live = it->second.lock();
-        }
-        if ( live == nullptr )
-            return false;
-
-        // 읽기에 실패하면 옛 내용을 지킨다(반쯤 쓴 파일을 저장 중에 본 경우 — 다음 이벤트가 다시 읽는다).
-        SpriteClipAsset fresh;
-        if ( fresh.loadFromFile( path ) == false )
-            return false;
-        *live = std::move( fresh );
         return true;
     }
 } // namespace sw
