@@ -242,14 +242,24 @@ namespace sw
         if ( absDirectory.empty() )
             return false;
 
+        // 항목은 **키 순서로** 쓴다. 맵은 넣은 순서로 돌므로 그대로 쓰면 같은 항목 집합이라도 베이커가 요청을 모은 순서에 따라
+        // 파일 바이트가 달라진다. 이 파일은 커밋되는 산출물이라, 요청 순서만 바꾼 변경이 매니페스트 넷을 바꿔 놓으면 진짜 변경을 가린다.
+        vector<const EntryMap::value_type*> listEntry;
+        listEntry.reserve( mapEntry.size() );
+        for ( const auto& pair : mapEntry )
+            listEntry.push_back( &pair );
+        std::sort( listEntry.begin(), listEntry.end(),
+                   []( const EntryMap::value_type* pLhs, const EntryMap::value_type* pRhs )
+        { return pLhs->first < pRhs->first; } );
+
         Archive archive;
         archive << kManifestMagic;
         archive << kManifestVersion;
-        archive << static_cast<uint32>( mapEntry.size() );
-        for ( const auto& pair : mapEntry )
+        archive << static_cast<uint32>( listEntry.size() );
+        for ( const EntryMap::value_type* pEntry : listEntry )
         {
-            archive << string_view( pair.first );
-            writeReflectionInternal( archive, pair.second );
+            archive << string_view( pEntry->first );
+            writeReflectionInternal( archive, pEntry->second );
         }
 
         vector<uint8> bytes;

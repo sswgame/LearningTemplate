@@ -37,6 +37,7 @@ namespace sw
 
         /**
          * @brief 매니페스트를 파일로 굽습니다(베이커 전용).
+         * @details 항목은 키 순서로 씁니다. 같은 항목 집합이면 넣은 순서와 상관없이 같은 바이트입니다.
          * @param absDirectory 매니페스트를 놓을 절대 디렉터리(`.../shaders/bin/<rhi>`)
          */
         [[nodiscard]] static bool save( const EntryMap& mapEntry, string_view absDirectory );

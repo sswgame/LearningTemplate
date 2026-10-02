@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -655,6 +656,37 @@ SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
     // 되돌리면 다시 최신이다.
     SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
     SW_EXPECT_EQUAL( hashForward, sw::ShaderBaker::computeEffectiveSourceHash( shaderPath ) );
+}
+
+/**
+ * @brief [ShaderBakerTest] 리플렉션 매니페스트의 바이트는 항목을 넣은 순서와 상관없다
+ * @details 베이커는 요청을 모은 순서대로 매니페스트 맵에 넣고, 맵은 넣은 순서로 돈다. 그 순서로 파일을 쓰면 같은 항목 집합이라도
+ *          요청 순서만 바뀐 변경(베이커가 패스 표를 훑는 순서 등)이 커밋된 매니페스트 넷을 모두 바꿔 놓는다. 키 순서로 써야 같은 바이트다.
+ */
+SW_TEST_CASE( ShaderBakerTest, ReflectionManifestBytesIgnoreInsertionOrder )
+{
+    const utf8*      arrKey[]  = { "forwardlit_vs_vsmain_0.dxil", "bloom_ps_psmain_0.dxil", "shadowdepth_vs_vsmain_1.dxil",
+                                   "tonemap_ps_psmain_0.dxil", "gbuffer_ps_psmain_7.dxil", "ssao_vs_vsmain_0.dxil" };
+    constexpr uint32 kKeyCount = static_cast<uint32>( sizeof( arrKey ) / sizeof( arrKey[0] ) );
+
+    sw::ShaderReflectionLibrary::EntryMap mapForward;
+    sw::ShaderReflectionLibrary::EntryMap mapBackward;
+    for ( uint32 keyIndex = 0; keyIndex < kKeyCount; ++keyIndex )
+    {
+        mapForward.emplace( sw::string( arrKey[keyIndex] ), sw::ShaderReflectionData{} );
+        mapBackward.emplace( sw::string( arrKey[kKeyCount - 1u - keyIndex] ), sw::ShaderReflectionData{} );
+    }
+
+    const sw::string forwardDir  = test::makeTempDirectory( "manifest_forward" );
+    const sw::string backwardDir = test::makeTempDirectory( "manifest_backward" );
+    SW_ASSERT_TRUE( sw::ShaderReflectionLibrary::save( mapForward, forwardDir ) );
+    SW_ASSERT_TRUE( sw::ShaderReflectionLibrary::save( mapBackward, backwardDir ) );
+
+    sw::vector<uint8> forwardBytes;
+    sw::vector<uint8> backwardBytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( forwardDir, sw::ShaderReflectionLibrary::getManifestFileName() ), forwardBytes ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( backwardDir, sw::ShaderReflectionLibrary::getManifestFileName() ), backwardBytes ) );
+    SW_EXPECT_TRUE_MSG( forwardBytes == backwardBytes, "같은 항목인데 넣은 순서가 다르다고 매니페스트 바이트가 달라졌다" );
 }
 
 /**
