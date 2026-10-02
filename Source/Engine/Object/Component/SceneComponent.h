@@ -88,6 +88,19 @@ namespace sw
 
         /** @brief 계층을 반영한 float32 월드 위치(캐시)입니다. LWC 를 float 로 내린 값입니다. */
         float3 getWorldPosition() const;
+        /**
+         * @brief 월드 위치를 정합니다. 부모 아래에 있으면 부모 월드의 역으로 로컬 위치를 구해 씁니다(회전 · 스케일은 그대로).
+         * @details 언리얼 `SetWorldLocation`, 유니티 `Transform.position` 의 자리입니다. 예전에는 월드 세터가 없어 에디터 다섯 곳이 각자 바꿨고 셋이
+         *          틀렸습니다 — 월드 값을 로컬 칸에 쓰거나 월드 축의 차이를 로컬 축에 더해, 부모가 돌았거나 커졌으면 엉뚱한 자리로 갔습니다.
+         */
+        void setWorldPosition( const float3& worldPosition );
+        /**
+         * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치 · 회전 · 스케일을 씁니다(언리얼 `SetWorldTransform`).
+         * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `createFromYawPitchRoll` 의 역)으로 적습니다. 에디터 기즈모가 예전에는
+         *          ImGuizmo 의 XYZ 오일러로 분해해 넣어, 두 축 이상이 섞인 회전이 다른 회전으로 들어갔습니다. 부모의 부등 스케일과 회전이 만든 기울임은
+         *          TRS 로 나타낼 수 없어 버립니다(언리얼 · 유니티도 같습니다).
+         */
+        void setWorldTransform( const float4x4& worldMatrix );
 
         /**
          * @brief 계층 위치 합을 double 로 누적한 월드 좌표(LWC)입니다.

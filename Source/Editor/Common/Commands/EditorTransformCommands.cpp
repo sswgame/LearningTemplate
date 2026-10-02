@@ -65,7 +65,7 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬 · 분배가 함께 씁니다.
-             * @details 월드 차이만큼 로컬 위치를 옮깁니다. 부모에 회전 · 크기가 없을 때 정확합니다(예전 두 벌이 모두 그랬습니다).
+             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 예전에는 월드 차이만큼 **로컬** 위치를 옮겨, 부모에 회전 · 크기가 있으면 틀렸다.
              *          주 씬 컴포넌트가 없으면 아무것도 하지 않습니다.
              */
             static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )
@@ -75,10 +75,9 @@ namespace sw::editor
                     return;
 
                 const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
-                const float32              delta          = targetValue - getAxisValue( pSc->getWorldPosition(), axis );
-                float3                     newLocal       = pSc->getLocalPosition();
-                setAxisValue( newLocal, axis, getAxisValue( newLocal, axis ) + delta );
-                pSc->setLocalPosition( newLocal );
+                float3                     worldPosition  = pSc->getWorldPosition();
+                setAxisValue( worldPosition, axis, targetValue );
+                pSc->setWorldPosition( worldPosition );
 
                 const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
                 EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
@@ -205,12 +204,17 @@ namespace sw::editor
 
         vector<GameObject*> listSel;
         pContext->getSelectionManager().getSelectedObjects( listSel );
-        if ( listSel.empty() )
+        snapObjectsToGround( listSel );
+    }
+
+    void EditorTransformCommands::snapObjectsToGround( const vector<GameObject*>& listObject )
+    {
+        if ( listObject.empty() )
             return;
 
         EditorTransaction::beginTransaction( "Snap to Ground" );
 
-        for ( GameObject* pGo : listSel )
+        for ( GameObject* pGo : listObject )
         {
             SceneComponent* pSc = pGo->getPrimarySceneComponent();
             if ( pSc == nullptr )
@@ -218,8 +222,9 @@ namespace sw::editor
 
             const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
+            // 월드로 읽고 월드로 쓴다. 예전에는 월드 위치를 **로컬** 칸에 써서, 부모가 옮겨지기만 해도 엉뚱한 자리로 갔고 크기는 로컬 스케일로 쟀다.
             float3       pos          = pSc->getWorldPosition();
-            const float3 scl          = pSc->getLocalScale();
+            const float3 scl          = pSc->getWorldMatrix().getScale();
             float32      bottomOffset = 0.0f;
 
             BoxCollider2DComponent* pBox = pGo->getComponent<BoxCollider2DComponent>();
@@ -233,7 +238,7 @@ namespace sw::editor
                 bottomOffset = scl._y * 0.5f;
 
             pos._y = bottomOffset;
-            pSc->setLocalPosition( pos );
+            pSc->setWorldPosition( pos );
 
             const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
             EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Snap to Ground" );
@@ -250,6 +255,11 @@ namespace sw::editor
 
         vector<GameObject*> listSel;
         pContext->getSelectionManager().getSelectedObjects( listSel );
+        alignObjects( listSel, axis, type );
+    }
+
+    void EditorTransformCommands::alignObjects( const vector<GameObject*>& listSel, AlignAxis axis, AlignType type )
+    {
         if ( listSel.size() < 2 )
             return;
 
@@ -300,7 +310,11 @@ namespace sw::editor
 
         vector<GameObject*> listSel;
         pContext->getSelectionManager().getSelectedObjects( listSel );
+        distributeObjects( std::move( listSel ), axis );
+    }
 
+    void EditorTransformCommands::distributeObjects( vector<GameObject*> listSel, AlignAxis axis )
+    {
         // 주 SceneComponent 가 없는 오브젝트는 분배 대상에서 뺀다(front/back 역참조 보호).
         listSel.erase( std::remove_if( listSel.begin(), listSel.end(),
                                        []( const GameObject* pGo )

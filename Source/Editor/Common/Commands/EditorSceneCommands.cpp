@@ -255,6 +255,18 @@ namespace sw::editor
         pSceneComp->setLocalScale( scale );
     }
 
+    void EditorSceneCommands::applyWorldTransform( GameObject* pObj, const float4x4& worldMatrix )
+    {
+        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+            return;
+        if ( pObj == nullptr )
+            return;
+
+        SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
+        if ( pSceneComp != nullptr )
+            pSceneComp->setWorldTransform( worldMatrix );
+    }
+
     void EditorSceneCommands::snapTranslationToSurface( GameObject* pObj, float3& translation, float32 scaleY )
     {
         if ( pObj == nullptr )

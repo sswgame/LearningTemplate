@@ -1,0 +1,66 @@
+#include "pch.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "Editor/Common/Commands/EditorTransformCommands.h"
+
+#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "TestFramework/TestFramework.h"
+
+using namespace sw;
+using namespace sw::editor;
+
+/**
+ * @brief [EditorTransformCommandsTest] 정렬은 월드 위치로 한다 — 돌고 커진 부모 아래의 오브젝트도 맞춘 축에 선다
+ * @details 정렬 · 분배가 월드 축의 차이를 **로컬** 축에 더했다. 부모가 Y 로 90° 돌고 두 배로 커지면 로컬 X 는 월드 -Z 방향이고 두 배로
+ *          움직여, 맞춘 값과 다른 자리로 갔다. 이제 월드 위치를 고쳐 쓴다(`SceneComponent::setWorldPosition`).
+ */
+SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedScaledParent )
+{
+    GameObjectManager manager;
+    GameObject*       pParent   = manager.createGameObject( hashed_string( "Turntable" ) );
+    SceneComponent*   pParentSc = pParent->addComponent<SceneComponent>();
+    pParentSc->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
+    pParentSc->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pParentSc->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+    GameObject*     pChild   = manager.createGameObject( hashed_string( "OnTurntable" ) );
+    SceneComponent* pChildSc = pChild->addComponent<SceneComponent>();
+    pChildSc->setLocalPosition( float3( 1.0f, 0.0f, 0.0f ) );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    GameObject*     pRoot   = manager.createGameObject( hashed_string( "Marker" ) );
+    SceneComponent* pRootSc = pRoot->addComponent<SceneComponent>();
+    pRootSc->setLocalPosition( float3( 5.0f, 0.0f, 3.0f ) );
+    manager.flushSceneTransforms();
+
+    EditorTransformCommands::alignObjects( { pChild, pRoot }, AlignAxis::X, AlignType::Min );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pChildSc->getWorldPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pRootSc->getWorldPosition()._x, 1e-4f );
+}
+
+/**
+ * @brief [EditorTransformCommandsTest] 바닥 붙이기는 월드 Y 로 한다 — 부모 아래의 오브젝트도 월드 바닥에 선다
+ * @details 월드 위치를 읽고 **로컬** 칸에 써서, 부모가 위로 옮겨져 있기만 해도 그만큼 떠 있었다. 크기도 로컬 스케일로 쟀다.
+ */
+SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorldGround )
+{
+    GameObjectManager manager;
+    GameObject*       pParent   = manager.createGameObject( hashed_string( "Shelf" ) );
+    SceneComponent*   pParentSc = pParent->addComponent<SceneComponent>();
+    pParentSc->setLocalPosition( float3( 0.0f, 10.0f, 0.0f ) );
+    pParentSc->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+    GameObject*    pCrate = manager.createGameObject( hashed_string( "Crate" ) );
+    MeshComponent* pMesh  = pCrate->addComponent<MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_ASSERT_TRUE( pCrate->attachToParent( pParent ) );
+    manager.flushSceneTransforms();
+
+    EditorTransformCommands::snapObjectsToGround( { pCrate } );
+    manager.flushSceneTransforms();
+    // 단위 상자 · 월드 Y 스케일 2 — 바닥까지 1.
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pMesh->getWorldPosition()._y, 1e-4f );
+}

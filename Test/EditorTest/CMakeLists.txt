@@ -21,6 +21,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorTransaction.cpp
+		TestEditorTransformCommands.cpp
 		TestEditorToolAssetCommands.cpp
 		TestEditorViewportMath.cpp
 		TestEditorWorkspaceGuid.cpp

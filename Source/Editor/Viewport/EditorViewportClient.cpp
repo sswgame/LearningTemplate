@@ -94,23 +94,8 @@ namespace sw::editor
 
             static void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
             {
-                if ( pSc == nullptr )
-                    return;
-                float4x4        localMat = world;
-                SceneComponent* pParent  = pSc->getParent();
-                if ( pParent != nullptr )
-                    localMat = world * pParent->getWorldMatrix().invert();
-
-                float32 arrMatrix[16];
-                storeColumnMajor( arrMatrix, localMat );
-                float3 translation{};
-                float3 rotationDeg{};
-                float3 scale{};
-                ImGuizmo::DecomposeMatrixToComponents( arrMatrix, translation.data(), rotationDeg.data(), scale.data() );
-                pSc->setLocalPosition( translation );
-                pSc->setLocalRotation( float3{ MathUtil::toRadian( rotationDeg._x ), MathUtil::toRadian( rotationDeg._y ),
-                                               MathUtil::toRadian( rotationDeg._z ) } );
-                pSc->setLocalScale( scale );
+                if ( pSc != nullptr )
+                    pSc->setWorldTransform( world );
             }
 
             static CameraComponent* getGameViewCamera()
@@ -561,27 +546,17 @@ namespace sw::editor
             float4x4 newWorldMat{};
             EditorViewportClientInternal::loadColumnMajor( newWorldMat, arrMatrix );
 
-            float4x4        localMat  = newWorldMat;
-            SceneComponent* pParentSc = pSceneComp->getParent();
-            if ( pParentSc != nullptr )
-                localMat = newWorldMat * pParentSc->getWorldMatrix().invert();
-
-            EditorViewportClientInternal::storeColumnMajor( arrMatrix, localMat );
-
-            float3 translation{};
-            float3 rotationDeg{};
-            float3 scale{};
-            ImGuizmo::DecomposeMatrixToComponents( arrMatrix, translation.data(), rotationDeg.data(), scale.data() );
-
+            // 표면 붙이기는 **월드** 위치 · 월드 Y 스케일로 한다. 예전에는 로컬로 분해한 값을 넘겨, 부모가 있으면 다른 오브젝트의 월드 윗면과
+            // 로컬 높이를 견줬다.
             if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
-                EditorSceneCommands::snapTranslationToSurface( pRaw, translation, scale._y );
+            {
+                float3 worldTranslation = newWorldMat.getTranslation();
+                EditorSceneCommands::snapTranslationToSurface( pRaw, worldTranslation, newWorldMat.getScale()._y );
+                newWorldMat.setTranslation( worldTranslation );
+            }
 
-            EditorSceneCommands::applyLocalTransform( pRaw, translation,
-                                                      float3{
-                                                          MathUtil::toRadian( rotationDeg._x ),
-                                                          MathUtil::toRadian( rotationDeg._y ),
-                                                          MathUtil::toRadian( rotationDeg._z ) },
-                                                      scale );
+            // 분해는 엔진이 한다(엔진의 오일러 규칙 — ImGuizmo 의 XYZ 분해는 엔진의 요 · 피치 · 롤 순서와 달라 섞인 회전이 틀어졌다).
+            EditorSceneCommands::applyWorldTransform( pRaw, newWorldMat );
         }
 
         if ( ImGuizmo::IsUsing() )

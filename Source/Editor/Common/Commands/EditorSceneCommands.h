@@ -51,7 +51,13 @@ namespace sw::editor
         /** @brief 로컬 트랜스폼을 적용합니다. */
         static void applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
                                          const float3& scale );
-        /** @brief 아래 콜라이더/메시 윗면에 Y를 맞춥니다. */
+        /**
+         * @brief 월드 트랜스폼을 적용합니다(`SceneComponent::setWorldTransform` — 부모 기준으로 분해하고 엔진의 오일러 규칙으로 적습니다).
+         * @details 기즈모가 씁니다. 예전에는 ImGuizmo 의 XYZ 오일러로 분해한 값을 로컬 회전에 넣어, 엔진의 요 · 피치 · 롤 순서와 달라 두 축 이상이
+         *          섞인 회전이 다른 회전으로 들어갔습니다.
+         */
+        static void applyWorldTransform( GameObject* pObj, const float4x4& worldMatrix );
+        /** @brief 아래 콜라이더/메시 윗면에 **월드** Y 를 맞춥니다(@p translation 은 월드 위치, @p scaleY 는 월드 Y 스케일). */
         static void snapTranslationToSurface( GameObject* pObj, float3& translation, float32 scaleY );
         /** @brief @p before 와 지금 상태로 Undo를 기록합니다. */
         static void commitModify( GameObject* pObj, const EditorObjectSnapshot& before, string_view undoLabel );

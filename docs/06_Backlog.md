@@ -2079,6 +2079,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 60 월드 ↔ 로컬 — 에디터 세 곳이 부모 있는 오브젝트를 엉뚱한 자리로 옮겼고, 기즈모는 섞인 회전을 다른 회전으로 넣었다: 엔진 월드 세터)
+
+(B) 스물다섯째의 남은 것 "에디터가 월드 → 로컬 변환을 다섯 벌 들고 셋이 틀렸다(월드 세터 없음)". 점검하다 하나가 더 나왔다.
+- **정렬 · 분배**(`moveAlongWorldAxis`)가 월드 축의 차이를 **로컬** 축에 더했고, **바닥 붙이기**는 월드 위치를 읽어 **로컬** 칸에 썼다(크기는 로컬 스케일로
+  쟀다), **기즈모의 표면 붙이기**는 로컬로 분해한 위치 · 스케일을 다른 오브젝트의 월드 윗면과 견줬다 — 부모가 돌았거나 커졌거나 옮겨지기만 해도 틀렸다.
+- **기즈모 회전**: 단일 · 그룹 기즈모가 ImGuizmo `DecomposeMatrixToComponents`(XYZ 오일러)로 분해한 각을 엔진의 로컬 회전(롤 → 피치 → 요,
+  `createFromYawPitchRoll`)에 그대로 넣었다. 한 축 회전은 같지만 두 축 이상이 섞이면 다른 회전이 된다(피치 0.3 · 요 0.7 · 롤 -0.4 로 재면 행렬 원소가
+  최대 0.35 어긋난다).
+
+언리얼 `SetWorldLocation` · `SetWorldTransform`, 유니티 `Transform.position` 처럼 엔진에 월드 세터를 두었다: `SceneComponent::setWorldPosition` · `setWorldTransform`
+(부모 월드의 역으로 로컬을 구하고, 회전은 엔진의 오일러 규칙 `quaternion::getEulerAngles` 로 적는다 — 부모의 부등 스케일 × 회전이 만든 기울임은 버린다).
+에디터 다섯 곳이 이것을 쓴다(`EditorSceneCommands::applyWorldTransform`). 정렬 · 분배 · 바닥 붙이기 본체는 오브젝트 목록을 받는 함수로 꺼내
+(`alignObjects` · `distributeObjects` · `snapObjectsToGround`) 선택(EditorContext)에 기대지 않고 시험한다.
+
+**검증.** `SceneComponentTest.WorldSettersRespectARotatedScaledParent`(돌고 커진 부모 아래 — 월드 위치, 세 축이 섞인 회전의 행렬 왕복),
+`EditorTransformCommandsTest.AlignUsesWorldPositionsUnderARotatedScaledParent` · `SnapToGroundPutsAParentedObjectOnWorldGround`. 변이 넷(월드를 로컬 칸에 ·
+부모를 무시한 분해 · 정렬과 바닥 붙이기의 로컬 쓰기)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 59 인스펙터 — 상속받은 프로퍼티가 보이지 않았고, 확장이 본문을 그리면 반사 프로퍼티를 통째로 감췄다: 상속 단계로 조립한다)
 
 (B) 스물다섯째의 남은 것 "에디터 인스펙터의 상속 단계별 조립". 기능 공백이 아니라 결함이었다.

@@ -186,6 +186,29 @@ namespace sw
         return float3( static_cast<float32>( worldLwc._x ), static_cast<float32>( worldLwc._y ), static_cast<float32>( worldLwc._z ) );
     }
 
+    void SceneComponent::setWorldPosition( const float3& worldPosition )
+    {
+        if ( _pParent == nullptr )
+        {
+            setLocalPosition( worldPosition );
+            return;
+        }
+        // 로컬 → 월드는 `로컬 TRS × 부모 월드`(행 벡터)다. 점 하나를 거꾸로 옮긴다.
+        setLocalPosition( float3::transform( worldPosition, _pParent->getWorldMatrix().invert() ) );
+    }
+
+    void SceneComponent::setWorldTransform( const float4x4& worldMatrix )
+    {
+        const float4x4 localMatrix = ( _pParent != nullptr ) ? worldMatrix * _pParent->getWorldMatrix().invert() : worldMatrix;
+        float3         scale{};
+        quaternion     rotation{};
+        float3         translation{};
+        localMatrix.decompose( scale, rotation, translation );
+        setLocalPosition( translation );
+        setLocalRotation( rotation.getEulerAngles() );
+        setLocalScale( scale );
+    }
+
     double3 SceneComponent::getWorldPositionLwc() const
     {
         ensureWorldCache();

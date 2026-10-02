@@ -690,3 +690,40 @@ SW_TEST_CASE( SceneComponentTest, BatchWithARepeatedHandleKeepsTheLastWrite )
         SW_EXPECT_NEAR_EQUAL( lastRepeatedValue, listComp[kRepeatedComp]->getWorldPosition()._x, 1e-3f );
     }
 }
+
+/**
+ * @brief [SceneComponentTest] 월드 세터는 돌고 커진 부모 아래에서도 그 월드 자리 · 회전에 놓는다 — 세 축이 섞인 회전도 그대로
+ * @details 월드 세터가 없어 에디터 다섯 곳이 각자 바꿨고 셋이 틀렸다(월드 값을 로컬 칸에 · 월드 축 차이를 로컬 축에). 기즈모는 ImGuizmo 의 XYZ
+ *          오일러로 분해해 넣어 엔진의 요 · 피치 · 롤 순서와 달라, 두 축 이상이 섞인 회전이 다른 회전으로 들어갔다. 언리얼 `SetWorldLocation` ·
+ *          `SetWorldTransform` 처럼 엔진이 부모 기준으로 분해한다.
+ */
+SW_TEST_CASE( SceneComponentTest, WorldSettersRespectARotatedScaledParent )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParentObj = manager.createGameObject( sw::hashed_string( "TurnedParent" ) );
+    sw::SceneComponent*   pParent    = pParentObj->addComponent<sw::SceneComponent>();
+    sw::GameObject*       pChildObj  = manager.createGameObject( sw::hashed_string( "WorldChild" ) );
+    sw::SceneComponent*   pChild     = pChildObj->addComponent<sw::SceneComponent>();
+    pParent->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
+    pParent->setLocalRotation( sw::float3( 0.2f, sw::MathUtil::HalfPi, -0.1f ) );
+    pParent->setLocalScale( sw::float3( 2.0f, 2.0f, 2.0f ) );
+    SW_ASSERT_TRUE( pChild->attachToComponent( pParent ) );
+    manager.flushSceneTransforms();
+
+    pChild->setWorldPosition( sw::float3( 5.0f, 1.0f, 2.0f ) );
+    manager.flushSceneTransforms();
+    const sw::float3 world = pChild->getWorldPosition();
+    SW_EXPECT_NEAR_EQUAL( 5.0f, world._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, world._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, world._z, 1e-4f );
+
+    // 세 축이 모두 섞인 회전 · 균등 스케일(기울임 없음) — 행렬이 그대로 돌아와야 한다.
+    const sw::float4x4 target = sw::float4x4::createTrs( sw::float3( 3.0f, 4.0f, 5.0f ), sw::float3( 0.3f, 0.7f, -0.4f ), sw::float3( 1.5f, 1.5f, 1.5f ) );
+    pChild->setWorldTransform( target );
+    manager.flushSceneTransforms();
+    const sw::float4x4 result    = pChild->getWorldMatrix();
+    const float32*     pExpected = target.data();
+    const float32*     pActual   = result.data();
+    for ( uint32 index = 0; index < 16; ++index )
+        SW_EXPECT_NEAR_EQUAL( pExpected[index], pActual[index], 1e-4f );
+}
