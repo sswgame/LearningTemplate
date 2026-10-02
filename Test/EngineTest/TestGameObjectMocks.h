@@ -186,26 +186,29 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        float3*                _pObservedWorld;
-        SceneComponent*        _pWatchedComp;     ///< 틱 안에서 이 컴포넌트의 로컬 · 월드 위치를 읽어 둔다 — 다른 오브젝트가 틱 중에 보는 값을 본다
-        GameObject*            _pTryParentOnTick; ///< 틱 안에서 자기 오브젝트를 이 오브젝트에 붙여 본다 — 결과는 `_bAttachAcceptedInTick`
-        float3                 _watchedLocalPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 로컬 위치
-        float3                 _watchedWorldPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 월드 위치
-        float3                 _tickLocalPos;
-        float3                 _tickLocalScale;
-        uint8                  _bWriteLocalOnTick     : 1;
-        uint8                  _bWriteScaleOnTick     : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
-        uint8                  _bWriteTwiceOnTick     : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
-        uint8                  _bDetachOnTick         : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
-        uint8                  _bParentKeptInTick     : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
-        uint8                  _bAttachAcceptedInTick : 1; ///< 틱 안의 `attachToParent( _pTryParentOnTick )` 가 true 를 돌려줬는지
-        [[maybe_unused]] uint8 _reserved              : 2;
-        int32                  _worldUpdateCount; ///< `onWorldTransformUpdated` 가 불린 횟수 — 합성 경로가 훅을 빠뜨리지 않는지 본다
+        float3*         _pObservedWorld;
+        SceneComponent* _pWatchedComp;     ///< 틱 안에서 이 컴포넌트의 로컬 · 월드 위치를 읽어 둔다 — 다른 오브젝트가 틱 중에 보는 값을 본다
+        GameObject*     _pTryParentOnTick; ///< 틱 안에서 자기 오브젝트를 이 오브젝트에 붙여 본다 — 결과는 `_bAttachAcceptedInTick`
+        TagID           _probeTag;         ///< `_bClearTagsOnTick` 이 지운 뒤 틱 안에서 아직 보이는지 볼 태그
+        float3          _watchedLocalPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 로컬 위치
+        float3          _watchedWorldPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 월드 위치
+        float3          _tickLocalPos;
+        float3          _tickLocalScale;
+        uint8           _bWriteLocalOnTick     : 1;
+        uint8           _bWriteScaleOnTick     : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
+        uint8           _bWriteTwiceOnTick     : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
+        uint8           _bDetachOnTick         : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
+        uint8           _bParentKeptInTick     : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
+        uint8           _bAttachAcceptedInTick : 1; ///< 틱 안의 `attachToParent( _pTryParentOnTick )` 가 true 를 돌려줬는지
+        uint8           _bClearTagsOnTick      : 1; ///< 틱에서 소유 오브젝트의 태그를 모두 지운다 — 틱 중이라 미뤄져야 한다
+        uint8           _bProbeTagKeptInTick   : 1; ///< 지운 직후에도 `_probeTag` 가 보였는지(미뤄졌는지) 기록한다
+        int32           _worldUpdateCount;          ///< `onWorldTransformUpdated` 가 불린 횟수 — 합성 경로가 훅을 빠뜨리지 않는지 본다
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
             , _pWatchedComp{ nullptr }
             , _pTryParentOnTick{ nullptr }
+            , _probeTag{}
             , _watchedLocalPos{}
             , _watchedWorldPos{}
             , _tickLocalPos{}
@@ -216,7 +219,8 @@ namespace sw
             , _bDetachOnTick{ SW_FALSE }
             , _bParentKeptInTick{ SW_FALSE }
             , _bAttachAcceptedInTick{ SW_FALSE }
-            , _reserved{ 0 }
+            , _bClearTagsOnTick{ SW_FALSE }
+            , _bProbeTagKeptInTick{ SW_FALSE }
             , _worldUpdateCount{ 0 }
         {
             setCanEverTick( true );
@@ -254,6 +258,11 @@ namespace sw
             {
                 detachFromComponent();
                 _bParentKeptInTick = ( getParent() != nullptr ) ? SW_TRUE : SW_FALSE;
+            }
+            if ( _bClearTagsOnTick == SW_TRUE && getOwner() != nullptr )
+            {
+                getOwner()->clearTags();
+                _bProbeTagKeptInTick = getOwner()->hasTag( _probeTag ) ? SW_TRUE : SW_FALSE;
             }
             if ( _pTryParentOnTick != nullptr && getOwner() != nullptr )
                 _bAttachAcceptedInTick = getOwner()->attachToParent( _pTryParentOnTick ) ? SW_TRUE : SW_FALSE;

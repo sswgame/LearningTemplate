@@ -296,6 +296,30 @@ SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
 }
 
 /**
+ * @brief [SceneComponentTest] 틱 안에서 태그를 모두 지우면 틱이 끝난 뒤에 지운다 — `removeTag` 와 같이
+ * @details `clearTags` 만 미루지 않고 바로 지워, 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안 비웠다.
+ */
+SW_TEST_CASE( SceneComponentTest, ClearTagsInsideTickIsDeferredUntilAfterTheTick )
+{
+    constexpr TagID kProbeTag = "Status.Probe"_tag;
+
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject*             pObj  = manager.createGameObject( sw::hashed_string( "TaggedTicker" ) );
+    sw::MockTickSceneComponent* pComp = pObj->addComponent<sw::MockTickSceneComponent>();
+    SW_ASSERT_NOT_NULL( pComp );
+    pObj->addTag( kProbeTag );
+    SW_ASSERT_TRUE( pObj->hasTag( kProbeTag ) );
+
+    pComp->_probeTag         = kProbeTag;
+    pComp->_bClearTagsOnTick = SW_TRUE;
+    manager.tick( 0.016f );
+
+    SW_EXPECT_TRUE( pComp->_bProbeTagKeptInTick == SW_TRUE );
+    SW_EXPECT_FALSE( pObj->hasTag( kProbeTag ) );
+}
+
+/**
  * @brief [SceneComponentTest] 틱 안에서 붙일 수 없는 부모에 붙이면 미루기 전에 false 다
  * @details 틱 중의 붙이기는 틱 뒤로 미뤄지는데, 미룬 일은 자기 매니저로 부모를 다시 찾는다. 다른 매니저의 부모는 그때 못 찾고 조용히
  *          버려졌고 호출은 이미 true 를 돌려준 뒤였다 — 부른 쪽은 붙었다고 믿는다. 거르는 것은 미루기 전이다.

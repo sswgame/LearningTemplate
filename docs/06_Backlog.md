@@ -2079,6 +2079,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 58 태그 — 틱 안의 `clearTags` 만 미루지 않고 바로 지웠다)
+
+(B) 스물다섯째의 남은 것 "틱 안 자기 변경". `addTag` · `removeTag` 는 틱 중이면 틱 뒤로 미루는데 `clearTags` 만 바로 `TagComponent` 를 비워, 병렬 틱의
+다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안 지웠다. 같은 규칙으로 미룬다 — 유니티 DOTS `EntityCommandBuffer` · 언리얼 Mass 명령 버퍼처럼 병렬
+구간의 변경은 동기점에서 한다.
+
+**검증.** `SceneComponentTest.ClearTagsInsideTickIsDeferredUntilAfterTheTick`(틱 안에서는 그대로 보이고 틱 뒤에는 지워진다; 목
+`MockTickSceneComponent::_bClearTagsOnTick`). 바로 지우는 변이에 진다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 57 프리팹 — JSON 프리팹을 되돌리면 인스턴스가 비었고, 형식 변환은 컴포넌트를 버렸고, 되돌리기는 인스턴스의 자리를 잃었다)
 
 (B) 스물다섯째의 남은 것 "프리팹(상태 포맷 기록 · 변환 경로 · 되돌리기)". 셋 다 결함이었다.

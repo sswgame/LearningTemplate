@@ -439,6 +439,15 @@ namespace sw
 
     void GameObject::clearTags()
     {
+        // `removeTag` 와 같이 틱 중이면 틱 뒤로 미룬다. 예전에는 여기만 바로 지워, 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안
+        // 비웠다(유니티 DOTS `EntityCommandBuffer` · 언리얼 Mass 명령 버퍼처럼 병렬 구간의 변경은 동기점에서 한다).
+        if ( isComponentMutationFrozen() )
+        {
+            deferOnSelfPostTick( Delegate<void( GameObject& )>( []( GameObject& self )
+            { self.clearTags(); } ) );
+            return;
+        }
+
         TagComponent* pTagComp = getComponent<TagComponent>();
         if ( pTagComp != nullptr )
             pTagComp->clearTags();
