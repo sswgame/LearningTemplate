@@ -73,6 +73,12 @@ namespace sw
         }
     }
 
+    void SpriteComponent::refreshFromClip()
+    {
+        refreshTextureInstance();    // 아틀라스가 바뀌었을 수 있다
+        refreshSpriteInstanceData(); // 지금 프레임의 UV
+    }
+
     void SpriteComponent::setTextureName( string_view texture )
     {
         _textureName = string{ texture };

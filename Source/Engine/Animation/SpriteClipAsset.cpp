@@ -20,8 +20,8 @@ namespace sw
             /** @brief 공유 표 하나입니다. 경로 → 약한 참조. 잠금과 함께 둡니다. */
             struct SharedTable
             {
-                mutex                                                  _mutex;
-                unordered_map<string, weak_ptr<const SpriteClipAsset>> _mapClip;
+                mutex                                            _mutex;
+                unordered_map<string, weak_ptr<SpriteClipAsset>> _mapClip; ///< 쥔 쪽에는 const 로 준다 — 고치는 것은 `reloadShared` 뿐이다
             };
 
             /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). */
@@ -235,7 +235,7 @@ namespace sw
             return nullptr;
 
         SpriteClipAssetInternal::SharedTable& table = SpriteClipAssetInternal::getSharedTable();
-        const string                          key{ path };
+        const string                          key   = FileUtil::normalizeSeparators( path ); // 핫 리로드가 같은 칸을 찾도록 구분자를 맞춘다
         {
             std::scoped_lock<mutex> lock{ table._mutex };
             const auto              it = table._mapClip.find( key );
@@ -260,11 +260,36 @@ namespace sw
             else
                 ++iter;
         }
-        weak_ptr<const SpriteClipAsset>&  slot   = table._mapClip[key];
+        weak_ptr<SpriteClipAsset>&        slot   = table._mapClip[key];
         shared_ptr<const SpriteClipAsset> winner = slot.lock();
         if ( winner != nullptr )
             return winner;
         slot = loaded;
         return loaded;
+    }
+
+    bool SpriteClipAsset::reloadShared( string_view path )
+    {
+        if ( path.empty() )
+            return false;
+
+        SpriteClipAssetInternal::SharedTable& table = SpriteClipAssetInternal::getSharedTable();
+        const string                          key   = FileUtil::normalizeSeparators( path );
+        shared_ptr<SpriteClipAsset>           live;
+        {
+            std::scoped_lock<mutex> lock{ table._mutex };
+            const auto              it = table._mapClip.find( key );
+            if ( it != table._mapClip.end() )
+                live = it->second.lock();
+        }
+        if ( live == nullptr )
+            return false;
+
+        // 읽기에 실패하면 옛 내용을 지킨다(반쯤 쓴 파일을 저장 중에 본 경우 — 다음 이벤트가 다시 읽는다).
+        SpriteClipAsset fresh;
+        if ( fresh.loadFromFile( path ) == false )
+            return false;
+        *live = std::move( fresh );
+        return true;
     }
 } // namespace sw

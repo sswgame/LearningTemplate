@@ -57,6 +57,8 @@ namespace sw
         void setClipPath( string_view path );
         /** @brief 읽은 클립입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
         const SpriteClipAsset* getClip() const { return _clip.get(); }
+        /** @brief 쥔 클립이 다시 읽혔을 때 부릅니다(`SpriteClipAsset::reloadShared` 뒤) — 아틀라스와 지금 프레임의 UV 를 다시 맞춥니다. */
+        void refreshFromClip();
 
         /** @brief 보일 클립 프레임 번호입니다. */
         int32 getClipFrame() const { return _clipFrame; }

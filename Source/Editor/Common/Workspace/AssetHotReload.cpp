@@ -14,11 +14,15 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw::editor
 {
@@ -56,6 +60,33 @@ namespace sw::editor
 
                 // 캐시만 버린다. 이미 스폰된 오브젝트는 그대로다(그것은 오버라이드 전파라는 다른 기능이다).
                 pResources->getPrefabManager().reload( relativePath, nullptr );
+            }
+
+            /**
+             * @brief 스프라이트 클립 문서를 쥔 쪽 모두에 제자리로 다시 읽히고, 활성 씬의 그 클립 스프라이트가 프레임을 다시 맞춥니다.
+             * @details 예전에는 이 줄이 없었다 — 플레이 중 클립을 저장해도 살아 있는 스프라이트는 옛 프레임을 그렸다(공유 표는 쥔 동안 다시 읽지 않는다).
+             *          아틀라스 이미지는 텍스처 줄이 맡는다(표에서 앞에 있다) — 여기서는 클립 문서만 본다.
+             */
+            static void reloadSpriteClip( string_view relativePath )
+            {
+                const string path = FileUtil::normalizeSeparators( relativePath );
+                if ( StringUtil::endsWith( path, ".sprite.json", true ) == false && StringUtil::endsWith( path, ".sprite", true ) == false )
+                    return;
+                if ( SpriteClipAsset::reloadShared( path ) == false )
+                    return; // 쥔 쪽이 없다 — 다음에 읽는 쪽이 새 내용을 읽는다
+                Scene*             pScene   = getActiveScene();
+                GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+                if ( pObjects == nullptr )
+                    return;
+                pObjects->forEachGameObject( [&path]( GameObject* pObject )
+                {
+                    for ( Component* pComponent : pObject->getComponents() )
+                    {
+                        SpriteComponent* pSprite = castTo<SpriteComponent>( pComponent );
+                        if ( pSprite != nullptr && StringUtil::equals( FileUtil::normalizeSeparators( pSprite->getClipPath() ), path, true ) )
+                            pSprite->refreshFromClip();
+                    }
+                } );
             }
 
             /** @brief `textures_raw/` 아래 소스 이미지를 옆 `textures/` 의 DDS 로 굽습니다. */
@@ -120,9 +151,10 @@ namespace sw::editor
             // (실제로 예전 감시는 `.mat` 만 보고 있었고 저장소의 애셋은 모두 `.material` 이라,
             //  머티리얼 핫 리로드가 한 번도 걸린 적이 없다.)
             inline static constexpr ReloadRule _s_arrReloadRule[] = {
-                {EditorAssetKind::Material, &reloadMaterial},
-                { EditorAssetKind::Texture,  &reloadTexture},
-                {  EditorAssetKind::Prefab,   &reloadPrefab},
+                {  EditorAssetKind::Material,   &reloadMaterial},
+                {   EditorAssetKind::Texture,    &reloadTexture},
+                {    EditorAssetKind::Prefab,     &reloadPrefab},
+                {EditorAssetKind::SpriteClip, &reloadSpriteClip},
             };
 
             /** @brief 처리기가 있는 종류의 확장자를 전부 모읍니다. */

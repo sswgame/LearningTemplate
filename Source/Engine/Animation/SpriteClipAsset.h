@@ -93,6 +93,13 @@ namespace sw
          *          마지막 사용자가 놓으면 사라집니다. 비동기 씬 로드의 워커에서 불려도 됩니다(잠급니다).
          */
         static shared_ptr<const SpriteClipAsset> acquireShared( string_view path );
+        /**
+         * @brief 나눠 준 클립을 파일에서 **제자리로** 다시 읽습니다(에디터 핫 리로드 — 언리얼의 재임포트). 쥔 쪽 모두가 새 내용을 봅니다.
+         * @details 표는 약한 참조라, 쥔 스프라이트가 하나라도 있으면 파일을 고쳐도 옛 내용이 나왔다(플레이 중 저장이 살아 있는 스프라이트에 닿지 않았다).
+         *          틱 밖(게임 스레드)에서만 부릅니다 — 틱 중의 스프라이트가 읽는 내용을 바꿉니다. 그 뒤 `SpriteComponent::refreshFromClip` 으로 프레임을 다시 맞춥니다.
+         * @return 그 경로의 클립을 누가 쥐고 있었고 다시 읽었으면 true. 쥔 쪽이 없으면(다음에 읽을 때 새 내용이다) · 읽을 수 없으면 false(옛 내용 그대로)입니다.
+         */
+        [[nodiscard]] static bool reloadShared( string_view path );
 
         string                      _atlasPath;     ///< 아틀라스 텍스처 경로("atlas")입니다
         vector<SpriteClipFrame>     _listFrame;     ///< 프레임("frames")입니다
