@@ -29,7 +29,8 @@ namespace sw
          * @brief serializeDiff 가 만든 델타 바이너리를 적용합니다.
          * @details 레이아웃: nameHash + size + payload 입니다(typeHash 없음. 현재 PropertyInfo 로 타입을 해석합니다).
          *          BinarySerializer 의 프로퍼티 레코드(nameHash + typeHash + size + payload)와 다릅니다.
-         *          모르는 프로퍼티 해시가 나오면 적용에 실패합니다(false).
+         *          모르는 프로퍼티 해시가 나오면 적용에 실패합니다(false). 값은 이 빌드의 판(`kCurrentBinaryWireVersion` — enum 은 열거자 이름 해시)으로
+         *          적고 읽습니다. 판을 싣는 머리가 없으므로 같은 실행 안에서만 주고받습니다(파일에 남기지 않는다).
          */
         [[nodiscard]] static bool deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize );
     };

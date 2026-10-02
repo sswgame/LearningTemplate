@@ -27,6 +27,37 @@ namespace
         gameObject.getChildren( listChild );
         return listChild;
     }
+
+    /**
+     * @brief 상태 시험의 enum(`sw::StateShiftColor`)을 열거자 목록으로 레지스트리에 올립니다. 같은 이름으로 다시 부르면 그 자리에 덮어씁니다 — 다음 빌드 ·
+     *        핫 리로드가 열거자를 옮기거나 지운 자리입니다(코드의 값은 그대로).
+     */
+    void registerStateShiftColor( const sw::vector<sw::pair<const utf8*, int64>>& listEnumerator )
+    {
+        sw::EnumInfo info;
+        info._name               = sw::hashed_string( "StateShiftColor" );
+        info._fullyQualifiedName = sw::hashed_string( "sw::StateShiftColor" );
+        info._size               = static_cast<uint8>( sizeof( int32 ) );
+        info._bIsSigned          = SW_TRUE;
+        info._bIsBitFlag         = SW_FALSE;
+        for ( const sw::pair<const utf8*, int64>& enumerator : listEnumerator )
+        {
+            const sw::hashed_string name( enumerator.first );
+            info._mapNameToValue[name]              = enumerator.second;
+            info._mapValueToName[enumerator.second] = name;
+        }
+        sw::engine::getTypeRegistry().registerEnum( info );
+    }
+
+    /** @brief 저장하는 빌드의 열거자 — 코드의 값과 같습니다. 시험은 끝에 이것으로 되돌립니다. */
+    void registerStateShiftColorAsDeclared()
+    {
+        registerStateShiftColor( {
+            {  "Red", 0},
+            {"Green", 1},
+            { "Blue", 2}
+        } );
+    }
 } // namespace
 
 namespace sw
@@ -60,6 +91,46 @@ namespace sw
             };
             engine::getTypeRegistry().registerClass( info );
             return engine::getTypeRegistry().findType( hashed_string( "sw::SchemaShiftComponent" ) );
+        }();
+        return s_pType;
+    }
+
+    /** @brief 상태 시험의 enum 입니다. 레지스트리의 열거자 표는 시험이 손으로 올린다(`registerStateShiftColor`). */
+    enum class StateShiftColor : int32
+    {
+        Red   = 0,
+        Green = 1,
+        Blue  = 2,
+    };
+
+    /**
+     * @brief enum 칸 하나와 그 **뒤의** 칸 하나를 가진 컴포넌트입니다 — enum 칸을 읽지 못해도 뒤의 칸 · 뒤의 컴포넌트가 읽히는지 본다. 타입 정보는 손으로
+     *        등록한다(`SchemaShiftComponent` 와 같은 모양).
+     */
+    class EnumShiftComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+
+        StateShiftColor _color{ StateShiftColor::Red };
+        int32           _after{ 0 };
+    };
+
+    const TypeInfo* EnumShiftComponent::StaticType()
+    {
+        static const TypeInfo* s_pType = []()
+        {
+            TypeInfo info{};
+            info._name               = hashed_string( "EnumShiftComponent" );
+            info._fullyQualifiedName = hashed_string( "sw::EnumShiftComponent" );
+            info._size               = sizeof( EnumShiftComponent );
+            info._listProperty       = {
+                {hashed_string( "_color" ), hashed_string( "sw::StateShiftColor" ), SW_OFFSET_OF( EnumShiftComponent, _color )},
+                {hashed_string( "_after" ),               hashed_string( "int32" ), SW_OFFSET_OF( EnumShiftComponent, _after )}
+            };
+            engine::getTypeRegistry().registerClass( info );
+            return engine::getTypeRegistry().findType( hashed_string( "sw::EnumShiftComponent" ) );
         }();
         return s_pType;
     }
@@ -806,4 +877,79 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
     SW_ASSERT_EQUAL( bytesAgain.size(), ObjectStateSerializer::loadFromBinaryBuffer( pModuleBack, bytesAgain.data(), bytesAgain.size() ) );
     SW_EXPECT_NULL( pModuleBack->getComponent<MissingComponent>() );
     SW_EXPECT_NOT_NULL( pModuleBack->getComponent<SceneComponent>() );
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 저장된 상태의 enum 은 열거자로 돌아온다 — 다음 빌드가 열거자 순서를 바꿔도, 열거자를 지워도(그 칸만 기본값, 나머지는 그대로)
+ * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷 · 되돌리기)는 enum 을 int64 **값**으로 실었다. 열거자를 사이에 넣으면 저장된
+ *          Green 이 다른 열거자로 읽혔다. 지운 열거자는 그 값의 다른 열거자가 됐다 — XML 은 그 칸만 실패로 남긴다. 그리고 바이너리는 컴포넌트 안의 읽지 못한 칸 하나에
+ *          그 컴포넌트를, 그래서 뒤의 컴포넌트까지 버렸다. 시험은 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumChanges )
+{
+    struct RestoreEnumOnExit
+    {
+        ~RestoreEnumOnExit() { registerStateShiftColorAsDeclared(); }
+    };
+    registerStateShiftColorAsDeclared();
+    const RestoreEnumOnExit restoreEnum{};
+
+    GameObjectManager manager;
+    manager.registerComponentType<EnumShiftComponent>( hashed_string( "EnumShiftComponent" ) );
+    manager.registerComponentType<SchemaShiftComponent>( hashed_string( "SchemaShiftComponent" ) );
+    GameObject*           pSaved = manager.createGameObject( hashed_string( "Saved" ) );
+    EnumShiftComponent*   pEnum  = pSaved->addComponent<EnumShiftComponent>();
+    SchemaShiftComponent* pNext  = pSaved->addComponent<SchemaShiftComponent>();
+    SW_ASSERT_TRUE( pEnum != nullptr && pNext != nullptr );
+    pEnum->_color = StateShiftColor::Green;
+    pEnum->_after = 5;
+    pNext->_kept  = 7;
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSaved, bytes ) );
+    const string xml = ObjectStateSerializer::saveToXmlString( pSaved );
+
+    // 1) 다음 빌드에서 열거자 순서가 바뀌었다 — Green 은 이제 2 다.
+    registerStateShiftColor( {
+        { "Blue", 0},
+        {  "Red", 1},
+        {"Green", 2}
+    } );
+    GameObject* pReordered = manager.createGameObject( hashed_string( "Reordered" ) );
+    SW_EXPECT_EQUAL( bytes.size(), ObjectStateSerializer::loadFromBinaryBuffer( pReordered, bytes.data(), bytes.size() ) );
+    const EnumShiftComponent* pReorderedEnum = pReordered->getComponent<EnumShiftComponent>();
+    SW_ASSERT_NOT_NULL( pReorderedEnum );
+    SW_EXPECT_TRUE_MSG( static_cast<int32>( pReorderedEnum->_color ) == 2, "저장된 Green 이 값으로 읽혀 다른 열거자가 됐습니다" );
+    SW_EXPECT_EQUAL( 5, pReorderedEnum->_after );
+    GameObject* pReorderedXml = manager.createGameObject( hashed_string( "ReorderedXml" ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXmlString( pReorderedXml, xml ) );
+    const EnumShiftComponent* pReorderedXmlEnum = pReorderedXml->getComponent<EnumShiftComponent>();
+    SW_ASSERT_NOT_NULL( pReorderedXmlEnum );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( pReorderedXmlEnum->_color ) ); // XML 은 원래 이름으로 실었다 — 두 형식이 같은 답이다
+
+    // 2) 다음 빌드에서 Green 이 Lime 이 됐다(ValueAlias 없음). 그 칸만 기본값(Red)으로 남고, 뒤의 칸 · 뒤의 컴포넌트는 읽힌다.
+    registerStateShiftColor( {
+        { "Red", 0},
+        {"Lime", 1},
+        {"Blue", 2}
+    } );
+    GameObject* pRenamed    = manager.createGameObject( hashed_string( "Renamed" ) );
+    GameObject* pRenamedXml = manager.createGameObject( hashed_string( "RenamedXml" ) );
+    size_t      readBytes   = 0;
+    bool        bXmlLoaded  = false;
+    {
+        test::ScopedDefensiveTestLog expected( "a saved enumerator the enum no longer has" );
+        readBytes  = ObjectStateSerializer::loadFromBinaryBuffer( pRenamed, bytes.data(), bytes.size() );
+        bXmlLoaded = ObjectStateSerializer::loadFromXmlString( pRenamedXml, xml );
+    }
+    SW_EXPECT_EQUAL( bytes.size(), readBytes );
+    SW_EXPECT_TRUE( bXmlLoaded );
+    for ( GameObject* pRenamedObject : { pRenamed, pRenamedXml } )
+    {
+        const EnumShiftComponent*   pRenamedEnum = pRenamedObject->getComponent<EnumShiftComponent>();
+        const SchemaShiftComponent* pRenamedNext = pRenamedObject->getComponent<SchemaShiftComponent>();
+        SW_ASSERT_TRUE_MSG( pRenamedEnum != nullptr && pRenamedNext != nullptr, "읽지 못한 enum 칸 하나에 컴포넌트가 사라졌습니다" );
+        SW_EXPECT_TRUE_MSG( pRenamedEnum->_color == StateShiftColor::Red, "지운 열거자가 그 값의 다른 열거자(Lime)로 읽혔습니다" );
+        SW_EXPECT_EQUAL( 5, pRenamedEnum->_after );
+        SW_EXPECT_EQUAL( 7, pRenamedNext->_kept );
+    }
 }

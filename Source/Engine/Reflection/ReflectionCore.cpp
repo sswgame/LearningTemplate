@@ -1009,6 +1009,19 @@ namespace sw
         return it != _mapNameToEnum.end() ? it->second : nullptr;
     }
 
+    const EnumInfo* TypeRegistry::findEnumByNameHash( const uint32 nameHash ) const
+    {
+        if ( nameHash == 0 )
+            return nullptr;
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        for ( const auto& [name, pEnumInfo] : _mapNameToEnum )
+        {
+            if ( name.getHash() == nameHash )
+                return pEnumInfo;
+        }
+        return nullptr;
+    }
+
     hashed_string TypeRegistry::canonicalTypeNameByHash( const uint32 nameHash ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };

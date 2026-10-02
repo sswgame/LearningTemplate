@@ -28,6 +28,24 @@ namespace sw
             static constexpr size_t kFastPropBitmaskThreshold = 64;
 
             /**
+             * @brief 태그 스트림 머리(uint32)의 짜임입니다 — 아래 24비트는 프로퍼티 수, 위 8비트는 값 인코딩의 판(`BinaryWireVersion`).
+             * @details 판이 없던 옛 스트림은 위 8비트가 0 이라 그대로 `EnumByValue` 로 읽힙니다(프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
+             *          중첩 구조체 · 소유 포인터 본문도 제 판을 말합니다. 판을 올리는 변경은 이 자리 하나만 고치면 모든 바이너리 길(세이브 · 스냅샷 · 쿠킹 씬 ·
+             *          복사 · RPC)에 실립니다.
+             */
+            static constexpr uint32 kTaggedVersionShift = 24;
+            static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
+            /** @brief 컴팩트 스트림 모드 바이트의 짜임입니다 — 아래 4비트는 모드(밀집 · 희소), 위 4비트는 판. 옛 스트림은 위가 0 이다. */
+            static constexpr uint8 kCompactVersionShift = 4;
+            static constexpr uint8 kCompactModeMask     = ( 1u << kCompactVersionShift ) - 1;
+
+            /** @brief 이 빌드가 읽을 수 있는 판인지 봅니다. 더 높은 판은 앞선 빌드가 쓴 것이라 읽지 않습니다(값을 다른 뜻으로 읽게 된다). */
+            static bool isReadableWireVersion( uint32 wireVersion )
+            {
+                return wireVersion <= static_cast<uint32>( kCurrentBinaryWireVersion );
+            }
+
+            /**
              * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false 입니다.
              * @details 비트필드 · 컨테이너 · 그 외 값의 세 분기로 나눕니다. 아카이브 경로 둘이 이 스무 줄을
              *          **각자** 갖고 있었습니다. 분기를 하나 더하면(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
@@ -35,7 +53,7 @@ namespace sw
              */
             static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
                                               size_t payloadStart, size_t payloadSize, const SerializeContext& ctx,
-                                              bool bRequireExactConsume )
+                                              bool bRequireExactConsume, BinaryWireVersion wireVersion )
             {
                 void* pPropPtr = prop.getRawPtr( pInstance );
 
@@ -44,7 +62,7 @@ namespace sw
                     // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
                     bool   bVal  = false;
                     size_t local = payloadStart;
-                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
+                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx, wireVersion ) == false )
                         return false;
                     prop.setValue<bool>( pInstance, bVal );
                     return true;
@@ -55,9 +73,9 @@ namespace sw
                 size_t local = payloadStart;
                 bool   bRead = false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    bRead = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx );
+                    bRead = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx, wireVersion );
                 else
-                    bRead = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
+                    bRead = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx, wireVersion );
                 if ( bRead == false )
                     return false;
                 return bRequireExactConsume == false || local == payloadStart + payloadSize;
@@ -80,7 +98,27 @@ namespace sw
                 SW_LOG_WARNING( "%#: a saved field (name hash %#) is not in the type any more - skipped (once per field)", typeInfo._name.c_str(), nameHash );
             }
 
-            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
+            /**
+             * @brief 엄격한 읽기가 읽지 못한 칸을 건너뛸 때(`allowsUnknownProperties`) 알립니다 — 타입 · 칸마다 한 번.
+             * @details 지금 타입에 있는 칸인데 값을 읽지 못했다(모르는 열거자 이름 · 바뀐 타입). XML · JSON 은 그 칸만 남기고 나머지를 읽는다 — 예전에는 바이너리만
+             *          그 컴포넌트를, 그래서 소유 포인터 목록의 **뒤 컴포넌트까지** 버렸다.
+             */
+            static void warnUnreadableFieldOnce( const TypeInfo& typeInfo, const PropertyInfo& prop )
+            {
+                static mutex                 s_mutex;
+                static unordered_set<uint64> s_setWarned;
+                const uint64                 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | prop.getNameHash();
+                {
+                    std::lock_guard<mutex> lock( s_mutex );
+                    if ( s_setWarned.insert( key ).second == false )
+                        return;
+                }
+                SW_LOG_WARNING( "%#: saved field '%#' (%#) could not be read - it is skipped and the rest is read (once per field)", typeInfo._name.c_str(),
+                                prop._name.c_str(), prop._typeName.c_str() );
+            }
+
+            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize,
+                                       BinaryWireVersion wireVersion )
             {
                 if ( pOutListOrphan == nullptr )
                     return;
@@ -88,6 +126,7 @@ namespace sw
                 orphan._name         = name;
                 orphan._nameHash     = nameHash != 0 ? nameHash : name.getHash();
                 orphan._wireTypeHash = wireTypeHash;
+                orphan._wireVersion  = wireVersion;
                 orphan._listBinary.assign( pPayload, pPayload + payloadSize );
                 pOutListOrphan->push_back( std::move( orphan ) );
             }
@@ -97,21 +136,31 @@ namespace sw
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 이 60여 줄을 **각자** 들고 있었고, 셋째 사본
              *          (`applyPropertyPayload` 의 세 분기)까지 있었습니다. 둘이 다른 것은 정책 셋뿐입니다.
              *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣습니다.
-             *          (2) 읽지 못한 프로퍼티: 엄격은 실패, 소프트는 orphan.
+             *          (2) 읽지 못한 프로퍼티: 엄격은 `allowsUnknownProperties` 면 그 칸만 건너뛰고(XML · JSON 과 같다) 아니면 실패, 소프트는 orphan.
              *          (3) 페이로드를 끝까지 읽었는지: 엄격만 봅니다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 기록 타입을 아는 스칼라는 이관이 값으로
              *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 봅니다. 소프트는 이관도 안 되면 예전처럼 끝까지 읽히지
-             *          않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다). 다만 값으로만 옮기는 스칼라 쌍(`isScalarValueCoercion`)은
-             *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520) orphan 으로 남깁니다.
+             *          않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다). 다만 값으로만 옮기는 쌍(`isValueOnlyCoercion` — 스칼라 · 다른 enum)은
+             *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남깁니다.
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
              */
             static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                            const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
                 BinaryStreamReader reader( pData, dataSize );
-                uint32             propCount{ 0 };
-                if ( reader.read( propCount ) == false )
+                uint32             header{ 0 };
+                if ( reader.read( header ) == false )
                     return false;
+                // 머리가 판을 말한다 — 이 스트림 안의 값(컨테이너 원소 · 맵 키 포함)은 그 판으로 읽는다. 옛 스트림은 0(`EnumByValue`)이다.
+                const uint32 wireVersionNumber = header >> kTaggedVersionShift;
+                if ( isReadableWireVersion( wireVersionNumber ) == false )
+                {
+                    SW_LOG_WARNING( "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
+                                    static_cast<uint32>( kCurrentBinaryWireVersion ) );
+                    return false;
+                }
+                const BinaryWireVersion wireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
+                const uint32            propCount   = header & kTaggedCountMask;
 
                 const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
                 const size_t                numProps = listProp.size();
@@ -151,7 +200,7 @@ namespace sw
                         if ( bStrict && ctx.allowsUnknownProperties() == false )
                             return false;
                         if ( bStrict == false )
-                            pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
+                            pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
                         else
                             warnSkippedFieldOnce( typeInfo, tagHash );
                         reader.skip( payloadSize );
@@ -171,27 +220,32 @@ namespace sw
                     if ( bWireMismatch )
                     {
                         void*               pPropPtr     = prop.getRawPtr( pInstance );
-                        const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
-                        bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName );
-                        if ( bApplied == false && bStrict == false && isScalarValueCoercion( prop._typeName, wireTypeName ) == false )
-                            bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false );
+                        const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
+                        bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
+                        if ( bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false )
+                            bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false, wireVersion );
                     }
                     else
                     {
-                        bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, bStrict );
+                        bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, bStrict, wireVersion );
                         if ( bApplied == false && bStrict == false )
                         {
                             void*               pPropPtr     = prop.getRawPtr( pInstance );
-                            const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
-                            bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName );
+                            const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
+                            bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
                         }
                     }
 
                     if ( bApplied == false )
                     {
-                        if ( bStrict )
+                        // 엄격한 읽기도 모르는 칸을 받는 문맥(오브젝트 상태)이면 **이 칸만** 건너뛴다 — 크기를 알아 다음 칸 자리는 맞다. 모르는 열거자 하나가
+                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 자리다.
+                        if ( bStrict && ctx.allowsUnknownProperties() == false )
                             return false;
-                        pushOrphanVal( pOutListOrphan, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
+                        if ( bStrict )
+                            warnUnreadableFieldOnce( typeInfo, prop );
+                        else
+                            pushOrphanVal( pOutListOrphan, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
                     }
 
                     reader.skip( payloadSize );
@@ -221,7 +275,7 @@ namespace sw
              */
             static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
                                               BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
-                                              const SerializeContext& ctx )
+                                              const SerializeContext& ctx, BinaryWireVersion wireVersion )
             {
                 uint64 payloadSize = 0;
                 if ( reader.readVarUint( payloadSize ) == false )
@@ -237,7 +291,7 @@ namespace sw
                 if ( propIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( listProp[static_cast<size_t>( propIndex )] ) )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
-                                               pData, payloadStart, payloadSize, ctx, false ) == false )
+                                               pData, payloadStart, payloadSize, ctx, false, wireVersion ) == false )
                         return false;
                 }
 
@@ -319,7 +373,9 @@ namespace sw
             ++propCount;
         }
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
-        writer.write( propCount );
+        SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
+        // 머리의 위 8비트가 판이다(`kTaggedVersionShift` 설명) — 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
+        writer.write( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
 
         for ( const PropertyInfo& prop : listProp )
         {
@@ -590,9 +646,11 @@ namespace sw
         const size_t modifiedCount = t_listRecord.size();
         const bool   bUseDense     = PresenceMaskUtil::shouldUseDenseMode( modifiedCount, totalProps );
 
+        // 모드 바이트의 위 4비트가 판이다(`kCompactVersionShift` 설명).
+        const uint8 versionBits = static_cast<uint8>( static_cast<uint8>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kCompactVersionShift );
         if ( bUseDense )
         {
-            writer.write( PresenceMaskUtil::kModeDense );
+            writer.write( static_cast<uint8>( versionBits | PresenceMaskUtil::kModeDense ) );
             writer.writeVarUint( static_cast<uint64>( totalProps ) );
 
             const size_t               bitmaskBytes = PresenceMaskUtil::computeBitmaskBytes( totalProps );
@@ -616,7 +674,7 @@ namespace sw
         }
         else
         {
-            writer.write( PresenceMaskUtil::kModeSparse );
+            writer.write( static_cast<uint8>( versionBits | PresenceMaskUtil::kModeSparse ) );
             writer.writeVarUint( static_cast<uint64>( modifiedCount ) );
 
             for ( const auto& rec : t_listRecord )
@@ -651,9 +709,14 @@ namespace sw
         BinaryStreamReader          reader( pData, dataSize );
         const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
 
-        uint8 modeByte = 0;
-        if ( reader.read( modeByte ) == false )
+        uint8 modeAndVersion = 0;
+        if ( reader.read( modeAndVersion ) == false )
             return false;
+        const uint8 wireVersionNumber = static_cast<uint8>( modeAndVersion >> BinarySerializerInternal::kCompactVersionShift );
+        if ( BinarySerializerInternal::isReadableWireVersion( wireVersionNumber ) == false )
+            return false;
+        const BinaryWireVersion wireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
+        const uint8             modeByte    = static_cast<uint8>( modeAndVersion & BinarySerializerInternal::kCompactModeMask );
 
         if ( modeByte == PresenceMaskUtil::kModeDense )
         {
@@ -686,7 +749,7 @@ namespace sw
                 if ( bPresent == false )
                     continue;
 
-                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx, wireVersion ) == false )
                     return false;
             }
             return true;
@@ -703,7 +766,7 @@ namespace sw
                 if ( reader.readVarUint( propIndex ) == false )
                     return false;
 
-                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx, wireVersion ) == false )
                     return false;
             }
             return true;

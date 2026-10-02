@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Compression/CompressionStream.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -81,6 +83,183 @@ namespace
         bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
         bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
         return bOk;
+    }
+
+    /** @brief 열거자 정체성 시험의 enum 입니다. 레지스트리에는 시험이 손으로 올리고, **다시 올려** 열거자 순서를 바꿉니다(코드의 값은 그대로). */
+    enum class WireShiftColor : int32
+    {
+        Red   = 0,
+        Green = 1,
+        Blue  = 2,
+    };
+
+    /** @brief 같은 시험의 비트플래그 enum 입니다. */
+    enum class WireShiftFlags : uint16
+    {
+        None = 0,
+        A    = 1,
+        B    = 2,
+        C    = 4,
+    };
+
+    /** @brief enum 을 값 · 비트플래그 · 시퀀스 원소 · 맵 키로 드는 구조체입니다. 마지막 칸은 앞의 enum 칸이 실패해도 뒤가 읽히는지 봅니다. */
+    struct WireShiftHost
+    {
+        WireShiftColor                 _color{ WireShiftColor::Red };
+        WireShiftFlags                 _flags{ WireShiftFlags::None };
+        sw::vector<WireShiftColor>     _listColor;
+        sw::map<WireShiftColor, int32> _mapColorToCount;
+        int32                          _after{ 0 };
+    };
+
+    /** @brief 손으로 올리는 EnumInfo 의 열거자 하나입니다. `_bAlias` 면 ValueAlias 입니다(그 이름도 값으로 읽히지만 쓰는 이름은 아니다). */
+    struct WireShiftEnumerator
+    {
+        const utf8* _pName;
+        int64       _value;
+        bool        _bAlias;
+    };
+
+    /** @brief 열거자 목록으로 enum 하나를 레지스트리에 올립니다. 같은 이름으로 다시 부르면 그 자리에 덮어씁니다(핫 리로드 · 다음 빌드의 자리). */
+    void registerWireShiftEnum( const utf8* pName, const utf8* pFqn, uint8 size, bool bFlags, const sw::vector<WireShiftEnumerator>& listEnumerator )
+    {
+        sw::EnumInfo info;
+        info._name               = sw::hashed_string( pName );
+        info._fullyQualifiedName = sw::hashed_string( pFqn );
+        info._size               = size;
+        info._bIsSigned          = bFlags ? SW_FALSE : SW_TRUE;
+        info._bIsBitFlag         = bFlags ? SW_TRUE : SW_FALSE;
+        for ( const WireShiftEnumerator& enumerator : listEnumerator )
+        {
+            const sw::hashed_string name( enumerator._pName );
+            info._mapNameToValue[name] = enumerator._value;
+            if ( enumerator._bAlias == false )
+                info._mapValueToName[enumerator._value] = name;
+        }
+        sw::engine::getTypeRegistry().registerEnum( info );
+    }
+
+    /** @brief 저장하는 빌드의 열거자 순서로 두 enum 을 올립니다 — 코드의 값과 같습니다. 순서를 바꾼 시험은 끝에 이것으로 되돌립니다. */
+    void registerWireShiftEnumsAsDeclared()
+    {
+        registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                               {
+                                   {  "Red", 0, false},
+                                   {"Green", 1, false},
+                                   { "Blue", 2, false}
+        } );
+        registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true,
+                               {
+                                   {"None", 0, false},
+                                   {   "A", 1, false},
+                                   {   "B", 2, false},
+                                   {   "C", 4, false}
+        } );
+    }
+
+    /** @brief `WireShiftHost` 의 타입 정보입니다(등록하지 않고 직렬화기에 바로 넘깁니다). */
+    sw::TypeInfo makeWireShiftHostType()
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( "WireShiftHost" );
+        info._fullyQualifiedName = sw::hashed_string( "sw::WireShiftHost" );
+        info._size               = sizeof( WireShiftHost );
+        info._listProperty       = {
+            { sw::hashed_string( "_color" ), sw::hashed_string( "sw::WireShiftColor" ), SW_OFFSET_OF( WireShiftHost, _color ) },
+            { sw::hashed_string( "_flags" ), sw::hashed_string( "sw::WireShiftFlags" ), SW_OFFSET_OF( WireShiftHost, _flags ) },
+            { sw::hashed_string( "_listColor" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( WireShiftHost, _listColor ), true, sw::ContainerKind::Sequence,
+             sw::hashed_string( "sw::WireShiftColor" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<WireShiftColor>>>() },
+            { sw::hashed_string( "_mapColorToCount" ), sw::hashed_string( "map" ), SW_OFFSET_OF( WireShiftHost, _mapColorToCount ), true, sw::ContainerKind::Map,
+             sw::hashed_string( "int32" ), sw::hashed_string( "sw::WireShiftColor" ), sw::make_shared<sw::MapWrapper<sw::map<WireShiftColor, int32>>>() },
+            { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftHost, _after ) },
+        };
+        return info;
+    }
+
+    /** @brief 시험이 저장하는 값입니다 — 모든 칸이 기본값과 다릅니다. */
+    WireShiftHost makeSavedWireShiftHost()
+    {
+        WireShiftHost host;
+        host._color                                  = WireShiftColor::Green;
+        host._flags                                  = static_cast<WireShiftFlags>( 5 ); // A | C
+        host._listColor                              = { WireShiftColor::Blue, WireShiftColor::Red };
+        host._mapColorToCount[WireShiftColor::Green] = 7;
+        host._after                                  = 9;
+        return host;
+    }
+
+    /** @brief 시험이 순서를 바꾸거나 이름을 지운 두 enum 을 끝에 선언대로 되돌립니다(다른 시험이 같은 등록을 본다). */
+    struct RestoreWireShiftEnumsOnExit
+    {
+        ~RestoreWireShiftEnumsOnExit() { registerWireShiftEnumsAsDeclared(); }
+    };
+
+    /** @brief 열거자 순서를 바꾼 다음 빌드로 두 enum 을 다시 올립니다 — Blue · Red · Green, 플래그 C · A · B. 코드의 값은 그대로입니다. */
+    void registerWireShiftEnumsReordered()
+    {
+        registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                               {
+                                   { "Blue", 0, false},
+                                   {  "Red", 1, false},
+                                   {"Green", 2, false}
+        } );
+        registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true,
+                               {
+                                   {"None", 0, false},
+                                   {   "C", 1, false},
+                                   {   "A", 2, false},
+                                   {   "B", 4, false}
+        } );
+    }
+
+    /** @brief `makeSavedWireShiftHost` 의 열거자들이 지금 등록의 값으로 읽혔는지 봅니다. 값은 부른 쪽이 지금 등록에서 셈한 것입니다. */
+    void expectWireShiftEnumerators( const utf8* pPath, const WireShiftHost& host, int64 green, int64 flagsAC, int64 blue, int64 red )
+    {
+        SW_EXPECT_TRUE_MSG( static_cast<int64>( host._color ) == green, pPath );
+        SW_EXPECT_TRUE_MSG( static_cast<int64>( host._flags ) == flagsAC, pPath );
+        SW_EXPECT_TRUE_MSG( host._listColor.size() == 2 && static_cast<int64>( host._listColor[0] ) == blue && static_cast<int64>( host._listColor[1] ) == red, pPath );
+        const auto countIt = host._mapColorToCount.find( static_cast<WireShiftColor>( green ) );
+        SW_EXPECT_TRUE_MSG( host._mapColorToCount.size() == 1 && countIt != host._mapColorToCount.end() && countIt->second == 7, pPath );
+        SW_EXPECT_TRUE_MSG( host._after == 9, pPath );
+    }
+
+    /** @brief 16진 숫자 하나의 값입니다(소문자). */
+    uint8 hexDigitValue( utf8 digit )
+    {
+        return static_cast<uint8>( ( digit >= 'a' ) ? ( digit - 'a' + 10 ) : ( digit - '0' ) );
+    }
+
+    /** @brief 소문자 16진 문자열을 바이트로 되돌립니다(`toHexString` 의 짝). */
+    sw::vector<uint8> fromHexString( sw::string_view hex )
+    {
+        sw::vector<uint8> bytes;
+        bytes.reserve( hex.size() / 2 );
+        for ( size_t charIndex = 0; charIndex + 1 < hex.size(); charIndex += 2 )
+            bytes.push_back( static_cast<uint8>( ( hexDigitValue( hex[charIndex] ) << 4 ) | hexDigitValue( hex[charIndex + 1] ) ) );
+        return bytes;
+    }
+
+    /** @brief enum 칸의 타입이 바뀐 다음 빌드의 자리입니다 — `_color` 가 글 · 수로 바뀐 두 모양. */
+    struct WireShiftRetypedHost
+    {
+        sw::string _colorText;
+        int32      _colorNumber{ -1 };
+        int32      _after{ 0 };
+    };
+
+    /** @brief `_color` 를 `pColorTypeName`(글 `string` · 수 `int32`)으로 읽는 타입 정보입니다. 나머지 enum 칸은 없습니다(orphan). */
+    sw::TypeInfo makeWireShiftRetypedType( bool bColorAsText )
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( "WireShiftHost" );
+        info._fullyQualifiedName = sw::hashed_string( "sw::WireShiftHost" );
+        info._size               = sizeof( WireShiftRetypedHost );
+        if ( bColorAsText )
+            info._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( "string" ), SW_OFFSET_OF( WireShiftRetypedHost, _colorText ) } );
+        else
+            info._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftRetypedHost, _colorNumber ) } );
+        info._listProperty.push_back( { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftRetypedHost, _after ) } );
+        return info;
     }
 } // namespace
 
@@ -577,6 +756,240 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
     SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dst, *typeInfo, json ) );
     SW_EXPECT_TRUE( dst._mode == sw::NarrowEnum::Two );
     SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( dst._guard ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 바이너리는 enum 을 **열거자**로 싣는다 — 열거자 순서를 바꾼 다음 빌드도 같은 열거자를 읽는다(값 · 비트플래그 · 원소 · 맵 키)
+ * @details 바이너리만 enum 을 int64 **값**으로 실었다(XML · JSON 은 이름). 열거자를 사이에 넣거나 순서를 바꾸면 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기
+ *          스냅샷이 조용히 다른 열거자로 읽혔다. 시험은 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
+ *          (태그 · 판 붙은 · 압축 · 컴팩트 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info  = makeWireShiftHostType();
+    const WireShiftHost               saved = makeSavedWireShiftHost();
+    const WireShiftHost               defaults{};
+
+    sw::vector<uint8> tagged;
+    sw::BinarySerializer::serialize( &saved, info, tagged );
+    sw::vector<uint8> versioned;
+    sw::BinarySerializer::serializeVersioned( 3, &saved, info, versioned );
+    sw::vector<uint8> compressed;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &saved, info, compressed ) );
+    sw::vector<uint8> compact;
+    sw::BinarySerializer::serializeCompact( &saved, info, compact );
+    sw::vector<uint8> diff;
+    SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info ) );
+
+    // 다음 빌드: 같은 enum 의 열거자 순서가 바뀌었다. Green 은 이제 2, A | C 는 2 | 1.
+    registerWireShiftEnumsReordered();
+
+    WireShiftHost fromTagged;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromTagged, info, tagged.data(), tagged.size() ) );
+    expectWireShiftEnumerators( "tagged", fromTagged, 2, 3, 0, 1 );
+
+    WireShiftHost fromVersioned;
+    uint32        version{ 0 };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &fromVersioned, info, versioned.data(), versioned.size(), 3 ) );
+    expectWireShiftEnumerators( "versioned", fromVersioned, 2, 3, 0, 1 );
+
+    WireShiftHost fromCompressed;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &fromCompressed, info, compressed.data(), compressed.size() ) );
+    expectWireShiftEnumerators( "compressed", fromCompressed, 2, 3, 0, 1 );
+
+    WireShiftHost fromCompact;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, compact.data(), compact.size() ) );
+    expectWireShiftEnumerators( "compact", fromCompact, 2, 3, 0, 1 );
+
+    WireShiftHost fromDiff;
+    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &fromDiff, info, diff.data(), diff.size() ) );
+    expectWireShiftEnumerators( "diff", fromDiff, 2, 3, 0, 1 );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] enum 을 값으로 싣던 때의 바이트도 그대로 읽힌다 — 판이 없는 스트림은 값으로 읽는다
+ * @details 아래 16진 두 줄은 이 변경 **전** 빌드가 `makeSavedWireShiftHost` 를 쓴 바이트 그대로다(태그 · 컴팩트). 머리에 판이 없고(태그 머리의 위 8비트 ·
+ *          컴팩트 모드 바이트의 위 4비트가 0) enum 은 int64 값이다. 디스크의 세이브 · 쿠킹 씬이 이 모양이다. 지금 빌드가 쓰는 바이트(골든)도 같이 둔다 —
+ *          머리의 판이 1 이고 enum 은 이름 해시다. 앞선 빌드의 판(2)은 다른 뜻일 수 있어 읽지 않는다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ValueEncodedEnumsFromBeforeTheChangeStillRead )
+{
+    registerWireShiftEnumsAsDeclared();
+    const sw::TypeInfo info = makeWireShiftHostType();
+
+    const sw::vector<uint8> legacyTagged = fromHexString(
+        "05000000516400bbad02b3b908000000010000000000000069c34f84553734500800000005000000000000000d69608302e8898f1400000002000000020000000000000000000000000000"
+        "0031a7168fb1efa2df1000000001000000010000000000000007000000849cb3ebbfe2defb0400000009000000" );
+    const sw::vector<uint8> legacyCompact = fromHexString(
+        "01051f0801000000000000000805000000000000001402000000020000000000000000000000000000001001000000010000000000000007000000"
+        "0409000000" );
+
+    WireShiftHost fromTagged;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromTagged, info, legacyTagged.data(), legacyTagged.size() ) );
+    expectWireShiftEnumerators( "legacy tagged", fromTagged, 1, 5, 2, 0 );
+
+    sw::vector<uint8> legacyVersioned( sizeof( uint32 ), 0 );
+    legacyVersioned[0] = 3;
+    legacyVersioned.insert( legacyVersioned.end(), legacyTagged.begin(), legacyTagged.end() );
+    WireShiftHost fromVersioned;
+    uint32        version{ 0 };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &fromVersioned, info, legacyVersioned.data(), legacyVersioned.size(), 3 ) );
+    expectWireShiftEnumerators( "legacy versioned", fromVersioned, 1, 5, 2, 0 );
+
+    sw::vector<uint8> legacyCompressed;
+    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( legacyTagged.data(), legacyTagged.size(), legacyCompressed ) );
+    WireShiftHost fromCompressed;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &fromCompressed, info, legacyCompressed.data(), legacyCompressed.size() ) );
+    expectWireShiftEnumerators( "legacy compressed", fromCompressed, 1, 5, 2, 0 );
+
+    WireShiftHost fromCompact;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, legacyCompact.data(), legacyCompact.size() ) );
+    expectWireShiftEnumerators( "legacy compact", fromCompact, 1, 5, 2, 0 );
+
+    // 옛 스트림의 orphan 은 적힌 판을 든다 — 이관이 나중에 그 값을 읽을 때도 값으로 읽는다(이름 해시로 읽으면 모르는 열거자가 된다).
+    sw::TypeInfo withoutColor = info;
+    withoutColor._listProperty.erase( withoutColor._listProperty.begin() );
+    WireShiftHost                     partial;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, legacyTagged.data(), legacyTagged.size(), &listOrphan ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
+    WireShiftHost            migrated;
+    sw::SchemaMigrateContext migrateContext;
+    migrateContext._pInstance = &migrated;
+    migrateContext._pTypeInfo = &info;
+    migrateContext._pOrphans  = &listOrphan;
+    SW_EXPECT_TRUE( migrateContext.applyOrphanTo( sw::hashed_string( "_color" ) ) );
+    SW_EXPECT_TRUE_MSG( migrated._color == WireShiftColor::Green, "옛 스트림의 orphan 을 지금 판으로 읽었습니다" );
+
+    // 지금 빌드가 쓰는 바이트 — 머리 05000001(판 1), _color 는 "Green" 의 해시, _flags 는 이름 둘(해시 오름차순), 원소 · 맵 키도 해시.
+    const WireShiftHost saved = makeSavedWireShiftHost();
+    sw::vector<uint8>   current;
+    sw::BinarySerializer::serialize( &saved, info, current );
+    SW_EXPECT_TRUE( goldenEq( "enum wire", toHexString( current ),
+                              "05000001516400bbad02b3b904000000bcec1d0169c34f84553734500c000000020000002c290ce4522c0ce60d69608302e8898f0c00000002000000"
+                              "cdf5fb82dc80f44031a7168fb1efa2df0c00000001000000bcec1d0107000000849cb3ebbfe2defb0400000009000000" ) );
+
+    // 앞선 빌드의 판은 읽지 않는다 — 머리의 위 8비트가 이 빌드의 판보다 크다.
+    sw::vector<uint8> newerVersion = current;
+    newerVersion[3]                = static_cast<uint8>( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) + 1 );
+    WireShiftHost fromNewer;
+    {
+        test::ScopedDefensiveTestLog expected( "a binary stream from a newer wire version" );
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &fromNewer, info, newerVersion.data(), newerVersion.size() ) );
+    }
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 지금 enum 에 없는 열거자 이름은 **그 칸만** 실패한다 — 값은 그대로, 0 이 되지 않는다(XML 과 같다)
+ * @details 열거자를 지웠거나 ValueAlias 없이 이름을 바꾼 다음 빌드의 자리다. 엄격한 읽기는 실패를 알리고 그 칸은 지금 값을 지킨다. 모르는 칸을 받는 문맥
+ *          (오브젝트 상태)은 그 칸만 건너뛰고 나머지를 읽는다 — 예전에는 바이너리만 그 컴포넌트를 통째로 버렸다. 옛 이름을 ValueAlias 로 남기면 새 이름으로 읽힌다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info  = makeWireShiftHostType();
+    const WireShiftHost               saved = makeSavedWireShiftHost();
+    sw::vector<uint8>                 bytes;
+    sw::BinarySerializer::serialize( &saved, info, bytes );
+
+    // 다음 빌드: Green 이 Lime 이 됐고(별칭 없음) 플래그 C 는 지워졌다.
+    registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                           {
+                               { "Red", 0, false},
+                               {"Lime", 1, false},
+                               {"Blue", 2, false}
+    } );
+    registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true,
+                           {
+                               {"None", 0, false},
+                               {   "A", 1, false},
+                               {   "B", 2, false}
+    } );
+
+    WireShiftHost strictTarget;
+    strictTarget._color = WireShiftColor::Blue;
+    {
+        test::ScopedDefensiveTestLog expected( "saved enumerators this build no longer has" );
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strictTarget, info, bytes.data(), bytes.size() ) );
+    }
+    SW_EXPECT_TRUE_MSG( strictTarget._color == WireShiftColor::Blue, "모르는 열거자가 칸의 값을 바꿨습니다(예전에는 값으로 읽어 Lime 이 됐다)" );
+
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    lenient.setAllowUnknownProperties( true );
+    WireShiftHost lenientTarget;
+    lenientTarget._color = WireShiftColor::Blue;
+    lenientTarget._flags = static_cast<WireShiftFlags>( 2 );
+    {
+        test::ScopedDefensiveTestLog expected( "fields this build cannot read are skipped" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenientTarget, info, bytes.data(), bytes.size(), lenient ) );
+    }
+    SW_EXPECT_TRUE( lenientTarget._color == WireShiftColor::Blue );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( lenientTarget._flags ) );
+    SW_EXPECT_TRUE( lenientTarget._listColor.size() == 2 && lenientTarget._listColor[0] == WireShiftColor::Blue && lenientTarget._listColor[1] == WireShiftColor::Red );
+    SW_EXPECT_EQUAL( 9, lenientTarget._after );
+
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    WireShiftHost                     softTarget;
+    {
+        test::ScopedDefensiveTestLog expected( "saved enumerators this build no longer has" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, info, bytes.data(), bytes.size(), &listOrphan ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 3 ), listOrphan.size() ); // _color · _flags · _mapColorToCount(키가 Green)
+    SW_EXPECT_EQUAL( 9, softTarget._after );
+
+    // 옛 이름을 ValueAlias 로 남긴 빌드는 새 이름으로 읽는다.
+    registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                           {
+                               {  "Red", 0, false},
+                               { "Lime", 1, false},
+                               { "Blue", 2, false},
+                               {"Green", 1,  true}
+    } );
+    registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true,
+                           {
+                               { "None", 0, false},
+                               {    "A", 1, false},
+                               {    "B", 2, false},
+                               {"Gamma", 4, false},
+                               {    "C", 4,  true}
+    } );
+    WireShiftHost viaAlias;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &viaAlias, info, bytes.data(), bytes.size() ) );
+    expectWireShiftEnumerators( "value alias", viaAlias, 1, 5, 2, 0 );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] enum 칸의 타입이 바뀌면 열거자 **이름**으로 옮긴다 — 글은 이름을 받고, 수는 받지 않는다(XML 과 같다)
+ * @details enum 은 이제 이름 해시(4 바이트)로 실린다. 타입이 바뀐 칸은 기록 타입을 알아야 옮길 수 있는데 타입 표가 enum 을 몰라(`canonicalTypeNameByHash`)
+ *          크기로 짐작했다 — 그 4 바이트가 int32 칸에 그대로 들어가는 길이었고, 예전 값 인코딩에서는 글 칸이 열거자 이름이 아니라 숫자("1")를 받았다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumeratorName )
+{
+    registerWireShiftEnumsAsDeclared();
+    const sw::TypeInfo  info  = makeWireShiftHostType();
+    const WireShiftHost saved = makeSavedWireShiftHost();
+    sw::vector<uint8>   bytes;
+    sw::BinarySerializer::serialize( &saved, info, bytes );
+
+    const sw::TypeInfo                asText = makeWireShiftRetypedType( true );
+    WireShiftRetypedHost              textTarget;
+    sw::vector<sw::SchemaOrphanValue> listTextOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &textTarget, asText, bytes.data(), bytes.size(), &listTextOrphan ) );
+    SW_EXPECT_EQUAL( sw::string( "Green" ), textTarget._colorText );
+    SW_EXPECT_EQUAL( 9, textTarget._after );
+
+    const sw::TypeInfo                asNumber = makeWireShiftRetypedType( false );
+    WireShiftRetypedHost              numberTarget;
+    sw::vector<sw::SchemaOrphanValue> listNumberOrphan;
+    {
+        test::ScopedDefensiveTestLog expected( "an enumerator name does not read as a number" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &numberTarget, asNumber, bytes.data(), bytes.size(), &listNumberOrphan ) );
+    }
+    SW_EXPECT_TRUE_MSG( numberTarget._colorNumber == -1, "열거자 이름 해시가 수 칸에 그대로 들어갔습니다" );
+    SW_EXPECT_EQUAL( 9, numberTarget._after );
 }
 
 /**
@@ -1857,12 +2270,12 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
         "</NestedContainerActor>\n";
 
     const sw::string kGoldenBinHex =
-        "060000005614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
+        "060000015614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
         "040000000500000086cb7acc7e60e28222000000020000000100000061020000000000803f000020"
         "40010000006201000000000050c04d6e7f33b377b4f91800000001000000030000006f7574010000"
-        "000100000078070000004ad2a1f20b4516201c000000010000001400000001000000a27d0b57bfe2"
-        "defb040000000b00000088efdd2cd7dd8ffe2100000001000000010000006d1400000001000000a2"
-        "7d0b57bfe2defb0400000021000000be55188f1aa2d1f6180000001400000001000000a27d0b57bf"
+        "000100000078070000004ad2a1f20b4516201c000000010000001400000001000001a27d0b57bfe2"
+        "defb040000000b00000088efdd2cd7dd8ffe2100000001000000010000006d1400000001000001a2"
+        "7d0b57bfe2defb0400000021000000be55188f1aa2d1f6180000001400000001000001a27d0b57bf"
         "e2defb040000002a000000";
 
     const sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
@@ -1915,9 +2328,9 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
         "scalar", &scalar, *pScalar,
         "{\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
         "<SampleTestActor _hp=\"-7\" _name=\"a&quot;b\\c&#10;d\" />\n",
-        "02000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64",
+        "02000001266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64",
         "{\"_schemaVersion\":7,\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
-        "0700000002000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64" ) );
+        "0700000002000001266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64" ) );
 
     // 비트필드(: 1) → JSON/XML true|false, Binary 01|00
     sw::BitfieldTestActor bits;
@@ -1929,9 +2342,9 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
         "bits", &bits, *pBits,
         "{\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
         "<BitfieldTestActor _bActive=\"true\" _bInvulnerable=\"false\" _bCanJump=\"true\" _score=\"777\" />\n",
-        "0400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000",
+        "0400000146dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000",
         "{\"_schemaVersion\":7,\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
-        "070000000400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000" ) );
+        "070000000400000146dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000" ) );
 
     // XmlAttribute 플래그 프로퍼티
     sw::DefaultValueTestActor attr;
@@ -1941,9 +2354,9 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
         "attr", &attr, *pAttr,
         "{\"_mana\":12,\"_title\":\"Sir\"}",
         "<DefaultValueTestActor _mana=\"12\" _title=\"Sir\" />\n",
-        "0200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972",
+        "0200000189a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972",
         "{\"_schemaVersion\":7,\"_mana\":12,\"_title\":\"Sir\"}",
-        "070000000200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972" ) );
+        "070000000200000189a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972" ) );
 }
 
 /**

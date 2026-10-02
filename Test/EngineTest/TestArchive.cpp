@@ -1068,9 +1068,10 @@ SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveDenseBitmask )
     sw::vector<uint8> denseBytes;
     sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), denseBytes );
 
-    // 1) 3개 프로퍼티(100% 밀집도)이므로 Dense 모드 매직(0x01)으로 시작하는지 검증
+    // 1) 3개 프로퍼티(100% 밀집도)이므로 Dense 모드(모드 바이트의 아래 4비트 0x01)로 시작하는지 검증 — 위 4비트는 이 빌드의 바이너리 판이다
     SW_EXPECT_TRUE( denseBytes.empty() == false );
-    SW_EXPECT_EQUAL( static_cast<uint8>( 0x01 ), denseBytes[0] );
+    const uint8 expectedModeByte = static_cast<uint8>( ( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) << 4 ) | sw::PresenceMaskUtil::kModeDense );
+    SW_EXPECT_EQUAL( expectedModeByte, denseBytes[0] );
 
     // 2) 역직렬화 검증
     TestReflectedPlayer restoredPlayer;

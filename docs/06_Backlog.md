@@ -1665,7 +1665,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 · 버린 값 · 범위 · 불리언 · 대화 조건 ✅ (3절) — 남은 것 아래 |
-| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ · 바이너리 enum 은 열거자로 ✅ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ (3절) — 소비 없는 컴포넌트는 결정 거리 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ (3절) — 서브틱 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ ⑬ · 월드 값 이동 · 월드 상자 ✅ ⑭ · 셰이더 노멀 · 단위 메타 ✅ (3절) — 남은 것 아래 |
@@ -1678,8 +1678,9 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   (버린 값 경고가 드러냄 — 실제로 순환하는 프리팹으로 고칠 것). `FileUtil::createParentDirectory` ·
   `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
-- **R3**(구조 ⑦~⑩ 뒤) — 바이너리는 enum 을 **값**으로 싣는다(XML 은 이름) — 열거자 순서를 바꾸면 세이브 · 핫 리로드 스냅샷이 다른 값으로 읽힌다.
-  이름 해시로 싣는 것이 맞지만 바이너리 형식이 바뀐다(`kObjectReflectedSchemaVersion` · 쿠킹 씬 판을 올리고 옛 판은 값으로 읽는 이관).
+- **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
+  컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). 한 enum 안의 이름 해시 충돌은 등록 때 검사하지
+  않는다. Shipping 쿠킹이 `game/empty/prefabs/old/testprop.prefab.bin` 없음 오류를 낸다(씬이 옛 프리팹 경로를 가리킴 — 2026-10-03 enum 작업 중 확인).
   에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
   린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
   모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
@@ -2103,6 +2104,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 — 바이너리는 enum 을 값이 아니라 열거자로 싣는다, 판은 스트림 머리마다 — 1-0j 의 R3)
+
+- **바이너리만 enum 을 int64 값으로 실었다**(XML · JSON 은 이름) — 열거자를 사이에 넣거나 순서를 바꾸면 세이브 · 핫 리로드 뒤 플레이 스냅샷 · 되돌리기 · 쿠킹
+  씬이 조용히 다른 열거자로 읽혔다. 이제 열거자 이름 해시(uint32), 비트플래그는 켜진 이름 수 + 해시들(오름차순 — 같은 값은 같은 바이트), 이름 없는 값 · 비트만
+  `0 + int64`. 플래그 이름 규칙은 글과 하나(`EnumInfo::collectFlagNames` — `toStringFlags` 도 이것), 읽기는 `findValueByNameHash`(ValueAlias 포함 — 이름을 바꾼
+  열거자는 옛 이름을 별칭으로 남기면 옛 데이터가 새 이름으로 읽힌다).
+- **판(`BinaryWireVersion`)은 스트림마다 실린다** — 태그 스트림 머리(프로퍼티 수 uint32)의 위 8비트, 컴팩트 모드 바이트의 위 4비트. 옛 스트림은 0 이라 값으로
+  읽고(세이브 · 쿠킹 씬 그대로 읽힘), 앞선 판은 거절한다. 컨테이너 원소 · 맵 키 · orphan(이관이 나중에 읽는 값)도 같은 판으로 읽는다.
+  `kObjectReflectedSchemaVersion` · SCN 판은 올리지 않았다 — 올리면 `skipFieldsTheTypeNoLongerHas` 가 옛 상태를 모두 거절하고, 그 판은 컴포넌트 · 세이브
+  구조체의 중첩 스트림까지 닿지 않는다.
+- **모르는 열거자는 그 칸만 실패한다** — 값은 그대로, 경고는 enum · 이름마다 한 번(XML 과 같다). 모르는 칸을 받는 문맥(오브젝트 상태)의 엄격한 읽기는 읽지
+  못한 칸을 건너뛰고 나머지를 읽는다 — 예전에는 그 컴포넌트와 소유 포인터 목록의 뒤 컴포넌트까지 버렸다(09-20 쿠킹 씬의 `_blendMode` "null" 칸이 그 예).
+- **enum 칸의 타입이 바뀌면 열거자 이름으로 옮긴다** — 타입 표가 enum 을 몰라(`canonicalTypeNameByHash`) 기록 타입을 크기로 짐작했다. `findWireTypeName`
+  (+ `TypeRegistry::findEnumByNameHash`)과 `isValueOnlyCoercion`(옛 `isScalarValueCoercion`)이 다른 enum 을 글로 옮긴다 — 문자열은 이름, 수는 실패.
+
+**검증.** 새 시험 5(옛 빌드가 쓴 바이트 그대로의 골든 포함 — 모두 이전 코드에서 진다): `ReflectionSerializationTest.BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered`
+(태그 · 판 붙은 · 압축 · 컴팩트 · diff) · `ValueEncodedEnumsFromBeforeTheChangeStillRead` · `UnknownEnumeratorFailsOnlyItsField` · `EnumFieldWithANewTypeReadsTheEnumeratorName`,
+`ObjectStateRoundTripTest.SavedEnumsKeepTheirEnumeratorAcrossEnumChanges`. 골든은 바이너리 머리의 위 바이트만 0 → 1(Stable · Wide · 컴팩트 모드 바이트).
+변이 9 모두 죽음. worktree 에서 Debug -LE hostgpu 30/30, Shipping -LE hostgpu 29/30(`CheckSourceGlob` 만). 메인 트리의 옛 쿠킹 씬 둘(값 인코딩)도 새 코드로
+읽힘을 확인했다. 메인에서 ⑯(모르는 컴포넌트 원문 — 원문 바이트는 제 머리의 판을 그대로 들고 간다) · R2 orphan 경고와 합쳤다.
 
 ### 2026-10-03 (R6 셰이더 노멀 · 단위 메타 — 노멀은 3x3 여인수 행렬(외적 셋 · 행렬식 부호)로, HP 바 비율 셋은 `Units=ratio` — 1-0j 의 R6 마지막 단위)
 

@@ -140,21 +140,34 @@ namespace sw
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */
     struct SerializerUtil
     {
-        /** @brief 값을 바이너리로 직렬화합니다. */
+        /**
+         * @brief 값을 바이너리로 직렬화합니다(이 빌드의 판 — `kCurrentBinaryWireVersion`).
+         * @details enum 은 **열거자 정체성**으로 적습니다 — 값이 아니라 열거자 이름의 해시(uint32), 비트플래그는 켜진 이름의 수(uint32)와 그 해시들
+         *          (해시 오름차순 — 같은 값이면 같은 바이트). 이름이 없는 값 · 이름이 덮지 못한 비트는 해시 자리에 0 을 두고 int64 값을 잇습니다.
+         *          XML · JSON 이 이름을 적는 것과 같은 규칙이라, 열거자 순서를 바꾸거나 사이에 넣어도 저장된 뜻이 그대로입니다.
+         */
         SW_API static void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
                                                  vector<uint8>& listBuffer, const SerializeContext& ctx );
-        /** @brief 바이너리에서 값을 역직렬화합니다. */
+        /**
+         * @brief 바이너리에서 값을 역직렬화합니다.
+         * @param wireVersion 바이트가 적힌 판입니다(스트림 머리가 말한다). 옛 판(`EnumByValue`)이면 enum 을 int64 값으로 읽습니다. 기본값은 이 빌드가
+         *                    방금 쓴 바이트(복사 · 비교 · diff)에만 맞습니다.
+         * @details 모르는 열거자 이름(지웠거나 ValueAlias 없이 이름을 바꿨다)이면 그 칸은 지금 값을 지키고 false 입니다 — XML 의 모르는 이름과 같다.
+         *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 칸으로 갈 수 있습니다(경고는 enum · 이름마다 한 번).
+         */
         [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
                                                                  const uint8* pData, size_t dataSize, size_t& offset,
-                                                                 const SerializeContext& ctx );
+                                                                 const SerializeContext& ctx,
+                                                                 BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
         /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. */
         SW_API static void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
                                                            vector<uint8>& listBuffer, const SerializeContext& ctx );
-        /** @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. */
+        /** @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소 · 키 · 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`). */
         [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
                                                                            const uint8* pData, size_t dataSize, size_t& offset,
-                                                                           const SerializeContext& ctx );
+                                                                           const SerializeContext& ctx,
+                                                                           BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
         /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML · JSON · SchemaMigrate 가 함께 쓰는 기본 조각입니다. */
         static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,

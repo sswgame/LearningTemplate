@@ -15,11 +15,27 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) SchemaOrphanValue: 현재 TypeInfo 에 맞는 자리가 없거나 적용하지 못한 기록 필드
     // ------------------------------------------------------------------------------
+    /**
+     * @enum BinaryWireVersion
+     * @brief 바이너리 **값 인코딩**의 판입니다. 스트림마다 머리에 실립니다 — 태그 스트림은 프로퍼티 수(uint32)의 위 8비트, 컴팩트 스트림은 모드 바이트의 위 4비트.
+     * @details 옛 스트림은 그 자리가 0 이라 `EnumByValue` 로 읽힙니다. 스트림마다 실리므로 그 안의 컨테이너 원소 · 맵 키도 같은 판으로 읽고, 중첩 구조체 ·
+     *          소유 포인터 본문은 제 머리의 판을 읽습니다. 세이브 · 플레이 스냅샷 · 쿠킹 씬 · 복사한 컴포넌트가 모두 같은 길입니다.
+     */
+    enum class BinaryWireVersion : uint8
+    {
+        EnumByValue = 0, ///< 옛 판 — enum 을 int64 **값**으로 실었다. 열거자 순서를 바꾸거나 사이에 넣으면 저장된 뜻이 바뀌었다.
+        EnumByName  = 1, ///< enum 을 열거자 **이름 해시**로 싣는다(비트플래그는 켜진 이름들). 이름 없는 값 · 비트만 값으로 싣는다.
+    };
+
+    /** @brief 이 빌드가 쓰는 판입니다. 읽기는 이것 이하의 판을 모두 받고, 더 높은 판(앞선 빌드의 데이터)은 거절합니다. */
+    inline constexpr BinaryWireVersion kCurrentBinaryWireVersion = BinaryWireVersion::EnumByName;
+
     struct SchemaOrphanValue
     {
-        hashed_string _name;
-        uint32        _nameHash{ 0 };
-        uint32        _wireTypeHash{ 0 }; ///< 바이너리에 적힌 프로퍼티 타입 해시(없으면 0)
+        hashed_string     _name;
+        uint32            _nameHash{ 0 };
+        uint32            _wireTypeHash{ 0 };                        ///< 바이너리에 적힌 프로퍼티 타입 해시(없으면 0)
+        BinaryWireVersion _wireVersion{ kCurrentBinaryWireVersion }; ///< 바이너리 값이 적힌 판 — 나중에 이관이 읽을 때 같은 판으로 읽는다
         /**
          * @brief 이관 함수가 이 값을 찾아 봤는지(`findOrphan` · `findOrphanHash` · `applyOrphanTo…`)입니다.
          * @details 찾아 본 값은 이관이 처리한 것이고, 아무도 찾지 않은 값은 로드가 **버린** 것입니다 — `runSchemaMigrateStep` 이
@@ -134,27 +150,37 @@ namespace sw
     // 5) 강제 변환 · 경로 해석: 바이너리/텍스트 강제 변환, 점 경로
     // ------------------------------------------------------------------------------
     /**
-     * @brief 기록 타입과 대상 타입이 **값으로만** 옮기는 쌍인지 묻습니다(기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열).
-     * @details 이 쌍은 `tryCoerceBinaryPayload` 가 기록 타입의 텍스트를 대상 타입으로 다시 읽어 옮기고, 못 옮기면 실패입니다.
-     *          부르는 쪽은 그 실패 뒤에 제 타입으로 다시 읽으면 안 됩니다. 크기가 같은 스칼라는 비트가 그대로 재해석됩니다.
+     * @brief 기록 타입과 대상 타입이 **값으로만** 옮기는 쌍인지 묻습니다 — 기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열, 또는 기록 타입이 **다른** enum.
+     * @details 이 쌍은 `tryCoerceBinaryPayload` 가 기록 값의 텍스트(스칼라는 수, enum 은 열거자 이름)를 대상 타입으로 다시 읽어 옮기고, 못 옮기면 실패입니다.
+     *          부르는 쪽은 그 실패 뒤에 제 타입으로 다시 읽으면 안 됩니다. 크기가 같은 스칼라는 비트가 그대로 재해석되고, enum 의 이름 해시는 수로 읽힙니다.
      * @param wireTypeName 기록 타입. 비어 있으면(모름) false 입니다.
      */
-    SW_API bool isScalarValueCoercion( hashed_string targetTypeName, hashed_string wireTypeName );
+    SW_API bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName );
 
     /**
      * @brief 바이너리 페이로드를 대상 타입으로 강제 변환해 봅니다(int32↔string 등).
      * @details 기록 타입을 아는 스칼라(정수 · 실수 · bool)를 다른 스칼라나 문자열로 바꿀 때는 **값으로** 옮깁니다
-     *          (`isScalarValueCoercion`). 기록 타입의 텍스트를 대상 타입으로 다시 읽으므로 JSON · XML 과 같은 규칙이고,
-     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패합니다. 그 밖에는 제 타입으로 끝까지 읽히는지부터 보고,
-     *          숫자 ↔ 문자열, 마지막으로 크기가 같은 POD 재해석을 시도합니다.
-     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오. 비워 두면 크기로 짐작하는데, 크기만으로는
+     *          (`isValueOnlyCoercion`). 기록 타입의 텍스트를 대상 타입으로 다시 읽으므로 JSON · XML 과 같은 규칙이고,
+     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패합니다. 기록 타입이 **다른 enum** 이면 그 enum 으로 읽어 열거자 이름(글)으로
+     *          옮깁니다 — XML 이 이름을 적어 두는 것과 같은 결과다(문자열이면 이름, 같은 이름을 가진 enum 이면 그 열거자, 정수면 실패).
+     *          그 밖에는 제 타입으로 끝까지 읽히는지부터 보고, 숫자 ↔ 문자열, 마지막으로 크기가 같은 POD 재해석을 시도합니다.
+     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
+     * @param wireVersion 그 payload 가 적힌 판입니다(스트림 머리 · orphan 이 든다).
      * @return 적용에 성공하면 true 입니다.
      */
     [[nodiscard]] SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
                                                       const uint8* pPayload, size_t payloadSize,
                                                       const SerializeContext& ctx,
-                                                      hashed_string           wireTypeName = hashed_string{} );
+                                                      hashed_string           wireTypeName = hashed_string{},
+                                                      BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
+
+    /**
+     * @brief 바이너리 태그의 기록 타입 해시를 이름으로 돌려줍니다 — 등록된 타입(정본 이름), 아니면 enum(FQN). 모르면 빈 이름입니다.
+     * @details 타입 표(`canonicalTypeNameByHash`)는 enum 을 모릅니다. 예전에는 enum 필드의 타입이 바뀌면 기록 타입을 몰라 크기로 짐작했다 —
+     *          열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽히는 길이었다.
+     */
+    SW_API hashed_string findWireTypeName( uint32 wireTypeHash );
 
     /**
      * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거 · 숫자↔문자열 강제 변환).

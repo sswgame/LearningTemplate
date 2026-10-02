@@ -193,6 +193,11 @@ namespace sw
          * @details 모듈이 내려가면 nullptr 를 답하지만 객체는 남습니다(묘비 — 같은 FQN 이 다시 오르면 그 자리에 덮어씁니다).
          */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
+        /**
+         * @brief 이름 · FQN · 별칭의 **해시**로 EnumInfo 를 찾습니다. 바이너리 태그의 기록 타입 해시가 enum 일 때 씁니다(`findWireTypeName`).
+         * @details 해시로 여는 표가 없어 이름표를 훑습니다 — 타입이 바뀐 필드를 읽는 드문 길에서만 부릅니다.
+         */
+        const EnumInfo* findEnumByNameHash( uint32 nameHash ) const;
 
         /**
          * @brief 이 타입이 **실제로 무엇으로 등록됐는지** 사람이 읽는 글로 돌려줍니다(진단용).

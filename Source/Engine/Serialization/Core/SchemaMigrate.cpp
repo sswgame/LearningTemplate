@@ -50,11 +50,6 @@ namespace sw
                        typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string );
             }
 
-            static hashed_string resolveWireTypeHash( uint32 wireTypeHash )
-            {
-                return engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
-            }
-
             /**
              * @brief 스칼라(정수 · 실수 · bool) 타입 이름인지 묻습니다. `formatWirePodToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
              * @details 미리 정의된 이름만 봅니다. 타입 레지스트리에 기대지 않으므로 원시 타입 등록 전에도 같은 답을 냅니다.
@@ -72,6 +67,36 @@ namespace sw
                         return true;
                 }
                 return false;
+            }
+
+            /** @brief 기록 타입이 대상과 **다른** enum 이면 그 EnumInfo 입니다. 같은 enum 을 다른 이름(FQN · 짧은 이름 · 별칭)으로 부른 것이면 nullptr 입니다. */
+            static const EnumInfo* findOtherWireEnum( hashed_string targetTypeName, hashed_string wireTypeName )
+            {
+                if ( wireTypeName.empty() )
+                    return nullptr;
+                const TypeRegistry& registry  = engine::getTypeRegistry();
+                const EnumInfo*     pWireEnum = registry.findEnum( wireTypeName );
+                if ( pWireEnum == nullptr || registry.findEnum( targetTypeName ) == pWireEnum )
+                    return nullptr;
+                return pWireEnum;
+            }
+
+            /**
+             * @brief 기록 enum 의 payload 를 열거자 이름(글)으로 만듭니다 — XML 이 그 칸에 적었을 글입니다(비트플래그는 `A | B`).
+             * @details payload 를 끝까지 읽지 못하거나 모르는 열거자면 false 입니다. enum 은 제 크기만큼만 쓰이므로 0 으로 둔 int64 자리에 읽습니다.
+             */
+            static bool formatWireEnumToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, const SerializeContext& ctx,
+                                                BinaryWireVersion wireVersion, string& outText )
+            {
+                int64  wireValue{ 0 };
+                size_t offset{ 0 };
+                if ( SerializerUtil::deserializeValueBinary( &wireValue, wireTypeName, pPayload, payloadSize, offset, ctx, wireVersion ) == false ||
+                     offset != payloadSize )
+                    return false;
+                StringBuilder<constant::kMaxBuffer8192> ss;
+                SerializerUtil::valueToText( ss, &wireValue, wireTypeName, ctx );
+                outText = ss.c_str();
+                return true;
             }
 
             static bool isNumericTypeName( hashed_string typeName )
@@ -198,13 +223,14 @@ namespace sw
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
+                // 적힌 판으로 읽는다 — 옛 스트림의 orphan 은 enum 을 값으로 들고 있다.
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, ctx ) )
+                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, ctx, orphan._wireVersion ) )
                         return true;
                 }
-                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, ctx, wireTypeName );
+                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, ctx, wireTypeName, orphan._wireVersion );
             }
 
             /**
@@ -228,7 +254,7 @@ namespace sw
 
                 hashed_string hint = wireTypeHint;
                 if ( hint.empty() )
-                    hint = resolveWireTypeHash( orphan._wireTypeHash );
+                    hint = findWireTypeName( orphan._wireTypeHash );
                 return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, ctx );
             }
 
@@ -474,33 +500,53 @@ namespace sw
         return parseTextValueCoerced( pPtr, pProp->_typeName, text, ctx );
     }
 
-    bool isScalarValueCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
+    bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
     {
-        if ( wireTypeName.empty() || wireTypeName == targetTypeName || SchemaMigrateInternal::isScalarTypeName( wireTypeName ) == false )
+        if ( wireTypeName.empty() || wireTypeName == targetTypeName )
+            return false;
+        // 기록 타입이 다른 enum 이면 열거자 이름으로만 옮긴다 — 제 타입으로 다시 읽으면 이름 해시가 수로 읽힌다.
+        if ( SchemaMigrateInternal::findOtherWireEnum( targetTypeName, wireTypeName ) != nullptr )
+            return true;
+        if ( SchemaMigrateInternal::isScalarTypeName( wireTypeName ) == false )
             return false;
         return SchemaMigrateInternal::isScalarTypeName( targetTypeName ) || SchemaMigrateInternal::isStringType( targetTypeName );
     }
 
+    hashed_string findWireTypeName( uint32 wireTypeHash )
+    {
+        const TypeRegistry& registry = engine::getTypeRegistry();
+        const hashed_string typeName = registry.canonicalTypeNameByHash( wireTypeHash );
+        if ( typeName.empty() == false )
+            return typeName;
+        const EnumInfo* pEnumInfo = registry.findEnumByNameHash( wireTypeHash );
+        return ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
+    }
+
     bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                 const SerializeContext& ctx, hashed_string wireTypeName )
+                                 const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
 
-        // 기록 타입을 아는 스칼라가 다른 스칼라 · 문자열로 바뀌었으면 **값으로** 옮긴다. 기록 타입의 텍스트를 대상 타입으로 다시
-        // 읽는다(JSON · XML 과 같은 규칙이다). 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
-        // (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 값으로 못 옮기면(float32 1.5 → int32)
-        // 실패다. payload 크기가 기록 타입과 안 맞아도(손상) 재해석하지 않고 실패로 끝낸다.
-        if ( isScalarValueCoercion( targetTypeName, wireTypeName ) )
+        // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 글로 만들어 대상 타입으로 다시 읽는다(JSON · XML 과 같은 규칙이다).
+        //  - 기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열. 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
+        //    (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 값으로 못 옮기면(float32 1.5 → int32) 실패다.
+        //  - 기록 타입이 다른 enum → 열거자 이름. 문자열은 이름을, 같은 이름이 있는 enum 은 그 열거자를 받고, 수는 받지 않는다(XML 에 적힌 이름과 같다).
+        //    제 타입 읽기로 가면 열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽혔다.
+        // payload 크기가 기록 타입과 안 맞아도(손상) 재해석하지 않고 실패로 끝낸다.
+        if ( isValueOnlyCoercion( targetTypeName, wireTypeName ) )
         {
-            string wireText;
-            if ( SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText ) == false )
+            string     wireText;
+            const bool bWireEnum  = SchemaMigrateInternal::findOtherWireEnum( targetTypeName, wireTypeName ) != nullptr;
+            const bool bFormatted = bWireEnum ? SchemaMigrateInternal::formatWireEnumToString( pPayload, payloadSize, wireTypeName, ctx, wireVersion, wireText )
+                                              : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
+            if ( bFormatted == false )
                 return false;
             return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, ctx );
         }
 
         size_t offset{ 0 };
-        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx ) &&
+        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx, wireVersion ) &&
              offset == payloadSize )
             return true;
 

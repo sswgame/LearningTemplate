@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Core/SerializerUtil.h"
 
+#include "Core/Concurrency/mutex.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -77,6 +78,149 @@ namespace sw
                     return false;
                 Memory::copy( &outValue, pData + inoutOffset, sizeof( uint32 ) );
                 inoutOffset += sizeof( uint32 );
+                return true;
+            }
+
+            /** @brief int64 하나를 리틀 엔디언 그대로 덧붙입니다. */
+            static void appendInt64( vector<uint8>& buffer, int64 value )
+            {
+                const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
+                buffer.insert( buffer.end(), pBytes, pBytes + sizeof( int64 ) );
+            }
+
+            /** @brief int64 하나를 읽고 오프셋을 그만큼 옮깁니다. */
+            static bool readInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
+            {
+                if ( inoutOffset + sizeof( int64 ) > dataSize )
+                    return false;
+                Memory::copy( &outValue, pData + inoutOffset, sizeof( int64 ) );
+                inoutOffset += sizeof( int64 );
+                return true;
+            }
+
+            /**
+             * @brief 열거자 항목 하나를 적습니다 — 이름 해시. 이름이 없으면(해시 0) 그 뒤에 int64 값을 잇습니다.
+             * @details 값으로 싣는 것은 이름이 없는 값 · 비트뿐입니다(이름이 없으니 정체성도 값 말고는 없다).
+             */
+            static void appendEnumEntry( vector<uint8>& buffer, uint32 nameHash, int64 unnamedValue )
+            {
+                appendUint32( buffer, nameHash );
+                if ( nameHash == 0 )
+                    appendInt64( buffer, unnamedValue );
+            }
+
+            /**
+             * @brief enum 값 하나를 열거자 정체성으로 적습니다(`SerializerUtil::serializeValueBinary` 설명의 형식).
+             * @details 비트플래그의 이름은 글(`toStringFlags`)과 같은 규칙으로 모으고(`EnumInfo::collectFlagNames`) 해시 오름차순으로 적습니다 — 같은 값은
+             *          같은 바이트라 바이트 비교(`arePropertyValuesEqual` · diff)가 맞습니다. 이름의 해시가 0 이면(사실상 없다) 값 전체를 값으로 싣습니다.
+             */
+            static void writeEnumBinary( const EnumInfo& enumInfo, const void* pValuePtr, vector<uint8>& buffer )
+            {
+                const int64 value = enumInfo.readValueFromMemory( pValuePtr );
+                if ( enumInfo._bIsBitFlag == SW_FALSE )
+                {
+                    appendEnumEntry( buffer, enumInfo.toString( value ).getHash(), value );
+                    return;
+                }
+
+                vector<hashed_string> listName;
+                const int64           unnamedBits = enumInfo.collectFlagNames( value, listName );
+                vector<uint32>        listNameHash;
+                listNameHash.reserve( listName.size() );
+                bool bHashless = false;
+                for ( const hashed_string& name : listName )
+                {
+                    listNameHash.push_back( name.getHash() );
+                    bHashless = bHashless || name.getHash() == 0;
+                }
+                if ( bHashless )
+                {
+                    appendUint32( buffer, 1 );
+                    appendEnumEntry( buffer, 0, value );
+                    return;
+                }
+                std::sort( listNameHash.begin(), listNameHash.end() );
+                appendUint32( buffer, static_cast<uint32>( listNameHash.size() + ( unnamedBits != 0 ? 1 : 0 ) ) );
+                for ( const uint32 nameHash : listNameHash )
+                    appendEnumEntry( buffer, nameHash, 0 );
+                if ( unnamedBits != 0 )
+                    appendEnumEntry( buffer, 0, unnamedBits );
+            }
+
+            /** @brief 모르는 열거자 이름을 알립니다 — enum · 이름마다 한 번(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게). */
+            static void warnUnknownEnumeratorOnce( const EnumInfo& enumInfo, uint32 nameHash )
+            {
+                static mutex                 s_mutex;
+                static unordered_set<uint64> s_uniqueWarnedKeys;
+                const uint64                 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
+                {
+                    std::lock_guard<mutex> lock( s_mutex );
+                    if ( s_uniqueWarnedKeys.insert( key ).second == false )
+                        return;
+                }
+                SW_LOG_WARNING( "%#: a saved enumerator (name hash %#) is not a value of it any more - the field keeps its current value (once per enumerator)",
+                                enumInfo._fullyQualifiedName.c_str(), nameHash );
+            }
+
+            /** @brief 열거자 항목 하나를 읽습니다. 이름을 모르면 `outKnown` 이 false 이고 바이트는 읽었습니다. 바이트가 모자라면 false 입니다. */
+            static bool readEnumEntry( const EnumInfo& enumInfo, const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue, bool& outKnown )
+            {
+                uint32 nameHash{ 0 };
+                if ( readUint32( pData, dataSize, inoutOffset, nameHash ) == false )
+                    return false;
+                outKnown = true;
+                if ( nameHash == 0 )
+                    return readInt64( pData, dataSize, inoutOffset, outValue );
+                outKnown = enumInfo.findValueByNameHash( nameHash, outValue );
+                if ( outKnown == false )
+                    warnUnknownEnumeratorOnce( enumInfo, nameHash );
+                return true;
+            }
+
+            /**
+             * @brief enum 값 하나를 적힌 판으로 읽습니다. 옛 판은 int64 값, 지금 판은 열거자 정체성입니다.
+             * @return 바이트가 모자라면 false. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었다 — XML 의 모르는 이름과 같은 칸
+             *         실패). 옛 판의 값 읽기는 이름 표를 보지 않는다(그때 적힌 뜻이 값이었다).
+             */
+            static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
+                                        BinaryWireVersion wireVersion )
+            {
+                int64 value{ 0 };
+                if ( wireVersion == BinaryWireVersion::EnumByValue )
+                {
+                    if ( readInt64( pData, dataSize, inoutOffset, value ) == false )
+                        return false;
+                    enumInfo.writeValueToMemory( pValuePtr, value );
+                    return true;
+                }
+
+                bool bKnown = true;
+                if ( enumInfo._bIsBitFlag == SW_FALSE )
+                {
+                    if ( readEnumEntry( enumInfo, pData, dataSize, inoutOffset, value, bKnown ) == false )
+                        return false;
+                }
+                else
+                {
+                    uint32 entryCount{ 0 };
+                    if ( readUint32( pData, dataSize, inoutOffset, entryCount ) == false )
+                        return false;
+                    // 항목은 적어도 4 바이트다 — 남은 바이트로 담을 수 없는 수는 망가진 스트림이다.
+                    if ( entryCount > ( dataSize - inoutOffset ) / sizeof( uint32 ) )
+                        return false;
+                    for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
+                    {
+                        int64 entryValue{ 0 };
+                        bool  bEntryKnown = true;
+                        if ( readEnumEntry( enumInfo, pData, dataSize, inoutOffset, entryValue, bEntryKnown ) == false )
+                            return false;
+                        value |= entryValue;
+                        bKnown = bKnown && bEntryKnown;
+                    }
+                }
+                if ( bKnown == false )
+                    return false;
+                enumInfo.writeValueToMemory( pValuePtr, value );
                 return true;
             }
 
@@ -311,9 +455,8 @@ namespace sw
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            int64        val   = pEnumInfo->readValueFromMemory( pValuePtr );
-            const uint8* pByte = reinterpret_cast<const uint8*>( &val );
-            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( int64 ) );
+            // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다 — 예전에는 int64 값이라 열거자 순서가 바뀌면 세이브 · 스냅샷의 뜻이 바뀌었다.
+            SerializerUtilInternal::writeEnumBinary( *pEnumInfo, pValuePtr, listBuffer );
             return;
         }
 
@@ -353,7 +496,7 @@ namespace sw
 
     bool SerializerUtil::deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
                                                  const uint8* pData, size_t dataSize, size_t& offset,
-                                                 const SerializeContext& ctx )
+                                                 const SerializeContext& ctx, BinaryWireVersion wireVersion )
     {
         const hashed_string                   resolved = SerializerUtil::resolveHandlerTypeName( typeName, ctx );
         const SerializeContext::BinaryReadFn* pReader  = ctx.findBinaryReader( resolved );
@@ -362,15 +505,7 @@ namespace sw
 
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
-        {
-            if ( offset + sizeof( int64 ) > dataSize )
-                return false;
-            int64 val{ 0 };
-            Memory::copy( &val, pData + offset, sizeof( int64 ) );
-            pEnumInfo->writeValueToMemory( pValuePtr, val );
-            offset += sizeof( int64 );
-            return true;
-        }
+            return SerializerUtilInternal::readEnumBinary( *pEnumInfo, pValuePtr, pData, dataSize, offset, wireVersion );
 
         const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
@@ -457,7 +592,7 @@ namespace sw
 
     bool SerializerUtil::deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
                                                            const uint8* pData, size_t dataSize, size_t& offset,
-                                                           const SerializeContext& ctx )
+                                                           const SerializeContext& ctx, BinaryWireVersion wireVersion )
     {
         if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
             return false;
@@ -500,8 +635,8 @@ namespace sw
                                                                                                [&]( void* pElement ) -> bool
                 {
                     if ( nested._elementNested != nullptr )
-                        return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx );
-                    return SerializerUtil::deserializeValueBinary( pElement, nested._elementTypeName, pData, dataSize, offset, ctx );
+                        return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
+                    return SerializerUtil::deserializeValueBinary( pElement, nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
                 } ) );
                 if ( bAppended == false )
                     return false;
@@ -518,13 +653,13 @@ namespace sw
             {
                 pMapWrap->defaultConstructKey( listKBuf.data() );
                 pMapWrap->defaultConstructValue( listVBuf.data() );
-                bool bOk = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx );
+                bool bOk = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx, wireVersion );
                 if ( bOk )
                 {
                     if ( nested._elementNested != nullptr )
-                        bOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx );
+                        bOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
                     else
-                        bOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx );
+                        bOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
                 }
                 if ( bOk )
                     pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );

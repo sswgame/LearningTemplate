@@ -532,20 +532,57 @@ namespace sw
                 return iter != _mapValueToName.end() ? iter->second : hashed_string( constants::reflection::kNone );
             }
 
-            // _mapValueToName 만 쓴다. ValueAlias 가 _mapNameToValue 에 있어도 출력에 중복되지 않는다.
+            vector<hashed_string> listName;
+            (void)collectFlagNames( val, listName ); // 이름이 덮지 못한 비트는 글에 적지 않는다(예전과 같다)
             string result;
             result.reserve( 64 );
-            for ( const auto& [bitVal, name] : _mapValueToName )
+            for ( const hashed_string& name : listName )
             {
-                if ( bitVal != 0 && ( val & bitVal ) == bitVal )
-                {
-                    if ( result.empty() == false )
-                        result += constants::reflection::kFlagSeparator;
-                    result += name.c_str();
-                }
+                if ( result.empty() == false )
+                    result += constants::reflection::kFlagSeparator;
+                result += name.c_str();
             }
 
             return hashed_string( result.c_str() );
+        }
+
+        /**
+         * @brief 비트플래그 값에 켜진 열거자들의 이름을 모으고, 이름이 덮지 못한 비트를 돌려줍니다.
+         * @details 0 이 아닌 값 가운데 비트가 모두 켜진 것이 이름입니다(`_mapValueToName` 만 쓴다 — ValueAlias 는 겹쳐 적지 않는다). 글(`toStringFlags`)과
+         *          바이너리(`SerializerUtil` 의 열거자 정체성 인코딩)가 **같은 이름**을 적도록 규칙을 여기 하나에 둡니다.
+         */
+        int64 collectFlagNames( int64 value, vector<hashed_string>& outListName ) const
+        {
+            outListName.clear();
+            int64 coveredBits{ 0 };
+            for ( const auto& [bitValue, name] : _mapValueToName )
+            {
+                if ( bitValue != 0 && ( value & bitValue ) == bitValue )
+                {
+                    outListName.push_back( name );
+                    coveredBits |= bitValue;
+                }
+            }
+            return value & ~coveredBits;
+        }
+
+        /**
+         * @brief 이름 해시로 열거자 값을 찾습니다 — 정본 이름과 ValueAlias 모두. 바이너리는 열거자를 이 해시로 싣습니다(값이 아니라 이름이 정체성이다).
+         * @details 표식 값(`Invalid` · `Count`)도 받습니다 — `tryParseText` 와 같은 규칙(필드에 든 값을 적은 그대로 읽는다). 이름 해시는 대소문자를
+         *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). 이름을 바꾼 열거자는 옛 이름을 ValueAlias 로 남기면 옛 데이터가
+         *          새 이름으로 읽힙니다.
+         */
+        [[nodiscard]] bool findValueByNameHash( uint32 nameHash, int64& outValue ) const
+        {
+            for ( const auto& [nameKey, enumValue] : _mapNameToValue )
+            {
+                if ( nameKey.getHash() == nameHash )
+                {
+                    outValue = enumValue;
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**
