@@ -6,6 +6,8 @@
 
     #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
+    #include "Core/Math/MathUtil.h"
+
     #include "Editor/Common/Widgets/EditorListFilter.h"
 
     #include "Engine/Reflection/ReflectionTypes.h"
@@ -74,6 +76,23 @@ namespace sw::editor
         if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
             return prop._listAlias.front().c_str();
         return prop._name.c_str();
+    }
+
+    InspectorDisplayUnit InspectorPropertyLayout::getDisplayUnit( const PropertyInfo& prop )
+    {
+        InspectorDisplayUnit unit{};
+        const string*        pUnits = prop.findCustomMeta( hashed_string( "Units" ) );
+        if ( pUnits == nullptr || pUnits->empty() )
+            return unit;
+        if ( *pUnits == "rad" )
+        {
+            unit._scale     = MathUtil::RadianToDegree;
+            unit._dragSpeed = kAngleDragSpeed;
+            unit._suffix    = "deg";
+            return unit;
+        }
+        unit._suffix = *pUnits;
+        return unit;
     }
 } // namespace sw::editor
 

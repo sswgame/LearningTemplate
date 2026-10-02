@@ -18,6 +18,19 @@ namespace sw::editor
 {
     class EditorListFilter;
 
+    /**
+     * @brief 반사 프로퍼티를 인스펙터에 보이는 단위입니다. 보이는 값 = 저장 값 × `_scale` 입니다.
+     * @details 각도는 라디안으로 저장하고(`Units=rad` — 트랜스폼 회전 · FOV · 원뿔 각) 도로 보이고 고칩니다. 언리얼 Details 의 FRotator · FOV,
+     *          유니티 인스펙터의 `localEulerAngles` · `fieldOfView` 가 모두 도입니다. 예전에는 트랜스폼 회전이 라디안을 `Units=deg` 라고 적었고
+     *          인스펙터는 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
+     */
+    struct InspectorDisplayUnit
+    {
+        float32 _scale{ 1.0f };     ///< 보이는 값 = 저장 값 × 이것
+        float32 _dragSpeed{ 0.0f }; ///< 픽셀당 보이는 값의 변화. 0 이면 타입의 기본입니다
+        string  _suffix{};          ///< 서식 뒤에 붙는 단위 글자. 없으면 빈 것입니다
+    };
+
     /** @brief 인스펙터가 한 카테고리로 묶어 그리는 반사 프로퍼티입니다. */
     struct InspectorPropertyGroup
     {
@@ -49,5 +62,11 @@ namespace sw::editor
 
         /** @brief 프로퍼티의 표시 이름입니다(DisplayName → 첫 별칭 → 이름). */
         static const utf8* getPropertyLabel( const PropertyInfo& prop );
+
+        /** @brief 각도를 도로 고칠 때 픽셀당 도입니다. 트랜스폼 섹션 · 시퀀서도 같은 값을 씁니다. */
+        static constexpr float32 kAngleDragSpeed = 0.5f;
+
+        /** @brief 프로퍼티의 `Units` 메타로 보이는 단위를 정합니다. `rad` 는 도로 보입니다(배율 · 드래그 속도 · "deg"), 나머지는 글자만 붙습니다. */
+        static InspectorDisplayUnit getDisplayUnit( const PropertyInfo& prop );
     };
 } // namespace sw::editor

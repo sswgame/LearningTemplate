@@ -2079,6 +2079,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 64 회전 단위 — 라디안을 `Units=deg` 라고 적었고, 인스펙터 · 시퀀서가 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다)
+
+남은 항목 "회전 단위". 트랜스폼 회전은 라디안으로 저장되는데(`setLocalRotation`, 직렬화 값도 라디안) PROPERTY 메타가 `Units=deg` 라고 적었고,
+인스펙터의 트랜스폼 섹션과 시퀀서의 회전 칸이 그 라디안을 날것으로 보이며 드래그 1 픽셀에 0.5 — 약 29 도 — 씩 움직였다. 일반 프로퍼티 칸도
+FOV · 스포트라이트 원뿔 각(`Units=rad`)을 라디안으로 보였다. 언리얼 Details(FRotator · FOV) · 유니티 인스펙터(`localEulerAngles` · `fieldOfView`
+· `spotAngle`)는 모두 도로 보인다.
+
+**저장은 라디안 그대로(파일 형식 · 엔진 API 불변), 에디터에서만 도로 보이고 고친다.** 메타를 사실대로 `Units=rad` 로 고쳤고, 인스펙터는 `Units` 에서
+보이는 단위를 정한다(`InspectorPropertyLayout::getDisplayUnit` — `rad` 는 배율 180/π · 도 단위 드래그 0.5 · "deg", 나머지는 글자만). 실수 칸 · float3 칸이
+그 배율로 보이고(범위 메타도 같은 배율) 바뀌었을 때만 나눠 되쓴다. 트랜스폼 섹션 · 시퀀서 회전 칸도 같은 규칙(`kAngleDragSpeed`).
+
+**검증.** `InspectorPropertyLayoutTest.RadianAnglesAreShownInDegrees`(회전 메타가 `rad` — 이전 코드에서 진다, 회전 · FOV 가 π/2 → 90 도 · 도 단위 드래그,
+위치는 배율 없이 "m"). 변이 셋(배율 · 드래그 속도 · 단위 글자)이 모두 실패했다. 트랜스폼 섹션 · 시퀀서의 ImGui 칸 자체는 시험 밖이다(EditorTest 는
+ImGui 를 링크하지 않는다). Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 63 틱 선언 · 등록부 계약 — 씬 컴포넌트의 onTick 이 조용히 안 돌았고, 다른 그룹의 선행 조건 · 범위 밖 그룹 · 우선순위 64+ 가 조용히 틀렸다)
 
 남은 항목 "컴포넌트 틱 선언 · 틱 등록부 계약". 넷이 모두 조용히 틀렸다.

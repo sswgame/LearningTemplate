@@ -7,6 +7,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -44,17 +45,16 @@ namespace sw::editor
                 ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
                 showTooltipIfHovered( prop );
             }
-            string getFormatWithUnits( const PropertyInfo& prop, const utf8* pDefaultFmt )
+            /** @brief 서식 뒤에 단위 글자를 붙입니다(`InspectorDisplayUnit::_suffix`). */
+            static string appendUnitSuffix( const utf8* pDefaultFmt, const string& suffix )
             {
-                const string* pUnits = prop.findCustomMeta( hashed_string( "Units" ) );
-                if ( pUnits != nullptr && pUnits->empty() == false )
+                string fmt = pDefaultFmt;
+                if ( suffix.empty() == false )
                 {
-                    string fmt = pDefaultFmt;
                     fmt += " ";
-                    fmt += *pUnits;
-                    return fmt;
+                    fmt += suffix;
                 }
-                return string{ pDefaultFmt };
+                return fmt;
             }
             bool isSliderRequested( const PropertyInfo& prop )
             {
@@ -238,23 +238,40 @@ namespace sw::editor
                 T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
+
+                // 보이는 단위(라디안 → 도)의 배율은 실수에만 건다. 정수는 단위를 글자로만 붙인다.
+                const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
+                const float64              scale     = Traits::kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
+                const float32              dragSpeed = ( Traits::kIsInteger == false && unit._dragSpeed > 0.0f ) ? unit._dragSpeed : Traits::kDragSpeed;
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer64> buf;
-                    formatstring( buf.data(), buf.capacity(), "%#", static_cast<typename Traits::Print>( *pPtr ) );
+                    if constexpr ( Traits::kIsInteger )
+                        formatstring( buf.data(), buf.capacity(), "%#", static_cast<typename Traits::Print>( *pPtr ) );
+                    else
+                        formatstring( buf.data(), buf.capacity(), "%#", static_cast<float64>( *pPtr ) * scale );
                     drawReadOnlyText( prop, buf.c_str() );
                     return true;
                 }
 
                 // 적힌 쪽만 막는다 — `Min = 0` 만 적은 프로퍼티는 위로 열려 있다(`PropertyMetadata::_bHasMinRange` 설명).
-                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._minRange ) : Traits::kMin;
-                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._maxRange ) : Traits::kMax;
+                const Widget minValue = ( prop._metadata._bHasMinRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._minRange * scale ) : Traits::kMin;
+                const Widget maxValue = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? static_cast<Widget>( prop._metadata._maxRange * scale ) : Traits::kMax;
                 const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
-                const string fmt      = getFormatWithUnits( prop, Traits::kFormat );
+                const string fmt      = appendUnitSuffix( Traits::kFormat, unit._suffix );
 
-                Widget widgetValue = static_cast<Widget>( *pPtr );
-                if ( drawNumberWidget( _pLabel, &widgetValue, Traits::kDragSpeed, minValue, maxValue, fmt.c_str(), bSlider ) )
-                    *pPtr = static_cast<T>( widgetValue );
+                Widget widgetValue{};
+                if constexpr ( Traits::kIsInteger )
+                    widgetValue = static_cast<Widget>( *pPtr );
+                else
+                    widgetValue = static_cast<Widget>( static_cast<float64>( *pPtr ) * scale );
+                if ( drawNumberWidget( _pLabel, &widgetValue, dragSpeed, minValue, maxValue, fmt.c_str(), bSlider ) )
+                {
+                    if constexpr ( Traits::kIsInteger )
+                        *pPtr = static_cast<T>( widgetValue );
+                    else
+                        *pPtr = static_cast<T>( static_cast<float64>( widgetValue ) / scale );
+                }
                 showTooltipIfHovered( prop );
                 InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
@@ -401,16 +418,25 @@ namespace sw::editor
                 float3* pPtr = prop.getValuePtr<float3>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
+                // 라디안으로 저장한 각도(`Units=rad`)는 도로 보이고 고친다 — 바뀌었을 때만 되쓴다.
+                const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( prop );
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
+                    const float3                          shown = *pPtr * unit._scale;
                     fixed_string<constant::kMaxBuffer128> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#)",
-                                  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ), Fmt( pPtr->_z, Format( 2 ) ) );
+                                  Fmt( shown._x, Format( 2 ) ), Fmt( shown._y, Format( 2 ) ), Fmt( shown._z, Format( 2 ) ) );
                     drawReadOnlyText( prop, buf.c_str() );
                     return true;
                 }
                 if ( isColorRequested( prop ) )
                     ImGui::ColorEdit3( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
+                else if ( unit._scale != 1.0f )
+                {
+                    float3 shown = *pPtr * unit._scale;
+                    if ( EditorWidgets::drawVec3Control( _pLabel, shown, 0.0f, 100.0f, unit._dragSpeed ) )
+                        *pPtr = shown * ( 1.0f / unit._scale );
+                }
                 else
                     EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
                 showTooltipIfHovered( prop );

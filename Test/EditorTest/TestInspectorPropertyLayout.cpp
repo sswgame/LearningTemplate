@@ -113,4 +113,39 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, TypeChainRunsFromBaseToDerived )
     SW_EXPECT_TRUE( meshAt < listType.size() - 1 );
 }
 
+/**
+ * @brief [InspectorPropertyLayoutTest] 라디안으로 저장한 각도는 도로 보인다 — 트랜스폼 회전 · FOV 가 같은 규칙이다
+ * @details 트랜스폼 회전은 라디안으로 저장되는데 메타가 `Units=deg` 라고 적었고, 인스펙터는 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
+ *          언리얼 Details(FRotator · FOV) · 유니티 인스펙터(`localEulerAngles` · `fieldOfView`)는 각도를 도로 보인다. 저장은 그대로 라디안이다.
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, RadianAnglesAreShownInDegrees )
+{
+    const PropertyInfo* pRotation = SceneComponent::StaticType()->findPropertyInHierarchy( hashed_string( "_localRotation" ) );
+    const PropertyInfo* pPosition = SceneComponent::StaticType()->findPropertyInHierarchy( hashed_string( "_localPosition" ) );
+    const PropertyInfo* pFov      = CameraComponent::StaticType()->findPropertyInHierarchy( hashed_string( "_fovY" ) );
+    SW_ASSERT_NOT_NULL( pRotation );
+    SW_ASSERT_NOT_NULL( pPosition );
+    SW_ASSERT_NOT_NULL( pFov );
+
+    // 저장 단위는 라디안이라고 적혀 있어야 한다(엔진의 `setLocalRotation` 이 받는 단위).
+    const string* pRotationUnits = pRotation->findCustomMeta( hashed_string( "Units" ) );
+    SW_ASSERT_NOT_NULL( pRotationUnits );
+    SW_EXPECT_EQUAL( string( "rad" ), *pRotationUnits );
+
+    for ( const PropertyInfo* pAngle : { pRotation, pFov } )
+    {
+        const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( *pAngle );
+        // pi/2 라디안이 90 도로 보인다.
+        SW_EXPECT_NEAR_EQUAL( 90.0f, 1.5707963f * unit._scale, 1e-3f );
+        SW_EXPECT_EQUAL( string( "deg" ), unit._suffix );
+        // 드래그는 도 단위다 — 한 픽셀이 1 도 이하.
+        SW_EXPECT_TRUE( unit._dragSpeed > 0.0f && unit._dragSpeed <= 1.0f );
+    }
+
+    // 각도가 아닌 단위는 배율 없이 글자만 붙는다.
+    const InspectorDisplayUnit meters = InspectorPropertyLayout::getDisplayUnit( *pPosition );
+    SW_EXPECT_EQUAL( 1.0f, meters._scale );
+    SW_EXPECT_EQUAL( string( "m" ), meters._suffix );
+}
+
 #endif // !SW_SHIPPING

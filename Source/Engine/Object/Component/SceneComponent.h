@@ -250,7 +250,7 @@ namespace sw
         PROPERTY( Name = "_localPosition", Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
         float3& getLocalPositionRef() { return _pTransformPage->_arrLocalPosition[getPageIndex()]; }
         /** @brief 로컬 회전 값의 자리(칸)입니다. 리플렉션은 이 함수로 `_localRotation` 을 찾습니다. */
-        PROPERTY( Name = "_localRotation", Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=deg" )
+        PROPERTY( Name = "_localRotation", Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=rad" )
         float3& getLocalRotationRef() { return _pTransformPage->_arrLocalRotation[getPageIndex()]; }
         /** @brief 로컬 스케일 값의 자리(칸)입니다. 리플렉션은 이 함수로 `_localScale` 을 찾습니다. */
         PROPERTY( Name = "_localScale", Category = "Transform", DisplayName = "Scale", Tooltip = "Local scale vector" )

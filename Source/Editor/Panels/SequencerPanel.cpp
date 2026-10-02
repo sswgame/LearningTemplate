@@ -2,12 +2,14 @@
 
 #include "Editor/Panels/SequencerPanel.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -191,12 +193,14 @@ namespace sw::editor
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
-            float32 arrRotation[3] = { item._rotation._x, item._rotation._y, item._rotation._z };
-            if ( ImGui::DragFloat3( "Rotation", arrRotation, 0.5f ) )
+            // 회전 델타는 라디안으로 저장하고(`setLocalRotation` 에 그대로 간다) 도로 보이고 고친다 — 인스펙터의 트랜스폼 섹션과 같은 규칙.
+            float32 arrRotation[3] = { item._rotation._x * MathUtil::RadianToDegree, item._rotation._y * MathUtil::RadianToDegree,
+                                       item._rotation._z * MathUtil::RadianToDegree };
+            if ( ImGui::DragFloat3( "Rotation", arrRotation, InspectorPropertyLayout::kAngleDragSpeed, 0.0f, 0.0f, "%.2f deg" ) )
             {
-                item._rotation._x = arrRotation[0];
-                item._rotation._y = arrRotation[1];
-                item._rotation._z = arrRotation[2];
+                item._rotation._x = arrRotation[0] * MathUtil::DegreeToRadian;
+                item._rotation._y = arrRotation[1] * MathUtil::DegreeToRadian;
+                item._rotation._z = arrRotation[2] * MathUtil::DegreeToRadian;
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );

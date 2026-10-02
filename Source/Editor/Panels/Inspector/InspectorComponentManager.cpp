@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -35,13 +36,14 @@ namespace sw::editor
                 EditorWidgets::drawGizmoOperationControls();
 
                 float3 pos = pSceneComp->getLocalPosition();
-                float3 rot = pSceneComp->getLocalRotation();
-                float3 scl = pSceneComp->getLocalScale();
+                // 회전은 라디안으로 저장하고 도로 보이고 고친다(언리얼 FRotator · 유니티 localEulerAngles). 예전에는 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
+                float3 rotDegree = pSceneComp->getLocalRotation() * MathUtil::RadianToDegree;
+                float3 scl       = pSceneComp->getLocalScale();
 
                 if ( EditorWidgets::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
                     pSceneComp->setLocalPosition( pos );
-                if ( EditorWidgets::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
-                    pSceneComp->setLocalRotation( rot );
+                if ( EditorWidgets::drawVec3Control( "Rotation", rotDegree, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
+                    pSceneComp->setLocalRotation( rotDegree * MathUtil::DegreeToRadian );
                 if ( EditorWidgets::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
                     pSceneComp->setLocalScale( scl );
 
