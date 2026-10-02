@@ -100,12 +100,6 @@ cd build/Ninja-Debug/Bin
 - **(진행 중) 렌더 패스 종류** — 패스 하나의 사실이 7 곳(registerPso 목록 · `EngineData` 셰이더 필드 · `ShaderBakeRequest` 문자열 체인 · `executePass`
   else-if · `FrameRendererUtil` 술어 다섯 · 입력 계약 · 트랜지언트 특례)에 흩어져 있다. 베이크 체인이 `"PostBloom"`(enum 은 `Bloom`) · 지운 별칭
   `"Shading"` 을 비교한다. → `RenderPassTypeTraits` 표 하나를 런타임과 베이커가 enum 으로 훑는다.
-- **(진행 중) 에디터 에셋 종류의 동작** — 표(`kArrAssetKind`) 밖의 if-체인: 테마 아이콘 · 색(`EditorThemeUtil.cpp`), 썸네일(`ContentBrowserPanel.cpp`),
-  실행기 분류(`EditorAssetCommands.cpp` `tryClassifyResourceFile` — Data 가 표와 다르다), `openPath` 의 죽은 Material 분기 · 읽는 곳 없는
-  `InspectMode::Asset`, `dropAt`. 도구 문서 load/save 다섯 쌍(`EditorToolAssetCommands`). → 표 칸 + `IEditorAssetTypeActions` 등록 + 템플릿.
-- **(진행 중) 엔진 다섯** — `releaseModuleCode` 의 보유자 손 목록(→ `IModuleCodeHolder` 자기 등록, 1-5 첫 항목), `GpuLightBuffer` 의 광원 종류
-  if + `static_cast`(→ 가상), `parseAttachmentFormat` 이 `RHIFormat` 14 중 4 개만 앎 · `parseArchetype` 조용한 폴백(→ 리플렉션 enum),
-  `ResourcePackReader` 가 코덱 등록부를 우회하는 switch, `ActionMapGlyph` 의 `BindingKind` else-if(→ 빠짐없는 switch).
 - **에디터 확장 지점을 손으로 채운다** — 패널(`EditorPanelManager.cpp` include 18 + 등록 18), 팝업(`EditorPopupManager.cpp`), 컴포넌트 인스펙터
   (`InspectorComponentManager.cpp` 에 클래스 넷이 다 들어 있다), 뷰포트 시각화(`EditorViewportVisualizer.cpp`), 명령 표 27 줄 + 메뉴 배치 손 목록
   (`EditorMenuBar.cpp` — 줄의 `_pCategory` 가 메뉴를 몰지 않는다). GameFramework · 킷 컴포넌트는 에디터 중앙 파일을 고치지 않고는 인스펙터 · 시각화를
@@ -165,6 +159,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **파이프라인 검증이 렌더 타깃이 될 수 없는 포맷을 첨부 포맷으로 받는다**(`RenderPipelineResource::validate` — 리플렉션 이름이면 `Unknown` · BC* 도 통과).
+  `parseAttachmentFormat` 은 모르는 이름을 R8G8B8A8_UNORM 으로 명시 폴백한다. 렌더 타깃 가능 포맷 판정(`RHIFormat` 특성)을 검증에 넣는다.
+
 - **거울 변환(음수 행렬식)에서 컬 모드를 뒤집지 않는다.** 노멀은 `swComputeWorldNormal` 가 바깥으로 맞추지만 래스터 컬은 그대로라, 뒤집힌 메시가 안쪽 면으로
   그려진다. `gbuffernormal.hlsl`(MRT 없는 폴백)은 네 백엔드가 모두 MRT 라 시험 밖이다.
 - **런타임은 DDS 만 읽는다.** `Texture2D` → `DdsLoader` 뿐이라 에디터에서 떨군 PNG 는 경로만 걸리고 그려지지 않는다. 텍스처 임포터 · 쿠킹의 몫이다
@@ -207,9 +204,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-5. 핫 리로드 · 모듈
 
-- **`engine::releaseModuleCode` 가 훑지 않는 등록부가 남았다.** 지금 넷(이벤트 구독 · 로그 리스너 · Undo · 창 처리기)만 뗀다. 빠진 것: `InputManager`
-  콜백 넷(`setTextInputCallback` 등), `KeyboardDevice` · `GamepadDevice` 콜백, `EventDispatcher` 의 `_mapChannelQueue`(큐에 쌓인 이벤트),
-  `ResourceManager::registerAssetCache`(모듈이 올린 캐시는 언로드 뒤 죽은 vtable). 지금은 다는 모듈이 없어 잠재 결함이다. 1-0 의 보유자 등록부 작업이 이 목록을 없앤다.
+- **`IModuleCodeHolder` 가 아닌 등록부가 남았다.** `releaseModuleCode` 는 보유자 목록(이벤트 구독 · 로그 리스너 · Undo · 창 · 에셋 캐시)을 훑는다. 빠진 것:
+  `InputManager` 콜백 넷(`setTextInputCallback` 등), `KeyboardDevice` · `GamepadDevice` 콜백, `EventDispatcher` 의 `_mapChannelQueue`(큐에 쌓인 이벤트).
+  각각 `IModuleCodeHolder` 를 상속해 스스로 등록하면 된다. 지금은 다는 모듈이 없어 잠재 결함이다.
 - **결함 · commit 실패 때 옛 이미지로 되돌리는 길이 없다.** `onAfterReload` 결함을 잡으면 인스턴스를 버리고 `markGraphBroken` 으로 이후 리로드를 막는다
   (재시작 필요). cr.h 식 "옛 이미지 + 스냅샷 되돌리기" 는 없다. 함정: 결함을 잡은 뒤는 소멸자 미실행 · 락을 쥔 상태다.
 - **리로드 트리거가 mtime 디바운스다.** "빌드 성공 뒤" 로 좁히지 않아, 연쇄 중 일부 모듈만 새로 써진 상태가 올라갈 여지가 있다(헤더 불일치는 ABI 도장이 막는다).
@@ -442,6 +439,11 @@ cd build/Ninja-Debug/Bin
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest`, `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
+
+- **`ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙는다** — 문구 비교는 startsWith 가 아니라 포함 여부로.
+- **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
+  줄끝이 체크아웃과 다르면(git 은 같은 파일로 본다) main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다.
+  워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
 
 - **진단 도구 표는 `docs/01_GettingStarted.md` §5** 가 정본이다(`-gv_dumpReflection=…`, `ReflectionParser --dump`, `-gv_dumpRenderGraph=1`, `'A' waits on 'B'`,
   `경로:줄:열: 이유`, `[SW_ASSERT]` stderr, `-gv_screenshot`). 시험 도우미도 거기 있다.
@@ -776,10 +778,14 @@ cd build/Ninja-Debug/Bin
 
 ### 3-8. 에디터
 
+- **에셋 종류 하나 = `EditorAssetKind` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
+  임포트) 각 한 줄 + 필요하면 `Source/Editor/AssetActions/<Kind>AssetTypeActions.cpp`(썸네일 · 열기 · 드롭, 정적 등록).** 종류별 if-체인을 다시 만들지 말 것 —
+  칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
+
 - **에디터는 `-EnableEditor` 로 켜야 뜬다.** 에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙인다(`-gv_editorPanelDump` 는 스스로 끝나지 않는다). 창 수가 모자라면 코드보다 로컬
   `Config/Editor/windows.ini` · `imgui.ini` 를 먼저 본다(추적하지 않는 파일 — 세션 간 픽셀 비교도 이것 때문에 안 된다). `-gv_editorOpenPanel=<id|all>`.
 - **에디터 커맨드 정본은 `Common/Gui/EditorCommandGui.cpp` 의 표 하나**(메뉴 · 단축키 · 팔레트, `EditorCommandRegistry::validate` 가 중복 조합을 잡는다). 한 줄짜리 래퍼는 이유가 있어
-  남았다(파일 머리) — "마저 정리" 하지 말 것. 확장자 정본은 `EditorAssetTypeRegistry`(`AssetKindRow` 한 줄), 핫 리로드 경로도 같은 줄의 칸(`_pCacheKindName` · `_pfnImportSource`)이다. 복합 접미사
+  남았다(파일 머리) — "마저 정리" 하지 말 것. 확장자 정본은 `EditorAssetTypeRegistry`(`kArrAssetMatch` 한 줄), 핫 리로드 경로도 같은 줄의 칸(`_pCacheKindName` · `_pfnImportSource`)이다. 복합 접미사
   `.prefab.xml` 은 접미사 비교로(`hasExtension` 은 마지막 점 뒤만 본다).
 - **nullable 조회는 받아서 확인하고 쓴다** — `editor::getService<T>()` · `game::getService<T>()` · `EditorContext::get()`. 나중에 불리는 람다 안에서는 다시 받는다. `getService<…>()->` 꼴은
   `CheckNullableServiceUse` 가 막는다. `game::areGameServicesBound()` 는 SceneManager 슬롯 하나만 본다. 진단용 서비스는 `OPT` 로 등록한다(required 면 `areEngineServicesBound()` 가 영영 false).
@@ -802,6 +808,9 @@ cd build/Ninja-Debug/Bin
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
+
+- **모듈 코드를 쥘 수 있는 등록부는 `IModuleCodeHolder` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
+  엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
 
 - **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
   말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 굽는 종류는 `_pfnImportSource`).
