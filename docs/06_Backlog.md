@@ -2079,6 +2079,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 52 계층 — 다른 씬의 부모에 붙었고(해제 후 사용), 소켓을 거치면 두 오브젝트가 서로의 부모가 됐다)
+
+(B) 스물다섯째의 남은 것 "부모 관계의 순환 · 매니저 검사". 붙이는 길은 자기 · null · 컴포넌트 사슬의 순환만 봤다.
+- **다른 매니저(씬)의 부모가 붙었다.** 자식은 자기 매니저의 루트 목록에서 빠지고, **부모 쪽 루트**가 자식 매니저의 더티 루트 목록에 올랐다.
+  부모 매니저가 그 루트를 파괴해도 자식 매니저는 몰라 다음 플러시가 해제된 컴포넌트를 읽는다. 틱 중이면 미룬 붙이기가 자기 매니저로 부모를
+  찾다 못 찾고 버렸는데 호출은 true 였다.
+- **소켓을 거치면 오브젝트 순환이 생겼다.** 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 라, A 의 primary → B 의 소켓, B 의 primary →
+  A 의 소켓은 컴포넌트 사슬 검사를 통과한다. 그 뒤 둘 밖의 오브젝트에 대한 `isDescendantOf` 는 끝나지 않는다(에디터의 순환 검사가 부른다).
+- 파괴 대기 중인 부모도 받았다(부모가 실제로 없어질 때 떨어져 자리가 튄다).
+
+`SceneComponent::canAttachTo` 하나가 이 규칙을 들고, 붙이는 길(컴포넌트 · 틱 중 미룸 · `GameObject::attachToParent`)이 **미루기 전에** 묻는다.
+언리얼 `AttachToComponent` 는 자기 · 순환을 거절하고, 유니티는 계층이 씬을 넘지 않는다 — 같은 규칙이다.
+
+**검증.** `GameObjectTest.AttachAcrossManagersIsRejected` · `SocketsCannotFormAnObjectCycle` · `AttachToADyingParentIsRejected`,
+`SceneComponentTest.AttachInsideTickIsRejectedBeforeItIsDeferred`(목 `MockTickSceneComponent::_pTryParentOnTick`). 변이 넷(매니저 검사 · 오브젝트 순환 ·
+파괴 대기 · 오브젝트 단위의 미루기 전 검사)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 51 셰이더 캐시 — Debug 의 실시간 컴파일이 디버그 코드젠을 `-opt` 자리에 썼고, 핫 리로드는 최적화 코드젠으로 덮어썼다)
 
 구조 ④ 를 쫓다 본 것. 로컬 캐시 경로(`Saved/ShaderCache/<rhi>/<유효 소스 해시>-<opt|dbg>/`)는 "같은 소스라도 코드젠이 다르면 다른 파일" 이라는 규칙인데,

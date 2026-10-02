@@ -1073,6 +1073,84 @@ SW_TEST_CASE( GameObjectTest, SocketChildIsListedAndDestroyedWithOwner )
 }
 
 /**
+ * @brief 다른 매니저(씬)의 부모에는 붙지 않는다 — 계층이 두 씬에 걸치지 않는다
+ * @details 예전에는 붙었고, 자식 매니저의 더티 루트 목록에 **부모 매니저의 루트**가 올랐다. 부모 매니저가 그 루트를 파괴해도 자식 매니저는
+ *          몰라 다음 플러시가 해제된 컴포넌트를 읽었다. 틱 중이면 미룬 붙이기가 자기 매니저로 부모를 찾다 못 찾고 버렸는데 호출은 true 였다.
+ */
+SW_TEST_CASE( GameObjectTest, AttachAcrossManagersIsRejected )
+{
+    sw::GameObjectManager managerChild;
+    sw::GameObjectManager managerParent;
+    sw::GameObject*       pChild    = managerChild.createGameObject( sw::hashed_string( "Child" ) );
+    sw::GameObject*       pParent   = managerParent.createGameObject( sw::hashed_string( "Parent" ) );
+    sw::SceneComponent*   pChildSc  = pChild->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pParentSc = pParent->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pChildSc );
+    SW_ASSERT_NOT_NULL( pParentSc );
+
+    test::ScopedDefensiveTestLog defensive( "attaching across two object managers" );
+    SW_EXPECT_FALSE( pChildSc->canAttachTo( pParentSc ) );
+    SW_EXPECT_FALSE( pChildSc->attachToComponent( pParentSc ) );
+    SW_EXPECT_FALSE( pChild->attachToParent( pParent ) );
+    SW_EXPECT_TRUE( pChildSc->getParent() == nullptr );
+    SW_EXPECT_TRUE( pChild->getParent() == nullptr );
+}
+
+/**
+ * @brief 소켓을 거쳐도 오브젝트끼리 서로의 부모가 되지 않는다
+ * @details 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 다. A 의 primary 를 B 의 소켓에, B 의 primary 를 A 의 소켓에 붙이면
+ *          컴포넌트 사슬은 어디서도 돌지 않아 예전 검사를 통과했고, 오브젝트 A · B 가 서로의 부모가 됐다 — 그 뒤로 둘 밖의 오브젝트에 대한
+ *          `isDescendantOf` 는 끝나지 않는다(에디터의 순환 검사가 그것을 부른다).
+ */
+SW_TEST_CASE( GameObjectTest, SocketsCannotFormAnObjectCycle )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pA       = manager.createGameObject( sw::hashed_string( "A" ) );
+    sw::GameObject*       pB       = manager.createGameObject( sw::hashed_string( "B" ) );
+    sw::SceneComponent*   pRootA   = pA->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pSocketA = pA->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pRootB   = pB->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pSocketB = pB->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pA->getPrimarySceneComponent() == pRootA );
+    SW_ASSERT_TRUE( pB->getPrimarySceneComponent() == pRootB );
+
+    SW_ASSERT_TRUE( pRootA->attachToComponent( pSocketB ) );
+    SW_ASSERT_TRUE( pA->getParent() == pB );
+
+    test::ScopedDefensiveTestLog defensive( "an object cycle through sockets" );
+    SW_EXPECT_FALSE( pRootB->canAttachTo( pSocketA ) );
+    SW_EXPECT_FALSE( pRootB->attachToComponent( pSocketA ) );
+    SW_EXPECT_FALSE( pB->attachToParent( pA ) );
+    // 둘 다 순환 안의 오브젝트라 순환이 생겼어도 이 검사는 끝난다(밖의 오브젝트로 묻지 않는다).
+    SW_EXPECT_TRUE( pA->isDescendantOf( pB ) );
+    SW_EXPECT_FALSE( pB->isDescendantOf( pA ) );
+    SW_EXPECT_TRUE( pB->getParent() == nullptr );
+    // 소켓은 primary 가 아니라 오브젝트의 부모를 바꾸지 않는다 — 같은 자리라도 소켓끼리는 붙는다.
+    SW_EXPECT_TRUE( pSocketA->canAttachTo( pRootB ) );
+}
+
+/**
+ * @brief 파괴 대기 중인 부모에는 붙지 않는다
+ * @details 붙은 자식은 부모 컴포넌트가 실제로 없어질 때 떨어져 월드 자리가 튄다. 언리얼 · 유니티처럼 지워지는 부모는 받지 않는다.
+ */
+SW_TEST_CASE( GameObjectTest, AttachToADyingParentIsRejected )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pChild    = manager.createGameObject( sw::hashed_string( "Child" ) );
+    sw::GameObject*       pParent   = manager.createGameObject( sw::hashed_string( "Parent" ) );
+    sw::SceneComponent*   pChildSc  = pChild->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pParentSc = pParent->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pChildSc->canAttachTo( pParentSc ) );
+
+    manager.destroyObject( pParent, false );
+    SW_ASSERT_TRUE( pParent->isPendingDestroy() );
+    SW_EXPECT_FALSE( pChildSc->canAttachTo( pParentSc ) );
+    SW_EXPECT_FALSE( pChildSc->attachToComponent( pParentSc ) );
+    SW_EXPECT_TRUE( pChildSc->getParent() == nullptr );
+    manager.processDeferredDestruction();
+}
+
+/**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
  *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진

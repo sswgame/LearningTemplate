@@ -187,22 +187,25 @@ namespace sw
         REFLECT_BODY();
 
         float3*                _pObservedWorld;
-        SceneComponent*        _pWatchedComp;    ///< 틱 안에서 이 컴포넌트의 로컬 · 월드 위치를 읽어 둔다 — 다른 오브젝트가 틱 중에 보는 값을 본다
-        float3                 _watchedLocalPos; ///< 틱 안에서 읽은 `_pWatchedComp` 의 로컬 위치
-        float3                 _watchedWorldPos; ///< 틱 안에서 읽은 `_pWatchedComp` 의 월드 위치
+        SceneComponent*        _pWatchedComp;     ///< 틱 안에서 이 컴포넌트의 로컬 · 월드 위치를 읽어 둔다 — 다른 오브젝트가 틱 중에 보는 값을 본다
+        GameObject*            _pTryParentOnTick; ///< 틱 안에서 자기 오브젝트를 이 오브젝트에 붙여 본다 — 결과는 `_bAttachAcceptedInTick`
+        float3                 _watchedLocalPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 로컬 위치
+        float3                 _watchedWorldPos;  ///< 틱 안에서 읽은 `_pWatchedComp` 의 월드 위치
         float3                 _tickLocalPos;
         float3                 _tickLocalScale;
-        uint8                  _bWriteLocalOnTick : 1;
-        uint8                  _bWriteScaleOnTick : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
-        uint8                  _bWriteTwiceOnTick : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
-        uint8                  _bDetachOnTick     : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
-        uint8                  _bParentKeptInTick : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
-        [[maybe_unused]] uint8 _reserved          : 3;
+        uint8                  _bWriteLocalOnTick     : 1;
+        uint8                  _bWriteScaleOnTick     : 1; ///< 위치에 이어 스케일도 쓴다 — 같은 컴포넌트에 잇따른 두 세터
+        uint8                  _bWriteTwiceOnTick     : 1; ///< 위치를 두 번 쓴다(먼저 엉뚱한 값) — 마지막 값이 이겨야 한다
+        uint8                  _bDetachOnTick         : 1; ///< 틱에서 자기를 부모에서 뗀다 — 틱 중이라 미뤄져야 한다
+        uint8                  _bParentKeptInTick     : 1; ///< 뗀 직후에도 부모가 그대로였는지(미뤄졌는지) 기록한다
+        uint8                  _bAttachAcceptedInTick : 1; ///< 틱 안의 `attachToParent( _pTryParentOnTick )` 가 true 를 돌려줬는지
+        [[maybe_unused]] uint8 _reserved              : 2;
         int32                  _worldUpdateCount; ///< `onWorldTransformUpdated` 가 불린 횟수 — 합성 경로가 훅을 빠뜨리지 않는지 본다
 
         MockTickSceneComponent()
             : _pObservedWorld{ nullptr }
             , _pWatchedComp{ nullptr }
+            , _pTryParentOnTick{ nullptr }
             , _watchedLocalPos{}
             , _watchedWorldPos{}
             , _tickLocalPos{}
@@ -212,6 +215,7 @@ namespace sw
             , _bWriteTwiceOnTick{ SW_FALSE }
             , _bDetachOnTick{ SW_FALSE }
             , _bParentKeptInTick{ SW_FALSE }
+            , _bAttachAcceptedInTick{ SW_FALSE }
             , _reserved{ 0 }
             , _worldUpdateCount{ 0 }
         {
@@ -251,6 +255,8 @@ namespace sw
                 detachFromComponent();
                 _bParentKeptInTick = ( getParent() != nullptr ) ? SW_TRUE : SW_FALSE;
             }
+            if ( _pTryParentOnTick != nullptr && getOwner() != nullptr )
+                _bAttachAcceptedInTick = getOwner()->attachToParent( _pTryParentOnTick ) ? SW_TRUE : SW_FALSE;
         }
     };
 

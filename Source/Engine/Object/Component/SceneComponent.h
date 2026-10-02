@@ -116,8 +116,17 @@ namespace sw
          */
         void updateWorldTransformFromParent();
 
-        /** @brief 부모 SceneComponent 에 붙입니다. */
+        /** @brief 부모 SceneComponent 에 붙입니다. 붙일 수 없는 부모(`canAttachTo` 가 false)면 아무것도 하지 않고 false 입니다. */
         bool attachToComponent( SceneComponent* pParent );
+        /**
+         * @brief @p pParent 에 붙일 수 있는지 봅니다. 붙이는 길(직접 · 틱 중 미룸 · 오브젝트 단위)이 모두 이것을 먼저 묻습니다.
+         * @details 안 되는 것: 자기 자신 · null · **다른 매니저(씬)의 부모**(계층이 두 매니저에 걸치면 한쪽의 더티 루트 목록에 다른 쪽
+         *          루트가 오르고, 그 루트가 파괴되면 남은 포인터를 플러시가 읽는다) · 파괴 대기 중인 부모 · 컴포넌트 사슬의 순환 · **오브젝트
+         *          사슬의 순환**(primary 가 아닌 컴포넌트(소켓)를 거치면 컴포넌트 사슬은 끊겨 있어도 오브젝트는 서로의 부모가 될 수 있다 —
+         *          그러면 `GameObject::isDescendantOf` 가 끝나지 않는다). 언리얼 `AttachToComponent` 가 자기 · 순환을 거절하고, 유니티는
+         *          계층이 씬을 넘지 않게 하는 것과 같은 규칙입니다.
+         */
+        bool canAttachTo( const SceneComponent* pParent ) const;
 
         /** @brief 부모 컴포넌트에서 뗍니다(틱 중이면 미룹니다). */
         void detachFromComponent();

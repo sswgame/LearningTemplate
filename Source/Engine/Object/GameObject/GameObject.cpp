@@ -208,7 +208,15 @@ namespace sw
         if ( getParent() == pParent )
             return true;
 
+        // 미루기 **전에** 거른다. 미룬 일은 자기 매니저로 부모를 다시 찾으므로 다른 매니저의 부모는 그때 조용히 사라지고, 순환은 그때야
+        // 실패하는데 이 호출은 이미 true 를 돌려준 뒤다. 붙는 자리의 나머지 규칙은 `SceneComponent::canAttachTo` 가 본다.
         GameObjectManager* pManager = getManager();
+        if ( pParent->getManager() != pManager || pParent->isDescendantOf( this ) )
+        {
+            SW_LOG_WARNING( "attachToParent: '%#' cannot become the parent of '%#' (another scene, or its own descendant)", pParent->getName().c_str(),
+                            getName().c_str() );
+            return false;
+        }
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId  = _objectId;

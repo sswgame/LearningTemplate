@@ -292,6 +292,33 @@ SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
 }
 
 /**
+ * @brief [SceneComponentTest] 틱 안에서 붙일 수 없는 부모에 붙이면 미루기 전에 false 다
+ * @details 틱 중의 붙이기는 틱 뒤로 미뤄지는데, 미룬 일은 자기 매니저로 부모를 다시 찾는다. 다른 매니저의 부모는 그때 못 찾고 조용히
+ *          버려졌고 호출은 이미 true 를 돌려준 뒤였다 — 부른 쪽은 붙었다고 믿는다. 거르는 것은 미루기 전이다.
+ */
+SW_TEST_CASE( SceneComponentTest, AttachInsideTickIsRejectedBeforeItIsDeferred )
+{
+    sw::GameObjectManager managerChild;
+    sw::GameObjectManager managerParent;
+    sw::RegisterMockComponents( managerChild );
+
+    sw::GameObject* pParent = managerParent.createGameObject( sw::hashed_string( "OtherSceneParent" ) );
+    SW_ASSERT_NOT_NULL( pParent->addComponent<sw::SceneComponent>() );
+    sw::GameObject*             pChild     = managerChild.createGameObject( sw::hashed_string( "TickChild" ) );
+    sw::MockTickSceneComponent* pChildComp = pChild->addComponent<sw::MockTickSceneComponent>();
+    SW_ASSERT_NOT_NULL( pChildComp );
+
+    pChildComp->_pTryParentOnTick      = pParent;
+    pChildComp->_bAttachAcceptedInTick = SW_TRUE;
+    {
+        test::ScopedDefensiveTestLog defensive( "attaching to another scene's object inside a tick" );
+        managerChild.tick( 0.016f );
+    }
+    SW_EXPECT_FALSE( pChildComp->_bAttachAcceptedInTick == SW_TRUE );
+    SW_EXPECT_TRUE( pChild->getParent() == nullptr );
+}
+
+/**
  * @brief [SceneComponentTest] 플러시 전에 월드 값을 읽어도 렌더 프리미티브는 더티로 남는다.
  * @details 지연 합성(`getWorldPosition` 등)이 월드 캐시를 채우며 더티를 지웠지만 갱신 훅은 부르지 않았다. 그 노드는 이제 더티가
  *          아니라 플러시가 건너뛰고, 렌더 더티는 훅에서만 찍히므로 **아무도 찍지 않았다** — 인스펙터가 메시 위치를 세팅하고 곧장

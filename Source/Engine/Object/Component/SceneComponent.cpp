@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "SceneComponent" );
+
     SceneComponent::SceneComponent()
         : _attachOwner{}
         , _attachComponent{}
@@ -278,8 +280,51 @@ namespace sw
         } );
     }
 
+    bool SceneComponent::canAttachTo( const SceneComponent* pParent ) const
+    {
+        if ( pParent == nullptr || pParent == this )
+            return false;
+
+        // 다른 매니저의 부모. 예전에는 붙었고, 자기 매니저의 루트 목록에서 빠진 뒤 **부모 쪽 루트**를 자기 매니저의 더티 루트 목록에
+        // 올렸다. 부모 매니저가 그 루트를 파괴해도 이쪽 목록은 모르니 다음 플러시가 해제된 컴포넌트를 읽었다. 틱 중이면 미룬 붙이기가 자기
+        // 매니저로 부모를 다시 찾아 못 찾고 조용히 버렸는데, 호출은 true 를 돌려줬다.
+        if ( pParent->_pManager != _pManager )
+        {
+            SW_LOG_WARNING( "attachToComponent: the parent belongs to another object manager (scene) - a hierarchy cannot span two scenes" );
+            return false;
+        }
+        const GameObject* pParentOwner = pParent->getOwner();
+        if ( pParent->isPendingDestroy() || ( pParentOwner != nullptr && pParentOwner->isPendingDestroy() ) )
+            return false;
+
+        // 컴포넌트 사슬의 순환.
+        for ( const SceneComponent* pAncestor = pParent; pAncestor != nullptr; pAncestor = pAncestor->_pParent )
+        {
+            if ( pAncestor == this )
+                return false;
+        }
+
+        // 오브젝트 사슬의 순환. 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 라, 붙는 것이 소유자의 primary 일 때만 오브젝트의
+        // 부모가 바뀐다. 소켓을 거치면 위의 컴포넌트 검사는 통과한다(A 의 primary → B 의 소켓, B 의 primary → A 의 소켓).
+        const GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && pParentOwner != nullptr && pParentOwner != pOwner && pOwner->getPrimarySceneComponent() == this &&
+             pParentOwner->isDescendantOf( pOwner ) )
+        {
+            SW_LOG_WARNING( "attachToComponent: '%#' would become a descendant of its own child '%#' - rejected", pOwner->getName().c_str(),
+                            pParentOwner->getName().c_str() );
+            return false;
+        }
+        return true;
+    }
+
     bool SceneComponent::attachToComponent( SceneComponent* pParent )
     {
+        // 이미 그 부모면 할 일이 없다(성공). 나머지는 틱 중이든 아니든 **여기서** 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
+        if ( pParent != nullptr && _pParent == pParent )
+            return true;
+        if ( canAttachTo( pParent ) == false )
+            return false;
+
         if ( isInParallelTick() )
         {
             GameObjectManager*        pManager     = _pManager;
@@ -293,23 +338,6 @@ namespace sw
                     pSelf->attachToComponent( pResolvedParent );
             } );
             return true;
-        }
-
-        if ( pParent == this )
-            return false;
-
-        if ( _pParent == pParent )
-            return true;
-
-        if ( pParent == nullptr )
-            return false;
-
-        SceneComponent* pAncestor = pParent;
-        while ( pAncestor != nullptr )
-        {
-            if ( pAncestor == this )
-                return false;
-            pAncestor = pAncestor->_pParent;
         }
 
         detachFromComponent();
