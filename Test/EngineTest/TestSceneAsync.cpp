@@ -45,8 +45,8 @@ namespace sw
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_async.xml" );
-    const sw::string binPath = test::makeTempPath( "sw_test_scene_async.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_async.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_async.scene.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"0\" name=\"AsyncTown\">\n"
@@ -94,8 +94,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
  */
 SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSameName )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_carry.xml" );
-    const sw::string binPath = test::makeTempPath( "sw_test_scene_carry.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_carry.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_carry.scene.bin" );
     const sw::string xmlStr  = "<Scene formatVersion=\"0\" name=\"Dungeon\"><entities><entity name=\"MusicPlayer\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     sw::SceneDocument doc{};
@@ -146,8 +146,8 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
  */
 SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.xml" );
-    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.scene.bin" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"DescOnly\"><entities><entity name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
@@ -173,7 +173,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
  */
 SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
 {
-    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.bin" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.scene.bin" );
 
     sw::SceneDocument originalDoc{};
     originalDoc._name = "BinaryTestScene";
@@ -207,10 +207,10 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
 {
-    const sw::string townA = test::makeTempPath( "sw_test_warp_a.xml" );
-    const sw::string binA  = test::makeTempPath( "sw_test_warp_a.bin" );
-    const sw::string townB = test::makeTempPath( "sw_test_warp_b.xml" );
-    const sw::string binB  = test::makeTempPath( "sw_test_warp_b.bin" );
+    const sw::string townA = test::makeTempPath( "sw_test_warp_a.scene.xml" );
+    const sw::string binA  = test::makeTempPath( "sw_test_warp_a.scene.bin" );
+    const sw::string townB = test::makeTempPath( "sw_test_warp_b.scene.xml" );
+    const sw::string binB  = test::makeTempPath( "sw_test_warp_b.scene.bin" );
     const sw::string xmlA =
         "<Scene formatVersion=\"0\" name=\"TownA\"><entities><entity name=\"A\"/></entities></Scene>";
     const sw::string xmlB =
@@ -260,8 +260,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_replace.xml" );
-    const sw::string binPath = test::makeTempPath( "sw_test_scene_replace.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_replace.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_replace.scene.bin" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"Replaced\"><entities><entity name=\"Only\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
@@ -344,8 +344,8 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
  */
 SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_future_scene.xml" );
-    const sw::string binPath = test::makeTempPath( "sw_test_future_scene.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_future_scene.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_future_scene.scene.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"0\" name=\"FutureTown\">\n"
@@ -406,8 +406,8 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
     for ( int32 index = 0; index < 3; ++index )
     {
         const sw::string name    = sw::string( "StressScene_" ) + sw::string( std::to_string( index ).c_str() );
-        const sw::string xmlPath = test::makeTempPath( ( name + ".xml" ).c_str() );
-        const sw::string binPath = test::makeTempPath( ( name + ".bin" ).c_str() );
+        const sw::string xmlPath = test::makeTempPath( ( name + ".scene.xml" ).c_str() );
+        const sw::string binPath = test::makeTempPath( ( name + ".scene.bin" ).c_str() );
 
         const sw::string xmlStr = "<Scene formatVersion=\"0\" name=\"" + name + "\"><entities><entity name=\"E\"/></entities></Scene>";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) );
@@ -458,12 +458,12 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
  */
 SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
 {
-    const sw::string pathA = test::makeTempPath( "sw_test_queued_a.xml" );
-    const sw::string binA  = test::makeTempPath( "sw_test_queued_a.bin" );
-    const sw::string pathB = test::makeTempPath( "sw_test_queued_b.xml" );
-    const sw::string binB  = test::makeTempPath( "sw_test_queued_b.bin" );
-    const sw::string pathC = test::makeTempPath( "sw_test_queued_c.xml" );
-    const sw::string binC  = test::makeTempPath( "sw_test_queued_c.bin" );
+    const sw::string pathA = test::makeTempPath( "sw_test_queued_a.scene.xml" );
+    const sw::string binA  = test::makeTempPath( "sw_test_queued_a.scene.bin" );
+    const sw::string pathB = test::makeTempPath( "sw_test_queued_b.scene.xml" );
+    const sw::string binB  = test::makeTempPath( "sw_test_queued_b.scene.bin" );
+    const sw::string pathC = test::makeTempPath( "sw_test_queued_c.scene.xml" );
+    const sw::string binC  = test::makeTempPath( "sw_test_queued_c.scene.bin" );
 
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [=]()
     {
@@ -525,7 +525,7 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
     static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
     (void)sw::MockAudioComponent::StaticType();
 
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory.xml" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory.scene.xml" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"LateFactory\">\n"
         "  <entities>\n"
@@ -540,7 +540,7 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
         "</Scene>\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     // Shipping 은 구운 바이너리 씬만 읽는다. 같은 문서를 옆에 굽는다.
-    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory.bin" );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory.scene.bin" );
     sw::SceneDocument cooked{};
     SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
@@ -574,7 +574,7 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePat
     static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
     (void)sw::MockAudioComponent::StaticType();
 
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory_queued.xml" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory_queued.scene.xml" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"LateFactoryQueued\">\n"
         "  <entities>\n"
@@ -588,7 +588,7 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePat
         "  </entities>\n"
         "</Scene>\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
-    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory_queued.bin" );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory_queued.scene.bin" );
     sw::SceneDocument cooked{};
     SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
@@ -624,14 +624,14 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePat
  */
 SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 {
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.xml" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.scene.xml" );
     const sw::string xmlStr  = "<Scene formatVersion=\"0\" name=\"SaveBlock\"><entities><entity name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
-    const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.bin" );
+    const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.scene.bin" );
     sw::SceneDocument cooked{};
     SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
-    const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.xml" );
+    const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.scene.xml" );
     sw::FileUtil::removeFile( savePath );
 
     sw::SceneManager manager;

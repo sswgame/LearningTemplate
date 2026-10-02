@@ -736,7 +736,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
 
 /**
  * @brief [ResourceTest] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
- * @details 이 형식은 `CookAssets.py buildAssetRegistryInternal` 이 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
+ * @details 이 형식은 엔진 쿠킹 단계(`AssetDatabase::makeRegistryText`)가 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
  */
 SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
 {
@@ -757,6 +757,73 @@ SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
     sw::Uuid outGuid{};
     SW_EXPECT_TRUE( db.tryGetGuid( "engine/materials/defaultmaterial.material", outGuid ) );
     SW_EXPECT_TRUE( outGuid == guidB );
+}
+
+/**
+ * @brief [ResourceTest] 배포본 레지스트리는 에셋을 `.meta` 가 놓인 자리로 적는다 — 옮긴 에셋도 새 자리로
+ * @details 예전에는 파이썬 쿠커가 `.meta` 안의 `sourcePath=` 칸으로 경로를 정했다. Dev 는 `.meta` 의 자리를 보므로(`scanMetaFiles`), 탐색기 · git 으로
+ *          옮긴 프리팹은 Dev 에서 멀쩡했고 **배포본에서만** GUID 가 옛 경로를 가리켰다 — 씬은 GUID 를 경로보다 먼저 보므로 그 프리팹이 사라졌다.
+ *          이제 레지스트리는 엔진 쿠킹 단계가 Dev 와 같은 규칙으로 쓴다. 도메인마다 `<cookedDir>/<domain>/assetregistry.txt` 다.
+ */
+SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
+{
+    const sw::string root   = test::makeTempDirectory( "registry_root" );
+    const sw::string cooked = test::makeTempDirectory( "registry_cooked" );
+    const sw::Uuid   moved  = sw::Uuid::generate();
+    const sw::Uuid   stayed = sw::Uuid::generate();
+    // 프리팹을 하위 폴더로 옮겼다 — .meta 는 따라왔지만 안의 sourcePath 는 옛 경로 그대로다.
+    const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
+    sw::FileUtil::createParentDirectory( movedMeta );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, sw::string( "guid=" ) + moved.toString() + "\nsourcePath=game/demo/prefabs/crate.prefab.xml\n" ) );
+    const sw::string engineMeta = sw::FileUtil::joinPath( root, "engine/materials/default.material.meta" );
+    sw::FileUtil::createParentDirectory( engineMeta );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, sw::string( "guid=" ) + stayed.toString() + "\n" ) );
+    const sw::string brokenMeta = sw::FileUtil::joinPath( root, "engine/materials/broken.material.meta" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, "guid=not-a-guid\n" ) );
+
+    uint32 failedCount = 0;
+    {
+        test::ScopedDefensiveTestLog expected( "a .meta whose guid cannot be read" );
+        SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, failedCount ) );
+    }
+    SW_EXPECT_EQUAL( 1u, failedCount );
+
+    sw::string gameRegistry;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( cooked, "game/demo/assetregistry.txt" ), gameRegistry ) );
+    sw::string engineRegistry;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( cooked, "engine/assetregistry.txt" ), engineRegistry ) );
+
+    sw::AssetDatabase db;
+    SW_EXPECT_EQUAL( 1u, db.loadRegistryText( gameRegistry ) );
+    SW_EXPECT_EQUAL( 1u, db.loadRegistryText( engineRegistry ) );
+    sw::string movedPath;
+    SW_ASSERT_TRUE( db.tryGetPath( moved, movedPath ) );
+    SW_EXPECT_STREQ( "game/demo/prefabs/moved/crate.prefab.xml", movedPath.c_str() );
+    sw::string stayedPath;
+    SW_ASSERT_TRUE( db.tryGetPath( stayed, stayedPath ) );
+    SW_EXPECT_STREQ( "engine/materials/default.material", stayedPath.c_str() );
+}
+
+/**
+ * @brief [ResourceTest] 쿠킹본 이름은 규칙 하나다 — 씬 · 프리팹 로더와 쿠커가 같은 이름을 만든다
+ * @details 예전에는 넷이 각자 확장자 길이를 세어(-4 · -5) 바꿨고, 씬 쿠커는 `.scene.xml` 을 **포함**하는 경로면 구웠으며 로더는 `.xml` 이면 무엇이든
+ *          `.bin` 으로 바꿨다. 이제 `AssetCookPath` 하나다.
+ */
+SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
+{
+    SW_EXPECT_STREQ( "game/x/maps/a.scene.bin", sw::AssetCookPath::toCookedPath( "game/x/maps/a.scene.xml" ).c_str() );
+    SW_EXPECT_STREQ( "game/x/prefabs/b.prefab.bin", sw::AssetCookPath::toCookedPath( "game/x/prefabs/b.prefab.xml" ).c_str() );
+    SW_EXPECT_STREQ( "game/x/prefabs/b.prefab.bin", sw::AssetCookPath::toCookedPath( "game/x/prefabs/b.prefab.json" ).c_str() );
+    SW_EXPECT_STREQ( "C:/Out/B.prefab.bin", sw::AssetCookPath::toCookedPath( "C:/Out/B.PREFAB.JSON" ).c_str() );
+    SW_EXPECT_STREQ( "a.prefab.bin", sw::AssetCookPath::toCookedPath( "a.prefab" ).c_str() );
+    SW_EXPECT_STREQ( "a.scene.bin", sw::AssetCookPath::toCookedPath( "a.scene.bin" ).c_str() );
+    SW_EXPECT_TRUE( sw::AssetCookPath::toCookedPath( "engine/materials/x.material.xml" ).empty() );
+    SW_EXPECT_TRUE( sw::AssetCookPath::toCookedPath( "maps/a.scene.xml.bak" ).empty() );
+
+    SW_EXPECT_TRUE( sw::AssetCookPath::isCookableSource( "maps/a.scene.xml" ) );
+    SW_EXPECT_TRUE( sw::AssetCookPath::isCookableSource( "prefabs/b.prefab.json" ) );
+    SW_EXPECT_FALSE( sw::AssetCookPath::isCookableSource( "prefabs/b.prefab.bin" ) );
+    SW_EXPECT_FALSE( sw::AssetCookPath::isCookableSource( "maps/a.scene.xml.bak" ) );
 }
 
 /**

@@ -385,29 +385,13 @@ def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12
 _kAssetRegistryFileName = "assetregistry.txt"
 
 
-def buildAssetRegistryInternal(domainDir: Path) -> bytes:
-    """도메인 아래 모든 .meta 를 `<guid> <sourcePath>` 한 줄씩으로 모읍니다 (AssetDatabase::loadRegistryText 가 읽는 형식).
+def hasStagedAssetRegistryInternal(stagedDir: Path | None) -> bool:
+    """엔진 쿠킹 단계(App --cook-scenes)가 이 도메인의 GUID 레지스트리를 스테이징했는가.
 
-    배포본은 .meta 를 싣지 않으므로(PackConfig `*.meta` 제외) 이 파일이 배포본 GUID 의 유일한 출처다.
-    없으면 씬·프리팹의 GUID 참조가 전부 경로 폴백으로 가고, 이름을 바꾼 에셋은 배포본에서만 못 찾는다.
+    레지스트리는 엔진이 쓴다(`AssetDatabase::writeRegistryFiles`) — 경로는 `.meta` 가 놓인 자리이고, Dev 런타임과 같은 규칙이다.
+    예전에는 여기서 `.meta` 안의 `sourcePath=` 칸으로 만들어, 탐색기 · git 으로 옮긴 에셋이 배포본에서만 옛 경로를 가리켰다.
     """
-    lines: list[str] = []
-    for metaPath in sorted(domainDir.rglob("*.meta")):
-        guid = ""
-        sourcePath = ""
-        for rawLine in metaPath.read_text(encoding="utf-8", errors="replace").splitlines():
-            key, sep, value = rawLine.strip().partition("=")
-            if not sep:
-                continue
-            if key == "guid":
-                guid = value.strip()
-            elif key == "sourcePath":
-                sourcePath = normalizePath(value.strip())
-        if guid and sourcePath:
-            lines.append(f"{guid} {sourcePath}")
-    if not lines:
-        return b""
-    return ("# <guid> <sourcePath> - CookAssets.py buildAssetRegistryInternal\n" + "\n".join(lines) + "\n").encode("utf-8")
+    return stagedDir is not None and (stagedDir / _kAssetRegistryFileName).is_file()
 
 
 class PackWriter:
@@ -636,12 +620,14 @@ def cookAllPacks(
                 targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
 
     for src, out, dlcId in targets:
-        registry = buildAssetRegistryInternal(src)
-        extra = [(_kAssetRegistryFileName, registry)] if registry else None
         staged = cookedDir / src.relative_to(resourceDir)
+        if any(src.rglob("*.meta")) and not hasStagedAssetRegistryInternal(staged):
+            # 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로 폴백으로 간다(이름을 바꾼 에셋은 배포본에서만 못 찾는다).
+            print(f"[CookAssets Warning] {src.name}: 스테이징에 {_kAssetRegistryFileName} 이 없습니다 - 엔진 쿠킹 단계(--all 또는 --prefabs-only)를 먼저 돌리십시오.",
+                  file=sys.stderr)
         success = cookPack(src, out, dlcAppId=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
                            stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
-                           extraEntries=extra, stagedDir=staged)
+                           stagedDir=staged)
         if not success:
             allSuccess = False
 

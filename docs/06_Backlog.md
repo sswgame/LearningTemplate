@@ -1665,7 +1665,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
-| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ 구조 ⑦ (3절) — 경로 · 경계는 남음 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ 구조 ⑦ · 쿠킹 이름 · 레지스트리 ✅ 구조 ⑧ (3절) — 편집기 경로 · 경계는 남음 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
@@ -1677,8 +1677,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   `parseBoolToken` 의 조용한 폴백(`StringUtil::tryParseBool` 로), 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다, `FileUtil::removeFile` · `copyFile` 같은
   "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
 - **R3**(구조 ⑦ 뒤 — 값 쓰기는 닫혔다) — 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
-  소스 → 쿠킹 경로 규칙 여섯 벌(`EditorAssetType.cpp` · `SceneDocument::load` · `loadPrefab` · `SceneCooker` `.scene.xml` · 씬 쿠킹 실패를 안 셈).
-  GUID 레지스트리가 Dev 는 `.meta` 위치, 쿠커는 `sourcePath=` 필드로 경로를 정한다(`CookAssets.py` 388-409 — 옮긴 프리팹이 배포본에서 사라진다).
+  에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
   텍스처 드롭이 흰 스프라이트(`EditorAssetCommands.cpp` 514 상대 경로를 `makeRelativePath` 에), Quick Launcher 경로가 "Resource/…", 프리셋 경로 규칙
   셋, `ResourceUtil::getWritePath` 가 ".." 를 받음. 인스펙터 Transform · Camera 섹션은 되돌리기 · dirty 가 없다(`InspectorComponentManager.cpp` 28-110).
   린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
@@ -2103,6 +2102,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-02 (구조 ⑧ 쿠킹 산출물의 이름과 GUID 레지스트리를 엔진의 규칙 하나로 — 1-0j 의 R3 둘째 단위)
+
+소스 → 쿠킹본 이름 규칙이 네 벌(씬 로더 · 씬 쿠커 · 프리팹 로더 · 프리팹 쿠커 — 각자 확장자 길이를 -4 · -5 로 세었다)이었고, 배포본 GUID 레지스트리는
+파이썬이 Dev 와 **다른 규칙**으로 만들었다. 드러난 결함:
+- **옮긴 에셋의 GUID 가 배포본에서만 옛 경로를 가리켰다** — Dev 는 `.meta` 가 놓인 자리로 경로를 정하는데(`scanMetaFiles`), 파이썬 쿠커는 `.meta` 안의
+  `sourcePath=` 칸을 읽었다(아무도 고치지 않는 칸 — 탐색기 · git 으로 옮기면 그대로 남는다). 씬은 GUID 를 경로보다 먼저 보므로 그 프리팹이 배포본에서만 사라졌다.
+  지금 저장소의 `.meta` 여섯은 모두 자리와 칸이 같아 아직 깨진 배포본은 없다. 이제 엔진 쿠킹 단계가 Dev 와 같은 규칙으로 도메인마다
+  `<cookedDir>/<domain>/assetregistry.txt` 를 쓰고(`AssetDatabase::writeRegistryFiles`), 파이썬은 스테이징된 것을 담기만 한다(없으면 경고).
+- **굽지 못한 씬이 쿠킹 실패가 아니었다** — 읽거나 쓰지 못한 씬을 건너뛰기만 했고 실패는 "구운 씬이 0 개" 일 때뿐이었다(프리팹은 셌다). 깨진 씬 하나는
+  배포본에 없었고 그 씬을 열 때에야 멈췄다. 이제 `cookAllScenes( root, cookedDir, outFailedCount )` 가 세고, 씬 · 프리팹 · 레지스트리 실패 하나면 쿠킹이 실패다.
+- 로더가 `.xml` 이면 무엇이든 `.bin` 으로 바꿔 찾았다 — 쿠커는 `.scene.xml` 만 굽는다. 이 차이에 기대던 것은 시험뿐이었다(`x.xml` · `x.bin` 짝 열넷 →
+  `.scene.xml` · `.scene.bin`). Dev 로더가 씬 이름이 아닌 경로를 바이너리로 먼저 읽어 보던 것도 사라졌다.
+
+구조로 막은 것: **`AssetCookPath`**(`AssetFormat.h`) — 접미사 표 하나(`.scene.xml` → `.scene.bin`, `.prefab.xml` · `.prefab.json` → `.prefab.bin`), 로더 둘과
+쿠커 둘이 모두 지난다. **레지스트리는 엔진이 쓴다**(`makeRegistryText` · `writeRegistryFiles`, 경로 = `.meta` 의 자리) — 형식을 쓰는 곳과 읽는 곳이 같은 클래스다.
+
+**검증.** 새 시험 3(모두 이전 코드에서 진다): `ResourceTest.ShippedAssetRegistryNamesTheAssetWhereItsMetaLives`(임시 트리 — 옮긴 `.meta` 의 칸은 옛 경로),
+`ResourceTest.CookedPathsComeFromOneRule`, `SceneTest.SceneCookCountsTheScenesItCouldNotCook`. 변이 5 중 4 죽음(`sourcePath` 칸을 믿기 · 깨진 `.meta` 안 세기 ·
+깨진 씬 안 세기 · 접미사 표에서 `.prefab.json` 빼기), 1 은 동치(씬 쿠커의 `find` ↔ `endsWith` — 모으는 쪽이 이미 `.xml` 확장자로 거른다). Shipping 빌드가
+실제로 굽고 담았다: `Cooked/engine` · `Cooked/game/empty` 의 `assetregistry.txt`(5 · 3 줄, `.meta` 여섯과 일치). Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-02 (구조 ⑦ 값 하나를 쓰는 규칙을 한 벌로 — 직접 쓴 값은 컴포넌트에 알리고, 비트필드는 그 비트만 — 1-0j 의 R3 첫 단위)
 

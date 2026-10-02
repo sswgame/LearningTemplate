@@ -347,23 +347,19 @@ namespace sw
 
     bool SceneDocument::load( string_view path )
     {
-        string     binPath( path );
-        const bool bXml = FileUtil::hasExtension( binPath, ".xml" );
-        if ( bXml )
-            binPath.replace( binPath.size() - 4, 4, ".bin" );
-        else if ( binPath.find( ".scene" ) != string::npos && FileUtil::hasExtension( binPath, ".bin" ) == false )
-            binPath += ".bin";
+        // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 굽지 않는다.
+        const string binPath = AssetCookPath::toCookedPath( path );
 
 #if defined( SW_SHIPPING )
-        if ( loadBinary( binPath ) )
+        if ( binPath.empty() == false && loadBinary( binPath ) )
             return true;
-        SW_LOG_ERROR( "Shipping requires cooked binary scene: %#", binPath );
+        SW_LOG_ERROR( "Shipping requires cooked binary scene: %# (cooked name '%#')", path, binPath );
         return false;
 #else
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( path );
 
-        if ( ResourceUtil::hasResource( binPath ) && loadBinary( binPath ) )
+        if ( binPath.empty() == false && ResourceUtil::hasResource( binPath ) && loadBinary( binPath ) )
             return true;
 
         return loadXml( path );

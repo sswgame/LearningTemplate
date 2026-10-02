@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
@@ -41,13 +42,13 @@ namespace
         const sw::string path = test::makeTempPath( pFileName );
         const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"0\" name=\"" ) + pSceneName +
                                 "\">\n  <entities>\n    <entity name=\"Boss\"/>\n  </entities>\n</Scene>\n";
-        // 쿠킹한 바이너리도 같은 이름으로 둔다 — Shipping 은 바이너리 씬(.bin)만 읽는다.
+        // 쿠킹한 바이너리도 쿠커와 같은 이름으로 둔다(`AssetCookPath`) — Shipping 은 바이너리 씬(.scene.bin)만 읽는다.
         sw::SceneDocument             doc{};
         sw::SceneDocument::EntityNode boss{};
         doc._name  = pSceneName;
         boss._name = "Boss";
         doc._listEntityNode.push_back( std::move( boss ) );
-        const bool bWritten = sw::FileUtil::writeTextFile( path, text ) && doc.saveBinary( sw::FileUtil::replaceExtension( path, ".bin" ) );
+        const bool bWritten = sw::FileUtil::writeTextFile( path, text ) && doc.saveBinary( sw::AssetCookPath::toCookedPath( path ) );
         return bWritten ? path : sw::string{};
     }
 
@@ -283,7 +284,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
  */
 SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterTheLoad )
 {
-    const sw::string scenePath = writeQueuedPlaySceneFile( "queuedplay.xml", "LoadedLevel" );
+    const sw::string scenePath = writeQueuedPlaySceneFile( "queuedplay.scene.xml", "LoadedLevel" );
     SW_ASSERT_FALSE( scenePath.empty() );
 
     SceneManager sceneManager;
@@ -320,7 +321,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterThe
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopCancelsAQueuedPlay )
 {
-    const sw::string scenePath = writeQueuedPlaySceneFile( "cancelledplay.xml", "LoadedLevel" );
+    const sw::string scenePath = writeQueuedPlaySceneFile( "cancelledplay.scene.xml", "LoadedLevel" );
     SW_ASSERT_FALSE( scenePath.empty() );
 
     SceneManager sceneManager;

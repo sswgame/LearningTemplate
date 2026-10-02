@@ -528,15 +528,10 @@ namespace sw
 
         unique_ptr<PrefabAsset> asset = make_unique<PrefabAsset>();
 
-        string     binPath( resolvedPath );
-        const bool bJson = FileUtil::hasExtension( binPath, ".json" );
-        const bool bXml  = FileUtil::hasExtension( binPath, ".xml" );
-        if ( bXml )
-            binPath.replace( binPath.size() - 4, 4, ".bin" );
-        else if ( bJson )
-            binPath.replace( binPath.size() - 5, 5, ".bin" );
-        else if ( binPath.find( ".prefab" ) != string::npos )
-            binPath += ".bin";
+        // 쿠킹본 이름은 쿠커(`cookAllPrefabs`)와 같은 규칙 하나다(`AssetCookPath`).
+        string binPath = AssetCookPath::toCookedPath( resolvedPath );
+        if ( binPath.empty() )
+            binPath = resolvedPath;
 
 #if defined( SW_SHIPPING )
         if ( asset->loadFromBinaryFile( binPath ) == false )
@@ -545,6 +540,7 @@ namespace sw
             return nullptr;
         }
 #else
+        const bool bJson         = FileUtil::hasExtension( resolvedPath, ".json" );
         const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
         if ( bSourceLoaded == false )
         {
@@ -710,10 +706,9 @@ namespace sw
             if ( ( bXml || bJson ) == false || normalized.size() <= root.size() + 1 )
                 continue;
 
-            // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 에 같은 이름으로, 확장자만 .bin 이다(런타임 `loadPrefab` 의 표와 같은 규칙).
-            string outputPath = out + normalized.substr( root.size() + 1 );
-            outputPath.replace( outputPath.size() - ( bXml ? 4 : 5 ), bXml ? 4 : 5, ".bin" );
-            const string outputKey = StringUtil::toLower( outputPath.c_str() );
+            // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
+            const string outputPath = AssetCookPath::toCookedPath( out + normalized.substr( root.size() + 1 ) );
+            const string outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( std::find( listWrittenKey.begin(), listWrittenKey.end(), outputKey ) != listWrittenKey.end() )
             {
                 SW_LOG_WARNING( "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );

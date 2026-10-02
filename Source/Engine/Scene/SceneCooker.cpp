@@ -3,12 +3,13 @@
 #include "Engine/Scene/SceneCooker.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -130,18 +131,21 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( string_view cookedDir )
+    uint32 SceneCooker::cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
     {
+        outFailedCount = 0;
         if ( cookedDir.empty() )
         {
             SW_LOG_ERROR( "Scene cook needs an output directory (--cooked-dir)." );
+            ++outFailedCount;
             return 0;
         }
 
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string resourceRoot( sourceRoot );
         if ( resourceRoot.empty() )
         {
             SW_LOG_ERROR( "Scene cook could not resolve the resource root." );
+            ++outFailedCount;
             return 0;
         }
 
@@ -154,13 +158,14 @@ namespace sw
         uint32 writtenCount{ 0 };
         for ( const string& scenePath : listSceneFile )
         {
-            if ( scenePath.find( ".scene.xml" ) == string::npos )
+            if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
                 continue;
 
             SceneDocument doc{};
             if ( doc.loadXml( scenePath ) == false )
             {
                 SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
+                ++outFailedCount;
                 continue;
             }
 
@@ -194,12 +199,12 @@ namespace sw
             string outputPath = normalizedOut;
             if ( outputPath.empty() == false && outputPath.back() != '/' )
                 outputPath += '/';
-            outputPath += relativePath;
-            outputPath.replace( outputPath.size() - 4, 4, ".bin" );
+            outputPath = AssetCookPath::toCookedPath( outputPath + relativePath );
 
             if ( doc.saveBinary( outputPath ) == false )
             {
                 SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
+                ++outFailedCount;
                 continue;
             }
 

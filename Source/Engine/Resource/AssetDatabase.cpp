@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -277,6 +279,83 @@ namespace sw
         if ( ResourceUtil::readTextResource( registryRelativePath, text ) == false )
             return 0;
         return loadRegistryText( text );
+    }
+
+    string AssetDatabase::makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount )
+    {
+        const string   domainRoot = FileUtil::joinPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) ), domain );
+        vector<string> listMeta;
+        FileUtil::collectFiles( domainRoot, path::kMetaExtension, listMeta, true );
+        std::sort( listMeta.begin(), listMeta.end() );
+
+        const string_view                       metaExtension( path::kMetaExtension );
+        const string                            domainPrefix = FileUtil::normalizePath( domain );
+        StringBuilder<constant::kMaxBuffer8192> sb;
+        sb.append( "# <guid> <sourcePath> - AssetDatabase::makeRegistryText (path = where the .meta sits)\n" );
+        uint32 lineCount{ 0 };
+        for ( const string& metaAbs : listMeta )
+        {
+            const string normalizedMeta = FileUtil::normalizeSeparators( metaAbs );
+            if ( normalizedMeta.size() <= domainRoot.size() + 1 + metaExtension.size() )
+                continue;
+            const string assetUnderDomain = normalizedMeta.substr( domainRoot.size() + 1, normalizedMeta.size() - domainRoot.size() - 1 - metaExtension.size() );
+
+            KeyValueMap mapData;
+            Uuid        guid{};
+            const utf8* pGuidText = nullptr;
+            if ( KeyValueFile::loadFile( metaAbs, mapData ) )
+                pGuidText = KeyValueFile::get( mapData, "guid", nullptr );
+            if ( pGuidText == nullptr || Uuid::tryParse( pGuidText, guid ) == false || guid.isNull() )
+            {
+                SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
+                ++outFailedCount;
+                continue;
+            }
+            sb.append( guid.toString().c_str() ).append( ' ' ).append( domainPrefix ).append( '/' ).append( FileUtil::normalizePath( assetUnderDomain ) ).append( '\n' );
+            ++lineCount;
+        }
+        return lineCount > 0 ? string( sb.view() ) : string{};
+    }
+
+    uint32 AssetDatabase::writeRegistryFiles( string_view resourceRoot, string_view cookedDir, uint32& outFailedCount )
+    {
+        // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `CookAssets.py` `cookAllPacks` 와 같은 나눔).
+        vector<string> listDomain;
+        vector<string> listTopFolder;
+        (void)FileUtil::collectFolders( resourceRoot, listTopFolder, false ); // 루트가 없으면 도메인이 없다 — 아래가 아무것도 쓰지 않는다
+        std::sort( listTopFolder.begin(), listTopFolder.end() );
+        for ( const string& topFolder : listTopFolder )
+        {
+            const string name = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( topFolder ) );
+            if ( StringUtil::equals( name, path::kGamePack, true ) == false )
+            {
+                listDomain.push_back( name );
+                continue;
+            }
+            vector<string> listGameFolder;
+            (void)FileUtil::collectFolders( topFolder, listGameFolder, false ); // 방금 찾은 폴더다
+            std::sort( listGameFolder.begin(), listGameFolder.end() );
+            for ( const string& gameFolder : listGameFolder )
+                listDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );
+        }
+
+        uint32 writtenCount{ 0 };
+        for ( const string& domain : listDomain )
+        {
+            const string text = makeRegistryText( resourceRoot, domain, outFailedCount );
+            if ( text.empty() )
+                continue;
+            const string outputPath = FileUtil::joinPath( FileUtil::joinPath( cookedDir, domain ), "assetregistry.txt" );
+            FileUtil::createParentDirectory( outputPath );
+            if ( FileUtil::writeTextFile( outputPath, text ) == false )
+            {
+                SW_LOG_ERROR( "Asset registry: could not write '%#'", outputPath );
+                ++outFailedCount;
+                continue;
+            }
+            ++writtenCount;
+        }
+        return writtenCount;
     }
 
     uint32 AssetDatabase::loadRegistryText( string_view text )

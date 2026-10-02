@@ -39,14 +39,17 @@ namespace sw
         SW_API static uint32 cookEntityState( SceneDocument& inoutDoc );
 
         /**
-         * @brief 리소스 트리의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 굽습니다.
-         * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않습니다.
+         * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 굽습니다(이름은 `AssetCookPath`).
+         * @param sourceRoot 리소스 루트(절대 경로)입니다. 쿠킹본의 상대 경로가 여기서 정해집니다.
+         * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않고 실패 하나로 셉니다.
+         * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 하나라도 있으면 배포본에 그 씬이 없다 — 쿠킹은 실패다.
          * @return 기록한 씬 파일 수입니다.
          *
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
-         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다.
+         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다. 예전에는 읽거나 쓰지 못한 씬을 세지 않아, 씬이 하나라도
+         *          구워지면 쿠킹이 성공이었고 배포본은 그 씬을 열 때에야 "Shipping requires cooked binary scene" 으로 멈췄다(프리팹은 셌다).
          */
-        SW_API static uint32 cookAllScenes( string_view cookedDir );
+        SW_API static uint32 cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
     };
 
 } // namespace sw

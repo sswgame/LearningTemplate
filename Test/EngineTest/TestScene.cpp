@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/Uuid/Uuid.h"
@@ -677,6 +678,35 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
     SW_EXPECT_TRUE( pReloadedChild->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 씬 쿠킹은 굽지 못한 씬을 센다 — 하나라도 있으면 쿠킹이 실패다
+ * @details 예전에는 읽거나 쓰지 못한 씬을 건너뛰기만 했고, 쿠킹 단계는 "구운 씬이 0 개" 일 때만 실패였다. 깨진 씬 하나는 배포본에 없었고, 그 씬을 열 때에야
+ *          "Shipping requires cooked binary scene" 으로 멈췄다(프리팹 쿠커는 실패를 셌다). 쿠킹본 이름도 이제 로더와 같은 규칙(`AssetCookPath`)이다.
+ */
+SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    const sw::string root   = test::makeTempDirectory( "scene_cook_root" );
+    const sw::string cooked = test::makeTempDirectory( "scene_cook_out" );
+
+    sw::SceneDocument good;
+    good._name                = "Good";
+    const sw::string goodPath = sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml" );
+    sw::FileUtil::createParentDirectory( goodPath );
+    SW_ASSERT_TRUE( good.saveXml( goodPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/broken.scene.xml" ), "<Scene name=\"Broken\"><Entity" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml.bak" ), "<Scene" ) ); // 굽는 것이 아니다
+
+    uint32 failedCount = 0;
+    {
+        test::ScopedDefensiveTestLog expected( "a scene file that is not XML" );
+        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+    }
+    SW_EXPECT_EQUAL( 1u, failedCount );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
 }
 
 /**

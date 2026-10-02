@@ -40,6 +40,23 @@ namespace sw
 
     using XmlAssetMigrator = bool ( * )( XmlDocument& doc, XmlNode& root );
 
+    /**
+     * @brief 저작 소스 경로와 쿠킹본 경로 사이의 이름 규칙입니다. 로더(씬 · 프리팹)와 쿠커가 모두 여기를 지납니다.
+     * @details 예전에는 같은 규칙이 네 벌이었다 — 씬 로더 · 씬 쿠커 · 프리팹 로더 · 프리팹 쿠커가 각자 확장자 길이를 손으로 세어(-4 · -5) 바꿨고,
+     *          씬 쿠커는 `.scene.xml` 을 **포함**하는 경로면 굽고(끝이 아니라), 로더는 `.xml` 이면 무엇이든 `.bin` 으로 바꿨다.
+     */
+    struct SW_API AssetCookPath
+    {
+        /**
+         * @brief 경로의 쿠킹본 경로입니다. 굽는 것이 아니면 빈 글입니다.
+         * @details `.scene.xml` → `.scene.bin`, `.prefab.xml` · `.prefab.json` → `.prefab.bin`. 이미 쿠킹본이면 그대로, 확장자 없는
+         *          `.scene` · `.prefab` 은 `.bin` 을 붙입니다. 대소문자는 가리지 않습니다.
+         */
+        static string toCookedPath( string_view path );
+        /** @brief 쿠커가 굽는 저작 소스(`.scene.xml` · `.prefab.xml` · `.prefab.json`)이면 true 입니다. */
+        static bool isCookableSource( string_view path );
+    };
+
     /** @brief 런타임이 쿠킹된 바이너리를 쓰는지 반환합니다. Shipping 은 쿠킹된 바이너리를, Dev 는 XML 저작본을 로드합니다. */
     constexpr bool usesCookedBinaryAtRuntime() noexcept
     {

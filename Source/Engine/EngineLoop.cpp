@@ -51,6 +51,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
@@ -293,12 +294,18 @@ namespace sw
                 string cookedDir;
                 _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-                const uint32 sceneCount = SceneCooker::cookAllScenes( cookedDir );
-                // 프리팹도 여기서 굽는다 — 형식을 쓰는 곳이 엔진 하나여야 한다(예전에는 파이썬이 PFB2 를 따로 들고 XML 만 구웠다).
-                uint32                        prefabFailedCount = 0;
-                [[maybe_unused]] const uint32 prefabCount       = PrefabManager::cookAllPrefabs( ResourceUtil::getRootFolderPath(), cookedDir, prefabFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes, %# prefabs (%# prefab failures).", sceneCount, prefabCount, prefabFailedCount );
-                _bHeadlessTaskFailed = sceneCount == 0 || prefabFailedCount > 0;
+                const string& resourceRoot     = ResourceUtil::getRootFolderPath();
+                uint32        sceneFailedCount = 0;
+                const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
+                // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다(예전에는 파이썬이 PFB2 를 따로 들고 XML 만
+                // 구웠고, 레지스트리는 `.meta` 의 `sourcePath=` 칸으로 경로를 정해 옮긴 에셋을 옛 경로로 실었다).
+                uint32                        prefabFailedCount   = 0;
+                [[maybe_unused]] const uint32 prefabCount         = PrefabManager::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
+                uint32                        registryFailedCount = 0;
+                [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
+                             prefabFailedCount, registryCount, registryFailedCount );
+                _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
                 return true;
             }
 

@@ -94,9 +94,22 @@ namespace sw
 
         /**
          * @brief 레지스트리 본문을 등록합니다. 한 줄에 `<guid> <sourcePath>` 이고 `#` 으로 시작하면 주석입니다. 반환값은 등록 수입니다.
-         * @details 형식은 `CookAssets.py` 의 `buildAssetRegistryInternal` 이 기준입니다. 둘이 어긋나면 배포본만 조용히 GUID 를 잃습니다.
+         * @details 형식은 쓰는 쪽 `makeRegistryText` 와 짝입니다.
          */
         uint32 loadRegistryText( string_view text );
+
+        /**
+         * @brief `<resourceRoot>/<domain>` 아래 `.meta` 마다 `<guid> <domain/상대 경로>` 한 줄을 만듭니다(경로 순). 쿠커가 배포본에 싣습니다.
+         * @details 경로는 **`.meta` 가 놓인 자리**입니다 — Dev 의 `scanMetaFiles` · `ensureMeta` 와 같은 규칙. 예전에는 파이썬 쿠커가 `.meta` 안의
+         *          `sourcePath=` 칸을 읽어, 탐색기 · git 으로 옮긴 에셋은 배포본에서만 **옛 경로**를 가리켰다(GUID 가 경로보다 먼저라 씬의 프리팹이 사라졌다).
+         *          그 칸은 사람이 읽으라고 남기고 아무도 읽지 않습니다. GUID 를 읽지 못한 `.meta` 는 @p outFailedCount 에 셉니다.
+         */
+        static string makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount );
+        /**
+         * @brief 리소스 루트의 도메인마다(`engine` · `common` · `game/<이름>` …) `<cookedDir>/<domain>/assetregistry.txt` 를 씁니다. 쓴 파일 수를 돌려줍니다.
+         * @details 팩 하나가 도메인 하나이고, 런타임은 도메인마다 이 파일을 읽습니다(`ResourceManager::loadAssetRegistries`). `.meta` 가 없는 도메인은 건너뜁니다.
+         */
+        static uint32 writeRegistryFiles( string_view resourceRoot, string_view cookedDir, uint32& outFailedCount );
 
         /** @brief 경로↔GUID 맵을 비웁니다. */
         void clear();
