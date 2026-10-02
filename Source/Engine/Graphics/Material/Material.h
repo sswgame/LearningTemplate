@@ -155,6 +155,14 @@ namespace sw
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**입니다.
          */
         const vector<RHIDescriptorIndex>& getMaterialTextureSrvs() const { return _listMaterialTextureSrv; }
+        /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
+        static constexpr uint32 kInvalidTextureSlot = 0xFFFFFFFFu;
+        /**
+         * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSrvs`)의 몇 번째인지입니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
+         *        않았으면 kInvalidTextureSlot 입니다.
+         * @details 인스턴스가 같은 프로퍼티의 텍스처를 덮어쓸 때 같은 슬롯을 쓰려고 묻습니다(`MaterialInstance::findTextureSlot`).
+         */
+        uint32 findTextureSlot( hashed_string name ) const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
         /** @brief 사용 플래그를 설정합니다. */
@@ -257,6 +265,7 @@ namespace sw
         uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로. releaseTextureAssets 가 그대로 돌려줌
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         RHIBlendMode               _blendMode;
         shared_ptr<AsyncLoadState> _asyncLoadState;
 

@@ -27,8 +27,29 @@ namespace sw
                 {
                     if ( batch._materialInstance == nullptr )
                         continue;
-                    if ( batch._materialInstance->updateRhi( pDevice ) )
-                        batch._materialCb = batch._materialInstance->getDescriptorIndex();
+                    if ( batch._materialInstance->updateRhi( pDevice ) == false )
+                        continue;
+                    batch._materialCb = batch._materialInstance->getDescriptorIndex();
+                    // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처를 얹는다(렌더 스레드가 빌린 것이라 여기서).
+                    batch._materialInstance->collectTextureSlotSrvs( batch._arrMaterialTexSrv, shaderslot::kMaterialTextureCount );
+                }
+            }
+
+            /**
+             * @brief 머티리얼 원소 표의 인스턴스를 올립니다(합친 배치의 인스턴스).
+             * @details 네이티브 bindless 에서는 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 원소 표(`_listEntry`)에만 있다.
+             *          예전에는 여기를 아무도 돌지 않아 그 인스턴스들의 바이트가 한 번도 만들어지지 않았고, 원소 업로드가 부모 바이트로 폴백해
+             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라졌다**. updateRhi 는 바뀐 것이 없으면 곧바로 돌아온다.
+             */
+            static void applyElementInstancesVal( IRHIDevice* pDevice, vector<GpuMaterialGroup>& listGroup )
+            {
+                for ( GpuMaterialGroup& group : listGroup )
+                {
+                    for ( GpuMaterialElement& element : group._listEntry )
+                    {
+                        if ( element._instance != nullptr )
+                            (void)element._instance->updateRhi( pDevice );
+                    }
                 }
             }
 
@@ -92,6 +113,7 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "RT.GpuScene.applyInstanceCbs" );
             GpuSceneInternal::applyInstanceCbsVal( pDevice, _snapshot._listAllBatch );
+            GpuSceneInternal::applyElementInstancesVal( pDevice, _snapshot._listMaterialGroup );
         }
         {
             SW_PROFILE_SCOPE( "RT.GpuScene.uploadMeshes" );
@@ -132,12 +154,16 @@ namespace sw
             _snapshot._listOpaqueBatch[batchIndex]._materialCb   = _snapshot._listAllBatch[batchIndex]._materialCb;
             _snapshot._listOpaqueBatch[batchIndex]._vertexBuffer = _snapshot._listAllBatch[batchIndex]._vertexBuffer;
             _snapshot._listOpaqueBatch[batchIndex]._firstVertex  = _snapshot._listAllBatch[batchIndex]._firstVertex;
+            Memory::copy( _snapshot._listOpaqueBatch[batchIndex]._arrMaterialTexSrv, _snapshot._listAllBatch[batchIndex]._arrMaterialTexSrv,
+                          sizeof( _snapshot._listAllBatch[batchIndex]._arrMaterialTexSrv ) );
         }
         for ( size_t batchIndex = 0; batchIndex < _snapshot._listTransparentBatch.size(); ++batchIndex )
         {
             _snapshot._listTransparentBatch[batchIndex]._materialCb   = _snapshot._listAllBatch[opaqueCount + batchIndex]._materialCb;
             _snapshot._listTransparentBatch[batchIndex]._vertexBuffer = _snapshot._listAllBatch[opaqueCount + batchIndex]._vertexBuffer;
             _snapshot._listTransparentBatch[batchIndex]._firstVertex  = _snapshot._listAllBatch[opaqueCount + batchIndex]._firstVertex;
+            Memory::copy( _snapshot._listTransparentBatch[batchIndex]._arrMaterialTexSrv, _snapshot._listAllBatch[opaqueCount + batchIndex]._arrMaterialTexSrv,
+                          sizeof( _snapshot._listAllBatch[opaqueCount + batchIndex]._arrMaterialTexSrv ) );
         }
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 재업로드를 생략한다. **간접 인자는 예외다.**

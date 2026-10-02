@@ -59,6 +59,7 @@ namespace sw
         , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
         , _listMaterialTextureSrv{}
+        , _listMaterialTextureName{}
         , _blendMode{ RHIBlendMode::Opaque }
         , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
         , _listCachedDefine{}
@@ -159,6 +160,7 @@ namespace sw
 
             _listAcquiredTexturePath.push_back( prop._assetPath );
             _listMaterialTextureSrv.push_back( pTexture->getSrv() );
+            _listMaterialTextureName.emplace_back( prop._name.c_str() );
             setTextureParameter( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
         }
     }
@@ -198,6 +200,16 @@ namespace sw
         return bChanged;
     }
 
+    uint32 Material::findTextureSlot( hashed_string name ) const
+    {
+        for ( size_t slot = 0; slot < _listMaterialTextureName.size(); ++slot )
+        {
+            if ( _listMaterialTextureName[slot] == name )
+                return static_cast<uint32>( slot );
+        }
+        return kInvalidTextureSlot;
+    }
+
     void Material::releaseTextureAssets( IRHIDevice* pRhi )
     {
         if ( _listAcquiredTexturePath.empty() )
@@ -210,6 +222,7 @@ namespace sw
         }
         _listAcquiredTexturePath.clear();
         _listMaterialTextureSrv.clear();
+        _listMaterialTextureName.clear();
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )

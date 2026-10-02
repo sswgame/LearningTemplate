@@ -2074,6 +2074,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (구조 ② 머티리얼 인스턴스 — 텍스처를 에셋으로 덮어쓴다, 합친 배치의 인스턴스도 GPU 에 올린다)
+
+㊽ 의 남은 한계("인스턴스의 날 텍스처 인덱스는 텍스처 리로드를 따라가지 못한다")를 보다가 셋이 더 나왔다.
+- **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라졌다.** 네이티브 bindless 는 불투명 배치를 머티리얼끼리 합치고(EngineLoop ·
+  FrameRenderer 가 켠다) 배치에 인스턴스를 싣지 않는다 — 인스턴스는 머티리얼 원소 표(`_listEntry`)에만 있다. 그런데 인스턴스를 `updateRhi` 하는 곳은
+  배치의 인스턴스뿐이라 원소 표의 인스턴스는 바이트가 한 번도 만들어지지 않았고, 원소 업로드가 부모 바이트로 폴백했다(값 · 텍스처 모두).
+  `GpuScene::upload` 가 원소 표의 인스턴스도 올린다(`applyElementInstancesVal`, 바뀐 것이 없으면 곧바로 돌아온다).
+- **텍스처 덮어쓰기가 날 디스크립터 인덱스였다** — 다시 올리면 돌려준 자리를 읽었고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혔으며 배치 슬롯에는
+  부모 텍스처만 실렸다. 언리얼 MIC(`SetTextureParameterValue( UTexture* )`) · 유니티 `MaterialPropertyBlock.SetTexture( Texture )` 처럼 **텍스처 에셋**으로
+  덮어쓴다: `MaterialInstance::setTextureParameter( 이름, 에셋 경로 )`. 게임 스레드는 경로만 적고, 렌더 스레드의 `updateRhi` 가 TextureCache 로 빌리고
+  돌려준다(`syncTextureOverrides`). 셰이더 값(네이티브 SRV · DX11/GL 슬롯 서수)은 그때마다 지금 텍스처에서 읽어 리로드를 따라가고, DX11 · GL 의 배치 슬롯은
+  렌더 스레드가 인스턴스 기준으로 채운다(`collectTextureSlotSrvs` — 부모 슬롯 위에 얹고, 부모에 없는 프로퍼티는 그 뒤에 잇는다). 날 인덱스 API 는 쓰는 곳이
+  없어 없앴다.
+- **.materialinstance 의 `assetPath` 를 읽고 버렸다** — 파일에 적은 텍스처가 조용히 부모 것으로 남았다. 이제 텍스처 덮어쓰기가 되고, 저장도 `assetPath` 로 한다.
+
+**검증.** `RenderPassGpuTest.InstanceOverridesReachTheGpuOnEveryBackend`(네 백엔드, 앱처럼 합치기를 백엔드에 맞춰 켜고 GpuSceneBuilder → 스냅샷 →
+GpuScene::upload — 값 덮어쓰기가 인스턴스 바이트에 있고, 덮어쓴 텍스처가 네이티브는 바이트에 · DX11/GL 은 배치 슬롯 0 에 닿으며, 다시 올리면 새 SRV 를, 지우면
+부모 텍스처를 쓰고 빌린 것을 돌려준다), `MaterialTest.InstanceTextureOverrideRoundTripsAsAnAssetPath`(nogpu — 저장 · 읽기 왕복). 변이 다섯(원소 표 인스턴스를
+안 올림 → **DX12 에서 덮어쓴 텍스처를 빌리지도 않았다** · 배치 슬롯 덮어쓰기 없음 · 리로드 무시 · 지운 것을 안 돌려줌 · `assetPath` 를 버림)이 모두 실패했다.
+
 ### 2026-10-02 (구조 ① 렌더 — 첨부가 자기 역할을 선언한다, G버퍼 · 그림자 맵 · AO 이름이 자유로워졌다)
 
 ㊼ 의 남은 한계: 입력 역할을 **이름으로만** 정해서(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor 고정 표) 그 첨부들의 이름을 바꾸면

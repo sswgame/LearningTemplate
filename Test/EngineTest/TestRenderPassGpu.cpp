@@ -28,6 +28,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuMeshVertexPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -3362,4 +3363,108 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedGBufferAttachmentsRenderTheSameImage )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run both deferred pipelines" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 머티리얼 인스턴스의 덮어쓰기가 네 백엔드 모두에서 GPU 에 닿는다 — 값 · 텍스처 에셋 · 텍스처 리로드 · 지우기
+ * @details 셋이 함께 어긋나 있었다.
+ *          (1) 네이티브 bindless(DX12 · Vulkan)는 불투명 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 머티리얼 원소 표에만
+ *              있는데 아무도 그것을 `updateRhi` 하지 않아, 원소 업로드가 부모 바이트로 폴백해 **오버라이드가 통째로 사라졌다**.
+ *          (2) 텍스처 덮어쓰기는 날 디스크립터 인덱스였다 — 텍스처를 다시 올리면 돌려준 자리를 읽었고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀
+ *              엉뚱한 슬롯이었다(배치 슬롯은 부모 것만 실렸다).
+ *          (3) 언리얼 MIC · 유니티 MaterialPropertyBlock 은 텍스처 **자체**를 덮어쓴다. 여기서도 에셋 경로로 덮어쓰고, 값은 그때마다 지금 텍스처에서 읽는다.
+ *          앱(EngineLoop)처럼 합치기를 백엔드에 맞춰 켜고 GpuSceneBuilder → 스냅샷 → GpuScene::upload 를 직접 돌려 인스턴스 바이트 · 배치 슬롯을 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
+{
+    const sw::string kOverrideTexture = "engine/textures/perlin.dds";
+    int32            attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+        const bool       bNativeBindless = device->supportsNativeBindlessSampling();
+        const sw::string label           = sw::string( device->getBackendName() ) + ": ";
+
+        {
+            // 부모는 albedoMap 에 checker.dds 를 빌린다(슬롯 0). 인스턴스는 roughness 와 albedoMap 을 덮어쓴다.
+            sw::shared_ptr<sw::Material> parent = sw::Material::create();
+            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
+            instance->setScalarParameter( sw::hashed_string( "roughness" ), 0.125f );
+            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), kOverrideTexture );
+            SW_EXPECT_TRUE( instance->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == kOverrideTexture );
+
+            sw::Scene                scene( "InstanceOverrideScene" );
+            sw::shared_ptr<sw::Mesh> cube    = sw::MeshUtil::createUnitCube();
+            sw::GameObject*          pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "InstancedCube" ) );
+            SW_ASSERT_NOT_NULL( pObject );
+            sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( cube );
+            pMesh->setMaterial( parent.get() );
+            pMesh->setMaterialInstance( instance );
+
+            // 앱과 같은 구성: 네이티브 bindless 에서는 배치를 머티리얼끼리 합친다(EngineLoop · FrameRenderer).
+            sw::GpuSceneBuilder builder;
+            builder.setMergeBatchesAcrossMaterials( bNativeBindless );
+            builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
+            sw::GpuSceneSnapshot packet;
+            builder.exportCpuSnapshot( packet );
+            sw::GpuScene rtScene;
+            rtScene.adoptCpuSnapshot( packet );
+            SW_ASSERT_EQUAL( size_t( 1 ), rtScene.getOpaqueBatches().size() );
+
+            auto readPackedUint = [&]( const utf8* pProperty ) -> uint32
+            {
+                uint32                      value{ 0xFFFFFFFFu };
+                const sw::MaterialProperty* pProp = parent->findProperty( sw::hashed_string( pProperty ) );
+                if ( pProp != nullptr && pProp->_offset + sizeof( value ) <= instance->getBuffer().size() )
+                    sw::Memory::copy( &value, instance->getBuffer().data() + pProp->_offset, sizeof( value ) );
+                return value;
+            };
+            sw::TextureCache& textures = sw::engine::getResourceManager().getTextureManager();
+            // 텍스처가 셰이더에 닿았는가 — 네이티브는 인스턴스 바이트의 SRV 인덱스, 슬롯 바인딩 백엔드는 배치 슬롯(부모의 albedoMap 자리 0).
+            auto expectTextureReachesShader = [&]( sw::RHIDescriptorIndex expectedSrv, const utf8* pWhen )
+            {
+                if ( bNativeBindless )
+                    SW_EXPECT_TRUE_MSG( readPackedUint( "albedoMap" ) == expectedSrv, ( label + pWhen + " — 인스턴스 바이트의 albedoMap 이 덮어쓴 텍스처가 아닙니다" ).c_str() );
+                else
+                    SW_EXPECT_TRUE_MSG( rtScene.getOpaqueBatches()[0]._arrMaterialTexSrv[0] == expectedSrv,
+                                        ( label + pWhen + " — 배치 슬롯 0 이 덮어쓴 텍스처가 아닙니다" ).c_str() );
+            };
+
+            SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
+            const sw::Texture2D* pOverride = textures.find( kOverrideTexture );
+            SW_ASSERT_TRUE_MSG( pOverride != nullptr, ( label + "인스턴스가 덮어쓴 텍스처를 빌리지 않았습니다" ).c_str() );
+            SW_ASSERT_TRUE_MSG( instance->getBuffer().empty() == false, ( label + "인스턴스 바이트가 만들어지지 않았습니다 — 합친 배치의 인스턴스를 아무도 올리지 않습니다" ).c_str() );
+            float32                     roughness{ 0.0f };
+            const sw::MaterialProperty* pRoughness = parent->findProperty( sw::hashed_string( "roughness" ) );
+            SW_ASSERT_NOT_NULL( pRoughness );
+            sw::Memory::copy( &roughness, instance->getBuffer().data() + pRoughness->_offset, sizeof( roughness ) );
+            SW_EXPECT_NEAR_EQUAL( 0.125f, roughness, 1e-6f );
+            expectTextureReachesShader( pOverride->getSrv(), "처음" );
+
+            // 텍스처를 다시 올리면 같은 객체에 새 SRV 가 붙는다 — 다음 업로드가 새 것을 넣는다.
+            textures.reload( kOverrideTexture, device.get() );
+            SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
+            expectTextureReachesShader( pOverride->getSrv(), "다시 올린 뒤" );
+
+            // 지우면 부모 텍스처로 돌아가고, 빌린 것을 돌려준다(아무도 안 쓰면 캐시에서 빠진다).
+            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), "" );
+            SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
+            SW_EXPECT_TRUE_MSG( textures.find( kOverrideTexture ) == nullptr, ( label + "지운 덮어쓰기의 텍스처를 돌려주지 않았습니다" ).c_str() );
+            expectTextureReachesShader( parent->getMaterialTextureSrvs()[0], "지운 뒤" );
+
+            rtScene.releaseGpu( device.get() );
+            instance->releaseRhi( device.get() );
+            cube->releaseRhi( device.get() );
+            parent->releaseRhi( device.get() );
+        }
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the instance override test" );
 }

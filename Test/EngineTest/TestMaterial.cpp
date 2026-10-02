@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
@@ -862,4 +863,38 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
     SW_EXPECT_EQUAL( 16u, pColor->_offset ); // 다시 맞추기 전에는 XML 순서다
     SW_EXPECT_TRUE_MSG( material->getElementStride() == 0, "옛 stride 가 XML 순서 바이트와 함께 남았습니다 — 다시 맞추지 않습니다" );
     SW_EXPECT_TRUE_MSG( material->getBufferGeneration() != syncedGeneration, "바이트가 바뀌었는데 세대가 그대로입니다 — 인스턴스가 옛 복사본을 씁니다" );
+}
+
+/**
+ * @brief [MaterialTest] 인스턴스의 텍스처 덮어쓰기는 에셋 경로다 — 저장하면 `assetPath` 로 나가고, 읽으면 다시 덮어쓰기가 된다
+ * @details 예전에는 덮어쓰기가 날 디스크립터 인덱스여서 값(`value`)으로 저장됐고, 파일의 `assetPath` 는 읽고 버려 .materialinstance 에 적은 텍스처가
+ *          조용히 부모 것으로 남았다. GPU 에 닿는 것은 `RenderPassGpuTest.InstanceOverridesReachTheGpuOnEveryBackend` 가 본다.
+ */
+SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::shared_ptr<sw::Material> parent = sw::Material::create();
+    SW_ASSERT_TRUE( parent->loadFromFile( "engine/materials/benchtextured.material" ) );
+
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
+    // 덮어쓰지 않았으면 부모 프로퍼티의 경로다.
+    SW_EXPECT_TRUE( instance->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == "engine/textures/test/checker.dds" );
+    instance->setTextureParameter( sw::hashed_string( "albedoMap" ), "engine/textures/perlin.dds" );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "albedoMap" ) ) );
+
+    const sw::string path = test::makeTempPath( "textureoverride.materialinstance" );
+    SW_ASSERT_TRUE( instance->saveToFile( path ) );
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    SW_EXPECT_TRUE_MSG( text.find( "assetPath=\"engine/textures/perlin.dds\"" ) != sw::string::npos, text.c_str() );
+
+    sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( parent.get() );
+    SW_ASSERT_TRUE( reloaded->loadFromFile( path ) );
+    SW_EXPECT_TRUE_MSG( reloaded->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == "engine/textures/perlin.dds", text.c_str() );
+    SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "albedoMap" ) ) );
+
+    // 지우면 다시 부모 경로다.
+    reloaded->setTextureParameter( sw::hashed_string( "albedoMap" ), "" );
+    SW_EXPECT_TRUE( reloaded->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == "engine/textures/test/checker.dds" );
+    SW_EXPECT_FALSE( reloaded->isParameterOverridden( sw::hashed_string( "albedoMap" ) ) );
 }

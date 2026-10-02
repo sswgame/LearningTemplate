@@ -11,7 +11,10 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -73,6 +76,8 @@ namespace sw
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _constantByteSize{ 0 }
         , _parentBufferGeneration{ 0 }
+        , _pTextureDevice{ nullptr }
+        , _textureReloadGeneration{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
@@ -86,12 +91,17 @@ namespace sw
         // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다. Mesh::releaseVertexBuffer 와 같은 함정이다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
             releaseRhi( pLiveDevice );
+        // 텍스처를 빌린 디바이스가 죽었으면 forgetRhi 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
+        releaseTextureOverrides( _pTextureDevice );
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
     void MaterialInstance::forgetRhi( IRHIDevice* pDevice )
     {
+        // 텍스처는 디바이스와 함께 갔다(TextureCache 의 Texture2D 도 같은 통보를 받는다). 참조만 놓는다.
+        if ( _pTextureDevice == pDevice )
+            releaseTextureOverrides( nullptr );
         if ( _constant._pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 상수버퍼는 그와 함께 갔다.
@@ -103,6 +113,8 @@ namespace sw
 
     void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
     {
+        if ( pRhi == nullptr || _pTextureDevice == pRhi )
+            releaseTextureOverrides( pRhi );
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
         if ( pRhi != nullptr && _constant._buffer != 0 && _constant._pDevice != pRhi )
             return;
@@ -202,6 +214,8 @@ namespace sw
         // 없는 파라미터에서 부모의 값 변경을 놓쳤고 다시 맞춘 레이아웃도 놓쳤다.
         if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
             _bGpuDirty = SW_TRUE;
+        if ( syncTextureOverrides( pRhi ) )
+            _bGpuDirty = SW_TRUE;
 
         if ( _bGpuDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
@@ -216,9 +230,15 @@ namespace sw
             _pParentMaterial->packNamedValueIntoBuffer( name, value, _bytes );
         }
 
-        for ( const auto& [name, idx] : _listTextureOverride )
+        // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
+        const bool bNativeBindless = pRhi->supportsNativeBindlessSampling();
+        for ( const TextureOverride& texture : _listTextureOverride )
         {
-            _pParentMaterial->packTextureIntoBuffer( name, idx, _bytes );
+            if ( texture._pTexture == nullptr )
+                continue;
+            const uint32 value = bNativeBindless ? texture._pTexture->getSrv() : findTextureSlot( texture._name );
+            if ( value != kInvalidDescriptorIndex && value != Material::kInvalidTextureSlot )
+                _pParentMaterial->packTextureIntoBuffer( texture._name, value, _bytes );
         }
 
         const uint32 size = static_cast<uint32>( _bytes.size() );
@@ -251,12 +271,111 @@ namespace sw
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
+    bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRhi )
+    {
+        if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
+            return false;
+        TextureCache& textures = engine::getResourceManager().getTextureManager();
+        bool          bChanged{ false };
+        // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRhi 가 먼저 와서 비웠다).
+        if ( _pTextureDevice != nullptr && _pTextureDevice != pRhi )
+        {
+            releaseTextureOverrides( _pTextureDevice );
+            bChanged = true;
+        }
+        _pTextureDevice = pRhi;
+
+        for ( TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._acquiredPath == texture._assetPath )
+                continue;
+            if ( texture._pTexture != nullptr )
+                textures.release( texture._acquiredPath, pRhi );
+            texture._pTexture     = nullptr;
+            texture._acquiredPath = texture._assetPath;
+            bChanged              = true;
+            if ( texture._assetPath.empty() )
+                continue;
+            texture._pTexture = textures.acquire( texture._assetPath, pRhi );
+            if ( texture._pTexture == nullptr )
+                SW_LOG_WARNING( "MaterialInstance '%#': texture '%#' for '%#' could not be loaded — the parent's texture stays.", _desc._name.c_str(),
+                                texture._assetPath.c_str(), texture._name.c_str() );
+        }
+        // 지운 덮어쓰기(빈 경로)는 돌려준 뒤 뺀다.
+        _listTextureOverride.erase( std::remove_if( _listTextureOverride.begin(), _listTextureOverride.end(),
+                                                    []( const TextureOverride& texture )
+        { return texture._assetPath.empty() && texture._pTexture == nullptr; } ),
+                                    _listTextureOverride.end() );
+
+        // 다시 올린 텍스처는 같은 객체에 새 SRV 를 받았다 — 다시 패킹한다.
+        const uint32 reloadGeneration = textures.getReloadGeneration();
+        if ( reloadGeneration != _textureReloadGeneration )
+        {
+            _textureReloadGeneration = reloadGeneration;
+            bChanged                 = true;
+        }
+        return bChanged;
+    }
+
+    void MaterialInstance::releaseTextureOverrides( IRHIDevice* pRhi )
+    {
+        const bool bServicesBound = engine::areEngineServicesBound();
+        for ( TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._pTexture != nullptr && bServicesBound )
+                engine::getResourceManager().getTextureManager().release( texture._acquiredPath, pRhi );
+            texture._pTexture = nullptr;
+            texture._acquiredPath.clear();
+        }
+        _pTextureDevice = nullptr;
+        _bGpuDirty      = SW_TRUE;
+    }
+
+    uint32 MaterialInstance::findTextureSlot( hashed_string name ) const
+    {
+        if ( _pParentMaterial == nullptr )
+            return Material::kInvalidTextureSlot;
+        const uint32 parentSlot = _pParentMaterial->findTextureSlot( name );
+        if ( parentSlot != Material::kInvalidTextureSlot )
+            return parentSlot;
+        // 부모에 없는 프로퍼티는 부모 슬롯 뒤에 덮어쓰기 순서대로 잇는다. 지울 것(빈 경로)은 자리를 차지하지 않는다.
+        uint32 slot = static_cast<uint32>( _pParentMaterial->getMaterialTextureSrvs().size() );
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._assetPath.empty() || _pParentMaterial->findTextureSlot( texture._name ) != Material::kInvalidTextureSlot )
+                continue;
+            if ( texture._name == name )
+                return slot < shaderslot::kMaterialTextureCount ? slot : Material::kInvalidTextureSlot;
+            ++slot;
+        }
+        return Material::kInvalidTextureSlot;
+    }
+
+    void MaterialInstance::collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
+    {
+        if ( pOutSlot == nullptr || _pParentMaterial == nullptr )
+            return;
+        const vector<RHIDescriptorIndex>& listParentSrv = _pParentMaterial->getMaterialTextureSrvs();
+        for ( uint32 slot = 0; slot < slotCount; ++slot )
+            pOutSlot[slot] = slot < listParentSrv.size() ? listParentSrv[slot] : kInvalidDescriptorIndex;
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._pTexture == nullptr )
+                continue;
+            const uint32 slot = findTextureSlot( texture._name );
+            if ( slot < slotCount )
+                pOutSlot[slot] = texture._pTexture->getSrv();
+        }
+    }
+
     void MaterialInstance::clearOverrides()
     {
         _listValueOverride.clear();
         _listScalarOverride.clear();
         _listVectorOverride.clear();
-        _listTextureOverride.clear();
+        // 텍스처는 렌더 스레드가 돌려준 뒤 뺀다(syncTextureOverrides) — 여기서 지우면 빌린 참조를 잃는다.
+        for ( TextureOverride& texture : _listTextureOverride )
+            texture._assetPath.clear();
         _listKeywordOverride.clear();
         _listMultiCompileOverride.clear();
         _qualityOverride = MaterialQualityLevel::Count;
@@ -312,11 +431,26 @@ namespace sw
         _bGpuDirty = SW_TRUE;
     }
 
-    void MaterialInstance::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
+    void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
-        MaterialInstanceInternal::insertOrAssign( _listTextureOverride, name, descIdx );
-        MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( descIdx ) );
+        // 게임 스레드는 원하는 경로만 적는다. 빌리고 돌려주는 것은 렌더 스레드의 updateRhi 다(syncTextureOverrides).
         _bGpuDirty = SW_TRUE;
+        for ( TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._name != name )
+                continue;
+            texture._assetPath = string( textureAssetPath );
+            // 같은 경로를 다시 주면 지난번에 빌리지 못한 것을 다시 시도한다(파일을 고친 뒤).
+            if ( texture._pTexture == nullptr )
+                texture._acquiredPath.clear();
+            return;
+        }
+        if ( textureAssetPath.empty() )
+            return;
+        TextureOverride texture{};
+        texture._name      = name;
+        texture._assetPath = string( textureAssetPath );
+        _listTextureOverride.push_back( std::move( texture ) );
     }
 
     void MaterialInstance::setQualityLevel( MaterialQualityLevel level )
@@ -385,19 +519,20 @@ namespace sw
         return nullptr;
     }
 
-    RHIDescriptorIndex MaterialInstance::getTextureParameter( hashed_string name ) const
+    string MaterialInstance::getTextureParameter( hashed_string name ) const
     {
-        const RHIDescriptorIndex* pVal = MaterialInstanceInternal::findValue( _listTextureOverride, name );
-        if ( pVal != nullptr )
-            return *pVal;
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._name == name && texture._assetPath.empty() == false )
+                return texture._assetPath;
+        }
         if ( _pParentMaterial != nullptr )
         {
             const MaterialProperty* pProp = _pParentMaterial->findProperty( name );
             if ( pProp != nullptr )
-                return pProp->_textureIndex;
-            return _pParentMaterial->getDescriptorIndex();
+                return pProp->_assetPath;
         }
-        return kInvalidDescriptorIndex;
+        return string{};
     }
 
     bool MaterialInstance::isKeywordEnabled( hashed_string keyword ) const
@@ -502,8 +637,11 @@ namespace sw
             return true;
         if ( MaterialInstanceInternal::findValue( _listVectorOverride, name ) != nullptr )
             return true;
-        if ( MaterialInstanceInternal::findValue( _listTextureOverride, name ) != nullptr )
-            return true;
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._name == name && texture._assetPath.empty() == false )
+                return true;
+        }
         if ( MaterialInstanceInternal::findValue( _listKeywordOverride, name ) != nullptr )
             return true;
         if ( MaterialInstanceInternal::findValue( _listMultiCompileOverride, name ) != nullptr )
@@ -557,6 +695,16 @@ namespace sw
             MaterialInstanceDesc::Override overrideItem{};
             overrideItem._name  = name.c_str() ? name.c_str() : "";
             overrideItem._value = value;
+            self->_desc._listOverride.push_back( std::move( overrideItem ) );
+        }
+        // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`) — 예전에는 날 인덱스를 값으로 저장했다.
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._assetPath.empty() )
+                continue;
+            MaterialInstanceDesc::Override overrideItem{};
+            overrideItem._name      = texture._name.c_str() ? texture._name.c_str() : "";
+            overrideItem._assetPath = texture._assetPath;
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
         }
         self->_desc._listKeyword.clear();
@@ -643,10 +791,16 @@ namespace sw
         _listValueOverride.clear();
         _listKeywordOverride.clear();
         _listMultiCompileOverride.clear();
+        for ( TextureOverride& texture : _listTextureOverride )
+            texture._assetPath.clear(); // 렌더 스레드가 돌려준 뒤 뺀다
 
+        // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 예전에는 읽고 버려 .materialinstance 의 텍스처가 조용히 부모 것으로 남았다.
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
         {
-            MaterialInstanceInternal::insertOrAssign( _listValueOverride, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
+            if ( overrideItem._assetPath.empty() == false )
+                setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
+            else
+                MaterialInstanceInternal::insertOrAssign( _listValueOverride, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
         }
         for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
         {
