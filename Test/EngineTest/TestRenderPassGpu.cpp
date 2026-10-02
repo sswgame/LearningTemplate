@@ -118,6 +118,131 @@ namespace
         }
         return drawnCount;
     }
+
+    /**
+     * @brief 파이프라인끼리 그림을 맞출 때의 공통 입력입니다 — 기본 카메라, 주광, 색을 준 기본 머티리얼의 큐브 하나와 그림자를 받는 바닥.
+     * @details 메시는 디바이스를 내리기 전에 `releaseRhi` 해야 합니다(static 메시 캐시가 죽은 디바이스를 붙잡지 않게).
+     */
+    struct LitCubeScene
+    {
+        sw::Scene                    _scene{ "LitCubeScene" };
+        sw::shared_ptr<sw::Material> _material;
+        sw::shared_ptr<sw::Mesh>     _mesh;
+        sw::shared_ptr<sw::Mesh>     _floor; ///< 큐브의 그림자를 받는다 — 바닥이 없으면 그림자 맵을 잘못 걸어도 그림이 같다
+
+        /** @brief 카메라 · 주광 · 큐브 · 바닥을 채웁니다. 하나라도 못 만들면 false 입니다. */
+        bool populate()
+        {
+            if ( _scene.ensureDefaultCameras() == false )
+                return false;
+            sw::GameObject* pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            if ( pLightObject != nullptr )
+            {
+                if ( sw::DirectionalLightComponent* pLight = pLightObject->addComponent<sw::DirectionalLightComponent>(); pLight != nullptr )
+                    pLight->setIntensity( 2.0f );
+            }
+            _material = sw::Material::create();
+            if ( _material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+                 _material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.5 0.25 1.0" ) == false )
+                return false;
+            _mesh = sw::MeshUtil::createUnitCube();
+            if ( _mesh == nullptr )
+                return false;
+            sw::GameObject*    pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+            sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            if ( pMesh == nullptr )
+                return false;
+            pMesh->setMesh( _mesh );
+            pMesh->setMaterial( _material.get() );
+            pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+
+            _floor                        = sw::MeshUtil::createPlane();
+            sw::GameObject*    pFloorGo   = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Floor" ) );
+            sw::MeshComponent* pFloorMesh = ( pFloorGo != nullptr && _floor != nullptr ) ? pFloorGo->addComponent<sw::MeshComponent>() : nullptr;
+            if ( pFloorMesh == nullptr )
+                return false;
+            pFloorMesh->setMesh( _floor );
+            pFloorMesh->setMaterial( _material.get() );
+            pFloorMesh->setLocalScale( sw::float3{ 6.0f, 1.0f, 6.0f } );
+            return true;
+        }
+
+        /** @brief 디바이스를 내리기 전에 GPU 자원을 놓습니다. */
+        void releaseRhi( sw::IRHIDevice* pDevice )
+        {
+            if ( _mesh != nullptr )
+                _mesh->releaseRhi( pDevice );
+            if ( _floor != nullptr )
+                _floor->releaseRhi( pDevice );
+        }
+    };
+
+    /**
+     * @brief 파이프라인 하나로 몇 프레임 돌리고 **화면에 나간 그림**(Present 캡처)을 읽어 옵니다.
+     * @details 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다. 백버퍼는 핸들이 없어 읽을 수 없으므로 캡처를 켠다.
+     */
+    bool renderPresentCaptureOf( sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pPipelinePath, sw::vector<uint8>& outByte,
+                                 sw::RHITextureMipSpan& outLayout )
+    {
+        sw::FrameRenderer renderer;
+        if ( renderer.initialize( pDevice, pPipelinePath ) == false || renderer.isReady() == false )
+            return false;
+        renderer.setPresentCaptureEnabled( true );
+
+        constexpr uint32 kWarmupFrameCount = 3;
+        for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
+        {
+            pDevice->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            if ( renderer.execute( pDevice, &scene ) == false )
+            {
+                pDevice->endFrame( false, false );
+                return false;
+            }
+            pDevice->endFrame( false, false );
+            pDevice->waitIdle();
+        }
+        const bool bRead = renderer.readbackPresentCapture( outByte, outLayout );
+        renderer.shutdown();
+        return bRead;
+    }
+
+    /** @brief 두 Present 캡처의 차이입니다(채널 단위). */
+    struct CaptureDifference
+    {
+        uint32 _maxDelta{ 0 };
+        uint32 _differCount{ 0 };
+        uint32 _notBackgroundCount{ 0 }; ///< 기준 그림에서 첫 픽셀과 다른 채널 수 — 0 이면 배경뿐이라 비교가 뜻이 없다
+        size_t _compareCount{ 0 };
+
+        /** @brief 반올림 차이(1)를 넘는 칸이 없고 다른 칸이 1% 이하면 같은 그림입니다. */
+        bool isSameImage() const { return _maxDelta <= 1 && _differCount * 100u <= _compareCount; }
+        /** @brief 실패 메시지에 붙일 요약입니다. */
+        sw::string describe() const
+        {
+            return sw::string( "최대 차이 " ) + sw::to_string( _maxDelta ) + ", 다른 칸 " + sw::to_string( _differCount ) + " / " +
+                   sw::to_string( static_cast<uint64>( _compareCount ) );
+        }
+    };
+
+    /** @brief 기준 캡처와 다른 캡처를 칸마다 맞춥니다. */
+    CaptureDifference compareCaptures( const sw::vector<uint8>& listReference, const sw::vector<uint8>& listOther )
+    {
+        CaptureDifference difference{};
+        difference._compareCount = ( listReference.size() < listOther.size() ) ? listReference.size() : listOther.size();
+        for ( size_t index = 0; index < difference._compareCount; ++index )
+        {
+            if ( listReference[index] != listReference[index % 4] )
+                ++difference._notBackgroundCount;
+            const uint32 delta = ( listReference[index] > listOther[index] ) ? static_cast<uint32>( listReference[index] - listOther[index] )
+                                                                             : static_cast<uint32>( listOther[index] - listReference[index] );
+            if ( delta == 0 )
+                continue;
+            ++difference._differCount;
+            if ( delta > difference._maxDelta )
+                difference._maxDelta = delta;
+        }
+        return difference;
+    }
 } // namespace
 
 /**
@@ -3081,8 +3206,13 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
-    pipelineText                 = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
-    pipelineText                 = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
+    pipelineText = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
+    pipelineText = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
+    // 그림자 맵도 이름을 바꾸고 역할을 적는다 — ForwardOpaque 는 그림자 맵을 이름이 아니라 ShadowMap 역할의 입력으로 찾는다.
+    pipelineText = sw::StringUtil::replace( pipelineText, "_name=\"ShadowMap\"", "_name=\"SunShadow\" _role=\"ShadowMap\"" );
+    pipelineText = sw::StringUtil::replace( pipelineText, "<item>ShadowMap</item>", "<item>SunShadow</item>" );
+    pipelineText = sw::StringUtil::replace( pipelineText, "_depthAttachment=\"ShadowMap\"", "_depthAttachment=\"SunShadow\"" );
+    SW_ASSERT_TRUE( pipelineText.find( "_role=\"ShadowMap\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renamedforwardpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, pipelineText ) );
 
@@ -3105,100 +3235,25 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
             continue;
 
         // 씬은 한 번만 만든다 — 두 파이프라인이 같은 입력을 받아야 비교가 성립한다.
-        sw::Scene scene( "RenamedAttachmentScene" );
-        bool      bOk = scene.ensureDefaultCameras();
-        if ( bOk )
-        {
-            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
-            if ( pLightObject != nullptr )
-            {
-                if ( sw::DirectionalLightComponent* pLight = pLightObject->addComponent<sw::DirectionalLightComponent>(); pLight != nullptr )
-                    pLight->setIntensity( 2.0f );
-            }
-        }
-
-        sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( bOk )
-            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
-                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.5 0.25 1.0" );
-
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
-        bOk                           = bOk && mesh != nullptr;
-        if ( bOk )
-        {
-            sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
-            sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
-            bOk                        = pMesh != nullptr;
-            if ( bOk )
-            {
-                pMesh->setMesh( mesh );
-                pMesh->setMaterial( material.get() );
-                pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
-            }
-        }
-
-        // 파이프라인 하나로 몇 프레임 돌리고 **화면에 나간 그림**을 읽어 온다.
-        auto renderThrough = [&]( const utf8* pPipelinePath, sw::vector<uint8>& outByte, sw::RHITextureMipSpan& outLayout ) -> bool
-        {
-            sw::FrameRenderer renderer;
-            if ( renderer.initialize( device.get(), pPipelinePath ) == false || renderer.isReady() == false )
-                return false;
-            renderer.setPresentCaptureEnabled( true );
-
-            // 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
-            constexpr uint32 kWarmupFrameCount = 3;
-            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
-            {
-                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                if ( renderer.execute( device.get(), &scene ) == false )
-                {
-                    device->endFrame( false, false );
-                    return false;
-                }
-                device->endFrame( false, false );
-                device->waitIdle();
-            }
-            const bool bRead = renderer.readbackPresentCapture( outByte, outLayout );
-            renderer.shutdown();
-            return bRead;
-        };
-
+        LitCubeScene          cube;
         sw::vector<uint8>     listReference;
         sw::vector<uint8>     listRenamed;
         sw::RHITextureMipSpan layoutReference{};
         sw::RHITextureMipSpan layoutRenamed{};
         const utf8*           pName = device->getBackendName();
+        bool                  bOk   = cube.populate();
         if ( bOk )
-            bOk = renderThrough( "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
         if ( bOk )
-            bOk = renderThrough( renamedPath.c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
         if ( bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height )
         {
             ++comparedCount;
-            const size_t compareCount = ( listReference.size() < listRenamed.size() ) ? listReference.size() : listRenamed.size();
-            uint32       differCount{ 0 };
-            uint32       maxDelta{ 0 };
-            uint32       notBackgroundCount{ 0 };
-            for ( size_t index = 0; index < compareCount; ++index )
-            {
-                if ( listReference[index] != listReference[index % 4] )
-                    ++notBackgroundCount;
-                const uint32 delta = ( listReference[index] > listRenamed[index] )
-                                       ? static_cast<uint32>( listReference[index] - listRenamed[index] )
-                                       : static_cast<uint32>( listRenamed[index] - listReference[index] );
-                if ( delta == 0 )
-                    continue;
-                ++differCount;
-                if ( delta > maxDelta )
-                    maxDelta = delta;
-            }
+            const CaptureDifference difference = compareCaptures( listReference, listRenamed );
             // 기준 그림에 큐브가 있어야 비교가 뜻이 있다 — 둘 다 배경뿐이면 이름을 무시해도 같게 나온다.
-            SW_EXPECT_TRUE_MSG( notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( maxDelta <= 1 && differCount * 100u <= compareCount,
-                                ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (최대 차이 " + sw::to_string( maxDelta ) + ", 다른 칸 " +
-                                  sw::to_string( differCount ) + ")" )
-                                    .c_str() );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "RenamedAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
@@ -3210,15 +3265,101 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
             test::ScopedLogCollector collector;
             sw::vector<uint8>        listBroken;
             sw::RHITextureMipSpan    layoutBroken{};
-            (void)renderThrough( brokenPath.c_str(), listBroken, layoutBroken );
+            (void)renderPresentCaptureOf( device.get(), cube._scene, brokenPath.c_str(), listBroken, layoutBroken );
             SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 타깃 'SceneColor'" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
 
-        // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 자원을 놓는다.
-        if ( mesh != nullptr )
-            mesh->releaseRhi( device.get() );
+        cube.releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run both pipelines" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] G버퍼 · 그림자 맵 · AO 첨부의 이름을 바꿔도 첨부가 역할을 선언하면 같은 그림이 나온다
+ * @details 역할은 **이름으로만** 정해졌다(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor). 이름을 바꾸면 Lighting 의 입력이 모두
+ *          SourceColor · SceneDepth 로 읽혀 계약이 깨지고 G버퍼가 걸리지 않았다 — 지오메트리 패스(㊼)는 고쳤지만 G버퍼 이름은 여전히 바꿀 수
+ *          없었다. 언리얼 RDG · 유니티 RenderGraph 처럼 바인딩을 이름에서 떼어, 첨부가 `_role` 로 자기 역할을 선언한다.
+ *          `deferredpipeline.xml` 의 다섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, RenamedGBufferAttachmentsRenderTheSameImage )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
+    struct AttachmentRename
+    {
+        const utf8* _pOldName;
+        const utf8* _pNewName;
+        const utf8* _pRole; ///< 비면 역할을 적지 않는다(깊이 포맷은 이름 없이도 SceneDepth 다)
+    };
+    constexpr AttachmentRename arrRename[] = {
+        {"GBufferAlbedo", "MainAlbedo",    "GBufferAlbedo"},
+        {"GBufferNormal", "MainNormal",    "GBufferNormal"},
+        {    "ShadowMap",  "SunShadow",        "ShadowMap"},
+        {      "AOColor",  "Occlusion", "AmbientOcclusion"},
+        {   "SceneDepth",  "MainDepth",                 ""},
+    };
+    for ( const AttachmentRename& rename : arrRename )
+    {
+        const sw::string oldName{ rename._pOldName };
+        const sw::string newName{ rename._pNewName };
+        const sw::string roleAttribute = ( rename._pRole[0] != 0 ) ? sw::string( " _role=\"" ) + rename._pRole + "\"" : sw::string{};
+        pipelineText                   = sw::StringUtil::replace( pipelineText, "_name=\"" + oldName + "\"", "_name=\"" + newName + "\"" + roleAttribute );
+        pipelineText                   = sw::StringUtil::replace( pipelineText, "<item>" + oldName + "</item>", "<item>" + newName + "</item>" );
+        pipelineText                   = sw::StringUtil::replace( pipelineText, "_depthAttachment=\"" + oldName + "\"", "_depthAttachment=\"" + newName + "\"" );
+    }
+    // G버퍼 출력의 순서도 뒤집는다(노멀 먼저) — 순서가 아니라 역할로 골라야 MRT 0 번에 알베도가 간다.
+    {
+        const size_t gbufferBegin = pipelineText.find( "_name=\"GBuffer\"" );
+        const size_t outputBegin  = gbufferBegin == sw::string::npos ? sw::string::npos : pipelineText.find( "<_listOutput>", gbufferBegin );
+        const size_t outputEnd    = outputBegin == sw::string::npos ? sw::string::npos : pipelineText.find( "</_listOutput>", outputBegin );
+        SW_ASSERT_TRUE( outputEnd != sw::string::npos );
+        sw::string block = pipelineText.substr( outputBegin, outputEnd - outputBegin );
+        block            = sw::StringUtil::replace( block, "<item>MainAlbedo</item>", "<item>@ALBEDO@</item>" );
+        block            = sw::StringUtil::replace( block, "<item>MainNormal</item>", "<item>MainAlbedo</item>" );
+        block            = sw::StringUtil::replace( block, "<item>@ALBEDO@</item>", "<item>MainNormal</item>" );
+        pipelineText     = pipelineText.substr( 0, outputBegin ) + block + pipelineText.substr( outputEnd );
+        SW_ASSERT_TRUE( pipelineText.find( "<item>MainNormal</item>", outputBegin ) < pipelineText.find( "<item>MainAlbedo</item>", outputBegin ) );
+    }
+    // 정본 이름이 남아 있으면 시험이 아무것도 바꾸지 않은 것이다.
+    SW_ASSERT_TRUE( pipelineText.find( "<item>GBufferAlbedo</item>" ) == sw::string::npos );
+    SW_ASSERT_TRUE( pipelineText.find( "_role=\"GBufferAlbedo\"" ) != sw::string::npos );
+    const sw::string renamedPath = test::makeTempPath( "renameddeferredpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, pipelineText ) );
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+
+        LitCubeScene          cube;
+        sw::vector<uint8>     listReference;
+        sw::vector<uint8>     listRenamed;
+        sw::RHITextureMipSpan layoutReference{};
+        sw::RHITextureMipSpan layoutRenamed{};
+        const utf8*           pName = device->getBackendName();
+        bool                  bOk   = cube.populate();
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/deferredpipeline.xml", listReference, layoutReference );
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
+
+        if ( bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height )
+        {
+            ++comparedCount;
+            const CaptureDifference difference = compareCaptures( listReference, listRenamed );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": G버퍼 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+        }
+        else if ( bOk == false )
+            SW_LOG_WARNING( "RenamedGBufferAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+
+        cube.releaseRhi( device.get() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run both deferred pipelines" );
 }

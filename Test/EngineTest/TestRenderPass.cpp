@@ -763,10 +763,10 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         sw::RenderPipelineResource res;
         makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal" } );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
-        const sw::vector<sw::hashed_string>& listColor = res.getGraphPass()[0]._listResolvedColorOutput;
+        const sw::vector<sw::RenderGraphPassDesc::ResolvedAttachment>& listColor = res.getGraphPass()[0]._listResolvedColorOutput;
         SW_ASSERT_EQUAL( size_t( 2 ), listColor.size() );
-        SW_EXPECT_TRUE( listColor[0].view() == "MainAlbedo" );
-        SW_EXPECT_TRUE( listColor[1].view() == "MainNormal" );
+        SW_EXPECT_TRUE( listColor[0]._attachment.view() == "MainAlbedo" );
+        SW_EXPECT_TRUE( listColor[1]._attachment.view() == "MainNormal" );
     }
     // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(예전에는 SceneColor 를 짐작해 열었다).
     {
@@ -780,5 +780,74 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         sw::RenderPipelineResource res;
         makePipeline( res, "DepthPrepass", { "MainDepth" } );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+}
+
+/**
+ * @brief [RenderPassTest] 첨부가 선언한 역할(`_role`)이 이름보다 먼저다 — 이름을 바꾼 G버퍼 · 그림자 맵으로 Lighting 계약이 선다
+ * @details 예전에는 역할을 이름으로만 정해, `MainAlbedo` · `MainNormal` 은 SourceColor 로 읽혀 Lighting 계약이 깨졌고(가공할 컬러가 둘 ·
+ *          필수 G버퍼 없음) `SunShadow` 는 SceneDepth 로 읽혔다. 모르는 역할 글은 검증 오류다. 그림은
+ *          `RenderPassGpuTest.RenamedGBufferAttachmentsRenderTheSameImage` 가 본다.
+ */
+SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    auto addAttachment = []( sw::RenderPipelineResource& res, const utf8* pName, const utf8* pFormat, const utf8* pRole )
+    {
+        sw::RenderPassAttachment att{};
+        att._name   = pName;
+        att._format = pFormat;
+        att._role   = pRole;
+        res.getDesc()._listAttachment.push_back( att );
+    };
+    auto makeDeferred = [&]( sw::RenderPipelineResource& res, const utf8* pAlbedoRole )
+    {
+        addAttachment( res, "MainAlbedo", "R8G8B8A8_UNORM", pAlbedoRole );
+        addAttachment( res, "MainNormal", "R16G16B16A16_FLOAT", "GBufferNormal" );
+        addAttachment( res, "MainDepth", "D24_UNORM_S8_UINT", "" );
+        addAttachment( res, "SunShadow", "D24_UNORM_S8_UINT", "ShadowMap" );
+        addAttachment( res, "Lit", "R16G16B16A16_FLOAT", "" );
+
+        sw::RenderGraphPassDesc gbuffer{};
+        gbuffer._name            = "GBuffer";
+        gbuffer._type            = "GBuffer";
+        gbuffer._depthAttachment = "MainDepth";
+        for ( const utf8* pOutput : { "MainNormal", "MainAlbedo", "MainDepth" } ) // 노멀을 먼저 — 순서가 아니라 역할로 골라야 한다
+            gbuffer._listOutput.push_back( pOutput );
+        res.getDesc()._listPass.push_back( gbuffer );
+
+        sw::RenderGraphPassDesc lighting{};
+        lighting._name = "Lighting";
+        lighting._type = "Lighting";
+        for ( const utf8* pInput : { "MainAlbedo", "MainNormal", "MainDepth", "SunShadow" } )
+            lighting._listInput.push_back( pInput );
+        lighting._listOutput.push_back( "Lit" );
+        res.getDesc()._listPass.push_back( lighting );
+    };
+
+    {
+        sw::RenderPipelineResource res;
+        makeDeferred( res, "GBufferAlbedo" );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+
+        const sw::RenderGraphPassDesc& gbuffer = res.getGraphPass()[0];
+        SW_ASSERT_EQUAL( size_t( 2 ), gbuffer._listResolvedColorOutput.size() );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[0]._role ) == sw::RenderPassInputRole::GBufferNormal );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[1]._role ) == sw::RenderPassInputRole::GBufferAlbedo );
+
+        const sw::RenderGraphPassDesc& lighting = res.getGraphPass()[1];
+        SW_ASSERT_EQUAL( size_t( 4 ), lighting._listResolvedInput.size() );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[0]._role ) == sw::RenderPassInputRole::GBufferAlbedo );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[1]._role ) == sw::RenderPassInputRole::GBufferNormal );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[2]._role ) == sw::RenderPassInputRole::SceneDepth );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[3]._role ) == sw::RenderPassInputRole::ShadowMap );
+    }
+    // 모르는 역할 글은 오류다 — 조용히 이름 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다. 이름 규칙으로 떨어진 알베도는 SourceColor 라
+    // Lighting 계약도 함께 깨진다(읽지 않는 SourceColor · 필수 GBufferAlbedo 없음) — 셋이다.
+    {
+        sw::RenderPipelineResource res;
+        makeDeferred( res, "Albedo" );
+        SW_EXPECT_EQUAL( 3u, res.validate( "unit-test" ) );
     }
 }

@@ -92,23 +92,30 @@ namespace sw
             return;
 
         // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
-        bool bHasTaaPass = false;
+        const RenderGraphPassDesc* pTaaPass = nullptr;
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             if ( pass._resolvedType == RenderPassType::TAA )
             {
-                bHasTaaPass = true;
+                pTaaPass = &pass;
                 break;
             }
         }
-        if ( bHasTaaPass == false )
+        if ( pTaaPass == nullptr )
             return;
 
-        // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상
-        // 첨부의 포맷을 그대로 따라간다.
-        const bool        bHasTaaColor = _transientPool.contains( string_view{ "TaaColor" } );
-        const string_view taaTarget    = bHasTaaColor ? string_view{ "TaaColor" }
-                                                      : string_view{ FrameRendererUtil::Attachment::kSceneColor };
+        // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷을 그대로 따라간다.
+        // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 예전에는 이름(TaaColor → SceneColor)으로 짐작했다.
+        string_view taaTarget = _transientPool.contains( string_view{ "TaaColor" } ) ? string_view{ "TaaColor" }
+                                                                                     : string_view{ FrameRendererUtil::Attachment::kSceneColor };
+        for ( const hashed_string& output : pTaaPass->_listResolvedOutput )
+        {
+            if ( _transientPool.contains( output.view() ) )
+            {
+                taaTarget = output.view();
+                break;
+            }
+        }
 
         RHITextureDesc historyDesc{};
         historyDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
@@ -290,7 +297,7 @@ namespace sw
         {
             if ( pass._resolvedType != RenderPassType::Present )
                 continue;
-            for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
                 if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment.view() ) != 0 )
                     return string( input._attachment.view() );

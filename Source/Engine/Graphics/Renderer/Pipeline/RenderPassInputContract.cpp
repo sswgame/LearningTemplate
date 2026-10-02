@@ -51,8 +51,24 @@ namespace sw
         return index < static_cast<uint32>( RenderPassInputRole::Count ) ? s_arrRoleName[index] : s_arrRoleName[0];
     }
 
-    RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat )
+    bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole )
     {
+        for ( uint32 index = static_cast<uint32>( RenderPassInputRole::SourceColor ); index < static_cast<uint32>( RenderPassInputRole::Count ); ++index )
+        {
+            if ( roleName == s_arrRoleName[index] )
+            {
+                outRole = static_cast<RenderPassInputRole>( index );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole )
+    {
+        RenderPassInputRole declared{ RenderPassInputRole::Invalid };
+        if ( declaredRole.empty() == false && tryParseRenderPassInputRole( declaredRole, declared ) )
+            return declared;
         for ( const FixedRoleName& fixed : s_arrFixedRoleName )
         {
             if ( attachmentName == fixed._pName )

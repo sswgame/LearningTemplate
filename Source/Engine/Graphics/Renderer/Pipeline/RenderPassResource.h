@@ -89,6 +89,16 @@ namespace sw
 
         PROPERTY()
         bool _bClear{ true };
+
+        /**
+         * @brief 이 첨부가 패스에 걸릴 때의 역할입니다(`RenderPassInputRole` 이름 — GBufferAlbedo · GBufferNormal · ShadowMap · AmbientOcclusion ·
+         *        SceneDepth · SourceColor). 비어 있으면 정본 이름(GBufferAlbedo …)과 포맷으로 정합니다.
+         * @details 예전에는 역할을 **이름으로만** 정해서, G버퍼 · 그림자 맵 · AO 첨부의 이름을 바꾸면 Lighting 의 입력 계약이 깨졌다(역할 없는 컬러는
+         *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 건다 —
+         *          어느 쪽도 텍스처의 이름이 바인딩을 정하지 않는다. 여기서는 첨부가 자기 역할을 선언하고, 이름은 파이프라인이 자유롭게 짓는다.
+         */
+        PROPERTY( SkipIfEmpty )
+        string _role;
     };
 
     /**
@@ -142,30 +152,34 @@ namespace sw
         hashed_string _resolvedDepthAttachment;
 
         /**
-         * @brief `_listInput` 하나하나의 (첨부 이름, 역할)입니다. XML 로드 시 RenderPipelineResource 가 채웁니다.
-         * @details 직렬화 대상이 아닙니다. 실행은 이 목록을 그대로 걸고(역할 이름 = 셰이더의 `g_<Role>Index`),
-         *          검증은 패스 타입의 계약(RenderPassInputContract)과 대조합니다. 둘이 같은 해석을 봅니다.
-         *          역할 값은 `RenderPassInputRole` 인데 이 헤더가 그 enum 을 모르므로(계약 헤더가 이 헤더를
-         *          포함합니다) 정수로 둡니다.
+         * @brief 해석한 첨부 하나(이름, 역할)입니다. 입력 목록과 컬러 출력 목록이 같은 모양을 씁니다.
+         * @details 역할 값은 `RenderPassInputRole` 인데 이 헤더가 그 enum 을 모르므로(계약 헤더가 이 헤더를 포함합니다) 정수로 둡니다.
+         *          역할은 첨부의 `_role` 선언 → 정본 이름 → 포맷 순으로 정합니다(`resolveRenderPassInputRole`).
          */
-        struct ResolvedInput
+        struct ResolvedAttachment
         {
             hashed_string _attachment;
             uint8         _role{ 0 };
         };
-        vector<ResolvedInput> _listResolvedInput;
+
+        /**
+         * @brief `_listInput` 하나하나의 (첨부 이름, 역할)입니다. XML 로드 시 RenderPipelineResource 가 채웁니다.
+         * @details 직렬화 대상이 아닙니다. 실행은 이 목록을 그대로 걸고(역할 이름 = 셰이더의 `g_<Role>Index`),
+         *          검증은 패스 타입의 계약(RenderPassInputContract)과 대조합니다. 둘이 같은 해석을 봅니다.
+         */
+        vector<ResolvedAttachment> _listResolvedInput;
 
         /** @brief `_listOutput` 을 intern 해 둔 값입니다. 풀스크린 패스가 "첫 번째로 존재하는 출력" 을 타깃으로 고릅니다. */
         vector<hashed_string> _listResolvedOutput;
 
         /**
-         * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 둔 것입니다(뎁스 포맷 · 스왑체인 · 선언되지 않은 이름은 빠집니다). XML 로드 시
-         *        RenderPipelineResource 가 채웁니다.
-         * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 이 순서대로 컬러 타깃을 겁니다 — GBuffer 는 [0] 알베도, [1] 노멀.
-         *          예전에는 그 이름을 코드에 박아(SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열었고, 없는
-         *          첨부의 핸들 0 은 백버퍼라 화면에 그렸습니다.
+         * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 둔 것입니다(뎁스 포맷 · 스왑체인 · 선언되지 않은 이름은 빠집니다). 역할도 함께 듭니다.
+         *        XML 로드 시 RenderPipelineResource 가 채웁니다.
+         * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 이 목록에서 컬러 타깃을 고릅니다 — GBuffer 는 역할(GBufferAlbedo ·
+         *          GBufferNormal)로, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)로. 예전에는 그 이름을 코드에 박아(SceneColor · GBufferAlbedo …)
+         *          다른 이름을 쓰는 파이프라인에서 없는 첨부를 열었고, 없는 첨부의 핸들 0 은 백버퍼라 화면에 그렸습니다.
          */
-        vector<hashed_string> _listResolvedColorOutput;
+        vector<ResolvedAttachment> _listResolvedColorOutput;
 
         /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
         PROPERTY( SkipIfEmpty )

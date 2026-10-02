@@ -63,6 +63,15 @@ namespace sw
                     break;
                 }
             }
+            // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
+            RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
+            if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
+            {
+                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
+                              "AmbientOcclusion 중 하나입니다",
+                              sourcePath, attachment._name, attachment._role );
+                ++issueCount;
+            }
         }
 
         auto isDepthAttachment = [&]( const RenderPassAttachment* pAttachment ) -> bool
@@ -92,19 +101,24 @@ namespace sw
             pass._listResolvedInput.clear();
             pass._listResolvedOutput.clear();
             pass._listResolvedColorOutput.clear();
-            for ( const string& inputName : pass._listInput )
+            // 역할은 첨부의 선언(`_role`)이 먼저, 그다음 정본 이름 · 포맷이다(resolveRenderPassInputRole).
+            auto resolveAttachment = [&]( const string& attachmentName ) -> RenderGraphPassDesc::ResolvedAttachment
             {
-                RenderGraphPassDesc::ResolvedInput resolved{};
-                resolved._attachment = hashed_string( inputName.c_str() );
-                resolved._role       = static_cast<uint8>( resolveRenderPassInputRole( inputName, isDepthAttachment( findAttachment( inputName ) ) ) );
-                pass._listResolvedInput.push_back( resolved );
-            }
+                const RenderPassAttachment*             pAttachment = findAttachment( attachmentName );
+                RenderGraphPassDesc::ResolvedAttachment resolved{};
+                resolved._attachment = hashed_string( attachmentName.c_str() );
+                resolved._role       = static_cast<uint8>(
+                    resolveRenderPassInputRole( attachmentName, isDepthAttachment( pAttachment ), pAttachment != nullptr ? string_view( pAttachment->_role ) : string_view{} ) );
+                return resolved;
+            };
+            for ( const string& inputName : pass._listInput )
+                pass._listResolvedInput.push_back( resolveAttachment( inputName ) );
             for ( const string& outputName : pass._listOutput )
             {
                 pass._listResolvedOutput.emplace_back( outputName.c_str() );
                 const RenderPassAttachment* pOutput = findAttachment( outputName );
                 if ( pOutput != nullptr && isDepthAttachment( pOutput ) == false )
-                    pass._listResolvedColorOutput.emplace_back( outputName.c_str() );
+                    pass._listResolvedColorOutput.push_back( resolveAttachment( outputName ) );
             }
             if ( isPipelinePassType( pass._resolvedType ) == false )
             {
@@ -212,7 +226,7 @@ namespace sw
                 continue;
 
             uint32 sourceColorCount{ 0 };
-            for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
                 const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
                 if ( role == RenderPassInputRole::SourceColor )
@@ -233,7 +247,7 @@ namespace sw
             {
                 const RenderPassInputRole required = pContract->_arrRequired[requiredIndex];
                 bool                      bFound{ false };
-                for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
                     if ( static_cast<RenderPassInputRole>( input._role ) == required )
                     {

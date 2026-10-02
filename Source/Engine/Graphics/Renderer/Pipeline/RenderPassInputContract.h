@@ -36,12 +36,15 @@ namespace sw
     /** @brief 역할의 셰이더 이름을 반환합니다. `g_<Name>Index` 의 `<Name>` 이자 FrameResourceRegistry 의 키입니다. */
     const utf8* getRenderPassInputRoleName( RenderPassInputRole role );
 
+    /** @brief 역할 이름(`getRenderPassInputRoleName` 의 글, Invalid 제외)을 역할로 읽습니다. 모르는 이름이면 false 입니다. */
+    bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole );
+
     /**
-     * @brief 첨부 이름 · 포맷으로 역할을 정합니다.
-     * @details 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor)은 그 역할, 그 밖의 깊이 포맷은
-     *          SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
+     * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
+     * @details 선언이 없거나 모르는 글이면(검증이 오류로 알린다) 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor)은 그 역할,
+     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
-    RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat );
+    RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );
 
     /**
      * @struct RenderPassInputContract

@@ -2074,6 +2074,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (구조 ① 렌더 — 첨부가 자기 역할을 선언한다, G버퍼 · 그림자 맵 · AO 이름이 자유로워졌다)
+
+㊼ 의 남은 한계: 입력 역할을 **이름으로만** 정해서(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor 고정 표) 그 첨부들의 이름을 바꾸면
+Lighting 계약이 깨졌다(역할 없는 컬러는 모두 SourceColor, 깊이는 모두 SceneDepth). 상용 엔진은 바인딩을 텍스처 이름에서 뗀다 — 언리얼 RDG 는
+패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 건다.
+- `RenderPassAttachment::_role`(선택, `SkipIfEmpty` 라 기존 XML 은 그대로) — 첨부가 역할을 선언한다. 역할은 선언 → 정본 이름 → 포맷 순
+  (`resolveRenderPassInputRole`). 모르는 역할 글은 검증 오류다(`tryParseRenderPassInputRole`).
+- 입력과 컬러 출력이 같은 해석 모양(`RenderGraphPassDesc::ResolvedAttachment`, 이름 + 역할)을 쓴다. GBuffer 는 알베도 · 노멀을 **역할로** 고르고
+  (없으면 선언 순서), ForwardOpaque 는 그림자 맵을 ShadowMap 역할의 입력으로 찾는다. Shadow · DepthPrepass 의 클리어 값은 실제로 거는 뎁스의 선언에서,
+  TAA 의 타깃과 히스토리 포맷은 TAA 패스가 선언한 출력에서 읽는다(예전에는 이름 ShadowMap · SceneDepth · TaaColor 로 찾았다).
+
+**검증.** `RenderPassTest.AttachmentRoleIsDeclaredNotNamed`(nogpu — 이름을 바꾼 G버퍼 · 그림자 맵이 선언한 역할로 Lighting 계약을 세우고, 노멀을 먼저 적은
+GBuffer 출력도 역할로 읽힌다; 모르는 역할 글은 오류 1 + 계약 오류 2), `RenderPassGpuTest.RenamedGBufferAttachmentsRenderTheSameImage`(네 백엔드 —
+`deferredpipeline.xml` 의 다섯 첨부 이름을 바꾸고 역할을 적고 GBuffer 출력 순서까지 뒤집어도 같은 그림). ㊼ 의 포워드 시험은 그림자 맵 이름도 바꾼다. 두 GPU
+시험은 공통 도우미(`LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`)로 묶었고, 씬에 **바닥**을 깔았다 — 바닥이 없으면 그림자를 받을 곳이 없어
+그림자 맵을 잘못 걸어도 그림이 같았다(그 변이가 처음에 살았다). 변이 다섯(선언 역할 무시 ×2 · GBuffer 를 순서로만 · 포워드가 그림자 맵을 이름으로 ·
+모르는 역할을 조용히)이 모두 실패했다.
+
 ### 2026-10-01 (결함 ㊿ 에디터 플레이 — Stop 이 플레이 중에 바뀐 씬에 스냅샷을 되돌렸다, 저장하면 다른 레벨 파일을 덮어썼다)
 
 Play 는 활성 씬의 오브젝트를 스냅샷으로 찍고 Stop 이 되돌린다. 그런데 Stop 은 **그때 활성인 씬**에 되돌렸다. 플레이 중에 게임 코드가 다음 레벨을 열면
