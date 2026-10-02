@@ -132,10 +132,10 @@ namespace sw
          * @details primary SceneComponent 계층을 공유합니다. 병렬 트랜스폼 구간에서는 미룹니다.
          * @return 성공하면 true 입니다. 미룬 경우에도 true 입니다.
          */
-        [[nodiscard]] bool attachToParent( GameObject* pParent );
+        [[nodiscard]] bool attachToParent( GameObject* pParent, AttachRule rule = AttachRule::KeepRelative );
 
         /** @brief 부모에서 뗍니다. */
-        void detachFromParent();
+        void detachFromParent( AttachRule rule = AttachRule::KeepRelative );
 
         /** @brief 부모 GameObject 입니다. primary SceneComponent 의 부모를 소유한 오브젝트입니다. */
         GameObject* getParent() const;

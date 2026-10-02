@@ -1668,7 +1668,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ (3절) — 소비 없는 컴포넌트 · 모르는 컴포넌트 보존은 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ 구조 ⑫ (3절) — 남은 것 아래 |
-| R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
+| R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ 구조 ⑬ (3절) — 남은 것 아래 |
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
@@ -1691,9 +1691,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 - **R5**(구조 ⑫ 뒤) — `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove,
   `forEachGameObject` 공유 잠금 재진입 교착 가능,
   `setName` · 서브틱 · 컴포넌트 비트필드. `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드).
-- **R6** — 같은 오브젝트의 둘째 씬 컴포넌트가 primary 에 붙지 않아 원점에 남는다(`editortest.scene.xml` 의 TestCollider · `testprop.prefab.xml`
-  데이터가 이미 그렇다), 재부모 · 부모 떼기가 월드 자리를 지키지 않는다(KeepWorld 없음), `CameraComponent::lookAt` 이 월드 방향을 로컬 회전에 쓴다,
-  셰이더가 노멀을 월드 행렬로 변환(부등 스케일에서 조명이 틀림), 에디터 크기 판정 넷이 로컬 스케일(`frameSelected` · 바닥/표면 붙이기 · 콜라이더
+- **R6**(구조 ⑬ 뒤) — 셰이더가 노멀을 월드 행렬로 변환(부등 스케일에서 조명이 틀림 — 3x3 여인수 행렬(외적 셋)이면 역전치 없이 맞다, 네 백엔드 스크린샷으로 볼 것), 에디터 크기 판정 넷이 로컬 스케일(`frameSelected` · 바닥/표면 붙이기 · 콜라이더
   와이어프레임), GameFramework 이동 컴포넌트 넷이 월드 값을 로컬에, 메시 경계 반지름이 0.866 고정(캡슐 끝이 잘린다), 단위 메타 셋.
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
@@ -2103,6 +2101,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑬ 오브젝트의 루트는 하나, 부착은 규칙을 받는다(KeepRelative · KeepWorld), `lookAt` 은 월드로 적는다 — 1-0j 의 R6 첫 단위)
+
+- **오브젝트의 둘째 씬 컴포넌트가 월드 원점에 놓였다** — 붙이지 않은 둘째 씬 컴포넌트(콜라이더 · 소켓 · 메시)는 루트로 남아 오브젝트를 옮겨도 따라오지 않았다.
+  `editortest.scene.xml` 의 TestCollider(primary 는 x=2.5, 콜라이더는 원점) · `testprop.prefab.xml` 이 이미 그랬다. 이제 붙는 순간 primary 아래로 간다(언리얼
+  RootComponent — 루트는 하나). 상태 읽기는 저장된 부착으로 다시 붙이고, 비어 있으면 이대로 둬 **옛 데이터도 읽는 순간 맞는다**. 일부러 떼는 것은 여전히 된다.
+- **에디터의 재부모 · 부모 떼기가 오브젝트를 튀게 했다** — 부착 규칙이 하나(로컬 지킴)뿐이었다. 이제 `AttachRule { KeepRelative, KeepWorld }` 를 부착 ·
+  떼기(컴포넌트 · 오브젝트, 틱 중 미룸에도 실린다)가 받는다. 코드 · 상태 읽기의 기본은 `KeepRelative`(저장된 로컬은 부모 기준), 계층 창은 `KeepWorld`.
+- **`CameraComponent::lookAt` 이 돌아간 부모 아래에서 엉뚱한 곳을 봤다** — 월드 요 · 피치를 로컬 회전에 넣었다. 이제 월드 행렬로 만들어 부모 기준으로
+  분해해 적는다(`setWorldTransform`).
+
+**검증.** 새 시험 4(모두 이전 코드에서 진다): `ObjectStateRoundTripTest.SecondSceneComponentHangsUnderThePrimary`(옛 데이터 포함) ·
+`AttachRuleKeepsWorldOrRelativeAsAsked`(돌고 커진 부모), `EditorSceneCommandsTest.ReparentAndUnparentKeepTheWorldPlace`,
+`GameObjectTest.CameraLookAtUnderARotatedParentFacesTheTarget`. 기존 `DeferredPrimaryRemovalRefreshesActive` 는 루트인 둘째 씬 컴포넌트를 전제했다 — 일부러
+떼는 줄을 더했다(시험의 뜻은 그대로). 변이 4 모두 죽음. Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-03 (구조 ⑫ 틱 중 구조 변경은 한 규칙 · 한 큐 — 비우기는 미루고, 제자리 상태 읽기는 거절하고, 미룬 것은 부른 순서대로 — 1-0j 의 R5 첫 단위)
 

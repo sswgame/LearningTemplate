@@ -349,7 +349,7 @@ namespace sw
         return true;
     }
 
-    bool SceneComponent::attachToComponent( SceneComponent* pParent )
+    bool SceneComponent::attachToComponent( SceneComponent* pParent, AttachRule rule )
     {
         // 이미 그 부모면 할 일이 없다(성공). 나머지는 틱 중이든 아니든 **여기서** 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
         if ( pParent != nullptr && _pParent == pParent )
@@ -362,17 +362,20 @@ namespace sw
             GameObjectManager*        pManager     = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
             const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
-            pManager->deferStructuralChange( [pManager, selfHandle, parentHandle]()
+            pManager->deferStructuralChange( [pManager, selfHandle, parentHandle, rule]()
             {
                 SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
                 SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;
                 // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pSelf != nullptr )
-                    (void)pSelf->attachToComponent( pResolvedParent );
+                    (void)pSelf->attachToComponent( pResolvedParent, rule );
             } );
             return true;
         }
 
+        // 월드를 지키려면 붙이기 **전의** 월드를 찍어 두고, 붙인 뒤 새 부모 기준으로 다시 적는다(`setWorldTransform` 이 분해한다).
+        const bool     bKeepWorld  = ( rule == AttachRule::KeepWorld );
+        const float4x4 worldBefore = bKeepWorld ? getWorldMatrix() : float4x4{};
         detachFromComponent();
 
         _unresolvedAttach.reset(); // 부모가 정해졌다 — 남겨 둔 참조는 이제 뜻이 없다
@@ -387,20 +390,33 @@ namespace sw
 
         markTransformDirty();
         refreshOwnerActiveInHierarchy();
+        if ( bKeepWorld )
+            setWorldTransform( worldBefore );
         return true;
     }
 
-    void SceneComponent::detachFromComponent()
+    void SceneComponent::detachFromComponent( AttachRule rule )
     {
         if ( isInParallelTick() )
         {
-            deferSelfCall( &SceneComponent::detachFromComponent );
+            GameObjectManager*        pManager   = _pManager;
+            const sw::ComponentHandle selfHandle = getHandle();
+            pManager->deferStructuralChange( [pManager, selfHandle, rule]()
+            {
+                SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
+                if ( pSelf != nullptr )
+                    pSelf->detachFromComponent( rule );
+            } );
             return;
         }
 
+        const bool     bKeepWorld  = ( rule == AttachRule::KeepWorld && _pParent != nullptr );
+        const float4x4 worldBefore = bKeepWorld ? getWorldMatrix() : float4x4{};
         // 일부러 뗐다 — 찾지 못해 남겨 둔 참조도 버린다(그대로 두면 다음 로드가 그 부모에 다시 붙인다).
         _unresolvedAttach.reset();
         detachFromParentImmediate();
+        if ( bKeepWorld )
+            setWorldTransform( worldBefore );
     }
 
     void SceneComponent::detachFromParentImmediate()

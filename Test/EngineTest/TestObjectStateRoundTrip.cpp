@@ -650,3 +650,76 @@ SW_TEST_CASE( ObjectStateRoundTripTest, TurnedOffComponentsAndHiddenMeshesStayTh
         SW_EXPECT_FALSE( pLoadedMesh->isVisible() );
     }
 }
+
+/**
+ * @brief [ObjectStateRoundTripTest] 오브젝트의 둘째 씬 컴포넌트는 primary 아래에 붙는다 — 오브젝트를 옮기면 따라오고, 루트로 저장된 옛 데이터도 읽으면 붙는다
+ * @details 둘째 씬 컴포넌트(콜라이더 · 소켓 · 메시)는 붙이지 않으면 루트로 남아 **월드 원점**에 놓였다 — 오브젝트를 옮겨도 따라오지 않았다.
+ *          `editortest.scene.xml` 의 TestCollider(primary 는 x=2.5, 콜라이더는 원점) · `testprop.prefab.xml` 이 이미 그랬다. 오브젝트의 루트는 하나다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, SecondSceneComponentHangsUnderThePrimary )
+{
+    GameObjectManager manager;
+    GameObject*       pCrate    = manager.createGameObject( hashed_string( "Crate" ) );
+    SceneComponent*   pRoot     = pCrate->addComponent<SceneComponent>();
+    SceneComponent*   pCollider = pCrate->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pRoot != nullptr && pCollider != nullptr );
+    SW_EXPECT_TRUE( pCollider->getParent() == pRoot );
+    pRoot->setLocalPosition( float3( 2.5f, 0.0f, 0.0f ) );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 2.5f, pCollider->getWorldPosition()._x, 1e-4f );
+
+    // 옛 데이터: 둘째가 루트로 저장됐다. 읽으면 primary 아래로 간다.
+    pCollider->detachFromComponent();
+    const string oldXml  = ObjectStateSerializer::saveToXmlString( pCrate );
+    GameObject*  pLoaded = manager.createGameObject( hashed_string( "LoadedCrate" ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pLoaded, oldXml ) );
+    SceneComponent* pLoadedRoot = pLoaded->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pLoadedRoot );
+    SceneComponent* pLoadedCollider = nullptr;
+    pLoaded->forEachComponentOfType<SceneComponent>( [&]( SceneComponent* pScene )
+    {
+        if ( pScene != pLoadedRoot )
+            pLoadedCollider = pScene;
+    } );
+    SW_ASSERT_NOT_NULL( pLoadedCollider );
+    SW_EXPECT_TRUE( pLoadedCollider->getParent() == pLoadedRoot );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 2.5f, pLoadedCollider->getWorldPosition()._x, 1e-4f );
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 부착 규칙 — `KeepWorld` 는 돌고 커진 부모에 붙이고 떼어도 월드 자리를 지키고, 기본(`KeepRelative`)은 로컬을 지킨다
+ * @details 규칙이 하나(로컬 지킴)뿐이라 에디터의 재부모 · 부모 떼기가 오브젝트를 새 부모만큼 튀게 했다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, AttachRuleKeepsWorldOrRelativeAsAsked )
+{
+    GameObjectManager manager;
+    GameObject*       pParentObj = manager.createGameObject( hashed_string( "Turntable" ) );
+    SceneComponent*   pParent    = pParentObj->addComponent<SceneComponent>();
+    pParent->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
+    pParent->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pParent->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+    GameObject*     pChildObj = manager.createGameObject( hashed_string( "Vase" ) );
+    SceneComponent* pChild    = pChildObj->addComponent<SceneComponent>();
+    pChild->setLocalPosition( float3( 3.0f, 1.0f, -2.0f ) );
+    manager.flushSceneTransforms();
+
+    SW_ASSERT_TRUE( pChildObj->attachToParent( pParentObj, AttachRule::KeepWorld ) );
+    manager.flushSceneTransforms();
+    const float3 worldAfterAttach = pChild->getWorldPosition();
+    SW_EXPECT_NEAR_EQUAL( 3.0f, worldAfterAttach._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, worldAfterAttach._y, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, worldAfterAttach._z, 1e-3f );
+
+    pChildObj->detachFromParent( AttachRule::KeepWorld );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pChild->getWorldPosition()._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, pChild->getWorldPosition()._z, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pChild->getLocalPosition()._x, 1e-3f );
+
+    // 기본은 로컬을 지킨다 — 상태 읽기가 기대하는 규칙이다.
+    SW_ASSERT_TRUE( pChildObj->attachToParent( pParentObj ) );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pChild->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_TRUE( MathUtil::abs( pChild->getWorldPosition()._x - 3.0f ) > 1.0f );
+}

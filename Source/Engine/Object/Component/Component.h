@@ -87,6 +87,18 @@ namespace sw
     };
 
     /**
+     * @brief 부모에 붙이거나 뗄 때 무엇을 지킬지입니다(언리얼 `EAttachmentRule` · 유니티 `SetParent( parent, worldPositionStays )`).
+     * @details `KeepRelative` 는 로컬 값을 그대로 두어 새 부모를 따라 월드 자리가 바뀝니다 — 상태 읽기 · 코드의 기본입니다(저장된 로컬은 부모 기준이다).
+     *          `KeepWorld` 는 월드 자리를 지키도록 로컬 값을 다시 구합니다 — 에디터의 재부모 · 부모 떼기가 씁니다(예전에는 규칙이 하나뿐이라 계층 창에서
+     *          끌어 놓은 오브젝트가 새 부모만큼 **튀었다**).
+     */
+    enum class AttachRule : uint8
+    {
+        KeepRelative,
+        KeepWorld
+    };
+
+    /**
      * @struct SubTickInfo
      * @brief 컴포넌트에 등록된 서브틱 하나의 메타데이터와 선행 조건 정보입니다.
      */

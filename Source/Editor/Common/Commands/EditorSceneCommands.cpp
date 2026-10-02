@@ -158,7 +158,8 @@ namespace sw::editor
             return false;
 
         const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pChild );
-        if ( pChild->attachToParent( pNewParent ) == false )
+        // 끌어 놓은 자리에 그대로 있게 월드를 지킨다(유니티 계층 창 · 언리얼 아웃라이너와 같다). 예전에는 로컬을 지켜 새 부모만큼 튀었다.
+        if ( pChild->attachToParent( pNewParent, AttachRule::KeepWorld ) == false )
             return false;
 
         const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pChild );
@@ -175,7 +176,7 @@ namespace sw::editor
             return false;
 
         const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-        pObj->detachFromParent();
+        pObj->detachFromParent( AttachRule::KeepWorld );
         const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, undoLabel );
         select( pObj, SelectionMode::Replace );

@@ -1109,6 +1109,7 @@ SW_TEST_CASE( GameObjectTest, DeferredPrimaryRemovalRefreshesActive )
     sw::GameObject*       pObj      = manager.createGameObject( sw::hashed_string( "TwoSceneComps" ) );
     sw::SceneComponent*   pPrimary  = pObj->addComponent<sw::SceneComponent>();
     sw::SceneComponent*   pSecond   = pObj->addComponent<sw::SceneComponent>();
+    pSecond->detachFromComponent(); // 둘째 씬 컴포넌트는 붙이는 순간 primary 아래로 간다 — 이 시험은 일부러 뗀 루트를 본다
     SW_ASSERT_TRUE( pPrimary->attachToComponent( pParentSc ) );
     pParent->setActive( false );
     SW_ASSERT_FALSE( pObj->isActiveInHierarchy() );
@@ -2759,4 +2760,27 @@ SW_TEST_CASE( GameObjectTest, ObjectIdsThatShareATableSlotAreBothFound )
     SW_EXPECT_TRUE( manager.findGameObjectById( kNewId ) == nullptr );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
     SW_EXPECT_EQUAL( pThird, manager.findGameObjectById( kOldId + 2 * kSlotCount ) );
+}
+
+/**
+ * @brief [GameObjectTest] 돌아간 부모 아래의 카메라도 `lookAt` 하면 목표를 본다
+ * @details `lookAt` 은 월드 방향으로 구한 요 · 피치를 **로컬** 회전에 넣었다. 부모(플레이어 · 리그)가 돌아가 있으면 그만큼 엉뚱한 곳을 봤다.
+ */
+SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pRig    = manager.createGameObject( sw::hashed_string( "Rig" ) );
+    sw::SceneComponent*   pRigSc  = pRig->addComponent<sw::SceneComponent>();
+    sw::GameObject*       pCamObj = manager.createGameObject( sw::hashed_string( "RigCamera" ) );
+    sw::CameraComponent*  pCamera = pCamObj->addComponent<sw::CameraComponent>();
+    SW_ASSERT_TRUE( pRigSc != nullptr && pCamera != nullptr );
+    pRigSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::HalfPi, 0.0f ) );
+    SW_ASSERT_TRUE( pCamObj->attachToParent( pRig ) );
+    manager.flushSceneTransforms();
+
+    pCamera->lookAt( sw::float3( 0.0f, 0.0f, 10.0f ) );
+    manager.flushSceneTransforms();
+    const sw::float3 forward = sw::float3::transformNormal( sw::float3( 0.0f, 0.0f, 1.0f ), pCamera->getWorldMatrix() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, forward._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, forward._z, 1e-3f );
 }

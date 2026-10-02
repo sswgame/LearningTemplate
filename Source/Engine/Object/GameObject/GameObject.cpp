@@ -201,7 +201,7 @@ namespace sw
         onPropertyChanged( s_activeName );
     }
 
-    bool GameObject::attachToParent( GameObject* pParent )
+    bool GameObject::attachToParent( GameObject* pParent, AttachRule rule )
     {
         if ( pParent == nullptr )
             return false;
@@ -221,13 +221,13 @@ namespace sw
         {
             const uint64 childId  = _objectId;
             const uint64 parentId = pParent->getObjectId();
-            pManager->deferStructuralChange( [pManager, childId, parentId]()
+            pManager->deferStructuralChange( [pManager, childId, parentId, rule]()
             {
                 GameObject* pChildObj  = pManager->findGameObjectById( childId );
                 GameObject* pParentObj = pManager->findGameObjectById( parentId );
                 // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pChildObj != nullptr && pParentObj != nullptr )
-                    (void)pChildObj->attachToParent( pParentObj );
+                    (void)pChildObj->attachToParent( pParentObj, rule );
             } );
             return true;
         }
@@ -241,20 +241,20 @@ namespace sw
             return false;
 
         // 계층 활성은 `attachToComponent` 가 그 자리에서 맞춘다.
-        return pChildSc->attachToComponent( pParentSc );
+        return pChildSc->attachToComponent( pParentSc, rule );
     }
 
-    void GameObject::detachFromParent()
+    void GameObject::detachFromParent( AttachRule rule )
     {
         GameObjectManager* pManager = getManager();
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId = _objectId;
-            pManager->deferStructuralChange( [pManager, childId]()
+            pManager->deferStructuralChange( [pManager, childId, rule]()
             {
                 GameObject* pChildObj = pManager->findGameObjectById( childId );
                 if ( pChildObj != nullptr )
-                    pChildObj->detachFromParent();
+                    pChildObj->detachFromParent( rule );
             } );
             return;
         }
@@ -262,7 +262,7 @@ namespace sw
         // 계층 활성은 떼는 자리(`detachFromParentImmediate`)가 맞춘다.
         SceneComponent* pChildSc = getPrimarySceneComponent();
         if ( pChildSc != nullptr )
-            pChildSc->detachFromComponent();
+            pChildSc->detachFromComponent( rule );
     }
 
     GameObject* GameObject::getParent() const
@@ -582,6 +582,15 @@ namespace sw
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
+        // 둘째 씬 컴포넌트부터는 primary 에 붙인다 — 오브젝트의 루트는 하나다(언리얼 RootComponent). 예전에는 루트로 남아 **월드 원점**에 놓였다
+        // (오브젝트를 옮겨도 콜라이더 · 메시가 따라오지 않았다 — `editortest.scene.xml` 의 TestCollider · `testprop.prefab.xml` 이 그랬다).
+        // 상태 읽기는 이 뒤에 저장된 부착(소켓 · 다른 오브젝트)으로 다시 붙이고, 부착이 비어 있으면 이대로 둔다(옛 데이터도 읽는 순간 맞는다).
+        Component* pPrimary = _pPrimaryScene.load( std::memory_order_relaxed );
+        if ( pComp->isSceneComponent() && pPrimary != nullptr && pPrimary != pComp )
+        {
+            if ( static_cast<SceneComponent*>( pComp )->attachToComponent( static_cast<SceneComponent*>( pPrimary ) ) == false )
+                SW_LOG_WARNING( "'%#': a second scene component could not be put under the primary - it stays a root", getName().c_str() );
+        }
         // 월드가 플레이 중이면 다음 틱 단계에서 onBeginPlay 를 부른다. **여기서 부르지 않는다** — 부르는 쪽(`addComponent` 뒤의 세팅,
         // 이름으로 붙이는 역직렬화의 PROPERTY 채우기)이 아직 끝나지 않았다.
         if ( _pOwnerManager->hasBegunPlay() )

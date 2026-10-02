@@ -235,3 +235,38 @@ SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh 
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_NULL( pRestored->getComponent<MeshComponent>() );
 }
+
+/**
+ * @brief [EditorSceneCommandsTest] 계층 창의 재부모 · 부모 떼기는 오브젝트를 놓인 자리에 둔다
+ * @details 붙이기가 로컬을 지켜, 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튀었다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, ReparentAndUnparentKeepTheWorldPlace )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "ReparentProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    GameObject*               pShelf   = pManager->createGameObject( hashed_string( "Shelf" ) );
+    GameObject*               pBook    = pManager->createGameObject( hashed_string( "Book" ) );
+    SceneComponent*           pShelfSc = pShelf->addComponent<SceneComponent>();
+    SceneComponent*           pBookSc  = pBook->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pShelfSc != nullptr && pBookSc != nullptr );
+    pShelfSc->setLocalPosition( float3( 0.0f, 5.0f, 0.0f ) );
+    pShelfSc->setLocalScale( float3( 3.0f, 3.0f, 3.0f ) );
+    pBookSc->setLocalPosition( float3( 1.0f, 2.0f, 0.0f ) );
+    pManager->mergePendingAdds();
+    pManager->flushSceneTransforms();
+
+    SW_ASSERT_TRUE( EditorSceneCommands::reparent( pBook, pShelf ) );
+    pManager->flushSceneTransforms();
+    SW_EXPECT_TRUE( pBook->getParent() == pShelf );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pBookSc->getWorldPosition()._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pBookSc->getWorldPosition()._y, 1e-3f );
+
+    SW_ASSERT_TRUE( EditorSceneCommands::unparent( pBook ) );
+    pManager->flushSceneTransforms();
+    SW_EXPECT_TRUE( pBook->getParent() == nullptr );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pBookSc->getWorldPosition()._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pBookSc->getWorldPosition()._y, 1e-3f );
+}

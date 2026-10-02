@@ -159,8 +159,11 @@ namespace sw
          */
         void updateWorldTransformFromParent();
 
-        /** @brief 부모 SceneComponent 에 붙입니다. 붙일 수 없는 부모(`canAttachTo` 가 false)면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] bool attachToComponent( SceneComponent* pParent );
+        /**
+         * @brief 부모 SceneComponent 에 붙입니다. 붙일 수 없는 부모(`canAttachTo` 가 false)면 아무것도 하지 않고 false 입니다.
+         * @param rule 로컬을 지킬지(기본) 월드 자리를 지킬지(`AttachRule`)입니다. 틱 중이면 규칙째 미뤄 그때의 월드를 지킵니다.
+         */
+        [[nodiscard]] bool attachToComponent( SceneComponent* pParent, AttachRule rule = AttachRule::KeepRelative );
         /**
          * @brief @p pParent 에 붙일 수 있는지 봅니다. 붙이는 길(직접 · 틱 중 미룸 · 오브젝트 단위)이 모두 이것을 먼저 묻습니다.
          * @details 안 되는 것: 자기 자신 · null · **다른 매니저(씬)의 부모**(계층이 두 매니저에 걸치면 한쪽의 더티 루트 목록에 다른 쪽
@@ -171,8 +174,8 @@ namespace sw
          */
         bool canAttachTo( const SceneComponent* pParent ) const;
 
-        /** @brief 부모 컴포넌트에서 뗍니다(틱 중이면 미룹니다). */
-        void detachFromComponent();
+        /** @brief 부모 컴포넌트에서 뗍니다(틱 중이면 미룹니다). `AttachRule::KeepWorld` 면 뗀 뒤에도 월드 자리를 지킵니다. */
+        void detachFromComponent( AttachRule rule = AttachRule::KeepRelative );
 
         /** @brief 부모 SceneComponent 를 반환합니다. */
         SceneComponent* getParent() const { return _pParent; }
@@ -248,8 +251,8 @@ namespace sw
         void queueTickWrite( SceneTransformWrite& write );
         /**
          * @brief 병렬 틱이 끝난 뒤 이 컴포넌트의 @p pMethod 를 다시 부르도록 미룹니다. 핸들로 되찾으므로 그 사이에 파괴돼도 안전합니다.
-         * @details `detachFromComponent` · `markTransformDirty` 가 같은 여덟 줄을 각자 들고 있었습니다. 인자가 있는
-         *          `attachToComponent` 는 부모 핸들도 되찾아야 해서 따로 둡니다.
+         * @details 인자 없는 메서드(`markTransformDirty`)용입니다. 인자가 있는 `attachToComponent` · `detachFromComponent` 는 부모 핸들 · 부착 규칙을
+         *          함께 싣느라 따로 둡니다.
          */
         void deferSelfCall( void ( SceneComponent::*pMethod )() );
         /**
