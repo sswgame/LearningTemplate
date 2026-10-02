@@ -9,7 +9,10 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -467,10 +470,127 @@ namespace sw
                _queuedPath.empty() == false;
     }
 
+    void SceneManager::markPersistent( GameObject* pRoot )
+    {
+        if ( pRoot == nullptr )
+            return;
+        // 편집 중에는 받지 않는다(유니티도 플레이 모드에서만). 받아 두면 편집 중 씬을 바꿀 때 옮겨 간다.
+        if ( _bWorldPlaying == false )
+        {
+            SW_LOG_WARNING( "markPersistent: '%#' ignored - objects carry across scene loads only while the world is playing", pRoot->getName().c_str() );
+            return;
+        }
+        if ( pRoot->getParent() != nullptr )
+        {
+            SW_LOG_WARNING( "markPersistent: '%#' is not a root object - only roots (with their children) carry across scene loads",
+                            pRoot->getName().c_str() );
+            return;
+        }
+        if ( isPersistent( pRoot ) == false )
+            _listPersistentObjectId.push_back( pRoot->getObjectId() );
+    }
+
+    bool SceneManager::isPersistent( const GameObject* pObject ) const
+    {
+        return pObject != nullptr &&
+               std::find( _listPersistentObjectId.begin(), _listPersistentObjectId.end(), pObject->getObjectId() ) != _listPersistentObjectId.end();
+    }
+
+    void SceneManager::carryPersistentObjects( Scene* pFrom, Scene* pTo )
+    {
+        GameObjectManager* pSource = ( pFrom != nullptr ) ? pFrom->getObjectManager() : nullptr;
+        GameObjectManager* pTarget = ( pTo != nullptr ) ? pTo->getObjectManager() : nullptr;
+        if ( pSource == nullptr || pTarget == nullptr || _listPersistentObjectId.empty() )
+            return;
+
+        struct CarriedObject
+        {
+            GameObject*    _pSource{ nullptr };
+            ObjectIdentity _identity{};
+            vector<uint8>  _bytes{};
+            GameObject*    _pTarget{ nullptr };
+        };
+        struct CrossAttachment
+        {
+            uint64 _childComponentId{ 0 };
+            uint64 _parentObjectId{ 0 };
+            uint64 _parentComponentId{ 0 };
+        };
+
+        vector<uint64> listKept;
+        for ( const uint64 rootId : _listPersistentObjectId )
+        {
+            GameObject* pRoot = pSource->findGameObjectById( rootId );
+            if ( pRoot == nullptr )
+                continue; // 그새 파괴됐다
+
+            // 루트와 자손(부모 먼저). 부착은 다른 오브젝트 쪽만 적어 둔다 — 오브젝트 안의 부착은 상태 로드가 되붙인다.
+            vector<CarriedObject>   listCarried;
+            vector<CrossAttachment> listCross;
+            vector<GameObject*>     listChild;
+            listCarried.push_back( CarriedObject{ pRoot } );
+            for ( size_t cursor = 0; cursor < listCarried.size(); ++cursor )
+            {
+                GameObject* pObject = listCarried[cursor]._pSource;
+                pObject->getChildren( listChild );
+                for ( GameObject* pChild : listChild )
+                    listCarried.push_back( CarriedObject{ pChild } );
+                for ( const Component* pComp : pObject->getComponents() )
+                {
+                    const SceneComponent* pScene  = ( pComp != nullptr && pComp->isSceneComponent() ) ? static_cast<const SceneComponent*>( pComp ) : nullptr;
+                    const SceneComponent* pParent = ( pScene != nullptr ) ? pScene->getParent() : nullptr;
+                    if ( pParent != nullptr && pParent->getOwner() != pObject )
+                        listCross.push_back( CrossAttachment{ pScene->getComponentId(), pParent->getOwner()->getObjectId(), pParent->getComponentId() } );
+                }
+            }
+
+            // 상태를 모두 찍은 뒤에 만든다 — 만드는 동안 원본은 그대로다.
+            for ( CarriedObject& carried : listCarried )
+            {
+                carried._identity = ObjectStateSerializer::captureIdentity( carried._pSource );
+                ObjectStateSerializer::saveToBinaryBuffer( carried._pSource, carried._bytes );
+            }
+            for ( CarriedObject& carried : listCarried )
+            {
+                carried._pTarget = pTarget->createGameObjectWithId( carried._pSource->getName(), carried._identity._objectId );
+                string parentName;
+                if ( carried._pTarget == nullptr ||
+                     ObjectStateSerializer::loadFromBinaryBuffer( carried._pTarget, carried._bytes.data(), carried._bytes.size(), parentName,
+                                                                  &carried._identity ) == 0 )
+                    SW_LOG_WARNING( "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
+            }
+            // 다른 오브젝트로의 부착은 **컴포넌트 id** 로 되붙인다(이름으로 찾지 않는다 — 새 씬에 같은 이름이 있으면 이름이 바뀐다). 소켓도 그대로다.
+            for ( const CrossAttachment& attachment : listCross )
+            {
+                GameObject*     pParentObject = pTarget->findGameObjectById( attachment._parentObjectId );
+                Component*      pParentComp   = ( pParentObject != nullptr ) ? pParentObject->findComponentById( attachment._parentComponentId ) : nullptr;
+                SceneComponent* pParent       = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;
+                SceneComponent* pChild        = nullptr;
+                for ( const CarriedObject& carried : listCarried )
+                {
+                    Component* pFound = ( carried._pTarget != nullptr ) ? carried._pTarget->findComponentById( attachment._childComponentId ) : nullptr;
+                    if ( pFound != nullptr )
+                    {
+                        pChild = pFound->isSceneComponent() ? static_cast<SceneComponent*>( pFound ) : nullptr;
+                        break;
+                    }
+                }
+                if ( pChild != nullptr && pParent != nullptr )
+                    pChild->attachToComponent( pParent );
+            }
+            if ( listCarried.front()._pTarget != nullptr )
+                listKept.push_back( rootId );
+        }
+        _listPersistentObjectId = std::move( listKept );
+    }
+
     void SceneManager::activateScene( Scene* pScene )
     {
         if ( _pActiveScene == pScene )
             return;
+        // 플레이 중이면 영속 루트를 들어오는 씬으로 옮겨 심는다 — 나가는 씬이 끝나기(endPlay) 전에, 상태가 살아 있을 때.
+        if ( _bWorldPlaying && _pActiveScene != nullptr && pScene != nullptr )
+            carryPersistentObjects( _pActiveScene, pScene );
         // 플레이 중이면 나가는 씬을 끝내고 들어오는 씬을 시작한다(씬을 내리기 전 — 언로드는 활성을 먼저 비운다).
         if ( _bWorldPlaying && _pActiveScene != nullptr && _pActiveScene->getObjectManager() != nullptr )
             _pActiveScene->getObjectManager()->endPlay();
@@ -483,7 +603,10 @@ namespace sw
     {
         if ( _bWorldPlaying == bPlaying )
             return;
-        _bWorldPlaying              = bPlaying;
+        _bWorldPlaying = bPlaying;
+        // 플레이를 멈추면 영속 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다). 편집 중 씬을 바꿀 때 옮겨 가면 안 된다.
+        if ( bPlaying == false )
+            _listPersistentObjectId.clear();
         GameObjectManager* pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )
             return;

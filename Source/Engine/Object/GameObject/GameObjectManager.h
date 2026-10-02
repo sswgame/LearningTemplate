@@ -589,7 +589,12 @@ namespace sw
         vector<ComponentHandle> _listProcessingDestroyComponent;
 
         mutable std::shared_mutex _mutex;
-        atomic<uint64>            _nextId;
+        /**
+         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentId` 와 같은 규칙).
+         * @details 예전에는 매니저마다 1 부터 셌다. 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 지키려면 다른 매니저의
+         *          발급과 겹치지 않아야 한다 — 겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊겼다. 유니티의 인스턴스 id 도 프로세스 전체다.
+         */
+        static atomic<uint64> _s_nextObjectId;
 
         PhysicsWorld _physicsWorld;
 

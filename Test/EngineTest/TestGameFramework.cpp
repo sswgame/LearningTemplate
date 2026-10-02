@@ -12,6 +12,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Base/DontDestroyOnLoadComponent.h"
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Base/GameService.h"
@@ -787,6 +788,52 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
         SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
         SW_EXPECT_TRUE( pManager->findGameObjectByName( hashed_string( "Survivor" ) ) != nullptr );
     }
+}
+
+/**
+ * @brief [GameFrameworkTest] `DontDestroyOnLoadComponent` 를 단 오브젝트는 플레이 중 씬을 바꿔도 남는다
+ * @details 예전에는 시작할 때 태그(`DontDestroyOnLoad`)만 붙였고 그 태그를 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다.
+ *          이제 시작이 씬 매니저에 루트를 영속으로 표시한다(유니티 `Object.DontDestroyOnLoad`) — 옮겨 심는 쪽은 `SceneTest.PersistentRootsCarryIntoTheNextScene`.
+ */
+SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossScenes )
+{
+    SceneManager sceneManager;
+    sceneManager.setWorldPlaying( true );
+    Scene* pTown = sceneManager.createEmptyActiveScene( "Town" );
+    SW_ASSERT_NOT_NULL( pTown );
+    struct ScopedSceneGameService
+    {
+        explicit ScopedSceneGameService( SceneManager& manager )
+        {
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            game::bindGameService( service );
+        }
+        ~ScopedSceneGameService() { game::unbindGameService(); }
+
+        ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
+        ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+    };
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    GameObject* pInventory = pTown->getObjectManager()->createGameObject( hashed_string( "Inventory" ) );
+    SW_ASSERT_NOT_NULL( pInventory );
+    SW_ASSERT_NOT_NULL( pInventory->addComponent<DontDestroyOnLoadComponent>() );
+    SW_ASSERT_NOT_NULL( pTown->getObjectManager()->createGameObject( hashed_string( "Villager" ) ) );
+    // 플레이 중에 붙은 컴포넌트의 시작은 다음 틱 단계다.
+    sceneManager.tick( 0.016f );
+    SW_EXPECT_TRUE( sceneManager.isPersistent( pInventory ) );
+    const uint64 inventoryId = pInventory->getObjectId();
+
+    Scene* pDungeon = sceneManager.createEmptyActiveScene( "Dungeon" );
+    SW_ASSERT_NOT_NULL( pDungeon );
+    const GameObject* pCarried = pDungeon->getObjectManager()->findGameObjectById( inventoryId );
+    SW_ASSERT_NOT_NULL( pCarried );
+    SW_EXPECT_TRUE( pCarried->getComponent<DontDestroyOnLoadComponent>() != nullptr );
+    SW_EXPECT_TRUE( pDungeon->getObjectManager()->findGameObjectByName( hashed_string( "Villager" ) ) == nullptr );
+
+    sceneManager.setWorldPlaying( false );
+    sceneManager.shutdown();
 }
 
 /**

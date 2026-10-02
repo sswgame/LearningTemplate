@@ -88,6 +88,60 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
 }
 
 /**
+ * @brief [SceneAsyncTest] 들어오는 씬에 같은 이름의 오브젝트가 있어도 옮겨 심은 영속 루트의 자식은 제 부모(소켓)에 붙는다
+ * @details 옮겨 심을 때 다른 오브젝트로의 부착을 **컴포넌트 id** 로 되붙인다. 이름(`_attachOwner`)으로 찾으면 들어오는 씬의 같은 이름 오브젝트에
+ *          붙거나(그쪽에는 그 소켓이 없다) 떨어진다 — 새 매니저가 옮겨 온 루트의 이름을 유일하게 바꾸기 때문이다.
+ */
+SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSameName )
+{
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_carry.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_carry.bin" );
+    const sw::string xmlStr  = "<Scene formatVersion=\"0\" name=\"Dungeon\"><entities><entity name=\"MusicPlayer\"/></entities></Scene>";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
+    sw::SceneDocument doc{};
+    doc._name = "Dungeon";
+    sw::SceneDocument::EntityNode decoy{};
+    decoy._name = "MusicPlayer";
+    doc._listEntityNode.push_back( std::move( decoy ) );
+    SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    manager.setWorldPlaying( true );
+    sw::Scene* pTown = manager.createEmptyActiveScene( "Town" );
+    SW_ASSERT_NOT_NULL( pTown );
+    sw::GameObjectManager* pObjects = pTown->getObjectManager();
+    sw::GameObject*        pKeeper  = pObjects->createGameObject( sw::hashed_string( "MusicPlayer" ) );
+    sw::SceneComponent*    pRoot    = pKeeper->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*    pMount   = pKeeper->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_ASSERT_NOT_NULL( pMount );
+    SW_ASSERT_TRUE( pMount->attachToComponent( pRoot ) );
+    sw::GameObject*     pSpeaker      = pObjects->createGameObject( sw::hashed_string( "Speaker" ) );
+    sw::SceneComponent* pSpeakerScene = pSpeaker->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSpeakerScene );
+    SW_ASSERT_TRUE( pSpeakerScene->attachToComponent( pMount ) );
+    manager.markPersistent( pKeeper );
+    const sw::ComponentHandle mountHandle   = pMount->getHandle();
+    const sw::ComponentHandle speakerHandle = pSpeakerScene->getHandle();
+
+    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    sw::drainSceneTransitions( manager );
+    sw::Scene* pDungeon = manager.getActiveScene();
+    SW_ASSERT_NOT_NULL( pDungeon );
+    SW_EXPECT_STREQ( "Dungeon", pDungeon->getName() );
+    sw::GameObjectManager* pNext           = pDungeon->getObjectManager();
+    sw::Component*         pCarriedMount   = pNext->resolveComponent( mountHandle );
+    auto*                  pCarriedSpeaker = static_cast<sw::SceneComponent*>( pNext->resolveComponent( speakerHandle ) );
+    SW_ASSERT_NOT_NULL( pCarriedMount );
+    SW_ASSERT_NOT_NULL( pCarriedSpeaker );
+    SW_EXPECT_TRUE( pCarriedSpeaker->getParent() == pCarriedMount );
+
+    manager.setWorldPlaying( false );
+    manager.shutdown();
+}
+
+/**
  * @brief [SceneAsyncTest] GPU 없이 SceneDocument 로드
  */
 SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )

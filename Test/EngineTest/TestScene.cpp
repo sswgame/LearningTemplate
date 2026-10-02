@@ -723,6 +723,90 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
 }
 
 /**
+ * @brief [SceneTest] 영속으로 표시한 루트는 플레이 중 씬 전환 너머로 자식 · 정체(id) · 소켓 부착 그대로 넘어가고, 나머지는 사라진다
+ * @details 유니티 `Object.DontDestroyOnLoad`(루트를 영속 씬으로 옮긴다) · 언리얼 심리스 트래블의 액터 목록 자리다. 예전에는
+ *          `DontDestroyOnLoadComponent` 가 태그 하나만 붙였고 그 태그를 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다.
+ *          플레이를 멈추면 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다).
+ */
+SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    manager.setWorldPlaying( true );
+    sw::Scene* pFirst = manager.createEmptyActiveScene( "First" );
+    SW_ASSERT_NOT_NULL( pFirst );
+    sw::GameObjectManager* pObjects = pFirst->getObjectManager();
+
+    sw::GameObject*     pKeeper      = pObjects->createGameObject( sw::hashed_string( "MusicPlayer" ) );
+    sw::SceneComponent* pKeeperRoot  = pKeeper->addComponent<sw::SceneComponent>();
+    sw::SceneComponent* pKeeperMount = pKeeper->addComponent<sw::SceneComponent>(); // 소켓(주 컴포넌트가 아닌 씬 컴포넌트)
+    SW_ASSERT_NOT_NULL( pKeeperRoot );
+    SW_ASSERT_NOT_NULL( pKeeperMount );
+    pKeeperRoot->setLocalPosition( sw::float3{ 1.0f, 2.0f, 3.0f } );
+    pKeeperMount->setLocalPosition( sw::float3{ 0.0f, 0.0f, 5.0f } );
+    SW_ASSERT_TRUE( pKeeperMount->attachToComponent( pKeeperRoot ) );
+
+    sw::GameObject*     pSpeaker      = pObjects->createGameObject( sw::hashed_string( "Speaker" ) );
+    sw::SceneComponent* pSpeakerScene = pSpeaker->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pSpeakerScene );
+    pSpeakerScene->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+    SW_ASSERT_TRUE( pSpeakerScene->attachToComponent( pKeeperMount ) );
+    SW_ASSERT_NOT_NULL( pObjects->createGameObject( sw::hashed_string( "Enemy" ) ) );
+
+    manager.markPersistent( pKeeper );
+    SW_EXPECT_TRUE( manager.isPersistent( pKeeper ) );
+    // 루트가 아닌 것은 표시하지 않는다(유니티도 루트만 받는다).
+    manager.markPersistent( pSpeaker );
+    SW_EXPECT_FALSE( manager.isPersistent( pSpeaker ) );
+
+    const uint64              keeperId      = pKeeper->getObjectId();
+    const uint64              speakerId     = pSpeaker->getObjectId();
+    const sw::ComponentHandle mountHandle   = pKeeperMount->getHandle();
+    const sw::ComponentHandle speakerHandle = pSpeakerScene->getHandle();
+
+    sw::Scene* pSecond = manager.createEmptyActiveScene( "Second" );
+    SW_ASSERT_NOT_NULL( pSecond );
+    sw::GameObjectManager* pNext           = pSecond->getObjectManager();
+    sw::GameObject*        pCarried        = pNext->findGameObjectById( keeperId );
+    sw::GameObject*        pCarriedSpeaker = pNext->findGameObjectById( speakerId );
+    SW_ASSERT_NOT_NULL( pCarried );
+    SW_ASSERT_NOT_NULL( pCarriedSpeaker );
+    SW_EXPECT_TRUE( pCarried->getName() == sw::hashed_string( "MusicPlayer" ) );
+    SW_EXPECT_TRUE( pNext->findGameObjectByName( sw::hashed_string( "Enemy" ) ) == nullptr );
+    SW_EXPECT_TRUE( manager.isPersistent( pCarried ) );
+
+    // 핸들이 이어지고, 자식은 같은 소켓에 붙어 있다.
+    sw::SceneComponent* pCarriedMount        = static_cast<sw::SceneComponent*>( pNext->resolveComponent( mountHandle ) );
+    sw::SceneComponent* pCarriedSpeakerScene = static_cast<sw::SceneComponent*>( pNext->resolveComponent( speakerHandle ) );
+    SW_ASSERT_NOT_NULL( pCarriedMount );
+    SW_ASSERT_NOT_NULL( pCarriedSpeakerScene );
+    SW_EXPECT_TRUE( pCarriedSpeakerScene->getParent() == pCarriedMount );
+    pNext->flushSceneTransforms();
+    const sw::float3 speakerWorld = pCarriedSpeakerScene->getWorldPosition();
+    SW_EXPECT_TRUE( sw::MathUtil::nearEqual( speakerWorld._x, 1.0f ) && sw::MathUtil::nearEqual( speakerWorld._y, 3.0f ) &&
+                    sw::MathUtil::nearEqual( speakerWorld._z, 8.0f ) );
+
+    // 다음 전환에도 넘어간다.
+    sw::Scene* pThird = manager.createEmptyActiveScene( "Third" );
+    SW_ASSERT_NOT_NULL( pThird );
+    SW_EXPECT_TRUE( pThird->getObjectManager()->findGameObjectById( keeperId ) != nullptr );
+
+    // 플레이를 멈추면 표시를 잊는다. 편집 중에는 표시를 받지 않는다.
+    manager.setWorldPlaying( false );
+    sw::GameObject* pEditTime = pThird->getObjectManager()->createGameObject( sw::hashed_string( "EditTime" ) );
+    manager.markPersistent( pEditTime );
+    SW_EXPECT_FALSE( manager.isPersistent( pEditTime ) );
+    // 다음 플레이에서 씬을 바꿔도 지난 플레이의 표시로 옮겨 가지 않는다.
+    manager.setWorldPlaying( true );
+    sw::Scene* pFourth = manager.createEmptyActiveScene( "Fourth" );
+    SW_ASSERT_NOT_NULL( pFourth );
+    SW_EXPECT_TRUE( pFourth->getObjectManager()->findGameObjectById( keeperId ) == nullptr );
+    manager.setWorldPlaying( false );
+
+    manager.shutdown();
+}
+
+/**
  * @brief [SceneTest] 프리팹을 찾지 못한 엔티티도 저장하면 그대로 남는다(유니티의 "Missing Prefab" 과 같은 자리)
  * @details 예전에는 스폰이 실패하면 경고 한 줄을 남기고 엔티티를 버렸다. 씬을 열고 저장하면 그 엔티티 · 덮어쓴 값 · 프리팹 GUID 가
  *          파일에서 영영 사라졌다 — 프리팹을 `.meta` 없이 옮겼거나 잠깐 없던 것만으로. 이제 풀지 못한 엔티티는 문서 그대로 들고 있다가

@@ -2573,6 +2573,28 @@ SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
 }
 
 /**
+ * @brief 오브젝트 id 는 매니저를 넘어 겹치지 않는다(컴포넌트 id 와 같은 규칙) — 씬을 넘어 옮긴 오브젝트가 정체를 지킬 수 있어야 한다.
+ * @details 예전에는 매니저마다 1 부터 셌다. 씬 A 의 오브젝트를 같은 id 로 씬 B 에 옮기면(영속 오브젝트 · `SceneManager::markPersistent`) B 의
+ *          같은 id 와 부딪혀 새 id 를 받았고, 그 오브젝트를 가리키던 핸들이 끊겼다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
+ */
+SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
+{
+    sw::GameObjectManager first;
+    sw::GameObjectManager second;
+    const sw::GameObject* pA = first.createGameObject( sw::hashed_string( "A" ) );
+    const sw::GameObject* pB = second.createGameObject( sw::hashed_string( "B" ) );
+    SW_ASSERT_NOT_NULL( pA );
+    SW_ASSERT_NOT_NULL( pB );
+    SW_EXPECT_TRUE( pA->getObjectId() != pB->getObjectId() );
+    // 되살린 id 도 뒤의 발급과 겹치지 않는다 — 다른 매니저의 발급에서도.
+    const sw::GameObject* pRestored = first.createGameObjectWithId( sw::hashed_string( "Restored" ), pB->getObjectId() + 100 );
+    SW_ASSERT_NOT_NULL( pRestored );
+    const sw::GameObject* pAfter = second.createGameObject( sw::hashed_string( "After" ) );
+    SW_ASSERT_NOT_NULL( pAfter );
+    SW_EXPECT_TRUE( pAfter->getObjectId() > pRestored->getObjectId() );
+}
+
+/**
  * @brief 되살린 큰 id 도 락 없는 표에서 찾는다 — 표 범위(약 420 만)를 넘었다고 맵으로 떨어지지 않는다.
  * @details 예전 표는 id 를 그대로 칸 번호로 써서 `kChunkSize * kMaxChunk` 를 넘는 id 는 모두 잠금 + 해시 맵(호출당 110 ns)으로 갔고, 되감지
  *          않았다. 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길로 갔고, 그런 세션에서 저장한 id 를 되살리면(세이브 · 플레이 복원) 처음부터
@@ -2588,11 +2610,11 @@ SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
     SW_EXPECT_EQUAL( pRestored, manager.findGameObjectById( kLargeId ) );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
 
-    // 발급은 그 뒤로 이어지고, 역시 표에 있다.
+    // 발급은 그 뒤로 이어지고(발급은 프로세스 전체라 다른 시험이 더 멀리 갔을 수 있다), 역시 표에 있다.
     sw::GameObject* pNext = manager.createGameObject( sw::hashed_string( "Next" ) );
     SW_ASSERT_NOT_NULL( pNext );
-    SW_EXPECT_EQUAL( kLargeId + 1, pNext->getObjectId() );
-    SW_EXPECT_EQUAL( pNext, manager.findGameObjectById( kLargeId + 1 ) );
+    SW_EXPECT_TRUE( pNext->getObjectId() > kLargeId );
+    SW_EXPECT_EQUAL( pNext, manager.findGameObjectById( pNext->getObjectId() ) );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
 }
 

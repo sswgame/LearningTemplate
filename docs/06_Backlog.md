@@ -2079,6 +2079,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 69 DontDestroyOnLoad — 태그 하나만 붙이고 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다)
+
+남은 항목 "DontDestroyOnLoad 가 아무것도 안 함". `DontDestroyOnLoadComponent` 는 시작할 때 `DontDestroyOnLoad` 태그를 붙이는 것이 전부였고 그 태그를
+읽는 곳이 없었다. 유니티 `Object.DontDestroyOnLoad` 는 루트를 영속 씬으로 옮기고(여러 씬이 함께 돈다), 언리얼은 심리스 트래블 때 액터 목록을 새 월드로
+가져간다. 여기는 활성 씬이 하나라 **씬이 바뀔 때 새 씬에 같은 정체로 옮겨 심는다.**
+
+- `SceneManager::markPersistent( root )` · `isPersistent` — 플레이 중 · 루트만 받는다(유니티와 같다. 아니면 경고). 플레이를 멈추면 잊는다(편집 중 씬을 바꿀
+  때 옮겨 가면 안 된다 — 유니티도 플레이 모드를 나가면 영속 씬을 비운다).
+- 활성 씬이 바뀔 때(`activateScene` — 동기 · 비동기 전환이 모두 여기를 지난다) 나가는 씬이 끝나기 **전에** 루트와 자손의 반사 상태를 찍어 들어오는
+  씬에 **같은 오브젝트 · 컴포넌트 id** 로 다시 만든다. 다른 오브젝트로의 부착은 **컴포넌트 id** 로 되붙인다 — 이름(`_attachOwner`)으로 찾으면 들어오는
+  씬의 같은 이름 오브젝트에 붙는다(새 매니저가 옮겨 온 루트 이름을 유일하게 바꾼다). 소켓도 그대로다. 다시 만드는 것이라 포인터 · 반사되지 않은
+  상태는 새것이고 `onBeginPlay` 가 다시 불린다(되돌리기 · 핫 리로드와 같은 계약) — 유니티처럼 같은 인스턴스가 이어지지는 않는다.
+- **오브젝트 id 를 프로세스 전체에서 하나로**(`GameObjectManager::_s_nextObjectId`, 컴포넌트 id 와 같은 규칙). 매니저마다 1 부터 세면 옮긴 오브젝트의
+  id 가 들어오는 씬의 id 와 부딪혀 새 id 를 받고 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체다. 결함 66 의 시험 하나("다음 발급은 정확히
+  +1")를 "그보다 크다" 로 고쳤다 — 발급이 프로세스 전체라 다른 시험이 더 멀리 갔을 수 있다.
+- 컴포넌트는 시작할 때 게임 서비스의 씬 매니저에 표시한다(`_bPersistent`).
+
+**검증.** `SceneTest.PersistentRootsCarryIntoTheNextScene`(자식 · 소켓 · 월드 자리 · 핸들 · 다음 전환에도 · 루트 아닌 것과 편집 중 표시는 거절 · 멈춘 뒤
+새 플레이에서는 옮기지 않음), `SceneAsyncTest.CarriedChildKeepsItsParentWhenTheNextSceneHasTheSameName`(비동기 로드 · 들어오는 씬에 같은 이름),
+`GameObjectTest.ObjectIdsAreUniqueAcrossManagers`, `GameFrameworkTest.DontDestroyOnLoadComponentKeepsItsOwnerAcrossScenes`. 변이 여덟(옮기지 않기 · 멈춰도
+표시 유지 · 루트 아닌 것 받기 · 편집 중 받기 · 부착 되붙이지 않기 · 정체 없이 만들기 · 되살린 id 가 발급을 밀지 않기 · 컴포넌트가 태그만)이 모두
+실패했다 — 처음에는 둘이 살았다(전환이 플레이 중에만 옮겨 "멈춰도 유지" 가 가려졌고, 이름이 겹치지 않으면 상태 로드가 이름으로 되붙여 "id 로 되붙이기"
+가 가려졌다). Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 68 스프라이트 — 씬 기본 머티리얼의 단위 큐브로 그려졌고, 스프라이트 셰이더는 GL 에서 링크조차 되지 않았다)
 
 남은 항목 "스프라이트가 스프라이트로 안 그려짐". `SpriteComponent` 는 메시 컴포넌트의 기본을 그대로 따라 **빈 메시 id → 단위 큐브, 머티리얼 없음 →

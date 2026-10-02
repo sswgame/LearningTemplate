@@ -44,6 +44,8 @@ namespace sw
 {
     SW_LOG_CALLER( "GameObjectManager" );
 
+    atomic<uint64> GameObjectManager::_s_nextObjectId = 1;
+
     static ComponentFactoryRegistrar* _s_engineHead{ nullptr };
     static bool                       _s_engineHeadSealed{ false };
     static atomic<uint32>             _s_factoryHeadSerial{ 0 };
@@ -89,7 +91,6 @@ namespace sw
         , _listProcessingDestroyObject{}
         , _listProcessingDestroyComponent{}
         , _mutex{}
-        , _nextId{ 1 }
         , _physicsWorld{}
         , _bTicking{ false }
         , _bProcessingDestruction{ false }
@@ -180,7 +181,7 @@ namespace sw
             return createGameObjectUnlocked( name, generateNewId() );
         }
 
-        _nextId.fetch_max( objectId + 1, std::memory_order_relaxed );
+        _s_nextObjectId.fetch_max( objectId + 1, std::memory_order_relaxed );
         return createGameObjectUnlocked( name, objectId );
     }
 
@@ -859,7 +860,7 @@ namespace sw
 
     uint64 GameObjectManager::generateNewId()
     {
-        return _nextId.fetch_add( 1, std::memory_order_relaxed );
+        return _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed );
     }
 
     bool GameObjectManager::isNameTakenUnlocked( hashed_string name ) const

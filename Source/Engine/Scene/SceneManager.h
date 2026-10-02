@@ -91,11 +91,23 @@ namespace sw
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
 
+        /**
+         * @brief 루트 오브젝트를 플레이 중 씬 전환 너머로 가져갑니다 — 유니티 `Object.DontDestroyOnLoad` · 언리얼 심리스 트래블의 액터 목록 자리입니다.
+         * @details 활성 씬이 바뀔 때 표시된 루트와 그 자손을 새 씬에 **같은 오브젝트 · 컴포넌트 id** 로 다시 만듭니다(반사 상태 · 이름 · 소켓 부착이
+         *          따라가고 핸들이 이어집니다). 다시 만드는 것이라 포인터 · 반사되지 않은 런타임 상태는 새것이고 `onBeginPlay` 가 다시 불립니다
+         *          (되돌리기 · 핫 리로드와 같은 계약). 루트가 아니거나 플레이 중이 아니면 경고하고 무시합니다(유니티도 루트만 · 플레이 모드에서만 받는다). 플레이를 멈추면 표시를 잊습니다.
+         */
+        void markPersistent( GameObject* pRoot );
+        /** @brief 씬 전환 너머로 가져갈 오브젝트로 표시되어 있으면 true 입니다. */
+        bool isPersistent( const GameObject* pObject ) const;
+
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
         /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다(대입 자리가 다섯이라 한곳으로 모았습니다). */
         void activateScene( Scene* pScene );
+        /** @brief 표시된 영속 루트와 그 자손을 @p pFrom 에서 @p pTo 로 같은 id 로 옮겨 심습니다. 사라진 루트는 표시에서 뺍니다. */
+        void carryPersistentObjects( Scene* pFrom, Scene* pTo );
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
          * @details 요청 경로와 대기열 경로가 **같은 자리**로 모이게 하려고 뽑았습니다. 예전에는
@@ -118,6 +130,7 @@ namespace sw
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;
+        vector<uint64>            _listPersistentObjectId; ///< `markPersistent` 로 표시한 루트의 오브젝트 id(옮겨 심어도 같다)
         Scene*                    _pActiveScene;
         bool                      _bWorldPlaying; ///< `setWorldPlaying`
         uint64                    _sceneGeneration;
