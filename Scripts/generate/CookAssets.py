@@ -30,6 +30,7 @@ import zlib
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
+    CookContractSpec,
     PackFormatSpec,
     findAppExecutable,
     getProjectRoot,
@@ -60,6 +61,10 @@ from common import (
 # 생성기(GeneratePackFormat.py)도 쓴다.
 # ------------------------------------------------------------------------------
 _gPackFormat = PackFormatSpec.load()
+
+# 쿠킹 표 — RHI 백엔드(별칭 · 셰이더 폴더)와 쿡 접미사. Config/Engine/CookContract.json 이 단일 출처이고 C++ 은 같은 파일에서
+# 생성한 X-macro 를 읽는다. 쿠커가 표대로 고르는지는 lint/gate/CheckCookContract.py 가 본다.
+_gCookContract = CookContractSpec.load()
 
 
 # ==============================================================================
@@ -168,8 +173,8 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
     raise SystemExit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
 
 
-def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path | None = None) -> str:
-    """타깃 RHI를 결정합니다: CLI > PackConfig.json > EngineConfig.json (기본값: dx12)."""
+def resolveTargetRhi(config: dict, cliRhi: str = "", projectRoot: Path | None = None) -> str:
+    """타깃 RHI 의 셰이더 폴더를 정합니다: CLI > PackConfig.json > EngineConfig.json > 표의 기본 백엔드. 이름은 표의 별칭으로 푼다."""
     r = ""
     if cliRhi:
         r = cliRhi.strip().lower()
@@ -179,17 +184,10 @@ def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path |
         engineCfgPath = projectRoot / kFileRuntimeEngineConfig
         if engineCfgPath.is_file():
             engineCfg = readJsonDictInternal(engineCfgPath, kFileRuntimeEngineConfig)
-            r = engineCfg.get("_window", {}).get("_defaultRHI", "DirectX12").strip().lower()
+            r = engineCfg.get("_window", {}).get("_defaultRHI", "").strip().lower()
 
-    if r in ("directx12", "dx12", "d3d12"):
-        return "dx12"
-    if r in ("vulkan", "vk", "spirv"):
-        return "vulkan"
-    if r in ("opengl", "gl"):
-        return "opengl"
-    if r in ("directx11", "dx11", "d3d11"):
-        return "dx11"
-    return "dx12"
+    backend = _gCookContract.findBackend(r) or _gCookContract.defaultBackend
+    return backend.shaderFolder
 
 
 def bakeShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bool:
@@ -326,17 +324,13 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
     return problems
 
 
-def isCookedArtifactInternal(relPath: str) -> bool:
-    """쿠커가 만드는 산출물 이름인가 — .prefab.bin, maps/·scenes/ 아래 .bin (씬). 소스 트리에서 보이면 잔재다."""
+def isCookedArtifact(relPath: str) -> bool:
+    """쿠커가 만드는 산출물 이름인가 — 표의 쿠킹본 접미사(`.scene.bin` · `.prefab.bin`). 소스 트리에서 보이면 잔재다."""
     normRel = normalizePath(relPath).lower()
-    if normRel.endswith(".prefab.bin"):
-        return True
-    if normRel.endswith(".bin") and ("/maps/" in f"/{normRel}" or "/scenes/" in f"/{normRel}"):
-        return True
-    return False
+    return any(normRel.endswith(cooked) for cooked in _gCookContract.listCookedSuffix)
 
 
-def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
+def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
     """PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다."""
     normRel = normalizePath(relPath).lower()
     parts = normRel.split("/")
@@ -375,7 +369,7 @@ def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12
             return False
 
     if "shaders/bin" in normRel:
-        for rhiFolder in ("dx12", "vulkan", "dx11"):
+        for rhiFolder in _gCookContract.listShaderFolder:
             if rhiFolder in dirParts and rhiFolder != targetRhi:
                 return False
 
@@ -558,9 +552,9 @@ def cookPack(
         if not filePath.is_file():
             continue
         rel = filePath.relative_to(sourceDir).as_posix()
-        if packConfig and not shouldIncludeFileInternal(rel, packConfig, targetRhi=targetRhi):
+        if packConfig and not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi):
             continue
-        if isCookedArtifactInternal(rel):
+        if isCookedArtifact(rel):
             # 산출물은 이제 스테이징에만 있다. 소스 트리에 남은 것은 옛 쿠킹의 잔재이고, Dev 런타임이 소스가
             # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
             staleCooked.append(rel)
@@ -648,7 +642,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cooked-dir", type=str, default="", help="프리팹·씬 쿠킹 산출물 스테이징 디렉터리 (기본: build/*/Bin/Cooked)")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
-    parser.add_argument("--target-rhi", type=str, default="", help="타깃 RHI 백엔드 (DirectX12, Vulkan, DirectX11)")
+    parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.name for backend in _gCookContract.listBackend)} 또는 그 별칭)")
     parser.add_argument("--bake-shaders", action="store_true", help="패킹 전 App.exe --bake-shaders 를 실행하여 셰이더 일괄 사전 빌드")
     parser.add_argument("--verify-shaders", action="store_true", help="구운 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
     parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 베이크에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
@@ -677,7 +671,7 @@ def main(argv: list[str] | None = None) -> int:
         if not packConfig:
             print(f"[CookAssets Error] missing or invalid config: {configPath}", file=sys.stderr)
             return 1
-        targetRhi = resolveTargetRhiInternal(packConfig, cliRhi=args.target_rhi, projectRoot=projectRoot)
+        targetRhi = resolveTargetRhi(packConfig, cliRhi=args.target_rhi, projectRoot=projectRoot)
         print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")
 
         if args.verify_shaders:

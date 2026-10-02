@@ -133,13 +133,13 @@ namespace sw
          */
         static void invalidateSharedHeaderCache();
 
-        /** @brief 타깃 포맷에 해당하는 서브폴더 이름("dx11", "dx12", "vulkan", "opengl")을 반환합니다. */
+        /** @brief 타깃 포맷의 바이너리 서브폴더 이름(쿠킹 표 `shader_folder`)입니다. 모르는 포맷은 기본 백엔드의 폴더입니다. */
         static string_view getSubfolderForFormat( ShaderTargetFormat format );
 
         /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. */
         static string_view getExtensionForFormat( ShaderTargetFormat format );
 
-        /** @brief 서브폴더 이름으로 ShaderTargetFormat 을 거꾸로 구합니다. */
+        /** @brief 쿠킹 표의 별칭(폴더 이름 포함)으로 ShaderTargetFormat 을 거꾸로 구합니다. 모르면 Count 입니다. */
         static ShaderTargetFormat getFormatForSubfolder( string_view subfolder );
     };
 } // namespace sw

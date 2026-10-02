@@ -4,6 +4,8 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
     namespace
@@ -12,7 +14,8 @@ namespace sw
         {
             /**
              * @brief 소스 접미사 → 쿠킹본 접미사와 그 에셋 종류. 긴 것이 먼저다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다).
-             * @details 에디터의 씬 · 프리팹 판정도 이 표다(`isCookableSource( path, kind )`) — 표가 둘이면 한쪽만 늘어난다.
+             * @details 줄은 쿠킹 표(`Config/Engine/CookContract.json` → `SW_COOK_SUFFIX_TABLE`)에서 온다 — Python 쿠커가 같은 표로
+             *          산출물을 알아본다. 에디터의 씬 · 프리팹 판정도 이 표다(`isCookableSource( path, kind )`).
              */
             struct CookSuffix
             {
@@ -22,13 +25,9 @@ namespace sw
                 bool        _bSource;
             };
             static constexpr CookSuffix kArrCookSuffix[] = {
-                {  ".scene.xml",  ".scene.bin",  AssetKind::Scene,  true},
-                { ".prefab.xml", ".prefab.bin", AssetKind::Prefab,  true},
-                {".prefab.json", ".prefab.bin", AssetKind::Prefab,  true},
-                {  ".scene.bin",  ".scene.bin",  AssetKind::Scene, false},
-                { ".prefab.bin", ".prefab.bin", AssetKind::Prefab, false},
-                {      ".scene",  ".scene.bin",  AssetKind::Scene, false},
-                {     ".prefab", ".prefab.bin", AssetKind::Prefab, false},
+#define SW_ASSET_COOK_SUFFIX_ROW( SourceSuffix, CookedSuffix, Kind, bAuthoringSource ) { SourceSuffix, CookedSuffix, AssetKind::Kind, bAuthoringSource },
+                SW_COOK_SUFFIX_TABLE( SW_ASSET_COOK_SUFFIX_ROW )
+#undef SW_ASSET_COOK_SUFFIX_ROW
             };
         };
     } // namespace

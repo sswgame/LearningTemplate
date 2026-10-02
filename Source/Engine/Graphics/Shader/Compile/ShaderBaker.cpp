@@ -12,6 +12,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineData.h"
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -21,12 +22,31 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
     namespace
     {
         struct ShaderBakerInternal
         {
+            /** @brief 백엔드 하나의 셰이더 타깃 · 바이너리 폴더 · 별칭입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
+            struct BackendFolder
+            {
+                ShaderTargetFormat _format;
+                string_view        _folder;
+                string_view        _arrAlias[4]; ///< 표의 별칭. 빈 칸 뒤는 없다(넷을 넘으면 컴파일되지 않는다)
+                bool               _bDefault;    ///< 표의 기본 백엔드인가
+            };
+
+            static constexpr BackendFolder kArrBackendFolder[] = {
+#define SW_SHADER_BAKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) { ShaderTargetFormat::ShaderTarget, ShaderFolder, { __VA_ARGS__ }, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
+                SW_RHI_BACKEND_TABLE( SW_SHADER_BAKER_BACKEND_ROW )
+#undef SW_SHADER_BAKER_BACKEND_ROW
+            };
+            static_assert( std::size( kArrBackendFolder ) == static_cast<size_t>( ShaderTargetFormat::Count ),
+                           "Config/Engine/CookContract.json needs one rhi_backends row per ShaderTargetFormat" );
+
             static string getStemLower( string_view filePath )
             {
                 const string fileName = FileUtil::getFileNamePart( filePath );
@@ -127,21 +147,15 @@ namespace sw
 
     string_view ShaderBaker::getSubfolderForFormat( ShaderTargetFormat format )
     {
-        switch ( format )
+        string_view defaultFolder;
+        for ( const ShaderBakerInternal::BackendFolder& row : ShaderBakerInternal::kArrBackendFolder )
         {
-            case ShaderTargetFormat::DXBC_D3D11:
-                return "dx11";
-            case ShaderTargetFormat::DXIL_D3D12:
-                return "dx12";
-            case ShaderTargetFormat::SPIRV_Vulkan:
-                return "vulkan";
-            case ShaderTargetFormat::SPIRV_OpenGL:
-                return "opengl";
-            case ShaderTargetFormat::Count:
-            default:
-                break;
+            if ( row._format == format )
+                return row._folder;
+            if ( row._bDefault )
+                defaultFolder = row._folder;
         }
-        return "dx12";
+        return defaultFolder;
     }
 
     string_view ShaderBaker::getExtensionForFormat( ShaderTargetFormat format )
@@ -166,14 +180,16 @@ namespace sw
 
     ShaderTargetFormat ShaderBaker::getFormatForSubfolder( string_view subfolder )
     {
-        if ( subfolder == "dx11" || subfolder == "d3d11" || subfolder == "directx11" )
-            return ShaderTargetFormat::DXBC_D3D11;
-        if ( subfolder == "dx12" || subfolder == "d3d12" || subfolder == "directx12" )
-            return ShaderTargetFormat::DXIL_D3D12;
-        if ( subfolder == "vulkan" || subfolder == "vk" || subfolder == "spirv" )
-            return ShaderTargetFormat::SPIRV_Vulkan;
-        if ( subfolder == "opengl" || subfolder == "gl" )
-            return ShaderTargetFormat::SPIRV_OpenGL;
+        if ( subfolder.empty() )
+            return ShaderTargetFormat::Count;
+        for ( const ShaderBakerInternal::BackendFolder& row : ShaderBakerInternal::kArrBackendFolder )
+        {
+            for ( const string_view alias : row._arrAlias )
+            {
+                if ( alias == subfolder )
+                    return row._format;
+            }
+        }
         return ShaderTargetFormat::Count;
     }
 

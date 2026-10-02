@@ -13,14 +13,48 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
 
     SW_LOG_CALLER( "RHI" );
 
+    namespace
+    {
+        struct RHIInternal
+        {
+            /** @brief 명령줄 플래그 하나와 그것이 고르는 백엔드입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
+            struct BackendArgument
+            {
+                CommandLineArgument _argument;
+                RHIBackend          _backend;
+            };
+
+            static constexpr BackendArgument kArrBackendArgument[] = {
+#define SW_RHI_BACKEND_ARGUMENT_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) { CommandLineArgument::Argument, RHIBackend::Backend },
+                SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_ARGUMENT_ROW )
+#undef SW_RHI_BACKEND_ARGUMENT_ROW
+            };
+
+            /** @brief 표의 줄 순서가 RHIBackend 열거값과 같은지입니다(줄 순서로 값을 읽는 쪽이 있다). */
+            static constexpr bool isTableInEnumOrder()
+            {
+                for ( uint32 rowIndex = 0; rowIndex < std::size( kArrBackendArgument ); ++rowIndex )
+                {
+                    if ( static_cast<uint32>( kArrBackendArgument[rowIndex]._backend ) != rowIndex )
+                        return false;
+                }
+                return true;
+            }
+        };
+
+        static_assert( RHIInternal::isTableInEnumOrder(), "Config/Engine/CookContract.json rhi_backends must follow RHIBackend values" );
+    } // namespace
+
     // EngineConfig 로드 실패 시에도 WindowConfig::_defaultRHI(cpp 기본값)와 같은 백엔드로 기동하도록 맞춥니다.
     // 이 플랫폼에서 쓸 수 없으면 RHI::initialize 가 getDefaultPlatformBackend() 로 폴백합니다.
-    SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
+    SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::SW_RHI_BACKEND_DEFAULT, "Current RHI Backend" );
 
     RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
         : _vertexShaderPath{}
@@ -114,26 +148,14 @@ namespace sw
 
     bool RHIBackendUtil::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )
     {
-        bool bFlag{ false };
-        if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
+        for ( const RHIInternal::BackendArgument& row : RHIInternal::kArrBackendArgument )
         {
-            outBackend = RHIBackend::DirectX11;
-            return true;
-        }
-        if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
-        {
-            outBackend = RHIBackend::DirectX12;
-            return true;
-        }
-        if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
-        {
-            outBackend = RHIBackend::Vulkan;
-            return true;
-        }
-        if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
-        {
-            outBackend = RHIBackend::OpenGL;
-            return true;
+            bool bFlag{ false };
+            if ( commandLineManager.getArgument( row._argument, bFlag ) && bFlag )
+            {
+                outBackend = row._backend;
+                return true;
+            }
         }
 
         // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전에는 짧은 플래그만 봐서, 전역 변수로
