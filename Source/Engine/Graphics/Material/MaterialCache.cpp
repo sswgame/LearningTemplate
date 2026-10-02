@@ -3,7 +3,9 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -24,10 +26,14 @@ namespace sw
         };
 
         unordered_map<string, Entry> _mapEntry;
+        vector<string>               _listPendingKey; ///< `requestInitialize` 가 올린, GPU 에 올릴 경로(`_mutex` 아래)
+        atomic<uint32>               _pendingCount;   ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
         std::shared_mutex            _mutex;
 
         Impl()
             : _mapEntry{}
+            , _listPendingKey{}
+            , _pendingCount{ 0 }
             , _mutex{}
         {
         }
@@ -107,6 +113,55 @@ namespace sw
             return 0;
         std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.size();
+    }
+
+    void MaterialCache::requestInitialize( string_view relativePath )
+    {
+        if ( relativePath.empty() || _impl == nullptr )
+            return;
+
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const auto                          it = _impl->_mapEntry.find( key );
+        if ( it == _impl->_mapEntry.end() || it->second._material->isRhiValid() )
+            return;
+        for ( const string& pendingKey : _impl->_listPendingKey )
+        {
+            if ( pendingKey == key )
+                return;
+        }
+        _impl->_listPendingKey.push_back( key );
+        _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
+    }
+
+    void MaterialCache::initializePending( IRHIDevice* pDevice )
+    {
+        if ( pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
+            return;
+
+        vector<string> listKey;
+        {
+            std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+            listKey.swap( _impl->_listPendingKey );
+            _impl->_pendingCount.store( 0, std::memory_order_release );
+        }
+
+        // 올리는 동안(파일 읽기 · 버퍼 생성) 잠그지 않는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다.
+        for ( const string& key : listKey )
+        {
+            shared_ptr<Material> material;
+            {
+                std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+                const auto                          it = _impl->_mapEntry.find( key );
+                if ( it == _impl->_mapEntry.end() )
+                    continue; // 그새 놓였다
+                material = it->second._material;
+            }
+            if ( material->isRhiValid() )
+                continue;
+            if ( material->initialize( pDevice, key ) == false )
+                SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
+        }
     }
 
     bool MaterialCache::isCached( string_view relativePath ) const

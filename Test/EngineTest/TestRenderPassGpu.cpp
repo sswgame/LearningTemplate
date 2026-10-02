@@ -10,6 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
@@ -2762,6 +2763,47 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the material texture ordinal test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 디바이스 없이 경로로 잡은 머티리얼(메시의 저장된 참조)을 `initializePending` 이 올린다 — 미리보기로 잡은 것은 올리지 않는다
+ * @details 컴포넌트는 디바이스를 모른다(Object 는 Scene 을 include 하지 않는다). 메시가 `acquire( path, nullptr )` 로 잡고 `requestInitialize` 로
+ *          표시하면, 엔진 루프가 패킷을 내기 전 · 씬 초기화가 디바이스로 올린다. 표시하지 않은 것(머티리얼 편집기 미리보기 — 편집 중인 내용을
+ *          넣는다)은 파일 내용으로 덮이면 안 되므로 그대로 둔다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kPath = "engine/materials/benchtextured.material";
+    sw::MaterialCache&    cache = sw::engine::getResourceManager().getMaterialManager();
+
+    int32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        sw::Material* pMaterial = cache.acquire( kPath, nullptr );
+        SW_ASSERT_NOT_NULL( pMaterial );
+        // 표시 전에는 올리지 않는다(미리보기 길).
+        cache.initializePending( device.get() );
+        SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+
+        cache.requestInitialize( kPath );
+        cache.initializePending( nullptr ); // 디바이스가 없으면 표시를 그대로 둔다
+        SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+        cache.initializePending( device.get() );
+        SW_EXPECT_TRUE_MSG( pMaterial->isRhiValid(), device->getBackendName() );
+
+        pMaterial->releaseRhi( device.get() );
+        cache.release( kPath );
+        SW_EXPECT_FALSE( cache.isCached( kPath ) );
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the deferred material upload test" );
 }
 
 /**

@@ -592,6 +592,10 @@ namespace sw
                 _owned._pSceneManager->tick( deltaTime );
         }
 
+        // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
+        if ( _rhi != nullptr && _rhi->hasDevice() )
+            _owned._pResourceManager->getMaterialManager().initializePending( &_rhi->getDevice() );
+
         Scene* pActiveScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
 
         BLOCK( "RenderFramePacket 제출" )

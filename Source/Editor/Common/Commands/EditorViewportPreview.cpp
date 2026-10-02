@@ -227,6 +227,6 @@ namespace sw::editor
 
         SpriteComponent* pSprite = pPrimary->getComponent<SpriteComponent>();
         if ( pSprite != nullptr && assetPath.empty() == false )
-            pSprite->setMaterialName( string{ assetPath } );
+            pSprite->setMaterialPath( assetPath );
     }
 } // namespace sw::editor

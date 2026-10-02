@@ -54,10 +54,27 @@ namespace sw
         /** @brief 원시 메시 포인터를 반환합니다. */
         Mesh* getRawMesh() const { return _mesh.get(); }
 
-        /** @brief 머티리얼을 설정합니다. */
+        /** @brief 머티리얼을 설정합니다. **저장되지 않는** 런타임 지정입니다 — 저장되는 참조는 `setMaterialPath` 입니다. */
         void setMaterial( Material* pMaterial );
-        /** @brief 머티리얼을 반환합니다. */
+        /** @brief 머티리얼을 반환합니다. 없으면 렌더러가 씬 기본 머티리얼을 씁니다. */
         Material* getMaterial() const { return _pMaterial; }
+
+        /**
+         * @brief 머티리얼 에셋 경로를 바꾸고 그 머티리얼을 잡습니다. 저장되는 참조이고, 빈 경로는 씬 기본 머티리얼입니다.
+         * @details 언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 의 자리입니다. 예전에는 메시의 머티리얼이
+         *          날 포인터뿐이라 저장되지 않아, 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐습니다.
+         */
+        void setMaterialPath( string_view path );
+        /** @brief 저장되는 머티리얼 에셋 경로입니다. 비어 있으면 씬 기본 머티리얼입니다. */
+        hashed_string getMaterialPath() const { return _materialPath; }
+        /**
+         * @brief `_materialPath` 의 머티리얼을 캐시에서 잡아 겁니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다.
+         * @details 로드는 값만 채우므로 시작(`onBeginPlay`) · 씬 초기화 · 프로퍼티 편집 · 세터가 부릅니다(`resolveRuntimeMesh` 와 같은 자리).
+         *          컴포넌트는 디바이스를 모르므로 디바이스 없이 잡고 GPU 업로드를 캐시에 맡깁니다(`MaterialCache::requestInitialize`).
+         *          새 것을 건 **뒤에** 옛 것을 놓습니다 — 놓는 순간 캐시가 지울 수 있습니다. 경로가 비면 런타임 지정(`setMaterial`)은 건드리지
+         *          않습니다(잡아 둔 것이 있을 때만 놓고 비웁니다).
+         */
+        void resolveMaterialAsset();
 
         /** @brief 머티리얼 인스턴스를 설정합니다. */
         void setMaterialInstance( shared_ptr<MaterialInstance> instance );
@@ -104,7 +121,7 @@ namespace sw
         void markRenderStateDirty();
         /** @brief 프리미티브 등록부에 자기를 넣습니다. 여기서 타입이 한 번 확정됩니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 프리미티브 등록부에서 자기를 뺍니다. 멱등입니다. */
+        /** @brief 프리미티브 등록부에서 자기를 빼고, 잡아 둔 머티리얼 참조를 놓습니다. 멱등입니다. */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 인스펙터/직렬화가 PROPERTY 를 바꾸면 렌더 상태를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
@@ -127,6 +144,11 @@ namespace sw
         shared_ptr<MaterialInstance> _materialInstance;
         PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
         string _meshId;
+        /** @brief 저장되는 머티리얼 참조입니다. `_materialName` 은 스프라이트가 따로 들던(읽는 곳 없던) 옛 칸 이름입니다. */
+        PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default",
+                  Alias = "_materialName, Material" )
+        hashed_string _materialPath;
+        hashed_string _acquiredMaterialPath; ///< 캐시에서 잡아 둔 경로(저장하지 않습니다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이것으로 놓습니다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Meta = "Units=m" )
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )

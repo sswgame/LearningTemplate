@@ -2079,6 +2079,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 67 메시 머티리얼 — 참조가 저장되지 않아 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐다)
+
+남은 항목 "메시 머티리얼 참조가 씬에 저장되지 않음". `MeshComponent` 의 머티리얼은 날 포인터(`_pMaterial`)뿐이었다 — 코드 · 미리보기가 건 머티리얼은
+저장되지 않았고, 씬을 열면 `bindSceneMeshDefaults` 가 모든 메시에 씬 기본을 걸었다. 스프라이트는 `_materialName` 을 따로 들고 저장까지 했지만 읽는 곳이
+없었다. 언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 는 에셋 참조로 저장된다.
+
+- **저장되는 참조**: `MeshComponent::_materialPath`(PROPERTY · 에셋 경로 · 인스펙터에 드롭). `setMaterialPath` · 프로퍼티 편집 · 시작(`onBeginPlay`) ·
+  씬 초기화가 `resolveMaterialAsset` 으로 캐시에서 잡아 건다(`resolveRuntimeMesh` 와 같은 자리). 새 것을 건 **뒤에** 옛 것을 놓고, `onUnregister` 가
+  놓는다(참조 셈). 경로가 비면 런타임 지정(`setMaterial`)은 건드리지 않는다. 스프라이트의 `_materialName` 은 이 참조의 옛 이름(Alias)으로 읽힌다 —
+  칸을 걷었고 저장소의 씬 · 프리팹도 새 이름으로 고쳤다.
+- **디바이스**: 컴포넌트는 디바이스를 모른다(층 규칙 — Object 는 Scene 을 include 하지 않는다). 디바이스 없이 잡고(`acquire( path, nullptr )` 는
+  빈 머티리얼이다) `MaterialCache::requestInitialize` 로 표시하면, 엔진 루프가 렌더 패킷을 내기 전 · 씬 초기화가 `initializePending( device )` 로
+  올린다(언리얼 `BeginInitResource` 의 자리. 비어 있으면 원자 하나만 읽는다). `acquire( path, nullptr )` 만으로는 표시하지 않는다 — 머티리얼
+  편집기 미리보기가 그렇게 잡아 편집 중인 내용을 넣는데, 올리면 파일 내용으로 덮인다.
+- 미리보기(`EditorViewportPreview::applyMaterial`)가 메시에 거는 머티리얼은 그대로 런타임 지정이다(편집 중 미리보기 — 저장하면 안 된다). 스프라이트에
+  적던 이름은 이제 `setMaterialPath` 다(예전과 같이 저장된다).
+
+**남은 것.** 로드는 값만 채운다 — 편집 모드에서 되돌리기 · 프리팹 드래그로 다시 만든 메시는 다음 씬 초기화 · 플레이까지 머티리얼(과 `_meshId` 메시)을
+풀지 않는다(이 결함 전과 같은 자리). 컴포넌트에 "로드 뒤" 훅(언리얼 `PostLoad` · 유니티 `OnAfterDeserialize`)을 둘지는 따로 판단한다.
+
+**검증.** `ObjectStateRoundTripTest.MeshMaterialReferenceSurvivesXml`(경로가 저장 · 로드 · 같은 캐시 머티리얼 · 경로를 비우면 놓음 · 마지막 사본이
+사라지면 캐시에서 빠짐 · 스프라이트 옛 이름), `SceneTest.InitializedSceneBindsSavedMeshMaterials`(다시 연 씬 — 참조 있는 메시는 그 머티리얼, 없는
+것만 기본), `RenderPassGpuTest.MaterialRequestedWithoutADeviceIsUploadedLater`(네 백엔드 — 표시 전 · 디바이스 없이는 안 올리고 표시 뒤 올림). 변이
+일곱(해제 빼기 둘 · 세터 · 씬 바인드 · 표시 버리기 · 업로드 빼기 · 표시 없는 것까지 올리기)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 66 오브젝트 id 표 — 약 420 만 id 뒤로는 모든 조회가 잠금 + 해시 맵으로 떨어졌고 되감지 않았다)
 
 남은 항목 "락 없는 id 표가 약 420 만 id 뒤로 잠금 + 맵 경로로 떨어진다". 표는 id 를 그대로 칸 번호로 써서 `kChunkSize × kMaxChunk`(2²²)를 넘는

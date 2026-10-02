@@ -28,9 +28,6 @@ namespace sw
         const string& getMeshName() const { return _meshName; }
         void          setMeshName( const string& mesh ) { _meshName = mesh; }
 
-        const string& getMaterialName() const { return _materialName; }
-        void          setMaterialName( const string& materialName ) { _materialName = materialName; }
-
         const string& getTextureName() const { return _textureName; }
         void          setTextureName( const string& tex ) { _textureName = tex; }
 
@@ -40,8 +37,6 @@ namespace sw
     private:
         PROPERTY( Category = "Rendering", DisplayName = "Mesh", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name", Alias = "Mesh" )
         string _meshName;
-        PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset name", Alias = "Material" )
-        string _materialName;
         PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name", Alias = "Texture" )
         string _textureName;
         PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", Tooltip = "Sprite clip identifier", Alias = "SpriteName" )

@@ -2,19 +2,26 @@
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourceManager.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "MeshComponent" );
+
     MeshComponent::MeshComponent()
         : _mesh{}
         , _pMaterial{ nullptr }
         , _materialInstance{}
         , _meshId{}
+        , _materialPath{}
+        , _acquiredMaterialPath{}
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
@@ -31,6 +38,36 @@ namespace sw
     {
         SceneComponent::onBeginPlay();
         resolveRuntimeMesh();
+        resolveMaterialAsset();
+    }
+
+    void MeshComponent::setMaterialPath( string_view path )
+    {
+        _materialPath = hashed_string( string{ path }.c_str() );
+        resolveMaterialAsset();
+    }
+
+    void MeshComponent::resolveMaterialAsset()
+    {
+        if ( _materialPath == _acquiredMaterialPath || engine::areEngineServicesBound() == false )
+            return;
+
+        MaterialCache& cache     = engine::getResourceManager().getMaterialManager();
+        Material*      pMaterial = nullptr;
+        if ( _materialPath.empty() == false )
+        {
+            pMaterial = cache.acquire( _materialPath.c_str(), nullptr );
+            if ( pMaterial != nullptr )
+                cache.requestInitialize( _materialPath.c_str() );
+            else
+                SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the scene default", _materialPath.c_str() );
+        }
+
+        const hashed_string previousPath = _acquiredMaterialPath;
+        _acquiredMaterialPath            = ( pMaterial != nullptr ) ? _materialPath : hashed_string{};
+        setMaterial( pMaterial );
+        if ( previousPath.empty() == false )
+            cache.release( previousPath.c_str() );
     }
 
     void MeshComponent::resolveRuntimeMesh()
@@ -53,6 +90,13 @@ namespace sw
     {
         manager.getPrimitiveRegistry().remove( this );
         _pPrimitiveRegistry = nullptr;
+        if ( _acquiredMaterialPath.empty() == false )
+        {
+            _pMaterial = nullptr;
+            if ( engine::areEngineServicesBound() )
+                engine::getResourceManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
+            _acquiredMaterialPath = hashed_string{};
+        }
         SceneComponent::onUnregister( manager );
     }
 
@@ -68,6 +112,9 @@ namespace sw
         // 계산될 때 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다. 그래서 여기서는 렌더 관련
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
         SceneComponent::onPropertyChanged( propertyName );
+        static const hashed_string s_materialPathName( "_materialPath" );
+        if ( propertyName == s_materialPathName )
+            resolveMaterialAsset();
         markRenderStateDirty();
     }
 

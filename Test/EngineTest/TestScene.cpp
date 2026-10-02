@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -672,6 +673,51 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
     SW_EXPECT_TRUE( pReloadedGrand->getParent() == pReloadedChild );
     SW_ASSERT_NOT_NULL( pReloadedChild->getPrimarySceneComponent() );
     SW_EXPECT_TRUE( pReloadedChild->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 다시 연 씬의 메시가 저장된 머티리얼 참조를 받는다 — 참조가 없는 메시만 씬 기본 머티리얼이다
+ * @details 메시의 머티리얼이 저장되지 않아 씬을 다시 열면 모든 메시가 씬 기본 머티리얼이었다. 씬 초기화(`Scene::initialize`)가 메시마다
+ *          `_materialPath` 를 풀고, 참조가 없는 것에만 기본을 건다.
+ */
+SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kPath = "engine/materials/benchtextured.material";
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "PaintedWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    sw::MeshComponent*     pPainted = pObjects->createGameObject( sw::hashed_string( "Painted" ) )->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pPainted );
+    SW_ASSERT_NOT_NULL( pObjects->createGameObject( sw::hashed_string( "Plain" ) )->addComponent<sw::MeshComponent>() );
+    pPainted->setMaterialPath( kPath );
+    SW_ASSERT_NOT_NULL( pPainted->getMaterial() );
+
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+
+    sw::Scene* pReloaded = manager.createScene( "PaintedWorldReloaded" );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_ASSERT_TRUE( pReloaded->instantiate( saved ) );
+    SW_ASSERT_TRUE( pReloaded->initialize( nullptr ) );
+
+    sw::GameObjectManager* pReloadedObjects = pReloaded->getObjectManager();
+    sw::GameObject*        pReloadedPainted = pReloadedObjects->findGameObjectByName( sw::hashed_string( "Painted" ) );
+    sw::GameObject*        pReloadedPlain   = pReloadedObjects->findGameObjectByName( sw::hashed_string( "Plain" ) );
+    SW_ASSERT_NOT_NULL( pReloadedPainted );
+    SW_ASSERT_NOT_NULL( pReloadedPlain );
+    const sw::MeshComponent* pPaintedMesh = pReloadedPainted->getComponent<sw::MeshComponent>();
+    const sw::MeshComponent* pPlainMesh   = pReloadedPlain->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pPaintedMesh );
+    SW_ASSERT_NOT_NULL( pPlainMesh );
+    SW_EXPECT_TRUE( pPaintedMesh->getMaterial() == pPainted->getMaterial() );
+    SW_EXPECT_TRUE( pPaintedMesh->getMaterial() != pReloaded->getMaterial() );
+    SW_EXPECT_TRUE( pPlainMesh->getMaterial() == pReloaded->getMaterial() );
 
     manager.shutdown();
 }

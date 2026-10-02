@@ -44,8 +44,10 @@ namespace sw
                 return engine::getEngineData()._defaultMaterial;
             }
 
-            /** @brief MeshComponent 의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
-            static void bindSceneMeshDefaults( Scene* pScene )
+            /**
+             * @brief MeshComponent 의 프리미티브 메시와 머티리얼(저장된 참조, 없으면 씬 기본)을 채우고, 잡은 머티리얼을 @p pRhiDevice 로 올립니다.
+             */
+            static void bindSceneMeshDefaults( Scene* pScene, IRHIDevice* pRhiDevice )
             {
                 if ( pScene == nullptr )
                     return;
@@ -62,11 +64,13 @@ namespace sw
                     if ( pMeshComp == nullptr )
                         return;
                     pMeshComp->resolveRuntimeMesh();
+                    pMeshComp->resolveMaterialAsset();
                     // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GpuSceneBuilder 가 그렇게 고른다.
                     // 여기서 씬 기본을 넣으면 배치가 기본 머티리얼(그룹 · 텍스처)과 인스턴스(원소 바이트 · 퍼뮤테이션)로 섞였다.
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
+                engine::getResourceManager().getMaterialManager().initializePending( pRhiDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -136,7 +140,7 @@ namespace sw
             }
         }
         ensureDefaultCameras();
-        SceneInternal::bindSceneMeshDefaults( this );
+        SceneInternal::bindSceneMeshDefaults( this, pRhiDevice );
         return true;
     }
 

@@ -3,11 +3,15 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -114,6 +118,58 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
     const sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pCopyMesh );
     SW_EXPECT_TRUE( pCopyMesh->getBlendMode() == sw::RHIBlendMode::Transparent );
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 메시의 머티리얼 참조가 저장 · 로드를 지나고, 잡은 참조는 경로를 비우거나 컴포넌트가 사라질 때 놓인다
+ * @details 메시의 머티리얼은 날 포인터(`_pMaterial`)뿐이라 저장되지 않았다 — 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐다.
+ *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 는 에셋 참조로 저장된다. 스프라이트가 따로 들던
+ *          `_materialName`(읽는 곳이 없었다)은 이 참조의 옛 이름으로 읽힌다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kPath = "engine/materials/benchtextured.material";
+    sw::MaterialCache&    cache = sw::engine::getResourceManager().getMaterialManager();
+    SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 시험이 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Painted" ) );
+    sw::MeshComponent*    pMesh   = pSource->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMaterialPath( kPath );
+    SW_EXPECT_TRUE( cache.isCached( kPath ) );
+    SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
+
+    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    SW_EXPECT_TRUE_MSG( xml.find( "_materialPath=\"engine/materials/benchtextured.material\"" ) != sw::string::npos, xml.c_str() );
+
+    sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "PaintedCopy" ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pCopyMesh );
+    SW_EXPECT_STREQ( kPath, pCopyMesh->getMaterialPath().c_str() );
+    // 로드는 값만 채운다. 잡는 것은 시작(onBeginPlay) · 씬 초기화 · 프로퍼티 편집이다 — 같은 캐시의 머티리얼이 걸린다.
+    pCopyMesh->resolveMaterialAsset();
+    SW_EXPECT_TRUE( pCopyMesh->getMaterial() == pMesh->getMaterial() );
+
+    // 경로를 비우면 놓고 씬 기본으로 돌아간다(포인터 없음). 사본이 아직 잡고 있다.
+    pMesh->setMaterialPath( "" );
+    SW_EXPECT_TRUE( pMesh->getMaterial() == nullptr );
+    SW_EXPECT_TRUE( cache.isCached( kPath ) );
+    // 사본이 사라지면 마지막 참조가 놓인다.
+    manager.destroyObject( pCopy );
+    manager.processDeferredDestruction();
+    SW_EXPECT_FALSE( cache.isCached( kPath ) );
+
+    // 스프라이트의 옛 칸 이름(`_materialName`)도 이 참조로 읽힌다.
+    sw::GameObject* pSprite = manager.createGameObject( sw::hashed_string( "OldSprite" ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
+        pSprite, "<GameObject _name=\"OldSprite\"><_listComponent><SpriteComponent _materialName=\"engine/materials/benchtextured.material\" />"
+                 "</_listComponent></GameObject>" ) );
+    const sw::SpriteComponent* pSpriteComp = pSprite->getComponent<sw::SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pSpriteComp );
+    SW_EXPECT_STREQ( kPath, pSpriteComp->getMaterialPath().c_str() );
 }
 
 /**

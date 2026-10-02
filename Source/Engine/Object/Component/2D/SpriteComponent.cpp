@@ -11,7 +11,6 @@ namespace sw
 {
     SpriteComponent::SpriteComponent()
         : _meshName{}
-        , _materialName{}
         , _textureName{}
         , _spriteName{}
     {
