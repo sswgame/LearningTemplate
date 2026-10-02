@@ -98,10 +98,15 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 
 `GameObjectManager` 가 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 한 번 부릅니다(`stepPhysics`):
 
-1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리 · 레이어 · 연속 여부로 한 번에 맞춘다(`updateBody`) — 시작 전이거나 꺼진
-   콜라이더는 빠진다.
+1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리 · 레이어 · 판정 방식(연속 · 트리거)으로 한 번에 맞춘다(`updateBody`) —
+   시작 전이거나 꺼진 콜라이더는 빠진다. 그 사이 순간이동했으면(`SceneComponent::teleportTo`) 순간이동으로 맞춘다(4.1).
 2. `step` 해 이벤트를 받는다.
-3. 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin( pOther )` / `onOverlapEnd( pOther )` 를 부른다(상대가 사라졌으면 nullptr).
+3. 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin( const OverlapInfo& )` / `onOverlapEnd( const OverlapInfo& )` 를 부른다 — 상대 오브젝트(끝에서
+   사라졌으면 nullptr), 양쪽 콜라이더가 트리거인지, 닿은 때를 싣는다.
+
+**트리거.** 콜라이더를 트리거로 두면(`setTrigger` — 유니티 `isTrigger` · 언리얼 Overlap 반응) 겹침은 똑같이 내지만, 받는 쪽은 `OverlapInfo::_bOtherTrigger`
+로 "몸이 아니라 감지 범위였다" 를 압니다. 투사체 · 공격 판정은 상대의 트리거에 막히지도 피해를 주지도 않습니다. 겹침은 바디 쌍마다 나므로 한
+오브젝트에 몸과 감지 범위가 함께 있으면 같은 상대에게서 둘이 옵니다. 예전 훅은 상대 오브젝트만 받아 그 둘을 가를 수 없었습니다.
 
 콜라이더는 틱하지 않습니다. 예전에는 병렬 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 봤습니다.
 틱 안의 질의(`queryAabb` · `sweepTest`)는 지난 step 의 자리를 봅니다(유니티 물리 질의와 같다).
@@ -116,5 +121,9 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 - 이벤트 목록은 **닿은 때(`PhysicsOverlapEvent::_time`) 순서**입니다. 총알이 한 step 에 적 둘을 지나가면 앞의 적이 먼저 오고, 총알은 거기서 사라지므로
   뒤의 적은 맞지 않습니다. 끝 이벤트와 제자리 겹침은 `_time = 1` 입니다.
 - 출발점에서 이미 겹쳐 있던 쌍(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀습니다. 넣으면 떠난 쌍의 끝이 한 step 늦습니다.
-- 상대는 **이번 step 의 자리**에 서 있는 것으로 봅니다(언리얼 투사체 이동 스윕과 같다). 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대는 닿지 않습니다.
-- 출발점은 바디를 더한 자리부터 잡힙니다. 연속 바디를 순간이동시키면 그 길도 쓸립니다 — 빠른 것에만 켭니다.
+- **상대도 움직였으면 상대 운동으로 잽니다**(Box2D 총알 TOI · 유니티 Continuous Dynamic). 모든 바디가 지난 step 의 자리를 들고 있고, 두 바디 모두 거기서
+  출발해 연속 바디의 이동에서 상대의 이동을 뺀 만큼 쓸립니다 — 프레임 사이에 총알 길을 가로질러 건너편으로 간 적도 맞습니다. 그 적의 **지금** 자리는
+  총알이 쓸린 범위 밖일 수 있어, 후보는 쓸린 범위를 이번 step 에 가장 많이 움직인 바디의 거리만큼 넓혀 모읍니다.
+- 출발점은 바디를 더한 자리부터 잡힙니다. **순간이동은 쓸지 않습니다** — `SceneComponent::teleportTo`(언리얼 `TeleportPhysics` · 유니티 `Rigidbody.position`
+  대입)는 그 컴포넌트와 그 아래 붙은 모두를 표시하고, 콜라이더는 바디를 `BodyMoveType::Teleport` 로 맞춰 새 자리를 다음 쓸림의 출발점으로 둡니다. 그냥
+  옮기면(`setWorldPosition`) 그 길이 쓸립니다.

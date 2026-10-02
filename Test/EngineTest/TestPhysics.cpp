@@ -557,6 +557,21 @@ namespace
         return box;
     }
 
+    /** @brief @p box 자리의 연속(CCD) 바디 값입니다. */
+    PhysicsBodyState makeContinuousState( const AABB& box )
+    {
+        PhysicsBodyState state;
+        state._aabb        = box;
+        state._bContinuous = SW_TRUE;
+        return state;
+    }
+
+    /** @brief 이벤트에서 @p objectId 쪽 바디가 트리거인지입니다. */
+    bool isTriggerSide( const PhysicsOverlapEvent& event, uint64 objectId )
+    {
+        return ( event._objectA == objectId ) ? event._bTriggerA == SW_TRUE : event._bTriggerB == SW_TRUE;
+    }
+
     /** @brief 이벤트 목록에서 두 오브젝트 쌍의 시작(true) · 끝(false) 이벤트 수를 셉니다(순서 무관). */
     uint32 countOverlapEvent( const vector<PhysicsOverlapEvent>& listEvent, uint64 objectA, uint64 objectB, bool bBegin )
     {
@@ -631,7 +646,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
     world.layers().setLayerCollision( 0, 1, false );
     world.addBody( makeWallBox( 5.0f ), 0, 1 );
     world.addBody( makeWallBox( 7.0f ), 1, 2 ); // 레이어가 막은 벽
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 0.0f, 0.0f ), 0, 3, true );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     const PhysicsWorld::BodyHandle slow = world.addBody( makeBoxAt( 0.0f, 10.0f ), 0, 4 );
     world.step( 0.016f );
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
@@ -665,7 +680,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
 {
     PhysicsWorld world;
     world.addBody( makeWallBox( 5.0f ), 0, 1 );
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 4.6f, 0.0f ), 0, 3, true );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 4.6f, 0.0f ) ), 3 );
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
 
@@ -684,7 +699,7 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
     PhysicsWorld world;
     world.addBody( makeWallBox( 8.0f ), 0, 1 );
     world.addBody( makeWallBox( 4.0f ), 0, 2 );
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 0.0f, 0.0f ), 0, 3, true );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     world.step( 0.016f );
 
     world.setAabb( fast, makeBoxAt( 10.0f, 0.0f ) );
@@ -694,4 +709,87 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
     const bool bNearWallFirst = listEvent[0]._objectA == 2ull || listEvent[0]._objectB == 2ull;
     SW_EXPECT_TRUE( bNearWallFirst );
     SW_EXPECT_TRUE( listEvent[0]._time < listEvent[1]._time );
+}
+
+/**
+ * @brief [PhysicsTest] 연속 바디는 그 step 에 자기 길을 가로질러 건너편으로 간 바디와도 겹친다(상대 운동)
+ * @details 쓸림은 상대를 이번 step 의 자리에 세워 두고 쟀다 — 총알이 x 로 가는 동안 y 로 길을 가로질러 건너간 적은 끝 자리가 길 밖이라 닿지
+ *          않았다. 이제 둘 다 지난 step 의 자리에서 출발해 이동의 차이만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic). 적의 지금 자리는 총알이
+ *          쓸린 범위의 그리드 셀 밖이라(바디가 많아 그리드로 후보를 모을 때), 후보 범위도 이번 step 에 가장 많이 움직인 거리만큼 넓혀야 찾는다.
+ */
+SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
+{
+    PhysicsWorld world;
+    // 멀리 떨어진 바디를 채워 둔다 — 바디가 적으면 질의가 그리드를 건너뛰고 모든 바디를 돌아, 범위를 넓히지 않아도 찾는다.
+    for ( uint64 fillerIndex = 0; fillerIndex < 60; ++fillerIndex )
+        world.addBody( makeBoxAt( 5000.0f + static_cast<float32>( fillerIndex ) * 2.0f, 5000.0f ), 0, 100 + fillerIndex );
+
+    AABB crosser;
+    crosser._min                         = float3( 100.0f, -100.0f, 0.0f );
+    crosser._max                         = float3( 100.1f, -99.0f, 1.0f );
+    const PhysicsWorld::BodyHandle enemy = world.addBody( crosser, 0, 1 );
+    const PhysicsWorld::BodyHandle fast  = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+
+    // 한 step 에 총알은 x 0 → 200, 적은 y -100 → 100 — 둘은 x 100 · y 0 근처에서 같은 때(t 0.495) 만난다. 끝 자리는 서로 멀다.
+    world.setAabb( fast, makeBoxAt( 200.0f, 0.0f ) );
+    AABB crossed = crosser;
+    crossed._min._y += 200.0f;
+    crossed._max._y += 200.0f;
+    world.setAabb( enemy, crossed );
+    world.step( 0.016f );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
+    SW_EXPECT_NEAR_EQUAL( 0.495f, world.getOverlapEvents()[0]._time, 1e-3f );
+}
+
+/**
+ * @brief [PhysicsTest] 순간이동한 연속 바디는 옛 자리에서 새 자리까지를 쓸지 않는다 — 같은 이동을 그냥 하면 쓴다
+ * @details 연속 바디는 지난 step 의 자리부터 쓸리므로, 리스폰 · 문 통과 같은 순간이동도 그 길에 놓인 것과 겹쳤다. 언리얼 `TeleportPhysics` ·
+ *          유니티 `Rigidbody.position` 대입처럼 순간이동(`BodyMoveType::Teleport`)은 새 자리를 다음 쓸림의 출발점으로 둔다.
+ */
+SW_TEST_CASE( PhysicsTest, TeleportedContinuousBodyDoesNotSweepTheGap )
+{
+    PhysicsWorld world;
+    world.addBody( makeWallBox( 5.0f ), 0, 1 );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    world.step( 0.016f );
+
+    // 벽 너머로 순간이동 — 닿지 않는다.
+    world.updateBody( fast, makeContinuousState( makeBoxAt( 10.0f, 0.0f ) ), BodyMoveType::Teleport );
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+
+    // 같은 거리를 쓸며 돌아오면 벽과 겹친다.
+    world.updateBody( fast, makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), BodyMoveType::Sweep );
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
+}
+
+/**
+ * @brief [PhysicsTest] 겹침 이벤트는 어느 쪽 바디가 트리거인지 싣는다 — 시작과 끝 모두
+ * @details 이벤트는 두 오브젝트 id 만 실어, 받는 쪽은 상대가 감지 범위(트리거)인지 몸(막는 콜라이더)인지 알 수 없었다 — 투사체가 적의 감지 범위에
+ *          막혔다. 끝 이벤트는 바디가 이미 사라졌을 수 있어 겹쳐 있던 때의 값을 싣는다.
+ */
+SW_TEST_CASE( PhysicsTest, OverlapEventsSayWhichBodyIsATrigger )
+{
+    PhysicsWorld     world;
+    PhysicsBodyState triggerState;
+    triggerState._aabb                    = makeUnitBox( 0.0f );
+    triggerState._bTrigger                = SW_TRUE;
+    const PhysicsWorld::BodyHandle sensor = world.addBody( triggerState, 11 );
+    const PhysicsWorld::BodyHandle body   = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
+    world.step( 0.016f );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_TRUE( isTriggerSide( world.getOverlapEvents()[0], 11 ) );
+    SW_EXPECT_FALSE( isTriggerSide( world.getOverlapEvents()[0], 22 ) );
+
+    // 트리거 쪽이 사라져도 끝 이벤트는 그쪽이 트리거였다고 말한다.
+    world.removeBody( sensor );
+    world.step( 0.016f );
+    SW_ASSERT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, false ) );
+    SW_EXPECT_TRUE( isTriggerSide( world.getOverlapEvents()[0], 11 ) );
+    SW_EXPECT_FALSE( isTriggerSide( world.getOverlapEvents()[0], 22 ) );
+    world.removeBody( body );
 }

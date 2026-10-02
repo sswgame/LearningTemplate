@@ -291,28 +291,35 @@ namespace sw
         // 이벤트 처리가 콜라이더를 만들거나 지워도 이 목록은 다음 step 까지 그대로지만, 같은 프레임에 다시 step 할 일은 없게 베껴 둔다.
         const vector<PhysicsOverlapEvent> listDelivered = listEvent;
         vector<Component*>                listTarget;
-        auto                              deliver = [this, &listTarget]( uint64 selfId, uint64 otherId, bool bBegin )
+        // 한 쪽에서 본 겹침 — 상대 오브젝트와 어느 콜라이더끼리였는지(트리거 여부)를 함께 넘긴다.
+        auto deliver = [this, &listTarget]( uint64 selfId, uint64 otherId, const PhysicsOverlapEvent& event, bool bSelfTrigger, bool bOtherTrigger )
         {
             GameObject* pSelf = findGameObjectById( selfId );
             if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
                 return;
-            GameObject* pOther = findGameObjectById( otherId );
+            OverlapInfo overlap;
+            overlap._pOther        = findGameObjectById( otherId );
+            overlap._time          = event._time;
+            overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
+            overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
             // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.
             listTarget.assign( pSelf->getComponents().begin(), pSelf->getComponents().end() );
             for ( Component* pComp : listTarget )
             {
                 if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
                     continue;
-                if ( bBegin )
-                    pComp->onOverlapBegin( pOther );
+                if ( event._bBegin == SW_TRUE )
+                    pComp->onOverlapBegin( overlap );
                 else
-                    pComp->onOverlapEnd( pOther );
+                    pComp->onOverlapEnd( overlap );
             }
         };
         for ( const PhysicsOverlapEvent& event : listDelivered )
         {
-            deliver( event._objectA, event._objectB, event._bBegin == SW_TRUE );
-            deliver( event._objectB, event._objectA, event._bBegin == SW_TRUE );
+            const bool bTriggerA = event._bTriggerA == SW_TRUE;
+            const bool bTriggerB = event._bTriggerB == SW_TRUE;
+            deliver( event._objectA, event._objectB, event, bTriggerA, bTriggerB );
+            deliver( event._objectB, event._objectA, event, bTriggerB, bTriggerA );
         }
     }
 

@@ -368,3 +368,27 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
 
     dispatcher.clear();
 }
+
+/**
+ * @brief [EventTest] 버스 스레드는 큐를 비우는 스레드다 — 주인이 정해지기 전에는 어느 스레드든, 정해진 뒤에는 그 스레드만 바로 발행할 수 있다
+ * @details 바로 알리고 싶은 쪽(`GameEventUtil::send`)이 `publish` 와 `push` 를 고르는 물음이다. 주인은 예전에는 Debug 에서만 기억해(단언용) 배포본에서
+ *          물을 수 없었다 — 그래서 게임플레이 이벤트는 늘 큐로 실려 한 프레임 늦었다.
+ */
+SW_TEST_CASE( EventTest, BusThreadIsTheThreadThatProcessesEvents )
+{
+    sw::EventDispatcher dispatcher;
+    bool                bOtherThreadBeforeOwner = false;
+    std::thread         before( [&dispatcher, &bOtherThreadBeforeOwner]()
+    { bOtherThreadBeforeOwner = dispatcher.isBusThread(); } );
+    before.join();
+    SW_EXPECT_TRUE( bOtherThreadBeforeOwner );
+    SW_EXPECT_TRUE( dispatcher.isBusThread() );
+
+    dispatcher.processEvents(); // 이 스레드가 주인이 된다
+    SW_EXPECT_TRUE( dispatcher.isBusThread() );
+    bool        bOtherThreadAfterOwner = true;
+    std::thread after( [&dispatcher, &bOtherThreadAfterOwner]()
+    { bOtherThreadAfterOwner = dispatcher.isBusThread(); } );
+    after.join();
+    SW_EXPECT_FALSE( bOtherThreadAfterOwner );
+}

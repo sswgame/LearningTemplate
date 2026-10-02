@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
@@ -37,6 +38,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 바디를 빼고 물리 월드 참조 · 콜라이더 목록 자리를 놓습니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 다음 step 의 바디 맞춤을 순간이동으로 합니다 — 옛 자리에서 새 자리까지를 쓸지 않습니다(`SceneComponent::teleportTo`). */
+        void onTeleported() override;
 
         /** @brief 물리 레이어입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 step 부터 겹침이 그 레이어로 걸러집니다. */
         int32 getColliderType() const { return _colliderType; }
@@ -45,10 +48,18 @@ namespace sw
         /**
          * @brief 연속 충돌(CCD)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseCCD`).
          * @details 켜면 물리가 지난 step 의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다
-         *          (`PhysicsWorld::step`). 빠른 것(투사체)에만 켭니다 — 순간이동도 그 길을 쓸어 지나간 것과 닿습니다.
+         *          (`PhysicsWorld::step`). 빠른 것(투사체)에만 켭니다. 순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
          */
         bool isContinuous() const { return _bContinuous; }
         void setContinuous( bool bContinuous ) { _bContinuous = bContinuous; }
+
+        /**
+         * @brief 트리거인지입니다(유니티 `Collider.isTrigger` · 언리얼 Overlap 반응).
+         * @details 트리거도 겹침 이벤트는 냅니다 — 받는 쪽이 `OverlapInfo::_bOtherTrigger` 로 가립니다. 투사체 · 공격 판정은 트리거에 막히지도 피해를
+         *          주지도 않습니다(감지 범위 · 구역 볼륨이 총알을 먹지 않는다).
+         */
+        bool isTrigger() const { return _bTrigger; }
+        void setTrigger( bool bTrigger ) { _bTrigger = bTrigger; }
 
         /** @brief 소유자 위치를 기준으로 한 콜라이더 중심 오프셋입니다. */
         float2 getOffsetPosition() const { return _offsetPos; }
@@ -69,7 +80,10 @@ namespace sw
 
     private:
         void unregisterPhysicsBody();
-        /** @brief 바디를 지금 상자 · 레이어 · 연속 여부에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다). */
+        /**
+         * @brief 바디를 지금 상자 · 레이어 · 판정 방식에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다).
+         * @details 순간이동 표시(`onTeleported`)가 있으면 그 사이를 쓸지 않게 맞추고 표시를 지웁니다.
+         */
         void syncPhysicsBody();
 
         /**
@@ -92,5 +106,9 @@ namespace sw
         uint32 _colliderIndex; ///< 매니저의 콜라이더 목록 자리(`GameObjectManager::registerCollider`). 없으면 `kNotRegistered`
         PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics step so a fast mover cannot pass through a thin collider" )
         bool _bContinuous;
+        PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )
+        bool _bTrigger;
+        /** @brief 순간이동했다는 표시입니다. 틱 중 다른 워커가 세울 수 있어 원자값이고, step 직전 바디 맞춤이 읽고 지웁니다. 저장하지 않는다. */
+        atomic<bool> _bTeleportPending;
     };
 } // namespace sw

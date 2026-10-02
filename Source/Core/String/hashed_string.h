@@ -355,6 +355,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 4) AllocationInfo — 청크 테이블 + 64KB 문자열 아레나 + 32개 샤드 뮤텍스
     // ------------------------------------------------------------------------------
+    /** @brief 청크 엔트리입니다. 락 없이 읽을 수 있도록 바뀌지 않는 데이터 슬롯입니다. */
+    template <typename T, typename N>
+    struct basic_hashed_string<T, N>::Entry
+    {
+        const value_type* _pStr{ nullptr };      ///< 아레나에 적재된 불변 C 문자열 포인터
+        size_type         _stringLength{ 0 };    ///< 문자열 길이(널 제외)
+        hash_type         _hash{ 0 };            ///< 미리 계산한 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)
+        uint32            _comparisonIndex{ 0 }; ///< 이 철자가 속한 이름의 비교 엔트리(처음 intern 된 철자면 자기 자신)
+    };
+
     /**
      * @struct AllocationInfo
      * @brief 문자열 intern 풀의 저장소이자 검색 엔진입니다.
@@ -370,16 +380,6 @@ namespace sw
      *   여러 스레드에서 intern 요청이 몰릴 때 락 하나에 경합이 생기지 않도록, 해시 상위 비트로 32개의 독립된
      *   `shared_mutex` 와 `unordered_map` 에 나눠 처리합니다.
      */
-    /** @brief 청크 엔트리입니다. 락 없이 읽을 수 있도록 바뀌지 않는 데이터 슬롯입니다. */
-    template <typename T, typename N>
-    struct basic_hashed_string<T, N>::Entry
-    {
-        const value_type* _pStr{ nullptr };      ///< 아레나에 적재된 불변 C 문자열 포인터
-        size_type         _stringLength{ 0 };    ///< 문자열 길이(널 제외)
-        hash_type         _hash{ 0 };            ///< 미리 계산한 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)
-        uint32            _comparisonIndex{ 0 }; ///< 이 철자가 속한 이름의 비교 엔트리(처음 intern 된 철자면 자기 자신)
-    };
-
     template <typename T, typename N>
     struct basic_hashed_string<T, N>::AllocationInfo
     {

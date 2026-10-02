@@ -54,25 +54,27 @@ namespace sw
         }
     }
 
-    void AttackBaseComponent::onOverlapBegin( GameObject* pOther )
+    void AttackBaseComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
-        Component::onOverlapBegin( pOther );
-        if ( pOther == nullptr )
+        Component::onOverlapBegin( overlap );
+        // 상대의 감지 범위(트리거)에 닿은 것은 맞은 것이 아니다 — 몸(막는 콜라이더)에 닿아야 한다.
+        if ( overlap._pOther == nullptr || overlap._bOtherTrigger == SW_TRUE )
             return;
 
-        const GameObjectHandle other = pOther->getHandle();
-        if ( std::find( _listOverlapping.begin(), _listOverlapping.end(), other ) == _listOverlapping.end() )
-            _listOverlapping.push_back( other );
+        // 접촉마다 하나씩 든다 — 상대가 콜라이더 둘로 겹쳤다가 하나만 떨어져도 남은 접촉이 남는다.
+        _listOverlapping.push_back( overlap._pOther->getHandle() );
         if ( _bIsAttacking )
-            deliverHit( pOther );
+            deliverHit( overlap._pOther );
     }
 
-    void AttackBaseComponent::onOverlapEnd( GameObject* pOther )
+    void AttackBaseComponent::onOverlapEnd( const OverlapInfo& overlap )
     {
-        Component::onOverlapEnd( pOther );
-        if ( pOther != nullptr )
+        Component::onOverlapEnd( overlap );
+        if ( overlap._bOtherTrigger == SW_TRUE )
+            return; // 시작에서 들지 않았다
+        if ( overlap._pOther != nullptr )
         {
-            (void)VectorUtil::removeSingleSwap( _listOverlapping, pOther->getHandle() ); // 없으면 잊을 것도 없다
+            (void)VectorUtil::removeSingleSwap( _listOverlapping, overlap._pOther->getHandle() ); // 없으면 잊을 것도 없다
             return;
         }
 

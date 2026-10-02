@@ -1681,9 +1681,8 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   움직이지 않는 규칙부터), GL 머티리얼 텍스처가 기본 샘플러(NEAREST · CLAMP)로 읽힌다(기존 — GL 글자 가장자리만 다른 까닭), 2D 정렬 레이어 없음(같은 깊이는 거리
   정렬 — 같은 Z 의 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다), 클립 공유 캐시는 쥔 동안 다시 읽지 않는다(플레이 중 에디터 저장이 살아 있는 스프라이트에 안 닿는다),
   인스턴스 +16 B 는 재지 않았다. `RenderPassGpuTest.MorphPoolIdentityMatchesRest` 가 전체 ctest 부하에서 한 번 졌다(807/26486 px < 5 %, sin(시간) 구동 — 단독 15/15).
-  투사체: 상대는 그 step 의 자리에 선 것으로 본다(길을 가로질러 건너간 상대는 안 맞는다), 연속 바디 순간이동은 그 길도 쓸린다(전용 API 없음), 기본 레이어
-  행렬은 전부 부딪혀 트리거성 콜라이더도 총알을 멈춘다(게임이 레이어로 정할 것), `ProjectileComponent::_instigator` 는 raw id 로 저장된다(플레이 중 씬 저장 시
-  낡은 id), 룸 이벤트 셋(RoomCleared 등)은 여전히 내는 곳이 없다.
+  투사체(⑱ 잇기 뒤): 순간이동이 아닌 먼 이동(에디터 드래그 등)이 있는 step 은 연속 바디가 모든 바디를 훑는다(답은 맞고 그 step 만 느리다), 상대 운동은 한 step
+  안 직선 이동을 가정한다, 맵 컨테이너 안의 핸들 · `ComponentHandle` PROPERTY 는 id 를 옮기지 않는다(지금 없음).
   `GameEvents.h` 의 세이브 · 레벨 요청 이벤트 열둘은 여전히 어휘뿐이다(발행자 · 구독자 없음 — 헤더 경고대로). `GameModeStateMachine` 은 쓰는 곳이 없다.
   **원래 목록**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
@@ -2102,6 +2101,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (킷 ⑱ 잇기 — 투사체 피해의 남은 것 열: 상대 운동 쓸림 · 순간이동 · 트리거 · 요격탄 · 같은 프레임 피해 알림 · 핸들 PROPERTY 의 id 규칙 · 룸 이벤트, 상용 엔진 방식으로 — 사용자 요청)
+
+- **연속 쓸림이 상대를 끝 자리에 세워 두고 쟀다** — 프레임 사이에 총알 길을 가로질러 건너간 적이 맞지 않았다. 모든 바디의 지난 자리에서 이동의 차이로 쓴다
+  (Box2D 총알 TOI · 유니티 Continuous Dynamic). 상대의 지금 자리는 쓸린 셀 밖일 수 있어 후보 범위를 그 step 의 최대 이동만큼 넓힌다.
+- **순간이동도 쓸렸다** — `SceneComponent::teleportTo`(아래 붙은 모두 · `onTeleported`)와 `BodyMoveType::Teleport`(언리얼 TeleportPhysics · 유니티 position 대입).
+- **겹침 훅이 상대 오브젝트만 받아 감지 범위(트리거)와 몸을 가를 수 없었다** — `setTrigger`(유니티 isTrigger · 언리얼 Overlap 반응), 바디 · 이벤트의 양쪽 트리거
+  여부, 훅은 `onOverlapBegin( const OverlapInfo& )`. 투사체 · 공격 판정은 상대의 트리거를 치지 않는다. 바디 갱신은 `PhysicsBodyState` 한 벌.
+- **"투사체끼리 지나친다" 가 고정 규칙이었다** — `ProjectileComponent::setInterceptor`(언리얼 채널별 반응), 같은 instigator 끼리는 지나침(산탄).
+- **피해 이벤트가 늘 큐라 한 프레임 늦었다** — `UnitStatsComponent::registerDamageApplied`(언리얼 OnTakeAnyDamage 자리, HP 가 깎인 그 자리에서)와
+  `GameEventUtil::send`(버스 스레드면 publish, 아니면 push — `EventDispatcher::isBusThread`, 버스 스레드를 배포본에서도 기억).
+- **핸들 PROPERTY 가 런타임 id 그대로 씬 파일에 들어갔다**(다시 연 씬에서 같은 값의 다른 오브젝트를 가리킬 수 있었다) — 부모 부착과 같은 규칙 하나: 쓸 때
+  `ObjectSaveOptions::getSavedObjectId`(파일 밖 · 프리팹은 0), 읽을 때 `ObjectStateBatch` 가 옮긴다(Live 그대로 · Saved 없으면 없음).
+- 공격 판정은 접촉마다 기억하고 판정 안에서 사라진 상대를 덜어 낸다(`getOverlapCount`). 콜라이더 없는 투사체는 시작할 때 경고. 룸 이벤트 셋을 `ActionRoom` 이
+  낸다(시작 · 클리어 · `onPlayerDefeated`, 자리는 `ActionRoomSite`). ActionCombat 시험은 `TestActionCombat.cpp`(ActionCombatTest)로 옮겼다.
+
+**검증.** 새 시험 16(PhysicsTest 3 · BoxCollider2DTest 2 · EventTest 1 · ActionCombatTest 10), 옮긴 시험 9. 변이 34 모두 죽음(하나는 Debug 버스 스레드 단언이
+시험을 멈춰서). `_listHitTarget` 의 직렬화 판정은 SmokeTest 모듈 PROPERTY 시험이 본다(void* 탐침으로 확인). 메인에 ⑲ ⑳ 과 합친 뒤 Debug 32/32(hostgpu 포함).
 
 ### 2026-10-03 (킷 ⑲ · ⑳ 스프라이트 프레임 · 색은 GPU 인스턴스로, 클립은 런타임 에셋 하나로, 월드 공간 UI 는 스프라이트로 — 1-0j 의 R4 렌더링 절반)
 

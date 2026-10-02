@@ -200,6 +200,41 @@ namespace sw
             {
                 return migrateContext._fromVersion == migrateContext._toVersion;
             }
+
+            /** @brief `GameObjectHandle` 의 타입 이름입니다 — 리플렉션 PROPERTY 의 타입 · 글 처리기의 이름이 같습니다. */
+            static const hashed_string& getObjectHandleTypeName()
+            {
+                static const hashed_string s_typeName{ "GameObjectHandle" };
+                return s_typeName;
+            }
+
+            /**
+             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
+             * @details 세 형식이 모두 이 글 처리기를 지납니다(바이너리도 핸들은 글로 싣는다 — `SerializerUtil::serializeValueBinary`). 예전에는 기본
+             *          처리기가 런타임 id 를 그대로 적어, 씬 파일을 다시 열면 같은 값을 받은 다른 오브젝트를 가리킬 수 있었다.
+             */
+            struct ReferenceWriter
+            {
+                const ObjectSaveOptions* _pOptions{ nullptr };
+
+                string write( const void* pValue ) const
+                {
+                    const GameObjectHandle& handle  = *static_cast<const GameObjectHandle*>( pValue );
+                    const bool              bOmit   = handle.isValid() == false || _pOptions->_bOmitExternalParent;
+                    const uint64            savedId = bOmit ? 0 : _pOptions->getSavedObjectId( handle.objectId() );
+                    return sw::to_string( savedId );
+                }
+            };
+
+            /** @brief 오브젝트 상태를 쓰는 문맥에 핸들 글 처리기를 겁니다. 읽기는 기본 그대로다 — 옮기는 일은 묶음이 모두 읽은 뒤 한다(`ObjectStateBatch::finish`). */
+            static void registerReferenceWriter( SerializeContext& ctx, const ReferenceWriter& writer )
+            {
+                const SerializeContext::TextReadFn* pReader = SerializeContext::getDefault().findTextReader( getObjectHandleTypeName() );
+                if ( pReader == nullptr )
+                    return;
+                ctx.registerTextHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::write, &writer ),
+                                         *pReader );
+            }
         };
     } // namespace
 } // namespace sw
@@ -218,7 +253,9 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return {};
 
-        SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        SerializeContext                                     ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
+        ObjectStateSerializerInternal::registerReferenceWriter( ctx, referenceWriter );
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
     }
 
@@ -334,8 +371,10 @@ namespace sw
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
 
-        const size_t     bodyStart = writer.getOffset();
-        SerializeContext ctx       = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        const size_t                                         bodyStart = writer.getOffset();
+        SerializeContext                                     ctx       = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
+        ObjectStateSerializerInternal::registerReferenceWriter( ctx, referenceWriter );
         BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, ctx );
         writer.writeAt( sizeHeaderPos, static_cast<uint32>( writer.getOffset() - bodyStart ) );
 
@@ -502,6 +541,64 @@ namespace sw
         // 2) 부착. 모든 오브젝트가 생긴 뒤라 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
         for ( const Entry& entry : _listEntry )
             resolveEntry( entry );
+
+        // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다 — 가리키던 오브젝트가 뒤에 읽혔어도 찾는다.
+        for ( const Entry& entry : _listEntry )
+            resolveObjectReferences( entry );
+    }
+
+    void ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const
+    {
+        GameObject* pObject = entry._pObject;
+        if ( pObject->isPendingDestroy() )
+            return;
+
+        const hashed_string& handleTypeName = ObjectStateSerializerInternal::getObjectHandleTypeName();
+        for ( Component* pComp : pObject->getComponents() )
+        {
+            const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
+            if ( pTypeInfo == nullptr )
+                continue;
+            for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+            {
+                // 읽지 않은 칸(Transient)은 지금 실행의 값이다 — 옮기면 살아 있는 참조를 망친다.
+                if ( prop._metadata._bTransient == SW_TRUE )
+                    continue;
+                if ( prop._bIsContainer == SW_FALSE )
+                {
+                    if ( prop._typeName == handleTypeName )
+                    {
+                        GameObjectHandle* pHandle = static_cast<GameObjectHandle*>( prop.getRawPtr( pComp ) );
+                        *pHandle                  = resolveObjectReference( *pHandle );
+                    }
+                    continue;
+                }
+                ISequenceContainerWrapper* pSequence = ( prop._containerWrapper != nullptr ) ? prop._containerWrapper->asSequence() : nullptr;
+                if ( pSequence == nullptr || prop._elementTypeName != handleTypeName )
+                    continue;
+                void*        pContainer   = prop.getRawPtr( pComp );
+                const size_t elementCount = pSequence->getSize( pContainer );
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    GameObjectHandle* pHandle = static_cast<GameObjectHandle*>( pSequence->getElement( pContainer, elementIndex ) );
+                    *pHandle                  = resolveObjectReference( *pHandle );
+                }
+            }
+        }
+    }
+
+    GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle ) const
+    {
+        if ( savedHandle.isValid() == false )
+            return GameObjectHandle{};
+        const GameObject* pReferent = findBySavedId( savedHandle.objectId() );
+        if ( pReferent != nullptr )
+            return pReferent->getHandle();
+        // 같은 실행의 상태면 묶음 밖의 런타임 id 그대로다 — 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.
+        if ( _idSpace == ObjectIdSpace::Live )
+            return savedHandle;
+        // 파일 id 가 이 묶음에 없다 — 이 실행에서 같은 값은 다른 오브젝트다(언리얼의 Instigator 처럼 파일 밖을 가리키는 런타임 참조는 남지 않는다).
+        return GameObjectHandle{};
     }
 
     GameObject* ObjectStateBatch::findBySavedId( uint64 savedId ) const

@@ -16,22 +16,46 @@ namespace sw
     struct PhysicsBody
     {
         AABB   _aabb{};
-        AABB   _stepAabb{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때는 `_aabb` 와 같다
+        AABB   _stepAabb{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때 · 순간이동 때는 `_aabb` 와 같다
         uint64 _objectId{ 0 };
         uint8  _layer{ 0 };
         uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(CCD) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
+        uint8  _bTrigger{ SW_FALSE };    ///< 트리거면 SW_TRUE — 겹침은 내지만 막지 않는다(유니티 `isTrigger` · 언리얼 Overlap 반응). 받는 쪽이 이벤트에서 본다
+    };
+
+    /** @brief 콜라이더가 바디에 맞추는 값 한 벌입니다 — 자리 · 레이어 · 판정 방식(`PhysicsWorld::addBody` · `updateBody`). */
+    struct PhysicsBodyState
+    {
+        AABB  _aabb{};
+        uint8 _layer{ 0 };
+        uint8 _bContinuous{ SW_FALSE };
+        uint8 _bTrigger{ SW_FALSE };
     };
 
     /**
-     * @brief `step` 이 낸 겹침 시작 · 끝 하나입니다. 두 바디의 오브젝트 id 입니다(순서는 정해져 있지 않다).
+     * @brief 바디를 옮기는 방식입니다(언리얼 `ETeleportType` · 유니티 `Rigidbody.MovePosition` 대 `position` 대입).
+     * @details 연속 바디만 다릅니다 — `Sweep` 은 지난 step 의 자리에서 새 자리까지 쓸려 그 사이에 닿은 것과 겹치고, `Teleport` 는 그 사이를 건너뛴다
+     *          (새 자리가 다음 쓸림의 출발점이 된다). 리스폰 · 문 통과 · 풀에서 꺼낸 총알처럼 "그 길을 실제로 지나가지 않은" 이동은 Teleport 다.
+     */
+    enum class BodyMoveType : uint8
+    {
+        Sweep,
+        Teleport
+    };
+
+    /**
+     * @brief `step` 이 낸 겹침 시작 · 끝 하나입니다. 두 바디의 오브젝트 id 와 각 바디가 트리거인지입니다(순서는 정해져 있지 않다).
      * @details 목록은 `_time` 순서입니다 — 빠른 연속 바디가 한 step 에 둘을 지나가면 **먼저 닿은 쪽**이 먼저 옵니다(총알이 뒤의 적부터 맞지 않는다).
+     *          한 오브젝트에 콜라이더가 여럿이면 바디 쌍마다 하나씩 옵니다 — 트리거 여부로 어느 콜라이더였는지 가립니다.
      */
     struct PhysicsOverlapEvent
     {
         uint64  _objectA{ 0 };
         uint64  _objectB{ 0 };
-        float32 _time{ 1.0f };       ///< 이번 step 안에서 닿은 때(0..1). 쓸려서 닿은 시작만 1 보다 작다 — 끝 · 제자리 겹침은 1
-        uint8   _bBegin{ SW_FALSE }; ///< 시작이면 SW_TRUE, 끝이면 SW_FALSE
+        float32 _time{ 1.0f };          ///< 이번 step 안에서 닿은 때(0..1). 쓸려서 닿은 시작만 1 보다 작다 — 끝 · 제자리 겹침은 1
+        uint8   _bBegin{ SW_FALSE };    ///< 시작이면 SW_TRUE, 끝이면 SW_FALSE
+        uint8   _bTriggerA{ SW_FALSE }; ///< A 쪽 바디가 트리거인지
+        uint8   _bTriggerB{ SW_FALSE }; ///< B 쪽 바디가 트리거인지
     };
 
     /**
@@ -46,20 +70,20 @@ namespace sw
         /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. */
         PhysicsWorld() = default;
 
-        /**
-         * @brief AABB 바디를 등록합니다.
-         * @param bContinuous 연속 충돌(CCD) 바디인지 — `PhysicsBody::_bContinuous`. 출발점(`_stepAabb`)은 지금 자리입니다.
-         */
-        BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0, bool bContinuous = false );
+        /** @brief 막는 · 이산 AABB 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
+        BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0 );
+        /** @brief 판정 방식(연속 · 트리거)까지 정한 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
+        BodyHandle addBody( const PhysicsBodyState& state, uint64 objectId );
         /** @brief 바디를 제거합니다. */
         void removeBody( BodyHandle handle );
-        /** @brief 바디 AABB 를 갱신합니다. 연속 바디는 다음 `step` 에서 지난 step 의 자리부터 여기까지 쓸립니다. */
+        /** @brief 바디 AABB 를 갱신합니다. 연속 바디는 다음 `step` 에서 지난 step 의 자리부터 여기까지 쓸립니다(`BodyMoveType::Sweep`). */
         void setAabb( BodyHandle handle, const AABB& aabb );
         /**
-         * @brief 바디의 상자 · 레이어 · 연속 여부를 한 번에 맞춥니다. 콜라이더가 `step` 직전에 부릅니다(`BoxCollider2DComponent::syncPhysicsBody`).
+         * @brief 바디의 상자 · 레이어 · 판정 방식을 한 번에 맞춥니다. 콜라이더가 `step` 직전에 부릅니다(`BoxCollider2DComponent::syncPhysicsBody`).
          * @details 예전에는 상자만 맞췄습니다 — 레이어는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류(`setColliderType`)가 겹침에 닿지 않았습니다.
+         * @param moveType `Teleport` 면 새 자리가 다음 쓸림의 출발점이 됩니다 — 지난 자리에서 여기까지의 길을 쓸지 않습니다.
          */
-        void updateBody( BodyHandle handle, const AABB& aabb, uint8 layer, bool bContinuous );
+        void updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType = BodyMoveType::Sweep );
         /** @brief 핸들이 유효하면 out 에 복사하고 true 를 반환합니다. */
         [[nodiscard]] bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
         /**
@@ -72,8 +96,11 @@ namespace sw
          *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`CCD::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)
          *          끝납니다. 출발점에서 이미 겹쳐 있던 것(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리
-         *          겹침이 이어 갑니다. 상대는 **이번 step 의 자리**에 서 있는 것으로 봅니다(언리얼 투사체의 이동 스윕과 같다) — 프레임 사이에 총알 길을
-         *          가로질러 건너편으로 간 상대는 닿지 않습니다.
+         *          겹침이 이어 갑니다.
+         *
+         *          **상대도 움직였으면 상대 운동으로 잽니다**(Box2D 총알 TOI · 유니티 Continuous Dynamic): 두 바디 모두 지난 step 의 자리에서 출발해
+         *          연속 바디의 이동에서 상대의 이동을 뺀 만큼 쓸립니다. 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대도 맞습니다. 예전에는 상대를
+         *          이번 step 의 자리에 세워 두고 쟀습니다.
          */
         void step( float32 deltaTime );
         /** @brief 마지막 `step` 이 낸 겹침 이벤트입니다. 다음 `step` 까지 그대로입니다. */
@@ -225,9 +252,12 @@ namespace sw
         void setAabbLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb );
         /**
          * @brief 연속 바디 @p body 가 지난 step 의 자리에서 지금 자리까지 쓸리며 처음 닿은 바디를 쌍으로 더합니다. `step` 이 `_mutex` 를 잡은 채로 부릅니다.
+         * @details 상대 운동으로 잽니다 — 두 바디의 출발점(`_stepAabb`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
+         *          들어 있으므로, 쓸린 범위를 이번 step 에 가장 많이 움직인 바디의 이동만큼 넓혀 모읍니다(그 안에 없으면 그 사이 어느 때에도 닿을 수 없다).
+         * @param maxDisplacement 이번 step 에 바디들이 축마다 움직인 가장 큰 거리(절댓값)
          * @param inoutListCandidate 후보를 모을 자리(할당 재사용 — 들어 있던 것은 버린다)
          */
-        void addSweptPairs( BodyHandle handle, const PhysicsBody& body, vector<BodyHandle>& inoutListCandidate );
+        void addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxDisplacement, vector<BodyHandle>& inoutListCandidate );
 
     private:
         mutable std::shared_mutex                                   _mutex;
@@ -238,7 +268,7 @@ namespace sw
         vector<BodyHandle> _listOversizedBody;
 
         /**
-         * @brief 겹친 쌍 하나 — 두 핸들(작은 쪽이 먼저)과 그 오브젝트 id 입니다. 바디가 사라진 뒤에도 끝 이벤트를 낼 수 있게 id 를 함께 든다.
+         * @brief 겹친 쌍 하나 — 두 핸들(작은 쪽이 먼저)과 그 오브젝트 id · 트리거 여부입니다. 바디가 사라진 뒤에도 끝 이벤트를 낼 수 있게 함께 든다.
          * @details `_time` 은 이번 step 안에서 닿은 때입니다(제자리 겹침은 1). 같은 쌍이 제자리 겹침과 쓸림(또는 연속 바디 둘의 양쪽 쓸림)으로
          *          두 번 들 수 있어, 줄 세운 뒤 가장 이른 것 하나만 남깁니다(`isEarlierInOrder`).
          */
@@ -249,13 +279,15 @@ namespace sw
             uint64     _firstObjectId{ 0 };
             uint64     _secondObjectId{ 0 };
             float32    _time{ 1.0f };
+            uint8      _bFirstTrigger{ SW_FALSE };
+            uint8      _bSecondTrigger{ SW_FALSE };
 
             /** @brief @p a · @p b 를 핸들 순서(작은 쪽이 먼저)로 놓은 쌍을 만듭니다. */
-            static OverlapPair makeOrdered( BodyHandle a, uint64 objectA, BodyHandle b, uint64 objectB, float32 time ) noexcept
+            static OverlapPair makeOrdered( BodyHandle a, const PhysicsBody& bodyA, BodyHandle b, const PhysicsBody& bodyB, float32 time ) noexcept
             {
                 if ( b < a )
-                    return OverlapPair{ b, a, objectB, objectA, time };
-                return OverlapPair{ a, b, objectA, objectB, time };
+                    return OverlapPair{ b, a, bodyB._objectId, bodyA._objectId, time, bodyB._bTrigger, bodyA._bTrigger };
+                return OverlapPair{ a, b, bodyA._objectId, bodyB._objectId, time, bodyA._bTrigger, bodyB._bTrigger };
             }
 
             bool operator<( const OverlapPair& other ) const noexcept

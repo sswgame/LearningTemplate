@@ -7,7 +7,9 @@
 
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 
+#include "GameFramework/Base/GameEventUtil.h"
 #include "GameFramework/Base/GameService.h"
+#include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
 
 namespace sw
 {
@@ -47,7 +49,8 @@ namespace sw
     } // namespace
 
     ActionRoom::ActionRoom()
-        : _kind{ ActionRoomKind::None }
+        : _site{}
+        , _kind{ ActionRoomKind::None }
         , _layers{}
         , _listActor{}
         , _listProjectile{}
@@ -80,16 +83,14 @@ namespace sw
 
     void ActionRoom::beginEntrance()
     {
-        clear();
-        _kind = ActionRoomKind::Hall;
+        startFight( ActionRoomKind::Hall );
         spawnGrunt( 6.0f, 3.0f );
         spawnGrunt( 8.0f, 5.0f );
     }
 
     void ActionRoom::beginHall()
     {
-        clear();
-        _kind = ActionRoomKind::Hall;
+        startFight( ActionRoomKind::Hall );
         spawnGrunt( 5.0f, 2.5f );
         spawnGrunt( 8.0f, 4.0f );
         spawnGrunt( 6.5f, 5.5f );
@@ -97,9 +98,37 @@ namespace sw
 
     void ActionRoom::beginBoss()
     {
-        clear();
-        _kind = ActionRoomKind::Boss;
+        startFight( ActionRoomKind::Boss );
         spawnBoss( 7.0f, 4.0f );
+    }
+
+    void ActionRoom::startFight( ActionRoomKind kind )
+    {
+        clear();
+        _kind = kind;
+        // 들어오면 문이 닫힌다 — 진입이 닫은 것이다(오버월드는 이 존의 워프를 막는다).
+        sendGateState( true, true );
+    }
+
+    void ActionRoom::onPlayerDefeated()
+    {
+        if ( _kind == ActionRoomKind::None )
+            return;
+        PlayerDefeatedInRoomEvent defeated;
+        defeated._returnMapPath = _site._returnMapPath;
+        GameEventUtil::send( defeated );
+        // 싸움이 끝났다 — 문을 열고 룸을 비운다(다시 들어오면 처음부터).
+        sendGateState( false, false );
+        clear();
+    }
+
+    void ActionRoom::sendGateState( bool bLocked, bool bTriggered ) const
+    {
+        ClearGateStateChangedEvent gate;
+        gate._zoneId     = _site._zoneId;
+        gate._bLocked    = bLocked ? SW_TRUE : SW_FALSE;
+        gate._bTriggered = bTriggered ? SW_TRUE : SW_FALSE;
+        GameEventUtil::send( gate );
     }
 
     float32 ActionRoom::getDashFill() const
@@ -356,6 +385,13 @@ namespace sw
         out._bClearedThisFrame = SW_TRUE;
         if ( _kind == ActionRoomKind::Boss )
             out._bBossDefeated = SW_TRUE;
+
+        // 클리어는 한 번만 알린다(위의 `_bCleared` 가 막는다). 결과를 알리고 문을 연다.
+        RoomClearedEvent cleared;
+        cleared._mapPath       = _site._mapPath;
+        cleared._bBossDefeated = out._bBossDefeated;
+        GameEventUtil::send( cleared );
+        sendGateState( false, false );
     }
 
     AABB ActionRoom::playerHurtBox( float32 x, float32 y ) const

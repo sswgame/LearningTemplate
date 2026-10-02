@@ -37,7 +37,15 @@ namespace sw
         , _colliderType{ 0 }
         , _colliderIndex{ kNotRegistered }
         , _bContinuous{ false }
+        , _bTrigger{ false }
+        , _bTeleportPending{ false }
     {
+    }
+
+    void BoxCollider2DComponent::onTeleported()
+    {
+        SceneComponent::onTeleported();
+        _bTeleportPending.store( true, std::memory_order_release );
     }
 
     void BoxCollider2DComponent::onBeginPlay()
@@ -171,16 +179,21 @@ namespace sw
         float2 maxB{};
         getBounds( minB, maxB );
 
-        const AABB  box   = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
-        const uint8 layer = static_cast<uint8>( _colliderType );
+        PhysicsBodyState state{};
+        state._aabb        = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
+        state._layer       = static_cast<uint8>( _colliderType );
+        state._bContinuous = _bContinuous ? SW_TRUE : SW_FALSE;
+        state._bTrigger    = _bTrigger ? SW_TRUE : SW_FALSE;
 
-        // 레이어 · 연속 여부도 매번 맞춘다 — 예전에는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류가 겹침에 닿지 않았다.
+        // 순간이동 표시는 이번 맞춤에서 쓰고 지운다 — 바디가 새로 들어도(더한 자리가 출발점이다) 남겨 두면 다음 이동을 잘못 건너뛴다.
+        const bool bTeleported = _bTeleportPending.exchange( false, std::memory_order_acq_rel );
+        // 레이어 · 판정 방식도 매번 맞춘다 — 예전에는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류가 겹침에 닿지 않았다.
         if ( _physicsBody.isValid() )
         {
-            _pPhysics->updateBody( _physicsBody, box, layer, _bContinuous );
+            _pPhysics->updateBody( _physicsBody, state, bTeleported ? BodyMoveType::Teleport : BodyMoveType::Sweep );
             return;
         }
-        _physicsBody = _pPhysics->addBody( box, layer, pOwner->getObjectId(), _bContinuous );
+        _physicsBody = _pPhysics->addBody( state, pOwner->getObjectId() );
     }
 
 } // namespace sw

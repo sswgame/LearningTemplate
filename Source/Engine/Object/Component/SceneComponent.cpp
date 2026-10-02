@@ -199,6 +199,25 @@ namespace sw
         setLocalPosition( float3::transform( worldPosition, _pParent->getWorldMatrix().invert() ) );
     }
 
+    void SceneComponent::teleportTo( const float3& worldPosition )
+    {
+        setWorldPosition( worldPosition );
+        // 이 아래에 붙은 모두가 함께 옮겨졌다 — 재귀 없이 스택으로 돈다(깊은 계층에서도 스택이 자라지 않는다).
+        vector<SceneComponent*, InlineAllocator<SceneComponent*, 16>> listPending;
+        listPending.push_back( this );
+        while ( listPending.empty() == false )
+        {
+            SceneComponent* pNode = listPending.back();
+            listPending.pop_back();
+            pNode->onTeleported();
+            for ( SceneComponent* pChild : pNode->_listChild )
+            {
+                if ( pChild != nullptr )
+                    listPending.push_back( pChild );
+            }
+        }
+    }
+
     void SceneComponent::setWorldTransform( const float4x4& worldMatrix )
     {
         const float4x4 localMatrix = ( _pParent != nullptr ) ? worldMatrix * _pParent->getWorldMatrix().invert() : worldMatrix;
@@ -568,14 +587,9 @@ namespace sw
         if ( options._bOmitExternalParent )
             return;
 
-        uint64 ownerId = pParentOwner->getObjectId();
-        if ( options._pSavedIdMap != nullptr )
-        {
-            const auto mapIt = options._pSavedIdMap->find( ownerId );
-            ownerId          = ( mapIt != options._pSavedIdMap->end() ) ? mapIt->second : 0;
-        }
+        // 부모 id 를 저장할 id 로 옮긴다 — 핸들 PROPERTY 와 같은 규칙 하나(`ObjectSaveOptions::getSavedObjectId`).
         _attachOwner     = pParentOwner->getName();
-        _attachOwnerId   = ownerId;
+        _attachOwnerId   = options.getSavedObjectId( pParentOwner->getObjectId() );
         _attachComponent = hashed_string( parentKey.c_str() );
     }
 

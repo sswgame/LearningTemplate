@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    /** @brief 겹침 시작 · 끝을 받은 상대 오브젝트 id 를 적는 컴포넌트입니다(상대가 이미 사라졌으면 0). */
+    /** @brief 겹침 시작 · 끝을 받은 상대 오브젝트 id 와 상대가 트리거였는지를 적는 컴포넌트입니다(상대가 이미 사라졌으면 0). */
     class MockOverlapListenerComponent : public Component
     {
     public:
@@ -21,10 +21,15 @@ namespace sw
 
         vector<uint64> _listBeginOther;
         vector<uint64> _listEndOther;
+        vector<bool>   _listBeginOtherTrigger;
 
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
-        void            onOverlapBegin( GameObject* pOther ) override { _listBeginOther.push_back( pOther != nullptr ? pOther->getObjectId() : 0 ); }
-        void            onOverlapEnd( GameObject* pOther ) override { _listEndOther.push_back( pOther != nullptr ? pOther->getObjectId() : 0 ); }
+        void            onOverlapBegin( const OverlapInfo& overlap ) override
+        {
+            _listBeginOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectId() : 0 );
+            _listBeginOtherTrigger.push_back( overlap._bOtherTrigger == SW_TRUE );
+        }
+        void onOverlapEnd( const OverlapInfo& overlap ) override { _listEndOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectId() : 0 ); }
     };
 
     inline const TypeInfo* MockOverlapListenerComponent::StaticType()
@@ -216,5 +221,66 @@ SW_TEST_CASE( BoxCollider2DTest, ColliderTypeChangedDuringPlayFiltersTheNextStep
     b._pCollider->setColliderType( 1 );
     manager.tick( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listEndOther.size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [BoxCollider2DTest] 연속 콜라이더를 `teleportTo` 로 옮기면 그 사이를 쓸지 않는다 — `setWorldPosition` 으로 옮기면 쓴다, 붙은 자식도 같다
+ * @details 연속 콜라이더는 지난 step 의 자리부터 쓸려, 리스폰 · 문 통과 같은 순간이동도 그 길의 벽과 겹쳤다(언리얼은 `TeleportPhysics`, 유니티는
+ *          `Rigidbody.position` 대입으로 가른다). `SceneComponent::teleportTo` 는 그 컴포넌트와 그 아래에 붙은 모두를 순간이동으로 표시하고, 콜라이더는
+ *          step 직전 바디를 맞출 때 새 자리를 다음 쓸림의 출발점으로 둔다.
+ */
+SW_TEST_CASE( BoxCollider2DTest, TeleportToDoesNotSweepTheGapButSetWorldPositionDoes )
+{
+    sw::GameObjectManager manager;
+    const OverlapProbe    wall   = spawnProbe( manager, "Wall", 5.0f );
+    const OverlapProbe    runner = spawnProbe( manager, "Runner", 0.0f );
+    const OverlapProbe    rider  = spawnProbe( manager, "Rider", 0.0f );
+    SW_ASSERT_NOT_NULL( wall._pListener );
+    SW_ASSERT_NOT_NULL( runner._pListener );
+    SW_ASSERT_NOT_NULL( rider._pListener );
+    wall._pCollider->setOffsetScale( sw::float2{ 0.1f, 20.0f } );
+    runner._pCollider->setContinuous( true );
+    rider._pCollider->setContinuous( true );
+    rider._pCollider->setLocalPosition( sw::float3{ 0.0f, 3.0f, 0.0f } );
+    SW_ASSERT_TRUE( rider._pObject->attachToParent( runner._pObject, sw::AttachRule::KeepWorld ) );
+
+    manager.beginPlay();
+    manager.tick( 0.016f );
+    SW_ASSERT_TRUE( wall._pListener->_listBeginOther.empty() );
+
+    // 순간이동 — 달리는 쪽도, 거기 탄 자식도 벽을 지나가지 않았다.
+    runner._pCollider->teleportTo( sw::float3{ 10.0f, 0.0f, 0.0f } );
+    manager.tick( 0.016f );
+    SW_EXPECT_TRUE( wall._pListener->_listBeginOther.empty() );
+
+    // 같은 거리를 그냥 옮기면 둘 다 벽을 쓸고 지나간다.
+    runner._pCollider->setWorldPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), wall._pListener->_listBeginOther.size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [BoxCollider2DTest] 트리거 콜라이더도 겹침을 내고, 받는 쪽은 상대가 트리거였는지 안다
+ * @details 겹침 훅은 상대 오브젝트 하나만 받아, 감지 범위(트리거)와 몸(막는 콜라이더)을 가를 수 없었다. 이제 `OverlapInfo` 가 양쪽 콜라이더의
+ *          트리거 여부를 싣는다(유니티 `isTrigger` · 언리얼 Overlap 반응).
+ */
+SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
+{
+    sw::GameObjectManager manager;
+    const OverlapProbe    sensor = spawnProbe( manager, "Sensor", 0.0f );
+    const OverlapProbe    body   = spawnProbe( manager, "Body", 0.5f );
+    SW_ASSERT_NOT_NULL( sensor._pListener );
+    SW_ASSERT_NOT_NULL( body._pListener );
+    sensor._pCollider->setTrigger( true );
+    SW_EXPECT_TRUE( sensor._pCollider->isTrigger() );
+
+    manager.beginPlay();
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), body._pListener->_listBeginOtherTrigger.size() );
+    SW_EXPECT_TRUE( body._pListener->_listBeginOtherTrigger[0] );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), sensor._pListener->_listBeginOtherTrigger.size() );
+    SW_EXPECT_FALSE( sensor._pListener->_listBeginOtherTrigger[0] );
     manager.endPlay();
 }

@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "ProjectileComponent" );
+
     ProjectileComponent::ProjectileComponent()
         : _velocity{ 0.0f, 0.0f }
         , _instigator{}
@@ -17,6 +19,7 @@ namespace sw
         , _pierceCount{ 0 }
         , _lifeTime{ 0.0f }
         , _currentLife{ 0.0f }
+        , _bInterceptor{ false }
     {
     }
 
@@ -30,9 +33,12 @@ namespace sw
         {
             pOwner->addTag( "Bullet"_tag );
             // 투사체는 빠르다 — 한 프레임에 얇은 적을 건너뛰어도 지나간 길에서 맞게 콜라이더를 연속 충돌로 둔다(언리얼 투사체 이동이 늘 쓸며 가는 것과 같다).
+            // 콜라이더가 없으면 겹침이 오지 않는다 — 날기만 하고 아무것도 맞히지 못한다. 조용히 두면 "총알이 안 맞는다" 가 원인 없이 보인다.
             BoxCollider2DComponent* pCollider = pOwner->getComponent<BoxCollider2DComponent>();
             if ( pCollider != nullptr )
                 pCollider->setContinuous( true );
+            else
+                SW_LOG_WARNING( "Projectile '%#' has no BoxCollider2DComponent on its object - it moves but can never hit anything", pOwner->getName().c_str() );
         }
 
         _currentLife = 0.0f;
@@ -70,13 +76,17 @@ namespace sw
         pSceneComp->setWorldPosition( pos );
     }
 
-    void ProjectileComponent::onOverlapBegin( GameObject* pOther )
+    void ProjectileComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
-        Component::onOverlapBegin( pOther );
+        Component::onOverlapBegin( overlap );
 
         // 사라지기로 한 뒤의 겹침(같은 step 에서 더 늦게 닿은 것)은 오지 않는다 — 파괴가 컴포넌트마다 삭제 표시를 세우고 전달이 그것을 건너뛴다.
         GameObject* pOwner = getOwner();
+        GameObject* pOther = overlap._pOther;
         if ( pOwner == nullptr || pOther == nullptr )
+            return;
+        // 상대가 트리거(감지 범위 · 구역 볼륨)면 막히지도 맞히지도 않는다. 예전에는 겹친 상대 오브젝트만 알아, 적의 감지 범위가 총알을 먹었다.
+        if ( overlap._bOtherTrigger == SW_TRUE )
             return;
 
         // 쏜 쪽과 거기 붙은 것(총 · 손)은 지나친다. 쏜 쪽이 이미 사라졌으면 풀리지 않으므로 지나칠 것도 없다.
@@ -84,22 +94,35 @@ namespace sw
         const GameObject*  pInstigator = ( pManager != nullptr ) ? pManager->resolveGameObject( _instigator ) : nullptr;
         if ( pOther->isDescendantOf( pInstigator ) )
             return;
-        // 다른 투사체도 지나친다 — 한 자리에서 퍼지는 산탄은 첫 step 에 서로 겹쳐 있다.
-        if ( pOther->getComponent<ProjectileComponent>() != nullptr )
+
+        // 다른 투사체는 요격탄만 맞힌다 — 맞힌 투사체는 지운다(그 투사체가 이 겹침을 받아도 요격탄이 아니면 지나친다).
+        const ProjectileComponent* pOtherProjectile = pOther->getComponent<ProjectileComponent>();
+        if ( pOtherProjectile != nullptr && canIntercept( *pOtherProjectile ) == false )
             return;
+        if ( pOtherProjectile != nullptr )
+            pOther->destroy();
 
         UnitStatsComponent* pStats = pOther->getComponent<UnitStatsComponent>();
         if ( pStats != nullptr )
-        {
             pStats->takeDamage( _damage, _instigator );
-            if ( _pierceCount > 0 )
-            {
-                --_pierceCount;
-                return;
-            }
+        // 맞힌 것(유닛 · 요격한 투사체)은 관통 수가 남았으면 하나 줄이고 계속 난다. 벽은 늘 멈춘다.
+        const bool bHitTarget = pStats != nullptr || pOtherProjectile != nullptr;
+        if ( bHitTarget && _pierceCount > 0 )
+        {
+            --_pierceCount;
+            return;
         }
-        // 유닛이든 벽이든, 레이어가 부딪히게 둔 것에 닿았으면 멈춘다. 파괴는 이 틱 끝(`processDeferredDestruction`)에 놓인다.
+        // 레이어가 부딪히게 둔 것에 닿았으면 멈춘다. 파괴는 이 틱 끝(`processDeferredDestruction`)에 놓인다.
         pOwner->destroy();
+    }
+
+    bool ProjectileComponent::canIntercept( const ProjectileComponent& other ) const
+    {
+        if ( _bInterceptor == false )
+            return false;
+        // 같은 쪽이 쏜 것끼리는 맞지 않는다 — 쏜 쪽을 모르면(무효 핸들) 편도 모르므로 맞힌다.
+        const bool bSameInstigator = _instigator.isValid() && other._instigator == _instigator;
+        return bSameInstigator == false;
     }
 
     void ProjectileComponent::setVelocity( const float2& velocity )
@@ -125,5 +148,10 @@ namespace sw
     void ProjectileComponent::setPierceCount( int32 pierceCount )
     {
         _pierceCount = pierceCount;
+    }
+
+    void ProjectileComponent::setInterceptor( bool bInterceptor )
+    {
+        _bInterceptor = bInterceptor;
     }
 } // namespace sw

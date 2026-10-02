@@ -20,6 +20,7 @@ namespace sw
         , _queueSpinLock{}
         , _mapChannelDispatchTable{}
         , _mapChannelQueue{}
+        , _busThreadId{}
         , _arrFrameAllocator{ LinearAllocator{ constant::kDefaultLinearCapacity }, LinearAllocator{ constant::kDefaultLinearCapacity } }
         , _arrListOverflowAllocation{}
         , _activeAllocatorIndex{ 0 }
@@ -33,26 +34,29 @@ namespace sw
         destroyQueuedEvents();
     }
 
-#if defined( SW_DEBUG )
     void EventDispatcher::bindBusThread()
     {
-        if ( _busThreadId == std::thread::id{} )
-            _busThreadId = std::this_thread::get_id();
+        // 이미 주인이 있으면 그대로다 — 큐를 비우는 스레드는 하나로 정해져 있다.
+        std::thread::id unbound{};
+        (void)_busThreadId.compare_exchange_strong( unbound, std::this_thread::get_id(), std::memory_order_acq_rel );
     }
 
+    bool EventDispatcher::isBusThread() const
+    {
+        // 아직 아무도 큐를 비우지 않았으면 주인이 없다. 시작할 때 구독 · 발행부터 하는 것은 정상이다.
+        const std::thread::id owner = _busThreadId.load( std::memory_order_acquire );
+        return owner == std::thread::id{} || owner == std::this_thread::get_id();
+    }
+
+#if defined( SW_DEBUG )
     void EventDispatcher::assertBusThread() const
     {
-        // 아직 아무도 큐를 비우지 않았으면 주인이 없다. 시작할 때 구독부터 하는 것은 정상이다.
-        if ( _busThreadId == std::thread::id{} )
-            return;
-
-        SW_LOG_ASSERT( std::this_thread::get_id() == _busThreadId,
+        SW_LOG_ASSERT( isBusThread(),
                        "EventDispatcher 의 버스(subscribe/unsubscribe/publish/processEvents/clear)는 "
                        "processEvents 를 부르는 스레드에서만 쓸 수 있습니다. "
                        "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
     }
 #else
-    void EventDispatcher::bindBusThread() {}
     void EventDispatcher::assertBusThread() const {}
 #endif
 

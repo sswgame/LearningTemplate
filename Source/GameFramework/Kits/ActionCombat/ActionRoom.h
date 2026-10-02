@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Physics/AABB.h"
@@ -60,15 +61,38 @@ namespace sw
             , _reserved{ 0 } {}
     };
 
+    /**
+     * @brief 이 룸이 어디에 있는지입니다 — 룸 이벤트에 실립니다(`ActionRoom::setSite`).
+     * @details 룸은 전투만 압니다. 어느 맵 · 어느 존의 룸인지, 지면 어디로 돌아가는지는 룸을 연 게임이 정합니다.
+     */
+    struct ActionRoomSite
+    {
+        string _mapPath;       ///< 이 룸의 맵(`RoomClearedEvent::_mapPath`)
+        string _zoneId;        ///< 클리어 게이트가 걸린 존(`ClearGateStateChangedEvent::_zoneId`)
+        string _returnMapPath; ///< 지면 돌아갈 오버월드 맵(`PlayerDefeatedInRoomEvent::_returnMapPath`)
+    };
+
     // ------------------------------------------------------------------------------
     // 2) ActionRoom — 적/투사체 스폰, 클리어 시 게이트 개방
     // ------------------------------------------------------------------------------
-    /** @brief 적 · 보스 투사체를 스폰하고, 클리어하면 클리어 게이트를 엽니다. */
+    /**
+     * @brief 적 · 보스 투사체를 스폰하고, 클리어하면 클리어 게이트를 엽니다.
+     * @details 상태가 바뀌는 자리마다 "game" 채널에 룸 이벤트를 냅니다(언리얼 GameMode 의 브로드캐스트 — `GameEventUtil::send`):
+     *          - 전투 시작(`beginEntrance` · `beginHall` · `beginBoss`) — 게이트가 닫힌다(`ClearGateStateChangedEvent` 잠김 · 진입 트리거).
+     *          - 클리어 — `RoomClearedEvent`(보스였는지) 뒤 게이트가 열린다.
+     *          - 플레이어 패배(`onPlayerDefeated`) — `PlayerDefeatedInRoomEvent` 뒤 게이트가 열리고 룸이 비워진다.
+     *          예전에는 세 이벤트가 선언만 있고 내는 곳이 없었다 — HUD · 오버월드가 결과를 매 프레임 `update` 의 반환값에서 되물어야 했다.
+     */
     class SW_GF_API ActionRoom
     {
     public:
         /** @brief 비활성(None) · 게이트 닫힘으로 시작합니다. */
         ActionRoom();
+
+        /** @brief 이 룸이 어디에 있는지 정합니다(이벤트에 실린다). `clear` 로 지워지지 않습니다. */
+        void setSite( const ActionRoomSite& site ) { _site = site; }
+        /** @brief 이 룸이 어디에 있는지 반환합니다. */
+        const ActionRoomSite& getSite() const { return _site; }
 
         /** @brief 룸 상태와 액터를 비웁니다. */
         void clear();
@@ -94,8 +118,14 @@ namespace sw
         /** @brief 살아 있는 적 수를 반환합니다. */
         int32 getAliveEnemyCount() const;
 
-        /** @brief 한 프레임 전투를 갱신합니다. */
+        /** @brief 한 프레임 전투를 갱신합니다. 이 프레임에 클리어했으면 룸 이벤트를 냅니다(클래스 설명). */
         ActionRoomFrameResult update( float32 deltaTime, const ActionRoomFrameInput& input );
+        /**
+         * @brief 플레이어가 이 룸에서 졌습니다 — `PlayerDefeatedInRoomEvent` 와 게이트 열림을 내고 룸을 비웁니다. 룸이 활성이 아니면 아무것도 하지 않습니다.
+         * @details 룸은 플레이어 HP 를 들지 않습니다(피해는 `ActionRoomFrameResult::_damageToPlayer` 로 돌려주고 게임이 깎는다). 그래서 패배는 HP 를
+         *          가진 게임이 알립니다 — 언리얼에서 폰의 죽음을 GameMode 에 알리고 GameMode 가 브로드캐스트하는 것과 같다.
+         */
+        void onPlayerDefeated();
         /** @brief 디버그 오버레이를 그립니다. */
         void drawDebug() const;
 
@@ -175,8 +205,12 @@ namespace sw
         void updateProjectiles( float32 deltaTime );
         /** @brief 플레이어 피격을 처리합니다. */
         void resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& out );
-        /** @brief 클리어 상태를 갱신합니다. */
+        /** @brief 클리어 상태를 갱신합니다. 이 프레임에 클리어했으면 룸 이벤트를 냅니다. */
         void refreshCleared( ActionRoomFrameResult& out );
+        /** @brief 전투를 시작합니다 — 룸을 비우고 종류를 정한 뒤 게이트가 닫혔음을 알립니다. 적 스폰은 부른 쪽이 한다. */
+        void startFight( ActionRoomKind kind );
+        /** @brief 클리어 게이트가 바뀌었음을 알립니다(`ClearGateStateChangedEvent`). */
+        void sendGateState( bool bLocked, bool bTriggered ) const;
         /** @brief 플레이어 피격 박스를 반환합니다. */
         AABB playerHurtBox( float32 x, float32 y ) const;
         /** @brief 플레이어 공격 박스를 반환합니다. */
@@ -187,6 +221,7 @@ namespace sw
         static constexpr uint8 kLayerPlayerAtk  = 2; ///< 플레이어 공격
         static constexpr uint8 kLayerProjectile = 3; ///< 적 투사체
 
+        ActionRoomSite         _site;
         ActionRoomKind         _kind;
         CollisionLayers        _layers;
         vector<Actor>          _listActor;

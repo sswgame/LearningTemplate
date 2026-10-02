@@ -2,14 +2,10 @@
 
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 
-#include "Core/Event/EventDispatcher.h"
-
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/GameEvents.h"
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Base/GameEventUtil.h"
 
 namespace sw
 {
@@ -44,15 +40,6 @@ namespace sw
                         pStats->takeDamage( amount, instigator );
                 } );
             }
-
-            /** @brief 깎인 피해를 "game" 채널 큐에 싣습니다. 이벤트 버스가 붙지 않은 프로세스(도구 · 시험)에서는 아무것도 하지 않습니다. */
-            static void pushDamageApplied( const DamageAppliedEvent& event )
-            {
-                EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
-                if ( pDispatcher == nullptr )
-                    return;
-                pDispatcher->push( gameEventChannel(), event );
-            }
         };
     } // namespace
 } // namespace sw
@@ -60,7 +47,8 @@ namespace sw
 namespace sw
 {
     UnitStatsComponent::UnitStatsComponent()
-        : _hp{ 0 }
+        : _damageAppliedMulticast{}
+        , _hp{ 0 }
         , _maxHp{ 0 }
         , _attack{ 0 }
         , _defense{ 0 }
@@ -122,6 +110,16 @@ namespace sw
         applyHeal( amount );
     }
 
+    DelegateHandle UnitStatsComponent::registerDamageApplied( const DamageAppliedDelegate& delegate )
+    {
+        return _damageAppliedMulticast.add( delegate );
+    }
+
+    void UnitStatsComponent::unregisterDamageApplied( DelegateHandle handle )
+    {
+        _damageAppliedMulticast.remove( handle );
+    }
+
     void UnitStatsComponent::applyTakeDamage( int32 amount, GameObjectHandle instigator )
     {
         const bool bCannotTakeDamage = ( _bIsDead || _invincibilityTime > 0.0f );
@@ -143,7 +141,8 @@ namespace sw
             _invincibilityTime = _maxInvincibilityTime;
         }
 
-        // 피해가 HP 에 닿는 자리는 여기 하나다 — 이벤트도 여기서 한 번 낸다(깎인 값 · 남은 HP 를 아는 곳이 여기뿐이다).
+        // 피해가 HP 에 닿는 자리는 여기 하나다 — 알림도 여기서 한 번 낸다(깎인 값 · 남은 HP 를 아는 곳이 여기뿐이다). 컴포넌트의 구독자는 그 자리에서,
+        // "game" 채널은 버스 스레드면 그 자리에서 · 아니면 다음 processEvents 에 받는다(`GameEventUtil::send`). 예전에는 늘 큐에 실어 한 프레임 늦었다.
         GameObject*        pOwner = getOwner();
         DamageAppliedEvent event;
         event._instigator  = instigator;
@@ -151,7 +150,8 @@ namespace sw
         event._amount      = actualDamage;
         event._remainingHp = _hp;
         event._bKilled     = _bIsDead ? SW_TRUE : SW_FALSE;
-        UnitStatsComponentInternal::pushDamageApplied( event );
+        _damageAppliedMulticast.broadcast( event );
+        GameEventUtil::send( event );
     }
 
     void UnitStatsComponent::applyHeal( int32 amount )

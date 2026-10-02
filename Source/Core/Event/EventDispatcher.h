@@ -195,6 +195,13 @@ namespace sw
             return s_defaultChannel;
         }
 
+        /**
+         * @brief 지금 스레드에서 버스 함수(`publish` …)를 불러도 되는지 — 큐를 비우는 스레드이거나 아직 주인이 없으면 true 입니다.
+         * @details 바로 알리고 싶은 쪽이 고르는 자리입니다(`GameEventUtil::send`): true 면 `publish`(구독자가 그 자리에서 받는다), 아니면 `push`
+         *          (다음 `processEvents`). 언리얼이 게임 스레드에서는 델리게이트를 바로 부르고 다른 스레드는 게임 스레드 작업으로 넘기는 것과 같은 갈림입니다.
+         */
+        bool isBusThread() const;
+
         /** @brief 큐에 대기 중인 이벤트 수를 반환합니다. */
         size_t getPendingEventCount() const
         {
@@ -321,10 +328,11 @@ namespace sw
         unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
         unordered_map<hashed_string, unique_ptr<ChannelEventList>>                      _mapChannelQueue;
 
-#if defined( SW_DEBUG )
-        /** @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다. */
-        std::thread::id _busThreadId;
-#endif
+        /**
+         * @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다.
+         * @details 예전에는 Debug 에만 있었습니다(단언용). 이제 `isBusThread` 가 배포본에서도 묻습니다 — 다른 스레드가 읽으므로 원자값입니다.
+         */
+        atomic<std::thread::id> _busThreadId;
 
         LinearAllocator _arrFrameAllocator[2];
         vector<void*>   _arrListOverflowAllocation[2];

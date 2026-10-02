@@ -1,8 +1,8 @@
 /**
  * @file ActionCombatEvents.h
  * @brief 액션 룸 · 전투 룸 이벤트입니다. 채널은 GameEvents.h 의 `gameEventChannel()`("game") 입니다.
- * @details 프레임워크가 실제로 내는 것은 `DamageAppliedEvent` 하나입니다(`UnitStatsComponent` 가 피해를 적용한 자리에서). 나머지 셋은
- *          게임이 주고받는 어휘입니다 — 쏘는 곳이 없습니다(2026-10-03 확인).
+ * @details 넷 모두 프레임워크가 냅니다(`GameEventUtil::send` — 버스 스레드면 그 자리에서, 아니면 다음 `processEvents`):
+ *          `DamageAppliedEvent` 는 `UnitStatsComponent` 가 피해를 적용한 자리에서, 룸 이벤트 셋은 `ActionRoom` 의 상태가 바뀌는 자리에서.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,9 +18,9 @@ namespace sw
      * @details `UnitStatsComponent` 가 HP 를 깎은 **그 자리 하나**에서 냅니다 — 투사체 · 공격 판정 · 게임 코드의 `takeDamage` 가 모두 거기를
      *          지납니다. 무적 · 죽음으로 깎이지 않은 피해는 내지 않습니다.
      *
-     *          `EventDispatcher::push` 로 큐에 싣습니다(아무 스레드나 되는 쪽). 피해는 틱 직후 큐 · 겹침 전달 · 게임 코드 어디서든 적용될 수
-     *          있어 버스 쪽(`publish`, 큐를 비우는 스레드 전용)으로는 낼 수 없습니다. 구독자는 다음 `processEvents`(`EngineLoop` 프레임 첫머리)에
-     *          받습니다 — 그때 대상이 이미 사라졌을 수 있으니 핸들로 풀어 확인합니다.
+     *          게임 스레드(이벤트 버스를 비우는 스레드)에서 적용되면 그 자리에서 냅니다(`publish`) — 구독자는 같은 프레임에 받습니다. 다른
+     *          스레드라면 큐에 싣고(`push`) 다음 `processEvents` 에 받습니다. 컴포넌트에 직접 거는 구독은 `UnitStatsComponent::registerDamageApplied`
+     *          입니다(언리얼 `OnTakeAnyDamage`). 대상은 핸들입니다 — 큐로 받았으면 그때 이미 사라졌을 수 있으니 풀어 확인합니다.
      */
     struct DamageAppliedEvent final : IEvent
     {
@@ -43,7 +43,7 @@ namespace sw
         SW_DECLARE_GAMEPLAY_EVENT( DamageAppliedEvent );
     };
 
-    /** @brief 액션 룸을 클리어했음을 알립니다. */
+    /** @brief 액션 룸을 클리어했음을 알립니다(`ActionRoom` — 마지막 적이 쓰러진 프레임). */
     struct RoomClearedEvent final : IEvent
     {
         string                 _mapPath;           ///< 클리어한 맵
@@ -58,14 +58,14 @@ namespace sw
         SW_DECLARE_GAMEPLAY_EVENT( RoomClearedEvent );
     };
 
-    /** @brief 액션 룸에서 플레이어가 패배했음을 알립니다. */
+    /** @brief 액션 룸에서 플레이어가 패배했음을 알립니다(`ActionRoom::onPlayerDefeated`). */
     struct PlayerDefeatedInRoomEvent final : IEvent
     {
         string _returnMapPath; ///< 복귀할 오버월드 맵
         SW_DECLARE_GAMEPLAY_EVENT( PlayerDefeatedInRoomEvent );
     };
 
-    /** @brief 클리어 게이트 잠금이 바뀌었음을 알립니다. */
+    /** @brief 클리어 게이트 잠금이 바뀌었음을 알립니다(`ActionRoom` — 전투 시작에 닫히고, 클리어 · 패배에 열린다). */
     struct ClearGateStateChangedEvent final : IEvent
     {
         string                 _zoneId;         ///< 존 ID

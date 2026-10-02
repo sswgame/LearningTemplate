@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -40,17 +41,31 @@ namespace sw
 
     /**
      * @struct ObjectSaveOptions
-     * @brief 오브젝트 상태를 쓸 때 다른 오브젝트로의 부착을 어떻게 적을지입니다.
+     * @brief 오브젝트 상태를 쓸 때 다른 오브젝트를 가리키는 것(부착의 부모 · `GameObjectHandle` PROPERTY)을 어떻게 적을지입니다.
      */
     struct ObjectSaveOptions
     {
-        /** @brief 있으면 부모 오브젝트의 런타임 id 를 이 표로 옮겨 적습니다(씬 파일 id). 없으면 런타임 id 그대로입니다(같은 실행의 스냅샷). */
+        /** @brief 있으면 다른 오브젝트의 런타임 id 를 이 표로 옮겨 적습니다(씬 파일 id). 없으면 런타임 id 그대로입니다(같은 실행의 스냅샷). */
         const ObjectSavedIdMap* _pSavedIdMap{ nullptr };
         /**
-         * @brief 다른 오브젝트로의 부착을 적지 않습니다 — 프리팹이 씁니다(프리팹 루트에는 부모가 없습니다).
+         * @brief 다른 오브젝트를 가리키는 것을 적지 않습니다 — 프리팹이 씁니다(프리팹 루트에는 부모가 없고, 핸들 PROPERTY 는 비워 적는다).
          * @details 예전에는 자식 인스턴스로 프리팹을 만들면 옛 부모의 이름이 프리팹에 들어가, 그 프리팹을 스폰할 때마다 그 이름의 오브젝트에 붙었습니다.
+         *          핸들도 같다 — 프리팹의 런타임 id 는 스폰한 실행에서 엉뚱한 오브젝트를 가리킨다.
          */
         bool _bOmitExternalParent{ false };
+
+        /**
+         * @brief 다른 오브젝트의 런타임 id 를 저장할 id 로 옮깁니다 — 부착(`SceneComponent`)과 핸들 PROPERTY 가 이 하나를 지납니다.
+         * @details 표가 있으면 그 오브젝트의 파일 id, 표에 없는 오브젝트(이 파일에 없다)는 0 입니다. 표가 없으면 그대로입니다. 언리얼의 Instigator 처럼
+         *          런타임 참조는 파일 밖을 가리키면 저장되지 않는다.
+         */
+        uint64 getSavedObjectId( uint64 runtimeId ) const
+        {
+            if ( _pSavedIdMap == nullptr )
+                return runtimeId;
+            const auto mapIt = _pSavedIdMap->find( runtimeId );
+            return ( mapIt != _pSavedIdMap->end() ) ? mapIt->second : 0;
+        }
     };
 
     /**
@@ -109,6 +124,10 @@ namespace sw
      *          - 찾지 못한 참조는 지우지 않고 그대로 둡니다(`SceneComponent::keepUnresolvedAttach`). 예전에는 다음 저장이 살아 있는 부모
      *            포인터(null)에서 필드를 다시 만들어 연결을 지웠습니다 — 쿠커는 자식이 부모보다 앞에 있는 씬의 연결을 모두 잃었습니다.
      *          언리얼은 레벨 안 오브젝트를 경로로, 유니티는 파일 안 fileID 로 가리킵니다 — 이 묶음의 저장된 id 가 그 자리입니다.
+     *
+     *          컴포넌트의 `GameObjectHandle` PROPERTY(단일 · 순서 컨테이너의 원소)도 같은 규칙으로 옮깁니다(`resolveObjectReference`): 묶음의 저장된
+     *          id 면 그 오브젝트, `Live` 면 런타임 id 그대로(핫 리로드 · 되돌리기 — id 는 다시 쓰이지 않는다), `Saved` 인데 묶음에 없으면 없음입니다.
+     *          예전에는 런타임 id 가 그대로 파일에 들어가, 다시 연 씬에서 같은 값의 다른 오브젝트를 가리킬 수 있었습니다.
      */
     class SW_API ObjectStateBatch
     {
@@ -154,6 +173,10 @@ namespace sw
         void resolveEntry( const Entry& entry ) const;
         /** @brief 부착 참조의 소유자 칸이 가리키는 오브젝트입니다. 자기면 항목의 오브젝트, 못 찾으면 nullptr 입니다. */
         GameObject* findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerId ) const;
+        /** @brief 항목 하나의 컴포넌트마다 `GameObjectHandle` PROPERTY 를 이 실행의 오브젝트로 옮깁니다(`Transient` 는 읽지 않았으니 건드리지 않는다). */
+        void resolveObjectReferences( const Entry& entry ) const;
+        /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트입니다(클래스 설명의 규칙). */
+        GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
 
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIdToObject;

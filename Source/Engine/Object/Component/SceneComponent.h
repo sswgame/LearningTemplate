@@ -94,6 +94,12 @@ namespace sw
          */
         virtual void onWorldTransformUpdated() {}
 
+        /**
+         * @brief 이 컴포넌트(또는 조상)가 순간이동했습니다(`teleportTo`). 물리 바디를 가진 파생이 다음 step 에서 그 사이를 쓸지 않게 표시합니다.
+         * @details 틱 중에도 불립니다(자식 오브젝트가 붙어 있으면 그 오브젝트의 컴포넌트에도). 원자적으로 표시만 하고, 물리는 step 직전에 읽습니다.
+         */
+        virtual void onTeleported() {}
+
         /** @brief 로컬 위치를 설정합니다. */
         void setLocalPosition( const float3& pos );
         /** @brief 로컬 위치를 반환합니다. */
@@ -117,6 +123,13 @@ namespace sw
          *          틀렸습니다 — 월드 값을 로컬 칸에 쓰거나 월드 축의 차이를 로컬 축에 더해, 부모가 돌았거나 커졌으면 엉뚱한 자리로 갔습니다.
          */
         void setWorldPosition( const float3& worldPosition );
+        /**
+         * @brief 월드 위치로 **순간이동**합니다 — `setWorldPosition` 과 같은 자리로 가지만, 연속 충돌 콜라이더가 옛 자리에서 새 자리까지를 쓸지 않습니다.
+         * @details 언리얼 `SetActorLocation( …, ETeleportType::TeleportPhysics )` · 유니티 `Rigidbody.position` 대입의 자리입니다. 이 컴포넌트와 그
+         *          아래에 붙은 모두(자식 오브젝트 포함)가 순간이동한 것으로 칩니다(`onTeleported`). 그냥 옮기면(`setWorldPosition`) 빠른 바디는 그 길에
+         *          놓인 것과 겹칩니다 — 리스폰 · 문 통과처럼 실제로 지나가지 않은 이동은 이것으로 합니다.
+         */
+        void teleportTo( const float3& worldPosition );
         /**
          * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치 · 회전 · 스케일을 씁니다(언리얼 `SetWorldTransform`).
          * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `createFromYawPitchRoll` 의 역)으로 적습니다. 에디터 기즈모가 예전에는
