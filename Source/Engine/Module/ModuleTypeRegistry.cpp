@@ -4,7 +4,8 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Event/EventDispatcher.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
@@ -13,8 +14,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
-#include "Engine/Window/IWindow.h"
 
 SW_LOG_CALLER( "ModuleTypeRegistry" );
 namespace sw
@@ -140,40 +139,27 @@ namespace sw
         {
             if ( pOutKeepImageMapped != nullptr )
                 *pOutKeepImageMapped = false;
-            if ( areEngineServicesBound() == false || pBegin == nullptr || pEnd == nullptr )
-                return 0;
 
             // 모듈은 자기가 단 것을 스스로 떼야 한다(에디터는 ImGuiEditor::shutdown · ~ConsolePanel 에서 뗀다). 여기서 뗀 것이 있으면
-            // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다.
-            uint32       remainingEntryCount{ 0 };
-            const uint32 eventCount = getEventDispatcher().releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
-            if ( eventCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# event subscription(s) behind — released them before unloading its image", moduleName, eventCount );
-            // 그 채널의 함수와 해제자가 이 이미지의 코드다. 예전에는 알리기만 하고 내려, 다음 발행 · 종료 때 내려간 코드로 뛰었다. 올려 둔다.
-            if ( remainingEntryCount > 0 )
+            // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다. 훑는 대상은 살아 있는 보유자 전부다(`IModuleCodeHolder`).
+            vector<IModuleCodeHolder::ReleaseResult> listResult;
+            IModuleCodeHolder::releaseAllWithin( pBegin, pEnd, listResult );
+
+            uint32 releasedCount{ 0 };
+            for ( const IModuleCodeHolder::ReleaseResult& result : listResult )
             {
-                SW_LOG_WARNING( "Module %# created %# event channel(s) that other code still subscribes to — keeping its image mapped until exit",
-                                moduleName, remainingEntryCount );
-                if ( pOutKeepImageMapped != nullptr )
-                    *pOutKeepImageMapped = true;
+                releasedCount += result._releasedCount;
+                if ( result._releasedCount > 0 )
+                    SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHolderName );
+                // 떼어 낼 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 내리면 다음 발행 · 종료 때 내려간 코드로 뛴다.
+                if ( result._bKeepImageMapped )
+                {
+                    SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pHolderName );
+                    if ( pOutKeepImageMapped != nullptr )
+                        *pOutKeepImageMapped = true;
+                }
             }
-
-            const uint32 listenerCount = Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
-            if ( listenerCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# log listener(s) behind — released them before unloading its image", moduleName, listenerCount );
-
-            // Undo 스택은 선택 서비스다(Shipping · 일부 호스트에는 없다).
-            CommandStack* pCommandStack = getBoundEngineServices()._pCommandStack;
-            const uint32  commandCount  = pCommandStack != nullptr ? pCommandStack->releaseCodeWithin( pBegin, pEnd ) : 0;
-            if ( commandCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# undo command(s) behind — cleared the undo stack before unloading its image", moduleName, commandCount );
-
-            IWindow*     pWindow     = IWindow::getActiveWindow();
-            const uint32 windowCount = pWindow != nullptr ? pWindow->releaseCodeWithin( pBegin, pEnd ) : 0;
-            if ( windowCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# window handler(s) behind — released them before unloading its image", moduleName, windowCount );
-
-            return eventCount + listenerCount + commandCount + windowCount;
+            return releasedCount;
         }
 #endif
     } // namespace engine

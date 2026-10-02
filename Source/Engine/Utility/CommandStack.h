@@ -8,11 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 
 namespace sw
 {
     /** @brief 변경에 대한 Push / Undo / Redo 스택 */
-    class SW_API CommandStack
+    class SW_API CommandStack final : public IModuleCodeHolder
     {
     public:
         /** @brief 레이블과 undo/redo 델리게이트를 담는 한 명령 */
@@ -23,8 +24,8 @@ namespace sw
             Delegate<void()> _redo;
         };
 
-        /** @brief 빈 스택으로 시작합니다. */
-        CommandStack() = default;
+        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `IModuleCodeHolder` 의 주의(vtable 의 집)입니다. */
+        CommandStack();
 
         /** @brief 명령 스택에 새로운 명령을 추가합니다. */
         void push( Command cmd );
@@ -71,6 +72,11 @@ namespace sw
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
 
+        /** @brief 보유자 목록의 이름입니다. */
+        const utf8* getModuleCodeHolderName() const override { return "undo commands"; }
+        /** @brief `releaseCodeWithin` 입니다. 스택을 비우면 그만이라 이미지를 붙들지 않습니다. */
+        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+
     private:
         /** @brief 들어온 명령의 undo · redo 코드 주소를 `_listCodeAddress` 에 (중복 없이) 적습니다. */
         void recordCodeAddress( const Command& cmd );
@@ -82,9 +88,9 @@ namespace sw
         string              _transactionLabel;
         string              _lastCoalesceKey;
         string              _empty;
-        size_t              _index{ 0 };
+        size_t              _index;
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
-        uint32 _transactionDepth{ 0 };
-        bool   _bIsExecuting{ false };
+        uint32 _transactionDepth;
+        bool   _bIsExecuting;
     };
 } // namespace sw

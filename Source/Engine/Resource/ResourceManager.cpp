@@ -222,6 +222,26 @@ namespace sw
         }
     }
 
+    uint32 ResourceManager::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    {
+        (void)outKeepImageMapped;
+        uint32 releasedCount{ 0 };
+        for ( size_t slot = _listAssetCache.size(); slot > 0; --slot )
+        {
+            const RegisteredAssetCache& entry = _listAssetCache[slot - 1];
+            if ( entry._bBuiltIn || entry._pCache == nullptr )
+                continue;
+            // 캐시 객체가 모듈의 정적 데이터이거나, 모듈 쪽 클래스라 vtable 이 그 이미지에 있으면 이미지와 함께 사라진다.
+            const bool bObjectWithin = IModuleCodeHolder::isAddressWithin( entry._pCache, pBegin, pEnd );
+            const bool bVtableWithin = IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( entry._pCache ), pBegin, pEnd );
+            if ( bObjectWithin == false && bVtableWithin == false )
+                continue;
+            _listAssetCache.erase( _listAssetCache.begin() + static_cast<ptrdiff_t>( slot - 1 ) );
+            ++releasedCount;
+        }
+        return releasedCount;
+    }
+
     MaterialCache& ResourceManager::getMaterialManager()
     {
         return *_materialCache;

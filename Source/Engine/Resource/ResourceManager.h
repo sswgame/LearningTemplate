@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/AssetDatabase.h"
@@ -33,13 +34,13 @@ namespace sw
      * @class ResourceManager
      * @brief 에셋 식별 · 스키마 · 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API ResourceManager
+    class SW_API ResourceManager final : public IModuleCodeHolder
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
         ResourceManager();
         /** @brief 캐시를 해제합니다. */
-        ~ResourceManager();
+        ~ResourceManager() override;
 
         ResourceManager( const ResourceManager& )            = delete;
         ResourceManager& operator=( const ResourceManager& ) = delete;
@@ -125,6 +126,14 @@ namespace sw
          *          이름만 씁니다. 조용히 지나가면 다음 실행에서 같은 일이 또 일어납니다.
          */
         void warnAboutRemainingModuleCaches() const;
+
+        /** @brief 보유자 목록의 이름입니다. */
+        const utf8* getModuleCodeHolderName() const override { return "asset caches"; }
+        /**
+         * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 올리고 내리지 않은 것)를 등록부에서 내립니다. 비우지 않습니다 —
+         *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 올라 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
+         */
+        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         ResourcePackManager&       getPackManager();

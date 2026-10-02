@@ -68,6 +68,12 @@ namespace sw
         return releasedCount;
     }
 
+    uint32 IWindow::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    {
+        (void)outKeepImageMapped;
+        return releaseCodeWithin( pBegin, pEnd );
+    }
+
     IWindow::~IWindow()
     {
         // **활성 창이 죽으면 전역 포인터도 같이 끊는다.** 그러지 않으면 뒤에

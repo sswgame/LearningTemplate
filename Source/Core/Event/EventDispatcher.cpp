@@ -194,6 +194,15 @@ namespace sw
         return releasedCount;
     }
 
+    uint32 EventDispatcher::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    {
+        uint32       remainingEntryCount{ 0 };
+        const uint32 releasedCount = releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
+        if ( remainingEntryCount > 0 )
+            outKeepImageMapped = true;
+        return releasedCount;
+    }
+
     void EventDispatcher::clear()
     {
         assertBusThread();

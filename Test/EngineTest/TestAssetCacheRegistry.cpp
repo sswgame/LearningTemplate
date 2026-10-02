@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -160,3 +162,30 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
     SW_EXPECT_TRUE_MSG( warningText.find( "ProbeKind" ) != sw::string::npos,
                         "두고 간 캐시를 이름으로 말하지 않았습니다" );
 }
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`engine::releaseModuleCode`)는 그 이미지의 캐시를 등록부에서 내린다
+ * @details 모듈이 `unregisterAssetCache` 를 빠뜨린 채 내려가면 등록부에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
+ *          뛴다. 여기서는 가짜 캐시의 vtable 한 바이트를 "모듈 이미지" 로 삼는다 — 그 범위 밖인 내장 캐시는 그대로 남아야 한다.
+ */
+SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "releaseModuleCode warns about a cache the module left registered" );
+    sw::ResourceManager resources;
+    ProbeAssetCache     probe;
+    resources.registerAssetCache( &probe );
+    const size_t registeredCount = resources.getAllAssetCache().size();
+
+    const uint8* pVtable = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IAssetCache*>( &probe ) ) );
+    SW_ASSERT_NOT_NULL( pVtable );
+    test::ScopedLogCollector logCollector;
+    SW_EXPECT_TRUE( sw::engine::releaseModuleCode( "ProbeModule", pVtable, pVtable + 1 ) >= 1u );
+
+    SW_EXPECT_NULL( resources.findAssetCache( "ProbeKind" ) );
+    SW_EXPECT_EQUAL( registeredCount - 1, resources.getAllAssetCache().size() );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
+    SW_EXPECT_FALSE_MSG( probe._bCleared, "등록부는 내리기만 한다 — 캐시는 그것을 만든 모듈이 지운다" );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "asset caches" ) >= 1u, logCollector.joined().c_str() );
+}
+#endif

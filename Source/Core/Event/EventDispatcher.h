@@ -9,6 +9,7 @@
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Event/EventType.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
@@ -48,13 +49,13 @@ namespace sw
      *       안에서의 안전성이 깨집니다. 잠금을 재귀로 바꿔 broadcast 전체를 감싸는 방법은, 임의의 콜백이 도는 내내 다른
      *       스레드를 스핀하게 만듭니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
      */
-    class SW_API EventDispatcher
+    class SW_API EventDispatcher final : public IModuleCodeHolder
     {
     public:
         /** @brief 버스 · 큐 락과 더블 버퍼 아레나를 준비합니다. */
         EventDispatcher();
         /** @brief 구독과 대기 큐를 비웁니다. */
-        ~EventDispatcher();
+        ~EventDispatcher() override;
 
         /** @brief 구독을 해제할 때 쓰는 채널 · 타입 · 핸들 토큰입니다. */
         struct EventSubscription
@@ -187,6 +188,14 @@ namespace sw
          *          내려간 코드로 뜁니다. 그런 항목은 비었으면 지웁니다(다음 구독 · 발행이 자기 쪽에서 새로 만든다).
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
+
+        /** @brief 보유자 목록의 이름입니다. */
+        const utf8* getModuleCodeHolderName() const override { return "event subscriptions"; }
+        /**
+         * @brief `releaseCodeWithin` 입니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다 —
+         *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 내리면 다음 발행 · 디스패처 소멸이 내려간 코드로 뜁니다.
+         */
+        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()

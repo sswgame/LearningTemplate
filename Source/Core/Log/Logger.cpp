@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/FileLogOutput.h"
 #include "Core/Log/ILogOutput.h"
@@ -64,6 +65,23 @@ namespace sw
 
         /// @brief 이 스레드가 지금 리스너를 부르는 중인 방송 깊이입니다(리스너 안에서 또 로그를 쓰면 겹친다). 떼기가 자기 자신을 기다리지 않게 한다.
         thread_local uint32 t_broadcastDepth{ 0 };
+
+        /**
+         * @struct GlobalLogListenerCodeHolder
+         * @brief 전역 로그 리스너(`Logger::addGlobalListener`)를 모듈 코드 보유자 목록에 올립니다. 리스너는 정적이라 보유자도 정적 하나입니다.
+         */
+        struct GlobalLogListenerCodeHolder final : public IModuleCodeHolder
+        {
+            const utf8* getModuleCodeHolderName() const override { return "log listeners"; }
+
+            uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
+            {
+                (void)outKeepImageMapped;
+                return Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
+            }
+        };
+
+        GlobalLogListenerCodeHolder s_globalLogListenerCodeHolder;
 
     } // namespace
 

@@ -4,6 +4,19 @@
 
 namespace sw
 {
+    CommandStack::CommandStack()
+        : _listCommand{}
+        , _listPendingTransactionCommand{}
+        , _listCodeAddress{}
+        , _transactionLabel{}
+        , _lastCoalesceKey{}
+        , _empty{}
+        , _index{ 0 }
+        , _transactionDepth{ 0 }
+        , _bIsExecuting{ false }
+    {
+    }
+
     void CommandStack::push( Command cmd )
     {
         if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
@@ -203,6 +216,12 @@ namespace sw
         const uint32 droppedCount = static_cast<uint32>( _listCommand.size() + _listPendingTransactionCommand.size() );
         clear();
         return droppedCount;
+    }
+
+    uint32 CommandStack::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    {
+        (void)outKeepImageMapped;
+        return releaseCodeWithin( pBegin, pEnd );
     }
 
     void CommandStack::recordCodeAddress( const Command& cmd )
