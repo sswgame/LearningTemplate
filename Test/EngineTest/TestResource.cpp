@@ -672,6 +672,38 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 }
 
 /**
+ * @brief [ResourceTest] 리소스 루트 **안의** 절대 경로는 그 전역 id 로 등록된다 — 같은 에셋이 키 둘을 갖지 않는다
+ * @details 예전에는 루트 안인지만 확인하고, 키는 받은 절대 경로를 소문자로 내린 것이었다. 같은 에셋이 id 키와 절대 경로 키를 따로 가졌고,
+ *          GUID → 경로가 **절대 경로**를 돌려줘 그 GUID 로 에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 기계마다 다른 경로를 받았다.
+ *          유니티 `AssetDatabase` 도 키는 프로젝트 상대 경로(`Assets/...`)다.
+ */
+SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const utf8*      pAsset   = "engine/materials/defaultmaterial.material";
+    const sw::string absolute = sw::ResourceUtil::getResourcePath( pAsset );
+    SW_ASSERT_FALSE( absolute.empty() );
+
+    sw::AssetDatabase db;
+    const sw::Uuid    fromAbsolute = db.ensureMeta( absolute );
+#if !defined( SW_SHIPPING )
+    SW_ASSERT_FALSE( fromAbsolute.isNull() );
+    sw::string path;
+    SW_EXPECT_TRUE( db.tryGetPath( fromAbsolute, path ) );
+    SW_EXPECT_STREQ( pAsset, path.c_str() );
+
+    // id 로 물어도 같은 GUID 이고, 표에는 한 줄뿐이다.
+    sw::Uuid fromId{};
+    SW_EXPECT_TRUE( db.tryGetGuid( pAsset, fromId ) );
+    SW_EXPECT_TRUE( fromId == fromAbsolute );
+    SW_EXPECT_TRUE( db.ensureMeta( pAsset ) == fromAbsolute );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), db.getAssetCount() );
+#else
+    SW_EXPECT_TRUE_MSG( fromAbsolute.isNull(), "배포 빌드가 .meta 없이 GUID 를 지어냈다" );
+#endif
+}
+
+/**
  * @brief [ResourceTest] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
  * @details 이 형식은 `CookAssets.py buildAssetRegistryInternal` 이 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
  */

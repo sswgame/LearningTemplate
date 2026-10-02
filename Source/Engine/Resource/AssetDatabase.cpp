@@ -79,9 +79,12 @@ namespace sw
         // `Assets/` 밖에는 .meta 를 만들지 않는다). 판정은 정규화 **전** 경로로 한다 — 루트와 대소문자를 견줘야 한다.
         if ( FileUtil::isAbsolutePath( relativePath ) )
         {
-            const string rootRelative = toRelativePath( relativePath );
+            string rootRelative = toRelativePath( relativePath );
             if ( rootRelative.empty() || rootRelative.rfind( "..", 0 ) == 0 )
                 return result;
+            // 루트 안이면 키는 그 전역 id 다. 예전에는 절대 경로를 소문자로 내린 것이 키가 되어, 같은 에셋이 id 키와 절대 경로 키를 따로
+            // 갖고 GUID → 경로가 기계마다 다른 절대 경로를 돌려줬다(유니티 `AssetDatabase` 의 키도 프로젝트 상대 경로다).
+            path = std::move( rootRelative );
         }
 
         BLOCK( "Check Existing Meta" )

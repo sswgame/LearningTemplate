@@ -2079,6 +2079,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 65 AssetDatabase — 루트 안의 절대 경로가 그대로 키가 되어, 같은 에셋이 키 둘을 갖고 GUID → 경로가 절대 경로를 돌려줬다)
+
+남은 항목 "ensureMeta: 루트 안 절대 경로가 키가 됨". 루트 **밖** 절대 경로를 거절하는 검사만 있었고, 루트 안이면 받은 절대 경로를 소문자로 내린 것을
+그대로 키로 썼다. 같은 에셋이 id 키(`engine/materials/x.material`)와 절대 경로 키를 따로 가졌고, 나중에 등록된 쪽이 GUID → 경로를 덮어써 그 GUID 로
+에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 `c:/users/.../resource/...` 를 받았다 — 기계마다 다르고 팩에는 없는 경로다. 루트 안이면 키를 그
+전역 id(`toRelativePath`)로 바꾼다(유니티 `AssetDatabase` 의 키도 프로젝트 상대 경로 `Assets/...` 다).
+
+**검증.** `ResourceTest.EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId`(절대 경로로 물어도 GUID → 경로가 id, id 로 물어도 같은 GUID, 표에 한 줄 —
+되돌린 변이에서 `c:/users/.../defaultmaterial.material` 이 나오며 진다). Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 64 회전 단위 — 라디안을 `Units=deg` 라고 적었고, 인스펙터 · 시퀀서가 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다)
 
 남은 항목 "회전 단위". 트랜스폼 회전은 라디안으로 저장되는데(`setLocalRotation`, 직렬화 값도 라디안) PROPERTY 메타가 `Units=deg` 라고 적었고,
