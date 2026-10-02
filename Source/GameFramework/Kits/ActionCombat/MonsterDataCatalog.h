@@ -9,11 +9,14 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    /** @brief 몬스터 AI 행동 양식 아키타입입니다. */
+    /** @brief 몬스터 AI 행동 양식 아키타입입니다. monsters.xml 의 `archetype` 속성이 열거자 이름 그대로입니다(리플렉션 이름표). */
+    ENUM()
     enum class MonsterArchetype : uint8
     {
         MeleePatrol = 0,
@@ -76,7 +79,7 @@ namespace sw
         MonsterDataCatalog& operator=( const MonsterDataCatalog& ) = delete;
 
         /**
-         * @brief XML 리소스 경로에서 몬스터 정의 테이블을 로드합니다.
+         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로 또는 실제 파일 경로입니다(`XmlDocument::loadPath`).
          * @return 하나라도 읽었으면 true. 그 밖에는 **최소 폴백을 심고** false 입니다.
          * @details 실패는 셋이고 셋 다 같게 다룹니다. 파일이 없다, 루트가 `<MonsterCatalog>` 가
          *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것이 한동안 성공으로
@@ -96,7 +99,11 @@ namespace sw
     private:
         void seedFallback();
 
-        static MonsterArchetype parseArchetype( const utf8* pStr );
+        /**
+         * @brief `archetype` 속성을 열거자로 읽습니다. 속성이 없으면 MeleePatrol 이고, 모르는 이름이면 경고하고 MeleePatrol 입니다.
+         * @param pMonsterId 경고에 적을 몬스터 id 입니다.
+         */
+        static MonsterArchetype parseArchetype( const utf8* pStr, const utf8* pMonsterId );
 
         unordered_map<hashed_string, MonsterDef> _mapMonster;
     };

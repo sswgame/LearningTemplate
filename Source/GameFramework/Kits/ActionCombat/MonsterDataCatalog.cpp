@@ -4,6 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -47,7 +48,7 @@ namespace sw
 
         XmlDocument doc;
         string      absPath;
-        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
+        if ( doc.loadPath( assetRelativePath, &absPath ) == false )
         {
             SW_LOG_WARNING( "Failed to read %# — using fallback monster definitions.", assetRelativePath );
             seedFallback();
@@ -76,7 +77,7 @@ namespace sw
             else
                 monsterDef._name = monsterDef._id;
 
-            monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ) );
+            monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ), pIdStr );
 
             XmlNode statsNode = node.findChild( "Stats" );
             if ( statsNode.isValid() )
@@ -159,18 +160,17 @@ namespace sw
         _mapMonster.clear();
     }
 
-    MonsterArchetype MonsterDataCatalog::parseArchetype( const utf8* pStr )
+    MonsterArchetype MonsterDataCatalog::parseArchetype( const utf8* pStr, const utf8* pMonsterId )
     {
         if ( pStr == nullptr )
             return MonsterArchetype::MeleePatrol;
 
-        if ( StringUtil::equals( pStr, "RangedShooter", true ) )
-            return MonsterArchetype::RangedShooter;
-        if ( StringUtil::equals( pStr, "FlyingPursuer", true ) )
-            return MonsterArchetype::FlyingPursuer;
-        if ( StringUtil::equals( pStr, "ChargerRush", true ) )
-            return MonsterArchetype::ChargerRush;
+        // 이름표는 리플렉션된 열거자 하나다(대소문자 무시). 열거자를 늘리면 여기는 고치지 않는다.
+        MonsterArchetype archetype{ MonsterArchetype::MeleePatrol };
+        if ( engine::getTypeRegistry().enumFromString( pStr, archetype ) )
+            return archetype;
 
+        SW_LOG_WARNING( "Monster '%#': unknown archetype '%#' — using MeleePatrol", pMonsterId, pStr );
         return MonsterArchetype::MeleePatrol;
     }
 } // namespace sw

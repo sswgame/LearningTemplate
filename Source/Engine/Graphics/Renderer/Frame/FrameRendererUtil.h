@@ -12,6 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
@@ -153,36 +154,25 @@ namespace sw
             return static_cast<uint8>( value * 255.0f + 0.5f );
         }
 
-        /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM 입니다. */
+        /**
+         * @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 이름표는 리플렉션된 열거자 이름 하나뿐입니다(대소문자 무시, ValueAlias 포함).
+         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 물러납니다. 그 이름은 로드 때 `RenderPipelineResource::validate` 가 같은 이름표로 이미 오류로
+         *          알렸고, 여기는 PSO · 트랜지언트를 만들 때마다 불리는 자리라 다시 말하지 않습니다. 이름표를 따로 두면 검증은 통과하는데 여기서는
+         *          모르는 포맷이 생깁니다.
+         */
         static RHIFormat parseAttachmentFormat( string_view formatName )
         {
-            const string formatNt( formatName );
-            const string upperName = StringUtil::toUpper( formatNt.c_str() );
-            if ( upperName == "D24_UNORM_S8_UINT" || upperName == "D24S8" )
-                return RHIFormat::D24_UNORM_S8_UINT;
-            if ( upperName == "R16G16B16A16_FLOAT" )
-                return RHIFormat::R16G16B16A16_FLOAT;
-            if ( upperName == "B8G8R8A8_UNORM" )
-                return RHIFormat::B8G8R8A8_UNORM;
-            return RHIFormat::R8G8B8A8_UNORM;
+            RHIFormat format{ RHIFormat::R8G8B8A8_UNORM };
+            if ( engine::getTypeRegistry().enumFromString( formatName, format ) == false )
+                return RHIFormat::R8G8B8A8_UNORM;
+            return format;
         }
 
-        /**
-         * @brief `parseAttachmentFormat` 의 역입니다. 포맷을 파이프라인 XML 이 쓰는 이름으로 반환합니다.
-         * @details **파서 바로 옆에 둡니다.** 이름과 값의 짝을 두 파일에 나눠 두면 한쪽만 늘어납니다.
-         */
+        /** @brief `parseAttachmentFormat` 의 역입니다. 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
         static const utf8* attachmentFormatName( RHIFormat format )
         {
-            // 파서와 **같은 모양**의 if 사슬이다. 짝을 눈으로 맞출 수 있도록.
-            if ( format == RHIFormat::D24_UNORM_S8_UINT )
-                return "D24_UNORM_S8_UINT";
-            if ( format == RHIFormat::R16G16B16A16_FLOAT )
-                return "R16G16B16A16_FLOAT";
-            if ( format == RHIFormat::B8G8R8A8_UNORM )
-                return "B8G8R8A8_UNORM";
-            if ( format == RHIFormat::R8G8B8A8_UNORM )
-                return "R8G8B8A8_UNORM";
-            return "(unknown)";
+            const utf8* pName = engine::getTypeRegistry().enumToString( format );
+            return pName != nullptr ? pName : "(unknown)";
         }
 
         /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */

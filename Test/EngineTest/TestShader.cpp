@@ -548,6 +548,27 @@ SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
 }
 
 /**
+ * @brief [ShaderBakerTest] 파이프라인 XML 의 첨부 포맷 이름은 RHIFormat 의 모든 열거자를 그 이름 그대로 읽는다
+ * @details 로드 검증(`RenderPipelineResource::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름표를 봐야 한다. 이름표가 둘이면
+ *          검증은 통과하는 "R32_FLOAT" 가 생성에서 조용히 R8G8B8A8_UNORM 이 된다. 이름 → 값 → 이름이 열거자마다 제자리로 돌아오는지 본다.
+ */
+SW_TEST_CASE( ShaderBakerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
+{
+    for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::BC7_UNORM ); ++value )
+    {
+        const sw::RHIFormat format = static_cast<sw::RHIFormat>( value );
+        const utf8*         pName  = sw::FrameRendererUtil::attachmentFormatName( format );
+        SW_ASSERT_NOT_NULL( pName );
+        SW_EXPECT_TRUE_MSG( sw::string_view( pName ) != "(unknown)", ( sw::string( "이름이 없는 RHIFormat 값: " ) + sw::to_string( value ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::FrameRendererUtil::parseAttachmentFormat( pName ) == format, pName );
+    }
+
+    // 대소문자는 가리지 않는다(XML 을 손으로 쓴다). 모르는 이름은 정해진 폴백이다 — 오류는 로드 검증이 낸다.
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "r32_float" ) == sw::RHIFormat::R32_FLOAT );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "NoSuchFormat" ) == sw::RHIFormat::R8G8B8A8_UNORM );
+}
+
+/**
  * @brief [ShaderBakerTest] 셰이더 캐시가 읽는 파일 이름은 베이커가 쓰는 이름과 같고, 퍼뮤테이션마다 다르다.
  * @details 예전엔 캐시가 스템과 스테이지만으로 이름을 만들어 **모든 퍼뮤테이션이 해시 0 바이너리를 읽었다** —
  *          베이크 바이너리가 있는 한 SW_FORWARD·MATERIAL_BLEND_TRANSLUCENT·SW_VIEWMODE_UNLIT 이 GPU 에 닿지

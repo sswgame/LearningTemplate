@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -1207,6 +1208,51 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
     stats.takeDamage( 200 );
     SW_EXPECT_EQUAL( 0, stats.getHp() );
     SW_EXPECT_TRUE( stats.isDead() );
+}
+
+/**
+ * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름표 그대로 읽히고, 모르는 이름은 경고한다
+ * @details 이름표는 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
+ *          물러나되 몬스터 id 와 함께 경고가 남아야 한다. 조용히 물러나면 원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownWarning )
+{
+    const uint32 kArchetypeCount = static_cast<uint32>( MonsterArchetype::ChargerRush ) + 1;
+    string       xml             = "<MonsterCatalog>\n";
+    for ( uint32 value = 0; value < kArchetypeCount; ++value )
+    {
+        const utf8* pName = engine::getTypeRegistry().enumToString( static_cast<MonsterArchetype>( value ) );
+        SW_ASSERT_NOT_NULL( pName );
+        xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" archetype=\"" + pName + "\"/>\n";
+    }
+    xml += "  <Monster id=\"typo\" archetype=\"Ranged\"/>\n";
+    xml += "  <Monster id=\"plain\"/>\n";
+    xml += "</MonsterCatalog>\n";
+    const string path = test::makeTempPath( "monsters.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, xml ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown archetype name is reported" );
+    test::ScopedLogCollector logCollector;
+    MonsterDataCatalog       catalog;
+    SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
+
+    for ( uint32 value = 0; value < kArchetypeCount; ++value )
+    {
+        const MonsterDef* pMonster = catalog.findMonster( hashed_string( ( string( "m" ) + to_string( value ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pMonster );
+        SW_EXPECT_TRUE( pMonster->_archetype == static_cast<MonsterArchetype>( value ) );
+    }
+
+    const MonsterDef* pTypo = catalog.findMonster( "typo" );
+    SW_ASSERT_NOT_NULL( pTypo );
+    SW_EXPECT_TRUE( pTypo->_archetype == MonsterArchetype::MeleePatrol );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "unknown archetype 'Ranged'" ) == 1u, logCollector.joined().c_str() );
+
+    // 속성이 없으면 기본값이고 경고하지 않는다.
+    const MonsterDef* pPlain = catalog.findMonster( "plain" );
+    SW_ASSERT_NOT_NULL( pPlain );
+    SW_EXPECT_TRUE( pPlain->_archetype == MonsterArchetype::MeleePatrol );
+    SW_EXPECT_EQUAL( 0u, logCollector.countContaining( "'plain'" ) );
 }
 
 /**
