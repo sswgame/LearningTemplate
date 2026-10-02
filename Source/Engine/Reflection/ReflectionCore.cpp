@@ -19,6 +19,41 @@ namespace sw
     {
         struct ReflectionCoreInternal
         {
+            /**
+             * @brief 이름 해시가 같은데 값이 다른 열거자 둘을 찾습니다. 없으면 false 입니다.
+             * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` · `RED`, 드물게 FNV 충돌)이 다른 값을
+             *          가리키면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는다 — 글 읽기도 대소문자를 무시하므로 같은 모호함이다.
+             *          같은 값을 가리키는 별칭은 괜찮다. 두 표를 다 본다 — 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 표에는
+             *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 표에서만 두 값이 같은 이름을 가리킨다.
+             */
+            static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
+                                              int64& outSecondValue )
+            {
+                unordered_map<uint32, std::pair<hashed_string, int64>> mapHashToName;
+                const auto                                             isClash = [&]( const hashed_string& name, int64 value ) -> bool
+                {
+                    const auto [iter, bInserted] = mapHashToName.emplace( static_cast<uint32>( name.getHash() ), std::make_pair( name, value ) );
+                    if ( bInserted || iter->second.second == value )
+                        return false;
+                    outFirstName   = iter->second.first;
+                    outFirstValue  = iter->second.second;
+                    outSecondName  = name;
+                    outSecondValue = value;
+                    return true;
+                };
+                for ( const auto& [value, name] : info._mapValueToName )
+                {
+                    if ( isClash( name, value ) )
+                        return true;
+                }
+                for ( const auto& [name, value] : info._mapNameToValue )
+                {
+                    if ( isClash( name, value ) )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 조상 표에 적는 이름입니다. FQN 의 intern 인덱스, 없으면 짧은 이름의 인덱스입니다. 둘 다 없으면 None 입니다. */
             static uint32 canonicalNameIndex( const TypeInfo& type )
             {
@@ -662,10 +697,21 @@ namespace sw
             _mapNameToEnum.insert_or_assign( pEnumInfo->_name, pEnumInfo );
         }
 
+        hashed_string clashFirst;
+        hashed_string clashSecond;
+        int64         clashFirstValue{ 0 };
+        int64         clashSecondValue{ 0 };
+        const bool    bNameClash = ReflectionCoreInternal::tryFindNameHashClash( *pEnumInfo, clashFirst, clashFirstValue, clashSecond, clashSecondValue );
+        const string  enumName( pEnumInfo->_fullyQualifiedName.c_str() );
+
         lock.unlock();
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING( "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
                             pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
+        if ( bNameClash )
+            SW_LOG_ERROR( "Enum %# has enumerators '%#' (%#) and '%#' (%#) with the same name hash but different values - binary saves and "
+                          "case-insensitive text cannot tell them apart; rename one",
+                          enumName.c_str(), clashFirst.c_str(), clashFirstValue, clashSecond.c_str(), clashSecondValue );
     }
 
     void TypeRegistry::registerPendingTypes( string_view moduleName, TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )

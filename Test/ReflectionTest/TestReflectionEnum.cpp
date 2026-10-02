@@ -397,3 +397,48 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
     registry.unregisterTypesByModule( "TestEnumGrowth" );
 #endif
 }
+
+/**
+ * @brief [ReflectionEnumInfoTest] 이름 해시가 같은데 값이 다른 열거자 둘은 등록 때 알린다 — 같은 값의 별칭은 괜찮다
+ * @details 바이너리는 enum 을 열거자 이름 해시(대소문자 무시)로 싣는다. `Red` · `RED` 가 다른 값이면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는데,
+ *          등록이 그것을 보지 않았다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported )
+{
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const auto        makeEnum = []( const utf8* pFqn, std::initializer_list<std::pair<const utf8*, int64>> listEnumerator )
+    {
+        sw::EnumInfo info;
+        info._fullyQualifiedName = sw::hashed_string( pFqn );
+        info._name               = info._fullyQualifiedName;
+        info._moduleName         = sw::hashed_string( "TestEnumClash" );
+        info._size               = 1;
+        for ( const auto& [pName, value] : listEnumerator )
+        {
+            const sw::hashed_string name( pName );
+            info._mapNameToValue.insert_or_assign( name, value );
+            info._mapValueToName.try_emplace( value, name );
+        }
+        return info;
+    };
+
+    test::ScopedLogCollector logs;
+    registry.registerEnum( makeEnum( "swtest::ClashFreeEnum", {
+                                                                  {    "Red", 0},
+                                                                  {    "RED", 0},
+                                                                  {"Crimson", 0},
+                                                                  {   "Blue", 1}
+    } ) ); // 같은 값의 별칭
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "same name hash" ) == 0, logs.joined().c_str() );
+    {
+        test::ScopedDefensiveTestLog expected( "an enum with two enumerators that differ only in case" );
+        registry.registerEnum( makeEnum( "swtest::ClashingEnum", {
+                                                                     {"Red", 0},
+                                                                     {"RED", 1}
+        } ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "swtest::ClashingEnum has enumerators" ) == 1, logs.joined().c_str() );
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestEnumClash" );
+#endif
+}

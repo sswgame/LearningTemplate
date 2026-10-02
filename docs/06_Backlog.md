@@ -1676,8 +1676,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
-  컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). 한 enum 안의 이름 해시 충돌은 등록 때 검사하지
-  않는다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
+  컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
 - **R4**(구조 ⑪ · ⑯ · ⑰ · ⑱ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 스프라이트 클립 · 월드 UI 그리기(GameData 는 ⑰, 투사체 · 공격은 ⑱).
   투사체: 상대는 그 step 의 자리에 선 것으로 본다(길을 가로질러 건너간 상대는 안 맞는다), 연속 바디 순간이동은 그 길도 쓸린다(전용 API 없음), 기본 레이어
   행렬은 전부 부딪혀 트리거성 콜라이더도 총알을 멈춘다(게임이 레이어로 정할 것), `ProjectileComponent::_instigator` 는 raw id 로 저장된다(플레이 중 씬 저장 시
@@ -2101,6 +2100,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R3 남은 것 — 이름 해시가 같은데 값이 다른 열거자는 등록 때 알린다)
+
+- **바이너리가 enum 을 이름 해시로 싣게 된 뒤, 한 enum 안의 해시 충돌을 아무도 보지 않았다** — 대소문자만 다른 두 이름(`Red` · `RED`)은 intern 에서 한 이름이
+  되어 이름 → 값 표에는 뒤의 값 하나만 남고, 값 → 이름 표에서는 두 값이 같은 이름을 가리킨다(쓰는 이름은 둘인데 읽는 이름은 하나 — 저장한 0 이 1 로 읽힌다).
+  `TypeRegistry::registerEnum` 이 두 표를 다 훑어 "같은 해시 · 다른 값" 을 이름과 값으로 알린다(같은 값의 별칭은 괜찮다). 지금 엔진 enum 에는 없다
+  (EngineTest · ReflectionTest · CoreTest · EditorTest 전체 실행에서 시험이 만든 것 1 건뿐).
+
+**검증.** 새 시험 1(이전 코드에서 진다): `ReflectionEnumInfoTest.EnumeratorsWhoseNameHashesClashAreReported`. 변이 2 모두 죽음(값 → 이름 표를 안 봄 · 알리지 않음).
 
 ### 2026-10-03 (킷 ⑱ 투사체 · 공격 판정이 피해를 준다 — 콜라이더 겹침 + 연속 충돌 바디, 피해는 `takeDamage` 한 길, `DamageAppliedEvent` — 1-0j 의 R4)
 
