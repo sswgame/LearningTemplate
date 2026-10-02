@@ -319,6 +319,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-11. 결정이 필요한 것
 
+- **(보류 — 사용자 결정 2026-10-03) `hashed_string` 에 FName 숫자 꼬리를 둘지.** 지금은 비교 · 표시 인덱스 두 칸(8 바이트)이라 `"Enemy_12"` · `"Enemy_13"` 이
+  이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
+  떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
+
 - **텍스트 포맷의 orphan 관대함은 의도인가.** 버전이 같고 모르는 필드만 있을 때 Binary 는 거절(`SchemaOrphanPolicy::Reject`), JSON · XML 은 버리고 통과
   (`Ignore`, 버린 것은 로드마다 경고). 의도라면 `SchemaMigrate.h` 계약을 포맷별로 적는다. 사고라면 텍스트를 Reject 로 — 프로퍼티를 지운 적 있는 에셋이 통째로
   로드에 실패하므로 마이그레이션 계획과 함께. 정책을 바꾸면 `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat` 가 깨지는 것이 정상이다
