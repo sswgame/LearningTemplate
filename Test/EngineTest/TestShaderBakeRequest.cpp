@@ -182,13 +182,10 @@ SW_TEST_CASE( ShaderBakeRequestTest, EveryPipelinePassShaderIsRequested )
         }
     }
 
-    // 배포 파이프라인이 실행 코드가 있는 파이프라인 타입을 모두 덮는지 본다(덮지 못한 타입은 이 대조가 보지 못한다).
+    // 배포 파이프라인이 파이프라인 타입을 모두 덮는지 본다(덮지 못한 타입은 이 대조가 보지 못한다).
     for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
     {
-        const sw::RenderPassType type        = static_cast<sw::RenderPassType>( typeIndex );
-        const bool               bCovered    = arrCovered[typeIndex];
-        const bool               bExecutable = sw::isPipelinePassType( type ) && type != sw::RenderPassType::GBufferAlbedo && type != sw::RenderPassType::GBufferNormal;
-        if ( bExecutable )
-            SW_EXPECT_TRUE_MSG( bCovered, ( "배포 파이프라인에 없는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
+        if ( sw::isPipelinePassType( static_cast<sw::RenderPassType>( typeIndex ) ) )
+            SW_EXPECT_TRUE_MSG( arrCovered[typeIndex], ( "배포 파이프라인에 없는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
     }
 }

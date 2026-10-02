@@ -522,15 +522,17 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE( removedTypeIsRejected( "ToneMap" ) == false );
     }
 
-    // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다.
+    // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다. GBufferAlbedo · GBufferNormal 은 MRT 없는 GBuffer 패스가 쓰는 PSO 일 뿐
+    //    executePass 에 실행 코드가 없다 — XML 이 받아 주면 그 패스는 매 프레임 경고만 남기고 아무것도 그리지 않는다.
+    for ( const utf8* pInternalType : { "GpuCull", "ForwardOpaqueNoDepthWrite", "GBufferAlbedo", "GBufferNormal" } )
     {
         sw::RenderPipelineResource res;
         sw::RenderPipelineDesc&    desc = res.getDesc();
         sw::RenderGraphPassDesc    pass{};
         pass._name = "Internal";
-        pass._type = "GpuCull";
+        pass._type = pInternalType;
         desc._listPass.push_back( pass );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) > 0u, pInternalType );
     }
 
     // 7) 풀스크린 패스의 입력은 그 타입의 계약과 맞아야 한다 — "선언만 있고 아무도 안 읽는 입력" 이 오류다.

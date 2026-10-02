@@ -38,8 +38,6 @@ namespace sw
         DepthPrepass,
         ForwardOpaque,
         GBuffer,
-        GBufferAlbedo,
-        GBufferNormal,
         Lighting,
         Transparent,
         SSAO,
@@ -51,6 +49,10 @@ namespace sw
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
+        /// @brief MRT 를 못 쓰는 디바이스에서 GBuffer 패스가 알베도만 따로 그리는 PSO 입니다(실행은 GBuffer 패스가 한다).
+        GBufferAlbedo,
+        /// @brief MRT 를 못 쓰는 디바이스에서 GBuffer 패스가 노멀만 따로 그리는 PSO 입니다.
+        GBufferNormal,
         GpuCull,
         /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instanceanim.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
         InstanceAnim,
