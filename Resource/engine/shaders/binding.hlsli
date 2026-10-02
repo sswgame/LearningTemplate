@@ -9,7 +9,7 @@
  *   네이티브 bindless(DX12 / Vulkan): 인덱스로 무제한 텍스처 배열을 직접 샘플 (SM6.6 힙 인덱싱 아님).
  *   에뮬(DX11 / OpenGL): 엔진이 리플렉션 t# 슬롯에 SRV 를 바인딩, 값 비교로 멀티플렉싱.
  * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
- *     VS: `SwInstanceData inst = SwLoadInstance( SV_InstanceID )` → inst.world / inst.materialIndex
+ *     VS: `SwInstanceData inst = SwLoadInstance( input.instanceSlot )` → inst.world / inst.materialIndex
  *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
  *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
  *   StructuredBuffer(g_SwMaterials, t9)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.

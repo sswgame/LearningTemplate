@@ -80,9 +80,9 @@
 #define SW_SLOT_MATERIAL_BUFFER        9
 
 // GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIds).
-// 정점 셰이더가 g_SwVisibleInstanceIds[배치.instanceBase + SV_InstanceID] 로 자기 인스턴스 번호를 찾는다 —
-// 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(SW_INVALID_INDEX)
-// 예전처럼 배치.instanceBase + SV_InstanceID 를 그대로 쓴다(컬링 없음 경로).
+// 정점 셰이더가 g_SwVisibleInstanceIds[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
+// 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(SW_INVALID_INDEX)
+// 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   10
 
 // GPU 가 변형한 정점 (StructuredBuffer<float4> g_SwMorphVertices — 정점당 float4 둘). 정점 셰이더가

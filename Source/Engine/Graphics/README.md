@@ -228,10 +228,11 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 ### GPUScene 인스턴스드 드로우 (언리얼 방식)
 
 메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData`, C++ `GpuInstance` 와 레이아웃 일치)
-에서 읽고, 배치당 `drawInstanced` 한 번으로 그린다. VS 는 `SwLoadInstance( SV_InstanceID )` 로 월드 행렬과
-`materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼 버퍼
-`g_SwMaterials`(t9) 의 원소를 읽는다. PassCB `g_InstanceBase` = 배치 시작 오프셋, `g_SwInstancesIndex` 가
-`SW_INVALID_INDEX` 면 `g_World`/`g_MaterialIndex` 폴백(레거시 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
+에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
+인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `SwLoadInstance( input.instanceSlot )`
+를 불러 월드 행렬과 `materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼
+버퍼 `g_SwMaterials`(t9) 의 원소를 읽는다. 배치 시작을 루트 상수(`g_InstanceBase`)로 넘기던 것은 없어졌다.
+`g_SwInstancesIndex` 가 `SW_INVALID_INDEX` 면 `g_World`/`g_MaterialIndex` 폴백(풀스크린 · 픽스처 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
 같은 슬롯(t4/t9)** 을 쓰고 백엔드는 그 슬롯을 어떻게 거는지만 다르다:
 
 | 백엔드 | t4/t9 구조버퍼를 거는 방법 |

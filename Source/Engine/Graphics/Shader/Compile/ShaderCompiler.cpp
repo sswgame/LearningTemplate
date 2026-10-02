@@ -95,8 +95,9 @@ namespace sw
              * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다(InstanceIndex→InstanceId, VertexIndex→VertexId).
              * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 냅니다. ARB_gl_spirv 는 그 둘을
              *          지원하지 않아 드라이버가 조용히 0 을 반환했습니다. 인스턴스드 드로우가 모두 원소 0 을 읽어 큐브 16개가 한
-             *          자리에 겹쳤습니다. 엔진은 시작 인스턴스를 g_InstanceBase 로 넘기고 startInstance 0 으로 그리므로
-             *          gl_InstanceID(베이스 제외)로도 뜻이 같습니다. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
+             *          자리에 겹쳤습니다. 지금 셰이더는 인스턴스 자리를 정점 스트림(`SW_INSTANCESLOT`)으로 받아 SV_InstanceID 를 쓰지
+             *          않습니다 — 다시 쓰게 되면 gl_InstanceID 는 startInstance 를 빼고 센다는 점(Vulkan InstanceIndex 와 다르다)에
+             *          주의하십시오. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
              */
             static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
             {

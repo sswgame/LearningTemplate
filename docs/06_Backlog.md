@@ -2079,6 +2079,15 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (정리 — 인스턴스 자리를 옛 방식(`g_InstanceBase + SV_InstanceID`)으로 설명하던 주석 다섯 곳 · 죽은 상수 이름)
+
+남은 항목 "셰이더 주석(gpucull · bindingslots) · README · 죽은 g_InstanceBase 이름". 배치 시작을 루트 상수(`g_InstanceBase`)로 넘기던 것은 정점
+스트림(`SW_INSTANCESLOT` — 간접 인자의 startInstance + 서수)으로 바뀌었는데, `gpucull.hlsl` · `bindingslots.hlsli` · `binding.hlsli` 머리말 ·
+`Graphics/README.md` 의 GPUScene 절 · `ShaderCompiler.cpp` 의 GL 내장 변수 패치 설명이 아직 옛 방식을 적었고, `FrameRendererUtil.h` 에 쓰는 곳 없는
+`_instanceBase{ "g_InstanceBase" }` 이름이 남아 있었다. 지금 방식으로 고치고 이름을 걷었다. GL 패치 설명에는 "셰이더가 SV_InstanceID 를 다시 쓰면
+gl_InstanceID 는 startInstance 를 빼고 센다" 는 주의를 남겼다(지금 셰이더는 쓰지 않는다). README 의 날짜가 붙은 이력 절은 그때의 기록이라 두었다.
+주석만 바뀌어 다시 구우니 바이너리는 그대로이고 굽기 도장만 바뀌었다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 73 씬의 프리팹 인스턴스 — 프리팹으로 다 지은 뒤 저장된 상태로 통째로 다시 지었다: 인스턴스마다 두 번)
 
 남은 항목 "씬의 프리팹 인스턴스는 임베드 상태가 기준". 씬은 프리팹 인스턴스도 **전체 상태**를 저장하고(덮어쓴 값 · 지운 컴포넌트까지), 읽을 때

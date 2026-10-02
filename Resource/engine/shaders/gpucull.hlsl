@@ -6,8 +6,9 @@
  * 스레드 하나가 인스턴스 하나를 맡는다. 절두체를 통과하면
  *   1) 자기 배치의 `instanceCount` 를 InterlockedAdd 로 하나 올려 **자리 번호를 받고**,
  *   2) 그 자리에 자기 인스턴스 번호를 적는다 (`g_VisibleInstanceIds`).
- * 그래서 간접 인자의 개수와 인스턴스 목록이 **함께** 만들어진다. 정점 셰이더는
- * `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 자기 인스턴스를 찾는다.
+ * 그래서 간접 인자의 개수와 인스턴스 목록이 **함께** 만들어진다. 정점 셰이더는 입력 어셈블러가 주는 인스턴스 슬롯
+ * (`SW_INSTANCESLOT` — 간접 인자의 startInstance + 서수)으로 `g_SwVisibleInstanceIds[slot]` 을 읽어 자기 인스턴스를 찾는다
+ * (`SwResolveInstanceId`).
  *
  * 예전 버전은 배치마다 스레드 하나를 두고 보이는 **개수만** 세어 `instanceCount` 에 넣었다. 그러면
  * 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가 보이는 상황에서 **보이는 쪽이 사라지고
