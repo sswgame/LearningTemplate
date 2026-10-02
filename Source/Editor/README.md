@@ -37,6 +37,7 @@
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
   화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 표(`EditorViewportVisualizer`)
 - **Popups/**: 커맨드 팔레트, 퀵 런처, 본 계층 팝업
+- **AssetActions/**: 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭) — 종류마다 파일 하나
 
 ### 어디에 두나
 
@@ -49,6 +50,19 @@
 | ImGui 없이 무언가를 바꾸거나 읽고 쓴다 | `Common/Commands/` |
 
 경계가 흐려지면 테스트가 먼저 막힙니다 — `Test/EditorTest` 는 ImGui 없이 도는 것만 검증합니다.
+
+## 애셋 종류를 하나 더하려면
+
+종류별 분기를 쓰지 않습니다. 종류는 세 곳에서만 정의됩니다.
+
+1. `Common/Workspace/EditorAssetType.h` 의 `EditorAssetKind` 에 값을 하나 더합니다.
+2. `Common/Workspace/EditorAssetType.cpp` 의 두 표에 줄을 더합니다 — `kArrAssetMatch`(어떤 경로가 그 종류인가, 핫 리로드
+   캐시 · 임포터)와 `kArrKindInfo`(이름 · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · Other 제외 · 임포트). 줄이 빠지거나 이름 ·
+   라벨 · 아이콘 칸이 비면 `static_assert` 가 컴파일을 멈춥니다. 아이콘 · 색 · 콘텐츠 브라우저 필터 · 퀵 런처 분류 ·
+   프로파일러 리소스 카탈로그 · 도구 패널 열기는 모두 이 표에서 나옵니다.
+3. 썸네일 · 열기 · 뷰포트 드롭이 따로 필요하면 `AssetActions/<Kind>AssetTypeActions.cpp` 에 `IEditorAssetTypeActions` 를
+   구현하고 같은 파일에 `EditorAssetTypeActionsRegistrar<…>` 정적 객체를 둡니다. 없으면 일반 문서 썸네일과 도구 패널 열기로
+   대신합니다.
 
 ## 커맨드를 하나 더하려면
 

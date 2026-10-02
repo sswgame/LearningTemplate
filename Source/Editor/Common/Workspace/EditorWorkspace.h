@@ -25,13 +25,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 인스펙터가 보여주는 대상 */
-    enum class InspectMode : uint8
-    {
-        GameObject = 0,
-        Asset
-    };
-
     /** @brief 에디터 뷰포트 카메라 북마크 (위치, 회전, 타깃) */
     struct CameraBookmark
     {
@@ -86,12 +79,10 @@ namespace sw::editor
         void remapSelectionByObjectName( GameObjectManager* pGameObjectManager );
 
         // ------------------------------------------------------------------------------
-        // 2) 애셋 포커스 · 인스펙트 모드
+        // 2) 애셋 포커스
         // ------------------------------------------------------------------------------
         const string& getFocusedAssetPath() const { return _focusedAssetPath; }
         void          setFocusedAssetPath( const utf8* pPath );
-
-        void setInspectMode( InspectMode mode ) { _inspectMode = mode; }
 
         // ------------------------------------------------------------------------------
         // 3) 기즈모 — 조작 모드 / 로컬 스페이스
@@ -211,7 +202,6 @@ namespace sw::editor
         unordered_map<uint64, string> _mapGameObjectToPrefab;
         unordered_map<uint64, Uuid>   _mapObjectIdToGuid;
         unordered_map<Uuid, uint64>   _mapGuidToObjectId;
-        InspectMode                   _inspectMode;
         EditorPendingSceneAction      _pendingSceneAction;
         int32                         _gizmoOperation;
         uint8                         _bGizmoLocalSpace  : 1;

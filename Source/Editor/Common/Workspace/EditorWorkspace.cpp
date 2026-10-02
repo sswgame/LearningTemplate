@@ -42,7 +42,6 @@ namespace sw::editor
         , _mapGameObjectToPrefab{}
         , _mapObjectIdToGuid{}
         , _mapGuidToObjectId{}
-        , _inspectMode{ InspectMode::GameObject }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _gizmoOperation{ 0 }
         , _bGizmoLocalSpace{ SW_TRUE }
@@ -91,7 +90,6 @@ namespace sw::editor
             _pSelectionManager->selectObject( pObj, mode );
         _selectedComponentId = 0;
         _selectedComponentKey.clear();
-        _inspectMode = InspectMode::GameObject;
     }
 
     void EditorWorkspace::selectComponent( GameObject* pObj, Component* pComp )
@@ -111,7 +109,6 @@ namespace sw::editor
             _selectedComponentKey.clear();
 
         _scrollToComponentId = _selectedComponentId;
-        _inspectMode         = InspectMode::GameObject;
     }
 
     void EditorWorkspace::remapSelectionByObjectName( GameObjectManager* pGameObjectManager )

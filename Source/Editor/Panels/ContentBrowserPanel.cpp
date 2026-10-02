@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -75,117 +76,19 @@ namespace sw::editor
         {
             drawFolderThumbnail( pDrawList, minPos, maxPos );
         }
-
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
-        {
-            // 프리팹: 등각 투영 파란 큐브
-            const float32 sz        = w * 0.22f;
-            ImVec2        topPts[4] = { ImVec2( cx, cy - sz * 1.1f ), ImVec2( cx + sz * 0.9f, cy - sz * 0.55f ),
-                                        ImVec2( cx, cy ), ImVec2( cx - sz * 0.9f, cy - sz * 0.55f ) };
-            pDrawList->AddConvexPolyFilled( topPts, 4, IM_COL32( 90, 160, 255, 255 ) );
-
-            ImVec2 leftPts[4] = { ImVec2( cx - sz * 0.9f, cy - sz * 0.55f ), ImVec2( cx, cy ),
-                                  ImVec2( cx, cy + sz * 0.9f ), ImVec2( cx - sz * 0.9f, cy + sz * 0.35f ) };
-            pDrawList->AddConvexPolyFilled( leftPts, 4, IM_COL32( 50, 120, 230, 255 ) );
-
-            ImVec2 rightPts[4] = { ImVec2( cx, cy ), ImVec2( cx + sz * 0.9f, cy - sz * 0.55f ),
-                                   ImVec2( cx + sz * 0.9f, cy + sz * 0.35f ), ImVec2( cx, cy + sz * 0.9f ) };
-            pDrawList->AddConvexPolyFilled( rightPts, 4, IM_COL32( 35, 95, 195, 255 ) );
-        }
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pPath ) )
-        {
-            // 머티리얼: 스페큘러 음영을 넣은 구
-            const float32 r = w * 0.26f;
-            pDrawList->AddCircleFilled( ImVec2( cx, cy ), r, IM_COL32( 160, 60, 220, 255 ), 24 );
-            pDrawList->AddCircleFilled( ImVec2( cx - r * 0.32f, cy - r * 0.32f ), r * 0.35f,
-                                        IM_COL32( 230, 180, 255, 200 ), 16 );
-            pDrawList->AddCircleFilled( ImVec2( cx - r * 0.38f, cy - r * 0.38f ), r * 0.15f,
-                                        IM_COL32( 255, 255, 255, 240 ), 12 );
-        }
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
-        {
-            // 체크무늬 배경
-            // 격자를 **정수 인덱스로** 돈다. 예전에는 float 변수를 루프 카운터로 써서 반복마다
-            // 오차가 쌓였고(칸 수가 경계에서 하나 달라질 수 있다) 칸 색을 정하려고 다시 나눗셈을
-            // 해야 했다. 인덱스로 돌면 위치는 곱셈 한 번이고 색은 인덱스 합의 홀짝이다.
-            constexpr float32 chk    = 6.0f;
-            const float32     startX = minPos._x + 4.0f;
-            const float32     startY = minPos._y + 4.0f;
-            const int32       countX = static_cast<int32>( MathUtil::max( ( maxPos._x - 4.0f - startX ) / chk, 0.0f ) ) + 1;
-            const int32       countY = static_cast<int32>( MathUtil::max( ( maxPos._y - 4.0f - startY ) / chk, 0.0f ) ) + 1;
-
-            for ( int32 indexY = 0; indexY < countY; ++indexY )
-            {
-                const float32 y = startY + static_cast<float32>( indexY ) * chk;
-                if ( y >= maxPos._y - 4.0f )
-                    break;
-
-                for ( int32 indexX = 0; indexX < countX; ++indexX )
-                {
-                    const float32 x = startX + static_cast<float32>( indexX ) * chk;
-                    if ( x >= maxPos._x - 4.0f )
-                        break;
-
-                    const bool bDark = ( ( indexX + indexY ) % 2 ) == 0;
-                    pDrawList->AddRectFilled( ImVec2( x, y ), ImVec2( x + chk, y + chk ),
-                                              bDark ? IM_COL32( 38, 40, 46, 255 ) : IM_COL32( 58, 62, 70, 255 ) );
-                }
-            }
-            // 액자 테두리
-            pDrawList->AddRect( ImVec2( minPos._x + w * 0.16f, minPos._y + h * 0.16f ),
-                                ImVec2( minPos._x + w * 0.84f, minPos._y + h * 0.84f ),
-                                IM_COL32( 255, 255, 255, 200 ), 2.0f );
-            pDrawList->AddCircleFilled( ImVec2( cx + w * 0.15f, cy - h * 0.12f ), w * 0.08f,
-                                        IM_COL32( 240, 200, 80, 230 ) );
-            ImVec2 triPts[3] = { ImVec2( cx - w * 0.22f, cy + h * 0.22f ), ImVec2( cx, cy - h * 0.05f ),
-                                 ImVec2( cx + w * 0.22f, cy + h * 0.22f ) };
-            pDrawList->AddConvexPolyFilled( triPts, 3, IM_COL32( 70, 180, 120, 230 ) );
-        }
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
-        {
-            // 씬: 나침반 / 지평선
-            pDrawList->AddCircle( ImVec2( cx, cy ), w * 0.26f, IM_COL32( 70, 200, 140, 200 ), 18, 1.5f );
-            pDrawList->AddLine( ImVec2( cx, cy - w * 0.28f ), ImVec2( cx, cy + w * 0.28f ),
-                                IM_COL32( 240, 80, 80, 220 ), 1.5f );
-            pDrawList->AddLine( ImVec2( cx - w * 0.28f, cy ), ImVec2( cx + w * 0.28f, cy ),
-                                IM_COL32( 80, 160, 240, 220 ), 1.5f );
-        }
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, pPath ) )
-        {
-            // 셰이더: 다이아몬드 / 프리즘
-            const float32 r         = w * 0.24f;
-            ImVec2        diaPts[4] = { ImVec2( cx, cy - r ), ImVec2( cx + r * 0.85f, cy ), ImVec2( cx, cy + r ),
-                                        ImVec2( cx - r * 0.85f, cy ) };
-            pDrawList->AddConvexPolyFilled( diaPts, 4, IM_COL32( 240, 120, 50, 255 ) );
-            pDrawList->AddPolyline( diaPts, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
-        }
-        else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, pPath ) )
-        {
-            // 사운드: 이퀄라이저 막대
-            constexpr int32   numBars    = 5;
-            constexpr float32 heights[5] = { 0.25f, 0.55f, 0.95f, 0.65f, 0.35f };
-            constexpr float32 barW       = 3.0f;
-            constexpr float32 barGap     = 3.0f;
-            constexpr float32 totalW     = numBars * barW + ( numBars - 1 ) * barGap;
-            const float32     startX     = cx - totalW * 0.5f;
-            for ( int32 barIndex = 0; barIndex < numBars; ++barIndex )
-            {
-                const float32 bx = startX + static_cast<float32>( barIndex ) * ( barW + barGap );
-                const float32 bh = h * 0.45f * heights[barIndex];
-                pDrawList->AddRectFilled( ImVec2( bx, cy - bh * 0.5f ), ImVec2( bx + barW, cy + bh * 0.5f ),
-                                          IM_COL32( 80, 210, 220, 240 ), 1.0f );
-            }
-        }
         else
         {
-            // 일반 문서 / 데이터 파일
-            pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
-                                      ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ),
-                                      IM_COL32( 65, 70, 82, 255 ), 3.0f );
-            const utf8*  pLbl  = ContentBrowserPanelInternal::typeLabel( entry._extension, false );
-            const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
-            pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ),
-                                IM_COL32( 220, 225, 235, 230 ), pLbl );
+            // 종류별 그림은 그 종류의 동작이 그린다(`IEditorAssetTypeActions`). 없으면 종류 라벨을 얹은 일반 문서다.
+            const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
+            const bool                     bDrawn   = pActions != nullptr && pActions->drawThumbnail( pDrawList, minPos, maxPos );
+            if ( bDrawn == false )
+            {
+                pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
+                                          ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ), IM_COL32( 65, 70, 82, 255 ), 3.0f );
+                const utf8*  pLbl  = ContentBrowserPanelInternal::typeLabel( entry._extension, false );
+                const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
+                pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ), IM_COL32( 220, 225, 235, 230 ), pLbl );
+            }
         }
 
         // 안쪽 테두리

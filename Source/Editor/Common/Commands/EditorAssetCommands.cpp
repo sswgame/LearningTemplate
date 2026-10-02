@@ -14,6 +14,7 @@
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -214,21 +215,12 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
+        // 전용 도구 패널이 먼저다(종류 표의 패널 제목). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
         if ( pContext->getAssetEditorManager().openAssetInEditor( relativePath ) )
             return true;
 
-        const string pathStr{ relativePath };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pathStr.c_str() ) )
-            return tryOpenScene( pathStr );
-
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pathStr.c_str() ) )
-        {
-            pContext->getWorkspace().setFocusedAssetPath( pathStr.c_str() );
-            pContext->getWorkspace().setInspectMode( InspectMode::Asset );
-            return true;
-        }
-
-        return false;
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( relativePath );
+        return pActions != nullptr && pActions->open( relativePath );
     }
 
     bool EditorAssetCommands::loadScene( string_view path )
@@ -490,29 +482,10 @@ namespace sw::editor
         if ( pManager == nullptr || pPath == nullptr )
             return;
 
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
-        {
-            GameObject* pSpawned = spawnPrefab( pManager, pPath, nullptr, "Spawn Prefab in Viewport" );
-            if ( pSpawned == nullptr )
-                return;
-            SceneComponent* pSc = pSpawned->getPrimarySceneComponent();
-            if ( pSc != nullptr )
-                pSc->setLocalPosition( spawnPos );
+        // 스폰 · 로드는 종류의 동작이 한다(프리팹 · 텍스처 · 씬). 처리하지 않은 것은 연다.
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
+        if ( pActions != nullptr && pActions->dropInViewport( pManager, pPath, spawnPos ) )
             return;
-        }
-
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
-        {
-            (void)tryOpenScene( pPath ); // 실패는 tryOpenScene 이 알린다
-            return;
-        }
-
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
-        {
-            spawnSprite( pManager, pPath, spawnPos );
-            return;
-        }
-
         (void)openPath( pPath ); // 실패는 openPath 가 알린다
     }
 
