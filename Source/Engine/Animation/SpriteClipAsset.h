@@ -26,7 +26,13 @@ namespace sw
         int32 _durationMs{ 100 };
     };
 
-    /** @brief 클립의 트랜스폼 키입니다(위치 · 회전을 시간에 따라 움직이는 선택 트랙). JSON 키는 "time" · "x" · "y" · "angleDeg" 입니다. */
+    /**
+     * @struct SpriteClipKey
+     * @brief 클립의 트랜스폼 키입니다(위치 · 회전을 시간에 따라 움직이는 선택 트랙). JSON 키는 "time" · "x" · "y" · "angleDeg" 입니다.
+     * @details `_time` 은 **클립 타임라인**의 초입니다 — 프레임 0 이 0 초에 시작하고 프레임마다 그 프레임의 시간만큼 흐릅니다
+     *          (`computeFrameStartSeconds`). 이름 붙은 애니메이션은 그 구간의 시각에서 트랙을 읽습니다. 값은 애니메이터가 움직이는
+     *          스프라이트의 **로컬** 위치(x · y) · Z 축 회전(도)입니다(`SpriteAnimatorComponent`).
+     */
     struct SpriteClipKey
     {
         float32 _time{ 0.0f };
@@ -86,6 +92,16 @@ namespace sw
          *          애니메이션 하나이던 시절의 뜻입니다. 이름 붙은 것이 있는데 그 이름이 없으면 false 입니다.
          */
         bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;
+        /** @brief 클립 타임라인에서 프레임 @p frameIndex 가 시작하는 시각(초)입니다 — 앞 프레임들의 시간 합이고, 시간이 없는 프레임은 @p fallbackSeconds 로 셉니다. */
+        float32 computeFrameStartSeconds( int32 frameIndex, float32 fallbackSeconds ) const;
+        /** @brief 트랜스폼 키가 하나라도 있으면 true 입니다. */
+        bool hasTransformKeys() const { return _listKey.empty() == false; }
+        /**
+         * @brief 트랜스폼 트랙을 클립 시각 @p clipSeconds 에서 샘플해 @p outKey 에 채웁니다. 키가 없으면 false 입니다.
+         * @details 두 키 사이는 선형 보간이고, 첫 키 앞 · 마지막 키 뒤는 그 키의 값을 유지합니다(유니티 커브의 Clamp). 키는 시간 순서가
+         *          아니어도 됩니다 — 에디터는 추가한 순서로 씁니다. 시각이 같은 키가 여럿이면 목록의 앞쪽 것입니다.
+         */
+        bool sampleTransformKey( float32 clipSeconds, SpriteClipKey& outKey ) const;
 
         string                      _atlasPath;     ///< 아틀라스 텍스처 경로("atlas")입니다
         vector<SpriteClipFrame>     _listFrame;     ///< 프레임("frames")입니다

@@ -207,4 +207,48 @@ namespace sw
         outRange._bLoop      = pAnimation->_bLoop;
         return true;
     }
+
+    float32 SpriteClipAsset::computeFrameStartSeconds( int32 frameIndex, float32 fallbackSeconds ) const
+    {
+        const int32 endFrame  = MathUtil::min( frameIndex, getFrameCount() );
+        float32     startTime = 0.0f;
+        for ( int32 earlierFrame = 0; earlierFrame < endFrame; ++earlierFrame )
+            startTime += getFrameDurationSeconds( earlierFrame, fallbackSeconds );
+        return startTime;
+    }
+
+    bool SpriteClipAsset::sampleTransformKey( float32 clipSeconds, SpriteClipKey& outKey ) const
+    {
+        if ( _listKey.empty() )
+            return false;
+
+        // 앞 키 = 시각이 clipSeconds 이하인 것 중 가장 늦은 것, 뒤 키 = clipSeconds 보다 늦은 것 중 가장 이른 것. 순서가 없는 목록이라 한 번 훑는다.
+        const SpriteClipKey* pBefore = nullptr;
+        const SpriteClipKey* pAfter  = nullptr;
+        for ( const SpriteClipKey& key : _listKey )
+        {
+            if ( key._time <= clipSeconds )
+            {
+                if ( pBefore == nullptr || key._time > pBefore->_time )
+                    pBefore = &key;
+            }
+            else if ( pAfter == nullptr || key._time < pAfter->_time )
+            {
+                pAfter = &key;
+            }
+        }
+
+        if ( pBefore == nullptr || pAfter == nullptr )
+        {
+            outKey = ( pBefore != nullptr ) ? *pBefore : *pAfter;
+            return true;
+        }
+
+        const float32 alpha = ( clipSeconds - pBefore->_time ) / ( pAfter->_time - pBefore->_time );
+        outKey._time        = clipSeconds;
+        outKey._position._x = MathUtil::lerp( pBefore->_position._x, pAfter->_position._x, alpha );
+        outKey._position._y = MathUtil::lerp( pBefore->_position._y, pAfter->_position._y, alpha );
+        outKey._angleDeg    = MathUtil::lerp( pBefore->_angleDeg, pAfter->_angleDeg, alpha );
+        return true;
+    }
 } // namespace sw

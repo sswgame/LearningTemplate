@@ -24,6 +24,13 @@ namespace sw
      *          프레임에 시간이 없으면(0) `_frameRate` 로 넘깁니다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음" 을 줍니다.
      *          예전에는 프레임 수(`_totalFrames`)를 손으로 넣어야 했고, 넘긴 프레임은 "<애니>-<프레임>" 문자열로 스프라이트의 읽는 곳 없는 칸에
      *          적혔습니다 — 화면에는 아무것도 바뀌지 않았습니다. 지금은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)를 넘깁니다.
+     *
+     *          **트랜스폼 키(`transformKeys`).** 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x · y 와 Z 축 회전을 키 값으로 정합니다
+     *          (z 위치 · 다른 축 회전 · 스케일은 그대로). 키 시각은 클립 타임라인의 초이고, 지금 구간의 프레임 시작 시각 + 그 프레임 안에서 흐른
+     *          시간에서 읽습니다(`SpriteClipAsset::sampleTransformKey`). 키가 없는 클립은 트랜스폼에 손대지 않습니다.
+     *          **오브젝트의 루트(primary 씬 컴포넌트)는 움직이지 않습니다.** 스프라이트가 루트면 키를 적용하지 않고 재생마다 한 번 알립니다 —
+     *          루트를 덮어쓰면 게임 코드 · 물리가 옮긴 오브젝트 자리가 매 틱 키 값으로 되돌아갑니다. 키로 움직일 스프라이트는 루트 아래에 둡니다
+     *          (언리얼은 루트 모션을 켜지 않으면 애니메이션이 액터 루트를 옮기지 않고, 유니티 2D 도 움직이는 스프라이트를 자식에 둡니다).
      */
     REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
     class SW_API SpriteAnimatorComponent : public SceneComponent
@@ -87,6 +94,10 @@ namespace sw
         float32 getFrameDuration( int32 frameInRange ) const;
         /** @brief 스프라이트에 지금 프레임(구간 시작 + 지금 프레임)을 넘깁니다. */
         void updateSpriteFrame();
+        /** @brief 클립 타임라인의 지금 시각(초)입니다 — 지금 프레임의 시작 시각 + 그 프레임 안에서 흐른 시간(프레임 시간을 넘지 않습니다). */
+        float32 computeClipTime() const;
+        /** @brief 클립의 트랜스폼 키를 지금 시각에서 읽어 스프라이트의 로컬 위치 x · y · Z 회전에 씁니다. 키가 없거나 스프라이트가 루트면 쓰지 않습니다. */
+        void applyTransformKeys();
 
         PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
         string              _animationGraphPath;
@@ -111,6 +122,7 @@ namespace sw
         uint8                  _bPlaying     : 1;
         uint8                  _bPaused      : 1;
         uint8                  _bGraphLoaded : 1;
-        [[maybe_unused]] uint8 _reserved     : 4;
+        uint8                  _bRootWarned  : 1; ///< 이번 재생에서 "루트 스프라이트에는 키를 적용하지 않는다" 를 알렸다
+        [[maybe_unused]] uint8 _reserved     : 3;
     };
 } // namespace sw

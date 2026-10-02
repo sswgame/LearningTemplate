@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimPlayer.h"
@@ -471,6 +472,102 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
     }
     SW_EXPECT_EQUAL( 1, pAnimator->getTotalFrames() );
     SW_EXPECT_EQUAL( 0, pSprite->getClipFrame() );
+}
+
+/**
+ * @brief [AnimationTest] 클립의 트랜스폼 키가 재생 중 스프라이트의 로컬 위치 x · y · Z 회전이 된다 — 클립 타임라인 시각으로 보간하고, 루트는 움직이지 않는다
+ * @details 키 시각은 클립 타임라인의 초다: 프레임 넷이 100 ms 씩이면 구간 "b"(프레임 2..3)는 0.2 초에서 시작한다. 두 키 사이는 선형 보간이고,
+ *          z 위치 · 루트 컴포넌트는 그대로다. 스프라이트가 오브젝트의 루트면 키를 적용하지 않고 한 번 알린다.
+ */
+SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string clipPath = test::makeTempPath( "keyed.sprite.json" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
+  "atlas": "engine/textures/test/quadrants.dds",
+  "frames": [
+    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
+    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
+    { "u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 },
+    { "u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 }
+  ],
+  "transformKeys": [
+    { "time": 0.4, "x": 4.0, "y": 2.0, "angleDeg": 0.0 },
+    { "time": 0.0, "x": 0.0, "y": 0.0, "angleDeg": 0.0 },
+    { "time": 0.2, "x": 2.0, "y": 0.0, "angleDeg": 90.0 }
+  ],
+  "animations": [
+    { "name": "a", "start": 0, "count": 2, "loop": true },
+    { "name": "b", "start": 2, "count": 2, "loop": false }
+  ]
+})" ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Keyed" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SceneComponent* pRoot = pObject->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    pRoot->setLocalPosition( float3{ 5.0f, 5.0f, 0.0f } );
+    SpriteComponent* pSprite = pObject->addComponent<SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pSprite );
+    SW_ASSERT_TRUE( pObject->getPrimarySceneComponent() == pRoot );
+    pSprite->setLocalPosition( float3{ 0.0f, 0.0f, 0.25f } );
+    pSprite->setClipPath( clipPath );
+    SW_ASSERT_NOT_NULL( pSprite->getClip() );
+    SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pAnimator );
+
+    const auto expectSpritePose = [pSprite]( float32 x, float32 y, float32 angleDeg )
+    {
+        const float3 position = pSprite->getLocalPosition();
+        SW_EXPECT_NEAR_EQUAL( x, position._x, 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( y, position._y, 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.25f, position._z, 1e-6f ); // 키에 없는 z 는 그대로
+        SW_EXPECT_NEAR_EQUAL( MathUtil::toRadian( angleDeg ), pSprite->getLocalRotation()._z, 1e-4f );
+    };
+
+    // "a" 는 0 초에서 시작한다. 50 ms 뒤는 0 · 0.2 키의 사분의 일, 150 ms 뒤(프레임 1 안)는 사분의 삼.
+    pAnimator->play( "a" );
+    expectSpritePose( 0.0f, 0.0f, 0.0f );
+    pAnimator->onTick( 0.05f );
+    expectSpritePose( 0.5f, 0.0f, 22.5f );
+    pAnimator->onTick( 0.1f );
+    SW_EXPECT_EQUAL( 1, pSprite->getClipFrame() );
+    expectSpritePose( 1.5f, 0.0f, 67.5f );
+
+    // "b" 는 클립 프레임 2 = 0.2 초에서 시작한다. 100 ms 뒤는 0.2 · 0.4 키의 가운데.
+    pAnimator->play( "b" );
+    expectSpritePose( 2.0f, 0.0f, 90.0f );
+    pAnimator->onTick( 0.1f );
+    expectSpritePose( 3.0f, 1.0f, 45.0f );
+    // 반복하지 않는 구간이 끝나면 구간 끝 시각(0.4 초)에 멈춘다 — 남은 타이머로 더 가지 않는다.
+    pAnimator->onTick( 0.5f );
+    SW_EXPECT_FALSE( pAnimator->isPlaying() );
+    expectSpritePose( 4.0f, 2.0f, 0.0f );
+
+    // 루트는 키가 움직이지 않는다.
+    const float3 rootPosition = pRoot->getLocalPosition();
+    SW_EXPECT_NEAR_EQUAL( 5.0f, rootPosition._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, rootPosition._y, 1e-6f );
+
+    // 스프라이트가 루트인 오브젝트는 키를 적용하지 않고 재생마다 한 번 알린다.
+    GameObject* pRootSprite = manager.createGameObject( hashed_string( "RootSprite" ) );
+    SW_ASSERT_NOT_NULL( pRootSprite );
+    SpriteComponent* pPrimarySprite = pRootSprite->addComponent<SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pPrimarySprite );
+    pPrimarySprite->setLocalPosition( float3{ 7.0f, 8.0f, 0.0f } );
+    pPrimarySprite->setClipPath( clipPath );
+    SpriteAnimatorComponent* pRootAnimator = pRootSprite->addComponent<SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pRootAnimator );
+    {
+        test::ScopedLogCollector     collector;
+        test::ScopedDefensiveTestLog expected( "transform keys on a root sprite are not applied" );
+        pRootAnimator->play( "b" );
+        pRootAnimator->onTick( 0.1f );
+        SW_EXPECT_EQUAL( 1u, collector.countContaining( "the sprite is the object's root" ) );
+    }
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pPrimarySprite->getLocalPosition()._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, pPrimarySprite->getLocalPosition()._y, 1e-6f );
 }
 
 /**

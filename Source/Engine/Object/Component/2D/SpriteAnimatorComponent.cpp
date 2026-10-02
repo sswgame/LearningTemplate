@@ -27,6 +27,7 @@ namespace sw
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bGraphLoaded{ SW_FALSE }
+        , _bRootWarned{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -103,6 +104,8 @@ namespace sw
 
         if ( _currentFrame != prevFrame )
             updateSpriteFrame();
+        // 키는 프레임 사이에서도 보간된다 — 프레임이 그대로여도 매 틱 다시 읽는다.
+        applyTransformKeys();
     }
 
     void SpriteAnimatorComponent::play( const string& animName )
@@ -112,10 +115,12 @@ namespace sw
         _bPaused          = SW_FALSE;
         _currentFrame     = 0;
         _frameTimer       = 0.0f;
+        _bRootWarned      = SW_FALSE;
         if ( _frameRate <= 0.0f )
             _frameRate = 12.0f;
         resolveFrameRange( true );
         updateSpriteFrame();
+        applyTransformKeys();
     }
 
     void SpriteAnimatorComponent::play( const string& animName, bool loop )
@@ -145,7 +150,9 @@ namespace sw
     void SpriteAnimatorComponent::setFrame( int32 frame )
     {
         _currentFrame = MathUtil::clamp( frame, 0, MathUtil::max( _totalFrames - 1, 0 ) );
+        _frameTimer   = 0.0f;
         updateSpriteFrame();
+        applyTransformKeys();
     }
 
     string SpriteAnimatorComponent::getCurrentAnimation() const
@@ -272,5 +279,49 @@ namespace sw
         if ( pSprite == nullptr )
             return;
         pSprite->setClipFrame( _firstClipFrame + _currentFrame );
+    }
+
+    float32 SpriteAnimatorComponent::computeClipTime() const
+    {
+        const SpriteClipAsset* pClip = findClip();
+        if ( pClip == nullptr )
+            return 0.0f;
+        const float32 fallbackSeconds = 1.0f / MathUtil::max( _frameRate, 1.0f );
+        const int32   clipFrame       = _firstClipFrame + _currentFrame;
+        // 반복하지 않는 구간이 끝나면 타이머에 남은 시간이 프레임 시간을 넘는다 — 구간 끝 시각에 멈춘다.
+        const float32 timeInFrame = MathUtil::clamp( _frameTimer, 0.0f, getFrameDuration( _currentFrame ) );
+        return pClip->computeFrameStartSeconds( clipFrame, fallbackSeconds ) + timeInFrame;
+    }
+
+    void SpriteAnimatorComponent::applyTransformKeys()
+    {
+        const SpriteClipAsset* pClip = findClip();
+        if ( pClip == nullptr || pClip->hasTransformKeys() == false )
+            return;
+        SpriteComponent* pSprite = findSprite();
+        if ( pSprite == nullptr )
+            return;
+
+        const GameObject* pOwner        = getOwner();
+        const bool        bSpriteIsRoot = ( pOwner != nullptr ) && ( pOwner->getPrimarySceneComponent() == pSprite );
+        if ( bSpriteIsRoot )
+        {
+            if ( _bRootWarned == SW_FALSE )
+            {
+                _bRootWarned = SW_TRUE;
+                SW_LOG_WARNING( "'%#': the sprite clip has transform keys but the sprite is the object's root - keys are not applied; attach the sprite under a root",
+                                pOwner->getName().c_str() );
+            }
+            return;
+        }
+
+        SpriteClipKey key{};
+        if ( pClip->sampleTransformKey( computeClipTime(), key ) == false )
+            return;
+        const float3 localPosition = pSprite->getLocalPosition();
+        float3       localRotation = pSprite->getLocalRotation();
+        localRotation._z           = MathUtil::toRadian( key._angleDeg );
+        pSprite->setLocalPosition( float3{ key._position._x, key._position._y, localPosition._z } );
+        pSprite->setLocalRotation( localRotation );
     }
 } // namespace sw
