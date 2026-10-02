@@ -587,12 +587,13 @@ namespace sw::editor
         }
 
         FileDialogParams params{};
-        params._type                = FileDialogParams::Type::Save;
-        params._title               = "Save Scene";
-        params._description         = "Scene";
-        params._bEnableMultiselect  = false;
-        params._listFilterExtension = { ".scene.xml", ".xml" };
-        const string mapsDir        = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
+        params._type               = FileDialogParams::Type::Save;
+        params._title              = "Save Scene";
+        params._description        = "Scene";
+        params._bEnableMultiselect = false;
+        // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 예전의 `.xml` 은 쿠커가 굽지 않는 이름이었다.
+        EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, params._listFilterExtension );
+        const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::directoryExists( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
@@ -745,14 +746,16 @@ namespace sw::editor
         if ( resourceRootPath.empty() )
             return;
 
+        // 종류 판정은 에셋 종류 등록부 하나다 — 예전에는 여기서 확장자 하나씩(`.prefab.xml` · `.png` · `.hlsl`)으로 따로 셌다.
+        // 리소스 루트는 위에서 비어 있지 않음을 봤다. 폴더가 그새 사라졌으면 개수가 0 이다.
         vector<string> listScene;
         vector<string> listPrefab;
         vector<string> listTexture;
         vector<string> listShader;
-        FileUtil::collectFiles( resourceRootPath, ".scene.xml", listScene, true );
-        FileUtil::collectFiles( resourceRootPath, ".prefab.xml", listPrefab, true );
-        FileUtil::collectFiles( resourceRootPath, ".png", listTexture, true );
-        FileUtil::collectFiles( resourceRootPath, ".hlsl", listShader, true );
+        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Scene, resourceRootPath, listScene );     // 없으면 0 개
+        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, resourceRootPath, listPrefab );   // 없으면 0 개
+        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Texture, resourceRootPath, listTexture ); // 없으면 0 개
+        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Shader, resourceRootPath, listShader );   // 없으면 0 개
 
         outCounts._sceneCount   = listScene.size();
         outCounts._prefabCount  = listPrefab.size();

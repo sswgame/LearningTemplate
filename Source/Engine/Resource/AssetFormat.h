@@ -55,6 +55,15 @@ namespace sw
         static string toCookedPath( string_view path );
         /** @brief 쿠커가 굽는 저작 소스(`.scene.xml` · `.prefab.xml` · `.prefab.json`)이면 true 입니다. */
         static bool isCookableSource( string_view path );
+        /**
+         * @brief @p path 가 @p kind(`Scene` · `Prefab`)의 저작 소스이면 true 입니다. 다른 종류는 늘 false 입니다.
+         * @details 에디터가 "이것은 씬 · 프리팹인가" 를 이것으로 묻는다(`EditorAssetTypeRegistry`). 예전에는 에디터가 접미사 표를 따로 들어,
+         *          쿠커가 굽지 않는 이름(`_scene.xml` · `.scene` 이 어디든 든 `.xml` · 확장자 없는 `.scene` · `.prefab` · 쿠킹본 `.prefab.bin`)도
+         *          씬 · 프리팹으로 열고 저장했다 — 에디터에서는 되는데 배포본에는 없었다.
+         */
+        static bool isCookableSource( string_view path, AssetKind kind );
+        /** @brief @p kind 의 저작 소스 접미사를 표 순서대로 @p outListSuffix 에 더합니다(정적 문자열이라 들고 있어도 됩니다). */
+        static void appendSourceSuffixes( AssetKind kind, vector<string_view>& outListSuffix );
     };
 
     /** @brief 런타임이 쿠킹된 바이너리를 쓰는지 반환합니다. Shipping 은 쿠킹된 바이너리를, Dev 는 XML 저작본을 로드합니다. */

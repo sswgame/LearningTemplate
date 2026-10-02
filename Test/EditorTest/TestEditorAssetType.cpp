@@ -1,7 +1,11 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+
+#include "Engine/Resource/AssetFormat.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -15,6 +19,78 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
     // 죽은 확장자는 **음성으로** 못 박는다. 되살아나면 여기서 걸린다.
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Material, "mats/hero.mat" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Material, "mats/hero.material" ) );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 씬 · 프리팹 판정은 쿠커의 규칙 하나다(`AssetCookPath`)
+ * @details 에디터가 접미사 표를 따로 들어, 쿠커가 굽지 않는 이름도 씬 · 프리팹으로 봤다 — `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`),
+ *          `_scene.xml`, 확장자 없는 `.scene` · `.prefab`. 에디터에서는 열리고 저장되고 퀵 런처 · 카탈로그에 떴지만 쿠커가 굽지 않아 배포본에서는
+ *          "Shipping requires cooked binary" 로 멈췄다. 쿠킹본 `.prefab.bin` 은 프리팹 편집기로 열렸지만 저장이 거절됐다(`PrefabAsset::saveToFile` 은
+ *          소스만 쓴다). 리소스 카탈로그는 프리팹을 `.prefab.xml` 하나로 세어 JSON 프리팹을 빠뜨렸다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
+{
+    using sw::editor::EditorAssetKind;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    const utf8* const arrPath[] = {
+        "maps/town.scene.xml",
+        "maps/TOWN.SCENE.XML",
+        "maps/forest.scenery.xml",
+        "maps/level_scene.xml",
+        "maps/a.scene",
+        "maps/a.scene.bin",
+        "maps/a.scene.xml.bak",
+        "prefabs/hero.prefab.xml",
+        "prefabs/hero.prefab.json",
+        "prefabs/hero.prefab.bin",
+        "prefabs/hero.prefab",
+        "prefabs/hero.xml",
+    };
+    for ( const utf8* pPath : arrPath )
+    {
+        const bool bCookedScene  = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Scene );
+        const bool bCookedPrefab = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Prefab );
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) == bCookedScene, pPath );
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) == bCookedPrefab, pPath );
+    }
+
+    // 규칙 자체가 비어 있으면 위의 대조는 아무것도 지키지 않는다 — 소스는 맞고, 쿠커가 굽지 않는 이름은 아니다.
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/TOWN.SCENE.XML" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab.json" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/forest.scenery.xml" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/level_scene.xml" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/a.scene" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab.bin" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.bin" ).empty() );
+    SW_EXPECT_STREQ( "Prefab Editor", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.json" ) }.c_str() );
+
+    // 접미사를 펼치는 쪽(핫 리로드 감시 · 대화상자 필터)도 같은 표다.
+    sw::vector<sw::string> listPrefabSuffix;
+    EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Prefab, listPrefabSuffix );
+    sw::vector<sw::string_view> listCookSuffix;
+    sw::AssetCookPath::appendSourceSuffixes( sw::AssetKind::Prefab, listCookSuffix );
+    SW_ASSERT_EQUAL( listCookSuffix.size(), listPrefabSuffix.size() );
+    for ( size_t index = 0; index < listCookSuffix.size(); ++index )
+        SW_EXPECT_TRUE( listPrefabSuffix[index] == listCookSuffix[index] );
+    sw::vector<sw::string> listSceneSuffix;
+    EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, listSceneSuffix );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listSceneSuffix.size() );
+    SW_EXPECT_STREQ( ".scene.xml", listSceneSuffix[0].c_str() );
+
+    // 카탈로그가 세는 길 — JSON 프리팹도 세고, 쿠킹본 · 굽지 않는 이름은 세지 않는다.
+    const sw::string folder = test::makeTempDirectory( "assetkind" );
+    for ( const utf8* pName : { "a.prefab.xml", "b.prefab.json", "c.prefab.bin", "d.scene.xml", "e.scenery.xml" } )
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( folder + "/" + pName, "<x/>" ) );
+    sw::vector<sw::string> listPrefabFile;
+    sw::vector<sw::string> listSceneFile;
+    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, folder, listPrefabFile ) );
+    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Scene, folder, listSceneFile ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listPrefabFile.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listSceneFile.size() );
+    sw::vector<sw::string> listMissing;
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, folder + "/nope", listMissing ) );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )

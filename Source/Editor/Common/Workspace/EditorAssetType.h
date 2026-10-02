@@ -114,6 +114,12 @@ namespace sw::editor
          *          않았습니다.
          */
         static void appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix );
+        /**
+         * @brief @p directory 아래(재귀)에서 지정 종류인 파일을 @p outListFilePath 에 더합니다. 폴더가 없으면 false 입니다.
+         * @details 판정은 `matches` 그대로다. 예전에는 리소스 카탈로그가 종류마다 확장자 하나(`.prefab.xml` · `.png` · `.hlsl`)로 따로 셌다 —
+         *          JSON 프리팹 · `.jpg` 텍스처 · `.hlsli` 는 세지 않았다.
+         */
+        [[nodiscard]] static bool collectFiles( EditorAssetKind kind, string_view directory, vector<string>& outListFilePath );
 
         /** @brief 임포트 대화상자용 접미사를 outListExtension에 추가합니다. */
         static void appendImportExtensions( vector<string>& outListExtension );

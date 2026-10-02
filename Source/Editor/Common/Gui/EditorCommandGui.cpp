@@ -17,6 +17,7 @@
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -78,11 +79,12 @@ namespace sw::editor
             static void commandOpenScene()
             {
                 FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Open;
-                params._title               = "Open Scene";
-                params._description         = "Scene";
-                params._bEnableMultiselect  = false;
-                params._listFilterExtension = { ".scene.xml", ".xml" };
+                params._type               = FileDialogParams::Type::Open;
+                params._title              = "Open Scene";
+                params._description        = "Scene";
+                params._bEnableMultiselect = false;
+                // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 예전의 `.xml` 은 쿠커가 굽지 않는 이름이었다.
+                EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, params._listFilterExtension );
 
                 const string activePack = GameConfig::getActive()._packRoot;
                 const string mapsDir    = ResourceUtil::getDomainFolderPath( activePack, path::kMapsFolder );

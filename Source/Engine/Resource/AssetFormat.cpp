@@ -10,21 +10,25 @@ namespace sw
     {
         struct AssetFormatInternal
         {
-            /** @brief 소스 접미사 → 쿠킹본 접미사. 긴 것이 먼저다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다). */
+            /**
+             * @brief 소스 접미사 → 쿠킹본 접미사와 그 에셋 종류. 긴 것이 먼저다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다).
+             * @details 에디터의 씬 · 프리팹 판정도 이 표다(`isCookableSource( path, kind )`) — 표가 둘이면 한쪽만 늘어난다.
+             */
             struct CookSuffix
             {
                 string_view _source;
                 string_view _cooked;
+                AssetKind   _kind;
                 bool        _bSource;
             };
             static constexpr CookSuffix kArrCookSuffix[] = {
-                {  ".scene.xml",  ".scene.bin",  true},
-                { ".prefab.xml", ".prefab.bin",  true},
-                {".prefab.json", ".prefab.bin",  true},
-                {  ".scene.bin",  ".scene.bin", false},
-                { ".prefab.bin", ".prefab.bin", false},
-                {      ".scene",  ".scene.bin", false},
-                {     ".prefab", ".prefab.bin", false},
+                {  ".scene.xml",  ".scene.bin",  AssetKind::Scene,  true},
+                { ".prefab.xml", ".prefab.bin", AssetKind::Prefab,  true},
+                {".prefab.json", ".prefab.bin", AssetKind::Prefab,  true},
+                {  ".scene.bin",  ".scene.bin",  AssetKind::Scene, false},
+                { ".prefab.bin", ".prefab.bin", AssetKind::Prefab, false},
+                {      ".scene",  ".scene.bin",  AssetKind::Scene, false},
+                {     ".prefab", ".prefab.bin", AssetKind::Prefab, false},
             };
         };
     } // namespace
@@ -52,6 +56,25 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    bool AssetCookPath::isCookableSource( string_view path, AssetKind kind )
+    {
+        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
+        {
+            if ( suffix._bSource && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true ) )
+                return true;
+        }
+        return false;
+    }
+
+    void AssetCookPath::appendSourceSuffixes( AssetKind kind, vector<string_view>& outListSuffix )
+    {
+        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
+        {
+            if ( suffix._bSource && suffix._kind == kind )
+                outListSuffix.push_back( suffix._source );
+        }
     }
 
     void AssetFormatRegistry::ensureBuiltins()

@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Resource/AssetFormat.h"
+
 namespace sw::editor
 {
     namespace
@@ -13,7 +15,7 @@ namespace sw::editor
         {
             EndsWith = 0,
             Extension,
-            Scene
+            CookableSource ///< 엔진의 쿠킹 규칙(`AssetCookPath`) — 쿠커가 굽는 저작 소스만. 접미사는 엔진 표에서 온다
         };
 
         // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다. 2026-09-12 에
@@ -23,7 +25,11 @@ namespace sw::editor
         // `.spv` 도 뺐다. 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
         // 소스로 세면 콘텐츠 브라우저가 빌드 출력 178개를 애셋으로 보여 준다.
         // 대신 `.hlsli` 를 넣었다. 공유 헤더는 진짜 셰이더 소스인데 빠져 있었다.
-        constexpr string_view kArrPrefabSuffix[]    = { ".prefab.xml", ".prefab.json", ".prefab.bin", ".prefab" };
+        //
+        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 굽는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`, 2026-10-03). 예전에는 여기 따로
+        // 적어, 쿠커가 굽지 않는 `_scene.xml` · `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`) · 확장자 없는 `.scene` · `.prefab` 도
+        // 씬 · 프리팹으로 열고 저장하고 퀵 런처에 띄웠다 — 에디터에서는 되고 배포본에는 없었다. 쿠킹본 `.prefab.bin` 은 프리팹 편집기로 열렸지만
+        // 저장이 거절됐다(`PrefabAsset::saveToFile` 은 소스만 쓴다). 구운 산출물은 `.spv` 처럼 에셋이 아니다.
         constexpr string_view kArrTextureExt[]      = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
         constexpr string_view kArrMaterialExt[]     = { ".material" };
         constexpr string_view kArrShaderExt[]       = { ".hlsl", ".hlsli" };
@@ -67,19 +73,19 @@ namespace sw::editor
 
         // 줄 순서가 곧 **브라우저 필터와 도구 패널의 표시 순서**다.
         const AssetKindRow kArrAssetKind[] = {
-            {         EditorAssetKind::Scene,     MatchMode::Scene,             nullptr,                              0,           nullptr,    "Scenes",  true},
-            {        EditorAssetKind::Prefab,  MatchMode::EndsWith,    kArrPrefabSuffix,    countOf( kArrPrefabSuffix ),   "Prefab Editor",   "Prefabs",  true},
-            {       EditorAssetKind::Texture, MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),           nullptr,  "Textures",  true},
-            {        EditorAssetKind::Shader, MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),           nullptr,   "Shaders",  true},
-            {      EditorAssetKind::Material, MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),        "Material", "Materials",  true},
-            {         EditorAssetKind::Audio, MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),           nullptr,     "Audio",  true},
-            {EditorAssetKind::AnimationGraph,  MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ), "Animation Graph",      "Anim",  true},
-            { EditorAssetKind::DialogueGraph,  MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),  "Dialogue Graph",  "Dialogue",  true},
-            {    EditorAssetKind::SpriteClip,  MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ),     "Sprite Clip",    "Sprite",  true},
-            {    EditorAssetKind::SpriteClip, MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),           nullptr,     nullptr,  true},
-            {       EditorAssetKind::TileMap,  MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),   "Tile Map Tool",  "Tile Map",  true},
-            {      EditorAssetKind::Sequence,  MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),       "Sequencer",       "Seq",  true},
-            {          EditorAssetKind::Data, MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),           nullptr,      "Data", false},
+            {         EditorAssetKind::Scene, MatchMode::CookableSource,             nullptr,                              0,           nullptr,    "Scenes",  true},
+            {        EditorAssetKind::Prefab, MatchMode::CookableSource,             nullptr,                              0,   "Prefab Editor",   "Prefabs",  true},
+            {       EditorAssetKind::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),           nullptr,  "Textures",  true},
+            {        EditorAssetKind::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),           nullptr,   "Shaders",  true},
+            {      EditorAssetKind::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),        "Material", "Materials",  true},
+            {         EditorAssetKind::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),           nullptr,     "Audio",  true},
+            {EditorAssetKind::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ), "Animation Graph",      "Anim",  true},
+            { EditorAssetKind::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),  "Dialogue Graph",  "Dialogue",  true},
+            {    EditorAssetKind::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ),     "Sprite Clip",    "Sprite",  true},
+            {    EditorAssetKind::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),           nullptr,     nullptr,  true},
+            {       EditorAssetKind::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),   "Tile Map Tool",  "Tile Map",  true},
+            {      EditorAssetKind::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),       "Sequencer",       "Seq",  true},
+            {          EditorAssetKind::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),           nullptr,      "Data", false},
         };
 
         struct EditorAssetTypeInternal
@@ -106,38 +112,50 @@ namespace sw::editor
                 return false;
             }
 
-            static bool matchScene( string_view path )
+            /** @brief 엔진 쿠킹 규칙의 종류입니다. 씬 · 프리팹이 아니면 `AssetKind::Count` 입니다. */
+            static AssetKind getCookKind( EditorAssetKind kind )
             {
-                if ( path.empty() )
-                    return false;
-                if ( FileUtil::hasExtension( path, ".scene" ) )
-                    return true;
-                if ( FileUtil::hasExtension( path, ".xml" ) )
-                {
-                    const string pathStr{ path };
-                    if ( StringUtil::stristr( pathStr.c_str(), ".scene" ) != nullptr )
-                        return true;
-                }
-                return StringUtil::endsWith( path, "_scene.xml", true );
+                if ( kind == EditorAssetKind::Scene )
+                    return AssetKind::Scene;
+                if ( kind == EditorAssetKind::Prefab )
+                    return AssetKind::Prefab;
+                return AssetKind::Count;
             }
 
             static bool matchRow( const AssetKindRow& row, string_view path )
             {
-                if ( row._mode == MatchMode::Scene )
-                    return matchScene( path );
+                if ( row._mode == MatchMode::CookableSource )
+                    return AssetCookPath::isCookableSource( path, getCookKind( row._kind ) );
                 return matchSuffixList( path, row._pSuffix, row._suffixCount, row._mode );
+            }
+
+            /** @brief 줄 하나의 접미사를 @p outListSuffix 에 더합니다. 쿠킹 규칙 줄은 엔진 표에서 가져옵니다(정적 문자열). */
+            static void appendRowSuffixes( const AssetKindRow& row, vector<string_view>& outListSuffix )
+            {
+                if ( row._mode == MatchMode::CookableSource )
+                {
+                    AssetCookPath::appendSourceSuffixes( getCookKind( row._kind ), outListSuffix );
+                    return;
+                }
+                if ( row._pSuffix == nullptr )
+                    return;
+                for ( uint32 index = 0; index < row._suffixCount; ++index )
+                    outListSuffix.push_back( row._pSuffix[index] );
             }
 
             /** @brief 전용 패널이 있는 종류의 접미사를 펼쳐 패널 매핑을 만듭니다. */
             static vector<EditorAssetPanelMapping> buildPanelMappings()
             {
                 vector<EditorAssetPanelMapping> listMapping{};
+                vector<string_view>             listSuffix{};
                 for ( const AssetKindRow& row : kArrAssetKind )
                 {
-                    if ( getPanelTitleOf( row._kind ) == nullptr || row._pSuffix == nullptr )
+                    if ( getPanelTitleOf( row._kind ) == nullptr )
                         continue;
-                    for ( uint32 index = 0; index < row._suffixCount; ++index )
-                        listMapping.push_back( EditorAssetPanelMapping{ row._kind, row._pSuffix[index] } );
+                    listSuffix.clear();
+                    appendRowSuffixes( row, listSuffix );
+                    for ( const string_view suffix : listSuffix )
+                        listMapping.push_back( EditorAssetPanelMapping{ row._kind, suffix } );
                 }
                 return listMapping;
             }
@@ -191,6 +209,19 @@ namespace sw::editor
                         return true;
                 }
                 return false;
+            }
+
+            /** @brief 줄 하나의 접미사를 중복 없이 @p outListSuffix 에 더합니다. */
+            static void appendUniqueRowSuffixes( const AssetKindRow& row, vector<string>& outListSuffix )
+            {
+                vector<string_view> listRowSuffix{};
+                appendRowSuffixes( row, listRowSuffix );
+                for ( const string_view suffix : listRowSuffix )
+                {
+                    if ( containsSuffix( outListSuffix, suffix ) )
+                        continue;
+                    outListSuffix.push_back( string{ suffix } );
+                }
             }
         };
     } // namespace
@@ -305,16 +336,22 @@ namespace sw::editor
     {
         for ( const AssetKindRow& row : kArrAssetKind )
         {
-            if ( row._kind != kind || row._pSuffix == nullptr )
-                continue;
-            for ( uint32 index = 0; index < row._suffixCount; ++index )
-            {
-                const string_view suffix = row._pSuffix[index];
-                if ( EditorAssetTypeInternal::containsSuffix( outListSuffix, suffix ) )
-                    continue;
-                outListSuffix.push_back( string{ suffix } );
-            }
+            if ( row._kind == kind )
+                EditorAssetTypeInternal::appendUniqueRowSuffixes( row, outListSuffix );
         }
+    }
+
+    bool EditorAssetTypeRegistry::collectFiles( EditorAssetKind kind, string_view directory, vector<string>& outListFilePath )
+    {
+        vector<string> listFile{};
+        if ( FileUtil::collectFiles( directory, "", listFile, true ) == false )
+            return false;
+        for ( string& filePath : listFile )
+        {
+            if ( matches( kind, string_view{ filePath } ) )
+                outListFilePath.push_back( std::move( filePath ) );
+        }
+        return true;
     }
 
     void EditorAssetTypeRegistry::appendImportExtensions( vector<string>& outListExtension )
@@ -323,15 +360,7 @@ namespace sw::editor
         {
             if ( row._kind == EditorAssetKind::Data || row._kind == EditorAssetKind::Scene )
                 continue;
-            if ( row._pSuffix == nullptr )
-                continue;
-            for ( uint32 index = 0; index < row._suffixCount; ++index )
-            {
-                const string_view suffix = row._pSuffix[index];
-                if ( EditorAssetTypeInternal::containsSuffix( outListExtension, suffix ) )
-                    continue;
-                outListExtension.push_back( string{ suffix } );
-            }
+            EditorAssetTypeInternal::appendUniqueRowSuffixes( row, outListExtension );
         }
         if ( EditorAssetTypeInternal::containsSuffix( outListExtension, ".json" ) == false )
             outListExtension.push_back( ".json" );
