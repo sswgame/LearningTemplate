@@ -238,6 +238,12 @@ namespace sw
             /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GpuInstance::_spinSeed 로 갑니다.
             uint32 _spinSeed{ 0 };
             /**
+             * @brief 스프라이트 프레임 · 색입니다(GpuInstance::_sprite 로 갑니다). **내용**이고 배치 키가 아닙니다.
+             * @details `operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않습니다 — 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
+             *          제자리 갱신(더티 구간 하나)으로 끝납니다. 키에 넣으면 프레임마다 정렬 · 나누기를 다시 했을 것입니다.
+             */
+            GpuSpriteInstanceData _sprite{};
+            /**
              * @brief (셰이더 경로 + define) 해시입니다. **어느 PSO 로 그릴지**를 정하는 값입니다.
              * @details 배치 키에 들어가야 합니다. 머티리얼 · 인스턴스 **포인터가 그대로여도** 인스턴스의
              *          키워드 · 멀티컴파일 · 품질을 바꾸면 이 값이 바뀌고, 그러면 다른 셰이더로 그려야 합니다.
@@ -263,7 +269,7 @@ namespace sw
             bool operator==( const DrawCandidate& other ) const
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _spinSeed == other._spinSeed &&
+                       _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
                        _permutationHash == other._permutationHash &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
@@ -306,7 +312,7 @@ namespace sw
         static void fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );
-        /** @brief 후보에서 GPU 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드)를 채웁니다. 배치 · 머티리얼 인덱스는 손대지 않습니다. */
+        /** @brief 후보에서 GPU 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드 · 스프라이트 프레임과 색)를 채웁니다. 배치 · 머티리얼 인덱스는 손대지 않습니다. */
         static void fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance );
         /**
          * @brief 월드 행렬만 바뀐 프리미티브(`_listTransformDirtyPrimitive`)의 후보에 트랜스폼 저장소의 행렬 · 바운드 중심을 옮깁니다.

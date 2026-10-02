@@ -302,3 +302,50 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     }
     SW_EXPECT_TRUE_MSG( notUpCount == 0, "바닥 평면의 노멀이 +Y 가 아니다" );
 }
+
+/**
+ * @brief [MeshPrimitiveTest] 스프라이트 사각형은 양면이고, 어느 면이든 그 면을 보는 카메라의 화면 오른쪽으로 u 가 는다(글자가 뒤집히지 않는다)
+ * @details 예전 스프라이트는 3D 쿼드(+Z 한 면, u 가 +X 로 는다)를 썼다. 그 면은 -Z 를 보는 카메라에서만 보이는데 그 카메라의 화면 오른쪽은 -X 라
+ *          모든 스프라이트가 좌우로 뒤집혔고(데미지 숫자 "123" 이 거울 글자였다), +Z 를 보는 2D 카메라에서는 후면 컬링으로 사라졌다.
+ *          카메라는 +Z 를 볼 때 화면 오른쪽이 +X 이고(왼손 좌표계, `CameraComponent::getViewMatrix`), -Z 를 볼 때는 -X 다. 면의 노멀이 -Z 면
+ *          +Z 를 보는 카메라가 그 면을 본다. 그래서 노멀 -Z 면은 u 가 +X 로, 노멀 +Z 면은 u 가 -X 로 늘어야 한다. v 는 두 면 모두 위가 0 이다.
+ *          감김은 엔진의 앞면 규약((b - a) x (c - a) 가 노멀)을 따라야 컬링이 맞는 면을 남긴다.
+ */
+SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
+{
+    sw::shared_ptr<sw::Mesh> sprite = sw::MeshUtil::createPrimitive( "Sprite" );
+    SW_ASSERT_NOT_NULL( sprite.get() );
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "sprite" ) == sw::MeshUtil::acquirePrimitive( "Sprite" ) );
+    const sw::vector<sw::RHIVertex>& listVertex = sprite->getVertices();
+    SW_ASSERT_EQUAL( 12u, static_cast<uint32>( listVertex.size() ) );
+
+    uint32 frontCount{ 0 };
+    uint32 backCount{ 0 };
+    for ( size_t base = 0; base + 2 < listVertex.size(); base += 3 )
+    {
+        const sw::RHIVertex& vertexA = listVertex[base + 0];
+        const sw::RHIVertex& vertexB = listVertex[base + 1];
+        const sw::RHIVertex& vertexC = listVertex[base + 2];
+        const sw::float3     positionA{ vertexA._arrPosition[0], vertexA._arrPosition[1], vertexA._arrPosition[2] };
+        const sw::float3     positionB{ vertexB._arrPosition[0], vertexB._arrPosition[1], vertexB._arrPosition[2] };
+        const sw::float3     positionC{ vertexC._arrPosition[0], vertexC._arrPosition[1], vertexC._arrPosition[2] };
+        const sw::float3     faceNormal = ( positionB - positionA ).cross( positionC - positionA );
+        // 감김의 노멀과 정점 노멀이 같은 쪽이다 — 컬링이 남기는 면이 정점 노멀이 말하는 면이다.
+        SW_EXPECT_TRUE( faceNormal._z * vertexA._arrNormal[2] > 0.0f );
+        const bool bFront = vertexA._arrNormal[2] < 0.0f;
+        if ( bFront )
+            ++frontCount;
+        else
+            ++backCount;
+
+        for ( const sw::RHIVertex* pVertex : { &vertexA, &vertexB, &vertexC } )
+        {
+            // 화면 오른쪽: 노멀 -Z 면(+Z 를 보는 카메라)은 +X, 노멀 +Z 면(-Z 를 보는 카메라)은 -X.
+            const float32 screenRight = bFront ? pVertex->_arrPosition[0] : -pVertex->_arrPosition[0];
+            SW_EXPECT_NEAR_EQUAL( screenRight + 0.5f, pVertex->_arrUv[0], 1e-6f );
+            SW_EXPECT_NEAR_EQUAL( 0.5f - pVertex->_arrPosition[1], pVertex->_arrUv[1], 1e-6f );
+        }
+    }
+    SW_EXPECT_EQUAL( 2u, frontCount );
+    SW_EXPECT_EQUAL( 2u, backCount );
+}

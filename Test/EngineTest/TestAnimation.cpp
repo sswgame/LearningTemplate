@@ -1,11 +1,18 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimPlayer.h"
 #include "Engine/Animation/BlendSpace.h"
 #include "Engine/Animation/DualQuaternion.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -362,7 +369,8 @@ SW_TEST_CASE( AnimationTest, AnimPlayerClampsNegativeSpeed )
 }
 
 /**
- * @brief [AnimationTest] SpriteAnimatorComponent 재생, 프레임 안전성 및 틱 검증
+ * @brief [AnimationTest] 클립이 없는 애니메이터는 프레임 하나에 머문다 — 재생 · 틱 · 프레임 지정이 범위를 벗어나지 않는다
+ * @details 프레임 수는 이제 손으로 넣지 않고 스프라이트의 클립에서 온다. 붙은 스프라이트 · 클립이 없으면 구간은 프레임 하나다.
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
 {
@@ -375,16 +383,94 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
     SW_EXPECT_TRUE( animator.isPlaying() );
     SW_EXPECT_EQUAL( 1, animator.getTotalFrames() );
 
-    animator.setTotalFrames( 4 );
-    SW_EXPECT_EQUAL( 4, animator.getTotalFrames() );
-
-    // 12fps -> 1 frame per 0.0833s. Advance by 0.1s
+    // 12fps 로 한참 돌려도 하나뿐인 프레임을 넘지 않는다.
     animator.onTick( 0.1f );
-    SW_EXPECT_EQUAL( 1, animator.getCurrentFrame() );
-
-    // Advance past all 4 frames with looping
     animator.onTick( 0.4f );
-    SW_EXPECT_TRUE( animator.getCurrentFrame() < 4 );
+    SW_EXPECT_EQUAL( 0, animator.getCurrentFrame() );
+    animator.setFrame( 7 );
+    SW_EXPECT_EQUAL( 0, animator.getCurrentFrame() );
+    animator.setFrame( -3 );
+    SW_EXPECT_EQUAL( 0, animator.getCurrentFrame() );
+}
+
+/**
+ * @brief [AnimationTest] 애니메이터의 프레임 수 · 프레임마다의 시간 · 반복은 스프라이트 클립에서 오고, 넘긴 프레임은 스프라이트의 UV 사각형이 된다
+ * @details 예전 애니메이터는 프레임 수를 손으로 받았고(`setTotalFrames`), 넘긴 프레임을 "<애니>-<프레임>" 글로 스프라이트의 읽는 곳 없는 칸에
+ *          적었다 — 화면은 그대로였다. 지금은 이름이 클립의 구간을 고르고(`run` = 프레임 2..4), 프레임마다 그 프레임의 시간(ms)만큼 머물며,
+ *          스프라이트가 그 프레임의 UV 사각형을 GPU 인스턴스 칸에 싣는다. 구간이 반복이 아니면 마지막 프레임에서 멈춘다.
+ */
+SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string clipPath = test::makeTempPath( "hero.sprite.json" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
+  "atlas": "engine/textures/test/quadrants.dds",
+  "frames": [
+    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
+    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
+    { "u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 50 },
+    { "u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 300 },
+    { "u": 0.25, "v": 0.25, "w": 0.5, "h": 0.5, "durationMs": 0 }
+  ],
+  "transformKeys": [],
+  "animations": [
+    { "name": "idle", "start": 0, "count": 2, "loop": true },
+    { "name": "run", "start": 2, "count": 3, "loop": false }
+  ]
+})" ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Hero" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SpriteComponent* pSprite = pObject->addComponent<SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pSprite );
+    pSprite->setClipPath( clipPath );
+    SW_ASSERT_NOT_NULL( pSprite->getClip() );
+    SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pAnimator );
+    pAnimator->setFrameRate( 10.0f ); // 시간이 0 인 프레임(4)은 0.1 초
+
+    pAnimator->play( "run" );
+    SW_EXPECT_EQUAL( 3, pAnimator->getTotalFrames() );
+    SW_EXPECT_EQUAL( 2, pAnimator->getFirstClipFrame() );
+    SW_EXPECT_FALSE( pAnimator->isRepeating() ); // 클립의 구간이 반복이 아니다
+    SW_EXPECT_EQUAL( 2, pSprite->getClipFrame() );
+    // 스프라이트가 그 프레임의 UV 사각형을 인스턴스 칸에 싣는다(unorm16 양자화).
+    const float4 shownRect = pSprite->getSpriteInstanceData().getUvRect();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, shownRect._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, shownRect._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, shownRect._z, 1e-4f );
+
+    // 프레임 2 는 50 ms 다 — 40 ms 로는 그대로, 20 ms 더 가면 프레임 3.
+    pAnimator->onTick( 0.04f );
+    SW_EXPECT_EQUAL( 0, pAnimator->getCurrentFrame() );
+    pAnimator->onTick( 0.02f );
+    SW_EXPECT_EQUAL( 1, pAnimator->getCurrentFrame() );
+    SW_EXPECT_EQUAL( 3, pSprite->getClipFrame() );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
+    // 프레임 3 은 300 ms — 200 ms 로는 그대로다(프레임 속도 10fps 였다면 넘어갔다).
+    pAnimator->onTick( 0.2f );
+    SW_EXPECT_EQUAL( 3, pSprite->getClipFrame() );
+    // 끝까지 가면 반복하지 않고 마지막 프레임(4)에서 멈춘다.
+    pAnimator->onTick( 1.0f );
+    SW_EXPECT_EQUAL( 4, pSprite->getClipFrame() );
+    SW_EXPECT_FALSE( pAnimator->isPlaying() );
+
+    // 반복 구간은 감긴다: idle(0..1) 을 100 ms 프레임 셋 만큼 → 0, 1, 0.
+    pAnimator->play( "idle" );
+    SW_EXPECT_TRUE( pAnimator->isRepeating() );
+    SW_EXPECT_EQUAL( 2, pAnimator->getTotalFrames() );
+    pAnimator->onTick( 0.25f );
+    SW_EXPECT_EQUAL( 0, pSprite->getClipFrame() );
+    SW_EXPECT_TRUE( pAnimator->isPlaying() );
+
+    // 클립에 없는 이름은 알리고 프레임 0 하나로 둔다.
+    {
+        test::ScopedDefensiveTestLog expected( "an animation name the clip does not have" );
+        pAnimator->play( "fly" );
+    }
+    SW_EXPECT_EQUAL( 1, pAnimator->getTotalFrames() );
+    SW_EXPECT_EQUAL( 0, pSprite->getClipFrame() );
 }
 
 /**

@@ -18,36 +18,11 @@ namespace sw
     class DialogueGraphAsset;
     class GameObject;
     class SequenceAsset;
+    class SpriteClipAsset;
 } // namespace sw
 
 namespace sw::editor
 {
-    /** @brief 스프라이트 클립 프레임 */
-    struct EditorSpriteClipFrame
-    {
-        float32 _u{ 0.0f };
-        float32 _v{ 0.0f };
-        float32 _w{ 1.0f };
-        float32 _h{ 1.0f };
-        int32   _durationMs{ 100 };
-    };
-
-    /** @brief 스프라이트 클립 트랜스폼 키 */
-    struct EditorSpriteClipKey
-    {
-        float32 _time{ 0.0f };
-        float2  _position{ 0.0f, 0.0f };
-        float32 _angleDeg{ 0.0f };
-    };
-
-    /** @brief SpriteClip.json 데이터 */
-    struct EditorSpriteClipData
-    {
-        string                        _atlasPath;
-        vector<EditorSpriteClipFrame> _listFrame;
-        vector<EditorSpriteClipKey>   _listKey;
-    };
-
     /** @brief 프리팹 인스턴스 컴포넌트 프로퍼티 오버라이드 항목 */
     struct PrefabOverrideItem
     {
@@ -78,14 +53,14 @@ namespace sw::editor
         static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus );
         /** @brief Resource 상대 경로로 TileMap XML을 씁니다. */
         [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXmlData& data );
-        /** @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다. */
-        static ToolAssetLoadResult loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path = {} );
+        /**
+         * @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다.
+         * @details 형식은 런타임 타입(`SpriteClipAsset`) 하나가 읽고 씁니다. 예전에는 에디터가 자기 구조체(`EditorSpriteClipData`)와 파서를 따로
+         *          들어 런타임에는 그 파일을 읽는 곳이 없었습니다. 문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJson` · `parseJson` 입니다.
+         */
+        static ToolAssetLoadResult loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path = {} );
         /** @brief SpriteClip JSON을 씁니다. */
-        [[nodiscard]] static bool saveSpriteClip( const EditorSpriteClipData& data, string_view path = {} );
-        /** @brief SpriteClip을 JSON 문자열로 직렬화합니다. */
-        static string serializeSpriteClip( const EditorSpriteClipData& data );
-        /** @brief JSON 문자열을 SpriteClip으로 파싱합니다. */
-        [[nodiscard]] static bool parseSpriteClip( string_view json, EditorSpriteClipData& outData );
+        [[nodiscard]] static bool saveSpriteClip( const SpriteClipAsset& data, string_view path = {} );
         /** @brief 시퀀서 JSON을 읽습니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다. */
         static ToolAssetLoadResult loadSequence( sw::SequenceAsset& outAsset, string_view path );
         /** @brief 시퀀서 JSON을 씁니다. */

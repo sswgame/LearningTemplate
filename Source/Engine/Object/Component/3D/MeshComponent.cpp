@@ -27,6 +27,7 @@ namespace sw
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
+        , _spriteInstanceData{}
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
@@ -160,6 +161,14 @@ namespace sw
     void MeshComponent::setMaterialInstance( shared_ptr<MaterialInstance> instance )
     {
         _materialInstance = std::move( instance );
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setSpriteInstanceData( const GpuSpriteInstanceData& data )
+    {
+        if ( _spriteInstanceData == data )
+            return;
+        _spriteInstanceData = data;
         markRenderStateDirty();
     }
 

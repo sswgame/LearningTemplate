@@ -2,75 +2,27 @@
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct SpriteComponentInternal
-        {
-            /** @brief 텍스처 인스턴스 표의 키입니다 — 부모 머티리얼과 텍스처. */
-            struct TextureInstanceKey
-            {
-                const Material* _pParent{ nullptr };
-                hashed_string   _texture{};
-
-                bool operator==( const TextureInstanceKey& other ) const { return _pParent == other._pParent && _texture == other._texture; }
-            };
-
-            struct TextureInstanceKeyHash
-            {
-                size_t operator()( const TextureInstanceKey& key ) const noexcept
-                {
-                    return std::hash<const void*>{}( key._pParent ) ^ ( static_cast<size_t>( key._texture.getHash() ) * 0x9E3779B97F4A7C15ull );
-                }
-            };
-
-            /**
-             * @brief (머티리얼, 텍스처)의 인스턴스를 나눠 줍니다. 없으면 만듭니다.
-             * @details 표는 **약한 참조**다(`MeshUtil::acquirePrimitive` 와 같은 모양) — 소유는 스프라이트에 있고 마지막 스프라이트가 놓으면
-             *          인스턴스도 사라진다. 사라진 칸은 새로 만들 때 걷는다.
-             */
-            static shared_ptr<MaterialInstance> acquireTextureInstance( Material* pParent, hashed_string texture )
-            {
-                static mutex                                                                                 s_mutexInstance;
-                static unordered_map<TextureInstanceKey, weak_ptr<MaterialInstance>, TextureInstanceKeyHash> s_mapInstance;
-
-                const TextureInstanceKey key{ pParent, texture };
-                std::scoped_lock<mutex>  lock{ s_mutexInstance };
-                const auto               it = s_mapInstance.find( key );
-                if ( it != s_mapInstance.end() )
-                {
-                    if ( shared_ptr<MaterialInstance> instance = it->second.lock() )
-                        return instance;
-                }
-
-                for ( auto iter = s_mapInstance.begin(); iter != s_mapInstance.end(); )
-                {
-                    if ( iter->second.expired() )
-                        iter = s_mapInstance.erase( iter );
-                    else
-                        ++iter;
-                }
-                shared_ptr<MaterialInstance> instance = MaterialInstance::create( pParent );
-                instance->setTextureParameter( hashed_string( "albedoMap" ), texture.c_str() );
-                s_mapInstance[key] = instance;
-                return instance;
-            }
-        };
-    } // namespace
+    SW_LOG_CALLER( "SpriteComponent" );
 
     SpriteComponent::SpriteComponent()
         : _textureName{}
         , _appliedTexture{}
-        , _spriteName{}
+        , _clipPath{}
+        , _clipFrame{ 0 }
+        , _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }
+        , _tint{ 1.0f, 1.0f, 1.0f, 1.0f }
+        , _clip{}
+        , _loadedClipPath{}
     {
     }
 
@@ -92,15 +44,33 @@ namespace sw
     void SpriteComponent::resolveRenderAssets()
     {
         MeshComponent::resolveRenderAssets();
+        refreshClip();
         refreshTextureInstance();
+        refreshSpriteInstanceData();
     }
 
     void SpriteComponent::onPropertyChanged( hashed_string propertyName )
     {
         MeshComponent::onPropertyChanged( propertyName );
         static const hashed_string s_textureName( "_textureName" );
-        if ( propertyName == s_textureName )
+        static const hashed_string s_clipPath( "_clipPath" );
+        static const hashed_string s_clipFrame( "_clipFrame" );
+        static const hashed_string s_uvRect( "_uvRect" );
+        static const hashed_string s_tint( "_tint" );
+        if ( propertyName == s_clipPath )
+        {
+            refreshClip();
             refreshTextureInstance();
+            refreshSpriteInstanceData();
+        }
+        else if ( propertyName == s_textureName )
+        {
+            refreshTextureInstance();
+        }
+        else if ( propertyName == s_clipFrame || propertyName == s_uvRect || propertyName == s_tint )
+        {
+            refreshSpriteInstanceData();
+        }
     }
 
     void SpriteComponent::setTextureName( string_view texture )
@@ -109,16 +79,68 @@ namespace sw
         refreshTextureInstance();
     }
 
+    void SpriteComponent::setClipPath( string_view path )
+    {
+        _clipPath = string{ path };
+        refreshClip();
+        refreshTextureInstance();
+        refreshSpriteInstanceData();
+    }
+
+    void SpriteComponent::setClipFrame( int32 frame )
+    {
+        _clipFrame = MathUtil::max( frame, 0 );
+        refreshSpriteInstanceData();
+    }
+
+    void SpriteComponent::setUvRect( const float4& uvRect )
+    {
+        _uvRect = uvRect;
+        refreshSpriteInstanceData();
+    }
+
+    void SpriteComponent::setTint( const float4& tint )
+    {
+        _tint = tint;
+        refreshSpriteInstanceData();
+    }
+
+    float4 SpriteComponent::getDisplayedUvRect() const
+    {
+        if ( _clip == nullptr || _clip->getFrameCount() == 0 )
+            return _uvRect;
+        const int32 lastFrame = _clip->getFrameCount() - 1;
+        return _clip->findFrame( MathUtil::clamp( _clipFrame, 0, lastFrame ) )->_uvRect;
+    }
+
     hashed_string SpriteComponent::getDefaultMaterialPath() const
     {
-        static const hashed_string s_spriteMaterial( "engine/materials/sprite2d.material" );
-        return s_spriteMaterial;
+        return SpriteRenderUtil::getSpriteMaterialPath();
+    }
+
+    string_view SpriteComponent::getEffectiveTexture() const
+    {
+        if ( _textureName.empty() == false || _clip == nullptr )
+            return _textureName;
+        return _clip->_atlasPath;
+    }
+
+    void SpriteComponent::refreshClip()
+    {
+        if ( _clipPath == _loadedClipPath )
+            return;
+        _loadedClipPath = _clipPath;
+        _clip           = SpriteClipAsset::acquireShared( _clipPath );
+        // 읽지 못한 경로는 `_loadedClipPath` 에 남아 다시 읽지 않는다. 경고는 로더가 이유와 함께 남겼다. 여기서는 무엇을 대신 그리는지만 말한다.
+        if ( _clip == nullptr && _clipPath.empty() == false )
+            SW_LOG_WARNING( "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );
     }
 
     void SpriteComponent::refreshTextureInstance()
     {
-        Material* pMaterial = getMaterial();
-        if ( pMaterial == nullptr || _textureName.empty() )
+        Material*         pMaterial   = getMaterial();
+        const string_view textureName = getEffectiveTexture();
+        if ( pMaterial == nullptr || textureName.empty() )
         {
             // 이 컴포넌트가 건 인스턴스만 뗀다. 코드가 건 인스턴스(텍스처 칸을 쓰지 않는)는 그대로다.
             if ( _appliedTexture.empty() == false )
@@ -129,12 +151,17 @@ namespace sw
             return;
         }
 
-        const hashed_string     texture( _textureName.c_str() );
+        const hashed_string     texture( string{ textureName }.c_str() );
         const MaterialInstance* pCurrent = getRawMaterialInstance();
         if ( texture == _appliedTexture && pCurrent != nullptr && pCurrent->getParent() == pMaterial )
             return;
         _appliedTexture = texture;
-        setMaterialInstance( SpriteComponentInternal::acquireTextureInstance( pMaterial, texture ) );
+        setMaterialInstance( SpriteRenderUtil::acquireTextureInstance( pMaterial, texture ) );
+    }
+
+    void SpriteComponent::refreshSpriteInstanceData()
+    {
+        setSpriteInstanceData( GpuSpriteInstanceData::make( getDisplayedUvRect(), _tint ) );
     }
 
     bool SpriteComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

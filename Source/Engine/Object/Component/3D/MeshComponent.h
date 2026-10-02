@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -109,6 +110,13 @@ namespace sw
         /** @brief setGpuSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
         uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
 
+        /**
+         * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색입니다. 빌더가 `GpuInstance::_sprite` 로 옮깁니다.
+         * @details 기본값(텍스처 전체 · 흰색)이면 아무 일도 하지 않습니다. 읽는 셰이더는 sprite2d.hlsl 이고, 값을 정하는 쪽은 파생
+         *          (`SpriteComponent`)입니다 — 그래서 세터는 protected 입니다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게).
+         */
+        const GpuSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+
         /** @brief 바운드 반지름(메시 공간)의 최소값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 것이 쓰입니다(키우기만 한다). */
         void setBoundsRadius( float32 radius );
         /** @brief 바운드 반지름(메시 공간)입니다 — 적어 둔 값과 메시의 경계(`Mesh::getBoundingRadius`) 중 큰 쪽. 월드 반지름은 `getWorldBounds` 입니다. */
@@ -152,6 +160,8 @@ namespace sw
         virtual string_view getDefaultMeshId() const { return {}; }
         /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 빈 것이면 씬 기본 머티리얼입니다(렌더러가 고른다). */
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
+        /** @brief 스프라이트 프레임 · 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다(같은 프레임을 다시 넣는 애니메이터는 공짜). */
+        void setSpriteInstanceData( const GpuSpriteInstanceData& data );
 
     private:
         /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
@@ -176,6 +186,8 @@ namespace sw
         RHIBlendMode _blendMode;
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
         uint32 _gpuSpinSeed;
+        /** @brief GPU 인스턴스의 스프라이트 칸입니다. 저장하지 않습니다 — 파생의 저장되는 값(프레임 · 색)에서 만듭니다. */
+        GpuSpriteInstanceData _spriteInstanceData;
         /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */

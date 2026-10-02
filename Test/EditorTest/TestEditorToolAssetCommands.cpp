@@ -6,6 +6,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 
 #include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -155,7 +156,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryToolAssetLoadTellsMissingFromMal
     string         status;
     TileMapXmlData tileMap;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( missing, tileMap, status ) == ToolAssetLoadResult::Missing );
-    EditorSpriteClipData clip;
+    SpriteClipAsset clip;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, status, missing ) == ToolAssetLoadResult::Missing );
     SequenceAsset sequence;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadSequence( sequence, missing ) == ToolAssetLoadResult::Missing );

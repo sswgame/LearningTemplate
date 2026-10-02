@@ -10,6 +10,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
@@ -452,10 +453,14 @@ SW_TEST_CASE( ShaderBindingContractTest, Dx12RootSignatureFitsBudget )
 }
 
 /**
- * @brief [ShaderBindingContractTest] GPUScene 인스턴스 원소 레이아웃이 C++ `GpuInstance` 와 같다 (구운 바이너리, 4 백엔드).
+ * @brief [ShaderBindingContractTest] GPUScene 인스턴스 원소 레이아웃이 C++ `GpuInstance` 와 같다 (구운 바이너리, 4 백엔드, 그래픽스 · 컴퓨트 셋).
  * @details `g_SwInstances`(t4)는 **C++ 이 쓰고 셰이더가 읽는** 유일한 구조체다 — 한쪽만 바뀌면 컴파일도 검증 레이어도
  *          아무 말을 하지 않고 월드 행렬·머티리얼 인덱스가 원소 1 부터 어긋난다(머티리얼 버퍼가 stride 0 으로 그랬던 것과 같은 함정).
  *          그래서 stride 와 필드 오프셋을 구운 바이너리의 리플렉션에서 읽어 C++ 구조체와 대조한다. GPU 가 필요 없다.
+ *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanim 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 예전에는 그 셋이 구조체를
+ *          각자 베껴 들고 있었고 이 검사가 그 이름을 보지 않았다 — 스프라이트 칸(uvStart · uvEnd · tint)을 더할 때 한 곳만 고치면 컬링 · 정렬 ·
+ *          회전이 원소 1 부터 어긋났을 것이다. 지금은 셋 다 `instancedata.hlsli` 하나를 쓰고, 여기서 세 이름을 모두 대조한다. 이름마다 적어도 한
+ *          바이너리가 있어야 한다(없으면 그 셰이더가 이름을 바꿨고 검사가 눈을 감은 것이다).
  */
 SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
 {
@@ -471,13 +476,21 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
     };
     // HLSL `SwInstanceData`(binding.hlsli) ↔ C++ `GpuInstance`(GpuScene.h). 이름은 셰이더 쪽 표기다.
     const ExpectedField arrExpected[] = {
-        {         "world", static_cast<uint32>( offsetof( sw::GpuInstance,          _world ) )},
-        {  "boundsCenter", static_cast<uint32>( offsetof( sw::GpuInstance,   _boundsCenter ) )},
-        {  "boundsRadius", static_cast<uint32>( offsetof( sw::GpuInstance,   _boundsRadius ) )},
-        {"meshBatchIndex", static_cast<uint32>( offsetof( sw::GpuInstance, _meshBatchIndex ) )},
-        { "materialIndex", static_cast<uint32>( offsetof( sw::GpuInstance,  _materialIndex ) )},
-        {     "blendMode", static_cast<uint32>( offsetof( sw::GpuInstance,      _blendMode ) )},
+        { "world", static_cast<uint32>( offsetof( sw::GpuInstance, _world ) ) },
+        { "boundsCenter", static_cast<uint32>( offsetof( sw::GpuInstance, _boundsCenter ) ) },
+        { "boundsRadius", static_cast<uint32>( offsetof( sw::GpuInstance, _boundsRadius ) ) },
+        { "meshBatchIndex", static_cast<uint32>( offsetof( sw::GpuInstance, _meshBatchIndex ) ) },
+        { "materialIndex", static_cast<uint32>( offsetof( sw::GpuInstance, _materialIndex ) ) },
+        { "blendMode", static_cast<uint32>( offsetof( sw::GpuInstance, _blendMode ) ) },
+        { "spinSeed", static_cast<uint32>( offsetof( sw::GpuInstance, _spinSeed ) ) },
+        { "uvStart", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _uvStart ) ) },
+        { "uvEnd", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _uvEnd ) ) },
+        { "tint", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _tint ) ) },
+        { "reserved", static_cast<uint32>( offsetof( sw::GpuInstance, _reserved ) ) },
     };
+    // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).
+    const utf8* arrInstanceBufferName[] = { sw::shaderslot::resname::kInstances, "g_Instances", "g_InstancesRW" };
+    uint32      arrCheckedPerName[3]    = {};
 
     constexpr uint32             kFormatCount            = 4;
     const sw::ShaderTargetFormat arrFormat[kFormatCount] = {
@@ -503,12 +516,16 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
             const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, format );
             for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
             {
-                if ( element._name != sw::shaderslot::resname::kInstances )
+                uint32 nameIndex = 0;
+                while ( nameIndex < 3 && element._name != arrInstanceBufferName[nameIndex] )
+                    ++nameIndex;
+                if ( nameIndex == 3 )
                     continue;
+                ++arrCheckedPerName[nameIndex];
 
-                const sw::string label = sw::string( arrFormatName[formatIndex] ) + "/" + sw::FileUtil::getFileNamePart( path );
+                const sw::string label = sw::string( arrFormatName[formatIndex] ) + "/" + sw::FileUtil::getFileNamePart( path ) + " " + element._name;
                 SW_EXPECT_TRUE_MSG( element._totalSize == static_cast<uint32>( sizeof( sw::GpuInstance ) ),
-                                    ( label + " g_SwInstances stride " + sw::to_string( element._totalSize ) + " != sizeof(GpuInstance) " +
+                                    ( label + " stride " + sw::to_string( element._totalSize ) + " != sizeof(GpuInstance) " +
                                       sw::to_string( static_cast<uint32>( sizeof( sw::GpuInstance ) ) ) )
                                         .c_str() );
 
@@ -523,12 +540,12 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
                             break;
                         }
                     }
-                    SW_EXPECT_TRUE_MSG( pFound != nullptr, ( label + " g_SwInstances 에 " + expected._pName + " 가 없습니다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( pFound != nullptr, ( label + " 에 " + expected._pName + " 가 없습니다" ).c_str() );
                     if ( pFound == nullptr )
                         continue;
                     SW_EXPECT_TRUE_MSG( pFound->_offset == expected._offset,
-                                        ( label + " g_SwInstances." + expected._pName + " 오프셋 " + sw::to_string( pFound->_offset ) +
-                                          " != C++ " + sw::to_string( expected._offset ) )
+                                        ( label + "." + expected._pName + " 오프셋 " + sw::to_string( pFound->_offset ) + " != C++ " +
+                                          sw::to_string( expected._offset ) )
                                             .c_str() );
                 }
                 ++checkedCount;
@@ -538,6 +555,8 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
 
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "g_SwInstances 를 선언한 구운 셰이더가 없습니다 (--bake-shaders 를 먼저 돌리세요)" );
+    for ( uint32 nameIndex = 0; nameIndex < 3; ++nameIndex )
+        SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 구운 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
 }
 
 SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )

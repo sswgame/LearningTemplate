@@ -30,7 +30,7 @@ namespace sw
         struct GpuSceneBuilderInternal
         {
             /**
-             * @brief 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드)가 raw 와 **비트 단위로** 다른지 확인합니다.
+             * @brief 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드 · 스프라이트 프레임과 색)가 raw 와 **비트 단위로** 다른지 확인합니다.
              * @details 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를 영원히 "안 바뀜" 으로 보고 화면에
              *          오차를 누적시킵니다(DrawCandidate::operator== 와 같은 이유). 전체 갱신과 부분 갱신이 같은 판정을 씁니다.
              */
@@ -39,7 +39,7 @@ namespace sw
                 return Memory::compare( &instance._world, &raw._world, sizeof( instance._world ) ) != 0 ||
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
-                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed;
+                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite;
             }
 
             /** @brief raw 의 페이로드를 인스턴스에 옮깁니다. `_meshBatchIndex` · `_materialIndex` 는 그대로 둡니다. 배치 구성이 같을 때만 부릅니다. */
@@ -50,6 +50,7 @@ namespace sw
                 outInstance._boundsRadius = raw._boundsRadius;
                 outInstance._blendMode    = raw._blendMode;
                 outInstance._spinSeed     = raw._spinSeed;
+                outInstance._sprite       = raw._sprite;
             }
 
             /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사합니다(렌더 스레드는 Material* 를 따라갈 수 없습니다). */
@@ -236,6 +237,7 @@ namespace sw
         candidate._localBoundsRadius = pMeshComp->getBoundsRadius();
         candidate._boundsRadius      = candidate._localBoundsRadius * world.getMaximumAxisScale();
         candidate._spinSeed          = pMeshComp->getGpuSpinSeed();
+        candidate._sprite            = pMeshComp->getSpriteInstanceData();
         // 소유를 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼 · 인스턴스의 소유도
         // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
         // 먼저 비교**한다. 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
@@ -255,6 +257,9 @@ namespace sw
         const MeshInstanceBatch* pBatch = entry._pBatch;
         if ( pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount() )
             return false;
+        // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수 · 길이 0 인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
+        if ( pBatch->isEntryVisible( entry._index ) == false )
+            return false;
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
             return false;
@@ -264,6 +269,7 @@ namespace sw
         candidate._localBoundsRadius         = item._boundsRadius;
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
         candidate._spinSeed                  = item._spinSeed;
+        candidate._sprite                    = item._sprite;
         // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
         if ( candidate._mesh.get() != pMesh )
             candidate._mesh = pBatch->getMesh();
@@ -304,6 +310,7 @@ namespace sw
         outInstance._boundsRadius = candidate._boundsRadius;
         outInstance._blendMode    = candidate._blendMode;
         outInstance._spinSeed     = candidate._spinSeed;
+        outInstance._sprite       = candidate._sprite;
     }
 
     void GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
@@ -1027,7 +1034,7 @@ namespace sw
                 return false;
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
-            // 트랜스폼과 바운드, 그리고 회전 시드뿐이다. 판정과 복사는 청크 갱신과 **같은 도우미**다.
+            // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임 · 색뿐이다. 판정과 복사는 청크 갱신과 **같은 도우미**다.
             const GpuInstance& prev             = ( *pPrevious )[slot];
             GpuInstance&       instance         = work[slot];
             const GpuInstance& raw              = _listScratchRaw[srcIndex];
@@ -1113,7 +1120,7 @@ namespace sw
             }
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
-            // 트랜스폼과 바운드, 그리고 회전 시드뿐이다. 판정과 복사는 직렬 루프와 **같은 도우미**다.
+            // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임 · 색뿐이다. 판정과 복사는 직렬 루프와 **같은 도우미**다.
             const GpuInstance& prev     = pPrevious[slot];
             GpuInstance&       instance = pInstance[slot];
             const GpuInstance& raw      = pRaw[srcIndex];

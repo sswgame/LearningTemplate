@@ -1,0 +1,42 @@
+{
+  "atlas": "engine/textures/test/quadrants.dds",
+  "frames": [
+    {
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.5,
+      "h": 0.5,
+      "durationMs": 250
+    },
+    {
+      "u": 0.5,
+      "v": 0.0,
+      "w": 0.5,
+      "h": 0.5,
+      "durationMs": 250
+    },
+    {
+      "u": 0.5,
+      "v": 0.5,
+      "w": 0.5,
+      "h": 0.5,
+      "durationMs": 250
+    },
+    {
+      "u": 0.0,
+      "v": 0.5,
+      "w": 0.5,
+      "h": 0.5,
+      "durationMs": 250
+    }
+  ],
+  "transformKeys": [],
+  "animations": [
+    {
+      "name": "cycle",
+      "start": 0,
+      "count": 4,
+      "loop": true
+    }
+  ]
+}

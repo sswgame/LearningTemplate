@@ -221,6 +221,8 @@ namespace sw
             return "cube";
         if ( StringUtil::equals( meshId, "Quad", true ) || StringUtil::equals( meshId, "Rect", true ) )
             return "quad";
+        if ( StringUtil::equals( meshId, "Sprite", true ) )
+            return "sprite";
         if ( StringUtil::equals( meshId, "Plane", true ) || StringUtil::equals( meshId, "Ground", true ) )
             return "plane";
         if ( StringUtil::equals( meshId, "Sphere", true ) )
@@ -245,6 +247,8 @@ namespace sw
             return createUnitCube();
         if ( canonical == "quad" )
             return createRectMesh();
+        if ( canonical == "sprite" )
+            return createSpriteQuad();
         if ( canonical == "plane" )
             return createPlane();
         if ( canonical == "sphere" )
@@ -490,6 +494,39 @@ namespace sw
             quadVertex( -0.5f, -0.5f ),
             quadVertex( 0.5f, 0.5f ),
             quadVertex( -0.5f, 0.5f ),
+        };
+        mesh->setVertices( std::move( listVert ) );
+        return mesh;
+    }
+
+    shared_ptr<Mesh> MeshUtil::createSpriteQuad()
+    {
+        auto mesh = Mesh::create();
+        // 앞면(-Z 를 향함): +Z 를 보는 카메라의 화면 오른쪽이 +X 라 u 는 +X 로 는다. 뒷면(+Z 를 향함): 그 카메라의 화면 오른쪽은 -X 라 u 는 -X 로 는다.
+        // 감김은 이 엔진의 앞면 규약((b - a) x (c - a) 가 그 면의 노멀)을 따른다. v 는 두 면 모두 위가 0 이다.
+        auto spriteVertex = []( float32 x, float32 y, float32 normalZ ) -> RHIVertex
+        {
+            const float32 u = ( normalZ < 0.0f ) ? ( x + 0.5f ) : ( 0.5f - x );
+            return RHIVertex{
+                { x, y, 0.0f },
+                { 0.0f, 0.0f, normalZ },
+                { u, 0.5f - y },
+                { 1.0f, 1.0f, 1.0f, 1.0f }
+            };
+        };
+        vector<RHIVertex> listVert = {
+            spriteVertex( -0.5f, -0.5f, -1.0f ),
+            spriteVertex( 0.5f, 0.5f, -1.0f ),
+            spriteVertex( 0.5f, -0.5f, -1.0f ),
+            spriteVertex( -0.5f, -0.5f, -1.0f ),
+            spriteVertex( -0.5f, 0.5f, -1.0f ),
+            spriteVertex( 0.5f, 0.5f, -1.0f ),
+            spriteVertex( -0.5f, -0.5f, 1.0f ),
+            spriteVertex( 0.5f, -0.5f, 1.0f ),
+            spriteVertex( 0.5f, 0.5f, 1.0f ),
+            spriteVertex( -0.5f, -0.5f, 1.0f ),
+            spriteVertex( 0.5f, 0.5f, 1.0f ),
+            spriteVertex( -0.5f, 0.5f, 1.0f ),
         };
         mesh->setVertices( std::move( listVert ) );
         return mesh;

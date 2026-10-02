@@ -2,13 +2,16 @@
 
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 
-#include "Core/String/StringBuilder.h"
+#include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "SpriteAnimator" );
+
     SpriteAnimatorComponent::SpriteAnimatorComponent()
         : _animationGraphPath{}
         , _graph{}
@@ -18,6 +21,8 @@ namespace sw
         , _frameTimer{ 0.0f }
         , _currentFrame{ 0 }
         , _totalFrames{ 1 }
+        , _firstClipFrame{ 0 }
+        , _pRangeClip{ nullptr }
         , _bRepeat{ SW_FALSE }
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }
@@ -38,8 +43,18 @@ namespace sw
 
         tryLoadAnimationGraph();
 
+        // 그래프가 없으면 클립의 이름 붙은 구간이 애니메이션 목록이다. 이름 없는 옛 클립은 프레임 전체가 애니메이션 하나다.
+        const SpriteClipAsset* pClip = findClip();
+        if ( _listAnimation.empty() && pClip != nullptr )
+        {
+            for ( const SpriteClipAnimation& animation : pClip->_listAnimation )
+                _listAnimation.push_back( animation._name );
+        }
+
         if ( _listAnimation.empty() == false )
             play( _listAnimation[0], _bRepeat == SW_TRUE );
+        else if ( pClip != nullptr && pClip->getFrameCount() > 0 )
+            play( string{}, _bRepeat == SW_TRUE );
     }
 
     void SpriteAnimatorComponent::onEndPlay()
@@ -50,23 +65,33 @@ namespace sw
 
     void SpriteAnimatorComponent::onTick( float32 deltaTime )
     {
-        if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE || _frameRate <= 0.0f || _totalFrames <= 0 )
+        if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
+            return;
+
+        // 스프라이트의 클립이 바뀌었으면(늦게 붙었다 · 경로를 고쳤다) 구간을 다시 잡는다. 반복 여부는 재생을 시작할 때 정한 그대로다.
+        if ( findClip() != _pRangeClip )
+            resolveFrameRange( false );
+        if ( _totalFrames <= 0 )
             return;
 
         _frameTimer += deltaTime;
-        const float32 frameDuration = 1.0f / _frameRate;
-        const int32   prevFrame     = _currentFrame;
-        while ( _frameTimer >= frameDuration )
+        const int32 prevFrame = _currentFrame;
+        // 프레임마다 시간이 다르다(클립의 durationMs). 한 틱에 여러 프레임을 넘길 수 있다 — 느린 프레임에서 시간이 밀리지 않게.
+        while ( _frameTimer >= getFrameDuration( _currentFrame ) )
         {
-            _frameTimer -= frameDuration;
-            _currentFrame++;
+            _frameTimer -= getFrameDuration( _currentFrame );
+            ++_currentFrame;
 
             if ( _currentFrame >= _totalFrames )
             {
                 if ( _bRepeat == SW_TRUE )
+                {
                     _currentFrame = 0;
+                }
                 else if ( tryAdvanceGraphNode() )
+                {
                     return;
+                }
                 else
                 {
                     _currentFrame = _totalFrames - 1;
@@ -80,19 +105,23 @@ namespace sw
             updateSpriteFrame();
     }
 
-    void SpriteAnimatorComponent::play( const string& animName, bool loop )
+    void SpriteAnimatorComponent::play( const string& animName )
     {
         _currentAnimation = animName;
-        _bRepeat          = loop ? SW_TRUE : SW_FALSE;
         _bPlaying         = SW_TRUE;
         _bPaused          = SW_FALSE;
         _currentFrame     = 0;
         _frameTimer       = 0.0f;
-        if ( _totalFrames <= 0 )
-            _totalFrames = 1;
         if ( _frameRate <= 0.0f )
             _frameRate = 12.0f;
+        resolveFrameRange( true );
         updateSpriteFrame();
+    }
+
+    void SpriteAnimatorComponent::play( const string& animName, bool loop )
+    {
+        play( animName );
+        _bRepeat = loop ? SW_TRUE : SW_FALSE;
     }
 
     void SpriteAnimatorComponent::stop()
@@ -115,7 +144,7 @@ namespace sw
 
     void SpriteAnimatorComponent::setFrame( int32 frame )
     {
-        _currentFrame = frame >= 0 ? frame : 0;
+        _currentFrame = MathUtil::clamp( frame, 0, MathUtil::max( _totalFrames - 1, 0 ) );
         updateSpriteFrame();
     }
 
@@ -152,11 +181,6 @@ namespace sw
     int32 SpriteAnimatorComponent::getTotalFrames() const
     {
         return _totalFrames;
-    }
-
-    void SpriteAnimatorComponent::setTotalFrames( int32 total )
-    {
-        _totalFrames = total > 0 ? total : 1;
     }
 
     int32 SpriteAnimatorComponent::getCurrentFrame() const
@@ -201,21 +225,52 @@ namespace sw
         return true;
     }
 
-    void SpriteAnimatorComponent::updateSpriteFrame()
+    SpriteComponent* SpriteAnimatorComponent::findSprite() const
     {
         GameObject* pGameObject = getOwner();
-        if ( pGameObject == nullptr )
+        return ( pGameObject != nullptr ) ? pGameObject->getComponent<SpriteComponent>() : nullptr;
+    }
+
+    const SpriteClipAsset* SpriteAnimatorComponent::findClip() const
+    {
+        const SpriteComponent* pSprite = findSprite();
+        return ( pSprite != nullptr ) ? pSprite->getClip() : nullptr;
+    }
+
+    void SpriteAnimatorComponent::resolveFrameRange( bool bTakeLoopFromClip )
+    {
+        const SpriteClipAsset* pClip = findClip();
+        _pRangeClip                  = pClip;
+        _firstClipFrame              = 0;
+        _totalFrames                 = 1;
+        if ( pClip == nullptr )
             return;
 
-        SpriteComponent* pSpriteComp = pGameObject->getComponent<SpriteComponent>();
-        if ( pSpriteComp == nullptr )
+        SpriteClipAnimation range{};
+        if ( pClip->findFrameRange( _currentAnimation, range ) == false )
+        {
+            SW_LOG_WARNING( "Sprite clip has no animation '%#' - showing frame 0", _currentAnimation );
             return;
+        }
+        _firstClipFrame = range._firstFrame;
+        _totalFrames    = MathUtil::max( range._frameCount, 1 );
+        _currentFrame   = MathUtil::clamp( _currentFrame, 0, _totalFrames - 1 );
+        if ( bTakeLoopFromClip )
+            _bRepeat = ( range._bLoop == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+    }
 
-        if ( _currentAnimation.empty() )
+    float32 SpriteAnimatorComponent::getFrameDuration( int32 frameInRange ) const
+    {
+        const float32          fallbackSeconds = 1.0f / MathUtil::max( _frameRate, 1.0f );
+        const SpriteClipAsset* pClip           = findClip();
+        return ( pClip != nullptr ) ? pClip->getFrameDurationSeconds( _firstClipFrame + frameInRange, fallbackSeconds ) : fallbackSeconds;
+    }
+
+    void SpriteAnimatorComponent::updateSpriteFrame()
+    {
+        SpriteComponent* pSprite = findSprite();
+        if ( pSprite == nullptr )
             return;
-
-        StringBuilder<constant::kMaxBuffer64> sb;
-        sb.append( _currentAnimation ).append( '-' ).append( _currentFrame );
-        pSpriteComp->setSpriteName( sb.c_str() );
+        pSprite->setClipFrame( _firstClipFrame + _currentFrame );
     }
 } // namespace sw

@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -33,7 +34,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
 namespace sw::editor
@@ -174,11 +174,9 @@ namespace sw::editor
         return true;
     }
 
-    ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )
     {
-        outData._listFrame.clear();
-        outData._listKey.clear();
-        outData._atlasPath.clear();
+        outData.clear();
 
         const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
         if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
@@ -195,18 +193,17 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         }
 
-        JsonDocument doc;
-        if ( doc.loadFile( resolved ) == false || parseSpriteClip( doc.dump( -1 ), outData ) == false )
+        if ( outData.loadFromFile( resolved ) == false )
         {
+            // 이유(경로:줄:열)는 런타임 로더가 이미 경고로 남겼다.
             outStatus = "Failed to read " + resolved;
-            SW_LOG_WARNING( "Could not read sprite clip '%#' (malformed or a newer format)", resolved );
             return ToolAssetLoadResult::Malformed;
         }
         outStatus = "Loaded " + resolved;
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool EditorToolAssetCommands::saveSpriteClip( const EditorSpriteClipData& data, string_view path )
+    bool EditorToolAssetCommands::saveSpriteClip( const SpriteClipAsset& data, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
         if ( resolved.empty() )
@@ -214,82 +211,12 @@ namespace sw::editor
             SW_LOG_ERROR( "스프라이트 클립 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
             return false;
         }
-        const string text = serializeSpriteClip( data );
-        if ( FileUtil::writeTextFile( resolved, text ) == false )
+        if ( data.saveToFile( resolved ) == false )
         {
             SW_LOG_ERROR( "스프라이트 클립 저장 실패: %#", resolved.c_str() );
             return false;
         }
         SW_LOG_INFO( "Saved %#", resolved.c_str() );
-        return true;
-    }
-
-    string EditorToolAssetCommands::serializeSpriteClip( const EditorSpriteClipData& data )
-    {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
-        root.set( "atlas" ).setString( data._atlasPath );
-
-        const JsonValue framesVal = root.set( "frames" );
-        framesVal.setArray();
-        for ( const EditorSpriteClipFrame& frame : data._listFrame )
-        {
-            const JsonValue frameJson = framesVal.pushBack();
-            frameJson.setObject();
-            frameJson.set( "u" ).setFloat( static_cast<float64>( frame._u ) );
-            frameJson.set( "v" ).setFloat( static_cast<float64>( frame._v ) );
-            frameJson.set( "w" ).setFloat( static_cast<float64>( frame._w ) );
-            frameJson.set( "h" ).setFloat( static_cast<float64>( frame._h ) );
-            frameJson.set( "durationMs" ).setInt( frame._durationMs );
-        }
-
-        const JsonValue keysVal = root.set( "transformKeys" );
-        keysVal.setArray();
-        for ( const EditorSpriteClipKey& key : data._listKey )
-        {
-            const JsonValue keyJson = keysVal.pushBack();
-            keyJson.setObject();
-            keyJson.set( "time" ).setFloat( static_cast<float64>( key._time ) );
-            keyJson.set( "x" ).setFloat( static_cast<float64>( key._position._x ) );
-            keyJson.set( "y" ).setFloat( static_cast<float64>( key._position._y ) );
-            keyJson.set( "angleDeg" ).setFloat( static_cast<float64>( key._angleDeg ) );
-        }
-
-        return doc.dump( 2 );
-    }
-
-    bool EditorToolAssetCommands::parseSpriteClip( string_view jsonView, EditorSpriteClipData& outData )
-    {
-        outData._listFrame.clear();
-        outData._listKey.clear();
-
-        JsonDocument doc;
-        if ( doc.parse( jsonView ) == false )
-            return false;
-
-        const JsonValue root = doc.getRoot();
-        outData._atlasPath   = root.get( "atlas" ).asString();
-
-        forEachObjectInArray( root, "frames", [&outData]( const JsonValue& frameJson, size_t /*frameIndex*/ )
-        {
-            EditorSpriteClipFrame frame{};
-            frame._u          = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
-            frame._v          = static_cast<float32>( frameJson.get( "v" ).asFloat( 0.0 ) );
-            frame._w          = static_cast<float32>( frameJson.get( "w" ).asFloat( 0.0 ) );
-            frame._h          = static_cast<float32>( frameJson.get( "h" ).asFloat( 0.0 ) );
-            frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
-            outData._listFrame.push_back( frame );
-        } );
-
-        forEachObjectInArray( root, "transformKeys", [&outData]( const JsonValue& keyJson, size_t /*keyIndex*/ )
-        {
-            EditorSpriteClipKey key{};
-            key._time        = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
-            key._position._x = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
-            key._position._y = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
-            key._angleDeg    = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
-            outData._listKey.push_back( key );
-        } );
         return true;
     }
 

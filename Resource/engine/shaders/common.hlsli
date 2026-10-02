@@ -9,7 +9,7 @@
  * Vulkan 은 DXC 시프트(-fvk-*-shift)가, OpenGL 은 아래 매크로의 [[vk::binding]] 이 정한다.
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
- *   SW_DECLARE_STRUCTURED_BUFFER( GpuInstance, g_Instances, 0 );              // 컴퓨트 읽기 t0
+ *   SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
  *   SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
  * 씬 메시 머티리얼은 binding.hlsli 의 SW_MATERIAL_BEGIN/END + SW_MATERIAL( index ) 를 쓴다 (GPUScene 버퍼).
  */

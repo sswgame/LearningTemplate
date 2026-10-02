@@ -227,8 +227,8 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 ### GPUScene 인스턴스드 드로우 (언리얼 방식)
 
-메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData`, C++ `GpuInstance` 와 레이아웃 일치)
-에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
+메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData` — 정의는 `instancedata.hlsli` 하나로 그래픽스와 컴퓨트
+셋이 함께 쓴다, C++ `GpuInstance` 와 112 바이트 레이아웃 일치)에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
 인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `SwLoadInstance( input.instanceSlot )`
 를 불러 월드 행렬과 `materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼
 버퍼 `g_SwMaterials`(t9) 의 원소를 읽는다. 배치 시작을 루트 상수(`g_InstanceBase`)로 넘기던 것은 없어졌다.
@@ -387,6 +387,13 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **인스턴스 원소 레이아웃 테스트** — `g_SwInstances`(t4)는 C++ 이 쓰고 셰이더가 읽는 유일한 구조체인데 둘을 대조하는 것이
   없었다. `ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의 stride·필드 오프셋을
   `GpuInstance` 와 대조한다 — 오프셋을 일부러 4 틀리게 넣어 실패 메시지(파일 이름 + 숫자)까지 확인했다.
+  2026-10-03 부터는 컴퓨트 셋의 이름(`g_Instances` · `g_InstancesRW`)도 같은 표로 대조한다(예전에는 셋이 구조체를 베껴 들었고 검사가 보지 않았다).
+- **스프라이트 인스턴스 칸** — `GpuInstance::_sprite`(`GpuSpriteInstanceData`: UV 사각형 꼭짓점 둘 unorm16 + 색 RGBA8, 12 바이트)는
+  머티리얼 인스턴스가 아니라 인스턴스에 싣는 프레임 · 색이다(언리얼 Custom Primitive Data). 배치 키(머티리얼 인스턴스)를 건드리지 않아
+  같은 텍스처의 스프라이트는 프레임 · 색이 달라도 한 드로우이고, 프레임만 넘긴 프레임은 그 인스턴스 한 칸만 더티로 올린다.
+  읽는 셰이더는 `sprite2d.hlsl` 하나(`SwInstanceUvRectOf` · `SwInstanceTintOf`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)
+  이고 UV 는 메시의 것이다 — 예전에는 한 면짜리 3D 쿼드에 UV 를 위치에서 지어내 보이는 쪽에서 좌우가 뒤집혔고 2D 카메라(+Z 를 봄)에서는
+  컬링으로 사라졌다. `RenderPassGpuTest.SpriteFramesAndTintsArePerInstance` 가 네 백엔드에서 픽셀로 본다.
 
 OpenGL 이 상하 반전으로 그리고 있었다 (2026-09-08):
 - `glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE )` 이 **한 번도 불리지 않았다.** 호출부가 `#ifdef GL_CLIP_CONTROL` 로 감싸여

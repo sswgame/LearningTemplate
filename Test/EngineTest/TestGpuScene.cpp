@@ -28,13 +28,17 @@
 #include "Engine/Graphics/Renderer/Scene/GpuInstanceRing.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
@@ -1981,4 +1985,158 @@ SW_TEST_CASE( GpuSceneTest, IncrementalTransparentTailMatchesFreshBuild )
 
     runScene( false );
     runScene( true );
+}
+
+namespace
+{
+    /** @brief 스프라이트 시험이 쓰는 네 칸 텍스처입니다(Scripts/generate/GenerateSpriteTextures.py). */
+    constexpr const utf8* kSpriteQuadrantTexture = "engine/textures/test/quadrants.dds";
+
+    /** @brief 경계 중심의 X 로 인스턴스를 찾습니다(스프라이트 시험은 X 로 늘어놓는다). 없으면 nullptr 입니다. */
+    const sw::GpuInstance* findInstanceAtX( const sw::vector<sw::GpuInstance>& listInstance, float32 x )
+    {
+        for ( const sw::GpuInstance& instance : listInstance )
+        {
+            if ( sw::MathUtil::abs( instance._boundsCenter._x - x ) < 1e-3f )
+                return &instance;
+        }
+        return nullptr;
+    }
+
+    /** @brief 같은 텍스처의 스프라이트 하나를 X 자리에 만듭니다. */
+    sw::SpriteComponent* spawnQuadrantSprite( sw::GameObjectManager& objects, const utf8* pName, float32 x )
+    {
+        sw::GameObject* pObj = objects.createGameObject( sw::hashed_string( pName ) );
+        if ( pObj == nullptr )
+            return nullptr;
+        sw::SpriteComponent* pSprite = pObj->addComponent<sw::SpriteComponent>();
+        if ( pSprite == nullptr )
+            return nullptr;
+        pSprite->setTextureName( kSpriteQuadrantTexture );
+        pSprite->setLocalPosition( sw::float3{ x, 0.0f, 0.0f } );
+        pSprite->resolveRenderAssets();
+        return pSprite;
+    }
+} // namespace
+
+/**
+ * @brief [GpuSceneTest] 스프라이트의 프레임 · 색은 GPU 인스턴스에 실리고 배치를 가르지 않는다 — 프레임만 넘기면 그 인스턴스 하나만 더티다
+ * @details 프레임 · 색을 머티리얼 인스턴스로 바꾸면(배치 키) 스프라이트마다 배치가 하나씩 생기고 프레임마다 다시 나눠야 했다. 지금은 `GpuInstance::_sprite`
+ *          라서 같은 텍스처의 스프라이트 셋은 프레임 · 색이 달라도 반투명 배치 하나이고, 프레임을 넘긴 프레임은 배치를 다시 짓지 않고 그 인스턴스 한
+ *          칸만 더티 구간으로 올린다(`DrawCandidate::operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않는다).
+ */
+SW_TEST_CASE( GpuSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingTheBatch )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::Scene scene( "GpuSceneSprites" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::SpriteComponent* pRed     = spawnQuadrantSprite( *objects, "Red", -1.0f );
+    sw::SpriteComponent* pMagenta = spawnQuadrantSprite( *objects, "Magenta", 0.0f );
+    sw::SpriteComponent* pGhost   = spawnQuadrantSprite( *objects, "Ghost", 1.0f );
+    SW_ASSERT_NOT_NULL( pRed );
+    SW_ASSERT_NOT_NULL( pMagenta );
+    SW_ASSERT_NOT_NULL( pGhost );
+    pRed->setUvRect( sw::float4{ 0.0f, 0.0f, 0.5f, 0.5f } );
+    pMagenta->setUvRect( sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f } );
+    pMagenta->setTint( sw::float4{ 1.0f, 0.0f, 1.0f, 1.0f } );
+    pGhost->setTint( sw::float4{ 1.0f, 1.0f, 1.0f, 0.5f } );
+    objects->flushSceneTransforms();
+
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, 5.0f };
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot first;
+    builder.exportCpuSnapshot( first );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( first.getInstances().size() ) );
+    // 같은 텍스처(머티리얼 인스턴스)라 프레임 · 색이 달라도 배치 하나다. (디바이스 없는 시험이라 머티리얼 파일이 아직 안 읽혀 블렌드는 기본값이다 —
+    // 반투명 배치인지는 RenderPassGpuTest.SpriteFramesAndTintsArePerInstance 가 실제 디바이스에서 본다.)
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( first._listAllBatch.size() ) );
+    SW_EXPECT_EQUAL( 3u, first._listAllBatch[0]._instanceCount );
+
+    const sw::SpriteComponent* arrSprite[] = { pRed, pMagenta, pGhost };
+    const float32              arrX[]      = { -1.0f, 0.0f, 1.0f };
+    for ( uint32 spriteIndex = 0; spriteIndex < 3; ++spriteIndex )
+    {
+        const sw::GpuInstance* pInstance = findInstanceAtX( first.getInstances(), arrX[spriteIndex] );
+        SW_ASSERT_NOT_NULL( pInstance );
+        SW_EXPECT_TRUE( pInstance->_sprite == arrSprite[spriteIndex]->getSpriteInstanceData() );
+    }
+
+    // 프레임만 넘긴다 — 배치는 그대로, 더티는 그 인스턴스 한 칸.
+    pMagenta->setUvRect( sw::float4{ 0.0f, 0.5f, 0.5f, 0.5f } );
+    builder.buildFromScene( &scene, cameraPos );
+    sw::GpuSceneSnapshot flipped;
+    builder.exportCpuSnapshot( flipped );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listAllBatch.size() ) );
+    SW_EXPECT_TRUE( flipped._bAllInstancesDirty == SW_FALSE );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listDirtyInstanceRun.size() ) );
+    SW_EXPECT_EQUAL( 1u, flipped._listDirtyInstanceRun[0]._count );
+    const uint32 dirtySlot = flipped._listDirtyInstanceRun[0]._start;
+    SW_ASSERT_TRUE( dirtySlot < flipped.getInstances().size() );
+    SW_EXPECT_TRUE( flipped.getInstances()[dirtySlot]._sprite == pMagenta->getSpriteInstanceData() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, flipped.getInstances()[dirtySlot]._sprite.getUvRect()._x, 1e-4f );
+}
+
+/**
+ * @brief [GpuSceneTest] 스프라이트 인스턴스 배치(월드 공간 UI)의 항목은 프레임 · 색을 싣고, 숨긴 항목은 빠지며, 같은 텍스처의 스프라이트 컴포넌트와 한 배치다
+ * @details HP 바 · 데미지 숫자는 저장되는 컴포넌트를 만들지 않고 `SpriteInstanceBatch` 로 그린다. 항목 수는 만들 때 정하고 쓰지 않는 자리는 숨긴다 —
+ *          숨긴 항목이 실리면 데미지 숫자의 남는 자릿수가 이전 값으로 보인다. 머티리얼 인스턴스는 스프라이트 컴포넌트와 같은 표에서 받아 한 배치로 묶인다.
+ */
+SW_TEST_CASE( GpuSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::Scene scene( "GpuSceneSpriteBatch" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+    sw::SpriteComponent* pSprite = spawnQuadrantSprite( *objects, "WorldSprite", 3.0f );
+    SW_ASSERT_NOT_NULL( pSprite );
+    objects->flushSceneTransforms();
+
+    sw::SpriteInstanceBatch batch;
+    SW_ASSERT_TRUE( batch.initialize( *objects, kSpriteQuadrantTexture, 3 ) );
+    SW_EXPECT_EQUAL( 4u, objects->getPrimitiveRegistry().getSlotCount() );
+    // 처음에는 모두 숨겨져 있다.
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, 5.0f };
+    builder.buildFromScene( &scene, cameraPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( builder.getInstances().size() ) );
+
+    const sw::float4 green{ 0.0f, 1.0f, 0.0f, 1.0f };
+    const sw::float4 frameTopRight{ 0.5f, 0.0f, 0.5f, 0.5f };
+    batch.setEntry( 0, sw::SpriteInstanceBatch::makeQuadWorld( sw::float3{ -1.0f, 0.0f, 0.0f }, 0.5f, 0.25f ), frameTopRight, green );
+    batch.setEntry( 1, sw::SpriteInstanceBatch::makeQuadWorld( sw::float3{ 1.0f, 0.0f, 0.0f }, 0.5f, 0.25f ), sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f },
+                    sw::float4{ 1.0f, 1.0f, 1.0f, 0.25f } );
+    builder.buildFromScene( &scene, cameraPos );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( builder.getInstances().size() ) ); // 스프라이트 컴포넌트 + 보인 항목 둘
+    // 같은 텍스처 인스턴스 · 같은 사각형 · 같은 머티리얼 — 스프라이트 컴포넌트와 한 배치다.
+    sw::GpuSceneSnapshot snapshot;
+    builder.exportCpuSnapshot( snapshot );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( snapshot._listAllBatch.size() ) );
+    SW_EXPECT_EQUAL( 3u, snapshot._listAllBatch[0]._instanceCount );
+
+    const sw::GpuInstance* pLeft = findInstanceAtX( builder.getInstances(), -1.0f );
+    SW_ASSERT_NOT_NULL( pLeft );
+    SW_EXPECT_TRUE( pLeft->_sprite == sw::GpuSpriteInstanceData::make( frameTopRight, green ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pLeft->_world.getScale()._x, 1e-5f ); // 사각형 메시의 한 변이 1 이라 스케일이 곧 폭
+    const sw::GpuInstance* pRight = findInstanceAtX( builder.getInstances(), 1.0f );
+    SW_ASSERT_NOT_NULL( pRight );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, pRight->_sprite.getTint()._w, 1.0f / 255.0f );
+
+    // 항목 하나를 숨기면 빠지고, 배치 전체를 숨기면 스프라이트 컴포넌트만 남는다.
+    batch.setEntryVisible( 1, false );
+    builder.buildFromScene( &scene, cameraPos );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( builder.getInstances().size() ) );
+    SW_EXPECT_TRUE( findInstanceAtX( builder.getInstances(), 1.0f ) == nullptr );
+    batch.setVisible( false );
+    builder.buildFromScene( &scene, cameraPos );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( builder.getInstances().size() ) );
+
+    // 놓으면 등록부에서 빠진다.
+    batch.shutdown();
+    SW_EXPECT_FALSE( batch.isInitialized() );
+    SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
 }

@@ -23,16 +23,8 @@
 #define SW_SORT_MAX_ELEMENTS 512
 #define SW_SORT_THREADS      256 // = SW_SORT_MAX_ELEMENTS / 2 (스레드마다 비교·교환 한 쌍)
 
-struct GpuInstance
-{
-	float4x4 world;
-	float3	 boundsCenter;
-	float	 boundsRadius;
-	uint	 meshBatchIndex;
-	uint	 materialIndex;
-	uint	 blendMode;
-	uint	 spinSeed;
-};
+// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다. 예전에는 여기 베낀 구조체가 있었고 계약 검사가 보지 않았다.
+#include "instancedata.hlsli"
 
 // C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertex 는 정점 풀 시작,
 // startInstance 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
@@ -64,7 +56,7 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 	uint2  g_SortPad;
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( GpuInstance, g_Instances, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );

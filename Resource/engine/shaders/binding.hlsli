@@ -19,6 +19,7 @@
 #define SW_ENGINE_BINDING_HLSLI
 
 #include "common.hlsli"
+#include "instancedata.hlsli"
 
 static const uint SW_INVALID_INDEX = 0xFFFFFFFFu;
 
@@ -81,20 +82,9 @@ SW_ROOT_CONSTANTS_END
 #endif
 
 // ------------------------------------------------------------------------------
-// 1-1) GPUScene 인스턴스 (per-instance world/material). C++ GpuInstance 와 레이아웃 일치.
+// 1-1) GPUScene 인스턴스 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instancedata.hlsli 하나다(컴퓨트도 그것을 쓴다).
 //      네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 건다 (레지스트리 이름 "SwInstances").
 // ------------------------------------------------------------------------------
-struct SwInstanceData
-{
-	float4x4 world;
-	float3   boundsCenter;
-	float    boundsRadius;
-	uint     meshBatchIndex;
-	uint     materialIndex;
-	uint     blendMode;
-	uint     pad;
-};
-
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
@@ -289,7 +279,11 @@ SwInstanceData SwLoadInstance( uint instanceSlot )
 	inst.meshBatchIndex = 0;
 	inst.materialIndex  = 0;
 	inst.blendMode      = 0;
-	inst.pad            = 0;
+	inst.spinSeed       = 0;
+	inst.uvStart        = 0u;          // (0, 0)
+	inst.uvEnd          = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
+	inst.tint           = 0xFFFFFFFFu; // 흰색 불투명
+	inst.reserved       = 0u;
 	return inst;
 }
 

@@ -11,6 +11,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -24,7 +25,11 @@ namespace sw
     /// @brief 배치에 셰이더 퍼뮤테이션이 없음을 뜻합니다. 그러면 패스가 자기 PSO 로 그립니다(GpuMeshBatch::_shaderPermutation).
     inline constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
-    /// @brief GPU 인스턴스 하나입니다(월드 행렬 · 바운드 · 배치 인덱스 · 머티리얼 원소 인덱스 · 블렌드 · 회전 시드).
+    /**
+     * @brief GPU 인스턴스 하나입니다(월드 행렬 · 바운드 · 배치 인덱스 · 머티리얼 원소 인덱스 · 블렌드 · 회전 시드 · 스프라이트 프레임과 색).
+     * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `SwInstanceData` 하나이고 그래픽스 · 컴퓨트가 함께 씁니다. 필드를
+     *          고치면 그 파일과 ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct 의 표를 함께 고칩니다(구운 바이너리로 대조합니다).
+     */
     struct GpuInstance
     {
         float4x4 _world{};
@@ -40,7 +45,15 @@ namespace sw
          *          CPU 가 매 프레임 회전을 계산해 올리던 것을 GPU 로 옮기는 통로입니다.
          */
         uint32 _spinSeed{ 0 };
+        /**
+         * @brief 스프라이트 프레임(UV 사각형)과 색입니다. 지금 읽는 셰이더는 sprite2d.hlsl 하나입니다.
+         * @details 머티리얼 인스턴스가 아니라 여기 싣는 이유는 `GpuSpriteInstanceData` 주석에 있습니다. 배치 키(머티리얼 인스턴스)를 건드리지
+         *          않아 같은 텍스처의 스프라이트가 프레임 · 색이 달라도 한 배치이고, 바뀌면 그 인스턴스만 더티 구간으로 올라갑니다.
+         */
+        GpuSpriteInstanceData _sprite{};
+        uint32                _reserved{ 0 }; ///< 16 바이트 정렬을 채웁니다(112 바이트). 셰이더의 `reserved` 입니다
     };
+    static_assert( sizeof( GpuInstance ) == 112, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시 · 머티리얼 · 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GpuMeshBatch

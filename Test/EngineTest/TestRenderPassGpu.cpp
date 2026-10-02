@@ -39,6 +39,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -3860,4 +3861,186 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the deferred pipeline for the normal test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 한 배치로 그린 스프라이트 여섯이 인스턴스마다 다른 아틀라스 프레임과 색을 보이고, 2D 카메라에서 텍스처가 뒤집히지 않는다 (4 백엔드)
+ * @details 네 칸 텍스처(왼위 빨강 · 오위 초록 · 왼아래 파랑 · 오아래 흰색)를 나눠 쓰는 스프라이트들이 각자 다른 칸(UV 사각형)과 색을 고른다.
+ *          둘은 머티리얼 인스턴스가 아니라 GPU 인스턴스(`instancedata.hlsli` 의 uvStart · uvEnd · tint)에 실리므로 모두 **반투명 배치 하나**다.
+ *          인스턴스 칸을 셰이더가 읽지 않으면 모두 텍스처 전체를 보여 가운데가 네 칸의 경계(섞인 색)이고, 색을 곱하지 않으면 자홍이 흰색 ·
+ *          반투명 파랑이 불투명 파랑이 된다. 마지막 하나는 텍스처 전체를 보이는데, 2D 카메라(+Z 를 봄, 화면 오른쪽 = +X)에서 왼쪽 위가 빨강 ·
+ *          오른쪽 위가 초록이어야 한다 — 예전 스프라이트는 이 카메라에서 후면 컬링으로 사라졌고, 보이는 쪽에서는 좌우가 뒤집혔다.
+ *          가운데 줄을 훑어 그려진 구간 여섯을 찾고 구간 가운데의 평균 색을 본다(톤매핑을 지나므로 우세 채널로 본다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kQuadrantTexture = "engine/textures/test/quadrants.dds";
+    struct SpriteCase
+    {
+        const utf8* _pName;
+        float32     _x;
+        sw::float4  _uvRect;
+        sw::float4  _tint;
+    };
+    const SpriteCase kArrCase[] = {
+        {     "Red", -1.25f, sw::float4{ 0.0f, 0.0f, 0.5f, 0.5f }, sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f }},
+        {   "Green", -0.75f, sw::float4{ 0.5f, 0.0f, 0.5f, 0.5f }, sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f }},
+        { "Magenta", -0.25f, sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f }, sw::float4{ 1.0f, 0.0f, 1.0f, 1.0f }},
+        {    "Blue",  0.25f, sw::float4{ 0.0f, 0.5f, 0.5f, 0.5f }, sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f }},
+        {"HalfBlue",  0.75f, sw::float4{ 0.0f, 0.5f, 0.5f, 0.5f }, sw::float4{ 1.0f, 1.0f, 1.0f, 0.4f }},
+        {    "Full",  1.25f, sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f }, sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f }},
+    };
+    constexpr uint32 kSpriteCount = 6;
+    constexpr int32  kWindow      = 1; // 표본 자리에서 ±1 픽셀 창의 평균
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+        {
+            sw::Scene scene( "SpriteInstanceScene" );
+            // 2D 카메라 — +Z 를 보므로 화면 오른쪽이 +X, 위가 +Y 다. 원점이 화면 가운데다.
+            sw::GameObject*      pCameraObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "SpriteCamera" ) );
+            sw::CameraComponent* pCamera       = ( pCameraObject != nullptr ) ? pCameraObject->addComponent<sw::CameraComponent>() : nullptr;
+            bOk                                = bOk && pCamera != nullptr;
+            if ( bOk )
+            {
+                pCamera->setRole( sw::CameraRole::Game );
+                pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
+                bOk = scene.ensureDefaultCameras();
+            }
+            for ( const SpriteCase& spriteCase : kArrCase )
+            {
+                if ( bOk == false )
+                    break;
+                sw::GameObject*      pObj    = scene.getObjectManager()->createGameObject( sw::hashed_string( spriteCase._pName ) );
+                sw::SpriteComponent* pSprite = ( pObj != nullptr ) ? pObj->addComponent<sw::SpriteComponent>() : nullptr;
+                bOk                          = pSprite != nullptr;
+                if ( bOk == false )
+                    break;
+                pSprite->setTextureName( kQuadrantTexture );
+                pSprite->setLocalPosition( sw::float3{ spriteCase._x, 0.0f, 0.0f } );
+                pSprite->setLocalScale( sw::float3{ 0.4f, 0.4f, 1.0f } );
+                pSprite->setUvRect( spriteCase._uvRect );
+                pSprite->setTint( spriteCase._tint );
+                pSprite->resolveRenderAssets();
+            }
+            if ( bOk )
+            {
+                scene.getObjectManager()->flushSceneTransforms();
+                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                // 첫 프레임에는 GpuScene 업로드 · 텍스처가 아직이라 몇 장 돌린다.
+                constexpr uint32 kWarmupFrameCount = 4;
+                for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+                {
+                    device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                    bOk = renderer.execute( device.get(), &scene );
+                    device->endFrame( false, false );
+                    device->waitIdle();
+                }
+                SW_EXPECT_TRUE_MSG( bOk, ( label + "프레임 실행 실패" ).c_str() );
+            }
+
+            if ( bOk )
+            {
+                // 여섯이 반투명 배치 하나다 — 프레임 · 색이 배치를 가르지 않는다.
+                const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getTransparentBatches();
+                SW_EXPECT_TRUE_MSG( batches.size() == 1u && batches[0]._instanceCount == kSpriteCount,
+                                    ( label + "스프라이트 여섯이 반투명 배치 하나가 아니다 (배치 " + sw::to_string( batches.size() ) + ")" ).c_str() );
+
+                test::RHITestImage image;
+                SW_ASSERT_TRUE_MSG( image.readTransient( renderer, "SceneColor" ), ( label + "SceneColor 를 되읽지 못했다" ).c_str() );
+                const int32 row = static_cast<int32>( image.getHeight() / 2 );
+                struct Span
+                {
+                    int32 _start;
+                    int32 _end;
+                };
+                sw::vector<Span> listSpan;
+                bool             bInside = false;
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
+                {
+                    const bool bDrawn = test::RHITestImage::isDefaultClearBackground( image.getPixel( x, static_cast<uint32>( row ) ) ) == false;
+                    if ( bDrawn && bInside == false )
+                        listSpan.push_back( Span{ static_cast<int32>( x ), static_cast<int32>( x ) } );
+                    if ( bDrawn )
+                        listSpan.back()._end = static_cast<int32>( x );
+                    bInside = bDrawn;
+                }
+                SW_EXPECT_TRUE_MSG( listSpan.size() == kSpriteCount,
+                                    ( label + "가운데 줄에서 그려진 구간이 " + sw::to_string( listSpan.size() ) + " 개다 (기대 6)" ).c_str() );
+                if ( listSpan.size() == kSpriteCount )
+                {
+                    // (x, y) 둘레 창의 평균 색입니다.
+                    const auto meanAround = [&image]( int32 x, int32 y )
+                    {
+                        sw::float3 sum{};
+                        float32    count{ 0.0f };
+                        for ( int32 offsetY = -kWindow; offsetY <= kWindow; ++offsetY )
+                        {
+                            for ( int32 offsetX = -kWindow; offsetX <= kWindow; ++offsetX )
+                            {
+                                const test::Rgba8 pixel = image.getPixel( static_cast<uint32>( x + offsetX ), static_cast<uint32>( y + offsetY ) );
+                                sum += sw::float3{ static_cast<float32>( pixel._r ), static_cast<float32>( pixel._g ), static_cast<float32>( pixel._b ) };
+                                count += 1.0f;
+                            }
+                        }
+                        return sum * ( 1.0f / count );
+                    };
+                    const auto describe = []( const sw::float3& color )
+                    {
+                        return "(" + sw::to_string( static_cast<int32>( color._x ) ) + ", " + sw::to_string( static_cast<int32>( color._y ) ) + ", " +
+                               sw::to_string( static_cast<int32>( color._z ) ) + ")";
+                    };
+                    // 이 카메라는 화면 오른쪽이 +X 라 구간 순서가 곧 월드 X 순서다.
+                    sw::float3 arrMean[kSpriteCount] = {};
+                    for ( uint32 spanIndex = 0; spanIndex < kSpriteCount; ++spanIndex )
+                        arrMean[spanIndex] = meanAround( ( listSpan[spanIndex]._start + listSpan[spanIndex]._end ) / 2, row );
+
+                    // 우세 채널로 본다: 빨강 · 초록 · 자홍(빨강 + 파랑, 초록 없음) · 파랑. 경계(섞인 색)라면 두 채널 이상이 함께 높다.
+                    constexpr float32 kHigh = 120.0f;
+                    constexpr float32 kLow  = 60.0f;
+                    const sw::float3& red   = arrMean[0];
+                    const sw::float3& green = arrMean[1];
+                    const sw::float3& mag   = arrMean[2];
+                    const sw::float3& blue  = arrMean[3];
+                    const sw::float3& half  = arrMean[4];
+                    SW_EXPECT_TRUE_MSG( red._x > kHigh && red._y < kLow && red._z < kLow, ( label + "왼위 칸이 빨강이 아니다 " + describe( red ) ).c_str() );
+                    SW_EXPECT_TRUE_MSG( green._y > kHigh && green._x < kLow && green._z < kLow, ( label + "오위 칸이 초록이 아니다 " + describe( green ) ).c_str() );
+                    SW_EXPECT_TRUE_MSG( mag._x > kHigh && mag._z > kHigh && mag._y < kLow,
+                                        ( label + "흰 칸 × 자홍 색이 자홍이 아니다(색을 곱하지 않았다) " + describe( mag ) ).c_str() );
+                    SW_EXPECT_TRUE_MSG( blue._z > kHigh && blue._x < kLow && blue._y < kLow, ( label + "왼아래 칸이 파랑이 아니다 " + describe( blue ) ).c_str() );
+                    // 알파 0.4 는 같은 파랑보다 확실히 어둡고(배경과 섞였다) 여전히 파랑이 우세하다.
+                    SW_EXPECT_TRUE_MSG( half._z < blue._z * 0.85f && half._z > half._x + 20.0f && half._z > half._y + 20.0f,
+                                        ( label + "알파 0.4 파랑 " + describe( half ) + " 이 불투명 파랑 " + describe( blue ) + " 과 구별되지 않는다" ).c_str() );
+
+                    // 텍스처 전체를 보이는 스프라이트: 화면에서 왼쪽 위가 빨강, 오른쪽 위가 초록, 왼쪽 아래가 파랑(뒤집히지 않았다).
+                    const Span&      full       = listSpan[5];
+                    const int32      centerX    = ( full._start + full._end ) / 2;
+                    const int32      quarter    = ( full._end - full._start + 1 ) / 4; // 정사각형이라 위아래 사분 거리도 같다
+                    const sw::float3 topLeft    = meanAround( centerX - quarter, row - quarter );
+                    const sw::float3 topRight   = meanAround( centerX + quarter, row - quarter );
+                    const sw::float3 bottomLeft = meanAround( centerX - quarter, row + quarter );
+                    SW_EXPECT_TRUE_MSG( topLeft._x > kHigh && topLeft._y < kLow && topRight._y > kHigh && topRight._x < kLow && bottomLeft._z > kHigh,
+                                        ( label + "텍스처가 뒤집혔다 — 왼위 " + describe( topLeft ) + " 오위 " + describe( topRight ) + " 왼아래 " + describe( bottomLeft ) +
+                                          " (기대: 빨강 · 초록 · 파랑)" )
+                                            .c_str() );
+                    SW_LOG_INFO( "%#sprite colors red %# green %# magenta %# blue %# alpha0.4 %# | full: top-left %# top-right %# bottom-left %#", label, describe( red ),
+                                 describe( green ), describe( mag ), describe( blue ), describe( half ), describe( topLeft ), describe( topRight ), describe( bottomLeft ) );
+                }
+            }
+        }
+        renderer.shutdown();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the per-instance sprite test" );
 }

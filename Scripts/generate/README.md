@@ -14,6 +14,7 @@
 | `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
 | `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |
 | `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
+| `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 데미지 숫자 글리프 아틀라스 · 네 칸 시험 텍스처 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/ui/digits.*` · `Resource/engine/textures/test/quadrants.*` |
 
 `Generate*` 넷은 2026-09-30 까지 `setup/` 에 있었다. `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은
 구성 시점이든 빌드 시점이든 여기다.

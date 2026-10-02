@@ -50,6 +50,23 @@ namespace sw
         markDirty( index );
     }
 
+    void MeshInstanceBatch::setSprite( uint32 index, const GpuSpriteInstanceData& sprite )
+    {
+        if ( index >= _listEntry.size() || _listEntry[index]._sprite == sprite )
+            return;
+        _listEntry[index]._sprite = sprite;
+        markDirty( index );
+    }
+
+    void MeshInstanceBatch::setEntryVisible( uint32 index, bool bVisible )
+    {
+        const uint8 newValue = bVisible ? SW_TRUE : SW_FALSE;
+        if ( index >= _listEntry.size() || _listEntry[index]._bVisible == newValue )
+            return;
+        _listEntry[index]._bVisible = newValue;
+        markDirty( index );
+    }
+
     void MeshInstanceBatch::setVisible( bool bVisible )
     {
         const uint8 newValue = bVisible ? SW_TRUE : SW_FALSE;
