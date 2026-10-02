@@ -32,11 +32,6 @@ namespace sw
         MeshComponent::onEndPlay();
     }
 
-    void SpriteComponent::onTick( float32 deltaTime )
-    {
-        MeshComponent::onTick( deltaTime );
-    }
-
     bool SpriteComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const
     {
         // 스프라이트는 XY 평면의 단위 사각형이다. Z 스케일은 두께가 없으니 보지 않는다.

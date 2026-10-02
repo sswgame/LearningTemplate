@@ -9,6 +9,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "Component" );
+
     Component::Component()
         : _pOwner{ nullptr }
         , _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
@@ -87,6 +89,17 @@ namespace sw
     {
         if ( subTickId == 0 )
             return {};
+        if ( isValidTickGroup( group ) == false )
+        {
+            SW_LOG_WARNING( "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickId, static_cast<uint32>( group ) );
+            return {};
+        }
+        if ( priority > kMaxTickPriority )
+        {
+            SW_LOG_WARNING( "Sub-tick %# priority %# is above %# - clamped (a priority must not cross into the next phase)", subTickId,
+                            static_cast<uint32>( priority ), static_cast<uint32>( kMaxTickPriority ) );
+            priority = kMaxTickPriority;
+        }
 
         if ( subTickId < 64 )
             _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_relaxed );
@@ -229,6 +242,12 @@ namespace sw
         // 같은 그룹이면 틱 항목을 다시 짓게 하지 않는다(기본 그룹을 onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿이다).
         if ( _tickGroup == group )
             return;
+        // 없는 그룹을 받아 두면 등록부가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
+        if ( isValidTickGroup( group ) == false )
+        {
+            SW_LOG_WARNING( "Tick group %# does not exist - the component keeps its current group", static_cast<uint32>( group ) );
+            return;
+        }
         _tickGroup = group;
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();

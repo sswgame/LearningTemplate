@@ -31,9 +31,15 @@ namespace sw
         PostUpdate,    ///< 렌더 직전 등 최종 단계
     };
 
+    /** @brief `TickGroup` 이 유효한 값(PrePhysics..PostUpdate)인지입니다. 정수에서 캐스트한 값은 넘을 수 있습니다. */
+    constexpr bool isValidTickGroup( TickGroup group )
+    {
+        return static_cast<uint32>( group ) <= static_cast<uint32>( TickGroup::PostUpdate );
+    }
+
     /**
      * @enum TickPhase
-     * @brief 같은 TickGroup 안의 세부 실행 단계입니다.
+     * @brief 같은 TickGroup 안의 세부 실행 단계입니다. 단계는 64 칸 간격이고, 서브틱 우선순위(0..`kMaxTickPriority`)가 그 칸 안의 자리입니다.
      */
     enum class TickPhase : uint8
     {
@@ -42,6 +48,9 @@ namespace sw
         Late     = 128, ///< 후행 연산 (래그돌 합성, 소켓 어태치먼트)
         Finalize = 192  ///< 최종 연산 (GPU 버퍼 업로드, LOD 계산)
     };
+
+    /** @brief 서브틱 우선순위의 상한입니다. 넘으면 이 값으로 묶습니다 — 단계(64 칸)를 넘어 다음 단계로 가지 않습니다. */
+    inline constexpr uint8 kMaxTickPriority = 63;
 
     /**
      * @struct SubTickHandle
@@ -184,11 +193,18 @@ namespace sw
         /** @brief 프로퍼티가 바뀌었을 때 불리는 콜백입니다. */
         virtual void onPropertyChanged( hashed_string propertyName );
 
-        /** @brief 서브틱을 등록합니다(TickGroup · Phase · Priority 지정). */
+        /**
+         * @brief 서브틱을 등록합니다(TickGroup · Phase · Priority 지정).
+         * @details 우선순위는 단계 안의 자리(0..`kMaxTickPriority`)이고, 넘으면 묶습니다(경고). 예전에는 `& 63` 으로 감겨 70 이 6 이 되어
+         *          10 보다 앞섰습니다. 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을 줍니다(예전에는 받아 두고 등록부가 조용히 버렸습니다).
+         */
         SubTickHandle registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
         /** @brief 서브틱 하나의 등록을 해제합니다. */
         bool unregisterSubTick( uint32 subTickId );
-        /** @brief 서브틱에 선행 조건을 추가합니다(prerequisiteHandle 이 먼저 실행되어야 합니다). */
+        /**
+         * @brief 서브틱에 선행 조건을 추가합니다(prerequisiteHandle 이 먼저 실행되어야 합니다).
+         * @details 선행 조건이 뒤 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가 돕니다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮깁니다.
+         */
         bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
         /** @brief 서브틱의 활성 여부를 설정합니다. */
         void setSubTickActive( uint32 subTickId, bool bActive );
@@ -210,9 +226,15 @@ namespace sw
         void setOwner( GameObject* pOwner ) { _pOwner = pOwner; }
         /** @brief 컴포넌트를 켜거나 끕니다. */
         void setActive( bool bActive );
-        /** @brief 틱 그룹을 바꿉니다. */
+        /** @brief 틱 그룹을 바꿉니다. 유효하지 않은 그룹(`isValidTickGroup`)은 경고하고 무시합니다. */
         void setTickGroup( TickGroup group );
-        /** @brief 주 틱에 들어갈지 설정합니다. 비주얼 컴포넌트는 false 가 기본입니다. */
+        /**
+         * @brief 주 틱에 들어갈지 설정합니다. 생성자에서 끄면(언리얼 `bCanEverTick = false`) 끈 것이 이깁니다.
+         * @details **기본은 "`onTick` 을 오버라이드했는가"** 입니다(유니티: `Update` 가 있으면 부른다) — `GameObject::addComponent` 가
+         *          `OverridesOnTick_v` 로 판정해, 오버라이드하지 않은 타입은 끕니다. 예전에는 기본값이 갈렸습니다(`Component` 켜짐 ·
+         *          `SceneComponent` 꺼짐): 씬 컴포넌트에 `onTick` 을 쓰고 이것을 잊으면 조용히 한 번도 돌지 않았고, `onTick` 이 없는 데이터
+         *          컴포넌트는 매 프레임 빈 가상 호출로 디스패치됐습니다.
+         */
         void setCanEverTick( bool bCanEverTick );
         /**
          * @brief 컴포넌트의 런타임 이름표를 설정합니다(기본은 타입 이름). **타입이 아니고 저장되지도 않습니다.**
@@ -313,4 +335,23 @@ namespace sw
         uint8               _reservedFlags     : 5;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
     };
+
+    /**
+     * @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지입니다. 주 틱의 기본값이 이것입니다.
+     * @details `&T::onTick` 의 타입이 `Component` 의 것이면 아무도 오버라이드하지 않았습니다. 볼 수 없으면(보호 · 비공개 오버라이드라
+     *          접근이 막히면) 오버라이드한 것으로 칩니다 — 그때는 생성자의 값을 그대로 둡니다.
+     */
+    template <typename T, typename = void>
+    struct OverridesOnTick : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct OverridesOnTick<T, std::void_t<decltype( &T::onTick )>>
+        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( float32 )> == false>
+    {
+    };
+
+    template <typename T>
+    inline constexpr bool OverridesOnTick_v = OverridesOnTick<T>::value;
 } // namespace sw

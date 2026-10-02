@@ -30,7 +30,6 @@ namespace sw
     {
         // 값(로컬 TRS · 월드 행렬 · LWC)은 저장소의 칸에 있다. 칸은 항등 로컬 · 항등 월드로 채워져 나온다.
         _transformSlot     = SceneTransformStorage::get().allocateSlot( this, _pTransformPage );
-        _bCanEverTick      = SW_FALSE;
         _bIsSceneComponent = SW_TRUE;
     }
 

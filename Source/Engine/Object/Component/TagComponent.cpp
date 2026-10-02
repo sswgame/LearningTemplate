@@ -7,7 +7,6 @@ namespace sw
     TagComponent::TagComponent()
         : _tags{}
     {
-        _bCanEverTick = SW_FALSE;
     }
 
     void TagComponent::onBeginPlay()

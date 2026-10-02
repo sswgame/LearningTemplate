@@ -563,4 +563,62 @@ namespace sw
                                           sizeof( MockPoolLifecycleComponent ) );
     }
 
+    /**
+     * @brief `onTick` 을 오버라이드했지만 틱을 선언하지 않는 씬 컴포넌트입니다. 생성자 인자로 끄면(`setCanEverTick( false )`) 끈 것이 이깁니다.
+     */
+    class MockSelfTickSceneComponent : public SceneComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        int32 _tickCount{ 0 };
+
+        explicit MockSelfTickSceneComponent( bool bOptOut = false )
+            : _tickCount{ 0 }
+        {
+            if ( bOptOut )
+                setCanEverTick( false );
+        }
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+
+        void onTick( float32 deltaTime ) override
+        {
+            SceneComponent::onTick( deltaTime );
+            ++_tickCount;
+        }
+    };
+
+    inline const TypeInfo* MockSelfTickSceneComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( hashed_string( "MockSelfTickSceneComponent" ),
+                                          hashed_string( "sw::MockSelfTickSceneComponent" ),
+                                          sizeof( MockSelfTickSceneComponent ),
+                                          hashed_string( "sw::SceneComponent" ) );
+    }
+
+    /** @brief `onTick` 이 없는 데이터 컴포넌트입니다(유니티의 Update 없는 스크립트). */
+    class MockNoTickComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        int32 _value{ 0 };
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+    };
+
+    inline const TypeInfo* MockNoTickComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( hashed_string( "MockNoTickComponent" ),
+                                          hashed_string( "sw::MockNoTickComponent" ),
+                                          sizeof( MockNoTickComponent ) );
+    }
+
 } // namespace sw

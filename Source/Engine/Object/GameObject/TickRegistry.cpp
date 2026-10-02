@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    static_assert( TickRegistry::kGroupCount == static_cast<uint32>( TickGroup::PostUpdate ) + 1, "TickRegistry::kGroupCount must match TickGroup" );
+
     namespace
     {
         struct TickRegistryInternal
@@ -67,6 +69,68 @@ namespace sw
                         outListStage.emplace_back();
                     outListStage[firstStage + slot].push_back( candidate._item );
                     ++slot;
+                }
+            }
+
+            /**
+             * @brief 선행 조건이 뒤 그룹에 있는 후보를 그 그룹으로 옮깁니다. 사슬을 따라 옮깁니다(언리얼 `QueueTickFunction` 의 `ActualStartTickGroup`).
+             * @details 모든 그룹의 후보를 한 그래프로 보고 위상 순서(Kahn)로 걸으며 "내 그룹 = max(내 그룹, 선행의 그룹)" 을 적습니다. 앞 그룹의
+             *          선행 조건은 이미 끝났으므로 아무것도 바꾸지 않습니다. 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수
+             *          없음" 으로 버렸습니다 — PrePhysics 의 기수가 PostPhysics 의 말보다 먼저 돌았습니다. 순환에 걸린 후보(와 그 뒤)는 위상
+             *          순서가 없으니 제 그룹에 둡니다(순환은 그룹 안에서 순서 키로 방어합니다).
+             */
+            static void raiseGroupsToPrerequisites( vector<StageCandidate>& listCandidate )
+            {
+                const size_t                                            count = listCandidate.size();
+                unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
+                mapLookup.reserve( count );
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    if ( listCandidate[index]._item._subTickId != 0 )
+                        mapLookup[{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId }] = index;
+                }
+
+                vector<vector<size_t>> listAdjacent( count );
+                vector<uint32>         listInDegree( count, 0 );
+                bool                   bCrossesGroup = false;
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    const vector<SubTickHandle>* pListPrerequisite = listCandidate[index]._pListPrerequisite;
+                    if ( pListPrerequisite == nullptr )
+                        continue;
+                    for ( const SubTickHandle& prerequisite : *pListPrerequisite )
+                    {
+                        const auto found = mapLookup.find( prerequisite );
+                        if ( found == mapLookup.end() || found->second == index )
+                            continue;
+                        listAdjacent[found->second].push_back( index );
+                        ++listInDegree[index];
+                        bCrossesGroup = bCrossesGroup || listCandidate[found->second]._item._group != listCandidate[index]._item._group;
+                    }
+                }
+                // 모든 선행 조건이 같은 그룹 안이면(보통) 옮길 것이 없다. 사슬이 그룹을 넘으려면 어느 간선 하나는 그룹을 넘는다.
+                if ( bCrossesGroup == false )
+                    return;
+
+                vector<size_t> listReady;
+                listReady.reserve( count );
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    if ( listInDegree[index] == 0 )
+                        listReady.push_back( index );
+                }
+                for ( size_t cursor = 0; cursor < listReady.size(); ++cursor )
+                {
+                    const size_t current = listReady[cursor];
+                    const uint8  group   = listCandidate[current]._item._group;
+                    for ( const size_t next : listAdjacent[current] )
+                    {
+                        uint8& nextGroup = listCandidate[next]._item._group;
+                        if ( nextGroup < group )
+                            nextGroup = group;
+                        if ( --listInDegree[next] == 0 )
+                            listReady.push_back( next );
+                    }
                 }
             }
 
@@ -238,7 +302,8 @@ namespace sw
                 const uint8 group = static_cast<uint8>( subTick._group );
                 if ( group >= kGroupCount )
                     continue;
-                listItem.push_back( TickItem{ pComp, subTick._subTickId, group, static_cast<uint8>( static_cast<uint8>( subTick._phase ) + ( subTick._priority & 63 ) ) } );
+                // 우선순위는 등록할 때 `kMaxTickPriority` 로 묶였다 — 단계(64 칸)를 넘지 않는다.
+                listItem.push_back( TickItem{ pComp, subTick._subTickId, group, static_cast<uint8>( static_cast<uint8>( subTick._phase ) + subTick._priority ) } );
                 prerequisiteCount += static_cast<uint32>( subTick._listPrerequisite.size() );
             }
         }
@@ -345,11 +410,11 @@ namespace sw
     void TickRegistry::computePrerequisiteStages( vector<TickStage>& outListStage ) const
     {
         outListStage.clear();
+        // 모든 그룹의 후보를 한 번에 모은다. 선행 조건은 그룹을 넘을 수 있다.
         vector<TickRegistryInternal::StageCandidate> listCandidate;
         uint32                                       originalIndex = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
-            listCandidate.clear();
             for ( const TickObjectEntry& entry : _arrListEntry[group] )
             {
                 GameObject* pObj = entry._pObject;
@@ -369,7 +434,20 @@ namespace sw
                     listCandidate.push_back( candidate );
                 }
             }
-            TickRegistryInternal::appendGroupStages( listCandidate, outListStage );
+        }
+        TickRegistryInternal::raiseGroupsToPrerequisites( listCandidate );
+
+        vector<TickRegistryInternal::StageCandidate> listGroupCandidate;
+        listGroupCandidate.reserve( listCandidate.size() );
+        for ( uint32 group = 0; group < kGroupCount; ++group )
+        {
+            listGroupCandidate.clear();
+            for ( const TickRegistryInternal::StageCandidate& candidate : listCandidate )
+            {
+                if ( candidate._item._group == group )
+                    listGroupCandidate.push_back( candidate );
+            }
+            TickRegistryInternal::appendGroupStages( listGroupCandidate, outListStage );
         }
     }
 } // namespace sw

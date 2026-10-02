@@ -2079,6 +2079,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 63 틱 선언 · 등록부 계약 — 씬 컴포넌트의 onTick 이 조용히 안 돌았고, 다른 그룹의 선행 조건 · 범위 밖 그룹 · 우선순위 64+ 가 조용히 틀렸다)
+
+남은 항목 "컴포넌트 틱 선언 · 틱 등록부 계약". 넷이 모두 조용히 틀렸다.
+- **틱 선언**: 기본값이 갈렸다 — `Component` 는 켜짐, `SceneComponent` 는 꺼짐. 씬 컴포넌트에 `onTick` 을 쓰고 `setCanEverTick( true )` 를 잊으면 한 번도
+  돌지 않았고, `onTick` 이 없는 데이터 컴포넌트(`DontDestroyOnLoadComponent` 등)는 매 프레임 빈 가상 호출로 디스패치됐다. 유니티는
+  `Update` 가 있으면 부르고 없으면 목록에 넣지 않는다. 언리얼은 `bCanEverTick` 을 생성자에서 직접 켠다(잊으면 같은 함정). **기본 = "`onTick` 을
+  오버라이드했는가"**(유니티), 생성자가 끄면 끈 것이 이긴다(언리얼). `addComponent<T>` 가 `OverridesOnTick_v<T>`(`&T::onTick` 의 타입이 `Component`
+  의 것인지 — 접근이 막히면 오버라이드한 것으로 친다)를 `attachCreatedComponent` 에 넘기고, 아니면 끈다. `SceneComponent` · `TagComponent` 의 끄기
+  줄과 `SpriteComponent` 의 빈 `onTick`(부모를 부르기만 했다 — 남겨 두면 모든 스프라이트가 돌기 시작한다)을 걷었다.
+- **범위 밖 그룹**: 정수에서 캐스트한 그룹을 받아 두고 등록부가 버렸다 — 그 컴포넌트가 한 번도 돌지 않았다. `setTickGroup` 은 경고하고 지금 그룹을
+  지키고, `registerSubTick` 은 빈 핸들을 준다(`isValidTickGroup`, 등록부의 `kGroupCount` 는 `static_assert` 로 enum 에 묶었다).
+- **우선순위**: 단계(64 칸) 안의 자리인데 `& 63` 으로 감겨 70 이 6 이 되어 10 보다 앞섰다. 등록할 때 `kMaxTickPriority`(63)로 묶는다(경고) — 다음 단계로
+  넘지 않는다.
+- **그룹을 넘는 선행 조건**: DAG 를 그룹마다 따로 지어 다른 그룹의 선행 조건을 "찾을 수 없음" 으로 버렸다 — PrePhysics 의 기수가 PostPhysics 의 말보다
+  먼저 돌았다. 언리얼 `QueueTickFunction` 처럼 뒤따르는 것을 선행의 그룹으로 옮긴다(`ActualStartTickGroup`, 사슬을 따라 — 모든 그룹의 후보를 한
+  그래프로 보고 위상 순서로 max 를 적는다). 모든 간선이 한 그룹 안이면(보통) 아무것도 하지 않는다. 순환에 걸린 것은 제 그룹에 둔다.
+
+"틱 그룹은 생성자에서" 는 할 일이 없었다 — `Source/` 에 `setTickGroup` · `registerSubTick` 을 부르는 곳이 없다.
+
+**검증.** `ComponentTickGroupTest.OverridingOnTickIsWhatMakesAComponentTick`(오버라이드한 씬 컴포넌트가 돈다 · 생성자가 끈 것은 안 돈다 · `onTick` 없는
+것은 틱 항목에 없다) · `OutOfRangeTickGroupIsRejected`, `ComponentSubTickHybridTest.PriorityAboveTheBandStaysLastInItsPhase` ·
+`PrerequisiteInALaterGroupMovesTheDependentThere`(사슬 셋 + 그룹 경계 표지) — 넷 다 이전 코드에서 진다. 변이 일곱(끄지 않기 · 씬 기본 꺼짐 되살리기 ·
+두 그룹 검사 · 묶기 · 옮기기 · 옮기기의 사슬)이 모두 실패했다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 62 메시 블렌드 모드 — 씬 · 프리팹에 "null" 로 저장돼 읽으면 불투명이 됐다)
 
 남은 항목을 점검하다 나왔다. `MeshComponent::_blendMode` 는 PROPERTY 인데 그 타입 `RHIBlendMode` 에 `ENUM()` 이 없어 직렬화기가 이름을 몰랐다 —

@@ -554,8 +554,11 @@ namespace sw
         return storage;
     }
 
-    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool )
+    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick )
     {
+        // 주 틱의 기본은 "onTick 을 오버라이드했는가" 다(유니티 Update). 오버라이드한 타입은 생성자의 값(기본 켜짐, 끄면 꺼짐)을 그대로 둔다.
+        if ( bOverridesTick == false )
+            pComp->_bCanEverTick = SW_FALSE;
         pComp->setOwner( this );
         pComp->_pPool     = pPool;
         pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름표(아래)는 타입과 무관하다

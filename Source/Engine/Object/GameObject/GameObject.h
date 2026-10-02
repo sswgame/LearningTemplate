@@ -304,8 +304,11 @@ namespace sw
         bool isComponentMutationFrozen() const;
         /** @brief 타입 `pTypeInfo` 의 풀(없으면 만듭니다)에서 한 칸을, 풀을 만들 수 없으면 힙에서 `typeSize` 바이트를 잡습니다. 실패하면 빈 칸입니다. */
         ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
-        /** @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다(소유자 · 풀 · 이름 · 기본값 · 목록 · primary 캐시 · 등록 · 틱 표시). */
-        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool );
+        /**
+         * @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다(소유자 · 풀 · 이름 · 기본값 · 목록 · primary 캐시 · 등록 · 틱 표시).
+         * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지(`OverridesOnTick_v`). 아니면 주 틱을 끕니다 — 돌 것이 없습니다.
+         */
+        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick );
         /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다 — 매니저가 있으면 `GameObjectManager::destroyComponentInstance` 가 전부 합니다.
          * @details 예전에는 `removeComponent` · `clearComponents` 가 해제 콜백 셋을 각자 부른 뒤 매니저에 넘겼고, 매니저가
@@ -418,7 +421,7 @@ namespace sw
             return nullptr;
 
         T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
-        attachCreatedComponent( pComp, pTypeInfo, storage._pPool );
+        attachCreatedComponent( pComp, pTypeInfo, storage._pPool, OverridesOnTick_v<T> );
         return pComp;
     }
 } // namespace sw

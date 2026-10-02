@@ -706,6 +706,137 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 }
 
 /**
+ * @brief `onTick` 을 오버라이드한 것이 곧 틱 선언이다 — 씬 컴포넌트도 돌고, `onTick` 이 없는 컴포넌트는 틱 목록에 들지 않는다.
+ * @details 예전에는 기본값이 갈렸다: `Component` 는 켜짐, `SceneComponent` 는 꺼짐. 씬 컴포넌트에 `onTick` 을 쓰고 선언을 잊으면 **조용히 한 번도
+ *          돌지 않았고**, `onTick` 이 없는 데이터 컴포넌트(영속 표시 같은 것)는 매 프레임 빈 가상 호출로 디스패치됐다. 유니티는 `Update` 가 있으면
+ *          부르고 없으면 목록에 넣지 않는다. 언리얼의 `bCanEverTick = false` 처럼 생성자가 끄면 끈 것이 이긴다.
+ */
+SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( hashed_string( "Spinner" ) );
+
+    auto* pSpinner = pObject->addComponent<MockSelfTickSceneComponent>();
+    auto* pOptOut  = pObject->addComponent<MockSelfTickSceneComponent>( true );
+    auto* pMarker  = pObject->addComponent<MockNoTickComponent>();
+    SW_ASSERT_NOT_NULL( pSpinner );
+    SW_ASSERT_NOT_NULL( pOptOut );
+    SW_ASSERT_NOT_NULL( pMarker );
+
+    SW_EXPECT_TRUE( pSpinner->canEverTick() );
+    SW_EXPECT_FALSE( pOptOut->canEverTick() );
+    SW_EXPECT_FALSE( pMarker->canEverTick() );
+    SW_EXPECT_FALSE( pMarker->hasTickWork() );
+
+    manager.tick( 0.016f );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 2, pSpinner->_tickCount );
+    SW_EXPECT_EQUAL( 0, pOptOut->_tickCount );
+    // 틱 항목은 돌 것 하나뿐이다.
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pObject->getTickItems().size() ) );
+    SW_EXPECT_EQUAL( static_cast<sw::Component*>( pSpinner ), pObject->getTickItems()[0]._pComponent );
+}
+
+/**
+ * @brief 범위 밖의 틱 그룹은 거절한다 — 예전에는 받아 두고 등록부가 조용히 버려 그 컴포넌트가 한 번도 돌지 않았다.
+ * @details 그룹은 넷(`TickRegistry::kGroupCount`)이다. 정수에서 캐스트한 값(데이터 주도 설정)이 넘으면 `setTickGroup` 은 그대로 두고,
+ *          `registerSubTick` 은 빈 핸들을 준다(언리얼 `TG_MAX` 도 유효한 그룹이 아니다).
+ */
+SW_TEST_CASE( ComponentTickGroupTest, OutOfRangeTickGroupIsRejected )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( hashed_string( "Grouped" ) );
+    auto*                 pComp   = pObject->addComponent<MockRootComponent>();
+    SW_ASSERT_NOT_NULL( pComp );
+    vector<string> listTickOrder;
+    pComp->_pTickOrderLog = &listTickOrder;
+    pComp->_componentTag  = "Root";
+
+    pComp->setTickGroup( sw::TickGroup::PostPhysics );
+    pComp->setTickGroup( static_cast<sw::TickGroup>( 7 ) );
+    SW_EXPECT_TRUE( pComp->getTickGroup() == sw::TickGroup::PostPhysics );
+
+    const sw::SubTickHandle handle = pComp->registerSubTick( static_cast<sw::TickGroup>( 9 ), 5 );
+    SW_EXPECT_FALSE( handle.isValid() );
+    SW_EXPECT_TRUE( pComp->getAllSubTicks().empty() );
+
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listTickOrder.size() );
+    SW_EXPECT_EQUAL( "Root", listTickOrder[0] );
+}
+
+/**
+ * @brief 우선순위는 단계 안의 0..63 이다 — 넘으면 그 단계의 맨 뒤로 묶는다. 예전에는 `& 63` 으로 감겨 70 이 6 이 되어 10 보다 앞섰다.
+ */
+SW_TEST_CASE( ComponentSubTickHybridTest, PriorityAboveTheBandStaysLastInItsPhase )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pActor = manager.createGameObject( hashed_string( "PriorityActor" ) );
+    auto*                 pComp  = pActor->addComponent<MockRootComponent>();
+    SW_ASSERT_NOT_NULL( pComp );
+    pComp->setCanEverTick( false );
+    pComp->_componentTag = "P";
+    vector<string> listTickOrder;
+    pComp->_pTickOrderLog = &listTickOrder;
+
+    pComp->registerSubTick( sw::TickGroup::DuringPhysics, 1, sw::TickPhase::Normal, 70 );
+    pComp->registerSubTick( sw::TickGroup::DuringPhysics, 2, sw::TickPhase::Normal, 10 );
+    // 묶어도 다음 단계(Late)의 0 보다는 앞이다 — 단계를 넘어가면 안 된다.
+    pComp->registerSubTick( sw::TickGroup::DuringPhysics, 3, sw::TickPhase::Late, 0 );
+
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
+    SW_EXPECT_EQUAL( "P_SubTick_2", listTickOrder[0] );
+    SW_EXPECT_EQUAL( "P_SubTick_1", listTickOrder[1] );
+    SW_EXPECT_EQUAL( "P_SubTick_3", listTickOrder[2] );
+}
+
+/**
+ * @brief 선행 조건이 뒤 그룹에 있으면 뒤따르는 틱이 그 그룹으로 옮겨 간다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮긴다.
+ * @details 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수 없음" 으로 버렸다 — PrePhysics 의 기수가 PostPhysics 의 말보다
+ *          먼저 돌았다. 앞 그룹의 선행 조건은 이미 끝났으므로 그대로다.
+ */
+SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDependentThere )
+{
+    sw::GameObjectManager manager;
+    vector<string>        listTickOrder;
+
+    auto addSubTicker = [&manager, &listTickOrder]( const utf8* pName ) -> MockRootComponent*
+    {
+        sw::GameObject* pActor = manager.createGameObject( hashed_string( pName ) );
+        auto*           pComp  = pActor->addComponent<MockRootComponent>();
+        pComp->setCanEverTick( false );
+        pComp->_componentTag  = pName;
+        pComp->_pTickOrderLog = &listTickOrder;
+        return pComp;
+    };
+
+    // 시계: DuringPhysics 의 주 틱 — 그룹 경계를 보는 표지.
+    sw::GameObject* pClockActor = manager.createGameObject( hashed_string( "Clock" ) );
+    auto*           pClock      = pClockActor->addComponent<MockRootComponent>();
+    pClock->setTickGroup( sw::TickGroup::DuringPhysics );
+    pClock->_componentTag  = "Clock";
+    pClock->_pTickOrderLog = &listTickOrder;
+
+    MockRootComponent* pLance = addSubTicker( "Lance" );
+    MockRootComponent* pRider = addSubTicker( "Rider" );
+    MockRootComponent* pHorse = addSubTicker( "Horse" );
+
+    const sw::SubTickHandle horse = pHorse->registerSubTick( sw::TickGroup::PostPhysics, 10 );
+    const sw::SubTickHandle rider = pRider->registerSubTick( sw::TickGroup::PrePhysics, 20 );
+    pLance->registerSubTick( sw::TickGroup::DuringPhysics, 30 );
+    SW_EXPECT_TRUE( pRider->addSubTickPrerequisite( 20, horse ) );
+    SW_EXPECT_TRUE( pLance->addSubTickPrerequisite( 30, rider ) );
+
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), listTickOrder.size() );
+    SW_EXPECT_EQUAL( "Clock", listTickOrder[0] );
+    SW_EXPECT_EQUAL( "Horse_SubTick_10", listTickOrder[1] );
+    SW_EXPECT_EQUAL( "Rider_SubTick_20", listTickOrder[2] );
+    SW_EXPECT_EQUAL( "Lance_SubTick_30", listTickOrder[3] );
+}
+
+/**
  * @brief [GameObjectHierarchy] refreshActiveInHierarchy 부모-자식-손자 다계층 합성 활성 상태 엣지 케이스 검증
  */
 /**
