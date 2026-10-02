@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/AABB.h"
 #include "Engine/Resource/ResourceManager.h"
 
 namespace sw
@@ -172,8 +173,26 @@ namespace sw
     {
         const float4x4 world = getWorldMatrix();
         outCenter            = world.getTranslation();
-        outRadius            = _boundsRadius * world.getMaximumAxisScale();
+        outRadius            = getBoundsRadius() * world.getMaximumAxisScale(); // GPU 컬링(`GpuSceneBuilder`)과 같은 반지름
         return true;
+    }
+
+    bool MeshComponent::getWorldBox( AABB& outBox ) const
+    {
+        const AABB local = ( _mesh != nullptr && _mesh->getVertexCount() > 0 ) ? AABB{
+                                                                                     _mesh->getLocalBoundsMin(), _mesh->getLocalBoundsMax()
+        }
+                                                                               : AABB{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f } };
+        outBox           = local.transformedBy( getWorldMatrix() );
+        return true;
+    }
+
+    float32 MeshComponent::getBoundsRadius() const
+    {
+        // 메시가 아는 경계를 덮는다 — 적어 둔 값은 키우기만 한다(정점 애니메이션 · 셰이더 변형의 여유). 예전에는 적어 둔 값(기본 단위 상자 0.866)
+        // 하나뿐이라 그보다 큰 도형(캡슐 끝 · 평면)이 보이는데도 컬링에 잘렸다.
+        const float32 meshRadius = ( _mesh != nullptr ) ? _mesh->getBoundingRadius() : 0.0f;
+        return MathUtil::max( _boundsRadius, meshRadius );
     }
 
     void MeshComponent::setBoundsRadius( float32 radius )

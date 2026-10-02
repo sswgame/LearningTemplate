@@ -21,6 +21,7 @@
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
+#include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/Kits/Overworld/CameraControllerComponent.h"
 #include "GameFramework/Kits/Overworld/PlayerController.h"
@@ -2232,6 +2233,53 @@ SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhen
         pController->onTick( kFrame );
     SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+}
+
+/**
+ * @brief [GameFrameworkTest] 움직이는 컴포넌트는 월드 값으로 움직인다 — 부모 아래에서도 월드 땅에 서고, 월드 방향으로 난다
+ * @details 중력 · 투사체 · 피해 숫자 · 카메라 컨트롤러가 월드 값(땅 높이 · 속도 · 목표)을 **로컬** 위치에 더하고 비교했다. 루트 오브젝트에서는 같아
+ *          드러나지 않았지만, 발판 위 캐릭터는 부모 높이만큼 떠서 멈췄고, 돌아간 부모 아래 투사체는 부모의 축을 따라 날았다.
+ */
+SW_TEST_CASE( GameFrameworkTest, MovementComponentsMoveInWorldSpaceUnderAParent )
+{
+    GameObjectManager manager;
+    GameObject*       pPlatform   = manager.createGameObject( hashed_string( "Platform" ) );
+    SceneComponent*   pPlatformSc = pPlatform->addComponent<SceneComponent>();
+    pPlatformSc->setLocalPosition( float3( 0.0f, 10.0f, 0.0f ) );
+    pPlatformSc->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+
+    // 중력: 부모(높이 10) 아래에서 떨어져도 월드 땅(0)에 선다.
+    GameObject*       pFaller   = manager.createGameObject( hashed_string( "Faller" ) );
+    SceneComponent*   pFallerSc = pFaller->addComponent<SceneComponent>();
+    GravityComponent* pGravity  = pFaller->addComponent<GravityComponent>();
+    SW_ASSERT_TRUE( pFallerSc != nullptr && pGravity != nullptr );
+    SW_ASSERT_TRUE( pFaller->attachToParent( pPlatform ) );
+    pFallerSc->setLocalPosition( float3( 0.0f, 5.0f, 0.0f ) );
+    pGravity->setGravity( -9.8f );
+    manager.flushSceneTransforms();
+    for ( int32 frameIndex = 0; frameIndex < 600; ++frameIndex )
+    {
+        pGravity->onTick( 1.0f / 60.0f );
+        manager.flushSceneTransforms();
+    }
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pFallerSc->getWorldPosition()._y, 1e-3f );
+
+    // 투사체: 돌아간 부모 아래에서도 월드 +X 로 난다.
+    GameObject*          pBullet     = manager.createGameObject( hashed_string( "Bullet" ) );
+    SceneComponent*      pBulletSc   = pBullet->addComponent<SceneComponent>();
+    ProjectileComponent* pProjectile = pBullet->addComponent<ProjectileComponent>();
+    SW_ASSERT_TRUE( pBulletSc != nullptr && pProjectile != nullptr );
+    SW_ASSERT_TRUE( pBullet->attachToParent( pPlatform ) );
+    manager.flushSceneTransforms();
+    const float3 start = pBulletSc->getWorldPosition();
+    pProjectile->setVelocity( float2( 10.0f, 0.0f ) );
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
+        pProjectile->onTick( 1.0f / 60.0f );
+        manager.flushSceneTransforms();
+    }
+    SW_EXPECT_NEAR_EQUAL( start._x + 10.0f, pBulletSc->getWorldPosition()._x, 1e-2f );
+    SW_EXPECT_NEAR_EQUAL( start._z, pBulletSc->getWorldPosition()._z, 1e-2f );
 }
 
 /**

@@ -270,3 +270,34 @@ SW_TEST_CASE( EditorSceneCommandsTest, ReparentAndUnparentKeepTheWorldPlace )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pBookSc->getWorldPosition()._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pBookSc->getWorldPosition()._y, 1e-3f );
 }
+
+/**
+ * @brief [EditorSceneCommandsTest] 표면 붙이기는 다른 오브젝트의 월드 윗면에 올린다 — 부모가 키운 바닥도
+ * @details 다른 메시의 윗면을 **로컬** 스케일 × 단위 상자로 셈해, 부모가 두 배로 키운 바닥의 윗면을 절반 높이로 잡았다(파묻혔다).
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, SurfaceSnapLandsOnTheWorldTopOfAScaledFloor )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "SurfaceSnapProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+
+    GameObject*     pStage   = pManager->createGameObject( hashed_string( "Stage" ) );
+    SceneComponent* pStageSc = pStage->addComponent<SceneComponent>();
+    pStageSc->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+    GameObject*    pFloor     = pManager->createGameObject( hashed_string( "Floor" ) );
+    MeshComponent* pFloorMesh = pFloor->addComponent<MeshComponent>();
+    SW_ASSERT_TRUE( pStageSc != nullptr && pFloorMesh != nullptr );
+    pFloorMesh->setLocalScale( float3( 5.0f, 1.0f, 5.0f ) ); // 단위 상자 — 월드 윗면은 1.0(부모 ×2)
+    SW_ASSERT_TRUE( pFloor->attachToParent( pStage ) );
+    GameObject*    pCrate     = pManager->createGameObject( hashed_string( "Crate" ) );
+    MeshComponent* pCrateMesh = pCrate->addComponent<MeshComponent>();
+    SW_ASSERT_NOT_NULL( pCrateMesh );
+    pManager->mergePendingAdds();
+    pManager->flushSceneTransforms();
+
+    float3 translation( 1.0f, 4.0f, 1.0f );
+    EditorSceneCommands::snapTranslationToSurface( pCrate, translation );
+    SW_EXPECT_NEAR_EQUAL( 1.0f + 0.5f, translation._y, 1e-3f ); // 바닥 윗면 1.0 + 상자 반 높이 0.5
+}

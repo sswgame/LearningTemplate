@@ -65,7 +65,7 @@ namespace sw::editor
          */
         static void applyWorldTransform( GameObject* pObj, const float4x4& worldMatrix );
         /** @brief 아래 콜라이더/메시 윗면에 **월드** Y 를 맞춥니다(@p translation 은 월드 위치, @p scaleY 는 월드 Y 스케일). */
-        static void snapTranslationToSurface( GameObject* pObj, float3& translation, float32 scaleY );
+        static void snapTranslationToSurface( GameObject* pObj, float3& translation );
         /** @brief @p before 와 지금 상태로 Undo를 기록합니다. */
         static void commitModify( GameObject* pObj, const EditorObjectSnapshot& before, string_view undoLabel );
 

@@ -51,10 +51,11 @@ namespace sw
         if ( pSceneComp == nullptr )
             return;
 
-        float3 pos = pSceneComp->getLocalPosition();
+        // 속도는 월드 값이다 — 월드 자리로 옮긴다(돌아간 부모 아래에서 로컬로 더하면 부모의 축을 따라 엉뚱한 방향으로 날았다).
+        float3 pos = pSceneComp->getWorldPosition();
         pos._x += _velocity._x * deltaTime;
         pos._y += _velocity._y * deltaTime;
-        pSceneComp->setLocalPosition( pos );
+        pSceneComp->setWorldPosition( pos );
     }
 
     void ProjectileComponent::setVelocity( const float2& velocity )

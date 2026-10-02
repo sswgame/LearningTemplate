@@ -312,6 +312,12 @@ namespace sw
         return false;
     }
 
+    bool SceneComponent::getWorldBox( AABB& outBox ) const
+    {
+        (void)outBox;
+        return false;
+    }
+
     bool SceneComponent::canAttachTo( const SceneComponent* pParent ) const
     {
         if ( pParent == nullptr || pParent == this )

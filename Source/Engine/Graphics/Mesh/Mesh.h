@@ -80,6 +80,16 @@ namespace sw
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
+         * @brief 메시 공간 원점에서 가장 먼 정점까지의 거리입니다(원점 중심 경계 구의 반지름). `setVertices` 가 구합니다.
+         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이것을 덮는다. 예전에는 메시가 경계를 몰라 모든 도형이 단위 상자의
+         *          반지름(0.866)을 썼고, 그보다 큰 도형(캡슐 끝 · 평면)은 화면 가장자리에서 보이는데도 잘렸다.
+         */
+        float32 getBoundingRadius() const { return _boundingRadius; }
+        /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
+        const float3& getLocalBoundsMin() const { return _localBoundsMin; }
+        /** @brief 메시 공간의 축 정렬 경계(최대)입니다. */
+        const float3& getLocalBoundsMax() const { return _localBoundsMax; }
+        /**
          * @brief 이 메시 **내용**의 프로세스 고유 번호입니다. 만들 때와 `setVertices` 때마다 새 번호를 받습니다.
          * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 예전에는 포인터만 봐서, 메시가 지워진 자리에 새 메시가
          *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꾸면 "같은 집합" 으로 보여 옛 정점을 그렸습니다.
@@ -104,8 +114,14 @@ namespace sw
         void releaseVertexBuffer();
         /** @brief 새 내용 번호를 냅니다(프로세스 전역, 0 은 쓰지 않습니다). */
         static uint64 allocateContentId();
+        /** @brief 정점에서 경계 반지름을 다시 구합니다. */
+        void refreshBoundingRadius();
 
         vector<RHIVertex> _listVertex;
+        /// @brief getBoundingRadius 참고. setVertices 가 구합니다.
+        float32 _boundingRadius{ 0.0f };
+        float3  _localBoundsMin{};
+        float3  _localBoundsMax{};
         /// @brief getContentId 참고. 만들 때와 setVertices 때 새로 받습니다.
         uint64 _contentId{ allocateContentId() };
         /// @brief setGpuMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.

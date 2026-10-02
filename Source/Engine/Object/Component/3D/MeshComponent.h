@@ -109,12 +109,14 @@ namespace sw
         /** @brief setGpuSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
         uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
 
-        /** @brief 바운드 반지름(메시 공간)을 설정합니다. */
+        /** @brief 바운드 반지름(메시 공간)의 최소값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 것이 쓰입니다(키우기만 한다). */
         void setBoundsRadius( float32 radius );
-        /** @brief 바운드 반지름(메시 공간)을 반환합니다. 월드 반지름은 `getWorldBounds` 입니다. */
-        float32 getBoundsRadius() const { return _boundsRadius; }
+        /** @brief 바운드 반지름(메시 공간)입니다 — 적어 둔 값과 메시의 경계(`Mesh::getBoundingRadius`) 중 큰 쪽. 월드 반지름은 `getWorldBounds` 입니다. */
+        float32 getBoundsRadius() const;
         /** @brief 월드 위치를 중심으로, 메시 반지름에 월드 행렬의 최대 축 스케일을 곱한 구입니다. GPU 컬링도 같은 값을 씁니다. */
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
+        /** @brief 메시 공간의 경계(`Mesh::getLocalBoundsMin/Max`, 메시가 없으면 단위 상자)를 월드로 옮긴 상자입니다. */
+        bool getWorldBox( AABB& outBox ) const override;
 
         /** @brief 가시 여부를 설정합니다. */
         void setVisible( bool bVisible );

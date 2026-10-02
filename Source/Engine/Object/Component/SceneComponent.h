@@ -20,6 +20,7 @@ namespace sw
 {
     enum class ObjectIdSpace : uint8;
 
+    struct AABB;
     struct ObjectSaveOptions;
     struct SceneTransformWrite;
 
@@ -150,6 +151,12 @@ namespace sw
          *          (메시 · 스프라이트 · 2D 박스) 모두 **로컬** 스케일을 봐서, 부모가 키운 물체는 클릭이 빗나갔습니다.
          */
         virtual bool getWorldBounds( float3& outCenter, float32& outRadius ) const;
+        /**
+         * @brief 그리거나 부딪히는 것의 **월드** 축 정렬 상자입니다. 크기가 없는 컴포넌트(빈 씬 컴포넌트 · 카메라 · 빛)는 false 입니다.
+         * @details 크기를 재는 쪽(에디터의 바닥 · 표면 붙이기 · 프레이밍)은 이것 하나를 본다. 예전에는 자리마다 "메시면 로컬 스케일 × 단위 상자,
+         *          콜라이더면 오프셋 크기" 를 따로 셈해, 부모가 키운 오브젝트 · 단위 상자가 아닌 메시 · 키운 콜라이더를 틀리게 쟀다.
+         */
+        virtual bool getWorldBox( AABB& outBox ) const;
 
         /**
          * @brief 부모 캐시가 이미 유효하다고 보고 이 노드의 월드 캐시를 갱신합니다.

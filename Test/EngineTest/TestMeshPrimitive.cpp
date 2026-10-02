@@ -27,6 +27,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -79,6 +80,75 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
 
     // 6. 모르는 id 는 둘 다 nullptr.
     SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "NoSuchShape" ) == nullptr );
+}
+
+/**
+ * @brief [MeshPrimitiveTest] 메시는 자기 경계를 알고, 메시 컴포넌트의 경계(컬링)는 그것을 덮는다
+ * @details 메시가 경계를 몰라 모든 도형이 단위 상자의 반지름(0.866)을 썼다. 그보다 큰 도형(캡슐 끝 · 평면)은 화면 가장자리에서 보이는데도 GPU 컬링에
+ *          잘렸다. 이제 `setVertices` 가 경계 반지름을 구하고, 컴포넌트는 적어 둔 값과 그것 중 큰 쪽을 쓴다.
+ */
+SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
+{
+    sw::GameObjectManager manager;
+    for ( const utf8* pMeshId : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "Quad", "Cone" } )
+    {
+        const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshId );
+        SW_ASSERT_NOT_NULL( mesh );
+        float32 farthest = 0.0f;
+        for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+        {
+            const sw::float3 position( vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] );
+            farthest = sw::MathUtil::max( farthest, position.getLength() );
+        }
+        SW_EXPECT_NEAR_EQUAL( farthest, mesh->getBoundingRadius(), 1e-4f );
+
+        sw::GameObject*    pObj  = manager.createGameObject( sw::hashed_string( pMeshId ) );
+        sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( mesh );
+        SW_EXPECT_TRUE_MSG( pMesh->getBoundsRadius() >= farthest - 1e-4f, pMeshId );
+        sw::float3 center{};
+        float32    worldRadius{ 0.0f };
+        SW_ASSERT_TRUE( pMesh->getWorldBounds( center, worldRadius ) );
+        SW_EXPECT_TRUE_MSG( worldRadius >= farthest - 1e-4f, pMeshId );
+    }
+}
+
+/**
+ * @brief [MeshPrimitiveTest] 오브젝트의 월드 상자는 메시의 실제 크기와 부모의 회전 · 스케일을 받는다
+ * @details 에디터의 붙이기 · 프레이밍이 "메시면 로컬 스케일 × 단위 상자" 로 크기를 셈했다. 평면은 두께가 없는데 반 칸 떠 있었고, 부모가 키운 바닥은
+ *          부모 스케일만큼 작게 잡혔다. 이제 크기는 `GameObject::getWorldBox`(컴포넌트마다 `getWorldBox`) 하나다.
+ */
+SW_TEST_CASE( MeshPrimitiveTest, WorldBoxFollowsTheMeshAndItsParents )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pParent   = manager.createGameObject( sw::hashed_string( "Stage" ) );
+    sw::SceneComponent*   pParentSc = pParent->addComponent<sw::SceneComponent>();
+    pParentSc->setLocalScale( sw::float3( 2.0f, 2.0f, 2.0f ) );
+    pParentSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::HalfPi, 0.0f ) );
+
+    sw::GameObject*    pFloor = manager.createGameObject( sw::hashed_string( "Floor" ) );
+    sw::MeshComponent* pMesh  = pFloor->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    const sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::acquirePrimitive( "Plane" );
+    SW_ASSERT_NOT_NULL( plane );
+    pMesh->setMesh( plane );
+    pMesh->setLocalScale( sw::float3( 1.0f, 1.0f, 3.0f ) );
+    SW_ASSERT_TRUE( pFloor->attachToParent( pParent ) );
+    manager.flushSceneTransforms();
+
+    sw::AABB box{};
+    SW_ASSERT_TRUE( pFloor->getWorldBox( box ) );
+    // 평면은 두께가 없다 — 위아래가 같은 높이다.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, box._max._y - box._min._y, 1e-4f );
+    // 로컬 Z(×3)가 부모의 90° 요로 월드 X 가 되고, 부모 스케일 2 를 받는다.
+    const float32 planeHalfZ = ( plane->getLocalBoundsMax()._z - plane->getLocalBoundsMin()._z ) * 0.5f;
+    SW_EXPECT_NEAR_EQUAL( planeHalfZ * 3.0f * 2.0f, ( box._max._x - box._min._x ) * 0.5f, 1e-3f );
+
+    // 크기 없는 것뿐이면 상자가 없다.
+    sw::GameObject* pEmpty = manager.createGameObject( sw::hashed_string( "Empty" ) );
+    SW_ASSERT_NOT_NULL( pEmpty->addComponent<sw::SceneComponent>() );
+    SW_EXPECT_FALSE( pEmpty->getWorldBox( box ) );
 }
 
 /**

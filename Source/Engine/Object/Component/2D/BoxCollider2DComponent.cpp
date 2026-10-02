@@ -88,6 +88,19 @@ namespace sw
         return true;
     }
 
+    bool BoxCollider2DComponent::getWorldBox( AABB& outBox ) const
+    {
+        float2 minB{};
+        float2 maxB{};
+        getBounds( minB, maxB );
+        const float32 worldZ = getWorldPosition()._z;
+        outBox               = AABB{
+            float3{minB._x, minB._y, worldZ},
+            float3{maxB._x, maxB._y, worldZ}
+        };
+        return true;
+    }
+
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );

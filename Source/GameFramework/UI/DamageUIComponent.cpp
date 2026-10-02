@@ -57,9 +57,10 @@ namespace sw
             SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
             if ( pSceneComp != nullptr )
             {
-                float3 pos = pSceneComp->getLocalPosition();
+                // 위로 떠오른다 — 월드 위다(돌아가거나 커진 부모 아래에서도).
+                float3 pos = pSceneComp->getWorldPosition();
                 pos._y += _floatSpeed * deltaTime;
-                pSceneComp->setLocalPosition( pos );
+                pSceneComp->setWorldPosition( pos );
             }
         }
     }

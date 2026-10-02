@@ -12,8 +12,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -325,18 +323,23 @@ namespace sw::editor
             pSceneComp->setWorldTransform( worldMatrix );
     }
 
-    void EditorSceneCommands::snapTranslationToSurface( GameObject* pObj, float3& translation, float32 scaleY )
+    void EditorSceneCommands::snapTranslationToSurface( GameObject* pObj, float3& translation )
     {
         if ( pObj == nullptr )
             return;
 
-        float32                 bottomOffset = 0.0f;
-        BoxCollider2DComponent* pMyBox       = pObj->getComponent<BoxCollider2DComponent>();
-        if ( pMyBox != nullptr )
-            bottomOffset = pMyBox->getOffsetScale()._y * 0.5f;
-        MeshComponent* pMyMesh = pObj->getComponent<MeshComponent>();
-        if ( pMyMesh != nullptr )
-            bottomOffset = scaleY * 0.5f;
+        // 크기는 월드 상자 하나로 잰다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지 · 가로 반 크기를 지금 상자에서 얻는다.
+        float32               bottomOffset = 0.0f;
+        float32               halfExtentX  = 0.5f;
+        float32               halfExtentZ  = 0.5f;
+        const SceneComponent* pMyScene     = pObj->getPrimarySceneComponent();
+        AABB                  myBox{};
+        if ( pMyScene != nullptr && pObj->getWorldBox( myBox ) )
+        {
+            bottomOffset = pMyScene->getWorldPosition()._y - myBox._min._y;
+            halfExtentX  = MathUtil::max( ( myBox._max._x - myBox._min._x ) * 0.5f, 0.01f );
+            halfExtentZ  = MathUtil::max( ( myBox._max._z - myBox._min._z ) * 0.5f, 0.01f );
+        }
 
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
@@ -349,9 +352,7 @@ namespace sw::editor
         float32            hitY     = 0.0f;
         bool               bHit     = false;
 
-        const float32 halfExtentX = ( pMyBox != nullptr ) ? pMyBox->getOffsetScale()._x * 0.5f : 0.5f;
-        const float32 halfExtentZ = 0.5f;
-        const float32 startY      = translation._y + 10.0f;
+        const float32 startY = translation._y + 10.0f;
         const AABB    movingBox{
             float3{translation._x - halfExtentX, startY - bottomOffset, translation._z - halfExtentZ},
             float3{translation._x + halfExtentX, startY + bottomOffset, translation._z + halfExtentZ}
@@ -377,22 +378,17 @@ namespace sw::editor
             if ( pOther == nullptr || pOther == pObj )
                 continue;
 
-            MeshComponent* pOtherMesh = pOther->getComponent<MeshComponent>();
-            if ( pOtherMesh != nullptr && pOtherMesh->isActive() )
+            // 다른 오브젝트의 윗면 · 발자국도 월드 상자로 본다. 예전에는 메시의 **로컬** 스케일 × 단위 상자로 셈해, 부모가 키운 바닥 · 단위 상자가
+            // 아닌 메시(평면 · 구)의 윗면을 틀리게 잡았다.
+            AABB otherBox{};
+            if ( pOther->isActiveInHierarchy() && pOther->getWorldBox( otherBox ) )
             {
-                const float3  otherPos = pOtherMesh->getWorldPosition();
-                const float3  otherScl = pOtherMesh->getLocalScale();
-                const float32 topY     = otherPos._y + otherScl._y * 0.5f;
-                if ( topY <= translation._y + 10.0f && ( topY > hitY || bHit == false ) )
+                const float32 topY = otherBox._max._y;
+                if ( topY <= translation._y + 10.0f && ( topY > hitY || bHit == false ) && otherBox._min._x <= translation._x &&
+                     translation._x <= otherBox._max._x && otherBox._min._z <= translation._z && translation._z <= otherBox._max._z )
                 {
-                    const float32 halfW = otherScl._x * 0.5f;
-                    const float32 halfD = otherScl._z * 0.5f;
-                    if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW &&
-                         otherPos._z - halfD <= translation._z && translation._z <= otherPos._z + halfD )
-                    {
-                        hitY = topY;
-                        bHit = true;
-                    }
+                    hitY = topY;
+                    bHit = true;
                 }
             }
         }

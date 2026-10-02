@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
@@ -199,6 +200,22 @@ namespace sw
         static const hashed_string s_activeName( "_bActive" );
         _bActive.store( bActive, std::memory_order_relaxed );
         onPropertyChanged( s_activeName );
+    }
+
+    bool GameObject::getWorldBox( AABB& outBox ) const
+    {
+        bool bAny = false;
+        for ( Component* pComp : _listComponent )
+        {
+            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false || pComp->isSelfActive() == false )
+                continue;
+            AABB componentBox{};
+            if ( static_cast<const SceneComponent*>( pComp )->getWorldBox( componentBox ) == false )
+                continue;
+            outBox = bAny ? outBox.unionWith( componentBox ) : componentBox;
+            bAny   = true;
+        }
+        return bAny;
     }
 
     bool GameObject::attachToParent( GameObject* pParent, AttachRule rule )

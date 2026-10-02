@@ -135,3 +135,22 @@ SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
     SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( chosenFolder, "plain.preset.xml" ) ) );
     SW_EXPECT_TRUE( EditorTransformCommands::loadComponentPreset( pMesh, chosenPath ) );
 }
+
+/**
+ * @brief [EditorTransformCommandsTest] 바닥 붙이기는 메시의 실제 크기로 잰다 — 평면은 바닥에 눕고, 단위 상자가 아닌 메시도 바닥에 선다
+ * @details "메시면 월드 스케일 × 단위 상자" 로 바닥까지를 셈해, 두께 없는 평면이 반 칸(0.5) 떠 있었다. 이제 오브젝트의 월드 상자(`GameObject::getWorldBox`)다.
+ */
+SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundMeasuresTheMeshNotAUnitBox )
+{
+    GameObjectManager manager;
+    GameObject*       pRug  = manager.createGameObject( hashed_string( "Rug" ) );
+    MeshComponent*    pMesh = pRug->addComponent<MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( MeshUtil::acquirePrimitive( "Plane" ) );
+    pMesh->setLocalPosition( float3( 0.0f, 3.0f, 0.0f ) );
+    manager.flushSceneTransforms();
+
+    EditorTransformCommands::snapObjectsToGround( { pRug } );
+    manager.flushSceneTransforms();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pMesh->getWorldPosition()._y, 1e-4f );
+}

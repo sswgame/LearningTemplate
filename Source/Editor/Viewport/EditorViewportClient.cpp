@@ -24,9 +24,7 @@
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -551,7 +549,7 @@ namespace sw::editor
             if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
             {
                 float3 worldTranslation = newWorldMat.getTranslation();
-                EditorSceneCommands::snapTranslationToSurface( pRaw, worldTranslation, newWorldMat.getScale()._y );
+                EditorSceneCommands::snapTranslationToSurface( pRaw, worldTranslation );
                 newWorldMat.setTranslation( worldTranslation );
             }
 
@@ -674,18 +672,14 @@ namespace sw::editor
         const float3 worldPos = pSceneComp->getWorldPosition();
         _orbitTarget          = worldPos;
 
-        float32                 objectRadius = 2.0f;
-        BoxCollider2DComponent* pBox         = pRaw->getComponent<BoxCollider2DComponent>();
-        if ( pBox != nullptr )
+        // 크기는 오브젝트의 월드 상자로 잰다(`GameObject::getWorldBox`). 예전에는 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈해,
+        // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡았다.
+        float32 objectRadius = 2.0f;
+        AABB    objectBox{};
+        if ( pRaw->getWorldBox( objectBox ) )
         {
-            const float2 scl = pBox->getOffsetScale();
-            objectRadius     = MathUtil::max( scl._x, scl._y ) * 0.6f;
-        }
-        MeshComponent* pMesh = pRaw->getComponent<MeshComponent>();
-        if ( pMesh != nullptr )
-        {
-            const float3 scl = pMesh->getLocalScale();
-            objectRadius     = MathUtil::max( scl._x, MathUtil::max( scl._y, scl._z ) ) * 1.5f;
+            const float3 diagonal{ objectBox._max._x - objectBox._min._x, objectBox._max._y - objectBox._min._y, objectBox._max._z - objectBox._min._z };
+            objectRadius = MathUtil::max( diagonal.getLength() * 0.5f, 0.1f );
         }
 
         _orbitDistance = MathUtil::clamp( objectRadius * 2.5f, 3.0f, 60.0f );

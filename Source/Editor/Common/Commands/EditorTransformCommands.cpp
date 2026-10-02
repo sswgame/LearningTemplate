@@ -11,12 +11,11 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/AABB.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
@@ -260,20 +259,13 @@ namespace sw::editor
 
             const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
-            // 월드로 읽고 월드로 쓴다. 예전에는 월드 위치를 **로컬** 칸에 써서, 부모가 옮겨지기만 해도 엉뚱한 자리로 갔고 크기는 로컬 스케일로 쟀다.
-            float3       pos          = pSc->getWorldPosition();
-            const float3 scl          = pSc->getWorldMatrix().getScale();
-            float32      bottomOffset = 0.0f;
-
-            BoxCollider2DComponent* pBox = pGo->getComponent<BoxCollider2DComponent>();
-            if ( pBox != nullptr )
-            {
-                const float2 boxScl = pBox->getOffsetScale();
-                bottomOffset        = boxScl._y * 0.5f;
-            }
-            MeshComponent* pMesh = pGo->getComponent<MeshComponent>();
-            if ( pMesh != nullptr )
-                bottomOffset = scl._y * 0.5f;
+            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 잰다(`GameObject::getWorldBox`) — 예전에는 "메시면 월드 스케일 × 단위 상자,
+            // 콜라이더면 오프셋 크기" 를 따로 셈해, 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻혔다.
+            float3  pos          = pSc->getWorldPosition();
+            float32 bottomOffset = 0.0f;
+            AABB    box{};
+            if ( pGo->getWorldBox( box ) )
+                bottomOffset = pos._y - box._min._y;
 
             pos._y = bottomOffset;
             pSc->setWorldPosition( pos );

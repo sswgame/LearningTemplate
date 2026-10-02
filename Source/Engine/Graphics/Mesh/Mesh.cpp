@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -31,6 +32,7 @@ namespace sw
         releaseVertexBuffer();
         _listVertex = listVertex;
         _contentId  = allocateContentId();
+        refreshBoundingRadius();
     }
 
     void Mesh::setVertices( vector<RHIVertex>&& listVertex )
@@ -38,6 +40,24 @@ namespace sw
         releaseVertexBuffer();
         _listVertex = std::move( listVertex );
         _contentId  = allocateContentId();
+        refreshBoundingRadius();
+    }
+
+    void Mesh::refreshBoundingRadius()
+    {
+        float32 maxLengthSquared = 0.0f;
+        float3  boundsMin{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
+        float3  boundsMax{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+        for ( const RHIVertex& vertex : _listVertex )
+        {
+            const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+            maxLengthSquared = MathUtil::max( maxLengthSquared, position.getLengthSquared() );
+            boundsMin        = float3{ MathUtil::min( boundsMin._x, position._x ), MathUtil::min( boundsMin._y, position._y ), MathUtil::min( boundsMin._z, position._z ) };
+            boundsMax        = float3{ MathUtil::max( boundsMax._x, position._x ), MathUtil::max( boundsMax._y, position._y ), MathUtil::max( boundsMax._z, position._z ) };
+        }
+        _boundingRadius = MathUtil::sqrt( maxLengthSquared );
+        _localBoundsMin = _listVertex.empty() ? float3{} : boundsMin;
+        _localBoundsMax = _listVertex.empty() ? float3{} : boundsMax;
     }
 
     uint64 Mesh::allocateContentId()

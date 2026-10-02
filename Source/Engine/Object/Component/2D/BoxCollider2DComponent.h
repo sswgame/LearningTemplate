@@ -52,6 +52,8 @@ namespace sw
         void getBounds( float2& outMin, float2& outMax ) const;
         /** @brief 물리가 쓰는 상자(`getBounds`)를 덮는 구입니다. 중심의 Z 는 컴포넌트의 월드 Z 입니다. */
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
+        /** @brief 물리가 판정하는 그 상자(`getBounds`)입니다. 깊이는 없습니다(월드 Z 한 점). */
+        bool getWorldBox( AABB& outBox ) const override;
         bool intersects( const BoxCollider2DComponent* pOther ) const;
         bool intersects( const float2& point ) const;
         bool intersects( const float2& minB, const float2& maxB ) const;

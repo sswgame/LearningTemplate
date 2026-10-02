@@ -41,7 +41,9 @@ namespace sw
         if ( pSceneComp == nullptr )
             return;
 
-        float3 pos = pSceneComp->getLocalPosition();
+        // 땅 높이(`_groundY`) · 속도는 **월드** 값이다 — 월드 자리로 읽고 쓴다. 예전에는 로컬로 읽고 써, 움직이는 발판 같은 부모 아래에서는
+        // 부모의 높이만큼 떠 있거나 파묻혀 멈췄다.
+        float3 pos = pSceneComp->getWorldPosition();
 
         // **바닥 위로 올라가 있으면 다시 떨어진다.** 예전에는 한 번 닿으면 `_bIsGrounded` 가
         // 영영 참이었다. 점프든 리프트든 순간이동이든 무엇이 올려 놓아도 중력이 다시는 안
@@ -61,6 +63,6 @@ namespace sw
                 _bIsGrounded = true;
             }
         }
-        pSceneComp->setLocalPosition( pos );
+        pSceneComp->setWorldPosition( pos );
     }
 } // namespace sw

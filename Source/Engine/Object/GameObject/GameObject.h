@@ -22,6 +22,7 @@
 
 namespace sw
 {
+    struct AABB;
     struct ObjectIdentity;
     struct ObjectSaveOptions;
 
@@ -139,6 +140,11 @@ namespace sw
 
         /** @brief 부모 GameObject 입니다. primary SceneComponent 의 부모를 소유한 오브젝트입니다. */
         GameObject* getParent() const;
+        /**
+         * @brief 이 오브젝트(자식 오브젝트는 빼고)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기 있는 것이 없으면 false 입니다.
+         * @details 에디터의 바닥 · 표면 붙이기 · 프레이밍이 크기를 이것 하나로 잰다(`SceneComponent::getWorldBox`).
+         */
+        bool getWorldBox( AABB& outBox ) const;
 
         /**
          * @brief 자식 GameObject 를 `outListChild` 에 채웁니다(비우고 채웁니다). 이 오브젝트의 씬 컴포넌트(소켓 포함)에 primary 가 붙은 오브젝트들입니다.
