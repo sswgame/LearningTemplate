@@ -2074,6 +2074,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 51 셰이더 캐시 — Debug 의 실시간 컴파일이 디버그 코드젠을 `-opt` 자리에 썼고, 핫 리로드는 최적화 코드젠으로 덮어썼다)
+
+구조 ④ 를 쫓다 본 것. 로컬 캐시 경로(`Saved/ShaderCache/<rhi>/<유효 소스 해시>-<opt|dbg>/`)는 "같은 소스라도 코드젠이 다르면 다른 파일" 이라는 규칙인데,
+`ShaderCache::getOrCompile` 은 Debug 에서 디버그 코드젠으로 컴파일하면서 경로는 **요청**(`-opt`)으로 정했고, `LiveShaderManager` 는 요청 그대로(최적화)
+컴파일해 같은 자리에 덮어썼다. Debug 의 `-opt` 폴더에 두 코드젠이 섞였고, 핫 리로드한 셰이더만 RenderDoc 디버그 정보를 잃었다. 실시간 컴파일 요청은
+`ShaderCache::makeLiveCompileDesc` 하나가 정하고(Debug = 디버그 코드젠), 캐시와 핫 리로드가 둘 다 그것으로 컴파일하고 경로를 만든다. 사전 베이크는 이
+규칙을 타지 않는다(늘 최적화).
+
+**검증.** `LiveShaderTest.LiveCompileWritesUnderItsOwnCodegen`(구운 바이너리가 없는 탐침 셰이더 — 캐시가 자기 코드젠의 자리에만 쓰고, 핫 리로드가 같은 자리에
+같은 바이트를 낸다). 변이 넷(캐시 경로를 요청으로 · 리로드가 요청으로 컴파일 · 리로드 경로를 요청으로 · 실시간 요청이 디버그를 안 켬)이 모두 실패했다.
+Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (구조 ④ 렌더 — 깊이 프리패스가 처음으로 돈다, DX11 은 깊이 전용 드로우를 하나도 내지 않고 있었다)
 
 ㊼ 의 남은 한계: 뎁스 로드 연산 수정을 볼 수 없었다 — 깊이 프리패스를 쓰는 파이프라인이 없었다. 언리얼 EarlyZ(`r.EarlyZPass`) · 유니티 URP Depth

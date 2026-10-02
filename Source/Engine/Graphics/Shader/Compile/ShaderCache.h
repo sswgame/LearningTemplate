@@ -67,6 +67,14 @@ namespace sw
          *          있으면 처음 컴파일된 퍼뮤테이션 하나가 같은 셰이더의 다른 퍼뮤테이션 모두를 덮습니다.
          */
         static string makeLocalCachePath( const ShaderCompileDesc& desc );
+        /**
+         * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. Debug 는 디버그 코드젠(RenderDoc 에서 한 줄씩 볼 수 있게), 그 밖은 요청 그대로입니다.
+         * @details 캐시의 실시간 컴파일과 `LiveShaderManager` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
+         *          예전에는 캐시만 디버그 코드젠으로 컴파일하면서 경로는 요청(`-opt`)으로 정했고, 재컴파일은 요청 그대로(최적화) 같은 자리에 썼습니다.
+         *          Debug 의 `-opt` 폴더에 두 코드젠이 섞였고, 핫 리로드한 셰이더만 디버그 정보를 잃었습니다.
+         *          사전 베이크 바이너리는 이 규칙을 타지 않습니다(베이커는 늘 최적화 코드젠).
+         */
+        static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
     private:
         /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시 · 사전 베이크 · 라이브 컴파일 세 갈래가 같은 항목을 만듭니다. */

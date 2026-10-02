@@ -5,6 +5,7 @@
 
 #if !defined( SW_SHIPPING )
 
+    #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
     #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -167,6 +168,72 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 
     SW_ASSERT_TRUE( reloaded._bSuccess );
     SW_EXPECT_TRUE( reloaded._bytecode != first._bytecode );
+}
+
+/**
+ * @brief [LiveShaderTest] 캐시의 실시간 컴파일과 핫 리로드가 같은 코드젠으로, 그 코드젠의 자리에 쓴다
+ * @details Debug 의 실시간 컴파일은 디버그 코드젠(RenderDoc 에서 한 줄씩)인데, 캐시는 그 바이트코드를 **요청**의 자리(`-opt`)에 썼고 핫 리로드는
+ *          요청 그대로(최적화) 같은 자리에 덮어썼다. `-opt` 폴더에 두 코드젠이 섞였고 리로드한 셰이더만 디버그 정보를 잃었다. 둘 다
+ *          `ShaderCache::makeLiveCompileDesc` 하나로 정한다. Debug 가 아니면 두 요청이 같아 이 케이스가 볼 차이가 없다.
+ */
+SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
+{
+    // 구운 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다.
+    const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
+    SW_ASSERT_FALSE( engineFolder.empty() );
+    const sw::string shaderAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livecodegenprobe.hlsl" );
+    sw::FileUtil::writeTextFile( shaderAbs, "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" );
+
+    sw::ShaderCompileDesc desc{};
+    desc._filePath   = "engine/shaders/livecodegenprobe.hlsl";
+    desc._entryPoint = "VSMain";
+    desc._stage      = sw::ShaderStage::Vertex;
+    #if defined( SW_PLATFORM_WINDOWS )
+    desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
+    #else
+    desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
+    #endif
+
+    const sw::ShaderCompileDesc liveDesc    = sw::ShaderCache::makeLiveCompileDesc( desc );
+    const sw::string            livePath    = sw::ShaderCache::makeLocalCachePath( liveDesc ); // 작업 폴더 기준(캐시가 쓰는 그대로)
+    const sw::string            requestPath = sw::ShaderCache::makeLocalCachePath( desc );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [shaderAbs, livePath, requestPath]()
+    {
+        sw::FileUtil::removeFile( shaderAbs );
+        sw::FileUtil::removeFile( livePath );
+        sw::FileUtil::removeFile( requestPath );
+    } ) );
+    sw::FileUtil::removeFile( livePath );
+    sw::FileUtil::removeFile( requestPath );
+    #if defined( SW_DEBUG )
+    SW_EXPECT_TRUE( liveDesc._bDebugCodegen != SW_FALSE );
+    SW_EXPECT_TRUE( livePath != requestPath );
+    #endif
+
+    sw::ShaderCache               cache;
+    const sw::ShaderCompileResult result = cache.getOrCompile( desc );
+    if ( result._bSuccess == false && result._errorMessage.find( "unavailable" ) != sw::string::npos )
+        SW_TEST_SKIP( result._errorMessage.c_str() );
+    SW_ASSERT_TRUE( result._bSuccess );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::fileExists( livePath ), "실시간 컴파일이 자기 코드젠의 자리에 쓰지 않았습니다" );
+    if ( livePath != requestPath )
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( requestPath ), "디버그 코드젠 바이트코드를 최적화 자리(-opt)에 썼습니다" );
+
+    // 핫 리로드도 같은 요청으로 다시 컴파일한다 — 소스가 그대로이니 같은 자리에 같은 바이트다.
+    if ( sw::engine::areEngineServicesBound() == false )
+        return;
+    sw::engine::getShaderCache().clearCache();
+    SW_ASSERT_TRUE( sw::engine::getShaderCache().getOrCompile( desc )._bSuccess );
+    sw::LiveShaderManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    manager.triggerReloadAll();
+    manager.update();
+    manager.shutdown();
+    sw::vector<uint8> listReloaded;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( livePath, listReloaded ) );
+    SW_EXPECT_TRUE_MSG( listReloaded == result._bytecode, "핫 리로드가 캐시와 다른 코드젠으로 다시 컴파일했습니다" );
+    if ( livePath != requestPath )
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( requestPath ), "핫 리로드가 최적화 자리(-opt)에 썼습니다" );
 }
 
 #endif // !SW_SHIPPING

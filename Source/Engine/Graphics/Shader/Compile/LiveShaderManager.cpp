@@ -90,7 +90,10 @@ namespace sw
             // 컴파일 캐시는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
             // 타지 않는다. 키에 소스와 모든 공유 헤더의 내용 해시(유효 소스 해시)가 들어 있으므로, 방금
             // 무효화한 덕분에 바뀐 것만 실제로 다시 컴파일된다.
-            const ShaderCompileResult newResult = ShaderCompiler::compileHlsl( desc );
+            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 예전에는 요청 그대로(최적화) 컴파일해, 리로드한
+            // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 자리에 최적화 코드젠을 덮어썼다.
+            const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
+            const ShaderCompileResult newResult = ShaderCompiler::compileHlsl( liveDesc );
             if ( newResult._bSuccess == false )
             {
                 ++failed;
@@ -101,7 +104,7 @@ namespace sw
 
             // 캐시가 읽는 이름 그대로 쓴다. 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
             // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
-            const string localPath = ShaderCache::makeLocalCachePath( desc );
+            const string localPath = ShaderCache::makeLocalCachePath( liveDesc );
 
             // **바이트가 같으면 쓰지 않는다.** 쓰면 "갱신" 으로 세어 재컴파일 콜백이 불리고, 바뀌지 않은
             // 셰이더의 PSO 까지 다시 만들게 된다.

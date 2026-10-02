@@ -71,6 +71,15 @@ namespace sw
         return FileUtil::joinPath( sourceDir, ShaderCacheInternal::makeBinaryFileName( desc ) );
     }
 
+    ShaderCompileDesc ShaderCache::makeLiveCompileDesc( const ShaderCompileDesc& desc )
+    {
+        ShaderCompileDesc liveDesc = desc;
+#if defined( SW_DEBUG )
+        liveDesc._bDebugCodegen = SW_TRUE;
+#endif
+        return liveDesc;
+    }
+
     ShaderCache::ShaderCache()
         : _mapCache{}
         , _mutexCache{}
@@ -125,7 +134,9 @@ namespace sw
         }
 
         // 1순위(로컬 라이브 수정 캐시: Saved/ShaderCache/). 파일 이름에 퍼뮤테이션 해시가 들어간다(헤더 주석 참고).
-        const string localCachePath = makeLocalCachePath( desc );
+        // 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다 — 아래 3순위가 그 요청으로 컴파일해 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
+        const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
+        const string            localCachePath = makeLocalCachePath( liveDesc );
         if ( FileUtil::fileExists( localCachePath ) )
         {
             // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것" 이다.
@@ -189,12 +200,8 @@ namespace sw
         // 3순위(런타임 DXC 컴파일 폴백, 개발 모드 전용)
 #if !defined( SW_SHIPPING )
         BLOCK( "캐시 미스: HLSL 컴파일 및 로컬 캐시 업데이트" )
-        // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다. RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
+        // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다(makeLiveCompileDesc). RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
         // 베이커는 이 경로를 타지 않으므로 구운 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
-        ShaderCompileDesc liveDesc = desc;
-    #if defined( SW_DEBUG )
-        liveDesc._bDebugCodegen = SW_TRUE;
-    #endif
         ShaderCompileResult compiledResult = ShaderCompiler::compileHlsl( liveDesc );
         if ( compiledResult._bSuccess )
         {
