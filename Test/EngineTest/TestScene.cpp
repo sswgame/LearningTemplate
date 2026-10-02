@@ -630,6 +630,53 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 }
 
 /**
+ * @brief [SceneTest] 씬을 저장하면 다른 오브젝트에 붙은 자식 오브젝트도 남고, 다시 읽으면 같은 부모 아래 같은 자리에 붙는다
+ * @details 저장이 부모가 있는 오브젝트를 건너뛰었다. 오브젝트 상태에는 자식 목록이 없다 — 자식은 자기 엔티티로 적히고 `_attachOwner` 로
+ *          되붙는다(`instantiate` 의 두 번째 단계). 그래서 계층 아래의 오브젝트는 저장할 때마다 파일에서 사라졌다. 언리얼 레벨 · 유니티 씬
+ *          (`m_Father`)처럼 계층 전체를 적는다.
+ */
+SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "HierarchyWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+
+    sw::GameObject* pParent     = pObjects->createGameObject( sw::hashed_string( "Parent" ) );
+    sw::GameObject* pChild      = pObjects->createGameObject( sw::hashed_string( "Child" ) );
+    sw::GameObject* pGrandChild = pObjects->createGameObject( sw::hashed_string( "GrandChild" ) );
+    SW_ASSERT_NOT_NULL( pParent->addComponent<sw::SceneComponent>() );
+    sw::SceneComponent* pChildSc = pChild->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pChildSc );
+    SW_ASSERT_NOT_NULL( pGrandChild->addComponent<sw::SceneComponent>() );
+    pChildSc->setLocalPosition( sw::float3{ 1.0f, 2.0f, 3.0f } );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    SW_ASSERT_TRUE( pGrandChild->attachToParent( pChild ) );
+
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), saved._listEntityNode.size() );
+
+    sw::Scene* pReloaded = manager.createScene( "HierarchyWorldReloaded" );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_ASSERT_TRUE( pReloaded->instantiate( saved ) );
+    sw::GameObjectManager* pReloadedObjects = pReloaded->getObjectManager();
+    sw::GameObject*        pReloadedChild   = pReloadedObjects->findGameObjectByName( sw::hashed_string( "Child" ) );
+    sw::GameObject*        pReloadedGrand   = pReloadedObjects->findGameObjectByName( sw::hashed_string( "GrandChild" ) );
+    SW_ASSERT_NOT_NULL( pReloadedChild );
+    SW_ASSERT_NOT_NULL( pReloadedGrand );
+    SW_ASSERT_NOT_NULL( pReloadedChild->getParent() );
+    SW_EXPECT_TRUE( pReloadedChild->getParent()->getName() == sw::hashed_string( "Parent" ) );
+    SW_EXPECT_TRUE( pReloadedGrand->getParent() == pReloadedChild );
+    SW_ASSERT_NOT_NULL( pReloadedChild->getPrimarySceneComponent() );
+    SW_EXPECT_TRUE( pReloadedChild->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
+
+    manager.shutdown();
+}
+
+/**
  * @brief [SceneTest] 프리팹을 찾지 못한 엔티티도 저장하면 그대로 남는다(유니티의 "Missing Prefab" 과 같은 자리)
  * @details 예전에는 스폰이 실패하면 경고 한 줄을 남기고 엔티티를 버렸다. 씬을 열고 저장하면 그 엔티티 · 덮어쓴 값 · 프리팹 GUID 가
  *          파일에서 영영 사라졌다 — 프리팹을 `.meta` 없이 옮겼거나 잠깐 없던 것만으로. 이제 풀지 못한 엔티티는 문서 그대로 들고 있다가

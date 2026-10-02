@@ -218,9 +218,12 @@ namespace sw
         outDoc._listEntityNode.clear();
         outDoc._bValid = true;
 
+        // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 제 씬 컴포넌트의 `_attachOwner` 로 읽은 뒤
+        // 되붙는다(`instantiate` 의 두 번째 단계 — 그래서 순서도 상관없다). 예전에는 부모가 있는 오브젝트를 건너뛰어, 계층 아래의 오브젝트가
+        // 저장할 때마다 파일에서 사라졌다.
         _objectManager->forEachGameObject( [&]( GameObject* pGo )
         {
-            if ( pGo == nullptr || pGo->getParent() != nullptr )
+            if ( pGo == nullptr )
                 return;
             CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
