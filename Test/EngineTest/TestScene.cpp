@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
@@ -802,6 +803,56 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     SW_ASSERT_NOT_NULL( pFourth );
     SW_EXPECT_TRUE( pFourth->getObjectManager()->findGameObjectById( keeperId ) == nullptr );
     manager.setWorldPlaying( false );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 저장된 상태가 있는 프리팹 인스턴스는 그 상태로 **한 번** 짓는다 — 프리팹 상태를 지었다가 통째로 덮지 않는다
+ * @details 씬은 프리팹 인스턴스도 전체 상태를 저장하고, 읽을 때 그 상태가 기준이다(덮어쓴 값 · 지운 컴포넌트까지). 예전에는 프리팹을 먼저
+ *          스폰해(컴포넌트를 모두 만들고) 그 위에 저장된 상태를 읽어 컴포넌트를 모두 지우고 다시 만들었다 — 인스턴스마다 두 번 지었다.
+ *          프리팹이 있는지는 여전히 본다(없으면 "Missing Prefab" 으로 남긴다), 저장할 때 프리팹 경로도 그대로 적는다.
+ */
+SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string prefabPath = test::makeTempPath( "lifecycle.prefab.xml" );
+    sw::string       savedState;
+    {
+        sw::GameObjectManager authoring;
+        sw::RegisterMockComponents( authoring );
+        sw::GameObject* pSource = authoring.createGameObject( sw::hashed_string( "Lifecycle" ) );
+        SW_ASSERT_NOT_NULL( pSource->addComponent<sw::MockPoolLifecycleComponent>() );
+        sw::PrefabAsset asset;
+        asset.setFromGameObject( pSource );
+        SW_ASSERT_TRUE( asset.saveToXmlFile( prefabPath ) );
+        // 배포본은 쿠킹본만 읽는다.
+        SW_ASSERT_TRUE( asset.saveToBinaryFile( sw::FileUtil::replaceExtension( prefabPath, ".bin" ) ) );
+        savedState = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    }
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "PrefabOnceWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::RegisterMockComponents( *pScene->getObjectManager() );
+
+    sw::SceneDocument             doc;
+    sw::SceneDocument::EntityNode entity;
+    entity._name        = "Lifecycle";
+    entity._prefab      = prefabPath;
+    entity._embeddedXml = savedState;
+    doc._listEntityNode.push_back( entity );
+
+    const int32 constructedBefore = sw::MockPoolLifecycleComponent::s_ctorCount.load();
+    SW_ASSERT_TRUE( pScene->instantiate( doc ) );
+    SW_EXPECT_EQUAL( 1, sw::MockPoolLifecycleComponent::s_ctorCount.load() - constructedBefore );
+    SW_EXPECT_EQUAL( size_t( 0 ), pScene->getUnresolvedEntityCount() );
+
+    sw::GameObject* pInstance = pScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Lifecycle" ) );
+    SW_ASSERT_NOT_NULL( pInstance );
+    SW_EXPECT_TRUE( pInstance->getComponent<sw::MockPoolLifecycleComponent>() != nullptr );
+    SW_EXPECT_STREQ( prefabPath.c_str(), pScene->getEntityPrefabPath( pInstance->getObjectId() ).c_str() );
 
     manager.shutdown();
 }

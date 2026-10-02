@@ -158,7 +158,17 @@ namespace sw
             GameObject* pGo{ nullptr };
             if ( entity._prefab.empty() == false )
             {
-                pGo = engine::getResourceManager().getPrefabManager().spawn( _objectManager.get(), entity._prefab, entity._name.c_str() );
+                // **저장된 상태가 있으면 그것이 기준이다**(덮어쓴 값 · 지운 컴포넌트까지 담긴 전체 상태). 프리팹을 스폰해 컴포넌트를 모두 만든
+                // 뒤 그 상태를 읽어 다시 모두 지우고 만들던 것을 — 인스턴스마다 두 번 지었다 — 한 번으로. 프리팹이 있는지는 그대로 본다(없으면
+                // 아래의 "Missing Prefab" 길). 상태가 없는 엔티티만 프리팹으로 짓는다.
+                PrefabManager&     prefabs           = engine::getResourceManager().getPrefabManager();
+                const bool         bHasSavedState    = entity._embeddedStateBytes.empty() == false || entity._embeddedXml.empty() == false;
+                const PrefabAsset* pPrefab           = bHasSavedState ? prefabs.loadPrefab( entity._prefab ) : nullptr;
+                const bool         bPrefabResolvable = pPrefab != nullptr && pPrefab->isValid();
+                if ( bHasSavedState == false )
+                    pGo = prefabs.spawn( _objectManager.get(), entity._prefab, entity._name.c_str() );
+                else if ( bPrefabResolvable )
+                    pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
                 if ( pGo == nullptr )
                 {
                     // 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값 · 프리팹 GUID 까지). 문서 그대로 들고 있다가 저장 때
