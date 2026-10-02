@@ -14,6 +14,13 @@
  * (에디터의 Glyph Previewer 탭이 이것으로 플랫폼별 표기를 나란히 비교해 보여 줍니다).
  */
 
+#if defined( __clang__ )
+    // 아래 두 switch 는 `BindingKind` 를 빠짐없이 적는다. 이 저장소는 `default:` 를 요구하므로(-Wswitch-default) -Wswitch 는 빠진
+    // 종류를 짚지 못한다 — 이 파일만 -Wswitch-enum 을 오류로 켜서, 종류를 늘리고 여기를 빠뜨리면 빌드가 선다.
+    #pragma clang diagnostic push
+    #pragma clang diagnostic error "-Wswitch-enum"
+#endif
+
 namespace sw
 {
     namespace
@@ -74,6 +81,92 @@ namespace sw
                 }
                 return "?";
             }
+
+            /** @brief 슬롯이 키보드 · 마우스 장치인지 반환합니다. */
+            static bool isKeyboardOrMouseSlot( const InputSlot& slot )
+            {
+                return slot._deviceKind == InputDeviceKind::Keyboard || slot._deviceKind == InputDeviceKind::Mouse;
+            }
+
+            /**
+             * @brief 키보드 · 마우스 장치에서 바인딩 하나의 표기입니다. 이 장치로 보일 것이 없으면 빈 문자열입니다(다음 바인딩을 본다).
+             * @details `BindingKind` 를 빠짐없이 다룹니다(파일 머리의 -Wswitch-enum 오류가 빠진 종류를 짚는다).
+             */
+            static string makeKeyboardMouseGlyph( const ActionBinding& binding, InputDeviceType device )
+            {
+                switch ( binding._kind )
+                {
+                    case BindingKind::SingleSlot:
+                    {
+                        if ( isKeyboardOrMouseSlot( binding._arrSlot[0] ) == false )
+                            return {};
+                        const string glyph = slotToGlyph( binding._arrSlot[0], device );
+                        return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
+                    }
+                    case BindingKind::Axis1DComposite:
+                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    case BindingKind::Vector2DComposite:
+                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + slotToGlyph( binding._arrSlot[1], device ) +
+                               slotToGlyph( binding._arrSlot[2], device ) + slotToGlyph( binding._arrSlot[3], device ) + " ]";
+                    case BindingKind::Chord:
+                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    case BindingKind::MouseDelta2D:
+                        return "[ Mouse Look ]";
+                    case BindingKind::VirtualJoystick2D:
+                        return string( "[ Drag " ) + slotToGlyph( binding._arrSlot[0], device ) + " ]";
+                    case BindingKind::Shortcut:
+                    {
+                        string modifierText;
+                        if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
+                            modifierText += "Ctrl + ";
+                        if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
+                            modifierText += "Shift + ";
+                        if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
+                            modifierText += "Alt + ";
+                        if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
+                            modifierText += "Win + ";
+                        return string( "[ " ) + modifierText + slotToGlyph( binding._arrSlot[0], device ) + " ]";
+                    }
+                    case BindingKind::AnyKey:
+                        return "[ Any Key ]";
+                    case BindingKind::GamepadStick2D: // 게임패드 전용 — 키보드 표기가 없다
+                    case BindingKind::Count:
+                    default:
+                        return {};
+                }
+            }
+
+            /**
+             * @brief 게임패드 장치에서 바인딩 하나의 표기입니다. 이 장치로 보일 것이 없으면 빈 문자열입니다(다음 바인딩을 본다).
+             * @details `BindingKind` 를 빠짐없이 다룹니다(파일 머리의 -Wswitch-enum 오류가 빠진 종류를 짚는다).
+             */
+            static string makeGamepadGlyph( const ActionBinding& binding, InputDeviceType device )
+            {
+                switch ( binding._kind )
+                {
+                    case BindingKind::SingleSlot:
+                    {
+                        if ( binding._arrSlot[0]._deviceKind != InputDeviceKind::Gamepad )
+                            return {};
+                        const string glyph = slotToGlyph( binding._arrSlot[0], device );
+                        return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
+                    }
+                    case BindingKind::GamepadStick2D:
+                        return ( binding._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
+                    case BindingKind::Chord:
+                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    case BindingKind::AnyKey:
+                        return "[ Any Button ]";
+                    case BindingKind::Axis1DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
+                    case BindingKind::Vector2DComposite:
+                    case BindingKind::MouseDelta2D:
+                    case BindingKind::VirtualJoystick2D:
+                    case BindingKind::Shortcut:
+                    case BindingKind::Count:
+                    default:
+                        return {};
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -97,79 +190,17 @@ namespace sw
         if ( pEntry == nullptr || pEntry->_listBinding.empty() )
             return "[ ? ]";
 
-        for ( const ActionBinding& b : pEntry->_listBinding )
+        for ( const ActionBinding& binding : pEntry->_listBinding )
         {
-            if ( device == InputDeviceType::KeyboardMouse )
-            {
-                if ( b._kind == BindingKind::SingleSlot )
-                {
-                    if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard || b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
-                    {
-                        const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
-                        if ( glyph != "?" )
-                            return string( "[ " ) + glyph + " ]";
-                    }
-                }
-                else if ( b._kind == BindingKind::Axis1DComposite )
-                {
-                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " / " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::Vector2DComposite )
-                {
-                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[2], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[3], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::Chord )
-                {
-                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::MouseDelta2D )
-                {
-                    return "[ Mouse Look ]";
-                }
-                else if ( b._kind == BindingKind::VirtualJoystick2D )
-                {
-                    return string( "[ Drag " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::Shortcut )
-                {
-                    string modifierText;
-                    if ( ( b._modifierMask & ModifierKey::Ctrl ) != 0 )
-                        modifierText += "Ctrl + ";
-                    if ( ( b._modifierMask & ModifierKey::Shift ) != 0 )
-                        modifierText += "Shift + ";
-                    if ( ( b._modifierMask & ModifierKey::Alt ) != 0 )
-                        modifierText += "Alt + ";
-                    if ( ( b._modifierMask & ModifierKey::Super ) != 0 )
-                        modifierText += "Win + ";
-                    return string( "[ " ) + modifierText + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::AnyKey )
-                {
-                    return "[ Any Key ]";
-                }
-            }
-            else
-            {
-                if ( b._kind == BindingKind::SingleSlot && b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
-                {
-                    const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
-                    if ( glyph != "?" )
-                        return string( "[ " ) + glyph + " ]";
-                }
-                else if ( b._kind == BindingKind::GamepadStick2D )
-                {
-                    return ( b._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
-                }
-                else if ( b._kind == BindingKind::Chord )
-                {
-                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-                }
-                else if ( b._kind == BindingKind::AnyKey )
-                {
-                    return "[ Any Button ]";
-                }
-            }
+            const string glyph = ( device == InputDeviceType::KeyboardMouse ) ? ActionMapGlyphInternal::makeKeyboardMouseGlyph( binding, device )
+                                                                              : ActionMapGlyphInternal::makeGamepadGlyph( binding, device );
+            if ( glyph.empty() == false )
+                return glyph;
         }
         return "[ ? ]";
     }
 } // namespace sw
+
+#if defined( __clang__ )
+    #pragma clang diagnostic pop
+#endif
