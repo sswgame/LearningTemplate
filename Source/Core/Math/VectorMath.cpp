@@ -84,10 +84,10 @@ namespace sw
         return float2{ result._x, result._y };
     }
 
-    float2 float2::transformNormal( const float2& v, const float4x4& matrix ) noexcept
+    float2 float2::transformVector( const float2& v, const float4x4& matrix ) noexcept
     {
         const float3 v3{ v._x, v._y, 0.f };
-        const float3 result = float3::transformNormal( v3, matrix );
+        const float3 result = float3::transformVector( v3, matrix );
         return float2{ result._x, result._y };
     }
 
@@ -298,7 +298,7 @@ namespace sw
             position._x * matrix._13 + position._y * matrix._23 + position._z * matrix._33 + matrix._43 };
     }
 
-    float3 float3::transformNormal( const float3& normal, const float4x4& matrix ) noexcept
+    float3 float3::transformVector( const float3& normal, const float4x4& matrix ) noexcept
     {
         return float3{
             normal._x * matrix._11 + normal._y * matrix._21 + normal._z * matrix._31,
@@ -509,7 +509,7 @@ namespace sw
             v._x * matrix._14 + v._y * matrix._24 + v._z * matrix._34 + v._w * matrix._44 };
     }
 
-    float4 float4::transformNormal( const float4& v, const float4x4& matrix ) noexcept
+    float4 float4::transformVector( const float4& v, const float4x4& matrix ) noexcept
     {
         return float4{
             v._x * matrix._11 + v._y * matrix._21 + v._z * matrix._31,

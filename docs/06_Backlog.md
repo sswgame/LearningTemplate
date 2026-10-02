@@ -1689,8 +1689,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 - **R5**(구조 ⑫ · ⑮ · 서브틱 뒤) — id 64 번부터의 서브틱은 활성이 목록에만 있어 틱 중 끄기 · 해제가 틱 뒤에야 반영된다(헤더에 적음).
   `forEachGameObject` 재진입은 이미 `WalkScope` 단언이 막는다(2026-10-03 확인).
 - **R6**(구조 ⑬ · ⑭ · 셰이더 노멀 뒤) — 거울 변환(음수 행렬식)에서 컬 모드를 뒤집지 않는다 — 뒤집힌 메시가 안쪽 면으로 그려진다. gbuffernormal.hlsl
-  (MRT 없는 폴백)은 네 백엔드가 MRT 라 시험 밖. `float3::transformNormal` 은 실은 방향(w=0) 변환이다(쓰는 곳은 방향이라 맞음 — 이름과
-  `MathTest.VectorTransformNormalNonUniformScale` 가 오해를 부른다). `UnitStatsComponent::_moveSpeed` 는 `Units=m/s` 인데 툴팁은 "tiles/sec"(읽는 곳 없음).
+  (MRT 없는 폴백)은 네 백엔드가 MRT 라 시험 밖. `UnitStatsComponent::_moveSpeed` 는 `Units=m/s` 인데 툴팁은 "tiles/sec"(읽는 곳 없음).
   DX11 디퍼드가 프레임마다 "OM DepthStencil is still bound on input" · "Forcing PS shader resource slot 3 to NULL" 을 낸다(이전부터 — 픽셀은 같다).
 
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
@@ -2100,6 +2099,13 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R6 남은 것 — `transformNormal` 은 방향 변환이라 언리얼처럼 `transformVector` 로)
+
+- **`float2/3/4::transformNormal` 은 법선 변환이 아니었다** — 평행 이동만 빼는 방향(w=0) 변환이다. 비균등 스케일에서 법선은 역전치로 옮겨야 하는데(셰이더가 같은 실수로
+  기울었다, R6), 이름이 그 차이를 가렸다. 시험 `VectorTransformNormalNonUniformScale` 도 축에 정렬된 Y 법선만 봐서 통과했다. 언리얼 이름(`TransformVector` — w=0,
+  `TransformPosition` — w=1)으로 바꾸고 문서에 "법선은 `invert().transpose()` 를 넘긴다" 를 적었다. 쓰는 곳(조명 방향 · 카메라 앞 · 위 · 부착 오프셋)은 모두 방향이라
+  동작은 같다. 시험은 `VectorTransformIsADirectionTransform` 으로 다시 썼다(평행 이동 없음 · 기운 면에서 방향 변환 법선은 수직이 아니고 역전치는 수직).
 
 ### 2026-10-03 (구조 — `hashed_string` 은 언리얼 FName 규칙: 같음은 대소문자 무시 · 표시는 적은 철자 · 순서는 고른다, 사용자 요청)
 

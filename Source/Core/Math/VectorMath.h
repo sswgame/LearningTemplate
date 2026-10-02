@@ -91,8 +91,8 @@ namespace sw
         /** @brief 4x4 행렬로 2D 좌표(z = 0, w = 1)를 변환합니다. */
         static float2 transform( const float2& v, const float4x4& matrix ) noexcept;
 
-        /** @brief 4x4 행렬로 2D 법선을 변환합니다(평행 이동은 무시합니다). */
-        static float2 transformNormal( const float2& v, const float4x4& matrix ) noexcept;
+        /** @brief 4x4 행렬로 2D **방향**(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`). */
+        static float2 transformVector( const float2& v, const float4x4& matrix ) noexcept;
 
         /** @brief 각 성분이 [-bound, bound] 안에 있으면 true 입니다. */
         bool isInBounds( const float2& bound ) const noexcept;
@@ -356,8 +356,12 @@ namespace sw
         /** @brief 4x4 행렬로 3D 좌표(w = 1)를 변환합니다. 원근 나눗셈은 하지 않습니다. */
         static float3 transform( const float3& v, const float4x4& matrix ) noexcept;
 
-        /** @brief 4x4 행렬로 3D 법선(w = 0)을 변환합니다. */
-        static float3 transformNormal( const float3& v, const float4x4& matrix ) noexcept;
+        /**
+         * @brief 4x4 행렬로 3D **방향**(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`).
+         * @details 예전 이름은 `transformNormal` 이었지만 법선 변환이 아니다 — 비균등 스케일에서 법선은 역전치(여인수) 행렬로 옮겨야 한다
+         *          (셰이더의 `SwWorldNormalOf`). 법선을 옮기려면 `matrix.invert().transpose()` 를 넘긴다.
+         */
+        static float3 transformVector( const float3& v, const float4x4& matrix ) noexcept;
 
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float32 dot( const float3& other ) const noexcept;
@@ -525,8 +529,8 @@ namespace sw
         static float4 transform( const float4& v, const quaternion& rotation ) noexcept;
         /** @brief 4x4 행렬로 변환합니다. */
         static float4 transform( const float4& v, const float4x4& matrix ) noexcept;
-        /** @brief 4x4 행렬의 회전 · 스케일 부분(3x3)으로 법선을 변환합니다. 결과의 w 는 0 입니다. */
-        static float4 transformNormal( const float4& v, const float4x4& matrix ) noexcept;
+        /** @brief 4x4 행렬의 회전 · 스케일 부분(3x3)으로 **방향**을 변환합니다(언리얼 `TransformVector`). 결과의 w 는 0 입니다. */
+        static float4 transformVector( const float4& v, const float4x4& matrix ) noexcept;
 
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float32 dot( const float4& other ) const noexcept;

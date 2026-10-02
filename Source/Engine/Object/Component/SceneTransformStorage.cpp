@@ -154,7 +154,7 @@ namespace sw
         if ( pParentWorld != nullptr && pParentLwc != nullptr )
         {
             world               = localTrs * ( *pParentWorld );
-            const float3 offset = float3::transformNormal( position, *pParentWorld );
+            const float3 offset = float3::transformVector( position, *pParentWorld );
             lwc                 = *pParentLwc + double3( static_cast<float64>( offset._x ), static_cast<float64>( offset._y ), static_cast<float64>( offset._z ) );
         }
         else

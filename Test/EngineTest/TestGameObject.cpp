@@ -2873,7 +2873,7 @@ SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
 
     pCamera->lookAt( sw::float3( 0.0f, 0.0f, 10.0f ) );
     manager.flushSceneTransforms();
-    const sw::float3 forward = sw::float3::transformNormal( sw::float3( 0.0f, 0.0f, 1.0f ), pCamera->getWorldMatrix() );
+    const sw::float3 forward = sw::float3::transformVector( sw::float3( 0.0f, 0.0f, 1.0f ), pCamera->getWorldMatrix() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, forward._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, forward._z, 1e-3f );
 }

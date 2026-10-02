@@ -91,8 +91,8 @@ namespace sw
     {
         const float4x4 worldMat = getWorldMatrix();
         const float3   eye      = worldMat.getTranslation();
-        const float3   forward  = float3::transformNormal( float3( 0.0f, 0.0f, 1.0f ), worldMat );
-        const float3   up       = float3::transformNormal( float3( 0.0f, 1.0f, 0.0f ), worldMat );
+        const float3   forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), worldMat );
+        const float3   up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), worldMat );
         const float3   target   = eye + forward;
         return float4x4::createLookAt( eye, target, up );
     }

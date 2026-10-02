@@ -3817,8 +3817,8 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
                 pObjectManager->flushSceneTransforms();
 
                 const sw::float4x4 world             = pMesh->getWorldMatrix();
-                const sw::float3   expected          = sw::float3::transformNormal( localNormal, world.invert().transpose() ).normalize();
-                const sw::float3   worldMatrixNormal = sw::float3::transformNormal( localNormal, world ).normalize();
+                const sw::float3   expected          = sw::float3::transformVector( localNormal, world.invert().transpose() ).normalize();
+                const sw::float3   worldMatrixNormal = sw::float3::transformVector( localNormal, world ).normalize();
                 SW_ASSERT_TRUE_MSG( expected.dot( worldMatrixNormal ) < kBlindDotLimit,
                                     ( label + "배치가 시험이 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
 

@@ -436,19 +436,27 @@ SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
 }
 
 /**
- * @brief [MathTest] float3::transformNormal 비균등 스케일 변환 시 법선 직교성 검증
+ * @brief [MathTest] float3::transformVector 는 방향 변환이다 — 평행 이동은 무시하고 스케일 · 회전은 건다(법선 변환이 아니다)
+ * @details 예전 이름 `transformNormal` 과 이 시험("비균등 스케일 변환 시 법선 직교성")은 축에 정렬된 Y 법선만 봐서 통과했다 — 기운 면의
+ *          법선은 이 함수로 옮기면 면에서 기운다(셰이더가 같은 실수를 했다, R6). 법선은 역전치 행렬을 넘겨야 수직이 남는다.
  */
-SW_TEST_CASE( MathTest, VectorTransformNormalNonUniformScale )
+SW_TEST_CASE( MathTest, VectorTransformIsADirectionTransform )
 {
-    // (0, 1, 0) 법선 벡터에 (2, 5, 2) 비균등 스케일 적용
-    sw::float4x4 nonUniformScale = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
-    sw::float3   unitY{ 0.0f, 1.0f, 0.0f };
-    sw::float3   transformedNormal = sw::float3::transformNormal( unitY, nonUniformScale ).normalize();
+    const sw::float4x4 scaleThenMove = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } ) *
+                                       sw::float4x4::createTranslation( sw::float3{ 10.0f, 20.0f, 30.0f } );
+    const sw::float3 moved = sw::float3::transformVector( sw::float3{ 1.0f, 1.0f, 0.0f }, scaleThenMove );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, moved._x, 1e-4f ); // 스케일은 걸리고
+    SW_EXPECT_NEAR_EQUAL( 5.0f, moved._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, moved._z, 1e-4f ); // 평행 이동은 없다
 
-    // Y축 방향 법선은 여전히 Y축 방향이어야 하며 길이가 1이어야 함
-    SW_EXPECT_NEAR_EQUAL( 0.0f, transformedNormal._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, transformedNormal._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, transformedNormal._z, 1e-4f );
+    // 기운 면(법선 (1,1,0)/√2, 면 위의 방향 (1,-1,0))에 비균등 스케일 — 방향 변환으로 옮긴 법선은 옮긴 면 방향과 수직이 아니다.
+    const sw::float4x4 nonUniformScale = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
+    const sw::float3   normal          = sw::float3{ 1.0f, 1.0f, 0.0f }.normalize();
+    const sw::float3   tangent         = sw::float3::transformVector( sw::float3{ 1.0f, -1.0f, 0.0f }, nonUniformScale );
+    const sw::float3   wrongNormal     = sw::float3::transformVector( normal, nonUniformScale ).normalize();
+    const sw::float3   rightNormal     = sw::float3::transformVector( normal, nonUniformScale.invert().transpose() ).normalize();
+    SW_EXPECT_TRUE( sw::MathUtil::abs( wrongNormal.dot( tangent.normalize() ) ) > 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, rightNormal.dot( tangent.normalize() ), 1e-4f );
 }
 
 /**
