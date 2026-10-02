@@ -28,35 +28,6 @@ namespace sw
     {
         struct ShaderBakeRequestInternal
         {
-            static string findDefaultShaderForPassType( string_view passType, const EngineData& engineData )
-            {
-                if ( passType == "Shadow" || passType == "DepthPrepass" )
-                    return engineData._shaderShadowDepth;
-                if ( passType == "ForwardOpaque" || passType == "ForwardOpaqueNoDepthWrite" || passType == "Transparent" )
-                    return engineData._shaderForwardLit;
-                if ( passType == "GBuffer" )
-                    return engineData._shaderGBuffer;
-                if ( passType == "GBufferAlbedo" )
-                    return engineData._shaderGBufferAlbedo;
-                if ( passType == "GBufferNormal" )
-                    return engineData._shaderGBufferNormal;
-                if ( passType == "Lighting" || passType == "Shading" )
-                    return engineData._shaderDeferredLighting;
-                if ( passType == "PostBloom" )
-                    return engineData._shaderPostBloom;
-                if ( passType == "Outline" )
-                    return engineData._shaderPostOutlineCommon;
-                if ( passType == "Present" )
-                    return engineData._shaderFullscreenBlit;
-                if ( passType == "SSAO" )
-                    return engineData._shaderSsao;
-                if ( passType == "TAA" )
-                    return engineData._shaderTaa;
-                if ( passType == "Tonemap" )
-                    return engineData._shaderTonemap;
-                return "";
-            }
-
             static void appendRequestUnique( vector<ShaderBakeRequest>& outListRequest,
                                              string_view                shaderPath,
                                              string_view                entryPoint,
@@ -153,18 +124,14 @@ namespace sw
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )
                     {
-                        string shaderPath = pass._shaderPath;
-                        if ( shaderPath.empty() )
-                            shaderPath = findDefaultShaderForPassType( pass._type, engineData );
+                        // 셰이더 경로와 define 은 런타임 PSO 생성(createPsoForPassType)과 **같은 함수**로 정한다. 경로는 XML 의
+                        // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
+                        // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._resolvedType, &pass, engineData );
+                        const string&                   shaderPath = passShader._shaderPath;
                         if ( shaderPath.empty() )
                             continue;
-
-                        // 패스가 더하는 define 은 XML 에만 있지 않다. G버퍼는 `SW_PASS_GBUFFER=1` 을 C++ 에서
-                        // 얹는다. 런타임과 **같은 함수**에 물어 합친다. 예전에는 여기서 XML 의 `_listPermutation`
-                        // 만 봐서, 런타임이 찾는 해시를 하나도 굽지 않았다(Shipping 에서 G버퍼 드로우가 통째로
-                        // 사라졌고 디퍼드 화면이 한 색으로 남았다).
-                        const vector<string> listPassDefine =
-                            mergeDefines( pass._listPermutation, FrameRendererUtil::getPassDefine( pass._resolvedType ) );
+                        const vector<string>& listPassDefine = passShader._listDefine;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다(아래 4단계).
                         if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
@@ -180,9 +147,9 @@ namespace sw
                         }
 
                         // 컴퓨트 셰이더
-                        if ( pass._computeEntryPoint.empty() == false || pass._type == "Compute" )
+                        if ( pass._computeEntryPoint.empty() == false )
                         {
-                            const string csEntry = pass._computeEntryPoint.empty() ? "CSMain" : pass._computeEntryPoint;
+                            const string& csEntry = pass._computeEntryPoint;
                             appendRequestUnique( outListRequest, shaderPath, csEntry, ShaderStage::Compute, listPassDefine );
                         }
                         else

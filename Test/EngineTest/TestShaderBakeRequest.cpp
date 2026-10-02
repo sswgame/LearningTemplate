@@ -15,9 +15,13 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 
+#include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -36,6 +40,23 @@ namespace
             if ( request._stage != stage || request._permutationHash != permutationHash )
                 continue;
             if ( sw::ShaderBaker::getStemLower( request._shaderPath ) == stemLower )
+                return true;
+        }
+        return false;
+    }
+
+    /** @brief 이 경로(정규화)·진입점·스테이지·해시를 가진 요청이 목록에 있는가. */
+    bool hasExactRequestInternal( const sw::vector<sw::ShaderBakeRequest>& listRequest,
+                                  sw::string_view                          shaderPath,
+                                  sw::string_view                          entryPoint,
+                                  sw::ShaderStage                          stage,
+                                  uint64                                   permutationHash )
+    {
+        const sw::string normPath = sw::FileUtil::normalizeSeparators( shaderPath );
+        for ( const sw::ShaderBakeRequest& request : listRequest )
+        {
+            if ( request._stage == stage && request._permutationHash == permutationHash && request._entryPoint == entryPoint &&
+                 request._shaderPath == normPath )
                 return true;
         }
         return false;
@@ -97,4 +118,77 @@ SW_TEST_CASE( ShaderBakeRequestTest, RequestsAreUnique )
     }
 
     SW_EXPECT_EQUAL( 0u, duplicateCount );
+}
+
+/**
+ * @brief [ShaderBakeRequestTest] 파이프라인 패스마다 런타임 PSO 가 컴파일할 (셰이더 · define) 을 베이커가 요청한다
+ * @details 런타임은 `selectRenderPassShader` 로 패스의 셰이더(XML 의 `_shaderPath`, 없으면 패스 종류 표의 기본 셰이더)와 define
+ *          (XML 퍼뮤테이션 + 패스 define)을 정한다. 베이커가 패스 종류를 다른 규칙으로 읽으면 그 패스만 매니페스트 미스로
+ *          Shipping 에서 사라진다. 배포 파이프라인 넷을 `_shaderPath` 를 비우고 퍼뮤테이션 하나를 얹어 임시 루트에 다시 써서,
+ *          모든 패스가 **기본 셰이더 + define** 경로를 타게 한 뒤 패스마다 대조한다.
+ */
+SW_TEST_CASE( ShaderBakeRequestTest, EveryPipelinePassShaderIsRequested )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::EngineData engineData;
+    SW_ASSERT_TRUE( engineData.loadFromResource() );
+
+    const sw::string tempRoot    = test::makeTempDirectory( "bake_pipeline_probe" );
+    const sw::string pipelineDir = sw::FileUtil::joinPath( tempRoot, "pipeline" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( pipelineDir ) );
+
+    const utf8*      arrPipeline[]  = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml",
+                                        "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardpipelinestaged.xml" };
+    constexpr uint32 kPipelineCount = static_cast<uint32>( sizeof( arrPipeline ) / sizeof( arrPipeline[0] ) );
+
+    sw::RenderPipelineResource arrProbe[kPipelineCount];
+    for ( uint32 pipelineIndex = 0; pipelineIndex < kPipelineCount; ++pipelineIndex )
+    {
+        sw::RenderPipelineResource& probe = arrProbe[pipelineIndex];
+        SW_ASSERT_TRUE_MSG( probe.loadFromXmlFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
+        for ( sw::RenderGraphPassDesc& pass : probe.getDesc()._listPass )
+        {
+            pass._shaderPath.clear();
+            pass._listPermutation.push_back( "SW_BAKE_PROBE=1" );
+        }
+        const sw::string probePath = sw::FileUtil::joinPath( pipelineDir, sw::FileUtil::getFileNamePart( arrPipeline[pipelineIndex] ) );
+        SW_ASSERT_TRUE_MSG( probe.saveToXmlFile( probePath ), probePath.c_str() );
+    }
+
+    sw::vector<sw::ShaderBakeRequest> listRequest;
+    sw::ShaderBakeDriver::collectAllRequests( tempRoot, listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    bool arrCovered[sw::kRenderPassTypeCount]{};
+    for ( const sw::RenderPipelineResource& probe : arrProbe )
+    {
+        for ( const sw::RenderGraphPassDesc& pass : probe.getGraphPass() )
+        {
+            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, engineData );
+            const sw::string                    label  = probe.getDesc()._name + "/" + pass._name;
+            SW_EXPECT_TRUE_MSG( shader._shaderPath.empty() == false, ( label + ": 기본 셰이더가 없다" ).c_str() );
+            const uint64     permutationHash = sw::ShaderBaker::computePermutationHash( shader._listDefine );
+            const sw::string vsEntry         = pass._vertexEntryPoint.empty() ? sw::string( "VSMain" ) : pass._vertexEntryPoint;
+            SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shader._shaderPath, vsEntry, sw::ShaderStage::Vertex, permutationHash ),
+                                ( label + ": 런타임 PSO 의 VS(" + shader._shaderPath + ") 요청이 없다 — Shipping 에서 이 패스가 사라진다" ).c_str() );
+            if ( sw::FrameRendererUtil::hasPixelStage( pass, probe.getDesc()._listAttachment ) )
+            {
+                const sw::string psEntry = pass._pixelEntryPoint.empty() ? sw::string( "PSMain" ) : pass._pixelEntryPoint;
+                SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shader._shaderPath, psEntry, sw::ShaderStage::Pixel, permutationHash ),
+                                    ( label + ": 런타임 PSO 의 PS(" + shader._shaderPath + ") 요청이 없다 — Shipping 에서 이 패스가 사라진다" ).c_str() );
+            }
+            arrCovered[static_cast<uint32>( pass._resolvedType )] = true;
+        }
+    }
+
+    // 배포 파이프라인이 실행 코드가 있는 파이프라인 타입을 모두 덮는지 본다(덮지 못한 타입은 이 대조가 보지 못한다).
+    for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
+    {
+        const sw::RenderPassType type        = static_cast<sw::RenderPassType>( typeIndex );
+        const bool               bCovered    = arrCovered[typeIndex];
+        const bool               bExecutable = sw::isPipelinePassType( type ) && type != sw::RenderPassType::GBufferAlbedo && type != sw::RenderPassType::GBufferNormal;
+        if ( bExecutable )
+            SW_EXPECT_TRUE_MSG( bCovered, ( "배포 파이프라인에 없는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
+    }
 }
