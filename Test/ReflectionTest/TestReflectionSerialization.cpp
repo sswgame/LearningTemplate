@@ -19,6 +19,7 @@
 #include "ReflectionTest/TestSampleActor.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestPropertyCoverage.h"
 
 // 리플렉션 직렬화 — Binary/JSON/XML 왕복 · 버전 · 스키마 마이그레이션 · 골든 출력 · 딥카피.
 // 골든 비교 헬퍼는 아래 익명 네임스페이스에 있다.
@@ -2976,7 +2977,8 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
  * @brief [ReflectionSerializationTest] 등록된 모든 PROPERTY 는 세 형식이 실어 나를 수 있는 타입이다
  * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 썼고, 읽으면 그 칸은 기본값이 됐다 — 저장한 줄 알았던 값이 사라졌다.
  *          선언(PROPERTY)만 있고 저장이 없는 것이 결함 62 · ㊺ 의 모양이다. 새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
- *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다.
+ *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다. 이 실행 파일은 엔진과 자기 시험 타입만 등록한다 — 모듈(GameFramework · 킷 ·
+ *          게임 · 에디터)의 타입은 `ModuleApiTest.EveryModulePropertyHasATypeTheSerializersCanCarry`(SmokeTest)가 같은 판정으로 본다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
 {
@@ -2986,25 +2988,8 @@ SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCa
     SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), ctx ) );
     SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "sw::RHIBlendMode" ), ctx ) );
 
-    sw::vector<const sw::TypeInfo*> listType;
-    sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
-    { listType.push_back( &typeInfo ); } );
-    SW_ASSERT_TRUE( listType.size() > 50 );
-
-    sw::string offenders;
-    uint32     checkedCount{ 0 };
-    for ( const sw::TypeInfo* pType : listType )
-    {
-        for ( const sw::PropertyInfo& prop : pType->_listProperty )
-        {
-            if ( prop._metadata._bTransient == SW_TRUE )
-                continue;
-            ++checkedCount;
-            if ( sw::SerializerUtil::canCarryProperty( prop, ctx ) )
-                continue;
-            offenders += sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (" + prop._typeName.c_str() + ")\n";
-        }
-    }
-    SW_EXPECT_TRUE( checkedCount > 100 );
-    SW_EXPECT_TRUE_MSG( offenders.empty(), offenders.c_str() );
+    const test::PropertyCarryReport report = test::makePropertyCarryReport();
+    SW_ASSERT_TRUE( report._typeCount > 50 );
+    SW_EXPECT_TRUE( report._checkedCount > 100 );
+    SW_EXPECT_TRUE_MSG( report._offender.empty(), report._offender.c_str() );
 }

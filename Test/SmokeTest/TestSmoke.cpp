@@ -30,6 +30,7 @@
 
 #include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestPropertyCoverage.h"
 
 #if !defined( SW_SHIPPING )
 
@@ -1424,6 +1425,65 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0,
                         ( "자식 프로세스에서 GameFramework 타입의 모듈 귀속 검사가 실패했습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+}
+
+/**
+ * @brief [ModuleApiTest] 자식 프로세스 역할: 모듈을 모두 올린 뒤 등록된 모든 PROPERTY 를 직렬화기 판정으로 본다. 그냥 실행하면 건너뛴다.
+ * @details `ModuleHost` 의 순서대로 공용 모듈 → 킷 → 게임 → 에디터를 올린다. 모듈마다 타입이 하나 이상 올라왔는지 먼저 본다 — 아무것도 안
+ *          올라왔으면 아래 판정은 엔진 타입만 본 셈이다. 공용 모듈의 등록 귀속은 프로세스마다 한 번뿐이라(이미지는 내려가지 않는다) 앞선 케이스가
+ *          모듈을 올린 이 프로세스가 아니라 자식에서 잰다(`SharedModuleChildKeepsItsRegistrations` 와 같은 까닭).
+ */
+SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
+{
+    if ( std::getenv( "SW_MODULE_PROPERTY_CHILD" ) == nullptr )
+        SW_TEST_SKIP( "child only — EveryModulePropertyHasATypeTheSerializersCanCarry launches it" );
+
+    const utf8* const     arrKit[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.loadSharedModule( "GameFramework" ) );
+    sw::vector<sw::string> listGameDepend{ "GameFramework" };
+    for ( const utf8* pKit : arrKit )
+    {
+        SW_ASSERT_TRUE( manager.registerModule( pKit, { "GameFramework" } ) );
+        listGameDepend.push_back( pKit );
+    }
+    SW_ASSERT_TRUE( manager.registerModule( "SWGame", listGameDepend ) );
+    SW_ASSERT_TRUE( manager.registerModule( "EditorModule" ) );
+
+    sw::unordered_map<sw::hashed_string, uint32> mapModuleTypeCount;
+    sw::engine::getTypeRegistry().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
+    { ++mapModuleTypeCount[info._moduleName]; } );
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+        SW_EXPECT_TRUE_MSG( mapModuleTypeCount[sw::hashed_string( pModule )] > 0, pModule );
+
+    const test::PropertyCarryReport report = test::makePropertyCarryReport();
+    SW_EXPECT_TRUE( report._checkedCount > 100 );
+    SW_EXPECT_TRUE_MSG( report._offender.empty(), report._offender.c_str() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [ModuleApiTest] 모듈(GameFramework · 킷 · 게임 · 에디터)이 등록하는 모든 PROPERTY 도 세 형식이 실어 나를 수 있는 타입이다
+ * @details 같은 판정(`ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`)이 ReflectionTest 가 등록하는 타입만 봤다 —
+ *          모듈 타입의 PROPERTY 가 직렬화기가 모르는 타입이면 씬 · 프리팹 · 세이브 · 에디터 설정에 조용히 `null` 로 쓰였다. 모듈을 올리는 실행 파일이
+ *          여기뿐이라 여기서 본다(자식 프로세스 — 위 케이스 머리말).
+ */
+SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
+{
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    {
+        if ( sw::FileUtil::fileExists( sw::modulePath( pModule ) ) == false )
+            SW_TEST_SKIP( "a module is not built next to the test in this config" );
+    }
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_MODULE_PROPERTY_CHILD", "1" }
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.ModulePropertyChildChecksEveryType", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈 타입의 PROPERTY 판정이 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
 }
 
 /**
