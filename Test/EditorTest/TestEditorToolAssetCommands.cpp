@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 
@@ -56,6 +57,48 @@ namespace
     private:
         DelegateHandle _handle{};
         int32          _errorCount{ 0 };
+    };
+
+    /** @brief 스코프 동안 도구 애셋 커맨드가 남긴 Error · Warning 로그의 문구를 모읍니다. */
+    class ScopedLogMessageCollector
+    {
+    public:
+        ScopedLogMessageCollector()
+        {
+            _handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
+            {
+                // 커맨드가 남긴 것만 본다 — 파일 계층의 오류 · 시험 프레임워크의 실패 보고는 모양을 비교할 대상이 아니다.
+                if ( entry._caller != "EditorToolAssetCommands" )
+                    return;
+                if ( entry._level == LogLevel::Error )
+                    _listError.push_back( entry._message );
+                else if ( entry._level == LogLevel::Warning )
+                    _listWarning.push_back( entry._message );
+            } ) );
+        }
+
+        ~ScopedLogMessageCollector() { Logger::removeGlobalListener( _handle ); }
+
+        ScopedLogMessageCollector( const ScopedLogMessageCollector& )            = delete;
+        ScopedLogMessageCollector& operator=( const ScopedLogMessageCollector& ) = delete;
+
+        const vector<string>& getErrors() const { return _listError; }
+
+        /** @brief @p text 가 든 경고가 있는지입니다(방어 시험 범위에서는 문구 앞에 표식이 붙는다). */
+        bool hasWarningContaining( const string& text ) const
+        {
+            for ( const string& message : _listWarning )
+            {
+                if ( message.find( text ) != string::npos )
+                    return true;
+            }
+            return false;
+        }
+
+    private:
+        DelegateHandle _handle{};
+        vector<string> _listError;
+        vector<string> _listWarning;
     };
 
     /** @brief 어떤 방법으로도 쓸 수 없는 경로 — 디렉터리 이름으로 파일을 만들 수는 없다. */
@@ -254,4 +297,109 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevert
     SW_EXPECT_NEAR_EQUAL( 5.0f, pInstanceSocket->getWorldPosition()._x, 1e-4f ); // 알렸다
     SW_EXPECT_TRUE( pInstanceAnimator->isRepeating() );
     SW_EXPECT_TRUE( pInstanceAnimator->isPlaying() ); // 같은 바이트의 다른 비트는 그대로다
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 다섯 도구 문서의 저장 실패는 같은 모양의 오류 한 줄이다
+ * @details 저장 커맨드 다섯이 실패를 제각각 알렸다(문구 · 언어 · 경로 표기가 달랐다). 지금은 `saveToolDocument` 한 벌이 알리므로
+ *          종류 이름만 다르고 모양은 같다: `Failed to save the <종류> to '<경로>'`.
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
+{
+    const string unwritable = makeUnwritablePath();
+
+    struct SaveCase
+    {
+        const utf8* _pLabel;
+        bool        _bSaved;
+        size_t      _errorCount;
+        string      _firstError;
+    };
+    vector<SaveCase> listCase;
+    const auto       runCase = [&listCase]( const utf8* pLabel, auto&& save )
+    {
+        ScopedLogMessageCollector collector;
+        const bool                bSaved = save();
+        listCase.push_back( SaveCase{ pLabel, bSaved, collector.getErrors().size(), collector.getErrors().empty() ? string{} : collector.getErrors()[0] } );
+    };
+    runCase( "animation graph", [&]()
+    { return EditorToolAssetCommands::saveAnimationGraph( AnimationGraphAsset{}, unwritable ); } );
+    runCase( "dialogue graph", [&]()
+    { return EditorToolAssetCommands::saveDialogueGraph( DialogueGraphAsset{}, unwritable ); } );
+    runCase( "tile map", [&]()
+    { return EditorToolAssetCommands::saveTileMap( unwritable, TileMapXmlData{} ); } );
+    runCase( "sprite clip", [&]()
+    { return EditorToolAssetCommands::saveSpriteClip( SpriteClipAsset{}, unwritable ); } );
+    runCase( "sequence", [&]()
+    { return EditorToolAssetCommands::saveSequence( SequenceAsset{}, unwritable ); } );
+
+    for ( const SaveCase& saveCase : listCase )
+    {
+        SW_EXPECT_FALSE( saveCase._bSaved );
+        SW_EXPECT_TRUE_MSG( saveCase._errorCount == 1, saveCase._pLabel );
+        const string expectedPrefix = string( "Failed to save the " ) + saveCase._pLabel + " to '";
+        SW_EXPECT_TRUE_MSG( StringUtil::startsWith( saveCase._firstError, expectedPrefix ), saveCase._firstError.c_str() );
+    }
+
+    // 경로도 기본 문서도 없으면 같은 문구로 경로가 없다고 말한다.
+    ScopedLogMessageCollector collector;
+    SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( SequenceAsset{}, {} ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), collector.getErrors().size() );
+    SW_EXPECT_TRUE( StringUtil::startsWith( collector.getErrors()[0], "Failed to save the sequence - no file path" ) );
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 다섯 도구 문서는 읽지 못한 파일을 같은 경고로 알리고, 상태 문구도 같은 모양이다
+ * @details 스프라이트 클립은 커맨드가 경고를 남기지 않았고 타일맵은 다른 문구였다. 상태 문구가 있는 둘(타일맵 · 스프라이트 클립)은
+ *          `No file yet: ` · `Failed to read ` · `Loaded ` 로 같은 모양이다.
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheSameWay )
+{
+    const string folder  = test::makeTempDirectory( "sw_tool_unreadable" );
+    const string broken  = FileUtil::joinPath( folder, "broken.txt" );
+    const string missing = FileUtil::joinPath( folder, "never_written.txt" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( broken, "<<< merge conflict { not a document" ) );
+
+    test::ScopedDefensiveTestLog expected( "tool documents that cannot be read" );
+    ScopedLogMessageCollector    collector;
+
+    AnimationGraphAsset animationGraph;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( animationGraph, broken ) == ToolAssetLoadResult::Malformed );
+    DialogueGraphAsset dialogueGraph;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogueGraph, broken ) == ToolAssetLoadResult::Malformed );
+    string         tileStatus;
+    TileMapXmlData tileMap;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( broken, tileMap, tileStatus ) == ToolAssetLoadResult::Malformed );
+    SW_EXPECT_TRUE( StringUtil::startsWith( tileStatus, "Failed to read " ) );
+    string          clipStatus;
+    SpriteClipAsset clip;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, clipStatus, broken ) == ToolAssetLoadResult::Malformed );
+    SW_EXPECT_TRUE( StringUtil::startsWith( clipStatus, "Failed to read " ) );
+    SequenceAsset sequence;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSequence( sequence, broken ) == ToolAssetLoadResult::Malformed );
+
+    const utf8* const arrLabel[] = { "animation graph", "dialogue graph", "tile map", "sprite clip", "sequence" };
+    for ( const utf8* pLabel : arrLabel )
+        SW_EXPECT_TRUE_MSG( collector.hasWarningContaining( string( "Could not read the " ) + pLabel + " '" ), pLabel );
+
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( missing, tileMap, tileStatus ) == ToolAssetLoadResult::Missing );
+    SW_EXPECT_STREQ( ( "No file yet: " + missing ).c_str(), tileStatus.c_str() );
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, clipStatus, missing ) == ToolAssetLoadResult::Missing );
+    SW_EXPECT_STREQ( ( "No file yet: " + missing ).c_str(), clipStatus.c_str() );
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 스프라이트 클립에 이미지를 주면 문서로 읽지 않고 아틀라스로 쓴다 — 파일이 있어도
+ * @details 아틀라스 폴백이 "파일이 없을 때" 안에 있어, 실제로 있는 이미지는 클립 문서로 읽으려다 `Malformed` 가 됐다(없는 이미지만 아틀라스가 됐다).
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, SpriteClipTakesAnExistingImageAsTheAtlas )
+{
+    const string image = test::makeTempPath( "sw_tool_atlas.png" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( image, "not really a png - never decoded here" ) );
+
+    string          status;
+    SpriteClipAsset clip;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, status, image ) == ToolAssetLoadResult::Loaded );
+    SW_EXPECT_STREQ( image.c_str(), clip._atlasPath.c_str() );
+    SW_EXPECT_STREQ( "Atlas from focused texture", status.c_str() );
 }

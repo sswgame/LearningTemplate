@@ -40,6 +40,24 @@ namespace sw::editor
 {
     namespace
     {
+        /**
+         * @struct ToolDocumentDesc
+         * @brief 도구 문서 종류 하나 — 로그 · 상태 문구의 이름과, 경로가 비었을 때 여는 에디터 기본 파일입니다.
+         * @details 읽기 · 쓰기 · 실패 알림은 `loadToolDocument` / `saveToolDocument` 한 벌이다. 종류마다 다른 것은 이 기술자와
+         *          파일 IO 오버로드(`readDocument` / `writeDocument`)뿐이다.
+         */
+        struct ToolDocumentDesc
+        {
+            const utf8* _pLabel;                ///< "animation graph" — 로그 · 상태 문구에 들어간다
+            string EditorData::* _pDefaultFile; ///< 경로가 비었을 때 여는 기본 파일(`EditorData` 칸). nullptr 이면 기본 문서가 없다
+        };
+
+        constexpr ToolDocumentDesc kAnimationGraphDocument{ "animation graph", &EditorData::_animationGraphDataFile };
+        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", &EditorData::_dialogueGraphDataFile };
+        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", &EditorData::_spriteClipFile };
+        constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
+        constexpr ToolDocumentDesc kSequenceDocument{ "sequence", nullptr };
+
         struct EditorToolAssetInternal
         {
             static string resolveExistingOrRelativePath( string_view path )
@@ -53,44 +71,89 @@ namespace sw::editor
             }
 
             /**
-             * @brief 도구 문서를 읽고 **어떻게 됐는지** 답합니다 — 파일이 없음(새 문서) · 읽음 · 있는데 읽지 못함(깨졌거나 새 형식).
-             * @details 예전에는 셋 다 bool 하나였고 실패는 로그도 없었다. 패널은 "없음" 과 "깨짐" 을 가를 수 없어 둘 다 앞 문서의 데이터를
-             *          든 채 저장할 수 있게 두었다 — 깨진 파일을 앞 문서로 덮는 길이었다.
+             * @brief 문서 경로입니다. 열린 문서 경로가 비면 기본 문서 경로이고, **둘 다 없으면 빈 문자열**입니다.
+             * @details 빈 경로를 파일 계층까지 내리면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 부르는 쪽(`loadToolDocument` ·
+             *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
-            template <typename TAsset>
-            static ToolAssetLoadResult loadToolAssetFile( TAsset& outData, const string& resolved, const utf8* pKind )
+            static string resolveDocumentPath( const ToolDocumentDesc& desc, string_view path )
             {
-                if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
-                    return ToolAssetLoadResult::Missing;
-                if ( outData.loadFromFile( resolved ) )
-                    return ToolAssetLoadResult::Loaded;
-                SW_LOG_WARNING( "Could not read %# '%#' (malformed or a newer format)", pKind, resolved );
-                return ToolAssetLoadResult::Malformed;
+                if ( path.empty() == false )
+                    return resolveExistingOrRelativePath( path );
+                if ( desc._pDefaultFile == nullptr )
+                    return {};
+                return EditorUtil::resolveEditorConfigFile( ( getEditorData().*desc._pDefaultFile ).c_str() );
             }
+
+            template <typename TAsset>
+            static bool readDocument( TAsset& outData, const string& resolved )
+            {
+                return outData.loadFromFile( resolved );
+            }
+
+            static bool readDocument( TileMapXmlData& outData, const string& resolved ) { return outData.load( resolved ); }
+
+            template <typename TAsset>
+            static bool writeDocument( const TAsset& data, const string& resolved )
+            {
+                return data.saveToFile( resolved );
+            }
+
+            static bool writeDocument( const TileMapXmlData& data, const string& resolved ) { return data.save( resolved ); }
+
+            /** @brief 상태 문구에 보일 경로 — 받은 경로가 있으면 그것(리소스 id), 없으면 푼 경로입니다. */
+            static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }
 
             /**
-             * @brief 열린 문서 경로가 비면 에디터 기본 문서 경로를 씁니다. **둘 다 없으면 빈 문자열**이고, 그대로 파일 계층까지
-             *        내려가면 `File not found: ` 처럼 이름이 빈 에러가 남습니다. 부르는 쪽에서 빈 경로를 먼저 걸러야 합니다.
+             * @brief 도구 문서를 읽고 **어떻게 됐는지** 답합니다 — 파일이 없음(새 문서) · 읽음 · 있는데 읽지 못함(깨졌거나 새 형식).
+             * @details 다섯 종류가 같은 모양으로 알린다. 읽지 못하면 경고 한 줄(`Could not read the <종류> '<경로>'`), @p pOutStatus 가
+             *          있으면 패널 상태 문구(`No file yet: …` · `Failed to read …` · `Loaded …`)를 쓴다.
              */
-            static string resolveAnimGraphPath( string_view path )
+            template <typename TAsset>
+            static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
-                if ( path.empty() == false )
-                    return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( getEditorData()._animationGraphDataFile.c_str() );
+                const string resolved = resolveDocumentPath( desc, path );
+                if ( resolved.empty() || ResourceUtil::hasResource( resolved ) == false )
+                {
+                    if ( pOutStatus != nullptr )
+                        *pOutStatus = resolved.empty() ? ( string( "No " ) + desc._pLabel + " file yet" ) : ( "No file yet: " + makeShownPath( path, resolved ) );
+                    return ToolAssetLoadResult::Missing;
+                }
+                if ( readDocument( outData, resolved ) == false )
+                {
+                    SW_LOG_WARNING( "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved );
+                    if ( pOutStatus != nullptr )
+                        *pOutStatus = "Failed to read " + makeShownPath( path, resolved );
+                    return ToolAssetLoadResult::Malformed;
+                }
+                if ( pOutStatus != nullptr )
+                    *pOutStatus = "Loaded " + makeShownPath( path, resolved );
+                return ToolAssetLoadResult::Loaded;
             }
 
-            static string resolveDialogueGraphPath( string_view path )
+            /** @brief 도구 문서를 씁니다. 실패는 두 경우(경로 없음 · 쓰기 실패) 모두 오류 한 줄로 알립니다 — 호출부가 반환값을 버려도 조용하지 않습니다. */
+            template <typename TAsset>
+            static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
             {
-                if ( path.empty() == false )
-                    return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( getEditorData()._dialogueGraphDataFile.c_str() );
+                const string resolved = resolveDocumentPath( desc, path );
+                if ( resolved.empty() )
+                {
+                    SW_LOG_ERROR( "Failed to save the %# - no file path and no default file", desc._pLabel );
+                    return false;
+                }
+                if ( writeDocument( data, resolved ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to save the %# to '%#'", desc._pLabel, resolved );
+                    return false;
+                }
+                SW_LOG_INFO( "Saved the %# to '%#'", desc._pLabel, resolved );
+                return true;
             }
 
-            static string resolveSpriteClipPath( string_view path )
+            /** @brief 스프라이트 클립 문서가 아닌 이미지인지입니다. 그런 경로는 문서로 읽지 않고 아틀라스로 씁니다. */
+            static bool isAtlasImagePath( string_view path )
             {
-                if ( path.empty() == false )
-                    return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( getEditorData()._spriteClipFile.c_str() );
+                return EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) &&
+                       EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path );
             }
         };
     } // namespace
@@ -102,147 +165,60 @@ namespace sw::editor
 
     ToolAssetLoadResult EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
     {
-        return EditorToolAssetInternal::loadToolAssetFile( outData, EditorToolAssetInternal::resolveAnimGraphPath( path ), "animation graph" );
+        return EditorToolAssetInternal::loadToolDocument( kAnimationGraphDocument, outData, path, nullptr );
     }
 
     bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
     {
-        // **실패도 성공만큼 분명하게 알린다.** 예전에는 성공에만 로그가 있고 실패 두 경우는 조용히 `false` 만 반환했다.
-        // 호출부가 그 값을 버리고 있어서 아무 일도 일어나지 않은 것처럼 보였다.
-        const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
-        if ( resolved.empty() )
-        {
-            SW_LOG_ERROR( "애니메이션 그래프 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
-            return false;
-        }
-        if ( data.saveToFile( resolved ) == false )
-        {
-            SW_LOG_ERROR( "애니메이션 그래프 저장 실패: %#", resolved.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Saved %#", resolved.c_str() );
-        return true;
+        return EditorToolAssetInternal::saveToolDocument( kAnimationGraphDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
     {
-        return EditorToolAssetInternal::loadToolAssetFile( outData, EditorToolAssetInternal::resolveDialogueGraphPath( path ), "dialogue graph" );
+        return EditorToolAssetInternal::loadToolDocument( kDialogueGraphDocument, outData, path, nullptr );
     }
 
     bool EditorToolAssetCommands::saveDialogueGraph( const DialogueGraphAsset& data, string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
-        if ( resolved.empty() )
-        {
-            SW_LOG_ERROR( "대화 그래프 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
-            return false;
-        }
-        if ( data.saveToFile( resolved ) == false )
-        {
-            SW_LOG_ERROR( "대화 그래프 저장 실패: %#", resolved.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), resolved.c_str() );
-        return true;
+        return EditorToolAssetInternal::saveToolDocument( kDialogueGraphDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus )
     {
-        if ( assetRelativePath.empty() || ResourceUtil::hasResource( assetRelativePath ) == false )
-        {
-            outStatus = "No file yet: " + string{ assetRelativePath };
-            return ToolAssetLoadResult::Missing;
-        }
-        if ( outData.load( assetRelativePath ) == false )
-        {
-            outStatus = "Failed to read " + string{ assetRelativePath };
-            SW_LOG_WARNING( "Could not read tile map '%#' (malformed or a newer format)", assetRelativePath );
-            return ToolAssetLoadResult::Malformed;
-        }
-        outStatus = string( "Loaded " ) + string( assetRelativePath );
-        return ToolAssetLoadResult::Loaded;
+        return EditorToolAssetInternal::loadToolDocument( kTileMapDocument, outData, assetRelativePath, &outStatus );
     }
 
     bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXmlData& data )
     {
-        if ( data.save( assetRelativePath ) == false )
-        {
-            SW_LOG_ERROR( "타일맵 저장 실패: %#", string( assetRelativePath ).c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Saved %#", string( assetRelativePath ).c_str() );
-        return true;
+        return EditorToolAssetInternal::saveToolDocument( kTileMapDocument, data, assetRelativePath );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )
     {
         outData.clear();
-
-        const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
-        if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
+        // 클립 문서가 아닌 이미지는 문서로 읽지 않는다 — 그 이미지를 아틀라스로 새 클립을 시작한다.
+        if ( EditorToolAssetInternal::isAtlasImagePath( path ) )
         {
-            const bool bAtlasImage = EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) &&
-                                     EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path );
-            if ( bAtlasImage )
-            {
-                outData._atlasPath = string{ path };
-                outStatus          = "Atlas from focused texture";
-                return ToolAssetLoadResult::Loaded;
-            }
-            outStatus = resolved.empty() ? string{ "No sprite clip file yet" } : ( "No file yet: " + resolved );
-            return ToolAssetLoadResult::Missing;
+            outData._atlasPath = string{ path };
+            outStatus          = "Atlas from focused texture";
+            return ToolAssetLoadResult::Loaded;
         }
-
-        if ( outData.loadFromFile( resolved ) == false )
-        {
-            // 이유(경로:줄:열)는 런타임 로더가 이미 경고로 남겼다.
-            outStatus = "Failed to read " + resolved;
-            return ToolAssetLoadResult::Malformed;
-        }
-        outStatus = "Loaded " + resolved;
-        return ToolAssetLoadResult::Loaded;
+        return EditorToolAssetInternal::loadToolDocument( kSpriteClipDocument, outData, path, &outStatus );
     }
 
     bool EditorToolAssetCommands::saveSpriteClip( const SpriteClipAsset& data, string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
-        if ( resolved.empty() )
-        {
-            SW_LOG_ERROR( "스프라이트 클립 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
-            return false;
-        }
-        if ( data.saveToFile( resolved ) == false )
-        {
-            SW_LOG_ERROR( "스프라이트 클립 저장 실패: %#", resolved.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Saved %#", resolved.c_str() );
-        return true;
+        return EditorToolAssetInternal::saveToolDocument( kSpriteClipDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
     {
-        return EditorToolAssetInternal::loadToolAssetFile( outAsset, EditorToolAssetInternal::resolveExistingOrRelativePath( path ), "sequence" );
+        return EditorToolAssetInternal::loadToolDocument( kSequenceDocument, outAsset, path, nullptr );
     }
 
     bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
     {
-        // 저장 커맨드 다섯이 실패를 알리는 방식이 제각각이었다. 이것과 `saveTileMap` 은 로그가 아예 없었고, `saveSpriteClip` 은
-        // 성공만 알렸다. 호출부는 반환값을 자주 버리므로 **실패가 조용하면 아무 일도 없었던 것처럼 보인다.** 다섯을 같은 모양으로
-        // 맞춘다.
-        const string resolved = EditorToolAssetInternal::resolveExistingOrRelativePath( path );
-        if ( resolved.empty() )
-        {
-            SW_LOG_ERROR( "시퀀스 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
-            return false;
-        }
-        if ( asset.saveToFile( resolved ) == false )
-        {
-            SW_LOG_ERROR( "시퀀스 저장 실패: %#", resolved.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Saved %#", resolved.c_str() );
-        return true;
+        return EditorToolAssetInternal::saveToolDocument( kSequenceDocument, asset, path );
     }
 
     void EditorToolAssetCommands::collectPrefabOverrides( GameObject* pInstance, string_view prefabPath, string& outPrefabPath,

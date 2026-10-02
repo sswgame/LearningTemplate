@@ -37,6 +37,9 @@ namespace sw::editor
     /**
      * @class EditorToolAssetCommands
      * @brief 도구 패널이 쓰던 파일 IO를 ImGui 없이 수행합니다.
+     * @details 도구 문서 다섯(애니메이션 그래프 · 대화 그래프 · 타일맵 · 스프라이트 클립 · 시퀀스)의 load/save 는 한 벌의 템플릿
+     *          (EditorToolAssetCommands.cpp 의 loadToolDocument · saveToolDocument)이다 — 실패는 모두 같은 모양으로 알린다: 읽지 못하면 경고
+     *          `Could not read the <종류> '<경로>'`, 저장하지 못하면 오류 `Failed to save the <종류> ...`.
      */
     class EditorToolAssetCommands
     {
@@ -55,6 +58,7 @@ namespace sw::editor
         [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXmlData& data );
         /**
          * @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다.
+         *        클립 문서가 아닌 이미지 경로는 문서로 읽지 않고 그 이미지를 아틀라스로 삼아 `Loaded` 를 돌려줍니다.
          * @details 형식은 런타임 타입(`SpriteClipAsset`) 하나가 읽고 씁니다. 예전에는 에디터가 자기 구조체(`EditorSpriteClipData`)와 파서를 따로
          *          들어 런타임에는 그 파일을 읽는 곳이 없었습니다. 문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJson` · `parseJson` 입니다.
          */
