@@ -1880,8 +1880,13 @@ Win32 중첩 `WM_SIZE`(㊵ · S5), 데이터 문자열이 전역 이름표로(�
 쓴다), 로컬 `parser_config.json`(㊹ · P3), 별칭으로 적은 프로퍼티(㊺ — 새로 찾았다), 머티리얼 레이아웃(㊻ · G2), 기하 패스의 첨부 이름(㊼ · G5), 텍스처
 핫 리로드 뒤 bindless 인덱스(㊽ · G1), 정점 · 모프 풀의 포인터 키(㊾ · G6), Play 중 씬 교체(㊿ · E4). ReflectionTest 가 시한(30 s)에 닿던 것은 시험
 샤딩(확인 ⑦ — `--test_shard=k/n` · CMake `SHARDS`)으로 풀었다.
-남은 한계: GBuffer 첨부 이름은 Lighting 입력의 역할이 이름으로 정해져 바꿀 수 없다(㊼); 인스턴스의 날 텍스처 인덱스 오버라이드는 텍스처 리로드를
-따라가지 못한다(㊽); "씬을 여는 중에는 Play 를 시작하지 않는다" 는 에디터 컨텍스트가 필요해 시험이 없다(㊿).
+남은 한계 넷은 2026-10-02 "상용 엔진과 비교해 극복" 으로 모두 풀었다(3절 구조 ①~④ · 결함 51). 각각 상용 엔진의 같은 자리를 견주고 그 모양으로 바꿨다:
+| 한계 | 상용 엔진 | 바꾼 것 |
+|------|-----------|---------|
+| G버퍼 · 그림자 맵 · AO 첨부 이름을 못 바꿈(㊼) | 언리얼 RDG 패스 파라미터 구조체 · 유니티 RenderGraph 셰이더 프로퍼티 — 바인딩이 텍스처 이름과 떨어져 있다 | 첨부가 역할을 선언한다(`RenderPassAttachment::_role`, 구조 ①) |
+| 인스턴스의 날 텍스처 인덱스 오버라이드가 리로드를 못 따라감(㊽) | 언리얼 MIC `SetTextureParameterValue(UTexture*)` · 유니티 `MaterialPropertyBlock.SetTexture` — 덮어쓰는 것은 에셋이다 | `MaterialInstance::setTextureParameter( 이름, 에셋 경로 )`(구조 ②) — 합친 배치의 인스턴스가 DX12 · Vulkan 에서 GPU 에 안 오르던 것도 드러났다 |
+| 씬을 여는 중의 Play 에 시험이 없음(㊿) | 언리얼 `RequestPlaySession` — 요청을 큐에 두고 다음 틱에 시작한다 | 미룬 Play 를 상태(`Starting`)로 두고 로드가 끝난 프레임에 시작한다(구조 ③) — 시험할 수 있는 상태 전환이 됐다 |
+| ㊼ 의 깊이 로드 연산을 볼 수 없음(프리패스 파이프라인 없음) | 언리얼 EarlyZ · 유니티 URP Depth Priming — depth-only 와 base pass 가 같은 정점 코드, LessEqual | `forwardprepasspipeline.xml`(구조 ④) — 프리패스가 네 백엔드 어디서도 맞지 않았고, DX11 은 깊이 전용 드로우를 하나도 안 내 그림자가 없었다 |
 - 기각: `StringBuilder::appendFormat` 의 조용한 잘림(C3) — 버퍼를 늘려 다시 포맷한다. 로그 한 줄의 8 KB 상한은 남지만 지금 가장 큰 덤프가 1.5 KB 다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
