@@ -16,7 +16,7 @@ namespace sw
      *
      *          리소스 팩의 `PackCompressionType` 과는 일부러 값을 다르게 두었습니다. 둘은 서로 다른 파일의 독립된 포맷입니다.
      *          숫자를 맞춰 두면 `static_cast` 로 오가고 싶어지고, 그 순간부터 한쪽의 포맷 변경이 다른 쪽까지 끌고 갑니다.
-     *          코덱 **구현**은 공유하되(같은 `ICompressionCodec` 클래스들), 어떤 코덱을 쓸지는 각 포맷이 자기 enum 으로 정합니다.
+     *          팩은 자기 enum 을 이 enum 으로 **표 한 곳**에서 옮겨(`PackCompressionUtil::kArrCodecMapping`) 같은 등록부에서 코덱을 찾습니다.
      */
     enum class CompressionCodecType : uint8
     {

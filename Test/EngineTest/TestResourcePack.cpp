@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/pair.h"
@@ -9,10 +10,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Compression/Lz4CompressionCodec.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
-#include "Engine/Compression/ZstdCompressionCodec.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/PackCompressionUtil.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourcePackReader.h"
@@ -104,21 +104,11 @@ namespace sw
                 const uint32 uncompSize = static_cast<uint32>( content.size() );
                 const uint32 crc        = StringUtil::computeCrc32( content.data(), uncompSize );
 
-                // 팩이 자기 enum 으로 코덱을 고르는 것은 리더와 같다 — 여기서도 같은 코덱 클래스를 쓴다.
-                RleCompressionCodec  rleCodec;
-                ZlibCompressionCodec zlibCodec;
-                Lz4CompressionCodec  lz4Codec;
-                ZstdCompressionCodec zstdCodec;
-
-                ICompressionCodec* pCodec{ nullptr };
-                if ( compression == PackCompressionType::RLE )
-                    pCodec = &rleCodec;
-                else if ( compression == PackCompressionType::Zlib )
-                    pCodec = &zlibCodec;
-                else if ( compression == PackCompressionType::LZ4 )
-                    pCodec = &lz4Codec;
-                else if ( compression == PackCompressionType::Zstd )
-                    pCodec = &zstdCodec;
+                // 코덱은 리더와 같은 길로 찾는다(팩 종류 → 코덱 종류 표 + 등록부). None 은 그대로 싣는다.
+                const bool         bCompressed = compression != PackCompressionType::None;
+                ICompressionCodec* pCodec      = bCompressed ? PackCompressionUtil::findCodec( compression ) : nullptr;
+                if ( bCompressed && pCodec == nullptr )
+                    return false;
 
                 vector<uint8> compressedPayloadBytes;
                 if ( pCodec != nullptr && uncompSize > 0 )
@@ -279,6 +269,35 @@ namespace sw
             return indexOffset;
         }
 
+        /** @brief RLE 를 그대로 위임하고 해제 횟수만 세는 코덱입니다. 팩 리더가 등록부의 코덱을 쓰는지 봅니다. */
+        class CountingRleCodec final : public ICompressionCodec
+        {
+        public:
+            explicit CountingRleCodec( uint32* pDecompressCount )
+                : _rleCodec{}
+                , _pDecompressCount{ pDecompressCount }
+            {
+            }
+
+            CompressionCodecType getCodecType() const override { return CompressionCodecType::RLE; }
+            const utf8*          getCodecName() const override { return "CountingRle"; }
+            size_t               compressBound( size_t uncompressedSize ) const override { return _rleCodec.compressBound( uncompressedSize ); }
+
+            bool compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outCompressedSize, int32 compressionLevel ) override
+            {
+                return _rleCodec.compress( pSrc, srcSize, pDst, dstCapacity, outCompressedSize, compressionLevel );
+            }
+
+            bool decompress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outUncompressedSize ) override
+            {
+                ++( *_pDecompressCount );
+                return _rleCodec.decompress( pSrc, srcSize, pDst, dstCapacity, outUncompressedSize );
+            }
+
+        private:
+            RleCompressionCodec _rleCodec;
+            uint32*             _pDecompressCount;
+        };
     } // namespace
 } // namespace sw
 
@@ -325,10 +344,9 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
 // Test 2: VFS 우선순위 오버라이드 스택 검증 (patch > patch_dlc > dlc > game > common > engine)
 // ------------------------------------------------------------------------------
 /**
- * @brief [ResourcePackTest] 팩이 코덱마다 왕복되는가 — RLE · Zlib · LZ4.
- * @details 팩은 **자기 포맷 enum(`PackCompressionType`)으로** 코덱을 고른다. 스트림 쪽
- *          `CompressionCodecType` 과 값이 다르고 엮지 않는다 — 구현만 공유한다.
- *          예전에는 리더가 RLE·Zlib 만 알았고 선언돼 있던 `LZ4` 는 "Unsupported" 로 거부했다.
+ * @brief [ResourcePackTest] 팩이 아는 압축 종류마다 왕복되는가 — 리플렉션된 `PackCompressionType` 의 모든 값(Custom 제외).
+ * @details 팩은 자기 디스크 enum(`PackCompressionType`)을 표 한 곳(`PackCompressionUtil::kArrCodecMapping`)에서 스트림 쪽
+ *          `CompressionCodecType` 으로 옮기고 등록부에서 코덱을 찾는다. 팩 종류를 늘리고 표에 줄을 빠뜨리면 그 종류에서 여기서 진다.
  */
 SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
 {
@@ -338,27 +356,24 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         { "text/long.txt", sw::string( 4096, 'A' ) },
     };
 
-    struct CodecCase
+    const sw::EnumInfo* pPackCompressionEnum = sw::engine::getTypeRegistry().findEnum<sw::PackCompressionType>();
+    SW_ASSERT_NOT_NULL( pPackCompressionEnum );
+    uint32 testedCount{ 0 };
+    for ( const auto& [value, name] : pPackCompressionEnum->_mapValueToName )
     {
-        sw::PackCompressionType _type;
-        const utf8*             _pName;
-    };
-    const CodecCase arrCase[] = {
-        {sw::PackCompressionType::None, "None"},
-        { sw::PackCompressionType::RLE,  "RLE"},
-        {sw::PackCompressionType::Zlib, "Zlib"},
-        { sw::PackCompressionType::LZ4,  "LZ4"},
-    };
+        const sw::PackCompressionType type = static_cast<sw::PackCompressionType>( value );
+        if ( type == sw::PackCompressionType::Custom )
+            continue;
+        ++testedCount;
 
-    for ( const CodecCase& codecCase : arrCase )
-    {
-        const sw::string packPath = sw::FileUtil::joinPath(
-            test::makeTempDirectory( "packs" ), sw::string( "test_codec_" ) + codecCase._pName + ".pack" );
+        sw::CompressionCodecType codecType{};
+        SW_EXPECT_TRUE_MSG( sw::PackCompressionUtil::findCodecType( type, codecType ), name.c_str() );
+        const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), sw::string( "test_codec_" ) + name.c_str() + ".pack" );
 
-        SW_EXPECT_TRUE_MSG( sw::createTestPackFile( packPath, 0, codecCase._type, listFile, false ), codecCase._pName );
+        SW_EXPECT_TRUE_MSG( sw::createTestPackFile( packPath, 0, type, listFile, false ), name.c_str() );
 
         sw::ResourcePackReader reader;
-        SW_EXPECT_TRUE_MSG( reader.open( packPath ), codecCase._pName );
+        SW_EXPECT_TRUE_MSG( reader.open( packPath ), name.c_str() );
         if ( reader.isOpen() == false )
             continue;
         SW_EXPECT_EQUAL( reader.getFileCount(), static_cast<uint32>( listFile.size() ) );
@@ -366,7 +381,7 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         for ( const auto& [relPath, expected] : listFile )
         {
             sw::vector<uint8> bytes;
-            SW_EXPECT_TRUE_MSG( reader.readFile( relPath, bytes ), codecCase._pName );
+            SW_EXPECT_TRUE_MSG( reader.readFile( relPath, bytes ), name.c_str() );
             const sw::string restored( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             SW_EXPECT_EQUAL( expected, restored );
         }
@@ -374,6 +389,41 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         reader.close();
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( packPath ) );
     }
+    // 표의 줄 수 = 엔진이 아는 팩 종류 수(Custom 제외).
+    SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::PackCompressionUtil::kArrCodecMapping ) / sizeof( sw::PackCompressionUtil::kArrCodecMapping[0] ) ), testedCount );
+}
+
+/**
+ * @brief [ResourcePackTest] 팩 리더는 코덱을 활성 등록부에서 찾는다 — 등록부가 바꾼 구현을 팩도 쓴다
+ * @details 리더가 코덱 클래스를 직접 만들면 등록부에서 같은 종류를 바꿔도(엔진 · 모듈의 다른 구현) 팩만 옛 구현을 쓴다. 여기서는 RLE 자리를
+ *          해제 횟수를 세는 코덱으로 바꾸고 RLE 팩을 읽는다. 끝나면 내장 RLE 로 되돌린다.
+ */
+SW_TEST_CASE( ResourcePackTest, PackReaderUsesTheActiveCodecRegistry )
+{
+    sw::CompressionCodecRegistry* pRegistry = sw::CompressionCodecRegistry::getActive();
+    SW_ASSERT_NOT_NULL( pRegistry );
+
+    uint32 decompressCount{ 0 };
+    pRegistry->registerCodec( sw::make_unique<sw::CountingRleCodec>( &decompressCount ) );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pRegistry]()
+    {
+        pRegistry->registerCodec( sw::make_unique<sw::RleCompressionCodec>() );
+    } ) );
+
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_codec_registry.pack" );
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::RLE, {
+                                                                                           { "text/long.txt", sw::string( 4096, 'B' ) }
+    },
+                                            false ) );
+
+    sw::ResourcePackReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( reader.readFile( "text/long.txt", bytes ) );
+    SW_EXPECT_EQUAL( size_t( 4096 ), bytes.size() );
+    reader.close();
+
+    SW_EXPECT_TRUE_MSG( decompressCount >= 1u, "팩 리더가 등록부의 RLE 코덱을 지나가지 않았다" );
 }
 
 SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )

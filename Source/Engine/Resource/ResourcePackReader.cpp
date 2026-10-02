@@ -6,7 +6,6 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -15,10 +14,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Compression/Lz4CompressionCodec.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
-#include "Engine/Compression/ZstdCompressionCodec.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/PackCompressionUtil.h"
 
 namespace sw
 {
@@ -495,44 +492,8 @@ namespace sw
             return true;
         }
 
-        // **코덱 구현은 공유하고, 고르는 것은 팩이 자기 enum 으로 한다.**
-        // 팩의 `PackCompressionType` 과 스트림의 `CompressionCodecType` 은 서로 다른 파일의 독립된
-        // on-disk 포맷이라 값이 다르다. 숫자를 건너다니지 않고 여기서 직접 고른다.
-        // (예전에는 RLE 은 코덱 클래스를, zlib 은 `uncompress` 를 이 함수 안에서 직접 불렀다.)
-        RleCompressionCodec  rleCodec;
-        ZlibCompressionCodec zlibCodec;
-        Lz4CompressionCodec  lz4Codec;
-        ZstdCompressionCodec zstdCodec;
-
-        ICompressionCodec* pCodec{ nullptr };
-        switch ( type )
-        {
-            case PackCompressionType::RLE:
-            {
-                pCodec = &rleCodec;
-                break;
-            }
-            case PackCompressionType::Zlib:
-            {
-                pCodec = &zlibCodec;
-                break;
-            }
-            case PackCompressionType::LZ4:
-            {
-                pCodec = &lz4Codec;
-                break;
-            }
-            case PackCompressionType::Zstd:
-            {
-                pCodec = &zstdCodec;
-                break;
-            }
-            case PackCompressionType::None:   // 위에서 이미 반환했다
-            case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것이라 엔진은 모른다
-            default:
-                break;
-        }
-
+        // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 등록부가 든다.
+        ICompressionCodec* pCodec = PackCompressionUtil::findCodec( type );
         if ( pCodec == nullptr )
         {
             SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );

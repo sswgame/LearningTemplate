@@ -27,9 +27,9 @@ namespace sw
      *          인스턴스와 스트림이 보는 인스턴스가 서로 달라집니다(실제로 달랐습니다). 소유자를 하나로 두고 슬롯이 그것을
      *          가리키게 해서 두 문제를 모두 막습니다.
      *
-     *          리소스 팩(`ResourcePackReader`)은 이 레지스트리를 쓰지 않습니다. 팩은 자기 포맷의 enum(`PackCompressionType`)을
-     *          디스크에 기록하고 직접 해제합니다. 두 enum 은 서로 다른 파일의 독립된 포맷이라(값도 2 · 3 에서 다릅니다), 둘을
-     *          엮으면 한쪽의 포맷 변경이 다른 쪽까지 끌고 갑니다.
+     *          리소스 팩(`ResourcePackReader`)도 이 레지스트리에서 코덱을 찾습니다. 팩은 자기 포맷의 enum(`PackCompressionType`)을
+     *          디스크에 기록하고, 두 enum 은 서로 다른 파일의 독립된 포맷이라 값이 다릅니다. 숫자를 건너다니지 않고 표 한 곳
+     *          (`PackCompressionUtil::kArrCodecMapping`, Engine)에서 옮긴 뒤 조회합니다.
      */
     class SW_API CompressionCodecRegistry
     {
