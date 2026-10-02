@@ -1,18 +1,16 @@
 /**
- * @file RenderResourceXml.h
- * @brief 렌더 리소스(`RenderPassResource` · `RenderPipelineResource`)가 함께 쓰는 XML 읽기 · 쓰기 배관입니다.
+ * @file ReflectedXmlFile.h
+ * @brief 리플렉션 desc 하나를 리소스 상대 경로의 XML 파일로 읽고 씁니다(렌더 패스 · 파이프라인 리소스가 씁니다).
  *
  * [왜 있는가]
- * 둘은 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는 **같은 일**을 하는데, 그 배관을
- * 각자 적고 있었습니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그.
- * 세 번째 렌더 리소스를 넣을 때 또 복사해야 하는 자리였고, 무엇보다 **한쪽만 고치면 다른 쪽이
- * 조용히 다르게 동작합니다**(예: 경로 해석 규칙을 바꿨는데 한 곳만 반영되는 경우).
+ * 렌더 리소스 둘(`RenderPassResource` · `RenderPipelineResource`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
+ * **같은 일**을 각자 적고 있었습니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그. 한쪽만 고치면
+ * 다른 쪽이 조용히 다르게 동작했습니다(경로 해석 규칙을 바꿨는데 한 곳만 반영되는 경우).
  *
  * [왜 여기인가]
- * 자연스러운 자리는 `XmlSerializer`(직렬화)나 `ResourceUtil`(경로)입니다. `ResourceUtil` 은 헤더에
- * "경로 I/O 만 맡는다" 고 적혀 있어 맞지 않습니다. 직렬화 쪽은 만들 당시 티어 2 라 티어 4 인
- * `Resource` 를 참조할 수 없었습니다. 그래서 **쓰는 쪽 옆**에 두었습니다. 지금은 `Resource/ResourceUtil.h`
- * 가 어느 티어에서든 쓸 수 있는 예외라(`Source/Engine/README.md`) 이 이유는 더 이상 성립하지 않습니다.
+ * 렌더러 옆(`Graphics/Renderer/Pipeline/RenderResourceXml`)에 있었습니다 — 만들 때 직렬화(티어 2)가 `Resource`(티어 4)를 볼 수
+ * 없었기 때문입니다. 지금은 `Resource/ResourceUtil.h` 가 어느 티어에서든 쓸 수 있는 경로 헬퍼라(`CheckEngineLayers` 의 예외) 그
+ * 이유가 없어졌고, 렌더러와 무관한 일이라 직렬화로 옮겼습니다(언리얼 `FJsonObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,10 +22,10 @@
 namespace sw
 {
     /**
-     * @struct RenderResourceXml
+     * @struct ReflectedXmlFile
      * @brief 리플렉션 desc 를 리소스 상대 경로의 XML 로 읽고 씁니다.
      */
-    struct SW_API RenderResourceXml
+    struct SW_API ReflectedXmlFile
     {
         /**
          * @brief 리플렉션 desc 를 XML 에서 읽습니다.

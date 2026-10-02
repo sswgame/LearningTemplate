@@ -2079,6 +2079,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (정리 — 리플렉션 desc 의 XML 파일 읽기 · 쓰기(`RenderResourceXml`)를 렌더러 옆에서 직렬화로: `ReflectedXmlFile`)
+
+남은 항목 "RenderResourceXml → Serialization". 렌더 패스 · 파이프라인 리소스가 함께 쓰는 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로
+오간다" 배관이 `Graphics/Renderer/Pipeline/` 에 있었다 — 만들 때 직렬화(티어 2)가 `Resource`(티어 4)를 볼 수 없었기 때문인데, 지금은
+`ResourceUtil.h` 가 어느 티어에서든 쓸 수 있는 경로 헬퍼라 그 이유가 없어졌다(이 줄은 위의 할 일 목록에 남아 있었다). 렌더러와 무관한 일이라
+`Serialization/Format/ReflectedXmlFile` 로 옮기고 이름도 하는 일로 바꿨다(언리얼 `FJsonObjectConverter` 가 Core 직렬화에 있는 자리). 동작은 그대로다.
+`CheckEngineLayers` 통과, Debug 29 + hostgpu 2. (CMake 주석의 낡은 "CookPrefabs" 도 고쳤다 — 결함 72 에서 파이썬 프리팹 쿠커가 없어졌다.)
+
 ### 2026-10-02 (정리 — 인스턴스 자리를 옛 방식(`g_InstanceBase + SV_InstanceID`)으로 설명하던 주석 다섯 곳 · 죽은 상수 이름)
 
 남은 항목 "셰이더 주석(gpucull · bindingslots) · README · 죽은 g_InstanceBase 이름". 배치 시작을 루트 상수(`g_InstanceBase`)로 넘기던 것은 정점

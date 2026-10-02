@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/Pipeline/RenderResourceXml.h"
+#include "Engine/Serialization/Format/ReflectedXmlFile.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderResourceXml" );
+    SW_LOG_CALLER( "ReflectedXmlFile" );
 
-    bool RenderResourceXml::loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXmlFile::loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -28,7 +28,7 @@ namespace sw
         return true;
     }
 
-    bool RenderResourceXml::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXmlFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {

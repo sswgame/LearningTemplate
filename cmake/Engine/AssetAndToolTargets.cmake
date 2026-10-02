@@ -41,7 +41,7 @@ if(SW_BUILD_DOCS)
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) 스크립트 타겟 — CookPrefabs, Engine 레이어/GLOB 린트
+# 2) 스크립트 타겟 — 에셋 쿠킹, Engine 레이어/GLOB 린트
 # CheckEngineLayers: Engine → Editor/GameFramework/Games 금지 include
 # CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
 # ------------------------------------------------------------------------------

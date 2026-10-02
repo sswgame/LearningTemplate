@@ -7,10 +7,10 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderResourceXml.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Serialization/Format/ReflectedXmlFile.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw
@@ -20,7 +20,7 @@ namespace sw
     bool RenderPipelineResource::loadFromXmlFile( string_view assetRelativePath )
     {
         _desc = {};
-        if ( RenderResourceXml::loadDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXmlFile::loadDesc( assetRelativePath, _desc ) == false )
             return false;
 
         validate( assetRelativePath );
@@ -271,7 +271,7 @@ namespace sw
 
     bool RenderPipelineResource::saveToXmlFile( string_view assetRelativePath ) const
     {
-        if ( RenderResourceXml::saveDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXmlFile::saveDesc( assetRelativePath, _desc ) == false )
             return false;
 
         SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, assetRelativePath );
