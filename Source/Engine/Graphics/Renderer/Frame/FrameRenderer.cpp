@@ -72,6 +72,7 @@ namespace sw
         , _meshMorphDiagOverride{ -1 }
         , _drawMergeOverride{ -1 }
         , _vertexPoolOverride{ -1 }
+        , _animationTimeOverride{ -1.0f }
         , _indirectDrawCallCount{ 0 }
         , _gpuComputeScopeSlot{ FrameProfiler::kInvalidSlot }
         , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }

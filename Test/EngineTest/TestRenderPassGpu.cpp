@@ -2597,7 +2597,10 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
  *          정점 i 의 레스트 값이므로 정점 셰이더가 제 원소를 읽으면 레스트와 픽셀이 같아야 한다.
  *          OpenGL 드라이버가 early-return 모양의 `swComputeMorphElement` 를 잘못 컴파일해 정점마다 **한 칸 앞
  *          원소**를 읽던 버그가 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
- *          만 본다 — 시간에 따라 움직이므로 A 와 **달라야** 한다.
+ *          만 본다 — A 와 **달라야** 한다.
+ *          **모프 시각을 고정한다**(`setAnimationTimeOverride`). 변위는 sin(2t + F·(x+y+z)) 인데 단위 큐브 정점의 위상(F = 6)은 2π 로 접으면
+ *          모두 π ± 0.43 근처라, t ≈ π/2 + kπ 에서는 모든 정점의 변위가 함께 0 을 지나 노멀 음영만 남는다(달라진 픽셀 약 2 %, 문턱 5 % 미만).
+ *          벽시계로 찍으면 부하로 늦어진 실행이 그 창(주기 π 초의 약 12 %)에 들어가 진다. t = 3π/4 는 |sin 2t| = 1 인 자리다.
  *          이 케이스가 없던 동안 GL 은 능력표로 꺼 두어 조용히 레스트를 그렸고, 원인은 두 세션 동안 셰이더
  *          바깥(업로드·바인딩·인덱싱)에서 헛되이 찾았다.
  */
@@ -2684,6 +2687,8 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
 
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+        // 변위가 가장 큰 시각에 고정한다(위 @details) — 찍는 순간의 벽시계에 따라 (C) 의 답이 바뀌지 않게.
+        renderer.setAnimationTimeOverride( sw::MathUtil::Pi * 0.75f );
 
         sw::Scene scene( "MorphPoolIdentityScene" );
         if ( bOk )
@@ -2749,9 +2754,8 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
             SW_EXPECT_TRUE_MSG( morphed._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
             if ( rest._bOk && morphed._bOk )
             {
-                // 지표는 **달라진 픽셀 수**다. 예전엔 실루엣(그려진 픽셀 수)의 차를 봤는데 변위가 sin(시간) 이라 시간에 따라
-                // 실루엣 차가 0 근처를 지나가 흔들렸다(드로우 루프가 빨라지자 DX 에서 떨어졌다). 변형은 위치와 노멀을 같이
-                // 바꾸므로 음영이 바뀐 픽셀까지 세면 어느 시점에도 그려진 픽셀의 수 % 이상이 다르다.
+                // 지표는 **달라진 픽셀 수**다 — 변형은 위치와 노멀을 같이 바꾸므로 음영이 바뀐 픽셀까지 센다. 고정한 시각(3π/4)에서
+                // 네 백엔드 모두 그려진 픽셀의 약 18 % 가 다르다(문턱 5 %).
                 const uint32 diffCount = countDifferentPixels( rest, morphed );
                 SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 20,
                                     ( label + ": 모프를 켰는데 그림이 레스트와 같다 (달라진 픽셀 " + sw::to_string( diffCount ) + " / 그려진 " +

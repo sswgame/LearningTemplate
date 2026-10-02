@@ -68,7 +68,7 @@ namespace sw
                     float32 _speedRange{ 0.0f };
                     uint32  _instanceCount{ 0 };
                 } animParams{};
-                animParams._time = _animTimer.getTotalTime();
+                animParams._time = getAnimationTime();
                 // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도"로 보이지 않는다.
                 animParams._baseSpeed     = FrameRendererUtil::kGpuSpinBaseSpeed;
                 animParams._speedRange    = FrameRendererUtil::kGpuSpinSpeedRange;
@@ -95,6 +95,11 @@ namespace sw
     int32 FrameRenderer::getEffectiveMeshMorphDiag() const
     {
         return ( _meshMorphDiagOverride >= 0 ) ? _meshMorphDiagOverride : gv_morphDiag;
+    }
+
+    float32 FrameRenderer::getAnimationTime() const
+    {
+        return ( _animationTimeOverride >= 0.0f ) ? _animationTimeOverride : _animTimer.getTotalTime();
     }
 
     void FrameRenderer::prepareMeshMorphPool()
@@ -192,7 +197,7 @@ namespace sw
             float32 _frequency{ 0.0f };
             uint32  _vertexCount{ 0 };
         } morphParams{};
-        morphParams._time        = _animTimer.getTotalTime();
+        morphParams._time        = getAnimationTime();
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
         morphParams._vertexCount = _meshMorphPool.getVertexCount();
