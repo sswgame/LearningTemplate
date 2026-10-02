@@ -10,7 +10,7 @@
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
  *   SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
- *   SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
+ *   SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
  * 씬 메시 머티리얼은 binding.hlsli 의 SW_MATERIAL_BEGIN/END + SW_MATERIAL( index ) 를 쓴다 (GPUScene 버퍼).
  */
 
@@ -87,8 +87,8 @@
 #define SW_ROOT_CONSTANTS_END   };
 #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
-#define SW_ROOT_CONSTANTS_BEGIN struct SwRootConstants_t {
-#define SW_ROOT_CONSTANTS_END   }; [[vk::push_constant]] ConstantBuffer<SwRootConstants_t> SwRootConstants;
+#define SW_ROOT_CONSTANTS_BEGIN struct SwRootConstantsData {
+#define SW_ROOT_CONSTANTS_END   }; [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
 #define SW_ROOT( field ) SwRootConstants.field
 #elif defined( DX12 )
 #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) ) {
@@ -140,10 +140,10 @@ static const float kInvPi  = 0.31830988618379067154f;
 // 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
 struct SwVertexInput
 {
-	float3 pos : POSITION;
-	float3 nrm : NORMAL;
-	float2 uv  : TEXCOORD0;
-	float4 col : COLOR;
+	float3 position : POSITION;
+	float3 normal   : NORMAL;
+	float2 uv       : TEXCOORD0;
+	float4 color    : COLOR;
 	// 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯). 씬 드로우만 건다.
 	// SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로
 	// 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).

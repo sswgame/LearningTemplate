@@ -11,10 +11,10 @@ SW_ROOT_CONSTANTS_BEGIN
 SW_ROOT_CONSTANTS_END
 
 [numthreads( 8, 8, 1 )]
-void CSMain( uint3 id : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-	if ( id.x >= SW_ROOT( g_Width ) || id.y >= SW_ROOT( g_Height ) )
+	if ( dispatchThreadId.x >= SW_ROOT( g_Width ) || dispatchThreadId.y >= SW_ROOT( g_Height ) )
 		return;
 	// r = x, g = y (8비트 UNORM 에서 정확히 복원), b = 0, a = 1
-	SW_StoreTex2D( SW_ROOT( g_TargetIndex ), id.xy, float4( id.x / 255.0f, id.y / 255.0f, 0.0f, 1.0f ) );
+	swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.x / 255.0f, dispatchThreadId.y / 255.0f, 0.0f, 1.0f ) );
 }

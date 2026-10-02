@@ -32,7 +32,7 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_InstancesRW, 0 );
  * @details 시드가 1,2,3... 처럼 이어진 값이어도 결과가 골고루 흩어져야 한다. 곱셈만 쓰면 이웃한 시드가
  *          이웃한 속도를 받아 "줄줄이 같은 속도"가 되는데, 그게 정확히 피하려는 그림이다.
  */
-uint SwHashSeed(uint seed)
+uint hashSeed(uint seed)
 {
 	seed = (seed ^ 61u) ^ (seed >> 16);
 	seed *= 9u;
@@ -43,50 +43,50 @@ uint SwHashSeed(uint seed)
 }
 
 /** @brief 해시를 [0,1) 실수로. 상위 24비트만 쓴다 (하위 비트는 해시 품질이 낮다). */
-float SwHashToUnit(uint hash)
+float hashToUnit(uint hash)
 {
 	return float(hash >> 8) * (1.0f / 16777216.0f);
 }
 
 [numthreads(64, 1, 1)]
-void CSMain(uint3 dtid : SV_DispatchThreadID)
+void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
-	const uint idx = dtid.x;
-	if (idx >= g_AnimInstanceCount)
+	const uint instanceIndex = dispatchThreadId.x;
+	if (instanceIndex >= g_AnimInstanceCount)
 		return;
 
-	SwInstanceData inst = g_InstancesRW[idx];
-	if (inst.spinSeed == 0)
+	SwInstanceData instance = g_InstancesRW[instanceIndex];
+	if (instance.spinSeed == 0)
 		return; // GPU 회전을 요청하지 않은 인스턴스는 CPU 가 올린 트랜스폼 그대로 둔다
 
-	const uint  hash = SwHashSeed(inst.spinSeed);
-	const float unit = SwHashToUnit(hash);
+	const uint  hash = hashSeed(instance.spinSeed);
+	const float unit = hashToUnit(hash);
 
 	// 속도는 기준 ± 폭. 시드의 최하위 비트로 **방향**도 가른다 — 속도만 다르면 전부 같은 쪽으로 돌아
 	// 멀리서 보면 여전히 한 덩어리로 보인다.
-	const float speed = g_SpinBaseSpeed + unit * g_SpinSpeedRange;
-	const float dir   = (hash & 1u) != 0u ? -1.0f : 1.0f;
+	const float speed     = g_SpinBaseSpeed + unit * g_SpinSpeedRange;
+	const float direction = (hash & 1u) != 0u ? -1.0f : 1.0f;
 
 	// 위상도 시드마다 어긋나게 — 속도가 달라도 t=0 에서 전부 같은 각도로 출발하면 처음 몇 초가 어색하다.
-	const float phase = SwHashToUnit(SwHashSeed(hash)) * 6.2831853f;
-	const float angle = dir * speed * g_Time + phase;
+	const float phase = hashToUnit(hashSeed(hash)) * 6.2831853f;
+	const float angle = direction * speed * g_Time + phase;
 
 	// CPU 가 올린 월드는 스케일 x 이동으로 본다(회전은 GPU 몫). 행벡터 규약(mul(v, M))이라 0~2행이
 	// 축이고 3행이 이동이다. 축의 길이가 곧 스케일이므로 길이를 뽑아 회전을 새로 조립한다.
-	const float3 scale = float3(length(inst.world[0].xyz), length(inst.world[1].xyz), length(inst.world[2].xyz));
-	const float3 trans = inst.world[3].xyz;
+	const float3 scale       = float3(length(instance.world[0].xyz), length(instance.world[1].xyz), length(instance.world[2].xyz));
+	const float3 translation = instance.world[3].xyz;
 
-	float s, c;
-	sincos(angle, s, c);
+	float sine, cosine;
+	sincos(angle, sine, cosine);
 
 	// world = Scale * RotY * Translate (행벡터 규약이라 왼쪽부터 적용된다).
-	inst.world[0] = float4(scale.x * c, 0.0f, scale.x * -s, 0.0f);
-	inst.world[1] = float4(0.0f, scale.y, 0.0f, 0.0f);
-	inst.world[2] = float4(scale.z * s, 0.0f, scale.z * c, 0.0f);
-	inst.world[3] = float4(trans, 1.0f);
+	instance.world[0] = float4(scale.x * cosine, 0.0f, scale.x * -sine, 0.0f);
+	instance.world[1] = float4(0.0f, scale.y, 0.0f, 0.0f);
+	instance.world[2] = float4(scale.z * sine, 0.0f, scale.z * cosine, 0.0f);
+	instance.world[3] = float4(translation, 1.0f);
 
 	// 바운드 중심은 이동 성분이다 — 회전만 바꿨으므로 그대로지만, 컬링이 읽는 값이라 맞춰 둔다.
-	inst.boundsCenter = trans;
+	instance.boundsCenter = translation;
 
-	g_InstancesRW[idx] = inst;
+	g_InstancesRW[instanceIndex] = instance;
 }

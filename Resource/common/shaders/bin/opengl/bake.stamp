@@ -1,8 +1,8 @@
 SWBAKE 3
-041f411cc64a2196 samplecompute.hlsl
-8ec98d0ec8f3f2d7 postoutline.hlsl
-8efd419b9290beb7 sampleindirect.hlsl
-98c1bc4362a81bc3 provokingvertex.hlsl
-98fd6c9b0c4d4d5d instanceslotprobe.hlsl
-a1278f57ad091713 computetexturewrite.hlsl
-cd5173768a92c5f3 computetestgeometry.hlsl
+082019df2dbbcbd5 instanceslotprobe.hlsl
+22c00eae8dfcf116 samplecompute.hlsl
+5a7f191448365563 computetexturewrite.hlsl
+5e94c1bdb2daf5ed sampleindirect.hlsl
+94c48c72e58dff6e postoutline.hlsl
+b0b5def5c5274e0d computetestgeometry.hlsl
+fe5d718c2deae691 provokingvertex.hlsl

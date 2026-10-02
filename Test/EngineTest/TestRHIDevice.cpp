@@ -812,7 +812,7 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
  * @brief [RHIDeviceTest] 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는가 — 백엔드마다 다르고, 엔진은 그 차이에 기댄다
  * @details 정점 풀(GpuMeshVertexPool)은 배치의 간접 인자에 `startVertex = 풀 오프셋` 을 싣고, 정점 셰이더는 SV_VertexID 로
  *          모프 풀의 로컬 정점 번호를 구한다. Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 그 오프셋을 **포함**하고
- *          D3D11·D3D12 는 드로우 안의 0 기반 번호다 — binding.hlsli 의 SwMorphElementOf 가 그 차이를 흡수한다.
+ *          D3D11·D3D12 는 드로우 안의 0 기반 번호다 — binding.hlsli 의 swComputeMorphElement 가 그 차이를 흡수한다.
  *          여기서는 provokingvertex.hlsl(SV_VertexID 로 풀스크린 삼각형을 만든다)을 startVertex = 36 으로 그린다:
  *          번호가 0·1·2 면 화면이 빨강이고(D3D), 36·37·38 이면 삼각형이 퇴화해 클리어 색만 남는다(Vulkan·GL).
  *          이 기대가 깨지면 셰이더의 분기도 같이 틀린 것이다.
@@ -1260,7 +1260,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
 /**
  * @brief [RHIDeviceTest] 컴퓨트가 RW 텍스처(UAV)에 쓴 픽셀을 네 백엔드에서 읽어 확인한다.
  * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D) 의 등록 인덱스를, DX11/GL 은 u4 슬롯 서수 0 을 루트 상수로 넘긴다
- *          (computetexturewrite.hlsl 의 SW_StoreTex2D). prepareTextureForUnorderedAccess → dispatch → readback.
+ *          (computetexturewrite.hlsl 의 swStoreRwTexture2D). prepareTextureForUnorderedAccess → dispatch → readback.
  */
 SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 {

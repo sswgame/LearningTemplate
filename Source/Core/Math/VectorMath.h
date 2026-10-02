@@ -359,7 +359,7 @@ namespace sw
         /**
          * @brief 4x4 행렬로 3D **방향**(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`).
          * @details 예전 이름은 `transformNormal` 이었지만 법선 변환이 아니다 — 비균등 스케일에서 법선은 역전치(여인수) 행렬로 옮겨야 한다
-         *          (셰이더의 `SwWorldNormalOf`). 법선을 옮기려면 `matrix.invert().transpose()` 를 넘긴다.
+         *          (셰이더의 `swComputeWorldNormal`). 법선을 옮기려면 `matrix.invert().transpose()` 를 넘긴다.
          */
         static float3 transformVector( const float3& v, const float4x4& matrix ) noexcept;
 

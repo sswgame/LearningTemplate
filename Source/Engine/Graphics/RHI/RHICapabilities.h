@@ -124,7 +124,7 @@ namespace sw
                     caps._bIndirectDraw   = SW_TRUE;
                     caps._bGpuCulling     = SW_TRUE;
                     // 오래 꺼져 있었다. GL 만 정점 셰이더가 풀에서 **한 칸 앞 원소**를 읽었다. 엔진이 준 바이트는
-                    // 모두 되읽어 맞았고, 원인은 드라이버가 early-return 모양의 `SwMorphElementOf` (DXC 가
+                    // 모두 되읽어 맞았고, 원인은 드라이버가 early-return 모양의 `swComputeMorphElement` (DXC 가
                     // OpSwitch(0) 구조로 내는 코드) 를 잘못 컴파일한 것이었다. 분기 없는 한 식으로 바꾸자 네
                     // 백엔드가 같다(binding.hlsli 주석). 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 잡는다.
                     caps._bGpuMeshMorph             = SW_TRUE;

@@ -168,5 +168,43 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - **모듈 상수**: `kPascalCase` 또는 `_kPascalCase`
 - **모듈 / 파일명**: `PascalCase.py` (`SetupEnvironment.py`)
 
+## 5. HLSL 셰이더 규칙
+셰이더도 HLSL 이 표현할 수 있는 데까지 **C++ 규칙을 그대로** 따른다. `Scripts/lint/gate/CheckShaderConventions.py` 가
+`Resource/` 아래 모든 `.hlsl` · `.hlsli` 에 이 절을 적용한다(CI 게이트 · 커밋 훅). 예전에는 셰이더를 보는 린트가 없어서
+PascalCase 함수, `SW_` 로 시작하는 함수, 한 글자 지역 변수, `_t` 꼬리 타입, `pos`/`nrm`/`col` 필드가 쌓여 있었다(2026-10-03 정리).
+
+| 대상 | 규칙 | 예시 |
+| :--- | :--- | :--- |
+| 공유 헤더(`.hlsli`) 함수 | `sw` + camelCase — FXC 에 네임스페이스가 없어 `sw::` 대신 | `swLoadInstance`, `swComputeWorldNormal`, `swLoadRwTexture2D` |
+| 한 파일(`.hlsl`) 함수 | camelCase, 접두어 없음 | `isVisible`, `hashSeed` |
+| 진입점 | `VSMain` · `PSMain` · `CSMain` 그대로 (컴파일러 · 파이프라인 XML 이 문자열로 부른다) | |
+| 공유 헤더 타입 | `Sw` + PascalCase, `_t` 꼬리 없음 | `SwInstanceData`, `SwMaterialData`, `SwRootConstantsData` |
+| 한 파일 타입 | PascalCase, `Sw` 없음. C++ 구조체를 비추면 C++ 타입 이름 그대로 | `PSInput`, `GpuBatchInfo`, `RHIDrawIndirectCommand` |
+| 필드 | camelCase. C++ 멤버를 비추면 그 이름에서 `_` 를 뺀 것 | `startVertexLocation`(`_startVertexLocation`), `position`, `worldPosition` |
+| 지역 변수 · 매개변수 | camelCase, 읽히는 이름 | `vertexId`, `instance`, `planeIndex` |
+| `out` · `inout` 매개변수 | `out` · `inout` 접두어 | `outPosition`, `outNeighborDepth` |
+| 고정 배열 지역 변수 | `arr` + 단수 명사 | `arrOffset[4]`, `arrPosition[6]` |
+| `groupshared` | `s_` (배열은 `s_arr`) | `s_arrKey[]`, `s_arrId[]` |
+| 파일 수준 `static const` | `kPascalCase` | `kInvalidIndex`, `kPi` |
+| `#define` | `SW_` + 대문자. 리소스 · 함수를 매크로로 별칭하지 않는다 | `SW_MATERIAL_BEGIN`, `SW_SORT_MAX_ELEMENTS` |
+| include 가드 | `SW_<도메인>_<파일>_HLSLI` | `SW_ENGINE_POSTBLOOM_HLSLI` |
+| 전역 리소스 · cbuffer 멤버 | `g_` + PascalCase — **C++ 가 이름으로 묶는다** | `g_ViewProj`, `g_SwInstances`, `g_SceneDepthIndex` |
+
+- **C++ 함수 이름 규칙이 그대로 적용된다.** 약어는 한 단어(`RW` → `Rw`, `ID` → `Id`), 줄임말은 풀어 쓴다(`Tex` → `Texture`,
+  `Cmp` → `Comparison`, `pos` → `position`, `nrm` → `normal`, `col` → `color`, `vid` → `vertexId`). 입력에서 값을 구하는 함수는
+  `…Of` 꼬리가 아니라 `compute…` 다(`SwWorldNormalOf` → `swComputeWorldNormal`). GPU 접근 동사는 버퍼 · RW 텍스처 원소에
+  `load` / `store`, 텍스처 읽기에 `sample` / `gather` 다.
+- **읽히는 이름.** 한 글자 · `i` `j` `k` · `idx` `inst` `ao` `dtid` 같은 줄임말을 쓰지 않는다. HLSL 키워드(`sample`, `point`,
+  `line`, `linear`, `texture`, `sampler`, `vector`, `matrix` …)를 이름으로 쓰지 않는다. 지역 `const` 는 C++ 처럼 `kPascalCase` 도 된다.
+- **문자열로 묶인 이름은 스타일 때문에 바꾸지 않는다.** 전역 · cbuffer 멤버(`g_*` — `shaderslot::resname` · `cbname`,
+  `PassConstantNames`, `g_<이름>Index` 레지스트리 규약), cbuffer 이름(`PassCB` · `CullParams` · `SwRootConstants` …), 시맨틱,
+  밖에서 넣는 define(`DX11` · `SW_PASS_*` · `MATERIAL_*` …), `bindingslots.hlsli` 의 매크로(C++ 가 같은 파일을 include 한다),
+  머티리얼 구조체 필드(`.material` 이 이름으로 채운다), 셰이더 파일 이름이 그렇다. 그래서 `g_*` 에는 컨테이너 · 단수 · 줄임말
+  규칙을 적용하지 않는다. 규칙에서 빼야 하는 이름은 게이트의 `kStringBoundName` 에 **이유와 함께** 적는다(지금은 진입점 셋).
+- **문자열로 묶인 이름을 바꾸려면 같은 커밋에서 C++ 도 바꾼다.** `ShaderBindingContract::validate` 는 계약 표에 없는 리플렉션
+  이름을 조용히 건너뛰어서, 셰이더 쪽만 이름을 바꾸면 그 리소스의 검사가 아무 말 없이 꺼진다.
+  `ShaderBindingContractTest.EveryBoundNameIsInBakedReflection` 이 반대 방향(C++ 가 아는 이름이 구운 `reflection.manifest`
+  에 있는가)을 봐서 그 개명을 실패로 만든다.
+
 ---
 [◀ 이전: 핫리로드 및 ABI 가이드](03_LiveReload_and_ABI.md) | [🏠 위키 홈으로 돌아가기](../README.md)

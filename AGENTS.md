@@ -138,6 +138,45 @@ able to guess the rest; that is the whole point.
 - Module/file names use `PascalCase.py`.
 - JSON configuration keys use `snake_case`.
 
+### HLSL
+
+Shaders follow the C++ rules wherever HLSL can express them. `CheckShaderConventions.py` enforces this
+section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
+
+- **Functions** are `camelCase`. A helper in a shared header (`.hlsli`) starts with `sw` — FXC has no
+  namespaces, so the prefix stands in for `sw::` (`swLoadInstance`, `swComputeWorldNormal`). A helper that
+  lives in one `.hlsl` has no prefix (`isVisible`, `hashSeed`), so the name says where to look.
+  The C++ function-name rules apply: an acronym is one word (`swLoadRwTexture2D`, never `SW_LoadRWTex2D`),
+  words are spelled out (`Tex` → `Texture`, `Cmp` → `Comparison`), and the verb table applies — a value
+  worked out from inputs is `compute…`, not an `…Of` suffix (`swComputeWorldPosition`, not `SwWorldPositionOf`).
+  GPU access verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
+  Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
+- **Types** are `PascalCase` with no `_t` suffix. A shared-header type starts with `Sw` (`SwInstanceData`,
+  `SwMaterialData`); a type local to one `.hlsl` does not (`PSInput`, `GpuBatchInfo`). A struct that mirrors
+  a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
+- **Fields** are `camelCase`. A field that mirrors a C++ member is that member without the leading `_`
+  (`_startVertexLocation` → `startVertexLocation`). No opaque abbreviations: `position`, `normal`, `color`,
+  `worldPosition`, `vertexId` — not `pos`, `nrm`, `col`, `wpos`, `vid`.
+- **Locals and parameters** are `camelCase` and descriptive — no single letters, no `i` / `j` / `k`, no
+  `idx` / `inst` / `ao` / `dtid`. `out` / `inout` parameters start with `out` / `inout` (`outPosition`).
+  A fixed-size local array takes `arr` + a singular noun (`arrOffset[4]`). `groupshared` variables take `s_`
+  (`s_arrKey[]` for an array). Never use an HLSL keyword as a name (`sample`, `point`, `line`, `linear`,
+  `texture`, `sampler`, `vector`, `matrix`, …). A local `const` may be `kPascalCase`, as in C++.
+- **Constants and macros**: a file-scope `static const` is `kPascalCase` (`kInvalidIndex`, `kPi`). A `#define`
+  is `SW_` + `SCREAMING_CASE`, and a macro never aliases a resource or a function. Include guards are
+  `SW_<DOMAIN>_<FILE>_HLSLI` (`SW_ENGINE_POSTBLOOM_HLSLI`).
+- **Globals and cbuffer members** are `g_` + `PascalCase` (`g_ViewProj`, `g_SwInstances`). C++ binds them
+  **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention),
+  so they are not renamed for style and the container, plural and abbreviation rules do not apply to them.
+  The same holds for every other string-bound name: cbuffer names (`PassCB`, `CullParams`, `SwRootConstants`),
+  semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), the macros in `bindingslots.hlsli`
+  (C++ includes that file), material struct fields (`.material` files bind them) and shader file names.
+  An exemption from the rules above is a named entry with its reason in the gate (`kStringBoundName`).
+- **Renaming a string-bound name changes C++ in the same commit.** `ShaderBindingContract::validate` skips
+  a reflected name it does not know, so a one-sided rename silently switches that resource's check off;
+  `ShaderBindingContractTest.EveryBoundNameIsInBakedReflection` fails instead when a name C++ binds is missing
+  from the baked `reflection.manifest`.
+
 ### Resource Assets
 
 - All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). Enforced automatically by `CheckResourceCasing.py` and Git pre-commit hooks.

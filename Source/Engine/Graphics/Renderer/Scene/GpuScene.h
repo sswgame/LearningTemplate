@@ -174,7 +174,7 @@ namespace sw
         /**
          * @brief 정점 풀을 쓸지 정합니다(기본 켬). 끄면 배치가 자기 정점 버퍼로 그립니다(startVertex 0). 진단 · A/B 용입니다.
          * @details 풀을 켠 그림과 끈 그림은 같아야 합니다. 다르면 백엔드가 간접 인자의 startVertex 나 SV_VertexID 를 다르게
-         *          다루는 것입니다(binding.hlsli SwMorphElementOf 의 API 차이 참고).
+         *          다루는 것입니다(binding.hlsli swComputeMorphElement 의 API 차이 참고).
          */
         void setVertexPoolEnabled( bool bEnabled );
         /**
@@ -238,7 +238,7 @@ namespace sw
          * @brief 뷰별 컬링 산출물입니다. 언리얼 FInstanceCullingContext 가 뷰마다 있는 것과 같은 자리입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
-         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽습니다(binding.hlsli SwResolveInstanceId). 이것이 없으면 컬링이
+         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽습니다(binding.hlsli swResolveInstanceId). 이것이 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라집니다**(보이는 것을 고를 수가 없습니다).
          *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트가 **각자** 갖습니다.
          */

@@ -2,20 +2,20 @@
 
 struct PSInput
 {
-	float4 pos : SV_POSITION;
-	float4 col : COLOR;
+	float4 position : SV_POSITION;
+	float4 color    : COLOR;
 };
 
 PSInput VSMain(SwVertexInput input)
 {
 	PSInput output;
-	float4 worldPos = mul(float4(input.pos, 1.0f), SwLoadInstanceWorld(input.instanceSlot));
-	output.pos = mul(worldPos, g_ViewProj);
-	output.col = input.col;
+	float4 worldPosition = mul(float4(input.position, 1.0f), swLoadInstanceWorld(input.instanceSlot));
+	output.position = mul(worldPosition, g_ViewProj);
+	output.color = input.color;
 	return output;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	return float4(input.col.rgb, 1.0f);
+	return float4(input.color.rgb, 1.0f);
 }

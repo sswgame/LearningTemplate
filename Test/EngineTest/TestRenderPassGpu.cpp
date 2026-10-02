@@ -268,7 +268,7 @@ namespace
                 const test::Rgba8 pixel = image.getPixel( col, row );
                 if ( pixel._a < 128 )
                     continue;
-                // 셰이더가 n * 0.5 + 0.5 로 적었다(SwStoreSurface · gbuffer.hlsl).
+                // 셰이더가 n * 0.5 + 0.5 로 적었다(swStoreSurface · gbuffer.hlsl).
                 sum._x += static_cast<float32>( pixel._r ) / 255.0f * 2.0f - 1.0f;
                 sum._y += static_cast<float32>( pixel._g ) / 255.0f * 2.0f - 1.0f;
                 sum._z += static_cast<float32>( pixel._b ) / 255.0f * 2.0f - 1.0f;
@@ -2595,7 +2595,7 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
  * @details 세 장을 찍는다 — (A) 모프 안 켬(레스트), (B) 모프 켜되 컴퓨트 없이 **레스트 버퍼를 그대로 풀에
  *          물림**(`setMeshMorphDiag(2)`), (C) 진짜 모프. B 의 정답은 A 와 **같은 그림**이다: 풀 원소 i 가
  *          정점 i 의 레스트 값이므로 정점 셰이더가 제 원소를 읽으면 레스트와 픽셀이 같아야 한다.
- *          OpenGL 드라이버가 early-return 모양의 `SwMorphElementOf` 를 잘못 컴파일해 정점마다 **한 칸 앞
+ *          OpenGL 드라이버가 early-return 모양의 `swComputeMorphElement` 를 잘못 컴파일해 정점마다 **한 칸 앞
  *          원소**를 읽던 버그가 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
  *          만 본다 — 시간에 따라 움직이므로 A 와 **달라야** 한다.
  *          이 케이스가 없던 동안 GL 은 능력표로 꺼 두어 조용히 레스트를 그렸고, 원인은 두 세션 동안 셰이더
@@ -3070,7 +3070,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
  * @details 셋이 함께 어긋났다. (1) "이 백엔드는 맞췄다" 는 비트를 아무도 지우지 않아, 다시 로드(XML 순서로 다시 쌓는다) 뒤에 다시 맞추지
  *          않았다. (2) GpuScene 이 인스턴스 CB 를 부모 레이아웃을 맞추기 **전에** 올려, 첫 프레임 인스턴스는 XML 순서 바이트를 들었다.
  *          (3) 인스턴스는 자기가 더러워질 때만 부모 바이트를 다시 복사해 부모의 값 변경을 놓쳤다. 셋 다 화면에서는 "엉뚱한 색" 이다.
- *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 SwMaterialData_t: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
+ *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 SwMaterialData: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
  */
 SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 {
@@ -3743,7 +3743,7 @@ SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
  * @brief [RenderPassGpuTest] 비균등 스케일 · 거울 스케일 아래에서도 G버퍼 노멀이 표면에 수직이다 — 네 백엔드, 머티리얼 셰이더(forwardlit)와 엔진 G버퍼 셰이더(gbuffer) 둘 다
  * @details 셰이더가 노멀을 월드 행렬로 옮기고 있었다(`mul( float4( n, 0 ), world )`). 균등 스케일 · 회전뿐이면 방향이 같아 드러나지 않지만, X 로 세 배
  *          늘린 부모 아래에서 Y 로 돈 쿼드는 노멀이 늘어난 축 쪽으로 50° 넘게 기울었다 — 늘린 메시의 조명이 통째로 틀렸다. 고친 셰이더는 3x3 의
- *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `SwWorldNormalOf`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
+ *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `swComputeWorldNormal`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
  *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 예전 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 시험은
  *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. G버퍼 패스의 컬링은 끈다 — 거울 변환은 감김을 뒤집는데 엔진은 아직
  *          컬 모드를 뒤집지 않으므로(남은 결함), 컬링을 두면 거울 배치의 그려지는 면이 그 수정에 따라 바뀐다. 이 시험은 노멀만 본다.

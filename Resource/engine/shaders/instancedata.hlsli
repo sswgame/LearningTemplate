@@ -31,7 +31,7 @@ struct SwInstanceData
 };
 
 /** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GpuSpriteInstanceData::makeUnorm16x2` 의 역이다. */
-float2 SwUnpackUnorm16x2( uint packed )
+float2 swUnpackUnorm16x2( uint packed )
 {
 	return float2( packed & 0xFFFFu, packed >> 16 ) * ( 1.0f / 65535.0f );
 }
@@ -40,17 +40,17 @@ float2 SwUnpackUnorm16x2( uint packed )
  * @brief 인스턴스의 UV 사각형 (u, v, 폭, 높이) — 머티리얼 uvRect 와 같은 꼴이다. 기본값(0, 0)–(1, 1)은 (0, 0, 1, 1) 이다.
  * @details 폭 · 높이는 음수일 수 있다(뒤집힌 프레임). 사각형 UV 에 아핀으로 적용하므로 정점에서 해도 픽셀에서 한 것과 같다.
  */
-float4 SwInstanceUvRectOf( SwInstanceData inst )
+float4 swComputeInstanceUvRect( SwInstanceData instance )
 {
-	const float2 uvStart = SwUnpackUnorm16x2( inst.uvStart );
-	const float2 uvEnd   = SwUnpackUnorm16x2( inst.uvEnd );
+	const float2 uvStart = swUnpackUnorm16x2( instance.uvStart );
+	const float2 uvEnd   = swUnpackUnorm16x2( instance.uvEnd );
 	return float4( uvStart, uvEnd - uvStart );
 }
 
 /** @brief 인스턴스 색 (r, g, b, a) — RGBA8 을 [0, 1] 로 푼다. 기본값은 흰색 불투명이다. */
-float4 SwInstanceTintOf( SwInstanceData inst )
+float4 swComputeInstanceTint( SwInstanceData instance )
 {
-	const uint packed = inst.tint;
+	const uint packed = instance.tint;
 	return float4( packed & 0xFFu, ( packed >> 8 ) & 0xFFu, ( packed >> 16 ) & 0xFFu, packed >> 24 ) * ( 1.0f / 255.0f );
 }
 

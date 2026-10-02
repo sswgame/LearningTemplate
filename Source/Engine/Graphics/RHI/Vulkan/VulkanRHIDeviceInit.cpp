@@ -291,7 +291,7 @@ namespace sw
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.multiDrawIndirect = availableFeatures.multiDrawIndirect;
         // 범위 밖 버퍼 읽기가 0 이 되도록 한다. DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스 · 머티리얼 인덱스가 GPU 폴트 대신
-        // 검은 픽셀로 드러난다(셰이더 쪽 클램프도 따로 있다: binding.hlsli SwLoadInstance. DX12 가 t# 를 루트 SRV 로 걸던 때 둔 것이다).
+        // 검은 픽셀로 드러난다(셰이더 쪽 클램프도 따로 있다: binding.hlsli swLoadInstance. DX12 가 t# 를 루트 SRV 로 걸던 때 둔 것이다).
         deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;
         deviceFeatures.samplerAnisotropy  = availableFeatures.samplerAnisotropy; // 정적 샘플러 세트의 ANISO_WRAP (없으면 createDescriptorResources 가 1.0 으로 만든다)
         // 와이어프레임(VK_POLYGON_MODE_LINE). DX11/DX12/GL 은 별도 기능 플래그가 없어 그냥 되는데

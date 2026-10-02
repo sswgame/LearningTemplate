@@ -177,13 +177,13 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
                     ↓
 드로우 직전 ShaderBindingBinder::bindGraphics(layout, registry, values, ...)
    - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer (패스마다 한 번)
-   - g_SwMaterials(t9): 셰이더 타입별 StructuredBuffer<SwMaterialData_t> — GpuScene 이 Material/MaterialInstance 버퍼를
+   - g_SwMaterials(t9): 셰이더 타입별 StructuredBuffer<SwMaterialData> — GpuScene 이 Material/MaterialInstance 버퍼를
                     리플렉션 stride 로 채워 배치 전에 bindStructuredBuffer. PS 는 인스턴스의 _materialIndex 로 원소를 읽는다
    - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (DX12/VK 텍스처 배열)
                     비네이티브(DX11/GL)는 bindShaderResource(srv, 리플렉션 t#)
    - MaterialCB(b1): 인스턴스 버퍼가 없는 픽스처(fullscreentriangle) 만 — Material 버퍼를 상수버퍼로 건다
-   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `SW_SampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11 s9..s15 샘플러 상태 / GL 은 결합 샘플러라 samplerId 무시
-   - RW 텍스처    : 컴퓨트 전용 `SW_StoreTex2D( index, coord, v )` — DX12/VK 배열(registerBindlessTextureUav 인덱스), DX11/GL u4..u7 서수
+   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `swSampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11 s9..s15 샘플러 상태 / GL 은 결합 샘플러라 samplerId 무시
+   - RW 텍스처    : 컴퓨트 전용 `swStoreRwTexture2D( index, texelPosition, value )` — DX12/VK 배열(registerBindlessTextureUav 인덱스), DX11/GL u4..u7 서수
    - 루트 상수    : `SW_ROOT_CONSTANTS_BEGIN … SW_ROOT_CONSTANTS_END` + `SW_ROOT( field )` ← setComputeRootConstants (16 dword)
 ```
 
@@ -194,7 +194,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `Shader/Binding/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
 | `Renderer/Frame/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
 | `Renderer/Frame/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
-| `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `SampleShadow/Source/...` 헬퍼 (4백엔드) |
+| `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `swSampleShadow/Source/...` 헬퍼 (4백엔드) |
 
 **셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로
 쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
@@ -216,9 +216,9 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 `RenderPassInputContract`(Pipeline/) 가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineResource::validate` 4번
 검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
-"셰이더가 SW_INVALID_INDEX 를 읽습니다", SourceColor 가 둘이면 오류. 디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어
+"셰이더가 kInvalidIndex 를 읽습니다", SourceColor 가 둘이면 오류. 디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어
 두고도 아무도 걸지 않아 SSAO 가 매 프레임 버려지던 것이 이 검사가 없어서였다. 새 역할이 필요하면 (1) enum 과
-이름표, (2) 계약 표, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`SW_SampleIndex` · `commitBindlessTextureBindings`)
+이름표, (2) 계약 표, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
 네 곳이다. `FrameRenderer::setInputRoleEnabled( role, false )` 는 그 역할을 걸지 않는 쇼 플래그다(테스트가 켬/끔을 비교한다).
 
 **`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
@@ -229,10 +229,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData` — 정의는 `instancedata.hlsli` 하나로 그래픽스와 컴퓨트
 셋이 함께 쓴다, C++ `GpuInstance` 와 112 바이트 레이아웃 일치)에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
-인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `SwLoadInstance( input.instanceSlot )`
+인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `swLoadInstance( input.instanceSlot )`
 를 불러 월드 행렬과 `materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼
 버퍼 `g_SwMaterials`(t9) 의 원소를 읽는다. 배치 시작을 루트 상수(`g_InstanceBase`)로 넘기던 것은 없어졌다.
-`g_SwInstancesIndex` 가 `SW_INVALID_INDEX` 면 `g_World`/`g_MaterialIndex` 폴백(풀스크린 · 픽스처 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
+`g_SwInstancesIndex` 가 `kInvalidIndex` 면 `g_World`/`g_MaterialIndex` 폴백(풀스크린 · 픽스처 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
 같은 슬롯(t4/t9)** 을 쓰고 백엔드는 그 슬롯을 어떻게 거는지만 다르다:
 
 | 백엔드 | t4/t9 구조버퍼를 거는 방법 |
@@ -369,7 +369,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   등록이 뷰를 오프라인 힙에도 만들고(`_offlineCpuHandle`), 드로우/디스패치 직전 `flushSlotTables` 가 바뀐 테이블만 온라인 힙 블록에
   `CopyDescriptors` 해 건다(`FD3D12DescriptorCache` + 서브할당 온라인 힙). 블록은 리스트가 닫힐 때 펜스 뒤 반납. 안 걸린 슬롯은 null 뷰.
   `ShaderBindingContractTest.Dx12RootSignatureFitsBudget` 이 계약에서 예산을 계산한다 — 테이블 안의 슬롯 수는 예산에 들지 않는다.
-- **P3 해결(DX11)** — `SW_SampleIndexWith` 의 samplerId 를 DX11 도 존중한다: 정적 샘플러 세트를 s9..s15 샘플러 상태로 걸고(`bindStaticSamplers`,
+- **P3 해결(DX11)** — `swSampleIndexWith` 의 samplerId 를 DX11 도 존중한다: 정적 샘플러 세트를 s9..s15 샘플러 상태로 걸고(`bindStaticSamplers`,
   즉시/지연 컨텍스트 모두) 셰이더가 리터럴 분기로 고른다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러 불가)이라 슬롯의 샘플러를
   엔진이 정한다 — 언리얼 OpenGL RHI 도 같은 제약(`glBindSampler` 유닛 단위).
 - **P3 설계 결정(구현 안 함)** — 텍스처 배열 용량은 언리얼도 고정(cvar 로 정한 힙 크기) + 펜스 뒤 인덱스 재사용이며, 스트리밍·축출은
@@ -380,7 +380,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 추가로 닫은 것 (2026-09-08, 위 검증 중에 드러난 것):
 - **머티리얼 폴백 원소 stride** — 머티리얼 없는 배치에 걸던 폴백이 256 바이트 원소 **하나를 공용**으로 썼다. 셰이더의
-  `SwMaterialData_t` 는 24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다(SRV 의 구조 stride 는
+  `SwMaterialData` 는 24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다(SRV 의 구조 stride 는
   셰이더 선언과 같아야 한다). 언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같게
   **stride 마다 하나**씩 만든다(`ensureMaterialFallbackBuffers`, PSO 를 다 등록한 뒤 셋업에서 — 기록 중에는 bindless 레지스트리를
   못 바꾼다). 필요한 stride 는 `ShaderBindingSlot::_elementStride`(리플렉션의 구조버퍼 원소 레이아웃)가 준다.
@@ -391,7 +391,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **스프라이트 인스턴스 칸** — `GpuInstance::_sprite`(`GpuSpriteInstanceData`: UV 사각형 꼭짓점 둘 unorm16 + 색 RGBA8, 12 바이트)는
   머티리얼 인스턴스가 아니라 인스턴스에 싣는 프레임 · 색이다(언리얼 Custom Primitive Data). 배치 키(머티리얼 인스턴스)를 건드리지 않아
   같은 텍스처의 스프라이트는 프레임 · 색이 달라도 한 드로우이고, 프레임만 넘긴 프레임은 그 인스턴스 한 칸만 더티로 올린다.
-  읽는 셰이더는 `sprite2d.hlsl` 하나(`SwInstanceUvRectOf` · `SwInstanceTintOf`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)
+  읽는 셰이더는 `sprite2d.hlsl` 하나(`swComputeInstanceUvRect` · `swComputeInstanceTint`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)
   이고 UV 는 메시의 것이다 — 예전에는 한 면짜리 3D 쿼드에 UV 를 위치에서 지어내 보이는 쪽에서 좌우가 뒤집혔고 2D 카메라(+Z 를 봄)에서는
   컬링으로 사라졌다. `RenderPassGpuTest.SpriteFramesAndTintsArePerInstance` 가 네 백엔드에서 픽셀로 본다.
 
@@ -472,12 +472,12 @@ Graphics 감사 후 고친 것 (2026-09-08):
   다시 만들지 않는다. 못 든 메시는 자기 버퍼(멀티 드로우엔 못 묶인다).
 - `g_SwBatches`(t13, `GpuBatchInfo` 32바이트) — 배치의 인스턴스 시작·모프 풀 시작·정점 풀 시작. 패스당 한 번 건다. 컬링 t1 과 같은 버퍼.
 - 인스턴스 슬롯 스트림(정점 슬롯 1, `SW_INSTANCESLOT`, uint, 인스턴스 스텝) — `0,1,2,…`. 간접 인자의 `startInstance` 가 배치 시작이라
-  입력 어셈블러가 네 API 모두 `startInstance + i` 를 준다. 정점 셰이더는 `SwLoadInstance( input.instanceSlot )` 로 자기 인스턴스를,
+  입력 어셈블러가 네 API 모두 `startInstance + i` 를 준다. 정점 셰이더는 `swLoadInstance( input.instanceSlot )` 로 자기 인스턴스를,
   `inst.meshBatchIndex` 로 배치 표를 읽는다. **SV_InstanceID 는 쓰지 않는다**(startInstance 포함 여부가 API 마다 달라서).
 - 루트 상수는 그룹당 하나(`g_SwMaterialCount`).
 
 **API 차이 하나는 남는다 — SV_VertexID.** Vulkan·GL 은 startVertex 를 포함하고 D3D 는 드로우 안의 0 기반 번호다.
-`binding.hlsli` 의 `SwMorphElementOf` 가 흡수하고 `RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대를 고정한다.
+`binding.hlsli` 의 `swComputeMorphElement` 가 흡수하고 `RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대를 고정한다.
 **버린 설계**: DX12 커맨드 시그니처의 루트 상수 주입 + Vulkan/GL DrawIndex — 그림은 맞았지만 DX12 ExecuteIndirect 가 호출당 두 배
 느려졌다(런타임 패치). 진단: `-gv_drawMerge=0`(배치마다 호출) · `-gv_vertexPool=0`(메시마다 정점 버퍼). 수치는 백로그 참고 —
 드로우 루프 DX12 458→200us · Vulkan 448→235us · GL 660→395us, 프레임 전체는 GL −40%, 나머지는 동등(GPU 쪽에서 상쇄).

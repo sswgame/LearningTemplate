@@ -642,7 +642,7 @@ namespace sw
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
 
-        // 슬롯 표는 binding.hlsli 의 SW_SampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal, depth|shadow].
+        // 슬롯 표는 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal, depth|shadow].
         // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 걸리지 않는다(알베도는 Lighting, AO 는 Bloom).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
         const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ao;

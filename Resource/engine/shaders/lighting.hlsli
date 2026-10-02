@@ -40,12 +40,12 @@ SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
  *          화면에 붙인 무늬" 다. 카메라가 움직이면 그늘이 물체를 따라오지 않고 화면에 붙어 있었다.
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다.
  */
-float SwSampleShadowAtWorld( float3 worldPos )
+float swSampleShadowAtWorld( float3 worldPosition )
 {
-	if ( g_ShadowMapIndex == SW_INVALID_INDEX )
+	if ( g_ShadowMapIndex == kInvalidIndex )
 		return 1.0f;
 
-	const float4 lightClip = mul( float4( worldPos, 1.0f ), g_LightViewProj );
+	const float4 lightClip = mul( float4( worldPosition, 1.0f ), g_LightViewProj );
 	if ( lightClip.w <= 0.0f )
 		return 1.0f;
 
@@ -55,7 +55,7 @@ float SwSampleShadowAtWorld( float3 worldPos )
 		return 1.0f;
 
 	// 바이어스는 g_ShadowParams.x. 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne).
-	const float lit = SW_SampleShadowCmp( g_ShadowMapIndex, uv, ndc.z - g_ShadowParams.x );
+	const float lit = swSampleShadowComparison( g_ShadowMapIndex, uv, ndc.z - g_ShadowParams.x );
 
 	// 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
 	return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
@@ -64,9 +64,9 @@ float SwSampleShadowAtWorld( float3 worldPos )
 /**
  * @brief 화면 UV와 깊이에서 월드 위치를 복원합니다 (디퍼드 전용).
  * @details G버퍼에 위치를 굽지 않는다 — 첨부 하나를 통째로 아끼고, 복원은 역행렬 곱 하나다.
- *          이 엔진은 행벡터 규약이라 `mul( 벡터, 행렬 )` 이다(`mul( worldPos, g_ViewProj )` 와 같은 순서).
+ *          이 엔진은 행벡터 규약이라 `mul( 벡터, 행렬 )` 이다(`mul( worldPosition, g_ViewProj )` 와 같은 순서).
  */
-float3 SwWorldPositionFromDepth( float2 uv, float deviceDepth )
+float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )
 {
 	const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
 	const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
@@ -76,23 +76,23 @@ float3 SwWorldPositionFromDepth( float2 uv, float deviceDepth )
 /**
  * @brief 이 표면을 씬의 **모든 라이트**로 셰이딩합니다.
  * @param albedo   표면 색 (앰비언트에도 곱해진다)
- * @param worldPos 월드 위치 — 점광의 거리 감쇠에 쓴다
+ * @param worldPosition 월드 위치 — 점광의 거리 감쇠에 쓴다
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
- * @param shadow   `SwSampleShadowAtWorld` 가 준 값 — `params.x` 가 켜진 빛에만 곱한다
- * @details 라이트 버퍼가 안 걸렸으면(`SW_INVALID_INDEX`) PassCB 의 키라이트 하나로 폴백한다 —
+ * @param shadow   `swSampleShadowAtWorld` 가 준 값 — `params.x` 가 켜진 빛에만 곱한다
+ * @details 라이트 버퍼가 안 걸렸으면(`kInvalidIndex`) PassCB 의 키라이트 하나로 폴백한다 —
  *          라이트 컴포넌트가 없는 씬도 예전과 같은 그림이 나온다.
  */
-float3 SwShadeLights( float3 albedo, float3 worldPos, float3 normal, float shadow )
+float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
 {
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
 	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
 
-	const uint lightCount = ( g_SwLightsIndex == SW_INVALID_INDEX ) ? 0u : g_SwLightCount;
+	const uint lightCount = ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
 	if ( lightCount == 0u )
 	{
-		const float3 keyDir   = normalize( -g_KeyLightDirIntensity.xyz );
-		const float  keyNdotl = saturate( dot( normal, keyDir ) );
-		lit += albedo * keyNdotl * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb * shadow;
+		const float3 keyDirection      = normalize( -g_KeyLightDirIntensity.xyz );
+		const float  keyNormalDotLight = saturate( dot( normal, keyDirection ) );
+		lit += albedo * keyNormalDotLight * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb * shadow;
 		return lit;
 	}
 
@@ -107,7 +107,7 @@ float3 SwShadeLights( float3 albedo, float3 worldPos, float3 normal, float shado
 		if ( lightType != SW_LIGHT_TYPE_DIRECTIONAL )
 		{
 			// 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
-			const float3 delta    = light.positionRadius.xyz - worldPos;
+			const float3 delta    = light.positionRadius.xyz - worldPosition;
 			const float  distance = length( delta );
 			// 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
 			const float radius = max( light.positionRadius.w, 1e-4f );
@@ -130,12 +130,12 @@ float3 SwShadeLights( float3 albedo, float3 worldPos, float3 normal, float shado
 			}
 		}
 
-		const float ndotl = saturate( dot( normal, toLight ) );
-		if ( ndotl * attenuation <= 0.0f )
+		const float normalDotLight = saturate( dot( normal, toLight ) );
+		if ( normalDotLight * attenuation <= 0.0f )
 			continue;
 
 		const float shadowTerm = ( light.params.x > 0.5f ) ? shadow : 1.0f;
-		lit += albedo * ndotl * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
+		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
 	}
 
 	return lit;

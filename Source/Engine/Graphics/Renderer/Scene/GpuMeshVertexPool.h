@@ -11,7 +11,7 @@
  * [어떻게]
  * 메시들의 정점을 이어 붙여 정점 버퍼 하나를 만들고 메시마다 시작 오프셋을 기억합니다. 배치의 간접 인자는
  * `startVertex = 시작 오프셋` 이고, 입력 어셈블러가 그 구간을 읽습니다. 정점 셰이더의 SV_VertexID 가 그 오프셋을
- * 포함하는지는 API 마다 다릅니다(Vulkan · GL 은 포함, D3D 는 0 기반. binding.hlsli SwMorphElementOf).
+ * 포함하는지는 API 마다 다릅니다(Vulkan · GL 은 포함, D3D 는 0 기반. binding.hlsli swComputeMorphElement).
  * 모프 풀(`GpuMeshMorphPool`)이 이미 같은 모양입니다.
  * 메시 집합이 바뀔 때만 다시 만듭니다(장면 로드 · 메시 추가). 정점 데이터는 CPU 사본(`Mesh::getVertices`)에서 옵니다.
  */

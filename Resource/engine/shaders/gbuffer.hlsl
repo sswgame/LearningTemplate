@@ -2,9 +2,9 @@
 
 struct PSInput
 {
-	float4 pos : SV_POSITION;
-	float4 col : COLOR;
-	float3 nrm : TEXCOORD0;
+	float4 position : SV_POSITION;
+	float4 color    : COLOR;
+	float3 normal   : TEXCOORD0;
 };
 
 struct PSOutput
@@ -13,28 +13,28 @@ struct PSOutput
 	float4 normal : SV_TARGET1;
 };
 
-PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 {
 	PSInput output;
-	SwInstanceData inst = SwLoadInstance(input.instanceSlot);
-	float3 localPos;
+	SwInstanceData instance = swLoadInstance(input.instanceSlot);
+	float3 localPosition;
 	float3 localNormal;
-	SwLoadMorphedVertex(inst.meshBatchIndex, vid, input.pos, input.nrm, localPos, localNormal);
-	float4x4 world = inst.world;
-	// 위치는 깊이 프리패스와 **같은 함수**로 만든다(binding.hlsli SwWorldPositionOf).
-	float4 worldPos = SwWorldPositionOf(localPos, world);
-	output.pos = SwClipPositionOf(worldPos, g_ViewProj);
-	output.col = input.col;
-	// 노멀은 여인수 행렬로 옮긴다(binding.hlsli SwWorldNormalOf) — 월드 행렬을 곱하면 비균등 스케일에서 기운다.
-	output.nrm = SwWorldNormalOf(localNormal, world);
+	swLoadMorphedVertex(instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal);
+	float4x4 world = instance.world;
+	// 위치는 깊이 프리패스와 **같은 함수**로 만든다(binding.hlsli swComputeWorldPosition).
+	float4 worldPosition = swComputeWorldPosition(localPosition, world);
+	output.position = swComputeClipPosition(worldPosition, g_ViewProj);
+	output.color = input.color;
+	// 노멀은 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 월드 행렬을 곱하면 비균등 스케일에서 기운다.
+	output.normal = swComputeWorldNormal(localNormal, world);
 	return output;
 }
 
 PSOutput PSMain(PSInput input)
 {
 	PSOutput output;
-	float3 nEnc = saturate(normalize(input.nrm) * 0.5f + 0.5f);
-	output.albedo = float4(input.col.rgb, 1.0f);
-	output.normal = float4(nEnc, 1.0f);
+	float3 encodedNormal = saturate(normalize(input.normal) * 0.5f + 0.5f);
+	output.albedo = float4(input.color.rgb, 1.0f);
+	output.normal = float4(encodedNormal, 1.0f);
 	return output;
 }

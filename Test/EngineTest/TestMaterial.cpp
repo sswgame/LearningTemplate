@@ -855,7 +855,7 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
 {
     SW_TEST_SUPPRESS_LOGS();
 
-    // XML 은 roughness 를 먼저 적고, 셰이더(SwMaterialData_t)는 color 를 먼저 둔다.
+    // XML 은 roughness 를 먼저 적고, 셰이더(SwMaterialData)는 color 를 먼저 둔다.
     const sw::string xml =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<MaterialDesc formatVersion=\"0\" name=\"ReloadProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"

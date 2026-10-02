@@ -22,17 +22,17 @@
 
 struct PSInput
 {
-	float4 pos : SV_POSITION;
-	float2 uv  : TEXCOORD0;
+	float4 position : SV_POSITION;
+	float2 uv       : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 {
 	PSInput output;
-	input.pos = input.pos;
-	float2 p = float2((vid == 1) ? 3.0f : -1.0f, (vid == 2) ? 3.0f : -1.0f);
-	output.pos = float4(p, 0.0f, 1.0f);
-	output.uv  = p * float2(0.5f, -0.5f) + 0.5f;
+	input.position = input.position;
+	float2 clipPosition = float2((vertexId == 1) ? 3.0f : -1.0f, (vertexId == 2) ? 3.0f : -1.0f);
+	output.position = float4(clipPosition, 0.0f, 1.0f);
+	output.uv       = clipPosition * float2(0.5f, -0.5f) + 0.5f;
 	return output;
 }
 
@@ -40,10 +40,10 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
 	float2 texel = g_OutlineParams.yz;
 	// 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 섞을 것이 없으니 점 샘플러로 읽는다.
-	float3 color = SampleSourcePoint(input.uv).rgb;
+	float3 color = swSampleSourcePoint(input.uv).rgb;
 
 #if defined( SW_POST_BLOOM )
-	color = SwApplyBloom(input.uv, texel, color);
+	color = swApplyBloom(input.uv, texel, color);
 	// **여기서 자르는 이유.** 패스를 나눠 두었을 때는 블룸 결과가 `R8G8B8A8_UNORM` 중간 타깃에
 	// 쓰이면서 [0,1] 로 잘렸다. 합치면 그 자름이 사라져 밝은 부분이 달라 보인다 — 합치기는
 	// **성능 변경이지 룩 변경이 아니어야** 하므로 같은 자리에서 똑같이 자른다.
@@ -51,7 +51,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 	color = saturate(color);
 #endif
 #if defined( SW_POST_OUTLINE )
-	color = SwApplyOutline(input.uv, texel, color);
+	color = swApplyOutline(input.uv, texel, color);
 #endif
 #if defined( SW_POST_TONEMAP )
 	color = color / (color + 1.0f);

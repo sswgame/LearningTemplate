@@ -126,7 +126,7 @@ namespace sw
 
                 // 명시 값이 없고 `g_<Name>Index` 패턴이면 레지스트리에서 텍스처 · 버퍼 bindless 인덱스를 채운다.
                 // 해결에 실패해도 이 멤버는 반드시 INVALID(0xFFFFFFFF)로 채운다. 0 으로 두면 셰이더가 힙 0번을
-                // 잘못 읽는다(SwLoadInstanceWorld / SW_SampleIndex 는 SW_INVALID_INDEX 비교로 폴백).
+                // 잘못 읽는다(swLoadInstanceWorld / swSampleIndex 는 kInvalidIndex 비교로 폴백).
                 uint32 autoIndex = kInvalidDescriptorIndex;
                 if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                 {

@@ -464,10 +464,10 @@ namespace sw
                     if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) )
                         textureIndex = static_cast<uint32>( numericVal );
                 }
-                // 붙은 텍스처가 없으면 0 이 아니라 SW_INVALID_INDEX 를 넣는다. 0 은 "첫 번째 슬롯"
+                // 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 "첫 번째 슬롯"
                 // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있던 상수버퍼를
                 // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 났다. 셰이더의
-                // SW_SampleIndex 는 SW_INVALID_INDEX 를 "텍스처 없음" 으로 이미 처리한다.
+                // swSampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 이미 처리한다.
                 return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }
             case MaterialPropertyType::Range:

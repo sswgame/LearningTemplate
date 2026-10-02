@@ -101,7 +101,7 @@ namespace sw
          * @brief GPU 메시 모프 진단 모드를 코드에서 고릅니다(`-gv_morphDiag` 와 같은 값 체계, 음수 = 전역 변수를 따름).
          * @details 테스트가 씁니다. 2(컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물림)의 정답은 **레스트 포즈와 같은
          *          그림**이라, 이 모드 하나로 "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수
-         *          있습니다. OpenGL 드라이버가 early-return 모양의 `SwMorphElementOf` 를 잘못 컴파일해 한 칸 어긋난
+         *          있습니다. OpenGL 드라이버가 early-return 모양의 `swComputeMorphElement` 를 잘못 컴파일해 한 칸 어긋난
          *          원소를 읽던 버그가 정확히 이 단언에 걸립니다(binding.hlsli 주석 참고).
          */
         void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
@@ -116,7 +116,7 @@ namespace sw
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 **걸지 않게** 합니다(쇼 플래그. 언리얼의 r.AmbientOcclusion.Levels=0 자리).
-         * @details 셰이더는 그 인덱스를 SW_INVALID_INDEX 로 읽어 폴백합니다(AO 는 1). "이 입력이 실제로 그림을 바꾸는가" 를
+         * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽어 폴백합니다(AO 는 1). "이 입력이 실제로 그림을 바꾸는가" 를
          *          같은 프레임 안에서 비교할 수 있습니다. SSAO 가 매 프레임 돌고 버려지던 것을 픽셀로 잡는 데 썼습니다.
          */
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
@@ -678,7 +678,7 @@ namespace sw
          *          나가지 않게 항상 유효한 버퍼를 겁니다(언리얼의 기본 머티리얼 자리).
          *
          *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같습니다.
-         *          예전에는 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData_t` 는
+         *          예전에는 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData` 는
          *          24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈습니다.
          *
          *          키는 stride 입니다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 합니다.

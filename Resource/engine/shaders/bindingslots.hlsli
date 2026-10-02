@@ -75,13 +75,13 @@
 #define SW_SLOT_MATERIAL_TEX3          8
 #define SW_MATERIAL_TEXTURE_SLOT_COUNT 4
 
-// GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<SwMaterialData_t> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
+// GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<SwMaterialData> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
 #define SW_SLOT_MATERIAL_BUFFER        9
 
 // GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIds).
 // 정점 셰이더가 g_SwVisibleInstanceIds[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
-// 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(SW_INVALID_INDEX)
+// 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(kInvalidIndex)
 // 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   10
 
@@ -90,7 +90,7 @@
 // 언리얼 GPU Skin Cache 가 컴퓨트 결과를 정점 스트림으로 물리는 자리와 같은 목적이고, 방법만
 // 정점 풀링이다(이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 구조버퍼라 그 결이 맞고,
 // DX11 의 "구조버퍼는 정점 버퍼가 될 수 없다" 제약과 DX12 의 UPLOAD 힙 제약을 아예 비켜 간다).
-// 안 걸려 있으면(SW_INVALID_INDEX) 입력 스트림을 그대로 쓴다.
+// 안 걸려 있으면(kInvalidIndex) 입력 스트림을 그대로 쓴다.
 #define SW_SLOT_MORPH_VERTEX_SRV       11
 
 // 씬의 라이트 목록 (StructuredBuffer<SwLightData> g_SwLights). 방향광·점광이 한 버퍼에 섞여 들어가고,
@@ -115,7 +115,7 @@
 #define SW_COMPUTE_UAV_SLOT_COUNT      4
 
 // 컴퓨트 RW 텍스처 — DX11/GL 은 고정 슬롯 u4..u7(g_SwRWSlot#), DX12/Vulkan 은 무제한 배열(g_SwBindlessRWTex2D, 아래 5)을
-// 인덱스로 고른다. 셰이더는 SW_StoreTex2D( index, coord, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..3).
+// 인덱스로 고른다. 셰이더는 swStoreRwTexture2D( index, texelPosition, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..3).
 #define SW_SLOT_COMPUTE_TEXUAV0        4
 #define SW_SLOT_COMPUTE_TEXUAV1        5
 #define SW_SLOT_COMPUTE_TEXUAV2        6
@@ -141,7 +141,7 @@
 #define SW_SAMPLER_SHADOW_CMP       7
 
 // DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 슬롯 결합 샘플러(s0..s8, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
-// 초기화 때 한 번 걸어 두고 셰이더는 SW_SampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
+// 초기화 때 한 번 걸어 두고 셰이더는 swSampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
 // 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은
 // SW_SAMPLER_* 를 DX11 도 존중하게 한 것이다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 세트가 없다.
 #define SW_DX11_STATIC_SAMPLER0        9

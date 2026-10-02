@@ -29,23 +29,20 @@ struct RHIDispatchIndirectCommand
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDrawBuffer, 0 );
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDispatchBuffer, 1 );
 
-#define GET_DRAW_BUFFER g_IndirectDrawBuffer
-#define GET_DISPATCH_BUFFER g_IndirectDispatchBuffer
-
 /**
  * @brief CSMain 컴퓨트 셰이더 진입점 (1,1,1 스레드 그룹)
  * @details DrawIndirect 커맨드 버퍼 및 DispatchIndirect 커맨드 버퍼의 파라미터를 동적으로 GPU 상에서 계산 및 저장
  */
-[numthreads( 1, 1, 1 )] void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
+[numthreads( 1, 1, 1 )] void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
 	// 1. DrawIndirect 커맨드 바이트 버퍼 기록 (vertexCount: 6, instanceCount: 1)
-	GET_DRAW_BUFFER.Store( 0, 6 );
-	GET_DRAW_BUFFER.Store( 4, 1 );
-	GET_DRAW_BUFFER.Store( 8, 0 );
-	GET_DRAW_BUFFER.Store( 12, 0 );
+	g_IndirectDrawBuffer.Store( 0, 6 );
+	g_IndirectDrawBuffer.Store( 4, 1 );
+	g_IndirectDrawBuffer.Store( 8, 0 );
+	g_IndirectDrawBuffer.Store( 12, 0 );
 
 	// 2. DispatchIndirect 커맨드 바이트 버퍼 기록 (threadGroupCountX: 4, Y: 1, Z: 1)
-	GET_DISPATCH_BUFFER.Store( 0, 4 );
-	GET_DISPATCH_BUFFER.Store( 4, 1 );
-	GET_DISPATCH_BUFFER.Store( 8, 1 );
+	g_IndirectDispatchBuffer.Store( 0, 4 );
+	g_IndirectDispatchBuffer.Store( 4, 1 );
+	g_IndirectDispatchBuffer.Store( 8, 1 );
 }

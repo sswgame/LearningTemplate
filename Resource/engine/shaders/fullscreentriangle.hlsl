@@ -2,8 +2,8 @@
 
 struct PSInput
 {
-	float4 pos : SV_POSITION;
-	float4 col : COLOR;
+	float4 position : SV_POSITION;
+	float4 color    : COLOR;
 };
 
 // b1(MaterialCB)을 네 백엔드에서 모두 실제 상수 버퍼로 쓸 수 있는지 지키는 픽스처다 (GPUScene 을 거치지 않는 드로우).
@@ -17,12 +17,12 @@ SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
 PSInput VSMain(SwVertexInput input)
 {
 	PSInput output;
-	output.pos = float4(input.pos, 1.0f);
-	output.col = input.col;
+	output.position = float4(input.position, 1.0f);
+	output.color = input.color;
 	return output;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	return input.col * g_MaterialColor;
+	return input.color * g_MaterialColor;
 }

@@ -72,7 +72,7 @@ namespace sw
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF = 모프 안 함.
          * @details RT 가 `GpuScene::assignMorphBases` 로 채웁니다. GT 는 GPU 풀을 모릅니다(스냅샷 소유 규칙). upload 가 이 값을
-         *          배치 표(`GpuBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽습니다(binding.hlsli SwMorphElementOf).
+         *          배치 표(`GpuBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽습니다(binding.hlsli swComputeMorphElement).
          */
         uint32             _morphVertexBase{ 0xFFFFFFFFu };
         RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;

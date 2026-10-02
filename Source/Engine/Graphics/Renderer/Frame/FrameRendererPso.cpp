@@ -339,7 +339,7 @@ namespace sw
         }
 
         // 방금 만든 변형의 레이아웃은 셋업 때 폴백 stride 를 모으던 시점에는 없었다. 그 셰이더가
-        // 다른 크기의 SwMaterialData_t 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
+        // 다른 크기의 SwMaterialData 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
         // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t9 를 **비운 채** 드로우를 낸다.
         // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
         // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.

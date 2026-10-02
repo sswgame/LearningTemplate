@@ -257,7 +257,7 @@ namespace sw
                 }
                 if ( bFound )
                     continue;
-                SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 SW_INVALID_INDEX 를 읽습니다",
+                SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 kInvalidIndex 를 읽습니다",
                               sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
                 ++issueCount;
             }

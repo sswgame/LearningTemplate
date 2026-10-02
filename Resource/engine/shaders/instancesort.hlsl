@@ -26,14 +26,14 @@
 // 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다. 예전에는 여기 베낀 구조체가 있었고 계약 검사가 보지 않았다.
 #include "instancedata.hlsli"
 
-// C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertex 는 정점 풀 시작,
-// startInstance 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
-struct DrawIndirectCommand
+// C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertexLocation 는 정점 풀 시작,
+// startInstanceLocation 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
+struct RHIDrawIndirectCommand
 {
 	uint vertexCount;
 	uint instanceCount;
-	uint startVertex;
-	uint startInstance;
+	uint startVertexLocation;
+	uint startInstanceLocation;
 };
 
 struct GpuBatchInfo
@@ -58,17 +58,17 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
 
 // 키와 값이 같이 움직여야 하므로 둘을 나란히 둔다. 키는 카메라까지의 거리 제곱(뒤에서 앞으로).
-groupshared float s_key[SW_SORT_MAX_ELEMENTS];
-groupshared uint  s_id[SW_SORT_MAX_ELEMENTS];
+groupshared float s_arrKey[SW_SORT_MAX_ELEMENTS];
+groupshared uint  s_arrId[SW_SORT_MAX_ELEMENTS];
 
 [numthreads(SW_SORT_THREADS, 1, 1)]
-void CSMain(uint3 gid : SV_GroupID, uint3 gtid : SV_GroupThreadID)
+void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 {
-	const uint batchIndex = gid.x;
+	const uint batchIndex = groupId.x;
 	if (batchIndex >= g_BatchCount)
 		return;
 
@@ -86,58 +86,59 @@ void CSMain(uint3 gid : SV_GroupID, uint3 gtid : SV_GroupThreadID)
 	//
 	// **루프 경계는 그대로 상수다.** `count` 는 UAV 에서 읽은 값이라 컴파일러(FXC)에게는 "스레드마다
 	// 다를 수 있는 값" 이고, 그 값에 걸린 흐름 안의 배리어는 X4026 으로 거부된다 — 실제로는 그룹 안에서
-	// 같은 값이지만 증명할 수 없다. 그래서 배리어는 상수 루프에 두고 **비교·교환만** n 안으로 줄인다.
+	// 같은 값이지만 증명할 수 없다. 그래서 배리어는 상수 루프에 두고 **비교·교환만** sortLength 안으로 줄인다.
 	// 배리어 45 번은 남지만 그것은 싸고, 비쌌던 것은 칸마다의 그룹공유 읽기·쓰기였다.
-	uint n = 2u;
-	while (n < count)
-		n <<= 1u;
+	uint sortLength = 2u;
+	while (sortLength < count)
+		sortLength <<= 1u;
 
-	// 그룹공유로 올린다. n 밖의 자리는 키를 -1 로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
-	for (uint load = gtid.x; load < (uint)SW_SORT_MAX_ELEMENTS; load += SW_SORT_THREADS)
+	// 그룹공유로 올린다. sortLength 밖의 자리는 키를 -1 로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
+	for (uint loadIndex = groupThreadId.x; loadIndex < (uint)SW_SORT_MAX_ELEMENTS; loadIndex += SW_SORT_THREADS)
 	{
-		if (load < count)
+		if (loadIndex < count)
 		{
-			const uint instId = g_VisibleInstanceIds[base + load];
-			s_id[load]        = instId;
+			const uint instanceId = g_VisibleInstanceIds[base + loadIndex];
+			s_arrId[loadIndex]    = instanceId;
 			// 인스턴스 번호가 범위를 벗어나면(있어선 안 되지만) 맨 뒤로 보낸다.
-			if (instId < g_InstanceCount)
+			if (instanceId < g_InstanceCount)
 			{
-				const float3 d = g_Instances[instId].boundsCenter - g_CameraPos.xyz;
-				s_key[load]    = dot(d, d);
+				const float3 toCamera = g_Instances[instanceId].boundsCenter - g_CameraPos.xyz;
+				s_arrKey[loadIndex]   = dot(toCamera, toCamera);
 			}
 			else
-				s_key[load] = -1.0f;
+				s_arrKey[loadIndex] = -1.0f;
 		}
 		else
 		{
-			s_id[load]  = 0u;
-			s_key[load] = -1.0f;
+			s_arrId[loadIndex]  = 0u;
+			s_arrKey[loadIndex] = -1.0f;
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
 
 	// 바이토닉 정렬 — **내림차순**(먼 것이 앞). 투명은 뒤에서 앞으로 그려야 블렌딩이 맞는다.
-	for (uint k = 2u; k <= (uint)SW_SORT_MAX_ELEMENTS; k <<= 1u)
+	// blockSize 는 이 단계에서 정렬되는 구간의 길이, compareDistance 는 그 안에서 짝을 짓는 거리다.
+	for (uint blockSize = 2u; blockSize <= (uint)SW_SORT_MAX_ELEMENTS; blockSize <<= 1u)
 	{
-		for (uint j = k >> 1u; j > 0u; j >>= 1u)
+		for (uint compareDistance = blockSize >> 1u; compareDistance > 0u; compareDistance >>= 1u)
 		{
-			// n 을 넘는 단계는 할 일이 없다 — 분기 안에 배리어가 없으므로 가변 값으로 걸러도 된다.
-			for (uint i = gtid.x; i < n && k <= n; i += SW_SORT_THREADS)
+			// sortLength 를 넘는 단계는 할 일이 없다 — 분기 안에 배리어가 없으므로 가변 값으로 걸러도 된다.
+			for (uint elementIndex = groupThreadId.x; elementIndex < sortLength && blockSize <= sortLength; elementIndex += SW_SORT_THREADS)
 			{
-				const uint partner = i ^ j;
-				if (partner > i)
+				const uint partner = elementIndex ^ compareDistance;
+				if (partner > elementIndex)
 				{
-					// (i & k) == 0 이면 이 구간은 내림차순으로 맞춘다.
-					const bool bDescending = ((i & k) == 0u);
-					const bool bSwap       = bDescending ? (s_key[i] < s_key[partner]) : (s_key[i] > s_key[partner]);
+					// (elementIndex & blockSize) == 0 이면 이 구간은 내림차순으로 맞춘다.
+					const bool bDescending = ((elementIndex & blockSize) == 0u);
+					const bool bSwap       = bDescending ? (s_arrKey[elementIndex] < s_arrKey[partner]) : (s_arrKey[elementIndex] > s_arrKey[partner]);
 					if (bSwap)
 					{
-						const float tmpKey = s_key[i];
-						s_key[i]           = s_key[partner];
-						s_key[partner]     = tmpKey;
-						const uint tmpId   = s_id[i];
-						s_id[i]            = s_id[partner];
-						s_id[partner]      = tmpId;
+						const float swapKey    = s_arrKey[elementIndex];
+						s_arrKey[elementIndex] = s_arrKey[partner];
+						s_arrKey[partner]      = swapKey;
+						const uint swapId      = s_arrId[elementIndex];
+						s_arrId[elementIndex]  = s_arrId[partner];
+						s_arrId[partner]       = swapId;
 					}
 				}
 			}
@@ -145,6 +146,6 @@ void CSMain(uint3 gid : SV_GroupID, uint3 gtid : SV_GroupThreadID)
 		}
 	}
 
-	for (uint store = gtid.x; store < count; store += SW_SORT_THREADS)
-		g_VisibleInstanceIds[base + store] = s_id[store];
+	for (uint storeIndex = groupThreadId.x; storeIndex < count; storeIndex += SW_SORT_THREADS)
+		g_VisibleInstanceIds[base + storeIndex] = s_arrId[storeIndex];
 }

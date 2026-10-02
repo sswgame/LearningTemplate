@@ -389,7 +389,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;
         Microsoft::WRL::ComPtr<ID3D11SamplerState>      _linearSampler;
-        /// @brief 정적 샘플러 세트입니다(bindingslots.hlsli 4, DX12 와 같은 표). s9..s15 에 겁니다. 셰이더가 SW_SampleIndexWith 의 samplerId 로 고릅니다.
+        /// @brief 정적 샘플러 세트입니다(bindingslots.hlsli 4, DX12 와 같은 표). s9..s15 에 겁니다. 셰이더가 swSampleIndexWith 의 samplerId 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         HWND                                       _pHWnd;
         RHIFormat                                  _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)

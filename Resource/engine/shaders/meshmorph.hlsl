@@ -32,20 +32,20 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
 
 [numthreads(64, 1, 1)]
-void CSMain(uint3 dtid : SV_DispatchThreadID)
+void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
-	const uint idx = dtid.x;
-	if (idx >= g_MorphVertexCount)
+	const uint vertexIndex = dispatchThreadId.x;
+	if (vertexIndex >= g_MorphVertexCount)
 		return;
 
-	const uint   element = idx * SW_MORPH_FLOAT4_PER_VERTEX;
-	const float4 restPos = g_RestVertices[element];
-	const float4 restNrm = g_RestVertices[element + 1u];
+	const uint   element             = vertexIndex * SW_MORPH_FLOAT4_PER_VERTEX;
+	const float4 restPositionElement = g_RestVertices[element];
+	const float4 restNormalElement   = g_RestVertices[element + 1u];
 
 	// 변형은 **정점 노멀 방향**으로 민다. 예전엔 원점 기준 방향을 법선 대신 썼다 — 정점에 노멀이
 	// 없던 시절의 대용이고, 원점 중심 도형에만 맞는 가정이었다(바닥 평면 같은 건 엉뚱하게 밀린다).
-	const float3 restPosition = restPos.xyz;
-	const float3 restNormal   = normalize(restNrm.xyz);
+	const float3 restPosition = restPositionElement.xyz;
+	const float3 restNormal   = normalize(restNormalElement.xyz);
 
 	// 위상을 위치에서 뽑아 정점마다 어긋나게 한다 — 전부 같은 위상이면 도형이 통째로 커졌다 작아질 뿐
 	// 모양이 변하지 않아, 변형이 실제로 걸렸는지 그림으로 구분할 수 없다.
