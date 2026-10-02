@@ -77,6 +77,29 @@ namespace sw
         bool               _bTickRenameVisibleInTick{ false }; ///< 바꾼 **직후**(아직 틱 안) 새 이름이 보였는지
         Component*         _pTickStopTicking{ nullptr };       ///< 설정되면 틱이 그 컴포넌트의 틱을 끈다(`setCanEverTick( false )`)
         bool               _bTickStopVisibleInTick{ false };   ///< 끈 **직후**(아직 틱 안) 꺼진 것이 보였는지
+        /**
+         * @brief 설정되면 틱이 그 컴포넌트의 서브틱을 바꾼다 — 3 을 등록하고, 1 에 `_tickSubTickPrerequisite` 를 선행 조건으로 더하고, 1 을 끄고, 2 를 해제한다.
+         * @details 시험이 1 · 2 를 미리 등록해 둔다. 바꾼 **직후**(아직 틱 안) 목록에 보였는지를 하나씩 적는다 — 미뤘으면 넷 다 아직 안 보인다.
+         *          원자 마스크는 바로 바뀌어야 한다(끈 서브틱 · 해제한 서브틱은 이번 틱의 남은 항목에서 곧바로 빠진다) — 그것도 적는다.
+         */
+        Component*    _pTickSubTickTarget{ nullptr };
+        SubTickHandle _tickSubTickPrerequisite{};
+        bool          _bTickSubTickAddVisibleInTick{ false };
+        bool          _bTickSubTickPrerequisiteVisibleInTick{ false };
+        bool          _bTickSubTickOffVisibleInTick{ false };
+        bool          _bTickSubTickRemoveVisibleInTick{ false };
+        bool          _bTickSubTickMaskOffInTick{ false }; ///< 끄고 해제한 1 · 2 가 틱 안에서 곧바로 꺼져 보였는지(마스크)
+
+        /** @brief @p pComponent 에 @p subTickId 서브틱이 등록돼 있으면 그 정보, 없으면 nullptr 입니다. */
+        static const SubTickInfo* findSubTick( const Component* pComponent, uint32 subTickId )
+        {
+            for ( const SubTickInfo& info : pComponent->getAllSubTicks() )
+            {
+                if ( info._subTickId == subTickId )
+                    return &info;
+            }
+            return nullptr;
+        }
 
         /** @brief 부른 횟수를 세고, 설정된 매니저가 있으면 오브젝트 하나를 만듭니다(onBeginPlay 안의 스폰). */
         void onBeginPlay() override
@@ -124,6 +147,20 @@ namespace sw
             {
                 _pTickStopTicking->setCanEverTick( false );
                 _bTickStopVisibleInTick = ( _pTickStopTicking->canEverTick() == false );
+            }
+            if ( _pTickSubTickTarget != nullptr )
+            {
+                _pTickSubTickTarget->registerSubTick( TickGroup::PostPhysics, 3 );
+                _bTickSubTickAddVisibleInTick = ( findSubTick( _pTickSubTickTarget, 3 ) != nullptr );
+                (void)_pTickSubTickTarget->addSubTickPrerequisite( 1, _tickSubTickPrerequisite ); // 붙었는지는 시험이 목록으로 본다
+                const SubTickInfo* pFirst              = findSubTick( _pTickSubTickTarget, 1 );
+                _bTickSubTickPrerequisiteVisibleInTick = ( pFirst != nullptr && pFirst->_listPrerequisite.empty() == false );
+                _pTickSubTickTarget->setSubTickActive( 1, false );
+                pFirst                        = findSubTick( _pTickSubTickTarget, 1 );
+                _bTickSubTickOffVisibleInTick = ( pFirst != nullptr && pFirst->_bActive == SW_FALSE );
+                (void)_pTickSubTickTarget->unregisterSubTick( 2 ); // 빠졌는지는 시험이 목록으로 본다
+                _bTickSubTickRemoveVisibleInTick = ( findSubTick( _pTickSubTickTarget, 2 ) == nullptr );
+                _bTickSubTickMaskOffInTick       = ( _pTickSubTickTarget->isSubTickActive( 1 ) == false && _pTickSubTickTarget->isSubTickActive( 2 ) == false );
             }
             if ( _pTickPrefabs != nullptr && _pTickSpawnManager != nullptr && _pTickSpawned == nullptr )
                 _pTickSpawned = _pTickPrefabs->spawn( _pTickSpawnManager, _tickSpawnPath, "TickSpawned" );

@@ -234,16 +234,24 @@ namespace sw
          * @brief 서브틱을 등록합니다(TickGroup · Phase · Priority 지정).
          * @details 우선순위는 단계 안의 자리(0..`kMaxTickPriority`)이고, 넘으면 묶습니다(경고). 예전에는 `& 63` 으로 감겨 70 이 6 이 되어
          *          10 보다 앞섰습니다. 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을 줍니다(예전에는 받아 두고 등록부가 조용히 버렸습니다).
+         *
+         *          **서브틱 목록(`_listSubTick`)을 바꾸는 넷(등록 · 해제 · 선행 조건 · 활성)은 틱 중이면 그 변경을 틱 직후로 미룹니다**(구조 변경 큐,
+         *          부른 순서대로 — 이어서 부른 선행 조건 추가도 등록 뒤에 돈다). 목록은 이 컴포넌트를 틱하는 워커가 읽는데(64 번부터의 활성 · 자기 틱
+         *          안의 등록 · 해제), 다른 오브젝트의 틱이 그것을 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽었고 두 워커가 같은 컴포넌트에
+         *          등록하면 `push_back` 이 겹쳤다(형제 `setTickGroup` · `setCanEverTick` 은 구조 ⑮ 에서 이미 미뤘다). 미뤄도 핸들은 바로 줍니다.
+         *          서브틱 1~63 의 원자 마스크는 틱 중에 바꾸라고 원자다 — 해제 · 끄기는 마스크를 바로 내려 이번 틱의 남은 항목이 곧바로 건너뛴다
+         *          (64 번부터는 활성이 목록에만 있어 틱 뒤에 바뀐다).
          */
         SubTickHandle registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
-        /** @brief 서브틱 하나의 등록을 해제합니다. */
+        /** @brief 서브틱 하나의 등록을 해제합니다. 있었으면 true 입니다. 틱 중이면 마스크만 바로 내리고 목록은 틱 직후로 미루며 true(받아 둠)입니다. */
         bool unregisterSubTick( uint32 subTickId );
         /**
          * @brief 서브틱에 선행 조건을 추가합니다(prerequisiteHandle 이 먼저 실행되어야 합니다).
          * @details 선행 조건이 뒤 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가 돕니다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮깁니다.
+         *          틱 중이면 인자만 보고 틱 직후로 미루며 true(받아 둠)입니다.
          */
         bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
-        /** @brief 서브틱의 활성 여부를 설정합니다. */
+        /** @brief 서브틱의 활성 여부를 설정합니다. 틱 중이면 마스크(1~63)만 바로 바꾸고 목록의 값은 틱 직후로 미룹니다. */
         void setSubTickActive( uint32 subTickId, bool bActive );
         /** @brief 서브틱이 활성 상태인지 확인합니다(비트마스크로 O(1)). */
         bool isSubTickActive( uint32 subTickId ) const
@@ -349,7 +357,7 @@ namespace sw
         bool isSubTickActiveSlow( uint32 subTickId ) const;
         /**
          * @brief 소유 매니저가 구조 변경을 얼려 두었으면(컴포넌트 틱 중) @p func 를 틱 직후 구조 변경 큐로 미루고 true 를 돌려줍니다. 아니면 false 입니다.
-         * @details 핸들로 다시 찾으므로 그 사이 파괴돼도 안전합니다. 틱 설정(그룹 · 틱 여부)이 `GameObject` 의 setName · addTag 와 같은 규칙을 지킵니다.
+         * @details 핸들로 다시 찾으므로 그 사이 파괴돼도 안전합니다. 틱 설정(그룹 · 틱 여부 · 서브틱)이 `GameObject` 의 setName · addTag 와 같은 규칙을 지킵니다.
          */
         bool                  deferIfStructureFrozen( Delegate<void( Component& )> func );
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터

@@ -101,6 +101,10 @@ namespace sw
                             static_cast<uint32>( priority ), static_cast<uint32>( kMaxTickPriority ) );
             priority = kMaxTickPriority;
         }
+        // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickId, phase, priority]( Component& self )
+        { self.registerSubTick( group, subTickId, phase, priority ); } ) ) )
+            return SubTickHandle{ _componentId, subTickId };
 
         if ( subTickId < 64 )
             _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_relaxed );
@@ -135,8 +139,12 @@ namespace sw
 
     bool Component::unregisterSubTick( uint32 subTickId )
     {
+        // 마스크는 바로 내린다 — 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록에서 빼는 것은 틱 뒤로.
         if ( subTickId < 64 )
             _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_relaxed );
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId]( Component& self )
+        { (void)self.unregisterSubTick( subTickId ); } ) ) )
+            return true;
 
         for ( size_t index = 0; index < _listSubTick.size(); ++index )
         {
@@ -159,6 +167,9 @@ namespace sw
         // 자기 자신을 선행 조건으로 추가하지 못하게 한다
         if ( prerequisiteHandle._componentId == _componentId && prerequisiteHandle._subTickId == subTickId )
             return false;
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, prerequisiteHandle]( Component& self )
+        { (void)self.addSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) )
+            return true;
 
         for ( SubTickInfo& info : _listSubTick )
         {
@@ -183,6 +194,8 @@ namespace sw
         if ( subTickId == 0 )
             return;
 
+        // 마스크는 바로 바꾼다 — 틱 중에 끄면 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록의 값은 틱 뒤로 미루고,
+        // 미룬 호출이 마스크도 다시 적어 틱 안에서 여러 번 바꾼 순서가 그대로 남는다.
         if ( subTickId < 64 )
         {
             if ( bActive )
@@ -190,6 +203,9 @@ namespace sw
             else
                 _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_release );
         }
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, bActive]( Component& self )
+        { self.setSubTickActive( subTickId, bActive ); } ) ) )
+            return;
 
         for ( SubTickInfo& info : _listSubTick )
         {

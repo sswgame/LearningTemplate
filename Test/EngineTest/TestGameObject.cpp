@@ -675,6 +675,50 @@ SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
 }
 
 /**
+ * @brief [GameObjectTest] 틱 안의 서브틱 목록 변경(등록 · 선행 조건 · 활성 · 해제)도 틱 뒤에 적용된다
+ * @details `registerSubTick` 은 컴포넌트의 서브틱 목록(벡터)을 틱 안에서 바로 늘렸다. 그 목록은 그 컴포넌트를 틱하는 워커가 읽는다(64 번부터의
+ *          활성 · 자기 틱 안의 등록 · 해제) — 다른 오브젝트의 틱이 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽고, 두 워커가 같은 컴포넌트에
+ *          등록하면 `push_back` 이 겹친다. 형제 `setTickGroup` · `setCanEverTick` 은 구조 ⑮ 에서 미뤘는데 서브틱 넷만 바로 썼다. 이제 같은 구조
+ *          변경 큐로 가고, 부른 순서대로 돌아 틱 안에서 등록하고 이어 더한 선행 조건도 틱 뒤에 맞게 붙는다. 원자 마스크(1~63)는 그대로 바로 바뀐다 —
+ *          틱 중에 끈 서브틱이 곧바로 건너뛰어지는 계약(`ComponentSubTickHybridTest.MidTickSubTickDeactivationAndCancellation`)은 지킨다.
+ */
+SW_TEST_CASE( GameObjectTest, SubTickChangesDuringTickApplyAfterIt )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    GameObject*        keeper     = manager.createGameObject( hashed_string( "SubTickChanger" ) );
+    GameObject*        target     = manager.createGameObject( hashed_string( "SubTickTarget" ) );
+    MockMeshComponent* keeperMesh = keeper->addComponent<MockMeshComponent>();
+    MockMeshComponent* targetMesh = target->addComponent<MockMeshComponent>();
+    SW_ASSERT_TRUE( keeperMesh != nullptr && targetMesh != nullptr );
+    SW_ASSERT_TRUE( targetMesh->registerSubTick( sw::TickGroup::PostPhysics, 1 ).isValid() );
+    SW_ASSERT_TRUE( targetMesh->registerSubTick( sw::TickGroup::PostPhysics, 2 ).isValid() );
+    const sw::SubTickHandle prerequisite = keeperMesh->registerSubTick( sw::TickGroup::PrePhysics, 9 );
+    SW_ASSERT_TRUE( prerequisite.isValid() );
+    keeperMesh->_pTickSubTickTarget      = targetMesh;
+    keeperMesh->_tickSubTickPrerequisite = prerequisite;
+
+    manager.tick( 0.016f );
+
+    // 틱 안에서 목록은 넷 다 아직이다. 마스크는 바로 꺼졌다.
+    SW_EXPECT_FALSE( keeperMesh->_bTickSubTickAddVisibleInTick );
+    SW_EXPECT_FALSE( keeperMesh->_bTickSubTickPrerequisiteVisibleInTick );
+    SW_EXPECT_FALSE( keeperMesh->_bTickSubTickOffVisibleInTick );
+    SW_EXPECT_FALSE( keeperMesh->_bTickSubTickRemoveVisibleInTick );
+    SW_EXPECT_TRUE( keeperMesh->_bTickSubTickMaskOffInTick );
+
+    // 틱 뒤에 부른 순서대로 적용됐다.
+    const sw::SubTickInfo* pFirst = MockMeshComponent::findSubTick( targetMesh, 1 );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pFirst->_listPrerequisite.size() ) );
+    SW_EXPECT_EQUAL( SW_FALSE, pFirst->_bActive );
+    SW_EXPECT_FALSE( targetMesh->isSubTickActive( 1 ) );
+    SW_EXPECT_TRUE( MockMeshComponent::findSubTick( targetMesh, 2 ) == nullptr );
+    SW_EXPECT_TRUE( MockMeshComponent::findSubTick( targetMesh, 3 ) != nullptr );
+    SW_EXPECT_TRUE( targetMesh->isSubTickActive( 3 ) );
+}
+
+/**
  * @brief [GameObjectTest] 같은 엔티티의 서로 다른 컴포넌트도 모두 tick된다
  */
 SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
