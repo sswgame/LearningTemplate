@@ -237,10 +237,7 @@ namespace sw::editor
                     warn( "Preset", "Select a component first" );
                     return;
                 }
-                const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPath[0] ) );
-                if ( fileName.empty() )
-                    return;
-                if ( EditorTransformCommands::saveComponentPreset( pComp, fileName ) == false )
+                if ( EditorTransformCommands::saveComponentPresetTo( pComp, listPath[0] ) == false )
                     warn( "Preset", "Failed to write the preset file" );
             }
 

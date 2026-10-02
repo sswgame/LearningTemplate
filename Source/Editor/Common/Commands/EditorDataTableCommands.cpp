@@ -223,10 +223,8 @@ namespace sw::editor
                 continue;
 
             GameDataFileEntry entry{};
-            entry._fileName           = FileUtil::getFileNamePart( file );
-            entry._absolutePath       = FileUtil::normalizeSeparators( file );
-            const string& projectRoot = ResourceUtil::getProjectFolderPath();
-            FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, entry._relativePath );
+            entry._fileName     = FileUtil::getFileNamePart( file );
+            entry._absolutePath = FileUtil::normalizeSeparators( file );
             outList.push_back( std::move( entry ) );
         }
         return true;

@@ -99,16 +99,16 @@ namespace sw::editor
 
             static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
             {
-                const string  file{ absPath };
-                const string  filename = FileUtil::getFileNamePart( file );
-                string        relPath;
-                const string& projectRoot = ResourceUtil::getProjectFolderPath();
-                FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, relPath );
-                relPath = FileUtil::normalizeSeparators( relPath );
+                const string file{ absPath };
+                const string filename = FileUtil::getFileNamePart( file );
+                // 콘텐츠 브라우저 · 끌어 놓기와 같은 형태(리소스 id)로 든다. 예전에는 프로젝트 기준 `Resource/…` 라 씬 열기 · 에셋 포커스가 다른 경로를 받았다.
+                const string resourceId = ResourceUtil::toResourceId( file );
+                if ( resourceId.empty() )
+                    return false;
 
-                outEntry._path   = relPath;
+                outEntry._path   = resourceId;
                 outEntry._title  = filename;
-                outEntry._detail = relPath;
+                outEntry._detail = resourceId;
 
                 if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, file.c_str() ) )
                 {
@@ -274,7 +274,8 @@ namespace sw::editor
 
     bool EditorAssetCommands::loadScene( string_view path )
     {
-        string loadPath = AssetDatabase::toRelativePath( string{ path } );
+        // 리소스 트리 안이면 리소스 id 로 연다(절대 경로 · 프로젝트 기준 경로 · id 모두). 밖이면 받은 경로 그대로다.
+        string loadPath = ResourceUtil::toResourceId( path );
         if ( loadPath.empty() )
             loadPath = string{ path };
 
@@ -510,11 +511,12 @@ namespace sw::editor
         SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
         if ( pSprite != nullptr )
         {
-            string        relPath;
-            const string& projectRoot = ResourceUtil::getProjectFolderPath();
-            FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, pPath, relPath );
-            relPath = FileUtil::normalizeSeparators( relPath );
-            pSprite->setTextureName( relPath );
+            // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 예전에는 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 해 경로가 깨졌고,
+            // 스프라이트는 텍스처를 찾지 못해 흰 사각형으로 그려졌다.
+            const string textureId = ResourceUtil::toResourceId( pPath );
+            if ( textureId.empty() )
+                SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
+            pSprite->setTextureName( textureId );
             // 편집 모드에서는 시작(onBeginPlay)이 없다 — 떨군 자리에서 바로 그려지게 렌더 에셋을 푼다.
             pSprite->resolveRenderAssets();
         }

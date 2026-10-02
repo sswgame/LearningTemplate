@@ -926,3 +926,31 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
 
     packManager.setAllowLooseFiles( bWasLoose );
 }
+
+/**
+ * @brief [ResourceTest] 편집기가 쥔 경로는 한 함수로 리소스 id 가 된다 — 절대 · 프로젝트 기준(`Resource/…`) · 이미 id 모두
+ * @details 예전에는 편집기가 자리마다 따로 바꿨다. 끌어 놓은 텍스처(리소스 id)를 프로젝트 루트 기준으로 다시 `makeRelativePath` 해 스프라이트가 흰
+ *          사각형이 됐고, 퀵 런처는 `Resource/…` 를 들고 있어 씬 열기 · 에셋 포커스가 다른 형태를 받았다. 루트 밖 · `..` 는 빈 글이다 — 쓰기 경로도
+ *          `..` 로 리소스 트리 밖에 쓰지 않는다(예전에는 데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있었다).
+ */
+SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string root = sw::FileUtil::trimTrailingSlashes( sw::ResourceUtil::getRootFolderPath() );
+    SW_ASSERT_TRUE( root.empty() == false );
+
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( root + "/game/empty/readme.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "Resource/game/empty/readme.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "Game\\Empty\\ReadMe.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "./game/empty/readme.md" ).c_str() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( sw::FileUtil::getDirectoryPart( root ) + "/Source/Engine/Engine.h" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "game/empty/../../../escape.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "../escape.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "" ).empty() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "a write path that climbs out of the resource tree" );
+        SW_EXPECT_TRUE( sw::ResourceUtil::getWritePath( "game/empty/../../../escape.txt" ).empty() );
+    }
+    SW_EXPECT_TRUE( sw::ResourceUtil::getWritePath( "game/empty/new_file.txt" ).empty() == false );
+}

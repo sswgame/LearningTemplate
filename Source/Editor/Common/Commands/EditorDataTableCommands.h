@@ -23,7 +23,6 @@ namespace sw::editor
     struct GameDataFileEntry
     {
         string _fileName;
-        string _relativePath;
         string _absolutePath;
     };
 

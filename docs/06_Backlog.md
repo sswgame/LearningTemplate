@@ -1665,7 +1665,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
-| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ 구조 ⑦ · 쿠킹 이름 · 레지스트리 ✅ 구조 ⑧ (3절) — 편집기 경로 · 경계는 남음 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ 구조 ⑦ · 쿠킹 이름 · 레지스트리 ✅ 구조 ⑧ · 편집기 경로 ✅ 구조 ⑨ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
@@ -1678,8 +1678,6 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
 - **R3**(구조 ⑦ 뒤 — 값 쓰기는 닫혔다) — 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
   에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
-  텍스처 드롭이 흰 스프라이트(`EditorAssetCommands.cpp` 514 상대 경로를 `makeRelativePath` 에), Quick Launcher 경로가 "Resource/…", 프리셋 경로 규칙
-  셋, `ResourceUtil::getWritePath` 가 ".." 를 받음. 인스펙터 Transform · Camera 섹션은 되돌리기 · dirty 가 없다(`InspectorComponentManager.cpp` 28-110).
   린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
   모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
 - **R4** — `Component::_bActive` · `MeshComponent::_bVisible` 이 저장되지 않는다(Stop · 되돌리기 · 저장 뒤 다시 켜진다, 토글이 되돌리기를 남기지
@@ -2102,6 +2100,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑨ 편집기가 쥔 경로는 리소스 id 하나로, 프리셋 이름 규칙 하나, 인스펙터 확장 구역도 되돌리기 규칙 하나 — 1-0j 의 R3 셋째 단위)
+
+편집기가 경로를 세 형태(절대 · 프로젝트 기준 `Resource/…` · 리소스 id)로 들고 자리마다 따로 바꿨다. 드러난 결함:
+- **텍스처를 끌어 놓은 스프라이트가 흰 사각형이었다** — 끌어 놓은 것은 리소스 id 인데 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 해 경로가 깨졌다.
+- **퀵 런처가 `Resource/…` 를 들고 있었다** — 콘텐츠 브라우저 · 끌어 놓기는 리소스 id 라, 씬 열기 · 에셋 포커스가 다른 형태를 받았다.
+- **쓰기 경로가 `..` 로 리소스 트리 밖으로 나갔다**(`getWritePath` — 데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있었다) → 빈 글 + 오류, 쓰지 않는다.
+- **"Save Component Preset" 이 고른 폴더를 버리고 이름을 망가뜨렸다** — 고른 파일 이름에서 `.xml` 만 떼어 이름 규칙에 넘겨 `MyPreset.preset.xml` 이
+  프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 됐다. 인스펙터 목록은 접미사 길이 11 을 손으로 세어 이름을 잘랐다.
+- **인스펙터 Transform · Camera 구역의 편집은 되돌리기 · dirty 가 없었다** — 프로퍼티 위젯은 위젯마다 `trackPod` 를 불러야 기록됐고, 확장 구역은 하나도
+  부르지 않았다(위치 · FOV 를 바꾸고 다른 씬을 열면 묻지 않고 사라졌다).
+- 게임 데이터 파일 항목의 `_relativePath` 는 쓰기만 하고 읽는 곳이 없었다 → 지움.
+
+구조로 막은 것: **`ResourceUtil::toResourceId`** — 절대 · `Resource/…` · id 무엇이든 리소스 id 로, 루트 밖 · `..` 는 빈 글(쓰기 경로의 가드도 이것).
+퀵 런처 색인 · 스프라이트 드롭 · 씬 열기가 이것을 지난다. 프리셋은 **두 입구에 규칙 하나씩**: 이름 저장은 `makeComponentPresetFileName` · 목록은
+`getComponentPresetName`(같은 규칙의 짝), 대화상자는 `saveComponentPresetTo`(고른 파일에 그대로). 인스펙터는 **확장 구역을 묶음으로 닫고 묶음을 위젯
+하나처럼 추적**한다(`InspectorPropertyUndo::trackLastItem` — ImGui 가 묶음 안 활성 항목의 활성 · 편집 · 해제를 묶음에 넘긴다) — 새 구역이 따로 부를 것이 없다.
+
+**검증.** 새 시험 2(이전 코드에서 진다): `ResourceTest.EveryPathTheEditorHoldsBecomesOneResourceId`, `EditorTransformCommandsTest.PresetNamesFollowOneRule`.
+변이 5 모두 죽음. **인스펙터 구역의 되돌리기는 시험이 없다** — 편집기 UI 를 몰 수 있는 하니스가 없어(EditorUiTest 는 백엔드 수명만 본다) 빌드와 ImGui
+묶음 규칙(`EndGroup` 이 활성 id · 편집 · 해제 플래그를 넘긴다)으로만 확인했다. 퀵 런처 · 스프라이트 드롭은 `EditorAssetCommands.cpp` 가 EditorTest 에
+링크되지 않아 `toResourceId` 시험으로 고정했다. Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-02 (구조 ⑧ 쿠킹 산출물의 이름과 GUID 레지스트리를 엔진의 규칙 하나로 — 1-0j 의 R3 둘째 단위)
 

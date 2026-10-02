@@ -6,19 +6,17 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Common/EngineDefines.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
@@ -28,6 +26,9 @@ namespace sw::editor
     {
         struct EditorTransformCommandsInternal
         {
+            /** @brief 컴포넌트 프리셋 파일의 접미사입니다. */
+            static constexpr string_view kPresetSuffix = ".preset.xml";
+
             static float32 getAxisValue( const float3& pos, AlignAxis axis )
             {
                 if ( axis == AlignAxis::X )
@@ -165,18 +166,46 @@ namespace sw::editor
         return pasteComponentAsNew( pTargetObj, typeName, vector<uint8>{}, xml );
     }
 
+    string EditorTransformCommands::makeComponentPresetFileName( const Component* pComp, string_view presetName )
+    {
+        if ( pComp == nullptr || presetName.empty() )
+            return {};
+        return string( pComp->getTypeName().c_str() ) + "_" + string{ presetName } + string( EditorTransformCommandsInternal::kPresetSuffix );
+    }
+
+    string EditorTransformCommands::getComponentPresetName( const Component* pComp, string_view presetFilePath )
+    {
+        if ( pComp == nullptr )
+            return {};
+        const string fileName = FileUtil::getFileNamePart( presetFilePath );
+        const string prefix   = string( pComp->getTypeName().c_str() ) + "_";
+        if ( StringUtil::startsWith( fileName, prefix ) == false || StringUtil::endsWith( fileName, EditorTransformCommandsInternal::kPresetSuffix, true ) == false ||
+             fileName.size() <= prefix.size() + EditorTransformCommandsInternal::kPresetSuffix.size() )
+            return {};
+        return fileName.substr( prefix.size(), fileName.size() - prefix.size() - EditorTransformCommandsInternal::kPresetSuffix.size() );
+    }
+
     bool EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )
     {
-        if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || presetName.empty() )
+        const string folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
+        const string fileName = makeComponentPresetFileName( pComp, presetName );
+        if ( folder.empty() || fileName.empty() )
+        {
+            SW_LOG_ERROR( "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
+            return false;
+        }
+        return saveComponentPresetTo( pComp, FileUtil::joinPath( folder, fileName ) );
+    }
+
+    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, string_view filePath )
+    {
+        if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty() )
             return false;
 
-        const string presetDir = ResourceUtil::getDomainFolderPath(
-            GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
-        FileUtil::ensureDirectoryExists( presetDir );
-
-        const string compName = pComp->getTypeName().c_str();
-        const string fileName = compName + "_" + string{ presetName } + ".preset.xml";
-        const string fullPath = FileUtil::joinPath( presetDir, fileName );
+        string fullPath( filePath );
+        if ( StringUtil::endsWith( fullPath, EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
+            fullPath = FileUtil::removeExtension( fullPath ) + string( EditorTransformCommandsInternal::kPresetSuffix );
+        FileUtil::createParentDirectory( fullPath );
 
         const string xmlData = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
         return FileUtil::writeTextFile( fullPath, xmlData );

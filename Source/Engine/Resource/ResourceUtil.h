@@ -66,6 +66,15 @@ namespace sw
         static string getWritePath( string_view path );
 
         /**
+         * @brief 편집기 · 도구가 쥔 경로를 리소스 id(전역 id — `game/empty/maps/x.scene.xml`, 소문자 · `/`)로 바꿉니다.
+         * @param path 절대 경로 · 프로젝트 기준 경로(`Resource/…`) · 이미 리소스 id 중 무엇이든 받습니다.
+         * @return 리소스 id 입니다. 리소스 루트 밖이거나 `..` 로 올라가면 빈 글입니다.
+         * @details 예전에는 편집기가 이 변환을 자리마다 따로 했다 — 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 걸어 텍스처를 떨군
+         *          스프라이트가 흰 사각형이 됐고(경로가 깨졌다), 퀵 런처는 `Resource/…` 를 들고 있어 씬 열기 · 에셋 포커스가 다른 형태의 경로를 받았다.
+         */
+        static string toResourceId( string_view path );
+
+        /**
          * @brief 상대 리소스 경로를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다(OS 절대 경로는 디스크에서 바로 읽습니다).
          * @param relativePath 팩 상대 키 또는 전역 ID(낱개 파일 우선일 때 경로를 풀지 못하면 인자 그대로 열어 봅니다)
          * @param outText 읽은 UTF-8 본문

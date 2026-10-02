@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -379,17 +380,13 @@ namespace sw::editor
                         _bComponentPresetDirty   = SW_FALSE;
                     }
 
-                    const string compPrefix = compTypeName + "_";
-                    bool         bFoundPresets{ false };
+                    bool bFoundPresets{ false };
                     for ( const string& presetFile : _listComponentPresetFile )
                     {
-                        const string fname = FileUtil::getFileNamePart( presetFile );
-                        if ( StringUtil::startsWith( fname, compPrefix ) )
+                        const string displayPreset = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
+                        if ( displayPreset.empty() == false )
                         {
-                            bFoundPresets        = true;
-                            string displayPreset = fname.substr( compPrefix.size() );
-                            if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
-                                displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
+                            bFoundPresets = true;
                             if ( ImGui::MenuItem( displayPreset.c_str() ) )
                                 if ( workspace.loadComponentPreset( pComp, presetFile ) == false )
                                     SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
@@ -476,7 +473,13 @@ namespace sw::editor
             pInspector->drawHeader( pComp );
         for ( IInspectorComponent* pInspector : listInspector )
         {
+            // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다.
+            // 예전에는 위젯마다 `trackPod` 를 불러야 했고, Transform · Camera 구역은 하나도 부르지 않아 위치 · FOV 편집을 되돌릴 수 없었고
+            // 씬도 dirty 가 되지 않았다(저장을 묻지 않고 사라졌다).
+            ImGui::BeginGroup();
             pInspector->drawSection( pComp, pRhiDevice );
+            ImGui::EndGroup();
+            InspectorPropertyUndo::trackLastItem( pTypeInfo->getDisplayName() );
             pInspector->collectDrawnProperties( listDrawnName );
         }
 

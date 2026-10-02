@@ -390,6 +390,13 @@ namespace sw
         if ( FileUtil::isAbsolutePath( path ) )
             return FileUtil::normalizeSeparators( path );
 
+        // 상대 경로가 `..` 로 올라가면 리소스 루트 밖에 쓴다(데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있었다). 쓰지 않는다.
+        if ( toResourceId( path ).empty() )
+        {
+            SW_LOG_ERROR( "'%#' leaves the resource tree - nothing is written there", path );
+            return {};
+        }
+
         // NRVO 가 걸리도록 이름 있는 값 하나로 모아 한 번만 반환한다.
         string result = getResourcePath( path );
         if ( result.empty() )
@@ -397,6 +404,33 @@ namespace sw
         if ( result.empty() )
             result = string{ path };
         return result;
+    }
+
+    string ResourceUtil::toResourceId( string_view path )
+    {
+        if ( path.empty() )
+            return {};
+        string relative = FileUtil::normalizeSeparators( path );
+        if ( FileUtil::isAbsolutePath( relative ) )
+        {
+            const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
+            string       underRoot;
+            if ( root.empty() || FileUtil::makeRelativePath( root, relative, underRoot ) == false )
+                return {};
+            relative = std::move( underRoot );
+        }
+        else if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kResourceFolder ) ) )
+        {
+            relative = FileUtil::suffixAfterPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kResourceFolder ) );
+        }
+
+        string id = FileUtil::normalizePath( relative );
+        while ( StringUtil::startsWith( id, "./" ) )
+            id.erase( 0, 2 );
+        if ( id.empty() || id == "." || id == ".." || StringUtil::startsWith( id, "../" ) || id.find( "/../" ) != string::npos ||
+             StringUtil::endsWith( id, "/.." ) )
+            return {};
+        return id;
     }
 
     string ResourceUtil::makeAbsolutePath( string_view relativePath )

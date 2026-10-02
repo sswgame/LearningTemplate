@@ -77,4 +77,9 @@ namespace sw::editor
             return;
         trackActiveItemEdit( pLabel );
     }
+
+    void InspectorPropertyUndo::trackLastItem( const utf8* pLabel )
+    {
+        trackActiveItemEdit( pLabel );
+    }
 } // namespace sw::editor
