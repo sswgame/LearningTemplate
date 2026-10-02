@@ -1,15 +1,19 @@
 #include "pch.h"
 
-#include "Editor/Common/Widgets/EditorListFilter.h"
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+// 인스펙터 배치는 에디터 메타데이터를 읽는다 — Shipping 빌드에는 그 메타데이터가 없어 이 시험도 없다.
 
-#include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#if !defined( SW_SHIPPING )
 
-#include "TestFramework/TestFramework.h"
+    #include "Editor/Common/Widgets/EditorListFilter.h"
+    #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+
+    #include "Engine/Object/Component/2D/SpriteComponent.h"
+    #include "Engine/Object/Component/3D/MeshComponent.h"
+    #include "Engine/Object/Component/CameraComponent.h"
+    #include "Engine/Object/Component/SceneComponent.h"
+    #include "Engine/Reflection/ReflectionTypes.h"
+
+    #include "TestFramework/TestFramework.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -108,3 +112,5 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, TypeChainRunsFromBaseToDerived )
     SW_EXPECT_TRUE( sceneAt < meshAt );
     SW_EXPECT_TRUE( meshAt < listType.size() - 1 );
 }
+
+#endif // !SW_SHIPPING

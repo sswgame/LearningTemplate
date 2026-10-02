@@ -1,10 +1,14 @@
 #include "pch.h"
 
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+// 인스펙터는 에디터 기능이라 Shipping 에는 없다 — 에디터 메타데이터(카테고리 · 표시 이름 · 숨김)도 Shipping 빌드에서 빠진다.
 
-#include "Editor/Common/Widgets/EditorListFilter.h"
+#if !defined( SW_SHIPPING )
 
-#include "Engine/Reflection/ReflectionTypes.h"
+    #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+
+    #include "Editor/Common/Widgets/EditorListFilter.h"
+
+    #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw::editor
 {
@@ -72,3 +76,5 @@ namespace sw::editor
         return prop._name.c_str();
     }
 } // namespace sw::editor
+
+#endif // !SW_SHIPPING
