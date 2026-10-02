@@ -5,9 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Pending work lives in docs/06_Backlog.md
 
 **Read [docs/06_Backlog.md](docs/06_Backlog.md) before starting work.** It is the shared to-do list
-across machines and sessions: what is left, why it is ordered that way, the traps to know before
-touching it, and what was recently finished (so the same ground is not re-covered). Update it in the
-same commit as the work it describes.
+across machines and sessions and holds only two things: the work that is still open (with the traps to
+know before touching it) and a reference section of lasting lessons from finished work. Update it in the
+same commit as the work it describes: when an item is done, delete it and move any lesson worth keeping
+into the reference section in a line or two. History lives in `git log`; the full old backlog with every
+dated "recently finished" entry is `git show 7ce95fc8:docs/06_Backlog.md`.
 
 ## Conventions live in AGENTS.md
 
@@ -70,7 +72,7 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
 - **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
   machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, which is
   how two `RenderPassGpuTest` failures and two `ShaderCompilerTest` failures sat in the tree unnoticed (see
-  `docs/06_Backlog.md`, 2026-09-17). A `--host_suites=only` run that selects nothing fails, and so does a
+  the 2026-09-17 entry of the old backlog, `git show 7ce95fc8:docs/06_Backlog.md`). A `--host_suites=only` run that selects nothing fails, and so does a
   declaration naming a suite that has no cases.
 - **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
   (no underscore), lives in exactly one file, a host suite has its file to itself, and every
