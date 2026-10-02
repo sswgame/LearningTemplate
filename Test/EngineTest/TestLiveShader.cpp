@@ -111,8 +111,8 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [includeAbs, shaderAbs]()
     {
-        sw::FileUtil::removeFile( includeAbs );
-        sw::FileUtil::removeFile( shaderAbs );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( includeAbs ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
         // **파일만 지우면 부족하다.** 공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 캐시하므로, 프로브가 있던
         // 동안의 값이 다음 테스트로 샌다 — `ShaderBakeStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
         // 비교해서 떨어졌다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
@@ -199,12 +199,12 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     const sw::string            requestPath = sw::ShaderCache::makeLocalCachePath( desc );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [shaderAbs, livePath, requestPath]()
     {
-        sw::FileUtil::removeFile( shaderAbs );
-        sw::FileUtil::removeFile( livePath );
-        sw::FileUtil::removeFile( requestPath );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( livePath ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( requestPath ) );
     } ) );
-    sw::FileUtil::removeFile( livePath );
-    sw::FileUtil::removeFile( requestPath );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( livePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( requestPath ) );
     #if defined( SW_DEBUG )
     SW_EXPECT_TRUE( liveDesc._bDebugCodegen != SW_FALSE );
     SW_EXPECT_TRUE( livePath != requestPath );

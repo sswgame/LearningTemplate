@@ -119,7 +119,7 @@ SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
     };
 
     // 1) 즉시 제거
-    pObj->removeComponent( attachCounted() );
+    SW_EXPECT_TRUE( pObj->removeComponent( attachCounted() ) );
     SW_EXPECT_EQUAL( 1, unregisterCount );
     SW_EXPECT_EQUAL( 1, destroyCount );
 

@@ -443,8 +443,8 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 
     for ( size_t index = 0; index < listXmlPath.size(); ++index )
     {
-        sw::FileUtil::removeFile( listXmlPath[index] );
-        sw::FileUtil::removeFile( listBinPath[index] );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( listXmlPath[index] ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( listBinPath[index] ) );
     }
 }
 
@@ -468,7 +468,7 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [=]()
     {
         for ( const sw::string& p : { pathA, binA, pathB, binB, pathC, binC } )
-            sw::FileUtil::removeFile( p );
+            SW_EXPECT_TRUE( sw::FileUtil::removeFile( p ) );
     } ) );
 
     for ( const auto& nameAndPath : {
@@ -632,7 +632,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
     const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.scene.xml" );
-    sw::FileUtil::removeFile( savePath );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( savePath ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );

@@ -167,7 +167,7 @@ namespace sw
         const CellRange range = CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
-            VectorUtil::removeSingleSwap( _listOversizedHandle, handle );
+            (void)VectorUtil::removeSingleSwap( _listOversizedHandle, handle ); // 없으면 뺄 것이 없다
             return;
         }
 
@@ -178,7 +178,7 @@ namespace sw
                 return;
 
             auto& listHandle = bucketIt->second;
-            VectorUtil::removeSingleSwap( listHandle, handle );
+            (void)VectorUtil::removeSingleSwap( listHandle, handle ); // 없으면 뺄 것이 없다
             if ( listHandle.empty() )
                 _mapBucket.erase( bucketIt );
         } );

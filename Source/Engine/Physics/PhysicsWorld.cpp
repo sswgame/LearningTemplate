@@ -150,7 +150,7 @@ namespace sw
         // 반드시 같은 답을 낸다. 다르면 큰 바디가 목록에 영원히 남거나, 셀에 죽은 핸들이 남는다.
         if ( isOversizedForGrid( aabb ) )
         {
-            VectorUtil::removeSingleSwap( _listOversizedBody, handle );
+            (void)VectorUtil::removeSingleSwap( _listOversizedBody, handle ); // 없으면 뺄 것이 없다
             return;
         }
 

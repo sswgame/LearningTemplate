@@ -354,7 +354,7 @@ namespace sw
     void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
+        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
     void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )

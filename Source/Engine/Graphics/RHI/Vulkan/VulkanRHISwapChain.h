@@ -53,7 +53,7 @@ namespace sw
          *          때문입니다. 그래서 서피스만 인스턴스 단계에서 먼저 만들어 둡니다.
          * @param linuxWsi 0=없음, 1=xlib, 2=xcb (인스턴스 확장 가용성으로 정해진 값)
          */
-        bool createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, uint32 linuxWsi );
+        [[nodiscard]] bool createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, uint32 linuxWsi );
 
         /** @brief 서피스를 파괴합니다. 스왑체인을 먼저 파괴한 뒤에 불러야 합니다. */
         void destroySurface( VkInstance instance );
@@ -71,13 +71,13 @@ namespace sw
          * @details 요청 크기는 서피스가 고정 크기를 보고하면 무시됩니다(스펙 요구).
          * @return 서피스가 0 크기를 보고하면(창 최소화 · 종료 중) false. 오류가 아니라 "지금은 못 만든다" 입니다.
          */
-        bool create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height );
+        [[nodiscard]] bool create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height );
 
         /** @brief 백버퍼 렌더패스에 맞는 프레임버퍼를 이미지마다 만듭니다. */
-        bool createFramebuffers( VkDevice device, VkRenderPass renderPass );
+        [[nodiscard]] bool createFramebuffers( VkDevice device, VkRenderPass renderPass );
 
         /** @brief acquire · renderFinished 세마포어를 만듭니다. `create` 로 이미지 수가 정해진 뒤에 부릅니다. */
-        bool createSemaphores( VkDevice device, uint32 frameCountInFlight );
+        [[nodiscard]] bool createSemaphores( VkDevice device, uint32 frameCountInFlight );
 
         /** @brief 세마포어를 파괴합니다. 스왑체인을 다시 만들 때 이미지 수가 바뀔 수 있어 함께 갱신합니다. */
         void destroySemaphores( VkDevice device );
@@ -118,7 +118,7 @@ namespace sw
 
     private:
         /** @brief 이미지마다 뷰를 만듭니다. `create` 안에서만 부릅니다. */
-        bool createImageViews( VkDevice device );
+        [[nodiscard]] bool createImageViews( VkDevice device );
 
         VkSurfaceKHR   _surface{ nullptr };
         VkSwapchainKHR _swapChain{ nullptr };

@@ -46,7 +46,7 @@ SW_TEST_CASE( EditorGlobalVariableCommandsTest, SavedPresetSkipsTestOnlyVariable
         bHasRuntime  = bHasRuntime || string_view{ pName } == "gv_presetRuntime";
         bHasTestOnly = bHasTestOnly || string_view{ pName } == "gv_presetTestOnly";
     }
-    FileUtil::removeFile( presetPath );
+    SW_EXPECT_TRUE( FileUtil::removeFile( presetPath ) );
 
     SW_EXPECT_TRUE( bHasRuntime );
     SW_EXPECT_FALSE( bHasTestOnly );
@@ -79,7 +79,7 @@ SW_TEST_CASE( EditorGlobalVariableCommandsTest, LoadedPresetSkipsTestOnlyVariabl
     SW_ASSERT_TRUE( doc.saveFile( presetPath ) );
 
     SW_ASSERT_TRUE( EditorGlobalVariableCommands::loadPreset( presetPath ) );
-    FileUtil::removeFile( presetPath );
+    SW_EXPECT_TRUE( FileUtil::removeFile( presetPath ) );
 
     SW_EXPECT_EQUAL( 99, runtimeValue );
     SW_EXPECT_EQUAL( 5, testOnlyValue );

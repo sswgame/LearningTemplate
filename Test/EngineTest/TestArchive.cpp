@@ -1597,7 +1597,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( corruptSlot, savePath ) );
 
         // Cleanup
-        sw::FileUtil::removeFile( savePath );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( savePath ) );
     }
 
     // 2. SceneDocument corrupted binary magic
@@ -1611,7 +1611,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         SW_EXPECT_FALSE( sceneDoc._bValid );
 
         // Cleanup
-        sw::FileUtil::removeFile( testScenePath );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( testScenePath ) );
     }
 
     // 3. PrefabAsset corrupted binary magic
@@ -1625,7 +1625,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         SW_EXPECT_FALSE( prefabAsset.isValid() );
 
         // Cleanup
-        sw::FileUtil::removeFile( testPrefabPath );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( testPrefabPath ) );
     }
 }
 

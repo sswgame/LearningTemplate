@@ -229,7 +229,7 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
         sw::StringBuilder<sw::constant::kMaxBuffer64> folderName;
         folderName.append( "SwCrashChild_" ).append( crashCase._pName );
         const sw::string folder = test::makeTempPath( folderName.view() );
-        sw::FileUtil::removeDirectory( folder );
+        SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
         sw::FileUtil::ensureDirectoryExists( folder );
 
         sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
@@ -262,7 +262,7 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
         const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
         SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0, crashCase._pName );
 #endif
-        sw::FileUtil::removeDirectory( folder );
+        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( folder ) );
     }
 }
 
@@ -280,7 +280,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 #endif
 
     const sw::string folder = test::makeTempPath( "SwCrashChild_stuck" );
-    sw::FileUtil::removeDirectory( folder );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
     sw::FileUtil::ensureDirectoryExists( folder );
 
     sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
@@ -307,7 +307,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
     const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
     SW_EXPECT_TRUE( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0 );
 #endif
-    sw::FileUtil::removeDirectory( folder );
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( folder ) );
 }
 
 /**
@@ -322,7 +322,7 @@ SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
     SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
 #else
     const sw::string folder = test::makeTempPath( "SwCrashChild_assert" );
-    sw::FileUtil::removeDirectory( folder );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
     sw::FileUtil::ensureDirectoryExists( folder );
 
     sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
@@ -341,6 +341,6 @@ SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
     const bool bNamesPlace      = child._output.find( "CrashContext.cpp:" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, ( "단언이 식 · 자리를 남기지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_FALSE( findReportFileInternal( folder, "stack.txt" ).empty() );
-    sw::FileUtil::removeDirectory( folder );
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( folder ) );
 #endif
 }

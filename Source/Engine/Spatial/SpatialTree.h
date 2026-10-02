@@ -244,7 +244,7 @@ namespace sw
             return false;
         }
 
-        bool remove( uint64 id )
+        [[nodiscard]] bool remove( uint64 id )
         {
             if ( _pRoot == nullptr )
                 return false;
@@ -390,7 +390,7 @@ namespace sw
                 return true;
             }
 
-            bool remove( uint64 id, size_t maxElements = Traits::kMaxElements )
+            [[nodiscard]] bool remove( uint64 id, size_t maxElements = Traits::kMaxElements )
             {
                 for ( auto it = _listElement.begin(); it != _listElement.end(); ++it )
                 {

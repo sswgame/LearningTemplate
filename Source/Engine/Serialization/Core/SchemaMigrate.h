@@ -79,10 +79,10 @@ namespace sw
         // 4) 구조 이동: 옛 프로퍼티 → 현재 프로퍼티, 텍스트로 강제 설정
         // ------------------------------------------------------------------------------
         /** @brief legacyInstance(없으면 현재 인스턴스)의 프로퍼티 값을 현재 프로퍼티로 옮깁니다(텍스트를 거쳐 변환합니다). */
-        bool moveProperty( hashed_string fromProp, hashed_string toProp ) const;
+        [[nodiscard]] bool moveProperty( hashed_string fromProp, hashed_string toProp ) const;
 
         /** @brief 점 경로로 구조를 옮깁니다(`_hp` → `_stats._hp`). */
-        bool movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const;
+        [[nodiscard]] bool movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const;
 
         /** @brief 텍스트로 현재 인스턴스 프로퍼티를 설정합니다. */
         bool setPropertyFromText( hashed_string propName, string_view text ) const;

@@ -180,9 +180,9 @@ SW_TEST_CASE( LocalizationManagerTest, DirectoryBatchLoading )
     const sw::string pathKo = sw::FileUtil::joinPath( tempDir, "ko_KR.json" );
     const sw::string pathEn = sw::FileUtil::joinPath( tempDir, "en_US.json" );
     const sw::string pathFr = sw::FileUtil::joinPath( tempDir, "fr_FR.json" );
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
-    sw::FileUtil::removeFile( pathFr );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathKo ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathEn ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathFr ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKo ), strlen( kKo ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEn ), strlen( kEn ) ) );
@@ -557,8 +557,8 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager 
     const sw::hashed_string kKeyWelcome{ "MSG_WELCOME" };
     const sw::string        pathKo = sw::FileUtil::joinPath( tempDir, "ko_KR.bin" );
     const sw::string        pathEn = sw::FileUtil::joinPath( tempDir, "en_US.bin" );
-    sw::FileUtil::removeFile( pathKo );
-    sw::FileUtil::removeFile( pathEn );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathKo ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathEn ) );
 
     BLOCK( "엔진이 실제로 내놓는 형식 그대로 굽는다" )
     {

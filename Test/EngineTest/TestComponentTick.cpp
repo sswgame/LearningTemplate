@@ -998,7 +998,7 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
 
     // 일부러 없는 경로를 준다 — 이것이 "기본값 없음" 의 정상 상태다.
     const sw::string missingPath = test::makeTempPath( "no_such_component_defaults.xml" );
-    sw::FileUtil::removeFile( missingPath );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( missingPath ) );
     defaults.setPath( missingPath );
 
     const uint32 before = defaults.getLoadAttemptCount();

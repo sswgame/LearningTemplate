@@ -559,7 +559,7 @@ namespace sw
             GameObject* pOwner = findGameObjectById( handle.objectId() );
             Component*  pComp  = ( pOwner != nullptr ) ? pOwner->findComponentById( handle.componentId(), true ) : nullptr;
             if ( pComp != nullptr && pComp->isPendingDestroy() )
-                pOwner->removeComponent( pComp );
+                (void)pOwner->removeComponent( pComp ); // 실패(목록에 없음)는 removeComponent 가 알린다
         }
 
         if ( _listProcessingDestroyObject.empty() == false )
@@ -766,8 +766,8 @@ namespace sw
             GameObject* pOwner = pComp->getOwner();
             if ( pOwner == nullptr )
                 continue;
-            pOwner->removeComponent( pComp );
-            ++count;
+            if ( pOwner->removeComponent( pComp ) )
+                ++count;
         }
         // removeComponent 는 얼려 있으면 미룬다. 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
         processDeferredDestruction();

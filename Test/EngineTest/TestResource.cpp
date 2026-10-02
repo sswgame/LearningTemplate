@@ -344,10 +344,10 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     const bool       bHadDlcDir = sw::FileUtil::directoryExists( dlcRootDir );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [gameDir, dlcRootDir, dlcPackDir, bHadDlcDir]()
     {
-        sw::FileUtil::removeDirectory( gameDir );
-        sw::FileUtil::removeDirectory( dlcPackDir );
+        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( gameDir ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dlcPackDir ) );
         if ( bHadDlcDir == false )
-            sw::FileUtil::removeDirectory( dlcRootDir );
+            SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dlcRootDir ) );
     } ) );
     sw::FileUtil::ensureDirectoryExists( gameDir );
     const utf8* kGameContent = "<Asset source=\"game\" />";

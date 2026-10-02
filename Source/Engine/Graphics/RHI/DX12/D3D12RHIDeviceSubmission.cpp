@@ -47,7 +47,7 @@ namespace sw
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
+        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
     ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()

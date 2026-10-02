@@ -450,12 +450,12 @@ namespace sw::editor
                     if ( ImGui::InputText( "##InlineRename", renameBuffer.data(), renameBuffer.capacity(),
                                            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
                     {
-                        EditorSceneCommands::rename( pObj, renameBuffer.c_str() );
+                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
                         renamingObjectId = 0;
                     }
                     if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
                     {
-                        EditorSceneCommands::rename( pObj, renameBuffer.c_str() );
+                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
                         renamingObjectId = 0;
                     }
                     if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )

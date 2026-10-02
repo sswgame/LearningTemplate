@@ -306,7 +306,7 @@ namespace sw::editor
             {
                 GameObjectManager* pGameObjectManager = pObj->getManager();
                 if ( pGameObjectManager == nullptr )
-                    pObj->removeComponent( pComp );
+                    (void)pObj->removeComponent( pComp ); // 실패는 removeComponent 가 알리고 카드가 남는다
                 else if ( EditorUtil::areSceneEditsAllowed() )
                     EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록 · dirty
                 else

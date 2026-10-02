@@ -988,7 +988,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
     SW_EXPECT_TRUE( manager.getModuleHandle( "SWGameAbiProbe" ) == nullptr );
     manager.shutdown();
 
-    sw::FileUtil::removeFile( probePath );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( probePath ) );
 }
 
 /**

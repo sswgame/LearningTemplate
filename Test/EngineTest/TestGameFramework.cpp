@@ -320,7 +320,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
         SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, binPath ) );
     }
 
-    FileUtil::removeFile( binPath );
+    SW_EXPECT_TRUE( FileUtil::removeFile( binPath ) );
 }
 
 /**

@@ -42,7 +42,8 @@ namespace sw
 
             static void tryDeleteFile( string_view path )
             {
-                FileUtil::removeFile( path );
+                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 cleanStaleShadowArtifacts 가 지운다.
+                (void)FileUtil::removeFile( path );
             }
 
             static void tryDeleteShadowArtifacts( string_view modulePath )
@@ -186,7 +187,7 @@ namespace sw
                 for ( const string& filePath : listFile )
                 {
                     if ( filePath.find( "_temp_" ) != string::npos )
-                        FileUtil::removeFile( filePath );
+                        (void)FileUtil::removeFile( filePath ); // 다른 프로세스가 아직 쥔 사본은 다음 정리 때 지운다
                 }
             }
         };

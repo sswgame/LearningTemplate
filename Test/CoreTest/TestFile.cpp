@@ -135,7 +135,7 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
     const sw::string rootDir = test::makeTempPath( "SwCollectCaseRoot" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "MixedCaseSub" );
-    sw::FileUtil::removeDirectory( rootDir ); // 앞 실행이 죽어 남긴 찌꺼기가 개수 단언을 흔들지 않게 한다
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( rootDir ) ); // 앞 실행이 죽어 남긴 찌꺼기가 개수 단언을 흔들지 않게 한다
     sw::FileUtil::ensureDirectoryExists( subDir );
 
     const sw::string filePath = sw::FileUtil::joinPath( subDir, "MixedCaseAsset.Bin" );
@@ -300,7 +300,7 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
 SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
 {
     const sw::string dir = test::makeTempPath( "SwAtomicWriteTest" );
-    sw::FileUtil::removeDirectory( dir );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     sw::FileUtil::ensureDirectoryExists( dir );
     const sw::string filePath = sw::FileUtil::joinPath( dir, "scene.xml" );
 
@@ -330,7 +330,7 @@ SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
 SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 {
     const sw::string dir = test::makeTempPath( "SwFailedWriteTest" );
-    sw::FileUtil::removeDirectory( dir );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     const sw::string blockedPath = sw::FileUtil::joinPath( dir, "blocked" );
     sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) );
 
@@ -356,7 +356,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
 {
     const sw::string dir = test::makeTempPath( "SwUnicodePath_한글폴더" );
-    sw::FileUtil::removeDirectory( dir );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     sw::FileUtil::ensureDirectoryExists( dir );
     SW_ASSERT_TRUE( sw::FileUtil::directoryExists( dir ) );
 

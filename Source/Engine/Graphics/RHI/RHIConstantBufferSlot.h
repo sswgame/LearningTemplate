@@ -40,7 +40,7 @@ namespace sw
          *          거릅니다(그리기는 살고 그 디스패치만 꺼집니다).
          * @return 바인딩할 수 있는 상태면 true.
          */
-        bool create( IRHIDevice* pDevice, uint32 byteSize );
+        [[nodiscard]] bool create( IRHIDevice* pDevice, uint32 byteSize );
 
         /** @brief 내용을 갱신합니다 (버퍼가 없으면 아무것도 하지 않습니다). */
         void update( IRHIDevice* pDevice, const void* pData, uint32 byteSize ) const;

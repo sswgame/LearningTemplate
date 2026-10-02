@@ -1664,7 +1664,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | 원인 | 대표 결함 | 구조로 막는 법 | 상태 |
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
-| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
+| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ (3절) — 소비 없는 컴포넌트는 결정 거리 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ (3절) — 서브틱 남음 |
@@ -1674,8 +1674,9 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 
 - **R2 에서 남은 것**(구조 ⑥ · ⑦ 뒤) — 숫자 아닌 글은 경고 없이 고아가 되어 Ignore 정책에 묻힌다(XML · JSON 로더 — 고아가 생기면 로드마다 한 번
   경고할 것), ActionMap 의 `static_cast<uint8>( getAttributeInt )`(pad "256" → 0 · "-1" → 255), `XmlNode::getAttributeBool` · 머티리얼
-  `parseBoolToken` 의 조용한 폴백(`StringUtil::tryParseBool` 로), 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다, `FileUtil::removeFile` · `copyFile` 같은
-  "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
+  `parseBoolToken` 의 조용한 폴백(`StringUtil::tryParseBool` 로), 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다. `FileUtil::createParentDirectory` ·
+  `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
+  (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ 뒤) — 바이너리는 enum 을 **값**으로 싣는다(XML 은 이름) — 열거자 순서를 바꾸면 세이브 · 핫 리로드 스냅샷이 다른 값으로 읽힌다.
   이름 해시로 싣는 것이 맞지만 바이너리 형식이 바뀐다(`kObjectReflectedSchemaVersion` · 쿠킹 씬 판을 올리고 옛 판은 값으로 읽는 이관).
   에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
@@ -2099,6 +2100,21 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑥ 잇기 — 만들기 · 지우기 · 옮기기 동사도 `[[nodiscard]]`, 1-0j 의 R2 남은 것)
+
+동사 표에 remove · copy · create · delete · move · rename 을 더했다. 이 동사의 bool 함수 31 개 가운데 `[[nodiscard]]` 는 셋(⑥ 의 `deleteAsset` ·
+`deleteAssetFile` · `copyPropertyValue`)뿐이었고, 결과를 버리는 호출이 82 곳(제품 22 · 시험 60)이었다. 뜻을 먼저 보았다 — 모두 "false = 그 일이 일어나지
+않았다" 다. `FileUtil::removeFile` · `removeDirectory` 는 이미 없으면 true(끝난 뒤 "없다" 가 성립하는지)이고, 컨테이너 도우미 `VectorUtil::removeSingleSwap` ·
+`SpatialTree::remove` 는 없어서 false 다 — 예외 없이 같은 규칙에 넣고, 버려도 되는 자리는 `(void)` 와 이유로 적었다.
+
+**버리던 자리에서 실제 결함은 나오지 않았다** — 정리, 안에서 이미 알리는 실패, 설계상 그 기능만 꺼지는 경로였다(에디터 에셋 · 세이브 슬롯 · 쿠킹 · 임시 파일
+길을 따로 확인). 대신 조용하던 것을 알린다: 쓰기 실패 뒤 임시 파일을 못 지우면 경고(`discardTempFile`), 셰이더 디스크 캐시 파일을 못 지우면 경고, 컴퓨트
+상수버퍼(컬링 · 인스턴스 애니 · 모프 · 정렬)를 못 만들면 그 디스패치가 꺼진다는 오류 한 줄(예전에는 `isValid()` 가 말없이 껐다), 모듈을 내리기 전 컴포넌트
+파괴는 실제로 지운 것만 센다. 시험의 파일 정리는 결과를 본다 — 준비는 `SW_ASSERT_TRUE`(전제), 끝 정리는 `SW_EXPECT_TRUE`(대상이 핸들을 쥐고 있으면 진다).
+
+**검증.** 게이트 자기 시험은 새 동사마다 하나씩(한 조각에 모으면 하나만 잡혀도 통과한다). 표에서 rename 을 빼면 `CheckLintsAreAlive` 가 진다, 버림 하나를
+되돌리면 빌드가 선다. Debug `-LE hostgpu` 30/30, Release 빌드 통과(worktree 에서). hostgpu(`LiveShaderTest` 정리 단언 넷)는 병합 뒤 Shipping 에서 본다.
 
 ### 2026-10-03 (구조 ⑯ 모르는 컴포넌트는 원문으로 맡아 두었다가 그대로 다시 쓴다(`MissingComponent`) — 1-0j 의 R4 둘째 단위)
 

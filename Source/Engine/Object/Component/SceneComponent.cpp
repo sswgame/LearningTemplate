@@ -431,7 +431,7 @@ namespace sw
             return;
 
         vector<SceneComponent*>& listSibling = _pParent->_listChild;
-        VectorUtil::removeSingleSwap( listSibling, this );
+        (void)VectorUtil::removeSingleSwap( listSibling, this ); // 붙인 쪽이 넣어 두었다 — 없으면 뺄 것이 없다
         if ( listSibling.empty() )
             _pParent->setTransformFlag( SceneTransformPage::kHasChildren, false );
         setTransformFlag( SceneTransformPage::kHasParent, false );

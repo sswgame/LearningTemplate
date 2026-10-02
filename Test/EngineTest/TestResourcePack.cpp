@@ -372,7 +372,7 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         }
 
         reader.close();
-        sw::FileUtil::removeFile( packPath );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( packPath ) );
     }
 }
 

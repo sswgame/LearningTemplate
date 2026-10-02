@@ -12,6 +12,10 @@
 
   load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile · bake
   revert · convert · try · open · attach · spawn · instantiate · reload
+  remove · copy · create · delete · move · rename        (2026-10-03 에 더함 — 선언 28 개, 결과를 버리던 자리 82 곳)
+
+동사의 뜻은 "false = 그 일이 일어나지 않았다" 다. 할 일이 없어 true 인 것(`FileUtil::removeFile` 은 이미 없으면 true)도, 없어서 false 인
+컨테이너 도우미(`VectorUtil::removeSingleSwap`)도 그 뜻 안에 있다 — 버려도 되는 자리는 `(void)` 와 이유로 그렇다고 적는다.
 
 `friend` 선언(정의가 아니면 속성을 달 수 없다)과 C-ABI 계약(`Source/RuntimeAPI`)은 보지 않는다. 한 줄에 반환 타입과 이름이 같이 있는
 선언만 본다 — 여러 줄로 쪼갠 선언은 놓치는 대신 오탐이 없다.
@@ -35,6 +39,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kListFallibleVerb = (
     "load", "save", "read", "write", "parse", "deserialize", "serialize", "apply", "restore", "import", "export",
     "cook", "compile", "bake", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
+    "remove", "copy", "create", "delete", "move", "rename",
 )
 
 # 줄 머리의 지정자(static · virtual · 내보내기 매크로) 다음 `bool 이름(` — 이름이 실패할 수 있는 동사로 시작하는 선언.
@@ -109,6 +114,21 @@ class CheckFallibleNodiscardGate(LintGate):
                 ),
             },
         },
+        # 만들기 · 지우기 · 옮기기 동사는 하나씩 — 한 조각에 모으면 하나만 잡혀도 통과해 나머지가 죽은 것을 모른다.
+        *(
+            {
+                "name": f"만들기 · 지우기 · 옮기기 동사 — {declaration.strip()}",
+                "files": {"Source/Probe/ProbeFileOps.h": "struct ProbeFileOps\n{\n" + declaration + "};\n"},
+            }
+            for declaration in (
+                "    static bool removeFile( string_view path );\n",
+                "    static bool copyFile( string_view source, string_view destination );\n",
+                "    bool createSurface( void* pWindowHandle );\n",
+                "    static bool deleteAssetFile( string_view absolutePath );\n",
+                "    bool moveProperty( hashed_string fromProp, hashed_string toProp ) const;\n",
+                "    static bool rename( GameObject* pObj, const utf8* pNewName );\n",
+            )
+        ),
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:

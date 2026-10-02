@@ -28,6 +28,13 @@ namespace sw
         // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
         _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
 
+        // 만들지 못한 상수버퍼는 `isValid()` 가 걸러 그 디스패치만 꺼진다(그리기는 산다). 꺼진 이유는 여기서 한 번 알린다.
+        auto createComputeConstantBuffer = [this]( RHIConstantBufferSlot& slot, uint32 byteSize, string_view usage )
+        {
+            if ( slot.create( _pDevice, byteSize ) == false )
+                SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", usage );
+        };
+
         struct GpuCullParams
         {
             float32 _planes[6][4]{};
@@ -39,7 +46,7 @@ namespace sw
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
             RenderView& renderView = _arrView[viewIndex];
-            renderView._cullCb.create( _pDevice, sizeof( GpuCullParams ) );
+            createComputeConstantBuffer( renderView._cullCb, sizeof( GpuCullParams ), "cull" );
         }
 
         struct GpuAnimParams
@@ -49,7 +56,7 @@ namespace sw
             float32 _speedRange{ 0.0f };
             uint32  _instanceCount{ 0 };
         };
-        _instanceAnimCb.create( _pDevice, sizeof( GpuAnimParams ) );
+        createComputeConstantBuffer( _instanceAnimCb, sizeof( GpuAnimParams ), "instance animation" );
 
         struct GpuMorphParams
         {
@@ -58,7 +65,7 @@ namespace sw
             float32 _frequency{ 0.0f };
             uint32  _vertexCount{ 0 };
         };
-        _meshMorphCb.create( _pDevice, sizeof( GpuMorphParams ) );
+        createComputeConstantBuffer( _meshMorphCb, sizeof( GpuMorphParams ), "mesh morph" );
 
         struct GpuSortParams
         {
@@ -67,7 +74,7 @@ namespace sw
             uint32  _batchCount{ 0 };
             uint32  _pad[2]{};
         };
-        _instanceSortCb.create( _pDevice, sizeof( GpuSortParams ) );
+        createComputeConstantBuffer( _instanceSortCb, sizeof( GpuSortParams ), "instance sort" );
 
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();

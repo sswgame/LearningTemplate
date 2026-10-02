@@ -155,12 +155,12 @@ namespace sw
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
         static bool getFileStamp( string_view fileName, FileStamp& outStamp );
-        /** @brief 파일을 복사합니다. */
-        static bool copyFile( string_view source, string_view destination );
+        /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
+        [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 입니다. */
-        static bool removeFile( string_view path );
+        [[nodiscard]] static bool removeFile( string_view path );
         /** @brief 디렉터리를 재귀적으로 삭제합니다. 없었거나 삭제했으면 true 입니다. */
-        static bool removeDirectory( string_view path );
+        [[nodiscard]] static bool removeDirectory( string_view path );
         /** @brief 시스템 임시 디렉터리 경로를 반환합니다. */
         static string getTempDirectory();
         /**

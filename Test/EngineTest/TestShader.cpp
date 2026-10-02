@@ -299,7 +299,7 @@ SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
     SW_EXPECT_EQUAL( firstHash, sw::ShaderBaker::computeEffectiveSourceHash( path ) );
 
-    sw::FileUtil::removeFile( path );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( path ) );
     SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderBaker::computeEffectiveSourceHash( path ) );
 }
 
@@ -626,7 +626,7 @@ SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
     const uint64 hashAfterHeaderAdded     = sw::ShaderBaker::computeEffectiveSourceHash( shaderPath );
 
     // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
-    sw::FileUtil::removeFile( tempHeader );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
     sw::ShaderBaker::invalidateSharedHeaderCache();
 
     SW_EXPECT_FALSE( bCurrentAfterHeaderAdded );

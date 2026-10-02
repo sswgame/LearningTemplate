@@ -38,7 +38,7 @@ namespace sw
          * @details 여러 곳이 "찾기 → 마지막 원소로 덮기 → pop_back" 여덟 줄을 각자 들고 있었습니다.
          */
         template <typename TVector, typename TValue>
-        static bool removeSingleSwap( TVector& list, const TValue& value )
+        [[nodiscard]] static bool removeSingleSwap( TVector& list, const TValue& value )
         {
             for ( size_t index = 0; index < list.size(); ++index )
             {

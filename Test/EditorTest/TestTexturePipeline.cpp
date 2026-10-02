@@ -159,7 +159,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( static_cast<size_t>( 1376 * 768 * 4 ), ddsData._bytes.size() );
 
         // 4. Cleanup
-        FileUtil::removeFile( tempOutDds );
+        SW_EXPECT_TRUE( FileUtil::removeFile( tempOutDds ) );
     }
 
     /**

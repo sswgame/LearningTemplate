@@ -274,8 +274,8 @@ namespace sw
          */
         Component* findComponentByTypeName( hashed_string typeName ) const;
 
-        /** @brief 컴포넌트 인스턴스 하나를 제거합니다. */
-        bool removeComponent( Component* pComp );
+        /** @brief 컴포넌트 인스턴스 하나를 제거합니다. 이 오브젝트의 것이 아니면 false, 틱 중이면 지연 제거로 넘기고 true 입니다. */
+        [[nodiscard]] bool removeComponent( Component* pComp );
 
         /** @brief componentId 로 소유 컴포넌트를 찾습니다. */
         Component* findComponentById( uint64 componentId, bool bIncludePendingDestroy = false ) const;

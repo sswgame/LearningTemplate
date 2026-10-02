@@ -652,8 +652,9 @@ namespace test
                      totalMs );
         SW_LOG_INFO( "====================================================" );
 
-        // 케이스 밖에서 만든 임시 경로와 빈 프로세스 폴더를 거둔다.
-        sw::FileUtil::removeDirectory( getProcessTempDirectory() );
+        // 케이스 밖에서 만든 임시 경로와 빈 프로세스 폴더를 거둔다. 케이스 폴더는 케이스마다 따졌으니 여기 남는 것은 케이스 밖에서 연 경로다.
+        if ( sw::FileUtil::removeDirectory( getProcessTempDirectory() ) == false )
+            SW_LOG_WARNING( "Could not remove the process temp directory %# - is a file handle left open?", getProcessTempDirectory().c_str() );
 
         // 호스트 스위트만 고른 실행이 아무것도 안 돌았다면 그 ctest 항목(`<타깃>_HostOnly`)은 빈 그물이다.
         const bool bHostOnlyRanNothing = _hostSuiteMode == HostSuiteMode::Only && runnableCount == 0;

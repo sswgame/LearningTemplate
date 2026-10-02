@@ -175,8 +175,8 @@ namespace sw
         void waitIdleInternal() override;
 
         /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
-        void resizeInternal( uint32 width, uint32 height ) override;
-        bool createRenderPass();
+        void               resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool createRenderPass();
         /** @brief 프레임을 엽니다(펜스 대기 · 스왑체인 이미지 획득 · 커맨드 버퍼 기록 시작). */
         void beginFrame( const float4& clearColor ) override;
 
@@ -295,7 +295,7 @@ namespace sw
         /**
          * @brief VkInstance 를 만듭니다.
          */
-        bool createInstance();
+        [[nodiscard]] bool createInstance();
         /**
          * @brief 디버그 메신저를 설정합니다.
          */
@@ -307,19 +307,19 @@ namespace sw
         /**
          * @brief 논리 디바이스와 큐를 만듭니다.
          */
-        bool createLogicalDevice();
+        [[nodiscard]] bool createLogicalDevice();
         /**
          * @brief 그래픽스 커맨드 풀을 만듭니다.
          */
-        bool createCommandPool();
+        [[nodiscard]] bool createCommandPool();
         /**
          * @brief 프레임별 커맨드 버퍼를 할당합니다.
          */
-        bool createCommandBuffers();
+        [[nodiscard]] bool createCommandBuffers();
         /**
          * @brief 인플라이트 슬롯의 펜스를 만듭니다. 스왑체인 세마포어는 스왑체인이 만듭니다.
          */
-        bool createFrameFences();
+        [[nodiscard]] bool createFrameFences();
         /**
          * @brief 인플라이트 펜스를 파괴하고 컨테이너를 비웁니다.
          */
@@ -414,7 +414,7 @@ namespace sw
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열 + immutable sampler)를 확보합니다. */
         bool ensureTextureSet();
         /** @brief 정적 샘플러 · 세트 레이아웃 둘 · 파이프라인 레이아웃 · 풀(텍스처용 1 + 프레임별 슬롯용) · 더미 UBO 를 만듭니다. */
-        bool createDescriptorResources();
+        [[nodiscard]] bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다 (GENERAL 레이아웃). */
@@ -467,7 +467,7 @@ namespace sw
         /** @brief 오프스크린 VkRenderPass 를 확보합니다. */
         bool ensureOffscreenRenderPass( uint32 vkFormat );
         /** @brief 오프스크린 텍스처용 프레임버퍼를 만듭니다. */
-        bool createOffscreenFramebuffer( VulkanTextureRecord& record );
+        [[nodiscard]] bool createOffscreenFramebuffer( VulkanTextureRecord& record );
         /** @brief 오프스크린 프레임버퍼를 파괴합니다. */
         void destroyOffscreenFramebuffer( VulkanTextureRecord& record );
         /** @brief 프레임버퍼(및 이 프레임버퍼가 소유한 렌더패스)를 GPU 펜스 통과 후 파괴하도록 큐에 넣습니다. */

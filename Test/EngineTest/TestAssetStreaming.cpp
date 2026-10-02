@@ -46,7 +46,7 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
 
     // 존재하지 않는 경로. 파일을 만들지 않으므로 워커는 반드시 실패한다.
     const sw::string missingPath = test::makeTempPath( "sw_test_missing_asset.dat" );
-    sw::FileUtil::removeFile( missingPath );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( missingPath ) );
 
     bool bFirstCompleted{ false };
     bool bFirstSuccess{ true };
@@ -258,7 +258,7 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
     for ( const sw::string& path : listTempFile )
     {
         SW_EXPECT_TRUE( queue.isLoaded( path ) );
-        sw::FileUtil::removeFile( path );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( path ) );
     }
 
     SW_EXPECT_TRUE( countCallback.load() > 0 );

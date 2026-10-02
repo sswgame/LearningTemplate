@@ -105,7 +105,7 @@ namespace sw
             if ( _pTickDestroyManager != nullptr && _pTickDestroyObject != nullptr )
                 _pTickDestroyManager->destroyObject( _pTickDestroyObject );
             if ( _pTickRemoveOwner != nullptr && _pTickRemoveComp != nullptr )
-                _pTickRemoveOwner->removeComponent( _pTickRemoveComp );
+                (void)_pTickRemoveOwner->removeComponent( _pTickRemoveComp ); // 지워졌는지는 시험이 본다
             if ( _pTickAttachChild != nullptr && _pTickAttachParent != nullptr )
                 (void)_pTickAttachChild->attachToComponent( _pTickAttachParent ); // 붙었는지는 시험이 계층으로 본다
             if ( _pTickClearOwner != nullptr )
@@ -209,7 +209,7 @@ namespace sw
             if ( pSibling != nullptr && getOwner() != nullptr )
             {
                 pSibling->_pSiblingToRemoveOnUnregister = nullptr;
-                getOwner()->removeComponent( pSibling );
+                (void)getOwner()->removeComponent( pSibling ); // 지워졌는지는 시험이 본다
             }
             Component::onUnregister( manager );
         }

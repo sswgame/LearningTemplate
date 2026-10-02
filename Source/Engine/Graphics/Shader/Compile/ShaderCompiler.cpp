@@ -258,7 +258,8 @@ namespace sw
             FileUtil::collectFiles( cacheDir, "", listFile, false );
             for ( const string& file : listFile )
             {
-                FileUtil::removeFile( file );
+                if ( FileUtil::removeFile( file ) == false )
+                    SW_LOG_WARNING( "Failed to remove shader cache file %# - it stays in the cache", file.c_str() );
             }
         }
     }

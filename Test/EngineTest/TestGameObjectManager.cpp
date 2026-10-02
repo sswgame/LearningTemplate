@@ -441,7 +441,7 @@ SW_TEST_CASE( ComponentPoolTest, PolymorphicComponentPoolIsolationAndAddressRecy
     void* pAudioAddr1 = static_cast<void*>( pAudio1 );
 
     // 2) MockMeshComponent 만 삭제
-    pActor->removeComponent( pMesh1 );
+    SW_EXPECT_TRUE( pActor->removeComponent( pMesh1 ) );
 
     // 3) 새로운 MockMeshComponent 추가 시 동일한 메모리 주소가 재활용되는지 검증
     sw::MockMeshComponent* pMesh2 = pActor->addComponent<sw::MockMeshComponent>();
@@ -453,7 +453,7 @@ SW_TEST_CASE( ComponentPoolTest, PolymorphicComponentPoolIsolationAndAddressRecy
     SW_EXPECT_EQUAL( pAudio1, pActor->getComponent<sw::MockAudioComponent>() );
 
     // 4) MockAudioComponent 삭제 후 재추가 시 Audio 풀 주소 재활용 검증
-    pActor->removeComponent( pAudio1 );
+    SW_EXPECT_TRUE( pActor->removeComponent( pAudio1 ) );
     sw::MockAudioComponent* pAudio2 = pActor->addComponent<sw::MockAudioComponent>();
     SW_ASSERT_NOT_NULL( pAudio2 );
     void* pAudioAddr2 = static_cast<void*>( pAudio2 );
@@ -492,7 +492,7 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolConstructorAndDestructorExactTrack
     {
         auto* pComp = listObject[index]->getComponent<sw::MockPoolLifecycleComponent>();
         SW_ASSERT_NOT_NULL( pComp );
-        listObject[index]->removeComponent( pComp );
+        SW_EXPECT_TRUE( listObject[index]->removeComponent( pComp ) );
     }
 
     SW_EXPECT_EQUAL( 50, sw::MockPoolLifecycleComponent::s_dtorCount.load( std::memory_order_relaxed ) );
@@ -527,8 +527,8 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolHighFrequencyChurnStress )
         pAudio->_volume                = 0.5f;
         SW_ASSERT_NOT_NULL( pAudio );
 
-        pActor->removeComponent( pMesh );
-        pActor->removeComponent( pAudio );
+        SW_EXPECT_TRUE( pActor->removeComponent( pMesh ) );
+        SW_EXPECT_TRUE( pActor->removeComponent( pAudio ) );
     }
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), pActor->getComponentCount() );

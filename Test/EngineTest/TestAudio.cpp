@@ -176,9 +176,9 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
         sw::engine::getTaskManager().waitAll();
 
     // 정리
-    sw::FileUtil::removeFile( validWavPath );
-    sw::FileUtil::removeFile( malformedPath );
-    sw::FileUtil::removeFile( truncatedPath );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( validWavPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( malformedPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( truncatedPath ) );
 
     pAudioSystem->shutdown();
 }
@@ -286,7 +286,7 @@ SW_TEST_CASE( AudioSystemTest, MusicPathTracksRequests )
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
 
-    sw::FileUtil::removeFile( musicPath );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( musicPath ) );
     pAudioSystem->shutdown();
 }
 
@@ -330,8 +330,8 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
 
-    sw::FileUtil::removeFile( wavA );
-    sw::FileUtil::removeFile( wavB );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavA ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavB ) );
 
     pAudioSystem->shutdown();
 }

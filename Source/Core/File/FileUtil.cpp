@@ -72,6 +72,13 @@ namespace sw
             /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
             static inline atomic<uint32> s_tempFileSerial{ 0 };
 
+            /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
+            static void discardTempFile( const string& tempPath )
+            {
+                if ( FileUtil::removeFile( tempPath ) == false )
+                    SW_LOG_WARNING( "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
+            }
+
             /**
              * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 자리로 바꿔 끼웁니다.
              * @details 예전 `writeTextFile` 은 원본을 "wb" 로 열어(그 순간 길이 0 이 된다) 그 자리에 쓰고, `fwrite` · `fclose` 결과를 보지
@@ -110,7 +117,7 @@ namespace sw
                 if ( written != size || bFlushed == false || bClosed == false )
                 {
                     SW_LOG_ERROR( "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
-                    FileUtil::removeFile( tempPath );
+                    discardTempFile( tempPath );
                     return false;
                 }
 
@@ -123,7 +130,7 @@ namespace sw
                     std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
                 }
                 SW_LOG_ERROR( "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
-                FileUtil::removeFile( tempPath );
+                discardTempFile( tempPath );
                 return false;
             }
 

@@ -255,7 +255,7 @@ namespace sw
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList );
+        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )

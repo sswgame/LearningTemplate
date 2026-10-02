@@ -237,9 +237,9 @@ namespace sw
          * @note **디바이스가 없으면 만들지 않습니다.** 초기화할 때 디바이스를 넘겨야 하는데 `RHI::getDevice()` 는 널 참조를
          *       반환하므로, 디바이스가 없는 상태에서 물으면 그 자리에서 죽습니다.
          */
-        bool createEditorInstance();
+        [[nodiscard]] bool createEditorInstance();
         /** @brief 게임 인스턴스를 만들고 초기화합니다. 디바이스 전제는 위와 같습니다. */
-        bool createGameInstance();
+        [[nodiscard]] bool createGameInstance();
 
         /** @brief 게임이 자기 상태를 직렬화해 두게 합니다(리로드 사이에 보존할 것). */
         void captureGameState();

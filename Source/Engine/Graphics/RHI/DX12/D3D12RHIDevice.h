@@ -310,13 +310,13 @@ namespace sw
          * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 부르는 쪽이 남깁니다.
          * @details 상수버퍼 링 · 정점/인덱스 업로드 버퍼 · 전체 화면 삼각형 · 업로드 스테이징 넷이 "만들기 → 매핑" 여덟 줄을 각자 들고 있었습니다.
          */
-        bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
+        [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
         /**
          * @brief 루트 시그니처(루트 CBV · t/u 슬롯 테이블 · 텍스처 배열 테이블 · 루트 상수 · 정적 샘플러), 커맨드 시그니처, 풀스크린 정점 버퍼를 만듭니다.
          */
-        bool createGlobalResources();
+        [[nodiscard]] bool createGlobalResources();
         /**
          * @brief 새로 연 커맨드 리스트에 셰이더 가시 힙 · 루트 시그니처(그래픽스/컴퓨트) · 텍스처 배열 테이블을 겁니다.
          * @details 리스트가 열릴 때 한 번이면 됩니다. 이후 드로우는 루트 CBV · 슬롯 테이블 · 루트 상수만 바꿉니다. 힙을 거는 4곳
