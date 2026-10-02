@@ -3,6 +3,8 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "Core/Compression/CompressionStream.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
@@ -59,6 +61,23 @@ namespace sw
                 if ( bRead == false )
                     return false;
                 return bRequireExactConsume == false || local == payloadStart + payloadSize;
+            }
+
+            /**
+             * @brief 엄격한 읽기가 타입에 없는 칸을 건너뛸 때(`allowsUnknownProperties`) 알립니다 — 타입 · 칸마다 한 번.
+             * @details 바이너리는 칸 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
+             */
+            static void warnSkippedFieldOnce( const TypeInfo& typeInfo, uint32 nameHash )
+            {
+                static mutex                 s_mutex;
+                static unordered_set<uint64> s_setWarned;
+                const uint64                 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | nameHash;
+                {
+                    std::lock_guard<mutex> lock( s_mutex );
+                    if ( s_setWarned.insert( key ).second == false )
+                        return;
+                }
+                SW_LOG_WARNING( "%#: a saved field (name hash %#) is not in the type any more - skipped (once per field)", typeInfo._name.c_str(), nameHash );
             }
 
             static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
@@ -133,6 +152,8 @@ namespace sw
                             return false;
                         if ( bStrict == false )
                             pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
+                        else
+                            warnSkippedFieldOnce( typeInfo, tagHash );
                         reader.skip( payloadSize );
                         continue;
                     }

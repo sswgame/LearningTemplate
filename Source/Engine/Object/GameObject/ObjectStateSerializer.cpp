@@ -17,6 +17,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
+#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
@@ -157,7 +158,26 @@ namespace sw
                 ctx.setOuterInstance( pGameObject );
                 ctx.setOwnedPointerFactory( &createOwnedComponent );
                 ctx.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
+                // 지금 타입에 없는 칸은 건너뛰고 읽는다 — 세 형식이 같은 규칙이다. 예전에는 XML · JSON 만 건너뛰고 바이너리는 **오브젝트 통째로**
+                // 실패해, 컴포넌트 PROPERTY 하나를 지우면 그 컴포넌트를 가진 모든 오브젝트의 세이브 · 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못했다.
+                ctx.setAllowUnknownProperties( true );
                 return ctx;
+            }
+
+            /**
+             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(옛 상태에만 있는 필드)을 알리고 넘깁니다. 스키마 버전이 같을 때만 받습니다.
+             * @details 바이너리의 판 붙은 읽기는 남는 칸이 있으면 이관 함수를 부르고, 없으면 실패합니다. 오브젝트 상태에는 이관할 것이 없다 —
+             *          지운 칸은 버리고 나머지를 읽는 것이 XML · JSON 과 같은 규칙입니다. 버전이 다르면 받지 않습니다(진짜 이관이 필요하다).
+             */
+            static bool skipFieldsTheTypeNoLongerHas( const SchemaMigrateContext& migrateContext )
+            {
+                if ( migrateContext._fromVersion != migrateContext._toVersion )
+                    return false;
+                const size_t orphanCount = migrateContext._pOrphans != nullptr ? migrateContext._pOrphans->size() : 0;
+                if ( orphanCount > 0 && migrateContext._pTypeInfo != nullptr )
+                    SW_LOG_WARNING( "%#: %# saved value(s) are not in the type any more - skipped", migrateContext._pTypeInfo->_name.c_str(),
+                                    static_cast<uint64>( orphanCount ) );
+                return true;
             }
         };
     } // namespace
@@ -317,7 +337,7 @@ namespace sw
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& ctx )
         {
             return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
-                                                           kObjectReflectedSchemaVersion, nullptr, nullptr, ctx );
+                                                           kObjectReflectedSchemaVersion, &ObjectStateSerializerInternal::skipFieldsTheTypeNoLongerHas, nullptr, ctx );
         } );
         return bLoaded ? bodyStart + bodySize : 0;
     }

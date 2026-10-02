@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -26,6 +27,42 @@ namespace
         return listChild;
     }
 } // namespace
+
+namespace sw
+{
+    /**
+     * @brief 저장한 뒤에 PROPERTY 하나(`_dropped`)가 사라지는 컴포넌트입니다 — 다음 빌드 · 핫 리로드의 자리. 코드젠 없이 타입 정보를 손으로 등록하고,
+     *        시험이 같은 이름으로 다시 등록해(핫 리로드가 하는 일) 칸 하나를 지운다. 타입 정보는 레지스트리의 것을 쓴다(재등록이 같은 주소에 덮는다).
+     */
+    class SchemaShiftComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+
+        int32 _kept{ 0 };
+        int32 _dropped{ 0 };
+    };
+
+    const TypeInfo* SchemaShiftComponent::StaticType()
+    {
+        static const TypeInfo* s_pType = []()
+        {
+            TypeInfo info{};
+            info._name               = hashed_string( "SchemaShiftComponent" );
+            info._fullyQualifiedName = hashed_string( "sw::SchemaShiftComponent" );
+            info._size               = sizeof( SchemaShiftComponent );
+            // 지울 칸이 **앞**이다 — 그 칸에서 읽기가 멈추면 뒤의 `_kept` 가 읽히지 않아 드러난다.
+            info._listProperty = {
+                {hashed_string( "_dropped" ), hashed_string( "int32" ), SW_OFFSET_OF( SchemaShiftComponent, _dropped )},
+                {   hashed_string( "_kept" ), hashed_string( "int32" ), SW_OFFSET_OF( SchemaShiftComponent,    _kept )}
+            };
+            engine::getTypeRegistry().registerClass( info );
+            return engine::getTypeRegistry().findType( hashed_string( "sw::SchemaShiftComponent" ) );
+        }();
+        return s_pType;
+    }
+} // namespace sw
 
 using namespace sw;
 
@@ -491,4 +528,94 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_EXPECT_NEAR_EQUAL( 6.0f, childPos._z, 0.0001f );
 
     manager->clear();
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] PROPERTY 하나가 사라져도 그 전의 바이너리 상태는 읽힌다 — 사라진 칸만 버린다(XML 과 같은 규칙)
+ * @details 바이너리 읽기만 엄격했다. 컴포넌트 안의 모르는 칸 하나에 그 컴포넌트가, 그래서 **오브젝트 통째로** 읽기가 실패했고(XML · JSON 은 건너뛰었다),
+ *          오브젝트 자기 칸이 사라지면 판 붙은 읽기가 이관 함수 없이 거절했다. 바이너리 상태가 스키마보다 오래 사는 자리 — 디스크의 세이브, 핫 리로드
+ *          뒤 Stop 이 되살리는 플레이 스냅샷 — 에서 그 오브젝트가 모두 사라졌다. 이제 세 형식이 같다: 지금 타입에 없는 칸은 건너뛰고 나머지를 읽는다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStillLoads )
+{
+    struct RestoreTypeOnExit
+    {
+        TypeInfo _original;
+        ~RestoreTypeOnExit() { engine::getTypeRegistry().registerClass( _original ); }
+    };
+    const TypeInfo* pComponentType = SchemaShiftComponent::StaticType();
+    const TypeInfo* pObjectType    = GameObject::StaticType();
+    SW_ASSERT_TRUE( pComponentType != nullptr && pObjectType != nullptr );
+    const RestoreTypeOnExit restoreComponentType{ *pComponentType };
+    const RestoreTypeOnExit restoreObjectType{ *pObjectType };
+
+    GameObjectManager manager;
+    manager.registerComponentType<SchemaShiftComponent>( hashed_string( "SchemaShiftComponent" ) );
+    GameObject*           pSaved = manager.createGameObject( hashed_string( "Saved" ) );
+    SchemaShiftComponent* pComp  = pSaved->addComponent<SchemaShiftComponent>();
+    SW_ASSERT_NOT_NULL( pComp );
+    pComp->_kept    = 7;
+    pComp->_dropped = 9;
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSaved, bytes ) );
+    const string xml = ObjectStateSerializer::saveToXmlString( pSaved );
+
+    // 1) 다음 빌드(핫 리로드)에서 컴포넌트의 `_dropped` 가 사라졌다 — 같은 이름으로 다시 등록한다.
+    TypeInfo componentAfter = restoreComponentType._original;
+    componentAfter._listProperty.erase( componentAfter._listProperty.begin() );
+    engine::getTypeRegistry().registerClass( componentAfter );
+
+    GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
+    GameObject* pFromXml    = manager.createGameObject( hashed_string( "FromXml" ) );
+    size_t      readBytes   = 0;
+    bool        bXmlLoaded  = false;
+    {
+        test::ScopedDefensiveTestLog expected( "a saved component field the type no longer declares" );
+        readBytes  = ObjectStateSerializer::loadFromBinaryBuffer( pFromBinary, bytes.data(), bytes.size() );
+        bXmlLoaded = ObjectStateSerializer::loadFromXmlString( pFromXml, xml );
+    }
+    SW_EXPECT_EQUAL( bytes.size(), readBytes );
+    SW_EXPECT_TRUE( bXmlLoaded );
+    const SchemaShiftComponent* pFromBinaryComp = pFromBinary->getComponent<SchemaShiftComponent>();
+    const SchemaShiftComponent* pFromXmlComp    = pFromXml->getComponent<SchemaShiftComponent>();
+    SW_ASSERT_TRUE( pFromBinaryComp != nullptr && pFromXmlComp != nullptr );
+    SW_EXPECT_EQUAL( 7, pFromBinaryComp->_kept );
+    SW_EXPECT_EQUAL( 7, pFromXmlComp->_kept );
+
+    // 2) 오브젝트 자기 칸(`_bActive`)이 사라져도 같다.
+    TypeInfo objectAfter = restoreObjectType._original;
+    for ( auto iter = objectAfter._listProperty.begin(); iter != objectAfter._listProperty.end(); ++iter )
+    {
+        if ( iter->_name == hashed_string( "_bActive" ) )
+        {
+            objectAfter._listProperty.erase( iter );
+            break;
+        }
+    }
+    SW_ASSERT_EQUAL( restoreObjectType._original._listProperty.size() - 1, objectAfter._listProperty.size() );
+    engine::getTypeRegistry().registerClass( objectAfter );
+
+    GameObject* pAfterObjectShift = manager.createGameObject( hashed_string( "AfterObjectShift" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a saved object field the type no longer declares" );
+        readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pAfterObjectShift, bytes.data(), bytes.size() );
+    }
+    SW_EXPECT_EQUAL( bytes.size(), readBytes );
+    const SchemaShiftComponent* pAfterObjectShiftComp = pAfterObjectShift->getComponent<SchemaShiftComponent>();
+    SW_ASSERT_NOT_NULL( pAfterObjectShiftComp );
+    SW_EXPECT_EQUAL( 7, pAfterObjectShiftComp->_kept );
+
+    // 3) 판(스키마 버전)이 다른 상태는 여전히 받지 않는다 — 건너뛰기는 같은 판의 지운 칸만이다(판이 다르면 진짜 이관이 필요하다).
+    vector<uint8> otherVersion  = bytes;
+    const size_t  versionOffset = sizeof( uint32 ) * 2; // 옛 부모 이름(루트라 길이 0) · 본문 크기 다음
+    uint32        savedVersion{ 0 };
+    SW_ASSERT_TRUE( otherVersion.size() > versionOffset + sizeof( uint32 ) );
+    Memory::copy( &savedVersion, otherVersion.data() + versionOffset, sizeof( uint32 ) );
+    const uint32 newerVersion = savedVersion + 1;
+    Memory::copy( otherVersion.data() + versionOffset, &newerVersion, sizeof( uint32 ) );
+    GameObject* pOtherVersion = manager.createGameObject( hashed_string( "OtherVersion" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a state from another schema version" );
+        SW_EXPECT_EQUAL( size_t( 0 ), ObjectStateSerializer::loadFromBinaryBuffer( pOtherVersion, otherVersion.data(), otherVersion.size() ) );
+    }
 }
