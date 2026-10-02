@@ -408,7 +408,10 @@ namespace sw
     /**
      * @enum RHIBlendMode
      * @brief 머티리얼 · 패스의 블렌드 분류입니다.
+     * @details 반사 enum 입니다 — 메시 컴포넌트의 `_blendMode` PROPERTY 가 이 이름으로 저장됩니다. 예전에는 `ENUM()` 이 없어 직렬화기가 이름을
+     *          몰라 `"null"` 로 적었고 읽을 때 불투명으로 돌아갔습니다(언리얼 `EBlendMode` 도 UENUM 입니다).
      */
+    ENUM()
     enum class RHIBlendMode : uint8
     {
         Opaque      = 0,

@@ -2079,6 +2079,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 62 메시 블렌드 모드 — 씬 · 프리팹에 "null" 로 저장돼 읽으면 불투명이 됐다)
+
+남은 항목을 점검하다 나왔다. `MeshComponent::_blendMode` 는 PROPERTY 인데 그 타입 `RHIBlendMode` 에 `ENUM()` 이 없어 직렬화기가 이름을 몰랐다 —
+씬 · 프리팹에 `_blendMode="null"` 로 적혔고(저장소의 `editortest.scene.xml` 둘 · `testprop.prefab.xml` 하나가 그랬다) 읽을 때는 기본값(불투명)으로
+돌아갔다. 반투명으로 바꾼 메시가 저장할 때마다 불투명이 됐다. `ENUM()` 을 달았고(언리얼 `EBlendMode` 도 UENUM), 에셋 셋의 "null" 은 실제로 읽히던
+값(Opaque)으로 고쳤다 — 그대로 두면 이제 "모르는 enum 이름" 경고가 난다.
+
+**검증.** `ObjectStateRoundTripTest.MeshBlendModeSurvivesXml`(Transparent 가 이름으로 적히고 다시 읽힌다 — 이전 코드에서 진다). `ENUM()` 을 빼는 변이에
+진다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 61 직렬화 — 범위를 넘는 정수 글자를 잘라 넣었다: "300" 이 uint8 44, "4000000000" 이 int32 음수)
 
 1-0g 에서 남긴 것 "텍스트 스칼라 파서가 좁은 정수로 범위 검사 없이 자른다(에셋을 훑어 본 뒤 정한다)". `SerializeContext` 의 `parseScalarValue` 가

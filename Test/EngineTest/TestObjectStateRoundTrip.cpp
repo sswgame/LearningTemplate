@@ -94,6 +94,29 @@ SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurviv
 // 7) ObjectStateXmlSerializerTest — XML 저장·계층 라운드트립
 // ------------------------------------------------------------------------------
 /**
+ * @brief [ObjectStateRoundTripTest] 메시의 블렌드 모드가 저장 · 로드를 지난다
+ * @details `RHIBlendMode` 에 `ENUM()` 이 없어 직렬화기가 이름을 몰랐다 — 씬 · 프리팹에 `_blendMode="null"` 로 적혔고(저장소의 에셋 셋이 그랬다),
+ *          읽을 때는 기본값(불투명)으로 돌아갔다. 반투명으로 바꾼 메시가 저장할 때마다 불투명이 됐다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "GlassPane" ) );
+    sw::MeshComponent*    pMesh   = pSource->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setBlendMode( sw::RHIBlendMode::Transparent );
+
+    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    SW_EXPECT_TRUE_MSG( xml.find( "_blendMode=\"Transparent\"" ) != sw::string::npos, xml.c_str() );
+
+    sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "GlassPaneCopy" ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    const sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pCopyMesh );
+    SW_EXPECT_TRUE( pCopyMesh->getBlendMode() == sw::RHIBlendMode::Transparent );
+}
+
+/**
  * @brief [ObjectStateRoundTripTest] 부모를 제자리에서 다시 읽어도(되돌리기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 다른 오브젝트의 자식이 붙어 있다
  * @details 제자리 로드는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가
  *          됐다.** 로드는 이 오브젝트 안의 부착만 되붙였다. 에디터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튀었다.

@@ -28,7 +28,7 @@
 					               _attachComponent="None"
 					               _meshId=""
 					               _boundsRadius="0.866"
-					               _blendMode="null"
+					               _blendMode="Opaque"
 					               _gpuSpinSeed="0" />
 				</_listComponent>
 			</GameObject>
@@ -43,7 +43,7 @@
 					                 _attachComponent="None"
 					                 _meshId=""
 					                 _boundsRadius="0.866"
-					                 _blendMode="null"
+					                 _blendMode="Opaque"
 					                 _gpuSpinSeed="0"
 					                 _meshName=""
 					                 _materialName=""
