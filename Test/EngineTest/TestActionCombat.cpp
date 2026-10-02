@@ -20,6 +20,8 @@
 #include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/UI/DamageUIComponent.h"
+#include "GameFramework/UI/HPBarBaseComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -843,4 +845,62 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
     SW_EXPECT_FALSE( room.isActive() );
     room.onPlayerDefeated();
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listDefeated.size() );
+}
+
+/**
+ * @brief [ActionCombatTest] 유닛은 같은 오브젝트의 HP 바를 몰고 간다 — 시작 · 피해 · 회복 · 스탯 재설정이 비율을 맞춘다
+ * @details HP 바는 그릴 줄은 알게 됐지만(⑳) `setTargetRatio` 를 부르는 곳이 없어 늘 가득 차 있었다. HP 가 바뀌는 자리(`UnitStatsComponent`)가 맞춘다.
+ */
+SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 100, 0, 0.0f );
+    SW_ASSERT_NOT_NULL( pUnit );
+    pUnit->setStats( 50, 100, 0, 0, 0.0f, 0.0f );
+    // 바는 스탯 뒤에 단다 — 씬에서 읽은 유닛처럼 시작할 때만 맞출 수 있다.
+    HPBarBaseComponent* pBar = pUnit->getOwner()->addComponent<HPBarBaseComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    manager.beginPlay();
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pBar->getTargetRatio(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pBar->getRemainRatio(), 1e-4f ); // 시작은 흔적 없이
+
+    pUnit->takeDamage( 20 );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, pBar->getTargetRatio(), 1e-4f );
+    pUnit->heal( 10 );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getTargetRatio(), 1e-4f );
+    pUnit->setStats( 80, 100, 0, 0, 0.0f, 0.0f ); // 스탯 재설정(부활)은 흔적 없이
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pBar->getRemainRatio(), 1e-4f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [ActionCombatTest] 데미지 숫자를 켠 유닛은 깎인 피해만큼의 숫자를 머리 위에 띄운다 — 끈 유닛은 띄우지 않는다
+ * @details 데미지 숫자 컴포넌트는 그릴 줄은 알게 됐지만(⑳) 값을 넣고 띄우는 곳이 없었다. 숫자는 요청한 피해가 아니라 방어력을 뺀 실제 피해다.
+ */
+SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pShown  = spawnUnit( manager, "Shown", 2.0f, 100, 5, 0.0f );
+    UnitStatsComponent* pSilent = spawnUnit( manager, "Silent", -2.0f, 100, 5, 0.0f );
+    SW_ASSERT_TRUE( pShown != nullptr && pSilent != nullptr );
+    pShown->setShowDamageNumbers( true );
+    manager.beginPlay();
+
+    pSilent->takeDamage( 25 );
+    pShown->takeDamage( 25 );
+
+    sw::vector<DamageUIComponent*> listNumber;
+    manager.forEachGameObject( [&listNumber]( GameObject* pObject )
+    {
+        if ( DamageUIComponent* pNumber = pObject->getComponent<DamageUIComponent>() )
+            listNumber.push_back( pNumber );
+    } );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listNumber.size() );
+    SW_EXPECT_EQUAL( 20, listNumber[0]->getDamageValue() );
+    const SceneComponent* pNumberRoot = listNumber[0]->getOwner()->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pNumberRoot );
+    const float3 expected = float3( 2.0f, 0.0f, 0.0f ) + pShown->getDamageNumberOffset();
+    SW_EXPECT_NEAR_EQUAL( expected._x, pNumberRoot->getWorldPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( expected._y, pNumberRoot->getWorldPosition()._y, 1e-4f );
+    manager.endPlay();
 }

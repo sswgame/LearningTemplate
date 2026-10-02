@@ -56,20 +56,27 @@ namespace sw
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
 
-        void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
-        {
-            _hp                   = hp;
-            _maxHp                = maxHp;
-            _attack               = attack;
-            _defense              = defense;
-            _moveSpeed            = moveSpeed;
-            _maxInvincibilityTime = maxInvincibilityTime;
-        }
+        /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(흔적 없이). */
+        void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
+
+        /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본 꺼짐). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜬다. */
+        void setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }
+        /** @brief 깎인 피해를 데미지 숫자로 띄우는지 반환합니다. */
+        bool showsDamageNumbers() const { return _bShowDamageNumbers; }
+        /** @brief 데미지 숫자가 뜨는 자리(유닛의 월드 위치 기준 오프셋)입니다. */
+        const float3& getDamageNumberOffset() const { return _damageNumberOffset; }
 
     private:
         /** @brief 피해를 지금 적용하고 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 자리입니다. */
         void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
+        /**
+         * @brief 같은 오브젝트의 HP 바(`HPBarBaseComponent`)를 지금 HP 비율로 맞춥니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 목표만(피해 · 회복).
+         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — 예전에는 HP 바를 아무도 움직이지 않았다(`setTargetRatio` 를 부르는 곳이 없었다).
+         */
+        void syncHealthBar( bool bReset );
+        /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */
+        void spawnDamageNumber( int32 amount );
 
         /** @brief HP 가 깎일 때 부를 구독자들입니다(`registerDamageApplied`). 저장하지 않는다 — 코드가 거는 것이다. */
         MulticastDelegate<void( const DamageAppliedEvent& )> _damageAppliedMulticast;
@@ -89,5 +96,9 @@ namespace sw
         float32 _maxInvincibilityTime;
         PROPERTY( Category = "State", DisplayName = "Is Dead", Tooltip = "Whether the unit is currently dead", ReadOnly, Alias = "bIsDead" )
         bool _bIsDead;
+        PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating damage number for each hit" )
+        bool _bShowDamageNumbers;
+        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Meta = "Units=m" )
+        float3 _damageNumberOffset;
     };
 } // namespace sw

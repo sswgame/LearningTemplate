@@ -2,10 +2,13 @@
 
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/GameEventUtil.h"
+#include "GameFramework/UI/DamageUIComponent.h"
+#include "GameFramework/UI/HPBarBaseComponent.h"
 
 namespace sw
 {
@@ -56,7 +59,20 @@ namespace sw
         , _invincibilityTime{ 0.0f }
         , _maxInvincibilityTime{ 0.0f }
         , _bIsDead{ false }
+        , _bShowDamageNumbers{ false }
+        , _damageNumberOffset{ 0.0f, 0.6f, 0.0f }
     {
+    }
+
+    void UnitStatsComponent::setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
+    {
+        _hp                   = hp;
+        _maxHp                = maxHp;
+        _attack               = attack;
+        _defense              = defense;
+        _moveSpeed            = moveSpeed;
+        _maxInvincibilityTime = maxInvincibilityTime;
+        syncHealthBar( true );
     }
 
     void UnitStatsComponent::onBeginPlay()
@@ -67,6 +83,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
             pOwner->addTag( "Stats"_tag );
+        syncHealthBar( true );
     }
 
     void UnitStatsComponent::onEndPlay()
@@ -152,6 +169,10 @@ namespace sw
         event._bKilled     = _bIsDead ? SW_TRUE : SW_FALSE;
         _damageAppliedMulticast.broadcast( event );
         GameEventUtil::send( event );
+
+        syncHealthBar( false );
+        if ( _bShowDamageNumbers )
+            spawnDamageNumber( actualDamage );
     }
 
     void UnitStatsComponent::applyHeal( int32 amount )
@@ -162,5 +183,40 @@ namespace sw
         _hp += amount;
         if ( _hp > _maxHp )
             _hp = _maxHp;
+        syncHealthBar( false );
+    }
+
+    void UnitStatsComponent::syncHealthBar( bool bReset )
+    {
+        GameObject*         pOwner = getOwner();
+        HPBarBaseComponent* pBar   = ( pOwner != nullptr ) ? pOwner->getComponent<HPBarBaseComponent>() : nullptr;
+        if ( pBar == nullptr )
+            return;
+        const float32 ratio = ( _maxHp > 0 ) ? static_cast<float32>( _hp ) / static_cast<float32>( _maxHp ) : 0.0f;
+        if ( bReset )
+            pBar->resetRatio( ratio );
+        else
+            pBar->setTargetRatio( ratio );
+    }
+
+    void UnitStatsComponent::spawnDamageNumber( int32 amount )
+    {
+        // 피해는 구조가 얼지 않은 자리에서만 적용된다(틱 중이면 `takeDamage` 가 틱 뒤로 미룬다) — 여기서 바로 만들어도 된다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
+        const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
+
+        GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
+        if ( pNumber == nullptr )
+            return;
+        SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
+        if ( pNumberRoot != nullptr )
+            pNumberRoot->setWorldPosition( position );
+        DamageUIComponent* pNumberUi = pNumber->addComponent<DamageUIComponent>();
+        if ( pNumberUi != nullptr )
+            pNumberUi->setDamageValue( amount );
     }
 } // namespace sw

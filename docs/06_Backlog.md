@@ -2102,6 +2102,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-03 (킷 — 유닛이 HP 바와 데미지 숫자를 몰고 간다: ⑱ 의 피해와 ⑳ 의 그리기를 잇는다)
+
+- **HP 바는 그릴 줄 알게 됐지만 늘 가득 차 있었고, 데미지 숫자는 띄우는 곳이 없었다** — `setTargetRatio` · `setDamageValue` 를 부르는 곳이 없었다.
+  HP 가 바뀌는 한 자리(`UnitStatsComponent` — 시작 · 피해 · 회복 · `setStats`)가 같은 오브젝트의 `HPBarBaseComponent` 를 맞춘다(시작 · 스탯 재설정은 흔적 없이
+  `resetRatio`, 피해 · 회복은 `setTargetRatio`). `_bShowDamageNumbers`(기본 꺼짐)인 유닛은 실제로 깎인 피해(방어력을 뺀 값)를 `_damageNumberOffset` 위에
+  `DamageUIComponent` 오브젝트로 띄운다(피해는 구조가 얼지 않은 자리에서만 적용되므로 그 자리에서 만든다). `setStats` 는 헤더 인라인에서 cpp 로.
+
+**검증.** 새 시험 2(이전 코드에서 진다): `ActionCombatTest.UnitDrivesItsHealthBar`(바를 스탯 뒤에 달아 시작 맞추기를 따로 본다) · `UnitSpawnsDamageNumbersWhenAsked`.
+변이 6 모두 죽음(시작 · 피해 · 회복 · setStats 맞추기 · 켬 여부 · 요청 피해로 띄우기).
+
 ### 2026-10-03 (킷 ⑱ 잇기 — 투사체 피해의 남은 것 열: 상대 운동 쓸림 · 순간이동 · 트리거 · 요격탄 · 같은 프레임 피해 알림 · 핸들 PROPERTY 의 id 규칙 · 룸 이벤트, 상용 엔진 방식으로 — 사용자 요청)
 
 - **연속 쓸림이 상대를 끝 자리에 세워 두고 쟀다** — 프레임 사이에 총알 길을 가로질러 건너간 적이 맞지 않았다. 모든 바디의 지난 자리에서 이동의 차이로 쓴다
