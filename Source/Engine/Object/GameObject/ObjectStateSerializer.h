@@ -82,22 +82,14 @@ namespace sw
 
         /**
          * @brief SceneComponent Attach 필드로 계층을 다시 해석합니다.
-         * @details 여러 GameObject 를 복원한 뒤 부릅니다(모든 GameObject 가 있다는 전제).
+         * @details 여러 GameObject 를 복원한 **뒤에** 오브젝트마다 부릅니다 — 읽는 동안에는 부모가 아직 없을 수 있습니다(자식이 먼저 읽히면 루트로
+         *          남습니다). 씬 로드 · 플레이 종료 복원 · 되돌리기가 이 순서를 씁니다. 계층은 로드가 이미 필드에 읽어 두었으므로 상태를 다시 받지
+         *          않습니다(예전에는 XML 문자열을 받고 쓰지 않았습니다).
          */
-        static bool                  rebindSceneHierarchy( GameObject* pGameObject, string_view xmlString );
-        [[maybe_unused]] static bool rebindSceneHierarchyFromJson( GameObject* pGameObject, string_view jsonString );
+        static bool rebindSceneHierarchy( GameObject* pGameObject );
 
         // ------------------------------------------------------------------------------
-        // 2) 파일
-        // ------------------------------------------------------------------------------
-        /** @brief GameObject 상태를 XML 파일로 저장합니다. */
-        static bool saveToXmlFile( const GameObject* pGameObject, string_view filePath );
-
-        /** @brief XML 파일에서 GameObject 상태를 로드합니다. */
-        static bool loadFromXmlFile( GameObject* pGameObject, string_view filePath );
-
-        // ------------------------------------------------------------------------------
-        // 3) 런타임 ID: 같은 오브젝트를 되살릴 때 핸들이 이어지게 한다(`ObjectIdentity`)
+        // 2) 런타임 ID: 같은 오브젝트를 되살릴 때 핸들이 이어지게 한다(`ObjectIdentity`)
         // ------------------------------------------------------------------------------
         /** @brief 오브젝트와 컴포넌트들의 지금 ID 를 적습니다. 삭제 대기 컴포넌트는 뺍니다. */
         static ObjectIdentity captureIdentity( const GameObject* pGameObject );

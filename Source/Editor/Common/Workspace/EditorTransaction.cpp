@@ -103,7 +103,7 @@ namespace sw::editor
             static void loadXmlSnapshot( GameObject* pTarget, const EditorObjectSnapshot& snapshot )
             {
                 ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, &snapshot._identity );
-                ObjectStateSerializer::rebindSceneHierarchy( pTarget, snapshot._xml );
+                ObjectStateSerializer::rebindSceneHierarchy( pTarget );
             }
 
             /** @brief 활성 씬에서 대상을 다시 찾아 XML 스냅샷을 되읽습니다. 대상이 없으면 아무것도 하지 않습니다. */
@@ -117,23 +117,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 활성 씬에서 대상을 다시 찾아 바이너리 스냅샷을 되읽습니다. 빈 스냅샷이거나 대상이 없으면 아무것도 하지 않습니다.
-             * @details 찍을 때의 컴포넌트 id 도 함께 되살립니다. 그래야 그 컴포넌트를 가리키던 핸들이 끊기지 않습니다.
-             */
-            static void restoreBinarySnapshot( const TargetKey& key, const EditorObjectBinarySnapshot& snapshot )
-            {
-                if ( snapshot._bytes.empty() )
-                    return;
-                GameObject* pTarget = findTargetGameObject( getActiveGameObjectManager(), key );
-                if ( pTarget == nullptr )
-                    return;
-                string parentName;
-                ObjectStateSerializer::loadFromBinaryBuffer( pTarget, snapshot._bytes.data(), snapshot._bytes.size(), parentName, &snapshot._identity );
-                markActiveSceneDirty();
-            }
-
-            /**
-             * @brief 기록을 스택에 넣고 활성 씬을 dirty 로 표시합니다. 오브젝트 기록 셋(바이너리 수정 · XML 수정 · 생성/삭제)이 함께 씁니다.
+             * @brief 기록을 스택에 넣고 활성 씬을 dirty 로 표시합니다. 오브젝트 기록 둘(수정 · 생성/삭제)이 함께 씁니다.
              * @details 스택이 없어도 **씬은 이미 바뀌었습니다.** 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시합니다.
              */
             static void pushCommand( CommandStack::Command&& cmd )
@@ -181,38 +165,6 @@ namespace sw::editor
         snapshot._xml      = ObjectStateSerializer::saveToXmlString( pObj );
         snapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
         return snapshot;
-    }
-
-    bool EditorTransaction::captureBinarySnapshot( const GameObject* pObj, EditorObjectBinarySnapshot& outSnapshot )
-    {
-        outSnapshot = EditorObjectBinarySnapshot{};
-        if ( pObj == nullptr )
-            return false;
-        outSnapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
-        return ObjectStateSerializer::saveToBinaryBuffer( pObj, outSnapshot._bytes );
-    }
-
-    void EditorTransaction::recordBinaryModify( GameObject* pObj, const EditorObjectBinarySnapshot& before, const EditorObjectBinarySnapshot& after,
-                                                string_view label )
-    {
-        if ( pObj == nullptr || before._bytes == after._bytes )
-            return;
-
-        // **람다가 직접 캡처한다.** 예전에는 여기서 `beforeBuf`/`afterBuf` 지역 사본을 하나씩
-        // 만들고 그것을 다시 람다가 값으로 캡처해서, 스냅샷마다 **바이트를 두 번** 복사했다.
-        // 오브젝트 하나의 바이너리 스냅샷은 수 KB 가 될 수 있고 편집마다 기록된다.
-        const EditorTransactionInternal::TargetKey key = EditorTransactionInternal::makeTargetKey( pObj );
-        CommandStack::Command                      cmd{};
-        cmd._label = string{ label };
-        cmd._undo  = [key, beforeSnapshot = before]()
-        {
-            EditorTransactionInternal::restoreBinarySnapshot( key, beforeSnapshot );
-        };
-        cmd._redo = [key, afterSnapshot = after]()
-        {
-            EditorTransactionInternal::restoreBinarySnapshot( key, afterSnapshot );
-        };
-        EditorTransactionInternal::pushCommand( std::move( cmd ) );
     }
 
     void EditorTransaction::recordModify( GameObject* pObj, const EditorObjectSnapshot& before, const EditorObjectSnapshot& after,

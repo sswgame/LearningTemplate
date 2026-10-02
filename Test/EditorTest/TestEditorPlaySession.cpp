@@ -8,6 +8,7 @@
 #include "EditorTest/EditorTestServices.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -147,6 +148,83 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
     pObjects->mergePendingAdds();
     SW_EXPECT_NOT_NULL( pObjects->findGameObjectById( heroId ) );
     SW_EXPECT_EQUAL( size_t( 0 ), countLivePlayObjectsNamed( *pObjects, "Bullet" ) );
+}
+
+/**
+ * @brief [EditorPlaySessionTest] 플레이 중에 부모와 자식이 모두 지워져도 Stop 이 계층째 되살린다 — 자식이 부모보다 먼저 되살아나도
+ * @details 되살리기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽고, 읽을 때 부모를 이름으로 찾아 붙인다. 자식을 먼저 만들었으면 자식을 읽는 순간
+ *          부모가 아직 없어 루트로 남았다. 오브젝트를 다 읽은 뒤 계층을 한 번 더 잇는 단계는 XML 폴백에만 있었는데, 그 폴백은 바이너리 저장이 실패할
+ *          때만(오브젝트가 null) 타서 실제로는 돌지 않았다. 씬 로드(`Scene::instantiate`)와 같이, 모두 읽은 뒤 계층을 다시 잇는다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedFirst )
+{
+    SceneManager sceneManager;
+    Scene*       pEdited = sceneManager.createEmptyActiveScene( "EditedLevel" );
+    SW_ASSERT_NOT_NULL( pEdited );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pObjects = pEdited->getObjectManager();
+    GameObject*        pChild   = pObjects->createGameObject( hashed_string( "Rider" ) );
+    GameObject*        pParent  = pObjects->createGameObject( hashed_string( "Horse" ) );
+    SW_ASSERT_NOT_NULL( pChild->addComponent<SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pParent->addComponent<SceneComponent>() );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    pObjects->mergePendingAdds();
+    const uint64 childId  = pChild->getObjectId();
+    const uint64 parentId = pParent->getObjectId();
+
+    PlaySessionData data;
+    EditorPlaySession::captureSnapshot( data );
+
+    // 플레이 중: 둘 다 지워진다.
+    pObjects->destroyObject( pParent, true );
+    pObjects->processDeferredDestruction();
+    pObjects->mergePendingAdds();
+    SW_ASSERT_TRUE( pObjects->findGameObjectById( childId ) == nullptr );
+
+    EditorPlaySession::restoreSnapshot( data );
+    pObjects->processDeferredDestruction();
+    pObjects->mergePendingAdds();
+
+    GameObject* pRestoredChild  = pObjects->findGameObjectById( childId );
+    GameObject* pRestoredParent = pObjects->findGameObjectById( parentId );
+    SW_ASSERT_NOT_NULL( pRestoredChild );
+    SW_ASSERT_NOT_NULL( pRestoredParent );
+    SW_EXPECT_TRUE_MSG( pRestoredChild->getParent() == pRestoredParent, "자식이 부모보다 먼저 되살아나 루트로 남았습니다" );
+}
+
+/**
+ * @brief [EditorPlaySessionTest] 멈춤에서 일시정지를 거쳐 Play 해도 월드가 켜지고 스냅샷이 찍힌다 — Stop 이 편집 씬을 되돌린다
+ * @details 예전에는 멈춤 → 플레이만 월드를 켜서, 멈춤 → 일시정지 → 플레이는 스냅샷도 onBeginPlay 도 없이 플레이가 돌았고 Stop 이 편집 씬을
+ *          되돌리지 못했다(고쳤지만 EditorContext 를 세울 수 없어 시험이 없었다 — 상태 전환 본체가 상태를 인자로 받으면서 생겼다).
+ */
+SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
+{
+    SceneManager sceneManager;
+    Scene*       pEdited = sceneManager.createEmptyActiveScene( "EditedLevel" );
+    SW_ASSERT_NOT_NULL( pEdited );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pObjects = pEdited->getObjectManager();
+    GameObject*               pHero    = pObjects->createGameObject( hashed_string( "Hero" ) );
+    SW_ASSERT_NOT_NULL( pHero );
+    pObjects->mergePendingAdds();
+    const uint64 heroId = pHero->getObjectId();
+
+    PlaySessionData data;
+    EditorPlaySession::setState( data, PlaySessionState::Paused );
+    SW_EXPECT_TRUE( data._bHasSnapshot == SW_TRUE );
+    SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
+    EditorPlaySession::setState( data, PlaySessionState::Playing );
+    SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
+
+    // 플레이 중에 영웅이 죽는다 — Stop 이 되살려야 한다.
+    pObjects->destroyObject( pHero );
+    pObjects->processDeferredDestruction();
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
+    pObjects->processDeferredDestruction();
+    pObjects->mergePendingAdds();
+    SW_EXPECT_NOT_NULL( pObjects->findGameObjectById( heroId ) );
 }
 
 /**

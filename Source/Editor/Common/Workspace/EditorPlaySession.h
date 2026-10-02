@@ -40,7 +40,6 @@ namespace sw::editor
             ObjectIdentity _identity;
             string         _name;
             vector<uint8>  _bytes;
-            string         _xml;
             string         _prefabPath; ///< 씬이 이 오브젝트에 매어 둔 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 세울 때 되살린다
         };
 

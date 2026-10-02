@@ -133,8 +133,6 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
 
     // 앞뒤가 같으면 애초에 기록하지 않는 계약이므로 일부러 다르게 준다.
     EditorTransaction::recordModify( pObject, EditorObjectSnapshot{ "<a/>", {} }, EditorObjectSnapshot{ "<b/>", {} }, "Probe" );
-    EditorTransaction::recordBinaryModify( pObject, EditorObjectBinarySnapshot{ vector<uint8>{ 1 }, {} }, EditorObjectBinarySnapshot{ vector<uint8>{ 2 }, {} },
-                                           "Probe binary" );
 }
 
 /**

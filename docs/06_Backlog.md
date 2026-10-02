@@ -2079,6 +2079,23 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 56 플레이 종료 — 부모 · 자식이 모두 지워지면 자식이 먼저 되살아나 루트로 남았다 · 스냅샷 API 정리)
+
+(B) 스물다섯째의 남은 것 "스냅샷 · 리바인드 API 정리" 를 하다 결함이 나왔다. 플레이 종료 복원은 스냅샷 순서(만든 순서)대로 오브젝트를 읽고, 읽을 때
+부모를 이름(`_attachOwner`)으로 찾아 붙인다. 플레이 중에 부모도 지워졌고 자식을 먼저 만들었으면 자식을 읽는 순간 부모가 없어 **루트로 남았다**.
+모두 읽은 뒤 계층을 다시 잇는 단계는 XML 폴백에만 있었는데, 그 폴백은 바이너리 저장이 실패할 때만(오브젝트가 null) 타서 실제로는 돌지 않았다.
+씬 로드(`Scene::instantiate`)와 같은 두 단계로 — 모두 읽은 뒤 복원한 오브젝트마다 계층을 다시 잇는다.
+
+함께 걷은 것(모두 호출이 없거나 받은 것을 쓰지 않았다): `rebindSceneHierarchy` 의 XML 문자열 인자(받고 버렸다) → `rebindSceneHierarchy( GameObject* )`,
+`rebindSceneHierarchyFromJson`, `ObjectStateSerializer::saveToXmlFile` · `loadFromXmlFile`, 플레이 스냅샷 · 복제의 XML 폴백(`ObjectSnapshot::_xml`),
+되돌리기의 바이너리 판(`EditorObjectBinarySnapshot` · `captureBinarySnapshot` · `recordBinaryModify` — 미룬 결정 "되돌리기 스냅샷의 바이너리 통일"):
+XML 은 float 를 `std::to_chars` 최단 왕복으로 적어 되돌리기가 값을 잃지 않으므로, 바이너리로 바꿀 정확성 이유가 없다 — 속도가 문제가 되면 그때
+언리얼 `FTransaction` 처럼 바꾼다(지금은 쓰는 곳 없는 두 번째 길이었다).
+
+**검증.** `EditorPlaySessionTest.StopRestoresAHierarchyWhoseChildWasCreatedFirst`(자식 먼저 만든 계층, 둘 다 지운 뒤 Stop — 이전 코드에서 진다) ·
+`PauseFromStoppedThenPlayStartsTheWorld`(스물다섯째 (5) — 멈춤 → 일시정지 → 플레이가 월드를 켜고 스냅샷을 찍는다; 고쳤지만 EditorContext 를 세울 수
+없어 시험이 없던 것, 상태 전환 본체가 상태를 인자로 받으면서 생겼다). 다시 잇기 단계를 빼는 변이에 진다. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 55 트랜스폼 쓰기 — 두 워커가 한 컴포넌트의 칸을 동시에 썼고, 이기는 값이 스레드 배정에 달렸다: 대상 단위로 나눈다)
 
 (B) 스물다섯째의 남은 것 "병렬 트랜스폼 쓰기 적용의 경합". 감사 뒤에 자기 오브젝트 쓰기(대기 칸)는 따로 갈라졌지만 나머지는 그대로였다.

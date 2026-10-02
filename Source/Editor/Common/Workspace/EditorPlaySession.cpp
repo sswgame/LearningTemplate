@@ -68,10 +68,7 @@ namespace sw::editor
                     if ( pContext != nullptr )
                         entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._identity._objectId );
 
-                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) == false )
-                        entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
-
-                    if ( entry._bytes.empty() == false || entry._xml.empty() == false )
+                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
                         data._listSnapshot.push_back( std::move( entry ) );
                 }
 
@@ -160,35 +157,18 @@ namespace sw::editor
 
                     mapRestored[snap._identity._objectId] = pObj;
 
-                    if ( snap._bytes.empty() == false )
-                    {
-                        string parentName;
-                        if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName, &snap._identity ) == 0 )
-                            SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
-                    }
-                    else if ( snap._xml.empty() == false )
-                    {
-                        if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml, &snap._identity ) == false )
-                            SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
-                    }
+                    string parentName;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName, &snap._identity ) == 0 )
+                        SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
                 }
 
-                // 3. 계층 관계 다시 연결 (XML 스냅샷 폴백용)
-                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                // 3. 계층을 다시 잇는다 — **모두 읽은 뒤에.** 읽는 동안에는 부모를 이름으로 찾는데, 플레이 중에 부모도 지워졌고 자식이 스냅샷에서
+                // 먼저 나오면(먼저 만들었으면) 그 순간 부모가 아직 없어 루트로 남았다. 씬 로드(`Scene::instantiate`)와 같은 두 단계다. 예전에는
+                // 이 단계가 XML 폴백에만 있었는데, 그 폴백은 바이너리 저장이 실패할 때만(오브젝트가 null) 타서 실제로는 돌지 않았다.
+                for ( const auto& [objectId, pObj] : mapRestored )
                 {
-                    if ( snap._xml.empty() )
-                        continue;
-
-                    GameObject* pObj = nullptr;
-                    auto        it   = mapRestored.find( snap._identity._objectId );
-                    if ( it != mapRestored.end() )
-                        pObj = it->second;
-
-                    if ( pObj == nullptr )
-                        continue;
-
-                    if ( ObjectStateSerializer::rebindSceneHierarchy( pObj, snap._xml ) == false )
-                        SW_LOG_WARNING( "Failed to rebind scene hierarchy for '%#'.", snap._name.c_str() );
+                    (void)objectId;
+                    ObjectStateSerializer::rebindSceneHierarchy( pObj );
                 }
 
                 SW_LOG_TRACE( "Play snapshot restored (%# objects).",

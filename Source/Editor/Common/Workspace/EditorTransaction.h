@@ -28,13 +28,6 @@ namespace sw::editor
         ObjectIdentity _identity;
     };
 
-    /** @brief `EditorObjectSnapshot` 의 바이너리 판입니다. */
-    struct EditorObjectBinarySnapshot
-    {
-        vector<uint8>  _bytes;
-        ObjectIdentity _identity;
-    };
-
     /**
      * @class EditorTransaction
      * @brief 스냅샷으로 GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
@@ -53,10 +46,6 @@ namespace sw::editor
         static void recordModify( GameObject* pObj, const EditorObjectSnapshot& before, const EditorObjectSnapshot& after,
                                   string_view label = "Modify GameObject" );
 
-        /** @brief 오브젝트 하나의 수정 전후 바이너리 상태를 Undo/Redo 에 기록합니다. 전후 바이트가 같으면 기록하지 않습니다. */
-        static void recordBinaryModify( GameObject* pObj, const EditorObjectBinarySnapshot& before, const EditorObjectBinarySnapshot& after,
-                                        string_view label = "Modify GameObject" );
-
         /** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
         static void recordCreation( GameObject* pObj, string_view label = "Create GameObject" );
 
@@ -65,9 +54,6 @@ namespace sw::editor
 
         /** @brief 현재 게임오브젝트의 전체 상태를 XML 스냅샷으로 캡처합니다(런타임 id 포함). nullptr 이면 빈 스냅샷입니다. */
         static EditorObjectSnapshot captureSnapshot( const GameObject* pObj );
-
-        /** @brief 현재 게임오브젝트의 전체 상태를 바이너리 스냅샷으로 캡처합니다(런타임 id 포함). */
-        static bool captureBinarySnapshot( const GameObject* pObj, EditorObjectBinarySnapshot& outSnapshot );
 
         /**
          * @brief 오브젝트 수명 편집의 방향입니다. 어느 쪽이 "되살리기" 인지를 정합니다.

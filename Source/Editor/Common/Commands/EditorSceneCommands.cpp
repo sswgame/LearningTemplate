@@ -81,8 +81,8 @@ namespace sw::editor
             return nullptr;
 
         vector<uint8> buffer;
-        const bool    bSavedBinary = ObjectStateSerializer::saveToBinaryBuffer( pSrc, buffer );
-        const string  xml          = bSavedBinary ? string{} : ObjectStateSerializer::saveToXmlString( pSrc );
+        if ( ObjectStateSerializer::saveToBinaryBuffer( pSrc, buffer ) == false )
+            return nullptr;
 
         fixed_string<constant::kMaxBuffer256> newName;
         formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
@@ -91,16 +91,8 @@ namespace sw::editor
         if ( pNewObj == nullptr )
             return nullptr;
 
-        if ( bSavedBinary )
-        {
-            string parentName;
-            ObjectStateSerializer::loadFromBinaryBuffer( pNewObj, buffer.data(), buffer.size(), parentName );
-        }
-        else
-        {
-            ObjectStateSerializer::loadFromXmlString( pNewObj, xml );
-            ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
-        }
+        string parentName;
+        ObjectStateSerializer::loadFromBinaryBuffer( pNewObj, buffer.data(), buffer.size(), parentName );
 
         pNewObj->setName( hashed_string( newName.c_str() ) );
         if ( pSrc->getParent() != nullptr )

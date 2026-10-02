@@ -146,7 +146,7 @@ namespace sw
             return false;
 
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다. 그래서 두 번째 단계가 있다.
-        vector<pair<GameObject*, string_view>> listRebindTarget;
+        vector<GameObject*> listRebindTarget;
         listRebindTarget.reserve( doc._listEntityNode.size() );
 
         for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
@@ -183,7 +183,7 @@ namespace sw
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), parentName ) == 0 )
                         SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
                     else
-                        listRebindTarget.emplace_back( pGo, string_view{} );
+                        listRebindTarget.push_back( pGo );
                 }
                 else if ( entity._embeddedXml.empty() == false )
                 {
@@ -192,16 +192,13 @@ namespace sw
 
                     const bool bHasHierarchy = ( entity._embeddedXml.find( "_attachOwner=" ) != string::npos );
                     if ( bHasHierarchy )
-                        listRebindTarget.emplace_back( pGo, entity._embeddedXml );
+                        listRebindTarget.push_back( pGo );
                 }
             }
         }
 
-        for ( const auto& [pTargetGo, xmlView] : listRebindTarget )
-        {
-            if ( pTargetGo != nullptr )
-                ObjectStateSerializer::rebindSceneHierarchy( pTargetGo, xmlView );
-        }
+        for ( GameObject* pTargetGo : listRebindTarget )
+            ObjectStateSerializer::rebindSceneHierarchy( pTargetGo );
 
         _objectManager->mergePendingAdds();
         _objectManager->flushSceneTransforms();

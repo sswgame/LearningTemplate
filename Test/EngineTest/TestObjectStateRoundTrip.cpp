@@ -192,7 +192,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, json ) );
     SW_EXPECT_STREQ( "SerializedHero", jsonTargetPtr->getName().c_str() );
     SW_EXPECT_FALSE( jsonTargetPtr->isActive() );
-    SW_EXPECT_TRUE( ObjectStateSerializer::rebindSceneHierarchyFromJson( jsonTargetPtr, json ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( jsonTargetPtr ) );
 
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( nullptr, json ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, "" ) );
@@ -254,9 +254,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml ) );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml ) );
 
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( parent, parentXml ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( child, childXml ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( grand, grandXml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( parent ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( child ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( grand ) );
 
     parent = manager->findGameObjectByName( hashed_string( "ParentGO" ) );
     child  = manager->findGameObjectByName( hashed_string( "ChildGO" ) );

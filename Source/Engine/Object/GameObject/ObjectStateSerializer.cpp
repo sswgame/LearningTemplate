@@ -276,41 +276,13 @@ namespace sw
         return loadFromText<JsonSerializer>( pGameObject, jsonString, pIdentity );
     }
 
-    bool ObjectStateSerializer::rebindSceneHierarchy( GameObject* pGameObject, string_view xmlString )
+    bool ObjectStateSerializer::rebindSceneHierarchy( GameObject* pGameObject )
     {
-        // 계층은 로드가 SceneComponent 의 Attach 필드에 이미 읽어 두었다. 문자열을 다시 읽지 않는다(포맷과 무관하다).
-        (void)xmlString;
         if ( pGameObject == nullptr )
             return false;
 
         pGameObject->applyLoadedHierarchy();
         return true;
-    }
-
-    bool ObjectStateSerializer::rebindSceneHierarchyFromJson( GameObject* pGameObject, string_view jsonString )
-    {
-        return rebindSceneHierarchy( pGameObject, jsonString );
-    }
-
-    bool ObjectStateSerializer::saveToXmlFile( const GameObject* pGameObject, string_view filePath )
-    {
-        string xmlStr = saveToXmlString( pGameObject );
-        if ( xmlStr.empty() )
-            return false;
-
-        return FileUtil::writeFile( string{ filePath }, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() );
-    }
-
-    bool ObjectStateSerializer::loadFromXmlFile( GameObject* pGameObject, string_view filePath )
-    {
-        vector<uint8> listData;
-        if ( ResourceUtil::readBinaryResource( filePath, listData ) == false && FileUtil::readFile( string{ filePath }, listData ) == false )
-            return false;
-        if ( listData.empty() )
-            return false;
-
-        string_view xmlStr( reinterpret_cast<const utf8*>( listData.data() ), listData.size() );
-        return loadFromXmlString( pGameObject, xmlStr );
     }
 
     ObjectIdentity ObjectStateSerializer::captureIdentity( const GameObject* pGameObject )
