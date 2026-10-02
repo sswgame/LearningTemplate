@@ -2074,6 +2074,20 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (구조 ③ 에디터 플레이 — 씬을 여는 중에 누른 Play 를 미뤘다가 로드가 끝난 프레임에 시작한다, 상태 전환을 시험할 수 있게)
+
+㊿ 의 남은 한계: "씬을 여는 중에는 Play 를 시작하지 않는다(경고)" 는 거절이었고 — 사용자가 다시 눌러야 했다 — 시험이 없었다(상태 전환이 EditorContext 를
+요구하는데 EditorTest 는 그것을 만들 수 없다). 언리얼은 Play 를 **요청**으로 받아(`RequestPlaySession`) 걸어 두고 다음 틱에 시작한다.
+- `EditorPlaySession::setState( PlaySessionData&, 상태 )` — 상태 전환 본체가 상태를 인자로 받는다(파사드 `setState( 상태 )` 는 컨텍스트의 상태로 부른다).
+  정지에서 시작할 때 씬을 여는 중(`SceneManager::isTransitioning`)이면 시작을 **미룬다**(`_bStartQueued` · `_queuedState`). Stop 은 미룬 시작도 거둔다.
+- `EditorPlaySession::update()` — 매 에디터 프레임(`ImGuiEditor::onHostFrameEnd`)에 미룬 시작이 있고 로드가 끝났으면 시작한다. 게임 뷰는 미룬 동안
+  "Starting" 칩을 보인다(Stop 으로 취소).
+
+**검증.** `EditorPlaySessionTest.PlayRequestedWhileASceneLoadsStartsAfterTheLoad`(실제 비동기 씬 로드 중에 Play — 정지 · 미룸, 로드가 들어오기 전의 update 는
+시작하지 않고, 로드가 들어온 프레임에 그 씬의 스냅샷으로 시작, Stop 은 같은 씬에 되돌린다), `StopCancelsAQueuedPlay`(미룬 Play 를 Stop 으로 거두면 로드 뒤에도
+시작하지 않는다). 변이 셋(로드 중에도 시작 · 미룬 것을 시작하지 않음 · Stop 이 거두지 않음)이 모두 실패했다. `update` 의 "로드 중이면 그냥 돌아간다" 를 빼는
+변이는 살았다 — `setState` 가 다시 미루므로 결과가 같고, 다른 것은 Info 로그가 프레임마다 다시 찍히는 것뿐이다(그래서 둔다).
+
 ### 2026-10-02 (구조 ② 머티리얼 인스턴스 — 텍스처를 에셋으로 덮어쓴다, 합친 배치의 인스턴스도 GPU 에 올린다)
 
 ㊽ 의 남은 한계("인스턴스의 날 텍스처 인덱스는 텍스처 리로드를 따라가지 못한다")를 보다가 셋이 더 나왔다.

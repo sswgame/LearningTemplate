@@ -115,6 +115,12 @@ namespace sw::editor
         EditorContext*         pContext     = EditorContext::get();
         const bool             bSceneDirty  = ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
 
+        if ( EditorPlaySession::isPlayQueued() )
+        {
+            EditorWidgets::drawChip( "Starting", editor::style::kWarn );
+            EditorWidgets::drawTooltip( "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)" );
+            ImGui::SameLine();
+        }
         if ( currentState == PlaySessionState::Playing )
         {
             EditorWidgets::drawChip( "Playing", editor::style::kOk );

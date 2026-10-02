@@ -569,6 +569,8 @@ namespace sw::editor
 
     void ImGuiEditor::onHostFrameEnd()
     {
+        // 씬을 여는 중에 누른 Play 는 미뤄져 있다 — 로드가 끝난 프레임에 여기서 시작한다.
+        EditorPlaySession::update();
         EditorPlaySession::consumePendingStep();
     }
 

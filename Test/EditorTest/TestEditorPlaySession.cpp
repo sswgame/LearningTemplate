@@ -1,9 +1,13 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
+
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 
 #include "EditorTest/EditorTestServices.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -27,6 +31,28 @@ namespace
                 ++count;
         } );
         return count;
+    }
+
+    /** @brief 엔티티 하나가 있는 씬 파일을 씁니다(비동기 로드용). */
+    sw::string writeQueuedPlaySceneFile( const utf8* pFileName, const utf8* pSceneName )
+    {
+        const sw::string path = test::makeTempPath( pFileName );
+        const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"0\" name=\"" ) + pSceneName +
+                                "\">\n  <entities>\n    <entity name=\"Boss\"/>\n  </entities>\n</Scene>\n";
+        return sw::FileUtil::writeTextFile( path, text ) ? path : sw::string{};
+    }
+
+    /** @brief 에디터 프레임을 흉내 냅니다 — 태스크를 비우고, 끝난 로드를 들이고(tickTransitions), 플레이 세션을 갱신합니다. */
+    void runEditorFramesUntil( SceneManager& sceneManager, PlaySessionData& data, bool ( *pfnDone )( const SceneManager&, const PlaySessionData& ) )
+    {
+        for ( int32 frame = 0; frame < 2000 && pfnDone( sceneManager, data ) == false; ++frame )
+        {
+            sw::engine::getTaskManager().waitAll();
+            sceneManager.tickTransitions();
+            EditorPlaySession::update( data );
+            if ( pfnDone( sceneManager, data ) == false )
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+        }
     }
 } // namespace
 
@@ -113,4 +139,72 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
     pObjects->mergePendingAdds();
     SW_EXPECT_NOT_NULL( pObjects->findGameObjectById( heroId ) );
     SW_EXPECT_EQUAL( size_t( 0 ), countLivePlayObjectsNamed( *pObjects, "Bullet" ) );
+}
+
+/**
+ * @brief [EditorPlaySessionTest] 씬을 여는 중에 누른 Play 는 미뤄졌다가 로드가 끝난 프레임에 그 씬으로 시작한다
+ * @details 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍고 플레이 중에 로드가 끝나 씬이 바뀐다. 예전(㊿)에는 그때 거절했고(경고), 그 전에는 그냥 시작했다.
+ *          언리얼 `RequestPlaySession` 처럼 요청을 걸어 두고 다음 틱에 시작한다. 이 시험이 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는
+ *          EditorContext 를 만들 수 없다).
+ */
+SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterTheLoad )
+{
+    const sw::string scenePath = writeQueuedPlaySceneFile( "queuedplay.xml", "LoadedLevel" );
+    SW_ASSERT_FALSE( scenePath.empty() );
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    PlaySessionData data;
+    SW_ASSERT_TRUE( sceneManager.requestLoadAsync( scenePath ) );
+    SW_ASSERT_TRUE( sceneManager.isTransitioning() );
+
+    EditorPlaySession::setState( data, PlaySessionState::Playing );
+    SW_EXPECT_TRUE_MSG( data._state == PlaySessionState::Stopped, "씬을 여는 중인데 곧 내려갈 씬으로 플레이를 시작했습니다" );
+    SW_EXPECT_TRUE_MSG( data._bStartQueued != SW_FALSE, "씬을 여는 중에 누른 Play 를 미뤄 두지 않았습니다" );
+    // 로드가 아직 들어오지 않았으면(tickTransitions 전) 프레임이 돌아도 시작하지 않는다.
+    EditorPlaySession::update( data );
+    SW_EXPECT_TRUE_MSG( data._state == PlaySessionState::Stopped, "씬 로드가 끝나기 전에 미룬 플레이를 시작했습니다" );
+
+    runEditorFramesUntil( sceneManager, data, []( const SceneManager&, const PlaySessionData& state )
+    { return state._state != PlaySessionState::Stopped; } );
+    SW_ASSERT_TRUE_MSG( data._state == PlaySessionState::Playing, "로드가 끝났는데 미룬 플레이가 시작하지 않았습니다" );
+    SW_EXPECT_TRUE( data._bStartQueued == SW_FALSE );
+    SW_EXPECT_TRUE_MSG( data._sceneName == "LoadedLevel", data._sceneName.c_str() ); // 스냅샷은 로드한 씬의 것이다
+    SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
+
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    SW_ASSERT_NOT_NULL( sceneManager.getActiveScene() );
+    SW_EXPECT_TRUE( sceneManager.getActiveScene()->getName() == "LoadedLevel" );
+    sceneManager.shutdown();
+}
+
+/**
+ * @brief [EditorPlaySessionTest] 미룬 Play 는 Stop 으로 거둔다 — 로드가 끝나도 저절로 시작하지 않는다
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StopCancelsAQueuedPlay )
+{
+    const sw::string scenePath = writeQueuedPlaySceneFile( "cancelledplay.xml", "LoadedLevel" );
+    SW_ASSERT_FALSE( scenePath.empty() );
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    PlaySessionData data;
+    SW_ASSERT_TRUE( sceneManager.requestLoadAsync( scenePath ) );
+    EditorPlaySession::setState( data, PlaySessionState::Playing );
+    SW_ASSERT_TRUE( data._bStartQueued != SW_FALSE );
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    SW_EXPECT_TRUE( data._bStartQueued == SW_FALSE );
+
+    runEditorFramesUntil( sceneManager, data, []( const SceneManager& manager, const PlaySessionData& )
+    { return manager.isTransitioning() == false; } );
+    EditorPlaySession::update( data );
+    SW_EXPECT_TRUE_MSG( data._state == PlaySessionState::Stopped, "거둔 Play 가 로드 뒤에 시작했습니다" );
+    SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
+    sceneManager.shutdown();
 }

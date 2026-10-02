@@ -248,6 +248,12 @@ namespace sw::editor
         return pData != nullptr && pData->_bStepPending == SW_TRUE;
     }
 
+    bool EditorPlaySession::isPlayQueued()
+    {
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr && pData->_bStartQueued != SW_FALSE;
+    }
+
     void EditorPlaySession::stepOnce()
     {
         PlaySessionData* pData = EditorPlaySessionInternal::data();
@@ -256,7 +262,7 @@ namespace sw::editor
         if ( pData->_state == PlaySessionState::Stopped )
         {
             setState( PlaySessionState::Playing );
-            if ( pData->_state == PlaySessionState::Stopped ) // 시작하지 못했다(씬을 여는 중) — 스냅샷 없이 한 프레임을 돌리지 않는다
+            if ( pData->_state == PlaySessionState::Stopped ) // 시작을 미뤘다(씬을 여는 중) — 로드가 끝나면 플레이로 시작한다
                 return;
         }
         pData->_bStepPending = SW_TRUE;
@@ -275,21 +281,53 @@ namespace sw::editor
     void EditorPlaySession::setState( PlaySessionState state )
     {
         PlaySessionData* pData = EditorPlaySessionInternal::data();
-        if ( pData == nullptr || pData->_state == state )
+        if ( pData != nullptr )
+            setState( *pData, state );
+    }
+
+    void EditorPlaySession::update()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData != nullptr )
+            update( *pData );
+    }
+
+    void EditorPlaySession::update( PlaySessionData& data )
+    {
+        if ( data._bStartQueued == SW_FALSE )
+            return;
+        const SceneManager* pSceneManager = editor::getService<SceneManager>();
+        if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
+            return;
+        data._bStartQueued = SW_FALSE;
+        setState( data, data._queuedState );
+    }
+
+    void EditorPlaySession::setState( PlaySessionData& data, PlaySessionState state )
+    {
+        // Stop 은 미룬 시작도 거둔다 — 로드가 끝난 뒤 사용자가 멈춘 플레이가 저절로 시작하면 안 된다.
+        if ( state == PlaySessionState::Stopped )
+            data._bStartQueued = SW_FALSE;
+        if ( data._state == state )
             return;
 
-        // 씬을 여는 중이면 플레이를 시작하지 않는다. 스냅샷은 지금 씬을 찍는데 플레이 중에 로드가 끝나 씬이 바뀌면, Stop 이 되돌릴 씬이 사용자가
-        // 막 연 씬이 아니게 된다.
-        if ( pData->_state == PlaySessionState::Stopped )
+        // 씬을 여는 중이면 시작을 미룬다(언리얼 RequestPlaySession 처럼 요청을 걸어 두고 로드가 끝난 프레임에 update 가 시작한다). 지금 시작하면
+        // 스냅샷은 곧 내려갈 씬을 찍고, 플레이 중에 로드가 끝나 씬이 바뀐다 — Stop 이 되돌릴 씬이 사용자가 막 연 씬이 아니게 된다.
+        if ( data._state == PlaySessionState::Stopped )
         {
             const SceneManager* pSceneManager = editor::getService<SceneManager>();
             if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
             {
-                SW_LOG_WARNING( "씬을 여는 중이라 플레이를 시작하지 않습니다 — 로드가 끝난 뒤 다시 시작하십시오." );
+                if ( data._bStartQueued == SW_FALSE )
+                    SW_LOG_INFO( "씬을 여는 중입니다 — 로드가 끝나면 플레이를 시작합니다." );
+                data._bStartQueued = SW_TRUE;
+                data._queuedState  = state;
                 return;
             }
         }
+        data._bStartQueued = SW_FALSE;
 
+        PlaySessionData* pData          = &data;
         pData->_bStepPending            = SW_FALSE;
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;

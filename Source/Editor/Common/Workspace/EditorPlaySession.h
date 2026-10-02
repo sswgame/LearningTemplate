@@ -50,13 +50,16 @@ namespace sw::editor
          * @details Stop 때 활성 씬의 세대가 다르면 플레이 중에 씬이 바뀐 것이다(게임 코드가 다음 레벨을 열었다). 그때는 편집하던 씬을 이 이름 ·
          *          소스 경로로 다시 세운 뒤 되돌린다(`EditorPlaySession::restoreSnapshot`).
          */
-        uint64                 _sceneGeneration;
-        string                 _sceneName;
-        string                 _sceneSourcePath;
-        PlaySessionState       _state{ PlaySessionState::Stopped };
+        uint64           _sceneGeneration;
+        string           _sceneName;
+        string           _sceneSourcePath;
+        PlaySessionState _state{ PlaySessionState::Stopped };
+        /** @brief 씬을 여는 중에 요청한 시작 상태입니다(`_bStartQueued` 일 때만 뜻이 있다). 로드가 끝난 프레임에 `update` 가 이 상태로 시작한다. */
+        PlaySessionState       _queuedState{ PlaySessionState::Stopped };
         uint8                  _bStepPending : 1;
         uint8                  _bHasSnapshot : 1;
-        [[maybe_unused]] uint8 _reserved     : 6;
+        uint8                  _bStartQueued : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼 RequestPlaySession 의 대기 요청)
+        [[maybe_unused]] uint8 _reserved     : 5;
 
         PlaySessionData()
             : _listSnapshot{}
@@ -64,8 +67,10 @@ namespace sw::editor
             , _sceneName{}
             , _sceneSourcePath{}
             , _state{ PlaySessionState::Stopped }
+            , _queuedState{ PlaySessionState::Stopped }
             , _bStepPending{ SW_FALSE }
             , _bHasSnapshot{ SW_FALSE }
+            , _bStartQueued{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -90,9 +95,22 @@ namespace sw::editor
         static bool isStopped();
         /** @brief 이번 프레임에 Step이 예약되어 있는지 반환합니다. */
         static bool hasPendingStep();
+        /** @brief 씬을 여는 중이라 시작이 미뤄져 있으면 true 입니다(로드가 끝나면 `update` 가 시작한다). */
+        static bool isPlayQueued();
 
         /** @brief 플레이 세션 상태를 변경합니다 (스냅샷 캡처 및 롤백 복구 처리). */
         static void setState( PlaySessionState state );
+        /**
+         * @brief `setState` 의 본체입니다. 상태를 인자로 받아 에디터 컨텍스트 없이도 시험할 수 있습니다.
+         * @details 정지에서 시작할 때 씬을 여는 중이면(`SceneManager::isTransitioning`) **시작을 미룹니다** — 언리얼 `RequestPlaySession` 이 요청을
+         *          걸어 두고 다음 틱에 시작하듯, 로드가 끝난 프레임에 `update` 가 시작합니다. 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍고, 플레이 중에
+         *          로드가 끝나 씬이 바뀝니다. 예전에는 그때 거절했다(경고만) — 사용자가 다시 눌러야 했다. Stop 은 미룬 시작도 거둡니다.
+         */
+        static void setState( PlaySessionData& data, PlaySessionState state );
+        /** @brief 매 에디터 프레임에 부릅니다. 미룬 시작이 있고 씬 로드가 끝났으면 시작합니다. */
+        static void update();
+        /** @brief `update` 의 본체입니다(상태를 인자로 받는다). */
+        static void update( PlaySessionData& data );
         /** @brief 시뮬레이션을 시작합니다. */
         static void play() { setState( PlaySessionState::Playing ); }
         /** @brief 시뮬레이션을 일시정지합니다. */
