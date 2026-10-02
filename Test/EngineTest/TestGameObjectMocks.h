@@ -707,4 +707,43 @@ namespace sw
                                           sizeof( MockNoTickComponent ) );
     }
 
+    /**
+     * @brief 상태를 다 읽으면(`onPostLoad`) 정해 둔 프리팹을 스폰하는 컴포넌트입니다 — 프리팹 안에 두면 "스폰이 스폰을 부르는" 순환이 된다.
+     * @details 스폰의 상태 읽기가 만드는 컴포넌트라 설정은 정적 칸으로 받습니다(정의는 TestGameObjectMocks.cpp 에 한 번). 순환 방어가 없을 때
+     *          시험이 스택을 넘기지 않고 지도록 `kMaxNestedSpawn` 번에서 멈춥니다.
+     */
+    class MockPostLoadSpawnerComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr int32 kMaxNestedSpawn = 4;
+        static PrefabManager*  s_pPrefabs; ///< 설정되면 `onPostLoad` 가 `s_spawnPath` 를 같은 매니저에 스폰한다
+        static string          s_spawnPath;
+        static int32           s_spawnAttemptCount; ///< `onPostLoad` 가 스폰을 시도한 횟수
+        static int32           s_spawnedCount;      ///< 그 스폰이 오브젝트를 돌려준 횟수
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+
+        void onPostLoad() override
+        {
+            Component::onPostLoad();
+            if ( s_pPrefabs == nullptr || getOwner() == nullptr || getOwner()->getManager() == nullptr || s_spawnAttemptCount >= kMaxNestedSpawn )
+                return;
+            ++s_spawnAttemptCount;
+            if ( s_pPrefabs->spawn( getOwner()->getManager(), s_spawnPath, "Nested" ) != nullptr )
+                ++s_spawnedCount;
+        }
+    };
+
+    inline const TypeInfo* MockPostLoadSpawnerComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( hashed_string( "MockPostLoadSpawnerComponent" ),
+                                          hashed_string( "sw::MockPostLoadSpawnerComponent" ),
+                                          sizeof( MockPostLoadSpawnerComponent ) );
+    }
+
 } // namespace sw

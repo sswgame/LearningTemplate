@@ -111,7 +111,14 @@ namespace sw
         const utf8* pValue = get( mapData, key, nullptr );
         if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
-        return StringUtil::parseBool( pValue, fallback );
+        // 형제 `getInt` · `getFloat` 처럼 못 읽은 글은 알린다. 예전에는 `parseBool` 이 "ture" 를 말없이 폴백으로 돌려줬다.
+        bool value{ fallback };
+        if ( StringUtil::tryParseBool( pValue, value ) == false )
+        {
+            SW_LOG_WARNING( "Key '%#' has an unreadable boolean '%#' - using %#", key, pValue, fallback ? "true" : "false" );
+            return fallback;
+        }
+        return value;
     }
 
     string KeyValueFile::dump( const KeyValueMap& mapData, string_view headerComment, string_view sectionName )

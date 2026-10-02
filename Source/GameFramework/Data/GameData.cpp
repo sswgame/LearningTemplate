@@ -27,21 +27,41 @@ namespace sw
     //   (2) **대소문자를 반만 봤다.** bool 은 `true`/`True`/`1` 만 알아서 `TRUE` · `yes` · `on`
     //       은 모두 fallback 으로 떨어졌다. `StringUtil::parseBool` 은 처음부터 그것들을 안다.
     // 덤으로 손수 푸는 쪽은 매번 `string` 을 하나씩 만들었다(파서는 `string_view` 로 받는다).
+    // 값이 있는데 못 읽으면 알린다(없거나 빈 값은 조용히 fallback) — `KeyValueFile` 의 형제 조회와 같은 규칙이다. 예전에는 셋 다 말없이 fallback 이었다.
     int32 GameData::getCustomPropertyInt( string_view key, int32 fallback ) const
     {
-        int32 value{ 0 };
-        return StringUtil::parseInt( getCustomProperty( key ), value ) ? value : fallback;
+        const string_view text = getCustomProperty( key );
+        int32             value{ 0 };
+        if ( text.empty() )
+            return fallback;
+        if ( StringUtil::parseInt( text, value ) )
+            return value;
+        SW_LOG_WARNING( "GameData '%#' has an unreadable integer '%#' - using %#", key, text, fallback );
+        return fallback;
     }
 
     float32 GameData::getCustomPropertyFloat( string_view key, float32 fallback ) const
     {
-        float32 value{ 0.0f };
-        return StringUtil::parseFloat( getCustomProperty( key ), value ) ? value : fallback;
+        const string_view text = getCustomProperty( key );
+        float32           value{ 0.0f };
+        if ( text.empty() )
+            return fallback;
+        if ( StringUtil::parseFloat( text, value ) )
+            return value;
+        SW_LOG_WARNING( "GameData '%#' has an unreadable number '%#' - using %#", key, text, fallback );
+        return fallback;
     }
 
     bool GameData::getCustomPropertyBool( string_view key, bool bFallback ) const
     {
-        return StringUtil::parseBool( getCustomProperty( key ), bFallback );
+        const string_view text = getCustomProperty( key );
+        bool              value{ bFallback };
+        if ( text.empty() )
+            return bFallback;
+        if ( StringUtil::tryParseBool( text, value ) )
+            return value;
+        SW_LOG_WARNING( "GameData '%#' has an unreadable boolean '%#' - using %#", key, text, bFallback ? "true" : "false" );
+        return bFallback;
     }
 
     bool GameData::loadFromResource( string_view assetRelativePath )

@@ -176,29 +176,41 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 }
 
 /**
- * @brief [PrefabTest] 프리팹 자기 참조 및 순환 참조 스폰 시 스택 오버플로우 방어 검증
+ * @brief [PrefabTest] 스폰이 같은 프리팹의 스폰을 부르면(순환) 안쪽 스폰만 거절되고 바깥 스폰은 끝난다 — 스택을 넘기지 않는다
+ * @details 예전 시험은 GameObject 의 프로퍼티가 아닌 `_prefabAssetPath` 를 적은 프리팹을 스폰했다 — 그 칸은 버려졌고(로드마다 알리는 경고가
+ *          드러냈다) 순환은 **한 번도** 일어나지 않았다. 순환 방어를 지워도 통과하는 시험이었다. 이제 상태를 다 읽으면(`onPostLoad`) 같은 프리팹을
+ *          스폰하는 컴포넌트를 프리팹 안에 둔다 — 엔진에서 스폰이 스폰을 부르는 길은 이것(컴포넌트 수명 훅)뿐이다.
  */
 SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "Circular prefab spawn test is Dev-only" );
-#else
-    const sw::string tempPath   = test::makeTempPath( "circular_self.prefab.json" );
-    const sw::string prefabJson = sw::string( R"({
-		"_name": "CircularSelf",
-		"_prefabAssetPath": ")" ) +
-                                  tempPath + R"("
-	})";
-
-    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( tempPath, prefabJson ) );
+    sw::GameObjectManager authoring;
+    sw::RegisterMockComponents( authoring );
+    sw::GameObject* pSource = authoring.createGameObject( sw::hashed_string( "CircularSelf" ) );
+    SW_ASSERT_NOT_NULL( pSource->addComponent<sw::MockPostLoadSpawnerComponent>() );
+    sw::PrefabAsset asset;
+    asset.setFromGameObject( pSource );
+    const sw::string xmlPath = test::makeTempPath( "circular_self.prefab.xml" );
+    SW_ASSERT_TRUE( asset.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::RegisterMockComponents( objects );
+    sw::PrefabManager prefabs;
+    sw::MockPostLoadSpawnerComponent::s_pPrefabs          = &prefabs;
+    sw::MockPostLoadSpawnerComponent::s_spawnPath         = xmlPath;
+    sw::MockPostLoadSpawnerComponent::s_spawnAttemptCount = 0;
+    sw::MockPostLoadSpawnerComponent::s_spawnedCount      = 0;
+    sw::GameObject* pSpawned                              = nullptr;
+    {
+        test::ScopedDefensiveTestLog expected( "a prefab whose component spawns the same prefab" );
+        pSpawned = prefabs.spawn( &objects, xmlPath, "TestCircular" );
+    }
+    sw::MockPostLoadSpawnerComponent::s_pPrefabs = nullptr;
 
-    // 순환 참조 감지 시 무한 재귀 없이 안전하게 반환
-    sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "TestCircular" );
-    SW_ASSERT_NOT_NULL( spawned );
-#endif
+    SW_ASSERT_NOT_NULL( pSpawned );                                              // 바깥 스폰은 끝난다
+    SW_EXPECT_EQUAL( 1, sw::MockPostLoadSpawnerComponent::s_spawnAttemptCount ); // 안쪽 스폰은 한 번 시도되어
+    SW_EXPECT_EQUAL( 0, sw::MockPostLoadSpawnerComponent::s_spawnedCount );      // 거절됐다
+    SW_EXPECT_NOT_NULL( pSpawned->getComponent<sw::MockPostLoadSpawnerComponent>() );
 }
 
 /**

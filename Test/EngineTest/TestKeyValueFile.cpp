@@ -334,3 +334,24 @@ SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
     SW_EXPECT_EQUAL( 600, sw::KeyValueFile::getInt( map, "height", 0 ) );
     SW_EXPECT_EQUAL( size_t( 2 ), map.size() );
 }
+
+/**
+ * @brief [KeyValueFileTest] 못 읽은 불리언은 fallback 이 되고 알린다 — 형제 getInt · getFloat 와 같은 규칙
+ * @details `getBool` 만 `parseBool` 로 읽어 "ture" 가 말없이 fallback 이 됐다(정수 · 실수는 이미 경고했다).
+ */
+SW_TEST_CASE( KeyValueFileTest, UnreadableBooleanFallsBackAndSaysSo )
+{
+    sw::KeyValueMap map;
+    SW_ASSERT_TRUE( sw::KeyValueFile::parse( "fullscreen=yes\nvsync=ture\nempty=\n", map ) );
+
+    test::ScopedLogCollector logs;
+    SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "fullscreen", false ) );
+    SW_EXPECT_FALSE( sw::KeyValueFile::getBool( map, "empty", false ) );
+    SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "missing", true ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable boolean" ) == 0, logs.joined().c_str() );
+    {
+        test::ScopedDefensiveTestLog expected( "a boolean key with a typo" );
+        SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "vsync", true ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Key 'vsync' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
+}

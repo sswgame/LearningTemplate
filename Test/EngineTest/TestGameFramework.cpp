@@ -2171,10 +2171,22 @@ SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecom
     gameData._mapCustomProperty["yesBool"]     = "yes";
     gameData._mapCustomProperty["offBool"]     = "OFF";
     gameData._mapCustomProperty["paddedInt"]   = "  12  ";
+    gameData._mapCustomProperty["typoBool"]    = "ture";
 
-    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
+    // 못 읽은 값은 fallback 이 되고 **알린다**(예전에는 말없이 fallback 이었다). 빈 값 · 없는 키는 조용하다.
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "custom properties that do not parse" );
+        SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
+        SW_EXPECT_NEAR_EQUAL( 0.5f, gameData.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
+        SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "typoBool", true ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenInt' has an unreadable integer 'six'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenFloat' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'typoBool' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, gameData.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
+    SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "missingBool", true ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable" ) == 3, logs.joined().c_str() );
 
     // 대소문자와 흔한 철자를 모두 안다 — 반만 아는 사본이 아니다.
     SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );

@@ -1673,9 +1673,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
 - **R2 에서 남은 것**(구조 ⑥ 과 그 잇기 뒤) — JSON 소유 포인터 원소(컴포넌트) 읽기는 엄격해 원소 안의 읽지 못한 값이 `_listComponent` 칸으로 보고된다
-  (XML 처럼 orphan 목록을 내려 줄 것). `KeyValueFile.cpp` · `GameData.cpp` 의 `StringUtil::parseBool` 폴백은 그대로다.
-  `PrefabTest.CircularReferenceSpawnProtection` 의 `_prefabAssetPath` 는 GameObject 프로퍼티가 아니라 이 시험은 순환 참조를 **한 번도 태우지 않는다**
-  (버린 값 경고가 드러냄 — 실제로 순환하는 프리팹으로 고칠 것). `FileUtil::createParentDirectory` ·
+  (XML 처럼 orphan 목록을 내려 줄 것). `FileUtil::createParentDirectory` ·
   `ensureDirectoryExists` 는 "만든다" 인데 void 라 실패를 삼킨다(뒤따르는 쓰기가 실패해 드러날 뿐 — bool + `[[nodiscard]]` 로 바꾸면 28 곳). 이름 가운데 동사
   (`recreate*`)와 .cpp 안 정적 함수는 게이트 밖이다.
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
@@ -2103,6 +2101,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (R2 남은 것 — 순환 프리팹 시험이 순환을 태운다, 키-값 · GameData 커스텀 칸의 못 읽은 값은 알린다)
+
+- **`PrefabTest.CircularReferenceSpawnProtection` 이 순환을 한 번도 태우지 않았다** — GameObject 의 프로퍼티가 아닌 `_prefabAssetPath` 를 적은 프리팹을 스폰했고,
+  그 칸은 버려졌다(R2 의 버린 값 경고가 드러냄). 순환 방어를 지워도 통과하는 시험이었다. 엔진에서 스폰이 스폰을 부르는 길은 컴포넌트 수명 훅뿐이라, 상태를
+  다 읽으면(`onPostLoad`) 같은 프리팹을 스폰하는 목(`MockPostLoadSpawnerComponent`)을 프리팹 안에 둔다 — 안쪽 스폰만 거절되고 바깥은 끝난다. 쿠킹본도 써서
+  Shipping 에서도 돈다(예전에는 Dev 전용으로 건너뛰었다).
+- **`KeyValueFile::getBool` 만 못 읽은 글을 말없이 폴백했다**(형제 `getInt` · `getFloat` 는 경고) — `tryParseBool` + 경고.
+- **`GameData::getCustomPropertyInt` · `Float` · `Bool` 이 값이 있는데 못 읽어도 말없이 fallback 이었다** — 셋 다 경고(없거나 빈 값은 조용하다).
+
+**검증.** 새 시험 1 · 보강 2(이전 코드에서 진다): `KeyValueFileTest.UnreadableBooleanFallsBackAndSaysSo`, `PrefabTest.CircularReferenceSpawnProtection`(다시 씀),
+`GameFrameworkTest.GameData_UnreadableValueFallsBackInsteadOfBecomingZero`(경고 단언). 변이 4 모두 죽음(순환 방어 끄기 · 키-값 불리언 · GameData 정수 · 불리언).
+Debug nogpu · lint 30/30.
 
 ### 2026-10-03 (구조 ⑰ GameData 의 칸은 읽힌다 — 서비스로 묶고, 다국어 · 입력 맵을 적용하고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 쓴다; 통합 ActionMap 은 입력 프레임이 갱신, 언어 코드는 정본 철자 하나 — 1-0j 의 R4)
 

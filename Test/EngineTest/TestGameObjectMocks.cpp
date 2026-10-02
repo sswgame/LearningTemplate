@@ -8,6 +8,11 @@ namespace sw
     atomic<int32> MockPoolLifecycleComponent::s_ctorCount{ 0 };
     atomic<int32> MockPoolLifecycleComponent::s_dtorCount{ 0 };
 
+    PrefabManager* MockPostLoadSpawnerComponent::s_pPrefabs{ nullptr };
+    string         MockPostLoadSpawnerComponent::s_spawnPath{};
+    int32          MockPostLoadSpawnerComponent::s_spawnAttemptCount{ 0 };
+    int32          MockPostLoadSpawnerComponent::s_spawnedCount{ 0 };
+
     /** @brief 테스트 전용 TypeInfo 를 만들거나 캐시에서 반환합니다. */
     const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size, hashed_string parentFqn )
     {
@@ -45,6 +50,7 @@ namespace sw
         MockMidTickDeactivatorComponent::StaticType();
         MockSubTickStressComponent::StaticType();
         MockPoolLifecycleComponent::StaticType();
+        MockPostLoadSpawnerComponent::StaticType();
 
         manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
         manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
@@ -57,5 +63,6 @@ namespace sw
         manager.registerComponentType<MockMidTickDeactivatorComponent>( hashed_string( "MockMidTickDeactivatorComponent" ) );
         manager.registerComponentType<MockSubTickStressComponent>( hashed_string( "MockSubTickStressComponent" ) );
         manager.registerComponentType<MockPoolLifecycleComponent>( hashed_string( "MockPoolLifecycleComponent" ) );
+        manager.registerComponentType<MockPostLoadSpawnerComponent>( hashed_string( "MockPostLoadSpawnerComponent" ) );
     }
 } // namespace sw
