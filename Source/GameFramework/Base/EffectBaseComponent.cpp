@@ -2,7 +2,11 @@
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
@@ -10,6 +14,7 @@ namespace sw
         : _duration{ 0.0f }
         , _currentTimer{ 0.0f }
         , _currentAlpha{ 0.0f }
+        , _listBaseAlpha{}
     {
     }
 
@@ -18,12 +23,19 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
 
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "VFX"_tag );
-
         _currentTimer = 0.0f;
         _currentAlpha = 1.0f;
+        _listBaseAlpha.clear();
+
+        GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr )
+        {
+            pOwner->addTag( "VFX"_tag );
+            // 기준은 시작할 때의 알파다 — 반투명으로 만든 이펙트가 흐려지기 시작할 때 불투명으로 튀지 않게.
+            pOwner->forEachComponentOfType<SpriteComponent>( [this]( SpriteComponent* pSprite )
+            { _listBaseAlpha.push_back( pSprite->getTint()._w ); } );
+        }
+        applyAlphaToSprites();
     }
 
     void EffectBaseComponent::onEndPlay()
@@ -50,6 +62,8 @@ namespace sw
                 if ( pOwner != nullptr )
                     pOwner->destroy();
             }
+            // 같은 오브젝트의 스프라이트라 같은 워커가 쓴다(오브젝트 단위 틱). 색은 GPU 인스턴스로 가고 배치는 그대로다.
+            applyAlphaToSprites();
         }
     }
 
@@ -71,5 +85,23 @@ namespace sw
     void EffectBaseComponent::setCurrentAlpha( float32 alpha )
     {
         _currentAlpha = alpha;
+        applyAlphaToSprites();
+    }
+
+    void EffectBaseComponent::applyAlphaToSprites()
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        const float32 fade        = MathUtil::saturate( _currentAlpha );
+        size_t        spriteIndex = 0;
+        pOwner->forEachComponentOfType<SpriteComponent>( [this, fade, &spriteIndex]( SpriteComponent* pSprite )
+        {
+            const float32 baseAlpha = ( spriteIndex < _listBaseAlpha.size() ) ? _listBaseAlpha[spriteIndex] : 1.0f;
+            ++spriteIndex;
+            float4 tint = pSprite->getTint();
+            tint._w     = baseAlpha * fade;
+            pSprite->setTint( tint );
+        } );
     }
 } // namespace sw

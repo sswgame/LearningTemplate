@@ -1,0 +1,100 @@
+<Scene formatVersion="0" name="SpriteUi">
+	<entities>
+		<entity name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0,-6"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="AnimatedSprite">
+			<GameObject _schemaVersion="0" _name="AnimatedSprite" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="-1.8,0.6,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1.2,1.2,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _clipPath="engine/textures/test/quadrants.sprite.json" />
+					<SpriteAnimatorComponent _localPosition="0,0,0"
+					                         _localRotation="0,0,0"
+					                         _localScale="1,1,1"
+					                         _attachOwner="None"
+					                         _attachComponent="None"
+					                         _bRepeat="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="Enemy">
+			<GameObject _schemaVersion="0" _name="Enemy" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="1.6,0.3,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="engine/textures/test/checker.dds" />
+					<HPBarBaseComponent _hpRatio="0.4"
+					                    _offsetPos="0,0.85"
+					                    _barSize="1.6,0.16"
+					                    _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="DamageNumber">
+			<GameObject _schemaVersion="0" _name="DamageNumber" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="1.6,-1.1,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<DamageUIComponent _damageValue="123"
+					                   _lifeTime="0"
+					                   _floatSpeed="0"
+					                   _glyphSize="0.42,0.56" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="EffectReference">
+			<GameObject _schemaVersion="0" _name="EffectReference" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="-1.2,-1.1,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="0.9,0.9,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="engine/textures/test/quadrants.dds"
+					                 _uvRect="0.5,0.5,0.5,0.5"
+					                 _tint="1,0.55,0.1,1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="FadingEffect">
+			<GameObject _schemaVersion="0" _name="FadingEffect" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="-2.4,-1.1,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="0.9,0.9,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="engine/textures/test/quadrants.dds"
+					                 _uvRect="0.5,0.5,0.5,0.5"
+					                 _tint="1,0.55,0.1,1" />
+					<EffectBaseComponent _duration="3.6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
